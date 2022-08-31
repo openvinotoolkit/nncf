@@ -13,6 +13,7 @@
 
 import pytest
 from functools import partial
+from build.lib.nncf.common.pruning.utils import get_prunable_layers_in_out_channels
 
 from tests.torch.helpers import create_compressed_model_and_algo_for_test
 from tests.torch.pruning.helpers import MobilenetV3BlockSEReshape
@@ -86,8 +87,9 @@ def test_init_params_for_flops_calculation(model, ref_params):
 
     assert compression_ctrl.nodes_flops == ref_params['nodes_flops']
     # pylint: disable=protected-access
-    assert compression_ctrl._shape_pruning_proc.full_input_channels == ref_params['in_channels']
-    assert compression_ctrl._shape_pruning_proc.full_output_channels == ref_params['out_channels']
+    inp_channels, out_channels = get_prunable_layers_in_out_channels(compression_ctrl._graph)
+    assert inp_channels == ref_params['in_channels']
+    assert out_channels == ref_params['out_channels']
 
 
 @pytest.mark.parametrize(

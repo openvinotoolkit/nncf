@@ -497,11 +497,9 @@ class ElasticWidthHandler(SingleElasticityHandler):
         graph = self._target_model.get_original_graph()
         prunable_types = [NNCFConv2d.op_func_name, NNCFLinear.op_func_name]
         self._shape_pruning_processor = ShapePruninigProcessor(
-            graph=self._target_model.get_original_graph(),
             prunable_types=prunable_types,
-            pruning_operations_metatype=PT_PRUNING_OPERATOR_METATYPES,
-            pruning_groups=pruned_module_groups_info)
-
+            pruning_operations_metatype=PT_PRUNING_OPERATOR_METATYPES)
+        self._next_nodes = self._shape_pruning_processor.get_next_nodes(graph, pruned_module_groups_info)
         # Need a copy because it will be used for adding `output_mask`/`input_masks` to nodes that are relevant to
         # Elastic Width only and therefore it should be isolated to not intercept with other algorithms.
         self._propagation_graph = deepcopy(graph)
@@ -663,8 +661,6 @@ class ElasticWidthHandler(SingleElasticityHandler):
         """
         graph = self._target_model.get_graph()
         in_channels, out_channels = get_prunable_layers_in_out_channels(graph)
-        self._shape_pruning_processor.update_graph(graph)
-        #self._shape_pruning_processor.update_pruninig_groups(self._pruned_module_groups_info)
 
         for group in self._pruned_module_groups_info.get_all_clusters():
             assert all(out_channels[group.elements[0].node_name] == out_channels[node.node_name]
@@ -674,7 +670,8 @@ class ElasticWidthHandler(SingleElasticityHandler):
             new_out_channels_num = first_elastic_op.get_active_width()
             num_of_pruned_elems = first_elastic_op.max_width - new_out_channels_num
             self._shape_pruning_processor.prune_cluster_shapes(group, num_of_pruned_elems,
-                                                                in_channels, out_channels)
+                                                               self._next_nodes,
+                                                               in_channels, out_channels)
 
         return in_channels, out_channels
 

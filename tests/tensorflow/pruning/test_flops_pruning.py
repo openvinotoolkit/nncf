@@ -72,29 +72,33 @@ def test_flops_calulation_for_spec_layers(model_fn, all_weights, pruning_flops_t
     assert compression_ctrl.current_params_num == ref_current_params
     # pylint:disable=protected-access
     original_graph = compression_ctrl._original_graph
-    shape_pruner = ShapePruninigProcessor(graph=original_graph,
-                                          prunable_types=compression_ctrl._prunable_types,
-                                          pruning_operations_metatype=TF_PRUNING_OPERATOR_METATYPES,
-                                          pruning_groups=compression_ctrl._pruned_layer_groups_info)
+    pruning_groups = compression_ctrl._pruned_layer_groups_info
+    shape_pruner = ShapePruninigProcessor(prunable_types=compression_ctrl._prunable_types,
+                                          pruning_operations_metatype=TF_PRUNING_OPERATOR_METATYPES)
 
+    next_nodes = shape_pruner.get_next_nodes(original_graph, pruning_groups)
     # Check output_shapes are empty in graph
     for node in original_graph.get_all_nodes():
         assert node.data['output_shape'] is None
 
+
     assert compression_ctrl._calculate_num_of_sparse_elements_by_node() == ref_num_of_sparse
 
     tmp_in_channels, tmp_out_channels = shape_pruner.calculate_in_out_channels_by_masks(
+        graph=original_graph,
+        pruning_groups=pruning_groups,
+        pruning_groups_next_nodes=next_nodes,
         num_of_sparse_elements_by_node=ref_num_of_sparse)
 
-    flops_weights_calculator = WeightsFlopsCalculator(
-        graph=original_graph,
-        output_shapes=collect_output_shapes(compression_ctrl.model, original_graph),
-                                            conv_op_metatypes=GENERAL_CONV_LAYER_METATYPES,
-                                            linear_op_metatypes=LINEAR_LAYER_METATYPES)
+    output_shapes = collect_output_shapes(compression_ctrl.model, original_graph)
+    flops_weights_calculator = WeightsFlopsCalculator(conv_op_metatypes=GENERAL_CONV_LAYER_METATYPES,
+                                                      linear_op_metatypes=LINEAR_LAYER_METATYPES)
     cur_flops, cur_params_num = \
         flops_weights_calculator.count_flops_and_weights(
-                                input_channels=tmp_in_channels,
-                                output_channels=tmp_out_channels)
+        graph=original_graph,
+        output_shapes=output_shapes,
+        input_channels=tmp_in_channels,
+        output_channels=tmp_out_channels)
     assert (cur_flops, cur_params_num) == (ref_current_flops, ref_current_params)
 
     all_clusters = compression_ctrl._pruned_layer_groups_info.get_all_clusters()

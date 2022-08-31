@@ -81,10 +81,7 @@ class MultiElasticityHandler(ElasticityHandler):
         self._handlers = handlers
         self._target_model = target_model
         self._is_handler_enabled_map = {elasticity_dim: True for elasticity_dim in handlers}
-        graph = target_model.get_graph()
         self._weights_calc = WeightsFlopsCalculator(
-            graph=graph,
-            output_shapes=collect_output_shapes(graph),
             conv_op_metatypes=GENERAL_CONV_LAYER_METATYPES,
             linear_op_metatypes=LINEAR_LAYER_METATYPES)
         self.activate_supernet()
@@ -255,9 +252,10 @@ class MultiElasticityHandler(ElasticityHandler):
 
         graph = self._target_model.get_graph()
         output_shapes = collect_output_shapes(graph)
-        self._weights_calc.update_graph_and_output_shapes(graph, output_shapes)
 
         flops, num_weights = self._weights_calc.count_flops_and_weights(
+            graph=graph,
+            output_shapes=output_shapes,
             input_channels=input_width_values,
             output_channels=output_width_values,
             kernel_sizes=kernel_sizes,

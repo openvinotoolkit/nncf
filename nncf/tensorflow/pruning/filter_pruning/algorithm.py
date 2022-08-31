@@ -29,6 +29,7 @@ from nncf.common.pruning.statistics import FilterPruningStatistics
 from nncf.common.pruning.statistics import PrunedModelStatistics
 from nncf.common.pruning.shape_pruning import WeightsFlopsCalculator
 from nncf.common.pruning.shape_pruning import ShapePruninigProcessor
+from nncf.common.pruning.utils import get_prunable_layers_in_out_channels
 from nncf.common.pruning.utils import get_rounded_pruned_element_number
 from nncf.common.statistics import NNCFStatistics
 from nncf.common.pruning.statistics import PrunedModelTheoreticalBorderline
@@ -111,28 +112,25 @@ class FilterPruningController(BasePruningAlgoController):
         self.frozen = False
         self.pruning_quota = 0.9
 
-
         self._weights_flops_calc = WeightsFlopsCalculator(
-            graph=graph,
-            output_shapes=collect_output_shapes(self._model, self._original_graph),
             conv_op_metatypes=GENERAL_CONV_LAYER_METATYPES,
             linear_op_metatypes=LINEAR_LAYER_METATYPES)
 
         self._shape_pruning_proc = ShapePruninigProcessor(
-            graph=graph,
             pruning_operations_metatype=TF_PRUNING_OPERATOR_METATYPES,
-            pruning_groups=pruned_layer_groups,
             prunable_types=prunable_types)
 
-        self.full_flops, self.full_params_num = self._weights_flops_calc.count_flops_and_weights()
-        self.full_filters_num = self._weights_flops_calc.count_filters_num()
+        self._pruning_quotas = {}
+        self._next_nodes = {}
+        self._output_shapes = {}
+        _, output_channels = get_prunable_layers_in_out_channels(self._original_graph)
+        self._init_pruned_layers_params(output_channels)
+
+        self.full_flops, self.full_params_num = self._weights_flops_calc.count_flops_and_weights(graph, self._output_shapes)
+        self.full_filters_num = self._weights_flops_calc.count_filters_num(graph, output_channels)
 
         self.current_flops, self.current_params_num = self.full_flops, self.full_params_num
         self.current_filters_num = self.full_filters_num
-
-
-        self._pruning_quotas = {}
-        self._init_pruning_quotas()
 
         self._pruned_layers_num = len(self._pruned_layer_groups_info.get_all_nodes())
         self._prunable_layers_num = len(self._original_graph.get_nodes_by_types(self._prunable_types))
@@ -225,10 +223,16 @@ class FilterPruningController(BasePruningAlgoController):
         if run_batchnorm_adaptation:
             self._run_batchnorm_adaptation()
 
-    def _init_pruning_quotas(self):
-        layers_out_channels = self._shape_pruning_proc.full_output_channels
+    def _init_pruned_layers_params(self, output_channels):
+        # 1. Collect nodes output shapes
+        self._output_shapes = collect_output_shapes(self._model, self._original_graph)
+
+        # 2. Initialize next_nodes for each pruning cluster
+        self._next_nodes = self._shape_pruning_proc.get_next_nodes(self._original_graph, self._pruned_layer_groups_info)
+
+        # 3. Initialize pruning quotas
         for cluster in self._pruned_layer_groups_info.get_all_clusters():
-            self._pruning_quotas[cluster.id] = floor(layers_out_channels[cluster.elements[0].node_name]
+            self._pruning_quotas[cluster.id] = floor(output_channels[cluster.elements[0].node_name]
                                                      * self.pruning_quota)
 
     def _set_binary_masks_for_pruned_layers_groupwise(self, pruning_level: float):
@@ -350,8 +354,7 @@ class FilterPruningController(BasePruningAlgoController):
             masks[group.id] = tf.ones(filters_num)
 
         # 2.
-        tmp_in_channels, tmp_out_channels =\
-            self._shape_pruning_proc.get_prunable_layers_in_out_channels()
+        tmp_in_channels, tmp_out_channels = get_prunable_layers_in_out_channels(self._original_graph)
         sorted_importances = sorted(zip(filter_importances, group_indexes, filter_indexes),
                                     key=lambda x: x[0])
         for _, group_id, filter_index in sorted_importances:
@@ -360,12 +363,16 @@ class FilterPruningController(BasePruningAlgoController):
             masks[group_id] = tf.tensor_scatter_nd_update(masks[group_id], [[filter_index]], [0])
             self._pruning_quotas[group_id] -= 1
 
+            cluster = self._pruned_layer_groups_info.get_cluster_by_id(group_id)
             # Update input/output shapes of pruned elements
             self._shape_pruning_proc.prune_cluster_shapes(
-                cluster=group_id, pruned_elems=1,
+                cluster=cluster, pruned_elems=1,
+                pruning_groups_next_nodes=self._next_nodes,
                 input_channels=tmp_in_channels, output_channels=tmp_out_channels)
 
             flops, params_num = self._weights_flops_calc.count_flops_and_weights(
+                                                         graph=self._original_graph,
+                                                         output_shapes=self._output_shapes,
                                                          input_channels=tmp_in_channels,
                                                          output_channels=tmp_out_channels)
             if flops <= target_flops:
@@ -424,11 +431,16 @@ class FilterPruningController(BasePruningAlgoController):
     def _calculate_flops_and_weights_in_uniformly_pruned_model(self, pruning_level):
         tmp_in_channels, tmp_out_channels = \
             self._shape_pruning_proc.calculate_in_out_channels_in_uniformly_pruned_model(
+                self._original_graph,
+                pruning_groups=self._pruned_layer_groups_info,
+                pruning_groups_next_nodes=self._next_nodes,
                 pruning_level=pruning_level)
 
         return self._weights_flops_calc.count_flops_and_weights(
-                                             input_channels=tmp_in_channels,
-                                             output_channels=tmp_out_channels)
+            graph=self._original_graph,
+            output_shapes=self._output_shapes,
+            input_channels=tmp_in_channels,
+            output_channels=tmp_out_channels)
 
     def _calculate_filters_importance_in_group(self, group: Cluster[PrunedLayerInfo]):
         """
@@ -459,15 +471,21 @@ class FilterPruningController(BasePruningAlgoController):
     def _update_benchmark_statistics(self):
         tmp_in_channels, tmp_out_channels = \
             self._shape_pruning_proc.calculate_in_out_channels_by_masks(
+                graph=self._original_graph,
+                pruning_groups=self._pruned_layer_groups_info,
+                pruning_groups_next_nodes=self._next_nodes,
                 num_of_sparse_elements_by_node=self._calculate_num_of_sparse_elements_by_node())
 
         self.current_filters_num = self._weights_flops_calc.count_filters_num(
-                                                                 output_channels=tmp_out_channels)
+            graph=self._original_graph,
+            output_channels=tmp_out_channels)
 
         self.current_flops, self.current_params_num = \
             self._weights_flops_calc.count_flops_and_weights(
-                                    input_channels=tmp_in_channels,
-                                    output_channels=tmp_out_channels)
+                graph=self._original_graph,
+                output_shapes=self._output_shapes,
+                input_channels=tmp_in_channels,
+                output_channels=tmp_out_channels)
 
     def _layer_filter_importance(self, layer: NNCFWrapper):
         layer_metatype = get_keras_layer_metatype(layer)

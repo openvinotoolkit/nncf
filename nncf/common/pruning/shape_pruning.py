@@ -15,7 +15,6 @@ from typing import Callable
 from typing import Dict
 from typing import List
 from typing import Tuple
-from typing import Union
 
 import numpy as np
 
@@ -23,6 +22,7 @@ from nncf.common.graph import NNCFGraph
 from nncf.common.graph import NNCFNodeName
 from nncf.common.graph.operator_metatypes import OperatorMetatype
 from nncf.common.pruning.clusterization import Cluster
+from nncf.common.pruning.clusterization import Clusterization
 from nncf.common.pruning.structs import PrunedLayerInfoBase
 from nncf.common.pruning.symbolic_mask import SymbolicMask
 from nncf.common.pruning.symbolic_mask import SymbolicMaskProcessor
@@ -37,65 +37,68 @@ from nncf.common.pruning.utils import get_input_masks
 
 class ShapePruninigProcessor:
     def __init__(self,
-                 graph: NNCFGraph,
                  prunable_types: List[str],
-                 pruning_operations_metatype: List[str],
-                 pruning_groups: List[Cluster[PrunedLayerInfoBase]]):
-        self._graph = graph
-        self._pruning_groups = pruning_groups
+                 pruning_operations_metatype: List[str]):
         self._prunable_types = prunable_types
         self._pruning_operations_metatype = pruning_operations_metatype
-        self._full_inp_channels, self._full_out_channels = get_prunable_layers_in_out_channels(graph)
-        self._pruning_groups_next_nodes = self._get_cluster_next_nodes()
-
-    @property
-    def full_input_channels(self):
-        return self._full_inp_channels.copy()
-
-    @property
-    def full_output_channels(self):
-        return self._full_out_channels.copy()
+        self._pruning_groups_next_nodes = None
 
     def calculate_in_out_channels_by_masks(self,
-                                           num_of_sparse_elements_by_node: Dict[NNCFNodeName, int]) -> \
+                                           graph: NNCFGraph,
+                                           pruning_groups,
+                                           pruning_groups_next_nodes,
+                                           num_of_sparse_elements_by_node: Dict[NNCFNodeName, int],
+                                           ) -> \
         Tuple[Dict[str, int], Dict[str, int]]:
         """
         Imitates filters pruning by removing output filters zeroed by pruning masks in each pruning group
         and updating corresponding input channels number in `pruning_groups_next_nodes` nodes.
 
+        :param graph: NNCFGraph.
+        :param pruning_groups: A list of pruning groups.
+        :param pruning_groups_next_nodes: A dictionary of next nodes of each pruning group.
         :param num_of_sparse_elements_by_node: A dictionary of num_of_sparse_elements of each pruning node.
         :return Dictionary of new input channels number {node_name: channels_num}
         """
-        def get_num_of_sparse_elements_by_node(node_name: str) -> int:
-            return num_of_sparse_elements_by_node[node_name]
 
-        return self._calculate_in_out_channels(get_num_of_sparse_elements_by_node)
+        def get_sparser(full_output_channels):
+            def get_num_of_sparse_elements_by_node(node_name: str) -> int:
+                return num_of_sparse_elements_by_node[node_name]
+            return get_num_of_sparse_elements_by_node
 
-    def calculate_in_out_channels_in_uniformly_pruned_model(self, pruning_level: float) -> \
+        return self._calculate_in_out_channels(get_sparser, graph, pruning_groups, pruning_groups_next_nodes)
+
+    def calculate_in_out_channels_in_uniformly_pruned_model(self,
+                                                            graph: NNCFGraph,
+                                                            pruning_groups,
+                                                            pruning_groups_next_nodes,
+                                                            pruning_level: float) -> \
         Tuple[Dict[str, int], Dict[str, int]]:
         """
         Imitates filters pruning by removing `pruning_rate` percent of output filters in each pruning group
         and updating corresponding input channels number in `pruning_groups_next_nodes` nodes.
 
+        :param graph: NNCFGraph.
+        :param pruning_groups: A list of pruning groups.
+        :param pruning_groups_next_nodes: A dictionary of next nodes of each pruning group.
         :param pruning_level: Target pruning rate.
         :return Tuple of dictionarise of new input and output channels number {node_name: channels_num}
         """
 
-        def get_num_of_sparse_elements_by_node(node_name: str) -> int:
-            old_out_channels = self._full_out_channels[node_name]
-            return get_rounded_pruned_element_number(old_out_channels, pruning_level)
+        def get_sparser(full_output_channels):
+            def get_num_of_sparse_elements_by_node(node_name: str) -> int:
+                old_out_channels = full_output_channels[node_name]
+                return get_rounded_pruned_element_number(old_out_channels, pruning_level)
+            return get_num_of_sparse_elements_by_node
 
-        return self._calculate_in_out_channels(get_num_of_sparse_elements_by_node)
+        return self._calculate_in_out_channels(get_sparser, graph, pruning_groups, pruning_groups_next_nodes)
 
-
-    def prune_cluster_shapes(self, cluster: Union[int, Cluster],
+    def prune_cluster_shapes(self,
+                             cluster: Cluster,
                              pruned_elems: int,
+                             pruning_groups_next_nodes,
                              input_channels: Dict[NNCFNodeName, int],
                              output_channels: Dict[NNCFNodeName, int]) -> None:
-        assert isinstance(cluster, (int, Cluster)), 'Wrong type for cluster param'
-        if isinstance(cluster, int):
-            cluster = self._pruning_groups.get_cluster_by_id(cluster)
-
         if not pruned_elems:
             return
 
@@ -105,19 +108,20 @@ class ShapePruninigProcessor:
                 input_channels[node.node_name] -= pruned_elems
 
         # Prune in channels in all next nodes
-        next_nodes = self._pruning_groups_next_nodes[cluster.id]
+        next_nodes = pruning_groups_next_nodes[cluster.id]
         for next_node in next_nodes:
             input_channels[next_node.node_name] -= pruned_elems * next_node.sparse_multiplier
 
-    def update_graph(self, graph: NNCFGraph):
-        self._graph = graph
+    def _calculate_in_out_channels(
+        self,
+        sparse_elements_counter_getter: Callable[[Dict[NNCFNodeName, int]], Callable[[NNCFNodeName], int]],
+        graph: NNCFGraph, pruning_groups, pruning_groups_next_nodes) -> Tuple[Dict[str, int], Dict[str, int]]:
 
-    def _calculate_in_out_channels(self, sparse_elements_counter: Callable[[str], int]) -> \
-        Tuple[Dict[str, int], Dict[str, int]]:
-        tmp_in_channels = self._full_inp_channels.copy()
-        tmp_out_channels = self._full_out_channels.copy()
+        full_input_channels, full_output_channels = get_prunable_layers_in_out_channels(graph)
+        tmp_in_channels, tmp_out_channels = full_input_channels.copy(), full_output_channels.copy()
+        sparse_elements_counter = sparse_elements_counter_getter(full_output_channels)
 
-        for group in self._pruning_groups.get_all_clusters():
+        for group in pruning_groups.get_all_clusters():
             layer_name = group.elements[0].node_name
             assert all(tmp_out_channels[layer_name] == tmp_out_channels[node.node_name] for node in
                        group.elements)
@@ -126,21 +130,19 @@ class ShapePruninigProcessor:
 
             self.prune_cluster_shapes(cluster=group, pruned_elems=num_of_sparse_elems,
                                       input_channels=tmp_in_channels,
-                                      output_channels=tmp_out_channels)
+                                      output_channels=tmp_out_channels,
+                                      pruning_groups_next_nodes=pruning_groups_next_nodes)
 
         return tmp_in_channels, tmp_out_channels
-
-    def get_prunable_layers_in_out_channels(self):
-        return self._full_inp_channels.copy(), self._full_out_channels.copy()
 
     class NextNode:
         def __init__(self, node_name, sparse_multiplier):
             self.node_name = node_name
             self.sparse_multiplier = sparse_multiplier
 
-    def _get_next_node_sparse_multiplier(self, next_node, cluster):
+    def _get_next_node_sparse_multiplier(self, graph, next_node, cluster):
         cluster_nodes_idxs = {node.nncf_node_id for node in cluster.elements}
-        for input_mask in get_input_masks(next_node, self._graph):
+        for input_mask in get_input_masks(next_node, graph):
             if not input_mask:
                 continue
             for mask_producer in input_mask.mask_producers:
@@ -149,41 +151,44 @@ class ShapePruninigProcessor:
 
         raise RuntimeError(f'Next node for cluster {cluster.elements} doesn\'t have closing mask')
 
-    def _get_cluster_next_nodes(self) -> Dict[int, List['NextNode']]:
+    def get_next_nodes(self, graph: NNCFGraph, pruning_groups: Clusterization[PrunedLayerInfoBase]) ->\
+        Dict[int, List['NextNode']]:
         """
         Finds nodes of `prunable_types` types that receive the output of a pruned cluster as input
         and collects all info specified in NextNode.
 
+        :param graph: NNCFGraph.
+        :param pruning_groups: `Clusterization` of pruning groups.
         :return Dictionary of next nodes by cluster {cluster_id: [node]}.
         """
         # 1. Propagate symbolic masks throught the net
-        for pruned_layer_info in self._pruning_groups.get_all_nodes():
-            node = self._graph.get_node_by_id(pruned_layer_info.nncf_node_id)
+        for pruned_layer_info in pruning_groups.get_all_nodes():
+            node = graph.get_node_by_id(pruned_layer_info.nncf_node_id)
             node.data['output_mask'] = SymbolicMask(get_output_channels(node), node.node_id)
 
-        MaskPropagationAlgorithm(self._graph,
+        MaskPropagationAlgorithm(graph,
                                  self._pruning_operations_metatype,
                                  SymbolicMaskProcessor).mask_propagation()
 
         # 2. Find next nodes and correspondent sparse multipliers
         next_nodes = {}
-        for cluster in self._pruning_groups.get_all_clusters():
+        for cluster in pruning_groups.get_all_clusters():
             next_nodes_cluster = set()
             cluster_nodes = set()
             for pruned_layer_info in cluster.elements:
-                nncf_cluster_node = self._graph.get_node_by_id(pruned_layer_info.nncf_node_id)
+                nncf_cluster_node = graph.get_node_by_id(pruned_layer_info.nncf_node_id)
                 cluster_nodes.add(nncf_cluster_node)
-                curr_next_nodes = get_next_nodes_of_types(self._graph, nncf_cluster_node, self._prunable_types)
+                curr_next_nodes = get_next_nodes_of_types(graph, nncf_cluster_node, self._prunable_types)
 
                 next_nodes_cluster = next_nodes_cluster.union(curr_next_nodes)
             next_nodes_cluster = next_nodes_cluster - cluster_nodes
             next_nodes[cluster.id] = []
             for next_node in next_nodes_cluster:
-                sparse_multiplier = self._get_next_node_sparse_multiplier(next_node, cluster)
+                sparse_multiplier = self._get_next_node_sparse_multiplier(graph, next_node, cluster)
                 next_nodes[cluster.id].append(self.NextNode(next_node.node_name, sparse_multiplier))
 
         # 3. Clean graph output shapes
-        for node in self._graph.get_all_nodes():
+        for node in graph.get_all_nodes():
             node.data['output_shape'] = None
 
         return next_nodes
@@ -191,16 +196,14 @@ class ShapePruninigProcessor:
 
 class WeightsFlopsCalculator:
     def __init__(self,
-                 graph: NNCFGraph,
-                 output_shapes: Dict[NNCFNodeName, List[int]],
                  conv_op_metatypes: List[OperatorMetatype],
                  linear_op_metatypes: List[OperatorMetatype]):
-        self._graph = graph
         self._conv_op_metatypes = conv_op_metatypes
         self._linear_op_metatypes = linear_op_metatypes
-        self._output_shapes = output_shapes
 
     def count_flops_and_weights(self,
+                                graph: NNCFGraph,
+                                output_shapes: Dict[NNCFNodeName, int],
                                 input_channels: Dict[NNCFNodeName, int] = None,
                                 output_channels: Dict[NNCFNodeName, int] = None,
                                 kernel_sizes: Dict[NNCFNodeName, Tuple[int, int]] = None,
@@ -221,11 +224,14 @@ class WeightsFlopsCalculator:
         :return number of FLOPs for the model
                 number of weights (params) in the model
         """
-        flops_pers_node, weights_per_node = self.count_flops_and_weights_per_node(input_channels, output_channels,
+        flops_pers_node, weights_per_node = self.count_flops_and_weights_per_node(graph, output_shapes,
+                                                                                  input_channels, output_channels,
                                                                                   kernel_sizes, op_addresses_to_skip)
         return sum(flops_pers_node.values()), sum(weights_per_node.values())
 
     def count_flops_and_weights_per_node(self,
+                                         graph: NNCFGraph,
+                                         output_shapes: Dict[NNCFNodeName, int],
                                          input_channels: Dict[NNCFNodeName, int] = None,
                                          output_channels: Dict[NNCFNodeName, int] = None,
                                          kernel_sizes: Dict[NNCFNodeName, Tuple[int, int]] = None,
@@ -252,7 +258,7 @@ class WeightsFlopsCalculator:
         output_channels = output_channels or {}
         kernel_sizes = kernel_sizes or {}
         op_addresses_to_skip = op_addresses_to_skip or []
-        for node in self._graph.get_nodes_by_metatypes(self._conv_op_metatypes):
+        for node in graph.get_nodes_by_metatypes(self._conv_op_metatypes):
             name = node.node_name
             if name in op_addresses_to_skip:
                 continue
@@ -269,13 +275,13 @@ class WeightsFlopsCalculator:
                 filters_per_channel = num_out_channels // node.layer_attributes.groups
 
             flops_numpy = 2 * np.prod(kernel_size) * num_in_channels * filters_per_channel *\
-                np.prod(self._output_shapes[name])
+                np.prod(output_shapes[name])
             weights_numpy = np.prod(kernel_size) * num_in_channels * filters_per_channel
 
             flops[name] = flops_numpy.astype(int).item()
             weights[name] = weights_numpy.astype(int).item()
 
-        for node in self._graph.get_nodes_by_metatypes(self._linear_op_metatypes):
+        for node in graph.get_nodes_by_metatypes(self._linear_op_metatypes):
             name = node.node_name
             if name in op_addresses_to_skip:
                 continue
@@ -283,7 +289,7 @@ class WeightsFlopsCalculator:
             num_in_features = input_channels.get(name, node.layer_attributes.in_features)
             num_out_features = output_channels.get(name, node.layer_attributes.out_features)
 
-            flops_numpy = 2 * num_in_features * num_out_features * np.prod(self._output_shapes[name][:-1])
+            flops_numpy = 2 * num_in_features * num_out_features * np.prod(output_shapes[name][:-1])
             weights_numpy = num_in_features * num_out_features
             flops[name] = flops_numpy
             weights[name] = weights_numpy
@@ -291,6 +297,7 @@ class WeightsFlopsCalculator:
         return flops, weights
 
     def count_filters_num(self,
+                          graph: NNCFGraph,
                           output_channels: Dict[NNCFNodeName, int] = None) -> int:
         """
         Counts filters of `op_metatypes` layers taking into account new output channels number.
@@ -300,10 +307,6 @@ class WeightsFlopsCalculator:
         """
         filters_num = 0
         output_channels = output_channels or {}
-        for node in self._graph.get_nodes_by_metatypes(self._conv_op_metatypes + self._linear_op_metatypes):
+        for node in graph.get_nodes_by_metatypes(self._conv_op_metatypes + self._linear_op_metatypes):
             filters_num += output_channels.get(node.node_name, get_output_channels(node))
         return filters_num
-
-    def update_graph_and_output_shapes(self, graph: NNCFGraph, output_shapes: Dict[str, List[int]]) -> None:
-        self._graph = graph
-        self._output_shapes = output_shapes

@@ -729,19 +729,18 @@ def test_flops_calculator(model_module, all_weights, pruning_flops_target, ref_f
         assert num_of_sparse_by_node[node_name] == refs['num_of_sparse_by_node'][node_name]
 
     graph = pruning_algo._model.get_original_graph()
+    pruning_groups = pruning_algo.pruned_module_groups_info
 
     shape_pruning_processor = ShapePruninigProcessor(
-                                graph=graph,
-                                pruning_operations_metatype=PT_PRUNING_OPERATOR_METATYPES,
-                                prunable_types=[v.op_func_name for v in NNCF_PRUNING_MODULES_DICT],
-                                pruning_groups=pruning_algo.pruned_module_groups_info)
+        pruning_operations_metatype=PT_PRUNING_OPERATOR_METATYPES,
+        prunable_types=[v.op_func_name for v in NNCF_PRUNING_MODULES_DICT])
 
+    pruning_groups_next_nodes = shape_pruning_processor.get_next_nodes(graph, pruning_groups)
     # Check output_shapes are empty in graph
     for node in graph.get_all_nodes():
         assert node.data['output_shape'] is None
 
     # Next nodes cluster check
-    pruning_groups_next_nodes = shape_pruning_processor._pruning_groups_next_nodes
     assert len(pruning_groups_next_nodes) == len(refs['next_nodes'])
     for idx, next_nodes in pruning_groups_next_nodes.items():
         next_nodes_ref = refs['next_nodes'][idx]
@@ -752,6 +751,9 @@ def test_flops_calculator(model_module, all_weights, pruning_flops_target, ref_f
             assert next_node.sparse_multiplier == next_node_ref.sparse_multiplier
 
     tmp_in_channels, tmp_out_channels = shape_pruning_processor.calculate_in_out_channels_by_masks(
+        graph=graph,
+        pruning_groups=pruning_groups,
+        pruning_groups_next_nodes=pruning_groups_next_nodes,
         num_of_sparse_elements_by_node=refs['num_of_sparse_by_node'])
 
     assert len(tmp_in_channels) == len(tmp_out_channels) == len(refs['pruned_in_channels'])
@@ -759,13 +761,14 @@ def test_flops_calculator(model_module, all_weights, pruning_flops_target, ref_f
         assert tmp_in_channels[node_name] == refs['pruned_in_channels'][node_name]
         assert tmp_out_channels[node_name] == refs['pruned_out_channels'][node_name]
 
-    weights_flops_calc = WeightsFlopsCalculator(graph=graph,
-                                                output_shapes=collect_output_shapes(graph),
-                                                conv_op_metatypes=GENERAL_CONV_LAYER_METATYPES,
+    output_shapes = collect_output_shapes(graph)
+    weights_flops_calc = WeightsFlopsCalculator(conv_op_metatypes=GENERAL_CONV_LAYER_METATYPES,
                                                 linear_op_metatypes=LINEAR_LAYER_METATYPES)
 
     cur_flops, cur_params_num = \
         weights_flops_calc.count_flops_and_weights(
+        graph=graph,
+        output_shapes=output_shapes,
         input_channels=tmp_in_channels,
         output_channels=tmp_out_channels)
     assert (cur_flops, cur_params_num) == (ref_flops, ref_params_num)
