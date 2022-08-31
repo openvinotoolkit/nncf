@@ -454,10 +454,10 @@ def test_collect_output_shapes(model, ref_output_shapes):
 
 
 BigPruningTestModelNextNodesRef = {
-    0: [ShapePruninigProcessor.NextNode('BigPruningTestModel/NNCFConv2d[conv2]/conv2d_0', 1)],
-    1: [ShapePruninigProcessor.NextNode('BigPruningTestModel/NNCFConvTranspose2d[up]/conv_transpose2d_0', 1)],
-    2: [ShapePruninigProcessor.NextNode('BigPruningTestModel/NNCFLinear[linear]/linear_0', 49)],
-    3: [ShapePruninigProcessor.NextNode('BigPruningTestModel/NNCFConv2d[conv3]/conv2d_0', 1)],
+    0: [ShapePruninigProcessor.NextNodeInfo('BigPruningTestModel/NNCFConv2d[conv2]/conv2d_0', 1)],
+    1: [ShapePruninigProcessor.NextNodeInfo('BigPruningTestModel/NNCFConvTranspose2d[up]/conv_transpose2d_0', 1)],
+    2: [ShapePruninigProcessor.NextNodeInfo('BigPruningTestModel/NNCFLinear[linear]/linear_0', 49)],
+    3: [ShapePruninigProcessor.NextNodeInfo('BigPruningTestModel/NNCFConv2d[conv3]/conv2d_0', 1)],
 }
 
 
@@ -574,9 +574,9 @@ BigPruningTestModelRef = {
 
 PruningTestModelBroadcastedLinearRefs = {
     "next_nodes": {
-        0: [ShapePruninigProcessor.NextNode('PruningTestModelBroadcastedLinear/NNCFLinear[last_linear]/linear_0', 64)],
-        1: [ShapePruninigProcessor.NextNode('PruningTestModelBroadcastedLinear/NNCFLinear[linear1]/linear_0', 64),
-            ShapePruninigProcessor.NextNode('PruningTestModelBroadcastedLinear/NNCFConv2d[conv1]/conv2d_0', 1)],
+        0: [ShapePruninigProcessor.NextNodeInfo('PruningTestModelBroadcastedLinear/NNCFLinear[last_linear]/linear_0', 64)],
+        1: [ShapePruninigProcessor.NextNodeInfo('PruningTestModelBroadcastedLinear/NNCFLinear[linear1]/linear_0', 64),
+            ShapePruninigProcessor.NextNodeInfo('PruningTestModelBroadcastedLinear/NNCFConv2d[conv1]/conv2d_0', 1)],
     },
     "num_of_sparse_by_node": {
         'PruningTestModelBroadcastedLinear/NNCFConv2d[first_conv]/conv2d_0': 16,
@@ -599,15 +599,15 @@ PruningTestModelBroadcastedLinearRefs = {
 
 PruningTestModelBroadcastedLinearWithConcatRefs = {
     "next_nodes": {
-        0: [ShapePruninigProcessor.NextNode(
+        0: [ShapePruninigProcessor.NextNodeInfo(
                 'PruningTestModelBroadcastedLinearWithConcat/NNCFLinear[last_linear]/linear_0', 64)],
-        1: [ShapePruninigProcessor.NextNode(
+        1: [ShapePruninigProcessor.NextNodeInfo(
                 'PruningTestModelBroadcastedLinearWithConcat/NNCFLinear[linear1]/linear_0', 64),
-            ShapePruninigProcessor.NextNode(
+            ShapePruninigProcessor.NextNodeInfo(
                 'PruningTestModelBroadcastedLinearWithConcat/NNCFConv2d[conv1]/conv2d_0', 1),
-            ShapePruninigProcessor.NextNode(
+            ShapePruninigProcessor.NextNodeInfo(
                 'PruningTestModelBroadcastedLinearWithConcat/NNCFConv2d[conv2]/conv2d_0', 1)],
-        2: [ShapePruninigProcessor.NextNode(
+        2: [ShapePruninigProcessor.NextNodeInfo(
             'PruningTestModelBroadcastedLinearWithConcat/NNCFLinear[last_linear]/linear_0', 64)],
     },
     "num_of_sparse_by_node": {
@@ -633,10 +633,10 @@ PruningTestModelBroadcastedLinearWithConcatRefs = {
 }
 PruningTestModelConcatWithLinearRefs = {
     "next_nodes": {
-        0: [ShapePruninigProcessor.NextNode('PruningTestModelConcatWithLinear/NNCFConv2d[conv2]/conv2d_0', 1),
-            ShapePruninigProcessor.NextNode('PruningTestModelConcatWithLinear/NNCFConv2d[conv3]/conv2d_0', 1)],
-        1: [ShapePruninigProcessor.NextNode('PruningTestModelConcatWithLinear/NNCFLinear[linear]/linear_0', 36)],
-        2: [ShapePruninigProcessor.NextNode('PruningTestModelConcatWithLinear/NNCFLinear[linear]/linear_0', 36)],
+        0: [ShapePruninigProcessor.NextNodeInfo('PruningTestModelConcatWithLinear/NNCFConv2d[conv2]/conv2d_0', 1),
+            ShapePruninigProcessor.NextNodeInfo('PruningTestModelConcatWithLinear/NNCFConv2d[conv3]/conv2d_0', 1)],
+        1: [ShapePruninigProcessor.NextNodeInfo('PruningTestModelConcatWithLinear/NNCFLinear[linear]/linear_0', 36)],
+        2: [ShapePruninigProcessor.NextNodeInfo('PruningTestModelConcatWithLinear/NNCFLinear[linear]/linear_0', 36)],
     },
     "num_of_sparse_by_node": {
         'PruningTestModelConcatWithLinear/NNCFConv2d[conv1]/conv2d_0': 8,
@@ -669,8 +669,8 @@ PruningTestBatchedLinearRef = { "next_nodes": {},
 
 PruningTestModelDiffChInPruningClusterRef = {
     "next_nodes": {
-        0: [ShapePruninigProcessor.NextNode('PruningTestModelDiffChInPruningCluster/NNCFConv2d[conv1]/conv2d_0', 1),
-            ShapePruninigProcessor.NextNode('PruningTestModelDiffChInPruningCluster/NNCFLinear[linear1]/linear_0', 49)],
+        0: [ShapePruninigProcessor.NextNodeInfo('PruningTestModelDiffChInPruningCluster/NNCFConv2d[conv1]/conv2d_0', 1),
+            ShapePruninigProcessor.NextNodeInfo('PruningTestModelDiffChInPruningCluster/NNCFLinear[linear1]/linear_0', 49)],
     },
     "num_of_sparse_by_node": {'PruningTestModelDiffChInPruningCluster/NNCFConv2d[first_conv]/conv2d_0': 8},
 

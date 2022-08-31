@@ -11,13 +11,19 @@
  limitations under the License.
 """
 
-from typing import List, Dict, Set, Union
+from typing import List, Union
 
 from nncf.common.tensor import NNCFTensor
 from nncf.common.pruning.tensor_processor import NNCFPruningBaseTensorProcessor
 
 
 class SymbolicMaskProducer:
+    """
+    Container of information about a NNCFNode which is produsing symbolic mask.
+    NNCFNode produced a (symbolic or not) mask means this mask was set as an output
+    mask to this NNCFNode during (symbolic or not) mask propagation.
+    """
+
     def __init__(self, id_: int, sparse_multiplier: int = 1) -> None:
         self._id = id_
         self._sparse_multiplier = sparse_multiplier

@@ -19,6 +19,7 @@ from typing import Tuple
 import numpy as np
 
 from nncf.common.graph import NNCFGraph
+from nncf.common.graph import NNCFNode
 from nncf.common.graph import NNCFNodeName
 from nncf.common.graph.operator_metatypes import OperatorMetatype
 from nncf.common.pruning.clusterization import Cluster
@@ -36,17 +37,28 @@ from nncf.common.pruning.utils import get_input_masks
 
 
 class ShapePruninigProcessor:
+    """
+    Collection of shape pruning functions. Class instance keeps
+    only parammeters which are constant during
+    compression algorithms execution.
+    """
+
     def __init__(self,
                  prunable_types: List[str],
                  pruning_operations_metatype: List[str]):
+        """
+        Constructor.
+
+        :param prunable_types: Types of nodes that will be returned.
+        :param pruning_operations_metatype: Metatypes of nodes that will be returned.
+        """
         self._prunable_types = prunable_types
         self._pruning_operations_metatype = pruning_operations_metatype
-        self._pruning_groups_next_nodes = None
 
     def calculate_in_out_channels_by_masks(self,
                                            graph: NNCFGraph,
-                                           pruning_groups,
-                                           pruning_groups_next_nodes,
+                                           pruning_groups: List[Cluster[PrunedLayerInfoBase]],
+                                           pruning_groups_next_nodes: Dict[int, List['ShapePruninigProcessor.NextNode']],
                                            num_of_sparse_elements_by_node: Dict[NNCFNodeName, int],
                                            ) -> \
         Tuple[Dict[str, int], Dict[str, int]]:
@@ -68,11 +80,12 @@ class ShapePruninigProcessor:
 
         return self._calculate_in_out_channels(get_sparser, graph, pruning_groups, pruning_groups_next_nodes)
 
-    def calculate_in_out_channels_in_uniformly_pruned_model(self,
-                                                            graph: NNCFGraph,
-                                                            pruning_groups,
-                                                            pruning_groups_next_nodes,
-                                                            pruning_level: float) -> \
+    def calculate_in_out_channels_in_uniformly_pruned_model(
+        self,
+        graph: NNCFGraph,
+        pruning_groups: List[Cluster[PrunedLayerInfoBase]],
+        pruning_groups_next_nodes: Dict[int, List['ShapePruninigProcessor.NextNode']],
+        pruning_level: float) -> \
         Tuple[Dict[str, int], Dict[str, int]]:
         """
         Imitates filters pruning by removing `pruning_rate` percent of output filters in each pruning group
@@ -135,12 +148,23 @@ class ShapePruninigProcessor:
 
         return tmp_in_channels, tmp_out_channels
 
-    class NextNode:
-        def __init__(self, node_name, sparse_multiplier):
+    class NextNodeInfo:
+        """
+            Container for next node information.
+        """
+
+        def __init__(self, node_name: NNCFNodeName, sparse_multiplier: int):
+            """
+            Constructor.
+
+            :param node_name: Name of a next node.
+            :param sparse_multiplier: Sparse multiplier of a next node.
+            """
             self.node_name = node_name
             self.sparse_multiplier = sparse_multiplier
 
-    def _get_next_node_sparse_multiplier(self, graph, next_node, cluster):
+    def _get_next_node_sparse_multiplier(self, graph: NNCFGraph, next_node: NNCFNode,
+                                         cluster: Clusterization[PrunedLayerInfoBase]) -> int:
         cluster_nodes_idxs = {node.nncf_node_id for node in cluster.elements}
         for input_mask in get_input_masks(next_node, graph):
             if not input_mask:
@@ -152,7 +176,7 @@ class ShapePruninigProcessor:
         raise RuntimeError(f'Next node for cluster {cluster.elements} doesn\'t have closing mask')
 
     def get_next_nodes(self, graph: NNCFGraph, pruning_groups: Clusterization[PrunedLayerInfoBase]) ->\
-        Dict[int, List['NextNode']]:
+        Dict[int, List['NextNodeInfo']]:
         """
         Finds nodes of `prunable_types` types that receive the output of a pruned cluster as input
         and collects all info specified in NextNode.
@@ -185,7 +209,7 @@ class ShapePruninigProcessor:
             next_nodes[cluster.id] = []
             for next_node in next_nodes_cluster:
                 sparse_multiplier = self._get_next_node_sparse_multiplier(graph, next_node, cluster)
-                next_nodes[cluster.id].append(self.NextNode(next_node.node_name, sparse_multiplier))
+                next_nodes[cluster.id].append(self.NextNodeInfo(next_node.node_name, sparse_multiplier))
 
         # 3. Clean graph output shapes
         for node in graph.get_all_nodes():
@@ -195,9 +219,21 @@ class ShapePruninigProcessor:
 
 
 class WeightsFlopsCalculator:
+    """
+    Collection of weight and flops calculation functions.
+    Class instance keeps only parammeters which are constant during
+    compression algorithms execution.
+    """
+
     def __init__(self,
                  conv_op_metatypes: List[OperatorMetatype],
                  linear_op_metatypes: List[OperatorMetatype]):
+        """
+        Constructor.
+
+        :param conv_op_metatypes: List of metatypes defining convolution operations.
+        :param linear_op_metatypes: List of metatypes defining linear/fully connected operations.
+        """
         self._conv_op_metatypes = conv_op_metatypes
         self._linear_op_metatypes = linear_op_metatypes
 
@@ -212,6 +248,9 @@ class WeightsFlopsCalculator:
         """
         Counts the number weights and FLOPs in the model for convolution and fully connected layers.
 
+        :param graph: NNCFGraph.
+        :param output_shapes: Dictionary of output dimension shapes for convolutions and
+            fully connected layers. E.g {node_name: (height, width)}
         :param input_channels: Dictionary of input channels number in convolutions.
             If not specified, taken from the graph. {node_name: channels_num}
         :param output_channels: Dictionary of output channels number in convolutions.
@@ -240,6 +279,9 @@ class WeightsFlopsCalculator:
         """
         Counts the number weights and FLOPs per node in the model for convolution and fully connected layers.
 
+        :param graph: NNCFGraph.
+        :param output_shapes: Dictionary of output dimension shapes for convolutions and
+            fully connected layers. E.g {node_name: (height, width)}
         :param input_channels: Dictionary of input channels number in convolutions.
             If not specified, taken from the graph. {node_name: channels_num}
         :param output_channels: Dictionary of output channels number in convolutions.
@@ -302,6 +344,7 @@ class WeightsFlopsCalculator:
         """
         Counts filters of `op_metatypes` layers taking into account new output channels number.
 
+        :param graph: NNCFGraph.
         :param output_channels:  A dictionary of output channels number in pruned model.
         :return: Current number of filters according to given graph and output channels.
         """
