@@ -14,8 +14,8 @@
 import pytest
 import tensorflow as tf
 
-from nncf.common.pruning.shape_pruning import ShapePruninigProcessor
-from nncf.common.pruning.shape_pruning import WeightsFlopsCalculator
+from nncf.common.pruning.shape_pruning_processor import ShapePruninigProcessor
+from nncf.common.pruning.weights_flops_calculator import WeightsFlopsCalculator
 from nncf.tensorflow.graph.metatypes.common import GENERAL_CONV_LAYER_METATYPES
 from nncf.tensorflow.graph.metatypes.common import LINEAR_LAYER_METATYPES
 from nncf.tensorflow.pruning.operations import TF_PRUNING_OPERATOR_METATYPES

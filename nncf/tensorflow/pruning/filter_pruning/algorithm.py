@@ -27,8 +27,8 @@ from nncf.common.pruning.schedulers import PRUNING_SCHEDULERS
 from nncf.common.pruning.schedulers import PruningScheduler
 from nncf.common.pruning.statistics import FilterPruningStatistics
 from nncf.common.pruning.statistics import PrunedModelStatistics
-from nncf.common.pruning.shape_pruning import WeightsFlopsCalculator
-from nncf.common.pruning.shape_pruning import ShapePruninigProcessor
+from nncf.common.pruning.weights_flops_calculator import WeightsFlopsCalculator
+from nncf.common.pruning.shape_pruning_processor import ShapePruninigProcessor
 from nncf.common.pruning.utils import get_prunable_layers_in_out_channels
 from nncf.common.pruning.utils import get_rounded_pruned_element_number
 from nncf.common.statistics import NNCFStatistics

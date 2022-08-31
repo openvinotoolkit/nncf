@@ -42,7 +42,7 @@ from nncf.common.pruning.structs import PrunedLayerInfoBase
 from nncf.common.pruning.utils import get_input_masks
 from nncf.common.pruning.utils import get_prunable_layers_in_out_channels
 from nncf.common.pruning.utils import is_prunable_depthwise_conv
-from nncf.common.pruning.shape_pruning import ShapePruninigProcessor
+from nncf.common.pruning.shape_pruning_processor import ShapePruninigProcessor
 from nncf.common.tensor import NNCFTensor
 from nncf.common.utils.logger import logger as nncf_logger
 from nncf.experimental.torch.nas.bootstrapNAS.elasticity.base_handler import BaseElasticityParams

@@ -19,7 +19,7 @@ from typing import Optional
 from typing import OrderedDict as OrderedDictType
 from typing import Tuple
 
-from nncf.common.pruning.shape_pruning import WeightsFlopsCalculator
+from nncf.common.pruning.weights_flops_calculator import WeightsFlopsCalculator
 from nncf.common.utils.logger import logger as nncf_logger
 from nncf.experimental.torch.nas.bootstrapNAS.elasticity.base_handler import ElasticityConfig
 from nncf.experimental.torch.nas.bootstrapNAS.elasticity.base_handler import ElasticityHandler

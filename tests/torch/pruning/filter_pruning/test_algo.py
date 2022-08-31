@@ -24,8 +24,8 @@ from nncf.torch.pruning.filter_pruning.algo import FilterPruningController
 from nncf.torch.pruning.filter_pruning.functions import l2_filter_norm
 from nncf.torch.pruning.filter_pruning.layers import FilterPruningMask
 from nncf.torch.pruning.filter_pruning.layers import apply_filter_binary_mask
-from nncf.common.pruning.shape_pruning import ShapePruninigProcessor
-from nncf.common.pruning.shape_pruning import WeightsFlopsCalculator
+from nncf.common.pruning.shape_pruning_processor import ShapePruninigProcessor
+from nncf.common.pruning.weights_flops_calculator import WeightsFlopsCalculator
 from nncf.common.pruning.schedulers import ExponentialPruningScheduler
 from nncf.torch.pruning.operations import PT_PRUNING_OPERATOR_METATYPES
 from nncf.torch.pruning.utils import _calculate_output_shape
