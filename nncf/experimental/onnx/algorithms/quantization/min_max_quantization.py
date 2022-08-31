@@ -49,7 +49,7 @@ from nncf.experimental.onnx.hardware.fused_patterns import ONNX_HW_FUSED_PATTERN
 from nncf.experimental.onnx.algorithms.quantization.utils import calculate_activation_quantizer_parameters
 from nncf.experimental.onnx.algorithms.quantization.utils import calculate_weight_quantizer_parameters
 from nncf.experimental.onnx.hardware.config import ONNXHWConfig
-from nncf.experimental.post_training.backend import Backend
+from nncf.common.utils.backend import BackendType
 
 QUANTIZATION_LAYER_METATYPES = GENERAL_WEIGHT_LAYER_METATYPES
 
@@ -224,7 +224,7 @@ class ONNXMinMaxQuantization(MinMaxQuantization):
                         quantization_target_point))
         return output
 
-    def create_subalgorithms(self, backend: Backend) -> None:
+    def create_subalgorithms(self, backend: BackendType) -> None:
         return
 
     def _get_weight_quantizer_config(self, model: onnx.ModelProto) -> QuantizerConfig:

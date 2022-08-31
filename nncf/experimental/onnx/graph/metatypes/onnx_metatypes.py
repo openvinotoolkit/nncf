@@ -63,6 +63,24 @@ class ONNXLeakyReluMetatype(ONNXOpMetatype):
 
 
 @ONNX_OPERATION_METATYPES.register()
+class ONNXThresholdedReluMetatype(ONNXOpMetatype):
+    name = 'ThresholdedReluOp'
+    op_names = ['ThresholdedRelu']
+
+
+@ONNX_OPERATION_METATYPES.register()
+class ONNXEluMetatype(ONNXOpMetatype):
+    name = 'EluOp'
+    op_names = ['Elu']
+
+
+@ONNX_OPERATION_METATYPES.register()
+class ONNXPReluMetatype(ONNXOpMetatype):
+    name = 'PReluOp'
+    op_names = ['PRelu']
+
+
+@ONNX_OPERATION_METATYPES.register()
 class ONNXSigmoidMetatype(ONNXOpMetatype):
     name = 'SigmoidOp'
     op_names = ['Sigmoid']
@@ -72,6 +90,12 @@ class ONNXSigmoidMetatype(ONNXOpMetatype):
 class ONNXHardSigmoidMetatype(ONNXOpMetatype):
     name = 'HardSigmoidOp'
     op_names = ['HardSigmoid']
+
+
+@ONNX_OPERATION_METATYPES.register()
+class ONNXHardSwishMetatype(ONNXOpMetatype):
+    name = 'HardSwishOp'
+    op_names = ['HardSwish']
 
 
 @ONNX_OPERATION_METATYPES.register()

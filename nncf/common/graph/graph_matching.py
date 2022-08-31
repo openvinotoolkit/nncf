@@ -16,13 +16,7 @@ from typing import Set
 import networkx as nx
 import networkx.algorithms.isomorphism as ism
 from nncf.common.graph.patterns import GraphPattern
-
-
-def get_edge_boundaries(match: List[str], graph: nx.DiGraph):
-    out_edge_boundary = list(nx.edge_boundary(graph, match, data=True))
-    complement = list(filter(lambda x: x not in match, graph.nodes.keys()))
-    in_edge_boundary = list(nx.edge_boundary(graph, complement, data=True))
-    return sorted(in_edge_boundary), sorted(out_edge_boundary)  # must be sorted for determinism
+from nncf.common.graph.graph import NNCFGraph
 
 
 def is_subgraph_has_inner_outgoing_edges(graph: nx.DiGraph, full_subgraph_with_non_pattern_nodes: List[str],
@@ -81,15 +75,21 @@ def find_subgraphs_matching_pattern(graph: nx.DiGraph, pattern_graph: GraphPatte
 
     def are_nodes_matching(node_1, node_2):
         for attr in node_2:
-            if attr == 'label':
+            if attr == GraphPattern.LABEL_ATTR:
                 continue
-            if attr == 'type':
+            if attr == GraphPattern.METATYPE_ATTR:
                 # GraphPattern.ANY_PATTERN_NODE_TYPE and GraphPattern.NON_PATTERN_NODE_TYPE
                 # are matched to any node type.
 
-                if GraphPattern.ANY_PATTERN_NODE_TYPE in node_2['type'] or \
-                        GraphPattern.NON_PATTERN_NODE_TYPE in node_2['type']:
+                if GraphPattern.ANY_PATTERN_NODE_TYPE in node_2[attr] or \
+                        GraphPattern.NON_PATTERN_NODE_TYPE in node_2[attr]:
                     continue
+                # Torch and TF pattern mapping based on 'type' section,
+                # While ONNX mapping based on metatypes -
+                # to support all of them, we need to check the existane of the attributes
+                if NNCFGraph.METATYPE_ATTR in node_1:
+                    if node_1[NNCFGraph.METATYPE_ATTR] in node_2[attr]:
+                        continue
             if node_1[attr] not in node_2[attr]:
                 return False
         return True
@@ -113,7 +113,7 @@ def find_subgraphs_matching_pattern(graph: nx.DiGraph, pattern_graph: GraphPatte
         """
         pattern_len = len(pattern)
         for node in pattern.nodes:
-            if GraphPattern.NON_PATTERN_NODE_TYPE in pattern_graph.graph.nodes.get(node)['type']:
+            if GraphPattern.NON_PATTERN_NODE_TYPE in pattern_graph.graph.nodes.get(node)[GraphPattern.METATYPE_ATTR]:
                 pattern_len -= 1
         return pattern_len
 
@@ -138,7 +138,7 @@ def find_subgraphs_matching_pattern(graph: nx.DiGraph, pattern_graph: GraphPatte
 
             for node, pattern_node_id in matcher.mapping.items():
                 pattern_node = pattern_graph.graph.nodes[pattern_node_id]
-                pattern_node_types = pattern_node.get('type')
+                pattern_node_types = pattern_node.get(GraphPattern.METATYPE_ATTR)
                 if GraphPattern.NON_PATTERN_NODE_TYPE in pattern_node_types:
                     outside_pattern_nodes.append(node)
             for node in outside_pattern_nodes:
