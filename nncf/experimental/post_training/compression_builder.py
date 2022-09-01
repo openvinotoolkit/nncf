@@ -103,7 +103,7 @@ class CompressionBuilder:
         backend = infer_backend_from_model(model)
         modified_model = self._get_prepared_model_for_compression(model, backend)
 
-        model_transformer = self._create_model_transformer(model, backend)
+        self._create_model_transformer(model, backend)
 
         if engine is None:
             engine = self._create_engine(backend)
