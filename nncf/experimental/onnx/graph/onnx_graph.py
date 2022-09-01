@@ -117,6 +117,30 @@ class ONNXGraph:
                         'output': list(node.output)}
         raise RuntimeError('There is no node with the name {}'.format(node_name))
 
+    def get_input_port_id_for_nodes_after_input(self, input_name, to_node):
+        for input_port_id, port in enumerate(to_node.input):
+            if port == input_name:
+                return input_port_id
+        raise RuntimeError()
+
+    def get_output_port_id_for_nodes_after_input(self, output_name, from_node):
+        for output_port_id, port in enumerate(from_node.output):
+            if port == output_name:
+                return output_port_id
+        raise RuntimeError()
+
+    def get_input_port_id_between_nodes(self, from_node, to_node):
+        for input_port_id, port in enumerate(to_node.input):
+            if port in from_node.output:
+                return input_port_id
+        raise RuntimeError()
+
+    def get_output_port_id_between_nodes(self, from_node, to_node):
+        for output_port_id, port in enumerate(from_node.output):
+            if port in to_node.input:
+                return output_port_id
+        raise RuntimeError()
+
     def get_nodes_by_type(self, node_type: str) -> List[NodeProto]:
         """
         Returns all nodes in the model that have type equal to 'node_type'.

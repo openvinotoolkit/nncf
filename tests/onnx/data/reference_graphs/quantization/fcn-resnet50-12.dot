@@ -1,10 +1,10 @@
 strict digraph  {
-"0 Shape_0" [id=0, type=Shape];
-"1 Gather_2" [id=1, type=Gather];
-"2 Shape_3" [id=2, type=Shape];
-"3 Gather_5" [id=3, type=Gather];
-"4 QuantizeLinear_549_1" [id=4, type=QuantizeLinear];
-"5 DequantizeLinear_549_1" [id=5, type=DequantizeLinear];
+"0 QuantizeLinear_input_1" [id=0, type=QuantizeLinear];
+"1 DequantizeLinear_input_1" [id=1, type=DequantizeLinear];
+"2 Shape_0" [id=2, type=Shape];
+"3 Gather_2" [id=3, type=Gather];
+"4 Shape_3" [id=4, type=Shape];
+"5 Gather_5" [id=5, type=Gather];
 "6 QuantizeLinear_548_1" [id=6, type=QuantizeLinear];
 "7 DequantizeLinear_548_1" [id=7, type=DequantizeLinear];
 "8 Conv_6" [id=8, type=Conv];
@@ -409,14 +409,14 @@ strict digraph  {
 "407 nncf_model_input_0" [id=407, type=nncf_model_input];
 "408 nncf_model_output_0" [id=408, type=nncf_model_output];
 "409 nncf_model_output_1" [id=409, type=nncf_model_output];
-"0 Shape_0" -> "1 Gather_2"  [label="[4]", style=dashed];
-"1 Gather_2" -> "378 Unsqueeze_128"  [label="[]", style=dashed];
-"1 Gather_2" -> "397 Unsqueeze_144"  [label="[]", style=dashed];
-"2 Shape_3" -> "3 Gather_5"  [label="[4]", style=dashed];
-"3 Gather_5" -> "379 Unsqueeze_129"  [label="[]", style=dashed];
-"3 Gather_5" -> "398 Unsqueeze_145"  [label="[]", style=dashed];
-"4 QuantizeLinear_549_1" -> "5 DequantizeLinear_549_1"  [label="[64]", style=dashed];
-"5 DequantizeLinear_549_1" -> "8 Conv_6"  [label="[64]", style=solid];
+"0 QuantizeLinear_input_1" -> "1 DequantizeLinear_input_1"  [label="[1, 3, 1, 1]", style=dashed];
+"1 DequantizeLinear_input_1" -> "8 Conv_6"  [label="[1, 3, 1, 1]", style=solid];
+"2 Shape_0" -> "3 Gather_2"  [label="[4]", style=dashed];
+"3 Gather_2" -> "378 Unsqueeze_128"  [label="[]", style=dashed];
+"3 Gather_2" -> "397 Unsqueeze_144"  [label="[]", style=dashed];
+"4 Shape_3" -> "5 Gather_5"  [label="[4]", style=dashed];
+"5 Gather_5" -> "379 Unsqueeze_129"  [label="[]", style=dashed];
+"5 Gather_5" -> "398 Unsqueeze_145"  [label="[]", style=dashed];
 "6 QuantizeLinear_548_1" -> "7 DequantizeLinear_548_1"  [label="[64, 3, 7, 7]", style=dashed];
 "7 DequantizeLinear_548_1" -> "8 Conv_6"  [label="[64, 3, 7, 7]", style=solid];
 "8 Conv_6" -> "9 Relu_7"  [label="[1, 64, 1, 1]", style=solid];
@@ -837,7 +837,7 @@ strict digraph  {
 "404 Cast_153" -> "405 Concat_154"  [label="[2]", style=dashed];
 "405 Concat_154" -> "406 Resize_156"  [label="[4]", style=dashed];
 "406 Resize_156" -> "409 nncf_model_output_1"  [label="[1, 21, 1, 1]", style=solid];
-"407 nncf_model_input_0" -> "0 Shape_0"  [label="[1, 3, 1, 1]", style=solid];
-"407 nncf_model_input_0" -> "2 Shape_3"  [label="[1, 3, 1, 1]", style=solid];
-"407 nncf_model_input_0" -> "8 Conv_6"  [label="[1, 3, 1, 1]", style=solid];
+"407 nncf_model_input_0" -> "0 QuantizeLinear_input_1"  [label="[1, 3, 1, 1]", style=solid];
+"407 nncf_model_input_0" -> "2 Shape_0"  [label="[1, 3, 1, 1]", style=solid];
+"407 nncf_model_input_0" -> "4 Shape_3"  [label="[1, 3, 1, 1]", style=solid];
 }

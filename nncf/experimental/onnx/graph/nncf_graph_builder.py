@@ -46,64 +46,80 @@ class GraphConverter:
 
         def add_nncf_input_node(onnx_graph):
             for i, _input in enumerate(onnx_graph.get_model_inputs()):
-                try:
-                    input_shape = onnx_graph.get_tensor_shape(_input)
-                except RuntimeError as err:
-                    nncf_logger.error(err)
-                    nncf_logger.error('The default tensor shape will be set.')
-                    input_shape = GraphConverter.DEFAULT_TENSOR_SHAPE
                 input_node = nncf_graph.add_nncf_node(node_name=MODEL_INPUT_OP_NAME + '_' + str(i),
                                                       node_type=NNCFGraphNodeType.INPUT_NODE,
                                                       node_metatype=InputNoopMetatype,
                                                       layer_attributes=None)
-                input_name = _input.name
-                to_nodes = onnx_graph.get_nodes_by_input(input_name)
+                to_nodes = onnx_graph.get_nodes_by_input(_input.name)
+                output_port_id = 0
                 for node in to_nodes:
-                    in_node_id = input_node.node_id
+                    node_type = node.op_type
+                    metatype = ONNX_OPERATION_METATYPES.get_operator_metatype_by_op_name(node_type)
+                    if metatype == ONNXConstantMetatype:  # We don't need to quantize Constants
+                        continue
+
+                    input_port_id = onnx_graph.get_input_port_id_for_nodes_after_input(_input.name, node)
+                    input_node_node_id = input_node.node_id
                     to_node_id = nncf_graph.get_node_by_name(node.name).node_id
-                    input_counter[in_node_id] += 1
-                    output_counter[to_node_id] += 1
-                    onnx_dtype = onnx_graph.get_edge_dtype_name(input_name)
+                    onnx_dtype = onnx_graph.get_edge_dtype_name(_input.name)
                     nncf_dtype = GraphConverter.convert_onnx_dtype_to_nncf_dtype(onnx_dtype)
+
+                    try:
+                        input_shape = onnx_graph.get_tensor_shape(_input)
+                    except RuntimeError as err:
+                        nncf_logger.error(err)
+                        nncf_logger.error('The default tensor shape will be set.')
+                        input_shape = GraphConverter.DEFAULT_TENSOR_SHAPE
+
                     nncf_graph.add_edge_between_nncf_nodes(
-                        from_node_id=input_node.node_id,
+                        from_node_id=input_node_node_id,
                         to_node_id=to_node_id,
                         tensor_shape=input_shape,
-                        input_port_id=input_counter[in_node_id],
-                        output_port_id=output_counter[to_node_id],
+                        input_port_id=input_port_id,
+                        output_port_id=output_port_id,
                         dtype=nncf_dtype
                     )
 
+                    output_port_id += 1
+
         def add_nncf_output_nodes(onnx_graph):
             for i, _output in enumerate(onnx_graph.get_model_outputs()):
-                try:
-                    output_shape = onnx_graph.get_tensor_shape(_output)
-                except RuntimeError as err:
-                    nncf_logger.error(err)
-                    nncf_logger.error('The default tensor shape will be set.')
-                    output_shape = GraphConverter.DEFAULT_TENSOR_SHAPE
                 output_node = nncf_graph.add_nncf_node(node_name=MODEL_OUTPUT_OP_NAME + '_' + str(i),
                                                        node_type=NNCFGraphNodeType.OUTPUT_NODE,
                                                        node_metatype=OutputNoopMetatype,
                                                        layer_attributes=None)
-
                 output_name = _output.name
-                to_nodes = onnx_graph.get_nodes_by_output(output_name)
-                for node in to_nodes:
-                    out_node_id = output_node.node_id
-                    to_node_id = nncf_graph.get_node_by_name(node.name).node_id
-                    input_counter[out_node_id] += 1
-                    output_counter[to_node_id] += 1
-                    onnx_dtype = onnx_graph.get_edge_dtype_name(output_name)
+                from_nodes = onnx_graph.get_nodes_by_output(output_name)
+                input_port_id = 0
+                for node in from_nodes:
+                    node_type = node.op_type
+                    metatype = ONNX_OPERATION_METATYPES.get_operator_metatype_by_op_name(node_type)
+                    if metatype == ONNXConstantMetatype:  # We don't need to quantize Constants
+                        continue
+
+                    output_port_id = onnx_graph.get_output_port_id_for_nodes_after_input(output_name, node)
+
+                    from_node_id = nncf_graph.get_node_by_name(node.name).node_id
+                    output_node_node_id = output_node.node_id
+                    onnx_dtype = onnx_graph.get_edge_dtype_name(output)
                     nncf_dtype = GraphConverter.convert_onnx_dtype_to_nncf_dtype(onnx_dtype)
+
+                    try:
+                        output_shape = onnx_graph.get_tensor_shape(_output)
+                    except RuntimeError as err:
+                        nncf_logger.error(err)
+                        nncf_logger.error('The default tensor shape will be set.')
+                        output_shape = GraphConverter.DEFAULT_TENSOR_SHAPE
+
                     nncf_graph.add_edge_between_nncf_nodes(
-                        from_node_id=to_node_id,
-                        to_node_id=output_node.node_id,
+                        from_node_id=from_node_id,
+                        to_node_id=output_node_node_id,
                         tensor_shape=output_shape,
-                        input_port_id=input_counter[out_node_id],
-                        output_port_id=output_counter[to_node_id],
+                        input_port_id=input_port_id,
+                        output_port_id=output_port_id,
                         dtype=nncf_dtype
                     )
+                    input_port_id += 1
 
         nncf_graph = NNCFGraph()
         onnx_graph = ONNXGraph(onnx_model)
@@ -122,15 +138,13 @@ class GraphConverter:
                                      node_type=node_type,
                                      node_metatype=metatype,
                                      layer_attributes=None)
-        input_counter = defaultdict(int)
-        output_counter = defaultdict(int)
-        for output_node in nncf_graph.get_all_nodes():
-            output_node_id = output_node.node_id
-            outputs = onnx_graph.get_node_edges(output_node.node_name)['output']
+        for output_node in onnx_graph.get_all_nodes():
+            node_type = output_node.op_type
+            metatype = ONNX_OPERATION_METATYPES.get_operator_metatype_by_op_name(node_type)
+            if metatype == ONNXConstantMetatype:  # We don't need to quantize Constants
+                continue
+            outputs = onnx_graph.get_node_edges(output_node.name)['output']
             for output in outputs:
-                nodes = onnx_graph.get_nodes_by_input(output)
-                if len(nodes) == 0:  # if this node is output
-                    continue
                 try:
                     shape = onnx_graph.get_edge_shape(output)
                 # This exception raised because ONNX format allows to not have shape field.
@@ -138,21 +152,34 @@ class GraphConverter:
                 # In fact, the quantization algorithm doesn't utilize tensor shape information.
                 # So, if there is no shape, the DEFAULT_TENSOR_SHAPE is used.
                 except RuntimeError as err:
-                    nncf_logger.error(err)
-                    nncf_logger.error('The default tensor shape will be set.')
+                    nncf_logger.debug(err)
+                    nncf_logger.debug('The default tensor shape will be set.')
                     shape = GraphConverter.DEFAULT_TENSOR_SHAPE
-                onnx_dtype = onnx_graph.get_edge_dtype_name(output)
-                nncf_dtype = GraphConverter.convert_onnx_dtype_to_nncf_dtype(onnx_dtype)
-                for in_node in nodes:
-                    in_node_id = nncf_graph.get_node_by_name(in_node.name).node_id
-                    input_counter[in_node_id] += 1
-                    output_counter[output_node_id] += 1
+
+                input_nodes = onnx_graph.get_nodes_by_input(output)
+                if not input_nodes:
+                    # if this node is output
+                    continue
+                for input_node in input_nodes:
+                    node_type = input_node.op_type
+                    metatype = ONNX_OPERATION_METATYPES.get_operator_metatype_by_op_name(node_type)
+                    if metatype == ONNXConstantMetatype:  # We don't need to quantize Constants
+                        continue
+                    input_port_id = onnx_graph.get_input_port_id_between_nodes(output_node, input_node)
+                    output_port_id = onnx_graph.get_output_port_id_between_nodes(output_node, input_node)
+
+                    output_node_id = nncf_graph.get_node_by_name(output_node.name).node_id
+                    in_node_id = nncf_graph.get_node_by_name(input_node.name).node_id
+
+                    onnx_dtype = onnx_graph.get_edge_dtype_name(output)
+                    nncf_dtype = GraphConverter.convert_onnx_dtype_to_nncf_dtype(onnx_dtype)
+
                     nncf_graph.add_edge_between_nncf_nodes(
                         from_node_id=output_node_id,
                         to_node_id=in_node_id,
                         tensor_shape=shape,
-                        input_port_id=input_counter[in_node_id],
-                        output_port_id=output_counter[output_node_id],
+                        input_port_id=input_port_id,
+                        output_port_id=output_port_id,
                         dtype=Dtype(nncf_dtype)
                     )
         add_nncf_input_node(onnx_graph)
