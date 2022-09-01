@@ -12,7 +12,6 @@
 """
 
 from abc import ABC
-from abc import abstractmethod
 
 from typing import Dict
 from typing import Union

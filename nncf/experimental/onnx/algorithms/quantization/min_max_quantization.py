@@ -44,7 +44,6 @@ from nncf.experimental.onnx.graph.transformations.commands import ONNXQuantizerI
 from nncf.experimental.onnx.engine import ONNXEngine
 from nncf.experimental.onnx.statistics.collectors import ONNXMinMaxStatisticCollector
 from nncf.experimental.onnx.statistics.collectors import ONNXMeanMinMaxStatisticCollector
-from nncf.experimental.onnx.graph.model_transformer import ONNXModelTransformer
 from nncf.experimental.onnx.graph.onnx_graph import ONNXGraph
 from nncf.experimental.onnx.hardware.fused_patterns import ONNX_HW_FUSED_PATTERNS
 from nncf.experimental.onnx.algorithms.quantization.utils import calculate_activation_quantizer_parameters
