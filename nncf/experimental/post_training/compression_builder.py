@@ -71,7 +71,6 @@ class CompressionBuilder:
                 ONNXModelTransformer  # pylint: disable=cyclic-import
             model_transformer = MODEL_TRANSFORMERS.get()
             assert isinstance(model_transformer, ONNXModelTransformer)
-            model_transformer.set_model(model)
             return model_transformer
         return None
 
@@ -104,7 +103,7 @@ class CompressionBuilder:
         backend = infer_backend_from_model(model)
         modified_model = self._get_prepared_model_for_compression(model, backend)
 
-        self._create_model_transformer(model, backend)
+        model_transformer = self._create_model_transformer(model, backend)
 
         if engine is None:
             engine = self._create_engine(backend)
@@ -116,7 +115,7 @@ class CompressionBuilder:
         for algorithm in self.algorithms:
             statistic_points = algorithm.get_statistic_points(modified_model)
             statistics_aggregator.register_stastistic_points(statistic_points)
-        statistics_aggregator.collect_statistics()
+        statistics_aggregator.collect_statistics(modified_model)
 
         for algorithm in self.algorithms:
             modified_model = algorithm.apply(modified_model, engine, statistics_aggregator.statistic_points)
