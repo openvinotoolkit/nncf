@@ -32,6 +32,7 @@ from nncf.experimental.post_training.algorithms.quantization import PostTraining
 from nncf.experimental.post_training.algorithms.quantization import PostTrainingQuantizationParameters
 from nncf.experimental.onnx.graph.nncf_graph_builder import GraphConverter
 from nncf.experimental.onnx.tensor import ONNXNNCFTensor
+from nncf.experimental.onnx.model_normalizer import ONNXModelNormalizer
 
 REFERENCE_GRAPHS_TEST_ROOT = 'data/reference_graphs/quantization'
 
@@ -97,6 +98,7 @@ def ptq_quantize_model(
 
 def compare_nncf_graph(quantized_model: onnx.ModelProto, path_ref_graph: str,
                        generate_ref_graphs: bool = False) -> None:
+    quantized_model = ONNXModelNormalizer.add_input_from_initializer(quantized_model)
     nncf_graph = GraphConverter.create_nncf_graph(quantized_model)
     nx_graph = nncf_graph.get_graph_for_structure_analysis(extended=True)
 
@@ -112,9 +114,11 @@ def compare_nncf_graph(quantized_model: onnx.ModelProto, path_ref_graph: str,
 
 
 def compare_nncf_graph_onnx_models(quantized_model: onnx.ModelProto, _quantized_model: onnx.ModelProto) -> None:
+    quantized_model = ONNXModelNormalizer.add_input_from_initializer(quantized_model)
     nncf_graph = GraphConverter.create_nncf_graph(quantized_model)
     nx_graph = nncf_graph.get_graph_for_structure_analysis(extended=True)
 
+    _quantized_model = ONNXModelNormalizer.add_input_from_initializer(_quantized_model)
     _nncf_graph = GraphConverter.create_nncf_graph(_quantized_model)
     _nx_graph = _nncf_graph.get_graph_for_structure_analysis(extended=True)
 

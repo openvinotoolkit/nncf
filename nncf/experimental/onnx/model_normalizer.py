@@ -20,7 +20,7 @@ from nncf.common.utils.logger import logger as nncf_logger
 
 class ONNXModelNormalizer:
     @staticmethod
-    def add_input_from_initializer(model: onnx.ModelProto) -> None:
+    def add_input_from_initializer(model: onnx.ModelProto) -> onnx.ModelProto:
         """
         Currently onnx.shape_inference doesn't use the shape of initializers, so add
         that info explicitly as ValueInfoProtos.
@@ -80,7 +80,19 @@ class ONNXModelNormalizer:
                         for g in attr.graphs:
                             add_const_value_infos_to_graph(g)
 
-        return add_const_value_infos_to_graph(model.graph)
+        modified_model = deepcopy(model)
+        add_const_value_infos_to_graph(modified_model.graph)
+        onnx.checker.check_model(modified_model)
+        return modified_model
+
+    @staticmethod
+    def infer_models_shape(model: onnx.ModelProto) -> onnx.ModelProto:
+        # ONNX shape inference
+        # https://github.com/onnx/onnx/blob/main/docs/proposals/SymbolicShapeInfProposal.md
+        onnx.checker.check_model(model)
+        infered_shape_model = onnx.shape_inference.infer_shapes(model)
+        onnx.checker.check_model(infered_shape_model)
+        return infered_shape_model
 
     @staticmethod
     def convert_opset_version(model: onnx.ModelProto) -> onnx.ModelProto:
@@ -94,14 +106,9 @@ class ONNXModelNormalizer:
 
         try:
             modified_model = deepcopy(model)
+            # TODO(kshpv): is it legal to change ir_vesrsion?
             modified_model.ir_version = 7  # Due to the 'Shufflenet-v1
             modified_model = convert_version(modified_model, 13)
-
-            # ONNX shape inference
-            # https://github.com/onnx/onnx/blob/main/docs/proposals/SymbolicShapeInfProposal.md
-            modified_model = onnx.shape_inference.infer_shapes(modified_model)
-            ONNXModelNormalizer.add_input_from_initializer(modified_model)
-
             onnx.checker.check_model(modified_model)
 
             nncf_logger.info(
@@ -132,3 +139,13 @@ class ONNXModelNormalizer:
                 "NNCF expects every node to have a unique name.")
 
         return model
+
+    @staticmethod
+    def normalize_model(model: onnx.ModelProto, convert_opset_version: bool = True) -> onnx.ModelProto:
+        modified_model = model
+        if convert_opset_version:
+            modified_model = ONNXModelNormalizer.convert_opset_version(model)
+        modified_model = ONNXModelNormalizer.infer_models_shape(modified_model)
+        modified_model = ONNXModelNormalizer.add_input_from_initializer(modified_model)
+        modified_model = ONNXModelNormalizer.replace_empty_node_name(modified_model)
+        return modified_model
