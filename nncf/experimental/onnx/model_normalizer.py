@@ -106,8 +106,8 @@ class ONNXModelNormalizer:
         onnx.checker.check_model(model)
         model_opset = model.opset_import[0].version
         model_ir_version = model.ir_version
-        nncf_logger.debug('Original opset = {}'.format(model_opset))
-        nncf_logger.debug('Original ir_version = {}'.format(model_ir_version))
+        nncf_logger.debug('Original Opset Version = {}'.format(model_opset))
+        nncf_logger.debug('Original IR Version = {}'.format(model_ir_version))
 
         try:
             modified_model = deepcopy(model)
@@ -115,18 +115,18 @@ class ONNXModelNormalizer:
                 # TODO(kshpv): is it legal to change ir_vesrsion?
                 modified_model.ir_version = ONNXModelNormalizer.DESIRED_IR_VERSION  # Due to the 'Shufflenet-v1
                 onnx.checker.check_model(modified_model)
-                nncf_logger.debug('Succesfully changed ir_version to = {}'.format(model.ir_version))
+                nncf_logger.debug('Successfully changed IR Version to = {}'.format(model.ir_version))
             if model_opset >= ONNXModelNormalizer.DESIRED_OPSET_VERSION:
                 return modified_model
 
             modified_model = convert_version(modified_model, ONNXModelNormalizer.DESIRED_OPSET_VERSION)
             onnx.checker.check_model(modified_model)
             nncf_logger.debug(
-                'Successfully converted the model to the opset = {}'.format(modified_model.opset_import[0].version))
+                'The model was successfully converted  to the Opset Version = {}'.format(modified_model.opset_import[0].version))
         except (RuntimeError, ConvertError):
             modified_model = model
             nncf_logger.error(
-                "Couldn't convert target model to opset13. Use original model")
+                "Couldn't convert target model to opset13. Using the original model")
 
         return modified_model
 
