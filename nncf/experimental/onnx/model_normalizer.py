@@ -19,6 +19,9 @@ from nncf.common.utils.logger import logger as nncf_logger
 
 
 class ONNXModelNormalizer:
+    DESIRED_OPSET_VERSION = 13
+    DESIRED_IR_VERSION = 7
+
     @staticmethod
     def add_input_from_initializer(model: onnx.ModelProto) -> onnx.ModelProto:
         """
@@ -90,9 +93,9 @@ class ONNXModelNormalizer:
         # ONNX shape inference
         # https://github.com/onnx/onnx/blob/main/docs/proposals/SymbolicShapeInfProposal.md
         onnx.checker.check_model(model)
-        infered_shape_model = onnx.shape_inference.infer_shapes(model)
-        onnx.checker.check_model(infered_shape_model)
-        return infered_shape_model
+        inferred_shape_model = onnx.shape_inference.infer_shapes(model)
+        onnx.checker.check_model(inferred_shape_model)
+        return inferred_shape_model
 
     @staticmethod
     def convert_opset_version(model: onnx.ModelProto) -> onnx.ModelProto:
@@ -101,17 +104,24 @@ class ONNXModelNormalizer:
         """
         # pylint: disable=no-member
         onnx.checker.check_model(model)
-        nncf_logger.info('Original opset = {}'.format(model.opset_import[0].version))
-        nncf_logger.info('Original ir_version = {}'.format(model.ir_version))
+        model_opset = model.opset_import[0].version
+        model_ir_version = model.ir_version
+        nncf_logger.debug('Original opset = {}'.format(model_opset))
+        nncf_logger.debug('Original ir_version = {}'.format(model_ir_version))
 
         try:
             modified_model = deepcopy(model)
-            # TODO(kshpv): is it legal to change ir_vesrsion?
-            modified_model.ir_version = 7  # Due to the 'Shufflenet-v1
-            modified_model = convert_version(modified_model, 13)
-            onnx.checker.check_model(modified_model)
+            if model_ir_version < ONNXModelNormalizer.DESIRED_IR_VERSION:
+                # TODO(kshpv): is it legal to change ir_vesrsion?
+                modified_model.ir_version = ONNXModelNormalizer.DESIRED_IR_VERSION  # Due to the 'Shufflenet-v1
+                onnx.checker.check_model(modified_model)
+                nncf_logger.debug('Succesfully changed ir_version to = {}'.format(model.ir_version))
+            if model_opset >= ONNXModelNormalizer.DESIRED_OPSET_VERSION:
+                return modified_model
 
-            nncf_logger.info(
+            modified_model = convert_version(modified_model, ONNXModelNormalizer.DESIRED_OPSET_VERSION)
+            onnx.checker.check_model(modified_model)
+            nncf_logger.debug(
                 'Successfully converted the model to the opset = {}'.format(modified_model.opset_import[0].version))
         except (RuntimeError, ConvertError):
             modified_model = model
