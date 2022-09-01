@@ -17,8 +17,6 @@ import pytest
 
 import os
 
-import torch
-from torchvision import models
 import onnx
 
 from nncf.experimental.onnx.datasets.common import infer_input_shape
@@ -27,33 +25,22 @@ from tests.onnx.quantization.common import ModelToTest
 
 
 MODEL_NAMES = [
-    'resnet18',
-    'densenet121',
-]
-
-MODELS = [
-    models.resnet18(),
-    models.densenet121(),
+    'densenet-7',
+    'densenet-8',
+    'densenet-9',
 ]
 
 INPUT_SHAPE = [1, 3, 224, 224]
-INPUT_KEY = 'input.1'
-LOW_OPSET_VERSIONS = [7, 8, 9]
+INPUT_KEY = 'data_0'
+
+TEST_CASES = [(ModelToTest(name, INPUT_SHAPE), INPUT_KEY) for name in MODEL_NAMES]
 
 
-TEST_CASES = []
-for name, model in zip(MODEL_NAMES, MODELS):
-    for version in LOW_OPSET_VERSIONS:
-        TEST_CASES.append((ModelToTest(name, INPUT_SHAPE), model, INPUT_KEY, version))
-
-
-def load_model(model_to_test, model, opset_version):
+def load_model(model_to_test):
     onnx_model_dir = str(TEST_ROOT.joinpath('onnx', 'data', 'models'))
     onnx_model_path = str(TEST_ROOT.joinpath(onnx_model_dir, model_to_test.model_name + '.onnx'))
     if not os.path.isdir(onnx_model_dir):
         os.mkdir(onnx_model_dir)
-    x = torch.randn(model_to_test.input_shape, requires_grad=False)
-    torch.onnx.export(model, x, onnx_model_path, opset_version=opset_version)
 
     original_model = onnx.load(onnx_model_path)
 
@@ -62,27 +49,27 @@ def load_model(model_to_test, model, opset_version):
 
 class TestLowOpsetModel:
 
-    @pytest.mark.parametrize(('model_to_test', 'model', 'input_keys', 'opset_version'), TEST_CASES)
-    def test_input_shape(self, model_to_test, model, input_keys, opset_version):
-        model = load_model(model_to_test, model, opset_version)
+    @pytest.mark.parametrize(('model_to_test', 'input_keys'), TEST_CASES)
+    def test_input_shape(self, model_to_test, input_keys):
+        model = load_model(model_to_test)
 
         input_shape, input_keys = infer_input_shape(model, model_to_test.input_shape, None)
 
         assert isinstance(input_shape, (list, tuple)) and len(input_shape) == 4
         assert isinstance(input_keys, list)
 
-    @pytest.mark.parametrize(('model_to_test', 'model', 'input_keys', 'opset_version'), TEST_CASES)
-    def test_input_keys(self, model_to_test, model, input_keys, opset_version):
-        model = load_model(model_to_test, model, opset_version)
+    @pytest.mark.parametrize(('model_to_test', 'input_keys'), TEST_CASES)
+    def test_input_keys(self, model_to_test, input_keys):
+        model = load_model(model_to_test)
 
         input_shape, input_keys = infer_input_shape(model, None, input_keys)
 
         assert isinstance(input_shape, (list, tuple)) and len(input_shape) == 4
         assert isinstance(input_keys, list)
 
-    @pytest.mark.parametrize(('model_to_test', 'model', 'input_keys', 'opset_version'), TEST_CASES)
-    def test_input_shape_input_keys(self, model_to_test, model, input_keys, opset_version):
-        model = load_model(model_to_test, model, opset_version)
+    @pytest.mark.parametrize(('model_to_test', 'input_keys'), TEST_CASES)
+    def test_input_shape_input_keys(self, model_to_test, input_keys):
+        model = load_model(model_to_test)
 
         input_shape, input_keys = infer_input_shape(model, model_to_test.input_shape, input_keys)
 
@@ -90,8 +77,8 @@ class TestLowOpsetModel:
         assert isinstance(input_keys, list)
 
     @pytest.mark.xfail(reason="both input_shape and input_keys are None")
-    @pytest.mark.parametrize(('model_to_test', 'model', 'input_keys', 'opset_version'), TEST_CASES)
-    def test_input_shape_input_keys_none(self, model_to_test, model, input_keys, opset_version):
-        model = load_model(model_to_test, model, opset_version)
+    @pytest.mark.parametrize(('model_to_test', 'input_keys'), TEST_CASES)
+    def test_input_shape_input_keys_none(self, model_to_test, input_keys):
+        model = load_model(model_to_test)
 
         _, _ = infer_input_shape(model, None, None)
