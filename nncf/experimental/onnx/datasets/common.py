@@ -22,13 +22,21 @@ def infer_input_shape(model: ModelProto,
                       main_shape: Optional[List[int]] = None,
                       main_keys: Optional[str] = None) -> Tuple[List[int], List[str]]:
     assert len(model.graph.input) > 0
+    if main_shape and main_keys:
+        return main_shape, [main_keys]
 
     def set_input_shape(node):
         dim = node.type.tensor_type.shape.dim
-        return [int(MessageToDict(d).get("dimValue")) for d in dim]
+        shape = []
+        for d in dim:
+            if 'dimParam' in MessageToDict(d):
+                raise ValueError(
+                    ('For models with dynamic input_shape, '
+                     'input_shape and input_keys must be set.'))
 
-    if main_shape and main_keys:
-        return main_shape, [main_keys]
+            shape.append(int(MessageToDict(d).get("dimValue")))
+
+        return shape
 
     if main_keys:
         nncf_logger.info(
@@ -54,6 +62,7 @@ def infer_input_shape(model: ModelProto,
     else:
         raise ValueError('Either main_shape or main_keys must be set correctly.')
 
-    assert len(input_shape) == 4 and input_keys is not None
+    assert len(input_shape) > 0 and input_keys is not None
+    assert isinstance(input_shape, (list, tuple))
 
     return input_shape, [input_keys]
