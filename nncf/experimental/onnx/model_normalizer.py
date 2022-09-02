@@ -19,6 +19,10 @@ from nncf.common.utils.logger import logger as nncf_logger
 
 
 class ONNXModelNormalizer:
+    """
+    The class, which helps to prepare the ONNX model for work with Post-Training Algorithms.
+    Implements methods for adding necessary information to the ONNX model.
+    """
     DESIRED_OPSET_VERSION = 13
     DESIRED_IR_VERSION = 7
 
@@ -90,6 +94,9 @@ class ONNXModelNormalizer:
 
     @staticmethod
     def infer_models_shape(model: onnx.ModelProto) -> onnx.ModelProto:
+        """
+        Infers 'model' and saves the edges shape into the 'model'.
+        """
         # ONNX shape inference
         # https://github.com/onnx/onnx/blob/main/docs/proposals/SymbolicShapeInfProposal.md
         onnx.checker.check_model(model)
@@ -98,9 +105,11 @@ class ONNXModelNormalizer:
         return inferred_shape_model
 
     @staticmethod
-    def convert_opset_version(model: onnx.ModelProto) -> onnx.ModelProto:
+    def convert_opset_version(model: onnx.ModelProto, opset_version: int,
+                              ir_version: int) -> onnx.ModelProto:
         """
-        Try to convert model to opset version 13, also adding some important information to the model such shapes.
+        Converts 'model' Opset Version to 'opset_version' if possible and changes IR Version to 'ir_version'.
+        If the 'model' can not be converted returns the original 'model'.
         """
         # pylint: disable=no-member
         onnx.checker.check_model(model)
@@ -111,18 +120,19 @@ class ONNXModelNormalizer:
 
         try:
             modified_model = deepcopy(model)
-            if model_ir_version < ONNXModelNormalizer.DESIRED_IR_VERSION:
+            if model_ir_version < ir_version:
                 # TODO(kshpv): is it legal to change ir_vesrsion?
-                modified_model.ir_version = ONNXModelNormalizer.DESIRED_IR_VERSION  # Due to the 'Shufflenet-v1
+                modified_model.ir_version = ir_version  # Due to the 'Shufflenet-v1
                 onnx.checker.check_model(modified_model)
                 nncf_logger.debug('Successfully changed IR Version to = {}'.format(model.ir_version))
-            if model_opset >= ONNXModelNormalizer.DESIRED_OPSET_VERSION:
+            if model_opset >= opset_version:
                 return modified_model
 
-            modified_model = convert_version(modified_model, ONNXModelNormalizer.DESIRED_OPSET_VERSION)
+            modified_model = convert_version(modified_model, opset_version)
             onnx.checker.check_model(modified_model)
             nncf_logger.debug(
-                'The model was successfully converted  to the Opset Version = {}'.format(modified_model.opset_import[0].version))
+                'The model was successfully converted  to the Opset Version = {}'.format(
+                    modified_model.opset_import[0].version))
         except (RuntimeError, ConvertError):
             modified_model = model
             nncf_logger.error(
@@ -131,10 +141,10 @@ class ONNXModelNormalizer:
         return modified_model
 
     @staticmethod
-    def replace_empty_node_name(model: onnx.ModelProto):
+    def replace_empty_node_name(model: onnx.ModelProto) -> onnx.ModelProto:
         """
-        NNCFGraph.get_node_by_name() does not allow empty node names.
-        NNCF expects every node to have a unique name.
+        Sets an unique name to every empty node in 'model'.
+        NNCFGraph expects every node to have an unique name.
         """
         for i, node in enumerate(model.graph.node):
             if node.name == '':
@@ -152,10 +162,17 @@ class ONNXModelNormalizer:
 
     @staticmethod
     def normalize_model(model: onnx.ModelProto, convert_opset_version: bool = True) -> onnx.ModelProto:
+        """
+        Takes the 'model' and cooks it for the Post-Training Algorithms.
+        """
+        nncf_logger.info('Preparing the model for the Post-Training Algorithms.')
         modified_model = model
         if convert_opset_version:
-            modified_model = ONNXModelNormalizer.convert_opset_version(model)
+            modified_model = ONNXModelNormalizer.convert_opset_version(model, ONNXModelNormalizer.DESIRED_OPSET_VERSION,
+                                                                       ONNXModelNormalizer.DESIRED_IR_VERSION)
         modified_model = ONNXModelNormalizer.infer_models_shape(modified_model)
+        # TODO(kshpv): probably add_input_from_initializer() should be removed with the higher version of onnx package.
         modified_model = ONNXModelNormalizer.add_input_from_initializer(modified_model)
         modified_model = ONNXModelNormalizer.replace_empty_node_name(modified_model)
+        nncf_logger.info('The model was successfully processed.')
         return modified_model
