@@ -168,7 +168,8 @@ class ONNXModelNormalizer:
         nncf_logger.info('Preparing the model for the Post-Training Algorithms.')
         modified_model = model
         if convert_opset_version:
-            modified_model = ONNXModelNormalizer.convert_opset_version(model, ONNXModelNormalizer.DESIRED_OPSET_VERSION,
+            modified_model = ONNXModelNormalizer.convert_opset_version(modified_model,
+                                                                       ONNXModelNormalizer.DESIRED_OPSET_VERSION,
                                                                        ONNXModelNormalizer.DESIRED_IR_VERSION)
         modified_model = ONNXModelNormalizer.infer_models_shape(modified_model)
         # TODO(kshpv): probably add_input_from_initializer() should be removed with the higher version of onnx package.

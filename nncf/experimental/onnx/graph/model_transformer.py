@@ -177,9 +177,11 @@ class ONNXModelTransformer(ModelTransformer):
                     if onnx_graph.get_node_edges(onnx_node_name.node_name)['input'][0] not in target_edge_names:
                         target_edge_names.add(onnx_graph.get_node_edges(onnx_node_name.node_name)['input'][0])
             else:
-                for target_edge_name in onnx_graph.get_node_edges(transformation.target_point.target_node_name)[
-                        'output']:
-                    target_edge_names.add(target_edge_name)
+                # for target_edge_name in onnx_graph.get_node_edges(transformation.target_point.target_node_name)[
+                #         'output']:
+                #     target_edge_names.add(target_edge_name)
+                target_edge_names.add(onnx_graph.get_node_edges(transformation.target_point.target_node_name)[
+                                          'output'][0])
         else:
             raise RuntimeError(
                 'Could not find the edge corresponding to node {}'.format(
@@ -219,11 +221,11 @@ class ONNXModelTransformer(ModelTransformer):
             axis=axis
         )
         # If several nodes on one edge
-        dequantizer_outputs = ['dq_output_' + st + '_' + str(cnt) for st in target_edge_names]
+        #dequantizer_outputs = ['dq_output_' + st + '_' + str(cnt) for st in target_edge_names]
         dequantizer = onnx.helper.make_node(
             'DequantizeLinear',
             inputs=['q_output_' + target_edge_name, scale_tensor_name, zero_point_tensor_name],
-            outputs=dequantizer_outputs,
+            outputs=['dq_output_' + target_edge_name + '_' + str(cnt)],
             name=dequantizer_name,
             axis=axis,
 
