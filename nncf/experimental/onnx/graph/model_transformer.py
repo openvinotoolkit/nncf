@@ -177,7 +177,8 @@ class ONNXModelTransformer(ModelTransformer):
                     if onnx_graph.get_node_edges(onnx_node_name.node_name)['input'][0] not in target_edge_names:
                         target_edge_names.add(onnx_graph.get_node_edges(onnx_node_name.node_name)['input'][0])
             else:
-                for target_edge_name in onnx_graph.get_node_edges(transformation.target_point.target_node_name)['output']:
+                for target_edge_name in onnx_graph.get_node_edges(transformation.target_point.target_node_name)[
+                        'output']:
                     target_edge_names.add(target_edge_name)
         else:
             raise RuntimeError(

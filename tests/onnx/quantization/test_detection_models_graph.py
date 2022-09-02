@@ -17,7 +17,6 @@ import os
 
 import onnx
 
-from nncf.experimental.onnx.model_normalizer import ONNXModelNormalizer
 from nncf.experimental.onnx.algorithms.quantization.utils import find_ignored_scopes
 
 from tests.common.helpers import TEST_ROOT

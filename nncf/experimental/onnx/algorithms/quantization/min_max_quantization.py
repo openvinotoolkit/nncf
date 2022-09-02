@@ -104,6 +104,8 @@ class ONNXMinMaxQuantization(MinMaxQuantization):
         return final_setup
 
     def get_quantization_target_points(self, model: onnx.ModelProto) -> List[ONNXTargetPoint]:
+        # pylint: disable=too-many-nested-blocks
+        # TODO(kshpv): to simple the function
         if self._quantization_target_points:
             return self._quantization_target_points
         quantizer_setup = self._get_quantizer_setup(model)
@@ -144,10 +146,9 @@ class ONNXMinMaxQuantization(MinMaxQuantization):
                         self._quantization_target_points.append(activation_quantization_target_point)
                         continue
                     # If quantization of Output
-                    else:
-                        outputs = onnx_graph.get_node_edges(node_name)['output'][0]
-                        activation_quantization_target_point = ONNXTargetPoint(TargetType.POST_LAYER_OPERATION,
-                                                                               node_name)
+                    outputs = onnx_graph.get_node_edges(node_name)['output'][0]
+                    activation_quantization_target_point = ONNXTargetPoint(TargetType.POST_LAYER_OPERATION,
+                                                                           node_name)
                 # If Input node
                 else:
                     outputs = \
