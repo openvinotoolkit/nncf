@@ -20,10 +20,23 @@ from onnx import ModelProto
 
 def infer_input_shape(model: ModelProto,
                       main_shape: Optional[List[int]] = None,
-                      main_keys: Optional[str] = None) -> Tuple[List[int], List[str]]:
+                      main_name: Optional[str] = None) -> Tuple[List[int], List[str]]:
+    """
+    Infer model's input_shape and input_name.
+    - If both shape and name are given, just return them.
+    - If either shape or name is given, find ungiven one using given one.
+    - If both shape and name are not given, raise ValueError.
+    If the model has dynamic input_shape, both main_shape and main_name must be given.
+
+    :param model: The target model to infer input_shape and input_name.
+    :param main_shape: If main_shape is given and equal to one of the model,
+        it can be used as it is. If main_name is not given, main_shape is used to find main_name.
+    :param main_name: If main_name is given and equal to one of the model,
+        it can be used as it is. If main_shape is not given, main_name is used to find main_shape.
+    """
     assert len(model.graph.input) > 0
-    if main_shape and main_keys:
-        return main_shape, [main_keys]
+    if main_shape and main_name:
+        return main_shape, main_name
 
     def set_input_shape(node):
         dim = node.type.tensor_type.shape.dim
@@ -32,37 +45,40 @@ def infer_input_shape(model: ModelProto,
             if 'dimParam' in MessageToDict(d):
                 raise ValueError(
                     ('For models with dynamic input_shape, '
-                     'input_shape and input_keys must be set.'))
+                     'input_shape and input_name must be set.'))
 
             shape.append(int(MessageToDict(d).get("dimValue")))
 
         return shape
 
-    if main_keys:
+    input_shape = None
+    input_name = None
+    if main_name:
         nncf_logger.info(
             "input_shape is None. Infer input_shape from the model.")
 
         for _input in model.graph.input:
-            if main_keys == _input.name:
+            if main_name == _input.name:
                 input_shape = set_input_shape(_input)
-                input_keys = main_keys
+                input_name = main_name
                 break
 
     elif main_shape:
         nncf_logger.info(
-            "input_keys is None. Infer input_keys from the model.")
+            "input_name is None. Infer input_name from the model.")
 
         for _input in model.graph.input:
             _input_shape = set_input_shape(_input)
             if main_shape == _input_shape:
                 input_shape = main_shape
-                input_keys = _input.name
+                input_name = _input.name
                 break
 
     else:
-        raise ValueError('Either main_shape or main_keys must be set correctly.')
+        raise ValueError('Either main_shape or main_name must be set correctly.')
 
-    assert len(input_shape) > 0 and input_keys is not None
-    assert isinstance(input_shape, (list, tuple))
+    assert input_shape is not None or input_name is not None, \
+        'Either main_shape or main_name must be set correctly.'
+    assert isinstance(input_shape, (list, tuple)) and len(input_shape) > 0
 
-    return input_shape, [input_keys]
+    return input_shape, input_name

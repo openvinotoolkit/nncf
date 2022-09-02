@@ -11,8 +11,6 @@
  limitations under the License.
 """
 
-import argparse
-
 from typing import List
 from typing import Optional
 
@@ -22,15 +20,16 @@ import onnx
 from nncf.experimental.post_training.compression_builder import CompressionBuilder
 from nncf.experimental.post_training.algorithms.quantization import PostTrainingQuantization
 from nncf.experimental.post_training.algorithms.quantization import PostTrainingQuantizationParameters
-from nncf.experimental.onnx.datasets.common import infer_input_shape
+from nncf.experimental.onnx.common import infer_input_shape
 from nncf.experimental.onnx.datasets.imagenet_dataset import create_imagenet_torch_dataset
 from nncf.experimental.post_training.api.metric import Accuracy
 from nncf.common.utils.logger import logger as nncf_logger
+from examples.experimental.onnx.common.argparser import get_common_argument_parser
 
 
 def run(onnx_model_path: str, output_model_path: str,
         dataset_path: str, batch_size: int, shuffle: bool, num_init_samples: int,
-        input_shape: Optional[List[int]] = None, input_keys: Optional[str] = None,
+        input_shape: Optional[List[int]] = None, input_name: Optional[str] = None,
         ignored_scopes: Optional[List[str]] = None,
         evaluate: Optional[bool] = False):
     nncf_logger.info("Post-Training Quantization Parameters:")
@@ -40,13 +39,13 @@ def run(onnx_model_path: str, output_model_path: str,
     original_model = onnx.load(onnx_model_path)
     nncf_logger.info("The model is loaded from {}".format(onnx_model_path))
 
-    assert input_shape or input_keys, "Either input_shape or input_keys must be set."
+    assert input_shape or input_name, "Either input_shape or input_name must be set."
 
-    input_shape, input_keys = infer_input_shape(original_model, input_shape, input_keys)
+    input_shape, input_name = infer_input_shape(original_model, input_shape, input_name)
 
     # Step 1: Initialize the data loader and metric (if it is needed).
     dataset = create_imagenet_torch_dataset(
-        dataset_path, input_key=input_keys[0],
+        dataset_path, input_name=input_name,
         input_shape=input_shape, batch_size=batch_size, shuffle=shuffle)
     metric = Accuracy(top_k=1)
 
@@ -84,31 +83,17 @@ def run(onnx_model_path: str, output_model_path: str,
 
 
 if __name__ == '__main__':
-    parser = argparse.ArgumentParser()
-    parser.add_argument("--onnx_model_path", "-m",
-                        help="Path to ONNX model", type=str, required=True)
-    parser.add_argument("--output_model_path", "-o",
-                        help="Path to output quantized ONNX model", type=str, required=True)
-    parser.add_argument("--data",
-                        help="Path to ImageNet validation data in the ImageFolder torchvision format "
-                             "(Please, take a look at torchvision.datasets.ImageFolder)",
-                        type=str, required=True)
+    parser = get_common_argument_parser()
+
     parser.add_argument(
         "--batch_size", help="Batch size for initialization", type=int, default=1)
     parser.add_argument(
         "--shuffle", help="Whether to shuffle dataset for initialization", default=True)
     parser.add_argument(
-        "--input_shape", help="Model's input shape. e.g. [1, 3, 224, 224].",
-        nargs="+", type=int, default=None)
-    parser.add_argument(
-        "--input_keys", help="Model's input key.", type=str, default=None)
-    parser.add_argument(
-        "--init_samples", help="Number of initialization samples", type=int, default=300)
-    parser.add_argument(
-        "--ignored_scopes", help="Ignored operations ot quantize", nargs="+", default=None)
-    parser.add_argument(
         "--evaluate", help="Run an evaluation step for the final quantized model", action="store_true")
+
     args = parser.parse_args()
+
     run(args.onnx_model_path,
         args.output_model_path,
         args.data,
@@ -116,7 +101,7 @@ if __name__ == '__main__':
         args.shuffle,
         args.init_samples,
         args.input_shape,
-        args.input_keys,
+        args.input_name,
         args.ignored_scopes,
         args.evaluate
         )
