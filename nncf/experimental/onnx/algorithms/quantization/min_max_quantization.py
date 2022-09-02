@@ -130,17 +130,14 @@ class ONNXMinMaxQuantization(MinMaxQuantization):
                         # If there are several inputs to quantize
                         if isinstance(quantization_point.insertion_point.input_port_id, list):
                             for input_port_id in quantization_point.insertion_point.input_port_id:
-                                # NNCFGraph starts countig from 1 while ONNX from 0
-                                edge_id = input_port_id
-                                edge_name = onnx_graph.get_node_edges(node_name)['input'][edge_id]
+                                edge_name = onnx_graph.get_node_edges(node_name)['input'][input_port_id]
                                 activation_quantization_target_point = ONNXTargetPoint(TargetType.PRE_LAYER_OPERATION,
                                                                                        node_name,
                                                                                        edge_name)
                                 self._quantization_target_points.append(activation_quantization_target_point)
                             continue
-                        # NNCFGraph starts countig from 1 while ONNX from 0
-                        edge_id = quantization_point.insertion_point.input_port_id
-                        edge_name = onnx_graph.get_node_edges(node_name)['input'][edge_id]
+                        edge_name = onnx_graph.get_node_edges(node_name)['input'][
+                            quantization_point.insertion_point.input_port_id]
                         activation_quantization_target_point = ONNXTargetPoint(TargetType.PRE_LAYER_OPERATION,
                                                                                node_name,
                                                                                edge_name)
