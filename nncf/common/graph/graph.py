@@ -496,8 +496,8 @@ class NNCFGraph:
                 nx.lexicographical_topological_sort(self._nx_graph,
                                                     key=lambda x: self._nx_graph.nodes[x][NNCFGraph.ID_NODE_ATTR])]
 
-    def dump_graph(self, path: str):
-        nx.drawing.nx_pydot.write_dot(self.get_graph_for_structure_analysis(), path)
+    def dump_graph(self, path: str, extended: bool = False):
+        nx.drawing.nx_pydot.write_dot(self.get_graph_for_structure_analysis(extended), path)
 
     def visualize_graph(self, path: str):
         out_graph = self._get_graph_for_visualization()
@@ -543,7 +543,12 @@ class NNCFGraph:
                     style = 'dashed'
                 else:
                     style = 'solid'
-                out_graph.add_edge(u, v, label=edge[NNCFGraph.ACTIVATION_SHAPE_EDGE_ATTR], style=style)
+
+                edge_label = f"output_port_id = {edge[NNCFGraph.OUTPUT_PORT_ID_EDGE_ATTR]} \\n " \
+                             f"shape = {edge[NNCFGraph.ACTIVATION_SHAPE_EDGE_ATTR]} \\n " \
+                             f"input_port_id = {edge[NNCFGraph.INPUT_PORT_ID_EDGE_ATTR]} \\n "
+
+                out_graph.add_edge(u, v, label=edge_label, style=style)
         else:
             for u, v in self._nx_graph.edges:
                 out_graph.add_edge(u, v)
@@ -568,7 +573,11 @@ class NNCFGraph:
                 style = 'dashed'
             else:
                 style = 'solid'
-            out_graph.add_edge(u, v, label=edge[NNCFGraph.ACTIVATION_SHAPE_EDGE_ATTR], style=style)
+            edge_label = f"output_port_id = {edge[NNCFGraph.OUTPUT_PORT_ID_EDGE_ATTR]} \\n " \
+                         f"shape = {edge[NNCFGraph.ACTIVATION_SHAPE_EDGE_ATTR]} \\n " \
+                         f"input_port_id = {edge[NNCFGraph.INPUT_PORT_ID_EDGE_ATTR]} \\n "
+
+            out_graph.add_edge(u, v, label=edge_label, style=style)
 
         mapping = {k: v['label'] for k, v in out_graph.nodes.items()}
         out_graph = nx.relabel_nodes(out_graph, mapping)

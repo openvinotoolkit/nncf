@@ -16,13 +16,11 @@ import pytest
 
 from nncf.experimental.onnx.graph.nncf_graph_builder import GraphConverter
 
-from tests.onnx.models import LinearModel
-from tests.onnx.models import MultiInputOutputModel
-from tests.onnx.models import ModelWithIntEdges
+from tests.onnx.models import ALL_MODELS
 
 import networkx as nx
 
-TEST_MODELS = [LinearModel, MultiInputOutputModel, ModelWithIntEdges]
+TEST_MODELS = ALL_MODELS
 PROJECT_ROOT = os.path.dirname(__file__)
 REFERENCE_GRAPHS_TEST_ROOT = 'data/reference_graphs'
 
@@ -54,13 +52,15 @@ def check_nx_graph(nx_graph: nx.DiGraph, expected_graph: nx.DiGraph):
 @pytest.mark.parametrize("model_creator_func", TEST_MODELS)
 def test_built_nncf_graphs(model_creator_func):
     model = model_creator_func()
-    nncf_graph = GraphConverter.create_nncf_graph(model.onnx_model)
-
-    nx_graph = nncf_graph.get_graph_for_structure_analysis(extended=True)
-
     data_dir = os.path.join(PROJECT_ROOT, REFERENCE_GRAPHS_TEST_ROOT)
     path_to_dot = os.path.abspath(os.path.join(data_dir, model.path_ref_graph))
 
-    expected_graph = nx.drawing.nx_pydot.read_dot(path_to_dot)
+    nncf_graph = GraphConverter.create_nncf_graph(model.onnx_model)
+    nx_graph = nncf_graph.get_graph_for_structure_analysis(extended=True)
 
+    dump_graph = True
+    if dump_graph:
+        nncf_graph.dump_graph(path_to_dot, dump_graph)
+
+    expected_graph = nx.drawing.nx_pydot.read_dot(path_to_dot)
     check_nx_graph(nx_graph, expected_graph)

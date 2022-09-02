@@ -374,25 +374,29 @@ class ReshapeWeightModel(ONNXReferenceModel):
             data_type=onnx.TensorProto.FLOAT)
 
         reshaped_w_node = onnx.helper.make_node(
+            name='Reshape',
             op_type="Reshape",
             inputs=["W", "w_shape"],
             outputs=["reshaped_w"],
         )
 
         added_x_node = onnx.helper.make_node(
+            name='Add',
             op_type="Add",
             inputs=["X", "z_tensor"],
             outputs=["added_x"],
         )
 
         gemm_node = onnx.helper.make_node(
-            'Gemm',
+            name='Gemm',
+            op_type='Gemm',
             inputs=['added_x', 'reshaped_w'],
             outputs=['logit']
         )
 
         softmax_node = onnx.helper.make_node(
-            'Softmax',
+            name='Softmax',
+            op_type='Softmax',
             inputs=['logit'],
             outputs=['Y'],
         )
@@ -407,7 +411,7 @@ class ReshapeWeightModel(ONNXReferenceModel):
 
         model = onnx.helper.make_model(graph_def)
         onnx.checker.check_model(model)
-        super().__init__(model, [input_shape], 'synthetic/reshape_weight_model.dot')
+        super().__init__(model, [input_shape], 'reshape_weight_model.dot')
 
 
 class WeightSharingModel(ONNXReferenceModel):
@@ -445,7 +449,8 @@ class WeightSharingModel(ONNXReferenceModel):
             data_type=onnx.TensorProto.FLOAT)
 
         relu_x_node = onnx.helper.make_node(
-            "Relu",
+            name="Relu",
+            op_type='Relu',
             inputs=["X"],
             outputs=["relu_X"],
         )
@@ -471,6 +476,7 @@ class WeightSharingModel(ONNXReferenceModel):
         )
 
         add_node = onnx.helper.make_node(
+            name='Add',
             op_type="Add",
             inputs=["conv_1", "conv_2"],
             outputs=["Y"],
@@ -486,7 +492,7 @@ class WeightSharingModel(ONNXReferenceModel):
 
         model = onnx.helper.make_model(graph_def)
         onnx.checker.check_model(model)
-        super().__init__(model, [input_shape], 'synthetic/weight_sharing_model.dot')
+        super().__init__(model, [input_shape], 'weight_sharing_model.dot')
 
 
 class OneInputPortQuantizableModel(ONNXReferenceModel):
@@ -513,7 +519,8 @@ class OneInputPortQuantizableModel(ONNXReferenceModel):
                                                output_shape)
 
         relu_x_node = onnx.helper.make_node(
-            "Relu",
+            name="Relu",
+            op_type='Relu',
             inputs=["X"],
             outputs=["relu_X"],
         )
@@ -526,6 +533,7 @@ class OneInputPortQuantizableModel(ONNXReferenceModel):
         )
 
         mul_node = onnx.helper.make_node(
+            name='Mul',
             op_type="Mul",
             inputs=["relu_X", "softmax_1"],
             outputs=["Y"],
@@ -540,7 +548,7 @@ class OneInputPortQuantizableModel(ONNXReferenceModel):
 
         model = onnx.helper.make_model(graph_def)
         onnx.checker.check_model(model)
-        super().__init__(model, [input_shape], 'synthetic/one_input_port_quantizable_model.dot')
+        super().__init__(model, [input_shape], 'one_input_port_quantizable_model.dot')
 
 
 class ManyInputPortsQuantizableModel(ONNXReferenceModel):
@@ -572,7 +580,8 @@ class ManyInputPortsQuantizableModel(ONNXReferenceModel):
                                                 output_shape)
 
         relu_x_node = onnx.helper.make_node(
-            "Relu",
+            name="Relu",
+            op_type='Relu',
             inputs=["X"],
             outputs=["relu_X"],
         )
@@ -592,6 +601,7 @@ class ManyInputPortsQuantizableModel(ONNXReferenceModel):
         )
 
         mul_node = onnx.helper.make_node(
+            name='Mul',
             op_type="Mul",
             inputs=["relu_X", "identity_1"],
             outputs=["Y"],
@@ -606,4 +616,8 @@ class ManyInputPortsQuantizableModel(ONNXReferenceModel):
 
         model = onnx.helper.make_model(graph_def)
         onnx.checker.check_model(model)
-        super().__init__(model, [input_shape], 'synthetic/many_input_ports_quantizable_model.dot')
+        super().__init__(model, [input_shape], 'many_input_ports_quantizable_model.dot')
+
+
+ALL_MODELS = [ManyInputPortsQuantizableModel, OneInputPortQuantizableModel, WeightSharingModel, ReshapeWeightModel,
+              OneConvolutionalModel, ModelWithIntEdges, MultiInputOutputModel, LinearModel]

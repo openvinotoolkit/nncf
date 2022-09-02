@@ -92,11 +92,11 @@ class GraphConverter:
             to_nodes = onnx_graph.get_nodes_by_input(input_name)
 
             input_node_node_id = input_node.node_id
-            input_shape = GraphConverter.get_tensor_shape(onnx_graph, input_name)
+            input_shape = GraphConverter._get_tensor_shape(onnx_graph, input_name)
             onnx_dtype = onnx_graph.get_edge_dtype_name(input_name)
             nncf_dtype = GraphConverter.convert_onnx_dtype_to_nncf_dtype(onnx_dtype)
             output_port_id = 0
-            for node in filter(GraphConverter.is_valid_onnx_metatype, to_nodes):
+            for node in filter(GraphConverter._is_valid_onnx_metatype, to_nodes):
                 to_node_id = nncf_graph.get_node_by_name(node.name).node_id
                 input_port_id = onnx_graph.get_input_port_id_for_nodes_after_input(input_name, node)
                 nncf_graph.add_edge_between_nncf_nodes(
@@ -123,11 +123,11 @@ class GraphConverter:
             from_nodes = onnx_graph.get_nodes_by_output(output_name)
 
             output_node_node_id = output_node.node_id
-            output_shape = GraphConverter.get_tensor_shape(onnx_graph, output_name)
+            output_shape = GraphConverter._get_tensor_shape(onnx_graph, output_name)
             onnx_dtype = onnx_graph.get_edge_dtype_name(output_name)
             nncf_dtype = GraphConverter.convert_onnx_dtype_to_nncf_dtype(onnx_dtype)
             input_port_id = 0
-            for node in filter(GraphConverter.is_valid_onnx_metatype, from_nodes):
+            for node in filter(GraphConverter._is_valid_onnx_metatype, from_nodes):
                 from_node_id = nncf_graph.get_node_by_name(node.name).node_id
                 output_port_id = onnx_graph.get_output_port_id_for_nodes_after_input(output_name, node)
                 nncf_graph.add_edge_between_nncf_nodes(
