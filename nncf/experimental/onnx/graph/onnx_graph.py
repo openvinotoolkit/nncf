@@ -117,29 +117,38 @@ class ONNXGraph:
                         'output': list(node.output)}
         raise RuntimeError('There is no node with the name {}'.format(node_name))
 
-    def get_input_port_id_for_nodes_after_input(self, input_name, to_node):
+    def get_input_port_id_for_nodes_after_input(self, input_name: str, to_node: NodeProto):
+        """
+        Returns input_port_id for 'to_node' connected with the model input with the name 'input_name'.
+        """
         for input_port_id, port in enumerate(to_node.input):
             if port == input_name:
                 return input_port_id
-        raise RuntimeError()
+        raise RuntimeError(f'The node {to_node} does not have input edge with the name {input_name}')
 
-    def get_output_port_id_for_nodes_after_input(self, output_name, from_node):
+    def get_output_port_id_for_nodes_before_output(self, output_name: str, from_node: NodeProto):
+        """
+        Returns output_port_id for 'from_node' connected with the model output with the name 'output_name'.
+        """
         for output_port_id, port in enumerate(from_node.output):
             if port == output_name:
                 return output_port_id
-        raise RuntimeError()
+        raise RuntimeError(f'The node {from_node} does not have output edge with the name {output_name}')
 
-    def get_input_port_id_between_nodes(self, from_node, to_node):
-        for input_port_id, port in enumerate(to_node.input):
+    def get_port_ids_between_nodes(self, from_node: NodeProto, to_node: NodeProto):
+        """
+        Returns input_port_id and output_port_id between 'from_node' and 'to_node'.
+        """
+        output = {'input_port_id': None, 'output_port_id': None}
+        for port_id, port in enumerate(to_node.input):
             if port in from_node.output:
-                return input_port_id
-        raise RuntimeError()
-
-    def get_output_port_id_between_nodes(self, from_node, to_node):
-        for output_port_id, port in enumerate(from_node.output):
+                output['input_port_id'] = port_id
+        for port_id, port in enumerate(from_node.output):
             if port in to_node.input:
-                return output_port_id
-        raise RuntimeError()
+                output['output_port_id'] = port_id
+        if output['output_port_id'] is None or output['input_port_id'] is None:
+            raise RuntimeError(f'The nodes {from_node.name} and {to_node.name} do not have edges between.')
+        return output
 
     def get_nodes_by_type(self, node_type: str) -> List[NodeProto]:
         """
