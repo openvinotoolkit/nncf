@@ -103,7 +103,10 @@ def test_compare_nncf_graph_detection_real_models(tmp_path, model_to_test):
         os.mkdir(onnx_model_dir)
     original_model = onnx.load(onnx_model_path)
 
-    original_model = ONNXModelNormalizer.normalize_model(original_model)
+    convert_opset_version = True
+    if model_to_test.model_name == 'MaskRCNN-12':
+        convert_opset_version = False
+    original_model = ONNXModelNormalizer.normalize_model(original_model, convert_opset_version)
 
     data_dir = os.path.join(PROJECT_ROOT, REFERENCE_GRAPHS_TEST_ROOT)
     path_to_dot = os.path.abspath(os.path.join(data_dir, model_to_test.path_ref_graph))

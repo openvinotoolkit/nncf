@@ -17,16 +17,15 @@ import pytest
 
 from tests.onnx.quantization.common import infer_model, min_max_quantize_model
 from tests.onnx.quantization.common import compare_nncf_graph
-from tests.onnx.models import ReshapeWeightModel
-from tests.onnx.models import WeightSharingModel
-from tests.onnx.models import OneInputPortQuantizableModel
-from tests.onnx.models import ManyInputPortsQuantizableModel
+from tests.onnx.models import ALL_MODELS
+from tests.onnx.models import MultiInputOutputModel
 
 
-@pytest.mark.parametrize('model_to_test', [ReshapeWeightModel(), WeightSharingModel(), OneInputPortQuantizableModel(),
-                                           ManyInputPortsQuantizableModel()])
+@pytest.mark.parametrize('model_to_test', ALL_MODELS)
 def test_syntetic_models_graph(model_to_test):
-    quantized_model = min_max_quantize_model(model_to_test.input_shape[0], model_to_test.onnx_model)
-    infer_model(model_to_test.input_shape[0], quantized_model)
-    compare_nncf_graph(quantized_model, model_to_test.path_ref_graph)
-
+    if model_to_test == MultiInputOutputModel:
+        pytest.skip('min_max_quantize_model does not support many inputs for now.')
+    model = model_to_test()
+    quantized_model = min_max_quantize_model(model.input_shape[0], model.onnx_model)
+    infer_model(model.input_shape[0], quantized_model)
+    compare_nncf_graph(quantized_model, 'synthetic/' + model.path_ref_graph)
