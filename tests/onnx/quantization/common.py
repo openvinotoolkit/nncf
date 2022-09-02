@@ -22,7 +22,6 @@ import onnx
 import onnxruntime as rt
 
 from tests.common.helpers import TEST_ROOT
-from tests.onnx.test_nncf_graph_builder import check_nx_graph
 
 from nncf.experimental.post_training.api.dataset import Dataset
 from nncf.experimental.post_training.compression_builder import CompressionBuilder
@@ -94,6 +93,30 @@ def ptq_quantize_model(
         PostTrainingQuantization(PostTrainingQuantizationParameters(number_samples=1, ignored_scopes=ignored_scopes)))
     quantized_model = builder.apply(original_model, dataset)
     return quantized_model
+
+
+def check_nx_graph(nx_graph: nx.DiGraph, expected_graph: nx.DiGraph):
+    for nx_graph_node, expected_graph_node in zip(sorted(nx_graph.nodes.keys()), sorted(expected_graph.nodes.keys())):
+        assert nx_graph_node == expected_graph_node
+
+    # Check nodes attrs
+    for node_name, node_attrs in nx_graph.nodes.items():
+        expected_attrs = {k: str(v) for k, v in expected_graph.nodes[node_name].items()}
+        attrs = {k: str(v) for k, v in node_attrs.items()}
+        assert expected_attrs == attrs
+
+    assert nx.DiGraph(expected_graph).edges == nx_graph.edges
+
+    # Check edges attrs
+    for nx_graph_edges, expected_graph_edges in zip(nx_graph.edges.data(), expected_graph.edges.data()):
+        for nx_edge_attrs, expected_graph_edge_attrs in zip(nx_graph_edges, expected_graph_edges):
+            if isinstance(nx_edge_attrs, dict):
+                nx_edge_attrs['label'] = str(nx_edge_attrs['label'])
+                if not isinstance(expected_graph_edge_attrs['label'], list):
+                    expected_graph_edge_attrs['label'] = expected_graph_edge_attrs['label'].replace('"', '')
+                else:
+                    expected_graph_edge_attrs['label'] = str(expected_graph_edge_attrs['label'])
+            assert nx_edge_attrs == expected_graph_edge_attrs
 
 
 def compare_nncf_graph(quantized_model: onnx.ModelProto, path_ref_graph: str,
