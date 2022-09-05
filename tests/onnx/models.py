@@ -29,6 +29,9 @@ def create_initializer_tensor(name: str, tensor_array: np.ndarray,
     return initializer_tensor
 
 
+OPSET_VERSION = 13
+
+
 class ONNXReferenceModel:
     def __init__(self, onnx_model, input_shape: List[List[int]], graph_path):
         self.onnx_model = onnx_model
@@ -168,8 +171,9 @@ class LinearModel(ONNXReferenceModel):
                 conv2_W_initializer_tensor, conv2_B_initializer_tensor
             ],
         )
-
-        model = onnx.helper.make_model(graph_def)
+        op = onnx.OperatorSetIdProto()
+        op.version = OPSET_VERSION
+        model = onnx.helper.make_model(graph_def, opset_imports=[op])
         onnx.checker.check_model(model)
         super().__init__(model, [input_shape], 'linear_model.dot')
 
@@ -230,7 +234,9 @@ class MultiInputOutputModel(ONNXReferenceModel):
             initializer=[],
         )
 
-        model = onnx.helper.make_model(graph_def)
+        op = onnx.OperatorSetIdProto()
+        op.version = OPSET_VERSION
+        model = onnx.helper.make_model(graph_def, opset_imports=[op])
         onnx.checker.check_model(model)
         super().__init__(model, [input_shape_1, input_shape_2, input_shape_3], 'multi_input_output_model.dot')
 
@@ -276,7 +282,9 @@ class ModelWithIntEdges(ONNXReferenceModel):
             initializer=[],
         )
 
-        model = onnx.helper.make_model(graph_def)
+        op = onnx.OperatorSetIdProto()
+        op.version = OPSET_VERSION
+        model = onnx.helper.make_model(graph_def, opset_imports=[op])
         onnx.checker.check_model(model)
         super().__init__(model, [input_shape], 'int_edges_model.dot')
 
@@ -330,7 +338,9 @@ class OneConvolutionalModel(ONNXReferenceModel):
             ],
         )
 
-        model = onnx.helper.make_model(graph_def)
+        op = onnx.OperatorSetIdProto()
+        op.version = OPSET_VERSION
+        model = onnx.helper.make_model(graph_def, opset_imports=[op])
         onnx.checker.check_model(model)
         super().__init__(model, [input_shape], 'one_convolutional_model.dot')
 
@@ -409,7 +419,9 @@ class ReshapeWeightModel(ONNXReferenceModel):
             initializer=[w_tensor, w_shape_tensor, z_tensor],
         )
 
-        model = onnx.helper.make_model(graph_def)
+        op = onnx.OperatorSetIdProto()
+        op.version = OPSET_VERSION
+        model = onnx.helper.make_model(graph_def, opset_imports=[op])
         onnx.checker.check_model(model)
         super().__init__(model, [input_shape], 'reshape_weight_model.dot')
 
@@ -490,7 +502,9 @@ class WeightSharingModel(ONNXReferenceModel):
             initializer=[w_tensor],
         )
 
-        model = onnx.helper.make_model(graph_def)
+        op = onnx.OperatorSetIdProto()
+        op.version = OPSET_VERSION
+        model = onnx.helper.make_model(graph_def, opset_imports=[op])
         onnx.checker.check_model(model)
         super().__init__(model, [input_shape], 'weight_sharing_model.dot')
 
@@ -546,7 +560,9 @@ class OneInputPortQuantizableModel(ONNXReferenceModel):
             outputs=[Y],
         )
 
-        model = onnx.helper.make_model(graph_def)
+        op = onnx.OperatorSetIdProto()
+        op.version = OPSET_VERSION
+        model = onnx.helper.make_model(graph_def, opset_imports=[op])
         onnx.checker.check_model(model)
         super().__init__(model, [input_shape], 'one_input_port_quantizable_model.dot')
 
@@ -614,7 +630,9 @@ class ManyInputPortsQuantizableModel(ONNXReferenceModel):
             outputs=[Y, Y1],
         )
 
-        model = onnx.helper.make_model(graph_def)
+        op = onnx.OperatorSetIdProto()
+        op.version = OPSET_VERSION
+        model = onnx.helper.make_model(graph_def, opset_imports=[op])
         onnx.checker.check_model(model)
         super().__init__(model, [input_shape], 'many_input_ports_quantizable_model.dot')
 
