@@ -88,6 +88,8 @@ class ONNXEngine(Engine):
         self.onnx_graph = ONNXGraph(model)
 
     def _register_statistics(self, outputs: NNCFData, statistic_points: StatisticPointsContainer) -> None:
+        # TODO(kshpv): remove many branches
+        # pylint: disable=too-many-branches
         edge_name_to_node_name = {}
         for node_name, _statistic_points in statistic_points.items():
             for statistic_point in _statistic_points:
@@ -102,7 +104,7 @@ class ONNXEngine(Engine):
                         else:
                             edge_name_to_node_name[edge_name] = [node_name]
                     continue
-                elif statistic_point.target_point.type == TargetType.POST_LAYER_OPERATION:
+                if statistic_point.target_point.type == TargetType.POST_LAYER_OPERATION:
                     # Any edge is fine so take 0-index
                     edge_name = self.onnx_graph.get_node_edges(node_name)['output'][0]
                 elif statistic_point.target_point.type == TargetType.PRE_LAYER_OPERATION:

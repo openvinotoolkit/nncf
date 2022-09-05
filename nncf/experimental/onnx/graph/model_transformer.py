@@ -11,7 +11,7 @@
  limitations under the License.
 """
 
-from typing import TypeVar
+from typing import TypeVar, Optional
 
 from copy import deepcopy
 from collections import Counter
@@ -153,7 +153,8 @@ class ONNXModelTransformer(ModelTransformer):
         for transformation in self.quantizer_insertion_commands:
             self._insert_quantizer_dequantizer(transformation)
 
-    def _get_target_edge_name(self, transformation: ONNXQuantizerInsertionCommand, onnx_graph: ONNXGraph):
+    def _get_target_edge_name(self, transformation: ONNXQuantizerInsertionCommand, onnx_graph: ONNXGraph) -> Optional[
+        str]:
         target_edge_name = None
         if transformation.target_point.type == TargetType.OPERATION_WITH_WEIGHTS:
             try:
@@ -161,7 +162,7 @@ class ONNXModelTransformer(ModelTransformer):
                     transformation.target_point.target_node_name)
             except RuntimeError as er:
                 nncf_logger.exception(er)
-                return
+                return None
         elif transformation.target_point.type == TargetType.PRE_LAYER_OPERATION:
             target_edge_name = transformation.target_point.edge_name
         elif transformation.target_point.type == TargetType.POST_LAYER_OPERATION:
@@ -198,20 +199,19 @@ class ONNXModelTransformer(ModelTransformer):
         zero_point_tensor_name = ONNXModelTransformer.ZERO_POINT_NAME_PREFIX + q_target_edge_name
 
         quantizer = onnx.helper.make_node(
-            'QuantizeLinear',
+            name=quantizer_name,
+            op_type='QuantizeLinear',
             inputs=[input_target_edge, scale_tensor_name, zero_point_tensor_name],
             outputs=['q_output_' + q_target_edge_name],
-            name=quantizer_name,
             axis=axis
         )
 
         dequantizer = onnx.helper.make_node(
-            'DequantizeLinear',
+            name=dequantizer_name,
+            op_type='DequantizeLinear',
             inputs=['q_output_' + q_target_edge_name, scale_tensor_name, zero_point_tensor_name],
             outputs=['dq_output_' + q_target_edge_name],
-            name=dequantizer_name,
             axis=axis,
-
         )
 
         return quantizer, dequantizer
