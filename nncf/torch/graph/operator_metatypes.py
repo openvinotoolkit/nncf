@@ -594,7 +594,7 @@ class PTSplitMetatype(PTOperatorMetatype):
     module_to_function_names = {
         NamespaceTarget.TORCH_NN_FUNCTIONAL: ["split", "chunk"]
     }
-    hw_config_names = [HWConfigOpName.SPLIT]
+    hw_config_names = [HWConfigOpName.SPLIT, HWConfigOpName.CHUNK]
 
 
 @PT_OPERATOR_METATYPES.register()

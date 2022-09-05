@@ -33,7 +33,8 @@ from nncf.common.pruning.operations import (
     ElementwisePruningOp,
     ReshapePruningOp,
     FlattenPruningOp,
-    StopMaskForwardPruningOp
+    StopMaskForwardPruningOp,
+    SplitPruningOp
 )
 
 TF_PRUNING_OPERATOR_METATYPES = PruningOperationsMetatypeRegistry("operator_metatypes")
@@ -112,3 +113,8 @@ class TFStopMaskForwardPruningOp(StopMaskForwardPruningOp):
 class TFConcatPruningOp(ConcatPruningOp):
     additional_types = layer_metatypes.TFConcatenateLayerMetatype.get_all_aliases() \
                        + op_metatypes.TFConcatOpMetatype.get_all_aliases()
+
+
+@TF_PRUNING_OPERATOR_METATYPES.register('split')
+class TFSplitPruningOp(SplitPruningOp):
+    additional_types = op_metatypes.TFSplitOpMetatype.get_all_aliases()

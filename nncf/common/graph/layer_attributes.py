@@ -13,7 +13,7 @@
 from abc import ABC
 from abc import abstractmethod
 from enum import Enum
-from typing import List, Tuple, Any
+from typing import List, Tuple, Any, Union
 
 
 class Dtype(Enum):
@@ -39,6 +39,23 @@ class MultipleInputLayerAttributes(BaseLayerAttributes):
 
     def __eq__(self, other: Any):
         return isinstance(other, MultipleInputLayerAttributes) \
+               and self.axis == other.axis
+
+
+class MultipleOutputLayerAttributes(BaseLayerAttributes):
+    """
+    Represents a layer with multiple outputs.
+    """
+
+    def __init__(self,
+                 chunks: Union[int, List],
+                 axis: int):
+        self.chunks = chunks
+        self.axis = axis
+
+    def __eq__(self, other: Any):
+        return isinstance(other, MultipleOutputLayerAttributes) \
+               and self.chunks == other.chunks \
                and self.axis == other.axis
 
 

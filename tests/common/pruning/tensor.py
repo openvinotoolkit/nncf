@@ -47,6 +47,12 @@ class NPNNCFTensorProcessor(NNCFPruningBaseTensorProcessor):
         cls.assert_allclose(input_masks)
         return input_masks[0]
 
+    @classmethod
+    def split(cls, tensor: NNCFTensor, output_shapes: List[int]) -> List[NNCFTensor]:
+        chunks = len(output_shapes)
+        ret_tensors = np.split(tensor.tensor, chunks)
+        return [NPNNCFTensor(ret_tensor) for ret_tensor in ret_tensors]
+
 
 class NPNNCFTensor(NNCFTensor):
     def __init__(self, tensor: np.array, dummy_device: Optional[str] = None):

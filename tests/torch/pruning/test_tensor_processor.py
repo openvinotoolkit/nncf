@@ -60,3 +60,16 @@ def test_elementwise_mask_propagation(all_close):
         result = PTNNCFPruningTensorProcessor.elementwise_mask_propagation(tensors)
         for t in tensors:
             assert torch.allclose(result.tensor, t.tensor)
+
+
+def test_split():
+    tensor_data = [0., 1., 2., 3.]
+    chunks = 2
+    pt_tensor = torch.tensor(tensor_data)
+    pt_output = torch.chunk(pt_tensor, chunks=2)
+    output_shapes = [output.shape[0] for output in pt_output]
+    tensor = PTNNCFTensor(pt_tensor)
+    split_tensors = PTNNCFPruningTensorProcessor.split(tensor, output_shapes=output_shapes)
+    ref_split = torch.tensor(tensor_data).chunk(chunks)
+    assert torch.all(split_tensors[0].tensor == ref_split[0])
+    assert torch.all(split_tensors[1].tensor == ref_split[1])

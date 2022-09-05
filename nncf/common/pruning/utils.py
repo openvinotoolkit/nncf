@@ -590,8 +590,13 @@ def get_input_masks(node: NNCFNode, graph: NNCFGraph) -> List[Optional[NNCFTenso
     :param graph: Graph to work with.
     :return: Input masks.
     """
+    retval = []
     input_masks = [input_node.data['output_mask'] for input_node in graph.get_previous_nodes(node)]
-    return input_masks
+    for input_mask in input_masks:
+        retval.append(input_mask[node.node_name] if isinstance(input_mask, dict) else input_mask)
+    if not retval:
+        retval = []
+    return retval
 
 
 def get_input_channels(node: NNCFNode) -> int:
@@ -636,4 +641,5 @@ def identity_mask_propagation(node: NNCFNode, graph: NNCFGraph) -> None:
         # In case for disconnected NNCFGraph
         input_masks = [None]
     assert len(input_masks) == 1
+
     node.data['output_mask'] = input_masks[0]
