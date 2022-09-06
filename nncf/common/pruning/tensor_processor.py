@@ -74,3 +74,14 @@ class NNCFPruningBaseTensorProcessor:
         :param input_masks: Given input masks.
         :return: Elementwise pruning operation output mask.
         """
+
+    @classmethod
+    @abstractmethod
+    def split(cls, tensor: NNCFTensor, output_shapes: List[int]) -> List[NNCFTensor]:
+        """
+        Split/chunk NNCFTensor into chunks along an exsiting dimension.
+
+        :param tensor: Given NNCFTensor.
+        :param output_shapes: Given shapes of the output masks
+        :returns: The list of NNCFTensor which is split
+        """

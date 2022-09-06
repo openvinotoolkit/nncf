@@ -22,43 +22,27 @@ from nncf.experimental.onnx.tensor import ONNXNNCFTensor
 
 from nncf.experimental.post_training.api.dataset import Dataset, NNCFData
 
-from onnx import ModelProto
-from google.protobuf.json_format import MessageToDict
 from torchvision import transforms
 from torchvision.datasets import ImageFolder
 
 
 class ImageNetDataset(Dataset):
-    def __init__(self, dataset, batch_size, shuffle, input_key):
+    def __init__(self, dataset, batch_size, shuffle, input_name):
         super().__init__(batch_size, shuffle)
         self.dataset = dataset
-        self.input_key = input_key
+        self.input_name = input_name
         nncf_logger.info(
             f"The dataset is built with the data located on {dataset.root}. "
-            f"Model input key is {input_key}."
+            f"Model input key is {input_name}."
         )
 
     def __getitem__(self, item) -> NNCFData:
         tensor, target = self.dataset[item]
         tensor = tensor.cpu().detach().numpy()
-        return {self.input_key: ONNXNNCFTensor(tensor), "targets": ONNXNNCFTensor(target)}
+        return {self.input_name: ONNXNNCFTensor(tensor), "targets": ONNXNNCFTensor(target)}
 
     def __len__(self) -> int:
         return len(self.dataset)
-
-
-def infer_input_shape(model: ModelProto) -> Tuple[Optional[int], int, int, int]:
-    assert len(model.graph.input) == 1
-
-    for _input in model.graph.input:
-        dim = _input.type.tensor_type.shape.dim
-        input_shape = [MessageToDict(d).get("dimValue") for d in dim]
-
-    input_shape = [int(dim) if dim is not None else dim for dim in input_shape]
-
-    assert len(input_shape) == 4
-
-    return input_shape
 
 
 def get_transform(image_size: Tuple[int, int],
@@ -85,7 +69,7 @@ def get_transform(image_size: Tuple[int, int],
 
 
 def create_imagenet_torch_dataset(dataset_dir: str,
-                                  input_key: str,
+                                  input_name: str,
                                   input_shape: Optional[Tuple[int, int, int, int]],
                                   mean=(0.485, 0.456, 0.406),
                                   std=(0.229, 0.224, 0.225),
@@ -102,4 +86,4 @@ def create_imagenet_torch_dataset(dataset_dir: str,
     transform = get_transform(image_size, crop_ratio, mean, std, channel_last)
     # The best practise is to use validation part of dataset for calibration (aligning with POT)
     initialization_dataset = ImageFolder(os.path.join(dataset_dir), transform)
-    return ImageNetDataset(initialization_dataset, batch_size, shuffle, input_key)
+    return ImageNetDataset(initialization_dataset, batch_size, shuffle, input_name)

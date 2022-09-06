@@ -25,7 +25,7 @@ def get_concat_axis(input_shapes: List[List[int]], output_shapes: List[List[int]
     Returns concatenation axis by given input and output shape of concat node.
 
     :param input_shapes: Input_shapes of given concat node.
-    :param output_shapes: Input_shapes of given concat node.
+    :param output_shapes: Output_shapes of given concat node.
     :returns: Concatenation axis of given concat node.
     """
     axis = None
@@ -68,3 +68,24 @@ def get_first_nodes_of_type(graph: NNCFGraph, op_types: List[str]) -> List[NNCFN
     for root in graph_roots:
         first_nodes_of_type.extend(graph.traverse_graph(root, partial_traverse_function))
     return first_nodes_of_type
+
+
+def get_split_axis(input_shapes: List[List[int]], output_shapes: List[List[int]]) -> int:
+    """
+    Returns split/chunk axis by given input and output shape of split/chunk node.
+
+    :param input_shapes: Input_shapes of given split/chunk node.
+    :param output_shapes: Output_shapes of given split/chunk node.
+    :returns: Split/Chunk axis of given split/chunk node.
+    """
+    axis = None
+    for idx, (dim_in, dim_out) in enumerate(zip(input_shapes[0], output_shapes[0])):
+        if dim_in != dim_out:
+            axis = idx
+            break
+
+    if axis is None:
+        axis = -1
+        logger.warning('Identity split/concat node detected')
+
+    return axis

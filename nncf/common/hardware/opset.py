@@ -48,6 +48,7 @@ class HWConfigOpName:
     SQUEEZE = 'Squeeze'
     UNSQUEEZE = 'Unsqueeze'
     SPLIT = 'Split'
+    CHUNK = 'Chunk'
     CROP = 'Crop'
     TRANSPOSE = 'Transpose'
     TILE = 'Tile'

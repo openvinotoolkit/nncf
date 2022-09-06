@@ -39,21 +39,21 @@ INPUT_SHAPES = [
 
 
 class TestDataset(Dataset):
-    def __init__(self, samples: List[Tuple[np.ndarray, int]], input_key: str):
+    def __init__(self, samples: List[Tuple[np.ndarray, int]], input_name: str):
         super().__init__(shuffle=False)
         self.samples = samples
-        self.input_key = input_key
+        self.input_name = input_name
 
     def __getitem__(self, item):
         inputs, targets = self.samples[item]
-        return {self.input_key: ONNXNNCFTensor(inputs), "targets": ONNXNNCFTensor(targets)}
+        return {self.input_name: ONNXNNCFTensor(inputs), "targets": ONNXNNCFTensor(targets)}
 
     def __len__(self):
         return 1
 
 
-def mock_dataloader_creator(dataset_name, dataset_path, input_key, input_shape):
-    return TestDataset([(np.zeros(input_shape[1:], dtype=np.float32), 0), ], input_key)
+def mock_dataloader_creator(dataset_name, dataset_path, input_name, input_shape):
+    return TestDataset([(np.zeros(input_shape[1:], dtype=np.float32), 0), ], input_name)
 
 
 @pytest.mark.parametrize(("model_name, input_shape"),
