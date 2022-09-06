@@ -11,9 +11,10 @@
  limitations under the License.
 """
 
-from typing import TypeVar
+from typing import List, TypeVar
 
 from nncf.common.graph.model_transformer import ModelTransformer
+from nncf.common.graph.transformations.commands import TransformationCommand
 from nncf.common.graph.transformations.layout import TransformationLayout
 from nncf.experimental.post_training.statistics.statistic_point import StatisticPointsContainer
 
@@ -42,17 +43,30 @@ class ModelTransformerMeta(ModelTransformer):
         }
 
     def set_model(self, model: ModelType):
+        """
+        Sets model
+
+        :param model: input model
+        """
         self._model = model
 
     def prepare_model_for_statistics_collection(self, statistic_points: StatisticPointsContainer) -> ModelType:
         """
-        Adds additional model outputs.
+        Prepares model for statics collection by adding external outputs
+
+        :param statistic_points: StatisticPointsContainer
+        :return: model after transformations
         """
-        transformation_layout = self._get_transformation_layout_extra_outputs(
-            statistic_points)
+        transformation_layout = self._get_transformation_layout_extra_outputs(statistic_points)
         return self.transform(transformation_layout)
 
     def transform(self, transformation_layout: TransformationLayout) -> ModelType:
+        """
+        Applies transformation layout on the model
+
+        :param transformation_layout: TransformationLayout
+        :return: model after transformations
+        """
         commands = list(self._callbacks_by_commands.keys())
         transformations_list = []
         for transformation in transformation_layout.transformations:
@@ -61,7 +75,13 @@ class ModelTransformerMeta(ModelTransformer):
         self._apply_transformations(transformations_list)
         return self._model
 
-    def _get_transformation_layout_extra_outputs(self, statistic_points) -> TransformationLayout:
+    def _get_transformation_layout_extra_outputs(self, statistic_points: StatisticPointsContainer) -> TransformationLayout:
+        """
+        Collects transformations layout by statistic_points
+
+        :param statistic_points: StatisticPointsContainer
+        :return: transformation_layout
+        """
         transformation_layout = self._transformation_layout()
         transformation_commands = []
         for _statistic_points in statistic_points.values():
@@ -74,17 +94,32 @@ class ModelTransformerMeta(ModelTransformer):
 
         return transformation_layout
 
-    def _apply_transformations(self, transformations_list):
+    def _apply_transformations(self, transformations: List[TransformationCommand]):
+        """
+        Applies transformations by type-callback on the model 
+
+        :param transformations: lisf of the TransformationCommand transformations
+        """
         transformations_by_types = {c: [] for c in self._callbacks_by_commands}
-        for transformation in transformations_list:
+        for transformation in transformations:
             transformation_type = type(transformation)
             transformations_by_types[transformation_type].append(transformation)
         for transform_type, callback in self._callbacks_by_commands.items():
             if transformations_by_types[transform_type]:
                 callback(transformations_by_types[transform_type])
 
-    def _apply_quantizer_insertion_transformations(self, transformations) -> None:
+    def _apply_quantizer_insertion_transformations(self, transformations: List[TransformationCommand]):
+        """
+        Applies transformations on the model
+
+        :param transformations: lisf of the TransformationCommand transformations
+        """
         raise NotImplementedError
 
-    def _apply_output_insertion_transformations(self, transformations) -> None:
+    def _apply_output_insertion_transformations(self, transformations: List[TransformationCommand]):
+        """
+        Applies incoming transformations to the model
+
+        :param transformations: list of the TransformationCommand transformations
+        """
         raise NotImplementedError

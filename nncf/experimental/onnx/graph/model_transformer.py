@@ -182,7 +182,7 @@ class ONNXModelTransformer(ModelTransformerMeta):
         """
         Applies transformations on the model
 
-        :param transformations: lisf of the ONNXQuantizerInsertionCommand
+        :param transformations: lisf of the ONNXQuantizerInsertionCommand transformations
         """
         # TODO: optimize
         for transformation in transformations:
