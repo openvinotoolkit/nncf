@@ -54,3 +54,4 @@ def test_json_against_nncf_config_schema(config_test_struct):
     else:
         with pytest.raises(jsonschema.ValidationError):
             _ = NNCFConfig.from_json(str(config_path))
+        pass

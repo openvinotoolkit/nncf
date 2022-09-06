@@ -13,17 +13,17 @@
 
 import copy
 
-from nncf.config.schema import ARRAY_OF_NUMBERS
-from nncf.config.schema import ARRAY_OF_STRINGS
-from nncf.config.schema import BATCHNORM_ADAPTATION_SCHEMA
-from nncf.config.schema import BOOLEAN
-from nncf.config.schema import IGNORED_SCOPES_DESCRIPTION
-from nncf.config.schema import NUMBER
-from nncf.config.schema import QUANTIZATION_SCHEMA
-from nncf.config.schema import STRING
-from nncf.config.schema import TARGET_SCOPES_DESCRIPTION
-from nncf.config.schema import make_string_or_array_of_strings_schema
-from nncf.config.schema import with_attributes
+from nncf.config.schemata.basic import ARRAY_OF_NUMBERS
+from nncf.config.schemata.basic import ARRAY_OF_STRINGS
+from nncf.config.schemata.common.targeting import BATCHNORM_ADAPTATION_SCHEMA
+from nncf.config.schemata.basic import BOOLEAN
+from nncf.config.schemata.common.targeting import IGNORED_SCOPES_DESCRIPTION
+from nncf.config.schemata.basic import NUMBER
+from nncf.config.schemata.algo.quantization import QUANTIZATION_SCHEMA
+from nncf.config.schemata.basic import STRING
+from nncf.config.schemata.common.targeting import TARGET_SCOPES_DESCRIPTION
+from nncf.config.schemata.basic import make_string_or_array_of_strings_schema
+from nncf.config.schemata.basic import with_attributes
 
 ########################################################################################################################
 # Experimental Quantization
