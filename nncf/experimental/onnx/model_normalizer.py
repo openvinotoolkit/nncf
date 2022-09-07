@@ -118,7 +118,7 @@ class ONNXModelNormalizer:
         nncf_logger.debug('Original Opset Version = {}'.format(model_opset))
         nncf_logger.debug('Original IR Version = {}'.format(model_ir_version))
 
-        modified_model = deepcopy(model)
+        modified_model = model
         if model_opset >= opset_version and model_ir_version >= ir_version:
             nncf_logger.info(
                 f"The model Opset Version {opset_version} and IR Version are equal or higher. Using the original model")
@@ -129,7 +129,7 @@ class ONNXModelNormalizer:
             nncf_logger.debug(
                 'The model was successfully converted  to the Opset Version = {}'.format(
                     modified_model.opset_import[0].version))
-        except ConvertError:
+        except (RuntimeError, ConvertError):
             nncf_logger.error(
                 f"Couldn't convert target model to the Opset Version {opset_version}. Using the original model")
             return modified_model
@@ -172,14 +172,14 @@ class ONNXModelNormalizer:
         Takes the 'model' and cooks it for the Post-Training Algorithms.
         """
         nncf_logger.info('Preparing the model for the Post-Training Algorithms.')
-        modified_model = model
-        if convert_opset_version:
-            modified_model = ONNXModelNormalizer.convert_opset_version(modified_model,
-                                                                       ONNXModelNormalizer.TARGET_OPSET_VERSION,
-                                                                       ONNXModelNormalizer.TARGET_IR_VERSION)
+        modified_model = deepcopy(model)
         modified_model = ONNXModelNormalizer.infer_models_shape(modified_model)
         # TODO(kshpv): probably add_input_from_initializer() should be removed with the higher version of onnx package.
         modified_model = ONNXModelNormalizer.add_input_from_initializer(modified_model)
         modified_model = ONNXModelNormalizer.replace_empty_node_name(modified_model)
+        if convert_opset_version:
+            modified_model = ONNXModelNormalizer.convert_opset_version(modified_model,
+                                                                       ONNXModelNormalizer.TARGET_OPSET_VERSION,
+                                                                       ONNXModelNormalizer.TARGET_IR_VERSION)
         nncf_logger.info('The model was successfully processed.')
         return modified_model

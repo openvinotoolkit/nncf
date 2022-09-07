@@ -148,7 +148,7 @@ class ONNXModelTransformer(ModelTransformer):
 
     def _apply_quantizer_insertion_transformations(self) -> None:
         # TODO: optimize: could be insertion of quantizers done in one operations
-        self.added_target_edges = Counter()
+        self._added_target_edges = Counter()
         for transformation in self.quantizer_insertion_commands:
             self._insert_quantizer_dequantizer(transformation)
 
@@ -176,7 +176,7 @@ class ONNXModelTransformer(ModelTransformer):
             raise RuntimeError(
                 'Could not find the edge corresponding to node {}'.format(
                     transformation.target_point.target_node_name))
-        self.added_target_edges[target_edge_name] += 1
+        self._added_target_edges[target_edge_name] += 1
         return target_edge_name
 
     def _get_quantize_dequantize_nodes(self, transformation: ONNXQuantizerInsertionCommand, target_edge_name: str) -> \
@@ -185,7 +185,7 @@ class ONNXModelTransformer(ModelTransformer):
         per_channel = isinstance(scale, list)
         axis = 0 if per_channel else None
 
-        cnt = self.added_target_edges[target_edge_name]
+        cnt = self._added_target_edges[target_edge_name]
 
         input_target_edge = target_edge_name
         q_target_edge_name = target_edge_name + '_' + str(cnt)
