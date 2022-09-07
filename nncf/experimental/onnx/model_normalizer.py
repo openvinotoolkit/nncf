@@ -14,6 +14,7 @@
 from collections import Counter
 from copy import deepcopy
 import onnx
+from onnx.version_converter import convert_version, ConvertError  # pylint: disable=no-name-in-module
 from nncf.common.utils.logger import logger as nncf_logger
 
 
@@ -119,19 +120,27 @@ class ONNXModelNormalizer:
 
         try:
             modified_model = deepcopy(model)
-            if model_ir_version < ir_version or model_opset < opset_version:
+            if model_opset >= opset_version:
+                return modified_model
+
+            modified_model = convert_version(modified_model, opset_version)
+            onnx.checker.check_model(modified_model)
+            nncf_logger.debug(
+                'The model was successfully converted  to the Opset Version = {}'.format(
+                    modified_model.opset_import[0].version))
+            if model_ir_version < ir_version:
                 op = onnx.OperatorSetIdProto()
                 op.version = opset_version
                 modified_model = onnx.helper.make_model(modified_model.graph, ir_version=ir_version, opset_imports=[op])
                 onnx.checker.check_model(modified_model)
                 nncf_logger.debug(
-                    'The model was successfully converted  to the Opset Version = {} with IR Version to = {}'.format(
-                        modified_model.opset_import[0].version, model.ir_version))
+                    'The model was successfully converted  to the Opset Version = {}'.format(
+                        modified_model.opset_import[0].version))
                 return modified_model
             nncf_logger.error(
                 f"The model Opset Version {opset_version} and IR Version are equal or higher. Using the original model")
             return modified_model
-        except RuntimeError:
+        except ConvertError:
             modified_model = model
             nncf_logger.error(
                 f"Couldn't convert target model to the Opset Version {opset_version}. Using the original model")
