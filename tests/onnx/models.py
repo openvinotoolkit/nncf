@@ -34,12 +34,8 @@ ALL_MODELS = []
 
 
 def register_model(cls):
-    ALL_MODELS.append(cls)
-
-    def wrap(obj):
-        return obj
-
-    return wrap
+    ALL_MODELS.append(cls())
+    return cls
 
 
 class ONNXReferenceModel:

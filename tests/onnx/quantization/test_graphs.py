@@ -23,9 +23,8 @@ from tests.onnx.models import MultiInputOutputModel
 
 @pytest.mark.parametrize('model_to_test', ALL_MODELS)
 def test_syntetic_models_graph(model_to_test):
-    if model_to_test == MultiInputOutputModel:
+    if isinstance(model_to_test, MultiInputOutputModel):
         pytest.skip('min_max_quantize_model does not support many inputs for now.')
-    model = model_to_test()
-    quantized_model = min_max_quantize_model(model.input_shape[0], model.onnx_model)
-    infer_model(model.input_shape[0], quantized_model)
-    compare_nncf_graph(quantized_model, 'synthetic/' + model.path_ref_graph)
+    quantized_model = min_max_quantize_model(model_to_test.input_shape[0], model_to_test.onnx_model)
+    infer_model(model_to_test.input_shape[0], quantized_model)
+    compare_nncf_graph(quantized_model, 'synthetic/' + model_to_test.path_ref_graph)
