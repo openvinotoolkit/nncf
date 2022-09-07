@@ -11,7 +11,7 @@
  limitations under the License.
 """
 
-from typing import TypeVar, Optional
+from typing import TypeVar, Optional, Tuple
 
 from copy import deepcopy
 from collections import Counter
@@ -21,7 +21,6 @@ from nncf.common.graph.model_transformer import ModelTransformer
 from nncf.common.graph.transformations.commands import TargetType
 from nncf.common.quantization.structs import QuantizationMode
 from nncf.common.graph.definitions import NNCFGraphNodeType
-from nncf.common.utils.logger import logger as nncf_logger
 from nncf.experimental.onnx.graph.onnx_graph import ONNXGraph
 from nncf.experimental.onnx.graph.nncf_graph_builder import GraphConverter
 from nncf.experimental.onnx.graph.transformations.layout import ONNXTransformationLayout
@@ -54,13 +53,13 @@ class ONNXModelTransformer(ModelTransformer):
         self._apply_transformations()
         return self.transformed_model
 
-    def _add_quantizer_insertion_transformation(self, transformation: ONNXQuantizerInsertionCommand):
+    def _add_quantizer_insertion_transformation(self, transformation: ONNXQuantizerInsertionCommand) -> None:
         self.quantizer_insertion_commands.append(transformation)
 
-    def _add_output_transformation(self, transformation: ONNXOutputInsertionCommand):
+    def _add_output_transformation(self, transformation: ONNXOutputInsertionCommand) -> None:
         self.output_insertion_commands.append(transformation)
 
-    def _apply_transformations(self):
+    def _apply_transformations(self) -> None:
         if self.quantizer_insertion_commands:
             self._apply_quantizer_insertion_transformations()
             self.quantizer_insertion_commands = []
@@ -147,22 +146,18 @@ class ONNXModelTransformer(ModelTransformer):
                                                                                *model_outputs])
         self.transformed_model = model_with_intermediate_outputs
 
-    def _apply_quantizer_insertion_transformations(self):
-        # TODO: optimize
+    def _apply_quantizer_insertion_transformations(self) -> None:
+        # TODO: optimize: could be insertion of quantizers done in one operations
         self.added_target_edges = Counter()
         for transformation in self.quantizer_insertion_commands:
             self._insert_quantizer_dequantizer(transformation)
 
-    def _get_target_edge_name(self, transformation: ONNXQuantizerInsertionCommand, onnx_graph: ONNXGraph) -> Optional[
-        str]:
+    def _get_target_edge_name(self, transformation: ONNXQuantizerInsertionCommand, onnx_graph: ONNXGraph) -> \
+            Optional[str]:
         target_edge_name = None
         if transformation.target_point.type == TargetType.OPERATION_WITH_WEIGHTS:
-            try:
-                target_edge_name = onnx_graph.get_weight_tensor_with_initializer(
-                    transformation.target_point.target_node_name)
-            except RuntimeError as er:
-                nncf_logger.exception(er)
-                return None
+            target_edge_name = onnx_graph.get_weight_tensor_with_initializer(
+                transformation.target_point.target_node_name)
         elif transformation.target_point.type == TargetType.PRE_LAYER_OPERATION:
             target_edge_name = transformation.target_point.edge_name
         elif transformation.target_point.type == TargetType.POST_LAYER_OPERATION:
@@ -184,7 +179,8 @@ class ONNXModelTransformer(ModelTransformer):
         self.added_target_edges[target_edge_name] += 1
         return target_edge_name
 
-    def _get_quantize_dequantize_nodes(self, transformation, target_edge_name):
+    def _get_quantize_dequantize_nodes(self, transformation: ONNXQuantizerInsertionCommand, target_edge_name: str) -> \
+            Tuple[onnx.NodeProto, onnx.NodeProto]:
         scale = transformation.quantizer_parameters.scale
         per_channel = isinstance(scale, list)
         axis = 0 if per_channel else None
@@ -216,7 +212,8 @@ class ONNXModelTransformer(ModelTransformer):
 
         return quantizer, dequantizer
 
-    def _get_scale_zero_point_tensors(self, transformation, quantizer, dequantizer):
+    def _get_scale_zero_point_tensors(self, transformation: ONNXQuantizerInsertionCommand, quantizer: onnx.NodeProto,
+                                      dequantizer: onnx.NodeProto) -> Tuple[onnx.TensorProto, onnx.TensorProto]:
         scale = transformation.quantizer_parameters.scale
         zero_point = transformation.quantizer_parameters.zero_point
         mode = transformation.quantizer_parameters.mode
@@ -236,7 +233,7 @@ class ONNXModelTransformer(ModelTransformer):
         onnx_zero_point = onnx.helper.make_tensor(zero_point_tensor_name, tensor_type, dims, zero_point)
         return onnx_scale, onnx_zero_point
 
-    def _insert_quantizer_dequantizer(self, transformation: ONNXQuantizerInsertionCommand):
+    def _insert_quantizer_dequantizer(self, transformation: ONNXQuantizerInsertionCommand) -> None:
         onnx_graph = ONNXGraph(self.transformed_model)
         target_edge_name = self._get_target_edge_name(transformation, onnx_graph)
         quantizer, dequantizer = self._get_quantize_dequantize_nodes(transformation, target_edge_name)
