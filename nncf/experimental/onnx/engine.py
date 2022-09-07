@@ -87,9 +87,12 @@ class ONNXEngine(Engine):
         self.nncf_graph = GraphConverter.create_nncf_graph(model)
         self.onnx_graph = ONNXGraph(model)
 
-    def _register_statistics(self, outputs: NNCFData, statistic_points: StatisticPointsContainer) -> None:
-        # TODO(kshpv): remove many branches
-        # pylint: disable=too-many-branches
+    def _find_edge_name_to_node_name_mapping(self, statistic_points: StatisticPointsContainer):
+        def _add_edge_name(edge_name: str) -> None:
+            if edge_name in edge_name_to_node_name:
+                edge_name_to_node_name[edge_name].append(node_name)
+            else:
+                edge_name_to_node_name[edge_name] = [node_name]
         edge_name_to_node_name = {}
         for node_name, _statistic_points in statistic_points.items():
             for statistic_point in _statistic_points:
@@ -99,10 +102,7 @@ class ONNXEngine(Engine):
                                                    self.nncf_graph.get_output_edges(nncf_node_name)]
                     for onnx_node_name in onnx_nodes_after_input_node:
                         edge_name = self.onnx_graph.get_node_edges(onnx_node_name.node_name)['input'][0]
-                        if edge_name in edge_name_to_node_name:
-                            edge_name_to_node_name[edge_name].append(node_name)
-                        else:
-                            edge_name_to_node_name[edge_name] = [node_name]
+                        _add_edge_name(edge_name)
                     continue
                 if statistic_point.target_point.type == TargetType.POST_LAYER_OPERATION:
                     # Any edge is fine so take 0-index
@@ -111,11 +111,11 @@ class ONNXEngine(Engine):
                     edge_name = statistic_point.target_point.edge_name
                 else:
                     RuntimeError('The statistics should be collected only from the input of output edges of the node')
-                if edge_name in edge_name_to_node_name:
-                    edge_name_to_node_name[edge_name].append(node_name)
-                else:
-                    edge_name_to_node_name[edge_name] = [node_name]
+                _add_edge_name(edge_name)
+        return edge_name_to_node_name
 
+    def _register_statistics(self, outputs: NNCFData, statistic_points: StatisticPointsContainer) -> None:
+        edge_name_to_node_name = self._find_edge_name_to_node_name_mapping(statistic_points)
         for output_name, output_tensor in outputs.items():
             if output_name in edge_name_to_node_name:
                 for node_name in edge_name_to_node_name[output_name]:
