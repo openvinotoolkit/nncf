@@ -49,7 +49,7 @@ from nncf.experimental.onnx.hardware.fused_patterns import ONNX_HW_FUSED_PATTERN
 from nncf.experimental.onnx.algorithms.quantization.utils import calculate_activation_quantizer_parameters
 from nncf.experimental.onnx.algorithms.quantization.utils import calculate_weight_quantizer_parameters
 from nncf.experimental.onnx.hardware.config import ONNXHWConfig
-from nncf.experimental.post_training.model_transformer_handler import MODEL_TRANSFORMERS
+from nncf.experimental.post_training.model_transformer_handler import PTQ_MODEL_TRANSFORMERS
 
 QUANTIZATION_LAYER_METATYPES = GENERAL_WEIGHT_LAYER_METATYPES
 
@@ -154,7 +154,7 @@ class ONNXMinMaxQuantization(MinMaxQuantization):
 
     def _apply(self, model: onnx.ModelProto, engine: ONNXEngine,
                statistic_points: StatisticPointsContainer) -> onnx.ModelProto:
-        model_transformer = MODEL_TRANSFORMERS.get()
+        model_transformer = PTQ_MODEL_TRANSFORMERS.get()
         model_transformer.set_model(model)
         transformation_layout, transformation_commands = ONNXTransformationLayout(), []
         onnx_graph = ONNXGraph(model)

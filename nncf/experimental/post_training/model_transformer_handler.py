@@ -11,25 +11,26 @@
  limitations under the License.
 """
 
-from xml.dom import NotFoundErr
+from nncf.common.utils.registry import Registry
 
 
-class ModelTransformersHandler:
+class ModelTransformersHandler(Registry):
 
-    def __init__(self):
+    def __init__(self, name):
+        super().__init__(name)
         self._model_transformer = None
 
     def register(self):
         def init(obj):
             if self._model_transformer is not None:
-                raise NotFoundErr('some message')
+                raise ValueError('The model transformer was already registred')
             self._model_transformer = obj(None)
             return obj
         return init
 
     def get(self):
         if self._model_transformer is None:
-            raise NotFoundErr('some message')
+            raise ValueError('Need to initialize model transformer before calling')
         return self._model_transformer
 
-MODEL_TRANSFORMERS = ModelTransformersHandler()
+PTQ_MODEL_TRANSFORMERS = ModelTransformersHandler('ModelTransformersHandler')

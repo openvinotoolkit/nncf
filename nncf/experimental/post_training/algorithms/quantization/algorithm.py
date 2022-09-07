@@ -123,7 +123,7 @@ class PostTrainingQuantization(Algorithm):
     def create_subalgorithms(self, backend: BackendType) -> None:
         if backend == BackendType.ONNX:
             from nncf.experimental.onnx.algorithms.quantization.min_max_quantization import \
-                ONNXMinMaxQuantization  # pylint: disable=cyclic-import
+                ONNXMinMaxQuantization
             for algorithm, parameters in self.algorithms_to_created.items():
                 if algorithm == PostTrainingAlgorithms.MinMaxQuantization:
                     self.algorithms.append(ONNXMinMaxQuantization(parameters))

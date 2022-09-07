@@ -12,7 +12,7 @@
 """
 
 from copy import deepcopy
-from typing import List, TypeVar
+from typing import List
 
 import onnx
 from nncf.common.graph.definitions import NNCFGraphNodeType
@@ -25,15 +25,13 @@ from nncf.experimental.onnx.graph.onnx_graph import ONNXGraph
 from nncf.experimental.onnx.graph.transformations.commands import ONNXOutputInsertionCommand
 from nncf.experimental.onnx.graph.transformations.commands import ONNXQuantizerInsertionCommand
 from nncf.experimental.onnx.graph.transformations.layout import ONNXTransformationLayout
-from nncf.experimental.post_training.compression_builder import MODEL_TRANSFORMERS
-from nncf.experimental.post_training.graph.model_transformer import ModelTransformerMeta
-
-ModelType = TypeVar('ModelType')
+from nncf.experimental.post_training.model_transformer_handler import PTQ_MODEL_TRANSFORMERS
+from nncf.experimental.post_training.graph.model_transformer import StaticModelTransformerBase
 
 
 # pylint: disable=no-member
-@MODEL_TRANSFORMERS.register()
-class ONNXModelTransformer(ModelTransformerMeta):
+@PTQ_MODEL_TRANSFORMERS.register()
+class ONNXModelTransformer(StaticModelTransformerBase):
     QUANTIZER_NAME_PREFIX = 'QuantizeLinear_'
     DEQUANTIZER_NAME_PREFIX = 'DequantizeLinear_'
     SCALE_TENSOR_NAME_PREFIX = 'scale_'
@@ -98,7 +96,7 @@ class ONNXModelTransformer(ModelTransformerMeta):
     def _get_extra_model_outputs(self,
                                  nncf_graph: NNCFGraph,
                                  onnx_graph: ONNXGraph,
-                                 transformations: List[ONNXOutputInsertionCommand]):
+                                 transformations: List[ONNXOutputInsertionCommand]) -> None:
         """
         Collects extra model outputs based on transformations
 
@@ -130,7 +128,7 @@ class ONNXModelTransformer(ModelTransformerMeta):
             extra_model_outputs.extend(input_edge_names)
         return extra_model_outputs
 
-    def _insert_outputs(self, model: ModelType, outputs=None) -> onnx.ModelProto:
+    def _insert_outputs(self, model: onnx.ModelProto, outputs=None) -> onnx.ModelProto:
         """
         Takes a model and changes its outputs.
 

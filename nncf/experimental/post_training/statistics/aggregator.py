@@ -20,7 +20,7 @@ from nncf.experimental.post_training.statistics.statistic_point import Statistic
 from nncf.experimental.post_training.api.engine import Engine
 from nncf.experimental.post_training.api.dataset import Dataset
 from nncf.experimental.post_training.api.sampler import Sampler
-from nncf.experimental.post_training.model_transformer_handler import MODEL_TRANSFORMERS
+from nncf.experimental.post_training.model_transformer_handler import PTQ_MODEL_TRANSFORMERS
 
 TensorType = TypeVar('TensorType')
 ModelType = TypeVar('ModelType')
@@ -37,13 +37,14 @@ class StatisticsAggregator(ABC):
         self.is_calculate_metric = False
         self.max_number_samples = 0
         self.statistic_points = StatisticPointsContainer()
+        self.model_transformer_handler = PTQ_MODEL_TRANSFORMERS
 
     def collect_statistics(self, model: ModelType) -> None:
         """
         Collects statistics for registered StatisticPoints.
         The statistics are stored in self.statistic_points.
         """
-        model_transformer = MODEL_TRANSFORMERS.get()
+        model_transformer = self.model_transformer_handler.get()
         model_transformer.set_model(model)
         self.engine.set_model(model_transformer.prepare_model_for_statistics_collection(self.statistic_points))
         self.engine.set_sampler(self._create_sampler(self.dataset, self.max_number_samples))

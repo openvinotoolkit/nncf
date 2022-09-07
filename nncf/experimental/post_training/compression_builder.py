@@ -11,6 +11,7 @@
  limitations under the License.
 """
 
+from ctypes import Union
 from typing import Callable, Optional, TypeVar
 
 from nncf.common.utils.logger import logger as nncf_logger
@@ -22,8 +23,8 @@ from nncf.experimental.post_training.api.engine import Engine
 from nncf.experimental.post_training.api.metric import Metric
 from nncf.experimental.post_training.api.dataset import Dataset
 from nncf.experimental.post_training.algorithms import Algorithm
-
-from nncf.experimental.post_training.model_transformer_handler import MODEL_TRANSFORMERS
+from nncf.experimental.post_training.statistics.aggregator import StatisticsAggregator
+from nncf.experimental.post_training.model_transformer_handler import PTQ_MODEL_TRANSFORMERS
 
 ModelType = TypeVar('ModelType')
 
@@ -48,17 +49,20 @@ class CompressionBuilder:
         Creates backend-specific Engine.
         """
         if backend == BackendType.ONNX:
-            from nncf.experimental.onnx.engine import ONNXEngine  # pylint: disable=cyclic-import
+            from nncf.experimental.onnx.engine import ONNXEngine
             return ONNXEngine()
         return None
 
-    def _create_statistics_aggregator(self, engine: Engine, dataset: Dataset, backend: BackendType):
+    def _create_statistics_aggregator(self,
+                                      engine: Engine,
+                                      dataset: Dataset,
+                                      backend: BackendType) -> StatisticsAggregator:
         """
         Creates backend-specific StatisticsAggregator.
         """
         if backend == BackendType.ONNX:
             from nncf.experimental.onnx.statistics.aggregator import \
-                ONNXStatisticsAggregator  # pylint: disable=cyclic-import
+                ONNXStatisticsAggregator
             return ONNXStatisticsAggregator(engine, dataset)
         return None
 
@@ -68,15 +72,15 @@ class CompressionBuilder:
         """
         if backend == BackendType.ONNX:
             from nncf.experimental.onnx.graph.model_transformer import \
-                ONNXModelTransformer  # pylint: disable=cyclic-import
-            model_transformer = MODEL_TRANSFORMERS.get()
+                ONNXModelTransformer
+            model_transformer = PTQ_MODEL_TRANSFORMERS.get()
             assert isinstance(model_transformer, ONNXModelTransformer)
             return model_transformer
         return None
 
     def _get_prepared_model_for_compression(self, model: ModelType, backend: BackendType) -> ModelType:
         if backend == BackendType.ONNX:
-            from nncf.experimental.onnx.model_normalizer import ONNXModelNormalizer  # pylint: disable=cyclic-import
+            from nncf.experimental.onnx.model_normalizer import ONNXModelNormalizer
             if self.convert_opset_version:
                 model = ONNXModelNormalizer.convert_opset_version(model)
             return ONNXModelNormalizer.replace_empty_node_name(model)

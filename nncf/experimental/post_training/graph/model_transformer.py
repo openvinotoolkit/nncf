@@ -11,7 +11,9 @@
  limitations under the License.
 """
 
-from typing import List, TypeVar
+from abc import ABC, abstractclassmethod
+from typing import List
+from typing import TypeVar
 
 from nncf.common.graph.model_transformer import ModelTransformer
 from nncf.common.graph.transformations.commands import TransformationCommand
@@ -22,7 +24,7 @@ ModelType = TypeVar('ModelType')
 
 
 # pylint: disable=no-member
-class ModelTransformerMeta(ModelTransformer):
+class StaticModelTransformerBase(ModelTransformer, ABC):
     QUANTIZER_NAME_PREFIX = 'QuantizeLinear_'
     DEQUANTIZER_NAME_PREFIX = 'DequantizeLinear_'
     SCALE_TENSOR_NAME_PREFIX = 'scale_'
@@ -108,18 +110,18 @@ class ModelTransformerMeta(ModelTransformer):
             if transformations_by_types[transform_type]:
                 callback(transformations_by_types[transform_type])
 
+    @abstractclassmethod
     def _apply_quantizer_insertion_transformations(self, transformations: List[TransformationCommand]):
         """
         Applies transformations on the model
 
         :param transformations: lisf of the TransformationCommand transformations
         """
-        raise NotImplementedError
 
+    @abstractclassmethod
     def _apply_output_insertion_transformations(self, transformations: List[TransformationCommand]):
         """
         Applies incoming transformations to the model
 
         :param transformations: list of the TransformationCommand transformations
         """
-        raise NotImplementedError
