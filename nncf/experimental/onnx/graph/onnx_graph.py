@@ -117,7 +117,7 @@ class ONNXGraph:
                         'output': list(node.output)}
         raise RuntimeError('There is no node with the name {}'.format(node_name))
 
-    def get_input_port_id_for_nodes_after_input(self, input_name: str, to_node: NodeProto):
+    def get_input_port_id_for_nodes_after_input(self, input_name: str, to_node: NodeProto) -> int:
         """
         Returns input_port_id for 'to_node' connected with the model input with the name 'input_name'.
         """
@@ -126,7 +126,7 @@ class ONNXGraph:
                 return input_port_id
         raise RuntimeError(f'The node {to_node} does not have input edge with the name {input_name}')
 
-    def get_output_port_id_for_nodes_before_output(self, output_name: str, from_node: NodeProto):
+    def get_output_port_id_for_nodes_before_output(self, output_name: str, from_node: NodeProto) -> int:
         """
         Returns output_port_id for 'from_node' connected with the model output with the name 'output_name'.
         """
@@ -135,7 +135,7 @@ class ONNXGraph:
                 return output_port_id
         raise RuntimeError(f'The node {from_node} does not have output edge with the name {output_name}')
 
-    def get_port_ids_between_nodes(self, from_node: NodeProto, to_node: NodeProto):
+    def get_port_ids_between_nodes(self, from_node: NodeProto, to_node: NodeProto) -> Dict[str, int]:
         """
         Returns input_port_id and output_port_id between 'from_node' and 'to_node'.
         """
