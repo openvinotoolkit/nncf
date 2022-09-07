@@ -47,7 +47,7 @@ class ONNXEngine(Engine):
         self.rt_session_options['providers'] = ['CPUExecutionProvider']
 
     def get_sampler(self) -> Sampler:
-        return self.sampler if self.sampler else create_onnx_sampler(self.dataset, len(self.dataset))
+        return self.sampler if self.sampler is not None else create_onnx_sampler(self.dataset, len(self.dataset))
 
     def set_model(self, model: onnx.ModelProto) -> None:
         """

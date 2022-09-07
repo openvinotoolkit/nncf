@@ -85,6 +85,7 @@ class MinMaxQuantization(Algorithm, ABC):
                                       per_channel=False)
 
     def __init__(self, parameters: MinMaxQuantizationParameters):
+        super().__init__()
         self.weight_quantizer_config = parameters.weight_quantizer_config \
             if parameters.weight_quantizer_config is not None else self._get_default_qconfig()
         self.activation_quantizer_config = parameters.activation_quantizer_config \

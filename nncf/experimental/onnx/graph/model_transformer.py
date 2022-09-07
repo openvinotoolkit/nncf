@@ -25,12 +25,10 @@ from nncf.experimental.onnx.graph.onnx_graph import ONNXGraph
 from nncf.experimental.onnx.graph.transformations.commands import ONNXOutputInsertionCommand
 from nncf.experimental.onnx.graph.transformations.commands import ONNXQuantizerInsertionCommand
 from nncf.experimental.onnx.graph.transformations.layout import ONNXTransformationLayout
-from nncf.experimental.post_training.model_transformer_handler import PTQ_MODEL_TRANSFORMERS
 from nncf.experimental.post_training.graph.model_transformer import StaticModelTransformerBase
 
 
 # pylint: disable=no-member
-@PTQ_MODEL_TRANSFORMERS.register()
 class ONNXModelTransformer(StaticModelTransformerBase):
     QUANTIZER_NAME_PREFIX = 'QuantizeLinear_'
     DEQUANTIZER_NAME_PREFIX = 'DequantizeLinear_'

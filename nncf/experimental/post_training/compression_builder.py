@@ -11,7 +11,6 @@
  limitations under the License.
 """
 
-from ctypes import Union
 from typing import Callable, Optional, TypeVar
 
 from nncf.common.utils.logger import logger as nncf_logger
@@ -23,8 +22,8 @@ from nncf.experimental.post_training.api.engine import Engine
 from nncf.experimental.post_training.api.metric import Metric
 from nncf.experimental.post_training.api.dataset import Dataset
 from nncf.experimental.post_training.algorithms import Algorithm
+from nncf.experimental.post_training.graph.model_transformer import StaticModelTransformerBase
 from nncf.experimental.post_training.statistics.aggregator import StatisticsAggregator
-from nncf.experimental.post_training.model_transformer_handler import PTQ_MODEL_TRANSFORMERS
 
 ModelType = TypeVar('ModelType')
 
@@ -56,14 +55,15 @@ class CompressionBuilder:
     def _create_statistics_aggregator(self,
                                       engine: Engine,
                                       dataset: Dataset,
-                                      backend: BackendType) -> StatisticsAggregator:
+                                      backend: BackendType,
+                                      model_transformer: StaticModelTransformerBase) -> StatisticsAggregator:
         """
         Creates backend-specific StatisticsAggregator.
         """
         if backend == BackendType.ONNX:
             from nncf.experimental.onnx.statistics.aggregator import \
                 ONNXStatisticsAggregator
-            return ONNXStatisticsAggregator(engine, dataset)
+            return ONNXStatisticsAggregator(engine, dataset, model_transformer)
         return None
 
     def _create_model_transformer(self, model: ModelType, backend: BackendType) -> ModelTransformer:
@@ -73,9 +73,7 @@ class CompressionBuilder:
         if backend == BackendType.ONNX:
             from nncf.experimental.onnx.graph.model_transformer import \
                 ONNXModelTransformer
-            model_transformer = PTQ_MODEL_TRANSFORMERS.get()
-            assert isinstance(model_transformer, ONNXModelTransformer)
-            return model_transformer
+            return ONNXModelTransformer(model)
         return None
 
     def _get_prepared_model_for_compression(self, model: ModelType, backend: BackendType) -> ModelType:
@@ -107,15 +105,16 @@ class CompressionBuilder:
         backend = infer_backend_from_model(model)
         modified_model = self._get_prepared_model_for_compression(model, backend)
 
-        self._create_model_transformer(model, backend)
+        model_transformer = self._create_model_transformer(model, backend)
 
         if engine is None:
             engine = self._create_engine(backend)
 
         for algorithm in self.algorithms:
+            algorithm.model_transformer = model_transformer
             algorithm.create_subalgorithms(backend)
 
-        statistics_aggregator = self._create_statistics_aggregator(engine, dataset, backend)
+        statistics_aggregator = self._create_statistics_aggregator(engine, dataset, backend, model_transformer)
         for algorithm in self.algorithms:
             statistic_points = algorithm.get_statistic_points(modified_model)
             statistics_aggregator.register_stastistic_points(statistic_points)

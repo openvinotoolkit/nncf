@@ -19,6 +19,7 @@ from typing import Dict
 from typing import Union
 
 from enum import Enum
+from nncf.experimental.post_training.graph.model_transformer import StaticModelTransformerBase
 from nncf.experimental.post_training.statistics.statistic_point import StatisticPointsContainer
 from nncf.experimental.post_training.api.engine import Engine
 from nncf.common.utils.backend import BackendType
@@ -48,6 +49,19 @@ class Algorithm(ABC):
     """
     Base class for all Post-Training algorithms.
     """
+
+    def __init__(self) -> None:
+        self._model_transformer = None
+
+    @property
+    def model_transformer(self) -> StaticModelTransformerBase:
+        if self._model_transformer is None:
+            raise NotImplementedError('model_transformer variable was not set before call')
+        return self._model_transformer
+
+    @model_transformer.setter
+    def model_transformer(self, model_transformer: StaticModelTransformerBase) -> None:
+        self._model_transformer = model_transformer
 
     def apply(self, model: ModelType, engine: Engine,
               statistic_points: StatisticPointsContainer) -> ModelType:

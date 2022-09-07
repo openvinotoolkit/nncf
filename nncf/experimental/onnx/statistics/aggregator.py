@@ -18,11 +18,12 @@ from nncf.experimental.post_training.api.sampler import Sampler
 from nncf.experimental.onnx.samplers import ONNXBatchSampler
 from nncf.experimental.onnx.samplers import ONNXRandomBatchSampler
 from nncf.experimental.onnx.engine import ONNXEngine
+from nncf.experimental.onnx.graph.model_transformer import ONNXModelTransformer
 
 
 class ONNXStatisticsAggregator(StatisticsAggregator):
-    def __init__(self, engine: ONNXEngine, dataset: Dataset):
-        super().__init__(engine, dataset)
+    def __init__(self, engine: ONNXEngine, dataset: Dataset, model_transformer: ONNXModelTransformer):
+        super().__init__(engine, dataset, model_transformer)
 
     def _create_sampler(self, dataset: Dataset,
                         sample_indices: int) -> Sampler:

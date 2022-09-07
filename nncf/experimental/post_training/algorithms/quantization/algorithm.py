@@ -126,4 +126,6 @@ class PostTrainingQuantization(Algorithm):
                 ONNXMinMaxQuantization
             for algorithm, parameters in self.algorithms_to_created.items():
                 if algorithm == PostTrainingAlgorithms.MinMaxQuantization:
-                    self.algorithms.append(ONNXMinMaxQuantization(parameters))
+                    min_max_algo = ONNXMinMaxQuantization(parameters)
+                    min_max_algo.model_transformer = self.model_transformer
+                    self.algorithms.append(min_max_algo)
