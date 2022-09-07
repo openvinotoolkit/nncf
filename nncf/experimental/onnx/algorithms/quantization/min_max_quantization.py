@@ -103,62 +103,51 @@ class ONNXMinMaxQuantization(MinMaxQuantization):
         final_setup = solver.get_final_quantizer_setup(finalized_proposal)
         return final_setup
 
+    def _append_weight_quantization_target_point(self, quantization_point) -> None:
+        weight_quantization_target_point = ONNXTargetPoint(TargetType.OPERATION_WITH_WEIGHTS,
+                                                           quantization_point.insertion_point.target_node_name)
+        # It prevents the duplicate weight quantizers from being added.
+        # It can happen when you have layers that share the identical weight tensor.
+        if weight_quantization_target_point in self._quantization_target_points:
+            return
+        self._quantization_target_points.append(weight_quantization_target_point)
+
+    def _append_activation_quantization_target_point(self, onnx_graph, quantization_point) -> None:
+        node_name = quantization_point.insertion_point.target_node_name
+        # If quantization of Model Input node
+        if NNCFGraphNodeType.INPUT_NODE in quantization_point.insertion_point.target_node_name:
+            # There is only onde node - input_node
+            activation_quantization_target_point = ONNXTargetPoint(TargetType.POST_LAYER_OPERATION, node_name)
+        # If not Model Input node
+        # If Quantization of node's input
+        elif quantization_point.insertion_point.input_port_id is not None:
+            _input_port_id = quantization_point.insertion_point.input_port_id
+            input_port_ids = [_input_port_id] if not isinstance(_input_port_id, list) else _input_port_id
+            # If there are several inputs to quantize
+            for input_port_id in input_port_ids:
+                edge_name = onnx_graph.get_node_edges(node_name)['input'][input_port_id]
+                activation_quantization_target_point = ONNXTargetPoint(TargetType.PRE_LAYER_OPERATION,
+                                                                       node_name,
+                                                                       edge_name)
+        # If quantization of node's output
+        else:
+            activation_quantization_target_point = ONNXTargetPoint(TargetType.POST_LAYER_OPERATION,
+                                                                   node_name)
+        if self._is_valid_activation_quantizer(activation_quantization_target_point, self._quantization_target_points):
+            self._quantization_target_points.append(activation_quantization_target_point)
+
     def get_quantization_target_points(self, model: onnx.ModelProto) -> List[ONNXTargetPoint]:
-        # pylint: disable=too-many-nested-blocks
-        # TODO(kshpv): to simple the function
         if self._quantization_target_points:
             return self._quantization_target_points
         quantizer_setup = self._get_quantizer_setup(model)
         onnx_graph = ONNXGraph(model)
-        weight_quantizer_node_names, filled_outputs = set(), set()
-        for _, quantization_point in quantizer_setup.quantization_points.items():
+        for quantization_point in quantizer_setup.quantization_points.values():
             if quantization_point.is_weight_quantization_point():
-                # It prevents the duplicate weight quantizers from being added.
-                # It can happen when you have layers that share the identical weight tensor.
-                if quantization_point.insertion_point.target_node_name in weight_quantizer_node_names:
-                    continue
-                weight_quantizer_node_names.add(quantization_point.insertion_point.target_node_name)
-
-                weight_quantization_target_point = ONNXTargetPoint(TargetType.OPERATION_WITH_WEIGHTS,
-                                                                   quantization_point.insertion_point.target_node_name)
-                self._quantization_target_points.append(weight_quantization_target_point)
+                self._append_weight_quantization_target_point(quantization_point)
+            elif quantization_point.is_activation_quantization_point():
+                self._append_activation_quantization_target_point(onnx_graph, quantization_point)
             else:
-                assert quantization_point.is_activation_quantization_point()
-                # If not Input node
-                node_name = quantization_point.insertion_point.target_node_name
-                if NNCFGraphNodeType.INPUT_NODE not in quantization_point.insertion_point.target_node_name:
-                    # If quantization of Input
-                    if quantization_point.insertion_point.input_port_id is not None:
-                        # If there are several inputs to quantize
-                        if isinstance(quantization_point.insertion_point.input_port_id, list):
-                            for input_port_id in quantization_point.insertion_point.input_port_id:
-                                edge_name = onnx_graph.get_node_edges(node_name)['input'][input_port_id]
-                                activation_quantization_target_point = ONNXTargetPoint(TargetType.PRE_LAYER_OPERATION,
-                                                                                       node_name,
-                                                                                       edge_name)
-                                self._quantization_target_points.append(activation_quantization_target_point)
-                            continue
-                        edge_name = onnx_graph.get_node_edges(node_name)['input'][
-                            quantization_point.insertion_point.input_port_id]
-                        activation_quantization_target_point = ONNXTargetPoint(TargetType.PRE_LAYER_OPERATION,
-                                                                               node_name,
-                                                                               edge_name)
-                        self._quantization_target_points.append(activation_quantization_target_point)
-                        continue
-                    # If quantization of Output
-                    outputs = onnx_graph.get_node_edges(node_name)['output'][0]
-                    activation_quantization_target_point = ONNXTargetPoint(TargetType.POST_LAYER_OPERATION,
-                                                                           node_name)
-                # If Input node
-                else:
-                    outputs = \
-                        onnx_graph.get_node_edges(quantization_point.directly_quantized_operator_node_names[0])[
-                            'input'][0]
-                    activation_quantization_target_point = ONNXTargetPoint(TargetType.POST_LAYER_OPERATION, node_name)
-
-                if self._is_valid_activation_quantizer(outputs, filled_outputs, onnx_graph):
-                    filled_outputs.add(outputs)
-                    self._quantization_target_points.append(activation_quantization_target_point)
+                raise RuntimeError('Incorrect quantization point')
 
         return self._quantization_target_points
 
@@ -250,15 +239,13 @@ class ONNXMinMaxQuantization(MinMaxQuantization):
 
         return config
 
+    @staticmethod
     def _is_valid_activation_quantizer(
-            self, outputs: str, filled_outputs: Set[str], onnx_graph: ONNXGraph) -> bool:
-
-        if outputs in filled_outputs:
-            # TODO (kshpv): resolve this problem with inception v3.
-            nncf_logger.debug(f"Skipping {outputs} layer because it's duplicated.")
+            activation_quantization_target_point: ONNXTargetPoint,
+            activation_quantizer_node_names: List[ONNXTargetPoint]) -> bool:
+        if activation_quantization_target_point.target_node_name in activation_quantizer_node_names:
+            nncf_logger.debug(
+                f"Skipping adding quantizer of the type {activation_quantization_target_point.type} to the node"
+                f" {activation_quantization_target_point.target_node_name} because it's duplicated.")
             return False
-        if not onnx_graph.is_valid_tensor(outputs):
-            nncf_logger.warning(f"Skipping {outputs} activation layer because it's not a valid node output.")
-            return False
-
         return True

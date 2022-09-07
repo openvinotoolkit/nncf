@@ -26,6 +26,11 @@ class ONNXTargetPoint(TargetPoint):
         self.target_node_name = target_node_name
         self.edge_name = edge_name
 
+    def __eq__(self, other: 'ONNXTargetPoint') -> bool:
+        return isinstance(other, ONNXTargetPoint) and \
+               self.type == other.type and self.target_node_name == other.target_node_name and \
+               self.edge_name == other.edge_name
+
 
 class ONNXInsertionCommand(TransformationCommand):
     def __init__(self, target_point: ONNXTargetPoint):
