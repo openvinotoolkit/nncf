@@ -87,50 +87,66 @@ TARGET_DEVICE_SCHEMA = {
 
 NNCF_CONFIG_SCHEMA = {
     "$schema": "http://json-schema.org/draft-07/schema",
+    "title": "NNCF configuration file schema",
+    "description": "The NNCF configuration file follows the JSON format and is the primary way to configure "
+                   "the result of NNCF application to a given user model. This configuration file is "
+                   "loaded into the `NNCFConfig` object by the user at runtime, after which the `NNCFConfig` "
+                   "is passed to the NNCF functions that perform actual compression or "
+                   "preparations for compression-aware training. \n\n"
+                   "The NNCF JSON configuration file is usually set up on a per-model, per-compression use case "
+                   "basis to contain:\n"
+                   "- a description of one or more compression algorithms to be applied to the model\n"
+                   "- the configuration parameters for each of the chosen algorithms\n"
+                   "- additional settings depending on the NNCF use case or integration scenario, e.g. specifying "
+                   "parameters for accuracy-aware training, or specifying model input shape for frameworks "
+                   "that do not have this data encapsulated in the model object in general such as PyTorch)\n"
+                   "and other parameters, the list of which may extend with the ongoing development of NNCF.\n\n"
+                   "This schema serves as a reference for users to write correct NNCF configuration files and each "
+                   "loaded NNCF configuration file into an `NNCFConfig` object is validated against it.",
     "type": "object",
     "properties": {
         "input_info": with_attributes(
             make_object_or_array_of_objects_schema(SINGLE_INPUT_INFO_SCHEMA),
-            description="Required - describe the specifics of your model inputs here."
-                        "This information is used to build the internal graph representation"
+            description="Describe the specifics of your model inputs here. "
+                        "This information is used to build the internal graph representation "
                         "that is leveraged for proper compression functioning, and for "
-                        "exporting the compressed model to ONNX - a dummy tensor with a "
-                        "corresponding shape and filler will be generated for each entry"
-                        "and passed as a corresponding argument into the model's forward"
+                        "exporting the compressed model to an executable format.\n"
+                        "For instance, in PyTorch a dummy tensor with a "
+                        "corresponding shape and filler will be generated for each entry "
+                        "and passed as a corresponding argument into the model's forward "
                         "method. Keywords can be specified for each entry - if left "
                         "unspecified, the dummy tensor will be passed as a positional arg."),
+        "target_device": with_attributes(
+            TARGET_DEVICE_SCHEMA,
+            description="The target device, the specificity of which will be taken into "
+                        "account while compressing in order to obtain the best "
+                        "performance for this type of device. The default 'ANY' means "
+                        "compatible quantization supported by any HW. Set "
+                        "this value to 'TRIAL' if you are going to use a custom "
+                        "quantization schema."),
+        "compression": make_object_or_array_of_objects_schema(
+            {"oneOf": [
+                    {"$ref": f"#/$defs/{algo_name}"} for algo_name in REF_VS_ALGO_SCHEMA
+                ]}),
         "disable_shape_matching": with_attributes(
             BOOLEAN,
-            description="Whether to enable strict input tensor"
-                        "shape matching when building the internal graph"
-                        "representation of the model. Set this to false if your"
+            description="[Deprecated] Whether to enable strict input tensor "
+                        "shape matching when building the internal graph "
+                        "representation of the model. Set this to false if your "
                         "model inputs have any variable dimension other than "
                         "the 0-th (batch) dimension, or if any non-batch "
                         "dimension of the intermediate tensors in your model "
-                        "execution flow depends on the input dimension,"
+                        "execution flow depends on the input dimension, "
                         "otherwise the compression will most likely fail."),
         # Validation of each separate compression description schema occurs in a separate step.
         # This is required for better user feedback, since holistic schema validation is uninformative
         # if there is an error in one of the compression configs.
         **COMPRESSION_LR_MULTIPLIER_PROPERTY,
         "accuracy_aware_training": with_attributes(ACCURACY_AWARE_TRAINING_SCHEMA,
-                                                   description="Accuracy Aware training pipeline's options. This "
-                                                               "section is required to define *mode* and *params*"),
-        "compression": make_object_or_array_of_objects_schema(
-                {"oneOf": [
-                    {"$ref": f"#/$defs/{algo_name}"} for algo_name in REF_VS_ALGO_SCHEMA
-                ]}),
-        "target_device": with_attributes(
-            TARGET_DEVICE_SCHEMA,
-            description="The target device, the specificity of which will be taken into "
-                        "account while compressing in order to obtain the best "
-                        "performance for this type of device. The default 'ANY' means "
-                        "compatible quantization supported by any HW. The parameter takes "
-                        "values from the set ('CPU', 'GPU', 'VPU', 'ANY', 'TRIAL'). Set "
-                        "this value to 'TRIAL' if you are going to use a custom "
-                        "quantization schema. Optional."),
+                                                   description="Options for the execution of the NNCF-powered "
+                                                               "'Accuracy Aware' training pipeline."),
         "log_dir": with_attributes(STRING,
-                                   description="Log directory for NNCF-specific logging outputs"),
+                                   description="Log directory for NNCF-specific logging outputs."),
     },
     "required": ["input_info"],
     "$defs": REF_VS_ALGO_SCHEMA,

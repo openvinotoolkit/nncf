@@ -14,9 +14,11 @@ from nncf.config.schemata.basic import NUMBER
 from nncf.config.schemata.basic import with_attributes
 
 COMPRESSION_LR_MULTIPLIER_PROPERTY = {
-    "compression_lr_multiplier": with_attributes(NUMBER,
-                                                 description="Used to increase/decrease gradients "
-                                                             "for compression algorithms' parameters.")
+    "compression_lr_multiplier":
+        with_attributes(NUMBER,
+                        description="PyTorch only - Used to increase/decrease gradients "
+                                    "for compression algorithms' parameters. The gradients will be multiplied "
+                                    "by the specified value.")
 }
 BASIC_COMPRESSION_ALGO_SCHEMA = {
     "type": "object",
