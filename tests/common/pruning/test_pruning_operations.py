@@ -16,14 +16,9 @@ from nncf.common.graph.layer_attributes import MultipleOutputLayerAttributes
 from nncf.common.graph.layer_attributes import GroupNormLayerAttributes
 from nncf.common.graph.layer_attributes import ConvolutionLayerAttributes
 from nncf.common.graph.layer_attributes import LinearLayerAttributes
-from nncf.common.graph.layer_attributes import ReshapeLayerAttributes
 from nncf.common.pruning.operations import BasePruningOp
 from nncf.common.pruning.mask_propagation import MaskPropagationAlgorithm
-from nncf.common.pruning.tensor_processor import NNCFPruningBaseTensorProcessor
 
-from tests.common.pruning import dummy_types
-from tests.common.pruning.tensor import NPNNCFTensor
-from tests.common.pruning.tensor import NPNNCFTensorProcessor
 
 
 @pytest.mark.parametrize('pruning_op,metatype,accept_pruned_input',
@@ -359,9 +354,10 @@ RESHAPE_TEST_CASES = [
     ['reshape', (1, 32, 64, 1), (1, 2048)], # Flatten
     ['reshape', (1, 1, 64), (1, 1, 1, 64)], # Expand
     ['reshape', (1, 1, 1, 64), (1, 64)], # Squeeze
-    ['reshape', (1, 1, 1, 64), (1, 1, 64, 1)],
+    ['reshape', (1, 1, 1, 64), (1, 1, 1, 64)],
     ['reshape', (1, 1, 32, 64), (1, 64, 32)],
     ['reshape', (1, 1, 32, 64), (1, 64, 16, 16)],
+    ['reshape', (1, 1, 64, 1), (1, 1, 1, 64)],
 ]
 
 
@@ -390,7 +386,8 @@ REF_OUTPUT_MASK_RESHAPE = [
                               [np.ones(10), 'error'],
                               [np.array([0, 1] * 32), np.reshape(np.array([[0] * 32 + [1] * 32] * 32), -1)],
                               [np.array([0, 1] * 32), np.reshape(np.array([[0] * 32 + [1] * 32] * 32), -1)]
-                          ] * 2 + [[np.array([0, 1] * 32)] * 2] * 4
+                          ] * 2 + [[np.array([0, 1] * 32)] * 2] * 5 +\
+                            [[np.ones(10), None]] * 1
 
 
 @pytest.mark.parametrize(('node_type', 'input_shape', 'output_shape', 'output_mask', 'output_mask_ref'),
