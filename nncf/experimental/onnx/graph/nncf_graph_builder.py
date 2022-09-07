@@ -10,7 +10,7 @@
  See the License for the specific language governing permissions and
  limitations under the License.
 """
-from typing import Union
+from typing import Union, List
 
 import onnx
 from onnx import ModelProto
@@ -39,7 +39,7 @@ class GraphConverter:
     DEFAULT_TENSOR_SHAPE = [1]
 
     @staticmethod
-    def _is_valid_onnx_metatype(node: NodeProto):
+    def _is_valid_onnx_metatype(node: NodeProto) -> bool:
         """
         Checks whether the node has the metatype which should be added to the NNCFGraph.a
         """
@@ -59,7 +59,7 @@ class GraphConverter:
         return True
 
     @staticmethod
-    def _get_tensor_shape(onnx_graph: onnx.GraphProto, tensor: Union[str, onnx.ValueInfoProto]):
+    def _get_tensor_shape(onnx_graph: onnx.GraphProto, tensor: Union[str, onnx.ValueInfoProto]) -> List[int]:
         """
         Returns the shape of the 'tensor'.
         """
@@ -79,7 +79,7 @@ class GraphConverter:
         return tensor_shape
 
     @staticmethod
-    def _add_nncf_input_nodes(onnx_graph: onnx.GraphProto, nncf_graph: NNCFGraph):
+    def _add_nncf_input_nodes(onnx_graph: onnx.GraphProto, nncf_graph: NNCFGraph) -> None:
         """
         Adds Input nodes to NNCFGraph.
         """
@@ -110,7 +110,7 @@ class GraphConverter:
                 output_port_id += 1
 
     @staticmethod
-    def _add_nncf_output_nodes(onnx_graph: onnx.GraphProto, nncf_graph: NNCFGraph):
+    def _add_nncf_output_nodes(onnx_graph: onnx.GraphProto, nncf_graph: NNCFGraph) -> None:
         """
         Adds Output nodes to NNCFGraph.
         """
