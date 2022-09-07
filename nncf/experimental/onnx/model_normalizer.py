@@ -14,7 +14,6 @@
 from collections import Counter
 from copy import deepcopy
 import onnx
-from onnx.version_converter import convert_version, ConvertError  # pylint: disable=no-name-in-module
 from nncf.common.utils.logger import logger as nncf_logger
 
 
@@ -23,8 +22,8 @@ class ONNXModelNormalizer:
     The class, which helps to prepare the ONNX model for work with Post-Training Algorithms.
     Implements methods for adding necessary information to the ONNX model.
     """
-    DESIRED_OPSET_VERSION = 13
-    DESIRED_IR_VERSION = 7
+    TARGET_OPSET_VERSION = 13
+    TARGET_IR_VERSION = 7
 
     @staticmethod
     def add_input_from_initializer(model: onnx.ModelProto) -> onnx.ModelProto:
@@ -120,23 +119,22 @@ class ONNXModelNormalizer:
 
         try:
             modified_model = deepcopy(model)
-            if model_ir_version < ir_version:
-                # TODO(kshpv): is it legal to change ir_vesrsion?
-                modified_model.ir_version = ir_version  # Due to the 'Shufflenet-v1
+            if model_ir_version < ir_version or model_opset < opset_version:
+                op = onnx.OperatorSetIdProto()
+                op.version = opset_version
+                modified_model = onnx.helper.make_model(modified_model.graph, ir_version=ir_version, opset_imports=[op])
                 onnx.checker.check_model(modified_model)
-                nncf_logger.debug('Successfully changed IR Version to = {}'.format(model.ir_version))
-            if model_opset >= opset_version:
+                nncf_logger.debug(
+                    'The model was successfully converted  to the Opset Version = {} with IR Version to = {}'.format(
+                        modified_model.opset_import[0].version, model.ir_version))
                 return modified_model
-
-            modified_model = convert_version(modified_model, opset_version)
-            onnx.checker.check_model(modified_model)
-            nncf_logger.debug(
-                'The model was successfully converted  to the Opset Version = {}'.format(
-                    modified_model.opset_import[0].version))
-        except (RuntimeError, ConvertError):
+            nncf_logger.error(
+                f"The model Opset Version {opset_version} and IR Version are equal or higher. Using the original model")
+            return modified_model
+        except RuntimeError:
             modified_model = model
             nncf_logger.error(
-                "Couldn't convert target model to opset13. Using the original model")
+                f"Couldn't convert target model to the Opset Version {opset_version}. Using the original model")
 
         return modified_model
 
@@ -169,8 +167,8 @@ class ONNXModelNormalizer:
         modified_model = model
         if convert_opset_version:
             modified_model = ONNXModelNormalizer.convert_opset_version(modified_model,
-                                                                       ONNXModelNormalizer.DESIRED_OPSET_VERSION,
-                                                                       ONNXModelNormalizer.DESIRED_IR_VERSION)
+                                                                       ONNXModelNormalizer.TARGET_OPSET_VERSION,
+                                                                       ONNXModelNormalizer.TARGET_IR_VERSION)
         modified_model = ONNXModelNormalizer.infer_models_shape(modified_model)
         # TODO(kshpv): probably add_input_from_initializer() should be removed with the higher version of onnx package.
         modified_model = ONNXModelNormalizer.add_input_from_initializer(modified_model)
