@@ -18,6 +18,8 @@ import torch
 from torchvision import models
 import onnx
 
+import networkx as nx
+
 from nncf.experimental.onnx.graph.nncf_graph_builder import GraphConverter
 from nncf.experimental.onnx.model_normalizer import ONNXModelNormalizer
 
@@ -26,14 +28,11 @@ from tests.common.helpers import TEST_ROOT
 from tests.onnx.quantization.common import ModelToTest
 from tests.onnx.quantization.common import check_nx_graph
 
-import networkx as nx
-
-TEST_MODELS = ALL_MODELS
 PROJECT_ROOT = os.path.dirname(__file__)
 REFERENCE_GRAPHS_TEST_ROOT = 'data/reference_graphs/original_nncf_graph'
 
 
-@pytest.mark.parametrize(["model_creator_func", 'dump_graph'], zip(TEST_MODELS, [False] * len(TEST_MODELS)))
+@pytest.mark.parametrize(["model_creator_func", 'dump_graph'], zip(ALL_MODELS, [False] * len(ALL_MODELS)))
 def test_compare_nncf_graph_synthetic_models(model_creator_func, dump_graph):
     model = model_creator_func()
     data_dir = os.path.join(PROJECT_ROOT, REFERENCE_GRAPHS_TEST_ROOT)

@@ -30,6 +30,16 @@ def create_initializer_tensor(name: str, tensor_array: np.ndarray,
 
 
 OPSET_VERSION = 13
+ALL_MODELS = []
+
+
+def register_model(cls):
+    ALL_MODELS.append(cls)
+
+    def wrap(obj):
+        return obj
+
+    return wrap
 
 
 class ONNXReferenceModel:
@@ -39,6 +49,7 @@ class ONNXReferenceModel:
         self.path_ref_graph = graph_path
 
 
+@register_model
 class LinearModel(ONNXReferenceModel):
     def __init__(self):
         input_shape = [1, 3, 32, 32]
@@ -178,6 +189,7 @@ class LinearModel(ONNXReferenceModel):
         super().__init__(model, [input_shape], 'linear_model.dot')
 
 
+@register_model
 class MultiInputOutputModel(ONNXReferenceModel):
     def __init__(self):
         input_shape_1 = [1, 6, 3, 3]
@@ -241,6 +253,7 @@ class MultiInputOutputModel(ONNXReferenceModel):
         super().__init__(model, [input_shape_1, input_shape_2, input_shape_3], 'multi_input_output_model.dot')
 
 
+@register_model
 class ModelWithIntEdges(ONNXReferenceModel):
     def __init__(self):
         model_input_name_1 = "X_1"
@@ -289,6 +302,7 @@ class ModelWithIntEdges(ONNXReferenceModel):
         super().__init__(model, [input_shape], 'int_edges_model.dot')
 
 
+@register_model
 class OneConvolutionalModel(ONNXReferenceModel):
     def __init__(self):
         input_shape = [1, 3, 10, 10]
@@ -345,6 +359,7 @@ class OneConvolutionalModel(ONNXReferenceModel):
         super().__init__(model, [input_shape], 'one_convolutional_model.dot')
 
 
+@register_model
 class ReshapeWeightModel(ONNXReferenceModel):
     # This graph pattern is in inception-v1-12:
     # https://github.com/onnx/models/tree/main/vision/classification/inception_and_googlenet/inception_v1
@@ -426,6 +441,7 @@ class ReshapeWeightModel(ONNXReferenceModel):
         super().__init__(model, [input_shape], 'reshape_weight_model.dot')
 
 
+@register_model
 class WeightSharingModel(ONNXReferenceModel):
     # This graph pattern is in retinanet-9:
     # https://github.com/onnx/models/tree/main/vision/object_detection_segmentation/retinanet
@@ -509,6 +525,7 @@ class WeightSharingModel(ONNXReferenceModel):
         super().__init__(model, [input_shape], 'weight_sharing_model.dot')
 
 
+@register_model
 class OneInputPortQuantizableModel(ONNXReferenceModel):
     #             X
     #             |
@@ -567,6 +584,7 @@ class OneInputPortQuantizableModel(ONNXReferenceModel):
         super().__init__(model, [input_shape], 'one_input_port_quantizable_model.dot')
 
 
+@register_model
 class ManyInputPortsQuantizableModel(ONNXReferenceModel):
     #             X
     #             |
@@ -635,7 +653,3 @@ class ManyInputPortsQuantizableModel(ONNXReferenceModel):
         model = onnx.helper.make_model(graph_def, opset_imports=[op])
         onnx.checker.check_model(model)
         super().__init__(model, [input_shape], 'many_input_ports_quantizable_model.dot')
-
-
-ALL_MODELS = [ManyInputPortsQuantizableModel, OneInputPortQuantizableModel, WeightSharingModel, ReshapeWeightModel,
-              OneConvolutionalModel, ModelWithIntEdges, MultiInputOutputModel, LinearModel]
