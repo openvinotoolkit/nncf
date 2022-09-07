@@ -12,7 +12,6 @@
 """
 
 from copy import deepcopy
-from typing import Set
 from typing import List
 
 import onnx
