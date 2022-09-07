@@ -173,13 +173,13 @@ class ONNXModelNormalizer:
         """
         nncf_logger.info('Preparing the model for the Post-Training Algorithms.')
         modified_model = deepcopy(model)
-        modified_model = ONNXModelNormalizer.infer_models_shape(modified_model)
-        # TODO(kshpv): probably add_input_from_initializer() should be removed with the higher version of onnx package.
-        modified_model = ONNXModelNormalizer.add_input_from_initializer(modified_model)
-        modified_model = ONNXModelNormalizer.replace_empty_node_name(modified_model)
         if convert_opset_version:
             modified_model = ONNXModelNormalizer.convert_opset_version(modified_model,
                                                                        ONNXModelNormalizer.TARGET_OPSET_VERSION,
                                                                        ONNXModelNormalizer.TARGET_IR_VERSION)
+        modified_model = ONNXModelNormalizer.infer_models_shape(modified_model)
+        # TODO(kshpv): probably add_input_from_initializer() should be removed with the higher version of onnx package.
+        modified_model = ONNXModelNormalizer.add_input_from_initializer(modified_model)
+        modified_model = ONNXModelNormalizer.replace_empty_node_name(modified_model)
         nncf_logger.info('The model was successfully processed.')
         return modified_model
