@@ -42,7 +42,6 @@ from nncf.config.schemata.common.compression import COMPRESSION_LR_MULTIPLIER_PR
 
 logger = logging.getLogger('nncf')
 
-
 ALL_SUPPORTED_ALGO_SCHEMA = [BINARIZATION_SCHEMA,
                              QUANTIZATION_SCHEMA,
                              CONST_SPARSITY_SCHEMA,
@@ -144,7 +143,9 @@ NNCF_CONFIG_SCHEMA = {
         **COMPRESSION_LR_MULTIPLIER_PROPERTY,
         "accuracy_aware_training": with_attributes(ACCURACY_AWARE_TRAINING_SCHEMA,
                                                    description="Options for the execution of the NNCF-powered "
-                                                               "'Accuracy Aware' training pipeline."),
+                                                               "'Accuracy Aware' training pipeline. The 'mode' "
+                                                               "property determines the mode of the accuracy-aware "
+                                                               "training execution and further available parameters."),
         "log_dir": with_attributes(STRING,
                                    description="Log directory for NNCF-specific logging outputs."),
     },

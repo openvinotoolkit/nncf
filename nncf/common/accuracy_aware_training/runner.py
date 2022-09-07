@@ -245,7 +245,6 @@ class BaseAccuracyAwareTrainingRunner(TrainingRunner):
         self.maximal_relative_accuracy_drop = accuracy_aware_params.get('maximal_relative_accuracy_degradation', 1.0)
         self.maximal_absolute_accuracy_drop = accuracy_aware_params.get('maximal_absolute_accuracy_degradation')
         self.maximal_total_epochs = accuracy_aware_params.get('maximal_total_epochs', 10000)
-        self.validate_every_n_epochs = accuracy_aware_params.get('validate_every_n_epochs', 1)
 
         self.verbose = verbose
         self.dump_checkpoints = dump_checkpoints

@@ -47,8 +47,12 @@ def make_string_or_array_of_strings_schema(addtl_dict_entries: Dict = None) -> D
 def make_object_or_array_of_objects_schema(single_object_schema: Dict = None) -> Dict:
     retval = {
         "oneOf": [
-            single_object_schema,
             {
+                "title": "single_object_version",
+                **single_object_schema,
+            },
+            {
+                "title": "array_of_objects_version",
                 "type": "array",
                 "items": single_object_schema
             },
