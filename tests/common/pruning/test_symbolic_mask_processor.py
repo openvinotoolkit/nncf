@@ -112,3 +112,21 @@ def test_elementwise_mask_propagation_inconsistent_(consistent):
     assert len(result.mask_producers) == 1
     assert result.mask_producers[0].id == 4
     assert result.mask_producers[0].sparse_multiplier == 2
+
+
+@pytest.mark.parametrize('consistent,out_shapes', [(True, [2, 2, 3]),
+                                                   (False, [2, 2, 4]),
+                                                   (False, [2, 2, 3, 0])])
+def test_split(consistent, out_shapes):
+    mask_producers = [SymbolicMaskProducer(1), SymbolicMaskProducer(2)]
+    input_mask = SymbolicMask(7, mask_producers)
+    if not consistent:
+        with pytest.raises(AssertionError):
+            SymbolicMaskProcessor.split(input_mask, out_shapes)
+        return
+
+    splitted_masks = SymbolicMaskProcessor.split(input_mask, out_shapes)
+    assert len(splitted_masks) == 3
+    for mask, mask_shape_ref in zip(splitted_masks, out_shapes):
+        assert mask.shape[0] == mask_shape_ref
+        assert mask.mask_producers == mask_producers

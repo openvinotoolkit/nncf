@@ -146,5 +146,9 @@ class SymbolicMaskProcessor(NNCFPruningBaseTensorProcessor):
 
     @classmethod
     def split(cls, tensor: SymbolicMask, output_shapes: List[int]) -> List[SymbolicMask]:
+        if any(shape <= 0 for shape in output_shapes) or tensor.shape[0] != sum(output_shapes):
+            raise AssertionError('Symbolic mask split was called with'\
+                f'invalid parammeters: input mask shape: {tensor.shape[0]}, output masks shapes: {output_shapes}')
+
         producers = tensor.mask_producers
         return [SymbolicMask(output_shape, producers) for output_shape in output_shapes]
