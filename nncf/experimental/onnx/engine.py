@@ -85,7 +85,7 @@ class ONNXEngine(Engine):
             for tensor, output in zip(output_tensors, model_outputs)
         }
 
-    def _create_model_graphs(self, model) -> None:
+    def _create_model_graphs(self, model: onnx.ModelProto) -> None:
         """
         Creates NNCFGraph and ONNXGraph.
         """
