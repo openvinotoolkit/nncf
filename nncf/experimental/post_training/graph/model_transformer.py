@@ -11,7 +11,8 @@
  limitations under the License.
 """
 
-from abc import ABC, abstractclassmethod
+from abc import ABC
+from abc import abstractmethod
 from typing import List
 from typing import TypeVar
 
@@ -77,7 +78,8 @@ class StaticModelTransformerBase(ModelTransformer, ABC):
         self._apply_transformations(transformations_list)
         return self._model
 
-    def _get_transformation_layout_extra_outputs(self, statistic_points: StatisticPointsContainer) -> TransformationLayout:
+    def _get_transformation_layout_extra_outputs(self,
+                                                 statistic_points: StatisticPointsContainer) -> TransformationLayout:
         """
         Collects transformations layout by statistic_points
 
@@ -98,7 +100,7 @@ class StaticModelTransformerBase(ModelTransformer, ABC):
 
     def _apply_transformations(self, transformations: List[TransformationCommand]):
         """
-        Applies transformations by type-callback on the model 
+        Applies transformations by type-callback on the model
 
         :param transformations: lisf of the TransformationCommand transformations
         """
@@ -110,7 +112,7 @@ class StaticModelTransformerBase(ModelTransformer, ABC):
             if transformations_by_types[transform_type]:
                 callback(transformations_by_types[transform_type])
 
-    @abstractclassmethod
+    @abstractmethod
     def _apply_quantizer_insertion_transformations(self, transformations: List[TransformationCommand]):
         """
         Applies transformations on the model
@@ -118,7 +120,7 @@ class StaticModelTransformerBase(ModelTransformer, ABC):
         :param transformations: lisf of the TransformationCommand transformations
         """
 
-    @abstractclassmethod
+    @abstractmethod
     def _apply_output_insertion_transformations(self, transformations: List[TransformationCommand]):
         """
         Applies incoming transformations to the model
