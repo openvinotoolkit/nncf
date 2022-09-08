@@ -32,16 +32,17 @@ PROJECT_ROOT = os.path.dirname(__file__)
 REFERENCE_GRAPHS_TEST_ROOT = 'data/reference_graphs/original_nncf_graph'
 
 
-@pytest.mark.parametrize(["model_to_test", 'dump_graph'], zip(ALL_MODELS, [False] * len(ALL_MODELS)))
-def test_compare_nncf_graph_synthetic_models(model_to_test, dump_graph):
+@pytest.mark.parametrize("model_to_test", ALL_MODELS)
+@pytest.mark.parametrize("generate_ref_graphs", [False])
+def test_compare_nncf_graph_synthetic_models(model_to_test, generate_ref_graphs):
     data_dir = os.path.join(PROJECT_ROOT, REFERENCE_GRAPHS_TEST_ROOT)
     path_to_dot = os.path.abspath(os.path.join(data_dir, 'synthetic', model_to_test.path_ref_graph))
 
     nncf_graph = GraphConverter.create_nncf_graph(model_to_test.onnx_model)
     nx_graph = nncf_graph.get_graph_for_structure_analysis(extended=True)
 
-    if dump_graph:
-        nncf_graph.dump_graph(path_to_dot, dump_graph)
+    if generate_ref_graphs:
+        nx.drawing.nx_pydot.write_dot(nx_graph, path_to_dot)
 
     expected_graph = nx.drawing.nx_pydot.read_dot(path_to_dot)
     check_nx_graph(nx_graph, expected_graph)
@@ -60,7 +61,8 @@ def test_compare_nncf_graph_synthetic_models(model_to_test, dump_graph):
                           (ModelToTest('mnasnet0_5', [1, 3, 224, 224]), models.mnasnet0_5()),
                           ]
                          )
-def test_compare_nncf_graph_classification_real_models(tmp_path, model_to_test, model):
+@pytest.mark.parametrize("generate_ref_graphs", [False])
+def test_compare_nncf_graph_classification_real_models(tmp_path, model_to_test, model, generate_ref_graphs):
     onnx_model_dir = str(TEST_ROOT.joinpath('onnx', 'data', 'models'))
     onnx_model_path = str(TEST_ROOT.joinpath(onnx_model_dir, model_to_test.model_name))
     if not os.path.isdir(onnx_model_dir):
@@ -77,9 +79,8 @@ def test_compare_nncf_graph_classification_real_models(tmp_path, model_to_test, 
     nncf_graph = GraphConverter.create_nncf_graph(original_model)
     nx_graph = nncf_graph.get_graph_for_structure_analysis(extended=True)
 
-    dump_graph = False
-    if dump_graph:
-        nncf_graph.dump_graph(path_to_dot, dump_graph)
+    if generate_ref_graphs:
+        nx.drawing.nx_pydot.write_dot(nx_graph, path_to_dot)
 
     expected_graph = nx.drawing.nx_pydot.read_dot(path_to_dot)
     check_nx_graph(nx_graph, expected_graph)
@@ -94,7 +95,8 @@ def test_compare_nncf_graph_classification_real_models(tmp_path, model_to_test, 
                           ModelToTest('fcn-resnet50-12', [1, 3, 480, 640])
                           ]
                          )
-def test_compare_nncf_graph_detection_real_models(tmp_path, model_to_test):
+@pytest.mark.parametrize("generate_ref_graphs", [False])
+def test_compare_nncf_graph_detection_real_models(tmp_path, model_to_test, generate_ref_graphs):
     onnx_model_dir = str(TEST_ROOT.joinpath('onnx', 'data', 'models'))
     onnx_model_path = str(TEST_ROOT.joinpath(onnx_model_dir, model_to_test.model_name + '.onnx'))
     if not os.path.isdir(onnx_model_dir):
@@ -112,9 +114,8 @@ def test_compare_nncf_graph_detection_real_models(tmp_path, model_to_test):
     nncf_graph = GraphConverter.create_nncf_graph(original_model)
     nx_graph = nncf_graph.get_graph_for_structure_analysis(extended=True)
 
-    dump_graph = True
-    if dump_graph:
-        nncf_graph.dump_graph(path_to_dot, dump_graph)
+    if generate_ref_graphs:
+        nx.drawing.nx_pydot.write_dot(nx_graph, path_to_dot)
 
     expected_graph = nx.drawing.nx_pydot.read_dot(path_to_dot)
     check_nx_graph(nx_graph, expected_graph)
