@@ -126,7 +126,7 @@ class ONNXModelNormalizer:
         try:
             modified_model = convert_version(modified_model, opset_version)
             onnx.checker.check_model(modified_model)
-            nncf_logger.debug(
+            nncf_logger.info(
                 'The model was successfully converted  to the Opset Version = {}'.format(
                     modified_model.opset_import[0].version))
         except (RuntimeError, ConvertError):
@@ -139,7 +139,7 @@ class ONNXModelNormalizer:
             op.version = opset_version
             modified_model = onnx.helper.make_model(modified_model.graph, ir_version=ir_version, opset_imports=[op])
             onnx.checker.check_model(modified_model)
-            nncf_logger.debug(
+            nncf_logger.info(
                 'The model was successfully converted  to the Opset Version = {}'.format(
                     modified_model.opset_import[0].version))
             return modified_model
