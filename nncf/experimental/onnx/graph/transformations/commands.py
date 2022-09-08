@@ -31,6 +31,24 @@ class ONNXTargetPoint(TargetPoint):
                self.type == other.type and self.target_node_name == other.target_node_name and \
                self.edge_name == other.edge_name
 
+    def __hash__(self):
+        return hash((self.target_node_name, self.edge_name, self._target_type))
+
+    def __lt__(self, other: 'ONNXTargetPoint'):
+        if self._target_type < other._target_type:
+            return True
+        if self._target_type > other._target_type:
+            return False
+        if self.target_node_name < other.target_node_name:
+            return True
+        if self.target_node_name > other.target_node_name:
+            return False
+        if self.edge_name < other.edge_name:
+            return True
+        if self.edge_name > other.edge_name:
+            return False
+
+
 
 class ONNXInsertionCommand(TransformationCommand):
     def __init__(self, target_point: ONNXTargetPoint):

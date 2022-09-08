@@ -12,7 +12,7 @@
 """
 
 from copy import deepcopy
-from typing import List
+from typing import Set
 
 import onnx
 # pylint: disable=no-member
@@ -21,6 +21,7 @@ from nncf.common.quantization.quantizer_propagation.solver import QuantizerPropa
 from nncf.common.quantization.structs import QuantizableWeightedLayerNode
 from nncf.common.quantization.structs import QuantizerConfig
 from nncf.common.quantization.structs import QuantizationMode
+from nncf.common.quantization.quantizer_setup import SingleConfigQuantizationPoint
 from nncf.common.graph.definitions import NNCFGraphNodeType
 from nncf.common.graph.transformations.commands import TargetType
 from nncf.common.insertion_point_graph import InsertionPointGraph
@@ -58,7 +59,9 @@ class ONNXMinMaxQuantization(MinMaxQuantization):
     def __init__(self, parameters: MinMaxQuantizationParameters):
         super().__init__(parameters)
         self.nncf_graph = None
-        self._quantization_target_points = []  # type: List[ONNXTargetPoint]
+        # It prevents the duplicate weight quantizers from being added.
+        # It can happen when you have layers that share the identical weight tensor.
+        self._quantization_target_points = set()  # type: Set[ONNXTargetPoint]
 
     def generate_stat_collector(self, quantizer_config: QuantizerConfig) -> TensorStatisticCollectorBase:
         is_symmetric = quantizer_config.mode == QuantizationMode.SYMMETRIC
@@ -102,16 +105,13 @@ class ONNXMinMaxQuantization(MinMaxQuantization):
         final_setup = solver.get_final_quantizer_setup(finalized_proposal)
         return final_setup
 
-    def _append_weight_quantization_target_point(self, quantization_point) -> None:
+    def _append_weight_quantization_target_point(self, quantization_point: SingleConfigQuantizationPoint) -> None:
         weight_quantization_target_point = ONNXTargetPoint(TargetType.OPERATION_WITH_WEIGHTS,
                                                            quantization_point.insertion_point.target_node_name)
-        # It prevents the duplicate weight quantizers from being added.
-        # It can happen when you have layers that share the identical weight tensor.
-        if weight_quantization_target_point in self._quantization_target_points:
-            return
-        self._quantization_target_points.append(weight_quantization_target_point)
+        self._quantization_target_points.add(weight_quantization_target_point)
 
-    def _append_activation_quantization_target_point(self, onnx_graph, quantization_point) -> None:
+    def _append_activation_quantization_target_point(self, onnx_graph: ONNXGraph,
+                                                     quantization_point: SingleConfigQuantizationPoint) -> None:
         node_name = quantization_point.insertion_point.target_node_name
         # If quantization of Model Input node
         if NNCFGraphNodeType.INPUT_NODE in quantization_point.insertion_point.target_node_name:
@@ -120,22 +120,17 @@ class ONNXMinMaxQuantization(MinMaxQuantization):
         # If not Model Input node
         # If Quantization of node's input
         elif quantization_point.insertion_point.input_port_id is not None:
-            _input_port_id = quantization_point.insertion_point.input_port_id
-            input_port_ids = [_input_port_id] if not isinstance(_input_port_id, list) else _input_port_id
-            # If there are several inputs to quantize
-            for input_port_id in input_port_ids:
-                edge_name = onnx_graph.get_node_edges(node_name)['input'][input_port_id]
-                activation_quantization_target_point = ONNXTargetPoint(TargetType.PRE_LAYER_OPERATION,
-                                                                       node_name,
-                                                                       edge_name)
+            edge_name = onnx_graph.get_node_edges(node_name)['input'][quantization_point.insertion_point.input_port_id]
+            activation_quantization_target_point = ONNXTargetPoint(TargetType.PRE_LAYER_OPERATION,
+                                                                   node_name,
+                                                                   edge_name)
         # If quantization of node's output
         else:
             activation_quantization_target_point = ONNXTargetPoint(TargetType.POST_LAYER_OPERATION,
                                                                    node_name)
-        if self._is_valid_activation_quantizer(activation_quantization_target_point, self._quantization_target_points):
-            self._quantization_target_points.append(activation_quantization_target_point)
+        self._quantization_target_points.add(activation_quantization_target_point)
 
-    def get_quantization_target_points(self, model: onnx.ModelProto) -> List[ONNXTargetPoint]:
+    def get_quantization_target_points(self, model: onnx.ModelProto) -> Set[ONNXTargetPoint]:
         if self._quantization_target_points:
             return self._quantization_target_points
         quantizer_setup = self._get_quantizer_setup(model)
@@ -147,11 +142,11 @@ class ONNXMinMaxQuantization(MinMaxQuantization):
                 self._append_activation_quantization_target_point(onnx_graph, quantization_point)
             else:
                 raise RuntimeError('Incorrect quantization point')
-
+        self._quantization_target_points = sorted(self._quantization_target_points)
         return self._quantization_target_points
 
     def reset_quantization_target_points(self):
-        self._quantization_target_points = []
+        self._quantization_target_points = set()
 
     def _apply(self, model: onnx.ModelProto, engine: ONNXEngine,
                statistic_points: StatisticPointsContainer) -> onnx.ModelProto:
@@ -237,14 +232,3 @@ class ONNXMinMaxQuantization(MinMaxQuantization):
             )
 
         return config
-
-    @staticmethod
-    def _is_valid_activation_quantizer(
-            activation_quantization_target_point: ONNXTargetPoint,
-            activation_quantizer_node_names: List[ONNXTargetPoint]) -> bool:
-        if activation_quantization_target_point.target_node_name in activation_quantizer_node_names:
-            nncf_logger.debug(
-                f"Skipping adding quantizer of the type {activation_quantization_target_point.type} to the node"
-                f" {activation_quantization_target_point.target_node_name} because it's duplicated.")
-            return False
-        return True
