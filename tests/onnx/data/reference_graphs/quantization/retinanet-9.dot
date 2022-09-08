@@ -834,8 +834,8 @@ strict digraph  {
 "832 QuantizeLinear_1005_1" [id=832, type=QuantizeLinear];
 "833 DequantizeLinear_1005_1" [id=833, type=DequantizeLinear];
 "834 Resize_nncf_345" [id=834, type=Resize];
-"835 QuantizeLinear_1129_1" [id=835, type=QuantizeLinear];
-"836 DequantizeLinear_1129_1" [id=836, type=DequantizeLinear];
+"835 QuantizeLinear_1453_1" [id=835, type=QuantizeLinear];
+"836 DequantizeLinear_1453_1" [id=836, type=DequantizeLinear];
 "837 QuantizeLinear_1006_1" [id=837, type=QuantizeLinear];
 "838 DequantizeLinear_1006_1" [id=838, type=DequantizeLinear];
 "839 Add_345" [id=839, type=Add];
@@ -845,8 +845,8 @@ strict digraph  {
 "843 QuantizeLinear_1016_1" [id=843, type=QuantizeLinear];
 "844 DequantizeLinear_1016_1" [id=844, type=DequantizeLinear];
 "845 Resize_nncf_349" [id=845, type=Resize];
-"846 QuantizeLinear_1130_1" [id=846, type=QuantizeLinear];
-"847 DequantizeLinear_1130_1" [id=847, type=DequantizeLinear];
+"846 QuantizeLinear_1454_1" [id=846, type=QuantizeLinear];
+"847 DequantizeLinear_1454_1" [id=847, type=DequantizeLinear];
 "848 QuantizeLinear_1017_1" [id=848, type=QuantizeLinear];
 "849 DequantizeLinear_1017_1" [id=849, type=DequantizeLinear];
 "850 Add_348" [id=850, type=Add];
@@ -1955,9 +1955,9 @@ strict digraph  {
 "832 QuantizeLinear_1005_1" -> "833 DequantizeLinear_1005_1"  [label="[1, 256, 15, 20]", style=dashed];
 "833 DequantizeLinear_1005_1" -> "834 Resize_nncf_345"  [label="[1, 256, 15, 20]", style=solid];
 "833 DequantizeLinear_1005_1" -> "870 Conv_354"  [label="[1, 256, 15, 20]", style=solid];
-"834 Resize_nncf_345" -> "835 QuantizeLinear_1129_1"  [label="[1, 256, 30, 40]", style=solid];
-"835 QuantizeLinear_1129_1" -> "836 DequantizeLinear_1129_1"  [label="[1, 256, 30, 40]", style=dashed];
-"836 DequantizeLinear_1129_1" -> "839 Add_345"  [label="[1, 256, 30, 40]", style=solid];
+"834 Resize_nncf_345" -> "835 QuantizeLinear_1453_1"  [label="[1, 256, 30, 40]", style=solid];
+"835 QuantizeLinear_1453_1" -> "836 DequantizeLinear_1453_1"  [label="[1, 256, 30, 40]", style=dashed];
+"836 DequantizeLinear_1453_1" -> "839 Add_345"  [label="[1, 256, 30, 40]", style=solid];
 "837 QuantizeLinear_1006_1" -> "838 DequantizeLinear_1006_1"  [label="[1, 256, 30, 40]", style=dashed];
 "838 DequantizeLinear_1006_1" -> "839 Add_345"  [label="[1, 256, 30, 40]", style=solid];
 "839 Add_345" -> "843 QuantizeLinear_1016_1"  [label="[1, 256, 30, 40]", style=solid];
@@ -1967,9 +1967,9 @@ strict digraph  {
 "843 QuantizeLinear_1016_1" -> "844 DequantizeLinear_1016_1"  [label="[1, 256, 30, 40]", style=dashed];
 "844 DequantizeLinear_1016_1" -> "845 Resize_nncf_349"  [label="[1, 256, 30, 40]", style=solid];
 "844 DequantizeLinear_1016_1" -> "867 Conv_353"  [label="[1, 256, 30, 40]", style=solid];
-"845 Resize_nncf_349" -> "846 QuantizeLinear_1130_1"  [label="[1, 256, 60, 80]", style=solid];
-"846 QuantizeLinear_1130_1" -> "847 DequantizeLinear_1130_1"  [label="[1, 256, 60, 80]", style=dashed];
-"847 DequantizeLinear_1130_1" -> "850 Add_348"  [label="[1, 256, 60, 80]", style=solid];
+"845 Resize_nncf_349" -> "846 QuantizeLinear_1454_1"  [label="[1, 256, 60, 80]", style=solid];
+"846 QuantizeLinear_1454_1" -> "847 DequantizeLinear_1454_1"  [label="[1, 256, 60, 80]", style=dashed];
+"847 DequantizeLinear_1454_1" -> "850 Add_348"  [label="[1, 256, 60, 80]", style=solid];
 "848 QuantizeLinear_1017_1" -> "849 DequantizeLinear_1017_1"  [label="[1, 256, 60, 80]", style=dashed];
 "849 DequantizeLinear_1017_1" -> "850 Add_348"  [label="[1, 256, 60, 80]", style=solid];
 "850 Add_348" -> "860 QuantizeLinear_1027_1"  [label="[1, 256, 60, 80]", style=solid];
