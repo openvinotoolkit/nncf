@@ -23,7 +23,7 @@ import networkx as nx
 from nncf.experimental.onnx.graph.nncf_graph_builder import GraphConverter
 from nncf.experimental.onnx.model_normalizer import ONNXModelNormalizer
 
-from tests.onnx.models import ALL_MODELS
+from tests.onnx.models import ALL_SYNTHETIC_MODELS
 from tests.common.helpers import TEST_ROOT
 from tests.onnx.quantization.common import ModelToTest
 from tests.onnx.quantization.common import check_nx_graph
@@ -32,9 +32,10 @@ PROJECT_ROOT = os.path.dirname(__file__)
 REFERENCE_GRAPHS_TEST_ROOT = 'data/reference_graphs/original_nncf_graph'
 
 
-@pytest.mark.parametrize("model_to_test", ALL_MODELS)
+@pytest.mark.parametrize("model_cls_to_test", ALL_SYNTHETIC_MODELS.values())
 @pytest.mark.parametrize("generate_ref_graphs", [False])
-def test_compare_nncf_graph_synthetic_models(model_to_test, generate_ref_graphs):
+def test_compare_nncf_graph_synthetic_models(model_cls_to_test, generate_ref_graphs):
+    model_to_test = model_cls_to_test()
     data_dir = os.path.join(PROJECT_ROOT, REFERENCE_GRAPHS_TEST_ROOT)
     path_to_dot = os.path.abspath(os.path.join(data_dir, 'synthetic', model_to_test.path_ref_graph))
 
