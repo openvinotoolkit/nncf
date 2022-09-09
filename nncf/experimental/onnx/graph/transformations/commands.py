@@ -35,24 +35,15 @@ class ONNXTargetPoint(TargetPoint):
         return hash((self.target_node_name, self.edge_name, self._target_type))
 
     def __lt__(self, other: 'ONNXTargetPoint') -> bool:
-        """
-        The ONNXTargetPoint should have the way to compare.
-        As we would like to have the sorted set of ONNXTargetPoint after completing getting a quantization setup.
-        :param other: ONNXTargetPoint to compare.
-        :return: True if other 'bigger'. False - if self is 'bigger'.
-        """
-        if self._target_type < other._target_type:
-            return True
-        if self._target_type > other._target_type:
-            return False
-        if self.target_node_name < other.target_node_name:
-            return True
-        if self.target_node_name > other.target_node_name:
-            return False
-        if self.edge_name < other.edge_name:
-            return True
-        if self.edge_name > other.edge_name:
-            return False
+        # The ONNXTargetPoint should have the way to compare.
+        # NNCF has to be able returning the Quantization Target Points in the deterministic way.
+        # MinMaxQuantizationAlgorithm returns the sorted Set of such ONNXTargetPoints.
+        params = ['_target_type', 'target_node_name', 'edge_name']
+        for param in params:
+            if self.__getattribute__(param) < other.__getattribute__(param):
+                return True
+            if self.__getattribute__(param) > other.__getattribute__(param):
+                return False
         return False
 
 

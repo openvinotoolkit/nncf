@@ -133,11 +133,11 @@ class ONNXMinMaxQuantization(MinMaxQuantization):
     def get_quantization_target_points(self, model: onnx.ModelProto) -> Set[ONNXTargetPoint]:
         """
         Returns Quantization Target Points.
-        As in the code logic we assume that the compression pipeline works only on onde model,
-        for optimiazation purpose if they were computed before returns them,
+        In the Compression Pipeline logic NNCF assumes that the compression pipeline works only on the single model.
+        So for the optimization purpose if Quantization Target Points were computed before the function returns them,
         otherwise builds NNCFGraph from the 'model',
-        finds the quantization setup and converts it to the Quantization Target Points.
-        :param model: ONNX model, which is used for Quamntiz
+        finds the quantization setup and processes it to the Set of Quantization Target Points.
+        :param model: ONNX model, for which Quantization Target Points are being seek.
         :return: Set of Quantization Target Points.
         """
         if self._quantization_target_points:

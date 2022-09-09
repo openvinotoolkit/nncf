@@ -170,7 +170,7 @@ class ONNXModelNormalizer:
     @staticmethod
     def normalize_model(model: onnx.ModelProto, convert_opset_version: bool = True) -> onnx.ModelProto:
         """
-        Makes a deepcopy of the 'model' and do processing steps on that:
+        Makes a deepcopy of the 'model' and do processing steps:
         1) Convert Opset Version to TARGET_OPSET_VERSION.
         2) Convert IR Version to TARGET_IR_VERSION.
         3) Infers shapes of the 'model' tensors.
