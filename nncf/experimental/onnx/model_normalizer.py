@@ -137,7 +137,7 @@ class ONNXModelNormalizer:
         :return: Converted ONNX model.
         """
         op = onnx.OperatorSetIdProto()
-        op.version = ir_version
+        op.version = model.opset_import[0].version
         modified_model = onnx.helper.make_model(model.graph, ir_version=ir_version, opset_imports=[op])
         onnx.checker.check_model(modified_model)
         nncf_logger.info(
@@ -194,8 +194,9 @@ class ONNXModelNormalizer:
                     f"The model Opset Version {model_opset} and IR Version {model_ir_version} are equal or higher."
                     f" Using the copy of the original model")
             else:
-                modified_model = ONNXModelNormalizer.convert_opset_version(modified_model,
-                                                                           ONNXModelNormalizer.TARGET_OPSET_VERSION)
+                if model_opset < ONNXModelNormalizer.TARGET_OPSET_VERSION:
+                    modified_model = ONNXModelNormalizer.convert_opset_version(modified_model,
+                                                                               ONNXModelNormalizer.TARGET_OPSET_VERSION)
                 if model_ir_version < ONNXModelNormalizer.TARGET_IR_VERSION:
                     modified_model = ONNXModelNormalizer.convert_ir_version(modified_model,
                                                                             ONNXModelNormalizer.TARGET_IR_VERSION)
