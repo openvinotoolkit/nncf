@@ -41,12 +41,14 @@ class GraphConverter:
     @staticmethod
     def _is_valid_onnx_metatype(node: NodeProto) -> bool:
         """
-        Checks whether the node has the metatype which should be added to the NNCFGraph.a
+        Checks whether the node has the metatype which should be added to the NNCFGraph.
+        :param node: Node to be checked.
+        :return: True if the metatype is valid and False if not.
         """
         node_type = node.op_type
         metatype = ONNX_OPERATION_METATYPES.get_operator_metatype_by_op_name(node_type)
         if metatype == ONNXConstantMetatype:  # We don't need to quantize Constants
-            nncf_logger.debug('The matatype is ONNXConstantMetatype, which in not quantizable. Skipping this node.')
+            nncf_logger.debug('The metatype is ONNXConstantMetatype, which in not quantizable. Skipping this node.')
             return False
         if metatype == UnknownMetatype:
             node_name = node.name
@@ -62,6 +64,9 @@ class GraphConverter:
     def _get_tensor_shape(onnx_graph: onnx.GraphProto, tensor: Union[str, onnx.ValueInfoProto]) -> List[int]:
         """
         Returns the shape of the 'tensor'.
+        :param onnx_graph: Graph, in which 'tensor' is been seeking.
+        :param tensor: Could be a name of tensor or ONNX internal tensor type.
+        :return: the 'tensor' shape.
         """
         try:
             if isinstance(tensor, str):
@@ -81,7 +86,11 @@ class GraphConverter:
     @staticmethod
     def _add_nncf_input_nodes(onnx_graph: onnx.GraphProto, nncf_graph: NNCFGraph) -> None:
         """
-        Adds Input nodes to NNCFGraph.
+        Adds special NNCF Input nodes to NNCFGraph.
+        For all the ONNX model inputs, the special NNCF Input node is placed and then corresponding edges are added.
+        :param onnx_graph: ONNXGraph, which helps to get information about the ONNX model.
+        :param nncf_graph: NNCFGraph, in which the new nodes will be added.
+        :return: None.
         """
         for i, _input in enumerate(onnx_graph.get_model_inputs()):
             input_node = nncf_graph.add_nncf_node(node_name=MODEL_INPUT_OP_NAME + '_' + str(i),
@@ -98,7 +107,7 @@ class GraphConverter:
             output_port_id = 0
             for node in filter(GraphConverter._is_valid_onnx_metatype, to_nodes):
                 to_node_id = nncf_graph.get_node_by_name(node.name).node_id
-                input_port_id = onnx_graph.get_input_port_id_for_nodes_after_input(input_name, node)
+                input_port_id = onnx_graph.get_input_port_id_for_node_after_input(input_name, node)
                 nncf_graph.add_edge_between_nncf_nodes(
                     from_node_id=input_node_node_id,
                     to_node_id=to_node_id,
@@ -112,7 +121,11 @@ class GraphConverter:
     @staticmethod
     def _add_nncf_output_nodes(onnx_graph: onnx.GraphProto, nncf_graph: NNCFGraph) -> None:
         """
-        Adds Output nodes to NNCFGraph.
+        Adds special NNCF Output nodes to NNCFGraph.
+        For all the ONNX model outputs, the special NNCF Output node is placed and then corresponding edges are added.
+        :param onnx_graph: ONNXGraph, which helps to get information about the ONNX model.
+        :param nncf_graph: NNCFGraph, in which the new nodes will be added.
+        :return: None.
         """
         for i, _output in enumerate(onnx_graph.get_model_outputs()):
             output_node = nncf_graph.add_nncf_node(node_name=MODEL_OUTPUT_OP_NAME + '_' + str(i),
@@ -129,7 +142,7 @@ class GraphConverter:
             input_port_id = 0
             for node in filter(GraphConverter._is_valid_onnx_metatype, from_nodes):
                 from_node_id = nncf_graph.get_node_by_name(node.name).node_id
-                output_port_id = onnx_graph.get_output_port_id_for_nodes_before_output(output_name, node)
+                output_port_id = onnx_graph.get_output_port_id_for_node_before_output(output_name, node)
                 nncf_graph.add_edge_between_nncf_nodes(
                     from_node_id=from_node_id,
                     to_node_id=output_node_node_id,
@@ -143,20 +156,27 @@ class GraphConverter:
     @staticmethod
     def convert_onnx_dtype_to_nncf_dtype(onnx_dtype: str) -> Dtype:
         """
-        Converts the primitive types from ONNX domain to NNCF domain.
+        Converts the primitive types from the ONNX domain to the NNCF domain.
+        :param onnx_dtype: ONNX primitive typename.
+        :return: NNCF primitive type.
         """
-        conversation_map = {
+        conversion_map = {
             "FLOAT": "float",
             "FLOAT16": "float",
             "BFLOAT16": "float",
             "DOUBLE": "float",
         }
-        return Dtype(conversation_map.get(onnx_dtype, 'int'))
+        return Dtype(conversion_map.get(onnx_dtype, 'int'))
 
     @staticmethod
     def create_nncf_graph(onnx_model: ModelProto) -> NNCFGraph:
         """
         Creates NNCFGraph from 'onnx_model'.
+        Initially, ONNXGraph is built. All nodes from onnx_model which have valid metatype are added to NNCFGraph.
+        Then, corresponding edges are added to the NNCFGraph with shape, type, output and input port ids.
+        In the last step, special NNCF Input and Output nodes are added.
+        :param onnx_model: ONNX model.
+        :return: NNCFGraph.
         """
         nncf_graph = NNCFGraph()
         onnx_graph = ONNXGraph(onnx_model)

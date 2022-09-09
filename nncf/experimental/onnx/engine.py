@@ -86,16 +86,10 @@ class ONNXEngine(Engine):
         }
 
     def _create_model_graphs(self, model: onnx.ModelProto) -> None:
-        """
-        Creates NNCFGraph and ONNXGraph.
-        """
         self.nncf_graph = GraphConverter.create_nncf_graph(model)
         self.onnx_graph = ONNXGraph(model)
 
     def _find_edge_name_to_node_name_mapping(self, statistic_points: StatisticPointsContainer) -> Dict[str, str]:
-        """
-        Finds a mapping between edge names to corresponding node names in 'statistic_points'.
-        """
         edge_name_to_node_name = {}
         for node_name, _statistic_points in statistic_points.items():
             for statistic_point in _statistic_points:

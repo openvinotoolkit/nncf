@@ -37,9 +37,8 @@ class ONNXModelNormalizer:
          - After onnx.shape_inference.infer_shapes the model graph value_info doesn't
          include all activations tensors #4102
          - https://github.com/onnx/onnx/issues/4102
-
-        Args:
-            model: The ModelProto to update.
+         :param model: ONNX model, in which the info is added.
+         :return: ONNX model with additional info.
         """
         # All (top-level) constants will have ValueInfos before IRv4 as they are all inputs
         if model.ir_version < 4:
@@ -96,6 +95,8 @@ class ONNXModelNormalizer:
     def infer_models_shape(model: onnx.ModelProto) -> onnx.ModelProto:
         """
         Infers 'model' and saves the edges shape into the 'model'.
+        :param model: ONNX model, which is inferred.
+        :return: ONNX model with inferred shapes.
         """
         # ONNX shape inference
         # https://github.com/onnx/onnx/blob/main/docs/proposals/SymbolicShapeInfProposal.md
@@ -105,52 +106,52 @@ class ONNXModelNormalizer:
         return inferred_shape_model
 
     @staticmethod
-    def convert_opset_version(model: onnx.ModelProto, opset_version: int,
-                              ir_version: int) -> onnx.ModelProto:
+    def convert_opset_version(model: onnx.ModelProto, opset_version: int) -> onnx.ModelProto:
         """
-        Converts 'model' Opset Version to 'opset_version' if possible and changes IR Version to 'ir_version'.
+        Tries to convert 'model' Opset Version to 'opset_version'.
         If the 'model' can not be converted returns the original 'model'.
+        :param model: ONNX model to convert.
+        :param opset_version: target Opset Version.
+        :return: Converted ONNX model or Original ONNX model.
         """
         # pylint: disable=no-member
-        onnx.checker.check_model(model)
-        model_opset = model.opset_import[0].version
-        model_ir_version = model.ir_version
-        nncf_logger.debug('Original Opset Version = {}'.format(model_opset))
-        nncf_logger.debug('Original IR Version = {}'.format(model_ir_version))
-
-        modified_model = model
-        if model_opset >= opset_version and model_ir_version >= ir_version:
-            nncf_logger.info(
-                f"The model Opset Version {opset_version} and IR Version are equal or higher. Using the original model")
-            return modified_model
         try:
-            modified_model = convert_version(modified_model, opset_version)
+            modified_model = convert_version(model, opset_version)
             onnx.checker.check_model(modified_model)
             nncf_logger.info(
                 'The model was successfully converted  to the Opset Version = {}'.format(
                     modified_model.opset_import[0].version))
+            return modified_model
         except (RuntimeError, ConvertError):
             nncf_logger.error(
-                f"Couldn't convert target model to the Opset Version {opset_version}. Using the original model")
-            return modified_model
+                f"Couldn't convert target model to the Opset Version {opset_version}. "
+                f"Using the copy of the original model")
+            return model
 
-        if model_ir_version < ir_version:
-            op = onnx.OperatorSetIdProto()
-            op.version = opset_version
-            modified_model = onnx.helper.make_model(modified_model.graph, ir_version=ir_version, opset_imports=[op])
-            onnx.checker.check_model(modified_model)
-            nncf_logger.info(
-                'The model was successfully converted  to the IR Version = {}'.format(
-                    modified_model.ir_version))
-            return modified_model
-
+    @staticmethod
+    def convert_ir_version(model: onnx.ModelProto, ir_version: int) -> onnx.ModelProto:
+        """
+        Creates a new model from the 'model' graph with the target IR Version.
+        :param model: ONNX model to convert.
+        :param ir_version: Target IR Version.
+        :return: Converted ONNX model.
+        """
+        op = onnx.OperatorSetIdProto()
+        op.version = ir_version
+        modified_model = onnx.helper.make_model(model.graph, ir_version=ir_version, opset_imports=[op])
+        onnx.checker.check_model(modified_model)
+        nncf_logger.info(
+            'The model was successfully converted  to the IR Version = {}'.format(
+                modified_model.ir_version))
         return modified_model
 
     @staticmethod
     def replace_empty_node_name(model: onnx.ModelProto) -> onnx.ModelProto:
         """
-        Sets an unique name to every empty node in 'model'.
-        NNCFGraph expects every node to have an unique name.
+        Sets a unique name to every node in 'model' with empty name field.
+        NNCFGraph expects every node to have a unique name.
+        :param model: ONNX model.
+        :return: ONNX model with filled nodes.
         """
         for i, node in enumerate(model.graph.node):
             if node.name == '':
@@ -169,14 +170,35 @@ class ONNXModelNormalizer:
     @staticmethod
     def normalize_model(model: onnx.ModelProto, convert_opset_version: bool = True) -> onnx.ModelProto:
         """
-        Takes the 'model' and cooks it for the Post-Training Algorithms.
+        Makes a deepcopy of the 'model' and do processing steps on that:
+        1) Convert Opset Version to TARGET_OPSET_VERSION.
+        2) Convert IR Version to TARGET_IR_VERSION.
+        3) Infers shapes of the 'model' tensors.
+        4) Adds shape of 'model' Initializers.
+        5) Replace empty node names.
+        :param model: ONNX model to process.
+        :param convert_opset_version: Whether convert Opset and IR Versions.
+        :return: new ONNX model, prepared for quantization.
         """
         nncf_logger.info('Preparing the model for the Post-Training Algorithms.')
         modified_model = deepcopy(model)
+        onnx.checker.check_model(modified_model)
         if convert_opset_version:
-            modified_model = ONNXModelNormalizer.convert_opset_version(modified_model,
-                                                                       ONNXModelNormalizer.TARGET_OPSET_VERSION,
-                                                                       ONNXModelNormalizer.TARGET_IR_VERSION)
+            model_opset = modified_model.opset_import[0].version
+            model_ir_version = modified_model.ir_version
+            nncf_logger.debug('Original Opset Version = {}'.format(model_opset))
+            nncf_logger.debug('Original IR Version = {}'.format(model_ir_version))
+            if model_opset >= ONNXModelNormalizer.TARGET_OPSET_VERSION and \
+                    model_ir_version >= ONNXModelNormalizer.TARGET_IR_VERSION:
+                nncf_logger.info(
+                    f"The model Opset Version {model_opset} and IR Version {model_ir_version} are equal or higher."
+                    f" Using the copy of the original model")
+            else:
+                modified_model = ONNXModelNormalizer.convert_opset_version(modified_model,
+                                                                           ONNXModelNormalizer.TARGET_OPSET_VERSION)
+                if model_ir_version < ONNXModelNormalizer.TARGET_IR_VERSION:
+                    modified_model = ONNXModelNormalizer.convert_ir_version(modified_model,
+                                                                            ONNXModelNormalizer.TARGET_IR_VERSION)
         modified_model = ONNXModelNormalizer.infer_models_shape(modified_model)
         # TODO(kshpv): probably add_input_from_initializer() should be removed with the higher version of onnx package.
         modified_model = ONNXModelNormalizer.add_input_from_initializer(modified_model)

@@ -31,10 +31,16 @@ class ONNXTargetPoint(TargetPoint):
                self.type == other.type and self.target_node_name == other.target_node_name and \
                self.edge_name == other.edge_name
 
-    def __hash__(self):
+    def __hash__(self) -> int:
         return hash((self.target_node_name, self.edge_name, self._target_type))
 
-    def __lt__(self, other: 'ONNXTargetPoint'):
+    def __lt__(self, other: 'ONNXTargetPoint') -> bool:
+        """
+        The ONNXTargetPoint should have the way to compare.
+        As we would like to have the sorted set of ONNXTargetPoint after completing getting a quantization setup.
+        :param other: ONNXTargetPoint to compare.
+        :return: True if other 'bigger'. False - if self is 'bigger'.
+        """
         if self._target_type < other._target_type:
             return True
         if self._target_type > other._target_type:
@@ -47,7 +53,7 @@ class ONNXTargetPoint(TargetPoint):
             return True
         if self.edge_name > other.edge_name:
             return False
-
+        return False
 
 
 class ONNXInsertionCommand(TransformationCommand):

@@ -105,13 +105,13 @@ class ONNXMinMaxQuantization(MinMaxQuantization):
         final_setup = solver.get_final_quantizer_setup(finalized_proposal)
         return final_setup
 
-    def _append_weight_quantization_target_point(self, quantization_point: SingleConfigQuantizationPoint) -> None:
+    def _add_weight_quantization_target_point(self, quantization_point: SingleConfigQuantizationPoint) -> None:
         weight_quantization_target_point = ONNXTargetPoint(TargetType.OPERATION_WITH_WEIGHTS,
                                                            quantization_point.insertion_point.target_node_name)
         self._quantization_target_points.add(weight_quantization_target_point)
 
-    def _append_activation_quantization_target_point(self, onnx_graph: ONNXGraph,
-                                                     quantization_point: SingleConfigQuantizationPoint) -> None:
+    def _add_activation_quantization_target_point(self, onnx_graph: ONNXGraph,
+                                                  quantization_point: SingleConfigQuantizationPoint) -> None:
         node_name = quantization_point.insertion_point.target_node_name
         # If quantization of Model Input node
         if NNCFGraphNodeType.INPUT_NODE in quantization_point.insertion_point.target_node_name:
@@ -131,21 +131,30 @@ class ONNXMinMaxQuantization(MinMaxQuantization):
         self._quantization_target_points.add(activation_quantization_target_point)
 
     def get_quantization_target_points(self, model: onnx.ModelProto) -> Set[ONNXTargetPoint]:
+        """
+        Returns Quantization Target Points.
+        As in the code logic we assume that the compression pipeline works only on onde model,
+        for optimiazation purpose if they were computed before returns them,
+        otherwise builds NNCFGraph from the 'model',
+        finds the quantization setup and converts it to the Quantization Target Points.
+        :param model: ONNX model, which is used for Quamntiz
+        :return: Set of Quantization Target Points.
+        """
         if self._quantization_target_points:
             return self._quantization_target_points
         quantizer_setup = self._get_quantizer_setup(model)
         onnx_graph = ONNXGraph(model)
         for quantization_point in quantizer_setup.quantization_points.values():
             if quantization_point.is_weight_quantization_point():
-                self._append_weight_quantization_target_point(quantization_point)
+                self._add_weight_quantization_target_point(quantization_point)
             elif quantization_point.is_activation_quantization_point():
-                self._append_activation_quantization_target_point(onnx_graph, quantization_point)
+                self._add_activation_quantization_target_point(onnx_graph, quantization_point)
             else:
                 raise RuntimeError('Incorrect quantization point')
         self._quantization_target_points = sorted(self._quantization_target_points)
         return self._quantization_target_points
 
-    def reset_quantization_target_points(self):
+    def reset_quantization_target_points(self) -> None:
         self._quantization_target_points = set()
 
     def _apply(self, model: onnx.ModelProto, engine: ONNXEngine,
