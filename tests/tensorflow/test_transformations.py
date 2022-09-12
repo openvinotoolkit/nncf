@@ -40,9 +40,8 @@ from nncf.tensorflow.layers.operation import NNCFOperation
 from nncf.tensorflow.quantization.layers import FakeQuantize
 from nncf.tensorflow.quantization.quantizers import TFQuantizerSpec
 from tests.tensorflow.test_compressed_graph import keras_model_to_tf_graph
-from tests.tensorflow.test_compressed_graph import prepare_and_check_nx_graph
 from tests.tensorflow.test_compressed_graph import get_nx_graph_from_tf_graph
-
+from tests.common.graph.nx_graph import compare_nx_graph_with_reference
 
 def test_insertion_commands_union_invalid_input():
     cmd_0 = commands.TFInsertionCommand(commands.TFBeforeLayer('layer_0'))
@@ -568,7 +567,7 @@ def check_graphs(model, ref_graph_filename):
     if not os.path.exists(ref_graph_path) and os.getenv("NNCF_TEST_REGEN_DOT") is not None:
         nx.drawing.nx_pydot.write_dot(nx_graph, ref_graph_path)
 
-    prepare_and_check_nx_graph(nx_graph, ref_graph_path)
+    compare_nx_graph_with_reference(nx_graph, ref_graph_path)
 
 
 def test_functional_insert_after():
