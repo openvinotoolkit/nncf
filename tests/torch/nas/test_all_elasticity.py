@@ -32,7 +32,7 @@ from tests.torch.nas.descriptors import THREE_CONV_TEST_DESC
 from tests.torch.nas.helpers import do_training_step
 from tests.torch.nas.models.synthetic import ThreeConvModel
 from tests.torch.nas.models.synthetic import ThreeConvModelMode
-from tests.torch.test_compressed_graph import check_nx_graph
+from tests.common.graph.nx_graph import compare_nx_graph_with_reference
 
 
 ###########################
@@ -51,7 +51,7 @@ def check_subnet_visualization(multi_elasticity_handler, model, nas_model_name, 
     model.rebuild_graph()
     dot_file = f'{nas_model_name}_{stage}.dot'
     width_graph = SubnetGraph(model.get_graph(), multi_elasticity_handler).get()
-    check_nx_graph(width_graph, dot_file, 'nas')
+    compare_nx_graph_with_reference(width_graph, 'nas/' + dot_file)
 
 
 ###########################
