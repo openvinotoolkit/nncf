@@ -36,16 +36,7 @@ class StaticModelTransformerBase(ModelTransformer, ABC):
         self._transformation_layout = None
         self._transformations_list = []
 
-        # Transformation commands list
-        self._output_insertion_command = None
-        self._quantizer_insertion_command = None
-
-        self._callbacks_by_commands = {
-            self._output_insertion_command: self._apply_output_insertion_transformations,
-            self._quantizer_insertion_command: self._apply_quantizer_insertion_transformations,
-        }
-
-    def set_model(self, model: ModelType):
+    def set_model(self, model: ModelType) -> None:
         """
         Sets model
 
@@ -70,50 +61,30 @@ class StaticModelTransformerBase(ModelTransformer, ABC):
         :param transformation_layout: TransformationLayout
         :return: model after transformations
         """
-        commands = list(self._callbacks_by_commands.keys())
-        transformations_list = []
-        for transformation in transformation_layout.transformations:
-            if type(transformation) in commands:
-                transformations_list.append(transformation)
-        self._apply_transformations(transformations_list)
+        self._apply_transformations(transformation_layout.transformations)
         return self._model
 
-    def _get_transformation_layout_extra_outputs(self,
-                                                 statistic_points: StatisticPointsContainer) -> TransformationLayout:
+    @abstractmethod
+    def _apply_transformations(self, transformations: List[TransformationCommand]) -> None:
+        """
+        Applies transformations by type-callback on the model
+
+        :param transformations: lisf of the TransformationCommand transformations
+        """
+
+    @abstractmethod
+    def _get_transformation_layout_extra_outputs(
+            self,
+            statistic_points: StatisticPointsContainer) -> TransformationLayout:
         """
         Collects transformations layout by statistic_points
 
         :param statistic_points: StatisticPointsContainer
         :return: transformation_layout
         """
-        transformation_layout = self._transformation_layout()
-        transformation_commands = []
-        for _statistic_points in statistic_points.values():
-            for _statistic_point in _statistic_points:
-                transformation_commands.append(
-                    self._output_insertion_command(_statistic_point.target_point))
-
-        for transformation_command in transformation_commands:
-            transformation_layout.register(transformation_command)
-
-        return transformation_layout
-
-    def _apply_transformations(self, transformations: List[TransformationCommand]):
-        """
-        Applies transformations by type-callback on the model
-
-        :param transformations: lisf of the TransformationCommand transformations
-        """
-        transformations_by_types = {c: [] for c in self._callbacks_by_commands}
-        for transformation in transformations:
-            transformation_type = type(transformation)
-            transformations_by_types[transformation_type].append(transformation)
-        for transform_type, callback in self._callbacks_by_commands.items():
-            if transformations_by_types[transform_type]:
-                callback(transformations_by_types[transform_type])
 
     @abstractmethod
-    def _apply_quantizer_insertion_transformations(self, transformations: List[TransformationCommand]):
+    def _apply_quantizer_insertion_transformations(self, transformations: List[TransformationCommand]) -> None:
         """
         Applies transformations on the model
 
@@ -121,7 +92,7 @@ class StaticModelTransformerBase(ModelTransformer, ABC):
         """
 
     @abstractmethod
-    def _apply_output_insertion_transformations(self, transformations: List[TransformationCommand]):
+    def _apply_output_insertion_transformations(self, transformations: List[TransformationCommand]) -> None:
         """
         Applies incoming transformations to the model
 

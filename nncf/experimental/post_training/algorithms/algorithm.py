@@ -56,7 +56,7 @@ class Algorithm(ABC):
     @property
     def model_transformer(self) -> StaticModelTransformerBase:
         if self._model_transformer is None:
-            raise NotImplementedError('model_transformer variable was not set before call')
+            raise RuntimeError('model_transformer variable was not set before call')
         return self._model_transformer
 
     @model_transformer.setter
