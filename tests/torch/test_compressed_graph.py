@@ -69,6 +69,7 @@ from tests.torch.test_models.synthetic import MultiOutputSameTensorModel
 from tests.torch.test_models.synthetic import PoolUnPool
 from tests.torch.test_models.synthetic import ReshapeModel
 from tests.torch.test_models.synthetic import TransposeModel
+from tests.common.graph.nx_graph import compare_nx_graph_with_reference
 
 
 def get_basic_quantization_config(quantization_type='symmetric', input_sample_sizes=None, input_info: Dict = None):
@@ -91,64 +92,10 @@ def get_basic_quantization_config_with_hw_config_type(hw_config_type, input_samp
     return config
 
 
-def sort_dot(path):
-    with open(path, 'r', encoding='utf8') as f:
-        content = f.readlines()
-    start_line = 'strict digraph  {\n'
-    end_line = '}\n'
-    content.remove(start_line)
-    content.remove(end_line)
-
-    def graph_key(line, offset):
-        key = line.split(' ')[0].replace('"', '')
-        if '->' in line:
-            key += line.split(' ')[3].replace('"', '')
-            return int(key) + offset
-        return int(key)
-
-    sorted_content = sorted(content, key=partial(graph_key, offset=len(content)))
-    with open(path, 'w', encoding='utf8') as f:
-        f.write(start_line)
-        f.writelines(sorted_content)
-        f.write(end_line)
-
-
 def check_graph(graph: PTNNCFGraph, path_to_dot, graph_dir, sort_dot_graph=True):
     # pylint:disable=protected-access
     nx_graph = graph.get_graph_for_structure_analysis()
-    check_nx_graph(nx_graph, path_to_dot, graph_dir, sort_dot_graph=sort_dot_graph)
-
-
-def check_nx_graph(nx_graph: nx.DiGraph, path_to_dot, graph_dir, sort_dot_graph=True):
-    data_dir = os.path.join(os.path.dirname(__file__), 'data/reference_graphs')
-    dot_dir = os.path.join(data_dir, graph_dir)
-    path_to_dot = os.path.abspath(os.path.join(dot_dir, path_to_dot))
-
-    for _, node in nx_graph.nodes(data=True):
-        if 'scope' in node:
-            node.pop('scope')
-
-    # validate .dot file manually!
-    if os.getenv("NNCF_TEST_REGEN_DOT") is not None:
-        if not os.path.exists(dot_dir):
-            os.makedirs(dot_dir)
-        nx.drawing.nx_pydot.write_dot(nx_graph, path_to_dot)
-        if sort_dot_graph:
-            sort_dot(path_to_dot)
-
-    load_graph = nx.drawing.nx_pydot.read_dot(path_to_dot)
-
-    # nx_graph is expected to have version-agnostic operator names already
-    for k, attrs in nx_graph.nodes.items():
-        attrs = {k: str(v) for k, v in attrs.items()}
-        load_attrs = {k: str(v).strip('"') for k, v in load_graph.nodes[k].items()}
-        if 'scope' in load_attrs:
-            load_attrs.pop('scope')  # TODO: remove
-        if attrs != load_attrs:
-            assert attrs == load_attrs
-
-    assert load_graph.nodes.keys() == nx_graph.nodes.keys()
-    assert nx.DiGraph(load_graph).edges == nx_graph.edges
+    compare_nx_graph_with_reference(nx_graph, path_to_dot, sort_dot_graph=sort_dot_graph)
 
 
 class QuantizeTestCaseConfiguration:
@@ -800,7 +747,8 @@ def test_compressed_graph_models_hw(desc, hw_config_type):
     sketch_graph = compressed_model.get_original_graph()
 
     potential_quantizer_graph = prepare_potential_quantizer_graph(sketch_graph, single_config_quantizer_setup)
-    check_nx_graph(potential_quantizer_graph, desc.dot_filename, _case_dir(hw_config_type.value), sort_dot_graph=False)
+    compare_nx_graph_with_reference(potential_quantizer_graph, _case_dir(hw_config_type.value) + desc.dot_filename,
+                                    sort_dot_graph=False)
 
 
 def _case_dir(type_hw_config):

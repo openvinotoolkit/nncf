@@ -22,6 +22,7 @@ import onnx
 import onnxruntime as rt
 
 from tests.common.helpers import TEST_ROOT
+from tests.common.graph.nx_graph import compare_nx_graph_with_reference
 
 from nncf.experimental.post_training.api.dataset import Dataset
 from nncf.experimental.post_training.compression_builder import CompressionBuilder
@@ -131,9 +132,7 @@ def compare_nncf_graph(quantized_model: onnx.ModelProto, path_ref_graph: str,
     if generate_ref_graphs:
         nx.drawing.nx_pydot.write_dot(nx_graph, path_to_dot)
 
-    expected_graph = nx.drawing.nx_pydot.read_dot(path_to_dot)
-
-    check_nx_graph(nx_graph, expected_graph)
+    compare_nx_graph_with_reference(nx_graph, path_to_dot, check_edge_attrs=True)
 
 
 def compare_nncf_graph_onnx_models(quantized_model: onnx.ModelProto, _quantized_model: onnx.ModelProto) -> None:
