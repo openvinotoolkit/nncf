@@ -95,7 +95,10 @@ def get_basic_quantization_config_with_hw_config_type(hw_config_type, input_samp
 def check_graph(graph: PTNNCFGraph, path_to_dot, graph_dir, sort_dot_graph=True):
     # pylint:disable=protected-access
     nx_graph = graph.get_graph_for_structure_analysis()
-    compare_nx_graph_with_reference(nx_graph, os.path.join(graph_dir, path_to_dot), sort_dot_graph=sort_dot_graph)
+    data_dir = os.path.join(os.path.dirname(__file__), 'data/reference_graphs')
+    dot_dir = os.path.join(data_dir, graph_dir)
+    path_to_dot = os.path.abspath(os.path.join(dot_dir, path_to_dot))
+    compare_nx_graph_with_reference(nx_graph, path_to_dot, sort_dot_graph=sort_dot_graph)
 
 
 class QuantizeTestCaseConfiguration:
