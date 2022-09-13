@@ -55,7 +55,7 @@ def compare_nx_graph_with_reference(nx_graph: nx.DiGraph, path_to_dot: str,
     # Check nodes attrs
     for node_name, node_attrs in nx_graph.nodes.items():
         expected_attrs = {k: str(v) for k, v in expected_graph.nodes[node_name].items()}
-        attrs = {k: str(v) for k, v in node_attrs.items()}
+        attrs = {k: str(v).strip('"') for k, v in node_attrs.items()}
         assert expected_attrs == attrs
 
     assert nx.DiGraph(expected_graph).edges == nx_graph.edges
