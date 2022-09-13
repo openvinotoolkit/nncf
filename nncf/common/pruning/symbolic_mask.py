@@ -19,7 +19,7 @@ from nncf.common.pruning.tensor_processor import NNCFPruningBaseTensorProcessor
 
 class SymbolicMaskProducer:
     """
-    Container of information about a NNCFNode which is produsing symbolic mask.
+    Container of information about a NNCFNode which is produsing a symbolic mask.
     NNCFNode produced a (symbolic or not) mask means this mask was set as an output
     mask to this NNCFNode during (symbolic or not) mask propagation.
     """

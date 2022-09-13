@@ -96,7 +96,6 @@ def test_elementwise_mask_propagation(all_close):
         assert result.shape[0] == 5
 
 
-
 @pytest.mark.parametrize('consistent', [True, False])
 def test_elementwise_mask_propagation_inconsistent_(consistent):
     mask0 = SymbolicMask(5, [SymbolicMaskProducer(4, 2)])

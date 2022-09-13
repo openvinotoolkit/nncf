@@ -27,7 +27,7 @@ from nncf.common.pruning.utils import get_output_channels
 class WeightsFlopsCalculator:
     """
     Collection of weight and flops calculation functions.
-    Class instance keeps only parammeters which are constant during
+    Class instance keeps only parameters that are constant during
     compression algorithms execution.
     """
 
@@ -52,7 +52,7 @@ class WeightsFlopsCalculator:
                                 op_addresses_to_skip: List[str] = None
                                 ) -> Tuple[int, int]:
         """
-        Counts the number weights and FLOPs in the model for convolution and fully connected layers.
+        Counts the number of weights and FLOPs in the model for convolution and fully connected layers.
 
         :param graph: NNCFGraph.
         :param output_shapes: Dictionary of output dimension shapes for convolutions and
@@ -83,7 +83,7 @@ class WeightsFlopsCalculator:
                                          op_addresses_to_skip: List[NNCFNodeName] = None) -> \
         Tuple[Dict[NNCFNodeName, int], Dict[NNCFNodeName, int]]:
         """
-        Counts the number weights and FLOPs per node in the model for convolution and fully connected layers.
+        Counts the number of weights and FLOPs per node in the model for convolution and fully connected layers.
 
         :param graph: NNCFGraph.
         :param output_shapes: Dictionary of output dimension shapes for convolutions and

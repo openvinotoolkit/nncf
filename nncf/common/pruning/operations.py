@@ -330,7 +330,7 @@ class ReshapePruningOp(BasePruningOp):
         input_shape = node.layer_attributes.input_shape
         output_shape = node.layer_attributes.output_shape
 
-        # TODO: fix according to CVS-90976
+        # TODO(dlyakhov): Cover all corner cases that appear here (ticket 90976)
         if len(input_shape)==len(output_shape) and set(input_shape)==set(output_shape):
             return input_shape == output_shape
         return True

@@ -14,7 +14,7 @@
 import pytest
 import tensorflow as tf
 
-from nncf.common.pruning.shape_pruning_processor import ShapePruninigProcessor
+from nncf.common.pruning.shape_pruning_processor import ShapePruningProcessor
 from nncf.common.pruning.weights_flops_calculator import WeightsFlopsCalculator
 from nncf.tensorflow.graph.metatypes.common import GENERAL_CONV_LAYER_METATYPES
 from nncf.tensorflow.graph.metatypes.common import LINEAR_LAYER_METATYPES
@@ -73,7 +73,7 @@ def test_flops_calulation_for_spec_layers(model_fn, all_weights, pruning_flops_t
     # pylint:disable=protected-access
     original_graph = compression_ctrl._original_graph
     pruning_groups = compression_ctrl._pruned_layer_groups_info
-    shape_pruner = ShapePruninigProcessor(prunable_types=compression_ctrl._prunable_types,
+    shape_pruner = ShapePruningProcessor(prunable_types=compression_ctrl._prunable_types,
                                           pruning_operations_metatype=TF_PRUNING_OPERATOR_METATYPES)
 
     next_nodes = shape_pruner.get_next_nodes(original_graph, pruning_groups)

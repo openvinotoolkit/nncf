@@ -32,7 +32,7 @@ from nncf.common.pruning.statistics import FilterPruningStatistics
 from nncf.common.pruning.statistics import PrunedModelTheoreticalBorderline
 from nncf.common.pruning.statistics import PrunedLayerSummary
 from nncf.common.pruning.statistics import PrunedModelStatistics
-from nncf.common.pruning.shape_pruning_processor import ShapePruninigProcessor
+from nncf.common.pruning.shape_pruning_processor import ShapePruningProcessor
 from nncf.common.pruning.weights_flops_calculator import WeightsFlopsCalculator
 from nncf.common.pruning.utils import get_rounded_pruned_element_number
 from nncf.common.pruning.utils import get_prunable_layers_in_out_channels
@@ -134,7 +134,7 @@ class FilterPruningController(BasePruningAlgoController):
         self._weights_flops_calc = WeightsFlopsCalculator(conv_op_metatypes=GENERAL_CONV_LAYER_METATYPES,
                                                           linear_op_metatypes=LINEAR_LAYER_METATYPES)
 
-        self._shape_pruning_proc = ShapePruninigProcessor(pruning_operations_metatype=PT_PRUNING_OPERATOR_METATYPES,
+        self._shape_pruning_proc = ShapePruningProcessor(pruning_operations_metatype=PT_PRUNING_OPERATOR_METATYPES,
                                                           prunable_types=prunable_types)
         self.pruning_quotas = {}
         self.nodes_flops = {}  # type: Dict[NNCFNodeName, int]

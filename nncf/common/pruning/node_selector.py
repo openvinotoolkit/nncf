@@ -202,9 +202,10 @@ class PruningNodeSelector:
                                      can_prune_after_check: Dict[int, PruningAnalysisDecision]) ->\
                                      Dict[int, PruningAnalysisDecision]:
         """
-        Checks all nodes that were marked as prunable after the model analysis and compatibility check vs.
-        pruning algo have a correct correspondent closing node on each path form self to outputs and
-        pruning dimensions of all nodes in all cluster groups are equal.
+        Checks:
+        1) All nodes that were marked as prunable after the model analysis and compatibility check vs.
+        pruning algo have a correct correspondent closing node on each path from self to outputs;
+        2) Pruning dimensions of all nodes in all cluster groups are equal.
 
         :param graph: Graph to work with.
         :param pruned_nodes_clusterization: Pruned nodes clusterization.
@@ -226,7 +227,7 @@ class PruningNodeSelector:
                                               Dict[int, PruningAnalysisDecision]:
         """
         Check all nodes that were marked as prunable after the model analysis and compatibility check vs.
-        pruning algo have a correct correspondent closing node on each path form self to outputs.
+        pruning algo have a correct correspondent closing node on each path from self to outputs.
 
         :param graph: Graph to work with.
         :param can_prune_after_check: Dict of node indices vs the decision made by previous steps;
@@ -247,12 +248,12 @@ class PruningNodeSelector:
     def _check_internal_groups_dim(self, pruned_nodes_clusterization: Clusterization) ->\
                                    Dict[int, PruningAnalysisDecision]:
         """
-        Checks pruning dimentions of all nodes in each cluster groups are equal and
-        returns nodes of clusters which failed the check.
+        Checks pruning dimensions of all nodes in each cluster group are equal and
+        returns nodes of clusters that failed the check.
 
         :param pruned_nodes_clusterization: Pruned nodes clusterization.
-        :returns: Pruning analisys decisions for nodes which have
-            not equal pruning dimentions in a cluster they are belongs to.
+        :returns: Pruning analysis decisions for nodes which have
+            not equal pruning dimensions in a cluster they are belong to.
         """
         retval = {}
         for cluster in pruned_nodes_clusterization.get_all_clusters():

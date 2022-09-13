@@ -15,6 +15,7 @@ from typing import Callable
 from typing import Dict
 from typing import List
 from typing import Tuple
+from typing import Any
 
 from nncf.common.graph import NNCFGraph
 from nncf.common.graph import NNCFNode
@@ -32,10 +33,10 @@ from nncf.common.pruning.utils import get_output_channels
 from nncf.common.pruning.utils import get_input_masks
 
 
-class ShapePruninigProcessor:
+class ShapePruningProcessor:
     """
     Collection of shape pruning functions. Class instance keeps
-    only parammeters which are constant during
+    only parameters that are constant during
     compression algorithms execution.
     """
 
@@ -55,7 +56,7 @@ class ShapePruninigProcessor:
         self,
         graph: NNCFGraph,
         pruning_groups: List[Cluster[PrunedLayerInfoBase]],
-        pruning_groups_next_nodes: Dict[int, List['ShapePruninigProcessor.NextNode']],
+        pruning_groups_next_nodes: Dict[int, List[Dict[str, Any]]],
         num_of_sparse_elements_by_node: Dict[NNCFNodeName, int]) -> \
         Tuple[Dict[str, int], Dict[str, int]]:
         """
@@ -80,7 +81,7 @@ class ShapePruninigProcessor:
         self,
         graph: NNCFGraph,
         pruning_groups: List[Cluster[PrunedLayerInfoBase]],
-        pruning_groups_next_nodes: Dict[int, List['ShapePruninigProcessor.NextNode']],
+        pruning_groups_next_nodes: Dict[int, List[Dict[str, Any]]],
         pruning_level: float) -> \
         Tuple[Dict[str, int], Dict[str, int]]:
         """
@@ -103,11 +104,23 @@ class ShapePruninigProcessor:
         return self._calculate_in_out_channels(get_sparser, graph, pruning_groups, pruning_groups_next_nodes)
 
     def prune_cluster_shapes(self,
-                             cluster: Cluster,
+                             cluster: Cluster[PrunedLayerInfoBase],
                              pruned_elems: int,
-                             pruning_groups_next_nodes,
+                             pruning_groups_next_nodes: Dict[int, List[Dict[str, Any]]],
                              input_channels: Dict[NNCFNodeName, int],
                              output_channels: Dict[NNCFNodeName, int]) -> None:
+        """
+        Imitates filter pruning by removing `pruned_elems` elements from
+        input/output channels corresponded to feeded cluster.
+
+        :param cluster:  A PrunedLayerInfoBase cluster.
+        :param pruned_elems: Amount of channels/elements to prune.
+        :param pruning_groups_next_nodes: A dictionary of next nodes of each pruning group.
+        :param input_channels: A dictionary of input channels number in prunable layers.
+            Will be modified according to the filter pruning algorithm.
+        :param output_channels: A dictionary of output channels number in prunable layers.
+            Will be modified according to the filter pruning algorithm.
+        """
         if not pruned_elems:
             return
 
@@ -117,14 +130,16 @@ class ShapePruninigProcessor:
                 input_channels[node.node_name] -= pruned_elems
 
         # Prune in channels in all next nodes
-        next_nodes = pruning_groups_next_nodes[cluster.id]
-        for next_node in next_nodes:
-            input_channels[next_node.node_name] -= pruned_elems * next_node.sparse_multiplier
+        next_nodes_info = pruning_groups_next_nodes[cluster.id]
+        for next_node_info in next_nodes_info:
+            input_channels[next_node_info['node_name']] -= pruned_elems * next_node_info['sparse_multiplier']
 
     def _calculate_in_out_channels(
         self,
         sparse_elements_counter_getter: Callable[[Dict[NNCFNodeName, int]], Callable[[NNCFNodeName], int]],
-        graph: NNCFGraph, pruning_groups, pruning_groups_next_nodes) -> Tuple[Dict[str, int], Dict[str, int]]:
+        graph: NNCFGraph,
+        pruning_groups: List[Cluster[PrunedLayerInfoBase]],
+        pruning_groups_next_nodes: Dict[int, List[Dict[str, Any]]]) -> Tuple[Dict[str, int], Dict[str, int]]:
 
         full_input_channels, full_output_channels = get_prunable_layers_in_out_channels(graph)
         tmp_in_channels, tmp_out_channels = full_input_channels.copy(), full_output_channels.copy()
@@ -144,21 +159,6 @@ class ShapePruninigProcessor:
 
         return tmp_in_channels, tmp_out_channels
 
-    class NextNodeInfo:
-        """
-            Container for next node information.
-        """
-
-        def __init__(self, node_name: NNCFNodeName, sparse_multiplier: int):
-            """
-            Constructor.
-
-            :param node_name: Name of a next node.
-            :param sparse_multiplier: Sparse multiplier of a next node.
-            """
-            self.node_name = node_name
-            self.sparse_multiplier = sparse_multiplier
-
     def _get_next_node_sparse_multiplier(self, graph: NNCFGraph, next_node: NNCFNode,
                                          cluster: Clusterization[PrunedLayerInfoBase]) -> int:
         cluster_nodes_idxs = {node.nncf_node_id for node in cluster.elements}
@@ -172,7 +172,7 @@ class ShapePruninigProcessor:
         raise RuntimeError(f'Next node for cluster {cluster.elements} doesn\'t have closing mask')
 
     def get_next_nodes(self, graph: NNCFGraph, pruning_groups: Clusterization[PrunedLayerInfoBase]) ->\
-        Dict[int, List['NextNodeInfo']]:
+        Dict[int, Dict[str, Any]]:
         """
         Finds nodes of `prunable_types` types that receive the output of a pruned cluster as input
         and collects all info specified in NextNode.
@@ -205,7 +205,8 @@ class ShapePruninigProcessor:
             next_nodes[cluster.id] = []
             for next_node in next_nodes_cluster:
                 sparse_multiplier = self._get_next_node_sparse_multiplier(graph, next_node, cluster)
-                next_nodes[cluster.id].append(self.NextNodeInfo(next_node.node_name, sparse_multiplier))
+                next_nodes[cluster.id].append({'node_name': next_node.node_name,
+                                               'sparse_multiplier': sparse_multiplier})
 
         # 3. Clean graph output shapes
         for node in graph.get_all_nodes():

@@ -175,6 +175,7 @@ def get_split_test_model(input_shape):
     outputs = conv4(x)
     return tf.keras.Model(inputs=inputs, outputs=outputs)
 
+
 def get_broadcasted_linear_model(input_shape):
     input_shape = [1, 8, 8, 1]
     inputs = tf.keras.Input(shape=input_shape[1:], name='input')

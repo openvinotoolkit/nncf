@@ -32,19 +32,34 @@ from nncf.common.utils.registry import Registry
 
 
 def is_grouped_conv(node: NNCFNode) -> bool:
+    """
+    Returns `True` if a feeded node is a grouped convolution node.
+
+    :param node: NNCFNode to check.
+    :return: `True` if a feeded node a grouped convolution node.
+    """
     return isinstance(node.layer_attributes, ConvolutionLayerAttributes) \
            and node.layer_attributes.groups != 1
 
 
 def is_batched_linear(node: NNCFNode, graph: NNCFGraph) -> bool:
+    """
+    Returns `True` if a feeded linear node output tensor has no more than two dimensions.
+    A linear layer has more than two output dimensions means, that this
+    linear layer multiplies several input matrices feeded by batch dimensions
+    from the left/right or both inputs. Batch input dimentions are elements of [:-2] slice.
+
+    :param node: NNCFNode to check.
+    :param graph: NNCFGraph which feeded node is belonged to.
+    :return: `True` if a feeded linear node output tensor has no more than two dimensions.
+    """
     if not isinstance(node.layer_attributes, LinearLayerAttributes):
         return False
 
-    edges = graph.get_input_edges(node)
+    edges = graph.get_output_edges(node)
     if not edges:
-        edges = graph.get_ouput_edges(node)
-        if not edges:
-            return False
+        return False
+
     return len(edges[0].tensor_shape) > 2
 
 
@@ -251,8 +266,8 @@ class PruningAnalysisReason(Enum):
     DIMENSION_MISMATCH = 'of dimension mismatch'
     CLOSING_CONV_MISSING = 'closing convolution missing'
     IN_GROUP_OF_UNPRUNABLE = 'is in the group with non prunable layers'
-    BATCHED_LINEAR = 'linear node has bathced dimension'
-    INCOMPATIBLE_DIMS_IN_CLUSTER = 'channels in cluster nodes has different values'
+    BATCHED_LINEAR = 'linear node has bathced dimension(s)'
+    INCOMPATIBLE_DIMS_IN_CLUSTER = 'channels in cluster nodes have different values'
 
     @classmethod
     def message(cls, node_name: str, decision: Optional['PruningAnalysisDecision']) -> str:
