@@ -76,8 +76,10 @@ class ONNXModelTransformer(StaticModelTransformerBase):
             elif isinstance(transformation, ONNXOutputInsertionCommand):
                 output_insert_transformations.append(transformation)
 
-        self._apply_quantizer_insertion_transformations(quantizer_insert_transformations)
-        self._apply_output_insertion_transformations(output_insert_transformations)
+        if quantizer_insert_transformations:
+            self._apply_quantizer_insertion_transformations(quantizer_insert_transformations)
+        if output_insert_transformations:
+            self._apply_output_insertion_transformations(output_insert_transformations)
 
     def _apply_output_insertion_transformations(self, transformations: List[ONNXOutputInsertionCommand]) -> None:
         """

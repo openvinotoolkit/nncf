@@ -118,6 +118,7 @@ class CompressionBuilder:
         for algorithm in self.algorithms:
             statistic_points = algorithm.get_statistic_points(modified_model)
             statistics_aggregator.register_stastistic_points(statistic_points)
+
         statistics_aggregator.collect_statistics(modified_model)
 
         for algorithm in self.algorithms:
