@@ -35,7 +35,7 @@ from tests.torch.nas.test_elastic_kernel import do_conv2d
 ###########################
 # Helpers
 ###########################
-from tests.common.graph.nx_graph import compare_nx_graph_with_reference
+from tests.torch.test_compressed_graph import check_nx_graph
 
 
 @pytest.fixture
@@ -203,4 +203,4 @@ def test_multi_forward_nodes():
     # multi_elasticity_handler.enable_all()
     # multi_elasticity_handler.activate_supernet()
     width_graph = SubnetGraph(model.get_graph(), multi_elasticity_handler).get()
-    compare_nx_graph_with_reference(width_graph, 'nas/' + 'multi_forward_node.dot')
+    check_nx_graph(width_graph, 'multi_forward_node.dot', 'nas/')
