@@ -3,6 +3,8 @@
 ## Introduction
 In this folder, there are test files available to test if the nncf module is installed and works properly in your local or server environment. It will test NNCF module with mock datasets(`cifar10` for classification, or `coco2017` for detection & segmentation) and mock models.
 
+**NOTICE** : Test checkpoint for `mobilenet_v3_small_imagenet_rb_sparsity_int8` is updated for TF2.8 version, expected accuracy also updated to `67.55%` to `67.59%`.
+
 ---
 
 ## pre-commit test
