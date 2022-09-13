@@ -750,8 +750,10 @@ def test_compressed_graph_models_hw(desc, hw_config_type):
     sketch_graph = compressed_model.get_original_graph()
 
     potential_quantizer_graph = prepare_potential_quantizer_graph(sketch_graph, single_config_quantizer_setup)
-    compare_nx_graph_with_reference(potential_quantizer_graph, _case_dir(hw_config_type.value) + desc.dot_filename,
-                                    sort_dot_graph=False)
+    data_dir = os.path.join(os.path.dirname(__file__), 'data/reference_graphs')
+    dot_dir = os.path.join(data_dir, _case_dir(hw_config_type.value))
+    path_to_dot = os.path.abspath(os.path.join(dot_dir, desc.dot_filename))
+    compare_nx_graph_with_reference(potential_quantizer_graph, path_to_dot, sort_dot_graph=False)
 
 
 def _case_dir(type_hw_config):
