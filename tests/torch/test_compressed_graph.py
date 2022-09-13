@@ -95,6 +95,10 @@ def get_basic_quantization_config_with_hw_config_type(hw_config_type, input_samp
 def check_graph(graph: PTNNCFGraph, path_to_dot, graph_dir, sort_dot_graph=True):
     # pylint:disable=protected-access
     nx_graph = graph.get_graph_for_structure_analysis()
+    check_nx_graph(nx_graph, path_to_dot, graph_dir, sort_dot_graph)
+
+
+def check_nx_graph(nx_graph: nx.DiGraph, path_to_dot, graph_dir, sort_dot_graph=True):
     data_dir = os.path.join(os.path.dirname(__file__), 'data/reference_graphs')
     dot_dir = os.path.join(data_dir, graph_dir)
     path_to_dot = os.path.abspath(os.path.join(dot_dir, path_to_dot))
@@ -274,7 +278,6 @@ class TestModelsGraph:
         compressed_model, compression_ctrl = \
             create_compressed_model_and_algo_for_test(model, config, dummy_forward_fn=desc.dummy_forward_fn,
                                                       wrap_inputs_fn=desc.wrap_inputs_fn)
-
 
         sparsifiable_modules = self.get_sparsifiable_modules(algo)
         ref_num_sparsed = len(get_all_modules_by_type(model, sparsifiable_modules))

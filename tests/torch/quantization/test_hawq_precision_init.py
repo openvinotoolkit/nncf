@@ -76,7 +76,7 @@ from tests.torch.quantization.test_quantization_helpers import get_squeezenet_qu
 from tests.torch.quantization.test_quantization_helpers import post_compression_test_distr_init
 # pylint:disable=unused-import
 from tests.torch.modules.test_rnn import _seed
-from tests.common.graph.nx_graph import compare_nx_graph_with_reference
+from tests.torch.test_compressed_graph import check_nx_graph
 from tests.torch.test_models import squeezenet1_1
 
 
@@ -281,7 +281,7 @@ def check_bitwidth_graph(algo_ctrl, model, path_to_dot, graph_dir, add_flops=Fal
     groups_of_adjacent_quantizers = algo_ctrl.groups_of_adjacent_quantizers
     graph = BitwidthGraph(algo_ctrl, model, groups_of_adjacent_quantizers, add_flops).get()
     nx_graph = add_adjust_padding_nodes(graph, model)
-    compare_nx_graph_with_reference(nx_graph, os.path.join(graph_dir, path_to_dot), sort_dot_graph=False)
+    check_nx_graph(nx_graph, path_to_dot, graph_dir, sort_dot_graph=False)
 
 
 class HAWQTestStruct(NamedTuple):
