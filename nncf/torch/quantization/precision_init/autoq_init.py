@@ -20,6 +20,10 @@ from nncf.common.utils.debug import is_debug
 from nncf.common.hardware.config import HWConfigType
 from nncf.common.utils.logger import logger
 from nncf.common.utils.os import safe_open
+from nncf.config.schemata.defaults import AUTOQ_EVAL_SUBSET_RATIO
+from nncf.config.schemata.defaults import AUTOQ_ITER_NUMBER
+from nncf.config.schemata.defaults import AUTOQ_WARMUP_ITER_NUMBER
+from nncf.config.schemata.defaults import PRECISION_INIT_BITWIDTHS
 from nncf.torch.quantization.precision_constraints import HardwareQuantizationConstraints
 from nncf.torch.quantization.precision_init.base_init import BasePrecisionInitializer, BasePrecisionInitParams
 from nncf.common.quantization.quantizer_setup import SingleConfigQuantizerSetup
@@ -67,17 +71,19 @@ class AutoQPrecisionInitParams(BasePrecisionInitParams):
                     target_hw_config_type: Optional[HWConfigType]) -> 'AutoQPrecisionInitParams':
         dict_copy = autoq_init_config_dict.copy()
         dump_autoq_data = dict_copy.pop('dump_init_precision_data', False)
-        iter_number = dict_copy.pop('iter_number', 0)
+        iter_number = dict_copy.pop('iter_number', AUTOQ_ITER_NUMBER)
         compression_ratio = dict_copy.pop('compression_ratio', 0.15)
-        eval_subset_ratio = dict_copy.pop('eval_subset_ratio', 1.0)
+        eval_subset_ratio = dict_copy.pop('eval_subset_ratio', AUTOQ_EVAL_SUBSET_RATIO)
+        warmup_iter_number = dict_copy.pop('warmup_iter_number', AUTOQ_WARMUP_ITER_NUMBER)
         skip_constraint = dict_copy.pop('skip_constraint', False)
         finetune = dict_copy.pop('finetune', False)
-        bits = dict_copy.pop('bits',  [2, 4, 8])
+        bits = dict_copy.pop('bits', PRECISION_INIT_BITWIDTHS)
 
         return cls(
             user_init_args=user_init_args,
             dump_autoq_data=dump_autoq_data,
             iter_number=iter_number,
+            warmup_iter_number=warmup_iter_number,
             ddpg_hparams_dict=dict_copy,
             hw_cfg_type=target_hw_config_type,
             compression_ratio=compression_ratio,

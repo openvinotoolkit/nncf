@@ -69,6 +69,7 @@ from nncf.config import NNCFConfig
 from nncf.config.extractors import extract_algo_specific_config
 from nncf.config.extractors import extract_bn_adaptation_init_params
 from nncf.config.extractors import extract_range_init_params
+from nncf.config.schemata.algo.quantization import PRECISION_INIT_TYPES_VS_DESCRIPTION
 from nncf.torch.algo_selector import PT_COMPRESSION_ALGORITHMS
 from nncf.torch.algo_selector import ZeroCompressionLoss
 from nncf.torch.compression_method_api import PTCompressionAlgorithmBuilder
@@ -538,6 +539,8 @@ class QuantizationBuilder(PTCompressionAlgorithmBuilder):
         if not init_precision_config:
             return None, None
         precision_init_type = init_precision_config.get('type', 'manual')
+        if precision_init_type not in PRECISION_INIT_TYPES_VS_DESCRIPTION:
+            raise RuntimeError(f"Unrecognized precision init type: {precision_init_type}")
         if precision_init_type == 'hawq':
             try:
                 precision_init_args = self.config.get_extra_struct(QuantizationPrecisionInitArgs)
@@ -569,9 +572,10 @@ class QuantizationBuilder(PTCompressionAlgorithmBuilder):
             precision_init_params = AutoQPrecisionInitParams.from_config(init_precision_config,
                                                                          precision_init_args,
                                                                          hw_config_type)
-        else:
+        elif precision_init_type == "manual":
             precision_init_params = ManualPrecisionInitParams.from_config(init_precision_config)
-
+        else:
+            raise ValueError(f"Unhandled precision init type: {precision_init_type}")
         return precision_init_type, precision_init_params
 
     def _get_minmax_values_for_quantizer_locations(self,

@@ -10,6 +10,7 @@
  See the License for the specific language governing permissions and
  limitations under the License.
 """
+from nncf.config.definitions import ONLINE_DOCS_ROOT
 from nncf.config.schemata.basic import ARRAY_OF_NUMBERS
 from nncf.config.schemata.basic import ARRAY_OF_STRINGS
 from nncf.config.schemata.basic import BOOLEAN
@@ -25,6 +26,14 @@ from nncf.config.schemata.common.initialization import BATCHNORM_ADAPTATION_SCHE
 from nncf.config.schemata.common.targeting import IGNORED_SCOPES_DESCRIPTION
 from nncf.config.schemata.common.targeting import SCOPING_PROPERTIES
 from nncf.config.schemata.common.targeting import TARGET_SCOPES_DESCRIPTION
+from nncf.config.schemata.defaults import AUTOQ_EVAL_SUBSET_RATIO
+from nncf.config.schemata.defaults import AUTOQ_WARMUP_ITER_NUMBER
+from nncf.config.schemata.defaults import HAWQ_DUMP_INIT_PRECISION_DATA
+from nncf.config.schemata.defaults import PRECISION_INIT_BITWIDTHS
+from nncf.config.schemata.defaults import HAWQ_COMPRESSION_RATIO
+from nncf.config.schemata.defaults import HAWQ_ITER_NUMBER
+from nncf.config.schemata.defaults import HAWQ_NUM_DATA_POINTS
+from nncf.config.schemata.defaults import HAWQ_TOLERANCE
 from nncf.config.schemata.defaults import MAX_PERCENTILE
 from nncf.config.schemata.defaults import MIN_PERCENTILE
 from nncf.config.schemata.defaults import NUM_INIT_SAMPLES
@@ -156,11 +165,121 @@ BITWIDTH_ASSIGNMENT_MODE_SCHEMA = {
     "type": "string",
     "enum": ['strict', 'liberal'],
     "default": "liberal",
-    "description": "The mode for assignment bitwidth to activation quantizers. A group of quantizers between modules "
-                   "with quantizable inputs have the same bitwidth in the strict mode. Liberal one allows different "
-                   "precisions within the group. Bitwidth is assigned based on hardware constraints. If multiple "
-                   "variants are possible the minimal compatible bitwidth is chosen."
+    "description": "The mode for assignment bitwidth to activation quantizers. In the 'strict' mode,"
+                   "a group of quantizers that feed their output to one and more "
+                   "same modules as input (weight quantizers count as well) will have the same bitwidth in the "
+                   "'liberal' mode allows different precisions within the group.\n"
+                   "Bitwidth is assigned based on hardware constraints. If multiple "
+                   "variants are possible, the minimal compatible bitwidth is chosen."
 }
+
+PRECISION_INIT_TYPES_VS_DESCRIPTION = {
+    "hawq": f"Applies HAWQ algorithm to determine best bitwidths for each quantizer using a Hessian"
+            f"calculation approach. For more details see "
+            f"[Quantization.md]{ONLINE_DOCS_ROOT}/docs/compression_algorithms/Quantization.md#hawq",
+    "autoq": f"Applies AutoQ algorithm to determine best bitwidths for each quantizer using reinforcement learning. "
+             f"For more details see "
+             f"[Quantization.md]{ONLINE_DOCS_ROOT}/docs/compression_algorithms/Quantization.md#autoq",
+    "manual": "Allows to manually specify via following config options the exact bitwidth "
+              "for each quantizer location. "
+}
+
+
+PRECISION_INITIALIZER_SCHEMA = {
+    "type": "object",
+    "description": "This initializer performs advanced selection of bitwidth per each quantizer "
+                   "location, trying to achieve the best tradeoff between performance and "
+                   "quality of the resulting model.",
+    "properties": {
+        "required": ["type"],
+        "type": with_attributes(annotated_enum(PRECISION_INIT_TYPES_VS_DESCRIPTION),
+                                description="Type of precision initialization."),
+        "bits": with_attributes(ARRAY_OF_NUMBERS,
+                                description="A list of bitwidth to choose from when performing precision "
+                                            "initialization. Overrides bits constraints specified in "
+                                            "`weight` and `activation` sections",
+                                examples=[[4, 8]],
+                                default=PRECISION_INIT_BITWIDTHS),
+        "num_data_points": with_attributes(NUMBER,
+                                           description="Number of data points to iteratively estimate "
+                                                       "Hessian trace",
+                                           default=HAWQ_NUM_DATA_POINTS),
+        "iter_number": with_attributes(NUMBER,
+                                       description="Maximum number of iterations of Hutchinson algorithm "
+                                                   "to Estimate Hessian trace.",
+                                       default=HAWQ_ITER_NUMBER),
+        "tolerance": with_attributes(NUMBER,
+                                     description="Minimum relative tolerance for stopping the Hutchinson "
+                                                 "algorithm. It's calculated  between mean average trace "
+                                                 "from previous iteration and current one.",
+                                     default=HAWQ_TOLERANCE),
+        "compression_ratio": with_attributes(NUMBER,
+                                             description="The desired ratio between bits complexity of "
+                                                         "fully INT8 model and mixed-precision lower-bit "
+                                                         "one. On precision initialization stage the HAWQ "
+                                                         "algorithm chooses the most accurate "
+                                                         "mixed-precision configuration with ratio no less "
+                                                         "than the specified. Bit complexity of the model "
+                                                         "is a sum of bit complexities for each quantized "
+                                                         "layer, which are a multiplication of FLOPS for "
+                                                         "the layer by number of bits for its "
+                                                         "quantization.",
+                                             default=HAWQ_COMPRESSION_RATIO),
+        "eval_subset_ratio": with_attributes(NUMBER,
+                                             description="The desired ratio of dataloader to be iterated "
+                                                         "during each search iteration of AutoQ precision "
+                                                         "initialization. Specifically, this ratio applies "
+                                                         "to the registered autoq_eval_loader via "
+                                                         "register_default_init_args.",
+                                             default=AUTOQ_EVAL_SUBSET_RATIO),
+        "warmup_iter_number": with_attributes(NUMBER,
+                                              description="The number of random policy at the beginning of "
+                                                          "of AutoQ precision initialization to populate "
+                                                          "replay buffer with experiences. This key is "
+                                                          "meant for internal testing use. Users need not "
+                                                          "to configure.",
+                                              default=AUTOQ_WARMUP_ITER_NUMBER),
+        "bitwidth_per_scope": {
+            "type": "array",
+            "items": {
+                "type": "array",
+                "items":
+                    [
+                        NUMBER,
+                        STRING
+                    ],
+                "description": "A tuple of a bitwidth and a scope of the quantizer to assign the "
+                               "bitwidth to."
+            },
+            "description": "Manual settings for the quantizer bitwidths. Scopes are used to identify "
+                           "the quantizers.",
+            "examples": [
+                [
+                    [2, "ResNet/NNCFConv2d[conv1]/conv2d_0|WEIGHT"],
+                    [8, "ResNet/ReLU[relu]/relu__0|OUTPUT"],
+                ]
+            ]
+        },
+        "traces_per_layer_path": with_attributes(STRING,
+                                                 description="Path to serialized PyTorch Tensor with "
+                                                             "average Hessian traces per quantized modules. "
+                                                             "It can be used to accelerate mixed precision "
+                                                             "initialization by using average Hessian "
+                                                             "traces from previous run of HAWQ algorithm. "),
+        "dump_init_precision_data": with_attributes(BOOLEAN,
+                                                    description="Whether to dump data related to Precision "
+                                                                "Initialization algorithm. "
+                                                                "HAWQ dump includes bitwidth graph,"
+                                                                " average traces and different plots. "
+                                                                "AutoQ dump includes DDPG agent "
+                                                                "learning trajectory in tensorboard and "
+                                                                "mixed-precision environment metadata.",
+                                                    default=HAWQ_DUMP_INIT_PRECISION_DATA),
+        "bitwidth_assignment_mode": BITWIDTH_ASSIGNMENT_MODE_SCHEMA,
+    },
+    "additionalProperties": False,
+}
+
 QUANTIZATION_INITIALIZER_SCHEMA = {
     "type": "object",
     "description": "Specifies the kind of pre-training initialization used for the quantization algorithm.\n"
@@ -169,88 +288,7 @@ QUANTIZATION_INITIALIZER_SCHEMA = {
     "properties": {
         "batchnorm_adaptation": BATCHNORM_ADAPTATION_SCHEMA,
         **RANGE_INIT_CONFIG_PROPERTIES["initializer"]["properties"],
-        "precision":
-            {
-                "type": "object",
-                "properties": {
-                    "type": with_attributes(STRING,
-                                            description="Type of precision initialization."),
-                    "bits": with_attributes(ARRAY_OF_NUMBERS,
-                                            description="A list of bitwidth to choose from when performing precision "
-                                                        "initialization. Overrides bits constraints specified in "
-                                                        "`weight` and `activation` sections",
-                                            examples=[[4, 8]]),
-                    "num_data_points": with_attributes(NUMBER,
-                                                       description="Number of data points to iteratively estimate "
-                                                                   "Hessian trace, 1000 by default."),
-                    "iter_number": with_attributes(NUMBER,
-                                                   description="Maximum number of iterations of Hutchinson algorithm "
-                                                               "to Estimate Hessian trace, 500 by default"),
-                    "tolerance": with_attributes(NUMBER,
-                                                 description="Minimum relative tolerance for stopping the Hutchinson "
-                                                             "algorithm. It's calculated  between mean average trace "
-                                                             "from previous iteration and current one. 1e-5 by default"
-                                                             "bitwidth_per_scope"),
-                    "compression_ratio": with_attributes(NUMBER,
-                                                         description="The desired ratio between bits complexity of "
-                                                                     "fully INT8 model and mixed-precision lower-bit "
-                                                                     "one. On precision initialization stage the HAWQ "
-                                                                     "algorithm chooses the most accurate "
-                                                                     "mixed-precision configuration with ratio no less "
-                                                                     "than the specified. Bit complexity of the model "
-                                                                     "is a sum of bit complexities for each quantized "
-                                                                     "layer, which are a multiplication of FLOPS for "
-                                                                     "the layer by number of bits for its "
-                                                                     "quantization.",
-                                                         default=1.5),
-                    "eval_subset_ratio": with_attributes(NUMBER,
-                                                         description="The desired ratio of dataloader to be iterated "
-                                                                     "during each search iteration of AutoQ precision "
-                                                                     "initialization. Specifically, this ratio applies "
-                                                                     "to the registered autoq_eval_loader via "
-                                                                     "register_default_init_args.",
-                                                         default=1.0),
-                    "warmup_iter_number": with_attributes(NUMBER,
-                                                          description="The number of random policy at the beginning of "
-                                                                      "of AutoQ precision initialization to populate "
-                                                                      "replay buffer with experiences. This key is "
-                                                                      "meant for internal testing use. Users need not "
-                                                                      "to configure.",
-                                                          default=20),
-                    "bitwidth_per_scope": {
-                        "type": "array",
-                        "items": {
-                            "type": "array",
-                            "items":
-                                [
-                                    NUMBER,
-                                    STRING
-                                ],
-                            "description": "A tuple of a bitwidth and a scope of the quantizer to assign the "
-                                           "bitwidth to."
-                        },
-                        "description": "Manual settings for the quantizer bitwidths. Scopes are used to identify "
-                                       "the quantizers."
-                    },
-                    "traces_per_layer_path": with_attributes(STRING,
-                                                             description="Path to serialized PyTorch Tensor with "
-                                                                         "average Hessian traces per quantized modules."
-                                                                         " It can be used to accelerate mixed precision"
-                                                                         "initialization by using average Hessian "
-                                                                         "traces from previous run of HAWQ algorithm."),
-                    "dump_init_precision_data": with_attributes(BOOLEAN,
-                                                                description="Whether to dump data related to Precision "
-                                                                            "Initialization algorithm. "
-                                                                            "HAWQ dump includes bitwidth graph,"
-                                                                            " average traces and different plots. "
-                                                                            "AutoQ dump includes DDPG agent "
-                                                                            "learning trajectory in tensorboard and "
-                                                                            "mixed-precision environment metadata.",
-                                                                default=True),
-                    "bitwidth_assignment_mode": BITWIDTH_ASSIGNMENT_MODE_SCHEMA,
-                },
-                "additionalProperties": False,
-            }
+        "precision": PRECISION_INITIALIZER_SCHEMA,
     },
     "additionalProperties": False,
 }
