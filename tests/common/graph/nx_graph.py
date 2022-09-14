@@ -39,7 +39,7 @@ def sort_dot(path):
         f.write(end_line)
 
 
-def check_nx_graph(nx_graph: nx.DiGraph, expected_graph: nx.DiGraph, check_edge_attrs=False):
+def check_nx_graph(nx_graph: nx.DiGraph, expected_graph: nx.DiGraph, check_edge_attrs: bool = False) -> None:
     # Check nodes attrs
     for node_name, node_attrs in nx_graph.nodes.items():
         expected_attrs = {k: str(v).strip('"') for k, v in expected_graph.nodes[node_name].items()}
@@ -61,7 +61,7 @@ def check_nx_graph(nx_graph: nx.DiGraph, expected_graph: nx.DiGraph, check_edge_
 
 
 def compare_nx_graph_with_reference(nx_graph: nx.DiGraph, path_to_dot: str,
-                                    sort_dot_graph=True, check_edge_attrs=False):
+                                    sort_dot_graph=True, check_edge_attrs: bool = False) -> None:
     """
     Checks whether the two nx.DiGraph are identical. The first one is 'nx_graph' argument
     and the second graph is read from the absolute path - 'path_to_dot'.

@@ -93,7 +93,7 @@ def get_basic_quantization_config_with_hw_config_type(hw_config_type, input_samp
     return config
 
 
-def get_full_path_to_the_graph(path_to_dot: str, graph_dir: str):
+def get_full_path_to_the_graph(path_to_dot: str, graph_dir: str) -> None:
     """
     Returns the absolute path to the .dot file of the graph.
     :param path_to_dot: The filename of .dot file.
@@ -106,7 +106,7 @@ def get_full_path_to_the_graph(path_to_dot: str, graph_dir: str):
     return path_to_dot
 
 
-def check_graph(graph: PTNNCFGraph, path_to_dot: str, graph_dir: str, sort_dot_graph: bool = True):
+def check_graph(graph: PTNNCFGraph, path_to_dot: str, graph_dir: str, sort_dot_graph: bool = True) -> None:
     """
     Builds the nx.Digraph for the structural analysis from 'graph', gets the full path to the reference graph from
     'path_to_dot' and 'graph_dir'. Then checks that the reference and the built graphs are identical.
