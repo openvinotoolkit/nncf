@@ -23,6 +23,7 @@ import onnxruntime as rt
 
 from tests.common.helpers import TEST_ROOT
 from tests.common.graph.nx_graph import compare_nx_graph_with_reference
+from tests.common.graph.nx_graph import check_nx_graph
 
 from nncf.experimental.post_training.api.dataset import Dataset
 from nncf.experimental.post_training.compression_builder import CompressionBuilder
@@ -96,30 +97,6 @@ def ptq_quantize_model(
     return quantized_model
 
 
-def check_nx_graph(nx_graph: nx.DiGraph, expected_graph: nx.DiGraph):
-    for nx_graph_node, expected_graph_node in zip(sorted(nx_graph.nodes.keys()), sorted(expected_graph.nodes.keys())):
-        assert nx_graph_node == expected_graph_node
-
-    # Check nodes attrs
-    for node_name, node_attrs in nx_graph.nodes.items():
-        expected_attrs = {k: str(v) for k, v in expected_graph.nodes[node_name].items()}
-        attrs = {k: str(v) for k, v in node_attrs.items()}
-        assert expected_attrs == attrs
-
-    assert nx.DiGraph(expected_graph).edges == nx_graph.edges
-
-    # Check edges attrs
-    for nx_graph_edges, expected_graph_edges in zip(nx_graph.edges.data(), expected_graph.edges.data()):
-        for nx_edge_attrs, expected_graph_edge_attrs in zip(nx_graph_edges, expected_graph_edges):
-            if isinstance(nx_edge_attrs, dict):
-                nx_edge_attrs['label'] = str(nx_edge_attrs['label'])
-                if not isinstance(expected_graph_edge_attrs['label'], list):
-                    expected_graph_edge_attrs['label'] = expected_graph_edge_attrs['label'].replace('"', '')
-                else:
-                    expected_graph_edge_attrs['label'] = str(expected_graph_edge_attrs['label'])
-            assert nx_edge_attrs == expected_graph_edge_attrs
-
-
 def compare_nncf_graph(quantized_model: onnx.ModelProto, path_ref_graph: str,
                        generate_ref_graphs: bool = False) -> None:
     quantized_model = ONNXModelNormalizer.add_input_from_initializer(quantized_model)
@@ -144,7 +121,7 @@ def compare_nncf_graph_onnx_models(quantized_model: onnx.ModelProto, _quantized_
     _nncf_graph = GraphConverter.create_nncf_graph(_quantized_model)
     _nx_graph = _nncf_graph.get_graph_for_structure_analysis(extended=True)
 
-    check_nx_graph(nx_graph, _nx_graph)
+    check_nx_graph(nx_graph, _nx_graph, check_edge_attrs=True)
 
 
 def infer_model(input_shape: List[int], quantized_model: onnx.ModelProto) -> None:

@@ -39,19 +39,7 @@ def sort_dot(path):
         f.write(end_line)
 
 
-def compare_nx_graph_with_reference(nx_graph: nx.DiGraph, path_to_dot: str,
-                                    sort_dot_graph=True, check_edge_attrs=False):
-    dot_dir = Path(path_to_dot).parent
-    # validate .dot file manually!
-    if os.getenv("NNCF_TEST_REGEN_DOT") is not None:
-        if not os.path.exists(dot_dir):
-            os.makedirs(dot_dir)
-        nx.drawing.nx_pydot.write_dot(nx_graph, path_to_dot)
-        if sort_dot_graph:
-            sort_dot(path_to_dot)
-
-    expected_graph = nx.drawing.nx_pydot.read_dot(path_to_dot)
-
+def check_nx_graph(nx_graph: nx.DiGraph, expected_graph: nx.DiGraph, check_edge_attrs=False):
     # Check nodes attrs
     for node_name, node_attrs in nx_graph.nodes.items():
         expected_attrs = {k: str(v).strip('"') for k, v in expected_graph.nodes[node_name].items()}
@@ -70,3 +58,29 @@ def compare_nx_graph_with_reference(nx_graph: nx.DiGraph, path_to_dot: str,
                     else:
                         expected_graph_edge_attrs['label'] = str(expected_graph_edge_attrs['label'])
                 assert nx_edge_attrs == expected_graph_edge_attrs
+
+
+def compare_nx_graph_with_reference(nx_graph: nx.DiGraph, path_to_dot: str,
+                                    sort_dot_graph=True, check_edge_attrs=False):
+    """
+    Checks whether the two nx.DiGraph are identical. The first one is 'nx_graph' argument
+    and the second is readed from the path 'path_to_dot'.
+    If 'sort_dot_graph' is True calls sort_dot() function on the second graph.
+    If 'check_edge_attrs' is True also checks edge attributes of the graphs.
+    :param nx_graph: The first nx.DiGraph.
+    :param path_to_dot: path to the second nx.DiGraph.
+    :param sort_dot_graph: whether to call sort_dot() function on the second graph.
+    :param check_edge_attrs: whether to check edge attributes of the graphs.
+    :return: None
+    """
+    dot_dir = Path(path_to_dot).parent
+    # validate .dot file manually!
+    if os.getenv("NNCF_TEST_REGEN_DOT") is not None:
+        if not os.path.exists(dot_dir):
+            os.makedirs(dot_dir)
+        nx.drawing.nx_pydot.write_dot(nx_graph, path_to_dot)
+        if sort_dot_graph:
+            sort_dot(path_to_dot)
+
+    expected_graph = nx.drawing.nx_pydot.read_dot(path_to_dot)
+    check_nx_graph(nx_graph, expected_graph, check_edge_attrs)
