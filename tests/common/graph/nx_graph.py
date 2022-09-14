@@ -64,11 +64,12 @@ def compare_nx_graph_with_reference(nx_graph: nx.DiGraph, path_to_dot: str,
                                     sort_dot_graph=True, check_edge_attrs=False):
     """
     Checks whether the two nx.DiGraph are identical. The first one is 'nx_graph' argument
-    and the second is readed from the path 'path_to_dot'.
-    If 'sort_dot_graph' is True calls sort_dot() function on the second graph.
-    If 'check_edge_attrs' is True also checks edge attributes of the graphs.
+    and the second graph is read from the absolute path - 'path_to_dot'.
+    Also, could dump the graph, based in the global variable NNCF_TEST_REGEN_DOT.
+    If 'sort_dot_graph' is True sorts the second graph before dumping.
+    If 'check_edge_attrs' is True checks edge attributes of the graphs.
     :param nx_graph: The first nx.DiGraph.
-    :param path_to_dot: path to the second nx.DiGraph.
+    :param path_to_dot: The absolute path to the second nx.DiGraph.
     :param sort_dot_graph: whether to call sort_dot() function on the second graph.
     :param check_edge_attrs: whether to check edge attributes of the graphs.
     :return: None
