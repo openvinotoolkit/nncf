@@ -11,4 +11,7 @@
  limitations under the License.
 """
 
-ONLINE_DOCS_ROOT = 'https://github.com/openvinotoolkit/nncf/tree/develop/'
+NUM_BN_ADAPTATION_SAMPLES = 2000
+NUM_INIT_SAMPLES = 256
+MIN_PERCENTILE = 0.1
+MAX_PERCENTILE = 99.9

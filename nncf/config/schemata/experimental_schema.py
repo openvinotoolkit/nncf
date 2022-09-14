@@ -15,7 +15,7 @@ import copy
 
 from nncf.config.schemata.basic import ARRAY_OF_NUMBERS
 from nncf.config.schemata.basic import ARRAY_OF_STRINGS
-from nncf.config.schemata.common.targeting import BATCHNORM_ADAPTATION_SCHEMA
+from nncf.config.schemata.common.initialization import BATCHNORM_ADAPTATION_SCHEMA
 from nncf.config.schemata.basic import BOOLEAN
 from nncf.config.schemata.common.targeting import IGNORED_SCOPES_DESCRIPTION
 from nncf.config.schemata.basic import NUMBER

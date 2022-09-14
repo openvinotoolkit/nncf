@@ -27,6 +27,8 @@ from nncf.common.tensor_statistics.collectors import ReductionShape
 from nncf.common.tensor_statistics.collectors import TensorStatisticCollectorBase
 from nncf.common.utils.progress_bar import ProgressBar
 from nncf.common.utils.helpers import should_consider_scope
+from nncf.config.schemata.defaults import MAX_PERCENTILE
+from nncf.config.schemata.defaults import MIN_PERCENTILE
 from nncf.tensorflow.layers.custom_objects import NNCF_QUANTIZATION_OPERATIONS
 from nncf.tensorflow.layers.wrapper import NNCFWrapper
 from nncf.tensorflow.layers.data_layout import get_channel_axis
@@ -119,14 +121,14 @@ class RangeInitializer:
             return TFMedianMADStatisticCollector(reduction_shape,
                                                  num_samples)
         if range_type == 'percentile':
-            min_percentile = init_config.init_type_specific_params.get('min_percentile', 0.1)
-            max_percentile = init_config.init_type_specific_params.get('max_percentile', 99.9)
+            min_percentile = init_config.init_type_specific_params.get('min_percentile', MIN_PERCENTILE)
+            max_percentile = init_config.init_type_specific_params.get('max_percentile', MAX_PERCENTILE)
             return TFPercentileStatisticCollector([min_percentile, max_percentile],
                                                   reduction_shape,
                                                   num_samples)
         if range_type == 'mean_percentile':
-            min_percentile = init_config.init_type_specific_params.get('min_percentile', 0.1)
-            max_percentile = init_config.init_type_specific_params.get('max_percentile', 99.9)
+            min_percentile = init_config.init_type_specific_params.get('min_percentile', MIN_PERCENTILE)
+            max_percentile = init_config.init_type_specific_params.get('max_percentile', MAX_PERCENTILE)
             return TFMeanPercentileStatisticCollector([min_percentile, max_percentile],
                                                       reduction_shape,
                                                       num_samples)

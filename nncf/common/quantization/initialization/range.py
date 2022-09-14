@@ -16,6 +16,7 @@ from typing import List, Dict, Optional
 from nncf.common.initialization.dataloader import NNCFDataLoader
 from nncf.common.quantization.structs import QuantizerGroup
 from nncf.common.quantization.structs import QuantizationMode
+from nncf.config.schemata.defaults import NUM_INIT_SAMPLES
 
 
 class RangeInitConfig:
@@ -46,7 +47,7 @@ class RangeInitConfig:
 
     @classmethod
     def from_dict(cls, dct: Dict) -> 'RangeInitConfig':
-        num_init_samples = dct.get('num_init_samples', 256)
+        num_init_samples = dct.get('num_init_samples', NUM_INIT_SAMPLES)
         if num_init_samples < 0:
             raise ValueError('Number of initialization samples must be >= 0')
         return cls(dct.get('type', 'mixed_min_max'),

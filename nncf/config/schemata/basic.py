@@ -31,6 +31,15 @@ ARRAY_OF_STRINGS = {
 }
 
 
+def annotated_enum(names_vs_description: Dict[str, str]) -> Dict:
+    retval_list = []
+    for name, descr in names_vs_description.items():
+        retval_list.append({"const": name, "title": name, "description": descr})
+    return {
+        "oneOf": retval_list
+    }
+
+
 def make_string_or_array_of_strings_schema(addtl_dict_entries: Dict = None) -> Dict:
     if addtl_dict_entries is None:
         addtl_dict_entries = {}

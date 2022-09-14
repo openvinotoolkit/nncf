@@ -10,7 +10,7 @@
  See the License for the specific language governing permissions and
  limitations under the License.
 """
-from nncf.config.definitions import DOCS_ROOT
+from nncf.config.definitions import ONLINE_DOCS_ROOT
 from nncf.config.schemata.basic import NUMBER
 from nncf.config.schemata.basic import with_attributes
 
@@ -31,7 +31,7 @@ ADAPTIVE_COMPRESSION_LEVEL_TRAINING_SCHEMA = {
     "title": ADAPTIVE_COMPRESSION_LEVEL_TRAINING_MODE_NAME_IN_CONFIG,
     "description": f"Adaptive compression level training mode schema. See "
                    f"[AdaptiveCompressionLevelTraining.md]"
-                   f"({DOCS_ROOT}docs/accuracy_aware_model_training/AdaptiveCompressionLevelTraining.md) "
+                   f"({ONLINE_DOCS_ROOT}docs/accuracy_aware_model_training/AdaptiveCompressionLevelTraining.md) "
                    f"for more general info on this mode.",
     "properties": {
         "mode": {"const": ADAPTIVE_COMPRESSION_LEVEL_TRAINING_MODE_NAME_IN_CONFIG},
@@ -82,7 +82,7 @@ EARLY_EXIT_TRAINING_SCHEMA = {
     "type": "object",
     "title": EARLY_EXIT_TRAINING_MODE_NAME_IN_CONFIG,
     "description": f"Early exit mode schema. See "
-                   f"[EarlyExitTraining.md]({DOCS_ROOT}docs/accuracy_aware_model_training/EarlyExitTraining.md) for "
+                   f"[EarlyExitTraining.md]({ONLINE_DOCS_ROOT}docs/accuracy_aware_model_training/EarlyExitTraining.md) for "
                    f"more general info on this mode.",
     "properties": {
         "mode": {"const": EARLY_EXIT_TRAINING_MODE_NAME_IN_CONFIG},

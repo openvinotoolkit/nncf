@@ -15,15 +15,19 @@ from nncf.config.schemata.basic import ARRAY_OF_STRINGS
 from nncf.config.schemata.basic import BOOLEAN
 from nncf.config.schemata.basic import NUMBER
 from nncf.config.schemata.basic import STRING
+from nncf.config.schemata.basic import annotated_enum
 from nncf.config.schemata.basic import make_object_or_array_of_objects_schema
 from nncf.config.schemata.basic import make_string_or_array_of_strings_schema
 from nncf.config.schemata.basic import with_attributes
 from nncf.config.schemata.common.compression import BASIC_COMPRESSION_ALGO_SCHEMA
 from nncf.config.schemata.common.compression import COMPRESSION_LR_MULTIPLIER_PROPERTY
-from nncf.config.schemata.common.targeting import BATCHNORM_ADAPTATION_SCHEMA
+from nncf.config.schemata.common.initialization import BATCHNORM_ADAPTATION_SCHEMA
 from nncf.config.schemata.common.targeting import IGNORED_SCOPES_DESCRIPTION
 from nncf.config.schemata.common.targeting import SCOPING_PROPERTIES
 from nncf.config.schemata.common.targeting import TARGET_SCOPES_DESCRIPTION
+from nncf.config.schemata.defaults import MAX_PERCENTILE
+from nncf.config.schemata.defaults import MIN_PERCENTILE
+from nncf.config.schemata.defaults import NUM_INIT_SAMPLES
 
 QUANTIZER_CONFIG_PROPERTIES = {
     "mode": with_attributes(STRING,
@@ -48,28 +52,65 @@ UNIFIED_SCALE_OP_SCOPES_SPECIFIER_SCHEMA = {
     "items": ARRAY_OF_STRINGS
 }
 
+RANGE_INIT_TYPES_VS_DESCRIPTIONS = {
+    "mixed_min_max": "Minimum quantizer range initialized using minima of per-channel minima of "
+                     "the tensor to be quantized, maximum quantizer range initialized using "
+                     "maxima of per-channel maxima of the tensor to be quantized. Offline. ",
+    "min_max": "Minimum quantizer range initialized using global minimum of values in "
+               "the tensor to be quantized, maximum quantizer range initialized using global maxima of the same. "
+               "Online.",
+    "mean_min_max": "Minimum quantizer range initialized using averages (across every single initialization sample) "
+                    "of minima of values in "
+                    "the tensor to be quantized, maximum quantizer range initialized using maxima respectively. "
+                    "Offline.",
+    "threesigma": "Quantizer minimum and maximum ranges set to be equal to +- 3 median absolute deviation from the "
+                  "median of the observed values in the tensor to be quantized. Offline.",
+    "percentile": "Quantizer minimum and maximum ranges set to be equal to specified percentiles of the the observed "
+                  "values (across the entire initialization sample set) in the tensor to be quantized. Offline.",
+    "mean_percentile": "Quantizer minimum and maximum ranges set to be equal to averaged (across every single "
+                       "initialization sample) specified percentiles of the the observed values  in the tensor to be "
+                       "quantized. Offline."
+}
+
 BASIC_RANGE_INIT_CONFIG_PROPERTIES = {
     "type": "object",
+    "title": "global_range_init_configuration",
     "properties": {
         "num_init_samples": with_attributes(NUMBER,
                                             description="Number of samples from the training dataset to "
                                                         "consume as sample model inputs for purposes of "
                                                         "setting initial minimum and maximum quantization "
-                                                        "ranges"),
-        "type": with_attributes(STRING, description="Type of the initializer - determines which "
-                                                    "statistics gathered during initialization will be "
-                                                    "used to initialize the quantization ranges"),
+                                                        "ranges.",
+                                            default=NUM_INIT_SAMPLES),
+        "type": with_attributes(
+            annotated_enum(RANGE_INIT_TYPES_VS_DESCRIPTIONS),
+            description="Type of the initializer - determines which "
+                        "statistics gathered during initialization will be "
+                        "used to initialize the quantization ranges.\n"
+                        "'Online' initializers do not have to "
+                        "store intermediate statistics in memory, while 'offline' do. Increasing the number "
+                        "of initialization samples for 'offline' initialization types will increase RAM "
+                        "overhead of applying NNCF to the model.\n"
+                        "Depending on whether the quantizer is configured to be per-tensor or per-channel, the "
+                        "statistics will be collected either on the basis of the set of the entire tensor values, or "
+                        "these will be collected and applied separately for each channel value subset.",
+            default="mixed_min_max"),
         "params": {
             "type": "object",
+            "description": "Type-specific parameters of the initializer.",
             "properties": {
-                "min_percentile": with_attributes(NUMBER,
-                                                  description="For 'percentile' type - specify the percentile of "
-                                                              "input value histograms to be set as the initial "
-                                                              "value for minimum quantizer input"),
-                "max_percentile": with_attributes(NUMBER,
-                                                  description="For 'percentile' type - specify the percentile of "
-                                                              "input value histograms to be set as the initial "
-                                                              "value for maximum quantizer input"),
+                "min_percentile":
+                    with_attributes(NUMBER,
+                                    description="For 'percentile' and 'mean_percentile' types - specify the percentile "
+                                                "of input value histograms to be set as the initial "
+                                                "value for minimum quantizer input",
+                                    default=MIN_PERCENTILE),
+                "max_percentile":
+                    with_attributes(NUMBER,
+                                    description="For 'percentile' and 'mean_percentile' types - specify the percentile "
+                                                "of input value histograms to be set as the initial "
+                                                "value for maximum quantizer input",
+                                    default=MAX_PERCENTILE),
             }
         }
     },
@@ -79,16 +120,14 @@ PER_LAYER_RANGE_INIT_CONFIG_PROPERTIES = {
     "type": "object",
     "properties": {
         **BASIC_RANGE_INIT_CONFIG_PROPERTIES["properties"],
-        "target_scopes": with_attributes(make_string_or_array_of_strings_schema(),
-                                         description=TARGET_SCOPES_DESCRIPTION),
-        "ignored_scopes": with_attributes(make_string_or_array_of_strings_schema(),
-                                          description=IGNORED_SCOPES_DESCRIPTION),
-        "target_quantizer_group": with_attributes(STRING, description="The target group of quantizers for which "
-                                                                      "specified type of range initialization will "
-                                                                      "be applied. It can take 'activations' or "
-                                                                      "'weights'. By default specified type of range "
-                                                                      "initialization will be applied to all group of"
-                                                                      "quantizers. Optional.")
+        **SCOPING_PROPERTIES,
+        "target_quantizer_group":
+            with_attributes(STRING, description="The target group of quantizers for which "
+                                                "specified type of range initialization will "
+                                                "be applied. By default specified type of range "
+                                                "initialization will be applied to all group of"
+                                                "quantizers. Optional.",
+                            enum=['activations', 'weights'])
     }
 }
 RANGE_INIT_CONFIG_PROPERTIES = {
@@ -96,12 +135,17 @@ RANGE_INIT_CONFIG_PROPERTIES = {
         "type": "object",
         "properties": {
             "range": {
+                "description": "This initializer performs forward runs of the model to be quantized using "
+                               "samples from a user-supplied data loader to gather activation and weight "
+                               "tensor statistics within the network and use these to set up initial range parameters "
+                               "for the quantizers. ",
                 "oneOf": [
+                    BASIC_RANGE_INIT_CONFIG_PROPERTIES,
                     {
                         "type": "array",
+                        "title": "per_layer_range_init_configuration",
                         "items": PER_LAYER_RANGE_INIT_CONFIG_PROPERTIES
-                    },
-                    BASIC_RANGE_INIT_CONFIG_PROPERTIES
+                    }
                 ],
             },
         },
@@ -119,6 +163,9 @@ BITWIDTH_ASSIGNMENT_MODE_SCHEMA = {
 }
 QUANTIZATION_INITIALIZER_SCHEMA = {
     "type": "object",
+    "description": "Specifies the kind of pre-training initialization used for the quantization algorithm.\n"
+                   "Some kind of initialization is usually required so that the trainable quantization "
+                   "parameters have a better chance to get fine-tuned to values that give good accuracy.",
     "properties": {
         "batchnorm_adaptation": BATCHNORM_ADAPTATION_SCHEMA,
         **RANGE_INIT_CONFIG_PROPERTIES["initializer"]["properties"],
