@@ -20,9 +20,21 @@ TARGET_SCOPES_DESCRIPTION = "A list of model control flow graph node scopes to b
                             " - functions as a 'denylist'. Optional."
 SCOPING_PROPERTIES = {
     "ignored_scopes": with_attributes(make_string_or_array_of_strings_schema(),
-                                      description=IGNORED_SCOPES_DESCRIPTION),
+                                      description=IGNORED_SCOPES_DESCRIPTION,
+                                      examples=[
+                                          "{re}conv.*",
+                                          ["LeNet/relu_0",
+                                           "LeNet/relu_1"]
+                                      ]),
     "target_scopes": with_attributes(make_string_or_array_of_strings_schema(),
-                                     description=TARGET_SCOPES_DESCRIPTION),
+                                     description=TARGET_SCOPES_DESCRIPTION,
+                                     examples=[
+                                         ["UNet/ModuleList[down_path]/UNetConvBlock[1]/Sequential[block]/Conv2d[0]",
+                                          "UNet/ModuleList[down_path]/UNetConvBlock[2]/Sequential[block]/Conv2d[0]",
+                                          "UNet/ModuleList[down_path]/UNetConvBlock[3]/Sequential[block]/Conv2d[0]",
+                                          "UNet/ModuleList[down_path]/UNetConvBlock[4]/Sequential[block]/Conv2d[0]"],
+                                         "UNet/ModuleList\\[up_path\\].*"
+                                     ]),
 }
 GENERIC_INITIALIZER_SCHEMA = {
     "type": "object",

@@ -35,6 +35,7 @@ import mlflow
 import torch
 
 from examples.torch.common.example_logger import logger as default_logger
+from nncf.config.schemata.defaults import QUANTIZATION_BITS
 from nncf.torch.utils import is_main_process
 
 # pylint: disable=import-error
@@ -61,9 +62,9 @@ def get_name(config):
                 retval += "_mixed_int"
             else:
                 activations = algo_dict.get('activations', {})
-                a_bits = activations.get('bits', 8)
+                a_bits = activations.get('bits', QUANTIZATION_BITS)
                 weights = algo_dict.get('weights', {})
-                w_bits = weights.get('bits', 8)
+                w_bits = weights.get('bits', QUANTIZATION_BITS)
                 if a_bits == w_bits:
                     retval += "_int{}".format(a_bits)
                 else:

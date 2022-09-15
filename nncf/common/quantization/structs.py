@@ -17,6 +17,8 @@ from typing import Dict, List, Optional, Any
 
 from nncf.common.graph import NNCFNode
 from nncf.common.graph import NNCFNodeName
+from nncf.config.schemata.defaults import QUANTIZATION_BITS
+from nncf.config.schemata.defaults import QUANTIZATION_PER_CHANNEL
 
 
 class QuantizationMode:
@@ -30,10 +32,10 @@ class QuantizerConfig:
     and determination of a quantizer setup scheme for a given model.
     """
 
-    def __init__(self, num_bits: int = 8,
+    def __init__(self, num_bits: int = QUANTIZATION_BITS,
                  mode: QuantizationMode = QuantizationMode.SYMMETRIC,
                  signedness_to_force: Optional[bool] = None,
-                 per_channel: bool = False):
+                 per_channel: bool = QUANTIZATION_PER_CHANNEL):
         """
         :param num_bits: Bitwidth of the quantization.
         :param mode: The mode of quantization (symmetric or asymmetric).

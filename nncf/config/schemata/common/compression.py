@@ -18,7 +18,7 @@ COMPRESSION_LR_MULTIPLIER_PROPERTY = {
         with_attributes(NUMBER,
                         description="PyTorch only - Used to increase/decrease gradients "
                                     "for compression algorithms' parameters. The gradients will be multiplied "
-                                    "by the specified value.")
+                                    "by the specified value. If unspecified, the gradients will not be adjusted.")
 }
 BASIC_COMPRESSION_ALGO_SCHEMA = {
     "type": "object",

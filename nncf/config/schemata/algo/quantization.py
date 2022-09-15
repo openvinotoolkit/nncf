@@ -26,9 +26,11 @@ from nncf.config.schemata.common.initialization import BATCHNORM_ADAPTATION_SCHE
 from nncf.config.schemata.common.targeting import IGNORED_SCOPES_DESCRIPTION
 from nncf.config.schemata.common.targeting import SCOPING_PROPERTIES
 from nncf.config.schemata.common.targeting import TARGET_SCOPES_DESCRIPTION
+from nncf.config.schemata.defaults import ACTIVATIONS_QUANT_START_EPOCH
 from nncf.config.schemata.defaults import AUTOQ_EVAL_SUBSET_RATIO
 from nncf.config.schemata.defaults import AUTOQ_WARMUP_ITER_NUMBER
 from nncf.config.schemata.defaults import HAWQ_DUMP_INIT_PRECISION_DATA
+from nncf.config.schemata.defaults import LR_POLY_DURATION_EPOCHS
 from nncf.config.schemata.defaults import PRECISION_INIT_BITWIDTHS
 from nncf.config.schemata.defaults import HAWQ_COMPRESSION_RATIO
 from nncf.config.schemata.defaults import HAWQ_ITER_NUMBER
@@ -37,23 +39,49 @@ from nncf.config.schemata.defaults import HAWQ_TOLERANCE
 from nncf.config.schemata.defaults import MAX_PERCENTILE
 from nncf.config.schemata.defaults import MIN_PERCENTILE
 from nncf.config.schemata.defaults import NUM_INIT_SAMPLES
+from nncf.config.schemata.defaults import QUANTIZATION_BITS
+from nncf.config.schemata.defaults import QUANTIZATION_EXPORT_TO_ONNX_STANDARD_OPS
+from nncf.config.schemata.defaults import QUANTIZATION_LOGARITHM_SCALE
+from nncf.config.schemata.defaults import QUANTIZATION_PER_CHANNEL
+from nncf.config.schemata.defaults import QUANTIZATION_PRESET
+from nncf.config.schemata.defaults import QUANTIZE_INPUTS
+from nncf.config.schemata.defaults import QUANTIZE_OUTPUTS
+from nncf.config.schemata.defaults import STAGED_QUANTIZATION_BASE_LR
+from nncf.config.schemata.defaults import STAGED_QUANTIZATION_BASE_WD
+from nncf.config.schemata.defaults import WEIGHTS_QUANT_START_EPOCH
+
+QUANTIZER_MODES = ['symmetric', 'asymmetric']
 
 QUANTIZER_CONFIG_PROPERTIES = {
-    "mode": with_attributes(STRING,
-                            description="Mode of quantization"),
+    "mode":
+        with_attributes(STRING,
+                        description=f"Mode of quantization. "
+                                    f"See [Quantization.md]"
+                                    f"({ONLINE_DOCS_ROOT}"
+                                    f"/docs/compression_algorithms/Quantization.md#symmetric-quantization) for "
+                                    f"more details.",
+                        enum=QUANTIZER_MODES),
     "bits": with_attributes(NUMBER,
                             description="Bitwidth to quantize to. It is intended for manual bitwidth setting. Can be "
                                         "overridden by the `bits` parameter from the `precision` initializer section. "
                                         "An error happens if it doesn't match a corresponding bitwidth constraints "
-                                        "from the hardware configuration."),
+                                        "from the hardware configuration.",
+                            default=QUANTIZATION_BITS),
     "signed": with_attributes(BOOLEAN,
-                              description="Whether to use signed or unsigned input/output values for quantization."
-                                          " If specified as unsigned and the input values during initialization have "
-                                          "differing signs, will reset to performing signed quantization instead."),
+                              description="Whether to use signed or unsigned input/output values for quantization. "
+                                          "`true` will force the quantization to support signed values, `false` will "
+                                          "force the quantization to only support input values with one and the same "
+                                          "signed, and leaving this value unspecified (default) will rely "
+                                          "on the initialization statistics to determine best approach. \n"
+                                          "Note: If set to `false`, but the input "
+                                          "values during initialization have differing signs, will "
+                                          "reset to performing signed quantization instead."),
     "per_channel": with_attributes(BOOLEAN,
-                                   description="Whether to quantize inputs per channel (i.e. per 0-th dimension for "
+                                   description="Whether to quantize inputs of this quantizer "
+                                               "per each channel of input tensor (per 0-th dimension for "
                                                "weight quantization, and per 1-st dimension for activation "
-                                               "quantization)")
+                                               "quantization).",
+                                   default=QUANTIZATION_PER_CHANNEL)
 }
 
 UNIFIED_SCALE_OP_SCOPES_SPECIFIER_SCHEMA = {
@@ -295,30 +323,42 @@ QUANTIZATION_INITIALIZER_SCHEMA = {
 STAGED_QUANTIZATION_PARAMS = {
     "params": {
         "type": "object",
+        "description": "Configures the staged quantization compression scheduler for the quantization algorithm. "
+                       "The quantizers will not be applied until a given epoch count is reached.",
         "properties": {
             "batch_multiplier": with_attributes(NUMBER,
                                                 description="Gradients will be accumulated for this number of "
                                                             "batches before doing a 'backward' call. Increasing "
                                                             "this may improve training quality, since binarized "
                                                             "networks exhibit noisy gradients requiring larger "
-                                                            "batch sizes than could be accomodated by GPUs"),
-            "activations_quant_start_epoch": with_attributes(NUMBER,
-                                                             description="Epoch to start binarizing activations"),
+                                                            "batch sizes than could be accommodated by GPUs."),
+            "activations_quant_start_epoch":
+                with_attributes(NUMBER,
+                                description="A zero-based index of the epoch, upon reaching which "
+                                            "the activations will start to be quantized.",
+                                default=ACTIVATIONS_QUANT_START_EPOCH),
             "weights_quant_start_epoch": with_attributes(NUMBER,
-                                                         description="Epoch to start binarizing weights"),
+                                                         description="Epoch to start quantizing weights",
+                                                         default=WEIGHTS_QUANT_START_EPOCH),
             "lr_poly_drop_start_epoch": with_attributes(NUMBER,
-                                                        description="Epoch to start dropping the learning rate"),
+                                                        description="Epoch to start dropping the learning rate. If "
+                                                                    "unspecified, learning rate will not be dropped."),
             "lr_poly_drop_duration_epochs": with_attributes(NUMBER,
                                                             description="Duration, in epochs, of the learning "
-                                                                        "rate dropping process."),
+                                                                        "rate dropping process.",
+                                                            default=LR_POLY_DURATION_EPOCHS),
             "disable_wd_start_epoch": with_attributes(NUMBER,
-                                                      description="Epoch to disable weight decay in the optimizer"),
-            "base_lr": with_attributes(NUMBER, description="Initial value of learning rate"),
-            "base_wd": with_attributes(NUMBER, description="Initial value of weight decay"),
+                                                      description="Epoch to disable weight decay in the optimizer. "
+                                                                  "If unspecified, weight decay will not be disabled."),
+            "base_lr": with_attributes(NUMBER, description="Initial value of learning rate.",
+                                       default=STAGED_QUANTIZATION_BASE_LR),
+            "base_wd": with_attributes(NUMBER, description="Initial value of weight decay.",
+                                       default=STAGED_QUANTIZATION_BASE_WD),
         },
         "additionalProperties": False
     }
 }
+
 QUANTIZATION_ALGO_NAME_IN_CONFIG = "quantization"
 QUANTIZATION_PRESETS_SCHEMA = {
     "type": "string",
@@ -327,13 +367,12 @@ QUANTIZATION_PRESETS_SCHEMA = {
 
 QUANTIZER_GROUP_PROPERTIES = {
     **QUANTIZER_CONFIG_PROPERTIES,
-    "ignored_scopes": with_attributes(make_object_or_array_of_objects_schema(STRING),
-                                      description=IGNORED_SCOPES_DESCRIPTION),
-    "target_scopes": with_attributes(make_object_or_array_of_objects_schema(STRING),
-                                     description=TARGET_SCOPES_DESCRIPTION),
+    **SCOPING_PROPERTIES,
     "logarithm_scale": with_attributes(BOOLEAN,
-                                       description="Whether to use log of scale as optimized parameter"
-                                                   " instead of scale itself."),
+                                       description="Whether to use log of scale as the optimization parameter "
+                                                   "instead of scale itself. This serves as an optional regularization "
+                                                   "opportunity for training quantizer scales.",
+                                       default=QUANTIZATION_LOGARITHM_SCALE),
 }
 
 WEIGHTS_GROUP_SCHEMA = {
@@ -362,32 +401,58 @@ ACTIVATIONS_GROUP_SCHEMA = {
     },
     "additionalProperties": False
 }
+
+OVERFLOW_FIX_OPTIONS = [
+    'enable',
+    'disable',
+    'first_layer_only'
+]
+
 QUANTIZATION_SCHEMA = {
     **BASIC_COMPRESSION_ALGO_SCHEMA,
     "properties": {
         "algorithm": {
             "const": QUANTIZATION_ALGO_NAME_IN_CONFIG
         },
-        **COMPRESSION_LR_MULTIPLIER_PROPERTY,
         "initializer": QUANTIZATION_INITIALIZER_SCHEMA,
+        "preset": with_attributes(QUANTIZATION_PRESETS_SCHEMA,
+                                  description="The preset defines the quantization schema for weights and activations. "
+                                              "The 'performance' mode sets up symmetric weight and activations "
+                                              "quantizers. The 'mixed' mode utilizes symmetric weight quantization and "
+                                              "asymmetric activation quantization.",
+                                  default=QUANTIZATION_PRESET),
+        "quantize_inputs": with_attributes(BOOLEAN,
+                                           description="Whether the model inputs should be immediately quantized prior "
+                                                       "to any other model operations.",
+                                           default=QUANTIZE_INPUTS),
+        "quantize_outputs": with_attributes(BOOLEAN,
+                                            description="Whether the model outputs should be additionally quantized.",
+                                            default=QUANTIZE_OUTPUTS),
         "weights": with_attributes(WEIGHTS_GROUP_SCHEMA,
                                    description="Constraints to be applied to model weights quantization only."),
         "activations": with_attributes(ACTIVATIONS_GROUP_SCHEMA,
                                        description="Constraints to be applied to model activations quantization only."),
-        "quantize_inputs": with_attributes(BOOLEAN,
-                                           description="Whether the model inputs should be immediately quantized prior "
-                                                       "to any other model operations.",
-                                           default=True),
-        "quantize_outputs": with_attributes(BOOLEAN,
-                                            description="Whether the model outputs should be additionally quantized.",
-                                            default=False),
-        "preset": with_attributes(QUANTIZATION_PRESETS_SCHEMA,
-                                  description="The preset defines the quantization schema for weights and activations. "
-                                              "The parameter takes values 'performance' or 'mixed'. The mode "
-                                              "'performance' defines symmetric weights and activations. The mode "
-                                              "'mixed' defines symmetric 'weights' and asymmetric activations."),
+
+
         "scope_overrides": {
             "type": "object",
+            "description": "This option is used to specify overriding quantization constraints for specific scope,"
+                           "e.g. in case you need to quantize a single operation differently than the rest of the "
+                           "model. Any other automatic or group-wise settings will be overridden.",
+            "examples": [
+                {
+                    'weights': {
+                        'QuantizeOutputsTestModel/NNCFConv2d[conv5]/conv2d_0':
+                            {
+                                "mode": "asymmetric",
+                            },
+                        "activations": {
+                            "{re}.*conv_first.*": {"mode": "asymmetric"},
+                            "{re}.*conv_second.*": {"mode": "symmetric"}
+                        }
+                    }
+                }
+            ],
             "properties": {
                 "weights": {
                     "type": "object",
@@ -417,28 +482,28 @@ QUANTIZATION_SCHEMA = {
                 }
             },
             "additionalProperties": False,
-            "description": "This option is used to specify overriding quantization constraints for specific scope,"
-                           "e.g. in case you need to quantize a single operation differently than the rest of the "
-                           "model."
         },
         "export_to_onnx_standard_ops": with_attributes(BOOLEAN,
                                                        description="Determines how should the additional quantization "
                                                                    "operations be exported into the ONNX format. Set "
-                                                                   "this to false for export to OpenVINO-supported "
-                                                                   "FakeQuantize ONNX, or to true for export to ONNX "
+                                                                   "this to true for export to ONNX "
                                                                    "standard QuantizeLinear-DequantizeLinear "
-                                                                   "node pairs (8-bit quantization only in the latter "
-                                                                   "case). Default: false"),
+                                                                   "node pairs (8-bit quantization only) or to false "
+                                                                   "for export to OpenVINO-supported FakeQuantize ONNX"
+                                                                   "(all quantization settings supported).",
+                                                       default=QUANTIZATION_EXPORT_TO_ONNX_STANDARD_OPS),
         "overflow_fix": with_attributes(STRING,
-                                        description="Option controls whether to apply the overflow "
+                                        description="This option controls whether to apply the overflow "
                                                     "issue fix for the appropriate NNCF config or not. "
                                                     "If set to 'disable', the fix will not be applied. "
                                                     "If set to 'enable' or 'first_layer_only', "
                                                     "while appropriate target_devices are chosen, "
                                                     "the fix will be applied to the all layers or to the first"
-                                                    "convolutional layer respectively."),
+                                                    "convolutional layer respectively.",
+                                        enum=OVERFLOW_FIX_OPTIONS),
         **STAGED_QUANTIZATION_PARAMS,
         **SCOPING_PROPERTIES,
+        **COMPRESSION_LR_MULTIPLIER_PROPERTY,
     },
     "additionalProperties": False
 }

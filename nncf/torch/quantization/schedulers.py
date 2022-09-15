@@ -15,6 +15,8 @@ import logging
 from nncf.common.utils.registry import Registry
 from nncf.common.schedulers import BaseCompressionScheduler
 from nncf.api.compression import CompressionStage
+from nncf.config.schemata.defaults import ACTIVATIONS_QUANT_START_EPOCH
+from nncf.config.schemata.defaults import WEIGHTS_QUANT_START_EPOCH
 
 logger = logging.getLogger(__name__)
 
@@ -28,8 +30,8 @@ class StagedQuantizationScheduler(BaseCompressionScheduler):
         if params is None:
             params = {}
         self.algo = quantization_ctrl
-        self.activations_quant_start_epoch = params.get('activations_quant_start_epoch', 1)
-        self.weights_quant_start_epoch = params.get('weights_quant_start_epoch', 1)
+        self.activations_quant_start_epoch = params.get('activations_quant_start_epoch', ACTIVATIONS_QUANT_START_EPOCH)
+        self.weights_quant_start_epoch = params.get('weights_quant_start_epoch', WEIGHTS_QUANT_START_EPOCH)
         self._set_quantization_status()
 
     def epoch_step(self, next_epoch=None):

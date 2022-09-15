@@ -70,6 +70,12 @@ from nncf.config.extractors import extract_algo_specific_config
 from nncf.config.extractors import extract_bn_adaptation_init_params
 from nncf.config.extractors import extract_range_init_params
 from nncf.config.schemata.algo.quantization import PRECISION_INIT_TYPES_VS_DESCRIPTION
+from nncf.config.schemata.defaults import QUANTIZATION_EXPORT_TO_ONNX_STANDARD_OPS
+from nncf.config.schemata.defaults import QUANTIZATION_LOGARITHM_SCALE
+from nncf.config.schemata.defaults import QUANTIZATION_OVERFLOW_FIX
+from nncf.config.schemata.defaults import QUANTIZATION_PRESET
+from nncf.config.schemata.defaults import QUANTIZE_INPUTS
+from nncf.config.schemata.defaults import QUANTIZE_OUTPUTS
 from nncf.torch.algo_selector import PT_COMPRESSION_ALGORITHMS
 from nncf.torch.algo_selector import ZeroCompressionLoss
 from nncf.torch.compression_method_api import PTCompressionAlgorithmBuilder
@@ -170,8 +176,8 @@ class QuantizerSetupGeneratorBase:
         self._quantization_config = quant_config
         self.hw_config = hw_config
         self._target_device = None if hw_config is None else hw_config.target_device
-        self._quantize_inputs = self._quantization_config.get('quantize_inputs', True)
-        self._quantize_outputs = self._quantization_config.get('quantize_outputs', False)
+        self._quantize_inputs = self._quantization_config.get('quantize_inputs', QUANTIZE_INPUTS)
+        self._quantize_outputs = self._quantization_config.get('quantize_outputs', QUANTIZE_OUTPUTS)
 
         self.ignored_scopes = self._quantization_config.get('ignored_scopes')
         self.target_scopes = self._quantization_config.get('target_scopes')
@@ -199,12 +205,13 @@ class QuantizerSetupGeneratorBase:
         params_dict = {}
         params_dict_from_config = quant_config.get(group_name, {})
         preset = quant_config.get('preset')
-        if self._target_device in ['ANY', 'CPU', 'GPU'] or self._target_device is None and preset is not None:
-            preset = QuantizationPreset.from_str(quant_config.get('preset', 'performance'))
+        if self._target_device in ['ANY', 'CPU', 'GPU'] or \
+                (self._target_device is None and preset is not None):
+            preset = QuantizationPreset.from_str(quant_config.get('preset', QUANTIZATION_PRESET))
             params_dict = preset.get_params_configured_by_preset(quantizer_group)
-            overrided_params = params_dict.keys() & params_dict_from_config.keys()
-            if overrided_params:
-                nncf_logger.warning('Preset quantizer parameters {} explicitly overrided.'.format(overrided_params))
+            overridden_params = params_dict.keys() & params_dict_from_config.keys()
+            if overridden_params:
+                nncf_logger.warning('Preset quantizer parameters {} explicitly overridden.'.format(overridden_params))
         params_dict.update(params_dict_from_config)
         self.global_quantizer_constraints[quantizer_group] = QuantizationConstraints.from_config_dict(params_dict)
         self._ignored_scopes_per_group[quantizer_group] = params_dict_from_config.get('ignored_scopes')
@@ -485,9 +492,10 @@ class QuantizationBuilder(PTCompressionAlgorithmBuilder):
         for quantizer_group in QuantizerGroup:
             group_name = quantizer_group.value
             params_dict = self._algo_config.get(group_name, {})
-            self._use_logarithm_scale_per_group[quantizer_group] = params_dict.get('logarithm_scale', False)
+            self._use_logarithm_scale_per_group[quantizer_group] = params_dict.get('logarithm_scale',
+                                                                                   QUANTIZATION_LOGARITHM_SCALE)
 
-        self._overflow_fix = self._algo_config.get('overflow_fix', 'enable')
+        self._overflow_fix = self._algo_config.get('overflow_fix', QUANTIZATION_OVERFLOW_FIX)
         self._device_for_callable_obj_creation = 'cpu'
 
     def _load_state_without_name(self, state_without_name: Dict[str, Any]):
@@ -1279,7 +1287,7 @@ class QuantizationController(QuantizationControllerBase):
         self._build_time_metric_info = build_time_metric_info
 
         should_export_to_onnx_qdq = algo_config.get('export_to_onnx_standard_ops',
-                                                    False)
+                                                    QUANTIZATION_EXPORT_TO_ONNX_STANDARD_OPS)
         if should_export_to_onnx_qdq:
             export_mode = QuantizerExportMode.ONNX_QUANTIZE_DEQUANTIZE_PAIRS
         else:

@@ -441,7 +441,7 @@ class TestModelsGraph:
                           desc.rename_resource_nodes)
 
 
-QUANTIZE_OUTPUTS = [
+QUANTIZE_OUTPUTS_MODELS = [
     ModelDesc('mobilenet_v2_quantize_outputs.pb', test_models.MobileNetV2, [1, 96, 96, 3]),
     ModelDesc('retinanet_quantize_outputs.pb', test_models.RetinaNet, [1, 603, 603, 3]),
     ModelDesc('sequential_model_quantize_outputs.pb', test_models.SequentialModel, [1, 224, 224, 3]),
@@ -449,7 +449,7 @@ QUANTIZE_OUTPUTS = [
 ]
 
 
-@pytest.mark.parametrize('desc', QUANTIZE_OUTPUTS, ids=[m.model_name for m in QUANTIZE_OUTPUTS])
+@pytest.mark.parametrize('desc', QUANTIZE_OUTPUTS_MODELS, ids=[m.model_name for m in QUANTIZE_OUTPUTS_MODELS])
 def test_quantize_outputs(desc: ModelDesc, _quantization_case_config):
     model = desc.model_builder(input_shape=tuple(desc.input_sample_sizes[1:]))
     config = get_basic_quantization_config(_quantization_case_config.qconfig,
