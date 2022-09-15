@@ -79,9 +79,7 @@ class CompressionBuilder:
     def _get_prepared_model_for_compression(self, model: ModelType, backend: BackendType) -> ModelType:
         if backend == BackendType.ONNX:
             from nncf.experimental.onnx.model_normalizer import ONNXModelNormalizer
-            if self.convert_opset_version:
-                model = ONNXModelNormalizer.convert_opset_version(model)
-            return ONNXModelNormalizer.replace_empty_node_name(model)
+            return ONNXModelNormalizer.normalize_model(model, self.convert_opset_version)
 
         return None
 

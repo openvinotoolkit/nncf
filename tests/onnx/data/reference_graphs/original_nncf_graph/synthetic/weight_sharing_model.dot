@@ -1,0 +1,14 @@
+strict digraph  {
+"0 Relu" [id=0, type=Relu];
+"1 Conv1" [id=1, type=Conv];
+"2 Conv2" [id=2, type=Conv];
+"3 Add" [id=3, type=Add];
+"4 nncf_model_input_0" [id=4, type=nncf_model_input];
+"5 nncf_model_output_0" [id=5, type=nncf_model_output];
+"0 Relu" -> "1 Conv1"  [label="[1, 1, 5, 5]", style=solid];
+"0 Relu" -> "2 Conv2"  [label="[1, 1, 5, 5]", style=solid];
+"1 Conv1" -> "3 Add"  [label="[1, 1, 5, 5]", style=solid];
+"2 Conv2" -> "3 Add"  [label="[1, 1, 5, 5]", style=solid];
+"3 Add" -> "5 nncf_model_output_0"  [label="[1, 1, 5, 5]", style=solid];
+"4 nncf_model_input_0" -> "0 Relu"  [label="[1, 1, 5, 5]", style=solid];
+}

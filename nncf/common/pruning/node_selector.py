@@ -16,10 +16,12 @@ from typing import Dict, List, Optional
 
 from nncf.common.graph import NNCFGraph
 from nncf.common.graph import NNCFNode
+from nncf.common.pruning.utils import get_output_channels
 from nncf.common.pruning.utils import get_sources_of_node
 from nncf.common.graph.utils import get_first_nodes_of_type
 from nncf.common.pruning.utils import get_previous_convs
 from nncf.common.pruning.utils import is_grouped_conv
+from nncf.common.pruning.utils import is_batched_linear
 from nncf.common.pruning.utils import PruningAnalysisDecision
 from nncf.common.pruning.utils import PruningAnalysisReason
 from nncf.common.pruning.utils import PruningOperationsMetatypeRegistry
@@ -176,7 +178,8 @@ class PruningNodeSelector:
         can_prune_and_should_prune_analysis = self._should_prune_groups_analysis(graph,
                                                                                  pruned_nodes_clusterization,
                                                                                  can_prune_analysis)
-        can_prune_final_analysis = self._pruning_dimensions_analysis(graph, can_prune_and_should_prune_analysis)
+        can_prune_final_analysis = self._pruning_dimensions_analysis(graph, pruned_nodes_clusterization,
+                                                                     can_prune_and_should_prune_analysis)
         self._filter_groups(pruned_nodes_clusterization, can_prune_final_analysis)
         return pruned_nodes_clusterization
 
@@ -194,10 +197,37 @@ class PruningNodeSelector:
             ret[node.layer_name].append(node)
         return [ret[module_identifier] for module_identifier in ret if len(ret[module_identifier]) > 1]
 
-    def _pruning_dimensions_analysis(self, graph, can_prune_after_check) -> Dict[int, PruningAnalysisDecision]:
+    def _pruning_dimensions_analysis(self, graph: NNCFGraph,
+                                     pruned_nodes_clusterization: Clusterization,
+                                     can_prune_after_check: Dict[int, PruningAnalysisDecision]) ->\
+                                     Dict[int, PruningAnalysisDecision]:
+        """
+        Checks:
+        1) All nodes that were marked as prunable after the model analysis and compatibility check vs.
+        pruning algo have a correct correspondent closing node on each path from self to outputs;
+        2) Pruning dimensions of all nodes in all cluster groups are equal.
+
+        :param graph: Graph to work with.
+        :param pruned_nodes_clusterization: Pruned nodes clusterization.
+        :param can_prune_after_check: Dict of node indices vs the decision made by previous steps;
+            the decision is true only for the nodes that do not conflict with mask propagation and
+            are supported by the NNCF pruning algorithm
+        :return: Pruning node analysis after model analyzer, pruning algo compatibility and pruning dimensions checks.
+        """
+
+        nodes_of_group_with_non_eq_pruning_dim = self._check_internal_groups_dim(pruned_nodes_clusterization)
+        can_prune_after_check_updated = can_prune_after_check.copy()
+        for node_id, val in nodes_of_group_with_non_eq_pruning_dim.items():
+            can_prune_after_check_updated[node_id] = can_prune_after_check_updated[node_id].join(val)
+
+        return self._check_all_closing_nodes_are_feasible(graph, can_prune_after_check_updated)
+
+    def _check_all_closing_nodes_are_feasible(self, graph: NNCFGraph,
+                                              can_prune_after_check: Dict[int, PruningAnalysisDecision]) ->\
+                                              Dict[int, PruningAnalysisDecision]:
         """
         Check all nodes that were marked as prunable after the model analysis and compatibility check vs.
-        pruning algo have a correct correspondent closing node on each path form self to outputs.
+        pruning algo have a correct correspondent closing node on each path from self to outputs.
 
         :param graph: Graph to work with.
         :param can_prune_after_check: Dict of node indices vs the decision made by previous steps;
@@ -214,6 +244,27 @@ class PruningNodeSelector:
         can_prune_updated = can_prune_after_check.copy()
         can_prune_updated.update(can_prune_for_prunable_layers)
         return can_prune_updated
+
+    def _check_internal_groups_dim(self, pruned_nodes_clusterization: Clusterization) ->\
+                                   Dict[int, PruningAnalysisDecision]:
+        """
+        Checks pruning dimensions of all nodes in each cluster group are equal and
+        returns nodes of clusters that failed the check.
+
+        :param pruned_nodes_clusterization: Pruned nodes clusterization.
+        :returns: Pruning analysis decisions for nodes which have
+            not equal pruning dimensions in a cluster they are belong to.
+        """
+        retval = {}
+        for cluster in pruned_nodes_clusterization.get_all_clusters():
+            has_equal_amount_of_channel = \
+                all(get_output_channels(cluster.elements[0]) == get_output_channels(node)
+                                        for node in cluster.elements[1:])
+            if not has_equal_amount_of_channel:
+                retval.update(
+                    {node.node_id: PruningAnalysisDecision(False, PruningAnalysisReason.INCOMPATIBLE_DIMS_IN_CLUSTER)
+                     for node in cluster.elements})
+        return retval
 
     def _should_prune_groups_analysis(self, graph: NNCFGraph, pruned_nodes_clusterization: Clusterization,
                                       can_prune: Dict[int, PruningAnalysisDecision]) \
@@ -301,5 +352,8 @@ class PruningNodeSelector:
 
         if not self._prune_downsample_convs and is_conv_with_downsampling(node):
             return PruningAnalysisDecision(False, PruningAnalysisReason.DOWNSAMPLE_CONV)
+
+        if is_batched_linear(node, graph):
+            return PruningAnalysisDecision(False, PruningAnalysisReason.BATCHED_LINEAR)
 
         return PruningAnalysisDecision(True)

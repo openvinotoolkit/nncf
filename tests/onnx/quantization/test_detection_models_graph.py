@@ -17,7 +17,6 @@ import os
 
 import onnx
 
-from nncf.experimental.onnx.model_normalizer import ONNXModelNormalizer
 from nncf.experimental.onnx.algorithms.quantization.utils import find_ignored_scopes
 
 from tests.common.helpers import TEST_ROOT
@@ -53,14 +52,12 @@ def test_min_max_quantization_graph(tmp_path, model_to_test):
         convert_opset_version = False
         # TODO: need to investigate disallowed_op_types for Mask RCNN
         ignored_scopes += find_ignored_scopes(
-            ["Concat", "Mul", "Add", "Sub", "Sigmoid", "Softmax", "Floor", "RoiAlign", "Resize", 'Div'], original_model)
+            ["Concat", "Mul", "Add", "Sub", "Sigmoid", "Softmax", "Floor", "RoiAlign", "Resize", 'Div', 'Cast',
+             'ScatterElements'], original_model)
 
     quantized_model = min_max_quantize_model(model_to_test.input_shape, original_model,
                                              convert_opset_version=convert_opset_version,
                                              ignored_scopes=ignored_scopes,
                                              dataset_has_batch_size=dataset_has_batch_size)
-    if convert_opset_version:
-        quantized_model = ONNXModelNormalizer.convert_opset_version(quantized_model)
-        # The problem with convert function - convert_opset_version.
-        infer_model(model_to_test.input_shape, quantized_model)
     compare_nncf_graph(quantized_model, model_to_test.path_ref_graph)
+    infer_model(model_to_test.input_shape, quantized_model)

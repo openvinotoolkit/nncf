@@ -20,6 +20,7 @@ from nncf.common.pruning.utils import get_input_masks
 from nncf.common.pruning.utils import get_input_channels
 from nncf.common.pruning.utils import get_output_channels
 from nncf.common.pruning.utils import is_grouped_conv
+from nncf.common.pruning.utils import is_batched_linear
 from nncf.common.pruning.utils import PruningAnalysisDecision
 from nncf.common.pruning.utils import PruningAnalysisReason
 from nncf.common.pruning.symbolic_mask import SymbolicMask
@@ -93,13 +94,12 @@ class MaskPropagationAlgorithm:
         :return: Dict of node indices vs the decision made by symbolic mask propagation algorithm.
         """
 
-        can_be_closing_convs = {node.node_id for node in self._graph.get_all_nodes()
-                                if node.node_type in prunable_layers_types and not is_grouped_conv(node)}
+        can_be_closing_convs = self._get_can_closing_convs(prunable_layers_types)
         can_prune_by_dim = {k: None for k in can_be_closing_convs}
         for node in self._graph.topological_sort():
             if node.node_id in can_be_closing_convs and can_prune_after_analysis[node.node_id]:
                 # Set output mask
-                node.data['output_mask'] = SymbolicMask(get_output_channels(node), [node.node_id])
+                node.data['output_mask'] = SymbolicMask(get_output_channels(node), node.node_id)
             # Propagate masks
             cls = self.get_meta_operation_by_type_name(node.node_type)
             cls.mask_propagation(node, self._graph, SymbolicMaskProcessor)
@@ -111,12 +111,12 @@ class MaskPropagationAlgorithm:
                     input_mask = input_masks[0] # type: SymbolicMask
 
                     for producer in input_mask.mask_producers:
-                        previously_dims_equal = True if can_prune_by_dim[producer] is None \
-                            else can_prune_by_dim[producer]
+                        previously_dims_equal = True if can_prune_by_dim[producer.id] is None \
+                            else can_prune_by_dim[producer.id]
 
                         is_dims_equal = get_input_channels(node) == input_mask.shape[0]
                         decision = previously_dims_equal and is_dims_equal
-                        can_prune_by_dim[producer] = PruningAnalysisDecision(
+                        can_prune_by_dim[producer.id] = PruningAnalysisDecision(
                             decision, PruningAnalysisReason.DIMENSION_MISMATCH)
         # Remove all convolutions with masks
         # that were propagated to output node
@@ -124,7 +124,7 @@ class MaskPropagationAlgorithm:
             for input_mask in get_input_masks(out_node, self._graph):
                 if input_mask:
                     for producer in input_mask.mask_producers:
-                        can_prune_by_dim[producer] = PruningAnalysisDecision(
+                        can_prune_by_dim[producer.id] = PruningAnalysisDecision(
                                 False, PruningAnalysisReason.LAST_CONV)
         # Update decision for nodes which
         # have no closing convolution
@@ -140,3 +140,11 @@ class MaskPropagationAlgorithm:
             node.data['output_mask'] = None
 
         return can_prune_by_dim
+
+    def _get_can_closing_convs(self, prunable_layers_types) -> Dict:
+        retval = set()
+        for node in self._graph.get_all_nodes():
+            if node.node_type in prunable_layers_types and \
+                not (is_grouped_conv(node) or is_batched_linear(node, self._graph)):
+                retval.add(node.node_id)
+        return retval

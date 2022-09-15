@@ -1,0 +1,21 @@
+strict digraph  {
+"0 Reshape" [id=0, type=Reshape];
+"1 Add" [id=1, type=Add];
+"2 QuantizeLinear_added_x_1" [id=2, type=QuantizeLinear];
+"3 DequantizeLinear_added_x_1" [id=3, type=DequantizeLinear];
+"4 QuantizeLinear_reshaped_w_1" [id=4, type=QuantizeLinear];
+"5 DequantizeLinear_reshaped_w_1" [id=5, type=DequantizeLinear];
+"6 Gemm" [id=6, type=Gemm];
+"7 Softmax" [id=7, type=Softmax];
+"8 nncf_model_input_0" [id=8, type=nncf_model_input];
+"9 nncf_model_output_0" [id=9, type=nncf_model_output];
+"0 Reshape" -> "4 QuantizeLinear_reshaped_w_1"  [label="[10, 5]", style=solid];
+"1 Add" -> "2 QuantizeLinear_added_x_1"  [label="[1, 10]", style=solid];
+"2 QuantizeLinear_added_x_1" -> "3 DequantizeLinear_added_x_1"  [label="[1, 10]", style=dashed];
+"3 DequantizeLinear_added_x_1" -> "6 Gemm"  [label="[1, 10]", style=solid];
+"4 QuantizeLinear_reshaped_w_1" -> "5 DequantizeLinear_reshaped_w_1"  [label="[10, 5]", style=dashed];
+"5 DequantizeLinear_reshaped_w_1" -> "6 Gemm"  [label="[10, 5]", style=solid];
+"6 Gemm" -> "7 Softmax"  [label="[1, 5]", style=solid];
+"7 Softmax" -> "9 nncf_model_output_0"  [label="[1, 5]", style=solid];
+"8 nncf_model_input_0" -> "1 Add"  [label="[1, 10]", style=solid];
+}

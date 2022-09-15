@@ -28,6 +28,7 @@ from tests.tensorflow.helpers import get_empty_config, create_compressed_model_a
 from tests.tensorflow.helpers import operational_node
 from tests.tensorflow.sparsity.magnitude.test_helpers import get_basic_filter_pruning_config
 from tests.tensorflow.sparsity.magnitude.test_helpers import get_basic_sparsity_config
+from tests.common.graph.nx_graph import compare_nx_graph_with_reference
 
 
 def get_basic_quantization_config(qconfig, input_sample_sizes=None) -> NNCFConfig:
@@ -89,19 +90,6 @@ def check_graph_def(graph_def, graph_path: str):
         expected_graph.ParseFromString(f.read())
 
     tf.test.assert_equal_graph_def(expected_graph, graph_def)
-
-
-def check_nx_graph(nx_graph: nx.DiGraph, graph_path: str):
-    expected_graph = nx.drawing.nx_pydot.read_dot(graph_path)
-
-    for nx_graph_node, expected_graph_node in zip(sorted(nx_graph.nodes.keys()), sorted(expected_graph.nodes.keys())):
-        assert nx_graph_node == expected_graph_node
-
-    for node_name, node_attrs in nx_graph.nodes.items():
-        expected_attrs = expected_graph.nodes[node_name]
-        assert expected_attrs == node_attrs
-
-    assert nx.DiGraph(expected_graph).edges == nx_graph.edges
 
 
 class QuantizeTestCaseConfiguration:
@@ -367,10 +355,7 @@ def prepare_and_check_nx_graph(tf_graph: tf.Graph, graph_path: str, ref_graph_ex
                                graph_to_layer_var_names_map: dict):
     nx_graph = get_nx_graph_from_tf_graph(tf_graph, graph_to_layer_var_names_map)
 
-    if os.getenv("NNCF_TEST_REGEN_DOT") is not None and not ref_graph_exist:
-        nx.drawing.nx_pydot.write_dot(nx_graph, graph_path)
-
-    check_nx_graph(nx_graph, graph_path)
+    compare_nx_graph_with_reference(nx_graph, graph_path)
 
 
 def check_model_graph(compressed_model, ref_graph_filename, ref_graph_dir, rename_resource_nodes):

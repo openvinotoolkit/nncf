@@ -10,9 +10,11 @@
  See the License for the specific language governing permissions and
  limitations under the License.
 """
-from typing import List, Dict
 
 import torch
+
+from typing import List, Dict
+
 from nncf.torch.pruning.tensor_processor import PTNNCFPruningTensorProcessor
 from texttable import Texttable
 from torch import nn
