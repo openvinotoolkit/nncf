@@ -10,11 +10,13 @@
  See the License for the specific language governing permissions and
  limitations under the License.
 """
+from typing import List, Dict
 
 import torch
 
-from typing import List, Dict
-
+from nncf.config.schemata.defaults import PRUNE_BATCH_NORMS
+from nncf.config.schemata.defaults import PRUNE_DOWNSAMPLE_CONVS
+from nncf.config.schemata.defaults import PRUNE_FIRST_CONV
 from nncf.torch.pruning.tensor_processor import PTNNCFPruningTensorProcessor
 from texttable import Texttable
 from torch import nn
@@ -49,9 +51,9 @@ class BasePruningAlgoBuilder(PTCompressionAlgorithmBuilder):
         self._set_default_params_for_ranking_type(params)
         self._params = params
 
-        self.prune_first = params.get('prune_first_conv', False)
-        self.prune_batch_norms = params.get('prune_batch_norms', True)
-        self.prune_downsample_convs = params.get('prune_downsample_convs', False)
+        self.prune_first = params.get('prune_first_conv', PRUNE_FIRST_CONV)
+        self.prune_batch_norms = params.get('prune_batch_norms', PRUNE_BATCH_NORMS)
+        self.prune_downsample_convs = params.get('prune_downsample_convs', PRUNE_DOWNSAMPLE_CONVS)
 
         self._prunable_types = self.get_op_types_of_pruned_modules()
 
@@ -202,9 +204,9 @@ class BasePruningAlgoController(PTCompressionAlgorithmController):
         self.pruning_config = extract_algo_specific_config(config, 'filter_pruning')
         params = self.pruning_config.get('params', {})
         self.pruned_module_groups_info = pruned_module_groups_info
-        self.prune_batch_norms = params.get('prune_batch_norms', True)
-        self.prune_first = params.get('prune_first_conv', False)
-        self.prune_downsample_convs = params.get('prune_downsample_convs', False)
+        self.prune_batch_norms = params.get('prune_batch_norms', PRUNE_BATCH_NORMS)
+        self.prune_first = params.get('prune_first_conv', PRUNE_FIRST_CONV)
+        self.prune_downsample_convs = params.get('prune_downsample_convs', PRUNE_DOWNSAMPLE_CONVS)
         self.prune_flops = False
         self.check_pruning_level(params)
         self._hooks = []

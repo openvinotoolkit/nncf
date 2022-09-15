@@ -18,8 +18,8 @@ from nncf.config.schemata.defaults import NUM_BN_ADAPTATION_SAMPLES
 BATCHNORM_ADAPTATION_SCHEMA = {
     "type": "object",
     "description": f"This initializer is applied by default to utilize batch norm statistics adaptation to the "
-                   f"quantization scenario. See "
-                   f"[Quantization.md]"
+                   f"current compression scenario. See "
+                   f"[documentation]"
                    f"({ONLINE_DOCS_ROOT}docs/compression_algorithms/Quantization.md#batch-norm-statistics-adaptation) "
                    f"for more details.",
     "properties": {

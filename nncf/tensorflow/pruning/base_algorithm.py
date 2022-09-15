@@ -33,6 +33,10 @@ from nncf.common.pruning.utils import get_output_channels
 from nncf.common.utils.logger import logger as nncf_logger
 from nncf.common.compression import BaseCompressionAlgorithmController
 from nncf.config.extractors import extract_algo_specific_config
+from nncf.config.schemata.defaults import PRUNE_BATCH_NORMS
+from nncf.config.schemata.defaults import PRUNE_DOWNSAMPLE_CONVS
+from nncf.config.schemata.defaults import PRUNE_FIRST_CONV
+from nncf.config.schemata.defaults import PRUNING_INIT
 from nncf.tensorflow.api.compression import TFCompressionAlgorithmBuilder
 from nncf.tensorflow.graph.converter import TFModelConverterFactory
 from nncf.tensorflow.graph.metatypes.keras_layers import TFBatchNormalizationLayerMetatype
@@ -71,9 +75,9 @@ class BasePruningAlgoBuilder(TFCompressionAlgorithmBuilder):
         self._params = params
 
         self._ignore_frozen_layers = True
-        self._prune_first = params.get('prune_first_conv', False)
-        self._prune_batch_norms = params.get('prune_batch_norms', True)
-        self._prune_downsample_convs = params.get('prune_downsample_convs', False)
+        self._prune_first = params.get('prune_first_conv', PRUNE_FIRST_CONV)
+        self._prune_batch_norms = params.get('prune_batch_norms', PRUNE_BATCH_NORMS)
+        self._prune_downsample_convs = params.get('prune_downsample_convs', PRUNE_DOWNSAMPLE_CONVS)
 
         self._prunable_types = self._get_op_types_of_pruned_layers()
         types_of_grouping_ops = self._get_types_of_grouping_ops()
@@ -276,7 +280,7 @@ class BasePruningAlgoController(BaseCompressionAlgorithmController):
         self.pruning_config = extract_algo_specific_config(config,
                                                            "filter_pruning")
         params = self.pruning_config.get('params', {})
-        self.pruning_init = self.pruning_config.get('pruning_init', 0)
+        self.pruning_init = self.pruning_config.get('pruning_init', PRUNING_INIT)
         self.pruning_level = self.pruning_init
         self._pruned_layer_groups_info = pruned_layer_groups_info
         self.prune_flops = False
