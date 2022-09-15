@@ -1,0 +1,13 @@
+strict digraph  {
+"0 Reshape" [id=0, type=Reshape];
+"1 Add" [id=1, type=Add];
+"2 Gemm" [id=2, type=Gemm];
+"3 Softmax" [id=3, type=Softmax];
+"4 nncf_model_input_0" [id=4, type=nncf_model_input];
+"5 nncf_model_output_0" [id=5, type=nncf_model_output];
+"0 Reshape" -> "2 Gemm"  [label="[10, 5]", style=solid];
+"1 Add" -> "2 Gemm"  [label="[1, 10]", style=solid];
+"2 Gemm" -> "3 Softmax"  [label="[1, 5]", style=solid];
+"3 Softmax" -> "5 nncf_model_output_0"  [label="[1, 5]", style=solid];
+"4 nncf_model_input_0" -> "1 Add"  [label="[1, 10]", style=solid];
+}

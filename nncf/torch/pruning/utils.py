@@ -116,7 +116,7 @@ def collect_output_shapes(graph: NNCFGraph) -> Dict[NNCFNodeName, List[int]]:
         if output_edges:
             out_edge = graph.get_output_edges(node)[0]
             out_shape = out_edge.tensor_shape
-            modules_out_shapes[node.node_name] = out_shape[-1]
+            modules_out_shapes[node.node_name] = out_shape
         else:
             # For disconnected NNCFGraph when node have no output edge
             nncf_logger.error("Node %s have no output edge in NNCFGraph", node.node_name)

@@ -11,6 +11,8 @@
  limitations under the License.
 """
 
+from typing import Optional
+
 from nncf.common.graph.transformations.commands import TransformationCommand
 from nncf.common.graph.transformations.commands import TransformationType
 from nncf.common.graph.transformations.commands import TargetType
@@ -19,9 +21,30 @@ from nncf.experimental.onnx.algorithms.quantization.utils import QuantizerLayerP
 
 
 class ONNXTargetPoint(TargetPoint):
-    def __init__(self, target_type: TargetType, target_node_name: str):
+    def __init__(self, target_type: TargetType, target_node_name: str, edge_name: Optional[str] = None):
         super().__init__(target_type)
         self.target_node_name = target_node_name
+        self.edge_name = edge_name
+
+    def __eq__(self, other: 'ONNXTargetPoint') -> bool:
+        return isinstance(other, ONNXTargetPoint) and \
+               self.type == other.type and self.target_node_name == other.target_node_name and \
+               self.edge_name == other.edge_name
+
+    def __hash__(self) -> int:
+        return hash((self.target_node_name, self.edge_name, self._target_type))
+
+    def __lt__(self, other: 'ONNXTargetPoint') -> bool:
+        # The ONNXTargetPoint should have the way to compare.
+        # NNCF has to be able returning the Quantization Target Points in the deterministic way.
+        # MinMaxQuantizationAlgorithm returns the sorted Set of such ONNXTargetPoints.
+        params = ['_target_type', 'target_node_name', 'edge_name']
+        for param in params:
+            if self.__getattribute__(param) < other.__getattribute__(param):
+                return True
+            if self.__getattribute__(param) > other.__getattribute__(param):
+                return False
+        return False
 
 
 class ONNXInsertionCommand(TransformationCommand):

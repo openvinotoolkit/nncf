@@ -19,7 +19,7 @@ from typing import Optional
 from typing import OrderedDict as OrderedDictType
 from typing import Tuple
 
-from nncf.common.pruning.utils import count_flops_and_weights_per_node
+from nncf.common.pruning.weights_flops_calculator import WeightsFlopsCalculator
 from nncf.common.utils.logger import logger as nncf_logger
 from nncf.experimental.torch.nas.bootstrapNAS.elasticity.base_handler import ElasticityConfig
 from nncf.experimental.torch.nas.bootstrapNAS.elasticity.base_handler import ElasticityHandler
@@ -65,9 +65,25 @@ class MultiElasticityHandler(ElasticityHandler):
     def __init__(self,
                  handlers: OrderedDictType[ElasticityDim, SingleElasticityHandler],
                  target_model: NNCFNetwork):
+        GENERAL_CONV_LAYER_METATYPES = [
+            PTConv1dMetatype,
+            PTDepthwiseConv1dSubtype,
+            PTConv2dMetatype,
+            PTDepthwiseConv2dSubtype,
+            PTConv3dMetatype,
+            PTDepthwiseConv3dSubtype,
+            PTConvTranspose2dMetatype,
+            PTConvTranspose3dMetatype
+        ]
+        LINEAR_LAYER_METATYPES = [
+            PTLinearMetatype
+        ]
         self._handlers = handlers
         self._target_model = target_model
         self._is_handler_enabled_map = {elasticity_dim: True for elasticity_dim in handlers}
+        self._weights_calc = WeightsFlopsCalculator(
+            conv_op_metatypes=GENERAL_CONV_LAYER_METATYPES,
+            linear_op_metatypes=LINEAR_LAYER_METATYPES)
         self.activate_supernet()
 
     @property
@@ -221,23 +237,6 @@ class MultiElasticityHandler(ElasticityHandler):
         """
         :return: FLOPs and the number weights and in the model for convolution and fully connected layers.
         """
-        GENERAL_CONV_LAYER_METATYPES = [
-            PTConv1dMetatype,
-            PTDepthwiseConv1dSubtype,
-            PTConv2dMetatype,
-            PTDepthwiseConv2dSubtype,
-            PTConv3dMetatype,
-            PTDepthwiseConv3dSubtype,
-            PTConvTranspose2dMetatype,
-            PTConvTranspose3dMetatype
-        ]
-        LINEAR_LAYER_METATYPES = [
-            PTLinearMetatype
-        ]
-
-        graph = self._target_model.get_graph()
-        modules_out_shapes = collect_output_shapes(graph)
-
         kernel_sizes = None
         if self.kernel_handler is not None:
             kernel_sizes = self.kernel_handler.get_active_kernel_sizes_per_node()
@@ -250,19 +249,19 @@ class MultiElasticityHandler(ElasticityHandler):
         if self.width_handler is not None:
             input_width_values, output_width_values = self.width_handler.get_active_in_out_width_values()
 
-        flops_pers_node, num_weights_per_node = count_flops_and_weights_per_node(
+
+        graph = self._target_model.get_graph()
+        output_shapes = collect_output_shapes(graph)
+
+        flops, num_weights = self._weights_calc.count_flops_and_weights(
             graph=graph,
-            output_shapes=modules_out_shapes,
+            output_shapes=output_shapes,
             input_channels=input_width_values,
             output_channels=output_width_values,
             kernel_sizes=kernel_sizes,
             op_addresses_to_skip=names_of_skipped_nodes,
-            conv_op_metatypes=GENERAL_CONV_LAYER_METATYPES,
-            linear_op_metatypes=LINEAR_LAYER_METATYPES,
         )
 
-        flops = sum(flops_pers_node.values())
-        num_weights = sum(num_weights_per_node.values())
         return flops, num_weights
 
     def _get_handler_by_elasticity_dim(self, dim: ElasticityDim) -> Optional[SingleElasticityHandler]:

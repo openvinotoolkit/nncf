@@ -138,4 +138,4 @@ def test_output_insertion(target_layers, target_layer_outputs):
     onnx_graph = ONNXGraph(transformed_model)
     # Should be topologically sorted
     for i in range(len(target_layers)):
-        assert onnx_graph.get_model_outputs()[i].name == target_layer_outputs[i]
+        assert onnx_graph.get_model_outputs()[i].name in target_layer_outputs

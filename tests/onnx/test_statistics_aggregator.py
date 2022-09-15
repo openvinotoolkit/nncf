@@ -73,11 +73,11 @@ def test_statistics_aggregator(range_type, test_parameters):
     onnx_graph = ONNXGraph(quantized_model)
     num_q = 0
     for node in quantized_model.graph.node:
-        if node.name == 'QuantizeLinear_X':
+        if node.name == 'QuantizeLinear_X_1':
             num_q += 1
             activation_scale = test_parameters.activation_float_range / ((2 ** 8 - 1) / 2)
             assert np.allclose(onnx_graph.get_initializers_value(node.input[1]), np.array(activation_scale))
-        if node.name == 'QuantizeLinear_Conv1_W':
+        if node.name == 'QuantizeLinear_Conv1_W_1':
             num_q += 1
             weight_scale = test_parameters.weight_float_range / ((2 ** 8 - 1) / 2)
             assert np.allclose(onnx_graph.get_initializers_value(node.input[1]),

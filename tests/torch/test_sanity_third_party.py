@@ -99,9 +99,9 @@ class TestTransformers:
             pip_runner.run_pip(f"install -r examples/pytorch/{sample_folder}/requirements.txt",
                                cwd=self.TRANSFORMERS_REPO_PATH)
         pip_runner.run_pip("install boto3", cwd=self.TRANSFORMERS_REPO_PATH)
-        subprocess.run(
-            "{} && {} setup.py develop".format(self.VENV_ACTIVATE, self.PYTHON_EXECUTABLE), check=True,
-            shell=True, cwd=PROJECT_ROOT)
+        # WA for deleted CONLL2003 in datasets==1.11.0 (https://github.com/huggingface/datasets/issues/3582)
+        pip_runner.run_pip("install -U datasets", cwd=self.TRANSFORMERS_REPO_PATH)
+        pip_runner.run_pip("install -e .", cwd=PROJECT_ROOT)
 
     @pytest.mark.dependency(depends=['install_trans'], name='xnli_train')
     def test_xnli_train(self, temp_folder):

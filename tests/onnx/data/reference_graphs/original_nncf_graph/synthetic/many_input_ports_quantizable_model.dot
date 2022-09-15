@@ -1,0 +1,16 @@
+strict digraph  {
+"0 Relu" [id=0, type=Relu];
+"1 Identity" [id=1, type=Identity];
+"2 Softmax" [id=2, type=Softmax];
+"3 Mul" [id=3, type=Mul];
+"4 nncf_model_input_0" [id=4, type=nncf_model_input];
+"5 nncf_model_output_0" [id=5, type=nncf_model_output];
+"6 nncf_model_output_1" [id=6, type=nncf_model_output];
+"0 Relu" -> "3 Mul"  [label="[1, 1, 5, 5]", style=solid];
+"1 Identity" -> "2 Softmax"  [label="[1, 1, 5, 5]", style=solid];
+"1 Identity" -> "3 Mul"  [label="[1, 1, 5, 5]", style=solid];
+"2 Softmax" -> "6 nncf_model_output_1"  [label="[1, 1, 5, 5]", style=solid];
+"3 Mul" -> "5 nncf_model_output_0"  [label="[1, 1, 5, 5]", style=solid];
+"4 nncf_model_input_0" -> "0 Relu"  [label="[1, 1, 5, 5]", style=solid];
+"4 nncf_model_input_0" -> "1 Identity"  [label="[1, 1, 5, 5]", style=solid];
+}
