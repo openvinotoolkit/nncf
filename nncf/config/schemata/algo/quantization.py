@@ -410,6 +410,13 @@ OVERFLOW_FIX_OPTIONS = [
 
 QUANTIZATION_SCHEMA = {
     **BASIC_COMPRESSION_ALGO_SCHEMA,
+    "description": f"Applies quantization on top of the input model, simulating future low-precision execution "
+                   f"specifics, and selects the quantization layout and parameters to strive for best possible "
+                   f"quantized model accuracy and performance. "
+                   f"\nSee [Quantization.md]"
+                   f"({ONLINE_DOCS_ROOT}"
+                   f"/docs/compression_algorithms/Quantization.md) and the rest of this schema for "
+                   f"more details and parameters.",
     "properties": {
         "algorithm": {
             "const": QUANTIZATION_ALGO_NAME_IN_CONFIG
