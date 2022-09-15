@@ -40,7 +40,7 @@ BINARIZATION_SCHEMA = {
                                 default=BINARIZATION_MODE),
         "initializer": QUANTIZATION_INITIALIZER_SCHEMA,
         **STAGED_QUANTIZATION_PARAMS,
-        **SCOPING_PROPERTIES
+        **SCOPING_PROPERTIES,
         **COMPRESSION_LR_MULTIPLIER_PROPERTY,
     },
     "additionalProperties": False
