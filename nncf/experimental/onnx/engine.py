@@ -11,6 +11,12 @@
  limitations under the License.
 """
 
+from typing import Dict
+
+import onnxruntime as rt
+import numpy as np
+import onnx
+
 from nncf.common.graph.transformations.commands import TargetType
 from nncf.common.graph.definitions import NNCFGraphNodeType
 
@@ -22,10 +28,6 @@ from nncf.experimental.onnx.samplers import create_onnx_sampler
 from nncf.experimental.onnx.tensor import ONNXNNCFTensor
 from nncf.experimental.onnx.graph.onnx_graph import ONNXGraph
 from nncf.experimental.onnx.graph.nncf_graph_builder import GraphConverter
-
-import onnxruntime as rt
-import numpy as np
-import onnx
 
 
 class ONNXEngine(Engine):
@@ -83,11 +85,11 @@ class ONNXEngine(Engine):
             for tensor, output in zip(output_tensors, model_outputs)
         }
 
-    def _create_model_graphs(self, model):
+    def _create_model_graphs(self, model: onnx.ModelProto) -> None:
         self.nncf_graph = GraphConverter.create_nncf_graph(model)
         self.onnx_graph = ONNXGraph(model)
 
-    def _register_statistics(self, outputs: NNCFData, statistic_points: StatisticPointsContainer) -> None:
+    def _find_edge_name_to_node_name_mapping(self, statistic_points: StatisticPointsContainer) -> Dict[str, str]:
         edge_name_to_node_name = {}
         for node_name, _statistic_points in statistic_points.items():
             for statistic_point in _statistic_points:
@@ -97,17 +99,25 @@ class ONNXEngine(Engine):
                                                    self.nncf_graph.get_output_edges(nncf_node_name)]
                     for onnx_node_name in onnx_nodes_after_input_node:
                         edge_name = self.onnx_graph.get_node_edges(onnx_node_name.node_name)['input'][0]
-                        edge_name_to_node_name[edge_name] = node_name
-                elif statistic_point.target_point.type == TargetType.POST_LAYER_OPERATION:
+                        edge_name_to_node_name[edge_name] = edge_name_to_node_name.get(edge_name, []) + [node_name]
+                    continue
+                if statistic_point.target_point.type == TargetType.POST_LAYER_OPERATION:
+                    # We quantize only 0-index of node's output
                     edge_name = self.onnx_graph.get_node_edges(node_name)['output'][0]
                 elif statistic_point.target_point.type == TargetType.PRE_LAYER_OPERATION:
-                    edge_name = self.onnx_graph.get_node_edges(node_name)['input'][0]
+                    edge_name = statistic_point.target_point.edge_name
                 else:
                     RuntimeError('The statistics should be collected only from the input of output edges of the node')
-                edge_name_to_node_name[edge_name] = node_name
+                edge_name_to_node_name[edge_name] = edge_name_to_node_name.get(edge_name, []) + [node_name]
+        return edge_name_to_node_name
 
+    def _register_statistics(self, outputs: NNCFData, statistic_points: StatisticPointsContainer) -> None:
+        """
+        Registers 'outputs' tensors from inferred model and register them to the correspondence 'statistic_points'.
+        """
+        edge_name_to_node_name = self._find_edge_name_to_node_name_mapping(statistic_points)
         for output_name, output_tensor in outputs.items():
             if output_name in edge_name_to_node_name:
-                node_name = edge_name_to_node_name[output_name]
-                for statistic_point in statistic_points[node_name]:
-                    statistic_point.register_tensor(output_tensor)
+                for node_name in edge_name_to_node_name[output_name]:
+                    for statistic_point in statistic_points[node_name]:
+                        statistic_point.register_tensor(output_tensor)
