@@ -28,6 +28,7 @@ from nncf.experimental.onnx.graph.onnx_graph import ONNXGraph
 from nncf.experimental.onnx.graph.transformations.commands import ONNXOutputInsertionCommand
 from nncf.experimental.onnx.graph.transformations.commands import ONNXQuantizerInsertionCommand
 from nncf.experimental.onnx.graph.transformations.layout import ONNXTransformationLayout
+from nncf.experimental.post_training.graph.helpers import BackendGraphFactory, NNCFGraphFactory
 from nncf.experimental.post_training.graph.model_transformer import StaticModelTransformerBase
 from nncf.experimental.post_training.statistics.statistic_point import StatisticPointsContainer
 
@@ -89,8 +90,8 @@ class ONNXModelTransformer(StaticModelTransformerBase):
 
         :param transformations: list of the ONNXOutputInsertionCommand transformations
         """
-        backend_graph = self._get_backend_graph(self._model)
-        nncf_graph = self._get_nncf_graph(self._model)
+        backend_graph = BackendGraphFactory.create(self._model)
+        nncf_graph = NNCFGraphFactory.create(self._model)
         model_outputs = self._get_model_outputs(backend_graph)
         extra_model_outputs = self._get_extra_model_outputs(nncf_graph,
                                                             backend_graph,
@@ -100,24 +101,6 @@ class ONNXModelTransformer(StaticModelTransformerBase):
                                                                outputs=[*extra_model_outputs,
                                                                         *model_outputs])
         self._model = model_with_intermediate_outputs
-
-    def _get_backend_graph(self, model: onnx.ModelProto) -> ONNXGraph:
-        """
-        Creates ONNXGraph from the model
-
-        :param model: *ONNX* model
-        :return: ONNXGraph
-        """
-        return ONNXGraph(model)
-
-    def _get_nncf_graph(self, model: onnx.ModelProto) -> NNCFGraph:
-        """
-        Creates NNCFGraph from the model
-
-        :param model: *ONNX* model
-        :return: NNCFGraph
-        """
-        return GraphConverter.create_nncf_graph(model)
 
     def _get_model_outputs(self, onnx_graph: ONNXGraph) -> List:
         """
@@ -173,7 +156,7 @@ class ONNXModelTransformer(StaticModelTransformerBase):
         """
         if outputs is None:
             raise RuntimeError("Parameter outputs cannot be None.")
-        onnx_graph = self._get_backend_graph(model)
+        onnx_graph = BackendGraphFactory.create(model)
         var_out = []
         for out in outputs:
             # shape should be None; if you place not None, some models will have inference problems (e.g. Mask RCNN)
@@ -300,7 +283,7 @@ class ONNXModelTransformer(StaticModelTransformerBase):
         return onnx_scale, onnx_zero_point
 
     def _insert_quantizer_dequantizer(self, transformation: ONNXQuantizerInsertionCommand) -> None:
-        onnx_graph = self._get_backend_graph(self._model)
+        onnx_graph = BackendGraphFactory.create(self._model)
         target_edge_name = self._get_target_edge_name(transformation, onnx_graph)
         quantizer, dequantizer = self._get_quantize_dequantize_nodes(transformation, target_edge_name)
         onnx_scale, onnx_zero_point = self._get_scale_zero_point_tensors(transformation, quantizer, dequantizer)
