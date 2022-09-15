@@ -568,7 +568,9 @@ class NNCFGraph:
                 style = 'dashed'
             else:
                 style = 'solid'
-            out_graph.add_edge(u, v, label=edge[NNCFGraph.ACTIVATION_SHAPE_EDGE_ATTR], style=style)
+            edge_label = f"{edge[NNCFGraph.ACTIVATION_SHAPE_EDGE_ATTR]} \\n" \
+                         f"{edge[NNCFGraph.OUTPUT_PORT_ID_EDGE_ATTR]} -> {edge[NNCFGraph.INPUT_PORT_ID_EDGE_ATTR]}"
+            out_graph.add_edge(u, v, label=edge_label, style=style)
 
         mapping = {k: v['label'] for k, v in out_graph.nodes.items()}
         out_graph = nx.relabel_nodes(out_graph, mapping)
