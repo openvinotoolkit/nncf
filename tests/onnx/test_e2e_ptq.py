@@ -17,6 +17,7 @@ limitations under the License.
 # pylint: disable=redefined-outer-name
 
 import itertools
+import json
 import math
 import os
 import subprocess
@@ -28,6 +29,10 @@ import pandas as pd
 import pytest
 from nncf.common.utils.logger import logger as nncf_logger
 from pytest_dependency import depends
+
+BG_COLOR_GREEN_HEX = 'ccffcc'
+BG_COLOR_YELLOW_HEX = 'ffffcc'
+BG_COLOR_RED_HEX = 'ffcccc'
 
 TEST_ROOT = Path(__file__).absolute().parents[1]
 PROJECT_ROOT = TEST_ROOT.parent.absolute()
@@ -152,10 +157,37 @@ def _read_csv(root_dir: Path, key=str):
     return df
 
 
+def _read_json(fpath: Path) -> pd.DataFrame:
+    fpath = str(fpath)
+    with open(fpath, "r") as fp:
+        d0 = json.load(fp)
+
+    rows = []
+
+    for task, d1 in d0.items():
+        for dataset, d2 in d1.items():
+            for model, d3 in d2.items():
+                d3["task"] = task
+                d3["dataset"] = dataset
+                d3["model"] = model
+                row = pd.Series(d3)
+                rows += [row]
+
+    df = pd.DataFrame(rows)
+    df = df[["model", "target", "metric_type", "diff_target_max"]]
+    df = df.set_index("model")
+
+    df["model_accuracy"] = df["target"] * 100.0
+    df["metric_name"] = df["metric_type"]
+
+    return df
+
+
 @pytest.fixture
 def reference_model_accuracy(scope="module"):
-    root_dir = TEST_ROOT / "onnx" / "data" / "reference_model_accuracy"
-    return _read_csv(root_dir, "reference")
+    fpath = TEST_ROOT / "onnx" / "data" / "reference_model_accuracy" / "reference.json"
+
+    return _read_json(fpath)
 
 
 @pytest.fixture
@@ -334,11 +366,13 @@ class TestBenchmarkResult:
 
         df = df.reset_index()
         df = df.rename({"model": "Model", "metric_name_FP32": "Metrics type",
-                        "model_accuracy_FP32": "FP32", "model_accuracy_INT8": "INT8"}, axis=1)
+                        "model_accuracy_FP32": "FP32", "model_accuracy_INT8": "INT8",
+                        "diff_target_min_FP32": "diff_target_min",
+                        "diff_target_max_FP32": "diff_target_max"}, axis=1)
 
         # TODO : We need to replace the values in those columns with the appropriate values in the future.
         df["Expected FP32"] = None
-        df["Diff Expected"] = "<1%"
+        df["Diff Expected"] = df["diff_target_max"].apply(lambda v: f"<{v:.1f}%")
 
         df = df[["Model", "Metrics type", "Expected FP32", "FP32", "INT8", "Diff", "Diff Expected"]]
 
@@ -352,26 +386,38 @@ class TestBenchmarkResult:
             if math.isnan(row["INT8"]):
                 red_rows += [idx]
 
+        green_rows = list(set(range(len(df))) - set(yellow_rows + red_rows))
+
         def _style_rows():
             styles = []
-            for idx in yellow_rows:
-                styles.append(f"""
-                .row{idx} {{background-color: yellow;}}
-                """)
-            for idx in red_rows:
-                styles.append(f"""
-                .row{idx} {{background-color: rgb(205, 92, 92);}}
-                """)
+            # 3 ~ 5 columns are allowed to be colored.
+
+            for col in range(3, 6):
+                for idx in yellow_rows:
+                    styles.append(f"""
+                    .row{idx}.col{col} {{background-color: #{BG_COLOR_YELLOW_HEX};}}
+                    """)
+                for idx in red_rows:
+                    styles.append(f"""
+                    .row{idx}.col{col} {{background-color: #{BG_COLOR_RED_HEX};}}
+                    """)
+                for idx in green_rows:
+                    styles.append(f"""
+                    .row{idx}.col{col} {{background-color: #{BG_COLOR_GREEN_HEX};}}
+                    """)
 
             return "\n".join(styles)
+
+        # Replace NaN values with "-"
+        df = df.fillna("-")
 
         with open(output_fp, "w", encoding="utf-8") as fp:
             fp.write(f"""
             <html>
             <head>
-            <style> 
+            <style>
             table, th, td {{font-size:10pt; border:1px solid black; border-collapse:collapse; text-align:center;}}
-            th, td {{padding: 5px; background-color: rgb(144, 238, 144);}}
+            th, td {{padding: 5px; }}
             {_style_rows()}
             </style>
             </head>
