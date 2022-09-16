@@ -366,11 +366,11 @@ class TestBenchmarkResult:
 
         assert len(this_model_accuracy) > 0, f"{model_name} has no result from the table."
 
-        for model_name, cols in this_model_accuracy.iterrows():
+        for index, cols in this_model_accuracy.iterrows():
             min_threshold = cols["diff_target_min"]
             max_threshold = cols["diff_target_max"]
             assert min_threshold < cols["Diff FP32"] < max_threshold, \
-                f"Diff Expected of {model_name} should be in ({min_threshold:.1f}%, {max_threshold:.1f}%)."
+                f"Diff Expected of {index} should be in ({min_threshold:.1f}%, {max_threshold:.1f}%)."
 
     @pytest.mark.e2e_ptq
     @pytest.mark.run(order=4)
