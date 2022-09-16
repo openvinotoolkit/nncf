@@ -1,8 +1,10 @@
-name: NNCF Config schema visualization page build
+name: Config schema HTML build
 on:
   push:
     branches:
       - develop
+    paths:
+      - nncf/config
 permissions:
   contents: write
 jobs:
