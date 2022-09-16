@@ -174,7 +174,7 @@ def _read_json(fpath: Path) -> pd.DataFrame:
                 rows += [row]
 
     df = pd.DataFrame(rows)
-    df = df[["model", "target", "metric_type", "diff_target_max"]]
+    df = df[["model", "target", "metric_type", "diff_target_min", "diff_target_max"]]
     df = df.set_index("model")
 
     df["model_accuracy"] = df["target"] * 100.0
@@ -362,37 +362,36 @@ class TestBenchmarkResult:
 
         output_fp = str(output_dir / "report.html")
 
-        df["Diff"] = df["model_accuracy_FP32"] - df["model_accuracy_INT8"]
-
         df = df.reset_index()
         df = df.rename({"model": "Model", "metric_name_FP32": "Metrics type",
                         "model_accuracy_FP32": "FP32", "model_accuracy_INT8": "INT8",
                         "diff_target_min_FP32": "diff_target_min",
                         "diff_target_max_FP32": "diff_target_max"}, axis=1)
 
-        # TODO : We need to replace the values in those columns with the appropriate values in the future.
-        df["Expected FP32"] = None
-        df["Diff Expected"] = df["diff_target_max"].apply(lambda v: f"<{v:.1f}%")
-
-        df = df[["Model", "Metrics type", "Expected FP32", "FP32", "INT8", "Diff", "Diff Expected"]]
+        df["Diff FP32"] = df["INT8"] - df["FP32"]
+        # TODO: Change E2E test to make "Expected FP32" column effective.
+        df["Expected FP32"] = df["FP32"]
+        df["Diff Expected"] = df["INT8"] - df["Expected FP32"]
 
         yellow_rows = []
         red_rows = []
+        green_rows = []
 
         for idx, row in df.iterrows():
-            if row["Diff"] > 1.0:
-                yellow_rows += [idx]
-
             if math.isnan(row["INT8"]):
                 red_rows += [idx]
+            elif row["diff_target_min"] < row["Diff FP32"] < row["diff_target_max"]:
+                green_rows += [idx]
+            else:
+                yellow_rows += [idx]
 
-        green_rows = list(set(range(len(df))) - set(yellow_rows + red_rows))
+        df = df[["Model", "Metrics type", "Expected FP32", "FP32", "INT8", "Diff FP32", "Diff Expected"]]
 
         def _style_rows():
             styles = []
-            # 3 ~ 5 columns are allowed to be colored.
+            # 3 ~ 6 columns are allowed to be colored.
 
-            for col in range(3, 6):
+            for col in range(3, 7):
                 for idx in yellow_rows:
                     styles.append(f"""
                     .row{idx}.col{col} {{background-color: #{BG_COLOR_YELLOW_HEX};}}
