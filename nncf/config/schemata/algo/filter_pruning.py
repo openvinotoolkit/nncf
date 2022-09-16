@@ -147,7 +147,8 @@ FILTER_PRUNING_SCHEMA = {
                                                                description="Random seed for LeGR coefficients "
                                                                            "generation.",
                                                                default=PRUNING_LEGR_RANDOM_SEED)
-                            }
+                            },
+                            "additionalProperties": False
                         },
                     "save_ranking_coeffs_path": with_attributes(STRING),  # TODO(vshampor): is this important?
                     "load_ranking_coeffs_path": with_attributes(STRING),  # TODO(vshampor): is this important?
