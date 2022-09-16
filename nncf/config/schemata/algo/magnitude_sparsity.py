@@ -10,6 +10,7 @@
  See the License for the specific language governing permissions and
  limitations under the License.
 """
+from nncf.config.definitions import ONLINE_DOCS_ROOT
 from nncf.config.schemata.common.compression import BASIC_COMPRESSION_ALGO_SCHEMA
 from nncf.config.schemata.basic import NUMBER
 from nncf.config.schemata.basic import STRING
@@ -17,17 +18,29 @@ from nncf.config.schemata.basic import with_attributes
 from nncf.config.schemata.common.sparsity import COMMON_SPARSITY_PARAM_PROPERTIES
 from nncf.config.schemata.common.targeting import GENERIC_INITIALIZER_SCHEMA
 from nncf.config.schemata.common.targeting import SCOPING_PROPERTIES
+from nncf.config.schemata.defaults import SPARSITY_INIT
 
 MAGNITUDE_SPARSITY_ALGO_NAME_IN_CONFIG = "magnitude_sparsity"
+
+WEIGHT_IMPORTANCE_OPTIONS = ['abs', 'normed_abs']
+
 MAGNITUDE_SPARSITY_SCHEMA = {
     **BASIC_COMPRESSION_ALGO_SCHEMA,
+    "description": f"Applies sparsity on top of the current model. Each weight tensor value will be either kept as-is, "
+                   f"or set to 0 based on its magnitude. For large sparsity levels, this will improve performance on "
+                   f"hardware that can profit from it. " 
+                   f"See [Sparsity.md]"
+                   f"({ONLINE_DOCS_ROOT}"
+                   f"/docs/compression_algorithms/Sparsity.md#magnitude-sparsity) and the rest of this schema for "
+                   f"more details and parameters.",
     "properties": {
         "algorithm": {
             "const": MAGNITUDE_SPARSITY_ALGO_NAME_IN_CONFIG
         },
         "sparsity_init": with_attributes(NUMBER,
                                          description="Initial value of the sparsity level applied to the "
-                                                     "model"),
+                                                     "model.",
+                                         default=SPARSITY_INIT),
         "initializer": GENERIC_INITIALIZER_SCHEMA,
         "params":
             {
@@ -38,8 +51,8 @@ MAGNITUDE_SPARSITY_SCHEMA = {
                                                          description="Determines the way in which the weight values "
                                                                      "will be sorted after being aggregated in order "
                                                                      "to determine the sparsity threshold "
-                                                                     "corresponding to a specific sparsity level. "
-                                                                     "Either 'abs' or 'normed_abs'.",
+                                                                     "corresponding to a specific sparsity level.",
+                                                         enum=WEIGHT_IMPORTANCE_OPTIONS,
                                                          default="normed_abs")
                 },
                 "additionalProperties": False

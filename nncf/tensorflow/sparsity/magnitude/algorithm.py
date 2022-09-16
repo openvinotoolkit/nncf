@@ -30,6 +30,8 @@ from nncf.common.statistics import NNCFStatistics
 from nncf.common.utils.helpers import should_consider_scope
 from nncf.config.extractors import extract_algo_specific_config
 from nncf.config.extractors import extract_bn_adaptation_init_params
+from nncf.config.schemata.defaults import MAGNITUDE_SPARSITY_WEIGHT_IMPORTANCE
+from nncf.config.schemata.defaults import SPARSITY_INIT
 from nncf.tensorflow.algorithm_selector import TF_COMPRESSION_ALGORITHMS
 from nncf.tensorflow.api.compression import TFCompressionAlgorithmBuilder
 from nncf.tensorflow.graph.converter import TFModelConverterFactory
@@ -141,9 +143,10 @@ class MagnitudeSparsityController(BaseSparsityController):
         params = deepcopy(algo_config.get('params', {}))
         self._threshold = 0
         self._frozen = False
-        self._weight_importance_fn = WEIGHT_IMPORTANCE_FUNCTIONS[params.get('weight_importance', 'normed_abs')]
+        self._weight_importance_fn = WEIGHT_IMPORTANCE_FUNCTIONS[params.get('weight_importance',
+                                                                            MAGNITUDE_SPARSITY_WEIGHT_IMPORTANCE)]
 
-        sparsity_init = algo_config.get('sparsity_init', 0)
+        sparsity_init = algo_config.get('sparsity_init', SPARSITY_INIT)
         params['sparsity_init'] = sparsity_init
         scheduler_type = params.get('schedule', 'polynomial')
 

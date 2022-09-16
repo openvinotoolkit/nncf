@@ -27,6 +27,9 @@ from nncf.common.sparsity.statistics import MagnitudeSparsityStatistics
 from nncf.common.statistics import NNCFStatistics
 from nncf.config.extractors import extract_algo_specific_config
 from nncf.config.extractors import extract_bn_adaptation_init_params
+from nncf.config.schemata.defaults import MAGNITUDE_SPARSITY_WEIGHT_IMPORTANCE
+from nncf.config.schemata.defaults import SPARSITY_INIT
+from nncf.config.schemata.defaults import SPARSITY_LEVEL_SETTING_MODE
 from nncf.torch.algo_selector import PT_COMPRESSION_ALGORITHMS
 from nncf.torch.compression_method_api import PTCompressionAlgorithmController
 from nncf.torch.nncf_network import NNCFNetwork
@@ -57,10 +60,11 @@ class MagnitudeSparsityController(BaseSparsityAlgoController):
         self._algo_config = extract_algo_specific_config(self._config, 'magnitude_sparsity')
         params = self._algo_config.get('params', {})
 
-        self._weight_importance_fn = WEIGHT_IMPORTANCE_FUNCTIONS[params.get('weight_importance', 'normed_abs')]
-        self._mode = params.get('sparsity_level_setting_mode', 'global')
+        self._weight_importance_fn = WEIGHT_IMPORTANCE_FUNCTIONS[params.get('weight_importance',
+                                                                            MAGNITUDE_SPARSITY_WEIGHT_IMPORTANCE)]
+        self._mode = params.get('sparsity_level_setting_mode', SPARSITY_LEVEL_SETTING_MODE)
         self._scheduler = None
-        sparsity_init = self._algo_config.get('sparsity_init', 0)
+        sparsity_init = self._algo_config.get('sparsity_init', SPARSITY_INIT)
 
         if self._mode == 'global':
             scheduler_params = deepcopy(params)
