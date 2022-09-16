@@ -335,32 +335,8 @@ class TestBenchmark:
 
 @pytest.mark.run(order=3)
 class TestBenchmarkResult:
-    @pytest.mark.e2e_ptq
-    @pytest.mark.dependency()
-    @pytest.mark.parametrize("task_type, model_name", MODELS)
-    def test_model_accuracy(self, request, task_type, model_name, reference_model_accuracy, quantized_model_accuracy):
-        # Run PTQ first
-        depends(request, ["TestPTQ::test_ptq_model" + request.node.name.lstrip("test_quantized_model_performance")])
-        check_xfail(model_name)
-        check_quantized_xfail(model_name)
-
+    def parse_df(self, reference_model_accuracy, quantized_model_accuracy):
         df = reference_model_accuracy.join(quantized_model_accuracy, lsuffix="_FP32", rsuffix="_INT8")
-        df["Diff"] = df["model_accuracy_FP32"] - df["model_accuracy_INT8"]
-        this_model_accuracy = df[df.index.str.contains(model_name)]
-
-        assert len(this_model_accuracy) > 0, f"{model_name} has no result from the table."
-
-        for idx, cols in this_model_accuracy.iterrows():
-            abs_acc_degradation = cols["Diff"]
-            assert abs_acc_degradation < 1.0, \
-                f"The absolute model accuracy degradation of {idx} exceeds 1% ({abs_acc_degradation}%)."
-
-    @pytest.mark.e2e_ptq
-    @pytest.mark.run(order=4)
-    def test_generate_report(self, reference_model_accuracy, quantized_model_accuracy, output_dir):
-        df = reference_model_accuracy.join(quantized_model_accuracy, lsuffix="_FP32", rsuffix="_INT8")
-
-        output_fp = str(output_dir / "report.html")
 
         df = df.reset_index()
         df = df.rename({"model": "Model", "metric_name_FP32": "Metrics type",
@@ -372,6 +348,36 @@ class TestBenchmarkResult:
         # TODO: Change E2E test to make "Expected FP32" column effective.
         df["Expected FP32"] = df["FP32"]
         df["Diff Expected"] = df["INT8"] - df["Expected FP32"]
+
+        return df
+
+    @pytest.mark.e2e_ptq
+    @pytest.mark.dependency()
+    @pytest.mark.parametrize("task_type, model_name", MODELS)
+    def test_model_accuracy(self, request, task_type, model_name, reference_model_accuracy, quantized_model_accuracy):
+        # Run PTQ first
+        depends(request, ["TestPTQ::test_ptq_model" + request.node.name.lstrip("test_quantized_model_performance")])
+        check_xfail(model_name)
+        check_quantized_xfail(model_name)
+
+        df = self.parse_df(reference_model_accuracy, quantized_model_accuracy)
+        df = df.set_index("Model")
+        this_model_accuracy = df[df.index.str.contains(model_name)]
+
+        assert len(this_model_accuracy) > 0, f"{model_name} has no result from the table."
+
+        for model_name, cols in this_model_accuracy.iterrows():
+            min_threshold = cols["diff_target_min"]
+            max_threshold = cols["diff_target_max"]
+            assert min_threshold < cols["Diff FP32"] < max_threshold, \
+                f"Diff Expected of {model_name} should be in ({min_threshold:.1f}%, {max_threshold:.1f}%)."
+
+    @pytest.mark.e2e_ptq
+    @pytest.mark.run(order=4)
+    def test_generate_report(self, reference_model_accuracy, quantized_model_accuracy, output_dir):
+        output_fp = str(output_dir / "report.html")
+
+        df = self.parse_df(reference_model_accuracy, quantized_model_accuracy)
 
         yellow_rows = []
         red_rows = []
