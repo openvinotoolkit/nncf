@@ -11,10 +11,12 @@
  limitations under the License.
 """
 
-from tensorflow.python.keras import backend
-from tensorflow.python.keras import layers
-from tensorflow.python.keras.applications import imagenet_utils
-from tensorflow.python.keras.engine import training
+from packaging import version
+import tensorflow as tf
+
+from nncf.tensorflow.tf_internals import backend
+from nncf.tensorflow.tf_internals import layers
+from nncf.tensorflow.tf_internals import imagenet_utils
 
 NUM_CLASSES = 1000
 
@@ -70,13 +72,17 @@ def MobileNet(input_shape=None, alpha=1.0, depth_multiplier=1, dropout=1e-3):
         x, 1024, alpha, depth_multiplier, strides=(2, 2), block_id=12)
     x = _depthwise_conv_block(x, 1024, alpha, depth_multiplier, block_id=13)
 
-    if backend.image_data_format() == 'channels_first':
-        shape = (int(1024 * alpha), 1, 1)
-    else:
-        shape = (1, 1, int(1024 * alpha))
+    if version.parse(tf.__version__) < version.parse('2.6'):
+        if backend.image_data_format() == 'channels_first':
+            shape = (int(1024 * alpha), 1, 1)
+        else:
+            shape = (1, 1, int(1024 * alpha))
 
-    x = layers.GlobalAveragePooling2D()(x)
-    x = layers.Reshape(shape, name='reshape_1')(x)
+        x = layers.GlobalAveragePooling2D()(x)
+        x = layers.Reshape(shape, name='reshape_1')(x)
+    else:
+        x = layers.GlobalAveragePooling2D(keepdims=True)(x)
+
     x = layers.Dropout(dropout, name='dropout')(x)
     x = layers.Conv2D(NUM_CLASSES, (1, 1), padding='same', name='conv_preds')(x)
     x = layers.Reshape((NUM_CLASSES,), name='reshape_2')(x)
@@ -85,7 +91,7 @@ def MobileNet(input_shape=None, alpha=1.0, depth_multiplier=1, dropout=1e-3):
                           name='predictions')(x)
 
     # Create model.
-    model = training.Model(img_input, x, name='mobilenet_%0.2f_%s' % (alpha, rows))
+    model = tf.keras.Model(img_input, x, name='mobilenet_%0.2f_%s' % (alpha, rows))
 
     return model
 

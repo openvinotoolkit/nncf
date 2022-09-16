@@ -37,7 +37,7 @@ EXAMPLES_DIR = PROJECT_ROOT.joinpath('examples', 'tensorflow')
 # │   │     │       ├── weights
 GLOBAL_CONFIG = {
     'classification': {
-            'imagenet': {
+            'imagenet2012': {
                     'configs': {
                         'quantization/inception_v3_imagenet_int8.json': {
                             'expected_accuracy': 78.35,
@@ -244,11 +244,6 @@ def _params(request, tmp_path_factory, dataset_dir, models_dir, weekly_tests):
     test_config, args, execution_arg, _ = request.param
     if dataset_dir:
         args['data'] =  os.path.join(dataset_dir, os.path.split(args['data'])[-1])
-    with open(args['config'], encoding='utf8') as config_file:
-        config = json.load(config_file)
-        if config.get('dataset') != 'imagenet2012' or config.get('dataset_type') != 'tfrecords':
-            args['data'] += '_{}'.format(config.get('dataset_type', 'tfrecords'))
-
     if args['weights']:
         if models_dir:
             args['weights'] = os.path.join(models_dir, args['weights'])
@@ -284,7 +279,8 @@ def run_sample(tc, args):
     if 'metrics-dump' in args:
         actual_acc = get_actual_acc(args['metrics-dump'])
         ref_acc = tc['expected_accuracy']
-        assert actual_acc == approx(ref_acc, abs=tc['absolute_tolerance_{}'.format(mode)])
+        assert actual_acc == approx(ref_acc, abs=tc['absolute_tolerance_{}'.format(mode)]), \
+            "Test accuracy doesn't meet the expected accuracy within threshold."
 
 
 def test_weekly_train_eval(_params, tmp_path):

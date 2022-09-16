@@ -11,10 +11,11 @@
  limitations under the License.
 """
 
-from tensorflow.python.keras import backend
-from tensorflow.python.keras import layers
-from tensorflow.python.keras.applications import imagenet_utils
-from tensorflow.python.keras.engine import training
+import tensorflow as tf
+
+from nncf.tensorflow.tf_internals import backend
+from nncf.tensorflow.tf_internals import layers
+from nncf.tensorflow.tf_internals import imagenet_utils
 
 NUM_CLASSES = 1000
 
@@ -100,6 +101,6 @@ def DenseNet121(input_shape=None):
                      name='predictions')(x)
 
     # Create model.
-    model = training.Model(img_input, x, name='densenet121')
+    model = tf.keras.Model(img_input, x, name='densenet121')
 
     return model

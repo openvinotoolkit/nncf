@@ -13,7 +13,7 @@
 
 import pytest
 import tensorflow as tf
-from tensorflow.python.keras import layers
+from tensorflow.keras import layers
 
 from nncf.tensorflow.graph.metatypes.matcher import get_keras_layer_metatype
 from nncf.tensorflow.layers.custom_objects import NNCF_QUANTIZATION_OPERATIONS
@@ -24,6 +24,7 @@ from nncf.tensorflow.quantization import FakeQuantize
 from nncf.tensorflow.quantization.algorithm import QuantizationController
 from nncf.tensorflow.quantization.quantizers import Quantizer
 from nncf.tensorflow.quantization.quantizers import TFQuantizerSpec
+from nncf.tensorflow.tf_internals import Rescaling
 from tests.tensorflow.helpers import create_compressed_model_and_algo_for_test
 from tests.tensorflow.helpers import get_basic_conv_test_model
 from tests.tensorflow.helpers import get_basic_two_conv_test_model
@@ -249,7 +250,7 @@ def get_quantize_inputs_test_model(input_shapes):
     conv6 = layers.Conv2D(filters=3, kernel_size=2)
     dense = layers.Dense(8)
 
-    x_1 = layers.Rescaling(1. / 255.)(input_1)
+    x_1 = Rescaling(1. / 255.)(input_1)
     x_1 = conv1(x_1)
     x_1 = conv4(x_1)
     x_1 = layers.GlobalAveragePooling2D()(x_1)

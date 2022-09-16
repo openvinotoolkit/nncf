@@ -122,7 +122,8 @@ def load_checkpoint(checkpoint, ckpt_path):
 
     if not path_to_checkpoint:
         logger.info('No checkpoint detected.')
-        return 0
+        if ckpt_path:
+            raise RuntimeError(f'ckpt_path was given, but no checkpoint detected in path: {ckpt_path}')
 
     logger.info('Checkpoint file {} found and restoring from checkpoint'
                 .format(path_to_checkpoint))
@@ -130,13 +131,10 @@ def load_checkpoint(checkpoint, ckpt_path):
     status = checkpoint.restore(path_to_checkpoint)
     status.expect_partial()
     logger.info('Completed loading from checkpoint.')
-    return None
 
 
 def resume_from_checkpoint(checkpoint, ckpt_path, steps_per_epoch):
-    if load_checkpoint(checkpoint, ckpt_path) == 0:
-        return 0
-
+    load_checkpoint(checkpoint, ckpt_path)
     initial_step = checkpoint.model.optimizer.iterations.numpy()
     initial_epoch = initial_step // steps_per_epoch
 

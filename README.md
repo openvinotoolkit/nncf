@@ -150,9 +150,9 @@ See [third_party_integration](./third_party_integration) for examples of code mo
 - Python\* 3.6.2 or later
 - Supported frameworks:
   - PyTorch\* >=1.5.0, <=1.9.1 (1.8.0 not supported)
-  - TensorFlow\* >=2.4.0, <=2.5.3
+  - TensorFlow\* >=2.4.0, <=2.8.2
 
-This repository is tested on Python* 3.6.2+, PyTorch* 1.9.1 (NVidia CUDA\* Toolkit 10.2) and TensorFlow* 2.5.3 (NVidia CUDA\* Toolkit 11.2).
+This repository is tested on Python* 3.6.2+, PyTorch* 1.9.1 (NVidia CUDA\* Toolkit 10.2) and TensorFlow* 2.8.2 (NVidia CUDA\* Toolkit 11.2).
 
 ## Installation
 We suggest to install or use the package in the [Python virtual environment](https://docs.python.org/3/tutorial/venv.html).
@@ -316,9 +316,9 @@ to find instruction and links to exact configuration files and final checkpoints
 |MobileNet V2|Sparsity 50% (RB)|ImageNet|71.34 (0.51)|
 |MobileNet V2|INT8 (per-tensor for weights) + Sparsity 52% (RB)|ImageNet|71.0 (0.85)|
 |MobileNet V3 small|INT8 (per-channel, symmetric for weights; per-tensor, asymmetric for activations) |ImageNet|67.75 (0.63)|
-|MobileNet V3 small|INT8 (per-channel, symmetric for weights; per-tensor, asymmetric for activations) + Sparsity 42% (RB)|ImageNet|67.55 (0.83)|
-|MobileNet V3 large|INT8 (per-channel, symmetric for weights; per-tensor, asymmetric for activations) |ImageNet|75.02 (0.79)|
-|MobileNet V3 large|INT8 (per-channel, symmetric for weights; per-tensor, asymmetric for activations) + Sparsity 42% (RB)|ImageNet|75.28 (0.53)|
+|MobileNet V3 small|INT8 (per-channel, symmetric for weights; per-tensor, asymmetric for activations) + Sparsity 42% (RB)|ImageNet|67.59 (0.79)|
+|MobileNet V3 large|INT8 (per-channel, symmetric for weights; per-tensor, asymmetric for activations) |ImageNet|75.04 (0.77)|
+|MobileNet V3 large|INT8 (per-channel, symmetric for weights; per-tensor, asymmetric for activations) + Sparsity 42% (RB)|ImageNet|75.29 (0.52)|
 |ResNet50|INT8 (per-tensor for weights)|ImageNet|75.0 (0.04)|
 |ResNet50|Sparsity 80% (RB)|ImageNet|74.36 (0.68)|
 |ResNet50|INT8 (per-tensor for weightsy) + Sparsity 65% (RB)|ImageNet|74.3 (0.74)|

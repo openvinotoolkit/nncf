@@ -116,15 +116,14 @@ def load_checkpoint(checkpoint, ckpt_path):
         logger.info('Provided checkpoint: {}'.format(path_to_checkpoint))
 
     if not path_to_checkpoint:
-        logger.info('No checkpoint detected')
-        return 0
+        logger.info('No checkpoint detected.')
+        if ckpt_path:
+            raise RuntimeError(f'ckpt_path was given, but no checkpoint detected in path: {ckpt_path}')
 
     logger.info('Checkpoint file {} found and restoring from checkpoint'.format(path_to_checkpoint))
     status = checkpoint.restore(path_to_checkpoint)
     status.expect_partial()
     logger.info('Completed loading from checkpoint')
-
-    return None
 
 
 def load_compression_state(ckpt_path: str):
@@ -182,7 +181,7 @@ def create_test_step_fn(strategy, model, predict_post_process_fn):
     return test_step
 
 
-def restore_compressed_model(config, strategy, model_builder, ckpt_path = None):
+def restore_compressed_model(config, strategy, model_builder, ckpt_path=None):
     compression_state = None
     if ckpt_path:
         compression_state = load_compression_state(ckpt_path)

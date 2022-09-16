@@ -11,10 +11,11 @@
  limitations under the License.
 """
 
-from tensorflow.python.keras import backend
-from tensorflow.python.keras import layers
-from tensorflow.python.keras.applications import imagenet_utils
-from tensorflow.python.keras.engine import training
+import tensorflow as tf
+
+from nncf.tensorflow.tf_internals import backend
+from nncf.tensorflow.tf_internals import layers
+from nncf.tensorflow.tf_internals import imagenet_utils
 
 NUM_CLASSES = 1000
 
@@ -124,7 +125,7 @@ def MobileNetV2(input_shape=None, alpha=1.0):
                      name='predictions')(x)
 
     # Create model.
-    model = training.Model(img_input, x, name='mobilenetv2_%0.2f_%s' % (alpha, rows))
+    model = tf.keras.Model(img_input, x, name='mobilenetv2_%0.2f_%s' % (alpha, rows))
 
     return model
 

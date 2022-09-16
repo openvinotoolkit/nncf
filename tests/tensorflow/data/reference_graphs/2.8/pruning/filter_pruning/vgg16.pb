@@ -1,0 +1,1 @@
+../../../2.5/pruning/filter_pruning/vgg16.pb

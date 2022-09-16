@@ -14,8 +14,6 @@
 import tensorflow as tf
 import numpy as np
 
-from tensorflow.python.keras.utils.control_flow_util import smart_cond
-
 from nncf.tensorflow.functions import logit
 from nncf.tensorflow.layers.custom_objects import NNCF_CUSTOM_OBJECTS
 from nncf.tensorflow.layers.operation import InputType
@@ -23,6 +21,7 @@ from nncf.tensorflow.layers.operation import NNCFOperation
 from nncf.tensorflow.sparsity.magnitude.functions import apply_mask
 from nncf.tensorflow.sparsity.rb.functions import calc_rb_binary_mask, st_binary_mask, binary_mask
 from nncf.tensorflow.layers.wrapper import NNCFWrapper
+from nncf.tensorflow import tf_internals
 
 
 @NNCF_CUSTOM_OBJECTS.register()
@@ -87,10 +86,10 @@ class RBSparsifyingWeight(NNCFOperation):
         """
         true_fn = lambda: apply_mask(inputs, self._calc_rb_binary_mask(weights))
         false_fn = lambda: apply_mask(inputs, binary_mask(weights['mask']))
-        return smart_cond(training,
-                          true_fn=lambda: smart_cond(weights['trainable'],
-                                                     true_fn=true_fn, false_fn=false_fn),
-                          false_fn=false_fn)
+        return tf_internals.smart_cond(training,
+                                       true_fn=lambda: tf_internals.smart_cond(weights['trainable'],
+                                                                               true_fn=true_fn, false_fn=false_fn),
+                                       false_fn=false_fn)
 
     def _calc_rb_binary_mask(self, op_weights):
         new_seed = tf.random.stateless_uniform(

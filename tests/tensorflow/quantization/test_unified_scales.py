@@ -15,7 +15,7 @@ import itertools
 import pytest
 
 import tensorflow as tf
-from tensorflow.python.keras import layers
+from tensorflow.keras import layers
 
 from nncf.common.hardware.config import HWConfigType
 from nncf.tensorflow.quantization.utils import collect_fake_quantize_layers

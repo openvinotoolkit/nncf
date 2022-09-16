@@ -16,9 +16,8 @@ import pytest
 from pkg_resources import parse_version
 import networkx as nx
 import tensorflow as tf
-from tensorflow.python.keras import layers
-from tensorflow.python.keras import models
-from tensorflow.python.keras.engine.keras_tensor import KerasTensor
+from tensorflow.keras import layers
+from tensorflow.keras import models
 
 from nncf.common.graph.transformations.commands import TargetType
 from nncf.common.graph.transformations.commands import TransformationPriority
@@ -39,8 +38,10 @@ from nncf.tensorflow.layers.custom_objects import NNCF_CUSTOM_OBJECTS
 from nncf.tensorflow.layers.operation import NNCFOperation
 from nncf.tensorflow.quantization.layers import FakeQuantize
 from nncf.tensorflow.quantization.quantizers import TFQuantizerSpec
+from nncf.tensorflow import tf_internals
 from tests.tensorflow.test_compressed_graph import keras_model_to_tf_graph
 from tests.tensorflow.test_compressed_graph import get_nx_graph_from_tf_graph
+from tests.tensorflow.helpers import remove_node_by_name
 from tests.common.graph.nx_graph import compare_nx_graph_with_reference
 
 def test_insertion_commands_union_invalid_input():
@@ -534,7 +535,8 @@ def apply_insert_before(model):
         else:
             instance_idx = 0
 
-        inputs = [layer.input] if isinstance(layer.input, KerasTensor) else layer.input
+        is_keras_tensor = isinstance(layer.input, tf_internals.keras_engine.keras_tensor.KerasTensor)
+        inputs = [layer.input] if is_keras_tensor else layer.input
 
         for port, _ in enumerate(inputs):
             fake_quantize_name = f'FakeQuantize_{i}.{port}/{original_node_name}'
@@ -562,6 +564,10 @@ def check_graphs(model, ref_graph_filename):
     ref_graph_path = os.path.abspath(os.path.join(data_dir, ref_graph_filename))
 
     graph, graph_to_layer_var_names_map = keras_model_to_tf_graph(model)
+
+    if tensorflow_version.startswith('2.8'):
+        graph = remove_node_by_name('NoOp', graph)
+
     nx_graph = get_nx_graph_from_tf_graph(graph, graph_to_layer_var_names_map)
 
     if not os.path.exists(ref_graph_path) and os.getenv("NNCF_TEST_REGEN_DOT") is not None:

@@ -26,6 +26,7 @@ from nncf.common.hardware.config import HWConfigType
 from tests.tensorflow import test_models
 from tests.tensorflow.helpers import get_empty_config, create_compressed_model_and_algo_for_test
 from tests.tensorflow.helpers import operational_node
+from tests.tensorflow.helpers import remove_node_by_name
 from tests.tensorflow.sparsity.magnitude.test_helpers import get_basic_filter_pruning_config
 from tests.tensorflow.sparsity.magnitude.test_helpers import get_basic_sparsity_config
 from tests.common.graph.nx_graph import compare_nx_graph_with_reference
@@ -375,6 +376,9 @@ def check_model_graph(compressed_model, ref_graph_filename, ref_graph_dir, renam
     compressed_graph, graph_to_layer_var_names_map = keras_model_to_tf_graph(compressed_model)
     if not rename_resource_nodes:
         graph_to_layer_var_names_map = {}
+
+    if tensorflow_version.startswith('2.8'):
+        compressed_graph = remove_node_by_name('NoOp', compressed_graph)
 
     ref_graph_ext = os.path.splitext(ref_graph_filename)[1]
     if ref_graph_ext == '.pb':

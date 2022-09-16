@@ -22,6 +22,7 @@ import re
 from setuptools import setup, find_packages
 
 here = os.path.abspath(os.path.dirname(__file__))
+proper_version = '59.5.0'
 
 with open("{}/README.md".format(here), "r", encoding="utf8") as fh:
     long_description = fh.read()
@@ -33,9 +34,9 @@ if "--tf" in sys.argv:
     if setuptools_version < '43.0.0':
         raise RuntimeError(
             "To properly install NNCF, please install setuptools>=43.0.0, "
-            "while current setuptools version is {curr}".format(
-            curr=setuptools.__version__
-        ))
+            f"while current setuptools version is {setuptools.__version__}. "
+            f"Recommended version is {proper_version}."
+        )
 
 
 is_installing_editable = "develop" in sys.argv
@@ -76,7 +77,7 @@ INSTALL_REQUIRES = ["ninja>=1.10.0.post2",
                     "addict>=2.4.0",
                     "texttable>=1.6.3",
                     "scipy<=1.5.4, >=1.3.2; python_version<'3.7'",
-                    "scipy>=1.3.2, <1.8; python_version>='3.7'",
+                    "scipy>=1.3.2, <=1.9.1; python_version>='3.7'",
                     "matplotlib~=3.3.4; python_version<'3.7'",
                     "matplotlib>=3.3.4, <3.6; python_version>='3.7'",
                     "networkx>=2.5, <2.8.1rc1",
@@ -113,8 +114,8 @@ EXTRAS_REQUIRE = {
     "tests": ["pytest"],
     "docs": [],
     "tf": [
-        "tensorflow~=2.5.0",
-        "numpy~=1.19.2",
+        "tensorflow~=2.8.2",
+        "numpy~=1.22.1"
     ],
     "torch": [
         "torch>=1.5.0, <=1.9.1, !=1.8.0",

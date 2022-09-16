@@ -12,13 +12,9 @@
 """
 
 import tensorflow as tf
-from tensorflow.python.keras import backend
-from tensorflow.python.keras import layers
-from tensorflow.python.keras import models
-from tensorflow.python.keras.applications import imagenet_utils
-from tensorflow.python.keras.utils import data_utils
 import tensorflow_hub as hub
 
+from nncf.tensorflow.tf_internals import imagenet_utils, Rescaling
 
 def mobilenet_v2_100_224(input_shape=None,
                          trainable=True,
@@ -43,7 +39,7 @@ def MobileNetV3(stack_fn, last_point_ch, input_shape=None, model_type='large', *
     if input_shape is None:
         input_shape = (None, None, 3)
 
-    if backend.image_data_format() == 'channels_last':
+    if tf.keras.backend.image_data_format() == 'channels_last':
         row_axis, col_axis = (0, 1)
     else:
         row_axis, col_axis = (1, 2)
@@ -53,49 +49,49 @@ def MobileNetV3(stack_fn, last_point_ch, input_shape=None, model_type='large', *
         raise ValueError('Input size must be at least 32x32; got `input_shape=' +
                          str(input_shape) + '`')
 
-    img_input = layers.Input(shape=input_shape)
-    channel_axis = 1 if backend.image_data_format() == 'channels_first' else -1
+    img_input = tf.keras.layers.Input(shape=input_shape)
+    channel_axis = 1 if tf.keras.backend.image_data_format() == 'channels_first' else -1
 
     kernel = 5
     activation = hard_swish
     se_ratio = 0.25
 
     x = img_input
-    x = layers.Rescaling(scale=1. / 127.5, offset=-1.)(x)
-    x = layers.Conv2D(
+    x = Rescaling(scale=1. / 127.5, offset=-1.)(x)
+    x = tf.keras.layers.Conv2D(
         16,
         kernel_size=3,
         strides=(2, 2),
         padding='same',
         use_bias=False,
         name='Conv')(x)
-    x = layers.BatchNormalization(
+    x = tf.keras.layers.BatchNormalization(
         axis=channel_axis, epsilon=1e-3,
         momentum=0.999, name='Conv/BatchNorm')(x)
     x = activation(x)
 
     x = stack_fn(x, kernel, activation, se_ratio)
 
-    last_conv_ch = _depth(backend.int_shape(x)[channel_axis] * 6)
+    last_conv_ch = _depth(tf.keras.backend.int_shape(x)[channel_axis] * 6)
 
-    x = layers.Conv2D(
+    x = tf.keras.layers.Conv2D(
         last_conv_ch,
         kernel_size=1,
         padding='same',
         use_bias=False,
         name='Conv_1')(x)
-    x = layers.BatchNormalization(
+    x = tf.keras.layers.BatchNormalization(
         axis=channel_axis, epsilon=1e-3,
         momentum=0.999, name='Conv_1/BatchNorm')(x)
     x = activation(x)
 
-    x = layers.GlobalAveragePooling2D()(x)
+    x = tf.keras.layers.GlobalAveragePooling2D()(x)
     if channel_axis == 1:
-        x = layers.Reshape((last_conv_ch, 1, 1))(x)
+        x = tf.keras.layers.Reshape((last_conv_ch, 1, 1))(x)
     else:
-        x = layers.Reshape((1, 1, last_conv_ch))(x)
+        x = tf.keras.layers.Reshape((1, 1, last_conv_ch))(x)
 
-    x = layers.Conv2D(
+    x = tf.keras.layers.Conv2D(
         last_point_ch,
         kernel_size=1,
         padding='same',
@@ -103,14 +99,14 @@ def MobileNetV3(stack_fn, last_point_ch, input_shape=None, model_type='large', *
         name='Conv_2')(x)
     x = activation(x)
 
-    x = layers.Dropout(0.2)(x)
-    x = layers.Conv2D(1000, kernel_size=1, padding='same', name='Logits')(x)
-    x = layers.Flatten()(x)
-    x = layers.Activation(activation='softmax',
+    x = tf.keras.layers.Dropout(0.2)(x)
+    x = tf.keras.layers.Conv2D(1000, kernel_size=1, padding='same', name='Logits')(x)
+    x = tf.keras.layers.Flatten()(x)
+    x = tf.keras.layers.Activation(activation='softmax',
                           name='Predictions')(x)
 
     # Create model.
-    model = models.Model(img_input, x, name='MobilenetV3{}'.format(model_type))
+    model = tf.keras.Model(img_input, x, name='MobilenetV3{}'.format(model_type))
 
     BASE_WEIGHT_PATH = ('https://storage.googleapis.com/tensorflow/'
                         'keras-applications/mobilenet_v3/')
@@ -122,7 +118,7 @@ def MobileNetV3(stack_fn, last_point_ch, input_shape=None, model_type='large', *
     file_name = 'weights_mobilenet_v3_{}_224_1.0_float.h5'.format(model_type)
     file_hash = WEIGHTS_HASHES[model_type]
 
-    weights_path = data_utils.get_file(
+    weights_path = tf.keras.utils.get_file(
         file_name,
         BASE_WEIGHT_PATH + file_name,
         cache_subdir='models',
@@ -175,15 +171,15 @@ def MobileNetV3Large(input_shape=None, **kwargs):
 
 
 def relu(x):
-    return layers.ReLU()(x)
+    return tf.keras.layers.ReLU()(x)
 
 
 def hard_sigmoid(x):
-    return layers.ReLU(6.)(x + 3.) * (1. / 6.)
+    return tf.keras.layers.ReLU(6.)(x + 3.) * (1. / 6.)
 
 
 def hard_swish(x):
-    return layers.Multiply()([hard_sigmoid(x), x])
+    return tf.keras.layers.Multiply()([hard_sigmoid(x), x])
 
 
 def _depth(v, divisor=8, min_value=None):
@@ -197,47 +193,47 @@ def _depth(v, divisor=8, min_value=None):
 
 
 def _se_block(inputs, filters, se_ratio, prefix):
-    x = layers.GlobalAveragePooling2D(name=prefix + 'squeeze_excite/AvgPool')(
+    x = tf.keras.layers.GlobalAveragePooling2D(name=prefix + 'squeeze_excite/AvgPool')(
         inputs)
-    if backend.image_data_format() == 'channels_first':
-        x = layers.Reshape((filters, 1, 1))(x)
+    if tf.keras.backend.image_data_format() == 'channels_first':
+        x = tf.keras.layers.Reshape((filters, 1, 1))(x)
     else:
-        x = layers.Reshape((1, 1, filters))(x)
-    x = layers.Conv2D(
+        x = tf.keras.layers.Reshape((1, 1, filters))(x)
+    x = tf.keras.layers.Conv2D(
         _depth(filters * se_ratio),
         kernel_size=1,
         padding='same',
         name=prefix + 'squeeze_excite/Conv')(
         x)
-    x = layers.ReLU(name=prefix + 'squeeze_excite/Relu')(x)
-    x = layers.Conv2D(
+    x = tf.keras.layers.ReLU(name=prefix + 'squeeze_excite/Relu')(x)
+    x = tf.keras.layers.Conv2D(
         filters,
         kernel_size=1,
         padding='same',
         name=prefix + 'squeeze_excite/Conv_1')(
         x)
     x = hard_sigmoid(x)
-    x = layers.Multiply(name=prefix + 'squeeze_excite/Mul')([inputs, x])
+    x = tf.keras.layers.Multiply(name=prefix + 'squeeze_excite/Mul')([inputs, x])
     return x
 
 
 def _inverted_res_block(x, expansion, filters, kernel_size, stride, se_ratio,
                         activation, block_id):
-    channel_axis = 1 if backend.image_data_format() == 'channels_first' else -1
+    channel_axis = 1 if tf.keras.backend.image_data_format() == 'channels_first' else -1
     shortcut = x
     prefix = 'expanded_conv/'
-    infilters = backend.int_shape(x)[channel_axis]
+    infilters = tf.keras.backend.int_shape(x)[channel_axis]
     if block_id:
         # Expand
         prefix = 'expanded_conv_{}/'.format(block_id)
-        x = layers.Conv2D(
+        x = tf.keras.layers.Conv2D(
             _depth(infilters * expansion),
             kernel_size=1,
             padding='same',
             use_bias=False,
             name=prefix + 'expand')(
             x)
-        x = layers.BatchNormalization(
+        x = tf.keras.layers.BatchNormalization(
             axis=channel_axis,
             epsilon=1e-3,
             momentum=0.999,
@@ -246,18 +242,18 @@ def _inverted_res_block(x, expansion, filters, kernel_size, stride, se_ratio,
         x = activation(x)
 
     if stride == 2:
-        x = layers.ZeroPadding2D(
+        x = tf.keras.layers.ZeroPadding2D(
             padding=imagenet_utils.correct_pad(x, kernel_size),
             name=prefix + 'depthwise/pad')(
             x)
-    x = layers.DepthwiseConv2D(
+    x = tf.keras.layers.DepthwiseConv2D(
         kernel_size,
         strides=stride,
         padding='same' if stride == 1 else 'valid',
         use_bias=False,
         name=prefix + 'depthwise')(
         x)
-    x = layers.BatchNormalization(
+    x = tf.keras.layers.BatchNormalization(
         axis=channel_axis,
         epsilon=1e-3,
         momentum=0.999,
@@ -268,14 +264,14 @@ def _inverted_res_block(x, expansion, filters, kernel_size, stride, se_ratio,
     if se_ratio:
         x = _se_block(x, _depth(infilters * expansion), se_ratio, prefix)
 
-    x = layers.Conv2D(
+    x = tf.keras.layers.Conv2D(
         filters,
         kernel_size=1,
         padding='same',
         use_bias=False,
         name=prefix + 'project')(
         x)
-    x = layers.BatchNormalization(
+    x = tf.keras.layers.BatchNormalization(
         axis=channel_axis,
         epsilon=1e-3,
         momentum=0.999,
@@ -283,5 +279,5 @@ def _inverted_res_block(x, expansion, filters, kernel_size, stride, se_ratio,
         x)
 
     if stride == 1 and infilters == filters:
-        x = layers.Add(name=prefix + 'Add')([shortcut, x])
+        x = tf.keras.layers.Add(name=prefix + 'Add')([shortcut, x])
     return x
