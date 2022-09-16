@@ -123,8 +123,3 @@ class NNCFConfig(dict):
                 # Passed a list of dicts
                 for compression_algo_dict in compression_section:
                     validate_single_compression_algo_schema(compression_algo_dict, REF_VS_ALGO_SCHEMA)
-
-
-
-
-

@@ -82,7 +82,8 @@ EARLY_EXIT_TRAINING_SCHEMA = {
     "type": "object",
     "title": EARLY_EXIT_TRAINING_MODE_NAME_IN_CONFIG,
     "description": f"Early exit mode schema. See "
-                   f"[EarlyExitTraining.md]({ONLINE_DOCS_ROOT}docs/accuracy_aware_model_training/EarlyExitTraining.md) for "
+                   f"[EarlyExitTraining.md]"
+                   f"({ONLINE_DOCS_ROOT}docs/accuracy_aware_model_training/EarlyExitTraining.md) for "
                    f"more general info on this mode.",
     "properties": {
         "mode": {"const": EARLY_EXIT_TRAINING_MODE_NAME_IN_CONFIG},

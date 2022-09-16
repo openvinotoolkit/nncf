@@ -28,7 +28,7 @@ MAGNITUDE_SPARSITY_SCHEMA = {
     **BASIC_COMPRESSION_ALGO_SCHEMA,
     "description": f"Applies sparsity on top of the current model. Each weight tensor value will be either kept as-is, "
                    f"or set to 0 based on its magnitude. For large sparsity levels, this will improve performance on "
-                   f"hardware that can profit from it. " 
+                   f"hardware that can profit from it. "
                    f"See [Sparsity.md]"
                    f"({ONLINE_DOCS_ROOT}"
                    f"/docs/compression_algorithms/Sparsity.md#magnitude-sparsity) and the rest of this schema for "

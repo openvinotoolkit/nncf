@@ -44,6 +44,7 @@ class AutoQPrecisionInitParams(BasePrecisionInitParams):
     def __init__(self, user_init_args: AutoQPrecisionInitArgs,
                  dump_autoq_data: bool = False,
                  iter_number: int = 0,
+                 warmup_iter_number: int = None,
                  compression_ratio: float = None,
                  eval_subset_ratio: float = None,
                  ddpg_hparams_dict: Dict = None,
@@ -56,6 +57,7 @@ class AutoQPrecisionInitParams(BasePrecisionInitParams):
         self.iter_number = iter_number
         self.compression_ratio = compression_ratio
         self.eval_subset_ratio = eval_subset_ratio
+        self.warmup_iter_number = warmup_iter_number
         if ddpg_hparams_dict is None:
             self.ddpg_hparams_dict = {}
         else:
@@ -104,6 +106,7 @@ class AutoQPrecisionInitializer(BasePrecisionInitializer):
         self._init_args = params.user_init_args
         self._dump_autoq_data = params.dump_autoq_data
         self._iter_number = params.iter_number
+        self._warmup_iter_number = params.warmup_iter_number
         self._ddpg_hparams_override = params.ddpg_hparams_dict
         self._hw_cfg_type = params.hw_cfg_type
 
@@ -163,10 +166,9 @@ class AutoQPrecisionInitializer(BasePrecisionInitializer):
 
         # Control buffer length at run manager level
         if "warmup_iter_number" not in self._ddpg_hparams_override:
-            self._ddpg_hparams_override["warmup_iter_number"] = 10
-
+            self._ddpg_hparams_override["warmup_iter_number"] = self._warmup_iter_number
         self._ddpg_hparams_override["rmsize"] = \
-            self._ddpg_hparams_override["warmup_iter_number"] * (len(env.master_df)+1)
+            self._warmup_iter_number * (len(env.master_df)+1)
 
         # Instantiate Automation Agent
         agent = DDPG(nb_state, nb_action, self._iter_number, hparam_override=self._ddpg_hparams_override)
