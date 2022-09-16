@@ -16,7 +16,6 @@ from copy import deepcopy
 from collections import Counter
 import onnx
 
-from nncf.common.graph.definitions import NNCFGraphNodeType
 from nncf.common.graph.graph import NNCFGraph
 from nncf.common.graph.transformations.commands import TargetType
 from nncf.common.graph.transformations.commands import TransformationCommand
@@ -24,7 +23,6 @@ from nncf.common.quantization.structs import QuantizationMode
 from nncf.common.graph.definitions import NNCFGraphNodeType
 from nncf.experimental.onnx.graph.onnx_graph import ONNXGraph
 from nncf.experimental.onnx.graph.nncf_graph_builder import GraphConverter
-from nncf.experimental.onnx.graph.onnx_graph import ONNXGraph
 from nncf.experimental.onnx.graph.transformations.commands import ONNXOutputInsertionCommand
 from nncf.experimental.onnx.graph.transformations.commands import ONNXQuantizerInsertionCommand
 from nncf.experimental.onnx.graph.transformations.layout import ONNXTransformationLayout
