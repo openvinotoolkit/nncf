@@ -31,23 +31,19 @@ from nncf.config.schemata.defaults import SPARSITY_TARGET_EPOCH
 SCHEDULE_OPTIONS = ['polynomial', 'exponential', 'adaptive', 'multistep', ]
 
 COMMON_SPARSITY_PARAM_PROPERTIES = {
+    "sparsity_level_setting_mode": with_attributes(STRING,
+                                                   description="The mode of sparsity level setting. \n"
+                                                               "`global` - the sparsity level is calculated across all "
+                                                               "weight values in the network across layers, "
+                                                               "`local` - the sparsity level can be set per-layer and "
+                                                               "within each layer is computed with respect only to the "
+                                                               "weight values within that layer.",
+                                                   default=SPARSITY_LEVEL_SETTING_MODE),
     "schedule": with_attributes(STRING,
                                 description=f"The type of scheduling to use for adjusting the target"
                                             f"sparsity level. Default - {RB_SPARSITY_SCHEDULER} for `rb_sparsity`, "
                                             f"{SPARSITY_SCHEDULER} otherwise",
                                 enum=SCHEDULE_OPTIONS),
-    "patience": with_attributes(NUMBER,
-                                description="A conventional patience parameter for the scheduler, "
-                                            "as for any other standard scheduler. Specified in units "
-                                            "of scheduler steps.",
-                                default=SPARSITY_SCHEDULER_PATIENCE),
-    "power": with_attributes(NUMBER,
-                             description="For polynomial scheduler - determines the corresponding power value.",
-                             default=SPARSITY_SCHEDULER_POWER),
-    "concave": with_attributes(BOOLEAN, description="For polynomial scheduler - if `true`, then the target sparsity "
-                                                    "level will be approached in concave manner, and in convex "
-                                                    "manner otherwise.",
-                               default=SPARSITY_SCHEDULER_CONCAVE),
     "sparsity_target": with_attributes(NUMBER,
                                        description="Target sparsity level for the model, to be reached at the end of "
                                                    "the compression schedule.",
@@ -61,6 +57,7 @@ COMMON_SPARSITY_PARAM_PROPERTIES = {
                                              description="Index of the epoch upon which the sparsity mask will "
                                                          "be frozen and no longer trained.",
                                              default=SPARSITY_FREEZE_EPOCH),
+
     "update_per_optimizer_step": with_attributes(BOOLEAN,
                                                  description="Whether the function-based sparsity level schedulers "
                                                              "should update the sparsity level after each optimizer "
@@ -76,21 +73,26 @@ COMMON_SPARSITY_PARAM_PROPERTIES = {
                                                    "scheduler only).",
                                        default=SPARSITY_MULTISTEP_STEPS),
     "multistep_sparsity_levels": with_attributes(ARRAY_OF_NUMBERS,
-                                                 description="Levels of sparsity to use at each step of the scheduler "
-                                                             "as specified in the 'multistep_steps' attribute. The "
-                                                             "first sparsity level will be applied immediately, "
+                                                 description="Multistep scheduler only - Levels of sparsity to use at "
+                                                             "each step of the scheduler as specified in the "
+                                                             "`multistep_steps` attribute. The first sparsity level "
+                                                             "will be applied immediately, "
                                                              "so the length of this list should be larger than the "
-                                                             "length of the 'steps' by one. The last sparsity level "
-                                                             "will function as the ultimate sparsity target, "
-                                                             "overriding the \"sparsity_target\" setting if it is "
-                                                             "present.",
+                                                             "length of the `multistep_steps` by one. The last "
+                                                             "sparsity level will function as the ultimate sparsity "
+                                                             "target, overriding the \"sparsity_target\" setting if it "
+                                                             "is present.",
                                                  default=SPARSITY_MULTISTEP_SPARSITY_LEVELS),
-    "sparsity_level_setting_mode": with_attributes(STRING,
-                                                   description="The mode of sparsity level setting. \n"
-                                                               "`global` - the sparsity level is calculated across all "
-                                                               "weight values in the network across layers, "
-                                                               "`local` - the sparsity level can be set per-layer and "
-                                                               "within each layer is computed with respect only to the "
-                                                               "weight values within that layer.",
-                                                   default=SPARSITY_LEVEL_SETTING_MODE),
+    "patience": with_attributes(NUMBER,
+                                description="A conventional patience parameter for the scheduler, "
+                                            "as for any other standard scheduler. Specified in units "
+                                            "of scheduler steps.",
+                                default=SPARSITY_SCHEDULER_PATIENCE),
+    "power": with_attributes(NUMBER,
+                             description="For polynomial scheduler - determines the corresponding power value.",
+                             default=SPARSITY_SCHEDULER_POWER),
+    "concave": with_attributes(BOOLEAN, description="For polynomial scheduler - if `true`, then the target sparsity "
+                                                    "level will be approached in concave manner, and in convex "
+                                                    "manner otherwise.",
+                               default=SPARSITY_SCHEDULER_CONCAVE),
 }

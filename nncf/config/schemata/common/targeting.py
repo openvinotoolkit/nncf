@@ -15,7 +15,7 @@ from nncf.config.schemata.basic import with_attributes
 from nncf.config.schemata.common.initialization import BATCHNORM_ADAPTATION_SCHEMA
 
 IGNORED_SCOPES_DESCRIPTION = "A list of model control flow graph node scopes to be ignored for this " \
-                             "operation - functions as a 'allowlist'. Optional."
+                             "operation - functions as an 'allowlist'. Optional."
 TARGET_SCOPES_DESCRIPTION = "A list of model control flow graph node scopes to be considered for this operation" \
                             " - functions as a 'denylist'. Optional."
 SCOPING_PROPERTIES = {

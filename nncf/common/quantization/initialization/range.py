@@ -73,7 +73,7 @@ class PerLayerRangeInitConfig(RangeInitConfig):
         :param target_scopes: A list of model control flow graph node scopes
             to be considered for this operation - functions as a 'denylist'
         :param ignored_scopes: A list of model control flow graph node scopes
-            to be ignored for this operation - functions as a 'allowlist'
+            to be ignored for this operation - functions as an 'allowlist'
         :param target_quantizer_group: The target group of quantizers for which
             specified type of range initialization will be applied. It can be
             quantizers group for activations or weights.

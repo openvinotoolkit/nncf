@@ -120,6 +120,16 @@ NNCF_CONFIG_SCHEMA = {
             {"oneOf": [
                     {"$ref": f"#/$defs/{algo_name}"} for algo_name in REF_VS_ALGO_SCHEMA
                 ]}),
+
+        "accuracy_aware_training": with_attributes(ACCURACY_AWARE_TRAINING_SCHEMA,
+                                                   description="Options for the execution of the NNCF-powered "
+                                                               "'Accuracy Aware' training pipeline. The 'mode' "
+                                                               "property determines the mode of the accuracy-aware "
+                                                               "training execution and further available parameters."),
+        # Validation of each separate compression description schema occurs in a separate step.
+        # This is required for better user feedback, since holistic schema validation is uninformative
+        # if there is an error in one of the compression configs.
+        **COMPRESSION_LR_MULTIPLIER_PROPERTY,
         "disable_shape_matching": with_attributes(
             BOOLEAN,
             description="[Deprecated] Whether to enable strict input tensor "
@@ -130,15 +140,6 @@ NNCF_CONFIG_SCHEMA = {
                         "dimension of the intermediate tensors in your model "
                         "execution flow depends on the input dimension, "
                         "otherwise the compression will most likely fail."),
-        # Validation of each separate compression description schema occurs in a separate step.
-        # This is required for better user feedback, since holistic schema validation is uninformative
-        # if there is an error in one of the compression configs.
-        **COMPRESSION_LR_MULTIPLIER_PROPERTY,
-        "accuracy_aware_training": with_attributes(ACCURACY_AWARE_TRAINING_SCHEMA,
-                                                   description="Options for the execution of the NNCF-powered "
-                                                               "'Accuracy Aware' training pipeline. The 'mode' "
-                                                               "property determines the mode of the accuracy-aware "
-                                                               "training execution and further available parameters."),
         "log_dir": with_attributes(STRING,
                                    description="Log directory for NNCF-specific logging outputs."),
     },

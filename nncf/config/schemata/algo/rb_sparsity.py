@@ -34,7 +34,6 @@ RB_SPARSITY_SCHEMA = {
         "algorithm": {
             "const": RB_SPARSITY_ALGO_NAME_IN_CONFIG
         },
-        **COMPRESSION_LR_MULTIPLIER_PROPERTY,
         "sparsity_init": with_attributes(NUMBER,
                                          description="Initial value of the sparsity level applied to the "
                                                      "model",
@@ -45,7 +44,8 @@ RB_SPARSITY_SCHEMA = {
                 "properties": COMMON_SPARSITY_PARAM_PROPERTIES,
                 "additionalProperties": False
             },
-        **SCOPING_PROPERTIES
+        **SCOPING_PROPERTIES,
+        **COMPRESSION_LR_MULTIPLIER_PROPERTY
     },
     "additionalProperties": False
 }
