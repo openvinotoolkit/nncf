@@ -21,8 +21,9 @@ class BackendGraphFactory:
         model_backend = infer_backend_from_model(model)
         if model_backend == BackendType.ONNX:
             return ONNXGraph(model)
-        raise RuntimeError(f'Cannot create backend-specific graph'
-                           'because {model_backend} is not supported!')
+        raise RuntimeError('Cannot create backend-specific graph'
+                           'because {0} is not supported!'.format(model_backend))
+
 
 class NNCFGraphFactory:
     @staticmethod
@@ -30,5 +31,5 @@ class NNCFGraphFactory:
         model_backend = infer_backend_from_model(model)
         if model_backend == BackendType.ONNX:
             return GraphConverter.create_nncf_graph(model)
-        raise RuntimeError(f'Cannot create backend-specific graph'
-                           'because {model_backend} is not supported!')
+        raise RuntimeError('Cannot create backend-specific graph'
+                           'because {0} is not supported!'.format(model_backend))
