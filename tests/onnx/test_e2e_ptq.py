@@ -159,7 +159,7 @@ def _read_csv(root_dir: Path, key=str):
 
 def _read_json(fpath: Path) -> pd.DataFrame:
     fpath = str(fpath)
-    with open(fpath, "r") as fp:
+    with open(fpath, "r", encoding="utf-8") as fp:
         d0 = json.load(fp)
 
     rows = []
