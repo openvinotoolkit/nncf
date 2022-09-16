@@ -22,7 +22,6 @@ from nncf.common.graph.transformations.commands import TransformationCommand
 from nncf.common.quantization.structs import QuantizationMode
 from nncf.common.graph.definitions import NNCFGraphNodeType
 from nncf.experimental.onnx.graph.onnx_graph import ONNXGraph
-from nncf.experimental.onnx.graph.nncf_graph_builder import GraphConverter
 from nncf.experimental.onnx.graph.transformations.commands import ONNXOutputInsertionCommand
 from nncf.experimental.onnx.graph.transformations.commands import ONNXQuantizerInsertionCommand
 from nncf.experimental.onnx.graph.transformations.layout import ONNXTransformationLayout
@@ -88,26 +87,17 @@ class ONNXModelTransformer(StaticModelTransformerBase):
 
         :param transformations: list of the ONNXOutputInsertionCommand transformations
         """
-        backend_graph = BackendGraphFactory.create(self._model)
+        onnx_graph = BackendGraphFactory.create(self._model)
         nncf_graph = NNCFGraphFactory.create(self._model)
-        model_outputs = self._get_model_outputs(backend_graph)
+        model_outputs = [output.name for output in onnx_graph.get_model_outputs()]
         extra_model_outputs = self._get_extra_model_outputs(nncf_graph,
-                                                            backend_graph,
+                                                            onnx_graph,
                                                             transformations)
 
         model_with_intermediate_outputs = self._insert_outputs(self._model,
                                                                outputs=[*extra_model_outputs,
                                                                         *model_outputs])
         self._model = model_with_intermediate_outputs
-
-    def _get_model_outputs(self, onnx_graph: ONNXGraph) -> List:
-        """
-        Collects regular model outputs
-
-        :param onnx_graph: ONNXGraph
-        :return: list of the output names
-        """
-        return [output.name for output in onnx_graph.get_model_outputs()]
 
     def _get_extra_model_outputs(self,
                                  nncf_graph: NNCFGraph,
@@ -144,7 +134,7 @@ class ONNXModelTransformer(StaticModelTransformerBase):
             extra_model_outputs.update(input_edge_names)
         return extra_model_outputs
 
-    def _insert_outputs(self, model: onnx.ModelProto, outputs=None) -> onnx.ModelProto:
+    def _insert_outputs(self, model: onnx.ModelProto, outputs: List[str] = None) -> onnx.ModelProto:
         """
         Takes a model and changes its outputs.
 
@@ -192,8 +182,14 @@ class ONNXModelTransformer(StaticModelTransformerBase):
             op_set.version = oimp.version
         return onnx_model
 
-    def _apply_quantizer_insertion_transformations(self,
-    transformations: List[ONNXQuantizerInsertionCommand]) -> None:
+    def _apply_quantizer_insertion_transformations(
+            self,
+            transformations: List[ONNXQuantizerInsertionCommand]) -> None:
+        """
+        Applies transformations on the model
+
+        :param transformations: lisf of the TransformationCommand transformations
+        """
         # TODO: optimize: could be insertion of quantizers done in one operations
         self._added_target_edges = Counter()
         for transformation in transformations:
@@ -210,7 +206,7 @@ class ONNXModelTransformer(StaticModelTransformerBase):
         elif transformation.target_point.type == TargetType.POST_LAYER_OPERATION:
             if NNCFGraphNodeType.INPUT_NODE in transformation.target_point.target_node_name:  # ADD INPUT NODE CASE
 
-                nncf_graph = GraphConverter.create_nncf_graph(self._model)
+                nncf_graph = NNCFGraphFactory.create(self._model)
                 nncf_node_name = nncf_graph.get_node_by_name(transformation.target_point.target_node_name)
                 onnx_nodes_after_input_node = [edge.to_node for edge in nncf_graph.get_output_edges(nncf_node_name)]
                 for onnx_node_name in onnx_nodes_after_input_node:

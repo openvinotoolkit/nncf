@@ -23,11 +23,11 @@ from nncf.common.graph.definitions import NNCFGraphNodeType
 from nncf.experimental.post_training.api.dataset import NNCFData
 from nncf.experimental.post_training.api.engine import Engine
 from nncf.experimental.post_training.api.sampler import Sampler
+from nncf.experimental.post_training.graph.helpers import BackendGraphFactory
+from nncf.experimental.post_training.graph.helpers import NNCFGraphFactory
 from nncf.experimental.post_training.statistics.statistic_point import StatisticPointsContainer
 from nncf.experimental.onnx.samplers import create_onnx_sampler
 from nncf.experimental.onnx.tensor import ONNXNNCFTensor
-from nncf.experimental.onnx.graph.onnx_graph import ONNXGraph
-from nncf.experimental.onnx.graph.nncf_graph_builder import GraphConverter
 
 
 class ONNXEngine(Engine):
@@ -85,8 +85,8 @@ class ONNXEngine(Engine):
         }
 
     def _create_model_graphs(self, model: onnx.ModelProto) -> None:
-        self.nncf_graph = GraphConverter.create_nncf_graph(model)
-        self.onnx_graph = ONNXGraph(model)
+        self.nncf_graph = NNCFGraphFactory.create(model)
+        self.onnx_graph = BackendGraphFactory.create(model)
 
     def _find_edge_name_to_node_name_mapping(self, statistic_points: StatisticPointsContainer) -> Dict[str, str]:
         edge_name_to_node_name = {}

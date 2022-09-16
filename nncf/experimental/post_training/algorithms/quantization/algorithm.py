@@ -23,7 +23,7 @@ from nncf.common.hardware.config import HWConfigType
 
 from nncf.common.utils.backend import BackendType
 from nncf.experimental.post_training.api.engine import Engine
-from nncf.experimental.post_training.algorithms import Algorithm
+from nncf.experimental.post_training.algorithms import ComplexAlgorithm
 from nncf.experimental.post_training.algorithms import AlgorithmParameters
 from nncf.experimental.post_training.algorithms import PostTrainingAlgorithms
 from nncf.experimental.post_training.algorithms.quantization.min_max_quantization import MinMaxQuantizationParameters
@@ -84,7 +84,7 @@ class PostTrainingQuantizationParameters(AlgorithmParameters):
                                per_channel=granularity == Granularity.PERCHANNEL)
 
 
-class PostTrainingQuantization(Algorithm):
+class PostTrainingQuantization(ComplexAlgorithm):
     """
     Implements Post-Training Quantization algorithm, which basically includes:
     1) MinMaxQuantization
@@ -105,7 +105,6 @@ class PostTrainingQuantization(Algorithm):
         self.number_samples = quantization_parameters.number_samples
 
         self.algorithms_to_created = quantization_parameters.algorithms
-        self.algorithms = []
 
     def _apply(self, model: ModelType, engine: Engine, statistic_points: StatisticPointsContainer) -> ModelType:
         for algorithm in self.algorithms:
@@ -120,12 +119,11 @@ class PostTrainingQuantization(Algorithm):
                     output.add_statistic_point(statistic_point)
         return output
 
-    def create_subalgorithms(self, backend: BackendType) -> None:
+    def _create_subalgorithms(self, backend: BackendType) -> None:
         if backend == BackendType.ONNX:
             from nncf.experimental.onnx.algorithms.quantization.min_max_quantization import \
                 ONNXMinMaxQuantization
             for algorithm, parameters in self.algorithms_to_created.items():
                 if algorithm == PostTrainingAlgorithms.MinMaxQuantization:
                     min_max_algo = ONNXMinMaxQuantization(parameters)
-                    min_max_algo.model_transformer = self.model_transformer
                     self.algorithms.append(min_max_algo)

@@ -69,6 +69,7 @@ class Algorithm(ABC):
         for edge_name in _statistic_points.keys():
             if statistic_points.get(edge_name) is None:
                 raise RuntimeError(f'No statistics collected for the layer {edge_name}')
+        self.model_transformer.set_model(model)
         return self._apply(model, engine, statistic_points)
 
     @abstractmethod
@@ -83,8 +84,25 @@ class Algorithm(ABC):
         Returns activation layers, for which StatisticsCollector should collect statistics.
         """
 
-    @abstractmethod
+
+class ComplexAlgorithm(Algorithm):
+    """
+    Sub-class for comples Post-Training algorithms that contains other algorithms inside.
+    """
+    def __init__(self) -> None:
+        super().__init__()
+        self.algorithms = []
+
     def create_subalgorithms(self, backend: BackendType) -> None:
+        """
+        Some complex algorithms have inner algorithms, such
+        """
+        self._create_subalgorithms(backend)
+        for algorithm in self.algorithms:
+            algorithm.model_transformer = self.model_transformer
+
+    @abstractmethod
+    def _create_subalgorithms(self, backend: BackendType) -> None:
         """
         Some complex algorithms have inner algorithms, such
         """

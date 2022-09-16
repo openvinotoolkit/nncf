@@ -26,10 +26,6 @@ ModelType = TypeVar('ModelType')
 
 # pylint: disable=no-member
 class StaticModelTransformerBase(ModelTransformer, ABC):
-    QUANTIZER_NAME_PREFIX = 'QuantizeLinear_'
-    DEQUANTIZER_NAME_PREFIX = 'DequantizeLinear_'
-    SCALE_TENSOR_NAME_PREFIX = 'scale_'
-    ZERO_POINT_NAME_PREFIX = 'zero_point_'
 
     def __init__(self, model: ModelType):
         super().__init__(model)
