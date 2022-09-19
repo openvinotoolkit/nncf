@@ -124,7 +124,7 @@ class CompressionBuilder:
 
         for algorithm in self.algorithms:
             algorithm.model_transformer = model_transformer
-            if isinstance(algorithm, f):
+            if isinstance(algorithm, CompositeAlgorithm):
                 algorithm.create_subalgorithms(backend)
 
         statistics_aggregator = self._create_statistics_aggregator(engine, dataset, model_transformer, backend)
