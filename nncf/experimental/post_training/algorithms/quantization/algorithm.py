@@ -23,7 +23,7 @@ from nncf.common.hardware.config import HWConfigType
 
 from nncf.common.utils.backend import BackendType
 from nncf.experimental.post_training.api.engine import Engine
-from nncf.experimental.post_training.algorithms import ComplexAlgorithm
+from nncf.experimental.post_training.algorithms import CompositeAlgorithm
 from nncf.experimental.post_training.algorithms import AlgorithmParameters
 from nncf.experimental.post_training.algorithms import PostTrainingAlgorithms
 from nncf.experimental.post_training.algorithms.quantization.min_max_quantization import MinMaxQuantizationParameters
@@ -84,7 +84,7 @@ class PostTrainingQuantizationParameters(AlgorithmParameters):
                                per_channel=granularity == Granularity.PERCHANNEL)
 
 
-class PostTrainingQuantization(ComplexAlgorithm):
+class PostTrainingQuantization(CompositeAlgorithm):
     """
     Implements Post-Training Quantization algorithm, which basically includes:
     1) MinMaxQuantization

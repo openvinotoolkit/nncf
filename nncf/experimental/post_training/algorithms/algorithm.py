@@ -85,7 +85,7 @@ class Algorithm(ABC):
         """
 
 
-class ComplexAlgorithm(Algorithm):
+class CompositeAlgorithm(Algorithm):
     """
     Sub-class for comples Post-Training algorithms that contains other algorithms inside.
     """

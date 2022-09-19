@@ -14,4 +14,4 @@
 from nncf.experimental.post_training.algorithms.algorithm import PostTrainingAlgorithms
 from nncf.experimental.post_training.algorithms.algorithm import AlgorithmParameters
 from nncf.experimental.post_training.algorithms.algorithm import Algorithm
-from nncf.experimental.post_training.algorithms.algorithm import ComplexAlgorithm
+from nncf.experimental.post_training.algorithms.algorithm import CompositeAlgorithm

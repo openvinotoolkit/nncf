@@ -17,7 +17,7 @@ from nncf.common.utils.logger import logger as nncf_logger
 from nncf.common.graph.model_transformer import ModelTransformer
 from nncf.common.utils.backend import BackendType
 from nncf.common.utils.backend import infer_backend_from_model
-from nncf.experimental.post_training.algorithms.algorithm import ComplexAlgorithm
+from nncf.experimental.post_training.algorithms.algorithm import CompositeAlgorithm
 
 from nncf.experimental.post_training.api.engine import Engine
 from nncf.experimental.post_training.api.metric import Metric
@@ -111,7 +111,7 @@ class CompressionBuilder:
 
         for algorithm in self.algorithms:
             algorithm.model_transformer = model_transformer
-            if isinstance(algorithm, ComplexAlgorithm):
+            if isinstance(algorithm, CompositeAlgorithm):
                 algorithm.create_subalgorithms(backend)
 
         statistics_aggregator = self._create_statistics_aggregator(engine, dataset, model_transformer, backend)
