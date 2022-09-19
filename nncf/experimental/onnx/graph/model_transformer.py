@@ -136,10 +136,10 @@ class ONNXModelTransformer(StaticModelTransformerBase):
 
     def _insert_outputs(self, model: onnx.ModelProto, outputs: List[str] = None) -> onnx.ModelProto:
         """
-        Takes a model and changes its outputs.
+        Takes a model and adds outputs based on the list of edge names to collect data from
 
         :param model: *ONNX* model
-        :param outputs: new outputs
+        :param outputs: edge names to collect data from
         :return: modified model
         """
         if outputs is None:

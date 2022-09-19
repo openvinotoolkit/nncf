@@ -65,6 +65,14 @@ class Algorithm(ABC):
 
     def apply(self, model: ModelType, engine: Engine,
               statistic_points: StatisticPointsContainer) -> ModelType:
+        """
+        Checks that statistic point exists, sets model into transformer 
+        and applies the algorithm to the model.
+        :param model: model for applying algorithm
+        :param engine: engine for the model execution
+        :param statistic_points: StatisticPointsContainer
+        :return: model after algorithm
+        """
         _statistic_points = self.get_statistic_points(model)
         for edge_name in _statistic_points.keys():
             if statistic_points.get(edge_name) is None:
@@ -75,7 +83,7 @@ class Algorithm(ABC):
     @abstractmethod
     def _apply(self, model: ModelType, engine: Engine, statistic_points: StatisticPointsContainer) -> ModelType:
         """
-        Applies the algorithm to the 'compressed_model'.
+        Applies the algorithm to the model.
         """
 
     @abstractmethod
@@ -95,7 +103,10 @@ class CompositeAlgorithm(Algorithm):
 
     def create_subalgorithms(self, backend: BackendType) -> None:
         """
-        Some complex algorithms have inner algorithms, such
+        Some composite algorithms have different inner algorithms. 
+        This method creates sub-algorithms and sets model transformer to them
+
+        :param backend: backend for the algorithms differentiation
         """
         self._create_subalgorithms(backend)
         for algorithm in self.algorithms:
@@ -104,5 +115,6 @@ class CompositeAlgorithm(Algorithm):
     @abstractmethod
     def _create_subalgorithms(self, backend: BackendType) -> None:
         """
-        Some complex algorithms have inner algorithms, such
+        Some composite algorithms have different inner algorithms. 
+        This method creates sub-algorithms
         """

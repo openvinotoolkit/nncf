@@ -47,6 +47,9 @@ class CompressionBuilder:
     def _create_engine(self, backend: BackendType) -> Engine:
         """
         Creates backend-specific Engine.
+        
+        :param backend: model backend type for the further differentiations
+        :return: backnd-specific Engine
         """
         if backend == BackendType.ONNX:
             from nncf.experimental.onnx.engine import ONNXEngine
@@ -60,6 +63,12 @@ class CompressionBuilder:
                                       backend: BackendType) -> StatisticsAggregator:
         """
         Creates backend-specific StatisticsAggregator.
+
+        :param engine: engine for the model execution
+        :param dataset: dataset for the statistics collection and validation
+        :param model_transformer: backend-specific StaticModelTransformerBase instance
+        :param backend: model backend type for the further differentiations
+        :return: backnd-specific StatisticsAggregator
         """
         if backend == BackendType.ONNX:
             from nncf.experimental.onnx.statistics.aggregator import \
@@ -70,6 +79,10 @@ class CompressionBuilder:
     def _create_model_transformer(self, model: ModelType, backend: BackendType) -> ModelTransformer:
         """
         Creates backend-specific ModelTransformer.
+
+        :param model: input model for the ModelTransformer
+        :param backend: model backend type for the further differentiations
+        :return: backnd-specific ModelTransformer
         """
         if backend == BackendType.ONNX:
             from nncf.experimental.onnx.graph.model_transformer import \
@@ -111,7 +124,7 @@ class CompressionBuilder:
 
         for algorithm in self.algorithms:
             algorithm.model_transformer = model_transformer
-            if isinstance(algorithm, CompositeAlgorithm):
+            if isinstance(algorithm, f):
                 algorithm.create_subalgorithms(backend)
 
         statistics_aggregator = self._create_statistics_aggregator(engine, dataset, model_transformer, backend)

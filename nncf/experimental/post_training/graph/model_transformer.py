@@ -82,7 +82,7 @@ class StaticModelTransformerBase(ModelTransformer, ABC):
     @abstractmethod
     def _apply_quantizer_insertion_transformations(self, transformations: List[TransformationCommand]) -> None:
         """
-        Applies transformations on the model
+        Applies quantizer insertion transformations to the model
 
         :param transformations: lisf of the TransformationCommand transformations
         """
@@ -90,7 +90,7 @@ class StaticModelTransformerBase(ModelTransformer, ABC):
     @abstractmethod
     def _apply_output_insertion_transformations(self, transformations: List[TransformationCommand]) -> None:
         """
-        Applies incoming transformations to the model
+        Applies output insertion transformations to the model
 
         :param transformations: list of the TransformationCommand transformations
         """
