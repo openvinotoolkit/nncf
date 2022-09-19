@@ -43,7 +43,11 @@ class StatisticsAggregator(ABC):
         """
         Collects statistics for registered StatisticPoints.
         The statistics are stored in self.statistic_points.
+
+        :param model: input model for the statistics collection
         """
+        if len(self.statistic_points) == 0:
+            raise RuntimeError('Statistics collection is not applicable while statistic_points were not registred!')
         self.model_transformer.set_model(model)
         self.engine.set_model(self.model_transformer.prepare_model_for_statistics_collection(self.statistic_points))
         self.engine.set_sampler(self._create_sampler(self.dataset, self.max_number_samples))
