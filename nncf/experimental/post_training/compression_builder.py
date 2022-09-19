@@ -47,7 +47,7 @@ class CompressionBuilder:
     def _create_engine(self, backend: BackendType) -> Engine:
         """
         Creates backend-specific Engine.
-        
+
         :param backend: model backend type for the further differentiations
         :return: backnd-specific Engine
         """

@@ -66,7 +66,7 @@ class Algorithm(ABC):
     def apply(self, model: ModelType, engine: Engine,
               statistic_points: StatisticPointsContainer) -> ModelType:
         """
-        Checks that statistic point exists, sets model into transformer 
+        Checks that statistic point exists, sets model into transformer
         and applies the algorithm to the model.
         :param model: model for applying algorithm
         :param engine: engine for the model execution
@@ -103,7 +103,7 @@ class CompositeAlgorithm(Algorithm):
 
     def create_subalgorithms(self, backend: BackendType) -> None:
         """
-        Some composite algorithms have different inner algorithms. 
+        Some composite algorithms have different inner algorithms.
         This method creates sub-algorithms and sets model transformer to them
 
         :param backend: backend for the algorithms differentiation
@@ -115,6 +115,6 @@ class CompositeAlgorithm(Algorithm):
     @abstractmethod
     def _create_subalgorithms(self, backend: BackendType) -> None:
         """
-        Some composite algorithms have different inner algorithms. 
+        Some composite algorithms have different inner algorithms.
         This method creates sub-algorithms
         """
