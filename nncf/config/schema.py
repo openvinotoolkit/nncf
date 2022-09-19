@@ -159,7 +159,7 @@ def validate_single_compression_algo_schema(single_compression_algo_dict: Dict, 
         jsonschema.validate(single_compression_algo_dict, schema=ref_vs_algo_schema[algo_name])
     except jsonschema.ValidationError as e:
         e.message = f"While validating the config for algorithm '{algo_name}' , got:\n" + e.message + \
-                    f"\nRefer to the algorithm subschema definition at FIXME"
+                    "\nRefer to the algorithm subschema definition at FIXME"
         raise e
 
 
