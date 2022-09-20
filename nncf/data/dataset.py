@@ -53,6 +53,13 @@ class Dataset(Generic[DataItem, ModelInput]):
         self._data_source = data_source
         self._transform_func = transform_func
 
+    @property
+    def data_source(self):
+        """
+        :return: The iterable object where data items are from.
+        """
+        return self._data_source
+
     def get_data(self, indices: Optional[List[int]] = None) -> Iterable[DataItem]:
         """
         Returns the iterable object that contains selected data items from the data source as-is.

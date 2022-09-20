@@ -24,7 +24,7 @@ from nncf.common.graph.graph import NNCFGraph
 from nncf.common.graph.transformations.commands import TargetType
 from nncf.common.graph.transformations.commands import TargetPoint
 from nncf.common.graph.transformations.layout import TransformationLayout
-from nncf.common.hardware.config import HWConfigType
+from nncf.common.hardware.config import HWConfigType, HW_CONFIG_TYPE_TARGET_DEVICE_MAP
 from nncf.common.insertion_point_graph import InsertionPointGraph
 from nncf.common.quantization.quantizer_propagation.solver import QuantizerPropagationSolver
 from nncf.common.quantization.quantizer_setup import SingleConfigQuantizationPoint
@@ -92,7 +92,7 @@ class MinMaxQuantizationParameters(AlgorithmParameters):
         self.activation_quantizer_config = self._determine_quantizer_config(activation_bits, activation_granularity,
                                                                             activation_mode)
         self.number_samples = number_samples
-        self.target_device = target_device
+        self.target_device = HWConfigType.from_str(HW_CONFIG_TYPE_TARGET_DEVICE_MAP[target_device.value])
         self.range_type = range_type
         self.quantize_outputs = quantize_outputs
         self.ignored_scopes = [] if ignored_scopes is None else ignored_scopes

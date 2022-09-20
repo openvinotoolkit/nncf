@@ -94,7 +94,7 @@ def quantize_impl(model: ov.Model,
                   preset: QuantizationPreset,
                   target_device: TargetDevice,
                   subset_size: int,
-                  fast_error_correction: bool,
+                  fast_bias_correction: bool,
                   model_type: Optional[str] = None,
                   ignored_scope: Optional[IgnoredScope] = None) -> ov.Model:
     """
@@ -118,7 +118,7 @@ def quantize_impl(model: ov.Model,
                 'target_device': target_device.value,
                 'preset': preset.value,
                 'stat_subset_size': subset_size,
-                'use_fast_bias': fast_error_correction,
+                'use_fast_bias': fast_bias_correction,
                 'model_type': model_type,
                 'ignored': _create_ignored_scope_config(ignored_scope)
             }

@@ -11,7 +11,6 @@
  limitations under the License.
 """
 
-import os
 import subprocess
 from pathlib import Path
 
@@ -25,9 +24,8 @@ from yolov5.utils.dataloaders import create_dataloader
 from yolov5.val import run as validation_fn
 
 
-FILE = Path(__file__).resolve()
-# Relative path to the `yolo_v5` directory.
-ROOT = FILE.parent.relative_to(Path.cwd())
+# Path to the `yolo_v5` directory.
+ROOT = Path(__file__).parent.resolve()
 # Path to the directory where the original and quantized IR will be saved.
 MODEL_DIR = ROOT / 'yolov5m_quantization'
 # Path to the dataset config from the `ultralytics/yolov5` repository.

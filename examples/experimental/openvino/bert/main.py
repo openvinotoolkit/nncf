@@ -26,9 +26,8 @@ import transformers
 import numpy as np
 
 
-FILE = Path(__file__).resolve()
-# Relative path to the `bert` directory.
-ROOT = FILE.parent.relative_to(Path.cwd())
+# Path to the `bert` directory.
+ROOT = Path(__file__).parent.resolve()
 # Path to the directory where the original and quantized IR will be saved.
 MODEL_DIR = ROOT / 'bert_quantization'
 # Path to the pre-trained model directory.
