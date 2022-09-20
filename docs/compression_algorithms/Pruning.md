@@ -78,33 +78,69 @@ The $(a_i, b_i)$ pair of scalars will be learned for each ( $i$ layer and used t
 This approach allows pruning the model taking into account layer-specific sensitivity to weight perturbations and get pruned models with higher accuracy.
 
 #### Filter pruning configuration file parameters
-```
+```JSON5
 {
     "algorithm": "filter_pruning",
     "initializer": {
         "batchnorm_adaptation": {
-            "num_bn_adaptation_samples": 2048, // Number of samples from the training dataset to pass through the model at initialization in order to update batchnorm statistics of the original model. The actual number of samples will be a closest multiple of the batch size.
+            "num_bn_adaptation_samples": 2048, // Number of samples from the training dataset to pass through the model at 
+            // initialization in order to update batchnorm statistics of the original model. The actual number of samples will 
+            // be a closest multiple of the batch size.
         }
     },
-    "pruning_init": 0.1, // Initial value of the pruning level applied to the convolutions that can be pruned in 'create_compressed_model' function. 0.0 by default.
+    "pruning_init": 0.1, // Initial value of the pruning level applied to the convolutions that can be pruned in 
+    // 'create_compressed_model' function. 0.0 by default.
+    
     "params": {
-        "schedule": "exponential", // The type of scheduling to use for adjusting the target pruning level. Either `exponential`, `exponential_with_bias`,  or `baseline`, by default it is `exponential`"
-        "pruning_target": 0.4, // Target value of the pruning level for the convolutions that can be pruned. These convolutions are determined by the model architecture. 0.5 by default.
-        "pruning_flops_target": 0.4, // Target value of the pruning level by FLOPs in the whole model. Only one parameter from `pruning_target` and `pruning_flops_target` can be set. If none of them is specified, `pruning_target` = 0.5 is used as the default value. 
+        "schedule": "exponential", // The type of scheduling to use for adjusting the target pruning level. Either `exponential`, 
+        // `exponential_with_bias`,  or `baseline`, by default it is `exponential`"
+        
+        "pruning_target": 0.4, // Target value of the pruning level for the convolutions that can be pruned. These convolutions 
+        // are determined by the model architecture. 0.5 by default.
+        
+        "pruning_flops_target": 0.4, // Target value of the pruning level by FLOPs in the whole model. Only one parameter from 
+        // `pruning_target` and `pruning_flops_target` can be set. If none of them is specified, `pruning_target` = 0.5 is used 
+        // as the default value. 
+        
         "num_init_steps": 3, // Number of epochs for model pretraining before starting filter pruning. 0 by default.
-        "pruning_steps": 10, // Number of epochs during which the pruning level is increased from `pruning_init` to `pruning_target` value.
-        "filter_importance": "L2", // The type of filter importance metric. Can be one of `L1`, `L2`, `geometric_median`. `L2` by default.
-        "interlayer_ranking_type": "unweighted_ranking", // The type of filter ranking across the layers. Can be one of `unweighted_ranking`, `learned_ranking`. `unweighted_ranking` by default.
-        "all_weights": false, // Whether to prune layers independently (choose filters with the smallest importance in each layer separately) or not. `False` by default.
-        "prune_first_conv": false, // Whether to prune first Convolutional layers or not. First means that it is a convolutional layer such that there is a path from model input to this layer such that there are no other convolution operations on it. `False` by default (`True` by default in case of 'learned_ranking' interlayer_ranking_type).
-        "prune_downsample_convs": false, // Whether to prune downsample Convolutional layers (with stride > 1) or not. `False` by default (`True` by default in case of 'learned_ranking' interlayer_ranking_type).
-        "prune_batch_norms": true, // Whether to nullifies parameters of Batch Norm layer corresponds to zeroed filters of convolution corresponding to this Batch Norm. `True` by default.
+        
+        "pruning_steps": 10, // Number of epochs during which the pruning level is increased from `pruning_init` to `pruning_target
+        // ` value.
+        
+        "filter_importance": "L2", // The type of filter importance metric. Can be one of `L1`, `L2`, `geometric_median`. `L2` 
+        // by default.
+        
+        "interlayer_ranking_type": "unweighted_ranking", // The type of filter ranking across the layers. Can be one of 
+        // `unweighted_ranking`, `learned_ranking`. `unweighted_ranking` by default.
+        
+        "all_weights": false, // Whether to prune layers independently (choose filters with the smallest importance in each layer 
+        // separately) or not. `False` by default.
+        
+        "prune_first_conv": false, // Whether to prune first Convolutional layers or not. First means that it is a convolutional 
+        // layer such that there is a path from model input to this layer such that there are no other convolution operations 
+        // on it. `False` by default (`True` by default in case of 'learned_ranking' interlayer_ranking_type).
+        
+        "prune_downsample_convs": false, // Whether to prune downsample Convolutional layers (with stride > 1) or not. `False` by 
+        // default (`True` by default in case of 'learned_ranking' interlayer_ranking_type).
+        
+        "prune_batch_norms": true, // Whether to nullifies parameters of Batch Norm layer corresponds to zeroed filters of 
+        convolution corresponding to this Batch Norm. `True` by default.
+        
         "save_ranking_coeffs_path": "path/coeffs.json", // Path to save .json file with interlayer ranking coefficients.
-        "load_ranking_coeffs_path": "PATH/learned_coeffs.json", // Path to loading interlayer ranking coefficients .json file, pretrained earlier.
+        
+        "load_ranking_coeffs_path": "PATH/learned_coeffs.json", // Path to loading interlayer ranking coefficients .json file, 
+        // pretrained earlier.
+        
         "legr_params": { // Set of parameters, that can be set for 'learned_ranking' interlayer_ranking_type case
+        
             "generations": 200, //  Number of generations for evolution algorithm optimizing. 400 by default
+            
             "train_steps": 150, // Number of training steps to estimate pruned model accuracy. 200 by default 
-            "max_pruning": 0.6, // Pruning level for the model to train LeGR algorithm on it. If learned ranking will be used for multiple pruning levels, the highest should be used as `max_pruning`. If model will be pruned with one pruning level, target pruning level should be used.
+            
+            "max_pruning": 0.6, // Pruning level for the model to train LeGR algorithm on it. If learned ranking will be used for 
+            // multiple pruning levels, the highest should be used as `max_pruning`. If model will be pruned with one pruning 
+            // level, target pruning level should be used.
+            
             "random_seed": 42, // Random seed for ranking coefficients generation during optimization 
         },
     },
@@ -113,7 +149,7 @@ This approach allows pruning the model taking into account layer-specific sensit
     "ignored_scopes": []
 
     // A list of model control flow graph node scopes to be considered for this operation - functions as a 'allowlist'. Optional.
-    // "target_scopes": []
+    "target_scopes": []
 }
 ```
 
