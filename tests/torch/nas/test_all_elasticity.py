@@ -121,7 +121,7 @@ def fixture_nas_model_name(request):
 
 def test_random_multi_elasticity(_seed, nas_model_name):
     if 'inception_v3' in nas_model_name:
-        pytest.skip(
+        pytest.xfail(
             f'Skip test for {nas_model_name} as it fails because of 2 issues: '
             'not able to set DynamicInputOp to train-only layers (ticket 60976) and '
             'invalid padding update in elastic kernel (ticket 60990)')
@@ -140,7 +140,7 @@ def test_random_multi_elasticity(_seed, nas_model_name):
     multi_elasticity_handler.enable_elasticity(ElasticityDim.DEPTH)
     multi_elasticity_handler.activate_random_subnet()
     if 'squeezenet1_0' in nas_model_name:
-        pytest.skip(
+        pytest.xfail(
             f'Skip test for {nas_model_name} as it fails with error: Given groups=1, weight of '
             'size [48, 256, 1, 1], expected input[1, 32, 4, 4] to have 256 channels, but got 32 channels instead')
     model.do_dummy_forward()
@@ -149,6 +149,10 @@ def test_random_multi_elasticity(_seed, nas_model_name):
     multi_elasticity_handler.enable_elasticity(ElasticityDim.WIDTH)
     multi_elasticity_handler.width_handler.width_num_params_indicator = 1
     multi_elasticity_handler.activate_random_subnet()
+    if 'shufflenet' in nas_model_name:
+        pytest.xfail(
+            f'Skip test for {nas_model_name} as it fails with error: ValueError: too many values to unpack '
+            f'(expected 4). It is happening due to overlapping blocks (ticket 92199).')
     model.do_dummy_forward()
     check_subnet_visualization(multi_elasticity_handler, model, nas_model_name, stage='width')
 

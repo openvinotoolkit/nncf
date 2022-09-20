@@ -21,10 +21,11 @@ import torch
 from torch import nn
 
 from examples.torch.common.models.classification.efficientnet import efficient_net
+from nncf.experimental.torch.nas.bootstrapNAS.elasticity.elasticity_dim import ElasticityDim
 from nncf.experimental.torch.search_building_blocks.search_blocks import BuildingBlock
 from nncf.experimental.torch.search_building_blocks.search_blocks import get_building_blocks
+from nncf.torch import register_operator
 from nncf.torch.layers import NNCFConv2d
-from nncf.experimental.torch.nas.bootstrapNAS.elasticity.elasticity_dim import ElasticityDim
 from nncf.torch.utils import get_model_device
 from tests.torch.helpers import create_compressed_model_and_algo_for_test
 from tests.torch.helpers import create_conv
@@ -435,6 +436,91 @@ def test_correct_grad_when_block_skipped__resnet50():
     assert (output_ref == output).sum() == np.prod(output.shape)
 
 
+class TwoPermute(nn.Module):
+    INPUT_SIZE = [1, 2]
+
+    def __init__(self):
+        super().__init__()
+        self.dummy = nn.Parameter(torch.zeros(1))
+
+    def forward(self, x):
+        num_dims = len(x.size())
+        permute_dims = tuple(range(num_dims - 1, -1, -1))
+        x = torch.permute(x, dims=permute_dims)
+        return torch.permute(x, dims=permute_dims)
+
+
+class ChunkConcat(nn.Module):
+    INPUT_SIZE = [2, 2]
+
+    def __init__(self):
+        super().__init__()
+        self.dummy = nn.Parameter(torch.zeros(1))
+
+    def forward(self, x):
+        chunks = torch.chunk(x, 2, 0)
+        return torch.cat(chunks)
+
+
+class TwoBranchesBeforeInput(nn.Module):
+    INPUT_SIZE = [1, 2]
+
+    def __init__(self):
+        super().__init__()
+        self.dummy = nn.Parameter(torch.ones(1))
+
+    def forward(self, x):
+        return x * self.dummy + x
+
+
+@register_operator()
+def custom_identity(x):
+    return x
+
+
+class TwoBranchesAfterInput(nn.Module):
+    INPUT_SIZE = [1, 2]
+
+    def __init__(self):
+        super().__init__()
+        self.dummy = nn.Parameter(torch.ones(1))
+
+    def forward(self, x):
+        x = custom_identity(x)
+        return x * self.dummy + x
+
+
+@pytest.mark.parametrize('model_creator', (
+        TwoPermute, ChunkConcat, TwoBranchesBeforeInput, TwoBranchesAfterInput))
+def test_can_skip_trivial_block(model_creator):
+    model = model_creator()
+    input_sample_sizes = model.INPUT_SIZE
+    nncf_config = get_empty_config(input_sample_sizes=input_sample_sizes)
+    nncf_config['bootstrapNAS'] = {'training': {
+        'elasticity': {
+            'available_elasticity_dims': [ElasticityDim.DEPTH.value],
+            'depth': {
+                'mode': 'auto',
+                'min_block_size': 1
+            }
+        }
+    }}
+    input_ = torch.ones(input_sample_sizes)
+    compressed_model, _ = create_bootstrap_training_model_and_ctrl(model, nncf_config)
+
+    # activate elastic depth to skip the only one possible block
+    ctx = compressed_model.get_tracing_context()
+    ctx.elastic_depth = True
+    ctx.set_active_skipped_block([0])
+
+    output = compressed_model(input_)
+
+    # both permute should be skipped, input stays the same
+    assert output.size() == input_.size()
+    # sanity check that elastic depth is working
+    assert id(input_) == id(output)
+
+
 ###########################
 # Dynamic Graph
 ###########################
@@ -511,7 +597,7 @@ def test_change_depth_indicator():
 
     ctrl.multi_elasticity_handler.depth_handler.depth_indicator = 2
     ctrl.multi_elasticity_handler.depth_handler.activate_minimum_subnet()
-    assert ctrl.multi_elasticity_handler.depth_handler.get_active_config() == [0, 1, 3, 4, 8, 9, 10, 11]
+    assert ctrl.multi_elasticity_handler.depth_handler.get_active_config() == [0, 3, 8, 10]
 
     ctrl.multi_elasticity_handler.depth_handler.depth_indicator = 1
     ctrl.multi_elasticity_handler.depth_handler.activate_subnet_for_config([0, 1])

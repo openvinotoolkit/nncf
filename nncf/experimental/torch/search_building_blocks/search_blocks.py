@@ -29,6 +29,7 @@ from nncf.common.graph.definitions import MODEL_OUTPUT_OP_NAME
 from nncf.common.graph.graph import NNCFGraph
 from nncf.common.graph.graph import NNCFNodeName
 from nncf.common.graph.graph_matching import find_subgraphs_matching_pattern
+from nncf.common.utils.logger import logger as nncf_logger
 from nncf.torch.dynamic_graph.operation_address import OperationAddress
 from nncf.torch.graph.graph import PTNNCFGraph
 from nncf.torch.graph.operator_metatypes import PTDropoutMetatype
@@ -38,7 +39,6 @@ from nncf.torch.graph.operator_metatypes import PTRELUMetatype
 from nncf.torch.hardware.fused_patterns import PT_HW_FUSED_PATTERNS
 from nncf.torch.layers import NNCF_MODULES_OP_NAMES
 from nncf.torch.nncf_network import NNCFNetwork
-from nncf.common.utils.logger import logger as nncf_logger
 
 IgnoredNameOperators = [*PTDropoutMetatype.get_all_aliases(), MODEL_OUTPUT_OP_NAME]
 OrdinalIDs = List[List[int]]
@@ -562,12 +562,21 @@ def restore_node_name_in_orig_graph(building_blocks: List[PotentialBuildingBlock
     building_block_in_orig_format = []
     ordinal_ids = []
     for block in building_blocks:
-        id_st = block.start_node.bottom_id  # dummy node
+        id_st = block.start_node.bottom_id
         id_end = block.end_node.bottom_id
-        block_in_orig_format = BuildingBlock(orig_graph.get_node_key_by_id(id_st).split(' ')[-1],
+        first_skipped_node = orig_graph.get_node_by_id(id_st)
+        input_nodes = orig_graph.get_input_nodes()
+        start_node_id = id_st
+
+        if first_skipped_node not in input_nodes and not block.start_node.is_dummy:
+            previous_nodes = orig_graph.get_previous_nodes(first_skipped_node)
+            num_inputs = len(previous_nodes)
+            assert num_inputs == 1, f'building block should have a single input, but it has {num_inputs} inputs.'
+            start_node_id = previous_nodes[0].node_id
+        block_in_orig_format = BuildingBlock(orig_graph.get_node_key_by_id(start_node_id).split(' ')[-1],
                                              orig_graph.get_node_key_by_id(id_end).split(' ')[-1])
         building_block_in_orig_format.append(block_in_orig_format)
-        ordinal_ids.append([id_st, id_end])
+        ordinal_ids.append([start_node_id, id_end])
     return building_block_in_orig_format, ordinal_ids
 
 

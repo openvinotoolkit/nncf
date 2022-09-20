@@ -373,7 +373,7 @@ class TracingContext:
             while i < len(block_indexes) - 1:
                 curr_index = block_indexes[i]
                 next_index = block_indexes[i + 1]
-                if self._ordinals_ids[curr_index][1] <= self._ordinals_ids[next_index][0]:
+                if self._ordinals_ids[curr_index][1] < self._ordinals_ids[next_index][0]:
                     self.start_node_name_of_skipped_block.append(self.skipped_blocks[next_index].start_node_name)
                     self.end_node_name_of_skipped_block.append(self.skipped_blocks[next_index].end_node_name)
                 else:
