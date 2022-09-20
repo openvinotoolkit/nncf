@@ -153,7 +153,8 @@
                     "metric_type": "Acc@1",
                     "model_description": "mobilenet_v3_small_int8_w_sym_ch_half_a_asym_t_rb_sparsity_42",
                     "compression_description": "INT8 Sparsity 42",
-                    "reverse_input_channels": true
+                    "reverse_input_channels": true,
+                    "diff_target_min": -0.15
                 },
                 "mobilenet_v3_large": {
                     "config": "tests/tensorflow/data/configs/classification/mobilenet_v3_large_imagenet.json",
