@@ -392,6 +392,11 @@ class TestBenchmarkResult:
                 yellow_rows += [idx]
 
         df = df[["Model", "Metrics type", "Expected FP32", "FP32", "INT8", "Diff FP32", "Diff Expected"]]
+        # Add ONNXRuntime-OpenVINOExecutionProvider multi-column on the top of 3 ~ 6 columns
+        hier_col_name = "ONNXRuntime-OpenVINOExecutionProvider"
+        df.columns = pd.MultiIndex.from_tuples(
+            [("", col) for col in df.columns[:3]] + [(hier_col_name, col) for col in df.columns[3:]]
+        )
 
         def _style_rows():
             styles = []
@@ -413,6 +418,27 @@ class TestBenchmarkResult:
 
             return "\n".join(styles)
 
+        legend_info = f"""
+        <p>legend:</p>
+        <p>
+            <span style='Background-color: #{BG_COLOR_GREEN_HEX}'>
+                Thresholds for FP32 and Expected are passed
+            </span>
+        </p>
+        <p>
+            <span style='Background-color: #{BG_COLOR_YELLOW_HEX}'>
+                Thresholds for Expected is failed, but for FP32 passed
+            </span>
+        </p>
+        <p>
+            <span style='Background-color: #{BG_COLOR_RED_HEX}'>
+                Thresholds for FP32 and Expected are failed
+            </span>
+        </p>
+        <p>
+            If Reference FP32 value in parentheses, it takes from "target" field of .json file
+        </p>
+        """
         # Replace NaN values with "-"
         df = df.fillna("-")
 
@@ -427,7 +453,8 @@ class TestBenchmarkResult:
             </style>
             </head>
             <body>
-            {df.style.set_precision(2).render()}
+            {legend_info}
+            {df.style.format({(hier_col_name, "FP32"): "({:.2f})"}).set_precision(2).render()}
             </body>
             </html>
             """)
