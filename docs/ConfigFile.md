@@ -6,13 +6,17 @@ The JSON file allows using comments that are supported by the [jstyleson](https:
 
 Below is an example of the NNCF configuration file
 
-```
+```JSON5
 {
-    "input_info": [ // Required - describe the specifics of your model inputs here. This information is used to build the internal graph representation that is leveraged for proper compression functioning, and for exporting the compressed model to ONNX. Inputs in the array without a "keyword" attribute are described in the order of the model's "forward" function argument order.
+    "input_info": [ // Required - describe the specifics of your model inputs here. This information is used to build the internal 
+    // graph representation that is leveraged for proper compression functioning, and for exporting the compressed model to ONNX. 
+    // Inputs in the array without a "keyword" attribute are described in the order of the model's "forward" function argument 
+    // order.
                     {
                         "sample_size": [1, 3, 224, 224],  // Shape of the tensor expected as input to the model.
                         "type": "float", // Data type of the model input tensor.
-                        "filler": "zeros", //  Determines what the tensor will be filled with when passed to the model    during tracing and exporting.
+                        "filler": "zeros", //  Determines what the tensor will be filled with when passed to the model 
+                        // during tracing and exporting.
                         "keyword": "input" // Keyword to be used when passing the tensor to the model's 'forward' method. Optional.
                     },
                     // Provide a description for each model input.
@@ -26,28 +30,34 @@ Below is an example of the NNCF configuration file
                 },
             ],
         },
-        "target_device": "VPU", // The target device, the specificity of which will be taken into account while compressing in order to obtain the best performance for this type of device. The default "ANY" means compatible quantization supported by any HW. The parameter takes values from the set ('CPU', 'GPU', 'VPU', 'ANY', 'TRIAL'). Set this value to 'TRIAL' if you are going to use a custom quantization schema.. Optional.
-        "compression": [ // One or more definitions for the compression algorithms to be applied to the model; either a single JSON object or an array of JSON objects. See README for each compression algorithm for a description of the available config parameters.
+        "target_device": "ANY", // The target device, the specificity of which will be taken into account while compressing 
+        // in order to obtain the best performance for this type of device. The default "ANY" means compatible quantization 
+        // supported by any HW. The parameter takes values from the set ('CPU', 'GPU', 'VPU', 'ANY', 'TRIAL'). Set this value 
+        // to 'TRIAL' if you are going to use a custom quantization schema.. Optional.
+        
+        "compression": [ // One or more definitions for the compression algorithms to be applied to the model; either a single 
+        // JSON object or an array of JSON objects. See README for each compression algorithm for a description of the available 
+        // config parameters.
             {
-                "algorithm": quantization,
-                "initializer": {
-                    "range": {
-                        "num_init_samples": 256
+                "algorithm": quantization, // Algorithm name
+                "initializer": {           // Quantizer initializer and its parameters
+                    "range": {             // Activation quantizer range initialization      
+                        "num_init_samples": 256 // Number of samples used for initialization
                     }
                 }
             },
             {
-                "algorithm": "magnitude_sparsity",
-                "params": {
-                    "schedule": "multistep",
-                    "steps": [
+                "algorithm": "magnitude_sparsity", // Algorithm name (stacked with the previous one)
+                "params": {                        // Algorithm-specific parameters
+                    "schedule": "multistep",       // Sparsity rate schedule type
+                    "steps": [                     // List of the epochs at which sparsity rate is increased
                         5,
                         10,
                         20,
                         30,
                         40
                     ],
-                    "sparsity_levels": [
+                    "sparsity_levels": [           // Sparsity rate applied at the steps defined above
                         0.1,
                         0.2,
                         0.3,
