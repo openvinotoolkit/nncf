@@ -69,8 +69,9 @@ FILTER_PRUNING_SCHEMA = {
                     "pruning_target": with_attributes(NUMBER,
                                                       description="Target value of the pruning level for "
                                                                   "the operations that can be pruned. "
-                                                                  "The operations are determined by the model "
-                                                                  "architecture as analyzed by the algorithm.",
+                                                                  "The operations are determined by analysis of the "
+                                                                  "model architecture during the pruning algorithm "
+                                                                  "initialization stage.",
                                                       default=PRUNING_TARGET),
                     "pruning_steps": with_attributes(NUMBER,
                                                      description="Number of epochs during which the pruning level is "
@@ -113,9 +114,10 @@ FILTER_PRUNING_SCHEMA = {
                                                                           "or not. ",
                                                               default=PRUNE_DOWNSAMPLE_CONVS),
                     "prune_batch_norms": with_attributes(BOOLEAN,
-                                                         description="Whether to nullify parameters of Batch Norm "
-                                                                     "layer that correspond to pruned filters of "
-                                                                     "convolution corresponding to this Batch Norm.",
+                                                         description="Whether to prune parameters of the Batch Norm "
+                                                                     "layer that corresponds to pruned filters of the "
+                                                                     "convolutional layer which feeds its output to "
+                                                                     "this Batch Norm.",
                                                          default=PRUNE_BATCH_NORMS),
                     "legr_params":
                         {
@@ -138,7 +140,7 @@ FILTER_PRUNING_SCHEMA = {
                                                                description="Pruning level for the model to train "
                                                                            "LeGR algorithm on it. If learned ranking "
                                                                            "will be used for multiple pruning "
-                                                                           "rates, the highest should be used as "
+                                                                           "levels, the highest should be used as "
                                                                            "`max_pruning`. If model will be pruned "
                                                                            "with one pruning level, this target should "
                                                                            "be used.",
