@@ -39,3 +39,6 @@
 /docker/onnx/openvinoep/Dockerfile filter=lfs diff=lfs merge=lfs -text
 /Makefile filter=lfs diff=lfs merge=lfs -text
 *.dev filter=lfs diff=lfs merge=lfs -text
+*.html filter=lfs diff=lfs merge=lfs -text
+*.css filter=lfs diff=lfs merge=lfs -text
+*.js filter=lfs diff=lfs merge=lfs -text
