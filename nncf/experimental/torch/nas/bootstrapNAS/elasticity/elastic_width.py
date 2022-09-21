@@ -55,6 +55,7 @@ from nncf.experimental.torch.nas.bootstrapNAS.elasticity.elasticity_dim import E
 from nncf.experimental.torch.nas.bootstrapNAS.elasticity.filter_reorder import FilterReorderingAlgorithm
 from nncf.torch.graph.graph import PTNNCFGraph
 from nncf.torch.graph.operator_metatypes import PTBatchNormMetatype
+from nncf.torch.graph.operator_metatypes import PTLayerNormMetatype
 from nncf.torch.graph.operator_metatypes import PTConv2dMetatype
 from nncf.torch.graph.operator_metatypes import PTDepthwiseConv2dSubtype
 from nncf.torch.graph.operator_metatypes import PTLinearMetatype
@@ -63,6 +64,7 @@ from nncf.torch.graph.transformations.commands import PTTargetPoint
 from nncf.torch.layers import NNCFConv2d
 from nncf.torch.layers import NNCFLinear
 from nncf.torch.module_operations import UpdateBatchNormParams
+from nncf.torch.module_operations import UpdateLayerNormParams
 from nncf.torch.module_operations import UpdateNumGroups
 from nncf.torch.module_operations import UpdateWeight
 from nncf.torch.module_operations import UpdateWeightAndOptionalBias
@@ -422,6 +424,23 @@ class ElasticInputWidthBatchNormOp(ElasticWidthOp, nn.Module):
         :return: trimmed batchnorm parameters
         """""
         return [param[:self._active_width] for param in bn_params.values()]
+
+
+class ElasticInputWidthLayerNormOp(ElasticWidthOp, nn.Module):
+    """
+    Introduces elastic input width for layernorm layer.
+    """
+
+    def forward(self, weight: torch.Tensor, bias: torch.Tensor, normalized_shape: torch.Tensor) -> List[torch.Tensor]:
+        """
+        Trims layernorm parameters according to active number of input channels.
+        :param weight: weight tensor to be trimmed
+        :param bias: bias tensor to be trimmed
+        :param normalized_shape: normalized_shape to be trimmed
+        :return: list of trimmed layernorm parameters
+        """""
+        assert len(normalized_shape) == 1, "Currently only 1-dimensional shape is supported."
+        return [weight[:self._active_width], bias[:self._active_width], (self._active_width,)]
 
 
 class ElasticOutputWidthConv2DOp(ElasticOutputWidthOp, nn.Module):
@@ -958,6 +977,7 @@ class ElasticWidthBuilder(SingleElasticityBuilder):
             PTConv2dMetatype: self._create_dynamic_conv_input_op,
             PTDepthwiseConv2dSubtype: self._create_dynamic_dw_conv_input_op,
             PTBatchNormMetatype: self._create_dynamic_bn_input_op,
+            PTLayerNormMetatype: self._create_dynamic_ln_input_op,
             PTLinearMetatype: self._create_dynamic_linear_input_op
         }
         for metatype, op_creator in metatype_vs_dynamic_input_op_creator.items():
@@ -1060,6 +1080,13 @@ class ElasticWidthBuilder(SingleElasticityBuilder):
         dynamic_bn_input_op = ElasticInputWidthBatchNormOp(max_width=generic_layer_attrs.get_num_filters(),
                                                            node_name=node_name)
         return UpdateBatchNormParams(dynamic_bn_input_op)
+
+    @staticmethod
+    def _create_dynamic_ln_input_op(generic_layer_attrs: BaseLayerAttributes, node_name: str) -> UpdateLayerNormParams:
+        assert isinstance(generic_layer_attrs, GenericWeightedLayerAttributes)
+        dynamic_ln_input_op = ElasticInputWidthLayerNormOp(max_width=generic_layer_attrs.get_num_filters(),
+                                                           node_name=node_name)
+        return UpdateLayerNormParams(dynamic_ln_input_op)
 
     @staticmethod
     def _create_dynamic_linear_input_op(linear_layer_attrs: BaseLayerAttributes, node_name: str) -> UpdateWeight:

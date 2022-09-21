@@ -35,6 +35,7 @@ from nncf.torch.graph.operator_metatypes import (
     PTRELU6Metatype,
     PTGELUMetatype,
     PTGroupNormMetatype,
+    PTLayerNormMetatype,
     PTHardTanhMetatype,
     PTHardSwishMetatype,
     PTHardSigmoidMetatype,
@@ -70,6 +71,7 @@ from nncf.common.pruning.operations import (
     BatchNormPruningOp,
     LinearPruningOp,
     GroupNormPruningOp,
+    LayerNormPruningOp,
     ConcatPruningOp,
     ElementwisePruningOp,
     ReshapePruningOp,
@@ -380,6 +382,27 @@ class PTGroupNormPruningOp(GroupNormPruningOp, PTPruner):
 
         nncf_logger.info('Pruned GroupNorm {} by input mask. Old num features: {}, new num features:'
                          ' {}.'.format(node.data['key'], old_num_clannels, new_num_channels))
+
+
+@PT_PRUNING_OPERATOR_METATYPES.register('layer_norm')
+class PTLayerNormPruningOp(LayerNormPruningOp, PTPruner):
+    subtypes = [PTLayerNormMetatype]
+
+    @classmethod
+    def input_reorder(cls, model: NNCFNetwork, node: NNCFNode, graph: NNCFGraph):
+        input_masks = get_input_masks(node, graph)
+        reorder_indexes = input_masks[0]
+        if reorder_indexes is None:
+            return
+
+        reorder_indexes = reorder_indexes.tensor
+        ln = model.get_containing_module(node.node_name)
+        ln.weight.data = torch.index_select(ln.weight.data, 0, reorder_indexes)
+        ln.bias.data = torch.index_select(ln.bias.data, 0, reorder_indexes)
+
+        nncf_logger.debug(
+            'Reordered channels (first 10 reorder indexes {}) of LayerNorm: {} '.format(reorder_indexes[:10],
+                                                                                        node.data['key']))
 
 
 @PT_PRUNING_OPERATOR_METATYPES.register('elementwise')
