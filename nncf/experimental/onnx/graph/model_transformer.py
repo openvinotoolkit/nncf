@@ -10,29 +10,28 @@
  See the License for the specific language governing permissions and
  limitations under the License.
 """
-
-from typing import TypeVar, Optional, Tuple
+from typing import List, Optional, Tuple
 
 from copy import deepcopy
 from collections import Counter
 import onnx
 
-from nncf.common.graph.model_transformer import ModelTransformer
+from nncf.common.graph.graph import NNCFGraph
 from nncf.common.graph.transformations.commands import TargetType
+from nncf.common.graph.transformations.commands import TransformationCommand
 from nncf.common.quantization.structs import QuantizationMode
 from nncf.common.graph.definitions import NNCFGraphNodeType
 from nncf.experimental.onnx.graph.onnx_graph import ONNXGraph
-from nncf.experimental.onnx.graph.nncf_graph_builder import GraphConverter
-from nncf.experimental.onnx.graph.transformations.layout import ONNXTransformationLayout
-from nncf.experimental.onnx.graph.transformations.commands import ONNXQuantizerInsertionCommand
 from nncf.experimental.onnx.graph.transformations.commands import ONNXOutputInsertionCommand
-
-ModelType = TypeVar('ModelType')
+from nncf.experimental.onnx.graph.transformations.commands import ONNXQuantizerInsertionCommand
+from nncf.experimental.onnx.graph.transformations.layout import ONNXTransformationLayout
+from nncf.experimental.post_training.graph.factories import BackendGraphFactory, NNCFGraphFactory
+from nncf.experimental.post_training.graph.model_transformer import StaticModelTransformerBase
+from nncf.experimental.post_training.statistics.statistic_point import StatisticPointsContainer
 
 
 # pylint: disable=no-member
-
-class ONNXModelTransformer(ModelTransformer):
+class ONNXModelTransformer(StaticModelTransformerBase):
     QUANTIZER_NAME_PREFIX = 'QuantizeLinear_'
     DEQUANTIZER_NAME_PREFIX = 'DequantizeLinear_'
     SCALE_TENSOR_NAME_PREFIX = 'scale_'
@@ -40,89 +39,82 @@ class ONNXModelTransformer(ModelTransformer):
 
     def __init__(self, model: onnx.ModelProto):
         super().__init__(model)
-        self.transformed_model = deepcopy(model)
-        self.quantizer_insertion_commands = []  # type: List[ONNXQuantizerInsertionCommand]
-        self.output_insertion_commands = []  # type: List[ONNXOutputInsertionCommand]
+        self._model = deepcopy(model)
 
-    def transform(self, transformation_layout: ONNXTransformationLayout) -> onnx.ModelProto:
-        for transformation in transformation_layout.transformations:
+    def _get_transformation_layout_extra_outputs(
+            self,
+            statistic_points: StatisticPointsContainer) -> ONNXTransformationLayout:
+        """
+        Collects transformations layout by statistic_points
+
+        :param statistic_points: StatisticPointsContainer
+        :return: transformation_layout
+        """
+        transformation_layout = ONNXTransformationLayout()
+        transformation_commands = []
+        for _statistic_points in statistic_points.values():
+            for _statistic_point in _statistic_points:
+                transformation_commands.append(ONNXOutputInsertionCommand(_statistic_point.target_point))
+
+        for transformation_command in transformation_commands:
+            transformation_layout.register(transformation_command)
+
+        return transformation_layout
+
+    def _apply_transformations(self, transformations: List[TransformationCommand]) -> None:
+        """
+        Applies transformations by type-callback on the model
+
+        :param transformations: lisf of the TransformationCommand transformations
+        """
+        quantizer_insert_transformations = []
+        output_insert_transformations = []
+
+        for transformation in transformations:
             if isinstance(transformation, ONNXQuantizerInsertionCommand):
-                self._add_quantizer_insertion_transformation(transformation)
+                quantizer_insert_transformations.append(transformation)
             elif isinstance(transformation, ONNXOutputInsertionCommand):
-                self._add_output_transformation(transformation)
-        self._apply_transformations()
-        return self.transformed_model
+                output_insert_transformations.append(transformation)
 
-    def _add_quantizer_insertion_transformation(self, transformation: ONNXQuantizerInsertionCommand) -> None:
-        self.quantizer_insertion_commands.append(transformation)
+        if quantizer_insert_transformations:
+            self._apply_quantizer_insertion_transformations(quantizer_insert_transformations)
+        if output_insert_transformations:
+            self._apply_output_insertion_transformations(output_insert_transformations)
 
-    def _add_output_transformation(self, transformation: ONNXOutputInsertionCommand) -> None:
-        self.output_insertion_commands.append(transformation)
+    def _apply_output_insertion_transformations(self, transformations: List[ONNXOutputInsertionCommand]) -> None:
+        """
+        Applies incoming transformations to the model
 
-    def _apply_transformations(self) -> None:
-        if self.quantizer_insertion_commands:
-            self._apply_quantizer_insertion_transformations()
-            self.quantizer_insertion_commands = []
-        if self.output_insertion_commands:
-            self._apply_outputs_transformations()
-            self.output_insertion_commands = []
-
-    def _apply_outputs_transformations(self):
-        def select_model_inputs_outputs(model, outputs=None):
-            """
-            Takes a model and changes its outputs.
-
-            :param model: *ONNX* model
-            :param outputs: new outputs
-            :return: modified model
-            """
-            if outputs is None:
-                raise RuntimeError("Parameter outputs cannot be None.")
-            onnx_graph = ONNXGraph(model)
-            var_out = []
-            for out in outputs:
-                # shape should be None; if you place not None, some models will have inference problems (e.g. Mask RCNN)
-                type_proto = onnx.helper.make_tensor_type_proto(onnx_graph.get_edge_dtype(out),
-                                                                shape=None)
-                value_info = onnx.helper.make_value_info(name=out, type_proto=type_proto)
-                var_out.append(value_info)
-
-            graph = onnx.helper.make_graph(nodes=model.graph.node,
-                                           name=model.graph.name,
-                                           inputs=model.graph.input,
-                                           outputs=var_out,
-                                           initializer=model.graph.initializer,
-                                           value_info=model.graph.value_info)
-            onnx_model = onnx.helper.make_model(graph,
-                                                ir_version=model.ir_version,
-                                                producer_name=model.producer_name,
-                                                producer_version=model.producer_version,
-                                                domain=model.domain,
-                                                model_version=model.model_version,
-                                                doc_string=model.doc_string)
-            if len(model.metadata_props) > 0:
-                values = {p.key: p.value for p in model.metadata_props}
-                onnx.helper.set_model_props(onnx_model, values)
-
-            if len(onnx_model.graph.input) != len(model.graph.input):
-                raise RuntimeError("Input mismatch {} != {}".format(
-                    len(onnx_model.input), len(model.input)))
-            # fix opset import
-            del onnx_model.opset_import[:]
-            for oimp in model.opset_import:
-                op_set = onnx_model.opset_import.add()
-                op_set.domain = oimp.domain
-                op_set.version = oimp.version
-            return onnx_model
-
-        onnx_graph = ONNXGraph(self.transformed_model)
-        nncf_graph = GraphConverter.create_nncf_graph(self.transformed_model)
+        :param transformations: list of the ONNXOutputInsertionCommand transformations
+        """
+        onnx_graph = BackendGraphFactory.create(self._model)
+        nncf_graph = NNCFGraphFactory.create(self._model)
         model_outputs = [output.name for output in onnx_graph.get_model_outputs()]
+        extra_model_outputs = self._get_extra_model_outputs(nncf_graph,
+                                                            onnx_graph,
+                                                            transformations)
+
+        model_with_intermediate_outputs = self._insert_outputs(self._model,
+                                                               outputs=[*extra_model_outputs,
+                                                                        *model_outputs])
+        self._model = model_with_intermediate_outputs
+
+    def _get_extra_model_outputs(self,
+                                 nncf_graph: NNCFGraph,
+                                 onnx_graph: ONNXGraph,
+                                 transformations: List[ONNXOutputInsertionCommand]) -> None:
+        """
+        Collects extra model outputs based on transformations
+
+        :param nncf_graph: NNCFGraph
+        :param onnx_graph: ONNXGraph
+        :param transformations: lisf of the ONNXOutputInsertionCommand
+        :return: list of the output names
+        """
         extra_model_outputs = set()
         input_edge_names = []
 
-        for transformation in self.output_insertion_commands:
-
+        for transformation in transformations:
             node_name = transformation.target_point.target_node_name
             if NNCFGraphNodeType.INPUT_NODE in node_name:
                 nncf_node_name = nncf_graph.get_node_by_name(transformation.target_point.target_node_name)
@@ -140,16 +132,67 @@ class ONNXModelTransformer(ModelTransformer):
                     raise RuntimeError
                 extra_model_outputs.add(edge_name)
             extra_model_outputs.update(input_edge_names)
+        return extra_model_outputs
 
-        model_with_intermediate_outputs = select_model_inputs_outputs(self.transformed_model,
-                                                                      outputs=[*extra_model_outputs,
-                                                                               *model_outputs])
-        self.transformed_model = model_with_intermediate_outputs
+    def _insert_outputs(self, model: onnx.ModelProto, outputs: List[str] = None) -> onnx.ModelProto:
+        """
+        Takes a model and adds outputs based on the list of edge names to collect data from
 
-    def _apply_quantizer_insertion_transformations(self) -> None:
+        :param model: *ONNX* model
+        :param outputs: edge names to collect data from
+        :return: modified model
+        """
+        if outputs is None:
+            raise RuntimeError("Parameter outputs cannot be None.")
+        onnx_graph = BackendGraphFactory.create(model)
+        var_out = []
+        for out in outputs:
+            # shape should be None; if you place not None, some models will have inference problems (e.g. Mask RCNN)
+            type_proto = onnx.helper.make_tensor_type_proto(onnx_graph.get_edge_dtype(out),
+                                                            shape=None)
+            value_info = onnx.helper.make_value_info(
+                name=out, type_proto=type_proto)
+            var_out.append(value_info)
+
+        graph = onnx.helper.make_graph(nodes=model.graph.node,
+                                       name=model.graph.name,
+                                       inputs=model.graph.input,
+                                       outputs=var_out,
+                                       initializer=model.graph.initializer,
+                                       value_info=model.graph.value_info)
+        onnx_model = onnx.helper.make_model(graph,
+                                            ir_version=model.ir_version,
+                                            producer_name=model.producer_name,
+                                            producer_version=model.producer_version,
+                                            domain=model.domain,
+                                            model_version=model.model_version,
+                                            doc_string=model.doc_string)
+        if len(model.metadata_props) > 0:
+            values = {p.key: p.value for p in model.metadata_props}
+            onnx.helper.set_model_props(onnx_model, values)
+
+        if len(onnx_model.graph.input) != len(model.graph.input):
+            raise RuntimeError("Input mismatch {} != {}".format(
+                len(onnx_model.input), len(model.input)))
+        # fix opset import
+        del onnx_model.opset_import[:]
+        for oimp in model.opset_import:
+            op_set = onnx_model.opset_import.add()
+            op_set.domain = oimp.domain
+            op_set.version = oimp.version
+        return onnx_model
+
+    def _apply_quantizer_insertion_transformations(
+            self,
+            transformations: List[ONNXQuantizerInsertionCommand]) -> None:
+        """
+        Applies transformations on the model
+
+        :param transformations: lisf of the TransformationCommand transformations
+        """
         # TODO: optimize: could be insertion of quantizers done in one operations
         self._added_target_edges = Counter()
-        for transformation in self.quantizer_insertion_commands:
+        for transformation in transformations:
             self._insert_quantizer_dequantizer(transformation)
 
     def _get_target_edge_name(self, transformation: ONNXQuantizerInsertionCommand, onnx_graph: ONNXGraph) -> \
@@ -163,7 +206,7 @@ class ONNXModelTransformer(ModelTransformer):
         elif transformation.target_point.type == TargetType.POST_LAYER_OPERATION:
             if NNCFGraphNodeType.INPUT_NODE in transformation.target_point.target_node_name:  # ADD INPUT NODE CASE
 
-                nncf_graph = GraphConverter.create_nncf_graph(self.transformed_model)
+                nncf_graph = NNCFGraphFactory.create(self._model)
                 nncf_node_name = nncf_graph.get_node_by_name(transformation.target_point.target_node_name)
                 onnx_nodes_after_input_node = [edge.to_node for edge in nncf_graph.get_output_edges(nncf_node_name)]
                 for onnx_node_name in onnx_nodes_after_input_node:
@@ -234,7 +277,7 @@ class ONNXModelTransformer(ModelTransformer):
         return onnx_scale, onnx_zero_point
 
     def _insert_quantizer_dequantizer(self, transformation: ONNXQuantizerInsertionCommand) -> None:
-        onnx_graph = ONNXGraph(self.transformed_model)
+        onnx_graph = BackendGraphFactory.create(self._model)
         target_edge_name = self._get_target_edge_name(transformation, onnx_graph)
         quantizer, dequantizer = self._get_quantize_dequantize_nodes(transformation, target_edge_name)
         onnx_scale, onnx_zero_point = self._get_scale_zero_point_tensors(transformation, quantizer, dequantizer)
@@ -258,8 +301,8 @@ class ONNXModelTransformer(ModelTransformer):
                     if inp == target_edge_name:
                         node.input[i] = dequantizer.output[0]
 
-        self.transformed_model.graph.initializer.extend([onnx_scale])
-        self.transformed_model.graph.initializer.extend([onnx_zero_point])
+        self._model.graph.initializer.extend([onnx_scale])
+        self._model.graph.initializer.extend([onnx_zero_point])
         insert_index = onnx_graph.get_node_index(input_nodes[0].name)
-        self.transformed_model.graph.node.insert(insert_index, quantizer)
-        self.transformed_model.graph.node.insert(insert_index + 1, dequantizer)
+        self._model.graph.node.insert(insert_index, quantizer)
+        self._model.graph.node.insert(insert_index + 1, dequantizer)

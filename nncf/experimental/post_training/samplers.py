@@ -26,9 +26,6 @@ import random
 SAMPLER_OUTPUT_TYPE = Union[torch.Tensor, np.ndarray]
 
 
-# TODO (Nikita Malinin): Replace or rename this file
-
-
 class BatchSampler(Sampler):
     """
     Base class for dataset sampler forms a batch from samples

@@ -27,29 +27,28 @@ from nncf.common.graph.transformations.commands import TargetType
 from nncf.common.insertion_point_graph import InsertionPointGraph
 from nncf.common.tensor_statistics.collectors import TensorStatisticCollectorBase
 from nncf.common.utils.logger import logger as nncf_logger
+from nncf.common.utils.backend import BackendType
 
 from nncf.experimental.post_training.algorithms.quantization.min_max_quantization import MinMaxQuantization
 from nncf.experimental.post_training.algorithms.quantization.min_max_quantization import MinMaxQuantizationParameters
 from nncf.experimental.post_training.algorithms.quantization.min_max_quantization import RangeType
 from nncf.experimental.post_training.algorithms.algorithm import PostTrainingAlgorithms
 from nncf.experimental.onnx.graph.transformations.commands import ONNXTargetPoint
+from nncf.experimental.post_training.graph.factories import BackendGraphFactory, NNCFGraphFactory
 from nncf.experimental.post_training.statistics.statistic_point import StatisticPoint
 from nncf.experimental.post_training.statistics.statistic_point import StatisticPointsContainer
 from nncf.experimental.onnx.graph.transformations.layout import ONNXTransformationLayout
 from nncf.experimental.onnx.graph.metatypes.onnx_metatypes import GENERAL_WEIGHT_LAYER_METATYPES
-from nncf.experimental.onnx.graph.nncf_graph_builder import GraphConverter
 from nncf.experimental.onnx.algorithms.quantization.default_quantization import DEFAULT_ONNX_QUANT_TRAIT_TO_OP_DICT
 from nncf.experimental.onnx.graph.transformations.commands import ONNXQuantizerInsertionCommand
 from nncf.experimental.onnx.engine import ONNXEngine
 from nncf.experimental.onnx.statistics.collectors import ONNXMinMaxStatisticCollector
 from nncf.experimental.onnx.statistics.collectors import ONNXMeanMinMaxStatisticCollector
-from nncf.experimental.onnx.graph.model_transformer import ONNXModelTransformer
 from nncf.experimental.onnx.graph.onnx_graph import ONNXGraph
 from nncf.experimental.onnx.hardware.fused_patterns import ONNX_HW_FUSED_PATTERNS
 from nncf.experimental.onnx.algorithms.quantization.utils import calculate_activation_quantizer_parameters
 from nncf.experimental.onnx.algorithms.quantization.utils import calculate_weight_quantizer_parameters
 from nncf.experimental.onnx.hardware.config import ONNXHWConfig
-from nncf.common.utils.backend import BackendType
 
 QUANTIZATION_LAYER_METATYPES = GENERAL_WEIGHT_LAYER_METATYPES
 
@@ -74,11 +73,8 @@ class ONNXMinMaxQuantization(MinMaxQuantization):
                                                     reduction_shape=axes, num_samples=self.number_samples)
         raise RuntimeError('This range type is not supported.')
 
-    def _create_model_transformer(self, model: onnx.ModelProto) -> ONNXModelTransformer:
-        return ONNXModelTransformer(model)
-
     def _get_quantizer_setup(self, model: onnx.ModelProto):
-        self.nncf_graph = GraphConverter.create_nncf_graph(model) if self.nncf_graph is None else self.nncf_graph
+        self.nncf_graph = NNCFGraphFactory.create(model) if self.nncf_graph is None else self.nncf_graph
         ip_graph = InsertionPointGraph(self.nncf_graph)
         pattern = ONNX_HW_FUSED_PATTERNS.get_full_pattern_graph()
         ip_graph = ip_graph.get_ip_graph_with_merged_hw_optimized_operations(pattern)
@@ -143,7 +139,7 @@ class ONNXMinMaxQuantization(MinMaxQuantization):
         if self._quantization_target_points:
             return self._quantization_target_points
         quantizer_setup = self._get_quantizer_setup(model)
-        onnx_graph = ONNXGraph(model)
+        onnx_graph = BackendGraphFactory.create(model)
         for quantization_point in quantizer_setup.quantization_points.values():
             if quantization_point.is_weight_quantization_point():
                 self._add_weight_quantization_target_point(quantization_point)
@@ -159,9 +155,8 @@ class ONNXMinMaxQuantization(MinMaxQuantization):
 
     def _apply(self, model: onnx.ModelProto, engine: ONNXEngine,
                statistic_points: StatisticPointsContainer) -> onnx.ModelProto:
-        model_transformer = self._create_model_transformer(model)
         transformation_layout, transformation_commands = ONNXTransformationLayout(), []
-        onnx_graph = ONNXGraph(model)
+        onnx_graph = BackendGraphFactory.create(model)
 
         quantization_target_points = self.get_quantization_target_points(model)
         weight_quantizer_config = self._get_weight_quantizer_config(model)
@@ -203,7 +198,7 @@ class ONNXMinMaxQuantization(MinMaxQuantization):
         for transformation_command in transformation_commands:
             transformation_layout.register(transformation_command)
 
-        quantized_model = model_transformer.transform(transformation_layout)
+        quantized_model = self.model_transformer.transform(transformation_layout)
         return quantized_model
 
     def get_statistic_points(self, model: onnx.ModelProto) -> StatisticPointsContainer:
