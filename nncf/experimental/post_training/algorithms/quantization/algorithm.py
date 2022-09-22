@@ -27,6 +27,8 @@ from nncf.experimental.post_training.algorithms import CompositeAlgorithm
 from nncf.experimental.post_training.algorithms import AlgorithmParameters
 from nncf.experimental.post_training.algorithms import PostTrainingAlgorithms
 from nncf.experimental.post_training.algorithms.quantization.min_max_quantization import MinMaxQuantizationParameters
+from nncf.experimental.post_training.algorithms.quantization.fast_bias_correction import FastBiasCorrection
+from nncf.experimental.post_training.algorithms.quantization.fast_bias_correction import FastBiasCorrectionParameters
 from nncf.experimental.post_training.algorithms.quantization.min_max_quantization import Preset
 from nncf.experimental.post_training.algorithms.quantization.min_max_quantization import Granularity
 from nncf.experimental.post_training.algorithms.quantization.min_max_quantization import RangeType
@@ -63,6 +65,9 @@ class PostTrainingQuantizationParameters(AlgorithmParameters):
             range_type=range_type,
             ignored_scopes=ignored_scopes,
             target_device=target_device
+        ),
+        PostTrainingAlgorithms.FastBiasCorrection: FastBiasCorrectionParameters(
+            number_samples=number_samples
         )}
 
         self.number_samples = number_samples
@@ -88,7 +93,7 @@ class PostTrainingQuantization(CompositeAlgorithm):
     """
     Implements Post-Training Quantization algorithm, which basically includes:
     1) MinMaxQuantization
-    2) BiasCorrection
+    2) FastBiasCorrection
     3) ChannelAlignment
 
     Disclaimer: currently, it only supports MinMaxQuantization. The following algorithms will be added soon.
@@ -108,8 +113,8 @@ class PostTrainingQuantization(CompositeAlgorithm):
 
     def _apply(self, model: ModelType, engine: Engine, statistic_points: StatisticPointsContainer) -> ModelType:
         for algorithm in self.algorithms:
-            quantized_model = algorithm.apply(model, engine, statistic_points)
-        return quantized_model
+            model = algorithm.apply(model, engine, statistic_points)
+        return model
 
     def get_statistic_points(self, model: ModelType) -> StatisticPointsContainer:
         output = StatisticPointsContainer()
@@ -126,4 +131,9 @@ class PostTrainingQuantization(CompositeAlgorithm):
             for algorithm, parameters in self.algorithms_to_created.items():
                 if algorithm == PostTrainingAlgorithms.MinMaxQuantization:
                     min_max_algo = ONNXMinMaxQuantization(parameters)
+                    min_max_algo.model_transformer = self.model_transformer
                     self.algorithms.append(min_max_algo)
+        if algorithm == PostTrainingAlgorithms.FastBiasCorrection:
+            fast_bc_algo = FastBiasCorrection(parameters)
+            fast_bc_algo.model_transformer = self.model_transformer
+            self.algorithms.append(fast_bc_algo)

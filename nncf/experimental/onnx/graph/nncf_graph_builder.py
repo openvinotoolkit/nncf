@@ -17,9 +17,10 @@ from onnx import ModelProto
 from onnx import NodeProto  # pylint: disable=no-name-in-module
 
 from nncf.common.graph import NNCFGraph
+from nncf.common.graph import layer_attributes
 from nncf.common.graph.definitions import NNCFGraphNodeType
 from nncf.common.graph.operator_metatypes import UnknownMetatype
-from nncf.common.graph.layer_attributes import Dtype
+from nncf.common.graph.layer_attributes import BaseLayerAttributes, Dtype
 from nncf.common.graph.definitions import MODEL_INPUT_OP_NAME
 from nncf.common.graph.definitions import MODEL_OUTPUT_OP_NAME
 from nncf.common.graph.operator_metatypes import InputNoopMetatype
@@ -27,7 +28,7 @@ from nncf.common.graph.operator_metatypes import OutputNoopMetatype
 from nncf.common.utils.logger import logger as nncf_logger
 
 from nncf.experimental.onnx.graph.onnx_graph import ONNXGraph
-from nncf.experimental.onnx.graph.metatypes.onnx_metatypes import ONNX_OPERATION_METATYPES
+from nncf.experimental.onnx.graph.metatypes.onnx_metatypes import LAYERS_WITH_BIAS_METATYPES, ONNX_OPERATION_METATYPES
 from nncf.experimental.onnx.graph.metatypes.onnx_metatypes import ONNXConstantMetatype
 
 
@@ -93,11 +94,12 @@ class GraphConverter:
         :return: None.
         """
         for i, _input in enumerate(onnx_graph.get_model_inputs()):
+            input_name = _input.name
+            layer_attributes = ExtendedLayerAttributes([input_name], [input_name])
             input_node = nncf_graph.add_nncf_node(node_name=MODEL_INPUT_OP_NAME + '_' + str(i),
                                                   node_type=NNCFGraphNodeType.INPUT_NODE,
                                                   node_metatype=InputNoopMetatype,
-                                                  layer_attributes=None)
-            input_name = _input.name
+                                                  layer_attributes=layer_attributes)
             to_nodes = onnx_graph.get_nodes_by_input(input_name)
 
             input_node_node_id = input_node.node_id
@@ -128,11 +130,12 @@ class GraphConverter:
         :return: None.
         """
         for i, _output in enumerate(onnx_graph.get_model_outputs()):
+            output_name = _output.name
+            layer_attributes = ExtendedLayerAttributes([output_name], [output_name])
             output_node = nncf_graph.add_nncf_node(node_name=MODEL_OUTPUT_OP_NAME + '_' + str(i),
                                                    node_type=NNCFGraphNodeType.OUTPUT_NODE,
                                                    node_metatype=OutputNoopMetatype,
-                                                   layer_attributes=None)
-            output_name = _output.name
+                                                   layer_attributes=layer_attributes)
             from_nodes = onnx_graph.get_nodes_by_output(output_name)
 
             output_node_node_id = output_node.node_id
@@ -182,10 +185,11 @@ class GraphConverter:
         onnx_graph = ONNXGraph(onnx_model)
         for node in filter(GraphConverter._is_valid_onnx_metatype, onnx_graph.get_all_nodes()):
             metatype = ONNX_OPERATION_METATYPES.get_operator_metatype_by_op_name(node.op_type)
+            layer_attributes = ExtendedLayerAttributes(node.input, node.output)
             nncf_graph.add_nncf_node(node_name=node.name,
                                      node_type=node.op_type,
                                      node_metatype=metatype,
-                                     layer_attributes=None)
+                                     layer_attributes=layer_attributes)
         for output_node in filter(GraphConverter._is_valid_onnx_metatype, onnx_graph.get_all_nodes()):
             output_edges = onnx_graph.get_node_edges(output_node.name)['output']
             for output_edge in output_edges:
@@ -215,3 +219,8 @@ class GraphConverter:
         GraphConverter._add_nncf_input_nodes(onnx_graph, nncf_graph)
         GraphConverter._add_nncf_output_nodes(onnx_graph, nncf_graph)
         return nncf_graph
+
+class ExtendedLayerAttributes(BaseLayerAttributes):
+    def __init__(self, input_tensor_names, output_tensor_names):
+        self.input_tensor_names = input_tensor_names
+        self.output_tensor_names = output_tensor_names

@@ -20,8 +20,10 @@ from nncf.common.tensor import TensorElementsType
 from nncf.common.tensor_statistics.collectors import MinMaxStatisticCollector
 from nncf.common.tensor_statistics.collectors import NNCFCollectorTensorProcessor
 from nncf.common.tensor_statistics.collectors import MeanMinMaxStatisticCollector
+from nncf.common.tensor_statistics.collectors import MeanStatisticCollector
 from nncf.experimental.onnx.tensor import ONNXNNCFTensor
 from nncf.experimental.onnx.statistics.statistics import ONNXMinMaxTensorStatistic
+from nncf.experimental.onnx.statistics.statistics import ONNXMeanTensorStatistic
 
 
 class ONNXNNCFCollectorTensorProcessor(NNCFCollectorTensorProcessor):
@@ -89,3 +91,14 @@ class ONNXMeanMinMaxStatisticCollector(MeanMinMaxStatisticCollector):
 
     def _get_statistics(self) -> ONNXMinMaxTensorStatistic:
         return ONNXMinMaxTensorStatistic(self._min_aggregate().tensor, self._max_aggregate().tensor)
+
+class ONNXMeanStatisticCollector(MeanStatisticCollector):
+    @staticmethod
+    def _get_processor() -> NNCFCollectorTensorProcessor:
+        return ONNXNNCFCollectorTensorProcessor()
+
+    def _register_input(self, x: ONNXNNCFTensor):
+        self._register_input_common(x)
+
+    def _get_statistics(self) -> ONNXMeanTensorStatistic:
+        return ONNXMeanTensorStatistic(self._mean_aggregate().tensor, self._shape())

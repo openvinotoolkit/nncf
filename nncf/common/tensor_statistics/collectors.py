@@ -349,6 +349,36 @@ class MeanMinMaxStatisticCollector(MinMaxOfflineStatisticCollectorBase):
         return self._tensor_processor.mean(stacked_max, axis=0)
 
 
+class MeanStatisticCollector(OfflineTensorStatisticCollector):
+    """
+    Collector aggregates mean per axis.
+    """
+
+    def __init__(self,
+                 reduction_shape: ReductionShape,
+                 num_samples: int = None,
+                 window_size: int = None):
+        super().__init__(reduction_shape, num_samples)
+        self._tensor_processor = self._get_processor()
+        self._all_values = deque(maxlen=window_size)
+        self._all_shapes = deque(maxlen=window_size)
+
+    def _register_input_common(self, x: NNCFTensor):
+        self._all_values.append(self._tensor_processor.mean(x, self._reduction_shape))
+        self._all_shapes.append(x.shape)
+
+    def _reset(self):
+        self._all_values.clear()
+        self._all_shapes.clear()
+
+    def _mean_aggregate(self):
+        all_values_stack = self._tensor_processor.stack(self._all_values)
+        return self._tensor_processor.mean(all_values_stack, 0)
+    
+    def _shape(self):
+        return self._all_shapes[0]
+
+
 class MedianMADStatisticCollector(OfflineTensorStatisticCollector):
     """
     Collector estimates median and median absolute deviation (MAD).

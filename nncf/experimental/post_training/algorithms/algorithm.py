@@ -29,7 +29,7 @@ ModelType = TypeVar('ModelType')
 
 class PostTrainingAlgorithms(Enum):
     MinMaxQuantization = 'min_max_quantization'
-    BiasCorrection = 'bias_correction'
+    FastBiasCorrection = 'fast_bias_correction'
     PostTrainingQuantization = 'post_training_quantization'
 
 

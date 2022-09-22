@@ -97,3 +97,19 @@ class StaticModelTransformerBase(ModelTransformer, ABC):
         """
         raise NotImplementedError(
             '_apply_output_insertion_transformations method must be implemented before call')
+
+    def _apply_bias_correction_transformations(self, transformations: List[TransformationCommand]) -> None:
+        """
+        Applies incoming transformations to the model
+
+        :param transformations: list of the TransformationCommand transformations
+        """
+        raise NotImplementedError(
+            '_apply_bias_correction_transformations method must be implemented before call')
+    
+    @staticmethod
+    def extract_model_by_inputs_outputs(model: ModelType, inputs: List[str], outputs: List[str]):
+        """
+        Extracts or builds sub-model from the original based on the inputs and outputs names
+        """
+        raise NotImplementedError('extract_model_by_inputs_outputs must be implemented before call')

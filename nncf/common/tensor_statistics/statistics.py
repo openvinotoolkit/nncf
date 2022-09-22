@@ -41,6 +41,16 @@ class MinMaxTensorStatistic(TensorStatistic):
                self.tensor_eq(self.max_values, other.max_values)
 
 
+class MeanTensorStatistic(TensorStatistic):
+    def __init__(self, mean_values, shape):
+        self.mean_values = mean_values
+        self.shape = shape
+
+    def __eq__(self, other: 'MeanTensorStatistic') -> bool:
+        return self.tensor_eq(self.mean_values, other.mean_values) and \
+            self.tensor_eq(self.shape, other.shape)
+
+
 class MedianMADTensorStatistic(TensorStatistic):
     def __init__(self, median_values, mad_values):
         self.median_values = median_values

@@ -20,3 +20,5 @@ class ONNXTransformationLayout(TransformationLayout):
     def register(self, transformation: TransformationCommand) -> None:
         if transformation.type == TransformationType.INSERT:
             self.transformations.append(transformation)
+        elif transformation.type == TransformationType.CHANGE:
+            self.transformations.append(transformation)

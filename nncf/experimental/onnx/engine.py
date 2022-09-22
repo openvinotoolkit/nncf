@@ -88,8 +88,7 @@ class ONNXEngine(Engine):
         self.nncf_graph = NNCFGraphFactory.create(model)
         self.onnx_graph = BackendGraphFactory.create(model)
 
-    def _find_edge_name_to_node_name_mapping(self, statistic_points: StatisticPointsContainer) -> Dict[str, str]:
-        edge_name_to_node_name = {}
+    def _register_statistics(self, outputs: NNCFData, statistic_points: StatisticPointsContainer) -> None:
         for node_name, _statistic_points in statistic_points.items():
             for statistic_point in _statistic_points:
                 if NNCFGraphNodeType.INPUT_NODE in statistic_point.target_point.target_node_name:
@@ -98,25 +97,12 @@ class ONNXEngine(Engine):
                                                    self.nncf_graph.get_output_edges(nncf_node_name)]
                     for onnx_node_name in onnx_nodes_after_input_node:
                         edge_name = self.onnx_graph.get_node_edges(onnx_node_name.node_name)['input'][0]
-                        edge_name_to_node_name[edge_name] = edge_name_to_node_name.get(edge_name, []) + [node_name]
-                    continue
-                if statistic_point.target_point.type == TargetType.POST_LAYER_OPERATION:
-                    # We quantize only 0-index of node's output
+                        statistic_point.register_tensor(outputs[edge_name])
+                elif statistic_point.target_point.type == TargetType.POST_LAYER_OPERATION:
                     edge_name = self.onnx_graph.get_node_edges(node_name)['output'][0]
+                    statistic_point.register_tensor(outputs[edge_name])
                 elif statistic_point.target_point.type == TargetType.PRE_LAYER_OPERATION:
-                    edge_name = statistic_point.target_point.edge_name
+                    edge_name = self.onnx_graph.get_node_edges(node_name)['input'][0]
+                    statistic_point.register_tensor(outputs[edge_name])
                 else:
                     RuntimeError('The statistics should be collected only from the input of output edges of the node')
-                edge_name_to_node_name[edge_name] = edge_name_to_node_name.get(edge_name, []) + [node_name]
-        return edge_name_to_node_name
-
-    def _register_statistics(self, outputs: NNCFData, statistic_points: StatisticPointsContainer) -> None:
-        """
-        Registers 'outputs' tensors from inferred model and register them to the correspondence 'statistic_points'.
-        """
-        edge_name_to_node_name = self._find_edge_name_to_node_name_mapping(statistic_points)
-        for output_name, output_tensor in outputs.items():
-            if output_name in edge_name_to_node_name:
-                for node_name in edge_name_to_node_name[output_name]:
-                    for statistic_point in statistic_points[node_name]:
-                        statistic_point.register_tensor(output_tensor)

@@ -97,6 +97,12 @@ class ONNXGraph:
         """
         nodes = self._get_nodes_by_lambda(input_name, lambda node: node.input)
         return nodes
+    
+    def get_node_inputs(self, node_name: str) -> List[NodeProto]:
+        node_inputs = []
+        for input_edge_name in self.get_node_edges(node_name)['input']:
+            node_inputs.extend(self.get_nodes_by_output(input_edge_name))
+        return node_inputs
 
     def _get_nodes_by_lambda(self, name: str, func: Callable[[NodeProto], List[NodeProto]]):
         output = []
@@ -210,6 +216,16 @@ class ONNXGraph:
             if init.name == initializer_name:
                 tensor = numpy_helper.to_array(init)
                 return tensor
+        raise RuntimeError('There is no initializer with the name {}'.format(initializer_name))
+
+    def get_initializer(self, initializer_name: str) -> np.ndarray:
+        """
+        Returns model's Initializer with the name equals to 'initializer_name'.
+        """
+        graph = self.onnx_model.graph
+        for init in graph.initializer:
+            if init.name == initializer_name:
+                return init
         raise RuntimeError('There is no initializer with the name {}'.format(initializer_name))
 
     def get_tensor_shape(self, tensor: ValueInfoProto) -> List[int]:

@@ -113,6 +113,7 @@ class TransformationType(OrderedEnum):
     INSERT = 0
     MULTI_INSERT = 1
     REMOVE = 2
+    CHANGE = 3
 
 
 class TargetPointStateNames:
