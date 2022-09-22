@@ -115,7 +115,7 @@ EXTRAS_REQUIRE = {
     "docs": [],
     "tf": [
         "tensorflow~=2.8.2",
-        "numpy~=1.23"
+        "numpy~=1.23.1"
     ],
     "torch": [
         "torch>=1.5.0, <=1.9.1, !=1.8.0",
