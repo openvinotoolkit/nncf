@@ -407,10 +407,9 @@ GENERAL_WEIGHT_LAYER_METATYPES = [ONNXConvolutionMetatype,
                                   ONNXLinearMetatype]
 
 LAYERS_WITH_BIAS_METATYPES = [ONNXConvolutionMetatype,
-                            #   ONNXConvolutionTransposeMetatype,
-                            #   ONNXLinearMetatype,
-                            #   ONNXBatchNormMetatype]
-]
+                              ONNXConvolutionTransposeMetatype,
+                              ONNXLinearMetatype,
+                              ONNXBatchNormMetatype]
 
 
 def get_operator_metatypes() -> List[Type[OperatorMetatype]]:
