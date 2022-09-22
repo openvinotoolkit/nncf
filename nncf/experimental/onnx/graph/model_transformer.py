@@ -337,7 +337,10 @@ class ONNXModelTransformer(StaticModelTransformerBase):
                 print(f'{node_name} skipped by threshold')
 
     @staticmethod
-    def extract_model_by_inputs_outputs(model: onnx.ModelProto, inputs: List[str], outputs: List[str]) -> onnx.ModelProto:
+    def extract_model_by_inputs_outputs(
+            model: onnx.ModelProto,
+            inputs: List[str],
+            outputs: List[str]) -> onnx.ModelProto:
         """
         Extracts or builds sub-model from the original based on the inputs and outputs names
         """

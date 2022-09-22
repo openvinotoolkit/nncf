@@ -17,7 +17,6 @@ from onnx import ModelProto
 from onnx import NodeProto  # pylint: disable=no-name-in-module
 
 from nncf.common.graph import NNCFGraph
-from nncf.common.graph import layer_attributes
 from nncf.common.graph.definitions import NNCFGraphNodeType
 from nncf.common.graph.operator_metatypes import UnknownMetatype
 from nncf.common.graph.layer_attributes import BaseLayerAttributes, Dtype
@@ -28,7 +27,7 @@ from nncf.common.graph.operator_metatypes import OutputNoopMetatype
 from nncf.common.utils.logger import logger as nncf_logger
 
 from nncf.experimental.onnx.graph.onnx_graph import ONNXGraph
-from nncf.experimental.onnx.graph.metatypes.onnx_metatypes import LAYERS_WITH_BIAS_METATYPES, ONNX_OPERATION_METATYPES
+from nncf.experimental.onnx.graph.metatypes.onnx_metatypes import ONNX_OPERATION_METATYPES
 from nncf.experimental.onnx.graph.metatypes.onnx_metatypes import ONNXConstantMetatype
 
 

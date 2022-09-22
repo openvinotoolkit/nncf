@@ -363,6 +363,11 @@ class MeanStatisticCollector(OfflineTensorStatisticCollector):
         self._all_values = deque(maxlen=window_size)
         self._all_shapes = deque(maxlen=window_size)
 
+    @staticmethod
+    @abstractmethod
+    def _get_processor():
+        pass
+
     def _register_input_common(self, x: NNCFTensor):
         self._all_values.append(self._tensor_processor.mean(x, self._reduction_shape))
         self._all_shapes.append(x.shape)
@@ -374,7 +379,7 @@ class MeanStatisticCollector(OfflineTensorStatisticCollector):
     def _mean_aggregate(self):
         all_values_stack = self._tensor_processor.stack(self._all_values)
         return self._tensor_processor.mean(all_values_stack, 0)
-    
+
     def _shape(self):
         return self._all_shapes[0]
 

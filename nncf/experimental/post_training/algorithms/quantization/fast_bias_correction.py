@@ -63,7 +63,10 @@ class FastBiasCorrection(Algorithm):
         self._axes = (0, 2, 3)
 
     def generate_stat_collector(self, model_backend) -> TensorStatisticCollectorBase:
-        return PTQMeanStatisticCollectorFactory.create(model_backend, reduction_shape=self._axes, num_samples=self.number_samples)
+        return PTQMeanStatisticCollectorFactory.create(
+            model_backend,
+            reduction_shape=self._axes,
+            num_samples=self.number_samples)
 
     @staticmethod
     def _input_filter_func(point):
@@ -116,7 +119,14 @@ class FastBiasCorrection(Algorithm):
 
             extracted_model = self._model_transformer.extract_model_by_inputs_outputs(model, input_names, output_names)
             # TODO: Optimize calculate_bias_shift method signature
-            bias_shift = self.calculate_bias_shift(engine, extracted_model, input_shape, input_fp, output_fp, input_names, output_names)
+            bias_shift = self.calculate_bias_shift(
+                engine,
+                extracted_model,
+                input_shape,
+                input_fp,
+                output_fp,
+                input_names,
+                output_names)
 
             target_point = PTQTargetPointFactory.create(model_backend, TargetType.LAYER, node.node_name)
             command = PTQBiasCorrectionCommandFactory.create(model_backend, target_point, bias_shift)
@@ -158,17 +168,14 @@ class FastBiasCorrection(Algorithm):
 
     def create_input_blob(self, input_shape, input_fp, input_names):
         input_blob = np.zeros(input_shape)
-        # axis = 1
-        # input_blob = np.moveaxis(input_blob, axis, 1)
         for i, value in enumerate(input_fp):
             input_blob[:, i] = value
-        # input_blob = np.moveaxis(input_blob, 1, axis)
         input_blob = input_blob.astype(np.float32)
 
         input_data = ONNXNNCFTensor(input_blob)
         input_data = {n: input_data for n in input_names}
         return input_data
-    
+
     def calculate_bias_shift(self,
                              engine,
                              model,

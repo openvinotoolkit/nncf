@@ -11,8 +11,6 @@
  limitations under the License.
 """
 
-from typing import Dict
-
 import onnxruntime as rt
 import numpy as np
 import onnx

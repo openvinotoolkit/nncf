@@ -11,7 +11,7 @@
  limitations under the License.
 """
 
-from typing import Optional, List
+from typing import Optional
 import numpy as np
 
 from nncf.common.graph.transformations.commands import TransformationCommand

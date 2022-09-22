@@ -125,15 +125,15 @@ class PostTrainingQuantization(CompositeAlgorithm):
         return output
 
     def _create_subalgorithms(self, backend: BackendType) -> None:
-        if backend == BackendType.ONNX:
-            from nncf.experimental.onnx.algorithms.quantization.min_max_quantization import \
-                ONNXMinMaxQuantization
-            for algorithm, parameters in self.algorithms_to_created.items():
+        for algorithm, parameters in self.algorithms_to_created.items():
+            if backend == BackendType.ONNX:
+                from nncf.experimental.onnx.algorithms.quantization.min_max_quantization import \
+                    ONNXMinMaxQuantization
                 if algorithm == PostTrainingAlgorithms.MinMaxQuantization:
                     min_max_algo = ONNXMinMaxQuantization(parameters)
                     min_max_algo.model_transformer = self.model_transformer
                     self.algorithms.append(min_max_algo)
-        if algorithm == PostTrainingAlgorithms.FastBiasCorrection:
-            fast_bc_algo = FastBiasCorrection(parameters)
-            fast_bc_algo.model_transformer = self.model_transformer
-            self.algorithms.append(fast_bc_algo)
+            if algorithm == PostTrainingAlgorithms.FastBiasCorrection:
+                fast_bc_algo = FastBiasCorrection(parameters)
+                fast_bc_algo.model_transformer = self.model_transformer
+                self.algorithms.append(fast_bc_algo)

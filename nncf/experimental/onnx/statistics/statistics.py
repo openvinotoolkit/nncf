@@ -26,4 +26,4 @@ class ONNXMinMaxTensorStatistic(MinMaxTensorStatistic):
 class ONNXMeanTensorStatistic(MeanTensorStatistic):
     @staticmethod
     def tensor_eq(tensor: np.ndarray, rtol=1e-6) -> bool:
-        return bool(np.allclose(tensor, rtol=rtol))
+        return bool(np.all(tensor, rtol=rtol))

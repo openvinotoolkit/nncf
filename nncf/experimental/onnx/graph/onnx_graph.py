@@ -24,7 +24,7 @@ import numpy as np
 from skl2onnx.helpers.onnx_helper import enumerate_model_node_outputs
 
 
-# pylint: disable=no-member
+# pylint: disable=no-member, too-many-public-methods
 
 class ONNXGraph:
     """
@@ -97,7 +97,7 @@ class ONNXGraph:
         """
         nodes = self._get_nodes_by_lambda(input_name, lambda node: node.input)
         return nodes
-    
+
     def get_node_inputs(self, node_name: str) -> List[NodeProto]:
         node_inputs = []
         for input_edge_name in self.get_node_edges(node_name)['input']:
