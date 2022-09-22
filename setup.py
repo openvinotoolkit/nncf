@@ -81,6 +81,7 @@ INSTALL_REQUIRES = ["ninja>=1.10.0.post2",
                     "matplotlib~=3.3.4; python_version<'3.7'",
                     "matplotlib>=3.3.4, <3.6; python_version>='3.7'",
                     "networkx>=2.5, <2.8.1rc1",
+                    "numpy>=1.19.1, <=1.23.1",
                     "pillow~=8.4.0; python_version<'3.7'",
                     "pillow>=9.0.0; python_version>='3.7'",
 
@@ -115,11 +116,9 @@ EXTRAS_REQUIRE = {
     "docs": [],
     "tf": [
         "tensorflow~=2.8.2",
-        "numpy~=1.23.1"
     ],
     "torch": [
         "torch>=1.5.0, <=1.9.1, !=1.8.0",
-        "numpy~=1.19.2",
         # Please see
         # https://stackoverflow.com/questions/70520120/attributeerror-module-setuptools-distutils-has-no-attribute-version
         "setuptools==59.5.0"
