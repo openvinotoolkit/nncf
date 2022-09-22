@@ -1,0 +1,13 @@
+model,launcher,device,dataset,tags,metric_name,metric_type,metric_value,metric_target,metric_scale,metric_postfix,dataset_size,ref,abs_threshold,rel_threshold,profiling_file
+FasterRCNN-12,onnx_runtime,,ms_coco_detection_80_class_with_background,,coco_precision,coco_precision,0.349304751669577,higher-better,100,%,5000,,0,0,
+MaskRCNN-12-det,onnx_runtime,,ms_coco_detection_80_class_with_background,,coco_precision,coco_precision,0.3467388617422638,higher-better,100,%,5000,,0,0,
+MaskRCNN-12-inst-seg,onnx_runtime,,ms_coco_mask_rcnn_short_80_classes,,coco_orig_segm_precision,coco_orig_segm_precision,0.3260399213242193,higher-better,100,%,5000,,0,0,
+ResNet101-DUC-12,onnx_runtime,,cityscapes,,mean_iou,mean_iou,0.6190616892416625,higher-better,100,%,500,,0,0,
+fcn-resnet50-12,onnx_runtime,,mscoco_segmentation_to_voc,,mean_iou,mean_iou,0.37956238921106084,higher-better,100,%,4952,,0,0,
+retinanet-9,onnx_runtime,,ms_coco_detection_80_class_without_background,,coco_precision,coco_precision,0.15034533618307552,higher-better,100,%,5000,,0,0,
+ssd-12,onnx_runtime,,ms_coco_detection_80_class_with_background,,coco_precision,coco_precision,0.2033672326000385,higher-better,100,%,5000,,0,0,
+tiny-yolov3-11,onnx_runtime,,ms_coco_detection_80_class_without_background,,coco_precision,coco_precision,0.07827280162105575,higher-better,100,%,5000,,0,0,
+tinyyolov2-8,onnx_runtime,,VOC2012_without_background,,map,map,0.29266863541861243,higher-better,100,%,5823,,0,0,
+yolov2-coco-9,onnx_runtime,,ms_coco_detection_80_class_without_background,,coco_precision,coco_precision,0.18237084251987853,higher-better,100,%,5000,,0,0,
+yolov3-12,onnx_runtime,,ms_coco_detection_80_class_without_background,,coco_precision,coco_precision,0.2916522116351522,higher-better,100,%,5000,,0,0,
+yolov4,onnx_runtime,,ms_coco_detection_80_class_without_background,,coco_precision,coco_precision,0.10003115887600533,higher-better,100,%,5000,,0,0,

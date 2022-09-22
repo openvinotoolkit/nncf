@@ -16,15 +16,23 @@ limitations under the License.
 
 # pylint: disable=redefined-outer-name
 
+import itertools
+import json
+import math
 import os
 import subprocess
 import sys
 from pathlib import Path
 from tempfile import TemporaryDirectory
 
+import pandas as pd
 import pytest
 from nncf.common.utils.logger import logger as nncf_logger
 from pytest_dependency import depends
+
+BG_COLOR_GREEN_HEX = 'ccffcc'
+BG_COLOR_YELLOW_HEX = 'ffffcc'
+BG_COLOR_RED_HEX = 'ffcccc'
 
 TEST_ROOT = Path(__file__).absolute().parents[1]
 PROJECT_ROOT = TEST_ROOT.parent.absolute()
@@ -37,15 +45,11 @@ if "PYTHONPATH" in ENV_VARS:
 else:
     ENV_VARS["PYTHONPATH"] = str(PROJECT_ROOT)
 
-MODELS = []
-MODELS += [
-    ("classification", os.path.splitext(model)[0])
-    for model in os.listdir(BENCHMARKING_DIR / "classification" / "onnx_models_configs")
-]
-MODELS += [
-    ("object_detection_segmentation", os.path.splitext(model)[0])
-    for model in os.listdir(BENCHMARKING_DIR / "object_detection_segmentation" / "onnx_models_configs")
-]
+TASKS = ["classification", "object_detection_segmentation"]
+MODELS = list(itertools.chain(*[
+    [(task, os.path.splitext(model)[0])
+     for model in os.listdir(BENCHMARKING_DIR / task / "onnx_models_configs")]
+    for task in TASKS]))
 
 XFAIL_MODELS = {"ssd_mobilenet_v1_12"}
 
@@ -60,7 +64,7 @@ XFAIL_QUANTIZED_MODELS = {
 
 def check_xfail(model_name):
     if model_name in XFAIL_MODELS:
-        pytest.xfail("ONNXRuntime-OVEP cannot execute the original model")
+        pytest.xfail("ONNXRuntime-OVEP cannot execute the reference model")
 
 
 def check_quantized_xfail(model_name):
@@ -140,6 +144,58 @@ def eval_size(request):
     return option
 
 
+def _read_csv(root_dir: Path, key=str):
+    dfs = []
+    for task in TASKS:
+        csv_fp = str(root_dir / task / f"accuracy_checker-{key}.csv")
+        dfs += [pd.read_csv(csv_fp)]
+    df = pd.concat(dfs, axis=0)
+    df = df[["model", "metric_value", "metric_name"]]
+    df = df.set_index("model")
+    df["model_accuracy"] = df["metric_value"] * 100.0
+    df = df[["model_accuracy", "metric_name"]]
+    return df
+
+
+def _read_json(fpath: Path) -> pd.DataFrame:
+    fpath = str(fpath)
+    with open(fpath, "r", encoding="utf-8") as fp:
+        d0 = json.load(fp)
+
+    rows = []
+
+    for task, d1 in d0.items():
+        for dataset, d2 in d1.items():
+            for model, d3 in d2.items():
+                d3["task"] = task
+                d3["dataset"] = dataset
+                d3["model"] = model
+                row = pd.Series(d3)
+                rows += [row]
+
+    df = pd.DataFrame(rows)
+    df = df[["model", "target", "metric_type", "diff_target_min", "diff_target_max"]]
+    df = df.set_index("model")
+
+    df["model_accuracy"] = df["target"] * 100.0
+    df["metric_name"] = df["metric_type"]
+
+    return df
+
+
+@pytest.fixture
+def reference_model_accuracy(scope="module"):
+    fpath = TEST_ROOT / "onnx" / "data" / "reference_model_accuracy" / "reference.json"
+
+    return _read_json(fpath)
+
+
+@pytest.fixture
+def quantized_model_accuracy(output_dir, scope="function"):
+    root_dir = output_dir
+    return _read_csv(root_dir, "quantized")
+
+
 @pytest.mark.e2e_ptq
 @pytest.mark.run(order=1)
 class TestPTQ:
@@ -200,7 +256,7 @@ class TestBenchmark:
         if is_quantized:
             out_file_name += "-quantized.csv"
         else:
-            out_file_name += "-original.csv"
+            out_file_name += "-reference.csv"
 
         model_file_name = model_name + "-quantized" if is_quantized else model_name
         model_file_name += ".onnx"
@@ -222,9 +278,9 @@ class TestBenchmark:
         nncf_logger.info(f"Run command: {com_str}")
         return com_line
 
-    @pytest.mark.e2e_eval_original_model
+    @pytest.mark.e2e_eval_reference_model
     @pytest.mark.parametrize("task_type, model_name", MODELS)
-    def test_original_model_accuracy(
+    def test_reference_model_accuracy(
             self, task_type, model_name, model_dir, data_dir, anno_dir, output_dir, eval_size):
 
         check_xfail(model_name)
@@ -233,9 +289,9 @@ class TestBenchmark:
                                    program="accuracy_checker.py", is_quantized=False)
         run_command(command)
 
-    @pytest.mark.e2e_eval_original_model
+    @pytest.mark.e2e_eval_reference_model
     @pytest.mark.parametrize("task_type, model_name", MODELS)
-    def test_original_model_performance(
+    def test_reference_model_performance(
             self, task_type, model_name, model_dir, data_dir, anno_dir, output_dir, eval_size):
 
         check_xfail(model_name)
@@ -275,3 +331,130 @@ class TestBenchmark:
         command = self.get_command(task_type, model_name, model_dir, data_dir, anno_dir, output_dir, eval_size,
                                    program="performance_checker.py", is_quantized=True)
         run_command(command)
+
+
+@pytest.mark.run(order=3)
+class TestBenchmarkResult:
+    def parse_df(self, reference_model_accuracy, quantized_model_accuracy):
+        df = reference_model_accuracy.join(quantized_model_accuracy, lsuffix="_FP32", rsuffix="_INT8")
+
+        df = df.reset_index()
+        df = df.rename({"model": "Model", "metric_name_FP32": "Metrics type",
+                        "model_accuracy_FP32": "FP32", "model_accuracy_INT8": "INT8",
+                        "diff_target_min_FP32": "diff_target_min",
+                        "diff_target_max_FP32": "diff_target_max"}, axis=1)
+
+        df["Diff FP32"] = df["INT8"] - df["FP32"]
+        # TODO: Change E2E test to make "Expected FP32" column effective.
+        df["Expected FP32"] = df["FP32"]
+        df["Diff Expected"] = df["INT8"] - df["Expected FP32"]
+
+        return df
+
+    @pytest.mark.e2e_ptq
+    @pytest.mark.dependency()
+    @pytest.mark.parametrize("task_type, model_name", MODELS)
+    def test_model_accuracy(self, request, task_type, model_name, reference_model_accuracy, quantized_model_accuracy):
+        # Run PTQ first
+        depends(request, ["TestPTQ::test_ptq_model" + request.node.name.lstrip("test_quantized_model_performance")])
+        check_xfail(model_name)
+        check_quantized_xfail(model_name)
+
+        df = self.parse_df(reference_model_accuracy, quantized_model_accuracy)
+        df = df.set_index("Model")
+        this_model_accuracy = df[df.index.str.contains(model_name)]
+
+        assert len(this_model_accuracy) > 0, f"{model_name} has no result from the table."
+
+        for index, cols in this_model_accuracy.iterrows():
+            min_threshold = cols["diff_target_min"]
+            max_threshold = cols["diff_target_max"]
+            assert min_threshold < cols["Diff FP32"] < max_threshold, \
+                f"Diff Expected of {index} should be in ({min_threshold:.1f}%, {max_threshold:.1f}%)."
+
+    @pytest.mark.e2e_ptq
+    @pytest.mark.run(order=4)
+    def test_generate_report(self, reference_model_accuracy, quantized_model_accuracy, output_dir):
+        output_fp = str(output_dir / "report.html")
+
+        df = self.parse_df(reference_model_accuracy, quantized_model_accuracy)
+
+        yellow_rows = []
+        red_rows = []
+        green_rows = []
+
+        for idx, row in df.iterrows():
+            if math.isnan(row["INT8"]):
+                red_rows += [idx]
+            elif row["diff_target_min"] < row["Diff FP32"] < row["diff_target_max"]:
+                green_rows += [idx]
+            else:
+                yellow_rows += [idx]
+
+        df = df[["Model", "Metrics type", "Expected FP32", "FP32", "INT8", "Diff FP32", "Diff Expected"]]
+        # Add ONNXRuntime-OpenVINOExecutionProvider multi-column on the top of 3 ~ 6 columns
+        hier_col_name = "ONNXRuntime-OpenVINOExecutionProvider"
+        df.columns = pd.MultiIndex.from_tuples(
+            [("", col) for col in df.columns[:3]] + [(hier_col_name, col) for col in df.columns[3:]]
+        )
+
+        def _style_rows():
+            styles = []
+            # 3 ~ 6 columns are allowed to be colored.
+
+            for col in range(3, 7):
+                for idx in yellow_rows:
+                    styles.append(f"""
+                    .row{idx}.col{col} {{background-color: #{BG_COLOR_YELLOW_HEX};}}
+                    """)
+                for idx in red_rows:
+                    styles.append(f"""
+                    .row{idx}.col{col} {{background-color: #{BG_COLOR_RED_HEX};}}
+                    """)
+                for idx in green_rows:
+                    styles.append(f"""
+                    .row{idx}.col{col} {{background-color: #{BG_COLOR_GREEN_HEX};}}
+                    """)
+
+            return "\n".join(styles)
+
+        legend_info = f"""
+        <p>legend:</p>
+        <p>
+            <span style='Background-color: #{BG_COLOR_GREEN_HEX}'>
+                Thresholds for FP32 and Expected are passed
+            </span>
+        </p>
+        <p>
+            <span style='Background-color: #{BG_COLOR_YELLOW_HEX}'>
+                Thresholds for Expected is failed, but for FP32 passed
+            </span>
+        </p>
+        <p>
+            <span style='Background-color: #{BG_COLOR_RED_HEX}'>
+                Thresholds for FP32 and Expected are failed
+            </span>
+        </p>
+        <p>
+            If Reference FP32 value in parentheses, it takes from "target" field of .json file
+        </p>
+        """
+        # Replace NaN values with "-"
+        df = df.fillna("-")
+
+        with open(output_fp, "w", encoding="utf-8") as fp:
+            fp.write(f"""
+            <html>
+            <head>
+            <style>
+            table, th, td {{font-size:10pt; border:1px solid black; border-collapse:collapse; text-align:center;}}
+            th, td {{padding: 5px; }}
+            {_style_rows()}
+            </style>
+            </head>
+            <body>
+            {legend_info}
+            {df.style.format({(hier_col_name, "FP32"): "({:.2f})"}).set_precision(2).render()}
+            </body>
+            </html>
+            """)
