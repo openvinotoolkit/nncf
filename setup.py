@@ -81,7 +81,7 @@ INSTALL_REQUIRES = ["ninja>=1.10.0.post2",
                     "matplotlib~=3.3.4; python_version<'3.7'",
                     "matplotlib>=3.3.4, <3.6; python_version>='3.7'",
                     "networkx>=2.5, <2.8.1rc1",
-                    "numpy>=1.19.1, <=1.23.1",
+                    "numpy>=1.19.1, <1.24",
                     "pillow~=8.4.0; python_version<'3.7'",
                     "pillow>=9.0.0; python_version>='3.7'",
 
