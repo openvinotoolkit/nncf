@@ -4,7 +4,7 @@ on:
     branches:
       - develop
     paths:
-      - nncf/config
+      - nncf/config/**
 permissions:
   contents: write
 jobs:
@@ -26,3 +26,4 @@ jobs:
         uses: JamesIves/github-pages-deploy-action@v4
         with:
           folder: schema_html_build # The folder the action should deploy.
+          token: ${{ secrets.PUSH_TO_GH_PAGES_BRANCH }}
