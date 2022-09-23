@@ -9,10 +9,11 @@ This training loop supports any combination of NNCF compression algorithms.
 
 There are only two main parameters of Early-Exit training loop: `maximal_relative_accuracy_degradation` or `maximal_absolute_accuracy_degradation` - relative/absolute accuracy drop in percentage/in original metric with original, uncompressed model less than that is user tolerant. And `maximal_total_epochs` - number of training epochs, if the fine-tuning epoch reaches this number, the loop finishes the fine-tuning and returns the model with the least accuracy drop.
 
-There is an example of config file needed to be provided to create_accuracy_aware_training_loop (see [the usage documentation](../Usage.md#accuracy-aware-model-training) for more details).
+Example of config file needed to be provided to create_accuracy_aware_training_loop (see [the usage documentation](../Usage.md#accuracy-aware-model-training) for more details).
 
-```
+```json5
 {
+    "input_infos": {"sample_size": [1, 2, 224, 224]},
     "accuracy_aware_training": {
         "mode": "early_exit",
         "params": {

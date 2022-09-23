@@ -82,7 +82,7 @@ FILTER_PRUNING_SCHEMA = {
                                                                         "FLOPs."),
                     "schedule": with_attributes(STRING,
                                                 description="The type of scheduling to use for adjusting the target "
-                                                            "pruning level. ",
+                                                            "pruning level.",
                                                 enum=FILTER_PRUNING_SCHEDULE_OPTIONS,
                                                 default=PRUNING_SCHEDULE),
 
@@ -111,7 +111,7 @@ FILTER_PRUNING_SCHEMA = {
                     "prune_downsample_convs": with_attributes(BOOLEAN,
                                                               description="Whether to prune downsampling "
                                                                           "convolutional layers (with stride > 1) "
-                                                                          "or not. ",
+                                                                          "or not.",
                                                               default=PRUNE_DOWNSAMPLE_CONVS),
                     "prune_batch_norms": with_attributes(BOOLEAN,
                                                          description="Whether to prune parameters of the Batch Norm "

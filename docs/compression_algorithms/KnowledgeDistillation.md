@@ -52,15 +52,14 @@ specify `knowledge_distillation` algorithm and its type in the config:
     ]
 }
 ```
-Example of a config: [example](../../examples/torch/classification/configs/pruning/resnet34_pruning_geometric_median_kd.json)
+See this [config file](../../examples/torch/classification/configs/pruning/resnet34_pruning_geometric_median_kd.json) for an example, and [NNCF config schema](FIXME) for reference to the available configuration parameters for the algorithm.
 
 ##### Limitations
 
 - The algorithm is supported for PyTorch only.
-
 - Training the same configuration with Knowledge Distillation requires more time and GPU memory than without it. 
-  On average, memory (for all GPU execution modes) and time overhead is below 20% each.
-
+On average, memory (for all GPU execution modes) and time overhead is below 20% each.
 - Outputs of model that shouldn't be differentiated must have `requires_grad=False`.
-
 - Model should output predictions, not calculate the losses.
+
+
