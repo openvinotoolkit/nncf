@@ -26,7 +26,6 @@ from nncf.common.utils.backend import infer_backend_from_compression_controller
 from nncf.common.utils.backend import BackendType
 from nncf.config.schemata.defaults import AA_COMPRESSION_RATE_STEP_REDUCTION_FACTOR
 from nncf.config.schemata.defaults import AA_INITIAL_COMPRESSION_RATE_STEP
-from nncf.config.schemata.defaults import AA_MAXIMAL_RELATIVE_ACCURACY_DEGRADATION
 from nncf.config.schemata.defaults import AA_MAXIMAL_TOTAL_EPOCHS
 from nncf.config.schemata.defaults import AA_MINIMAL_COMPRESSION_RATE_STEP
 from nncf.config.schemata.defaults import AA_PATIENCE_EPOCHS

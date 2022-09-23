@@ -60,18 +60,18 @@ QUANTIZER_CONFIG_PROPERTIES = {
     "bits": with_attributes(NUMBER,
                             description="Bitwidth to quantize to. It is intended for manual bitwidth setting. Can be "
                                         "overridden by the `bits` parameter from the `precision` initializer section. "
-                                        "An error happens if it doesn't match a corresponding bitwidth constraints "
+                                        "An error occurs if it doesn't match a corresponding bitwidth constraints "
                                         "from the hardware configuration.",
                             default=QUANTIZATION_BITS),
     "signed": with_attributes(BOOLEAN,
                               description="Whether to use signed or unsigned input/output values for quantization. "
                                           "`true` will force the quantization to support signed values, `false` will "
                                           "force the quantization to only support input values with one and the same "
-                                          "signed, and leaving this value unspecified (default) will rely "
+                                          "sign, and leaving this value unspecified (default) means relying "
                                           "on the initialization statistics to determine best approach. \n"
                                           "Note: If set to `false`, but the input "
-                                          "values during initialization have differing signs, will "
-                                          "reset to performing signed quantization instead."),
+                                          "values have differing signs during initialization, signed quantization "
+                                          "will be performed instead."),
     "per_channel": with_attributes(BOOLEAN,
                                    description="Whether to quantize inputs of this quantizer "
                                                "per each channel of input tensor (per 0-th dimension for "
@@ -88,10 +88,10 @@ UNIFIED_SCALE_OP_SCOPES_SPECIFIER_SCHEMA = {
 RANGE_INIT_TYPES_VS_DESCRIPTIONS = {
     "mixed_min_max": "Minimum quantizer range initialized using minima of per-channel minima of "
                      "the tensor to be quantized, maximum quantizer range initialized using "
-                     "maxima of per-channel maxima of the tensor to be quantized. Offline. ",
+                     "maxima of per-channel maxima of the tensor to be quantized. Offline.",
     "min_max": "Minimum quantizer range initialized using global minimum of values in "
-               "the tensor to be quantized, maximum quantizer range initialized using global maxima of the same. "
-               "Online.",
+               "the tensor to be quantized, maximum quantizer range initialized using global maxima of the same"
+               "values. Online.",
     "mean_min_max": "Minimum quantizer range initialized using averages (across every single initialization sample) "
                     "of minima of values in "
                     "the tensor to be quantized, maximum quantizer range initialized using maxima respectively. "
@@ -101,7 +101,7 @@ RANGE_INIT_TYPES_VS_DESCRIPTIONS = {
     "percentile": "Quantizer minimum and maximum ranges set to be equal to specified percentiles of the the observed "
                   "values (across the entire initialization sample set) in the tensor to be quantized. Offline.",
     "mean_percentile": "Quantizer minimum and maximum ranges set to be equal to averaged (across every single "
-                       "initialization sample) specified percentiles of the the observed values  in the tensor to be "
+                       "initialization sample) specified percentiles of the the observed values in the tensor to be "
                        "quantized. Offline."
 }
 
@@ -136,13 +136,13 @@ BASIC_RANGE_INIT_CONFIG_PROPERTIES = {
                     with_attributes(NUMBER,
                                     description="For 'percentile' and 'mean_percentile' types - specify the percentile "
                                                 "of input value histograms to be set as the initial "
-                                                "value for minimum quantizer input",
+                                                "value for the quantizer input minimum.",
                                     default=MIN_PERCENTILE),
                 "max_percentile":
                     with_attributes(NUMBER,
                                     description="For 'percentile' and 'mean_percentile' types - specify the percentile "
                                                 "of input value histograms to be set as the initial "
-                                                "value for maximum quantizer input",
+                                                "value for the quantizer input maximum.",
                                     default=MAX_PERCENTILE),
             }
         }
@@ -156,10 +156,9 @@ PER_LAYER_RANGE_INIT_CONFIG_PROPERTIES = {
         **SCOPING_PROPERTIES,
         "target_quantizer_group":
             with_attributes(STRING, description="The target group of quantizers for which "
-                                                "specified type of range initialization will "
-                                                "be applied. By default specified type of range "
-                                                "initialization will be applied to all group of"
-                                                "quantizers. Optional.",
+                                                "the specified type of range initialization will "
+                                                "be applied. If unspecified, then the range "
+                                                "initialization of the given type will be applied to all quantizers.",
                             enum=['activations', 'weights'])
     }
 }
@@ -171,7 +170,7 @@ RANGE_INIT_CONFIG_PROPERTIES = {
                 "description": "This initializer performs forward runs of the model to be quantized using "
                                "samples from a user-supplied data loader to gather activation and weight "
                                "tensor statistics within the network and use these to set up initial range parameters "
-                               "for the quantizers. ",
+                               "for quantizers.",
                 "oneOf": [
                     BASIC_RANGE_INIT_CONFIG_PROPERTIES,
                     {
@@ -221,12 +220,12 @@ PRECISION_INITIALIZER_SCHEMA = {
         "bits": with_attributes(ARRAY_OF_NUMBERS,
                                 description="A list of bitwidth to choose from when performing precision "
                                             "initialization. Overrides bits constraints specified in "
-                                            "`weight` and `activation` sections",
+                                            "`weight` and `activation` sections.",
                                 examples=[[4, 8]],
                                 default=PRECISION_INIT_BITWIDTHS),
         "num_data_points": with_attributes(NUMBER,
                                            description="Number of data points to iteratively estimate "
-                                                       "Hessian trace",
+                                                       "Hessian trace.",
                                            default=HAWQ_NUM_DATA_POINTS),
         "iter_number": with_attributes(NUMBER,
                                        description="Maximum number of iterations of Hutchinson algorithm "
@@ -235,18 +234,18 @@ PRECISION_INITIALIZER_SCHEMA = {
         "tolerance": with_attributes(NUMBER,
                                      description="Minimum relative tolerance for stopping the Hutchinson "
                                                  "algorithm. It's calculated  between mean average trace "
-                                                 "from previous iteration and current one.",
+                                                 "from the previous iteration and the current one.",
                                      default=HAWQ_TOLERANCE),
         "compression_ratio": with_attributes(NUMBER,
                                              description="The desired ratio between bits complexity of "
-                                                         "fully INT8 model and mixed-precision lower-bit "
+                                                         "a fully INT8 model and a mixed-precision lower-bit "
                                                          "one. On precision initialization stage the HAWQ "
                                                          "algorithm chooses the most accurate "
-                                                         "mixed-precision configuration with ratio no less "
+                                                         "mixed-precision configuration with a ratio no less "
                                                          "than the specified. Bit complexity of the model "
                                                          "is a sum of bit complexities for each quantized "
                                                          "layer, which are a multiplication of FLOPS for "
-                                                         "the layer by number of bits for its "
+                                                         "the layer by the number of bits for its "
                                                          "quantization.",
                                              default=HAWQ_COMPRESSION_RATIO),
         "eval_subset_ratio": with_attributes(NUMBER,
@@ -289,7 +288,7 @@ PRECISION_INITIALIZER_SCHEMA = {
                                                              "average Hessian traces per quantized modules. "
                                                              "It can be used to accelerate mixed precision "
                                                              "initialization by using average Hessian "
-                                                             "traces from previous run of HAWQ algorithm. "),
+                                                             "traces from previous run of HAWQ algorithm."),
         "dump_init_precision_data": with_attributes(BOOLEAN,
                                                     description="Whether to dump data related to Precision "
                                                                 "Initialization algorithm. "
@@ -308,7 +307,7 @@ QUANTIZATION_INITIALIZER_SCHEMA = {
     "type": "object",
     "description": "Specifies the kind of pre-training initialization used for the quantization algorithm.\n"
                    "Some kind of initialization is usually required so that the trainable quantization "
-                   "parameters have a better chance to get fine-tuned to values that give good accuracy.",
+                   "parameters have a better chance to get fine-tuned to values that result in good accuracy.",
     "properties": {
         "batchnorm_adaptation": BATCHNORM_ADAPTATION_SCHEMA,
         **RANGE_INIT_CONFIG_PROPERTIES["initializer"]["properties"],
@@ -326,19 +325,22 @@ STAGED_QUANTIZATION_PARAMS = {
                                                 description="Gradients will be accumulated for this number of "
                                                             "batches before doing a 'backward' call. Increasing "
                                                             "this may improve training quality, since binarized "
-                                                            "networks exhibit noisy gradients requiring larger "
-                                                            "batch sizes than could be accommodated by GPUs."),
+                                                            "networks exhibit noisy gradients and their training "
+                                                            "requires larger batch sizes than could be accommodated "
+                                                            "by GPUs."),
             "activations_quant_start_epoch":
                 with_attributes(NUMBER,
                                 description="A zero-based index of the epoch, upon reaching which "
                                             "the activations will start to be quantized.",
                                 default=ACTIVATIONS_QUANT_START_EPOCH),
             "weights_quant_start_epoch": with_attributes(NUMBER,
-                                                         description="Epoch to start quantizing weights",
+                                                         description="Epoch index upon which the weights will start "
+                                                                     "to be quantized.",
                                                          default=WEIGHTS_QUANT_START_EPOCH),
             "lr_poly_drop_start_epoch": with_attributes(NUMBER,
-                                                        description="Epoch to start dropping the learning rate. If "
-                                                                    "unspecified, learning rate will not be dropped."),
+                                                        description="Epoch index upon which the learning rate will "
+                                                                    "start to be dropped. If unspecified, "
+                                                                    "learning rate will not be dropped."),
             "lr_poly_drop_duration_epochs": with_attributes(NUMBER,
                                                             description="Duration, in epochs, of the learning "
                                                                         "rate dropping process.",
@@ -366,8 +368,8 @@ QUANTIZER_GROUP_PROPERTIES = {
     **SCOPING_PROPERTIES,
     "logarithm_scale": with_attributes(BOOLEAN,
                                        description="Whether to use log of scale as the optimization parameter "
-                                                   "instead of scale itself. This serves as an optional regularization "
-                                                   "opportunity for training quantizer scales.",
+                                                   "instead of the scale itself. This serves as an optional "
+                                                   "regularization opportunity for training quantizer scales.",
                                        default=QUANTIZATION_LOGARITHM_SCALE),
 }
 
@@ -386,7 +388,7 @@ ACTIVATIONS_GROUP_SCHEMA = {
                                              description="Specifies operations in the model which will share "
                                                          "the same quantizer module for activations. This "
                                                          "is helpful in case one and the same quantizer scale "
-                                                         "is required for inputs to the same operation. Each "
+                                                         "is required for each input of this operation. Each "
                                                          "sub-array will define a group of model operation "
                                                          "inputs that have to share a single actual "
                                                          "quantization module, each entry in this subarray "
@@ -407,7 +409,7 @@ OVERFLOW_FIX_OPTIONS = [
 QUANTIZATION_SCHEMA = {
     **BASIC_COMPRESSION_ALGO_SCHEMA,
     "description": f"Applies quantization on top of the input model, simulating future low-precision execution "
-                   f"specifics, and selects the quantization layout and parameters to strive for best possible "
+                   f"specifics, and selects the quantization layout and parameters to strive for the best possible "
                    f"quantized model accuracy and performance. "
                    f"\nSee [Quantization.md]"
                    f"({ONLINE_DOCS_ROOT}"
@@ -420,7 +422,7 @@ QUANTIZATION_SCHEMA = {
         "initializer": QUANTIZATION_INITIALIZER_SCHEMA,
         "preset": with_attributes(QUANTIZATION_PRESETS_SCHEMA,
                                   description="The preset defines the quantization schema for weights and activations. "
-                                              "The 'performance' mode sets up symmetric weight and activations "
+                                              "The 'performance' mode sets up symmetric weight and activation "
                                               "quantizers. The 'mixed' mode utilizes symmetric weight quantization and "
                                               "asymmetric activation quantization.",
                                   default=QUANTIZATION_PRESET),
@@ -489,10 +491,10 @@ QUANTIZATION_SCHEMA = {
         "export_to_onnx_standard_ops": with_attributes(BOOLEAN,
                                                        description="Determines how should the additional quantization "
                                                                    "operations be exported into the ONNX format. Set "
-                                                                   "this to true for export to ONNX "
+                                                                   "this to true to export to ONNX "
                                                                    "standard QuantizeLinear-DequantizeLinear "
                                                                    "node pairs (8-bit quantization only) or to false "
-                                                                   "for export to OpenVINO-supported FakeQuantize ONNX"
+                                                                   "to export to OpenVINO-supported FakeQuantize ONNX"
                                                                    "(all quantization settings supported).",
                                                        default=QUANTIZATION_EXPORT_TO_ONNX_STANDARD_OPS),
         "overflow_fix": with_attributes(STRING,
@@ -501,7 +503,7 @@ QUANTIZATION_SCHEMA = {
                                                     "If set to 'disable', the fix will not be applied. "
                                                     "If set to 'enable' or 'first_layer_only', "
                                                     "while appropriate target_devices are chosen, "
-                                                    "the fix will be applied to the all layers or to the first"
+                                                    "the fix will be applied to all layers or to the first"
                                                     "convolutional layer respectively.",
                                         enum=OVERFLOW_FIX_OPTIONS),
         **STAGED_QUANTIZATION_PARAMS,
