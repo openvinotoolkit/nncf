@@ -38,6 +38,9 @@ from nncf.common.utils.logger import logger as nncf_logger
 from nncf.common.schedulers import StubCompressionScheduler
 from nncf.common.accuracy_aware_training.training_loop import ADAPTIVE_COMPRESSION_CONTROLLERS
 from nncf.config.extractors import extract_bn_adaptation_init_params
+from nncf.config.schemata.defaults import PRUNING_ALL_WEIGHTS
+from nncf.config.schemata.defaults import PRUNING_FILTER_IMPORTANCE
+from nncf.config.schemata.defaults import PRUNING_SCHEDULE
 from nncf.tensorflow.algorithm_selector import TF_COMPRESSION_ALGORITHMS
 from nncf.tensorflow.graph.metatypes.common import GENERAL_CONV_LAYER_METATYPES
 from nncf.tensorflow.graph.metatypes.common import LINEAR_LAYER_METATYPES
@@ -139,9 +142,10 @@ class FilterPruningController(BasePruningAlgoController):
             self._calculate_flops_and_weights_in_uniformly_pruned_model(1.)
 
         self._weights_normalizer = tensor_l2_normalizer  # for all weights in common case
-        self._filter_importance = FILTER_IMPORTANCE_FUNCTIONS.get(params.get('filter_importance', 'L2'))
-        self.all_weights = params.get('all_weights', False)
-        scheduler_cls = PRUNING_SCHEDULERS.get(params.get('schedule', 'exponential'))
+        self._filter_importance = FILTER_IMPORTANCE_FUNCTIONS.get(params.get('filter_importance',
+                                                                             PRUNING_FILTER_IMPORTANCE))
+        self.all_weights = params.get('all_weights', PRUNING_ALL_WEIGHTS)
+        scheduler_cls = PRUNING_SCHEDULERS.get(params.get('schedule', PRUNING_SCHEDULE))
         self._scheduler = scheduler_cls(self, params)
         self._bn_adaptation = None
         self.set_pruning_level(self.pruning_init)

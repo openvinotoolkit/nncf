@@ -20,6 +20,10 @@ from nncf.common.utils.debug import is_debug
 from nncf.common.hardware.config import HWConfigType
 from nncf.common.utils.logger import logger
 from nncf.common.utils.os import safe_open
+from nncf.config.schemata.defaults import AUTOQ_EVAL_SUBSET_RATIO
+from nncf.config.schemata.defaults import AUTOQ_ITER_NUMBER
+from nncf.config.schemata.defaults import AUTOQ_WARMUP_ITER_NUMBER
+from nncf.config.schemata.defaults import PRECISION_INIT_BITWIDTHS
 from nncf.torch.quantization.precision_constraints import HardwareQuantizationConstraints
 from nncf.torch.quantization.precision_init.base_init import BasePrecisionInitializer, BasePrecisionInitParams
 from nncf.common.quantization.quantizer_setup import SingleConfigQuantizerSetup
@@ -40,6 +44,7 @@ class AutoQPrecisionInitParams(BasePrecisionInitParams):
     def __init__(self, user_init_args: AutoQPrecisionInitArgs,
                  dump_autoq_data: bool = False,
                  iter_number: int = 0,
+                 warmup_iter_number: int = None,
                  compression_ratio: float = None,
                  eval_subset_ratio: float = None,
                  ddpg_hparams_dict: Dict = None,
@@ -52,6 +57,7 @@ class AutoQPrecisionInitParams(BasePrecisionInitParams):
         self.iter_number = iter_number
         self.compression_ratio = compression_ratio
         self.eval_subset_ratio = eval_subset_ratio
+        self.warmup_iter_number = warmup_iter_number
         if ddpg_hparams_dict is None:
             self.ddpg_hparams_dict = {}
         else:
@@ -67,17 +73,19 @@ class AutoQPrecisionInitParams(BasePrecisionInitParams):
                     target_hw_config_type: Optional[HWConfigType]) -> 'AutoQPrecisionInitParams':
         dict_copy = autoq_init_config_dict.copy()
         dump_autoq_data = dict_copy.pop('dump_init_precision_data', False)
-        iter_number = dict_copy.pop('iter_number', 0)
+        iter_number = dict_copy.pop('iter_number', AUTOQ_ITER_NUMBER)
         compression_ratio = dict_copy.pop('compression_ratio', 0.15)
-        eval_subset_ratio = dict_copy.pop('eval_subset_ratio', 1.0)
+        eval_subset_ratio = dict_copy.pop('eval_subset_ratio', AUTOQ_EVAL_SUBSET_RATIO)
+        warmup_iter_number = dict_copy.pop('warmup_iter_number', AUTOQ_WARMUP_ITER_NUMBER)
         skip_constraint = dict_copy.pop('skip_constraint', False)
         finetune = dict_copy.pop('finetune', False)
-        bits = dict_copy.pop('bits',  [2, 4, 8])
+        bits = dict_copy.pop('bits', PRECISION_INIT_BITWIDTHS)
 
         return cls(
             user_init_args=user_init_args,
             dump_autoq_data=dump_autoq_data,
             iter_number=iter_number,
+            warmup_iter_number=warmup_iter_number,
             ddpg_hparams_dict=dict_copy,
             hw_cfg_type=target_hw_config_type,
             compression_ratio=compression_ratio,
@@ -98,6 +106,7 @@ class AutoQPrecisionInitializer(BasePrecisionInitializer):
         self._init_args = params.user_init_args
         self._dump_autoq_data = params.dump_autoq_data
         self._iter_number = params.iter_number
+        self._warmup_iter_number = params.warmup_iter_number
         self._ddpg_hparams_override = params.ddpg_hparams_dict
         self._hw_cfg_type = params.hw_cfg_type
 
@@ -157,10 +166,9 @@ class AutoQPrecisionInitializer(BasePrecisionInitializer):
 
         # Control buffer length at run manager level
         if "warmup_iter_number" not in self._ddpg_hparams_override:
-            self._ddpg_hparams_override["warmup_iter_number"] = 10
-
+            self._ddpg_hparams_override["warmup_iter_number"] = self._warmup_iter_number
         self._ddpg_hparams_override["rmsize"] = \
-            self._ddpg_hparams_override["warmup_iter_number"] * (len(env.master_df)+1)
+            self._warmup_iter_number * (len(env.master_df)+1)
 
         # Instantiate Automation Agent
         agent = DDPG(nb_state, nb_action, self._iter_number, hparam_override=self._ddpg_hparams_override)

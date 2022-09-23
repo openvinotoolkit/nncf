@@ -17,6 +17,8 @@ from torch import nn
 
 from nncf.common.schedulers import BaseCompressionScheduler
 from nncf.common.statistics import NNCFStatistics
+from nncf.config.schemata.defaults import KNOWLEDGE_DISTILLATION_SCALE
+from nncf.config.schemata.defaults import KNOWLEDGE_DISTILLATION_TEMPERATURE
 from nncf.torch.graph.transformations.layout import PTTransformationLayout
 from nncf import NNCFConfig
 from nncf.torch.knowledge_distillation.knowledge_distillation_loss import KnowledgeDistillationLoss
@@ -31,9 +33,9 @@ from nncf.torch.algo_selector import PT_COMPRESSION_ALGORITHMS
 class KnowledgeDistillationBuilder(PTCompressionAlgorithmBuilder):
     def __init__(self, config: NNCFConfig, should_init: bool = True):
         super().__init__(config, should_init)
-        self.kd_type = self._algo_config.get('type', None)
-        self.scale = self._algo_config.get('scale', 1)
-        self.temperature = self._algo_config.get('temperature', 1)
+        self.kd_type = self._algo_config.get('type')
+        self.scale = self._algo_config.get('scale', KNOWLEDGE_DISTILLATION_SCALE)
+        self.temperature = self._algo_config.get('temperature', KNOWLEDGE_DISTILLATION_TEMPERATURE)
         if 'temperature' in self._algo_config.keys() and self.kd_type == 'mse':
             raise ValueError("Temperature shouldn't be stated for MSE Loss (softmax only feature)")
 

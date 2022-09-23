@@ -21,6 +21,7 @@ from nncf.common.quantization.initialization.range import PerLayerRangeInitConfi
 from nncf.common.quantization.initialization.range import RangeInitConfig
 from nncf.common.utils.logger import logger
 from nncf.config.config import NNCFConfig
+from nncf.config.schemata.defaults import NUM_BN_ADAPTATION_SAMPLES
 from nncf.config.structures import BNAdaptationInitArgs
 from nncf.config.structures import QuantizationRangeInitArgs
 
@@ -148,7 +149,7 @@ def extract_bn_adaptation_init_params(config: NNCFConfig, algo_name: str) -> Opt
 
 
 def get_bn_adapt_algo_kwargs(nncf_config: NNCFConfig, params: Dict[str, Any]) -> Dict[str, Any]:
-    num_bn_adaptation_samples = params.get('num_bn_adaptation_samples', 2000)
+    num_bn_adaptation_samples = params.get('num_bn_adaptation_samples', NUM_BN_ADAPTATION_SAMPLES)
 
     if num_bn_adaptation_samples == 0:
         return None

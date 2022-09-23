@@ -22,10 +22,8 @@ import jstyleson as json
 
 from nncf.common.utils.logger import logger
 from nncf.common.utils.os import safe_open
-from nncf.config.experimental_schema import EXPERIMENTAL_REF_VS_ALGO_SCHEMA
 from nncf.config.schema import REF_VS_ALGO_SCHEMA
-from nncf.config.schema import get_root_nncf_config_schema
-from nncf.config.schema import validate_accuracy_aware_training_schema
+from nncf.config.schema import NNCF_CONFIG_SCHEMA
 from nncf.config.schema import validate_single_compression_algo_schema
 from nncf.config.structures import NNCFExtraConfigStruct
 
@@ -93,42 +91,35 @@ class NNCFConfig(dict):
         return param
 
     @staticmethod
+    def schema():
+        return NNCF_CONFIG_SCHEMA
+
+    @staticmethod
+    def _is_path_to_algorithm_name(path_parts: List[str]) -> bool:
+        return (len(path_parts) == 2 and path_parts[0] == "compression" and path_parts[1] == "algorithm") or \
+               (len(path_parts) == 3 and path_parts[0] == "compression" and path_parts[1].isnumeric()
+                and path_parts[2] == "algorithm")
+
+    @staticmethod
     def validate(loaded_json):
-        COMMON_REF_VS_ALGO_SCHEMA = {**REF_VS_ALGO_SCHEMA, **EXPERIMENTAL_REF_VS_ALGO_SCHEMA}
-        ROOT_NNCF_CONFIG_SCHEMA = get_root_nncf_config_schema(COMMON_REF_VS_ALGO_SCHEMA)
-        NNCFConfig._validate_json_section_by_schema(loaded_json, ROOT_NNCF_CONFIG_SCHEMA)
-
-        compression_section = loaded_json.get('compression')
-        accuracy_aware_section = loaded_json.get('accuracy_aware_training')
-        if accuracy_aware_section is not None:
-            validate_accuracy_aware_training_schema(accuracy_aware_section)
-        if compression_section is None:
-            # No compression specified
-            return
-
         try:
+            jsonschema.validate(loaded_json, NNCFConfig.schema())
+        except jsonschema.ValidationError as e:
+            logger.error('Invalid NNCF config supplied!')
+            absolute_path_parts = [str(x) for x in e.absolute_path]
+            if not NNCFConfig._is_path_to_algorithm_name(absolute_path_parts):
+                e.message += "\nRefer to the NNCF config schema documentation at FILLME"
+                e.schema = "*schema too long for stdout display, see full schema documentation at FILLME*"
+                raise e
+
+            # Need to make the error more algo-specific in case the config was so bad that no
+            # scheme could be matched
+            # If error is in the algo section, will revalidate the algo sections separately to
+            # make the error message more targeted instead of displaying the entire huge schema.
+            compression_section = loaded_json["compression"]
             if isinstance(compression_section, dict):
-                validate_single_compression_algo_schema(compression_section, COMMON_REF_VS_ALGO_SCHEMA)
+                validate_single_compression_algo_schema(compression_section, REF_VS_ALGO_SCHEMA)
             else:
                 # Passed a list of dicts
                 for compression_algo_dict in compression_section:
-                    validate_single_compression_algo_schema(compression_algo_dict, COMMON_REF_VS_ALGO_SCHEMA)
-        except jsonschema.ValidationError:
-            # No need to trim the exception output here since only the compression algo
-            # specific sub-schema will be shown, which is much shorter than the global schema
-            logger.error('Invalid NNCF config supplied!')
-            raise
-
-    @staticmethod
-    def _validate_json_section_by_schema(loaded_json, schema):
-        try:
-            jsonschema.validate(loaded_json, schema)
-        except jsonschema.ValidationError as e:
-            logger.error('Invalid NNCF config supplied!')
-
-            # The default exception's __str__ result will contain the entire schema,
-            # which is too large to be readable.
-            import nncf.config.schema as config_schema #pylint: disable=cyclic-import
-            msg = e.message + '. See documentation or {} for an NNCF configuration file JSON schema definition'.format(
-                config_schema.__file__)
-            raise jsonschema.ValidationError(msg)
+                    validate_single_compression_algo_schema(compression_algo_dict, REF_VS_ALGO_SCHEMA)

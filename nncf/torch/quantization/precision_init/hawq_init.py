@@ -31,6 +31,12 @@ from nncf.common.quantization.structs import QuantizerConfig
 from nncf.common.utils.logger import logger as nncf_logger
 from nncf.common.utils.os import safe_open
 from nncf.common.utils.debug import is_debug
+from nncf.config.schemata.defaults import HAWQ_DUMP_INIT_PRECISION_DATA
+from nncf.config.schemata.defaults import PRECISION_INIT_BITWIDTHS
+from nncf.config.schemata.defaults import HAWQ_COMPRESSION_RATIO
+from nncf.config.schemata.defaults import HAWQ_ITER_NUMBER
+from nncf.config.schemata.defaults import HAWQ_NUM_DATA_POINTS
+from nncf.config.schemata.defaults import HAWQ_TOLERANCE
 from nncf.torch.quantization.hessian_trace import HessianTraceEstimator
 from nncf.torch.quantization.layers import QuantizersSwitcher
 from nncf.torch.quantization.precision_constraints import HardwareQuantizationConstraints
@@ -93,13 +99,13 @@ class HAWQPrecisionInitParams(BasePrecisionInitParams):
                     user_init_args: QuantizationPrecisionInitArgs) -> 'HAWQPrecisionInitParams':
         return cls(
             user_init_args=user_init_args,
-            bitwidths=hawq_init_config_dict.get('bits', [2, 4, 8]),
+            bitwidths=hawq_init_config_dict.get('bits', PRECISION_INIT_BITWIDTHS),
             traces_per_layer_path=hawq_init_config_dict.get('traces_per_layer_path', None),
-            num_data_points=hawq_init_config_dict.get('num_data_points', 100),
-            iter_number=hawq_init_config_dict.get('iter_number', 200),
-            tolerance=hawq_init_config_dict.get('tolerance', 1e-4),
-            compression_ratio=hawq_init_config_dict.get('compression_ratio', 1.5),
-            dump_hawq_data=hawq_init_config_dict.get('dump_init_precision_data', False),
+            num_data_points=hawq_init_config_dict.get('num_data_points', HAWQ_NUM_DATA_POINTS),
+            iter_number=hawq_init_config_dict.get('iter_number', HAWQ_ITER_NUMBER),
+            tolerance=hawq_init_config_dict.get('tolerance', HAWQ_TOLERANCE),
+            compression_ratio=hawq_init_config_dict.get('compression_ratio', HAWQ_COMPRESSION_RATIO),
+            dump_hawq_data=hawq_init_config_dict.get('dump_init_precision_data', HAWQ_DUMP_INIT_PRECISION_DATA),
             bitwidth_assignment_mode=BitwidthAssignmentMode.from_str(
                 hawq_init_config_dict.get('bitwidth_assignment_mode', BitwidthAssignmentMode.LIBERAL.value)
             )

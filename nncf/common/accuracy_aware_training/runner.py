@@ -24,6 +24,11 @@ import pathlib
 from nncf.api.compression import CompressionAlgorithmController
 from nncf.common.utils.backend import infer_backend_from_compression_controller
 from nncf.common.utils.backend import BackendType
+from nncf.config.schemata.defaults import AA_COMPRESSION_RATE_STEP_REDUCTION_FACTOR
+from nncf.config.schemata.defaults import AA_INITIAL_COMPRESSION_RATE_STEP
+from nncf.config.schemata.defaults import AA_MAXIMAL_TOTAL_EPOCHS
+from nncf.config.schemata.defaults import AA_MINIMAL_COMPRESSION_RATE_STEP
+from nncf.config.schemata.defaults import AA_PATIENCE_EPOCHS
 
 ModelType = TypeVar('ModelType')
 OptimizerType = TypeVar('OptimizerType')
@@ -242,10 +247,9 @@ class BaseAccuracyAwareTrainingRunner(TrainingRunner):
 
     def __init__(self, accuracy_aware_params: Dict[str, object], verbose=True,
                  dump_checkpoints=True):
-        self.maximal_relative_accuracy_drop = accuracy_aware_params.get('maximal_relative_accuracy_degradation', 1.0)
+        self.maximal_relative_accuracy_drop = accuracy_aware_params.get('maximal_relative_accuracy_degradation')
         self.maximal_absolute_accuracy_drop = accuracy_aware_params.get('maximal_absolute_accuracy_degradation')
-        self.maximal_total_epochs = accuracy_aware_params.get('maximal_total_epochs', 10000)
-        self.validate_every_n_epochs = accuracy_aware_params.get('validate_every_n_epochs', 1)
+        self.maximal_total_epochs = accuracy_aware_params.get('maximal_total_epochs', AA_MAXIMAL_TOTAL_EPOCHS)
 
         self.verbose = verbose
         self.dump_checkpoints = dump_checkpoints
@@ -294,10 +298,13 @@ class BaseAdaptiveCompressionLevelTrainingRunner(BaseAccuracyAwareTrainingRunner
                  dump_checkpoints=True):
         super().__init__(accuracy_aware_params, verbose, dump_checkpoints)
 
-        self.compression_rate_step = accuracy_aware_params.get('initial_compression_rate_step', 0.1)
-        self.step_reduction_factor = accuracy_aware_params.get('compression_rate_step_reduction_factor', 0.5)
-        self.minimal_compression_rate_step = accuracy_aware_params.get('minimal_compression_rate_step', 0.025)
-        self.patience_epochs = accuracy_aware_params.get('patience_epochs')
+        self.compression_rate_step = accuracy_aware_params.get('initial_compression_rate_step',
+                                                               AA_INITIAL_COMPRESSION_RATE_STEP)
+        self.step_reduction_factor = accuracy_aware_params.get('compression_rate_step_reduction_factor',
+                                                               AA_COMPRESSION_RATE_STEP_REDUCTION_FACTOR)
+        self.minimal_compression_rate_step = accuracy_aware_params.get('minimal_compression_rate_step',
+                                                                       AA_MINIMAL_COMPRESSION_RATE_STEP)
+        self.patience_epochs = accuracy_aware_params.get('patience_epochs', AA_PATIENCE_EPOCHS)
         self.initial_training_phase_epochs = accuracy_aware_params.get('initial_training_phase_epochs')
 
         self.minimal_compression_rate = minimal_compression_rate

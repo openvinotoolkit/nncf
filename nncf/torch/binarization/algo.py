@@ -26,13 +26,13 @@ from nncf.common.statistics import NNCFStatistics
 from nncf.common.utils.logger import logger as nncf_logger
 from nncf.config import NNCFConfig
 from nncf.config.extractors import extract_algo_specific_config
+from nncf.config.schemata.defaults import BINARIZATION_MODE
 from nncf.torch.algo_selector import PT_COMPRESSION_ALGORITHMS
 from nncf.torch.algo_selector import ZeroCompressionLoss
 from nncf.torch.binarization.layers import ActivationBinarizationScaleThreshold
 from nncf.torch.binarization.layers import ActivationBinarizer
 from nncf.torch.binarization.layers import BINARIZATION_MODULES
 from nncf.torch.binarization.layers import BaseBinarizer
-from nncf.torch.binarization.layers import BinarizationMode
 from nncf.torch.binarization.layers import WeightBinarizer
 from nncf.torch.compression_method_api import PTCompressionAlgorithmBuilder
 from nncf.torch.compression_method_api import PTCompressionAlgorithmController
@@ -51,7 +51,7 @@ from nncf.torch.utils import get_model_device
 class BinarizationBuilder(PTCompressionAlgorithmBuilder):
     def __init__(self, config, should_init: bool = True):
         super().__init__(config, should_init)
-        self.mode = self._algo_config.get('mode', BinarizationMode.XNOR)
+        self.mode = self._algo_config.get('mode', BINARIZATION_MODE)
 
     def _get_transformation_layout(self, target_model: NNCFNetwork) -> PTTransformationLayout:
         layout = PTTransformationLayout()
