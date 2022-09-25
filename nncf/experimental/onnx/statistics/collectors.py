@@ -56,6 +56,14 @@ class ONNXNNCFCollectorTensorProcessor(NNCFCollectorTensorProcessor):
         return ONNXNNCFTensor(np.mean(x.tensor, axis=axis))
 
     @staticmethod
+    def mean_per_channel(x: NNCFTensor, axis: int) -> NNCFTensor:
+        if len(x.shape) < 3:
+            return ONNXNNCFTensor(np.mean(x.tensor, axis=0))
+        x = np.moveaxis(x.tensor, axis, 1)
+        t = x.reshape(x.shape[0], x.shape[1], -1)
+        return ONNXNNCFTensor(np.mean(t, axis=(0, 2)))
+
+    @staticmethod
     def stack(x: Union[List[NNCFTensor], Deque[NNCFTensor]], axis: int = 0) -> NNCFTensor:
         x = [t.tensor for t in x]
         return ONNXNNCFTensor(np.stack(x, axis=axis))

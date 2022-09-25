@@ -11,10 +11,10 @@
  limitations under the License.
 """
 
-from typing import Optional
+from typing import Optional, List
 import numpy as np
 
-from nncf.common.graph.transformations.commands import TransformationCommand
+from nncf.common.graph.transformations.commands import Command, TransformationCommand
 from nncf.common.graph.transformations.commands import TransformationType
 from nncf.common.graph.transformations.commands import TargetType
 from nncf.common.graph.transformations.commands import TargetPoint
@@ -78,5 +78,15 @@ class ONNXBiasCorrectionCommand(TransformationCommand):
         self.bias_value = bias_value
 
     def union(self, other: 'TransformationCommand') -> 'TransformationCommand':
+        # Have a look at nncf/torch/graph/transformations/commands/PTInsertionCommand
+        raise NotImplementedError()
+
+class ONNXModelExtractionCommand(Command):
+    def __init__(self, inputs: List[str], outputs: List[str]):
+        super().__init__(TransformationType.EXTRACT)
+        self.inputs = inputs
+        self.outputs = outputs
+
+    def union(self, other: 'Command') -> 'Command':
         # Have a look at nncf/torch/graph/transformations/commands/PTInsertionCommand
         raise NotImplementedError()

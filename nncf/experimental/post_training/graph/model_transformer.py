@@ -11,7 +11,7 @@
  limitations under the License.
 """
 
-from abc import ABC
+from abc import ABC, abstractmethod
 from typing import List
 from typing import TypeVar
 
@@ -49,6 +49,7 @@ class StaticModelTransformerBase(ModelTransformer, ABC):
         transformation_layout = self._get_transformation_layout_extra_outputs(statistic_points)
         return self.transform(transformation_layout)
 
+    @abstractmethod
     def transform(self, transformation_layout: TransformationLayout) -> ModelType:
         """
         Applies transformation layout on the model
@@ -56,17 +57,6 @@ class StaticModelTransformerBase(ModelTransformer, ABC):
         :param transformation_layout: TransformationLayout
         :return: model after transformations
         """
-        self._apply_transformations(transformation_layout.transformations)
-        return self._model
-
-    def _apply_transformations(self, transformations: List[TransformationCommand]) -> None:
-        """
-        Applies transformations by type-callback on the model
-
-        :param transformations: lisf of the TransformationCommand transformations
-        """
-        raise NotImplementedError(
-            '_apply_transformations method must be implemented before call')
 
     def _get_transformation_layout_extra_outputs(
             self,

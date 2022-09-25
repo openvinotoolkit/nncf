@@ -114,6 +114,7 @@ class TransformationType(OrderedEnum):
     MULTI_INSERT = 1
     REMOVE = 2
     CHANGE = 3
+    EXTRACT = 4
 
 
 class TargetPointStateNames:
@@ -206,6 +207,29 @@ class TransformationCommand:
         return isinstance(command, TransformationCommand) and \
                self.type == command.type and \
                self.target_point == command.target_point
+
+    def union(self, other: 'TransformationCommand') -> 'TransformationCommand':
+        raise NotImplementedError()
+
+    def __add__(self, other: 'TransformationCommand') -> 'TransformationCommand':
+        return self.union(other)
+
+class Command:
+    """
+    The base class for transformation commands.
+    """
+
+    def __init__(self, command_type: TransformationType):
+        """
+        Constructor.
+
+        :param command_type: Type of the transformation command.
+        """
+        self._command_type = command_type
+
+    @property
+    def type(self) -> TransformationType:
+        return self._command_type
 
     def union(self, other: 'TransformationCommand') -> 'TransformationCommand':
         raise NotImplementedError()

@@ -11,26 +11,13 @@
  limitations under the License.
 """
 from nncf.common.graph.transformations.commands import TargetPoint
-from nncf.common.graph.transformations.layout import TransformationLayout
 from nncf.common.tensor_statistics.collectors import MeanStatisticCollector
 from nncf.common.utils.backend import BackendType
 from nncf.common.utils.backend import infer_backend_from_model
 from nncf.experimental.onnx.graph.nncf_graph_builder import GraphConverter
-from nncf.experimental.onnx.graph.onnx_graph import ONNXGraph
-from nncf.experimental.onnx.graph.transformations.commands import ONNXBiasCorrectionCommand
+from nncf.experimental.onnx.graph.transformations.commands import ONNXBiasCorrectionCommand, ONNXModelExtractionCommand
 from nncf.experimental.onnx.graph.transformations.commands import ONNXTargetPoint
-from nncf.experimental.onnx.graph.transformations.layout import ONNXTransformationLayout
 from nncf.experimental.onnx.statistics.collectors import ONNXMeanStatisticCollector
-
-
-class BackendGraphFactory:
-    @staticmethod
-    def create(model):
-        model_backend = infer_backend_from_model(model)
-        if model_backend == BackendType.ONNX:
-            return ONNXGraph(model)
-        raise RuntimeError('Cannot create backend-specific graph'
-                           'because {0} is not supported!'.format(model_backend))
 
 
 class NNCFGraphFactory:
@@ -41,14 +28,6 @@ class NNCFGraphFactory:
             return GraphConverter.create_nncf_graph(model)
         raise RuntimeError('Cannot create backend-specific graph'
                            'because {0} is not supported!'.format(model_backend))
-
-
-class PTQTransformationLayoutFactory:
-    @staticmethod
-    def create(backend) -> TransformationLayout:
-        if backend == BackendType.ONNX:
-            transformation_layout = ONNXTransformationLayout()
-        return transformation_layout
 
 
 class PTQTargetPointFactory:
@@ -67,6 +46,15 @@ class PTQBiasCorrectionCommandFactory:
             bias_correction_command = ONNXBiasCorrectionCommand(
                 target_point, bias_value)
         return bias_correction_command
+
+
+class PTQModelExtractionCommandFactory:
+    @staticmethod
+    def create(backend, inputs, outputs) -> TargetPoint:
+        if backend == BackendType.ONNX:
+            model_extraction_command = ONNXModelExtractionCommand(
+                inputs, outputs)
+        return model_extraction_command
 
 
 class PTQMeanStatisticCollectorFactory:

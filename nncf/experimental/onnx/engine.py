@@ -17,11 +17,11 @@ import onnx
 
 from nncf.common.graph.transformations.commands import TargetType
 from nncf.common.graph.definitions import NNCFGraphNodeType
+from nncf.experimental.onnx.graph.onnx_graph import ONNXGraph
 
 from nncf.experimental.post_training.api.dataset import NNCFData
 from nncf.experimental.post_training.api.engine import Engine
 from nncf.experimental.post_training.api.sampler import Sampler
-from nncf.experimental.post_training.graph.factories import BackendGraphFactory
 from nncf.experimental.post_training.graph.factories import NNCFGraphFactory
 from nncf.experimental.post_training.statistics.statistic_point import StatisticPointsContainer
 from nncf.experimental.onnx.samplers import create_onnx_sampler
@@ -84,7 +84,7 @@ class ONNXEngine(Engine):
 
     def _create_model_graphs(self, model: onnx.ModelProto) -> None:
         self.nncf_graph = NNCFGraphFactory.create(model)
-        self.onnx_graph = BackendGraphFactory.create(model)
+        self.onnx_graph = ONNXGraph(model)
 
     def _register_statistics(self, outputs: NNCFData, statistic_points: StatisticPointsContainer) -> None:
         for node_name, _statistic_points in statistic_points.items():

@@ -369,7 +369,7 @@ class MeanStatisticCollector(OfflineTensorStatisticCollector):
         pass
 
     def _register_input_common(self, x: NNCFTensor):
-        self._all_values.append(self._tensor_processor.mean(x, self._reduction_shape))
+        self._all_values.append(self._tensor_processor.mean_per_channel(x, self._reduction_shape))
         self._all_shapes.append(x.shape)
 
     def _reset(self):

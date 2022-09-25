@@ -15,6 +15,7 @@ from copy import deepcopy
 from typing import Set
 
 import onnx
+from nncf.common.graph.transformations.layout import TransformationLayout
 # pylint: disable=no-member
 
 from nncf.common.quantization.quantizer_propagation.solver import QuantizerPropagationSolver
@@ -34,10 +35,9 @@ from nncf.experimental.post_training.algorithms.quantization.min_max_quantizatio
 from nncf.experimental.post_training.algorithms.quantization.min_max_quantization import RangeType
 from nncf.experimental.post_training.algorithms.algorithm import PostTrainingAlgorithms
 from nncf.experimental.onnx.graph.transformations.commands import ONNXTargetPoint
-from nncf.experimental.post_training.graph.factories import BackendGraphFactory, NNCFGraphFactory
+from nncf.experimental.post_training.graph.factories import NNCFGraphFactory
 from nncf.experimental.post_training.statistics.statistic_point import StatisticPoint
 from nncf.experimental.post_training.statistics.statistic_point import StatisticPointsContainer
-from nncf.experimental.onnx.graph.transformations.layout import ONNXTransformationLayout
 from nncf.experimental.onnx.graph.metatypes.onnx_metatypes import GENERAL_WEIGHT_LAYER_METATYPES
 from nncf.experimental.onnx.algorithms.quantization.default_quantization import DEFAULT_ONNX_QUANT_TRAIT_TO_OP_DICT
 from nncf.experimental.onnx.graph.transformations.commands import ONNXQuantizerInsertionCommand
@@ -139,7 +139,7 @@ class ONNXMinMaxQuantization(MinMaxQuantization):
         if self._quantization_target_points:
             return self._quantization_target_points
         quantizer_setup = self._get_quantizer_setup(model)
-        onnx_graph = BackendGraphFactory.create(model)
+        onnx_graph = ONNXGraph(model)
         for quantization_point in quantizer_setup.quantization_points.values():
             if quantization_point.is_weight_quantization_point():
                 self._add_weight_quantization_target_point(quantization_point)
@@ -155,8 +155,8 @@ class ONNXMinMaxQuantization(MinMaxQuantization):
 
     def _apply(self, model: onnx.ModelProto, engine: ONNXEngine,
                statistic_points: StatisticPointsContainer) -> onnx.ModelProto:
-        transformation_layout, transformation_commands = ONNXTransformationLayout(), []
-        onnx_graph = BackendGraphFactory.create(model)
+        transformation_layout, transformation_commands = TransformationLayout(), []
+        onnx_graph = ONNXGraph(model)
 
         quantization_target_points = self.get_quantization_target_points(model)
         weight_quantizer_config = self._get_weight_quantizer_config(model)
