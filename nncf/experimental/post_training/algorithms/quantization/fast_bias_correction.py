@@ -46,8 +46,9 @@ class FastBiasCorrectionParameters(AlgorithmParameters):
     Base class of FastBiasCorrection parameters.
     """
 
-    def __init__(self, number_samples: int = 100):
+    def __init__(self, number_samples: int = 100, threshold: float = 2.0):
         self.number_samples = number_samples
+        self.threshold = threshold
 
     def to_json(self) -> Dict[str, Union[str, float, int]]:
         """
@@ -60,6 +61,7 @@ class FastBiasCorrection(Algorithm):
     def __init__(self, parameters: FastBiasCorrectionParameters):
         super().__init__()
         self.number_samples = parameters.number_samples
+        self.threshold = parameters.threshold
         self.nncf_graph = None
         self._target_points_to_correct = []  # type: List[TargetPoint]
         self._channel_axis_by_types = {
@@ -135,16 +137,17 @@ class FastBiasCorrection(Algorithm):
                 model_backend,
                 reduction_shape=channel_axis,
                 num_samples=self.number_samples)
+            input_blob = self._create_input_blob(
+                model_backend,
+                input_shape, input_fp, input_names)
             bias_shift = self._calculate_bias_shift(
                 engine,
                 extracted_model,
-                model_backend,
                 stat_collector,
+                model_backend,
+                input_blob,
                 channel_axis,
-                input_shape,
-                input_fp,
                 output_fp,
-                input_names,
                 output_names)
 
             target_point = PTQTargetPointFactory.create(
@@ -205,17 +208,11 @@ class FastBiasCorrection(Algorithm):
     def _calculate_bias_shift(self,
                               engine,
                               model,
-                              model_backend,
                               stat_collector,
+                              input_blob,
                               channel_axis,
-                              input_shape,
-                              input_fp,
                               output_fp,
-                              input_names,
                               output_names):
-        input_blob = self._create_input_blob(
-            model_backend,
-            input_shape, input_fp, input_names)
 
         engine.rt_session_options['providers'] = ['OpenVINOExecutionProvider']
         engine.set_model(model)

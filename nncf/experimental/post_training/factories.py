@@ -46,10 +46,10 @@ class PTQTargetPointFactory:
 
 class PTQBiasCorrectionCommandFactory:
     @staticmethod
-    def create(backend, target_point, bias_value) -> TargetPoint:
+    def create(backend, target_point, bias_value, threshold) -> TargetPoint:
         if backend == BackendType.ONNX:
             bias_correction_command = ONNXBiasCorrectionCommand(
-                target_point, bias_value)
+                target_point, bias_value, threshold)
         return bias_correction_command
 
 

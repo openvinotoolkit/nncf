@@ -17,6 +17,7 @@ from collections import Counter
 import onnx
 import numpy as np
 
+from nncf.common.utils.logger import logger as nncf_logger
 from nncf.common.graph.graph import NNCFGraph
 from nncf.common.graph.transformations.commands import TargetType
 from nncf.common.graph.transformations.layout import TransformationLayout
@@ -340,11 +341,11 @@ class ONNXModelTransformer(StaticModelTransformerBase):
             if np.count_nonzero(current_bias_value == 0) == 0:
                 bias_shift_magnitude = np.max(np.abs(transformation.bias_value / current_bias_value))
 
-            if bias_shift_magnitude < 2.0:
-                print(f'{node_name} bias was changed')
+            if bias_shift_magnitude < transformation.threshold:
+                nncf_logger.debug(f'{node_name} bias was changed')
                 bias_initializer.CopyFrom(new_bias_tensor)
             else:
-                print(f'{node_name} skipped by threshold')
+                nncf_logger.debug(f'{node_name} skipped by threshold')
 
     def _apply_model_extraction_transformation(self, transformation: ONNXModelExtractionCommand) -> onnx.ModelProto:
         """
