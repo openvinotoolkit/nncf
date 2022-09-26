@@ -22,6 +22,9 @@ from nncf.common.compression import BaseCompressionAlgorithmController as BaseCo
 from nncf.config.structures import ModelEvaluationArgs
 from nncf.config.utils import is_accuracy_aware_training
 from nncf.config.utils import is_experimental_quantization
+from nncf.telemetry_wrapper.telemetry import NNCFTelemetry
+from nncf.telemetry_wrapper.telemetry import NNCF_TF_CATEGORY
+from nncf.telemetry_wrapper.telemetry import get_algo_names_from_builder
 from nncf.tensorflow.accuracy_aware_training.keras_model_utils import accuracy_aware_fit
 from nncf.tensorflow.api.compression import TFCompressionAlgorithmBuilder
 from nncf.config.extractors import extract_algorithm_names
@@ -75,6 +78,7 @@ def create_compressed_model(model: tf.keras.Model,
         - compressed_model: The model with additional modifications
             necessary to enable algorithm-specific compression during fine-tuning.
     """
+    NNCFTelemetry.start_session(NNCF_TF_CATEGORY)
     if is_experimental_quantization(config):
         if is_keras_layer_model(model):
             raise ValueError('Experimental quantization algorithm has not supported models with '
@@ -94,6 +98,11 @@ def create_compressed_model(model: tf.keras.Model,
             original_model_accuracy = evaluation_args.eval_fn(model)
 
     builder = create_compression_algorithm_builder(config, should_init=not compression_state)
+
+    NNCFTelemetry.send_event(event_category=NNCF_TF_CATEGORY,
+                             event_action='compression_started',
+                             event_label=','.join(get_algo_names_from_builder(builder)))
+
     if compression_state:
         builder.load_state(compression_state[BaseController.BUILDER_STATE])
     compressed_model = builder.apply_to(model)
@@ -101,6 +110,7 @@ def create_compressed_model(model: tf.keras.Model,
     compressed_model.original_model_accuracy = original_model_accuracy
     if isinstance(compressed_model, tf.keras.Model):
         compressed_model.accuracy_aware_fit = types.MethodType(accuracy_aware_fit, compressed_model)
+    NNCFTelemetry.end_session(NNCF_TF_CATEGORY)
     return compression_ctrl, compressed_model
 
 

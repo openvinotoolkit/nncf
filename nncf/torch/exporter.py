@@ -19,6 +19,8 @@ import torch
 
 from nncf.common.exporter import Exporter
 from nncf.common.utils.logger import logger as nncf_logger
+from nncf.telemetry_wrapper.telemetry import NNCFTelemetry
+from nncf.telemetry_wrapper.telemetry import NNCF_PT_CATEGORY
 from nncf.torch.dynamic_graph.graph_tracer import create_dummy_forward_fn
 from nncf.torch.dynamic_graph.graph_tracer import create_mock_tensor
 from nncf.torch.nested_objects_traversal import objwalk
@@ -97,6 +99,9 @@ class PTExporter(Exporter):
                 - `onnx_<opset_version>` for export to the ONNX format with specific opset version.
             The ONNX format will be used if `save_format` is not specified.
         """
+
+        NNCFTelemetry.start_session(NNCF_PT_CATEGORY)
+
         fn_args = {'save_path': save_path}
 
         if save_format is None:
@@ -116,7 +121,13 @@ class PTExporter(Exporter):
             raise ValueError(f'Unsupported saving format: \'{save_format}\'. '
                              f'Available formats: {available_formats}')
 
+        NNCFTelemetry.send_event(event_category=NNCF_PT_CATEGORY,
+                                 event_action="export_model_started",
+                                 event_label=save_format)
+
         export_fn(**fn_args)
+
+        NNCFTelemetry.end_session(NNCF_PT_CATEGORY)
 
     def _export_to_onnx(self, save_path: str, opset_version: int) -> None:
         """

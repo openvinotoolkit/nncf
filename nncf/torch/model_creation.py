@@ -30,6 +30,9 @@ from nncf.config import NNCFConfig
 from nncf.config.extractors import extract_algorithm_names
 from nncf.config.structures import ModelEvaluationArgs
 from nncf.config.utils import is_accuracy_aware_training
+from nncf.telemetry_wrapper.telemetry import NNCFTelemetry
+from nncf.telemetry_wrapper.telemetry import NNCF_PT_CATEGORY
+from nncf.telemetry_wrapper.telemetry import get_algo_names_from_builder
 from nncf.torch.algo_selector import NoCompressionAlgorithmBuilder
 from nncf.torch.algo_selector import PT_COMPRESSION_ALGORITHMS
 from nncf.torch.composite_compression import PTCompositeCompressionAlgorithmBuilder
@@ -78,12 +81,14 @@ def create_compressed_model(model: Module,
     function, which is a no-operation function and marks the tensors as inputs to be traced by NNCF in the internal
     graph representation. Output is the tuple of (args, kwargs), where args and kwargs are the same as were supplied in
     input, but each tensor in the original input. Must be specified if dummy_forward_fn is specified.
-    :param dump_graphs: Whether or not should also dump the internal graph representation of the
+    :param wrap_outputs_fn: same as `wrap_inputs_fn`, but applies to model outputs
+    :param dump_graphs: Whether to dump the internal graph representation of the
     original and compressed models in the .dot format into the log directory.
     :return: A controller for the compression algorithm (or algorithms, in which case the controller
     is an instance of CompositeCompressionController) and the model ready for compression parameter training wrapped
     as an object of NNCFNetwork."""
 
+    NNCFTelemetry.start_session(NNCF_PT_CATEGORY)
     set_debug_log_dir(config.get("log_dir", "."))
 
     is_legacy_model_state_dict = compression_state is not None and \
@@ -96,6 +101,11 @@ def create_compressed_model(model: Module,
     nncf_network = create_nncf_network(model, config, dummy_forward_fn, wrap_inputs_fn, wrap_outputs_fn)
 
     builder = create_compression_algorithm_builder(config, should_init)
+
+    NNCFTelemetry.send_event(event_category=NNCF_PT_CATEGORY,
+                             event_action='compression_started',
+                             event_label=','.join(get_algo_names_from_builder(builder)))
+
     is_state_loadable = not is_legacy_model_state_dict and compression_state is not None
     if is_state_loadable:
         builder.load_state(compression_state[BaseController.BUILDER_STATE])
@@ -119,6 +129,7 @@ def create_compressed_model(model: Module,
             compressed_model_graph.visualize_graph(osp.join(config.get("log_dir", "."), "compressed_graph.dot"))
 
     synchronize_all_processes_in_distributed_mode()
+    NNCFTelemetry.end_session(NNCF_PT_CATEGORY)
     return compression_ctrl, compressed_model
 
 

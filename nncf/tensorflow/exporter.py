@@ -17,6 +17,8 @@ import tensorflow as tf
 from tensorflow.python.framework.convert_to_constants import convert_variables_to_constants_v2
 
 from nncf.common.exporter import Exporter
+from nncf.telemetry_wrapper.telemetry import NNCFTelemetry
+from nncf.telemetry_wrapper.telemetry import NNCF_TF_CATEGORY
 
 
 # TODO(andrey-churkin): Add support for `input_names` and `output_names`
@@ -42,6 +44,8 @@ class TFExporter(Exporter):
                 - `frozen_graph` for export to the Frozen Graph format.
             The Frozen Graph format will be used if `save_format` is not specified.
         """
+        NNCFTelemetry.start_session(NNCF_TF_CATEGORY)
+
         if save_format is None:
             save_format = TFExporter._FROZEN_GRAPH_FORMAT
 
@@ -51,6 +55,7 @@ class TFExporter(Exporter):
             TFExporter._FROZEN_GRAPH_FORMAT: self._export_to_frozen_graph,
         }
 
+
         export_fn = format_to_export_fn.get(save_format)
 
         if export_fn is None:
@@ -58,7 +63,12 @@ class TFExporter(Exporter):
             raise ValueError(f'Unsupported saving format: \'{save_format}\'. '
                              f'Available formats: {available_formats}')
 
+        NNCFTelemetry.send_event(event_category=NNCF_TF_CATEGORY,
+                                 event_action="export_model_started",
+                                 event_label=save_format)
         export_fn(save_path)
+
+        NNCFTelemetry.end_session(NNCF_TF_CATEGORY)
 
     def _export_to_saved_model(self, save_path: str) -> None:
         """

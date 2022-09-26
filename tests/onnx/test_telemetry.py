@@ -11,12 +11,12 @@
  limitations under the License.
 """
 
-import os
-NNCF_PACKAGE_ROOT_DIR = os.path.dirname(os.path.abspath(__file__))
-HW_CONFIG_RELATIVE_DIR = "common/hardware/configs"
+from tests.onnx.quantization.common import min_max_quantize_model
+from tests.onnx.models import LinearModel
+from tests.common.helpers import telemetry_send_event_test_driver
 
-# Environment variables below, if set, mark the execution environment
-# so that certain actions within NNCF proper, such as telemetry event collection or
-# debug dumps, are performed or not performed
-NNCF_CI_ENV_VAR_NAME = "NNCF_CI"  # Must be set in CI environments
-NNCF_DEV_ENV_VAR_NAME = "NNCF_DEV" # Must be set in environments of the NNCF dev team machines
+def test_telemetry_is_sent(mocker):
+    def use_nncf_fn():
+        model_to_test = LinearModel()
+        _ = min_max_quantize_model(model_to_test.input_shape[0], model_to_test.onnx_model)
+    telemetry_send_event_test_driver(mocker, use_nncf_fn)
