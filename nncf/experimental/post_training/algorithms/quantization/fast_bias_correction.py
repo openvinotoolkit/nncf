@@ -21,17 +21,18 @@ from nncf.common.graph.transformations.commands import TargetType
 from nncf.common.graph.transformations.layout import TransformationLayout
 from nncf.common.tensor_statistics.collectors import TensorStatisticCollectorBase
 from nncf.common.utils.backend import infer_backend_from_model
-from nncf.experimental.onnx.engine import ONNXEngine
-from nncf.experimental.onnx.graph.metatypes.onnx_metatypes import LAYERS_WITH_BIAS_METATYPES
-from nncf.experimental.onnx.graph.transformations.commands import ONNXTargetPoint
-from nncf.experimental.onnx.tensor import ONNXNNCFTensor
+from nncf.common.graph.transformations.commands import TargetPoint
 from nncf.experimental.post_training.algorithms import AlgorithmParameters
 from nncf.experimental.post_training.algorithms.algorithm import Algorithm
 from nncf.experimental.post_training.algorithms.algorithm import PostTrainingAlgorithms
-from nncf.experimental.post_training.graph.factories import NNCFGraphFactory, PTQModelExtractionCommandFactory
-from nncf.experimental.post_training.graph.factories import PTQBiasCorrectionCommandFactory
-from nncf.experimental.post_training.graph.factories import PTQTargetPointFactory
-from nncf.experimental.post_training.graph.factories import PTQMeanStatisticCollectorFactory
+from nncf.experimental.post_training.api.engine import Engine
+from nncf.experimental.post_training.factories import NNCFGraphFactory
+from nncf.experimental.post_training.factories import PTQLayerMetatypesFactory
+from nncf.experimental.post_training.factories import PTQModelExtractionCommandFactory
+from nncf.experimental.post_training.factories import PTQNNCFTensorFactory
+from nncf.experimental.post_training.factories import PTQBiasCorrectionCommandFactory
+from nncf.experimental.post_training.factories import PTQTargetPointFactory
+from nncf.experimental.post_training.factories import PTQMeanStatisticCollectorFactory
 from nncf.experimental.post_training.statistics.statistic_point import StatisticPoint
 from nncf.experimental.post_training.statistics.statistic_point import StatisticPointsContainer
 
@@ -60,7 +61,7 @@ class FastBiasCorrection(Algorithm):
         super().__init__()
         self.number_samples = parameters.number_samples
         self.nncf_graph = None
-        self._target_points_to_correct = []  # type: List[ONNXTargetPoint]
+        self._target_points_to_correct = []  # type: List[TargetPoint]
         self._channel_axis_by_types = {
             'Conv': 1,
             'Gemm': -1,
@@ -82,7 +83,7 @@ class FastBiasCorrection(Algorithm):
         return PostTrainingAlgorithms.FastBiasCorrection in point.algorithm_to_tensor_collectors and \
             point.target_point.type == TargetType.POST_LAYER_OPERATION
 
-    def _apply(self, model: ModelType, engine: ONNXEngine,
+    def _apply(self, model: ModelType, engine: Engine,
                statistic_points: StatisticPointsContainer) -> ModelType:
 
         model_backend = infer_backend_from_model(model)
@@ -90,8 +91,10 @@ class FastBiasCorrection(Algorithm):
         transformation_layout = TransformationLayout()
         nncf_graph = NNCFGraphFactory.create(model)
 
+        layers_with_bias_types = PTQLayerMetatypesFactory.get_layers_with_bias_types(
+            model_backend)
         biased_nodes = nncf_graph.get_nodes_by_metatypes(
-            LAYERS_WITH_BIAS_METATYPES)
+            layers_with_bias_types)
 
         for node in biased_nodes:
             node_name = node.node_name
@@ -135,6 +138,7 @@ class FastBiasCorrection(Algorithm):
             bias_shift = self._calculate_bias_shift(
                 engine,
                 extracted_model,
+                model_backend,
                 stat_collector,
                 channel_axis,
                 input_shape,
@@ -157,15 +161,15 @@ class FastBiasCorrection(Algorithm):
         model_backend = infer_backend_from_model(model)
         nncf_graph = NNCFGraphFactory.create(
             model) if self.nncf_graph is None else self.nncf_graph
+        layers_with_bias_types = PTQLayerMetatypesFactory.get_layers_with_bias_types(
+            model_backend)
         biased_nodes = nncf_graph.get_nodes_by_metatypes(
-            LAYERS_WITH_BIAS_METATYPES)
+            layers_with_bias_types)
 
         statistic_container = StatisticPointsContainer()
 
         for node in biased_nodes:
             edge_name = node.layer_attributes.input_tensor_names[0]
-            if edge_name == '463':
-                print('s')
             pre_layer_statistic_point = PTQTargetPointFactory.create(
                 model_backend, TargetType.PRE_LAYER_OPERATION, node.node_name, edge_name)
             post_layer_statistic_point = PTQTargetPointFactory.create(
@@ -188,19 +192,20 @@ class FastBiasCorrection(Algorithm):
                                                      tensor_collector=stat_collector,
                                                      algorithm=PostTrainingAlgorithms.FastBiasCorrection))
 
-    def _create_input_blob(self, input_shape, input_fp, input_names):
+    def _create_input_blob(self, model_backend, input_shape, input_fp, input_names):
         input_blob = np.zeros(input_shape)
         for i, value in enumerate(input_fp):
             input_blob[:, i] = value
         input_blob = input_blob.astype(np.float32)
 
-        input_data = ONNXNNCFTensor(input_blob)
+        input_data = PTQNNCFTensorFactory.create(model_backend, input_blob)
         input_data = {n: input_data for n in input_names}
         return input_data
 
     def _calculate_bias_shift(self,
                               engine,
                               model,
+                              model_backend,
                               stat_collector,
                               channel_axis,
                               input_shape,
@@ -209,6 +214,7 @@ class FastBiasCorrection(Algorithm):
                               input_names,
                               output_names):
         input_blob = self._create_input_blob(
+            model_backend,
             input_shape, input_fp, input_names)
 
         engine.rt_session_options['providers'] = ['OpenVINOExecutionProvider']

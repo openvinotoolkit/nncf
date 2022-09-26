@@ -10,14 +10,19 @@
  See the License for the specific language governing permissions and
  limitations under the License.
 """
+from build.lib.nncf.experimental.onnx.graph.metatypes.onnx_metatypes import LAYERS_WITH_BIAS_METATYPES
+from build.lib.nncf.experimental.onnx.graph.metatypes.onnx_metatypes import ONNX_OPERATION_METATYPES
 from nncf.common.graph.transformations.commands import TargetPoint
+from nncf.common.tensor import NNCFTensor
 from nncf.common.tensor_statistics.collectors import MeanStatisticCollector
 from nncf.common.utils.backend import BackendType
 from nncf.common.utils.backend import infer_backend_from_model
 from nncf.experimental.onnx.graph.nncf_graph_builder import GraphConverter
-from nncf.experimental.onnx.graph.transformations.commands import ONNXBiasCorrectionCommand, ONNXModelExtractionCommand
+from nncf.experimental.onnx.graph.transformations.commands import ONNXBiasCorrectionCommand
+from nncf.experimental.onnx.graph.transformations.commands import ONNXModelExtractionCommand
 from nncf.experimental.onnx.graph.transformations.commands import ONNXTargetPoint
 from nncf.experimental.onnx.statistics.collectors import ONNXMeanStatisticCollector
+from nncf.experimental.onnx.tensor import ONNXNNCFTensor
 
 
 class NNCFGraphFactory:
@@ -64,3 +69,23 @@ class PTQMeanStatisticCollectorFactory:
             mean_stats_collector = ONNXMeanStatisticCollector(
                 reduction_shape=reduction_shape, num_samples=num_samples)
         return mean_stats_collector
+
+class PTQNNCFTensorFactory:
+    @staticmethod
+    def create(backend, tensor_data) -> NNCFTensor:
+        if backend == BackendType.ONNX:
+            tensor = ONNXNNCFTensor(tensor_data)
+        return tensor
+
+class PTQLayerMetatypesFactory:
+    @staticmethod
+    def get_metatypes(backend):
+        if backend == BackendType.ONNX:
+            metatypes = ONNX_OPERATION_METATYPES
+        return metatypes
+    
+    @staticmethod
+    def get_layers_with_bias_types(backend):
+        if backend == BackendType.ONNX:
+            layers_with_bias = LAYERS_WITH_BIAS_METATYPES
+        return layers_with_bias

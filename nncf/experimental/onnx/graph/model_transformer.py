@@ -27,7 +27,7 @@ from nncf.experimental.onnx.graph.transformations.commands import ONNXBiasCorrec
 from nncf.experimental.onnx.graph.transformations.commands import ONNXModelExtractionCommand
 from nncf.experimental.onnx.graph.transformations.commands import ONNXOutputInsertionCommand
 from nncf.experimental.onnx.graph.transformations.commands import ONNXQuantizerInsertionCommand
-from nncf.experimental.post_training.graph.factories import NNCFGraphFactory
+from nncf.experimental.post_training.factories import NNCFGraphFactory
 from nncf.experimental.post_training.graph.model_transformer import StaticModelTransformerBase
 from nncf.experimental.post_training.statistics.statistic_point import StatisticPointsContainer
 

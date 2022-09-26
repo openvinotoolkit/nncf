@@ -22,7 +22,7 @@ from nncf.experimental.onnx.graph.onnx_graph import ONNXGraph
 from nncf.experimental.post_training.api.dataset import NNCFData
 from nncf.experimental.post_training.api.engine import Engine
 from nncf.experimental.post_training.api.sampler import Sampler
-from nncf.experimental.post_training.graph.factories import NNCFGraphFactory
+from nncf.experimental.post_training.factories import NNCFGraphFactory
 from nncf.experimental.post_training.statistics.statistic_point import StatisticPointsContainer
 from nncf.experimental.onnx.samplers import create_onnx_sampler
 from nncf.experimental.onnx.tensor import ONNXNNCFTensor

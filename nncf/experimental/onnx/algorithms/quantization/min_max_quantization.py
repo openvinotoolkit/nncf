@@ -35,7 +35,7 @@ from nncf.experimental.post_training.algorithms.quantization.min_max_quantizatio
 from nncf.experimental.post_training.algorithms.quantization.min_max_quantization import RangeType
 from nncf.experimental.post_training.algorithms.algorithm import PostTrainingAlgorithms
 from nncf.experimental.onnx.graph.transformations.commands import ONNXTargetPoint
-from nncf.experimental.post_training.graph.factories import NNCFGraphFactory
+from nncf.experimental.post_training.factories import NNCFGraphFactory
 from nncf.experimental.post_training.statistics.statistic_point import StatisticPoint
 from nncf.experimental.post_training.statistics.statistic_point import StatisticPointsContainer
 from nncf.experimental.onnx.graph.metatypes.onnx_metatypes import GENERAL_WEIGHT_LAYER_METATYPES
