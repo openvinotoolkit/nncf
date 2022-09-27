@@ -903,13 +903,16 @@ class HRNetBlock(nn.Module):
     #        (conv6)     (conv7)
     def __init__(self):
         super().__init__()
-        self.conv1 = create_conv(1, 8, 5, 5)
-        self.conv2 = create_conv(1, 8, 1, 1)
-        self.conv3 = create_conv(4, 8, 5, 5)
-        self.conv4 = create_conv(4, 8, 1, 1)
-        self.conv5 = create_conv(8, 16, 1, 1)
-        self.conv6 = create_conv(24, 48, 1, 1)
-        self.conv7 = create_conv(24, 48, 1, 1)
+        self.conv1 = create_conv(1, 16, 5, 5)
+        self.conv2 = create_conv(1, 16, 1, 1)
+        self.conv3 = create_conv(8, 16, 5, 5)
+        self.conv4 = create_conv(8, 16, 1, 1)
+        self.conv5 = create_conv(16, 32, 1, 1)
+        self.conv6 = create_conv(48, 48, 1, 1)
+        self.conv7 = create_conv(48, 48, 1, 1)
+        for conv in [getattr(self, f'conv{i}') for i in range(1, 8)]:
+            for i in range(conv.out_channels):
+                conv.weight.data[i] = i
 
         self.avg_pool = nn.AdaptiveAvgPool2d(4)
 
