@@ -98,12 +98,6 @@ class ONNXGraph:
         nodes = self._get_nodes_by_lambda(input_name, lambda node: node.input)
         return nodes
 
-    def get_node_inputs(self, node_name: str) -> List[NodeProto]:
-        node_inputs = []
-        for input_edge_name in self.get_node_edges(node_name)['input']:
-            node_inputs.extend(self.get_nodes_by_output(input_edge_name))
-        return node_inputs
-
     def _get_nodes_by_lambda(self, name: str, func: Callable[[NodeProto], List[NodeProto]]):
         output = []
         graph = self.onnx_model.graph

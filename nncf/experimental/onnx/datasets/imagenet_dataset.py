@@ -42,7 +42,7 @@ class ImageNetDataset(Dataset):
         return {self.input_name: ONNXNNCFTensor(tensor), "targets": ONNXNNCFTensor(target)}
 
     def __len__(self) -> int:
-        return len(self.dataset)
+        return 5000 #len(self.dataset)
 
 
 def get_transform(image_size: Tuple[int, int],

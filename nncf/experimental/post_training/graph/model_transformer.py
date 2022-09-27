@@ -90,9 +90,9 @@ class StaticModelTransformerBase(ModelTransformer, ABC):
 
     def _apply_bias_correction_transformations(self, transformations: List[TransformationCommand]) -> None:
         """
-        Applies incoming transformations to the model
+        Applies bias correction transformations on the model
 
-        :param transformations: list of the TransformationCommand transformations
+        :param transformations: lisf of the TransformationCommand transformations
         """
         raise NotImplementedError(
             '_apply_bias_correction_transformations method must be implemented before call')

@@ -216,14 +216,14 @@ class TransformationCommand:
 
 class Command:
     """
-    The base class for transformation commands.
+    The base class for non-target transformation commands.
     """
 
     def __init__(self, command_type: TransformationType):
         """
         Constructor.
 
-        :param command_type: Type of the transformation command.
+        :param command_type: Type of the non-target transformation command.
         """
         self._command_type = command_type
 

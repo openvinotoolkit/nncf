@@ -52,7 +52,6 @@ class ONNXEngine(Engine):
     def set_model(self, model: onnx.ModelProto) -> None:
         """
         Creates ONNXRuntime InferenceSession for the onnx model.
-
         :param model: onnx.ModelProto model instance
         """
         super().set_model(model)
@@ -69,7 +68,6 @@ class ONNXEngine(Engine):
         """
         Runs model on the provided input_data via ONNXRuntime InferenceSession.
         Returns the dictionary of model outputs by node names.
-
         :param input_data: inputs for the model transformed with the inputs_transforms
         :return output_data: models output after outputs_transforms
         """

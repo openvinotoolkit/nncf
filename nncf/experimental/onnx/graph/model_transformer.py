@@ -325,6 +325,11 @@ class ONNXModelTransformer(StaticModelTransformerBase):
         self._model.graph.node.insert(insert_index + 1, dequantizer)
 
     def _apply_bias_correction_transformations(self, transformations: List[ONNXBiasCorrectionCommand]) -> None:
+        """
+        Applies bias correction transformations on the model
+
+        :param transformations: lisf of the TransformationCommand transformations
+        """
         onnx_graph = ONNXGraph(self._model)
 
         for transformation in transformations:
@@ -349,7 +354,7 @@ class ONNXModelTransformer(StaticModelTransformerBase):
 
     def _apply_model_extraction_transformation(self, transformation: ONNXModelExtractionCommand) -> onnx.ModelProto:
         """
-        Extracts or builds sub-model from the original based on the inputs and outputs names
+        Extracts sub-model from the original based on the inputs and outputs names
         """
         onnx_model_exctactor = onnx.utils.Extractor(self._model)
         return onnx_model_exctactor.extract_model(transformation.inputs, transformation.outputs)

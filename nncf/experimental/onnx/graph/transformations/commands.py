@@ -73,7 +73,7 @@ class ONNXOutputInsertionCommand(ONNXInsertionCommand):
         raise NotImplementedError()
 
 class ONNXBiasCorrectionCommand(TransformationCommand):
-    def __init__(self, target_point: ONNXTargetPoint, bias_value: np.array, threshold: float):
+    def __init__(self, target_point: ONNXTargetPoint, bias_value: np.ndarray, threshold: float):
         super().__init__(TransformationType.CHANGE, target_point)
         self.bias_value = bias_value
         self.threshold = threshold

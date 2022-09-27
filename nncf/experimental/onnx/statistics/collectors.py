@@ -100,6 +100,7 @@ class ONNXMeanMinMaxStatisticCollector(MeanMinMaxStatisticCollector):
     def _get_statistics(self) -> ONNXMinMaxTensorStatistic:
         return ONNXMinMaxTensorStatistic(self._min_aggregate().tensor, self._max_aggregate().tensor)
 
+
 class ONNXMeanStatisticCollector(MeanStatisticCollector):
     @staticmethod
     def _get_processor() -> NNCFCollectorTensorProcessor:

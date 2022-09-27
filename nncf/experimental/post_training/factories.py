@@ -10,8 +10,7 @@
  See the License for the specific language governing permissions and
  limitations under the License.
 """
-from build.lib.nncf.experimental.onnx.graph.metatypes.onnx_metatypes import LAYERS_WITH_BIAS_METATYPES
-from build.lib.nncf.experimental.onnx.graph.metatypes.onnx_metatypes import ONNX_OPERATION_METATYPES
+
 from nncf.common.graph.transformations.commands import TargetPoint
 from nncf.common.tensor import NNCFTensor
 from nncf.common.tensor_statistics.collectors import MeanStatisticCollector
@@ -23,6 +22,8 @@ from nncf.experimental.onnx.graph.transformations.commands import ONNXModelExtra
 from nncf.experimental.onnx.graph.transformations.commands import ONNXTargetPoint
 from nncf.experimental.onnx.statistics.collectors import ONNXMeanStatisticCollector
 from nncf.experimental.onnx.tensor import ONNXNNCFTensor
+from nncf.experimental.onnx.graph.metatypes.onnx_metatypes import LAYERS_WITH_BIAS_METATYPES
+from nncf.experimental.onnx.graph.metatypes.onnx_metatypes import ONNX_OPERATION_METATYPES
 
 
 class NNCFGraphFactory:
@@ -83,7 +84,7 @@ class PTQLayerMetatypesFactory:
         if backend == BackendType.ONNX:
             metatypes = ONNX_OPERATION_METATYPES
         return metatypes
-    
+
     @staticmethod
     def get_layers_with_bias_types(backend):
         if backend == BackendType.ONNX:
