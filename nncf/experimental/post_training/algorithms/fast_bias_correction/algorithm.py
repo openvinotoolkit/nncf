@@ -11,6 +11,7 @@
  limitations under the License.
 """
 
+from audioop import bias
 from typing import Dict
 from typing import List
 from typing import TypeVar
@@ -19,19 +20,14 @@ from typing import Union
 import numpy as np
 from nncf.common.graph.transformations.commands import TargetType
 from nncf.common.graph.transformations.layout import TransformationLayout
-from nncf.common.utils.backend import get_backend
+from nncf.common.utils.backend import BackendType, get_backend
 from nncf.common.graph.transformations.commands import TargetPoint
 from nncf.experimental.post_training.algorithms import AlgorithmParameters
 from nncf.experimental.post_training.algorithms.algorithm import Algorithm
 from nncf.experimental.post_training.algorithms.algorithm import PostTrainingAlgorithms
+from nncf.experimental.post_training.algorithms.fast_bias_correction.onnx_algo_backend import ONNXAlgoBackend
 from nncf.experimental.post_training.api.engine import Engine
 from nncf.experimental.post_training.factories import NNCFGraphFactory
-from nncf.experimental.post_training.factories import PTQLayerMetatypesFactory
-from nncf.experimental.post_training.factories import PTQModelExtractionCommandFactory
-from nncf.experimental.post_training.factories import PTQNNCFTensorFactory
-from nncf.experimental.post_training.factories import PTQBiasCorrectionCommandFactory
-from nncf.experimental.post_training.factories import PTQTargetPointFactory
-from nncf.experimental.post_training.factories import PTQMeanStatisticCollectorFactory
 from nncf.experimental.post_training.statistics.statistic_point import StatisticPoint
 from nncf.experimental.post_training.statistics.statistic_point import StatisticPointsContainer
 
@@ -68,16 +64,25 @@ class FastBiasCorrection(Algorithm):
             'Conv': 1,
             'Gemm': -1,
         }
+        self._backend_entity = None
+    
+    def _set_backend_entity(self, model):
+        model_backend = get_backend(model)
+        if model_backend == BackendType.ONNX:
+            self._backend_entity = ONNXAlgoBackend()
+        else:
+            raise RuntimeError('Cannot return backend-specific entity'
+                               'because {} is not supported!'.format(model_backend))
 
     def _apply(self, model: ModelType, engine: Engine,
                statistic_points: StatisticPointsContainer) -> ModelType:
 
-        model_backend = get_backend(model)
+        self._set_backend_entity(model)
 
         transformation_layout = TransformationLayout()
         nncf_graph = NNCFGraphFactory.create(model)
 
-        layers_with_bias_types = PTQLayerMetatypesFactory.get_layers_with_bias_types(model_backend)
+        layers_with_bias_types = self._backend_entity.layers_with_bias_metatypes
         biased_nodes = nncf_graph.get_nodes_by_metatypes(layers_with_bias_types)
 
         for node in biased_nodes:
@@ -93,14 +98,12 @@ class FastBiasCorrection(Algorithm):
                     input_names.append(tensor_name)
             output_names = node.layer_attributes.output_tensor_names
 
-            extracted_model = self._extract_submodel(model_backend, input_names, output_names)
+            extracted_model = self._extract_submodel(input_names, output_names)
 
             channel_axis = self._channel_axis_by_types[node.node_type]
-            stat_collector = PTQMeanStatisticCollectorFactory.create(model_backend,
-                                                                     reduction_shape=channel_axis,
-                                                                     num_samples=self.number_samples)
-            input_blob = self._create_input_blob(model_backend,
-                                                 input_shape,
+            stat_collector = self._backend_entity.mean_statistic_collector(reduction_shape=channel_axis,
+                                                                           num_samples=self.number_samples)
+            input_blob = self._create_input_blob(input_shape,
                                                  input_fp,
                                                  input_names)
             bias_shift = self._get_bias_shift(
@@ -112,19 +115,17 @@ class FastBiasCorrection(Algorithm):
                 output_fp=output_fp,
                 output_names=output_names)
 
-            target_point = PTQTargetPointFactory.create(model_backend,
-                                                        TargetType.LAYER,
-                                                        node.node_name)
-            bias_correction_command = PTQBiasCorrectionCommandFactory.create(model_backend,
-                                                                             target_point,
-                                                                             bias_shift,
-                                                                             self.threshold)
+            target_point = self._backend_entity.target_point(TargetType.LAYER,
+                                                             node.node_name)
+            bias_correction_command = self._backend_entity.bias_correction_command(target_point,
+                                                                                   bias_shift,
+                                                                                   self.threshold)
             transformation_layout.register(bias_correction_command)
 
         quantized_model = self._model_transformer.transform(transformation_layout)
         return quantized_model
 
-    def _get_fp_inputs(self, statistic_points: StatisticPointsContainer, node_name: str) -> tuple(List, List):
+    def _get_fp_inputs(self, statistic_points: StatisticPointsContainer, node_name: str):
         def input_filter_func(point):
             return PostTrainingAlgorithms.FastBiasCorrection in point.algorithm_to_tensor_collectors and \
                 point.target_point.type == TargetType.PRE_LAYER_OPERATION
@@ -152,30 +153,28 @@ class FastBiasCorrection(Algorithm):
             output_fp.extend(tensor_collector.get_statistics().mean_values)
         return output_fp
 
-    def _extract_submodel(self, model_backend, input_names, output_names):
-        model_extraction_command = PTQModelExtractionCommandFactory.create(model_backend,
-                                                                           input_names,
-                                                                           output_names)
+    def _extract_submodel(self, input_names, output_names):
+        model_extraction_command = self._backend_entity.model_extraction_command(input_names,
+                                                                                 output_names)
         me_transformation_layout = TransformationLayout()
         me_transformation_layout.register(model_extraction_command)
         extracted_model = self._model_transformer.transform(me_transformation_layout)
         return extracted_model
 
-    def _add_statistic_point(self, model_backend, container, point, axes):
-        stat_collector = PTQMeanStatisticCollectorFactory.create(model_backend,
-                                                                 reduction_shape=axes,
-                                                                 num_samples=self.number_samples)
+    def _add_statistic_point(self, container, point, axes):
+        stat_collector = self._backend_entity.mean_statistic_collector(reduction_shape=axes,
+                                                                       num_samples=self.number_samples)
         container.add_statistic_point(StatisticPoint(target_point=point,
                                                      tensor_collector=stat_collector,
                                                      algorithm=PostTrainingAlgorithms.FastBiasCorrection))
 
-    def _create_input_blob(self, model_backend, input_shape, input_fp, input_names):
+    def _create_input_blob(self, input_shape, input_fp, input_names):
         input_blob = np.zeros(input_shape)
         for i, value in enumerate(input_fp):
             input_blob[:, i] = value
         input_blob = input_blob.astype(np.float32)
 
-        input_data = PTQNNCFTensorFactory.create(model_backend, input_blob)
+        input_data = self._backend_entity.nncf_tensor(input_blob)
         input_data = {n: input_data for n in input_names}
         return input_data
 
@@ -198,30 +197,26 @@ class FastBiasCorrection(Algorithm):
         return bias_shift
 
     def get_statistic_points(self, model: ModelType) -> StatisticPointsContainer:
-        model_backend = get_backend(model)
+        self._set_backend_entity(model)
         nncf_graph = NNCFGraphFactory.create(model) if self.nncf_graph is None else self.nncf_graph
-        layers_with_bias_types = PTQLayerMetatypesFactory.get_layers_with_bias_types(model_backend)
+        layers_with_bias_types = self._backend_entity.layers_with_bias_metatypes
         biased_nodes = nncf_graph.get_nodes_by_metatypes(layers_with_bias_types)
 
         statistic_container = StatisticPointsContainer()
 
         for node in biased_nodes:
             edge_name = node.layer_attributes.input_tensor_names[0]
-            pre_layer_statistic_point = PTQTargetPointFactory.create(model_backend,
-                                                                     TargetType.PRE_LAYER_OPERATION,
-                                                                     node.node_name,
-                                                                     edge_name)
-            post_layer_statistic_point = PTQTargetPointFactory.create(model_backend,
-                                                                      TargetType.POST_LAYER_OPERATION,
-                                                                      node.node_name)
+            pre_layer_statistic_point = self._backend_entity.target_point(TargetType.PRE_LAYER_OPERATION,
+                                                                          node.node_name,
+                                                                          edge_name)
+            post_layer_statistic_point = self._backend_entity.target_point(TargetType.POST_LAYER_OPERATION,
+                                                                           node.node_name)
             channel_axis = self._channel_axis_by_types[node.node_type]
 
-            self._add_statistic_point(model_backend,
-                                      statistic_container,
+            self._add_statistic_point(statistic_container,
                                       pre_layer_statistic_point,
                                       channel_axis)
-            self._add_statistic_point(model_backend,
-                                      statistic_container,
+            self._add_statistic_point(statistic_container,
                                       post_layer_statistic_point,
                                       channel_axis)
 

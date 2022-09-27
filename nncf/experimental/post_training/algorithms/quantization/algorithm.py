@@ -27,8 +27,8 @@ from nncf.experimental.post_training.algorithms import CompositeAlgorithm
 from nncf.experimental.post_training.algorithms import AlgorithmParameters
 from nncf.experimental.post_training.algorithms import PostTrainingAlgorithms
 from nncf.experimental.post_training.algorithms.quantization.min_max_quantization import MinMaxQuantizationParameters
-from nncf.experimental.post_training.algorithms.quantization.fast_bias_correction import FastBiasCorrection
-from nncf.experimental.post_training.algorithms.quantization.fast_bias_correction import FastBiasCorrectionParameters
+from nncf.experimental.post_training.algorithms.fast_bias_correction.algorithm import FastBiasCorrection
+from nncf.experimental.post_training.algorithms.fast_bias_correction.algorithm import FastBiasCorrectionParameters
 from nncf.experimental.post_training.algorithms.quantization.min_max_quantization import Preset
 from nncf.experimental.post_training.algorithms.quantization.min_max_quantization import Granularity
 from nncf.experimental.post_training.algorithms.quantization.min_max_quantization import RangeType
