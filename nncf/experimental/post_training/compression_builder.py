@@ -16,7 +16,7 @@ from typing import Callable, Optional, TypeVar
 from nncf.common.utils.logger import logger as nncf_logger
 from nncf.common.graph.model_transformer import ModelTransformer
 from nncf.common.utils.backend import BackendType
-from nncf.common.utils.backend import infer_backend_from_model
+from nncf.common.utils.backend import get_backend
 from nncf.experimental.post_training.algorithms.algorithm import CompositeAlgorithm
 
 from nncf.experimental.post_training.api.engine import Engine
@@ -114,7 +114,7 @@ class CompressionBuilder:
             nncf_logger.info('There are no algorithms added. The original model will be returned.')
             return model
 
-        backend = infer_backend_from_model(model)
+        backend = get_backend(model)
         modified_model = self._get_prepared_model_for_compression(model, backend)
 
         model_transformer = self._create_model_transformer(model, backend)
@@ -140,7 +140,7 @@ class CompressionBuilder:
 
     def evaluate(self, model: ModelType, metric: Metric, dataset: Dataset,
                  engine: Engine = None, outputs_transforms: Optional[Callable] = None):
-        backend = infer_backend_from_model(model)
+        backend = get_backend(model)
 
         if engine is None:
             engine = self._create_engine(backend)

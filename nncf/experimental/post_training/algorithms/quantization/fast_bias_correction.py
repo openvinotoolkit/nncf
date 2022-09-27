@@ -19,7 +19,7 @@ from typing import Union
 import numpy as np
 from nncf.common.graph.transformations.commands import TargetType
 from nncf.common.graph.transformations.layout import TransformationLayout
-from nncf.common.utils.backend import infer_backend_from_model
+from nncf.common.utils.backend import get_backend
 from nncf.common.graph.transformations.commands import TargetPoint
 from nncf.experimental.post_training.algorithms import AlgorithmParameters
 from nncf.experimental.post_training.algorithms.algorithm import Algorithm
@@ -69,20 +69,10 @@ class FastBiasCorrection(Algorithm):
             'Gemm': -1,
         }
 
-    @staticmethod
-    def _input_filter_func(point):
-        return PostTrainingAlgorithms.FastBiasCorrection in point.algorithm_to_tensor_collectors and \
-            point.target_point.type == TargetType.PRE_LAYER_OPERATION
-
-    @staticmethod
-    def _output_filter_func(point):
-        return PostTrainingAlgorithms.FastBiasCorrection in point.algorithm_to_tensor_collectors and \
-            point.target_point.type == TargetType.POST_LAYER_OPERATION
-
     def _apply(self, model: ModelType, engine: Engine,
                statistic_points: StatisticPointsContainer) -> ModelType:
 
-        model_backend = infer_backend_from_model(model)
+        model_backend = get_backend(model)
 
         transformation_layout = TransformationLayout()
         nncf_graph = NNCFGraphFactory.create(model)
@@ -92,21 +82,8 @@ class FastBiasCorrection(Algorithm):
 
         for node in biased_nodes:
             node_name = node.node_name
-            input_fp = []
-            input_shape = []
-            output_fp = []
-
-            for tensor_collector in statistic_points.iter_through_algorithm_tensor_collectors_in_target_node(
-                    node_name,
-                    self._input_filter_func,
-                    PostTrainingAlgorithms.FastBiasCorrection):
-                input_fp.extend(tensor_collector.get_statistics().mean_values)
-                input_shape.extend(tensor_collector.get_statistics().shape)
-            for tensor_collector in statistic_points.iter_through_algorithm_tensor_collectors_in_target_node(
-                    node_name,
-                    self._output_filter_func,
-                    PostTrainingAlgorithms.FastBiasCorrection):
-                output_fp.extend(tensor_collector.get_statistics().mean_values)
+            input_fp, input_shape = self._get_fp_inputs(statistic_points, node_name)
+            output_fp = self._get_fp_outputs(statistic_points, node_name)
 
             input_names = []
             for dequantize_node in nncf_graph.get_previous_nodes(node):
@@ -116,14 +93,8 @@ class FastBiasCorrection(Algorithm):
                     input_names.append(tensor_name)
             output_names = node.layer_attributes.output_tensor_names
 
-            model_extraction_command = PTQModelExtractionCommandFactory.create(model_backend,
-                                                                               input_names,
-                                                                               output_names)
-            me_transformation_layout = TransformationLayout()
-            me_transformation_layout.register(model_extraction_command)
-            extracted_model = self._model_transformer.transform(me_transformation_layout)
+            extracted_model = self._extract_submodel(model_backend, input_names, output_names)
 
-            # TODO: Optimize _calculate_bias_shift method signature
             channel_axis = self._channel_axis_by_types[node.node_type]
             stat_collector = PTQMeanStatisticCollectorFactory.create(model_backend,
                                                                      reduction_shape=channel_axis,
@@ -132,7 +103,7 @@ class FastBiasCorrection(Algorithm):
                                                  input_shape,
                                                  input_fp,
                                                  input_names)
-            bias_shift = self._calculate_bias_shift(
+            bias_shift = self._get_bias_shift(
                 engine=engine,
                 model=extracted_model,
                 stat_collector=stat_collector,
@@ -153,8 +124,81 @@ class FastBiasCorrection(Algorithm):
         quantized_model = self._model_transformer.transform(transformation_layout)
         return quantized_model
 
+    def _get_fp_inputs(self, statistic_points: StatisticPointsContainer, node_name: str) -> tuple(List, List):
+        def input_filter_func(point):
+            return PostTrainingAlgorithms.FastBiasCorrection in point.algorithm_to_tensor_collectors and \
+                point.target_point.type == TargetType.PRE_LAYER_OPERATION
+
+        input_fp = []
+        input_shape = []
+        for tensor_collector in statistic_points.iter_through_algorithm_tensor_collectors_in_target_node(
+                node_name,
+                input_filter_func,
+                PostTrainingAlgorithms.FastBiasCorrection):
+            input_fp.extend(tensor_collector.get_statistics().mean_values)
+            input_shape.extend(tensor_collector.get_statistics().shape)
+        return input_fp, input_shape
+
+    def _get_fp_outputs(self, statistic_points: StatisticPointsContainer, node_name: str) -> List:
+        def output_filter_func(point):
+            return PostTrainingAlgorithms.FastBiasCorrection in point.algorithm_to_tensor_collectors and \
+                point.target_point.type == TargetType.POST_LAYER_OPERATION
+
+        output_fp = []
+        for tensor_collector in statistic_points.iter_through_algorithm_tensor_collectors_in_target_node(
+                node_name,
+                output_filter_func,
+                PostTrainingAlgorithms.FastBiasCorrection):
+            output_fp.extend(tensor_collector.get_statistics().mean_values)
+        return output_fp
+
+    def _extract_submodel(self, model_backend, input_names, output_names):
+        model_extraction_command = PTQModelExtractionCommandFactory.create(model_backend,
+                                                                           input_names,
+                                                                           output_names)
+        me_transformation_layout = TransformationLayout()
+        me_transformation_layout.register(model_extraction_command)
+        extracted_model = self._model_transformer.transform(me_transformation_layout)
+        return extracted_model
+
+    def _add_statistic_point(self, model_backend, container, point, axes):
+        stat_collector = PTQMeanStatisticCollectorFactory.create(model_backend,
+                                                                 reduction_shape=axes,
+                                                                 num_samples=self.number_samples)
+        container.add_statistic_point(StatisticPoint(target_point=point,
+                                                     tensor_collector=stat_collector,
+                                                     algorithm=PostTrainingAlgorithms.FastBiasCorrection))
+
+    def _create_input_blob(self, model_backend, input_shape, input_fp, input_names):
+        input_blob = np.zeros(input_shape)
+        for i, value in enumerate(input_fp):
+            input_blob[:, i] = value
+        input_blob = input_blob.astype(np.float32)
+
+        input_data = PTQNNCFTensorFactory.create(model_backend, input_blob)
+        input_data = {n: input_data for n in input_names}
+        return input_data
+
+    def _get_bias_shift(self,
+                        engine,
+                        model,
+                        stat_collector,
+                        input_blob,
+                        channel_axis,
+                        output_fp,
+                        output_names):
+
+        engine.rt_session_options['providers'] = ['OpenVINOExecutionProvider']
+        engine.set_model(model)
+        q_outputs = engine.infer(input_blob)
+        engine.rt_session_options['providers'] = ['CPUExecutionProvider']
+        q_outputs = q_outputs[output_names[0]]
+        q_outputs = stat_collector._get_processor().mean_per_channel(q_outputs, channel_axis).tensor
+        bias_shift = np.array(output_fp) - q_outputs
+        return bias_shift
+
     def get_statistic_points(self, model: ModelType) -> StatisticPointsContainer:
-        model_backend = infer_backend_from_model(model)
+        model_backend = get_backend(model)
         nncf_graph = NNCFGraphFactory.create(model) if self.nncf_graph is None else self.nncf_graph
         layers_with_bias_types = PTQLayerMetatypesFactory.get_layers_with_bias_types(model_backend)
         biased_nodes = nncf_graph.get_nodes_by_metatypes(layers_with_bias_types)
@@ -182,39 +226,3 @@ class FastBiasCorrection(Algorithm):
                                       channel_axis)
 
         return statistic_container
-
-    def _add_statistic_point(self, model_backend, container, point, axes):
-        stat_collector = PTQMeanStatisticCollectorFactory.create(model_backend,
-                                                                 reduction_shape=axes,
-                                                                 num_samples=self.number_samples)
-        container.add_statistic_point(StatisticPoint(target_point=point,
-                                                     tensor_collector=stat_collector,
-                                                     algorithm=PostTrainingAlgorithms.FastBiasCorrection))
-
-    def _create_input_blob(self, model_backend, input_shape, input_fp, input_names):
-        input_blob = np.zeros(input_shape)
-        for i, value in enumerate(input_fp):
-            input_blob[:, i] = value
-        input_blob = input_blob.astype(np.float32)
-
-        input_data = PTQNNCFTensorFactory.create(model_backend, input_blob)
-        input_data = {n: input_data for n in input_names}
-        return input_data
-
-    def _calculate_bias_shift(self,
-                              engine,
-                              model,
-                              stat_collector,
-                              input_blob,
-                              channel_axis,
-                              output_fp,
-                              output_names):
-
-        engine.rt_session_options['providers'] = ['OpenVINOExecutionProvider']
-        engine.set_model(model)
-        q_outputs = engine.infer(input_blob)
-        engine.rt_session_options['providers'] = ['CPUExecutionProvider']
-        q_outputs = q_outputs[output_names[0]]
-        q_outputs = stat_collector._get_processor().mean_per_channel(q_outputs, channel_axis).tensor
-        bias_shift = np.array(output_fp) - q_outputs
-        return bias_shift

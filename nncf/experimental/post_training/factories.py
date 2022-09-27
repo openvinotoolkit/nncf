@@ -15,7 +15,7 @@ from nncf.common.graph.transformations.commands import TargetPoint
 from nncf.common.tensor import NNCFTensor
 from nncf.common.tensor_statistics.collectors import MeanStatisticCollector
 from nncf.common.utils.backend import BackendType
-from nncf.common.utils.backend import infer_backend_from_model
+from nncf.common.utils.backend import get_backend
 from nncf.experimental.onnx.graph.nncf_graph_builder import GraphConverter
 from nncf.experimental.onnx.graph.transformations.commands import ONNXBiasCorrectionCommand
 from nncf.experimental.onnx.graph.transformations.commands import ONNXModelExtractionCommand
@@ -29,7 +29,7 @@ from nncf.experimental.onnx.graph.metatypes.onnx_metatypes import ONNX_OPERATION
 class NNCFGraphFactory:
     @staticmethod
     def create(model):
-        model_backend = infer_backend_from_model(model)
+        model_backend = get_backend(model)
         if model_backend == BackendType.ONNX:
             return GraphConverter.create_nncf_graph(model)
         raise RuntimeError('Cannot create backend-specific graph'
