@@ -11,7 +11,6 @@
  limitations under the License.
 """
 
-from audioop import bias
 from typing import Dict
 from typing import List
 from typing import TypeVar
@@ -25,7 +24,8 @@ from nncf.common.graph.transformations.commands import TargetPoint
 from nncf.experimental.post_training.algorithms import AlgorithmParameters
 from nncf.experimental.post_training.algorithms.algorithm import Algorithm
 from nncf.experimental.post_training.algorithms.algorithm import PostTrainingAlgorithms
-from nncf.experimental.post_training.algorithms.fast_bias_correction.onnx_algo_backend import ONNXAlgoBackend
+from nncf.experimental.post_training.algorithms.fast_bias_correction.onnx_algo_backend import ONNXFBCAlgoBackend
+from nncf.experimental.post_training.algorithms.fast_bias_correction.algo_backend import ALGO_BACKENDS
 from nncf.experimental.post_training.api.engine import Engine
 from nncf.experimental.post_training.factories import NNCFGraphFactory
 from nncf.experimental.post_training.statistics.statistic_point import StatisticPoint
@@ -65,11 +65,14 @@ class FastBiasCorrection(Algorithm):
             'Gemm': -1,
         }
         self._backend_entity = None
-    
-    def _set_backend_entity(self, model):
+
+    def available_backends(self) -> List[BackendType]:
+        return [backend.BACKEND_TYPE for backend in ALGO_BACKENDS.values()]
+
+    def _set_backend_entity(self, model: ModelType):
         model_backend = get_backend(model)
         if model_backend == BackendType.ONNX:
-            self._backend_entity = ONNXAlgoBackend()
+            self._backend_entity = ONNXFBCAlgoBackend()
         else:
             raise RuntimeError('Cannot return backend-specific entity'
                                'because {} is not supported!'.format(model_backend))
@@ -187,10 +190,8 @@ class FastBiasCorrection(Algorithm):
                         output_fp,
                         output_names):
 
-        engine.rt_session_options['providers'] = ['OpenVINOExecutionProvider']
         engine.set_model(model)
         q_outputs = engine.infer(input_blob)
-        engine.rt_session_options['providers'] = ['CPUExecutionProvider']
         q_outputs = q_outputs[output_names[0]]
         q_outputs = stat_collector._get_processor().mean_per_channel(q_outputs, channel_axis).tensor
         bias_shift = np.array(output_fp) - q_outputs
