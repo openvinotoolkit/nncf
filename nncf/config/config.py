@@ -22,6 +22,7 @@ import jstyleson as json
 
 from nncf.common.utils.logger import logger
 from nncf.common.utils.os import safe_open
+from nncf.config.definitions import SCHEMA_VISUALIZATION_URL
 from nncf.config.schema import REF_VS_ALGO_SCHEMA
 from nncf.config.schema import NNCF_CONFIG_SCHEMA
 from nncf.config.schema import validate_single_compression_algo_schema
@@ -108,8 +109,9 @@ class NNCFConfig(dict):
             logger.error('Invalid NNCF config supplied!')
             absolute_path_parts = [str(x) for x in e.absolute_path]
             if not NNCFConfig._is_path_to_algorithm_name(absolute_path_parts):
-                e.message += "\nRefer to the NNCF config schema documentation at FILLME"
-                e.schema = "*schema too long for stdout display, see full schema documentation at FILLME*"
+                e.message += f"\nRefer to the NNCF config schema documentation at " \
+                             f"{SCHEMA_VISUALIZATION_URL}"
+                e.schema = "*schema too long for stdout display*"
                 raise e
 
             # Need to make the error more algo-specific in case the config was so bad that no

@@ -56,7 +56,7 @@ This special algorithm takes no additional parameters and is used when you want 
 
 **Example configuration files**
 
->_For the full list of the algorithm configuration parameters via config file, see the corresponding section in the [NNCF config schema](FIXME)_.
+>_For the full list of the algorithm configuration parameters via config file, see the corresponding section in the [NNCF config schema](https://openvinotoolkit.github.io/nncf/)_.
 
 - Apply magnitude sparsity with default parameters (0 to 90% sparsity over 90 epochs of training, sparsity increased polynomially with each epoch):
 

@@ -11,6 +11,7 @@
  limitations under the License.
 """
 from nncf.config.definitions import ONLINE_DOCS_ROOT
+from nncf.config.definitions import QUANTIZATION_ALGO_NAME_IN_CONFIG
 from nncf.config.schemata.basic import ARRAY_OF_NUMBERS
 from nncf.config.schemata.basic import ARRAY_OF_STRINGS
 from nncf.config.schemata.basic import BOOLEAN
@@ -25,7 +26,6 @@ from nncf.config.schemata.common.targeting import SCOPING_PROPERTIES
 from nncf.config.schemata.defaults import ACTIVATIONS_QUANT_START_EPOCH
 from nncf.config.schemata.defaults import AUTOQ_EVAL_SUBSET_RATIO
 from nncf.config.schemata.defaults import AUTOQ_WARMUP_ITER_NUMBER
-from nncf.config.schemata.defaults import HAWQ_COMPRESSION_RATIO
 from nncf.config.schemata.defaults import HAWQ_DUMP_INIT_PRECISION_DATA
 from nncf.config.schemata.defaults import HAWQ_ITER_NUMBER
 from nncf.config.schemata.defaults import HAWQ_NUM_DATA_POINTS
@@ -363,7 +363,6 @@ STAGED_QUANTIZATION_PARAMS = {
     }
 }
 
-QUANTIZATION_ALGO_NAME_IN_CONFIG = "quantization"
 QUANTIZATION_PRESETS_SCHEMA = {
     "type": "string",
     "enum": ["performance", "mixed"]

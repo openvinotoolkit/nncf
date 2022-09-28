@@ -166,7 +166,7 @@ Therefore, it is expected that these numbers may differ from the calculated stat
 
 **Example configuration files**
 
->_For the full list of the algorithm configuration parameters via config file, see the corresponding section in the [NNCF config schema](FIXME)_.
+>_For the full list of the algorithm configuration parameters via config file, see the corresponding section in the [NNCF config schema](https://openvinotoolkit.github.io/nncf/)_.
 
 - Prune a model with default parameters (from 0 to 0.5 pruning level across 100 epochs with exponential schedule)
 ```json5

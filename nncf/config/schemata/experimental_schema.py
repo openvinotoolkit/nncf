@@ -13,6 +13,9 @@
 
 import copy
 
+from nncf.config.definitions import BOOTSTRAP_NAS_ALGO_NAME_IN_CONFIG
+from nncf.config.definitions import EXPERIMENTAL_QUANTIZATION_ALGO_NAME_IN_CONFIG
+
 from nncf.config.schemata.basic import ARRAY_OF_NUMBERS
 from nncf.config.schemata.basic import ARRAY_OF_STRINGS
 from nncf.config.schemata.common.initialization import BATCHNORM_ADAPTATION_SCHEMA
@@ -28,14 +31,12 @@ from nncf.config.schemata.basic import with_attributes
 ########################################################################################################################
 # Experimental Quantization
 ########################################################################################################################
-EXPERIMENTAL_QUANTIZATION_ALGO_NAME_IN_CONFIG = 'experimental_quantization'
 EXPERIMENTAL_QUANTIZATION_SCHEMA = copy.deepcopy(QUANTIZATION_SCHEMA)
 EXPERIMENTAL_QUANTIZATION_SCHEMA['properties']['algorithm']['const'] = EXPERIMENTAL_QUANTIZATION_ALGO_NAME_IN_CONFIG
 
 ########################################################################################################################
 # BootstrapNAS
 ########################################################################################################################
-BOOTSTRAP_NAS_ALGO_NAME_IN_CONFIG = 'bootstrapNAS'
 
 TRAINING_ALGORITHMS_SCHEMA = {
     "type": "string",

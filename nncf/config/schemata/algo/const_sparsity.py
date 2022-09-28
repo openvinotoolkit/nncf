@@ -10,10 +10,10 @@
  See the License for the specific language governing permissions and
  limitations under the License.
 """
+from nncf.config.definitions import CONST_SPARSITY_ALGO_NAME_IN_CONFIG
 from nncf.config.schemata.common.compression import BASIC_COMPRESSION_ALGO_SCHEMA
 from nncf.config.schemata.common.targeting import SCOPING_PROPERTIES
 
-CONST_SPARSITY_ALGO_NAME_IN_CONFIG = "const_sparsity"
 CONST_SPARSITY_SCHEMA = {
     **BASIC_COMPRESSION_ALGO_SCHEMA,
     "properties": {

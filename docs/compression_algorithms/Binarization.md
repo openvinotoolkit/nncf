@@ -19,7 +19,7 @@ Training binarized networks requires special scheduling of the training process.
 
 **Example configuration files**:
 
->_For the full list of the algorithm configuration parameters via config file, see the corresponding section in the [NNCF config schema](FIXME)_.
+>_For the full list of the algorithm configuration parameters via config file, see the corresponding section in the [NNCF config schema](https://openvinotoolkit.github.io/nncf/)_.
 
 - Binarize a ResNet using XNOR algorithm, ignoring several portions of the model, with finetuning on the scope of 60 epochs and staged binarization schedule (activations first, then weights)
 ```json5

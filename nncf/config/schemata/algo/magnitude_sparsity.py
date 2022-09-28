@@ -10,6 +10,7 @@
  See the License for the specific language governing permissions and
  limitations under the License.
 """
+from nncf.config.definitions import MAGNITUDE_SPARSITY_ALGO_NAME_IN_CONFIG
 from nncf.config.definitions import ONLINE_DOCS_ROOT
 from nncf.config.schemata.common.compression import BASIC_COMPRESSION_ALGO_SCHEMA
 from nncf.config.schemata.basic import NUMBER
@@ -19,8 +20,6 @@ from nncf.config.schemata.common.sparsity import COMMON_SPARSITY_PARAM_PROPERTIE
 from nncf.config.schemata.common.targeting import GENERIC_INITIALIZER_SCHEMA
 from nncf.config.schemata.common.targeting import SCOPING_PROPERTIES
 from nncf.config.schemata.defaults import SPARSITY_INIT
-
-MAGNITUDE_SPARSITY_ALGO_NAME_IN_CONFIG = "magnitude_sparsity"
 
 WEIGHT_IMPORTANCE_OPTIONS = ['abs', 'normed_abs']
 

@@ -10,6 +10,7 @@
  See the License for the specific language governing permissions and
  limitations under the License.
 """
+from nncf.config.definitions import KNOWLEDGE_DISTILLATION_ALGO_NAME_IN_CONFIG
 from nncf.config.definitions import ONLINE_DOCS_ROOT
 from nncf.config.schemata.basic import STRING
 from nncf.config.schemata.common.compression import BASIC_COMPRESSION_ALGO_SCHEMA
@@ -19,7 +20,6 @@ from nncf.config.schemata.defaults import KNOWLEDGE_DISTILLATION_SCALE
 from nncf.config.schemata.defaults import KNOWLEDGE_DISTILLATION_TEMPERATURE
 
 KNOWLEDGE_DISTILLATION_TYPE_OPTIONS = ["mse", "softmax"]
-KNOWLEDGE_DISTILLATION_ALGO_NAME_IN_CONFIG = 'knowledge_distillation'
 
 KNOWLEDGE_DISTILLATION_SCHEMA = {
     **BASIC_COMPRESSION_ALGO_SCHEMA,

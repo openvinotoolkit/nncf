@@ -16,22 +16,24 @@ from typing import Dict
 
 import jsonschema
 
+from nncf.config.definitions import ALGO_NAME_VS_README_URL
+from nncf.config.definitions import SCHEMA_VISUALIZATION_URL
 from nncf.config.schemata.experimental_schema import EXPERIMENTAL_REF_VS_ALGO_SCHEMA
 from nncf.config.schemata.accuracy_aware import ACCURACY_AWARE_MODES_VS_SCHEMA
 from nncf.config.schemata.accuracy_aware import ACCURACY_AWARE_TRAINING_SCHEMA
-from nncf.config.schemata.algo.binarization import BINARIZATION_ALGO_NAME_IN_CONFIG
+from nncf.config.definitions import BINARIZATION_ALGO_NAME_IN_CONFIG
 from nncf.config.schemata.algo.binarization import BINARIZATION_SCHEMA
-from nncf.config.schemata.algo.const_sparsity import CONST_SPARSITY_ALGO_NAME_IN_CONFIG
+from nncf.config.definitions import CONST_SPARSITY_ALGO_NAME_IN_CONFIG
 from nncf.config.schemata.algo.const_sparsity import CONST_SPARSITY_SCHEMA
-from nncf.config.schemata.algo.filter_pruning import FILTER_PRUNING_ALGO_NAME_IN_CONFIG
+from nncf.config.definitions import FILTER_PRUNING_ALGO_NAME_IN_CONFIG
 from nncf.config.schemata.algo.filter_pruning import FILTER_PRUNING_SCHEMA
-from nncf.config.schemata.algo.knowledge_distillation import KNOWLEDGE_DISTILLATION_ALGO_NAME_IN_CONFIG
+from nncf.config.definitions import KNOWLEDGE_DISTILLATION_ALGO_NAME_IN_CONFIG
 from nncf.config.schemata.algo.knowledge_distillation import KNOWLEDGE_DISTILLATION_SCHEMA
-from nncf.config.schemata.algo.magnitude_sparsity import MAGNITUDE_SPARSITY_ALGO_NAME_IN_CONFIG
+from nncf.config.definitions import MAGNITUDE_SPARSITY_ALGO_NAME_IN_CONFIG
 from nncf.config.schemata.algo.magnitude_sparsity import MAGNITUDE_SPARSITY_SCHEMA
-from nncf.config.schemata.algo.quantization import QUANTIZATION_ALGO_NAME_IN_CONFIG
+from nncf.config.definitions import QUANTIZATION_ALGO_NAME_IN_CONFIG
 from nncf.config.schemata.algo.quantization import QUANTIZATION_SCHEMA
-from nncf.config.schemata.algo.rb_sparsity import RB_SPARSITY_ALGO_NAME_IN_CONFIG
+from nncf.config.definitions import RB_SPARSITY_ALGO_NAME_IN_CONFIG
 from nncf.config.schemata.algo.rb_sparsity import RB_SPARSITY_SCHEMA
 from nncf.config.schemata.basic import ARRAY_OF_NUMBERS
 from nncf.config.schemata.basic import BOOLEAN
@@ -43,14 +45,15 @@ from nncf.config.schemata.common.compression import COMPRESSION_LR_MULTIPLIER_PR
 logger = logging.getLogger('nncf')
 
 REF_VS_ALGO_SCHEMA = {
-                      QUANTIZATION_ALGO_NAME_IN_CONFIG: QUANTIZATION_SCHEMA,
-                      FILTER_PRUNING_ALGO_NAME_IN_CONFIG: FILTER_PRUNING_SCHEMA,
-                      MAGNITUDE_SPARSITY_ALGO_NAME_IN_CONFIG: MAGNITUDE_SPARSITY_SCHEMA,
-                      RB_SPARSITY_ALGO_NAME_IN_CONFIG: RB_SPARSITY_SCHEMA,
-                      KNOWLEDGE_DISTILLATION_ALGO_NAME_IN_CONFIG: KNOWLEDGE_DISTILLATION_SCHEMA,
-                      CONST_SPARSITY_ALGO_NAME_IN_CONFIG: CONST_SPARSITY_SCHEMA,
-                      BINARIZATION_ALGO_NAME_IN_CONFIG: BINARIZATION_SCHEMA,
-                      **EXPERIMENTAL_REF_VS_ALGO_SCHEMA}
+    QUANTIZATION_ALGO_NAME_IN_CONFIG: QUANTIZATION_SCHEMA,
+    FILTER_PRUNING_ALGO_NAME_IN_CONFIG: FILTER_PRUNING_SCHEMA,
+    MAGNITUDE_SPARSITY_ALGO_NAME_IN_CONFIG: MAGNITUDE_SPARSITY_SCHEMA,
+    RB_SPARSITY_ALGO_NAME_IN_CONFIG: RB_SPARSITY_SCHEMA,
+    KNOWLEDGE_DISTILLATION_ALGO_NAME_IN_CONFIG: KNOWLEDGE_DISTILLATION_SCHEMA,
+    CONST_SPARSITY_ALGO_NAME_IN_CONFIG: CONST_SPARSITY_SCHEMA,
+    BINARIZATION_ALGO_NAME_IN_CONFIG: BINARIZATION_SCHEMA,
+    **EXPERIMENTAL_REF_VS_ALGO_SCHEMA
+}
 
 
 SINGLE_INPUT_INFO_SCHEMA = {
@@ -159,7 +162,10 @@ def validate_single_compression_algo_schema(single_compression_algo_dict: Dict, 
         jsonschema.validate(single_compression_algo_dict, schema=ref_vs_algo_schema[algo_name])
     except jsonschema.ValidationError as e:
         e.message = f"While validating the config for algorithm '{algo_name}' , got:\n" + e.message + \
-                    "\nRefer to the algorithm subschema definition at FIXME"
+                    f"\nRefer to the algorithm subschema definition at {SCHEMA_VISUALIZATION_URL}\n"
+        if algo_name in ALGO_NAME_VS_README_URL:
+            e.message += f"or to the algorithm documentation for examples of the configs: " \
+                         f"{ALGO_NAME_VS_README_URL[algo_name]}"
         raise e
 
 

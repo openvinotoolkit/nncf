@@ -313,7 +313,7 @@ Following is an example of wrapping ImageNet validation loop as a callback. Top5
 
 **Example configuration files**:
 
->_For the full list of the algorithm configuration parameters via config file, see the corresponding section in the [NNCF config schema](FIXME)_.
+>_For the full list of the algorithm configuration parameters via config file, see the corresponding section in the [NNCF config schema](https://openvinotoolkit.github.io/nncf/)_.
 
 - Quantize a model using default algorithm settings (8-bit, quantizers configuration chosen to be compatible with all Intel target HW types):
 ```json5
