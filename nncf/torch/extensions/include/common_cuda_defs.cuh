@@ -67,4 +67,7 @@ inline dim3 get_2d_grid_size_for_per_channel(const uint32_t scale_count)
 #define PROFILE(CODE) CODE
 #endif
 
+#define DEF_ACCUM_TYPE(SOURCE_TYPE, NEW_ACCUM_TYPE) \
+typedef std::conditional_t<std::is_same<SOURCE_TYPE, at::Half>::value, float, SOURCE_TYPE> NEW_ACCUM_TYPE;
+
 #endif // _COMMON_CUDA_DEFS_CUH_

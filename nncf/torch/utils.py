@@ -119,6 +119,10 @@ class no_jit_trace:
 
 def sum_like(tensor_to_sum, ref_tensor):
     """Warning: may modify tensor_to_sum"""
+    half = tensor_to_sum.dtype == np.float16
+    if half:
+        tensor_to_sum = tensor_to_sum.astype(np.float32)
+
     if ref_tensor.size == 1:
         return tensor_to_sum.sum()
 
@@ -128,6 +132,9 @@ def sum_like(tensor_to_sum, ref_tensor):
                 tensor_to_sum = tensor_to_sum.sum(dim, keepdims=True)
             else:
                 tensor_to_sum = tensor_to_sum.sum(dim, keepdim=True)
+    if half:
+        tensor_to_sum = tensor_to_sum.astype(np.float16)
+
     return tensor_to_sum
 
 

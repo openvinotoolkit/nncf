@@ -9,14 +9,6 @@ enum class ScaleType
     PER_ACTIVATION_CHANNEL
 };
 
-void to_type(std::vector<at::Tensor> tensors, c10::ScalarType type) {
-    std::transform(tensors.begin(), tensors.end(), tensors.begin(), [type](at::Tensor t) -> at::Tensor { return t.toType(type);});
-}
-
-//void to_type(std::vector<std::unique_ptr<at::Tensor>> tensors, c10::ScalarType type) {
-//    std::transform(tensors.begin(), tensors.end(), tensors.begin(), [type](std::unique_ptr<at::Tensor> t) -> std::unique_ptr<at::Tensor>
-//    { return std::unique_ptr<at::Tensor>(new at::Tensor(t->toType(type)));});
-//}
 
 ScaleType get_scale_type(const at::Tensor& input, const at::Tensor& input_low, const at::Tensor& input_range)
 {
@@ -124,8 +116,8 @@ __device__ void calcGrad(
 template <typename scalar_t, typename scalar_accum_t>
 __global__ void q_single_scale_cuda_backward_kernel(
         scalar_t* __restrict__ grad_input,
-        scalar_accum_t* __restrict__ grad_input_low,
-        scalar_accum_t* __restrict__ grad_input_range,
+        scalar_t* __restrict__ grad_input_low,
+        scalar_t* __restrict__ grad_input_range,
         scalar_accum_t* __restrict__ dev_tmp_range,
         scalar_accum_t* __restrict__ dev_tmp_low,
         int32_t* __restrict__ dev_last_block_counter_range,
@@ -159,8 +151,8 @@ __global__ void q_single_scale_cuda_backward_kernel(
 
     __shared__ scalar_accum_t sh_grad_range[CUDA_MAX_NUM_THREADS_PER_BLOCK];
     __shared__ scalar_accum_t sh_grad_low[CUDA_MAX_NUM_THREADS_PER_BLOCK];
-    reduce_with_shared_memory<scalar_accum_t>(sh_grad_range, sum_range, tidx, bidx, dev_tmp_range, dev_last_block_counter_range, grad_input_range, gridDim.x);
-    reduce_with_shared_memory<scalar_accum_t>(sh_grad_low, sum_low, tidx, bidx, dev_tmp_low, dev_last_block_counter_low, grad_input_low, gridDim.x);
+    reduce_with_shared_memory<scalar_t, scalar_accum_t>(sh_grad_range, sum_range, tidx, bidx, dev_tmp_range, dev_last_block_counter_range, grad_input_range, gridDim.x);
+    reduce_with_shared_memory<scalar_t, scalar_accum_t>(sh_grad_low, sum_low, tidx, bidx, dev_tmp_low, dev_last_block_counter_low, grad_input_low, gridDim.x);
 }
 
 
@@ -168,8 +160,8 @@ __global__ void q_single_scale_cuda_backward_kernel(
 template <typename scalar_t, typename scalar_accum_t>
 __global__ void q_scale_per_weight_channel_cuda_backward_kernel(
         scalar_t* __restrict__ grad_input,
-        scalar_accum_t* __restrict__ grad_input_low,
-        scalar_accum_t* __restrict__ grad_input_range,
+        scalar_t* __restrict__ grad_input_low,
+        scalar_t* __restrict__ grad_input_range,
         scalar_accum_t* __restrict__ dev_tmp_range,
         scalar_accum_t* __restrict__ dev_tmp_low,
         int32_t* __restrict__ dev_last_block_counter_range,
@@ -221,16 +213,16 @@ __global__ void q_scale_per_weight_channel_cuda_backward_kernel(
 
     __shared__ scalar_accum_t  sh_grad_range[CUDA_MAX_NUM_THREADS_PER_BLOCK];
     __shared__ scalar_accum_t  sh_grad_low[CUDA_MAX_NUM_THREADS_PER_BLOCK];
-    reduce_with_shared_memory<scalar_accum_t>(sh_grad_range, per_thread_grad_sum_range, tidx, per_scale_block_idx, dev_tmp_range, dev_last_block_counter_range, grad_input_range, total_blocks_per_scale);
-    reduce_with_shared_memory<scalar_accum_t>(sh_grad_low, per_thread_grad_sum_low, tidx, per_scale_block_idx, dev_tmp_low, dev_last_block_counter_low, grad_input_low, total_blocks_per_scale);
+    reduce_with_shared_memory<scalar_t, scalar_accum_t>(sh_grad_range, per_thread_grad_sum_range, tidx, per_scale_block_idx, dev_tmp_range, dev_last_block_counter_range, grad_input_range, total_blocks_per_scale);
+    reduce_with_shared_memory<scalar_t, scalar_accum_t>(sh_grad_low, per_thread_grad_sum_low, tidx, per_scale_block_idx, dev_tmp_low, dev_last_block_counter_low, grad_input_low, total_blocks_per_scale);
 }
 
 
 template <typename scalar_t, typename scalar_accum_t>
 __global__ void q_scale_per_activation_channel_cuda_backward_kernel(
         scalar_t* __restrict__ grad_input,
-        scalar_accum_t* __restrict__ grad_input_low,
-        scalar_accum_t* __restrict__ grad_input_range,
+        scalar_t* __restrict__ grad_input_low,
+        scalar_t* __restrict__ grad_input_range,
         scalar_accum_t* __restrict__ dev_tmp_range,
         scalar_accum_t* __restrict__ dev_tmp_low,
         int32_t* __restrict__ dev_last_block_counter_range,
@@ -294,8 +286,8 @@ __global__ void q_scale_per_activation_channel_cuda_backward_kernel(
 
     __shared__ scalar_accum_t sh_grad_range[CUDA_MAX_NUM_THREADS_PER_BLOCK];
     __shared__ scalar_accum_t sh_grad_low[CUDA_MAX_NUM_THREADS_PER_BLOCK];
-    reduce_with_shared_memory<scalar_accum_t>(sh_grad_range, per_thread_grad_sum_range, tidx, per_scale_block_idx, dev_tmp_range, dev_last_block_counter_range, grad_input_range, total_blocks_per_scale);
-    reduce_with_shared_memory<scalar_accum_t>(sh_grad_low, per_thread_grad_sum_low, tidx, per_scale_block_idx, dev_tmp_low, dev_last_block_counter_low, grad_input_low, total_blocks_per_scale);
+    reduce_with_shared_memory<scalar_t, scalar_accum_t>(sh_grad_range, per_thread_grad_sum_range, tidx, per_scale_block_idx, dev_tmp_range, dev_last_block_counter_range, grad_input_range, total_blocks_per_scale);
+    reduce_with_shared_memory<scalar_t, scalar_accum_t>(sh_grad_low, per_thread_grad_sum_low, tidx, per_scale_block_idx, dev_tmp_low, dev_last_block_counter_low, grad_input_low, total_blocks_per_scale);
 }
 
 
@@ -363,26 +355,22 @@ std::vector<at::Tensor> q_single_scale_cuda_backward(at::Tensor grad_output,
     
 
     auto grid_size = std::min(GET_BLOCKS(size), CUDA_BLOCKS_PER_GRID_FOR_UNIFORM_ELTWISE);
-    auto dev_tmp_range = at::empty({grid_size}, grad_output.options());
-    auto dev_tmp_low = at::empty({grid_size}, grad_output.options());
+    auto accum_options = grad_output.options();
+    if (grad_output.scalar_type() == c10::ScalarType::Half) {
+        accum_options = accum_options.dtype(c10::ScalarType::Float);
+    }
+
+    auto dev_tmp_range = at::empty({grid_size}, accum_options);
+    auto dev_tmp_low = at::empty({grid_size}, accum_options);
     auto dev_last_block_counter_range = at::zeros({1},  at::device(grad_output.options().device()).dtype(at::kInt));
     auto dev_last_block_counter_low = at::zeros({1},  at::device(grad_output.options().device()).dtype(at::kInt));
 
-    const auto grad_input_dtype = grad_output.scalar_type();
-    if (grad_input_dtype == c10::ScalarType::Half)
-    {
-        grad_input_range = grad_input_range.toType(c10::ScalarType::Float);
-        grad_input_low = grad_input_low.toType(c10::ScalarType::Float);
-        dev_tmp_range = dev_tmp_range.toType(c10::ScalarType::Float);
-        dev_tmp_low = dev_tmp_low.toType(c10::ScalarType::Float);
-    }
-    //to_type({grad_input_range, grad_input_low, dev_tmp_range, dev_tmp_low}, c10::ScalarType::Float);
     PROFILE(AT_DISPATCH_FLOATING_TYPES_AND_HALF(input.scalar_type(), "q_single_scale_cuda_backward", ([&] {
-      typedef std::conditional_t<std::is_same<scalar_t, at::Half>::value, float, scalar_t> scalar_accum_t;
+      DEF_ACCUM_TYPE(scalar_t, scalar_accum_t)
       q_single_scale_cuda_backward_kernel<scalar_t, scalar_accum_t><<<grid_size, CUDA_MAX_NUM_THREADS_PER_BLOCK, 0, at::cuda::getCurrentCUDAStream()>>>(
           grad_input.data_ptr<scalar_t>(),
-          grad_input_low.data_ptr<scalar_accum_t>(),
-          grad_input_range.data_ptr<scalar_accum_t>(),
+          grad_input_low.data_ptr<scalar_t>(),
+          grad_input_range.data_ptr<scalar_t>(),
           dev_tmp_range.data_ptr<scalar_accum_t>(),
           dev_tmp_low.data_ptr<scalar_accum_t>(),
           dev_last_block_counter_range.data_ptr<int32_t>(),
@@ -397,10 +385,6 @@ std::vector<at::Tensor> q_single_scale_cuda_backward(at::Tensor grad_output,
           size);
     }));)
 
-    if (grad_input_dtype == c10::ScalarType::Half) {
-        grad_input_low = grad_input_low.toType(c10::ScalarType::Half);
-        grad_input_range = grad_input_range.toType(c10::ScalarType::Half);
-    }
 
     return {grad_input, grad_input_low, grad_input_range};
 }
@@ -423,28 +407,23 @@ std::vector<at::Tensor> q_scale_per_weight_channel_cuda_backward(at::Tensor grad
     auto grad_input_low = at::empty(input_range.sizes(), grad_output.options());
     auto grad_input_range = at::empty(input_range.sizes(), grad_output.options());
 
+    auto accum_options = grad_output.options();
+    if (grad_output.scalar_type() == c10::ScalarType::Half) {
+        accum_options = accum_options.dtype(c10::ScalarType::Float);
+    }
+
     dim3 grid_size = get_2d_grid_size_for_per_channel(scale_count);
-    auto dev_tmp_range = at::zeros({grid_size.x, grid_size.y}, grad_output.options());
-    auto dev_tmp_low = at::zeros({grid_size.x, grid_size.y}, grad_output.options());
+    auto dev_tmp_range = at::zeros({grid_size.x, grid_size.y}, accum_options);
+    auto dev_tmp_low = at::zeros({grid_size.x, grid_size.y}, accum_options);
     auto dev_last_block_counter_range = at::zeros({grid_size.x, 1},  at::device(grad_output.options().device()).dtype(at::kInt));
     auto dev_last_block_counter_low = at::zeros({grid_size.x, 1},  at::device(grad_output.options().device()).dtype(at::kInt));
 
-    const auto grad_input_dtype = grad_output.scalar_type();
-    if (grad_input_dtype == c10::ScalarType::Half)
-    {
-        grad_input_range = grad_input_range.toType(c10::ScalarType::Float);
-        grad_input_low = grad_input_low.toType(c10::ScalarType::Float);
-        dev_tmp_range = dev_tmp_range.toType(c10::ScalarType::Float);
-        dev_tmp_low = dev_tmp_low.toType(c10::ScalarType::Float);
-    }
-    //to_type({grad_input_range, grad_input_low, dev_tmp_range, dev_tmp_low}, c10::ScalarType::Float);
-
     PROFILE(AT_DISPATCH_FLOATING_TYPES_AND_HALF(input.scalar_type(), "q_single_scale_cuda_backward", ([&] {
-              typedef std::conditional_t<std::is_same<scalar_t, at::Half>::value, float, scalar_t> scalar_accum_t;
+              DEF_ACCUM_TYPE(scalar_t, scalar_accum_t)
               q_scale_per_weight_channel_cuda_backward_kernel<scalar_t, scalar_accum_t><<<grid_size, CUDA_MAX_NUM_THREADS_PER_BLOCK, 0, at::cuda::getCurrentCUDAStream()>>>(
                   grad_input.data_ptr<scalar_t>(),
-                  grad_input_low.data_ptr<scalar_accum_t>(),
-                  grad_input_range.data_ptr<scalar_accum_t>(),
+                  grad_input_low.data_ptr<scalar_t>(),
+                  grad_input_range.data_ptr<scalar_t>(),
                   dev_tmp_range.data_ptr<scalar_accum_t>(),
                   dev_tmp_low.data_ptr<scalar_accum_t>(),
                   dev_last_block_counter_range.data_ptr<int32_t>(),
@@ -459,12 +438,6 @@ std::vector<at::Tensor> q_scale_per_weight_channel_cuda_backward(at::Tensor grad
                   elements_per_scale);
             }));
     )
-
-    if (grad_input_dtype == c10::ScalarType::Half) {
-        grad_input_low = grad_input_low.toType(c10::ScalarType::Half);
-        grad_input_range = grad_input_range.toType(c10::ScalarType::Half);
-    }
-    //    to_type({grad_input_low, grad_input_range}, grad_input_dtype);
 
     return {grad_input, grad_input_low, grad_input_range};
 }
@@ -488,29 +461,24 @@ std::vector<at::Tensor> q_scale_per_activation_channel_cuda_backward(at::Tensor 
     auto grad_input_low = at::empty(input_range.sizes(), grad_output.options());
     auto grad_input_range = at::empty(input_range.sizes(), grad_output.options());
 
+    auto accum_options = grad_output.options();
+    if (grad_output.scalar_type() == c10::ScalarType::Half) {
+        accum_options = accum_options.dtype(c10::ScalarType::Float);
+    }
+
     dim3 grid_size = get_2d_grid_size_for_per_channel(scale_count);
-    auto dev_tmp_range = at::zeros({grid_size.x, grid_size.y}, grad_output.options());
-    auto dev_tmp_low = at::zeros({grid_size.x, grid_size.y}, grad_output.options());
+    auto dev_tmp_range = at::zeros({grid_size.x, grid_size.y}, accum_options);
+    auto dev_tmp_low = at::zeros({grid_size.x, grid_size.y}, accum_options);
     auto dev_last_block_counter_range = at::zeros({grid_size.x, 1},  at::device(grad_output.options().device()).dtype(at::kInt));
     auto dev_last_block_counter_low = at::zeros({grid_size.x, 1},  at::device(grad_output.options().device()).dtype(at::kInt));
 
-    const auto grad_input_dtype = grad_output.scalar_type();
-    if (grad_input_dtype == c10::ScalarType::Half)
-    {
-        grad_input_range = grad_input_range.toType(c10::ScalarType::Float);
-        grad_input_low = grad_input_low.toType(c10::ScalarType::Float);
-        dev_tmp_range = dev_tmp_range.toType(c10::ScalarType::Float);
-        dev_tmp_low = dev_tmp_low.toType(c10::ScalarType::Float);
-    }
-    //to_type({grad_input_range, grad_input_low, dev_tmp_range, dev_tmp_low}, c10::ScalarType::Float);
-
     PROFILE(
         AT_DISPATCH_FLOATING_TYPES_AND_HALF(input.scalar_type(), "q_scale_per_activation_channel_cuda_backward", ([&] {
-          typedef std::conditional_t<std::is_same<scalar_t, at::Half>::value, float, scalar_t> scalar_accum_t;
+          DEF_ACCUM_TYPE(scalar_t, scalar_accum_t)
           q_scale_per_activation_channel_cuda_backward_kernel<scalar_t, scalar_accum_t><<<grid_size, CUDA_MAX_NUM_THREADS_PER_BLOCK, 0, at::cuda::getCurrentCUDAStream()>>>(
               grad_input.data_ptr<scalar_t>(),
-              grad_input_low.data_ptr<scalar_accum_t>(),
-              grad_input_range.data_ptr<scalar_accum_t>(),
+              grad_input_low.data_ptr<scalar_t>(),
+              grad_input_range.data_ptr<scalar_t>(),
               dev_tmp_range.data_ptr<scalar_accum_t>(),
               dev_tmp_low.data_ptr<scalar_accum_t>(),
               dev_last_block_counter_range.data_ptr<int32_t>(),
@@ -528,12 +496,6 @@ std::vector<at::Tensor> q_scale_per_activation_channel_cuda_backward(at::Tensor 
               leading_channel_offset);
         }));
     )
-
-    if (grad_input_dtype == c10::ScalarType::Half) {
-        grad_input_low = grad_input_low.toType(c10::ScalarType::Half);
-        grad_input_range = grad_input_range.toType(c10::ScalarType::Half);
-    }
-        //to_type({grad_input_low, grad_input_range}, grad_input_dtype);
 
     return {grad_input, grad_input_low, grad_input_range};
 }
