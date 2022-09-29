@@ -115,7 +115,6 @@ class MultiElasticityTestDesc(NamedTuple):
     input_sizes: List[int] = [1, 3, 32, 32]
     algo_params: Dict = {}
     name: str = None
-    is_auto_skipped_blocks: bool = False
 
     def __str__(self):
         if hasattr(self.model_creator, '__name__'):

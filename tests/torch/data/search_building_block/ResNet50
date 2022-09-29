@@ -1,0 +1,74 @@
+{
+    "blocks": [
+        {
+            "start_node_name": "ResNet/Sequential[layer1]/Bottleneck[0]/relu_2",
+            "end_node_name": "ResNet/Sequential[layer1]/Bottleneck[1]/relu_2"
+        },
+        {
+            "start_node_name": "ResNet/Sequential[layer1]/Bottleneck[1]/relu_2",
+            "end_node_name": "ResNet/Sequential[layer1]/Bottleneck[2]/__iadd___0"
+        },
+        {
+            "start_node_name": "ResNet/Sequential[layer2]/Bottleneck[0]/relu_2",
+            "end_node_name": "ResNet/Sequential[layer2]/Bottleneck[1]/relu_2"
+        },
+        {
+            "start_node_name": "ResNet/Sequential[layer2]/Bottleneck[1]/relu_2",
+            "end_node_name": "ResNet/Sequential[layer2]/Bottleneck[2]/relu_2"
+        },
+        {
+            "start_node_name": "ResNet/Sequential[layer2]/Bottleneck[2]/relu_2",
+            "end_node_name": "ResNet/Sequential[layer2]/Bottleneck[3]/__iadd___0"
+        },
+        {
+            "start_node_name": "ResNet/Sequential[layer3]/Bottleneck[0]/relu_2",
+            "end_node_name": "ResNet/Sequential[layer3]/Bottleneck[1]/relu_2"
+        },
+        {
+            "start_node_name": "ResNet/Sequential[layer3]/Bottleneck[1]/relu_2",
+            "end_node_name": "ResNet/Sequential[layer3]/Bottleneck[2]/relu_2"
+        },
+        {
+            "start_node_name": "ResNet/Sequential[layer3]/Bottleneck[2]/relu_2",
+            "end_node_name": "ResNet/Sequential[layer3]/Bottleneck[3]/relu_2"
+        },
+        {
+            "start_node_name": "ResNet/Sequential[layer3]/Bottleneck[3]/relu_2",
+            "end_node_name": "ResNet/Sequential[layer3]/Bottleneck[4]/relu_2"
+        },
+        {
+            "start_node_name": "ResNet/Sequential[layer3]/Bottleneck[4]/relu_2",
+            "end_node_name": "ResNet/Sequential[layer3]/Bottleneck[5]/__iadd___0"
+        },
+        {
+            "start_node_name": "ResNet/Sequential[layer4]/Bottleneck[0]/relu_2",
+            "end_node_name": "ResNet/Sequential[layer4]/Bottleneck[1]/relu_2"
+        },
+        {
+            "start_node_name": "ResNet/Sequential[layer4]/Bottleneck[1]/relu_2",
+            "end_node_name": "ResNet/Sequential[layer4]/Bottleneck[2]/__iadd___0"
+        }
+    ],
+    "group_dependent": {
+        "0": [
+            0,
+            1
+        ],
+        "1": [
+            2,
+            3,
+            4
+        ],
+        "2": [
+            5,
+            6,
+            7,
+            8,
+            9
+        ],
+        "3": [
+            10,
+            11
+        ]
+    }
+}

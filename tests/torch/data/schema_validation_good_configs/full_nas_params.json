@@ -30,8 +30,7 @@
                     "skipped_blocks": [["start_1", "end_1"], ["start_2", "end_2"]],
                     "max_block_size": 1,
                     "min_block_size": 1,
-                    "allow_nested_blocks": true,
-                    "allow_linear_combination": false
+                    "hw_fused_ops": false
                 }
             }
         }

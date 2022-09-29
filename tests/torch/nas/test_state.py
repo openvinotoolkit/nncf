@@ -103,27 +103,20 @@ COMMON_DEPTH_SUPERNET_DESC = ElasticityDesc(
     ElasticityDim.DEPTH,
     model_cls=BasicTestSuperNet,
     params={
-        'mode': 'auto',
-        'min_block_size': 2
+        'min_block_size': 2,
+        'hw_fused_ops': True,
     },
     ref_state={
         'elasticity_params': {
-            'allow_linear_combination': False,
-            'allow_nested_blocks': False,
+            'hw_fused_ops': True,
             'max_block_size': 50,
             'min_block_size': 2,
             'skipped_blocks': None
         },
-        EDBuilderStateNames.SKIPPED_BLOCKS: [
-            {
-                'start_node_name': 'BasicTestSuperNet/NNCFConv2d[conv1]/conv2d_0',
-                'end_node_name': 'BasicTestSuperNet/__add___0'
-            }
-        ],
-        EDBuilderStateNames.SKIPPED_BLOCKS_DEPENDENCIES: {0: [0]},
-        EDBuilderStateNames.OrdinalIds: [[1, 3]],
+        EDBuilderStateNames.SKIPPED_BLOCKS: [],
+        EDBuilderStateNames.SKIPPED_BLOCKS_DEPENDENCIES: {},
     },
-    ref_search_space=[[0], []]
+    ref_search_space=[[]]
 )
 
 
@@ -140,16 +133,14 @@ COMMON_DEPTH_BASIC_DESC = ElasticityDesc(
     ref_search_space=[[0], []],
     ref_state={
         'elasticity_params': {
-            'allow_linear_combination': False,
-            'allow_nested_blocks': False,
+            'hw_fused_ops': True,
             'max_block_size': 50,
-            'min_block_size': 6,
+            'min_block_size': 5,
             'skipped_blocks': [['DepthBasicConvTestModel/Sequential[branch_with_blocks]/NNCFConv2d[conv0]/conv2d_0',
                                 'DepthBasicConvTestModel/Sequential[branch_with_blocks]/NNCFConv2d[conv1]/conv2d_0']]
         },
         EDBuilderStateNames.SKIPPED_BLOCKS: BASIC_ELASTIC_DEPTH_PARAMS['skipped_blocks_state'],
         EDBuilderStateNames.SKIPPED_BLOCKS_DEPENDENCIES: BASIC_ELASTIC_DEPTH_PARAMS['skipped_blocks_dependencies'],
-        EDBuilderStateNames.OrdinalIds: None,
     }
 )
 

@@ -1,0 +1,42 @@
+{
+    "blocks": [
+        {
+            "start_node_name": "ResNeXt/Sequential[layer1]/Block[0]/relu_2",
+            "end_node_name": "ResNeXt/Sequential[layer1]/Block[1]/relu_2"
+        },
+        {
+            "start_node_name": "ResNeXt/Sequential[layer1]/Block[1]/relu_2",
+            "end_node_name": "ResNeXt/Sequential[layer1]/Block[2]/__iadd___0"
+        },
+        {
+            "start_node_name": "ResNeXt/Sequential[layer2]/Block[0]/relu_2",
+            "end_node_name": "ResNeXt/Sequential[layer2]/Block[1]/relu_2"
+        },
+        {
+            "start_node_name": "ResNeXt/Sequential[layer2]/Block[1]/relu_2",
+            "end_node_name": "ResNeXt/Sequential[layer2]/Block[2]/__iadd___0"
+        },
+        {
+            "start_node_name": "ResNeXt/Sequential[layer3]/Block[0]/relu_2",
+            "end_node_name": "ResNeXt/Sequential[layer3]/Block[1]/relu_2"
+        },
+        {
+            "start_node_name": "ResNeXt/Sequential[layer3]/Block[1]/relu_2",
+            "end_node_name": "ResNeXt/Sequential[layer3]/Block[2]/__iadd___0"
+        }
+    ],
+    "group_dependent": {
+        "0": [
+            0,
+            1
+        ],
+        "1": [
+            2,
+            3
+        ],
+        "2": [
+            4,
+            5
+        ]
+    }
+}

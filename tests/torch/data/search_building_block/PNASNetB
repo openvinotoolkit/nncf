@@ -1,0 +1,102 @@
+{
+    "blocks": [
+        {
+            "start_node_name": "PNASNet/NNCFConv2d[conv1]/conv2d_0",
+            "end_node_name": "PNASNet/Sequential[layer1]/CellB[0]/relu_2"
+        },
+        {
+            "start_node_name": "PNASNet/Sequential[layer1]/CellB[0]/relu_2",
+            "end_node_name": "PNASNet/Sequential[layer1]/CellB[1]/relu_2"
+        },
+        {
+            "start_node_name": "PNASNet/Sequential[layer1]/CellB[1]/relu_2",
+            "end_node_name": "PNASNet/Sequential[layer1]/CellB[2]/relu_2"
+        },
+        {
+            "start_node_name": "PNASNet/Sequential[layer1]/CellB[2]/relu_2",
+            "end_node_name": "PNASNet/Sequential[layer1]/CellB[3]/relu_2"
+        },
+        {
+            "start_node_name": "PNASNet/Sequential[layer1]/CellB[3]/relu_2",
+            "end_node_name": "PNASNet/Sequential[layer1]/CellB[4]/relu_2"
+        },
+        {
+            "start_node_name": "PNASNet/Sequential[layer1]/CellB[4]/relu_2",
+            "end_node_name": "PNASNet/Sequential[layer1]/CellB[5]/relu_2"
+        },
+        {
+            "start_node_name": "PNASNet/CellB[layer2]/cat_0",
+            "end_node_name": "PNASNet/Sequential[layer3]/CellB[0]/cat_0"
+        },
+        {
+            "start_node_name": "PNASNet/Sequential[layer3]/CellB[0]/cat_0",
+            "end_node_name": "PNASNet/Sequential[layer3]/CellB[1]/cat_0"
+        },
+        {
+            "start_node_name": "PNASNet/Sequential[layer3]/CellB[1]/cat_0",
+            "end_node_name": "PNASNet/Sequential[layer3]/CellB[2]/cat_0"
+        },
+        {
+            "start_node_name": "PNASNet/Sequential[layer3]/CellB[2]/cat_0",
+            "end_node_name": "PNASNet/Sequential[layer3]/CellB[3]/cat_0"
+        },
+        {
+            "start_node_name": "PNASNet/Sequential[layer3]/CellB[3]/cat_0",
+            "end_node_name": "PNASNet/Sequential[layer3]/CellB[4]/cat_0"
+        },
+        {
+            "start_node_name": "PNASNet/Sequential[layer3]/CellB[4]/cat_0",
+            "end_node_name": "PNASNet/Sequential[layer3]/CellB[5]/cat_0"
+        },
+        {
+            "start_node_name": "PNASNet/CellB[layer4]/cat_0",
+            "end_node_name": "PNASNet/Sequential[layer5]/CellB[0]/cat_0"
+        },
+        {
+            "start_node_name": "PNASNet/Sequential[layer5]/CellB[0]/cat_0",
+            "end_node_name": "PNASNet/Sequential[layer5]/CellB[1]/cat_0"
+        },
+        {
+            "start_node_name": "PNASNet/Sequential[layer5]/CellB[1]/cat_0",
+            "end_node_name": "PNASNet/Sequential[layer5]/CellB[2]/cat_0"
+        },
+        {
+            "start_node_name": "PNASNet/Sequential[layer5]/CellB[2]/cat_0",
+            "end_node_name": "PNASNet/Sequential[layer5]/CellB[3]/cat_0"
+        },
+        {
+            "start_node_name": "PNASNet/Sequential[layer5]/CellB[3]/cat_0",
+            "end_node_name": "PNASNet/Sequential[layer5]/CellB[4]/cat_0"
+        },
+        {
+            "start_node_name": "PNASNet/Sequential[layer5]/CellB[4]/cat_0",
+            "end_node_name": "PNASNet/Sequential[layer5]/CellB[5]/cat_0"
+        }
+    ],
+    "group_dependent": {
+        "0": [
+            0,
+            1,
+            2,
+            3,
+            4,
+            5
+        ],
+        "1": [
+            6,
+            7,
+            8,
+            9,
+            10,
+            11
+        ],
+        "2": [
+            12,
+            13,
+            14,
+            15,
+            16,
+            17
+        ]
+    }
+}

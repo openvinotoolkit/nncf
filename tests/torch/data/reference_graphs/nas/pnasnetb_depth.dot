@@ -390,9 +390,9 @@ strict digraph  {
 "388 PNASNet/Sequential[layer5]/CellB[4]/__add___1" [id=388, label="__add___IW[128, 128]_OW128_#287", style=filled, type=__add__];
 "389 PNASNet/Sequential[layer5]/CellB[4]/relu_1" [id=389, label="relu_IW128_OW128_#288", style=filled, type=relu];
 "390 PNASNet/Sequential[layer5]/CellB[4]/cat_0" [id=390, label="cat_IW[128, 128]_OW256_#289", style=filled, type=cat];
-"391 PNASNet/Sequential[layer5]/CellB[4]/NNCFConv2d[conv2]/conv2d_0" [color=lightblue, id=391, label="conv2d_IW256_OW128_G17_#290", style=filled, type=conv2d];
-"392 PNASNet/Sequential[layer5]/CellB[4]/NNCFBatchNorm2d[bn2]/batch_norm_0" [id=392, label="batch_norm_IW128_OW128_#291", style=filled, type=batch_norm];
-"393 PNASNet/Sequential[layer5]/CellB[4]/relu_2" [id=393, label="relu_IW128_OW128_#292", style=filled, type=relu];
+"391 PNASNet/Sequential[layer5]/CellB[5]/NNCFConv2d[conv2]/conv2d_0" [color=lightblue, id=391, label="conv2d_IW256_OW128_G18_#305", style=filled, type=conv2d];
+"392 PNASNet/Sequential[layer5]/CellB[5]/NNCFBatchNorm2d[bn2]/batch_norm_0" [id=392, label="batch_norm_IW128_OW128_#306", style=filled, type=batch_norm];
+"393 PNASNet/Sequential[layer5]/CellB[5]/relu_2" [id=393, label="relu_IW128_OW128_#307", style=filled, type=relu];
 "394 PNASNet/avg_pool2d_0" [id=394, label="avg_pool2d_IW128_OW128_#308", style=filled, type=avg_pool2d];
 "395 PNASNet/view_0" [id=395, label="view_IW128_OW128_#309", style=filled, type=view];
 "396 PNASNet/NNCFLinear[linear]/linear_0" [id=396, label="linear_IW128_#310", style=filled, type=linear];
@@ -841,10 +841,10 @@ strict digraph  {
 "387 PNASNet/Sequential[layer5]/CellB[4]/relu_0" -> "390 PNASNet/Sequential[layer5]/CellB[4]/cat_0"  [label="(1, 128, 8, 8)", style=solid];
 "388 PNASNet/Sequential[layer5]/CellB[4]/__add___1" -> "389 PNASNet/Sequential[layer5]/CellB[4]/relu_1"  [label="(1, 128, 8, 8)", style=solid];
 "389 PNASNet/Sequential[layer5]/CellB[4]/relu_1" -> "390 PNASNet/Sequential[layer5]/CellB[4]/cat_0"  [label="(1, 128, 8, 8)", style=solid];
-"390 PNASNet/Sequential[layer5]/CellB[4]/cat_0" -> "391 PNASNet/Sequential[layer5]/CellB[4]/NNCFConv2d[conv2]/conv2d_0"  [label="(1, 256, 8, 8)", style=solid];
-"391 PNASNet/Sequential[layer5]/CellB[4]/NNCFConv2d[conv2]/conv2d_0" -> "392 PNASNet/Sequential[layer5]/CellB[4]/NNCFBatchNorm2d[bn2]/batch_norm_0"  [label="(1, 128, 8, 8)", style=solid];
-"392 PNASNet/Sequential[layer5]/CellB[4]/NNCFBatchNorm2d[bn2]/batch_norm_0" -> "393 PNASNet/Sequential[layer5]/CellB[4]/relu_2"  [label="(1, 128, 8, 8)", style=solid];
-"393 PNASNet/Sequential[layer5]/CellB[4]/relu_2" -> "394 PNASNet/avg_pool2d_0"  [label="(1, 128, 8, 8)", style=solid];
+"390 PNASNet/Sequential[layer5]/CellB[4]/cat_0" -> "391 PNASNet/Sequential[layer5]/CellB[5]/NNCFConv2d[conv2]/conv2d_0"  [label="(1, 256, 8, 8)", style=solid];
+"391 PNASNet/Sequential[layer5]/CellB[5]/NNCFConv2d[conv2]/conv2d_0" -> "392 PNASNet/Sequential[layer5]/CellB[5]/NNCFBatchNorm2d[bn2]/batch_norm_0"  [label="(1, 128, 8, 8)", style=solid];
+"392 PNASNet/Sequential[layer5]/CellB[5]/NNCFBatchNorm2d[bn2]/batch_norm_0" -> "393 PNASNet/Sequential[layer5]/CellB[5]/relu_2"  [label="(1, 128, 8, 8)", style=solid];
+"393 PNASNet/Sequential[layer5]/CellB[5]/relu_2" -> "394 PNASNet/avg_pool2d_0"  [label="(1, 128, 8, 8)", style=solid];
 "394 PNASNet/avg_pool2d_0" -> "395 PNASNet/view_0"  [label="(1, 128, 1, 1)", style=solid];
 "395 PNASNet/view_0" -> "396 PNASNet/NNCFLinear[linear]/linear_0"  [label="(1, 128)", style=solid];
 "396 PNASNet/NNCFLinear[linear]/linear_0" -> "397 /nncf_model_output_0"  [label="(1, 10)", style=solid];

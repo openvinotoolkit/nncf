@@ -1,0 +1,34 @@
+{
+    "blocks": [
+        {
+            "start_node_name": "SqueezeNet/Sequential[features]/Fire[3]/NNCFConv2d[squeeze]/conv2d_0",
+            "end_node_name": "SqueezeNet/Sequential[features]/Fire[4]/ReLU[squeeze_activation]/relu__0"
+        },
+        {
+            "start_node_name": "SqueezeNet/Sequential[features]/MaxPool2d[6]/max_pool2d_0",
+            "end_node_name": "SqueezeNet/Sequential[features]/Fire[7]/cat_0"
+        },
+        {
+            "start_node_name": "SqueezeNet/Sequential[features]/Fire[8]/NNCFConv2d[squeeze]/conv2d_0",
+            "end_node_name": "SqueezeNet/Sequential[features]/Fire[9]/ReLU[squeeze_activation]/relu__0"
+        },
+        {
+            "start_node_name": "SqueezeNet/Sequential[features]/MaxPool2d[11]/max_pool2d_0",
+            "end_node_name": "SqueezeNet/Sequential[features]/Fire[12]/cat_0"
+        }
+    ],
+    "group_dependent": {
+        "0": [
+            0
+        ],
+        "1": [
+            1
+        ],
+        "2": [
+            2
+        ],
+        "3": [
+            3
+        ]
+    }
+}

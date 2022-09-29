@@ -37,7 +37,7 @@ def check_onnx_weights(ctrl, path_to_onnx, ref_orig_weights, expected_num_nodes)
 
 
 def test_multi_elasticity_weights_in_onnx(tmp_path):
-    _, ctrl = create_bnas_model_and_ctrl_by_test_desc(THREE_CONV_TEST_DESC, mode='manual')
+    _, ctrl = create_bnas_model_and_ctrl_by_test_desc(THREE_CONV_TEST_DESC)
     multi_elasticity_handler = ctrl.multi_elasticity_handler
     orig_model = ThreeConvModel()
     conv1 = orig_model.conv1
