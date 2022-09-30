@@ -18,6 +18,8 @@ import torch.distributed as dist
 
 from nncf import NNCFConfig
 from nncf.config.extractors import extract_algo_specific_config
+from nncf.config.schemata.defaults import SPARSITY_INIT
+from nncf.config.schemata.defaults import SPARSITY_LEVEL_SETTING_MODE
 from nncf.torch.algo_selector import PT_COMPRESSION_ALGORITHMS
 from nncf.api.compression import CompressionStage
 from nncf.common.graph import NNCFNode
@@ -55,7 +57,7 @@ class RBSparsityController(BaseSparsityAlgoController):
         params = deepcopy(algo_config.get('params', {}))
 
         self._distributed = False
-        self._mode = params.get('sparsity_level_setting_mode', 'global')
+        self._mode = params.get('sparsity_level_setting_mode', SPARSITY_LEVEL_SETTING_MODE)
         self._check_sparsity_masks = params.get('check_sparsity_masks', False)
 
         sparsify_operations = [m.operand for m in self.sparsified_module_info]
@@ -65,7 +67,7 @@ class RBSparsityController(BaseSparsityAlgoController):
         else:
             self._loss = SparseLoss(sparsify_operations)
 
-            sparsity_init = algo_config.get('sparsity_init', 0)
+            sparsity_init = algo_config.get('sparsity_init', SPARSITY_INIT)
             params['sparsity_init'] = sparsity_init
             scheduler_cls = SPARSITY_SCHEDULERS.get(params.get('schedule', 'exponential'))
             self._scheduler = scheduler_cls(self, params)

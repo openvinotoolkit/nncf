@@ -23,6 +23,8 @@ from nncf.common.sparsity.schedulers import SparsityScheduler
 from nncf.common.sparsity.statistics import RBSparsityStatistics
 from nncf.common.statistics import NNCFStatistics
 from nncf.config.extractors import extract_algo_specific_config
+from nncf.config.schemata.defaults import SPARSITY_INIT
+from nncf.config.schemata.defaults import SPARSITY_LEVEL_SETTING_MODE
 from nncf.tensorflow.algorithm_selector import TF_COMPRESSION_ALGORITHMS
 from nncf.tensorflow.api.compression import TFCompressionAlgorithmBuilder
 from nncf.tensorflow.graph.converter import TFModelConverterFactory
@@ -104,10 +106,10 @@ class RBSparsityController(BaseSparsityController):
     def __init__(self, target_model, config: NNCFConfig, op_names: List[str]):
         super().__init__(target_model, op_names)
         algo_config = extract_algo_specific_config(config, "rb_sparsity")
-        sparsity_init = algo_config.get('sparsity_init', 0)
+        sparsity_init = algo_config.get('sparsity_init', SPARSITY_INIT)
         params = deepcopy(algo_config.get('params', {}))
         params['sparsity_init'] = sparsity_init
-        sparsity_level_mode = params.get('sparsity_level_setting_mode', 'global')
+        sparsity_level_mode = params.get('sparsity_level_setting_mode', SPARSITY_LEVEL_SETTING_MODE)
 
         if sparsity_level_mode == 'local':
             raise NotImplementedError('RB sparsity algorithm do not support local sparsity loss')

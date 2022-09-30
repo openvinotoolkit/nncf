@@ -17,6 +17,9 @@ import scipy.optimize
 
 from nncf.common.utils.registry import Registry
 from nncf.common.schedulers import ExponentialDecaySchedule, BaseCompressionScheduler
+from nncf.config.schemata.defaults import PRUNING_NUM_INIT_STEPS
+from nncf.config.schemata.defaults import PRUNING_STEPS
+from nncf.config.schemata.defaults import PRUNING_TARGET
 
 PRUNING_SCHEDULERS = Registry('pruning_schedulers')
 
@@ -55,10 +58,10 @@ class PruningScheduler(BaseCompressionScheduler):
         if self._controller.prune_flops:
             self.target_level = params.get('pruning_flops_target')
         else:
-            self.target_level = params.get('pruning_target', 0.5)
+            self.target_level = params.get('pruning_target', PRUNING_TARGET)
 
-        self.num_warmup_epochs = params.get('num_init_steps', 0)
-        self.num_pruning_epochs = params.get('pruning_steps', 100)
+        self.num_warmup_epochs = params.get('num_init_steps', PRUNING_NUM_INIT_STEPS)
+        self.num_pruning_epochs = params.get('pruning_steps', PRUNING_STEPS)
         self.freeze_epoch = self.num_warmup_epochs + self.num_pruning_epochs
 
     def _calculate_pruning_level(self) -> float:

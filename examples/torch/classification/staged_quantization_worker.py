@@ -50,6 +50,9 @@ from examples.torch.common.utils import make_additional_checkpoints
 from examples.torch.common.utils import print_args
 from nncf.api.compression import CompressionStage
 from nncf.common.utils.tensorboard import prepare_for_tensorboard
+from nncf.config.schemata.defaults import LR_POLY_DURATION_EPOCHS
+from nncf.config.schemata.defaults import STAGED_QUANTIZATION_BASE_LR
+from nncf.config.schemata.defaults import STAGED_QUANTIZATION_BASE_WD
 from nncf.torch.binarization.algo import BinarizationController
 from nncf.torch.checkpoint_loading import load_state
 from nncf.torch.initialization import default_criterion_fn
@@ -76,8 +79,8 @@ class KDLossCalculator:
 
 def get_quantization_optimizer(params_to_optimize, quantization_config):
     params = quantization_config.get("params", {})
-    base_lr = params.get("base_lr", 1e-3)
-    base_wd = params.get("base_wd", 1e-5)
+    base_lr = params.get("base_lr", STAGED_QUANTIZATION_BASE_LR)
+    base_wd = params.get("base_wd", STAGED_QUANTIZATION_BASE_WD)
     return torch.optim.Adam(params_to_optimize,
                             lr=base_lr,
                             weight_decay=base_wd)
@@ -86,9 +89,9 @@ def get_quantization_optimizer(params_to_optimize, quantization_config):
 class PolyLRDropScheduler:
     def __init__(self, optimizer, quantization_config):
         params = quantization_config.get('params', {})
-        self.base_lr = params.get("base_lr", 1e-3)
+        self.base_lr = params.get("base_lr", STAGED_QUANTIZATION_BASE_LR)
         self.lr_poly_drop_start_epoch = params.get('lr_poly_drop_start_epoch', None)
-        self.lr_poly_drop_duration_epochs = params.get('lr_poly_drop_duration_epochs', 30)
+        self.lr_poly_drop_duration_epochs = params.get('lr_poly_drop_duration_epochs', LR_POLY_DURATION_EPOCHS)
         self.disable_wd_start_epoch = params.get('disable_wd_start_epoch', None)
         self.optimizer = optimizer
         self.last_epoch = 0

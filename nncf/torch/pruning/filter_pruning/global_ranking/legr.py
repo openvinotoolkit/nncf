@@ -15,6 +15,10 @@ import time
 from torch import nn
 
 from nncf.common.utils.logger import logger as nncf_logger
+from nncf.config.schemata.defaults import PRUNING_LEGR_GENERATIONS
+from nncf.config.schemata.defaults import PRUNING_LEGR_MAX_PRUNING
+from nncf.config.schemata.defaults import PRUNING_LEGR_RANDOM_SEED
+from nncf.config.schemata.defaults import PRUNING_LEGR_TRAIN_STEPS
 from nncf.torch.pruning.filter_pruning.global_ranking.evolutionary_optimization import LeGRPruner, EvolutionOptimizer, \
     LeGREvolutionEnv
 from nncf.torch.structures import LeGRInitArgs
@@ -25,8 +29,13 @@ class LeGR:
     Class for training global ranking coefficients with Evolution optimization agent (but this agent can be easily
     replaced by any other RL agent with a similar interface) and LeGR-optimization environment.
     """
-    def __init__(self, pruning_ctrl: 'FilterPruningController', target_model: nn.Module, legr_init_args: LeGRInitArgs,
-                 train_steps: int = 200, generations: int = 400, max_pruning: float = 0.8, random_seed: int = 42):
+    def __init__(self, pruning_ctrl: 'FilterPruningController',
+                 target_model: nn.Module,
+                 legr_init_args: LeGRInitArgs,
+                 train_steps: int = PRUNING_LEGR_TRAIN_STEPS,
+                 generations: int = PRUNING_LEGR_GENERATIONS,
+                 max_pruning: float = PRUNING_LEGR_MAX_PRUNING,
+                 random_seed: int = PRUNING_LEGR_RANDOM_SEED):
         """
         Initializing all necessary structures for optimization- LeGREvolutionEnv environment and EvolutionOptimizer
          agent.

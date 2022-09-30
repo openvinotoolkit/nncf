@@ -20,6 +20,15 @@ from nncf.common.schedulers import ExponentialDecaySchedule
 from nncf.common.schedulers import MultiStepSchedule
 from nncf.common.sparsity.controller import SparsityController
 from nncf.common.schedulers import BaseCompressionScheduler
+from nncf.config.schemata.defaults import SPARSITY_FREEZE_EPOCH
+from nncf.config.schemata.defaults import SPARSITY_MULTISTEP_SPARSITY_LEVELS
+from nncf.config.schemata.defaults import SPARSITY_MULTISTEP_STEPS
+from nncf.config.schemata.defaults import SPARSITY_SCHEDULER_CONCAVE
+from nncf.config.schemata.defaults import SPARSITY_SCHEDULER_PATIENCE
+from nncf.config.schemata.defaults import SPARSITY_SCHEDULER_POWER
+from nncf.config.schemata.defaults import SPARSITY_SCHEDULER_UPDATE_PER_OPTIMIZER_STEP
+from nncf.config.schemata.defaults import SPARSITY_TARGET
+from nncf.config.schemata.defaults import SPARSITY_TARGET_EPOCH
 
 SPARSITY_SCHEDULERS = Registry('sparsity_schedulers')
 
@@ -53,9 +62,9 @@ class SparsityScheduler(BaseCompressionScheduler):
         super().__init__()
         self._controller = controller
         self.initial_level = params.get('sparsity_init')
-        self.target_level = params.get('sparsity_target', 0.5)
-        self.target_epoch = params.get('sparsity_target_epoch', 90)
-        self.freeze_epoch = params.get('sparsity_freeze_epoch', 100)
+        self.target_level = params.get('sparsity_target', SPARSITY_TARGET)
+        self.target_epoch = params.get('sparsity_target_epoch', SPARSITY_TARGET_EPOCH)
+        self.freeze_epoch = params.get('sparsity_freeze_epoch', SPARSITY_FREEZE_EPOCH)
 
     def _calculate_sparsity_level(self) -> float:
         """
@@ -116,9 +125,11 @@ class PolynomialSparsityScheduler(SparsityScheduler):
         """
         super().__init__(controller, params)
         self.schedule = PolynomialDecaySchedule(self.initial_level, self.target_level, self.target_epoch,
-                                                params.get('power', 0.9), params.get('concave', True))
+                                                params.get('power', SPARSITY_SCHEDULER_POWER),
+                                                params.get('concave', SPARSITY_SCHEDULER_CONCAVE))
         self._steps_in_current_epoch = 0
-        self._update_per_optimizer_step = params.get('update_per_optimizer_step', False)
+        self._update_per_optimizer_step = params.get('update_per_optimizer_step',
+                                                     SPARSITY_SCHEDULER_UPDATE_PER_OPTIMIZER_STEP)
         self._steps_per_epoch = params.get('steps_per_epoch', None)
         self._should_skip = False
 
@@ -230,7 +241,7 @@ class AdaptiveSparsityScheduler(SparsityScheduler):
         super().__init__(controller, params)
         self.decay_step = params.get('step', 0.05)
         self.eps = params.get('eps', 0.03)
-        self.patience = params.get('patience', 1)
+        self.patience = params.get('patience', SPARSITY_SCHEDULER_PATIENCE)
         self.num_bad_epochs = 0
         self._current_level = self.initial_level
 
@@ -288,7 +299,8 @@ class MultiStepSparsityScheduler(SparsityScheduler):
         """
         super().__init__(controller, params)
         self.schedule = MultiStepSchedule(
-            sorted(params.get('multistep_steps', [90])), params.get('multistep_sparsity_levels', [0.1, 0.5]))
+            sorted(params.get('multistep_steps', SPARSITY_MULTISTEP_STEPS)),
+            params.get('multistep_sparsity_levels', SPARSITY_MULTISTEP_SPARSITY_LEVELS))
         self.target_level = self.schedule.values[-1]
 
     @property
