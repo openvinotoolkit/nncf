@@ -33,38 +33,69 @@ class FBCAlgoBackend(ABC):
     @property
     @abstractmethod
     def operation_metatypes(self):
-        """ Property for the backend-specific metatypes """
+        """
+        Property for the backend-specific metatypes
+        """
 
     @property
     @abstractmethod
     def layers_with_bias_metatypes(self):
-        """ Property for the backend-specific metatypes with bias """
+        """
+        Property for the backend-specific metatypes with bias
+        """
 
     @staticmethod
     @abstractmethod
     def target_point(target_type: TargetType, target_node_name: str, edge_name: str = None) -> TargetPoint:
-        """ Returns backend-specific target point """
+        """
+        Returns backend-specific target point
+        :param target_type: type of the location that should be modified
+        :param target_node_name: the name of the located node
+        :param edge_name: name of the tensor for the statistics disctribution
+        :return: backend-specific TargetPoint
+        """
 
     @staticmethod
     @abstractmethod
     def bias_correction_command(target_point: TargetPoint,
-                                bias_value: np.ndarray,
+                                bias_shift: np.ndarray,
                                 threshold: float) -> TransformationCommand:
-        """ Returns backend-specific bias correction command """
+        """ 
+        Returns backend-specific bias correction command
+        :param target_point: target location for the correction
+        :param bias_shift: shift value for the bias
+        :param threshold: parametrized threshold for the shift magnitude comparison
+        :return: backend-specific TransformationCommand for the bias correction
+        """
 
     @staticmethod
     @abstractmethod
     def model_extraction_command(inputs: List[str], outputs: List[str]) -> TransformationCommand:
-        """ Returns backend-specific bias correction command """
+        """
+        Returns backend-specific bias correction
+        :param inputs: list of the input names for sub-model beggining
+        :param outputs: list of the output names for sub-model end
+        :return: backend-specific TransformationCommand for the model extraction
+        """
 
     @staticmethod
     @abstractmethod
     def mean_statistic_collector(reduction_shape: ReductionShape,
                                  num_samples: int = None,
                                  window_size: int = None) -> TensorStatisticCollectorBase:
-        """ Returns backend-specific mean statistic collector """
+        """
+        Returns backend-specific mean statistic collector
+        :param reduction_shape: channel axes for the statistics aggregation
+        :param num_samples: maximum number of samples to collect.
+        :param window_size:
+        :return: backend-specific TensorStatisticCollectorBase for the statistics calculation
+        """
 
     @staticmethod
     @abstractmethod
     def nncf_tensor(tensor: TensorType) -> NNCFTensor:
-        """ Returns backend-specific NNCFTensor """
+        """
+        Returns backend-specific NNCFTensor
+        :param tensor: tensor data for the wrapping
+        :return: NNCFTensor
+        """

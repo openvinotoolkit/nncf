@@ -14,6 +14,7 @@
 from abc import ABC
 from abc import abstractmethod
 
+from typing import List
 from typing import TypeVar
 from typing import Dict
 from typing import Union
@@ -52,6 +53,13 @@ class Algorithm(ABC):
 
     def __init__(self) -> None:
         self._model_transformer = None
+    
+    @property
+    @abstractmethod
+    def available_backends(self) -> List[BackendType]:
+        """
+        Returns list of the avaliable backends for the algorithm
+        """
 
     @property
     def model_transformer(self) -> StaticModelTransformerBase:
@@ -100,6 +108,10 @@ class CompositeAlgorithm(Algorithm):
     def __init__(self) -> None:
         super().__init__()
         self.algorithms = []
+    
+    @property
+    def available_backends(self) -> List[BackendType]:
+        pass
 
     def create_subalgorithms(self, backend: BackendType) -> None:
         """

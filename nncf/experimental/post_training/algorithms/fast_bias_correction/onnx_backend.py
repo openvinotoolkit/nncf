@@ -25,14 +25,12 @@ from nncf.experimental.onnx.graph.transformations.commands import ONNXModelExtra
 from nncf.experimental.onnx.graph.transformations.commands import ONNXTargetPoint
 from nncf.experimental.onnx.statistics.collectors import ONNXMeanStatisticCollector
 from nncf.experimental.onnx.tensor import ONNXNNCFTensor
-from nncf.experimental.post_training.algorithms.fast_bias_correction.algo_backend import ALGO_BACKENDS
-from nncf.experimental.post_training.algorithms.fast_bias_correction.algo_backend import FBCAlgoBackend
+from nncf.experimental.post_training.algorithms.fast_bias_correction.backend import ALGO_BACKENDS
+from nncf.experimental.post_training.algorithms.fast_bias_correction.backend import FBCAlgoBackend
 
 
-@ALGO_BACKENDS.register()
+@ALGO_BACKENDS.register(BackendType.ONNX)
 class ONNXFBCAlgoBackend(FBCAlgoBackend):
-
-    BACKEND_TYPE = BackendType.ONNX
 
     @property
     def operation_metatypes(self) -> Registry:
@@ -43,14 +41,16 @@ class ONNXFBCAlgoBackend(FBCAlgoBackend):
         return LAYERS_WITH_BIAS_METATYPES
 
     @staticmethod
-    def target_point(target_type: TargetType, target_node_name: str = None, edge_name: str = None) -> ONNXTargetPoint:
+    def target_point(target_type: TargetType,
+                     target_node_name: str = None,
+                     edge_name: str = None) -> ONNXTargetPoint:
         return ONNXTargetPoint(target_type, target_node_name, edge_name)
 
     @staticmethod
     def bias_correction_command(target_point: ONNXTargetPoint,
-                                bias_value: np.ndarray,
+                                bias_shift: np.ndarray,
                                 threshold: float) -> ONNXBiasCorrectionCommand:
-        return ONNXBiasCorrectionCommand(target_point, bias_value, threshold)
+        return ONNXBiasCorrectionCommand(target_point, bias_shift, threshold)
 
     @staticmethod
     def model_extraction_command(inputs: List[str], outputs: List[str]) -> ONNXModelExtractionCommand:

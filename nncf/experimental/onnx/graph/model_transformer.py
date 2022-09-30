@@ -339,7 +339,7 @@ class ONNXModelTransformer(StaticModelTransformerBase):
             bias_initializer = onnx_graph.get_initializer(bias_initializer_name)
             current_bias_value = onnx.numpy_helper.to_array(bias_initializer)
 
-            new_bias_value = current_bias_value + transformation.bias_value
+            new_bias_value = current_bias_value + transformation.bias_shift
             new_bias_tensor = onnx.numpy_helper.from_array(new_bias_value, bias_initializer_name)
 
             bias_shift_magnitude = np.inf
