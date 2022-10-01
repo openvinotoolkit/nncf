@@ -10,6 +10,7 @@ import torch.nn as nn
 from datasets import load_dataset
 from nncf import NNCFConfig
 from nncf.common.utils.helpers import matches_any, should_consider_scope
+from nncf.torch.sparsity.functions import apply_binary_mask
 from nncf.torch import create_compressed_model, register_default_init_args
 from nncf.torch.layer_utils import COMPRESSION_MODULES, CompressionParameter
 from nncf.torch.layers import NNCF_MODULES_MAP
@@ -76,6 +77,10 @@ class MovementSparsityConfigBuilder:
             self._config_dict['compression']['params']['warmup_start_epoch'] = a
         if b is not None:
             self._config_dict['compression']['params']['warmup_end_epoch'] = b
+        return self
+
+    def input_info(self, value):
+        self._config_dict['input_info'] = value
         return self
 
     def sparse_structure_by_scopes(self, value):
@@ -373,9 +378,48 @@ def test_binary_mask(tmp_path, nncf_config_builder):
     run_movement_pipeline(tmp_path, nncf_config, CheckBinaryMask)
 
 
+# @pytest.mark.parametrize('config', [
+#     dict(weight=torch.ones([4, 2]),
+#          bias=torch.ones([4]),
+#          weight_importance=torch.tensor([[1.0], [0.0]]),
+#          bias_importance=torch.tensor([1.0, 0.0]),
+#          ref_sparsity=0.5,
+#          nncf_config=MovementSparsityConfigBuilder().sparse_structure_by_scopes([["block", [2, 2], "{re}.*"]])),
+#     dict(weight=torch.zeros([4, 2]),
+#          bias=torch.ones([4]),
+#          weight_importance=torch.tensor([[1.0], [1.0]]),
+#          bias_importance=torch.tensor([1.0, 1.0]),
+#          ref_sparsity=8 / 12.0,
+#          nncf_config=MovementSparsityConfigBuilder().sparse_structure_by_scopes([["block", [2, 2], "{re}.*"]])),
+#     dict(weight=torch.arange(-4, 4).float().reshape(4, 2),
+#          bias=torch.ones([4]),
+#          weight_importance=torch.tensor([[1.0, 1.0, 1.0, 0.0], [1.0, 0.0, 0.0, 1.0]]),
+#          bias_importance=torch.tensor([1.0, 1.0, 0.0, 1.0]),
+#          ref_sparsity=5 / 12.0,
+#          nncf_config=MovementSparsityConfigBuilder().sparse_structure_by_scopes([["fine", [1, 1], "{re}.*"]]))
+# ])
+# def test_sparsity_statistics(config):
+#     class BasicModel(nn.Module):
+#         def __init__(self):
+#             super().__init__()
+#             self.linears = nn.Linear(2, 4, bias=True)
+
+#         def forward(self, inputs):
+#             return self.linears(inputs)
+
+#     compression_ctrl, model = create_compressed_model(BasicModel(), config['nncf_config'].input_info([{"sample_size": [1, 2]}]).build())
+#     for sparse_module in compression_ctrl.sparsified_module_info:
+#           # HOW to set data? load a state_dict? 
+#         sparse_module.module.weight.data = config['weight']
+#         sparse_module.module.bias.data = config['bias']
+#         sparse_module.operand._weight_importance.data = config['weight_importance']
+#         sparse_module.operand._bias_importance.data = config['bias_importance']
+#         calculated_sparsity = compression_ctrl.statistics().movement_sparsity.model_statistics.sparsity_level_for_layers
+#         print(calculated_sparsity)
+#         assert calculated_sparsity == approx(config['ref_sparsity'])
+
+
 if __name__ == "__main__":
     # test_can_create_movement_sparsity_layers(MovementSparsityConfigBuilder())
     # test_can_run_full_pipeline(Path('/tmp'), MovementSparsityConfigBuilder)
     # test_importance_score_update(Path('/tmp'), MovementSparsityConfigBuilder())
-    test_binary_mask(Path('/tmp'), MovementSparsityConfigBuilder())
-    test_can_run_full_pipeline
