@@ -280,7 +280,8 @@ def test_pruning_masks_applying_correctness(all_weights, prune_by_flops, pruning
                     'bn1': [1, 16] + [8] * dim,
                     'bn2': [1, 32] + [8] * dim,
                     'up': [1, 32] + [8] * dim,
-                    'linear': [1, 448 * 7**(dim - 1)]}
+                    'linear': [1, 448 * 7**(dim - 1)],
+                    'layernorm': [1, 128]}
 
     def check_mask(module, num):
         # Mask for weights
@@ -373,6 +374,10 @@ def test_pruning_masks_applying_correctness(all_weights, prune_by_flops, pruning
     check_mask(linear, i)
     check_module_output(linear, 'linear', i)
 
+    # Check for layernorm
+    layernorm = pruned_model.layernorm
+    check_mask(layernorm, i)
+    check_module_output(layernorm, 'layernorm', i)
 
 @pytest.mark.parametrize('prune_bn',
                          (False,
