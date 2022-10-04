@@ -11,12 +11,13 @@ Please follow [installation guide](../../../torch/classification/README.md#insta
 You can run the FracBits mixed-precision quantization algorithm with the pre-defined configuration file.
 
 ```bash
-python main.py -m train -c <config_path> -j <num_workers> --data <dataset_path> --log-dir <path_for_logging>
+cd examples/experimental/torch/classification
+python fracbits.py -m train -c <config_path> -j <num_workers> --data <dataset_path> --log-dir <path_for_logging>
 ```
 
 The following describes each argument.
 
-- `-c`: FracBits configuration file path. You can find it from `examples/experimental/torch/classification/configs`.
+- `-c`: FracBits configuration file path. You can find it from `examples/experimental/torch/classification/fracbits_configs`.
 - `-j`: The number of PyTorch dataloader workers.
 - `--data`: Directory path of the dataset.
 - `--log-dir`: Directory path to save log files, tensorboard logs, and model checkpoints.
