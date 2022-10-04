@@ -11,6 +11,7 @@
  limitations under the License.
 """
 
+from typing import Dict
 from typing import List
 import numpy as np
 from nncf.common.graph.transformations.commands import TargetType
@@ -23,7 +24,7 @@ from nncf.experimental.onnx.graph.metatypes.onnx_metatypes import ONNX_OPERATION
 from nncf.experimental.onnx.graph.transformations.commands import ONNXBiasCorrectionCommand
 from nncf.experimental.onnx.graph.transformations.commands import ONNXModelExtractionCommand
 from nncf.experimental.onnx.graph.transformations.commands import ONNXTargetPoint
-from nncf.experimental.onnx.statistics.collectors import ONNXMeanStatisticCollector
+from nncf.experimental.onnx.statistics.collectors import ONNXMeanStatisticCollector, ONNXNNCFCollectorTensorProcessor
 from nncf.experimental.onnx.tensor import ONNXNNCFTensor
 from nncf.experimental.post_training.algorithms.fast_bias_correction.backend import ALGO_BACKENDS
 from nncf.experimental.post_training.algorithms.fast_bias_correction.backend import FBCAlgoBackend
@@ -39,6 +40,14 @@ class ONNXFBCAlgoBackend(FBCAlgoBackend):
     @property
     def layers_with_bias_metatypes(self) -> Registry:
         return LAYERS_WITH_BIAS_METATYPES
+
+    @property
+    def channel_axis_by_types(self) -> Dict[str, int]:
+        return {'Conv': 1, 'Gemm': -1}
+
+    @property
+    def tensor_processor(self) -> ONNXNNCFCollectorTensorProcessor:
+        return ONNXNNCFCollectorTensorProcessor()
 
     @staticmethod
     def target_point(target_type: TargetType,

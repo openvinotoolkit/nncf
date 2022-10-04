@@ -12,7 +12,7 @@
 """
 
 from copy import deepcopy
-from typing import Set
+from typing import List, Set
 
 import onnx
 from nncf.common.graph.transformations.layout import TransformationLayout
@@ -61,6 +61,10 @@ class ONNXMinMaxQuantization(MinMaxQuantization):
         # It prevents the duplicate weight quantizers from being added.
         # It can happen when you have layers that share the identical weight tensor.
         self._quantization_target_points = set()  # type: Set[ONNXTargetPoint]
+
+    @property
+    def available_backends(self) -> List[BackendType]:
+        pass
 
     def generate_stat_collector(self, quantizer_config: QuantizerConfig) -> TensorStatisticCollectorBase:
         is_symmetric = quantizer_config.mode == QuantizationMode.SYMMETRIC

@@ -357,7 +357,14 @@ class MeanStatisticCollector(OfflineTensorStatisticCollector):
     def __init__(self,
                  reduction_shape: ReductionShape,
                  num_samples: int = None,
-                 window_size: int = None):
+                 window_size: int = None) -> None:
+        """
+        Init method for the MeanStatisticCollector
+
+        :param reduction_shape: shape for the reduction while collection
+        :param num_samples: number of samples for statistic collection
+        :param window_size: maximum length for the statistic collection
+        """
         super().__init__(reduction_shape, num_samples)
         self._tensor_processor = self._get_processor()
         self._all_values = deque(maxlen=window_size)

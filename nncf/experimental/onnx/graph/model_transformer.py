@@ -328,7 +328,7 @@ class ONNXModelTransformer(StaticModelTransformerBase):
         """
         Applies bias correction transformations on the model
 
-        :param transformations: lisf of the TransformationCommand transformations
+        :param transformations: lisf of the bias correction transformations
         """
         onnx_graph = ONNXGraph(self._model)
 
@@ -344,7 +344,7 @@ class ONNXModelTransformer(StaticModelTransformerBase):
 
             bias_shift_magnitude = np.inf
             if np.count_nonzero(current_bias_value == 0) == 0:
-                bias_shift_magnitude = np.max(np.abs(transformation.bias_value / current_bias_value))
+                bias_shift_magnitude = np.max(np.abs((new_bias_value - current_bias_value) / current_bias_value))
 
             if bias_shift_magnitude < transformation.threshold:
                 nncf_logger.debug(f'{node_name} bias was changed')

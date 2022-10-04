@@ -44,11 +44,26 @@ class FBCAlgoBackend(ABC):
         Property for the backend-specific metatypes with bias
         """
 
+    @property
+    @abstractmethod
+    def channel_axis_by_types(self):
+        """
+        Property for the backend-specific info about channels placement in the layout
+        """
+
+    @property
+    @abstractmethod
+    def tensor_processor(self):
+        """
+        Returns backend-specific instance of the NNCFCollectorTensorProcessor
+        """
+
     @staticmethod
     @abstractmethod
     def target_point(target_type: TargetType, target_node_name: str, edge_name: str = None) -> TargetPoint:
         """
         Returns backend-specific target point
+
         :param target_type: type of the location that should be modified
         :param target_node_name: the name of the located node
         :param edge_name: name of the tensor for the statistics disctribution
@@ -60,8 +75,9 @@ class FBCAlgoBackend(ABC):
     def bias_correction_command(target_point: TargetPoint,
                                 bias_shift: np.ndarray,
                                 threshold: float) -> TransformationCommand:
-        """ 
+        """
         Returns backend-specific bias correction command
+
         :param target_point: target location for the correction
         :param bias_shift: shift value for the bias
         :param threshold: parametrized threshold for the shift magnitude comparison
@@ -73,6 +89,7 @@ class FBCAlgoBackend(ABC):
     def model_extraction_command(inputs: List[str], outputs: List[str]) -> TransformationCommand:
         """
         Returns backend-specific bias correction
+
         :param inputs: list of the input names for sub-model beggining
         :param outputs: list of the output names for sub-model end
         :return: backend-specific TransformationCommand for the model extraction
@@ -85,6 +102,7 @@ class FBCAlgoBackend(ABC):
                                  window_size: int = None) -> TensorStatisticCollectorBase:
         """
         Returns backend-specific mean statistic collector
+
         :param reduction_shape: channel axes for the statistics aggregation
         :param num_samples: maximum number of samples to collect.
         :param window_size:
@@ -96,6 +114,7 @@ class FBCAlgoBackend(ABC):
     def nncf_tensor(tensor: TensorType) -> NNCFTensor:
         """
         Returns backend-specific NNCFTensor
+
         :param tensor: tensor data for the wrapping
         :return: NNCFTensor
         """

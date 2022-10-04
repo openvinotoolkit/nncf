@@ -53,12 +53,14 @@ class Algorithm(ABC):
 
     def __init__(self) -> None:
         self._model_transformer = None
-    
+
     @property
     @abstractmethod
     def available_backends(self) -> List[BackendType]:
         """
         Returns list of the avaliable backends for the algorithm
+
+        :return: List of backends supported by the algorithm
         """
 
     @property
@@ -108,7 +110,7 @@ class CompositeAlgorithm(Algorithm):
     def __init__(self) -> None:
         super().__init__()
         self.algorithms = []
-    
+
     @property
     def available_backends(self) -> List[BackendType]:
         pass
