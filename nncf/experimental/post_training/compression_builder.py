@@ -59,7 +59,6 @@ class CompressionBuilder:
     def _create_statistics_aggregator(self,
                                       engine: Engine,
                                       dataset: Dataset,
-                                      model_transformer: StaticModelTransformerBase,
                                       backend: BackendType) -> StatisticsAggregator:
         """
         Creates backend-specific StatisticsAggregator.
@@ -73,7 +72,7 @@ class CompressionBuilder:
         if backend == BackendType.ONNX:
             from nncf.experimental.onnx.statistics.aggregator import \
                 ONNXStatisticsAggregator
-            return ONNXStatisticsAggregator(engine, dataset, model_transformer)
+            return ONNXStatisticsAggregator(engine, dataset)
         return None
 
     def _create_model_transformer(self, model: ModelType, backend: BackendType) -> ModelTransformer:
@@ -117,22 +116,20 @@ class CompressionBuilder:
         backend = get_backend(model)
         modified_model = self._get_prepared_model_for_compression(model, backend)
 
-        model_transformer = self._create_model_transformer(model, backend)
-
         if engine is None:
             engine = self._create_engine(backend)
 
         for algorithm in self.algorithms:
-            algorithm.model_transformer = model_transformer
             if isinstance(algorithm, CompositeAlgorithm):
                 algorithm.create_subalgorithms(backend)
 
-        statistics_aggregator = self._create_statistics_aggregator(engine, dataset, model_transformer, backend)
+        statistics_aggregator = self._create_statistics_aggregator(engine, dataset, backend)
         for algorithm in self.algorithms:
             statistic_points = algorithm.get_statistic_points(modified_model)
             statistics_aggregator.register_stastistic_points(statistic_points)
 
-        statistics_aggregator.collect_statistics(modified_model)
+        model_transformer = self._create_model_transformer(model, backend)
+        statistics_aggregator.collect_statistics(model_transformer, modified_model)
 
         for algorithm in self.algorithms:
             modified_model = algorithm.apply(modified_model, engine, statistics_aggregator.statistic_points)

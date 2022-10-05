@@ -13,6 +13,7 @@
 
 from typing import Dict
 from typing import List
+import onnx
 import numpy as np
 from nncf.common.graph.transformations.commands import TargetType
 from nncf.common.tensor_statistics.collectors import ReductionShape
@@ -21,6 +22,7 @@ from nncf.common.utils.registry import Registry
 
 from nncf.experimental.onnx.graph.metatypes.onnx_metatypes import LAYERS_WITH_BIAS_METATYPES
 from nncf.experimental.onnx.graph.metatypes.onnx_metatypes import ONNX_OPERATION_METATYPES
+from nncf.experimental.onnx.graph.model_transformer import ONNXModelTransformer
 from nncf.experimental.onnx.graph.transformations.commands import ONNXBiasCorrectionCommand
 from nncf.experimental.onnx.graph.transformations.commands import ONNXModelExtractionCommand
 from nncf.experimental.onnx.graph.transformations.commands import ONNXTargetPoint
@@ -48,6 +50,10 @@ class ONNXFBCAlgoBackend(FBCAlgoBackend):
     @property
     def tensor_processor(self) -> ONNXNNCFCollectorTensorProcessor:
         return ONNXNNCFCollectorTensorProcessor()
+    
+    @staticmethod
+    def model_transformer(model: onnx.ModelProto) -> ONNXModelTransformer:
+        return ONNXModelTransformer(model)
 
     @staticmethod
     def target_point(target_type: TargetType,

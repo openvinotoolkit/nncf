@@ -31,6 +31,7 @@ from nncf.experimental.post_training.algorithms.algorithm import PostTrainingAlg
 from nncf.experimental.post_training.algorithms.fast_bias_correction.backend import ALGO_BACKENDS
 from nncf.experimental.post_training.api.engine import Engine
 from nncf.experimental.post_training.factories import NNCFGraphFactory
+from nncf.experimental.post_training.graph.model_transformer import StaticModelTransformerBase
 from nncf.experimental.post_training.statistics.statistic_point import StatisticPoint
 from nncf.experimental.post_training.statistics.statistic_point import StatisticPointsContainer
 
@@ -58,7 +59,6 @@ class FastBiasCorrectionParameters(AlgorithmParameters):
         """
 
 
-# pylint: disable = too-many-function-args
 class FastBiasCorrection(Algorithm):
 
     def __init__(self, parameters: FastBiasCorrectionParameters):
@@ -88,9 +88,9 @@ class FastBiasCorrection(Algorithm):
 
     def _apply(self, model: ModelType, engine: Engine,
                statistic_points: StatisticPointsContainer) -> ModelType:
-
         self._set_backend_entity(model)
 
+        model_transformer = self._backend_entity.model_transformer(model)
         transformation_layout = TransformationLayout()
         nncf_graph = NNCFGraphFactory.create(model)
 
@@ -113,7 +113,7 @@ class FastBiasCorrection(Algorithm):
             input_name = node.layer_attributes.input_tensor_names[0]
             output_name = node.layer_attributes.output_tensor_names[0]
 
-            extracted_model = self._extract_submodel([input_name], [output_name])
+            extracted_model = self._extract_submodel(model_transformer, [input_name], [output_name])
 
             channel_axis = self._backend_entity.channel_axis_by_types[node.node_type]
             input_blob = self._create_input_blob(input_shape,
@@ -134,7 +134,7 @@ class FastBiasCorrection(Algorithm):
                                                                                    self.threshold)
             transformation_layout.register(bias_correction_command)
 
-        quantized_model = self._model_transformer.transform(transformation_layout)
+        quantized_model = model_transformer.transform(transformation_layout)
         return quantized_model
 
     def _get_fp_inputs(self, statistic_points: StatisticPointsContainer, node_name: str) -> Tuple[List, List]:
@@ -179,10 +179,14 @@ class FastBiasCorrection(Algorithm):
             output_fp.extend(tensor_collector.get_statistics().mean_values)
         return output_fp
 
-    def _extract_submodel(self, input_names: List[str], output_names: List[str]) -> ModelType:
+    def _extract_submodel(self,
+                          model_transformer: StaticModelTransformerBase,
+                          input_names: List[str],
+                          output_names: List[str]) -> ModelType:
         """
         Extracts sub-model from the original based on the input & output tensor names
 
+        :param model_transformer: ModelTransformer instance
         :param input_names: list of the input names
         :param output_names: list of the output names
         :return: backend-specific sub-model
@@ -191,7 +195,7 @@ class FastBiasCorrection(Algorithm):
                                                                                  output_names)
         me_transformation_layout = TransformationLayout()
         me_transformation_layout.register(model_extraction_command)
-        extracted_model = self._model_transformer.transform(me_transformation_layout)
+        extracted_model = model_transformer.transform(me_transformation_layout)
         return extracted_model
 
     def _add_statistic_point(self, container: StatisticPointsContainer, point: TargetPoint, axis: int) -> None:

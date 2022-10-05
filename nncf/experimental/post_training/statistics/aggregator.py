@@ -15,6 +15,7 @@ from abc import ABC
 from abc import abstractmethod
 
 from typing import TypeVar
+from nncf.common.graph.model_transformer import ModelTransformer
 
 from nncf.experimental.post_training.statistics.statistic_point import StatisticPointsContainer
 from nncf.experimental.post_training.api.engine import Engine
@@ -31,23 +32,23 @@ class StatisticsAggregator(ABC):
     Base class for statistics collection.
     """
 
-    def __init__(self, engine: Engine, dataset: Dataset, model_transformer: StaticModelTransformerBase):
+    def __init__(self, engine: Engine, dataset: Dataset):
         self.engine = engine
         self.dataset = dataset
         self.is_calculate_metric = False
         self.max_number_samples = 0
         self.statistic_points = StatisticPointsContainer()
-        self.model_transformer = model_transformer
 
-    def collect_statistics(self, model: ModelType) -> None:
+    def collect_statistics(self, model_transformer: StaticModelTransformerBase) -> None:
         """
         Collects statistics for registered StatisticPoints.
         The statistics are stored in self.statistic_points.
 
-        :param model: input model for the statistics collection
+        :param model_transformer: ModelTransformer intance with the model
         """
-        self.model_transformer.set_model(model)
-        self.engine.set_model(self.model_transformer.prepare_model_for_statistics_collection(self.statistic_points))
+        transformation_layout = model_transformer._get_transformation_layout_extra_outputs(self.statistic_points)
+        model_with_outputs = model_transformer.transform(transformation_layout)
+        self.engine.set_model(model_with_outputs)
         self.engine.set_sampler(self._create_sampler(self.dataset, self.max_number_samples))
         self.engine.compute_statistics(self.statistic_points)
 

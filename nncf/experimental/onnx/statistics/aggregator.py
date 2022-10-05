@@ -22,8 +22,8 @@ from nncf.experimental.onnx.graph.model_transformer import ONNXModelTransformer
 
 
 class ONNXStatisticsAggregator(StatisticsAggregator):
-    def __init__(self, engine: ONNXEngine, dataset: Dataset, model_transformer: ONNXModelTransformer):
-        super().__init__(engine, dataset, model_transformer)
+    def __init__(self, engine: ONNXEngine, dataset: Dataset):
+        super().__init__(engine, dataset)
 
     def _create_sampler(self, dataset: Dataset,
                         sample_indices: int) -> Sampler:

@@ -14,6 +14,7 @@
 from abc import ABC
 from abc import abstractmethod
 from typing import List
+from typing import TypeVar
 
 import numpy as np
 from nncf.common.graph.transformations.commands import TargetPoint
@@ -24,7 +25,9 @@ from nncf.common.tensor import TensorType
 from nncf.common.tensor_statistics.collectors import TensorStatisticCollectorBase
 from nncf.common.tensor_statistics.collectors import ReductionShape
 from nncf.common.utils.registry import Registry
+from nncf.experimental.post_training.graph.model_transformer import StaticModelTransformerBase
 
+ModelType = TypeVar('ModelType')
 ALGO_BACKENDS = Registry('algo_backends')
 
 
@@ -56,6 +59,16 @@ class FBCAlgoBackend(ABC):
     def tensor_processor(self):
         """
         Returns backend-specific instance of the NNCFCollectorTensorProcessor
+        """
+    
+    @staticmethod
+    @abstractmethod
+    def model_transformer(model: ModelType) -> StaticModelTransformerBase:
+        """
+        Returns backend-specific ModelTransformer instance
+
+        :param model: backend-specific model to create ModelTransformer
+        :return: ModelTransformer instance
         """
 
     @staticmethod

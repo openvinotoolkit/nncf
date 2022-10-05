@@ -31,24 +31,6 @@ class StaticModelTransformerBase(ModelTransformer, ABC):
         self._transformation_layout = None
         self._transformations_list = []
 
-    def set_model(self, model: ModelType) -> None:
-        """
-        Sets model
-
-        :param model: input model
-        """
-        self._model = model
-
-    def prepare_model_for_statistics_collection(self, statistic_points: StatisticPointsContainer) -> ModelType:
-        """
-        Prepares model for statics collection by adding external outputs
-
-        :param statistic_points: StatisticPointsContainer
-        :return: model after transformations
-        """
-        transformation_layout = self._get_transformation_layout_extra_outputs(statistic_points)
-        return self.transform(transformation_layout)
-
     @abstractmethod
     def transform(self, transformation_layout: TransformationLayout) -> ModelType:
         """

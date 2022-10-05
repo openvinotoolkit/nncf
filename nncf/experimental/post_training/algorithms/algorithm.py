@@ -51,9 +51,6 @@ class Algorithm(ABC):
     Base class for all Post-Training algorithms.
     """
 
-    def __init__(self) -> None:
-        self._model_transformer = None
-
     @property
     @abstractmethod
     def available_backends(self) -> List[BackendType]:
@@ -62,16 +59,6 @@ class Algorithm(ABC):
 
         :return: List of backends supported by the algorithm
         """
-
-    @property
-    def model_transformer(self) -> StaticModelTransformerBase:
-        if self._model_transformer is None:
-            raise RuntimeError('model_transformer variable was not set before call')
-        return self._model_transformer
-
-    @model_transformer.setter
-    def model_transformer(self, model_transformer: StaticModelTransformerBase) -> None:
-        self._model_transformer = model_transformer
 
     def apply(self, model: ModelType, engine: Engine,
               statistic_points: StatisticPointsContainer) -> ModelType:
@@ -87,7 +74,6 @@ class Algorithm(ABC):
         for edge_name in _statistic_points.keys():
             if statistic_points.get(edge_name) is None:
                 raise RuntimeError(f'No statistics collected for the layer {edge_name}')
-        self.model_transformer.set_model(model)
         return self._apply(model, engine, statistic_points)
 
     @abstractmethod
@@ -113,22 +99,15 @@ class CompositeAlgorithm(Algorithm):
 
     @property
     def available_backends(self) -> List[BackendType]:
+        # TODO: Need to add the implementation of the method (cross-algorithm backend calculation) 
+        # after updating the MinMax Quantization with shareable logic
         pass
 
+    @abstractmethod
     def create_subalgorithms(self, backend: BackendType) -> None:
         """
         Some composite algorithms have different inner algorithms.
         This method creates sub-algorithms and sets model transformer to them
 
         :param backend: backend for the algorithms differentiation
-        """
-        self._create_subalgorithms(backend)
-        for algorithm in self.algorithms:
-            algorithm.model_transformer = self.model_transformer
-
-    @abstractmethod
-    def _create_subalgorithms(self, backend: BackendType) -> None:
-        """
-        Some composite algorithms have different inner algorithms.
-        This method creates sub-algorithms
         """

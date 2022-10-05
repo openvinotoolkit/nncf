@@ -29,6 +29,7 @@ from nncf.common.insertion_point_graph import InsertionPointGraph
 from nncf.common.tensor_statistics.collectors import TensorStatisticCollectorBase
 from nncf.common.utils.logger import logger as nncf_logger
 from nncf.common.utils.backend import BackendType
+from nncf.experimental.onnx.graph.model_transformer import ONNXModelTransformer
 
 from nncf.experimental.post_training.algorithms.quantization.min_max_quantization import MinMaxQuantization
 from nncf.experimental.post_training.algorithms.quantization.min_max_quantization import MinMaxQuantizationParameters
@@ -161,6 +162,7 @@ class ONNXMinMaxQuantization(MinMaxQuantization):
                statistic_points: StatisticPointsContainer) -> onnx.ModelProto:
         transformation_layout, transformation_commands = TransformationLayout(), []
         onnx_graph = ONNXGraph(model)
+        model_transformer = ONNXModelTransformer(model)
 
         quantization_target_points = self.get_quantization_target_points(model)
         weight_quantizer_config = self._get_weight_quantizer_config(model)
@@ -202,7 +204,7 @@ class ONNXMinMaxQuantization(MinMaxQuantization):
         for transformation_command in transformation_commands:
             transformation_layout.register(transformation_command)
 
-        quantized_model = self.model_transformer.transform(transformation_layout)
+        quantized_model = model_transformer.transform(transformation_layout)
         return quantized_model
 
     def get_statistic_points(self, model: onnx.ModelProto) -> StatisticPointsContainer:
