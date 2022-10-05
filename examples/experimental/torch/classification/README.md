@@ -37,4 +37,4 @@ We provide configurations for three model architectures: `inception_v3`, `mobile
 - Model accuracy is obtained by averaging on 5 repeats.
 - Absolute accuracy drop is compared to FP32 model accuracy reported in [Results for quantization](../../../torch/classification/README.md#results-for-quantization).
 - Compression rate is about the reduced model size compared to the initial one. The model initial state starts from INT8 quantization, so compression rate = 1.5 means that the model size is reduced to 2/3 compared to the INT8 model.
-- Model size is the total number of bits in model weights. It is computed by $\sum_i \textrm{\# of params}_i \times \textrm{bitwidth}_i$ where $\textrm{\# of params}_i$ is the number of parameters of $i$th layer and $\textrm{bitwidth}_i$ is the bit-width of $i$th layer.
+- Model size is the total number of bits in model weights. It is computed by $\sum_i \textrm{num-params}_i \times \textrm{bitwidth}_i$ where $\textrm{num-params}_i$ is the number of parameters of $i$-th layer and $\textrm{bitwidth}_i$ is the bit-width of $i$-th layer.
