@@ -24,8 +24,8 @@ def set_manual_seed():
     torch.manual_seed(3003)
 
 
-@pytest.fixture(scope="function")
-def linear_problem(num_bits: int = 4, sigma: float = 0.2):
+@pytest.fixture(scope="function", name="linear_problem")
+def fxt_linear_problem(num_bits: int = 4, sigma: float = 0.2):
     set_manual_seed()
 
     levels = 2 ** num_bits
@@ -48,11 +48,11 @@ def qspec(request):
                            logarithm_scale=False)
 
 
-@pytest.fixture
-def config(model_size: int = 4):
-    config = get_empty_config(model_size)
+@pytest.fixture(name="config")
+def fxt_config(model_size: int = 4):
+    new_config = get_empty_config(model_size)
 
-    config["compression"] = {
+    new_config["compression"] = {
         "algorithm": "fracbits_quantization",
         "initializer": {
             "range": {
@@ -68,12 +68,12 @@ def config(model_size: int = 4):
             "alpha": 1.0
         }
     }
-    register_bn_adaptation_init_args(config)
-    return config
+    register_bn_adaptation_init_args(new_config)
+    return new_config
 
 
-@pytest.fixture
-def conv_model():
+@pytest.fixture(name="conv_model")
+def fxt_conv_model():
     set_manual_seed()
     return BasicConvTestModel()
 

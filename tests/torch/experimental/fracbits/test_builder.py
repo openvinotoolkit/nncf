@@ -118,5 +118,5 @@ def test_statistics(config, conv_model):
     stats: NNCFStatistics = ctrl.statistics()
     assert stats.quantization is not None
 
-    dict_stats = {k: v for k, v in stats}
+    dict_stats = dict(stats)
     assert dict_stats[ctrl.name] is not None
