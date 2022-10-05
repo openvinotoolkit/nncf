@@ -75,10 +75,10 @@ class StatisticPointsContainer(UserDict):
             if statistic_point_condition_func(_statistic_point):
                 yield _statistic_point
 
-    def iter_through_algorithm_tensor_collectors_in_target_node(self, target_node_name: str,
-                                                                statistic_point_condition_func: Callable[
-                                                                    [StatisticPoint], bool],
-                                                                algorithm: 'PostTrainingAlgorithms'):
+    def get_algo_statistics_for_node(self, target_node_name: str,
+                                     statistic_point_condition_func: Callable[
+                                         [StatisticPoint], bool],
+                                     algorithm: 'PostTrainingAlgorithms'):
 
         for _statistic_point in self.iter_through_statistic_points_in_target_node(target_node_name,
                                                                                   statistic_point_condition_func):

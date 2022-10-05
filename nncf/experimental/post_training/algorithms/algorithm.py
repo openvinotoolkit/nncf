@@ -99,7 +99,7 @@ class CompositeAlgorithm(Algorithm):
 
     @property
     def available_backends(self) -> List[BackendType]:
-        # TODO: Need to add the implementation of the method (cross-algorithm backend calculation) 
+        # TODO(KodiaqQ): Need to add the implementation of the method (cross-algorithm backend calculation) 
         # after updating the MinMax Quantization with shareable logic
         pass
 

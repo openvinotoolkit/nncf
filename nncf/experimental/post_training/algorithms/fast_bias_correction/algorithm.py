@@ -40,7 +40,7 @@ ModelType = TypeVar('ModelType')
 
 class FastBiasCorrectionParameters(AlgorithmParameters):
     """
-    Base class of FastBiasCorrection parameters.
+    Parameters of FastBiasCorrection algorithm
     """
 
     def __init__(self, number_samples: int = 100, threshold: float = 2.0) -> None:
@@ -74,7 +74,7 @@ class FastBiasCorrection(Algorithm):
 
     def _set_backend_entity(self, model: ModelType) -> None:
         """
-        Factory method for creating the needed backend based on the model
+        Creates a helper class with a backed-specific logic of the algorithm
 
         :param model: backend-specific input model
         """
@@ -151,7 +151,7 @@ class FastBiasCorrection(Algorithm):
 
         input_fp = []
         input_shape = []
-        for tensor_collector in statistic_points.iter_through_algorithm_tensor_collectors_in_target_node(
+        for tensor_collector in statistic_points.get_algo_statistics_for_node(
                 node_name,
                 input_filter_func,
                 PostTrainingAlgorithms.FastBiasCorrection):
@@ -172,7 +172,7 @@ class FastBiasCorrection(Algorithm):
                 point.target_point.type == TargetType.POST_LAYER_OPERATION
 
         output_fp = []
-        for tensor_collector in statistic_points.iter_through_algorithm_tensor_collectors_in_target_node(
+        for tensor_collector in statistic_points.get_algo_statistics_for_node(
                 node_name,
                 output_filter_func,
                 PostTrainingAlgorithms.FastBiasCorrection):

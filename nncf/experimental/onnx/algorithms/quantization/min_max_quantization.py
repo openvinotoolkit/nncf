@@ -190,7 +190,7 @@ class ONNXMinMaxQuantization(MinMaxQuantization):
                     return PostTrainingAlgorithms.MinMaxQuantization in point.algorithm_to_tensor_collectors and \
                            point.target_point.type == quantization_target_point.type
 
-                for tensor_collector in statistic_points.iter_through_algorithm_tensor_collectors_in_target_node(
+                for tensor_collector in statistic_points.get_algo_statistics_for_node(
                         target_node_name,
                         filter_func,
                         PostTrainingAlgorithms.MinMaxQuantization):
