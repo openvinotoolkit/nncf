@@ -54,7 +54,7 @@ The magnitude sparsity method implements a naive approach that is based on the a
 #### Constant Sparsity
 This special algorithm takes no additional parameters and is used when you want to load a checkpoint already trained with another sparsity algorithm and do other compression without changing the sparsity mask.
 
-**Example configuration files**
+### Example configuration files
 
 >_For the full list of the algorithm configuration parameters via config file, see the corresponding section in the [NNCF config schema](https://openvinotoolkit.github.io/nncf/)_.
 

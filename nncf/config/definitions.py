@@ -35,4 +35,3 @@ ALGO_NAME_VS_README_URL = {
     KNOWLEDGE_DISTILLATION_ALGO_NAME_IN_CONFIG: 'docs/compression_algorithms/KnowledgeDistillation.md',
     BINARIZATION_ALGO_NAME_IN_CONFIG: 'docs/compression_algorithms/Binarization.md'
 }
-

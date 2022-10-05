@@ -164,22 +164,34 @@ It is important to note that pruning levels mentioned in the `statistics of the 
 It is not always possible to achieve these levels of pruning due to cross-layer and inference constraints. 
 Therefore, it is expected that these numbers may differ from the calculated statistics in the `statistics of the pruned model` section.
 
-**Example configuration files**
+### Example configuration files
 
 >_For the full list of the algorithm configuration parameters via config file, see the corresponding section in the [NNCF config schema](https://openvinotoolkit.github.io/nncf/)_.
 
-- Prune a model with default parameters (from 0 to 0.5 pruning level across 100 epochs with exponential schedule)
+- Prune a model with default parameters (from 0 to 0.5 filter pruning level across 100 epochs with exponential schedule)
+```json5
+{
+    "input_info": { "sample_size": [1, 3, 224, 224] },
+    "compression":
+    {
+        "algorithm": "filter_pruning"
+    }
+}
+```
+
+- Same as above, but filter importance is considered globally across all eligible weighted operations:
 ```json5
 {
     "input_info": { "sample_size": [1, 3, 224, 224] },
     "compression":
     {
         "algorithm": "filter_pruning",
+        "all_weights": true
     }
 }
 ```
 
-- Prune a model, immediately setting pruning level to 10%, applying [batchnorm adaptation](./BatchnormAdaptation.md) and reaching 60% within 20 epochs using exponential schedule, enabling pruning of first convolutional layers and downsampling convolutional layers:
+- Prune a model, immediately setting filter pruning level to 10%, applying [batchnorm adaptation](./BatchnormAdaptation.md) and reaching 60% within 20 epochs using exponential schedule, enabling pruning of first convolutional layers and downsampling convolutional layers:
 ```json5
 {
     "input_info": { "sample_size": [1, 3, 224, 224] },
@@ -198,7 +210,7 @@ Therefore, it is expected that these numbers may differ from the calculated stat
 }
 ```
 
-- Prune a model using geometric median filter importance and reaching 30% within 10 epochs using exponential schedule, postponing application of pruning for 10 epochs:
+- Prune a model using geometric median filter importance and reaching 30% filter pruning level within 10 epochs using exponential schedule, postponing application of pruning for 10 epochs:
 ```json5
 {
     "input_info": { "sample_size": [1, 3, 224, 224] },
@@ -216,7 +228,7 @@ Therefore, it is expected that these numbers may differ from the calculated stat
 }
 ```
 
-- Prune and quantize a model at the same time using default parameters:
+- Prune and quantize a model at the same time using a FLOPS target for pruning and defaults for the rest of parameters:
 ```json5
 {
     "input_info": { "sample_size": [1, 3, 224, 224] },
@@ -224,9 +236,36 @@ Therefore, it is expected that these numbers may differ from the calculated stat
     [
         {
             "algorithm": "filter_pruning",
+            "params": {
+                "pruning_flops_target": 0.6,
+            }
         },
         {
-            "algorithm": "quantization",
+            "algorithm": "quantization"
+        }
+    ]
+}
+```
+
+- Prune a model with default parameters, estimate filter ranking by Learned Global Ranking method before finetuning. 
+LEGR algorithm will be using 200 generations for the evolution algorithm, 20 train steps to estimate pruned model accuracy on each generation and target maximal filter pruning level equal to 50%:
+```json5
+{
+    "input_info": { "sample_size": [1, 3, 224, 224] },
+    "compression": 
+    [
+        {
+            "algorithm": "filter_pruning",
+            "params": 
+            {
+                "interlayer_ranking_type": "learned_ranking",
+                "legr_params":
+                {
+                    "generations": 200,
+                    "train_steps": 20,
+                    "max_pruning": 0.5
+                }
+            }
         }
     ]
 }

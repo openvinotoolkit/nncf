@@ -311,7 +311,7 @@ Following is an example of wrapping ImageNet validation loop as a callback. Top5
 ```
 
 
-**Example configuration files**:
+### Example configuration files:
 
 >_For the full list of the algorithm configuration parameters via config file, see the corresponding section in the [NNCF config schema](https://openvinotoolkit.github.io/nncf/)_.
 
