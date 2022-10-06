@@ -159,10 +159,7 @@ at::Tensor wb_cuda_forward(
 
     auto grid_size = std::min(GET_BLOCKS(elements_per_scale), CUDA_BLOCKS_PER_GRID_FOR_UNIFORM_ELTWISE);
 
-    auto accum_options = input.options();
-    if (input.scalar_type() == c10::ScalarType::Half) {
-        accum_options = accum_options.dtype(c10::ScalarType::Float);
-    }
+    auto accum_options = get_accum_options(input.options());
     auto dev_tmp = at::empty({grid_size}, accum_options);
     auto dev_last_block_counter = at::zeros({1},  at::device(input.options().device()).dtype(at::kInt));
 
@@ -172,7 +169,7 @@ at::Tensor wb_cuda_forward(
     for (int ch_idx = 0; ch_idx < scale_count; ch_idx++)
     {
         AT_DISPATCH_FLOATING_TYPES_AND_HALF(input.type(), "wb_cuda_forward_scale", ([&] {
-          DEF_ACCUM_TYPE(scalar_t, scalar_accum_t)
+          using scalar_accum_t = ACCUM_TYPE_FOR(scalar_t);
           wb_cuda_scale_calc_kernel<scalar_t, scalar_accum_t><<<grid_size, CUDA_MAX_NUM_THREADS_PER_BLOCK, 0, at::cuda::getCurrentCUDAStream()>>>(
               input.data<scalar_t>() + ch_idx * elements_per_scale,
               scale.data<scalar_t>() + ch_idx,
@@ -269,18 +266,14 @@ std::vector<at::Tensor> ab_cuda_backward(
           );
     }));
 
-    auto accum_options = grad_output.options();
-    if (grad_output.scalar_type() == c10::ScalarType::Half) {
-        accum_options = accum_options.dtype(c10::ScalarType::Float);
-    }
-
+    auto accum_options = get_accum_options(grad_output.options());
     auto grid_size = std::min(GET_BLOCKS(input_elements_count), CUDA_BLOCKS_PER_GRID_FOR_UNIFORM_ELTWISE);
     auto dev_tmp = at::empty({grid_size}, accum_options);
     auto dev_last_block_counter = at::zeros({1},  at::device(grad_output.options().device()).dtype(at::kInt));
 
 
     AT_DISPATCH_FLOATING_TYPES_AND_HALF(input.type(), "ab_cuda_backward", ([&] {
-          DEF_ACCUM_TYPE(scalar_t, scalar_accum_t)
+          using scalar_accum_t = ACCUM_TYPE_FOR(scalar_t);
           ab_cuda_grad_scale_kernel<scalar_t, scalar_accum_t><<<grid_size, CUDA_MAX_NUM_THREADS_PER_BLOCK, 0, at::cuda::getCurrentCUDAStream()>>>(
               grad_scale.data<scalar_t>(),
               grad_output.data<scalar_t>(),
@@ -301,7 +294,7 @@ std::vector<at::Tensor> ab_cuda_backward(
     {
         auto init_element_offset = contiguous_elements_per_threshold * ch_idx;
         AT_DISPATCH_FLOATING_TYPES_AND_HALF(input.type(), "ab_cuda_backward", ([&] {
-          DEF_ACCUM_TYPE(scalar_t, scalar_accum_t)
+          using scalar_accum_t = ACCUM_TYPE_FOR(scalar_t);
           ab_cuda_grad_thresholds_kernel<scalar_t, scalar_accum_t><<<grid_size, CUDA_MAX_NUM_THREADS_PER_BLOCK, 0, at::cuda::getCurrentCUDAStream()>>>(
               grad_thresholds.data<scalar_t>() + ch_idx,
               grad_output.data<scalar_t>() + init_element_offset,
