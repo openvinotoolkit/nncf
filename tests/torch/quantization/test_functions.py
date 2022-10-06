@@ -107,7 +107,7 @@ def generate_one_channel_input(input_low, input_range, min_adj, quant_len, ch_id
 
     points = np.array([-min_adj_ch + (i // 2 + get_deviation()) * quant_len_ch
                        for i in range(2 ** (bits + 1) - 2)])
-    input_elems = np.prod(input_size) 
+    input_elems = np.prod(input_size)
     if input_elems > len(points):
         points = np.tile(points, int(np.ceil(input_elems / len(points) + 0.5)))
     points = points[:input_elems]
@@ -130,7 +130,6 @@ def generate_input(input_size, input_low, input_range, levels, bits, scale_mode,
     scale = (levels - 1) / input_range
     min_adj = (- input_low * scale).round() / scale
     max_deviation = 0.4
-    get_deviation = None
     if middle_points:
         def get_deviation():
             get_deviation.state +=1
@@ -145,7 +144,7 @@ def generate_input(input_size, input_low, input_range, levels, bits, scale_mode,
         assert_input_size(input_size)
         return generate_one_channel_input(input_low, input_range, min_adj, quant_len,
                                           None, input_size, bits, get_deviation)
-
+    inputs = None
     if scale_mode ==  "per_channel_scale":
         if is_weights:
             assert_input_size(input_size[1:])
@@ -170,7 +169,7 @@ def generate_input(input_size, input_low, input_range, levels, bits, scale_mode,
                 inputs[:, idx] = generate_one_channel_input(
                     input_low, input_range, min_adj, quant_len,
                     ch_idx, input_size[0:1] + input_size[2:], bits, get_deviation)
-        return inputs
+    return inputs
 
 def get_test_data(data_list, is_cuda=False, is_backward=False, is_fp16=False):
     results = []
@@ -198,7 +197,7 @@ def check_quant_moved(test_val, ref_val, quant_len, rtol, atol = 1e-10):
     """
     Checks values in `test_val` and `ref_val` elementwise eather equal with given rtol/atol or
     values differ by correspondent `quant_len` +- rtol.
-    
+
     :param test_val: Given test value.
     :param ref_val: Given reference value.
     :param quant_len: Lenghts of quants in quantizers
@@ -210,10 +209,10 @@ def check_quant_moved(test_val, ref_val, quant_len, rtol, atol = 1e-10):
         test_val, ref_val = [test_val], [ref_val]
     for t, r in zip(test_val, ref_val):
         t_numpy = t.cpu().detach().numpy()
-        bad_elems = ~np.isclose(t_numpy, r, rtol, atol) 
+        bad_elems = ~np.isclose(t_numpy, r, rtol, atol)
         if not np.any(bad_elems):
             continue
-        moved_quant_elems = None 
+        moved_quant_elems = None
         abs_diff = np.abs(t_numpy - r)
         if np.prod(quant_len.shape) > 1:
             ch_dim = np.argmax(quant_len.shape)
@@ -221,9 +220,9 @@ def check_quant_moved(test_val, ref_val, quant_len, rtol, atol = 1e-10):
             quant_len = quant_len.squeeze()[idxs[:, ch_dim]]
         moved_quant_elems = np.abs(abs_diff[bad_elems] - quant_len) < rtol
         assert np.all(moved_quant_elems)
-            
 
-def check_outputs_for_quantization_functions(test_val: torch.Tensor, ref_val: np.ndarray, 
+
+def check_outputs_for_quantization_functions(test_val: torch.Tensor, ref_val: np.ndarray,
                                              is_fp16: bool, rtol=1e-4, atol=1e-10):
 
     if is_fp16:
@@ -391,7 +390,7 @@ class TestParametrized:
 
             def calc_low_and_range():
                 min_range = 0.1
-                input_low = np.random.random_sample() * 3 - 1.5 
+                input_low = np.random.random_sample() * 3 - 1.5
                 input_range = min_range + np.random.random_sample() * 3
                 return input_low, input_range
 
@@ -514,9 +513,9 @@ class TestParametrized:
             test_value.sum().backward()
             test_grads = get_grads([test_input, test_input_low, test_input_range])
 
-            check_outputs_for_quantization_functions(test_value, ref_output, is_fp16, 
+            check_outputs_for_quantization_functions(test_value, ref_output, is_fp16,
                                                      rtol=1e-2 if is_fp16 else 1e-3)
-            check_outputs_for_quantization_functions(test_grads, ref_grads, is_fp16, 
+            check_outputs_for_quantization_functions(test_grads, ref_grads, is_fp16,
                                                      rtol=1e-2 if is_fp16 else 1e-3)
 
 
