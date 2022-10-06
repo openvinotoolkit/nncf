@@ -94,7 +94,7 @@ class GraphConverter:
         """
         for i, _input in enumerate(onnx_graph.get_model_inputs()):
             input_name = _input.name
-            layer_attributes = ExtendedLayerAttributes([input_name], [input_name])
+            layer_attributes = ONNXExtendedLayerAttributes([input_name], [input_name])
             input_node = nncf_graph.add_nncf_node(node_name=MODEL_INPUT_OP_NAME + '_' + str(i),
                                                   node_type=NNCFGraphNodeType.INPUT_NODE,
                                                   node_metatype=InputNoopMetatype,
@@ -130,7 +130,7 @@ class GraphConverter:
         """
         for i, _output in enumerate(onnx_graph.get_model_outputs()):
             output_name = _output.name
-            layer_attributes = ExtendedLayerAttributes([output_name], [output_name])
+            layer_attributes = ONNXExtendedLayerAttributes([output_name], [output_name])
             output_node = nncf_graph.add_nncf_node(node_name=MODEL_OUTPUT_OP_NAME + '_' + str(i),
                                                    node_type=NNCFGraphNodeType.OUTPUT_NODE,
                                                    node_metatype=OutputNoopMetatype,
@@ -184,7 +184,7 @@ class GraphConverter:
         onnx_graph = ONNXGraph(onnx_model)
         for node in filter(GraphConverter._is_valid_onnx_metatype, onnx_graph.get_all_nodes()):
             metatype = ONNX_OPERATION_METATYPES.get_operator_metatype_by_op_name(node.op_type)
-            layer_attributes = ExtendedLayerAttributes(node.input, node.output)
+            layer_attributes = ONNXExtendedLayerAttributes(node.input, node.output)
             nncf_graph.add_nncf_node(node_name=node.name,
                                      node_type=node.op_type,
                                      node_metatype=metatype,
@@ -219,7 +219,16 @@ class GraphConverter:
         GraphConverter._add_nncf_output_nodes(onnx_graph, nncf_graph)
         return nncf_graph
 
-class ExtendedLayerAttributes(BaseLayerAttributes):
+class ONNXExtendedLayerAttributes(BaseLayerAttributes):
+    """
+    This class stores extended attributes of modules/layers for the algorithms.
+
+    Args:
+        input_tensor_names:
+            List of the input tensor/edge names of the module/layer
+        output_tensor_names:
+            List of the output tensor/edge names of the module/layer
+    """
     def __init__(self, input_tensor_names, output_tensor_names):
         self.input_tensor_names = input_tensor_names
         self.output_tensor_names = output_tensor_names

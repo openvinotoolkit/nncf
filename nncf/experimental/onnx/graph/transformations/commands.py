@@ -73,6 +73,18 @@ class ONNXOutputInsertionCommand(ONNXInsertionCommand):
         raise NotImplementedError()
 
 class ONNXBiasCorrectionCommand(TransformationCommand):
+    """
+    BiasCorrecionCommand class
+
+    Args:
+        target_point:
+            The TargetPoint instance for the correction that contains layer's information.
+        bias_shift:
+            The bias shift value (numpy format) that will be added to the original bias value.
+        threshold:
+            The floating-point value against which it is shift magnitude compares.
+            For the details see the Fast/BiasCorrectionParameters.
+    """
     def __init__(self, target_point: ONNXTargetPoint, bias_shift: np.ndarray, threshold: float):
         super().__init__(TransformationType.CHANGE, target_point)
         self.bias_shift = bias_shift
@@ -83,6 +95,15 @@ class ONNXBiasCorrectionCommand(TransformationCommand):
         raise NotImplementedError()
 
 class ONNXModelExtractionCommand(Command):
+    """
+    ModelExtractionCommand class
+
+    Args:
+        inputs:
+            List of the input names that denote the sub-graph beggining.
+        outputs:
+            List of the output names that denote the sub-graph ending.
+    """
     def __init__(self, inputs: List[str], outputs: List[str]):
         super().__init__(TransformationType.EXTRACT)
         self.inputs = inputs

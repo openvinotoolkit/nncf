@@ -13,7 +13,7 @@
 
 from abc import ABC
 from abc import abstractmethod
-from typing import List
+from typing import List, Tuple
 from typing import TypeVar
 
 import numpy as np
@@ -22,6 +22,7 @@ from nncf.common.graph.transformations.commands import TransformationCommand
 from nncf.common.graph.transformations.commands import TargetType
 from nncf.common.tensor import NNCFTensor
 from nncf.common.tensor import TensorType
+from nncf.common.graph import NNCFNode
 from nncf.common.tensor_statistics.collectors import TensorStatisticCollectorBase
 from nncf.common.tensor_statistics.collectors import ReductionShape
 from nncf.common.utils.registry import Registry
@@ -60,7 +61,7 @@ class FBCAlgoBackend(ABC):
         """
         Returns backend-specific instance of the NNCFCollectorTensorProcessor
         """
-    
+
     @staticmethod
     @abstractmethod
     def model_transformer(model: ModelType) -> StaticModelTransformerBase:
@@ -130,4 +131,25 @@ class FBCAlgoBackend(ABC):
 
         :param tensor: tensor data for the wrapping
         :return: NNCFTensor
+        """
+
+    @staticmethod
+    @abstractmethod
+    def get_tensor_names(node: NNCFNode) -> Tuple[List[str], List[str]]:
+        """
+        Returns tuple of the lists with the input & output tensor names respectively
+
+        :param node: NNCFNode with the layer_attributes
+        :return: tuple of the lists with the names
+        """
+
+    @staticmethod
+    @abstractmethod
+    def create_blob(shape: Tuple[int], data: List[float]) -> np.ndarray:
+        """
+        Creates the backend-specific (because of layout) blob
+
+        :param shape: shape of the blob
+        :param data: data to fill the blob
+        :return: np.ndarray blob
         """

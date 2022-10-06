@@ -80,8 +80,11 @@ class StaticModelTransformerBase(ModelTransformer, ABC):
             '_apply_bias_correction_transformations method must be implemented before call')
 
     @staticmethod
-    def extract_model_by_inputs_outputs(model: ModelType, inputs: List[str], outputs: List[str]):
+    def _apply_model_extraction_transformation(transformations: List[TransformationCommand]) -> ModelType:
         """
         Extracts or builds sub-model from the original based on the inputs and outputs names
+
+        :param transformations: lisf of the TransformationCommand transformations
         """
-        raise NotImplementedError('extract_model_by_inputs_outputs must be implemented before call')
+        raise NotImplementedError(
+            '_apply_model_extraction_transformation must be implemented before call')

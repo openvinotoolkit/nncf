@@ -11,7 +11,7 @@
  limitations under the License.
 """
 
-from typing import Dict
+from typing import Dict, Tuple
 from typing import List
 import onnx
 import numpy as np
@@ -19,6 +19,7 @@ from nncf.common.graph.transformations.commands import TargetType
 from nncf.common.tensor_statistics.collectors import ReductionShape
 from nncf.common.utils.backend import BackendType
 from nncf.common.utils.registry import Registry
+from nncf.common.graph import NNCFNode
 
 from nncf.experimental.onnx.graph.metatypes.onnx_metatypes import LAYERS_WITH_BIAS_METATYPES
 from nncf.experimental.onnx.graph.metatypes.onnx_metatypes import ONNX_OPERATION_METATYPES
@@ -50,7 +51,7 @@ class ONNXFBCAlgoBackend(FBCAlgoBackend):
     @property
     def tensor_processor(self) -> ONNXNNCFCollectorTensorProcessor:
         return ONNXNNCFCollectorTensorProcessor()
-    
+
     @staticmethod
     def model_transformer(model: onnx.ModelProto) -> ONNXModelTransformer:
         return ONNXModelTransformer(model)
@@ -80,3 +81,16 @@ class ONNXFBCAlgoBackend(FBCAlgoBackend):
     @staticmethod
     def nncf_tensor(tensor: np.ndarray) -> ONNXNNCFTensor:
         return ONNXNNCFTensor(tensor)
+
+    @staticmethod
+    def get_tensor_names(node: NNCFNode):
+        return node.layer_attributes.input_tensor_names, \
+            node.layer_attributes.output_tensor_names
+
+    @staticmethod
+    def create_blob(shape: Tuple[int], data: List[float]) -> np.ndarray:
+        blob = np.zeros(shape)
+        for i, value in enumerate(data):
+            blob[:, i] = value
+        blob = blob.astype(np.float32)
+        return blob

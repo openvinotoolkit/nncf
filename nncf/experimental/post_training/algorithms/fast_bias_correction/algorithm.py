@@ -41,15 +41,19 @@ ModelType = TypeVar('ModelType')
 class FastBiasCorrectionParameters(AlgorithmParameters):
     """
     Parameters of FastBiasCorrection algorithm
+
+    Args:
+        number_samples:
+            The number of the samples for the statistics collection.
+            This statistics uses for the further calculation of the bias shift.
+        threshold:
+            The magnitude threshold that regulates the application of the shift.
+            Magnitude calculates as the maximum of the absolute ratio of the shift to the original bias value.
+            If the calculated value less than threshold, shift will apply to the bias.
+
     """
 
     def __init__(self, number_samples: int = 100, threshold: float = 2.0) -> None:
-        """
-        Initial method for the FastBiasCorrectionParameters
-
-        :param number_samples: number of the samples for the statistics collection
-        :param threshold: threshold that regulates the application of the shift (or not)
-        """
         self.number_samples = number_samples
         self.threshold = threshold
 
@@ -60,6 +64,26 @@ class FastBiasCorrectionParameters(AlgorithmParameters):
 
 
 class FastBiasCorrection(Algorithm):
+
+    """
+    Post-training FastBiasCorrection algorithm implementation
+
+    The main purpose of this algorithm to reduce quantization error
+    via correction the bias of the Convolutions, FullyConnected, etc. layers.
+    The algorithm pipeline is very simple:
+        - we collects floating-point statistics from the corresponding model for the layers with bias;
+        - then we gets the quantized model and try to reduce it's error by correction of the bias;
+        - the shift calculates using the sub-graph that consists of the correction layer and
+        weight quantizer-dequantizer pair or fake quantize node;
+        - the floating-point statistics uses as input for
+        the sub-graph and further quantization output calculation;
+        - in the end we corrects the original bias by the difference (shift)
+        between floating-point and quantized outputs;
+
+    Args:
+        parameters:
+            The instance of the FastBiasCorrectionParameters.
+    """
 
     def __init__(self, parameters: FastBiasCorrectionParameters):
         super().__init__()
@@ -110,13 +134,14 @@ class FastBiasCorrection(Algorithm):
             input_fp, input_shape = self._get_fp_inputs(statistic_points, node_name)
             output_fp = self._get_fp_outputs(statistic_points, node_name)
 
-            input_name = node.layer_attributes.input_tensor_names[0]
-            output_name = node.layer_attributes.output_tensor_names[0]
+            input_tensor_names, output_tensor_names = self._backend_entity.get_tensor_names(node)
+            input_name = input_tensor_names[0]
+            output_name = output_tensor_names[0]
 
             extracted_model = self._extract_submodel(model_transformer, [input_name], [output_name])
 
             channel_axis = self._backend_entity.channel_axis_by_types[node.node_type]
-            input_blob = self._create_input_blob(input_shape,
+            input_blob = self._create_input_data(input_shape,
                                                  input_fp,
                                                  input_name)
             bias_shift = self._get_bias_shift(
@@ -212,7 +237,7 @@ class FastBiasCorrection(Algorithm):
                                                      tensor_collector=stat_collector,
                                                      algorithm=PostTrainingAlgorithms.FastBiasCorrection))
 
-    def _create_input_blob(self,
+    def _create_input_data(self,
                            input_shape: Tuple[int],
                            input_fp: List[np.ndarray],
                            input_name: str) -> Dict[str, NNCFTensor]:
@@ -224,11 +249,7 @@ class FastBiasCorrection(Algorithm):
         :param input_name: name for the output dict
         :return: dictionary of the blob by input name
         """
-        input_blob = np.zeros(input_shape)
-        for i, value in enumerate(input_fp):
-            input_blob[:, i] = value
-        input_blob = input_blob.astype(np.float32)
-
+        input_blob = self._backend_entity.create_blob(input_shape, input_fp)
         input_data = self._backend_entity.nncf_tensor(input_blob)
         input_data = {input_name: input_data}
         return input_data
@@ -258,16 +279,16 @@ class FastBiasCorrection(Algorithm):
         bias_shift = np.array(output_fp) - q_outputs
         return bias_shift
 
-    @staticmethod
-    def _is_node_with_bias(node: NNCFNode) -> bool:
+    def _is_node_with_bias(self, node: NNCFNode) -> bool:
         """
         Checks whether the node has a bias or not
 
         :param node: NNCFNode with the attributes
         :return: boolean indicating whether the node has a bias or not
         """
-        # Should be updated to take account of backend specifics
-        return len(node.layer_attributes.input_tensor_names) > 2
+        # TODO (KodiaqQ): Should be updated to take account of backend specifics
+        input_tensor_names, _ = self._backend_entity.get_tensor_names(node)
+        return len(input_tensor_names) > 2
 
     @staticmethod
     def _is_quantized_weights(node: NNCFNode, nncf_graph: NNCFGraph) -> bool:
@@ -278,7 +299,7 @@ class FastBiasCorrection(Algorithm):
         :param nncf_graph: NNCFGraph for the traverce
         :return: boolean indicating whether the node has a quantized weights or not
         """
-        # Should be updated to take account of backend specifics
+        # TODO (KodiaqQ): Should be updated to take account of backend specifics
         input_nodes = nncf_graph.get_previous_nodes(node)
         weight_dequantizer = input_nodes[1]
         return weight_dequantizer.node_type == 'DequantizeLinear'
@@ -294,7 +315,8 @@ class FastBiasCorrection(Algorithm):
         for node in biased_nodes:
             if not self._is_node_with_bias(node):
                 continue
-            edge_name = node.layer_attributes.input_tensor_names[0]
+            input_tensor_names, _ = self._backend_entity.get_tensor_names(node)
+            edge_name = input_tensor_names[0]
             pre_layer_statistic_point = self._backend_entity.target_point(TargetType.PRE_LAYER_OPERATION,
                                                                           node.node_name,
                                                                           edge_name)
