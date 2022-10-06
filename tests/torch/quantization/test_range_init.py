@@ -61,11 +61,11 @@ from tests.torch.helpers import create_compressed_model_and_algo_for_test
 from tests.torch.helpers import create_ones_mock_dataloader
 from tests.torch.helpers import get_empty_config
 from tests.torch.helpers import register_bn_adaptation_init_args
-from tests.torch.quantization.test_quantization_helpers import compare_multi_gpu_dump
-from tests.torch.quantization.test_quantization_helpers import create_rank_dataloader
-from tests.torch.quantization.test_quantization_helpers import distributed_init_test_default
-from tests.torch.quantization.test_quantization_helpers import get_squeezenet_quantization_config
-from tests.torch.quantization.test_quantization_helpers import post_compression_test_distr_init
+from tests.torch.quantization.quantization_helpers import compare_multi_gpu_dump
+from tests.torch.quantization.quantization_helpers import create_rank_dataloader
+from tests.torch.quantization.quantization_helpers import distributed_init_test_default
+from tests.torch.quantization.quantization_helpers import get_squeezenet_quantization_config
+from tests.torch.quantization.quantization_helpers import post_compression_test_distr_init
 
 # pylint:disable=unused-import
 

@@ -14,6 +14,7 @@
 import torch
 
 from nncf.common.graph.definitions import MODEL_INPUT_OP_NAME
+from nncf.common.quantization.quantizer_setup import DEFAULT_QUANTIZER_CONFIG
 from nncf.common.quantization.structs import QuantizationMode
 from nncf.torch.dynamic_graph.graph_tracer import ModelInputInfo
 from nncf.torch.hardware.config import PTHWConfig
@@ -24,7 +25,7 @@ from nncf.torch.quantization.algo import QuantizerSetupGeneratorBase
 from nncf.torch.quantization.layers import AsymmetricQuantizer
 from nncf.torch.quantization.layers import BaseQuantizer
 from nncf.torch.quantization.layers import SymmetricQuantizer
-from tests.torch.quantization.test_quantization_helpers import get_quantization_config_without_range_init
+from tests.torch.quantization.quantization_helpers import get_quantization_config_without_range_init
 
 
 class ModelForHWConfigTest(torch.nn.Module):
@@ -60,7 +61,7 @@ class TestHWConfigRules:
 
     @staticmethod
     def quantizer_has_default_config(quantizer: BaseQuantizer) -> bool:
-        default_qconfig = QuantizerSetupGeneratorBase.DEFAULT_QUANTIZER_CONFIG
+        default_qconfig = DEFAULT_QUANTIZER_CONFIG
         is_ok = True
         is_ok &= (quantizer.num_bits == default_qconfig.num_bits)
         is_ok &= (quantizer.per_channel == default_qconfig.per_channel)

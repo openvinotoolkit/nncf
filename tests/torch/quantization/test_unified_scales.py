@@ -33,7 +33,7 @@ from tests.torch.helpers import get_nodes_by_type
 from tests.torch.helpers import register_bn_adaptation_init_args
 from tests.torch.helpers import resolve_constant_node_inputs_to_values
 from tests.torch.quantization.test_onnx_export import get_successors
-from tests.torch.quantization.test_quantization_helpers import get_quantization_config_without_range_init
+from tests.torch.quantization.quantization_helpers import get_quantization_config_without_range_init
 
 
 # pylint: disable=no-member

@@ -27,7 +27,7 @@ from tests.torch.helpers import BasicConvTestModel
 from tests.torch.helpers import create_compressed_model_and_algo_for_test
 from tests.torch.helpers import get_empty_config
 from tests.torch.helpers import register_bn_adaptation_init_args
-from tests.torch.quantization.test_quantization_helpers import get_quantization_config_without_range_init
+from tests.torch.quantization.quantization_helpers import get_quantization_config_without_range_init
 from tests.torch.sparsity.magnitude.test_helpers import get_basic_magnitude_sparsity_config
 from tests.torch.sparsity.rb.test_algo import get_basic_sparsity_config
 
