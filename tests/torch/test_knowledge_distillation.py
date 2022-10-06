@@ -194,7 +194,7 @@ def test_loss_outputs_parsing():
             if tensor1.requires_grad:
                 loss_outputs.append((tensor1, tensor2))
 
-        reference_kd_loss = sum([mse(item[0], item[1]) for item in loss_outputs])
+        reference_kd_loss = sum(mse(item[0], item[1]) for item in loss_outputs)
         actual_kd_loss = compression_ctrl.loss()
         assert torch.allclose(reference_kd_loss, actual_kd_loss)
 

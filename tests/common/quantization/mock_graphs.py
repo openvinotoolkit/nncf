@@ -1,22 +1,14 @@
 import random
 from typing import Dict
 from typing import List
-from typing import List
 from typing import Set
 from typing import Tuple
-from unittest.mock import MagicMock
 from unittest.mock import MagicMock
 
 import networkx as nx
 
 from nncf.common.graph import BaseLayerAttributes
 from nncf.common.graph import Dtype
-from nncf.common.graph import NNCFGraph
-from nncf.common.graph import NNCFGraph
-from nncf.common.graph import NNCFGraph
-from nncf.common.graph import NNCFGraph
-from nncf.common.graph import NNCFGraph
-from nncf.common.graph import NNCFGraph
 from nncf.common.graph import NNCFGraph
 from nncf.common.graph import NNCFNodeName
 from nncf.common.graph.layer_attributes import ConvolutionLayerAttributes
@@ -342,9 +334,3 @@ def get_sequentially_connected_model_graph(op_name_keys: List[str]) -> nx.DiGrap
 
     mark_input_ports_lexicographically_based_on_input_node_key(graph)
     return graph
-
-def set_quant_trait_for_node_type(mock_graph: nx.DiGraph, node_type: str, quant_trait: QuantizationTrait):
-    for node_key in mock_graph.nodes():
-        type_attr = mock_graph[node_key][NNCFGraph.NODE_TYPE_ATTR]
-        if type_attr == node_type:
-            mock_graph[node_key][NNCF]

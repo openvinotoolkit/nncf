@@ -21,7 +21,6 @@ from nncf.torch.hardware.config import PTHWConfig
 from nncf.torch.nncf_network import NNCFNetwork
 from nncf.torch.quantization.algo import QuantizationBuilder
 from nncf.torch.quantization.algo import QuantizationController
-from nncf.torch.quantization.algo import QuantizerSetupGeneratorBase
 from nncf.torch.quantization.layers import AsymmetricQuantizer
 from nncf.torch.quantization.layers import BaseQuantizer
 from nncf.torch.quantization.layers import SymmetricQuantizer

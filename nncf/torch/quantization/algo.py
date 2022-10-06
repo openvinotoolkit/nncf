@@ -109,7 +109,6 @@ from nncf.torch.quantization.init_range import StatCollectorGenerator
 from nncf.torch.quantization.layers import BaseQuantizer
 from nncf.torch.quantization.layers import PTQuantizerSpec
 from nncf.torch.quantization.layers import QUANTIZATION_MODULES
-from nncf.torch.quantization.layers import QuantizationMode
 from nncf.torch.quantization.layers import QuantizerConfig
 from nncf.torch.quantization.layers import QuantizerExportMode
 from nncf.torch.quantization.layers import QuantizersSwitcher
@@ -1028,7 +1027,8 @@ class QuantizationBuilder(PTCompressionAlgorithmBuilder):
             if quantizer_setup.quantization_points[qp_id].is_weight_quantization_point()]
         act_qp_ids = [qp_id for qp_id in qp_ids_list_for_current_group
             if quantizer_setup.quantization_points[qp_id].is_activation_quantization_point()]
-        ip_str_repr_key_lambda = lambda x: str(quantizer_setup.quantization_points[x].target_point.target_node_name)
+        def ip_str_repr_key_lambda(x):
+            return str(quantizer_setup.quantization_points[x].target_point.target_node_name)
         sorted_wqp_ids = sorted(weight_qp_ids, key=ip_str_repr_key_lambda)
         sorted_aqp_ids = sorted(act_qp_ids, key=ip_str_repr_key_lambda)
         sorted_qp_ids = sorted_wqp_ids + sorted_aqp_ids

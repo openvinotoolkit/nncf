@@ -1246,7 +1246,7 @@ class QuantizerPropagationSolver:
         qconfig_and_priority_list = []  # type: List[Tuple[QuantizerConfig, int]]
         for merged_qconfig in merged_qconfig_list:
             priority = 0
-            max_original_list_len = max([len(x) for x in potential_qconfigs_for_each_branch])
+            max_original_list_len = max(len(x) for x in potential_qconfigs_for_each_branch)
             for original_branch_qconfig_list in potential_qconfigs_for_each_branch:
                 try:
                     idx = original_branch_qconfig_list.index(merged_qconfig)

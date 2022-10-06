@@ -503,8 +503,7 @@ def test_eltwise_unified_scales_for_vpu():
 
     assert len(compression_ctrl.non_weight_quantizers) == 2
 
-    total_quantizations = sum(
-        [len(info.affected_insertions) for info in compression_ctrl.non_weight_quantizers.values()])
+    total_quantizations = sum(len(info.affected_insertions) for info in compression_ctrl.non_weight_quantizers.values())
     assert total_quantizations == 8
 
 
@@ -585,8 +584,7 @@ def test_unified_scales_with_concat(target_device, model_creator, ref_aq_module_
 
     assert len(compression_ctrl.non_weight_quantizers) == ref_aq_module_count
 
-    total_quantizations = sum(
-        [len(info.affected_insertions) for info in compression_ctrl.non_weight_quantizers.values()])
+    total_quantizations = sum(len(info.affected_insertions) for info in compression_ctrl.non_weight_quantizers.values())
     assert total_quantizations == ref_quantizations
 
 
