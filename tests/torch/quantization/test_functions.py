@@ -195,6 +195,17 @@ def skip_if_half_on_cpu(is_fp16, use_cuda):
 
 
 def check_quant_moved(test_val, ref_val, quant_len, rtol, atol = 1e-10):
+    """
+    Checks values in `test_val` and `ref_val` elementwise eather equal with given rtol/atol or
+    values differ by correspondent `quant_len` +- rtol.
+    
+    :param test_val: Given test value.
+    :param ref_val: Given reference value.
+    :param quant_len: Lenghts of quants in quantizers
+        (for each channel in case per channel quantization).
+    :param atol: Absolute tollerance.
+    :param rtol: Relative tollerance.
+    """
     if not isinstance(test_val, list):
         test_val, ref_val = [test_val], [ref_val]
     for t, r in zip(test_val, ref_val):
