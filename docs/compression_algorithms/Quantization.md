@@ -87,9 +87,6 @@ ${input\\_low}''=\frac{ZP}{ZP-levels+1}*{input\\_high}'$
 ${input\\_low,input\\_high} = \begin{cases} {input\\_low}',{input\\_high}', \& ZP \in {0,levels-1} \\\\ {input\\_low}',{input\\_high}'', \& {input\\_high}'' - {input\\_low}' > {input\\_high}' - {input\\_low}'' \\\\ {input\\_low}'',{input\\_high}', \& {input\\_high}'' - {input\\_low}' <= {input\\_high}' - {input\\_low}'' \end{cases}$
 
 
-
-
-
 You can use the `num_init_samples` parameter from the `initializer` group to initialize the values of `input_low` and `input_range` from the collected statistics using given number of samples.
 
 #### Quantizer setup and hardware config files
@@ -141,6 +138,9 @@ $input\\_low^{*} = 0$
 
 $input\\_range^{*} = scale$
 
+The most common case of applying quantization is 8-bit uniform quantization. 
+NNCF example scripts provide a plethora of configuration files that implement this case ([PyTorch](../../examples/torch/classification/configs/quantization/inception_v3_imagenet_int8.json), [TensorFlow](../../examples/tensorflow/classification/configs/quantization/inception_v3_imagenet_int8.json))
+
 ---
 **NOTE**
 
@@ -152,6 +152,8 @@ To fix this issue inside NNCF, by default, all weight tensors are quantized in 8
 This regime is used when `"target_device": "CPU"` or `"target_device": "ANY"` set. This fix, potentially, requires longer fine-tuning.
 
 To control the application of overflow fix, `"overflow_fix"` config option is introduced. The default value is `"overflow_fix": "enable"`. To apply the overflow issue fix only to the first layer, use `"overflow_fix": "first_layer_only"`. To disable the overflow issue fix for all layers, use `"overflow_fix": "disable"`.
+
+
 
 ---
 
@@ -243,8 +245,8 @@ For automatic mixed-precision selection it's recommended to use the following te
 
 Note, optimizer parameters are model specific, this template contains optimal ones for ResNet-like models.
 
-Here's an [example](../../examples/torch/classification/configs/mixed_precision/squeezenet1_1_imagenet_mixed_int_hawq.json) of
-using the template in the full configuration file.
+The [example](../../examples/torch/classification/configs/mixed_precision/squeezenet1_1_imagenet_mixed_int_hawq.json) of
+using the template in a full-fledged configuration file is provided with the [classification sample](../../examples/torch/classification) for PyTorch.
 
 This template uses `plateau` scheduler. Though it usually leads to a lot of epochs of tuning for achieving a good
 model's accuracy, this is the most reliable way. Staged quantization is an alternative approach and can be more than
@@ -270,20 +272,26 @@ When the agent enters a state/quantizer, it receives the state features and forw
 To evaluate the goodness of a policy, NNCF backend quantizes the workload accordingly and performs evaluation with the user-registered function. The evaluated score, together with the state embedding, predicted action are appended to an experience vault to serve for DDPG learning. The learning is carried out by sampling the data point from the experience vault for supervised training of the DDPG network. This process typically happens at a fixed interval. In the current implementation, it is performed after each episode evaluation. For bootstrapping, exploration and diversity of experience, noise is added to action output. As the episodic iterations progress, the noise magnitude is gradually reduced to zero, a deterministic mixed-precision policy is converged at the end of the episodes. NNCF currently keeps track of the best policy and uses it for fine tuning.
 
 ```json5
-    "target_device": "VPU",
-    "compression": {
-        "algorithm": "quantization",
-        "initializer": {
-            "precision": {
-                "type": "autoq",
-                "bits": [2, 4, 8],
-                "iter_number": 300,
-                "compression_ratio": 0.15,
-                "eval_subset_ratio": 0.20,
-                "dump_init_precision_data": true
-            }
-        }
-    }
+{
+   "target_device": "VPU",
+   "compression": {
+      "algorithm": "quantization",
+      "initializer": {
+         "precision": {
+            "type": "autoq",
+            "bits": [
+               2,
+               4,
+               8
+            ],
+            "iter_number": 300,
+            "compression_ratio": 0.15,
+            "eval_subset_ratio": 0.20,
+            "dump_init_precision_data": true
+         }
+      }
+   }
+}
 ```
 
 The snippet above demonstrates the specification of AutoQ in NNCF config. ```target_device``` determines the bitwidth choices available for a particular layer. ```bits``` also defines the precision space of quantizer but it is only active in the absence of target device.
@@ -310,6 +318,7 @@ Following is an example of wrapping ImageNet validation loop as a callback. Top5
             autoq_eval_fn, val_loader, config.device)
 ```
 
+The complete config [example](../../examples/torch/classification/configs/mixed_precision/mobilenet_v2_imagenet_mixed_int_autoq_staged.json) that applies AutoQ to MobileNetV2 is provided within the [classification sample](../../examples/torch/classification) for PyTorch.
 
 ### Example configuration files:
 
