@@ -5,10 +5,19 @@ on:
       - develop
     paths:
       - nncf/config/**
+  pull_request:
+    branches:
+      - develop
+    paths:
+      - nncf/config/**
+    types:
+      - closed
+
 permissions:
   contents: write
 jobs:
   build-and-deploy:
+    if: github.event.pull_request.merged == true || github.event_name == "push"
     concurrency: ci-${{ github.ref }} # Recommended if you intend to make multiple deployments in quick succession.
     runs-on: ubuntu-latest
     steps:
