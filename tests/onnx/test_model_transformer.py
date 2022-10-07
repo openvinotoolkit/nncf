@@ -142,7 +142,7 @@ def test_output_insertion(target_layers, target_layer_outputs):
         assert onnx_graph.get_model_outputs()[i].name in target_layer_outputs
 
 CONV_LAYERS = [['Conv1', 'Conv2']]
-BIAS_VALUES = [[np.full((32,), 1), np.full((10,), 2)]]
+BIAS_VALUES = [[np.full((32,), 2), np.full((10,), 3)]]
 BIAS_REFERENCES = [[2.0, 3.0]]
 
 @pytest.mark.parametrize('layers, values, refs', zip(CONV_LAYERS, BIAS_VALUES, BIAS_REFERENCES))
