@@ -15,8 +15,8 @@ from abc import ABC
 from abc import abstractmethod
 
 from typing import TypeVar
-from nncf.common.graph.model_transformer import ModelTransformer
 
+from nncf.common.graph.transformations.layout import TransformationLayout
 from nncf.experimental.post_training.statistics.statistic_point import StatisticPointsContainer
 from nncf.experimental.post_training.api.engine import Engine
 from nncf.experimental.post_training.api.dataset import Dataset
@@ -46,7 +46,7 @@ class StatisticsAggregator(ABC):
 
         :param model_transformer: ModelTransformer intance with the model
         """
-        transformation_layout = model_transformer._get_transformation_layout_extra_outputs(self.statistic_points)
+        transformation_layout = self._get_transformation_layout_extra_outputs(self.statistic_points)
         model_with_outputs = model_transformer.transform(transformation_layout)
         self.engine.set_model(model_with_outputs)
         self.engine.set_sampler(self._create_sampler(self.dataset, self.max_number_samples))
@@ -72,4 +72,15 @@ class StatisticsAggregator(ABC):
                         sample_indices: int) -> Sampler:
         """
         Create backend-specific Sampler.
+        """
+
+    @abstractmethod
+    def _get_transformation_layout_extra_outputs(
+            self,
+            statistic_points: StatisticPointsContainer) -> TransformationLayout:
+        """
+        Create backend-specific transformation layout for the further statistics collection
+
+        :param statistic_points: StatisticPointsContainer to add outputs
+        :return: TransformationLayout with the corresponding transformations
         """

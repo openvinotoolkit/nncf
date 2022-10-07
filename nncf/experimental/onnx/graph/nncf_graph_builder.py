@@ -222,13 +222,13 @@ class GraphConverter:
 class ONNXExtendedLayerAttributes(BaseLayerAttributes):
     """
     This class stores extended attributes of modules/layers for the algorithms.
-
-    Args:
-        input_tensor_names:
-            List of the input tensor/edge names of the module/layer
-        output_tensor_names:
-            List of the output tensor/edge names of the module/layer
     """
     def __init__(self, input_tensor_names, output_tensor_names):
+        """
+        Initializes ONNXExtendedLayerAttributes
+
+        :param input_tensor_names: List of the input tensor/edge names of the module/layer
+        :param output_tensor_names: List of the output tensor/edge names of the module/layer
+        """
         self.input_tensor_names = input_tensor_names
         self.output_tensor_names = output_tensor_names

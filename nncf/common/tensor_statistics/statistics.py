@@ -47,10 +47,10 @@ class MeanTensorStatistic(TensorStatistic):
     """
     def __init__(self, mean_values, shape):
         """
-        Init for the MeanTensorStatistic
+        Initializes MeanTensorStatistic
 
-        :param mean_values: collected mean per-axis value
-        :param shape: shape of the collected statistics
+        :param mean_values: Сollected mean per-axis values.
+        :param shape: The shape of the collected statistics.
         """
         self.mean_values = mean_values
         self.shape = shape

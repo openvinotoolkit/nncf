@@ -352,22 +352,21 @@ class MeanMinMaxStatisticCollector(MinMaxOfflineStatisticCollectorBase):
 class MeanStatisticCollector(OfflineTensorStatisticCollector):
     """
     Collector that aggregates statistics as mean along a pre-assigned axis.
-
-    Args:
-        reduction_shape:
-            The shape for the reduction while statistics collection.
-            For the MeanStatisticCollector this parameter contains the main axis.
-        num_samples:
-            Optional parameter for statistic collection that regulates
-            the number of samples that will be processed.
-        window_size:
-            Optional maximum length for the statistic collection
     """
 
     def __init__(self,
                  reduction_shape: ReductionShape,
                  num_samples: Optional[int] = None,
                  window_size: Optional[int] = None) -> None:
+        """
+        Initializes MeanStatisticCollector
+
+        :param reduction_shape: The shape for the reduction while statistics collection.
+            For the MeanStatisticCollector this parameter contains the main axis.
+        :param num_samples: Optional parameter for statistic collection that regulates
+            the number of samples that will be processed.
+        :param window_size: Optional maximum length for the statistic collection
+        """
         super().__init__(reduction_shape, num_samples)
         self._tensor_processor = self._get_processor()
         self._all_values = deque(maxlen=window_size)

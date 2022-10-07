@@ -75,17 +75,16 @@ class ONNXOutputInsertionCommand(ONNXInsertionCommand):
 class ONNXBiasCorrectionCommand(TransformationCommand):
     """
     BiasCorrecionCommand class
-
-    Args:
-        target_point:
-            The TargetPoint instance for the correction that contains layer's information.
-        bias_shift:
-            The bias shift value (numpy format) that will be added to the original bias value.
-        threshold:
-            The floating-point value against which it is shift magnitude compares.
-            For the details see the Fast/BiasCorrectionParameters.
     """
     def __init__(self, target_point: ONNXTargetPoint, bias_shift: np.ndarray, threshold: float):
+        """
+        Initializes BiasCorrectionCommand
+
+        :param target_point: The TargetPoint instance for the correction that contains layer's information.
+        :param bias_shift: The bias shift value (numpy format) that will be added to the original bias value.
+        :param threshold: The floating-point value against which it is shift magnitude compares.
+            For the details see the Fast/BiasCorrectionParameters.
+        """
         super().__init__(TransformationType.CHANGE, target_point)
         self.bias_shift = bias_shift
         self.threshold = threshold
@@ -97,14 +96,14 @@ class ONNXBiasCorrectionCommand(TransformationCommand):
 class ONNXModelExtractionCommand(Command):
     """
     ModelExtractionCommand class
-
-    Args:
-        inputs:
-            List of the input names that denote the sub-graph beggining.
-        outputs:
-            List of the output names that denote the sub-graph ending.
     """
     def __init__(self, inputs: List[str], outputs: List[str]):
+        """
+        Initializes ModelExtractionCommand
+
+        :param inputs: List of the input names that denote the sub-graph beggining.
+        :param outputs: List of the output names that denote the sub-graph ending.
+        """
         super().__init__(TransformationType.EXTRACT)
         self.inputs = inputs
         self.outputs = outputs

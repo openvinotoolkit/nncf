@@ -20,7 +20,6 @@ from typing import Dict
 from typing import Union
 
 from enum import Enum
-from nncf.experimental.post_training.graph.model_transformer import StaticModelTransformerBase
 from nncf.experimental.post_training.statistics.statistic_point import StatisticPointsContainer
 from nncf.experimental.post_training.api.engine import Engine
 from nncf.common.utils.backend import BackendType
@@ -99,7 +98,7 @@ class CompositeAlgorithm(Algorithm):
 
     @property
     def available_backends(self) -> List[BackendType]:
-        # TODO(KodiaqQ): Need to add the implementation of the method (cross-algorithm backend calculation) 
+        # TODO(KodiaqQ): Need to add the implementation of the method (cross-algorithm backend calculation)
         # after updating the MinMax Quantization with shareable logic
         pass
 

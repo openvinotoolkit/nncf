@@ -42,18 +42,20 @@ class FastBiasCorrectionParameters(AlgorithmParameters):
     """
     Parameters of FastBiasCorrection algorithm
 
-    Args:
-        number_samples:
-            The number of the samples for the statistics collection.
-            This statistics uses for the further calculation of the bias shift.
-        threshold:
-            The magnitude threshold that regulates the application of the shift.
-            Magnitude calculates as the maximum of the absolute ratio of the shift to the original bias value.
-            If the calculated value less than threshold, shift will apply to the bias.
-
+    :param number_samples: The number of the samples for the statistics collection.
+    :param threshold: The magnitude threshold that regulates the application of the shift.
     """
 
     def __init__(self, number_samples: int = 100, threshold: float = 2.0) -> None:
+        """
+        Initializes FastBiasCorrectionParameters
+
+        :param number_samples: The number of the samples for the statistics collection.
+            This statistics uses for the further calculation of the bias shift.
+        :param threshold: The magnitude threshold that regulates the application of the shift.
+            Magnitude calculates as the maximum of the absolute ratio of the shift to the original bias value.
+            If the calculated value less than threshold, shift will apply to the bias.
+        """
         self.number_samples = number_samples
         self.threshold = threshold
 
@@ -78,14 +80,19 @@ class FastBiasCorrection(Algorithm):
         - the floating-point statistics uses as input for
         the sub-graph and further quantization output calculation;
         - in the end we corrects the original bias by the difference (shift)
-        between floating-point and quantized outputs;
-
-    Args:
-        parameters:
-            The instance of the FastBiasCorrectionParameters.
+        between floating-point and quantized outputs.
+    
+    :param number_samples: The number of the samples for the statistics collection.
+    :param threshold: The magnitude threshold that regulates the application of the shift.
+    :param nncf_graph: NNCFGraph class for the algorithm.
     """
 
     def __init__(self, parameters: FastBiasCorrectionParameters):
+        """
+        Initializes FastBiasCorrection
+
+        :param parameters: The instance of the FastBiasCorrectionParameters.
+        """
         super().__init__()
         self.number_samples = parameters.number_samples
         self.threshold = parameters.threshold
