@@ -41,7 +41,7 @@ Training binarized networks requires special scheduling of the training process.
                            "ResNet/Conv2d[conv1]",
                            "ResNet/Sequential[layer2]/BasicBlock[0]/Sequential[downsample]",
                            "ResNet/Sequential[layer3]/BasicBlock[0]/Sequential[downsample]",
-                           "ResNet/Sequential[layer4]/BasicBlock[0]/Sequential[downsample]"],
+                           "ResNet/Sequential[layer4]/BasicBlock[0]/Sequential[downsample]"]
     }
 }
 ```

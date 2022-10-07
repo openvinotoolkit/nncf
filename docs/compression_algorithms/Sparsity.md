@@ -64,7 +64,7 @@ This special algorithm takes no additional parameters and is used when you want 
 {
     "input_info": { "sample_size": [1, 3, 224, 224] }, // the input shape of your model may vary
     "compression": {
-      "algorithm": "magnitude_sparsity",
+      "algorithm": "magnitude_sparsity"
     }
 }
 ```
@@ -81,7 +81,7 @@ This special algorithm takes no additional parameters and is used when you want 
         "multistep_sparsity_levels": [0, 0.35, 0.7], // first level applied immediately (epoch 0), 0.35 - at epoch 10, 0.7 - at epoch 20
         "sparsity_target": 0.5,
         "sparsity_target_epoch": 20 // "sparsity_target" fully reached at the beginning of epoch 20
-      },
+      }
     }
 }
 ```
@@ -100,7 +100,7 @@ This special algorithm takes no additional parameters and is used when you want 
       },
       "initializer": {
         "batchnorm_adaptation": {
-          "num_bn_adaptation_samples": 100,
+          "num_bn_adaptation_samples": 100
         }
       }
     }

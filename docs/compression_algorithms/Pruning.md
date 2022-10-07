@@ -204,7 +204,7 @@ Therefore, it is expected that these numbers may differ from the calculated stat
             "pruning_steps": 20,
             "schedule": "exponential",
             "prune_first_conv": true,
-            "prune_downsample_convs": true,
+            "prune_downsample_convs": true
         }
     }
 }
@@ -237,7 +237,7 @@ Therefore, it is expected that these numbers may differ from the calculated stat
         {
             "algorithm": "filter_pruning",
             "params": {
-                "pruning_flops_target": 0.6,
+                "pruning_flops_target": 0.6
             }
         },
         {

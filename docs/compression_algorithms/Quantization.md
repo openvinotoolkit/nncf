@@ -235,7 +235,7 @@ For automatic mixed-precision selection it's recommended to use the following te
             "precision": {
                 "type": "hawq",
                 "bits": [4,8]
-                "compression_ratio": 1.5,
+                "compression_ratio": 1.5
             }
         }
     }
@@ -320,7 +320,7 @@ Following is an example of wrapping ImageNet validation loop as a callback. Top5
 {
     "input_info": { "sample_size": [1, 3, 224, 224] }, // the input shape of your model may vary
     "compression": {
-       "algorithm": "quantization",
+       "algorithm": "quantization"
     }
 }
 ```
@@ -332,7 +332,7 @@ Following is an example of wrapping ImageNet validation loop as a callback. Top5
     "compression": {
        "algorithm": "quantization",
        "weights": {"mode": "symmetric"},
-       "activations": {"mode": "asymmetric"},
+       "activations": {"mode": "asymmetric"}
     },
    "target_device": "CPU"
 }
@@ -359,7 +359,7 @@ Following is an example of wrapping ImageNet validation loop as a callback. Top5
     "compression": {
        "algorithm": "quantization",
        "bits": 4,
-       "per_channel": true,
+       "per_channel": true
     },
     "target_device": "TRIAL"
 }
@@ -397,7 +397,7 @@ Following is an example of wrapping ImageNet validation loop as a callback. Top5
        "ignored_scopes": ["{re}BertSelfAttention\\[self\\]/__add___0",
             "RobertaForSequenceClassification/RobertaClassificationHead[classifier]/Linear[out_proj]",
             "RobertaForSequenceClassification/RobertaClassificationHead[classifier]/Linear[dense]"
-        ],
+        ]
     },
     "target_device": "TRIAL"
 }
@@ -413,9 +413,9 @@ Following is an example of wrapping ImageNet validation loop as a callback. Top5
                "type": "autoq", // or "type": "hawq"
                "bits": [2, 4, 8],
                "compression_ratio": 0.15,
-               "iter_number": 300,
-           },
-       },
+               "iter_number": 300
+           }
+       }
     },
     "target_device": "TRIAL"
 }

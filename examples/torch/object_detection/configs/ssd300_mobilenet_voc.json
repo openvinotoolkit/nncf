@@ -34,7 +34,7 @@
     "aspect_ratios": [[2], [2, 3], [2, 3], [2, 3], [2], [2]],
     "clip": false,
     "flip": true,
-    "top_k": 200,
+    "top_k": 200
   }
 }
 

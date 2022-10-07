@@ -18,7 +18,7 @@ Example of config file needed to be provided to create_accuracy_aware_training_l
         "mode": "early_exit",
         "params": {
             "maximal_relative_accuracy_degradation": 1.0,
-            "maximal_total_expochs": 100,
+            "maximal_total_expochs": 100
         }
     },
     "compression": [

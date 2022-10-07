@@ -21,7 +21,7 @@ Note that in order to use batchnorm adaptation for your model, you must supply t
             "batchnorm_adaptation": {
                 "num_bn_adaptation_samples": 2048
             }
-        },
+        }
     }
 }
 ```
