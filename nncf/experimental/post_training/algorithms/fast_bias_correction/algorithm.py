@@ -159,12 +159,23 @@ class FastBiasCorrection(Algorithm):
                 output_fp=output_fp,
                 output_name=output_name)
 
-            target_point = self._backend_entity.target_point(TargetType.LAYER,
-                                                             node.node_name)
-            bias_correction_command = self._backend_entity.bias_correction_command(target_point,
-                                                                                   bias_shift,
-                                                                                   self.threshold)
-            transformation_layout.register(bias_correction_command)
+            # We uses 2nd value from the tensor names
+            # because of the bias tensor placement on this position.
+            bias_tensor_name = input_tensor_names[2]
+            current_bias = self._backend_entity.get_initializer_value(model, bias_tensor_name)
+            updated_bias = current_bias + bias_shift
+            magnitude = self._get_bias_shift_magnitude(current_bias, updated_bias)
+
+            if magnitude < self.threshold:
+                nncf_logger.debug(f'{node_name} bias would be changed')
+                target_point = self._backend_entity.target_point(TargetType.LAYER,
+                                                                 node.node_name)
+                bias_correction_command = self._backend_entity.bias_correction_command(target_point,
+                                                                                       updated_bias,
+                                                                                       self.threshold)
+                transformation_layout.register(bias_correction_command)
+            else:
+                nncf_logger.debug(f'{node_name} bias skipped by threshold')
 
         quantized_model = model_transformer.transform(transformation_layout)
         return quantized_model
@@ -310,6 +321,20 @@ class FastBiasCorrection(Algorithm):
         input_nodes = nncf_graph.get_previous_nodes(node)
         weight_dequantizer = input_nodes[1]
         return weight_dequantizer.node_type == 'DequantizeLinear'
+
+    @staticmethod
+    def _get_bias_shift_magnitude(current_bias_value: np.ndarray, updated_bias_value: np.ndarray) -> float:
+        """
+        Calculates bias shift magnitude based on the current and updated values
+
+        :param current_bias_value: the original bias value
+        :param updated_bias_value: the updated bias value
+        :return: magnitude between original and updated bias values
+        """
+        bias_shift_magnitude = np.inf
+        if np.count_nonzero(current_bias_value == 0) == 0:
+            bias_shift_magnitude = np.max(np.abs((updated_bias_value - current_bias_value) / current_bias_value))
+        return bias_shift_magnitude
 
     def get_statistic_points(self, model: ModelType) -> StatisticPointsContainer:
         self._set_backend_entity(model)

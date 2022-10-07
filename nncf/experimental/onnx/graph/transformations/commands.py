@@ -76,17 +76,17 @@ class ONNXBiasCorrectionCommand(TransformationCommand):
     """
     BiasCorrecionCommand class
     """
-    def __init__(self, target_point: ONNXTargetPoint, bias_shift: np.ndarray, threshold: float):
+    def __init__(self, target_point: ONNXTargetPoint, bias_value: np.ndarray, threshold: float):
         """
         Initializes BiasCorrectionCommand
 
         :param target_point: The TargetPoint instance for the correction that contains layer's information.
-        :param bias_shift: The bias shift value (numpy format) that will be added to the original bias value.
+        :param bias_value: The bias shift value (numpy format) that will be added to the original bias value.
         :param threshold: The floating-point value against which it is shift magnitude compares.
             For the details see the Fast/BiasCorrectionParameters.
         """
         super().__init__(TransformationType.CHANGE, target_point)
-        self.bias_shift = bias_shift
+        self.bias_value = bias_value
         self.threshold = threshold
 
     def union(self, other: 'TransformationCommand') -> 'TransformationCommand':

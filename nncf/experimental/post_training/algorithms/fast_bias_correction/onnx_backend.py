@@ -64,9 +64,9 @@ class ONNXFBCAlgoBackend(FBCAlgoBackend):
 
     @staticmethod
     def bias_correction_command(target_point: ONNXTargetPoint,
-                                bias_shift: np.ndarray,
+                                bias_value: np.ndarray,
                                 threshold: float) -> ONNXBiasCorrectionCommand:
-        return ONNXBiasCorrectionCommand(target_point, bias_shift, threshold)
+        return ONNXBiasCorrectionCommand(target_point, bias_value, threshold)
 
     @staticmethod
     def model_extraction_command(inputs: List[str], outputs: List[str]) -> ONNXModelExtractionCommand:
@@ -94,3 +94,10 @@ class ONNXFBCAlgoBackend(FBCAlgoBackend):
             blob[:, i] = value
         blob = blob.astype(np.float32)
         return blob
+
+    @staticmethod
+    def get_initializer_value(model: onnx.ModelProto, initializer_name: str) -> np.ndarray:
+        for initializer in model.graph.initializer:
+            if initializer.name == initializer_name:
+                return onnx.numpy_helper.to_array(initializer)
+        raise RuntimeError('There is no initializer with the name {}'.format(initializer_name))

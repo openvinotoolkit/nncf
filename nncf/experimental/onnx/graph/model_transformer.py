@@ -15,9 +15,7 @@ from typing import List, Optional, Tuple
 from copy import deepcopy
 from collections import Counter
 import onnx
-import numpy as np
 
-from nncf.common.utils.logger import logger as nncf_logger
 from nncf.common.graph.graph import NNCFGraph
 from nncf.common.graph.transformations.commands import TargetType
 from nncf.common.graph.transformations.layout import TransformationLayout
@@ -337,20 +335,10 @@ class ONNXModelTransformer(StaticModelTransformerBase):
             onnx_node = onnx_graph.get_node_by_name(node_name)
             bias_initializer_name = onnx_node.input[2]
             bias_initializer = onnx_graph.get_initializer(bias_initializer_name)
-            current_bias_value = onnx.numpy_helper.to_array(bias_initializer)
 
-            new_bias_value = current_bias_value + transformation.bias_shift
-            new_bias_tensor = onnx.numpy_helper.from_array(new_bias_value, bias_initializer_name)
-
-            bias_shift_magnitude = np.inf
-            if np.count_nonzero(current_bias_value == 0) == 0:
-                bias_shift_magnitude = np.max(np.abs((new_bias_value - current_bias_value) / current_bias_value))
-
-            if bias_shift_magnitude < transformation.threshold:
-                nncf_logger.debug(f'{node_name} bias was changed')
-                bias_initializer.CopyFrom(new_bias_tensor)
-            else:
-                nncf_logger.debug(f'{node_name} skipped by threshold')
+            new_bias_tensor = onnx.numpy_helper.from_array(transformation.bias_value,
+                                                           bias_initializer_name)
+            bias_initializer.CopyFrom(new_bias_tensor)
 
     def _apply_model_extraction_transformation(self, transformation: ONNXModelExtractionCommand) -> onnx.ModelProto:
         """

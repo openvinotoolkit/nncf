@@ -87,13 +87,13 @@ class FBCAlgoBackend(ABC):
     @staticmethod
     @abstractmethod
     def bias_correction_command(target_point: TargetPoint,
-                                bias_shift: np.ndarray,
+                                bias_value: np.ndarray,
                                 threshold: float) -> TransformationCommand:
         """
         Returns backend-specific bias correction command
 
         :param target_point: target location for the correction
-        :param bias_shift: shift value for the bias
+        :param bias_value: new value for the bias
         :param threshold: parametrized threshold for the shift magnitude comparison
         :return: backend-specific TransformationCommand for the bias correction
         """
@@ -152,4 +152,15 @@ class FBCAlgoBackend(ABC):
         :param shape: shape of the blob
         :param data: data to fill the blob
         :return: np.ndarray blob
+        """
+
+    @staticmethod
+    @abstractmethod
+    def get_initializer_value(model: ModelType, initializer_name: str) -> np.ndarray:
+        """
+        Returns initializer value in the NumPy format
+
+        :param model: backend-specific model for the initializer finding
+        :param initializer_name: name of the tensor/initializer to find in the model
+        :return: initializer value in the NumPy format
         """
