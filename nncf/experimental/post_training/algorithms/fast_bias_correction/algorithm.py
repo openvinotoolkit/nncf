@@ -81,7 +81,7 @@ class FastBiasCorrection(Algorithm):
         the sub-graph and further quantization output calculation;
         - in the end we corrects the original bias by the difference (shift)
         between floating-point and quantized outputs.
-    
+
     :param number_samples: The number of the samples for the statistics collection.
     :param threshold: The magnitude threshold that regulates the application of the shift.
     :param nncf_graph: NNCFGraph class for the algorithm.

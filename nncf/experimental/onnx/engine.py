@@ -98,7 +98,7 @@ class ONNXEngine(Engine):
                     edge_name = self.onnx_graph.get_node_edges(node_name)['output'][0]
                     statistic_point.register_tensor(outputs[edge_name])
                 elif statistic_point.target_point.type == TargetType.PRE_LAYER_OPERATION:
-                    edge_name = self.onnx_graph.get_node_edges(node_name)['input'][0]
+                    edge_name = statistic_point.target_point.edge_name
                     statistic_point.register_tensor(outputs[edge_name])
                 else:
                     RuntimeError('The statistics should be collected only from the input of output edges of the node')

@@ -46,7 +46,7 @@ class ONNXFBCAlgoBackend(FBCAlgoBackend):
 
     @property
     def channel_axis_by_types(self) -> Dict[str, int]:
-        return {'Conv': 1, 'Gemm': -1}
+        return {'Conv': 1, 'Gemm': -1, 'ConvTranspose': 1}
 
     @property
     def tensor_processor(self) -> ONNXNNCFCollectorTensorProcessor:
