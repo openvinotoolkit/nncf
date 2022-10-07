@@ -1716,4 +1716,3 @@ class TestQuantizerPropagationSolver:
         double_input_pq = all_pqs[affected_op_node_per_pq.index("5 /E_0")]
         assert double_input_pq.current_location_node_key == InsertionPointGraph.get_pre_hook_node_key("5 /E_0",
                                                                                                       input_port_id=1)
-

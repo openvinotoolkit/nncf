@@ -277,7 +277,7 @@ class TestInsertionCommands:
                                            OperationAddress.from_str(target_point.target_node_name),
                                            target_point.input_port_id)
         if insertion_point.insertion_type in [PTInsertionType.OPERATOR_PRE_HOOK, PTInsertionType.OPERATOR_POST_HOOK]:
-            hook = lambda x: x  #pylint:disable=unnecessary-lambda-assignment
+            hook = lambda x: x
         else:
             hook = BaseOp(lambda x: x)
 
@@ -319,9 +319,9 @@ class TestInsertionCommands:
             hook2 = BaseOp(lambda x: 2 * x)
             hook3 = BaseOp(lambda x: 3 * x)
         else:
-            hook1 = lambda x: x     #pylint:disable=unnecessary-lambda-assignment
-            hook2 = lambda x: 2 * x #pylint:disable=unnecessary-lambda-assignment
-            hook3 = lambda x: 3 * x #pylint:disable=unnecessary-lambda-assignment
+            hook1 = lambda x: x
+            hook2 = lambda x: 2 * x
+            hook3 = lambda x: 3 * x
 
         if insertion_type == TargetType.OPERATION_WITH_WEIGHTS:
             point = self.point_for_conv2_weights

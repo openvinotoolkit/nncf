@@ -11,7 +11,7 @@ from tests.common.quantization.mock_graphs import get_nncf_graph_from_mock_nx_gr
 from tests.common.quantization.mock_graphs import get_randomly_connected_model_graph
 
 
-def test_set_quantization_traits_for_quant_prop_graph_nodes(self):
+def test_set_quantization_traits_for_quant_prop_graph_nodes():
     # Test all patchable metatypes. If a patchable metatype is not registered
     # in quantization trait-to-metatype dict, the test will fail.
     tested_op_metatypes = get_operator_metatypes()  # type: List[Type[OperatorMetatype]]
@@ -44,7 +44,7 @@ def test_set_quantization_traits_for_quant_prop_graph_nodes(self):
                 assert quant_types == QuantizerPropagationSolver.DEFAULT_QUANTIZATION_TYPES
 
 
-def test_quantization_traits_are_unambiguous_for_op_names(self):
+def test_quantization_traits_are_unambiguous_for_op_names():
     op_name_to_trait_dict = {}  # type: Dict[str, QuantizationTrait]
     for trait, arches in DEFAULT_PT_QUANT_TRAIT_TO_OP_DICT.items():
         for op_meta in arches:
