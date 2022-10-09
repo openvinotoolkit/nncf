@@ -1,6 +1,7 @@
 import math
 import os
 from pathlib import Path
+from typing import List, Optional, Union
 
 import nncf
 import numpy as np
@@ -10,12 +11,12 @@ import torch.nn as nn
 from datasets import load_dataset
 from nncf import NNCFConfig
 from nncf.common.utils.helpers import matches_any, should_consider_scope
-from nncf.torch.sparsity.functions import apply_binary_mask
 from nncf.torch import create_compressed_model, register_default_init_args
 from nncf.torch.layer_utils import COMPRESSION_MODULES, CompressionParameter
 from nncf.torch.layers import NNCF_MODULES_MAP
 from nncf.torch.module_operations import UpdateWeightAndBias
 from nncf.torch.nncf_network import NNCFNetwork
+from nncf.torch.sparsity.functions import apply_binary_mask
 from nncf.torch.sparsity.layers import BinaryMask
 from nncf.torch.sparsity.movement.algo import (ImportanceLoss,
                                                MovementSparsifier,
@@ -214,8 +215,9 @@ def assert_sparsified_layer_mode(sparsifier: MovementSparsifier, module: nn.Line
     MovementSparsityConfigBuilder().sparse_structure_by_scopes([["block", [5, 5, 5], "{re}.*"]]),  # wrong config
     MovementSparsityConfigBuilder().sparse_structure_by_scopes([["block", [5, 5], "{re}.*"]]),  # wrong config
 ])
-def test_can_create_movement_sparsity_layers(nncf_config_builder):
+def test_can_create_movement_sparsity_layers(tmp_path, nncf_config_builder):
     nncf_config = nncf_config_builder.build()
+    nncf_config['log_dir'] = tmp_path 
     compression_ctrl, compressed_model = create_compressed_model(bert_tiny_torch_model(), nncf_config)
     assert isinstance(compression_ctrl, MovementSparsityController)
 
@@ -239,9 +241,8 @@ def test_can_create_movement_sparsity_layers(nncf_config_builder):
             assert count_movement_op == 1
 
 
-def run_movement_pipeline(tmp_path, nncf_config, callback_cls=None):  # temporarily remove fixture for model & dataset
+def run_movement_pipeline(tmp_path, compression_ctrl, compressed_model, callbacks: Optional[List[TrainerCallback]] = None):  # temporarily remove fixture for model & dataset
     train_dataset, eval_dataset = yelp_dataset()
-    compression_ctrl, model = create_compressed_model(bert_tiny_torch_model(), nncf_config)
 
     training_args = TrainingArguments(
         output_dir=tmp_path / "test_trainer",
@@ -263,15 +264,13 @@ def run_movement_pipeline(tmp_path, nncf_config, callback_cls=None):  # temporar
         predictions = np.argmax(logits, axis=-1)
         return dict(acc=(predictions == labels).mean())
 
-    if callback_cls is None:
-        callback = MovementSparsityCallback(compression_ctrl)
-    else:
-        callback = callback_cls(compression_ctrl)
+    if callbacks is None:
+        callbacks = [MovementSparsityCallback(compression_ctrl)]
     trainer = MovementSparsityTrainer(
-        model=model,
+        model=compressed_model,
         args=training_args,
         compression_ctrl=compression_ctrl,
-        callbacks=[callback],
+        callbacks=callbacks,
         train_dataset=train_dataset,
         eval_dataset=eval_dataset,
         compute_metrics=compute_metrics,
@@ -279,7 +278,7 @@ def run_movement_pipeline(tmp_path, nncf_config, callback_cls=None):  # temporar
 
     train_result = trainer.train()
     eval_result = trainer.evaluate()
-    return train_result, eval_result, callback
+    return train_result, eval_result, callbacks
 
 
 @pytest.mark.parametrize('nncf_config_builder', [
@@ -293,7 +292,10 @@ def run_movement_pipeline(tmp_path, nncf_config, callback_cls=None):  # temporar
 )
 def test_can_run_full_pipeline(tmp_path, nncf_config_builder):
     nncf_config = nncf_config_builder().build()
-    train_log, eval_result, callback = run_movement_pipeline(tmp_path, nncf_config)
+    nncf_config['log_dir'] = tmp_path 
+    compression_ctrl, compressed_model = create_compressed_model(bert_tiny_torch_model(), nncf_config)
+    callback = MovementSparsityCallback(compression_ctrl)
+    train_log, eval_result, _ = run_movement_pipeline(tmp_path, compression_ctrl, compressed_model, [callback])
 
     # check
     warmup_a, warmup_b = nncf_config_builder().get_warmup_range()
@@ -321,6 +323,8 @@ def test_can_run_full_pipeline(tmp_path, nncf_config_builder):
 )
 def test_importance_score_update(tmp_path, nncf_config_builder):
     nncf_config = nncf_config_builder().build()
+    nncf_config['log_dir'] = tmp_path 
+    compression_ctrl, compressed_model = create_compressed_model(bert_tiny_torch_model(), nncf_config)
 
     class CheckImportanceCallback(MovementSparsityCallback):
         def on_epoch_end(self, args: TrainingArguments, state: TrainerState, control: TrainerControl, **kwargs):
@@ -334,14 +338,16 @@ def test_importance_score_update(tmp_path, nncf_config_builder):
                     assert torch.count_nonzero(sparsifier._bias_importance) > 0
                     assert sparsifier._bias_importance.requires_grad is ref_requires_grad
 
-    run_movement_pipeline(tmp_path, nncf_config, CheckImportanceCallback)
+    run_movement_pipeline(tmp_path, compression_ctrl, compressed_model, [CheckImportanceCallback(compression_ctrl)])
 
 
 @pytest.mark.parametrize('nncf_config_builder', [
-    MovementSparsityConfigBuilder()]
-)
+    MovementSparsityConfigBuilder(),
+])
 def test_compression_loss(tmp_path, nncf_config_builder):
     nncf_config = nncf_config_builder().build()
+    nncf_config['log_dir'] = tmp_path 
+    compression_ctrl, compressed_model = create_compressed_model(bert_tiny_torch_model(), nncf_config)
 
     class CheckCompressionLossCallback(MovementSparsityCallback):
         def on_step_end(self, args: TrainingArguments, state: TrainerState, control: TrainerControl, **kwargs):
@@ -357,14 +363,16 @@ def test_compression_loss(tmp_path, nncf_config_builder):
                 if state.epoch > self.compression_ctrl.scheduler.warmup_end_epoch:
                     assert loss_compress.requires_grad is False
 
-    run_movement_pipeline(tmp_path, nncf_config, CheckCompressionLossCallback)
+    run_movement_pipeline(tmp_path, compression_ctrl, compressed_model, [CheckCompressionLossCallback(compression_ctrl)])
 
 
 @pytest.mark.parametrize('nncf_config_builder', [
-    MovementSparsityConfigBuilder()]
-)
+    MovementSparsityConfigBuilder(),
+])
 def test_binary_mask(tmp_path, nncf_config_builder):
     nncf_config = nncf_config_builder().build()
+    nncf_config['log_dir'] = tmp_path 
+    compression_ctrl, compressed_model = create_compressed_model(bert_tiny_torch_model(), nncf_config)
 
     class CheckBinaryMask(MovementSparsityCallback):
         def on_epoch_end(self, args: TrainingArguments, state: TrainerState, control: TrainerControl, **kwargs):
@@ -375,7 +383,7 @@ def test_binary_mask(tmp_path, nncf_config_builder):
                     ref_binary_mask = (sparsifier._weight_importance > self.compression_ctrl.scheduler.current_importance_threshold).float()
                     torch.allclose(sparsifier.weight_ctx.binary_mask, sparsifier._expand_importance(ref_binary_mask))  # TODO: add _expand_importance test in unit test.
 
-    run_movement_pipeline(tmp_path, nncf_config, CheckBinaryMask)
+    run_movement_pipeline(tmp_path, compression_ctrl, compressed_model, [CheckBinaryMask(compression_ctrl)])
 
 
 # @pytest.mark.parametrize('config', [
@@ -409,7 +417,7 @@ def test_binary_mask(tmp_path, nncf_config_builder):
 
 #     compression_ctrl, model = create_compressed_model(BasicModel(), config['nncf_config'].input_info([{"sample_size": [1, 2]}]).build())
 #     for sparse_module in compression_ctrl.sparsified_module_info:
-#           # HOW to set data? load a state_dict? 
+#           # HOW to set data? load a state_dict?
 #         sparse_module.module.weight.data = config['weight']
 #         sparse_module.module.bias.data = config['bias']
 #         sparse_module.operand._weight_importance.data = config['weight_importance']
@@ -420,6 +428,7 @@ def test_binary_mask(tmp_path, nncf_config_builder):
 
 
 if __name__ == "__main__":
-    # test_can_create_movement_sparsity_layers(MovementSparsityConfigBuilder())
+    test_can_create_movement_sparsity_layers(MovementSparsityConfigBuilder())
     # test_can_run_full_pipeline(Path('/tmp'), MovementSparsityConfigBuilder)
     # test_importance_score_update(Path('/tmp'), MovementSparsityConfigBuilder())
+    pass
