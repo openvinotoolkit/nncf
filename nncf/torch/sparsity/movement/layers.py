@@ -135,7 +135,7 @@ class MovementSparsifier(nn.Module):
         btensor = apply_binary_mask_impl(tmp_btensor, bias)
         return wtensor, btensor
 
-    def _calc_training_binary_mask(self, weight, bias):
+    def _calc_training_binary_mask(self, weight=None, bias=None): # TODO: unnecessary arguments
         if self.training and not self.frozen:
             w_mask = binary_mask_by_threshold(
                 self._expand_importance(self._weight_importance), 

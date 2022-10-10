@@ -17,7 +17,7 @@ from nncf.common.sparsity.statistics import MovementSparsityStatistics
 from nncf.common.utils.helpers import matches_any, should_consider_scope
 from nncf.torch import create_compressed_model, register_default_init_args
 from nncf.torch.layer_utils import COMPRESSION_MODULES, CompressionParameter
-from nncf.torch.layers import NNCF_MODULES_MAP
+from nncf.torch.layers import NNCF_MODULES_MAP, NNCFLinear
 from nncf.torch.module_operations import UpdateWeightAndBias
 from nncf.torch.nncf_network import NNCFNetwork
 from nncf.torch.sparsity.functions import apply_binary_mask
@@ -26,11 +26,14 @@ from nncf.torch.sparsity.movement.algo import (ImportanceLoss,
                                                MovementSparsifier,
                                                MovementSparsityController,
                                                SparseConfig, SparseStructure)
+from nncf.torch.utils import get_model_device
+from onnx import numpy_helper
 from pytest import approx
 from tests.torch.helpers import (BasicConvTestModel, MockModel,
                                  check_correct_nncf_modules_replacement,
                                  create_compressed_model_and_algo_for_test,
-                                 get_empty_config)
+                                 get_all_inputs_for_graph_node,
+                                 get_empty_config, get_nodes_by_type)
 from transformers import (AutoModelForSequenceClassification, AutoTokenizer,
                           Trainer, TrainingArguments)
 from transformers.trainer_callback import (TrainerCallback, TrainerControl,
@@ -389,54 +392,94 @@ def test_binary_mask(tmp_path, nncf_config_builder):
                 sparsifier = sparse_module.operand
                 if state.epoch <= self.compression_ctrl.scheduler.warmup_end_epoch:  # TODO: The binary mask after fill staget is not related to importance score
                     ref_binary_mask = (sparsifier._weight_importance > self.compression_ctrl.scheduler.current_importance_threshold).float()
-                    torch.allclose(sparsifier.weight_ctx.binary_mask, sparsifier._expand_importance(ref_binary_mask))  # TODO: add _expand_importance test in unit test.
+                    assert torch.allclose(sparsifier.weight_ctx.binary_mask, sparsifier._expand_importance(ref_binary_mask))  # TODO: add _expand_importance test in unit test.
 
     run_movement_pipeline(tmp_path, compression_ctrl, compressed_model, [CheckBinaryMask(compression_ctrl)])
 
 
-# @pytest.mark.parametrize('config', [
-#     dict(weight=torch.ones([4, 2]),
-#          bias=torch.ones([4]),
-#          weight_importance=torch.tensor([[1.0], [0.0]]),
-#          bias_importance=torch.tensor([1.0, 0.0]),
-#          ref_sparsity=0.5,
-#          nncf_config=MovementSparsityConfigBuilder().sparse_structure_by_scopes([["block", [2, 2], "{re}.*"]])),
-#     dict(weight=torch.zeros([4, 2]),
-#          bias=torch.ones([4]),
-#          weight_importance=torch.tensor([[1.0], [1.0]]),
-#          bias_importance=torch.tensor([1.0, 1.0]),
-#          ref_sparsity=8 / 12.0,
-#          nncf_config=MovementSparsityConfigBuilder().sparse_structure_by_scopes([["block", [2, 2], "{re}.*"]])),
-#     dict(weight=torch.arange(-4, 4).float().reshape(4, 2),
-#          bias=torch.ones([4]),
-#          weight_importance=torch.tensor([[1.0, 1.0, 1.0, 0.0], [1.0, 0.0, 0.0, 1.0]]),
-#          bias_importance=torch.tensor([1.0, 1.0, 0.0, 1.0]),
-#          ref_sparsity=5 / 12.0,
-#          nncf_config=MovementSparsityConfigBuilder().sparse_structure_by_scopes([["fine", [1, 1], "{re}.*"]]))
-# ])
-# def test_sparsity_statistics(config):
-#     class BasicModel(nn.Module):
-#         def __init__(self):
-#             super().__init__()
-#             self.linears = nn.Linear(2, 4, bias=True)
+# This part is not finished. How to check sparisty with fill stage?
+@pytest.mark.parametrize('nncf_config_builder', [
+    MovementSparsityConfigBuilder(),
+])
+def test_sparsity_statistics_are_increasing(tmp_path, nncf_config_builder):
+    nncf_config = nncf_config_builder().build()
+    nncf_config['log_dir'] = tmp_path
+    compression_ctrl, compressed_model = create_compressed_model(bert_tiny_torch_model(), nncf_config)
+    assert isinstance(compression_ctrl.statistics().movement_sparsity, MovementSparsityStatistics)
+    log_dict = defaultdict(list)
+    compressed_model.train()
+    for epoch in range(10):
+        compression_ctrl.scheduler.epoch_step()
+        for batch in range(4):
+            compression_ctrl.scheduler.step()
+            statistics = compression_ctrl.statistics().movement_sparsity
+            log_dict['importance_threshold'].append(statistics.importance_threshold)
+            log_dict['importance_regularization_factor'].append(statistics.importance_regularization_factor)
+            log_dict['sparsity_level'].append(statistics.model_statistics.sparsity_level)
+            log_dict['sparsity_level_for_layers'].append(statistics.model_statistics.sparsity_level_for_layers)
 
-#         def forward(self, inputs):
-#             return self.linears(inputs)
+    def is_non_decreasing(x: List):
+        return all(a <= b for a, b in zip(x[:-1], x[1:]))
 
-#     compression_ctrl, model = create_compressed_model(BasicModel(), config['nncf_config'].input_info([{"sample_size": [1, 2]}]).build())
-#     for sparse_module in compression_ctrl.sparsified_module_info:
-#           # HOW to set data? load a state_dict?
-#         sparse_module.module.weight.data = config['weight']
-#         sparse_module.module.bias.data = config['bias']
-#         sparse_module.operand._weight_importance.data = config['weight_importance']
-#         sparse_module.operand._bias_importance.data = config['bias_importance']
-#         calculated_sparsity = compression_ctrl.statistics().movement_sparsity.model_statistics.sparsity_level_for_layers
-#         print(calculated_sparsity)
-#         assert calculated_sparsity == approx(config['ref_sparsity'])
+    assert is_non_decreasing(log_dict['importance_threshold'])
+    assert is_non_decreasing(log_dict['importance_regularization_factor'])
+    assert is_non_decreasing(log_dict['sparsity_level'])
+    assert is_non_decreasing(log_dict['sparsity_level_for_layers'])
+
+
+def get_linear_weight_bias_data(module: NNCFLinear):
+    # TODO: how can we get this via UpdateWeightAndBias?
+    in_features = module.in_features
+    zero_input = torch.zeros((1, in_features))
+    eye_input = torch.eye(in_features)
+    with torch.no_grad():
+        bias = module(zero_input)
+        weight = module(eye_input) - bias
+    return weight.T, bias
+
+
+def check_onnx_has_sparsified_param(compressed_model, compression_ctrl, onnx_path):
+    ref_params = {}
+    module_name_dict = {module: name for name, module in compressed_model.named_modules()}
+    for m in compression_ctrl.sparsified_module_info:
+        weight, bias = get_linear_weight_bias_data(m.module)
+        name = module_name_dict[m.module]
+        ref_params[name + '.weight'] = weight
+        ref_params[name + '.bias'] = bias
+
+    compression_ctrl.export_model(onnx_path)
+    onnx_model = onnx.load(onnx_path)
+
+    for t in onnx_model.graph.initializer:
+        if t.name in ref_params:
+            ref_param = ref_params.pop(t.name).numpy()
+            onnx_param = numpy_helper.to_array(t)
+            assert np.allclose(ref_param, onnx_param, atol=1e-6)
+            # atol cannot be the default value, i.e., 1e-8, probably due to
+            # the current way of accessing pruned reference weight and bias.
+    assert len(ref_params) == 0
+
+
+@pytest.mark.parametrize('nncf_config_builder', [
+    MovementSparsityConfigBuilder(),
+])
+def test_export_onnx_has_sparsified_param(tmp_path, nncf_config_builder):
+    nncf_config = nncf_config_builder().build()
+    nncf_config['log_dir'] = tmp_path
+    compression_ctrl, compressed_model = create_compressed_model(bert_tiny_torch_model(), nncf_config)
+    for m in compression_ctrl.sparsified_module_info:
+        torch.nn.init.uniform_(m.operand._weight_importance, a=-1., b=1.)
+        torch.nn.init.uniform_(m.operand._bias_importance, a=-1., b=1.)
+    for threshold in [-0.5, 0.0, 0.5]:
+        compressed_model.train()
+        for m in compression_ctrl.sparsified_module_info:
+            m.operand.masking_threshold = threshold
+            m.operand._calc_training_binary_mask()
+        onnx_path = tmp_path / f'model_thres{threshold}.onnx'
+        check_onnx_has_sparsified_param(compressed_model, compression_ctrl, onnx_path)
 
 
 if __name__ == "__main__":
-    test_can_create_movement_sparsity_layers(MovementSparsityConfigBuilder())
+    # test_can_create_movement_sparsity_layers(MovementSparsityConfigBuilder())
     # test_can_run_full_pipeline(Path('/tmp'), MovementSparsityConfigBuilder)
-    # test_importance_score_update(Path('/tmp'), MovementSparsityConfigBuilder())
-    pass
+    test_export_onnx_has_sparsified_param(Path('/tmp'), MovementSparsityConfigBuilder())

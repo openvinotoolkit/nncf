@@ -360,12 +360,12 @@ class PolynomialThresholdScheduler(BaseCompressionScheduler):
         self.cached_importance_threshold = self.current_importance_threshold
 
         self.schedule = PolynomialDecaySchedule(
-            self.init_importance_threshold, 
-            self.final_importance_threshold, 
-            (self.warmup_end_epoch-self.warmup_start_epoch),
-            params.get('power', 3), 
+            self.init_importance_threshold,
+            self.final_importance_threshold,
+            (self.warmup_end_epoch - self.warmup_start_epoch),
+            params.get('power', 3),
             params.get('concave', True)
-            )
+        )
 
         self._steps_in_current_epoch = 0
         self._update_per_optimizer_step = params.get('update_per_optimizer_step', False)
@@ -380,16 +380,16 @@ class PolynomialThresholdScheduler(BaseCompressionScheduler):
     def _disable_importance_grad(self):
         for m in self._controller.sparsified_module_info:
             m.operand.freeze_importance()
-                        
+
     def _update_importance_masking_threshold(self):
         if self.cached_importance_threshold != self.current_importance_threshold:
             for m in self._controller.sparsified_module_info:
                 m.operand.masking_threshold = self.current_importance_threshold
-        self.cached_importance_threshold = self.current_importance_threshold 
+        self.cached_importance_threshold = self.current_importance_threshold
 
     def epoch_step(self, next_epoch: Optional[int] = None) -> None:
         self._maybe_should_skip()
-        self._steps_in_current_epoch = 0 # This must be set after _maybe_should_skip as it is used in that routine
+        self._steps_in_current_epoch = 0  # This must be set after _maybe_should_skip as it is used in that routine
         if self._should_skip:
             return
         # only increment epoch if should_skip is checked
@@ -404,13 +404,13 @@ class PolynomialThresholdScheduler(BaseCompressionScheduler):
 
         if self._update_per_optimizer_step:
             self.schedule_threshold()
-    
+
     def schedule_threshold(self):
         if self.current_step < self.warmup_start_epoch * self._steps_per_epoch:
-            self.current_importance_threshold  = self.init_importance_threshold
+            self.current_importance_threshold = self.init_importance_threshold
 
         elif self.current_step >= self.warmup_end_epoch * self._steps_per_epoch:
-            self.current_importance_threshold  = self.final_importance_threshold
+            self.current_importance_threshold = self.final_importance_threshold
             self._disable_importance_grad()
 
             # TODO: gradient freezing should be at the epoch to freeze epoch
@@ -420,23 +420,22 @@ class PolynomialThresholdScheduler(BaseCompressionScheduler):
             #         m._importance.requires_grad=False
 
         else:
-            self.current_importance_threshold  = self._calculate_threshold_level()
+            self.current_importance_threshold = self._calculate_threshold_level()
 
         # self.current_importance_threshold = 0.1
         self._update_importance_masking_threshold()
         # if _cached_threshold != self.current_importance_threshold  or _cached_regu_lambda != self.current_importance_lambda:
         #     for n, m in self._controller.model.named_modules():
         #         if m.__class__.__name__ == "MovementSparsifyingWeight":
-        #             m.masking_threshold = self.current_importance_threshold 
+        #             m.masking_threshold = self.current_importance_threshold
         #             # m.lmbd = self.current_importance_lambda
 
     def _calculate_threshold_level(self) -> float:
-        warmup_start_global_step = self.warmup_start_epoch*self._steps_per_epoch
+        warmup_start_global_step = self.warmup_start_epoch * self._steps_per_epoch
         schedule_current_step = self.current_step - warmup_start_global_step
         schedule_epoch = schedule_current_step // self._steps_per_epoch
         schedule_step = schedule_current_step % self._steps_per_epoch
         return self.schedule(schedule_epoch, schedule_step, self._steps_per_epoch)
-
 
     def load_state(self, state: Dict[str, Any]) -> None:
         super().load_state(state)
