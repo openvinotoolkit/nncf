@@ -62,7 +62,7 @@ SINGLE_INPUT_INFO_SCHEMA = {
         "type": with_attributes(STRING,
                                 description="Data type of the model input tensor."),
         "filler": with_attributes(STRING,
-                                  description="Determines what the tensor will be filled with when passed to the model"
+                                  description="Determines what the ill be filled with when passed to the model"
                                               " during tracing and exporting."),
         "keyword": with_attributes(STRING,
                                    description="Keyword to be used when passing the tensor to the model's "
