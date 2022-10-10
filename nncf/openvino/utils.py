@@ -30,8 +30,7 @@ class POTDataLoader(Sized, DataLoaderImpl):
 
     def __init__(self,
                  data_source: DataSource,
-                 transform_fn: Callable[[DataItem], ModelInput],
-                 batch_size: int):
+                 transform_fn: Callable[[DataItem], ModelInput]):
         """
         Initializes the data loader.
 
@@ -43,7 +42,7 @@ class POTDataLoader(Sized, DataLoaderImpl):
         :param batch_size: An integer that represents the number of consecutive elements
             of `data_source` that were combined in a single batch.
         """
-        super().__init__(data_source, transform_fn, batch_size)
+        super().__init__(data_source, transform_fn)
         self._length = None
 
     def __len__(self) -> int:

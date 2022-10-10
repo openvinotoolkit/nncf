@@ -43,39 +43,7 @@ def create_dataloader(data_source: DataSource,
                          'https://docs.python.org/3/glossary.html#term-iterable to learn more '
                          'about iterable object.') from exc
 
-    batch_size = _get_batch_size(data_source)
-
-    return DataLoaderImpl(data_source, transform_fn, batch_size)
-
-
-def _get_batch_size(data_source: DataSource) -> int:
-    """
-    Tries to determine the batch size of the provided custom data source.
-    If it was successful returns the number of elements return per iteration
-    from the `data_source` or `1` otherwise.
-
-    :param data_source: Custom data source that is an iterable python object.
-    :return: The number of elements return per iteration from the `data_source` or `1`.
-    """
-    try:
-        import torch
-    except ImportError:
-        torch = None
-
-    try:
-        import tensorflow
-    except ImportError:
-        tensorflow = None
-
-    batch_size = 1
-
-    if torch is not None and isinstance(data_source, torch.utils.data.DataLoader):
-        batch_size = data_source.batch_size
-
-    if tensorflow is not None and isinstance(data_source, tensorflow.data.Dataset):
-        batch_size = getattr(data_source, '_batch_size', batch_size)
-
-    return batch_size
+    return DataLoaderImpl(data_source, transform_fn)
 
 
 def create_subset(data_loader: DataLoader, indices: List[int]) -> DataLoader:
@@ -103,4 +71,4 @@ def create_subset(data_loader: DataLoader, indices: List[int]) -> DataLoader:
                     pos = pos + 1
                     yield batch
 
-    return DataLoaderImpl(BatchSelector(), data_loader._transform_fn, data_loader.batch_size)
+    return DataLoaderImpl(BatchSelector(), data_loader.transform_fn)

@@ -14,6 +14,11 @@
 from nncf.config import NNCFConfig
 from nncf.version import __version__
 
+from nncf.quantization import quantize
+from nncf.quantization import TargetDevice
+from nncf.data import create_dataloader
+from nncf.data import DataLoader
+
 try:
     import torch
 except ImportError:

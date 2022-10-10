@@ -14,14 +14,15 @@
 import tempfile
 from pathlib import Path
 from typing import Optional
-from typing import Callable
 
 import openvino.runtime as ov
 from openvino.tools import pot
 
 from nncf.data import DataLoader
 from nncf.openvino.utils import POTDataLoader
-from nncf.openvino.engine import CustomEngine
+from nncf.openvino.engine import OVEngine
+from nncf.quantization.params import TargetDevice
+from nncf.common.quantization.structs import QuantizationPreset
 
 
 def _convert_openvino_model_to_compressed_model(model: ov.Model,
@@ -65,8 +66,8 @@ def _convert_compressed_model_to_openvino_model(model: pot.graph.nx_model.Compre
 
 def quantize_impl(model: ov.Model,
                   calibration_dataset: DataLoader,
-                  preset: str,
-                  target_device: str,
+                  preset: QuantizationPreset,
+                  target_device: TargetDevice,
                   subset_size: int,
                   fast_error_correction: bool,
                   model_type: Optional[str] = None) -> ov.Model:
@@ -85,8 +86,8 @@ def quantize_impl(model: ov.Model,
         {
             'name': 'DefaultQuantization',
             'params': {
-                'target_device': target_device,
-                'preset': preset,
+                'target_device': target_device.value,
+                'preset': preset.value,
                 'stat_subset_size': subset_size,
                 'use_fast_bias': fast_error_correction,
                 'model_type': model_type,
@@ -94,10 +95,8 @@ def quantize_impl(model: ov.Model,
         }
     ]
 
-    pot_dataloader = POTDataLoader(calibration_dataset,
-                                   calibration_dataset.transform,
-                                   calibration_dataset.batch_size)
-    engine = CustomEngine(engine_config, pot_dataloader, pot_dataloader)
+    pot_dataloader = POTDataLoader(calibration_dataset, calibration_dataset.transform_fn)
+    engine = OVEngine(engine_config, pot_dataloader, pot_dataloader)
     pipeline = pot.create_pipeline(algorithms, engine)
     compressed_model = pipeline.run(pot_model)
     pot.compress_model_weights(compressed_model)

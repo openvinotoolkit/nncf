@@ -11,19 +11,20 @@
  limitations under the License.
 """
 
-from typing import Callable
 from typing import Optional
 
 from nncf.api.compression import ModelType
 from nncf.common.utils.backend import infer_backend_from_model
 from nncf.common.utils.backend import BackendType
+from nncf.common.quantization.structs import QuantizationPreset
 from nncf.data import DataLoader
+from nncf.quantization.params import TargetDevice
 
 
 def quantize(model: ModelType,
              calibration_dataset: DataLoader,
-             preset: str = 'performance',
-             target_device: str = 'ANY',
+             preset: QuantizationPreset = QuantizationPreset.PERFORMANCE,
+             target_device: TargetDevice = TargetDevice.ANY,
              subset_size: int = 300,
              fast_error_correction: bool = True,
              model_type: Optional[str] = None) -> ModelType:
@@ -38,9 +39,9 @@ def quantize(model: ModelType,
         - `performance`: Symmetric quantization of weights and activations.
         - `mixed`: Symmetric quantization of weights and asymmetric
           quantization of activations.
-    :param target_device: A target device the specificity of which will
-        be taken into account during optimization It can the take
-        following values: `ANY`, `CPU`, `GPU`, `GNA`.
+    :param target_device: A target device the specificity of which will be taken
+        into account while compressing in order to obtain the best performance
+        for this type of device.
     :param subset_size: Size of a subset to calculate activations
         statistics used for quantization.
     :param fast_error_correction: Setting this option to `False` enables a different

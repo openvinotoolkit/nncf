@@ -34,22 +34,15 @@ class DataLoader(ABC):
 
     @property
     @abstractmethod
-    def batch_size(self) -> int:
+    def transform_fn(self) -> Callable[[DataItem], ModelInput]:
         """
-        Returns the number of elements return per iteration.
+        Returns the transformation method that takes a data item
+        returned per iteration through the `DataLoader` object and
+        transforms it to the model's expected input that can be used
+        for the model inference.
 
-        :return: A number of elements return per iteration.
-        """
-
-    @abstractmethod
-    def transform(self, data: DataItem) -> ModelInput:
-        """
-        Transforms the passed argument to the model input.
-
-        :param data: The data element returned per iteration through
-            this data loader.
-        :return: Model's expected input that can be used for the model
-            inference.
+        :return: The method that takes data item and transforms it into
+            the model's expected input that can be used for the model inference.
         """
 
     @abstractmethod
@@ -70,8 +63,7 @@ class DataLoaderImpl(DataLoader):
 
     def __init__(self,
                  data_source: DataSource,
-                 transform_fn: Callable[[DataItem], ModelInput],
-                 batch_size: int):
+                 transform_fn: Callable[[DataItem], ModelInput]):
         """
         Initializes the data loader.
 
@@ -80,24 +72,13 @@ class DataLoaderImpl(DataLoader):
         :param transform_fn: Transformation method that takes a data item
             returned per iteration through `DataSource` object and transforms
             it to the model's expected input that can be used for the model inference.
-        :param batch_size: An integer that represents the number of consecutive elements
-            of `DataSource` that were combined in a single batch.
         """
         self._data_source = data_source
         self._transform_fn = transform_fn
-        self._batch_size = batch_size
 
     @property
-    def batch_size(self) -> int:
-        """
-        Returns the number of elements return per iteration.
-
-        :return: A number of elements return per iteration.
-        """
-        return self._batch_size
-
-    def transform(self, data: DataItem) -> ModelInput:
-        return self._transform_fn(data)
+    def transform_fn(self) -> Callable[[DataItem], ModelInput]:
+        return self._transform_fn
 
     def __iter__(self) -> Iterable[DataItem]:
         return iter(self._data_source)

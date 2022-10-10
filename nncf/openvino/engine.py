@@ -77,7 +77,7 @@ def _pot_sampler_to_nncf_dataloader(sampler) -> DataLoader:
     raise Exception(f'Unexpected type of sampler: {type(sampler)}')
 
 
-class CustomEngine(pot.IEEngine):
+class OVEngine(pot.IEEngine):
     def __init__(self,
                  config,
                  calibration_dataloader: DataLoader,
@@ -103,7 +103,7 @@ class CustomEngine(pot.IEEngine):
         dataloader = _pot_sampler_to_nncf_dataloader(sampler)
 
         for data in dataloader:
-            input_data = dataloader.transform(data)
+            input_data = dataloader.transform_fn(data)
             outputs = infer_request.infer(self._fill_input(compiled_model, input_data))
             self._process_infer_output(stats_layout, outputs, None, None, need_metrics_per_sample)
 
@@ -141,7 +141,7 @@ class CustomEngine(pot.IEEngine):
         start_time = time()
         infer_queue.set_callback(completion_callback)
         for batch_id, data in dataloader_iter:
-            input_data = dataloader.transform(data)
+            input_data = dataloader.transform_fn(data)
             user_data = (start_time, batch_id)
             infer_queue.start_async(self._fill_input(compiled_model, input_data), user_data)
         infer_queue.wait_all()
