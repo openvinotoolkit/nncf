@@ -148,7 +148,6 @@ def generate_input(input_size, input_low, input_range, levels, bits, scale_mode,
             val = random_deviation()
             get_deviation.state +=1
             return val
-        get_deviation.state = 0
 
     if scale_mode == "single_scale":
         assert_input_size(input_size)
@@ -182,7 +181,6 @@ def generate_input(input_size, input_low, input_range, levels, bits, scale_mode,
                     input_low, input_range, min_adj, quant_len,
                     ch_idx, input_size[0:1] + input_size[2:], bits, get_deviation,
                     min_deviation)
-                get_deviation.state = 0
     return inputs
 
 def get_test_data(data_list, is_cuda=False, is_backward=False, is_fp16=False):
@@ -364,7 +362,15 @@ class TestParametrized:
             fixed = None
             if is_fp16:
                 # This is needed to make scale == 1 to prevent
-                # quant movement on forward pass
+                # quant movement on forward pass in FP16 precision.
+                # In case scale != 1., not precice scale multiplication in FP16
+                # could lead to big deviations, so even if an input point
+                # lies in safe range (far from middles of quants) after a scaling
+                # it could end up in the middle of a quant. It happens mostly
+                # when target quant > 150 because in real life scenarious quantization range
+                # usualy less than 2 ** quantization bits,
+                # so input is small and scale is big, small FP16 input multiplies big fp16 scale,
+                # deviation is significant.
                 fixed = 2 ** (bits - 1) - 1
             ref_scale = self.generate_scale(input_size, scale_mode, is_weights, fixed=fixed).astype(np_dtype)
             test_scale = get_test_data([ref_scale], use_cuda, is_backward=True, is_fp16=is_fp16)
@@ -375,9 +381,14 @@ class TestParametrized:
             ref_input_low = ref_scale * (level_low / level_high)
             ref_input_range = ref_scale - ref_input_low
 
-            # This is needed to prevent fp16 middle quants in ref_input
-            min_deviation = 0.75 if is_fp16 else 0.
-            max_deviation = 0.75 if is_fp16 else 0.4
+            # This is needed to prevent middle points in forward pass.
+            # Small deviation in computations could lead to completely different
+            # results: instead of quant a quant a + 1 will be returned.
+            # Different results in forward leads to high deviations on bacward pass.
+            # To prevent this, input values are put into [min_deviation, max_deviation]
+            # section of quant, so small deviation woun't change the quant on forward pass
+            min_deviation = 0.1 if is_fp16 else 0.
+            max_deviation = 0.35 if is_fp16 else 0.4
             ref_input = generate_input(input_size, ref_input_low, ref_input_range, levels,
                                        bits, scale_mode, is_weights, not use_cuda,
                                        min_deviation, max_deviation).astype(np_dtype)
@@ -514,7 +525,15 @@ class TestParametrized:
             fixed = None
             if is_fp16:
                 # This is needed to make scale == 1 to prevent
-                # quant movement on forward pass
+                # quant movement on forward pass in FP16 precision.
+                # In case scale != 1., not precice scale multiplication in FP16
+                # could lead to big deviations, so even if an input point
+                # lies in safe range (far from middles of quants) after a scaling
+                # it could end up in the middle of a quant. It happens mostly
+                # when target quant > 150 because in real life scenarious quantization range
+                # usualy less than 2 ** quantization bits,
+                # so input is small and scale is big, small FP16 input multiplies big fp16 scale,
+                # deviation is significant.
                 fixed = {}
                 fixed['input_low'] = - 2 ** (bits - 1)
                 fixed['input_range'] = 2 ** bits - 1
@@ -531,9 +550,14 @@ class TestParametrized:
             for tensor_ in (test_input_low, test_input_range):
                 assert tensor_.dtype == torch.half if is_fp16 else torch.float
 
-            # This is needed to prevent fp16 middle quants in ref_input
-            min_deviation = 0.25 if is_fp16 else 0.
-            max_deviation = 0.25 if is_fp16 else 0.4
+            # This is needed to prevent middle points in forward pass.
+            # Small deviation in computations could lead to completely different
+            # results: instead of quant a quant a + 1 will be returned.
+            # Different results in forward leads to high deviations on bacward pass.
+            # To prevent this, input values are put into [min_deviation, max_deviation]
+            # section of quant, so small deviation woun't change the quant on forward pass
+            min_deviation = 0.1 if is_fp16 else 0.
+            max_deviation = 0.35 if is_fp16 else 0.4
             ref_input = generate_input(input_size, ref_input_low, ref_input_range, levels,
                                        bits, scale_mode, is_weights, not use_cuda,
                                        min_deviation, max_deviation).astype(np_dtype)
