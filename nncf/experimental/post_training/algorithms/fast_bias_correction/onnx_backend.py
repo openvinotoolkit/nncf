@@ -101,3 +101,7 @@ class ONNXFBCAlgoBackend(FBCAlgoBackend):
             if initializer.name == initializer_name:
                 return onnx.numpy_helper.to_array(initializer)
         raise RuntimeError('There is no initializer with the name {}'.format(initializer_name))
+
+    @staticmethod
+    def process_model_output(raw_data: Dict, output_name: str) -> ONNXNNCFTensor:
+        return raw_data[output_name]

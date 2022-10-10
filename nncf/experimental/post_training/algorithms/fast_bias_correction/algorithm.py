@@ -287,8 +287,8 @@ class FastBiasCorrection(Algorithm):
         :return: calculated bias shift
         """
         engine.set_model(model)
-        q_outputs = engine.infer(input_blob)
-        q_outputs = q_outputs[output_name]
+        raw_output = engine.infer(input_blob)
+        q_outputs = self._backend_entity.process_model_output(raw_output, output_name)
         q_outputs = self._backend_entity.tensor_processor.mean_per_channel(q_outputs, channel_axis).tensor
         bias_shift = np.array(output_fp) - q_outputs
         return bias_shift
