@@ -12,35 +12,51 @@
 """
 
 from abc import abstractmethod
-from typing import TypeVar, List, Optional
+from typing import TypeVar, List
+
+import numpy as np
 
 TensorType = TypeVar('TensorType')
 DeviceType = TypeVar('DeviceType')
-TensorElementsType = TypeVar('TensorElementsType')
 
 
-class NNCFTensor:
+class NNCFTensor(object):
     """
     An interface of framework specific tensors for common NNCF algorithms.
     """
 
-    def __init__(self, tensor: Optional[TensorType]):
-        self._tensor = tensor
-
-    def __eq__(self, other: "NNCFTensor") -> bool:
-        return self._tensor == other.tensor
-
     @property
+    @abstractmethod
     def tensor(self) -> TensorType:
-        return self._tensor
+        pass
 
     @property
+    @abstractmethod
     def shape(self) -> List[int]:
-        if self._tensor is None:
-            raise RuntimeError('Attempt to get shape of empty NNCFTensor')
-        return self._tensor.shape
+        pass
 
     @property
     @abstractmethod
     def device(self) -> DeviceType:
+        pass
+
+    @property
+    @abstractmethod
+    def __eq__(self, other: "NNCFTensor") -> bool:
+        pass
+
+    @abstractmethod
+    def __add__(self, other: "NNCFTensor") -> "NNCFTensor":
+        pass
+
+    @abstractmethod
+    def __sub__(self, other: "NNCFTensor") -> "NNCFTensor":
+        pass
+
+    @abstractmethod
+    def __truediv__(self, other: "NNCFTensor") -> "NNCFTensor":
+        pass
+
+    @abstractmethod
+    def to_numpy(self) -> np.array:
         pass
