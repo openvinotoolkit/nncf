@@ -40,6 +40,7 @@ from nncf.common.quantization.quantizer_propagation.structs import PropagatingQu
 from nncf.common.quantization.quantizer_propagation.structs import PropagationPath
 from nncf.common.quantization.quantizer_propagation.structs import QuantizationTrait
 from nncf.common.quantization.quantizer_propagation.structs import QuantizerPropagationStateGraphNodeType
+from nncf.common.quantization.quantizer_setup import DEFAULT_QUANTIZER_CONFIG
 from nncf.common.quantization.quantizer_setup import MultiConfigQuantizerSetup
 from nncf.common.quantization.quantizer_setup import QuantizationPointId
 from nncf.common.quantization.quantizer_setup import SingleConfigQuantizerSetup
@@ -898,8 +899,7 @@ class QuantizerPropagationSolver:
             nncf_node_ref = next(iter(quant_prop_graph.op_node_keys_to_underlying_nodes_mapping[operator_node_key]))
             qconf_list = self._filter_qconfigs_according_to_scope(qconf_list, nncf_node_ref.node_name)
         else:
-            from nncf.torch.quantization.algo import QuantizerSetupGeneratorBase #pylint: disable=cyclic-import
-            qconf_list = [deepcopy(QuantizerSetupGeneratorBase.DEFAULT_QUANTIZER_CONFIG)]
+            qconf_list = [deepcopy(DEFAULT_QUANTIZER_CONFIG)]
 
         is_unified_scale = quant_det_id in self._unified_scales_operation_set
         if is_unified_scale:
@@ -1246,7 +1246,7 @@ class QuantizerPropagationSolver:
         qconfig_and_priority_list = []  # type: List[Tuple[QuantizerConfig, int]]
         for merged_qconfig in merged_qconfig_list:
             priority = 0
-            max_original_list_len = max([len(x) for x in potential_qconfigs_for_each_branch])
+            max_original_list_len = max(len(x) for x in potential_qconfigs_for_each_branch)
             for original_branch_qconfig_list in potential_qconfigs_for_each_branch:
                 try:
                     idx = original_branch_qconfig_list.index(merged_qconfig)

@@ -23,6 +23,7 @@ from typing import Set
 
 from nncf.common.graph import NNCFNodeName
 from nncf.common.quantization.structs import NonWeightQuantizerId
+from nncf.common.quantization.structs import QuantizationMode
 from nncf.common.quantization.structs import QuantizerConfig
 from nncf.common.quantization.structs import UnifiedScaleType
 from nncf.common.quantization.structs import WeightQuantizerId
@@ -31,6 +32,10 @@ from nncf.common.utils.logger import logger as nncf_logger
 
 QuantizationPointId = int
 
+DEFAULT_QUANTIZER_CONFIG = QuantizerConfig(num_bits=8,
+                                           mode=QuantizationMode.SYMMETRIC,
+                                           signedness_to_force=None,
+                                           per_channel=False)
 
 class QuantizationPointType(Enum):
     WEIGHT_QUANTIZATION = 0

@@ -34,8 +34,8 @@ from tests.torch.quantization.test_hawq_precision_init import create_test_datalo
 from tests.torch.quantization.test_hawq_precision_init import get_path_to_bitwidth_dump
 from tests.torch.quantization.test_hawq_precision_init import precision_init_dumping_worker
 from tests.torch.quantization.test_hawq_precision_init import ssd_vgg_512_test
-from tests.torch.quantization.test_quantization_helpers import compare_multi_gpu_dump
-from tests.torch.quantization.test_quantization_helpers import get_quantization_config_without_range_init
+from tests.torch.quantization.quantization_helpers import compare_multi_gpu_dump
+from tests.torch.quantization.quantization_helpers import get_quantization_config_without_range_init
 # pylint:disable=unused-import
 from tests.torch.modules.test_rnn import _seed
 from tests.torch.test_models import squeezenet1_1

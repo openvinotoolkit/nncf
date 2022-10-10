@@ -10,6 +10,7 @@
  See the License for the specific language governing permissions and
  limitations under the License.
 """
+from collections import Counter
 from copy import deepcopy
 from typing import List
 from typing import Tuple
@@ -31,6 +32,7 @@ from nncf.common.quantization.structs import QuantizationMode
 from nncf.common.quantization.structs import QuantizerConfig
 from nncf.common.quantization.structs import WeightQuantizerId
 from nncf.common.utils.debug import nncf_debug
+from nncf.torch import create_compressed_model
 from nncf.torch import register_default_init_args
 from nncf.torch.checkpoint_loading import load_state
 from nncf.torch.compression_method_api import PTCompressionLoss
@@ -51,13 +53,15 @@ from nncf.torch.quantization.layers import SymmetricQuantizer
 from nncf.torch.utils import get_all_modules_by_type
 from nncf.torch.utils import get_model_device
 from tests.torch.helpers import BasicConvTestModel
+from tests.torch.helpers import LeNet
 from tests.torch.helpers import TwoConvTestModel
 from tests.torch.helpers import create_compressed_model_and_algo_for_test
 from tests.torch.helpers import create_ones_mock_dataloader
+from tests.torch.helpers import create_random_mock_dataloader
 from tests.torch.helpers import get_empty_config
 from tests.torch.helpers import register_bn_adaptation_init_args
-from tests.torch.quantization.test_quantization_helpers import get_quantization_config_without_range_init
-from tests.torch.quantization.test_quantization_helpers import get_squeezenet_quantization_config
+from tests.torch.quantization.quantization_helpers import get_quantization_config_without_range_init
+from tests.torch.quantization.quantization_helpers import get_squeezenet_quantization_config
 
 
 def compare_qspecs(qspec: PTQuantizerSpec, quantizer: BaseQuantizer):
@@ -803,3 +807,31 @@ class TestHalfPrecisionModels:
             result = compressed_model(inputs)
             if torch.is_autocast_enabled(): # For torch <= 1.9.1 and CPU the autocast context won't have effect
                 assert result.dtype == torch.float16
+
+
+@pytest.mark.parametrize('update_config_info, should_ignore_quantizers', [({}, []),
+                                                                          ({"ignored_scopes": ["LeNet/relu_1"]},
+                                                                           ['LeNet/relu_0']),
+                                                                          ({"activations": {
+                                                                              "ignored_scopes": ["LeNet/relu_1"]}},
+                                                                           ['LeNet/relu_0'])])
+def test_activation_ignored_scope(update_config_info, should_ignore_quantizers):
+    model = LeNet()
+    all_quantization_names = ["LeNet/NNCFConv2d[conv1]/conv2d_0",
+                              "LeNet/NNCFConv2d[conv2]/conv2d_0",
+                              "LeNet/NNCFLinear[fc1]/linear_0",
+                              "LeNet/NNCFLinear[fc2]/linear_0",
+                              "LeNet/NNCFLinear[fc3]/linear_0",
+                              "/nncf_model_input_0",
+                              "LeNet/relu_0",
+                              "LeNet/relu_1",
+                              "LeNet/relu_2",
+                              "LeNet/relu_3"]
+    ref_quantization_names = list(filter(lambda x: x not in should_ignore_quantizers, all_quantization_names))
+    config = get_quantization_config_without_range_init(LeNet.INPUT_SIZE[-1])
+    config["compression"].update(update_config_info)
+    train_loader = create_random_mock_dataloader(config, num_samples=10)
+    config = register_default_init_args(config, train_loader)
+    ctrl, _ = create_compressed_model(model, config)
+    assert Counter([item.target_node_name for item in ctrl.all_quantizations.keys()]) == \
+           Counter(ref_quantization_names)
