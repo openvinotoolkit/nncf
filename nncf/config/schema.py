@@ -80,7 +80,7 @@ TARGET_DEVICE_SCHEMA = {
 NNCF_CONFIG_SCHEMA = {
     "$schema": "http://json-schema.org/draft-07/schema",
     "title": "NNCF configuration file schema",
-    "description": "The NNCF configuration file follows the JSON format and is the primary way to configure "
+    "description": "The NNCF file follows the JSON format and is the primary way to configure "
                    "the result of NNCF application to a given user model. This configuration file is "
                    "loaded into the `NNCFConfig` object by the user at runtime, after which the `NNCFConfig` "
                    "is passed to the NNCF functions that perform actual compression or "
