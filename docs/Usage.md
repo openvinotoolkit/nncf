@@ -21,9 +21,10 @@ The framework is designed so that the modifications to your original training co
  1. **Add** the imports required for NNCF:
     ```python
     import torch
-    import nncf  # Important - should be imported directly after torch
+    import nncf  # Important - must be imported before any other external package that depends on torch
     from nncf import NNCFConfig, create_compressed_model, load_state
     ```
+    **NOTE (PyTorch)**: Due to the way NNCF works within the PyTorch backend, `import nncf` must be done before any other import of `torch` in your package _or_ in third-party packages that your code utilizes, otherwise the compression may be applied incompletely.
  2. Load the NNCF JSON configuration file that you prepared during Step 1:
     ```python
     nncf_config = NNCFConfig.from_json("nncf_config.json")  # Specify a path to your own NNCF configuration file in place of "nncf_config.json"

@@ -44,7 +44,7 @@ This function returns a model with additional modifications necessary to enable 
 
 ```python
 import torch
-import nncf  # Important - should be imported directly after torch
+import nncf  # Important - must be imported before any other external package that depends on torch
 
 from nncf import NNCFConfig
 from nncf.torch import create_compressed_model, register_default_init_args
@@ -74,6 +74,9 @@ compression_ctrl, compressed_model = create_compressed_model(model, nncf_config)
 compression_ctrl.export_model("compressed_model.onnx")
 torch.save(compressed_model.state_dict(), "compressed_model.pth")
 ```
+
+**NOTE (PyTorch)**: Due to the way NNCF works within the PyTorch backend, `import nncf` must be done before any other import of `torch` in your package _or_ in third-party packages that your code utilizes, otherwise the compression may be applied incompletely.
+
 
 ### Usage example with TensorFlow
 ```python
