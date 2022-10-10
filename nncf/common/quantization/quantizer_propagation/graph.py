@@ -157,6 +157,19 @@ class QuantizerPropagationStateGraph(nx.DiGraph):
         for barred_node_key in self.ignored_node_keys + iteration_scope_node_keys:
             self._add_barrier_after_node(barred_node_key)
 
+    def get_node_keys_by_metatype(self, metatype: Type[OperatorMetatype]) -> List[str]:
+        """
+        Returns a list of node keys, whose metatype is corresponding to the 'metatype'.
+
+        :param metatype: The metatype to look for.
+        :return: List of node keys.
+        """
+        output = []
+        for node, node_metatype in self.nodes(self.OPERATOR_METATYPE_NODE_ATTR):
+            if node_metatype == metatype:
+                output.append(node)
+        return output
+
     def _insertion_point_to_quant_insertion_point(self,
                                                   ip: Union[PreHookInsertionPoint,
                                                             PostHookInsertionPoint]) -> QuantizationInsertionPointBase:
