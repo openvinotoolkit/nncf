@@ -1,15 +1,19 @@
 import math
 import os
+from collections import defaultdict
 from pathlib import Path
 from typing import List, Optional, Union
 
 import nncf
 import numpy as np
+import onnx
 import pytest
 import torch
 import torch.nn as nn
 from datasets import load_dataset
 from nncf import NNCFConfig
+from nncf.api.compression import CompressionAlgorithmController
+from nncf.common.sparsity.statistics import MovementSparsityStatistics
 from nncf.common.utils.helpers import matches_any, should_consider_scope
 from nncf.torch import create_compressed_model, register_default_init_args
 from nncf.torch.layer_utils import COMPRESSION_MODULES, CompressionParameter
@@ -41,9 +45,9 @@ class MovementSparsityConfigBuilder:
     def __init__(self) -> None:
         self._config_dict = {
             "input_info": [
-                {"sample_size": [1, 1], "type": "long", "keyword": "labels"},
                 {"sample_size": [1, 256], "type": "long", "keyword": "input_ids"},
                 {"sample_size": [1, 256], "type": "long", "keyword": "token_type_ids"},
+                {"sample_size": [1, 256], "type": "long", "keyword": "position_ids"},
                 {"sample_size": [1, 256], "type": "long", "keyword": "attention_mask"},
             ],
             "compression":
@@ -117,12 +121,16 @@ class MovementSparsityConfigBuilder:
 def yelp_dataset():
     tokenizer = AutoTokenizer.from_pretrained(MODEL_NAME_HF)
     dataset = load_dataset("yelp_review_full")
+    max_length = 128
+    n_train_samples, n_val_samples = 128, 128
 
     def tokenize_fn(examples):
-        return tokenizer(examples["text"], padding="max_length", truncation=True, max_length=128)
+        row = tokenizer(examples["text"], padding="max_length", truncation=True, max_length=max_length)
+        row['position_ids'] = list(range(max_length))
+        return row
 
-    train_dataset = dataset["train"].shuffle(seed=42).select(range(128)).map(tokenize_fn)
-    test_dataset = dataset["test"].shuffle(seed=42).select(range(128)).map(tokenize_fn)
+    train_dataset = dataset["train"].shuffle(seed=42).select(range(n_train_samples)).map(tokenize_fn)
+    test_dataset = dataset["test"].shuffle(seed=42).select(range(n_val_samples)).map(tokenize_fn)
     return train_dataset, test_dataset
 
 
@@ -137,18 +145,15 @@ class MovementSparsityTrainer(Trainer):
         self.compression_ctrl = compression_ctrl
 
     def compute_loss(self, model, inputs, return_outputs=False):
+        loss_main, outputs = super().compute_loss(model, inputs, return_outputs=True)
         loss_compress = self.compression_ctrl.loss()
-        if return_outputs:
-            loss_main, outputs = super().compute_loss(model, inputs, return_outputs)
-            return loss_main + loss_compress, outputs
-        else:
-            loss_main = super().compute_loss(model, inputs, return_outputs)
-            return loss_main + loss_compress
+        loss = loss_main + loss_compress
+        return (loss, outputs) if return_outputs else loss
 
 
 class MovementSparsityCallback(TrainerCallback):
-    def __init__(self, compression_ctrl) -> None:
-        self.compression_ctrl: MovementSparsityController = compression_ctrl
+    def __init__(self, compression_ctrl: CompressionAlgorithmController) -> None:
+        self.compression_ctrl = compression_ctrl
         self._compress_log = dict()
 
     def get_compress_log(self):
@@ -212,12 +217,12 @@ def assert_sparsified_layer_mode(sparsifier: MovementSparsifier, module: nn.Line
     MovementSparsityConfigBuilder().sparse_structure_by_scopes([["per_dim", [0], "{re}.*BertIntermediate.*"]]),
     MovementSparsityConfigBuilder().sparse_structure_by_scopes([["per_dim", [0], "{re}.*BertIntermediate.*"],
                                                                 ["block", [4, 4], "{re}.*attention.*"]]),
-    MovementSparsityConfigBuilder().sparse_structure_by_scopes([["block", [5, 5, 5], "{re}.*"]]),  # wrong config
-    MovementSparsityConfigBuilder().sparse_structure_by_scopes([["block", [5, 5], "{re}.*"]]),  # wrong config
+    # MovementSparsityConfigBuilder().sparse_structure_by_scopes([["block", [5, 5, 5], "{re}.*"]]),  # wrong config
+    # MovementSparsityConfigBuilder().sparse_structure_by_scopes([["block", [5, 5], "{re}.*"]]),  # wrong config
 ])
 def test_can_create_movement_sparsity_layers(tmp_path, nncf_config_builder):
     nncf_config = nncf_config_builder.build()
-    nncf_config['log_dir'] = tmp_path 
+    nncf_config['log_dir'] = tmp_path
     compression_ctrl, compressed_model = create_compressed_model(bert_tiny_torch_model(), nncf_config)
     assert isinstance(compression_ctrl, MovementSparsityController)
 
@@ -292,7 +297,7 @@ def run_movement_pipeline(tmp_path, compression_ctrl, compressed_model, callback
 )
 def test_can_run_full_pipeline(tmp_path, nncf_config_builder):
     nncf_config = nncf_config_builder().build()
-    nncf_config['log_dir'] = tmp_path 
+    nncf_config['log_dir'] = tmp_path
     compression_ctrl, compressed_model = create_compressed_model(bert_tiny_torch_model(), nncf_config)
     callback = MovementSparsityCallback(compression_ctrl)
     train_log, eval_result, _ = run_movement_pipeline(tmp_path, compression_ctrl, compressed_model, [callback])
@@ -323,7 +328,7 @@ def test_can_run_full_pipeline(tmp_path, nncf_config_builder):
 )
 def test_importance_score_update(tmp_path, nncf_config_builder):
     nncf_config = nncf_config_builder().build()
-    nncf_config['log_dir'] = tmp_path 
+    nncf_config['log_dir'] = tmp_path
     compression_ctrl, compressed_model = create_compressed_model(bert_tiny_torch_model(), nncf_config)
 
     class CheckImportanceCallback(MovementSparsityCallback):
@@ -346,16 +351,19 @@ def test_importance_score_update(tmp_path, nncf_config_builder):
 ])
 def test_compression_loss(tmp_path, nncf_config_builder):
     nncf_config = nncf_config_builder().build()
-    nncf_config['log_dir'] = tmp_path 
+    nncf_config['log_dir'] = tmp_path
     compression_ctrl, compressed_model = create_compressed_model(bert_tiny_torch_model(), nncf_config)
 
     class CheckCompressionLossCallback(MovementSparsityCallback):
         def on_step_end(self, args: TrainingArguments, state: TrainerState, control: TrainerControl, **kwargs):
             super().on_step_end(args, state, control, **kwargs)
             assert isinstance(self.compression_ctrl.loss, ImportanceLoss)
+            for layer in self.compression_ctrl.loss._sparse_layers:
+                assert isinstance(layer, MovementSparsifier)
+
             loss_compress = self.compression_ctrl.loss()
             if state.epoch <= self.compression_ctrl.scheduler.warmup_start_epoch:
-                assert torch.allclose(loss_compress, torch.zeros_like(loss_compress))
+                assert not torch.is_nonzero(loss_compress)
                 assert loss_compress.requires_grad is True
             else:
                 if self.compression_ctrl.scheduler.current_importance_lambda > 0.0:  # TODO: not the right way to check condition
@@ -371,7 +379,7 @@ def test_compression_loss(tmp_path, nncf_config_builder):
 ])
 def test_binary_mask(tmp_path, nncf_config_builder):
     nncf_config = nncf_config_builder().build()
-    nncf_config['log_dir'] = tmp_path 
+    nncf_config['log_dir'] = tmp_path
     compression_ctrl, compressed_model = create_compressed_model(bert_tiny_torch_model(), nncf_config)
 
     class CheckBinaryMask(MovementSparsityCallback):
