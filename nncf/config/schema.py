@@ -85,7 +85,7 @@ NNCF_CONFIG_SCHEMA = {
                    "loaded into the `NNCFConfig` object by the user at runtime, after which the `NNCFConfig` "
                    "is passed to the NNCF functions that perform actual compression or "
                    "preparations for compression-aware training. \n\n"
-                   "The NNCF JSON configuration file is usually set up on a per-model, per-compression use case "
+                   "The NNCF JSON  file is usually set up on a per-model, per-compression use case "
                    "basis to contain:\n"
                    "- a description of one or more compression algorithms to be applied to the model\n"
                    "- the configuration parameters for each of the chosen algorithms\n"
