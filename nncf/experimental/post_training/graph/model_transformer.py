@@ -18,7 +18,6 @@ from typing import TypeVar
 from nncf.common.graph.model_transformer import ModelTransformer
 from nncf.common.graph.transformations.commands import TransformationCommand
 from nncf.common.graph.transformations.layout import TransformationLayout
-from nncf.experimental.post_training.statistics.statistic_point import StatisticPointsContainer
 
 ModelType = TypeVar('ModelType')
 
