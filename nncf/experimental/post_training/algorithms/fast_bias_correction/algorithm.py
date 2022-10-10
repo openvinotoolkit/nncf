@@ -48,8 +48,6 @@ class FastBiasCorrectionParameters(AlgorithmParameters):
 
     def __init__(self, number_samples: int = 100, threshold: float = 2.0) -> None:
         """
-        Initializes FastBiasCorrectionParameters
-
         :param number_samples: The number of the samples for the statistics collection.
             This statistics uses for the further calculation of the bias shift.
         :param threshold: The magnitude threshold that regulates the application of the shift.
@@ -87,10 +85,8 @@ class FastBiasCorrection(Algorithm):
     :param nncf_graph: NNCFGraph class for the algorithm.
     """
 
-    def __init__(self, parameters: FastBiasCorrectionParameters):
+    def __init__(self, parameters: FastBiasCorrectionParameters) -> None:
         """
-        Initializes FastBiasCorrection
-
         :param parameters: The instance of the FastBiasCorrectionParameters.
         """
         super().__init__()
@@ -100,7 +96,7 @@ class FastBiasCorrection(Algorithm):
         self._backend_entity = None
 
     @property
-    def available_backends(self) -> List[BackendType]:
+    def available_backends(self) -> Dict[str, BackendType]:
         return ALGO_BACKENDS.registry_dict
 
     def _set_backend_entity(self, model: ModelType) -> None:

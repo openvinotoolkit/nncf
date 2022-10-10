@@ -225,8 +225,6 @@ class ONNXExtendedLayerAttributes(BaseLayerAttributes):
     """
     def __init__(self, input_tensor_names, output_tensor_names):
         """
-        Initializes ONNXExtendedLayerAttributes
-
         :param input_tensor_names: List of the input tensor/edge names of the module/layer
         :param output_tensor_names: List of the output tensor/edge names of the module/layer
         """

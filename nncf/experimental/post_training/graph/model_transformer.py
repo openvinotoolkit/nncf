@@ -40,18 +40,6 @@ class StaticModelTransformerBase(ModelTransformer, ABC):
         :return: model after transformations
         """
 
-    def _get_transformation_layout_extra_outputs(
-            self,
-            statistic_points: StatisticPointsContainer) -> TransformationLayout:
-        """
-        Collects transformations layout by statistic_points
-
-        :param statistic_points: StatisticPointsContainer
-        :return: transformation_layout
-        """
-        raise NotImplementedError(
-            '_get_transformation_layout_extra_outputs method must be implemented before call')
-
     def _apply_quantizer_insertion_transformations(self, transformations: List[TransformationCommand]) -> None:
         """
         Applies quantizer insertion transformations to the model
@@ -84,7 +72,7 @@ class StaticModelTransformerBase(ModelTransformer, ABC):
         """
         Extracts or builds sub-model from the original based on the inputs and outputs names
 
-        :param transformations: lisf of the TransformationCommand transformations
+        :param transformations: list of the TransformationCommand transformations
         """
         raise NotImplementedError(
             '_apply_model_extraction_transformation must be implemented before call')

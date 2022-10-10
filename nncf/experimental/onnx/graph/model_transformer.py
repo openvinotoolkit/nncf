@@ -28,7 +28,6 @@ from nncf.experimental.onnx.graph.transformations.commands import ONNXOutputInse
 from nncf.experimental.onnx.graph.transformations.commands import ONNXQuantizerInsertionCommand
 from nncf.experimental.post_training.factories import NNCFGraphFactory
 from nncf.experimental.post_training.graph.model_transformer import StaticModelTransformerBase
-from nncf.experimental.post_training.statistics.statistic_point import StatisticPointsContainer
 
 
 # pylint: disable=no-member
@@ -41,26 +40,6 @@ class ONNXModelTransformer(StaticModelTransformerBase):
     def __init__(self, model: onnx.ModelProto):
         super().__init__(model)
         self._model = deepcopy(model)
-
-    def _get_transformation_layout_extra_outputs(
-            self,
-            statistic_points: StatisticPointsContainer) -> TransformationLayout:
-        """
-        Collects transformations layout by statistic_points
-
-        :param statistic_points: StatisticPointsContainer
-        :return: transformation_layout
-        """
-        transformation_layout = TransformationLayout()
-        transformation_commands = []
-        for _statistic_points in statistic_points.values():
-            for _statistic_point in _statistic_points:
-                transformation_commands.append(ONNXOutputInsertionCommand(_statistic_point.target_point))
-
-        for transformation_command in transformation_commands:
-            transformation_layout.register(transformation_command)
-
-        return transformation_layout
 
     def transform(self, transformation_layout: TransformationLayout) -> onnx.ModelProto:
         """
@@ -329,11 +308,12 @@ class ONNXModelTransformer(StaticModelTransformerBase):
         :param transformations: lisf of the bias correction transformations
         """
         onnx_graph = ONNXGraph(self._model)
+        bias_tensor_position = 2
 
         for transformation in transformations:
             node_name = transformation.target_point.target_node_name
             onnx_node = onnx_graph.get_node_by_name(node_name)
-            bias_initializer_name = onnx_node.input[2]
+            bias_initializer_name = onnx_node.input[bias_tensor_position]
             bias_initializer = onnx_graph.get_initializer(bias_initializer_name)
 
             new_bias_tensor = onnx.numpy_helper.from_array(transformation.bias_value,

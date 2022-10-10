@@ -12,7 +12,7 @@
 """
 
 from copy import deepcopy
-from typing import List, Set
+from typing import Set, Dict
 
 import onnx
 from nncf.common.graph.transformations.layout import TransformationLayout
@@ -64,7 +64,7 @@ class ONNXMinMaxQuantization(MinMaxQuantization):
         self._quantization_target_points = set()  # type: Set[ONNXTargetPoint]
 
     @property
-    def available_backends(self) -> List[BackendType]:
+    def available_backends(self) -> Dict[str, BackendType]:
         pass
 
     def generate_stat_collector(self, quantizer_config: QuantizerConfig) -> TensorStatisticCollectorBase:

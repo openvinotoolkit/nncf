@@ -74,12 +74,10 @@ class ONNXOutputInsertionCommand(ONNXInsertionCommand):
 
 class ONNXBiasCorrectionCommand(TransformationCommand):
     """
-    BiasCorrecionCommand class
+    Corrects bias value in the model based on the input value.
     """
     def __init__(self, target_point: ONNXTargetPoint, bias_value: np.ndarray, threshold: float):
         """
-        Initializes BiasCorrectionCommand
-
         :param target_point: The TargetPoint instance for the correction that contains layer's information.
         :param bias_value: The bias shift value (numpy format) that will be added to the original bias value.
         :param threshold: The floating-point value against which it is shift magnitude compares.
@@ -95,12 +93,10 @@ class ONNXBiasCorrectionCommand(TransformationCommand):
 
 class ONNXModelExtractionCommand(Command):
     """
-    ModelExtractionCommand class
+    Extracts sub-graph based on the sub-model input and output names.
     """
     def __init__(self, inputs: List[str], outputs: List[str]):
         """
-        Initializes ModelExtractionCommand
-
         :param inputs: List of the input names that denote the sub-graph beggining.
         :param outputs: List of the output names that denote the sub-graph ending.
         """

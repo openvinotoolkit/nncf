@@ -14,7 +14,6 @@
 from abc import ABC
 from abc import abstractmethod
 
-from typing import List
 from typing import TypeVar
 from typing import Dict
 from typing import Union
@@ -52,11 +51,11 @@ class Algorithm(ABC):
 
     @property
     @abstractmethod
-    def available_backends(self) -> List[BackendType]:
+    def available_backends(self) -> Dict[str, BackendType]:
         """
-        Returns list of the avaliable backends for the algorithm
+        Returns dictionary of the avaliable backends for the algorithm
 
-        :return: List of backends supported by the algorithm
+        :return: Dict of backends supported by the algorithm
         """
 
     def apply(self, model: ModelType, engine: Engine,
@@ -97,7 +96,7 @@ class CompositeAlgorithm(Algorithm):
         self.algorithms = []
 
     @property
-    def available_backends(self) -> List[BackendType]:
+    def available_backends(self) -> Dict[str, BackendType]:
         # TODO(KodiaqQ): Need to add the implementation of the method (cross-algorithm backend calculation)
         # after updating the MinMax Quantization with shareable logic
         pass
