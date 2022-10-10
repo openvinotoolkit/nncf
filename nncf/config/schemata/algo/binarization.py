@@ -10,6 +10,7 @@
  See the License for the specific language governing permissions and
  limitations under the License.
 """
+from nncf.config.definitions import BINARIZATION_ALGO_NAME_IN_CONFIG
 from nncf.config.definitions import ONLINE_DOCS_ROOT
 from nncf.config.schemata.common.compression import BASIC_COMPRESSION_ALGO_SCHEMA
 from nncf.config.schemata.common.compression import COMPRESSION_LR_MULTIPLIER_PROPERTY
@@ -20,7 +21,6 @@ from nncf.config.schemata.basic import with_attributes
 from nncf.config.schemata.common.targeting import SCOPING_PROPERTIES
 from nncf.config.schemata.defaults import BINARIZATION_MODE
 
-BINARIZATION_ALGO_NAME_IN_CONFIG = "binarization"
 BINARIZATION_MODE_OPTIONS = ['xnor', 'dorefa']
 BINARIZATION_SCHEMA = {
     **BASIC_COMPRESSION_ALGO_SCHEMA,

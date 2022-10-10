@@ -1,3 +1,6 @@
+
+>_Scroll down for the examples of the JSON configuration files that can be used to apply this algorithm_.
+
 ### Non-Structured Sparsity
 Sparsity algorithm zeros weights in Convolutional and Fully-Connected layers in a non-structured way,
 so that zero values are randomly distributed inside the tensor. Most of the sparsity algorithms set the less important weights to zero but the criteria of how they do it is different. The framework contains several implementations of sparsity methods.
@@ -39,30 +42,6 @@ and reduce the corresponding accuracy drop even before model training. This opti
 sparsity and filter pruning algorithms. It can be enabled by setting a non-zero value of `num_bn_adaptation_samples` in the
 `batchnorm_adaptation` section of the `initializer` configuration (see example below).
 
-**RB sparsity configuration file parameters**:
-
-```
-{
-    "algorithm": "rb_sparsity",
-    "sparsity_init": 0.05,// "Initial value of the sparsity level applied to the model in 'create_compressed_model' function
-    "params": {
-            "schedule": "multistep",  // The type of scheduling to use for adjusting the target sparsity level
-            "patience": 3, // A regular patience parameter for the scheduler, as for any other standard scheduler. Specified in units of scheduler steps.
-            "sparsity_target": 0.7, // Target value of the sparsity level for the model
-            "sparsity_target_epoch": 3, // Index of the epoch from which the sparsity level of the model will be equal to spatsity_target value
-            "sparsity_freeze_epoch": 50, // Index of the epoch from which the sparsity mask will be frozen and no longer trained
-            "multistep_steps": [10, 20], // A list of scheduler steps at which to transition to the next scheduled sparsity level (multistep scheduler only).
-            "multistep_sparsity_levels": [0.2, 0.5, 0.7] // Levels of sparsity to use at each step of the scheduler as specified in the 'multistep_steps' attribute. The first sparsity level will be applied immediately, so the length of this list should be larger than the length of the 'steps' by one. The last sparsity level will function as the ultimate sparsity target, overriding the "sparsity_target" setting if it is present.
-    },
-
-    // A list of model control flow graph node scopes to be ignored for this operation - functions as a 'denylist'. Optional.
-    "ignored_scopes": []
-
-    // A list of model control flow graph node scopes to be considered for this operation - functions as a 'allowlist'. Optional.
-    // "target_scopes": []
-}
-```
-
 > **NOTE**: In all our sparsity experiments, we used the Adam optimizer and initial learning rate `0.001` for model weights and sparsity mask.
 
 #### Magnitude Sparsity
@@ -71,45 +50,80 @@ The magnitude sparsity method implements a naive approach that is based on the a
 - Weights are used as is during the threshold calculation procedure.
 - Weights are normalized before the threshold calculation.
 
-**Magnitude sparsity configuration file parameters**:
-```
-{
-    "algorithm": "magnitude_sparsity",
-    "initializer": {
-        "batchnorm_adaptation": {
-            "num_bn_adaptation_samples": 2048, // Number of samples from the training dataset to pass through the model at initialization in order to update batchnorm statistics of the original model. The actual number of samples will be a closest multiple of the batch size.
-        }
-    }
-    "sparsity_init": 0.05,// "Initial value of the sparsity level applied to the model in 'create_compressed_model' function
-    "params": {
-            "schedule": "multistep",  // The type of scheduling to use for adjusting the target sparsity level
-            "patience": 3, // A regular patience parameter for the scheduler, as for any other standard scheduler. Specified in units of scheduler steps.
-            "sparsity_target": 0.7, // Target value of the sparsity level for the model
-            "sparsity_target_epoch": 3, // Index of the epoch from which the sparsity level of the model will be equal to spatsity_target value
-            "sparsity_freeze_epoch": 50, // Index of the epoch from which the sparsity mask will be frozen and no longer trained
-            "multistep_steps": [10, 20], // A list of scheduler steps at which to transition to the next scheduled sparsity level (multistep scheduler only).
-            "multistep_sparsity_levels": [0.2, 0.5, 0.7] // Levels of sparsity to use at each step of the scheduler as specified in the 'multistep_steps' attribute. The first sparsity level will be applied immediately, so the length of this list should be larger than the length of the 'steps' by one. The last sparsity level will function as the ultimate sparsity target, overriding the "sparsity_target" setting if it is present.
-    },
-
-    // A list of model control flow graph node scopes to be ignored for this operation - functions as a 'denylist'. Optional.
-    "ignored_scopes": []
-
-    // A list of model control flow graph node scopes to be considered for this operation - functions as a 'allowlist'. Optional.
-    // "target_scopes": []
-}
-```
 
 #### Constant Sparsity
 This special algorithm takes no additional parameters and is used when you want to load a checkpoint already trained with another sparsity algorithm and do other compression without changing the sparsity mask.
 
-**Constant sparsity configuration file parameters**:
-```
-{
-    "algorithm": "const_sparsity",
-    // A list of model control flow graph node scopes to be ignored for this operation - functions as a 'denylist'. Optional.
-    "ignored_scopes": []
+### Example configuration files
 
-    // A list of model control flow graph node scopes to be considered for this operation - functions as a 'allowlist'. Optional.
-    // "target_scopes": []
-}).
+>_For the full list of the algorithm configuration parameters via config file, see the corresponding section in the [NNCF config schema](https://openvinotoolkit.github.io/nncf/)_.
+
+- Apply magnitude sparsity with default parameters (0 to 90% sparsity over 90 epochs of training, sparsity increased polynomially with each epoch):
+
+```json5
+{
+    "input_info": { "sample_size": [1, 3, 224, 224] }, // the input shape of your model may vary
+    "compression": {
+      "algorithm": "magnitude_sparsity"
+    }
+}
+```
+
+- Apply magnitude sparsity, increasing sparsity level step-wise from 0 to 70% in 3 steps at given training epoch indices:
+```json5
+{
+    "input_info": { "sample_size": [1, 3, 224, 224] }, // the input shape of your model may vary
+    "compression": {
+      "algorithm": "magnitude_sparsity",
+      "params": {
+        "schedule": "multistep",
+        "multistep_steps": [10, 20],
+        "multistep_sparsity_levels": [0, 0.35, 0.7], // first level applied immediately (epoch 0), 0.35 - at epoch 10, 0.7 - at epoch 20
+        "sparsity_target": 0.5,
+        "sparsity_target_epoch": 20 // "sparsity_target" fully reached at the beginning of epoch 20
+      }
+    }
+}
+```
+
+- Apply magnitude sparsity, immediately setting sparsity level to 10%, performing [batch-norm adaptation](./BatchnormAdaptation.md) to potentially recover accuracy, and exponentially increasing sparsity to 50% over 30 epochs of training:
+```json5
+{
+    "input_info": { "sample_size": [1, 3, 224, 224] }, // the input shape of your model may vary
+    "compression": {
+      "algorithm": "magnitude_sparsity",
+      "sparsity_init": 0.1,  // set already before the beginning of epoch 0 of training
+      "params": {
+        "schedule": "exponential",
+        "sparsity_target": 0.5,
+        "sparsity_target_epoch": 30 // "sparsity_target" fully reached at the beginning of epoch 20
+      },
+      "initializer": {
+        "batchnorm_adaptation": {
+          "num_bn_adaptation_samples": 100
+        }
+      }
+    }
+}
+```
+
+- Apply RB-sparsity to UNet, increasing sparsity level exponentially from 1% to 60% over 100 epochs, keeping the sparsity mask trainable until epoch 110 (after which the mask is frozen and the model is allowed to fine-tune with a fixed sparsity level), and excluding parts of the model from sparsification:
+```json5
+{
+    "input_info": { "sample_size": [1, 3, 224, 224] }, // the input shape of your model may vary
+    "compression": {
+        "algorithm": "rb_sparsity",
+        "sparsity_init": 0.01,
+        "params": {
+            "sparsity_target": 0.60,
+            "sparsity_target_epoch": 100,
+            "sparsity_freeze_epoch": 110
+        },
+        "ignored_scopes": [
+          // assuming PyTorch model
+           "{re}UNet/ModuleList\\[up_path\\].*", // do not sparsify decoder
+           "UNet/NNCFConv2d[last]/conv2d_0" // do not sparsify final convolution
+        ]
+    }
+}
 ```

@@ -11,6 +11,7 @@
  limitations under the License.
 """
 from nncf.config.definitions import ONLINE_DOCS_ROOT
+from nncf.config.definitions import QUANTIZATION_ALGO_NAME_IN_CONFIG
 from nncf.config.schemata.basic import ARRAY_OF_NUMBERS
 from nncf.config.schemata.basic import ARRAY_OF_STRINGS
 from nncf.config.schemata.basic import BOOLEAN
@@ -25,7 +26,6 @@ from nncf.config.schemata.common.targeting import SCOPING_PROPERTIES
 from nncf.config.schemata.defaults import ACTIVATIONS_QUANT_START_EPOCH
 from nncf.config.schemata.defaults import AUTOQ_EVAL_SUBSET_RATIO
 from nncf.config.schemata.defaults import AUTOQ_WARMUP_ITER_NUMBER
-from nncf.config.schemata.defaults import HAWQ_COMPRESSION_RATIO
 from nncf.config.schemata.defaults import HAWQ_DUMP_INIT_PRECISION_DATA
 from nncf.config.schemata.defaults import HAWQ_ITER_NUMBER
 from nncf.config.schemata.defaults import HAWQ_NUM_DATA_POINTS
@@ -199,10 +199,10 @@ BITWIDTH_ASSIGNMENT_MODE_SCHEMA = {
 PRECISION_INIT_TYPES_VS_DESCRIPTION = {
     "hawq": f"Applies HAWQ algorithm to determine best bitwidths for each quantizer using a Hessian"
             f"calculation approach. For more details see "
-            f"[Quantization.md]{ONLINE_DOCS_ROOT}/docs/compression_algorithms/Quantization.md#hawq",
+            f"[Quantization.md]({ONLINE_DOCS_ROOT}/docs/compression_algorithms/Quantization.md#hawq)",
     "autoq": f"Applies AutoQ algorithm to determine best bitwidths for each quantizer using reinforcement learning. "
              f"For more details see "
-             f"[Quantization.md]{ONLINE_DOCS_ROOT}/docs/compression_algorithms/Quantization.md#autoq",
+             f"[Quantization.md]({ONLINE_DOCS_ROOT}/docs/compression_algorithms/Quantization.md#autoq)",
     "manual": "Allows to manually specify via following config options the exact bitwidth "
               "for each quantizer location. "
 }
@@ -237,7 +237,8 @@ PRECISION_INITIALIZER_SCHEMA = {
                                                  "from the previous iteration and the current one.",
                                      default=HAWQ_TOLERANCE),
         "compression_ratio": with_attributes(NUMBER,
-                                             description="The desired ratio between bits complexity of "
+                                             description="For the `hawq` mode:\n"
+                                                         "The desired ratio between bit complexity of "
                                                          "a fully INT8 model and a mixed-precision lower-bit "
                                                          "one. On precision initialization stage the HAWQ "
                                                          "algorithm chooses the most accurate "
@@ -246,8 +247,13 @@ PRECISION_INITIALIZER_SCHEMA = {
                                                          "is a sum of bit complexities for each quantized "
                                                          "layer, which are a multiplication of FLOPS for "
                                                          "the layer by the number of bits for its "
-                                                         "quantization.",
-                                             default=HAWQ_COMPRESSION_RATIO),
+                                                         "quantization.\n"
+                                                         "For the `autoq` mode:\n"
+                                                         "The target model size after quantization, relative to total "
+                                                         "parameters size in FP32. E.g. a uniform INT8-quantized model "
+                                                         "would have a `compression_ratio` equal to 0.25,"
+                                                         "and a uniform INT4-quantized model would have "
+                                                         "`compression_ratio` equal to 0.125."),
         "eval_subset_ratio": with_attributes(NUMBER,
                                              description="The desired ratio of dataloader to be iterated "
                                                          "during each search iteration of AutoQ precision "
@@ -357,7 +363,6 @@ STAGED_QUANTIZATION_PARAMS = {
     }
 }
 
-QUANTIZATION_ALGO_NAME_IN_CONFIG = "quantization"
 QUANTIZATION_PRESETS_SCHEMA = {
     "type": "string",
     "enum": ["performance", "mixed"]

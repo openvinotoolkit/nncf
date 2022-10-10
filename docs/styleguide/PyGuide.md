@@ -494,7 +494,7 @@ long_name = 2  # comment that should not be aligned
 
 dictionary = {
     'foo': 1,
-    'long_name': 2,
+    'long_name': 2
 }
 ```
 
@@ -505,7 +505,7 @@ long_name = 2     # comment that should not be aligned
 
 dictionary = {
     'foo'      : 1,
-    'long_name': 2,
+    'long_name': 2
 }
 ```
 

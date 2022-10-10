@@ -10,6 +10,8 @@
  See the License for the specific language governing permissions and
  limitations under the License.
 """
+from nncf.config.definitions import ADAPTIVE_COMPRESSION_LEVEL_TRAINING_MODE_NAME_IN_CONFIG
+from nncf.config.definitions import EARLY_EXIT_TRAINING_MODE_NAME_IN_CONFIG
 from nncf.config.definitions import ONLINE_DOCS_ROOT
 from nncf.config.schemata.basic import NUMBER
 from nncf.config.schemata.basic import with_attributes
@@ -31,7 +33,6 @@ COMMON_AA_PROPERTIES = {
                                     "in units of absolute metric of the original model."),
 }
 
-ADAPTIVE_COMPRESSION_LEVEL_TRAINING_MODE_NAME_IN_CONFIG = "adaptive_compression_level"
 ADAPTIVE_COMPRESSION_LEVEL_TRAINING_SCHEMA = {
     "type": "object",
     "title": ADAPTIVE_COMPRESSION_LEVEL_TRAINING_MODE_NAME_IN_CONFIG,
@@ -89,7 +90,6 @@ ADAPTIVE_COMPRESSION_LEVEL_TRAINING_SCHEMA = {
     "required": ["mode", "params"],
     "additionalProperties": False
 }
-EARLY_EXIT_TRAINING_MODE_NAME_IN_CONFIG = "early_exit"
 EARLY_EXIT_TRAINING_SCHEMA = {
     "type": "object",
     "title": EARLY_EXIT_TRAINING_MODE_NAME_IN_CONFIG,

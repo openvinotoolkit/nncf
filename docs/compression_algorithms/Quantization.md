@@ -1,6 +1,6 @@
+>_Scroll down for the examples of the JSON configuration files that can be used to apply this algorithm_.
 
 ### Uniform Quantization with Fine-Tuning
-
 A uniform "fake" quantization method supports an arbitrary number of bits (>=2) which is used to represent weights and activations.
 The method performs differentiable sampling of the continuous signal (for example, activations or weights) during forward pass, simulating inference with integer arithmetic.
 
@@ -87,9 +87,6 @@ ${input\\_low}''=\frac{ZP}{ZP-levels+1}*{input\\_high}'$
 ${input\\_low,input\\_high} = \begin{cases} {input\\_low}',{input\\_high}', \& ZP \in {0,levels-1} \\\\ {input\\_low}',{input\\_high}'', \& {input\\_high}'' - {input\\_low}' > {input\\_high}' - {input\\_low}'' \\\\ {input\\_low}'',{input\\_high}', \& {input\\_high}'' - {input\\_low}' <= {input\\_high}' - {input\\_low}'' \end{cases}$
 
 
-
-
-
 You can use the `num_init_samples` parameter from the `initializer` group to initialize the values of `input_low` and `input_range` from the collected statistics using given number of samples.
 
 #### Quantizer setup and hardware config files
@@ -141,6 +138,9 @@ $input\\_low^{*} = 0$
 
 $input\\_range^{*} = scale$
 
+The most common case of applying quantization is 8-bit uniform quantization. 
+NNCF example scripts provide a plethora of configuration files that implement this case ([PyTorch](../../examples/torch/classification/configs/quantization/inception_v3_imagenet_int8.json), [TensorFlow](../../examples/tensorflow/classification/configs/quantization/inception_v3_imagenet_int8.json))
+
 ---
 **NOTE**
 
@@ -152,6 +152,8 @@ To fix this issue inside NNCF, by default, all weight tensors are quantized in 8
 This regime is used when `"target_device": "CPU"` or `"target_device": "ANY"` set. This fix, potentially, requires longer fine-tuning.
 
 To control the application of overflow fix, `"overflow_fix"` config option is introduced. The default value is `"overflow_fix": "enable"`. To apply the overflow issue fix only to the first layer, use `"overflow_fix": "first_layer_only"`. To disable the overflow issue fix for all layers, use `"overflow_fix": "disable"`.
+
+
 
 ---
 
@@ -235,7 +237,7 @@ For automatic mixed-precision selection it's recommended to use the following te
             "precision": {
                 "type": "hawq",
                 "bits": [4,8]
-                "compression_ratio": 1.5,
+                "compression_ratio": 1.5
             }
         }
     }
@@ -243,8 +245,8 @@ For automatic mixed-precision selection it's recommended to use the following te
 
 Note, optimizer parameters are model specific, this template contains optimal ones for ResNet-like models.
 
-Here's an [example](../../examples/torch/classification/configs/mixed_precision/squeezenet1_1_imagenet_mixed_int_hawq.json) of
-using the template in the full configuration file.
+The [example](../../examples/torch/classification/configs/mixed_precision/squeezenet1_1_imagenet_mixed_int_hawq.json) of
+using the template in a full-fledged configuration file is provided with the [classification sample](../../examples/torch/classification) for PyTorch.
 
 This template uses `plateau` scheduler. Though it usually leads to a lot of epochs of tuning for achieving a good
 model's accuracy, this is the most reliable way. Staged quantization is an alternative approach and can be more than
@@ -269,21 +271,27 @@ When the agent enters a state/quantizer, it receives the state features and forw
 
 To evaluate the goodness of a policy, NNCF backend quantizes the workload accordingly and performs evaluation with the user-registered function. The evaluated score, together with the state embedding, predicted action are appended to an experience vault to serve for DDPG learning. The learning is carried out by sampling the data point from the experience vault for supervised training of the DDPG network. This process typically happens at a fixed interval. In the current implementation, it is performed after each episode evaluation. For bootstrapping, exploration and diversity of experience, noise is added to action output. As the episodic iterations progress, the noise magnitude is gradually reduced to zero, a deterministic mixed-precision policy is converged at the end of the episodes. NNCF currently keeps track of the best policy and uses it for fine tuning.
 
-```
-    "target_device": "VPU",
-    "compression": {
-        "algorithm": "quantization",
-        "initializer": {
-            "precision": {
-                "type": "autoq",
-                "bits": [2, 4, 8],
-                "iter_number": 300,
-                "compression_ratio": 0.15,
-                "eval_subset_ratio": 0.20,
-                "dump_init_precision_data": true
-            }
-        }
-    }
+```json5
+{
+   "target_device": "VPU",
+   "compression": {
+      "algorithm": "quantization",
+      "initializer": {
+         "precision": {
+            "type": "autoq",
+            "bits": [
+               2,
+               4,
+               8
+            ],
+            "iter_number": 300,
+            "compression_ratio": 0.15,
+            "eval_subset_ratio": 0.20,
+            "dump_init_precision_data": true
+         }
+      }
+   }
+}
 ```
 
 The snippet above demonstrates the specification of AutoQ in NNCF config. ```target_device``` determines the bitwidth choices available for a particular layer. ```bits``` also defines the precision space of quantizer but it is only active in the absence of target device.
@@ -310,116 +318,115 @@ Following is an example of wrapping ImageNet validation loop as a callback. Top5
             autoq_eval_fn, val_loader, config.device)
 ```
 
-#### Batch-norm statistics adaptation
+The complete config [example](../../examples/torch/classification/configs/mixed_precision/mobilenet_v2_imagenet_mixed_int_autoq_staged.json) that applies AutoQ to MobileNetV2 is provided within the [classification sample](../../examples/torch/classification) for PyTorch.
 
-After the compression-related changes in the model have been committed, the statistics of the batchnorm layers
-(per-channel rolling means and variances of activation tensors) can be updated by passing several batches of data
-through the model before the fine-tuning starts. This allows to correct the compression-induced bias in the model
-and reduce the corresponding accuracy drop even before model training. This option is common for quantization, magnitude
-sparsity and filter pruning algorithms. It can be enabled by setting a non-zero value of `num_bn_adaptation_samples` in the
-`batchnorm_adaptation` section of the `initializer` configuration (see example below).
+### Example configuration files:
 
+>_For the full list of the algorithm configuration parameters via config file, see the corresponding section in the [NNCF config schema](https://openvinotoolkit.github.io/nncf/)_.
 
-**Quantization configuration file parameters**:
-```
+- Quantize a model using default algorithm settings (8-bit, quantizers configuration chosen to be compatible with all Intel target HW types):
+```json5
 {
-    "algorithm": "quantization",
-    "preset": "performance", // The preset defines the quantization schema for weights and activations. The parameter takes values 'performance' or 'mixed'. The mode 'performance' defines symmetric weights and activations. The mode 'mixed' defines symmetric 'weights' and asymmetric 'activations'. Any preset parameters can be overridden by sections 'weights' and 'activations'. Preset "performance" set by default for all target devices except "TRIAL".
-    "initializer": {
-        "range": {
-            "num_init_samples": 256, // Number of samples from the training dataset to consume as sample model inputs for purposes of setting initial minimum and maximum quantization ranges
-            "type": "min_max" // Type of the initializer - determines which statistics gathered during initialization will be used to initialize the quantization ranges. "mean_min_max" is used by default
-        },
-        "precision": {
-            "type": "hawq", // Type of precision initialization - either "manual" or "hawq". With "manual", precisions are defined explicitly via "bitwidth_per_scope". With "hawq", these are determined automatically using the HAWQ algorithm.
-            "bits": [4, 8], // A list of bitwidth to choose from when performing precision initialization. Overrides bitwidth constraints specified in `weight` and `activation` sections",
-            "num_data_points": 100, // Number of data points to iteratively estimate Hessian trace, 100 by default.
-            "iter_number": 200, // Maximum number of iterations of Hutchinson algorithm to estimate Hessian trace, 200 by default
-            "tolerance": 1e-4, //  Minimum relative tolerance for stopping the Hutchinson algorithm. It's calculated between mean average trace from previous iteration and current one. 1e-4 by default
-            "compression_ratio": 1.5, // The desired ratio between bits complexity of fully INT8 model and mixed-precision lower-bit one.
-            "bitwidth_per_scope": [ // Manual settings for the quantizer bitwidths. Scopes are used to identify the weight quantizers. The same number of bits is assigned to adjacent activation quantizers. By default bitwidth is taken from global quantization parameters from `weights` and `activations` sections above
-                [
-                    4,
-                    "InsertionType.NNCF_MODULE_PRE_OP MobileNetV2/Sequential[features]/InvertedResidual[16]/Sequential[conv]/NNCFConv2d[2]"
-                ], // A tuple of a bitwidth and a scope
-                [
-                    4,
-                    "TargetType.OPERATOR_POST_HOOK MobileNetV2/Sequential[features]/ConvBNReLU[0]/ReLU6[2]/hardtanh_0",
-                ]
-            ]
-        }
-        "batchnorm_adaptation": {
-            "num_bn_adaptation_samples": 2048, // Number of samples from the training dataset to pass through the model at initialization in order to update batchnorm statistics of the original model. The actual number of samples will be a closest multiple of the batch size.
-        }
+    "input_info": { "sample_size": [1, 3, 224, 224] }, // the input shape of your model may vary
+    "compression": {
+       "algorithm": "quantization"
     }
-    "weights": { // Constraints to be applied to model weights quantization only.
-        "mode": "symmetric", // Mode of quantization
-        "bits": 8, // Bitwidth to quantize to. It is intended to manually specify bitwidth for all weights. Can be overridden by the `bits` parameter from the `precision` initializer section. An error happens if it doesn't match a bitwidth constraints for module weight specified in the hardware configuration.
-        "signed": true, // Whether to use signed or unsigned input/output values for quantization. If specified as unsigned and the input values during initialization have differing signs, will reset to performing signed quantization instead.
-        "per_channel": false, // Whether to quantize inputs per channel (i.e. per 0-th dimension for weight quantization,and per 1-st dimension for activation quantization)
-
-        // A list of model control flow graph node scopes to be ignored for this operation - functions as a 'denylist'. Optional.
-        "ignored_scopes": []
-
-        // A list of model control flow graph node scopes to be considered for this operation - functions as a 'allowlist'. Optional.
-        // "target_scopes": []
-    },
-    "activations": { // Constraints to be applied to model activations quantization only.
-        "mode": "symmetric", // Mode of quantization
-        "bits": 4, // Bitwidth to quantize to. It is intended to manually specify bitwidth for all activations. Can be overridden by the `bits` parameter from the `precision` initializer section. An error happens if it doesn't match a bitwidth constraints for module inputs specified in the hardware configuration.
-        "signed": true, // Whether to use signed or unsigned input/output values for quantization. If specified as unsigned and the input values during initialization have differing signs, will reset to performing signed quantization instead.
-        "per_channel": false, // Whether to quantize inputs per channel (i.e. per 0-th dimension for weight quantization,and per 1-st dimension for activation quantization)
-
-        // A list of model control flow graph node scopes to be ignored for this operation - functions as a 'denylist'. Optional.
-        "ignored_scopes": []
-
-        // A list of model control flow graph node scopes to be considered for this operation - functions as a 'allowlist'. Optional.
-        // "target_scopes": []
-
-        // Specifies points in the model which will share the same quantizer module for activations. This is helpful in case one and the same quantizer scale is required for inputs to the same operation. Each sub-array will define a group of activation quantizer insertion points that have to share a single actual quantization module, each entry in this subarray should correspond to exactly one node in the NNCF graph and the groups should not overlap. The finalquantizer for each sub-array will be associated with the first element of this sub-array.
-        "linked_quantizer_scopes": []
-    },
-    "quantize_inputs": true, // Whether the model inputs should be immediately quantized prior to any other model operations."
-    "scope_overrides": { // This option is used to specify overriding quantization constraints for specific scope, e.g. in case you need to quantize a single operation differently than the rest of the model.
-    	"activations": {
-		"{re}.*InvertedResidual.*": {
-		    "mode": "symmetric", // Mode of quantization
-		    "bits": 4, // Bitwidth to quantize to.
-		    "signed": true, // Whether to use signed or unsigned input/output values for quantization. If specified as unsigned and the input values during initialization have differing signs, will reset to performing signed quantization instead.
-		    "per_channel": false // Whether to quantize inputs per channel (i.e. per 0-th dimension for weight quantization,and per 1-st dimension for activation quantization)
-		}
-	}
-    },
-
-    // A list of model control flow graph node scopes to be ignored for this operation - functions as a 'denylist'. Optional.
-    "ignored_scopes": [],
-
-    // A list of model control flow graph node scopes to be considered for this operation - functions as a 'allowlist'. Optional.
-    // "target_scopes": [],
-
-    // Determines how should the additional quantization operations be exported into the ONNX format. Set this to false for export to OpenVINO-supported FakeQuantize ONNX, or to true for export to ONNX standard QuantizeLinear-DequantizeLinear node pairs (8-bit quantization only in the latter case). Default: false
-    "export_to_onnx_standard_ops": false,
 }
 ```
 
-***Per layer ranges initializations parameters***:
-Per layer ranges initiaization can be enabled by specifying  in `"initializer"` section `"range"` as list of dictionaries in the following format:
-
-```
+- Quantize a model to 8-bit precision targeted for Intel CPUs, with additional constraints of symmetric weight quantization and asymmetric activation quantization:
+```json5
 {
-    "range": [
-        {
-            "type": "min_max", // Type of the initializer - determines which statistics gathered during initialization will be used to initialize the quantization ranges for all modules specified by `"target_scopes"` or `"ignored_scopes"`.
-
-            "num_init_samples": 256, // Number of samples from the training dataset to consume as sample model inputs for purposes of setting initial minimum and maximum quantization ranges
-
-            "target_scopes": [], // A list of model control flow graph node scopes to be considered for this operation - functions as a 'allowlist'. Optional.
-            "ignored_scopes": [], // A list of model control flow graph node scopes to be ignored for this operation - functions as a 'denylist'. Optional.
-            "target_quantizer_group": "weights" // Type of quantizer group to which this initialization of ranges will be applied. Optional. (By default this initialization of ranges will be applied to weights and activations quantizers)
-        },
-        ...
-    ]
+    "input_info": { "sample_size": [1, 3, 32, 32] }, // the input shape of your model may vary
+    "compression": {
+       "algorithm": "quantization",
+       "weights": {"mode": "symmetric"},
+       "activations": {"mode": "asymmetric"}
+    },
+   "target_device": "CPU"
 }
-
 ```
-Initialization of ranges defined in this way must specify an unambiguous initialization rule for each module.
+
+- Quantize a model with fully symmetric INT8 quantization and increased number of quantizer range initialization samples (make sure to supply a corresponding data loader in code via `nncf.config.structures.QuantizationRangeInitArgs` or the `register_default_init_args` helper function):
+```json5
+{
+    "input_info": { "sample_size": [1, 3, 224, 224] }, // the input shape of your model may vary
+    "compression": {
+       "algorithm": "quantization",
+       "mode": "symmetric",
+       "initializer": {
+         "range": { "num_init_samples": 5000 }
+       }
+    }
+}
+```
+
+- Quantize a model using 4-bit per-channel quantization for experimentation/trial purposes (end-to-end performance and/or compatibility with OpenVINO Inference Engine not guaranteed)
+```json5
+{
+    "input_info": { "sample_size": [1, 3, 32, 32] }, // the input shape of your model may vary
+    "compression": {
+       "algorithm": "quantization",
+       "bits": 4,
+       "per_channel": true
+    },
+    "target_device": "TRIAL"
+}
+```
+
+- Quantize a multi-input model to 8-bit precision targeted for Intel CPUs, with a range initialization performed using percentile statistics (empirically known to be better for NLP models, for example) and excluding some parts of the model from quantization:
+```json5
+{
+    "input_info": [
+       {
+            "keyword": "input_ids",
+            "sample_size": [1, 128],
+            "type": "long",
+            "filler": "ones"
+        },
+        {
+            "keyword": "attention_mask",
+            "sample_size": [1, 128],
+            "type": "long",
+            "filler": "ones"
+        }
+    ], // the input shape of your model may vary
+    "compression": {
+       "algorithm": "quantization",
+       "initializer": {
+          "range": {
+             "num_init_samples": 64,
+             "type": "percentile",
+             "params": {
+                "min_percentile": 0.01,
+                "max_percentile": 99.99
+             }
+          }
+       },
+       "ignored_scopes": ["{re}BertSelfAttention\\[self\\]/__add___0",
+            "RobertaForSequenceClassification/RobertaClassificationHead[classifier]/Linear[out_proj]",
+            "RobertaForSequenceClassification/RobertaClassificationHead[classifier]/Linear[dense]"
+        ]
+    },
+    "target_device": "TRIAL"
+}
+```
+- Quantize a model to variable bit width using 300 iterations of the AutoQ algorithm, with a target model size (w.r.t the effective parameter storage size) set to 15% of the FP32 model and possible quantizer bitwidths limited to INT2, INT4 or INT8.
+```json5
+{
+    "input_info": { "sample_size": [1, 3, 224, 224] }, // the input shape of your model may vary
+    "compression": {
+       "algorithm": "quantization",
+       "initializer": {
+           "precision": {
+               "type": "autoq", // or "type": "hawq"
+               "bits": [2, 4, 8],
+               "compression_ratio": 0.15,
+               "iter_number": 300
+           }
+       }
+    },
+    "target_device": "TRIAL"
+}
+```
+

@@ -43,7 +43,7 @@
         "search": {
             "algorithm": "NSGA2",
             "num_evals": 4,
-            "population": 1,
+            "population": 1
         }
     }
 }

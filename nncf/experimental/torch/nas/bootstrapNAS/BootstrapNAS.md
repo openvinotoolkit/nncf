@@ -55,7 +55,7 @@ In the search section, you specify the search algorithm, e.g., `NSGA-II` and its
     "algorithm": "NSGA2",
             "num_evals": 3000,
             "population": 50,
-            "ref_acc": 93.65,
+            "ref_acc": 93.65
 }
 ```
 

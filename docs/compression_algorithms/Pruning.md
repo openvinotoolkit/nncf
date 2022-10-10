@@ -1,6 +1,5 @@
-### Pruning
-
-#### Filter pruning
+>_Scroll down for the examples of the JSON configuration files that can be used to apply this algorithm_.
+### Filter pruning
 
 Filter pruning algorithm zeros output filters in Convolutional layers based on some filter importance criterion  (filters with smaller importance are pruned).
 The framework contains three filter importance criteria: `L1`, `L2` norm, and `Geometric Median`. Also, different schemes of pruning application are presented by different schedulers.
@@ -77,45 +76,6 @@ Interlayer ranking type can be one of `unweighted_ranking` or `learned_ranking`.
 The $(a_i, b_i)$ pair of scalars will be learned for each ( $i$ layer and used to transform norms of $i$-th layer filters before sorting all filter norms together as $a_i * N_i + b_i$ , where $N_i$ - is vector of filter norma of $i$-th layer, $(a_i, b_i)$ is ranking coefficients for $i$-th layer.
 This approach allows pruning the model taking into account layer-specific sensitivity to weight perturbations and get pruned models with higher accuracy.
 
-#### Filter pruning configuration file parameters
-```
-{
-    "algorithm": "filter_pruning",
-    "initializer": {
-        "batchnorm_adaptation": {
-            "num_bn_adaptation_samples": 2048, // Number of samples from the training dataset to pass through the model at initialization in order to update batchnorm statistics of the original model. The actual number of samples will be a closest multiple of the batch size.
-        }
-    },
-    "pruning_init": 0.1, // Initial value of the pruning level applied to the convolutions that can be pruned in 'create_compressed_model' function. 0.0 by default.
-    "params": {
-        "schedule": "exponential", // The type of scheduling to use for adjusting the target pruning level. Either `exponential`, `exponential_with_bias`,  or `baseline`, by default it is `exponential`"
-        "pruning_target": 0.4, // Target value of the pruning level for the convolutions that can be pruned. These convolutions are determined by the model architecture. 0.5 by default.
-        "pruning_flops_target": 0.4, // Target value of the pruning level by FLOPs in the whole model. Only one parameter from `pruning_target` and `pruning_flops_target` can be set. If none of them is specified, `pruning_target` = 0.5 is used as the default value. 
-        "num_init_steps": 3, // Number of epochs for model pretraining before starting filter pruning. 0 by default.
-        "pruning_steps": 10, // Number of epochs during which the pruning level is increased from `pruning_init` to `pruning_target` value.
-        "filter_importance": "L2", // The type of filter importance metric. Can be one of `L1`, `L2`, `geometric_median`. `L2` by default.
-        "interlayer_ranking_type": "unweighted_ranking", // The type of filter ranking across the layers. Can be one of `unweighted_ranking`, `learned_ranking`. `unweighted_ranking` by default.
-        "all_weights": false, // Whether to prune layers independently (choose filters with the smallest importance in each layer separately) or not. `False` by default.
-        "prune_first_conv": false, // Whether to prune first Convolutional layers or not. First means that it is a convolutional layer such that there is a path from model input to this layer such that there are no other convolution operations on it. `False` by default (`True` by default in case of 'learned_ranking' interlayer_ranking_type).
-        "prune_downsample_convs": false, // Whether to prune downsample Convolutional layers (with stride > 1) or not. `False` by default (`True` by default in case of 'learned_ranking' interlayer_ranking_type).
-        "prune_batch_norms": true, // Whether to nullifies parameters of Batch Norm layer corresponds to zeroed filters of convolution corresponding to this Batch Norm. `True` by default.
-        "save_ranking_coeffs_path": "path/coeffs.json", // Path to save .json file with interlayer ranking coefficients.
-        "load_ranking_coeffs_path": "PATH/learned_coeffs.json", // Path to loading interlayer ranking coefficients .json file, pretrained earlier.
-        "legr_params": { // Set of parameters, that can be set for 'learned_ranking' interlayer_ranking_type case
-            "generations": 200, //  Number of generations for evolution algorithm optimizing. 400 by default
-            "train_steps": 150, // Number of training steps to estimate pruned model accuracy. 200 by default 
-            "max_pruning": 0.6, // Pruning level for the model to train LeGR algorithm on it. If learned ranking will be used for multiple pruning levels, the highest should be used as `max_pruning`. If model will be pruned with one pruning level, target pruning level should be used.
-            "random_seed": 42, // Random seed for ranking coefficients generation during optimization 
-        },
-    },
-
-    // A list of model control flow graph node scopes to be ignored for this operation - functions as a 'denylist'. Optional.
-    "ignored_scopes": []
-
-    // A list of model control flow graph node scopes to be considered for this operation - functions as a 'allowlist'. Optional.
-    // "target_scopes": []
-}
-```
 
 > **NOTE:**  In all our pruning experiments we used SGD optimizer.
 
@@ -203,3 +163,110 @@ it does not take into account the number of filters in layers that cannot be pru
 It is important to note that pruning levels mentioned in the `statistics of the filter pruning algorithm` are the goals the algorithm aims to achieve.
 It is not always possible to achieve these levels of pruning due to cross-layer and inference constraints. 
 Therefore, it is expected that these numbers may differ from the calculated statistics in the `statistics of the pruned model` section.
+
+### Example configuration files
+
+>_For the full list of the algorithm configuration parameters via config file, see the corresponding section in the [NNCF config schema](https://openvinotoolkit.github.io/nncf/)_.
+
+- Prune a model with default parameters (from 0 to 0.5 filter pruning level across 100 epochs with exponential schedule)
+```json5
+{
+    "input_info": { "sample_size": [1, 3, 224, 224] },
+    "compression":
+    {
+        "algorithm": "filter_pruning"
+    }
+}
+```
+
+- Same as above, but filter importance is considered globally across all eligible weighted operations:
+```json5
+{
+    "input_info": { "sample_size": [1, 3, 224, 224] },
+    "compression":
+    {
+        "algorithm": "filter_pruning",
+        "all_weights": true
+    }
+}
+```
+
+- Prune a model, immediately setting filter pruning level to 10%, applying [batchnorm adaptation](./BatchnormAdaptation.md) and reaching 60% within 20 epochs using exponential schedule, enabling pruning of first convolutional layers and downsampling convolutional layers:
+```json5
+{
+    "input_info": { "sample_size": [1, 3, 224, 224] },
+    "compression":
+    {
+        "algorithm": "filter_pruning",
+        "pruning_init": 0.1,
+        "params": {
+            "pruning_target": 0.6,
+            "pruning_steps": 20,
+            "schedule": "exponential",
+            "prune_first_conv": true,
+            "prune_downsample_convs": true
+        }
+    }
+}
+```
+
+- Prune a model using geometric median filter importance and reaching 30% filter pruning level within 10 epochs using exponential schedule, postponing application of pruning for 10 epochs:
+```json5
+{
+    "input_info": { "sample_size": [1, 3, 224, 224] },
+    "compression":
+    {
+        "algorithm": "filter_pruning",
+        "params": {
+            "filter_importance": "geometric_median",
+            "pruning_target": 0.3,
+            "pruning_steps": 10,
+            "schedule": "exponential",
+            "num_init_steps": 10
+        }
+    }
+}
+```
+
+- Prune and quantize a model at the same time using a FLOPS target for pruning and defaults for the rest of parameters:
+```json5
+{
+    "input_info": { "sample_size": [1, 3, 224, 224] },
+    "compression":
+    [
+        {
+            "algorithm": "filter_pruning",
+            "params": {
+                "pruning_flops_target": 0.6
+            }
+        },
+        {
+            "algorithm": "quantization"
+        }
+    ]
+}
+```
+
+- Prune a model with default parameters, estimate filter ranking by Learned Global Ranking method before finetuning. 
+LEGR algorithm will be using 200 generations for the evolution algorithm, 20 train steps to estimate pruned model accuracy on each generation and target maximal filter pruning level equal to 50%:
+```json5
+{
+    "input_info": { "sample_size": [1, 3, 224, 224] },
+    "compression": 
+    [
+        {
+            "algorithm": "filter_pruning",
+            "params": 
+            {
+                "interlayer_ranking_type": "learned_ranking",
+                "legr_params":
+                {
+                    "generations": 200,
+                    "train_steps": 20,
+                    "max_pruning": 0.5
+                }
+            }
+        }
+    ]
+}
+```
