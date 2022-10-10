@@ -54,8 +54,9 @@ ELASTIC_DEPTH_SCHEMA = {
         "skipped_blocks": {
             "type": "array",
             "items": ARRAY_OF_STRINGS,
-            "description": "List of building blocks to be skipped. "
-                           "The block is defined by names of start and end nodes.",
+            "description": "List of building blocks to be skipped. The block is defined by names of start and end "
+                           "nodes. The end node is skipped. In contrast, the start node is executed. It produces a "
+                           "tensor that is bypassed through the skipping nodes until the one after end node. ",
             "examples": [
                 [
                     ["start_op_1", "end_op_1"],
@@ -63,30 +64,18 @@ ELASTIC_DEPTH_SCHEMA = {
                 ]
             ],
         },
-        "mode": with_attributes(ELASTIC_DEPTH_MODE_SCHEMA,
-                                description="The way of elastic depth configuration - how skipped blocks are "
-                                            "defined. Two modes are supported: manual and auto. The first "
-                                            "refers to explicit setting coordinates of blocks in the config. "
-                                            "The latter assumes no input from the user - blocks to skip are "
-                                            "found automatically"),
         "min_block_size": with_attributes(NUMBER,
                                           description="Defines minimal number of operations in the skipping block. "
                                                       "Option is available for the auto mode only. "
-                                                      "Default value is 6"),
+                                                      "Default value is 5"),
         "max_block_size": with_attributes(NUMBER,
                                           description="Defines maximal number of operations in the block. "
                                                       "Option is available for the auto mode only. "
                                                       "Default value is 50"),
-        "allow_nested_blocks": with_attributes(BOOLEAN,
-                                               description="If true, automatic block search will consider nested "
-                                                           "blocks: the ones that are part of bigger block. By "
-                                                           "default, nested blocks are declined during the search and "
-                                                           "bigger blocks are found only. False, by default"),
-        "allow_linear_combination": with_attributes(BOOLEAN,
-                                                    description="If False, automatic block search will decline blocks "
-                                                                "that are a combination of other blocks, "
-                                                                "in another words, that consist entirely of operations "
-                                                                "of other blocks. False, by default"),
+        "hw_fused_ops": with_attributes(BOOLEAN,
+                                        description="If True, automatic block search will not relate operations, "
+                                                    "which are fused on inference, into different blocks for skipping. "
+                                                    "True, by default"),
     },
     "additionalProperties": False
 }

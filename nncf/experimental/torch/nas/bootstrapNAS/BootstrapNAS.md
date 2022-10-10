@@ -67,13 +67,31 @@ List of parameters that can be used in the configuration file:
 
 `algorithm`: Defines training strategy for tuning supernet. By default, `progressive_shrinking`.
 
-`progressivity_of_elasticity`: Defines the order of adding a new elasticity dimension from stage to stage. examples=["width", "depth", "kernel"].
+`progressivity_of_elasticity`: Defines the order of adding a new elasticity dimension from stage to stage. 
+examples=["width", "depth", "kernel"].
 
-`batchnorm_adaptation`: Specifies the number of samples from the training dataset to use for model inference during the BatchNorm statistics adaptation procedure for the compressed model.
+`batchnorm_adaptation`: Specifies the number of samples from the training dataset to use for model inference during the 
+BatchNorm statistics adaptation procedure for the compressed model.
 
-`schedule`: The schedule section includes a list of stage descriptors (`list_stage_descriptions`) that specify the elasticity dimensions enabled for a particular stage (`train_dims`), the number of `epochs` for the stage, the `depth_indicator` which in the case of elastic depth, restricts the maximum number of blocks in each independent group that can be skipped, the `width_indicator`, which restricts the maximum number of width values in each elastic layer. The user can also specify whether weights should be reorganized (`reorg_weights`), whether batch norm adaptation should be triggered at the beginning of the stage (`bn_adapt`), the initial learning rate for the stage (`init_lr`), and the epochs to use for adjusting the learning rate (`epochs_lr`). 
+`schedule`: The schedule section includes a list of stage descriptors (`list_stage_descriptions`) that specify the 
+elasticity dimensions enabled for a particular stage (`train_dims`), the number of `epochs` for the stage, the 
+`depth_indicator` which in the case of elastic depth, restricts the maximum number of blocks in each independent group 
+that can be skipped, the `width_indicator`, which restricts the maximum number of width values in each elastic layer. 
+The user can also specify whether weights should be reorganized (`reorg_weights`), whether batch norm adaptation should 
+be triggered at the beginning of the stage (`bn_adapt`), the initial learning rate for the stage (`init_lr`), and 
+the epochs to use for adjusting the learning rate (`epochs_lr`). 
 
-`elasticity`: Currently, BootstrapNAS supports three elastic dimensions (`kernel`, `width` and `depth`). The `mode` for elastic depth can be set as `auto` or `manual`. If manual is selected, the user can specify, a list of possible `skipped_blocks` that, as the name suggest, might be skipped. In `auto` mode, the user can specify the `min_block_size`, i.e., minimal number of operations in the skipping block, and the `max_block_size`, i.e., maximal number of operations in the block. The user can also `allow_nested_blocks` or `allow_linear_combination` of blocks. In the case of elastic width, the user can specify the `min_width`, i.e., the minimal number of output channels that can be activated for each layers with elastic width. Default value is 32, the `max_num_widths`, which restricts total number of different elastic width values for each layer, a `width_step`, which defines a step size for a generation of the elastic width search space, or a `width_multiplier` to define the elastic width search space via a list of multipliers. Finally, the user can determine the type of filter importance metric: L1, L2 or geometric mean. L2 is selected by default. For elastic kernel, the user can specify the `max_num_kernels`, which restricts the total number of different elastic kernel values for each layer.
+`elasticity`: Currently, BootstrapNAS supports three elastic dimensions (`kernel`, `width` and `depth`). 
+Elastic depth automatically finds blocks to skip, by default. The user can specify the `min_block_size`, i.e., minimal 
+number of operations in the skipping block, and the `max_block_size`, i.e., maximal number of operations in the block.
+Alternatively, one can specify list of blocks to skip manually via `skipped_blocks`. 
+In the case of elastic width, the user can specify the `min_width`, i.e., the minimal number of output channels that 
+can be activated for each layers with elastic width. Default value is 32, the `max_num_widths`, which restricts total 
+number of different elastic width values for each layer, a `width_step`, which defines a step size for a generation of 
+the elastic width search space, or a `width_multiplier` to define the elastic width search space via a list of multipliers. 
+Finally, the user can determine the type of filter importance metric: L1, L2 or geometric mean. L2 is selected by default. 
+For elastic kernel, the user can specify the `max_num_kernels`, which restricts the total number of different elastic 
+kernel values for each layer.
 
 `train_steps`: Defines the number of samples used for each training epoch.
 

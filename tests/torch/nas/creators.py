@@ -62,14 +62,13 @@ def create_bootstrap_training_model_and_ctrl(model,
     return model, ctrl
 
 
-def create_bnas_model_and_ctrl_by_test_desc(desc: MultiElasticityTestDesc, mode='auto'):
+def create_bnas_model_and_ctrl_by_test_desc(desc: MultiElasticityTestDesc):
     config = {
         "input_info": {"sample_size": desc.input_sizes},
         "bootstrapNAS": {
             "training": {
                 "elasticity": {
                     "depth": {
-                        'mode': mode,
                         'skipped_blocks': desc.blocks_to_skip
                     }
                 }
@@ -77,11 +76,9 @@ def create_bnas_model_and_ctrl_by_test_desc(desc: MultiElasticityTestDesc, mode=
         }
     }
     depth_config = config['bootstrapNAS']['training']['elasticity']['depth']
-    if depth_config['mode'] == 'auto':
+    if not desc.blocks_to_skip:
         del depth_config['skipped_blocks']
     config['bootstrapNAS']['training']['elasticity'].update(desc.algo_params)
-    if desc.name == 'densenet_121':
-        config['bootstrapNAS']['training'] = {'elasticity': {'depth': {'min_block_size': 10, 'max_block_size': 117}}}
 
     nncf_config = NNCFConfig.from_dict(config)
     model = desc.model_creator()
@@ -126,9 +123,6 @@ def create_bootstrap_nas_training_algo(model_name) -> Tuple[NNCFNetwork, Progres
     nncf_config = get_empty_config(input_sample_sizes=NAS_MODEL_DESCS[model_name][1])
     nncf_config['bootstrapNAS'] = {'training': {'algorithm': 'progressive_shrinking'}}
     nncf_config['input_info'][0].update({'filler': 'random'})
-    if model_name == 'densenet_121':
-        nncf_config['bootstrapNAS']['training'] = {
-            'elasticity': {'depth': {'min_block_size': 10, 'max_block_size': 117}}}
 
     input_info_list = create_input_infos(nncf_config)
     dummy_forward = create_dummy_forward_fn(input_info_list)

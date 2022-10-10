@@ -41,7 +41,6 @@
                     "width_multipliers": [1, 0.80, 0.60]
                 },
                 "depth": {
-                    "mode": "manual",
                     "skipped_blocks": [
                         ["ResNet/Sequential[layer1]/Bottleneck[1]/ReLU[relu]/relu__2", "ResNet/Sequential[layer1]/Bottleneck[2]/ReLU[relu]/relu__2"],
                         ["ResNet/Sequential[layer2]/Bottleneck[1]/ReLU[relu]/relu__2", "ResNet/Sequential[layer2]/Bottleneck[2]/ReLU[relu]/relu__2"],

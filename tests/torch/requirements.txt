@@ -9,3 +9,6 @@ pytest-dependency>=0.5.1
 virtualenv
 # Ticket 69520
 pyparsing<3.0
+
+# Required for search_buidling_blocks tests
+transformers

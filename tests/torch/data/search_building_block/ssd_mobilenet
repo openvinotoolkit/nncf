@@ -1,0 +1,54 @@
+{
+    "blocks": [
+        {
+            "start_node_name": "MobileNetSSD/MultiOutputSequential[basenet]/Sequential[2]/ReLU[5]/relu__0",
+            "end_node_name": "MobileNetSSD/MultiOutputSequential[basenet]/Sequential[3]/ReLU[5]/relu__0"
+        },
+        {
+            "start_node_name": "MobileNetSSD/MultiOutputSequential[basenet]/Sequential[4]/ReLU[5]/relu__0",
+            "end_node_name": "MobileNetSSD/MultiOutputSequential[basenet]/Sequential[5]/ReLU[5]/relu__0"
+        },
+        {
+            "start_node_name": "MobileNetSSD/MultiOutputSequential[basenet]/Sequential[6]/ReLU[5]/relu__0",
+            "end_node_name": "MobileNetSSD/MultiOutputSequential[basenet]/Sequential[7]/ReLU[5]/relu__0"
+        },
+        {
+            "start_node_name": "MobileNetSSD/MultiOutputSequential[basenet]/Sequential[7]/ReLU[5]/relu__0",
+            "end_node_name": "MobileNetSSD/MultiOutputSequential[basenet]/Sequential[8]/ReLU[5]/relu__0"
+        },
+        {
+            "start_node_name": "MobileNetSSD/MultiOutputSequential[basenet]/Sequential[8]/ReLU[5]/relu__0",
+            "end_node_name": "MobileNetSSD/MultiOutputSequential[basenet]/Sequential[9]/ReLU[5]/relu__0"
+        },
+        {
+            "start_node_name": "MobileNetSSD/MultiOutputSequential[basenet]/Sequential[9]/ReLU[5]/relu__0",
+            "end_node_name": "MobileNetSSD/MultiOutputSequential[basenet]/Sequential[10]/ReLU[5]/relu__0"
+        },
+        {
+            "start_node_name": "MobileNetSSD/MultiOutputSequential[basenet]/Sequential[10]/ReLU[5]/relu__0",
+            "end_node_name": "MobileNetSSD/MultiOutputSequential[basenet]/Sequential[11]/ReLU[5]/relu__0"
+        },
+        {
+            "start_node_name": "MobileNetSSD/MultiOutputSequential[basenet]/Sequential[12]/ReLU[5]/relu__0",
+            "end_node_name": "MobileNetSSD/MultiOutputSequential[basenet]/Sequential[13]/ReLU[5]/relu__0"
+        }
+    ],
+    "group_dependent": {
+        "0": [
+            0
+        ],
+        "1": [
+            1
+        ],
+        "2": [
+            2,
+            3,
+            4,
+            5,
+            6
+        ],
+        "3": [
+            7
+        ]
+    }
+}

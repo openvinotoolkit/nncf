@@ -112,7 +112,7 @@ def wrap_operator(operator, operator_info: 'PatchedOperatorInfo'):
                     assert ctx.in_skipped_block is True
                     ctx.in_skipped_block = False
                 if str_op_address in ctx.start_node_name_of_skipped_block:
-                    assert ctx.in_skipped_block is False
+                    assert ctx.in_skipped_block is False, 'skipping of overlapping blocks'
                     ctx.in_skipped_block = True
                     ctx.tensor_cache = result
         except:
@@ -157,7 +157,7 @@ def wrap_module_call(module_call):
                 assert ctx.in_skipped_block is True
                 ctx.in_skipped_block = False
             if str_op_address in ctx.start_node_name_of_skipped_block:
-                assert ctx.in_skipped_block is False
+                assert ctx.in_skipped_block is False, 'skipping of overlapping blocks'
                 ctx.in_skipped_block = True
         else:
             retval = module_call(self, *args, **kwargs)
