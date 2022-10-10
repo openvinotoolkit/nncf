@@ -6,7 +6,6 @@ on:
       - test_for_doc_build_trigger
     paths:
       - nncf/config/**
-
 permissions:
   contents: write
 jobs:
