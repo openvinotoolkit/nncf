@@ -222,8 +222,11 @@ def _get_layer_attributes(module: TorchModule, operator_name: str) -> BaseLayerA
             module.num_channels,
             module.num_groups
         )
+    # torch.nn.utils.weight_norm replaces weight with weight_g and weight_v
+    is_weight_norm_applied = hasattr(module, 'weight_g') and hasattr(module, 'weight_v')
+    weight_attr = 'weight_g' if is_weight_norm_applied else 'weight'
     if isinstance(module, (Conv1d, Conv2d, Conv3d)):
-        return ConvolutionLayerAttributes(weight_requires_grad=module.weight.requires_grad,
+        return ConvolutionLayerAttributes(weight_requires_grad=getattr(module, weight_attr).requires_grad,
                                           in_channels=module.in_channels,
                                           out_channels=module.out_channels,
                                           kernel_size=module.kernel_size,
@@ -232,7 +235,7 @@ def _get_layer_attributes(module: TorchModule, operator_name: str) -> BaseLayerA
                                           transpose=False,
                                           padding_values=module.padding)
     if isinstance(module, (ConvTranspose1d, ConvTranspose2d, ConvTranspose3d)):
-        return ConvolutionLayerAttributes(weight_requires_grad=module.weight.requires_grad,
+        return ConvolutionLayerAttributes(weight_requires_grad=getattr(module, weight_attr).requires_grad,
                                           in_channels=module.in_channels,
                                           out_channels=module.out_channels,
                                           kernel_size=module.kernel_size,
@@ -241,12 +244,11 @@ def _get_layer_attributes(module: TorchModule, operator_name: str) -> BaseLayerA
                                           transpose=True,
                                           padding_values=module.padding)
     if isinstance(module, Linear):
-        return LinearLayerAttributes(weight_requires_grad=module.weight.requires_grad,
+        return LinearLayerAttributes(weight_requires_grad=getattr(module, weight_attr).requires_grad,
                                      in_features=module.in_features,
                                      out_features=module.out_features)
-
-    if hasattr(module, 'weight'):
-        return GenericWeightedLayerAttributes(weight_requires_grad=module.weight.requires_grad,
+    if hasattr(module, 'weight') or is_weight_norm_applied:
+        return GenericWeightedLayerAttributes(weight_requires_grad=getattr(module, weight_attr).requires_grad,
                                               weight_shape=module.weight.shape)
 
     return GenericWeightedLayerAttributes(weight_requires_grad=False,

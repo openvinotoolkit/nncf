@@ -368,7 +368,7 @@ class ElasticDepthBuilder(SingleElasticityBuilder):
         """
         tracing_context = target_model.get_tracing_context()
         tracing_context.elastic_depth = True
-
+        blocks_for_info = self._skipped_blocks
         if self._skipped_blocks is None:
             extended_blocks, self._skip_dependencies = \
                 get_building_blocks(
@@ -378,9 +378,10 @@ class ElasticDepthBuilder(SingleElasticityBuilder):
                     hw_fused_ops=self._params.hw_fused_ops,
                 )
             self._skipped_blocks = [eb.basic_block for eb in extended_blocks]
+            blocks_for_info = extended_blocks
         nncf_logger.info("Blocks for skipping (changing the depth of model):")
         new_line = '\n'
-        str_bs = [str(block) for block in self._skipped_blocks]
+        str_bs = [str(block) for block in blocks_for_info]
         nncf_logger.info(f"""[{new_line.join(str_bs)}
                         ]
                         """)

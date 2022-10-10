@@ -45,6 +45,7 @@ from tests.torch.helpers import register_bn_adaptation_init_args
 from tests.torch.nas.descriptors import MultiElasticityTestDesc
 from tests.torch.nas.helpers import move_model_to_cuda_if_available
 from tests.torch.nas.models.synthetic import TwoConvModel
+from tests.torch.nas.models.tcn import TCN
 from tests.torch.nas.models.vgg_k7 import VGG11_K7
 
 
@@ -114,7 +115,8 @@ NAS_MODEL_DESCS = {
     'resnext29_32x4d': [test_models.ResNeXt29_32x4d, [1, 3, 32, 32]],
     'pnasnetb': [test_models.PNASNetB, [1, 3, 32, 32]],
     'unet': [test_models.UNet, [1, 3, 360, 480]],
-    'ssd_vgg': [test_models.ssd_vgg300, [2, 3, 300, 300]]
+    'ssd_vgg': [test_models.ssd_vgg300, [2, 3, 300, 300]],
+    'tcn': [partial(TCN, input_size=1, output_size=10, num_channels=[25] * 8, kernel_size=7, dropout=0.05), [1, 1, 3]]
 }
 
 

@@ -152,6 +152,11 @@ class ExtendedBuildingBlock:
         self.ordinal_ids = ordinal_ids
         self.op_addresses = op_addresses
 
+    def __str__(self) -> str:
+        return "[START NODE: {}, END_NODE: {}] [{}, {}] #ops={}".format(self.basic_block.start_node_name,
+                                                                        self.basic_block.end_node_name,
+                                                                        *self.ordinal_ids, len(self.op_addresses))
+
     @property
     def start_node_name(self):
         return self.basic_block.start_node_name
