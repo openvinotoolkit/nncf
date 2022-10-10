@@ -26,7 +26,7 @@ from torchvision.models import squeezenet1_1
 
 from nncf import NNCFConfig
 from nncf.api.compression import CompressionScheduler
-from nncf.common.hardware.config import HWConfigType
+from nncf.common.hardware.config import TargetDevice
 from nncf.common.quantization.structs import NonWeightQuantizerId
 from nncf.common.quantization.structs import QuantizationMode
 from nncf.common.quantization.structs import QuantizerConfig
@@ -291,7 +291,7 @@ def test_quantizers_have_proper_narrow_range_set():
         assert aq.narrow_range is False
 
 
-@pytest.fixture(name="hw_config_type", params=HWConfigType)
+@pytest.fixture(name="hw_config_type", params=TargetDevice)
 def hw_config_type_(request):
     return request.param
 

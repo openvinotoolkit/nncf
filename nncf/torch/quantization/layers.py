@@ -49,7 +49,7 @@ class QuantizerExportMode(Enum):
     ONNX_QUANTIZE_DEQUANTIZE_PAIRS = "quantize_dequantize"
 
     @staticmethod
-    def from_str(config_value: str) -> 'HWConfigType':
+    def from_str(config_value: str) -> 'QuantizerExportMode':
         if config_value == QuantizerExportMode.FAKE_QUANTIZE.value:
             return QuantizerExportMode.FAKE_QUANTIZE
         if config_value == QuantizerExportMode.ONNX_QUANTIZE_DEQUANTIZE_PAIRS.value:

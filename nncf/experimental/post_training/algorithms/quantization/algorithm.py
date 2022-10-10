@@ -19,7 +19,7 @@ from typing import TypeVar
 
 from nncf.common.quantization.structs import QuantizerConfig
 from nncf.common.quantization.structs import QuantizationMode
-from nncf.common.hardware.config import HWConfigType
+from nncf.common.hardware.config import TargetDevice
 
 from nncf.common.utils.backend import BackendType
 from nncf.experimental.post_training.api.engine import Engine
@@ -48,7 +48,7 @@ class PostTrainingQuantizationParameters(AlgorithmParameters):
                  activation_granularity: Granularity = Granularity.PERTENSOR,
                  range_type: RangeType = RangeType.MEAN_MINMAX,
                  number_samples: int = 300,
-                 target_device: HWConfigType = HWConfigType.CPU,
+                 target_device: TargetDevice = TargetDevice.CPU,
                  ignored_scopes: Optional[List[str]] = None
                  ):
         weight_mode, activation_mode = self._determine_weight_activation_modes(preset)

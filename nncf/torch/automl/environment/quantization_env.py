@@ -40,7 +40,7 @@ from nncf.common.initialization.batchnorm_adaptation import BatchnormAdaptationA
 from nncf.common.quantization.structs import QuantizerConfig
 from nncf.config.extractors import extract_bn_adaptation_init_params
 from nncf.common.utils.logger import logger
-from nncf.common.hardware.config import HWConfigType
+from nncf.common.hardware.config import TargetDevice
 from nncf.common.utils.debug import DEBUG_LOG_DIR
 from nncf.common.utils.debug import is_debug
 from nncf.torch.initialization import PartialDataLoader
@@ -132,7 +132,7 @@ class QuantizationEnv:
                  hw_precision_constraints: HardwareQuantizationConstraints,
                  eval_loader: torch.utils.data.DataLoader,
                  eval_fn: Callable[[nn.Module, torch.utils.data.DataLoader], float],
-                 hw_config_type: HWConfigType,
+                 hw_config_type: TargetDevice,
                  params: QuantizationEnvParams
                  ):
 
@@ -148,7 +148,7 @@ class QuantizationEnv:
 
         # Check and only proceed if target device is supported by Q.Env
         self.hw_cfg_type = hw_config_type
-        assert self.hw_cfg_type in [None, HWConfigType.VPU]
+        assert self.hw_cfg_type in [None, TargetDevice.VPU]
 
         # Set target compression ratio
         self.compression_ratio = params.compression_ratio
@@ -170,7 +170,7 @@ class QuantizationEnv:
         # Configure search space for precision according to target device
         if self.hw_cfg_type is None:
             self.model_bitwidth_space = params.bits
-        elif self.hw_cfg_type is HWConfigType.VPU:
+        elif self.hw_cfg_type is TargetDevice.VPU:
             self.model_bitwidth_space = self._hw_precision_constraints.get_all_unique_bitwidths()
         self.model_bitwidth_space = sorted(list(self.model_bitwidth_space))
 

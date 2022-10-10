@@ -28,7 +28,7 @@ from examples.torch.common.utils import is_staged_quantization
 from nncf.api.compression import CompressionStage
 from nncf.common.compression import BaseCompressionAlgorithmController as BaseController
 from nncf.common.compression import BaseControllerStateNames
-from nncf.common.hardware.config import HWConfigType
+from nncf.common.hardware.config import TargetDevice
 from nncf.config import NNCFConfig
 from tests.common.config_factory import ConfigFactory
 from tests.common.helpers import TEST_ROOT
@@ -460,7 +460,7 @@ def test_cpu_only_mode_produces_cpu_only_model(config, tmp_path, mocker):
         assert not p.is_cuda
 
 
-@pytest.mark.parametrize('target_device', [x.value for x in HWConfigType])
+@pytest.mark.parametrize('target_device', [x.value for x in TargetDevice])
 def test_sample_propagates_target_device_cl_param_to_nncf_config(mocker, tmp_path, target_device):
     config_dict = {
         "input_info":

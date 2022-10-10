@@ -30,7 +30,7 @@ from nncf.common.graph import OUTPUT_NOOP_METATYPES
 from nncf.common.graph.transformations.commands import TargetPoint
 from nncf.common.graph.transformations.commands import TransformationPriority
 from nncf.common.graph.utils import get_first_nodes_of_type
-from nncf.common.hardware.config import HWConfigType
+from nncf.common.hardware.config import TargetDevice
 from nncf.common.hardware.config import HW_CONFIG_TYPE_TARGET_DEVICE_MAP
 from nncf.common.initialization.batchnorm_adaptation import BatchnormAdaptationAlgorithm
 from nncf.common.insertion_point_graph import InsertionPointGraph
@@ -268,7 +268,7 @@ class QuantizationBuilder(TFCompressionAlgorithmBuilder):
 
         self.hw_config = None
         if self._target_device != "TRIAL":
-            hw_config_type = HWConfigType.from_str(HW_CONFIG_TYPE_TARGET_DEVICE_MAP[self._target_device])
+            hw_config_type = TargetDevice.from_str(HW_CONFIG_TYPE_TARGET_DEVICE_MAP[self._target_device])
             hw_config_path = TFHWConfig.get_path_to_hw_config(hw_config_type)
             self.hw_config = TFHWConfig.from_json(hw_config_path)
 

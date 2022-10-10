@@ -22,7 +22,7 @@ from copy import deepcopy
 from nncf.common.utils.ordered_enum import OrderedEnum
 from nncf.common.quantization.structs import QuantizerConfig
 from nncf.common.quantization.structs import QuantizationMode
-from nncf.common.hardware.config import HWConfigType
+from nncf.common.hardware.config import TargetDevice
 
 from nncf.experimental.post_training.algorithms import Algorithm
 from nncf.experimental.post_training.algorithms import AlgorithmParameters
@@ -55,7 +55,7 @@ class MinMaxQuantizationParameters(AlgorithmParameters):
                  weight_quantizer_config: QuantizerConfig = None,
                  activation_quantizer_config: QuantizerConfig = None,
                  number_samples: int = 100,
-                 target_device: HWConfigType = HWConfigType.CPU,
+                 target_device: TargetDevice = TargetDevice.CPU,
                  range_type: RangeType = RangeType.MEAN_MINMAX,
                  quatize_outputs: bool = False,
                  ignored_scopes: List[str] = None,

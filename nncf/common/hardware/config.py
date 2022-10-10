@@ -35,27 +35,27 @@ from nncf.definitions import HW_CONFIG_RELATIVE_DIR
 from nncf.definitions import NNCF_PACKAGE_ROOT_DIR
 from nncf.common.utils.logger import logger as nncf_logger
 
-class HWConfigType(Enum):
+class TargetDevice(Enum):
     CPU = 'CPU'
     GPU = 'GPU'
     VPU = 'VPU'
 
     @staticmethod
-    def from_str(config_value: str) -> 'HWConfigType':
-        if config_value == HWConfigType.CPU.value:
-            return HWConfigType.CPU
-        if config_value == HWConfigType.GPU.value:
-            return HWConfigType.GPU
-        if config_value == HWConfigType.VPU.value:
-            return HWConfigType.VPU
+    def from_str(config_value: str) -> 'TargetDevice':
+        if config_value == TargetDevice.CPU.value:
+            return TargetDevice.CPU
+        if config_value == TargetDevice.GPU.value:
+            return TargetDevice.GPU
+        if config_value == TargetDevice.VPU.value:
+            return TargetDevice.VPU
         raise RuntimeError('Unknown HW config type string')
 
 
 HW_CONFIG_TYPE_TARGET_DEVICE_MAP = {
-    'ANY': HWConfigType.CPU.value,
-    'CPU': HWConfigType.CPU.value,
-    'VPU': HWConfigType.VPU.value,
-    'GPU': HWConfigType.GPU.value,
+    'ANY': TargetDevice.CPU.value,
+    'CPU': TargetDevice.CPU.value,
+    'VPU': TargetDevice.VPU.value,
+    'GPU': TargetDevice.GPU.value,
     'TRIAL': None
 }
 
@@ -71,9 +71,9 @@ class HWConfig(list, ABC):
     ADJUST_PADDING_ATTRIBUTE_NAME = 'adjust_padding'
 
     TYPE_TO_CONF_NAME_DICT = {
-        HWConfigType.CPU: 'cpu.json',
-        HWConfigType.VPU: 'vpu.json',
-        HWConfigType.GPU: 'gpu.json'
+        TargetDevice.CPU: 'cpu.json',
+        TargetDevice.VPU: 'vpu.json',
+        TargetDevice.GPU: 'gpu.json'
     }
 
     def __init__(self):
@@ -86,7 +86,7 @@ class HWConfig(list, ABC):
         pass
 
     @staticmethod
-    def get_path_to_hw_config(hw_config_type: HWConfigType):
+    def get_path_to_hw_config(hw_config_type: TargetDevice):
         return '/'.join([NNCF_PACKAGE_ROOT_DIR, HW_CONFIG_RELATIVE_DIR,
                          HWConfig.TYPE_TO_CONF_NAME_DICT[hw_config_type]])
 

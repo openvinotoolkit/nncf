@@ -12,7 +12,7 @@
 """
 
 from examples.torch.common.sample_config import CustomArgumentParser
-from nncf.common.hardware.config import HWConfigType
+from nncf.common.hardware.config import TargetDevice
 
 
 def get_common_argument_parser():
@@ -27,7 +27,7 @@ def get_common_argument_parser():
     parser.add_argument('--target-device', help='Type of the hardware configuration for compression algorithms',
                         type=str,
                         dest="target_device",
-                        choices=[t.value for t in HWConfigType])
+                        choices=[t.value for t in TargetDevice])
 
     parser.add_argument(
         "--mode",

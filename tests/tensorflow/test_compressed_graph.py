@@ -22,7 +22,7 @@ import tensorflow as tf
 import networkx as nx
 
 from nncf import NNCFConfig
-from nncf.common.hardware.config import HWConfigType
+from nncf.common.hardware.config import TargetDevice
 from tests.tensorflow import test_models
 from tests.tensorflow.helpers import get_empty_config, create_compressed_model_and_algo_for_test
 from tests.tensorflow.helpers import operational_node
@@ -461,7 +461,7 @@ def test_quantize_outputs(desc: ModelDesc, _quantization_case_config):
                       desc.rename_resource_nodes)
 
 
-TYPE_HW = [(HWConfigType.CPU), (HWConfigType.GPU), (HWConfigType.VPU)]
+TYPE_HW = [(TargetDevice.CPU), (TargetDevice.GPU), (TargetDevice.VPU)]
 
 TEST_HW_MODELS_DESC = [
     ModelDesc('resnet50.pb', test_models.ResNet50, [1, 32, 32, 3]),

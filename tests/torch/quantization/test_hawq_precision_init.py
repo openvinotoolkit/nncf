@@ -38,7 +38,7 @@ from examples.torch.object_detection.models.ssd_vgg import SSD_VGG
 from nncf.torch import register_default_init_args
 from nncf.torch.checkpoint_loading import load_state
 from nncf.common.graph import NNCFNodeName
-from nncf.common.hardware.config import HWConfigType
+from nncf.common.hardware.config import TargetDevice
 from nncf.common.quantization.structs import QuantizerGroup
 from nncf.common.utils.debug import set_debug_log_dir
 from nncf.torch.utils import get_model_device
@@ -151,10 +151,10 @@ class BaseConfigBuilder:
         return self
 
     def for_vpu(self):
-        return self._set_target_device(HWConfigType.VPU.value)
+        return self._set_target_device(TargetDevice.VPU.value)
 
     def for_cpu(self):
-        return self._set_target_device(HWConfigType.CPU.value)
+        return self._set_target_device(TargetDevice.CPU.value)
 
     def for_trial(self):
         return self._set_target_device('TRIAL')

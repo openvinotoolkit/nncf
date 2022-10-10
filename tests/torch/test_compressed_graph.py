@@ -33,7 +33,7 @@ from torch import nn
 import torch.nn.functional as F
 import torchvision
 
-from nncf.common.hardware.config import HWConfigType
+from nncf.common.hardware.config import TargetDevice
 from nncf.common.quantization.quantizer_setup import ActivationQuantizationInsertionPoint
 from nncf.common.quantization.quantizer_setup import SingleConfigQuantizerSetup
 from nncf.torch import nncf_model_input
@@ -744,7 +744,7 @@ TEST_HW_MODELS_DESC = [
     ModelDesc("mobilenet_v2", torchvision.models.MobileNetV2, [2, 3, 32, 32])
 ]
 
-TYPE_HW = [(HWConfigType.CPU), (HWConfigType.GPU), (HWConfigType.VPU)]
+TYPE_HW = [(TargetDevice.CPU), (TargetDevice.GPU), (TargetDevice.VPU)]
 
 
 @pytest.fixture(scope='function', params=TYPE_HW)

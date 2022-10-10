@@ -23,7 +23,7 @@ import torch.nn
 from nncf.common.graph import NNCFNodeName
 from nncf.common.graph.transformations.commands import TargetType
 from nncf.torch.dynamic_graph.operation_address import OperationAddress
-from nncf.common.hardware.config import HWConfigType
+from nncf.common.hardware.config import TargetDevice
 from nncf.torch.graph.transformations.commands import PTTargetPoint
 from nncf.torch.quantization.layers import AsymmetricQuantizer
 from nncf.common.quantization.structs import NonWeightQuantizerId
@@ -563,7 +563,7 @@ CAT_UNIFIED_SCALE_TEST_STRUCTS = [(SingleCatModel, 3, 4),
 
 @pytest.mark.parametrize("target_device, model_creator, ref_aq_module_count, ref_quantizations",
                          [(t_dev,) + rest for t_dev, rest in
-                          itertools.product([x.value for x in HWConfigType],
+                          itertools.product([x.value for x in TargetDevice],
                                             CAT_UNIFIED_SCALE_TEST_STRUCTS)])
 def test_unified_scales_with_concat(target_device, model_creator, ref_aq_module_count, ref_quantizations):
     nncf_config = get_quantization_config_without_range_init(model_size=1)

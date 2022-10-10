@@ -17,7 +17,7 @@ import pytest
 import tensorflow as tf
 from tensorflow.keras import layers
 
-from nncf.common.hardware.config import HWConfigType
+from nncf.common.hardware.config import TargetDevice
 from nncf.tensorflow.quantization.utils import collect_fake_quantize_layers
 from tests.tensorflow.helpers import create_compressed_model_and_algo_for_test
 from tests.tensorflow.quantization.utils import get_basic_quantization_config
@@ -88,7 +88,7 @@ def get_total_quantizations(model: tf.keras.Model) -> int:
 
 @pytest.mark.parametrize("target_device, model_creator, ref_aq_module_count, ref_quantizations",
                          [(t_dev, ) + rest for t_dev, rest in
-                             itertools.product([x.value for x in HWConfigType],
+                             itertools.product([x.value for x in TargetDevice],
                                                CAT_UNIFIED_SCALE_TEST_STRUCTS)])
 def test_unified_scales_with_concat(target_device, model_creator, ref_aq_module_count, ref_quantizations):
     nncf_config = get_basic_quantization_config()
@@ -151,7 +151,7 @@ def get_shared_conv_test_model():
     return tf.keras.Model(inputs=inputs, outputs=out)
 
 
-@pytest.mark.parametrize("target_device", [t_dev.value for t_dev in HWConfigType])
+@pytest.mark.parametrize("target_device", [t_dev.value for t_dev in TargetDevice])
 def test_shared_op_unified_scales(target_device):
     nncf_config = get_basic_quantization_config()
     nncf_config["target_device"] = target_device

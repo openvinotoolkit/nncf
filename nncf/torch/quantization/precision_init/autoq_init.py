@@ -17,7 +17,7 @@ from typing import Dict, Tuple, List, Optional
 import os
 
 from nncf.common.utils.debug import is_debug
-from nncf.common.hardware.config import HWConfigType
+from nncf.common.hardware.config import TargetDevice
 from nncf.common.utils.logger import logger
 from nncf.common.utils.os import safe_open
 from nncf.config.schemata.defaults import AUTOQ_EVAL_SUBSET_RATIO
@@ -48,7 +48,7 @@ class AutoQPrecisionInitParams(BasePrecisionInitParams):
                  compression_ratio: float = None,
                  eval_subset_ratio: float = None,
                  ddpg_hparams_dict: Dict = None,
-                 hw_cfg_type: HWConfigType = None,
+                 hw_cfg_type: TargetDevice = None,
                  skip_constraint: bool = False,
                  finetune: bool = False,
                  bits: List[int] = None):
@@ -70,7 +70,7 @@ class AutoQPrecisionInitParams(BasePrecisionInitParams):
     @classmethod
     def from_config(cls, autoq_init_config_dict: Dict,
                     user_init_args: AutoQPrecisionInitArgs,
-                    target_hw_config_type: Optional[HWConfigType]) -> 'AutoQPrecisionInitParams':
+                    target_hw_config_type: Optional[TargetDevice]) -> 'AutoQPrecisionInitParams':
         dict_copy = autoq_init_config_dict.copy()
         dump_autoq_data = dict_copy.pop('dump_init_precision_data', False)
         iter_number = dict_copy.pop('iter_number', AUTOQ_ITER_NUMBER)

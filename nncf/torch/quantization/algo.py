@@ -41,7 +41,7 @@ from nncf.common.graph.transformations.commands import TargetPoint
 from nncf.common.graph.transformations.commands import TargetType
 from nncf.common.graph.utils import get_first_nodes_of_type
 from nncf.common.hardware.config import HWConfig
-from nncf.common.hardware.config import HWConfigType
+from nncf.common.hardware.config import TargetDevice
 from nncf.common.hardware.config import HW_CONFIG_TYPE_TARGET_DEVICE_MAP
 from nncf.common.initialization.batchnorm_adaptation import BatchnormAdaptationAlgorithm
 from nncf.common.insertion_point_graph import InsertionPointGraph
@@ -467,7 +467,7 @@ class QuantizationBuilder(PTCompressionAlgorithmBuilder):
         hw_config_type = None
         target_device = self.config.get('target_device', 'ANY')
         if target_device != 'TRIAL':
-            hw_config_type = HWConfigType.from_str(HW_CONFIG_TYPE_TARGET_DEVICE_MAP[target_device])
+            hw_config_type = TargetDevice.from_str(HW_CONFIG_TYPE_TARGET_DEVICE_MAP[target_device])
         if hw_config_type is not None:
             hw_config_path = PTHWConfig.get_path_to_hw_config(hw_config_type)
             self.hw_config = PTHWConfig.from_json(hw_config_path)
@@ -558,7 +558,7 @@ class QuantizationBuilder(PTCompressionAlgorithmBuilder):
                 precision_init_args
             )
         elif precision_init_type == "autoq":
-            if self.hw_config is not None and self.hw_config.target_device != HWConfigType.VPU.value:
+            if self.hw_config is not None and self.hw_config.target_device != TargetDevice.VPU.value:
                 raise ValueError("Unsupported device ({}). Automatic Precision Initialization only supports for "
                                  "target_device NONE or VPU".format(self.hw_config.target_device))
             try:
@@ -571,7 +571,7 @@ class QuantizationBuilder(PTCompressionAlgorithmBuilder):
 
             hw_config_type = None
             if self.hw_config is not None:
-                hw_config_type = HWConfigType.from_str(self.hw_config.target_device)
+                hw_config_type = TargetDevice.from_str(self.hw_config.target_device)
             precision_init_params = AutoQPrecisionInitParams.from_config(init_precision_config,
                                                                          precision_init_args,
                                                                          hw_config_type)

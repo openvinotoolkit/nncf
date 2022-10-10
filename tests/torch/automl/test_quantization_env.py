@@ -17,7 +17,7 @@ import pytest
 from nncf import NNCFConfig
 from nncf.torch.automl.environment.quantization_env import QuantizationEnv, ModelSizeCalculator, QuantizationEnvParams
 from nncf.torch.dynamic_graph.graph_tracer import create_input_infos
-from nncf.common.hardware.config import HWConfigType, HWConfig
+from nncf.common.hardware.config import TargetDevice, HWConfig
 from nncf.torch.hardware.config import PTHWConfig
 from nncf.torch.nncf_network import NNCFNetwork
 from nncf.torch.quantization.algo import ExperimentalQuantizationBuilder, PropagationBasedQuantizerSetupGenerator
@@ -36,7 +36,7 @@ def create_test_quantization_env(model_creator=BasicConvTestModel, input_info_cf
 
     model = model_creator()
     nncf_network = NNCFNetwork(model, input_infos=create_input_infos(input_info_cfg))
-    hw_config_type = HWConfigType.VPU
+    hw_config_type = TargetDevice.VPU
     hw_config_path = HWConfig.get_path_to_hw_config(hw_config_type)
     hw_config = PTHWConfig.from_json(hw_config_path)
     setup = PropagationBasedQuantizerSetupGenerator(NNCFConfig(),
@@ -70,7 +70,7 @@ def create_test_quantization_env(model_creator=BasicConvTestModel, input_info_cf
                            constraints,
                            data_loader,
                            lambda *x: 0,
-                           hw_config_type=HWConfigType.VPU,
+                           hw_config_type=TargetDevice.VPU,
                            params=QuantizationEnvParams(compression_ratio=0.15,
                                                         eval_subset_ratio=1.0,
                                                         skip_constraint=False,
