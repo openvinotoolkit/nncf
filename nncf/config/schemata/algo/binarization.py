@@ -35,7 +35,7 @@ BINARIZATION_SCHEMA = {
         },
         "mode": with_attributes(STRING,
                                 description="Selects the mode of binarization - either 'xnor' for XNOR binarization,"
-                                            "or 'dorefa' for DoReFa binarization",
+                                            "or 'dorefa' for DoReFa binarization.",
                                 enum=BINARIZATION_MODE_OPTIONS,
                                 default=BINARIZATION_MODE),
         "initializer": QUANTIZATION_INITIALIZER_SCHEMA,
