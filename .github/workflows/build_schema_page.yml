@@ -3,11 +3,13 @@ on:
   push:
     branches:
       - develop
+      - test_for_doc_build_trigger
     paths:
       - nncf/config/**
   pull_request:
     branches:
       - develop
+      - test_for_doc_build_trigger
     paths:
       - nncf/config/**
     types:
