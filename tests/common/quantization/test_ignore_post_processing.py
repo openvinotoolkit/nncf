@@ -26,6 +26,7 @@ from nncf.common.graph.operator_metatypes import OutputNoopMetatype
 from nncf.common.graph.operator_metatypes import InputNoopMetatype
 from nncf.common.graph.definitions import NNCFGraphNodeType
 from nncf.common.insertion_point_graph import InsertionPointGraph
+from nncf.common.utils.registry import Registry
 
 from nncf.experimental.onnx.graph.metatypes.onnx_metatypes import ONNXTopKMetatype
 from nncf.experimental.onnx.graph.metatypes.onnx_metatypes import ONNXNonMaxSuppressionMetatype
@@ -33,6 +34,8 @@ from nncf.experimental.onnx.graph.metatypes.onnx_metatypes import WEIGHT_LAYER_M
 from nncf.experimental.onnx.hardware.fused_patterns import ONNX_HW_FUSED_PATTERNS
 
 from collections import Counter
+
+ALL_SYNTHETIC_NNCF_GRAPH = Registry('ONNX_SYNTHETIC_MODELS')
 
 
 class NodeWithType:
@@ -71,6 +74,7 @@ class NNCFGraphToTest:
                 output_port_counter[output_node_id] += 1
 
 
+@ALL_SYNTHETIC_NNCF_GRAPH.register()
 class ModelToTest1(NNCFGraphToTest):
     #              Input_1       Input_2
     #                 |             |
@@ -112,6 +116,7 @@ class ModelToTest1(NNCFGraphToTest):
         self.reference_ignored_scopes = ['Identity_2', 'Identity_1', 'Identity_4', 'Identity_5']
 
 
+@ALL_SYNTHETIC_NNCF_GRAPH.register()
 class ModelToTest2(NNCFGraphToTest):
     #          Input_1
     #             |
@@ -146,6 +151,7 @@ class ModelToTest2(NNCFGraphToTest):
         self.reference_ignored_scopes = ['Identity_2', 'Identity_1']
 
 
+@ALL_SYNTHETIC_NNCF_GRAPH.register()
 class ModelToTest3(NNCFGraphToTest):
     #          Input_1
     #             |
@@ -183,6 +189,7 @@ class ModelToTest3(NNCFGraphToTest):
         self.reference_ignored_scopes = ['Identity_3']
 
 
+@ALL_SYNTHETIC_NNCF_GRAPH.register()
 class ModelToTest4(NNCFGraphToTest):
     #          Input_1
     #             |
@@ -221,10 +228,51 @@ class ModelToTest4(NNCFGraphToTest):
         self.reference_ignored_scopes = ['Identity_3', 'Identity_2', 'Identity_5', 'Identity_4', 'Identity_1']
 
 
+@ALL_SYNTHETIC_NNCF_GRAPH.register()
+class ModelToTest5(NNCFGraphToTest):
+    #          Input_1
+    #             |
+    #           Conv_1
+    #             |
+    #           Identity_1
+    #             |       \
+    #        Identity_2   Identity_3
+    #             |      /       |
+    #           Identity_4    Identity_5
+    #                \       /
+    #                 \     /
+    #                  Identity_6
+    #                    |
+    #                 Identity_7
+    #                    |
+    #                  Output_1
+
+    def __init__(self):
+        nodes = [NodeWithType('Input_1', 'Input'),
+                 NodeWithType('Conv_1', 'Conv'),
+                 NodeWithType('Identity_1', 'Identity'),
+                 NodeWithType('Identity_2', 'Identity'),
+                 NodeWithType('Identity_3', 'Identity'),
+                 NodeWithType('Identity_4', 'Identity'),
+                 NodeWithType('Identity_5', 'Identity'),
+                 NodeWithType('Output_1', 'Output'),
+                 NodeWithType('Identity_6', 'Identity'),
+                 NodeWithType('Identity_7', 'Identity')
+                 ]
+        node_edges = {'Input_1': ['Conv_1'], 'Conv_1': ['Identity_1'], 'Identity_1': ['Identity_2', 'Identity_3'],
+                      'Identity_2': ['Identity_4'],
+                      'Identity_3': ['Identity_5', 'Identity_4'], 'Identity_4': ['Identity_6'],
+                      'Identity_5': ['Identity_6'],
+                      'Identity_6': ['Identity_7'], 'Identity_7': ['Output_1']}
+        super().__init__(nodes, node_edges)
+        self.reference_ignored_scopes = []
+
+
 # pylint:disable=protected-access
 
-@pytest.mark.parametrize('model_to_test', [ModelToTest1(), ModelToTest2(), ModelToTest3(), ModelToTest4()])
+@pytest.mark.parametrize('model_to_test', ALL_SYNTHETIC_NNCF_GRAPH.values())
 def test_add_ignoring_nodes_after_last_weight_node(model_to_test):
+    model_to_test = model_to_test()
     nncf_graph = model_to_test.nncf_graph
 
     ip_graph = InsertionPointGraph(nncf_graph)
