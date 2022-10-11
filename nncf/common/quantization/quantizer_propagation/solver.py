@@ -52,6 +52,7 @@ from nncf.common.quantization.structs import QuantizerGroup
 from nncf.common.quantization.structs import UnifiedScaleType
 from nncf.common.utils.debug import DEBUG_LOG_DIR
 from nncf.common.utils.debug import is_debug
+from nncf.common.utils.dot_file_rw import write_dot_graph
 from nncf.common.utils.helpers import matches_any
 from nncf.common.utils.logger import logger as nncf_logger
 from nncf.common.graph.operator_metatypes import UnknownMetatype
@@ -729,7 +730,7 @@ class QuantizerPropagationSolver:
                                                       finished_ids_str),
             "labelloc": "t"}
         pth = deepcopy(dump_path)
-        nx.drawing.nx_pydot.write_dot(out_graph, pth)
+        write_dot_graph(out_graph, pth)
 
     def setup_initial_quantizers(self,
                                  quant_prop_graph: QuantizerPropagationStateGraph) -> QuantizerPropagationStateGraph:

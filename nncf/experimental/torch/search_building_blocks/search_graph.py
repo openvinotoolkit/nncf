@@ -22,6 +22,7 @@ import networkx as nx
 from nncf.common.graph.graph import NNCFGraph
 from nncf.common.graph.graph import NNCFNodeName
 from nncf.common.graph.graph_matching import find_subgraphs_matching_pattern
+from nncf.common.utils.dot_file_rw import write_dot_graph
 from nncf.torch.graph.graph import PTNNCFGraph
 from nncf.torch.graph.operator_metatypes import PTRELUMetatype
 from nncf.torch.hardware.fused_patterns import PT_HW_FUSED_PATTERNS
@@ -236,7 +237,7 @@ class SearchGraph:
 
     def visualize_graph(self, path: str):
         out_graph = self._get_graph_for_visualization()
-        nx.drawing.nx_pydot.write_dot(out_graph, path)
+        write_dot_graph(out_graph, path)
 
 
 def get_search_graph(original_graph: PTNNCFGraph, hw_fused_ops: bool) -> SearchGraph:
