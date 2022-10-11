@@ -68,7 +68,7 @@ class MovementSparsityConfigBuilder:
                         "update_per_optimizer_step": True,
                     },
                     "sparse_structure_by_scopes": [
-                        ["block", [8, 8], "{re}.*attention*"],
+                        ["block", [16, 16], "{re}.*attention*"],
                         ["per_dim", [0], "{re}.*BertIntermediate.*"],
                         ["per_dim", [1], "{re}.*BertOutput.*"],
                     ],
@@ -187,6 +187,7 @@ class MovementSparsityCallback(TrainerCallback):
         mvmt_ctrl = self.compression_ctrl  # TODO: mutliple child ctrls
         # should move into the scheduler codes
         if self.compression_ctrl.scheduler.get_state()["current_epoch"] == mvmt_ctrl.scheduler.warmup_end_epoch:
+            print('Fill stage')
             mvmt_ctrl.reset_independent_structured_mask()
             mvmt_ctrl.resolve_structured_mask()
             mvmt_ctrl.populate_structured_mask()
@@ -249,10 +250,9 @@ def test_can_create_movement_sparsity_layers(tmp_path, nncf_config_builder):
             assert count_movement_op == 1
 
 
-def run_movement_pipeline(tmp_path, compression_ctrl, compressed_model, callbacks: Optional[List[TrainerCallback]] = None):  # temporarily remove fixture for model & dataset
+def run_movement_pipeline(tmp_path, compression_ctrl, compressed_model, callbacks: Optional[List[TrainerCallback]] = None, **kwargs):  # temporarily remove fixture for model & dataset
     train_dataset, eval_dataset = yelp_dataset()
-
-    training_args = TrainingArguments(
+    args = dict(
         output_dir=tmp_path / "test_trainer",
         label_names=["labels"],
         evaluation_strategy="epoch",
@@ -266,6 +266,8 @@ def run_movement_pipeline(tmp_path, compression_ctrl, compressed_model, callback
         disable_tqdm=True,
         no_cuda=True,  # TODO: where to set cuda devices for cuda training?
     )
+    args.update(kwargs)
+    training_args = TrainingArguments(**args)
 
     def compute_metrics(eval_pred):
         logits, labels = eval_pred
@@ -381,6 +383,7 @@ def test_compression_loss(tmp_path, nncf_config_builder):
     MovementSparsityConfigBuilder(),
 ])
 def test_binary_mask(tmp_path, nncf_config_builder):
+    # TODO: ref_binary_mask` in this test is incorrect. We have `max_percentile` argument when thresholding.
     nncf_config = nncf_config_builder().build()
     nncf_config['log_dir'] = tmp_path
     compression_ctrl, compressed_model = create_compressed_model(bert_tiny_torch_model(), nncf_config)
@@ -479,7 +482,62 @@ def test_export_onnx_has_sparsified_param(tmp_path, nncf_config_builder):
         check_onnx_has_sparsified_param(compressed_model, compression_ctrl, onnx_path)
 
 
+@pytest.mark.parametrize('nncf_config_builder', [
+    MovementSparsityConfigBuilder().warmup_range(0, 1),
+])
+def test_structured_mask_obeys_unstructured(tmp_path, nncf_config_builder):
+    nncf_config = nncf_config_builder().build()
+    nncf_config['log_dir'] = tmp_path
+    compression_ctrl, compressed_model = create_compressed_model(bert_tiny_torch_model(), nncf_config)
+    for m in compression_ctrl.sparsified_module_info:
+        torch.nn.init.normal_(m.operand._weight_importance)
+        torch.nn.init.normal_(m.operand._bias_importance)
+
+    def get_sparsified_module_mask(compression_ctrl):
+        mask_dict = {}
+        for m in compression_ctrl.sparsified_module_info:
+            mask_dict[(m, 'weight')] = m.operand.weight_ctx.binary_mask.data.clone()
+            mask_dict[(m, 'bias')] = m.operand.bias_ctx.binary_mask.data.clone()
+        return mask_dict
+
+    class StructuredMaskingCallback(MovementSparsityCallback):
+        def on_epoch_begin(self, args: TrainingArguments, state: TrainerState, control: TrainerControl, **kwargs):
+            if state.epoch != self.compression_ctrl.scheduler.warmup_end_epoch:
+                super().on_epoch_begin(args, state, control, **kwargs)
+            else:
+                unstuctured_mask_dict = get_sparsified_module_mask(self.compression_ctrl)
+                super().on_epoch_begin(args, state, control, **kwargs)  # conduct fill stage
+                stuctured_mask_dict = get_sparsified_module_mask(self.compression_ctrl)
+                for key in unstuctured_mask_dict:
+                    unstuctured_mask = unstuctured_mask_dict[key]
+                    stuctured_mask = stuctured_mask_dict[key]
+                    assert torch.all(stuctured_mask >= unstuctured_mask)  # structured mask preserves more "1"s
+
+    callback = StructuredMaskingCallback(compression_ctrl)
+    run_movement_pipeline(tmp_path, compression_ctrl, compressed_model, [callback], num_train_epochs=2)
+    # for epoch, log in callback.get_compress_log().items():
+    #     print(log)
+
+
+@pytest.mark.parametrize('nncf_config_builder', [
+    MovementSparsityConfigBuilder().warmup_range(0, 1),
+])
+def test_fill_stage_has_fixed_sparsity(tmp_path, nncf_config_builder):
+    nncf_config = nncf_config_builder().build()
+    nncf_config['log_dir'] = tmp_path
+    compression_ctrl, compressed_model = create_compressed_model(bert_tiny_torch_model(), nncf_config)
+    for m in compression_ctrl.sparsified_module_info:
+        torch.nn.init.normal_(m.operand._weight_importance)
+        torch.nn.init.normal_(m.operand._bias_importance)
+
+    callback = MovementSparsityCallback(compression_ctrl)
+    run_movement_pipeline(tmp_path, compression_ctrl, compressed_model, [callback], num_train_epochs=2)
+    rela_sparsity = [log['relative_sparsity'] for epoch, log in callback.get_compress_log().items()
+                     if epoch > nncf_config_builder.get_warmup_range()[1]]
+    assert all(sparsity == approx(rela_sparsity[0]) for sparsity in rela_sparsity)
+
+
 if __name__ == "__main__":
     # test_can_create_movement_sparsity_layers(MovementSparsityConfigBuilder())
     # test_can_run_full_pipeline(Path('/tmp'), MovementSparsityConfigBuilder)
-    test_export_onnx_has_sparsified_param(Path('/tmp'), MovementSparsityConfigBuilder())
+    test_structured_mask_obeys_unstructured(Path('/tmp'), MovementSparsityConfigBuilder().warmup_range(0, 1))
