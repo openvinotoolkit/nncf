@@ -200,8 +200,8 @@ class QuantizationProposal:
 
 class PostprocessingNodeLocator:
     @staticmethod
-    def _is_node_in_quantizable_nodes(node_key: str, quant_prop_graph: QuantizerPropagationStateGraph,
-                                      quantizable_layer_nodes_names: List[str]) -> bool:
+    def _is_node_has_underlying_weights(node_key: str, quant_prop_graph: QuantizerPropagationStateGraph,
+                                        quantizable_layer_nodes_names: List[str]) -> bool:
         underlying_nncf_nodes = quant_prop_graph.op_node_keys_to_underlying_nodes_mapping[node_key]
         for node in underlying_nncf_nodes:
             if node.data[NNCFGraph.KEY_NODE_ATTR] in quantizable_layer_nodes_names:
@@ -216,9 +216,6 @@ class PostprocessingNodeLocator:
         if node_metatype == metatypes[1]:
             traverse_path_flags['is_nms_visited'] = True
 
-    @staticmethod
-    def _mark_node_as_visited(node_key: str, visited_nodes: Set[str]) -> None:
-        visited_nodes.add(node_key)
 
     @staticmethod
     def _get_node_metatype(node_key: str, quant_prop_graph: QuantizerPropagationStateGraph) -> OperatorMetatype:
@@ -280,7 +277,7 @@ class PostprocessingNodeLocator:
         def backward_traverse_function(node_key: str, output: List[str], visited_nodes: Set[str],
                                        traverse_path_flags: Dict[str, bool]) -> Tuple[bool, List[str]]:
             """
-            Realizes the DFS search of the quantization ignored nodes in graph.
+            Realizes the search of the quantization ignored nodes in graph.
             Only QuantizerPropagationStateGraphNodeType.OPERATOR nodes are processed in the traversing.
             If the current node is in the list of the quantizable nodes with weights,
              the traversing in this path is stopped.
@@ -305,8 +302,8 @@ class PostprocessingNodeLocator:
                     return False, are_weight_nodes
                 if node_key in visited_nodes:
                     return True, are_weight_nodes
-                if PostprocessingNodeLocator._is_node_in_quantizable_nodes(node_key, quant_prop_graph,
-                                                                           quantizable_layer_nodes_names):
+                if PostprocessingNodeLocator._is_node_has_underlying_weights(node_key, quant_prop_graph,
+                                                                             quantizable_layer_nodes_names):
                     are_weight_nodes.append(True)
                     return True, are_weight_nodes
                 are_weight_nodes.append(False)
@@ -320,8 +317,8 @@ class PostprocessingNodeLocator:
 
             node_metatype = PostprocessingNodeLocator._get_node_metatype(node_key, quant_prop_graph)
             # If the node not weight quantizable
-            if not PostprocessingNodeLocator._is_node_in_quantizable_nodes(node_key, quant_prop_graph,
-                                                                           quantizable_layer_nodes_names):
+            if not PostprocessingNodeLocator._is_node_has_underlying_weights(node_key, quant_prop_graph,
+                                                                             quantizable_layer_nodes_names):
                 if node_metatype not in [InputNoopMetatype, OutputNoopMetatype]:
                     PostprocessingNodeLocator._update_traverse_path_flags(node_metatype, traverse_path_flags,
                                                                           post_processing_metatypes)
@@ -332,12 +329,12 @@ class PostprocessingNodeLocator:
                                                                                        output=[],
                                                                                        traverse_forward=True)
                     if any(is_weight_node_after_the_current):
-                        PostprocessingNodeLocator._mark_node_as_visited(node_key, visited_nodes)
+                        visited_nodes.add(node_key)
                         return True, output
                     output.append(node_key)
-                PostprocessingNodeLocator._mark_node_as_visited(node_key, visited_nodes)
+                visited_nodes.add(node_key)
                 return False, output
-            PostprocessingNodeLocator._mark_node_as_visited(node_key, visited_nodes)
+            visited_nodes.add(node_key)
             return True, output
 
         partial_backward_traverse_function = partial(backward_traverse_function, visited_nodes=visited_nodes,

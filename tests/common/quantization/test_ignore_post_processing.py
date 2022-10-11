@@ -11,6 +11,8 @@
  limitations under the License.
 """
 
+from typing import List
+
 import pytest
 
 from nncf.experimental.onnx.graph.metatypes.onnx_metatypes import ONNX_OPERATION_METATYPES
@@ -33,10 +35,17 @@ from nncf.experimental.onnx.hardware.fused_patterns import ONNX_HW_FUSED_PATTERN
 from collections import Counter
 
 
+class NodeWithType:
+    def __init__(self, name, op_type):
+        self.node_name = name
+        self.node_op_type = op_type
+
+
 class NNCFGraphToTest:
-    def __init__(self, node_names, node_op_types, node_edges):
+    def __init__(self, nodes: List[NodeWithType], node_edges):
         self.nncf_graph = NNCFGraph()
-        for node_name, node_op_type in zip(node_names, node_op_types):
+        for node in nodes:
+            node_name, node_op_type = node.node_name, node.node_op_type
             if 'Output' in node_name:
                 metatype = OutputNoopMetatype
                 node_op_type = NNCFGraphNodeType.OUTPUT_NODE
@@ -80,15 +89,26 @@ class ModelToTest1(NNCFGraphToTest):
     #                Output_1    Output_2
     #
     def __init__(self):
-        node_names = ['Input_1', 'Conv_1', 'Identity_1', 'NMS_1', 'Identity_2', 'TopK_1', 'Output_1', 'Input_2',
-                      'Identity_3', 'FC_1', 'Identity_4', 'NMS_2', 'Identity_5', 'Output_2']
-        node_op_types = ['Input', 'Conv', 'Identity', 'NonMaxSuppression', 'Identity', 'TopK', 'Output', 'Input',
-                         'Identity', 'Gemm', 'Identity', 'NonMaxSuppression', 'Identity', 'Output']
+        nodes = [NodeWithType('Input_1', 'Input'),
+                 NodeWithType('Conv_1', 'Conv'),
+                 NodeWithType('Identity_1', 'Identity'),
+                 NodeWithType('NMS_1', 'NonMaxSuppression'),
+                 NodeWithType('Identity_2', 'Identity'),
+                 NodeWithType('TopK_1', 'TopK'),
+                 NodeWithType('Output_1', 'Output'),
+                 NodeWithType('Input_2', 'Input'),
+                 NodeWithType('Identity_3', 'Identity'),
+                 NodeWithType('FC_1', 'Gemm'),
+                 NodeWithType('Identity_4', 'Identity'),
+                 NodeWithType('NMS_2', 'NonMaxSuppression'),
+                 NodeWithType('Identity_5', 'Identity'),
+                 NodeWithType('Output_2', 'Output'),
+                 ]
         node_edges = {'Input_1': ['Conv_1'], 'Conv_1': ['Identity_1'], 'Identity_1': ['NMS_1'], 'NMS_1': ['Identity_2'],
                       'Identity_2': ['TopK_1'], 'TopK_1': ['Output_1'], 'Input_2': ['Identity_3'],
                       'Identity_3': ['NMS_1', 'FC_1'], 'FC_1': ['Identity_4'], 'Identity_4': ['NMS_2'],
                       'NMS_2': ['Identity_5'], 'Identity_5': ['Output_2']}
-        super().__init__(node_names, node_op_types, node_edges)
+        super().__init__(nodes, node_edges)
         self.reference_ignored_scopes = ['Identity_2', 'Identity_1', 'Identity_4', 'Identity_5']
 
 
@@ -110,12 +130,19 @@ class ModelToTest2(NNCFGraphToTest):
     #           Output_1
 
     def __init__(self):
-        node_names = ['Input_1', 'Conv_1', 'Identity_1', 'TopK_1', 'Identity_2', 'TopK_2', 'Identity_3', 'Output_1']
-        node_op_types = ['Input', 'Conv', 'Identity', 'TopK', 'Identity', 'TopK', 'Identity', 'Output']
+        nodes = [NodeWithType('Input_1', 'Input'),
+                 NodeWithType('Conv_1', 'Conv'),
+                 NodeWithType('Identity_1', 'Identity'),
+                 NodeWithType('TopK_1', 'TopK'),
+                 NodeWithType('Identity_2', 'Identity'),
+                 NodeWithType('TopK_2', 'TopK'),
+                 NodeWithType('Identity_3', 'Identity'),
+                 NodeWithType('Output_1', 'Output')
+                 ]
         node_edges = {'Input_1': ['Conv_1'], 'Conv_1': ['Identity_1'], 'Identity_1': ['TopK_1'],
                       'TopK_1': ['Identity_2'],
                       'Identity_2': ['TopK_2'], 'TopK_2': ['Identity_3'], 'Identity_3': ['Output_1']}
-        super().__init__(node_names, node_op_types, node_edges)
+        super().__init__(nodes, node_edges)
         self.reference_ignored_scopes = ['Identity_2', 'Identity_1']
 
 
@@ -137,16 +164,22 @@ class ModelToTest3(NNCFGraphToTest):
     #           Output_1
 
     def __init__(self):
-        node_names = ['Input_1', 'Conv_1', 'Identity_1', 'TopK_1', 'Identity_2', 'NMS_1', 'Identity_3', 'Output_1',
-                      'Conv_2', 'Output_2']
-        node_op_types = ['Input', 'Conv', 'Identity', 'TopK', 'Identity', 'NonMaxSuppression', 'Identity', 'Output',
-                         'Conv',
-                         'Output']
+        nodes = [NodeWithType('Input_1', 'Input'),
+                 NodeWithType('Conv_1', 'Conv'),
+                 NodeWithType('Identity_1', 'Identity'),
+                 NodeWithType('TopK_1', 'TopK'),
+                 NodeWithType('Identity_2', 'Identity'),
+                 NodeWithType('NMS_1', 'NonMaxSuppression'),
+                 NodeWithType('Identity_3', 'Identity'),
+                 NodeWithType('Output_1', 'Output'),
+                 NodeWithType('Conv_2', 'Conv'),
+                 NodeWithType('Output_2', 'Output')
+                 ]
         node_edges = {'Input_1': ['Conv_1'], 'Conv_1': ['Identity_1'], 'Identity_1': ['TopK_1'],
                       'TopK_1': ['Identity_2'],
                       'Identity_2': ['NMS_1', 'Conv_2'], 'NMS_1': ['Identity_3'], 'Identity_3': ['Output_1'],
                       'Conv_2': ['Output_2']}
-        super().__init__(node_names, node_op_types, node_edges)
+        super().__init__(nodes, node_edges)
         self.reference_ignored_scopes = ['Identity_3']
 
 
@@ -169,16 +202,22 @@ class ModelToTest4(NNCFGraphToTest):
     #                  Output_1
 
     def __init__(self):
-        node_names = ['Input_1', 'Conv_1', 'Identity_1', 'TopK_1', 'Identity_2', 'NMS_1', 'Identity_3', 'Output_1',
-                      'Identity_4', 'Identity_5']
-        node_op_types = ['Input', 'Conv', 'Identity', 'TopK', 'Identity', 'NonMaxSuppression', 'Identity', 'Output',
-                         'Identity',
-                         'Identity']
+        nodes = [NodeWithType('Input_1', 'Input'),
+                 NodeWithType('Conv_1', 'Conv'),
+                 NodeWithType('Identity_1', 'Identity'),
+                 NodeWithType('TopK_1', 'TopK'),
+                 NodeWithType('Identity_2', 'Identity'),
+                 NodeWithType('NMS_1', 'NonMaxSuppression'),
+                 NodeWithType('Identity_3', 'Identity'),
+                 NodeWithType('Output_1', 'Output'),
+                 NodeWithType('Identity_4', 'Identity'),
+                 NodeWithType('Identity_5', 'Identity')
+                 ]
         node_edges = {'Input_1': ['Conv_1'], 'Conv_1': ['Identity_1'], 'Identity_1': ['TopK_1', 'Identity_4'],
                       'TopK_1': ['Identity_2'],
                       'Identity_2': ['NMS_1'], 'NMS_1': ['Identity_3'], 'Identity_3': ['Output_1'],
                       'Identity_4': ['Identity_2', 'Identity_5'], 'Identity_5': ['NMS_1']}
-        super().__init__(node_names, node_op_types, node_edges)
+        super().__init__(nodes, node_edges)
         self.reference_ignored_scopes = ['Identity_3', 'Identity_2', 'Identity_5', 'Identity_4', 'Identity_1']
 
 
