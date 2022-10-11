@@ -583,7 +583,9 @@ def load_state(model: torch.nn.Module, state_dict_to_load: dict, is_resume: bool
 Classes should have a docstring below the class definition describing the class. If your class
 has public attributes, they should be documented here follow the same formatting as a function's
 params section. The `__init__` function and other magic methods may be left without a textual description,
-if there is nothing special about this exact implementation of the magic method.
+if there is nothing special about this exact implementation of the magic method 
+(i.e. the function has no notable side effects, the implementation is done in a conventional way such as 
+hashing all fields as a tuple in `__hash__` or concatenating string-like objects in `__add__` etc.)
 
 ```python
 class ModelTransformer:
