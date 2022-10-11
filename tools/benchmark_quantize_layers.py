@@ -39,22 +39,17 @@ HIGH_BATCH_INPUT_SIZE = [128, 96, 64, 64]
 
 TEST_PLACES = ['weights', 'activations']
 TEST_GRANULARITY = ['per_tensor', 'per_channel']
-TEST_SYMMETRIC = [True,]# False]
-#TEST_DEVICES = [torch.device('cuda'), torch.device('cpu')]
-TEST_DEVICES = [torch.device('cuda')]
+TEST_SYMMETRIC = [True, False]
+TEST_DEVICES = [torch.device('cuda'), torch.device('cpu')]
 TEST_BATCHES = [{'mode': "low batch", 'input_size': LOW_BATCH_INPUT_SIZE,
                  'runs': {torch.device('cuda'): GPU_RUNS_LOW_BATCH, torch.device('cpu'): CPU_RUNS}},
                 {'mode': "high batch", 'input_size': HIGH_BATCH_INPUT_SIZE,
                  'runs': {torch.device('cuda'): GPU_RUNS_HIGH_BATCH, torch.device('cpu'): CPU_RUNS}}]
 TEST_DTYPES = [torch.float, torch.half]
-#TEST_DISTR_MODE = ['SYNK', 'DATAPARALLEL', 'DATADISTRIBUTED']
-TEST_DISTR_MODE = ['SYNK',]# 'DATAPARALLEL']
-#TEST_NARROW_RANGE = [False, True]
-TEST_NARROW_RANGE = [False]
-#TEST_TIMING_MODE = ['KERNEL', 'WALL']
-TEST_TIMING_MODE = ['KERNEL']
-#TEST_REFERENCE = [True, False]
-TEST_REFERENCE = [False]
+TEST_DISTR_MODE = ['SYNK', 'DATAPARALLEL', 'DATADISTRIBUTED']
+TEST_NARROW_RANGE = [False, True]
+TEST_TIMING_MODE = ['KERNEL', 'WALL']
+TEST_REFERENCE = [True, False]
 
 TEST_PARAMS_STRUCT = [
 {
@@ -193,7 +188,7 @@ if __name__ == '__main__':
     device_ids = range(torch.cuda.device_count())
     ngpus_per_node = len(device_ids)
     world_size = ngpus_per_node
-    for params in tqdm(TEST_PARAMS_STRUCT[0:1]):
+    for params in tqdm(TEST_PARAMS_STRUCT):
         print(params)
         module = get_module(params, per_tensor_scale_shape)
         call_fn = run_wall if params['timing'] == 'WALL' else run_profile
@@ -217,4 +212,4 @@ if __name__ == '__main__':
     df = pd.DataFrame(benchmark_data)
 
     df.to_csv(file_name, index=False)
-    print()
+    print('Done!')
