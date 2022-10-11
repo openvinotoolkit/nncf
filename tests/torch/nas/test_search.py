@@ -19,7 +19,6 @@ from typing import NamedTuple
 import pytest
 
 from nncf import NNCFConfig
-from tests.torch.nas.test_all_elasticity import fixture_nas_model_name #pylint: disable=unused-import
 from nncf.config.structures import BNAdaptationInitArgs
 from nncf.experimental.torch.nas.bootstrapNAS import SearchAlgorithm
 from nncf.experimental.torch.nas.bootstrapNAS.elasticity.elasticity_dim import ElasticityDim
