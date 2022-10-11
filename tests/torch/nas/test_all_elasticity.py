@@ -110,7 +110,8 @@ NAS_MODELS_SCOPE = [
     'pnasnetb',
     'ssd_mobilenet',
     'ssd_vgg',
-    'mobilenet_v3_small'
+    'mobilenet_v3_small',
+    'tcn'
 ]
 
 
