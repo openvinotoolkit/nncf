@@ -11,12 +11,16 @@
  limitations under the License.
 """
 
-from nncf.common.graph.transformations.layout import TransformationLayout
-from nncf.common.graph.transformations.commands import TransformationCommand
-from nncf.common.graph.transformations.commands import TransformationType
+from nncf.common.utils.backend import BackendType
+from nncf.common.utils.backend import get_backend
+from nncf.experimental.onnx.graph.nncf_graph_builder import GraphConverter
 
 
-class ONNXTransformationLayout(TransformationLayout):
-    def register(self, transformation: TransformationCommand) -> None:
-        if transformation.type == TransformationType.INSERT:
-            self.transformations.append(transformation)
+class NNCFGraphFactory:
+    @staticmethod
+    def create(model):
+        model_backend = get_backend(model)
+        if model_backend == BackendType.ONNX:
+            return GraphConverter.create_nncf_graph(model)
+        raise RuntimeError('Cannot create backend-specific graph'
+                           'because {} is not supported!'.format(model_backend))

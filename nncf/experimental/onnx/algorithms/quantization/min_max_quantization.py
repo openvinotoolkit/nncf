@@ -12,9 +12,10 @@
 """
 
 from copy import deepcopy
-from typing import Set
+from typing import Set, Dict
 
 import onnx
+from nncf.common.graph.transformations.layout import TransformationLayout
 # pylint: disable=no-member
 
 from nncf.common.quantization.quantizer_propagation.solver import QuantizerPropagationSolver
@@ -28,16 +29,16 @@ from nncf.common.insertion_point_graph import InsertionPointGraph
 from nncf.common.tensor_statistics.collectors import TensorStatisticCollectorBase
 from nncf.common.utils.logger import logger as nncf_logger
 from nncf.common.utils.backend import BackendType
+from nncf.experimental.onnx.graph.model_transformer import ONNXModelTransformer
 
 from nncf.experimental.post_training.algorithms.quantization.min_max_quantization import MinMaxQuantization
 from nncf.experimental.post_training.algorithms.quantization.min_max_quantization import MinMaxQuantizationParameters
 from nncf.experimental.post_training.algorithms.quantization.min_max_quantization import RangeType
 from nncf.experimental.post_training.algorithms.algorithm import PostTrainingAlgorithms
 from nncf.experimental.onnx.graph.transformations.commands import ONNXTargetPoint
-from nncf.experimental.post_training.graph.factories import BackendGraphFactory, NNCFGraphFactory
+from nncf.experimental.post_training.factories import NNCFGraphFactory
 from nncf.experimental.post_training.statistics.statistic_point import StatisticPoint
 from nncf.experimental.post_training.statistics.statistic_point import StatisticPointsContainer
-from nncf.experimental.onnx.graph.transformations.layout import ONNXTransformationLayout
 from nncf.experimental.onnx.graph.metatypes.onnx_metatypes import GENERAL_WEIGHT_LAYER_METATYPES
 from nncf.experimental.onnx.algorithms.quantization.default_quantization import DEFAULT_ONNX_QUANT_TRAIT_TO_OP_DICT
 from nncf.experimental.onnx.graph.transformations.commands import ONNXQuantizerInsertionCommand
@@ -61,6 +62,10 @@ class ONNXMinMaxQuantization(MinMaxQuantization):
         # It prevents the duplicate weight quantizers from being added.
         # It can happen when you have layers that share the identical weight tensor.
         self._quantization_target_points = set()  # type: Set[ONNXTargetPoint]
+
+    @property
+    def available_backends(self) -> Dict[str, BackendType]:
+        pass
 
     def generate_stat_collector(self, quantizer_config: QuantizerConfig) -> TensorStatisticCollectorBase:
         is_symmetric = quantizer_config.mode == QuantizationMode.SYMMETRIC
@@ -139,7 +144,7 @@ class ONNXMinMaxQuantization(MinMaxQuantization):
         if self._quantization_target_points:
             return self._quantization_target_points
         quantizer_setup = self._get_quantizer_setup(model)
-        onnx_graph = BackendGraphFactory.create(model)
+        onnx_graph = ONNXGraph(model)
         for quantization_point in quantizer_setup.quantization_points.values():
             if quantization_point.is_weight_quantization_point():
                 self._add_weight_quantization_target_point(quantization_point)
@@ -155,8 +160,9 @@ class ONNXMinMaxQuantization(MinMaxQuantization):
 
     def _apply(self, model: onnx.ModelProto, engine: ONNXEngine,
                statistic_points: StatisticPointsContainer) -> onnx.ModelProto:
-        transformation_layout, transformation_commands = ONNXTransformationLayout(), []
-        onnx_graph = BackendGraphFactory.create(model)
+        transformation_layout, transformation_commands = TransformationLayout(), []
+        onnx_graph = ONNXGraph(model)
+        model_transformer = ONNXModelTransformer(model)
 
         quantization_target_points = self.get_quantization_target_points(model)
         weight_quantizer_config = self._get_weight_quantizer_config(model)
@@ -184,7 +190,7 @@ class ONNXMinMaxQuantization(MinMaxQuantization):
                     return PostTrainingAlgorithms.MinMaxQuantization in point.algorithm_to_tensor_collectors and \
                            point.target_point.type == quantization_target_point.type
 
-                for tensor_collector in statistic_points.iter_through_algorithm_tensor_collectors_in_target_node(
+                for tensor_collector in statistic_points.get_algo_statistics_for_node(
                         target_node_name,
                         filter_func,
                         PostTrainingAlgorithms.MinMaxQuantization):
@@ -198,7 +204,7 @@ class ONNXMinMaxQuantization(MinMaxQuantization):
         for transformation_command in transformation_commands:
             transformation_layout.register(transformation_command)
 
-        quantized_model = self.model_transformer.transform(transformation_layout)
+        quantized_model = model_transformer.transform(transformation_layout)
         return quantized_model
 
     def get_statistic_points(self, model: onnx.ModelProto) -> StatisticPointsContainer:

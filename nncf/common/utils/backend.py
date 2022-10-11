@@ -21,7 +21,7 @@ class BackendType(Enum):
     ONNX = 'ONNX'
 
 
-def infer_backend_from_model(model) -> BackendType:
+def get_backend(model) -> BackendType:
     """
     Returns the NNCF backend name string inferred from the type of the model object passed into this function.
 
@@ -70,4 +70,4 @@ def infer_backend_from_compression_controller(compression_controller: Compressio
     (of CompressionAlgorithmController type).
     :return: A BackendType representing the NNCF backend.
     """
-    return infer_backend_from_model(compression_controller.model)
+    return get_backend(compression_controller.model)

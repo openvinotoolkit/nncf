@@ -18,16 +18,16 @@ import onnx
 
 from nncf.common.graph.graph import NNCFGraph
 from nncf.common.graph.transformations.commands import TargetType
-from nncf.common.graph.transformations.commands import TransformationCommand
+from nncf.common.graph.transformations.layout import TransformationLayout
 from nncf.common.quantization.structs import QuantizationMode
 from nncf.common.graph.definitions import NNCFGraphNodeType
 from nncf.experimental.onnx.graph.onnx_graph import ONNXGraph
+from nncf.experimental.onnx.graph.transformations.commands import ONNXBiasCorrectionCommand
+from nncf.experimental.onnx.graph.transformations.commands import ONNXModelExtractionCommand
 from nncf.experimental.onnx.graph.transformations.commands import ONNXOutputInsertionCommand
 from nncf.experimental.onnx.graph.transformations.commands import ONNXQuantizerInsertionCommand
-from nncf.experimental.onnx.graph.transformations.layout import ONNXTransformationLayout
-from nncf.experimental.post_training.graph.factories import BackendGraphFactory, NNCFGraphFactory
+from nncf.experimental.post_training.factories import NNCFGraphFactory
 from nncf.experimental.post_training.graph.model_transformer import StaticModelTransformerBase
-from nncf.experimental.post_training.statistics.statistic_point import StatisticPointsContainer
 
 
 # pylint: disable=no-member
@@ -41,27 +41,7 @@ class ONNXModelTransformer(StaticModelTransformerBase):
         super().__init__(model)
         self._model = deepcopy(model)
 
-    def _get_transformation_layout_extra_outputs(
-            self,
-            statistic_points: StatisticPointsContainer) -> ONNXTransformationLayout:
-        """
-        Collects transformations layout by statistic_points
-
-        :param statistic_points: StatisticPointsContainer
-        :return: transformation_layout
-        """
-        transformation_layout = ONNXTransformationLayout()
-        transformation_commands = []
-        for _statistic_points in statistic_points.values():
-            for _statistic_point in _statistic_points:
-                transformation_commands.append(ONNXOutputInsertionCommand(_statistic_point.target_point))
-
-        for transformation_command in transformation_commands:
-            transformation_layout.register(transformation_command)
-
-        return transformation_layout
-
-    def _apply_transformations(self, transformations: List[TransformationCommand]) -> None:
+    def transform(self, transformation_layout: TransformationLayout) -> onnx.ModelProto:
         """
         Applies transformations by type-callback on the model
 
@@ -69,17 +49,31 @@ class ONNXModelTransformer(StaticModelTransformerBase):
         """
         quantizer_insert_transformations = []
         output_insert_transformations = []
+        bias_correction_transformations = []
+        model_extraction_transformation = None
+
+        transformations = transformation_layout.transformations
 
         for transformation in transformations:
             if isinstance(transformation, ONNXQuantizerInsertionCommand):
                 quantizer_insert_transformations.append(transformation)
             elif isinstance(transformation, ONNXOutputInsertionCommand):
                 output_insert_transformations.append(transformation)
+            elif isinstance(transformation, ONNXBiasCorrectionCommand):
+                bias_correction_transformations.append(transformation)
+            elif isinstance(transformation, ONNXModelExtractionCommand):
+                model_extraction_transformation = transformation
 
         if quantizer_insert_transformations:
             self._apply_quantizer_insertion_transformations(quantizer_insert_transformations)
         if output_insert_transformations:
             self._apply_output_insertion_transformations(output_insert_transformations)
+        if bias_correction_transformations:
+            self._apply_bias_correction_transformations(bias_correction_transformations)
+        if model_extraction_transformation:
+            return self._apply_model_extraction_transformation(model_extraction_transformation)
+
+        return self._model
 
     def _apply_output_insertion_transformations(self, transformations: List[ONNXOutputInsertionCommand]) -> None:
         """
@@ -87,7 +81,7 @@ class ONNXModelTransformer(StaticModelTransformerBase):
 
         :param transformations: list of the ONNXOutputInsertionCommand transformations
         """
-        onnx_graph = BackendGraphFactory.create(self._model)
+        onnx_graph = ONNXGraph(self._model)
         nncf_graph = NNCFGraphFactory.create(self._model)
         model_outputs = [output.name for output in onnx_graph.get_model_outputs()]
         extra_model_outputs = self._get_extra_model_outputs(nncf_graph,
@@ -144,7 +138,7 @@ class ONNXModelTransformer(StaticModelTransformerBase):
         """
         if outputs is None:
             raise RuntimeError("Parameter outputs cannot be None.")
-        onnx_graph = BackendGraphFactory.create(model)
+        onnx_graph = ONNXGraph(model)
         var_out = []
         for out in outputs:
             # shape should be None; if you place not None, some models will have inference problems (e.g. Mask RCNN)
@@ -277,7 +271,7 @@ class ONNXModelTransformer(StaticModelTransformerBase):
         return onnx_scale, onnx_zero_point
 
     def _insert_quantizer_dequantizer(self, transformation: ONNXQuantizerInsertionCommand) -> None:
-        onnx_graph = BackendGraphFactory.create(self._model)
+        onnx_graph = ONNXGraph(self._model)
         target_edge_name = self._get_target_edge_name(transformation, onnx_graph)
         quantizer, dequantizer = self._get_quantize_dequantize_nodes(transformation, target_edge_name)
         onnx_scale, onnx_zero_point = self._get_scale_zero_point_tensors(transformation, quantizer, dequantizer)
@@ -306,3 +300,29 @@ class ONNXModelTransformer(StaticModelTransformerBase):
         insert_index = onnx_graph.get_node_index(input_nodes[0].name)
         self._model.graph.node.insert(insert_index, quantizer)
         self._model.graph.node.insert(insert_index + 1, dequantizer)
+
+    def _apply_bias_correction_transformations(self, transformations: List[ONNXBiasCorrectionCommand]) -> None:
+        """
+        Applies bias correction transformations on the model
+
+        :param transformations: lisf of the bias correction transformations
+        """
+        onnx_graph = ONNXGraph(self._model)
+        bias_tensor_position = 2
+
+        for transformation in transformations:
+            node_name = transformation.target_point.target_node_name
+            onnx_node = onnx_graph.get_node_by_name(node_name)
+            bias_initializer_name = onnx_node.input[bias_tensor_position]
+            bias_initializer = onnx_graph.get_initializer(bias_initializer_name)
+
+            new_bias_tensor = onnx.numpy_helper.from_array(transformation.bias_value,
+                                                           bias_initializer_name)
+            bias_initializer.CopyFrom(new_bias_tensor)
+
+    def _apply_model_extraction_transformation(self, transformation: ONNXModelExtractionCommand) -> onnx.ModelProto:
+        """
+        Extracts sub-model from the original based on the inputs and outputs names
+        """
+        onnx_model_exctactor = onnx.utils.Extractor(self._model)
+        return onnx_model_exctactor.extract_model(transformation.inputs, transformation.outputs)

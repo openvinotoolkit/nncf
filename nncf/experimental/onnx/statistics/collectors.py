@@ -20,8 +20,10 @@ from nncf.common.tensor import TensorElementsType
 from nncf.common.tensor_statistics.collectors import MinMaxStatisticCollector
 from nncf.common.tensor_statistics.collectors import NNCFCollectorTensorProcessor
 from nncf.common.tensor_statistics.collectors import MeanMinMaxStatisticCollector
+from nncf.common.tensor_statistics.collectors import MeanStatisticCollector
 from nncf.experimental.onnx.tensor import ONNXNNCFTensor
 from nncf.experimental.onnx.statistics.statistics import ONNXMinMaxTensorStatistic
+from nncf.experimental.onnx.statistics.statistics import ONNXMeanTensorStatistic
 
 
 class ONNXNNCFCollectorTensorProcessor(NNCFCollectorTensorProcessor):
@@ -52,6 +54,14 @@ class ONNXNNCFCollectorTensorProcessor(NNCFCollectorTensorProcessor):
     @staticmethod
     def mean(x: NNCFTensor, axis: Union[int, tuple]) -> NNCFTensor:
         return ONNXNNCFTensor(np.mean(x.tensor, axis=axis))
+
+    @staticmethod
+    def mean_per_channel(x: NNCFTensor, axis: int) -> NNCFTensor:
+        if len(x.shape) < 3:
+            return ONNXNNCFTensor(np.mean(x.tensor, axis=0))
+        x = np.moveaxis(x.tensor, axis, 1)
+        t = x.reshape(x.shape[0], x.shape[1], -1)
+        return ONNXNNCFTensor(np.mean(t, axis=(0, 2)))
 
     @staticmethod
     def stack(x: Union[List[NNCFTensor], Deque[NNCFTensor]], axis: int = 0) -> NNCFTensor:
@@ -89,3 +99,15 @@ class ONNXMeanMinMaxStatisticCollector(MeanMinMaxStatisticCollector):
 
     def _get_statistics(self) -> ONNXMinMaxTensorStatistic:
         return ONNXMinMaxTensorStatistic(self._min_aggregate().tensor, self._max_aggregate().tensor)
+
+
+class ONNXMeanStatisticCollector(MeanStatisticCollector):
+    @staticmethod
+    def _get_processor() -> NNCFCollectorTensorProcessor:
+        return ONNXNNCFCollectorTensorProcessor()
+
+    def _register_input(self, x: ONNXNNCFTensor):
+        self._register_input_common(x)
+
+    def _get_statistics(self) -> ONNXMeanTensorStatistic:
+        return ONNXMeanTensorStatistic(self._mean_aggregate().tensor, self._shape())
