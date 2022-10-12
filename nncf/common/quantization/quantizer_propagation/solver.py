@@ -199,135 +199,106 @@ class QuantizationProposal:
 
 
 class PostprocessingNodeLocator:
-    @staticmethod
-    def _is_node_has_underlying_weights(node_key: str, quant_prop_graph: QuantizerPropagationStateGraph,
-                                        quantizable_layer_nodes_names: List[str]) -> bool:
-        underlying_nncf_nodes = quant_prop_graph.op_node_keys_to_underlying_nodes_mapping[node_key]
+    """
+    Detects the nodes in the QuantizerPropagationStateGraph, which implement the post-processing logic in the model.
+    Based on the special post-processing marker metatypes the nodes are placed in the ignored.
+    """
+
+    def __init__(self, quant_prop_graph: QuantizerPropagationStateGraph,
+                 quantizable_layer_nodes: List[QuantizableWeightedLayerNode],
+                 post_processing_marker_metatypes: List[OperatorMetatype]):
+        self._quant_prop_graph = quant_prop_graph
+        self._post_processing_marker_metatypes = post_processing_marker_metatypes
+        self._quantizable_layer_node_keys = [q_nodes.node.data[NNCFGraph.KEY_NODE_ATTR] for q_nodes in
+                                             quantizable_layer_nodes]
+        self._post_processing_marker_encountered = False
+
+    def _is_node_has_underlying_weights(self, node_key: str) -> bool:
+        underlying_nncf_nodes = self._quant_prop_graph.op_node_keys_to_underlying_nodes_mapping[node_key]
         for node in underlying_nncf_nodes:
-            if node.data[NNCFGraph.KEY_NODE_ATTR] in quantizable_layer_nodes_names:
+            if node.data[NNCFGraph.KEY_NODE_ATTR] in self._quantizable_layer_node_keys:
                 return True
         return False
 
-    @staticmethod
-    def _update_traverse_path_flags(node_metatype: OperatorMetatype, traverse_path_flags: Dict[str, bool],
-                                    metatypes: List[OperatorMetatype]) -> None:
-        if node_metatype == metatypes[0]:
-            traverse_path_flags['is_topk_visited'] = True
-        if node_metatype == metatypes[1]:
-            traverse_path_flags['is_nms_visited'] = True
+    def _update_traverse_path_flags(self, node_metatype: OperatorMetatype) -> None:
+        if node_metatype in self._post_processing_marker_metatypes:
+            self._post_processing_marker_encountered = True
 
+    def _get_node_metatype(self, node_key: str) -> OperatorMetatype:
+        node = self._quant_prop_graph.nodes[node_key]
+        return node.get(self._quant_prop_graph.OPERATOR_METATYPE_NODE_ATTR)
 
-    @staticmethod
-    def _get_node_metatype(node_key: str, quant_prop_graph: QuantizerPropagationStateGraph) -> OperatorMetatype:
-        node = quant_prop_graph.nodes[node_key]
-        return node.get(quant_prop_graph.OPERATOR_METATYPE_NODE_ATTR)
+    def _is_node_operator(self, node_key: str) -> bool:
+        node = self._quant_prop_graph.nodes[node_key]
+        return node.get(self._quant_prop_graph.NODE_TYPE_NODE_ATTR) == QuantizerPropagationStateGraphNodeType.OPERATOR
 
-    @staticmethod
-    def _is_node_operator(node_key: str, quant_prop_graph: QuantizerPropagationStateGraph) -> bool:
-        node = quant_prop_graph.nodes[node_key]
-        return node.get(quant_prop_graph.NODE_TYPE_NODE_ATTR) == QuantizerPropagationStateGraphNodeType.OPERATOR
-
-    @staticmethod
-    def _maybe_add_nodes_to_ignored(node_keys: List[str], quant_prop_graph: QuantizerPropagationStateGraph,
-                                    traverse_path_flags: Dict[str, bool],
-                                    metatypes: List[OperatorMetatype]) -> List[str]:
-        """
-        Add node to ignored for quantization if NonMaxSuppressionMetatype node was faced,
-        or the node locates before TopKMetatype.
-        :param node_keys: Nodes to add or skip.
-        :param quant_prop_graph: The main graph.
-        :param traverse_path_flags: The flags shows whether TopKMetatype and NonMaxSuppressionMetatype were faced.
-        :param metatypes: Framework specific TopKMetatype and NonMaxSuppressionMetatype.
-        :return:
-        """
+    def _get_ignored_node_keys(self, node_keys: List[str]) -> List[str]:
         output = []
-        is_adding = False
-        for node_key in node_keys:
-            node_metatype = PostprocessingNodeLocator._get_node_metatype(node_key, quant_prop_graph)
-            if traverse_path_flags['is_nms_visited']:
-                if node_metatype not in metatypes:
-                    output.append(node_key)
-            elif traverse_path_flags['is_topk_visited']:
-                if is_adding and node_metatype not in metatypes:
-                    output.append(node_key)
-                if node_metatype == metatypes[0]:
-                    is_adding = True
+        for node_key, node_metatype in zip(node_keys, map(self._get_node_metatype, node_keys)):
+            if node_metatype not in self._post_processing_marker_metatypes:
+                output.append(node_key)
         return output
 
-    @staticmethod
-    def get_post_processing_node_keys(post_processing_metatypes: List[OperatorMetatype],
-                                      quantizable_layer_nodes: List[QuantizableWeightedLayerNode],
-                                      quant_prop_graph: QuantizerPropagationStateGraph, ) -> List[str]:
+    def get_post_processing_node_keys(self) -> List[str]:
         """
-        Finds and adds the nodes of the QuantizerPropagationStateGraph to the ignored for quantization.
-        Starting from the output nodes all the nodes are added,
-        until the quantizable nodes with weights are faced.
-        If the path with the nodes has the node with NonMaxSuppressionMetatype,
+        Finds out the nodes of the QuantizerPropagationStateGraph, which are in post-processing part of the model.
+        Starting from the output nodes all the nodes are added, until the quantizable nodes with weights are faced.
+        If the path with the nodes has the post-processing marker node,
         all the nodes in this path will be added into ignored.
-        If the path with the nodes has the node with TopKMetatype,
-        all the nodes starting from TopKMetatype in this path will be added into ignored.
-        :return: The QuantizerPropagationStateGraph with updated ignored nodes.
+        :return: The list of the node keys to be ignored.
         """
 
         visited_nodes = set()
-        quantizable_layer_nodes_names = [q_nodes.node.data[NNCFGraph.KEY_NODE_ATTR] for q_nodes in
-                                         quantizable_layer_nodes]
-        traverse_path_flags = {'is_topk_visited': False, 'is_nms_visited': False}
 
-        def backward_traverse_function(node_key: str, output: List[str], visited_nodes: Set[str],
-                                       traverse_path_flags: Dict[str, bool]) -> Tuple[bool, List[str]]:
+        def backward_traverse_function(node_key: str, output: List[str],
+                                       visited_nodes: Set[str]) -> Tuple[bool, List[str]]:
             """
             Realizes the search of the quantization ignored nodes in graph.
-            Only QuantizerPropagationStateGraphNodeType.OPERATOR nodes are processed in the traversing.
+            Only QuantizerPropagationStateGraphNodeType.OPERATOR nodes are processed during the traversing.
             If the current node is in the list of the quantizable nodes with weights,
-             the traversing in this path is stopped.
+             the traversing is being stopped.
             The new forward traversing from the current node starts.
             If the quantizable nodes with weights is faced in forward traversing faced,
-             the original backward traversing is stopped.
+             the original backward traversing is being stopped.
 
             :param node_key: node key to check, whether the traversing has to be stopped or not
             and whether the node should be added to the traversed path.
             :param output: Path contains the list of the visited nodes.
             :param visited_nodes: Set stores whether the particular node was visited before or not.
-            :param traverse_path_flags: Flags contains whether TopKMetatype or NonMaxSuppressionMetatype
-            were faced in the path.
-            :return: The first value shows whether the traversied finished,
-            the second one is traversing path containig visited nodes.
+            :return: The first value shows whether the traversing finished,
+            the second one is traversing path containing the visited nodes.
             """
 
             def forward_traverse_function(node_key: str, are_weight_nodes: List[bool], visited_nodes: Set[str]) \
                     -> Tuple[bool, List[bool]]:
                 # If the node is not operator
-                if not PostprocessingNodeLocator._is_node_operator(node_key, quant_prop_graph):
+                if not self._is_node_operator(node_key):
                     return False, are_weight_nodes
                 if node_key in visited_nodes:
                     return True, are_weight_nodes
-                if PostprocessingNodeLocator._is_node_has_underlying_weights(node_key, quant_prop_graph,
-                                                                             quantizable_layer_nodes_names):
+                if self._is_node_has_underlying_weights(node_key):
                     are_weight_nodes.append(True)
                     return True, are_weight_nodes
                 are_weight_nodes.append(False)
                 return False, are_weight_nodes
 
             # If the node is not operator
-            if not PostprocessingNodeLocator._is_node_operator(node_key, quant_prop_graph):
+            if not self._is_node_operator(node_key):
                 return False, output
             if node_key in visited_nodes:
                 return True, output
 
-            node_metatype = PostprocessingNodeLocator._get_node_metatype(node_key, quant_prop_graph)
+            node_metatype = self._get_node_metatype(node_key)
             # If the node not weight quantizable
-            if not PostprocessingNodeLocator._is_node_has_underlying_weights(node_key, quant_prop_graph,
-                                                                             quantizable_layer_nodes_names):
+            if not self._is_node_has_underlying_weights(node_key):
                 if node_metatype not in [InputNoopMetatype, OutputNoopMetatype]:
-                    PostprocessingNodeLocator._update_traverse_path_flags(node_metatype, traverse_path_flags,
-                                                                          post_processing_metatypes)
+                    self._update_traverse_path_flags(node_metatype)
                     partial_forward_traverse_func = partial(forward_traverse_function,
                                                             visited_nodes=visited_nodes)
-                    is_weight_node_after_the_current = quant_prop_graph.traverse_graph(node_key,
-                                                                                       partial_forward_traverse_func,
-                                                                                       output=[],
-                                                                                       traverse_forward=True)
+                    is_weight_node_after_the_current = self._quant_prop_graph.traverse_graph(node_key,
+                                                                                             partial_forward_traverse_func,
+                                                                                             output=[],
+                                                                                             traverse_forward=True)
                     if any(is_weight_node_after_the_current):
                         visited_nodes.add(node_key)
                         return True, output
@@ -337,20 +308,15 @@ class PostprocessingNodeLocator:
             visited_nodes.add(node_key)
             return True, output
 
-        partial_backward_traverse_function = partial(backward_traverse_function, visited_nodes=visited_nodes,
-                                                     traverse_path_flags=traverse_path_flags)
+        partial_backward_traverse_function = partial(backward_traverse_function, visited_nodes=visited_nodes)
         output = []
-        for start_node_key in quant_prop_graph.get_node_keys_by_metatype(OutputNoopMetatype):
-            traverse_path_flags['is_topk_visited'] = False
-            traverse_path_flags['is_nms_visited'] = False
-            node_keys = quant_prop_graph.traverse_graph(start_node_key, partial_backward_traverse_function,
-                                                        output=[], traverse_forward=False)
-            if not any(traverse_path_flags.values()):
-                continue
-            ignored_node_keys = PostprocessingNodeLocator._maybe_add_nodes_to_ignored(node_keys, quant_prop_graph,
-                                                                                      traverse_path_flags,
-                                                                                      post_processing_metatypes)
-            output.extend(ignored_node_keys)
+        for start_node_key in self._quant_prop_graph.get_node_keys_by_metatype(OutputNoopMetatype):
+            self._post_processing_marker_encountered = False
+            node_keys = self._quant_prop_graph.traverse_graph(start_node_key, partial_backward_traverse_function,
+                                                              output=[], traverse_forward=False)
+            if self._post_processing_marker_encountered:
+                ignored_node_keys = self._get_ignored_node_keys(node_keys)
+                output.extend(ignored_node_keys)
 
         return output
 
@@ -385,7 +351,7 @@ class QuantizerPropagationSolver:
                  additional_unified_scale_op_scopes: List[List[str]] = None,
                  run_consistency_checks: bool = False,
                  quantize_outputs: bool = False,
-                 post_processing_metatypes: List[OperatorMetatype] = None):
+                 post_processing_marker_metatypes: List[OperatorMetatype] = None):
         """
         Initializes the solver with parameters affecting the resulting quantizer setup.
 
@@ -419,9 +385,8 @@ class QuantizerPropagationSolver:
           trainable quantizer parameters.
         :param run_consistency_checks: Whether to run internal consistency checks at each propagataion step.
         :param quantize_outputs: Whether to insert additional quantizers right before each of the model outputs.
-        :param post_processing_metatypes: The framework specific TopK and NonMaximumSuppression NNCF Metatypes
-         that are used for automatic ignoring post-processing nodes, connected with TopK and NonMaximumSuppression.
-         The first element in the list should be TopK metatype, the second - NonMaximumSuppression.
+        :param post_processing_marker_metatypes: The framework specific NNCF Metatypes, which are markers for
+        the model post-processing part. They are used for automatic ignoring post-processing nodes.
          If None automatic ignoring will be skipped.
         """
         if default_trait_to_metatype_map is None:
@@ -475,7 +440,7 @@ class QuantizerPropagationSolver:
         self._potential_quantizers = {}
         self._num_potential_quantized_activations = 0
         self._quantizable_layer_nodes = quantizable_layer_nodes
-        self._post_processing_metatypes = post_processing_metatypes
+        self._post_processing_marker_metatypes = post_processing_marker_metatypes
 
     def run_on_ip_graph(self, ip_graph: InsertionPointGraph) -> QuantizationProposal:
         """
@@ -496,9 +461,9 @@ class QuantizerPropagationSolver:
         quant_prop_graph = QuantizerPropagationStateGraph(ip_graph,
                                                           self._ignored_scopes,
                                                           self._target_scopes)
-        if self._post_processing_metatypes is not None:
+        if self._post_processing_marker_metatypes is not None:
             post_processing_node_keys = PostprocessingNodeLocator.get_post_processing_node_keys(
-                self._post_processing_metatypes, self._quantizable_layer_nodes, quant_prop_graph)
+                self._post_processing_marker_metatypes, self._quantizable_layer_nodes, quant_prop_graph)
             for post_processing_node_key in post_processing_node_keys:
                 self._add_node_to_ignored(post_processing_node_key, quant_prop_graph)
         quant_prop_graph = self.set_allowed_quantization_types_for_operator_nodes(quant_prop_graph)

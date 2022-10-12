@@ -15,7 +15,6 @@ from typing import List
 
 import pytest
 
-from nncf.experimental.onnx.graph.metatypes.onnx_metatypes import ONNX_OPERATION_METATYPES
 from nncf.common.graph.layer_attributes import Dtype
 from nncf.common.quantization.quantizer_propagation.solver import PostprocessingNodeLocator
 from nncf.common.quantization.structs import QuantizableWeightedLayerNode
@@ -28,10 +27,10 @@ from nncf.common.graph.definitions import NNCFGraphNodeType
 from nncf.common.insertion_point_graph import InsertionPointGraph
 from nncf.common.utils.registry import Registry
 
-from nncf.experimental.onnx.graph.metatypes.onnx_metatypes import ONNXTopKMetatype
-from nncf.experimental.onnx.graph.metatypes.onnx_metatypes import ONNXNonMaxSuppressionMetatype
-from nncf.experimental.onnx.graph.metatypes.onnx_metatypes import WEIGHT_LAYER_METATYPES
-from nncf.experimental.onnx.hardware.fused_patterns import ONNX_HW_FUSED_PATTERNS
+from tests.common.quantization.metatypes import METATYPES_FOR_TEST
+from tests.common.quantization.metatypes import TopKTestMetatype
+from tests.common.quantization.metatypes import NMSTestMetatype
+from tests.common.quantization.metatypes import WEIGHT_LAYER_METATYPES
 
 from collections import Counter
 
@@ -56,7 +55,7 @@ class NNCFGraphToTest:
                 metatype = InputNoopMetatype
                 node_op_type = NNCFGraphNodeType.INPUT_NODE
             else:
-                metatype = ONNX_OPERATION_METATYPES.get_operator_metatype_by_op_name(node_op_type)
+                metatype = METATYPES_FOR_TEST.get_operator_metatype_by_op_name(node_op_type)
             self.nncf_graph.add_nncf_node(node_name=node_name,
                                           node_type=node_op_type,
                                           node_metatype=metatype,
@@ -94,18 +93,18 @@ class ModelToTest1(NNCFGraphToTest):
     #
     def __init__(self):
         nodes = [NodeWithType('Input_1', 'Input'),
-                 NodeWithType('Conv_1', 'Conv'),
-                 NodeWithType('Identity_1', 'Identity'),
-                 NodeWithType('NMS_1', 'NonMaxSuppression'),
-                 NodeWithType('Identity_2', 'Identity'),
-                 NodeWithType('TopK_1', 'TopK'),
+                 NodeWithType('Conv_1', 'conv2d'),
+                 NodeWithType('Identity_1', 'identity'),
+                 NodeWithType('NMS_1', 'nms'),
+                 NodeWithType('Identity_2', 'identity'),
+                 NodeWithType('TopK_1', 'topk'),
                  NodeWithType('Output_1', 'Output'),
                  NodeWithType('Input_2', 'Input'),
-                 NodeWithType('Identity_3', 'Identity'),
-                 NodeWithType('FC_1', 'Gemm'),
-                 NodeWithType('Identity_4', 'Identity'),
-                 NodeWithType('NMS_2', 'NonMaxSuppression'),
-                 NodeWithType('Identity_5', 'Identity'),
+                 NodeWithType('Identity_3', 'identity'),
+                 NodeWithType('FC_1', 'linear'),
+                 NodeWithType('Identity_4', 'identity'),
+                 NodeWithType('NMS_2', 'nms'),
+                 NodeWithType('Identity_5', 'identity'),
                  NodeWithType('Output_2', 'Output'),
                  ]
         node_edges = {'Input_1': ['Conv_1'], 'Conv_1': ['Identity_1'], 'Identity_1': ['NMS_1'], 'NMS_1': ['Identity_2'],
@@ -136,19 +135,19 @@ class ModelToTest2(NNCFGraphToTest):
 
     def __init__(self):
         nodes = [NodeWithType('Input_1', 'Input'),
-                 NodeWithType('Conv_1', 'Conv'),
-                 NodeWithType('Identity_1', 'Identity'),
-                 NodeWithType('TopK_1', 'TopK'),
-                 NodeWithType('Identity_2', 'Identity'),
-                 NodeWithType('TopK_2', 'TopK'),
-                 NodeWithType('Identity_3', 'Identity'),
+                 NodeWithType('Conv_1', 'conv2d'),
+                 NodeWithType('Identity_1', 'identity'),
+                 NodeWithType('TopK_1', 'topk'),
+                 NodeWithType('Identity_2', 'identity'),
+                 NodeWithType('TopK_2', 'topk'),
+                 NodeWithType('Identity_3', 'identity'),
                  NodeWithType('Output_1', 'Output')
                  ]
         node_edges = {'Input_1': ['Conv_1'], 'Conv_1': ['Identity_1'], 'Identity_1': ['TopK_1'],
                       'TopK_1': ['Identity_2'],
                       'Identity_2': ['TopK_2'], 'TopK_2': ['Identity_3'], 'Identity_3': ['Output_1']}
         super().__init__(nodes, node_edges)
-        self.reference_ignored_scopes = ['Identity_2', 'Identity_1']
+        self.reference_ignored_scopes = ['Identity_3', 'Identity_2', 'Identity_1']
 
 
 @ALL_SYNTHETIC_NNCF_GRAPH.register()
@@ -171,14 +170,14 @@ class ModelToTest3(NNCFGraphToTest):
 
     def __init__(self):
         nodes = [NodeWithType('Input_1', 'Input'),
-                 NodeWithType('Conv_1', 'Conv'),
-                 NodeWithType('Identity_1', 'Identity'),
-                 NodeWithType('TopK_1', 'TopK'),
-                 NodeWithType('Identity_2', 'Identity'),
-                 NodeWithType('NMS_1', 'NonMaxSuppression'),
-                 NodeWithType('Identity_3', 'Identity'),
+                 NodeWithType('Conv_1', 'conv2d'),
+                 NodeWithType('Identity_1', 'identity'),
+                 NodeWithType('TopK_1', 'topk'),
+                 NodeWithType('Identity_2', 'identity'),
+                 NodeWithType('NMS_1', 'nms'),
+                 NodeWithType('Identity_3', 'identity'),
                  NodeWithType('Output_1', 'Output'),
-                 NodeWithType('Conv_2', 'Conv'),
+                 NodeWithType('Conv_2', 'conv2d'),
                  NodeWithType('Output_2', 'Output')
                  ]
         node_edges = {'Input_1': ['Conv_1'], 'Conv_1': ['Identity_1'], 'Identity_1': ['TopK_1'],
@@ -210,15 +209,15 @@ class ModelToTest4(NNCFGraphToTest):
 
     def __init__(self):
         nodes = [NodeWithType('Input_1', 'Input'),
-                 NodeWithType('Conv_1', 'Conv'),
-                 NodeWithType('Identity_1', 'Identity'),
-                 NodeWithType('TopK_1', 'TopK'),
-                 NodeWithType('Identity_2', 'Identity'),
-                 NodeWithType('NMS_1', 'NonMaxSuppression'),
-                 NodeWithType('Identity_3', 'Identity'),
+                 NodeWithType('Conv_1', 'conv2d'),
+                 NodeWithType('Identity_1', 'identity'),
+                 NodeWithType('TopK_1', 'topk'),
+                 NodeWithType('Identity_2', 'identity'),
+                 NodeWithType('NMS_1', 'nms'),
+                 NodeWithType('Identity_3', 'identity'),
                  NodeWithType('Output_1', 'Output'),
-                 NodeWithType('Identity_4', 'Identity'),
-                 NodeWithType('Identity_5', 'Identity')
+                 NodeWithType('Identity_4', 'identity'),
+                 NodeWithType('Identity_5', 'identity')
                  ]
         node_edges = {'Input_1': ['Conv_1'], 'Conv_1': ['Identity_1'], 'Identity_1': ['TopK_1', 'Identity_4'],
                       'TopK_1': ['Identity_2'],
@@ -249,15 +248,15 @@ class ModelToTest5(NNCFGraphToTest):
 
     def __init__(self):
         nodes = [NodeWithType('Input_1', 'Input'),
-                 NodeWithType('Conv_1', 'Conv'),
-                 NodeWithType('Identity_1', 'Identity'),
-                 NodeWithType('Identity_2', 'Identity'),
-                 NodeWithType('Identity_3', 'Identity'),
-                 NodeWithType('Identity_4', 'Identity'),
-                 NodeWithType('Identity_5', 'Identity'),
+                 NodeWithType('Conv_1', 'conv2d'),
+                 NodeWithType('Identity_1', 'identity'),
+                 NodeWithType('Identity_2', 'identity'),
+                 NodeWithType('Identity_3', 'identity'),
+                 NodeWithType('Identity_4', 'identity'),
+                 NodeWithType('Identity_5', 'identity'),
                  NodeWithType('Output_1', 'Output'),
-                 NodeWithType('Identity_6', 'Identity'),
-                 NodeWithType('Identity_7', 'Identity')
+                 NodeWithType('Identity_6', 'identity'),
+                 NodeWithType('Identity_7', 'identity')
                  ]
         node_edges = {'Input_1': ['Conv_1'], 'Conv_1': ['Identity_1'], 'Identity_1': ['Identity_2', 'Identity_3'],
                       'Identity_2': ['Identity_4'],
@@ -268,28 +267,21 @@ class ModelToTest5(NNCFGraphToTest):
         self.reference_ignored_scopes = []
 
 
-# pylint:disable=protected-access
-
 @pytest.mark.parametrize('model_to_test', ALL_SYNTHETIC_NNCF_GRAPH.values())
-def test_add_ignoring_nodes_after_last_weight_node(model_to_test):
+def test_node_locator_finds_postprocessing_nodes(model_to_test):
     model_to_test = model_to_test()
     nncf_graph = model_to_test.nncf_graph
 
     ip_graph = InsertionPointGraph(nncf_graph)
-    pattern = ONNX_HW_FUSED_PATTERNS.get_full_pattern_graph()
-    ip_graph = ip_graph.get_ip_graph_with_merged_hw_optimized_operations(pattern)
 
     weight_nodes = nncf_graph.get_nodes_by_metatypes(WEIGHT_LAYER_METATYPES)
     quantizable_layer_nodes = [QuantizableWeightedLayerNode(weight_node, [QuantizerConfig()]) for weight_node in
                                weight_nodes]
 
     quant_prop_graph = QuantizerPropagationStateGraph(ip_graph)
-
-    ignored_node_keys = PostprocessingNodeLocator.get_post_processing_node_keys(
-        post_processing_metatypes=[ONNXTopKMetatype,
-                                   ONNXNonMaxSuppressionMetatype],
-        quantizable_layer_nodes=quantizable_layer_nodes,
-        quant_prop_graph=quant_prop_graph)
+    post_processing_node_locator = PostprocessingNodeLocator(quant_prop_graph, quantizable_layer_nodes,
+                                                             [TopKTestMetatype, NMSTestMetatype])
+    ignored_node_keys = post_processing_node_locator.get_post_processing_node_keys()
 
     ignored_node_names = [nncf_graph.get_node_by_key(ignored_node_key).node_name for ignored_node_key in
                           ignored_node_keys]
