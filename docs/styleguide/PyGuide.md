@@ -582,10 +582,7 @@ def load_state(model: torch.nn.Module, state_dict_to_load: dict, is_resume: bool
 
 Classes should have a docstring below the class definition describing the class. If your class
 has public attributes, they should be documented here follow the same formatting as a function's
-params section. The `__init__` function and other magic methods may be left without a textual description,
-if there is nothing special about this exact implementation of the magic method 
-(i.e. the function has no notable side effects, the implementation is done in a conventional way such as 
-hashing all fields as a tuple in `__hash__` or concatenating string-like objects in `__add__` etc.)
+params section. 
 
 ```python
 class ModelTransformer:
@@ -612,6 +609,54 @@ class ModelTransformer:
         :return: The transformed model
         """
         raise NotImplementedError()
+```
+
+The `__init__` function and other magic methods may be left without a textual description,
+if there is nothing special about this exact implementation of the magic method 
+(i.e. the function has no notable side effects, the implementation is done in a conventional way such as 
+hashing all fields as a tuple in `__hash__` or concatenating string-like objects in `__add__` etc.)
+
+For instance, this simple `__init__` method may omit the method description in the docstring (the parameter description is, however, still required):
+```python
+class Klass:
+    # ...
+    def __init__(self, param1: int, param2: float):
+        """
+        :param param1: Description of param1
+        :param param2: Description of param2
+        """
+        self.param1 = param1
+        self.param2 = param2
+```
+while this `__init__` requires a description of external dependencies and potential side effects of creating objects of the class:
+```python
+class ComplexKlass(BaseClass):
+    # ...
+   def __init__(self, param1: ParamType, param2: AnotherParamType):
+        """
+        *Add a brief explanation of what happens during this particular __init__, such as :*
+        The construction of this objects is dependent on the value of GLOBAL_VARIABLE...
+        Each object of the class after __init__ is registered in ...
+        Each instantiation of an object of this class leads to a side effect in ... (explain side effect)
+        If *this* and *that*, the object creation will fail with a RuntimeError.
+        *... and other noteworthy stuff happening in this method.*
+        
+        :param param1: Description of param1
+        :param param2: Description of param2
+        
+        :raises RuntimeError if *this* and *that*
+        """
+        super().__init__(param1)
+        self.public_param = get_public_param_value_from_global_variable(param1, GLOBAL_VARIABLE)
+        result = perform_complex_calculations_with_param1_and_param2(param1, param2)
+        if result == CONSTANT_VALUE_1:
+            self.another_public_param = self._do_one_thing()
+        elif result == CONSTANT_VALUE_2:
+            self.another_public_param = self._do_other_thing()
+        else:
+            raise RuntimeError()
+        call_function_with_side_effects()  # such as registering this instance somewhere, or acquiring a resource, etc.
+        # ... potentially more code which is not understandable at a glance
 ```
 
 <a id="s3.5.4-block-and-inline-comments"></a>
