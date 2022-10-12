@@ -48,16 +48,14 @@ class MovementSparsityConfigBuilder:
                 {
                     "algorithm": "movement_sparsity",
                     "params": {
-                        "schedule": "modified_threshold_polynomial_decay",
+                        "schedule": "threshold_polynomial_decay",
                         "power": 3,
+                        "init_importance_threshold": -0.1,
+                        "final_importance_threshold": 0.0,
                         "warmup_start_epoch": 1,
                         "warmup_end_epoch": 3,
-                        "importance_threshold_warmup_start": -0.1,  # init threshold when warm up starts
-                        "importance_threshold": 0.0,  # final threshold
-                        "importance_regularization_factor": 0.2,
-                        "do_threshold_warmup": True,
-                        "do_regularization_factor_warmup": True,
                         "steps_per_epoch": 128 // 32,
+                        "importance_regularization_factor": 0.02,
                         "update_per_optimizer_step": True,
                     },
                     "sparse_structure_by_scopes": [
@@ -102,7 +100,7 @@ class MovementSparsityConfigBuilder:
                 self._config_dict['compression']['params']['warmup_end_epoch'])
 
     def get_final_importance_threshold(self):
-        return self._config_dict['compression']['params']['importance_threshold']
+        return self._config_dict['compression']['params']['final_importance_threshold']
 
     def get_importance_regularization_factor(self):
         return self._config_dict['compression']['params']['importance_regularization_factor']
@@ -380,3 +378,4 @@ if __name__ == "__main__":
     # test_can_run_full_pipeline(Path('/tmp'), MovementSparsityConfigBuilder)
     # test_importance_score_update(Path('/tmp'), MovementSparsityConfigBuilder())
     test_binary_mask(Path('/tmp'), MovementSparsityConfigBuilder())
+    test_can_run_full_pipeline
