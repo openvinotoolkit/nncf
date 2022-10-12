@@ -44,11 +44,9 @@ class ConfigBuilder:
             "power": 3,
             "warmup_start_epoch": 1,
             "warmup_end_epoch": 3,
-            "importance_threshold_warmup_start": -0.1,  # init threshold when warm up starts
-            "importance_threshold": 0.0,  # final threshold
+            "init_importance_threshold": -0.1,
+            "final_importance_threshold": 0.0,
             "importance_regularization_factor": 0.2,
-            "do_threshold_warmup": True,
-            "do_regularization_factor_warmup": True,
             "steps_per_epoch": 128 // 32,
             "update_per_optimizer_step": True,
             "sparse_structure_by_scopes": [
@@ -74,7 +72,7 @@ class ConfigBuilder:
             ],
             "compression": {
                 "algorithm": "movement_sparsity",
-                "params": dict(schedule="modified_threshold_polynomial_decay", **args),
+                "params": dict(schedule="threshold_polynomial_decay", **args),
                 "sparse_structure_by_scopes": sparse_structure_by_scopes,
                 "ignored_scopes": ignored_scopes,
             },
