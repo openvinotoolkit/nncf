@@ -59,7 +59,7 @@ class MovementSparsifier(nn.Module):
         self.frozen = frozen
         self.eps = eps
         self.lmbd = 0.5 # module_level_loss_weightage
-        self.masking_threshold = 0.0
+        self.masking_threshold = -999 # This must be sufficiently small # TODO: there might be dependency
         self.sparse_cfg = sparse_cfg
         
         weight_shape = target_module_node.layer_attributes.get_weight_shape()

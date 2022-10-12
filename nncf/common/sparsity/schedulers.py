@@ -374,7 +374,8 @@ class PolynomialThresholdScheduler(BaseCompressionScheduler):
 
     @property
     def current_importance_lambda(self):
-        return self.importance_target_lambda * (self.current_importance_threshold/self.final_importance_threshold)
+        return self.importance_target_lambda * (self.current_importance_threshold-self.init_importance_threshold)/(self.final_importance_threshold-self.init_importance_threshold)
+
 
     def _disable_importance_grad(self):
         for m in self._controller.sparsified_module_info:
