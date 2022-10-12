@@ -47,7 +47,8 @@ def _seed():
     manual_seed(0)
 
 
-@pytest.fixture(name='basic_model', params=(ConvTwoFcTestModel, TwoConvAddConvTestModel, TwoSequentialConvBNTestModel))
+@pytest.fixture(name='basic_model', params=(TwoSequentialFcLNTestModel, ConvTwoFcTestModel,
+                                            TwoConvAddConvTestModel, TwoSequentialConvBNTestModel))
 def fixture_basic_model(request):
     model_cls = request.param
     model = model_cls()
