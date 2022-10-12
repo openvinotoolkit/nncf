@@ -82,6 +82,7 @@ class TargetType(IntEnum):
     OPERATION_WITH_WEIGHTS = 5
     OPERATOR_PRE_HOOK = 6
     OPERATOR_POST_HOOK = 7
+    OPERATION_WITH_WEIGHT_WT_BIAS = 8
 
     def get_state(self) -> Dict[str, Any]:
         """

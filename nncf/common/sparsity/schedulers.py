@@ -321,3 +321,152 @@ class MultiStepSparsityScheduler(SparsityScheduler):
 
     def _calculate_sparsity_level(self) -> float:
         return self.schedule(self.current_epoch)
+
+
+@SPARSITY_SCHEDULERS.register('threshold_polynomial_decay')
+class PolynomialThresholdScheduler(BaseCompressionScheduler):
+    """
+    Sparsity scheduler with a polynomial decay schedule.
+
+    Two ways are available for calculations of the sparsity:
+        - per epoch
+        - per step
+    Parameters `update_per_optimizer_step` and `steps_per_epoch`
+    should be provided in config for the per step calculation.
+    If `update_per_optimizer_step` was only provided then scheduler
+    will use first epoch to calculate `steps_per_epoch`
+    parameter. In this case, `current_epoch` and `current_step` will
+    not be updated on this epoch. The scheduler will start calculation
+    after `steps_per_epoch` will be calculated.
+    """
+
+    def __init__(self, controller: SparsityController, params: dict):
+        """
+        TODO: revise docstring
+        TODO: test epoch-wise stepping
+        Initializes a sparsity scheduler with a polynomial decay schedule.
+
+        :param controller: Sparsity algorithm controller.
+        :param params: Parameters of the scheduler.
+        """
+        super().__init__()
+        self._controller = controller
+        self.init_importance_threshold = params.get('init_importance_threshold', 0.0)
+        self.final_importance_threshold = params.get('final_importance_threshold', 0.1)
+        self.warmup_start_epoch = params.get('warmup_start_epoch', 0.0)
+        self.warmup_end_epoch = params.get('warmup_end_epoch', 0.0)
+        self.importance_target_lambda = params.get('importance_regularization_factor', 1.0)
+        self.current_importance_threshold  = self.init_importance_threshold
+        self.cached_importance_threshold = self.current_importance_threshold
+
+        self.schedule = PolynomialDecaySchedule(
+            self.init_importance_threshold, 
+            self.final_importance_threshold, 
+            (self.warmup_end_epoch-self.warmup_start_epoch),
+            params.get('power', 3), 
+            params.get('concave', True)
+            )
+
+        self._steps_in_current_epoch = 0
+        self._update_per_optimizer_step = params.get('update_per_optimizer_step', False)
+        self._steps_per_epoch = params.get('steps_per_epoch', None)
+        self._should_skip = False
+
+    @property
+    def current_importance_lambda(self):
+        return self.importance_target_lambda * (self.current_importance_threshold/self.final_importance_threshold)
+
+    def _disable_importance_grad(self):
+        for m in self._controller.sparsified_module_info:
+            m.operand.freeze_importance()
+                        
+    def _update_importance_masking_threshold(self):
+        if self.cached_importance_threshold != self.current_importance_threshold:
+            for m in self._controller.sparsified_module_info:
+                m.operand.masking_threshold = self.current_importance_threshold
+        self.cached_importance_threshold = self.current_importance_threshold 
+
+    def epoch_step(self, next_epoch: Optional[int] = None) -> None:
+        self._maybe_should_skip()
+        self._steps_in_current_epoch = 0 # This must be set after _maybe_should_skip as it is used in that routine
+        if self._should_skip:
+            return
+        # only increment epoch if should_skip is checked
+        super().epoch_step(next_epoch)
+        self.schedule_threshold()
+
+    def step(self, next_step: Optional[int] = None) -> None:
+        super().step(next_step)
+        self._steps_in_current_epoch += 1
+        if self._should_skip:
+            return
+
+        if self._update_per_optimizer_step:
+            self.schedule_threshold()
+    
+    def schedule_threshold(self):
+        if self.current_step < self.warmup_start_epoch * self._steps_per_epoch:
+            self.current_importance_threshold  = self.init_importance_threshold
+
+        elif self.current_step >= self.warmup_end_epoch * self._steps_per_epoch:
+            self.current_importance_threshold  = self.final_importance_threshold
+            self._disable_importance_grad()
+
+            # TODO: gradient freezing should be at the epoch to freeze epoch
+            # for n, m in self._controller.model.named_modules():
+            #     if m.__class__.__name__ == "MovementSparsifyingWeight":
+            #         m.frozen=True
+            #         m._importance.requires_grad=False
+
+        else:
+            self.current_importance_threshold  = self._calculate_threshold_level()
+
+        # self.current_importance_threshold = 0.1
+        self._update_importance_masking_threshold()
+        # if _cached_threshold != self.current_importance_threshold  or _cached_regu_lambda != self.current_importance_lambda:
+        #     for n, m in self._controller.model.named_modules():
+        #         if m.__class__.__name__ == "MovementSparsifyingWeight":
+        #             m.masking_threshold = self.current_importance_threshold 
+        #             # m.lmbd = self.current_importance_lambda
+
+    def _calculate_threshold_level(self) -> float:
+        warmup_start_global_step = self.warmup_start_epoch*self._steps_per_epoch
+        schedule_current_step = self.current_step - warmup_start_global_step
+        schedule_epoch = schedule_current_step // self._steps_per_epoch
+        schedule_step = schedule_current_step % self._steps_per_epoch
+        return self.schedule(schedule_epoch, schedule_step, self._steps_per_epoch)
+
+
+    def load_state(self, state: Dict[str, Any]) -> None:
+        super().load_state(state)
+        if self._update_per_optimizer_step:
+            self._steps_per_epoch = state['_steps_per_epoch']
+
+    def get_state(self) -> Dict[str, Any]:
+        state = super().get_state()
+        if self._update_per_optimizer_step:
+            state['_steps_per_epoch'] = self._steps_per_epoch
+        return state
+
+    def _maybe_should_skip(self) -> None:
+        """
+        Checks if the first epoch (with index 0) should be skipped to calculate
+        the steps per epoch. If the skip is needed, then the internal state
+        of the scheduler object will not be changed.
+        """
+        self._should_skip = False
+        if self._update_per_optimizer_step:
+            if self._steps_per_epoch is None and self._steps_in_current_epoch > 0:
+                self._steps_per_epoch = self._steps_in_current_epoch
+
+            if self._steps_per_epoch is not None and self._steps_in_current_epoch > 0:
+                if self._steps_per_epoch != self._steps_in_current_epoch:
+                    raise Exception('Actual steps per epoch and steps per epoch from the scheduler '
+                                    'parameters are different. Scheduling may be incorrect.')
+
+            if self._steps_per_epoch is None:
+                self._should_skip = True
+                logger.warning('Scheduler set to update sparsity level per optimizer step, '
+                               'but steps_per_epoch was not set in config. Will only start updating '
+                               'sparsity level after measuring the actual steps per epoch as signaled '
+                               'by a .epoch_step() call.')

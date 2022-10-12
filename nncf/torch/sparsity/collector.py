@@ -53,9 +53,10 @@ class PTSparseModelStatisticsCollector(BaseSparseModelStatisticsCollector):
 
             if hasattr(minfo.module, 'bias') and minfo.module.bias is not None:
                 bias = minfo.module.bias
+                sparse_bias = minfo.operand.apply_binary_mask(bias, isbias=True) #TODO: breaking changes
                 name = f'{minfo.module_node_name}/bias'
                 weights_descriptions.append(
-                    WeightDescription(name, list(bias.shape), bias.count_nonzero().item(), is_sparse=False)
+                    WeightDescription(name, list(bias.shape), sparse_bias.count_nonzero().item(), is_sparse=True)
                 )
 
             processed_modules.append(minfo.module)

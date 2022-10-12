@@ -42,10 +42,15 @@ class STRound(torch.autograd.Function):
 # pylint:disable=abstract-method
 class STThreshold(torch.autograd.Function):
     @staticmethod
-    def forward(ctx, input_):
-        output = (input_ > 0.5).type(input_.dtype)
+    def forward(ctx, input_, threshold=0.5):
+        output = (input_ > threshold).type(input_.dtype)
         return output
 
     @staticmethod
+<<<<<<< HEAD
     def backward(ctx: Any, *grad_outputs: Any) -> Any:
         return grad_outputs[0]
+=======
+    def backward(ctx, grad_output):
+        return grad_output, None
+>>>>>>> Initial Commit for Movement Sparsity

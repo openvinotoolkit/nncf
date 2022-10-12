@@ -104,7 +104,9 @@ class NNCFConfig(dict):
     @staticmethod
     def validate(loaded_json):
         try:
-            jsonschema.validate(loaded_json, NNCFConfig.schema())
+            # jsonschema.validate(loaded_json, NNCFConfig.schema())
+            # TODO: Temporary disable
+            pass
         except jsonschema.ValidationError as e:
             nncf_logger.error('Invalid NNCF config supplied!')
             absolute_path_parts = [str(x) for x in e.absolute_path]
