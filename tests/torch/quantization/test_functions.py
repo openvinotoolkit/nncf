@@ -145,9 +145,7 @@ def generate_input(input_size, input_low, input_range, levels, bits, scale_mode,
         get_deviation.state = 0
     else:
         def get_deviation():
-            val = random_deviation()
-            get_deviation.state +=1
-            return val
+            return random_deviation()
 
     if scale_mode == "single_scale":
         assert_input_size(input_size)
@@ -384,9 +382,9 @@ class TestParametrized:
             # This is needed to prevent middle points in forward pass.
             # Small deviation in computations could lead to completely different
             # results: instead of quant a quant a + 1 will be returned.
-            # Different results in forward leads to high deviations on bacward pass.
+            # Different results in forward leads to high deviations on backward pass.
             # To prevent this, input values are put into [min_deviation, max_deviation]
-            # section of quant, so small deviation woun't change the quant on forward pass
+            # section of quant, so small deviation won't change the quant on forward pass
             min_deviation = 0.1 if is_fp16 else 0.
             max_deviation = 0.35 if is_fp16 else 0.4
             ref_input = generate_input(input_size, ref_input_low, ref_input_range, levels,
@@ -553,9 +551,9 @@ class TestParametrized:
             # This is needed to prevent middle points in forward pass.
             # Small deviation in computations could lead to completely different
             # results: instead of quant a quant a + 1 will be returned.
-            # Different results in forward leads to high deviations on bacward pass.
+            # Different results in forward leads to high deviations on backward pass.
             # To prevent this, input values are put into [min_deviation, max_deviation]
-            # section of quant, so small deviation woun't change the quant on forward pass
+            # section of quant, so small deviation won't change the quant on forward pass
             min_deviation = 0.1 if is_fp16 else 0.
             max_deviation = 0.35 if is_fp16 else 0.4
             ref_input = generate_input(input_size, ref_input_low, ref_input_range, levels,

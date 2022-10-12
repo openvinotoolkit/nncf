@@ -280,7 +280,7 @@ __global__ void q_scale_per_activation_channel_cuda_backward_kernel(
         fakeQuantize<scalar_t>(&output, (input + additional_offset), input_low, input_range, levels);
         calcGrad<scalar_t>((grad_input + additional_offset), &val_grad_input_low, &val_grad_input_range, (grad_output + additional_offset),
                  (input + additional_offset), &output, range_low, range_high, reverted_range, alpha);
-        per_thread_grad_sum_range +=  val_grad_input_range;
+        per_thread_grad_sum_range += val_grad_input_range;
         per_thread_grad_sum_low += val_grad_input_low;
     }
 
@@ -353,7 +353,6 @@ std::vector<at::Tensor> q_single_scale_cuda_backward(at::Tensor grad_output,
     auto grad_input_range = at::empty({1}, grad_output.options());
     auto grad_input_low = at::empty({1}, grad_output.options());
 
-
     auto grid_size = std::min(GET_BLOCKS(size), CUDA_BLOCKS_PER_GRID_FOR_UNIFORM_ELTWISE);
     auto accum_options = get_accum_options(grad_output.options());
 
@@ -381,7 +380,6 @@ std::vector<at::Tensor> q_single_scale_cuda_backward(at::Tensor grad_output,
           level_high,
           size);
     }));)
-
 
     return {grad_input, grad_input_low, grad_input_range};
 }
