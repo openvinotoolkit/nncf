@@ -293,10 +293,10 @@ class PostprocessingNodeLocator:
             if not self._is_node_has_underlying_weights(node_key):
                 if node_metatype not in [InputNoopMetatype, OutputNoopMetatype]:
                     self._update_traverse_path_flags(node_metatype)
-                    partial_forward_traverse_func = partial(forward_traverse_function,
+                    partial_forward_traverse_f = partial(forward_traverse_function,
                                                             visited_nodes=visited_nodes)
                     is_weight_node_after_the_current = self._quant_prop_graph.traverse_graph(node_key,
-                                                                                             partial_forward_traverse_func,
+                                                                                             partial_forward_traverse_f,
                                                                                              output=[],
                                                                                              traverse_forward=True)
                     if any(is_weight_node_after_the_current):
@@ -462,8 +462,9 @@ class QuantizerPropagationSolver:
                                                           self._ignored_scopes,
                                                           self._target_scopes)
         if self._post_processing_marker_metatypes is not None:
-            post_processing_node_keys = PostprocessingNodeLocator.get_post_processing_node_keys(
-                self._post_processing_marker_metatypes, self._quantizable_layer_nodes, quant_prop_graph)
+            post_processing_node_locator = PostprocessingNodeLocator(quant_prop_graph, self._quantizable_layer_nodes,
+                                                                     self._post_processing_marker_metatypes)
+            post_processing_node_keys = post_processing_node_locator.get_post_processing_node_keys()
             for post_processing_node_key in post_processing_node_keys:
                 self._add_node_to_ignored(post_processing_node_key, quant_prop_graph)
         quant_prop_graph = self.set_allowed_quantization_types_for_operator_nodes(quant_prop_graph)

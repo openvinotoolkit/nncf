@@ -18,7 +18,6 @@ from nncf.experimental.onnx.hardware.pattern_operations import LINEAR_OPERATIONS
 from nncf.experimental.onnx.hardware.pattern_operations import BATCH_NORMALIZATION_OPERATIONS
 from nncf.experimental.onnx.hardware.pattern_operations import ATOMIC_ACTIVATIONS_OPERATIONS
 from nncf.experimental.onnx.hardware.pattern_operations import ARITHMETIC_OPERATIONS
-from nncf.experimental.onnx.hardware.pattern_operations import MATMUL_OPERATIONS
 
 from nncf.experimental.onnx.hardware.patterns import create_swish_activation
 from nncf.experimental.onnx.hardware.patterns import create_input_preprocessing_pattern
@@ -39,10 +38,6 @@ def _get_onnx_hw_fused_patterns() -> HWFusedPatterns:
     batch_norms = batch_norm | decomposed_batch_norm
     hw_fused_patterns.register(batch_norms, BATCH_NORMALIZATION_OPERATIONS['label'], match=False)
 
-    matmul_ops = GraphPattern()
-    matmul_ops.add_node(**MATMUL_OPERATIONS)
-    hw_fused_patterns.register(linear_ops, MATMUL_OPERATIONS['label'], match=False)
-
     atomic_activations = GraphPattern()
     atomic_activations.add_node(**ATOMIC_ACTIVATIONS_OPERATIONS)
     swish = create_swish_activation()
@@ -59,7 +54,7 @@ def _get_onnx_hw_fused_patterns() -> HWFusedPatterns:
 
     hw_fused_patterns.register(linear_ops + batch_norm_activations_permutation, 'LINEAR + BN_ACT_PERM',
                                match=True)
-    hw_fused_patterns.register(matmul_ops + arithmetic_ops, 'MATMUL + ARITHMETIC',
+    hw_fused_patterns.register(linear_ops + arithmetic_ops, 'LINEAR + ARITHMETIC',
                                match=True)
 
     hw_fused_patterns.register(batch_norms + activations, 'BN + ACTIVATIONS', match=True)

@@ -100,8 +100,8 @@ class ONNXMinMaxQuantization(MinMaxQuantization):
                                             default_qconfig_list=[self._get_default_qconfig()],
                                             quantizable_layer_nodes=quantizable_layer_nodes,
                                             quantize_outputs=self.quantize_outputs,
-                                            post_processing_metatypes=[ONNXTopKMetatype,
-                                                                       ONNXNonMaxSuppressionMetatype])
+                                            post_processing_marker_metatypes=[ONNXTopKMetatype,
+                                                                              ONNXNonMaxSuppressionMetatype])
         quantization_proposal = solver.run_on_ip_graph(ip_graph)
         multi_config_setup = quantization_proposal.quantizer_setup
         single_config_setup = multi_config_setup.select_first_qconfig_for_each_point()
