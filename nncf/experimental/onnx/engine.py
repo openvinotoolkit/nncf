@@ -11,20 +11,18 @@
  limitations under the License.
 """
 
-from typing import Dict
-
 import onnxruntime as rt
 import numpy as np
 import onnx
 
 from nncf.common.graph.transformations.commands import TargetType
 from nncf.common.graph.definitions import NNCFGraphNodeType
+from nncf.experimental.onnx.graph.onnx_graph import ONNXGraph
 
 from nncf.experimental.post_training.api.dataset import NNCFData
 from nncf.experimental.post_training.api.engine import Engine
 from nncf.experimental.post_training.api.sampler import Sampler
-from nncf.experimental.post_training.graph.factories import BackendGraphFactory
-from nncf.experimental.post_training.graph.factories import NNCFGraphFactory
+from nncf.experimental.post_training.factories import NNCFGraphFactory
 from nncf.experimental.post_training.statistics.statistic_point import StatisticPointsContainer
 from nncf.experimental.onnx.samplers import create_onnx_sampler
 from nncf.experimental.onnx.tensor import ONNXNNCFTensor
@@ -54,7 +52,6 @@ class ONNXEngine(Engine):
     def set_model(self, model: onnx.ModelProto) -> None:
         """
         Creates ONNXRuntime InferenceSession for the onnx model.
-
         :param model: onnx.ModelProto model instance
         """
         super().set_model(model)
@@ -71,7 +68,6 @@ class ONNXEngine(Engine):
         """
         Runs model on the provided input_data via ONNXRuntime InferenceSession.
         Returns the dictionary of model outputs by node names.
-
         :param input_data: inputs for the model transformed with the inputs_transforms
         :return output_data: models output after outputs_transforms
         """
@@ -86,10 +82,9 @@ class ONNXEngine(Engine):
 
     def _create_model_graphs(self, model: onnx.ModelProto) -> None:
         self.nncf_graph = NNCFGraphFactory.create(model)
-        self.onnx_graph = BackendGraphFactory.create(model)
+        self.onnx_graph = ONNXGraph(model)
 
-    def _find_edge_name_to_node_name_mapping(self, statistic_points: StatisticPointsContainer) -> Dict[str, str]:
-        edge_name_to_node_name = {}
+    def _register_statistics(self, outputs: NNCFData, statistic_points: StatisticPointsContainer) -> None:
         for node_name, _statistic_points in statistic_points.items():
             for statistic_point in _statistic_points:
                 if NNCFGraphNodeType.INPUT_NODE in statistic_point.target_point.target_node_name:
@@ -98,25 +93,12 @@ class ONNXEngine(Engine):
                                                    self.nncf_graph.get_output_edges(nncf_node_name)]
                     for onnx_node_name in onnx_nodes_after_input_node:
                         edge_name = self.onnx_graph.get_node_edges(onnx_node_name.node_name)['input'][0]
-                        edge_name_to_node_name[edge_name] = edge_name_to_node_name.get(edge_name, []) + [node_name]
-                    continue
-                if statistic_point.target_point.type == TargetType.POST_LAYER_OPERATION:
-                    # We quantize only 0-index of node's output
+                        statistic_point.register_tensor(outputs[edge_name])
+                elif statistic_point.target_point.type == TargetType.POST_LAYER_OPERATION:
                     edge_name = self.onnx_graph.get_node_edges(node_name)['output'][0]
+                    statistic_point.register_tensor(outputs[edge_name])
                 elif statistic_point.target_point.type == TargetType.PRE_LAYER_OPERATION:
                     edge_name = statistic_point.target_point.edge_name
+                    statistic_point.register_tensor(outputs[edge_name])
                 else:
                     RuntimeError('The statistics should be collected only from the input of output edges of the node')
-                edge_name_to_node_name[edge_name] = edge_name_to_node_name.get(edge_name, []) + [node_name]
-        return edge_name_to_node_name
-
-    def _register_statistics(self, outputs: NNCFData, statistic_points: StatisticPointsContainer) -> None:
-        """
-        Registers 'outputs' tensors from inferred model and register them to the correspondence 'statistic_points'.
-        """
-        edge_name_to_node_name = self._find_edge_name_to_node_name_mapping(statistic_points)
-        for output_name, output_tensor in outputs.items():
-            if output_name in edge_name_to_node_name:
-                for node_name in edge_name_to_node_name[output_name]:
-                    for statistic_point in statistic_points[node_name]:
-                        statistic_point.register_tensor(output_tensor)

@@ -12,18 +12,20 @@
 """
 
 from nncf.common.utils.logger import logger as nncf_logger
+from nncf.common.graph.transformations.layout import TransformationLayout
 from nncf.experimental.post_training.api.dataset import Dataset
 from nncf.experimental.post_training.statistics.aggregator import StatisticsAggregator
+from nncf.experimental.post_training.statistics.aggregator import StatisticPointsContainer
 from nncf.experimental.post_training.api.sampler import Sampler
 from nncf.experimental.onnx.samplers import ONNXBatchSampler
 from nncf.experimental.onnx.samplers import ONNXRandomBatchSampler
 from nncf.experimental.onnx.engine import ONNXEngine
-from nncf.experimental.onnx.graph.model_transformer import ONNXModelTransformer
+from nncf.experimental.onnx.graph.transformations.commands import ONNXOutputInsertionCommand
 
 
 class ONNXStatisticsAggregator(StatisticsAggregator):
-    def __init__(self, engine: ONNXEngine, dataset: Dataset, model_transformer: ONNXModelTransformer):
-        super().__init__(engine, dataset, model_transformer)
+    def __init__(self, engine: ONNXEngine, dataset: Dataset):
+        super().__init__(engine, dataset)
 
     def _create_sampler(self, dataset: Dataset,
                         sample_indices: int) -> Sampler:
@@ -32,3 +34,17 @@ class ONNXStatisticsAggregator(StatisticsAggregator):
             return ONNXRandomBatchSampler(dataset, sample_indices=sample_indices)
         nncf_logger.info('Using Non-Shuffled dataset')
         return ONNXBatchSampler(dataset, sample_indices=sample_indices)
+
+    def _get_transformation_layout_extra_outputs(
+            self,
+            statistic_points: StatisticPointsContainer) -> TransformationLayout:
+        transformation_layout = TransformationLayout()
+        transformation_commands = []
+        for _statistic_points in statistic_points.values():
+            for _statistic_point in _statistic_points:
+                transformation_commands.append(ONNXOutputInsertionCommand(_statistic_point.target_point))
+
+        for transformation_command in transformation_commands:
+            transformation_layout.register(transformation_command)
+
+        return transformation_layout

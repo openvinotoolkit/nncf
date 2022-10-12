@@ -24,7 +24,7 @@ import numpy as np
 from skl2onnx.helpers.onnx_helper import enumerate_model_node_outputs
 
 
-# pylint: disable=no-member
+# pylint: disable=no-member, too-many-public-methods
 
 class ONNXGraph:
     """
@@ -210,6 +210,16 @@ class ONNXGraph:
             if init.name == initializer_name:
                 tensor = numpy_helper.to_array(init)
                 return tensor
+        raise RuntimeError('There is no initializer with the name {}'.format(initializer_name))
+
+    def get_initializer(self, initializer_name: str) -> np.ndarray:
+        """
+        Returns model's Initializer with the name equals to 'initializer_name'.
+        """
+        graph = self.onnx_model.graph
+        for init in graph.initializer:
+            if init.name == initializer_name:
+                return init
         raise RuntimeError('There is no initializer with the name {}'.format(initializer_name))
 
     def get_tensor_shape(self, tensor: ValueInfoProto) -> List[int]:
