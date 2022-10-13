@@ -22,7 +22,7 @@ def _get_torch_hw_fused_patterns() -> HWFusedPatterns:
 
     matmul_ops = GraphPattern()
     matmul_ops.add_node(**MATMUL_OPERATIONS)
-    retval.register(linear_ops, MATMUL_OPERATIONS['label'], match=False)
+    retval.register(matmul_ops, MATMUL_OPERATIONS['label'], match=False)
 
     batch_norm = GraphPattern()
     batch_norm.add_node(**BATCH_NORMALIZATION_OPERATIONS)

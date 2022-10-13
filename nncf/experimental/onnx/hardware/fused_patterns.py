@@ -37,7 +37,7 @@ def _get_onnx_hw_fused_patterns() -> HWFusedPatterns:
 
     matmul_ops = GraphPattern()
     matmul_ops.add_node(**MATMUL_OPERATIONS)
-    hw_fused_patterns.register(linear_ops, MATMUL_OPERATIONS['label'], match=False)
+    hw_fused_patterns.register(matmul_ops, MATMUL_OPERATIONS['label'], match=False)
 
     atomic_activations = GraphPattern()
     atomic_activations.add_node(**ATOMIC_ACTIVATIONS_OPERATIONS)
