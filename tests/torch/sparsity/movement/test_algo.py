@@ -1,6 +1,7 @@
 import math
 import os
 from collections import defaultdict
+from functools import partial
 from pathlib import Path
 from typing import List, Optional, Union
 
@@ -94,17 +95,18 @@ def test_can_create_movement_sparsity_layers(tmp_path, nncf_config_builder):
     ConfigBuilder(warmup_start_epoch=1, warmup_end_epoch=1),
     ConfigBuilder(warmup_start_epoch=-1, warmup_end_epoch=-1),  # no warm_up?
 ])
-def test_can_run_full_pipeline(tmp_path, nncf_config_builder):
+def test_importance_threshold_and_regularization_factor_range(tmp_path, nncf_config_builder):
     nncf_config = nncf_config_builder.build(log_dir=tmp_path)
     compression_ctrl, compressed_model = create_compressed_model(bert_tiny_torch_model(), nncf_config)
     callback = BaseCallback(compression_ctrl)
     train_log, eval_result, _ = run_movement_pipeline(tmp_path, compression_ctrl, compressed_model, [callback])
 
-    # check
+    # check importance_threshold & regularization factor.
     warmup_a = nncf_config_builder.get('warmup_start_epoch')
     warmup_b = nncf_config_builder.get('warmup_end_epoch')
     importance_regularization_factor = nncf_config_builder.get('importance_regularization_factor')
-    final_importance_threshold = nncf_config_builder.get('importance_threshold')
+    init_importance_threshold = nncf_config_builder.get('init_importance_threshold')
+    final_importance_threshold = nncf_config_builder.get('final_importance_threshold')
     for epoch, log in callback.get_compress_log().items():
         # TODO: the <= and > may be a bit confusing here.
         # Assume one epoch has 4 steps, and warmup_range is [1, 2]:
@@ -112,14 +114,13 @@ def test_can_run_full_pipeline(tmp_path, nncf_config_builder):
         #   so the first stage is filtered by `epoch <= 1`, and the last stage is `epoch > 2`.
         if epoch <= warmup_a:
             assert log['importance_regularization_factor'] == approx(0.0)
-            assert log['importance_threshold'] == -math.inf  # TODO: this is no sigmoid
-            # assert log['relative_sparsity'] = approx(0.0)
+            assert log['importance_threshold'] == approx(init_importance_threshold)
         elif epoch > warmup_b:
             assert log['importance_regularization_factor'] == approx(importance_regularization_factor)
             assert log['importance_threshold'] == approx(final_importance_threshold)
         else:
             assert 0.0 <= log['importance_regularization_factor'] <= importance_regularization_factor + 1e-6  # how to check this in Pytest?
-            assert -math.inf <= log['importance_threshold'] <= final_importance_threshold + 1e-6  # TODO: during warmup, threshold starts at a non-inf, customizable value.
+            assert init_importance_threshold - 1e-6 <= log['importance_threshold'] <= final_importance_threshold + 1e-6  # TODO: during warmup, threshold starts at a non-inf, customizable value.
 
 
 @pytest.mark.parametrize('nncf_config_builder', [
@@ -163,8 +164,8 @@ def test_compression_loss(tmp_path, nncf_config_builder):
                 assert not torch.is_nonzero(loss_compress)
                 assert loss_compress.requires_grad is True
             else:
-                if self.compression_ctrl.scheduler.current_importance_lambda > 0.0:  # TODO: not the right way to check condition
-                    assert loss_compress > 0.0
+                if self.compression_ctrl.scheduler.current_importance_lambda > 0.:  # TODO: not the right way to check condition
+                    assert loss_compress > 0.
                 if state.epoch > self.compression_ctrl.scheduler.warmup_end_epoch:
                     assert loss_compress.requires_grad is False
 
@@ -174,19 +175,30 @@ def test_compression_loss(tmp_path, nncf_config_builder):
 @pytest.mark.parametrize('nncf_config_builder', [
     ConfigBuilder(),
 ])
-def test_binary_mask(tmp_path, nncf_config_builder):
-    # TODO: ref_binary_mask` in this test is incorrect. We have `max_percentile` argument when thresholding.
+def test_binary_mask_update(tmp_path, nncf_config_builder):
+    # We will check "mask == (importance_score > threshold)" in the unit test.
     nncf_config = nncf_config_builder.build(log_dir=tmp_path)
     compression_ctrl, compressed_model = create_compressed_model(bert_tiny_torch_model(), nncf_config)
 
     class CheckBinaryMaskCallback(BaseCallback):
-        def on_epoch_end(self, args: TrainingArguments, state: TrainerState, control: TrainerControl, **kwargs):
+        def on_step_end(self, args: TrainingArguments, state: TrainerState, control: TrainerControl, **kwargs):
             super().on_step_end(args, state, control, **kwargs)
-            for sparse_module in self.compression_ctrl.sparsified_module_info:
-                sparsifier = sparse_module.operand
-                if state.epoch <= self.compression_ctrl.scheduler.warmup_end_epoch:  # TODO: The binary mask after fill staget is not related to importance score
-                    ref_binary_mask = (sparsifier._weight_importance > self.compression_ctrl.scheduler.current_importance_threshold).float()
-                    assert torch.allclose(sparsifier.weight_ctx.binary_mask, sparsifier._expand_importance(ref_binary_mask))  # TODO: add _expand_importance test in unit test.
+            if state.epoch <= self.compression_ctrl.scheduler.warmup_start_epoch:
+                for m in self.compression_ctrl.sparsified_module_info:
+                    weight_mask = m.operand.weight_ctx.binary_mask
+                    ref_weight_mask = torch.ones_like(m.module.weight.data)
+                    assert torch.allclose(weight_mask, ref_weight_mask)
+                    bias_mask = m.operand.bias_ctx.binary_mask
+                    ref_bias_mask = torch.ones_like(m.module.bias.data)
+                    assert torch.allclose(bias_mask, ref_bias_mask)
+            elif state.epoch >= self.compression_ctrl.scheduler.warmup_end_epoch:  # when warmup is ended
+                count_sparse_modules = 0
+                for m in self.compression_ctrl.sparsified_module_info:
+                    weight_mask = m.operand.weight_ctx.binary_mask
+                    bias_mask = m.operand.bias_ctx.binary_mask
+                    if torch.mean(weight_mask) < 1. or torch.mean(bias_mask) < 1.:
+                        count_sparse_modules += 1
+                assert count_sparse_modules > 0
 
     run_movement_pipeline(tmp_path, compression_ctrl, compressed_model, [CheckBinaryMaskCallback(compression_ctrl)])
 
@@ -232,6 +244,7 @@ def get_linear_weight_bias_data(module: NNCFLinear):
 
 
 def check_onnx_has_sparsified_param(compressed_model, compression_ctrl, onnx_path):
+    compressed_model.eval()
     ref_params = {}
     module_name_dict = {module: name for name, module in compressed_model.named_modules()}
     for m in compression_ctrl.sparsified_module_info:
@@ -240,7 +253,12 @@ def check_onnx_has_sparsified_param(compressed_model, compression_ctrl, onnx_pat
         ref_params[name + '.weight'] = weight
         ref_params[name + '.bias'] = bias
 
+    # temporary solution to preserve param names in onnx model
+    _original_export_fn = torch.onnx.export
+    _tmp_export_fn = partial(_original_export_fn, do_constant_folding=False)
+    torch.onnx.export = _tmp_export_fn
     compression_ctrl.export_model(onnx_path)
+    torch.onnx.export = _original_export_fn
     onnx_model = onnx.load(onnx_path)
 
     for t in onnx_model.graph.initializer:
@@ -293,11 +311,11 @@ def test_structured_mask_obeys_unstructured(tmp_path, nncf_config_builder):
             if state.epoch != self.compression_ctrl.scheduler.warmup_end_epoch:
                 super().on_epoch_begin(args, state, control, **kwargs)
             else:
-                unstuctured_mask_dict = get_sparsified_module_mask(self.compression_ctrl)
+                unstructured_mask_dict = get_sparsified_module_mask(self.compression_ctrl)
                 super().on_epoch_begin(args, state, control, **kwargs)  # conduct fill stage
                 stuctured_mask_dict = get_sparsified_module_mask(self.compression_ctrl)
-                for key in unstuctured_mask_dict:
-                    unstuctured_mask = unstuctured_mask_dict[key]
+                for key in unstructured_mask_dict:
+                    unstuctured_mask = unstructured_mask_dict[key]
                     stuctured_mask = stuctured_mask_dict[key]
                     assert torch.all(stuctured_mask >= unstuctured_mask)  # structured mask preserves more "1"s
 
