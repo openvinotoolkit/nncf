@@ -582,7 +582,7 @@ def load_state(model: torch.nn.Module, state_dict_to_load: dict, is_resume: bool
 
 Classes should have a docstring below the class definition describing the class. If your class
 has public attributes, they should be documented here follow the same formatting as a function's
-params section. 
+params section.
 
 ```python
 class ModelTransformer:
@@ -611,7 +611,7 @@ class ModelTransformer:
         raise NotImplementedError()
 ```
 
-The `__init__` function and other magic methods may be left without a textual description,
+The `__init__` function and other magic methods in non-API classes may be left without a textual description,
 if there is nothing special about this exact implementation of the magic method 
 (i.e. the function has no notable side effects, the implementation is done in a conventional way such as 
 hashing all fields as a tuple in `__hash__` or concatenating string-like objects in `__add__` etc.)
@@ -635,7 +635,7 @@ class ComplexKlass(BaseClass):
    def __init__(self, param1: ParamType, param2: AnotherParamType):
         """
         *Add a brief explanation of what happens during this particular __init__, such as :*
-        The construction of this objects is dependent on the value of GLOBAL_VARIABLE...
+        The construction of this object is dependent on the value of GLOBAL_VARIABLE...
         Each object of the class after __init__ is registered in ...
         Each instantiation of an object of this class leads to a side effect in ... (explain side effect)
         If *this* and *that*, the object creation will fail with a RuntimeError.
