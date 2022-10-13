@@ -776,8 +776,8 @@ class TestHalfPrecisionModels:
         compressed_model(inputs)
 
     @pytest.mark.parametrize('device',
-        [pytest.param("cuda"), pytest.param("cpu", marks=pytest.mark.xfail(reason="CVS-86697"))])
-    def test_manual_partial_half_precision_model(self, initializing_config: NNCFConfig, device):
+        [pytest.param("cuda"), pytest.param("cpu", marks=pytest.mark.skip(reason="CVS-86697"))])
+    def test_manual_partial_half_precision_model(self, initializing_config: NNCFConfig, device: str):
         model = TestHalfPrecisionModels.ModelWithManualPartialHalfPrecision()
         inputs = torch.ones([1, 1, 1, 1])
 
