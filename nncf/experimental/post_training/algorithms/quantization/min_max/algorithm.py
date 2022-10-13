@@ -40,8 +40,10 @@ from nncf.experimental.post_training.algorithms import Algorithm
 from nncf.experimental.post_training.algorithms import AlgorithmParameters
 from nncf.experimental.post_training.algorithms.algorithm import PostTrainingAlgorithms
 from nncf.experimental.post_training.algorithms.quantization.min_max.backend import ALGO_BACKENDS
-from nncf.experimental.post_training.algorithms.quantization.min_max.utils import calculate_activation_quantizer_parameters
-from nncf.experimental.post_training.algorithms.quantization.min_max.utils import calculate_weight_quantizer_parameters
+from nncf.experimental.post_training.algorithms.quantization.min_max.utils import \
+    calculate_activation_quantizer_parameters
+from nncf.experimental.post_training.algorithms.quantization.min_max.utils import \
+    calculate_weight_quantizer_parameters
 from nncf.experimental.post_training.api.engine import Engine
 from nncf.experimental.post_training.factories import NNCFGraphFactory
 from nncf.experimental.post_training.statistics.statistic_point import StatisticPoint
@@ -108,10 +110,12 @@ class MinMaxQuantization(Algorithm):
     """
     Post-training MinMaxQuantization algorithm implementation.
 
-    The main purpose of this algorithm to insert FakeQuantizes (or pairs of Quantizer-Dequantizer operations) into the model.
+    The main purpose of this algorithm to insert FakeQuantizes 
+    (or pairs of Quantizer-Dequantizer operations) into the model.
     This operation is very expressive and allows mapping values from arbitrary input and output ranges.
     This algorithm projects (discretize) the input values to the low-precision data type
-    using affine transformation (with clamp and rounding) and then re-project discrete values back to the original range and data type.
+    using affine transformation (with clamp and rounding) and then re-project discrete values back to the
+    original range and data type.
     It can be considered as an emulation of the quantization/dequantization process which happens at runtime.
 
     :param weight_quantizer_config: QuantizerConfig instance for the weights.
@@ -233,8 +237,9 @@ class MinMaxQuantization(Algorithm):
 
         :param quantization_point: SingleConfigQuantizationPoint for the needed layer.
         """
+        node_name = quantization_point.insertion_point.target_node_name
         weight_quantization_target_point = self._backend_entity.target_point(TargetType.OPERATION_WITH_WEIGHTS,
-                                                                             quantization_point.insertion_point.target_node_name)
+                                                                             node_name)
         self._quantization_target_points.add(weight_quantization_target_point)
 
     def _add_activation_quantization_target_point(self,

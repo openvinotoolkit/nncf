@@ -107,7 +107,8 @@ class FastBiasCorrection(Algorithm):
         """
         model_backend = get_backend(model)
         if model_backend == BackendType.ONNX:
-            from nncf.experimental.post_training.algorithms.quantization.fast_bias_correction.onnx_backend import ONNXFBCAlgoBackend
+            from nncf.experimental.post_training.algorithms.quantization.fast_bias_correction.onnx_backend import \
+                ONNXFBCAlgoBackend
             self._backend_entity = ONNXFBCAlgoBackend()
         else:
             raise RuntimeError('Cannot return backend-specific entity'
