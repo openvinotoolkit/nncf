@@ -21,7 +21,6 @@ from nncf.common.quantization.structs import QuantizerConfig
 from nncf.common.quantization.structs import QuantizationMode
 from nncf.common.hardware.config import HWConfigType
 
-from nncf.common.utils.backend import BackendType
 from nncf.experimental.post_training.api.engine import Engine
 from nncf.experimental.post_training.algorithms import CompositeAlgorithm
 from nncf.experimental.post_training.algorithms import AlgorithmParameters
@@ -29,7 +28,8 @@ from nncf.experimental.post_training.algorithms import PostTrainingAlgorithms
 from nncf.experimental.post_training.algorithms.quantization.min_max.algorithm import MinMaxQuantization
 from nncf.experimental.post_training.algorithms.quantization.min_max.algorithm import MinMaxQuantizationParameters
 from nncf.experimental.post_training.algorithms.quantization.fast_bias_correction.algorithm import FastBiasCorrection
-from nncf.experimental.post_training.algorithms.quantization.fast_bias_correction.algorithm import FastBiasCorrectionParameters
+from nncf.experimental.post_training.algorithms.quantization.fast_bias_correction.algorithm import \
+    FastBiasCorrectionParameters
 from nncf.experimental.post_training.algorithms.quantization.min_max.algorithm import Preset
 from nncf.experimental.post_training.algorithms.quantization.min_max.algorithm import Granularity
 from nncf.experimental.post_training.algorithms.quantization.min_max.algorithm import RangeType
