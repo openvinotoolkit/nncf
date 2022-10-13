@@ -16,10 +16,10 @@ import pytest
 import numpy as np
 
 from nncf.experimental.post_training.compression_builder import CompressionBuilder
-from nncf.experimental.onnx.algorithms.quantization.min_max_quantization import ONNXMinMaxQuantization
-from nncf.experimental.post_training.algorithms.quantization import MinMaxQuantizationParameters
+from nncf.experimental.post_training.algorithms.quantization.min_max.algorithm import MinMaxQuantizationParameters
+from nncf.experimental.post_training.algorithms.quantization.min_max.algorithm import MinMaxQuantization
 from nncf.experimental.onnx.graph.onnx_graph import ONNXGraph
-from nncf.experimental.post_training.algorithms.quantization.min_max_quantization import RangeType
+from nncf.experimental.post_training.algorithms.quantization.min_max.algorithm import RangeType
 
 from tests.onnx.models import OneConvolutionalModel
 from tests.onnx.test_samplers import TestDataset
@@ -62,7 +62,7 @@ def test_statistics_aggregator(range_type, test_parameters):
     dataset = TestDataset(DATASET_SAMPLES, input_key="X")
     compression_builder = CompressionBuilder()
 
-    quantization = ONNXMinMaxQuantization(MinMaxQuantizationParameters(
+    quantization = MinMaxQuantization(MinMaxQuantizationParameters(
         number_samples=test_parameters.number_samples,
         range_type=range_type
     ))

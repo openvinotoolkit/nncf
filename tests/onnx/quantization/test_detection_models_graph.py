@@ -17,14 +17,13 @@ import os
 
 import onnx
 
-from nncf.experimental.onnx.algorithms.quantization.utils import find_ignored_scopes
-
 from tests.common.helpers import TEST_ROOT
 from tests.onnx.quantization.common import ModelToTest
 
 from tests.onnx.quantization.common import min_max_quantize_model
 from tests.onnx.quantization.common import compare_nncf_graph
 from tests.onnx.quantization.common import infer_model
+from tests.onnx.quantization.common import find_ignored_scopes
 
 
 @pytest.mark.parametrize(('model_to_test'),

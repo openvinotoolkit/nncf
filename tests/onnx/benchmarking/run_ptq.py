@@ -17,7 +17,6 @@ from typing import Optional
 
 import numpy as np
 import onnx
-from nncf.experimental.onnx.algorithms.quantization.utils import find_ignored_scopes
 from nncf.experimental.onnx.tensor import ONNXNNCFTensor
 
 from nncf.experimental.post_training.compression_builder import CompressionBuilder
@@ -35,6 +34,7 @@ from openvino.tools.accuracy_checker.evaluators import ModelEvaluator
 from tests.onnx.benchmarking.accuracy_checker import MSCocoSegmentationToVOCConverter
 from nncf.experimental.post_training.api import dataset as ptq_api_dataset
 
+from tests.onnx.quantization.common import find_ignored_scopes
 
 # pylint: disable=redefined-outer-name
 

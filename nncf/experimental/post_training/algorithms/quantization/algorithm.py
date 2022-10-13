@@ -26,12 +26,13 @@ from nncf.experimental.post_training.api.engine import Engine
 from nncf.experimental.post_training.algorithms import CompositeAlgorithm
 from nncf.experimental.post_training.algorithms import AlgorithmParameters
 from nncf.experimental.post_training.algorithms import PostTrainingAlgorithms
-from nncf.experimental.post_training.algorithms.quantization.min_max_quantization import MinMaxQuantizationParameters
-from nncf.experimental.post_training.algorithms.fast_bias_correction.algorithm import FastBiasCorrection
-from nncf.experimental.post_training.algorithms.fast_bias_correction.algorithm import FastBiasCorrectionParameters
-from nncf.experimental.post_training.algorithms.quantization.min_max_quantization import Preset
-from nncf.experimental.post_training.algorithms.quantization.min_max_quantization import Granularity
-from nncf.experimental.post_training.algorithms.quantization.min_max_quantization import RangeType
+from nncf.experimental.post_training.algorithms.quantization.min_max.algorithm import MinMaxQuantization
+from nncf.experimental.post_training.algorithms.quantization.min_max.algorithm import MinMaxQuantizationParameters
+from nncf.experimental.post_training.algorithms.quantization.fast_bias_correction.algorithm import FastBiasCorrection
+from nncf.experimental.post_training.algorithms.quantization.fast_bias_correction.algorithm import FastBiasCorrectionParameters
+from nncf.experimental.post_training.algorithms.quantization.min_max.algorithm import Preset
+from nncf.experimental.post_training.algorithms.quantization.min_max.algorithm import Granularity
+from nncf.experimental.post_training.algorithms.quantization.min_max.algorithm import RangeType
 from nncf.experimental.post_training.statistics.statistic_point import StatisticPointsContainer
 
 ModelType = TypeVar('ModelType')
@@ -124,14 +125,11 @@ class PostTrainingQuantization(CompositeAlgorithm):
                     output.add_statistic_point(statistic_point)
         return output
 
-    def create_subalgorithms(self, backend: BackendType) -> None:
+    def create_subalgorithms(self) -> None:
         for algorithm, parameters in self.algorithms_to_created.items():
-            if backend == BackendType.ONNX:
-                from nncf.experimental.onnx.algorithms.quantization.min_max_quantization import \
-                    ONNXMinMaxQuantization
-                if algorithm == PostTrainingAlgorithms.MinMaxQuantization:
-                    min_max_algo = ONNXMinMaxQuantization(parameters)
-                    self.algorithms.append(min_max_algo)
+            if algorithm == PostTrainingAlgorithms.MinMaxQuantization:
+                min_max_algo = MinMaxQuantization(parameters)
+                self.algorithms.append(min_max_algo)
             if algorithm == PostTrainingAlgorithms.FastBiasCorrection:
                 fast_bc_algo = FastBiasCorrection(parameters)
                 self.algorithms.append(fast_bc_algo)
