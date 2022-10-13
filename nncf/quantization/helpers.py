@@ -14,7 +14,7 @@
 from typing import Optional
 
 from nncf.api.compression import ModelType
-from nncf.common.utils.backend import infer_backend_from_model
+from nncf.common.utils.backend import get_backend
 from nncf.common.utils.backend import BackendType
 from nncf.common.quantization.structs import QuantizationPreset
 from nncf.data import DataLoader
@@ -51,7 +51,7 @@ def quantize(model: ModelType,
         in the model. Supported only `transformer` now.
     :return: The quantized model.
     """
-    backend = infer_backend_from_model(model)
+    backend = get_backend(model)
     if backend == BackendType.OPENVINO:
         from nncf.openvino.quantization.helpers import quantize_impl
         return quantize_impl(model, calibration_dataset, preset, target_device, subset_size,
