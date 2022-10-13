@@ -110,7 +110,7 @@ class MinMaxQuantization(Algorithm):
     """
     Post-training MinMaxQuantization algorithm implementation.
 
-    The main purpose of this algorithm to insert FakeQuantizes 
+    The main purpose of this algorithm to insert FakeQuantizes
     (or pairs of Quantizer-Dequantizer operations) into the model.
     This operation is very expressive and allows mapping values from arbitrary input and output ranges.
     This algorithm projects (discretize) the input values to the low-precision data type
