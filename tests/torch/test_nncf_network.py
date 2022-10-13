@@ -33,6 +33,8 @@ from nncf.common.insertion_point_graph import InsertionPointGraph
 from nncf.common.insertion_point_graph import InsertionPointGraphNodeType
 from nncf.common.insertion_point_graph import PostHookInsertionPoint
 from nncf.common.insertion_point_graph import PreHookInsertionPoint
+from nncf.common.utils.dot_file_rw import read_dot_graph
+from nncf.common.utils.dot_file_rw import write_dot_graph
 from nncf.torch import register_module
 from nncf.torch.dynamic_graph.context import PreHookId
 from nncf.torch.dynamic_graph.graph_tracer import ModelInputInfo
@@ -546,9 +548,9 @@ class TestInsertionPointGraph:
         if os.getenv("NNCF_TEST_REGEN_DOT") is not None:
             if not os.path.exists(str(data_dir)):
                 os.makedirs(str(data_dir))
-            nx.drawing.nx_pydot.write_dot(merged_ip_graph, str(path_to_dot_file))
+            write_dot_graph(merged_ip_graph, str(path_to_dot_file))
 
-        load_graph = nx.drawing.nx_pydot.read_dot(str(path_to_dot_file))
+        load_graph = read_dot_graph(str(path_to_dot_file))
 
         for key in load_graph.nodes.keys():
             key.replace(r'\\n', r'\n')  # Somehow pydot mangles the \n characters while writing a .dot file

@@ -16,11 +16,11 @@ from typing import List
 import os
 import warnings
 
-import networkx as nx
 import numpy as np
 import onnx
 import onnxruntime as rt
 
+from nncf.common.utils.dot_file_rw import write_dot_graph
 from tests.common.helpers import TEST_ROOT
 from tests.common.graph.nx_graph import compare_nx_graph_with_reference
 from tests.common.graph.nx_graph import check_nx_graph
@@ -115,7 +115,7 @@ def compare_nncf_graph(quantized_model: onnx.ModelProto, path_ref_graph: str,
     path_to_dot = os.path.abspath(os.path.join(data_dir, path_ref_graph))
 
     if generate_ref_graphs:
-        nx.drawing.nx_pydot.write_dot(nx_graph, path_to_dot)
+        write_dot_graph(nx_graph, path_to_dot)
 
     compare_nx_graph_with_reference(nx_graph, path_to_dot, check_edge_attrs=True)
 

@@ -30,6 +30,7 @@ from tests.torch.nas.helpers import move_model_to_cuda_if_available
 from tests.torch.nas.models.synthetic import TwoConvAddConvTestModel
 from tests.torch.nas.models.synthetic import TwoSequentialConvBNTestModel
 from tests.torch.nas.models.synthetic import ConvTwoFcTestModel
+from tests.torch.nas.models.synthetic import TwoSequentialFcLNTestModel
 from tests.torch.nas.test_all_elasticity import NAS_MODELS_SCOPE
 from tests.torch.nas.test_elastic_kernel import do_conv2d
 ###########################
@@ -46,7 +47,8 @@ def _seed():
     manual_seed(0)
 
 
-@pytest.fixture(name='basic_model', params=(ConvTwoFcTestModel, TwoConvAddConvTestModel, TwoSequentialConvBNTestModel))
+@pytest.fixture(name='basic_model', params=(TwoSequentialFcLNTestModel, ConvTwoFcTestModel,
+                                            TwoConvAddConvTestModel, TwoSequentialConvBNTestModel))
 def fixture_basic_model(request):
     model_cls = request.param
     model = model_cls()

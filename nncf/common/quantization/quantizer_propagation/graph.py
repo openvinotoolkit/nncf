@@ -128,9 +128,12 @@ class QuantizerPropagationStateGraph(nx.DiGraph):
                 self.op_node_keys_to_underlying_nodes_mapping[node_key] = underlying_nncf_nodes
 
                 ignored = False
-                for nncf_node in underlying_nncf_nodes:
-                    if not should_consider_scope(nncf_node.node_name, self._ignored_scopes, self._target_scopes):
-                        ignored = True
+                # For the fused-pattern nodes, will only ignore the entire pattern if the primary node in the
+                # merged pattern is in the ignored scopes. The primary node is the first one in the
+                # underlying_nncf_nodes list.
+                primary_node = underlying_nncf_nodes[0]
+                if not should_consider_scope(primary_node.node_name, self._ignored_scopes, self._target_scopes):
+                    ignored = True
 
                 if ignored:
                     qpg_node[self.IS_IN_IGNORED_SCOPES] = True

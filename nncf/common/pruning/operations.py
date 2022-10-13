@@ -181,6 +181,17 @@ class GroupNormPruningOp(BasePruningOp):
             node.data['output_mask'] = None
 
 
+class LayerNormPruningOp(BasePruningOp):
+    @classmethod
+    def accept_pruned_input(cls, node: NNCFNode) -> bool:
+        return True
+
+    @classmethod
+    def mask_propagation(cls, node: NNCFNode, graph: NNCFGraph,
+                         tensor_processor: Type[NNCFPruningBaseTensorProcessor]) -> None:
+        identity_mask_propagation(node, graph)
+
+
 class ConcatPruningOp(BasePruningOp):
     @classmethod
     def accept_pruned_input(cls, node: NNCFNode):

@@ -809,12 +809,27 @@ class TestHalfPrecisionModels:
                 assert result.dtype == torch.float16
 
 
-@pytest.mark.parametrize('update_config_info, should_ignore_quantizers', [({}, []),
-                                                                          ({"ignored_scopes": ["LeNet/relu_1"]},
-                                                                           ['LeNet/relu_0']),
-                                                                          ({"activations": {
-                                                                              "ignored_scopes": ["LeNet/relu_1"]}},
-                                                                           ['LeNet/relu_0'])])
+@pytest.mark.parametrize('update_config_info, should_ignore_quantizers', [
+    (
+            {}, []
+    ),
+    (
+            {"ignored_scopes": ["LeNet/relu_1"]},
+            []  # ignoring second op in the pattern doesn't lead to exclusion of quantization first op
+    ),
+    (
+            {"activations": {"ignored_scopes": ["LeNet/relu_1"]}},
+            []  # ignoring second op in the pattern doesn't lead to exclusion of quantization first op
+    ),
+    (
+            {"ignored_scopes": ["LeNet/NNCFConv2d[conv2]/conv2d_0"]},
+            ["LeNet/relu_0", "LeNet/NNCFConv2d[conv2]/conv2d_0"]
+    ),
+    (
+            {"activations": {"ignored_scopes": ["LeNet/NNCFConv2d[conv2]/conv2d_0"]}},
+            ["LeNet/relu_0"]
+    )
+])
 def test_activation_ignored_scope(update_config_info, should_ignore_quantizers):
     model = LeNet()
     all_quantization_names = ["LeNet/NNCFConv2d[conv1]/conv2d_0",

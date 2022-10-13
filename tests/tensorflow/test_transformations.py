@@ -14,7 +14,6 @@
 import os
 import pytest
 from pkg_resources import parse_version
-import networkx as nx
 import tensorflow as tf
 from tensorflow.keras import layers
 from tensorflow.keras import models
@@ -24,6 +23,7 @@ from nncf.common.graph.transformations.commands import TransformationPriority
 from nncf.common.graph.transformations.commands import TransformationType
 from nncf.common.quantization.structs import QuantizerConfig
 from nncf.common.quantization.structs import QuantizationMode
+from nncf.common.utils.dot_file_rw import write_dot_graph
 from nncf.tensorflow.graph.converter import TFModelConverterFactory
 from nncf.tensorflow.graph.model_transformer import TFModelTransformer
 from nncf.tensorflow.graph.transformations import commands
@@ -571,7 +571,7 @@ def check_graphs(model, ref_graph_filename):
     nx_graph = get_nx_graph_from_tf_graph(graph, graph_to_layer_var_names_map)
 
     if not os.path.exists(ref_graph_path) and os.getenv("NNCF_TEST_REGEN_DOT") is not None:
-        nx.drawing.nx_pydot.write_dot(nx_graph, ref_graph_path)
+        write_dot_graph(nx_graph, ref_graph_path)
 
     compare_nx_graph_with_reference(nx_graph, ref_graph_path)
 

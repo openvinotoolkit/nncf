@@ -16,6 +16,9 @@ from functools import partial
 from pathlib import Path
 import networkx as nx
 
+from nncf.common.utils.dot_file_rw import read_dot_graph
+from nncf.common.utils.dot_file_rw import write_dot_graph
+
 
 def sort_dot(path):
     with open(path, 'r', encoding='utf8') as f:
@@ -79,9 +82,9 @@ def compare_nx_graph_with_reference(nx_graph: nx.DiGraph, path_to_dot: str,
     if os.getenv("NNCF_TEST_REGEN_DOT") is not None:
         if not os.path.exists(dot_dir):
             os.makedirs(dot_dir)
-        nx.drawing.nx_pydot.write_dot(nx_graph, path_to_dot)
+        write_dot_graph(nx_graph, path_to_dot)
         if sort_dot_graph:
             sort_dot(path_to_dot)
 
-    expected_graph = nx.drawing.nx_pydot.read_dot(path_to_dot)
+    expected_graph = read_dot_graph(path_to_dot)
     check_nx_graph(nx_graph, expected_graph, check_edge_attrs)

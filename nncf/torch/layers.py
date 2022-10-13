@@ -237,6 +237,19 @@ class NNCFGroupNorm(_NNCFModuleMixin, nn.GroupNorm):
         return nncf_bn
 
 
+class NNCFLayerNorm(_NNCFModuleMixin, nn.LayerNorm):
+    op_func_name = "layer_norm"
+    ignored_algorithms = ['magnitude_sparsity', 'rb_sparsity', 'const_sparsity', 'quantization']
+
+    @staticmethod
+    def from_module(module):
+        assert module.__class__.__name__ == nn.LayerNorm.__name__
+
+        nncf_ln = NNCFLayerNorm(module.normalized_shape, hasattr(module, 'eps'))
+        nncf_ln = align_module_internals(module, nncf_ln)
+        return nncf_ln
+
+
 class NNCFConvTranspose2d(_NNCFModuleMixin, nn.ConvTranspose2d):
     op_func_name = "conv_transpose2d"
     target_weight_dim_for_compression = 1
@@ -326,6 +339,7 @@ NNCF_MODULES_DICT = {
     NNCFBatchNorm2d: nn.BatchNorm2d,
     NNCFBatchNorm3d: nn.BatchNorm3d,
     NNCFGroupNorm: nn.GroupNorm,
+    NNCFLayerNorm: nn.LayerNorm,
     NNCFConvTranspose1d: nn.ConvTranspose1d,
     NNCFConvTranspose2d: nn.ConvTranspose2d,
     NNCFConvTranspose3d: nn.ConvTranspose3d,

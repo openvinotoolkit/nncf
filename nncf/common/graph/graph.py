@@ -25,6 +25,7 @@ from nncf.common.graph.layer_attributes import Dtype
 from nncf.common.graph.operator_metatypes import INPUT_NOOP_METATYPES
 from nncf.common.graph.operator_metatypes import OUTPUT_NOOP_METATYPES
 from nncf.common.graph.operator_metatypes import OperatorMetatype
+from nncf.common.utils.dot_file_rw import write_dot_graph
 from nncf.common.utils.logger import logger as nncf_logger
 
 NNCFNodeName = str
@@ -497,11 +498,11 @@ class NNCFGraph:
                                                     key=lambda x: self._nx_graph.nodes[x][NNCFGraph.ID_NODE_ATTR])]
 
     def dump_graph(self, path: str):
-        nx.drawing.nx_pydot.write_dot(self.get_graph_for_structure_analysis(), path)
+        write_dot_graph(self.get_graph_for_structure_analysis(), path)
 
     def visualize_graph(self, path: str):
         out_graph = self._get_graph_for_visualization()
-        nx.drawing.nx_pydot.write_dot(out_graph, path)
+        write_dot_graph(out_graph, path)
         try:
             A = to_agraph(out_graph)
             A.layout('dot')
