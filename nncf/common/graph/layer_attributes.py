@@ -120,6 +120,22 @@ class LinearLayerAttributes(WeightedLayerAttributes):
         return 0
 
 
+class EmbeddingLayerAttributes(WeightedLayerAttributes):
+    def __init__(self,
+                 weight_requires_grad: bool,
+                 num_embeddings: int,
+                 embedding_dim: int):
+        super().__init__(weight_requires_grad)
+        self.num_embeddings = num_embeddings
+        self.embedding_dim = embedding_dim
+
+    def get_weight_shape(self) -> List[int]:
+        return [self.num_embeddings, self.embedding_dim]
+
+    def get_target_dim_for_compression(self) -> int:
+        return 1
+
+
 class ConvolutionLayerAttributes(WeightedLayerAttributes):
     """
     This class stores attributes of convolution modules/layers

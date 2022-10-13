@@ -154,6 +154,18 @@ class LinearPruningOp(BasePruningOp):
         node.data['output_mask'] = output_mask
 
 
+class EmbeddingPruningOp(BasePruningOp):
+    @classmethod
+    def accept_pruned_input(cls, node: NNCFNode) -> bool:
+        return False
+
+    @classmethod
+    def mask_propagation(cls, node: NNCFNode, graph: NNCFGraph,
+                         tensor_processor: Type[NNCFPruningBaseTensorProcessor]) -> None:
+        output_mask = node.data.get('output_mask', None)
+        node.data['output_mask'] = output_mask
+
+
 class BatchNormPruningOp(BasePruningOp):
     @classmethod
     def accept_pruned_input(cls, node: NNCFNode) -> bool:

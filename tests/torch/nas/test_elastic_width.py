@@ -30,7 +30,7 @@ from tests.torch.nas.helpers import move_model_to_cuda_if_available
 from tests.torch.nas.models.synthetic import TwoConvAddConvTestModel
 from tests.torch.nas.models.synthetic import TwoSequentialConvBNTestModel
 from tests.torch.nas.models.synthetic import ConvTwoFcTestModel
-from tests.torch.nas.models.synthetic import TwoSequentialFcLNTestModel
+from tests.torch.nas.models.synthetic import EmbeddingTwoSequentialFcLNTestModel
 from tests.torch.nas.test_all_elasticity import NAS_MODELS_SCOPE
 from tests.torch.nas.test_elastic_kernel import do_conv2d
 ###########################
@@ -47,7 +47,7 @@ def _seed():
     manual_seed(0)
 
 
-@pytest.fixture(name='basic_model', params=(TwoSequentialFcLNTestModel, ConvTwoFcTestModel,
+@pytest.fixture(name='basic_model', params=(EmbeddingTwoSequentialFcLNTestModel, ConvTwoFcTestModel,
                                             TwoConvAddConvTestModel, TwoSequentialConvBNTestModel))
 def fixture_basic_model(request):
     model_cls = request.param
@@ -64,6 +64,17 @@ BASIC_ELASTIC_WIDTH_PARAMS = {'filter_importance': 'L1',
                               'overwrite_groups_widths': None,
                               'width_multipliers': None,
                               'width_step': 1}
+EMBED_TWO_FCLN_ELASTIC_WIDTH_PARAMS = {'filter_importance': 'L1',
+                                       'add_dynamic_inputs': None,
+                                       'max_num_widths': -1,
+                                       'min_width': 1,
+                                       'overwrite_groups': [
+                                            ['EmbeddingTwoSequentialFcLNTestModel/NNCFEmbedding[embed]/embedding_0'],
+                                            ['EmbeddingTwoSequentialFcLNTestModel/NNCFLinear[fc1]/linear_0']
+                                       ],
+                                       'overwrite_groups_widths': [[], []],
+                                       'width_multipliers': None,
+                                       'width_step': 1}
 
 
 ###########################
@@ -116,7 +127,8 @@ def test_width_activation(basic_model):
         'bootstrapNAS': {
             'training': {
                 'elasticity': {
-                    'width': BASIC_ELASTIC_WIDTH_PARAMS
+                    'width': EMBED_TWO_FCLN_ELASTIC_WIDTH_PARAMS if isinstance(basic_model, EmbeddingTwoSequentialFcLNTestModel)
+                        else BASIC_ELASTIC_WIDTH_PARAMS
                 },
             }
         }
@@ -137,6 +149,16 @@ def test_width_activation(basic_model):
 def test_width_reorg(basic_model):
     config = get_empty_config(input_sample_sizes=basic_model.INPUT_SIZE)
     config['bootstrapNAS'] = {}
+    if isinstance(basic_model, EmbeddingTwoSequentialFcLNTestModel):
+        config.update({
+            'bootstrapNAS': {
+                'training': {
+                    'elasticity': {
+                        'width': EMBED_TWO_FCLN_ELASTIC_WIDTH_PARAMS
+                    },
+                }
+            }
+        })
     model, ctrl = create_bootstrap_training_model_and_ctrl(basic_model, config)
     device = next(model.parameters()).device
     dummy_input = torch.Tensor([1]).reshape(basic_model.INPUT_SIZE).to(device)

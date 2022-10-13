@@ -29,6 +29,7 @@ from torch import nn
 from nncf.common.graph import BaseLayerAttributes
 from nncf.common.graph import NNCFNodeName
 from nncf.common.graph.layer_attributes import ConvolutionLayerAttributes
+from nncf.common.graph.layer_attributes import EmbeddingLayerAttributes
 from nncf.common.graph.layer_attributes import GenericWeightedLayerAttributes
 from nncf.common.graph.layer_attributes import LinearLayerAttributes
 from nncf.common.graph.transformations.commands import TargetType
@@ -58,11 +59,13 @@ from nncf.torch.graph.operator_metatypes import PTBatchNormMetatype
 from nncf.torch.graph.operator_metatypes import PTLayerNormMetatype
 from nncf.torch.graph.operator_metatypes import PTConv2dMetatype
 from nncf.torch.graph.operator_metatypes import PTDepthwiseConv2dSubtype
+from nncf.torch.graph.operator_metatypes import PTEmbeddingMetatype
 from nncf.torch.graph.operator_metatypes import PTLinearMetatype
 from nncf.torch.graph.transformations.commands import PTInsertionCommand
 from nncf.torch.graph.transformations.commands import PTTargetPoint
 from nncf.torch.layers import NNCFConv2d
 from nncf.torch.layers import NNCFLinear
+from nncf.torch.layers import NNCFEmbedding
 from nncf.torch.module_operations import UpdateBatchNormParams
 from nncf.torch.module_operations import UpdateLayerNormParams
 from nncf.torch.module_operations import UpdateNumGroups
@@ -480,6 +483,19 @@ class ElasticOutputWidthLinearOp(ElasticOutputWidthOp, nn.Module):
         return [weight[:self._active_width, :], new_bias]
 
 
+class ElasticOutputWidthEmbeddingOp(ElasticOutputWidthOp, nn.Module):
+    """
+    Introduces elastic output width for embedding layer.
+    """
+    def forward(self, weight: torch.Tensor) -> torch.Tensor:
+        """
+        Trims embedding layer's parameters according to active number of output channels.
+        :param weight: weight tensor to be trimmed
+        :return: trimmed embedding parameters
+        """
+        return weight[:, :self._active_width]
+
+
 class ElasticWidthHandler(SingleElasticityHandler):
     """
     An interface for handling elastic width dimension in the network, i.e. define number of channels in the layers.
@@ -514,7 +530,7 @@ class ElasticWidthHandler(SingleElasticityHandler):
         self._add_dynamic_inputs = add_dynamic_inputs
 
         graph = self._target_model.get_original_graph()
-        prunable_types = [NNCFConv2d.op_func_name, NNCFLinear.op_func_name]
+        prunable_types = [NNCFConv2d.op_func_name, NNCFLinear.op_func_name, NNCFEmbedding.op_func_name]
         self._shape_pruning_processor = ShapePruningProcessor(
             prunable_types=prunable_types,
             pruning_operations_metatype=PT_PRUNING_OPERATOR_METATYPES)
@@ -905,7 +921,7 @@ class ElasticWidthBuilder(SingleElasticityBuilder):
         device = next(target_model.parameters()).device
 
         if not self._grouped_node_names_to_prune:
-            prunable_types = [NNCFConv2d, NNCFLinear]
+            prunable_types = [NNCFConv2d, NNCFLinear, NNCFEmbedding]
             prune_operations_types = [pt.op_func_name for pt in prunable_types]
             types_of_grouping_ops = PTElementwisePruningOp.get_all_op_aliases()
             pruning_node_selector = PruningNodeSelector(PT_PRUNING_OPERATOR_METATYPES,
@@ -927,7 +943,15 @@ class ElasticWidthBuilder(SingleElasticityBuilder):
         metatype_vs_elastic_op_creator = {
             PTConv2dMetatype: self._create_elastic_conv_width_op,
             PTDepthwiseConv2dSubtype: self._create_elastic_conv_width_op,
-            PTLinearMetatype: self._create_elastic_linear_width_op
+            PTLinearMetatype: self._create_elastic_linear_width_op,
+            PTEmbeddingMetatype: self._create_elastic_embedding_width_op
+        }
+
+        metatype_vs_update_params_op = {
+            PTConv2dMetatype: UpdateWeightAndOptionalBias,
+            PTDepthwiseConv2dSubtype: UpdateWeightAndOptionalBias,
+            PTLinearMetatype: UpdateWeightAndOptionalBias,
+            PTEmbeddingMetatype: UpdateWeight
         }
 
         for i, grouped_node_names in enumerate(self._grouped_node_names_to_prune):
@@ -949,7 +973,8 @@ class ElasticWidthBuilder(SingleElasticityBuilder):
                         self._overwrite_groups_widths[i] if self._overwriting_pruning_groups
                                                         else [])
                 elastic_width_operation.to(device)
-                update_conv_params_op = UpdateWeightAndOptionalBias(elastic_width_operation)
+                update_params_op = metatype_vs_update_params_op[metatype]
+                update_conv_params_op = update_params_op(elastic_width_operation)
                 transformation_commands.append(
                     PTInsertionCommand(
                         PTTargetPoint(
@@ -961,8 +986,8 @@ class ElasticWidthBuilder(SingleElasticityBuilder):
                     )
                 )
                 pruned_module = target_model.get_containing_module(node_name)
-                assert isinstance(pruned_module, (nn.Conv2d, nn.Linear)), \
-                    'currently prune only 2D Convolutions and Linear layers'
+                assert isinstance(pruned_module, (nn.Conv2d, nn.Linear, nn.Embedding)), \
+                    'currently prune only 2D Convolutions, Linear layers and Embedding layers'
 
                 group_minfos.append(ElasticWidthInfo(node_name=node_name,
                                                      module=pruned_module,
@@ -1061,6 +1086,19 @@ class ElasticWidthBuilder(SingleElasticityBuilder):
         nncf_logger.info("Adding Dynamic Linear Layer in scope: {}".format(str(node_name)))
         return ElasticOutputWidthLinearOp(linear_layer_attrs.out_features, node_name, params,
                                           fixed_width_list=fixed_width_list)
+
+    @staticmethod
+    def _create_elastic_embedding_width_op(embedding_layer_attrs: BaseLayerAttributes,
+                                           node_name: str,
+                                           params: ElasticWidthParams,
+                                           fixed_width_list: Optional[List[int]] = None) -> \
+                                                                    ElasticOutputWidthEmbeddingOp:
+        assert isinstance(embedding_layer_attrs, EmbeddingLayerAttributes)
+        if fixed_width_list is None:
+            fixed_width_list = []
+        nncf_logger.info("Adding Dynamic Embedding Layer in scope: {}".format(str(node_name)))
+        return ElasticOutputWidthEmbeddingOp(embedding_layer_attrs.embedding_dim, node_name, params,
+                                            fixed_width_list=fixed_width_list)
 
     @staticmethod
     def _create_dynamic_conv_input_op(conv_layer_attrs: BaseLayerAttributes, node_name: str) -> UpdateWeight:
