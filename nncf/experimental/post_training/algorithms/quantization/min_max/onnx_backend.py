@@ -11,11 +11,13 @@
  limitations under the License.
 """
 
+from copy import deepcopy
 import numpy as np
 import onnx
 
 from nncf.common.graph.graph import NNCFNode
 from nncf.common.graph.transformations.commands import TargetType
+from nncf.common.quantization.structs import QuantizerConfig
 from nncf.common.tensor_statistics.collectors import ReductionShape
 from nncf.common.utils.backend import BackendType
 from nncf.common.utils.registry import Registry
@@ -94,8 +96,22 @@ class ONNXMinMaxAlgoBackend(MinMaxAlgoBackend):
                 return onnx.numpy_helper.to_array(initializer)
         raise RuntimeError(
             'There is no initializer with the name {}'.format(initializer_name))
-    
+
     @staticmethod
     def get_tensor_names(node: NNCFNode):
         return node.layer_attributes.input_tensor_names, \
             node.layer_attributes.output_tensor_names
+
+    @staticmethod
+    def get_weight_config(config: QuantizerConfig, model: onnx.ModelProto):
+        config = deepcopy(config)
+        message = None
+        if model.opset_import[0].version < 13:
+            config.per_channel = False
+            message = (
+                f"Model opset version is {model.opset_import[0].version} < 13. "
+                "Per-channel quantization is not supported. "
+                "Set weight_quantizer_config.per_channel = False"
+            )
+
+        return config, message

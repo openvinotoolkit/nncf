@@ -13,6 +13,7 @@
 
 from abc import ABC
 from abc import abstractmethod
+from typing import Optional
 from typing import TypeVar
 from typing import Tuple
 from typing import List
@@ -25,6 +26,7 @@ from nncf.common.graph.transformations.commands import TransformationCommand
 from nncf.common.tensor_statistics.collectors import ReductionShape
 from nncf.common.tensor_statistics.collectors import TensorStatisticCollectorBase
 from nncf.common.utils.registry import Registry
+from nncf.common.quantization.structs import QuantizerConfig
 from nncf.experimental.post_training.algorithms.quantization.min_max.utils import QuantizerLayerParameters
 from nncf.experimental.post_training.graph.model_transformer import StaticModelTransformerBase
 
@@ -137,7 +139,7 @@ class MinMaxAlgoBackend(ABC):
         :param initializer_name: Name of the tensor/initializer to find in the model.
         :return: Initializer value in the NumPy format.
         """
-    
+
     @staticmethod
     @abstractmethod
     def get_tensor_names(node: NNCFNode) -> Tuple[List[str], List[str]]:
@@ -146,4 +148,15 @@ class MinMaxAlgoBackend(ABC):
 
         :param node: NNCFNode with the layer_attributes.
         :return: Tuple of the lists with the names.
+        """
+
+    @staticmethod
+    @abstractmethod
+    def get_weight_config(config: QuantizerConfig, model: ModelType) -> Tuple[QuantizerConfig, Optional[str]]:
+        """
+        Returns backend-specific configuration based on the input model attributes.
+
+        :param config: Base QuantizerConfig from the algo.
+        :param model: Backend-specific model instance.
+        :return: Tuple of the updated QuantizerConfig and the optional message.
         """
