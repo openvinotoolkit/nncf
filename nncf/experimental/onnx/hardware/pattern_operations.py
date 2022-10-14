@@ -33,8 +33,7 @@ from nncf.experimental.onnx.graph.metatypes.onnx_metatypes import ONNXSubMetatyp
 
 LINEAR_OPERATIONS = {GraphPattern.METATYPE_ATTR: [ONNXConvolutionMetatype,
                                                   ONNXConvolutionTransposeMetatype,
-                                                  ONNXLinearMetatype,
-                                                  ONNXMatMulMetatype
+                                                  ONNXLinearMetatype
                                                   ],
                      GraphPattern.LABEL_ATTR: 'LINEAR'}
 
@@ -65,3 +64,7 @@ ARITHMETIC_OPERATIONS = {GraphPattern.METATYPE_ATTR: [ONNXAddLayerMetatype,
                                                       ONNXDivLayerMetatype,
                                                       ],
                          GraphPattern.LABEL_ATTR: 'ARITHMETIC'}
+
+MATMUL_OPERATIONS = {GraphPattern.METATYPE_ATTR: [ONNXMatMulMetatype
+                                                  ],
+                     GraphPattern.LABEL_ATTR: 'MATMUL'}

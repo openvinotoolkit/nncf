@@ -15,7 +15,6 @@ from nncf.common.quantization.quantizer_propagation.structs import QuantizationT
 from nncf.experimental.onnx.graph.metatypes.onnx_metatypes import ONNXConvolutionMetatype
 from nncf.experimental.onnx.graph.metatypes.onnx_metatypes import ONNXConvolutionTransposeMetatype
 from nncf.experimental.onnx.graph.metatypes.onnx_metatypes import ONNXLinearMetatype
-from nncf.experimental.onnx.graph.metatypes.onnx_metatypes import ONNXMatMulMetatype
 from nncf.experimental.onnx.graph.metatypes.onnx_metatypes import ONNXSigmoidMetatype
 from nncf.experimental.onnx.graph.metatypes.onnx_metatypes import ONNXHardSigmoidMetatype
 from nncf.experimental.onnx.graph.metatypes.onnx_metatypes import ONNXAveragePoolMetatype
@@ -36,7 +35,6 @@ DEFAULT_ONNX_QUANT_TRAIT_TO_OP_DICT = {
         ONNXConvolutionMetatype,
         ONNXConvolutionTransposeMetatype,
         ONNXLinearMetatype,
-        ONNXMatMulMetatype,
         ONNXAveragePoolMetatype,
         ONNXGlobalAveragePoolMetatype,
         ONNXAddLayerMetatype,

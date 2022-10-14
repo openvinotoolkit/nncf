@@ -404,8 +404,7 @@ class ONNXIdentityMetatype(ONNXOpMetatype):
 
 WEIGHT_LAYER_METATYPES = [ONNXConvolutionMetatype,
                           ONNXConvolutionTransposeMetatype,
-                          ONNXLinearMetatype,
-                          ONNXMatMulMetatype]
+                          ONNXLinearMetatype]
 
 LAYERS_WITH_BIAS_METATYPES = [ONNXConvolutionMetatype,
                               ONNXConvolutionTransposeMetatype]
