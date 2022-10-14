@@ -34,7 +34,6 @@ from nncf.common.quantization.structs import QuantizerConfig
 from nncf.common.tensor_statistics.collectors import TensorStatisticCollectorBase
 from nncf.common.utils.backend import BackendType, get_backend
 from nncf.common.utils.logger import logger as nncf_logger
-from nncf.common.utils.ordered_enum import OrderedEnum
 
 from nncf.experimental.post_training.algorithms import Algorithm
 from nncf.experimental.post_training.algorithms import AlgorithmParameters
@@ -44,6 +43,7 @@ from nncf.experimental.post_training.algorithms.quantization.min_max.utils impor
     calculate_activation_quantizer_parameters
 from nncf.experimental.post_training.algorithms.quantization.min_max.utils import \
     calculate_weight_quantizer_parameters
+from nncf.experimental.post_training.algorithms.quantization.definitions import RangeType
 from nncf.experimental.post_training.api.engine import Engine
 from nncf.experimental.post_training.factories import NNCFGraphFactory
 from nncf.experimental.post_training.statistics.statistic_point import StatisticPoint
@@ -52,30 +52,19 @@ from nncf.experimental.post_training.statistics.statistic_point import Statistic
 ModelType = TypeVar('ModelType')
 
 
-class Preset(OrderedEnum):
-    PERFOMANCE = 'perfomance'
-    MIXED = 'mixed'
-    ACCURACY = 'accuracy'
-
-
-class Granularity(OrderedEnum):
-    PERTENSOR = 'pertensor'
-    PERCHANNEL = 'perchannel'
-
-
-class RangeType(OrderedEnum):
-    MINMAX = 'min_max'
-    MEAN_MINMAX = 'mean_min_max'
-
-
 class MinMaxQuantizationParameters(AlgorithmParameters):
     """
     Base class of MinMaxQuantization algorithm parameters.
     """
 
+    DEFAULT_QCONFIG = QuantizerConfig(num_bits=8,
+                                      mode=QuantizationMode.SYMMETRIC,
+                                      signedness_to_force=None,
+                                      per_channel=False)
+
     def __init__(self,
-                 weight_quantizer_config: QuantizerConfig = None,
-                 activation_quantizer_config: QuantizerConfig = None,
+                 weight_quantizer_config: QuantizerConfig = deepcopy(DEFAULT_QCONFIG),
+                 activation_quantizer_config: QuantizerConfig = deepcopy(DEFAULT_QCONFIG),
                  number_samples: int = 100,
                  target_device: HWConfigType = HWConfigType.CPU,
                  range_type: RangeType = RangeType.MEAN_MINMAX,
@@ -129,26 +118,12 @@ class MinMaxQuantization(Algorithm):
     :param _quantization_target_points: Set of the unique target points.
     """
 
-    DEFAULT_QCONFIG = QuantizerConfig(num_bits=8,
-                                      mode=QuantizationMode.SYMMETRIC,
-                                      signedness_to_force=None,
-                                      per_channel=False)
-
     def __init__(self, parameters: MinMaxQuantizationParameters):
-        super().__init__()
-        self.weight_quantizer_config = parameters.weight_quantizer_config \
-            if parameters.weight_quantizer_config is not None else self._get_default_qconfig()
-        self.activation_quantizer_config = parameters.activation_quantizer_config \
-            if parameters.activation_quantizer_config is not None else self._get_default_qconfig()
-        self.number_samples = parameters.number_samples
-        self.target_device = parameters.target_device
-        self.range_type = parameters.range_type
-        self.quantize_outputs = parameters.quantize_outputs
-        self.ignored_scopes = parameters.ignored_scopes
         self.nncf_graph = None
         # It prevents the duplicate weight quantizers from being added.
         # It can happen when you have layers that share the identical weight tensor.
         self._quantization_target_points = set()  # type: Set[TargetPoint]
+        self._parameters = parameters
 
     @property
     def available_backends(self) -> Dict[str, BackendType]:
@@ -169,15 +144,6 @@ class MinMaxQuantization(Algorithm):
             raise RuntimeError('Cannot return backend-specific entity'
                                'because {} is not supported!'.format(model_backend))
 
-    def _get_default_qconfig(self) -> QuantizerConfig:
-        """
-        Returns the deepcopy of the DEFAULT_QCONFIG.
-
-        :return: QuantizerConfig instance.
-        """
-        qconfig = deepcopy(self.DEFAULT_QCONFIG)
-        return qconfig
-
     def _get_stat_collector(self, quantizer_config: QuantizerConfig) -> TensorStatisticCollectorBase:
         """
         Creates and returns statistic collector instance based on the quantizer's configuration.
@@ -187,15 +153,15 @@ class MinMaxQuantization(Algorithm):
         """
         is_symmetric = quantizer_config.mode == QuantizationMode.SYMMETRIC
         axes = (0, 2, 3) if quantizer_config.per_channel else None
-        if self.range_type == RangeType.MINMAX:
+        if self._parameters.range_type == RangeType.MINMAX:
             return self._backend_entity.minmax_statistic_collector(use_abs_max=is_symmetric,
                                                                    reduction_shape=axes,
-                                                                   num_samples=self.number_samples)
-        if self.range_type == RangeType.MEAN_MINMAX:
+                                                                   num_samples=self._parameters.number_samples)
+        if self._parameters.range_type == RangeType.MEAN_MINMAX:
             return self._backend_entity.mean_minmax_statistic_collector(use_per_sample_stats=False,
                                                                         use_abs_max=is_symmetric,
                                                                         reduction_shape=axes,
-                                                                        num_samples=self.number_samples)
+                                                                        num_samples=self._parameters.number_samples)
         raise RuntimeError('This range type is not supported!')
 
     def _get_quantizer_setup(self, nncf_graph: NNCFGraph) -> SingleConfigQuantizerSetup:
@@ -213,16 +179,17 @@ class MinMaxQuantization(Algorithm):
         quantizable_layer_nodes = [QuantizableWeightedLayerNode(weight_node, [QuantizerConfig()])
                                    for weight_node in weight_nodes]
 
-        hw_config_type = self.target_device
+        hw_config_type = self._parameters.target_device
         hw_config_path = self._backend_entity.hw_config.get_path_to_hw_config(hw_config_type)
         hw_config = self._backend_entity.hw_config.from_json(hw_config_path)
+        default_config = deepcopy(self._parameters.DEFAULT_QCONFIG)
 
-        solver = QuantizerPropagationSolver(ignored_scopes=self.ignored_scopes,
+        solver = QuantizerPropagationSolver(ignored_scopes=self._parameters.ignored_scopes,
                                             hw_config=hw_config,
                                             default_trait_to_metatype_map=self._backend_entity.quant_trait_op_dict,
-                                            default_qconfig_list=[self._get_default_qconfig()],
+                                            default_qconfig_list=[default_config],
                                             quantizable_layer_nodes=quantizable_layer_nodes,
-                                            quantize_outputs=self.quantize_outputs)
+                                            quantize_outputs=self._parameters.quantize_outputs)
 
         quantization_proposal = solver.run_on_ip_graph(ip_graph)
         multi_config_setup = quantization_proposal.quantizer_setup
@@ -305,11 +272,9 @@ class MinMaxQuantization(Algorithm):
         model_transformer = self._backend_entity.model_transformer(model)
 
         quantization_target_points = self._get_quantization_target_points(model)
-        weight_quantizer_config, message = self._backend_entity.get_weight_config(self.weight_quantizer_config, model)
+        weight_quantizer_config = self._backend_entity.get_weight_config(self._parameters.weight_quantizer_config,
+                                                                         model)
         weight_initializer_names = set()
-
-        if message is not None:
-            nncf_logger.warning(message)
 
         for quantization_target_point in quantization_target_points:
             target_node_name = quantization_target_point.target_node_name
@@ -340,7 +305,7 @@ class MinMaxQuantization(Algorithm):
                         filter_func,
                         PostTrainingAlgorithms.MinMaxQuantization):
                     parameters = calculate_activation_quantizer_parameters(tensor_collector.get_statistics(),
-                                                                           self.activation_quantizer_config)
+                                                                           self._parameters.activation_quantizer_config)
                     command = self._backend_entity.quantizer_insertion_command(quantization_target_point, parameters)
                     transformation_commands.append(command)
             else:
@@ -362,7 +327,7 @@ class MinMaxQuantization(Algorithm):
                     'Adding {} Quantization Target Point to the Statistics Points,'
                     ' which outputs will be used for statistics collection'.format(
                         quantization_target_point.target_node_name))
-                stat_collector = self._get_stat_collector(self.activation_quantizer_config)
+                stat_collector = self._get_stat_collector(self._parameters.activation_quantizer_config)
                 output.add_statistic_point(StatisticPoint(target_point=quantization_target_point,
                                                           tensor_collector=stat_collector,
                                                           algorithm=PostTrainingAlgorithms.MinMaxQuantization))

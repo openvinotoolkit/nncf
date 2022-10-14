@@ -14,7 +14,6 @@
 from copy import deepcopy
 from typing import Dict
 from typing import List
-from typing import Optional
 from typing import Tuple
 import numpy as np
 import onnx
@@ -28,6 +27,7 @@ from nncf.common.quantization.structs import QuantizerConfig
 from nncf.common.tensor_statistics.collectors import ReductionShape
 from nncf.common.utils.backend import BackendType
 from nncf.common.utils.registry import Registry
+from nncf.common.utils.logger import logger as nncf_logger
 
 from nncf.experimental.onnx.graph.metatypes.onnx_metatypes import GENERAL_WEIGHT_LAYER_METATYPES
 from nncf.experimental.onnx.graph.model_transformer import ONNXModelTransformer
@@ -110,15 +110,14 @@ class ONNXMinMaxAlgoBackend(MinMaxAlgoBackend):
             node.layer_attributes.output_tensor_names
 
     @staticmethod
-    def get_weight_config(config: QuantizerConfig, model: onnx.ModelProto) -> Tuple[QuantizerConfig, Optional[str]]:
+    def get_weight_config(config: QuantizerConfig, model: onnx.ModelProto) -> QuantizerConfig:
         config = deepcopy(config)
-        message = None
         if model.opset_import[0].version < 13:
             config.per_channel = False
-            message = (
+            nncf_logger.warning(
                 f"Model opset version is {model.opset_import[0].version} < 13. "
                 "Per-channel quantization is not supported. "
                 "Set weight_quantizer_config.per_channel = False"
             )
 
-        return config, message
+        return config

@@ -19,7 +19,7 @@ from nncf.experimental.post_training.compression_builder import CompressionBuild
 from nncf.experimental.post_training.algorithms.quantization.min_max.algorithm import MinMaxQuantizationParameters
 from nncf.experimental.post_training.algorithms.quantization.min_max.algorithm import MinMaxQuantization
 from nncf.experimental.onnx.graph.onnx_graph import ONNXGraph
-from nncf.experimental.post_training.algorithms.quantization.min_max.algorithm import RangeType
+from nncf.experimental.post_training.algorithms.quantization.definitions import RangeType
 
 from tests.onnx.models import OneConvolutionalModel
 from tests.onnx.test_samplers import TestDataset

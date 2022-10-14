@@ -14,7 +14,6 @@
 from abc import ABC
 from abc import abstractmethod
 from typing import Dict
-from typing import Optional
 from typing import TypeVar
 from typing import Tuple
 from typing import List
@@ -156,11 +155,11 @@ class MinMaxAlgoBackend(ABC):
 
     @staticmethod
     @abstractmethod
-    def get_weight_config(config: QuantizerConfig, model: ModelType) -> Tuple[QuantizerConfig, Optional[str]]:
+    def get_weight_config(config: QuantizerConfig, model: ModelType) -> QuantizerConfig:
         """
         Returns backend-specific configuration based on the input model attributes.
 
         :param config: Base QuantizerConfig from the algo.
         :param model: Backend-specific model instance.
-        :return: Tuple of the updated QuantizerConfig and the optional message.
+        :return: The updated QuantizerConfig.
         """

@@ -30,9 +30,9 @@ from nncf.experimental.post_training.algorithms.quantization.min_max.algorithm i
 from nncf.experimental.post_training.algorithms.quantization.fast_bias_correction.algorithm import FastBiasCorrection
 from nncf.experimental.post_training.algorithms.quantization.fast_bias_correction.algorithm import \
     FastBiasCorrectionParameters
-from nncf.experimental.post_training.algorithms.quantization.min_max.algorithm import Preset
-from nncf.experimental.post_training.algorithms.quantization.min_max.algorithm import Granularity
-from nncf.experimental.post_training.algorithms.quantization.min_max.algorithm import RangeType
+from nncf.experimental.post_training.algorithms.quantization.definitions import Preset
+from nncf.experimental.post_training.algorithms.quantization.definitions import Granularity
+from nncf.experimental.post_training.algorithms.quantization.definitions import RangeType
 from nncf.experimental.post_training.statistics.statistic_point import StatisticPointsContainer
 
 ModelType = TypeVar('ModelType')
