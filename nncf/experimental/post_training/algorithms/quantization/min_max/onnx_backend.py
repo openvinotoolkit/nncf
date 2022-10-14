@@ -12,11 +12,18 @@
 """
 
 from copy import deepcopy
+from typing import Dict
+from typing import List
+from typing import Optional
+from typing import Tuple
 import numpy as np
 import onnx
 
 from nncf.common.graph.graph import NNCFNode
+from nncf.common.graph.operator_metatypes import OperatorMetatype
+from nncf.common.graph.patterns import HWFusedPatterns
 from nncf.common.graph.transformations.commands import TargetType
+from nncf.common.hardware.config import HWConfig
 from nncf.common.quantization.structs import QuantizerConfig
 from nncf.common.tensor_statistics.collectors import ReductionShape
 from nncf.common.utils.backend import BackendType
@@ -45,15 +52,15 @@ class ONNXMinMaxAlgoBackend(MinMaxAlgoBackend):
         return GENERAL_WEIGHT_LAYER_METATYPES
 
     @property
-    def hw_fused_patterns(self):
+    def hw_fused_patterns(self) -> HWFusedPatterns:
         return ONNX_HW_FUSED_PATTERNS
 
     @property
-    def hw_config(self):
+    def hw_config(self) -> HWConfig:
         return ONNXHWConfig
 
     @property
-    def quant_trait_op_dict(self):
+    def quant_trait_op_dict(self) -> Dict[int, OperatorMetatype]:
         return DEFAULT_ONNX_QUANT_TRAIT_TO_OP_DICT
 
     @staticmethod
@@ -98,12 +105,12 @@ class ONNXMinMaxAlgoBackend(MinMaxAlgoBackend):
             'There is no initializer with the name {}'.format(initializer_name))
 
     @staticmethod
-    def get_tensor_names(node: NNCFNode):
+    def get_tensor_names(node: NNCFNode) -> Tuple[List[str], List[str]]:
         return node.layer_attributes.input_tensor_names, \
             node.layer_attributes.output_tensor_names
 
     @staticmethod
-    def get_weight_config(config: QuantizerConfig, model: onnx.ModelProto):
+    def get_weight_config(config: QuantizerConfig, model: onnx.ModelProto) -> Tuple[QuantizerConfig, Optional[str]]:
         config = deepcopy(config)
         message = None
         if model.opset_import[0].version < 13:

@@ -13,6 +13,7 @@
 
 from abc import ABC
 from abc import abstractmethod
+from typing import Dict
 from typing import Optional
 from typing import TypeVar
 from typing import Tuple
@@ -20,9 +21,12 @@ from typing import List
 
 import numpy as np
 from nncf.common.graph.graph import NNCFNode
+from nncf.common.graph.operator_metatypes import OperatorMetatype
+from nncf.common.graph.patterns import HWFusedPatterns
 from nncf.common.graph.transformations.commands import TargetPoint
 from nncf.common.graph.transformations.commands import TargetType
 from nncf.common.graph.transformations.commands import TransformationCommand
+from nncf.common.hardware.config import HWConfig
 from nncf.common.tensor_statistics.collectors import ReductionShape
 from nncf.common.tensor_statistics.collectors import TensorStatisticCollectorBase
 from nncf.common.utils.registry import Registry
@@ -38,28 +42,28 @@ class MinMaxAlgoBackend(ABC):
 
     @property
     @abstractmethod
-    def layers_with_weights_metatypes(self):
+    def layers_with_weights_metatypes(self) -> Registry:
         """
         Property for the backend-specific metatypes with weights.
         """
 
     @property
     @abstractmethod
-    def hw_fused_patterns(self):
+    def hw_fused_patterns(self) -> HWFusedPatterns:
         """
         Property for the hardware & backend-specific layers patterns.
         """
 
     @property
     @abstractmethod
-    def hw_config(self):
+    def hw_config(self) -> HWConfig:
         """
         Property for the hardware backend-specific configuration.
         """
 
     @property
     @abstractmethod
-    def quant_trait_op_dict(self):
+    def quant_trait_op_dict(self) -> Dict[int, OperatorMetatype]:
         """
         Property for the backend-specific dictionary that contains QuantizationTrait-specific metatypes.
         """
