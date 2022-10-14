@@ -33,6 +33,7 @@ def create_initializer_tensor(name: str, tensor_array: np.ndarray,
 
 OPSET_VERSION = 13
 ALL_SYNTHETIC_MODELS = Registry('ONNX_SYNTHETIC_MODELS')
+WEIGHT_DETECTION_MODELS = Registry('ONNX_WEIGHT_DETECTION_MODELS')
 
 
 class ONNXReferenceModel:
@@ -646,3 +647,94 @@ class ManyInputPortsQuantizableModel(ONNXReferenceModel):
         model = onnx.helper.make_model(graph_def, opset_imports=[op])
         onnx.checker.check_model(model)
         super().__init__(model, [input_shape], 'many_input_ports_quantizable_model.dot')
+
+
+@WEIGHT_DETECTION_MODELS.register()
+class MatMulWithWeightsModel(ONNXReferenceModel):
+    #           X
+    #           |
+    #         MatMul
+    #           |
+    #           Y
+    def __init__(self):
+        input_shape = output_shape = [1, 1, 5, 5]
+
+        # IO tensors (ValueInfoProto).
+        model_input_name = "X"
+        X = onnx.helper.make_tensor_value_info(model_input_name,
+                                               onnx.TensorProto.FLOAT,
+                                               input_shape)
+        model_output_name = "Y"
+        Y = onnx.helper.make_tensor_value_info(model_output_name,
+                                               onnx.TensorProto.FLOAT,
+                                               output_shape)
+
+        W = np.ones_like(input_shape).astype(np.float32)
+
+        w_tensor = create_initializer_tensor(
+            name="W",
+            tensor_array=W,
+            data_type=onnx.TensorProto.FLOAT)
+
+        mat_mul_node = onnx.helper.make_node(
+            name='MatMul',
+            op_type="MatMul",
+            inputs=["X", "W"],
+            outputs=["Y"],
+        )
+
+        graph_def = onnx.helper.make_graph(
+            nodes=[mat_mul_node],
+            name="Net",
+            inputs=[X],
+            outputs=[Y],
+            initializer=[w_tensor]
+        )
+
+        op = onnx.OperatorSetIdProto()
+        op.version = OPSET_VERSION
+        model = onnx.helper.make_model(graph_def, opset_imports=[op])
+        onnx.checker.check_model(model)
+        super().__init__(model, [input_shape], 'mat_mul_with_weights_model.dot')
+
+
+@WEIGHT_DETECTION_MODELS.register()
+class MatMulWithoutWeightsModel(ONNXReferenceModel):
+    #           X
+    #         /   \
+    #         |   |
+    #         MatMul
+    #           |
+    #           Y
+    def __init__(self):
+        input_shape = output_shape = [1, 1, 5, 5]
+
+        # IO tensors (ValueInfoProto).
+        model_input_name = "X"
+        X = onnx.helper.make_tensor_value_info(model_input_name,
+                                               onnx.TensorProto.FLOAT,
+                                               input_shape)
+        model_output_name = "Y"
+        Y = onnx.helper.make_tensor_value_info(model_output_name,
+                                               onnx.TensorProto.FLOAT,
+                                               output_shape)
+
+        mat_mul_node = onnx.helper.make_node(
+            name='MatMul',
+            op_type="MatMul",
+            inputs=["X", "X"],
+            outputs=["Y"],
+        )
+
+        graph_def = onnx.helper.make_graph(
+            nodes=[mat_mul_node],
+            name="Net",
+            inputs=[X],
+            outputs=[Y],
+        )
+
+        op = onnx.OperatorSetIdProto()
+        op.version = OPSET_VERSION
+        model = onnx.helper.make_model(graph_def, opset_imports=[op])
+        onnx.checker.check_model(model)
+        super().__init__(model, [input_shape], 'mat_mul_without_weights_model.dot')

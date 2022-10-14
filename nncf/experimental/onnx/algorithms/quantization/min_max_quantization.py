@@ -15,6 +15,7 @@ from typing import Set, Dict
 from copy import deepcopy
 
 import onnx
+from onnx import numpy_helper
 
 # pylint: disable=no-member
 
@@ -43,7 +44,7 @@ from nncf.experimental.post_training.statistics.statistic_point import Statistic
 from nncf.experimental.post_training.statistics.statistic_point import StatisticPointsContainer
 from nncf.experimental.onnx.graph.metatypes.onnx_metatypes import ONNXTopKMetatype
 from nncf.experimental.onnx.graph.metatypes.onnx_metatypes import ONNXNonMaxSuppressionMetatype
-from nncf.experimental.onnx.graph.metatypes.onnx_metatypes import WEIGHT_LAYER_METATYPES
+from nncf.experimental.onnx.graph.metatypes.onnx_metatypes import POSSIBLE_WEIGHT_LAYERS_METATYPES
 from nncf.experimental.onnx.algorithms.quantization.default_quantization import DEFAULT_ONNX_QUANT_TRAIT_TO_OP_DICT
 from nncf.experimental.onnx.graph.transformations.commands import ONNXQuantizerInsertionCommand
 from nncf.experimental.onnx.engine import ONNXEngine
@@ -86,7 +87,13 @@ class ONNXMinMaxQuantization(MinMaxQuantization):
         pattern = ONNX_HW_FUSED_PATTERNS.get_full_pattern_graph()
         ip_graph = ip_graph.get_ip_graph_with_merged_hw_optimized_operations(pattern)
 
-        weight_nodes = self.nncf_graph.get_nodes_by_metatypes(WEIGHT_LAYER_METATYPES)
+        onnx_graph = ONNXGraph(model)
+        possible_weight_nodes = self.nncf_graph.get_nodes_by_metatypes(POSSIBLE_WEIGHT_LAYERS_METATYPES)
+        weight_nodes = []
+        for possible_weight_node in possible_weight_nodes:
+            if onnx_graph.get_node_initializers(possible_weight_node.node_name):
+                weight_nodes.append(possible_weight_node)
+
         quantizable_layer_nodes = [QuantizableWeightedLayerNode(weight_node, [QuantizerConfig()]) for weight_node in
                                    weight_nodes]
 
@@ -174,18 +181,19 @@ class ONNXMinMaxQuantization(MinMaxQuantization):
         for quantization_target_point in quantization_target_points:
             target_node_name = quantization_target_point.target_node_name
             if quantization_target_point.type == TargetType.OPERATION_WITH_WEIGHTS:
-                try:
-                    weight_initializer_name = onnx_graph.get_weight_tensor_with_initializer(target_node_name)
-                    # If the nodes share one weight tensor, we should have only one quantizer on that
-                    if weight_initializer_name in weight_initializer_names:
-                        continue
-                    weight_initializer_names.add(weight_initializer_name)
-                except RuntimeError as er:
-                    nncf_logger.exception(er)
+                weight_initializers = onnx_graph.get_node_initializers(target_node_name)
+                if not weight_initializers:
+                    nncf_logger.exception('There is no initializer in the node {}'.format(target_node_name))
                     continue
-                weight_tensor = onnx_graph.get_initializers_value(weight_initializer_name)
+                # We assume that the weight tensor should be the first in the list
+                weight_initializer = weight_initializers[0]
+                weight_initializer_name = weight_initializer.name
+                # If the nodes share one weight tensor, we should have only one quantizer on that
+                if weight_initializer_name in weight_initializer_names:
+                    continue
+                weight_initializer_names.add(weight_initializer_name)
+                weight_tensor = numpy_helper.to_array(weight_initializer)
                 parameters = calculate_weight_quantizer_parameters(weight_tensor, weight_quantizer_config)
-
                 command = ONNXQuantizerInsertionCommand(quantization_target_point, parameters)
                 transformation_commands.append(command)
             elif quantization_target_point.type in [TargetType.PRE_LAYER_OPERATION, TargetType.POST_LAYER_OPERATION]:

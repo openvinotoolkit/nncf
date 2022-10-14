@@ -170,57 +170,37 @@ class ONNXGraph:
                 output.append(node)
         return output
 
-    def get_weight_tensor_with_initializer(self, node_name: str) -> Optional[str]:
+    def get_node_initializers(self, node_name: str) -> List[onnx.TensorProto]:
         """
-        Return 'node_name' node's input weight tensor if it has an initializer type.
-        Otherwise, return None.
-        """
-        node_inputs = self.get_node_edges(node_name)['input']
-
-        # TODO(kshpv): add search of input weight tensor
-        weight_tensor_name = node_inputs[1]
-
-        if weight_tensor_name in self.initializer_names:
-            return weight_tensor_name
-        raise RuntimeError(
-            'There is no weight tensor with the name {}.'
-            ' Probably this node utilizes other nodes outputs as its weight '.format(
-                node_name))
-
-    def get_weight_input_in_module(self, node_name: str) -> ValueInfoProto:
-        """
-        Returns 'node_name' node's input weight tensor.
+        Returns Initializers of the node.
+        :param node_name: Name of the node.
+        :return: List of Initializers.
         """
         node_inputs = self.get_node_edges(node_name)['input']
-        # TODO(kshpv): add search of input weight tensor
-        return node_inputs[1]
+        output = []
+        for input_port_id, node_input in enumerate(node_inputs):
+            initializer = self.get_initializer(node_input)
+            if initializer is not None:
+                output.append(initializer)
+        return output
+
+    def get_initializer(self, initializer_name: str) -> Optional[onnx.TensorProto]:
+        """
+        Returns model's Initializer with the name equals to 'initializer_name'.
+        :param initializer_name: Initializer name.
+        :return: Initializer.
+        """
+        graph = self.onnx_model.graph
+        for init in graph.initializer:
+            if init.name == initializer_name:
+                return init
+        return None
 
     def get_node_index(self, node_name: str):
         for i, node in enumerate(self.get_all_nodes()):
             if node.name == node_name:
                 return i
         return -1
-
-    def get_initializers_value(self, initializer_name: str) -> np.ndarray:
-        """
-        Returns tensor value of model's Initializer with the name equals to 'initializer_name'.
-        """
-        graph = self.onnx_model.graph
-        for init in graph.initializer:
-            if init.name == initializer_name:
-                tensor = numpy_helper.to_array(init)
-                return tensor
-        raise RuntimeError('There is no initializer with the name {}'.format(initializer_name))
-
-    def get_initializer(self, initializer_name: str) -> np.ndarray:
-        """
-        Returns model's Initializer with the name equals to 'initializer_name'.
-        """
-        graph = self.onnx_model.graph
-        for init in graph.initializer:
-            if init.name == initializer_name:
-                return init
-        raise RuntimeError('There is no initializer with the name {}'.format(initializer_name))
 
     def get_tensor_shape(self, tensor: ValueInfoProto) -> List[int]:
         """

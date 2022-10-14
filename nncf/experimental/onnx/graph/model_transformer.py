@@ -193,8 +193,8 @@ class ONNXModelTransformer(StaticModelTransformerBase):
             Optional[str]:
         target_edge_name = None
         if transformation.target_point.type == TargetType.OPERATION_WITH_WEIGHTS:
-            target_edge_name = onnx_graph.get_weight_tensor_with_initializer(
-                transformation.target_point.target_node_name)
+            # We assume that the weight tensor should be the first in the list
+            target_edge_name = onnx_graph.get_node_initializers(transformation.target_point.target_node_name)[0].name
         elif transformation.target_point.type == TargetType.PRE_LAYER_OPERATION:
             target_edge_name = transformation.target_point.edge_name
         elif transformation.target_point.type == TargetType.POST_LAYER_OPERATION:
