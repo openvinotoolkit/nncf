@@ -31,6 +31,7 @@ from nncf.torch.graph.transformations.commands import PTTargetPoint
 from nncf.torch.graph.transformations.commands import TransformationPriority
 from nncf.torch.sparsity.movement.layers import MovementSparsifier, SparseConfig, SparseStructure
 from nncf.torch.sparsity.movement.loss import ImportanceLoss, SparseLossForPerLayerSparsity
+from nncf.torch.module_operations import UpdateWeightAndBias
 from nncf.torch.utils import get_world_size, get_model_device
 from nncf.common.utils.helpers import matches_any
 from nncf.common.accuracy_aware_training.training_loop import ADAPTIVE_COMPRESSION_CONTROLLERS
@@ -67,15 +68,18 @@ class MovementSparsityBuilder(BaseSparsityAlgoBuilder):
             compression_lr_multiplier = \
                 self.config.get_redefinable_global_param_value_for_algo('compression_lr_multiplier',
                                                                         self.name)
-            operation = self.create_weight_sparsifying_operation(module_node, compression_lr_multiplier)
-            hook = operation.to(device)
-            # TODO: hardcoded to OPERATION_WITH_WEIGHT_WT_BIAS
-            insertion_commands.append(PTInsertionCommand(PTTargetPoint(TargetType.OPERATION_WITH_WEIGHT_WT_BIAS,
-                                                                       target_node_name=node_name),
-                                                         hook, TransformationPriority.SPARSIFICATION_PRIORITY))
+            sparsifying_operation = self.create_weight_sparsifying_operation(module_node, compression_lr_multiplier)
+            hook = UpdateWeightAndBias(sparsifying_operation).to(device)
+            insertion_commands.append(
+                PTInsertionCommand(
+                    PTTargetPoint(TargetType.PRE_LAYER_OPERATION, target_node_name=node_name),
+                    hook,
+                    TransformationPriority.SPARSIFICATION_PRIORITY
+                )
+            )
             sparsified_module = target_model.get_containing_module(node_name)
             self._sparsified_module_info.append(
-                SparseModuleInfo(node_name, sparsified_module, hook))
+                SparseModuleInfo(node_name, sparsified_module, sparsifying_operation))
 
         return insertion_commands
 

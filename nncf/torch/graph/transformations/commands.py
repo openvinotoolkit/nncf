@@ -19,8 +19,7 @@ class PTTargetPointStateNames:
 class PTTargetPoint(TargetPoint):
     _OPERATION_TYPES = [TargetType.PRE_LAYER_OPERATION,
                         TargetType.POST_LAYER_OPERATION,
-                        TargetType.OPERATION_WITH_WEIGHTS,
-                        TargetType.OPERATION_WITH_WEIGHT_WT_BIAS]
+                        TargetType.OPERATION_WITH_WEIGHTS]
     _HOOK_TYPES = [TargetType.OPERATOR_PRE_HOOK,
                    TargetType.OPERATOR_POST_HOOK]
 
