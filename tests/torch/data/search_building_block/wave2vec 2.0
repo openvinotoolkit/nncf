@@ -42,7 +42,7 @@
     {
         "basic_block": {
             "end_node_name": "Wav2Vec2ForSequenceClassification/Wav2Vec2Model[wav2vec2]/Wav2Vec2Encoder[encoder]/ModuleList[layers]/Wav2Vec2EncoderLayer[0]/__add___1",
-            "start_node_name": "Wav2Vec2ForSequenceClassification/Wav2Vec2Model[wav2vec2]/Wav2Vec2Encoder[encoder]/ModuleList[layers]/Wav2Vec2EncoderLayer[0]/LayerNorm[layer_norm]/layer_norm_0"
+            "start_node_name": "Wav2Vec2ForSequenceClassification/Wav2Vec2Model[wav2vec2]/Wav2Vec2Encoder[encoder]/ModuleList[layers]/Wav2Vec2EncoderLayer[0]/NNCFLayerNorm[layer_norm]/layer_norm_0"
         },
         "block_type": "FF",
         "op_addresses": [
@@ -61,7 +61,7 @@
     {
         "basic_block": {
             "end_node_name": "Wav2Vec2ForSequenceClassification/Wav2Vec2Model[wav2vec2]/Wav2Vec2Encoder[encoder]/ModuleList[layers]/Wav2Vec2EncoderLayer[1]/__add___0",
-            "start_node_name": "Wav2Vec2ForSequenceClassification/Wav2Vec2Model[wav2vec2]/Wav2Vec2Encoder[encoder]/ModuleList[layers]/Wav2Vec2EncoderLayer[0]/LayerNorm[final_layer_norm]/layer_norm_0"
+            "start_node_name": "Wav2Vec2ForSequenceClassification/Wav2Vec2Model[wav2vec2]/Wav2Vec2Encoder[encoder]/ModuleList[layers]/Wav2Vec2EncoderLayer[0]/NNCFLayerNorm[final_layer_norm]/layer_norm_0"
         },
         "block_type": "MSHA",
         "op_addresses": [
@@ -101,7 +101,7 @@
     {
         "basic_block": {
             "end_node_name": "Wav2Vec2ForSequenceClassification/Wav2Vec2Model[wav2vec2]/Wav2Vec2Encoder[encoder]/ModuleList[layers]/Wav2Vec2EncoderLayer[1]/__add___1",
-            "start_node_name": "Wav2Vec2ForSequenceClassification/Wav2Vec2Model[wav2vec2]/Wav2Vec2Encoder[encoder]/ModuleList[layers]/Wav2Vec2EncoderLayer[1]/LayerNorm[layer_norm]/layer_norm_0"
+            "start_node_name": "Wav2Vec2ForSequenceClassification/Wav2Vec2Model[wav2vec2]/Wav2Vec2Encoder[encoder]/ModuleList[layers]/Wav2Vec2EncoderLayer[1]/NNCFLayerNorm[layer_norm]/layer_norm_0"
         },
         "block_type": "FF",
         "op_addresses": [
@@ -120,7 +120,7 @@
     {
         "basic_block": {
             "end_node_name": "Wav2Vec2ForSequenceClassification/Wav2Vec2Model[wav2vec2]/Wav2Vec2Encoder[encoder]/ModuleList[layers]/Wav2Vec2EncoderLayer[2]/__add___0",
-            "start_node_name": "Wav2Vec2ForSequenceClassification/Wav2Vec2Model[wav2vec2]/Wav2Vec2Encoder[encoder]/ModuleList[layers]/Wav2Vec2EncoderLayer[1]/LayerNorm[final_layer_norm]/layer_norm_0"
+            "start_node_name": "Wav2Vec2ForSequenceClassification/Wav2Vec2Model[wav2vec2]/Wav2Vec2Encoder[encoder]/ModuleList[layers]/Wav2Vec2EncoderLayer[1]/NNCFLayerNorm[final_layer_norm]/layer_norm_0"
         },
         "block_type": "MSHA",
         "op_addresses": [
@@ -160,7 +160,7 @@
     {
         "basic_block": {
             "end_node_name": "Wav2Vec2ForSequenceClassification/Wav2Vec2Model[wav2vec2]/Wav2Vec2Encoder[encoder]/ModuleList[layers]/Wav2Vec2EncoderLayer[2]/__add___1",
-            "start_node_name": "Wav2Vec2ForSequenceClassification/Wav2Vec2Model[wav2vec2]/Wav2Vec2Encoder[encoder]/ModuleList[layers]/Wav2Vec2EncoderLayer[2]/LayerNorm[layer_norm]/layer_norm_0"
+            "start_node_name": "Wav2Vec2ForSequenceClassification/Wav2Vec2Model[wav2vec2]/Wav2Vec2Encoder[encoder]/ModuleList[layers]/Wav2Vec2EncoderLayer[2]/NNCFLayerNorm[layer_norm]/layer_norm_0"
         },
         "block_type": "FF",
         "op_addresses": [
@@ -179,7 +179,7 @@
     {
         "basic_block": {
             "end_node_name": "Wav2Vec2ForSequenceClassification/Wav2Vec2Model[wav2vec2]/Wav2Vec2Encoder[encoder]/ModuleList[layers]/Wav2Vec2EncoderLayer[3]/__add___0",
-            "start_node_name": "Wav2Vec2ForSequenceClassification/Wav2Vec2Model[wav2vec2]/Wav2Vec2Encoder[encoder]/ModuleList[layers]/Wav2Vec2EncoderLayer[2]/LayerNorm[final_layer_norm]/layer_norm_0"
+            "start_node_name": "Wav2Vec2ForSequenceClassification/Wav2Vec2Model[wav2vec2]/Wav2Vec2Encoder[encoder]/ModuleList[layers]/Wav2Vec2EncoderLayer[2]/NNCFLayerNorm[final_layer_norm]/layer_norm_0"
         },
         "block_type": "MSHA",
         "op_addresses": [
@@ -219,7 +219,7 @@
     {
         "basic_block": {
             "end_node_name": "Wav2Vec2ForSequenceClassification/Wav2Vec2Model[wav2vec2]/Wav2Vec2Encoder[encoder]/ModuleList[layers]/Wav2Vec2EncoderLayer[3]/__add___1",
-            "start_node_name": "Wav2Vec2ForSequenceClassification/Wav2Vec2Model[wav2vec2]/Wav2Vec2Encoder[encoder]/ModuleList[layers]/Wav2Vec2EncoderLayer[3]/LayerNorm[layer_norm]/layer_norm_0"
+            "start_node_name": "Wav2Vec2ForSequenceClassification/Wav2Vec2Model[wav2vec2]/Wav2Vec2Encoder[encoder]/ModuleList[layers]/Wav2Vec2EncoderLayer[3]/NNCFLayerNorm[layer_norm]/layer_norm_0"
         },
         "block_type": "FF",
         "op_addresses": [
@@ -238,7 +238,7 @@
     {
         "basic_block": {
             "end_node_name": "Wav2Vec2ForSequenceClassification/Wav2Vec2Model[wav2vec2]/Wav2Vec2Encoder[encoder]/ModuleList[layers]/Wav2Vec2EncoderLayer[4]/__add___0",
-            "start_node_name": "Wav2Vec2ForSequenceClassification/Wav2Vec2Model[wav2vec2]/Wav2Vec2Encoder[encoder]/ModuleList[layers]/Wav2Vec2EncoderLayer[3]/LayerNorm[final_layer_norm]/layer_norm_0"
+            "start_node_name": "Wav2Vec2ForSequenceClassification/Wav2Vec2Model[wav2vec2]/Wav2Vec2Encoder[encoder]/ModuleList[layers]/Wav2Vec2EncoderLayer[3]/NNCFLayerNorm[final_layer_norm]/layer_norm_0"
         },
         "block_type": "MSHA",
         "op_addresses": [
@@ -278,7 +278,7 @@
     {
         "basic_block": {
             "end_node_name": "Wav2Vec2ForSequenceClassification/Wav2Vec2Model[wav2vec2]/Wav2Vec2Encoder[encoder]/ModuleList[layers]/Wav2Vec2EncoderLayer[4]/__add___1",
-            "start_node_name": "Wav2Vec2ForSequenceClassification/Wav2Vec2Model[wav2vec2]/Wav2Vec2Encoder[encoder]/ModuleList[layers]/Wav2Vec2EncoderLayer[4]/LayerNorm[layer_norm]/layer_norm_0"
+            "start_node_name": "Wav2Vec2ForSequenceClassification/Wav2Vec2Model[wav2vec2]/Wav2Vec2Encoder[encoder]/ModuleList[layers]/Wav2Vec2EncoderLayer[4]/NNCFLayerNorm[layer_norm]/layer_norm_0"
         },
         "block_type": "FF",
         "op_addresses": [
@@ -297,7 +297,7 @@
     {
         "basic_block": {
             "end_node_name": "Wav2Vec2ForSequenceClassification/Wav2Vec2Model[wav2vec2]/Wav2Vec2Encoder[encoder]/ModuleList[layers]/Wav2Vec2EncoderLayer[5]/__add___0",
-            "start_node_name": "Wav2Vec2ForSequenceClassification/Wav2Vec2Model[wav2vec2]/Wav2Vec2Encoder[encoder]/ModuleList[layers]/Wav2Vec2EncoderLayer[4]/LayerNorm[final_layer_norm]/layer_norm_0"
+            "start_node_name": "Wav2Vec2ForSequenceClassification/Wav2Vec2Model[wav2vec2]/Wav2Vec2Encoder[encoder]/ModuleList[layers]/Wav2Vec2EncoderLayer[4]/NNCFLayerNorm[final_layer_norm]/layer_norm_0"
         },
         "block_type": "MSHA",
         "op_addresses": [
@@ -337,7 +337,7 @@
     {
         "basic_block": {
             "end_node_name": "Wav2Vec2ForSequenceClassification/Wav2Vec2Model[wav2vec2]/Wav2Vec2Encoder[encoder]/ModuleList[layers]/Wav2Vec2EncoderLayer[5]/__add___1",
-            "start_node_name": "Wav2Vec2ForSequenceClassification/Wav2Vec2Model[wav2vec2]/Wav2Vec2Encoder[encoder]/ModuleList[layers]/Wav2Vec2EncoderLayer[5]/LayerNorm[layer_norm]/layer_norm_0"
+            "start_node_name": "Wav2Vec2ForSequenceClassification/Wav2Vec2Model[wav2vec2]/Wav2Vec2Encoder[encoder]/ModuleList[layers]/Wav2Vec2EncoderLayer[5]/NNCFLayerNorm[layer_norm]/layer_norm_0"
         },
         "block_type": "FF",
         "op_addresses": [
@@ -356,7 +356,7 @@
     {
         "basic_block": {
             "end_node_name": "Wav2Vec2ForSequenceClassification/Wav2Vec2Model[wav2vec2]/Wav2Vec2Encoder[encoder]/ModuleList[layers]/Wav2Vec2EncoderLayer[6]/__add___0",
-            "start_node_name": "Wav2Vec2ForSequenceClassification/Wav2Vec2Model[wav2vec2]/Wav2Vec2Encoder[encoder]/ModuleList[layers]/Wav2Vec2EncoderLayer[5]/LayerNorm[final_layer_norm]/layer_norm_0"
+            "start_node_name": "Wav2Vec2ForSequenceClassification/Wav2Vec2Model[wav2vec2]/Wav2Vec2Encoder[encoder]/ModuleList[layers]/Wav2Vec2EncoderLayer[5]/NNCFLayerNorm[final_layer_norm]/layer_norm_0"
         },
         "block_type": "MSHA",
         "op_addresses": [
@@ -396,7 +396,7 @@
     {
         "basic_block": {
             "end_node_name": "Wav2Vec2ForSequenceClassification/Wav2Vec2Model[wav2vec2]/Wav2Vec2Encoder[encoder]/ModuleList[layers]/Wav2Vec2EncoderLayer[6]/__add___1",
-            "start_node_name": "Wav2Vec2ForSequenceClassification/Wav2Vec2Model[wav2vec2]/Wav2Vec2Encoder[encoder]/ModuleList[layers]/Wav2Vec2EncoderLayer[6]/LayerNorm[layer_norm]/layer_norm_0"
+            "start_node_name": "Wav2Vec2ForSequenceClassification/Wav2Vec2Model[wav2vec2]/Wav2Vec2Encoder[encoder]/ModuleList[layers]/Wav2Vec2EncoderLayer[6]/NNCFLayerNorm[layer_norm]/layer_norm_0"
         },
         "block_type": "FF",
         "op_addresses": [
@@ -415,7 +415,7 @@
     {
         "basic_block": {
             "end_node_name": "Wav2Vec2ForSequenceClassification/Wav2Vec2Model[wav2vec2]/Wav2Vec2Encoder[encoder]/ModuleList[layers]/Wav2Vec2EncoderLayer[7]/__add___0",
-            "start_node_name": "Wav2Vec2ForSequenceClassification/Wav2Vec2Model[wav2vec2]/Wav2Vec2Encoder[encoder]/ModuleList[layers]/Wav2Vec2EncoderLayer[6]/LayerNorm[final_layer_norm]/layer_norm_0"
+            "start_node_name": "Wav2Vec2ForSequenceClassification/Wav2Vec2Model[wav2vec2]/Wav2Vec2Encoder[encoder]/ModuleList[layers]/Wav2Vec2EncoderLayer[6]/NNCFLayerNorm[final_layer_norm]/layer_norm_0"
         },
         "block_type": "MSHA",
         "op_addresses": [
@@ -455,7 +455,7 @@
     {
         "basic_block": {
             "end_node_name": "Wav2Vec2ForSequenceClassification/Wav2Vec2Model[wav2vec2]/Wav2Vec2Encoder[encoder]/ModuleList[layers]/Wav2Vec2EncoderLayer[7]/__add___1",
-            "start_node_name": "Wav2Vec2ForSequenceClassification/Wav2Vec2Model[wav2vec2]/Wav2Vec2Encoder[encoder]/ModuleList[layers]/Wav2Vec2EncoderLayer[7]/LayerNorm[layer_norm]/layer_norm_0"
+            "start_node_name": "Wav2Vec2ForSequenceClassification/Wav2Vec2Model[wav2vec2]/Wav2Vec2Encoder[encoder]/ModuleList[layers]/Wav2Vec2EncoderLayer[7]/NNCFLayerNorm[layer_norm]/layer_norm_0"
         },
         "block_type": "FF",
         "op_addresses": [
@@ -474,7 +474,7 @@
     {
         "basic_block": {
             "end_node_name": "Wav2Vec2ForSequenceClassification/Wav2Vec2Model[wav2vec2]/Wav2Vec2Encoder[encoder]/ModuleList[layers]/Wav2Vec2EncoderLayer[8]/__add___0",
-            "start_node_name": "Wav2Vec2ForSequenceClassification/Wav2Vec2Model[wav2vec2]/Wav2Vec2Encoder[encoder]/ModuleList[layers]/Wav2Vec2EncoderLayer[7]/LayerNorm[final_layer_norm]/layer_norm_0"
+            "start_node_name": "Wav2Vec2ForSequenceClassification/Wav2Vec2Model[wav2vec2]/Wav2Vec2Encoder[encoder]/ModuleList[layers]/Wav2Vec2EncoderLayer[7]/NNCFLayerNorm[final_layer_norm]/layer_norm_0"
         },
         "block_type": "MSHA",
         "op_addresses": [
@@ -514,7 +514,7 @@
     {
         "basic_block": {
             "end_node_name": "Wav2Vec2ForSequenceClassification/Wav2Vec2Model[wav2vec2]/Wav2Vec2Encoder[encoder]/ModuleList[layers]/Wav2Vec2EncoderLayer[8]/__add___1",
-            "start_node_name": "Wav2Vec2ForSequenceClassification/Wav2Vec2Model[wav2vec2]/Wav2Vec2Encoder[encoder]/ModuleList[layers]/Wav2Vec2EncoderLayer[8]/LayerNorm[layer_norm]/layer_norm_0"
+            "start_node_name": "Wav2Vec2ForSequenceClassification/Wav2Vec2Model[wav2vec2]/Wav2Vec2Encoder[encoder]/ModuleList[layers]/Wav2Vec2EncoderLayer[8]/NNCFLayerNorm[layer_norm]/layer_norm_0"
         },
         "block_type": "FF",
         "op_addresses": [
@@ -533,7 +533,7 @@
     {
         "basic_block": {
             "end_node_name": "Wav2Vec2ForSequenceClassification/Wav2Vec2Model[wav2vec2]/Wav2Vec2Encoder[encoder]/ModuleList[layers]/Wav2Vec2EncoderLayer[9]/__add___0",
-            "start_node_name": "Wav2Vec2ForSequenceClassification/Wav2Vec2Model[wav2vec2]/Wav2Vec2Encoder[encoder]/ModuleList[layers]/Wav2Vec2EncoderLayer[8]/LayerNorm[final_layer_norm]/layer_norm_0"
+            "start_node_name": "Wav2Vec2ForSequenceClassification/Wav2Vec2Model[wav2vec2]/Wav2Vec2Encoder[encoder]/ModuleList[layers]/Wav2Vec2EncoderLayer[8]/NNCFLayerNorm[final_layer_norm]/layer_norm_0"
         },
         "block_type": "MSHA",
         "op_addresses": [
@@ -573,7 +573,7 @@
     {
         "basic_block": {
             "end_node_name": "Wav2Vec2ForSequenceClassification/Wav2Vec2Model[wav2vec2]/Wav2Vec2Encoder[encoder]/ModuleList[layers]/Wav2Vec2EncoderLayer[9]/__add___1",
-            "start_node_name": "Wav2Vec2ForSequenceClassification/Wav2Vec2Model[wav2vec2]/Wav2Vec2Encoder[encoder]/ModuleList[layers]/Wav2Vec2EncoderLayer[9]/LayerNorm[layer_norm]/layer_norm_0"
+            "start_node_name": "Wav2Vec2ForSequenceClassification/Wav2Vec2Model[wav2vec2]/Wav2Vec2Encoder[encoder]/ModuleList[layers]/Wav2Vec2EncoderLayer[9]/NNCFLayerNorm[layer_norm]/layer_norm_0"
         },
         "block_type": "FF",
         "op_addresses": [
@@ -592,7 +592,7 @@
     {
         "basic_block": {
             "end_node_name": "Wav2Vec2ForSequenceClassification/Wav2Vec2Model[wav2vec2]/Wav2Vec2Encoder[encoder]/ModuleList[layers]/Wav2Vec2EncoderLayer[10]/__add___0",
-            "start_node_name": "Wav2Vec2ForSequenceClassification/Wav2Vec2Model[wav2vec2]/Wav2Vec2Encoder[encoder]/ModuleList[layers]/Wav2Vec2EncoderLayer[9]/LayerNorm[final_layer_norm]/layer_norm_0"
+            "start_node_name": "Wav2Vec2ForSequenceClassification/Wav2Vec2Model[wav2vec2]/Wav2Vec2Encoder[encoder]/ModuleList[layers]/Wav2Vec2EncoderLayer[9]/NNCFLayerNorm[final_layer_norm]/layer_norm_0"
         },
         "block_type": "MSHA",
         "op_addresses": [
@@ -632,7 +632,7 @@
     {
         "basic_block": {
             "end_node_name": "Wav2Vec2ForSequenceClassification/Wav2Vec2Model[wav2vec2]/Wav2Vec2Encoder[encoder]/ModuleList[layers]/Wav2Vec2EncoderLayer[10]/__add___1",
-            "start_node_name": "Wav2Vec2ForSequenceClassification/Wav2Vec2Model[wav2vec2]/Wav2Vec2Encoder[encoder]/ModuleList[layers]/Wav2Vec2EncoderLayer[10]/LayerNorm[layer_norm]/layer_norm_0"
+            "start_node_name": "Wav2Vec2ForSequenceClassification/Wav2Vec2Model[wav2vec2]/Wav2Vec2Encoder[encoder]/ModuleList[layers]/Wav2Vec2EncoderLayer[10]/NNCFLayerNorm[layer_norm]/layer_norm_0"
         },
         "block_type": "FF",
         "op_addresses": [
@@ -651,7 +651,7 @@
     {
         "basic_block": {
             "end_node_name": "Wav2Vec2ForSequenceClassification/Wav2Vec2Model[wav2vec2]/Wav2Vec2Encoder[encoder]/ModuleList[layers]/Wav2Vec2EncoderLayer[11]/__add___0",
-            "start_node_name": "Wav2Vec2ForSequenceClassification/Wav2Vec2Model[wav2vec2]/Wav2Vec2Encoder[encoder]/ModuleList[layers]/Wav2Vec2EncoderLayer[10]/LayerNorm[final_layer_norm]/layer_norm_0"
+            "start_node_name": "Wav2Vec2ForSequenceClassification/Wav2Vec2Model[wav2vec2]/Wav2Vec2Encoder[encoder]/ModuleList[layers]/Wav2Vec2EncoderLayer[10]/NNCFLayerNorm[final_layer_norm]/layer_norm_0"
         },
         "block_type": "MSHA",
         "op_addresses": [
@@ -691,7 +691,7 @@
     {
         "basic_block": {
             "end_node_name": "Wav2Vec2ForSequenceClassification/Wav2Vec2Model[wav2vec2]/Wav2Vec2Encoder[encoder]/ModuleList[layers]/Wav2Vec2EncoderLayer[11]/__add___1",
-            "start_node_name": "Wav2Vec2ForSequenceClassification/Wav2Vec2Model[wav2vec2]/Wav2Vec2Encoder[encoder]/ModuleList[layers]/Wav2Vec2EncoderLayer[11]/LayerNorm[layer_norm]/layer_norm_0"
+            "start_node_name": "Wav2Vec2ForSequenceClassification/Wav2Vec2Model[wav2vec2]/Wav2Vec2Encoder[encoder]/ModuleList[layers]/Wav2Vec2EncoderLayer[11]/NNCFLayerNorm[layer_norm]/layer_norm_0"
         },
         "block_type": "FF",
         "op_addresses": [
