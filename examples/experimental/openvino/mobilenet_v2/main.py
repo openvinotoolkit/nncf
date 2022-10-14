@@ -11,6 +11,8 @@
  limitations under the License.
 """
 
+from typing import Iterable
+from typing import Any
 import os
 import subprocess
 from pathlib import Path
@@ -60,10 +62,9 @@ def run_example():
         images, _ = data_item
         return images.numpy()
 
-    # Wrap framework-specific data source into the `nncf.DataLoader` object.
-    val_dataloader = nncf.create_dataloader(data_source, transform_fn)
-
-    quantized_model = nncf.quantize(ov_model, val_dataloader)
+    # Wrap framework-specific data source into the `nncf.Dataset` object.
+    calibration_dataset = nncf.Dataset(data_source, transform_fn)
+    quantized_model = nncf.quantize(ov_model, calibration_dataset)
 
     # Step 5: Save the quantized model.
     ir_qmodel_xml = MODEL_DIR.joinpath('mobilenet_v2_quantized.xml')
@@ -72,11 +73,11 @@ def run_example():
 
     # Step 6: Compare the accuracy of the original and quantized models.
     print('Checking the accuracy of the original model:')
-    metric = validation_fn(ov_model, val_dataloader)
+    metric = validation_fn(ov_model, data_source)
     print(f'accuracy@top1: {metric}')
 
     print('Checking the accuracy of the quantized model:')
-    metric = validation_fn(quantized_model, val_dataloader)
+    metric = validation_fn(quantized_model, data_source)
     print(f'accuracy@top1: {metric}')
 
     # Step 7: Compare Performance of the original and quantized models.
@@ -132,7 +133,7 @@ def create_data_source() -> torch.utils.data.DataLoader:
 # Code regarding CUDA and training was removed.
 # Some code was changed and added.
 
-def validation_fn(model: ov.Model, data_loader: nncf.DataLoader) -> float:
+def validation_fn(model: ov.Model, validation_dataset: Iterable[Any]) -> float:
     compiled_model = ie.compile_model(model, device_name='CPU')
     output_layer = next(iter(compiled_model.outputs))
 
@@ -144,7 +145,7 @@ def validation_fn(model: ov.Model, data_loader: nncf.DataLoader) -> float:
                 i = base_progress + i
 
                 # compute output
-                input_data = loader.transform_fn((images, target))
+                input_data = images.numpy()
                 output = torch.from_numpy(
                     compiled_model([input_data])[output_layer]
                 )
@@ -168,7 +169,7 @@ def validation_fn(model: ov.Model, data_loader: nncf.DataLoader) -> float:
     BATCH_SIZE = 1
     NUM_BATCHES = 50000 // BATCH_SIZE
     progress = utils.ProgressMeter(NUM_BATCHES, [batch_time, top1, top5], prefix='Test: ')
-    run_validate(data_loader)
+    run_validate(validation_dataset)
     progress.display_summary()
 
     return top1.avg

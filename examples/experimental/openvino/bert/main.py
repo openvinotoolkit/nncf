@@ -11,6 +11,9 @@
  limitations under the License.
 """
 
+from typing import Iterable
+from typing import Any
+
 import os
 import subprocess
 from pathlib import Path
@@ -65,10 +68,9 @@ def run_example():
         }
         return [inputs]
 
-    # Wrap framework-specific data source into the `nncf.DataLoader` object.
-    val_dataloader = nncf.create_dataloader(data_source, transform_fn)
-
-    quantized_model = nncf.quantize(ov_model, val_dataloader, model_type='transformer')
+    # Wrap framework-specific data source into the `nncf.Dataset` object.
+    calibration_dataset = nncf.Dataset(data_source, transform_fn)
+    quantized_model = nncf.quantize(ov_model, calibration_dataset, model_type='transformer')
 
     # Step 5: Save quantized model.
     ir_qmodel_xml = MODEL_DIR.joinpath('bert_base_mrpc_quantized.xml')
@@ -77,11 +79,11 @@ def run_example():
 
     # Step 6: Compare the accuracy of the original and quantized models.
     print('Checking the accuracy of the original model:')
-    metric = validation_fn(ov_model, val_dataloader)
+    metric = validation_fn(ov_model, data_source)
     print(f'F1 score: {metric}')
 
     print('Checking the accuracy of the quantized model:')
-    metric = validation_fn(quantized_model, val_dataloader)
+    metric = validation_fn(quantized_model, data_source)
     print(f'F1 score: {metric}')
 
     # Step 7: Compare Performance of the original and quantized models.
@@ -141,13 +143,13 @@ def create_data_source() -> datasets.Dataset:
     return processed_dataset
 
 
-def validation_fn(model: ov.Model, data_loader: nncf.DataLoader) -> float:
+def validation_fn(model: ov.Model, validation_dataset: Iterable[Any]) -> float:
     compiled_model = ie.compile_model(model, device_name='CPU')
     output_layer = next(iter(compiled_model.outputs))
 
     metric = evaluate.load('glue', TASK_NAME)
     INPUT_NAMES = [x.any_name for x in compiled_model.inputs]
-    for batch in data_loader:
+    for batch in validation_dataset:
         inputs = [
             np.expand_dims(np.asarray(batch[key], dtype=np.int64), 0) for key in INPUT_NAMES
         ]

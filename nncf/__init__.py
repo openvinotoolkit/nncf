@@ -17,8 +17,7 @@ from nncf.version import __version__
 from nncf.quantization import quantize
 from nncf.quantization import TargetDevice
 from nncf.quantization import QuantizationPreset
-from nncf.data import create_dataloader
-from nncf.data import DataLoader
+from nncf.data import Dataset
 
 try:
     import torch

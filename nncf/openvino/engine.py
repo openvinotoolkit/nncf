@@ -13,14 +13,15 @@
 
 from typing import Optional
 from typing import Callable
+from typing import Iterable
+from typing import Any
 from time import time
 
 from openvino.runtime import AsyncInferQueue
 from openvino.tools import pot
 
 from nncf.api.compression import ModelType
-from nncf.data import DataLoader
-from nncf.data.utils import create_subset
+from nncf.data import Dataset
 
 
 logger = pot.utils.logger.get_logger(__name__)
@@ -64,34 +65,21 @@ class DummyMetric(pot.Metric):
         self._avg_value = None
 
 
-def _pot_sampler_to_nncf_dataloader(sampler) -> DataLoader:
-    dataloader = sampler._data_loader
-    indices = sampler._subset_indices
-
-    if not isinstance(dataloader, DataLoader):
-        raise Exception(f'Unexpected type of data loader: {type(dataloader)}')
-
-    if isinstance(sampler, pot.samplers.batch_sampler.BatchSampler):
-        return create_subset(dataloader, indices)
-
-    raise Exception(f'Unexpected type of sampler: {type(sampler)}')
-
-
 class OVEngine(pot.IEEngine):
     def __init__(self,
                  config,
-                 calibration_dataloader: DataLoader,
-                 validation_dataloader: DataLoader,
-                 validation_fn: Optional[Callable[[ModelType, DataLoader], float]] = None):
+                 calibration_dataset: Dataset,
+                 validation_dataset: Dataset,
+                 validation_fn: Optional[Callable[[ModelType, Iterable[Any]], float]] = None):
         metric = DummyMetric() if validation_fn is not None else None
-        super().__init__(config, validation_dataloader, metric)
-        self._calibration_dataloader = calibration_dataloader  #TODO(andrey-churkin): Not used now.
-        self._validation_dataloader = validation_dataloader
+        super().__init__(config, validation_dataset, metric)
+        self._calibration_dataset = calibration_dataset  # TODO(andrey-churkin): Not used now.
+        self._validation_dataset = validation_dataset
         self._validation_fn = validation_fn
 
     @property
     def data_loader(self):
-        return self._validation_dataloader
+        return self._validation_dataset
 
     def _process_dataset(self,
                          stats_layout,
@@ -100,10 +88,9 @@ class OVEngine(pot.IEEngine):
                          need_metrics_per_sample=False):
         compiled_model = self._ie.compile_model(self._model, self._device)
         infer_request = compiled_model.create_infer_request()
-        dataloader = _pot_sampler_to_nncf_dataloader(sampler)
 
-        for data in dataloader:
-            input_data = dataloader.transform_fn(data)
+        indices = getattr(sampler, '_subset_indices')
+        for input_data in self._validation_dataset.get_inference_data(indices):
             outputs = infer_request.infer(self._fill_input(compiled_model, input_data))
             self._process_infer_output(stats_layout, outputs, None, None, need_metrics_per_sample)
 
@@ -114,7 +101,7 @@ class OVEngine(pot.IEEngine):
                                need_metrics_per_sample=False,
                                requests_num=0):
         total_length = len(sampler)
-        dataloader = _pot_sampler_to_nncf_dataloader(sampler)
+        indices = getattr(sampler, '_subset_indices')
 
         def completion_callback(request, user_data):
             start_time, batch_id = user_data
@@ -136,12 +123,11 @@ class OVEngine(pot.IEEngine):
 
         progress_log_fn('Start inference of %d images', total_length)
 
-        dataloader_iter = iter(enumerate(dataloader))
+        dataloader_iter = iter(enumerate(self._validation_dataset.get_data(indices)))
         # Start inference
         start_time = time()
         infer_queue.set_callback(completion_callback)
-        for batch_id, data in dataloader_iter:
-            input_data = dataloader.transform_fn(data)
+        for batch_id, input_data in dataloader_iter:
             user_data = (start_time, batch_id)
             infer_queue.start_async(self._fill_input(compiled_model, input_data), user_data)
         infer_queue.wait_all()
@@ -179,10 +165,9 @@ class OVEngine(pot.IEEngine):
             raise Exception('Model was not set in Engine class')
 
         if self._validation_fn is not None:
-            if sampler is None:
-                dataloader = self._data_loader
-            else:
-                dataloader = _pot_sampler_to_nncf_dataloader(sampler)
-            self._metric.avg_value = self._validation_fn(self._model, dataloader)
+            indices = None
+            if sampler:
+                indices = getattr(sampler, '_subset_indices')
+            self._metric.avg_value = self._validation_fn(self._model, self._validation_dataset.get_data(indices))
 
         return super().predict(stats_layout, sampler, stat_aliases, metric_per_sample, print_progress)

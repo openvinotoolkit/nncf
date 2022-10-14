@@ -18,7 +18,7 @@ from typing import Optional
 import openvino.runtime as ov
 from openvino.tools import pot
 
-from nncf.data import DataLoader
+from nncf.data import Dataset
 from nncf.openvino.utils import POTDataLoader
 from nncf.openvino.engine import OVEngine
 from nncf.quantization.params import TargetDevice
@@ -65,7 +65,7 @@ def _convert_compressed_model_to_openvino_model(model: pot.graph.nx_model.Compre
 
 
 def quantize_impl(model: ov.Model,
-                  calibration_dataset: DataLoader,
+                  calibration_dataset: Dataset,
                   preset: QuantizationPreset,
                   target_device: TargetDevice,
                   subset_size: int,
@@ -95,7 +95,7 @@ def quantize_impl(model: ov.Model,
         }
     ]
 
-    pot_dataloader = POTDataLoader(calibration_dataset, calibration_dataset.transform_fn)
+    pot_dataloader = POTDataLoader(calibration_dataset)
     engine = OVEngine(engine_config, pot_dataloader, pot_dataloader)
     pipeline = pot.create_pipeline(algorithms, engine)
     compressed_model = pipeline.run(pot_model)

@@ -64,10 +64,9 @@ def run_example():
         images = images.cpu().detach().numpy()
         return images
 
-    # Wrap framework-specific data source into the `nncf.DataLoader` object.
-    val_dataloader = nncf.create_dataloader(data_source, transform_fn)
-
-    quantized_model = nncf.quantize(ov_model, val_dataloader, preset=nncf.QuantizationPreset.MIXED)
+    # Wrap framework-specific data source into the `nncf.Dataset` object.
+    calibration_dataet = nncf.Dataset(data_source, transform_fn)
+    quantized_model = nncf.quantize(ov_model, calibration_dataet, preset=nncf.QuantizationPreset.MIXED)
 
     # Step 5: Save the quantized model.
     ir_qmodel_xml = MODEL_DIR.joinpath('yolov5m_quantized.xml')

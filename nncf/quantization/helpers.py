@@ -17,12 +17,12 @@ from nncf.api.compression import ModelType
 from nncf.common.utils.backend import get_backend
 from nncf.common.utils.backend import BackendType
 from nncf.common.quantization.structs import QuantizationPreset
-from nncf.data import DataLoader
+from nncf.data import Dataset
 from nncf.quantization.params import TargetDevice
 
 
 def quantize(model: ModelType,
-             calibration_dataset: DataLoader,
+             calibration_dataset: Dataset,
              preset: QuantizationPreset = QuantizationPreset.PERFORMANCE,
              target_device: TargetDevice = TargetDevice.ANY,
              subset_size: int = 300,

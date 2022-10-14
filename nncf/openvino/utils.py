@@ -11,58 +11,34 @@
  limitations under the License.
 """
 
-from typing import Callable
-
+from typing import Optional
+from typing import List
 from collections.abc import Sized
-
-from nncf.data.types import DataSource
-from nncf.data.types import DataItem
-from nncf.data.types import ModelInput
-from nncf.data.dataloader import DataLoaderImpl
+from nncf.data import Dataset
 
 
 # TODO(andrey-churkin): The algorithms from the POT use the `__len__()` method.
 # It should be removed when we change all algorithms.
-class POTDataLoader(Sized, DataLoaderImpl):
-    """
-    Adds the `__len__()` method to the `DataLoaderImpl`.
-    """
-
-    def __init__(self,
-                 data_source: DataSource,
-                 transform_fn: Callable[[DataItem], ModelInput]):
-        """
-        Initializes the data loader.
-
-        :param data_source: The custom data source that is an iterable
-            python object.
-        :param transform_fn: Transformation method that takes a data item
-            returned per iteration through `data_source` object and transforms
-            it to the model's expected input that can be used for the model inference.
-        :param batch_size: An integer that represents the number of consecutive elements
-            of `data_source` that were combined in a single batch.
-        """
-        super().__init__(data_source, transform_fn)
+class POTDataLoader(Sized):
+    def __init__(self, dataset: Dataset):
+        self._dataset = dataset
         self._length = None
+
+    def get_data(self, indices: Optional[List[int]] = None):
+        return self._dataset.get_data(indices)
+
+    def get_inference_data(self, indices: Optional[List[int]] = None):
+        return self._dataset.get_inference_data(indices)
 
     def __len__(self) -> int:
         if self._length is None:
-            self._length = POTDataLoader._get_length(self._data_source)
+            self._length = POTDataLoader._get_length(self.get_data())
         return self._length
 
     @staticmethod
-    def _get_length(data_source: DataSource) -> int:
-        """
-        Returns the length of the provided custom data source.
-
-        :param data_source: Custom data source that is an iterable python object.
-        :return: The length of the provided custom data source.
-        """
-        if isinstance(data_source, Sized):
-            return len(data_source)
-
+    def _get_length(iterable) -> int:
         length = 0
-        for _ in data_source:
+        for _ in iterable:
             length = length + 1
 
         return length

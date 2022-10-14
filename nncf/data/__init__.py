@@ -11,5 +11,4 @@
  limitations under the License.
 """
 
-from nncf.data.dataloader import DataLoader
-from nncf.data.utils import create_dataloader
+from nncf.data.dataset import Dataset
