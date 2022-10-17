@@ -270,18 +270,17 @@ class PostprocessingNodeLocator:
             the second one is traversing path containing the visited nodes.
             """
 
-            def forward_traverse_function(node_key: str, are_weight_nodes: List[bool], visited_nodes: Set[str]) \
-                    -> Tuple[bool, List[bool]]:
+            def forward_traverse_function(node_key: str, output: List[str],
+                                          visited_nodes: Set[str]) -> Tuple[bool, List[bool]]:
                 # If the node is not operator
                 if not self._is_node_operator(node_key):
-                    return False, are_weight_nodes
+                    return False, output
                 if node_key in visited_nodes:
-                    return True, are_weight_nodes
+                    return True, output
+                output.append(node_key)
                 if self._is_node_has_underlying_weights(node_key):
-                    are_weight_nodes.append(True)
-                    return True, are_weight_nodes
-                are_weight_nodes.append(False)
-                return False, are_weight_nodes
+                    return True, output
+                return False, output
 
             # If the node is not operator
             if not self._is_node_operator(node_key):
@@ -300,14 +299,15 @@ class PostprocessingNodeLocator:
             self._check_if_postprocessing(node_metatype)
             partial_forward_traverse_function = partial(forward_traverse_function,
                                                         visited_nodes=visited_nodes)
-            is_weight_node_after_the_current = self._quant_prop_graph.traverse_graph(node_key,
-                                                                                     partial_forward_traverse_function,
-                                                                                     output=[],
-                                                                                     traverse_forward=True)
+            forward_visited_node_keys = self._quant_prop_graph.traverse_graph(node_key,
+                                                                           partial_forward_traverse_function,
+                                                                           output=[],
+                                                                           traverse_forward=True)
             # If in the path there are nodes with weights should stop the main backward traversing
-            if any(is_weight_node_after_the_current):
-                visited_nodes.add(node_key)
-                return True, output
+            for forward_visited_node_key in forward_visited_node_keys:
+                if self._is_node_has_underlying_weights(forward_visited_node_key):
+                    visited_nodes.add(node_key)
+                    return True, output
             output.append(node_key)
             return False, output
 
