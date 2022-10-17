@@ -19,7 +19,10 @@ LINEAR_OPERATIONS = {'type': ['linear',
                               'conv_transpose1d',
                               'conv_transpose2d',
                               'conv_transpose3d',
-                              'addmm'
+                              'addmm',
+                              'bmm',
+                              'matmul',
+                              'mm'
                               ],
                      'label': 'LINEAR'}
 
@@ -73,9 +76,3 @@ POOLING_OPERATIONS = {'type': ['adaptive_avg_pool2d',
                                'avg_pool2d',
                                'avg_pool3d'],
                       'label': 'POOLING'}
-
-MATMUL_OPERATIONS = {'type': ['bmm',
-                              'matmul',
-                              'mm'
-                              ],
-                     'label': 'MATMUL'}
