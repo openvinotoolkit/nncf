@@ -23,11 +23,13 @@ from nncf.common.quantization.structs import QuantizerConfig
 from nncf.common.graph.graph import NNCFGraph
 from nncf.common.graph.operator_metatypes import OutputNoopMetatype
 from nncf.common.graph.operator_metatypes import InputNoopMetatype
-from nncf.common.graph.definitions import NNCFGraphNodeType
 from nncf.common.insertion_point_graph import InsertionPointGraph
 from nncf.common.utils.registry import Registry
 
-from tests.common.quantization.metatypes import METATYPES_FOR_TEST
+from tests.common.quantization.metatypes import TestMetatype
+from tests.common.quantization.metatypes import Conv2dTestMetatype
+from tests.common.quantization.metatypes import IdentityTestMetatype
+from tests.common.quantization.metatypes import LinearTestMetatype
 from tests.common.quantization.metatypes import TopKTestMetatype
 from tests.common.quantization.metatypes import NMSTestMetatype
 from tests.common.quantization.metatypes import WEIGHT_LAYER_METATYPES
@@ -38,7 +40,7 @@ ALL_SYNTHETIC_NNCF_GRAPH = Registry('ONNX_SYNTHETIC_MODELS')
 
 
 class NodeWithType:
-    def __init__(self, name, op_type):
+    def __init__(self, name: str, op_type: TestMetatype):
         self.node_name = name
         self.node_op_type = op_type
 
@@ -47,18 +49,9 @@ class NNCFGraphToTest:
     def __init__(self, nodes: List[NodeWithType], node_edges):
         self.nncf_graph = NNCFGraph()
         for node in nodes:
-            node_name, node_op_type = node.node_name, node.node_op_type
-            if 'Output' in node_name:
-                metatype = OutputNoopMetatype
-                node_op_type = NNCFGraphNodeType.OUTPUT_NODE
-            elif 'Input' in node_name:
-                metatype = InputNoopMetatype
-                node_op_type = NNCFGraphNodeType.INPUT_NODE
-            else:
-                metatype = METATYPES_FOR_TEST.get_operator_metatype_by_op_name(node_op_type)
-            self.nncf_graph.add_nncf_node(node_name=node_name,
-                                          node_type=node_op_type,
-                                          node_metatype=metatype,
+            self.nncf_graph.add_nncf_node(node_name=node.node_name,
+                                          node_type=node.node_op_type.name,
+                                          node_metatype=node.node_op_type,
                                           layer_attributes=None)
         input_port_counter = Counter()
         output_port_counter = Counter()
@@ -92,20 +85,20 @@ class ModelToTest1(NNCFGraphToTest):
     #                Output_1    Output_2
     #
     def __init__(self):
-        nodes = [NodeWithType('Input_1', 'Input'),
-                 NodeWithType('Conv_1', 'conv2d'),
-                 NodeWithType('Identity_1', 'identity'),
-                 NodeWithType('NMS_1', 'nms'),
-                 NodeWithType('Identity_2', 'identity'),
-                 NodeWithType('TopK_1', 'topk'),
-                 NodeWithType('Output_1', 'Output'),
-                 NodeWithType('Input_2', 'Input'),
-                 NodeWithType('Identity_3', 'identity'),
-                 NodeWithType('FC_1', 'linear'),
-                 NodeWithType('Identity_4', 'identity'),
-                 NodeWithType('NMS_2', 'nms'),
-                 NodeWithType('Identity_5', 'identity'),
-                 NodeWithType('Output_2', 'Output'),
+        nodes = [NodeWithType('Input_1', InputNoopMetatype),
+                 NodeWithType('Conv_1', Conv2dTestMetatype),
+                 NodeWithType('Identity_1', IdentityTestMetatype),
+                 NodeWithType('NMS_1', NMSTestMetatype),
+                 NodeWithType('Identity_2', IdentityTestMetatype),
+                 NodeWithType('TopK_1', TopKTestMetatype),
+                 NodeWithType('Output_1', OutputNoopMetatype),
+                 NodeWithType('Input_2', InputNoopMetatype),
+                 NodeWithType('Identity_3', IdentityTestMetatype),
+                 NodeWithType('FC_1', LinearTestMetatype),
+                 NodeWithType('Identity_4', IdentityTestMetatype),
+                 NodeWithType('NMS_2', NMSTestMetatype),
+                 NodeWithType('Identity_5', IdentityTestMetatype),
+                 NodeWithType('Output_2', OutputNoopMetatype),
                  ]
         node_edges = {'Input_1': ['Conv_1'], 'Conv_1': ['Identity_1'], 'Identity_1': ['NMS_1'], 'NMS_1': ['Identity_2'],
                       'Identity_2': ['TopK_1'], 'TopK_1': ['Output_1'], 'Input_2': ['Identity_3'],
@@ -134,14 +127,14 @@ class ModelToTest2(NNCFGraphToTest):
     #           Output_1
 
     def __init__(self):
-        nodes = [NodeWithType('Input_1', 'Input'),
-                 NodeWithType('Conv_1', 'conv2d'),
-                 NodeWithType('Identity_1', 'identity'),
-                 NodeWithType('TopK_1', 'topk'),
-                 NodeWithType('Identity_2', 'identity'),
-                 NodeWithType('TopK_2', 'topk'),
-                 NodeWithType('Identity_3', 'identity'),
-                 NodeWithType('Output_1', 'Output')
+        nodes = [NodeWithType('Input_1', InputNoopMetatype),
+                 NodeWithType('Conv_1', Conv2dTestMetatype),
+                 NodeWithType('Identity_1', IdentityTestMetatype),
+                 NodeWithType('TopK_1', TopKTestMetatype),
+                 NodeWithType('Identity_2', IdentityTestMetatype),
+                 NodeWithType('TopK_2', TopKTestMetatype),
+                 NodeWithType('Identity_3', IdentityTestMetatype),
+                 NodeWithType('Output_1', OutputNoopMetatype)
                  ]
         node_edges = {'Input_1': ['Conv_1'], 'Conv_1': ['Identity_1'], 'Identity_1': ['TopK_1'],
                       'TopK_1': ['Identity_2'],
@@ -169,16 +162,16 @@ class ModelToTest3(NNCFGraphToTest):
     #           Output_1
 
     def __init__(self):
-        nodes = [NodeWithType('Input_1', 'Input'),
-                 NodeWithType('Conv_1', 'conv2d'),
-                 NodeWithType('Identity_1', 'identity'),
-                 NodeWithType('TopK_1', 'topk'),
-                 NodeWithType('Identity_2', 'identity'),
-                 NodeWithType('NMS_1', 'nms'),
-                 NodeWithType('Identity_3', 'identity'),
-                 NodeWithType('Output_1', 'Output'),
-                 NodeWithType('Conv_2', 'conv2d'),
-                 NodeWithType('Output_2', 'Output')
+        nodes = [NodeWithType('Input_1', InputNoopMetatype),
+                 NodeWithType('Conv_1', Conv2dTestMetatype),
+                 NodeWithType('Identity_1', IdentityTestMetatype),
+                 NodeWithType('TopK_1', TopKTestMetatype),
+                 NodeWithType('Identity_2', IdentityTestMetatype),
+                 NodeWithType('NMS_1', NMSTestMetatype),
+                 NodeWithType('Identity_3', IdentityTestMetatype),
+                 NodeWithType('Output_1', OutputNoopMetatype),
+                 NodeWithType('Conv_2', Conv2dTestMetatype),
+                 NodeWithType('Output_2', OutputNoopMetatype)
                  ]
         node_edges = {'Input_1': ['Conv_1'], 'Conv_1': ['Identity_1'], 'Identity_1': ['TopK_1'],
                       'TopK_1': ['Identity_2'],
@@ -208,16 +201,16 @@ class ModelToTest4(NNCFGraphToTest):
     #                  Output_1
 
     def __init__(self):
-        nodes = [NodeWithType('Input_1', 'Input'),
-                 NodeWithType('Conv_1', 'conv2d'),
-                 NodeWithType('Identity_1', 'identity'),
-                 NodeWithType('TopK_1', 'topk'),
-                 NodeWithType('Identity_2', 'identity'),
-                 NodeWithType('NMS_1', 'nms'),
-                 NodeWithType('Identity_3', 'identity'),
-                 NodeWithType('Output_1', 'Output'),
-                 NodeWithType('Identity_4', 'identity'),
-                 NodeWithType('Identity_5', 'identity')
+        nodes = [NodeWithType('Input_1', InputNoopMetatype),
+                 NodeWithType('Conv_1', Conv2dTestMetatype),
+                 NodeWithType('Identity_1', IdentityTestMetatype),
+                 NodeWithType('TopK_1', TopKTestMetatype),
+                 NodeWithType('Identity_2', IdentityTestMetatype),
+                 NodeWithType('NMS_1', NMSTestMetatype),
+                 NodeWithType('Identity_3', IdentityTestMetatype),
+                 NodeWithType('Output_1', OutputNoopMetatype),
+                 NodeWithType('Identity_4', IdentityTestMetatype),
+                 NodeWithType('Identity_5', IdentityTestMetatype)
                  ]
         node_edges = {'Input_1': ['Conv_1'], 'Conv_1': ['Identity_1'], 'Identity_1': ['TopK_1', 'Identity_4'],
                       'TopK_1': ['Identity_2'],
@@ -247,16 +240,16 @@ class ModelToTest5(NNCFGraphToTest):
     #                  Output_1
 
     def __init__(self):
-        nodes = [NodeWithType('Input_1', 'Input'),
-                 NodeWithType('Conv_1', 'conv2d'),
-                 NodeWithType('Identity_1', 'identity'),
-                 NodeWithType('Identity_2', 'identity'),
-                 NodeWithType('Identity_3', 'identity'),
-                 NodeWithType('Identity_4', 'identity'),
-                 NodeWithType('Identity_5', 'identity'),
-                 NodeWithType('Output_1', 'Output'),
-                 NodeWithType('Identity_6', 'identity'),
-                 NodeWithType('Identity_7', 'identity')
+        nodes = [NodeWithType('Input_1', InputNoopMetatype),
+                 NodeWithType('Conv_1', Conv2dTestMetatype),
+                 NodeWithType('Identity_1', IdentityTestMetatype),
+                 NodeWithType('Identity_2', IdentityTestMetatype),
+                 NodeWithType('Identity_3', IdentityTestMetatype),
+                 NodeWithType('Identity_4', IdentityTestMetatype),
+                 NodeWithType('Identity_5', IdentityTestMetatype),
+                 NodeWithType('Output_1', OutputNoopMetatype),
+                 NodeWithType('Identity_6', IdentityTestMetatype),
+                 NodeWithType('Identity_7', IdentityTestMetatype)
                  ]
         node_edges = {'Input_1': ['Conv_1'], 'Conv_1': ['Identity_1'], 'Identity_1': ['Identity_2', 'Identity_3'],
                       'Identity_2': ['Identity_4'],

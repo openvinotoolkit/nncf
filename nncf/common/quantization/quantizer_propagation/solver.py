@@ -221,7 +221,7 @@ class PostprocessingNodeLocator:
                 return True
         return False
 
-    def _update_traverse_path_flags(self, node_metatype: OperatorMetatype) -> None:
+    def _check_if_postprocessing(self, node_metatype: OperatorMetatype) -> None:
         if node_metatype in self._post_processing_marker_metatypes:
             self._post_processing_marker_encountered = True
 
@@ -290,24 +290,26 @@ class PostprocessingNodeLocator:
                 return True, output
 
             node_metatype = self._get_node_metatype(node_key)
-            # If the node not weight quantizable
-            if not self._is_node_has_underlying_weights(node_key):
-                if node_metatype not in [InputNoopMetatype, OutputNoopMetatype]:
-                    self._update_traverse_path_flags(node_metatype)
-                    partial_forward_traverse_f = partial(forward_traverse_function,
-                                                            visited_nodes=visited_nodes)
-                    is_weight_node_after_the_current = self._quant_prop_graph.traverse_graph(node_key,
-                                                                                             partial_forward_traverse_f,
-                                                                                             output=[],
-                                                                                             traverse_forward=True)
-                    if any(is_weight_node_after_the_current):
-                        visited_nodes.add(node_key)
-                        return True, output
-                    output.append(node_key)
+            # If the node weight quantizable
+            if self._is_node_has_underlying_weights(node_key):
+                visited_nodes.add(node_key)
+                return True, output
+            if node_metatype in [InputNoopMetatype, OutputNoopMetatype]:
                 visited_nodes.add(node_key)
                 return False, output
-            visited_nodes.add(node_key)
-            return True, output
+            self._check_if_postprocessing(node_metatype)
+            partial_forward_traverse_function = partial(forward_traverse_function,
+                                                        visited_nodes=visited_nodes)
+            is_weight_node_after_the_current = self._quant_prop_graph.traverse_graph(node_key,
+                                                                                     partial_forward_traverse_function,
+                                                                                     output=[],
+                                                                                     traverse_forward=True)
+            # If in the path there are nodes with weights should stop the main backward traversing
+            if any(is_weight_node_after_the_current):
+                visited_nodes.add(node_key)
+                return True, output
+            output.append(node_key)
+            return False, output
 
         partial_backward_traverse_function = partial(backward_traverse_function, visited_nodes=visited_nodes)
         output = []
@@ -388,6 +390,10 @@ class QuantizerPropagationSolver:
         :param quantize_outputs: Whether to insert additional quantizers right before each of the model outputs.
         :param post_processing_marker_metatypes: The framework specific NNCF Metatypes, which are markers for
         the model post-processing part. They are used for automatic ignoring post-processing nodes.
+        The seeking post-processing nodes algorithm uses traversing through the model graph from the output nodes.
+        During traversing all the visited nodes are added, until the quantizable nodes with weights are faced.
+        If the path with the nodes has the post-processing marker node,
+        all the nodes in this path will be added into ignored.
          If None automatic ignoring will be skipped.
         """
         if default_trait_to_metatype_map is None:
