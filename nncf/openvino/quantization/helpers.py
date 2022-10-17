@@ -14,6 +14,7 @@
 import tempfile
 from pathlib import Path
 from typing import Optional
+import logging
 
 import openvino.runtime as ov
 from openvino.tools import pot
@@ -23,6 +24,7 @@ from nncf.openvino.utils import POTDataLoader
 from nncf.openvino.engine import OVEngine
 from nncf.quantization.params import TargetDevice
 from nncf.common.quantization.structs import QuantizationPreset
+from nncf.common.utils.logger import logger as nncf_logger
 
 
 def _convert_openvino_model_to_compressed_model(model: ov.Model,
@@ -74,6 +76,9 @@ def quantize_impl(model: ov.Model,
     """
     Implementation of the `quantize()` method for the OpenVINO backend.
     """
+    pot.utils.logger.init_logger(
+        level=logging.getLevelName(nncf_logger.getEffectiveLevel())
+    )
     pot_model = _convert_openvino_model_to_compressed_model(model, target_device)
 
     engine_config = {
