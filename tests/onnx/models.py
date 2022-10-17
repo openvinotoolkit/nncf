@@ -352,7 +352,7 @@ class OneConvolutionalModel(ONNXReferenceModel):
         onnx.checker.check_model(model)
         super().__init__(model, [input_shape], 'one_convolutional_model.dot')
 
-
+@WEIGHT_DETECTION_MODELS.register()
 @ALL_SYNTHETIC_MODELS.register()
 class ReshapeWeightModel(ONNXReferenceModel):
     # This graph pattern is in inception-v1-12:
@@ -433,8 +433,9 @@ class ReshapeWeightModel(ONNXReferenceModel):
         model = onnx.helper.make_model(graph_def, opset_imports=[op])
         onnx.checker.check_model(model)
         super().__init__(model, [input_shape], 'reshape_weight_model.dot')
+        self.weight_nodes = ['Gemm']
 
-
+@WEIGHT_DETECTION_MODELS.register()
 @ALL_SYNTHETIC_MODELS.register()
 class WeightSharingModel(ONNXReferenceModel):
     # This graph pattern is in retinanet-9:
@@ -517,6 +518,7 @@ class WeightSharingModel(ONNXReferenceModel):
         model = onnx.helper.make_model(graph_def, opset_imports=[op])
         onnx.checker.check_model(model)
         super().__init__(model, [input_shape], 'weight_sharing_model.dot')
+        self.weight_nodes = ['Conv1', 'Conv2']
 
 
 @ALL_SYNTHETIC_MODELS.register()
@@ -669,7 +671,7 @@ class MatMulWithWeightsModel(ONNXReferenceModel):
                                                onnx.TensorProto.FLOAT,
                                                output_shape)
 
-        W = np.ones_like(input_shape).astype(np.float32)
+        W = np.ones(input_shape).astype(np.float32)
 
         w_tensor = create_initializer_tensor(
             name="W",
@@ -696,6 +698,7 @@ class MatMulWithWeightsModel(ONNXReferenceModel):
         model = onnx.helper.make_model(graph_def, opset_imports=[op])
         onnx.checker.check_model(model)
         super().__init__(model, [input_shape], 'mat_mul_with_weights_model.dot')
+        self.weight_nodes = ['MatMul']
 
 
 @WEIGHT_DETECTION_MODELS.register()
@@ -738,3 +741,4 @@ class MatMulWithoutWeightsModel(ONNXReferenceModel):
         model = onnx.helper.make_model(graph_def, opset_imports=[op])
         onnx.checker.check_model(model)
         super().__init__(model, [input_shape], 'mat_mul_without_weights_model.dot')
+        self.weight_nodes = []

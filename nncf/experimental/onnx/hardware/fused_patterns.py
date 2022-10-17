@@ -52,6 +52,8 @@ def _get_onnx_hw_fused_patterns() -> HWFusedPatterns:
                                          activations + batch_norms | \
                                          batch_norms | activations
 
+    arithmetic_bn_act_permutation = arithmetic_ops + batch_norm_activations_permutation
+
     hw_fused_patterns.register(linear_ops + batch_norm_activations_permutation, 'LINEAR + BN_ACT_PERM',
                                match=True)
     hw_fused_patterns.register(linear_ops + arithmetic_ops, 'LINEAR + ARITHMETIC',
@@ -61,6 +63,9 @@ def _get_onnx_hw_fused_patterns() -> HWFusedPatterns:
     hw_fused_patterns.register(activations + batch_norms, 'ACTIVATIONS + BN', match=True)
     hw_fused_patterns.register(arithmetic_ops + batch_norm_activations_permutation,
                                'ARITHMETIC + BN_ACT_PERM', match=True)
+
+    hw_fused_patterns.register(linear_ops + arithmetic_bn_act_permutation,
+                               'LINEAR + ARITHMETIC + BN_ACT_PERM', match=True)
 
     input_preprocessing_pattern = create_input_preprocessing_pattern()
     hw_fused_patterns.register(input_preprocessing_pattern,

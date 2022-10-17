@@ -207,7 +207,6 @@ class ONNXShapeMetatype(ONNXOpMetatype):
 
 @ONNX_OPERATION_METATYPES.register()
 class ONNXExpandMetatype(ONNXOpMetatype):
-    # TODO (kshpv): hw_config_names?
     name = 'ExpandOp'
     op_names = ['Expand']
 
@@ -336,7 +335,6 @@ class ONNXNonMaxSuppressionMetatype(ONNXOpMetatype):
 class ONNXCastMetatype(ONNXOpMetatype):
     name = 'CastOp'
     op_names = ['Cast']
-    hw_config_names = [HWConfigOpName.SQUEEZE]
 
 
 @ONNX_OPERATION_METATYPES.register()
@@ -394,6 +392,7 @@ class ONNXSoftmaxMetatype(ONNXOpMetatype):
 class ONNXPadMetatype(ONNXOpMetatype):
     name = 'PadOp'
     op_names = ['Pad']
+    hw_config_names = [HWConfigOpName.PAD]
 
 
 @ONNX_OPERATION_METATYPES.register()
@@ -406,7 +405,11 @@ WEIGHT_LAYER_METATYPES = [ONNXConvolutionMetatype,
                           ONNXConvolutionTransposeMetatype,
                           ONNXLinearMetatype]
 
-POSSIBLE_WEIGHT_LAYERS_METATYPES = WEIGHT_LAYER_METATYPES + [ONNXMatMulMetatype]
+POSSIBLE_WEIGHT_LAYERS_METATYPES = WEIGHT_LAYER_METATYPES + [ONNXMatMulMetatype,
+                                                             ONNXAddLayerMetatype,
+                                                             ONNXMulLayerMetatype,
+                                                             ONNXDivLayerMetatype,
+                                                             ONNXSubMetatype]
 
 LAYERS_WITH_BIAS_METATYPES = [ONNXConvolutionMetatype,
                               ONNXConvolutionTransposeMetatype]
