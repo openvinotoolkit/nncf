@@ -140,7 +140,7 @@ class OVEngine(pot.IEEngine):
 
         progress_log_fn('Start inference of %d images', total_length)
 
-        dataloader_iter = iter(enumerate(self._validation_dataset.get_data(indices)))
+        dataloader_iter = iter(enumerate(self._validation_dataset.get_inference_data(indices)))
         # Start inference
         start_time = time()
         infer_queue.set_callback(completion_callback)
