@@ -11,11 +11,11 @@
  limitations under the License.
 """
 
-from copy import deepcopy
 from typing import Set, Dict
+from copy import deepcopy
 
 import onnx
-from nncf.common.graph.transformations.layout import TransformationLayout
+
 # pylint: disable=no-member
 
 from nncf.common.quantization.quantizer_propagation.solver import QuantizerPropagationSolver
@@ -23,7 +23,9 @@ from nncf.common.quantization.structs import QuantizableWeightedLayerNode
 from nncf.common.quantization.structs import QuantizerConfig
 from nncf.common.quantization.structs import QuantizationMode
 from nncf.common.quantization.quantizer_setup import SingleConfigQuantizationPoint
+from nncf.common.graph.graph import NNCFGraph
 from nncf.common.graph.definitions import NNCFGraphNodeType
+from nncf.common.graph.transformations.layout import TransformationLayout
 from nncf.common.graph.transformations.commands import TargetType
 from nncf.common.insertion_point_graph import InsertionPointGraph
 from nncf.common.tensor_statistics.collectors import TensorStatisticCollectorBase
@@ -39,7 +41,9 @@ from nncf.experimental.onnx.graph.transformations.commands import ONNXTargetPoin
 from nncf.experimental.post_training.factories import NNCFGraphFactory
 from nncf.experimental.post_training.statistics.statistic_point import StatisticPoint
 from nncf.experimental.post_training.statistics.statistic_point import StatisticPointsContainer
-from nncf.experimental.onnx.graph.metatypes.onnx_metatypes import GENERAL_WEIGHT_LAYER_METATYPES
+from nncf.experimental.onnx.graph.metatypes.onnx_metatypes import ONNXTopKMetatype
+from nncf.experimental.onnx.graph.metatypes.onnx_metatypes import ONNXNonMaxSuppressionMetatype
+from nncf.experimental.onnx.graph.metatypes.onnx_metatypes import WEIGHT_LAYER_METATYPES
 from nncf.experimental.onnx.algorithms.quantization.default_quantization import DEFAULT_ONNX_QUANT_TRAIT_TO_OP_DICT
 from nncf.experimental.onnx.graph.transformations.commands import ONNXQuantizerInsertionCommand
 from nncf.experimental.onnx.engine import ONNXEngine
@@ -51,14 +55,12 @@ from nncf.experimental.onnx.algorithms.quantization.utils import calculate_activ
 from nncf.experimental.onnx.algorithms.quantization.utils import calculate_weight_quantizer_parameters
 from nncf.experimental.onnx.hardware.config import ONNXHWConfig
 
-QUANTIZATION_LAYER_METATYPES = GENERAL_WEIGHT_LAYER_METATYPES
-
 
 class ONNXMinMaxQuantization(MinMaxQuantization):
 
     def __init__(self, parameters: MinMaxQuantizationParameters):
         super().__init__(parameters)
-        self.nncf_graph = None
+        self.nncf_graph = None  # type: NNCFGraph
         # It prevents the duplicate weight quantizers from being added.
         # It can happen when you have layers that share the identical weight tensor.
         self._quantization_target_points = set()  # type: Set[ONNXTargetPoint]
@@ -84,7 +86,7 @@ class ONNXMinMaxQuantization(MinMaxQuantization):
         pattern = ONNX_HW_FUSED_PATTERNS.get_full_pattern_graph()
         ip_graph = ip_graph.get_ip_graph_with_merged_hw_optimized_operations(pattern)
 
-        weight_nodes = self.nncf_graph.get_nodes_by_metatypes(QUANTIZATION_LAYER_METATYPES)
+        weight_nodes = self.nncf_graph.get_nodes_by_metatypes(WEIGHT_LAYER_METATYPES)
         quantizable_layer_nodes = [QuantizableWeightedLayerNode(weight_node, [QuantizerConfig()]) for weight_node in
                                    weight_nodes]
 
@@ -97,8 +99,9 @@ class ONNXMinMaxQuantization(MinMaxQuantization):
                                             default_trait_to_metatype_map=DEFAULT_ONNX_QUANT_TRAIT_TO_OP_DICT,
                                             default_qconfig_list=[self._get_default_qconfig()],
                                             quantizable_layer_nodes=quantizable_layer_nodes,
-                                            quantize_outputs=self.quantize_outputs)
-
+                                            quantize_outputs=self.quantize_outputs,
+                                            post_processing_marker_metatypes=[ONNXTopKMetatype,
+                                                                              ONNXNonMaxSuppressionMetatype])
         quantization_proposal = solver.run_on_ip_graph(ip_graph)
         multi_config_setup = quantization_proposal.quantizer_setup
         single_config_setup = multi_config_setup.select_first_qconfig_for_each_point()
@@ -115,7 +118,7 @@ class ONNXMinMaxQuantization(MinMaxQuantization):
                                                   quantization_point: SingleConfigQuantizationPoint) -> None:
         node_name = quantization_point.insertion_point.target_node_name
         # If quantization of Model Input node
-        if NNCFGraphNodeType.INPUT_NODE in quantization_point.insertion_point.target_node_name:
+        if NNCFGraphNodeType.INPUT_NODE in node_name:
             # There is only onde node - input_node
             activation_quantization_target_point = ONNXTargetPoint(TargetType.POST_LAYER_OPERATION, node_name)
         # If not Model Input node

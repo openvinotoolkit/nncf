@@ -33,24 +33,26 @@ from nncf.experimental.post_training.algorithms.quantization import PostTraining
 from nncf.experimental.post_training.algorithms.quantization import PostTrainingQuantizationParameters
 from nncf.experimental.onnx.graph.nncf_graph_builder import GraphConverter
 from nncf.experimental.onnx.tensor import ONNXNNCFTensor
+from nncf.experimental.onnx.graph.onnx_graph import ONNXGraph
 from nncf.experimental.onnx.model_normalizer import ONNXModelNormalizer
 
 REFERENCE_GRAPHS_TEST_ROOT = 'data/reference_graphs/quantization'
 
 
 class DatasetForTest(Dataset):
-    def __init__(self, input_key: str, input_shape: List[int], has_batch_dim: bool):
+    def __init__(self, input_key: str, input_shape: List[int], input_dtype: np.dtype, has_batch_dim: bool):
         super().__init__()
         self.input_key = input_key
         self.input_shape = input_shape
+        self.input_dtype = input_dtype
         self.has_batch_dim = has_batch_dim
 
     def __getitem__(self, item: int):
         return {
             self.input_key: ONNXNNCFTensor(
-                np.squeeze(np.random.random(self.input_shape).astype(np.float32),
+                np.squeeze(np.random.random(self.input_shape).astype(self.input_dtype),
                            axis=0)) if self.has_batch_dim else ONNXNNCFTensor(
-                np.random.random(self.input_shape).astype(np.float32)),
+                np.random.random(self.input_shape).astype(self.input_dtype)),
             "targets": ONNXNNCFTensor(0)
         }
 
@@ -78,7 +80,10 @@ def _get_input_key(original_model: onnx.ModelProto) -> str:
 def min_max_quantize_model(
         input_shape: List[int], original_model: onnx.ModelProto, convert_opset_version: bool = True,
         ignored_scopes: List[str] = None, dataset_has_batch_size: bool = True) -> onnx.ModelProto:
-    dataset = DatasetForTest(_get_input_key(original_model), input_shape, dataset_has_batch_size)
+    onnx_graph = ONNXGraph(original_model)
+    input_dtype = onnx_graph.get_edge_dtype(original_model.graph.input[0].name)
+    input_np_dtype = onnx.helper.mapping.TENSOR_TYPE_TO_NP_TYPE[input_dtype]
+    dataset = DatasetForTest(_get_input_key(original_model), input_shape, input_np_dtype, dataset_has_batch_size)
     builder = CompressionBuilder(convert_opset_version)
     builder.add_algorithm(
         ONNXMinMaxQuantization(MinMaxQuantizationParameters(number_samples=1, ignored_scopes=ignored_scopes)))
@@ -89,7 +94,10 @@ def min_max_quantize_model(
 def ptq_quantize_model(
         input_shape: List[int], original_model: onnx.ModelProto, convert_opset_version: bool = True,
         ignored_scopes: List[str] = None, dataset_has_batch_size: bool = True) -> onnx.ModelProto:
-    dataset = DatasetForTest(_get_input_key(original_model), input_shape, dataset_has_batch_size)
+    onnx_graph = ONNXGraph(original_model)
+    input_dtype = onnx_graph.get_edge_dtype(original_model.graph.input[0].name)
+    input_np_dtype = onnx.helper.mapping.TENSOR_TYPE_TO_NP_TYPE[input_dtype]
+    dataset = DatasetForTest(_get_input_key(original_model), input_shape, input_np_dtype, dataset_has_batch_size)
     builder = CompressionBuilder(convert_opset_version)
     builder.add_algorithm(
         PostTrainingQuantization(PostTrainingQuantizationParameters(number_samples=1, ignored_scopes=ignored_scopes)))
@@ -125,8 +133,11 @@ def compare_nncf_graph_onnx_models(quantized_model: onnx.ModelProto, _quantized_
 
 
 def infer_model(input_shape: List[int], quantized_model: onnx.ModelProto) -> None:
+    onnx_graph = ONNXGraph(quantized_model)
+    input_dtype = onnx_graph.get_edge_dtype(quantized_model.graph.input[0].name)
+    input_np_dtype = onnx.helper.mapping.TENSOR_TYPE_TO_NP_TYPE[input_dtype]
     serialized_model = quantized_model.SerializeToString()
     sess = rt.InferenceSession(serialized_model, providers=['OpenVINOExecutionProvider'])
     _input = np.random.random(input_shape)
     input_name = sess.get_inputs()[0].name
-    _ = sess.run([], {input_name: _input.astype(np.float32)})
+    _ = sess.run([], {input_name: _input.astype(input_np_dtype)})

@@ -517,38 +517,46 @@ class NNCFGraph:
 
     def get_graph_for_structure_analysis(self, extended: bool = False) -> nx.DiGraph:
         """
-        The graph to dump has certain node attributes omitted, compared to the graph stored
-        inside NNCFGraph.
+        Returns the nx.Digraph, which is built based on self._nx_graph.
+        The new graph has certain node attributes omitted, compared to the graph stored inside NNCFGraph.
+        If the node name consists of a special reserved character, this character will be replaced.
 
-        :param extended - whether the graph should have additional node attributes for improved visualization
+        :param extended: whether the graph edges should have attributes: shape of the tensor and tensor primitive type.
         :return: An nx.DiGraph to be used for structure analysis
         """
+        # .dot format reserves ':' character in node names
+        __RESERVED_DOT_CHARACTER = ':'
+        __CHARACTER_REPLACE_TO = '^'
+
         out_graph = nx.DiGraph()
         for node_name, node in self._nx_graph.nodes.items():
+            visualization_node_name = node_name.replace(__RESERVED_DOT_CHARACTER, __CHARACTER_REPLACE_TO)
             attrs_node = {
                 'id': node[NNCFGraph.ID_NODE_ATTR],
                 'type': node[NNCFGraph.NODE_TYPE_ATTR]
             }
-            if 'color' in node:
-                attrs_node['color'] = node['color']
-            if 'label' in node:
-                attrs_node['label'] = node['label']
-            if 'style' in node:
-                attrs_node['style'] = node['style']
+            for attr in ['color', 'label', 'style']:
+                if attr in node:
+                    attrs_node[attr] = node[attr]
+            # If the node_name has reserved character, use visualization_node_name as node name.
+            # While use 'label' attribute with original node name for visualization.
+            if 'label' not in attrs_node and __RESERVED_DOT_CHARACTER in node_name:
+                attrs_node['label'] = node_name
 
-            out_graph.add_node(node_name, **attrs_node)
-        if extended:
-            for u, v in self._nx_graph.edges:
-                edge = self._nx_graph.edges[u, v]
+            out_graph.add_node(visualization_node_name, **attrs_node)
+
+        for u, v in self._nx_graph.edges:
+            edge = self._nx_graph.edges[u, v]
+            attrs_edge = {}
+            u = u.replace(__RESERVED_DOT_CHARACTER, __CHARACTER_REPLACE_TO)
+            v = v.replace(__RESERVED_DOT_CHARACTER, __CHARACTER_REPLACE_TO)
+            if extended:
                 if edge[NNCFGraph.DTYPE_EDGE_ATTR] is Dtype.INTEGER:
-                    style = 'dashed'
+                    attrs_edge['style'] = 'dashed'
                 else:
-                    style = 'solid'
-                out_graph.add_edge(u, v, label=edge[NNCFGraph.ACTIVATION_SHAPE_EDGE_ATTR], style=style)
-        else:
-            for u, v in self._nx_graph.edges:
-                out_graph.add_edge(u, v)
-
+                    attrs_edge['style'] = 'solid'
+                attrs_edge['label'] = edge[NNCFGraph.ACTIVATION_SHAPE_EDGE_ATTR]
+            out_graph.add_edge(u, v, **attrs_edge)
         return out_graph
 
     def _get_graph_for_visualization(self) -> nx.DiGraph:

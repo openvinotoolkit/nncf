@@ -67,6 +67,23 @@ class LinearTestMetatype(TestMetatype):
     name = 'linear'
 
 
+@METATYPES_FOR_TEST.register()
+class TopKTestMetatype(TestMetatype):
+    name = 'topk'
+
+
+@METATYPES_FOR_TEST.register()
+class NMSTestMetatype(TestMetatype):
+    name = 'nms'
+
+
+@METATYPES_FOR_TEST.register()
+class IdentityTestMetatype(TestMetatype):
+    name = 'identity'
+
+
+WEIGHT_LAYER_METATYPES = [LinearTestMetatype, Conv2dTestMetatype, MatMulTestMetatype]
+
 DEFAULT_TEST_QUANT_TRAIT_MAP = {
     QuantizationTrait.INPUTS_QUANTIZABLE: [
         BatchNormTestMetatype,
