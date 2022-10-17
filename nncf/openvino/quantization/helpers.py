@@ -35,8 +35,8 @@ def _convert_openvino_model_to_compressed_model(model: ov.Model,
     :return: The POT representation of the provided model.
     """
     with tempfile.TemporaryDirectory(dir=tempfile.gettempdir()) as tmp_dir:
-        xml_path = str(Path(tmp_dir).joinpath('model.xml'))
-        bin_path = str(Path(tmp_dir).joinpath('model.bin'))
+        xml_path = str(Path(tmp_dir) / 'model.xml')
+        bin_path = str(Path(tmp_dir) / 'model.bin')
         ov.serialize(model, xml_path, bin_path)
         model_config = {
             'model_name': 'model',

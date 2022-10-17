@@ -27,7 +27,15 @@ from nncf.data import Dataset
 logger = pot.utils.logger.get_logger(__name__)
 
 
+# TODO(andrey-churkin): This class should be removed after refactoring of the OVEngine class.
+# We will be able to do that when we will have moved the POT code in the NNCF.
 class DummyMetric(pot.Metric):
+    """
+    Dummy implementation of the pot.Metric abstract class. It is used for compatibility
+    with the POT API. All docstring for the methods can be
+    found [here](https://docs.openvino.ai/latest/pot_compression_api_README.html#metric).
+    """
+
     def __init__(self, higher_better: bool = True):
         self._name = 'custom_metric'
         self._higher_better = higher_better
@@ -65,7 +73,16 @@ class DummyMetric(pot.Metric):
         self._avg_value = None
 
 
+# TODO(andrey-churkin): This class should be refactored. We will be able to do that when
+# we will have moved the POT code in the NNCF.
 class OVEngine(pot.IEEngine):
+    """
+    Implementation of the engine for the OpenVINO backend.
+
+    All docstring for the methods can be found
+    [here](https://docs.openvino.ai/latest/pot_compression_api_README.html#engine).
+    """
+
     def __init__(self,
                  config,
                  calibration_dataset: Dataset,

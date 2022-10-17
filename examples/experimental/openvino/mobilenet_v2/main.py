@@ -13,7 +13,6 @@
 
 from typing import Iterable
 from typing import Any
-import os
 import subprocess
 from pathlib import Path
 import time
@@ -28,11 +27,11 @@ from examples.experimental.openvino.mobilenet_v2 import utils
 
 FILE = Path(__file__).resolve()
 # Relative path to the `mobilenet_v2` directory.
-ROOT = Path(os.path.relpath(FILE.parent, Path.cwd()))
+ROOT = FILE.parent.relative_to(Path.cwd())
 # Path to the directory where the original and quantized IR will be saved.
-MODEL_DIR = ROOT.joinpath('mobilenet_v2_quantization')
+MODEL_DIR = ROOT / 'mobilenet_v2_quantization'
 # Path to ImageNet validation dataset.
-DATASET_DIR = ROOT.joinpath('imagenet')
+DATASET_DIR = ROOT / 'imagenet'
 
 
 ie = ov.Core()
@@ -67,8 +66,8 @@ def run_example():
     quantized_model = nncf.quantize(ov_model, calibration_dataset)
 
     # Step 5: Save the quantized model.
-    ir_qmodel_xml = MODEL_DIR.joinpath('mobilenet_v2_quantized.xml')
-    ir_qmodel_bin = MODEL_DIR.joinpath('mobilenet_v2_quantized.bin')
+    ir_qmodel_xml = MODEL_DIR / 'mobilenet_v2_quantized.xml'
+    ir_qmodel_bin = MODEL_DIR / 'mobilenet_v2_quantized.bin'
     ov.serialize(quantized_model, str(ir_qmodel_xml), str(ir_qmodel_bin))
 
     # Step 6: Compare the accuracy of the original and quantized models.
@@ -90,10 +89,10 @@ def convert_torch_to_openvino(model: torch.nn.Module) -> ov.Model:
     Converts PyTorch MobileNetV2 model to the OpenVINO IR format.
     """
     if not MODEL_DIR.exists():
-        os.makedirs(MODEL_DIR)
+        MODEL_DIR.mkdir()
 
     # Export PyTorch model to the ONNX format.
-    onnx_model_path = MODEL_DIR.joinpath('mobilenet_v2.onnx')
+    onnx_model_path = MODEL_DIR / 'mobilenet_v2.onnx'
     dummy_input = torch.randn(1, 3, 224, 224)
     torch.onnx.export(model, dummy_input, onnx_model_path, verbose=False)
 
@@ -101,8 +100,8 @@ def convert_torch_to_openvino(model: torch.nn.Module) -> ov.Model:
     mo_command = f'mo --framework onnx -m {onnx_model_path} --output_dir {MODEL_DIR}'
     subprocess.call(mo_command, shell=True)
 
-    ir_model_xml = MODEL_DIR.joinpath('mobilenet_v2.xml')
-    ir_model_bin = MODEL_DIR.joinpath('mobilenet_v2.bin')
+    ir_model_xml = MODEL_DIR / 'mobilenet_v2.xml'
+    ir_model_bin = MODEL_DIR / 'mobilenet_v2.bin'
     ov_model = ie.read_model(model=ir_model_xml, weights=ir_model_bin)
 
     return ov_model
@@ -112,7 +111,7 @@ def create_data_source() -> torch.utils.data.DataLoader:
     """
     Creates validation ImageNet data loader.
     """
-    val_dir = DATASET_DIR.joinpath('val')
+    val_dir = DATASET_DIR / 'val'
     # Transformations were taken from [here](https://pytorch.org/hub/pytorch_vision_mobilenet_v2).
     preprocess = torchvision.transforms.Compose([
         torchvision.transforms.Resize(256),
@@ -128,14 +127,14 @@ def create_data_source() -> torch.utils.data.DataLoader:
     return val_dataloader
 
 
-# The `validate()` method was taken as is from the pythorch repository.
+# The `validate()` method was taken as is from the pytorch repository.
 # You can find it [here](https://github.com/pytorch/examples/blob/main/imagenet/main.py).
 # Code regarding CUDA and training was removed.
 # Some code was changed and added.
 
 def validation_fn(model: ov.Model, validation_dataset: Iterable[Any]) -> float:
     compiled_model = ie.compile_model(model, device_name='CPU')
-    output_layer = next(iter(compiled_model.outputs))
+    output_layer = compiled_model.output(0)
 
     def run_validate(loader, base_progress=0):
         PRINT_FREQ = 10000

@@ -27,11 +27,11 @@ from yolov5.val import run as validation_fn
 
 FILE = Path(__file__).resolve()
 # Relative path to the `yolo_v5` directory.
-ROOT = Path(os.path.relpath(FILE.parent, Path.cwd()))
+ROOT = FILE.parent.relative_to(Path.cwd())
 # Path to the directory where the original and quantized IR will be saved.
-MODEL_DIR = ROOT.joinpath('yolov5m_quantization')
+MODEL_DIR = ROOT / 'yolov5m_quantization'
 # Path to the dataset config from the `ultralytics/yolov5` repository.
-DATASET_CONFIG = ROOT.joinpath('yolov5', 'data', 'coco.yaml')
+DATASET_CONFIG = ROOT / 'yolov5' / 'data' / 'coco.yaml'
 
 
 ie = ov.Core()
@@ -65,12 +65,12 @@ def run_example():
         return images
 
     # Wrap framework-specific data source into the `nncf.Dataset` object.
-    calibration_dataet = nncf.Dataset(data_source, transform_fn)
-    quantized_model = nncf.quantize(ov_model, calibration_dataet, preset=nncf.QuantizationPreset.MIXED)
+    calibration_dataset = nncf.Dataset(data_source, transform_fn)
+    quantized_model = nncf.quantize(ov_model, calibration_dataset, preset=nncf.QuantizationPreset.MIXED)
 
     # Step 5: Save the quantized model.
-    ir_qmodel_xml = MODEL_DIR.joinpath('yolov5m_quantized.xml')
-    ir_qmodel_bin = MODEL_DIR.joinpath('yolov5m_quantized.bin')
+    ir_qmodel_xml = MODEL_DIR / 'yolov5m_quantized.xml'
+    ir_qmodel_bin = MODEL_DIR / 'yolov5m_quantized.bin'
     ov.serialize(quantized_model, str(ir_qmodel_xml), str(ir_qmodel_bin))
 
     # Step 6: Compare the accuracy of the original and quantized models.
@@ -106,10 +106,10 @@ def convert_torch_to_openvino(model: torch.nn.Module) -> ov.Model:
     Converts PyTorch YOLOv5 model to the OpenVINO IR format.
     """
     if not MODEL_DIR.exists():
-        os.makedirs(MODEL_DIR)
+        MODEL_DIR.mkdir()
 
     # Export PyTorch model to the ONNX format.
-    onnx_model_path = MODEL_DIR.joinpath('yolov5m.onnx')
+    onnx_model_path = MODEL_DIR / 'yolov5m.onnx'
     dummy_input = torch.randn(1, 3, 640, 640)
     torch.onnx.export(model, dummy_input, onnx_model_path, verbose=False)
 
@@ -117,8 +117,8 @@ def convert_torch_to_openvino(model: torch.nn.Module) -> ov.Model:
     mo_command = f'mo --framework onnx -m {onnx_model_path} --output_dir {MODEL_DIR}'
     subprocess.call(mo_command, shell=True)
 
-    ir_model_xml = MODEL_DIR.joinpath('yolov5m.xml')
-    ir_model_bin = MODEL_DIR.joinpath('yolov5m.bin')
+    ir_model_xml = MODEL_DIR / 'yolov5m.xml'
+    ir_model_bin = MODEL_DIR / 'yolov5m.bin'
     ov_model = ie.read_model(model=ir_model_xml, weights=ir_model_bin)
 
     return ov_model

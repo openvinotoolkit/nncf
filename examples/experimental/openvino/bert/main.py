@@ -14,7 +14,6 @@
 from typing import Iterable
 from typing import Any
 
-import os
 import subprocess
 from pathlib import Path
 
@@ -29,11 +28,11 @@ import numpy as np
 
 FILE = Path(__file__).resolve()
 # Relative path to the `bert` directory.
-ROOT = Path(os.path.relpath(FILE.parent, Path.cwd()))
+ROOT = FILE.parent.relative_to(Path.cwd())
 # Path to the directory where the original and quantized IR will be saved.
-MODEL_DIR = ROOT.joinpath('bert_quantization')
+MODEL_DIR = ROOT / 'bert_quantization'
 # Path to the pre-trained model directory.
-PRETRAINED_MODEL_DIR = ROOT.joinpath('MRPC')
+PRETRAINED_MODEL_DIR = ROOT / 'MRPC'
 
 TASK_NAME = 'mrpc'
 MAX_SEQ_LENGTH = 128
@@ -73,8 +72,8 @@ def run_example():
     quantized_model = nncf.quantize(ov_model, calibration_dataset, model_type='transformer')
 
     # Step 5: Save quantized model.
-    ir_qmodel_xml = MODEL_DIR.joinpath('bert_base_mrpc_quantized.xml')
-    ir_qmodel_bin = MODEL_DIR.joinpath('bert_base_mrpc_quantized.bin')
+    ir_qmodel_xml = MODEL_DIR / 'bert_base_mrpc_quantized.xml'
+    ir_qmodel_bin = MODEL_DIR / 'bert_base_mrpc_quantized.bin'
     ov.serialize(quantized_model, str(ir_qmodel_xml), str(ir_qmodel_bin))
 
     # Step 6: Compare the accuracy of the original and quantized models.
@@ -96,10 +95,10 @@ def convert_torch_to_openvino(model: torch.nn.Module) -> ov.Model:
     Converts the fine-tuned BERT model for the MRPC task to the OpenVINO IR format.
     """
     if not MODEL_DIR.exists():
-        os.makedirs(MODEL_DIR)
+        MODEL_DIR.mkdir()
 
     # Export PyTorch model to the ONNX format.
-    onnx_model_path = MODEL_DIR.joinpath('bert_base_mrpc.onnx')
+    onnx_model_path = MODEL_DIR / 'bert_base_mrpc.onnx'
     dummy_input = (
         torch.ones(1, MAX_SEQ_LENGTH, dtype=torch.int64),  # input_ids
         torch.ones(1, MAX_SEQ_LENGTH, dtype=torch.int64),  # attention_mask
@@ -117,8 +116,8 @@ def convert_torch_to_openvino(model: torch.nn.Module) -> ov.Model:
     mo_command = f'mo --framework onnx -m {onnx_model_path} --output_dir {MODEL_DIR}'
     subprocess.call(mo_command, shell=True)
 
-    ir_model_xml = MODEL_DIR.joinpath('bert_base_mrpc.xml')
-    ir_model_bin = MODEL_DIR.joinpath('bert_base_mrpc.bin')
+    ir_model_xml = MODEL_DIR / 'bert_base_mrpc.xml'
+    ir_model_bin = MODEL_DIR / 'bert_base_mrpc.bin'
     ov_model = ie.read_model(model=ir_model_xml, weights=ir_model_bin)
 
     return ov_model
@@ -145,7 +144,7 @@ def create_data_source() -> datasets.Dataset:
 
 def validation_fn(model: ov.Model, validation_dataset: Iterable[Any]) -> float:
     compiled_model = ie.compile_model(model, device_name='CPU')
-    output_layer = next(iter(compiled_model.outputs))
+    output_layer = compiled_model.output(0)
 
     metric = evaluate.load('glue', TASK_NAME)
     INPUT_NAMES = [x.any_name for x in compiled_model.inputs]
