@@ -27,7 +27,7 @@ from tests.common.graph.nx_graph import check_nx_graph
 
 from nncf.experimental.post_training.api.dataset import Dataset
 from nncf.experimental.post_training.compression_builder import CompressionBuilder
-from nncf.experimental.onnx.algorithms.quantization.min_max_quantization import ONNXMinMaxQuantization
+from nncf.experimental.post_training.algorithms.quantization.min_max.algorithm import MinMaxQuantization
 from nncf.experimental.post_training.algorithms.quantization import MinMaxQuantizationParameters
 from nncf.experimental.post_training.algorithms.quantization import PostTrainingQuantization
 from nncf.experimental.post_training.algorithms.quantization import PostTrainingQuantizationParameters
@@ -86,7 +86,7 @@ def min_max_quantize_model(
     dataset = DatasetForTest(_get_input_key(original_model), input_shape, input_np_dtype, dataset_has_batch_size)
     builder = CompressionBuilder(convert_opset_version)
     builder.add_algorithm(
-        ONNXMinMaxQuantization(MinMaxQuantizationParameters(number_samples=1, ignored_scopes=ignored_scopes)))
+        MinMaxQuantization(MinMaxQuantizationParameters(number_samples=1, ignored_scopes=ignored_scopes)))
     quantized_model = builder.apply(original_model, dataset)
     return quantized_model
 
@@ -141,3 +141,7 @@ def infer_model(input_shape: List[int], quantized_model: onnx.ModelProto) -> Non
     _input = np.random.random(input_shape)
     input_name = sess.get_inputs()[0].name
     _ = sess.run([], {input_name: _input.astype(input_np_dtype)})
+
+def find_ignored_scopes(disallowed_op_types: List[str], model: onnx.ModelProto) -> List[str]:
+    disallowed_op_types = set(disallowed_op_types)
+    return [node.name for node in model.graph.node if node.op_type in disallowed_op_types]

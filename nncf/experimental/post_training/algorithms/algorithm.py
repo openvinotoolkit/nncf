@@ -102,10 +102,8 @@ class CompositeAlgorithm(Algorithm):
         pass
 
     @abstractmethod
-    def create_subalgorithms(self, backend: BackendType) -> None:
+    def create_subalgorithms(self) -> None:
         """
         Some composite algorithms have different inner algorithms.
         This method creates sub-algorithms and sets model transformer to them
-
-        :param backend: backend for the algorithms differentiation
         """

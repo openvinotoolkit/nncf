@@ -11,7 +11,22 @@
  limitations under the License.
 """
 
-from nncf.experimental.post_training.algorithms.quantization.algorithm import PostTrainingQuantization
-from nncf.experimental.post_training.algorithms.quantization.algorithm import PostTrainingQuantizationParameters
-from nncf.experimental.post_training.algorithms.quantization.min_max.algorithm import MinMaxQuantization
-from nncf.experimental.post_training.algorithms.quantization.min_max.algorithm import MinMaxQuantizationParameters
+from enum import Enum
+
+
+class TargetDevice(Enum):
+    """
+    Describes the target device the specificity of which will be taken
+    into account while compressing in order to obtain the best performance
+    for this type of device.
+
+    :param ANY:
+    :param CPU:
+    :param GPU:
+    :param VPU:
+    """
+
+    ANY = 'ANY'
+    CPU = 'CPU'
+    GPU = 'GPU'
+    VPU = 'VPU'

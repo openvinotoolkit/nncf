@@ -14,13 +14,11 @@
 from typing import Union
 from typing import List
 
-import onnx
 import numpy as np
 
 from nncf.common.quantization.structs import QuantizerConfig
 from nncf.common.quantization.structs import QuantizationMode
-
-from nncf.experimental.onnx.statistics.collectors import ONNXMinMaxTensorStatistic
+from nncf.common.tensor_statistics.statistics import MinMaxTensorStatistic
 
 
 class QuantizerLayerParameters:
@@ -67,7 +65,7 @@ def calculate_weight_quantizer_parameters(weight_tensor: np.ndarray, quantizer_c
     return QuantizerLayerParameters(scales.tolist(), zero_points.tolist(), mode)
 
 
-def calculate_activation_quantizer_parameters(statistics: ONNXMinMaxTensorStatistic,
+def calculate_activation_quantizer_parameters(statistics: MinMaxTensorStatistic,
                                               quantizer_config: QuantizerConfig) -> QuantizerLayerParameters:
     """
     Calculates Quantizer/Dequantizer layer attributes for activation quantizer such as scale, zero_points and
@@ -84,13 +82,3 @@ def calculate_activation_quantizer_parameters(statistics: ONNXMinMaxTensorStatis
     scales = calculate_scale_level(input_high, input_low, num_bits, mode)
     zero_points = np.zeros_like(scales, dtype=np.int64)
     return QuantizerLayerParameters(scales.tolist(), zero_points.tolist(), mode)
-
-
-def find_ignored_scopes(disallowed_op_types: List[str], model: onnx.ModelProto) -> List[str]:
-    """
-    Find ignored_scopes from disallowed_op_types.
-    For example, if disallowed_op_types = {"Mul", "Add"},
-    all nodes which have op_type = "Mul" or "Add" will be added to ignored_scopes.
-    """
-    disallowed_op_types = set(disallowed_op_types)
-    return [node.name for node in model.graph.node if node.op_type in disallowed_op_types]

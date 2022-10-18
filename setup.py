@@ -80,7 +80,7 @@ INSTALL_REQUIRES = ["ninja>=1.10.0.post2",
                     "scipy>=1.3.2, <=1.9.1; python_version>='3.7'",
                     "matplotlib~=3.3.4; python_version<'3.7'",
                     "matplotlib>=3.3.4, <3.6; python_version>='3.7'",
-                    "networkx>=2.5, <=2.8.2",  # see ticket 94048 or https://github.com/networkx/networkx/issues/5962
+                    "networkx>=2.6, <=2.8.2",  # see ticket 94048 or https://github.com/networkx/networkx/issues/5962
                     "numpy>=1.19.1, <1.24",
                     "pillow~=8.4.0; python_version<'3.7'",
                     "pillow>=9.0.0; python_version>='3.7'",

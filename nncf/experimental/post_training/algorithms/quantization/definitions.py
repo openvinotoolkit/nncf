@@ -11,7 +11,14 @@
  limitations under the License.
 """
 
-from nncf.experimental.post_training.algorithms.quantization.algorithm import PostTrainingQuantization
-from nncf.experimental.post_training.algorithms.quantization.algorithm import PostTrainingQuantizationParameters
-from nncf.experimental.post_training.algorithms.quantization.min_max.algorithm import MinMaxQuantization
-from nncf.experimental.post_training.algorithms.quantization.min_max.algorithm import MinMaxQuantizationParameters
+from nncf.common.utils.ordered_enum import OrderedEnum
+
+
+class Granularity(OrderedEnum):
+    PERTENSOR = 'pertensor'
+    PERCHANNEL = 'perchannel'
+
+
+class RangeType(OrderedEnum):
+    MINMAX = 'min_max'
+    MEAN_MINMAX = 'mean_min_max'

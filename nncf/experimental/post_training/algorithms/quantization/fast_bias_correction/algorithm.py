@@ -28,7 +28,7 @@ from nncf.common.graph.transformations.commands import TargetPoint
 from nncf.experimental.post_training.algorithms import AlgorithmParameters
 from nncf.experimental.post_training.algorithms.algorithm import Algorithm
 from nncf.experimental.post_training.algorithms.algorithm import PostTrainingAlgorithms
-from nncf.experimental.post_training.algorithms.fast_bias_correction.backend import ALGO_BACKENDS
+from nncf.experimental.post_training.algorithms.quantization.fast_bias_correction.backend import ALGO_BACKENDS
 from nncf.experimental.post_training.api.engine import Engine
 from nncf.experimental.post_training.factories import NNCFGraphFactory
 from nncf.experimental.post_training.graph.model_transformer import StaticModelTransformerBase
@@ -107,7 +107,8 @@ class FastBiasCorrection(Algorithm):
         """
         model_backend = get_backend(model)
         if model_backend == BackendType.ONNX:
-            from nncf.experimental.post_training.algorithms.fast_bias_correction.onnx_backend import ONNXFBCAlgoBackend
+            from nncf.experimental.post_training.algorithms.quantization.fast_bias_correction.onnx_backend import \
+                ONNXFBCAlgoBackend
             self._backend_entity = ONNXFBCAlgoBackend()
         else:
             raise RuntimeError('Cannot return backend-specific entity'

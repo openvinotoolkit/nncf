@@ -56,9 +56,7 @@ def _get_onnx_hw_fused_patterns() -> HWFusedPatterns:
 
     hw_fused_patterns.register(linear_ops + batch_norm_activations_permutation, 'LINEAR + BN_ACT_PERM',
                                match=True)
-    hw_fused_patterns.register(linear_ops + arithmetic_ops, 'LINEAR + ARITHMETIC',
-                               match=True)
-
+    hw_fused_patterns.register(linear_ops + arithmetic_ops, 'LINEAR + ARITHMETIC', match=True)
     hw_fused_patterns.register(batch_norms + activations, 'BN + ACTIVATIONS', match=True)
     hw_fused_patterns.register(activations + batch_norms, 'ACTIVATIONS + BN', match=True)
     hw_fused_patterns.register(arithmetic_ops + batch_norm_activations_permutation,
