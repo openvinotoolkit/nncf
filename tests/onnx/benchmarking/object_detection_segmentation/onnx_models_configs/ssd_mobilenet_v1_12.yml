@@ -22,3 +22,6 @@ models:
         metrics:
           - type: coco_precision
             threshold: .5:.05:.95
+
+    ignored_scopes: [ 'copy__21/Preprocessor/map/while/Less', 'Preprocessor/mul',
+                      'copy__43/Postprocessor/BatchMultiClassNonMaxSuppression/map/while/Less', 'add']

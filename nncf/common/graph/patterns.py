@@ -23,6 +23,8 @@ import itertools as it
 import networkx as nx
 import networkx.algorithms.isomorphism as ism
 
+from nncf.common.utils.dot_file_rw import write_dot_graph
+
 
 class HWFusedPatterns:
     """
@@ -242,7 +244,7 @@ class GraphPattern:
         return [self._graph.subgraph(c) for c in nx.weakly_connected_components(self._graph)]
 
     def dump_graph(self, path: str) -> None:
-        nx.drawing.nx_pydot.write_dot(self._graph, path)
+        write_dot_graph(self._graph, path)
 
 
 def merge_two_types_of_operations(first_op: Dict, second_op: Dict, label: str) -> Dict:

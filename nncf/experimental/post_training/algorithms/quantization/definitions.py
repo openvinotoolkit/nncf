@@ -14,12 +14,6 @@
 from nncf.common.utils.ordered_enum import OrderedEnum
 
 
-class Preset(OrderedEnum):
-    PERFOMANCE = 'perfomance'
-    MIXED = 'mixed'
-    ACCURACY = 'accuracy'
-
-
 class Granularity(OrderedEnum):
     PERTENSOR = 'pertensor'
     PERCHANNEL = 'perchannel'

@@ -116,7 +116,19 @@ class no_jit_trace:
         torch._C._set_tracing_state(self.state)
         self.state = None
 
+def fp32_accum_wrapper(func):
+    def wrapper(tensor_to_sum, ret_tensor):
+        half = tensor_to_sum.dtype == np.float16
+        if half:
+            tensor_to_sum = tensor_to_sum.astype(np.float)
+        retval = func(tensor_to_sum, ret_tensor)
+        if half:
+            retval = retval.astype(np.float16)
+        return retval
+    return wrapper
 
+
+@fp32_accum_wrapper
 def sum_like(tensor_to_sum, ref_tensor):
     """Warning: may modify tensor_to_sum"""
     if ref_tensor.size == 1:

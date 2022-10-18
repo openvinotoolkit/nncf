@@ -41,9 +41,16 @@ class MinMaxAlgoBackend(ABC):
 
     @property
     @abstractmethod
-    def layers_with_weights_metatypes(self) -> Registry:
+    def layers_with_weights_metatypes(self) -> List[OperatorMetatype]:
         """
         Property for the backend-specific metatypes with weights.
+        """
+    
+    @property
+    @abstractmethod
+    def post_processing_metatypes(self) -> List[OperatorMetatype]:
+        """
+        Property for the backend-specific post-processing metatypes (NonMaximumSupression, TopK, etc.).
         """
 
     @property

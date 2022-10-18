@@ -19,7 +19,10 @@ LINEAR_OPERATIONS = {'type': ['linear',
                               'conv_transpose1d',
                               'conv_transpose2d',
                               'conv_transpose3d',
-                              'addmm'
+                              'addmm',
+                              'bmm',
+                              'matmul',
+                              'mm'
                               ],
                      'label': 'LINEAR'}
 
@@ -33,6 +36,9 @@ BATCH_NORMALIZATION_OPERATIONS = {'type': ['batch_norm',
 
 GROUP_NORMALIZATION_OPERATIONS = {'type': ['group_norm'],
                                   'label': 'GROUP_NORMALIZATION'}
+
+LAYER_NORMALIZATION_OPERATIONS = {'type': ['layer_norm'],
+                                  'label': 'LAYER_NORMALIZATION'}
 
 RELU_OPERATIONS = {'type': ['relu',
                             'relu_',
@@ -70,9 +76,3 @@ POOLING_OPERATIONS = {'type': ['adaptive_avg_pool2d',
                                'avg_pool2d',
                                'avg_pool3d'],
                       'label': 'POOLING'}
-
-MATMUL_OPERATIONS = {'type': ['bmm',
-                              'matmul',
-                              'mm'
-                              ],
-                     'label': 'MATMUL'}

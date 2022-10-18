@@ -150,3 +150,12 @@ class UpdateBatchNormParams(UpdateParameterList):
     """
     def __init__(self, op):
         super().__init__(["weight", "bias", "running_mean", "running_var"], op)
+
+
+class UpdateLayerNormParams(UpdateParameterList):
+    """
+    A module which updates attribute of layer norm module
+    fed to forward method call by operand call.
+    """
+    def __init__(self, op):
+        super().__init__(["weight", "bias", "normalized_shape"], op)

@@ -13,6 +13,7 @@
 
 from copy import deepcopy
 from typing import Dict
+from typing import Tuple
 from typing import List
 from typing import Set
 from typing import TypeVar
@@ -31,6 +32,8 @@ from nncf.common.quantization.quantizer_setup import SingleConfigQuantizerSetup
 from nncf.common.quantization.structs import QuantizableWeightedLayerNode
 from nncf.common.quantization.structs import QuantizationMode
 from nncf.common.quantization.structs import QuantizerConfig
+from nncf.common.quantization.structs import QuantizationPreset
+from nncf.common.quantization.structs import QuantizerGroup
 from nncf.common.tensor_statistics.collectors import TensorStatisticCollectorBase
 from nncf.common.utils.backend import BackendType, get_backend
 from nncf.common.utils.logger import logger as nncf_logger
@@ -44,6 +47,7 @@ from nncf.experimental.post_training.algorithms.quantization.min_max.utils impor
 from nncf.experimental.post_training.algorithms.quantization.min_max.utils import \
     calculate_weight_quantizer_parameters
 from nncf.experimental.post_training.algorithms.quantization.definitions import RangeType
+from nncf.experimental.post_training.algorithms.quantization.definitions import Granularity
 from nncf.experimental.post_training.api.engine import Engine
 from nncf.experimental.post_training.factories import NNCFGraphFactory
 from nncf.experimental.post_training.statistics.statistic_point import StatisticPoint
@@ -63,12 +67,15 @@ class MinMaxQuantizationParameters(AlgorithmParameters):
                                       per_channel=False)
 
     def __init__(self,
-                 weight_quantizer_config: QuantizerConfig = deepcopy(DEFAULT_QCONFIG),
-                 activation_quantizer_config: QuantizerConfig = deepcopy(DEFAULT_QCONFIG),
+                 preset: QuantizationPreset = QuantizationPreset.PERFORMANCE,
+                 weight_bits: int = 8,
+                 weight_granularity: Granularity = Granularity.PERCHANNEL,
+                 activation_bits: int = 8,
+                 activation_granularity: Granularity = Granularity.PERTENSOR,
                  number_samples: int = 100,
                  target_device: HWConfigType = HWConfigType.CPU,
                  range_type: RangeType = RangeType.MEAN_MINMAX,
-                 quatize_outputs: bool = False,
+                 quantize_outputs: bool = False,
                  ignored_scopes: List[str] = None,
                  ):
         """
@@ -80,18 +87,31 @@ class MinMaxQuantizationParameters(AlgorithmParameters):
         :param quantize_outputs: Boolean value that says whether quantize outputs or not.
         :param ignored_scopes: List of the layers that should not quantized during the process.
         """
-        self.weight_quantizer_config = weight_quantizer_config
-        self.activation_quantizer_config = activation_quantizer_config
+        weight_mode, activation_mode = self._determine_weight_activation_modes(preset)
+        self.weight_quantizer_config = self._determine_quantizer_config(weight_bits, weight_granularity, weight_mode)
+        self.activation_quantizer_config = self._determine_quantizer_config(activation_bits, activation_granularity,
+                                                                            activation_mode)
         self.number_samples = number_samples
         self.target_device = target_device
         self.range_type = range_type
+        self.quantize_outputs = quantize_outputs
         self.ignored_scopes = [] if ignored_scopes is None else ignored_scopes
-        self.quantize_outputs = quatize_outputs
 
     def to_json(self) -> Dict[str, Union[str, float, int]]:
         """
         Serialize all MinMaxQuantization parameters to JSON.
         """
+    
+    def _determine_weight_activation_modes(self, preset: QuantizationPreset) -> Tuple[
+            QuantizationMode, QuantizationMode]:
+        weight_mode = QuantizationPreset.get_params_configured_by_preset(preset, QuantizerGroup.WEIGHTS)['mode']
+        activation_mode = QuantizationPreset.get_params_configured_by_preset(preset, QuantizerGroup.ACTIVATIONS)['mode']
+        return weight_mode, activation_mode
+
+    def _determine_quantizer_config(self, number_bits: int,
+                                    granularity: Granularity, mode: QuantizationMode) -> QuantizerConfig:
+        return QuantizerConfig(num_bits=number_bits, mode=mode,
+                               per_channel=granularity == Granularity.PERCHANNEL)
 
 
 class MinMaxQuantization(Algorithm):
@@ -189,7 +209,8 @@ class MinMaxQuantization(Algorithm):
                                             default_trait_to_metatype_map=self._backend_entity.quant_trait_op_dict,
                                             default_qconfig_list=[default_config],
                                             quantizable_layer_nodes=quantizable_layer_nodes,
-                                            quantize_outputs=self._parameters.quantize_outputs)
+                                            quantize_outputs=self._parameters.quantize_outputs,
+                                            post_processing_marker_metatypes=self._backend_entity.post_processing_metatypes)
 
         quantization_proposal = solver.run_on_ip_graph(ip_graph)
         multi_config_setup = quantization_proposal.quantizer_setup
@@ -221,7 +242,7 @@ class MinMaxQuantization(Algorithm):
         node_name = quantization_point.insertion_point.target_node_name
         node = nncf_graph.get_node_by_name(node_name)
         # If quantization of Model Input node
-        if NNCFGraphNodeType.INPUT_NODE in quantization_point.insertion_point.target_node_name:
+        if NNCFGraphNodeType.INPUT_NODE in node_name:
             # There is only onde node - input_node
             activation_quantization_target_point = self._backend_entity.target_point(TargetType.POST_LAYER_OPERATION,
                                                                                      node_name)

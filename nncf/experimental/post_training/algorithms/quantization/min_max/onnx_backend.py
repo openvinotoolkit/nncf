@@ -29,7 +29,9 @@ from nncf.common.utils.backend import BackendType
 from nncf.common.utils.registry import Registry
 from nncf.common.utils.logger import logger as nncf_logger
 
-from nncf.experimental.onnx.graph.metatypes.onnx_metatypes import GENERAL_WEIGHT_LAYER_METATYPES
+from nncf.experimental.onnx.graph.metatypes.onnx_metatypes import WEIGHT_LAYER_METATYPES
+from nncf.experimental.onnx.graph.metatypes.onnx_metatypes import ONNXNonMaxSuppressionMetatype
+from nncf.experimental.onnx.graph.metatypes.onnx_metatypes import ONNXTopKMetatype
 from nncf.experimental.onnx.graph.model_transformer import ONNXModelTransformer
 from nncf.experimental.onnx.graph.transformations.commands import ONNXQuantizerInsertionCommand
 from nncf.experimental.onnx.graph.transformations.commands import ONNXTargetPoint
@@ -48,8 +50,12 @@ from nncf.experimental.post_training.algorithms.quantization.min_max.utils impor
 class ONNXMinMaxAlgoBackend(MinMaxAlgoBackend):
 
     @property
-    def layers_with_weights_metatypes(self) -> Registry:
-        return GENERAL_WEIGHT_LAYER_METATYPES
+    def layers_with_weights_metatypes(self) -> List[OperatorMetatype]:
+        return WEIGHT_LAYER_METATYPES
+    
+    @property
+    def post_processing_metatypes(self) -> List[OperatorMetatype]:
+        return [ONNXTopKMetatype, ONNXNonMaxSuppressionMetatype]
 
     @property
     def hw_fused_patterns(self) -> HWFusedPatterns:

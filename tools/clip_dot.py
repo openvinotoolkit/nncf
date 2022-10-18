@@ -4,6 +4,9 @@ from argparse import ArgumentParser
 
 import networkx as nx
 
+from nncf.common.utils.dot_file_rw import read_dot_graph
+from nncf.common.utils.dot_file_rw import write_dot_graph
+
 
 def main(argv):
     parser = ArgumentParser()
@@ -15,7 +18,7 @@ def main(argv):
     parser.add_argument('-o', '--output_file', help='Output .dot file', required=True)
     args = parser.parse_args(args=argv)
 
-    graph = nx.DiGraph(nx.drawing.nx_pydot.read_dot(args.input_file))
+    graph = nx.DiGraph(read_dot_graph(args.input_file))
 
     new_graph = nx.DiGraph()
 
@@ -55,7 +58,7 @@ def main(argv):
     #     edge_data = graph.edges[from_key, to_key]
     #     new_graph.add_edge(from_key, to_key, **edge_data)
 
-    nx.drawing.nx_pydot.write_dot(new_graph, args.output_file)
+    write_dot_graph(new_graph, args.output_file)
 
 
 if __name__ == '__main__':

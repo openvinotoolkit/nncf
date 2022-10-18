@@ -62,6 +62,7 @@ from nncf.common.quantization.structs import WeightQuantizerId
 from nncf.common.schedulers import BaseCompressionScheduler
 from nncf.common.statistics import NNCFStatistics
 from nncf.common.utils.debug import is_debug
+from nncf.common.utils.dot_file_rw import write_dot_graph
 from nncf.common.utils.helpers import matches_any
 from nncf.common.utils.logger import DuplicateFilter
 from nncf.common.utils.logger import logger as nncf_logger
@@ -1573,7 +1574,7 @@ class QuantizationDebugInterface(DebugInterface):
                 for ip_node_key in node[InsertionPointGraph.ASSOCIATED_IP_NODE_KEYS_NODE_ATTR]:
                     out_graph.add_edge(node_key, ip_node_key, style="dashed", headport='e', tailport='e')
 
-        nx.drawing.nx_pydot.write_dot(out_graph, self.dump_dir / Path("insertion_point_graph.dot"))
+        write_dot_graph(out_graph, self.dump_dir / Path("insertion_point_graph.dot"))
 
 
 class ExperimentalQuantizationBuilder(QuantizationBuilder):

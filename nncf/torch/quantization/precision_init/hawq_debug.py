@@ -15,10 +15,10 @@ from collections import OrderedDict
 from pathlib import Path
 from typing import List
 
-import networkx as nx
 import torch
 from torch import Tensor
 
+from nncf.common.utils.dot_file_rw import write_dot_graph
 from nncf.common.utils.logger import logger as nncf_logger
 from nncf.torch.nncf_network import ExtraCompressionModuleType
 from nncf.torch.nncf_network import NNCFNetwork
@@ -189,4 +189,4 @@ class HAWQDebugger:
         from nncf.torch.quantization.precision_init.bitwidth_graph import BitwidthGraph #pylint: disable=cyclic-import
         bw_graph = BitwidthGraph(algo_ctrl, model, groups_of_adjacent_quantizers).get()
         nx_graph = add_adjust_padding_nodes(bw_graph, model)
-        nx.drawing.nx_pydot.write_dot(nx_graph, self._dump_dir / Path('bitwidth_graph.dot'))
+        write_dot_graph(nx_graph, self._dump_dir / Path('bitwidth_graph.dot'))

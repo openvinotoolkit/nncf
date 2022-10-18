@@ -41,9 +41,9 @@ def get_keras_layer_metatype(
     y = layer(x)
 
     metatype = get_keras_layer_metatype(layer, determine_subtype = False)
-    assert metatype == TFDepthwiseConv2DSubLayerMetatype
-    metatype = get_keras_layer_metatype(layer, determine_subtype = True)
     assert metatype == TFConv2DLayerMetatype
+    metatype = get_keras_layer_metatype(layer, determine_subtype = True)
+    assert metatype == TFDepthwiseConv2DSubLayerMetatype
     ```
 
     :param layer: The Keras layer.

@@ -2,7 +2,7 @@
     {
         "basic_block": {
             "end_node_name": "ViTForImageClassification/ViTModel[vit]/ViTEncoder[encoder]/ModuleList[layer]/ViTLayer[0]/ViTAttention[attention]/ViTSelfOutput[output]/NNCFLinear[dense]/linear_0",
-            "start_node_name": "ViTForImageClassification/ViTModel[vit]/ViTEncoder[encoder]/ModuleList[layer]/ViTLayer[0]/LayerNorm[layernorm_before]/layer_norm_0"
+            "start_node_name": "ViTForImageClassification/ViTModel[vit]/ViTEncoder[encoder]/ModuleList[layer]/ViTLayer[0]/NNCFLayerNorm[layernorm_before]/layer_norm_0"
         },
         "block_type": "MSHA",
         "op_addresses": [
@@ -38,7 +38,7 @@
         },
         "block_type": "FF",
         "op_addresses": [
-            "ViTForImageClassification/ViTModel[vit]/ViTEncoder[encoder]/ModuleList[layer]/ViTLayer[0]/LayerNorm[layernorm_after]/layer_norm_0",
+            "ViTForImageClassification/ViTModel[vit]/ViTEncoder[encoder]/ModuleList[layer]/ViTLayer[0]/NNCFLayerNorm[layernorm_after]/layer_norm_0",
             "ViTForImageClassification/ViTModel[vit]/ViTEncoder[encoder]/ModuleList[layer]/ViTLayer[0]/ViTIntermediate[intermediate]/GELUActivation[intermediate_act_fn]/gelu_0",
             "ViTForImageClassification/ViTModel[vit]/ViTEncoder[encoder]/ModuleList[layer]/ViTLayer[0]/ViTIntermediate[intermediate]/NNCFLinear[dense]/linear_0",
             "ViTForImageClassification/ViTModel[vit]/ViTEncoder[encoder]/ModuleList[layer]/ViTLayer[0]/ViTOutput[output]/Dropout[dropout]/dropout_0",
@@ -53,7 +53,7 @@
     {
         "basic_block": {
             "end_node_name": "ViTForImageClassification/ViTModel[vit]/ViTEncoder[encoder]/ModuleList[layer]/ViTLayer[1]/ViTAttention[attention]/ViTSelfOutput[output]/NNCFLinear[dense]/linear_0",
-            "start_node_name": "ViTForImageClassification/ViTModel[vit]/ViTEncoder[encoder]/ModuleList[layer]/ViTLayer[1]/LayerNorm[layernorm_before]/layer_norm_0"
+            "start_node_name": "ViTForImageClassification/ViTModel[vit]/ViTEncoder[encoder]/ModuleList[layer]/ViTLayer[1]/NNCFLayerNorm[layernorm_before]/layer_norm_0"
         },
         "block_type": "MSHA",
         "op_addresses": [
@@ -89,7 +89,7 @@
         },
         "block_type": "FF",
         "op_addresses": [
-            "ViTForImageClassification/ViTModel[vit]/ViTEncoder[encoder]/ModuleList[layer]/ViTLayer[1]/LayerNorm[layernorm_after]/layer_norm_0",
+            "ViTForImageClassification/ViTModel[vit]/ViTEncoder[encoder]/ModuleList[layer]/ViTLayer[1]/NNCFLayerNorm[layernorm_after]/layer_norm_0",
             "ViTForImageClassification/ViTModel[vit]/ViTEncoder[encoder]/ModuleList[layer]/ViTLayer[1]/ViTIntermediate[intermediate]/GELUActivation[intermediate_act_fn]/gelu_0",
             "ViTForImageClassification/ViTModel[vit]/ViTEncoder[encoder]/ModuleList[layer]/ViTLayer[1]/ViTIntermediate[intermediate]/NNCFLinear[dense]/linear_0",
             "ViTForImageClassification/ViTModel[vit]/ViTEncoder[encoder]/ModuleList[layer]/ViTLayer[1]/ViTOutput[output]/Dropout[dropout]/dropout_0",
@@ -104,7 +104,7 @@
     {
         "basic_block": {
             "end_node_name": "ViTForImageClassification/ViTModel[vit]/ViTEncoder[encoder]/ModuleList[layer]/ViTLayer[2]/ViTAttention[attention]/ViTSelfOutput[output]/NNCFLinear[dense]/linear_0",
-            "start_node_name": "ViTForImageClassification/ViTModel[vit]/ViTEncoder[encoder]/ModuleList[layer]/ViTLayer[2]/LayerNorm[layernorm_before]/layer_norm_0"
+            "start_node_name": "ViTForImageClassification/ViTModel[vit]/ViTEncoder[encoder]/ModuleList[layer]/ViTLayer[2]/NNCFLayerNorm[layernorm_before]/layer_norm_0"
         },
         "block_type": "MSHA",
         "op_addresses": [
@@ -140,7 +140,7 @@
         },
         "block_type": "FF",
         "op_addresses": [
-            "ViTForImageClassification/ViTModel[vit]/ViTEncoder[encoder]/ModuleList[layer]/ViTLayer[2]/LayerNorm[layernorm_after]/layer_norm_0",
+            "ViTForImageClassification/ViTModel[vit]/ViTEncoder[encoder]/ModuleList[layer]/ViTLayer[2]/NNCFLayerNorm[layernorm_after]/layer_norm_0",
             "ViTForImageClassification/ViTModel[vit]/ViTEncoder[encoder]/ModuleList[layer]/ViTLayer[2]/ViTIntermediate[intermediate]/GELUActivation[intermediate_act_fn]/gelu_0",
             "ViTForImageClassification/ViTModel[vit]/ViTEncoder[encoder]/ModuleList[layer]/ViTLayer[2]/ViTIntermediate[intermediate]/NNCFLinear[dense]/linear_0",
             "ViTForImageClassification/ViTModel[vit]/ViTEncoder[encoder]/ModuleList[layer]/ViTLayer[2]/ViTOutput[output]/Dropout[dropout]/dropout_0",
@@ -155,7 +155,7 @@
     {
         "basic_block": {
             "end_node_name": "ViTForImageClassification/ViTModel[vit]/ViTEncoder[encoder]/ModuleList[layer]/ViTLayer[3]/ViTAttention[attention]/ViTSelfOutput[output]/NNCFLinear[dense]/linear_0",
-            "start_node_name": "ViTForImageClassification/ViTModel[vit]/ViTEncoder[encoder]/ModuleList[layer]/ViTLayer[3]/LayerNorm[layernorm_before]/layer_norm_0"
+            "start_node_name": "ViTForImageClassification/ViTModel[vit]/ViTEncoder[encoder]/ModuleList[layer]/ViTLayer[3]/NNCFLayerNorm[layernorm_before]/layer_norm_0"
         },
         "block_type": "MSHA",
         "op_addresses": [
@@ -191,7 +191,7 @@
         },
         "block_type": "FF",
         "op_addresses": [
-            "ViTForImageClassification/ViTModel[vit]/ViTEncoder[encoder]/ModuleList[layer]/ViTLayer[3]/LayerNorm[layernorm_after]/layer_norm_0",
+            "ViTForImageClassification/ViTModel[vit]/ViTEncoder[encoder]/ModuleList[layer]/ViTLayer[3]/NNCFLayerNorm[layernorm_after]/layer_norm_0",
             "ViTForImageClassification/ViTModel[vit]/ViTEncoder[encoder]/ModuleList[layer]/ViTLayer[3]/ViTIntermediate[intermediate]/GELUActivation[intermediate_act_fn]/gelu_0",
             "ViTForImageClassification/ViTModel[vit]/ViTEncoder[encoder]/ModuleList[layer]/ViTLayer[3]/ViTIntermediate[intermediate]/NNCFLinear[dense]/linear_0",
             "ViTForImageClassification/ViTModel[vit]/ViTEncoder[encoder]/ModuleList[layer]/ViTLayer[3]/ViTOutput[output]/Dropout[dropout]/dropout_0",
@@ -206,7 +206,7 @@
     {
         "basic_block": {
             "end_node_name": "ViTForImageClassification/ViTModel[vit]/ViTEncoder[encoder]/ModuleList[layer]/ViTLayer[4]/ViTAttention[attention]/ViTSelfOutput[output]/NNCFLinear[dense]/linear_0",
-            "start_node_name": "ViTForImageClassification/ViTModel[vit]/ViTEncoder[encoder]/ModuleList[layer]/ViTLayer[4]/LayerNorm[layernorm_before]/layer_norm_0"
+            "start_node_name": "ViTForImageClassification/ViTModel[vit]/ViTEncoder[encoder]/ModuleList[layer]/ViTLayer[4]/NNCFLayerNorm[layernorm_before]/layer_norm_0"
         },
         "block_type": "MSHA",
         "op_addresses": [
@@ -242,7 +242,7 @@
         },
         "block_type": "FF",
         "op_addresses": [
-            "ViTForImageClassification/ViTModel[vit]/ViTEncoder[encoder]/ModuleList[layer]/ViTLayer[4]/LayerNorm[layernorm_after]/layer_norm_0",
+            "ViTForImageClassification/ViTModel[vit]/ViTEncoder[encoder]/ModuleList[layer]/ViTLayer[4]/NNCFLayerNorm[layernorm_after]/layer_norm_0",
             "ViTForImageClassification/ViTModel[vit]/ViTEncoder[encoder]/ModuleList[layer]/ViTLayer[4]/ViTIntermediate[intermediate]/GELUActivation[intermediate_act_fn]/gelu_0",
             "ViTForImageClassification/ViTModel[vit]/ViTEncoder[encoder]/ModuleList[layer]/ViTLayer[4]/ViTIntermediate[intermediate]/NNCFLinear[dense]/linear_0",
             "ViTForImageClassification/ViTModel[vit]/ViTEncoder[encoder]/ModuleList[layer]/ViTLayer[4]/ViTOutput[output]/Dropout[dropout]/dropout_0",
@@ -257,7 +257,7 @@
     {
         "basic_block": {
             "end_node_name": "ViTForImageClassification/ViTModel[vit]/ViTEncoder[encoder]/ModuleList[layer]/ViTLayer[5]/ViTAttention[attention]/ViTSelfOutput[output]/NNCFLinear[dense]/linear_0",
-            "start_node_name": "ViTForImageClassification/ViTModel[vit]/ViTEncoder[encoder]/ModuleList[layer]/ViTLayer[5]/LayerNorm[layernorm_before]/layer_norm_0"
+            "start_node_name": "ViTForImageClassification/ViTModel[vit]/ViTEncoder[encoder]/ModuleList[layer]/ViTLayer[5]/NNCFLayerNorm[layernorm_before]/layer_norm_0"
         },
         "block_type": "MSHA",
         "op_addresses": [
@@ -293,7 +293,7 @@
         },
         "block_type": "FF",
         "op_addresses": [
-            "ViTForImageClassification/ViTModel[vit]/ViTEncoder[encoder]/ModuleList[layer]/ViTLayer[5]/LayerNorm[layernorm_after]/layer_norm_0",
+            "ViTForImageClassification/ViTModel[vit]/ViTEncoder[encoder]/ModuleList[layer]/ViTLayer[5]/NNCFLayerNorm[layernorm_after]/layer_norm_0",
             "ViTForImageClassification/ViTModel[vit]/ViTEncoder[encoder]/ModuleList[layer]/ViTLayer[5]/ViTIntermediate[intermediate]/GELUActivation[intermediate_act_fn]/gelu_0",
             "ViTForImageClassification/ViTModel[vit]/ViTEncoder[encoder]/ModuleList[layer]/ViTLayer[5]/ViTIntermediate[intermediate]/NNCFLinear[dense]/linear_0",
             "ViTForImageClassification/ViTModel[vit]/ViTEncoder[encoder]/ModuleList[layer]/ViTLayer[5]/ViTOutput[output]/Dropout[dropout]/dropout_0",
@@ -308,7 +308,7 @@
     {
         "basic_block": {
             "end_node_name": "ViTForImageClassification/ViTModel[vit]/ViTEncoder[encoder]/ModuleList[layer]/ViTLayer[6]/ViTAttention[attention]/ViTSelfOutput[output]/NNCFLinear[dense]/linear_0",
-            "start_node_name": "ViTForImageClassification/ViTModel[vit]/ViTEncoder[encoder]/ModuleList[layer]/ViTLayer[6]/LayerNorm[layernorm_before]/layer_norm_0"
+            "start_node_name": "ViTForImageClassification/ViTModel[vit]/ViTEncoder[encoder]/ModuleList[layer]/ViTLayer[6]/NNCFLayerNorm[layernorm_before]/layer_norm_0"
         },
         "block_type": "MSHA",
         "op_addresses": [
@@ -344,7 +344,7 @@
         },
         "block_type": "FF",
         "op_addresses": [
-            "ViTForImageClassification/ViTModel[vit]/ViTEncoder[encoder]/ModuleList[layer]/ViTLayer[6]/LayerNorm[layernorm_after]/layer_norm_0",
+            "ViTForImageClassification/ViTModel[vit]/ViTEncoder[encoder]/ModuleList[layer]/ViTLayer[6]/NNCFLayerNorm[layernorm_after]/layer_norm_0",
             "ViTForImageClassification/ViTModel[vit]/ViTEncoder[encoder]/ModuleList[layer]/ViTLayer[6]/ViTIntermediate[intermediate]/GELUActivation[intermediate_act_fn]/gelu_0",
             "ViTForImageClassification/ViTModel[vit]/ViTEncoder[encoder]/ModuleList[layer]/ViTLayer[6]/ViTIntermediate[intermediate]/NNCFLinear[dense]/linear_0",
             "ViTForImageClassification/ViTModel[vit]/ViTEncoder[encoder]/ModuleList[layer]/ViTLayer[6]/ViTOutput[output]/Dropout[dropout]/dropout_0",
@@ -359,7 +359,7 @@
     {
         "basic_block": {
             "end_node_name": "ViTForImageClassification/ViTModel[vit]/ViTEncoder[encoder]/ModuleList[layer]/ViTLayer[7]/ViTAttention[attention]/ViTSelfOutput[output]/NNCFLinear[dense]/linear_0",
-            "start_node_name": "ViTForImageClassification/ViTModel[vit]/ViTEncoder[encoder]/ModuleList[layer]/ViTLayer[7]/LayerNorm[layernorm_before]/layer_norm_0"
+            "start_node_name": "ViTForImageClassification/ViTModel[vit]/ViTEncoder[encoder]/ModuleList[layer]/ViTLayer[7]/NNCFLayerNorm[layernorm_before]/layer_norm_0"
         },
         "block_type": "MSHA",
         "op_addresses": [
@@ -395,7 +395,7 @@
         },
         "block_type": "FF",
         "op_addresses": [
-            "ViTForImageClassification/ViTModel[vit]/ViTEncoder[encoder]/ModuleList[layer]/ViTLayer[7]/LayerNorm[layernorm_after]/layer_norm_0",
+            "ViTForImageClassification/ViTModel[vit]/ViTEncoder[encoder]/ModuleList[layer]/ViTLayer[7]/NNCFLayerNorm[layernorm_after]/layer_norm_0",
             "ViTForImageClassification/ViTModel[vit]/ViTEncoder[encoder]/ModuleList[layer]/ViTLayer[7]/ViTIntermediate[intermediate]/GELUActivation[intermediate_act_fn]/gelu_0",
             "ViTForImageClassification/ViTModel[vit]/ViTEncoder[encoder]/ModuleList[layer]/ViTLayer[7]/ViTIntermediate[intermediate]/NNCFLinear[dense]/linear_0",
             "ViTForImageClassification/ViTModel[vit]/ViTEncoder[encoder]/ModuleList[layer]/ViTLayer[7]/ViTOutput[output]/Dropout[dropout]/dropout_0",
@@ -410,7 +410,7 @@
     {
         "basic_block": {
             "end_node_name": "ViTForImageClassification/ViTModel[vit]/ViTEncoder[encoder]/ModuleList[layer]/ViTLayer[8]/ViTAttention[attention]/ViTSelfOutput[output]/NNCFLinear[dense]/linear_0",
-            "start_node_name": "ViTForImageClassification/ViTModel[vit]/ViTEncoder[encoder]/ModuleList[layer]/ViTLayer[8]/LayerNorm[layernorm_before]/layer_norm_0"
+            "start_node_name": "ViTForImageClassification/ViTModel[vit]/ViTEncoder[encoder]/ModuleList[layer]/ViTLayer[8]/NNCFLayerNorm[layernorm_before]/layer_norm_0"
         },
         "block_type": "MSHA",
         "op_addresses": [
@@ -446,7 +446,7 @@
         },
         "block_type": "FF",
         "op_addresses": [
-            "ViTForImageClassification/ViTModel[vit]/ViTEncoder[encoder]/ModuleList[layer]/ViTLayer[8]/LayerNorm[layernorm_after]/layer_norm_0",
+            "ViTForImageClassification/ViTModel[vit]/ViTEncoder[encoder]/ModuleList[layer]/ViTLayer[8]/NNCFLayerNorm[layernorm_after]/layer_norm_0",
             "ViTForImageClassification/ViTModel[vit]/ViTEncoder[encoder]/ModuleList[layer]/ViTLayer[8]/ViTIntermediate[intermediate]/GELUActivation[intermediate_act_fn]/gelu_0",
             "ViTForImageClassification/ViTModel[vit]/ViTEncoder[encoder]/ModuleList[layer]/ViTLayer[8]/ViTIntermediate[intermediate]/NNCFLinear[dense]/linear_0",
             "ViTForImageClassification/ViTModel[vit]/ViTEncoder[encoder]/ModuleList[layer]/ViTLayer[8]/ViTOutput[output]/Dropout[dropout]/dropout_0",
@@ -461,7 +461,7 @@
     {
         "basic_block": {
             "end_node_name": "ViTForImageClassification/ViTModel[vit]/ViTEncoder[encoder]/ModuleList[layer]/ViTLayer[9]/ViTAttention[attention]/ViTSelfOutput[output]/NNCFLinear[dense]/linear_0",
-            "start_node_name": "ViTForImageClassification/ViTModel[vit]/ViTEncoder[encoder]/ModuleList[layer]/ViTLayer[9]/LayerNorm[layernorm_before]/layer_norm_0"
+            "start_node_name": "ViTForImageClassification/ViTModel[vit]/ViTEncoder[encoder]/ModuleList[layer]/ViTLayer[9]/NNCFLayerNorm[layernorm_before]/layer_norm_0"
         },
         "block_type": "MSHA",
         "op_addresses": [
@@ -497,7 +497,7 @@
         },
         "block_type": "FF",
         "op_addresses": [
-            "ViTForImageClassification/ViTModel[vit]/ViTEncoder[encoder]/ModuleList[layer]/ViTLayer[9]/LayerNorm[layernorm_after]/layer_norm_0",
+            "ViTForImageClassification/ViTModel[vit]/ViTEncoder[encoder]/ModuleList[layer]/ViTLayer[9]/NNCFLayerNorm[layernorm_after]/layer_norm_0",
             "ViTForImageClassification/ViTModel[vit]/ViTEncoder[encoder]/ModuleList[layer]/ViTLayer[9]/ViTIntermediate[intermediate]/GELUActivation[intermediate_act_fn]/gelu_0",
             "ViTForImageClassification/ViTModel[vit]/ViTEncoder[encoder]/ModuleList[layer]/ViTLayer[9]/ViTIntermediate[intermediate]/NNCFLinear[dense]/linear_0",
             "ViTForImageClassification/ViTModel[vit]/ViTEncoder[encoder]/ModuleList[layer]/ViTLayer[9]/ViTOutput[output]/Dropout[dropout]/dropout_0",
@@ -512,7 +512,7 @@
     {
         "basic_block": {
             "end_node_name": "ViTForImageClassification/ViTModel[vit]/ViTEncoder[encoder]/ModuleList[layer]/ViTLayer[10]/ViTAttention[attention]/ViTSelfOutput[output]/NNCFLinear[dense]/linear_0",
-            "start_node_name": "ViTForImageClassification/ViTModel[vit]/ViTEncoder[encoder]/ModuleList[layer]/ViTLayer[10]/LayerNorm[layernorm_before]/layer_norm_0"
+            "start_node_name": "ViTForImageClassification/ViTModel[vit]/ViTEncoder[encoder]/ModuleList[layer]/ViTLayer[10]/NNCFLayerNorm[layernorm_before]/layer_norm_0"
         },
         "block_type": "MSHA",
         "op_addresses": [
@@ -548,7 +548,7 @@
         },
         "block_type": "FF",
         "op_addresses": [
-            "ViTForImageClassification/ViTModel[vit]/ViTEncoder[encoder]/ModuleList[layer]/ViTLayer[10]/LayerNorm[layernorm_after]/layer_norm_0",
+            "ViTForImageClassification/ViTModel[vit]/ViTEncoder[encoder]/ModuleList[layer]/ViTLayer[10]/NNCFLayerNorm[layernorm_after]/layer_norm_0",
             "ViTForImageClassification/ViTModel[vit]/ViTEncoder[encoder]/ModuleList[layer]/ViTLayer[10]/ViTIntermediate[intermediate]/GELUActivation[intermediate_act_fn]/gelu_0",
             "ViTForImageClassification/ViTModel[vit]/ViTEncoder[encoder]/ModuleList[layer]/ViTLayer[10]/ViTIntermediate[intermediate]/NNCFLinear[dense]/linear_0",
             "ViTForImageClassification/ViTModel[vit]/ViTEncoder[encoder]/ModuleList[layer]/ViTLayer[10]/ViTOutput[output]/Dropout[dropout]/dropout_0",
@@ -563,7 +563,7 @@
     {
         "basic_block": {
             "end_node_name": "ViTForImageClassification/ViTModel[vit]/ViTEncoder[encoder]/ModuleList[layer]/ViTLayer[11]/ViTAttention[attention]/ViTSelfOutput[output]/NNCFLinear[dense]/linear_0",
-            "start_node_name": "ViTForImageClassification/ViTModel[vit]/ViTEncoder[encoder]/ModuleList[layer]/ViTLayer[11]/LayerNorm[layernorm_before]/layer_norm_0"
+            "start_node_name": "ViTForImageClassification/ViTModel[vit]/ViTEncoder[encoder]/ModuleList[layer]/ViTLayer[11]/NNCFLayerNorm[layernorm_before]/layer_norm_0"
         },
         "block_type": "MSHA",
         "op_addresses": [
@@ -599,7 +599,7 @@
         },
         "block_type": "FF",
         "op_addresses": [
-            "ViTForImageClassification/ViTModel[vit]/ViTEncoder[encoder]/ModuleList[layer]/ViTLayer[11]/LayerNorm[layernorm_after]/layer_norm_0",
+            "ViTForImageClassification/ViTModel[vit]/ViTEncoder[encoder]/ModuleList[layer]/ViTLayer[11]/NNCFLayerNorm[layernorm_after]/layer_norm_0",
             "ViTForImageClassification/ViTModel[vit]/ViTEncoder[encoder]/ModuleList[layer]/ViTLayer[11]/ViTIntermediate[intermediate]/GELUActivation[intermediate_act_fn]/gelu_0",
             "ViTForImageClassification/ViTModel[vit]/ViTEncoder[encoder]/ModuleList[layer]/ViTLayer[11]/ViTIntermediate[intermediate]/NNCFLinear[dense]/linear_0",
             "ViTForImageClassification/ViTModel[vit]/ViTEncoder[encoder]/ModuleList[layer]/ViTLayer[11]/ViTOutput[output]/Dropout[dropout]/dropout_0",
