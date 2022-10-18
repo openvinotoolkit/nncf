@@ -29,8 +29,8 @@ from nncf.experimental.onnx.graph.transformations.commands import ONNXModelExtra
 from nncf.experimental.onnx.graph.transformations.commands import ONNXTargetPoint
 from nncf.experimental.onnx.statistics.collectors import ONNXMeanStatisticCollector, ONNXNNCFCollectorTensorProcessor
 from nncf.experimental.onnx.tensor import ONNXNNCFTensor
-from nncf.experimental.post_training.algorithms.fast_bias_correction.backend import ALGO_BACKENDS
-from nncf.experimental.post_training.algorithms.fast_bias_correction.backend import FBCAlgoBackend
+from nncf.experimental.post_training.algorithms.quantization.fast_bias_correction.backend import ALGO_BACKENDS
+from nncf.experimental.post_training.algorithms.quantization.fast_bias_correction.backend import FBCAlgoBackend
 
 
 @ALGO_BACKENDS.register(BackendType.ONNX)

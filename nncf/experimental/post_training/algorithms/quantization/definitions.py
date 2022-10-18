@@ -10,3 +10,15 @@
  See the License for the specific language governing permissions and
  limitations under the License.
 """
+
+from nncf.common.utils.ordered_enum import OrderedEnum
+
+
+class Granularity(OrderedEnum):
+    PERTENSOR = 'pertensor'
+    PERCHANNEL = 'perchannel'
+
+
+class RangeType(OrderedEnum):
+    MINMAX = 'min_max'
+    MEAN_MINMAX = 'mean_min_max'
