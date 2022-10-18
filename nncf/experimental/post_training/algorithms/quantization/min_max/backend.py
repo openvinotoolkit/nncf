@@ -45,7 +45,7 @@ class MinMaxAlgoBackend(ABC):
         """
         Property for the backend-specific metatypes with weights.
         """
-    
+
     @property
     @abstractmethod
     def post_processing_metatypes(self) -> List[OperatorMetatype]:

@@ -101,7 +101,7 @@ class MinMaxQuantizationParameters(AlgorithmParameters):
         """
         Serialize all MinMaxQuantization parameters to JSON.
         """
-    
+
     def _determine_weight_activation_modes(self, preset: QuantizationPreset) -> Tuple[
             QuantizationMode, QuantizationMode]:
         weight_mode = QuantizationPreset.get_params_configured_by_preset(preset, QuantizerGroup.WEIGHTS)['mode']
@@ -204,13 +204,14 @@ class MinMaxQuantization(Algorithm):
         hw_config = self._backend_entity.hw_config.from_json(hw_config_path)
         default_config = deepcopy(self._parameters.DEFAULT_QCONFIG)
 
+        post_processing_types = self._backend_entity.post_processing_metatypes
         solver = QuantizerPropagationSolver(ignored_scopes=self._parameters.ignored_scopes,
                                             hw_config=hw_config,
                                             default_trait_to_metatype_map=self._backend_entity.quant_trait_op_dict,
                                             default_qconfig_list=[default_config],
                                             quantizable_layer_nodes=quantizable_layer_nodes,
                                             quantize_outputs=self._parameters.quantize_outputs,
-                                            post_processing_marker_metatypes=self._backend_entity.post_processing_metatypes)
+                                            post_processing_marker_metatypes=post_processing_types)
 
         quantization_proposal = solver.run_on_ip_graph(ip_graph)
         multi_config_setup = quantization_proposal.quantizer_setup
