@@ -742,3 +742,106 @@ class MatMulWithoutWeightsModel(ONNXReferenceModel):
         onnx.checker.check_model(model)
         super().__init__(model, [input_shape], 'mat_mul_without_weights_model.dot')
         self.weight_nodes = []
+
+
+@WEIGHT_DETECTION_MODELS.register()
+class MulWithWeightsZeroInputModel(ONNXReferenceModel):
+    #           X
+    #           |
+    #           |
+    #          Mul
+    #           |
+    #           Y
+    def __init__(self):
+        input_shape = output_shape = [1, 1, 5, 5]
+
+        # IO tensors (ValueInfoProto).
+        model_input_name = "X"
+        X = onnx.helper.make_tensor_value_info(model_input_name,
+                                               onnx.TensorProto.FLOAT,
+                                               input_shape)
+        model_output_name = "Y"
+        Y = onnx.helper.make_tensor_value_info(model_output_name,
+                                               onnx.TensorProto.FLOAT,
+                                               output_shape)
+
+        W = np.ones(input_shape).astype(np.float32)
+
+        w_tensor = create_initializer_tensor(
+            name="W",
+            tensor_array=W,
+            data_type=onnx.TensorProto.FLOAT)
+
+        mul_node = onnx.helper.make_node(
+            name='Mul',
+            op_type="Mul",
+            inputs=["W", "X"],
+            outputs=["Y"],
+        )
+
+        graph_def = onnx.helper.make_graph(
+            nodes=[mul_node],
+            name="Net",
+            inputs=[X],
+            outputs=[Y],
+            initializer=[w_tensor]
+        )
+
+        op = onnx.OperatorSetIdProto()
+        op.version = OPSET_VERSION
+        model = onnx.helper.make_model(graph_def, opset_imports=[op])
+        onnx.checker.check_model(model)
+        super().__init__(model, [input_shape], 'mul_with_weights_zero_input_model.dot')
+        self.weight_nodes = ['Mul']
+
+
+@WEIGHT_DETECTION_MODELS.register()
+class MulWithWeightsFirstInputModel(ONNXReferenceModel):
+    #           X
+    #           |
+    #           |
+    #          Mul
+    #           |
+    #           Y
+    def __init__(self):
+        input_shape = output_shape = [1, 1, 5, 5]
+
+        # IO tensors (ValueInfoProto).
+        model_input_name = "X"
+        X = onnx.helper.make_tensor_value_info(model_input_name,
+                                               onnx.TensorProto.FLOAT,
+                                               input_shape)
+        model_output_name = "Y"
+        Y = onnx.helper.make_tensor_value_info(model_output_name,
+                                               onnx.TensorProto.FLOAT,
+                                               output_shape)
+
+        W = np.ones(input_shape).astype(np.float32)
+
+        w_tensor = create_initializer_tensor(
+            name="W",
+            tensor_array=W,
+            data_type=onnx.TensorProto.FLOAT)
+
+        mul_node = onnx.helper.make_node(
+            name='Mul',
+            op_type="Mul",
+            inputs=["X", "W"],
+            outputs=["Y"],
+        )
+
+        graph_def = onnx.helper.make_graph(
+            nodes=[mul_node],
+            name="Net",
+            inputs=[X],
+            outputs=[Y],
+            initializer=[w_tensor]
+        )
+
+        op = onnx.OperatorSetIdProto()
+        op.version = OPSET_VERSION
+        model = onnx.helper.make_model(graph_def, opset_imports=[op])
+        onnx.checker.check_model(model)
+        super().__init__(model, [input_shape], 'mul_with_weights_first_input_model.dot')
+        self.weight_nodes = ['Mul']
+

@@ -184,6 +184,10 @@ class ONNXGraph:
                 output.append(initializer)
         return output
 
+    def get_initializer_dtype(self, initializer_name: str) -> str:
+        initializer = self.get_initializer(initializer_name)
+        return onnx.TensorProto.DataType.Name(initializer.data_type)
+
     def get_initializer(self, initializer_name: str) -> Optional[onnx.TensorProto]:
         """
         Returns model's Initializer with the name equals to 'initializer_name'.

@@ -11,7 +11,7 @@
  limitations under the License.
 """
 
-from typing import Set, Dict
+from typing import Set, Dict, List
 from copy import deepcopy
 
 import onnx
@@ -25,6 +25,7 @@ from nncf.common.quantization.structs import QuantizerConfig
 from nncf.common.quantization.structs import QuantizationMode
 from nncf.common.quantization.quantizer_setup import SingleConfigQuantizationPoint
 from nncf.common.graph.graph import NNCFGraph
+from nncf.common.graph.graph import NNCFNode
 from nncf.common.graph.definitions import NNCFGraphNodeType
 from nncf.common.graph.transformations.layout import TransformationLayout
 from nncf.common.graph.transformations.commands import TargetType
@@ -55,6 +56,8 @@ from nncf.experimental.onnx.hardware.fused_patterns import ONNX_HW_FUSED_PATTERN
 from nncf.experimental.onnx.algorithms.quantization.utils import calculate_activation_quantizer_parameters
 from nncf.experimental.onnx.algorithms.quantization.utils import calculate_weight_quantizer_parameters
 from nncf.experimental.onnx.hardware.config import ONNXHWConfig
+from nncf.experimental.onnx.graph.nncf_graph_builder import GraphConverter
+from nncf.common.graph.layer_attributes import Dtype
 
 
 class ONNXMinMaxQuantization(MinMaxQuantization):
@@ -81,19 +84,27 @@ class ONNXMinMaxQuantization(MinMaxQuantization):
                                                     reduction_shape=axes, num_samples=self.number_samples)
         raise RuntimeError('This range type is not supported.')
 
+    def _get_weight_nodes(self, model: onnx.ModelProto) -> List[NNCFNode]:
+        onnx_graph = ONNXGraph(model)
+        possible_weight_nodes = self.nncf_graph.get_nodes_by_metatypes(POSSIBLE_WEIGHT_LAYERS_METATYPES)
+        output = []
+        for possible_weight_node in possible_weight_nodes:
+            initializers = onnx_graph.get_node_initializers(possible_weight_node.node_name)
+            for initializer in initializers:
+                onnx_dtype = onnx_graph.get_initializer_dtype(initializer.name)
+                nncf_dtype = GraphConverter.convert_onnx_dtype_to_nncf_dtype(onnx_dtype)
+                if nncf_dtype == Dtype.FLOAT:
+                    output.append(possible_weight_node)
+                    break
+        return output
+
     def _get_quantizer_setup(self, model: onnx.ModelProto):
         self.nncf_graph = NNCFGraphFactory.create(model) if self.nncf_graph is None else self.nncf_graph
         ip_graph = InsertionPointGraph(self.nncf_graph)
         pattern = ONNX_HW_FUSED_PATTERNS.get_full_pattern_graph()
         ip_graph = ip_graph.get_ip_graph_with_merged_hw_optimized_operations(pattern)
 
-        onnx_graph = ONNXGraph(model)
-        possible_weight_nodes = self.nncf_graph.get_nodes_by_metatypes(POSSIBLE_WEIGHT_LAYERS_METATYPES)
-        weight_nodes = []
-        for possible_weight_node in possible_weight_nodes:
-            if onnx_graph.get_node_initializers(possible_weight_node.node_name):
-                weight_nodes.append(possible_weight_node)
-
+        weight_nodes = self._get_weight_nodes(model)
         quantizable_layer_nodes = [QuantizableWeightedLayerNode(weight_node, [QuantizerConfig()]) for weight_node in
                                    weight_nodes]
 
