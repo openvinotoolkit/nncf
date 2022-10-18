@@ -53,7 +53,11 @@ def test_min_max_quantization_graph(tmp_path, model_to_test):
         convert_opset_version = False
         # TODO: need to investigate disallowed_op_types for Mask RCNN
         ignored_scopes += find_ignored_scopes(
-            ["Resize", 'Div', "RoiAlign", 'ScatterElements'], original_model)
+            ["RoiAlign", 'ScatterElements', 'Resize'], original_model)
+        # Runtime can not infere such model
+        ignored_scopes += ['6593', '6592', '6587', '6583', '6582', '6581', '6564', '6579', '6562']
+        # Runtime error on the Resize nodes
+        ignored_scopes += ['413', '414', '445', '446', '477', '478', '']
     if model_to_test.model_name == 'ssd_mobilenet_v1_12':
         ignored_scopes = ['copy__21/Preprocessor/map/while/Less',
                           'Preprocessor/mul',
