@@ -217,6 +217,7 @@ def _collect_module_attrs_and_ignored_algorithms(ctx: TracingContext,
     return layer_attrs, ignored_algos
 
 
+# pylint:disable=too-many-return-statements
 def _get_layer_attributes(module: TorchModule, operator_name: str) -> BaseLayerAttributes:
     if operator_name == "group_norm":
         return GroupNormLayerAttributes(

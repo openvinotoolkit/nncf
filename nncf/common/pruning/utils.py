@@ -389,8 +389,8 @@ def get_input_channels(node: NNCFNode) -> int:
     :param node: Given prunable node.
     :return: Count of input channels of the given node.
     """
-    layer_attrs = node.layer_attributes # type: Union[ConvolutionLayerAttributes, LinearLayerAttributes,
-                                        #             EmbeddingLayerAttributes]
+    layer_attrs = node.layer_attributes \
+        # type: Union[ConvolutionLayerAttributes, LinearLayerAttributes, EmbeddingLayerAttributes]
     if isinstance(layer_attrs, ConvolutionLayerAttributes):
         return layer_attrs.in_channels
     if isinstance(layer_attrs, LinearLayerAttributes):
@@ -407,8 +407,8 @@ def get_output_channels(node: NNCFNode) -> int:
     :param node: Given prunable node.
     :return: Count of output channels of the given node.
     """
-    layer_attrs = node.layer_attributes # type: Union[ConvolutionLayerAttributes, LinearLayerAttributes,
-                                        #             EmbeddingLayerAttributes]
+    layer_attrs = node.layer_attributes \
+        # type: Union[ConvolutionLayerAttributes, LinearLayerAttributes, EmbeddingLayerAttributes]
     if isinstance(layer_attrs, ConvolutionLayerAttributes):
         return layer_attrs.out_channels
     if isinstance(layer_attrs, LinearLayerAttributes):
