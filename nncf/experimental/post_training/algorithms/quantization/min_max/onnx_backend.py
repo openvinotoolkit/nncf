@@ -27,8 +27,10 @@ from nncf.common.quantization.structs import QuantizerConfig
 from nncf.common.tensor_statistics.collectors import ReductionShape
 from nncf.common.utils.backend import BackendType
 from nncf.common.utils.logger import logger as nncf_logger
+from nncf.common.graph.layer_attributes import Dtype
 
 from nncf.experimental.onnx.graph.metatypes.onnx_metatypes import WEIGHT_LAYER_METATYPES
+from nncf.experimental.onnx.graph.metatypes.onnx_metatypes import POSSIBLE_WEIGHT_LAYERS_METATYPES
 from nncf.experimental.onnx.graph.metatypes.onnx_metatypes import ONNXNonMaxSuppressionMetatype
 from nncf.experimental.onnx.graph.metatypes.onnx_metatypes import ONNXTopKMetatype
 from nncf.experimental.onnx.graph.model_transformer import ONNXModelTransformer
@@ -39,6 +41,8 @@ from nncf.experimental.onnx.hardware.fused_patterns import ONNX_HW_FUSED_PATTERN
 from nncf.experimental.onnx.quantization.default_quantization import DEFAULT_ONNX_QUANT_TRAIT_TO_OP_DICT
 from nncf.experimental.onnx.statistics.collectors import ONNXMeanMinMaxStatisticCollector
 from nncf.experimental.onnx.statistics.collectors import ONNXMinMaxStatisticCollector
+from nncf.experimental.onnx.graph.onnx_graph import ONNXGraph
+from nncf.experimental.onnx.graph.nncf_graph_builder import GraphConverter
 
 from nncf.experimental.post_training.algorithms.quantization.min_max.backend import MinMaxAlgoBackend
 from nncf.experimental.post_training.algorithms.quantization.min_max.backend import ALGO_BACKENDS
@@ -126,3 +130,18 @@ class ONNXMinMaxAlgoBackend(MinMaxAlgoBackend):
             )
 
         return config
+
+    @staticmethod
+    def get_weight_nodes(model: onnx.ModelProto, nncf_graph) -> List[NNCFNode]:
+        onnx_graph = ONNXGraph(model)
+        possible_weight_nodes = nncf_graph.get_nodes_by_metatypes(POSSIBLE_WEIGHT_LAYERS_METATYPES)
+        output = []
+        for possible_weight_node in possible_weight_nodes:
+            initializers = onnx_graph.get_node_initializers(possible_weight_node.node_name)
+            for initializer in initializers:
+                onnx_dtype = onnx_graph.get_initializer_dtype(initializer.name)
+                nncf_dtype = GraphConverter.convert_onnx_dtype_to_nncf_dtype(onnx_dtype)
+                if nncf_dtype == Dtype.FLOAT:
+                    output.append(possible_weight_node)
+                    break
+        return output

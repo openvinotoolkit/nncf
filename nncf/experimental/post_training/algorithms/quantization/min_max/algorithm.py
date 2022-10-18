@@ -184,7 +184,7 @@ class MinMaxQuantization(Algorithm):
                                                                         num_samples=self._parameters.number_samples)
         raise RuntimeError('This range type is not supported!')
 
-    def _get_quantizer_setup(self, nncf_graph: NNCFGraph) -> SingleConfigQuantizerSetup:
+    def _get_quantizer_setup(self, model, nncf_graph: NNCFGraph) -> SingleConfigQuantizerSetup:
         """
         Returns SingleConfigQuantizerSetup instance based on the input NNCFGraph.
 
@@ -195,7 +195,7 @@ class MinMaxQuantization(Algorithm):
         pattern = self._backend_entity.hw_fused_patterns.get_full_pattern_graph()
         ip_graph = ip_graph.get_ip_graph_with_merged_hw_optimized_operations(pattern)
 
-        weight_nodes = nncf_graph.get_nodes_by_metatypes(self._backend_entity.layers_with_weights_metatypes)
+        weight_nodes = self._backend_entity.get_weight_nodes(model, nncf_graph)
         quantizable_layer_nodes = [QuantizableWeightedLayerNode(weight_node, [QuantizerConfig()])
                                    for weight_node in weight_nodes]
 
@@ -276,7 +276,7 @@ class MinMaxQuantization(Algorithm):
 
         if self._quantization_target_points:
             return self._quantization_target_points
-        quantizer_setup = self._get_quantizer_setup(nncf_graph)
+        quantizer_setup = self._get_quantizer_setup(model, nncf_graph)
         for quantization_point in quantizer_setup.quantization_points.values():
             if quantization_point.is_weight_quantization_point():
                 self._add_weight_quantization_target_point(quantization_point)

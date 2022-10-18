@@ -1,8 +1,9 @@
 import pytest
 from collections import Counter
 
-from nncf.experimental.onnx.algorithms.quantization.min_max_quantization import ONNXMinMaxQuantization, \
+from nncf.experimental.post_training.algorithms.quantization.min_max.algorithm import MinMaxQuantization, \
     MinMaxQuantizationParameters
+from nncf.experimental.onnx.graph.nncf_graph_builder import GraphConverter
 from tests.onnx.models import WEIGHT_DETECTION_MODELS
 
 
@@ -10,8 +11,10 @@ from tests.onnx.models import WEIGHT_DETECTION_MODELS
 def test_weight_nodes_detection(model_to_test):
     model_to_test = model_to_test()
     onnx_model = model_to_test.onnx_model
-    quantization_algo = ONNXMinMaxQuantization(MinMaxQuantizationParameters(number_samples=1))
-    quantizer_setup = quantization_algo._get_quantizer_setup(onnx_model)
+    quantization_algo = MinMaxQuantization(MinMaxQuantizationParameters(number_samples=1))
+    nncf_graph = GraphConverter.create_nncf_graph(onnx_model)
+    quantization_algo._set_backend_entity(onnx_model)
+    quantizer_setup = quantization_algo._get_quantizer_setup(onnx_model, nncf_graph)
 
     quantized_weight_nodes = []
     for quantization_point in quantizer_setup.quantization_points.values():
