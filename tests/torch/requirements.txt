@@ -10,3 +10,4 @@ pyparsing<3.0
 
 # Required for search_buidling_blocks tests
 transformers==4.23.1
+datasets
