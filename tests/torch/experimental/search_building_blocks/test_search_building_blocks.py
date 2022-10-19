@@ -28,7 +28,7 @@ from nncf.experimental.torch.search_building_blocks.search_blocks import Buildin
 from nncf.experimental.torch.search_building_blocks.search_blocks import BuildingBlocks
 from nncf.experimental.torch.search_building_blocks.search_blocks import GroupedBlockIDs
 from nncf.experimental.torch.search_building_blocks.search_blocks import get_building_blocks
-from tests.common.helpers import TEST_ROOT
+from tests.common.paths import TEST_ROOT
 from tests.torch import test_models
 from tests.torch.helpers import create_compressed_model_and_algo_for_test
 from tests.torch.helpers import get_empty_config

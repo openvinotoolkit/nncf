@@ -22,8 +22,8 @@ import pytest
 from pytest import approx
 
 from nncf import NNCFConfig
-from tests.common.helpers import PROJECT_ROOT
-from tests.common.helpers import TEST_ROOT
+from tests.common.paths import PROJECT_ROOT
+from tests.common.paths import TEST_ROOT
 from tests.common.helpers import get_cli_dict_args
 from tests.torch.helpers import Command
 from tests.torch.sample_test_validator import BaseSampleTestCaseDescriptor

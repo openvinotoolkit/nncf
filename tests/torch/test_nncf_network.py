@@ -55,7 +55,7 @@ from nncf.torch.nncf_network import PTInsertionPoint
 from nncf.torch.nncf_network import PTInsertionType
 from nncf.torch.nncf_network import PTModelTransformer
 
-from tests.common.helpers import TEST_ROOT
+from tests.common.paths import TEST_ROOT
 from tests.common.quantization.mock_graphs import get_ip_graph_for_test
 from tests.common.quantization.mock_graphs import get_mock_model_graph_with_broken_output_edge_pattern
 from tests.common.quantization.mock_graphs import get_mock_model_graph_with_mergeable_pattern

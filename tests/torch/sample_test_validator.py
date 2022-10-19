@@ -30,9 +30,9 @@ from examples.torch.common.utils import get_name
 from nncf import NNCFConfig
 from nncf.common.utils.registry import Registry
 from tests.common.config_factory import ConfigFactory
-from tests.common.helpers import EXAMPLES_DIR
-from tests.common.helpers import PROJECT_ROOT
-from tests.common.helpers import TEST_ROOT
+from tests.common.paths import EXAMPLES_DIR
+from tests.common.paths import PROJECT_ROOT
+from tests.common.paths import TEST_ROOT
 
 
 def create_command_line(args, sample_type, main_filename='main.py'):

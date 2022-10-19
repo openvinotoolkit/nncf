@@ -19,7 +19,7 @@ import pytest
 import tensorflow as tf
 
 from tests.common.config_factory import ConfigFactory
-from tests.common.helpers import TEST_ROOT
+from tests.common.paths import TEST_ROOT
 from tests.tensorflow.helpers import get_coco_dataset_builders
 from tests.tensorflow.helpers import get_cifar10_dataset_builders
 from tests.tensorflow.test_models import SequentialModel, SequentialModelNoInput

@@ -30,14 +30,15 @@ import pytest
 from nncf.common.utils.logger import logger as nncf_logger
 from pytest_dependency import depends
 
+from tests.common.paths import DATASET_DEFINITIONS_PATH
+from tests.common.paths import PROJECT_ROOT
+from tests.onnx.conftest import ONNX_TEST_ROOT
+
 BG_COLOR_GREEN_HEX = 'ccffcc'
 BG_COLOR_YELLOW_HEX = 'ffffcc'
 BG_COLOR_RED_HEX = 'ffcccc'
 
-TEST_ROOT = Path(__file__).absolute().parents[1]
-PROJECT_ROOT = TEST_ROOT.parent.absolute()
-BENCHMARKING_DIR = PROJECT_ROOT / 'tests' / "onnx" / "benchmarking"
-DATASET_DEFINITIONS_PATH = BENCHMARKING_DIR / "dataset_definitions.yml"
+BENCHMARKING_DIR = ONNX_TEST_ROOT / "benchmarking"
 
 ENV_VARS = os.environ.copy()
 if "PYTHONPATH" in ENV_VARS:
@@ -185,7 +186,7 @@ def _read_json(fpath: Path) -> pd.DataFrame:
 
 @pytest.fixture
 def reference_model_accuracy(scope="module"):
-    fpath = TEST_ROOT / "onnx" / "data" / "reference_model_accuracy" / "reference.json"
+    fpath = ONNX_TEST_ROOT / "onnx" / "data" / "reference_model_accuracy" / "reference.json"
 
     return _read_json(fpath)
 

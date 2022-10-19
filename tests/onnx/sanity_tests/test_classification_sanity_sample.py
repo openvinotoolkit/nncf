@@ -27,7 +27,9 @@ import numpy as np
 from examples.experimental.onnx.classification.onnx_ptq_classification import run
 from nncf.experimental.onnx.tensor import ONNXNNCFTensor
 from nncf.experimental.post_training.api.dataset import Dataset
-from tests.common.helpers import TEST_ROOT
+from tests.common.paths import TEST_ROOT
+from tests.onnx.conftest import ONNX_MODEL_DIR
+from tests.onnx.conftest import ONNX_TEST_ROOT
 
 MODEL_NAMES = [
     'resnet18',
@@ -85,10 +87,7 @@ def mock_dataset_creator(dataset_path, input_name, input_shape, batch_size, shuf
 @patch('examples.experimental.onnx.classification.onnx_ptq_classification.create_imagenet_torch_dataset',
        new=mock_dataset_creator)
 def test_sanity_quantize_sample(tmp_path, model_name, model, input_shape):
-    onnx_model_dir = str(TEST_ROOT.joinpath('onnx', 'data', 'models'))
-    onnx_model_path = str(TEST_ROOT.joinpath(onnx_model_dir, model_name))
-    if not os.path.isdir(onnx_model_dir):
-        os.mkdir(onnx_model_dir)
+    onnx_model_path = ONNX_MODEL_DIR / (model_name + '.onnx')
     x = torch.randn(input_shape, requires_grad=False)
     torch.onnx.export(model, x, onnx_model_path, opset_version=13)
     onnx_output_model_path = str(tmp_path / model_name)
