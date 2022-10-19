@@ -30,7 +30,6 @@ from nncf.common.utils.logger import logger as nncf_logger
 from nncf.common.graph.layer_attributes import Dtype
 
 from nncf.experimental.onnx.graph.metatypes.onnx_metatypes import WEIGHT_LAYER_METATYPES
-from nncf.experimental.onnx.graph.metatypes.onnx_metatypes import POSSIBLE_WEIGHT_LAYERS_METATYPES
 from nncf.experimental.onnx.graph.metatypes.onnx_metatypes import ONNXNonMaxSuppressionMetatype
 from nncf.experimental.onnx.graph.metatypes.onnx_metatypes import ONNXTopKMetatype
 from nncf.experimental.onnx.graph.model_transformer import ONNXModelTransformer
@@ -134,7 +133,7 @@ class ONNXMinMaxAlgoBackend(MinMaxAlgoBackend):
     @staticmethod
     def get_weight_nodes(model: onnx.ModelProto, nncf_graph) -> List[NNCFNode]:
         onnx_graph = ONNXGraph(model)
-        possible_weight_nodes = nncf_graph.get_nodes_by_metatypes(POSSIBLE_WEIGHT_LAYERS_METATYPES)
+        possible_weight_nodes = nncf_graph.get_nodes_by_metatypes(WEIGHT_LAYER_METATYPES)
         output = []
         for possible_weight_node in possible_weight_nodes:
             initializers = onnx_graph.get_node_initializers(possible_weight_node.node_name)
@@ -144,4 +143,4 @@ class ONNXMinMaxAlgoBackend(MinMaxAlgoBackend):
                 if nncf_dtype == Dtype.FLOAT:
                     output.append(possible_weight_node)
                     break
-        return output
+        return possible_weight_nodes

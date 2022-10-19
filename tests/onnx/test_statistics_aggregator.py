@@ -13,6 +13,7 @@
 
 import pytest
 
+import onnx
 import numpy as np
 
 from nncf.experimental.post_training.compression_builder import CompressionBuilder
@@ -76,10 +77,13 @@ def test_statistics_aggregator(range_type, test_parameters):
         if node.name == 'QuantizeLinear_X_1':
             num_q += 1
             activation_scale = test_parameters.activation_float_range / ((2 ** 8 - 1) / 2)
-            assert np.allclose(onnx_graph.get_initializers_value(node.input[1]), np.array(activation_scale))
+            scale = onnx_graph.get_initializer(node.input[1])
+            scale_value = onnx.numpy_helper.to_array(scale)
+            assert np.allclose(scale_value, np.array(activation_scale))
         if node.name == 'QuantizeLinear_Conv1_W_1':
             num_q += 1
+            scale = onnx_graph.get_initializer(node.input[1])
+            scale_value = onnx.numpy_helper.to_array(scale)
             weight_scale = test_parameters.weight_float_range / ((2 ** 8 - 1) / 2)
-            assert np.allclose(onnx_graph.get_initializers_value(node.input[1]),
-                               np.array(weight_scale))
+            assert np.allclose(scale_value, np.array(weight_scale))
     assert num_q == 2
