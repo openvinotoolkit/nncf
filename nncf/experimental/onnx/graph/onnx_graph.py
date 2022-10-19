@@ -18,8 +18,6 @@ from typing import List
 import onnx
 from onnx import NodeProto  # pylint: disable=no-name-in-module
 from onnx import ValueInfoProto  # pylint: disable=no-name-in-module
-from onnx import numpy_helper  # pylint: disable=no-name-in-module
-import numpy as np
 
 from skl2onnx.helpers.onnx_helper import enumerate_model_node_outputs
 
@@ -178,13 +176,18 @@ class ONNXGraph:
         """
         node_inputs = self.get_node_edges(node_name)['input']
         output = []
-        for input_port_id, node_input in enumerate(node_inputs):
+        for node_input in node_inputs:
             initializer = self.get_initializer(node_input)
             if initializer is not None:
                 output.append(initializer)
         return output
 
     def get_initializer_dtype(self, initializer_name: str) -> str:
+        """
+        Returns the name of the type of initializer tensor.
+        :param initializer_name: Name of the initializer tensor.
+        :return: Name of the type.
+        """
         initializer = self.get_initializer(initializer_name)
         return onnx.TensorProto.DataType.Name(initializer.data_type)
 

@@ -20,6 +20,8 @@ from nncf.experimental.onnx.graph.nncf_graph_builder import GraphConverter
 from tests.onnx.models import WEIGHT_DETECTION_MODELS
 from tests.onnx.models import MulWithWeightsFirstInputModel, MulWithWeightsZeroInputModel, ReshapeWeightModel
 
+# pylint: disable=protected-access
+
 
 @pytest.mark.parametrize('model_to_test', WEIGHT_DETECTION_MODELS.values())
 def test_weight_nodes_detection(model_to_test):

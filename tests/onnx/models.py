@@ -844,4 +844,3 @@ class MulWithWeightsFirstInputModel(ONNXReferenceModel):
         onnx.checker.check_model(model)
         super().__init__(model, [input_shape], 'mul_with_weights_first_input_model.dot')
         self.weight_nodes = ['Mul']
-
