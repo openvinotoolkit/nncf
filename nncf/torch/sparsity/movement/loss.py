@@ -15,6 +15,7 @@ import torch
 
 from nncf.torch.compression_method_api import PTCompressionLoss
 
+
 class ImportanceLoss(PTCompressionLoss):
     def __init__(self, sparse_layers=None, penalty_scheduler=None):
         super().__init__()
@@ -35,17 +36,16 @@ class ImportanceLoss(PTCompressionLoss):
     def calculate(self) -> torch.Tensor:
         # TODO, how about frozen?
         if self.disabled:
-            return 0
-
-        loss = 0
-        n_active_layer=0
-        for sparse_layer in self._sparse_layers:
-            loss += sparse_layer.loss()
-            n_active_layer+=1
-
+            return 0.
+        if not self._sparse_layers:
+            return 0.
+        loss = self._sparse_layers[0].loss()
+        for sparse_layer in self._sparse_layers[1:]:
+            loss = loss + sparse_layer.loss()
+        multiplier = 1.0
         if self.penalty_scheduler is not None:
-            return self.penalty_scheduler.current_importance_lambda * (loss/n_active_layer)
-        return loss/n_active_layer 
+            multiplier = self.penalty_scheduler.current_importance_lambda
+        return loss / len(self._sparse_layers) * multiplier
 
 
 class SparseLossForPerLayerSparsity(ImportanceLoss):

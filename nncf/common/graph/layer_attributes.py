@@ -39,7 +39,7 @@ class MultipleInputLayerAttributes(BaseLayerAttributes):
 
     def __eq__(self, other: Any):
         return isinstance(other, MultipleInputLayerAttributes) \
-               and self.axis == other.axis
+            and self.axis == other.axis
 
 
 class MultipleOutputLayerAttributes(BaseLayerAttributes):
@@ -55,8 +55,8 @@ class MultipleOutputLayerAttributes(BaseLayerAttributes):
 
     def __eq__(self, other: Any):
         return isinstance(other, MultipleOutputLayerAttributes) \
-               and self.chunks == other.chunks \
-               and self.axis == other.axis
+            and self.chunks == other.chunks \
+            and self.axis == other.axis
 
 
 class WeightedLayerAttributes(BaseLayerAttributes):
@@ -70,7 +70,7 @@ class WeightedLayerAttributes(BaseLayerAttributes):
 
     def __eq__(self, other: Any):
         return isinstance(other, WeightedLayerAttributes) \
-               and self.weight_requires_grad == other.weight_requires_grad
+            and self.weight_requires_grad == other.weight_requires_grad
 
     @abstractmethod
     def get_weight_shape(self) -> List[int]:
@@ -109,7 +109,7 @@ class LinearLayerAttributes(WeightedLayerAttributes):
                  weight_requires_grad: bool,
                  in_features: int,
                  out_features: int,
-                 bias: bool):
+                 bias: bool = True):
         super().__init__(weight_requires_grad)
         self.in_features = in_features
         self.out_features = out_features
@@ -151,13 +151,13 @@ class ConvolutionLayerAttributes(WeightedLayerAttributes):
 
     def __eq__(self, other: Any):
         return isinstance(other, ConvolutionLayerAttributes) \
-               and super().__eq__(other) \
-               and self.in_channels == other.in_channels \
-               and self.out_channels == other.out_channels \
-               and self.kernel_size == other.kernel_size \
-               and self.stride == other.stride \
-               and self.groups == other.groups \
-               and self.transpose == other.transpose
+            and super().__eq__(other) \
+            and self.in_channels == other.in_channels \
+            and self.out_channels == other.out_channels \
+            and self.kernel_size == other.kernel_size \
+            and self.stride == other.stride \
+            and self.groups == other.groups \
+            and self.transpose == other.transpose
 
     def get_weight_shape(self) -> List[int]:
         if not self.transpose:
@@ -187,9 +187,9 @@ class GroupNormLayerAttributes(WeightedLayerAttributes):
 
     def __eq__(self, other: Any):
         return isinstance(other, GroupNormLayerAttributes) \
-               and super().__eq__(other) \
-               and self.num_channels == other.num_channels \
-               and self.num_groups == other.num_groups
+            and super().__eq__(other) \
+            and self.num_channels == other.num_channels \
+            and self.num_groups == other.num_groups
 
     def get_weight_shape(self) -> List[int]:
         return [self.num_channels]

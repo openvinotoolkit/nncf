@@ -3,12 +3,14 @@ from typing import List, Optional, Union
 
 import numpy as np
 import pytest
+import torch
+import torch.nn as nn
 from datasets import load_dataset
 from nncf import NNCFConfig
 from nncf.api.compression import CompressionAlgorithmController
 from transformers import AutoModelForSequenceClassification, AutoTokenizer
 from transformers import Trainer as BaseTrainer
-from transformers import TrainingArguments
+from transformers import TrainingArguments, BertConfig
 from transformers.trainer_callback import (TrainerCallback, TrainerControl,
                                            TrainerState)
 
@@ -36,6 +38,19 @@ def yelp_dataset():
 # @pytest.fixture
 def bert_tiny_torch_model():
     return AutoModelForSequenceClassification.from_pretrained(MODEL_NAME, num_labels=5)
+
+
+def bert_tiny_unpretrained():
+    model_cfg = {
+        "hidden_size": 4,
+        "intermediate_size": 3,
+        "max_position_embeddings": 512,
+        "model_type": "bert",
+        "num_attention_heads": 2,
+        "num_hidden_layers": 1,
+        "vocab_size": 30522,
+    }
+    return AutoModelForSequenceClassification.from_config(BertConfig(**model_cfg, num_labels=5))
 
 
 class ConfigBuilder:

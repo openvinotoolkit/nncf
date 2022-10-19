@@ -356,8 +356,8 @@ class PolynomialThresholdScheduler(BaseCompressionScheduler):
         self.warmup_start_epoch = params.get('warmup_start_epoch', 0.0)
         self.warmup_end_epoch = params.get('warmup_end_epoch', 0.0)
         self.importance_target_lambda = params.get('importance_regularization_factor', 1.0)
-        self.current_importance_threshold  = self.init_importance_threshold
-        self.cached_importance_threshold = self.current_importance_threshold
+        self.current_importance_threshold = self.init_importance_threshold
+        self.cached_importance_threshold = None
 
         self.schedule = PolynomialDecaySchedule(
             self.init_importance_threshold,
@@ -374,8 +374,7 @@ class PolynomialThresholdScheduler(BaseCompressionScheduler):
 
     @property
     def current_importance_lambda(self):
-        return self.importance_target_lambda * (self.current_importance_threshold-self.init_importance_threshold)/(self.final_importance_threshold-self.init_importance_threshold)
-
+        return self.importance_target_lambda * (self.current_importance_threshold - self.init_importance_threshold) / (self.final_importance_threshold - self.init_importance_threshold)
 
     def _disable_importance_grad(self):
         for m in self._controller.sparsified_module_info:
@@ -441,6 +440,11 @@ class PolynomialThresholdScheduler(BaseCompressionScheduler):
         super().load_state(state)
         if self._update_per_optimizer_step:
             self._steps_per_epoch = state['_steps_per_epoch']
+            if self._steps_per_epoch is None:  # It is the first epoch and `steps_per_epoch` not specified
+                self._steps_in_current_epoch = self._current_step + 1
+                self._should_skip = True
+            else:
+                self._steps_in_current_epoch = self._current_step % self._steps_per_epoch + 1
 
     def get_state(self) -> Dict[str, Any]:
         state = super().get_state()

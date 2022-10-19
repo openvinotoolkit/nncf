@@ -11,7 +11,7 @@
  limitations under the License.
 """
 from copy import deepcopy
-from typing import DefaultDict, List, OrderedDict
+from typing import DefaultDict, List, OrderedDict, Optional
 
 import torch
 import torch.distributed as dist
@@ -105,39 +105,51 @@ class MovementSparsityBuilder(BaseSparsityAlgoBuilder):
         return MovementSparsityController(model, self._sparsified_module_info, self.config)
 
 class StructuredMask:
-    def __init__(self, 
-                 target_module_node, 
-                 sparsifying_node_name, 
+    def __init__(self,
+                 target_module_node,
+                 sparsifying_node_name,
                  grid_size,
                  dependent_group_id,
                  sparse_module_info):
-
-        self.target_module_node=target_module_node
-        self.sparsifying_node_name=sparsifying_node_name
-        self.grid_size=grid_size
-        self.dependent_group_id=dependent_group_id
-        self.sparse_module_info=sparse_module_info
+        # TODO: remove useless attributes
+        self.target_module_node = target_module_node
+        self.sparsifying_node_name = sparsifying_node_name
+        self.grid_size = grid_size
+        self.dependent_group_id = dependent_group_id
+        self.sparse_module_info = sparse_module_info
+        self._independent_structured_mask = None
+        self._dependent_structured_mask = None
 
     @property
     def independent_structured_mask(self):
         return self._independent_structured_mask
-    
+
     @independent_structured_mask.setter
     def independent_structured_mask(self, tensor):
+        if self._independent_structured_mask is not None and \
+                self._independent_structured_mask.shape != tensor.shape:
+            raise ValueError("Shape change about independent structured mask")
         with torch.no_grad():
-            self._independent_structured_mask = tensor
-            # self._independent_structured_mask.set_(tensor)
+            self._independent_structured_mask = tensor.clone()
 
     @property
     def dependent_structured_mask(self):
         return self._dependent_structured_mask
-    
+
     @dependent_structured_mask.setter
     def dependent_structured_mask(self, tensor):
-        # TODO: check dim
+        if self._dependent_structured_mask is not None and \
+                self._dependent_structured_mask.shape != tensor.shape:
+            raise ValueError("Shape change about dependent structured mask")
         with torch.no_grad():
-            self._dependent_structured_mask = tensor
-            # self._dependent_structured_mask.set_(tensor)
+            self._dependent_structured_mask = tensor.clone()
+
+
+class PrunableOp:
+    def __init__(self, op_addr: OperationAddress, op_mod: Optional[torch.nn.Module]):
+        self.op_addr = op_addr
+        self.op_mod = op_mod
+
 
 @ADAPTIVE_COMPRESSION_CONTROLLERS.register('pt_movement_sparsity')
 class MovementSparsityController(BaseSparsityAlgoController):
@@ -520,8 +532,6 @@ class MovementSparsityController(BaseSparsityAlgoController):
             print('\n'.join(list(map(lambda x: '{:12} | {}'.format(str(list(x.op_mod.weight.shape)), str(x.op_addr)), op_list))))
   
     def _get_group_of_prunable_ops(self):
-        PrunableOp = namedtuple("PrunableOp", "op_addr op_mod")
-
         building_blocks, _ = get_building_blocks(self.model,
                                 target_block_types=[BuildingBlockType.MSHA, BuildingBlockType.FF],
                                 block_filter_strategy=BlockFilteringStrategy.KEEP_SMALL,
