@@ -12,6 +12,7 @@
 """
 import os
 from copy import deepcopy
+from pathlib import Path
 from typing import List
 
 import pytest
@@ -56,8 +57,8 @@ class ManualSampleConfigTestParams(ManualConfigTestParamsBase):
 
 
 class ManualTestConfigTestParams(ManualConfigTestParamsBase):
-    def _get_config_path(self):
-        return TEST_ROOT.joinpath('torch', 'data', 'configs', 'hawq') / self.name
+    def _get_config_path(self) -> Path:
+        return TEST_ROOT / 'torch' / 'data' / 'configs' / 'hawq' / self.name
 
 
 class BitwidthDistributionStatistics:

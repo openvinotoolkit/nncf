@@ -13,17 +13,12 @@
 
 # pylint: disable=redefined-outer-name
 
+import onnx
 import pytest
 
-import os
-
-import onnx
-
 from nncf.experimental.onnx.common import infer_input_shape
-from tests.common.paths import TEST_ROOT
 from tests.onnx.conftest import ONNX_MODEL_DIR
 from tests.onnx.quantization.common import ModelToTest
-
 
 TEST_CASES = [
     (ModelToTest('densenet-7', [1, 3, 224, 224]), 'data_0'),

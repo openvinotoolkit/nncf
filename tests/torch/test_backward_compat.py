@@ -42,7 +42,7 @@ from tests.common.helpers import get_cli_dict_args
 from tests.torch.test_sanity_sample import create_command_line
 
 GLOBAL_CONFIG = {
-    TEST_ROOT.joinpath("torch", "data", "configs", "squeezenet1_1_cifar10_rb_sparsity_int8.json"): [
+    TEST_ROOT / "torch" / "data" / "configs" / "squeezenet1_1_cifar10_rb_sparsity_int8.json" : [
         {
             'checkpoint_name': 'squeezenet1_1_custom_cifar10_rb_sparsity_int8_dp.pth',
             'dataset': "cifar10",

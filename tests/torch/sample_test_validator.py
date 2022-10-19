@@ -235,7 +235,7 @@ class BaseSampleTestCaseDescriptor(ABC):
 
     def mock_dataset(self, dataset_name: str):
         self.dataset_name = dataset_name
-        self.dataset_dir = TEST_ROOT.joinpath("torch", "data", "mock_datasets", dataset_name)
+        self.dataset_dir = TEST_ROOT / "torch" / "data" / "mock_datasets" / dataset_name
         return self
 
     def __str__(self):

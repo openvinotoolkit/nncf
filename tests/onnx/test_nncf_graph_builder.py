@@ -29,7 +29,6 @@ from tests.common.paths import TEST_ROOT
 from tests.onnx.quantization.common import ModelToTest
 from tests.onnx.quantization.common import check_nx_graph
 
-PROJECT_ROOT = os.path.dirname(__file__)
 REFERENCE_GRAPHS_DIR = ONNX_TEST_ROOT / 'data' / 'reference_graphs' / 'original_nncf_graph'
 
 
@@ -37,7 +36,7 @@ REFERENCE_GRAPHS_DIR = ONNX_TEST_ROOT / 'data' / 'reference_graphs' / 'original_
 @pytest.mark.parametrize("generate_ref_graphs", [False])
 def test_compare_nncf_graph_synthetic_models(model_cls_to_test, generate_ref_graphs):
     model_to_test = model_cls_to_test()
-    path_to_dot = REFERENCE_GRAPHS_DIR / 'synthetic' /  model_to_test.path_ref_graph
+    path_to_dot = REFERENCE_GRAPHS_DIR / 'synthetic' / model_to_test.path_ref_graph
 
     nncf_graph = GraphConverter.create_nncf_graph(model_to_test.onnx_model)
     nx_graph = nncf_graph.get_graph_for_structure_analysis(extended=True)

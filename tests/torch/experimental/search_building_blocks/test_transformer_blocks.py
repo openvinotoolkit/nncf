@@ -42,7 +42,7 @@ from tests.torch.nas.helpers import move_model_to_cuda_if_available
 
 
 def check_extended_blocks(name, actual_blocks: ExtendedBuildingBlocks):
-    ref_file_dir = TEST_ROOT.joinpath('torch', 'data', 'search_building_block')
+    ref_file_dir = TEST_ROOT / 'torch' / 'data' / 'search_building_block'
     ref_file_path = ref_file_dir.joinpath(name)
     if os.getenv("NNCF_TEST_REGEN_DOT") is not None:
         if not os.path.exists(ref_file_dir):

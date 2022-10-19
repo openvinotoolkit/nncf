@@ -477,12 +477,14 @@ class TestSotaCheckpoints:
         mo_cmd_tail_template = "--framework=onnx --data_type=FP16 --reverse_input_channels" \
                                " --mean_values={} --scale_values={} --output_dir {}"
         if onnx_type == "q_dq":
-            mo_cmd_tail = mo_cmd_tail_template.format(mean_val, scale_val, q_dq_ir_model_folder)
+            model_folder = q_dq_ir_model_folder
+            mo_cmd_tail = mo_cmd_tail_template.format(mean_val, scale_val, model_folder)
             onnx_model = str(onnx_dir + 'q_dq/' + eval_test_struct.model_name_ + '.onnx')
             mo_cmd = "mo --input_model {} {}".format(onnx_model, mo_cmd_tail)
         else:
+            model_folder = ir_model_folder
             onnx_model = str(onnx_dir + eval_test_struct.model_name_ + '.onnx')
-            mo_cmd_tail = mo_cmd_tail_template.format(mean_val, scale_val, ir_model_folder)
+            mo_cmd_tail = mo_cmd_tail_template.format(mean_val, scale_val, model_folder)
             mo_cmd = "mo --input_model {} {}".format(onnx_model, mo_cmd_tail)
 
         exit_code, err_str = self.run_cmd(mo_cmd, cwd=PROJECT_ROOT)
@@ -493,7 +495,7 @@ class TestSotaCheckpoints:
             else:
                 report_csv_path = f"{PROJECT_ROOT}/{eval_test_struct.model_name_}.csv"
             ac_cmd = f"accuracy_check -c {ac_yml_path} -s {ov_data_dir} -d {DATASET_DEFINITIONS_PATH} " \
-                     f"-m {q_dq_ir_model_folder} --csv_result {report_csv_path}"
+                     f"-m {model_folder} --csv_result {report_csv_path}"
             exit_code, err_str = self.run_cmd(ac_cmd, cwd=PROJECT_ROOT)
             if exit_code != 0 or err_str is not None:
                 pytest.fail(err_str)

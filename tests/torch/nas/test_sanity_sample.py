@@ -38,7 +38,7 @@ class NASSampleTestDescriptor(SanityTestCaseDescriptor):
 
     @property
     def config_directory(self) -> Path:
-        return TEST_ROOT.joinpath("torch", "data", "configs", "nas")
+        return TEST_ROOT / "torch" / "data" / "configs" / "nas"
 
     def get_validator(self) -> 'NASSampleValidator':
         return NASSampleValidator(self)

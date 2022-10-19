@@ -13,23 +13,18 @@
 
 from typing import List
 from typing import Tuple
-
-import pytest
 from unittest.mock import patch
 
-import os
-
+import numpy as np
+import onnxruntime as rt
+import pytest
 import torch
 from torchvision import models
-import onnxruntime as rt
-import numpy as np
 
 from examples.experimental.onnx.classification.onnx_ptq_classification import run
 from nncf.experimental.onnx.tensor import ONNXNNCFTensor
 from nncf.experimental.post_training.api.dataset import Dataset
-from tests.common.paths import TEST_ROOT
 from tests.onnx.conftest import ONNX_MODEL_DIR
-from tests.onnx.conftest import ONNX_TEST_ROOT
 
 MODEL_NAMES = [
     'resnet18',
@@ -91,7 +86,7 @@ def test_sanity_quantize_sample(tmp_path, model_name, model, input_shape):
     x = torch.randn(input_shape, requires_grad=False)
     torch.onnx.export(model, x, onnx_model_path, opset_version=13)
     onnx_output_model_path = str(tmp_path / model_name)
-    run(onnx_model_path, onnx_output_model_path, 'none',
+    run(str(onnx_model_path), onnx_output_model_path, 'none',
         batch_size=1, shuffle=True, num_init_samples=1,
         input_shape=input_shape, ignored_scopes=None)
 

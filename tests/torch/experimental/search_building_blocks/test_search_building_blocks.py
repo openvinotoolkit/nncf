@@ -42,7 +42,7 @@ from tests.torch.test_models.resnet import ResNet50
 
 
 def check_blocks_and_groups(name, actual_blocks: BuildingBlocks, actual_group_dependent: GroupedBlockIDs):
-    ref_file_dir = TEST_ROOT.joinpath('torch', 'data', 'search_building_block')
+    ref_file_dir = TEST_ROOT / 'torch' / 'data' / 'search_building_block'
     ref_file_path = ref_file_dir.joinpath(name)
     if os.getenv("NNCF_TEST_REGEN_DOT") is not None:
         if not os.path.exists(ref_file_dir):

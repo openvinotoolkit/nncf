@@ -63,14 +63,14 @@ def mock_dataloader_creator(dataset_name, dataset_path, input_name, input_shape)
     'create_dataset_from_segmentation_torch_dataset',
     new=mock_dataloader_creator)
 def test_sanity_quantize_sample(tmp_path, model_name, input_shape):
-    onnx_model_dir = str(TEST_ROOT.joinpath('onnx', 'data', 'models'))
-    onnx_model_path = str(TEST_ROOT.joinpath(onnx_model_dir, model_name + '.onnx'))
+    onnx_model_dir = TEST_ROOT / 'onnx' / 'data' / 'models'
+    onnx_model_path = onnx_model_dir / (model_name + '.onnx')
     if not os.path.isdir(onnx_model_dir):
         os.mkdir(onnx_model_dir)
 
     onnx_output_model_path = str(tmp_path / model_name)
 
-    run(onnx_model_path, onnx_output_model_path, 'CamVid',
+    run(str(onnx_model_path), onnx_output_model_path, 'CamVid',
         'none', num_init_samples=1, input_shape=input_shape, ignored_scopes=None)
 
     sess = rt.InferenceSession(onnx_output_model_path, providers=['OpenVINOExecutionProvider'])
