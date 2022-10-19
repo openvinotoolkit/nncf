@@ -143,4 +143,4 @@ class ONNXMinMaxAlgoBackend(MinMaxAlgoBackend):
                 if nncf_dtype == Dtype.FLOAT:
                     output.append(possible_weight_node)
                     break
-        return possible_weight_nodes
+        return output

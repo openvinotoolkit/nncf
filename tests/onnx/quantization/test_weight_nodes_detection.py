@@ -18,10 +18,14 @@ from nncf.experimental.post_training.algorithms.quantization.min_max.algorithm i
     MinMaxQuantizationParameters
 from nncf.experimental.onnx.graph.nncf_graph_builder import GraphConverter
 from tests.onnx.models import WEIGHT_DETECTION_MODELS
+from tests.onnx.models import MulWithWeightsFirstInputModel, MulWithWeightsZeroInputModel, ReshapeWeightModel
 
 
 @pytest.mark.parametrize('model_to_test', WEIGHT_DETECTION_MODELS.values())
 def test_weight_nodes_detection(model_to_test):
+    if model_to_test in [MulWithWeightsFirstInputModel, MulWithWeightsZeroInputModel, ReshapeWeightModel]:
+        pytest.skip('Currently there are some limitations of quantizing the weights of the elementwise operations.'
+                    'The ticket is 94688.')
     model_to_test = model_to_test()
     onnx_model = model_to_test.onnx_model
     quantization_algo = MinMaxQuantization(MinMaxQuantizationParameters(number_samples=1))
