@@ -21,14 +21,14 @@ from nncf.common.utils.backend import BackendType
 from nncf.common.utils.registry import Registry
 from nncf.common.graph import NNCFNode
 
-from nncf.experimental.onnx.graph.metatypes.onnx_metatypes import LAYERS_WITH_BIAS_METATYPES
-from nncf.experimental.onnx.graph.metatypes.onnx_metatypes import ONNX_OPERATION_METATYPES
-from nncf.experimental.onnx.graph.model_transformer import ONNXModelTransformer
-from nncf.experimental.onnx.graph.transformations.commands import ONNXBiasCorrectionCommand
-from nncf.experimental.onnx.graph.transformations.commands import ONNXModelExtractionCommand
-from nncf.experimental.onnx.graph.transformations.commands import ONNXTargetPoint
-from nncf.experimental.onnx.statistics.collectors import ONNXMeanStatisticCollector, ONNXNNCFCollectorTensorProcessor
-from nncf.experimental.onnx.tensor import ONNXNNCFTensor
+from nncf.onnx.graph.metatypes.onnx_metatypes import LAYERS_WITH_BIAS_METATYPES
+from nncf.onnx.graph.metatypes.onnx_metatypes import ONNX_OPERATION_METATYPES
+from nncf.onnx.graph.model_transformer import ONNXModelTransformer
+from nncf.onnx.graph.transformations.commands import ONNXBiasCorrectionCommand
+from nncf.onnx.graph.transformations.commands import ONNXModelExtractionCommand
+from nncf.onnx.graph.transformations.commands import ONNXTargetPoint
+from nncf.onnx.tensor_statistics.collectors import ONNXMeanStatisticCollector, ONNXNNCFCollectorTensorProcessor
+from nncf.onnx.tensor import ONNXNNCFTensor
 from nncf.experimental.post_training.algorithms.quantization.fast_bias_correction.backend import ALGO_BACKENDS
 from nncf.experimental.post_training.algorithms.quantization.fast_bias_correction.backend import FBCAlgoBackend
 

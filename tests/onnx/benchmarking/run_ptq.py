@@ -17,7 +17,7 @@ from typing import Optional
 
 import numpy as np
 import onnx
-from nncf.experimental.onnx.tensor import ONNXNNCFTensor
+from nncf.onnx.tensor import ONNXNNCFTensor
 
 from nncf.experimental.post_training.compression_builder import CompressionBuilder
 from nncf.experimental.post_training.algorithms.quantization import PostTrainingQuantization

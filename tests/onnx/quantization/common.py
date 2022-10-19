@@ -31,10 +31,10 @@ from nncf.experimental.post_training.algorithms.quantization.min_max.algorithm i
 from nncf.experimental.post_training.algorithms.quantization import MinMaxQuantizationParameters
 from nncf.experimental.post_training.algorithms.quantization import PostTrainingQuantization
 from nncf.experimental.post_training.algorithms.quantization import PostTrainingQuantizationParameters
-from nncf.experimental.onnx.graph.nncf_graph_builder import GraphConverter
-from nncf.experimental.onnx.tensor import ONNXNNCFTensor
-from nncf.experimental.onnx.graph.onnx_graph import ONNXGraph
-from nncf.experimental.onnx.model_normalizer import ONNXModelNormalizer
+from nncf.onnx.graph.nncf_graph_builder import GraphConverter
+from nncf.onnx.tensor import ONNXNNCFTensor
+from nncf.onnx.graph.onnx_graph import ONNXGraph
+from nncf.onnx.model_normalizer import ONNXModelNormalizer
 
 REFERENCE_GRAPHS_TEST_ROOT = 'data/reference_graphs/quantization'
 

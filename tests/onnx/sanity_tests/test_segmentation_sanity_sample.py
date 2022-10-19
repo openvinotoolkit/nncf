@@ -23,7 +23,7 @@ import onnxruntime as rt
 import numpy as np
 
 from examples.experimental.onnx.semantic_segmentation.onnx_ptq_segmentation import run
-from nncf.experimental.onnx.tensor import ONNXNNCFTensor
+from nncf.onnx.tensor import ONNXNNCFTensor
 from nncf.experimental.post_training.api.dataset import Dataset
 from tests.common.helpers import TEST_ROOT
 

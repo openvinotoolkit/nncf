@@ -20,8 +20,8 @@ import onnx
 
 from nncf.common.utils.dot_file_rw import read_dot_graph
 from nncf.common.utils.dot_file_rw import write_dot_graph
-from nncf.experimental.onnx.graph.nncf_graph_builder import GraphConverter
-from nncf.experimental.onnx.model_normalizer import ONNXModelNormalizer
+from nncf.onnx.graph.nncf_graph_builder import GraphConverter
+from nncf.onnx.model_normalizer import ONNXModelNormalizer
 
 from tests.onnx.models import ALL_SYNTHETIC_MODELS
 from tests.common.helpers import TEST_ROOT

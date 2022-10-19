@@ -21,11 +21,11 @@ from nncf.common.graph.transformations.commands import TargetType
 from nncf.common.graph.transformations.layout import TransformationLayout
 from nncf.common.quantization.structs import QuantizationMode
 from nncf.common.graph.definitions import NNCFGraphNodeType
-from nncf.experimental.onnx.graph.onnx_graph import ONNXGraph
-from nncf.experimental.onnx.graph.transformations.commands import ONNXBiasCorrectionCommand
-from nncf.experimental.onnx.graph.transformations.commands import ONNXModelExtractionCommand
-from nncf.experimental.onnx.graph.transformations.commands import ONNXOutputInsertionCommand
-from nncf.experimental.onnx.graph.transformations.commands import ONNXQuantizerInsertionCommand
+from nncf.onnx.graph.onnx_graph import ONNXGraph
+from nncf.onnx.graph.transformations.commands import ONNXBiasCorrectionCommand
+from nncf.onnx.graph.transformations.commands import ONNXModelExtractionCommand
+from nncf.onnx.graph.transformations.commands import ONNXOutputInsertionCommand
+from nncf.onnx.graph.transformations.commands import ONNXQuantizerInsertionCommand
 from nncf.experimental.post_training.factories import NNCFGraphFactory
 from nncf.experimental.post_training.graph.model_transformer import StaticModelTransformerBase
 

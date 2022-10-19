@@ -24,10 +24,10 @@ from nncf.common.utils.logger import logger as nncf_logger
 from openvino.tools.accuracy_checker.config import ConfigReader
 from openvino.tools.accuracy_checker.argparser import build_arguments_parser
 from openvino.tools.accuracy_checker.evaluators import ModelEvaluator
-from nncf.experimental.onnx.tensor import ONNXNNCFTensor
+from nncf.onnx.tensor import ONNXNNCFTensor
 
-from nncf.experimental.onnx.engine import ONNXEngine
-from nncf.experimental.onnx.samplers import create_onnx_sampler
+from nncf.onnx.engine import ONNXEngine
+from nncf.onnx.samplers import create_onnx_sampler
 from nncf.experimental.post_training.api.dataset import Dataset
 
 from time import time

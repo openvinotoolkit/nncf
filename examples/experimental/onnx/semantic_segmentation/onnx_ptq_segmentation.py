@@ -18,8 +18,9 @@ import onnx
 from nncf.experimental.post_training.compression_builder import CompressionBuilder
 from nncf.experimental.post_training.algorithms.quantization import PostTrainingQuantization
 from nncf.experimental.post_training.algorithms.quantization import PostTrainingQuantizationParameters
-from nncf.experimental.onnx.common import infer_input_shape
-from nncf.experimental.onnx.datasets.segmentation_dataset import create_dataset_from_segmentation_torch_dataset
+from nncf.onnx.common import infer_input_shape
+from examples.experimental.onnx.semantic_segmentation.segmentation_dataset import \
+    create_dataset_from_segmentation_torch_dataset
 from examples.experimental.onnx.common.argparser import get_common_argument_parser
 
 

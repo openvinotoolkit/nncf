@@ -17,10 +17,10 @@ from nncf.experimental.post_training.api.dataset import Dataset
 from nncf.experimental.post_training.statistics.aggregator import StatisticsAggregator
 from nncf.experimental.post_training.statistics.aggregator import StatisticPointsContainer
 from nncf.experimental.post_training.api.sampler import Sampler
-from nncf.experimental.onnx.samplers import ONNXBatchSampler
-from nncf.experimental.onnx.samplers import ONNXRandomBatchSampler
-from nncf.experimental.onnx.engine import ONNXEngine
-from nncf.experimental.onnx.graph.transformations.commands import ONNXOutputInsertionCommand
+from nncf.onnx.samplers import ONNXBatchSampler
+from nncf.onnx.samplers import ONNXRandomBatchSampler
+from nncf.onnx.engine import ONNXEngine
+from nncf.onnx.graph.transformations.commands import ONNXOutputInsertionCommand
 
 
 class ONNXStatisticsAggregator(StatisticsAggregator):

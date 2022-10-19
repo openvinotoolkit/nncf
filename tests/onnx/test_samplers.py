@@ -18,9 +18,9 @@ import pytest
 
 import numpy as np
 
-from nncf.experimental.onnx.samplers import ONNXBatchSampler
-from nncf.experimental.onnx.samplers import ONNXRandomBatchSampler
-from nncf.experimental.onnx.tensor import ONNXNNCFTensor
+from nncf.onnx.samplers import ONNXBatchSampler
+from nncf.onnx.samplers import ONNXRandomBatchSampler
+from nncf.onnx.tensor import ONNXNNCFTensor
 from nncf.experimental.post_training.api.dataset import Dataset, NNCFData
 
 INPUT_SHAPE = [3, 10, 10]

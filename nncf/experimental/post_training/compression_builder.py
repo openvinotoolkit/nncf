@@ -51,7 +51,7 @@ class CompressionBuilder:
         :return: backnd-specific Engine
         """
         if backend == BackendType.ONNX:
-            from nncf.experimental.onnx.engine import ONNXEngine
+            from nncf.onnx.engine import ONNXEngine
             return ONNXEngine()
         return None
 
@@ -69,7 +69,7 @@ class CompressionBuilder:
         :return: backnd-specific StatisticsAggregator
         """
         if backend == BackendType.ONNX:
-            from nncf.experimental.onnx.statistics.aggregator import \
+            from nncf.onnx.tensor_statistics.aggregator import \
                 ONNXStatisticsAggregator
             return ONNXStatisticsAggregator(engine, dataset)
         return None
@@ -83,14 +83,14 @@ class CompressionBuilder:
         :return: backnd-specific ModelTransformer
         """
         if backend == BackendType.ONNX:
-            from nncf.experimental.onnx.graph.model_transformer import \
+            from nncf.onnx.graph.model_transformer import \
                 ONNXModelTransformer
             return ONNXModelTransformer(model)
         return None
 
     def _get_prepared_model_for_compression(self, model: ModelType, backend: BackendType) -> ModelType:
         if backend == BackendType.ONNX:
-            from nncf.experimental.onnx.model_normalizer import ONNXModelNormalizer
+            from nncf.onnx.model_normalizer import ONNXModelNormalizer
             return ONNXModelNormalizer.normalize_model(model, self.convert_opset_version)
 
         return None

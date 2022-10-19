@@ -28,17 +28,17 @@ from nncf.common.tensor_statistics.collectors import ReductionShape
 from nncf.common.utils.backend import BackendType
 from nncf.common.utils.logger import logger as nncf_logger
 
-from nncf.experimental.onnx.graph.metatypes.onnx_metatypes import WEIGHT_LAYER_METATYPES
-from nncf.experimental.onnx.graph.metatypes.onnx_metatypes import ONNXNonMaxSuppressionMetatype
-from nncf.experimental.onnx.graph.metatypes.onnx_metatypes import ONNXTopKMetatype
-from nncf.experimental.onnx.graph.model_transformer import ONNXModelTransformer
-from nncf.experimental.onnx.graph.transformations.commands import ONNXQuantizerInsertionCommand
-from nncf.experimental.onnx.graph.transformations.commands import ONNXTargetPoint
-from nncf.experimental.onnx.hardware.config import ONNXHWConfig
-from nncf.experimental.onnx.hardware.fused_patterns import ONNX_HW_FUSED_PATTERNS
-from nncf.experimental.onnx.quantization.default_quantization import DEFAULT_ONNX_QUANT_TRAIT_TO_OP_DICT
-from nncf.experimental.onnx.statistics.collectors import ONNXMeanMinMaxStatisticCollector
-from nncf.experimental.onnx.statistics.collectors import ONNXMinMaxStatisticCollector
+from nncf.onnx.graph.metatypes.onnx_metatypes import WEIGHT_LAYER_METATYPES
+from nncf.onnx.graph.metatypes.onnx_metatypes import ONNXNonMaxSuppressionMetatype
+from nncf.onnx.graph.metatypes.onnx_metatypes import ONNXTopKMetatype
+from nncf.onnx.graph.model_transformer import ONNXModelTransformer
+from nncf.onnx.graph.transformations.commands import ONNXQuantizerInsertionCommand
+from nncf.onnx.graph.transformations.commands import ONNXTargetPoint
+from nncf.onnx.hardware.config import ONNXHWConfig
+from nncf.onnx.hardware.fused_patterns import ONNX_HW_FUSED_PATTERNS
+from nncf.onnx.quantization.default_quantization import DEFAULT_ONNX_QUANT_TRAIT_TO_OP_DICT
+from nncf.onnx.tensor_statistics.collectors import ONNXMeanMinMaxStatisticCollector
+from nncf.onnx.tensor_statistics.collectors import ONNXMinMaxStatisticCollector
 
 from nncf.experimental.post_training.algorithms.quantization.min_max.backend import MinMaxAlgoBackend
 from nncf.experimental.post_training.algorithms.quantization.min_max.backend import ALGO_BACKENDS

@@ -21,9 +21,9 @@ from nncf.common.tensor_statistics.collectors import MinMaxStatisticCollector
 from nncf.common.tensor_statistics.collectors import NNCFCollectorTensorProcessor
 from nncf.common.tensor_statistics.collectors import MeanMinMaxStatisticCollector
 from nncf.common.tensor_statistics.collectors import MeanStatisticCollector
-from nncf.experimental.onnx.tensor import ONNXNNCFTensor
-from nncf.experimental.onnx.statistics.statistics import ONNXMinMaxTensorStatistic
-from nncf.experimental.onnx.statistics.statistics import ONNXMeanTensorStatistic
+from nncf.onnx.tensor import ONNXNNCFTensor
+from nncf.onnx.tensor_statistics.statistics import ONNXMinMaxTensorStatistic
+from nncf.onnx.tensor_statistics.statistics import ONNXMeanTensorStatistic
 
 
 class ONNXNNCFCollectorTensorProcessor(NNCFCollectorTensorProcessor):

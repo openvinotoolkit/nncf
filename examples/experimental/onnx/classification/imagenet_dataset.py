@@ -18,7 +18,7 @@ import os
 import torch
 
 from nncf.common.utils.logger import logger as nncf_logger
-from nncf.experimental.onnx.tensor import ONNXNNCFTensor
+from nncf.onnx.tensor import ONNXNNCFTensor
 
 from nncf.experimental.post_training.api.dataset import Dataset, NNCFData
 

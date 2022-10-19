@@ -13,7 +13,7 @@
 
 from nncf.common.utils.backend import BackendType
 from nncf.common.utils.backend import get_backend
-from nncf.experimental.onnx.graph.nncf_graph_builder import GraphConverter
+from nncf.onnx.graph.nncf_graph_builder import GraphConverter
 
 
 class NNCFGraphFactory:
