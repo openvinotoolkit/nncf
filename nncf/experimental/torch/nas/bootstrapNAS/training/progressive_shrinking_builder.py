@@ -48,7 +48,7 @@ class ProgressiveShrinkingBuilder(PTCompressionAlgorithmBuilder):
         super().__init__(nncf_config, should_init)
         bn_adapt_params = self._algo_config.get('batchnorm_adaptation', {})
         bn_adapt_algo_kwargs = get_bn_adapt_algo_kwargs(nncf_config, bn_adapt_params)
-        self._bn_adaptation = BatchnormAdaptationAlgorithm(**bn_adapt_algo_kwargs)
+        self._bn_adaptation = BatchnormAdaptationAlgorithm(**bn_adapt_algo_kwargs) if bn_adapt_algo_kwargs else None
 
         default_progressivity = map(lambda x: x.value, self.DEFAULT_PROGRESSIVITY)
         progressivity_of_elasticity = self._algo_config.get('progressivity_of_elasticity', default_progressivity)

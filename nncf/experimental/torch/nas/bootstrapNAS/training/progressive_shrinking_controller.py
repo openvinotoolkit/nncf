@@ -82,7 +82,7 @@ class ProgressiveShrinkingController(BNASTrainingController):
         else:
             nncf_logger.info("Stage LR scheduler in use")
             lr_scheduler = StageLRScheduler(optimizer, train_iters)
-        self._scheduler.set_lr_scheduler(lr_scheduler)
+        self._scheduler.lr_scheduler = lr_scheduler
 
     @property
     def lr_schedule_config(self) -> str:
