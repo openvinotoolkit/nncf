@@ -22,7 +22,8 @@ from openvino.tools import pot
 from nncf.data import Dataset
 from nncf.openvino.utils import POTDataLoader
 from nncf.openvino.engine import OVEngine
-from nncf.quantization.params import TargetDevice
+from nncf.parameters import IgnoredScope
+from nncf.parameters import TargetDevice
 from nncf.common.quantization.structs import QuantizationPreset
 from nncf.common.utils.logger import logger as nncf_logger
 
@@ -66,13 +67,43 @@ def _convert_compressed_model_to_openvino_model(model: pot.graph.nx_model.Compre
     return ov_model
 
 
+def _create_ignored_scope_config(ignored_scope: IgnoredScope) -> dict:
+    """
+    Creates POT ignored scope configuration from the ignored scope that is
+    defined using `IgnoredScope` class.
+
+    :param ignored_scope: The ignored scope
+    :return: A POT ignored scope configuration as dict
+    """
+    if ignored_scope is None:
+        return {}
+
+    ignored = {}
+    if ignored_scope.node_names is not None:
+        node_names = ignored_scope.node_names
+        if isinstance(node_names, str):
+            node_names = [node_names]
+        ignored['scope'] = node_names
+    if ignored_scope.node_name_regexps is not None:
+        raise RuntimeError('Quantization algorithm form the OpenVINO backend '
+                           'does not support node name regular expressions '
+                           'in the ignored scopes yet')
+    if ignored_scope.node_types is not None:
+        node_types = ignored_scope.node_types
+        if isinstance(node_types, str):
+            node_types = [node_types]
+        ignored['operations'] = [{'type': node_type} for node_type in node_types]
+    return ignored
+
+
 def quantize_impl(model: ov.Model,
                   calibration_dataset: Dataset,
                   preset: QuantizationPreset,
                   target_device: TargetDevice,
                   subset_size: int,
                   fast_error_correction: bool,
-                  model_type: Optional[str] = None) -> ov.Model:
+                  model_type: Optional[str] = None,
+                  ignored_scope: Optional[IgnoredScope] = None) -> ov.Model:
     """
     Implementation of the `quantize()` method for the OpenVINO backend.
     """
@@ -96,6 +127,7 @@ def quantize_impl(model: ov.Model,
                 'stat_subset_size': subset_size,
                 'use_fast_bias': fast_error_correction,
                 'model_type': model_type,
+                'ignored': _create_ignored_scope_config(ignored_scope)
             }
         }
     ]

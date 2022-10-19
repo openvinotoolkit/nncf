@@ -62,7 +62,7 @@ def pytest_addoption(parser):
                                                             "if param not specified"
     )
     parser.addoption(
-        "--ov-data-dir", type=str, default=None, help="Path to datasets directory for OpenVino accuracy test"
+        "--ov-data-dir", type=str, default=None, help="Path to datasets directory for OpenVINO accuracy test"
     )
     parser.addoption(
         "--imagenet", action="store_true", default=False, help="Enable tests with imagenet"
@@ -83,13 +83,13 @@ def pytest_addoption(parser):
                                                                         "on RTX3090 cards"
     )
     parser.addoption(
-        "--run-openvino-eval", action="store_true", default=False, help="To run eval models via OpenVino"
+        "--run-openvino-eval", action="store_true", default=False, help="To run eval models via OpenVINO"
     )
     parser.addoption(
         "--onnx-dir", type=str, default=None, help="Path to converted onnx models"
     )
     parser.addoption(
-        "--ov-config-dir", type=str, default=None, help="Path to OpenVino configs"
+        "--ov-config-dir", type=str, default=None, help="Path to OpenVINO configs"
     )
     parser.addoption(
         "--pip-cache-dir", type=str, default=None,

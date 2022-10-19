@@ -30,8 +30,8 @@ The test result will be saved in `nncf-test.xml`, and it will returns pass, skip
 --metrics-dump-path=METRICS_DUMP_PATH
                       Path to directory to store metrics. Directory must be empty or should not exist.Metric keeps in PROJECT_ROOT/test_results/metrics_dump_timestamp if param   not specified
 --ov-data-dir=OV_DATA_DIR
-                      Path to datasets directory for OpenVino accuracy test
---run-openvino-eval   To run eval models via OpenVino
+                      Path to datasets directory for OpenVINO accuracy test
+--run-openvino-eval   To run eval models via OpenVINO
 --run-weekly-tests    To run weekly tests
 --models-dir=MODELS_DIR
                       Path to checkpoints directory for weekly tests

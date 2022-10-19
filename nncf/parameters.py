@@ -12,6 +12,7 @@
 """
 
 from enum import Enum
+from typing import List
 
 
 class TargetDevice(Enum):
@@ -30,3 +31,23 @@ class TargetDevice(Enum):
     CPU = 'CPU'
     GPU = 'GPU'
     VPU = 'VPU'
+
+
+class IgnoredScope:
+    """
+    Dataclass that contains description of the ignored scope
+    """
+
+    def __init__(self,
+                 node_names: List[str] = None,
+                 node_name_regexps: List[str] = None,
+                 node_types: List[str] = None):
+        """
+        :param node_names: list of ignored node names
+        :param node_name_regexps: list of regular expressions applied
+            to node names
+        :param node_types: list of ignored node types
+        """
+        self.node_names = node_names
+        self.node_name_regexps = node_name_regexps
+        self.node_types = node_types
