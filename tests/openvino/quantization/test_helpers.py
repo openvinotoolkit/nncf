@@ -48,7 +48,7 @@ def test_create_ignored_scope_config(ignored_node_names, ignored_node_types):
 
 def test_create_ignored_scope_config_raise_exception():
     ignored_scope = IgnoredScope(
-        node_name_regexps='.*'
+        node_name_patterns='.*'
     )
     with pytest.raises(Exception):
         _ = _create_ignored_scope_config(ignored_scope)

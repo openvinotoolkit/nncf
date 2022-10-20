@@ -11,21 +11,21 @@
  limitations under the License.
 """
 
+import logging
 import tempfile
 from pathlib import Path
-from typing import Optional
-import logging
+from typing import Dict, Optional
 
 import openvino.runtime as ov
 from openvino.tools import pot
 
-from nncf.data import Dataset
-from nncf.openvino.utils import POTDataLoader
-from nncf.openvino.engine import OVEngine
-from nncf.parameters import IgnoredScope
-from nncf.parameters import TargetDevice
 from nncf.common.quantization.structs import QuantizationPreset
 from nncf.common.utils.logger import logger as nncf_logger
+from nncf.data import Dataset
+from nncf.openvino.engine import OVEngine
+from nncf.openvino.utils import POTDataLoader
+from nncf.parameters import IgnoredScope
+from nncf.parameters import TargetDevice
 
 
 def _convert_openvino_model_to_compressed_model(model: ov.Model,
@@ -67,7 +67,7 @@ def _convert_compressed_model_to_openvino_model(model: pot.graph.nx_model.Compre
     return ov_model
 
 
-def _create_ignored_scope_config(ignored_scope: IgnoredScope) -> dict:
+def _create_ignored_scope_config(ignored_scope: IgnoredScope) -> Dict:
     """
     Creates POT ignored scope configuration from the ignored scope that is
     defined using `IgnoredScope` class.
@@ -84,7 +84,7 @@ def _create_ignored_scope_config(ignored_scope: IgnoredScope) -> dict:
         if isinstance(node_names, str):
             node_names = [node_names]
         ignored['scope'] = node_names
-    if ignored_scope.node_name_regexps is not None:
+    if ignored_scope.node_name_patterns is not None:
         raise RuntimeError('Quantization algorithm form the OpenVINO backend '
                            'does not support node name regular expressions '
                            'in the ignored scopes yet')

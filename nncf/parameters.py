@@ -35,19 +35,48 @@ class TargetDevice(Enum):
 
 class IgnoredScope:
     """
-    Dataclass that contains description of the ignored scope
+    Dataclass that contains description of the ignored scope.
+
+    The ignored scope specify model sub-graphs which should be excluded from
+    the optimization process such as quantization, pruning and etc.
+
+    For example, you want to exclude some model nodes from the optimization
+    process by node name:
+
+    ```
+    import nncf
+    node_names = ['node_1', 'node_2', 'node_3']
+    ignored_scope = nncf.IgnoredScope(node_names=node_names)
+    ```
+
+    or using regular expressions to match node names:
+
+    ```
+    pattern = ['node_\d']
+    ignored_scope = nncf.IgnoredScope(node_name_patterns=pattern)
+    ```
+
+    to exclude some nodes of the OpenVINO model from the optimization process
+    by node type:
+
+    ```
+    node_types = ['Multiply', 'GroupConvolution', 'Interpolate']
+    ignored_scope = nncf.IgnoredScope(node_types=pattern)
+    ```
+
+    **Note** Node types must be specified according to the model framework.
     """
 
     def __init__(self,
                  node_names: Optional[List[str]] = None,
-                 node_name_regexps: Optional[List[str]] = None,
+                 node_name_patterns: Optional[List[str]] = None,
                  node_types: Optional[List[str]] = None):
         """
         :param node_names: List of ignored node names
-        :param node_name_regexps: List of regular expressions specifying
+        :param node_name_patterns: List of regular expressions specifying
             patterns for names of ignored nodes
         :param node_types: List of ignored node types
         """
         self.node_names = node_names
-        self.node_name_regexps = node_name_regexps
+        self.node_name_patterns = node_name_patterns
         self.node_types = node_types
