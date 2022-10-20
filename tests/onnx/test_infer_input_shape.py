@@ -19,7 +19,7 @@ import os
 
 import onnx
 
-from nncf.onnx.utils import infer_input_shape
+from nncf.onnx.passes.infer import infer_input_shape
 from tests.common.helpers import TEST_ROOT
 from tests.onnx.quantization.common import ModelToTest
 
