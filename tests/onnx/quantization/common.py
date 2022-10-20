@@ -29,8 +29,8 @@ from nncf.experimental.post_training.api.dataset import Dataset
 from nncf.experimental.post_training.compression_builder import CompressionBuilder
 from nncf.experimental.post_training.algorithms.quantization.min_max.algorithm import MinMaxQuantization
 from nncf.experimental.post_training.algorithms.quantization import MinMaxQuantizationParameters
-from nncf.experimental.post_training.algorithms.quantization import PostTrainingQuantization
-from nncf.experimental.post_training.algorithms.quantization import PostTrainingQuantizationParameters
+from nncf.experimental.post_training.algorithms.quantization import DefaultQuantization
+from nncf.experimental.post_training.algorithms.quantization import DefaultQuantizationParameters
 from nncf.onnx.graph.nncf_graph_builder import GraphConverter
 from nncf.onnx.tensor import ONNXNNCFTensor
 from nncf.onnx.graph.onnx_graph import ONNXGraph
@@ -100,7 +100,7 @@ def ptq_quantize_model(
     dataset = DatasetForTest(_get_input_key(original_model), input_shape, input_np_dtype, dataset_has_batch_size)
     builder = CompressionBuilder(convert_opset_version)
     builder.add_algorithm(
-        PostTrainingQuantization(PostTrainingQuantizationParameters(number_samples=1, ignored_scopes=ignored_scopes)))
+        DefaultQuantization(DefaultQuantizationParameters(number_samples=1, ignored_scopes=ignored_scopes)))
     quantized_model = builder.apply(original_model, dataset)
     return quantized_model
 

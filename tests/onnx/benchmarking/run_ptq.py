@@ -20,8 +20,8 @@ import onnx
 from nncf.onnx.tensor import ONNXNNCFTensor
 
 from nncf.experimental.post_training.compression_builder import CompressionBuilder
-from nncf.experimental.post_training.algorithms.quantization import PostTrainingQuantization
-from nncf.experimental.post_training.algorithms.quantization import PostTrainingQuantizationParameters
+from nncf.experimental.post_training.algorithms.quantization import DefaultQuantization
+from nncf.experimental.post_training.algorithms.quantization import DefaultQuantizationParameters
 from nncf.common.utils.logger import logger as nncf_logger
 
 from openvino.tools.accuracy_checker.config import ConfigReader
@@ -85,11 +85,11 @@ def run(onnx_model_path: str, output_model_path: str, dataset: Dataset,
     builder = CompressionBuilder(convert_opset_version)
 
     # Step 2: Create the quantization algorithm and add to the builder.
-    quantization_parameters = PostTrainingQuantizationParameters(
+    quantization_parameters = DefaultQuantizationParameters(
         number_samples=num_init_samples,
         ignored_scopes=ignored_scopes
     )
-    quantization = PostTrainingQuantization(quantization_parameters)
+    quantization = DefaultQuantization(quantization_parameters)
     builder.add_algorithm(quantization)
 
     # Step 4: Execute the pipeline.

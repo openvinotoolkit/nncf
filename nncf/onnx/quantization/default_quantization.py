@@ -11,25 +11,26 @@
  limitations under the License.
 """
 
-from nncf.common.quantization.quantizer_propagation.structs import QuantizationTrait
-from nncf.onnx.graph.metatypes.onnx_metatypes import ONNXConvolutionMetatype
-from nncf.onnx.graph.metatypes.onnx_metatypes import ONNXConvolutionTransposeMetatype
-from nncf.onnx.graph.metatypes.onnx_metatypes import ONNXLinearMetatype
-from nncf.onnx.graph.metatypes.onnx_metatypes import ONNXMatMulMetatype
-from nncf.onnx.graph.metatypes.onnx_metatypes import ONNXSigmoidMetatype
-from nncf.onnx.graph.metatypes.onnx_metatypes import ONNXHardSigmoidMetatype
-from nncf.onnx.graph.metatypes.onnx_metatypes import ONNXAveragePoolMetatype
-from nncf.onnx.graph.metatypes.onnx_metatypes import ONNXGlobalAveragePoolMetatype
-from nncf.onnx.graph.metatypes.onnx_metatypes import ONNXAddLayerMetatype
-from nncf.onnx.graph.metatypes.onnx_metatypes import ONNXSubMetatype
-from nncf.onnx.graph.metatypes.onnx_metatypes import ONNXMulLayerMetatype
-from nncf.onnx.graph.metatypes.onnx_metatypes import ONNXConcatLayerMetatype
-from nncf.onnx.graph.metatypes.onnx_metatypes import ONNXBatchNormMetatype
-from nncf.onnx.graph.metatypes.onnx_metatypes import ONNXResizeMetatype
-from nncf.onnx.graph.metatypes.onnx_metatypes import ONNXSoftmaxMetatype
-from nncf.onnx.graph.metatypes.onnx_metatypes import ONNXExpMetatype
-
 from nncf.common.graph.operator_metatypes import UnknownMetatype
+from nncf.common.quantization.quantizer_propagation.structs import \
+    QuantizationTrait
+from nncf.onnx.graph.metatypes.onnx_metatypes import (
+    ONNXAddLayerMetatype,
+    ONNXAveragePoolMetatype,
+    ONNXBatchNormMetatype,
+    ONNXConcatLayerMetatype,
+    ONNXConvolutionMetatype,
+    ONNXConvolutionTransposeMetatype,
+    ONNXExpMetatype,
+    ONNXGlobalAveragePoolMetatype,
+    ONNXHardSigmoidMetatype,
+    ONNXLinearMetatype,
+    ONNXMatMulMetatype,
+    ONNXMulLayerMetatype,
+    ONNXResizeMetatype,
+    ONNXSigmoidMetatype,
+    ONNXSoftmaxMetatype,
+    ONNXSubMetatype)
 
 DEFAULT_ONNX_QUANT_TRAIT_TO_OP_DICT = {
     QuantizationTrait.INPUTS_QUANTIZABLE: [

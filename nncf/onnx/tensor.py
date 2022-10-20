@@ -12,7 +12,6 @@
 """
 
 import numpy as np
-
 from nncf.common.tensor import NNCFTensor
 
 

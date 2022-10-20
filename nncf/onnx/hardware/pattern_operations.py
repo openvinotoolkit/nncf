@@ -11,25 +11,26 @@
  limitations under the License.
 """
 
-from nncf.common.graph.patterns import merge_two_types_of_operations
 from nncf.common.graph.graph_matching import GraphPattern
-from nncf.onnx.graph.metatypes.onnx_metatypes import ONNXConvolutionMetatype
-from nncf.onnx.graph.metatypes.onnx_metatypes import ONNXConvolutionTransposeMetatype
-from nncf.onnx.graph.metatypes.onnx_metatypes import ONNXLinearMetatype
-from nncf.onnx.graph.metatypes.onnx_metatypes import ONNXMatMulMetatype
-from nncf.onnx.graph.metatypes.onnx_metatypes import ONNXBatchNormMetatype
-from nncf.onnx.graph.metatypes.onnx_metatypes import ONNXReluMetatype
-from nncf.onnx.graph.metatypes.onnx_metatypes import ONNXLeakyReluMetatype
-from nncf.onnx.graph.metatypes.onnx_metatypes import ONNXThresholdedReluMetatype
-from nncf.onnx.graph.metatypes.onnx_metatypes import ONNXEluMetatype
-from nncf.onnx.graph.metatypes.onnx_metatypes import ONNXPReluMetatype
-from nncf.onnx.graph.metatypes.onnx_metatypes import ONNXSigmoidMetatype
-from nncf.onnx.graph.metatypes.onnx_metatypes import ONNXHardSigmoidMetatype
-from nncf.onnx.graph.metatypes.onnx_metatypes import ONNXHardSwishMetatype
-from nncf.onnx.graph.metatypes.onnx_metatypes import ONNXAddLayerMetatype
-from nncf.onnx.graph.metatypes.onnx_metatypes import ONNXMulLayerMetatype
-from nncf.onnx.graph.metatypes.onnx_metatypes import ONNXDivLayerMetatype
-from nncf.onnx.graph.metatypes.onnx_metatypes import ONNXSubMetatype
+from nncf.common.graph.patterns import merge_two_types_of_operations
+from nncf.onnx.graph.metatypes.onnx_metatypes import (
+    ONNXAddLayerMetatype,
+    ONNXBatchNormMetatype,
+    ONNXConvolutionMetatype,
+    ONNXConvolutionTransposeMetatype,
+    ONNXDivLayerMetatype,
+    ONNXEluMetatype,
+    ONNXHardSigmoidMetatype,
+    ONNXHardSwishMetatype,
+    ONNXLeakyReluMetatype,
+    ONNXLinearMetatype,
+    ONNXMatMulMetatype,
+    ONNXMulLayerMetatype,
+    ONNXPReluMetatype,
+    ONNXReluMetatype,
+    ONNXSigmoidMetatype,
+    ONNXSubMetatype,
+    ONNXThresholdedReluMetatype)
 
 LINEAR_OPERATIONS = {GraphPattern.METATYPE_ATTR: [ONNXConvolutionMetatype,
                                                   ONNXConvolutionTransposeMetatype,

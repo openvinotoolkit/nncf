@@ -11,14 +11,15 @@
  limitations under the License.
 """
 
-from typing import Optional, List
-import numpy as np
+from typing import List, Optional
 
-from nncf.common.graph.transformations.commands import Command, TransformationCommand
-from nncf.common.graph.transformations.commands import TransformationType
-from nncf.common.graph.transformations.commands import TargetType
-from nncf.common.graph.transformations.commands import TargetPoint
-from nncf.experimental.post_training.algorithms.quantization.min_max.utils import QuantizerLayerParameters
+import numpy as np
+from nncf.common.graph.transformations.commands import (Command, TargetPoint,
+                                                        TargetType,
+                                                        TransformationCommand,
+                                                        TransformationType)
+from nncf.experimental.post_training.algorithms.quantization.min_max.utils import \
+    QuantizerLayerParameters
 
 
 class ONNXTargetPoint(TargetPoint):

@@ -36,9 +36,9 @@ from nncf.experimental.post_training.statistics.statistic_point import Statistic
 ModelType = TypeVar('ModelType')
 
 
-class PostTrainingQuantizationParameters(AlgorithmParameters):
+class DefaultQuantizationParameters(AlgorithmParameters):
     """
-    This class handles parameters for PostTrainingQuantization algorithm.
+    This class handles parameters for DefaultQuantization algorithm.
     """
 
     def __init__(self,
@@ -73,19 +73,15 @@ class PostTrainingQuantizationParameters(AlgorithmParameters):
         pass
 
 
-class PostTrainingQuantization(CompositeAlgorithm):
+class DefaultQuantization(CompositeAlgorithm):
     """
-    Implements Post-Training Quantization algorithm, which basically includes:
+    Implements Post-Training DefaultQuantization algorithm, which basically includes:
     1) MinMaxQuantization
     2) FastBiasCorrection
-    3) ChannelAlignment
-
-    Disclaimer: currently, it only supports MinMaxQuantization. The following algorithms will be added soon.
-
     """
 
     def __init__(self,
-                 quantization_parameters: PostTrainingQuantizationParameters = PostTrainingQuantizationParameters()):
+                 quantization_parameters: DefaultQuantizationParameters = DefaultQuantizationParameters()):
         super().__init__()
         self.algorithms_to_created = quantization_parameters.algorithms
 

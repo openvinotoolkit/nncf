@@ -18,9 +18,9 @@ import numpy as np
 import onnx
 
 from nncf.experimental.post_training.compression_builder import CompressionBuilder
-from nncf.experimental.post_training.algorithms.quantization import PostTrainingQuantization
-from nncf.experimental.post_training.algorithms.quantization import PostTrainingQuantizationParameters
-from nncf.onnx.common import infer_input_shape
+from nncf.experimental.post_training.algorithms.quantization import DefaultQuantization
+from nncf.experimental.post_training.algorithms.quantization import DefaultQuantizationParameters
+from nncf.onnx.utils import infer_input_shape
 from examples.experimental.onnx.classification.imagenet_dataset import create_imagenet_torch_dataset
 from nncf.experimental.post_training.api.metric import Accuracy
 from nncf.common.utils.logger import logger as nncf_logger
@@ -53,11 +53,11 @@ def run(onnx_model_path: str, output_model_path: str,
     builder = CompressionBuilder()
 
     # Step 3: Create the quantization algorithm and add to the builder.
-    quantization_parameters = PostTrainingQuantizationParameters(
+    quantization_parameters = DefaultQuantizationParameters(
         number_samples=num_init_samples,
         ignored_scopes=ignored_scopes
     )
-    quantization = PostTrainingQuantization(quantization_parameters)
+    quantization = DefaultQuantization(quantization_parameters)
     builder.add_algorithm(quantization)
 
     # Step 4: Execute the pipeline.

@@ -13,9 +13,12 @@
 
 from collections import Counter
 from copy import deepcopy
-import onnx
-from onnx.version_converter import convert_version, ConvertError  # pylint: disable=no-name-in-module
+
 from nncf.common.utils.logger import logger as nncf_logger
+
+import onnx
+from onnx.version_converter import (  # pylint: disable=no-name-in-module
+    ConvertError, convert_version)
 
 
 class ONNXModelNormalizer:

@@ -11,18 +11,14 @@
  limitations under the License.
 """
 
-from typing import Callable, Optional
-from typing import Dict
-from typing import List
+from typing import Callable, Dict, List, Optional
 
+import numpy as np
 import onnx
 from onnx import NodeProto  # pylint: disable=no-name-in-module
 from onnx import ValueInfoProto  # pylint: disable=no-name-in-module
 from onnx import numpy_helper  # pylint: disable=no-name-in-module
-import numpy as np
-
 from skl2onnx.helpers.onnx_helper import enumerate_model_node_outputs
-
 
 # pylint: disable=no-member, too-many-public-methods
 

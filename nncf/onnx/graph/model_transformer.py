@@ -10,24 +10,24 @@
  See the License for the specific language governing permissions and
  limitations under the License.
 """
+from collections import Counter
+from copy import deepcopy
 from typing import List, Optional, Tuple
 
-from copy import deepcopy
-from collections import Counter
 import onnx
-
+from nncf.common.graph.definitions import NNCFGraphNodeType
 from nncf.common.graph.graph import NNCFGraph
 from nncf.common.graph.transformations.commands import TargetType
 from nncf.common.graph.transformations.layout import TransformationLayout
 from nncf.common.quantization.structs import QuantizationMode
-from nncf.common.graph.definitions import NNCFGraphNodeType
-from nncf.onnx.graph.onnx_graph import ONNXGraph
-from nncf.onnx.graph.transformations.commands import ONNXBiasCorrectionCommand
-from nncf.onnx.graph.transformations.commands import ONNXModelExtractionCommand
-from nncf.onnx.graph.transformations.commands import ONNXOutputInsertionCommand
-from nncf.onnx.graph.transformations.commands import ONNXQuantizerInsertionCommand
 from nncf.experimental.post_training.factories import NNCFGraphFactory
-from nncf.experimental.post_training.graph.model_transformer import StaticModelTransformerBase
+from nncf.experimental.post_training.graph.model_transformer import \
+    StaticModelTransformerBase
+from nncf.onnx.graph.onnx_graph import ONNXGraph
+from nncf.onnx.graph.transformations.commands import (ONNXBiasCorrectionCommand,
+                                                      ONNXModelExtractionCommand,
+                                                      ONNXOutputInsertionCommand,
+                                                      ONNXQuantizerInsertionCommand)
 
 
 # pylint: disable=no-member

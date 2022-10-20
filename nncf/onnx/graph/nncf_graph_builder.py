@@ -10,25 +10,23 @@
  See the License for the specific language governing permissions and
  limitations under the License.
 """
-from typing import Union, List
+from typing import List, Union
 
 import onnx
-from onnx import ModelProto
-from onnx import NodeProto  # pylint: disable=no-name-in-module
-
 from nncf.common.graph import NNCFGraph
-from nncf.common.graph.definitions import NNCFGraphNodeType
-from nncf.common.graph.operator_metatypes import UnknownMetatype
+from nncf.common.graph.definitions import (MODEL_INPUT_OP_NAME,
+                                           MODEL_OUTPUT_OP_NAME,
+                                           NNCFGraphNodeType)
 from nncf.common.graph.layer_attributes import BaseLayerAttributes, Dtype
-from nncf.common.graph.definitions import MODEL_INPUT_OP_NAME
-from nncf.common.graph.definitions import MODEL_OUTPUT_OP_NAME
-from nncf.common.graph.operator_metatypes import InputNoopMetatype
-from nncf.common.graph.operator_metatypes import OutputNoopMetatype
+from nncf.common.graph.operator_metatypes import (InputNoopMetatype,
+                                                  OutputNoopMetatype,
+                                                  UnknownMetatype)
 from nncf.common.utils.logger import logger as nncf_logger
-
+from nncf.onnx.graph.metatypes.onnx_metatypes import (ONNX_OPERATION_METATYPES,
+                                                      ONNXConstantMetatype)
 from nncf.onnx.graph.onnx_graph import ONNXGraph
-from nncf.onnx.graph.metatypes.onnx_metatypes import ONNX_OPERATION_METATYPES
-from nncf.onnx.graph.metatypes.onnx_metatypes import ONNXConstantMetatype
+from onnx import NodeProto  # pylint: disable=no-name-in-module
+from onnx import ModelProto
 
 
 class GraphConverter:

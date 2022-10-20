@@ -11,17 +11,15 @@
  limitations under the License.
 """
 
-from typing import List
-from typing import Union
 from collections import defaultdict
+from typing import List, Union
 
 from nncf.common.utils.logger import logger as nncf_logger
-from nncf.onnx.tensor_statistics.collectors import ONNXNNCFCollectorTensorProcessor
-
 from nncf.experimental.post_training.api.dataset import Dataset, NNCFData
-
-from nncf.experimental.post_training.samplers import BatchSampler
-from nncf.experimental.post_training.samplers import RandomBatchSampler
+from nncf.experimental.post_training.samplers import (BatchSampler,
+                                                      RandomBatchSampler)
+from nncf.onnx.tensor_statistics.collectors import \
+    ONNXNNCFCollectorTensorProcessor
 
 
 def _post_process(nncf_data_list: List[NNCFData], stack_tensors: bool = True) -> NNCFData:

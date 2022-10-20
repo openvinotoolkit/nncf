@@ -11,21 +11,21 @@
  limitations under the License.
 """
 
-import onnxruntime as rt
 import numpy as np
-import onnx
-
-from nncf.common.graph.transformations.commands import TargetType
+import onnxruntime as rt
 from nncf.common.graph.definitions import NNCFGraphNodeType
-from nncf.onnx.graph.onnx_graph import ONNXGraph
-
+from nncf.common.graph.transformations.commands import TargetType
 from nncf.experimental.post_training.api.dataset import NNCFData
 from nncf.experimental.post_training.api.engine import Engine
 from nncf.experimental.post_training.api.sampler import Sampler
 from nncf.experimental.post_training.factories import NNCFGraphFactory
-from nncf.experimental.post_training.statistics.statistic_point import StatisticPointsContainer
+from nncf.experimental.post_training.statistics.statistic_point import \
+    StatisticPointsContainer
+from nncf.onnx.graph.onnx_graph import ONNXGraph
 from nncf.onnx.samplers import create_onnx_sampler
 from nncf.onnx.tensor import ONNXNNCFTensor
+
+import onnx
 
 
 class ONNXEngine(Engine):

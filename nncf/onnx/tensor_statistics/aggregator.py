@@ -11,16 +11,16 @@
  limitations under the License.
 """
 
-from nncf.common.utils.logger import logger as nncf_logger
 from nncf.common.graph.transformations.layout import TransformationLayout
+from nncf.common.utils.logger import logger as nncf_logger
 from nncf.experimental.post_training.api.dataset import Dataset
-from nncf.experimental.post_training.statistics.aggregator import StatisticsAggregator
-from nncf.experimental.post_training.statistics.aggregator import StatisticPointsContainer
 from nncf.experimental.post_training.api.sampler import Sampler
-from nncf.onnx.samplers import ONNXBatchSampler
-from nncf.onnx.samplers import ONNXRandomBatchSampler
+from nncf.experimental.post_training.statistics.aggregator import (
+    StatisticPointsContainer,
+    StatisticsAggregator)
 from nncf.onnx.engine import ONNXEngine
 from nncf.onnx.graph.transformations.commands import ONNXOutputInsertionCommand
+from nncf.onnx.samplers import ONNXBatchSampler, ONNXRandomBatchSampler
 
 
 class ONNXStatisticsAggregator(StatisticsAggregator):

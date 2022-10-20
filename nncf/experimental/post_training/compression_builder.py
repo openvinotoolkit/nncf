@@ -100,7 +100,7 @@ class CompressionBuilder:
         Apply compression algorithms to the 'model'.
 
         1) Prepare the original model. This step is essential for some backends, e.g. ONNX
-        2) Creates subalgorithms, which is essential for some composite algorithms such as PostTrainingQuantization
+        2) Creates subalgorithms, which is essential for some composite algorithms such as DefaultQuantization
         2) Creates default Engine if it wasn't provided.
         3) Creates StatisticsAggregator.
         4) Get layers for statistics collection from algorithms.

@@ -13,12 +13,12 @@
 
 from nncf.common.graph.definitions import NNCFGraphNodeType
 from nncf.common.graph.patterns import GraphPattern
-
-from nncf.onnx.graph.metatypes.onnx_metatypes import ONNXSigmoidMetatype
-from nncf.onnx.graph.metatypes.onnx_metatypes import ONNXHardSigmoidMetatype
-from nncf.onnx.graph.metatypes.onnx_metatypes import ONNXAddLayerMetatype
-from nncf.onnx.graph.metatypes.onnx_metatypes import ONNXSubMetatype
-from nncf.onnx.graph.metatypes.onnx_metatypes import ONNXMulLayerMetatype
+from nncf.onnx.graph.metatypes.onnx_metatypes import (
+    ONNXAddLayerMetatype,
+    ONNXHardSigmoidMetatype,
+    ONNXMulLayerMetatype,
+    ONNXSigmoidMetatype,
+    ONNXSubMetatype)
 
 
 def create_swish_activation() -> GraphPattern:

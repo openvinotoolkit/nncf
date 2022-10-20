@@ -11,11 +11,10 @@
  limitations under the License.
 """
 
-from typing import List
-from typing import Type
+from typing import List, Type
 
-from nncf.common.graph.operator_metatypes import OperatorMetatype
-from nncf.common.graph.operator_metatypes import OperatorMetatypeRegistry
+from nncf.common.graph.operator_metatypes import (OperatorMetatype,
+                                                  OperatorMetatypeRegistry)
 from nncf.common.hardware.opset import HWConfigOpName
 
 ONNX_OPERATION_METATYPES = OperatorMetatypeRegistry('onnx_operator_metatypes')

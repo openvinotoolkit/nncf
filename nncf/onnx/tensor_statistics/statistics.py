@@ -12,9 +12,8 @@
 """
 
 import numpy as np
-
-from nncf.common.tensor_statistics.statistics import MinMaxTensorStatistic
-from nncf.common.tensor_statistics.statistics import MeanTensorStatistic
+from nncf.common.tensor_statistics.statistics import (MeanTensorStatistic,
+                                                      MinMaxTensorStatistic)
 
 
 class ONNXMinMaxTensorStatistic(MinMaxTensorStatistic):
