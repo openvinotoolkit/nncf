@@ -51,8 +51,8 @@ def quantize(model: ModelType,
         more time but requires less memory.
     :param model_type: Model type is needed to specify additional patterns
         in the model. Supported only `transformer` now.
-    :param ignored_scope: An ignored scope that defined list of model control
-        flow graph nodes be ignored during quantization.
+    :param ignored_scope: An ignored scope that defined the list of model control
+        flow graph nodes to be ignored during quantization.
     :return: The quantized model.
     """
     backend = get_backend(model)

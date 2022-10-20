@@ -20,7 +20,6 @@ from nncf.parameters import TargetDevice
 from nncf.quantization import QuantizationPreset
 from nncf.quantization import quantize
 
-
 try:
     import torch
 except ImportError:

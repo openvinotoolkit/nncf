@@ -12,7 +12,7 @@
 """
 
 from enum import Enum
-from typing import List
+from typing import List, Optional
 
 
 class TargetDevice(Enum):
@@ -39,14 +39,14 @@ class IgnoredScope:
     """
 
     def __init__(self,
-                 node_names: List[str] = None,
-                 node_name_regexps: List[str] = None,
-                 node_types: List[str] = None):
+                 node_names: Optional[List[str]] = None,
+                 node_name_regexps: Optional[List[str]] = None,
+                 node_types: Optional[List[str]] = None):
         """
-        :param node_names: list of ignored node names
-        :param node_name_regexps: list of regular expressions applied
-            to node names
-        :param node_types: list of ignored node types
+        :param node_names: List of ignored node names
+        :param node_name_regexps: List of regular expressions specifying
+            patterns for names of ignored nodes
+        :param node_types: List of ignored node types
         """
         self.node_names = node_names
         self.node_name_regexps = node_name_regexps
