@@ -10,8 +10,3 @@
  See the License for the specific language governing permissions and
  limitations under the License.
 """
-
-from nncf.experimental.post_training.algorithms.quantization.default.algorithm import DefaultQuantization
-from nncf.experimental.post_training.algorithms.quantization.default.algorithm import DefaultQuantizationParameters
-from nncf.experimental.post_training.algorithms.quantization.min_max.algorithm import MinMaxQuantization
-from nncf.experimental.post_training.algorithms.quantization.min_max.algorithm import MinMaxQuantizationParameters
