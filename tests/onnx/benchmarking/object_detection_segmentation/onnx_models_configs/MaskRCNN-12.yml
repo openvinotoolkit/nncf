@@ -33,7 +33,7 @@ models:
     has_batch_dim: False
     disallowed_op_types: ["Resize", 'Div', "RoiAlign", 'ScatterElements']
     convert_opset_version: False
-    ignored_scopes: ['6593', '6592', '6587', '6583', '6582', '6581', '6564', '6579', '6562',
+    ignored_scopes: ['6593', '6592', '6590', '6587', '6586', '6583', '6582', '6581', '6564', '6579', '6562', '6588'
                      '413', '414', '445', '446', '477', '478']
 
   - name: MaskRCNN-12-inst-seg
