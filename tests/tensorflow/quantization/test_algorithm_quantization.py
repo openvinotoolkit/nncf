@@ -15,12 +15,14 @@ import pytest
 import tensorflow as tf
 from tensorflow.keras import layers
 
+from nncf.common.initialization.batchnorm_adaptation import BatchnormAdaptationAlgorithm
 from nncf.tensorflow.graph.metatypes.matcher import get_keras_layer_metatype
 from nncf.tensorflow.layers.custom_objects import NNCF_QUANTIZATION_OPERATIONS
 from nncf.tensorflow.layers.operation import InputType
 from nncf.tensorflow.layers.wrapper import NNCFWrapper
 from nncf.tensorflow.layers.data_layout import get_channel_axis
 from nncf.tensorflow.quantization import FakeQuantize
+from nncf.tensorflow.quantization.algorithm import QuantizationBuilder
 from nncf.tensorflow.quantization.algorithm import QuantizationController
 from nncf.tensorflow.quantization.quantizers import Quantizer
 from nncf.tensorflow.quantization.quantizers import TFQuantizerSpec
@@ -32,6 +34,7 @@ from tests.tensorflow.quantization.utils import get_basic_quantization_config
 # TODO(nlyalyus): WA for the bug 58886, QuantizationMode should be imported after nncf.tensorflow.
 #  Otherwise test_quantize_inputs and test_quantize_outputs_removal will fail, because of invalid inputs quantization
 from nncf.common.quantization.structs import QuantizationMode
+
 
 def compare_qspecs(qspec: TFQuantizerSpec, quantizer):
     assert qspec.num_bits == quantizer.num_bits
@@ -714,3 +717,20 @@ def test_quantization_preset_with_scope_overrides():
             assert wq.mode == 'asymmetric'
         else:
             assert wq.mode == 'symmetric'
+
+
+def test_quantization_with_bn_adaptation_disable(mocker):
+    model = get_basic_conv_test_model()
+    config = get_basic_quantization_config()
+    config['compression']['initializer'] = {
+        'batchnorm_adaptation': {
+            'num_bn_adaptation_samples': 0
+        }
+    }
+
+    init_spy = mocker.spy(QuantizationBuilder, 'initialize')
+    bn_adaptation_spy = mocker.spy(BatchnormAdaptationAlgorithm, 'run')
+    create_compressed_model_and_algo_for_test(model, config)
+
+    init_spy.assert_called()
+    bn_adaptation_spy.assert_not_called()
