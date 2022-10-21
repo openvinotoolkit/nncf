@@ -110,6 +110,7 @@ compression_ctrl.export_model("compressed_model.pb", save_format='frozen_graph')
 
 For a more detailed description of NNCF usage in your training code, see [this tutorial](docs/Usage.md). 
 For in-depth examples of NNCF integration, browse the [sample scripts](#model-compression-samples) code, or the [example patches](#third-party-repository-integration) to third-party repositories.
+For FAQ, visit this [link](./docs/FAQ.md).
 
 
 ## Model Compression Samples
