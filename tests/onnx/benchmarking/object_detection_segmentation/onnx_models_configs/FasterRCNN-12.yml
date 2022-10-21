@@ -31,4 +31,5 @@ models:
 
     has_batch_dim: False
     disallowed_op_types: ["Resize", 'Div', "RoiAlign", 'ScatterElements']
+    ignored_scopes: ['413', '414', '445', '446', '477', '478']
     convert_opset_version: False
