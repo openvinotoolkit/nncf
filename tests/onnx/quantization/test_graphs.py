@@ -21,7 +21,9 @@ from tests.onnx.models import ALL_SYNTHETIC_MODELS
 from tests.onnx.models import MultiInputOutputModel
 
 
-@pytest.mark.parametrize('model_cls_to_test', ALL_SYNTHETIC_MODELS.values())
+
+@pytest.mark.parametrize('model_cls_to_test', ALL_SYNTHETIC_MODELS.values(),
+                         ids=[model_to_test().__class__.__name__ for model_to_test in ALL_SYNTHETIC_MODELS.values()])
 def test_syntetic_models_graph(model_cls_to_test):
     if model_cls_to_test == MultiInputOutputModel:
         pytest.skip('min_max_quantize_model does not support many inputs for now.')

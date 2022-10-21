@@ -27,7 +27,8 @@ from tests.onnx.quantization.common import infer_model
 @pytest.mark.parametrize(('model_to_test'),
                          [ModelToTest('icnet_camvid', [1, 3, 768, 960]),
                           ModelToTest('unet_camvid', [1, 3, 368, 480]),
-                          ]
+                          ],
+                         ids=['icnet_camvid', 'unet_camvid']
                          )
 def test_min_max_quantization_graph(tmp_path, model_to_test):
     onnx_model_dir = str(TEST_ROOT.joinpath('onnx', 'data', 'models'))

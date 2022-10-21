@@ -29,6 +29,7 @@ TEST_DATA = [ModelToTest('ssd_mobilenet_v1_12', [1, 300, 300, 3]),
              ModelToTest('ssd-12', [1, 3, 1200, 1200]),
              ModelToTest('yolov2-coco-9', [1, 3, 416, 416]),
              ModelToTest('tiny-yolov2', [1, 3, 416, 416]),
+             ModelToTest('FasterRCNN-12', [3, 30, 30]),
              ModelToTest('MaskRCNN-12', [3, 30, 30]),
              ModelToTest('retinanet-9', [1, 3, 480, 640]),
              ModelToTest('fcn-resnet50-12', [1, 3, 480, 640])
@@ -54,14 +55,19 @@ def test_min_max_quantization_graph(tmp_path, model_to_test):
         ignored_scopes += find_ignored_scopes(
             ["Resize", 'Div', "RoiAlign", 'ScatterElements'], original_model)
         # Runtime can not infere such model
-        ignored_scopes += ['6593', '6592', '6590', '6587', '6586', '6583', '6582', '6581', '6564', '6579', '6562', '6588']
+        ignored_scopes += ['6593', '6592', '6590', '6587', '6586', '6583', '6582', '6581', '6564', '6579', '6562',
+                           '6588']
         # # Runtime error on the Resize nodes
         ignored_scopes += ['413', '414', '445', '446', '477', '478']
     if model_to_test.model_name == 'ssd_mobilenet_v1_12':
         ignored_scopes = ['copy__21/Preprocessor/map/while/Less',
                           'Preprocessor/mul',
                           'copy__43/Postprocessor/BatchMultiClassNonMaxSuppression/map/while/Less', 'add']
-
+    if model_to_test.model_name == 'FasterRCNN-12':
+        convert_opset_version = False
+        ignored_scopes += find_ignored_scopes(
+            ["RoiAlign", 'Div', 'ScatterElements', 'Resize'], original_model)
+        ignored_scopes += ['413', '414', '445', '477', '478']
     quantized_model = min_max_quantize_model(model_to_test.input_shape, original_model,
                                              convert_opset_version=convert_opset_version,
                                              ignored_scopes=ignored_scopes,
