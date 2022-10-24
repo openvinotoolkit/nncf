@@ -438,23 +438,24 @@ class BaseQuantizer(nn.Module):
         return x, y_scale, y_zero_point
 
     def run_export_quantization(self, x: torch.Tensor):
-        if self._export_mode == QuantizerExportMode.FAKE_QUANTIZE:
-            x, levels, input_low, input_high = self._prepare_fq_export_quantization(x)
-            return ExportQuantizeToFakeQuantize.apply(x, levels,
-                                                      input_low,
-                                                      input_high,
-                                                      input_low,
-                                                      input_high)
-        if self._export_mode == QuantizerExportMode.ONNX_QUANTIZE_DEQUANTIZE_PAIRS:
-            x, y_scale, y_zero_point = self._prepare_qdq_export_quantization(x)
-            if self.per_channel and y_zero_point.numel() > 1:
-                if torch.allclose(y_scale - y_scale[0], torch.zeros_like(y_scale)) and \
-                        torch.allclose(y_zero_point - y_zero_point[0], torch.zeros_like(y_zero_point)):
-                    y_scale, y_zero_point = y_scale[0], y_zero_point[0]
-                    return ExportQuantizeToONNXQuantDequant.apply(x, y_scale, y_zero_point)
-                raise RuntimeError("PyTorch export to ONNX using QuantizeLinear-DequantizeLinear "
-                                   "doesn't support per channel quantization")
-            return ExportQuantizeToONNXQuantDequant.apply(x, y_scale, y_zero_point)
+        with torch.no_grad():
+            if self._export_mode == QuantizerExportMode.FAKE_QUANTIZE:
+                x, levels, input_low, input_high = self._prepare_fq_export_quantization(x)
+                return ExportQuantizeToFakeQuantize.apply(x, levels,
+                                                          input_low,
+                                                          input_high,
+                                                          input_low,
+                                                          input_high)
+            if self._export_mode == QuantizerExportMode.ONNX_QUANTIZE_DEQUANTIZE_PAIRS:
+                x, y_scale, y_zero_point = self._prepare_qdq_export_quantization(x)
+                if self.per_channel and y_zero_point.numel() > 1:
+                    if torch.allclose(y_scale - y_scale[0], torch.zeros_like(y_scale)) and \
+                            torch.allclose(y_zero_point - y_zero_point[0], torch.zeros_like(y_zero_point)):
+                        y_scale, y_zero_point = y_scale[0], y_zero_point[0]
+                        return ExportQuantizeToONNXQuantDequant.apply(x, y_scale, y_zero_point)
+                    raise RuntimeError("PyTorch export to ONNX using QuantizeLinear-DequantizeLinear "
+                                       "doesn't support per channel quantization")
+                return ExportQuantizeToONNXQuantDequant.apply(x, y_scale, y_zero_point)
         raise RuntimeError('Unknown export mode')
 
     def extra_repr(self):
