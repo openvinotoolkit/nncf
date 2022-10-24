@@ -9,23 +9,80 @@ Links to sections:
 
 ## Common
 
+### What is NNCF for?
+NNCF takes a deep learning network model object and modifies it for faster inference.
+Within NNCF, the process of modification is colloquially known as compression.
+
+Sometimes this is not possible to do without the loss of accuracy for the network without losing quality.
+NNCF provides algorithms that strive for minimal or zero loss of accuracy, which can be applied, depending on the algorithm, during training, fine-tuning or post-training.
+
 ### Does the Neural Network *Compression* Framework provide *lossless compression*?
-Not in the way the term "lossless compression" usually appears in literature. Under "compression" we mean the preparation of the model for *future* efficient execution of this model in the OpenVINO Inference Engine. Under "future" we mean that the process of compression is usually an offline, one-time step before the model is being used in production, which provides a new model object that could then be used instead of the original to run faster and take up lower memory without significantly losing accuracy.
+Not in the way the term "lossless compression" usually appears in literature. 
+Under "compression" we mean the preparation of the model for *future* efficient execution of this model in the OpenVINO Inference Engine. 
+Under "future" we mean that the process of compression is usually an offline, one-time step before the model is being used in production, which provides a new model object that could then be used instead of the original to run faster and take up lower memory without significantly losing accuracy.
 
 No *compression* in the sense of archiving or entropy coding is being done during NNCF compression.
+
+### How does your compression make inference faster?
+General, well-known, literature-backed techniques of neural network inference acceleration are applied, with Intel HW/runtime specifics in mind.
+
+### Can I use NNCF-compressed models with runtimes other than OpenVINO Inference Engine?
+While this is certainly possible in some cases, with a beneficial outcome even, we recommend NNCF as a way to get the most out of your setup based on OpenVINO Inference Engine inference.
+We aim for best results on OpenVINO runtime with Intel hardware, and development-wise this is not always easy to generalize to other platforms or runtimes.
+Some backends such as onnxruntime also support using OpenVINO Inference Engine as the actual executor for the inference, so NNCF-compressed models will also work there.
+
+### Do I need OpenVINO or an Intel CPU to run NNCF?
+Currently, this is not required in general.
+Most NNCF backends can run compression and produce a compressed model object without OpenVINO or an Intel CPU on board of the machine. You only need OpenVINO and Intel hardware when you actually need to run inference on the compressed model, e.g. in a production scenario.
+
+### Do I need a GPU to run NNCF?
+Currently all NNCF-supported backends allow running in a CPU-only mode, and NNCF does not disturb this.
+Note, however, that training-aware compression will naturally work much slower on most CPUs when compared with GPU-powered execution.
+
+Check out the [notebooks](https://github.com/openvinotoolkit/openvino_notebooks#-model-training) for examples of NNCF being applied on smaller datasets which work in a reasonable amount of time on a CPU-only setup.
+
+### NNCF supports both training and post-training compression approaches, how do I know which I need?
+The rule of thumb is - start with post-training compression, and use training compression if you are not satisfied with the results and if training compression is possible for your use case.
+Post-training is faster, but can degrade accuracy more than the training-enabled approach.
 
 ### I don't see any improvements after applying the `*_sparsity` algorithms
 The sparsity algorithms introduce unstructured sparsity which can only be taken advantage of in terms of performance by using specialized hardware and/or software runtimes. Within the scope of these algorithms, NNCF provides functionally correct models with non-salient weights simply zeroed out, which does not lead to the reduction of the model checkpoint size. The models can, however, be used for benchmarking experimental/future hardware or runtimes, and for SOTA claims of applying unstructured sparsity on a given model architecture.
 
 For an opportunity to observably increase performance by omitting unnecessary computations in the model, consider using the [filter pruning](./compression_algorithms/Pruning.md) algorithm. Models compressed with this algorithm can be executed more efficiently within OpenVINO Inference Engine runtime when compared to the uncompressed counterparts.
 
-### Can I use NNCF-compressed models with runtimes other than OpenVINO Inference Engine?
-While this is certainly possible in some cases, with a beneficial outcome even, we recommend NNCF as a way to get the most out of your setup based on OpenVINO Inference Engine inference.
-We aim for best results on OpenVINO runtime with Intel hardware, and development-wise this is not always easy to generalize to other platforms or runtimes.
+### What is saturation issue and how to avoid it?
+On older generations of Intel CPUs (those not supporting [AVX-VNNI](https://en.wikipedia.org/wiki/Advanced_Vector_Extensions#AVX-VNNI)) convolutions and linear layer INT8 execution is implemented in OpenVINO's Inference Engine in such a way that mathematical overflow manifests itself _if more than 128 levels are used in the quantized domain_ (out of possible 2^8 = 256) for the weights of the corresponding operations.
+This is referred to as "saturation issue" within NNCF.
+On newer AVX-VNNI enabled Intel CPUs the Inference Engine uses a better set of instructions that do not exhibit this flaw.
 
-### Do I need OpenVINO or an Intel CPU to run NNCF?
-Currently, this is not required in general.
-Most NNCF backends can run compression and produce a compressed model object without OpenVINO or an Intel CPU on board of the machine. You only need OpenVINO and Intel hardware when you actually need to run inference on the compressed model, e.g. in a production scenario.
+For this reason, and to support best compatibility across Intel CPUs, the weights of the convolutional and linear operations in the DL models are quantized by NNCF to only utilize 128 levels out of possible 256, effectively applying 7-bit quantization.
+This does not apply to activation quantization - values of quantized activation tensors will utilize the entire set of quantization levels (256) available for INT8. 
+
+### How can I exclude certain layers from compression?
+Utilize the "ignored_scopes" parameter, either using an [NNCF config file](./ConfigFile.md) or by passing these as a function parameter if you are using NNCF purely by its Python API.
+Within this parameter you can set up one or multiple identifiers to layers in your model (regex is possible) and these will be correspondingly ignored while applying the algorithms.
+This can be done either globally or on a per-algorithm basis.
+
+The format of the layer identifiers is different for each backend that NNCF supports, but attempts to be as close to the identifiers encountered in the original framework as possible.
+For better understanding of how NNCF sees the layers in your network so that you can set up a working "ignored_scopes" line, see the `original_graph.dot` and the `compressed_graph.dot` Graphviz-format visualizations of the model's control flow graph.
+These files are dumped in the NNCF's log directory at each invocation of model compression.
+
+### Why do I need to pass a dataloader to certain NNCF algorithms?
+These algorithms have to run a forward pass on the model to be compressed in order to properly initialize the compressed state of the model and/or to gather activation statistics that are indisposable in this algorithm.
+It is recommended, although by no means mandatory, to pass a dataloader with the same dataset that you were training the initial model for.
+
+
+### The compression process takes too long, how can I make it faster?
+For training approaches the majority of time is taken by the training loop, so any regular methods that improve model convergence should work here. 
+Try the built-in [knowledge distillation](./compression_algorithms/KnowledgeDistillation.md) to potentially obtain target accuracy faster.
+Alternatively you may want to reduce the number of initialization samples
+
+For post-training approaches... FILLME
+
+### I get a "CUDA out of memory" error when running NNCF in the compression-aware training approach, although the original model to be compressed runs and trains fine without NNCF.
+As some of the compression algorithm parameters are also trainable, NNCF-compressed model objects ready for training will have a larger GPU memory footprint than the uncompressed counterparts.
+Try reducing batch size for the NNCF training runs if it makes sense to do so in your situation.
+
 
 
 ## PyTorch

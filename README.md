@@ -1,4 +1,5 @@
 # Neural Network Compression Framework (NNCF)
+_For the installation instructions, [click here](#installation)._
 
 NNCF provides a suite of advanced algorithms for Neural Networks inference optimization in [OpenVINO&trade;](https://github.com/openvinotoolkit/openvino) with minimal accuracy drop.
 
@@ -360,6 +361,14 @@ to find instruction and links to exact configuration files and final checkpoints
     year =    {2020}
 }
 ```
+
+## Useful links
+- [Documentation](./docs)
+- Example scripts (model objects available through links in respective README.md files):
+    - [PyTorch](./examples/torch)
+    - [TensorFlow](./examples/tensorflow)
+- [FAQ](./docs/FAQ.md)
+- [Notebooks](https://github.com/openvinotoolkit/openvino_notebooks#-model-training)
 
 ## Legal Information
 [*] Other names and brands may be claimed as the property of others.
