@@ -211,6 +211,9 @@ def main_worker(current_gpu, config: SampleConfig):
                        model_params=config.get('model_params'),
                        weights_path=config.get('weights'))
 
+    state_dict = torch.load('/home/nsavelye/workspace/models/resnet18_cifar10_8854.pth')['net']
+    model.load_state_dict(state_dict)
+
     model.to(config.device)
 
     resuming_checkpoint = None
@@ -266,7 +269,7 @@ def main_worker(current_gpu, config: SampleConfig):
             # training function that trains the model for one epoch (full training dataset pass)
             # it is assumed that all the NNCF-related methods are properly called inside of
             # this function (like e.g. the step and epoch_step methods of the compression scheduler)
-            def train_epoch_fn(compression_ctrl, model, epoch, optimizer, **kwargs):
+            def train_epoch_fn(compression_ctrl, model, optimizer, lr_scheduler, epoch):
                 return train_epoch(train_loader, model, criterion, train_criterion_fn,
                                    optimizer, compression_ctrl, epoch, config)
 

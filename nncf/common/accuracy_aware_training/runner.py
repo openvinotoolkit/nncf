@@ -11,6 +11,7 @@
  limitations under the License.
 """
 
+from __future__ import annotations
 from typing import Callable
 from typing import Dict
 from typing import List
@@ -24,6 +25,18 @@ import pathlib
 from nncf.api.compression import CompressionAlgorithmController
 from nncf.common.utils.backend import infer_backend_from_compression_controller
 from nncf.common.utils.backend import BackendType
+from nncf.config.schemata.defaults import AA_COMPRESSION_RATE_STEP_REDUCTION_FACTOR
+from nncf.config.schemata.defaults import AA_INITIAL_COMPRESSION_RATE_STEP
+from nncf.config.schemata.defaults import AA_LR_REDUCTION_FACTOR
+from nncf.config.schemata.defaults import AA_MAXIMAL_TOTAL_EPOCHS
+from nncf.config.schemata.defaults import AA_MINIMAL_COMPRESSION_RATE_STEP
+from nncf.config.schemata.defaults import AA_PATIENCE_EPOCHS
+
+from typing import TYPE_CHECKING
+if TYPE_CHECKING:
+    from nncf.torch.accuracy_aware_training.runner import PTAdaptiveCompressionLevelTrainingRunner
+    from nncf.tensorflow.accuracy_aware_training.runner import TFAdaptiveCompressionLevelTrainingRunner
+
 
 TModel = TypeVar('TModel')
 OptimizerType = TypeVar('OptimizerType')
@@ -58,12 +71,6 @@ class TrainingRunner(ABC):
 
         :param model: The model to be evaluated
         :return: Target validation metric value (float).
-        """
-
-    @abstractmethod
-    def update_learning_rate(self) -> None:
-        """
-        Update learning rate.
         """
 
     @abstractmethod
@@ -122,12 +129,13 @@ class TrainingRunner(ABC):
         set the obtained value to the `minimal_tolerable_accuracy` attribute of the TrainingRunner.
         """
 
+    # TODO: use typing_extensions.Protocol to define signature of *_fns with specified keyword arguments
     @abstractmethod
     def initialize_training_loop_fns(self, train_epoch_fn: Callable[[CompressionAlgorithmController, TModel,
                                                                      Optional[OptimizerType],
                                                                      Optional[LRSchedulerType],
                                                                      Optional[int]], None],
-                                     validate_fn: Callable[[TModel, Optional[float]], float],
+                                     validate_fn: Callable[[TModel, Optional[int]], float],
                                      configure_optimizers_fn: Callable[[], Tuple[OptimizerType, LRSchedulerType]],
                                      dump_checkpoint_fn: Callable[
                                          [TModel, CompressionAlgorithmController, 'TrainingRunner', str], None],
@@ -215,7 +223,8 @@ class AdaptiveCompressionLevelTrainingRunnerCreator(TrainingRunnerCreator):
         self.maximal_compression_rate = maximal_compression_rate
         self.dump_checkpoints = dump_checkpoints
 
-    def create_training_loop(self) -> TrainingRunner:
+    def create_training_loop(self) -> Union[PTAdaptiveCompressionLevelTrainingRunner,
+                                            TFAdaptiveCompressionLevelTrainingRunner]:
         """
         Creates an object of AdaptiveCompressionLevelTrainingRunner depending on user backend
 
@@ -240,7 +249,7 @@ class AdaptiveCompressionLevelTrainingRunnerCreator(TrainingRunnerCreator):
         raise RuntimeError('Got an unsupported value of nncf_backend')
 
 
-class BaseAccuracyAwareTrainingRunner(TrainingRunner):
+class BaseAccuracyAwareTrainingRunner(TrainingRunner, ABC):
     """
     The base accuracy-aware training Runner object,
     initialized with the default parameters unless specified in the config.
@@ -250,8 +259,7 @@ class BaseAccuracyAwareTrainingRunner(TrainingRunner):
                  dump_checkpoints=True):
         self.maximal_relative_accuracy_drop = accuracy_aware_params.get('maximal_relative_accuracy_degradation', 1.0)
         self.maximal_absolute_accuracy_drop = accuracy_aware_params.get('maximal_absolute_accuracy_degradation')
-        self.maximal_total_epochs = accuracy_aware_params.get('maximal_total_epochs', 10000)
-        self.validate_every_n_epochs = accuracy_aware_params.get('validate_every_n_epochs', 1)
+        self.maximal_total_epochs = accuracy_aware_params.get('maximal_total_epochs', AA_MAXIMAL_TOTAL_EPOCHS)
 
         self.verbose = verbose
         self.dump_checkpoints = dump_checkpoints
@@ -264,7 +272,6 @@ class BaseAccuracyAwareTrainingRunner(TrainingRunner):
         self.training_epoch_count = 0
         self.cumulative_epoch_count = 0
         self.best_val_metric_value = 0
-        self.loss = None
 
     def initialize_training_loop_fns(self, train_epoch_fn: Callable[[CompressionAlgorithmController, TModel,
                                                                      Optional[OptimizerType],
@@ -290,7 +297,7 @@ class BaseAccuracyAwareTrainingRunner(TrainingRunner):
                                               (1 - 0.01 * self.maximal_relative_accuracy_drop)
 
 
-class BaseAdaptiveCompressionLevelTrainingRunner(BaseAccuracyAwareTrainingRunner):
+class BaseAdaptiveCompressionLevelTrainingRunner(BaseAccuracyAwareTrainingRunner, ABC):
     """
     The base adaptive compression level accuracy-aware training Runner object,
     initialized with the default parameters unless specified in the config.
@@ -301,10 +308,14 @@ class BaseAdaptiveCompressionLevelTrainingRunner(BaseAccuracyAwareTrainingRunner
                  dump_checkpoints=True):
         super().__init__(accuracy_aware_params, verbose, dump_checkpoints)
 
-        self.compression_rate_step = accuracy_aware_params.get('initial_compression_rate_step', 0.1)
-        self.step_reduction_factor = accuracy_aware_params.get('compression_rate_step_reduction_factor', 0.5)
-        self.minimal_compression_rate_step = accuracy_aware_params.get('minimal_compression_rate_step', 0.025)
-        self.patience_epochs = accuracy_aware_params.get('patience_epochs')
+        self.compression_rate_step = accuracy_aware_params.get('initial_compression_rate_step',
+                                                               AA_INITIAL_COMPRESSION_RATE_STEP)
+        self.compression_rate_step_reduction_factor = accuracy_aware_params.get(
+            'compression_rate_step_reduction_factor', AA_COMPRESSION_RATE_STEP_REDUCTION_FACTOR)
+        self.lr_reduction_factor = accuracy_aware_params.get('lr_reduction_factor', AA_LR_REDUCTION_FACTOR)
+        self.minimal_compression_rate_step = accuracy_aware_params.get('minimal_compression_rate_step',
+                                                                       AA_MINIMAL_COMPRESSION_RATE_STEP)
+        self.patience_epochs = accuracy_aware_params.get('patience_epochs', AA_PATIENCE_EPOCHS)
         self.initial_training_phase_epochs = accuracy_aware_params.get('initial_training_phase_epochs')
 
         self.minimal_compression_rate = minimal_compression_rate

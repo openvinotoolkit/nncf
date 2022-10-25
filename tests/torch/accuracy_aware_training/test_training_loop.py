@@ -62,9 +62,9 @@ def create_finetuned_lenet_model_and_dataloader(config, eval_fn, finetuning_step
      'final_compression_rate',
      'reference_final_metric'),
     (
-            ({'maximal_relative_accuracy_degradation': 0.01}, 0.66742, 0.996252),
-            ({'maximal_relative_accuracy_degradation': 100.0}, 0.94136, 0.876409),
-            ({'maximal_absolute_accuracy_degradation': 0.10}, 0.767040, 0.938572),
+            ({'maximal_relative_accuracy_degradation': 0.01}, 0.7421, 0.998181),
+            ({'maximal_relative_accuracy_degradation': 100.0}, 0.9165, 0.0),
+            ({'maximal_absolute_accuracy_degradation': 0.10}, 0.8168, 0.9151),
     )
 )
 def test_adaptive_compression_training_loop(max_accuracy_degradation,
@@ -83,7 +83,7 @@ def test_adaptive_compression_training_loop(max_accuracy_degradation,
                     x, y_gt = next(train_loader)
                     y = model(x)
                     loss += F.mse_loss(y.sum(), y_gt)
-        return 1 - loss.item()
+        return max(1 - loss.item(), 0)
 
     input_sample_size = [1, 1, LeNet.INPUT_SIZE[-1], LeNet.INPUT_SIZE[-1]]
     config = get_basic_magnitude_sparsity_config(input_sample_size=input_sample_size)
@@ -91,6 +91,7 @@ def test_adaptive_compression_training_loop(max_accuracy_degradation,
     params = {
         "initial_training_phase_epochs": initial_training_phase_epochs,
         "patience_epochs": patience_epochs,
+        "lr_reduction_factor": 1,
     }
     params.update(max_accuracy_degradation)
     accuracy_aware_config = {
@@ -128,6 +129,9 @@ def test_adaptive_compression_training_loop(max_accuracy_degradation,
                                         train_epoch_fn=train_fn,
                                         validate_fn=partial(validate_fn, train_loader=train_loader),
                                         configure_optimizers_fn=configure_optimizers_fn)
+    # TODO: change the test to assert for the lower bound, not the exact values
+    # TODO: compression_ctrl.compression_rate is not the compression rate of the returned model because of
+    #   the loading the best checkpoint at the end of ACLoop
     assert compression_ctrl.compression_rate == pytest.approx(final_compression_rate, 1e-3)
     assert validate_fn(model, train_loader=train_loader) == pytest.approx(reference_final_metric, 1e-4)
 
@@ -202,7 +206,7 @@ def test_adaptive_compression_training_loop_with_no_training(
 
     possible_checkpoint_compression_rates = \
         acc_aware_training_loop.runner.get_compression_rates_with_positive_acc_budget()
-    assert len(possible_checkpoint_compression_rates) == 1
+    assert len(possible_checkpoint_compression_rates) == 2
 
 
 @pytest.mark.parametrize(

@@ -16,6 +16,7 @@ from typing import Dict, List, Tuple, Union
 
 import numpy as np
 import torch
+from math import isclose
 
 from nncf import NNCFConfig
 from nncf.api.compression import CompressionLoss
@@ -592,7 +593,8 @@ class FilterPruningController(BasePruningAlgoController):
         actual_pruning_level = self._pruning_level
         if actual_pruning_level == 0:
             return CompressionStage.UNCOMPRESSED
-        if actual_pruning_level >= target_pruning_level:
+        if isclose(actual_pruning_level, target_pruning_level, abs_tol=1e-5) or \
+                actual_pruning_level > target_pruning_level:
             return CompressionStage.FULLY_COMPRESSED
         return CompressionStage.PARTIALLY_COMPRESSED
 

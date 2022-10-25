@@ -1,0 +1,49 @@
+{
+    "model": "resnet18",
+    "pretrained": false,
+    "batch_size": 512,
+    "epochs": 100,
+    "input_info": {
+        "sample_size": [
+            1,
+            3,
+            32,
+            32
+        ]
+    },
+    "dataset": "cifar10",
+    "num_classes": 10,
+    "optimizer": {
+        "type": "SGD",
+        "base_lr": 0.001,
+        "weight_decay": 1e-4,
+        "schedule_type": "multistep",
+        "steps": [
+            30,
+            40
+        ],
+        "optimizer_params": {
+            "momentum": 0.9,
+            "nesterov": true
+        }
+    },
+    "accuracy_aware_training": {
+        "mode": "adaptive_compression_level",
+        "params": {
+            "maximal_relative_accuracy_degradation": 1.0,
+            "initial_training_phase_epochs": 50,
+            "patience_epochs": 50,
+            "maximal_total_epochs": 500
+        }
+    },
+    "compression": {
+        "algorithm": "filter_pruning",
+        "pruning_init": 0.1,
+        "params": {
+            "schedule": "exponential",
+            "pruning_target": 0.4,
+            "pruning_steps": 20,
+            "filter_importance": "geometric_median"
+        }
+    }
+}

@@ -42,7 +42,7 @@ def create_initialized_lenet_model_and_dataloader(config: NNCFConfig) -> Tuple[n
 @pytest.mark.parametrize(
     ('num_steps', 'learning_rate', 'reference_metric'),
     (
-        (10, 1e-3, 0.78276),
+        (10, 5e-4, 0.78276),
     )
 )
 def test_runner(num_steps, learning_rate, reference_metric):
