@@ -281,7 +281,6 @@ def patch_extension_build_function():
     """
     try:
         torch_version_numbers = torch.__version__.split('+', maxsplit=1)[0]
-        split_torch_version = list(map(int, torch_version_numbers.split('.')))
         # get major, minor and patch number, ignore other version info like .dev
         split_torch_version = list(map(int, torch_version_numbers.split('.')[:3]))
 
