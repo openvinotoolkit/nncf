@@ -369,6 +369,7 @@ to find instruction and links to exact configuration files and final checkpoints
     - [TensorFlow](./examples/tensorflow)
 - [FAQ](./docs/FAQ.md)
 - [Notebooks](https://github.com/openvinotoolkit/openvino_notebooks#-model-training)
+- [HuggingFace Optimum Intel](https://huggingface.co/docs/optimum/intel/optimization_ov) utilizes NNCF as a compression backend within the renowned `transformers` repository.
 
 ## Legal Information
 [*] Other names and brands may be claimed as the property of others.
