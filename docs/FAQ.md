@@ -50,13 +50,16 @@ The sparsity algorithms introduce unstructured sparsity which can only be taken 
 
 For an opportunity to observably increase performance by omitting unnecessary computations in the model, consider using the [filter pruning](./compression_algorithms/Pruning.md) algorithm. Models compressed with this algorithm can be executed more efficiently within OpenVINO Inference Engine runtime when compared to the uncompressed counterparts.
 
-### What is saturation issue and how to avoid it?
+### What is a "saturation issue" and how to avoid it?
 On older generations of Intel CPUs (those not supporting [AVX-VNNI](https://en.wikipedia.org/wiki/Advanced_Vector_Extensions#AVX-VNNI)) convolutions and linear layer INT8 execution is implemented in OpenVINO's Inference Engine in such a way that mathematical overflow manifests itself _if more than 128 levels are used in the quantized domain_ (out of possible 2^8 = 256) for the weights of the corresponding operations.
 This is referred to as "saturation issue" within NNCF.
 On newer AVX-VNNI enabled Intel CPUs the Inference Engine uses a better set of instructions that do not exhibit this flaw.
 
 For this reason, and to support best compatibility across Intel CPUs, the weights of the convolutional and linear operations in the DL models are quantized by NNCF to only utilize 128 levels out of possible 256, effectively applying 7-bit quantization.
-This does not apply to activation quantization - values of quantized activation tensors will utilize the entire set of quantization levels (256) available for INT8. 
+This does not apply to activation quantization - values of quantized activation tensors will utilize the entire set of quantization levels (256) available for INT8.
+
+You can influence this behaviour by setting the `"overflow_fix"` parameter in the NNCF configuration file.
+See documentation for this parameter in the [NNCF configuration file JSON schema reference](https://openvinotoolkit.github.io/nncf/#compression_oneOf_i0_oneOf_i0_overflow_fix).
 
 ### How can I exclude certain layers from compression?
 Utilize the "ignored_scopes" parameter, either using an [NNCF config file](./ConfigFile.md) or by passing these as a function parameter if you are using NNCF purely by its Python API.
@@ -97,7 +100,7 @@ Sometimes, when the compilation process is abnormally aborted, these `.lock` fil
 To resolve these, delete the `torch_extensions` directory (at `~/.cache`, or pointed to by `TORCH_EXTENSIONS_DIR`, or at your specific location), and re-run the script that imports from `nncf.torch`.
 The compilation takes some time and happens upon import, so do not interrupt the launch of your Python script until the import has been completed.
 
-### Importing anything from `nncf.torch` leads to an error mentioning `gcc`, `nvcc`, or `ninja`
+### Importing anything from `nncf.torch` leads to an error mentioning `gcc`, `nvcc`, `ninja`, or `cl.exe`
 See the answer above for the general description of the reasons why these are involved in NNCF PyTorch operation.
 To resolve, make sure that your CUDA installation contains the development tools (e.g. the `nvcc` compiler), and that the environmental variables are set properly so that these tools are available in `PATH` or `PYTHONPATH`.
 

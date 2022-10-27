@@ -38,6 +38,7 @@ from nncf.config.schemata.defaults import PRECISION_INIT_BITWIDTHS
 from nncf.config.schemata.defaults import QUANTIZATION_BITS
 from nncf.config.schemata.defaults import QUANTIZATION_EXPORT_TO_ONNX_STANDARD_OPS
 from nncf.config.schemata.defaults import QUANTIZATION_LOGARITHM_SCALE
+from nncf.config.schemata.defaults import QUANTIZATION_OVERFLOW_FIX
 from nncf.config.schemata.defaults import QUANTIZATION_PER_CHANNEL
 from nncf.config.schemata.defaults import QUANTIZATION_PRESET
 from nncf.config.schemata.defaults import QUANTIZE_INPUTS
@@ -505,12 +506,13 @@ QUANTIZATION_SCHEMA = {
         "overflow_fix": with_attributes(STRING,
                                         description="This option controls whether to apply the overflow "
                                                     "issue fix for the appropriate NNCF config or not. "
-                                                    "If set to 'disable', the fix will not be applied. "
-                                                    "If set to 'enable' or 'first_layer_only', "
+                                                    "If set to `disable`, the fix will not be applied. "
+                                                    "If set to `enable` or `first_layer_only`, "
                                                     "while appropriate target_devices are chosen, "
-                                                    "the fix will be applied to all layers or to the first"
+                                                    "the fix will be applied to all layers or to the first "
                                                     "convolutional layer respectively.",
-                                        enum=OVERFLOW_FIX_OPTIONS),
+                                        enum=OVERFLOW_FIX_OPTIONS,
+                                        default=QUANTIZATION_OVERFLOW_FIX),
         **STAGED_QUANTIZATION_PARAMS,
         **SCOPING_PROPERTIES,
         **COMPRESSION_LR_MULTIPLIER_PROPERTY,
