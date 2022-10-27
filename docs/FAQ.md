@@ -24,7 +24,10 @@ Under "future" we mean that the process of compression is usually an offline, on
 No *compression* in the sense of archiving or entropy coding is being done during NNCF compression.
 
 ### How does your compression make inference faster?
-General, well-known, literature-backed techniques of neural network inference acceleration are applied, with Intel HW/runtime specifics in mind.
+General, well-known, literature-backed techniques of neural network inference acceleration (such as quantization, filter pruning and knowledge distillation) are applied, with Intel HW/runtime specifics in mind.
+
+An overview of some of those can be found in the [following paper](https://arxiv.org/abs/2002.08679).
+
 
 ### Can I use NNCF-compressed models with runtimes other than OpenVINO Inference Engine?
 While this is certainly possible in some cases, with a beneficial outcome even, we recommend NNCF as a way to get the most out of your setup based on OpenVINO Inference Engine inference.
@@ -78,9 +81,8 @@ It is recommended, although by no means mandatory, to pass a dataloader with the
 ### The compression process takes too long, how can I make it faster?
 For training approaches the majority of time is taken by the training loop, so any regular methods that improve model convergence should work here. 
 Try the built-in [knowledge distillation](./compression_algorithms/KnowledgeDistillation.md) to potentially obtain target accuracy faster.
-Alternatively you may want to reduce the number of initialization samples
+Alternatively you may want to reduce the number of initialization samples taken from the initialization dataloader by the algorithms that require it.
 
-For post-training approaches... FILLME
 
 ### I get a "CUDA out of memory" error when running NNCF in the compression-aware training approach, although the original model to be compressed runs and trains fine without NNCF.
 As some of the compression algorithm parameters are also trainable, NNCF-compressed model objects ready for training will have a larger GPU memory footprint than the uncompressed counterparts.
