@@ -8,6 +8,7 @@ import torch.nn as nn
 from datasets import load_dataset
 from nncf import NNCFConfig
 from nncf.api.compression import CompressionAlgorithmController
+from nncf.torch.sparsity.movement.algo import MovementSparsifier
 from transformers import AutoModelForSequenceClassification, AutoTokenizer
 from transformers import Trainer as BaseTrainer
 from transformers import TrainingArguments, BertConfig
@@ -202,3 +203,9 @@ def run_movement_pipeline(tmp_path, compression_ctrl, compressed_model,
     train_result = trainer.train()
     eval_result = trainer.evaluate()
     return train_result, eval_result, callbacks
+
+
+def initialize_sparsifer_parameters(operand: MovementSparsifier, mean: float = 0., std: float = 3.):
+    torch.nn.init.normal_(operand._weight_importance, mean, std)
+    if operand.prune_bias:
+        torch.nn.init.normal_(operand._bias_importance, mean, std)

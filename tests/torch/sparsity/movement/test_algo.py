@@ -25,7 +25,9 @@ from pytest import approx
 from tests.torch.sparsity.movement.helpers import (BaseCallback, ConfigBuilder,
                                                    bert_tiny_torch_model,
                                                    bert_tiny_unpretrained,
+                                                   initialize_sparsifer_parameters,
                                                    run_movement_pipeline)
+from tests.torch.test_algo_common import BasicLinearTestModel
 from transformers import TrainingArguments
 from transformers.trainer_callback import TrainerControl, TrainerState
 
@@ -98,6 +100,38 @@ def test_can_create_structured_masks(tmp_path):
         assert isinstance(ctx, StructuredMask)
     # We currenltly do not check value correctness of `ctx.(in)dependent_mask` because they are internal variables.
     # See `test_controller_structured_mask_filling`.
+
+
+def get_linear_layer_equiv_weight_bias(module: NNCFLinear):
+    in_features = module.in_features
+    zero_input = torch.zeros((1, in_features))
+    eye_input = torch.eye(in_features)
+    with torch.no_grad():
+        bias = module(zero_input)
+        weight = module(eye_input) - bias
+    return weight.T, bias
+
+
+@pytest.mark.parametrize("sparse_structure_by_scopes", [
+    ["block", [2, 2], "{re}fc"],
+    ["per_dim", [0], "{re}fc"],
+    ["per_dim", [1], "{re}fc"],
+    ["fine", [1, 1], "{re}fc"],
+])
+def test_layer_actual_behavior_matches_sparsifer_mask(tmp_path, sparse_structure_by_scopes):
+    nncf_config = ConfigBuilder(sparse_structure_by_scopes=[sparse_structure_by_scopes]).build(
+        log_dir=tmp_path, input_info=[{"sample_size": [1, 4]}])
+    model = BasicLinearTestModel(size=4)
+    compression_ctrl, compressed_model = create_compressed_model(model, nncf_config)
+    module_info = compression_ctrl.sparsified_module_info[0]
+    operand = module_info.operand
+    initialize_sparsifer_parameters(operand)
+    operand.masking_threshold = 0.
+    ori_weight, ori_bias = module_info.module.weight, module_info.module.bias
+    masked_weight, masked_bias = operand(ori_weight, ori_bias)  # sparsifier forward function
+    equiv_weight, equiv_bias = get_linear_layer_equiv_weight_bias(module_info.module)
+    assert torch.allclose(equiv_weight, masked_weight)
+    assert torch.allclose(equiv_bias, masked_bias)
 
 
 @pytest.mark.parametrize('description', [
@@ -186,7 +220,7 @@ def test_importance_score_update(tmp_path, nncf_config_builder):
     compression_ctrl, compressed_model = create_compressed_model(bert_tiny_torch_model(), nncf_config)
 
     class CheckImportanceCallback(BaseCallback):
-        def on_epoch_end(self, args: TrainingArguments, state: TrainerState, control: TrainerControl, **kwargs):
+        def on_step_end(self, args: TrainingArguments, state: TrainerState, control: TrainerControl, **kwargs):
             super().on_step_end(args, state, control, **kwargs)
             for sparse_module in self.compression_ctrl.sparsified_module_info:
                 sparsifier = sparse_module.operand
@@ -203,7 +237,7 @@ def test_importance_score_update(tmp_path, nncf_config_builder):
 @pytest.mark.parametrize('nncf_config_builder', [
     ConfigBuilder(),
 ])
-def test_compression_loss(tmp_path, nncf_config_builder):
+def test_compression_loss_update(tmp_path, nncf_config_builder):
     nncf_config = nncf_config_builder.build(log_dir=tmp_path)
     compression_ctrl, compressed_model = create_compressed_model(bert_tiny_torch_model(), nncf_config)
 
@@ -286,23 +320,13 @@ def test_sparsity_statistics_are_increasing(tmp_path, nncf_config_builder):
     assert is_non_decreasing(log_dict['sparsity_level_for_layers'])
 
 
-def get_linear_weight_bias_data(module: NNCFLinear):
-    # TODO: how can we get this via UpdateWeightAndBias?
-    in_features = module.in_features
-    zero_input = torch.zeros((1, in_features))
-    eye_input = torch.eye(in_features)
-    with torch.no_grad():
-        bias = module(zero_input)
-        weight = module(eye_input) - bias
-    return weight.T, bias
-
-
 def check_onnx_has_sparsified_param(compressed_model, compression_ctrl, onnx_path):
     compressed_model.eval()
     ref_params = {}
     module_name_dict = {module: name for name, module in compressed_model.named_modules()}
     for m in compression_ctrl.sparsified_module_info:
-        weight, bias = get_linear_weight_bias_data(m.module)
+        with torch.no_grad():
+            weight, bias = m.operand(m.module.weight, m.module.bias)
         name = module_name_dict[m.module]
         ref_params[name + '.weight'] = weight
         ref_params[name + '.bias'] = bias
@@ -316,9 +340,7 @@ def check_onnx_has_sparsified_param(compressed_model, compression_ctrl, onnx_pat
         if t.name in ref_params:
             ref_param = ref_params.pop(t.name).numpy()
             onnx_param = numpy_helper.to_array(t)
-            assert np.allclose(ref_param, onnx_param, atol=1e-6)
-            # atol cannot be the default value, i.e., 1e-8, probably due to
-            # the current way of accessing pruned reference weight and bias.
+            assert np.allclose(ref_param, onnx_param)
     assert len(ref_params) == 0
 
 
@@ -329,13 +351,11 @@ def test_export_onnx_has_sparsified_param(tmp_path, nncf_config_builder):
     nncf_config = nncf_config_builder.build(log_dir=tmp_path)
     compression_ctrl, compressed_model = create_compressed_model(bert_tiny_torch_model(), nncf_config)
     for m in compression_ctrl.sparsified_module_info:
-        torch.nn.init.uniform_(m.operand._weight_importance, a=-1., b=1.)
-        torch.nn.init.uniform_(m.operand._bias_importance, a=-1., b=1.)
+        initialize_sparsifer_parameters(m.operand)
     for threshold in [-0.5, 0.0, 0.5]:
         compressed_model.train()
         for m in compression_ctrl.sparsified_module_info:
             m.operand.masking_threshold = threshold
-            m.operand._calc_training_binary_mask()
         onnx_path = tmp_path / f'model_thres{threshold}.onnx'
         check_onnx_has_sparsified_param(compressed_model, compression_ctrl, onnx_path)
 
@@ -347,8 +367,7 @@ def test_structured_mask_obeys_unstructured(tmp_path, nncf_config_builder):
     nncf_config = nncf_config_builder.build(log_dir=tmp_path)
     compression_ctrl, compressed_model = create_compressed_model(bert_tiny_torch_model(), nncf_config)
     for m in compression_ctrl.sparsified_module_info:
-        torch.nn.init.normal_(m.operand._weight_importance)
-        torch.nn.init.normal_(m.operand._bias_importance)
+        initialize_sparsifer_parameters(m.operand)
 
     def get_sparsified_module_mask(compression_ctrl):
         mask_dict = {}
@@ -372,8 +391,6 @@ def test_structured_mask_obeys_unstructured(tmp_path, nncf_config_builder):
 
     callback = StructuredMaskingCallback(compression_ctrl)
     run_movement_pipeline(tmp_path, compression_ctrl, compressed_model, [callback], num_train_epochs=2)
-    # for epoch, log in callback.get_compress_log().items():
-    #     print(log)
 
 
 @pytest.mark.parametrize('nncf_config_builder', [
@@ -383,17 +400,10 @@ def test_fill_stage_has_fixed_sparsity(tmp_path, nncf_config_builder):
     nncf_config = nncf_config_builder.build(log_dir=tmp_path)
     compression_ctrl, compressed_model = create_compressed_model(bert_tiny_torch_model(), nncf_config)
     for m in compression_ctrl.sparsified_module_info:
-        torch.nn.init.normal_(m.operand._weight_importance)
-        torch.nn.init.normal_(m.operand._bias_importance)
+        initialize_sparsifer_parameters(m.operand)
 
     callback = BaseCallback(compression_ctrl)
     run_movement_pipeline(tmp_path, compression_ctrl, compressed_model, [callback], num_train_epochs=2)
     rela_sparsity = [log['relative_sparsity'] for epoch, log in callback.get_compress_log().items()
                      if epoch > nncf_config_builder.get('warmup_end_epoch')]
     assert all(sparsity == approx(rela_sparsity[0]) for sparsity in rela_sparsity)
-
-
-if __name__ == "__main__":
-    # test_can_create_movement_sparsity_layers(MovementSparsityConfigBuilder())
-    # test_can_run_full_pipeline(Path('/tmp'), MovementSparsityConfigBuilder)
-    test_structured_mask_obeys_unstructured(Path('/tmp'), ConfigBuilder(warmup_start_epoch=0, warmup_end_epoch=1))
