@@ -24,6 +24,7 @@ import subprocess
 import sys
 from pathlib import Path
 from tempfile import TemporaryDirectory
+from typing import List
 
 import pandas as pd
 import pytest
@@ -80,7 +81,9 @@ def check_quantized_xfail(model_name):
         pytest.xfail("ONNXRuntime-OVEP cannot execute the quantized model")
 
 
-def run_command(command):
+def run_command(command: List[str]):
+    com_str = ' '.join(command)
+    nncf_logger.info(f"Run command: {com_str}")
     with subprocess.Popen(command,
                           stdout=subprocess.PIPE,
                           stderr=subprocess.STDOUT,
@@ -152,7 +155,7 @@ def eval_size(request):
     return option
 
 
-def _read_csv(root_dir: Path, key=str):
+def _read_csv(root_dir: Path, key: str) -> pd.DataFrame:
     dfs = []
     for task in TASKS:
         csv_fp = str(root_dir / task / f"accuracy_checker-{key}.csv")
@@ -243,8 +246,15 @@ class TestPTQ:
 
 @pytest.mark.run(order=2)
 class TestBenchmark:
+    @staticmethod
     def get_command(
-            self, task_type, model_name, model_dir, data_dir, anno_dir, output_dir, eval_size, program, is_quantized):
+            task_type: str,
+            model_name: str,
+            model_dir: Path,
+            data_dir: Path,
+            anno_dir: Path,
+            output_dir: Path,
+            eval_size: int, program: str, is_quantized: bool) -> List[str]:
 
         program_path = BENCHMARKING_DIR / program
 
@@ -252,12 +262,12 @@ class TestBenchmark:
         config_path = task_path / "onnx_models_configs" / (model_name + ".yml")
 
         output_dir = output_dir / task_type
-        if not os.path.exists(output_dir):
-            os.makedirs(output_dir)
+        if not output_dir.exists():
+            output_dir.mkdir(parents=True)
 
         anno_dir = anno_dir / str(eval_size)
-        if not os.path.exists(anno_dir):
-            os.makedirs(anno_dir)
+        if not anno_dir.exists():
+            anno_dir.mkdir(parents=True)
 
         out_file_name = os.path.splitext(program)[0]
 
@@ -282,8 +292,6 @@ class TestBenchmark:
         if eval_size is not None:
             com_line += ["-ss", str(eval_size)]
 
-        com_str = ' '.join(com_line)
-        nncf_logger.info(f"Run command: {com_str}")
         return com_line
 
     @pytest.mark.e2e_eval_reference_model
