@@ -11,19 +11,17 @@
  limitations under the License.
 """
 
-from typing import Callable, Optional, TypeVar
+from typing import TypeVar
 
+from nncf import Dataset
 from nncf.common.utils.logger import logger as nncf_logger
 from nncf.common.graph.model_transformer import ModelTransformer
 from nncf.common.utils.backend import BackendType
 from nncf.common.utils.backend import get_backend
-from nncf.experimental.post_training.algorithms.algorithm import CompositeAlgorithm
 
-from nncf.experimental.post_training.api.engine import Engine
-from nncf.experimental.post_training.api.metric import Metric
-from nncf.experimental.post_training.api.dataset import Dataset
-from nncf.experimental.post_training.algorithms import Algorithm
-from nncf.experimental.post_training.statistics.aggregator import StatisticsAggregator
+from nncf.quantization.api.engine import Engine
+from nncf.quantization.algorithms import Algorithm
+from nncf.quantization.statistics.aggregator import StatisticsAggregator
 
 ModelType = TypeVar('ModelType')
 
@@ -118,10 +116,6 @@ class CompressionBuilder:
         if engine is None:
             engine = self._create_engine(backend)
 
-        for algorithm in self.algorithms:
-            if isinstance(algorithm, CompositeAlgorithm):
-                algorithm.create_subalgorithms()
-
         statistics_aggregator = self._create_statistics_aggregator(engine, dataset, backend)
         for algorithm in self.algorithms:
             statistic_points = algorithm.get_statistic_points(modified_model)
@@ -133,16 +127,3 @@ class CompressionBuilder:
         for algorithm in self.algorithms:
             modified_model = algorithm.apply(modified_model, engine, statistics_aggregator.statistic_points)
         return modified_model
-
-    def evaluate(self, model: ModelType, metric: Metric, dataset: Dataset,
-                 engine: Engine = None, outputs_transforms: Optional[Callable] = None):
-        backend = get_backend(model)
-
-        if engine is None:
-            engine = self._create_engine(backend)
-        if outputs_transforms is not None:
-            engine.set_outputs_transforms(outputs_transforms)
-        engine.set_model(model)
-        engine.set_metrics(metric)
-        engine.set_dataset(dataset)
-        return engine.compute_metrics()

@@ -38,20 +38,20 @@ from nncf.common.tensor_statistics.collectors import TensorStatisticCollectorBas
 from nncf.common.utils.backend import BackendType, get_backend
 from nncf.common.utils.logger import logger as nncf_logger
 
-from nncf.experimental.post_training.algorithms import Algorithm
-from nncf.experimental.post_training.algorithms import AlgorithmParameters
-from nncf.experimental.post_training.algorithms.algorithm import PostTrainingAlgorithms
-from nncf.experimental.post_training.algorithms.quantization.min_max.backend import ALGO_BACKENDS
-from nncf.experimental.post_training.algorithms.quantization.min_max.utils import \
+from nncf.quantization.algorithms import Algorithm
+from nncf.quantization.algorithms import AlgorithmParameters
+from nncf.quantization.algorithms.algorithm import PostTrainingAlgorithms
+from nncf.quantization.algorithms.min_max.backend import ALGO_BACKENDS
+from nncf.quantization.algorithms.min_max.utils import \
     calculate_activation_quantizer_parameters
-from nncf.experimental.post_training.algorithms.quantization.min_max.utils import \
+from nncf.quantization.algorithms.min_max.utils import \
     calculate_weight_quantizer_parameters
-from nncf.experimental.post_training.algorithms.quantization.definitions import RangeType
-from nncf.experimental.post_training.algorithms.quantization.definitions import Granularity
-from nncf.experimental.post_training.api.engine import Engine
-from nncf.experimental.post_training.factories import NNCFGraphFactory
-from nncf.experimental.post_training.statistics.statistic_point import StatisticPoint
-from nncf.experimental.post_training.statistics.statistic_point import StatisticPointsContainer
+from nncf.quantization.algorithms.definitions import RangeType
+from nncf.quantization.algorithms.definitions import Granularity
+from nncf.quantization.api.engine import Engine
+from nncf.quantization.factories import NNCFGraphFactory
+from nncf.quantization.statistics.statistic_point import StatisticPoint
+from nncf.quantization.statistics.statistic_point import StatisticPointsContainer
 
 ModelType = TypeVar('ModelType')
 
@@ -157,7 +157,7 @@ class MinMaxQuantization(Algorithm):
         """
         model_backend = get_backend(model)
         if model_backend == BackendType.ONNX:
-            from nncf.experimental.post_training.algorithms.quantization.min_max.onnx_backend import \
+            from nncf.quantization.algorithms.min_max.onnx_backend import \
                 ONNXMinMaxAlgoBackend
             self._backend_entity = ONNXMinMaxAlgoBackend()
         else:

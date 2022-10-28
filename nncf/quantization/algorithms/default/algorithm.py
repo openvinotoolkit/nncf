@@ -19,26 +19,27 @@ from typing import TypeVar
 
 from nncf.common.hardware.config import HWConfigType
 from nncf.common.quantization.structs import QuantizationPreset
+from nncf.common.utils.backend import BackendType
+from nncf.quantization.algorithms.algorithm import Algorithm
 
-from nncf.experimental.post_training.api.engine import Engine
-from nncf.experimental.post_training.algorithms import CompositeAlgorithm
-from nncf.experimental.post_training.algorithms import AlgorithmParameters
-from nncf.experimental.post_training.algorithms import PostTrainingAlgorithms
-from nncf.experimental.post_training.algorithms.quantization.min_max.algorithm import MinMaxQuantization
-from nncf.experimental.post_training.algorithms.quantization.min_max.algorithm import MinMaxQuantizationParameters
-from nncf.experimental.post_training.algorithms.quantization.fast_bias_correction.algorithm import FastBiasCorrection
-from nncf.experimental.post_training.algorithms.quantization.fast_bias_correction.algorithm import \
+from nncf.quantization.api.engine import Engine
+from nncf.quantization.algorithms import AlgorithmParameters
+from nncf.quantization.algorithms import PostTrainingAlgorithms
+from nncf.quantization.algorithms.min_max.algorithm import MinMaxQuantization
+from nncf.quantization.algorithms.min_max.algorithm import MinMaxQuantizationParameters
+from nncf.quantization.algorithms.fast_bias_correction.algorithm import FastBiasCorrection
+from nncf.quantization.algorithms.fast_bias_correction.algorithm import \
     FastBiasCorrectionParameters
-from nncf.experimental.post_training.algorithms.quantization.definitions import Granularity
-from nncf.experimental.post_training.algorithms.quantization.definitions import RangeType
-from nncf.experimental.post_training.statistics.statistic_point import StatisticPointsContainer
+from nncf.quantization.algorithms.definitions import Granularity
+from nncf.quantization.algorithms.definitions import RangeType
+from nncf.quantization.statistics.statistic_point import StatisticPointsContainer
 
 ModelType = TypeVar('ModelType')
 
 
-class PostTrainingQuantizationParameters(AlgorithmParameters):
+class DefaultQuantizationParameters(AlgorithmParameters):
     """
-    This class handles parameters for PostTrainingQuantization algorithm.
+    This class handles parameters for DefaultQuantization algorithm.
     """
 
     def __init__(self,
@@ -65,7 +66,7 @@ class PostTrainingQuantizationParameters(AlgorithmParameters):
             quantize_outputs=quantize_outputs,
             ignored_scopes=ignored_scopes
         ),
-        PostTrainingAlgorithms.FastBiasCorrection: FastBiasCorrectionParameters(
+            PostTrainingAlgorithms.FastBiasCorrection: FastBiasCorrectionParameters(
             number_samples=number_samples
         )}
 
@@ -73,23 +74,50 @@ class PostTrainingQuantizationParameters(AlgorithmParameters):
         pass
 
 
-class PostTrainingQuantization(CompositeAlgorithm):
+class DefaultQuantization(Algorithm):
     """
-    Implements Post-Training Quantization algorithm, which basically includes:
+    Implements Default post-training Quantization algorithm, which basically includes:
     1) MinMaxQuantization
     2) FastBiasCorrection
     3) ChannelAlignment
 
-    Disclaimer: currently, it only supports MinMaxQuantization. The following algorithms will be added soon.
+    Disclaimer: currently, it only supports MinMaxQuantization & FastBiasCorrection. ChannelAlignment will be added soon.
 
     """
 
     def __init__(self,
-                 quantization_parameters: PostTrainingQuantizationParameters = PostTrainingQuantizationParameters()):
+                 quantization_parameters: DefaultQuantizationParameters = DefaultQuantizationParameters()):
         super().__init__()
-        self.algorithms_to_created = quantization_parameters.algorithms
+        self.algorithms = self._get_sub_algorithms(
+            quantization_parameters.algorithms)
+
+    @staticmethod
+    def _get_sub_algorithms(algorithms: Dict[PostTrainingAlgorithms, AlgorithmParameters]) -> List[Algorithm]:
+        """
+        This methods initializes sub-algorithms based on the general parameters.
+
+        :param algorithms: The dictonary of the parameters per algorithm type.
+
+        :return: The list of the algorithms instances.
+        """
+        algorithms_list = []
+        for algorithm, parameters in algorithms.items():
+            if algorithm == PostTrainingAlgorithms.MinMaxQuantization:
+                min_max_algo = MinMaxQuantization(parameters)
+                algorithms_list.append(min_max_algo)
+            if algorithm == PostTrainingAlgorithms.FastBiasCorrection:
+                fast_bc_algo = FastBiasCorrection(parameters)
+                algorithms_list.append(fast_bc_algo)
+        return algorithms_list
+
+    def available_backends(self) -> Dict[str, BackendType]:
+        algorithms_backends = {}
+        for algorithm in self.algorithms:
+            algorithms_backends.update(algorithm.available_backends)
+        return algorithms_backends
 
     def _apply(self, model: ModelType, engine: Engine, statistic_points: StatisticPointsContainer) -> ModelType:
+        self.available_backends()
         for algorithm in self.algorithms:
             model = algorithm.apply(model, engine, statistic_points)
         return model
@@ -101,12 +129,3 @@ class PostTrainingQuantization(CompositeAlgorithm):
                 for statistic_point in statistic_points:
                     output.add_statistic_point(statistic_point)
         return output
-
-    def create_subalgorithms(self) -> None:
-        for algorithm, parameters in self.algorithms_to_created.items():
-            if algorithm == PostTrainingAlgorithms.MinMaxQuantization:
-                min_max_algo = MinMaxQuantization(parameters)
-                self.algorithms.append(min_max_algo)
-            if algorithm == PostTrainingAlgorithms.FastBiasCorrection:
-                fast_bc_algo = FastBiasCorrection(parameters)
-                self.algorithms.append(fast_bc_algo)

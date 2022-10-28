@@ -14,15 +14,13 @@
 from typing import List
 from typing import Optional
 
-import numpy as np
 import onnx
 
-from nncf.experimental.post_training.compression_builder import CompressionBuilder
-from nncf.experimental.post_training.algorithms.quantization import PostTrainingQuantization
-from nncf.experimental.post_training.algorithms.quantization import PostTrainingQuantizationParameters
+from nncf.quantization.compression_builder import CompressionBuilder
+from nncf.quantization.algorithms import DefaultQuantization
+from nncf.quantization.algorithms import DefaultQuantizationParameters
 from nncf.experimental.onnx.common import infer_input_shape
 from nncf.experimental.onnx.datasets.imagenet_dataset import create_imagenet_torch_dataset
-from nncf.experimental.post_training.api.metric import Accuracy
 from nncf.common.utils.logger import logger as nncf_logger
 from examples.experimental.onnx.common.argparser import get_common_argument_parser
 
@@ -30,8 +28,7 @@ from examples.experimental.onnx.common.argparser import get_common_argument_pars
 def run(onnx_model_path: str, output_model_path: str,
         dataset_path: str, batch_size: int, shuffle: bool, num_init_samples: int,
         input_shape: Optional[List[int]] = None, input_name: Optional[str] = None,
-        ignored_scopes: Optional[List[str]] = None,
-        evaluate: Optional[bool] = False):
+        ignored_scopes: Optional[List[str]] = None):
     nncf_logger.info("Post-Training Quantization Parameters:")
     nncf_logger.info("  number of samples: {}".format(num_init_samples))
     nncf_logger.info("  ignored_scopes: {}".format(ignored_scopes))
@@ -47,17 +44,16 @@ def run(onnx_model_path: str, output_model_path: str,
     dataset = create_imagenet_torch_dataset(
         dataset_path, input_name=input_name,
         input_shape=input_shape, batch_size=batch_size, shuffle=shuffle)
-    metric = Accuracy(top_k=1)
 
     # Step 2: Create a pipeline of compression algorithms.
     builder = CompressionBuilder()
 
     # Step 3: Create the quantization algorithm and add to the builder.
-    quantization_parameters = PostTrainingQuantizationParameters(
+    quantization_parameters = DefaultQuantizationParameters(
         number_samples=num_init_samples,
         ignored_scopes=ignored_scopes
     )
-    quantization = PostTrainingQuantization(quantization_parameters)
+    quantization = DefaultQuantization(quantization_parameters)
     builder.add_algorithm(quantization)
 
     # Step 4: Execute the pipeline.
@@ -71,16 +67,6 @@ def run(onnx_model_path: str, output_model_path: str,
 
     onnx.checker.check_model(output_model_path)
 
-    # Step 6: (Optional) Validate the quantized model.
-    if evaluate:
-        nncf_logger.info("Validation of the quantized model "
-                         "on the validation part of the dataset.")
-
-        metrics = builder.evaluate(
-            quantized_model, metric, dataset, outputs_transforms=lambda x: np.concatenate(x, axis=0))
-        for metric_name, metric_value in metrics.items():
-            nncf_logger.info("{}: {}".format(metric_name, metric_value))
-
 
 if __name__ == '__main__':
     parser = get_common_argument_parser()
@@ -89,8 +75,6 @@ if __name__ == '__main__':
         "--batch_size", help="Batch size for initialization", type=int, default=1)
     parser.add_argument(
         "--shuffle", help="Whether to shuffle dataset for initialization", default=True)
-    parser.add_argument(
-        "--evaluate", help="Run an evaluation step for the final quantized model", action="store_true")
 
     args = parser.parse_args()
 
@@ -102,6 +86,5 @@ if __name__ == '__main__':
         args.init_samples,
         args.input_shape,
         args.input_name,
-        args.ignored_scopes,
-        args.evaluate
+        args.ignored_scopes
         )

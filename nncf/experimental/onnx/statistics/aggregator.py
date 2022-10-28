@@ -11,14 +11,10 @@
  limitations under the License.
 """
 
-from nncf.common.utils.logger import logger as nncf_logger
 from nncf.common.graph.transformations.layout import TransformationLayout
-from nncf.experimental.post_training.api.dataset import Dataset
-from nncf.experimental.post_training.statistics.aggregator import StatisticsAggregator
-from nncf.experimental.post_training.statistics.aggregator import StatisticPointsContainer
-from nncf.experimental.post_training.api.sampler import Sampler
-from nncf.experimental.onnx.samplers import ONNXBatchSampler
-from nncf.experimental.onnx.samplers import ONNXRandomBatchSampler
+from nncf import Dataset
+from nncf.quantization.statistics.aggregator import StatisticsAggregator
+from nncf.quantization.statistics.aggregator import StatisticPointsContainer
 from nncf.experimental.onnx.engine import ONNXEngine
 from nncf.experimental.onnx.graph.transformations.commands import ONNXOutputInsertionCommand
 
@@ -26,14 +22,6 @@ from nncf.experimental.onnx.graph.transformations.commands import ONNXOutputInse
 class ONNXStatisticsAggregator(StatisticsAggregator):
     def __init__(self, engine: ONNXEngine, dataset: Dataset):
         super().__init__(engine, dataset)
-
-    def _create_sampler(self, dataset: Dataset,
-                        sample_indices: int) -> Sampler:
-        if dataset.shuffle:
-            nncf_logger.info('Using Shuffled dataset')
-            return ONNXRandomBatchSampler(dataset, sample_indices=sample_indices)
-        nncf_logger.info('Using Non-Shuffled dataset')
-        return ONNXBatchSampler(dataset, sample_indices=sample_indices)
 
     def _get_transformation_layout_extra_outputs(
             self,

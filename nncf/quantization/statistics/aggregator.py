@@ -16,12 +16,11 @@ from abc import abstractmethod
 
 from typing import TypeVar
 
+from nncf import Dataset
 from nncf.common.graph.transformations.layout import TransformationLayout
-from nncf.experimental.post_training.statistics.statistic_point import StatisticPointsContainer
-from nncf.experimental.post_training.api.engine import Engine
-from nncf.experimental.post_training.api.dataset import Dataset
-from nncf.experimental.post_training.api.sampler import Sampler
-from nncf.experimental.post_training.graph.model_transformer import StaticModelTransformerBase
+from nncf.quantization.statistics.statistic_point import StatisticPointsContainer
+from nncf.quantization.api.engine import Engine
+from nncf.quantization.graph.model_transformer import StaticModelTransformerBase
 
 TensorType = TypeVar('TensorType')
 ModelType = TypeVar('ModelType')
@@ -49,8 +48,8 @@ class StatisticsAggregator(ABC):
         transformation_layout = self._get_transformation_layout_extra_outputs(self.statistic_points)
         model_with_outputs = model_transformer.transform(transformation_layout)
         self.engine.set_model(model_with_outputs)
-        self.engine.set_sampler(self._create_sampler(self.dataset, self.max_number_samples))
-        self.engine.compute_statistics(self.statistic_points)
+        self.engine.set_dataset(self.dataset)
+        self.engine.compute_statistics(self.statistic_points, self.max_number_samples)
 
     def register_stastistic_points(self, statistic_points: StatisticPointsContainer):
         """
@@ -66,13 +65,6 @@ class StatisticsAggregator(ABC):
                 for _, tensor_collectors in _statistic_point.algorithm_to_tensor_collectors.items():
                     for tensor_collector in tensor_collectors:
                         self.max_number_samples = max(self.max_number_samples, tensor_collector.num_samples)
-
-    @abstractmethod
-    def _create_sampler(self, dataset: Dataset,
-                        sample_indices: int) -> Sampler:
-        """
-        Create backend-specific Sampler.
-        """
 
     @abstractmethod
     def _get_transformation_layout_extra_outputs(

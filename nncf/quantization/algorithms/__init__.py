@@ -11,7 +11,10 @@
  limitations under the License.
 """
 
-from nncf.experimental.post_training.algorithms.quantization.algorithm import PostTrainingQuantization
-from nncf.experimental.post_training.algorithms.quantization.algorithm import PostTrainingQuantizationParameters
-from nncf.experimental.post_training.algorithms.quantization.min_max.algorithm import MinMaxQuantization
-from nncf.experimental.post_training.algorithms.quantization.min_max.algorithm import MinMaxQuantizationParameters
+from nncf.quantization.algorithms.algorithm import PostTrainingAlgorithms
+from nncf.quantization.algorithms.algorithm import AlgorithmParameters
+from nncf.quantization.algorithms.algorithm import Algorithm
+from nncf.quantization.algorithms.default.algorithm import DefaultQuantization
+from nncf.quantization.algorithms.default.algorithm import DefaultQuantizationParameters
+from nncf.quantization.algorithms.min_max.algorithm import MinMaxQuantization
+from nncf.quantization.algorithms.min_max.algorithm import MinMaxQuantizationParameters

@@ -27,15 +27,14 @@ from openvino.tools.accuracy_checker.evaluators import ModelEvaluator
 from nncf.experimental.onnx.tensor import ONNXNNCFTensor
 
 from nncf.experimental.onnx.engine import ONNXEngine
-from nncf.experimental.onnx.samplers import create_onnx_sampler
-from nncf.experimental.post_training.api.dataset import Dataset
+from nncf.quantization.dataset import PTQDataset
 
 from time import time
 import pandas as pd
 
 
 #pylint: disable=redefined-outer-name
-class OpenVINOAccuracyCheckerDataset(Dataset):
+class OpenVINOAccuracyCheckerDataset(PTQDataset):
     def __init__(self, model_evaluator: ModelEvaluator, batch_size: int, shuffle: bool, has_batch_dim: bool = True):
         super().__init__(batch_size, shuffle)
         self.model_evaluator = model_evaluator
@@ -59,7 +58,7 @@ class OpenVINOAccuracyCheckerDataset(Dataset):
         return len(self.model_evaluator.dataset)
 
 
-def run(onnx_model_path: str, output_file_path: str, dataset: Dataset, model_name: str,
+def run(onnx_model_path: str, output_file_path: str, dataset: PTQDataset, model_name: str,
         ignored_scopes: Optional[List[str]] = None):
 
     num_init_samples = len(dataset)

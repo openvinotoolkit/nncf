@@ -18,10 +18,8 @@ import pytest
 
 import numpy as np
 
-from nncf.experimental.onnx.samplers import ONNXBatchSampler
-from nncf.experimental.onnx.samplers import ONNXRandomBatchSampler
 from nncf.experimental.onnx.tensor import ONNXNNCFTensor
-from nncf.experimental.post_training.api.dataset import Dataset, NNCFData
+from nncf.quantization.dataset import PTQDataset, NNCFData
 
 INPUT_SHAPE = [3, 10, 10]
 
@@ -30,7 +28,7 @@ DATASET_SAMPLES = [(np.zeros(INPUT_SHAPE), 0),
                    (100 * np.ones(INPUT_SHAPE), 2)]
 
 
-class TestDataset(Dataset):
+class TestDataset(PTQDataset):
     def __init__(self, samples: List[Tuple[np.ndarray, int]], input_key: str = "input"):
         super().__init__(shuffle=False)
         self.samples = samples

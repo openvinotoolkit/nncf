@@ -17,7 +17,7 @@ import pytest
 
 import numpy as np
 
-from nncf.experimental.post_training.api.metric import Accuracy
+from nncf.quantization.api.metric import Accuracy
 
 
 @pytest.fixture

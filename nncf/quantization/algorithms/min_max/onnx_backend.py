@@ -40,9 +40,9 @@ from nncf.experimental.onnx.quantization.default_quantization import DEFAULT_ONN
 from nncf.experimental.onnx.statistics.collectors import ONNXMeanMinMaxStatisticCollector
 from nncf.experimental.onnx.statistics.collectors import ONNXMinMaxStatisticCollector
 
-from nncf.experimental.post_training.algorithms.quantization.min_max.backend import MinMaxAlgoBackend
-from nncf.experimental.post_training.algorithms.quantization.min_max.backend import ALGO_BACKENDS
-from nncf.experimental.post_training.algorithms.quantization.min_max.utils import QuantizerLayerParameters
+from nncf.quantization.algorithms.min_max.backend import MinMaxAlgoBackend
+from nncf.quantization.algorithms.min_max.backend import ALGO_BACKENDS
+from nncf.quantization.algorithms.min_max.utils import QuantizerLayerParameters
 
 
 @ALGO_BACKENDS.register(BackendType.ONNX)

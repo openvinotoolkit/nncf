@@ -16,12 +16,12 @@ from typing import List
 from nncf.common.utils.logger import logger as nncf_logger
 from nncf.experimental.onnx.tensor import ONNXNNCFTensor
 
-from nncf.experimental.post_training.api.dataset import Dataset
+from nncf.quantization.dataset import PTQDataset
 from examples.torch.semantic_segmentation.datasets.camvid import CamVid
 from examples.torch.semantic_segmentation.datasets.mapillary import Mapillary
 
 
-class SegmentationDataLoader(Dataset):
+class SegmentationDataLoader(PTQDataset):
     def __init__(self, dataset, batch_size, shuffle, input_name):
         super().__init__(batch_size, shuffle)
         self.dataset = dataset

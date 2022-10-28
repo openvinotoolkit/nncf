@@ -25,15 +25,15 @@ from nncf.common.graph.transformations.commands import TargetType
 from nncf.common.graph.transformations.layout import TransformationLayout
 from nncf.common.utils.backend import BackendType, get_backend
 from nncf.common.graph.transformations.commands import TargetPoint
-from nncf.experimental.post_training.algorithms import AlgorithmParameters
-from nncf.experimental.post_training.algorithms.algorithm import Algorithm
-from nncf.experimental.post_training.algorithms.algorithm import PostTrainingAlgorithms
-from nncf.experimental.post_training.algorithms.quantization.fast_bias_correction.backend import ALGO_BACKENDS
-from nncf.experimental.post_training.api.engine import Engine
-from nncf.experimental.post_training.factories import NNCFGraphFactory
-from nncf.experimental.post_training.graph.model_transformer import StaticModelTransformerBase
-from nncf.experimental.post_training.statistics.statistic_point import StatisticPoint
-from nncf.experimental.post_training.statistics.statistic_point import StatisticPointsContainer
+from nncf.quantization.algorithms import AlgorithmParameters
+from nncf.quantization.algorithms.algorithm import Algorithm
+from nncf.quantization.algorithms.algorithm import PostTrainingAlgorithms
+from nncf.quantization.algorithms.fast_bias_correction.backend import ALGO_BACKENDS
+from nncf.quantization.api.engine import Engine
+from nncf.quantization.factories import NNCFGraphFactory
+from nncf.quantization.graph.model_transformer import StaticModelTransformerBase
+from nncf.quantization.statistics.statistic_point import StatisticPoint
+from nncf.quantization.statistics.statistic_point import StatisticPointsContainer
 
 ModelType = TypeVar('ModelType')
 
@@ -107,7 +107,7 @@ class FastBiasCorrection(Algorithm):
         """
         model_backend = get_backend(model)
         if model_backend == BackendType.ONNX:
-            from nncf.experimental.post_training.algorithms.quantization.fast_bias_correction.onnx_backend import \
+            from nncf.quantization.algorithms.fast_bias_correction.onnx_backend import \
                 ONNXFBCAlgoBackend
             self._backend_entity = ONNXFBCAlgoBackend()
         else:

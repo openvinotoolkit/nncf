@@ -19,12 +19,9 @@ from nncf.common.graph.transformations.commands import TargetType
 from nncf.common.graph.definitions import NNCFGraphNodeType
 from nncf.experimental.onnx.graph.onnx_graph import ONNXGraph
 
-from nncf.experimental.post_training.api.dataset import NNCFData
-from nncf.experimental.post_training.api.engine import Engine
-from nncf.experimental.post_training.api.sampler import Sampler
-from nncf.experimental.post_training.factories import NNCFGraphFactory
-from nncf.experimental.post_training.statistics.statistic_point import StatisticPointsContainer
-from nncf.experimental.onnx.samplers import create_onnx_sampler
+from nncf.quantization.api.engine import Engine, NNCFData
+from nncf.quantization.factories import NNCFGraphFactory
+from nncf.quantization.statistics.statistic_point import StatisticPointsContainer
 from nncf.experimental.onnx.tensor import ONNXNNCFTensor
 
 
@@ -45,9 +42,6 @@ class ONNXEngine(Engine):
         # onnxruntime.capi.onnxruntime_pybind11_state.Fail: [ONNXRuntimeError] : 1
         # : FAIL : This is an invalid model. Error: Duplicate definition of name (data).
         self.rt_session_options['providers'] = ['CPUExecutionProvider']
-
-    def get_sampler(self) -> Sampler:
-        return self.sampler if self.sampler is not None else create_onnx_sampler(self.dataset, len(self.dataset))
 
     def set_model(self, model: onnx.ModelProto) -> None:
         """

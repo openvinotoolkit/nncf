@@ -24,7 +24,7 @@ import numpy as np
 
 from examples.experimental.onnx.semantic_segmentation.onnx_ptq_segmentation import run
 from nncf.experimental.onnx.tensor import ONNXNNCFTensor
-from nncf.experimental.post_training.api.dataset import Dataset
+from nncf.quantization.dataset import PTQDataset
 from tests.common.helpers import TEST_ROOT
 
 MODELS_NAME = [
@@ -38,7 +38,7 @@ INPUT_SHAPES = [
 ]
 
 
-class TestDataset(Dataset):
+class TestDataset(PTQDataset):
     def __init__(self, samples: List[Tuple[np.ndarray, int]], input_name: str):
         super().__init__(shuffle=False)
         self.samples = samples

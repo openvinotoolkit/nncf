@@ -11,38 +11,14 @@
  limitations under the License.
 """
 
+import os
 from typing import Optional, Tuple
 
-import os
-
 import torch
-
-from nncf.common.utils.logger import logger as nncf_logger
+from nncf import Dataset
 from nncf.experimental.onnx.tensor import ONNXNNCFTensor
-
-from nncf.experimental.post_training.api.dataset import Dataset, NNCFData
-
 from torchvision import transforms
 from torchvision.datasets import ImageFolder
-
-
-class ImageNetDataset(Dataset):
-    def __init__(self, dataset, batch_size, shuffle, input_name):
-        super().__init__(batch_size, shuffle)
-        self.dataset = dataset
-        self.input_name = input_name
-        nncf_logger.info(
-            f"The dataset is built with the data located on {dataset.root}. "
-            f"Model input key is {input_name}."
-        )
-
-    def __getitem__(self, item) -> NNCFData:
-        tensor, target = self.dataset[item]
-        tensor = tensor.cpu().detach().numpy()
-        return {self.input_name: ONNXNNCFTensor(tensor), "targets": ONNXNNCFTensor(target)}
-
-    def __len__(self) -> int:
-        return len(self.dataset)
 
 
 def get_transform(image_size: Tuple[int, int],
@@ -76,6 +52,11 @@ def create_imagenet_torch_dataset(dataset_dir: str,
                                   crop_ratio=0.875,
                                   batch_size: int = 1,
                                   shuffle: bool = True):
+    def transform_fn(data_item):
+        tensor, target = data_item
+        tensor = tensor.cpu().detach().numpy()
+        return {input_name: ONNXNNCFTensor(tensor), 'targets': ONNXNNCFTensor(target)}
+
     channel_last = input_shape[1] > input_shape[3] and input_shape[2] > input_shape[3]
 
     if channel_last:
@@ -86,4 +67,7 @@ def create_imagenet_torch_dataset(dataset_dir: str,
     transform = get_transform(image_size, crop_ratio, mean, std, channel_last)
     # The best practise is to use validation part of dataset for calibration (aligning with POT)
     initialization_dataset = ImageFolder(os.path.join(dataset_dir), transform)
-    return ImageNetDataset(initialization_dataset, batch_size, shuffle, input_name)
+    dataloader = torch.utils.data.DataLoader(initialization_dataset,
+                                             batch_size=batch_size,
+                                             shuffle=shuffle)
+    return Dataset(dataloader, transform_fn)

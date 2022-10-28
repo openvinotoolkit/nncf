@@ -15,9 +15,9 @@ from typing import List, Optional
 
 import onnx
 
-from nncf.experimental.post_training.compression_builder import CompressionBuilder
-from nncf.experimental.post_training.algorithms.quantization import PostTrainingQuantization
-from nncf.experimental.post_training.algorithms.quantization import PostTrainingQuantizationParameters
+from nncf.quantization.compression_builder import CompressionBuilder
+from nncf.quantization.algorithms import DefaultQuantization
+from nncf.quantization.algorithms import DefaultQuantizationParameters
 from nncf.experimental.onnx.common import infer_input_shape
 from nncf.experimental.onnx.datasets.segmentation_dataset import create_dataset_from_segmentation_torch_dataset
 from examples.experimental.onnx.common.argparser import get_common_argument_parser
@@ -46,11 +46,11 @@ def run(onnx_model_path: str, output_model_path: str, dataset_name: str,
     builder = CompressionBuilder()
 
     # Step 3: Create the quantization algorithm and add to the builder.
-    quantization_parameters = PostTrainingQuantizationParameters(
+    quantization_parameters = DefaultQuantizationParameters(
         number_samples=num_init_samples,
         ignored_scopes=ignored_scopes
     )
-    quantization = PostTrainingQuantization(quantization_parameters)
+    quantization = DefaultQuantization(quantization_parameters)
     builder.add_algorithm(quantization)
 
     # Step 4: Execute the pipeline.

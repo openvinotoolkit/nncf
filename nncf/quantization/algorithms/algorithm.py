@@ -19,8 +19,8 @@ from typing import Dict
 from typing import Union
 
 from enum import Enum
-from nncf.experimental.post_training.statistics.statistic_point import StatisticPointsContainer
-from nncf.experimental.post_training.api.engine import Engine
+from nncf.quantization.statistics.statistic_point import StatisticPointsContainer
+from nncf.quantization.api.engine import Engine
 from nncf.common.utils.backend import BackendType
 
 ModelType = TypeVar('ModelType')
@@ -84,26 +84,4 @@ class Algorithm(ABC):
     def get_statistic_points(self, model: ModelType) -> StatisticPointsContainer:
         """
         Returns activation layers, for which StatisticsCollector should collect statistics.
-        """
-
-
-class CompositeAlgorithm(Algorithm):
-    """
-    Sub-class for comples Post-Training algorithms that contains other algorithms inside.
-    """
-    def __init__(self) -> None:
-        super().__init__()
-        self.algorithms = []
-
-    @property
-    def available_backends(self) -> Dict[str, BackendType]:
-        # TODO(KodiaqQ): Need to add the implementation of the method (cross-algorithm backend calculation)
-        # after updating the MinMax Quantization with shareable logic
-        pass
-
-    @abstractmethod
-    def create_subalgorithms(self) -> None:
-        """
-        Some composite algorithms have different inner algorithms.
-        This method creates sub-algorithms and sets model transformer to them
         """

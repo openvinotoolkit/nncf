@@ -25,12 +25,12 @@ from tests.common.helpers import TEST_ROOT
 from tests.common.graph.nx_graph import compare_nx_graph_with_reference
 from tests.common.graph.nx_graph import check_nx_graph
 
-from nncf.experimental.post_training.api.dataset import Dataset
-from nncf.experimental.post_training.compression_builder import CompressionBuilder
-from nncf.experimental.post_training.algorithms.quantization.min_max.algorithm import MinMaxQuantization
-from nncf.experimental.post_training.algorithms.quantization import MinMaxQuantizationParameters
-from nncf.experimental.post_training.algorithms.quantization import PostTrainingQuantization
-from nncf.experimental.post_training.algorithms.quantization import PostTrainingQuantizationParameters
+from nncf.quantization.dataset import PTQDataset
+from nncf.quantization.compression_builder import CompressionBuilder
+from nncf.quantization.algorithms.min_max.algorithm import MinMaxQuantization
+from nncf.quantization.algorithms import MinMaxQuantizationParameters
+from nncf.quantization.algorithms import DefaultQuantization
+from nncf.quantization.algorithms import DefaultQuantizationParameters
 from nncf.experimental.onnx.graph.nncf_graph_builder import GraphConverter
 from nncf.experimental.onnx.tensor import ONNXNNCFTensor
 from nncf.experimental.onnx.graph.onnx_graph import ONNXGraph
@@ -39,7 +39,7 @@ from nncf.experimental.onnx.model_normalizer import ONNXModelNormalizer
 REFERENCE_GRAPHS_TEST_ROOT = 'data/reference_graphs/quantization'
 
 
-class DatasetForTest(Dataset):
+class DatasetForTest(PTQDataset):
     def __init__(self, input_key: str, input_shape: List[int], input_dtype: np.dtype, has_batch_dim: bool):
         super().__init__()
         self.input_key = input_key
@@ -100,7 +100,7 @@ def ptq_quantize_model(
     dataset = DatasetForTest(_get_input_key(original_model), input_shape, input_np_dtype, dataset_has_batch_size)
     builder = CompressionBuilder(convert_opset_version)
     builder.add_algorithm(
-        PostTrainingQuantization(PostTrainingQuantizationParameters(number_samples=1, ignored_scopes=ignored_scopes)))
+        DefaultQuantization(DefaultQuantizationParameters(number_samples=1, ignored_scopes=ignored_scopes)))
     quantized_model = builder.apply(original_model, dataset)
     return quantized_model
 

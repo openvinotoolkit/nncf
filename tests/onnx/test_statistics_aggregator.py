@@ -15,11 +15,11 @@ import pytest
 
 import numpy as np
 
-from nncf.experimental.post_training.compression_builder import CompressionBuilder
-from nncf.experimental.post_training.algorithms.quantization.min_max.algorithm import MinMaxQuantizationParameters
-from nncf.experimental.post_training.algorithms.quantization.min_max.algorithm import MinMaxQuantization
+from nncf.quantization.compression_builder import CompressionBuilder
+from nncf.quantization.algorithms.min_max.algorithm import MinMaxQuantizationParameters
+from nncf.quantization.algorithms.min_max.algorithm import MinMaxQuantization
 from nncf.experimental.onnx.graph.onnx_graph import ONNXGraph
-from nncf.experimental.post_training.algorithms.quantization.definitions import RangeType
+from nncf.quantization.algorithms.definitions import RangeType
 
 from tests.onnx.models import OneConvolutionalModel
 from tests.onnx.test_samplers import TestDataset

@@ -26,8 +26,8 @@ from nncf.experimental.onnx.graph.transformations.commands import ONNXBiasCorrec
 from nncf.experimental.onnx.graph.transformations.commands import ONNXModelExtractionCommand
 from nncf.experimental.onnx.graph.transformations.commands import ONNXOutputInsertionCommand
 from nncf.experimental.onnx.graph.transformations.commands import ONNXQuantizerInsertionCommand
-from nncf.experimental.post_training.factories import NNCFGraphFactory
-from nncf.experimental.post_training.graph.model_transformer import StaticModelTransformerBase
+from nncf.quantization.factories import NNCFGraphFactory
+from nncf.quantization.graph.model_transformer import StaticModelTransformerBase
 
 
 # pylint: disable=no-member

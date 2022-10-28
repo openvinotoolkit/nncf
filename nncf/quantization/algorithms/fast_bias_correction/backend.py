@@ -26,7 +26,7 @@ from nncf.common.graph import NNCFNode
 from nncf.common.tensor_statistics.collectors import TensorStatisticCollectorBase
 from nncf.common.tensor_statistics.collectors import ReductionShape
 from nncf.common.utils.registry import Registry
-from nncf.experimental.post_training.graph.model_transformer import StaticModelTransformerBase
+from nncf.quantization.graph.model_transformer import StaticModelTransformerBase
 
 ModelType = TypeVar('ModelType')
 OutputType = TypeVar('OutputType')

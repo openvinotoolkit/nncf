@@ -19,9 +19,9 @@ import numpy as np
 import onnx
 from nncf.experimental.onnx.tensor import ONNXNNCFTensor
 
-from nncf.experimental.post_training.compression_builder import CompressionBuilder
-from nncf.experimental.post_training.algorithms.quantization import PostTrainingQuantization
-from nncf.experimental.post_training.algorithms.quantization import PostTrainingQuantizationParameters
+from nncf.quantization.compression_builder import CompressionBuilder
+from nncf.quantization.algorithms import DefaultQuantization
+from nncf.quantization.algorithms import DefaultQuantizationParameters
 from nncf.common.utils.logger import logger as nncf_logger
 
 from openvino.tools.accuracy_checker.config import ConfigReader
@@ -32,14 +32,14 @@ from openvino.tools.accuracy_checker.evaluators import ModelEvaluator
 # pylint: disable=unused-import
 # This import need to register custom Conerter
 from tests.onnx.benchmarking.accuracy_checker import MSCocoSegmentationToVOCConverter
-from nncf.experimental.post_training.api import dataset as ptq_api_dataset
+from nncf.quantization import dataset as ptq_api_dataset
 
 from tests.onnx.quantization.common import find_ignored_scopes
 
 # pylint: disable=redefined-outer-name
 
 
-class OpenVINOAccuracyCheckerDataset(ptq_api_dataset.Dataset):
+class OpenVINOAccuracyCheckerDataset(ptq_api_dataset.PTQDataset):
     def __init__(self, model_evaluator: ModelEvaluator, batch_size: int, shuffle: bool, has_batch_dim: bool = True):
         super().__init__(batch_size, shuffle)
         self.model_evaluator = model_evaluator
@@ -85,11 +85,11 @@ def run(onnx_model_path: str, output_model_path: str, dataset: Dataset,
     builder = CompressionBuilder(convert_opset_version)
 
     # Step 2: Create the quantization algorithm and add to the builder.
-    quantization_parameters = PostTrainingQuantizationParameters(
+    quantization_parameters = DefaultQuantizationParameters(
         number_samples=num_init_samples,
         ignored_scopes=ignored_scopes
     )
-    quantization = PostTrainingQuantization(quantization_parameters)
+    quantization = DefaultQuantization(quantization_parameters)
     builder.add_algorithm(quantization)
 
     # Step 4: Execute the pipeline.

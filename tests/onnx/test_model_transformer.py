@@ -26,7 +26,7 @@ from nncf.experimental.onnx.graph.transformations.commands import ONNXOutputInse
 from nncf.common.quantization.structs import QuantizationMode
 from nncf.experimental.onnx.graph.model_transformer import ONNXModelTransformer
 from nncf.experimental.onnx.graph.onnx_graph import ONNXGraph
-from nncf.experimental.post_training.algorithms.quantization.min_max.utils import QuantizerLayerParameters
+from nncf.quantization.algorithms.min_max.utils import QuantizerLayerParameters
 
 from tests.onnx.models import LinearModel
 

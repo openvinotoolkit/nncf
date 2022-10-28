@@ -12,16 +12,16 @@
 """
 
 from abc import ABC, abstractmethod
-from typing import Callable, Dict, TypeVar
+from typing import Callable, TypeVar, Dict
 
 from tqdm import tqdm
 
-from nncf.experimental.post_training.statistics.statistic_point import StatisticPointsContainer
-from nncf.experimental.post_training.api.dataset import NNCFData
-from nncf.experimental.post_training.api.sampler import Sampler
+from nncf.common.tensor import NNCFTensor
+from nncf.quantization.statistics.statistic_point import StatisticPointsContainer
 
 ModelType = TypeVar('ModelType')
 MetricType = TypeVar('MetricType')
+NNCFData = Dict[str, NNCFTensor]
 
 
 class Engine(ABC):
@@ -31,9 +31,7 @@ class Engine(ABC):
 
     def __init__(self):
         self.model = None
-        self._sampler = None
         self._dataset = None
-        self._metrics = None
         self._inputs_transforms = lambda input_data: input_data
         self._outputs_transforms = lambda output_data: output_data
 
@@ -42,33 +40,14 @@ class Engine(ABC):
     def dataset(self):
         return self._dataset
 
-    @property
-    def metrics(self):
-        return self._metrics
-
-    @property
-    def sampler(self):
-        return self._sampler
-
     def set_dataset(self, dataset) -> None:
         self._dataset = dataset
-
-    def set_metrics(self, metrics) -> None:
-        self._metrics = metrics
-
-    def set_sampler(self, sampler) -> None:
-        self._sampler = sampler
 
     def set_model(self, model: ModelType) -> None:
         self.model = model
 
     def is_model_set(self) -> bool:
         return self.model is not None
-
-    def get_sampler(self) -> Sampler:
-        if not self.sampler:
-            raise RuntimeError(f'The {self.__class__} tried to get sampler, but it was not set')
-        return self.sampler
 
     def set_outputs_transforms(self, outputs_transforms: Callable):
         """
@@ -82,7 +61,7 @@ class Engine(ABC):
         """
         self._inputs_transforms = inputs_transforms
 
-    def compute_statistics(self, statistic_points: StatisticPointsContainer) -> None:
+    def compute_statistics(self, statistic_points: StatisticPointsContainer, subset_size: int = None) -> None:
         """
         Performs model inference on specified dataset subset and collects statistics
 
@@ -92,30 +71,10 @@ class Engine(ABC):
         if not self.is_model_set():
             raise RuntimeError(f'The {self.__class__} tried to compute statistics, '
                                'while the model was not set.')
-        sampler = self.get_sampler()
-
-        for input_data in tqdm(sampler):
+        subset_indices = list(range(subset_size))
+        for input_data in tqdm(self.dataset.get_inference_data(subset_indices), total=subset_size):
             outputs = self.infer(input_data)
             self._register_statistics(outputs, statistic_points)
-
-    def compute_metrics(self, metrics_per_sample: bool = False) -> Dict[str, MetricType]:
-        """
-        Performs model inference on specified dataset subset for metrics calculation
-
-        :param metrics_per_sample: whether to collect metrics for each batch
-        :return metrics: a tuple of dictionaries of persample and
-        overall metric values if 'metrics_per_sample' is True
-        """
-        if not self.is_model_set():
-            raise RuntimeError(f'The {self.__class__} tried to compute statistics, '
-                               'while the model was not set.')
-
-        # TODO (Nikita Malinin): Add per-sample metrics calculation
-        sampler = self.get_sampler()
-        for input_data in tqdm(sampler):
-            outputs = self.infer(input_data)
-            self.metrics.update(outputs, input_data)
-        return self.metrics.avg_value
 
     @abstractmethod
     def infer(self, input_data: NNCFData) -> NNCFData:
