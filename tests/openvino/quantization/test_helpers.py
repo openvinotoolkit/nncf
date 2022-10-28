@@ -16,34 +16,21 @@ import pytest
 from nncf.parameters import IgnoredScope
 from nncf.openvino.quantization.helpers import _create_ignored_scope_config
 
-IGNORED_NAMES = [['name1', 'name2'], 'name1']
-IGNORED_TYPES = [['type1', 'type2'], 'type1']
 
+def test_create_ignored_scope_config():
+    ignored_names = ['name1', 'name2']
+    ignored_types = ['type1', 'type2']
 
-@pytest.mark.parametrize(('ignored_names, ignored_types'),
-                         zip(IGNORED_NAMES, IGNORED_TYPES),
-                         ids=['list', 'str'])
-def test_create_ignored_scope_config(ignored_names, ignored_types):
     ignored_scope = IgnoredScope(
         names=ignored_names,
         types=ignored_types,
     )
     ignored_config = _create_ignored_scope_config(ignored_scope)
 
-    expected_names = ignored_names
-    if isinstance(expected_names, str):
-        expected_names = [expected_names]
-
-    assert ignored_config['scope'] == expected_names
-
-    expected_types = ignored_types
-    if isinstance(expected_types, str):
-        expected_types = [expected_types]
+    assert ignored_config['scope'] == ignored_names
 
     actual_types = [a['type'] for a in ignored_config['operations']]
-    actual_types = actual_types.sort()
-    expected_types = expected_types.sort()
-    assert actual_types == expected_types
+    assert actual_types.sort() == ignored_types.sort()
 
 
 def test_create_ignored_scope_config_raise_exception():

@@ -67,7 +67,7 @@ def _convert_compressed_model_to_openvino_model(model: pot.graph.nx_model.Compre
     return ov_model
 
 
-def _create_ignored_scope_config(ignored_scope: IgnoredScope) -> Dict:
+def _create_ignored_scope_config(ignored_scope: Optional[IgnoredScope]) -> Dict:
     """
     Maps the content of `IgnoredScope` class to the `ignored` section of POT config.
 
@@ -79,19 +79,13 @@ def _create_ignored_scope_config(ignored_scope: IgnoredScope) -> Dict:
 
     ignored = {}
     if ignored_scope.names is not None:
-        names = ignored_scope.names
-        if isinstance(names, str):
-            names = [names]
-        ignored['scope'] = names
+        ignored['scope'] = ignored_scope.names
     if ignored_scope.patterns is not None:
         raise RuntimeError('Quantization algorithm form the OpenVINO backend '
                            'does not support regular expressions in the ignored '
                            'scopes yet')
     if ignored_scope.types is not None:
-        types = ignored_scope.types
-        if isinstance(types, str):
-            types = [types]
-        ignored['operations'] = [{'type': type} for type in types]
+        ignored['operations'] = [{'type': type} for type in ignored_scope.types]
     return ignored
 
 
