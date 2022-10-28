@@ -78,20 +78,20 @@ def _create_ignored_scope_config(ignored_scope: IgnoredScope) -> Dict:
         return {}
 
     ignored = {}
-    if ignored_scope.node_names is not None:
-        node_names = ignored_scope.node_names
-        if isinstance(node_names, str):
-            node_names = [node_names]
-        ignored['scope'] = node_names
-    if ignored_scope.node_name_patterns is not None:
+    if ignored_scope.names is not None:
+        names = ignored_scope.names
+        if isinstance(names, str):
+            names = [names]
+        ignored['scope'] = names
+    if ignored_scope.patterns is not None:
         raise RuntimeError('Quantization algorithm form the OpenVINO backend '
-                           'does not support node name regular expressions '
-                           'in the ignored scopes yet')
-    if ignored_scope.node_types is not None:
-        node_types = ignored_scope.node_types
-        if isinstance(node_types, str):
-            node_types = [node_types]
-        ignored['operations'] = [{'type': node_type} for node_type in node_types]
+                           'does not support regular expressions in the ignored '
+                           'scopes yet')
+    if ignored_scope.types is not None:
+        types = ignored_scope.types
+        if isinstance(types, str):
+            types = [types]
+        ignored['operations'] = [{'type': type} for type in types]
     return ignored
 
 

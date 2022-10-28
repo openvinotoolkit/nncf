@@ -16,39 +16,39 @@ import pytest
 from nncf.parameters import IgnoredScope
 from nncf.openvino.quantization.helpers import _create_ignored_scope_config
 
-IGNORED_NODE_NAMES = [['name1', 'name2'], 'name1']
-IGNORED_NODE_TYPES = [['type1', 'type2'], 'type1']
+IGNORED_NAMES = [['name1', 'name2'], 'name1']
+IGNORED_TYPES = [['type1', 'type2'], 'type1']
 
 
-@pytest.mark.parametrize(('ignored_node_names, ignored_node_types'),
-                         zip(IGNORED_NODE_NAMES, IGNORED_NODE_TYPES),
+@pytest.mark.parametrize(('ignored_names, ignored_types'),
+                         zip(IGNORED_NAMES, IGNORED_TYPES),
                          ids=['list', 'str'])
-def test_create_ignored_scope_config(ignored_node_names, ignored_node_types):
+def test_create_ignored_scope_config(ignored_names, ignored_types):
     ignored_scope = IgnoredScope(
-        node_names=ignored_node_names,
-        node_types=ignored_node_types,
+        names=ignored_names,
+        types=ignored_types,
     )
     ignored_config = _create_ignored_scope_config(ignored_scope)
 
-    expected_node_names = ignored_node_names
-    if isinstance(expected_node_names, str):
-        expected_node_names = [expected_node_names]
+    expected_names = ignored_names
+    if isinstance(expected_names, str):
+        expected_names = [expected_names]
 
-    assert ignored_config['scope'] == expected_node_names
+    assert ignored_config['scope'] == expected_names
 
-    expected_node_types = ignored_node_types
-    if isinstance(expected_node_types, str):
-        expected_node_types = [expected_node_types]
+    expected_types = ignored_types
+    if isinstance(expected_types, str):
+        expected_types = [expected_types]
 
-    actual_node_types = [a['type'] for a in ignored_config['operations']]
-    actual_node_types = actual_node_types.sort()
-    expected_node_types = expected_node_types.sort()
-    assert actual_node_types == expected_node_types
+    actual_types = [a['type'] for a in ignored_config['operations']]
+    actual_types = actual_types.sort()
+    expected_types = expected_types.sort()
+    assert actual_types == expected_types
 
 
 def test_create_ignored_scope_config_raise_exception():
     ignored_scope = IgnoredScope(
-        node_name_patterns='.*'
+        patterns='.*'
     )
     with pytest.raises(Exception):
         _ = _create_ignored_scope_config(ignored_scope)

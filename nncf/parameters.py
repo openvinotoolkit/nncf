@@ -47,39 +47,39 @@ class IgnoredScope:
 
     # Exclude by node name:
     node_names = ['node_1', 'node_2', 'node_3']
-    ignored_scope = nncf.IgnoredScope(node_names=node_names)
+    ignored_scope = nncf.IgnoredScope(names=node_names)
 
     # Exclude using regular expressions:
-    pattern = ['node_\\d']
-    ignored_scope = nncf.IgnoredScope(node_name_patterns=pattern)
+    patterns = ['node_\\d']
+    ignored_scope = nncf.IgnoredScope(patterns=patterns)
 
-    # Exclude by node type:
+    # Exclude by operation type:
 
     # OpenVINO opset https://docs.openvino.ai/latest/openvino_docs_ops_opset.html
-    node_types = ['Multiply', 'GroupConvolution', 'Interpolate']
-    ignored_scope = nncf.IgnoredScope(node_types=pattern)
+    operation_types = ['Multiply', 'GroupConvolution', 'Interpolate']
+    ignored_scope = nncf.IgnoredScope(types=operation_types)
 
     # ONNX opset https://github.com/onnx/onnx/blob/main/docs/Operators.md
-    node_types = ['Mul', 'Conv', 'Resize']
-    ignored_scope = nncf.IgnoredScope(node_types=pattern)
+    operation_types = ['Mul', 'Conv', 'Resize']
+    ignored_scope = nncf.IgnoredScope(types=operation_types)
 
     ...
 
     ```
 
-    **Note** Node types must be specified according to the model framework.
+    **Note** Operation types must be specified according to the model framework.
     """
 
     def __init__(self,
-                 node_names: Optional[List[str]] = None,
-                 node_name_patterns: Optional[List[str]] = None,
-                 node_types: Optional[List[str]] = None):
+                 names: Optional[List[str]] = None,
+                 patterns: Optional[List[str]] = None,
+                 types: Optional[List[str]] = None):
         """
-        :param node_names: List of ignored node names
-        :param node_name_patterns: List of regular expressions specifying
-            patterns for names of ignored nodes
-        :param node_types: List of ignored node types
+        :param names: List of ignored node names
+        :param patterns: List of regular expressions that define patterns for 
+            names of ignored nodes
+        :param types: List of ignored operation types
         """
-        self.node_names = node_names
-        self.node_name_patterns = node_name_patterns
-        self.node_types = node_types
+        self.names = names
+        self.patterns = patterns
+        self.types = types
