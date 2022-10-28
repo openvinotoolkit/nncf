@@ -69,8 +69,7 @@ def _convert_compressed_model_to_openvino_model(model: pot.graph.nx_model.Compre
 
 def _create_ignored_scope_config(ignored_scope: IgnoredScope) -> Dict:
     """
-    Creates POT ignored scope configuration from the ignored scope that is
-    defined using `IgnoredScope` class.
+    Maps the content of `IgnoredScope` class to the `ignored` section of POT config.
 
     :param ignored_scope: The ignored scope
     :return: A POT ignored scope configuration as dict

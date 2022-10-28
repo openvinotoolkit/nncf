@@ -13,4 +13,3 @@
 
 from nncf.common.quantization.structs import QuantizationPreset
 from nncf.quantization.helpers import quantize
-

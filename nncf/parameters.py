@@ -37,31 +37,34 @@ class IgnoredScope:
     """
     Dataclass that contains description of the ignored scope.
 
-    The ignored scope specify model sub-graphs which should be excluded from
+    The ignored scope defines model sub-graphs that should be excluded from
     the optimization process such as quantization, pruning and etc.
 
-    For example, you want to exclude some model nodes from the optimization
-    process by node name:
+    Examples:
 
     ```
     import nncf
+
+    # Exclude by node name:
     node_names = ['node_1', 'node_2', 'node_3']
     ignored_scope = nncf.IgnoredScope(node_names=node_names)
-    ```
 
-    or using regular expressions to match node names:
-
-    ```
-    pattern = ['node_\d']
+    # Exclude using regular expressions:
+    pattern = ['node_\\d']
     ignored_scope = nncf.IgnoredScope(node_name_patterns=pattern)
-    ```
 
-    to exclude some nodes of the OpenVINO model from the optimization process
-    by node type:
+    # Exclude by node type:
 
-    ```
+    # OpenVINO opset https://docs.openvino.ai/latest/openvino_docs_ops_opset.html
     node_types = ['Multiply', 'GroupConvolution', 'Interpolate']
     ignored_scope = nncf.IgnoredScope(node_types=pattern)
+
+    # ONNX opset https://github.com/onnx/onnx/blob/main/docs/Operators.md
+    node_types = ['Mul', 'Conv', 'Resize']
+    ignored_scope = nncf.IgnoredScope(node_types=pattern)
+
+    ...
+
     ```
 
     **Note** Node types must be specified according to the model framework.
