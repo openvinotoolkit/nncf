@@ -19,7 +19,7 @@ from nncf.torch.sparsity.movement.functions import binary_mask_by_threshold
 from nncf.torch.functions import logit
 from nncf.torch.layer_utils import COMPRESSION_MODULES, CompressionParameter
 from enum import Enum
-from typing import Dict, List, Optional, Any
+from typing import Dict, List, Optional, Any, Tuple
 from copy import deepcopy
 
 from torch.nn.modules import sparse
@@ -34,21 +34,86 @@ class SparseStructure(str, Enum):
     BLOCK = "block"
     PER_DIM = "per_dim"
 
+    @classmethod
+    def from_str(cls, mode: str) -> 'SparseStructure':
+        if mode == SparseStructure.FINE.value:
+            return SparseStructure.FINE
+        if mode == SparseStructure.BLOCK.value:
+            return SparseStructure.BLOCK
+        if mode == SparseStructure.PER_DIM.value:
+            return SparseStructure.PER_DIM
+        raise RuntimeError(f"Unknown sparse structure: {mode}."
+                           f"List of supported: {[e.value for e in SparseStructure]}")
+
+
 class SparseConfig:
-    def __init__(self, mode: SparseStructure = SparseStructure.FINE, sparse_args=None):
-        self.mode = SparseStructure(mode)
-        self.sparse_args = sparse_args
+    def __init__(self,
+                 mode: SparseStructure,
+                 sparse_factors: Optional[Tuple[int, int]] = None,
+                 sparse_axis: Optional[int] = None):
+        error_prefix = 'Invalid sparse config.'
         self.sparse_factors = None
+        self.sparse_axis = None
+        self.mode = mode
+        if self.mode == SparseStructure.FINE:
+            self.sparse_factors = (1, 1)
+
+        if self.mode == SparseStructure.BLOCK:
+            if sparse_factors is None:
+                raise ValueError(
+                    '{} Missing `sparse_factors`. Block sparsity structure expects it specified.'.format(error_prefix))
+            if not (isinstance(sparse_factors, (tuple, list)) and len(sparse_factors) == 2):
+                raise ValueError('{} Invalid format of `sparse_factors`. '
+                                 'Block sparsity structure expects tuple of two numbers')
+            self.sparse_factors = tuple(sparse_factors)
+
+        if self.mode == SparseStructure.PER_DIM:
+            if sparse_axis is None:
+                raise ValueError(
+                    '{} Missing `axis`. Sparsity structure per dimension expects it specified.'.format(error_prefix))
+            self.sparse_axis = sparse_axis
+
+    @classmethod
+    def from_config(cls, config: Dict[str, Any]) -> 'SparseConfig':
+        """
+        Creates the object from its config.
+        """
+        mode_str = config.get('mode', SparseStructure.FINE.value)
+        mode = SparseStructure.from_str(mode_str)
+        sparse_factors = config.get('sparse_factors')
+        axis = config.get('axis')
+        return cls(mode, sparse_factors, axis)
+
+    def __str__(self):
+        return f'{self.mode.value, self.sparse_factors}'
+
+
+class SparseConfigByScope:
+    def __init__(self, sparse_config: SparseConfig, target_scopes: str):
+        self.sparse_config = sparse_config
+        self.target_scopes = target_scopes
+
+    @classmethod
+    def from_config(cls, config: Dict[str, Any]) -> 'SparseConfigByScope':
+        """
+        Creates the object from its representation .
+        """
+        error_prefix = 'Invalid sparse structure by scopes {}.'.format(config)
+        target_scopes = config.get('target_scopes')
+        if not target_scopes:
+            raise ValueError('{} Missing `target_scopes`.'.format(error_prefix))
+        sparse_config = SparseConfig.from_config(config)
+        return cls(sparse_config, target_scopes)
 
 
 @COMPRESSION_MODULES.register()
 class MovementSparsifier(nn.Module):
-    def __init__(self, 
-                 target_module_node, 
-                 frozen=True, 
-                 compression_lr_multiplier=None, 
-                 eps=1e-6, 
-                 sparse_cfg=None):
+    def __init__(self,
+                 target_module_node,
+                 sparse_cfg: SparseConfig,
+                 frozen=True,
+                 compression_lr_multiplier=None,
+                 eps=1e-6):
         super().__init__()
 
         DEBUG=False
@@ -60,11 +125,13 @@ class MovementSparsifier(nn.Module):
         self.eps = eps
         self.lmbd = 0.5 # module_level_loss_weightage
         self.masking_threshold = -999 # This must be sufficiently small # TODO: there might be dependency
-        self.sparse_cfg = sparse_cfg
-        
+
         weight_shape = target_module_node.layer_attributes.get_weight_shape()
         self.weight_ctx = BinaryMask(weight_shape)
-        self._weight_importance_shape, self._bool_expand_importance = self._get_importance_shape(weight_shape)
+        self.sparse_factors = self._get_sparse_factors(weight_shape, sparse_cfg)
+        self.sparse_structure = sparse_cfg.mode
+        self._weight_importance_shape, self._bool_expand_importance = self._get_importance_shape(
+            weight_shape, self.sparse_factors, self.sparse_structure)
         self._weight_importance = CompressionParameter(
                                 torch.rand(self._weight_importance_shape) if DEBUG is True else torch.zeros(self._weight_importance_shape),
                                 requires_grad=not self.frozen,
@@ -123,8 +190,7 @@ class MovementSparsifier(nn.Module):
 
 
     def extra_repr(self):
-        return 'sparse_structure: {}, {}'.format(
-            self.sparse_cfg.mode, self.sparse_cfg.sparse_args)
+        return 'sparse_structure: {}'.format(self.sparse_structure.value, self.sparse_factors)
 
     def forward(self, weight, bias):
         if is_tracing_state():
@@ -157,42 +223,38 @@ class MovementSparsifier(nn.Module):
         if isbias is True:
             return self.bias_ctx.apply_binary_mask(param_tensor)
         return self.weight_ctx.apply_binary_mask(param_tensor)
-        
-    def _get_importance_shape(self, weight_shape):
-        #TODO:remove  weight_shape, r=32, c=32):
-        # Default to fine_grained sparsity
-        if self.sparse_cfg is None:
-            self.sparse_cfg = SparseConfig(
-                SparseStructure("fine"),
-                (1,1)
-            )
-            self.sparse_cfg.sparse_factors = (1, 1)
 
-        if self.sparse_cfg.mode == SparseStructure.FINE:
-            self.sparse_cfg.sparse_factors = (1, 1)
-            return weight_shape, False
-
-        if self.sparse_cfg.mode == SparseStructure.BLOCK:
-            r, c = self.sparse_cfg.sparse_args
+    @staticmethod
+    def _get_sparse_factors(weight_shape, sparse_config: SparseConfig):
+        sparse_factors = sparse_config.sparse_factors
+        if sparse_config.mode == SparseStructure.BLOCK:
+            r, c = sparse_factors
             assert weight_shape[0] % r == 0, "r: {} is not a factor of dim axes 0".format(r)
             assert weight_shape[1] % c == 0, "c: {} is not a factor of dim axes 1".format(c)
-            self.sparse_cfg.sparse_factors = (r, c)
+
+        if sparse_config.mode == SparseStructure.PER_DIM:
+            if sparse_config.sparse_axis < 0 or sparse_config.sparse_axis >= len(weight_shape):
+                raise ValueError("Invalid axis id {}, axes range {}".format(
+                    sparse_config.sparse_axis,
+                    list(range(len(weight_shape)))))
+            sparse_factors = deepcopy(weight_shape)
+            sparse_factors[sparse_config.sparse_axis] = 1
+            sparse_factors = tuple(sparse_factors)
+        return sparse_factors
+
+    @staticmethod
+    def _get_importance_shape(weight_shape, sparse_factors: Tuple[int, int], sparse_structure: SparseStructure):
+        # TODO:remove  weight_shape, r=32, c=32):
+        if sparse_structure == SparseStructure.FINE:
+            return weight_shape, False
+
+        if sparse_structure == SparseStructure.BLOCK:
+            r, c = sparse_factors
             return (weight_shape[0]//r, weight_shape[1]//c), True
 
-        if self.sparse_cfg.mode == SparseStructure.PER_DIM:
-            if len(self.sparse_cfg.sparse_args) != 1 or not isinstance(self.sparse_cfg.sparse_args[0], int):
-                raise ValueError("Invalid sparse_arg {}, per_dim expects a single digit that indicates axis".format(self.sparse_cfg.sparse_args))
-
-            if self.sparse_cfg.sparse_args[0] < 0 or self.sparse_cfg.sparse_args[0] >= len(weight_shape):
-                raise ValueError("Invalid axis id {}, axes range {}".format(
-                                                                        self.sparse_cfg.sparse_args[0],
-                                                                        list(range(len(weight_shape)))))
-            self.sparse_cfg.sparse_factors = deepcopy(weight_shape)
-            self.sparse_cfg.sparse_factors[self.sparse_cfg.sparse_args[0]] = 1
-            self.sparse_cfg.sparse_factors = tuple(self.sparse_cfg.sparse_factors)
-
+        if sparse_structure == SparseStructure.PER_DIM:
             score_shape = []
-            for axes, (dim, factor) in enumerate(zip(weight_shape, self.sparse_cfg.sparse_factors)):
+            for axes, (dim, factor) in enumerate(zip(weight_shape, sparse_factors)):
                 assert dim % factor == 0, "{} is not a factor of axes {} with dim size {}".format(factor, axes, dim)
                 score_shape.append(dim//factor)
             return score_shape, True
@@ -202,11 +264,11 @@ class MovementSparsifier(nn.Module):
         if self._bool_expand_importance:
             if isbias is False:
                 return importance.repeat_interleave(
-                    self.sparse_cfg.sparse_factors[0], dim=0).repeat_interleave(
-                    self.sparse_cfg.sparse_factors[1], dim=1)
+                    self.sparse_factors[0], dim=0).repeat_interleave(
+                    self.sparse_factors[1], dim=1)
             else:
                 return importance.repeat_interleave(
-                    self.sparse_cfg.sparse_factors[0], dim=0)
+                    self.sparse_factors[0], dim=0)
         return importance
 
     def loss(self):
@@ -217,8 +279,7 @@ class MovementSparsifier(nn.Module):
 
     def get_structured_mask(self, grain_size=None):
         if grain_size is None:
-            grain_size = self.sparse_cfg.sparse_factors
-        
+            grain_size = self.sparse_factors
         structured_mask_shape = [dim//grain_size[axes] for axes, dim in enumerate(list(self.weight_ctx.binary_mask.shape))]
         temp_shape = list(it.chain(*zip(list(structured_mask_shape), list(grain_size))))
         structured_mask = self.weight_ctx.binary_mask.detach().clone()

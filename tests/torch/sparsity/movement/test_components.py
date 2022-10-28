@@ -18,10 +18,15 @@ from tests.torch.test_algo_common import BasicLinearTestModel
 
 
 @pytest.mark.parametrize(("sparse_structure_by_scopes", "init_weight_importance", "init_bias_importance", "ref_masked_weight", "ref_masked_bias"), [
-    (["block", [2, 2], "{re}fc"], [[0, 1], [0, 1]], [1, 0], [[0, 0, 2, 3], [0, 0, 6, 7], [0, 0, 10, 11], [0, 0, 14, 15]], [0, 1, 0, 0]),
-    (["per_dim", [0], "{re}fc"], [[0], [1], [0], [1]], [1, 1, 0, 0], [[0] * 4, [4, 5, 6, 7], [0] * 4, [12, 13, 14, 15]], [0, 1, 0, 0]),
-    (["per_dim", [1], "{re}fc"], [0, 1, 0, 1], [0], [[0, 1, 0, 3], [0, 5, 0, 7], [0, 9, 0, 11], [0, 13, 0, 15]], [0] * 4),
-    (["fine", [1, 1], "{re}fc"], [[0, 1, 1, 1], [0, 1, 1, 1], [1] * 4, [0] * 4], [0, 0, 0, 1], [[0, 1, 2, 3], [0, 5, 6, 7], [8, 9, 10, 11], [0] * 4], [0, 0, 0, 3])
+    ({"mode": "block", "sparse_factors": [2, 2], "target_scopes": "{re}fc"}, [[0, 1], [0, 1]], [1, 0],
+     [[0, 0, 2, 3], [0, 0, 6, 7], [0, 0, 10, 11], [0, 0, 14, 15]], [0, 1, 0, 0]),
+    ({"mode": "per_dim", "axis": 0, "target_scopes": "{re}fc"}, [[0], [1], [0], [1]], [1, 1, 0, 0],
+     [[0] * 4, [4, 5, 6, 7], [0] * 4, [12, 13, 14, 15]], [0, 1, 0, 0]),
+    ({"mode": "per_dim", "axis": 1, "target_scopes": "{re}fc"}, [0, 1, 0, 1], [0],
+     [[0, 1, 0, 3], [0, 5, 0, 7], [0, 9, 0, 11], [0, 13, 0, 15]], [0] * 4),
+    ({"mode": "fine", "sparse_factors": [1, 1], "target_scopes": "{re}fc"},
+     [[0, 1, 1, 1], [0, 1, 1, 1], [1] * 4, [0] * 4], [0, 0, 0, 1],
+     [[0, 1, 2, 3], [0, 5, 6, 7], [8, 9, 10, 11], [0] * 4], [0, 0, 0, 3])
 ])
 def test_sparsifier_forward(tmp_path, sparse_structure_by_scopes, init_weight_importance, init_bias_importance, ref_masked_weight, ref_masked_bias):
     nncf_config = ConfigBuilder(sparse_structure_by_scopes=[sparse_structure_by_scopes]).build(

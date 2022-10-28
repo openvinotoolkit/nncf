@@ -30,6 +30,7 @@ from nncf.torch.graph.transformations.commands import PTInsertionCommand
 from nncf.torch.graph.transformations.commands import PTTargetPoint
 from nncf.torch.graph.transformations.commands import TransformationPriority
 from nncf.torch.sparsity.movement.layers import MovementSparsifier, SparseConfig, SparseStructure
+from nncf.torch.sparsity.movement.layers import SparseConfigByScope
 from nncf.torch.sparsity.movement.loss import ImportanceLoss, SparseLossForPerLayerSparsity
 from nncf.torch.module_operations import UpdateWeightAndBias
 from nncf.torch.utils import get_world_size, get_model_device
@@ -52,6 +53,11 @@ import pandas as pd
 
 @PT_COMPRESSION_ALGORITHMS.register('movement_sparsity')
 class MovementSparsityBuilder(BaseSparsityAlgoBuilder):
+    def __init__(self, config, should_init: bool = True):
+        super().__init__(config, should_init)
+        configs = self._algo_config.get('sparse_structure_by_scopes', [])
+        self._sparse_configs_by_scopes = [SparseConfigByScope.from_config(c) for c in configs]
+
     def _sparsify_weights(self, target_model: NNCFNetwork) -> List[PTInsertionCommand]:
         device = get_model_device(target_model)
         sparsified_module_nodes = target_model.get_weighted_original_graph_nodes(
@@ -84,22 +90,16 @@ class MovementSparsityBuilder(BaseSparsityAlgoBuilder):
         return insertion_commands
 
     def create_weight_sparsifying_operation(self, target_module_node: NNCFNode, compression_lr_multiplier: float):
-        sparse_cfg=None
-        if 'sparse_structure_by_scopes' in self._algo_config:
-            for sparse_mode, sparse_args, regex in self._algo_config['sparse_structure_by_scopes']:
-                if matches_any(target_module_node.node_name, regex):
-                    sparse_cfg = SparseConfig(sparse_mode, sparse_args)
-                    break
+        sparse_cfg = SparseConfig(SparseStructure.FINE)
+        node_name = target_module_node.node_name
+        for configs_per_scopes in self._sparse_configs_by_scopes:
+            target_scopes = configs_per_scopes.target_scopes
+            if matches_any(node_name, target_scopes):
+                sparse_cfg = configs_per_scopes.sparse_config
+                break
 
-        if sparse_cfg is None:
-            sparse_cfg = SparseConfig()
-
-        return MovementSparsifier(
-                    target_module_node, 
-                    frozen=False,
-                    compression_lr_multiplier=compression_lr_multiplier,
-                    eps=1e-6, 
-                    sparse_cfg=sparse_cfg)
+        return MovementSparsifier(target_module_node, sparse_cfg=sparse_cfg, frozen=False,
+                                  compression_lr_multiplier=compression_lr_multiplier, eps=1e-6)
 
     def _build_controller(self, model: NNCFNetwork) -> PTCompressionAlgorithmController:
         return MovementSparsityController(model, self._sparsified_module_info, self.config)
@@ -326,7 +326,7 @@ class MovementSparsityController(BaseSparsityAlgoController):
 
                 elif any(map(sparsifying_node_name.__contains__, ['BertIntermediate','BertOutput'])):
                     mask = sparse_module_info.operand.get_structured_mask()
-                    grid_size = sparse_module_info.operand.sparse_cfg.sparse_factors
+                    grid_size = sparse_module_info.operand.sparse_factors
 
                     if DEBUG is True:
                         if 'BertIntermediate' in sparsifying_node_name:

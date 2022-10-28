@@ -104,8 +104,7 @@ class NNCFConfig(dict):
     @staticmethod
     def validate(loaded_json):
         try:
-            # jsonschema.validate(loaded_json, NNCFConfig.schema())
-            # TODO: Temporary disable
+            jsonschema.validate(loaded_json, NNCFConfig.schema())
             pass
         except jsonschema.ValidationError as e:
             nncf_logger.error('Invalid NNCF config supplied!')

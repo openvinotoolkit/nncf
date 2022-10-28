@@ -66,9 +66,9 @@ class ConfigBuilder:
             "steps_per_epoch": 128 // 32,
             "update_per_optimizer_step": True,
             "sparse_structure_by_scopes": [
-                ["block", [16, 16], "{re}.*attention*"],
-                ["per_dim", [0], "{re}.*BertIntermediate.*"],
-                ["per_dim", [1], "{re}.*BertOutput.*"],
+                {"mode": "block", "sparse_factors": [16, 16], "target_scopes": "{re}.*attention*"},
+                {"mode": "per_dim", "axis": 0, "target_scopes": "{re}.*BertIntermediate.*"},
+                {"mode": "per_dim", "axis": 1, "target_scopes": "{re}.*BertOutput.*"},
             ],
             "ignored_scopes": ["{re}embedding", "{re}pooler", "{re}classifier"],
         }

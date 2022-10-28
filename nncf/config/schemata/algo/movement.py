@@ -12,13 +12,33 @@
 """
 from nncf.config.definitions import ONLINE_DOCS_ROOT
 from nncf.config.definitions import MOVEMENT_SPARSITY_ALGO_NAME_IN_CONFIG
+from nncf.config.schemata.basic import ARRAY_OF_NUMBERS
 from nncf.config.schemata.common.compression import BASIC_COMPRESSION_ALGO_SCHEMA
 from nncf.config.schemata.common.compression import COMPRESSION_LR_MULTIPLIER_PROPERTY
 from nncf.config.schemata.basic import STRING, NUMBER, BOOLEAN
 from nncf.config.schemata.basic import with_attributes
 from nncf.config.schemata.common.sparsity import COMMON_SPARSITY_PARAM_PROPERTIES
 from nncf.config.schemata.common.targeting import SCOPING_PROPERTIES
-from nncf.config.schemata.defaults import SPARSITY_INIT
+
+MOVEMENT_SPARSITY_SCHEDULE_OPTIONS = ['threshold_polynomial_decay']
+
+SPARSE_STRUCTURE_MODE = ['fine', 'block', 'per_dim']
+
+SPARSE_STRUCTURE_BY_SCOPES_SCHEMA = {
+    "type": "object",
+    "properties": {
+        "mode": with_attributes(STRING,
+                                description="TBD",
+                                enum=SPARSE_STRUCTURE_MODE),
+        "sparse_factors": with_attributes(ARRAY_OF_NUMBERS,
+                                          description="TBD"),
+        "axis": with_attributes(NUMBER,
+                                description="TBD"),
+        "target_scopes": with_attributes(STRING,
+                                         description="TBD")
+    },
+    "additionalProperties": False
+}
 
 MOVEMENT_SPARSITY_SCHEMA = {
     **BASIC_COMPRESSION_ALGO_SCHEMA,
@@ -36,7 +56,9 @@ MOVEMENT_SPARSITY_SCHEMA = {
                 "properties": {
                     "schedule": with_attributes(STRING,
                                                 description="The type of scheduling to use for adjusting the"
-                                                            "importance threshold and its regularization factor"),
+                                                            "importance threshold and its regularization factor",
+                                                enum=MOVEMENT_SPARSITY_SCHEDULE_OPTIONS,
+                                                default=MOVEMENT_SPARSITY_SCHEDULE_OPTIONS[0]),
                     "power": with_attributes(NUMBER,
                                              description="For polynomial scheduler - determines the corresponding power value."),
                     "init_importance_threshold": with_attributes(NUMBER,
@@ -56,19 +78,17 @@ MOVEMENT_SPARSITY_SCHEMA = {
                                                    " scheduling in the first training epoch if "
                                                    "'update_per_optimizer_step' is true"),
                     "update_per_optimizer_step": with_attributes(BOOLEAN,
-                                                                description="Whether the function-based sparsity level schedulers "
-                                                                            "should update the sparsity level after each optimizer "
-                                                                            "step instead of each epoch step."),
-                    "sparsity_level_setting_mode": with_attributes(STRING,
-                                                                description="The mode of sparsity level setting( "
-                                                                            "'global' - one sparsity level is set for all layer, "
-                                                                            "'local' - sparsity level is set per-layer.)"),
-                    # TODO
-                    # "sparse_structure_by_scopes": with_attributes(make_object_or_array_of_objects_schema(_ARRAY_OF_STRINGS),
-                    #                   description="specification of sparsity grain size by NNCF scope. "),
+                                                                 description="Whether the function-based sparsity level schedulers "
+                                                                             "should update the sparsity level after each optimizer "
+                                                                             "step instead of each epoch step."),
                 },
                 "additionalProperties": False
             },
+        "sparse_structure_by_scopes": {
+            "type": "array",
+            "items": SPARSE_STRUCTURE_BY_SCOPES_SCHEMA,
+            "description": "TBD"
+        },
         **SCOPING_PROPERTIES,
         **COMPRESSION_LR_MULTIPLIER_PROPERTY
     },
