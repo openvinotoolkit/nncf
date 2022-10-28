@@ -62,6 +62,13 @@ XFAIL_QUANTIZED_MODELS = {
     "yolov4",
 }
 
+# TODO(vshampor): Somehow installing onnxruntime-openvino does not install the OV package in the way
+#  that we are used to, and accuracy checker invocations cannot find the dataset_definitions.yml
+#  file using the regular path pointing to site-packages, hence the need for using a copy of
+#  a hopefully relevant dataset_definitions.yml taken from the tests dir. Should investigate
+#  if onnxruntime-openvino actually has a relevant dataset_definitions.yml file somewhere within its own
+#  site-packages directory.
+DATASET_DEFINITIONS_PATH_ONNX = BENCHMARKING_DIR / 'dataset_definitions.yml'
 
 def check_xfail(model_name):
     if model_name in XFAIL_MODELS:
@@ -186,7 +193,7 @@ def _read_json(fpath: Path) -> pd.DataFrame:
 
 @pytest.fixture
 def reference_model_accuracy(scope="module"):
-    fpath = ONNX_TEST_ROOT / "onnx" / "data" / "reference_model_accuracy" / "reference.json"
+    fpath = ONNX_TEST_ROOT / "data" / "reference_model_accuracy" / "reference.json"
 
     return _read_json(fpath)
 
