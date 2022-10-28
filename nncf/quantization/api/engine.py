@@ -20,9 +20,7 @@ from nncf.common.tensor import NNCFTensor
 from nncf.quantization.statistics.statistic_point import StatisticPointsContainer
 
 ModelType = TypeVar('ModelType')
-MetricType = TypeVar('MetricType')
-NNCFData = Dict[str, NNCFTensor]
-
+ModelInput = TypeVar('ModelInput')
 
 class Engine(ABC):
     """
@@ -77,7 +75,7 @@ class Engine(ABC):
             self._register_statistics(outputs, statistic_points)
 
     @abstractmethod
-    def infer(self, input_data: NNCFData) -> NNCFData:
+    def infer(self, input_data: ModelInput) -> Dict[str, NNCFTensor]:
         """
         Runs model on the provided input_data.
         Returns the dictionary of model outputs by node names.
@@ -87,7 +85,7 @@ class Engine(ABC):
         """
 
     @abstractmethod
-    def _register_statistics(self, outputs: NNCFData, statistic_points: StatisticPointsContainer) -> None:
+    def _register_statistics(self, outputs: Dict[str, NNCFTensor], statistic_points: StatisticPointsContainer) -> None:
         """
         Does mapping from the provided output and statistics_points to register statistics.
         """

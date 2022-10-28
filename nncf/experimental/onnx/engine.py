@@ -11,15 +11,17 @@
  limitations under the License.
 """
 
+from typing import Dict
 import onnxruntime as rt
 import numpy as np
 import onnx
 
 from nncf.common.graph.transformations.commands import TargetType
 from nncf.common.graph.definitions import NNCFGraphNodeType
+from nncf.common.tensor import NNCFTensor
 from nncf.experimental.onnx.graph.onnx_graph import ONNXGraph
 
-from nncf.quantization.api.engine import Engine, NNCFData
+from nncf.quantization.api.engine import Engine
 from nncf.quantization.factories import NNCFGraphFactory
 from nncf.quantization.statistics.statistic_point import StatisticPointsContainer
 from nncf.experimental.onnx.tensor import ONNXNNCFTensor
@@ -58,7 +60,7 @@ class ONNXEngine(Engine):
 
         self._create_model_graphs(model)
 
-    def infer(self, input_data: NNCFData) -> NNCFData:
+    def infer(self, input_data: Dict[str, NNCFTensor]) -> Dict[str, NNCFTensor]:
         """
         Runs model on the provided input_data via ONNXRuntime InferenceSession.
         Returns the dictionary of model outputs by node names.
@@ -78,7 +80,7 @@ class ONNXEngine(Engine):
         self.nncf_graph = NNCFGraphFactory.create(model)
         self.onnx_graph = ONNXGraph(model)
 
-    def _register_statistics(self, outputs: NNCFData, statistic_points: StatisticPointsContainer) -> None:
+    def _register_statistics(self, outputs: Dict[str, NNCFTensor], statistic_points: StatisticPointsContainer) -> None:
         for node_name, _statistic_points in statistic_points.items():
             for statistic_point in _statistic_points:
                 if NNCFGraphNodeType.INPUT_NODE in statistic_point.target_point.target_node_name:
