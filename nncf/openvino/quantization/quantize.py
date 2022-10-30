@@ -14,16 +14,20 @@
 import logging
 import tempfile
 from pathlib import Path
-from typing import Dict, Optional
+from typing import Dict
+from typing import Optional
+from typing import Callable
+from typing import Iterable
+from typing import Any
 
 import openvino.runtime as ov
 from openvino.tools import pot
 
-from nncf.common.quantization.structs import QuantizationPreset
-from nncf.common.utils.logger import logger as nncf_logger
 from nncf.data import Dataset
 from nncf.openvino.engine import OVEngine
-from nncf.openvino.utils import POTDataLoader
+from nncf.openvino.quantization.accuracy_aware import ExperimentalAccuracyAware
+from nncf.common.quantization.structs import QuantizationPreset
+from nncf.common.utils.logger import logger as nncf_logger
 from nncf.parameters import IgnoredScope
 from nncf.parameters import ModelType
 from nncf.parameters import TargetDevice
@@ -126,8 +130,65 @@ def quantize_impl(model: ov.Model,
         }
     ]
 
-    pot_dataloader = POTDataLoader(calibration_dataset)
-    engine = OVEngine(engine_config, pot_dataloader, pot_dataloader)
+    engine = OVEngine(engine_config, calibration_dataset, calibration_dataset)
+    pipeline = pot.create_pipeline(algorithms, engine)
+    compressed_model = pipeline.run(pot_model)
+    pot.compress_model_weights(compressed_model)
+
+    quantized_model = _convert_compressed_model_to_openvino_model(compressed_model)
+
+    return quantized_model
+
+
+def quantize_with_accuracy_control_impl(model: ov.Model,
+                                        calibration_dataset: Dataset,
+                                        validation_dataset: Dataset,
+                                        validation_fn: Callable[[ov.Model, Iterable[Any]], float],
+                                        max_drop: float = 0.01,
+                                        preset: QuantizationPreset = QuantizationPreset.PERFORMANCE,
+                                        target_device: TargetDevice = TargetDevice.ANY,
+                                        subset_size: int = 300,
+                                        fast_error_correction: bool = True,
+                                        model_type: Optional[str] = None) -> ov.Model:
+    """
+    Implementation of the `quantize_with_accuracy_control()` method for the OpenVINO backend.
+    """
+    pot.utils.logger.init_logger(
+        level=logging.getLevelName(nncf_logger.getEffectiveLevel())
+    )
+    pot_model = _convert_openvino_model_to_compressed_model(model, target_device)
+
+    engine_config = {
+        'device': 'CPU',
+        'stat_requests_number': 2,
+        'eval_requests_number': 2,
+    }
+
+    # Check whether it is possible to calculate the metric for one data item.
+    use_original_metric = True
+    try:
+        _ = validation_fn(model, validation_dataset.get_data(indices=[0]))
+    except Exception:
+        use_original_metric = False
+
+    pot.algorithms.algorithm_selector.COMPRESSION_ALGORITHMS.register('ExperimentalAccuracyAware')(ExperimentalAccuracyAware)
+
+    algorithms = [
+        {
+            'name': 'ExperimentalAccuracyAware',
+            'params': {
+                'target_device': target_device.value,
+                'stat_subset_size': subset_size,
+                'maximal_drop': max_drop,
+                'metric_subset_ratio': 0.5,
+                'preset': preset.value,
+                'use_fast_bias': fast_error_correction,
+                'model_type': model_type,
+            }
+        }
+    ]
+
+    engine = OVEngine(engine_config, calibration_dataset, validation_dataset, validation_fn, use_original_metric)
     pipeline = pot.create_pipeline(algorithms, engine)
     compressed_model = pipeline.run(pot_model)
     pot.compress_model_weights(compressed_model)
