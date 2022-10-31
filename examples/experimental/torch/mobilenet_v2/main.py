@@ -107,8 +107,7 @@ def create_data_source(batch_size: int = 1) -> torch.utils.data.DataLoader:
     val_dataset = torchvision.datasets.ImageFolder(val_dir, preprocess)
     val_dataloader = torch.utils.data.DataLoader(val_dataset,
                                                  batch_size=batch_size,
-                                                 shuffle=False,
-                                                 num_workers=4)
+                                                 shuffle=False)
     return val_dataloader
 
 
