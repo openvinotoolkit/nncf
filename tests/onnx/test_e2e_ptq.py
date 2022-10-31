@@ -31,7 +31,6 @@ import pytest
 from nncf.common.utils.logger import logger as nncf_logger
 from pytest_dependency import depends
 
-from tests.common.paths import DATASET_DEFINITIONS_PATH
 from tests.common.paths import PROJECT_ROOT
 from tests.onnx.conftest import ONNX_TEST_ROOT
 
@@ -231,7 +230,7 @@ class TestPTQ:
         com_line = [
             sys.executable, str(program_path),
             "-c", str(config_path),
-            "-d", str(DATASET_DEFINITIONS_PATH),
+            "-d", str(DATASET_DEFINITIONS_PATH_ONNX),
             "-m", str(model_dir / task_type / (model_name + ".onnx")),
             "-o", str(ckpt_dir),
             "-s", str(data_dir),
@@ -282,7 +281,7 @@ class TestBenchmark:
         com_line = [
             sys.executable, str(program_path),
             "-c", str(config_path),
-            "-d", str(DATASET_DEFINITIONS_PATH),
+            "-d", str(DATASET_DEFINITIONS_PATH_ONNX),
             "-m", str(model_dir / task_type / model_file_name),
             "-s", str(data_dir),
             "-a", str(anno_dir),
