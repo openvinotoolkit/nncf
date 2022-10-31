@@ -14,11 +14,12 @@
 from typing import Optional
 
 from nncf.api.compression import ModelType
-from nncf.common.utils.backend import get_backend
-from nncf.common.utils.backend import BackendType
 from nncf.common.quantization.structs import QuantizationPreset
+from nncf.common.utils.backend import BackendType
+from nncf.common.utils.backend import get_backend
 from nncf.data import Dataset
-from nncf.quantization.params import TargetDevice
+from nncf.parameters import IgnoredScope
+from nncf.parameters import TargetDevice
 
 
 def quantize(model: ModelType,
@@ -27,7 +28,8 @@ def quantize(model: ModelType,
              target_device: TargetDevice = TargetDevice.ANY,
              subset_size: int = 300,
              fast_error_correction: bool = True,
-             model_type: Optional[str] = None) -> ModelType:
+             model_type: Optional[str] = None,
+             ignored_scope: Optional[IgnoredScope] = None) -> ModelType:
     """
     Applies post-training quantization algorithm to provided model.
 
@@ -49,12 +51,14 @@ def quantize(model: ModelType,
         more time but requires less memory.
     :param model_type: Model type is needed to specify additional patterns
         in the model. Supported only `transformer` now.
+    :param ignored_scope: An ignored scope that defined the list of model control
+        flow graph nodes to be ignored during quantization.
     :return: The quantized model.
     """
     backend = get_backend(model)
     if backend == BackendType.OPENVINO:
         from nncf.openvino.quantization.helpers import quantize_impl
         return quantize_impl(model, calibration_dataset, preset, target_device, subset_size,
-                             fast_error_correction, model_type)
+                             fast_error_correction, model_type, ignored_scope)
 
     raise RuntimeError(f'Unsupported type of backend: {backend}')

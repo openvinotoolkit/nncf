@@ -50,10 +50,10 @@ def pytest_addoption(parser):
                                                             "if param not specified"
     )
     parser.addoption(
-        "--ov-data-dir", type=str, default=None, help="Path to datasets directory for OpenVino accuracy test"
+        "--ov-data-dir", type=str, default=None, help="Path to datasets directory for OpenVINO accuracy test"
     )
     parser.addoption(
-        "--run-openvino-eval", action="store_true", default=False, help="To run eval models via OpenVino"
+        "--run-openvino-eval", action="store_true", default=False, help="To run eval models via OpenVINO"
     )
     parser.addoption(
         "--run-weekly-tests", action="store_true", default=False, help="To run weekly tests"
