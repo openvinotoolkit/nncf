@@ -29,7 +29,7 @@ from nncf.config.extractors import extract_accuracy_aware_training_params
 from nncf.common.accuracy_aware_training.runner import EarlyExitTrainingRunnerCreator
 from nncf.common.accuracy_aware_training.runner import AdaptiveCompressionLevelTrainingRunnerCreator
 
-ModelType = TypeVar('ModelType')
+T_model = TypeVar('T_model')
 ADAPTIVE_COMPRESSION_CONTROLLERS = Registry('adaptive_compression_controllers')
 
 
@@ -40,7 +40,7 @@ class TrainingLoop(ABC):
     """
 
     @abstractmethod
-    def run(self, model: ModelType, train_epoch_fn, validate_fn, configure_optimizers_fn=None,
+    def run(self, model: T_model, train_epoch_fn, validate_fn, configure_optimizers_fn=None,
             dump_checkpoint_fn=None, tensorboard_writer=None, log_dir=None):
         """
         Implements the custom logic to run a training loop for model fine-tuning

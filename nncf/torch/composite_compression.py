@@ -28,7 +28,7 @@ from nncf.torch.graph.transformations.layout import PTTransformationLayout
 from nncf.torch.nncf_network import NNCFNetwork
 from nncf.torch.nncf_network import PTModelTransformer
 
-ModelType = TypeVar('ModelType')
+T_model = TypeVar('T_model')
 
 
 class PTCompositeCompressionLoss(CompositeCompressionLoss, PTCompressionLoss):
@@ -67,7 +67,7 @@ class PTCompositeCompressionAlgorithmBuilder(
 
         return transformed_model
 
-    def _build_controller(self, model: ModelType) -> PTCompressionAlgorithmController:
+    def _build_controller(self, model: T_model) -> PTCompressionAlgorithmController:
         """
         Simple implementation of building controller without setting builder state and loading controller's one.
         Builds `PTCompositeCompressionAlgorithmController` to handle the additional
@@ -85,7 +85,7 @@ class PTCompositeCompressionAlgorithmBuilder(
             composite_ctrl.add(builder.build_controller(model))
         return composite_ctrl
 
-    def get_transformation_layout(self, model: ModelType) -> PTTransformationLayout:
+    def get_transformation_layout(self, model: T_model) -> PTTransformationLayout:
         """
         Computes necessary model transformations to enable algorithm-specific
         compression.
@@ -99,7 +99,7 @@ class PTCompositeCompressionAlgorithmBuilder(
             transformations.update(builder.get_transformation_layout(model))
         return transformations
 
-    def initialize(self, model: ModelType) -> None:
+    def initialize(self, model: T_model) -> None:
         for builder in self.child_builders:
             if builder.should_init:
                 builder.initialize(model)
@@ -110,7 +110,7 @@ class PTCompositeCompressionAlgorithmBuilder(
 
 class PTCompositeCompressionAlgorithmController(
     CompositeCompressionAlgorithmController, PTCompressionAlgorithmController):
-    def __init__(self, target_model: ModelType):
+    def __init__(self, target_model: T_model):
         super().__init__(target_model)
         self._loss = PTCompositeCompressionLoss()
 

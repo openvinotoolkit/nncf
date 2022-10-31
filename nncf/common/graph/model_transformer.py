@@ -15,7 +15,7 @@ from typing import TypeVar
 
 from nncf.common.graph.transformations.layout import TransformationLayout
 
-ModelType = TypeVar('ModelType')
+T_model = TypeVar('T_model')
 
 
 class ModelTransformer:
@@ -23,7 +23,7 @@ class ModelTransformer:
     Applies transformations to the model.
     """
 
-    def __init__(self, model: ModelType):
+    def __init__(self, model: T_model):
         """
         Initializes Model Transformer.
 
@@ -31,7 +31,7 @@ class ModelTransformer:
         """
         self._model = model
 
-    def transform(self, transformation_layout: TransformationLayout) -> ModelType:
+    def transform(self, transformation_layout: TransformationLayout) -> T_model:
         """
         Applies transformations to the model.
 

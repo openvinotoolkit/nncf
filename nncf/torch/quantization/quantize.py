@@ -12,16 +12,16 @@
 """
 
 from copy import deepcopy
-from typing import Optional, Any, Tuple, Dict
+from typing import Any, Dict, Optional, Tuple
 
 import torch
-
-from nncf import Dataset
-from nncf import NNCFConfig
-from nncf import QuantizationPreset
-from nncf import TargetDevice
+from nncf.common.quantization.structs import QuantizationPreset
+from nncf.config import NNCFConfig
 from nncf.config.structures import BNAdaptationInitArgs
 from nncf.config.structures import QuantizationRangeInitArgs
+from nncf.data import Dataset
+from nncf.parameters import ModelType
+from nncf.parameters import TargetDevice
 from nncf.torch.dynamic_graph.io_handling import wrap_nncf_model_inputs_with_objwalk
 from nncf.torch.dynamic_graph.io_handling import wrap_nncf_model_outputs_with_objwalk
 from nncf.torch.initialization import PTInitializingDataLoader
@@ -70,6 +70,62 @@ class CalibrarionDataLoader(PTInitializingDataLoader):
         return length
 
 
+def _get_transformer_quantization_config(subset_size: int) -> Dict:
+    """
+    :return: The quantization config for transformer-based models.
+    """
+    return {
+        'algorithm': 'quantization',
+        'preset': 'mixed',
+        'initializer': {
+            'range': {'num_init_samples': subset_size, 'type': 'mean_min_max'},
+            'batchnorm_adaptation': {'num_bn_adaptation_samples': 0},
+        },
+        'scope_overrides': {'activations': {'{re}.*matmul_0': {'mode': 'symmetric'}}},
+        'ignored_scopes': [
+            '{re}.*Embeddings.*',
+            '{re}.*__add___[0-1]',
+            '{re}.*layer_norm_0',
+            '{re}.*matmul_1',
+            '{re}.*__truediv__*',
+        ],
+        'overflow_fix': 'disable',
+    }
+
+
+def _get_default_quantization_config(preset: QuantizationPreset, subset_size: int) -> Dict:
+    """
+    :return: The default quantization config.
+    """
+    return {
+        'algorithm': 'quantization',
+        'preset': preset.value,
+        'initializer': {
+            'range': {'num_init_samples': subset_size},
+            'batchnorm_adaptation': {'num_bn_adaptation_samples': 0}
+        },
+        'overflow_fix': 'first_layer_only'
+    }
+
+
+def _create_nncf_config(preset: QuantizationPreset,
+                        target_device: TargetDevice,
+                        subset_size: int, 
+                        model_type: Optional[ModelType]) -> NNCFConfig:
+    """
+    :return: The NNCFConfig for quantization method. 
+    """
+    if model_type is None:
+        compression_config = _get_default_quantization_config(preset, subset_size)
+    elif model_type == ModelType.TRANSFORMER:
+        compression_config = _get_transformer_quantization_config(subset_size)
+    
+    return NNCFConfig({
+        'target_device': target_device.value,
+        'compression': compression_config
+    })
+
+
 def quantize_impl(model: torch.nn.Module,
                   calibration_dataset: Dataset,
                   preset: QuantizationPreset,
@@ -85,24 +141,7 @@ def quantize_impl(model: torch.nn.Module,
     if fast_bias_correction == False:
         raise ValueError(f'fast_bias_correction={fast_bias_correction} is not supported')
 
-    nncf_config = NNCFConfig(
-        {
-            "target_device": target_device.value,
-            "compression": {
-                "algorithm": "quantization",
-                "preset": preset.value,
-                "initializer": {
-                    "range": {
-                        "num_init_samples": subset_size
-                    },
-                    "batchnorm_adaptation": {
-                        "num_bn_adaptation_samples": 0
-                    }
-                },
-                "overflow_fix": "first_layer_only"
-            }
-        }
-    )
+    nncf_config = _create_nncf_config(preset, target_device, subset_size, model_type)
 
     calibration_data_loader = CalibrarionDataLoader(calibration_dataset)
     nncf_config.register_extra_structs(

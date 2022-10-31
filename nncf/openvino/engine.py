@@ -20,7 +20,7 @@ from time import time
 from openvino.runtime import AsyncInferQueue
 from openvino.tools import pot
 
-from nncf.api.compression import ModelType
+from nncf.api.compression import T_model
 from nncf.data import Dataset
 
 
@@ -87,7 +87,7 @@ class OVEngine(pot.IEEngine):
                  config,
                  calibration_dataset: Dataset,
                  validation_dataset: Dataset,
-                 validation_fn: Optional[Callable[[ModelType, Iterable[Any]], float]] = None):
+                 validation_fn: Optional[Callable[[T_model, Iterable[Any]], float]] = None):
         metric = DummyMetric() if validation_fn is not None else None
         super().__init__(config, validation_dataset, metric)
         self._calibration_dataset = calibration_dataset  # TODO(andrey-churkin): Not used now.

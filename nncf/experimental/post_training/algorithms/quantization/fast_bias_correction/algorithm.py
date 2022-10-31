@@ -35,7 +35,7 @@ from nncf.experimental.post_training.graph.model_transformer import StaticModelT
 from nncf.experimental.post_training.statistics.statistic_point import StatisticPoint
 from nncf.experimental.post_training.statistics.statistic_point import StatisticPointsContainer
 
-ModelType = TypeVar('ModelType')
+T_model = TypeVar('T_model')
 
 
 class FastBiasCorrectionParameters(AlgorithmParameters):
@@ -99,7 +99,7 @@ class FastBiasCorrection(Algorithm):
     def available_backends(self) -> Dict[str, BackendType]:
         return ALGO_BACKENDS.registry_dict
 
-    def _set_backend_entity(self, model: ModelType) -> None:
+    def _set_backend_entity(self, model: T_model) -> None:
         """
         Creates a helper class with a backed-specific logic of the algorithm
 
@@ -114,8 +114,8 @@ class FastBiasCorrection(Algorithm):
             raise RuntimeError('Cannot return backend-specific entity'
                                'because {} is not supported!'.format(model_backend))
 
-    def _apply(self, model: ModelType, engine: Engine,
-               statistic_points: StatisticPointsContainer) -> ModelType:
+    def _apply(self, model: T_model, engine: Engine,
+               statistic_points: StatisticPointsContainer) -> T_model:
         self._set_backend_entity(model)
 
         model_transformer = self._backend_entity.model_transformer(model)
@@ -222,7 +222,7 @@ class FastBiasCorrection(Algorithm):
     def _extract_submodel(self,
                           model_transformer: StaticModelTransformerBase,
                           input_names: List[str],
-                          output_names: List[str]) -> ModelType:
+                          output_names: List[str]) -> T_model:
         """
         Extracts sub-model from the original based on the input & output tensor names
 
@@ -271,7 +271,7 @@ class FastBiasCorrection(Algorithm):
 
     def _get_bias_shift(self,
                         engine: Engine,
-                        model: ModelType,
+                        model: T_model,
                         input_blob: Dict[str, NNCFTensor],
                         channel_axis: Tuple[int],
                         output_fp: List[np.ndarray],
@@ -333,7 +333,7 @@ class FastBiasCorrection(Algorithm):
             bias_shift_magnitude = np.max(np.abs((updated_bias_value - current_bias_value) / current_bias_value))
         return bias_shift_magnitude
 
-    def get_statistic_points(self, model: ModelType) -> StatisticPointsContainer:
+    def get_statistic_points(self, model: T_model) -> StatisticPointsContainer:
         self._set_backend_entity(model)
         nncf_graph = NNCFGraphFactory.create(model) if self.nncf_graph is None else self.nncf_graph
         layers_with_bias_types = self._backend_entity.layers_with_bias_metatypes

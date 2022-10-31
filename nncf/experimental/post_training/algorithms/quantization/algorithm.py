@@ -33,7 +33,7 @@ from nncf.experimental.post_training.algorithms.quantization.definitions import 
 from nncf.experimental.post_training.algorithms.quantization.definitions import RangeType
 from nncf.experimental.post_training.statistics.statistic_point import StatisticPointsContainer
 
-ModelType = TypeVar('ModelType')
+T_model = TypeVar('T_model')
 
 
 class PostTrainingQuantizationParameters(AlgorithmParameters):
@@ -89,12 +89,12 @@ class PostTrainingQuantization(CompositeAlgorithm):
         super().__init__()
         self.algorithms_to_created = quantization_parameters.algorithms
 
-    def _apply(self, model: ModelType, engine: Engine, statistic_points: StatisticPointsContainer) -> ModelType:
+    def _apply(self, model: T_model, engine: Engine, statistic_points: StatisticPointsContainer) ->T_model:
         for algorithm in self.algorithms:
             model = algorithm.apply(model, engine, statistic_points)
         return model
 
-    def get_statistic_points(self, model: ModelType) -> StatisticPointsContainer:
+    def get_statistic_points(self, model:T_model) -> StatisticPointsContainer:
         output = StatisticPointsContainer()
         for algorithm in self.algorithms:
             for statistic_points in algorithm.get_statistic_points(model).values():

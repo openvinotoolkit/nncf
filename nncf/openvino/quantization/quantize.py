@@ -25,6 +25,7 @@ from nncf.data import Dataset
 from nncf.openvino.engine import OVEngine
 from nncf.openvino.utils import POTDataLoader
 from nncf.parameters import IgnoredScope
+from nncf.parameters import ModelType
 from nncf.parameters import TargetDevice
 
 
@@ -95,7 +96,7 @@ def quantize_impl(model: ov.Model,
                   target_device: TargetDevice,
                   subset_size: int,
                   fast_bias_correction: bool,
-                  model_type: Optional[str] = None,
+                  model_type: Optional[ModelType] = None,
                   ignored_scope: Optional[IgnoredScope] = None) -> ov.Model:
     """
     Implementation of the `quantize()` method for the OpenVINO backend.
@@ -119,7 +120,7 @@ def quantize_impl(model: ov.Model,
                 'preset': preset.value,
                 'stat_subset_size': subset_size,
                 'use_fast_bias': fast_bias_correction,
-                'model_type': model_type,
+                'model_type': model_type.value,
                 'ignored': _create_ignored_scope_config(ignored_scope)
             }
         }

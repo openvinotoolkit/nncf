@@ -20,7 +20,7 @@ from nncf.experimental.post_training.statistics.statistic_point import Statistic
 from nncf.experimental.post_training.api.dataset import NNCFData
 from nncf.experimental.post_training.api.sampler import Sampler
 
-ModelType = TypeVar('ModelType')
+T_model = TypeVar('T_model')
 MetricType = TypeVar('MetricType')
 
 
@@ -59,7 +59,7 @@ class Engine(ABC):
     def set_sampler(self, sampler) -> None:
         self._sampler = sampler
 
-    def set_model(self, model: ModelType) -> None:
+    def set_model(self, model: T_model) -> None:
         self.model = model
 
     def is_model_set(self) -> bool:

@@ -23,16 +23,16 @@ import csv
 from nncf.common.utils.logger import logger as nncf_logger
 
 DataLoaderType = TypeVar('DataLoaderType')
-ModelType = TypeVar('ModelType')
+T_model = TypeVar('T_model')
 EvalFnType = Callable[
     [
-        ModelType
+        T_model
     ],
     float
 ]
 AccValFnType = Callable[
     [
-        ModelType,
+        T_model,
         DataLoaderType
     ],
     float
@@ -190,7 +190,7 @@ class AccuracyEvaluator(BaseEvaluator):
     A particular kind of evaluator for collecting model's accuracy measurements
     """
 
-    def __init__(self, model: ModelType, eval_func: AccValFnType,
+    def __init__(self, model: T_model, eval_func: AccValFnType,
                  val_loader: DataLoaderType, is_top1: Optional[bool] = True):
         """
         Initializes Accuracy operator

@@ -13,23 +13,24 @@
 
 from typing import Optional
 
-from nncf.api.compression import ModelType
+from nncf.api.compression import T_model
 from nncf.common.quantization.structs import QuantizationPreset
 from nncf.common.utils.backend import BackendType
 from nncf.common.utils.backend import get_backend
 from nncf.data import Dataset
 from nncf.parameters import IgnoredScope
+from nncf.parameters import ModelType
 from nncf.parameters import TargetDevice
 
 
-def quantize(model: ModelType,
+def quantize(model: T_model,
              calibration_dataset: Dataset,
              preset: QuantizationPreset = QuantizationPreset.PERFORMANCE,
              target_device: TargetDevice = TargetDevice.ANY,
              subset_size: int = 300,
              fast_bias_correction: bool = True,
-             model_type: Optional[str] = None,
-             ignored_scope: Optional[IgnoredScope] = None) -> ModelType:
+             model_type: Optional[ModelType] = None,
+             ignored_scope: Optional[IgnoredScope] = None) -> T_model:
     """
     Applies post-training quantization algorithm to provided model.
 
@@ -64,16 +65,16 @@ def quantize(model: ModelType,
     if backend == BackendType.ONNX:
         from nncf.onnx.quantization.quantize import quantize_impl
         return quantize_impl(model, calibration_dataset, preset, target_device, subset_size,
-                             fast_bias_correction, model_type, ignored_scope)
+                             fast_bias_correction, model_type)
 
     if backend == BackendType.TENSORFLOW:
         from nncf.tensorflow.quantization.quantize import quantize_impl
         return quantize_impl(model, calibration_dataset, preset, target_device, subset_size,
-                             fast_bias_correction, model_type, ignored_scope)
+                             fast_bias_correction, model_type)
 
     if backend == BackendType.TORCH:
         from nncf.torch.quantization.quantize import quantize_impl
         return quantize_impl(model, calibration_dataset, preset, target_device, subset_size,
-                             fast_bias_correction, model_type, ignored_scope)
+                             fast_bias_correction, model_type)
 
     raise RuntimeError(f'Unsupported type of backend: {backend}')

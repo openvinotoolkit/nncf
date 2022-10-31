@@ -16,7 +16,10 @@ from typing import Optional
 import numpy as np
 import onnx
 
-from nncf import Dataset, TargetDevice
+from nncf.data import Dataset
+from nncf.parameters import IgnoredScope
+from nncf.parameters import ModelType
+from nncf.parameters import TargetDevice
 from nncf.common.quantization.structs import QuantizationPreset
 from nncf.experimental.onnx.tensor import ONNXNNCFTensor
 from nncf.experimental.post_training.algorithms.quantization import PostTrainingQuantization
@@ -91,7 +94,7 @@ def quantize_impl(model: onnx.ModelProto,
                   target_device: TargetDevice,
                   subset_size: int,
                   fast_bias_correction: bool,
-                  model_type: Optional[str] = None) -> onnx.ModelProto:
+                  model_type: Optional[ModelType] = None) -> onnx.ModelProto:
     """
     Implementation of the `quantize()` method for the ONNX backend.
     """

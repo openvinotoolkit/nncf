@@ -53,7 +53,7 @@ from nncf.experimental.post_training.factories import NNCFGraphFactory
 from nncf.experimental.post_training.statistics.statistic_point import StatisticPoint
 from nncf.experimental.post_training.statistics.statistic_point import StatisticPointsContainer
 
-ModelType = TypeVar('ModelType')
+T_model = TypeVar('T_model')
 
 
 class MinMaxQuantizationParameters(AlgorithmParameters):
@@ -149,7 +149,7 @@ class MinMaxQuantization(Algorithm):
     def available_backends(self) -> Dict[str, BackendType]:
         return ALGO_BACKENDS.registry_dict
 
-    def _set_backend_entity(self, model: ModelType) -> None:
+    def _set_backend_entity(self, model: T_model) -> None:
         """
         Creates a helper class with a backed-specific logic of the algorithm
 
@@ -261,7 +261,7 @@ class MinMaxQuantization(Algorithm):
                                                                                      node_name)
         self._quantization_target_points.add(activation_quantization_target_point)
 
-    def _get_quantization_target_points(self, model: ModelType) -> Set[TargetPoint]:
+    def _get_quantization_target_points(self, model: T_model) -> Set[TargetPoint]:
         """
         Returns Quantization Target Points.
         In the Compression Pipeline logic NNCF assumes that the compression pipeline works only on the single model.
@@ -287,8 +287,8 @@ class MinMaxQuantization(Algorithm):
         self._quantization_target_points = sorted(self._quantization_target_points)
         return self._quantization_target_points
 
-    def _apply(self, model: ModelType, engine: Engine,
-               statistic_points: StatisticPointsContainer) -> ModelType:
+    def _apply(self, model: T_model, engine: Engine,
+               statistic_points: StatisticPointsContainer) -> T_model:
         transformation_layout, transformation_commands = TransformationLayout(), []
         nncf_graph = NNCFGraphFactory.create(model) if self.nncf_graph is None else self.nncf_graph
         model_transformer = self._backend_entity.model_transformer(model)
@@ -339,7 +339,7 @@ class MinMaxQuantization(Algorithm):
         quantized_model = model_transformer.transform(transformation_layout)
         return quantized_model
 
-    def get_statistic_points(self, model: ModelType) -> StatisticPointsContainer:
+    def get_statistic_points(self, model: T_model) -> StatisticPointsContainer:
         self._set_backend_entity(model)
         quantization_target_points = self._get_quantization_target_points(model)
         output = StatisticPointsContainer()

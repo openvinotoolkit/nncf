@@ -15,14 +15,15 @@ from typing import Optional
 
 import tensorflow as tf
 
-from nncf import Dataset
-from nncf import NNCFConfig
-from nncf import QuantizationPreset
-from nncf import TargetDevice
 from nncf.common.initialization.dataloader import NNCFDataLoader
+from nncf.common.quantization.structs import QuantizationPreset
+from nncf.config import NNCFConfig
 from nncf.config.structures import BNAdaptationInitArgs
 from nncf.config.structures import QuantizationRangeInitArgs
+from nncf.data import Dataset
 from nncf.data.dataset import DataProvider
+from nncf.parameters import ModelType
+from nncf.parameters import TargetDevice
 from nncf.tensorflow.helpers.model_creation import create_compressed_model
 
 
@@ -65,7 +66,7 @@ def quantize_impl(model: tf.Module,
                   target_device: TargetDevice,
                   subset_size: int,
                   fast_bias_correction: bool,
-                  model_type: Optional[str] = None) -> tf.Module:
+                  model_type: Optional[ModelType] = None) -> tf.Module:
     """
     Implementation of the `quantize()` method for the TensorFlow backend.
     """

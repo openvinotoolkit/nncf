@@ -17,7 +17,7 @@ from typing import Union
 
 from nncf import NNCFConfig
 from nncf.api.compression import CompressionAlgorithmController
-from nncf.api.compression import ModelType
+from nncf.api.compression import T_model
 from nncf.common.composite_compression import CompositeCompressionAlgorithmBuilder
 from nncf.common.compression import BaseCompressionAlgorithmBuilder
 from nncf.common.graph.transformations.layout import TransformationLayout
@@ -39,16 +39,16 @@ class A(BaseCompressionAlgorithmBuilder):
     def _get_state_without_name(self) -> Dict[str, Any]:
         return {STATE_ATTR: self.state_value}
 
-    def apply_to(self, model: ModelType) -> ModelType:
+    def apply_to(self, model: T_model) -> T_model:
         pass
 
-    def _build_controller(self, model: ModelType) -> CompressionAlgorithmController:
+    def _build_controller(self, model: T_model) -> CompressionAlgorithmController:
         pass
 
-    def get_transformation_layout(self, model: ModelType) -> TransformationLayout:
+    def get_transformation_layout(self, model: T_model) -> TransformationLayout:
         pass
 
-    def initialize(self, model: ModelType) -> None:
+    def initialize(self, model: T_model) -> None:
         pass
 
 
@@ -60,16 +60,16 @@ class CA(CompositeCompressionAlgorithmBuilder):
     def add(self, child_builder) -> None:
         self._child_builders.append(child_builder)
 
-    def apply_to(self, model: ModelType) -> ModelType:
+    def apply_to(self, model: T_model) -> T_model:
         pass
 
-    def build_controller(self, model: ModelType) -> CompressionAlgorithmController:
+    def build_controller(self, model: T_model) -> CompressionAlgorithmController:
         pass
 
-    def get_transformation_layout(self, model: ModelType) -> TransformationLayout:
+    def get_transformation_layout(self, model: T_model) -> TransformationLayout:
         pass
 
-    def initialize(self, model: ModelType) -> None:
+    def initialize(self, model: T_model) -> None:
         pass
 
 

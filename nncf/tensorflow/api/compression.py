@@ -19,7 +19,7 @@ from nncf import NNCFConfig
 from nncf.common.compression import BaseCompressionAlgorithmBuilder
 from nncf.tensorflow.graph.model_transformer import TFModelTransformer
 
-ModelType = TypeVar('ModelType')
+T_model = TypeVar('T_model')
 
 
 class TFCompressionAlgorithmBuilder(BaseCompressionAlgorithmBuilder):
@@ -51,7 +51,7 @@ class TFCompressionAlgorithmBuilder(BaseCompressionAlgorithmBuilder):
 
         :param state_without_name: Output of `_get_state_without_name()` method.
         """
-    def apply_to(self, model: ModelType) -> ModelType:
+    def apply_to(self, model: T_model) -> T_model:
         """
         Applies algorithm-specific modifications to the model.
 
