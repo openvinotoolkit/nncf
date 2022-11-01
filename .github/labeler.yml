@@ -14,6 +14,16 @@ NNCF TF:
   - 'nncf/tensorflow/**/*'
   - 'tests/tensorflow/**/*'
 
+NNCF ONNX:
+  - 'examples/onnx/**/*'
+  - 'nncf/onxx/**/*'
+  - 'tests/onnx/**/*'
+
+NNCF OpenVINO:
+  - 'examples/openvino/**/*'
+  - 'nncf/openvino/**/*'
+  - 'tests/openvino/**/*'
+
 documentation:
   - '**/README.md'
   - 'docs/**/*'
