@@ -119,6 +119,9 @@ class BuildingBlockType(Enum):
 
     def __eq__(self, other: 'BuildingBlockType'):
         return self.__dict__ == other.__dict__
+    
+    def __hash__(self) -> int:
+        return hash((self.__class__.__name__, self.name))
 
 
 class EBBlocksStateNames:

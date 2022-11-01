@@ -7,6 +7,7 @@ import pytest
 from nncf.common.sparsity.schedulers import PolynomialThresholdScheduler
 from pytest import approx
 
+# TODO: add enable_structured_masking test
 
 class SchedulerParams:
     def __init__(self, power: int = 3,
@@ -16,7 +17,8 @@ class SchedulerParams:
                  final_importance_threshold: float = 0.0,
                  importance_regularization_factor: float = 0.1,
                  steps_per_epoch: Optional[int] = 4,
-                 update_per_optimizer_step: bool = True):
+                 update_per_optimizer_step: bool = True,
+                 enable_structured_masking: bool = True):
         self.power = power
         self.warmup_start_epoch = warmup_start_epoch
         self.warmup_end_epoch = warmup_end_epoch
@@ -25,6 +27,7 @@ class SchedulerParams:
         self.importance_regularization_factor = importance_regularization_factor
         self.steps_per_epoch = steps_per_epoch
         self.update_per_optimizer_step = update_per_optimizer_step
+        self.enable_structured_masking = enable_structured_masking
 
 
 @pytest.mark.parametrize('params,ref_threshold,ref_factor', [
@@ -32,8 +35,8 @@ class SchedulerParams:
      [-1., -1., -1., -1., -1., -0.7656, -0.5625, -0.3906, -0.2500, -0.1406, -0.0625, -0.0156, 0., 0., 0., 0., 0., 0., 0., 0.],
      [0., 0., 0., 0., 0., 0.0234, 0.0438, 0.0609, 0.0750, 0.0859, 0.0938, 0.0984, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1]),
     (SchedulerParams(3, 0, 5, 1, 3, 1, 4, False),  # full range warmup, with update on epoch step
-     [1., 1., 1., 1., 1.7718, 1.7718, 1.7718, 1.7718, 2.4508, 2.4508, 2.4508, 2.4508, 2.8178, 2.8178, 2.8178, 2.8178, 2.9688, 2.9688, 2.9688, 2.9688],
-     [0., 0., 0., 0., 0.3859, 0.3859, 0.3859, 0.3859, 0.7254, 0.7254, 0.7254, 0.7254, 0.9089, 0.9089, 0.9089, 0.9089, 0.9844, 0.9844, 0.9844, 0.9844]),
+     [1.0, 1.0, 1.0, 1.0, 1.9760, 1.9760, 1.9760, 1.9760, 2.5680, 2.5680, 2.5680, 2.5680, 2.8720, 2.8720, 2.8720, 2.8720, 2.9840, 2.9840, 2.9840, 2.9840],
+     [0., 0., 0., 0., 0.4880, 0.4880, 0.4880, 0.4880, 0.7840, 0.7840, 0.7840, 0.7840, 0.9360, 0.9360, 0.9360, 0.9360, 0.9920, 0.9920, 0.9920, 0.9920]),
     (SchedulerParams(4, 2, 8, 0, 5, 10, 3),  # warm up range overflow
      [0., 0., 0., 0., 0., 0., 0., 1.0219, 1.8785, 2.5887, 3.1702, 3.6396, 4.0123, 4.3027, 4.5237],
      [0., 0., 0., 0., 0., 0., 0., 2.0438, 3.7570, 5.1775, 6.3405, 7.2793, 8.0247, 8.6053, 9.0474]),
@@ -50,7 +53,6 @@ def test_scheduler_can_produce_decayed_importance_threshold_and_regularization_f
             scheduler.step()
             threshold.append(scheduler.current_importance_threshold)
             factor.append(scheduler.current_importance_lambda)
-
     assert np.allclose(threshold, ref_threshold, atol=1e-4)
     assert np.allclose(factor, ref_factor, atol=1e-4)
 

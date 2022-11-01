@@ -65,6 +65,7 @@ class ConfigBuilder:
             "importance_regularization_factor": 0.2,
             "steps_per_epoch": 128 // 32,
             "update_per_optimizer_step": True,
+            "enable_structured_masking": True,
             "sparse_structure_by_scopes": [
                 {"mode": "block", "sparse_factors": [16, 16], "target_scopes": "{re}.*attention*"},
                 {"mode": "per_dim", "axis": 0, "target_scopes": "{re}.*BertIntermediate.*"},
@@ -206,6 +207,6 @@ def run_movement_pipeline(tmp_path, compression_ctrl, compressed_model,
 
 
 def initialize_sparsifer_parameters(operand: MovementSparsifier, mean: float = 0., std: float = 3.):
-    torch.nn.init.normal_(operand._weight_importance, mean, std)
+    torch.nn.init.normal_(operand.weight_importance, mean, std)
     if operand.prune_bias:
-        torch.nn.init.normal_(operand._bias_importance, mean, std)
+        torch.nn.init.normal_(operand.bias_importance, mean, std)

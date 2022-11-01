@@ -27,7 +27,8 @@ from nncf.torch.sparsity.movement.algo import ImportanceLoss
 from nncf.torch.sparsity.movement.algo import MovementSparsifier
 from nncf.torch.sparsity.movement.algo import MovementSparsityController
 from nncf.torch.sparsity.movement.algo import SparseStructure
-from nncf.torch.sparsity.movement.algo import StructuredMask
+from nncf.torch.sparsity.movement.structured_mask_strategy import HuggingFaceBertStructuredMaskStrategy
+from nncf.torch.sparsity.movement.structured_mask_handler import StructuredMaskContext
 from nncf.torch.sparsity.movement.layers import SparseConfig
 from nncf.torch.sparsity.movement.layers import SparseConfigByScope
 from tests.torch.sparsity.movement.helpers import BaseCallback
@@ -41,7 +42,7 @@ from tests.torch.test_algo_common import BasicLinearTestModel
 
 def check_sparsified_layer_mode(sparsifier: MovementSparsifier, module: NNCFLinear, config: SparseConfig):
     weight_shape = module.weight.shape
-    assert isinstance(sparsifier._weight_importance, CompressionParameter)
+    assert isinstance(sparsifier.weight_importance, CompressionParameter)
     if config.mode == SparseStructure.BLOCK:
         ref_weight_importance = torch.zeros([
             weight_shape[0] // config.sparse_factors[0],
@@ -51,13 +52,13 @@ def check_sparsified_layer_mode(sparsifier: MovementSparsifier, module: NNCFLine
         ref_weight_importance = torch.zeros([1, weight_shape[config.sparse_axis]])
     else:
         ref_weight_importance = torch.zeros(weight_shape)
-    assert torch.allclose(sparsifier._weight_importance,
+    assert torch.allclose(sparsifier.weight_importance,
                           ref_weight_importance)  # TODO: should not use internal variables here
 
     if module.bias is not None:
-        assert isinstance(sparsifier._bias_importance, CompressionParameter)
+        assert isinstance(sparsifier.bias_importance, CompressionParameter)
         ref_bias_importance = torch.zeros([ref_weight_importance.shape[0]])
-        assert torch.allclose(sparsifier._bias_importance, ref_bias_importance)
+        assert torch.allclose(sparsifier.bias_importance, ref_bias_importance)
 
 
 @ pytest.mark.parametrize('nncf_config_builder', [
@@ -117,16 +118,21 @@ def test_can_create_movement_sparsity_layers(tmp_path, nncf_config_builder):
 
 
 def test_can_create_structured_masks(tmp_path):
+    # TODO: The structured mask part is in active refactor. Further changes are expected.
+    # TODO: unit test for handler
     nncf_config = ConfigBuilder(sparse_structure_by_scopes=[]).build(log_dir=tmp_path)
     compression_ctrl, compressed_model = create_compressed_model(bert_tiny_unpretrained(), nncf_config)
-    assert hasattr(compression_ctrl, 'structured_ctx_by_group')
-    structured_ctx_by_group = compression_ctrl.structured_ctx_by_group
-    assert isinstance(structured_ctx_by_group, DefaultDict)
-    assert set(structured_ctx_by_group.keys()) == set([0, 1])
-    for ctx in itertools.chain(*structured_ctx_by_group.values()):
-        assert isinstance(ctx, StructuredMask)
+    assert hasattr(compression_ctrl, '_structured_mask_handler')
+    structured_mask_handler = compression_ctrl._structured_mask_handler
+    assert isinstance(structured_mask_handler.strategy, HuggingFaceBertStructuredMaskStrategy)
+    assert len(structured_mask_handler._structured_mask_ctx_by_group_type) == 2
+    for group_type, ctxes in structured_mask_handler._structured_mask_ctx_by_group_type:
+        # assert group_type in [BuildingBlockType.MSHA, BuildingBlockType.FF]
+        for ctx in ctxes:
+            assert isinstance(ctx, StructuredMaskContext)
     # We currenltly do not check value correctness of `ctx.(in)dependent_mask` because they are internal variables.
     # See `test_controller_structured_mask_filling`.
+
 
 
 def get_linear_layer_equiv_weight_bias(module: NNCFLinear):
@@ -146,14 +152,14 @@ def get_linear_layer_equiv_weight_bias(module: NNCFLinear):
     {"mode": "fine", "sparse_factors": [1, 1], "target_scopes": "{re}fc"},
 ])
 def test_layer_actual_behavior_matches_sparsifer_mask(tmp_path, sparse_structure_by_scopes):
-    nncf_config = ConfigBuilder(sparse_structure_by_scopes=[sparse_structure_by_scopes]).build(
+    nncf_config = ConfigBuilder(sparse_structure_by_scopes=[sparse_structure_by_scopes], enable_structured_masking=False).build(
         log_dir=tmp_path, input_info=[{"sample_size": [1, 4]}])
     model = BasicLinearTestModel(size=4)
     compression_ctrl, compressed_model = create_compressed_model(model, nncf_config)
     module_info = compression_ctrl.sparsified_module_info[0]
     operand = module_info.operand
     initialize_sparsifer_parameters(operand)
-    operand.masking_threshold = 0.
+    operand.importance_threshold = 0.
     ori_weight, ori_bias = module_info.module.weight, module_info.module.bias
     masked_weight, masked_bias = operand(ori_weight, ori_bias)  # sparsifier forward function
     equiv_weight, equiv_bias = get_linear_layer_equiv_weight_bias(module_info.module)
@@ -252,11 +258,11 @@ def test_importance_score_update(tmp_path, nncf_config_builder):
             for sparse_module in self.compression_ctrl.sparsified_module_info:
                 sparsifier = sparse_module.operand
                 ref_requires_grad = (state.epoch <= self.compression_ctrl.scheduler.warmup_end_epoch)
-                assert torch.count_nonzero(sparsifier._weight_importance) > 0  # TODO: it is not a good assertion due to randomness
-                assert sparsifier._weight_importance.requires_grad is ref_requires_grad
+                assert torch.count_nonzero(sparsifier.weight_importance) > 0  # TODO: it is not a good assertion due to randomness
+                assert sparsifier.weight_importance.requires_grad is ref_requires_grad
                 if sparsifier.prune_bias is not None:
-                    assert torch.count_nonzero(sparsifier._bias_importance) > 0
-                    assert sparsifier._bias_importance.requires_grad is ref_requires_grad
+                    assert torch.count_nonzero(sparsifier.bias_importance) > 0
+                    assert sparsifier.bias_importance.requires_grad is ref_requires_grad
 
     run_movement_pipeline(tmp_path, compression_ctrl, compressed_model, [CheckImportanceCallback(compression_ctrl)])
 
@@ -381,8 +387,8 @@ def test_export_onnx_has_sparsified_param(tmp_path, nncf_config_builder):
         initialize_sparsifer_parameters(m.operand)
     for threshold in [-0.5, 0.0, 0.5]:
         compressed_model.train()
-        for m in compression_ctrl.sparsified_module_info:
-            m.operand.masking_threshold = threshold
+        for minfo in compression_ctrl.sparsified_module_info:
+            minfo.operand.importance_threshold = threshold
         onnx_path = tmp_path / f'model_thres{threshold}.onnx'
         check_onnx_has_sparsified_param(compressed_model, compression_ctrl, onnx_path)
 

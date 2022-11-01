@@ -73,6 +73,9 @@ MOVEMENT_SPARSITY_SCHEMA = {
                                                                     "warmup at the value of final_importance_threshold"),
                     "importance_regularization_factor": with_attributes(NUMBER,
                                                                         description="regularization final lambda"),
+                    "enable_structured_masking": with_attributes(BOOLEAN,
+                                                                default=True,
+                                                                description="Whether to enable structured masking after warmup stage."),
                     "steps_per_epoch": with_attributes(NUMBER,
                                        description="Number of optimizer steps in one epoch. Required to start proper "
                                                    " scheduling in the first training epoch if "
