@@ -21,6 +21,14 @@ from openvino.tools import pot
 
 
 class ExperimentalAccuracyAware(pot.AccuracyAwareCommon):
+    """
+    Experimental implementation of the Accuracy Aware algorithm from the POT.
+
+    This implementation works the same way as implementation from the POT in
+    case when it is possible to calculate the metric for one instance.
+    When it is not possible NMSE metric is used to select ranking subset and
+    calculate node importance.
+    """
 
     def __init__(self, config, engine):
         super().__init__(config, engine)
