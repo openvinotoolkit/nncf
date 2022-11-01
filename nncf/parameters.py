@@ -35,14 +35,14 @@ class TargetDevice(Enum):
 
 class ModelType(Enum):
     """
-    Describes the model type the specificity of which will be taken into 
+    Describes the model type the specificity of which will be taken into
     account during compression.
-    
-    
-    :param TRANSFORMER: Transformer-based models 
+
+
+    :param TRANSFORMER: Transformer-based models
         (https://arxiv.org/pdf/1706.03762.pdf)
     """
-    TRANSFORMER = 'transformer' 
+    TRANSFORMER = 'transformer'
 
 
 class IgnoredScope:
@@ -88,7 +88,7 @@ class IgnoredScope:
                  types: Optional[List[str]] = None):
         """
         :param names: List of ignored node names
-        :param patterns: List of regular expressions that define patterns for 
+        :param patterns: List of regular expressions that define patterns for
             names of ignored nodes
         :param types: List of ignored operation types
         """

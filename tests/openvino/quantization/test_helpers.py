@@ -14,7 +14,7 @@
 import pytest
 
 from nncf.parameters import IgnoredScope
-from nncf.openvino.quantization.helpers import _create_ignored_scope_config
+from nncf.openvino.quantization.quantize import _create_ignored_scope_config
 
 
 def test_create_ignored_scope_config():

@@ -17,7 +17,6 @@ import numpy as np
 import onnx
 
 from nncf.data import Dataset
-from nncf.parameters import IgnoredScope
 from nncf.parameters import ModelType
 from nncf.parameters import TargetDevice
 from nncf.common.quantization.structs import QuantizationPreset
@@ -100,7 +99,7 @@ def quantize_impl(model: onnx.ModelProto,
     """
     if model_type is not None:
         raise ValueError(f'model_type={model_type} is not supported')
-    if fast_bias_correction == False:
+    if fast_bias_correction is False:
         raise ValueError(f'fast_bias_correction={fast_bias_correction} is not supported')
 
     builder = CompressionBuilder()

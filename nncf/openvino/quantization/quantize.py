@@ -120,7 +120,7 @@ def quantize_impl(model: ov.Model,
                 'preset': preset.value,
                 'stat_subset_size': subset_size,
                 'use_fast_bias': fast_bias_correction,
-                'model_type': model_type.value,
+                'model_type': None if model_type is None else model_type.value,
                 'ignored': _create_ignored_scope_config(ignored_scope)
             }
         }

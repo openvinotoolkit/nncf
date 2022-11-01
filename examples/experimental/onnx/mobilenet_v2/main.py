@@ -14,8 +14,8 @@
 import os
 import time
 from pathlib import Path
+from typing import Dict, List
 
-import numpy as np
 import onnx
 import onnxruntime as rt
 import torch
@@ -117,8 +117,8 @@ def create_data_source() -> torch.utils.data.DataLoader:
 
 def validate(model: onnx.ModelProto,
              val_loader: torch.utils.data.DataLoader,
-             providers=['OpenVINOExecutionProvider'],
-             provider_options=[{'device_type' : 'CPU_FP32'}],
+             providers: List[str],
+             provider_options: List[Dict[str, str]],
              print_freq: int = 10000):
 
     def run_validate(sess, input_name, output_names, loader, base_progress=0):

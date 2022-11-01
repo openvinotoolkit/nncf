@@ -81,7 +81,8 @@ def _get_transformer_quantization_config(subset_size: int) -> Dict:
             'range': {'num_init_samples': subset_size, 'type': 'mean_min_max'},
             'batchnorm_adaptation': {'num_bn_adaptation_samples': 0},
         },
-        'scope_overrides': {'activations': {'{re}.*matmul_0': {'mode': 'symmetric'}}},
+        'scope_overrides': {
+            'activations': {'{re}.*matmul_0': {'mode': 'symmetric'}}},
         'ignored_scopes': [
             '{re}.*Embeddings.*',
             '{re}.*__add___[0-1]',
@@ -93,7 +94,8 @@ def _get_transformer_quantization_config(subset_size: int) -> Dict:
     }
 
 
-def _get_default_quantization_config(preset: QuantizationPreset, subset_size: int) -> Dict:
+def _get_default_quantization_config(preset: QuantizationPreset,
+                                     subset_size: int) -> Dict:
     """
     :return: The default quantization config.
     """
@@ -102,7 +104,7 @@ def _get_default_quantization_config(preset: QuantizationPreset, subset_size: in
         'preset': preset.value,
         'initializer': {
             'range': {'num_init_samples': subset_size},
-            'batchnorm_adaptation': {'num_bn_adaptation_samples': 0}
+            'batchnorm_adaptation': {'num_bn_adaptation_samples': subset_size}
         },
         'overflow_fix': 'first_layer_only'
     }
@@ -110,16 +112,16 @@ def _get_default_quantization_config(preset: QuantizationPreset, subset_size: in
 
 def _create_nncf_config(preset: QuantizationPreset,
                         target_device: TargetDevice,
-                        subset_size: int, 
+                        subset_size: int,
                         model_type: Optional[ModelType]) -> NNCFConfig:
     """
-    :return: The NNCFConfig for quantization method. 
+    :return: The NNCFConfig for quantization method.
     """
     if model_type is None:
         compression_config = _get_default_quantization_config(preset, subset_size)
     elif model_type == ModelType.TRANSFORMER:
         compression_config = _get_transformer_quantization_config(subset_size)
-    
+
     return NNCFConfig({
         'target_device': target_device.value,
         'compression': compression_config
@@ -138,7 +140,7 @@ def quantize_impl(model: torch.nn.Module,
     """
     if model_type is not None:
         raise ValueError(f'model_type={model_type} is not supported')
-    if fast_bias_correction == False:
+    if fast_bias_correction is False:
         raise ValueError(f'fast_bias_correction={fast_bias_correction} is not supported')
 
     nncf_config = _create_nncf_config(preset, target_device, subset_size, model_type)

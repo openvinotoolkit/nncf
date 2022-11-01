@@ -150,7 +150,9 @@ def validate(model: ov.Model,
         for m in metrics:
             m.update_state(labels, pred)
         if i % print_freq == 0 or i + 1 == num_items:
-            print(f'{i + 1}/{num_items}: acc@1: {metrics[0].result().numpy():.4f} acc@5: {metrics[1].result().numpy():.4f}')
+            print(f'{i + 1}/{num_items}: '
+                  f'acc@1: {metrics[0].result().numpy():.4f} '
+                  f'acc@5: {metrics[1].result().numpy():.4f}')
 
     return metrics[0].result().numpy(), metrics[1].result().numpy()
 

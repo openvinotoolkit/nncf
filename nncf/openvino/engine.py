@@ -37,6 +37,7 @@ class DummyMetric(pot.Metric):
     """
 
     def __init__(self, higher_better: bool = True):
+        super().__init__()
         self._name = 'custom_metric'
         self._higher_better = higher_better
         self._avg_value = None

@@ -49,7 +49,7 @@ class CalibrarionDataLoader(NNCFDataLoader):
             if isinstance(batch_size, tf.Tensor):
                 batch_size = batch_size.numpy()
             batch_size = int(batch_size)
-        except:
+        except: # pylint: disable=W0702
             batch_size = 1
         return batch_size
 
@@ -72,7 +72,7 @@ def quantize_impl(model: tf.Module,
     """
     if model_type is not None:
         raise ValueError(f'model_type={model_type} is not supported')
-    if fast_bias_correction == False:
+    if fast_bias_correction is False:
         raise ValueError(f'fast_bias_correction={fast_bias_correction} is not supported')
 
     nncf_config = NNCFConfig(
@@ -86,7 +86,7 @@ def quantize_impl(model: tf.Module,
                         "num_init_samples": subset_size
                     },
                     "batchnorm_adaptation": {
-                        "num_bn_adaptation_samples": 0
+                        "num_bn_adaptation_samples": subset_size
                     }
                 },
                 "overflow_fix": "first_layer_only"
