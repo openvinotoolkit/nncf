@@ -72,7 +72,7 @@ def _convert_compressed_model_to_openvino_model(model: pot.graph.nx_model.Compre
     return ov_model
 
 
-def _create_ignored_scope_config(ignored_scope: Optional[IgnoredScope]) -> Dict:
+def _create_ignored_scope_config(ignored_scope: Optional[IgnoredScope] = None) -> Dict:
     """
     Maps the content of `IgnoredScope` class to the `ignored` section of POT config.
 
@@ -149,7 +149,8 @@ def quantize_with_accuracy_control_impl(model: ov.Model,
                                         target_device: TargetDevice = TargetDevice.ANY,
                                         subset_size: int = 300,
                                         fast_error_correction: bool = True,
-                                        model_type: Optional[str] = None) -> ov.Model:
+                                        model_type: Optional[str] = None,
+                                        ignored_scope: Optional[IgnoredScope] = None) -> ov.Model:
     """
     Implementation of the `quantize_with_accuracy_control()` method for the OpenVINO backend.
     """
@@ -184,6 +185,7 @@ def quantize_with_accuracy_control_impl(model: ov.Model,
                 'preset': preset.value,
                 'use_fast_bias': fast_error_correction,
                 'model_type': model_type,
+                'ignored': _create_ignored_scope_config(ignored_scope),
             }
         }
     ]

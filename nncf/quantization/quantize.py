@@ -92,7 +92,8 @@ def quantize_with_accuracy_control(model: ModelType,
                                    target_device: TargetDevice = TargetDevice.ANY,
                                    subset_size: int = 300,
                                    fast_error_correction: bool = True,
-                                   model_type: Optional[str] = None) -> ModelType:
+                                   model_type: Optional[str] = None,
+                                   ignored_scope: Optional[IgnoredScope] = None) -> ModelType:
     """
     Applies post-training quantization algorithm with accuracy control to provided model.
 
@@ -118,6 +119,8 @@ def quantize_with_accuracy_control(model: ModelType,
         more time but requires less memory.
     :param model_type: Model type is needed to specify additional patterns
         in the model. Supported only `transformer` now.
+    :param ignored_scope: An ignored scope that defined the list of model control
+        flow graph nodes to be ignored during quantization.
     :return: The quantized model.
     """
     backend = get_backend(model)
@@ -125,6 +128,6 @@ def quantize_with_accuracy_control(model: ModelType,
         from nncf.openvino.quantization.quantize import quantize_with_accuracy_control_impl
         return quantize_with_accuracy_control_impl(model, calibration_dataset, validation_dataset, validation_fn,
                                                    max_drop, preset, target_device, subset_size,
-                                                   fast_error_correction, model_type)
+                                                   fast_error_correction, model_type, ignored_scope)
 
     raise RuntimeError(f'Unsupported type of backend: {backend}')
