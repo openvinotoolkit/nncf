@@ -360,7 +360,7 @@ class MovementSparsityController(BaseSparsityAlgoController):
         for group_id, building_block in enumerate(building_blocks):
             sparsified_module_info = []
             for op_addr in building_block.op_addresses:
-                if op_addr.operator_name in NNCF_MODULES_OP_NAMES:
+                if op_addr.operator_name in 'linear':
                     module = self.model.get_module_by_scope(op_addr.scope_in_model)
                     module_info = module_2_sparse_module_info_map[module]
                     sparsified_module_info.append(module_info)
