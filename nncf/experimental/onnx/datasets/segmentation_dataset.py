@@ -13,15 +13,16 @@
 
 from typing import List
 
+import torch
+# from nncf.quantization.dataset import PTQDataset
+from examples.torch.semantic_segmentation.datasets.camvid import CamVid
+from examples.torch.semantic_segmentation.datasets.mapillary import Mapillary
+from nncf import Dataset
 from nncf.common.utils.logger import logger as nncf_logger
 from nncf.experimental.onnx.tensor import ONNXNNCFTensor
 
-from nncf.quantization.dataset import PTQDataset
-from examples.torch.semantic_segmentation.datasets.camvid import CamVid
-from examples.torch.semantic_segmentation.datasets.mapillary import Mapillary
 
-
-class SegmentationDataLoader(PTQDataset):
+class SegmentationDataLoader():
     def __init__(self, dataset, batch_size, shuffle, input_name):
         super().__init__(batch_size, shuffle)
         self.dataset = dataset
@@ -42,10 +43,13 @@ def create_dataset_from_segmentation_torch_dataset(dataset_name: str,
                                                    dataset_dir: str,
                                                    input_name: str,
                                                    input_shape: List[int]):
-    from examples.torch.semantic_segmentation.utils.transforms import Resize
-    from examples.torch.semantic_segmentation.utils.transforms import Normalize
-    from examples.torch.semantic_segmentation.utils.transforms import Compose
-    from examples.torch.semantic_segmentation.utils.transforms import ToTensor
+    from examples.torch.semantic_segmentation.utils.transforms import (
+        Compose, Normalize, Resize, ToTensor)
+
+    def transform_fn(data_item):
+        tensor, target = data_item
+        tensor = tensor.cpu().detach().numpy()
+        return {input_name: ONNXNNCFTensor(tensor), 'targets': ONNXNNCFTensor(target)}
 
     if dataset_name.lower() == 'mapillary':
         mean = (0.485, 0.456, 0.406)
@@ -66,4 +70,7 @@ def create_dataset_from_segmentation_torch_dataset(dataset_name: str,
     ])
     initialization_dataset = dataset_class(
         dataset_dir, 'val', transforms=transform)
-    return SegmentationDataLoader(initialization_dataset, 1, True, input_name)
+    dataloader = torch.utils.data.DataLoader(initialization_dataset,
+                                             batch_size=1,
+                                             shuffle=True)
+    return Dataset(dataloader, transform_fn)

@@ -25,9 +25,8 @@ import onnxruntime as rt
 import numpy as np
 
 from examples.experimental.onnx.classification.onnx_ptq_classification import run
-from nncf.experimental.onnx.tensor import ONNXNNCFTensor
-from nncf.quantization.dataset import PTQDataset
 from tests.common.helpers import TEST_ROOT
+from tests.onnx.quantization.common import get_dataset_for_test
 
 MODEL_NAMES = [
     'resnet18',
@@ -63,22 +62,8 @@ TEST_CASES = [
 ]
 
 
-class TestDataset(PTQDataset):
-    def __init__(self, samples: List[Tuple[np.ndarray, int]], input_name: str):
-        super().__init__(shuffle=False)
-        self.samples = samples
-        self.input_name = input_name
-
-    def __getitem__(self, item):
-        inputs, targets = self.samples[item]
-        return {self.input_name: ONNXNNCFTensor(inputs), "targets": ONNXNNCFTensor(targets)}
-
-    def __len__(self):
-        return 1
-
-
 def mock_dataset_creator(dataset_path, input_name, input_shape, batch_size, shuffle):
-    return TestDataset([(np.zeros(input_shape[1:], dtype=np.float32), 0), ], input_name=input_name)
+    return get_dataset_for_test([(np.zeros(input_shape[1:], dtype=np.float32), 0), ], input_name=input_name)
 
 
 @pytest.mark.parametrize(("model_name, model, input_shape"), TEST_CASES)

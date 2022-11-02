@@ -11,7 +11,7 @@
  limitations under the License.
 """
 
-from typing import List
+from typing import List, Optional, Tuple
 
 import os
 import warnings
@@ -20,12 +20,12 @@ import numpy as np
 import onnx
 import onnxruntime as rt
 
+from nncf import Dataset
 from nncf.common.utils.dot_file_rw import write_dot_graph
 from tests.common.helpers import TEST_ROOT
 from tests.common.graph.nx_graph import compare_nx_graph_with_reference
 from tests.common.graph.nx_graph import check_nx_graph
 
-from nncf.quantization.dataset import PTQDataset
 from nncf.quantization.compression_builder import CompressionBuilder
 from nncf.quantization.algorithms.min_max.algorithm import MinMaxQuantization
 from nncf.quantization.algorithms import MinMaxQuantizationParameters
@@ -39,26 +39,25 @@ from nncf.experimental.onnx.model_normalizer import ONNXModelNormalizer
 REFERENCE_GRAPHS_TEST_ROOT = 'data/reference_graphs/quantization'
 
 
-class DatasetForTest(PTQDataset):
-    def __init__(self, input_key: str, input_shape: List[int], input_dtype: np.dtype, has_batch_dim: bool):
-        super().__init__()
-        self.input_key = input_key
-        self.input_shape = input_shape
-        self.input_dtype = input_dtype
-        self.has_batch_dim = has_batch_dim
+def get_random_dataset_for_test(input_key: str,
+                                input_shape: List[int],
+                                input_dtype: np.dtype,
+                                has_batch_dim: bool,
+                                length: Optional[int] = 10):
 
-    def __getitem__(self, item: int):
-        return {
-            self.input_key: ONNXNNCFTensor(
-                np.squeeze(np.random.random(self.input_shape).astype(self.input_dtype),
-                           axis=0)) if self.has_batch_dim else ONNXNNCFTensor(
-                np.random.random(self.input_shape).astype(self.input_dtype)),
-            "targets": ONNXNNCFTensor(0)
-        }
+    def transform_fn():
+        tensor = ONNXNNCFTensor(np.squeeze(np.random.random(input_shape).astype(input_dtype), axis=0)) \
+            if has_batch_dim else ONNXNNCFTensor(np.random.random(input_shape).astype(input_dtype))
+        return {input_key: ONNXNNCFTensor(tensor), 'targets': ONNXNNCFTensor(0)}
+    return Dataset(list(range(length)), transform_fn)
 
-    def __len__(self):
-        return 10
 
+def get_dataset_for_test(samples: List[Tuple[np.ndarray, int]], input_name: str):
+
+    def transform_fn(data_item):
+        inputs, targets = data_item
+        return {input_name: ONNXNNCFTensor(inputs), "targets": ONNXNNCFTensor(targets)}
+    return Dataset(samples, transform_fn)
 
 class ModelToTest:
     def __init__(self, model_name: str, input_shape: List[int]):
@@ -83,7 +82,7 @@ def min_max_quantize_model(
     onnx_graph = ONNXGraph(original_model)
     input_dtype = onnx_graph.get_edge_dtype(original_model.graph.input[0].name)
     input_np_dtype = onnx.helper.mapping.TENSOR_TYPE_TO_NP_TYPE[input_dtype]
-    dataset = DatasetForTest(_get_input_key(original_model), input_shape, input_np_dtype, dataset_has_batch_size)
+    dataset = get_random_dataset_for_test(_get_input_key(original_model), input_shape, input_np_dtype, dataset_has_batch_size)
     builder = CompressionBuilder(convert_opset_version)
     builder.add_algorithm(
         MinMaxQuantization(MinMaxQuantizationParameters(number_samples=1, ignored_scopes=ignored_scopes)))
@@ -97,7 +96,7 @@ def ptq_quantize_model(
     onnx_graph = ONNXGraph(original_model)
     input_dtype = onnx_graph.get_edge_dtype(original_model.graph.input[0].name)
     input_np_dtype = onnx.helper.mapping.TENSOR_TYPE_TO_NP_TYPE[input_dtype]
-    dataset = DatasetForTest(_get_input_key(original_model), input_shape, input_np_dtype, dataset_has_batch_size)
+    dataset = get_random_dataset_for_test(_get_input_key(original_model), input_shape, input_np_dtype, dataset_has_batch_size)
     builder = CompressionBuilder(convert_opset_version)
     builder.add_algorithm(
         DefaultQuantization(DefaultQuantizationParameters(number_samples=1, ignored_scopes=ignored_scopes)))

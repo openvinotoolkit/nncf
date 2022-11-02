@@ -11,9 +11,6 @@
  limitations under the License.
 """
 
-from typing import List
-from typing import Tuple
-
 import pytest
 from unittest.mock import patch
 
@@ -23,9 +20,8 @@ import onnxruntime as rt
 import numpy as np
 
 from examples.experimental.onnx.semantic_segmentation.onnx_ptq_segmentation import run
-from nncf.experimental.onnx.tensor import ONNXNNCFTensor
-from nncf.quantization.dataset import PTQDataset
 from tests.common.helpers import TEST_ROOT
+from tests.onnx.quantization.common import get_dataset_for_test
 
 MODELS_NAME = [
     'icnet_camvid',
@@ -38,22 +34,8 @@ INPUT_SHAPES = [
 ]
 
 
-class TestDataset(PTQDataset):
-    def __init__(self, samples: List[Tuple[np.ndarray, int]], input_name: str):
-        super().__init__(shuffle=False)
-        self.samples = samples
-        self.input_name = input_name
-
-    def __getitem__(self, item):
-        inputs, targets = self.samples[item]
-        return {self.input_name: ONNXNNCFTensor(inputs), "targets": ONNXNNCFTensor(targets)}
-
-    def __len__(self):
-        return 1
-
-
 def mock_dataloader_creator(dataset_name, dataset_path, input_name, input_shape):
-    return TestDataset([(np.zeros(input_shape[1:], dtype=np.float32), 0), ], input_name)
+    return get_dataset_for_test([(np.zeros(input_shape[1:], dtype=np.float32), 0), ], input_name)
 
 
 @pytest.mark.parametrize(("model_name, input_shape"),
