@@ -104,7 +104,11 @@ def run_install_checks(venv_path, tmp_path, package_type, test_dir, install_type
         else:
             raise FileNotFoundError('NNCF package not found')
 
-        option = 'tf' if test_dir == 'tensorflow' else 'torch'
+
+        option = test_dir
+        if option == 'tensorflow':
+            option = 'tf'
+
         subprocess.run(
             '{} install {}/dist/{}[{}] '.format(pip_with_venv,
                                                 PROJECT_ROOT,

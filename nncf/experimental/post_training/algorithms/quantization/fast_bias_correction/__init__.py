@@ -10,18 +10,3 @@
  See the License for the specific language governing permissions and
  limitations under the License.
 """
-
-from nncf.common.utils.backend import BackendType
-from nncf.common.utils.backend import get_backend
-
-
-class NNCFGraphFactory:
-    @staticmethod
-    def create(model):
-        model_backend = get_backend(model)
-        if model_backend == BackendType.ONNX:
-            from nncf.experimental.onnx.graph.nncf_graph_builder import GraphConverter
-
-            return GraphConverter.create_nncf_graph(model)
-        raise RuntimeError('Cannot create backend-specific graph'
-                           'because {} is not supported!'.format(model_backend))
