@@ -110,6 +110,12 @@ LIST_CASES = [
                               'anton-l/wav2vec2-base-ft-keyword-spotting'),
     ),
     TransformerSearchBBlockParamsCase(
+        name='SWIN MS',
+        input_info=dict(sample_size=[1, 3, 224, 224]),
+        model_creator=partial(AutoModelForImageClassification.from_pretrained,
+                              'microsoft/swin-tiny-patch4-window7-224'),
+    ),
+    TransformerSearchBBlockParamsCase(
         name='one MHSA',
         input_info=dict(sample_size=[384, 768]),
         model_creator=SelfAttention,
