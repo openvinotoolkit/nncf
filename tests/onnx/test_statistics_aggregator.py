@@ -59,7 +59,7 @@ class TestParameters:
 def test_statistics_aggregator(range_type, test_parameters):
     model = OneConvolutionalModel().onnx_model
 
-    dataset = get_dataset_for_test(DATASET_SAMPLES, input_key="X")
+    dataset = get_dataset_for_test(DATASET_SAMPLES, "X")
     compression_builder = CompressionBuilder()
 
     quantization = MinMaxQuantization(MinMaxQuantizationParameters(

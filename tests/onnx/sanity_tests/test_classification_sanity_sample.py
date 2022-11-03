@@ -63,7 +63,7 @@ TEST_CASES = [
 
 
 def mock_dataset_creator(dataset_path, input_name, input_shape, batch_size, shuffle):
-    return get_dataset_for_test([(np.zeros(input_shape[1:], dtype=np.float32), 0), ], input_name=input_name)
+    return get_dataset_for_test([(np.zeros(input_shape[1:], dtype=np.float32), 0), ], input_name)
 
 
 @pytest.mark.parametrize(("model_name, model, input_shape"), TEST_CASES)

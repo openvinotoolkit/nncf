@@ -45,10 +45,11 @@ def get_random_dataset_for_test(input_key: str,
                                 has_batch_dim: bool,
                                 length: Optional[int] = 10):
 
-    def transform_fn():
-        tensor = ONNXNNCFTensor(np.squeeze(np.random.random(input_shape).astype(input_dtype), axis=0)) \
-            if has_batch_dim else ONNXNNCFTensor(np.random.random(input_shape).astype(input_dtype))
-        return {input_key: ONNXNNCFTensor(tensor), 'targets': ONNXNNCFTensor(0)}
+    def transform_fn(item):
+        tensor = ONNXNNCFTensor(np.random.random(input_shape).astype(input_dtype))
+        if has_batch_dim:
+            tensor = ONNXNNCFTensor(np.squeeze(np.random.random(input_shape).astype(input_dtype), axis=0))
+        return {input_key: tensor, 'targets': ONNXNNCFTensor(0)}
     return Dataset(list(range(length)), transform_fn)
 
 
@@ -56,7 +57,7 @@ def get_dataset_for_test(samples: List[Tuple[np.ndarray, int]], input_name: str)
 
     def transform_fn(data_item):
         inputs, targets = data_item
-        return {input_name: ONNXNNCFTensor(inputs), "targets": ONNXNNCFTensor(targets)}
+        return {input_name: ONNXNNCFTensor([inputs]), "targets": ONNXNNCFTensor(targets)}
     return Dataset(samples, transform_fn)
 
 class ModelToTest:
@@ -78,7 +79,7 @@ def _get_input_key(original_model: onnx.ModelProto) -> str:
 
 def min_max_quantize_model(
         input_shape: List[int], original_model: onnx.ModelProto, convert_opset_version: bool = True,
-        ignored_scopes: List[str] = None, dataset_has_batch_size: bool = True) -> onnx.ModelProto:
+        ignored_scopes: List[str] = None, dataset_has_batch_size: bool = False) -> onnx.ModelProto:
     onnx_graph = ONNXGraph(original_model)
     input_dtype = onnx_graph.get_edge_dtype(original_model.graph.input[0].name)
     input_np_dtype = onnx.helper.mapping.TENSOR_TYPE_TO_NP_TYPE[input_dtype]
@@ -92,7 +93,7 @@ def min_max_quantize_model(
 
 def ptq_quantize_model(
         input_shape: List[int], original_model: onnx.ModelProto, convert_opset_version: bool = True,
-        ignored_scopes: List[str] = None, dataset_has_batch_size: bool = True) -> onnx.ModelProto:
+        ignored_scopes: List[str] = None, dataset_has_batch_size: bool = False) -> onnx.ModelProto:
     onnx_graph = ONNXGraph(original_model)
     input_dtype = onnx_graph.get_edge_dtype(original_model.graph.input[0].name)
     input_np_dtype = onnx.helper.mapping.TENSOR_TYPE_TO_NP_TYPE[input_dtype]

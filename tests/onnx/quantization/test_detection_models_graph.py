@@ -38,7 +38,6 @@ TEST_DATA = [ModelToTest('ssd_mobilenet_v1_12', [1, 300, 300, 3]),
 @pytest.mark.parametrize(('model_to_test'), TEST_DATA, ids=[model_to_test.model_name for model_to_test in TEST_DATA])
 def test_min_max_quantization_graph(tmp_path, model_to_test):
     convert_opset_version = True
-    dataset_has_batch_size = len(model_to_test.input_shape) > 3
 
     onnx_model_dir = str(TEST_ROOT.joinpath('onnx', 'data', 'models'))
     onnx_model_path = str(TEST_ROOT.joinpath(onnx_model_dir, model_to_test.model_name + '.onnx'))
@@ -60,7 +59,6 @@ def test_min_max_quantization_graph(tmp_path, model_to_test):
 
     quantized_model = min_max_quantize_model(model_to_test.input_shape, original_model,
                                              convert_opset_version=convert_opset_version,
-                                             ignored_scopes=ignored_scopes,
-                                             dataset_has_batch_size=dataset_has_batch_size)
+                                             ignored_scopes=ignored_scopes)
     compare_nncf_graph(quantized_model, model_to_test.path_ref_graph)
     infer_model(model_to_test.input_shape, quantized_model)
