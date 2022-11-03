@@ -17,7 +17,6 @@ from typing import Optional
 import onnx
 import onnxruntime as rt
 
-from sklearn.metrics import accuracy_score
 from nncf.quantization.compression_builder import CompressionBuilder
 from nncf.quantization.algorithms import DefaultQuantization
 from nncf.quantization.algorithms import DefaultQuantizationParameters

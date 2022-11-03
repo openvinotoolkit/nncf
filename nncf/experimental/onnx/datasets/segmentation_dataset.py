@@ -11,31 +11,15 @@
  limitations under the License.
 """
 
+import torch
+
 from typing import List
 
 from torch.utils.data import DataLoader
 from examples.torch.semantic_segmentation.datasets.camvid import CamVid
 from examples.torch.semantic_segmentation.datasets.mapillary import Mapillary
 from nncf import Dataset
-from nncf.common.utils.logger import logger as nncf_logger
 from nncf.experimental.onnx.tensor import ONNXNNCFTensor
-
-
-class SegmentationDataLoader():
-    def __init__(self, dataset, batch_size, shuffle, input_name):
-        super().__init__(batch_size, shuffle)
-        self.dataset = dataset
-        self.input_name = input_name
-        nncf_logger.info(
-            'The dataset is built with the data located on  {}'.format(dataset.root_dir))
-
-    def __getitem__(self, item):
-        tensor, target = self.dataset[item]
-        tensor = tensor.cpu().detach().numpy()
-        return {self.input_name: ONNXNNCFTensor(tensor), "targets": ONNXNNCFTensor(target)}
-
-    def __len__(self):
-        return len(self.dataset)
 
 
 def create_dataloader(dataset_name: str,
@@ -65,7 +49,8 @@ def create_dataloader(dataset_name: str,
         dataset_dir, 'val', transforms=transform)
     return DataLoader(initialization_dataset,
                       batch_size=1,
-                      shuffle=True)
+                      shuffle=True,
+                      generator=torch.manual_seed(0))
 
 
 def create_dataset(dataloader: DataLoader, input_name: str) -> Dataset:

@@ -64,8 +64,9 @@ def create_dataloader(dataset_dir: str,
     # The best practise is to use validation part of dataset for calibration (aligning with POT)
     initialization_dataset = ImageFolder(os.path.join(dataset_dir), transform)
     return DataLoader(initialization_dataset,
-                                       batch_size=batch_size,
-                                       shuffle=shuffle)
+                      batch_size=batch_size,
+                      shuffle=shuffle,
+                      generator=torch.manual_seed(0))
 
 
 def create_dataset(dataloader: DataLoader, input_name: str) -> Dataset:
