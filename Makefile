@@ -13,5 +13,5 @@ test-onnx:
 pylint-onnx:
 	pylint --rcfile .pylintrc				\
 		nncf/experimental/onnx				\
-		nncf/experimental/post_training		\
+		nncf/quantization					\
 		tests/onnx examples/experimental/onnx

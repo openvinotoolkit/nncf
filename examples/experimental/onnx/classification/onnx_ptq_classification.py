@@ -73,7 +73,7 @@ def run(onnx_model_path: str, output_model_path: str,
     if evaluate:
         nncf_logger.info("Validation of the quantized model "
                          "on the validation part of the dataset.")
-        
+
         logging_step = 1000
 
         so = rt.SessionOptions()
@@ -92,7 +92,7 @@ def run(onnx_model_path: str, output_model_path: str,
             metric.update(output, target.numpy())
             if i != 0 and i % logging_step == 0:
                 print("{} samples validated".format(i))
-        
+
         metrics = metric.avg_value
         for metric_name, metric_value in metrics.items():
             nncf_logger.info("{}: {}".format(metric_name, metric_value))

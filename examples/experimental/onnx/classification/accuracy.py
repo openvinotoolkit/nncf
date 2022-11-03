@@ -45,7 +45,9 @@ class Accuracy():
         """
         return {self.name: np.ravel(self._matches).mean()}
 
-    def _extract(self, outputs: Dict[str, ModelOutput], targets: Dict[str, ModelOutput]) -> Tuple[np.ndarray, np.ndarray]:
+    def _extract(self,
+                 outputs: Dict[str, ModelOutput],
+                 targets: Dict[str, ModelOutput]) -> Tuple[np.ndarray, np.ndarray]:
         """
         Extract outputs and targets np.ndarray to compute accuracy
         If output_key is None and the model produces only one tensor,

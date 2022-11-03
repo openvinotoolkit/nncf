@@ -16,7 +16,6 @@ from unittest.mock import patch
 
 import os
 
-import torch
 import onnxruntime as rt
 import numpy as np
 
