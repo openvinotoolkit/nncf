@@ -82,11 +82,13 @@ def run_example():
 
     # Step 6: Compare the accuracy of the original and quantized models.
     print('Checking the accuracy of the original model:')
-    metric = validation_fn(ov_model, data_source, data_source.labels)
+    compiled_model = ie.compile_model(ov_model, device_name='CPU')
+    metric = validation_fn(compiled_model, data_source, data_source.labels)
     print(f'mAP: {metric}')
 
     print('Checking the accuracy of the quantized model:')
-    metric = validation_fn(quantized_model, data_source, data_source.labels)
+    compiled_model = ie.compile_model(quantized_model, device_name='CPU')
+    metric = validation_fn(compiled_model, data_source, data_source.labels)
     print(f'mAP: {metric}')
 
     # Step 7: Compare Performance of the original and quantized models.
@@ -94,10 +96,8 @@ def run_example():
     # benchmark_app -m ssd_mobilenet_v1_fpn_quantization/ssd_mobilenet_v1_fpn_quantized.xml -d CPU -api async
 
 
-def validation_fn(model: ov.Model, validation_dataset: Iterable[Any], labels) -> float:
-    compiled_model = ie.compile_model(model, device_name='CPU')
+def validation_fn(compiled_model: ov.CompiledModel, validation_dataset: Iterable[Any], labels) -> float:
     output_layer = compiled_model.output(0)
-
     metric = MAP(91, labels)
 
     for images, labels in validation_dataset:

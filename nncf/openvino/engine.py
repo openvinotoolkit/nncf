@@ -110,14 +110,18 @@ class OVEngine(pot.IEEngine):
                 stat_aliases=None,
                 metric_per_sample=False,
                 print_progress=False):
+
+        if self._model is None:
+            raise Exception('Model was not set in Engine class')
+
         subset_indices = None
         if sampler:
             subset_indices = sorted(getattr(sampler, '_subset_indices'))
 
-        self._metric.avg_value = None
         is_full_dataset = subset_indices is None or len(subset_indices) == len(self.data_loader)
         if self._validation_fn and (is_full_dataset or self.use_original_metric):
-            self._metric.avg_value = self._validation_fn(self._model,
+            compiled_model = self._ie.compile_model(model=self._model, device_name=self._device)
+            self._metric.avg_value = self._validation_fn(compiled_model,
                                                          self._validation_dataset.get_data(subset_indices))
             if not metric_per_sample and stats_layout is None:
                 metrics = self._metric.avg_value
@@ -136,10 +140,14 @@ class OVEngine(pot.IEEngine):
         return super().predict(stats_layout, dataset_wrapper, stat_aliases, metric_per_sample, print_progress)
 
     def calculate_per_sample_metrics(self, subset_indices: List[int]):
+        if subset_indices is None:
+            subset_indices = list(range(len(self.data_loader)))
+
         if self.use_original_metric:
+            compiled_model = self._ie.compile_model(model=self._model, device_name=self._device)
             per_sample_metrics = []
             for i in subset_indices:
-                metric_value = self._validation_fn(self._model, self._validation_dataset.get_data(indices=[i]))
+                metric_value = self._validation_fn(compiled_model, self._validation_dataset.get_data(indices=[i]))
                 per_sample_metrics.append({
                     'sample_id': len(per_sample_metrics),
                     'metric_name': 'original_metric',

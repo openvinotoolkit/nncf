@@ -37,7 +37,7 @@ class ExperimentalAccuracyAware(pot.AccuracyAwareCommon):
                 name='nmse',
                 type='nmse',
                 is_special=True,
-                comporator=lambda a: -a,
+                comparator=lambda a: -a,
                 sort_fn=partial(pot.algorithms.quantization.accuracy_aware_common.utils.sort_by_logit_distance,
                                 distance='nmse')
             )
@@ -45,7 +45,7 @@ class ExperimentalAccuracyAware(pot.AccuracyAwareCommon):
                 name='nmse',
                 type='nmse',
                 is_special=True,
-                comporator=lambda a: -a,
+                comparator=lambda a: -a,
                 sort_fn=partial(pot.algorithms.quantization.accuracy_aware_common.utils.sort_by_logit_distance,
                                 distance='nmse')
             )

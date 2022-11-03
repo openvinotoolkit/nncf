@@ -143,7 +143,7 @@ def quantize_impl(model: ov.Model,
 def quantize_with_accuracy_control_impl(model: ov.Model,
                                         calibration_dataset: Dataset,
                                         validation_dataset: Dataset,
-                                        validation_fn: Callable[[ov.Model, Iterable[Any]], float],
+                                        validation_fn: Callable[[ov.CompiledModel, Iterable[Any]], float],
                                         max_drop: float = 0.01,
                                         preset: QuantizationPreset = QuantizationPreset.PERFORMANCE,
                                         target_device: TargetDevice = TargetDevice.ANY,
@@ -161,14 +161,16 @@ def quantize_with_accuracy_control_impl(model: ov.Model,
 
     engine_config = {
         'device': 'CPU',
-        'stat_requests_number': 2,
-        'eval_requests_number': 2,
+        'stat_requests_number': 1,
+        'eval_requests_number': 1,
     }
 
     # Check whether it is possible to calculate the metric for one data item.
     use_original_metric = True
     try:
-        _ = validation_fn(model, validation_dataset.get_data(indices=[0]))
+        ie = ov.Core()
+        compiled_model = ie.compile_model(model, device_name='CPU')
+        _ = validation_fn(compiled_model, validation_dataset.get_data(indices=[0]))
     except Exception:
         use_original_metric = False
 
