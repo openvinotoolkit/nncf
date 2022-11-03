@@ -28,7 +28,7 @@ from nncf.experimental.torch.search_building_blocks.search_blocks import Buildin
 from nncf.experimental.torch.search_building_blocks.search_blocks import BuildingBlocks
 from nncf.experimental.torch.search_building_blocks.search_blocks import GroupedBlockIDs
 from nncf.experimental.torch.search_building_blocks.search_blocks import get_building_blocks
-from tests.common.helpers import TEST_ROOT
+from tests.common.paths import TEST_ROOT
 from tests.torch import test_models
 from tests.torch.helpers import create_compressed_model_and_algo_for_test
 from tests.torch.helpers import get_empty_config
@@ -42,7 +42,7 @@ from tests.torch.test_models.resnet import ResNet50
 
 
 def check_blocks_and_groups(name, actual_blocks: BuildingBlocks, actual_group_dependent: GroupedBlockIDs):
-    ref_file_dir = TEST_ROOT.joinpath('torch', 'data', 'search_building_block')
+    ref_file_dir = TEST_ROOT / 'torch' / 'data' / 'search_building_block'
     ref_file_path = ref_file_dir.joinpath(name)
     if os.getenv("NNCF_TEST_REGEN_DOT") is not None:
         if not os.path.exists(ref_file_dir):

@@ -6,7 +6,8 @@ import jsonschema
 import pytest
 
 from nncf.config import NNCFConfig
-from tests.common.helpers import PROJECT_ROOT, TEST_ROOT
+from tests.common.paths import PROJECT_ROOT
+from tests.common.paths import TEST_ROOT
 
 GOOD_CONFIG_SOURCES = [
     PROJECT_ROOT / Path("examples/torch/classification/configs"),

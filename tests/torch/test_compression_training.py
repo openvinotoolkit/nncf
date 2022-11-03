@@ -22,8 +22,8 @@ import pytest
 from pytest import approx
 
 from nncf import NNCFConfig
-from tests.common.helpers import PROJECT_ROOT
-from tests.common.helpers import TEST_ROOT
+from tests.common.paths import PROJECT_ROOT
+from tests.common.paths import TEST_ROOT
 from tests.common.helpers import get_cli_dict_args
 from tests.torch.helpers import Command
 from tests.torch.sample_test_validator import BaseSampleTestCaseDescriptor
@@ -108,9 +108,7 @@ class CompressionTrainingTestDescriptor(BaseSampleTestCaseDescriptor):
     @property
     def config_directory(self) -> Path:
         sample_dir_name = self.sample_handler.get_sample_dir_name()
-        return TEST_ROOT.joinpath(
-            "torch", "data", "configs", "weekly", sample_dir_name, self.dataset_name
-        )
+        return TEST_ROOT / "torch" / "data" / "configs" / "weekly" / sample_dir_name / self.dataset_name
 
     def get_main_filename(self) -> str:
         return self.sample_handler.get_main_location().split('.')[-1] + '.py'

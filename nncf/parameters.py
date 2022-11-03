@@ -76,7 +76,7 @@ class IgnoredScope:
                  types: Optional[List[str]] = None):
         """
         :param names: List of ignored node names
-        :param patterns: List of regular expressions that define patterns for 
+        :param patterns: List of regular expressions that define patterns for
             names of ignored nodes
         :param types: List of ignored operation types
         """

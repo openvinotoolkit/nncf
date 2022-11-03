@@ -35,14 +35,14 @@ from nncf.experimental.torch.search_building_blocks.search_blocks import Extende
 from nncf.experimental.torch.search_building_blocks.search_blocks import get_building_blocks
 from nncf.experimental.torch.search_building_blocks.search_blocks import get_indexes_of_overlapping_blocks_min
 from nncf.experimental.torch.search_building_blocks.search_blocks import get_indexes_of_overlapping_blocks_seq
-from tests.common.helpers import TEST_ROOT
+from tests.common.paths import TEST_ROOT
 from tests.torch.helpers import create_compressed_model_and_algo_for_test
 from tests.torch.helpers import get_empty_config
 from tests.torch.nas.helpers import move_model_to_cuda_if_available
 
 
 def check_extended_blocks(name, actual_blocks: ExtendedBuildingBlocks):
-    ref_file_dir = TEST_ROOT.joinpath('torch', 'data', 'search_building_block')
+    ref_file_dir = TEST_ROOT / 'torch' / 'data' / 'search_building_block'
     ref_file_path = ref_file_dir.joinpath(name)
     if os.getenv("NNCF_TEST_REGEN_DOT") is not None:
         if not os.path.exists(ref_file_dir):

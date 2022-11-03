@@ -17,7 +17,6 @@ import subprocess
 import sys
 from abc import ABC
 from abc import abstractmethod
-from pathlib import Path
 from typing import Callable
 from typing import List
 from typing import TypeVar
@@ -25,12 +24,11 @@ from typing import Union
 
 import numpy as np
 
-TensorType = TypeVar('TensorType')
+from tests.common.paths import GITHUB_REPO_URL
+from tests.common.paths import PROJECT_ROOT
+from tests.common.paths import TEST_ROOT
 
-TEST_ROOT = Path(__file__).absolute().parents[1]
-PROJECT_ROOT = TEST_ROOT.parent.absolute()
-EXAMPLES_DIR = PROJECT_ROOT / 'examples'
-GITHUB_REPO_URL = 'https://github.com/openvinotoolkit/nncf/'
+TensorType = TypeVar('TensorType')
 
 
 def get_cli_dict_args(args):

@@ -12,6 +12,7 @@
 """
 import os
 from copy import deepcopy
+from pathlib import Path
 from typing import List
 
 import pytest
@@ -22,8 +23,8 @@ from nncf import NNCFConfig
 from nncf.torch import register_default_init_args
 from nncf.common.quantization.structs import NonWeightQuantizerId
 from nncf.common.quantization.structs import WeightQuantizerId
-from tests.common.helpers import EXAMPLES_DIR
-from tests.common.helpers import TEST_ROOT
+from tests.common.paths import EXAMPLES_DIR
+from tests.common.paths import TEST_ROOT
 from tests.torch.helpers import BasicConvTestModel
 from tests.torch.helpers import create_compressed_model_and_algo_for_test
 from tests.torch.helpers import create_ones_mock_dataloader
@@ -56,8 +57,8 @@ class ManualSampleConfigTestParams(ManualConfigTestParamsBase):
 
 
 class ManualTestConfigTestParams(ManualConfigTestParamsBase):
-    def _get_config_path(self):
-        return TEST_ROOT.joinpath('torch', 'data', 'configs', 'hawq') / self.name
+    def _get_config_path(self) -> Path:
+        return TEST_ROOT / 'torch' / 'data' / 'configs' / 'hawq' / self.name
 
 
 class BitwidthDistributionStatistics:

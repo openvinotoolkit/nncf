@@ -24,20 +24,21 @@ import subprocess
 import sys
 from pathlib import Path
 from tempfile import TemporaryDirectory
+from typing import List
 
 import pandas as pd
 import pytest
 from nncf.common.utils.logger import logger as nncf_logger
 from pytest_dependency import depends
 
+from tests.common.paths import PROJECT_ROOT
+from tests.onnx.conftest import ONNX_TEST_ROOT
+
 BG_COLOR_GREEN_HEX = 'ccffcc'
 BG_COLOR_YELLOW_HEX = 'ffffcc'
 BG_COLOR_RED_HEX = 'ffcccc'
 
-TEST_ROOT = Path(__file__).absolute().parents[1]
-PROJECT_ROOT = TEST_ROOT.parent.absolute()
-BENCHMARKING_DIR = PROJECT_ROOT / 'tests' / "onnx" / "benchmarking"
-DATASET_DEFINITIONS_PATH = BENCHMARKING_DIR / "dataset_definitions.yml"
+BENCHMARKING_DIR = ONNX_TEST_ROOT / "benchmarking"
 
 ENV_VARS = os.environ.copy()
 if "PYTHONPATH" in ENV_VARS:
@@ -61,6 +62,13 @@ XFAIL_QUANTIZED_MODELS = {
     "yolov4",
 }
 
+# TODO(vshampor): Somehow installing onnxruntime-openvino does not install the OV package in the way
+#  that we are used to, and accuracy checker invocations cannot find the dataset_definitions.yml
+#  file using the regular path pointing to site-packages, hence the need for using a copy of
+#  a hopefully relevant dataset_definitions.yml taken from the tests dir. Should investigate
+#  if onnxruntime-openvino actually has a relevant dataset_definitions.yml file somewhere within its own
+#  site-packages directory.
+DATASET_DEFINITIONS_PATH_ONNX = BENCHMARKING_DIR / 'dataset_definitions.yml'
 
 def check_xfail(model_name):
     if model_name in XFAIL_MODELS:
@@ -72,7 +80,9 @@ def check_quantized_xfail(model_name):
         pytest.xfail("ONNXRuntime-OVEP cannot execute the quantized model")
 
 
-def run_command(command):
+def run_command(command: List[str]):
+    com_str = ' '.join(command)
+    nncf_logger.info(f"Run command: {com_str}")
     with subprocess.Popen(command,
                           stdout=subprocess.PIPE,
                           stderr=subprocess.STDOUT,
@@ -144,7 +154,7 @@ def eval_size(request):
     return option
 
 
-def _read_csv(root_dir: Path, key=str):
+def _read_csv(root_dir: Path, key: str) -> pd.DataFrame:
     dfs = []
     for task in TASKS:
         csv_fp = str(root_dir / task / f"accuracy_checker-{key}.csv")
@@ -185,7 +195,7 @@ def _read_json(fpath: Path) -> pd.DataFrame:
 
 @pytest.fixture
 def reference_model_accuracy(scope="module"):
-    fpath = TEST_ROOT / "onnx" / "data" / "reference_model_accuracy" / "reference.json"
+    fpath = ONNX_TEST_ROOT / "data" / "reference_model_accuracy" / "reference.json"
 
     return _read_json(fpath)
 
@@ -220,7 +230,7 @@ class TestPTQ:
         com_line = [
             sys.executable, str(program_path),
             "-c", str(config_path),
-            "-d", str(DATASET_DEFINITIONS_PATH),
+            "-d", str(DATASET_DEFINITIONS_PATH_ONNX),
             "-m", str(model_dir / task_type / (model_name + ".onnx")),
             "-o", str(ckpt_dir),
             "-s", str(data_dir),
@@ -235,8 +245,15 @@ class TestPTQ:
 
 @pytest.mark.run(order=2)
 class TestBenchmark:
+    @staticmethod
     def get_command(
-            self, task_type, model_name, model_dir, data_dir, anno_dir, output_dir, eval_size, program, is_quantized):
+            task_type: str,
+            model_name: str,
+            model_dir: Path,
+            data_dir: Path,
+            anno_dir: Path,
+            output_dir: Path,
+            eval_size: int, program: str, is_quantized: bool) -> List[str]:
 
         program_path = BENCHMARKING_DIR / program
 
@@ -244,12 +261,12 @@ class TestBenchmark:
         config_path = task_path / "onnx_models_configs" / (model_name + ".yml")
 
         output_dir = output_dir / task_type
-        if not os.path.exists(output_dir):
-            os.makedirs(output_dir)
+        if not output_dir.exists():
+            output_dir.mkdir(parents=True)
 
         anno_dir = anno_dir / str(eval_size)
-        if not os.path.exists(anno_dir):
-            os.makedirs(anno_dir)
+        if not anno_dir.exists():
+            anno_dir.mkdir(parents=True)
 
         out_file_name = os.path.splitext(program)[0]
 
@@ -264,7 +281,7 @@ class TestBenchmark:
         com_line = [
             sys.executable, str(program_path),
             "-c", str(config_path),
-            "-d", str(DATASET_DEFINITIONS_PATH),
+            "-d", str(DATASET_DEFINITIONS_PATH_ONNX),
             "-m", str(model_dir / task_type / model_file_name),
             "-s", str(data_dir),
             "-a", str(anno_dir),
@@ -274,8 +291,6 @@ class TestBenchmark:
         if eval_size is not None:
             com_line += ["-ss", str(eval_size)]
 
-        com_str = ' '.join(com_line)
-        nncf_logger.info(f"Run command: {com_str}")
         return com_line
 
     @pytest.mark.e2e_eval_reference_model

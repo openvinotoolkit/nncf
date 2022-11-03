@@ -16,12 +16,13 @@ from unittest.mock import patch
 
 import os
 
+import torch
 import onnxruntime as rt
 import numpy as np
 
 from examples.experimental.onnx.semantic_segmentation.onnx_ptq_segmentation import run
-from tests.common.helpers import TEST_ROOT
 from tests.onnx.quantization.common import get_dataset_for_test
+from tests.common.paths import TEST_ROOT
 
 MODELS_NAME = [
     'icnet_camvid',
@@ -34,25 +35,32 @@ INPUT_SHAPES = [
 ]
 
 
-def mock_dataloader_creator(dataset_name, dataset_path, input_name, input_shape):
-    return get_dataset_for_test([(np.zeros(input_shape[1:], dtype=np.float32), 0), ], input_name)
+def mock_dataloader_creator(dataset_name, dataset_path, input_shape):
+    return [(np.zeros(input_shape[1:], dtype=np.float32), 0)]
 
+
+def mock_dataset_creator(dataloader, input_name):
+    return get_dataset_for_test(dataloader, input_name)
 
 @pytest.mark.parametrize(("model_name, input_shape"),
                          zip(MODELS_NAME, INPUT_SHAPES))
 @patch(
     'examples.experimental.onnx.semantic_segmentation.onnx_ptq_segmentation.'
-    'create_dataset_from_segmentation_torch_dataset',
+    'create_dataloader',
     new=mock_dataloader_creator)
+@patch(
+    'examples.experimental.onnx.semantic_segmentation.onnx_ptq_segmentation.'
+    'create_dataset',
+    new=mock_dataset_creator)
 def test_sanity_quantize_sample(tmp_path, model_name, input_shape):
-    onnx_model_dir = str(TEST_ROOT.joinpath('onnx', 'data', 'models'))
-    onnx_model_path = str(TEST_ROOT.joinpath(onnx_model_dir, model_name + '.onnx'))
+    onnx_model_dir = TEST_ROOT / 'onnx' / 'data' / 'models'
+    onnx_model_path = onnx_model_dir / (model_name + '.onnx')
     if not os.path.isdir(onnx_model_dir):
         os.mkdir(onnx_model_dir)
 
     onnx_output_model_path = str(tmp_path / model_name)
 
-    run(onnx_model_path, onnx_output_model_path, 'CamVid',
+    run(str(onnx_model_path), onnx_output_model_path, 'CamVid',
         'none', num_init_samples=1, input_shape=input_shape, ignored_scopes=None)
 
     sess = rt.InferenceSession(onnx_output_model_path, providers=['OpenVINOExecutionProvider'])

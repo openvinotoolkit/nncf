@@ -11,22 +11,17 @@
  limitations under the License.
 """
 
-from typing import List
-from typing import Tuple
-
-import pytest
 from unittest.mock import patch
 
-import os
-
+import numpy as np
+import onnxruntime as rt
+import pytest
 import torch
 from torchvision import models
-import onnxruntime as rt
-import numpy as np
 
 from examples.experimental.onnx.classification.onnx_ptq_classification import run
-from tests.common.helpers import TEST_ROOT
 from tests.onnx.quantization.common import get_dataset_for_test
+from tests.onnx.conftest import ONNX_MODEL_DIR
 
 MODEL_NAMES = [
     'resnet18',
@@ -62,22 +57,25 @@ TEST_CASES = [
 ]
 
 
-def mock_dataset_creator(dataset_path, input_name, input_shape, batch_size, shuffle):
-    return get_dataset_for_test([(np.zeros(input_shape[1:], dtype=np.float32), 0), ], input_name)
+def mock_dataloader_creator(dataset_path, input_shape, batch_size, shuffle):
+    return [(np.zeros(input_shape[1:], dtype=np.float32), 0)]
+
+
+def mock_dataset_creator(dataloader, input_name):
+    return get_dataset_for_test(dataloader, input_name)
 
 
 @pytest.mark.parametrize(("model_name, model, input_shape"), TEST_CASES)
-@patch('examples.experimental.onnx.classification.onnx_ptq_classification.create_imagenet_torch_dataset',
+@patch('examples.experimental.onnx.classification.onnx_ptq_classification.create_dataloader',
+       new=mock_dataloader_creator)
+@patch('examples.experimental.onnx.classification.onnx_ptq_classification.create_dataset',
        new=mock_dataset_creator)
 def test_sanity_quantize_sample(tmp_path, model_name, model, input_shape):
-    onnx_model_dir = str(TEST_ROOT.joinpath('onnx', 'data', 'models'))
-    onnx_model_path = str(TEST_ROOT.joinpath(onnx_model_dir, model_name))
-    if not os.path.isdir(onnx_model_dir):
-        os.mkdir(onnx_model_dir)
+    onnx_model_path = ONNX_MODEL_DIR / (model_name + '.onnx')
     x = torch.randn(input_shape, requires_grad=False)
     torch.onnx.export(model, x, onnx_model_path, opset_version=13)
     onnx_output_model_path = str(tmp_path / model_name)
-    run(onnx_model_path, onnx_output_model_path, 'none',
+    run(str(onnx_model_path), onnx_output_model_path, 'none',
         batch_size=1, shuffle=True, num_init_samples=1,
         input_shape=input_shape, ignored_scopes=None)
 
