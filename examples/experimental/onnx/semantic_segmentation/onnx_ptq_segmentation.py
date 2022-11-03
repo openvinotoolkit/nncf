@@ -19,7 +19,7 @@ from nncf.quantization.compression_builder import CompressionBuilder
 from nncf.quantization.algorithms import DefaultQuantization
 from nncf.quantization.algorithms import DefaultQuantizationParameters
 from nncf.experimental.onnx.common import infer_input_shape
-from nncf.experimental.onnx.datasets.segmentation_dataset import create_dataset_from_segmentation_torch_dataset
+from nncf.experimental.onnx.datasets.segmentation_dataset import create_dataloader, create_dataset
 from examples.experimental.onnx.common.argparser import get_common_argument_parser
 
 
@@ -38,9 +38,9 @@ def run(onnx_model_path: str, output_model_path: str, dataset_name: str,
 
     input_shape, input_name = infer_input_shape(original_model, input_shape, input_name)
 
-    # Step 1: Initialize the data loader.
-    dataloader = create_dataset_from_segmentation_torch_dataset(
-        dataset_name, dataset_path, input_name, input_shape)
+    # Step 1: Initialize the dataloader & dataset.
+    dataloader = create_dataloader(dataset_name, dataset_path, input_shape)
+    dataset = create_dataset(dataloader, input_name)
 
     # Step 2: Create a pipeline of compression algorithms.
     builder = CompressionBuilder()
@@ -55,7 +55,7 @@ def run(onnx_model_path: str, output_model_path: str, dataset_name: str,
 
     # Step 4: Execute the pipeline.
     print("Post-Training Quantization has just started!")
-    quantized_model = builder.apply(original_model, dataloader)
+    quantized_model = builder.apply(original_model, dataset)
 
     # Step 5: Save the quantized model.
     onnx.save(quantized_model, output_model_path)

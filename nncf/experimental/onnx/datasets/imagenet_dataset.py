@@ -15,6 +15,7 @@ import os
 from typing import Optional, Tuple
 
 import torch
+from torch.utils.data import DataLoader
 from nncf import Dataset
 from nncf.experimental.onnx.tensor import ONNXNNCFTensor
 from torchvision import transforms
@@ -44,18 +45,13 @@ def get_transform(image_size: Tuple[int, int],
     return transforms.Compose(transform_list)
 
 
-def create_imagenet_torch_dataset(dataset_dir: str,
-                                  input_name: str,
-                                  input_shape: Optional[Tuple[int, int, int, int]],
-                                  mean=(0.485, 0.456, 0.406),
-                                  std=(0.229, 0.224, 0.225),
-                                  crop_ratio=0.875,
-                                  batch_size: int = 1,
-                                  shuffle: bool = True):
-    def transform_fn(data_item):
-        tensor, target = data_item
-        tensor = tensor.cpu().detach().numpy()
-        return {input_name: ONNXNNCFTensor(tensor), 'targets': ONNXNNCFTensor(target)}
+def create_dataloader(dataset_dir: str,
+                      input_shape: Optional[Tuple[int, int, int, int]],
+                      mean=(0.485, 0.456, 0.406),
+                      std=(0.229, 0.224, 0.225),
+                      crop_ratio=0.875,
+                      batch_size: int = 1,
+                      shuffle: bool = True) -> DataLoader:
 
     channel_last = input_shape[1] > input_shape[3] and input_shape[2] > input_shape[3]
 
@@ -67,7 +63,16 @@ def create_imagenet_torch_dataset(dataset_dir: str,
     transform = get_transform(image_size, crop_ratio, mean, std, channel_last)
     # The best practise is to use validation part of dataset for calibration (aligning with POT)
     initialization_dataset = ImageFolder(os.path.join(dataset_dir), transform)
-    dataloader = torch.utils.data.DataLoader(initialization_dataset,
-                                             batch_size=batch_size,
-                                             shuffle=shuffle)
+    return DataLoader(initialization_dataset,
+                                       batch_size=batch_size,
+                                       shuffle=shuffle)
+
+
+def create_dataset(dataloader: DataLoader, input_name: str) -> Dataset:
+
+    def transform_fn(data_item):
+        tensor, target = data_item
+        tensor = tensor.cpu().detach().numpy()
+        return {input_name: ONNXNNCFTensor(tensor), 'targets': ONNXNNCFTensor(target)}
+
     return Dataset(dataloader, transform_fn)

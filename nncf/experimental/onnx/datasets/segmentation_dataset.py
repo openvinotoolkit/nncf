@@ -13,8 +13,7 @@
 
 from typing import List
 
-import torch
-# from nncf.quantization.dataset import PTQDataset
+from torch.utils.data import DataLoader
 from examples.torch.semantic_segmentation.datasets.camvid import CamVid
 from examples.torch.semantic_segmentation.datasets.mapillary import Mapillary
 from nncf import Dataset
@@ -39,17 +38,11 @@ class SegmentationDataLoader():
         return len(self.dataset)
 
 
-def create_dataset_from_segmentation_torch_dataset(dataset_name: str,
-                                                   dataset_dir: str,
-                                                   input_name: str,
-                                                   input_shape: List[int]):
+def create_dataloader(dataset_name: str,
+                      dataset_dir: str,
+                      input_shape: List[int]) -> DataLoader:
     from examples.torch.semantic_segmentation.utils.transforms import (
         Compose, Normalize, Resize, ToTensor)
-
-    def transform_fn(data_item):
-        tensor, target = data_item
-        tensor = tensor.cpu().detach().numpy()
-        return {input_name: ONNXNNCFTensor(tensor), 'targets': ONNXNNCFTensor(target)}
 
     if dataset_name.lower() == 'mapillary':
         mean = (0.485, 0.456, 0.406)
@@ -70,7 +63,16 @@ def create_dataset_from_segmentation_torch_dataset(dataset_name: str,
     ])
     initialization_dataset = dataset_class(
         dataset_dir, 'val', transforms=transform)
-    dataloader = torch.utils.data.DataLoader(initialization_dataset,
-                                             batch_size=1,
-                                             shuffle=True)
+    return DataLoader(initialization_dataset,
+                      batch_size=1,
+                      shuffle=True)
+
+
+def create_dataset(dataloader: DataLoader, input_name: str) -> Dataset:
+
+    def transform_fn(data_item):
+        tensor, target = data_item
+        tensor = tensor.cpu().detach().numpy()
+        return {input_name: ONNXNNCFTensor(tensor), 'targets': ONNXNNCFTensor(target)}
+
     return Dataset(dataloader, transform_fn)
