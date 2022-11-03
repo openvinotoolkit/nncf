@@ -48,7 +48,7 @@ def run_example():
 
     # Step 2: Converts PyTorch model to the OpenVINO model.
     ov_model = convert_torch_to_openvino(model)
-    
+
     # Step 3: Create calibration dataset.
     data_source = create_data_source()
 
