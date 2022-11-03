@@ -8,7 +8,7 @@ from torch import nn
 from nncf import NNCFConfig
 from nncf.common.quantization.structs import QuantizerConfig
 from nncf.torch.quantization.algo import QuantizationController
-from tests.common.helpers import TEST_ROOT
+from tests.common.paths import TEST_ROOT
 from tests.torch.sample_test_validator import SampleType
 from tests.torch.sample_test_validator import SanitySampleValidator
 from tests.torch.sample_test_validator import SanityTestCaseDescriptor
@@ -22,7 +22,7 @@ class PrecisionTestCaseDescriptor(SanityTestCaseDescriptor, ABC):
 
     @property
     def config_directory(self) -> Path:
-        return TEST_ROOT.joinpath("torch", "data", "configs", "hawq")
+        return TEST_ROOT / "torch" / "data" / "configs" / "hawq"
 
     def get_precision_section(self) -> Dict:
         raise NotImplementedError

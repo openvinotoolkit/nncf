@@ -11,18 +11,14 @@
  limitations under the License.
 """
 
+import onnx
 import pytest
 
-import os
-
-import onnx
-
-from tests.common.helpers import TEST_ROOT
+from tests.onnx.conftest import ONNX_MODEL_DIR
 from tests.onnx.quantization.common import ModelToTest
-
-from tests.onnx.quantization.common import min_max_quantize_model
 from tests.onnx.quantization.common import compare_nncf_graph
 from tests.onnx.quantization.common import infer_model
+from tests.onnx.quantization.common import min_max_quantize_model
 from tests.onnx.quantization.common import find_ignored_scopes
 
 TEST_DATA = [ModelToTest('ssd_mobilenet_v1_12', [1, 300, 300, 3]),
@@ -40,11 +36,8 @@ def test_min_max_quantization_graph(tmp_path, model_to_test):
     convert_opset_version = True
     dataset_has_batch_size = len(model_to_test.input_shape) > 3
 
-    onnx_model_dir = str(TEST_ROOT.joinpath('onnx', 'data', 'models'))
-    onnx_model_path = str(TEST_ROOT.joinpath(onnx_model_dir, model_to_test.model_name + '.onnx'))
-    if not os.path.isdir(onnx_model_dir):
-        os.mkdir(onnx_model_dir)
-    original_model = onnx.load(onnx_model_path)
+    onnx_model_path = ONNX_MODEL_DIR / (model_to_test.model_name + '.onnx')
+    original_model = onnx.load(str(onnx_model_path))
 
     ignored_scopes = []
     if model_to_test.model_name == 'MaskRCNN-12':

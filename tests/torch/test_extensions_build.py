@@ -6,7 +6,7 @@ import shutil
 
 import torch
 
-from tests.common.helpers import TEST_ROOT
+from tests.common.paths import TEST_ROOT
 from tests.torch.helpers import Command
 
 EXTENSIONS_BUILD_FILENAME = 'extensions_build_checks.py'

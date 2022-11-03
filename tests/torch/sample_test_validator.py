@@ -30,9 +30,9 @@ from examples.torch.common.utils import get_name
 from nncf import NNCFConfig
 from nncf.common.utils.registry import Registry
 from tests.common.config_factory import ConfigFactory
-from tests.common.helpers import EXAMPLES_DIR
-from tests.common.helpers import PROJECT_ROOT
-from tests.common.helpers import TEST_ROOT
+from tests.common.paths import EXAMPLES_DIR
+from tests.common.paths import PROJECT_ROOT
+from tests.common.paths import TEST_ROOT
 
 
 def create_command_line(args, sample_type, main_filename='main.py'):
@@ -235,7 +235,7 @@ class BaseSampleTestCaseDescriptor(ABC):
 
     def mock_dataset(self, dataset_name: str):
         self.dataset_name = dataset_name
-        self.dataset_dir = TEST_ROOT.joinpath("torch", "data", "mock_datasets", dataset_name)
+        self.dataset_dir = TEST_ROOT / "torch" / "data" / "mock_datasets" / dataset_name
         return self
 
     def __str__(self):
