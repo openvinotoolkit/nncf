@@ -135,12 +135,10 @@ def quantize_impl(model: torch.nn.Module,
                   target_device: TargetDevice,
                   subset_size: int,
                   fast_bias_correction: bool,
-                  model_type: Optional[str] = None) -> torch.nn.Module:
+                  model_type: Optional[ModelType] = None) -> torch.nn.Module:
     """
     Implementation of the `quantize()` method for the PyTorch backend.
     """
-    if model_type is not None:
-        raise ValueError(f'model_type={model_type} is not supported')
     if fast_bias_correction is False:
         raise ValueError(f'fast_bias_correction={fast_bias_correction} is not supported')
 
