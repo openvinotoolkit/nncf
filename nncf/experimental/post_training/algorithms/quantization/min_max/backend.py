@@ -33,7 +33,7 @@ from nncf.common.quantization.structs import QuantizerConfig
 from nncf.experimental.post_training.algorithms.quantization.min_max.utils import QuantizerLayerParameters
 from nncf.experimental.post_training.graph.model_transformer import StaticModelTransformerBase
 
-T_model = TypeVar('T_model')
+TModel = TypeVar('TModel')
 ALGO_BACKENDS = Registry('algo_backends')
 
 
@@ -76,7 +76,7 @@ class MinMaxAlgoBackend(ABC):
 
     @staticmethod
     @abstractmethod
-    def model_transformer(model: T_model) -> StaticModelTransformerBase:
+    def model_transformer(model: TModel) -> StaticModelTransformerBase:
         """
         Returns backend-specific ModelTransformer instance.
 
@@ -141,7 +141,7 @@ class MinMaxAlgoBackend(ABC):
 
     @staticmethod
     @abstractmethod
-    def get_initializer_value(model: T_model, initializer_name: str) -> np.ndarray:
+    def get_initializer_value(model: TModel, initializer_name: str) -> np.ndarray:
         """
         Returns initializer value in the NumPy format.
 
@@ -162,7 +162,7 @@ class MinMaxAlgoBackend(ABC):
 
     @staticmethod
     @abstractmethod
-    def get_weight_config(config: QuantizerConfig, model: T_model) -> QuantizerConfig:
+    def get_weight_config(config: QuantizerConfig, model: TModel) -> QuantizerConfig:
         """
         Returns backend-specific configuration based on the input model attributes.
 

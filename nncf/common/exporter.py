@@ -14,7 +14,7 @@
 from abc import ABC, abstractmethod
 from typing import Optional, List, Tuple, Any
 
-from nncf.api.compression import T_model
+from nncf.api.compression import TModel
 
 
 class Exporter(ABC):
@@ -26,7 +26,7 @@ class Exporter(ABC):
     """
 
     def __init__(self,
-                 model: T_model,
+                 model: TModel,
                  input_names: Optional[List[str]] = None,
                  output_names: Optional[List[str]] = None,
                  model_args: Optional[Tuple[Any, ...]] = None):

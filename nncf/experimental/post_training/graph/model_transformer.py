@@ -19,19 +19,19 @@ from nncf.common.graph.model_transformer import ModelTransformer
 from nncf.common.graph.transformations.commands import TransformationCommand
 from nncf.common.graph.transformations.layout import TransformationLayout
 
-T_model = TypeVar('T_model')
+TModel = TypeVar('TModel')
 
 
 # pylint: disable=no-member
 class StaticModelTransformerBase(ModelTransformer, ABC):
 
-    def __init__(self, model: T_model):
+    def __init__(self, model: TModel):
         super().__init__(model)
         self._transformation_layout = None
         self._transformations_list = []
 
     @abstractmethod
-    def transform(self, transformation_layout: TransformationLayout) -> T_model:
+    def transform(self, transformation_layout: TransformationLayout) -> TModel:
         """
         Applies transformation layout on the model
 
@@ -67,7 +67,7 @@ class StaticModelTransformerBase(ModelTransformer, ABC):
             '_apply_bias_correction_transformations method must be implemented before call')
 
     @staticmethod
-    def _apply_model_extraction_transformation(transformations: List[TransformationCommand]) -> T_model:
+    def _apply_model_extraction_transformation(transformations: List[TransformationCommand]) -> TModel:
         """
         Extracts or builds sub-model from the original based on the inputs and outputs names
 

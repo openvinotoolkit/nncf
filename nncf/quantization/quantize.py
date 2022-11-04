@@ -13,7 +13,7 @@
 
 from typing import Optional
 
-from nncf.api.compression import T_model
+from nncf.api.compression import TModel
 from nncf.common.quantization.structs import QuantizationPreset
 from nncf.common.utils.backend import BackendType
 from nncf.common.utils.backend import get_backend
@@ -23,14 +23,14 @@ from nncf.parameters import ModelType
 from nncf.parameters import TargetDevice
 
 
-def quantize(model: T_model,
+def quantize(model: TModel,
              calibration_dataset: Dataset,
              preset: QuantizationPreset = QuantizationPreset.PERFORMANCE,
              target_device: TargetDevice = TargetDevice.ANY,
              subset_size: int = 300,
              fast_bias_correction: bool = True,
              model_type: Optional[ModelType] = None,
-             ignored_scope: Optional[IgnoredScope] = None) -> T_model:
+             ignored_scope: Optional[IgnoredScope] = None) -> TModel:
     """
     Applies post-training quantization algorithm to provided model.
 

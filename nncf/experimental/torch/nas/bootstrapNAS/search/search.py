@@ -51,10 +51,10 @@ from nncf.experimental.torch.nas.bootstrapNAS.elasticity.multi_elasticity_handle
 from nncf.torch.nncf_network import NNCFNetwork
 
 DataLoaderType = TypeVar('DataLoaderType')
-T_model = TypeVar('T_model')
+TModel = TypeVar('TModel')
 ValFnType = Callable[
     [
-        T_model,
+        TModel,
         DataLoaderType
     ],
     float

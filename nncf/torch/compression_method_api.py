@@ -39,7 +39,7 @@ from nncf.torch.layers import NNCF_WRAPPED_USER_MODULES_DICT
 from nncf.torch.nncf_network import NNCFNetwork
 from nncf.torch.nncf_network import PTModelTransformer
 
-T_model = TypeVar('T_model')
+TModel = TypeVar('TModel')
 
 DOMAIN_CUSTOM_OPS_NAME = "org.openvinotoolkit"
 
@@ -141,7 +141,7 @@ class PTCompressionAlgorithmBuilder(BaseCompressionAlgorithmBuilder):
         return layout
 
     @abstractmethod
-    def _build_controller(self, model: T_model) -> PTCompressionAlgorithmController:
+    def _build_controller(self, model: TModel) -> PTCompressionAlgorithmController:
         """
         Simple implementation of building controller without setting builder state and loading controller's one.
 
@@ -150,7 +150,7 @@ class PTCompressionAlgorithmBuilder(BaseCompressionAlgorithmBuilder):
         :return: The instance of the `BaseCompressionAlgorithmController`.
         """
 
-    def build_controller(self, model: T_model) -> PTCompressionAlgorithmController:
+    def build_controller(self, model: TModel) -> PTCompressionAlgorithmController:
         """
         Builds `PTCompressionAlgorithmController` to handle the additional modules,
         parameters, and hooks inserted into the model to enable algorithm-specific
