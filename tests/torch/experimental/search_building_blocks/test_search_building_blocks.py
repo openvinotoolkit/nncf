@@ -43,7 +43,7 @@ from tests.torch.test_models.resnet import ResNet50
 
 def check_blocks_and_groups(name, actual_blocks: BuildingBlocks, actual_group_dependent: GroupedBlockIDs):
     ref_file_dir = TEST_ROOT / 'torch' / 'data' / 'search_building_block'
-    ref_file_path = ref_file_dir.joinpath(name)
+    ref_file_path = ref_file_dir.joinpath(name + '.json')
     if os.getenv("NNCF_TEST_REGEN_DOT") is not None:
         if not os.path.exists(ref_file_dir):
             os.makedirs(ref_file_dir)
@@ -74,15 +74,14 @@ class BuildingBlockParamsCase:
         self.input_sizes = input_sizes
         self.min_block_size = min_block_size
         self.max_block_size = max_block_size
-        self.name = name
-        self.hw_fused_ops = hw_fused_ops
-
-    def __str__(self):
-        name = self.name
         if not name and hasattr(self.model_creator, '__name__'):
             name = self.model_creator.__name__
         assert name, 'Can\'t define name from the model (usually due to partial), please specify it explicitly'
-        return name
+        self.name = name.lower().replace(' ', '_')
+        self.hw_fused_ops = hw_fused_ops
+
+    def __str__(self):
+        return self.name
 
 
 LIST_BB_PARAMS_CASES = [
@@ -114,7 +113,7 @@ def test_building_block(desc: BuildingBlockParamsCase):
                                                       min_block_size=desc.min_block_size,
                                                       hw_fused_ops=desc.hw_fused_ops)
     skipped_blocks = [eb.basic_block for eb in ext_blocks]
-    check_blocks_and_groups(str(desc), skipped_blocks, group_dependent)
+    check_blocks_and_groups(desc.name, skipped_blocks, group_dependent)
 
 
 class SearchBBlockAlgoParamsCase:

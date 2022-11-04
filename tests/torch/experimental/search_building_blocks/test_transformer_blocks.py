@@ -43,7 +43,7 @@ from tests.torch.nas.helpers import move_model_to_cuda_if_available
 
 def check_extended_blocks(name, actual_blocks: ExtendedBuildingBlocks):
     ref_file_dir = TEST_ROOT / 'torch' / 'data' / 'search_building_block'
-    ref_file_path = ref_file_dir.joinpath(name)
+    ref_file_path = ref_file_dir.joinpath(name + '.json')
     if os.getenv("NNCF_TEST_REGEN_DOT") is not None:
         if not os.path.exists(ref_file_dir):
             os.makedirs(ref_file_dir)
@@ -65,7 +65,7 @@ class TransformerSearchBBlockParamsCase:
                  model_creator: Callable[[], nn.Module]):
         self.input_info = input_info
         self.model_creator = model_creator
-        self.name = name
+        self.name = name.lower().replace(' ', '_')
 
 
 class SelfAttention(nn.Module):
