@@ -35,7 +35,7 @@ class AverageMeter:
         self.avg = self.sum / self.count
 
     def all_reduce(self):
-        device = "cuda" if torch.cuda.is_available() else "cpu"
+        device = 'cuda' if torch.cuda.is_available() else 'cpu'
         total = torch.tensor([self.sum, self.count], dtype=torch.float32, device=device)
         dist.all_reduce(total, dist.ReduceOp.SUM, async_op=False)
         self.sum, self.count = total.tolist()
@@ -62,7 +62,7 @@ class AverageMeter:
 
 
 class ProgressMeter:
-    def __init__(self, num_batches, meters, prefix=""):
+    def __init__(self, num_batches, meters, prefix=''):
         self.batch_fmtstr = self._get_batch_fmtstr(num_batches)
         self.meters = meters
         self.prefix = prefix
@@ -73,7 +73,7 @@ class ProgressMeter:
         print('\t'.join(entries))
 
     def display_summary(self):
-        entries = [" *"]
+        entries = [' *']
         entries += [meter.summary() for meter in self.meters]
         print(' '.join(entries))
 

@@ -16,12 +16,12 @@ import subprocess
 from pathlib import Path
 from typing import Dict, List, Tuple
 
+import nncf
 import openvino.runtime as ov
 import tensorflow as tf
 import tensorflow_datasets as tfds
 from tensorflow.python.keras.metrics import Metric
 
-import nncf
 from examples.experimental.tensorflow.mobilenet_v2.utils import center_crop
 
 # Path to the `mobilenet_v2` directory.
@@ -29,14 +29,14 @@ ROOT = Path(__file__).parent.resolve()
 # Path to the directory where the original and quantized models will be saved.
 MODEL_DIR = ROOT / 'mobilenet_v2_quantization'
 # Path to ImageNet validation dataset.
-DATASET_DIR = Path("/ssd/tensorflow/imagenet") #ROOT / 'imagenet'
+DATASET_DIR = ROOT / 'imagenet'
 
 
 def run_example():
     """
     Runs the MobileNetV2 quantization example.
     """
-    # Step 1: Instantiates the MobileNetV2 from the Keras Applications.
+    # Step 1: Instantiate the MobileNetV2 from the Keras Applications.
     model = tf.keras.applications.MobileNetV2()
 
     # Step 2: Create calibration dataset.
@@ -67,7 +67,7 @@ def run_example():
     model_name = 'mobilenet_v2'
     saved_model_dir = MODEL_DIR / model_name
     quantized_model.save(saved_model_dir)
-    print(f"The quantized model is exported to {saved_model_dir}")
+    print(f'The quantized model is exported to {saved_model_dir}')
 
     # Step 5: Run OpenVINO Model Optimizer to convert TensorFlow model to OpenVINO IR.
     mo_command = f'mo --saved_model_dir {saved_model_dir} ' \
@@ -134,8 +134,8 @@ def validate(model: ov.Model,
     :param model: An OpenVINO model.
     :param metrics: A list of TensorFlow metrics
     :param val_dataset: An instant of the TensorFlow dataset
-    :param print_freq:
-    :return:
+    :param print_freq: A print frequency (batch iterations).
+    :return: A Tuple of scalars of computed metrics
     """
     for m in metrics:
         m.reset_state()
@@ -150,9 +150,10 @@ def validate(model: ov.Model,
         for m in metrics:
             m.update_state(labels, pred)
         if i % print_freq == 0 or i + 1 == num_items:
-            print(f'{i + 1}/{num_items}: '
-                  f'acc@1: {metrics[0].result().numpy():.4f} '
-                  f'acc@5: {metrics[1].result().numpy():.4f}')
+            output = [f'{i + 1}/{num_items}:']
+            for m in metrics:
+                  output.append(f'{m.name}: {m.result().numpy():.4f}')
+            print(' '.join(output))
 
     return metrics[0].result().numpy(), metrics[1].result().numpy()
 

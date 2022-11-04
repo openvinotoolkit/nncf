@@ -13,6 +13,7 @@
 
 import tensorflow as tf
 
+
 def center_crop(image: tf.Tensor,
                 image_size: int,
                 crop_padding: int) -> tf.Tensor:

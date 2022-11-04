@@ -16,11 +16,11 @@ import subprocess
 import time
 from pathlib import Path
 
+import nncf
 import torch
 import torchvision
 from openvino.runtime import Core
 
-import nncf
 from examples.experimental.torch.mobilenet_v2 import utils
 
 # Path to the `mobilenet_v2` directory.
@@ -28,7 +28,7 @@ ROOT = Path(__file__).parent.resolve()
 # Path to the directory where the original and quantized models will be saved.
 MODEL_DIR = ROOT / 'mobilenet_v2_quantization'
 # Path to ImageNet validation dataset.
-DATASET_DIR = Path("/ssd/imagenet") #ROOT / 'imagenet'
+DATASET_DIR = ROOT / 'imagenet'
 # Batch size
 BATCH_SIZE = 125
 
@@ -71,7 +71,7 @@ def run_example():
     onnx_quantized_model_path = MODEL_DIR / 'mobilenet_v2.onnx'
     dummy_input = torch.randn(BATCH_SIZE, 3, 224, 224)
     torch.onnx.export(quantized_model, dummy_input, onnx_quantized_model_path, verbose=False)
-    print(f"The quantized model is exported to: {onnx_quantized_model_path}")
+    print(f'The quantized model is exported to: {onnx_quantized_model_path}')
 
     # Step 5: Run OpenVINO Model Optimizer to convert ONNX model to OpenVINO IR.
     mo_command = f'mo --framework onnx -m {onnx_quantized_model_path} --output_dir {MODEL_DIR}'

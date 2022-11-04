@@ -14,14 +14,13 @@
 import subprocess
 import time
 from pathlib import Path
-from typing import Any
-from typing import Iterable
+from typing import Any, Iterable
 
+import nncf
 import openvino.runtime as ov
 import torch
 import torchvision
 
-import nncf
 from examples.experimental.openvino.mobilenet_v2 import utils
 
 # Path to the `mobilenet_v2` directory.
@@ -29,7 +28,7 @@ ROOT = Path(__file__).parent.resolve()
 # Path to the directory where the original and quantized IR will be saved.
 MODEL_DIR = ROOT / 'mobilenet_v2_quantization'
 # Path to ImageNet validation dataset.
-DATASET_DIR = Path('/ssd/imagenet') #ROOT / 'imagenet'
+DATASET_DIR = ROOT / 'imagenet'
 
 
 ie = ov.Core()
@@ -71,9 +70,9 @@ def run_example():
     ir_qmodel_xml = MODEL_DIR / 'mobilenet_v2_quantized.xml'
     ir_qmodel_bin = MODEL_DIR / 'mobilenet_v2_quantized.bin'
     ov.serialize(quantized_model, str(ir_qmodel_xml), str(ir_qmodel_bin))
-    print("The quantized model has been saved in:")
-    print(f"XML file: {ir_qmodel_xml}")
-    print(f"BIN file: {ir_qmodel_bin}")
+    print('The quantized model has been saved in:')
+    print(f'XML file: {ir_qmodel_xml}')
+    print(f'BIN file: {ir_qmodel_bin}')
 
     # Step 6: Compare the accuracy of the original and quantized models.
     print('Checking the accuracy of the original model:')

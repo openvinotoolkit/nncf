@@ -45,7 +45,8 @@ class CalibrarionDataLoader(PTInitializingDataLoader):
 
     @property
     def batch_size(self):
-        return getattr(self._data_loader.data_source, 'batch_size', 1)
+        data_source = getattr(self._data_loader, '_data_source')
+        return getattr(data_source, 'batch_size', 1)
 
     def __iter__(self):
         return iter(self._data_loader.get_inference_data())

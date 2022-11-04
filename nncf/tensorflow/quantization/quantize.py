@@ -40,7 +40,7 @@ class CalibrarionDataLoader(NNCFDataLoader):
 
     @property
     def batch_size(self) -> int:
-        data_source = self._dataset.data_source
+        data_source = getattr(self._dataset, '_data_source')
 
         if not hasattr(data_source, '_batch_size'):
             return 1

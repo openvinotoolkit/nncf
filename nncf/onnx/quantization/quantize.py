@@ -28,6 +28,9 @@ from nncf.experimental.post_training.compression_builder import CompressionBuild
 
 
 # TODO(alexsu52): It is a workaround and should be removed.
+# ONNX expects the dataset instance with following implemented interfaces 
+# https://github.com/openvinotoolkit/nncf/blob/develop/nncf/experimental/post_training/api/dataset.py. 
+# Thus the intermediate class is needed to run quantization in ONNX backend.
 class ONNXDataset(PTQDataset):
     """
     This class wraps the nncf.Dataset.

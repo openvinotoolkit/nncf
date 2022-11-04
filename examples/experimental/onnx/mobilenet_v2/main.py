@@ -16,12 +16,12 @@ import time
 from pathlib import Path
 from typing import Dict, List
 
+import nncf
 import onnx
 import onnxruntime as rt
 import torch
 import torchvision
 
-import nncf
 from examples.experimental.onnx.mobilenet_v2 import utils
 
 # Path to the `mobilenet_v2` directory.
@@ -29,7 +29,7 @@ ROOT = Path(__file__).parent.resolve()
 # Path to the directory where the original and quantized models will be saved.
 MODEL_DIR = ROOT / 'mobilenet_v2_quantization'
 # Path to ImageNet validation dataset.
-DATASET_DIR = Path("/ssd/imagenet") #ROOT / 'imagenet'
+DATASET_DIR = ROOT / 'imagenet'
 
 
 def run_example():
@@ -76,7 +76,7 @@ def run_example():
     # Step 6: Save the quantized model.
     quantized_model_path = MODEL_DIR / 'quantized_mobilenet_v2.onnx'
     onnx.save(quantized_model, quantized_model_path)
-    print(f"The quantized model has been saved in: {quantized_model_path}")
+    print(f'The quantized model has been saved in: {quantized_model_path}')
 
     # Step 7: Compare the accuracy of the original and quantized models.
     print('Checking the accuracy of the original model:')

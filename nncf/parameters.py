@@ -38,7 +38,6 @@ class ModelType(Enum):
     Describes the model type the specificity of which will be taken into
     account during compression.
 
-
     :param TRANSFORMER: Transformer-based models
         (https://arxiv.org/pdf/1706.03762.pdf)
     """
