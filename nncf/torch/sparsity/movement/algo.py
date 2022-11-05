@@ -137,11 +137,12 @@ class MovementSparsityController(BaseSparsityAlgoController):
             if model_family == 'auto':
                 model_family = detect_supported_model_family(self.model)
             if model_family not in STRUCTURED_MASK_STRATEGY.registry_dict:
-                nncf_logger.warning('No supported model for structured masking. Disabled.')
+                nncf_logger.warning('No supported model for structured masking. Disable structured_masking by force.')
+                self._scheduler.enable_structured_masking = False
             else:
                 strategy_cls = STRUCTURED_MASK_STRATEGY.get(model_family)
-                strcutured_mask_strategy = strategy_cls.from_compressed_model(self.model)
-                self._structured_mask_handler = StructuredMaskHandler(self.prunable_sparsified_module_info_groups, strcutured_mask_strategy)
+                structured_mask_strategy = strategy_cls.from_compressed_model(self.model)
+                self._structured_mask_handler = StructuredMaskHandler(self.prunable_sparsified_module_info_groups, structured_mask_strategy)
 
     def compression_stage(self) -> CompressionStage:
         # if self._mode == 'local':
