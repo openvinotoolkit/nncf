@@ -529,7 +529,7 @@ def get_requires_grad_per_param(model):
 
 
 def get_skipped_quantized_weight_node_names() -> List[NNCFNodeName]:
-    scopes_list = ['MobileNetV2/Sequential[features]/ConvBNActivation[18]/NNCFConv2d[0]/conv2d_0',
+    scopes_list = ['MobileNetV2/Sequential[features]/Conv2dNormActivation[18]/NNCFConv2d[0]/conv2d_0',
                    'MobileNetV2/Sequential[features]/InvertedResidual[17]/Sequential[conv]/NNCFConv2d[2]/conv2d_0',
                    'MobileNetV2/Sequential[features]/InvertedResidual[16]/Sequential[conv]/NNCFConv2d[2]/conv2d_0']
     return scopes_list
