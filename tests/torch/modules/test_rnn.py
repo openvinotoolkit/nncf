@@ -289,7 +289,7 @@ class TestLSTM:
                 torch.testing.assert_allclose(test_output.sorted_indices, ref_output.sorted_indices)
                 torch.testing.assert_allclose(test_output.unsorted_indices, ref_output.unsorted_indices)
         else:
-            torch.testing.assert_allclose(test_output, ref_output, rtol=1e-2, atol=1e-3)
+            torch.testing.assert_allclose(test_output, ref_output, rtol=9e-2, atol=15e-4)
 
     def test_backward_lstm(self, sizes, bidirectional, num_layers, bias, batch_first, variable_length, sorted_, is_cuda,
                            empty_initial, dropout, _seed):
