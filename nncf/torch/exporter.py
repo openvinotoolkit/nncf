@@ -157,13 +157,20 @@ class PTExporter(Exporter):
                 retval = dummy_forward(self._model)
                 output_names = generate_output_names_list(count_tensors(retval))
 
+            def set_eval_state(module, _) -> None:
+                module.training = False
+
+            def func_apply_to_bns(module):
+                if isinstance(module, (torch.nn.modules.batchnorm.BatchNorm1d,
+                                       torch.nn.modules.batchnorm.BatchNorm2d,
+                                       torch.nn.modules.batchnorm.BatchNorm3d)):
+                    module.register_forward_pre_hook(set_eval_state)
+            model.apply(func_apply_to_bns)
             torch.onnx.export(model, tuple(input_tensor_list), save_path,
                               input_names=input_names,
                               output_names=output_names,
-                              enable_onnx_checker=False,
                               opset_version=opset_version,
-                              # Do not fuse Conv+BN in ONNX. May cause dropout elements to appear in ONNX.
-                              training=True)
+                              training=torch.onnx.TrainingMode.TRAINING)
             model.enable_dynamic_graph_building()
         model.forward = original_forward
         model.to(original_device)
