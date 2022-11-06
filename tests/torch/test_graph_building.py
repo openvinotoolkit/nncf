@@ -10,35 +10,35 @@
  See the License for the specific language governing permissions and
  limitations under the License.
 """
+import pytest
+import torch
+import torch.nn.functional as F
 from copy import deepcopy
+from torch import nn
+from typing import List
+from typing import Tuple
 
 from nncf.common.graph import Dtype
 from nncf.common.graph.definitions import MODEL_INPUT_OP_NAME
 from nncf.common.graph.definitions import MODEL_OUTPUT_OP_NAME
 from nncf.common.graph.definitions import NNCFGraphNodeType
 from nncf.common.graph.layer_attributes import MultipleInputLayerAttributes
-from typing import List
-from typing import Tuple
-from torch import nn
-
-import pytest
-import torch
-import torch.nn.functional as F
-
+from nncf.common.graph.layer_attributes import MultipleOutputLayerAttributes
+from nncf.common.graph.layer_attributes import ReshapeLayerAttributes
 from nncf.torch import nncf_model_input
-from nncf.torch.dynamic_graph.graph import DynamicGraph
-from nncf.torch.dynamic_graph.graph_tracer import GraphTracer
-from nncf.torch.dynamic_graph.io_handling import wrap_nncf_model_outputs_with_objwalk
-from nncf.torch.dynamic_graph.graph_tracer import ModelInputInfo
-from nncf.torch.dynamic_graph.graph_tracer import create_dummy_forward_fn
+from nncf.torch.dynamic_graph.context import TracingContext
 from nncf.torch.dynamic_graph.context import get_current_context
 from nncf.torch.dynamic_graph.context import no_nncf_trace
-from nncf.torch.dynamic_graph.context import TracingContext
+from nncf.torch.dynamic_graph.graph import DynamicGraph
+from nncf.torch.dynamic_graph.graph_tracer import GraphTracer
+from nncf.torch.dynamic_graph.graph_tracer import ModelInputInfo
+from nncf.torch.dynamic_graph.graph_tracer import create_dummy_forward_fn
+from nncf.torch.dynamic_graph.io_handling import wrap_nncf_model_outputs_with_objwalk
+from nncf.torch.dynamic_graph.trace_tensor import TracedTensor
 from nncf.torch.graph.graph_builder import GraphBuilder
-from nncf.torch.graph.operator_metatypes import PTCatMetatype, PTSplitMetatype
+from nncf.torch.graph.operator_metatypes import PTCatMetatype
 from nncf.torch.graph.operator_metatypes import PTReshapeMetatype
-from nncf.common.graph.layer_attributes import ReshapeLayerAttributes
-from nncf.common.graph.layer_attributes import MultipleOutputLayerAttributes
+from nncf.torch.graph.operator_metatypes import PTSplitMetatype
 from tests.torch.helpers import create_compressed_model_and_algo_for_test
 from tests.torch.helpers import register_bn_adaptation_init_args
 from tests.torch.test_compressed_graph import get_basic_quantization_config
@@ -561,16 +561,17 @@ class ModelWithIntegerPaths(torch.nn.Module):
     def __init__(self):
         super().__init__()
         self.conv1 = torch.nn.Conv2d(2, 2, 1)
-        self.linear = torch.nn.Linear(1, 1, 1)
+        self.linear = torch.nn.Linear(2, 2)
 
     def forward(self, x: torch.Tensor):
         x = self.conv1(x)
         sz = torch.tensor(x.shape).to(x.device)
         sz_tensor = torch.cat([sz])
         idx_tensor = sz_tensor // sz_tensor
-        x = x[idx_tensor] * torch.ones([1, 1]).to(x.device)
-        x = self.linear(x)
-        return x
+        single_idx = idx_tensor[0]
+        y = x[single_idx][single_idx] * torch.ones([1, 1]).to(x.device)
+        z = self.linear(y)
+        return z
 
 
 def test_integer_path_marking():
@@ -579,7 +580,30 @@ def test_integer_path_marking():
     nncf_graph = builder.build_graph(ModelWithIntegerPaths(), input_infos=input_infos)
     edges = list(nncf_graph.get_all_edges())
     num_integer_edges = sum([1 for edge in edges if edge.dtype is Dtype.INTEGER])
-    assert num_integer_edges == 2  # cat -> __floordiv__ and __floordiv__ -> __getitem__
+    # cat -> __floordiv__,  __floordiv__ -> __getitem__0 (to get single_idx),
+    # __getitem__0 -> __getitem__1 (first indexing by tensor), __getitem__0 -> __getitem__2 (second indexing by tensor)
+    assert num_integer_edges == 4
+
+
+def test_torch_tensor_getitem_behavior(mocker):
+    x = torch.ones((10, 4, 4, 4))
+    indexes = torch.LongTensor([0, 1, 2])
+    mock_tensor_meta = mocker.stub
+    traced_x = TracedTensor.from_torch_tensor(torch.ones((10, 4, 4, 4)), mock_tensor_meta)
+    traced_indexes = TracedTensor.from_torch_tensor(torch.LongTensor([0, 1, 2]), mock_tensor_meta)
+    SHAPE_1 = [3, 4, 4, 4]
+    SHAPE_2 = [3, 4, 4]
+    assert list(x[indexes].shape) == SHAPE_1
+    assert list(x[traced_indexes].shape) == SHAPE_1
+    assert list(traced_x[indexes].shape) == SHAPE_1
+    assert list(traced_x[traced_indexes].shape) == SHAPE_1
+
+    assert list(x[indexes, indexes].shape) == SHAPE_2
+    assert list(x[traced_indexes, traced_indexes].shape) == SHAPE_2
+    assert list(traced_x[indexes, indexes].shape) == SHAPE_2
+    assert list(traced_x[traced_indexes, traced_indexes].shape)
+    assert list(x[indexes, traced_indexes].shape) == SHAPE_2
+    assert list(traced_x[indexes, traced_indexes].shape) == SHAPE_2
 
 
 class ModelSpecificException(Exception):
