@@ -26,6 +26,7 @@ from nncf.experimental.onnx.graph.metatypes.onnx_metatypes import ONNXConcatLaye
 from nncf.experimental.onnx.graph.metatypes.onnx_metatypes import ONNXAddLayerMetatype
 from nncf.experimental.onnx.graph.metatypes.onnx_metatypes import ONNXConstantOfShapeMetatype
 from nncf.experimental.onnx.graph.metatypes.onnx_metatypes import ONNXShapeMetatype
+from nncf.experimental.onnx.model_normalizer import ONNXModelNormalizer
 
 from tests.onnx.models import LinearModel
 from tests.onnx.models import MultiInputOutputModel
@@ -44,6 +45,7 @@ REF_METATYPES_COUNTERS = [
                          zip(TEST_MODELS, REF_METATYPES_COUNTERS))
 def test_mapping_onnx_metatypes(model_creator_func, ref_metatypes):
     model = model_creator_func()
-    nncf_graph = GraphConverter.create_nncf_graph(model.onnx_model)
+    model = ONNXModelNormalizer.normalize_model(model.onnx_model)
+    nncf_graph = GraphConverter.create_nncf_graph(model)
     actual_metatypes = [node.metatype for node in nncf_graph.get_all_nodes()]
     assert Counter(ref_metatypes) == Counter(actual_metatypes)

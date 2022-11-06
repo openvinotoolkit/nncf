@@ -61,7 +61,7 @@ class GraphConverter:
         return True
 
     @staticmethod
-    def _get_tensor_shape(onnx_graph: onnx.GraphProto, tensor: Union[str, onnx.ValueInfoProto]) -> List[int]:
+    def _get_tensor_shape(onnx_model: onnx.ModelProto, tensor: Union[str, onnx.ValueInfoProto]) -> List[int]:
         """
         Returns the shape of the 'tensor'.
         :param onnx_graph: Graph, in which 'tensor' is been seeking.
@@ -70,9 +70,9 @@ class GraphConverter:
         """
         try:
             if isinstance(tensor, str):
-                tensor_shape = onnx_graph.get_edge_shape(tensor)
+                tensor_shape = ONNXGraph.get_edge_shape(onnx_model, tensor)
             elif isinstance(tensor, onnx.ValueInfoProto):
-                tensor_shape = onnx_graph.get_tensor_shape(tensor)
+                tensor_shape = ONNXGraph.get_tensor_shape(tensor)
         except RuntimeError as err:
             # This exception raised because ONNX format allows to not have shape field.
             # Model example - effecienet-v2, mobilenet_v2.
@@ -84,7 +84,7 @@ class GraphConverter:
         return tensor_shape
 
     @staticmethod
-    def _add_nncf_input_nodes(onnx_graph: onnx.GraphProto, nncf_graph: NNCFGraph) -> None:
+    def _add_nncf_input_nodes(onnx_model: onnx.ModelProto, nncf_graph: NNCFGraph) -> None:
         """
         Adds special NNCF Input nodes to NNCFGraph.
         For all the ONNX model inputs, the special NNCF Input node is placed and then corresponding edges are added.
@@ -92,23 +92,23 @@ class GraphConverter:
         :param nncf_graph: NNCFGraph, in which the new nodes will be added.
         :return: None.
         """
-        for i, _input in enumerate(onnx_graph.get_model_inputs()):
+        for i, _input in enumerate(ONNXGraph.get_model_inputs(onnx_model)):
             input_name = _input.name
             layer_attributes = ONNXExtendedLayerAttributes([input_name], [input_name])
             input_node = nncf_graph.add_nncf_node(node_name=MODEL_INPUT_OP_NAME + '_' + str(i),
                                                   node_type=NNCFGraphNodeType.INPUT_NODE,
                                                   node_metatype=InputNoopMetatype,
                                                   layer_attributes=layer_attributes)
-            to_nodes = onnx_graph.get_nodes_by_input(input_name)
+            to_nodes = ONNXGraph.get_nodes_by_input(onnx_model, input_name)
 
             input_node_node_id = input_node.node_id
-            input_shape = GraphConverter._get_tensor_shape(onnx_graph, input_name)
-            onnx_dtype = onnx_graph.get_edge_dtype_name(input_name)
+            input_shape = GraphConverter._get_tensor_shape(onnx_model, input_name)
+            onnx_dtype = ONNXGraph.get_edge_dtype_name(onnx_model, input_name)
             nncf_dtype = GraphConverter.convert_onnx_dtype_to_nncf_dtype(onnx_dtype)
             output_port_id = 0
             for node in filter(GraphConverter._is_valid_onnx_metatype, to_nodes):
                 to_node_id = nncf_graph.get_node_by_name(node.name).node_id
-                input_port_id = onnx_graph.get_input_port_id_for_node_after_input(input_name, node)
+                input_port_id = ONNXGraph.get_input_port_id_for_node_after_input(input_name, node)
                 nncf_graph.add_edge_between_nncf_nodes(
                     from_node_id=input_node_node_id,
                     to_node_id=to_node_id,
@@ -120,7 +120,7 @@ class GraphConverter:
                 output_port_id += 1
 
     @staticmethod
-    def _add_nncf_output_nodes(onnx_graph: onnx.GraphProto, nncf_graph: NNCFGraph) -> None:
+    def _add_nncf_output_nodes(onnx_model: onnx.ModelProto, nncf_graph: NNCFGraph) -> None:
         """
         Adds special NNCF Output nodes to NNCFGraph.
         For all the ONNX model outputs, the special NNCF Output node is placed and then corresponding edges are added.
@@ -128,23 +128,23 @@ class GraphConverter:
         :param nncf_graph: NNCFGraph, in which the new nodes will be added.
         :return: None.
         """
-        for i, _output in enumerate(onnx_graph.get_model_outputs()):
+        for i, _output in enumerate(ONNXGraph.get_model_outputs(onnx_model)):
             output_name = _output.name
             layer_attributes = ONNXExtendedLayerAttributes([output_name], [output_name])
             output_node = nncf_graph.add_nncf_node(node_name=MODEL_OUTPUT_OP_NAME + '_' + str(i),
                                                    node_type=NNCFGraphNodeType.OUTPUT_NODE,
                                                    node_metatype=OutputNoopMetatype,
                                                    layer_attributes=layer_attributes)
-            from_nodes = onnx_graph.get_nodes_by_output(output_name)
+            from_nodes = ONNXGraph.get_nodes_by_output(onnx_model, output_name)
 
             output_node_node_id = output_node.node_id
-            output_shape = GraphConverter._get_tensor_shape(onnx_graph, output_name)
-            onnx_dtype = onnx_graph.get_edge_dtype_name(output_name)
+            output_shape = GraphConverter._get_tensor_shape(onnx_model, output_name)
+            onnx_dtype = ONNXGraph.get_edge_dtype_name(onnx_model, output_name)
             nncf_dtype = GraphConverter.convert_onnx_dtype_to_nncf_dtype(onnx_dtype)
             input_port_id = 0
             for node in filter(GraphConverter._is_valid_onnx_metatype, from_nodes):
                 from_node_id = nncf_graph.get_node_by_name(node.name).node_id
-                output_port_id = onnx_graph.get_output_port_id_for_node_before_output(output_name, node)
+                output_port_id = ONNXGraph.get_output_port_id_for_node_before_output(output_name, node)
                 nncf_graph.add_edge_between_nncf_nodes(
                     from_node_id=from_node_id,
                     to_node_id=output_node_node_id,
@@ -181,29 +181,28 @@ class GraphConverter:
         :return: NNCFGraph.
         """
         nncf_graph = NNCFGraph()
-        onnx_graph = ONNXGraph(onnx_model)
-        for node in filter(GraphConverter._is_valid_onnx_metatype, onnx_graph.get_all_nodes()):
+        for node in filter(GraphConverter._is_valid_onnx_metatype, ONNXGraph.get_all_nodes(onnx_model)):
             metatype = ONNX_OPERATION_METATYPES.get_operator_metatype_by_op_name(node.op_type)
             layer_attributes = ONNXExtendedLayerAttributes(node.input, node.output)
             nncf_graph.add_nncf_node(node_name=node.name,
                                      node_type=node.op_type,
                                      node_metatype=metatype,
                                      layer_attributes=layer_attributes)
-        for output_node in filter(GraphConverter._is_valid_onnx_metatype, onnx_graph.get_all_nodes()):
-            output_edges = onnx_graph.get_node_edges(output_node.name)['output']
+        for output_node in filter(GraphConverter._is_valid_onnx_metatype, ONNXGraph.get_all_nodes(onnx_model)):
+            output_edges = ONNXGraph.get_node_edges(onnx_model, output_node.name)['output']
             for output_edge in output_edges:
-                tensor_shape = GraphConverter._get_tensor_shape(onnx_graph, output_edge)
+                tensor_shape = GraphConverter._get_tensor_shape(onnx_model, output_edge)
 
                 output_node_id = nncf_graph.get_node_by_name(output_node.name).node_id
-                onnx_dtype = onnx_graph.get_edge_dtype_name(output_edge)
+                onnx_dtype = ONNXGraph.get_edge_dtype_name(onnx_model, output_edge)
                 nncf_dtype = GraphConverter.convert_onnx_dtype_to_nncf_dtype(onnx_dtype)
 
-                input_nodes = onnx_graph.get_nodes_by_input(output_edge)
+                input_nodes = ONNXGraph.get_nodes_by_input(onnx_model, output_edge)
                 if not input_nodes:
                     # if this node is output
                     continue
                 for input_node in filter(GraphConverter._is_valid_onnx_metatype, input_nodes):
-                    port_ids = onnx_graph.get_port_ids_between_nodes(output_node, input_node)
+                    port_ids = ONNXGraph.get_port_ids_between_nodes(output_node, input_node)
                     input_port_id = port_ids['input_port_id']
                     output_port_id = port_ids['output_port_id']
                     in_node_id = nncf_graph.get_node_by_name(input_node.name).node_id
@@ -215,8 +214,8 @@ class GraphConverter:
                         output_port_id=output_port_id,
                         dtype=Dtype(nncf_dtype)
                     )
-        GraphConverter._add_nncf_input_nodes(onnx_graph, nncf_graph)
-        GraphConverter._add_nncf_output_nodes(onnx_graph, nncf_graph)
+        GraphConverter._add_nncf_input_nodes(onnx_model, nncf_graph)
+        GraphConverter._add_nncf_output_nodes(onnx_model, nncf_graph)
         return nncf_graph
 
 class ONNXExtendedLayerAttributes(BaseLayerAttributes):

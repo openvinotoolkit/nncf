@@ -80,8 +80,8 @@ def _get_input_key(original_model: onnx.ModelProto) -> str:
 def min_max_quantize_model(
         input_shape: List[int], original_model: onnx.ModelProto, convert_opset_version: bool = True,
         ignored_scopes: List[str] = None, dataset_has_batch_size: bool = True) -> onnx.ModelProto:
-    onnx_graph = ONNXGraph(original_model)
-    input_dtype = onnx_graph.get_edge_dtype(original_model.graph.input[0].name)
+    normalized_model = ONNXModelNormalizer.normalize_model(original_model, convert_opset_version)
+    input_dtype = ONNXGraph.get_edge_dtype(normalized_model, original_model.graph.input[0].name)
     input_np_dtype = onnx.helper.mapping.TENSOR_TYPE_TO_NP_TYPE[input_dtype]
     dataset = DatasetForTest(_get_input_key(original_model), input_shape, input_np_dtype, dataset_has_batch_size)
     builder = CompressionBuilder(convert_opset_version)
@@ -94,8 +94,7 @@ def min_max_quantize_model(
 def ptq_quantize_model(
         input_shape: List[int], original_model: onnx.ModelProto, convert_opset_version: bool = True,
         ignored_scopes: List[str] = None, dataset_has_batch_size: bool = True) -> onnx.ModelProto:
-    onnx_graph = ONNXGraph(original_model)
-    input_dtype = onnx_graph.get_edge_dtype(original_model.graph.input[0].name)
+    input_dtype = ONNXGraph.get_edge_dtype(original_model, original_model.graph.input[0].name)
     input_np_dtype = onnx.helper.mapping.TENSOR_TYPE_TO_NP_TYPE[input_dtype]
     dataset = DatasetForTest(_get_input_key(original_model), input_shape, input_np_dtype, dataset_has_batch_size)
     builder = CompressionBuilder(convert_opset_version)
@@ -133,8 +132,7 @@ def compare_nncf_graph_onnx_models(quantized_model: onnx.ModelProto, _quantized_
 
 
 def infer_model(input_shape: List[int], quantized_model: onnx.ModelProto) -> None:
-    onnx_graph = ONNXGraph(quantized_model)
-    input_dtype = onnx_graph.get_edge_dtype(quantized_model.graph.input[0].name)
+    input_dtype = ONNXGraph.get_edge_dtype(quantized_model, quantized_model.graph.input[0].name)
     input_np_dtype = onnx.helper.mapping.TENSOR_TYPE_TO_NP_TYPE[input_dtype]
     serialized_model = quantized_model.SerializeToString()
     sess = rt.InferenceSession(serialized_model, providers=['OpenVINOExecutionProvider'])
