@@ -212,7 +212,9 @@ def test_export_lstm_cell(tmp_path):
     model, algo = create_compressed_model_and_algo_for_test(LSTMCellNNCF(1, 1), config)
 
     test_path = str(tmp_path.joinpath('test.onnx'))
-    algo.export_model(test_path)
+    # Exporting the operator ::chunk to ONNX opset version 9 is not supported.
+    # Support for this operator was added in version 11
+    algo.export_model(test_path, save_format='onnx_11')
     assert os.path.exists(test_path)
 
     onnx_num = 0
@@ -392,7 +394,9 @@ def test_export_stacked_bi_lstm(tmp_path):
     model, algo = create_compressed_model_and_algo_for_test(test_rnn, config)
 
     test_path = str(tmp_path.joinpath('test.onnx'))
-    algo.export_model(test_path)
+    # Exporting the operator ::chunk to ONNX opset version 9 is not supported.
+    # Support for this operator was added in version 11
+    algo.export_model(test_path, save_format='onnx_11')
     assert os.path.exists(test_path)
 
     onnx_num = 0
