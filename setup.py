@@ -73,7 +73,7 @@ def find_version(*file_paths):
     return version_value
 
 
-INSTALL_REQUIRES = ["ninja>=1.10.0.post2",
+INSTALL_REQUIRES = ["ninja>=1.10.0.post2, <1.11",
                     "addict>=2.4.0",
                     "texttable>=1.6.3",
                     "scipy<=1.5.4, >=1.3.2; python_version<'3.7'",
