@@ -233,9 +233,9 @@ def load_dataset(dataset, config):
 
     # Get a batch of samples to display
     if 'test' in config.mode and 'train' not in config.mode:
-        images, labels = iter(val_loader).next()
+        images, labels = next(iter(val_loader))
     else:
-        images, labels = iter(train_loader).next()
+        images, labels = next(iter(train_loader))
     logger.info("Image size: {}".format(images.size()))
     logger.info("Label size: {}".format(labels.size()))
     logger.info("Class-color encoding: {}".format(class_encoding))
