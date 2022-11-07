@@ -188,8 +188,9 @@ class ONNXModelTransformer(StaticModelTransformerBase):
         """
         # TODO: optimize: could be insertion of quantizers done in one operations
         self._added_target_edges = Counter()
+        onnx_graph = ONNXGraph(self._model)
         for transformation in transformations:
-            self._insert_quantizer_dequantizer(transformation)
+            self._insert_quantizer_dequantizer(transformation, onnx_graph)
         self._model = ONNXModelNormalizer.infer_models_shape(self._model)
 
     def _get_target_edge_name(self, transformation: ONNXQuantizerInsertionCommand, onnx_graph: ONNXGraph) -> \
@@ -273,8 +274,8 @@ class ONNXModelTransformer(StaticModelTransformerBase):
         onnx_zero_point = onnx.helper.make_tensor(zero_point_tensor_name, tensor_type, dims, zero_point)
         return onnx_scale, onnx_zero_point
 
-    def _insert_quantizer_dequantizer(self, transformation: ONNXQuantizerInsertionCommand) -> None:
-        onnx_graph = ONNXGraph(self._model)
+    def _insert_quantizer_dequantizer(self, transformation: ONNXQuantizerInsertionCommand,
+                                      onnx_graph: ONNXGraph) -> None:
         target_edge_name = self._get_target_edge_name(transformation, onnx_graph)
         quantizer, dequantizer = self._get_quantize_dequantize_nodes(transformation, target_edge_name)
         onnx_scale, onnx_zero_point = self._get_scale_zero_point_tensors(transformation, quantizer, dequantizer)
