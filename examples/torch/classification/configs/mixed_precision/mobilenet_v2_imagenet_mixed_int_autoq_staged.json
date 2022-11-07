@@ -37,7 +37,7 @@
             "activations_quant_start_epoch": 0,
             "weights_quant_start_epoch": 0,
             "lr_poly_drop_start_epoch": 0,
-            "lr_poly_drop_duration_epochs": 10,
+            "lr_poly_drop_duration_epochs": 10
         }
     }
 }

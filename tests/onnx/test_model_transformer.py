@@ -16,16 +16,17 @@ import pytest
 import onnx
 # pylint: disable=no-member
 import numpy as np
+from nncf.common.graph.transformations.layout import TransformationLayout
 
 from nncf.experimental.onnx.graph.transformations.commands import ONNXTargetPoint
+from nncf.experimental.onnx.graph.transformations.commands import ONNXBiasCorrectionCommand
 from nncf.common.graph.transformations.commands import TargetType
 from nncf.experimental.onnx.graph.transformations.commands import ONNXQuantizerInsertionCommand
 from nncf.experimental.onnx.graph.transformations.commands import ONNXOutputInsertionCommand
-from nncf.experimental.onnx.algorithms.quantization.utils import QuantizerLayerParameters
 from nncf.common.quantization.structs import QuantizationMode
 from nncf.experimental.onnx.graph.model_transformer import ONNXModelTransformer
-from nncf.experimental.onnx.graph.transformations.layout import ONNXTransformationLayout
 from nncf.experimental.onnx.graph.onnx_graph import ONNXGraph
+from nncf.experimental.post_training.algorithms.quantization.min_max.utils import QuantizerLayerParameters
 
 from tests.onnx.models import LinearModel
 
@@ -38,7 +39,7 @@ QUANTIZER_NUMBER = [None, 1, 3]
                          zip(TARGET_LAYERS, SHOULD_RAISE_EXCEPTION, QUANTIZER_NUMBER))
 def test_quantizer_insertion(target_layers, should_raise, quantizer_number):
     model = LinearModel().onnx_model
-    transformation_layout = ONNXTransformationLayout()
+    transformation_layout = TransformationLayout()
 
     for target_layer in target_layers:
         target_point = ONNXTargetPoint(TargetType.POST_LAYER_OPERATION, target_layer)
@@ -90,7 +91,7 @@ class QuantizerParameters:
                                                  QUANTIZER_MODE, QUANTIZER_ONNX_DTYPE, QUANTIZER_ONNX_ATTRIBUTES)])
 def test_inserted_quantizer_parameters(test_parameters):
     model = LinearModel().onnx_model
-    transformation_layout = ONNXTransformationLayout()
+    transformation_layout = TransformationLayout()
     quantizer_parameters = QuantizerLayerParameters(test_parameters.scale, test_parameters.zero_point,
                                                     test_parameters.mode)
     target_point = ONNXTargetPoint(TargetType.POST_LAYER_OPERATION, test_parameters.target_layer)
@@ -122,7 +123,7 @@ TARGET_LAYERS_OUTPUT = [['ReLU1_Y'], ['Conv1_Y', 'BN1_Y'],  ['Conv1_Y', 'BN1_Y',
 @pytest.mark.parametrize('target_layers, target_layer_outputs', zip(TARGET_LAYERS, TARGET_LAYERS_OUTPUT))
 def test_output_insertion(target_layers, target_layer_outputs):
     model = LinearModel().onnx_model
-    transformation_layout = ONNXTransformationLayout()
+    transformation_layout = TransformationLayout()
     for target_layer in target_layers:
         target_point = ONNXTargetPoint(TargetType.POST_LAYER_OPERATION, target_layer)
         command = ONNXOutputInsertionCommand(target_point)
@@ -139,3 +140,27 @@ def test_output_insertion(target_layers, target_layer_outputs):
     # Should be topologically sorted
     for i in range(len(target_layers)):
         assert onnx_graph.get_model_outputs()[i].name in target_layer_outputs
+
+CONV_LAYERS = [['Conv1', 'Conv2']]
+BIAS_VALUES = [[np.full((32,), 2), np.full((10,), 3)]]
+BIAS_REFERENCES = [[2.0, 3.0]]
+
+@pytest.mark.parametrize('layers, values, refs', zip(CONV_LAYERS, BIAS_VALUES, BIAS_REFERENCES))
+def test_bias_correction(layers, values, refs):
+    model = LinearModel().onnx_model
+    transformation_layout = TransformationLayout()
+    for conv_layer, bias_value in zip(layers, values):
+        target_point = ONNXTargetPoint(TargetType.LAYER, conv_layer)
+        command = ONNXBiasCorrectionCommand(target_point, bias_value, np.inf)
+        transformation_layout.register(command)
+
+    model_transformer = ONNXModelTransformer(model)
+
+    transformed_model = model_transformer.transform(transformation_layout)
+    onnx_graph = ONNXGraph(transformed_model)
+
+    for conv_layer, bias_reference in zip(layers, refs):
+        bias_tensor_name = onnx_graph.get_node_by_name(conv_layer).input[2]
+        bias_tensor = onnx_graph.get_initializer(bias_tensor_name)
+        bias_value = onnx.numpy_helper.to_array(bias_tensor)
+        assert np.mean(bias_value) == bias_reference

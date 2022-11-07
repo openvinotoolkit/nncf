@@ -348,3 +348,32 @@ def test_export_quantized_weights_with_middle_quants(tmp_path, half_range, quant
         if (diff > 1e-6).any():
             assert ((diff[diff > 1e-6] - quant_len).abs() < 1e-6).all(), 'quants completely different!'
             assert False, f'quant moved at flatten positions {torch.where(diff.flatten() > 1e-6)}'
+
+
+def test_torch_onnx_export(tmp_path):
+    model = TwoConvTestModel()
+    nncf_config = get_config_for_export_mode(should_be_onnx_standard=False)
+
+    compression_model, compression_ctrl = create_compressed_model_and_algo_for_test(model, nncf_config)
+
+    onnx_checkpoint_path = tmp_path / 'model.onnx'
+    compression_ctrl.prepare_for_export()
+
+    dummy_input = torch.randn(1, 1, 4, 4)
+    torch.onnx.export(compression_model, dummy_input, onnx_checkpoint_path, verbose=False)
+    onnx_model_proto = onnx.load_model(onnx_checkpoint_path)
+
+    num_fq = 0
+    num_model_nodes = 0
+    num_other_nodes = 0
+    # pylint:disable=no-member
+    for node in onnx_model_proto.graph.node:
+        op_type = node.op_type
+        if op_type == 'FakeQuantize':
+            num_fq += 1
+        elif op_type in ['Conv', 'Constant']:
+            num_model_nodes += 1
+        else:
+            num_other_nodes += 1
+    assert num_fq == 4
+    assert num_other_nodes == 0

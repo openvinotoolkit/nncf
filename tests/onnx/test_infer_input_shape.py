@@ -13,16 +13,12 @@
 
 # pylint: disable=redefined-outer-name
 
+import onnx
 import pytest
 
-import os
-
-import onnx
-
 from nncf.experimental.onnx.common import infer_input_shape
-from tests.common.helpers import TEST_ROOT
+from tests.onnx.conftest import ONNX_MODEL_DIR
 from tests.onnx.quantization.common import ModelToTest
-
 
 TEST_CASES = [
     (ModelToTest('densenet-7', [1, 3, 224, 224]), 'data_0'),
@@ -36,18 +32,12 @@ DET_TEST_CASES = [
 
 
 def load_model(model_to_test):
-    onnx_model_dir = str(TEST_ROOT.joinpath('onnx', 'data', 'models'))
-    onnx_model_path = str(TEST_ROOT.joinpath(onnx_model_dir, model_to_test.model_name + '.onnx'))
-    if not os.path.isdir(onnx_model_dir):
-        os.mkdir(onnx_model_dir)
-
+    onnx_model_path = ONNX_MODEL_DIR / (model_to_test.model_name + '.onnx')
     original_model = onnx.load(onnx_model_path)
-
     return original_model
 
 
 class TestMultipleInputs:
-
     @pytest.mark.parametrize(('model_to_test', 'input_name'), TEST_CASES)
     def test_input_shape_input_name(self, model_to_test, input_name):
         model = load_model(model_to_test)

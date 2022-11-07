@@ -10,7 +10,6 @@
  See the License for the specific language governing permissions and
  limitations under the License.
 """
-from functools import partial
 from typing import Any
 from typing import Dict
 from typing import List
@@ -18,12 +17,13 @@ from typing import NamedTuple
 from typing import Optional
 
 import pytest
+from functools import partial
 
+from examples.torch.common.models.classification.mobilenet_v2_cifar10 import MobileNetV2
 from nncf.experimental.torch.nas.bootstrapNAS.elasticity.elasticity_dim import ElasticityDim
 from tests.torch.helpers import BasicConvTestModel
 from tests.torch.nas.descriptors import ElasticityDesc
 from tests.torch.nas.descriptors import WidthElasticityDesc
-from examples.torch.common.models.classification.mobilenet_v2_cifar10 import MobileNetV2
 from tests.torch.nas.models.synthetic import TwoConvModel
 from tests.torch.nas.test_elastic_depth import DepthBasicConvTestModel
 from tests.torch.nas.test_elastic_depth import RESNET50_INPUT_SIZE
@@ -100,10 +100,10 @@ LIST_WIDTH_SS_DESCS = [
 LIST_SEARCH_SPACE_DESCS = [
     COMMON_DEPTH_BASIC_DESC,
     ElasticityDesc(ElasticityDim.DEPTH, model_cls=DepthBasicConvTestModel,
-                   params={'mode': 'auto', 'min_block_size': 2},
+                   params={'min_block_size': 1, 'hw_fused_ops': False},
                    ref_search_space=[[]]),
     COMMON_DEPTH_SUPERNET_DESC,
-    ElasticityDesc(ElasticityDim.DEPTH, model_cls=ResNet18, params={'mode': 'auto'}, input_size=RESNET50_INPUT_SIZE,
+    ElasticityDesc(ElasticityDim.DEPTH, model_cls=ResNet18, input_size=RESNET50_INPUT_SIZE,
                    ref_search_space=[
                        [1], [2], [3], [4],
                        [1, 2], [1, 3], [1, 4], [2, 3], [2, 4], [3, 4],
@@ -111,7 +111,8 @@ LIST_SEARCH_SPACE_DESCS = [
                        [1, 2, 3, 4],
                        []
                    ]),
-    ElasticityDesc(ElasticityDim.DEPTH, model_cls=MobileNetV2, params={'mode': 'auto'}, input_size=RESNET50_INPUT_SIZE,
+    ElasticityDesc(ElasticityDim.DEPTH, model_cls=MobileNetV2,
+                   input_size=RESNET50_INPUT_SIZE,
                    ref_search_space=[
                        [0], [2], [5], [7], [9],
                        [0, 2], [0, 5], [0, 7], [0, 9], [2, 5], [2, 7], [2, 9], [5, 7], [5, 9], [7, 9],
@@ -119,6 +120,16 @@ LIST_SEARCH_SPACE_DESCS = [
                        [2, 7, 9],
                        [5, 7, 9],
                        [0, 2, 5, 7], [0, 2, 5, 9], [0, 2, 7, 9], [0, 5, 7, 9], [2, 5, 7, 9], [0, 2, 5, 7, 9],
+                       []
+                   ]),
+    ElasticityDesc(ElasticityDim.DEPTH, model_cls=MobileNetV2,
+                   name='MobileNetV2_auto',
+                   params={'min_block_size': 10},
+                   input_size=RESNET50_INPUT_SIZE,
+                   ref_search_space=[
+                       [0], [1], [2], [3],
+                       [0, 1], [0, 2], [0, 3], [1, 2], [1, 3], [2, 3],
+                       [0, 1, 2], [0, 1, 3], [0, 2, 3], [1, 2, 3], [0, 1, 2, 3],
                        []
                    ]),
     *LIST_KERNEL_SS_DESCS,

@@ -343,3 +343,66 @@ class ConvTwoFcTestModel(nn.Module):
         x = self.fc1(x)
         x = self.fc2(x)
         return x
+
+
+class TwoSequentialFcLNTestModel(nn.Module):
+    #
+    # fc1 -> ln1 -> fc2 -> ln2
+    #
+    INPUT_SIZE = [1, 1]
+
+    def __init__(self):
+        super().__init__()
+        self.fc1 = nn.Linear(1, 2)
+        self.fc2 = nn.Linear(2, 3)
+        self.ln1 = nn.LayerNorm(2)
+        self.ln2 = nn.LayerNorm(3)
+
+        ConvTwoFcTestModel._init_params_fc(self.fc1, torch.Tensor([[3],
+                                                                   [4]]))
+        ConvTwoFcTestModel._init_params_fc(self.fc2, torch.Tensor([[2, 1],
+                                                                   [3, 4],
+                                                                   [6, 5]]))
+        self._init_params_ln(self.ln1)
+        self._init_params_ln(self.ln2)
+
+    @staticmethod
+    def _init_params_ln(ln):
+        ln.weight.data = torch.arange(len(ln.weight.data)).float()
+        ln.bias.data = torch.arange(len(ln.bias.data)).float()
+
+    def check_reorg(self):
+        device = get_model_device(self)
+        ref_fc_weights_1 = torch.Tensor([[4], [3]]).to(device)
+        ref_fc_bias_1 = torch.Tensor([4, 3]).to(device)
+        ref_ln_weights_1 = torch.Tensor([1, 0]).to(device)
+        ref_ln_bias_1 = torch.Tensor([1, 0]).to(device)
+        ref_fc_weights_2 = torch.Tensor([[1, 2],
+                                         [4, 3],
+                                         [5, 6]]).to(device)
+        assert torch.equal(self.fc1.weight, ref_fc_weights_1)
+        assert torch.equal(self.fc1.bias, ref_fc_bias_1)
+        assert torch.equal(self.fc2.weight, ref_fc_weights_2)
+        assert torch.equal(self.ln1.weight, ref_ln_weights_1)
+        assert torch.equal(self.ln1.bias, ref_ln_bias_1)
+
+    def get_minimal_subnet_output(self, x):
+        device = get_model_device(self)
+        fc_weight_1 = torch.Tensor([[4]]).to(device)
+        fc_weight_2 = torch.Tensor([[1], [4], [5]]).to(device)
+        fc_bias_2 = torch.Tensor([2, 3, 6]).reshape(1, 1, 3).to(device)
+        ln_weight_2 = torch.Tensor([0, 1, 2]).to(device)
+        ln_bias_2 = torch.Tensor([0, 1, 2]).to(device)
+
+        x = x * fc_weight_1.t() + 4 #fc1
+        x = (x - 8) / math.sqrt(self.ln1.eps + 8) * 1 + 1 #ln1
+        x = x * fc_weight_2.t() + fc_bias_2 #fc2
+        x = (x - 7) / math.sqrt(self.ln2.eps + 32 / 3) * ln_weight_2 + ln_bias_2 #ln2
+        return x
+
+    def forward(self, x):
+        x = self.fc1(x)
+        x = self.ln1(x)
+        x = self.fc2(x)
+        x = self.ln2(x)
+        return x

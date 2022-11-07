@@ -18,10 +18,10 @@ import sys
 
 import pytest
 from nncf.torch import BKC_TORCH_VERSION
-from tests.common.helpers import PROJECT_ROOT
+from tests.common.paths import PROJECT_ROOT
 from tests.torch.helpers import Command
 
-TRANSFORMERS_COMMIT = "bff1c71e84e392af9625c345f9ea71f7b6d75fb3"
+TRANSFORMERS_COMMIT = "bd469c40659ce76c81f69c7726759d249b4aef49"
 INSTALL_PATH = PROJECT_ROOT.parent
 DATASET_PATH = os.path.join(PROJECT_ROOT, "tests", "torch", "data", "mock_datasets")
 
@@ -204,7 +204,8 @@ class TestTransformers:
 
     @pytest.mark.dependency(depends=['install_trans'], name='lm_train')
     def test_lm_train(self, temp_folder):
-        com_line = "examples/pytorch/language-modeling/run_clm.py --model_name_or_path gpt2" \
+        # GPT2 is loaded via torch.frombuffer which is not available in torch==1.9.1 yet
+        com_line = "examples/pytorch/language-modeling/run_clm.py --model_name_or_path distilgpt2" \
                    " --do_train --per_gpu_train_batch_size 1" \
                    " --dataset_name wikitext --dataset_config_name wikitext-2-raw-v1 " \
                    " --num_train_epochs 0.001" \
@@ -218,6 +219,7 @@ class TestTransformers:
 
     @pytest.mark.dependency(depends=['install_trans', 'lm_train'])
     def test_lm_eval(self, temp_folder):
+        # GPT2 is loaded via torch.frombuffer which is not available in torch==1.9.1 yet
         com_line = "examples/pytorch/language-modeling/run_clm.py " \
                    " --model_name_or_path {output} --do_eval " \
                    " --output_dir {output} --dataset_name wikitext --dataset_config_name wikitext-2-raw-v1" \

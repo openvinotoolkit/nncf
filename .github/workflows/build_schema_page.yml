@@ -3,6 +3,7 @@ on:
   push:
     branches:
       - develop
+      - test_for_doc_build_trigger
     paths:
       - nncf/config/**
 permissions:
@@ -27,3 +28,4 @@ jobs:
         with:
           folder: schema_html_build # The folder the action should deploy.
           token: ${{ secrets.PUSH_TO_GH_PAGES_BRANCH }}
+          branch: doc_pages

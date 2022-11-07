@@ -18,9 +18,9 @@ from nncf.common.graph import Dtype
 from nncf.common.graph import NNCFGraphEdge
 from nncf.common.graph import NNCFGraphPatternIO
 from nncf.common.graph import NNCFNodeName
-from tests.torch.test_nncf_network import get_mock_nncf_node_attrs
-from tests.torch.test_nncf_network import get_nncf_graph_from_mock_nx_graph
-from tests.torch.test_nncf_network import mark_input_ports_lexicographically_based_on_input_node_key
+from tests.common.quantization.mock_graphs import get_mock_nncf_node_attrs
+from tests.common.quantization.mock_graphs import get_nncf_graph_from_mock_nx_graph
+from tests.common.quantization.mock_graphs import mark_input_ports_lexicographically_based_on_input_node_key
 
 
 def test_graph_pattern_io_building():

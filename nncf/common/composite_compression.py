@@ -26,7 +26,7 @@ from nncf.api.compression import CompressionStage
 from nncf.api.compression import ModelType
 from nncf.common.statistics import NNCFStatistics
 from nncf.common.utils.backend import BackendType
-from nncf.common.utils.backend import infer_backend_from_model
+from nncf.common.utils.backend import get_backend
 
 
 class CompositeCompressionLoss(CompressionLoss):
@@ -314,7 +314,7 @@ class CompositeCompressionAlgorithmController(CompressionAlgorithmController):
                 - ({'x': None, 'y': y},) for keyword arguments only.
         """
         self.prepare_for_export()
-        backend = infer_backend_from_model(self.model)
+        backend = get_backend(self.model)
         if backend is BackendType.TENSORFLOW:
             from nncf.tensorflow.exporter import TFExporter #pylint: disable=cyclic-import
             exporter = TFExporter(self.model, input_names, output_names, model_args)

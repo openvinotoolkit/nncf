@@ -23,7 +23,7 @@ from nncf.experimental.torch.nas.bootstrapNAS.elasticity.multi_elasticity_handle
 from nncf.experimental.torch.nas.bootstrapNAS.training.progressive_shrinking_controller import \
     ProgressiveShrinkingController
 from nncf.experimental.torch.nas.bootstrapNAS.training.scheduler import BootstrapNASScheduler
-from tests.common.helpers import TEST_ROOT
+from tests.common.paths import TEST_ROOT
 from tests.torch.sample_test_validator import SampleType
 from tests.torch.sample_test_validator import SanitySampleValidator
 from tests.torch.sample_test_validator import SanityTestCaseDescriptor
@@ -38,7 +38,7 @@ class NASSampleTestDescriptor(SanityTestCaseDescriptor):
 
     @property
     def config_directory(self) -> Path:
-        return TEST_ROOT.joinpath("torch", "data", "configs", "nas")
+        return TEST_ROOT / "torch" / "data" / "configs" / "nas"
 
     def get_validator(self) -> 'NASSampleValidator':
         return NASSampleValidator(self)

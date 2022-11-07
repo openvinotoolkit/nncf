@@ -11,6 +11,7 @@
  limitations under the License.
 """
 from nncf.config.definitions import ONLINE_DOCS_ROOT
+from nncf.config.definitions import RB_SPARSITY_ALGO_NAME_IN_CONFIG
 from nncf.config.schemata.common.compression import BASIC_COMPRESSION_ALGO_SCHEMA
 from nncf.config.schemata.common.compression import COMPRESSION_LR_MULTIPLIER_PROPERTY
 from nncf.config.schemata.basic import NUMBER
@@ -19,7 +20,6 @@ from nncf.config.schemata.common.sparsity import COMMON_SPARSITY_PARAM_PROPERTIE
 from nncf.config.schemata.common.targeting import SCOPING_PROPERTIES
 from nncf.config.schemata.defaults import SPARSITY_INIT
 
-RB_SPARSITY_ALGO_NAME_IN_CONFIG = "rb_sparsity"
 RB_SPARSITY_SCHEMA = {
     **BASIC_COMPRESSION_ALGO_SCHEMA,
     "description": f"Applies sparsity on top of the current model. Each weight tensor value will be either kept as-is, "

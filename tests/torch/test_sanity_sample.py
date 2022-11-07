@@ -31,7 +31,7 @@ from nncf.common.compression import BaseControllerStateNames
 from nncf.common.hardware.config import HWConfigType
 from nncf.config import NNCFConfig
 from tests.common.config_factory import ConfigFactory
-from tests.common.helpers import TEST_ROOT
+from tests.common.paths import TEST_ROOT
 from tests.torch.helpers import Command
 from tests.torch.sample_test_validator import create_command_line
 
@@ -47,18 +47,18 @@ DATASETS = {
 }
 
 CONFIGS = {
-    "classification": [TEST_ROOT.joinpath("torch", "data", "configs", "squeezenet1_1_cifar10_rb_sparsity_int8.json"),
-                       TEST_ROOT.joinpath("torch", "data", "configs", "inception_v3_mock_dataset.json"),
-                       TEST_ROOT.joinpath("torch", "data", "configs", "resnet18_cifar100_bin_xnor.json"),
-                       TEST_ROOT.joinpath("torch", "data", "configs", "resnet18_cifar10_staged_quant.json"),
-                       TEST_ROOT.joinpath("torch", "data", "configs", "resnet18_pruning_magnitude.json"),
-                       TEST_ROOT.joinpath("torch", "data", "configs", "resnet18_pruning_learned_ranking.json"),
-                       TEST_ROOT.joinpath("torch", "data", "configs", "resnet18_pruning_accuracy_aware.json"),
-                       TEST_ROOT.joinpath("torch", "data", "configs", "resnet18_int8_accuracy_aware.json")],
-    "semantic_segmentation": [TEST_ROOT.joinpath("torch", "data", "configs", "unet_camvid_int8.json"),
-                              TEST_ROOT.joinpath("torch", "data", "configs", "unet_camvid_rb_sparsity.json")],
-    "object_detection": [TEST_ROOT.joinpath("torch", "data", "configs", "ssd300_vgg_voc_int8.json"),
-                         TEST_ROOT.joinpath("torch", "data", "configs", "ssd300_vgg_voc_int8_accuracy_aware.json")]
+    "classification": [TEST_ROOT / "torch" / "data" / "configs" / "squeezenet1_1_cifar10_rb_sparsity_int8.json",
+                       TEST_ROOT / "torch" / "data" / "configs" / "inception_v3_mock_dataset.json",
+                       TEST_ROOT / "torch" / "data" / "configs" / "resnet18_cifar100_bin_xnor.json",
+                       TEST_ROOT / "torch" / "data" / "configs" / "resnet18_cifar10_staged_quant.json",
+                       TEST_ROOT / "torch" / "data" / "configs" / "resnet18_pruning_magnitude.json",
+                       TEST_ROOT / "torch" / "data" / "configs" / "resnet18_pruning_learned_ranking.json",
+                       TEST_ROOT / "torch" / "data" / "configs" / "resnet18_pruning_accuracy_aware.json",
+                       TEST_ROOT / "torch" / "data" / "configs" / "resnet18_int8_accuracy_aware.json"],
+    "semantic_segmentation": [TEST_ROOT / "torch" / "data" / "configs" / "unet_camvid_int8.json",
+                              TEST_ROOT / "torch" / "data" / "configs" / "unet_camvid_rb_sparsity.json"],
+    "object_detection": [TEST_ROOT / "torch" / "data" / "configs" / "ssd300_vgg_voc_int8.json",
+                         TEST_ROOT / "torch" / "data" / "configs" / "ssd300_vgg_voc_int8_accuracy_aware.json"]
 }
 
 BATCHSIZE_PER_GPU = {
@@ -73,14 +73,13 @@ DATASET_PATHS = {
             tempfile.gettempdir(), x) for x in DATASETS["classification"]
     },
     "semantic_segmentation": {
-        DATASETS["semantic_segmentation"][0]: lambda dataset_root: TEST_ROOT.joinpath("torch", "data", "mock_datasets",
-                                                                                      "camvid"),
-        DATASETS["semantic_segmentation"][0]: lambda dataset_root: TEST_ROOT.joinpath("torch", "data", "mock_datasets",
-                                                                                      "camvid")
+        DATASETS["semantic_segmentation"][0]: lambda dataset_root: TEST_ROOT / "torch" / "data" / "mock_datasets"
+                                                                   / "camvid",
+        DATASETS["semantic_segmentation"][0]: lambda dataset_root:  TEST_ROOT / "torch" / "data" / "mock_datasets"
+                                                                   / "camvid",
     },
     "object_detection": {
-        DATASETS["object_detection"][0]: lambda dataset_root: TEST_ROOT.joinpath("torch", "data", "mock_datasets",
-                                                                                 "voc")
+        DATASETS["object_detection"][0]: lambda dataset_root: TEST_ROOT / "torch" / "data" / "mock_datasets" / "voc"
     },
 }
 
@@ -493,15 +492,14 @@ def test_sample_propagates_target_device_cl_param_to_nncf_config(mocker, tmp_pat
 
 
 @pytest.fixture(name='accuracy_aware_config',
-                params=[TEST_ROOT.joinpath("torch", "data", "configs", "resnet18_pruning_accuracy_aware.json"),
-                        TEST_ROOT.joinpath("torch", "data", "configs", "resnet18_int8_accuracy_aware.json")])
+                params=[TEST_ROOT / "torch" / "data" / "configs" / "resnet18_pruning_accuracy_aware.json",
+                        TEST_ROOT / "torch" / "data" / "configs" / "resnet18_int8_accuracy_aware.json"])
 def fixture_accuracy_aware_config(request):
     config_path = request.param
     with config_path.open() as f:
         jconfig = json.load(f)
 
     dataset_name = 'mock_32x32'
-    TEST_ROOT.joinpath("torch", "data", "mock_datasets", dataset_name)
     dataset_path = os.path.join('/tmp', 'mock_32x32')
     sample_type = 'classification'
 

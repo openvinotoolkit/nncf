@@ -17,8 +17,9 @@ from prettytable import PrettyTable
 from yattag import Doc
 
 from nncf.config import NNCFConfig
-from tests.common.helpers import PROJECT_ROOT
-from tests.common.helpers import TEST_ROOT
+from tests.common.paths import DATASET_DEFINITIONS_PATH
+from tests.common.paths import PROJECT_ROOT
+from tests.common.paths import TEST_ROOT
 
 BG_COLOR_GREEN_HEX = 'ccffcc'
 BG_COLOR_YELLOW_HEX = 'ffffcc'
@@ -28,18 +29,6 @@ DIFF_TARGET_MIN_GLOBAL = -0.1
 DIFF_TARGET_MAX_GLOBAL = 0.1
 DIFF_FP32_MIN_GLOBAL = -1.0
 DIFF_FP32_MAX_GLOBAL = 0.1
-
-OPENVINO_DIR = PROJECT_ROOT.parent / 'intel' / 'openvino'
-if not os.path.exists(OPENVINO_DIR):
-    OPENVINO_DIR = PROJECT_ROOT.parent / 'intel' / 'openvino_2021'
-ACC_CHECK_DIR = OPENVINO_DIR / 'deployment_tools' / 'open_model_zoo' / 'tools' / 'accuracy_checker'
-MO_DIR = OPENVINO_DIR / 'deployment_tools' / 'model_optimizer'
-USING_OV2_PACKAGE_FORMAT = False
-
-if not os.path.exists(ACC_CHECK_DIR) and not os.path.exists(MO_DIR):
-    ACC_CHECK_DIR = PROJECT_ROOT
-    MO_DIR = PROJECT_ROOT
-    USING_OV2_PACKAGE_FORMAT = True
 
 
 class EvalRunParamsStruct:
@@ -131,7 +120,7 @@ class TestSotaCheckpoints:
             env["PYTHONPATH"] = str(PROJECT_ROOT)
 
         with subprocess.Popen(com_line, stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
-                                  cwd=cwd, env=env) as result:
+                              cwd=cwd, env=env) as result:
             exit_code = result.poll()
 
             def process_line(decoded_line: str, error_lines: List):
@@ -488,32 +477,26 @@ class TestSotaCheckpoints:
         mo_cmd_tail_template = "--framework=onnx --data_type=FP16 --reverse_input_channels" \
                                " --mean_values={} --scale_values={} --output_dir {}"
         if onnx_type == "q_dq":
-            mo_cmd_tail = mo_cmd_tail_template.format(mean_val, scale_val, q_dq_ir_model_folder)
+            model_folder = q_dq_ir_model_folder
+            mo_cmd_tail = mo_cmd_tail_template.format(mean_val, scale_val, model_folder)
             onnx_model = str(onnx_dir + 'q_dq/' + eval_test_struct.model_name_ + '.onnx')
-            if USING_OV2_PACKAGE_FORMAT:
-                mo_cmd = "mo --input_model {} {}".format(onnx_model, mo_cmd_tail)
-            else:
-                mo_cmd = "{} mo.py --input_model {} {}".format(sys.executable, onnx_model, mo_cmd_tail)
+            mo_cmd = "mo --input_model {} {}".format(onnx_model, mo_cmd_tail)
         else:
+            model_folder = ir_model_folder
             onnx_model = str(onnx_dir + eval_test_struct.model_name_ + '.onnx')
-            mo_cmd_tail = mo_cmd_tail_template.format(mean_val, scale_val, ir_model_folder)
-            if USING_OV2_PACKAGE_FORMAT:
-                mo_cmd = "mo --input_model {} {}".format(onnx_model, mo_cmd_tail)
-            else:
-                mo_cmd = "{} mo.py --input_model {} {}".format(sys.executable, onnx_model, mo_cmd_tail)
+            mo_cmd_tail = mo_cmd_tail_template.format(mean_val, scale_val, model_folder)
+            mo_cmd = "mo --input_model {} {}".format(onnx_model, mo_cmd_tail)
 
-        exit_code, err_str = self.run_cmd(mo_cmd, cwd=MO_DIR)
+        exit_code, err_str = self.run_cmd(mo_cmd, cwd=PROJECT_ROOT)
         if exit_code == 0 and err_str is None:
+            ac_yml_path = f"{config_folder}/{eval_test_struct.model_name_}.yml"
             if onnx_type == "q_dq":
-                ac_cmd = "accuracy_check -c {}/{}.yml -s {} -d dataset_definitions.yml -m {} --csv_result " \
-                         "{}/q_dq_report.csv".format(config_folder, eval_test_struct.model_name_, ov_data_dir,
-                                                     q_dq_ir_model_folder, PROJECT_ROOT)
+                report_csv_path = f"{PROJECT_ROOT}/{eval_test_struct.model_name_}_q_dq.csv"
             else:
-                ac_cmd = "accuracy_check -c {}/{config}.yml -s {} -d dataset_definitions.yml -m {} --csv_result " \
-                         "{}/{config}.csv".format(config_folder, ov_data_dir,
-                                                  ir_model_folder, PROJECT_ROOT,
-                                                  config=eval_test_struct.model_name_)
-            exit_code, err_str = self.run_cmd(ac_cmd, cwd=ACC_CHECK_DIR)
+                report_csv_path = f"{PROJECT_ROOT}/{eval_test_struct.model_name_}.csv"
+            ac_cmd = f"accuracy_check -c {ac_yml_path} -s {ov_data_dir} -d {DATASET_DEFINITIONS_PATH} " \
+                     f"-m {model_folder} --csv_result {report_csv_path}"
+            exit_code, err_str = self.run_cmd(ac_cmd, cwd=PROJECT_ROOT)
             if exit_code != 0 or err_str is not None:
                 pytest.fail(err_str)
         else:
@@ -565,14 +548,6 @@ class TestSotaCheckpoints:
 
 
 Tsc = TestSotaCheckpoints
-
-
-@pytest.fixture(autouse=True, scope="class")
-def openvino_preinstall(ov_data_dir):
-    if ov_data_dir and not USING_OV2_PACKAGE_FORMAT:
-        subprocess.run("pip install -r requirements_onnx.txt", cwd=MO_DIR, check=True, shell=True)
-        subprocess.run(f"{sys.executable} setup.py install", cwd=ACC_CHECK_DIR, check=True, shell=True)
-
 
 @pytest.fixture(autouse=True, scope="class")
 def make_metrics_dump_path(metrics_dump_dir):

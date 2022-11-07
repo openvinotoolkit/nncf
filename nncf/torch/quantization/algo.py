@@ -47,6 +47,7 @@ from nncf.common.initialization.batchnorm_adaptation import BatchnormAdaptationA
 from nncf.common.insertion_point_graph import InsertionPointGraph
 from nncf.common.insertion_point_graph import InsertionPointGraphNodeType
 from nncf.common.quantization.config_assignment import assign_qconfig_lists_to_modules
+from nncf.common.quantization.quantizer_setup import DEFAULT_QUANTIZER_CONFIG
 from nncf.common.quantization.quantizer_setup import MultiConfigQuantizerSetup
 from nncf.common.quantization.quantizer_setup import QuantizationPointId
 from nncf.common.quantization.quantizer_setup import QuantizerSetupBase
@@ -61,6 +62,7 @@ from nncf.common.quantization.structs import WeightQuantizerId
 from nncf.common.schedulers import BaseCompressionScheduler
 from nncf.common.statistics import NNCFStatistics
 from nncf.common.utils.debug import is_debug
+from nncf.common.utils.dot_file_rw import write_dot_graph
 from nncf.common.utils.helpers import matches_any
 from nncf.common.utils.logger import DuplicateFilter
 from nncf.common.utils.logger import logger as nncf_logger
@@ -108,7 +110,6 @@ from nncf.torch.quantization.init_range import StatCollectorGenerator
 from nncf.torch.quantization.layers import BaseQuantizer
 from nncf.torch.quantization.layers import PTQuantizerSpec
 from nncf.torch.quantization.layers import QUANTIZATION_MODULES
-from nncf.torch.quantization.layers import QuantizationMode
 from nncf.torch.quantization.layers import QuantizerConfig
 from nncf.torch.quantization.layers import QuantizerExportMode
 from nncf.torch.quantization.layers import QuantizersSwitcher
@@ -161,11 +162,6 @@ class QuantizerBuilderStateVersion(IntEnum):
 
 
 class QuantizerSetupGeneratorBase:
-    DEFAULT_QUANTIZER_CONFIG = QuantizerConfig(num_bits=8,
-                                               mode=QuantizationMode.SYMMETRIC,
-                                               signedness_to_force=None,
-                                               per_channel=False)
-
     def __init__(self, quant_config: Dict,
                  target_model: NNCFNetwork,
                  precision_init_type: str = None,
@@ -218,7 +214,7 @@ class QuantizerSetupGeneratorBase:
         self._target_scopes_per_group[quantizer_group] = params_dict_from_config.get('target_scopes')
 
     def _get_default_qconfig(self, constraints: QuantizationConstraints = None):
-        qconfig = deepcopy(self.DEFAULT_QUANTIZER_CONFIG)
+        qconfig = deepcopy(DEFAULT_QUANTIZER_CONFIG)
         if constraints is not None:
             qconfig = constraints.apply_constraints_to(qconfig)
         return qconfig
@@ -1032,7 +1028,8 @@ class QuantizationBuilder(PTCompressionAlgorithmBuilder):
             if quantizer_setup.quantization_points[qp_id].is_weight_quantization_point()]
         act_qp_ids = [qp_id for qp_id in qp_ids_list_for_current_group
             if quantizer_setup.quantization_points[qp_id].is_activation_quantization_point()]
-        ip_str_repr_key_lambda = lambda x: str(quantizer_setup.quantization_points[x].target_point.target_node_name)
+        def ip_str_repr_key_lambda(x):
+            return str(quantizer_setup.quantization_points[x].target_point.target_node_name)
         sorted_wqp_ids = sorted(weight_qp_ids, key=ip_str_repr_key_lambda)
         sorted_aqp_ids = sorted(act_qp_ids, key=ip_str_repr_key_lambda)
         sorted_qp_ids = sorted_wqp_ids + sorted_aqp_ids
@@ -1577,7 +1574,7 @@ class QuantizationDebugInterface(DebugInterface):
                 for ip_node_key in node[InsertionPointGraph.ASSOCIATED_IP_NODE_KEYS_NODE_ATTR]:
                     out_graph.add_edge(node_key, ip_node_key, style="dashed", headport='e', tailport='e')
 
-        nx.drawing.nx_pydot.write_dot(out_graph, self.dump_dir / Path("insertion_point_graph.dot"))
+        write_dot_graph(out_graph, self.dump_dir / Path("insertion_point_graph.dot"))
 
 
 class ExperimentalQuantizationBuilder(QuantizationBuilder):

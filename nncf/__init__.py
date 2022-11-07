@@ -11,8 +11,14 @@
  limitations under the License.
 """
 
-from nncf.config import NNCFConfig
 from nncf.version import __version__
+
+from nncf.config import NNCFConfig
+from nncf.data import Dataset
+from nncf.parameters import IgnoredScope
+from nncf.parameters import TargetDevice
+from nncf.quantization import QuantizationPreset
+from nncf.quantization import quantize
 
 try:
     import torch

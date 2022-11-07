@@ -290,6 +290,8 @@ class InsertionPointGraph(nx.DiGraph):
                 merged_ip_graph.remove_node(node_key)
                 merged_node_key += node_key + '\n'
 
+            # The first node in the merged node list will be considered a "primary" node for purposes
+            # of further ignored/target scope application.
             merged_node_attrs[InsertionPointGraph.MERGED_NNCF_NODE_LIST_NODE_ATTR] = merged_nncf_nodes
             merged_ip_graph.add_node(merged_node_key, **merged_node_attrs)
             for in_edge_key, in_edge_attrs in in_edge_copies_dict.items():

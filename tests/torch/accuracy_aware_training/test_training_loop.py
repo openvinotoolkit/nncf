@@ -29,7 +29,7 @@ from tests.torch.helpers import LeNet
 from tests.torch.helpers import create_ones_mock_dataloader
 from tests.torch.helpers import set_torch_seed
 from tests.torch.sparsity.magnitude.test_helpers import get_basic_magnitude_sparsity_config
-from tests.torch.quantization.test_quantization_helpers import get_quantization_config_without_range_init
+from tests.torch.quantization.quantization_helpers import get_quantization_config_without_range_init
 
 
 def create_finetuned_lenet_model_and_dataloader(config, eval_fn, finetuning_steps,

@@ -1,0 +1,35 @@
+{
+    "blocks": [
+        {
+            "start_node_name": "Inception3/InceptionB[Mixed_6a]/cat_0",
+            "end_node_name": "Inception3/InceptionC[Mixed_6b]/cat_0"
+        },
+        {
+            "start_node_name": "Inception3/InceptionC[Mixed_6b]/cat_0",
+            "end_node_name": "Inception3/InceptionC[Mixed_6c]/cat_0"
+        },
+        {
+            "start_node_name": "Inception3/InceptionC[Mixed_6c]/cat_0",
+            "end_node_name": "Inception3/InceptionC[Mixed_6d]/cat_0"
+        },
+        {
+            "start_node_name": "Inception3/InceptionC[Mixed_6d]/cat_0",
+            "end_node_name": "Inception3/InceptionC[Mixed_6e]/cat_0"
+        },
+        {
+            "start_node_name": "Inception3/InceptionE[Mixed_7b]/cat_2",
+            "end_node_name": "Inception3/InceptionE[Mixed_7c]/cat_2"
+        }
+    ],
+    "group_dependent": {
+        "0": [
+            0,
+            1,
+            2,
+            3
+        ],
+        "1": [
+            4
+        ]
+    }
+}

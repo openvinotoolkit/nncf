@@ -20,7 +20,7 @@ import math
 from nncf.api.compression import ModelType
 from nncf.common.initialization.dataloader import NNCFDataLoader
 from nncf.common.utils.backend import BackendType
-from nncf.common.utils.backend import infer_backend_from_model
+from nncf.common.utils.backend import get_backend
 
 
 class BatchnormAdaptationAlgorithmImpl(ABC):
@@ -91,7 +91,7 @@ class BatchnormAdaptationAlgorithm:
 
         :param model: A model for which the algorithm will be applied.
         """
-        backend = infer_backend_from_model(model)
+        backend = get_backend(model)
         if backend is BackendType.TORCH:
             from nncf.torch.batchnorm_adaptation import PTBatchnormAdaptationAlgorithmImpl #pylint: disable=cyclic-import
             impl_cls = PTBatchnormAdaptationAlgorithmImpl

@@ -10,6 +10,7 @@
  See the License for the specific language governing permissions and
  limitations under the License.
 """
+from nncf.config.definitions import FILTER_PRUNING_ALGO_NAME_IN_CONFIG
 from nncf.config.definitions import ONLINE_DOCS_ROOT
 from nncf.config.schemata.common.compression import BASIC_COMPRESSION_ALGO_SCHEMA
 from nncf.config.schemata.basic import BOOLEAN
@@ -34,7 +35,6 @@ from nncf.config.schemata.defaults import PRUNING_SCHEDULE
 from nncf.config.schemata.defaults import PRUNING_STEPS
 from nncf.config.schemata.defaults import PRUNING_TARGET
 
-FILTER_PRUNING_ALGO_NAME_IN_CONFIG = 'filter_pruning'
 FILTER_PRUNING_SCHEDULE_OPTIONS = ['exponential', 'exponential_with_bias', 'baseline']
 FILTER_IMPORTANCE_OPTIONS = ['L2', 'L1', 'geometric_median']
 INTERLAYER_RANKING_TYPE_OPTIONS = ['unweighted_ranking', 'learned_ranking']
@@ -82,7 +82,7 @@ FILTER_PRUNING_SCHEMA = {
                                                                         "FLOPs."),
                     "schedule": with_attributes(STRING,
                                                 description="The type of scheduling to use for adjusting the target "
-                                                            "pruning level. ",
+                                                            "pruning level.",
                                                 enum=FILTER_PRUNING_SCHEDULE_OPTIONS,
                                                 default=PRUNING_SCHEDULE),
 
@@ -111,7 +111,7 @@ FILTER_PRUNING_SCHEMA = {
                     "prune_downsample_convs": with_attributes(BOOLEAN,
                                                               description="Whether to prune downsampling "
                                                                           "convolutional layers (with stride > 1) "
-                                                                          "or not. ",
+                                                                          "or not.",
                                                               default=PRUNE_DOWNSAMPLE_CONVS),
                     "prune_batch_norms": with_attributes(BOOLEAN,
                                                          description="Whether to prune parameters of the Batch Norm "

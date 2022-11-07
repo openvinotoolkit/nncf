@@ -11,13 +11,14 @@
  limitations under the License.
 """
 
-from typing import Optional
+from typing import Optional, List
+import numpy as np
 
-from nncf.common.graph.transformations.commands import TransformationCommand
+from nncf.common.graph.transformations.commands import Command, TransformationCommand
 from nncf.common.graph.transformations.commands import TransformationType
 from nncf.common.graph.transformations.commands import TargetType
 from nncf.common.graph.transformations.commands import TargetPoint
-from nncf.experimental.onnx.algorithms.quantization.utils import QuantizerLayerParameters
+from nncf.experimental.post_training.algorithms.quantization.min_max.utils import QuantizerLayerParameters
 
 
 class ONNXTargetPoint(TargetPoint):
@@ -68,5 +69,41 @@ class ONNXQuantizerInsertionCommand(ONNXInsertionCommand):
 
 class ONNXOutputInsertionCommand(ONNXInsertionCommand):
     def union(self, other: 'TransformationCommand') -> 'TransformationCommand':
+        # Have a look at nncf/torch/graph/transformations/commands/PTInsertionCommand
+        raise NotImplementedError()
+
+class ONNXBiasCorrectionCommand(TransformationCommand):
+    """
+    Corrects bias value in the model based on the input value.
+    """
+    def __init__(self, target_point: ONNXTargetPoint, bias_value: np.ndarray, threshold: float):
+        """
+        :param target_point: The TargetPoint instance for the correction that contains layer's information.
+        :param bias_value: The bias shift value (numpy format) that will be added to the original bias value.
+        :param threshold: The floating-point value against which it is shift magnitude compares.
+            For the details see the Fast/BiasCorrectionParameters.
+        """
+        super().__init__(TransformationType.CHANGE, target_point)
+        self.bias_value = bias_value
+        self.threshold = threshold
+
+    def union(self, other: 'TransformationCommand') -> 'TransformationCommand':
+        # Have a look at nncf/torch/graph/transformations/commands/PTInsertionCommand
+        raise NotImplementedError()
+
+class ONNXModelExtractionCommand(Command):
+    """
+    Extracts sub-graph based on the sub-model input and output names.
+    """
+    def __init__(self, inputs: List[str], outputs: List[str]):
+        """
+        :param inputs: List of the input names that denote the sub-graph beggining.
+        :param outputs: List of the output names that denote the sub-graph ending.
+        """
+        super().__init__(TransformationType.EXTRACT)
+        self.inputs = inputs
+        self.outputs = outputs
+
+    def union(self, other: 'Command') -> 'Command':
         # Have a look at nncf/torch/graph/transformations/commands/PTInsertionCommand
         raise NotImplementedError()

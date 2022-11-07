@@ -15,7 +15,7 @@
         "weight_decay": 3e-7,
         "base_lr": 3.5e-3,
         "label_smoothing": 0.1,
-        "no_decay_keys": "bn#bias",
+        "no_decay_keys": "bn#bias"
     },
     "bootstrapNAS": {
         "training": {
@@ -41,7 +41,6 @@
                     "width_multipliers": [1, 0.80, 0.60]
                 },
                 "depth": {
-                    "mode": "manual",
                     "skipped_blocks": [
                         ["ResNet/Sequential[layer1]/Bottleneck[1]/ReLU[relu]/relu__2", "ResNet/Sequential[layer1]/Bottleneck[2]/ReLU[relu]/relu__2"],
                         ["ResNet/Sequential[layer2]/Bottleneck[1]/ReLU[relu]/relu__2", "ResNet/Sequential[layer2]/Bottleneck[2]/ReLU[relu]/relu__2"],
@@ -49,15 +48,15 @@
                         ["ResNet/Sequential[layer3]/Bottleneck[3]/ReLU[relu]/relu__2", "ResNet/Sequential[layer3]/Bottleneck[4]/ReLU[relu]/relu__2"],
                         ["ResNet/Sequential[layer3]/Bottleneck[4]/ReLU[relu]/relu__2", "ResNet/Sequential[layer3]/Bottleneck[5]/ReLU[relu]/relu__2"],
                         ["ResNet/Sequential[layer4]/Bottleneck[1]/ReLU[relu]/relu__2", "ResNet/Sequential[layer4]/Bottleneck[2]/ReLU[relu]/relu__2"]
-                    ],
+                    ]
                 }
-            },
+            }
         },
         "search": {
             "algorithm": "NSGA2",
             "num_evals": 3000,
             "population": 50,
-            "ref_acc": 93.65,
+            "ref_acc": 93.65
         }
     }
 }

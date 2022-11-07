@@ -19,7 +19,6 @@ from typing import Dict
 from typing import Union
 
 from enum import Enum
-from nncf.experimental.post_training.graph.model_transformer import StaticModelTransformerBase
 from nncf.experimental.post_training.statistics.statistic_point import StatisticPointsContainer
 from nncf.experimental.post_training.api.engine import Engine
 from nncf.common.utils.backend import BackendType
@@ -29,7 +28,7 @@ ModelType = TypeVar('ModelType')
 
 class PostTrainingAlgorithms(Enum):
     MinMaxQuantization = 'min_max_quantization'
-    BiasCorrection = 'bias_correction'
+    FastBiasCorrection = 'fast_bias_correction'
     PostTrainingQuantization = 'post_training_quantization'
 
 
@@ -50,18 +49,14 @@ class Algorithm(ABC):
     Base class for all Post-Training algorithms.
     """
 
-    def __init__(self) -> None:
-        self._model_transformer = None
-
     @property
-    def model_transformer(self) -> StaticModelTransformerBase:
-        if self._model_transformer is None:
-            raise RuntimeError('model_transformer variable was not set before call')
-        return self._model_transformer
+    @abstractmethod
+    def available_backends(self) -> Dict[str, BackendType]:
+        """
+        Returns dictionary of the avaliable backends for the algorithm
 
-    @model_transformer.setter
-    def model_transformer(self, model_transformer: StaticModelTransformerBase) -> None:
-        self._model_transformer = model_transformer
+        :return: Dict of backends supported by the algorithm
+        """
 
     def apply(self, model: ModelType, engine: Engine,
               statistic_points: StatisticPointsContainer) -> ModelType:
@@ -77,7 +72,6 @@ class Algorithm(ABC):
         for edge_name in _statistic_points.keys():
             if statistic_points.get(edge_name) is None:
                 raise RuntimeError(f'No statistics collected for the layer {edge_name}')
-        self.model_transformer.set_model(model)
         return self._apply(model, engine, statistic_points)
 
     @abstractmethod
@@ -101,20 +95,15 @@ class CompositeAlgorithm(Algorithm):
         super().__init__()
         self.algorithms = []
 
-    def create_subalgorithms(self, backend: BackendType) -> None:
+    @property
+    def available_backends(self) -> Dict[str, BackendType]:
+        # TODO(KodiaqQ): Need to add the implementation of the method (cross-algorithm backend calculation)
+        # after updating the MinMax Quantization with shareable logic
+        pass
+
+    @abstractmethod
+    def create_subalgorithms(self) -> None:
         """
         Some composite algorithms have different inner algorithms.
         This method creates sub-algorithms and sets model transformer to them
-
-        :param backend: backend for the algorithms differentiation
-        """
-        self._create_subalgorithms(backend)
-        for algorithm in self.algorithms:
-            algorithm.model_transformer = self.model_transformer
-
-    @abstractmethod
-    def _create_subalgorithms(self, backend: BackendType) -> None:
-        """
-        Some composite algorithms have different inner algorithms.
-        This method creates sub-algorithms
         """

@@ -33,7 +33,7 @@ from tests.torch.helpers import get_nodes_by_type
 from tests.torch.helpers import register_bn_adaptation_init_args
 from tests.torch.helpers import resolve_constant_node_inputs_to_values
 from tests.torch.quantization.test_onnx_export import get_successors
-from tests.torch.quantization.test_quantization_helpers import get_quantization_config_without_range_init
+from tests.torch.quantization.quantization_helpers import get_quantization_config_without_range_init
 
 
 # pylint: disable=no-member
@@ -503,8 +503,7 @@ def test_eltwise_unified_scales_for_vpu():
 
     assert len(compression_ctrl.non_weight_quantizers) == 2
 
-    total_quantizations = sum(
-        [len(info.affected_insertions) for info in compression_ctrl.non_weight_quantizers.values()])
+    total_quantizations = sum(len(info.affected_insertions) for info in compression_ctrl.non_weight_quantizers.values())
     assert total_quantizations == 8
 
 
@@ -585,8 +584,7 @@ def test_unified_scales_with_concat(target_device, model_creator, ref_aq_module_
 
     assert len(compression_ctrl.non_weight_quantizers) == ref_aq_module_count
 
-    total_quantizations = sum(
-        [len(info.affected_insertions) for info in compression_ctrl.non_weight_quantizers.values()])
+    total_quantizations = sum(len(info.affected_insertions) for info in compression_ctrl.non_weight_quantizers.values())
     assert total_quantizations == ref_quantizations
 
 

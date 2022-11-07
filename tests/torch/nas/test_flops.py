@@ -100,10 +100,9 @@ LIST_OF_ME_DESCS = [
         ref_model_stats=RefModelStats(
             supernet=ModelStats(1_776_701_440, 6_872_768),
             kernel_stage=ModelStats(1_776_701_440, 6_872_768),
-            depth_stage=ModelStats(472_272_896, 3_145_408),
+            depth_stage=ModelStats(1_223_053_312, 6_602_432),
             width_stage=ModelStats(358_165_120, 1_134_752)
         ),
-        is_auto_skipped_blocks=True,
     ),
     THREE_CONV_TEST_DESC,
     MultiElasticityTestDesc(
@@ -124,8 +123,7 @@ LIST_OF_ME_DESCS = [
 
 @pytest.mark.parametrize('desc', LIST_OF_ME_DESCS, ids=map(str, LIST_OF_ME_DESCS))
 def test_multi_elasticity_flops(desc: MultiElasticityTestDesc):
-    elastic_depth_mode = 'auto' if desc.is_auto_skipped_blocks else 'manual'
-    model, ctrl = create_bnas_model_and_ctrl_by_test_desc(desc, elastic_depth_mode)
+    model, ctrl = create_bnas_model_and_ctrl_by_test_desc(desc)
     ref_model_stats = desc.ref_model_stats
     multi_elasticity_handler = ctrl.multi_elasticity_handler
 

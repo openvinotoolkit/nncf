@@ -14,7 +14,7 @@
 import pytest
 import subprocess
 
-from tests.common.helpers import PROJECT_ROOT
+from tests.common.paths import PROJECT_ROOT
 from tests.common.helpers import run_install_checks
 
 

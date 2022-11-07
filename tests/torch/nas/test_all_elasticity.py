@@ -71,7 +71,7 @@ RESNET50_2_MANUAL_BLOCKS_DESC = MultiElasticityTestDesc(
 
 
 def test_bn_adaptation_on_minimal_subnet_width_stage():
-    model, ctrl = create_bnas_model_and_ctrl_by_test_desc(RESNET50_2_MANUAL_BLOCKS_DESC, mode='manual')
+    model, ctrl = create_bnas_model_and_ctrl_by_test_desc(RESNET50_2_MANUAL_BLOCKS_DESC)
 
     multi_elasticity_handler = ctrl.multi_elasticity_handler
     # pylint: disable=protected-access
@@ -110,7 +110,8 @@ NAS_MODELS_SCOPE = [
     'pnasnetb',
     'ssd_mobilenet',
     'ssd_vgg',
-    'mobilenet_v3_small'
+    'mobilenet_v3_small',
+    'tcn'
 ]
 
 
@@ -121,7 +122,7 @@ def fixture_nas_model_name(request):
 
 def test_random_multi_elasticity(_seed, nas_model_name):
     if 'inception_v3' in nas_model_name:
-        pytest.skip(
+        pytest.xfail(
             f'Skip test for {nas_model_name} as it fails because of 2 issues: '
             'not able to set DynamicInputOp to train-only layers (ticket 60976) and '
             'invalid padding update in elastic kernel (ticket 60990)')
@@ -140,9 +141,13 @@ def test_random_multi_elasticity(_seed, nas_model_name):
     multi_elasticity_handler.enable_elasticity(ElasticityDim.DEPTH)
     multi_elasticity_handler.activate_random_subnet()
     if 'squeezenet1_0' in nas_model_name:
-        pytest.skip(
+        pytest.xfail(
             f'Skip test for {nas_model_name} as it fails with error: Given groups=1, weight of '
             'size [48, 256, 1, 1], expected input[1, 32, 4, 4] to have 256 channels, but got 32 channels instead')
+    if 'shufflenet' in nas_model_name:
+        pytest.xfail(
+            f'Skip test for {nas_model_name} as it fails with error: ValueError: too many values to unpack '
+            f'(expected 4). It is happening because the whole is not skipped, just traced operators (ticket 92199).')
     model.do_dummy_forward()
     check_subnet_visualization(multi_elasticity_handler, model, nas_model_name, stage='depth')
 
@@ -158,7 +163,7 @@ def test_random_multi_elasticity(_seed, nas_model_name):
 ###########################
 
 def test_multi_elasticity_outputs():
-    model, ctrl = create_bnas_model_and_ctrl_by_test_desc(THREE_CONV_TEST_DESC, mode='manual')
+    model, ctrl = create_bnas_model_and_ctrl_by_test_desc(THREE_CONV_TEST_DESC)
     multi_elasticity_handler = ctrl.multi_elasticity_handler
     ref_model = THREE_CONV_TEST_DESC.model_creator()
     device = next(iter(model.parameters())).device
@@ -194,7 +199,7 @@ def test_multi_elasticity_outputs():
 
 
 def test_multi_elasticity_gradients():
-    model, ctrl = create_bnas_model_and_ctrl_by_test_desc(THREE_CONV_TEST_DESC, mode='manual')
+    model, ctrl = create_bnas_model_and_ctrl_by_test_desc(THREE_CONV_TEST_DESC)
     multi_elasticity_handler = ctrl.multi_elasticity_handler
     ref_model = ThreeConvModel()
     if torch.cuda.is_available():
@@ -246,10 +251,9 @@ REF_COMPRESSION_STATE_FOR_TWO_CONV = {
                     'builder_states': {
                         'depth': {
                             'elasticity_params': {
-                                'allow_linear_combination': False,
-                                'allow_nested_blocks': False,
+                                'hw_fused_ops': True,
                                 'max_block_size': 50,
-                                'min_block_size': 6,
+                                'min_block_size': 5,
                                 'skipped_blocks': [['ThreeConvModel/NNCFConv2d[conv1]/conv2d_0',
                                                     'ThreeConvModel/NNCFConv2d[conv_to_skip]/conv2d_0']]
                             },
@@ -260,7 +264,6 @@ REF_COMPRESSION_STATE_FOR_TWO_CONV = {
                                 }
                             ],
                             'skipped_blocks_dependencies': {0: [0]},
-                            'ordinal_ids': [[1, 2]],
                         },
                         'width': {
                             'elasticity_params': {
@@ -337,7 +340,6 @@ TWO_CONV_FULL_CONFIG = {
             "elasticity": {
                 "available_elasticity_dims": ["width", "depth"],
                 "depth": {
-                    'mode': 'manual',
                     'skipped_blocks': THREE_CONV_TEST_DESC.blocks_to_skip
                 },
                 "kernel": {
@@ -405,7 +407,7 @@ def test_can_restore_and_get_the_same_output():
     device = next(iter(ref_model.parameters())).device
     input_ = torch.ones(ThreeConvModel.INPUT_SIZE).to(device)
 
-    model, training_ctrl = create_bnas_model_and_ctrl_by_test_desc(THREE_CONV_TEST_DESC, mode='manual')
+    model, training_ctrl = create_bnas_model_and_ctrl_by_test_desc(THREE_CONV_TEST_DESC)
     multi_elasticity_handler = training_ctrl.multi_elasticity_handler
     multi_elasticity_handler.enable_all()
     multi_elasticity_handler.activate_minimum_subnet()

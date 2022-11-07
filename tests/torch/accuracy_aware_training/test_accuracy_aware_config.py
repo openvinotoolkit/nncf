@@ -19,7 +19,7 @@ from nncf.common.accuracy_aware_training import create_accuracy_aware_training_l
 from tests.torch.helpers import create_compressed_model_and_algo_for_test
 from tests.torch.helpers import LeNet
 from tests.torch.helpers import create_ones_mock_dataloader
-from tests.torch.quantization.test_quantization_helpers import get_quantization_config_without_range_init
+from tests.torch.quantization.quantization_helpers import get_quantization_config_without_range_init
 
 
 @pytest.mark.parametrize(('aa_config', 'must_raise'), (

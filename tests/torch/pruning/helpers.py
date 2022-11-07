@@ -360,9 +360,12 @@ class BigPruningTestModel(nn.Module):
         for i in range(64):
             self.up.weight.data[0][i] += i
         self.linear = nn.Linear(448 * 7**(self.dim - 1), 128)
+        self.layernorm = nn.LayerNorm(128)
         for i in range(128):
             self.linear.weight.data[i] = i
+            self.layernorm.weight.data[i] = i
         self.linear.bias.data.fill_(1)
+        self.layernorm.bias.data.fill_(1)
         self.bn3 = create_bn(128, dim=self.dim)
         self.conv3 = create_conv(128, 1, 1, 5, 1, dim=self.dim)
 
@@ -377,7 +380,8 @@ class BigPruningTestModel(nn.Module):
         x = self.up(x)
         x = self.relu(x)
         b, *_ = x.size()
-        x = self.linear(x.view(b, -1)).view(b, -1, *[1]*self.dim)
+        x = self.linear(x.view(b, -1))
+        x = self.layernorm(x).view(b, -1, *[1]*self.dim)
         x = self.bn3(x)
         x = self.conv3(x)
         x = x.view(b, -1)
@@ -903,13 +907,16 @@ class HRNetBlock(nn.Module):
     #        (conv6)     (conv7)
     def __init__(self):
         super().__init__()
-        self.conv1 = create_conv(1, 8, 5, 5)
-        self.conv2 = create_conv(1, 8, 1, 1)
-        self.conv3 = create_conv(4, 8, 5, 5)
-        self.conv4 = create_conv(4, 8, 1, 1)
-        self.conv5 = create_conv(8, 16, 1, 1)
-        self.conv6 = create_conv(24, 48, 1, 1)
-        self.conv7 = create_conv(24, 48, 1, 1)
+        self.conv1 = create_conv(1, 16, 5, 5)
+        self.conv2 = create_conv(1, 16, 1, 1)
+        self.conv3 = create_conv(8, 16, 5, 5)
+        self.conv4 = create_conv(8, 16, 1, 1)
+        self.conv5 = create_conv(16, 32, 1, 1)
+        self.conv6 = create_conv(48, 48, 1, 1)
+        self.conv7 = create_conv(48, 48, 1, 1)
+        for conv in [getattr(self, f'conv{i}') for i in range(1, 8)]:
+            for i in range(conv.out_channels):
+                conv.weight.data[i] = i
 
         self.avg_pool = nn.AdaptiveAvgPool2d(4)
 

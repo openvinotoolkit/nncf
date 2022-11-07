@@ -142,8 +142,8 @@ class BasePruningAlgoBuilder(PTCompressionAlgorithmBuilder):
         MaskPropagationAlgorithm(target_model_graph, PT_PRUNING_OPERATOR_METATYPES,
                                  PTNNCFPruningTensorProcessor).mask_propagation()
 
-        # Adding binary masks also for Batch/Group Norms to allow applying masks after propagation
-        types_to_apply_mask = ['group_norm']
+        # Adding binary masks also for Batch/Group/Layer Norms to allow applying masks after propagation
+        types_to_apply_mask = ['group_norm', 'layer_norm']
         if self.prune_batch_norms:
             types_to_apply_mask.append('batch_norm')
 

@@ -1,4 +1,5 @@
 # Neural Network Compression Framework (NNCF)
+_For the installation instructions, [click here](#installation)._
 
 NNCF provides a suite of advanced algorithms for Neural Networks inference optimization in [OpenVINO&trade;](https://github.com/openvinotoolkit/openvino) with minimal accuracy drop.
 
@@ -44,7 +45,7 @@ This function returns a model with additional modifications necessary to enable 
 
 ```python
 import torch
-import nncf  # Important - should be imported directly after torch
+import nncf  # Important - must be imported before any other external package that depends on torch
 
 from nncf import NNCFConfig
 from nncf.torch import create_compressed_model, register_default_init_args
@@ -74,6 +75,9 @@ compression_ctrl, compressed_model = create_compressed_model(model, nncf_config)
 compression_ctrl.export_model("compressed_model.onnx")
 torch.save(compressed_model.state_dict(), "compressed_model.pth")
 ```
+
+**NOTE (PyTorch)**: Due to the way NNCF works within the PyTorch backend, `import nncf` must be done before any other import of `torch` in your package _or_ in third-party packages that your code utilizes, otherwise the compression may be applied incompletely.
+
 
 ### Usage example with TensorFlow
 ```python
@@ -107,6 +111,7 @@ compression_ctrl.export_model("compressed_model.pb", save_format='frozen_graph')
 
 For a more detailed description of NNCF usage in your training code, see [this tutorial](docs/Usage.md). 
 For in-depth examples of NNCF integration, browse the [sample scripts](#model-compression-samples) code, or the [example patches](#third-party-repository-integration) to third-party repositories.
+For FAQ, visit this [link](./docs/FAQ.md).
 
 
 ## Model Compression Samples
@@ -356,6 +361,15 @@ to find instruction and links to exact configuration files and final checkpoints
     year =    {2020}
 }
 ```
+
+## Useful links
+- [Documentation](./docs)
+- Example scripts (model objects available through links in respective README.md files):
+    - [PyTorch](./examples/torch)
+    - [TensorFlow](./examples/tensorflow)
+- [FAQ](./docs/FAQ.md)
+- [Notebooks](https://github.com/openvinotoolkit/openvino_notebooks#-model-training)
+- [HuggingFace Optimum Intel](https://huggingface.co/docs/optimum/intel/optimization_ov) utilizes NNCF as a compression backend within the renowned `transformers` repository.
 
 ## Legal Information
 [*] Other names and brands may be claimed as the property of others.

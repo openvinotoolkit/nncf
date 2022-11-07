@@ -3,11 +3,11 @@
 
 namespace {
 
-template <typename scalar_t>
+template <typename scalar_t, typename scalar_accum_t>
 __global__ void wb_cuda_scale_calc_kernel(
         const scalar_t* __restrict__ input,
         scalar_t* __restrict__ scale_output,
-        scalar_t* __restrict__ dev_tmp,
+        scalar_accum_t* __restrict__ dev_tmp,
         int* __restrict__ dev_last_block_counter,
         const int64_t total_elements_count) {
     const uint16_t tidx = threadIdx.x;
@@ -15,15 +15,15 @@ __global__ void wb_cuda_scale_calc_kernel(
     const uint64_t gtidx = bidx * CUDA_MAX_NUM_THREADS_PER_BLOCK + tidx;
     const uint64_t grid_size = CUDA_MAX_NUM_THREADS_PER_BLOCK * gridDim.x;
 
-    scalar_t sum = 0;
+    scalar_accum_t sum = 0;
     for (int i = gtidx; i < total_elements_count; i += grid_size) {
         sum += abs(*(input + i));
     }
 
     sum /= total_elements_count;
 
-    __shared__ scalar_t sh_mem[CUDA_MAX_NUM_THREADS_PER_BLOCK];
-    reduce_with_shared_memory<scalar_t>(sh_mem, sum, tidx, bidx, dev_tmp, dev_last_block_counter, scale_output, gridDim.x);
+    __shared__ scalar_accum_t sh_mem[CUDA_MAX_NUM_THREADS_PER_BLOCK];
+    reduce_with_shared_memory<scalar_t, scalar_accum_t>(sh_mem, sum, tidx, bidx, dev_tmp, dev_last_block_counter, scale_output, gridDim.x);
 }
 
 template <typename scalar_t>
@@ -78,14 +78,14 @@ __global__ void ab_cuda_grad_input_kernel(
     }
 }
 
-template <typename scalar_t>
+template <typename scalar_t, typename scalar_accum_t>
 __global__ void ab_cuda_grad_scale_kernel(
         scalar_t* __restrict__ grad_scale,
         const scalar_t* __restrict__ grad_output,
         const scalar_t* __restrict__ output,
         const scalar_t* __restrict__ input,
         const scalar_t* __restrict__ scale,
-        scalar_t* __restrict__ dev_tmp,
+        scalar_accum_t* __restrict__ dev_tmp,
         int* __restrict__ dev_last_block_counter,
         const int64_t total_elements_count) {
     const uint16_t tidx = threadIdx.x;
@@ -93,24 +93,24 @@ __global__ void ab_cuda_grad_scale_kernel(
     const uint32_t gtidx = bidx * CUDA_MAX_NUM_THREADS_PER_BLOCK + tidx;
     const uint64_t grid_size = CUDA_MAX_NUM_THREADS_PER_BLOCK * gridDim.x;
 
-    scalar_t sum = 0;
+    scalar_accum_t sum = 0;
     for (int i = gtidx; i < total_elements_count; i += grid_size) {
         scalar_t err_element = (*(output + i) - *(input + i)) / *scale;
         scalar_t grad_element = *(grad_output + i);
         sum += (*(input + i) < *scale) ? err_element * grad_element : grad_element;
     }
 
-    __shared__ scalar_t sh_mem[CUDA_MAX_NUM_THREADS_PER_BLOCK];
-    reduce_with_shared_memory<scalar_t>(sh_mem, sum, tidx, bidx, dev_tmp, dev_last_block_counter, grad_scale, gridDim.x);
+    __shared__ scalar_accum_t sh_mem[CUDA_MAX_NUM_THREADS_PER_BLOCK];
+    reduce_with_shared_memory<scalar_t, scalar_accum_t>(sh_mem, sum, tidx, bidx, dev_tmp, dev_last_block_counter, grad_scale, gridDim.x);
 }
 
-template <typename scalar_t>
+template <typename scalar_t, typename scalar_accum_t>
 __global__ void ab_cuda_grad_thresholds_kernel(
         scalar_t* __restrict__ grad_thresholds,
         const scalar_t* __restrict__ grad_output,
         const scalar_t* __restrict__ input,
         const scalar_t* __restrict__ scale,
-        scalar_t* __restrict__ dev_tmp,
+        scalar_accum_t* __restrict__ dev_tmp,
         int* __restrict__ dev_last_block_counter,
         int64_t total_elements_per_threshold,
         int64_t contiguous_elements_per_threshold,
@@ -121,7 +121,7 @@ __global__ void ab_cuda_grad_thresholds_kernel(
     const uint32_t gtidx = bidx * CUDA_MAX_NUM_THREADS_PER_BLOCK + tidx;
     const uint64_t grid_size = CUDA_MAX_NUM_THREADS_PER_BLOCK * gridDim.x;
 
-    scalar_t sum = 0;
+    scalar_accum_t sum = 0;
     for (int i = gtidx; i < total_elements_per_threshold; i += grid_size) {
         // i is the global thread index - need to calculate the input array index
         // that belongs to a specific scale index from i. Will do this by treating i
@@ -138,8 +138,8 @@ __global__ void ab_cuda_grad_thresholds_kernel(
         }
     }
 
-    __shared__ scalar_t sh_mem[CUDA_MAX_NUM_THREADS_PER_BLOCK];
-    reduce_with_shared_memory<scalar_t>(sh_mem, sum, tidx, bidx, dev_tmp, dev_last_block_counter, grad_thresholds, gridDim.x);
+    __shared__ scalar_accum_t sh_mem[CUDA_MAX_NUM_THREADS_PER_BLOCK];
+    reduce_with_shared_memory<scalar_t, scalar_accum_t>(sh_mem, sum, tidx, bidx, dev_tmp, dev_last_block_counter, grad_thresholds, gridDim.x);
 }
 
 }
@@ -158,7 +158,9 @@ at::Tensor wb_cuda_forward(
     elements_per_scale = input_elements_count / input.size(0);
 
     auto grid_size = std::min(GET_BLOCKS(elements_per_scale), CUDA_BLOCKS_PER_GRID_FOR_UNIFORM_ELTWISE);
-    auto dev_tmp = at::empty({grid_size}, input.options());
+
+    auto accum_options = get_accum_options(input.options());
+    auto dev_tmp = at::empty({grid_size}, accum_options);
     auto dev_last_block_counter = at::zeros({1},  at::device(input.options().device()).dtype(at::kInt));
 
 
@@ -167,10 +169,11 @@ at::Tensor wb_cuda_forward(
     for (int ch_idx = 0; ch_idx < scale_count; ch_idx++)
     {
         AT_DISPATCH_FLOATING_TYPES_AND_HALF(input.type(), "wb_cuda_forward_scale", ([&] {
-          wb_cuda_scale_calc_kernel<scalar_t><<<grid_size, CUDA_MAX_NUM_THREADS_PER_BLOCK, 0, at::cuda::getCurrentCUDAStream()>>>(
+          using scalar_accum_t = ACCUM_TYPE_FOR(scalar_t);
+          wb_cuda_scale_calc_kernel<scalar_t, scalar_accum_t><<<grid_size, CUDA_MAX_NUM_THREADS_PER_BLOCK, 0, at::cuda::getCurrentCUDAStream()>>>(
               input.data<scalar_t>() + ch_idx * elements_per_scale,
               scale.data<scalar_t>() + ch_idx,
-              dev_tmp.data<scalar_t>(),
+              dev_tmp.data<scalar_accum_t>(),
               dev_last_block_counter.data<int>(),
               elements_per_scale);
         }));
@@ -263,25 +266,27 @@ std::vector<at::Tensor> ab_cuda_backward(
           );
     }));
 
+    auto accum_options = get_accum_options(grad_output.options());
     auto grid_size = std::min(GET_BLOCKS(input_elements_count), CUDA_BLOCKS_PER_GRID_FOR_UNIFORM_ELTWISE);
-    auto dev_tmp = at::empty({grid_size}, grad_output.options());
+    auto dev_tmp = at::empty({grid_size}, accum_options);
     auto dev_last_block_counter = at::zeros({1},  at::device(grad_output.options().device()).dtype(at::kInt));
 
 
     AT_DISPATCH_FLOATING_TYPES_AND_HALF(input.type(), "ab_cuda_backward", ([&] {
-          ab_cuda_grad_scale_kernel<scalar_t><<<grid_size, CUDA_MAX_NUM_THREADS_PER_BLOCK, 0, at::cuda::getCurrentCUDAStream()>>>(
+          using scalar_accum_t = ACCUM_TYPE_FOR(scalar_t);
+          ab_cuda_grad_scale_kernel<scalar_t, scalar_accum_t><<<grid_size, CUDA_MAX_NUM_THREADS_PER_BLOCK, 0, at::cuda::getCurrentCUDAStream()>>>(
               grad_scale.data<scalar_t>(),
               grad_output.data<scalar_t>(),
               output.data<scalar_t>(),
               input.data<scalar_t>(),
               scale.data<scalar_t>(),
-              dev_tmp.data<scalar_t>(),
+              dev_tmp.data<scalar_accum_t>(),
               dev_last_block_counter.data<int>(),
               input_elements_count);
         }));
 
     grid_size = std::min(GET_BLOCKS(total_elements_per_threshold), CUDA_BLOCKS_PER_GRID_FOR_UNIFORM_ELTWISE);
-    dev_tmp = at::empty({grid_size}, grad_output.options());
+    dev_tmp = at::empty({grid_size}, accum_options);
     dev_last_block_counter = at::zeros({1},  at::device(grad_output.options().device()).dtype(at::kInt));
 
     // Same concept as for per activation channel quantization
@@ -289,12 +294,13 @@ std::vector<at::Tensor> ab_cuda_backward(
     {
         auto init_element_offset = contiguous_elements_per_threshold * ch_idx;
         AT_DISPATCH_FLOATING_TYPES_AND_HALF(input.type(), "ab_cuda_backward", ([&] {
-          ab_cuda_grad_thresholds_kernel<scalar_t><<<grid_size, CUDA_MAX_NUM_THREADS_PER_BLOCK, 0, at::cuda::getCurrentCUDAStream()>>>(
+          using scalar_accum_t = ACCUM_TYPE_FOR(scalar_t);
+          ab_cuda_grad_thresholds_kernel<scalar_t, scalar_accum_t><<<grid_size, CUDA_MAX_NUM_THREADS_PER_BLOCK, 0, at::cuda::getCurrentCUDAStream()>>>(
               grad_thresholds.data<scalar_t>() + ch_idx,
               grad_output.data<scalar_t>() + init_element_offset,
               input.data<scalar_t>() + init_element_offset,
               scale.data<scalar_t>(),
-              dev_tmp.data<scalar_t>(),
+              dev_tmp.data<scalar_accum_t>(),
               dev_last_block_counter.data<int>(),
               total_elements_per_threshold,
               contiguous_elements_per_threshold,
