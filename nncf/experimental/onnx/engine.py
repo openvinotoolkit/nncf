@@ -92,10 +92,10 @@ class ONNXEngine(Engine):
                     onnx_nodes_after_input_node = [edge.to_node for edge in
                                                    self.nncf_graph.get_output_edges(nncf_node_name)]
                     for onnx_node_name in onnx_nodes_after_input_node:
-                        edge_name = self.onnx_graph.get_node_edges(onnx_node_name.node_name)['input'][0]
+                        edge_name = self.onnx_graph.get_node_edge_names(onnx_node_name.node_name)['input'][0]
                         statistic_point.register_tensor(outputs[edge_name])
                 elif statistic_point.target_point.type == TargetType.POST_LAYER_OPERATION:
-                    edge_name = self.onnx_graph.get_node_edges(node_name)['output'][0]
+                    edge_name = self.onnx_graph.get_node_edge_names(node_name)['output'][0]
                     statistic_point.register_tensor(outputs[edge_name])
                 elif statistic_point.target_point.type == TargetType.PRE_LAYER_OPERATION:
                     edge_name = statistic_point.target_point.edge_name

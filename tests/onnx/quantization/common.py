@@ -80,8 +80,7 @@ def _get_input_key(original_model: onnx.ModelProto) -> str:
 def min_max_quantize_model(
         input_shape: List[int], original_model: onnx.ModelProto, convert_opset_version: bool = True,
         ignored_scopes: List[str] = None, dataset_has_batch_size: bool = True) -> onnx.ModelProto:
-    normalized_model = ONNXModelNormalizer.normalize_model(original_model, convert_opset_version)
-    onnx_graph = ONNXGraph(normalized_model)
+    onnx_graph = ONNXGraph(original_model)
     input_dtype = onnx_graph.get_edge_dtype(original_model.graph.input[0].name)
     input_np_dtype = onnx.helper.mapping.TENSOR_TYPE_TO_NP_TYPE[input_dtype]
     dataset = DatasetForTest(_get_input_key(original_model), input_shape, input_np_dtype, dataset_has_batch_size)
@@ -95,8 +94,7 @@ def min_max_quantize_model(
 def ptq_quantize_model(
         input_shape: List[int], original_model: onnx.ModelProto, convert_opset_version: bool = True,
         ignored_scopes: List[str] = None, dataset_has_batch_size: bool = True) -> onnx.ModelProto:
-    normalized_model = ONNXModelNormalizer.normalize_model(original_model, convert_opset_version)
-    onnx_graph = ONNXGraph(normalized_model)
+    onnx_graph = ONNXGraph(original_model)
     input_dtype = onnx_graph.get_edge_dtype(original_model.graph.input[0].name)
     input_np_dtype = onnx.helper.mapping.TENSOR_TYPE_TO_NP_TYPE[input_dtype]
     dataset = DatasetForTest(_get_input_key(original_model), input_shape, input_np_dtype, dataset_has_batch_size)
@@ -109,7 +107,6 @@ def ptq_quantize_model(
 
 def compare_nncf_graph(quantized_model: onnx.ModelProto, path_ref_graph: str,
                        generate_ref_graphs: bool = False) -> None:
-    quantized_model = ONNXModelNormalizer.normalize_model(quantized_model, False)
     nncf_graph = GraphConverter.create_nncf_graph(quantized_model)
     nx_graph = nncf_graph.get_graph_for_structure_analysis(extended=True)
 
@@ -123,7 +120,6 @@ def compare_nncf_graph(quantized_model: onnx.ModelProto, path_ref_graph: str,
 
 
 def compare_nncf_graph_onnx_models(quantized_model: onnx.ModelProto, _quantized_model: onnx.ModelProto) -> None:
-    quantized_model = ONNXModelNormalizer.normalize_model(quantized_model, False)
     nncf_graph = GraphConverter.create_nncf_graph(quantized_model)
     nx_graph = nncf_graph.get_graph_for_structure_analysis(extended=True)
 

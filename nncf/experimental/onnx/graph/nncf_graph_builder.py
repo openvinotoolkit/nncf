@@ -190,7 +190,7 @@ class GraphConverter:
                                      node_metatype=metatype,
                                      layer_attributes=layer_attributes)
         for output_node in filter(GraphConverter._is_valid_onnx_metatype, onnx_graph.get_all_nodes()):
-            output_edges = onnx_graph.get_node_edges(output_node.name)['output']
+            output_edges = onnx_graph.get_node_edge_names(output_node.name)['output']
             for output_edge in output_edges:
                 tensor_shape = GraphConverter._get_tensor_shape(onnx_graph, output_edge)
 

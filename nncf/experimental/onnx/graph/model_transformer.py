@@ -116,12 +116,12 @@ class ONNXModelTransformer(StaticModelTransformerBase):
                 nncf_node_name = nncf_graph.get_node_by_name(transformation.target_point.target_node_name)
                 onnx_nodes_after_input_node = [edge.to_node for edge in nncf_graph.get_output_edges(nncf_node_name)]
                 for onnx_node_name in onnx_nodes_after_input_node:
-                    input_edge_names.append(onnx_graph.get_node_edges(onnx_node_name.node_name)['input'][0])
+                    input_edge_names.append(onnx_graph.get_node_edge_names(onnx_node_name.node_name)['input'][0])
                 extra_model_outputs.update(input_edge_names)
                 input_edge_names = []
             else:
                 if transformation.target_point.type == TargetType.POST_LAYER_OPERATION:
-                    edge_name = onnx_graph.get_node_edges(node_name)['output'][0]
+                    edge_name = onnx_graph.get_node_edge_names(node_name)['output'][0]
                 elif transformation.target_point.type == TargetType.PRE_LAYER_OPERATION:
                     edge_name = transformation.target_point.edge_name
                 else:
@@ -197,21 +197,19 @@ class ONNXModelTransformer(StaticModelTransformerBase):
             Optional[str]:
         target_edge_name = None
         if transformation.target_point.type == TargetType.OPERATION_WITH_WEIGHTS:
-            target_edge_name = onnx_graph.get_weight_tensor_with_initializer(
+            target_edge_name = onnx_graph.get_weight_tensor_name(
                 transformation.target_point.target_node_name)
         elif transformation.target_point.type == TargetType.PRE_LAYER_OPERATION:
             target_edge_name = transformation.target_point.edge_name
         elif transformation.target_point.type == TargetType.POST_LAYER_OPERATION:
             if NNCFGraphNodeType.INPUT_NODE in transformation.target_point.target_node_name:  # ADD INPUT NODE CASE
-
-                nncf_graph = self._nncf_graph
-                nncf_node_name = nncf_graph.get_node_by_name(transformation.target_point.target_node_name)
-                onnx_nodes_after_input_node = [edge.to_node for edge in nncf_graph.get_output_edges(nncf_node_name)]
+                nncf_node_name = self._nncf_graph.get_node_by_name(transformation.target_point.target_node_name)
+                onnx_nodes_after_input_node = [edge.to_node for edge in self._nncf_graph.get_output_edges(nncf_node_name)]
                 for onnx_node_name in onnx_nodes_after_input_node:
-                    target_edge_name = onnx_graph.get_node_edges(onnx_node_name.node_name)['input'][0]
+                    target_edge_name = onnx_graph.get_node_edge_names(onnx_node_name.node_name)['input'][0]
                     break
             else:
-                target_edge_name = onnx_graph.get_node_edges(transformation.target_point.target_node_name)[
+                target_edge_name = onnx_graph.get_node_edge_names(transformation.target_point.target_node_name)[
                     'output'][0]
         else:
             raise RuntimeError(
