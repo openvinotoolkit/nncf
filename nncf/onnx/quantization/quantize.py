@@ -39,7 +39,7 @@ class ONNXDataset(PTQDataset):
     """
 
     def __init__(self, dataset: Dataset):
-        super().__init__(has_batch_dim=False)
+        super().__init__(shuffle=False, has_batch_dim=False)
         self._dataset = dataset
         self._length = None
         self._it = None

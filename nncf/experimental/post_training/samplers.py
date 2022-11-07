@@ -54,9 +54,6 @@ class RandomBatchSampler(BatchSampler):
         random.seed(seed)
         self.random_permutated_indices = list(range(len(self.dataset)))
         random.shuffle(self.random_permutated_indices)
-        self.random_permutated_indices = \
-            self.random_permutated_indices[:len(self.batch_indices)]
-        self.random_permutated_indices.sort()
 
     def __iter__(self):
         for i in range(len(self.batch_indices) - 1):
