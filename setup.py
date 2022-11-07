@@ -124,8 +124,8 @@ EXTRAS_REQUIRE = {
         "setuptools==59.5.0"
     ],
     "onnx": [
-        "torch==1.12.0",
-        "torchvision==0.13",
+        "torch==1.13.0",
+        "torchvision==0.14",
         "onnx==1.12.0",
         "skl2onnx==1.13",
         "protobuf==3.20.1",
