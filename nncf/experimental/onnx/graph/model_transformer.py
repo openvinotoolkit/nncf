@@ -28,7 +28,6 @@ from nncf.experimental.onnx.graph.transformations.commands import ONNXOutputInse
 from nncf.experimental.onnx.graph.transformations.commands import ONNXQuantizerInsertionCommand
 from nncf.experimental.post_training.factories import NNCFGraphFactory
 from nncf.experimental.post_training.graph.model_transformer import StaticModelTransformerBase
-from nncf.experimental.onnx.model_normalizer import ONNXModelNormalizer
 
 
 # pylint: disable=no-member
@@ -203,7 +202,8 @@ class ONNXModelTransformer(StaticModelTransformerBase):
         elif transformation.target_point.type == TargetType.POST_LAYER_OPERATION:
             if NNCFGraphNodeType.INPUT_NODE in transformation.target_point.target_node_name:  # ADD INPUT NODE CASE
                 nncf_node_name = self._nncf_graph.get_node_by_name(transformation.target_point.target_node_name)
-                onnx_nodes_after_input_node = [edge.to_node for edge in self._nncf_graph.get_output_edges(nncf_node_name)]
+                onnx_nodes_after_input_node = [edge.to_node for edge in
+                                               self._nncf_graph.get_output_edges(nncf_node_name)]
                 for onnx_node_name in onnx_nodes_after_input_node:
                     target_edge_name = onnx_graph.get_node_edge_names(onnx_node_name.node_name)['input'][0]
                     break
