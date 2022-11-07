@@ -29,8 +29,6 @@ ROOT = Path(__file__).parent.resolve()
 MODEL_DIR = ROOT / 'mobilenet_v2_quantization'
 # Path to ImageNet validation dataset.
 DATASET_DIR = ROOT / 'imagenet'
-# Batch size
-BATCH_SIZE = 125
 
 
 def run_example():
@@ -45,7 +43,7 @@ def run_example():
     model.eval()
 
     # Step 2: Create dataset.
-    data_source = create_data_source(BATCH_SIZE)
+    data_source = create_data_source(batch_size=128)
 
     # Step 3: Apply quantization algorithm.
 
@@ -69,7 +67,7 @@ def run_example():
         os.makedirs(MODEL_DIR)
 
     onnx_quantized_model_path = MODEL_DIR / 'mobilenet_v2.onnx'
-    dummy_input = torch.randn(BATCH_SIZE, 3, 224, 224)
+    dummy_input = torch.randn(1, 3, 224, 224)
     torch.onnx.export(quantized_model, dummy_input, onnx_quantized_model_path, verbose=False)
     print(f'The quantized model is exported to: {onnx_quantized_model_path}')
 
@@ -87,6 +85,9 @@ def run_example():
     ir_model_xml = MODEL_DIR / 'mobilenet_v2.xml'
     ir_model_bin = MODEL_DIR / 'mobilenet_v2.bin'
     ir_quantized_model = ie.read_model(model=ir_model_xml, weights=ir_model_bin)
+    # Using [the dynamic shape feature](https://docs.openvino.ai/latest/openvino_docs_OV_UG_DynamicShapes.html)
+    # to compute the last batch of the validation dataset
+    ir_quantized_model.reshape([-1, 3, 224, 224])
     quantized_compiled_model = ie.compile_model(ir_quantized_model, device_name='CPU')
     quantized_result = validate_openvino_model(quantized_compiled_model, data_source)
     print(f'The quantized model accuracy@top1: {quantized_result:.3f}')
@@ -168,7 +169,7 @@ def validate(model, val_loader, forward_fn):
     progress = utils.ProgressMeter(
         len(val_loader), [batch_time, top1, top5], prefix='Test: '
     )
-    run_validate(val_loader, print_freq=10000 // BATCH_SIZE)
+    run_validate(val_loader, print_freq=10000 // val_loader.batch_size)
     progress.display_summary()
 
     return top1.avg

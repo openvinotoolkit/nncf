@@ -127,7 +127,7 @@ def create_data_source(batch_size: int) -> tf.data.Dataset:
 def validate(model: ov.Model,
              metrics: List[Metric],
              val_dataset: tf.data.Dataset,
-             print_freq: int = 100) -> Tuple[float]:
+             print_freq: int = 100) -> Tuple[tf.Tensor]:
     """
     Validate the accuracy of the model.
 
@@ -135,7 +135,7 @@ def validate(model: ov.Model,
     :param metrics: A list of TensorFlow metrics
     :param val_dataset: An instant of the TensorFlow dataset
     :param print_freq: A print frequency (batch iterations).
-    :return: A Tuple of scalars of computed metrics
+    :return: A Tuple of metric value tensors
     """
     for m in metrics:
         m.reset_state()
@@ -152,10 +152,10 @@ def validate(model: ov.Model,
         if i % print_freq == 0 or i + 1 == num_items:
             output = [f'{i + 1}/{num_items}:']
             for m in metrics:
-                  output.append(f'{m.name}: {m.result().numpy():.4f}')
+                  output.append(f'{m.name}: {m.result():.4f}')
             print(' '.join(output))
 
-    return metrics[0].result().numpy(), metrics[1].result().numpy()
+    return metrics[0].result(), metrics[1].result()
 
 
 if __name__ == '__main__':
