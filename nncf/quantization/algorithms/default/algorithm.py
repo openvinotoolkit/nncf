@@ -81,7 +81,8 @@ class DefaultQuantization(Algorithm):
     2) FastBiasCorrection
     3) ChannelAlignment
 
-    Disclaimer: currently, it only supports MinMaxQuantization & FastBiasCorrection. ChannelAlignment will be added soon.
+    Disclaimer: currently, it only supports MinMaxQuantization & FastBiasCorrection.
+    ChannelAlignment will be added soon.
 
     """
 
@@ -110,6 +111,7 @@ class DefaultQuantization(Algorithm):
                 algorithms_list.append(fast_bc_algo)
         return algorithms_list
 
+    @property
     def available_backends(self) -> Dict[str, BackendType]:
         algorithms_backends = {}
         for algorithm in self.algorithms:

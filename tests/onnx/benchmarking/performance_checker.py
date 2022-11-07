@@ -29,6 +29,8 @@ from nncf.common.utils.logger import logger as nncf_logger
 from nncf.experimental.onnx.engine import ONNXEngine
 from nncf.experimental.onnx.tensor import ONNXNNCFTensor
 
+#pylint: disable=redefined-outer-name,protected-access
+
 
 def process_fn(data_item, model_evaluator: ModelEvaluator, has_batch_dim: Optional[bool] = False):
     _, batch_annotation, batch_input, _ = data_item
@@ -112,8 +114,11 @@ if __name__ == '__main__':
         transform_fn = partial(process_fn, **options)
         dataset = nncf.Dataset(model_evaluator.dataset, transform_fn)
 
+        num_init_samples = len(model_evaluator.dataset)
+
         run(onnx_model_path=str(config_entry["launchers"][0]["model"]),
             output_file_path=args.csv_result,
             dataset=dataset,
             model_name=config_entry["name"],
+            num_init_samples=num_init_samples,
             ignored_scopes=ignored_scopes)

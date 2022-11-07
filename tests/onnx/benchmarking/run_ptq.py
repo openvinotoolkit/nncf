@@ -36,6 +36,8 @@ from tests.onnx.benchmarking.accuracy_checker import MSCocoSegmentationToVOCConv
 
 from tests.onnx.quantization.common import find_ignored_scopes
 
+#pylint: disable=redefined-outer-name,protected-access
+
 
 def process_fn(data_item, model_evaluator: ModelEvaluator, has_batch_dim: Optional[bool] = False):
     _, batch_annotation, batch_input, _ = data_item
