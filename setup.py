@@ -131,12 +131,17 @@ EXTRAS_REQUIRE = {
         "protobuf==3.20.1",
         "onnxruntime-openvino==1.11.0",
     ],
+    "openvino": [
+        "openvino-dev"        
+    ]
 }
 
 EXTRAS_REQUIRE["all"] = [
     EXTRAS_REQUIRE["tf"],
     EXTRAS_REQUIRE["torch"]
 ]
+
+SETUP_REQUIRES = []
 
 if "--torch" in sys.argv:
     INSTALL_REQUIRES.extend(EXTRAS_REQUIRE["torch"])
@@ -152,6 +157,11 @@ if "--tf" in sys.argv:
 if "--onnx" in sys.argv:
     INSTALL_REQUIRES.extend(EXTRAS_REQUIRE["onnx"])
     sys.argv.remove("--onnx")
+
+if "--openvino" in sys.argv:
+    INSTALL_REQUIRES.extend(EXTRAS_REQUIRE["openvino"])
+    SETUP_REQUIRES.extend(EXTRAS_REQUIRE["openvino"])
+    sys.argv.remove("--openvino")
 
 if "--all" in sys.argv:
     INSTALL_REQUIRES.extend(EXTRAS_REQUIRE["all"])
@@ -175,6 +185,7 @@ setup(
         "Operating System :: OS Independent",
     ],
     install_requires=INSTALL_REQUIRES,
+    setup_requires=SETUP_REQUIRES,
     extras_require=EXTRAS_REQUIRE,
     keywords=["compression", "quantization", "sparsity", "mixed-precision-training",
               "quantization-aware-training", "hawq", "classification",

@@ -11,10 +11,10 @@
  limitations under the License.
 """
 
-import pytest
 import subprocess
+import pytest
 
-from tests.common.paths import PROJECT_ROOT
+from tests.common.helpers import PROJECT_ROOT
 from tests.common.helpers import run_install_checks
 
 
@@ -32,15 +32,12 @@ def package_type_(request):
 
 
 def test_install(tmp_venv_with_nncf, tmp_path, package_type):
-    run_install_checks(tmp_venv_with_nncf, tmp_path, package_type, test_dir='tensorflow')
+    run_install_checks(tmp_venv_with_nncf, tmp_path, package_type, test_dir='openvino')
 
 
-def test_install_with_examples_and_tests_requirements(tmp_venv_with_nncf, tmp_path, package_type):
+def test_install_with_tests_requirements(tmp_venv_with_nncf, tmp_path, package_type):
     pip_with_venv = '. {0}/bin/activate && {0}/bin/pip'.format(tmp_venv_with_nncf)
     subprocess.call(
-        '{} install -r {}/examples/tensorflow/requirements.txt'.format(pip_with_venv, PROJECT_ROOT),
+        '{} install -r {}/tests/openvino/requirements.txt'.format(pip_with_venv, PROJECT_ROOT),
         shell=True)
-    subprocess.call(
-        '{} install -r {}/tests/tensorflow/requirements.txt'.format(pip_with_venv, PROJECT_ROOT),
-        shell=True)
-    run_install_checks(tmp_venv_with_nncf, tmp_path, package_type, test_dir='tensorflow')
+    run_install_checks(tmp_venv_with_nncf, tmp_path, package_type, test_dir='openvino')

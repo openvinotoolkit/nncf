@@ -24,7 +24,7 @@ from tests.tensorflow.test_sota_checkpoints import DATASET_TYPE_AVAILABILITY
 from tests.tensorflow.test_sota_checkpoints import EVAL_SCRIPT_NAME_MAP
 from tests.tensorflow.test_sota_checkpoints import EvalRunParamsStruct
 from tests.tensorflow.test_sota_checkpoints import RunTest
-from tests.common.helpers import PROJECT_ROOT
+from tests.common.paths import PROJECT_ROOT
 
 DIFF_TARGET_INIT_MIN_GLOBAL = -0.3
 DIFF_TARGET_INIT_MAX_GLOBAL = 0.3

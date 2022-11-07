@@ -13,6 +13,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 """
+from tests.common.paths import TEST_ROOT
 
 
 def pytest_addoption(parser):
@@ -47,3 +48,7 @@ def pytest_addoption(parser):
         help="[e2e-test-onnx-model-zoo] Dataset subsample size for evaluation. "
         "If not provided, full dataset is used for evaluation."
     )
+
+
+ONNX_TEST_ROOT = TEST_ROOT / 'onnx'
+ONNX_MODEL_DIR = ONNX_TEST_ROOT / 'data' / 'models'
