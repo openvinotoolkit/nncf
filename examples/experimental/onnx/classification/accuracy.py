@@ -18,7 +18,7 @@ import numpy as np
 ModelOutput = TypeVar('ModelOutput')
 
 
-class Accuracy():
+class Accuracy:
 
     """
     The classification accuracy metric is defined as the number of correct predictions

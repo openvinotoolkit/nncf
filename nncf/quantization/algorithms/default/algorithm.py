@@ -119,7 +119,6 @@ class DefaultQuantization(Algorithm):
         return algorithms_backends
 
     def _apply(self, model: ModelType, engine: Engine, statistic_points: StatisticPointsContainer) -> ModelType:
-        self.available_backends()
         for algorithm in self.algorithms:
             model = algorithm.apply(model, engine, statistic_points)
         return model

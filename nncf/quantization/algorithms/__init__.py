@@ -18,3 +18,5 @@ from nncf.quantization.algorithms.default.algorithm import DefaultQuantization
 from nncf.quantization.algorithms.default.algorithm import DefaultQuantizationParameters
 from nncf.quantization.algorithms.min_max.algorithm import MinMaxQuantization
 from nncf.quantization.algorithms.min_max.algorithm import MinMaxQuantizationParameters
+from nncf.quantization.algorithms.fast_bias_correction.algorithm import FastBiasCorrection
+from nncf.quantization.algorithms.fast_bias_correction.algorithm import FastBiasCorrectionParameters

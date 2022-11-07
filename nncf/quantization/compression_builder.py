@@ -111,6 +111,10 @@ class CompressionBuilder:
             return model
 
         backend = get_backend(model)
+
+        # TODO (KodiaqQ): Remove after ONNX is removed from experimental
+        if backend == BackendType.ONNX:
+            nncf_logger.warning('You are using experimental ONNX backend for the Post-training quantization.')
         modified_model = self._get_prepared_model_for_compression(model, backend)
 
         if engine is None:
