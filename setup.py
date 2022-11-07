@@ -129,7 +129,7 @@ EXTRAS_REQUIRE = {
         "onnx==1.12.0",
         "skl2onnx==1.13",
         "protobuf==3.20.1",
-        "onnxruntime-openvino==1.12",
+        "onnxruntime-openvino==1.13.1",
     ],
 }
 
