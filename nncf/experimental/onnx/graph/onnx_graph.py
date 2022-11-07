@@ -210,9 +210,11 @@ class ONNXGraph:
                 return tensor
         raise RuntimeError('There is no initializer with the name {}'.format(initializer_name))
 
-    def get_initializer(self, initializer_name: str) -> np.ndarray:
+    def get_initializer(self, initializer_name: str) -> onnx.TensorProto:
         """
         Returns model's Initializer with the name equals to 'initializer_name'.
+        :param initializer_name: Name of the Initializer.
+        :return: The Initializer.
         """
         for init in self.onnx_model.graph.initializer:
             if init.name == initializer_name:
@@ -222,6 +224,8 @@ class ONNXGraph:
     def get_tensor_shape(self, tensor: onnx.ValueInfoProto) -> List[int]:
         """
         Returns 'tensor' shape.
+        :param tensor: The tensor.
+        :return: Shape of the Tensor.
         """
         tensor_type = tensor.type.tensor_type
         shape = []
@@ -245,7 +249,12 @@ class ONNXGraph:
 
     def get_edge_shape(self, edge_name: str) -> List[int]:
         """
-        Returns tensor shape of the edge with the name 'edge_name'.
+        Returns a shape of the edge with the name 'edge_name'.
+        If the activations tensors were not filled in self._activations_tensor_name_to_value_info, it updates them.
+        If after updating of the self._activations_tensor_name_to_value_info, there is still no such tensor,
+        do shape inference of the model.
+        :param edge_name: The name of the edge.
+        :return: Shape of the tensor on that edge.
         """
         if self._activations_tensor_name_to_value_info is None:
             self._update_activation_tensors()
@@ -259,6 +268,11 @@ class ONNXGraph:
     def get_edge_dtype(self, edge_name: str) -> int:
         """
         Returns the data type of the edge with the name 'edge_name'.
+        If the activations tensors were not filled in self._activations_tensor_name_to_value_info, it updates them.
+        If after updating of the self._activations_tensor_name_to_value_info, there is still no such tensor,
+        do shape inference of the model.
+        :param edge_name: The name of the edge.
+        :return: Shape of the tensor on that edge.
         """
         if self._activations_tensor_name_to_value_info is None:
             self._update_activation_tensors()
@@ -272,5 +286,7 @@ class ONNXGraph:
     def get_edge_dtype_name(self, edge_name: str) -> str:
         """
         Returns the name of datatype of the edge with the name 'edge_name'.
+        :param edge_name: The name of the edge.
+        :return: The Name of the datatype.
         """
         return onnx.TensorProto.DataType.Name(self.get_edge_dtype(edge_name))

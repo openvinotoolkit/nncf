@@ -191,7 +191,6 @@ class ONNXModelTransformer(StaticModelTransformerBase):
         onnx_graph = ONNXGraph(self._model)
         for transformation in transformations:
             self._insert_quantizer_dequantizer(transformation, onnx_graph)
-        self._model = ONNXModelNormalizer.infer_models_shape(self._model)
 
     def _get_target_edge_name(self, transformation: ONNXQuantizerInsertionCommand, onnx_graph: ONNXGraph) -> \
             Optional[str]:
