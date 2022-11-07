@@ -81,7 +81,8 @@ def min_max_quantize_model(
         input_shape: List[int], original_model: onnx.ModelProto, convert_opset_version: bool = True,
         ignored_scopes: List[str] = None, dataset_has_batch_size: bool = True) -> onnx.ModelProto:
     normalized_model = ONNXModelNormalizer.normalize_model(original_model, convert_opset_version)
-    input_dtype = ONNXGraph.get_edge_dtype(normalized_model, original_model.graph.input[0].name)
+    onnx_graph = ONNXGraph(normalized_model)
+    input_dtype = onnx_graph.get_edge_dtype(original_model.graph.input[0].name)
     input_np_dtype = onnx.helper.mapping.TENSOR_TYPE_TO_NP_TYPE[input_dtype]
     dataset = DatasetForTest(_get_input_key(original_model), input_shape, input_np_dtype, dataset_has_batch_size)
     builder = CompressionBuilder(convert_opset_version)
@@ -94,7 +95,9 @@ def min_max_quantize_model(
 def ptq_quantize_model(
         input_shape: List[int], original_model: onnx.ModelProto, convert_opset_version: bool = True,
         ignored_scopes: List[str] = None, dataset_has_batch_size: bool = True) -> onnx.ModelProto:
-    input_dtype = ONNXGraph.get_edge_dtype(original_model, original_model.graph.input[0].name)
+    normalized_model = ONNXModelNormalizer.normalize_model(original_model, convert_opset_version)
+    onnx_graph = ONNXGraph(normalized_model)
+    input_dtype = onnx_graph.get_edge_dtype(original_model.graph.input[0].name)
     input_np_dtype = onnx.helper.mapping.TENSOR_TYPE_TO_NP_TYPE[input_dtype]
     dataset = DatasetForTest(_get_input_key(original_model), input_shape, input_np_dtype, dataset_has_batch_size)
     builder = CompressionBuilder(convert_opset_version)
@@ -106,7 +109,7 @@ def ptq_quantize_model(
 
 def compare_nncf_graph(quantized_model: onnx.ModelProto, path_ref_graph: str,
                        generate_ref_graphs: bool = False) -> None:
-    quantized_model = ONNXModelNormalizer.add_input_from_initializer(quantized_model)
+    quantized_model = ONNXModelNormalizer.normalize_model(quantized_model, False)
     nncf_graph = GraphConverter.create_nncf_graph(quantized_model)
     nx_graph = nncf_graph.get_graph_for_structure_analysis(extended=True)
 
@@ -120,10 +123,11 @@ def compare_nncf_graph(quantized_model: onnx.ModelProto, path_ref_graph: str,
 
 
 def compare_nncf_graph_onnx_models(quantized_model: onnx.ModelProto, _quantized_model: onnx.ModelProto) -> None:
-    quantized_model = ONNXModelNormalizer.add_input_from_initializer(quantized_model)
+    quantized_model = ONNXModelNormalizer.normalize_model(quantized_model, False)
     nncf_graph = GraphConverter.create_nncf_graph(quantized_model)
     nx_graph = nncf_graph.get_graph_for_structure_analysis(extended=True)
 
+    _quantized_model = ONNXModelNormalizer.normalize_model(_quantized_model, False)
     _quantized_model = ONNXModelNormalizer.add_input_from_initializer(_quantized_model)
     _nncf_graph = GraphConverter.create_nncf_graph(_quantized_model)
     _nx_graph = _nncf_graph.get_graph_for_structure_analysis(extended=True)
@@ -132,7 +136,8 @@ def compare_nncf_graph_onnx_models(quantized_model: onnx.ModelProto, _quantized_
 
 
 def infer_model(input_shape: List[int], quantized_model: onnx.ModelProto) -> None:
-    input_dtype = ONNXGraph.get_edge_dtype(quantized_model, quantized_model.graph.input[0].name)
+    onnx_graph = ONNXGraph(quantized_model)
+    input_dtype = onnx_graph.get_edge_dtype(quantized_model.graph.input[0].name)
     input_np_dtype = onnx.helper.mapping.TENSOR_TYPE_TO_NP_TYPE[input_dtype]
     serialized_model = quantized_model.SerializeToString()
     sess = rt.InferenceSession(serialized_model, providers=['OpenVINOExecutionProvider'])

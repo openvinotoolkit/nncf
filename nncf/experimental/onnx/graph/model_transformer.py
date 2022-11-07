@@ -28,6 +28,7 @@ from nncf.experimental.onnx.graph.transformations.commands import ONNXOutputInse
 from nncf.experimental.onnx.graph.transformations.commands import ONNXQuantizerInsertionCommand
 from nncf.experimental.post_training.factories import NNCFGraphFactory
 from nncf.experimental.post_training.graph.model_transformer import StaticModelTransformerBase
+from nncf.experimental.onnx.model_normalizer import ONNXModelNormalizer
 
 
 # pylint: disable=no-member
@@ -40,6 +41,7 @@ class ONNXModelTransformer(StaticModelTransformerBase):
     def __init__(self, model: onnx.ModelProto):
         super().__init__(model)
         self._model = deepcopy(model)
+        self._nncf_graph = NNCFGraphFactory.create(self._model)
 
     def transform(self, transformation_layout: TransformationLayout) -> onnx.ModelProto:
         """
@@ -81,9 +83,12 @@ class ONNXModelTransformer(StaticModelTransformerBase):
 
         :param transformations: list of the ONNXOutputInsertionCommand transformations
         """
+        onnx_graph = ONNXGraph(self._model)
         nncf_graph = NNCFGraphFactory.create(self._model)
-        model_outputs = [output.name for output in ONNXGraph.get_model_outputs(self._model)]
-        extra_model_outputs = self._get_extra_model_outputs(nncf_graph, transformations)
+        model_outputs = [output.name for output in onnx_graph.get_model_outputs()]
+        extra_model_outputs = self._get_extra_model_outputs(nncf_graph,
+                                                            onnx_graph,
+                                                            transformations)
 
         model_with_intermediate_outputs = self._insert_outputs(self._model,
                                                                outputs=[*extra_model_outputs,
@@ -92,11 +97,13 @@ class ONNXModelTransformer(StaticModelTransformerBase):
 
     def _get_extra_model_outputs(self,
                                  nncf_graph: NNCFGraph,
+                                 onnx_graph: ONNXGraph,
                                  transformations: List[ONNXOutputInsertionCommand]) -> None:
         """
         Collects extra model outputs based on transformations
 
         :param nncf_graph: NNCFGraph
+        :param onnx_graph: ONNXGraph
         :param transformations: lisf of the ONNXOutputInsertionCommand
         :return: list of the output names
         """
@@ -109,12 +116,12 @@ class ONNXModelTransformer(StaticModelTransformerBase):
                 nncf_node_name = nncf_graph.get_node_by_name(transformation.target_point.target_node_name)
                 onnx_nodes_after_input_node = [edge.to_node for edge in nncf_graph.get_output_edges(nncf_node_name)]
                 for onnx_node_name in onnx_nodes_after_input_node:
-                    input_edge_names.append(ONNXGraph.get_node_edges(self._model, onnx_node_name.node_name)['input'][0])
+                    input_edge_names.append(onnx_graph.get_node_edges(onnx_node_name.node_name)['input'][0])
                 extra_model_outputs.update(input_edge_names)
                 input_edge_names = []
             else:
                 if transformation.target_point.type == TargetType.POST_LAYER_OPERATION:
-                    edge_name = ONNXGraph.get_node_edges(self._model, node_name)['output'][0]
+                    edge_name = onnx_graph.get_node_edges(node_name)['output'][0]
                 elif transformation.target_point.type == TargetType.PRE_LAYER_OPERATION:
                     edge_name = transformation.target_point.edge_name
                 else:
@@ -133,10 +140,11 @@ class ONNXModelTransformer(StaticModelTransformerBase):
         """
         if outputs is None:
             raise RuntimeError("Parameter outputs cannot be None.")
+        onnx_graph = ONNXGraph(model)
         var_out = []
         for out in outputs:
             # shape should be None; if you place not None, some models will have inference problems (e.g. Mask RCNN)
-            type_proto = onnx.helper.make_tensor_type_proto(ONNXGraph.get_edge_dtype(model, out),
+            type_proto = onnx.helper.make_tensor_type_proto(onnx_graph.get_edge_dtype(out),
                                                             shape=None)
             value_info = onnx.helper.make_value_info(
                 name=out, type_proto=type_proto)
@@ -182,26 +190,27 @@ class ONNXModelTransformer(StaticModelTransformerBase):
         self._added_target_edges = Counter()
         for transformation in transformations:
             self._insert_quantizer_dequantizer(transformation)
+        self._model = ONNXModelNormalizer.infer_models_shape(self._model)
 
-    def _get_target_edge_name(self, transformation: ONNXQuantizerInsertionCommand) -> \
+    def _get_target_edge_name(self, transformation: ONNXQuantizerInsertionCommand, onnx_graph: ONNXGraph) -> \
             Optional[str]:
         target_edge_name = None
         if transformation.target_point.type == TargetType.OPERATION_WITH_WEIGHTS:
-            target_edge_name = ONNXGraph.get_weight_tensor_with_initializer(self._model,
+            target_edge_name = onnx_graph.get_weight_tensor_with_initializer(
                 transformation.target_point.target_node_name)
         elif transformation.target_point.type == TargetType.PRE_LAYER_OPERATION:
             target_edge_name = transformation.target_point.edge_name
         elif transformation.target_point.type == TargetType.POST_LAYER_OPERATION:
             if NNCFGraphNodeType.INPUT_NODE in transformation.target_point.target_node_name:  # ADD INPUT NODE CASE
 
-                nncf_graph = NNCFGraphFactory.create(self._model)
+                nncf_graph = self._nncf_graph
                 nncf_node_name = nncf_graph.get_node_by_name(transformation.target_point.target_node_name)
                 onnx_nodes_after_input_node = [edge.to_node for edge in nncf_graph.get_output_edges(nncf_node_name)]
                 for onnx_node_name in onnx_nodes_after_input_node:
-                    target_edge_name = ONNXGraph.get_node_edges(self._model, onnx_node_name.node_name)['input'][0]
+                    target_edge_name = onnx_graph.get_node_edges(onnx_node_name.node_name)['input'][0]
                     break
             else:
-                target_edge_name = ONNXGraph.get_node_edges(self._model, transformation.target_point.target_node_name)[
+                target_edge_name = onnx_graph.get_node_edges(transformation.target_point.target_node_name)[
                     'output'][0]
         else:
             raise RuntimeError(
@@ -265,20 +274,21 @@ class ONNXModelTransformer(StaticModelTransformerBase):
         return onnx_scale, onnx_zero_point
 
     def _insert_quantizer_dequantizer(self, transformation: ONNXQuantizerInsertionCommand) -> None:
-        target_edge_name = self._get_target_edge_name(transformation)
+        onnx_graph = ONNXGraph(self._model)
+        target_edge_name = self._get_target_edge_name(transformation, onnx_graph)
         quantizer, dequantizer = self._get_quantize_dequantize_nodes(transformation, target_edge_name)
         onnx_scale, onnx_zero_point = self._get_scale_zero_point_tensors(transformation, quantizer, dequantizer)
 
         # If several nodes on one edge
         input_nodes = []
-        input_nodes.extend(ONNXGraph.get_nodes_by_input(self._model, target_edge_name))
+        input_nodes.extend(onnx_graph.get_nodes_by_input(target_edge_name))
         if not input_nodes:
             raise RuntimeError(
                 f'Can not add the quantizer to the {target_edge_name} edge. This edge does not have end node.')
 
         if transformation.target_point.type == TargetType.PRE_LAYER_OPERATION:
             # If we need to change only target nodes input
-            target_node = ONNXGraph.get_node_by_name(self._model, transformation.target_point.target_node_name)
+            target_node = onnx_graph.get_node_by_name(transformation.target_point.target_node_name)
             for i, inp in enumerate(target_node.input):
                 if inp == target_edge_name:
                     target_node.input[i] = dequantizer.output[0]
@@ -290,17 +300,9 @@ class ONNXModelTransformer(StaticModelTransformerBase):
 
         self._model.graph.initializer.extend([onnx_scale])
         self._model.graph.initializer.extend([onnx_zero_point])
-        insert_index = ONNXGraph.get_node_index(self._model, input_nodes[0].name)
+        insert_index = onnx_graph.get_node_index(input_nodes[0].name)
         self._model.graph.node.insert(insert_index, quantizer)
         self._model.graph.node.insert(insert_index + 1, dequantizer)
-
-        shape = ONNXGraph.get_edge_shape(self._model, target_edge_name)
-        q_v_info = onnx.helper.make_tensor_value_info(name=quantizer.output[0],
-                                                      elem_type=onnx_zero_point.data_type, shape=shape)
-        dq_v_info = onnx.helper.make_tensor_value_info(name=dequantizer.output[0],
-                                                       elem_type=onnx.TensorProto.FLOAT, shape=shape)
-        self._model.graph.value_info.append(q_v_info)
-        self._model.graph.value_info.append(dq_v_info)
 
     def _apply_bias_correction_transformations(self, transformations: List[ONNXBiasCorrectionCommand]) -> None:
         """
@@ -308,13 +310,14 @@ class ONNXModelTransformer(StaticModelTransformerBase):
 
         :param transformations: lisf of the bias correction transformations
         """
+        onnx_graph = ONNXGraph(self._model)
         bias_tensor_position = 2
 
         for transformation in transformations:
             node_name = transformation.target_point.target_node_name
-            onnx_node = ONNXGraph.get_node_by_name(self._model, node_name)
+            onnx_node = onnx_graph.get_node_by_name(node_name)
             bias_initializer_name = onnx_node.input[bias_tensor_position]
-            bias_initializer = ONNXGraph.get_initializer(self._model, bias_initializer_name)
+            bias_initializer = onnx_graph.get_initializer(bias_initializer_name)
 
             new_bias_tensor = onnx.numpy_helper.from_array(transformation.bias_value,
                                                            bias_initializer_name)

@@ -30,76 +30,73 @@ class ONNXGraph:
     The class stores onnx model and provides the interface to interact with it.
     """
 
-    @staticmethod
-    def get_all_nodes(model: onnx.ModelProto) -> List[NodeProto]:
+    def __init__(self, onnx_model: onnx.ModelProto):
+        self.onnx_model = onnx_model
+        self.activations_tensors = self.onnx_model.graph.value_info
+        self.model_inputs = self.onnx_model.graph.input
+        self.model_outputs = self.onnx_model.graph.output
+
+    def get_all_nodes(self) -> List[NodeProto]:
         """
         Returns all nodes of onnx model.
         """
-        return model.graph.node
+        return self.onnx_model.graph.node
 
-    @staticmethod
-    def get_node_by_name(model: onnx.ModelProto, node_name: str) -> Optional[NodeProto]:
-        for node in model.graph.node:
+    def get_node_by_name(self, node_name: str) -> Optional[NodeProto]:
+        for node in self.onnx_model.graph.node:
             if node.name == node_name:
                 return node
         return None
 
-    @staticmethod
-    def get_model_inputs(model: onnx.ModelProto) -> List[ValueInfoProto]:
+    def get_model_inputs(self) -> List[ValueInfoProto]:
         """
         Returns model inputs.
         """
         inputs = []
-        input_all = [node.name for node in model.graph.input]
-        input_initializer = [node.name for node in model.graph.initializer]
+        input_all = [node.name for node in self.onnx_model.graph.input]
+        input_initializer = [node.name for node in self.onnx_model.graph.initializer]
         net_feed_input = list(set(input_all) - set(input_initializer))
-        for node in model.graph.input:
+        for node in self.onnx_model.graph.input:
             if node.name in net_feed_input:
                 inputs.append(node)
         return inputs
 
-    @staticmethod
-    def get_model_outputs(model: onnx.ModelProto) -> List[ValueInfoProto]:
+    def get_model_outputs(self) -> List[ValueInfoProto]:
         """
         Returns model outputs.
         """
-        return list(model.graph.output)
+        return list(self.onnx_model.graph.output)
 
-    @staticmethod
-    def get_nodes_by_output(model: onnx.ModelProto, output_name: str) -> List[NodeProto]:
+    def get_nodes_by_output(self, output_name: str) -> List[NodeProto]:
         """
         Returns all nodes that have output with the name 'output_name'.
         """
-        return ONNXGraph._get_nodes_by_lambda(model, output_name, lambda node: node.output)
+        return self._get_nodes_by_lambda(output_name, lambda node: node.output)
 
-    @staticmethod
-    def get_nodes_by_input(model: onnx.ModelProto, input_name: str) -> List[NodeProto]:
+    def get_nodes_by_input(self, input_name: str) -> List[NodeProto]:
         """
         Returns all nodes that have input with the name 'input_name'.
         """
-        return ONNXGraph._get_nodes_by_lambda(model, input_name, lambda node: node.input)
+        return self._get_nodes_by_lambda(input_name, lambda node: node.input)
 
-    @staticmethod
-    def _get_nodes_by_lambda(model: onnx.ModelProto, name: str, func: Callable[[NodeProto], List[NodeProto]]):
+    def _get_nodes_by_lambda(self, name: str, func: Callable[[NodeProto], List[NodeProto]]):
         output = []
-        for node in model.graph.node:
+        for node in self.onnx_model.graph.node:
             if name in func(node) or name == func(node):
                 output.append(node)
         return output
 
-    @staticmethod
-    def get_node_edges(model: onnx.ModelProto, node_name: str) -> Dict[str, List[ValueInfoProto]]:
+    def get_node_edges(self, node_name: str) -> Dict[str, List[ValueInfoProto]]:
         """
         Returns node input and output edges.
         """
-        for node in model.graph.node:
+        for node in self.onnx_model.graph.node:
             if node.name == node_name:
                 return {'input': list(node.input),
                         'output': list(node.output)}
         raise RuntimeError('There is no node with the name {}'.format(node_name))
 
-    @staticmethod
-    def get_input_port_id_for_node_after_input(input_name: str, to_node: NodeProto) -> int:
+    def get_input_port_id_for_node_after_input(self, input_name: str, to_node: NodeProto) -> int:
         """
         Returns input_port_id for 'to_node' connected with the model input with the name 'input_name'.
         :param input_name: Name of the ONNX model Input.
@@ -111,8 +108,7 @@ class ONNXGraph:
                 return input_port_id
         raise RuntimeError(f'The node {to_node} does not have input edge with the name {input_name}')
 
-    @staticmethod
-    def get_output_port_id_for_node_before_output(output_name: str, from_node: NodeProto) -> int:
+    def get_output_port_id_for_node_before_output(self, output_name: str, from_node: NodeProto) -> int:
         """
         Returns output_port_id for 'from_node' connected with the model output with the name 'output_name'.
         :param output_name: Name of the ONNX model Output.
@@ -124,8 +120,7 @@ class ONNXGraph:
                 return output_port_id
         raise RuntimeError(f'The node {from_node} does not have output edge with the name {output_name}')
 
-    @staticmethod
-    def get_port_ids_between_nodes(from_node: NodeProto, to_node: NodeProto) -> Dict[str, int]:
+    def get_port_ids_between_nodes(self, from_node: NodeProto, to_node: NodeProto) -> Dict[str, int]:
         """
         Returns input_port_id and output_port_id between 'from_node' and 'to_node'.
         :param from_node: Node, whose output is connected to 'to_node' node.
@@ -143,68 +138,61 @@ class ONNXGraph:
             raise RuntimeError(f'The nodes {from_node.name} and {to_node.name} do not have edges between.')
         return output
 
-    @staticmethod
-    def get_nodes_by_type(model: onnx.ModelProto, node_type: str) -> List[NodeProto]:
+    def get_nodes_by_type(self, node_type: str) -> List[NodeProto]:
         """
         Returns all nodes in the model that have type equal to 'node_type'.
         """
         output = []
-        for node in model.graph.node:
+        for node in self.onnx_model.graph.node:
             if str(node.op_type) == node_type:
                 output.append(node)
         return output
 
-    @staticmethod
-    def get_weight_tensor_with_initializer(model: onnx.ModelProto, node_name: str) -> Optional[str]:
+    def get_weight_tensor_with_initializer(self, node_name: str) -> Optional[str]:
         """
         Return 'node_name' node's input weight tensor if it has an initializer type.
         Otherwise, return None.
         """
-        node_inputs = ONNXGraph.get_node_edges(model, node_name)['input']
+        node_inputs = self.get_node_edges(node_name)['input']
 
         # TODO(kshpv): add search of input weight tensor
         weight_tensor_name = node_inputs[1]
         return weight_tensor_name
 
-    @staticmethod
-    def get_weight_input_in_module(model: onnx.ModelProto, node_name: str) -> ValueInfoProto:
+    def get_weight_input_in_module(self, node_name: str) -> ValueInfoProto:
         """
         Returns 'node_name' node's input weight tensor.
         """
-        node_inputs = ONNXGraph.get_node_edges(model, node_name)['input']
+        node_inputs = self.get_node_edges(node_name)['input']
         # TODO(kshpv): add search of input weight tensor
         return node_inputs[1]
 
-    @staticmethod
-    def get_node_index(model: onnx.ModelProto, node_name: str):
-        for i, node in enumerate(ONNXGraph.get_all_nodes(model)):
+    def get_node_index(self, node_name: str):
+        for i, node in enumerate(self.get_all_nodes()):
             if node.name == node_name:
                 return i
         return -1
 
-    @staticmethod
-    def get_initializers_value(model: onnx.ModelProto, initializer_name: str) -> np.ndarray:
+    def get_initializers_value(self, initializer_name: str) -> np.ndarray:
         """
         Returns tensor value of model's Initializer with the name equals to 'initializer_name'.
         """
-        for init in model.graph.initializer:
+        for init in self.onnx_model.graph.initializer:
             if init.name == initializer_name:
                 tensor = numpy_helper.to_array(init)
                 return tensor
         raise RuntimeError('There is no initializer with the name {}'.format(initializer_name))
 
-    @staticmethod
-    def get_initializer(model: onnx.ModelProto, initializer_name: str) -> np.ndarray:
+    def get_initializer(self, initializer_name: str) -> np.ndarray:
         """
         Returns model's Initializer with the name equals to 'initializer_name'.
         """
-        for init in model.graph.initializer:
+        for init in self.onnx_model.graph.initializer:
             if init.name == initializer_name:
                 return init
         raise RuntimeError('There is no initializer with the name {}'.format(initializer_name))
 
-    @staticmethod
-    def get_tensor_shape(tensor: ValueInfoProto) -> List[int]:
+    def get_tensor_shape(self, tensor: ValueInfoProto) -> List[int]:
         """
         Returns 'tensor' shape.
         """
@@ -228,35 +216,26 @@ class ONNXGraph:
             raise RuntimeError(f'The tensor {tensor.name} does not have shape field')
         return shape
 
-    @staticmethod
-    def get_edge_shape(model: onnx.ModelProto, edge_name: str) -> List[int]:
+    def get_edge_shape(self, edge_name: str) -> List[int]:
         """
         Returns tensor shape of the edge with the name 'edge_name'.
         """
-        activations_tensors = model.graph.value_info
-        inputs = model.graph.input
-        outputs = model.graph.output
-        for tensor in itertools.chain(activations_tensors, inputs, outputs):
+        for tensor in itertools.chain(self.activations_tensors, self.model_inputs, self.model_outputs):
             if tensor.name == edge_name:
-                return ONNXGraph.get_tensor_shape(tensor)
+                return self.get_tensor_shape(tensor)
         raise RuntimeError('There is no edge with the name {}'.format(edge_name))
 
-    @staticmethod
-    def get_edge_dtype(model: onnx.ModelProto, edge_name: str) -> int:
+    def get_edge_dtype(self, edge_name: str) -> int:
         """
         Returns the data type of the edge with the name 'edge_name'.
         """
-        activations_tensors = model.graph.value_info
-        inputs = model.graph.input
-        outputs = model.graph.output
-        for tensor in itertools.chain(activations_tensors, inputs, outputs):
+        for tensor in itertools.chain(self.activations_tensors, self.model_inputs, self.model_outputs):
             if tensor.name == edge_name:
                 return tensor.type.tensor_type.elem_type
         raise RuntimeError('There is no edge with the name {}'.format(edge_name))
 
-    @staticmethod
-    def get_edge_dtype_name(model: onnx.ModelProto, edge_name: str) -> str:
+    def get_edge_dtype_name(self, edge_name: str) -> str:
         """
         Returns the name of datatype of the edge with the name 'edge_name'.
         """
-        return onnx.TensorProto.DataType.Name(ONNXGraph.get_edge_dtype(model, edge_name))
+        return onnx.TensorProto.DataType.Name(self.get_edge_dtype(edge_name))
