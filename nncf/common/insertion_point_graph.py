@@ -38,10 +38,16 @@ class PreHookInsertionPoint:
         self.target_node_name = target_node_name
         self.input_port_id = input_port_id
 
+    def __str__(self):
+        return str(self.input_port_id) + ' ' + self.target_node_name
+
 
 class PostHookInsertionPoint:
     def __init__(self, target_node_name: str):
         self.target_node_name = target_node_name
+
+    def __str__(self):
+        return self.target_node_name
 
 
 class InsertionPointGraph(nx.DiGraph):
