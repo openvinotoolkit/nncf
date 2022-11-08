@@ -39,8 +39,7 @@ def test_compare_nncf_graph_synthetic_models(model_cls_to_test, generate_ref_gra
     data_dir = os.path.join(PROJECT_ROOT, REFERENCE_GRAPHS_TEST_ROOT)
     path_to_dot = os.path.abspath(os.path.join(data_dir, 'synthetic', model_to_test.path_ref_graph))
 
-    model = ONNXModelNormalizer.normalize_model(model_to_test.onnx_model)
-    nncf_graph = GraphConverter.create_nncf_graph(model)
+    nncf_graph = GraphConverter.create_nncf_graph(model_to_test.onnx_model)
     nx_graph = nncf_graph.get_graph_for_structure_analysis(extended=True)
 
     if generate_ref_graphs:

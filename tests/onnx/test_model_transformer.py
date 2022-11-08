@@ -27,7 +27,6 @@ from nncf.common.quantization.structs import QuantizationMode
 from nncf.experimental.onnx.graph.model_transformer import ONNXModelTransformer
 from nncf.experimental.onnx.graph.onnx_graph import ONNXGraph
 from nncf.experimental.post_training.algorithms.quantization.min_max.utils import QuantizerLayerParameters
-from nncf.experimental.onnx.model_normalizer import ONNXModelNormalizer
 
 from tests.onnx.models import LinearModel
 
@@ -40,7 +39,6 @@ QUANTIZER_NUMBER = [None, 1, 3]
                          zip(TARGET_LAYERS, SHOULD_RAISE_EXCEPTION, QUANTIZER_NUMBER))
 def test_quantizer_insertion(target_layers, should_raise, quantizer_number):
     model = LinearModel().onnx_model
-    model = ONNXModelNormalizer.normalize_model(model)
     transformation_layout = TransformationLayout()
 
     for target_layer in target_layers:
@@ -93,7 +91,6 @@ class QuantizerParameters:
                                                  QUANTIZER_MODE, QUANTIZER_ONNX_DTYPE, QUANTIZER_ONNX_ATTRIBUTES)])
 def test_inserted_quantizer_parameters(test_parameters):
     model = LinearModel().onnx_model
-    model = ONNXModelNormalizer.normalize_model(model)
     transformation_layout = TransformationLayout()
     quantizer_parameters = QuantizerLayerParameters(test_parameters.scale, test_parameters.zero_point,
                                                     test_parameters.mode)
@@ -126,7 +123,6 @@ TARGET_LAYERS_OUTPUT = [['ReLU1_Y'], ['Conv1_Y', 'BN1_Y'],  ['Conv1_Y', 'BN1_Y',
 @pytest.mark.parametrize('target_layers, target_layer_outputs', zip(TARGET_LAYERS, TARGET_LAYERS_OUTPUT))
 def test_output_insertion(target_layers, target_layer_outputs):
     model = LinearModel().onnx_model
-    model = ONNXModelNormalizer.normalize_model(model)
     transformation_layout = TransformationLayout()
     for target_layer in target_layers:
         target_point = ONNXTargetPoint(TargetType.POST_LAYER_OPERATION, target_layer)
@@ -138,7 +134,7 @@ def test_output_insertion(target_layers, target_layer_outputs):
     transformed_model = model_transformer.transform(transformation_layout)
     # TODO(kshpv): The problem occurs because shaope field is missing,
     #  but this is essential for some dynamic models such as Mask-RCNN
-    # onnx.checker.check_model(transformed_model)
+    #onnx.checker.check_model(transformed_model)
 
     onnx_graph = ONNXGraph(transformed_model)
     # Should be topologically sorted
@@ -152,7 +148,6 @@ BIAS_REFERENCES = [[2.0, 3.0]]
 @pytest.mark.parametrize('layers, values, refs', zip(CONV_LAYERS, BIAS_VALUES, BIAS_REFERENCES))
 def test_bias_correction(layers, values, refs):
     model = LinearModel().onnx_model
-    model = ONNXModelNormalizer.normalize_model(model)
     transformation_layout = TransformationLayout()
     for conv_layer, bias_value in zip(layers, values):
         target_point = ONNXTargetPoint(TargetType.LAYER, conv_layer)
