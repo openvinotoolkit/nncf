@@ -185,7 +185,6 @@ class SearchAlgorithm(BaseSearchAlgorithm):
         super().__init__()
         self._model = model
         self._elasticity_ctrl = elasticity_ctrl
-        self._elasticity_ctrl.multi_elasticity_handler.activate_maximum_subnet()
         search_config = nncf_config.get('bootstrapNAS', {}).get('search', {})
         self.num_obj = None
         self.search_params = SearchParams.from_dict(search_config)
@@ -217,7 +216,8 @@ class SearchAlgorithm(BaseSearchAlgorithm):
         self._result = None
         bn_adapt_params = search_config.get('batchnorm_adaptation', {})
         bn_adapt_algo_kwargs = get_bn_adapt_algo_kwargs(nncf_config, bn_adapt_params)
-        self.bn_adaptation = BatchnormAdaptationAlgorithm(**bn_adapt_algo_kwargs)
+        self.bn_adaptation = BatchnormAdaptationAlgorithm(**bn_adapt_algo_kwargs) if bn_adapt_algo_kwargs else None
+
         self._problem = None
         self.checkpoint_save_dir = None
         self.type_var = np.int
@@ -308,6 +308,7 @@ class SearchAlgorithm(BaseSearchAlgorithm):
         :return: Elasticity controller with discovered sub-network, sub-network configuration and
                 its performance metrics.
         """
+        self._elasticity_ctrl.multi_elasticity_handler.activate_maximum_subnet()
         nncf_logger.info("Searching for optimal subnet.")
         if ref_acc != 100:
             self.search_params.ref_acc = ref_acc
