@@ -33,7 +33,7 @@ REFERENCE_GRAPHS_DIR = ONNX_TEST_ROOT / 'data' / 'reference_graphs' / 'original_
 
 
 @pytest.mark.parametrize("model_cls_to_test", ALL_SYNTHETIC_MODELS.values())
-@pytest.mark.parametrize("generate_ref_graphs", [True])
+@pytest.mark.parametrize("generate_ref_graphs", [False])
 def test_compare_nncf_graph_synthetic_models(model_cls_to_test, generate_ref_graphs):
     model_to_test = model_cls_to_test()
     path_to_dot = REFERENCE_GRAPHS_DIR / 'synthetic' / model_to_test.path_ref_graph
@@ -61,7 +61,7 @@ def test_compare_nncf_graph_synthetic_models(model_cls_to_test, generate_ref_gra
                           (ModelToTest('mnasnet0_5', [1, 3, 224, 224]), models.mnasnet0_5()),
                           ]
                          )
-@pytest.mark.parametrize("generate_ref_graphs", [True])
+@pytest.mark.parametrize("generate_ref_graphs", [False])
 def test_compare_nncf_graph_classification_real_models(tmp_path, model_to_test, model, generate_ref_graphs):
     if model_to_test.model_name in ['inception_v3', 'googlenet', 'vgg16']:
         pytest.skip('Ticket 96177')
@@ -97,7 +97,7 @@ def test_compare_nncf_graph_classification_real_models(tmp_path, model_to_test, 
                           ModelToTest('fcn-resnet50-12', [1, 3, 480, 640])
                           ]
                          )
-@pytest.mark.parametrize("generate_ref_graphs", [True])
+@pytest.mark.parametrize("generate_ref_graphs", [False])
 def test_compare_nncf_graph_detection_real_models(tmp_path, model_to_test, generate_ref_graphs):
     onnx_model_dir = TEST_ROOT / 'onnx' / 'data' / 'models'
     onnx_model_path = onnx_model_dir / (model_to_test.model_name + '.onnx')

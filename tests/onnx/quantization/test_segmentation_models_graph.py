@@ -22,7 +22,7 @@ from tests.onnx.quantization.common import min_max_quantize_model
 
 
 @pytest.mark.parametrize(('model_to_test'),
-                         [#ModelToTest('icnet_camvid', [1, 3, 768, 960]),
+                         [ModelToTest('icnet_camvid', [1, 3, 768, 960]),
                           ModelToTest('unet_camvid', [1, 3, 368, 480]),
                           ]
                          )
@@ -31,6 +31,5 @@ def test_min_max_quantization_graph(tmp_path, model_to_test):
 
     original_model = onnx.load(onnx_model_path)
     quantized_model = min_max_quantize_model(model_to_test.input_shape, original_model)
-    compare_nncf_graph(quantized_model, model_to_test.path_ref_graph, True)
-    onnx.save_model(quantized_model, 'unet_int8.onnx')
+    compare_nncf_graph(quantized_model, model_to_test.path_ref_graph)
     infer_model(model_to_test.input_shape, quantized_model)
