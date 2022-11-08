@@ -34,7 +34,6 @@ from nncf.experimental.post_training.algorithms.quantization import PostTraining
 from nncf.experimental.onnx.graph.nncf_graph_builder import GraphConverter
 from nncf.experimental.onnx.tensor import ONNXNNCFTensor
 from nncf.experimental.onnx.graph.onnx_graph import ONNXGraph
-from nncf.experimental.onnx.model_normalizer import ONNXModelNormalizer
 
 REFERENCE_GRAPHS_TEST_ROOT = 'data/reference_graphs/quantization'
 
@@ -138,6 +137,7 @@ def infer_model(input_shape: List[int], quantized_model: onnx.ModelProto) -> Non
     _input = np.random.random(input_shape)
     input_name = sess.get_inputs()[0].name
     _ = sess.run([], {input_name: _input.astype(input_np_dtype)})
+
 
 def find_ignored_scopes(disallowed_op_types: List[str], model: onnx.ModelProto) -> List[str]:
     disallowed_op_types = set(disallowed_op_types)

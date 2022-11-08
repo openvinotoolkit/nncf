@@ -197,7 +197,7 @@ class GraphConverter:
                 output_node_id = nncf_graph.get_node_by_name(output_node.name).node_id
                 try:
                     onnx_dtype = onnx_graph.get_edge_dtype_name(output_edge)
-                except RuntimeError as e:
+                except RuntimeError:
                     # If this edge was not added during inference
                     continue
                 nncf_dtype = GraphConverter.convert_onnx_dtype_to_nncf_dtype(onnx_dtype)
