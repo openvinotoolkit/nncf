@@ -269,10 +269,3 @@ class ONNXGraph:
         Returns the name of datatype of the edge with the name 'edge_name'.
         """
         return onnx.TensorProto.DataType.Name(self.get_edge_dtype(edge_name))
-
-    def get_output_nodes(self, node_name: str) -> List[NodeProto]:
-        output = []
-        node_edges = self.get_node_edges(node_name)['output']
-        for node_edge in node_edges:
-            output.extend(self.get_nodes_by_input(node_edge))
-        return output

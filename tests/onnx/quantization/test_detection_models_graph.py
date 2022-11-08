@@ -55,5 +55,11 @@ def test_min_max_quantization_graph(tmp_path, model_to_test):
                                              convert_opset_version=convert_opset_version,
                                              ignored_scopes=ignored_scopes,
                                              dataset_has_batch_size=dataset_has_batch_size)
-    compare_nncf_graph(quantized_model, model_to_test.path_ref_graph)
+    compare_nncf_graph(quantized_model, model_to_test.path_ref_graph, True)
+    onnx.save_model(quantized_model, 'ssd_mobilenet_v1_12_int8.onnx')
     infer_model(model_to_test.input_shape, quantized_model)
+
+
+def test_i():
+    quantized_model = onnx.load_model('ssd_mobilenet_v1_12_int8.onnx')
+    infer_model([1, 300, 300, 3], quantized_model)
