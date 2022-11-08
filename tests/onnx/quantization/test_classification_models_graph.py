@@ -41,8 +41,6 @@ from tests.onnx.quantization.common import infer_model
                           ]
                          )
 def test_min_max_quantization_graph(tmp_path, model_to_test, model):
-    if model_to_test.model_name == 'shufflenet_v2_x1_0':
-        pytest.skip('While inferencing the model error occured.')
     onnx_model_dir = str(TEST_ROOT.joinpath('onnx', 'data', 'models'))
     onnx_model_path = str(TEST_ROOT.joinpath(onnx_model_dir, model_to_test.model_name))
     if not os.path.isdir(onnx_model_dir):
