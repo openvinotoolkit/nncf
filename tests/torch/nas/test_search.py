@@ -19,10 +19,7 @@ from typing import NamedTuple
 import pytest
 
 from nncf import NNCFConfig
-from nncf.experimental.torch.nas.bootstrapNAS.elasticity.elasticity_controller import ElasticityController
-from nncf.experimental.torch.nas.bootstrapNAS.search.search import ValFnType, DataLoaderType
-from nncf.torch.nncf_network import NNCFNetwork
-from tests.torch.nas.test_all_elasticity import fixture_nas_model_name  # pylint: disable=unused-import
+from nncf.experimental.torch.nas.bootstrapNAS.search.search import DataLoaderType
 from nncf.config.structures import BNAdaptationInitArgs
 from nncf.experimental.torch.nas.bootstrapNAS import SearchAlgorithm
 from nncf.experimental.torch.nas.bootstrapNAS.elasticity.elasticity_dim import ElasticityDim
@@ -32,6 +29,7 @@ from tests.torch.nas.creators import NAS_MODEL_DESCS
 from tests.torch.nas.creators import create_bnas_model_and_ctrl_by_test_desc
 from tests.torch.nas.creators import create_bootstrap_training_model_and_ctrl
 from tests.torch.nas.models.synthetic import ThreeConvModel
+from tests.torch.nas.test_all_elasticity import fixture_nas_model_name  # pylint: disable=unused-import
 
 
 class SearchTestDesc(NamedTuple):

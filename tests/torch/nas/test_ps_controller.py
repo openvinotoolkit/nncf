@@ -36,7 +36,7 @@ from nncf.torch.nncf_network import NNCFNetwork
 from tests.torch.helpers import create_ones_mock_dataloader, MockModel
 from tests.torch.nas.creators import create_bnas_model_and_ctrl_by_test_desc
 from tests.torch.nas.models.synthetic import ThreeConvModel
-from tests.torch.nas.test_scheduler import fixture_schedule_params
+from tests.torch.nas.test_scheduler import fixture_schedule_params # pylint: disable=unused-import
 
 
 class PSControllerTestDesc(NamedTuple):
@@ -93,7 +93,7 @@ class TestProgressiveTrainingController:
                                      algo_params={'width': {'min_width': 1, 'width_step': 1}},
                                      input_sizes=ThreeConvModel.INPUT_SIZE,
                                      )
-        nncf_network, ctrl, nncf_config = prepare_test_model(test_desc)
+        _, _, nncf_config = prepare_test_model(test_desc)
         update_train_bn_adapt_section(nncf_config, is_called)
         bn_adapt_run_patch = mocker.patch(
             "nncf.common.initialization.batchnorm_adaptation.BatchnormAdaptationAlgorithm.run")
