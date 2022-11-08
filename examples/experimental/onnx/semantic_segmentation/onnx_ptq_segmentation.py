@@ -19,7 +19,7 @@ from nncf.quantization.compression_builder import CompressionBuilder
 from nncf.quantization.algorithms import DefaultQuantization
 from nncf.quantization.algorithms import DefaultQuantizationParameters
 from nncf.experimental.onnx.common import infer_input_shape
-from nncf.experimental.onnx.datasets.segmentation_dataset import create_dataloader, create_dataset
+from examples.experimental.onnx.semantic_segmentation.segmentation_dataset import create_dataloader, create_dataset
 from examples.experimental.onnx.common.argparser import get_common_argument_parser
 
 
