@@ -83,7 +83,7 @@ MOVEMENT_SPARSITY_SCHEMA = {
                     "update_per_optimizer_step": with_attributes(BOOLEAN,
                                                                  description="Whether the function-based sparsity level schedulers "
                                                                              "should update the sparsity level after each optimizer "
-                                                                             "step instead of each epoch step."),
+                                                                             "step instead of each epoch step."), # TODO(yujie): remove this after checking the test configs 
                 },
                 "additionalProperties": False
             },

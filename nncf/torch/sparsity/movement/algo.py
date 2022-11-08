@@ -46,11 +46,13 @@ from nncf.experimental.torch.search_building_blocks.search_blocks import Buildin
 from collections import defaultdict, namedtuple
 from nncf.torch.dynamic_graph.operation_address import OperationAddress
 import networkx as nx
-from nncf.torch.layers import NNCF_MODULES_OP_NAMES
+from nncf.torch.layers import NNCF_MODULES_OP_NAMES, NNCFLinear
 import os
 import numpy as np
 import pandas as pd
 from nncf.torch.sparsity.movement.structured_mask_strategy import STRUCTURED_MASK_STRATEGY, detect_supported_model_family
+
+SUPPORTED_NNCF_MODULES = [NNCFLinear]
 
 @PT_COMPRESSION_ALGORITHMS.register('movement_sparsity')
 class MovementSparsityBuilder(BaseSparsityAlgoBuilder):
@@ -62,7 +64,7 @@ class MovementSparsityBuilder(BaseSparsityAlgoBuilder):
     def _sparsify_weights(self, target_model: NNCFNetwork) -> List[PTInsertionCommand]:
         device = get_model_device(target_model)
         sparsified_module_nodes = target_model.get_weighted_original_graph_nodes(
-            nncf_module_names=self.compressed_nncf_module_names)
+            nncf_module_names=[m.__name__ for m in SUPPORTED_NNCF_MODULES])
         insertion_commands = []
         for module_node in sparsified_module_nodes:
             node_name = module_node.node_name
@@ -133,16 +135,13 @@ class MovementSparsityController(BaseSparsityAlgoController):
         self.prunable_sparsified_module_info_groups = self._get_group_of_prunable_sparsified_module_info()
 
         if self._scheduler.enable_structured_masking:
-            model_family = params.get('model_family', 'auto')
-            if model_family == 'auto':
-                model_family = detect_supported_model_family(self.model)
+            model_family = detect_supported_model_family(self.model)
             if model_family not in STRUCTURED_MASK_STRATEGY.registry_dict:
-                nncf_logger.warning('No supported model for structured masking. Disable structured_masking by force.')
-                self._scheduler.enable_structured_masking = False
-            else:
-                strategy_cls = STRUCTURED_MASK_STRATEGY.get(model_family)
-                structured_mask_strategy = strategy_cls.from_compressed_model(self.model)
-                self._structured_mask_handler = StructuredMaskHandler(self.prunable_sparsified_module_info_groups, structured_mask_strategy)
+                raise RuntimeError("You set `enable_structured_masking=True`, but no supported model is detected. "
+                                   "Supported model families: {}".format(list(STRUCTURED_MASK_STRATEGY.keys())))
+            strategy_cls = STRUCTURED_MASK_STRATEGY.get(model_family)
+            structured_mask_strategy = strategy_cls.from_compressed_model(self.model)
+            self._structured_mask_handler = StructuredMaskHandler(self.prunable_sparsified_module_info_groups, structured_mask_strategy)
 
     def compression_stage(self) -> CompressionStage:
         # if self._mode == 'local':
@@ -208,12 +207,15 @@ class MovementSparsityController(BaseSparsityAlgoController):
         return nncf_stats
 
     def reset_independent_structured_mask(self):
+        assert self._scheduler.enable_structured_masking is True
         self._structured_mask_handler.update_independent_structured_mask()
 
     def resolve_structured_mask(self):
+        assert self._scheduler.enable_structured_masking is True
         self._structured_mask_handler.resolve_dependent_structured_mask()
 
     def populate_structured_mask(self):
+        assert self._scheduler.enable_structured_masking is True
         self._structured_mask_handler.populate_dependent_structured_mask_to_operand()
 
     def report_structured_sparsity(self, dirname):
@@ -361,7 +363,7 @@ class MovementSparsityController(BaseSparsityAlgoController):
         for group_id, building_block in enumerate(building_blocks):
             sparsified_module_info = []
             for op_addr in building_block.op_addresses:
-                if op_addr.operator_name in 'linear':
+                if op_addr.operator_name in [m.op_func_name for m in SUPPORTED_NNCF_MODULES]:
                     module = self.model.get_module_by_scope(op_addr.scope_in_model)
                     module_info = module_2_sparse_module_info_map[module]
                     sparsified_module_info.append(module_info)

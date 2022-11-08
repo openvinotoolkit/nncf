@@ -71,7 +71,7 @@ class ConfigBuilder:
                 {"mode": "per_dim", "axis": 0, "target_scopes": "{re}.*BertIntermediate.*"},
                 {"mode": "per_dim", "axis": 1, "target_scopes": "{re}.*BertOutput.*"},
             ],
-            "ignored_scopes": ["{re}embedding", "{re}pooler", "{re}classifier", "{re}LayerNorm"],
+            "ignored_scopes": ["{re}embedding", "{re}pooler", "{re}classifier"],
         }
         assert len(set(overrides.keys()) - set(self._current_args.keys())) == 0
         self.update(**overrides)

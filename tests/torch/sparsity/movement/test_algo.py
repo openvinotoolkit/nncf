@@ -19,6 +19,7 @@ from nncf.common.sparsity.schedulers import PolynomialThresholdScheduler
 from nncf.common.sparsity.statistics import MovementSparsityStatistics
 from nncf.common.utils.helpers import matches_any
 from nncf.common.utils.helpers import should_consider_scope
+from nncf.common.utils.registry import Registry
 from nncf.torch import create_compressed_model
 from nncf.torch.layer_utils import CompressionParameter
 from nncf.torch.layers import NNCFLinear
@@ -27,8 +28,9 @@ from nncf.torch.sparsity.movement.algo import ImportanceLoss
 from nncf.torch.sparsity.movement.algo import MovementSparsifier
 from nncf.torch.sparsity.movement.algo import MovementSparsityController
 from nncf.torch.sparsity.movement.algo import SparseStructure
-from nncf.torch.sparsity.movement.structured_mask_strategy import HuggingFaceBertStructuredMaskStrategy
-from nncf.torch.sparsity.movement.structured_mask_handler import StructuredMaskContext
+from nncf.torch.sparsity.movement.algo import SUPPORTED_NNCF_MODULES
+from nncf.torch.sparsity.movement.structured_mask_strategy import STRUCTURED_MASK_STRATEGY
+from nncf.torch.sparsity.movement.structured_mask_handler import StructuredMaskContext, StructuredMaskHandler
 from nncf.torch.sparsity.movement.layers import SparseConfig
 from nncf.torch.sparsity.movement.layers import SparseConfigByScope
 from tests.torch.sparsity.movement.helpers import BaseCallback
@@ -96,12 +98,8 @@ def test_can_create_movement_sparsity_layers(tmp_path, nncf_config_builder):
     assert isinstance(compression_ctrl.scheduler, PolynomialThresholdScheduler)
 
     for scope, module in compressed_model.get_nncf_modules().items():
-        if not should_consider_scope(str(scope), nncf_config_builder.get('ignored_scopes')):
-            if hasattr(module, 'pre_ops'):
-                for op in module.pre_ops.values():
-                    assert (not isinstance(op, UpdateWeightAndBias)) or (not isinstance(op.operand, MovementSparsifier))
-        else:
-            count_movement_op = 0
+        count_movement_op = 0
+        if hasattr(module, 'pre_ops'):
             for op in module.pre_ops.values():
                 if isinstance(op, UpdateWeightAndBias) and isinstance(op.operand, MovementSparsifier):
                     count_movement_op += 1
@@ -114,24 +112,32 @@ def test_can_create_movement_sparsity_layers(tmp_path, nncf_config_builder):
                             break  # only test the first matched expression. Need tests to confirm only one matched expression matched for each layer.
                     else:
                         check_sparsified_layer_mode(sparsifier, module, SparseConfig(SparseStructure.FINE, (1, 1)))
+        if should_consider_scope(str(scope), nncf_config_builder.get('ignored_scopes')) and isinstance(module, tuple(SUPPORTED_NNCF_MODULES)):
             assert count_movement_op == 1
+        else:
+            assert count_movement_op == 0
 
-
-def test_can_create_structured_masks(tmp_path):
-    # TODO: The structured mask part is in active refactor. Further changes are expected.
+@pytest.mark.parametrize('enable_structured_masking', [True, False])
+@pytest.mark.parametrize(('model_obj', 'ref_supported_model_family'), [
+    (bert_tiny_torch_model(), 'huggingface_bert'),
+])
+def test_can_create_structured_mask_handler_if_supported(tmp_path, enable_structured_masking: bool, model_obj, ref_supported_model_family):
     # TODO: unit test for handler
-    nncf_config = ConfigBuilder(sparse_structure_by_scopes=[]).build(log_dir=tmp_path)
-    compression_ctrl, compressed_model = create_compressed_model(bert_tiny_unpretrained(), nncf_config)
-    assert hasattr(compression_ctrl, '_structured_mask_handler')
-    structured_mask_handler = compression_ctrl._structured_mask_handler
-    assert isinstance(structured_mask_handler.strategy, HuggingFaceBertStructuredMaskStrategy)
-    assert len(structured_mask_handler._structured_mask_ctx_by_group_type) == 2
-    for group_type, ctxes in structured_mask_handler._structured_mask_ctx_by_group_type:
-        # assert group_type in [BuildingBlockType.MSHA, BuildingBlockType.FF]
-        for ctx in ctxes:
-            assert isinstance(ctx, StructuredMaskContext)
-    # We currenltly do not check value correctness of `ctx.(in)dependent_mask` because they are internal variables.
-    # See `test_controller_structured_mask_filling`.
+    # TODO: add more cases to check
+    nncf_config = ConfigBuilder(sparse_structure_by_scopes=[], enable_structured_masking=enable_structured_masking).build(log_dir=tmp_path)
+    if enable_structured_masking is True:
+        if ref_supported_model_family in STRUCTURED_MASK_STRATEGY.registry_dict:
+            compression_ctrl, compressed_model = create_compressed_model(model_obj, nncf_config)
+            assert hasattr(compression_ctrl, '_structured_mask_handler')
+            assert isinstance(compression_ctrl._structured_mask_handler, StructuredMaskHandler)
+            assert isinstance(compression_ctrl._structured_mask_handler.strategy, STRUCTURED_MASK_STRATEGY.get(ref_supported_model_family))
+        else:
+            with pytest.raises(RuntimeError, match=r".*no supported model.*"):
+                create_compressed_model(model_obj, nncf_config)
+    else:
+        compression_ctrl, compressed_model = create_compressed_model(model_obj, nncf_config)
+        assert (not hasattr(compression_ctrl, '_structured_mask_handler')) or compression_ctrl._structured_mask_handler is None
+
 
 
 

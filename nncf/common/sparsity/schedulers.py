@@ -351,15 +351,18 @@ class PolynomialThresholdScheduler(BaseCompressionScheduler):
         """
         super().__init__()
         self._controller = controller
-        self.init_importance_threshold: float = params.get('init_importance_threshold', 0.0)
-        self.final_importance_threshold: float = params.get('final_importance_threshold', 0.1)
+        self.init_importance_threshold: float = params.get('init_importance_threshold', -1.)
+        self.final_importance_threshold: float = params.get('final_importance_threshold', 0.)
         self.warmup_start_epoch: int = params.get('warmup_start_epoch', 0)
         self.warmup_end_epoch: int = params.get('warmup_end_epoch', 0)
-        self.importance_target_lambda: float = params.get('importance_regularization_factor', 1.0)
+        self.importance_target_lambda: float = params.get('importance_regularization_factor', 0.1)
         self.enable_structured_masking: bool = params.get('enable_structured_masking', True)
-        self.current_importance_threshold = self.init_importance_threshold
-        self._cached_importance_threshold = None
-        self._is_importance_frozen = False
+        self._steps_per_epoch = params.get('steps_per_epoch', None)
+
+        if self._steps_per_epoch is None and self.warmup_start_epoch < 1:
+            raise ValueError('`warmup_start_epoch` must be >= 1 in order to enable the auto calculation of `steps_per_epoch`. '
+                             'Please either change `warmup_start_epoch` to a larger number or specify `steps_per_epoch` in the config.'
+            )
 
         self.schedule = PolynomialDecaySchedule(
             self.init_importance_threshold,
@@ -368,10 +371,10 @@ class PolynomialThresholdScheduler(BaseCompressionScheduler):
             params.get('power', 3),
             params.get('concave', True)
         )
-
+        self.current_importance_threshold = self.init_importance_threshold
+        self._cached_importance_threshold = None
+        self._is_importance_frozen = False
         self._steps_in_current_epoch = 0
-        self._update_per_optimizer_step = params.get('update_per_optimizer_step', False)
-        self._steps_per_epoch = params.get('steps_per_epoch', None)
         self._should_skip = False
 
     @property
@@ -389,11 +392,11 @@ class PolynomialThresholdScheduler(BaseCompressionScheduler):
         self.cached_importance_threshold = self.current_importance_threshold
 
     def epoch_step(self, next_epoch: Optional[int] = None) -> None:
+        super().epoch_step(next_epoch)
         self._maybe_should_skip()
         self._steps_in_current_epoch = 0
         if self._should_skip:
             return
-        super().epoch_step(next_epoch)
         self.schedule_threshold(self.current_step + 1) # useful when update_per_optimizer_step=False
 
     def step(self, next_step: Optional[int] = None) -> None:
@@ -401,9 +404,7 @@ class PolynomialThresholdScheduler(BaseCompressionScheduler):
         self._steps_in_current_epoch += 1
         if self._should_skip:
             return
-
-        if self._update_per_optimizer_step:
-            self.schedule_threshold(self.current_step)
+        self.schedule_threshold(self.current_step)
 
     def schedule_threshold(self, global_step: Optional[int] = None):
         if global_step is None:
@@ -432,18 +433,16 @@ class PolynomialThresholdScheduler(BaseCompressionScheduler):
 
     def load_state(self, state: Dict[str, Any]) -> None:
         super().load_state(state)
-        if self._update_per_optimizer_step:
-            self._steps_per_epoch = state['_steps_per_epoch']
-            if self._steps_per_epoch is None:  # It is the first epoch and `steps_per_epoch` not specified
-                self._steps_in_current_epoch = self._current_step + 1
-                self._should_skip = True
-            else:
-                self._steps_in_current_epoch = self._current_step % self._steps_per_epoch + 1
+        self._steps_per_epoch = state['_steps_per_epoch']
+        if self._steps_per_epoch is None:  # It is the first epoch and `steps_per_epoch` not specified
+            self._steps_in_current_epoch = self._current_step + 1
+            self._should_skip = True
+        else:
+            self._steps_in_current_epoch = self._current_step % self._steps_per_epoch + 1
 
     def get_state(self) -> Dict[str, Any]:
         state = super().get_state()
-        if self._update_per_optimizer_step:
-            state['_steps_per_epoch'] = self._steps_per_epoch
+        state['_steps_per_epoch'] = self._steps_per_epoch
         return state
 
     def _maybe_should_skip(self) -> None:
@@ -453,18 +452,18 @@ class PolynomialThresholdScheduler(BaseCompressionScheduler):
         of the scheduler object will not be changed.
         """
         self._should_skip = False
-        if self._update_per_optimizer_step:
-            if self._steps_per_epoch is None and self._steps_in_current_epoch > 0:
-                self._steps_per_epoch = self._steps_in_current_epoch
 
-            if self._steps_per_epoch is not None and self._steps_in_current_epoch > 0:
-                if self._steps_per_epoch != self._steps_in_current_epoch:
-                    raise Exception('Actual steps per epoch and steps per epoch from the scheduler '
-                                    'parameters are different. Scheduling may be incorrect.')
+        if self._steps_per_epoch is None and self._steps_in_current_epoch > 0:
+            self._steps_per_epoch = self._steps_in_current_epoch
 
-            if self._steps_per_epoch is None:
-                self._should_skip = True
-                logger.warning('Scheduler set to update sparsity level per optimizer step, '
-                               'but steps_per_epoch was not set in config. Will only start updating '
-                               'sparsity level after measuring the actual steps per epoch as signaled '
-                               'by a .epoch_step() call.')
+        if self._steps_per_epoch is not None and self._steps_in_current_epoch > 0:
+            if self._steps_per_epoch != self._steps_in_current_epoch:
+                raise Exception('Actual steps per epoch and steps per epoch from the scheduler '
+                                'parameters are different. Scheduling may be incorrect.')
+
+        if self._steps_per_epoch is None:
+            self._should_skip = True
+            logger.warning('Scheduler set to update sparsity level per optimizer step, '
+                            'but steps_per_epoch was not set in config. Will only start updating '
+                            'sparsity level after measuring the actual steps per epoch as signaled '
+                            'by a .epoch_step() call.')

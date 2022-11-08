@@ -17,7 +17,6 @@ class SchedulerParams:
                  final_importance_threshold: float = 0.0,
                  importance_regularization_factor: float = 0.1,
                  steps_per_epoch: Optional[int] = 4,
-                 update_per_optimizer_step: bool = True,
                  enable_structured_masking: bool = True):
         self.power = power
         self.warmup_start_epoch = warmup_start_epoch
@@ -26,7 +25,6 @@ class SchedulerParams:
         self.final_importance_threshold = final_importance_threshold
         self.importance_regularization_factor = importance_regularization_factor
         self.steps_per_epoch = steps_per_epoch
-        self.update_per_optimizer_step = update_per_optimizer_step
         self.enable_structured_masking = enable_structured_masking
 
 
@@ -34,9 +32,6 @@ class SchedulerParams:
     (SchedulerParams(2, 1, 3, -1, 0, 0.1, 4),  # normal use
      [-1., -1., -1., -1., -1., -0.7656, -0.5625, -0.3906, -0.2500, -0.1406, -0.0625, -0.0156, 0., 0., 0., 0., 0., 0., 0., 0.],
      [0., 0., 0., 0., 0., 0.0234, 0.0438, 0.0609, 0.0750, 0.0859, 0.0938, 0.0984, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1]),
-    (SchedulerParams(3, 0, 5, 1, 3, 1, 4, False),  # full range warmup, with update on epoch step
-     [1.0, 1.0, 1.0, 1.0, 1.9760, 1.9760, 1.9760, 1.9760, 2.5680, 2.5680, 2.5680, 2.5680, 2.8720, 2.8720, 2.8720, 2.8720, 2.9840, 2.9840, 2.9840, 2.9840],
-     [0., 0., 0., 0., 0.4880, 0.4880, 0.4880, 0.4880, 0.7840, 0.7840, 0.7840, 0.7840, 0.9360, 0.9360, 0.9360, 0.9360, 0.9920, 0.9920, 0.9920, 0.9920]),
     (SchedulerParams(4, 2, 8, 0, 5, 10, 3),  # warm up range overflow
      [0., 0., 0., 0., 0., 0., 0., 1.0219, 1.8785, 2.5887, 3.1702, 3.6396, 4.0123, 4.3027, 4.5237],
      [0., 0., 0., 0., 0., 0., 0., 2.0438, 3.7570, 5.1775, 6.3405, 7.2793, 8.0247, 8.6053, 9.0474]),
@@ -141,3 +136,9 @@ def test_scheduler_can_infer_steps_per_epoch():
     scheduler.step()
     assert scheduler.current_importance_threshold == threshold_after_6_step_calls
     assert scheduler.current_importance_lambda == factor_after_6_step_calls
+
+
+def test_scheduler_raises_error_of_improper_steps_per_epoch_setting():
+    params = SchedulerParams(warmup_start_epoch=0, steps_per_epoch=None)
+    with pytest.raises(ValueError):    
+        _ = PolynomialThresholdScheduler(controller=MagicMock(), params=params.__dict__)
