@@ -11,8 +11,6 @@
  limitations under the License.
 """
 
-import warnings
-
 import torch
 
 from nncf.common.utils.logger import logger as nncf_logger
