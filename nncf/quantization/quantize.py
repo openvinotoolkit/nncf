@@ -65,16 +65,16 @@ def quantize(model: TModel,
     if backend == BackendType.ONNX:
         from nncf.onnx.quantization.quantize import quantize_impl
         return quantize_impl(model, calibration_dataset, preset, target_device, subset_size,
-                             fast_bias_correction, model_type)
+                             fast_bias_correction, model_type, ignored_scope)
 
     if backend == BackendType.TENSORFLOW:
         from nncf.tensorflow.quantization.quantize import quantize_impl
         return quantize_impl(model, calibration_dataset, preset, target_device, subset_size,
-                             fast_bias_correction, model_type)
+                             fast_bias_correction, model_type, ignored_scope)
 
     if backend == BackendType.TORCH:
         from nncf.torch.quantization.quantize import quantize_impl
         return quantize_impl(model, calibration_dataset, preset, target_device, subset_size,
-                             fast_bias_correction, model_type)
+                             fast_bias_correction, model_type, ignored_scope)
 
     raise RuntimeError(f'Unsupported type of backend: {backend}')

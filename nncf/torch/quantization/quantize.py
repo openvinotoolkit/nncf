@@ -20,6 +20,8 @@ from nncf.config import NNCFConfig
 from nncf.config.structures import BNAdaptationInitArgs
 from nncf.config.structures import QuantizationRangeInitArgs
 from nncf.data import Dataset
+from nncf.parameters import convert_ignored_scope_to_list
+from nncf.parameters import IgnoredScope
 from nncf.parameters import ModelType
 from nncf.parameters import TargetDevice
 from nncf.torch.dynamic_graph.io_handling import wrap_nncf_model_inputs_with_objwalk
@@ -114,7 +116,8 @@ def _get_default_quantization_config(preset: QuantizationPreset,
 def _create_nncf_config(preset: QuantizationPreset,
                         target_device: TargetDevice,
                         subset_size: int,
-                        model_type: Optional[ModelType]) -> NNCFConfig:
+                        model_type: Optional[ModelType],
+                        ignored_scope: Optional[IgnoredScope]) -> NNCFConfig:
     """
     :return: The NNCFConfig for quantization method.
     """
@@ -122,6 +125,13 @@ def _create_nncf_config(preset: QuantizationPreset,
         compression_config = _get_default_quantization_config(preset, subset_size)
     elif model_type == ModelType.TRANSFORMER:
         compression_config = _get_transformer_quantization_config(subset_size)
+    
+    if ignored_scope is not None:
+        _ignored_scope = convert_ignored_scope_to_list(ignored_scope)
+        if 'ignored_scopes' in compression_config:
+            compression_config['ignored_scopes'].extend(_ignored_scope)
+        else:
+            compression_config['ignored_scopes'] = _ignored_scope
 
     return NNCFConfig({
         'target_device': target_device.value,
@@ -135,14 +145,21 @@ def quantize_impl(model: torch.nn.Module,
                   target_device: TargetDevice,
                   subset_size: int,
                   fast_bias_correction: bool,
-                  model_type: Optional[ModelType] = None) -> torch.nn.Module:
+                  model_type: Optional[ModelType] = None,
+                  ignored_scope: Optional[IgnoredScope] = None) -> torch.nn.Module:
     """
     Implementation of the `quantize()` method for the PyTorch backend.
     """
     if fast_bias_correction is False:
-        raise ValueError(f'fast_bias_correction={fast_bias_correction} is not supported')
+        raise ValueError(f'fast_bias_correction={fast_bias_correction} is not '
+                          'supported')
+    if ignored_scope is not None and ignored_scope.types is not None:
+        raise RuntimeError('Quantization algorithm form the PyTorch backend '
+                            'does not support operation types in the ignored '
+                            'scopes yet')
 
-    nncf_config = _create_nncf_config(preset, target_device, subset_size, model_type)
+    nncf_config = _create_nncf_config(preset, target_device, subset_size,
+                                      model_type, ignored_scope)
 
     calibration_data_loader = CalibrarionDataLoader(calibration_dataset)
     nncf_config.register_extra_structs(

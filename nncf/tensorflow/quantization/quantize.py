@@ -22,6 +22,8 @@ from nncf.config.structures import BNAdaptationInitArgs
 from nncf.config.structures import QuantizationRangeInitArgs
 from nncf.data import Dataset
 from nncf.data.dataset import DataProvider
+from nncf.parameters import convert_ignored_scope_to_list
+from nncf.parameters import IgnoredScope
 from nncf.parameters import ModelType
 from nncf.parameters import TargetDevice
 from nncf.tensorflow.helpers.model_creation import create_compressed_model
@@ -66,30 +68,37 @@ def quantize_impl(model: tf.Module,
                   target_device: TargetDevice,
                   subset_size: int,
                   fast_bias_correction: bool,
-                  model_type: Optional[ModelType] = None) -> tf.Module:
+                  model_type: Optional[ModelType] = None,
+                  ignored_scope: Optional[IgnoredScope] = None) -> tf.Module:
     """
     Implementation of the `quantize()` method for the TensorFlow backend.
     """
     if model_type is not None:
         raise ValueError(f'model_type={model_type} is not supported')
     if fast_bias_correction is False:
-        raise ValueError(f'fast_bias_correction={fast_bias_correction} is not supported')
+        raise ValueError(f'fast_bias_correction={fast_bias_correction} is not '
+                          'supported')
+    if ignored_scope is not None and ignored_scope.types is not None:
+        raise RuntimeError('Quantization algorithm form the TensorFlow backend '
+                            'does not support operation types in the ignored '
+                            'scopes yet')
 
     nncf_config = NNCFConfig(
         {
-            "target_device": target_device.value,
-            "compression": {
-                "algorithm": "quantization",
-                "preset": preset.value,
-                "initializer": {
-                    "range": {
-                        "num_init_samples": subset_size
+            'target_device': target_device.value,
+            'compression': {
+                'algorithm': 'quantization',
+                'preset': preset.value,
+                'initializer': {
+                    'range': {
+                        'num_init_samples': subset_size
                     },
-                    "batchnorm_adaptation": {
-                        "num_bn_adaptation_samples": subset_size
+                    'batchnorm_adaptation': {
+                        'num_bn_adaptation_samples': subset_size
                     }
                 },
-                "overflow_fix": "first_layer_only"
+                'overflow_fix': 'first_layer_only',
+                'ignored_scopes': convert_ignored_scope_to_list(ignored_scope)
             }
         }
     )
