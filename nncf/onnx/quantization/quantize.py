@@ -30,8 +30,8 @@ from nncf.experimental.post_training.compression_builder import CompressionBuild
 
 
 # TODO(alexsu52): It is a workaround and should be removed.
-# ONNX expects the dataset instance with following implemented interfaces 
-# https://github.com/openvinotoolkit/nncf/blob/develop/nncf/experimental/post_training/api/dataset.py. 
+# ONNX expects the dataset instance with following implemented interfaces
+# https://github.com/openvinotoolkit/nncf/blob/develop/nncf/experimental/post_training/api/dataset.py.
 # Thus the intermediate class is needed to run quantization in ONNX backend.
 class ONNXDataset(PTQDataset):
     """
@@ -109,7 +109,7 @@ def quantize_impl(model: onnx.ModelProto,
         raise ValueError(f'fast_bias_correction={fast_bias_correction} is not '
                           'supported')
     if ignored_scope is not None and ignored_scope.types is not None:
-        raise RuntimeError('Quantization algorithm form the ONNX backend '
+        raise RuntimeError('Quantization algorithm from the ONNX backend '
                            'does not support operation types in the ignored '
                            'scopes yet')
 

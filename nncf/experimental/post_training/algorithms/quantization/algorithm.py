@@ -89,12 +89,12 @@ class PostTrainingQuantization(CompositeAlgorithm):
         super().__init__()
         self.algorithms_to_created = quantization_parameters.algorithms
 
-    def _apply(self, model: TModel, engine: Engine, statistic_points: StatisticPointsContainer) ->TModel:
+    def _apply(self, model: TModel, engine: Engine, statistic_points: StatisticPointsContainer) -> TModel:
         for algorithm in self.algorithms:
             model = algorithm.apply(model, engine, statistic_points)
         return model
 
-    def get_statistic_points(self, model:TModel) -> StatisticPointsContainer:
+    def get_statistic_points(self, model: TModel) -> StatisticPointsContainer:
         output = StatisticPointsContainer()
         for algorithm in self.algorithms:
             for statistic_points in algorithm.get_statistic_points(model).values():

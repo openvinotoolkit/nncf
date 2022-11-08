@@ -152,7 +152,7 @@ def validate(model: ov.Model,
         if i % print_freq == 0 or i + 1 == num_items:
             output = [f'{i + 1}/{num_items}:']
             for m in metrics:
-                  output.append(f'{m.name}: {m.result():.4f}')
+                output.append(f'{m.name}: {m.result():.4f}')
             print(' '.join(output))
 
     return metrics[0].result(), metrics[1].result()

@@ -98,7 +98,7 @@ class IgnoredScope:
 
 def convert_ignored_scope_to_list(ignored_scope: Optional[IgnoredScope]) -> List[str]:
     """
-    Convert the contents of the `IgnoredScope` class to the legacy ignored 
+    Convert the contents of the `IgnoredScope` class to the legacy ignored
     scope format.
 
     :param ignored_scope: The ignored scope

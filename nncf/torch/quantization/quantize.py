@@ -125,7 +125,7 @@ def _create_nncf_config(preset: QuantizationPreset,
         compression_config = _get_default_quantization_config(preset, subset_size)
     elif model_type == ModelType.TRANSFORMER:
         compression_config = _get_transformer_quantization_config(subset_size)
-    
+
     if ignored_scope is not None:
         _ignored_scope = convert_ignored_scope_to_list(ignored_scope)
         if 'ignored_scopes' in compression_config:
@@ -154,7 +154,7 @@ def quantize_impl(model: torch.nn.Module,
         raise ValueError(f'fast_bias_correction={fast_bias_correction} is not '
                           'supported')
     if ignored_scope is not None and ignored_scope.types is not None:
-        raise RuntimeError('Quantization algorithm form the PyTorch backend '
+        raise RuntimeError('Quantization algorithm from the PyTorch backend '
                             'does not support operation types in the ignored '
                             'scopes yet')
 
