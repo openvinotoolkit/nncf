@@ -54,4 +54,5 @@ def test_min_max_quantization_graph(tmp_path, model_to_test, model):
     original_model = onnx.load(onnx_model_path)
     quantized_model = min_max_quantize_model(model_to_test.input_shape, original_model)
     compare_nncf_graph(quantized_model, model_to_test.path_ref_graph)
-    infer_model(model_to_test.input_shape, quantized_model)
+    # Ticket 96177
+    # infer_model(model_to_test.input_shape, quantized_model)
