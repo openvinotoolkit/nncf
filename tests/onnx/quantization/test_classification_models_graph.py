@@ -41,16 +41,18 @@ from tests.onnx.quantization.common import infer_model
                           ]
                          )
 def test_min_max_quantization_graph(tmp_path, model_to_test, model):
+    if model_to_test.model_name in ['inception_v3', 'googlenet', 'vgg16']:
+        pytest.skip('Ticket 96177')
     onnx_model_dir = str(TEST_ROOT.joinpath('onnx', 'data', 'models'))
     onnx_model_path = str(TEST_ROOT.joinpath(onnx_model_dir, model_to_test.model_name))
     if not os.path.isdir(onnx_model_dir):
         os.mkdir(onnx_model_dir)
     x = torch.randn(model_to_test.input_shape, requires_grad=False)
+    # Ticket 96177
     torch.onnx.export(model, x, onnx_model_path, opset_version=13, training=torch.onnx.TrainingMode.TRAINING)
 
     original_model = onnx.load(onnx_model_path)
     onnx.save_model(original_model, 'resnet18.onnx')
     quantized_model = min_max_quantize_model(model_to_test.input_shape, original_model)
-    # compare_nncf_graph(quantized_model, model_to_test.path_ref_graph)
-    # infer_model(model_to_test.input_shape, quantized_model)
-    onnx.save_model(quantized_model, 'resnet18_int8.onnx')
+    compare_nncf_graph(quantized_model, model_to_test.path_ref_graph)
+    infer_model(model_to_test.input_shape, quantized_model)

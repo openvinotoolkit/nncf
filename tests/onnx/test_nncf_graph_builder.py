@@ -63,12 +63,15 @@ def test_compare_nncf_graph_synthetic_models(model_cls_to_test, generate_ref_gra
                          )
 @pytest.mark.parametrize("generate_ref_graphs", [True])
 def test_compare_nncf_graph_classification_real_models(tmp_path, model_to_test, model, generate_ref_graphs):
+    if model_to_test.model_name in ['inception_v3', 'googlenet', 'vgg16']:
+        pytest.skip('Ticket 96177')
     onnx_model_dir = TEST_ROOT / 'onnx' / 'data' / 'models'
     onnx_model_path = onnx_model_dir / model_to_test.model_name
     if not os.path.isdir(onnx_model_dir):
         os.mkdir(onnx_model_dir)
     x = torch.randn(model_to_test.input_shape, requires_grad=False)
-    torch.onnx.export(model, x, onnx_model_path, opset_version=13)
+    # Ticket 96177
+    torch.onnx.export(model, x, onnx_model_path, opset_version=13, training=torch.onnx.TrainingMode.TRAINING)
 
     original_model = onnx.load(onnx_model_path)
     original_model = ONNXModelNormalizer.normalize_model(original_model)
