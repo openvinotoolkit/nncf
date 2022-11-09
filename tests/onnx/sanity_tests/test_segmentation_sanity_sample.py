@@ -63,6 +63,8 @@ def mock_dataloader_creator(dataset_name, dataset_path, input_name, input_shape)
     'create_dataset_from_segmentation_torch_dataset',
     new=mock_dataloader_creator)
 def test_sanity_quantize_sample(tmp_path, model_name, input_shape):
+    if model_name == 'unet_camvid':
+        pytest.skip('Ticket 96049')
     onnx_model_dir = TEST_ROOT / 'onnx' / 'data' / 'models'
     onnx_model_path = onnx_model_dir / (model_name + '.onnx')
     if not os.path.isdir(onnx_model_dir):
