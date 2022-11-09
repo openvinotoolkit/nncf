@@ -16,7 +16,6 @@ from typing import Tuple
 from unittest.mock import patch
 
 import numpy as np
-import onnxruntime as rt
 import pytest
 import torch
 from torchvision import models

@@ -24,7 +24,6 @@ from tests.common.paths import TEST_ROOT
 from tests.onnx.quantization.common import ModelToTest
 from tests.onnx.quantization.common import min_max_quantize_model
 from tests.onnx.quantization.common import compare_nncf_graph
-from tests.onnx.quantization.common import infer_model
 
 
 @pytest.mark.parametrize(('model_to_test', 'model'),
