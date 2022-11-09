@@ -20,7 +20,7 @@ import numpy as np
 from nncf.experimental.onnx.model_normalizer import ONNXModelNormalizer
 
 
-# pylint: disable=no-member, too-many-public-methods
+# pylint: disable=no-member
 
 class ONNXGraph:
     """
@@ -32,7 +32,7 @@ class ONNXGraph:
         self._node_name_to_node = None  # type: Dict[str, onnx.onnx.NodeProto]
         self._activations_tensor_name_to_value_info = None  # type: Dict[str, onnx.onnx.ValueInfoProto]
 
-    def _update_activation_tensors(self, do_shape_inference: bool = False):
+    def _update_activation_tensors(self, do_shape_inference: bool = False) -> None:
         if do_shape_inference:
             self.onnx_model = ONNXModelNormalizer.infer_models_shape(self.onnx_model)
         self._activations_tensor_name_to_value_info = {tensor.name: tensor for tensor in
@@ -42,12 +42,13 @@ class ONNXGraph:
         self._activations_tensor_name_to_value_info.update(model_inputs_name_to_value_info)
         self._activations_tensor_name_to_value_info.update(model_outputs_name_to_value_info)
 
-    def _update_node_names(self):
+    def _update_node_names(self) -> None:
         self._node_name_to_node = {n.name: n for n in self.onnx_model.graph.node}
 
     def get_all_nodes(self) -> List[onnx.NodeProto]:
         """
         Returns model nodes in the original order.
+
         :return: model nodes.
         """
         return self.onnx_model.graph.node
@@ -57,6 +58,7 @@ class ONNXGraph:
         Returns a model node with the name equals to 'node_name' from self._node_name_to_node.
         If the self._node_name_to_node is None, fills it with the nodes from the self.onnx_model.
         If there is no node with such name returns None.
+
         :param node_name: Name of the node.
         :return: None if the node with the specified name exists - otherwise returns the node.
         """
@@ -67,6 +69,7 @@ class ONNXGraph:
     def get_model_inputs(self) -> List[onnx.ValueInfoProto]:
         """
         Returns all model inputs.
+
         :return: Model Inputs.
         """
         inputs = []
@@ -81,6 +84,7 @@ class ONNXGraph:
     def get_model_outputs(self) -> List[onnx.ValueInfoProto]:
         """
         Returns all model outputs.
+
         :return: Model Outputs.
         """
         return list(self.onnx_model.graph.output)
@@ -88,6 +92,7 @@ class ONNXGraph:
     def get_nodes_by_output(self, output_name: str) -> List[onnx.NodeProto]:
         """
         Returns all nodes that have output edge with the name 'output_name'.
+
         :param output_name: The name of output edge.
         :return: Nodes with corresponding output.
         """
@@ -96,12 +101,14 @@ class ONNXGraph:
     def get_nodes_by_input(self, input_name: str) -> List[onnx.NodeProto]:
         """
         Returns all nodes that have input with the name 'input_name'.
+
         :param input_name: The name of input edge.
         :return: Nodes with corresponding input.
         """
         return self._get_nodes_by_lambda(input_name, lambda node: node.input)
 
-    def _get_nodes_by_lambda(self, name: str, func: Callable[[onnx.NodeProto], List[onnx.NodeProto]]):
+    def _get_nodes_by_lambda(self, name: str, func: Callable[[onnx.NodeProto], List[onnx.NodeProto]]) -> List[
+        onnx.NodeProto]:
         output = []
         for node in self.get_all_nodes():
             if name in func(node):
@@ -111,6 +118,7 @@ class ONNXGraph:
     def get_node_edge_names(self, node_name: str) -> Dict[str, List[str]]:
         """
         Returns node edge names.
+
         :param node_name: The name of the node.
         :return: Dict with two keys: 'input' and 'output',
         which are corresponding to input and output edges accordingly.
@@ -126,6 +134,7 @@ class ONNXGraph:
     def get_input_port_id_for_node_after_input(input_name: str, to_node: onnx.NodeProto) -> int:
         """
         Returns input_port_id for 'to_node' connected with the model input with the name 'input_name'.
+
         :param input_name: Name of the ONNX model Input.
         :param to_node: Node, which has input edge with 'input_name' name.
         :return: input port number for 'to_node', which is connected to 'input_name'.
@@ -139,6 +148,7 @@ class ONNXGraph:
     def get_output_port_id_for_node_before_output(output_name: str, from_node: onnx.NodeProto) -> int:
         """
         Returns output_port_id for 'from_node' connected with the model output with the name 'output_name'.
+
         :param output_name: Name of the ONNX model Output.
         :param from_node: Node, which has output edge with 'output_name' name.
         :return: output port number for 'from_node', which is connected to 'output_name'.
@@ -152,6 +162,7 @@ class ONNXGraph:
     def get_port_ids_between_nodes(from_node: onnx.NodeProto, to_node: onnx.NodeProto) -> Dict[str, int]:
         """
         Returns input_port_id and output_port_id between 'from_node' and 'to_node'.
+
         :param from_node: Node, whose output is connected to 'to_node' node.
         :param to_node: Node, whose input is connected to 'from_node' node.
         :return: Dict{'input_port_id': input port id, 'output_port_id': output port id}
@@ -170,6 +181,7 @@ class ONNXGraph:
     def get_nodes_by_type(self, node_type: str) -> List[onnx.NodeProto]:
         """
         Returns all nodes in the model that have type equal to 'node_type'.
+
         :param node_type: Type of the nodes.
         :return: All nodes with the corresponding type.
         """
@@ -183,6 +195,7 @@ class ONNXGraph:
         # TODO(kshpv): add search of input weight tensor
         """
         Returns weight tensor name from the 1-index.
+
         :param node_name: Name of the node.
         :return: Weight tensor name.
         """
@@ -190,9 +203,10 @@ class ONNXGraph:
         weight_tensor = node_inputs[1]
         return weight_tensor
 
-    def get_node_index(self, node_name: str):
+    def get_node_index(self, node_name: str) -> int:
         """
         Returns the node index in the model.
+
         :param node_name: Name of the node.
         :return: Node index, -1 if there is no such node.
         """
@@ -204,6 +218,7 @@ class ONNXGraph:
     def get_initializers_value(self, initializer_name: str) -> np.ndarray:
         """
         Returns tensor value of model's Initializer with the name equals to 'initializer_name'.
+
         :param initializer_name: Name of the tensor.
         :return: The value of the tensor.
         """
@@ -216,6 +231,7 @@ class ONNXGraph:
     def get_initializer(self, initializer_name: str) -> onnx.TensorProto:
         """
         Returns model's Initializer with the name equals to 'initializer_name'.
+
         :param initializer_name: Name of the Initializer.
         :return: The Initializer.
         """
@@ -228,6 +244,7 @@ class ONNXGraph:
     def get_tensor_shape(tensor: onnx.ValueInfoProto) -> List[int]:
         """
         Returns 'tensor' shape.
+
         :param tensor: The tensor.
         :return: Shape of the Tensor.
         """
@@ -257,6 +274,7 @@ class ONNXGraph:
         If the activations tensors were not filled in self._activations_tensor_name_to_value_info, it updates them.
         If after updating of the self._activations_tensor_name_to_value_info, there is still no such tensor,
         do shape inference of the model.
+
         :param edge_name: The name of the edge.
         :return: Shape of the tensor on that edge.
         """
@@ -275,6 +293,7 @@ class ONNXGraph:
         If the activations tensors were not filled in self._activations_tensor_name_to_value_info, it updates them.
         If after updating of the self._activations_tensor_name_to_value_info, there is still no such tensor,
         do shape inference of the model.
+
         :param edge_name: The name of the edge.
         :return: Shape of the tensor on that edge.
         """
@@ -290,6 +309,7 @@ class ONNXGraph:
     def get_edge_dtype_name(self, edge_name: str) -> str:
         """
         Returns the name of datatype of the edge with the name 'edge_name'.
+
         :param edge_name: The name of the edge.
         :return: The Name of the datatype.
         """
