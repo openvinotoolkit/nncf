@@ -45,10 +45,6 @@ from nncf.common.accuracy_aware_training.runner import BaseAccuracyAwareTraining
 from nncf.common.accuracy_aware_training.runner import BaseAdaptiveCompressionLevelTrainingRunner
 
 
-# TODO: add type hints
-# TODO: condition logging messages on self.verbose
-# TODO: check tensorboard logs
-
 class PTAccuracyAwareTrainingRunner(BaseAccuracyAwareTrainingRunner):
     """
     BaseAccuracyAwareTrainingRunner
@@ -62,7 +58,6 @@ class PTAccuracyAwareTrainingRunner(BaseAccuracyAwareTrainingRunner):
 
         self.base_lr_reduction_factor_during_search = 1.0
         self.lr_updates_needed = lr_updates_needed
-        # TODO: is it possible to provide these in the constructor instead of assigning from .run() later on?
         self.load_checkpoint_fn = None
         self.early_stopping_fn = None
         self.update_learning_rate_fn = None
@@ -75,10 +70,10 @@ class PTAccuracyAwareTrainingRunner(BaseAccuracyAwareTrainingRunner):
                                              tensorboard_writer=tensorboard_writer, log_dir=log_dir)
         self._log_dir = self._log_dir if self._log_dir is not None \
             else os.path.join(os.getcwd(), 'runs')
-        # TODO:
-        #  1) checkpoints are saved to log_dir, but not to config.checkpoint_save_dir
-        #  2) resulting log_dir path:
-        #       'runs/resnet18_cifar10_filter_pruning/2022-10-27__23-19-45/accuracy_aware_training/2022-10-27__23-19-45'
+        self._log_dir = configure_accuracy_aware_paths(self._log_dir)
+        self._checkpoint_save_dir = self._log_dir
+        if self._tensorboard_writer is None and TENSORBOARD_AVAILABLE:
+            self._tensorboard_writer = SummaryWriter(self._log_dir)
         if is_main_process():
             # Only the main process should create a log directory
             self._log_dir = configure_accuracy_aware_paths(self._log_dir)
@@ -97,7 +92,6 @@ class PTAccuracyAwareTrainingRunner(BaseAccuracyAwareTrainingRunner):
 
     def train_epoch(self, model, compression_controller):
         compression_controller.scheduler.epoch_step()
-        # TODO: fix type hint for *_fns so that argument names are specified
         # assuming that epoch number is only used for logging in train_fn:
         self._train_epoch_fn(compression_controller,
                              model,
@@ -108,9 +102,7 @@ class PTAccuracyAwareTrainingRunner(BaseAccuracyAwareTrainingRunner):
         self.cumulative_epoch_count += 1
 
     def validate(self, model):
-        # TODO: this method should only compute and return the accuracy on the validation dataset
         with torch.no_grad():
-            # TODO: fix type hint for *_fns so that argument names are specified
             self.current_val_metric_value = self._validate_fn(model, epoch=self.cumulative_epoch_count)
         is_better_by_accuracy = (not self.is_higher_metric_better) != (
                 self.current_val_metric_value > self.best_val_metric_value)
@@ -129,7 +121,6 @@ class PTAccuracyAwareTrainingRunner(BaseAccuracyAwareTrainingRunner):
                                          self.training_epoch_count,
                                          self.current_val_metric_value)
         else:
-            # FIXME:"The epoch parameter in `scheduler.step()` was not necessary and is being deprecated where possible"
             if self.lr_scheduler is not None and self.lr_updates_needed:
                 self.lr_scheduler.step(
                     self.training_epoch_count if not isinstance(self.lr_scheduler, ReduceLROnPlateau)
@@ -161,8 +152,6 @@ class PTAccuracyAwareTrainingRunner(BaseAccuracyAwareTrainingRunner):
 
         self.training_epoch_count = 0
         self.best_val_metric_value = 0
-        # TODO: introducing a differentiation by compression rates for best val metric instead of zeroing it out will
-        #   make an algorithm more flexible
         self.current_val_metric_value = 0
 
     def dump_statistics(self, model, compression_controller):
@@ -174,13 +163,11 @@ class PTAccuracyAwareTrainingRunner(BaseAccuracyAwareTrainingRunner):
         if self.verbose:
             nncf_logger.info(statistics.to_str())
 
-        # TODO: pylint Expected type 'NNCFStatistics', got 'Statistics' instead
         for key, value in prepare_for_tensorboard(statistics).items():
             if isinstance(value, (int, float)):
                 self.add_tensorboard_scalar('compression/statistics/{0}'.format(key),
                                             value, self.cumulative_epoch_count)
 
-        # TODO: we shouldn't dump checkpoint here / rename the method to .dump_statistics_and_checkpoint()
         self.dump_checkpoint(model, compression_controller)
 
     def _save_best_checkpoint(self, checkpoint_path):
@@ -193,11 +180,6 @@ class PTAccuracyAwareTrainingRunner(BaseAccuracyAwareTrainingRunner):
     def dump_checkpoint(self, model, compression_controller):
         if not is_main_process():
             return
-
-        # TODO: remove CompressionStage.FULLY_COMPRESSED? Ideally, we should save the best model even if we have not
-        #   fully compressed the model yet.
-        #  Additionally, for AdaptiveCompression loop where compression rate frequently changes, FULLY_COMPRESSED state
-        #   does not make a lot of sense.
         is_best_checkpoint = (self.best_val_metric_value == self.current_val_metric_value and
                               compression_controller.compression_stage() == CompressionStage.FULLY_COMPRESSED)
         if not self.dump_checkpoints and not is_best_checkpoint:
@@ -277,16 +259,6 @@ class PTAdaptiveCompressionLevelTrainingRunner(PTAccuracyAwareTrainingRunner,
                  maximal_compression_rate=0.95,
                  dump_checkpoints=True):
 
-        # TODO: PTAccuracyAwareTrainingRunner and BaseAdaptiveCompressionLevelTrainingRunner have a common parent of
-        #       BaseAccuracyAwareTrainingRunner. Due to explicit __init__ calls BAATR constructor is called twice.
-        #       This is not critical but not clean.
-        #   Call order:
-        #        1. PTAdaptiveCompressionLevelTrainingRunner()
-        #        2.     PTAccuracyAwareTrainingRunner()
-        #        3.         BaseAdaptiveCompressionLevelTrainingRunner()
-        #        4.             BaseAccuracyAwareTrainingRunner()   !
-        #        5.     BaseAdaptiveCompressionLevelTrainingRunner()
-        #        6.         BaseAccuracyAwareTrainingRunner()   !
         PTAccuracyAwareTrainingRunner.__init__(self, accuracy_aware_training_params,
                                                lr_updates_needed, verbose,
                                                dump_checkpoints)
@@ -301,12 +273,10 @@ class PTAdaptiveCompressionLevelTrainingRunner(PTAccuracyAwareTrainingRunner,
         if not is_main_process():
             return
 
-        # TODO: .update_training_history() call does not belong here as it is not part of dumping statistics
         self.update_training_history(self.compression_rate_target, self.current_val_metric_value)
         super().dump_statistics(model, compression_controller)
 
     def _save_best_checkpoint(self, checkpoint_path):
-        # TODO: does not seem to differ a lot from the parent implementation, possible to combine?
         best_checkpoint_filename = 'acc_aware_checkpoint_best_compression_rate_' \
                                    '{comp_rate:.3f}.pth'.format(comp_rate=self.compression_rate_target)
         best_path = osp.join(self._checkpoint_save_dir, best_checkpoint_filename)
@@ -318,8 +288,6 @@ class PTAdaptiveCompressionLevelTrainingRunner(PTAccuracyAwareTrainingRunner,
         # load checkpoint with the highest compression rate and positive acc budget
         possible_checkpoint_rates = self.get_compression_rates_with_positive_acc_budget()
         if len(possible_checkpoint_rates) == 0:
-            # TODO: 'Increasing the number of training epochs': checkpoint loading method should not lead to
-            #   this kind of logs; move this part out from this method / rephrase the log message
             nncf_logger.warning('Could not produce a compressed model satisfying the set accuracy '
                                 'degradation criterion during training. Increasing the number of training '
                                 'epochs')
@@ -328,7 +296,6 @@ class PTAdaptiveCompressionLevelTrainingRunner(PTAccuracyAwareTrainingRunner,
         best_checkpoint_compression_rate = max(possible_checkpoint_rates)
         if best_checkpoint_compression_rate not in self._best_checkpoints:
             # The checkpoint wasn't saved because it was not fully compressed
-            # TODO: we should save these checkpoints nevertheless as they still may be useful to the user
             return
 
         resuming_checkpoint_path = self._best_checkpoints[best_checkpoint_compression_rate]

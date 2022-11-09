@@ -129,7 +129,6 @@ class TrainingRunner(ABC):
         set the obtained value to the `minimal_tolerable_accuracy` attribute of the TrainingRunner.
         """
 
-    # TODO: use typing_extensions.Protocol to define signature of *_fns with specified keyword arguments
     @abstractmethod
     def initialize_training_loop_fns(self, train_epoch_fn: Callable[[CompressionAlgorithmController, TModel,
                                                                      Optional[OptimizerType],
