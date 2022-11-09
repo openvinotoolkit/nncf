@@ -122,7 +122,8 @@ class ONNXGraph:
                     'output': list(self._node_name_to_node[node_name].output)}
         raise RuntimeError('There is no node with the name {}'.format(node_name))
 
-    def get_input_port_id_for_node_after_input(self, input_name: str, to_node: onnx.NodeProto) -> int:
+    @staticmethod
+    def get_input_port_id_for_node_after_input(input_name: str, to_node: onnx.NodeProto) -> int:
         """
         Returns input_port_id for 'to_node' connected with the model input with the name 'input_name'.
         :param input_name: Name of the ONNX model Input.
@@ -134,7 +135,8 @@ class ONNXGraph:
                 return input_port_id
         raise RuntimeError(f'The node {to_node} does not have input edge with the name {input_name}')
 
-    def get_output_port_id_for_node_before_output(self, output_name: str, from_node: onnx.NodeProto) -> int:
+    @staticmethod
+    def get_output_port_id_for_node_before_output(output_name: str, from_node: onnx.NodeProto) -> int:
         """
         Returns output_port_id for 'from_node' connected with the model output with the name 'output_name'.
         :param output_name: Name of the ONNX model Output.
@@ -146,7 +148,8 @@ class ONNXGraph:
                 return output_port_id
         raise RuntimeError(f'The node {from_node} does not have output edge with the name {output_name}')
 
-    def get_port_ids_between_nodes(self, from_node: onnx.NodeProto, to_node: onnx.NodeProto) -> Dict[str, int]:
+    @staticmethod
+    def get_port_ids_between_nodes(from_node: onnx.NodeProto, to_node: onnx.NodeProto) -> Dict[str, int]:
         """
         Returns input_port_id and output_port_id between 'from_node' and 'to_node'.
         :param from_node: Node, whose output is connected to 'to_node' node.
@@ -221,7 +224,8 @@ class ONNXGraph:
                 return init
         raise RuntimeError('There is no initializer with the name {}'.format(initializer_name))
 
-    def get_tensor_shape(self, tensor: onnx.ValueInfoProto) -> List[int]:
+    @staticmethod
+    def get_tensor_shape(tensor: onnx.ValueInfoProto) -> List[int]:
         """
         Returns 'tensor' shape.
         :param tensor: The tensor.
@@ -259,10 +263,10 @@ class ONNXGraph:
         if self._activations_tensor_name_to_value_info is None:
             self._update_activation_tensors()
         if edge_name in self._activations_tensor_name_to_value_info:
-            return self.get_tensor_shape(self._activations_tensor_name_to_value_info[edge_name])
+            return ONNXGraph.get_tensor_shape(self._activations_tensor_name_to_value_info[edge_name])
         self._update_activation_tensors(do_shape_inference=True)
         if edge_name in self._activations_tensor_name_to_value_info:
-            return self.get_tensor_shape(self._activations_tensor_name_to_value_info[edge_name])
+            return ONNXGraph.get_tensor_shape(self._activations_tensor_name_to_value_info[edge_name])
         raise RuntimeError('There is no edge with the name {}'.format(edge_name))
 
     def get_edge_dtype(self, edge_name: str) -> int:
