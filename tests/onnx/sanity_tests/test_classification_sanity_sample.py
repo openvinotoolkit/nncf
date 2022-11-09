@@ -80,6 +80,8 @@ def mock_dataset_creator(dataset_path, input_name, input_shape, batch_size, shuf
 @patch('examples.experimental.onnx.classification.onnx_ptq_classification.create_imagenet_torch_dataset',
        new=mock_dataset_creator)
 def test_sanity_quantize_sample(tmp_path, model_name, model, input_shape):
+    if model_name in ['inception_v3', 'googlenet']:
+        pytest.skip('Ticket 96177')
     onnx_model_path = ONNX_MODEL_DIR / (model_name + '.onnx')
     x = torch.randn(input_shape, requires_grad=False)
     # Ticket 96177
