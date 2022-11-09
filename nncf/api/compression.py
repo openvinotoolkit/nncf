@@ -19,7 +19,7 @@ from nncf.api.statistics import Statistics
 from nncf.common.graph.transformations.layout import TransformationLayout
 from nncf.common.utils.ordered_enum import OrderedEnum
 
-ModelType = TypeVar('ModelType')
+TModel = TypeVar('TModel')
 
 
 class CompressionLoss(ABC):
@@ -158,7 +158,7 @@ class CompressionAlgorithmController(ABC):
     compression scheduler and compression loss.
     """
 
-    def __init__(self, target_model: ModelType):
+    def __init__(self, target_model: TModel):
         """
         Initializes the internal state of the compression algorithm controller.
 
@@ -169,7 +169,7 @@ class CompressionAlgorithmController(ABC):
         self._model = target_model
 
     @property
-    def model(self) -> ModelType:
+    def model(self) -> TModel:
         """
         :return: The target model.
         """
@@ -277,7 +277,7 @@ class CompressionAlgorithmController(ABC):
                 - ({'x': None, 'y': y},) for keyword arguments only.
         """
 
-    def strip_model(self, model: ModelType) -> ModelType:
+    def strip_model(self, model: TModel) -> TModel:
         """
         Strips auxiliary layers that were used for the model compression, as it's
         only needed for training. The method is used before exporting the model
@@ -331,7 +331,7 @@ class CompressionAlgorithmBuilder(ABC):
         """
 
     @abstractmethod
-    def apply_to(self, model: ModelType) -> ModelType:
+    def apply_to(self, model: TModel) -> TModel:
         """
         Applies algorithm-specific modifications to the model.
 
@@ -341,7 +341,7 @@ class CompressionAlgorithmBuilder(ABC):
         """
 
     @abstractmethod
-    def build_controller(self, model: ModelType) -> CompressionAlgorithmController:
+    def build_controller(self, model: TModel) -> CompressionAlgorithmController:
         """
         Builds `CompressionAlgorithmController` to handle the additional modules,
         parameters, and hooks inserted into the model to enable algorithm-specific
@@ -353,7 +353,7 @@ class CompressionAlgorithmBuilder(ABC):
         """
 
     @abstractmethod
-    def get_transformation_layout(self, model: ModelType) -> TransformationLayout:
+    def get_transformation_layout(self, model: TModel) -> TransformationLayout:
         """
         Computes necessary model transformations to enable algorithm-specific
         compression.
@@ -364,7 +364,7 @@ class CompressionAlgorithmBuilder(ABC):
         """
 
     @abstractmethod
-    def initialize(self, model: ModelType) -> None:
+    def initialize(self, model: TModel) -> None:
         """
         Initialize model parameters before training
 

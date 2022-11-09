@@ -17,7 +17,7 @@ from typing import Optional
 
 import math
 
-from nncf.api.compression import ModelType
+from nncf.api.compression import TModel
 from nncf.common.initialization.dataloader import NNCFDataLoader
 from nncf.common.utils.backend import BackendType
 from nncf.common.utils.backend import get_backend
@@ -48,7 +48,7 @@ class BatchnormAdaptationAlgorithmImpl(ABC):
         self._device = device
 
     @abstractmethod
-    def run(self, model: ModelType) -> None:
+    def run(self, model: TModel) -> None:
         """
         Runs the batch-norm statistics adaptation algorithm. This method contains the implementation
         of the algorithm.
@@ -85,7 +85,7 @@ class BatchnormAdaptationAlgorithm:
         self._data_loader = data_loader
         self._num_bn_adaptation_steps = math.ceil(num_bn_adaptation_samples / data_loader.batch_size)
 
-    def run(self, model: ModelType) -> None:
+    def run(self, model: TModel) -> None:
         """
         Runs the batch-norm statistics adaptation algorithm.
 

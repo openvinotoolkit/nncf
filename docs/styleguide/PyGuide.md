@@ -592,7 +592,7 @@ class ModelTransformer:
     :param public_attribute: Public attribute description
     """
 
-    def __init__(self, model: ModelType, transformation_layout: TransformationLayout):
+    def __init__(self, model: TModel, transformation_layout: TransformationLayout):
         """
         :param model: The model to be transformed
         :param transformation_layout: An instance of `TransformationLayout` that
@@ -602,7 +602,7 @@ class ModelTransformer:
         self._transformations = transformation_layout.transformations
         self.public_attribute = None
 
-    def transform(self) -> ModelType:
+    def transform(self) -> TModel:
         """
         Applies transformations to the model.
 

@@ -21,7 +21,7 @@ from nncf.tensorflow.algorithm_selector import get_compression_algorithm_builder
 from nncf.tensorflow.api.compression import TFCompressionAlgorithmBuilder
 from nncf.tensorflow.graph.transformations.layout import TFTransformationLayout
 
-ModelType = TypeVar('ModelType')
+TModel = TypeVar('TModel')
 
 
 class TFCompositeCompressionAlgorithmBuilder(
@@ -37,18 +37,18 @@ class TFCompositeCompressionAlgorithmBuilder(
             algo_builder_cls = get_compression_algorithm_builder(algo_name)
             self._child_builders.append(algo_builder_cls(config, should_init=should_init))
 
-    def _build_controller(self, model: ModelType) -> CompositeCompressionAlgorithmController:
+    def _build_controller(self, model: TModel) -> CompositeCompressionAlgorithmController:
         composite_ctrl = CompositeCompressionAlgorithmController(model)
         for builder in self.child_builders:
             composite_ctrl.add(builder.build_controller(model))
         return composite_ctrl
 
-    def get_transformation_layout(self, model: ModelType) -> TFTransformationLayout:
+    def get_transformation_layout(self, model: TModel) -> TFTransformationLayout:
         transformations = TFTransformationLayout()
         for builder in self.child_builders:
             transformations.update(builder.get_transformation_layout(model))
         return transformations
 
-    def initialize(self, model: ModelType) -> None:
+    def initialize(self, model: TModel) -> None:
         for builder in self.child_builders:
             builder.initialize(model)

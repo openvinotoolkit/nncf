@@ -23,7 +23,7 @@ from nncf.api.compression import CompressionAlgorithmController
 from nncf.api.compression import CompressionLoss
 from nncf.api.compression import CompressionScheduler
 from nncf.api.compression import CompressionStage
-from nncf.api.compression import ModelType
+from nncf.api.compression import TModel
 from nncf.common.statistics import NNCFStatistics
 from nncf.common.utils.backend import BackendType
 from nncf.common.utils.backend import get_backend
@@ -166,7 +166,7 @@ class CompositeCompressionAlgorithmController(CompressionAlgorithmController):
     BUILDER_STATE = 'builder_state'
     CONTROLLER_STATE = 'ctrl_state'
 
-    def __init__(self, target_model: ModelType):
+    def __init__(self, target_model: TModel):
         """
         Initializes the internal state of the composite compression algorithm
         controller.

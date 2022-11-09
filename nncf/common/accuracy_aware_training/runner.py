@@ -30,7 +30,7 @@ from nncf.config.schemata.defaults import AA_MAXIMAL_TOTAL_EPOCHS
 from nncf.config.schemata.defaults import AA_MINIMAL_COMPRESSION_RATE_STEP
 from nncf.config.schemata.defaults import AA_PATIENCE_EPOCHS
 
-ModelType = TypeVar('ModelType')
+TModel = TypeVar('TModel')
 OptimizerType = TypeVar('OptimizerType')
 LRSchedulerType = TypeVar('LRSchedulerType')
 TensorboardWriterType = TypeVar('TensorboardWriterType')
@@ -47,7 +47,7 @@ class TrainingRunner(ABC):
     minimal_tolerable_accuracy: float
 
     @abstractmethod
-    def train_epoch(self, model: ModelType, compression_controller: CompressionAlgorithmController) -> None:
+    def train_epoch(self, model: TModel, compression_controller: CompressionAlgorithmController) -> None:
         """
         Calls train_epoch_fn and compression_controller.scheduler.epoch_step()
 
@@ -57,7 +57,7 @@ class TrainingRunner(ABC):
         """
 
     @abstractmethod
-    def validate(self, model: ModelType) -> float:
+    def validate(self, model: TModel) -> float:
         """
         Compute the target metric value on the validation dataset for the supplied model.
 
@@ -66,7 +66,7 @@ class TrainingRunner(ABC):
         """
 
     @abstractmethod
-    def dump_statistics(self, model: ModelType, compression_controller: CompressionAlgorithmController) -> None:
+    def dump_statistics(self, model: TModel, compression_controller: CompressionAlgorithmController) -> None:
         """
         Dumps current statistics from compression_controller and dumps model's checkpoint.
 
@@ -76,7 +76,7 @@ class TrainingRunner(ABC):
         """
 
     @abstractmethod
-    def dump_checkpoint(self, model: ModelType, compression_controller: CompressionAlgorithmController) -> None:
+    def dump_checkpoint(self, model: TModel, compression_controller: CompressionAlgorithmController) -> None:
         """
         Dump current model checkpoint on disk.
 
@@ -104,7 +104,7 @@ class TrainingRunner(ABC):
         """
 
     @abstractmethod
-    def retrieve_uncompressed_model_accuracy(self, model: ModelType) -> None:
+    def retrieve_uncompressed_model_accuracy(self, model: TModel) -> None:
         """
         :param model: The model object to retrieve the original accuracy value from.
 
@@ -122,14 +122,14 @@ class TrainingRunner(ABC):
         """
 
     @abstractmethod
-    def initialize_training_loop_fns(self, train_epoch_fn: Callable[[CompressionAlgorithmController, ModelType,
+    def initialize_training_loop_fns(self, train_epoch_fn: Callable[[CompressionAlgorithmController, TModel,
                                                                      Optional[OptimizerType],
                                                                      Optional[LRSchedulerType],
                                                                      Optional[int]], None],
-                                     validate_fn: Callable[[ModelType, Optional[float]], float],
+                                     validate_fn: Callable[[TModel, Optional[float]], float],
                                      configure_optimizers_fn: Callable[[], Tuple[OptimizerType, LRSchedulerType]],
                                      dump_checkpoint_fn: Callable[
-                                         [ModelType, CompressionAlgorithmController, 'TrainingRunner', str], None],
+                                         [TModel, CompressionAlgorithmController, 'TrainingRunner', str], None],
                                      tensorboard_writer: TensorboardWriterType = None,
                                      log_dir: Union[str, pathlib.Path] = None):
         """
@@ -147,7 +147,7 @@ class TrainingRunner(ABC):
         """
 
     @abstractmethod
-    def load_best_checkpoint(self, model: ModelType) -> None:
+    def load_best_checkpoint(self, model: TModel) -> None:
         """
         Load the most accurate model state from the fine-tuning history.
 
@@ -263,14 +263,14 @@ class BaseAccuracyAwareTrainingRunner(TrainingRunner):
         self.cumulative_epoch_count = 0
         self.best_val_metric_value = 0
 
-    def initialize_training_loop_fns(self, train_epoch_fn: Callable[[CompressionAlgorithmController, ModelType,
+    def initialize_training_loop_fns(self, train_epoch_fn: Callable[[CompressionAlgorithmController, TModel,
                                                                      Optional[OptimizerType],
                                                                      Optional[LRSchedulerType],
                                                                      Optional[int]], None],
-                                     validate_fn: Callable[[ModelType, Optional[float]], float],
+                                     validate_fn: Callable[[TModel, Optional[float]], float],
                                      configure_optimizers_fn: Callable[[], Tuple[OptimizerType, LRSchedulerType]],
                                      dump_checkpoint_fn: Callable[
-                                         [ModelType, CompressionAlgorithmController, TrainingRunner, str], None],
+                                         [TModel, CompressionAlgorithmController, TrainingRunner, str], None],
                                      tensorboard_writer=None, log_dir=None):
         self._train_epoch_fn = train_epoch_fn
         self._validate_fn = validate_fn
