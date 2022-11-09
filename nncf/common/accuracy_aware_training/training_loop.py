@@ -68,8 +68,8 @@ class BaseEarlyExitCompressionTrainingLoop(TrainingLoop, ABC):
         self.compression_controller = None
 
     def run(self, model: TModel, train_epoch_fn, validate_fn, configure_optimizers_fn=None,
-            dump_checkpoint_fn=None, load_checkpoint_fn=None, early_stopping_fn=None, update_learning_rate_fn=None,
-            tensorboard_writer=None, log_dir=None):
+            dump_checkpoint_fn=None, load_checkpoint_fn=None, early_stopping_fn=None,
+            tensorboard_writer=None, log_dir=None, update_learning_rate_fn=None):
         self.runner.initialize_training_loop_fns(train_epoch_fn, validate_fn, configure_optimizers_fn,
                                                  dump_checkpoint_fn, tensorboard_writer, log_dir)
         self.runner.load_checkpoint_fn = load_checkpoint_fn
@@ -251,9 +251,9 @@ class AdaptiveCompressionTrainingLoop(BaseEarlyExitCompressionTrainingLoop):
         raise RuntimeError('No compression algorithm that supports adaptive compression '
                            'accuracy-aware training was specified')
 
-    def run(self, model, train_epoch_fn, validate_fn, configure_optimizers_fn=None,
-            dump_checkpoint_fn=None, load_checkpoint_fn=None, early_stopping_fn=None, update_learning_rate_fn=None,
-            tensorboard_writer=None, log_dir=None):
+    def run(self, model: TModel, train_epoch_fn, validate_fn, configure_optimizers_fn=None,
+            dump_checkpoint_fn=None, load_checkpoint_fn=None, early_stopping_fn=None,
+            tensorboard_writer=None, log_dir=None, update_learning_rate_fn=None):
         self.runner.initialize_training_loop_fns(train_epoch_fn, validate_fn, configure_optimizers_fn,
                                                  dump_checkpoint_fn, tensorboard_writer, log_dir)
         self.runner.load_checkpoint_fn = load_checkpoint_fn
