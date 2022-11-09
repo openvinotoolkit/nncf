@@ -34,7 +34,7 @@ from nncf.quantization.algorithms.definitions import Granularity
 from nncf.quantization.algorithms.definitions import RangeType
 from nncf.quantization.statistics.statistic_point import StatisticPointsContainer
 
-ModelType = TypeVar('ModelType')
+TModel = TypeVar('TModel')
 
 
 class DefaultQuantizationParameters(AlgorithmParameters):
@@ -118,12 +118,12 @@ class DefaultQuantization(Algorithm):
             algorithms_backends.update(algorithm.available_backends)
         return algorithms_backends
 
-    def _apply(self, model: ModelType, engine: Engine, statistic_points: StatisticPointsContainer) -> ModelType:
+    def _apply(self, model: TModel, engine: Engine, statistic_points: StatisticPointsContainer) -> TModel:
         for algorithm in self.algorithms:
             model = algorithm.apply(model, engine, statistic_points)
         return model
 
-    def get_statistic_points(self, model: ModelType) -> StatisticPointsContainer:
+    def get_statistic_points(self, model: TModel) -> StatisticPointsContainer:
         output = StatisticPointsContainer()
         for algorithm in self.algorithms:
             for statistic_points in algorithm.get_statistic_points(model).values():

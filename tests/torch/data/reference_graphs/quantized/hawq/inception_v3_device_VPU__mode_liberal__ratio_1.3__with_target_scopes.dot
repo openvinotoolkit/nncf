@@ -315,7 +315,9 @@ strict digraph  {
 "313 Inception3/InceptionE[Mixed_7c]/BasicConv2d[branch3x3dbl_1]/SymmetricQuantizer/symmetric_quantize_0" [color=red, id=313, label="AFQ_[B:4 M:S SGN:U PC:N]_#313_G0", style=filled, type=symmetric_quantize];
 "314 Inception3/InceptionE[Mixed_7c]/BasicConv2d[branch3x3dbl_2]/NNCFConv2d[conv]/ModuleDict[pre_ops]/UpdateWeight[1]/SymmetricQuantizer[op]/symmetric_quantize_0" [color=red, id=314, label="WFQ_[B:4 M:S SGN:S PC:Y]_#314_G0", style=filled, type=symmetric_quantize];
 "315 Inception3/InceptionE[Mixed_7c]/BasicConv2d[branch3x3dbl_2]/NNCFConv2d[conv]/pad_0" [color=lightblue, id=315, label="pad_k3x3_PAD_FLOPS:198180864(shared among nodes 314,315,316)_#315", style=filled, type=pad];
+"315 Inception3/InceptionE[Mixed_7c]/BasicConv2d[branch3x3dbl_2]/NNCFConv2d[conv]/pad_0_apad" [color=yellow, label=adjust_padding_value, style=filled, type=""];
 "316 Inception3/InceptionE[Mixed_7c]/BasicConv2d[branch3x3dbl_2]/NNCFConv2d[conv]/conv2d_0" [color=lightblue, id=316, label="conv2d_k3x3_PAD_FLOPS:198180864(shared among nodes 314,315,316)_#316", style=filled, type=conv2d];
+"316 Inception3/InceptionE[Mixed_7c]/BasicConv2d[branch3x3dbl_2]/NNCFConv2d[conv]/conv2d_0_apad" [color=yellow, label=adjust_padding_value, style=filled, type=""];
 "317 Inception3/InceptionE[Mixed_7c]/BasicConv2d[branch3x3dbl_2]/NNCFBatchNorm2d[bn]/batch_norm_0" [id=317, label="batch_norm_#317", style=filled, type=batch_norm];
 "318 Inception3/InceptionE[Mixed_7c]/BasicConv2d[branch3x3dbl_2]/relu__0" [id=318, label="relu__#318", style=filled, type=relu_];
 "319 Inception3/InceptionE[Mixed_7c]/BasicConv2d[branch3x3dbl_2]/SymmetricQuantizer/symmetric_quantize_0" [color=red, id=319, label="AFQ_[B:4 M:S SGN:U PC:N]_#319_G4", style=filled, type=symmetric_quantize];
@@ -341,8 +343,6 @@ strict digraph  {
 "339 Inception3/Linear[fc]/linear_0" [id=339, label="linear_#339", style=filled, type=linear];
 "340 /nncf_model_output_0" [id=340, label="nncf_model_output_#340", style=filled, type=nncf_model_output];
 "341 /nncf_model_output_1" [id=341, label="nncf_model_output_#341", style=filled, type=nncf_model_output];
-"315 Inception3/InceptionE[Mixed_7c]/BasicConv2d[branch3x3dbl_2]/NNCFConv2d[conv]/pad_0_apad" [color=yellow, label=adjust_padding_value, style=filled, type=""];
-"316 Inception3/InceptionE[Mixed_7c]/BasicConv2d[branch3x3dbl_2]/NNCFConv2d[conv]/conv2d_0_apad" [color=yellow, label=adjust_padding_value, style=filled, type=""];
 "0 /nncf_model_input_0" -> "1 Inception3/BasicConv2d[Conv2d_1a_3x3]/Conv2d[conv]/conv2d_0";
 "1 Inception3/BasicConv2d[Conv2d_1a_3x3]/Conv2d[conv]/conv2d_0" -> "2 Inception3/BasicConv2d[Conv2d_1a_3x3]/BatchNorm2d[bn]/batch_norm_0";
 "2 Inception3/BasicConv2d[Conv2d_1a_3x3]/BatchNorm2d[bn]/batch_norm_0" -> "3 Inception3/BasicConv2d[Conv2d_1a_3x3]/relu__0";
@@ -443,7 +443,6 @@ strict digraph  {
 "86 Inception3/InceptionA[Mixed_5d]/cat_0" -> "99 Inception3/InceptionB[Mixed_6a]/max_pool2d_0";
 "87 Inception3/InceptionB[Mixed_6a]/BasicConv2d[branch3x3]/Conv2d[conv]/conv2d_0" -> "88 Inception3/InceptionB[Mixed_6a]/BasicConv2d[branch3x3]/BatchNorm2d[bn]/batch_norm_0";
 "88 Inception3/InceptionB[Mixed_6a]/BasicConv2d[branch3x3]/BatchNorm2d[bn]/batch_norm_0" -> "89 Inception3/InceptionB[Mixed_6a]/BasicConv2d[branch3x3]/relu__0";
-"89 Inception3/InceptionB[Mixed_6a]/BasicConv2d[branch3x3]/relu__0" -> "100 Inception3/InceptionB[Mixed_6a]/cat_0";
 "90 Inception3/InceptionB[Mixed_6a]/BasicConv2d[branch3x3dbl_1]/Conv2d[conv]/conv2d_0" -> "91 Inception3/InceptionB[Mixed_6a]/BasicConv2d[branch3x3dbl_1]/BatchNorm2d[bn]/batch_norm_0";
 "91 Inception3/InceptionB[Mixed_6a]/BasicConv2d[branch3x3dbl_1]/BatchNorm2d[bn]/batch_norm_0" -> "92 Inception3/InceptionB[Mixed_6a]/BasicConv2d[branch3x3dbl_1]/relu__0";
 "92 Inception3/InceptionB[Mixed_6a]/BasicConv2d[branch3x3dbl_1]/relu__0" -> "93 Inception3/InceptionB[Mixed_6a]/BasicConv2d[branch3x3dbl_2]/Conv2d[conv]/conv2d_0";
@@ -452,6 +451,7 @@ strict digraph  {
 "95 Inception3/InceptionB[Mixed_6a]/BasicConv2d[branch3x3dbl_2]/relu__0" -> "96 Inception3/InceptionB[Mixed_6a]/BasicConv2d[branch3x3dbl_3]/Conv2d[conv]/conv2d_0";
 "96 Inception3/InceptionB[Mixed_6a]/BasicConv2d[branch3x3dbl_3]/Conv2d[conv]/conv2d_0" -> "97 Inception3/InceptionB[Mixed_6a]/BasicConv2d[branch3x3dbl_3]/BatchNorm2d[bn]/batch_norm_0";
 "97 Inception3/InceptionB[Mixed_6a]/BasicConv2d[branch3x3dbl_3]/BatchNorm2d[bn]/batch_norm_0" -> "98 Inception3/InceptionB[Mixed_6a]/BasicConv2d[branch3x3dbl_3]/relu__0";
+"89 Inception3/InceptionB[Mixed_6a]/BasicConv2d[branch3x3]/relu__0" -> "100 Inception3/InceptionB[Mixed_6a]/cat_0";
 "98 Inception3/InceptionB[Mixed_6a]/BasicConv2d[branch3x3dbl_3]/relu__0" -> "100 Inception3/InceptionB[Mixed_6a]/cat_0";
 "99 Inception3/InceptionB[Mixed_6a]/max_pool2d_0" -> "100 Inception3/InceptionB[Mixed_6a]/cat_0";
 "100 Inception3/InceptionB[Mixed_6a]/cat_0" -> "101 Inception3/InceptionC[Mixed_6b]/BasicConv2d[branch1x1]/Conv2d[conv]/conv2d_0";
@@ -693,7 +693,9 @@ strict digraph  {
 "312 Inception3/InceptionE[Mixed_7c]/BasicConv2d[branch3x3dbl_1]/relu__0" -> "313 Inception3/InceptionE[Mixed_7c]/BasicConv2d[branch3x3dbl_1]/SymmetricQuantizer/symmetric_quantize_0";
 "313 Inception3/InceptionE[Mixed_7c]/BasicConv2d[branch3x3dbl_1]/SymmetricQuantizer/symmetric_quantize_0" -> "315 Inception3/InceptionE[Mixed_7c]/BasicConv2d[branch3x3dbl_2]/NNCFConv2d[conv]/pad_0";
 "314 Inception3/InceptionE[Mixed_7c]/BasicConv2d[branch3x3dbl_2]/NNCFConv2d[conv]/ModuleDict[pre_ops]/UpdateWeight[1]/SymmetricQuantizer[op]/symmetric_quantize_0" -> "316 Inception3/InceptionE[Mixed_7c]/BasicConv2d[branch3x3dbl_2]/NNCFConv2d[conv]/conv2d_0";
+"315 Inception3/InceptionE[Mixed_7c]/BasicConv2d[branch3x3dbl_2]/NNCFConv2d[conv]/pad_0_apad" -> "315 Inception3/InceptionE[Mixed_7c]/BasicConv2d[branch3x3dbl_2]/NNCFConv2d[conv]/pad_0";
 "315 Inception3/InceptionE[Mixed_7c]/BasicConv2d[branch3x3dbl_2]/NNCFConv2d[conv]/pad_0" -> "316 Inception3/InceptionE[Mixed_7c]/BasicConv2d[branch3x3dbl_2]/NNCFConv2d[conv]/conv2d_0";
+"316 Inception3/InceptionE[Mixed_7c]/BasicConv2d[branch3x3dbl_2]/NNCFConv2d[conv]/conv2d_0_apad" -> "316 Inception3/InceptionE[Mixed_7c]/BasicConv2d[branch3x3dbl_2]/NNCFConv2d[conv]/conv2d_0";
 "316 Inception3/InceptionE[Mixed_7c]/BasicConv2d[branch3x3dbl_2]/NNCFConv2d[conv]/conv2d_0" -> "317 Inception3/InceptionE[Mixed_7c]/BasicConv2d[branch3x3dbl_2]/NNCFBatchNorm2d[bn]/batch_norm_0";
 "317 Inception3/InceptionE[Mixed_7c]/BasicConv2d[branch3x3dbl_2]/NNCFBatchNorm2d[bn]/batch_norm_0" -> "318 Inception3/InceptionE[Mixed_7c]/BasicConv2d[branch3x3dbl_2]/relu__0";
 "318 Inception3/InceptionE[Mixed_7c]/BasicConv2d[branch3x3dbl_2]/relu__0" -> "319 Inception3/InceptionE[Mixed_7c]/BasicConv2d[branch3x3dbl_2]/SymmetricQuantizer/symmetric_quantize_0";
@@ -719,6 +721,4 @@ strict digraph  {
 "337 Inception3/Dropout[dropout]/dropout_0" -> "338 Inception3/flatten_0";
 "338 Inception3/flatten_0" -> "339 Inception3/Linear[fc]/linear_0";
 "339 Inception3/Linear[fc]/linear_0" -> "340 /nncf_model_output_0";
-"315 Inception3/InceptionE[Mixed_7c]/BasicConv2d[branch3x3dbl_2]/NNCFConv2d[conv]/pad_0_apad" -> "315 Inception3/InceptionE[Mixed_7c]/BasicConv2d[branch3x3dbl_2]/NNCFConv2d[conv]/pad_0";
-"316 Inception3/InceptionE[Mixed_7c]/BasicConv2d[branch3x3dbl_2]/NNCFConv2d[conv]/conv2d_0_apad" -> "316 Inception3/InceptionE[Mixed_7c]/BasicConv2d[branch3x3dbl_2]/NNCFConv2d[conv]/conv2d_0";
 }

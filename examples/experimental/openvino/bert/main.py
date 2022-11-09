@@ -25,10 +25,10 @@ import evaluate
 import transformers
 import numpy as np
 
+from nncf.parameters import ModelType
 
-FILE = Path(__file__).resolve()
-# Relative path to the `bert` directory.
-ROOT = FILE.parent.relative_to(Path.cwd())
+# Path to the `bert` directory.
+ROOT = Path(__file__).parent.resolve()
 # Path to the directory where the original and quantized IR will be saved.
 MODEL_DIR = ROOT / 'bert_quantization'
 # Path to the pre-trained model directory.
@@ -69,7 +69,8 @@ def run_example():
 
     # Wrap framework-specific data source into the `nncf.Dataset` object.
     calibration_dataset = nncf.Dataset(data_source, transform_fn)
-    quantized_model = nncf.quantize(ov_model, calibration_dataset, model_type='transformer')
+    quantized_model = nncf.quantize(ov_model, calibration_dataset,
+                                    model_type=ModelType.TRANSFORMER)
 
     # Step 5: Save quantized model.
     ir_qmodel_xml = MODEL_DIR / 'bert_base_mrpc_quantized.xml'

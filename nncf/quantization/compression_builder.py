@@ -23,7 +23,7 @@ from nncf.quantization.api.engine import Engine
 from nncf.quantization.algorithms import Algorithm
 from nncf.quantization.statistics.aggregator import StatisticsAggregator
 
-ModelType = TypeVar('ModelType')
+TModel = TypeVar('TModel')
 
 
 class CompressionBuilder:
@@ -72,7 +72,7 @@ class CompressionBuilder:
             return ONNXStatisticsAggregator(engine, dataset)
         return None
 
-    def _create_model_transformer(self, model: ModelType, backend: BackendType) -> ModelTransformer:
+    def _create_model_transformer(self, model: TModel, backend: BackendType) -> ModelTransformer:
         """
         Creates backend-specific ModelTransformer.
 
@@ -86,14 +86,14 @@ class CompressionBuilder:
             return ONNXModelTransformer(model)
         return None
 
-    def _get_prepared_model_for_compression(self, model: ModelType, backend: BackendType) -> ModelType:
+    def _get_prepared_model_for_compression(self, model: TModel, backend: BackendType) -> TModel:
         if backend == BackendType.ONNX:
             from nncf.experimental.onnx.model_normalizer import ONNXModelNormalizer
             return ONNXModelNormalizer.normalize_model(model, self.convert_opset_version)
 
         return None
 
-    def apply(self, model: ModelType, dataset: Dataset, engine: Engine = None) -> ModelType:
+    def apply(self, model: TModel, dataset: Dataset, engine: Engine = None) -> TModel:
         """
         Apply compression algorithms to the 'model'.
 

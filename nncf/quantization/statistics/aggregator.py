@@ -23,7 +23,7 @@ from nncf.quantization.api.engine import Engine
 from nncf.quantization.graph.model_transformer import StaticModelTransformerBase
 
 TensorType = TypeVar('TensorType')
-ModelType = TypeVar('ModelType')
+TModel = TypeVar('TModel')
 
 
 class StatisticsAggregator(ABC):

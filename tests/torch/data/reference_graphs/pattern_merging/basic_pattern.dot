@@ -1,12 +1,12 @@
 strict digraph  {
-"0 /A_0" [associated_ip_node_keys="{'POST HOOK 0 /A_0'}", is_merged=False, node_type="InsertionPointGraphNodeType.OPERATOR", regular_node_data="0 /A_0 A"];
-"4 /B_0" [associated_ip_node_keys="{'POST HOOK 4 /B_0', 'PRE HOOK 0 4 /B_0'}", is_merged=False, node_type="InsertionPointGraphNodeType.OPERATOR", regular_node_data="4 /B_0 B"];
-"POST HOOK 0 /A_0" [insertion_point_data="TargetType.OPERATOR_POST_HOOK /A_0", node_type="InsertionPointGraphNodeType.INSERTION_POINT"];
-"PRE HOOK 0 1 /conv2d_0" [insertion_point_data="TargetType.OPERATOR_PRE_HOOK 0 /conv2d_0", node_type="InsertionPointGraphNodeType.INSERTION_POINT"];
-"POST HOOK 3 /relu_0" [insertion_point_data="TargetType.OPERATOR_POST_HOOK /relu_0", node_type="InsertionPointGraphNodeType.INSERTION_POINT"];
-"PRE HOOK 0 4 /B_0" [insertion_point_data="TargetType.OPERATOR_PRE_HOOK 0 /B_0", node_type="InsertionPointGraphNodeType.INSERTION_POINT"];
-"POST HOOK 4 /B_0" [insertion_point_data="TargetType.OPERATOR_POST_HOOK /B_0", node_type="InsertionPointGraphNodeType.INSERTION_POINT"];
-"1 /conv2d_0\n2 /batch_norm_0\n3 /relu_0\n" [associated_ip_node_keys="{'PRE HOOK 0 1 /conv2d_0', 'POST HOOK 3 /relu_0'}", is_merged=True, merged_node_list="[1 /conv2d_0 conv2d, 2 /batch_norm_0 batch_norm, 3 /relu_0 relu]", node_type="InsertionPointGraphNodeType.OPERATOR", regular_node_data="1 /conv2d_0 conv2d"];
+"0 /A_0";
+"4 /B_0";
+"POST HOOK 0 /A_0";
+"PRE HOOK 0 1 /conv2d_0";
+"POST HOOK 3 /relu_0";
+"PRE HOOK 0 4 /B_0";
+"POST HOOK 4 /B_0";
+"1 /conv2d_0\n2 /batch_norm_0\n3 /relu_0\n";
 "0 /A_0" -> "POST HOOK 0 /A_0";
 "4 /B_0" -> "POST HOOK 4 /B_0";
 "POST HOOK 0 /A_0" -> "PRE HOOK 0 1 /conv2d_0";

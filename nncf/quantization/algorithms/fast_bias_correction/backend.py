@@ -28,7 +28,7 @@ from nncf.common.tensor_statistics.collectors import ReductionShape
 from nncf.common.utils.registry import Registry
 from nncf.quantization.graph.model_transformer import StaticModelTransformerBase
 
-ModelType = TypeVar('ModelType')
+TModel = TypeVar('TModel')
 OutputType = TypeVar('OutputType')
 ALGO_BACKENDS = Registry('algo_backends')
 
@@ -65,7 +65,7 @@ class FBCAlgoBackend(ABC):
 
     @staticmethod
     @abstractmethod
-    def model_transformer(model: ModelType) -> StaticModelTransformerBase:
+    def model_transformer(model: TModel) -> StaticModelTransformerBase:
         """
         Returns backend-specific ModelTransformer instance.
 
@@ -157,7 +157,7 @@ class FBCAlgoBackend(ABC):
 
     @staticmethod
     @abstractmethod
-    def get_initializer_value(model: ModelType, initializer_name: str) -> np.ndarray:
+    def get_initializer_value(model: TModel, initializer_name: str) -> np.ndarray:
         """
         Returns initializer value in the NumPy format.
 

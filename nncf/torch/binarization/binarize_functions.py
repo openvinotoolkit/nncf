@@ -11,10 +11,9 @@
  limitations under the License.
 """
 
-import warnings
-
 import torch
 
+from nncf.common.utils.logger import logger as nncf_logger
 from nncf.torch.utils import add_domain
 
 from .extensions import BinarizedFunctionsCUDA
@@ -110,7 +109,7 @@ class ActivationBinarizationScaleThresholdFn(torch.autograd.Function):
     def backward(ctx, grad_output):
         if grad_output.is_cuda:
             if not grad_output.is_contiguous():
-                warnings.warn("grad_output is not contiguous!", RuntimeWarning)
+                nncf_logger.debug("grad_output is not contiguous!")
                 grad_output = grad_output.contiguous()
 
         input_, scale, output = ctx.saved_variables

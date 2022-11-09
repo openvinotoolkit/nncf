@@ -23,7 +23,7 @@ from nncf.quantization.statistics.statistic_point import StatisticPointsContaine
 from nncf.quantization.api.engine import Engine
 from nncf.common.utils.backend import BackendType
 
-ModelType = TypeVar('ModelType')
+TModel = TypeVar('TModel')
 
 
 class PostTrainingAlgorithms(Enum):
@@ -58,8 +58,8 @@ class Algorithm(ABC):
         :return: Dict of backends supported by the algorithm
         """
 
-    def apply(self, model: ModelType, engine: Engine,
-              statistic_points: StatisticPointsContainer) -> ModelType:
+    def apply(self, model: TModel, engine: Engine,
+              statistic_points: StatisticPointsContainer) -> TModel:
         """
         Checks that statistic point exists, sets model into transformer
         and applies the algorithm to the model.
@@ -75,13 +75,13 @@ class Algorithm(ABC):
         return self._apply(model, engine, statistic_points)
 
     @abstractmethod
-    def _apply(self, model: ModelType, engine: Engine, statistic_points: StatisticPointsContainer) -> ModelType:
+    def _apply(self, model: TModel, engine: Engine, statistic_points: StatisticPointsContainer) -> TModel:
         """
         Applies the algorithm to the model.
         """
 
     @abstractmethod
-    def get_statistic_points(self, model: ModelType) -> StatisticPointsContainer:
+    def get_statistic_points(self, model: TModel) -> StatisticPointsContainer:
         """
         Returns activation layers, for which StatisticsCollector should collect statistics.
         """

@@ -25,6 +25,7 @@ from nncf.data import Dataset
 from nncf.openvino.engine import OVEngine
 from nncf.openvino.utils import POTDataLoader
 from nncf.parameters import IgnoredScope
+from nncf.parameters import ModelType
 from nncf.parameters import TargetDevice
 
 
@@ -81,7 +82,7 @@ def _create_ignored_scope_config(ignored_scope: Optional[IgnoredScope]) -> Dict:
     if ignored_scope.names is not None:
         ignored['scope'] = ignored_scope.names
     if ignored_scope.patterns is not None:
-        raise RuntimeError('Quantization algorithm form the OpenVINO backend '
+        raise RuntimeError('Quantization algorithm from the OpenVINO backend '
                            'does not support regular expressions in the ignored '
                            'scopes yet')
     if ignored_scope.types is not None:
@@ -94,8 +95,8 @@ def quantize_impl(model: ov.Model,
                   preset: QuantizationPreset,
                   target_device: TargetDevice,
                   subset_size: int,
-                  fast_error_correction: bool,
-                  model_type: Optional[str] = None,
+                  fast_bias_correction: bool,
+                  model_type: Optional[ModelType] = None,
                   ignored_scope: Optional[IgnoredScope] = None) -> ov.Model:
     """
     Implementation of the `quantize()` method for the OpenVINO backend.
@@ -118,8 +119,8 @@ def quantize_impl(model: ov.Model,
                 'target_device': target_device.value,
                 'preset': preset.value,
                 'stat_subset_size': subset_size,
-                'use_fast_bias': fast_error_correction,
-                'model_type': model_type,
+                'use_fast_bias': fast_bias_correction,
+                'model_type': None if model_type is None else model_type.value,
                 'ignored': _create_ignored_scope_config(ignored_scope)
             }
         }

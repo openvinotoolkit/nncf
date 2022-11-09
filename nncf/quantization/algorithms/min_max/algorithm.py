@@ -24,7 +24,7 @@ from nncf.common.graph.graph import NNCFGraph
 from nncf.common.graph.transformations.commands import TargetType
 from nncf.common.graph.transformations.commands import TargetPoint
 from nncf.common.graph.transformations.layout import TransformationLayout
-from nncf.common.hardware.config import HWConfigType
+from nncf.common.hardware.config import HWConfigType, HW_CONFIG_TYPE_TARGET_DEVICE_MAP
 from nncf.common.insertion_point_graph import InsertionPointGraph
 from nncf.common.quantization.quantizer_propagation.solver import QuantizerPropagationSolver
 from nncf.common.quantization.quantizer_setup import SingleConfigQuantizationPoint
@@ -53,7 +53,7 @@ from nncf.quantization.factories import NNCFGraphFactory
 from nncf.quantization.statistics.statistic_point import StatisticPoint
 from nncf.quantization.statistics.statistic_point import StatisticPointsContainer
 
-ModelType = TypeVar('ModelType')
+TModel = TypeVar('TModel')
 
 
 class MinMaxQuantizationParameters(AlgorithmParameters):
@@ -92,7 +92,7 @@ class MinMaxQuantizationParameters(AlgorithmParameters):
         self.activation_quantizer_config = self._determine_quantizer_config(activation_bits, activation_granularity,
                                                                             activation_mode)
         self.number_samples = number_samples
-        self.target_device = target_device
+        self.target_device = HWConfigType.from_str(HW_CONFIG_TYPE_TARGET_DEVICE_MAP[target_device.value])
         self.range_type = range_type
         self.quantize_outputs = quantize_outputs
         self.ignored_scopes = [] if ignored_scopes is None else ignored_scopes
@@ -149,7 +149,7 @@ class MinMaxQuantization(Algorithm):
     def available_backends(self) -> Dict[str, BackendType]:
         return ALGO_BACKENDS.registry_dict
 
-    def _set_backend_entity(self, model: ModelType) -> None:
+    def _set_backend_entity(self, model: TModel) -> None:
         """
         Creates a helper class with a backed-specific logic of the algorithm
 
@@ -261,7 +261,7 @@ class MinMaxQuantization(Algorithm):
                                                                                      node_name)
         self._quantization_target_points.add(activation_quantization_target_point)
 
-    def _get_quantization_target_points(self, model: ModelType) -> Set[TargetPoint]:
+    def _get_quantization_target_points(self, model: TModel) -> Set[TargetPoint]:
         """
         Returns Quantization Target Points.
         In the Compression Pipeline logic NNCF assumes that the compression pipeline works only on the single model.
@@ -287,8 +287,8 @@ class MinMaxQuantization(Algorithm):
         self._quantization_target_points = sorted(self._quantization_target_points)
         return self._quantization_target_points
 
-    def _apply(self, model: ModelType, engine: Engine,
-               statistic_points: StatisticPointsContainer) -> ModelType:
+    def _apply(self, model: TModel, engine: Engine,
+               statistic_points: StatisticPointsContainer) -> TModel:
         transformation_layout, transformation_commands = TransformationLayout(), []
         nncf_graph = NNCFGraphFactory.create(model) if self.nncf_graph is None else self.nncf_graph
         model_transformer = self._backend_entity.model_transformer(model)
@@ -339,7 +339,7 @@ class MinMaxQuantization(Algorithm):
         quantized_model = model_transformer.transform(transformation_layout)
         return quantized_model
 
-    def get_statistic_points(self, model: ModelType) -> StatisticPointsContainer:
+    def get_statistic_points(self, model: TModel) -> StatisticPointsContainer:
         self._set_backend_entity(model)
         quantization_target_points = self._get_quantization_target_points(model)
         output = StatisticPointsContainer()

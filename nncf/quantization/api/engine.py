@@ -19,7 +19,7 @@ from tqdm import tqdm
 from nncf.common.tensor import NNCFTensor
 from nncf.quantization.statistics.statistic_point import StatisticPointsContainer
 
-ModelType = TypeVar('ModelType')
+TModel = TypeVar('TModel')
 ModelInput = TypeVar('ModelInput')
 
 class Engine(ABC):
@@ -41,7 +41,7 @@ class Engine(ABC):
     def set_dataset(self, dataset) -> None:
         self._dataset = dataset
 
-    def set_model(self, model: ModelType) -> None:
+    def set_model(self, model: TModel) -> None:
         self.model = model
 
     def is_model_set(self) -> bool:
