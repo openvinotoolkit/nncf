@@ -211,9 +211,6 @@ def main_worker(current_gpu, config: SampleConfig):
                        model_params=config.get('model_params'),
                        weights_path=config.get('weights'))
 
-    state_dict = torch.load('/home/nsavelye/workspace/models/resnet18_cifar10_8854.pth')['net']
-    model.load_state_dict(state_dict)
-
     model.to(config.device)
 
     resuming_checkpoint = None
