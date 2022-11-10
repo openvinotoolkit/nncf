@@ -480,7 +480,7 @@ def test_mock_dump_checkpoint(aa_config, tmp_path):
         return checkpoint_path
 
     config = get_quantization_config_without_range_init(LeNet.INPUT_SIZE[-1])
-    train_loader = create_ones_mock_dataloader(aa_config, num_samples=10)
+    train_loader = create_ones_mock_dataloader(config, num_samples=10)
     model = LeNet()
     config.update(aa_config)
 

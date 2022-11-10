@@ -73,7 +73,7 @@ def find_version(*file_paths):
     return version_value
 
 
-INSTALL_REQUIRES = ["ninja>=1.10.0.post2",
+INSTALL_REQUIRES = ["ninja>=1.10.0.post2, <1.11",
                     "addict>=2.4.0",
                     "texttable>=1.6.3",
                     "scipy<=1.5.4, >=1.3.2; python_version<'3.7'",
@@ -127,16 +127,20 @@ EXTRAS_REQUIRE = {
         "torch==1.13.0",
         "torchvision==0.14",
         "onnx==1.12.0",
-        "skl2onnx==1.13",
         "protobuf==3.20.1",
         "onnxruntime-openvino==1.13.1",
     ],
+    "openvino": [
+        "openvino-dev"
+    ]
 }
 
 EXTRAS_REQUIRE["all"] = [
     EXTRAS_REQUIRE["tf"],
     EXTRAS_REQUIRE["torch"]
 ]
+
+SETUP_REQUIRES = []
 
 if "--torch" in sys.argv:
     INSTALL_REQUIRES.extend(EXTRAS_REQUIRE["torch"])
@@ -152,6 +156,11 @@ if "--tf" in sys.argv:
 if "--onnx" in sys.argv:
     INSTALL_REQUIRES.extend(EXTRAS_REQUIRE["onnx"])
     sys.argv.remove("--onnx")
+
+if "--openvino" in sys.argv:
+    INSTALL_REQUIRES.extend(EXTRAS_REQUIRE["openvino"])
+    SETUP_REQUIRES.extend(EXTRAS_REQUIRE["openvino"])
+    sys.argv.remove("--openvino")
 
 if "--all" in sys.argv:
     INSTALL_REQUIRES.extend(EXTRAS_REQUIRE["all"])
@@ -175,6 +184,7 @@ setup(
         "Operating System :: OS Independent",
     ],
     install_requires=INSTALL_REQUIRES,
+    setup_requires=SETUP_REQUIRES,
     extras_require=EXTRAS_REQUIRE,
     keywords=["compression", "quantization", "sparsity", "mixed-precision-training",
               "quantization-aware-training", "hawq", "classification",

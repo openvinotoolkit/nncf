@@ -24,7 +24,7 @@ from nncf.experimental.post_training.api.sampler import Sampler
 from nncf.experimental.post_training.graph.model_transformer import StaticModelTransformerBase
 
 TensorType = TypeVar('TensorType')
-ModelType = TypeVar('ModelType')
+TModel = TypeVar('TModel')
 
 
 class StatisticsAggregator(ABC):

@@ -11,19 +11,13 @@
  limitations under the License.
 """
 
-from typing import Iterator
-from typing import Union
-import torch
-import numpy as np
-
-from abc import abstractmethod
-
-from nncf.experimental.post_training.api.sampler import Sampler
-from nncf.experimental.post_training.api.dataset import Dataset, NNCFData
-
 import random
+from abc import abstractmethod
+from typing import Iterator
 
-SAMPLER_OUTPUT_TYPE = Union[torch.Tensor, np.ndarray]
+from nncf.experimental.post_training.api.dataset import Dataset
+from nncf.experimental.post_training.api.dataset import NNCFData
+from nncf.experimental.post_training.api.sampler import Sampler
 
 
 class BatchSampler(Sampler):

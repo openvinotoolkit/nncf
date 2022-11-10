@@ -13,7 +13,6 @@
 
 from nncf.common.utils.backend import BackendType
 from nncf.common.utils.backend import get_backend
-from nncf.experimental.onnx.graph.nncf_graph_builder import GraphConverter
 
 
 class NNCFGraphFactory:
@@ -21,6 +20,8 @@ class NNCFGraphFactory:
     def create(model):
         model_backend = get_backend(model)
         if model_backend == BackendType.ONNX:
+            from nncf.experimental.onnx.graph.nncf_graph_builder import GraphConverter
+
             return GraphConverter.create_nncf_graph(model)
         raise RuntimeError('Cannot create backend-specific graph'
                            'because {} is not supported!'.format(model_backend))

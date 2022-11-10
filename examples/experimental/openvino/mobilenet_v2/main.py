@@ -11,23 +11,20 @@
  limitations under the License.
 """
 
-from typing import Iterable
-from typing import Any
 import subprocess
-from pathlib import Path
 import time
+from pathlib import Path
+from typing import Any, Iterable
 
+import nncf
 import openvino.runtime as ov
 import torch
 import torchvision
-import nncf
 
 from examples.experimental.openvino.mobilenet_v2 import utils
 
-
-FILE = Path(__file__).resolve()
-# Relative path to the `mobilenet_v2` directory.
-ROOT = FILE.parent.relative_to(Path.cwd())
+# Path to the `mobilenet_v2` directory.
+ROOT = Path(__file__).parent.resolve()
 # Path to the directory where the original and quantized IR will be saved.
 MODEL_DIR = ROOT / 'mobilenet_v2_quantization'
 # Path to ImageNet validation dataset.
@@ -41,7 +38,7 @@ def run_example():
     """
     Runs the MobileNetV2 quantization example.
     """
-    # Step 1: Initialize model from the PyTorch Hub.
+    # Step 1: Instantiate the MobileNetV2 from the PyTorch Hub.
     # For more details, please see the [link](https://pytorch.org/hub/pytorch_vision_mobilenet_v2).
     model = torch.hub.load('pytorch/vision:v0.10.0', 'mobilenet_v2', pretrained=True)
     model.eval()
@@ -63,21 +60,28 @@ def run_example():
 
     # Wrap framework-specific data source into the `nncf.Dataset` object.
     calibration_dataset = nncf.Dataset(data_source, transform_fn)
+
+    # Quantization of the OpenVINO model. The `quantize` method expects an
+    # OpenVINO model as input and returns an OpenVINO model that has been
+    # quantized using the calibration dataset.
     quantized_model = nncf.quantize(ov_model, calibration_dataset)
 
     # Step 5: Save the quantized model.
     ir_qmodel_xml = MODEL_DIR / 'mobilenet_v2_quantized.xml'
     ir_qmodel_bin = MODEL_DIR / 'mobilenet_v2_quantized.bin'
     ov.serialize(quantized_model, str(ir_qmodel_xml), str(ir_qmodel_bin))
+    print('The quantized model has been saved in:')
+    print(f'XML file: {ir_qmodel_xml}')
+    print(f'BIN file: {ir_qmodel_bin}')
 
     # Step 6: Compare the accuracy of the original and quantized models.
     print('Checking the accuracy of the original model:')
     metric = validation_fn(ov_model, data_source)
-    print(f'accuracy@top1: {metric}')
+    print(f'The original model accuracy@top1: {metric:.3f}')
 
     print('Checking the accuracy of the quantized model:')
-    metric = validation_fn(quantized_model, data_source)
-    print(f'accuracy@top1: {metric}')
+    quantized_metric = validation_fn(quantized_model, data_source)
+    print(f'The quantized model accuracy@top1: {quantized_metric:.3f}')
 
     # Step 7: Compare Performance of the original and quantized models.
     # benchmark_app -m mobilenet_v2_quantization/mobilenet_v2.xml -d CPU -api async
@@ -122,8 +126,7 @@ def create_data_source() -> torch.utils.data.DataLoader:
     val_dataset = torchvision.datasets.ImageFolder(val_dir, preprocess)
     val_dataloader = torch.utils.data.DataLoader(val_dataset,
                                                  batch_size=1,
-                                                 shuffle=False,
-                                                 num_workers=4)
+                                                 shuffle=False)
     return val_dataloader
 
 

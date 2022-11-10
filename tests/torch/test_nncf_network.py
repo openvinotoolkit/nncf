@@ -33,6 +33,7 @@ from nncf.common.insertion_point_graph import InsertionPointGraph
 from nncf.common.insertion_point_graph import InsertionPointGraphNodeType
 from nncf.common.insertion_point_graph import PostHookInsertionPoint
 from nncf.common.insertion_point_graph import PreHookInsertionPoint
+from nncf.common.utils.dot_file_rw import get_graph_without_data
 from nncf.common.utils.dot_file_rw import read_dot_graph
 from nncf.common.utils.dot_file_rw import write_dot_graph
 from nncf.torch import register_module
@@ -548,7 +549,8 @@ class TestInsertionPointGraph:
         if os.getenv("NNCF_TEST_REGEN_DOT") is not None:
             if not os.path.exists(str(data_dir)):
                 os.makedirs(str(data_dir))
-            write_dot_graph(merged_ip_graph, str(path_to_dot_file))
+            graph_without_data = get_graph_without_data(merged_ip_graph)
+            write_dot_graph(graph_without_data, str(path_to_dot_file))
 
         load_graph = read_dot_graph(str(path_to_dot_file))
 

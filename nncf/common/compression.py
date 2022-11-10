@@ -30,7 +30,7 @@ from nncf.common.utils.registry import Registry
 from nncf.config.extractors import extract_algo_specific_config
 from nncf.config.extractors import extract_bn_adaptation_init_params
 
-ModelType = TypeVar('ModelType')
+TModel = TypeVar('TModel')
 
 NO_COMPRESSION_ALGORITHM_NAME = 'NoCompressionAlgorithm'
 
@@ -51,7 +51,7 @@ class BaseCompressionAlgorithmController(CompressionAlgorithmController):
     CONTROLLER_STATE = 'ctrl_state'
     _state_names = BaseControllerStateNames
 
-    def __init__(self, target_model: ModelType):
+    def __init__(self, target_model: TModel):
         """
         Initializes the internal state of the compression algorithm controller.
 
@@ -237,7 +237,7 @@ class BaseCompressionAlgorithmBuilder(CompressionAlgorithmBuilder):
         return {self.name: self._get_state_without_name()}
 
     @abstractmethod
-    def _build_controller(self, model: ModelType) -> BaseCompressionAlgorithmController:
+    def _build_controller(self, model: TModel) -> BaseCompressionAlgorithmController:
         """
         Simple implementation of building controller without setting builder state and loading controller's one.
 
@@ -246,7 +246,7 @@ class BaseCompressionAlgorithmBuilder(CompressionAlgorithmBuilder):
         :return: The instance of the `BaseCompressionAlgorithmController`.
         """
 
-    def build_controller(self, model: ModelType) -> BaseCompressionAlgorithmController:
+    def build_controller(self, model: TModel) -> BaseCompressionAlgorithmController:
         """
         Builds `BaseCompressionAlgorithmController` to handle the additional modules,
         parameters, and hooks inserted into the model to enable algorithm-specific

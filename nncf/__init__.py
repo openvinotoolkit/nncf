@@ -16,6 +16,7 @@ from nncf.version import __version__
 from nncf.config import NNCFConfig
 from nncf.data import Dataset
 from nncf.parameters import IgnoredScope
+from nncf.parameters import ModelType
 from nncf.parameters import TargetDevice
 from nncf.quantization import QuantizationPreset
 from nncf.quantization import quantize
@@ -30,6 +31,18 @@ try:
 except ImportError:
     tf = None
 
-if torch is None and tf is None:
+try:
+    import onnx
+except ImportError:
+    onnx = None
+
+try:
+    import openvino.runtime as ov_runtime
+    import openvino.tools.pot as ov_pot
+except ImportError:
+    ov_runtime = None
+    ov_pot = None
+
+if torch is None and tf is None and onnx is None and ov_runtime is None and ov_pot is None:
     import warnings
-    warnings.warn("None of PyTorch or TensorFlow have been found. Please, install one of the frameworks")
+    warnings.warn("None of PyTorch, TensorFlow, ONNX, OpenVINO have been found. Please, install one of the frameworks")
