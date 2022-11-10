@@ -27,7 +27,6 @@ import torch.utils.data
 from numpy.random import random_sample
 from torch.utils import model_zoo
 from torchvision.models import MobileNetV2
-from torchvision.models import inception_v3
 from torchvision.models import mobilenet_v2
 from torchvision.models import resnet50
 from torchvision.transforms import transforms
@@ -78,6 +77,7 @@ from tests.torch.quantization.quantization_helpers import post_compression_test_
 from tests.torch.modules.test_rnn import _seed
 from tests.torch.test_compressed_graph import get_full_path_to_the_graph
 from tests.common.graph.nx_graph import compare_nx_graph_with_reference
+from tests.torch.test_models import inception_v3
 from tests.torch.test_models import squeezenet1_1
 
 
