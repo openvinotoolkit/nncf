@@ -93,17 +93,16 @@ class BaseEarlyExitCompressionTrainingLoop(TrainingLoop, ABC):
                                                               compressed_model_accuracy)
 
         self.runner.dump_statistics(model, self.compression_controller)
-        if self._accuracy_criterion_satisfied(accuracy_budget, self.compression_controller):
-            nncf_logger.info('')
-            nncf_logger.info('The accuracy criteria is reached after the initialization step.')
-            self.print_accuracy_statistics(compressed_model_accuracy, uncompressed_model_accuracy,
-                                           accuracy_drop, rel_accuracy_drop, accuracy_budget)
-            nncf_logger.info('')
-            return model
 
         nncf_logger.info('Results of the initialization step:')
         self.print_accuracy_statistics(compressed_model_accuracy, uncompressed_model_accuracy,
                                        accuracy_drop, rel_accuracy_drop, accuracy_budget)
+
+        if self._accuracy_criterion_satisfied(accuracy_budget, self.compression_controller):
+            nncf_logger.info('')
+            nncf_logger.info('The accuracy criteria is reached after the initialization step.')
+            nncf_logger.info('')
+            return model
 
         for epoch in range(1, self.runner.maximal_total_epochs + 1):
             self.runner.train_epoch(model, self.compression_controller)
@@ -308,6 +307,7 @@ class AdaptiveCompressionTrainingLoop(BaseEarlyExitCompressionTrainingLoop):
                     raise RuntimeError('Cannot produce a compressed model with a specified '
                                        'minimal tolerable accuracy')
                 if self.runner.compression_rate_target > self.runner.maximal_compression_rate:
+                    self.runner.compression_rate_target = self.runner.maximal_compression_rate
                     nncf_logger.info('Reached maximal possible compression rate '
                                      '{max_rate}'.format(max_rate=self.runner.maximal_compression_rate))
                     break

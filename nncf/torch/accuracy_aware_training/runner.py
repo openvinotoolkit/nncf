@@ -270,9 +270,6 @@ class PTAdaptiveCompressionLevelTrainingRunner(PTAccuracyAwareTrainingRunner,
                                                             dump_checkpoints=dump_checkpoints)
 
     def dump_statistics(self, model, compression_controller):
-        if not is_main_process():
-            return
-
         self.update_training_history(self.compression_rate_target, self.current_val_metric_value)
         super().dump_statistics(model, compression_controller)
 
