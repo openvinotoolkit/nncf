@@ -34,7 +34,6 @@ from nncf.torch.dynamic_graph.graph_tracer import GraphTracer
 from nncf.torch.dynamic_graph.graph_tracer import ModelInputInfo
 from nncf.torch.dynamic_graph.graph_tracer import create_dummy_forward_fn
 from nncf.torch.dynamic_graph.io_handling import wrap_nncf_model_outputs_with_objwalk
-from nncf.torch.dynamic_graph.trace_tensor import TracedTensor
 from nncf.torch.graph.graph_builder import GraphBuilder
 from nncf.torch.graph.operator_metatypes import PTCatMetatype
 from nncf.torch.graph.operator_metatypes import PTReshapeMetatype
@@ -589,6 +588,7 @@ def test_torch_tensor_getitem_behavior(mocker):
     x = torch.ones((10, 4, 4, 4))
     indexes = torch.LongTensor([0, 1, 2])
     mock_tensor_meta = mocker.stub
+    from nncf.torch.dynamic_graph.trace_tensor import TracedTensor
     traced_x = TracedTensor.from_torch_tensor(torch.ones((10, 4, 4, 4)), mock_tensor_meta)
     traced_indexes = TracedTensor.from_torch_tensor(torch.LongTensor([0, 1, 2]), mock_tensor_meta)
     SHAPE_1 = [3, 4, 4, 4]
