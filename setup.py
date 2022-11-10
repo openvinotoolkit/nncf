@@ -76,14 +76,11 @@ def find_version(*file_paths):
 INSTALL_REQUIRES = ["ninja>=1.10.0.post2, <1.11",
                     "addict>=2.4.0",
                     "texttable>=1.6.3",
-                    "scipy<=1.5.4, >=1.3.2; python_version<'3.7'",
-                    "scipy>=1.3.2, <=1.9.1; python_version>='3.7'",
-                    "matplotlib~=3.3.4; python_version<'3.7'",
-                    "matplotlib>=3.3.4, <3.6; python_version>='3.7'",
+                    "scipy>=1.3.2, <=1.9.1",
+                    "matplotlib>=3.3.4, <3.6",
                     "networkx>=2.6, <=2.8.2",  # see ticket 94048 or https://github.com/networkx/networkx/issues/5962
                     "numpy>=1.19.1, <1.24",
-                    "pillow~=8.4.0; python_version<'3.7'",
-                    "pillow>=9.0.0; python_version>='3.7'",
+                    "pillow>=9.0.0",
 
                     # The recent pyparsing major version update seems to break
                     # integration with networkx - the graphs parsed from current .dot
@@ -97,16 +94,14 @@ INSTALL_REQUIRES = ["ninja>=1.10.0.post2, <1.11",
                     "jstyleson>=0.0.2",
                     "tqdm>=4.54.1",
                     "natsort>=7.1.0",
-                    "pandas~=1.1.5; python_version<'3.7'",
-                    "pandas>=1.1.5,<1.4.0rc0; python_version>='3.7'",
-                    "scikit-learn~=0.24.0; python_version<'3.7'",
-                    "scikit-learn>=0.24.0; python_version>='3.7'",
+                    "pandas>=1.1.5,<1.4.0rc0",
+                    "scikit-learn>=0.24.0",
                     "wheel>=0.36.1"]
 
 
 python_version = sys.version_info
-if python_version < (3, 6, 2):
-    print("Only Python >= 3.6.2 is supported")
+if python_version < (3, 7, 0):
+    print("Only Python >= 3.7.0 is supported")
     sys.exit(0)
 
 version_string = "{}{}".format(sys.version_info[0], sys.version_info[1])
@@ -127,7 +122,6 @@ EXTRAS_REQUIRE = {
         "torch==1.9.1",
         "torchvision==0.10.1",
         "onnx==1.11.0",
-        "skl2onnx==1.9.3",
         "protobuf==3.20.1",
         "onnxruntime-openvino==1.11.0",
     ],
