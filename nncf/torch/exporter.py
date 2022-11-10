@@ -170,7 +170,7 @@ class PTExporter(Exporter):
                               input_names=input_names,
                               output_names=output_names,
                               opset_version=opset_version,
-                              training=torch.onnx.TrainingMode.TRAINING)
+                              training=True)
             model.enable_dynamic_graph_building()
         model.forward = original_forward
         model.to(original_device)
