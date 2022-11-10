@@ -23,5 +23,8 @@ wrapper(Conv2dStaticSamePadding)
 
 def efficient_net(pretrained=True, num_classes=1000, **kwargs):
     if pretrained:
-        return EfficientNet.from_pretrained(num_classes=num_classes, **kwargs)
-    return EfficientNet.from_name(num_classes=num_classes, **kwargs)
+        model = EfficientNet.from_pretrained(num_classes=num_classes, **kwargs)
+    else:
+        model = EfficientNet.from_name(num_classes=num_classes, **kwargs)
+    model.set_swish(memory_efficient=False)
+    return model
