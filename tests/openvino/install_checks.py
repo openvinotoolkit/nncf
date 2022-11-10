@@ -26,8 +26,8 @@ EXCLUDED_MODULES_PATTERNS = (
     'nncf\\.experimental\\.torch.*',
     '.*?onnx_[^\\.]*',
     '.*?torch_[^\\.]*',
-    '.*?tf_[^\\.]*',
-    )
+    '.*?tf_[^\\.]*'
+)
 
 
 def excluded_module(name):
@@ -42,10 +42,9 @@ def onerror(name):
         raise RuntimeError(f'Could not import {name}')
 
 
-for loader, module_name, is_pkg in pkgutil.walk_packages(nncf.__path__,
-                                                         nncf.__name__ + '.',
-                                                         onerror):
+for loader, module_name, _ in pkgutil.walk_packages(nncf.__path__,
+                                                    nncf.__name__ + '.',
+                                                    onerror):
     if module_name in sys.modules or excluded_module(module_name):
         continue
-    if not is_pkg:
-        loader.find_module(module_name).load_module(module_name)
+    loader.find_module(module_name).load_module(module_name)

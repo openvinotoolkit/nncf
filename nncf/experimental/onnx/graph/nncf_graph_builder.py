@@ -74,7 +74,7 @@ class GraphConverter:
             if isinstance(tensor, str):
                 tensor_shape = onnx_graph.get_edge_shape(tensor)
             elif isinstance(tensor, onnx.ValueInfoProto):
-                tensor_shape = onnx_graph.get_tensor_shape(tensor)
+                tensor_shape = ONNXGraph.get_tensor_shape(tensor)
         except RuntimeError as err:
             # This exception raised because ONNX format allows to not have shape field.
             # Model example - effecienet-v2, mobilenet_v2.
@@ -110,7 +110,7 @@ class GraphConverter:
             output_port_id = 0
             for node in filter(GraphConverter._is_valid_onnx_metatype, to_nodes):
                 to_node_id = nncf_graph.get_node_by_name(node.name).node_id
-                input_port_id = onnx_graph.get_input_port_id_for_node_after_input(input_name, node)
+                input_port_id = ONNXGraph.get_input_port_id_for_node_after_input(input_name, node)
                 nncf_graph.add_edge_between_nncf_nodes(
                     from_node_id=input_node_node_id,
                     to_node_id=to_node_id,
@@ -146,7 +146,7 @@ class GraphConverter:
             input_port_id = 0
             for node in filter(GraphConverter._is_valid_onnx_metatype, from_nodes):
                 from_node_id = nncf_graph.get_node_by_name(node.name).node_id
-                output_port_id = onnx_graph.get_output_port_id_for_node_before_output(output_name, node)
+                output_port_id = ONNXGraph.get_output_port_id_for_node_before_output(output_name, node)
                 nncf_graph.add_edge_between_nncf_nodes(
                     from_node_id=from_node_id,
                     to_node_id=output_node_node_id,
@@ -205,7 +205,7 @@ class GraphConverter:
                 visited_nodes.append(current_node)
 
         for output_node in visited_nodes:
-            output_edges = onnx_graph.get_node_edges(output_node.name)['output']
+            output_edges = onnx_graph.get_node_edge_names(output_node.name)['output']
             for output_edge in output_edges:
                 tensor_shape = GraphConverter._get_tensor_shape(onnx_graph, output_edge)
 
@@ -218,7 +218,7 @@ class GraphConverter:
                     # if this node is output
                     continue
                 for input_node in filter(GraphConverter._is_valid_onnx_metatype, input_nodes):
-                    port_ids = onnx_graph.get_port_ids_between_nodes(output_node, input_node)
+                    port_ids = ONNXGraph.get_port_ids_between_nodes(output_node, input_node)
                     input_port_id = port_ids['input_port_id']
                     output_port_id = port_ids['output_port_id']
                     in_node_id = nncf_graph.get_node_by_name(input_node.name).node_id

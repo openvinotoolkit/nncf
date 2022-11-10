@@ -35,7 +35,7 @@ from nncf.torch.checkpoint_loading import load_state
 from nncf.torch.nncf_network import NNCFNetwork
 from nncf.torch.utils import is_main_process
 
-ModelType = TypeVar('ModelType')
+TModel = TypeVar('TModel')
 OptimizerType = TypeVar('OptimizerType')
 LRSchedulerType = TypeVar('LRSchedulerType')
 TensorboardWriterType = TypeVar('TensorboardWriterType')
@@ -43,7 +43,7 @@ DataLoaderType = TypeVar('DataLoaderType')
 TrainEpochFnType = Callable[
     [
         DataLoaderType,
-        ModelType,
+        TModel,
         CompressionAlgorithmController,
         int,
         OptimizerType,
@@ -51,7 +51,7 @@ TrainEpochFnType = Callable[
 ]
 ValFnType = Callable[
     [
-        ModelType,
+        TModel,
         DataLoaderType
     ],
     Tuple[float, float, float]
