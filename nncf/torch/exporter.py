@@ -11,11 +11,14 @@
  limitations under the License.
 """
 from typing import Any
+from typing import List
 from typing import Optional
 from typing import Tuple
 from functools import partial
 from copy import copy
 import torch
+from torch import nn
+from torch.utils.hooks import RemovableHandle
 
 from nncf.common.exporter import Exporter
 from nncf.common.utils.logger import logger as nncf_logger
@@ -31,6 +34,45 @@ def generate_input_names_list(num_inputs: int):
 
 def generate_output_names_list(num_outputs: int):
     return [f'output.{idx}' for idx in range(0, num_outputs)]
+
+
+class BNTrainingStateSwitcher:
+    def __init__(self, model: nn.Module, state: bool = True):
+        self.original_training_state = {}
+        self.model = model
+        self.state = state
+        self.handles: List[RemovableHandle] = []
+
+    @staticmethod
+    def _apply_to_batchnorms(func):
+        def func_apply_to_bns(module):
+            if isinstance(module, (torch.nn.modules.batchnorm.BatchNorm1d,
+                                   torch.nn.modules.batchnorm.BatchNorm2d,
+                                   torch.nn.modules.batchnorm.BatchNorm3d)):
+                func(module)
+        return func_apply_to_bns
+
+    def __enter__(self):
+        def save_original_bn_training_state(module: torch.nn.Module):
+            self.original_training_state[module] = module.training
+        self.model.apply(self._apply_to_batchnorms(save_original_bn_training_state))
+
+        def hook(module, _) -> None:
+            module.training = self.state
+
+        def register_hook(module: torch.nn.Module):
+            handle = module.register_forward_pre_hook(hook)
+            self.handles.append(handle)
+
+        self.model.apply(self._apply_to_batchnorms(register_hook))
+        return self
+
+    def __exit__(self, *args):
+        def restore_original_bn_training_state(module: torch.nn.Module):
+            module.training = self.original_training_state[module]
+        self.model.apply(self._apply_to_batchnorms(restore_original_bn_training_state))
+        for handle in self.handles:
+            handle.remove()
 
 
 def count_tensors(model_retval: Any) -> int:
@@ -157,20 +199,12 @@ class PTExporter(Exporter):
                 retval = dummy_forward(self._model)
                 output_names = generate_output_names_list(count_tensors(retval))
 
-            def set_eval_state(module, _) -> None:
-                module.training = False
-
-            def func_apply_to_bns(module):
-                if isinstance(module, (torch.nn.modules.batchnorm.BatchNorm1d,
-                                       torch.nn.modules.batchnorm.BatchNorm2d,
-                                       torch.nn.modules.batchnorm.BatchNorm3d)):
-                    module.register_forward_pre_hook(set_eval_state)
-            model.apply(func_apply_to_bns)
-            torch.onnx.export(model, tuple(input_tensor_list), save_path,
-                              input_names=input_names,
-                              output_names=output_names,
-                              opset_version=opset_version,
-                              training=True)
+            with BNTrainingStateSwitcher(model, False):
+                torch.onnx.export(model, tuple(input_tensor_list), save_path,
+                                  input_names=input_names,
+                                  output_names=output_names,
+                                  opset_version=opset_version,
+                                  training=torch.onnx.TrainingMode.TRAINING)
             model.enable_dynamic_graph_building()
         model.forward = original_forward
         model.to(original_device)
