@@ -315,9 +315,15 @@ class ONNXGraph:
         """
         return onnx.TensorProto.DataType.Name(self.get_edge_dtype(edge_name))
 
-    def get_output_nodes(self, node_name: str) -> List[NodeProto]:
+    def get_children(self, node: onnx.NodeProto) -> List[onnx.NodeProto]:
+        """
+        Returns children of the node.
+
+        :param node_name: The parent node.
+        :return: All children nodes.
+        """
         output = []
-        node_edges = self.get_node_edges(node_name)['output']
+        node_edges = self.get_node_edge_names(node.name)['output']
         for node_edge in node_edges:
             output.extend(self.get_nodes_by_input(node_edge))
         return output

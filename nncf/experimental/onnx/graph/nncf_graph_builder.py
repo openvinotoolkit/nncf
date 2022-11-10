@@ -194,7 +194,7 @@ class GraphConverter:
             current_node = nodes_queue.popleft()
             if current_node in visited_nodes:
                 continue
-            nodes_queue.extend(onnx_graph.get_output_nodes(current_node.name))
+            nodes_queue.extend(onnx_graph.get_children(current_node))
             if GraphConverter._is_valid_onnx_metatype(current_node):
                 metatype = ONNX_OPERATION_METATYPES.get_operator_metatype_by_op_name(current_node.op_type)
                 layer_attributes = ONNXExtendedLayerAttributes(current_node.input, current_node.output)
