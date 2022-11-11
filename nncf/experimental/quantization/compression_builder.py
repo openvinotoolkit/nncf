@@ -19,8 +19,8 @@ from nncf.common.graph.model_transformer import ModelTransformer
 from nncf.common.utils.backend import BackendType
 from nncf.common.utils.backend import get_backend
 
-from nncf.quantization.api.engine import Engine
-from nncf.quantization.algorithms import Algorithm
+from nncf.common.engine import Engine
+from nncf.quantization.algorithms.algorithm import Algorithm
 from nncf.quantization.statistics.aggregator import StatisticsAggregator
 
 TModel = TypeVar('TModel')

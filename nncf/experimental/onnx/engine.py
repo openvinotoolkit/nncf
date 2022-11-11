@@ -21,8 +21,8 @@ from nncf.common.graph.definitions import NNCFGraphNodeType
 from nncf.common.tensor import NNCFTensor
 from nncf.experimental.onnx.graph.onnx_graph import ONNXGraph
 
-from nncf.quantization.api.engine import Engine
-from nncf.quantization.factories import NNCFGraphFactory
+from nncf.common.engine import Engine
+from nncf.common.graph.factory import NNCFGraphFactory
 from nncf.quantization.statistics.statistic_point import StatisticPointsContainer
 from nncf.experimental.onnx.tensor import ONNXNNCFTensor
 

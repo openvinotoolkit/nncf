@@ -23,6 +23,7 @@ import torch
 import torchvision
 
 from examples.experimental.onnx.mobilenet_v2 import utils
+from nncf.experimental.onnx.tensor import ONNXNNCFTensor
 
 # Path to the `mobilenet_v2` directory.
 ROOT = Path(__file__).parent.resolve()
@@ -63,7 +64,7 @@ def run_example():
     input_name = onnx_model.graph.input[0].name
     def transform_fn(data_item):
         images, _ = data_item
-        return {input_name: images.numpy()}
+        return {input_name: ONNXNNCFTensor(images.numpy())}
 
     # Wrap framework-specific data source into the `nncf.Dataset` object.
     calibration_dataset = nncf.Dataset(data_source, transform_fn)

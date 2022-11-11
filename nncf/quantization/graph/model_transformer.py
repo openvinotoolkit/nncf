@@ -23,7 +23,7 @@ TModel = TypeVar('TModel')
 
 
 # pylint: disable=no-member
-class StaticModelTransformerBase(ModelTransformer, ABC):
+class BaseModelTransformer(ModelTransformer, ABC):
 
     def __init__(self, model: TModel):
         super().__init__(model)
@@ -39,39 +39,35 @@ class StaticModelTransformerBase(ModelTransformer, ABC):
         :return: model after transformations
         """
 
+    @abstractmethod
     def _apply_quantizer_insertion_transformations(self, transformations: List[TransformationCommand]) -> None:
         """
         Applies quantizer insertion transformations to the model
 
         :param transformations: lisf of the TransformationCommand transformations
         """
-        raise NotImplementedError(
-            '_apply_quantizer_insertion_transformations method must be implemented before call')
 
+    @abstractmethod
     def _apply_output_insertion_transformations(self, transformations: List[TransformationCommand]) -> None:
         """
         Applies output insertion transformations to the model
 
         :param transformations: list of the TransformationCommand transformations
         """
-        raise NotImplementedError(
-            '_apply_output_insertion_transformations method must be implemented before call')
 
+    @abstractmethod
     def _apply_bias_correction_transformations(self, transformations: List[TransformationCommand]) -> None:
         """
         Applies bias correction transformations on the model
 
         :param transformations: lisf of the TransformationCommand transformations
         """
-        raise NotImplementedError(
-            '_apply_bias_correction_transformations method must be implemented before call')
 
     @staticmethod
+    @abstractmethod
     def _apply_model_extraction_transformation(transformations: List[TransformationCommand]) -> TModel:
         """
         Extracts or builds sub-model from the original based on the inputs and outputs names
 
         :param transformations: list of the TransformationCommand transformations
         """
-        raise NotImplementedError(
-            '_apply_model_extraction_transformation must be implemented before call')

@@ -26,12 +26,12 @@ from nncf.experimental.onnx.graph.transformations.commands import ONNXBiasCorrec
 from nncf.experimental.onnx.graph.transformations.commands import ONNXModelExtractionCommand
 from nncf.experimental.onnx.graph.transformations.commands import ONNXOutputInsertionCommand
 from nncf.experimental.onnx.graph.transformations.commands import ONNXQuantizerInsertionCommand
-from nncf.quantization.factories import NNCFGraphFactory
-from nncf.quantization.graph.model_transformer import StaticModelTransformerBase
+from nncf.common.graph.factory import NNCFGraphFactory
+from nncf.quantization.graph.model_transformer import BaseModelTransformer
 
 
 # pylint: disable=no-member
-class ONNXModelTransformer(StaticModelTransformerBase):
+class ONNXModelTransformer(BaseModelTransformer):
     QUANTIZER_NAME_PREFIX = 'QuantizeLinear_'
     DEQUANTIZER_NAME_PREFIX = 'DequantizeLinear_'
     SCALE_TENSOR_NAME_PREFIX = 'scale_'

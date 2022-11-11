@@ -11,35 +11,32 @@
  limitations under the License.
 """
 
-from typing import Dict
-from typing import List
-from typing import Union
-from typing import Optional
-from typing import TypeVar
+from typing import Dict, List, Optional, TypeVar, Union
 
+from nncf import Dataset
+from nncf.common.engine import Engine
+from nncf.common.graph.model_transformer import ModelTransformer
 from nncf.common.hardware.config import HWConfigType
 from nncf.common.quantization.structs import QuantizationPreset
-from nncf.common.utils.backend import BackendType
-from nncf.quantization.algorithms.algorithm import Algorithm
-
-from nncf.quantization.api.engine import Engine
-from nncf.quantization.algorithms import AlgorithmParameters
-from nncf.quantization.algorithms import PostTrainingAlgorithms
-from nncf.quantization.algorithms.min_max.algorithm import MinMaxQuantization
-from nncf.quantization.algorithms.min_max.algorithm import MinMaxQuantizationParameters
-from nncf.quantization.algorithms.fast_bias_correction.algorithm import FastBiasCorrection
-from nncf.quantization.algorithms.fast_bias_correction.algorithm import \
-    FastBiasCorrectionParameters
-from nncf.quantization.algorithms.definitions import Granularity
-from nncf.quantization.algorithms.definitions import RangeType
-from nncf.quantization.statistics.statistic_point import StatisticPointsContainer
+from nncf.common.utils.backend import BackendType, get_backend
+from nncf.common.utils.logger import logger as nncf_logger
+from nncf.quantization.algorithms.algorithm import (Algorithm,
+                                                    AlgorithmParameters)
+from nncf.quantization.algorithms.definitions import Granularity, RangeType
+from nncf.quantization.algorithms.fast_bias_correction.algorithm import (
+    FastBiasCorrection, FastBiasCorrectionParameters)
+from nncf.quantization.algorithms.min_max.algorithm import (
+    MinMaxQuantization, MinMaxQuantizationParameters)
+from nncf.quantization.statistics.aggregator import StatisticsAggregator
+from nncf.quantization.statistics.statistic_point import \
+    StatisticPointsContainer
 
 TModel = TypeVar('TModel')
 
 
-class DefaultQuantizationParameters(AlgorithmParameters):
+class PostTrainingQuantizationParameters(AlgorithmParameters):
     """
-    This class handles parameters for DefaultQuantization algorithm.
+    This class handles parameters for PostTrainingQuantization algorithm.
     """
 
     def __init__(self,
@@ -54,7 +51,7 @@ class DefaultQuantizationParameters(AlgorithmParameters):
                  quantize_outputs: bool = False,
                  ignored_scopes: Optional[List[str]] = None
                  ):
-        self.algorithms = {PostTrainingAlgorithms.MinMaxQuantization: MinMaxQuantizationParameters(
+        self.algorithms = {MinMaxQuantization: MinMaxQuantizationParameters(
             preset=preset,
             weight_bits=weight_bits,
             weight_granularity=weight_granularity,
@@ -66,7 +63,7 @@ class DefaultQuantizationParameters(AlgorithmParameters):
             quantize_outputs=quantize_outputs,
             ignored_scopes=ignored_scopes
         ),
-            PostTrainingAlgorithms.FastBiasCorrection: FastBiasCorrectionParameters(
+            FastBiasCorrection: FastBiasCorrectionParameters(
             number_samples=number_samples
         )}
 
@@ -74,9 +71,9 @@ class DefaultQuantizationParameters(AlgorithmParameters):
         pass
 
 
-class DefaultQuantization(Algorithm):
+class PostTrainingQuantization(Algorithm):
     """
-    Implements Default post-training Quantization algorithm, which basically includes:
+    Implements Post-Training Quantization algorithm, which basically includes:
     1) MinMaxQuantization
     2) FastBiasCorrection
     3) ChannelAlignment
@@ -87,13 +84,12 @@ class DefaultQuantization(Algorithm):
     """
 
     def __init__(self,
-                 quantization_parameters: DefaultQuantizationParameters = DefaultQuantizationParameters()):
+                 quantization_parameters: PostTrainingQuantizationParameters = PostTrainingQuantizationParameters()):
         super().__init__()
-        self.algorithms = self._get_sub_algorithms(
-            quantization_parameters.algorithms)
+        self.algorithms = self._get_sub_algorithms(quantization_parameters.algorithms)
 
     @staticmethod
-    def _get_sub_algorithms(algorithms: Dict[PostTrainingAlgorithms, AlgorithmParameters]) -> List[Algorithm]:
+    def _get_sub_algorithms(algorithms: Dict[Algorithm, AlgorithmParameters]) -> List[Algorithm]:
         """
         This methods initializes sub-algorithms based on the general parameters.
 
@@ -103,30 +99,107 @@ class DefaultQuantization(Algorithm):
         """
         algorithms_list = []
         for algorithm, parameters in algorithms.items():
-            if algorithm == PostTrainingAlgorithms.MinMaxQuantization:
+            if algorithm == MinMaxQuantization:
                 min_max_algo = MinMaxQuantization(parameters)
                 algorithms_list.append(min_max_algo)
-            if algorithm == PostTrainingAlgorithms.FastBiasCorrection:
+            if algorithm == FastBiasCorrection:
                 fast_bc_algo = FastBiasCorrection(parameters)
                 algorithms_list.append(fast_bc_algo)
         return algorithms_list
 
     @property
     def available_backends(self) -> Dict[str, BackendType]:
-        algorithms_backends = {}
-        for algorithm in self.algorithms:
-            algorithms_backends.update(algorithm.available_backends)
-        return algorithms_backends
-
-    def _apply(self, model: TModel, engine: Engine, statistic_points: StatisticPointsContainer) -> TModel:
-        for algorithm in self.algorithms:
-            model = algorithm.apply(model, engine, statistic_points)
-        return model
+        return
 
     def get_statistic_points(self, model: TModel) -> StatisticPointsContainer:
-        output = StatisticPointsContainer()
+            output = StatisticPointsContainer()
+            for algorithm in self.algorithms:
+                for statistic_points in algorithm.get_statistic_points(model).values():
+                    for statistic_point in statistic_points:
+                        output.add_statistic_point(statistic_point)
+            return output
+
+    def _create_engine(self, backend: BackendType) -> Engine:
+        """
+        Creates backend-specific Engine.
+
+        :param backend: model backend type for the further differentiations
+        :return: backnd-specific Engine
+        """
+        if backend == BackendType.ONNX:
+            from nncf.experimental.onnx.engine import ONNXEngine
+            return ONNXEngine()
+        return None
+
+    def _create_statistics_aggregator(self,
+                                      engine: Engine,
+                                      dataset: Dataset,
+                                      backend: BackendType) -> StatisticsAggregator:
+        """
+        Creates backend-specific StatisticsAggregator.
+
+        :param engine: engine for the model execution
+        :param dataset: dataset for the statistics collection and validation
+        :param model_transformer: backend-specific StaticModelTransformerBase instance
+        :param backend: model backend type for the further differentiations
+        :return: backnd-specific StatisticsAggregator
+        """
+        if backend == BackendType.ONNX:
+            from nncf.experimental.onnx.statistics.aggregator import \
+                ONNXStatisticsAggregator
+            return ONNXStatisticsAggregator(engine, dataset)
+        return None
+
+    def _create_model_transformer(self, model: TModel, backend: BackendType) -> ModelTransformer:
+        """
+        Creates backend-specific ModelTransformer.
+
+        :param model: input model for the ModelTransformer
+        :param backend: model backend type for the further differentiations
+        :return: backnd-specific ModelTransformer
+        """
+        if backend == BackendType.ONNX:
+            from nncf.experimental.onnx.graph.model_transformer import \
+                ONNXModelTransformer
+            return ONNXModelTransformer(model)
+        return None
+
+    def _get_prepared_model_for_compression(self, model: TModel, backend: BackendType) -> TModel:
+        if backend == BackendType.ONNX:
+            from nncf.experimental.onnx.model_normalizer import \
+                ONNXModelNormalizer
+            return ONNXModelNormalizer.normalize_model(model, self.convert_opset_version)
+
+        return None
+
+    def _apply(self,
+               model: TModel,
+               engine: Optional[Engine] = None,
+               statistic_points: Optional[StatisticPointsContainer] = None,
+               dataset: Optional[Dataset] = None) -> TModel:
+
+        modified_model = model
+        if engine is None and statistic_points is None:
+            backend = get_backend(model)
+
+            # TODO (KodiaqQ): Remove after ONNX is removed from experimental
+            if backend == BackendType.ONNX:
+                nncf_logger.warning(
+                    'You are using experimental ONNX backend for the Post-training quantization.')
+            modified_model = self._get_prepared_model_for_compression(modified_model, backend)
+
+            if engine is None:
+                engine = self._create_engine(backend)
+
+            statistics_aggregator = self._create_statistics_aggregator(engine, dataset, backend)
+            for algorithm in self.algorithms:
+                algo_statistic_points = algorithm.get_statistic_points(modified_model)
+                statistics_aggregator.register_stastistic_points(algo_statistic_points)
+
+            model_transformer = self._create_model_transformer(modified_model, backend)
+            statistics_aggregator.collect_statistics(model_transformer)
+            statistic_points = statistics_aggregator.statistic_points
+
         for algorithm in self.algorithms:
-            for statistic_points in algorithm.get_statistic_points(model).values():
-                for statistic_point in statistic_points:
-                    output.add_statistic_point(statistic_point)
-        return output
+            modified_model = algorithm.apply(modified_model, engine, statistic_points)
+        return modified_model

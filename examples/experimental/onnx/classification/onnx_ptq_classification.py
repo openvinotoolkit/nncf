@@ -17,9 +17,9 @@ from typing import Optional
 import onnx
 import onnxruntime as rt
 
-from nncf.quantization.compression_builder import CompressionBuilder
-from nncf.quantization.algorithms import DefaultQuantization
-from nncf.quantization.algorithms import DefaultQuantizationParameters
+from nncf.experimental.quantization.compression_builder import CompressionBuilder
+from nncf.quantization.algorithms.default.algorithm import PostTrainingQuantization
+from nncf.quantization.algorithms.default.algorithm import PostTrainingQuantizationParameters
 from nncf.experimental.onnx.common import infer_input_shape
 from examples.experimental.onnx.classification.imagenet_dataset import create_dataloader, create_dataset
 from nncf.common.utils.logger import logger as nncf_logger
@@ -53,11 +53,11 @@ def run(onnx_model_path: str, output_model_path: str,
     builder = CompressionBuilder()
 
     # Step 3: Create the quantization algorithm and add to the builder.
-    quantization_parameters = DefaultQuantizationParameters(
+    quantization_parameters = PostTrainingQuantizationParameters(
         number_samples=num_init_samples,
         ignored_scopes=ignored_scopes
     )
-    quantization = DefaultQuantization(quantization_parameters)
+    quantization = PostTrainingQuantization(quantization_parameters)
     builder.add_algorithm(quantization)
 
     # Step 4: Execute the pipeline.

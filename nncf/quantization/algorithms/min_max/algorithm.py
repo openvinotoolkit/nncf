@@ -18,7 +18,9 @@ from typing import List
 from typing import Set
 from typing import TypeVar
 from typing import Union
+from typing import Optional
 
+from nncf import Dataset
 from nncf.common.graph.definitions import NNCFGraphNodeType
 from nncf.common.graph.graph import NNCFGraph
 from nncf.common.graph.transformations.commands import TargetType
@@ -38,9 +40,8 @@ from nncf.common.tensor_statistics.collectors import TensorStatisticCollectorBas
 from nncf.common.utils.backend import BackendType, get_backend
 from nncf.common.utils.logger import logger as nncf_logger
 
-from nncf.quantization.algorithms import Algorithm
-from nncf.quantization.algorithms import AlgorithmParameters
-from nncf.quantization.algorithms.algorithm import PostTrainingAlgorithms
+from nncf.quantization.algorithms.algorithm import Algorithm
+from nncf.quantization.algorithms.algorithm import AlgorithmParameters
 from nncf.quantization.algorithms.min_max.backend import ALGO_BACKENDS
 from nncf.quantization.algorithms.min_max.utils import \
     calculate_activation_quantizer_parameters
@@ -48,8 +49,8 @@ from nncf.quantization.algorithms.min_max.utils import \
     calculate_weight_quantizer_parameters
 from nncf.quantization.algorithms.definitions import RangeType
 from nncf.quantization.algorithms.definitions import Granularity
-from nncf.quantization.api.engine import Engine
-from nncf.quantization.factories import NNCFGraphFactory
+from nncf.common.engine import Engine
+from nncf.common.graph.factory import NNCFGraphFactory
 from nncf.quantization.statistics.statistic_point import StatisticPoint
 from nncf.quantization.statistics.statistic_point import StatisticPointsContainer
 
@@ -287,8 +288,11 @@ class MinMaxQuantization(Algorithm):
         self._quantization_target_points = sorted(self._quantization_target_points)
         return self._quantization_target_points
 
-    def _apply(self, model: TModel, engine: Engine,
-               statistic_points: StatisticPointsContainer) -> TModel:
+    def _apply(self,
+               model: TModel,
+               engine: Optional[Engine] = None,
+               statistic_points: Optional[StatisticPointsContainer] = None,
+               dataset: Optional[Dataset] = None) -> TModel:
         transformation_layout, transformation_commands = TransformationLayout(), []
         nncf_graph = NNCFGraphFactory.create(model) if self.nncf_graph is None else self.nncf_graph
         model_transformer = self._backend_entity.model_transformer(model)
@@ -319,13 +323,13 @@ class MinMaxQuantization(Algorithm):
                 transformation_commands.append(command)
             elif quantization_target_point.type in [TargetType.PRE_LAYER_OPERATION, TargetType.POST_LAYER_OPERATION]:
                 def filter_func(point):
-                    return PostTrainingAlgorithms.MinMaxQuantization in point.algorithm_to_tensor_collectors and \
+                    return MinMaxQuantization in point.algorithm_to_tensor_collectors and \
                         point.target_point.type == quantization_target_point.type
 
                 for tensor_collector in statistic_points.get_algo_statistics_for_node(
                         target_node_name,
                         filter_func,
-                        PostTrainingAlgorithms.MinMaxQuantization):
+                        MinMaxQuantization):
                     parameters = calculate_activation_quantizer_parameters(tensor_collector.get_statistics(),
                                                                            self._parameters.activation_quantizer_config)
                     command = self._backend_entity.quantizer_insertion_command(quantization_target_point, parameters)
@@ -352,7 +356,7 @@ class MinMaxQuantization(Algorithm):
                 stat_collector = self._get_stat_collector(self._parameters.activation_quantizer_config)
                 output.add_statistic_point(StatisticPoint(target_point=quantization_target_point,
                                                           tensor_collector=stat_collector,
-                                                          algorithm=PostTrainingAlgorithms.MinMaxQuantization))
+                                                          algorithm=MinMaxQuantization))
             else:
                 nncf_logger.debug(
                     'Skipping {} Quantization Target Point, which is used for weights quantization'.format(

@@ -31,7 +31,7 @@ from nncf.common.tensor_statistics.collectors import TensorStatisticCollectorBas
 from nncf.common.utils.registry import Registry
 from nncf.common.quantization.structs import QuantizerConfig
 from nncf.quantization.algorithms.min_max.utils import QuantizerLayerParameters
-from nncf.quantization.graph.model_transformer import StaticModelTransformerBase
+from nncf.quantization.graph.model_transformer import BaseModelTransformer
 
 TModel = TypeVar('TModel')
 ALGO_BACKENDS = Registry('algo_backends')
@@ -76,7 +76,7 @@ class MinMaxAlgoBackend(ABC):
 
     @staticmethod
     @abstractmethod
-    def model_transformer(model: TModel) -> StaticModelTransformerBase:
+    def model_transformer(model: TModel) -> BaseModelTransformer:
         """
         Returns backend-specific ModelTransformer instance.
 

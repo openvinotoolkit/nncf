@@ -15,7 +15,7 @@ import pytest
 
 import numpy as np
 
-from nncf.quantization.compression_builder import CompressionBuilder
+from nncf.experimental.quantization.compression_builder import CompressionBuilder
 from nncf.quantization.algorithms.min_max.algorithm import MinMaxQuantizationParameters
 from nncf.quantization.algorithms.min_max.algorithm import MinMaxQuantization
 from nncf.experimental.onnx.graph.onnx_graph import ONNXGraph
