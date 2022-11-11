@@ -281,10 +281,37 @@ BOOTSTRAP_NAS_SCHEMA = {
 }
 
 ########################################################################################################################
+# FracBits Quantization
+########################################################################################################################
+FRACBITS_QUANTIZATION_ALGO_NAME_IN_CONFIG = 'fracbits_quantization'
+FRACBITS_QUANTIZATION_SCHEMA = copy.deepcopy(QUANTIZATION_SCHEMA)
+FRACBITS_QUANTIZATION_SCHEMA['properties']['algorithm']['const'] = FRACBITS_QUANTIZATION_ALGO_NAME_IN_CONFIG
+FRACBITS_QUANTIZATION_SCHEMA['properties']['freeze_epoch'] = with_attributes(
+    NUMBER, description="The number of epoch to freeze fractional bit widths to integers by rounding them.")
+FRACBITS_QUANTIZATION_SCHEMA['properties']['loss'] = {
+    "type": "object",
+    "properties": {
+        "type": with_attributes(STRING, description="Type of compression loss. Choose model_size or bitops."),
+        "compression_rate": with_attributes(NUMBER, description="Target compression rate"),
+        "criteria": with_attributes(STRING, description="Criteria to measure the distance between the target "
+                                    "compression rate and the currrent compression rate. Choose L1 or L2."),
+        "flip_loss": with_attributes(
+            BOOLEAN,
+            description="If true, we compute the compression loss by "
+            "|1 / target_compression_rate - (current_model_size / target_model_size)|, "
+            "otherwise, we compute it by "
+            "|target_compression_rate - (target_model_size / current_model_size)|."),
+        "alpha": with_attributes(NUMBER, description="Scale multiplier for the compression loss."),
+    },
+    "additionalProperties": False
+}
+
+########################################################################################################################
 # All experimental schemas
 ########################################################################################################################
 
 EXPERIMENTAL_REF_VS_ALGO_SCHEMA = {
     EXPERIMENTAL_QUANTIZATION_ALGO_NAME_IN_CONFIG: EXPERIMENTAL_QUANTIZATION_SCHEMA,
-    BOOTSTRAP_NAS_ALGO_NAME_IN_CONFIG: BOOTSTRAP_NAS_SCHEMA
+    BOOTSTRAP_NAS_ALGO_NAME_IN_CONFIG: BOOTSTRAP_NAS_SCHEMA,
+    FRACBITS_QUANTIZATION_ALGO_NAME_IN_CONFIG: FRACBITS_QUANTIZATION_SCHEMA
 }
