@@ -53,7 +53,7 @@ class Algorithm(ABC):
         :return: Dict of backends supported by the algorithm
         """
 
-    def apply(self, 
+    def apply(self,
               model: TModel,
               engine: Optional[Engine] = None,
               statistic_points: Optional[StatisticPointsContainer] = None,
@@ -67,7 +67,7 @@ class Algorithm(ABC):
         :return: model after algorithm
         """
         if engine is None and statistic_points is None:
-            return self._apply(model, dataset=dataset)
+            return self._apply(model, engine=None, statistic_points=None, dataset=dataset)
         _statistic_points = self.get_statistic_points(model)
         for edge_name in _statistic_points.keys():
             if statistic_points.get(edge_name) is None:

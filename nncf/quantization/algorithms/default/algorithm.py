@@ -112,12 +112,12 @@ class PostTrainingQuantization(Algorithm):
         return
 
     def get_statistic_points(self, model: TModel) -> StatisticPointsContainer:
-            output = StatisticPointsContainer()
-            for algorithm in self.algorithms:
-                for statistic_points in algorithm.get_statistic_points(model).values():
-                    for statistic_point in statistic_points:
-                        output.add_statistic_point(statistic_point)
-            return output
+        output = StatisticPointsContainer()
+        for algorithm in self.algorithms:
+            for statistic_points in algorithm.get_statistic_points(model).values():
+                for statistic_point in statistic_points:
+                    output.add_statistic_point(statistic_point)
+        return output
 
     def _create_engine(self, backend: BackendType) -> Engine:
         """
@@ -168,7 +168,7 @@ class PostTrainingQuantization(Algorithm):
         if backend == BackendType.ONNX:
             from nncf.experimental.onnx.model_normalizer import \
                 ONNXModelNormalizer
-            return ONNXModelNormalizer.normalize_model(model, self.convert_opset_version)
+            return ONNXModelNormalizer.normalize_model(model, convert_opset_version=True)
 
         return None
 
