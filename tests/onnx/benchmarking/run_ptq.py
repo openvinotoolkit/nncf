@@ -35,6 +35,8 @@ from tests.onnx.benchmarking.accuracy_checker import MSCocoSegmentationToVOCConv
 from nncf.experimental.post_training.api import dataset as ptq_api_dataset
 
 from tests.onnx.quantization.common import find_ignored_scopes
+from tests.onnx.utils import convert_opset_version
+
 
 # pylint: disable=redefined-outer-name
 
@@ -66,8 +68,7 @@ class OpenVINOAccuracyCheckerDataset(ptq_api_dataset.Dataset):
 def run(onnx_model_path: str, output_model_path: str, dataset: Dataset,
         ignored_scopes: Optional[List[str]] = None,
         disallowed_op_types: Optional[List[str]] = None,
-        convert_opset_version: bool = True):
-
+        convert_model_opset: bool = True):
     num_init_samples = len(dataset)
 
     nncf_logger.info("Post-Training Quantization Parameters:")
@@ -81,8 +82,12 @@ def run(onnx_model_path: str, output_model_path: str, dataset: Dataset,
     nncf_logger.info(f"  number of samples: {num_init_samples}")
     nncf_logger.info(f"  ignored_scopes: {ignored_scopes}")
 
+    # Step 0: Convert model opset
+    if convert_model_opset:
+        model = convert_opset_version(original_model)
+
     # Step 1: Create a pipeline of compression algorithms.
-    builder = CompressionBuilder(convert_opset_version)
+    builder = CompressionBuilder()
 
     # Step 2: Create the quantization algorithm and add to the builder.
     quantization_parameters = PostTrainingQuantizationParameters(
@@ -94,7 +99,7 @@ def run(onnx_model_path: str, output_model_path: str, dataset: Dataset,
 
     # Step 4: Execute the pipeline.
     nncf_logger.info("Post-Training Quantization has just started!")
-    quantized_model = builder.apply(original_model, dataset)
+    quantized_model = builder.apply(model, dataset)
 
     # Step 5: Save the quantized model.
     onnx.save(quantized_model, output_model_path)

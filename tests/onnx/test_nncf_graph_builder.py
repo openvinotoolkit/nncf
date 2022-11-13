@@ -21,13 +21,13 @@ import onnx
 from nncf.common.utils.dot_file_rw import read_dot_graph
 from nncf.common.utils.dot_file_rw import write_dot_graph
 from nncf.experimental.onnx.graph.nncf_graph_builder import GraphConverter
-from nncf.experimental.onnx.model_normalizer import ONNXModelNormalizer
 from tests.onnx.conftest import ONNX_TEST_ROOT
 
 from tests.onnx.models import ALL_SYNTHETIC_MODELS
 from tests.common.paths import TEST_ROOT
 from tests.onnx.quantization.common import ModelToTest
 from tests.onnx.quantization.common import check_nx_graph
+from tests.onnx.utils import convert_opset_version
 
 REFERENCE_GRAPHS_DIR = ONNX_TEST_ROOT / 'data' / 'reference_graphs' / 'original_nncf_graph'
 
@@ -71,7 +71,6 @@ def test_compare_nncf_graph_classification_real_models(tmp_path, model_to_test, 
     torch.onnx.export(model, x, onnx_model_path, opset_version=13)
 
     original_model = onnx.load(onnx_model_path)
-    original_model = ONNXModelNormalizer.normalize_model(original_model)
 
     path_to_dot = REFERENCE_GRAPHS_DIR / model_to_test.path_ref_graph
 
@@ -102,10 +101,8 @@ def test_compare_nncf_graph_detection_real_models(tmp_path, model_to_test, gener
         os.mkdir(onnx_model_dir)
     original_model = onnx.load(onnx_model_path)
 
-    convert_opset_version = True
-    if model_to_test.model_name == 'MaskRCNN-12':
-        convert_opset_version = False
-    original_model = ONNXModelNormalizer.normalize_model(original_model, convert_opset_version)
+    if model_to_test.model_name != 'MaskRCNN-12':
+        original_model = convert_opset_version(original_model)
 
     path_to_dot = REFERENCE_GRAPHS_DIR / model_to_test.path_ref_graph
 

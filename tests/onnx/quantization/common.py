@@ -21,10 +21,6 @@ import onnx
 import onnxruntime as rt
 
 from nncf.common.utils.dot_file_rw import write_dot_graph
-from tests.common.paths import TEST_ROOT
-from tests.common.graph.nx_graph import compare_nx_graph_with_reference
-from tests.common.graph.nx_graph import check_nx_graph
-
 from nncf.experimental.post_training.api.dataset import Dataset
 from nncf.experimental.post_training.compression_builder import CompressionBuilder
 from nncf.experimental.post_training.algorithms.quantization.min_max.algorithm import MinMaxQuantization
@@ -34,7 +30,11 @@ from nncf.experimental.post_training.algorithms.quantization import PostTraining
 from nncf.experimental.onnx.graph.nncf_graph_builder import GraphConverter
 from nncf.experimental.onnx.tensor import ONNXNNCFTensor
 from nncf.experimental.onnx.graph.onnx_graph import ONNXGraph
-from nncf.experimental.onnx.model_normalizer import ONNXModelNormalizer
+
+from tests.common.paths import TEST_ROOT
+from tests.common.graph.nx_graph import compare_nx_graph_with_reference
+from tests.common.graph.nx_graph import check_nx_graph
+from tests.onnx.utils import convert_opset_version
 
 REFERENCE_GRAPHS_TEST_ROOT = 'data/reference_graphs/quantization'
 
@@ -78,13 +78,15 @@ def _get_input_key(original_model: onnx.ModelProto) -> str:
 
 
 def min_max_quantize_model(
-        input_shape: List[int], original_model: onnx.ModelProto, convert_opset_version: bool = True,
+        input_shape: List[int], original_model: onnx.ModelProto, convert_model_opset: bool = True,
         ignored_scopes: List[str] = None, dataset_has_batch_size: bool = True) -> onnx.ModelProto:
+    if convert_model_opset:
+        original_model = convert_opset_version(original_model)
     onnx_graph = ONNXGraph(original_model)
     input_dtype = onnx_graph.get_edge_dtype(original_model.graph.input[0].name)
     input_np_dtype = onnx.helper.mapping.TENSOR_TYPE_TO_NP_TYPE[input_dtype]
     dataset = DatasetForTest(_get_input_key(original_model), input_shape, input_np_dtype, dataset_has_batch_size)
-    builder = CompressionBuilder(convert_opset_version)
+    builder = CompressionBuilder()
     builder.add_algorithm(
         MinMaxQuantization(MinMaxQuantizationParameters(number_samples=1, ignored_scopes=ignored_scopes)))
     quantized_model = builder.apply(original_model, dataset)
@@ -92,13 +94,15 @@ def min_max_quantize_model(
 
 
 def ptq_quantize_model(
-        input_shape: List[int], original_model: onnx.ModelProto, convert_opset_version: bool = True,
+        input_shape: List[int], original_model: onnx.ModelProto, convert_model_opset: bool = True,
         ignored_scopes: List[str] = None, dataset_has_batch_size: bool = True) -> onnx.ModelProto:
+    if convert_model_opset:
+        original_model = convert_opset_version(original_model)
     onnx_graph = ONNXGraph(original_model)
     input_dtype = onnx_graph.get_edge_dtype(original_model.graph.input[0].name)
     input_np_dtype = onnx.helper.mapping.TENSOR_TYPE_TO_NP_TYPE[input_dtype]
     dataset = DatasetForTest(_get_input_key(original_model), input_shape, input_np_dtype, dataset_has_batch_size)
-    builder = CompressionBuilder(convert_opset_version)
+    builder = CompressionBuilder()
     builder.add_algorithm(
         PostTrainingQuantization(PostTrainingQuantizationParameters(number_samples=1, ignored_scopes=ignored_scopes)))
     quantized_model = builder.apply(original_model, dataset)
@@ -107,7 +111,6 @@ def ptq_quantize_model(
 
 def compare_nncf_graph(quantized_model: onnx.ModelProto, path_ref_graph: str,
                        generate_ref_graphs: bool = False) -> None:
-    quantized_model = ONNXModelNormalizer.add_input_from_initializer(quantized_model)
     nncf_graph = GraphConverter.create_nncf_graph(quantized_model)
     nx_graph = nncf_graph.get_graph_for_structure_analysis(extended=True)
 
@@ -121,11 +124,9 @@ def compare_nncf_graph(quantized_model: onnx.ModelProto, path_ref_graph: str,
 
 
 def compare_nncf_graph_onnx_models(quantized_model: onnx.ModelProto, _quantized_model: onnx.ModelProto) -> None:
-    quantized_model = ONNXModelNormalizer.add_input_from_initializer(quantized_model)
     nncf_graph = GraphConverter.create_nncf_graph(quantized_model)
     nx_graph = nncf_graph.get_graph_for_structure_analysis(extended=True)
 
-    _quantized_model = ONNXModelNormalizer.add_input_from_initializer(_quantized_model)
     _nncf_graph = GraphConverter.create_nncf_graph(_quantized_model)
     _nx_graph = _nncf_graph.get_graph_for_structure_analysis(extended=True)
 
@@ -141,6 +142,7 @@ def infer_model(input_shape: List[int], quantized_model: onnx.ModelProto) -> Non
     _input = np.random.random(input_shape)
     input_name = sess.get_inputs()[0].name
     _ = sess.run([], {input_name: _input.astype(input_np_dtype)})
+
 
 def find_ignored_scopes(disallowed_op_types: List[str], model: onnx.ModelProto) -> List[str]:
     disallowed_op_types = set(disallowed_op_types)

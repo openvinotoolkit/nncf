@@ -12,6 +12,7 @@
 """
 from typing import Union, List
 
+from collections import Counter
 import onnx
 from onnx import ModelProto
 from onnx import NodeProto  # pylint: disable=no-name-in-module
@@ -37,6 +38,97 @@ class GraphConverter:
     """
 
     DEFAULT_TENSOR_SHAPE = [1]
+
+    @staticmethod
+    def _preprocess_model(model: onnx.ModelProto) -> onnx.ModelProto:
+        model = GraphConverter._add_input_from_initializer(model)
+        model = GraphConverter._replace_empty_node_name(model)
+        return model
+
+    @staticmethod
+    def _replace_empty_node_name(model: onnx.ModelProto) -> onnx.ModelProto:
+        """
+        Sets a unique name to every node in 'model' with empty name field.
+        NNCFGraph expects every node to have a unique name.
+        :param model: ONNX model.
+        :return: ONNX model with filled nodes.
+        """
+        for i, node in enumerate(model.graph.node):
+            if node.name == '':
+                node.name = node.op_type + '_nncf_' + str(i)
+
+        name_counter = Counter([node.name for node in model.graph.node])
+
+        if max(name_counter.values()) > 1:
+            raise RuntimeError(
+                f"Nodes {[(name, cnt) for name, cnt in name_counter.items() if cnt > 1]} "
+                "(name, counts) occurred more than once. "
+                "NNCF expects every node to have a unique name.")
+
+        return model
+
+    @staticmethod
+    def _add_input_from_initializer(model: onnx.ModelProto) -> onnx.ModelProto:
+        """
+        Currently onnx.shape_inference doesn't use the shape of initializers, so add
+        that info explicitly as ValueInfoProtos.
+        Mutates the model.
+
+        History of this code
+         - After onnx.shape_inference.infer_shapes the model graph value_info doesn't
+         include all activations tensors #4102
+         - https://github.com/onnx/onnx/issues/4102
+         :param model: ONNX model, in which the info is added.
+         :return: ONNX model with additional info.
+        """
+        # All (top-level) constants will have ValueInfos before IRv4 as they are all inputs
+        if model.ir_version < 4:
+            nncf_logger.info('Could not process model, as it has {} < 4'.format(model.ir_version))
+            return model
+
+        def add_const_value_infos_to_graph(graph: onnx.GraphProto):
+            inputs = {i.name for i in graph.input}
+            existing_info = {vi.name: vi for vi in graph.input}
+            for init in graph.initializer:
+                # Check it really is a constant, not an input
+                if init.name in inputs:
+                    continue
+
+                # The details we want to add
+                elem_type = init.data_type
+                shape = init.dims
+
+                # Get existing or create new value info for this constant
+                vi = existing_info.get(init.name)
+                if vi is None:
+                    vi = graph.input.add()
+                    vi.name = init.name
+
+                # Even though it would be weird, we will not overwrite info even if it doesn't match
+                tt = vi.type.tensor_type
+                if tt.elem_type == onnx.TensorProto.UNDEFINED:
+                    tt.elem_type = elem_type
+                if not tt.HasField("shape"):
+                    # Ensure we set an empty list if the const is scalar (zero dims)
+                    tt.shape.dim.extend([])
+                    for dim in shape:
+                        tt.shape.dim.add().dim_value = dim
+
+            # Handle subgraphs
+            for node in graph.node:
+                for attr in node.attribute:
+                    # Ref attrs refer to other attrs, so we don't need to do anything
+                    if attr.ref_attr_name != "":
+                        continue
+
+                    if attr.type == onnx.AttributeProto.GRAPH:
+                        add_const_value_infos_to_graph(attr.g)
+                    if attr.type == onnx.AttributeProto.GRAPHS:
+                        for g in attr.graphs:
+                            add_const_value_infos_to_graph(g)
+
+        add_const_value_infos_to_graph(model.graph)
+        return model
 
     @staticmethod
     def _is_valid_onnx_metatype(node: NodeProto) -> bool:
@@ -180,6 +272,7 @@ class GraphConverter:
         :param onnx_model: ONNX model.
         :return: NNCFGraph.
         """
+        onnx_model = GraphConverter._preprocess_model(onnx_model)
         nncf_graph = NNCFGraph()
         onnx_graph = ONNXGraph(onnx_model)
         for node in filter(GraphConverter._is_valid_onnx_metatype, onnx_graph.get_all_nodes()):
@@ -219,10 +312,12 @@ class GraphConverter:
         GraphConverter._add_nncf_output_nodes(onnx_graph, nncf_graph)
         return nncf_graph
 
+
 class ONNXExtendedLayerAttributes(BaseLayerAttributes):
     """
     This class stores extended attributes of modules/layers for the algorithms.
     """
+
     def __init__(self, input_tensor_names, output_tensor_names):
         """
         :param input_tensor_names: List of the input tensor/edge names of the module/layer

@@ -13,6 +13,8 @@
 
 from typing import Callable, Optional, TypeVar
 
+from copy import deepcopy
+
 from nncf.common.utils.logger import logger as nncf_logger
 from nncf.common.graph.model_transformer import ModelTransformer
 from nncf.common.utils.backend import BackendType
@@ -33,9 +35,8 @@ class CompressionBuilder:
     The main class applies the compression algorithms to the model according to their order.
     """
 
-    def __init__(self, convert_opset_version: bool = True):
+    def __init__(self):
         self.algorithms = []
-        self.convert_opset_version = convert_opset_version
 
     def add_algorithm(self, algorithm: Algorithm) -> None:
         """
@@ -88,13 +89,6 @@ class CompressionBuilder:
             return ONNXModelTransformer(model)
         return None
 
-    def _get_prepared_model_for_compression(self, model: TModel, backend: BackendType) -> TModel:
-        if backend == BackendType.ONNX:
-            from nncf.experimental.onnx.model_normalizer import ONNXModelNormalizer
-            return ONNXModelNormalizer.normalize_model(model, self.convert_opset_version)
-
-        return None
-
     def apply(self, model: TModel, dataset: Dataset, engine: Engine = None) -> TModel:
         """
         Apply compression algorithms to the 'model'.
@@ -107,13 +101,11 @@ class CompressionBuilder:
         5) Collect all statistics.
         6) Apply algorithms.
         """
-
         if not self.algorithms:
             nncf_logger.info('There are no algorithms added. The original model will be returned.')
             return model
-
-        backend = get_backend(model)
-        modified_model = self._get_prepared_model_for_compression(model, backend)
+        _model = deepcopy(model)
+        backend = get_backend(_model)
 
         if engine is None:
             engine = self._create_engine(backend)
@@ -124,14 +116,14 @@ class CompressionBuilder:
 
         statistics_aggregator = self._create_statistics_aggregator(engine, dataset, backend)
         for algorithm in self.algorithms:
-            statistic_points = algorithm.get_statistic_points(modified_model)
+            statistic_points = algorithm.get_statistic_points(_model)
             statistics_aggregator.register_stastistic_points(statistic_points)
 
-        model_transformer = self._create_model_transformer(modified_model, backend)
+        model_transformer = self._create_model_transformer(_model, backend)
         statistics_aggregator.collect_statistics(model_transformer)
 
         for algorithm in self.algorithms:
-            modified_model = algorithm.apply(modified_model, engine, statistics_aggregator.statistic_points)
+            modified_model = algorithm.apply(_model, engine, statistics_aggregator.statistic_points)
         return modified_model
 
     def evaluate(self, model: TModel, metric: Metric, dataset: Dataset,
