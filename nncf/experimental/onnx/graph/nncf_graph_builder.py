@@ -199,10 +199,14 @@ class GraphConverter:
             if GraphConverter._is_valid_onnx_metatype(current_node):
                 metatype = ONNX_OPERATION_METATYPES.get_operator_metatype_by_op_name(current_node.op_type)
                 layer_attributes = ONNXExtendedLayerAttributes(current_node.input, current_node.output)
+                is_shared = onnx_graph.is_node_shared(current_node)
+                layer_name = onnx_graph.get_node_layer_name(current_node)
                 nncf_graph.add_nncf_node(node_name=current_node.name,
                                          node_type=current_node.op_type,
                                          node_metatype=metatype,
-                                         layer_attributes=layer_attributes)
+                                         layer_attributes=layer_attributes,
+                                         layer_name=layer_name,
+                                         is_shared=is_shared)
                 visited_nodes.append(current_node)
 
         for output_node in visited_nodes:

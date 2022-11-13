@@ -18,6 +18,8 @@ from onnx import numpy_helper  # pylint: disable=no-name-in-module
 import numpy as np
 
 from nncf.experimental.onnx.model_normalizer import ONNXModelNormalizer
+from nncf.experimental.onnx.graph.metatypes.onnx_metatypes import ONNX_OPERATION_METATYPES
+from nncf.experimental.onnx.graph.metatypes.onnx_metatypes import WEIGHT_LAYER_METATYPES
 
 
 # pylint: disable=no-member
@@ -191,17 +193,20 @@ class ONNXGraph:
                 output.append(node)
         return output
 
-    def get_weight_tensor_name(self, node_name: str) -> str:
+    def get_weight_tensor_name(self, node: onnx.NodeProto) -> Optional[str]:
         # TODO(kshpv): add search of input weight tensor
         """
         Returns weight tensor name from the 1-index.
 
-        :param node_name: Name of the node.
+        :param node: node.
         :return: Weight tensor name.
         """
-        node_inputs = self.get_node_edge_names(node_name)['input']
-        weight_tensor = node_inputs[1]
-        return weight_tensor
+        metatype = ONNX_OPERATION_METATYPES.get_operator_metatype_by_op_name(node.op_type)
+        if metatype in WEIGHT_LAYER_METATYPES:
+            node_inputs = self.get_node_edge_names(node.name)['input']
+            weight_tensor = node_inputs[1]
+            return weight_tensor
+        return None
 
     def get_node_index(self, node_name: str) -> int:
         """
@@ -327,3 +332,12 @@ class ONNXGraph:
         for node_edge in node_edges:
             output.extend(self.get_nodes_by_input(node_edge))
         return output
+
+    def is_node_shared(self, node: onnx.NodeProto) -> bool:
+        weight_tensor_name = self.get_weight_tensor_name(node)
+        nodes = self.get_nodes_by_input(weight_tensor_name)
+        return len(nodes) > 1
+
+    def get_node_layer_name(self, node: onnx.NodeProto) -> Optional[str]:
+        weight_tensor_name = self.get_weight_tensor_name(node)
+        return weight_tensor_name
