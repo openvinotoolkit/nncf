@@ -54,9 +54,7 @@ INPUT_SHAPES = [
 ]
 
 TEST_CASES = [
-    pytest.param(name, model, shape) if name != "shufflenet_v2_x1_0"
-    else pytest.param(name, model, shape, marks=pytest.mark.xfail)
-    for name, model, shape in zip(MODEL_NAMES, MODELS, INPUT_SHAPES)
+    pytest.param(name, model, shape) for name, model, shape in zip(MODEL_NAMES, MODELS, INPUT_SHAPES)
 ]
 
 
@@ -82,6 +80,8 @@ def mock_dataset_creator(dataset_path, input_name, input_shape, batch_size, shuf
 @patch('examples.experimental.onnx.classification.onnx_ptq_classification.create_imagenet_torch_dataset',
        new=mock_dataset_creator)
 def test_sanity_quantize_sample(tmp_path, model_name, model, input_shape):
+    if model_name == 'shufflenet_v2_x1_0':
+        pytest.skip()
     onnx_model_path = ONNX_MODEL_DIR / (model_name + '.onnx')
     x = torch.randn(input_shape, requires_grad=False)
     torch.onnx.export(model, x, onnx_model_path, opset_version=13)
