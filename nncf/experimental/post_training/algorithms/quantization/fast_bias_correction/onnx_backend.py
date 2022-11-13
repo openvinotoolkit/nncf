@@ -23,6 +23,7 @@ from nncf.common.graph import NNCFNode
 
 from nncf.experimental.onnx.graph.metatypes.onnx_metatypes import LAYERS_WITH_BIAS_METATYPES
 from nncf.experimental.onnx.graph.metatypes.onnx_metatypes import ONNX_OPERATION_METATYPES
+from nncf.experimental.onnx.graph.metatypes.onnx_metatypes import ONNXDequantizeLinearMetatype
 from nncf.experimental.onnx.graph.model_transformer import ONNXModelTransformer
 from nncf.experimental.onnx.graph.transformations.commands import ONNXBiasCorrectionCommand
 from nncf.experimental.onnx.graph.transformations.commands import ONNXModelExtractionCommand
@@ -31,6 +32,7 @@ from nncf.experimental.onnx.statistics.collectors import ONNXMeanStatisticCollec
 from nncf.experimental.onnx.tensor import ONNXNNCFTensor
 from nncf.experimental.post_training.algorithms.quantization.fast_bias_correction.backend import ALGO_BACKENDS
 from nncf.experimental.post_training.algorithms.quantization.fast_bias_correction.backend import FBCAlgoBackend
+from nncf.experimental.onnx.graph.onnx_graph import ONNXGraph
 
 
 @ALGO_BACKENDS.register(BackendType.ONNX)
@@ -105,3 +107,21 @@ class ONNXFBCAlgoBackend(FBCAlgoBackend):
     @staticmethod
     def process_model_output(raw_data: Dict, output_name: str) -> ONNXNNCFTensor:
         return raw_data[output_name]
+
+    @staticmethod
+    def is_quantized_weights(node: NNCFNode, model: onnx.ModelProto) -> bool:
+        """
+        Checks whether the node is quantised or not
+
+        :param node: NNCFNode with the attributes
+        :param nncf_graph: NNCFGraph for the traverce
+        :return: boolean indicating whether the node has a quantized weights or not
+        """
+        # TODO (KodiaqQ): Should be updated to take account of backend specifics
+        onnx_graph = ONNXGraph(model)
+        input_edge_names = onnx_graph.get_node_edge_names(node.node_name)['input']
+        nodes = onnx_graph.get_nodes_by_output(input_edge_names[1])
+        assert len(nodes) == 1
+        weight_dequantizer = nodes[0]
+        metatype = ONNX_OPERATION_METATYPES.get_operator_metatype_by_op_name(weight_dequantizer.op_type)
+        return metatype == ONNXDequantizeLinearMetatype

@@ -28,6 +28,8 @@ from nncf.experimental.onnx.graph.metatypes.onnx_metatypes import ONNXBatchNormM
 from nncf.experimental.onnx.graph.metatypes.onnx_metatypes import ONNXResizeMetatype
 from nncf.experimental.onnx.graph.metatypes.onnx_metatypes import ONNXSoftmaxMetatype
 from nncf.experimental.onnx.graph.metatypes.onnx_metatypes import ONNXExpMetatype
+from nncf.experimental.onnx.graph.metatypes.onnx_metatypes import ONNXQuantizeLinearMetatype
+from nncf.experimental.onnx.graph.metatypes.onnx_metatypes import ONNXDequantizeLinearMetatype
 
 from nncf.common.graph.operator_metatypes import UnknownMetatype
 
@@ -49,6 +51,8 @@ DEFAULT_ONNX_QUANT_TRAIT_TO_OP_DICT = {
     QuantizationTrait.NON_QUANTIZABLE: [ONNXSigmoidMetatype,
                                         ONNXSoftmaxMetatype,
                                         ONNXExpMetatype,
+                                        ONNXQuantizeLinearMetatype,
+                                        ONNXDequantizeLinearMetatype,
                                         UnknownMetatype],
     QuantizationTrait.CONCAT: [ONNXConcatLayerMetatype],
     QuantizationTrait.OUTPUT_QUANTIZATION_AS_WEIGHTS: []
