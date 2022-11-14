@@ -37,10 +37,16 @@ def generate_output_names_list(num_outputs: int):
 
 
 class BNTrainingStateSwitcher:
-    def __init__(self, model: nn.Module, state: bool = True):
+    """
+    Context manager for switching between evaluation and training mode of BatchNormalization module.
+    At the enter, it sets a forward pre-hook for setting BatchNormalization layers to the given state whether training
+    or evaluation.
+    At the exit, restore original BatchNormalization layer mode.
+    """
+    def __init__(self, model: nn.Module, is_training: bool = True):
         self.original_training_state = {}
         self.model = model
-        self.state = state
+        self.is_training = is_training
         self.handles: List[RemovableHandle] = []
 
     @staticmethod
@@ -58,7 +64,7 @@ class BNTrainingStateSwitcher:
         self.model.apply(self._apply_to_batchnorms(save_original_bn_training_state))
 
         def hook(module, _) -> None:
-            module.training = self.state
+            module.training = self.is_training
 
         def register_hook(module: torch.nn.Module):
             handle = module.register_forward_pre_hook(hook)
