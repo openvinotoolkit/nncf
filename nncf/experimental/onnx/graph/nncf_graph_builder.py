@@ -195,10 +195,10 @@ class GraphConverter:
                 tensor_shape = GraphConverter._get_tensor_shape(onnx_graph, output_edge)
 
                 output_node_id = nncf_graph.get_node_by_name(output_node.name).node_id
-                onnx_dtype = onnx_graph.get_edge_dtype_name(output_edge)
-                if onnx_dtype is None:
-                    # The edge was not added during inference of ONNX model,
-                    # meaning that we do not need to add it in the NNCFGraph.
+                try:
+                    onnx_dtype = onnx_graph.get_edge_dtype_name(output_edge)
+                except RuntimeError:
+                    # If this edge was not added during inference
                     continue
                 nncf_dtype = GraphConverter.convert_onnx_dtype_to_nncf_dtype(onnx_dtype)
 
@@ -223,12 +223,10 @@ class GraphConverter:
         GraphConverter._add_nncf_output_nodes(onnx_graph, nncf_graph)
         return nncf_graph
 
-
 class ONNXExtendedLayerAttributes(BaseLayerAttributes):
     """
     This class stores extended attributes of modules/layers for the algorithms.
     """
-
     def __init__(self, input_tensor_names, output_tensor_names):
         """
         :param input_tensor_names: List of the input tensor/edge names of the module/layer
