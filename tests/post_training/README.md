@@ -9,6 +9,7 @@ The outcome of each quantization step is accuracy and performance with OpenVINO.
 ## Installation
 ```
 pip install -r requirements.txt
+python setup.py install
 ```
 
 ## Data preparation
