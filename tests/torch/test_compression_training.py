@@ -68,6 +68,8 @@ class CompressionTrainingValidator(BaseSampleValidator):
             args['checkpoint-save-dir'] = self._desc.checkpoint_save_dir
         if self._desc.execution_arg:
             args[self._desc.execution_arg] = None
+        if self._desc.mixed_precision:
+            args['mixed-precision'] = None
         return args
 
     def _create_command_line(self, args):
@@ -94,6 +96,7 @@ class CompressionTrainingTestDescriptor(BaseSampleTestCaseDescriptor):
         self.checkpoint_save_dir = None
         self.checkpoint_name = None
         self.seed = 1
+        self._mixed_precision = False
         self.weights_filename_ = None
         self.weights_path = None
         self.timeout_ = 30 * 60  # 30 min
@@ -142,6 +145,13 @@ class CompressionTrainingTestDescriptor(BaseSampleTestCaseDescriptor):
     def cpu_only(self):
         self.execution_arg = 'cpu-only'
         return self
+
+    @property
+    def mixed_precision(self):
+        return self._mixed_precision
+
+    def use_mixed_precision(self):
+        self._mixed_precision = True
 
     def data_parallel(self):
         self.execution_arg = ''
@@ -402,8 +412,11 @@ def finalize_desc(desc, dataset_dir, tmp_path_factory, weekly_models_path, enabl
 
 @pytest.fixture(name='desc', scope='module',
                 params=TEST_CASE_DESCRIPTORS, ids=map(str, TEST_CASE_DESCRIPTORS))
-def fixture_desc(request, dataset_dir, tmp_path_factory, weekly_models_path, enable_imagenet):
+def fixture_desc(request, dataset_dir, tmp_path_factory, weekly_models_path, enable_imagenet,
+                 weekly_with_mixed_precision):
     desc: CompressionTrainingTestDescriptor = request.param
+    if weekly_with_mixed_precision:
+        desc.use_mixed_precision()
     return finalize_desc(desc, dataset_dir, tmp_path_factory, weekly_models_path, enable_imagenet)
 
 
