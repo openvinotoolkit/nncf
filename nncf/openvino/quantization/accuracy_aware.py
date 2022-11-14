@@ -20,6 +20,8 @@ from addict import Dict
 from openvino.tools import pot
 
 
+# TODO(andrey-churkin): Should be removed after OpenVINO release.
+# pylint: disable=E1101
 class NMSEBasedAccuracyAware(pot.AccuracyAwareCommon):
     """
     NMSE based implementation of the Accuracy Aware algorithm from the POT.
