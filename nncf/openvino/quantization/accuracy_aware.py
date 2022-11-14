@@ -20,9 +20,9 @@ from addict import Dict
 from openvino.tools import pot
 
 
-class ExperimentalAccuracyAware(pot.AccuracyAwareCommon):
+class NMSEBasedAccuracyAware(pot.AccuracyAwareCommon):
     """
-    Experimental implementation of the Accuracy Aware algorithm from the POT.
+    NMSE based implementation of the Accuracy Aware algorithm from the POT.
 
     This implementation works the same way as implementation from the POT in
     case when it is possible to calculate the metric for one instance.

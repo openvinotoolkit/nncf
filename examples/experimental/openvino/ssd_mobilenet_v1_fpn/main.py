@@ -43,8 +43,7 @@ def run_example():
     """
     # Step 1: Load the OpenVINO model.
     ir_model_xml = ROOT / 'public' / 'ssd_mobilenet_v1_fpn_coco' / 'FP32' / 'ssd_mobilenet_v1_fpn_coco.xml'
-    ir_model_bin = ir_model_xml.with_suffix('.bin')
-    ov_model = ie.read_model(model=ir_model_xml, weights=ir_model_bin)
+    ov_model = ie.read_model(ir_model_xml)
 
     # Step 2: Create data source.
     dataset_config = {
@@ -62,13 +61,13 @@ def run_example():
         images, _ = data
         return np.expand_dims(images, 0)
 
+    metric = MAP(91, data_source.labels)
     # Wrap framework-specific data source into the `nncf.Dataset` object.
-    calibration_dataset = nncf.Dataset(data_source, transform_fn)
     validation_dataset = nncf.Dataset(data_source, transform_fn)
     quantized_model = nncf.quantize_with_accuracy_control(ov_model,
-                                                          calibration_dataset,
                                                           validation_dataset,
-                                                          validation_fn=partial(validation_fn, labels=data_source.labels),
+                                                          validation_dataset,
+                                                          validation_fn=partial(validation_fn, metric=metric),
                                                           max_drop=0.004,
                                                           preset=nncf.QuantizationPreset.MIXED)
 
@@ -96,9 +95,8 @@ def run_example():
     # benchmark_app -m ssd_mobilenet_v1_fpn_quantization/ssd_mobilenet_v1_fpn_quantized.xml -d CPU -api async
 
 
-def validation_fn(compiled_model: ov.CompiledModel, validation_dataset: Iterable[Any], labels) -> float:
+def validation_fn(compiled_model: ov.CompiledModel, validation_dataset: Iterable[Any], metric) -> float:
     output_layer = compiled_model.output(0)
-    metric = MAP(91, labels)
 
     for images, labels in validation_dataset:
         input_data = np.expand_dims(images, 0)

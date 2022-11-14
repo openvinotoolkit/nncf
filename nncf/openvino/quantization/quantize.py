@@ -25,7 +25,7 @@ from openvino.tools import pot
 
 from nncf.data import Dataset
 from nncf.openvino.engine import OVEngine
-from nncf.openvino.quantization.accuracy_aware import ExperimentalAccuracyAware
+from nncf.openvino.quantization.accuracy_aware import NMSEBasedAccuracyAware
 from nncf.common.quantization.structs import QuantizationPreset
 from nncf.common.utils.logger import logger as nncf_logger
 from nncf.parameters import IgnoredScope
@@ -174,11 +174,11 @@ def quantize_with_accuracy_control_impl(model: ov.Model,
     except Exception:
         use_original_metric = False
 
-    pot.algorithms.algorithm_selector.COMPRESSION_ALGORITHMS.register('ExperimentalAccuracyAware')(ExperimentalAccuracyAware)
+    pot.algorithms.algorithm_selector.COMPRESSION_ALGORITHMS.register('NMSEBasedAccuracyAware')(NMSEBasedAccuracyAware)
 
     algorithms = [
         {
-            'name': 'ExperimentalAccuracyAware',
+            'name': 'NMSEBasedAccuracyAware',
             'params': {
                 'target_device': target_device.value,
                 'stat_subset_size': subset_size,
