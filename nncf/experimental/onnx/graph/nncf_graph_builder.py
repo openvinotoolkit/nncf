@@ -198,7 +198,8 @@ class GraphConverter:
                 try:
                     onnx_dtype = onnx_graph.get_edge_dtype_name(output_edge)
                 except RuntimeError:
-                    # If this edge was not added during inference
+                    # If this edge was not added during inference of ONNX model,
+                    # we do not add it to NNCFGraph
                     continue
                 nncf_dtype = GraphConverter.convert_onnx_dtype_to_nncf_dtype(onnx_dtype)
 

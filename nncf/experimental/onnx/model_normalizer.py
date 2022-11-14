@@ -35,9 +35,7 @@ class ONNXModelNormalizer:
         """
         # ONNX shape inference
         # https://github.com/onnx/onnx/blob/main/docs/proposals/SymbolicShapeInfProposal.md
-        onnx.checker.check_model(model)
         inferred_shape_model = onnx.shape_inference.infer_shapes(model)
-        onnx.checker.check_model(inferred_shape_model)
         return inferred_shape_model
 
     @staticmethod
