@@ -68,10 +68,9 @@ def get_torch_dataloader(folder, transform, batch_size=1):
     return val_loader
 
 
-def export_to_onnx(model, save_path):
-    x = torch.randn(1, 3, 224, 224, requires_grad=True)
+def export_to_onnx(model, save_path, data_sample):
     torch.onnx.export(model,
-                      x,
+                      data_sample,
                       save_path,
                       export_params=True,
                       opset_version=13,
@@ -92,7 +91,7 @@ def run_benchmark(model_path):
 
     return None, output
 
-def benchmark_model(model_path, model_name):
+def benchmark_performance(model_path, model_name):
     """
     Receives the OpenVINO IR model and runs benchmark tool for it
     """
@@ -140,6 +139,24 @@ def validate_accuracy(model_path, val_loader):
 
     return accuracy_score(predictions, references)
 
+def benchmark_torch_model(model, dataloader, model_name):
+    data_sample, _ = next(iter(dataloader))
+    # Dump model
+    onnx_path = Path(torch_output) / (model_name + ".onnx")
+    export_to_onnx(model, onnx_path, data_sample)
+    ov_path = Path(torch_output) / (model_name + ".xml")
+    export_to_ir(onnx_path, torch_output, model_name)
+
+    # Benchmark performance
+    performance = benchmark_performance(ov_path, model_name)
+    print(f"Performance of {model_name} model: {performance}")
+
+    # Validate accuracy
+    accuracy = validate_accuracy(ov_path, dataloader)
+    print(f"Accuracy of {model_name} model: {accuracy}")
+
+    return performance, accuracy
+
 @pytest.fixture(scope="session")
 def data(pytestconfig):
     return pytestconfig.getoption("data")
@@ -148,7 +165,6 @@ def data(pytestconfig):
 def output(pytestconfig):
     return pytestconfig.getoption("output")
 
-torch_output="./tmp"
 @pytest.mark.parametrize("model_name", 
             get_model_list())
 def test_ptq_timm(data, output, model_name):
@@ -169,35 +185,13 @@ def test_ptq_timm(data, output, model_name):
     calibration_dataset = nncf.Dataset(val_dataloader, transform_fn)
     quantized_model = nncf.quantize(model, calibration_dataset)
 
-    # Dump FP32 model
-    onnx_path = Path(torch_output) / (model_name + ".onnx")
-    export_to_onnx(model, onnx_path)
-    ov_path = Path(torch_output) / (model_name + ".xml")
-    export_to_ir(onnx_path, torch_output, model_name)
-
-     # Dump quantized model
-    q_model_name = model_name + "_int8"
-    q_onnx_path = Path(torch_output) / (q_model_name + ".onnx")
-    export_to_onnx(quantized_model, q_onnx_path)
-    q_ov_path = Path(torch_output) / (q_model_name + ".xml")
-    export_to_ir(q_onnx_path, torch_output, q_model_name)
-
-    # Benchmark FP32 performance
-    q_perf = benchmark_model(ov_path, model_name)
-    print(f"Performance of FP32 model: {q_perf}")
-
-    # Benchmark INT8 performance
-    q_perf = benchmark_model(q_ov_path, q_model_name)
-    print(f"Performance of INT8 model: {q_perf}")
-
     ov_dataloader = get_torch_dataloader(data, transform, batch_size=1)
-    # Validate FP32 accuracy
-    accuracy = validate_accuracy(ov_path, ov_dataloader)
-    print(f"Accuracy of FP32 model: {accuracy}")
 
-    # Validate quantized accuracy
-    q_accuracy = validate_accuracy(q_ov_path, ov_dataloader)
-    print(f"Accuracy of INT8 model: {q_accuracy}")
+    # benchmark models
+    perf, acc = benchmark_torch_model(model, ov_dataloader, model_name)
+
+    q_model_name = model_name + "_int8"
+    q_perf, q_acc = benchmark_torch_model(quantized_model, ov_dataloader, q_model_name)
 
     assert quantized_model
 
