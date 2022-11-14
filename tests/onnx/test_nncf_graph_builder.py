@@ -64,6 +64,7 @@ def test_compare_nncf_graph_synthetic_models(model_cls_to_test, generate_ref_gra
 @pytest.mark.parametrize("generate_ref_graphs", [False])
 def test_compare_nncf_graph_classification_real_models(tmp_path, model_to_test, model, generate_ref_graphs):
     if model_to_test.model_name in ['inception_v3', 'googlenet', 'vgg16']:
+        # The model skipping will be remove when correct NNCFGraph building will be merged
         pytest.skip('Ticket 96177')
     onnx_model_dir = TEST_ROOT / 'onnx' / 'data' / 'models'
     onnx_model_path = onnx_model_dir / model_to_test.model_name
