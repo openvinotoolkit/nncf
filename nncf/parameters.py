@@ -45,18 +45,6 @@ class ModelType(Enum):
     TRANSFORMER = 'transformer'
 
 
-class DropType(Enum):
-    """
-    Describes the drop type of a metric.
-
-    :param ABSOLUTE: Absolute type of drop.
-    :param RELATIVE Relative type of drop.
-    """
-
-    ABSOLUTE = 'absolute'
-    RELATIVE = 'relative'
-
-
 class IgnoredScope:
     """
     Dataclass that contains description of the ignored scope.

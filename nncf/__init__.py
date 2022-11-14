@@ -18,7 +18,6 @@ from nncf.data import Dataset
 from nncf.parameters import IgnoredScope
 from nncf.parameters import ModelType
 from nncf.parameters import TargetDevice
-from nncf.parameters import DropType
 from nncf.quantization import QuantizationPreset
 from nncf.quantization import quantize
 from nncf.quantization import quantize_with_accuracy_control

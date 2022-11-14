@@ -27,7 +27,6 @@ from nncf.data import Dataset
 from nncf.parameters import IgnoredScope
 from nncf.parameters import ModelType
 from nncf.parameters import TargetDevice
-from nncf.parameters import DropType
 from nncf.common.quantization.structs import QuantizationPreset
 from nncf.common.utils.logger import logger as nncf_logger
 from nncf.openvino.engine import OVEngine
@@ -146,11 +145,10 @@ def quantize_with_accuracy_control_impl(model: ov.Model,
                                         validation_dataset: Dataset,
                                         validation_fn: Callable[[ov.CompiledModel, Iterable[Any]], float],
                                         max_drop: float = 0.01,
-                                        drop_type: DropType = DropType.ABSOLUTE,
                                         preset: QuantizationPreset = QuantizationPreset.PERFORMANCE,
                                         target_device: TargetDevice = TargetDevice.ANY,
                                         subset_size: int = 300,
-                                        fast_error_correction: bool = True,
+                                        fast_bias_correction: bool = True,
                                         model_type: Optional[str] = None,
                                         ignored_scope: Optional[IgnoredScope] = None) -> ov.Model:
     """
@@ -185,10 +183,9 @@ def quantize_with_accuracy_control_impl(model: ov.Model,
                 'target_device': target_device.value,
                 'stat_subset_size': subset_size,
                 'maximal_drop': max_drop,
-                'drop_type': drop_type.value,
                 'metric_subset_ratio': 0.5,
                 'preset': preset.value,
-                'use_fast_bias': fast_error_correction,
+                'use_fast_bias': fast_bias_correction,
                 'model_type': model_type,
                 'ignored': _create_ignored_scope_config(ignored_scope),
             }
