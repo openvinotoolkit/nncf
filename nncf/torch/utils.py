@@ -330,7 +330,9 @@ LEGACY_VS_NEW_BN_MAP = {
     'BatchNorm2d': 'NNCFBatchNorm2d',
     'BatchNorm3d': 'NNCFBatchNorm3d',
     'NNCFBatchNorm': 'NNCFBatchNorm2d',
+    'ConvBNActivation': 'Conv2dNormActivation',
 }
+
 
 def maybe_convert_legacy_names_in_model_state(state_dict_to_load: Dict[str, Any]) -> None:
     """
@@ -338,25 +340,14 @@ def maybe_convert_legacy_names_in_model_state(state_dict_to_load: Dict[str, Any]
 
     :param state_dict_to_load: State dict to convert.
     """
-
-    legacy_names = {
-        'BatchNorm1d': [],
-        'BatchNorm2d': [],
-        'BatchNorm3d': [],
-        'NNCFBatchNorm': [],
-    }
-    for name in state_dict_to_load:
-        if 'BatchNorm2d' in name:
-            legacy_names['BatchNorm2d'].append(name)
-        if 'BatchNorm1d' in name:
-            legacy_names['BatchNorm1d'].append(name)
-        if 'BatchNorm3d' in name:
-            legacy_names['BatchNorm3d'].append(name)
-        if 'NNCFBatchNorm' in name:
-            legacy_names['NNCFBatchNorm'].append(name)
-
+    legacy_names = LEGACY_VS_NEW_BN_MAP.keys()
+    matched_legacy_names = {name: [] for name in legacy_names}
+    for name_in_state_dict in state_dict_to_load:
+        matched = filter(lambda x: x in name_in_state_dict, legacy_names)
+        for legacy_name in matched:
+            matched_legacy_names[legacy_name].append(name_in_state_dict)
     for old_name, new_name in LEGACY_VS_NEW_BN_MAP.items():
-        rename_legacy_names_in_state_dict(state_dict_to_load, legacy_names[old_name], old_name, new_name)
+        rename_legacy_names_in_state_dict(state_dict_to_load, matched_legacy_names[old_name], old_name, new_name)
 
 
 def maybe_convert_legacy_names_in_compress_state(compression_state: Dict[str, Any]) -> None:
