@@ -71,6 +71,7 @@ def test_compare_nncf_graph_classification_real_models(tmp_path, model_to_test, 
         os.mkdir(onnx_model_dir)
     x = torch.randn(model_to_test.input_shape, requires_grad=False)
     # Ticket 96177
+    # Export will be changed to Eval mode when correct building of NNCFGraph will be merged
     torch.onnx.export(model, x, onnx_model_path, opset_version=13, training=torch.onnx.TrainingMode.TRAINING)
 
     original_model = onnx.load(onnx_model_path)

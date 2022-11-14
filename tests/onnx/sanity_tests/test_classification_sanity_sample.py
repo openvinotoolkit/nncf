@@ -80,10 +80,12 @@ def mock_dataset_creator(dataset_path, input_name, input_shape, batch_size, shuf
        new=mock_dataset_creator)
 def test_sanity_quantize_sample(tmp_path, model_name, model, input_shape):
     if model_name in ['inception_v3', 'googlenet']:
+        # The model skipping will be remove when correct NNCFGraph building will be merged
         pytest.skip('Ticket 96177')
     onnx_model_path = ONNX_MODEL_DIR / (model_name + '.onnx')
     x = torch.randn(input_shape, requires_grad=False)
     # Ticket 96177
+    # Export will be changed to Eval mode when correct building of NNCFGraph will be merged
     torch.onnx.export(model, x, onnx_model_path, opset_version=13, training=torch.onnx.TrainingMode.TRAINING)
     onnx_output_model_path = str(tmp_path / model_name)
     run(str(onnx_model_path), onnx_output_model_path, 'none',
@@ -91,6 +93,8 @@ def test_sanity_quantize_sample(tmp_path, model_name, model, input_shape):
         input_shape=input_shape, ignored_scopes=None)
 
     # Ticket 96177
+    # Inference will be return when the export mode changed to Eval,
+    # as OV EP can not inference BN in train mode.
     # sess = rt.InferenceSession(onnx_output_model_path, providers=[
     #                            'OpenVINOExecutionProvider'])
     # _input = np.random.random(input_shape)
