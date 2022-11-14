@@ -41,7 +41,20 @@ class ModelType(Enum):
     :param TRANSFORMER: Transformer-based models
         (https://arxiv.org/pdf/1706.03762.pdf)
     """
+
     TRANSFORMER = 'transformer'
+
+
+class DropType(Enum):
+    """
+    Describes the drop type of a metric.
+
+    :param ABSOLUTE: Absolute type of drop.
+    :param RELATIVE Relative type of drop.
+    """
+
+    ABSOLUTE = 'absolute'
+    RELATIVE = 'relative'
 
 
 class IgnoredScope:

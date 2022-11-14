@@ -24,6 +24,7 @@ from nncf.data import Dataset
 from nncf.parameters import IgnoredScope
 from nncf.parameters import ModelType
 from nncf.parameters import TargetDevice
+from nncf.parameters import DropType
 
 
 def quantize(model: TModel,
@@ -88,6 +89,7 @@ def quantize_with_accuracy_control(model: ModelType,
                                    validation_dataset: Dataset,
                                    validation_fn: Callable[[Any, Iterable[Any]], float],
                                    max_drop: float = 0.01,
+                                   drop_type: DropType = DropType.ABSOLUTE,
                                    preset: QuantizationPreset = QuantizationPreset.PERFORMANCE,
                                    target_device: TargetDevice = TargetDevice.ANY,
                                    subset_size: int = 300,
@@ -108,6 +110,7 @@ def quantize_with_accuracy_control(model: ModelType,
         The function should return the value of the metric with the following meaning:
         A higher value corresponds to better performance of the model.
     :param max_drop: The maximum accuracy drop that should be achieved after the quantization.
+    :param drop_type: The drop type of the metric.
     :param preset: A preset that controls the quantization mode.
     :param target_device: A target device the specificity of which will be taken
         into account while compressing in order to obtain the best performance
@@ -127,7 +130,7 @@ def quantize_with_accuracy_control(model: ModelType,
     if backend == BackendType.OPENVINO:
         from nncf.openvino.quantization.quantize import quantize_with_accuracy_control_impl
         return quantize_with_accuracy_control_impl(model, calibration_dataset, validation_dataset, validation_fn,
-                                                   max_drop, preset, target_device, subset_size,
+                                                   max_drop, drop_type, preset, target_device, subset_size,
                                                    fast_error_correction, model_type, ignored_scope)
 
     raise RuntimeError(f'Unsupported type of backend: {backend}')

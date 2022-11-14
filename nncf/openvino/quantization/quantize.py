@@ -24,13 +24,14 @@ import openvino.runtime as ov
 from openvino.tools import pot
 
 from nncf.data import Dataset
-from nncf.openvino.engine import OVEngine
-from nncf.openvino.quantization.accuracy_aware import NMSEBasedAccuracyAware
-from nncf.common.quantization.structs import QuantizationPreset
-from nncf.common.utils.logger import logger as nncf_logger
 from nncf.parameters import IgnoredScope
 from nncf.parameters import ModelType
 from nncf.parameters import TargetDevice
+from nncf.parameters import DropType
+from nncf.common.quantization.structs import QuantizationPreset
+from nncf.common.utils.logger import logger as nncf_logger
+from nncf.openvino.engine import OVEngine
+from nncf.openvino.quantization.accuracy_aware import NMSEBasedAccuracyAware
 
 
 def _convert_openvino_model_to_compressed_model(model: ov.Model,
@@ -72,7 +73,7 @@ def _convert_compressed_model_to_openvino_model(model: pot.graph.nx_model.Compre
     return ov_model
 
 
-def _create_ignored_scope_config(ignored_scope: Optional[IgnoredScope] = None) -> Dict:
+def _create_ignored_scope_config(ignored_scope: Optional[IgnoredScope]) -> Dict:
     """
     Maps the content of `IgnoredScope` class to the `ignored` section of POT config.
 
@@ -145,6 +146,7 @@ def quantize_with_accuracy_control_impl(model: ov.Model,
                                         validation_dataset: Dataset,
                                         validation_fn: Callable[[ov.CompiledModel, Iterable[Any]], float],
                                         max_drop: float = 0.01,
+                                        drop_type: DropType = DropType.ABSOLUTE,
                                         preset: QuantizationPreset = QuantizationPreset.PERFORMANCE,
                                         target_device: TargetDevice = TargetDevice.ANY,
                                         subset_size: int = 300,
@@ -183,6 +185,7 @@ def quantize_with_accuracy_control_impl(model: ov.Model,
                 'target_device': target_device.value,
                 'stat_subset_size': subset_size,
                 'maximal_drop': max_drop,
+                'drop_type': drop_type.value,
                 'metric_subset_ratio': 0.5,
                 'preset': preset.value,
                 'use_fast_bias': fast_error_correction,
