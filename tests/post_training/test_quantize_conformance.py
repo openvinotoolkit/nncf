@@ -115,7 +115,6 @@ def validate_accuracy(model_path, val_loader):
     predictions = [0] * dataset_size
     references = [-1] * dataset_size
 
-    print(f"Model path: {model_path}")
     core = ov.Core()
     ov_model = core.read_model(model_path)
     compiled_model = core.compile_model(ov_model)
@@ -145,11 +144,18 @@ def validate_accuracy(model_path, val_loader):
 def data(pytestconfig):
     return pytestconfig.getoption("data")
 
-OUTPUT_PATH="./tmp"
+@pytest.fixture(scope="session")
+def output(pytestconfig):
+    return pytestconfig.getoption("output")
+
+torch_output="./tmp"
 @pytest.mark.parametrize("model_name", 
             get_model_list())
-def test_torch_quantization(data, model_name):
+def test_ptq_timm(data, output, model_name):
     torch.multiprocessing.set_sharing_strategy('file_system') # W/A to avoid RuntimeError
+
+    torch_output = Path(output) / "torch"
+    torch_output.mkdir(parents=True, exist_ok=True)
 
     model = create_timm_model(model_name)
     model.eval().cpu()
@@ -164,17 +170,17 @@ def test_torch_quantization(data, model_name):
     quantized_model = nncf.quantize(model, calibration_dataset)
 
     # Dump FP32 model
-    onnx_path = Path(OUTPUT_PATH) / (model_name + ".onnx")
+    onnx_path = Path(torch_output) / (model_name + ".onnx")
     export_to_onnx(model, onnx_path)
-    ov_path = Path(OUTPUT_PATH) / (model_name + ".xml")
-    export_to_ir(onnx_path, OUTPUT_PATH, model_name)
+    ov_path = Path(torch_output) / (model_name + ".xml")
+    export_to_ir(onnx_path, torch_output, model_name)
 
      # Dump quantized model
     q_model_name = model_name + "_int8"
-    q_onnx_path = Path(OUTPUT_PATH) / (q_model_name + ".onnx")
+    q_onnx_path = Path(torch_output) / (q_model_name + ".onnx")
     export_to_onnx(quantized_model, q_onnx_path)
-    q_ov_path = Path(OUTPUT_PATH) / (q_model_name + ".xml")
-    export_to_ir(q_onnx_path, OUTPUT_PATH, q_model_name)
+    q_ov_path = Path(torch_output) / (q_model_name + ".xml")
+    export_to_ir(q_onnx_path, torch_output, q_model_name)
 
     # Benchmark FP32 performance
     q_perf = benchmark_model(ov_path, model_name)

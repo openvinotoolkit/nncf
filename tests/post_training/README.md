@@ -25,7 +25,7 @@ n01843383
 ## Usage
 Once the evnironment is installed use the following command to run the test:
 ```
-pytest --data <path_to_imagenet_val_folder> tests/post_training/test_quantize_conformance.py
+pytest --data=<path_to_imagenet_val_folder> --output=./tmp tests/post_training/test_quantize_conformance.py
 ```
 
 
