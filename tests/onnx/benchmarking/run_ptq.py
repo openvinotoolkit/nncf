@@ -83,8 +83,7 @@ def run(onnx_model_path: str, output_model_path: str, dataset: Dataset,
     nncf_logger.info(f"  ignored_scopes: {ignored_scopes}")
 
     # Step 0: Convert model opset
-    if convert_model_opset:
-        model = convert_opset_version(original_model)
+    model = convert_opset_version(original_model) if convert_model_opset else original_model
 
     # Step 1: Create a pipeline of compression algorithms.
     builder = CompressionBuilder()
@@ -129,7 +128,7 @@ if __name__ == '__main__':
         ignored_scopes = config_entry.get("ignored_scopes", None)
         disallowed_op_types = config_entry.get("disallowed_op_types", None)
         has_batch_dim = config_entry.get("has_batch_dim", True)
-        convert_opset_version = config_entry.get("convert_opset_version", True)
+        convert_model_opset = config_entry.get("convert_opset_version", True)
 
         dataset_config = config_entry["datasets"][0]
         dataset = OpenVINOAccuracyCheckerDataset(
@@ -151,4 +150,4 @@ if __name__ == '__main__':
             dataset,
             ignored_scopes,
             disallowed_op_types,
-            convert_opset_version)
+            convert_model_opset)
