@@ -1,0 +1,9 @@
+--extra-index-url https://download.pytorch.org/whl/cpu
+torch
+--extra-index-url https://download.pytorch.org/whl/cpu
+torchvision
+pytest
+openvino
+openvino-dev
+timm
+nncf
