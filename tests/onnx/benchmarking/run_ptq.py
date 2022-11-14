@@ -12,8 +12,7 @@
 """
 
 import os
-from typing import List
-from typing import Optional
+from typing import List, Optional
 import nncf
 
 import numpy as np

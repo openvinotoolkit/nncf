@@ -12,13 +12,7 @@
 """
 
 from copy import deepcopy
-from typing import Dict
-from typing import Tuple
-from typing import List
-from typing import Set
-from typing import TypeVar
-from typing import Union
-from typing import Optional
+from typing import Dict, Tuple, List, Set, TypeVar, Union, Optional
 
 from nncf import Dataset
 from nncf.common.graph.definitions import NNCFGraphNodeType
@@ -26,7 +20,8 @@ from nncf.common.graph.graph import NNCFGraph
 from nncf.common.graph.transformations.commands import TargetType
 from nncf.common.graph.transformations.commands import TargetPoint
 from nncf.common.graph.transformations.layout import TransformationLayout
-from nncf.common.hardware.config import HWConfigType, HW_CONFIG_TYPE_TARGET_DEVICE_MAP
+from nncf.common.hardware.config import HWConfigType
+from nncf.common.hardware.config import HW_CONFIG_TYPE_TARGET_DEVICE_MAP
 from nncf.common.insertion_point_graph import InsertionPointGraph
 from nncf.common.quantization.quantizer_propagation.solver import QuantizerPropagationSolver
 from nncf.common.quantization.quantizer_setup import SingleConfigQuantizationPoint
@@ -37,16 +32,15 @@ from nncf.common.quantization.structs import QuantizerConfig
 from nncf.common.quantization.structs import QuantizationPreset
 from nncf.common.quantization.structs import QuantizerGroup
 from nncf.common.tensor_statistics.collectors import TensorStatisticCollectorBase
-from nncf.common.utils.backend import BackendType, get_backend
+from nncf.common.utils.backend import BackendType
+from nncf.common.utils.backend import get_backend
 from nncf.common.utils.logger import logger as nncf_logger
 
 from nncf.quantization.algorithms.algorithm import Algorithm
 from nncf.quantization.algorithms.algorithm import AlgorithmParameters
 from nncf.quantization.algorithms.min_max.backend import ALGO_BACKENDS
-from nncf.quantization.algorithms.min_max.utils import \
-    calculate_activation_quantizer_parameters
-from nncf.quantization.algorithms.min_max.utils import \
-    calculate_weight_quantizer_parameters
+from nncf.quantization.algorithms.min_max.utils import calculate_activation_quantizer_parameters
+from nncf.quantization.algorithms.min_max.utils import calculate_weight_quantizer_parameters
 from nncf.quantization.algorithms.definitions import RangeType
 from nncf.quantization.algorithms.definitions import Granularity
 from nncf.common.engine import Engine

@@ -14,10 +14,7 @@
 from abc import ABC
 from abc import abstractmethod
 
-from typing import TypeVar
-from typing import Dict
-from typing import Union
-from typing import Optional
+from typing import TypeVar, Dict, Union, Optional
 
 from nncf.quantization.statistics.statistic_point import StatisticPointsContainer
 from nncf.common.engine import Engine

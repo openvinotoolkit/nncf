@@ -13,8 +13,7 @@
 
 from abc import ABC
 from abc import abstractmethod
-from typing import List, Tuple
-from typing import TypeVar
+from typing import List, Tuple, TypeVar
 
 import numpy as np
 from nncf.common.graph.transformations.commands import TargetPoint

@@ -12,9 +12,7 @@
 """
 
 from copy import deepcopy
-from typing import Dict
-from typing import List
-from typing import Tuple
+from typing import Dict, List, Tuple
 import numpy as np
 import onnx
 

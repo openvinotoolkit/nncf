@@ -11,8 +11,7 @@
  limitations under the License.
 """
 
-from typing import List
-from typing import Optional
+from typing import List, Optional
 
 import onnx
 import onnxruntime as rt
@@ -21,7 +20,8 @@ from nncf.experimental.quantization.compression_builder import CompressionBuilde
 from nncf.quantization.algorithms.default.algorithm import PostTrainingQuantization
 from nncf.quantization.algorithms.default.algorithm import PostTrainingQuantizationParameters
 from nncf.experimental.onnx.common import infer_input_shape
-from examples.experimental.onnx.classification.imagenet_dataset import create_dataloader, create_dataset
+from examples.experimental.onnx.classification.imagenet_dataset import create_dataloader
+from examples.experimental.onnx.classification.imagenet_dataset import create_dataset
 from nncf.common.utils.logger import logger as nncf_logger
 from examples.experimental.onnx.common.argparser import get_common_argument_parser
 from examples.experimental.onnx.classification.accuracy import Accuracy

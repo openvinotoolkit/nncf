@@ -11,9 +11,9 @@
  limitations under the License.
 """
 
-from abc import ABC, abstractmethod
-from typing import List
-from typing import TypeVar
+from abc import ABC
+from abc import abstractmethod
+from typing import List, TypeVar
 
 from nncf.common.graph.model_transformer import ModelTransformer
 from nncf.common.graph.transformations.commands import TransformationCommand

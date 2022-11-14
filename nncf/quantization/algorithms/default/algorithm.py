@@ -18,18 +18,19 @@ from nncf.common.engine import Engine
 from nncf.common.graph.model_transformer import ModelTransformer
 from nncf.common.hardware.config import HWConfigType
 from nncf.common.quantization.structs import QuantizationPreset
-from nncf.common.utils.backend import BackendType, get_backend
+from nncf.common.utils.backend import BackendType
+from nncf.common.utils.backend import get_backend
 from nncf.common.utils.logger import logger as nncf_logger
-from nncf.quantization.algorithms.algorithm import (Algorithm,
-                                                    AlgorithmParameters)
-from nncf.quantization.algorithms.definitions import Granularity, RangeType
-from nncf.quantization.algorithms.fast_bias_correction.algorithm import (
-    FastBiasCorrection, FastBiasCorrectionParameters)
-from nncf.quantization.algorithms.min_max.algorithm import (
-    MinMaxQuantization, MinMaxQuantizationParameters)
+from nncf.quantization.algorithms.algorithm import Algorithm
+from nncf.quantization.algorithms.algorithm import AlgorithmParameters
+from nncf.quantization.algorithms.definitions import Granularity
+from nncf.quantization.algorithms.definitions import RangeType
+from nncf.quantization.algorithms.fast_bias_correction.algorithm import FastBiasCorrection
+from nncf.quantization.algorithms.fast_bias_correction.algorithm import FastBiasCorrectionParameters
+from nncf.quantization.algorithms.min_max.algorithm import MinMaxQuantization
+from nncf.quantization.algorithms.min_max.algorithm import MinMaxQuantizationParameters
 from nncf.quantization.statistics.aggregator import StatisticsAggregator
-from nncf.quantization.statistics.statistic_point import \
-    StatisticPointsContainer
+from nncf.quantization.statistics.statistic_point import StatisticPointsContainer
 
 TModel = TypeVar('TModel')
 

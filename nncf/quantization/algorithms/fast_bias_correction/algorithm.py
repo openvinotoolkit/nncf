@@ -11,11 +11,7 @@
  limitations under the License.
 """
 
-from typing import Dict, Tuple
-from typing import List
-from typing import TypeVar
-from typing import Union
-from typing import Optional
+from typing import Dict, Tuple, List, TypeVar, Union, Optional
 
 import numpy as np
 from nncf import Dataset
@@ -25,7 +21,8 @@ from nncf.common.tensor import NNCFTensor
 from nncf.common.utils.logger import logger as nncf_logger
 from nncf.common.graph.transformations.commands import TargetType
 from nncf.common.graph.transformations.layout import TransformationLayout
-from nncf.common.utils.backend import BackendType, get_backend
+from nncf.common.utils.backend import BackendType
+from nncf.common.utils.backend import get_backend
 from nncf.common.graph.transformations.commands import TargetPoint
 from nncf.quantization.algorithms.algorithm import AlgorithmParameters
 from nncf.quantization.algorithms.algorithm import Algorithm
