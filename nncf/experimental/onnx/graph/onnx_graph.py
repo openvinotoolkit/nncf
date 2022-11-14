@@ -268,7 +268,7 @@ class ONNXGraph:
             raise RuntimeError(f'The tensor {tensor.name} does not have shape field')
         return shape
 
-    def get_edge_shape(self, edge_name: str) -> List[int]:
+    def get_edge_shape(self, edge_name: str) -> Optional[List[int]]:
         """
         Returns a shape of the edge with the name 'edge_name'.
         If the activations tensors were not filled in self._activations_tensor_name_to_value_info, it updates them.
@@ -285,9 +285,9 @@ class ONNXGraph:
         self._update_activation_tensors(do_shape_inference=True)
         if edge_name in self._activations_tensor_name_to_value_info:
             return ONNXGraph.get_tensor_shape(self._activations_tensor_name_to_value_info[edge_name])
-        raise RuntimeError('There is no edge with the name {}'.format(edge_name))
+        return None
 
-    def get_edge_dtype(self, edge_name: str) -> int:
+    def get_edge_dtype(self, edge_name: str) -> Optional[int]:
         """
         Returns the data type of the edge with the name 'edge_name'.
         If the activations tensors were not filled in self._activations_tensor_name_to_value_info, it updates them.
@@ -304,13 +304,16 @@ class ONNXGraph:
         self._update_activation_tensors(do_shape_inference=True)
         if edge_name in self._activations_tensor_name_to_value_info:
             return self._activations_tensor_name_to_value_info[edge_name].type.tensor_type.elem_type
-        raise RuntimeError('There is no edge with the name {}'.format(edge_name))
+        return None
 
-    def get_edge_dtype_name(self, edge_name: str) -> str:
+    def get_edge_dtype_name(self, edge_name: str) -> Optional[str]:
         """
         Returns the name of datatype of the edge with the name 'edge_name'.
 
         :param edge_name: The name of the edge.
         :return: The Name of the datatype.
         """
-        return onnx.TensorProto.DataType.Name(self.get_edge_dtype(edge_name))
+        edge_dtype = self.get_edge_dtype(edge_name)
+        if edge_dtype is None:
+            return None
+        return onnx.TensorProto.DataType.Name(edge_dtype)
