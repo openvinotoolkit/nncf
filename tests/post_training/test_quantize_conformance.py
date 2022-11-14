@@ -2,6 +2,7 @@ from bz2 import compress
 import os, sys
 import re
 import logging
+from pathlib import Path
 
 import torch
 import nncf
@@ -15,6 +16,8 @@ import timm
 from texttable import Texttable
 
 import openvino
+
+NOT_AVAILABLE_MESSAGE = 'N/A'
 
 def get_model_list():
     full_list = timm.list_models()
@@ -70,13 +73,45 @@ def export_to_onnx(model, save_path):
                       opset_version=13,
                       do_constant_folding=False)
 
-def pytest_addoption(parser):
-    parser.addoption("--data", action="store", default="/mnt/datasets/imagenet/val")
+def export_to_ir(model_path, save_path, model_name):
+    command_line = f'mo -m {model_path} -o {save_path} -n {model_name}'
+    os.popen(command_line).read()
+
+
+def run_benchmark(model_path):
+    command_line = 'benchmark_app -m {} -d CPU '.format(model_path)
+    output = os.popen(command_line).read()
+
+    match = re.search("Throughput\: (.+?) FPS", output)
+    if match != None:
+        fps = match.group(1)
+        return float(fps), output
+
+    return None, output
+
+def benchmark_model(model_path, model_name):
+    """
+    Receives the OpenVINO IR model and runs benchmark tool for it
+    """
+
+    model_perf = NOT_AVAILABLE_MESSAGE
+
+    try:
+        model_perf, bench_output = run_benchmark(model_path)
+
+        if model_perf == None:
+            logging.info("Cannot measure performance for the model: {}\nDetails: {}\n".format(model_name, bench_output))
+            model_perf = NOT_AVAILABLE_MESSAGE
+    except BaseException as error:
+        logging.error("Error when becnhmarking the model: {}. Details: {}".format(model_name, error))
+
+    return model_perf
 
 @pytest.fixture(scope="session")
 def data(pytestconfig):
     return pytestconfig.getoption("data")
 
+OUTPUT_PATH="./"
 @pytest.mark.parametrize("model_name", 
             get_model_list())
 def test_torch_quantization(data, model_name):
@@ -91,6 +126,25 @@ def test_torch_quantization(data, model_name):
         return images
     calibration_dataset = nncf.Dataset(val_dataloader, transform_fn)
     quantized_model = nncf.quantize(model, calibration_dataset)
+
+    # Dump FP32 model
+    onnx_path = Path(OUTPUT_PATH) / (model_name + ".onnx")
+    export_to_onnx(model, onnx_path)
+    ov_path = Path(OUTPUT_PATH) / (model_name + ".xml")
+    export_to_ir(onnx_path, OUTPUT_PATH, model_name)
+    # Benchmark performance
+    q_perf = benchmark_model(ov_path, model_name)
+    print(f"Performance of FP32 model: {q_perf}")
+
+    # Dump quantized model
+    q_model_name = model_name + "_int8"
+    onnx_path = Path(OUTPUT_PATH) / (q_model_name + ".onnx")
+    export_to_onnx(quantized_model, onnx_path)
+    ov_path = Path(OUTPUT_PATH) / (q_model_name + ".xml")
+    export_to_ir(onnx_path, OUTPUT_PATH, q_model_name)
+    # Benchmark performance
+    q_perf = benchmark_model(ov_path, q_model_name)
+    print(f"Performance of INT8 model: {q_perf}")
 
     assert quantized_model
 

@@ -3,7 +3,7 @@ torch
 --extra-index-url https://download.pytorch.org/whl/cpu
 torchvision
 pytest
-openvino
-openvino-dev
+openvino>=2022.1
+openvino-dev>=2022.1
 timm
 nncf
