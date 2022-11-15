@@ -15,7 +15,6 @@ from torchvision.transforms import InterpolationMode
 import pytest
 
 import timm
-from texttable import Texttable
 from tqdm import tqdm
 from sklearn.metrics import accuracy_score
 
@@ -29,8 +28,8 @@ def get_model_list():
     #model_list += [m for m in full_list if "vit" in m]
     #model_list = [m for m in full_list if "levit" in m]
     #model_list = ["adv_inception_v3", "bat_resnext26ts", "beit_base_patch16_224","botnet26t_256", "cait_m36_384", "coat_lite_mini", "convit_tiny", "convmixer_768_32",  "convnext_base","crossvit_9_240", "cspdarknet53", "darknet53", "deit_base_distilled_patch16_224","densenet121", "dla34",  "dm_nfnet_f0",  "dpn68", "eca_botnext26ts_256","ecaresnet26t", "efficientnet_b0","efficientnet_el_pruned","efficientnet_lite0", "efficientnetv2_l", "ese_vovnet19b_dw","fbnetc_100", "gcresnet33ts", "gernet_l", "gernet_m", "gernet_s", "ghostnet_050","gluon_senet154", "gluon_seresnext50_32x4d", "gluon_xception65", "gmixer_12_224",  "gmlp_b16_224","halo2botnet50ts_256", "hardcorenas_a","hrnet_w18", "ig_resnext101_32x8d", "inception_resnet_v2", "inception_v3", "inception_v4", "jx_nest_base","lambda_resnet26rpt_256","lcnet_035","levit_128", "mixer_b16_224","mnasnet_050", "mobilenetv2_035", "mobilenetv2_050", "mobilenetv2_075", "mobilenetv2_100","mobilenetv3_large_075", "mobilenetv3_large_100","nasnetalarge", "nest_base","nf_ecaresnet26", "nf_ecaresnet50", "nf_regnet_b0","nf_seresnet50", "nfnet_f2s","pit_b_distilled_224", "pit_s_224",  "pnasnet5large", "regnetx_002","regnety_002",  "regnetz_b16","repvgg_a2", "repvgg_b2",  "res2net50_14w_8s","resmlp_12_224","resmlp_36_224","resnest14d","resnet18", "resnetblur18","resnetrs50","resnetv2_50d", "resnetv2_50x1_bitm_in21k","resnext26ts","rexnetr_130","sebotnet33ts_256", "sehalonet33ts", "selecsls42","semnasnet_050",  "senet154", "seresnet18", "skresnet18", "spnasnet_100", "ssl_resnet18","swin_base_patch4_window7_224","swsl_resnet18","tresnet_m", "tv_resnet34", "twins_pcpvt_base","vgg11", "visformer_small","vit_base_patch16_224","wide_resnet101_2", "xception","xcit_large_24_p8_224"]
-    #model_list = ["mobilenetv2_050","resnet18"]
-    model_list = ["mobilenetv2_050"]
+    model_list = ["mobilenetv2_050","resnet18"]
+    #model_list = ["mobilenetv2_050"]
     return model_list
 
 def create_timm_model(name):
@@ -132,6 +131,7 @@ def validate_accuracy(model_path, val_loader):
 
     for i, (images, target) in tqdm(enumerate(val_loader)):
         infer_queue.start_async(images.numpy(), userdata=i)
+        
         references[i] = target
 
     infer_queue.wait_all()
@@ -191,9 +191,13 @@ def data(pytestconfig):
 def output(pytestconfig):
     return pytestconfig.getoption("output")
 
+@pytest.fixture(scope="session")
+def result(pytestconfig):
+    return pytestconfig._test_result
+
 @pytest.mark.parametrize("model_name", 
             get_model_list())
-def test_ptq_timm(data, output, model_name):
+def test_ptq_timm(data, output, result, model_name):
     torch.multiprocessing.set_sharing_strategy('file_system') # W/A to avoid RuntimeError
 
     ouput_folder = Path(output)
@@ -225,8 +229,8 @@ def test_ptq_timm(data, output, model_name):
     onnx_model = onnx.load(onnx_model_path)
     onnx_input_name = onnx_model.graph.input[0].name
     def onnx_transform_fn(data_item):
-        images, targets = data_item
-        return {onnx_input_name: images.numpy(), "targets": targets.numpy()}
+        images, _ = data_item
+        return {onnx_input_name: images.numpy()}
     onnx_calibration_dataset = nncf.Dataset(batch_one_dataloader, onnx_transform_fn)
 
     onnx_quantized_model = nncf.quantize(onnx_model, onnx_calibration_dataset)
@@ -252,10 +256,6 @@ def test_ptq_timm(data, output, model_name):
     q_ov_model_name = model_name + "_ov_int8"
     q_ov_perf, q_ov_acc = benchmark_ov_model(ov_quantized_model, batch_one_dataloader, q_ov_model_name, ov_output_path)
 
-    print(f"Orig performance: {orig_perf}, accuracy: {orig_acc}")
-    print(f"Torch INT8 performance: {q_torch_perf}, accuracy: {q_torch_acc}")
-    print(f"OV INT8 performance: {q_ov_perf}, accuracy: {q_ov_acc}")
-    print(f"ONNX INT8 performance: {q_onnx_perf}, accuracy: {q_onnx_acc}")
 
-    assert True
-
+    result.append([model_name, orig_acc, q_torch_acc, q_onnx_acc, q_ov_acc,
+            orig_perf, q_torch_perf, q_onnx_perf, q_ov_perf])
