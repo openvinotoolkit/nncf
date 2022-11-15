@@ -8,10 +8,14 @@ import torch.nn as nn
 from datasets import load_dataset
 from nncf import NNCFConfig
 from nncf.api.compression import CompressionAlgorithmController
-from nncf.torch.sparsity.movement.algo import MovementSparsifier
+from nncf.experimental.torch.sparsity.movement.algo import MovementSparsifier
 from transformers import AutoModelForSequenceClassification, AutoTokenizer
 from transformers import Trainer as BaseTrainer
 from transformers import TrainingArguments, BertConfig
+from transformers import Wav2Vec2Config
+from transformers import AutoModelForAudioClassification
+from transformers import SwinConfig
+from transformers import AutoModelForImageClassification
 from transformers.trainer_callback import (TrainerCallback, TrainerControl,
                                            TrainerState)
 
@@ -54,6 +58,214 @@ def bert_tiny_unpretrained():
     return AutoModelForSequenceClassification.from_config(BertConfig(**model_cfg, num_labels=5))
 
 
+def wav2vec2_model():
+    config = Wav2Vec2Config(
+        hidden_size=4,
+        num_hidden_layers=1,
+        num_attention_heads=2,
+        intermediate_size=6,
+        conv_dim=(4, 4),
+        conv_stride=(1, 1),
+        conv_kernel=(3, 3),
+        num_conv_pos_embeddings=3,
+        num_conv_pos_embedding_groups=1,
+        proj_codevector_dim=4,
+        classifier_proj_size=3
+    )
+    return AutoModelForAudioClassification.from_config(config)
+
+
+def swin_model():
+    config = SwinConfig()  # TODO(yujie): change config for a smaller model
+    return AutoModelForImageClassification.from_config(config)
+
+
+class BaseMockRunRecipe:
+    model_family: str
+
+    def __init__(self, model_config, algo_config) -> None:
+        self.model_config = model_config
+        self.algo_config = algo_config
+
+    @property
+    def model(self):
+        pass
+
+    @property
+    def nncf_config(self):
+        pass
+
+    @property
+    def mock_dataset(self):
+        pass
+
+    @staticmethod
+    def get_nncf_modules_in_transformer_block_order(compressed_model):
+        """Returns the NNCF modules in usual transformer block order, 
+        i.e., List[Tuple(query, key, value, output, feedforward_in, feedforward_out)]
+        """
+        return []
+
+
+class SchedulerParams:
+    def __init__(self, power: int = 3,
+                 warmup_start_epoch: int = 1,
+                 warmup_end_epoch: int = 3,
+                 init_importance_threshold: float = -1.0,
+                 final_importance_threshold: float = 0.0,
+                 importance_regularization_factor: float = 0.1,
+                 steps_per_epoch: Optional[int] = 4,
+                 enable_structured_masking: bool = True):
+        self.power = power
+        self.warmup_start_epoch = warmup_start_epoch
+        self.warmup_end_epoch = warmup_end_epoch
+        self.init_importance_threshold = init_importance_threshold
+        self.final_importance_threshold = final_importance_threshold
+        self.importance_regularization_factor = importance_regularization_factor
+        self.steps_per_epoch = steps_per_epoch
+        self.enable_structured_masking = enable_structured_masking
+
+
+class NNCFAlgoConfig:
+    def __init__(self, sparse_structure_by_scopes=[], ignored_scopes=[],
+                 scheduler_params=None, **scheduler_overrides):
+        self.scheduler_params = scheduler_params or SchedulerParams()
+        for k, v in scheduler_overrides.items():
+            assert hasattr(self.scheduler_params, k)
+            setattr(self.scheduler_params, k, v)
+        self.sparse_structure_by_scopes = sparse_structure_by_scopes
+        self.ignored_scopes = ignored_scopes
+
+    def to_dict(self):
+        return {
+            "algorithm": "movement_sparsity",
+            "params": self.scheduler_params.__dict__,
+            "sparse_structure_by_scopes": self.sparse_structure_by_scopes,
+            "ignored_scopes": self.ignored_scopes,
+        }
+
+
+class Wav2Vec2RunRecipe(BaseMockRunRecipe):
+    model_family = 'huggingface_wav2vec2'
+    default_model_config = Wav2Vec2Config(
+        hidden_size=4,
+        num_hidden_layers=1,
+        num_attention_heads=2,
+        intermediate_size=6,
+        conv_dim=(4, 4),
+        conv_stride=(1, 1),
+        conv_kernel=(3, 3),
+        num_conv_pos_embeddings=3,
+        num_conv_pos_embedding_groups=1,
+        proj_codevector_dim=4,
+        classifier_proj_size=3,
+        num_labels=2,
+    )
+
+    default_algo_config = NNCFAlgoConfig(
+        sparse_structure_by_scopes=[],
+        ignored_scopes=[],
+        scheduler_params=SchedulerParams(),
+    )
+
+    def __init__(self,
+                 model_config: Optional[Wav2Vec2Config] = None,
+                 algo_config: Optional[NNCFAlgoConfig] = None):
+        model_config = model_config or Wav2Vec2RunRecipe.default_model_config
+        algo_config = algo_config or Wav2Vec2RunRecipe.default_algo_config
+        super().__init__(model_config, algo_config)
+
+    @property
+    def model(self):
+        return AutoModelForAudioClassification.from_config(self.model_config)
+
+    @staticmethod
+    def get_nncf_modules_in_transformer_block_order(compressed_wav2vec2_model):
+        modules = []
+        for block in compressed_wav2vec2_model.nncf_module.wav2vec2.encoder.layers:
+            modules.append(
+                (block.attention.q_proj,
+                 block.attention.k_proj,
+                 block.attention.v_proj,
+                 block.attention.out_proj,
+                 block.feed_forward.intermediate_dense,
+                 block.feed_forward.output_dense)
+            )
+        return modules
+
+    @property
+    def nncf_config(self):
+        config_dict = {
+            "input_info": [
+                {"sample_size": [1, 32], "keyword": "input_values"}
+            ],
+            "compression": self.algo_config.to_dict()
+        }
+        return NNCFConfig.from_dict(config_dict)
+
+    @property
+    def mock_dataset(self):
+        pass
+
+
+class BertRunRecipe(BaseMockRunRecipe):
+    model_family = 'huggingface_bert'
+    default_model_config = BertConfig(
+        hidden_size=4,
+        intermediate_size=3,
+        max_position_embeddings=512,
+        num_attention_heads=2,
+        num_hidden_layers=1,
+        vocab_size=30522,
+        num_labels=2,
+    )
+    default_algo_config = NNCFAlgoConfig(
+        sparse_structure_by_scopes=[
+            {"mode": "block", "sparse_factors": [2, 2], "target_scopes": "{re}.*attention*"},
+            {"mode": "per_dim", "axis": 0, "target_scopes": "{re}.*BertIntermediate.*"},
+            {"mode": "per_dim", "axis": 1, "target_scopes": "{re}.*BertOutput.*"},
+        ],
+        ignored_scopes=["{re}embedding", "{re}pooler", "{re}classifier"],
+        scheduler_params=SchedulerParams(),
+    )
+
+    def __init__(self,
+                 model_config: Optional[BertConfig] = None,
+                 algo_config: Optional[NNCFAlgoConfig] = None):
+        model_config = model_config or BertRunRecipe.default_model_config
+        algo_config = algo_config or BertRunRecipe.default_algo_config
+        super().__init__(model_config, algo_config)
+
+    @property
+    def model(self):
+        return AutoModelForSequenceClassification.from_config(self.model_config)
+
+    @property
+    def nncf_config(self):
+        return NNCFConfig.from_dict({
+            "input_info": [
+                {"sample_size": [1, 256], "type": "long", "keyword": "input_ids"},
+                {"sample_size": [1, 256], "type": "long", "keyword": "token_type_ids"},
+                {"sample_size": [1, 256], "type": "long", "keyword": "position_ids"},
+                {"sample_size": [1, 256], "type": "long", "keyword": "attention_mask"},
+            ],
+            "compression": self.algo_config.to_dict()})
+
+    @staticmethod
+    def get_nncf_modules_in_transformer_block_order(compressed_bert_model):
+        modules = []
+        for block in compressed_bert_model.nncf_module.bert.encoder.layer:
+            modules.append(
+                (block.attention.self.query,
+                 block.attention.self.key,
+                 block.attention.self.value,
+                 block.attention.output.dense,
+                 block.intermediate.dense,
+                 block.output.dense)
+            )
+        return modules
+
+
 class ConfigBuilder:
     def __init__(self, **overrides):
         self._current_args = {
@@ -64,7 +276,6 @@ class ConfigBuilder:
             "final_importance_threshold": 0.0,
             "importance_regularization_factor": 0.2,
             "steps_per_epoch": 128 // 32,
-            "update_per_optimizer_step": True,
             "enable_structured_masking": True,
             "sparse_structure_by_scopes": [
                 {"mode": "block", "sparse_factors": [16, 16], "target_scopes": "{re}.*attention*"},
@@ -89,7 +300,7 @@ class ConfigBuilder:
             ],
             "compression": {
                 "algorithm": "movement_sparsity",
-                "params": dict(schedule="threshold_polynomial_decay", **args),
+                "params": dict(**args),
                 "sparse_structure_by_scopes": sparse_structure_by_scopes,
                 "ignored_scopes": ignored_scopes,
             },
@@ -177,7 +388,7 @@ def run_movement_pipeline(tmp_path, compression_ctrl, compressed_model,
         learning_rate=1e-3,
         optim="adamw_torch",
         remove_unused_columns=False,
-        report_to=None,
+        report_to="none",
         disable_tqdm=True,
         no_cuda=True,  # TODO: where to set cuda devices for cuda training?
     )

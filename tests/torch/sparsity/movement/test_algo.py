@@ -24,15 +24,15 @@ from nncf.torch import create_compressed_model
 from nncf.torch.layer_utils import CompressionParameter
 from nncf.torch.layers import NNCFLinear
 from nncf.torch.module_operations import UpdateWeightAndBias
-from nncf.torch.sparsity.movement.algo import ImportanceLoss
-from nncf.torch.sparsity.movement.algo import MovementSparsifier
-from nncf.torch.sparsity.movement.algo import MovementSparsityController
-from nncf.torch.sparsity.movement.algo import SparseStructure
-from nncf.torch.sparsity.movement.algo import SUPPORTED_NNCF_MODULES
-from nncf.torch.sparsity.movement.structured_mask_strategy import STRUCTURED_MASK_STRATEGY
-from nncf.torch.sparsity.movement.structured_mask_handler import StructuredMaskContext, StructuredMaskHandler
-from nncf.torch.sparsity.movement.layers import SparseConfig
-from nncf.torch.sparsity.movement.layers import SparseConfigByScope
+from nncf.experimental.torch.sparsity.movement.algo import ImportanceLoss
+from nncf.experimental.torch.sparsity.movement.algo import MovementSparsifier
+from nncf.experimental.torch.sparsity.movement.algo import MovementSparsityController
+from nncf.experimental.torch.sparsity.movement.algo import SparseStructure
+from nncf.experimental.torch.sparsity.movement.algo import SUPPORTED_NNCF_MODULES
+from nncf.experimental.torch.sparsity.movement.structured_mask_strategy import STRUCTURED_MASK_STRATEGY
+from nncf.experimental.torch.sparsity.movement.structured_mask_handler import StructuredMaskContext, StructuredMaskHandler
+from nncf.experimental.torch.sparsity.movement.layers import SparseConfig
+from nncf.experimental.torch.sparsity.movement.layers import SparseConfigByScope
 from tests.torch.sparsity.movement.helpers import BaseCallback
 from tests.torch.sparsity.movement.helpers import ConfigBuilder
 from tests.torch.sparsity.movement.helpers import bert_tiny_torch_model

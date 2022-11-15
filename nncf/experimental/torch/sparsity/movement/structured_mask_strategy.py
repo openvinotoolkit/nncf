@@ -105,6 +105,7 @@ class HuggingFaceBertStructuredMaskStrategy(BaseStructuredMaskStrategy):
         }
         return config
 
+
 @STRUCTURED_MASK_STRATEGY.register("huggingface_wav2vec2")
 class HuggingFaceWav2Vec2StructuredMaskStrategy(HuggingFaceBertStructuredMaskStrategy):
     MHSA_Q: str = "q_proj"
@@ -113,6 +114,12 @@ class HuggingFaceWav2Vec2StructuredMaskStrategy(HuggingFaceBertStructuredMaskStr
     MHSA_O: str = "out_proj"
     FFN_I: str = "intermediate_dense"
     FFN_O: str = "output_dense"
+
+    @classmethod
+    def from_compressed_model(cls, compressed_model: NNCFNetwork):
+        hidden_dim = compressed_model.nncf_module.wav2vec2.config.hidden_size
+        num_heads = compressed_model.nncf_module.wav2vec2.config.num_attention_heads
+        return cls(dim_per_head=hidden_dim // num_heads)
 
 
 @STRUCTURED_MASK_STRATEGY.register("huggingface_swin")
@@ -125,7 +132,7 @@ class HuggingFaceSwinStructuredMaskStrategy(BaseStructuredMaskStrategy):
     FFN_O: str = "SwinOutput"
 
     # Description of config in HuggingFace's Swin
-    # swin.config.depth: a list specifiying the number of Swin Transformer Block in each stage. 
+    # swin.config.depth: a list specifiying the number of Swin Transformer Block in each stage.
     #                    E.g. depth of Swin-b is [2, 2, 18, 2], meaning there 4 stages.
     #
     # swin.config.num_heads: a list of specifiying the number of self-attention head in each stage/
@@ -133,7 +140,7 @@ class HuggingFaceSwinStructuredMaskStrategy(BaseStructuredMaskStrategy):
     #                        each Swin transformer block in this stage has 16 attention heads.
     #
     # swin.config.encoder_stride: synonymous to the number of output dimension in each self-attention head, dim_per_head
-    
+
     def __init__(self, dim_per_head: int) -> None:
         super().__init__()
         self.dim_per_head = dim_per_head

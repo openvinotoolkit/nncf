@@ -29,10 +29,10 @@ from nncf.torch.sparsity.base_algo import BaseSparsityAlgoBuilder, BaseSparsityA
 from nncf.torch.graph.transformations.commands import PTInsertionCommand
 from nncf.torch.graph.transformations.commands import PTTargetPoint
 from nncf.torch.graph.transformations.commands import TransformationPriority
-from nncf.torch.sparsity.movement.layers import MovementSparsifier, SparseConfig, SparseStructure
-from nncf.torch.sparsity.movement.layers import SparseConfigByScope
-from nncf.torch.sparsity.movement.loss import ImportanceLoss, SparseLossForPerLayerSparsity
-from nncf.torch.sparsity.movement.structured_mask_handler import StructuredMaskHandler, SparsifiedModuleInfoGroup
+from nncf.experimental.torch.sparsity.movement.layers import MovementSparsifier, SparseConfig, SparseStructure
+from nncf.experimental.torch.sparsity.movement.layers import SparseConfigByScope
+from nncf.experimental.torch.sparsity.movement.loss import ImportanceLoss, SparseLossForPerLayerSparsity
+from nncf.experimental.torch.sparsity.movement.structured_mask_handler import StructuredMaskHandler, SparsifiedModuleInfoGroup
 from nncf.torch.module_operations import UpdateWeightAndBias
 from nncf.torch.utils import get_world_size, get_model_device
 from nncf.common.utils.helpers import matches_any
@@ -50,7 +50,7 @@ from nncf.torch.layers import NNCF_MODULES_OP_NAMES, NNCFLinear
 import os
 import numpy as np
 import pandas as pd
-from nncf.torch.sparsity.movement.structured_mask_strategy import STRUCTURED_MASK_STRATEGY, detect_supported_model_family
+from nncf.experimental.torch.sparsity.movement.structured_mask_strategy import STRUCTURED_MASK_STRATEGY, detect_supported_model_family
 
 SUPPORTED_NNCF_MODULES = [NNCFLinear]
 

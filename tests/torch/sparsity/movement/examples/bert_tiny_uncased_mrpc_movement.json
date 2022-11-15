@@ -1,0 +1,51 @@
+{
+  "input_info": [
+    {
+      "sample_size": [1, 128],
+      "type": "long",
+    },
+    {
+      "sample_size": [1, 128],
+      "type": "long",
+    },
+    {
+      "sample_size": [1, 128],
+      "type": "long",
+    },
+    {
+      "sample_size": [1, 128],
+      "type": "long",
+    }
+  ],
+  "compression": [
+    {
+      "algorithm": "movement_sparsity",
+      "params": {
+        "warmup_start_epoch": 1,
+        "warmup_end_epoch": 3,
+        "init_importance_threshold": -1,
+        "final_importance_threshold": 0,
+        "importance_regularization_factor": 0.01,
+        "enable_structured_masking": true,
+      },
+      "sparse_structure_by_scopes": [
+        {
+          "mode": "block",
+          "sparse_factors": [32, 32],
+          "target_scopes": "{re}.*attention.*"
+        },
+        {
+          "mode": "per_dim",
+          "axis": 0,
+          "target_scopes": "{re}.*BertIntermediate.*"
+        },
+        {
+          "mode": "per_dim",
+          "axis": 1,
+          "target_scopes": "{re}.*BertOutput.*"
+        }
+      ],
+      "ignored_scopes": ["{re}embedding", "{re}pooler", "{re}classifier"]
+    }
+  ]
+}

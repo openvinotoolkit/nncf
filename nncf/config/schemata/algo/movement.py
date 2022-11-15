@@ -20,8 +20,6 @@ from nncf.config.schemata.basic import with_attributes
 from nncf.config.schemata.common.sparsity import COMMON_SPARSITY_PARAM_PROPERTIES
 from nncf.config.schemata.common.targeting import SCOPING_PROPERTIES
 
-MOVEMENT_SPARSITY_SCHEDULE_OPTIONS = ['threshold_polynomial_decay']
-
 SPARSE_STRUCTURE_MODE = ['fine', 'block', 'per_dim']
 
 SPARSE_STRUCTURE_BY_SCOPES_SCHEMA = {
@@ -54,18 +52,13 @@ MOVEMENT_SPARSITY_SCHEMA = {
             {
                 "type": "object",
                 "properties": {
-                    "schedule": with_attributes(STRING,
-                                                description="The type of scheduling to use for adjusting the"
-                                                            "importance threshold and its regularization factor",
-                                                enum=MOVEMENT_SPARSITY_SCHEDULE_OPTIONS,
-                                                default=MOVEMENT_SPARSITY_SCHEDULE_OPTIONS[0]),
                     "power": with_attributes(NUMBER,
                                              description="For polynomial scheduler - determines the corresponding power value."),
                     "init_importance_threshold": with_attributes(NUMBER,
                                                                  description="importance masking threshold @ warmup_start_epoch"),
                     "warmup_start_epoch": with_attributes(NUMBER,
                                                           description="Index of the starting epoch of the importance masking threshold"
-                                                                        "warmup at the value of init_importance_threshold"),
+                                                          "warmup at the value of init_importance_threshold"),
                     "final_importance_threshold": with_attributes(NUMBER,
                                                                   description="importance masking threshold @ warmup_end_epoch"),
                     "warmup_end_epoch": with_attributes(NUMBER,
@@ -74,19 +67,15 @@ MOVEMENT_SPARSITY_SCHEMA = {
                     "importance_regularization_factor": with_attributes(NUMBER,
                                                                         description="regularization final lambda"),
                     "enable_structured_masking": with_attributes(BOOLEAN,
-                                                                default=True,
-                                                                description="Whether to enable structured masking after warmup stage."),
+                                                                 default=True,
+                                                                 description="Whether to enable structured masking after warmup stage."),
                     "steps_per_epoch": with_attributes(NUMBER,
-                                       description="Number of optimizer steps in one epoch. Required to start proper "
-                                                   " scheduling in the first training epoch if "
-                                                   "'update_per_optimizer_step' is true"),
-                    "update_per_optimizer_step": with_attributes(BOOLEAN,
-                                                                 description="Whether the function-based sparsity level schedulers "
-                                                                             "should update the sparsity level after each optimizer "
-                                                                             "step instead of each epoch step."), # TODO(yujie): remove this after checking the test configs 
+                                                       description="Number of optimizer steps in one epoch. Required to start proper "
+                                                       " scheduling in the first training epoch if "
+                                                       "'update_per_optimizer_step' is true"),
                 },
                 "additionalProperties": False
-            },
+        },
         "sparse_structure_by_scopes": {
             "type": "array",
             "items": SPARSE_STRUCTURE_BY_SCOPES_SCHEMA,

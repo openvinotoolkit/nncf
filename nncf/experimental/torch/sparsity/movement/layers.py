@@ -23,7 +23,7 @@ from nncf.torch.layer_utils import COMPRESSION_MODULES, CompressionParameter
 from nncf.torch.sparsity.functions import \
     apply_binary_mask as apply_binary_mask_impl
 from nncf.torch.sparsity.layers import BinaryMask
-from nncf.torch.sparsity.movement.functions import binary_mask_by_threshold
+from nncf.experimental.torch.sparsity.movement.functions import binary_mask_by_threshold
 from nncf.torch.utils import is_tracing_state, no_jit_trace
 from torch import nn
 

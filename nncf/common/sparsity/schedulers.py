@@ -353,8 +353,8 @@ class PolynomialThresholdScheduler(BaseCompressionScheduler):
         self._controller = controller
         self.init_importance_threshold: float = params.get('init_importance_threshold', -1.)
         self.final_importance_threshold: float = params.get('final_importance_threshold', 0.)
-        self.warmup_start_epoch: int = params.get('warmup_start_epoch', 0)
-        self.warmup_end_epoch: int = params.get('warmup_end_epoch', 0)
+        self.warmup_start_epoch: int = params.get('warmup_start_epoch', 1)
+        self.warmup_end_epoch: int = params.get('warmup_end_epoch', 2)
         self.importance_target_lambda: float = params.get('importance_regularization_factor', 0.1)
         self.enable_structured_masking: bool = params.get('enable_structured_masking', True)
         self._steps_per_epoch = params.get('steps_per_epoch', None)

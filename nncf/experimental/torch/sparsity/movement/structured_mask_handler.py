@@ -9,19 +9,11 @@ import torch
 from nncf.experimental.torch.search_building_blocks.search_blocks import \
     BuildingBlockType
 from nncf.torch.sparsity.base_algo import SparseModuleInfo
-from nncf.torch.sparsity.movement.layers import MovementSparsifier
-from nncf.experimental.torch.search_building_blocks.search_blocks import BuildingBlock, get_building_blocks, BuildingBlockType, BlockFilteringStrategy
+from nncf.experimental.torch.sparsity.movement.layers import MovementSparsifier
+from nncf.experimental.torch.search_building_blocks.search_blocks import BuildingBlockType
+from nncf.common.utils.debug import is_debug
 
 logger = logging.getLogger('nncf')
-
-
-class SparsifiedModuleInfoGroup:
-    def __init__(self, group_id: int,
-                 group_type: BuildingBlockType,
-                 sparse_module_info: List[SparseModuleInfo]) -> None:
-        self.group_id = group_id
-        self.group_type = group_type
-        self.sparse_module_info = sparse_module_info
 
 
 def contains_any(tested_str: str,
@@ -46,7 +38,7 @@ class StructuredMaskContext:
         self._dependent_structured_mask = None
 
     def __repr__(self) -> str:
-        return f"<StructuredMaskContext object for \"{self.module_node_name}\">"
+        return f"<StructuredMaskContext for \"{self.module_node_name}\">"
 
     @property
     def independent_structured_mask(self) -> Optional[torch.Tensor]:
@@ -59,7 +51,7 @@ class StructuredMaskContext:
     def independent_structured_mask(self, tensor: torch.Tensor):
         if self._independent_structured_mask is None:
             self._independent_structured_mask = tensor.clone()
-        else: 
+        else:
             if self._independent_structured_mask.shape != tensor.shape:
                 raise ValueError("Wrong shape about independent structured mask")
             if self._independent_structured_mask.device != tensor.device:
@@ -127,6 +119,31 @@ class StructuredMaskContext:
             self.sparsifier_operand.bias_ctx.binary_mask = structured_mask_inflated.amax(dim=1)
 
 
+class SparsifiedModuleInfoGroup:
+    def __init__(self, group_id: int,
+                 group_type: BuildingBlockType,
+                 sparse_module_info: List[SparseModuleInfo]) -> None:
+        self.group_id = group_id
+        self.group_type = group_type
+        self.sparse_module_info = sparse_module_info
+
+
+class StructuredMaskContextGroup:
+    def __init__(self, group_type: BuildingBlockType,
+                 structured_mask_context_list: List[StructuredMaskContext]) -> None:
+        self.group_type = group_type
+        self.structured_mask_context_list = structured_mask_context_list
+
+    def __repr__(self) -> str:
+        str_ = f'{self.group_type}: ['
+        for ctx in self.structured_mask_context_list:
+            str_ += f'\n\t{ctx}'
+        if len(self.structured_mask_context_list) == 0:
+            str_ += '<empty>'
+        str_ += '\n]'
+        return str_
+
+
 class StructuredMaskHandler:
 
     def __init__(self,
@@ -135,30 +152,14 @@ class StructuredMaskHandler:
         self.sparsified_module_info_groups = sparsified_module_info_groups
         self.strategy = strategy
         self.strategy_by_group_type = strategy.strategy_by_group_type
-        self._structured_mask_ctx_by_group_type = self._create_structured_mask_ctx_by_group_type()
+        self._structured_mask_ctx_groups = self._create_structured_mask_ctx_groups()
 
-    def _get_group_of_prunable_sparsified_module_info(self) -> List[SparsifiedModuleInfoGroup]:
-        module_2_sparse_module_info_map = {sparse_info.module: sparse_info for sparse_info in self.sparsified_module_info}
-        building_blocks, _ = get_building_blocks(self.model,
-                                                 target_block_types=[BuildingBlockType.MSHA, BuildingBlockType.FF],
-                                                 block_filter_strategy=BlockFilteringStrategy.KEEP_SMALL,
-                                                 hw_fused_ops=True)
-        prunable_sparsified_module_info_groups = []
-        for group_id, building_block in enumerate(building_blocks):
-            sparsified_module_info = []
-            for op_addr in building_block.op_addresses:
-                if op_addr.operator_name in NNCF_MODULES_OP_NAMES:
-                    module = self.model.get_module_by_scope(op_addr.scope_in_model)
-                    module_info = module_2_sparse_module_info_map[module]
-                    sparsified_module_info.append(module_info)
-            prunable_sparsified_module_info_groups.append(
-                SparsifiedModuleInfoGroup(group_id,
-                                          building_block.block_type,
-                                          sparsified_module_info))
-        return prunable_sparsified_module_info_groups
+        logger.debug('Structured mask contexts by group:')
+        for group in self._structured_mask_ctx_groups:
+            logger.debug(str(group))
 
-    def _create_structured_mask_ctx_by_group_type(self) -> List[Tuple[BuildingBlockType, List[StructuredMaskContext]]]:
-        structured_mask_ctx_by_group_type = []
+    def _create_structured_mask_ctx_groups(self) -> List[StructuredMaskContextGroup]:
+        structured_mask_ctx_groups = []
         for group in self.sparsified_module_info_groups:
             group_type = group.group_type
             ctxes = []
@@ -172,21 +173,17 @@ class StructuredMaskHandler:
                         break
                 else:
                     raise ValueError("Invalid entry, pls debug")
-            structured_mask_ctx_by_group_type.append((group.group_type, ctxes))
-        print('*' * 30)
-        for group_type, ctxes in structured_mask_ctx_by_group_type:
-            print(group_type)
-            for ctx in ctxes:
-                print(ctx)
-        return structured_mask_ctx_by_group_type
+            structured_mask_ctx_groups.append(StructuredMaskContextGroup(group_type, ctxes))
+        return structured_mask_ctx_groups
 
     def update_independent_structured_mask(self):
-        for _, ctxes in self._structured_mask_ctx_by_group_type:
-            for ctx in ctxes:
+        for group in self._structured_mask_ctx_groups:
+            for ctx in group.structured_mask_context_list:
                 ctx.update_independent_structured_mask()
 
     def resolve_dependent_structured_mask(self):
-        for group_type, ctxes in self._structured_mask_ctx_by_group_type:
+        for group in self._structured_mask_ctx_groups:
+            group_type = group.group_type
             if group_type not in self.strategy_by_group_type:
                 raise ValueError(f"No strucrtured mask strategy for group_type=\"{group_type}\"")
             rule_list = self.strategy_by_group_type[group_type]
@@ -194,6 +191,7 @@ class StructuredMaskHandler:
                 rule.keywords for rule in rule_list if rule.prune_by_row is True))
             col_prune_keywords = list(itertools.chain.from_iterable(
                 rule.keywords for rule in rule_list if rule.prune_by_row is False))
+            ctxes = group.structured_mask_context_list
             row_prune_ctxes = list(filter(lambda ctx: contains_any(ctx.module_node_name, row_prune_keywords), ctxes))
             col_prune_ctxes = list(filter(lambda ctx: contains_any(ctx.module_node_name, col_prune_keywords), ctxes))
             independent_masks = [ctx.independent_structured_mask for ctx in row_prune_ctxes] + \
@@ -206,6 +204,6 @@ class StructuredMaskHandler:
                     ctx.dependent_structured_mask = coarse_mask.t()
 
     def populate_dependent_structured_mask_to_operand(self):
-        for _, ctxes in self._structured_mask_ctx_by_group_type:
-            for ctx in ctxes:
+        for group in self._structured_mask_ctx_groups:
+            for ctx in group.structured_mask_context_list:
                 ctx.populate_dependent_structured_mask_to_operand()
