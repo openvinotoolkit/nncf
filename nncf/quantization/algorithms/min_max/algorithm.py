@@ -45,8 +45,8 @@ from nncf.quantization.algorithms.definitions import RangeType
 from nncf.quantization.algorithms.definitions import Granularity
 from nncf.common.engine import Engine
 from nncf.common.graph.factory import NNCFGraphFactory
-from nncf.quantization.statistics.statistic_point import StatisticPoint
-from nncf.quantization.statistics.statistic_point import StatisticPointsContainer
+from nncf.common.tensor_statistics.statistic_point import StatisticPoint
+from nncf.common.tensor_statistics.statistic_point import StatisticPointsContainer
 
 TModel = TypeVar('TModel')
 

@@ -25,7 +25,7 @@ from nncf.common.graph import NNCFNode
 from nncf.common.tensor_statistics.collectors import TensorStatisticCollectorBase
 from nncf.common.tensor_statistics.collectors import ReductionShape
 from nncf.common.utils.registry import Registry
-from nncf.quantization.graph.model_transformer import BaseModelTransformer
+from nncf.common.graph.model_transformer import ModelTransformer
 
 TModel = TypeVar('TModel')
 OutputType = TypeVar('OutputType')
@@ -64,7 +64,7 @@ class FBCAlgoBackend(ABC):
 
     @staticmethod
     @abstractmethod
-    def model_transformer(model: TModel) -> BaseModelTransformer:
+    def model_transformer(model: TModel) -> ModelTransformer:
         """
         Returns backend-specific ModelTransformer instance.
 

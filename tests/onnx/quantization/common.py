@@ -29,10 +29,9 @@ from tests.common.graph.nx_graph import check_nx_graph
 from nncf.experimental.quantization.compression_builder import CompressionBuilder
 from nncf.quantization.algorithms.min_max.algorithm import MinMaxQuantization
 from nncf.quantization.algorithms.min_max.algorithm import MinMaxQuantizationParameters
-from nncf.quantization.algorithms.default.algorithm import PostTrainingQuantization
-from nncf.quantization.algorithms.default.algorithm import PostTrainingQuantizationParameters
+from nncf.quantization.algorithms.post_training.algorithm import PostTrainingQuantization
+from nncf.quantization.algorithms.post_training.algorithm import PostTrainingQuantizationParameters
 from nncf.experimental.onnx.graph.nncf_graph_builder import GraphConverter
-from nncf.experimental.onnx.tensor import ONNXNNCFTensor
 from nncf.experimental.onnx.graph.onnx_graph import ONNXGraph
 from nncf.experimental.onnx.model_normalizer import ONNXModelNormalizer
 
@@ -46,10 +45,10 @@ def get_random_dataset_for_test(input_key: str,
                                 length: Optional[int] = 10):
 
     def transform_fn(item):
-        tensor = ONNXNNCFTensor(np.random.random(input_shape).astype(input_dtype))
+        tensor = np.random.random(input_shape).astype(input_dtype)
         if has_batch_dim:
-            tensor = ONNXNNCFTensor(np.squeeze(np.random.random(input_shape).astype(input_dtype), axis=0))
-        return {input_key: tensor, 'targets': ONNXNNCFTensor(0)}
+            tensor = np.squeeze(np.random.random(input_shape).astype(input_dtype), axis=0)
+        return {input_key: tensor, 'targets': 0}
     return Dataset(list(range(length)), transform_fn)
 
 
@@ -57,7 +56,7 @@ def get_dataset_for_test(samples: List[Tuple[np.ndarray, int]], input_name: str)
 
     def transform_fn(data_item):
         inputs, targets = data_item
-        return {input_name: ONNXNNCFTensor([inputs]), "targets": ONNXNNCFTensor(targets)}
+        return {input_name: [inputs], "targets": targets}
     return Dataset(samples, transform_fn)
 
 class ModelToTest:

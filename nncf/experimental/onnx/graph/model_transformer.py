@@ -27,11 +27,11 @@ from nncf.experimental.onnx.graph.transformations.commands import ONNXModelExtra
 from nncf.experimental.onnx.graph.transformations.commands import ONNXOutputInsertionCommand
 from nncf.experimental.onnx.graph.transformations.commands import ONNXQuantizerInsertionCommand
 from nncf.common.graph.factory import NNCFGraphFactory
-from nncf.quantization.graph.model_transformer import BaseModelTransformer
+from nncf.common.graph.model_transformer import ModelTransformer
 
 
 # pylint: disable=no-member
-class ONNXModelTransformer(BaseModelTransformer):
+class ONNXModelTransformer(ModelTransformer):
     QUANTIZER_NAME_PREFIX = 'QuantizeLinear_'
     DEQUANTIZER_NAME_PREFIX = 'DequantizeLinear_'
     SCALE_TENSOR_NAME_PREFIX = 'scale_'

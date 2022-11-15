@@ -21,7 +21,7 @@ from nncf.common.utils.backend import get_backend
 
 from nncf.common.engine import Engine
 from nncf.quantization.algorithms.algorithm import Algorithm
-from nncf.quantization.statistics.aggregator import StatisticsAggregator
+from nncf.common.tensor_statistics.aggregator import StatisticsAggregator
 
 TModel = TypeVar('TModel')
 
@@ -62,7 +62,7 @@ class CompressionBuilder:
 
         :param engine: engine for the model execution
         :param dataset: dataset for the statistics collection and validation
-        :param model_transformer: backend-specific StaticModelTransformerBase instance
+        :param model_transformer: backend-specific ModelTransformerBase instance
         :param backend: model backend type for the further differentiations
         :return: backnd-specific StatisticsAggregator
         """

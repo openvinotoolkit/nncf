@@ -13,8 +13,8 @@
 
 from nncf.common.graph.transformations.layout import TransformationLayout
 from nncf import Dataset
-from nncf.quantization.statistics.aggregator import StatisticsAggregator
-from nncf.quantization.statistics.aggregator import StatisticPointsContainer
+from nncf.common.tensor_statistics.aggregator import StatisticsAggregator
+from nncf.common.tensor_statistics.aggregator import StatisticPointsContainer
 from nncf.experimental.onnx.engine import ONNXEngine
 from nncf.experimental.onnx.graph.transformations.commands import ONNXOutputInsertionCommand
 

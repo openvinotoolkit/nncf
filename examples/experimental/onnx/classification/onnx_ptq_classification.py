@@ -17,8 +17,8 @@ import onnx
 import onnxruntime as rt
 
 from nncf.experimental.quantization.compression_builder import CompressionBuilder
-from nncf.quantization.algorithms.default.algorithm import PostTrainingQuantization
-from nncf.quantization.algorithms.default.algorithm import PostTrainingQuantizationParameters
+from nncf.quantization.algorithms.post_training.algorithm import PostTrainingQuantization
+from nncf.quantization.algorithms.post_training.algorithm import PostTrainingQuantizationParameters
 from nncf.experimental.onnx.common import infer_input_shape
 from examples.experimental.onnx.classification.imagenet_dataset import create_dataloader
 from examples.experimental.onnx.classification.imagenet_dataset import create_dataset

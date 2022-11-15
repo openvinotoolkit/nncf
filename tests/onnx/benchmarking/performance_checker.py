@@ -27,7 +27,6 @@ from tqdm import tqdm
 import nncf
 from nncf.common.utils.logger import logger as nncf_logger
 from nncf.experimental.onnx.engine import ONNXEngine
-from nncf.experimental.onnx.tensor import ONNXNNCFTensor
 
 #pylint: disable=redefined-outer-name,protected-access
 
@@ -37,8 +36,8 @@ def process_fn(data_item, model_evaluator: ModelEvaluator, has_batch_dim: Option
     filled_inputs, _, _ = model_evaluator._get_batch_input(batch_annotation, batch_input)
 
     if len(filled_inputs) == 1:
-        return {k: ONNXNNCFTensor(np.squeeze(v, axis=0))
-                if has_batch_dim else ONNXNNCFTensor(v) for k, v in filled_inputs[0].items()}
+        return {k: np.squeeze(v, axis=0)
+                if has_batch_dim else v for k, v in filled_inputs[0].items()}
 
     raise Exception("len(filled_inputs) should be one.")
 

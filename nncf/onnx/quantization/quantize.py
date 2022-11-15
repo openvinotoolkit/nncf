@@ -21,8 +21,8 @@ from nncf.parameters import IgnoredScope
 from nncf.parameters import ModelType
 from nncf.parameters import TargetDevice
 from nncf.common.quantization.structs import QuantizationPreset
-from nncf.quantization.algorithms.default.algorithm import PostTrainingQuantization
-from nncf.quantization.algorithms.default.algorithm  import PostTrainingQuantizationParameters
+from nncf.quantization.algorithms.post_training.algorithm import PostTrainingQuantization
+from nncf.quantization.algorithms.post_training.algorithm  import PostTrainingQuantizationParameters
 
 
 def quantize_impl(model: onnx.ModelProto,

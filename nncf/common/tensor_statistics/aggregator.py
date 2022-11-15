@@ -18,9 +18,9 @@ from typing import TypeVar
 
 from nncf import Dataset
 from nncf.common.graph.transformations.layout import TransformationLayout
-from nncf.quantization.statistics.statistic_point import StatisticPointsContainer
+from nncf.common.tensor_statistics.statistic_point import StatisticPointsContainer
 from nncf.common.engine import Engine
-from nncf.quantization.graph.model_transformer import BaseModelTransformer
+from nncf.common.graph.model_transformer import ModelTransformer
 
 TensorType = TypeVar('TensorType')
 TModel = TypeVar('TModel')
@@ -38,7 +38,7 @@ class StatisticsAggregator(ABC):
         self.max_number_samples = 0
         self.statistic_points = StatisticPointsContainer()
 
-    def collect_statistics(self, model_transformer: BaseModelTransformer) -> None:
+    def collect_statistics(self, model_transformer: ModelTransformer) -> None:
         """
         Collects statistics for registered StatisticPoints.
         The statistics are stored in self.statistic_points.

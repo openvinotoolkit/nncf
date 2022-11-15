@@ -16,8 +16,8 @@ from typing import List, Optional
 import onnx
 
 from nncf.experimental.quantization.compression_builder import CompressionBuilder
-from nncf.quantization.algorithms.default.algorithm import PostTrainingQuantization
-from nncf.quantization.algorithms.default.algorithm import PostTrainingQuantizationParameters
+from nncf.quantization.algorithms.post_training.algorithm import PostTrainingQuantization
+from nncf.quantization.algorithms.post_training.algorithm import PostTrainingQuantizationParameters
 from nncf.experimental.onnx.common import infer_input_shape
 from examples.experimental.onnx.semantic_segmentation.segmentation_dataset import create_dataloader
 from examples.experimental.onnx.semantic_segmentation.segmentation_dataset import create_dataset

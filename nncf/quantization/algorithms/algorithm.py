@@ -16,7 +16,7 @@ from abc import abstractmethod
 
 from typing import TypeVar, Dict, Union, Optional
 
-from nncf.quantization.statistics.statistic_point import StatisticPointsContainer
+from nncf.common.tensor_statistics.statistic_point import StatisticPointsContainer
 from nncf.common.engine import Engine
 from nncf.common.utils.backend import BackendType
 from nncf import Dataset

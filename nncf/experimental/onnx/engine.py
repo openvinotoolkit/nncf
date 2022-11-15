@@ -11,10 +11,11 @@
  limitations under the License.
 """
 
-from typing import Dict
+from typing import Dict, TypeVar
 import onnxruntime as rt
 import numpy as np
 import onnx
+from tqdm import tqdm
 
 from nncf.common.graph.transformations.commands import TargetType
 from nncf.common.graph.definitions import NNCFGraphNodeType
@@ -23,9 +24,11 @@ from nncf.experimental.onnx.graph.onnx_graph import ONNXGraph
 
 from nncf.common.engine import Engine
 from nncf.common.graph.factory import NNCFGraphFactory
-from nncf.quantization.statistics.statistic_point import StatisticPointsContainer
+from nncf.common.tensor_statistics.statistic_point import StatisticPointsContainer
 from nncf.experimental.onnx.tensor import ONNXNNCFTensor
 
+ModelInput = TypeVar('ModelInput')
+ModelOutput = TypeVar('ModelOutput')
 
 class ONNXEngine(Engine):
     """
@@ -59,6 +62,21 @@ class ONNXEngine(Engine):
             self.input_names.add(inp.name)
 
         self._create_model_graphs(model)
+
+    def compute_statistics(self, statistic_points: StatisticPointsContainer, subset_size: int = None) -> None:
+        """
+        Performs model inference on specified dataset subset and collects statistics
+
+        :param statistic_points: StatisticPointsContaine with StatisticPoints,
+         in which statistics are collected and registered.
+        """
+        if not self.is_model_set():
+            raise RuntimeError(f'The {self.__class__} tried to compute statistics, '
+                               'while the model was not set.')
+        subset_indices = list(range(subset_size))
+        for input_data in tqdm(self.dataset.get_inference_data(subset_indices), total=subset_size):
+            outputs = self.infer({n: ONNXNNCFTensor(v) for n, v in input_data.items()})
+            self._register_statistics(outputs, statistic_points)
 
     def infer(self, input_data: Dict[str, NNCFTensor]) -> Dict[str, NNCFTensor]:
         """

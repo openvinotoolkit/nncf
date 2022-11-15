@@ -15,10 +15,9 @@ from abc import ABC
 from abc import abstractmethod
 from typing import Callable, TypeVar, Dict
 
-from tqdm import tqdm
 
 from nncf.common.tensor import NNCFTensor
-from nncf.quantization.statistics.statistic_point import StatisticPointsContainer
+from nncf.common.tensor_statistics.statistic_point import StatisticPointsContainer
 
 TModel = TypeVar('TModel')
 ModelInput = TypeVar('ModelInput')
@@ -60,6 +59,7 @@ class Engine(ABC):
         """
         self._inputs_transforms = inputs_transforms
 
+    @abstractmethod
     def compute_statistics(self, statistic_points: StatisticPointsContainer, subset_size: int = None) -> None:
         """
         Performs model inference on specified dataset subset and collects statistics
@@ -67,13 +67,6 @@ class Engine(ABC):
         :param statistic_points: StatisticPointsContaine with StatisticPoints,
          in which statistics are collected and registered.
         """
-        if not self.is_model_set():
-            raise RuntimeError(f'The {self.__class__} tried to compute statistics, '
-                               'while the model was not set.')
-        subset_indices = list(range(subset_size))
-        for input_data in tqdm(self.dataset.get_inference_data(subset_indices), total=subset_size):
-            outputs = self.infer(input_data)
-            self._register_statistics(outputs, statistic_points)
 
     @abstractmethod
     def infer(self, input_data: ModelInput) -> Dict[str, NNCFTensor]:

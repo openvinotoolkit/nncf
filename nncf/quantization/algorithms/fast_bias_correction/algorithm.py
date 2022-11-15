@@ -29,9 +29,9 @@ from nncf.quantization.algorithms.algorithm import Algorithm
 from nncf.quantization.algorithms.fast_bias_correction.backend import ALGO_BACKENDS
 from nncf.common.engine import Engine
 from nncf.common.graph.factory import NNCFGraphFactory
-from nncf.quantization.graph.model_transformer import BaseModelTransformer
-from nncf.quantization.statistics.statistic_point import StatisticPoint
-from nncf.quantization.statistics.statistic_point import StatisticPointsContainer
+from nncf.common.graph.model_transformer import ModelTransformer
+from nncf.common.tensor_statistics.statistic_point import StatisticPoint
+from nncf.common.tensor_statistics.statistic_point import StatisticPointsContainer
 
 TModel = TypeVar('TModel')
 
@@ -221,7 +221,7 @@ class FastBiasCorrection(Algorithm):
         return output_fp
 
     def _extract_submodel(self,
-                          model_transformer: BaseModelTransformer,
+                          model_transformer: ModelTransformer,
                           input_names: List[str],
                           output_names: List[str]) -> TModel:
         """

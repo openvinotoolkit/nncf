@@ -19,7 +19,6 @@ from torch.utils.data import DataLoader
 from examples.torch.semantic_segmentation.datasets.camvid import CamVid
 from examples.torch.semantic_segmentation.datasets.mapillary import Mapillary
 from nncf import Dataset
-from nncf.experimental.onnx.tensor import ONNXNNCFTensor
 
 
 def create_dataloader(dataset_name: str,
@@ -58,6 +57,6 @@ def create_dataset(dataloader: DataLoader, input_name: str) -> Dataset:
     def transform_fn(data_item):
         tensor, target = data_item
         tensor = tensor.cpu().detach().numpy()
-        return {input_name: ONNXNNCFTensor(tensor), 'targets': ONNXNNCFTensor(target)}
+        return {input_name: tensor, 'targets': target}
 
     return Dataset(dataloader, transform_fn)
