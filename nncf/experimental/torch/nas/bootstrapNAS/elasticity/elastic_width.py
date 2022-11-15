@@ -479,11 +479,16 @@ class ElasticOutputWidthLinearOp(ElasticOutputWidthOp, nn.Module):
         new_bias = None if bias is None else bias[:self._active_width]
         return [weight[:self._active_width, :], new_bias]
 
+class EWHandlerStateNames:
+    ACTIVE_CONFIG = 'active_config'
+    WIDTH_NUM_PARAMS_INDICATOR = 'width_num_params_indicator'
+
 
 class ElasticWidthHandler(SingleElasticityHandler):
     """
     An interface for handling elastic width dimension in the network, i.e. define number of channels in the layers.
     """
+    _state_names = EWHandlerStateNames
 
     def __init__(self, target_model: NNCFNetwork,
                  filter_importance_fn: Callable[[torch.Tensor, int], torch.Tensor],
@@ -541,6 +546,27 @@ class ElasticWidthHandler(SingleElasticityHandler):
         :return: nncf graph that is used for propagating pruning and reordering masks
         """
         return self._propagation_graph
+
+    def load_state(self, state: Dict[str, Any]) -> None:
+        """
+        Initializes object from the state.
+        :param state: Output of `get_state()` method.
+        """
+        active_config = state[self._state_names.ACTIVE_CONFIG]
+        self.activate_subnet_for_config(active_config)
+        self.width_num_params_indicator = state[self._state_names.WIDTH_NUM_PARAMS_INDICATOR]
+
+    def get_state(self) -> Dict[str, Any]:
+        """
+        Returns a dictionary with Python data structures (dict, list, tuple, str, int, float, True, False, None) that
+        represents state of the object.
+        :return: state of the object
+        """
+        active_config = self.get_active_config()
+        return {
+            self._state_names.ACTIVE_CONFIG: active_config,
+            self._state_names.WIDTH_NUM_PARAMS_INDICATOR: self.width_num_params_indicator,
+        }
 
     def get_transformation_commands(self) -> List[TransformationCommand]:
         """
