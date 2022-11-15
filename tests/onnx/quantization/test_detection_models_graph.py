@@ -33,6 +33,8 @@ TEST_DATA = [ModelToTest('ssd_mobilenet_v1_12', [1, 300, 300, 3]),
 
 @pytest.mark.parametrize(('model_to_test'), TEST_DATA, ids=[model_to_test.model_name for model_to_test in TEST_DATA])
 def test_min_max_quantization_graph(tmp_path, model_to_test):
+    if model_to_test.model_name == 'ssd_mobilenet_v1_12':
+        pytest.skip('Ticket 96156')
     convert_opset_version = True
 
     onnx_model_path = ONNX_MODEL_DIR / (model_to_test.model_name + '.onnx')
