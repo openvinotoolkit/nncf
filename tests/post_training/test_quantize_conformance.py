@@ -7,6 +7,7 @@ import numpy as np
 
 import torch
 import nncf
+import onnx
 import torchvision.datasets as datasets
 import torchvision.transforms as transforms
 from torchvision.transforms import InterpolationMode
@@ -110,7 +111,7 @@ def benchmark_performance(model_path, model_name):
     return model_perf
 
 def validate_accuracy(model_path, val_loader):
-    dataset_size = len(val_loader)
+    dataset_size = 100#len(val_loader)
     predictions = [0] * dataset_size
     references = [-1] * dataset_size
 
@@ -133,28 +134,56 @@ def validate_accuracy(model_path, val_loader):
         infer_queue.start_async(images.numpy(), userdata=i)
         
         references[i] = target
+        if i > dataset_size-2:
+            break
 
+    infer_queue.wait_all()
     predictions = np.concatenate(predictions, axis=0)
     references = np.concatenate(references, axis=0)
 
     return accuracy_score(predictions, references)
 
-def benchmark_torch_model(model, dataloader, model_name):
+def benchmark_torch_model(model, dataloader, model_name, output_path):
     data_sample, _ = next(iter(dataloader))
     # Dump model
-    onnx_path = Path(torch_output) / (model_name + ".onnx")
+    onnx_path = Path(output_path) / (model_name + ".onnx")
     export_to_onnx(model, onnx_path, data_sample)
-    ov_path = Path(torch_output) / (model_name + ".xml")
-    export_to_ir(onnx_path, torch_output, model_name)
+    ov_path = Path(output_path) / (model_name + ".xml")
+    export_to_ir(onnx_path, output_path, model_name)
 
     # Benchmark performance
     performance = benchmark_performance(ov_path, model_name)
-    print(f"Performance of {model_name} model: {performance}")
-
     # Validate accuracy
     accuracy = validate_accuracy(ov_path, dataloader)
-    print(f"Accuracy of {model_name} model: {accuracy}")
+    return performance, accuracy
 
+def benchmark_onnx_model(model, dataloader, model_name, output_path):
+    # Dump model
+    onnx_path = Path(output_path) / (model_name + ".onnx")
+    onnx.save(model, onnx_path)
+    ov_path = Path(output_path) / (model_name + ".xml")
+    export_to_ir(onnx_path, output_path, model_name)
+
+    # Benchmark performance
+    performance = benchmark_performance(ov_path, model_name)
+    # Validate accuracy
+    accuracy = validate_accuracy(ov_path, dataloader)
+    return performance, accuracy
+
+def benchmark_ov_model(model, dataloader, model_name, output_path):
+    # Dump model
+    ov_path = Path(output_path) / (model_name + ".xml")
+    if isinstance(model, ov.Model):
+        print(f"It is ov.Model")
+    else:
+        print(f"It is a different type: {type(model)}")
+
+    ov.serialize(model, str(ov_path))
+
+    # Benchmark performance
+    performance = benchmark_performance(ov_path, model_name)
+    # Validate accuracy
+    accuracy = validate_accuracy(ov_path, dataloader)
     return performance, accuracy
 
 @pytest.fixture(scope="session")
@@ -165,34 +194,68 @@ def data(pytestconfig):
 def output(pytestconfig):
     return pytestconfig.getoption("output")
 
-@pytest.mark.parametrize("model_name", 
+'''@pytest.mark.parametrize("model_name", 
             get_model_list())
+def test_ptq_timm(data, output, model_name):'''
 def test_ptq_timm(data, output, model_name):
     torch.multiprocessing.set_sharing_strategy('file_system') # W/A to avoid RuntimeError
 
-    torch_output = Path(output) / "torch"
-    torch_output.mkdir(parents=True, exist_ok=True)
+    ouput_folder = Path(output)
 
     model = create_timm_model(model_name)
     model.eval().cpu()
     transform = get_model_transform(model)
-    val_dataloader = get_torch_dataloader(data, transform, batch_size=128)
 
-    # quantize model with NNCF PTQ API
+    batch_one_dataloader = get_torch_dataloader(data, transform, batch_size=1)
+    # benchmark original models (once)
+    orig_perf, orig_acc = benchmark_torch_model(model, batch_one_dataloader, model_name, ouput_folder)
+
+    val_dataloader = get_torch_dataloader(data, transform, batch_size=128)
     def transform_fn(data_item):
         images, _ = data_item
         return images
     calibration_dataset = nncf.Dataset(val_dataloader, transform_fn)
-    quantized_model = nncf.quantize(model, calibration_dataset)
 
-    ov_dataloader = get_torch_dataloader(data, transform, batch_size=1)
+    # quantize PyTorch model
+    torch_quantized_model = nncf.quantize(model, calibration_dataset)
+    # benchmark quantized torch model
+    torch_output_path = ouput_folder/ "torch"
+    torch_output_path.mkdir(parents=True, exist_ok=True)
+    q_torch_model_name = model_name + "_torch_int8"
+    q_torch_perf, q_torch_acc = benchmark_torch_model(torch_quantized_model, batch_one_dataloader, q_torch_model_name, torch_output_path)
 
-    # benchmark models
-    perf, acc = benchmark_torch_model(model, ov_dataloader, model_name)
+    # quantize OpenVINO model
+    def ov_transform_fn(data_item):
+        images, _ = data_item
+        return images.numpy()
 
-    q_model_name = model_name + "_int8"
-    q_perf, q_acc = benchmark_torch_model(quantized_model, ov_dataloader, q_model_name)
+    ov_model_path = ouput_folder / (model_name + ".xml")
+    core = ov.Core()
+    ov_model = core.read_model(ov_model_path)
+    ov_calibration_dataset = nncf.Dataset(batch_one_dataloader, ov_transform_fn)
+    ov_quantized_model = nncf.quantize(ov_model, ov_calibration_dataset)
+
+    ov_output_path = ouput_folder/ "openvino"
+    ov_output_path.mkdir(parents=True, exist_ok=True)
+    q_ov_model_name = model_name + "_ov_int8"
+    q_ov_perf, q_ov_acc = benchmark_ov_model(ov_quantized_model, batch_one_dataloader, q_ov_model_name, ov_output_path)
+
+    # quantize ONNX model
+    onnx_model_path = ouput_folder / (model_name + ".onnx")
+    onnx_model = onnx.load(onnx_model_path)
+    onnx_quantized_model = nncf.quantize(onnx_model, ov_calibration_dataset)
+
+    onnx_output_path = ouput_folder/ "onnx"
+    onnx_output_path.mkdir(parents=True, exist_ok=True)
+    q_onnx_model_name = model_name + "_onnx_int8"
+    q_onnx_perf, q_onnx_acc = benchmark_onnx_model(onnx_quantized_model, batch_one_dataloader, q_onnx_model_name, onnx_output_path)
+
+    print(f"Orig performance: {orig_perf}, accuracy: {orig_acc}")
+    print(f"Torch INT8 performance: {q_torch_perf}, accuracy: {q_torch_acc}")
+    print(f"OV INT8 performance: {q_ov_perf}, accuracy: {q_ov_acc}")
+    print(f"ONNX INT8 performance: {q_onnx_perf}, accuracy: {q_onnx_acc}")
 
     assert quantized_model
 
+test_ptq_timm("/home/alex/work/datasets/imagenet/imagenet/val", "./tmp", "mobilenetv2_050")
 

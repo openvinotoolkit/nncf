@@ -2,6 +2,8 @@
 torch
 --extra-index-url https://download.pytorch.org/whl/cpu
 torchvision
+onnx
+onnxruntime
 pytest
 openvino>=2022.1
 openvino-dev>=2022.1
