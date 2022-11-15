@@ -22,6 +22,7 @@ from typing import TypeVar
 from nncf import NNCFConfig
 from nncf.api.compression import CompressionAlgorithmBuilder
 from nncf.api.compression import CompressionAlgorithmController
+from nncf.api.compression import CompressionStage
 from nncf.common.schedulers import StubCompressionScheduler
 from nncf.common.utils.backend import BackendType
 from nncf.common.utils.backend import get_backend
@@ -136,7 +137,7 @@ class BaseCompressionAlgorithmController(CompressionAlgorithmController):
         if self.name in state:
             algo_state = state[self.name]
             if self._state_names.COMPRESSION_STAGE in state:
-                compression_stage = state[self._state_names.COMPRESSION_STAGE]
+                compression_stage = CompressionStage(state[self._state_names.COMPRESSION_STAGE])
                 if self.compression_stage() != compression_stage:
                     nncf_logger.warning('Current CompressionStage ({}) of the compression controller does '
                                         'not correspond to the value found in '
@@ -155,7 +156,7 @@ class BaseCompressionAlgorithmController(CompressionAlgorithmController):
             self.name: {
                 self._state_names.LOSS: self.loss.get_state(),
                 self._state_names.SCHEDULER: self.scheduler.get_state(),
-                self._state_names.COMPRESSION_STAGE: self.compression_stage()
+                self._state_names.COMPRESSION_STAGE: self.compression_stage().value
             }
         }
 

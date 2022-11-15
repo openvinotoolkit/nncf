@@ -21,6 +21,8 @@ from tensorflow.keras.optimizers import schedules
 
 from nncf.common.accuracy_aware_training.runner import BaseAccuracyAwareTrainingRunner
 from nncf.common.accuracy_aware_training.runner import BaseAdaptiveCompressionLevelTrainingRunner
+from nncf.common.schedulers import StubCompressionScheduler
+from nncf.common.utils.logger import logger as nncf_logger
 
 
 class TFAccuracyAwareTrainingRunner(BaseAccuracyAwareTrainingRunner):
@@ -61,7 +63,7 @@ class TFAccuracyAwareTrainingRunner(BaseAccuracyAwareTrainingRunner):
             elif isinstance(scheduler, schedules.PiecewiseConstantDecay):
                 scheduler.values = [lr * self.base_lr_reduction_factor_during_search for lr in scheduler.values]
             else:
-                raise NotImplementedError(f"Scheduler {type(scheduler)} is not supported yet")
+                nncf_logger.warning(f"Learning rate scheduler {scheduler} is not supported yet. Not reducing lr.")
 
         self.training_epoch_count = 0
         self.best_val_metric_value = 0
@@ -72,6 +74,24 @@ class TFAccuracyAwareTrainingRunner(BaseAccuracyAwareTrainingRunner):
             self.update_learning_rate_fn(self.lr_scheduler,
                                          self.training_epoch_count,
                                          self.current_val_metric_value)
+
+    def dump_checkpoint(self, model, compression_controller):
+        # a workaround because for tensorflow backend disabling compression scheduler does not work properly
+        is_best_checkpoint = (self.best_val_metric_value == self.current_val_metric_value and
+                              isinstance(compression_controller.scheduler, StubCompressionScheduler))
+        if not self.dump_checkpoints and not is_best_checkpoint:
+            return
+
+        if self._dump_checkpoint_fn is not None:
+            checkpoint_path = self._dump_checkpoint_fn(model, compression_controller, self, self._checkpoint_save_dir)
+        else:
+            checkpoint_path = osp.join(self._checkpoint_save_dir,
+                                       f'acc_aware_checkpoint_last{self.checkpoint_path_extension}')
+            self._save_checkpoint(model, checkpoint_path, compression_controller)
+        nncf_logger.info("The checkpoint is saved in {}".format(checkpoint_path))
+
+        if is_best_checkpoint:
+            self._save_best_checkpoint(model, checkpoint_path)
 
     def _save_checkpoint(self, model, checkpoint_path, compression_controller=None):
         # for tensorflow checkpoints are saved in multiple shards, hence we save it in a separate subdirectory
@@ -99,3 +119,21 @@ class TFAdaptiveCompressionLevelTrainingRunner(BaseAdaptiveCompressionLevelTrain
         super().__init__(accuracy_aware_training_params, verbose, dump_checkpoints, lr_updates_needed,
                          minimal_compression_rate=minimal_compression_rate,
                          maximal_compression_rate=maximal_compression_rate)
+
+    def dump_checkpoint(self, model, compression_controller):
+        # a workaround because for tensorflow backend disabling compression scheduler does not work properly
+        is_best_checkpoint = (self.best_val_metric_value == self.current_val_metric_value and
+                              isinstance(compression_controller.scheduler, StubCompressionScheduler))
+        if not self.dump_checkpoints and not is_best_checkpoint:
+            return
+
+        if self._dump_checkpoint_fn is not None:
+            checkpoint_path = self._dump_checkpoint_fn(model, compression_controller, self, self._checkpoint_save_dir)
+        else:
+            checkpoint_path = osp.join(self._checkpoint_save_dir,
+                                       f'acc_aware_checkpoint_last{self.checkpoint_path_extension}')
+            self._save_checkpoint(model, checkpoint_path, compression_controller)
+        nncf_logger.info("The checkpoint is saved in {}".format(checkpoint_path))
+
+        if is_best_checkpoint:
+            self._save_best_checkpoint(model, checkpoint_path)
