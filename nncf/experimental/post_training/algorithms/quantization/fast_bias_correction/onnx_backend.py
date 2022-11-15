@@ -120,14 +120,6 @@ class ONNXFBCAlgoBackend(FBCAlgoBackend):
 
     @staticmethod
     def is_quantized_weights(node: NNCFNode, model: onnx.ModelProto) -> bool:
-        """
-        Checks whether the node is quantised or not
-
-        :param node: NNCFNode with the attributes
-        :param nncf_graph: NNCFGraph for the traverce
-        :return: boolean indicating whether the node has a quantized weights or not
-        """
-        # TODO (KodiaqQ): Should be updated to take account of backend specifics
         onnx_graph = ONNXGraph(model)
         input_edge_names = onnx_graph.get_node_edge_names(node.node_name)['input']
         nodes = onnx_graph.get_nodes_by_output(input_edge_names[1])
