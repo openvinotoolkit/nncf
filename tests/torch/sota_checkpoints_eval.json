@@ -77,7 +77,8 @@
                 "config": "examples/torch/classification/configs/quantization/inception_v3_imagenet.json",
                 "target": 77.34,
                 "metric_type": "Acc@1",
-                "model_description": "Inception V3"
+                "model_description": "Inception V3",
+                "multiprocessing_distributed": true
             },
             "inception_v3_imagenet_int8": {
                 "config": "examples/torch/classification/configs/quantization/inception_v3_imagenet_int8.json",
@@ -88,7 +89,8 @@
                 "model_description": "Inception V3",
                 "compression_description": "INT8",
                 "diff_fp32_min": -1,
-                "diff_fp32_max": 1.0
+                "diff_fp32_max": 1.0,
+                "multiprocessing_distributed": true
             },
             "inception_v3_imagenet_rb_sparsity_int8": {
                 "config": "examples/torch/classification/configs/sparsity_quantization/inception_v3_imagenet_rb_sparsity_int8.json",
@@ -99,7 +101,8 @@
                 "model_description": "Inception V3",
                 "compression_description": "INT8 + Sparsity 61% (RB)",
                 "diff_fp32_min": -1,
-                "diff_fp32_max": 0.4
+                "diff_fp32_max": 0.4,
+                "multiprocessing_distributed": true
             },
             "mobilenet_v2_imagenet": {
                 "config": "examples/torch/classification/configs/quantization/mobilenet_v2_imagenet.json",
@@ -394,7 +397,8 @@
                 "resume": "unet_camvid.pth",
                 "mean_value": "[99.603,103.329,105.6567]",
                 "scale_value": "[75.643,77.821,76.746]",
-                "model_description": "UNet"
+                "model_description": "UNet",
+                "multiprocessing_distributed": true
             },
             "unet_camvid_int8": {
                 "config": "examples/torch/semantic_segmentation/configs/unet_camvid_int8.json",
@@ -408,7 +412,8 @@
                 "scale_value": "[75.643,77.821,76.746]",
                 "diff_fp32_min": -1,
                 "diff_fp32_max": 0.1,
-                "diff_target_min": -0.2
+                "diff_target_min": -0.2,
+                "multiprocessing_distributed": true
             },
             "unet_camvid_magnitude_sparsity_int8": {
                 "config": "examples/torch/semantic_segmentation/configs/unet_camvid_magnitude_sparsity_int8.json",
@@ -421,7 +426,8 @@
                 "model_description": "UNet",
                 "compression_description": "INT8 + Sparsity 60% (Magnitude)",
                 "diff_fp32_min": -1,
-                "diff_fp32_max": 0.6
+                "diff_fp32_max": 0.6,
+                "multiprocessing_distributed": true
             },
             "icnet_camvid": {
                 "config": "examples/torch/semantic_segmentation/configs/icnet_camvid.json",
@@ -430,7 +436,8 @@
                 "resume": "icnet_camvid.pth",
                 "mean_value": "[99.603,103.329,105.6567]",
                 "scale_value": "[75.643,77.821,76.746]",
-                "model_description": "ICNet"
+                "model_description": "ICNet",
+                "multiprocessing_distributed": true
             },
             "icnet_camvid_int8": {
                 "config": "examples/torch/semantic_segmentation/configs/icnet_camvid_int8.json",
@@ -443,7 +450,8 @@
                 "model_description": "ICNet",
                 "compression_description": "INT8",
                 "diff_fp32_min": -1,
-                "diff_fp32_max": 0.1
+                "diff_fp32_max": 0.1,
+                "multiprocessing_distributed": true
             },
             "icnet_camvid_magnitude_sparsity_int8": {
                 "config": "examples/torch/semantic_segmentation/configs/icnet_camvid_magnitude_sparsity_int8.json",
@@ -456,7 +464,8 @@
                 "model_description": "ICNet",
                 "compression_description": "INT8 + Sparsity 60% (Magnitude)",
                 "diff_fp32_min": -1,
-                "diff_fp32_max": 0.1
+                "diff_fp32_max": 0.1,
+                "multiprocessing_distributed": true
             }
         },
         "mapillary_vistas": {
@@ -465,7 +474,8 @@
                 "target": 56.23,
                 "metric_type": "Mean IoU",
                 "resume": "unet_mapillary.pth",
-                "model_description": "UNet"
+                "model_description": "UNet",
+                "multiprocessing_distributed": true
             },
             "unet_mapillary_int8": {
                 "config": "examples/torch/semantic_segmentation/configs/unet_mapillary_int8.json",
@@ -476,7 +486,8 @@
                 "model_description": "UNet",
                 "compression_description": "INT8",
                 "diff_fp32_min": -1,
-                "diff_fp32_max": 0.1
+                "diff_fp32_max": 0.1,
+                "multiprocessing_distributed": true
             },
             "unet_mapillary_magnitude_sparsity_int8": {
                 "config": "examples/torch/semantic_segmentation/configs/unet_mapillary_magnitude_sparsity_int8.json",
@@ -488,7 +499,8 @@
                 "compression_description": "INT8 + Sparsity 60% (Magnitude)",
                 "diff_fp32_min": -1,
                 "diff_fp32_max": 0.1,
-                "diff_target_max": 0.2
+                "diff_target_max": 0.2,
+                "multiprocessing_distributed": true
             },
             "unet_mapillary_pruning_geometric_median": {
                 "config": "examples/torch/semantic_segmentation/configs/unet_mapillary_pruning_geometric_median.json",
@@ -499,7 +511,8 @@
                 "model_description": "UNet",
                 "compression_description": "Filter pruning, 25%, geometric median criterion",
                 "diff_fp32_min": -1,
-                "diff_fp32_max": 0.1
+                "diff_fp32_max": 0.1,
+                "multiprocessing_distributed": true
             }
         }
     }

@@ -52,14 +52,9 @@ MODELS = list(itertools.chain(*[
      for model in os.listdir(BENCHMARKING_DIR / task / "onnx_models_configs")]
     for task in TASKS]))
 
-XFAIL_MODELS = {"ssd_mobilenet_v1_12"}
+XFAIL_MODELS = {}
 
 XFAIL_QUANTIZED_MODELS = {
-    "shufflenet-9",
-    "shufflenet-v2-12",
-    "tiny-yolov3-11",
-    "yolov3-12",
-    "yolov4",
 }
 
 # TODO(vshampor): Somehow installing onnxruntime-openvino does not install the OV package in the way
