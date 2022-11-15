@@ -38,9 +38,7 @@ def test_min_max_ptq_quantization_graph_are_same(tmp_path, model_to_test, model)
     if not os.path.isdir(onnx_model_dir):
         os.mkdir(onnx_model_dir)
     x = torch.randn(model_to_test.input_shape, requires_grad=False)
-    # Ticket 96177
-    # Export will be changed to Eval mode when correct building of NNCFGraph will be merged
-    torch.onnx.export(model, x, onnx_model_path, opset_version=13, training=torch.onnx.TrainingMode.TRAINING)
+    torch.onnx.export(model, x, onnx_model_path, opset_version=13)
 
     original_model = onnx.load(onnx_model_path)
     min_max_quantized_model = min_max_quantize_model(model_to_test.input_shape, original_model)

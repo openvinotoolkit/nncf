@@ -23,6 +23,7 @@ from nncf.common.graph import NNCFNode
 
 from nncf.experimental.onnx.graph.metatypes.onnx_metatypes import LAYERS_WITH_BIAS_METATYPES
 from nncf.experimental.onnx.graph.metatypes.onnx_metatypes import ONNX_OPERATION_METATYPES
+from nncf.experimental.onnx.graph.metatypes.onnx_metatypes import ONNXIdentityMetatype
 from nncf.experimental.onnx.graph.metatypes.onnx_metatypes import ONNXDequantizeLinearMetatype
 from nncf.experimental.onnx.graph.model_transformer import ONNXModelTransformer
 from nncf.experimental.onnx.graph.transformations.commands import ONNXBiasCorrectionCommand
@@ -98,11 +99,21 @@ class ONNXFBCAlgoBackend(FBCAlgoBackend):
         return blob
 
     @staticmethod
-    def get_initializer_value(model: onnx.ModelProto, initializer_name: str) -> np.ndarray:
-        for initializer in model.graph.initializer:
-            if initializer.name == initializer_name:
-                return onnx.numpy_helper.to_array(initializer)
-        raise RuntimeError('There is no initializer with the name {}'.format(initializer_name))
+    def get_bias_value(model: onnx.ModelProto, node: NNCFNode) -> np.ndarray:
+        onnx_graph = ONNXGraph(model)
+        node = onnx_graph.get_node_by_name(node.node_name)
+        # We uses 2nd value from the tensor names
+        # because of the bias tensor placement on this position.
+        bias_input_name = node.input[2]
+        try:
+            return onnx_graph.get_initializers_value(bias_input_name)
+        except RuntimeError:
+            node = onnx_graph.get_nodes_by_output(bias_input_name)[0]
+            metatype = ONNX_OPERATION_METATYPES.get_operator_metatype_by_op_name(node.op_type)
+            if metatype == ONNXIdentityMetatype:
+                return onnx_graph.get_initializers_value(node.input[0])
+            else:
+                raise RuntimeError('Could not find the bias value of the node')
 
     @staticmethod
     def process_model_output(raw_data: Dict, output_name: str) -> ONNXNNCFTensor:

@@ -23,6 +23,7 @@ from nncf.experimental.onnx.graph.metatypes.onnx_metatypes import WEIGHT_LAYER_M
 
 
 # pylint: disable=no-member
+# pylint: disable=too-many-public-methods
 
 class ONNXGraph:
     """
@@ -334,10 +335,22 @@ class ONNXGraph:
         return output
 
     def is_node_shared(self, node: onnx.NodeProto) -> bool:
+        """
+        Returns whether the node share a weight.
+
+        :param node: Node.
+        :return: True whether node shares a wight - otherwise False.
+        """
         weight_tensor_name = self.get_weight_tensor_name(node)
         nodes = self.get_nodes_by_input(weight_tensor_name)
         return len(nodes) > 1
 
     def get_node_layer_name(self, node: onnx.NodeProto) -> Optional[str]:
+        """
+        Returns name of a weight tensor if it exists.
+
+        :param node: Node.
+        :return: Name of a weight tensor or None if the node does not have a weight.
+        """
         weight_tensor_name = self.get_weight_tensor_name(node)
         return weight_tensor_name

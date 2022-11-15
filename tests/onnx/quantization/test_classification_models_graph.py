@@ -24,6 +24,7 @@ from tests.common.paths import TEST_ROOT
 from tests.onnx.quantization.common import ModelToTest
 from tests.onnx.quantization.common import min_max_quantize_model
 from tests.onnx.quantization.common import compare_nncf_graph
+from tests.onnx.quantization.common import infer_model
 
 
 @pytest.mark.parametrize(('model_to_test', 'model'),
@@ -40,22 +41,14 @@ from tests.onnx.quantization.common import compare_nncf_graph
                           ]
                          )
 def test_min_max_quantization_graph(tmp_path, model_to_test, model):
-    if model_to_test.model_name in ['inception_v3', 'googlenet']:
-        # The model skipping will be remove when correct NNCFGraph building will be merged
-        pytest.skip('Ticket 96177')
     onnx_model_dir = str(TEST_ROOT.joinpath('onnx', 'data', 'models'))
     onnx_model_path = str(TEST_ROOT.joinpath(onnx_model_dir, model_to_test.model_name))
     if not os.path.isdir(onnx_model_dir):
         os.mkdir(onnx_model_dir)
     x = torch.randn(model_to_test.input_shape, requires_grad=False)
-    # Ticket 96177
-    # Export will be changed to Eval mode when correct building of NNCFGraph will be merged
-    torch.onnx.export(model, x, onnx_model_path, opset_version=13, training=torch.onnx.TrainingMode.TRAINING)
+    torch.onnx.export(model, x, onnx_model_path, opset_version=13)
 
     original_model = onnx.load(onnx_model_path)
     quantized_model = min_max_quantize_model(model_to_test.input_shape, original_model)
-    compare_nncf_graph(quantized_model, model_to_test.path_ref_graph)
-    # Ticket 96177
-    # Inference will be return when the export mode changed to Eval,
-    # as OV EP can not inference BN in train mode.
-    # infer_model(model_to_test.input_shape, quantized_model)
+    compare_nncf_graph(quantized_model, model_to_test.path_ref_graph, True)
+    infer_model(model_to_test.input_shape, quantized_model)

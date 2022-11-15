@@ -156,10 +156,7 @@ class FastBiasCorrection(Algorithm):
                 output_fp=output_fp,
                 output_name=output_name)
 
-            # We uses 2nd value from the tensor names
-            # because of the bias tensor placement on this position.
-            bias_tensor_name = input_tensor_names[2]
-            current_bias = self._backend_entity.get_initializer_value(model, bias_tensor_name)
+            current_bias = self._backend_entity.get_bias_value(model, node)
             updated_bias = current_bias + bias_shift
             magnitude = self._get_bias_shift_magnitude(current_bias, updated_bias)
 
