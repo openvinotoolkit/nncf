@@ -47,7 +47,7 @@ def get_random_dataset_for_test(input_key: str,
         tensor = np.random.random(input_shape).astype(input_dtype)
         if has_batch_dim:
             tensor = np.squeeze(np.random.random(input_shape).astype(input_dtype), axis=0)
-        return {input_key: tensor, 'targets': 0}
+        return {input_key: tensor}
     return Dataset(list(range(length)), transform_fn)
 
 

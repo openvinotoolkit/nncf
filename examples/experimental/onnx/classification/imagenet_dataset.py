@@ -71,8 +71,8 @@ def create_dataloader(dataset_dir: str,
 def create_dataset(dataloader: DataLoader, input_name: str) -> Dataset:
 
     def transform_fn(data_item):
-        tensor, target = data_item
+        tensor, _ = data_item
         tensor = tensor.cpu().detach().numpy()
-        return {input_name: tensor, 'targets': target}
+        return {input_name: tensor}
 
     return Dataset(dataloader, transform_fn)
