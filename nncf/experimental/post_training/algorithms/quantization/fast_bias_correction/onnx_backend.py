@@ -107,13 +107,12 @@ class ONNXFBCAlgoBackend(FBCAlgoBackend):
         bias_input_name = node.input[2]
         try:
             return onnx_graph.get_initializers_value(bias_input_name)
-        except RuntimeError:
+        except RuntimeError as e:
             node = onnx_graph.get_nodes_by_output(bias_input_name)[0]
             metatype = ONNX_OPERATION_METATYPES.get_operator_metatype_by_op_name(node.op_type)
             if metatype == ONNXIdentityMetatype:
                 return onnx_graph.get_initializers_value(node.input[0])
-            else:
-                raise RuntimeError('Could not find the bias value of the node')
+            raise RuntimeError('Could not find the bias value of the node') from e
 
     @staticmethod
     def process_model_output(raw_data: Dict, output_name: str) -> ONNXNNCFTensor:
