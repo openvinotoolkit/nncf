@@ -11,7 +11,7 @@
  limitations under the License.
 """
 
-from typing import Dict, TypeVar
+from typing import Dict
 import onnxruntime as rt
 import numpy as np
 import onnx
@@ -27,8 +27,6 @@ from nncf.common.graph.factory import NNCFGraphFactory
 from nncf.common.tensor_statistics.statistic_point import StatisticPointsContainer
 from nncf.experimental.onnx.tensor import ONNXNNCFTensor
 
-ModelInput = TypeVar('ModelInput')
-ModelOutput = TypeVar('ModelOutput')
 
 class ONNXEngine(Engine):
     """
