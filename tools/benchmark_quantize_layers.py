@@ -12,6 +12,7 @@
 """
 
 import os
+from typing import Any
 
 import torch
 import torch.multiprocessing as mp
@@ -91,6 +92,7 @@ class DefaultedPTQuantizerSpec(PTQuantizerSpec):
 
 # reference impl
 class ReferenceQuantizeSymmetric(torch.autograd.Function):
+    # pylint:disable=abstract-method
     @staticmethod
     def forward(ctx, input_, scale, bits):
         level_high = scale.new_tensor([2 ** (bits - 1) - 1])
@@ -109,7 +111,8 @@ class ReferenceQuantizeSymmetric(torch.autograd.Function):
         return output
 
     @staticmethod
-    def backward(ctx, grad_output):
+    def backward(ctx: Any, *grad_outputs: Any) -> Any:
+        grad_output = grad_outputs[0]
         input_, scale, output = ctx.saved_tensors
         level_high = ctx.level_high
         level_low = ctx.level_low
