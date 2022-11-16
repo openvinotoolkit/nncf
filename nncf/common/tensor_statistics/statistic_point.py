@@ -29,7 +29,7 @@ class StatisticPoint:
     """
 
     def __init__(self, target_point: TargetPoint, tensor_collector: TensorStatisticCollectorBase,
-                 algorithm: 'PostTrainingAlgorithms'):
+                 algorithm: 'Algorithm'):
         self.target_point = target_point
         self.algorithm_to_tensor_collectors = {algorithm: [tensor_collector]}
 
@@ -79,7 +79,7 @@ class StatisticPointsContainer(UserDict):
             self,
             target_node_name: str,
             statistic_point_condition_func: Callable[[StatisticPoint], bool],
-            algorithm: 'PostTrainingAlgorithms') -> Generator[TensorStatisticCollectorBase, None, None]:
+            algorithm: 'Algorithm') -> Generator[TensorStatisticCollectorBase, None, None]:
 
         for _statistic_point in self.iter_through_statistic_points_in_target_node(target_node_name,
                                                                                   statistic_point_condition_func):

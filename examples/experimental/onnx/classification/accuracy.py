@@ -10,60 +10,15 @@
  See the License for the specific language governing permissions and
  limitations under the License.
 """
-from typing import Optional, Tuple
+
+from typing import Dict, Optional, Tuple, TypeVar
+
 import numpy as np
 
-from abc import ABC
-from abc import abstractmethod
-
-from nncf.experimental.post_training.api.dataset import NNCFData
+ModelOutput = TypeVar('ModelOutput')
 
 
-class Metric(ABC):
-    """
-    An abstract class representing an metric.
-    """
-
-    def __init__(self):
-        self.reset()
-
-    @property
-    def value(self):
-        """
-        Computes metric value for the one dataset sample
-        """
-        raise NotImplementedError('The value() property should be implemented to use this metric '
-                                  'with AccuracyAwareQuantization algorithm!')
-
-    @property
-    @abstractmethod
-    def avg_value(self):
-        """
-        Computes metric value across dataset
-        """
-
-    @property
-    def higher_better(self) -> bool:
-        """
-        Boolean attribute whether the metric should be increased
-        """
-        return True
-
-    @abstractmethod
-    def update(self, outputs: NNCFData, targets: NNCFData) -> None:
-        """
-        Calculates and updates metric value
-
-        :param outputs: model output
-        :param targets: annotation for metric calculation
-        """
-
-    @abstractmethod
-    def reset(self) -> None:
-        """ Reset metric """
-
-
-class Accuracy(Metric):
+class Accuracy:
 
     """
     The classification accuracy metric is defined as the number of correct predictions
@@ -72,7 +27,7 @@ class Accuracy(Metric):
     Metric is calculated as a percentage.
     """
 
-    def __init__(self, top_k: int = 1, output_key: Optional[str] = None, target_key: str = "targets"):
+    def __init__(self, top_k: int = 1, output_key: Optional[str] = None, target_key: Optional[str] = None):
         super().__init__()
         self._top_k = top_k
         self._matches = []
@@ -90,34 +45,35 @@ class Accuracy(Metric):
         """
         return {self.name: np.ravel(self._matches).mean()}
 
-    def _extract(self, outputs: NNCFData, targets: NNCFData) -> Tuple[np.ndarray, np.ndarray]:
+    def _extract(self,
+                 outputs: Dict[str, ModelOutput],
+                 targets: Dict[str, ModelOutput]) -> Tuple[np.ndarray, np.ndarray]:
         """
         Extract outputs and targets np.ndarray to compute accuracy
         If output_key is None and the model produces only one tensor,
         it implicitly uses that tensor to compute the model accuracy.
         """
-        if self._output_key is None and len(outputs) == 1:
-            outputs = list(outputs.values())[0].tensor
-        elif self._output_key in outputs:
-            outputs = outputs[self._output_key].tensor
-        else:
-            raise KeyError(
-                f"There is no {self._output_key} in the model outputs.")
+        if self._output_key is not None:
+            if self._output_key in outputs:
+                outputs = outputs[self._output_key]
+            else:
+                raise KeyError(
+                    f"There is no {self._output_key} in the model outputs.")
 
-        if self._target_key in targets:
-            targets = targets[self._target_key].tensor
-        else:
-            raise KeyError(
-                f"There is no {self._target_key} in the input data.")
+        if self._target_key is not None:
+            if self._target_key in targets:
+                targets = targets[self._target_key]
+            else:
+                raise KeyError(
+                    f"There is no {self._target_key} in the input data.")
 
         return outputs, targets
 
-    def update(self, outputs: NNCFData, targets: NNCFData) -> None:
+    def update(self, outputs: Dict[str, ModelOutput], targets: Dict[str, ModelOutput]) -> None:
         """
         Updates prediction matches based on the model output value and target.
         To calculate the top@N metric, the model output and target data must be represented
         as a list of length 1 containing vector and scalar values, respectively.
-
         :param output: 2D model classification output
         [
             [prob_0, ..., prob_M],  # Batch 1
@@ -150,9 +106,3 @@ class Accuracy(Metric):
                         for pred, target in zip(preds, targets)])
 
         self._matches.append(match)
-
-    def reset(self):
-        """
-        Resets collected matches
-        """
-        self._matches = []

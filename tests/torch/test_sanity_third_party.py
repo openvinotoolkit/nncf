@@ -83,7 +83,7 @@ class TestTransformers:
         pip_runner.run_pip("install onnx")
         torch_install_cmd = "install torch=={}".format(BKC_TORCH_VERSION)
         if torch_with_cuda11:
-            pip_runner.run_pip(torch_install_cmd + '+cu111 -f https://download.pytorch.org/whl/torch_stable.html')
+            pip_runner.run_pip(torch_install_cmd + '+cu116 --extra-index-url https://download.pytorch.org/whl/cu116')
         pip_runner.run_pip(torch_install_cmd)
         subprocess.run("git clone https://github.com/huggingface/transformers {}".format(self.TRANSFORMERS_REPO_PATH),
                        check=True, shell=True)

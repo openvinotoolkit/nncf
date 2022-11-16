@@ -246,7 +246,7 @@ LIST_TEST_DESCS = [
     ),
     LayerAttributesTestDesc(
         module=nn.EmbeddingBag(1, 1),
-        model_input_info_list=[ModelInputInfo([1, 1], type_str='long')],
+        model_input_info_list=[ModelInputInfo([1, 1], type_str='long', filler='zeros')],
         layer_attributes=GenericWeightedLayerAttributes(
             weight_requires_grad=True,
             weight_shape=Size([1, 1]),

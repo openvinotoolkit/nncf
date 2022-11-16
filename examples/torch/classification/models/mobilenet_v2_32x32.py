@@ -34,7 +34,7 @@ def _make_divisible(v: float, divisor: int, min_value: Optional[int] = None) -> 
     return new_v
 
 
-class ConvBNActivation(nn.Sequential):
+class Conv2dNormActivation(nn.Sequential):
     def __init__(
         self,
         in_planes: int,
@@ -61,7 +61,7 @@ class ConvBNActivation(nn.Sequential):
 
 
 # necessary for backwards compatibility
-ConvBNReLU = ConvBNActivation
+ConvBNReLU = Conv2dNormActivation
 
 
 class InvertedResidual(nn.Module):

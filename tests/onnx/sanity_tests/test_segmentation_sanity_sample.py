@@ -11,9 +11,6 @@
  limitations under the License.
 """
 
-from typing import List
-from typing import Tuple
-
 import pytest
 from unittest.mock import patch
 
@@ -23,8 +20,7 @@ import onnxruntime as rt
 import numpy as np
 
 from examples.experimental.onnx.semantic_segmentation.onnx_ptq_segmentation import run
-from nncf.experimental.onnx.tensor import ONNXNNCFTensor
-from nncf.experimental.post_training.api.dataset import Dataset
+from tests.onnx.quantization.common import get_dataset_for_test
 from tests.common.paths import TEST_ROOT
 
 MODELS_NAME = [
@@ -38,31 +34,26 @@ INPUT_SHAPES = [
 ]
 
 
-class TestDataset(Dataset):
-    def __init__(self, samples: List[Tuple[np.ndarray, int]], input_name: str):
-        super().__init__(shuffle=False)
-        self.samples = samples
-        self.input_name = input_name
-
-    def __getitem__(self, item):
-        inputs, targets = self.samples[item]
-        return {self.input_name: ONNXNNCFTensor(inputs), "targets": ONNXNNCFTensor(targets)}
-
-    def __len__(self):
-        return 1
+def mock_dataloader_creator(dataset_name, dataset_path, input_shape):
+    return [(np.zeros(input_shape[1:], dtype=np.float32), 0)]
 
 
-def mock_dataloader_creator(dataset_name, dataset_path, input_name, input_shape):
-    return TestDataset([(np.zeros(input_shape[1:], dtype=np.float32), 0), ], input_name)
-
+def mock_dataset_creator(dataloader, input_name):
+    return get_dataset_for_test(dataloader, input_name)
 
 @pytest.mark.parametrize(("model_name, input_shape"),
                          zip(MODELS_NAME, INPUT_SHAPES))
 @patch(
     'examples.experimental.onnx.semantic_segmentation.onnx_ptq_segmentation.'
-    'create_dataset_from_segmentation_torch_dataset',
+    'create_dataloader',
     new=mock_dataloader_creator)
+@patch(
+    'examples.experimental.onnx.semantic_segmentation.onnx_ptq_segmentation.'
+    'create_dataset',
+    new=mock_dataset_creator)
 def test_sanity_quantize_sample(tmp_path, model_name, input_shape):
+    if model_name == 'unet_camvid':
+        pytest.skip('Ticket 96049')
     onnx_model_dir = TEST_ROOT / 'onnx' / 'data' / 'models'
     onnx_model_path = onnx_model_dir / (model_name + '.onnx')
     if not os.path.isdir(onnx_model_dir):

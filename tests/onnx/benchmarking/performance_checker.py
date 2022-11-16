@@ -12,57 +12,39 @@
 """
 
 import os
-from typing import List
-from typing import Optional
+from functools import partial
+from time import time
+from typing import List, Optional
 
 import numpy as np
 import onnx
-
-from tqdm import tqdm
-from nncf.common.utils.logger import logger as nncf_logger
-
-from openvino.tools.accuracy_checker.config import ConfigReader
-from openvino.tools.accuracy_checker.argparser import build_arguments_parser
-from openvino.tools.accuracy_checker.evaluators import ModelEvaluator
-from nncf.experimental.onnx.tensor import ONNXNNCFTensor
-
-from nncf.experimental.onnx.engine import ONNXEngine
-from nncf.experimental.onnx.samplers import create_onnx_sampler
-from nncf.experimental.post_training.api.dataset import Dataset
-
-from time import time
 import pandas as pd
+from openvino.tools.accuracy_checker.argparser import build_arguments_parser
+from openvino.tools.accuracy_checker.config import ConfigReader
+from openvino.tools.accuracy_checker.evaluators import ModelEvaluator
+from tqdm import tqdm
+
+import nncf
+from nncf.common.utils.logger import logger as nncf_logger
+from nncf.experimental.onnx.engine import ONNXEngine
+
+#pylint: disable=redefined-outer-name,protected-access
 
 
-#pylint: disable=redefined-outer-name
-class OpenVINOAccuracyCheckerDataset(Dataset):
-    def __init__(self, model_evaluator: ModelEvaluator, batch_size: int, shuffle: bool, has_batch_dim: bool = True):
-        super().__init__(batch_size, shuffle)
-        self.model_evaluator = model_evaluator
-        self.has_batch_dim = has_batch_dim
+def process_fn(data_item, model_evaluator: ModelEvaluator, has_batch_dim: Optional[bool] = False):
+    _, batch_annotation, batch_input, _ = data_item
+    filled_inputs, _, _ = model_evaluator._get_batch_input(batch_annotation, batch_input)
 
-    def __getitem__(self, item):
-        _, batch_annotation, batch_input, _ = self.model_evaluator.dataset[item]
-        filled_inputs, _, _ = self.model_evaluator._get_batch_input(
-            batch_annotation, batch_input)
+    if len(filled_inputs) == 1:
+        return {k: np.squeeze(v, axis=0)
+                if has_batch_dim else v for k, v in filled_inputs[0].items()}
 
-        if len(filled_inputs) == 1:
-            return {
-                k: ONNXNNCFTensor(np.squeeze(v, axis=0))
-                if self.has_batch_dim else ONNXNNCFTensor(v)
-                for k, v in filled_inputs[0].items()
-            }
-
-        raise Exception("len(filled_inputs) should be one.")
-
-    def __len__(self):
-        return len(self.model_evaluator.dataset)
+    raise Exception("len(filled_inputs) should be one.")
 
 
-def run(onnx_model_path: str, output_file_path: str, dataset: Dataset, model_name: str,
+def run(onnx_model_path: str, output_file_path: str, dataset: nncf.Dataset,
+        model_name: str, num_init_samples: int,
         ignored_scopes: Optional[List[str]] = None):
-
-    num_init_samples = len(dataset)
 
     nncf_logger.info("Post-Training Quantization Parameters:")
     nncf_logger.info(f"  number of samples: {num_init_samples}")
@@ -74,15 +56,15 @@ def run(onnx_model_path: str, output_file_path: str, dataset: Dataset, model_nam
     onnx.checker.check_model(original_model)
 
     engine = ONNXEngine()
-    sampler = create_onnx_sampler(dataset, len(dataset))
 
     engine.rt_session_options['providers'] = ["OpenVINOExecutionProvider"]
     engine.set_model(original_model)
-    engine.set_sampler(sampler)
 
     elapsed_times = []
 
-    for input_data in tqdm(sampler):
+    indices_list = list(range(num_init_samples))
+
+    for input_data in tqdm(dataset.get_inference_data(indices_list), total=num_init_samples):
         start_time = time()
         engine.infer(input_data)
         elapsed_times += [1000.0 * (time() - start_time)]
@@ -117,16 +99,25 @@ if __name__ == '__main__':
             continue
 
         ignored_scopes = config_entry.get("ignored_scopes", None)
-        has_batch_dim = config_entry.get("has_batch_dim", True)
+        has_batch_dim = config_entry.get("has_batch_dim", False)
 
         dataset_config = config_entry["datasets"][0]
 
         assert "launchers" in config_entry
         assert len(config_entry["launchers"]) == 1
 
+        options = {
+            'model_evaluator': model_evaluator,
+            'has_batch_dim': has_batch_dim
+        }
+        transform_fn = partial(process_fn, **options)
+        dataset = nncf.Dataset(model_evaluator.dataset, transform_fn)
+
+        num_init_samples = len(model_evaluator.dataset)
+
         run(onnx_model_path=str(config_entry["launchers"][0]["model"]),
             output_file_path=args.csv_result,
-            dataset=OpenVINOAccuracyCheckerDataset(
-                model_evaluator, batch_size=1, shuffle=True, has_batch_dim=has_batch_dim),
+            dataset=dataset,
             model_name=config_entry["name"],
+            num_init_samples=num_init_samples,
             ignored_scopes=ignored_scopes)

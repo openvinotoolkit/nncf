@@ -97,7 +97,7 @@ class DataProvider(Generic[DataItem, ModelInput]):
         if hasattr(self._data_source, '__getitem__'):
             return DataProvider._get_iterator_for_map_style(self._data_source, self._transform_func, self._indices)
 
-        return DataProvider._get_iterator_for_iter(self._data_source, self._transform_func, self._indices)
+        return DataProvider._get_iterator_for_iter(self._data_source, self._transform_func, sorted(self._indices))
 
     @staticmethod
     def _get_iterator_for_map_style(data_source: Iterable[DataItem],

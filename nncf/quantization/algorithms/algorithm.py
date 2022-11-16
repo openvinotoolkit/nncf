@@ -14,22 +14,14 @@
 from abc import ABC
 from abc import abstractmethod
 
-from typing import TypeVar
-from typing import Dict
-from typing import Union
+from typing import TypeVar, Dict, Union, Optional
 
-from enum import Enum
-from nncf.experimental.post_training.statistics.statistic_point import StatisticPointsContainer
-from nncf.experimental.post_training.api.engine import Engine
+from nncf.common.tensor_statistics.statistic_point import StatisticPointsContainer
+from nncf.common.engine import Engine
 from nncf.common.utils.backend import BackendType
+from nncf import Dataset
 
 TModel = TypeVar('TModel')
-
-
-class PostTrainingAlgorithms(Enum):
-    MinMaxQuantization = 'min_max_quantization'
-    FastBiasCorrection = 'fast_bias_correction'
-    PostTrainingQuantization = 'post_training_quantization'
 
 
 class AlgorithmParameters(ABC):
@@ -58,8 +50,11 @@ class Algorithm(ABC):
         :return: Dict of backends supported by the algorithm
         """
 
-    def apply(self, model: TModel, engine: Engine,
-              statistic_points: StatisticPointsContainer) -> TModel:
+    def apply(self,
+              model: TModel,
+              engine: Optional[Engine] = None,
+              statistic_points: Optional[StatisticPointsContainer] = None,
+              dataset: Optional[Dataset] = None) -> TModel:
         """
         Checks that statistic point exists, sets model into transformer
         and applies the algorithm to the model.
@@ -68,6 +63,8 @@ class Algorithm(ABC):
         :param statistic_points: StatisticPointsContainer
         :return: model after algorithm
         """
+        if engine is None and statistic_points is None:
+            return self._apply(model, engine=None, statistic_points=None, dataset=dataset)
         _statistic_points = self.get_statistic_points(model)
         for edge_name in _statistic_points.keys():
             if statistic_points.get(edge_name) is None:
@@ -75,7 +72,11 @@ class Algorithm(ABC):
         return self._apply(model, engine, statistic_points)
 
     @abstractmethod
-    def _apply(self, model: TModel, engine: Engine, statistic_points: StatisticPointsContainer) -> TModel:
+    def _apply(self,
+               model: TModel,
+               engine: Engine,
+               statistic_points: StatisticPointsContainer,
+               dataset: Optional[Dataset] = None) -> TModel:
         """
         Applies the algorithm to the model.
         """
@@ -84,26 +85,4 @@ class Algorithm(ABC):
     def get_statistic_points(self, model: TModel) -> StatisticPointsContainer:
         """
         Returns activation layers, for which StatisticsCollector should collect statistics.
-        """
-
-
-class CompositeAlgorithm(Algorithm):
-    """
-    Sub-class for comples Post-Training algorithms that contains other algorithms inside.
-    """
-    def __init__(self) -> None:
-        super().__init__()
-        self.algorithms = []
-
-    @property
-    def available_backends(self) -> Dict[str, BackendType]:
-        # TODO(KodiaqQ): Need to add the implementation of the method (cross-algorithm backend calculation)
-        # after updating the MinMax Quantization with shareable logic
-        pass
-
-    @abstractmethod
-    def create_subalgorithms(self) -> None:
-        """
-        Some composite algorithms have different inner algorithms.
-        This method creates sub-algorithms and sets model transformer to them
         """
