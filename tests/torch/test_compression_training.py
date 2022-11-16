@@ -413,9 +413,9 @@ def finalize_desc(desc, dataset_dir, tmp_path_factory, weekly_models_path, enabl
 @pytest.fixture(name='desc', scope='module',
                 params=TEST_CASE_DESCRIPTORS, ids=map(str, TEST_CASE_DESCRIPTORS))
 def fixture_desc(request, dataset_dir, tmp_path_factory, weekly_models_path, enable_imagenet,
-                 weekly_with_mixed_precision):
+                 mixed_precision):
     desc: CompressionTrainingTestDescriptor = request.param
-    if weekly_with_mixed_precision:
+    if mixed_precision:
         desc.use_mixed_precision()
     return finalize_desc(desc, dataset_dir, tmp_path_factory, weekly_models_path, enable_imagenet)
 
@@ -434,6 +434,7 @@ def fixture_nas_desc(request, dataset_dir, tmp_path_factory, weekly_models_path,
     return finalize_desc(desc, dataset_dir, tmp_path_factory, weekly_models_path, enable_imagenet)
 
 
+@pytest.mark.weekly
 class TestCompression:
     @pytest.mark.dependency(name="train")
     def test_compression_train(self, desc: CompressionTrainingTestDescriptor, tmp_path, mocker):
