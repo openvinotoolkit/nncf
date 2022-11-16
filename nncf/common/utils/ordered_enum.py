@@ -12,11 +12,11 @@
 """
 
 import functools
-from enum import Enum
+from enum import IntEnum
 
 
 @functools.total_ordering
-class OrderedEnum(Enum):
+class OrderedEnum(IntEnum):
     def __eq__(self, other):
         if self.__class__ is other.__class__:
             return self.value == other.value # pylint: disable=W0143
