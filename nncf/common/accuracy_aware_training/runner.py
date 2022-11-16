@@ -188,8 +188,8 @@ class TrainingRunner(ABC):
         """
 
     @abstractmethod
-    def _save_checkpoint(self, model: TModel, checkpoint_path: str,
-                         compression_controller: Optional[CompressionAlgorithmController]) -> None:
+    def _save_checkpoint(self, model: TModel, compression_controller: CompressionAlgorithmController,
+                         checkpoint_path: str) -> None:
         """
         Save a model to the disk.
 
@@ -205,15 +205,6 @@ class TrainingRunner(ABC):
 
         :param model: The model object in which the state will be loaded.
         :param checkpoint_path: The path where model checkpoint is stored.
-        """
-
-    @abstractmethod
-    def _copy_checkpoint(self, source_path: str, destination_path: str) -> None:
-        """
-        Copy a model checkpoint to another location
-
-        :param source_path: The source model path
-        :param destination_path: Where to save the model
         """
 
 
@@ -392,11 +383,11 @@ class BaseAccuracyAwareTrainingRunner(TrainingRunner, ABC):
         else:
             checkpoint_path = osp.join(self._checkpoint_save_dir,
                                        f'acc_aware_checkpoint_last{self.checkpoint_path_extension}')
-            self._save_checkpoint(model, checkpoint_path, compression_controller)
+            self._save_checkpoint(model, compression_controller, checkpoint_path)
         nncf_logger.info("The checkpoint is saved in {}".format(checkpoint_path))
 
         if is_best_checkpoint:
-            self._save_best_checkpoint(model, checkpoint_path)
+            self._save_best_checkpoint(model, compression_controller)
 
     def configure_optimizers(self):
         self.optimizer, self.lr_scheduler = self._configure_optimizers_fn()
@@ -428,11 +419,11 @@ class BaseAccuracyAwareTrainingRunner(TrainingRunner, ABC):
             return self.early_stopping_fn(self.current_val_metric_value)
         return False
 
-    def _save_best_checkpoint(self, model, checkpoint_path):
-        best_path = osp.join(self._checkpoint_save_dir, f'acc_aware_checkpoint_best{osp.splitext(checkpoint_path)[1]}')
+    def _save_best_checkpoint(self, model, compression_controller):
+        best_path = osp.join(self._checkpoint_save_dir, f'acc_aware_checkpoint_best{self.checkpoint_path_extension}')
         self._best_checkpoint = best_path
-        self._copy_checkpoint(checkpoint_path, best_path)
-        nncf_logger.info('Copy best checkpoint {} -> {}'.format(checkpoint_path, best_path))
+        self._save_checkpoint(model, compression_controller, best_path)
+        nncf_logger.info('Saved the best model to {}'.format(best_path))
 
     def add_tensorboard_scalar(self, key, data, step):
         if self.verbose and self._tensorboard_writer is not None:
@@ -482,9 +473,9 @@ class BaseAdaptiveCompressionLevelTrainingRunner(BaseAccuracyAwareTrainingRunner
         self.update_training_history(self.compression_rate_target, self.current_val_metric_value)
         super().dump_statistics(model, compression_controller)
 
-    def _save_best_checkpoint(self, model, checkpoint_path):
+    def _save_best_checkpoint(self, model, compression_controller):
         best_checkpoint_filename = f'acc_aware_checkpoint_best_' \
-                                   f'{self.compression_rate_target:.3f}{osp.splitext(checkpoint_path)[1]}'
+                                   f'{self.compression_rate_target:.3f}{self.checkpoint_path_extension}'
         best_path = osp.join(self._checkpoint_save_dir, best_checkpoint_filename)
 
         accuracy_budget = self.best_val_metric_value - self.minimal_tolerable_accuracy
@@ -493,8 +484,8 @@ class BaseAdaptiveCompressionLevelTrainingRunner(BaseAccuracyAwareTrainingRunner
             return
 
         self._best_checkpoints[self.compression_rate_target] = (best_path, accuracy_budget)
-        self._copy_checkpoint(checkpoint_path, best_path)
-        nncf_logger.info('Copy best checkpoint {} -> {}'.format(checkpoint_path, best_path))
+        self._save_checkpoint(model, compression_controller, best_path)
+        nncf_logger.info('Saved the best model to {}'.format(best_path))
 
     def load_best_checkpoint(self, model):
         # load checkpoint with the highest compression rate and positive acc budget

@@ -11,8 +11,6 @@
  limitations under the License.
 """
 
-from shutil import copyfile
-
 import torch
 from torch.optim.lr_scheduler import ReduceLROnPlateau
 
@@ -93,7 +91,7 @@ class PTAccuracyAwareTrainingRunner(BaseAccuracyAwareTrainingRunner):
             return
         super().dump_checkpoint(model, compression_controller)
 
-    def _save_checkpoint(self, model, checkpoint_path, compression_controller):
+    def _save_checkpoint(self, model, compression_controller, checkpoint_path):
         checkpoint = {
             'epoch': self.cumulative_epoch_count + 1,
             'state_dict': model.state_dict(),
@@ -111,9 +109,6 @@ class PTAccuracyAwareTrainingRunner(BaseAccuracyAwareTrainingRunner):
             resuming_checkpoint = torch.load(checkpoint_path, map_location='cpu')
             resuming_model_state_dict = resuming_checkpoint.get('state_dict', resuming_checkpoint)
             load_state(model, resuming_model_state_dict, is_resume=True)
-
-    def _copy_checkpoint(self, source_path, destination_path):
-        copyfile(source_path, destination_path)
 
 
 class PTAdaptiveCompressionLevelTrainingRunner(BaseAdaptiveCompressionLevelTrainingRunner,

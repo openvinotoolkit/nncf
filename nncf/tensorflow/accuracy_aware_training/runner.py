@@ -12,8 +12,6 @@
 """
 
 import os.path as osp
-from shutil import rmtree
-from shutil import copytree
 
 import tensorflow as tf
 import tensorflow_addons as tfa
@@ -30,7 +28,7 @@ class TFAccuracyAwareTrainingRunner(BaseAccuracyAwareTrainingRunner):
     The Training Runner implementation for TensorFlow training code.
     """
 
-    checkpoint_path_extension = ''
+    checkpoint_path_extension = '.pt'
 
     def retrieve_uncompressed_model_accuracy(self, model):
         if not hasattr(model, 'original_model_accuracy'):
@@ -75,41 +73,14 @@ class TFAccuracyAwareTrainingRunner(BaseAccuracyAwareTrainingRunner):
                                          self.training_epoch_count,
                                          self.current_val_metric_value)
 
-    def dump_checkpoint(self, model, compression_controller):
-        # a workaround because for tensorflow backend disabling compression scheduler does not work properly
-        is_best_checkpoint = (self.best_val_metric_value == self.current_val_metric_value and
-                              isinstance(compression_controller.scheduler, StubCompressionScheduler))
-        if not self.dump_checkpoints and not is_best_checkpoint:
-            return
-
-        if self._dump_checkpoint_fn is not None:
-            checkpoint_path = self._dump_checkpoint_fn(model, compression_controller, self, self._checkpoint_save_dir)
-        else:
-            checkpoint_path = osp.join(self._checkpoint_save_dir,
-                                       f'acc_aware_checkpoint_last{self.checkpoint_path_extension}')
-            self._save_checkpoint(model, checkpoint_path, compression_controller)
-        nncf_logger.info("The checkpoint is saved in {}".format(checkpoint_path))
-
-        if is_best_checkpoint:
-            self._save_best_checkpoint(model, checkpoint_path)
-
-    def _save_checkpoint(self, model, checkpoint_path, compression_controller=None):
-        # for tensorflow checkpoints are saved in multiple shards, hence we save it in a separate subdirectory
-        new_checkpoint_path = osp.join(checkpoint_path, "checkpoint")
-        model.save_weights(new_checkpoint_path)
+    def _save_checkpoint(self, model, compression_controller, checkpoint_path):
+        model.save_weights(checkpoint_path)
 
     def _load_checkpoint(self, model, checkpoint_path):
         if self.load_checkpoint_fn is not None:
             self.load_checkpoint_fn(model, checkpoint_path)
         else:
-            # checkpoint is in the subdirectory
-            new_checkpoint_path = osp.join(checkpoint_path, "checkpoint")
-            model.load_weights(new_checkpoint_path)
-
-    def _copy_checkpoint(self, source_path, destination_path):
-        if osp.exists(destination_path):
-            rmtree(destination_path)
-        copytree(source_path, destination_path)
+            model.load_weights(checkpoint_path)
 
 
 class TFAdaptiveCompressionLevelTrainingRunner(BaseAdaptiveCompressionLevelTrainingRunner,
@@ -132,8 +103,8 @@ class TFAdaptiveCompressionLevelTrainingRunner(BaseAdaptiveCompressionLevelTrain
         else:
             checkpoint_path = osp.join(self._checkpoint_save_dir,
                                        f'acc_aware_checkpoint_last{self.checkpoint_path_extension}')
-            self._save_checkpoint(model, checkpoint_path, compression_controller)
+            self._save_checkpoint(model, compression_controller, checkpoint_path)
         nncf_logger.info("The checkpoint is saved in {}".format(checkpoint_path))
 
         if is_best_checkpoint:
-            self._save_best_checkpoint(model, checkpoint_path)
+            self._save_best_checkpoint(model, compression_controller)
