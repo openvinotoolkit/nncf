@@ -11,8 +11,7 @@
  limitations under the License.
 """
 
-from typing import Dict, Tuple
-from typing import List
+from typing import Dict, Tuple, List
 import onnx
 import numpy as np
 from nncf.common.graph.transformations.commands import TargetType
@@ -27,10 +26,11 @@ from nncf.experimental.onnx.graph.model_transformer import ONNXModelTransformer
 from nncf.experimental.onnx.graph.transformations.commands import ONNXBiasCorrectionCommand
 from nncf.experimental.onnx.graph.transformations.commands import ONNXModelExtractionCommand
 from nncf.experimental.onnx.graph.transformations.commands import ONNXTargetPoint
-from nncf.experimental.onnx.statistics.collectors import ONNXMeanStatisticCollector, ONNXNNCFCollectorTensorProcessor
+from nncf.experimental.onnx.statistics.collectors import ONNXMeanStatisticCollector
+from nncf.experimental.onnx.statistics.collectors import ONNXNNCFCollectorTensorProcessor
 from nncf.experimental.onnx.tensor import ONNXNNCFTensor
-from nncf.experimental.post_training.algorithms.quantization.fast_bias_correction.backend import ALGO_BACKENDS
-from nncf.experimental.post_training.algorithms.quantization.fast_bias_correction.backend import FBCAlgoBackend
+from nncf.quantization.algorithms.fast_bias_correction.backend import ALGO_BACKENDS
+from nncf.quantization.algorithms.fast_bias_correction.backend import FBCAlgoBackend
 
 
 @ALGO_BACKENDS.register(BackendType.ONNX)

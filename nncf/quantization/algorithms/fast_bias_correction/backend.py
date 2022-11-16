@@ -13,8 +13,7 @@
 
 from abc import ABC
 from abc import abstractmethod
-from typing import List, Tuple
-from typing import TypeVar
+from typing import List, Tuple, TypeVar
 
 import numpy as np
 from nncf.common.graph.transformations.commands import TargetPoint
@@ -26,7 +25,7 @@ from nncf.common.graph import NNCFNode
 from nncf.common.tensor_statistics.collectors import TensorStatisticCollectorBase
 from nncf.common.tensor_statistics.collectors import ReductionShape
 from nncf.common.utils.registry import Registry
-from nncf.experimental.post_training.graph.model_transformer import StaticModelTransformerBase
+from nncf.common.graph.model_transformer import ModelTransformer
 
 TModel = TypeVar('TModel')
 OutputType = TypeVar('OutputType')
@@ -65,7 +64,7 @@ class FBCAlgoBackend(ABC):
 
     @staticmethod
     @abstractmethod
-    def model_transformer(model: TModel) -> StaticModelTransformerBase:
+    def model_transformer(model: TModel) -> ModelTransformer:
         """
         Returns backend-specific ModelTransformer instance.
 
