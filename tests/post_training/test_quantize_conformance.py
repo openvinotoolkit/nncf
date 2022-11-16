@@ -3,6 +3,7 @@ import os
 import re
 import logging
 from pathlib import Path
+import re
 import numpy as np
 
 import torch
@@ -189,14 +190,13 @@ def result(pytestconfig):
 @pytest.mark.parametrize("model_args", 
             get_validation_scope())
 def test_ptq_timm(data, output, result, model_args):
-    output_folder = Path(output)
-    output_folder.mkdir(parents=True, exist_ok=True) 
     torch.multiprocessing.set_sharing_strategy('file_system') # W/A to avoid RuntimeError
 
     model_name = model_args["name"]
     model_quantization_params = model_args["quantization_params"]
     try:
-        ouput_folder = Path(output)
+        output_folder = Path(output)
+        output_folder.mkdir(parents=True, exist_ok=True) 
 
         model = create_timm_model(model_name)
         model.eval().cpu()
@@ -204,7 +204,7 @@ def test_ptq_timm(data, output, result, model_args):
 
         batch_one_dataloader = get_torch_dataloader(data, transform, batch_size=1)
         # benchmark original models (once)
-        orig_perf, orig_acc = benchmark_torch_model(model, batch_one_dataloader, model_name, ouput_folder)
+        orig_perf, orig_acc = benchmark_torch_model(model, batch_one_dataloader, model_name, output_folder)
 
         val_dataloader = get_torch_dataloader(data, transform, batch_size=128)
         def transform_fn(data_item):
@@ -216,17 +216,17 @@ def test_ptq_timm(data, output, result, model_args):
         try:
             torch_quantized_model = nncf.quantize(model, calibration_dataset, **model_quantization_params)
             # benchmark quantized torch model
-            torch_output_path = ouput_folder/ "torch"
+            torch_output_path = output_folder/ "torch"
             torch_output_path.mkdir(parents=True, exist_ok=True)
             q_torch_model_name = model_name + "_torch_int8"
             q_torch_perf, q_torch_acc = benchmark_torch_model(torch_quantized_model, batch_one_dataloader, q_torch_model_name, torch_output_path)
         except BaseException as error:
-            q_torch_perf = str(error)
-            q_torch_acc = str(error)
+            q_torch_perf = re.escape(str(error))
+            q_torch_acc = "-"
 
         # quantize ONNX model
         try:
-            onnx_model_path = ouput_folder / (model_name + ".onnx")
+            onnx_model_path = output_folder / (model_name + ".onnx")
             onnx_model = onnx.load(onnx_model_path)
             onnx_input_name = onnx_model.graph.input[0].name
             def onnx_transform_fn(data_item):
@@ -236,13 +236,13 @@ def test_ptq_timm(data, output, result, model_args):
 
             onnx_quantized_model = nncf.quantize(onnx_model, onnx_calibration_dataset, **model_quantization_params)
 
-            onnx_output_path = ouput_folder/ "onnx"
+            onnx_output_path = output_folder/ "onnx"
             onnx_output_path.mkdir(parents=True, exist_ok=True)
             q_onnx_model_name = model_name + "_onnx_int8"
             q_onnx_perf, q_onnx_acc = benchmark_onnx_model(onnx_quantized_model, batch_one_dataloader, q_onnx_model_name, onnx_output_path)
         except BaseException as error:
-            q_onnx_perf = str(error)
-            q_onnx_acc = str(error)
+            q_onnx_perf = re.escape(str(error))
+            q_onnx_acc = "-"
 
         # quantize OpenVINO model
         try:
@@ -251,18 +251,18 @@ def test_ptq_timm(data, output, result, model_args):
                 return images.numpy()
             ov_calibration_dataset = nncf.Dataset(batch_one_dataloader, ov_transform_fn)
 
-            ov_model_path = ouput_folder / (model_name + ".xml")
+            ov_model_path = output_folder / (model_name + ".xml")
             core = ov.Core()
             ov_model = core.read_model(ov_model_path)
             ov_quantized_model = nncf.quantize(ov_model, ov_calibration_dataset, **model_quantization_params)
 
-            ov_output_path = ouput_folder/ "openvino"
+            ov_output_path = output_folder/ "openvino"
             ov_output_path.mkdir(parents=True, exist_ok=True)
             q_ov_model_name = model_name + "_ov_int8"
             q_ov_perf, q_ov_acc = benchmark_ov_model(ov_quantized_model, batch_one_dataloader, q_ov_model_name, ov_output_path)
         except BaseException as error:
-            q_ov_perf = str(error)
-            q_ov_acc = str(error)
+            q_ov_perf = re.escape(str(error))
+            q_ov_acc = "-"
 
 
         result.append([model_name, orig_acc, q_torch_acc, q_onnx_acc, q_ov_acc,
