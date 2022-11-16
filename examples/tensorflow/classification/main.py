@@ -43,7 +43,6 @@ from examples.tensorflow.common.utils import print_args
 from examples.tensorflow.common.utils import serialize_config
 from examples.tensorflow.common.utils import serialize_cli_args
 from examples.tensorflow.common.utils import write_metrics
-from examples.tensorflow.common.utils import SummaryWriter
 from examples.tensorflow.common.utils import close_strategy_threadpool
 from examples.tensorflow.common.utils import set_seed
 

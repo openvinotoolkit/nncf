@@ -15,7 +15,7 @@ import os.path as osp
 
 import tensorflow as tf
 import tensorflow_addons as tfa
-from tensorflow.keras.optimizers import schedules
+import tensorflow.keras.optimizers.schedules
 
 from nncf.common.accuracy_aware_training.runner import BaseAccuracyAwareTrainingRunner
 from nncf.common.accuracy_aware_training.runner import BaseAdaptiveCompressionLevelTrainingRunner
@@ -56,9 +56,10 @@ class TFAccuracyAwareTrainingRunner(BaseAccuracyAwareTrainingRunner):
                 scheduler = scheduler * self.base_lr_reduction_factor_during_search
                 optimizer.learning_rate = scheduler
                 optimizer.lr = scheduler
-            elif isinstance(scheduler, (schedules.CosineDecay, schedules.ExponentialDecay)):
+            elif isinstance(scheduler, (tensorflow.keras.optimizers.schedules.CosineDecay,
+                                        tensorflow.keras.optimizers.schedules.ExponentialDecay)):
                 scheduler.initial_learning_rate *= self.base_lr_reduction_factor_during_search
-            elif isinstance(scheduler, schedules.PiecewiseConstantDecay):
+            elif isinstance(scheduler, tensorflow.keras.optimizers.schedules.PiecewiseConstantDecay):
                 scheduler.values = [lr * self.base_lr_reduction_factor_during_search for lr in scheduler.values]
             else:
                 nncf_logger.warning(f"Learning rate scheduler {scheduler} is not supported yet. Not reducing lr.")
