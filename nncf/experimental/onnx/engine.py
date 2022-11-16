@@ -11,20 +11,20 @@
  limitations under the License.
 """
 
+from typing import Dict
 import onnxruntime as rt
 import numpy as np
 import onnx
+from tqdm import tqdm
 
 from nncf.common.graph.transformations.commands import TargetType
 from nncf.common.graph.definitions import NNCFGraphNodeType
+from nncf.common.tensor import NNCFTensor
 from nncf.experimental.onnx.graph.onnx_graph import ONNXGraph
 
-from nncf.experimental.post_training.api.dataset import NNCFData
-from nncf.experimental.post_training.api.engine import Engine
-from nncf.experimental.post_training.api.sampler import Sampler
-from nncf.experimental.post_training.factories import NNCFGraphFactory
-from nncf.experimental.post_training.statistics.statistic_point import StatisticPointsContainer
-from nncf.experimental.onnx.samplers import create_onnx_sampler
+from nncf.common.engine import Engine
+from nncf.common.graph.factory import NNCFGraphFactory
+from nncf.common.tensor_statistics.statistic_point import StatisticPointsContainer
 from nncf.experimental.onnx.tensor import ONNXNNCFTensor
 
 
@@ -46,9 +46,6 @@ class ONNXEngine(Engine):
         # : FAIL : This is an invalid model. Error: Duplicate definition of name (data).
         self.rt_session_options['providers'] = ['CPUExecutionProvider']
 
-    def get_sampler(self) -> Sampler:
-        return self.sampler if self.sampler is not None else create_onnx_sampler(self.dataset, len(self.dataset))
-
     def set_model(self, model: onnx.ModelProto) -> None:
         """
         Creates ONNXRuntime InferenceSession for the onnx model.
@@ -64,7 +61,22 @@ class ONNXEngine(Engine):
 
         self._create_model_graphs(model)
 
-    def infer(self, input_data: NNCFData) -> NNCFData:
+    def compute_statistics(self, statistic_points: StatisticPointsContainer, subset_size: int = None) -> None:
+        """
+        Performs model inference on specified dataset subset and collects statistics
+
+        :param statistic_points: StatisticPointsContaine with StatisticPoints,
+         in which statistics are collected and registered.
+        """
+        if not self.is_model_set():
+            raise RuntimeError(f'The {self.__class__} tried to compute statistics, '
+                               'while the model was not set.')
+        subset_indices = list(range(subset_size))
+        for input_data in tqdm(self.dataset.get_inference_data(subset_indices), total=subset_size):
+            outputs = self.infer({n: ONNXNNCFTensor(v) for n, v in input_data.items()})
+            self._register_statistics(outputs, statistic_points)
+
+    def infer(self, input_data: Dict[str, NNCFTensor]) -> Dict[str, NNCFTensor]:
         """
         Runs model on the provided input_data via ONNXRuntime InferenceSession.
         Returns the dictionary of model outputs by node names.
@@ -84,7 +96,7 @@ class ONNXEngine(Engine):
         self.nncf_graph = NNCFGraphFactory.create(model)
         self.onnx_graph = ONNXGraph(model)
 
-    def _register_statistics(self, outputs: NNCFData, statistic_points: StatisticPointsContainer) -> None:
+    def _register_statistics(self, outputs: Dict[str, NNCFTensor], statistic_points: StatisticPointsContainer) -> None:
         for node_name, _statistic_points in statistic_points.items():
             for statistic_point in _statistic_points:
                 if NNCFGraphNodeType.INPUT_NODE in statistic_point.target_point.target_node_name:

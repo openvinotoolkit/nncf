@@ -18,8 +18,7 @@ from nncf.common.graph.transformations.commands import Command, TransformationCo
 from nncf.common.graph.transformations.commands import TransformationType
 from nncf.common.graph.transformations.commands import TargetType
 from nncf.common.graph.transformations.commands import TargetPoint
-from nncf.experimental.post_training.algorithms.quantization.min_max.utils import QuantizerLayerParameters
-
+from nncf.quantization.algorithms.min_max.utils import QuantizerLayerParameters
 
 class ONNXTargetPoint(TargetPoint):
     def __init__(self, target_type: TargetType, target_node_name: str, edge_name: Optional[str] = None):

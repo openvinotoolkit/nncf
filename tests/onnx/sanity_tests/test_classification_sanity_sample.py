@@ -11,8 +11,6 @@
  limitations under the License.
 """
 
-from typing import List
-from typing import Tuple
 from unittest.mock import patch
 
 import numpy as np
@@ -22,8 +20,7 @@ import torch
 from torchvision import models
 
 from examples.experimental.onnx.classification.onnx_ptq_classification import run
-from nncf.experimental.onnx.tensor import ONNXNNCFTensor
-from nncf.experimental.post_training.api.dataset import Dataset
+from tests.onnx.quantization.common import get_dataset_for_test
 from tests.onnx.conftest import ONNX_MODEL_DIR
 from tests.onnx.quantization.common import infer_model
 
@@ -59,26 +56,18 @@ TEST_CASES = [
 ]
 
 
-class TestDataset(Dataset):
-    def __init__(self, samples: List[Tuple[np.ndarray, int]], input_name: str):
-        super().__init__(shuffle=False)
-        self.samples = samples
-        self.input_name = input_name
-
-    def __getitem__(self, item):
-        inputs, targets = self.samples[item]
-        return {self.input_name: ONNXNNCFTensor(inputs), "targets": ONNXNNCFTensor(targets)}
-
-    def __len__(self):
-        return 1
+def mock_dataloader_creator(dataset_path, input_shape, batch_size, shuffle):
+    return [(np.zeros(input_shape[1:], dtype=np.float32), 0)]
 
 
-def mock_dataset_creator(dataset_path, input_name, input_shape, batch_size, shuffle):
-    return TestDataset([(np.zeros(input_shape[1:], dtype=np.float32), 0), ], input_name=input_name)
+def mock_dataset_creator(dataloader, input_name):
+    return get_dataset_for_test(dataloader, input_name)
 
 
 @pytest.mark.parametrize(("model_name, model, input_shape"), TEST_CASES)
-@patch('examples.experimental.onnx.classification.onnx_ptq_classification.create_imagenet_torch_dataset',
+@patch('examples.experimental.onnx.classification.onnx_ptq_classification.create_dataloader',
+       new=mock_dataloader_creator)
+@patch('examples.experimental.onnx.classification.onnx_ptq_classification.create_dataset',
        new=mock_dataset_creator)
 def test_sanity_quantize_sample(tmp_path, model_name, model, input_shape):
     onnx_model_path = ONNX_MODEL_DIR / (model_name + '.onnx')

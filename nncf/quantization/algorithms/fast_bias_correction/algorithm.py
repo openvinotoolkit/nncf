@@ -11,29 +11,27 @@
  limitations under the License.
 """
 
-from typing import Dict, Tuple
-from typing import List
-from typing import TypeVar
-from typing import Union
+from typing import Dict, Tuple, List, TypeVar, Union, Optional
 
 import numpy as np
-
+from nncf import Dataset
+from nncf.common.graph import NNCFGraph
 from nncf.common.graph import NNCFNode
 from nncf.common.tensor import NNCFTensor
 from nncf.common.utils.logger import logger as nncf_logger
 from nncf.common.graph.transformations.commands import TargetType
 from nncf.common.graph.transformations.layout import TransformationLayout
-from nncf.common.utils.backend import BackendType, get_backend
+from nncf.common.utils.backend import BackendType
+from nncf.common.utils.backend import get_backend
 from nncf.common.graph.transformations.commands import TargetPoint
-from nncf.experimental.post_training.algorithms import AlgorithmParameters
-from nncf.experimental.post_training.algorithms.algorithm import Algorithm
-from nncf.experimental.post_training.algorithms.algorithm import PostTrainingAlgorithms
-from nncf.experimental.post_training.algorithms.quantization.fast_bias_correction.backend import ALGO_BACKENDS
-from nncf.experimental.post_training.api.engine import Engine
-from nncf.experimental.post_training.factories import NNCFGraphFactory
-from nncf.experimental.post_training.graph.model_transformer import StaticModelTransformerBase
-from nncf.experimental.post_training.statistics.statistic_point import StatisticPoint
-from nncf.experimental.post_training.statistics.statistic_point import StatisticPointsContainer
+from nncf.quantization.algorithms.algorithm import AlgorithmParameters
+from nncf.quantization.algorithms.algorithm import Algorithm
+from nncf.quantization.algorithms.fast_bias_correction.backend import ALGO_BACKENDS
+from nncf.common.engine import Engine
+from nncf.common.graph.factory import NNCFGraphFactory
+from nncf.common.graph.model_transformer import ModelTransformer
+from nncf.common.tensor_statistics.statistic_point import StatisticPoint
+from nncf.common.tensor_statistics.statistic_point import StatisticPointsContainer
 
 TModel = TypeVar('TModel')
 
@@ -107,15 +105,18 @@ class FastBiasCorrection(Algorithm):
         """
         model_backend = get_backend(model)
         if model_backend == BackendType.ONNX:
-            from nncf.experimental.post_training.algorithms.quantization.fast_bias_correction.onnx_backend import \
+            from nncf.quantization.algorithms.fast_bias_correction.onnx_backend import \
                 ONNXFBCAlgoBackend
             self._backend_entity = ONNXFBCAlgoBackend()
         else:
             raise RuntimeError('Cannot return backend-specific entity'
                                'because {} is not supported!'.format(model_backend))
 
-    def _apply(self, model: TModel, engine: Engine,
-               statistic_points: StatisticPointsContainer) -> TModel:
+    def _apply(self,
+               model: TModel,
+               engine: Optional[Engine] = None,
+               statistic_points: Optional[StatisticPointsContainer] = None,
+               dataset: Optional[Dataset] = None) -> TModel:
         self._set_backend_entity(model)
 
         model_transformer = self._backend_entity.model_transformer(model)
@@ -183,7 +184,7 @@ class FastBiasCorrection(Algorithm):
         :return: collected mean tensor data and shape for the further bias calculation
         """
         def input_filter_func(point):
-            return PostTrainingAlgorithms.FastBiasCorrection in point.algorithm_to_tensor_collectors and \
+            return FastBiasCorrection in point.algorithm_to_tensor_collectors and \
                 point.target_point.type == TargetType.PRE_LAYER_OPERATION
 
         input_fp = []
@@ -191,7 +192,7 @@ class FastBiasCorrection(Algorithm):
         for tensor_collector in statistic_points.get_algo_statistics_for_node(
                 node_name,
                 input_filter_func,
-                PostTrainingAlgorithms.FastBiasCorrection):
+                FastBiasCorrection):
             input_fp.extend(tensor_collector.get_statistics().mean_values)
             input_shape.extend(tensor_collector.get_statistics().shape)
         return input_fp, input_shape
@@ -205,19 +206,19 @@ class FastBiasCorrection(Algorithm):
         :return: collected mean tensor data for the further bias calculation
         """
         def output_filter_func(point):
-            return PostTrainingAlgorithms.FastBiasCorrection in point.algorithm_to_tensor_collectors and \
+            return FastBiasCorrection in point.algorithm_to_tensor_collectors and \
                 point.target_point.type == TargetType.POST_LAYER_OPERATION
 
         output_fp = []
         for tensor_collector in statistic_points.get_algo_statistics_for_node(
                 node_name,
                 output_filter_func,
-                PostTrainingAlgorithms.FastBiasCorrection):
+                FastBiasCorrection):
             output_fp.extend(tensor_collector.get_statistics().mean_values)
         return output_fp
 
     def _extract_submodel(self,
-                          model_transformer: StaticModelTransformerBase,
+                          model_transformer: ModelTransformer,
                           input_names: List[str],
                           output_names: List[str]) -> TModel:
         """
@@ -247,7 +248,7 @@ class FastBiasCorrection(Algorithm):
                                                                        num_samples=self.number_samples)
         container.add_statistic_point(StatisticPoint(target_point=point,
                                                      tensor_collector=stat_collector,
-                                                     algorithm=PostTrainingAlgorithms.FastBiasCorrection))
+                                                     algorithm=FastBiasCorrection))
 
     def _create_input_data(self,
                            input_shape: Tuple[int],

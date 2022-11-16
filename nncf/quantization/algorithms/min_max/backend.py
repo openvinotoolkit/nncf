@@ -13,10 +13,7 @@
 
 from abc import ABC
 from abc import abstractmethod
-from typing import Dict
-from typing import TypeVar
-from typing import Tuple
-from typing import List
+from typing import Dict, TypeVar, Tuple, List
 
 import numpy as np
 from nncf.common.graph.graph import NNCFNode
@@ -30,8 +27,8 @@ from nncf.common.tensor_statistics.collectors import ReductionShape
 from nncf.common.tensor_statistics.collectors import TensorStatisticCollectorBase
 from nncf.common.utils.registry import Registry
 from nncf.common.quantization.structs import QuantizerConfig
-from nncf.experimental.post_training.algorithms.quantization.min_max.utils import QuantizerLayerParameters
-from nncf.experimental.post_training.graph.model_transformer import StaticModelTransformerBase
+from nncf.quantization.algorithms.min_max.utils import QuantizerLayerParameters
+from nncf.common.graph.model_transformer import ModelTransformer
 
 TModel = TypeVar('TModel')
 ALGO_BACKENDS = Registry('algo_backends')
@@ -76,7 +73,7 @@ class MinMaxAlgoBackend(ABC):
 
     @staticmethod
     @abstractmethod
-    def model_transformer(model: TModel) -> StaticModelTransformerBase:
+    def model_transformer(model: TModel) -> ModelTransformer:
         """
         Returns backend-specific ModelTransformer instance.
 
