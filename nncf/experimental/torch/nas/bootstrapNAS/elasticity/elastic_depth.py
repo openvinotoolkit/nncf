@@ -43,7 +43,6 @@ ElasticDepthSearchSpace = List[ElasticDepthConfig]  # grouped list of block inde
 
 
 class EDHandlerStateNames:
-    ACTIVE_CONFIG = 'active_config'
     DEPTH_INDICATOR = 'depth_indicator'
 
 
@@ -104,8 +103,7 @@ class ElasticDepthHandler(SingleElasticityHandler):
         Initializes object from the state.
         :param state: Output of `get_state()` method.
         """
-        active_config = state[self._state_names.ACTIVE_CONFIG]
-        self.activate_subnet_for_config(active_config)
+        super().load_state(state)
         self.depth_indicator = state[self._state_names.DEPTH_INDICATOR]
 
     def get_state(self) -> Dict[str, Any]:
@@ -114,11 +112,9 @@ class ElasticDepthHandler(SingleElasticityHandler):
         represents state of the object.
         :return: state of the object
         """
-        active_config = self.get_active_config()
-        return {
-            self._state_names.ACTIVE_CONFIG: active_config,
-            self._state_names.DEPTH_INDICATOR: self.depth_indicator,
-        }
+        state = super().get_state()
+        state[self._state_names.DEPTH_INDICATOR] = self.depth_indicator
+        return state
 
     def get_search_space(self) -> ElasticDepthSearchSpace:
         """

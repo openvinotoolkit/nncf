@@ -480,7 +480,6 @@ class ElasticOutputWidthLinearOp(ElasticOutputWidthOp, nn.Module):
         return [weight[:self._active_width, :], new_bias]
 
 class EWHandlerStateNames:
-    ACTIVE_CONFIG = 'active_config'
     WIDTH_NUM_PARAMS_INDICATOR = 'width_num_params_indicator'
 
 
@@ -552,8 +551,7 @@ class ElasticWidthHandler(SingleElasticityHandler):
         Initializes object from the state.
         :param state: Output of `get_state()` method.
         """
-        active_config = state[self._state_names.ACTIVE_CONFIG]
-        self.activate_subnet_for_config(active_config)
+        super().load_state(state)
         self.width_num_params_indicator = state[self._state_names.WIDTH_NUM_PARAMS_INDICATOR]
 
     def get_state(self) -> Dict[str, Any]:
@@ -562,11 +560,9 @@ class ElasticWidthHandler(SingleElasticityHandler):
         represents state of the object.
         :return: state of the object
         """
-        active_config = self.get_active_config()
-        return {
-            self._state_names.ACTIVE_CONFIG: active_config,
-            self._state_names.WIDTH_NUM_PARAMS_INDICATOR: self.width_num_params_indicator,
-        }
+        state = super().get_state()
+        state[self._state_names.WIDTH_NUM_PARAMS_INDICATOR] = self.width_num_params_indicator
+        return state
 
     def get_transformation_commands(self) -> List[TransformationCommand]:
         """
