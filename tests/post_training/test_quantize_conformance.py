@@ -23,7 +23,7 @@ import openvino.runtime as ov
 from model_scope import get_validation_scope
 
 NOT_AVAILABLE_MESSAGE = 'N/A'
-
+DEFAULT_VAL_THREADS = 4
 
 def create_timm_model(name):
     model = timm.create_model(name, num_classes=1000, in_chans=3, pretrained=True, checkpoint_path="")
@@ -111,20 +111,18 @@ def validate_accuracy(model_path, val_loader):
     ov_model = core.read_model(model_path)
     compiled_model = core.compile_model(ov_model)
 
-    jobs = 4
+    jobs = os.environ.get('NUM_VAL_THREADS', DEFAULT_VAL_THREADS)
     infer_queue = ov.AsyncInferQueue(compiled_model, jobs)
 
     def process_result(request, userdata):
         result = request.get_output_tensor().data
         predicted_label = np.argmax(result, axis=1)
-
         predictions[userdata] = [predicted_label]
 
     infer_queue.set_callback(process_result)
 
     for i, (images, target) in tqdm(enumerate(val_loader)):
         infer_queue.start_async(images.numpy(), userdata=i)
-        
         references[i] = target
 
     infer_queue.wait_all()
