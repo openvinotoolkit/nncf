@@ -5,14 +5,8 @@ from nncf import ModelType
 
 def get_validation_scope() -> List[dict]:
     model_scope = []
-    '''model_scope.append({"name": "resnet18", "quantization_params": {}})
-    model_scope.append({"name": "mobilenetv2_050", "quantization_params": {"preset":QuantizationPreset.MIXED}})
-    model_scope.append({"name": "vit_small_patch16_18x2_224", "quantization_params": {"preset":QuantizationPreset.MIXED, "model_type": ModelType.TRANSFORMER}})'''
-    model_scope.append({"name": "deit3_small_patch16_224", "quantization_params": {"preset":QuantizationPreset.MIXED, "model_type": ModelType.TRANSFORMER}})
-    model_scope.append({"name": "swin_base_patch4_window7_224", "quantization_params": {"preset":QuantizationPreset.MIXED, "model_type": ModelType.TRANSFORMER}})
-
     # Basic
-    '''model_scope.append({"name": "vgg11", "quantization_params": {}})
+    model_scope.append({"name": "vgg11", "quantization_params": {}})
     model_scope.append({"name": "resnet18", "quantization_params": {}})
     model_scope.append({"name": "repvgg_a2", "quantization_params": {}})
     model_scope.append({"name": "densenet121", "quantization_params": {}})
@@ -45,6 +39,6 @@ def get_validation_scope() -> List[dict]:
     model_scope.append({"name": "efficientnet_lite0", "quantization_params": {"preset":QuantizationPreset.MIXED}})
     model_scope.append({"name": "ghostnet_050", "quantization_params": {"preset":QuantizationPreset.MIXED}}) 
     model_scope.append({"name": "dpn68", "quantization_params": {"preset":QuantizationPreset.MIXED}})
-    model_scope.append({"name": "dla34", "quantization_params": {"preset":QuantizationPreset.MIXED}})'''
+    model_scope.append({"name": "dla34", "quantization_params": {"preset":QuantizationPreset.MIXED}})
     
     return model_scope
