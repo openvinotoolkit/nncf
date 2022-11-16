@@ -15,7 +15,6 @@ from typing import Dict, Tuple, List, TypeVar, Union, Optional
 
 import numpy as np
 from nncf import Dataset
-from nncf.common.graph import NNCFGraph
 from nncf.common.graph import NNCFNode
 from nncf.common.tensor import NNCFTensor
 from nncf.common.utils.logger import logger as nncf_logger
