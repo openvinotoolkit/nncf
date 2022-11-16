@@ -34,12 +34,12 @@ MODEL_NAMES = [
 ]
 
 MODELS = [
-    models.resnet18(),
-    models.mobilenet_v2(),
-    models.inception_v3(),
-    models.googlenet(),
-    models.vgg16(),
-    models.shufflenet_v2_x1_0(),
+    models.resnet18(pretrained=True),
+    models.mobilenet_v2(pretrained=True),
+    models.inception_v3(pretrained=True),
+    models.googlenet(pretrained=True),
+    models.vgg16(pretrained=True),
+    models.shufflenet_v2_x1_0(pretrained=True),
 ]
 
 INPUT_SHAPES = [

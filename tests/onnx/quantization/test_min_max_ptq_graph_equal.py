@@ -28,8 +28,8 @@ from tests.onnx.quantization.common import compare_nncf_graph_onnx_models
 
 
 @pytest.mark.parametrize(('model_to_test', 'model'),
-                         [(ModelToTest('resnet18', [1, 3, 224, 224]), models.resnet18()),
-                          (ModelToTest('mobilenet_v2', [1, 3, 224, 224]), models.mobilenet_v2()),
+                         [(ModelToTest('resnet18', [1, 3, 224, 224]), models.resnet18(pretrained=True)),
+                          (ModelToTest('mobilenet_v2', [1, 3, 224, 224]), models.mobilenet_v2(pretrained=True)),
                           ]
                          )
 def test_min_max_ptq_quantization_graph_are_same(tmp_path, model_to_test, model):
