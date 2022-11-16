@@ -24,6 +24,8 @@ from nncf.parameters import convert_ignored_scope_to_list
 from nncf.parameters import IgnoredScope
 from nncf.parameters import ModelType
 from nncf.parameters import TargetDevice
+from nncf.torch.dynamic_graph.context import no_nncf_trace
+from nncf.torch.dynamic_graph.io_handling import replicate_same_tensors
 from nncf.torch.dynamic_graph.io_handling import wrap_nncf_model_inputs_with_objwalk
 from nncf.torch.dynamic_graph.io_handling import wrap_nncf_model_outputs_with_objwalk
 from nncf.torch.initialization import PTInitializingDataLoader
@@ -169,26 +171,30 @@ def quantize_impl(model: torch.nn.Module,
         ]
     )
 
-    def create_dummy_forward_fn(data_loader, device):
-        data_item = next(iter(data_loader))
-        args, kwargs = data_loader.get_inputs(data_item)
-
-        def send_to_device(tensor):
-            return tensor.to(device)
-
-        args = objwalk(args, is_tensor, send_to_device)
-        kwargs = objwalk(kwargs, is_tensor, send_to_device)
-
-        def dummy_forward(model):
-            return model(*args, **kwargs)
-
-        return dummy_forward
-
     def wrap_inputs(args, kwargs):
         return wrap_nncf_model_inputs_with_objwalk(args, kwargs)
 
     def wrap_outputs(retval):
         return wrap_nncf_model_outputs_with_objwalk(retval)
+
+    def create_dummy_forward_fn(data_loader, device):
+        def dummy_forward(model):
+            with no_nncf_trace():
+                data_item = next(iter(data_loader))
+                args, kwargs = data_loader.get_inputs(data_item)
+
+                def send_to_device(tensor):
+                    return tensor.to(device)
+
+                args = objwalk(args, is_tensor, send_to_device)
+                kwargs = objwalk(kwargs, is_tensor, send_to_device)
+
+            args, kwargs = wrap_inputs(args, kwargs)
+            retval =  model(*args, **kwargs)
+            retval = replicate_same_tensors(retval)
+            return wrap_outputs(retval)
+
+        return dummy_forward
 
     dummy_forward_fn = create_dummy_forward_fn(calibration_data_loader,
                                                get_model_device(model))
