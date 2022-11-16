@@ -47,14 +47,11 @@ class StatisticsAggregator(ABC):
 
         :param model_transformer: ModelTransformer intance with the model
         """
-        engine = self._get_engine(model)
-        transformation_layout = self._get_transformation_layout_extra_outputs(self.statistic_points)
-        engine.model = model_transformer.transform(transformation_layout)
-        # self.compute_statistics(self.statistic_points, self.max_number_samples)
 
-        if engine.model is None:
-            raise RuntimeError(f'The {self.__class__} tried to compute statistics, '
-                               'while the model was not set.')
+        transformation_layout = self._get_transformation_layout_extra_outputs(self.statistic_points)
+        model_with_outputs = model_transformer.transform(transformation_layout)
+        engine = self._get_engine(model_with_outputs)
+
         subset_indices = list(range(self.max_number_samples))
         self._prepare_for_statistics_collection(model)
         for input_data in tqdm(self.dataset.get_inference_data(subset_indices), total=self.max_number_samples):
