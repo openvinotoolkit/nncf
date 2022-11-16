@@ -148,7 +148,7 @@ class FastBiasCorrection(Algorithm):
             input_blob = self._create_input_data(input_shape,
                                                  input_fp,
                                                  input_name)
-            engine = self._backend_entity.get_engine(model)
+            engine = self._backend_entity.get_engine(extracted_model)
             bias_shift = self._get_bias_shift(
                 engine=engine,
                 model=extracted_model,

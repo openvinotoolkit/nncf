@@ -48,8 +48,7 @@ class ONNXEngine(Engine):
         :param input_data: inputs for the model transformed with the inputs_transforms
         :return output_data: models output after outputs_transforms
         """
-        output_tensors = self.sess.run(
-            [], {k: v for k, v in input_data.items() if k in self.input_names})
+        output_tensors = self.sess.run([], {k: v for k, v in input_data.items() if k in self.input_names})
         model_outputs = self.sess.get_outputs()
 
         return {output.name: tensor for tensor, output in zip(output_tensors, model_outputs)}
