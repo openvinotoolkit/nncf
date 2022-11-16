@@ -12,7 +12,7 @@
 """
 from abc import ABC
 from abc import abstractmethod
-from typing import Any, NoReturn
+from typing import Any
 from typing import Dict
 from typing import List
 from typing import Optional
@@ -70,23 +70,6 @@ class ElasticityHandler(ABC):
 
         :return: elasticity configuration
         """
-
-    def get_elasticity_indicator(self) -> int:
-        """
-
-        Returns: None if elastic indicator is not used by the derived class.
-
-        """
-        return None
-
-    def set_elasticity_indicator(self, elasticity_indicator: int = None) -> NoReturn:
-        """
-        Args:
-            if elasticity_indicator is used, it is implemented in derived class. Otherwise is None.
-        Returns:
-
-        """
-        pass
 
     @abstractmethod
     def activate_supernet(self) -> None:
@@ -146,7 +129,6 @@ class ElasticityHandler(ABC):
 
 class SEHandlerStateNames:
     ACTIVE_CONFIG = 'active_config'
-    ELASTICITY_INDICATOR = 'elasticity_indicator'
 
 
 class SingleElasticityHandler(ElasticityHandler, ABC):
@@ -190,10 +172,7 @@ class SingleElasticityHandler(ElasticityHandler, ABC):
         :param state: Output of `get_state()` method.
         """
         active_config = state[self._state_names.ACTIVE_CONFIG]
-        elasticity_indicator = state[self._state_names.ELASTICITY_INDICATOR]
         self.activate_subnet_for_config(active_config)
-        if elasticity_indicator:
-            self.set_elasticity_indicator(elasticity_indicator)
 
     def get_state(self) -> Dict[str, Any]:
         """
@@ -203,10 +182,8 @@ class SingleElasticityHandler(ElasticityHandler, ABC):
         :return: state of the object
         """
         active_config = self.get_active_config()
-        elasticity_indicator = self.get_elasticity_indicator()
         return {
             self._state_names.ACTIVE_CONFIG: active_config,
-            self._state_names.ELASTICITY_INDICATOR: elasticity_indicator
         }
 
 
