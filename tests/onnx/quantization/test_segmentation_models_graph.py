@@ -27,8 +27,6 @@ from tests.onnx.quantization.common import min_max_quantize_model
                           ]
                          )
 def test_min_max_quantization_graph(tmp_path, model_to_test):
-    if model_to_test.model_name == 'unet_camvid':
-        pytest.skip('Ticket 96049')
     onnx_model_path = ONNX_MODEL_DIR / (model_to_test.model_name + '.onnx')
 
     original_model = onnx.load(onnx_model_path)

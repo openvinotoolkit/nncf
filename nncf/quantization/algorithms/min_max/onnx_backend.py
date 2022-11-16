@@ -26,9 +26,12 @@ from nncf.common.tensor_statistics.collectors import ReductionShape
 from nncf.common.utils.backend import BackendType
 from nncf.common.utils.logger import logger as nncf_logger
 
+from nncf.experimental.onnx.graph.metatypes.onnx_metatypes import ONNX_OPERATION_METATYPES
 from nncf.experimental.onnx.graph.metatypes.onnx_metatypes import WEIGHT_LAYER_METATYPES
 from nncf.experimental.onnx.graph.metatypes.onnx_metatypes import ONNXNonMaxSuppressionMetatype
 from nncf.experimental.onnx.graph.metatypes.onnx_metatypes import ONNXTopKMetatype
+from nncf.experimental.onnx.graph.metatypes.onnx_metatypes import ONNXIdentityMetatype
+from nncf.experimental.onnx.graph.metatypes.onnx_metatypes import ONNXReshapeMetatype
 from nncf.experimental.onnx.graph.model_transformer import ONNXModelTransformer
 from nncf.experimental.onnx.graph.transformations.commands import ONNXQuantizerInsertionCommand
 from nncf.experimental.onnx.graph.transformations.commands import ONNXTargetPoint
@@ -37,6 +40,7 @@ from nncf.experimental.onnx.hardware.fused_patterns import ONNX_HW_FUSED_PATTERN
 from nncf.experimental.onnx.quantization.default_quantization import DEFAULT_ONNX_QUANT_TRAIT_TO_OP_DICT
 from nncf.experimental.onnx.statistics.collectors import ONNXMeanMinMaxStatisticCollector
 from nncf.experimental.onnx.statistics.collectors import ONNXMinMaxStatisticCollector
+from nncf.experimental.onnx.graph.onnx_graph import ONNXGraph
 
 from nncf.quantization.algorithms.min_max.backend import MinMaxAlgoBackend
 from nncf.quantization.algorithms.min_max.backend import ALGO_BACKENDS
@@ -98,6 +102,20 @@ class ONNXMinMaxAlgoBackend(MinMaxAlgoBackend):
                                                 reduction_shape,
                                                 num_samples,
                                                 window_size)
+
+    @staticmethod
+    def get_weight_tensor_name(model: onnx.ModelProto, node_name: str) -> str:
+        onnx_graph = ONNXGraph(model)
+        node_inputs = onnx_graph.get_node_edge_names(node_name)['input']
+        weight_input = node_inputs[1]
+        try:
+            return onnx_graph.get_initializer(weight_input).name
+        except RuntimeError as e:
+            node = onnx_graph.get_nodes_by_output(weight_input)[0]
+            metatype = ONNX_OPERATION_METATYPES.get_operator_metatype_by_op_name(node.op_type)
+            if metatype in [ONNXIdentityMetatype, ONNXReshapeMetatype]:
+                return onnx_graph.get_initializer(node.input[0]).name
+            raise RuntimeError('Could not find the weight value of the node') from e
 
     @staticmethod
     def get_initializer_value(model: onnx.ModelProto, initializer_name: str) -> np.ndarray:
