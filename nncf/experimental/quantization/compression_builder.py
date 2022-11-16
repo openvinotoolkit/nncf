@@ -41,20 +41,7 @@ class CompressionBuilder:
         """
         self.algorithms.append(algorithm)
 
-    def _create_engine(self, backend: BackendType) -> Engine:
-        """
-        Creates backend-specific Engine.
-
-        :param backend: model backend type for the further differentiations
-        :return: backnd-specific Engine
-        """
-        if backend == BackendType.ONNX:
-            from nncf.experimental.onnx.engine import ONNXEngine
-            return ONNXEngine()
-        return None
-
     def _create_statistics_aggregator(self,
-                                      engine: Engine,
                                       dataset: Dataset,
                                       backend: BackendType) -> StatisticsAggregator:
         """
@@ -69,7 +56,7 @@ class CompressionBuilder:
         if backend == BackendType.ONNX:
             from nncf.experimental.onnx.statistics.aggregator import \
                 ONNXStatisticsAggregator
-            return ONNXStatisticsAggregator(engine, dataset)
+            return ONNXStatisticsAggregator(dataset)
         return None
 
     def _create_model_transformer(self, model: TModel, backend: BackendType) -> ModelTransformer:
@@ -93,7 +80,7 @@ class CompressionBuilder:
 
         return None
 
-    def apply(self, model: TModel, dataset: Dataset, engine: Engine = None) -> TModel:
+    def apply(self, model: TModel, dataset: Dataset) -> TModel:
         """
         Apply compression algorithms to the 'model'.
 
@@ -117,17 +104,14 @@ class CompressionBuilder:
             nncf_logger.warning('You are using experimental ONNX backend for the Post-training quantization.')
         modified_model = self._get_prepared_model_for_compression(model, backend)
 
-        if engine is None:
-            engine = self._create_engine(backend)
-
-        statistics_aggregator = self._create_statistics_aggregator(engine, dataset, backend)
+        statistics_aggregator = self._create_statistics_aggregator(dataset, backend)
         for algorithm in self.algorithms:
             statistic_points = algorithm.get_statistic_points(modified_model)
             statistics_aggregator.register_stastistic_points(statistic_points)
 
         model_transformer = self._create_model_transformer(modified_model, backend)
-        statistics_aggregator.collect_statistics(model_transformer)
+        statistics_aggregator.collect_statistics(modified_model, model_transformer)
 
         for algorithm in self.algorithms:
-            modified_model = algorithm.apply(modified_model, engine, statistics_aggregator.statistic_points)
+            modified_model = algorithm.apply(modified_model, statistics_aggregator.statistic_points)
         return modified_model

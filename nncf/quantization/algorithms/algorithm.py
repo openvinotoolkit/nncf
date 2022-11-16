@@ -52,7 +52,6 @@ class Algorithm(ABC):
 
     def apply(self,
               model: TModel,
-              engine: Optional[Engine] = None,
               statistic_points: Optional[StatisticPointsContainer] = None,
               dataset: Optional[Dataset] = None) -> TModel:
         """
@@ -63,18 +62,17 @@ class Algorithm(ABC):
         :param statistic_points: StatisticPointsContainer
         :return: model after algorithm
         """
-        if engine is None and statistic_points is None:
+        if statistic_points is None:
             return self._apply(model, engine=None, statistic_points=None, dataset=dataset)
         _statistic_points = self.get_statistic_points(model)
         for edge_name in _statistic_points.keys():
             if statistic_points.get(edge_name) is None:
                 raise RuntimeError(f'No statistics collected for the layer {edge_name}')
-        return self._apply(model, engine, statistic_points)
+        return self._apply(model, statistic_points)
 
     @abstractmethod
     def _apply(self,
                model: TModel,
-               engine: Engine,
                statistic_points: StatisticPointsContainer,
                dataset: Optional[Dataset] = None) -> TModel:
         """

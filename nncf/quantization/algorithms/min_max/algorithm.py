@@ -284,7 +284,6 @@ class MinMaxQuantization(Algorithm):
 
     def _apply(self,
                model: TModel,
-               engine: Optional[Engine] = None,
                statistic_points: Optional[StatisticPointsContainer] = None,
                dataset: Optional[Dataset] = None) -> TModel:
         transformation_layout, transformation_commands = TransformationLayout(), []

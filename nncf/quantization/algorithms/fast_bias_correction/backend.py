@@ -26,6 +26,7 @@ from nncf.common.tensor_statistics.collectors import TensorStatisticCollectorBas
 from nncf.common.tensor_statistics.collectors import ReductionShape
 from nncf.common.utils.registry import Registry
 from nncf.common.graph.model_transformer import ModelTransformer
+from nncf.common.engine import Engine
 
 TModel = TypeVar('TModel')
 OutputType = TypeVar('OutputType')
@@ -175,3 +176,14 @@ class FBCAlgoBackend(ABC):
         :param output_name: Name of the output layer or tensor name.
         :return: Processed output as NNCFTensor.
         """
+
+    @staticmethod
+    @abstractmethod
+    def get_engine(model: TModel) -> Engine:
+        """
+        Returns backend-specific engine.
+
+        :param model: Backend-specific model.
+        :return: Backend-specific Engine instance.
+        """
+
