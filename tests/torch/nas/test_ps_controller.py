@@ -10,7 +10,8 @@
  See the License for the specific language governing permissions and
  limitations under the License.
 """
-from collections import OrderedDict
+from copy import deepcopy
+from pathlib import Path
 
 from typing import Any
 from typing import Dict
@@ -18,25 +19,18 @@ from typing import List
 from typing import NamedTuple
 
 import pytest
+import torch
 
 from nncf import NNCFConfig
-from nncf.common.initialization.batchnorm_adaptation import BatchnormAdaptationAlgorithm
-from nncf.config.extractors import get_bn_adapt_algo_kwargs
 from nncf.config.structures import BNAdaptationInitArgs
-from nncf.experimental.torch.nas.bootstrapNAS.elasticity.base_handler import SingleElasticityHandler
-from nncf.experimental.torch.nas.bootstrapNAS.elasticity.elastic_depth import ElasticDepthHandler
-from nncf.experimental.torch.nas.bootstrapNAS.elasticity.elastic_width import ElasticWidthHandler
-from nncf.experimental.torch.nas.bootstrapNAS.elasticity.elasticity_dim import ElasticityDim
-from nncf.experimental.torch.nas.bootstrapNAS.elasticity.multi_elasticity_handler import MultiElasticityHandler
-from nncf.experimental.torch.nas.bootstrapNAS.training.progressive_shrinking_builder import ProgressiveShrinkingBuilder
-from nncf.experimental.torch.nas.bootstrapNAS.training.progressive_shrinking_controller import \
-    ProgressiveShrinkingController
-from nncf.experimental.torch.nas.bootstrapNAS.training.stage_descriptor import StageDescriptor
-from nncf.torch.nncf_network import NNCFNetwork
-from tests.torch.helpers import create_ones_mock_dataloader, MockModel
-from tests.torch.nas.creators import create_bnas_model_and_ctrl_by_test_desc
+from nncf.experimental.torch.nas.bootstrapNAS import EpochBasedTrainingAlgorithm
+from nncf.experimental.torch.nas.bootstrapNAS.training.training_algorithm import EBTrainAlgoStateNames
+from nncf.torch.model_creation import create_nncf_network
+from tests.torch.helpers import create_ones_mock_dataloader
+from tests.torch.nas.creators import create_bootstrap_training_model_and_ctrl
+from tests.torch.nas.helpers import move_model_to_cuda_if_available
 from tests.torch.nas.models.synthetic import ThreeConvModel
-from tests.torch.nas.test_scheduler import fixture_schedule_params # pylint: disable=unused-import
+from tests.torch.nas.test_scheduler import fixture_schedule_params  # pylint: disable=unused-import
 
 
 class PSControllerTestDesc(NamedTuple):
@@ -57,9 +51,7 @@ class PSControllerTestDesc(NamedTuple):
         return name
 
 
-def prepare_test_model(ps_ctrl_desc):
-    model, ctrl = create_bnas_model_and_ctrl_by_test_desc(ps_ctrl_desc)
-    elasticity_ctrl = ctrl.elasticity_controller
+def prepare_test_model(ps_ctrl_desc, bn_adapt_section_is_called):
     config = {
         "input_info": {"sample_size": ps_ctrl_desc.input_sizes},
         "bootstrapNAS": {
@@ -67,17 +59,16 @@ def prepare_test_model(ps_ctrl_desc):
                 "batchnorm_adaptation": {
                     "num_bn_adaptation_samples": 2
                 },
-                "elasticity": {
-                    "available_elasticity_dims": ["depth", "width"]
-                }
             },
         }
     }
     nncf_config = NNCFConfig.from_dict(config)
+    update_train_bn_adapt_section(nncf_config, bn_adapt_section_is_called)
     bn_adapt_args = BNAdaptationInitArgs(data_loader=create_ones_mock_dataloader(nncf_config))
     nncf_config.register_extra_structs([bn_adapt_args])
-    return model, elasticity_ctrl, nncf_config
-
+    model = ps_ctrl_desc.model_creator()
+    move_model_to_cuda_if_available(model)
+    return model, bn_adapt_args, nncf_config
 
 def update_train_bn_adapt_section(nncf_config, bn_adapt_section_is_called):
     if not bn_adapt_section_is_called:
@@ -86,45 +77,34 @@ def update_train_bn_adapt_section(nncf_config, bn_adapt_section_is_called):
 
 # pylint: disable=protected-access
 class TestProgressiveTrainingController:
-    @pytest.mark.parametrize(('bn_adapt_section', 'is_called'), (("section_with_zero_num_samples", False),
-                                                                 ("section_with_non_zero_num_samples", True)))
-    def test_bn_adapt(self, mocker, bn_adapt_section, is_called, tmp_path, schedule_params):
+    @pytest.mark.parametrize("bn_adapt_section_is_called", [False, True],
+                             ids=["section_with_zero_num_samples", "section_with_non_zero_num_samples"])
+    def test_bn_adapt(self, mocker, bn_adapt_section_is_called, tmp_path, schedule_params):
         test_desc = PSControllerTestDesc(model_creator=ThreeConvModel,
-                                     algo_params={'width': {'min_width': 1, 'width_step': 1}},
-                                     input_sizes=ThreeConvModel.INPUT_SIZE,
-                                     )
-        _, _, nncf_config = prepare_test_model(test_desc)
-        update_train_bn_adapt_section(nncf_config, is_called)
+                                         algo_params={'width': {'min_width': 1, 'width_step': 1}},
+                                         input_sizes=ThreeConvModel.INPUT_SIZE,
+                                         )
+        clean_model, bn_adapt_args, nncf_config = prepare_test_model(test_desc, bn_adapt_section_is_called)
+        model = deepcopy(clean_model)
+        model, ctrl = create_bootstrap_training_model_and_ctrl(model, nncf_config, False)
+
+        checkpoint_path = Path(tmp_path, 'test_checkpoint_bn_adapt.pth')
+        checkpoint = {
+            EBTrainAlgoStateNames.EPOCH: 1,
+            EBTrainAlgoStateNames.MODEL_STATE: model.state_dict(),
+            EBTrainAlgoStateNames.SUPERNET_BEST_ACC1: 0,
+            EBTrainAlgoStateNames.MIN_SUBNET_BEST_ACC1: 0,
+            EBTrainAlgoStateNames.OPTIMIZER: None,
+            EBTrainAlgoStateNames.TRAINING_ALGO_STATE: ctrl.get_compression_state()
+        }
+        torch.save(checkpoint, checkpoint_path)
+
         bn_adapt_run_patch = mocker.patch(
             "nncf.common.initialization.batchnorm_adaptation.BatchnormAdaptationAlgorithm.run")
-        mock_model = MockModel()
-        mock_nncf_network = mocker.MagicMock(spec=NNCFNetwork)
-        mock_width_handler = mocker.MagicMock(spec=ElasticWidthHandler)
-        mock_depth_handler = mocker.MagicMock(spec=ElasticDepthHandler)
-        mock_kernel_handler = mocker.MagicMock(spec=SingleElasticityHandler)
-        handlers = OrderedDict({
-            ElasticityDim.WIDTH: mock_width_handler,
-            ElasticityDim.KERNEL: mock_kernel_handler,
-            ElasticityDim.DEPTH: mock_depth_handler,
-        })
-        mock_handler = MultiElasticityHandler(handlers, mock_nncf_network)
-        # pylint:disable=protected-access
-        mock_elasticity_ctrl = mocker.stub()
-        mock_elasticity_ctrl.multi_elasticity_handler = mock_handler
-        lr_schedule_config = {}
-        training_config = nncf_config.get('bootstrapNAS', {}).get('training', {})
-        bn_adapt_params = training_config.get('batchnorm_adaptation', {})
-        bn_adapt_algo_kwargs = get_bn_adapt_algo_kwargs(nncf_config, bn_adapt_params)
-        bn_adaptation = BatchnormAdaptationAlgorithm(**bn_adapt_algo_kwargs) if bn_adapt_algo_kwargs else None
-        training_algo = ProgressiveShrinkingController(mock_model, mock_elasticity_ctrl, bn_adaptation,
-                                                       ProgressiveShrinkingBuilder.DEFAULT_PROGRESSIVITY,
-                                                       schedule_params, lr_schedule_config)
-        # Check prepare for validation
-        training_algo.prepare_for_validation()
-        # Check when setting stage
-        desc = StageDescriptor([ElasticityDim.DEPTH, ElasticityDim.WIDTH], bn_adapt=is_called)
-        training_algo.set_stage(desc)
-        if is_called:
+        clean_model = create_nncf_network(clean_model, nncf_config)
+        training_algorithm = EpochBasedTrainingAlgorithm.from_checkpoint(clean_model, bn_adapt_args, checkpoint_path)
+        training_algorithm._training_ctrl.prepare_for_validation()
+        if bn_adapt_section_is_called:
             bn_adapt_run_patch.assert_called()
         else:
             bn_adapt_run_patch.assert_not_called()
