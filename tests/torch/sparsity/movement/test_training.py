@@ -212,6 +212,7 @@ class MovementTrainingValidator(BaseSampleValidator):
     def validate_spy(self):
         pass
 
+
 mrpc_movement_desc_template = \
     MovementTrainingTestDescriptor()\
     .model_name("google/bert_uncased_L-2_H-128_A-2")\

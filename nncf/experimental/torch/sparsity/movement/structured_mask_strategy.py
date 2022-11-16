@@ -2,8 +2,7 @@ import inspect
 from typing import Dict, List, Optional, Sequence, Tuple, Union
 
 from nncf.common.utils.registry import Registry
-from nncf.experimental.torch.search_building_blocks.search_blocks import \
-    BuildingBlockType
+from nncf.experimental.torch.search_building_blocks.search_blocks import BuildingBlockType
 from nncf.torch.nncf_network import NNCFNetwork
 
 STRUCTURED_MASK_STRATEGY = Registry("structured_mask_strategy")
@@ -31,6 +30,7 @@ class StructuredMaskRule:
             slice(None),
             slice(None),
         ),
+        # TODO(yujie): delete this slice for now. May added later for torchvision transformers.
     ) -> None:
         self.keywords: List[str] = [keywords] if isinstance(keywords, str) else keywords
         self.prune_by_row = prune_by_row
@@ -49,7 +49,7 @@ class StructuredMaskRule:
 class BaseStructuredMaskStrategy:
     @property
     def strategy_by_group_type(self):
-        pass
+        return {}
 
     @classmethod
     def from_compressed_model(cls, compressed_model: NNCFNetwork):
@@ -76,7 +76,7 @@ class HuggingFaceBertStructuredMaskStrategy(BaseStructuredMaskStrategy):
         return cls(dim_per_head=hidden_dim // num_heads)
 
     @property
-    def strategy_by_group_type(self) -> Dict[str, List[StructuredMaskRule]]:
+    def strategy_by_group_type(self) -> Dict[BuildingBlockType, List[StructuredMaskRule]]:
         config = {
             BuildingBlockType.MSHA: [
                 StructuredMaskRule(

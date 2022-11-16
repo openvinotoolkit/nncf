@@ -1,5 +1,6 @@
 from copy import deepcopy
 from typing import List, Optional, Union
+from pathlib import Path
 
 import numpy as np
 import pytest
@@ -18,12 +19,46 @@ from transformers import SwinConfig
 from transformers import AutoModelForImageClassification
 from transformers.trainer_callback import (TrainerCallback, TrainerControl,
                                            TrainerState)
+from nncf.common.graph.graph import NNCFGraph
+from nncf.common.graph.graph import NNCFNode
+from nncf.common.graph.layer_attributes import LinearLayerAttributes
 
 MODEL_NAME = "google/bert_uncased_L-2_H-128_A-2"
 DATASET_NAME = "yelp_review_full"
 
 
+def mock_linear_nncf_node(in_features: int = 1, out_features: int = 1,
+                          bias: bool = True, node_name='linear'):
+    graph = NNCFGraph()
+    linear = graph.add_nncf_node(node_name, 'linear', 'linear',
+                                 LinearLayerAttributes(True, in_features, out_features, bias=bias))
+    return linear
+
+
+def ensure_tensor(data, dtype=torch.float, device=torch.device('cpu')):
+    if isinstance(data, np.ndarray):
+        return torch.from_numpy(data).to(dtype=dtype, device=device)
+    elif isinstance(data, torch.Tensor):
+        return data.to(dtype=dtype, device=device)
+    else:
+        return torch.tensor(data, dtype=dtype, device=device)
+
+
+class ParamDict:
+    def __init__(self, dtype=torch.float, device=torch.device('cpu'), **kwargs):
+        self.keys = kwargs.keys()
+        for name, value in kwargs.items():
+            setattr(self, name, ensure_tensor(value, dtype, device) if
+                    value is not None else None)
+
+    def __getitem__(self, key):
+        assert key in self.keys
+        return getattr(self, key)
+
+
 # @pytest.fixture
+
+
 def yelp_dataset():
     tokenizer = AutoTokenizer.from_pretrained(MODEL_NAME)
     dataset = load_dataset(DATASET_NAME)
@@ -80,33 +115,6 @@ def swin_model():
     return AutoModelForImageClassification.from_config(config)
 
 
-class BaseMockRunRecipe:
-    model_family: str
-
-    def __init__(self, model_config, algo_config) -> None:
-        self.model_config = model_config
-        self.algo_config = algo_config
-
-    @property
-    def model(self):
-        pass
-
-    @property
-    def nncf_config(self):
-        pass
-
-    @property
-    def mock_dataset(self):
-        pass
-
-    @staticmethod
-    def get_nncf_modules_in_transformer_block_order(compressed_model):
-        """Returns the NNCF modules in usual transformer block order, 
-        i.e., List[Tuple(query, key, value, output, feedforward_in, feedforward_out)]
-        """
-        return []
-
-
 class SchedulerParams:
     def __init__(self, power: int = 3,
                  warmup_start_epoch: int = 1,
@@ -127,7 +135,8 @@ class SchedulerParams:
 
 
 class NNCFAlgoConfig:
-    def __init__(self, sparse_structure_by_scopes=[], ignored_scopes=[],
+    def __init__(self, sparse_structure_by_scopes=[],
+                 ignored_scopes=[],
                  scheduler_params=None, **scheduler_overrides):
         self.scheduler_params = scheduler_params or SchedulerParams()
         for k, v in scheduler_overrides.items():
@@ -145,13 +154,49 @@ class NNCFAlgoConfig:
         }
 
 
+class BaseMockRunRecipe:
+    model_family: str
+    supports_structured_masking: bool
+
+    def __init__(self, model_config, algo_config: NNCFAlgoConfig, log_dir=None) -> None:
+        self.model_config = deepcopy(model_config)
+        self.algo_config = deepcopy(algo_config)
+        self.log_dir = log_dir
+        if log_dir is not None:
+            Path(log_dir).mkdir(exist_ok=True, parents=True)
+
+    @property
+    def model(self):
+        pass
+
+    @property
+    def transformer_block_info_in_model(self):
+        return {}
+
+    @property
+    def nncf_config(self):
+        pass
+
+    @property
+    def mock_dataset(self):
+        pass
+
+    @staticmethod
+    def get_nncf_modules_in_transformer_block_order(compressed_model):
+        """Returns the NNCF modules in usual transformer block order, 
+        i.e., List[Tuple(query, key, value, output, feedforward_in, feedforward_out)]
+        """
+        return []
+
+
 class Wav2Vec2RunRecipe(BaseMockRunRecipe):
     model_family = 'huggingface_wav2vec2'
+    supports_structured_masking = True
     default_model_config = Wav2Vec2Config(
         hidden_size=4,
         num_hidden_layers=1,
         num_attention_heads=2,
-        intermediate_size=6,
+        intermediate_size=3,
         conv_dim=(4, 4),
         conv_stride=(1, 1),
         conv_kernel=(3, 3),
@@ -179,6 +224,14 @@ class Wav2Vec2RunRecipe(BaseMockRunRecipe):
     def model(self):
         return AutoModelForAudioClassification.from_config(self.model_config)
 
+    @property
+    def transformer_block_info_in_model(self):
+        model_config = self.model_config
+        return dict(
+            num_hidden_layers=model_config.num_hidden_layers,
+            dim_per_head=model_config.hidden_size // model_config.num_attention_heads,
+        )
+
     @staticmethod
     def get_nncf_modules_in_transformer_block_order(compressed_wav2vec2_model):
         modules = []
@@ -201,6 +254,8 @@ class Wav2Vec2RunRecipe(BaseMockRunRecipe):
             ],
             "compression": self.algo_config.to_dict()
         }
+        if self.log_dir is not None:
+            config_dict['log_dir'] = str(self.log_dir)
         return NNCFConfig.from_dict(config_dict)
 
     @property
@@ -210,6 +265,7 @@ class Wav2Vec2RunRecipe(BaseMockRunRecipe):
 
 class BertRunRecipe(BaseMockRunRecipe):
     model_family = 'huggingface_bert'
+    supports_structured_masking = True
     default_model_config = BertConfig(
         hidden_size=4,
         intermediate_size=3,
@@ -241,15 +297,26 @@ class BertRunRecipe(BaseMockRunRecipe):
         return AutoModelForSequenceClassification.from_config(self.model_config)
 
     @property
+    def transformer_block_info_in_model(self):
+        model_config = self.model_config
+        return dict(
+            num_hidden_layers=model_config.num_hidden_layers,
+            dim_per_head=model_config.hidden_size // model_config.num_attention_heads,
+        )
+
+    @property
     def nncf_config(self):
-        return NNCFConfig.from_dict({
+        config_dict = {
             "input_info": [
                 {"sample_size": [1, 256], "type": "long", "keyword": "input_ids"},
                 {"sample_size": [1, 256], "type": "long", "keyword": "token_type_ids"},
                 {"sample_size": [1, 256], "type": "long", "keyword": "position_ids"},
                 {"sample_size": [1, 256], "type": "long", "keyword": "attention_mask"},
             ],
-            "compression": self.algo_config.to_dict()})
+            "compression": self.algo_config.to_dict()}
+        if self.log_dir is not None:
+            config_dict['log_dir'] = str(self.log_dir)
+        return NNCFConfig.from_dict(config_dict)
 
     @staticmethod
     def get_nncf_modules_in_transformer_block_order(compressed_bert_model):

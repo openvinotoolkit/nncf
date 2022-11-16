@@ -16,6 +16,7 @@ import torch
 from nncf.torch.dynamic_graph.patch_pytorch import register_operator
 from nncf.torch.functions import STThreshold
 
+
 @register_operator()
 def binary_mask_by_threshold(importance, threshold=0.5, max_percentile=0.98):
     with torch.no_grad():
