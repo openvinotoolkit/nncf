@@ -12,6 +12,7 @@
 """
 
 from copy import deepcopy
+from functools import partial
 from typing import Dict, Tuple, List, Set, TypeVar, Union, Optional
 
 from nncf import Dataset
@@ -98,7 +99,7 @@ class MinMaxQuantizationParameters(AlgorithmParameters):
         """
 
     def _determine_weight_activation_modes(self, preset: QuantizationPreset) -> Tuple[
-            QuantizationMode, QuantizationMode]:
+        QuantizationMode, QuantizationMode]:
         weight_mode = QuantizationPreset.get_params_configured_by_preset(preset, QuantizerGroup.WEIGHTS)['mode']
         activation_mode = QuantizationPreset.get_params_configured_by_preset(preset, QuantizerGroup.ACTIVATIONS)['mode']
         return weight_mode, activation_mode
@@ -110,7 +111,6 @@ class MinMaxQuantizationParameters(AlgorithmParameters):
 
 
 class MinMaxQuantization(Algorithm):
-
     """
     Post-training MinMaxQuantization algorithm implementation.
 
@@ -179,6 +179,32 @@ class MinMaxQuantization(Algorithm):
                                                                         num_samples=self._parameters.number_samples)
         raise RuntimeError('This range type is not supported!')
 
+    def _filter_nncf_graph(self, nncf_graph: NNCFGraph) -> NNCFGraph:
+        """
+        Removes all Constant nodes from NNCFGraph, making it inference graph.
+
+        :param nncf_graph: The original NNCFGraph.
+        :return: NNCFGraph without Constan nodes.
+        """
+
+        def traverse_function(curr_node, output, visited_nodes):
+            if curr_node in visited_nodes:
+                return True, output
+            output.append(curr_node)
+            visited_nodes.append(curr_node)
+            return False, output
+
+        start_nodes = nncf_graph.get_input_nodes()
+        visited_nodes = []
+        partial_traverse_function = partial(traverse_function, visited_nodes=visited_nodes)
+        traversed_nodes = []
+        for star_node in start_nodes:
+            traversed_nodes += nncf_graph.traverse_graph(star_node, partial_traverse_function)
+        all_nodes = nncf_graph.get_all_nodes()
+        constant_nodes = [node for node in all_nodes if node not in traversed_nodes]
+        nncf_graph.remove_nodes(constant_nodes)
+        return nncf_graph
+
     def _get_quantizer_setup(self, nncf_graph: NNCFGraph) -> SingleConfigQuantizerSetup:
         """
         Returns SingleConfigQuantizerSetup instance based on the input NNCFGraph.
@@ -186,6 +212,7 @@ class MinMaxQuantization(Algorithm):
         :param nncf_graph: NNCFGraph instance.
         :return: SingleConfigQuantizerSetup for the current NNCFGraph entity.
         """
+        nncf_graph = self._filter_nncf_graph(nncf_graph)
         ip_graph = InsertionPointGraph(nncf_graph)
         pattern = self._backend_entity.hw_fused_patterns.get_full_pattern_graph()
         ip_graph = ip_graph.get_ip_graph_with_merged_hw_optimized_operations(pattern)

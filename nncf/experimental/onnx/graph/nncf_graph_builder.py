@@ -185,31 +185,14 @@ class GraphConverter:
         """
         nncf_graph = NNCFGraph()
         onnx_graph = ONNXGraph(onnx_model)
-
-        model_inputs = onnx_graph.get_model_inputs()
-        nodes_queue, visited_nodes = deque(), []
-        for inp in model_inputs:
-            nodes_queue.extend(onnx_graph.get_nodes_by_input(inp.name))
-
-        while nodes_queue:
-            current_node = nodes_queue.popleft()
-            if current_node in visited_nodes:
-                continue
-            nodes_queue.extend(onnx_graph.get_children(current_node))
-            if GraphConverter._is_valid_onnx_metatype(current_node):
-                metatype = ONNX_OPERATION_METATYPES.get_operator_metatype_by_op_name(current_node.op_type)
-                layer_attributes = ONNXExtendedLayerAttributes(current_node.input, current_node.output)
-                is_shared = onnx_graph.is_node_shared(current_node)
-                layer_name = onnx_graph.get_node_layer_name(current_node)
-                nncf_graph.add_nncf_node(node_name=current_node.name,
-                                         node_type=current_node.op_type,
-                                         node_metatype=metatype,
-                                         layer_attributes=layer_attributes,
-                                         layer_name=layer_name,
-                                         is_shared=is_shared)
-                visited_nodes.append(current_node)
-
-        for output_node in visited_nodes:
+        for node in filter(GraphConverter._is_valid_onnx_metatype, onnx_graph.get_all_nodes()):
+            metatype = ONNX_OPERATION_METATYPES.get_operator_metatype_by_op_name(node.op_type)
+            layer_attributes = ONNXExtendedLayerAttributes(node.input, node.output)
+            nncf_graph.add_nncf_node(node_name=node.name,
+                                     node_type=node.op_type,
+                                     node_metatype=metatype,
+                                     layer_attributes=layer_attributes)
+        for output_node in filter(GraphConverter._is_valid_onnx_metatype, onnx_graph.get_all_nodes()):
             output_edges = onnx_graph.get_node_edge_names(output_node.name)['output']
             for output_edge in output_edges:
                 tensor_shape = GraphConverter._get_tensor_shape(onnx_graph, output_edge)
