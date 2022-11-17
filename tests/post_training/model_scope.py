@@ -40,3 +40,5 @@ def get_validation_scope() -> List[dict]:
     model_scope.append({"name": "ghostnet_050", "quantization_params": {"preset":QuantizationPreset.MIXED}}) 
     model_scope.append({"name": "dpn68", "quantization_params": {"preset":QuantizationPreset.MIXED}})
     model_scope.append({"name": "dla34", "quantization_params": {"preset":QuantizationPreset.MIXED}})
+    
+    return model_scope

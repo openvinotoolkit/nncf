@@ -3,7 +3,7 @@ import numpy as np
 from pathlib import Path
 
 def pytest_addoption(parser):
-    parser.addoption("--data", action="store", default="/mnt/datasets/imagenet/val")
+    parser.addoption("--data", action="store")
     parser.addoption("--output", action="store", default="./tmp/")
 
 def pytest_configure(config):
