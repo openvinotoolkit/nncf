@@ -79,30 +79,17 @@ def update_train_bn_adapt_section(nncf_config, bn_adapt_section_is_called):
 class TestProgressiveTrainingController:
     @pytest.mark.parametrize("bn_adapt_section_is_called", [False, True],
                              ids=["section_with_zero_num_samples", "section_with_non_zero_num_samples"])
-    def test_bn_adapt(self, mocker, bn_adapt_section_is_called, tmp_path, schedule_params):
+    def test_bn_adapt(self, mocker, bn_adapt_section_is_called, schedule_params):
         test_desc = PSControllerTestDesc(model_creator=ThreeConvModel,
                                          algo_params={'width': {'min_width': 1, 'width_step': 1}},
                                          input_sizes=ThreeConvModel.INPUT_SIZE,
                                          )
-        clean_model, bn_adapt_args, nncf_config = prepare_test_model(test_desc, bn_adapt_section_is_called)
-        model = deepcopy(clean_model)
-        model, ctrl = create_bootstrap_training_model_and_ctrl(model, nncf_config, False)
-
-        checkpoint_path = Path(tmp_path, 'test_checkpoint_bn_adapt.pth')
-        checkpoint = {
-            EBTrainAlgoStateNames.EPOCH: 1,
-            EBTrainAlgoStateNames.MODEL_STATE: model.state_dict(),
-            EBTrainAlgoStateNames.SUPERNET_BEST_ACC1: 0,
-            EBTrainAlgoStateNames.MIN_SUBNET_BEST_ACC1: 0,
-            EBTrainAlgoStateNames.OPTIMIZER: None,
-            EBTrainAlgoStateNames.TRAINING_ALGO_STATE: ctrl.get_compression_state()
-        }
-        torch.save(checkpoint, checkpoint_path)
-
         bn_adapt_run_patch = mocker.patch(
             "nncf.common.initialization.batchnorm_adaptation.BatchnormAdaptationAlgorithm.run")
-        clean_model = create_nncf_network(clean_model, nncf_config)
-        training_algorithm = EpochBasedTrainingAlgorithm.from_checkpoint(clean_model, bn_adapt_args, checkpoint_path)
+        model, bn_adapt_args, nncf_config = prepare_test_model(test_desc, bn_adapt_section_is_called)
+        model = create_nncf_network(model, nncf_config)
+
+        training_algorithm = EpochBasedTrainingAlgorithm.from_config(model, nncf_config)
         training_algorithm._training_ctrl.prepare_for_validation()
         if bn_adapt_section_is_called:
             bn_adapt_run_patch.assert_called()
