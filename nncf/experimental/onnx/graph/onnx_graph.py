@@ -11,7 +11,7 @@
  limitations under the License.
 """
 
-from typing import Callable, Dict, List, Optional
+from typing import Callable, Dict, List, Optional, Tuple
 
 import onnx
 from onnx import numpy_helper  # pylint: disable=no-name-in-module
@@ -19,7 +19,8 @@ import numpy as np
 
 from nncf.experimental.onnx.model_normalizer import ONNXModelNormalizer
 from nncf.experimental.onnx.graph.metatypes.onnx_metatypes import ONNX_OPERATION_METATYPES
-from nncf.experimental.onnx.graph.metatypes.onnx_metatypes import WEIGHT_LAYER_METATYPES
+from nncf.experimental.onnx.graph.metatypes.onnx_metatypes import ONNXIdentityMetatype
+from nncf.experimental.onnx.graph.metatypes.onnx_metatypes import ONNXReshapeMetatype
 
 
 # pylint: disable=no-member
@@ -194,20 +195,31 @@ class ONNXGraph:
                 output.append(node)
         return output
 
-    def get_weight_tensor_name(self, node: onnx.NodeProto) -> Optional[str]:
-        # TODO(kshpv): add search of input weight tensor
+    def get_weight_tensor(self, node: onnx.NodeProto) -> Tuple[str, np.ndarray]:
         """
-        Returns weight tensor name from the 1-index.
+        Returns node's weight tensor name and its value.
 
-        :param node: node.
-        :return: Weight tensor name.
+        :param node: Node, in which the weight tensor finally applied.
+        :return: Weight tensor name and its value.
         """
-        metatype = ONNX_OPERATION_METATYPES.get_operator_metatype_by_op_name(node.op_type)
-        if metatype in WEIGHT_LAYER_METATYPES:
-            node_inputs = self.get_node_edge_names(node.name)['input']
-            weight_tensor = node_inputs[1]
-            return weight_tensor
-        return None
+        node_name = node.name
+        node_inputs = self.get_node_edge_names(node_name)['input']
+        weight_input = node_inputs[1]
+        try:
+            return self.get_initializer(weight_input).name, self.get_initializers_value(weight_input)
+        except RuntimeError as e:
+            node = self.get_nodes_by_output(weight_input)[0]
+            metatype = ONNX_OPERATION_METATYPES.get_operator_metatype_by_op_name(node.op_type)
+            if metatype == ONNXIdentityMetatype:
+                tensor_name = self.get_initializer(node.input[0]).name
+                return tensor_name, self.get_initializers_value(tensor_name)
+            if metatype == ONNXReshapeMetatype:
+                tensor_name = node.output[0]
+                shape = self.get_initializers_value(node.input[1])
+                tensor_value = self.get_initializers_value(node.input[0])
+                reshaped_tensor_value = tensor_value.reshape(shape)
+                return tensor_name, reshaped_tensor_value
+            raise RuntimeError('Could not find the weight value of the node') from e
 
     def get_node_index(self, node_name: str) -> int:
         """

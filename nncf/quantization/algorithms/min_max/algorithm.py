@@ -328,8 +328,8 @@ class MinMaxQuantization(Algorithm):
             node = nncf_graph.get_node_by_name(target_node_name)
             if quantization_target_point.type == TargetType.OPERATION_WITH_WEIGHTS:
                 try:
-                    weight_initializer_name = self._backend_entity.get_weight_tensor_name(model, node.node_name)
-                    weight_tensor = self._backend_entity.get_initializer_value(model, weight_initializer_name)
+                    weight_initializer_name, weight_tensor = self._backend_entity.get_weight_tensor(model,
+                                                                                                    node.node_name)
                     # If the nodes share one weight tensor, we should have only one quantizer on that
                     if weight_initializer_name in weight_initializer_names:
                         continue
