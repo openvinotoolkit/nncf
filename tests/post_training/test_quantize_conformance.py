@@ -20,6 +20,7 @@ from sklearn.metrics import accuracy_score
 import openvino.runtime as ov
 
 from model_scope import get_validation_scope
+import copy
 
 NOT_AVAILABLE_MESSAGE = "N/A"
 DEFAULT_VAL_THREADS = 4
@@ -61,7 +62,7 @@ def get_model_transform(model):
 def get_torch_dataloader(folder, transform, batch_size=1):
     val_dataset = datasets.ImageFolder(root=folder, transform=transform)
     val_loader = torch.utils.data.DataLoader(
-        val_dataset, batch_size=batch_size, num_workers=4, shuffle=False
+        val_dataset, batch_size=batch_size, num_workers=2, shuffle=False
     )
     return val_loader
 
@@ -135,7 +136,9 @@ def validate_accuracy(model_path, val_loader):
     infer_queue.set_callback(process_result)
 
     for i, (images, target) in tqdm(enumerate(val_loader)):
-        infer_queue.start_async(images.numpy(), userdata=i)
+        # W/A for memory leaks when using torch DataLoader and OpenVINO
+        image_copies = copy.deepcopy(images.numpy())
+        infer_queue.start_async(image_copies, userdata=i)
         references[i] = target
 
     infer_queue.wait_all()

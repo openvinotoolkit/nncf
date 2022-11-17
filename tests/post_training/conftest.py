@@ -1,5 +1,4 @@
 import pytest
-from texttable import Texttable
 import numpy as np
 from pathlib import Path
 
@@ -20,5 +19,5 @@ def pytest_runtest_makereport(item, call):
         header = ["Model name", "FP32 top-1", "Torch INT8 top-1", "ONNX INT8 top-1", "OV INT8 top-1",
             "FP32 FPS", "Torch INT8 FPS", "ONNX INT8 FPS", "OV INT8 FPS"]
         output_folder = Path(item.config.getoption("--output"))
-        output_folder.mkdir(parents=True, exist_ok=True)        
+        output_folder.mkdir(parents=True, exist_ok=True)
         np.savetxt(output_folder / "results.csv", table, delimiter=",", fmt='%s', header=','.join(header))

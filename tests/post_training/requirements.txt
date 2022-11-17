@@ -8,5 +8,4 @@ pytest
 openvino>=2022.1
 openvino-dev>=2022.1
 timm
-texttable
 sklearn
