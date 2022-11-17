@@ -22,6 +22,7 @@ from typing import Any
 
 import torch
 from torch.backends import cudnn
+from torch.cuda.amp.autocast_mode import autocast
 from torch import nn
 import torch.nn.parallel
 import torch.optim
@@ -54,6 +55,7 @@ from examples.torch.common.optimizer import make_optimizer
 from examples.torch.common.sample_config import SampleConfig
 from examples.torch.common.sample_config import create_sample_config
 from examples.torch.common.utils import MockDataset
+from examples.torch.common.utils import NullContextManager
 from examples.torch.common.utils import SafeMLFLow
 from examples.torch.common.utils import configure_device
 from examples.torch.common.utils import configure_logging
@@ -94,6 +96,11 @@ def get_argument_parser():
     )
     parser.add_argument('--test-every-n-epochs', default=1, type=int,
                         help='Enables running validation every given number of epochs')
+    parser.add_argument('--mixed-precision',
+                        dest='mixed_precision',
+                        help='Enables torch.cuda.amp autocasting during training and'
+                             ' validation steps',
+                        action='store_true')
     return parser
 
 
@@ -505,6 +512,7 @@ def train_epoch(train_loader, model, criterion, criterion_fn, optimizer, compres
         train_iters = len(train_loader)
 
     compression_scheduler = compression_ctrl.scheduler
+    casting = autocast if config.mixed_precision else NullContextManager
 
     # switch to train mode
     model.train()
@@ -520,12 +528,13 @@ def train_epoch(train_loader, model, criterion, criterion_fn, optimizer, compres
         target = target.to(config.device)
 
         # compute output
-        output = model(input_)
-        criterion_loss = criterion_fn(output, target, criterion)
+        with casting():
+            output = model(input_)
+            criterion_loss = criterion_fn(output, target, criterion)
 
-        # compute compression loss
-        compression_loss = compression_ctrl.loss()
-        loss = criterion_loss + compression_loss
+            # compute compression loss
+            compression_loss = compression_ctrl.loss()
+            loss = criterion_loss + compression_loss
 
         if isinstance(output, InceptionOutputs):
             output = output.logits
@@ -591,6 +600,7 @@ def validate(val_loader, model, criterion, config, epoch=0, log_validation_info=
     # switch to evaluate mode
     model.eval()
 
+    casting = autocast if config.mixed_precision else NullContextManager
     with torch.no_grad():
         end = time.time()
         for i, (input_, target) in enumerate(val_loader):
@@ -598,8 +608,9 @@ def validate(val_loader, model, criterion, config, epoch=0, log_validation_info=
             target = target.to(config.device)
 
             # compute output
-            output = model(input_)
-            loss = default_criterion_fn(output, target, criterion)
+            with casting():
+                output = model(input_)
+                loss = default_criterion_fn(output, target, criterion)
 
             # measure accuracy and record loss
             acc1, acc5 = accuracy(output, target, topk=(1, 5))
