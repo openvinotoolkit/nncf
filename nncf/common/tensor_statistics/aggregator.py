@@ -10,23 +10,22 @@
  See the License for the specific language governing permissions and
  limitations under the License.
 """
-
 from abc import ABC
 from abc import abstractmethod
-from typing import Dict, TypeVar
+from itertools import islice
+from typing import Dict, TypeVar, Any
 
 from tqdm import tqdm
 
-from nncf import Dataset
-from nncf.common.engine import Engine
-from nncf.common.graph.model_transformer import ModelTransformer
+from nncf.common.factory import ModelTransformerFactory
+from nncf.common.factory import EngineFactory
 from nncf.common.graph.transformations.layout import TransformationLayout
 from nncf.common.tensor import NNCFTensor
 from nncf.common.tensor_statistics.statistic_point import StatisticPointsContainer
+from nncf.data.dataset import Dataset
 
 TensorType = TypeVar('TensorType')
 TModel = TypeVar('TModel')
-ModelOutput = TypeVar('ModelOutput')
 
 
 class StatisticsAggregator(ABC):
@@ -36,25 +35,23 @@ class StatisticsAggregator(ABC):
 
     def __init__(self, dataset: Dataset):
         self.dataset = dataset
-        self.is_calculate_metric = False
-        self.max_number_samples = 0
+        self.stat_subset_size = 0
         self.statistic_points = StatisticPointsContainer()
 
-    def collect_statistics(self, model: TModel, model_transformer: ModelTransformer) -> None:
+    def collect_statistics(self, model: TModel) -> None:
         """
         Collects statistics for registered StatisticPoints.
         The statistics are stored in self.statistic_points.
 
-        :param model_transformer: ModelTransformer intance with the model
+        :param model: backend-specific model instance
         """
+        model_transformer = ModelTransformerFactory.create(model)
 
         transformation_layout = self._get_transformation_layout_extra_outputs(self.statistic_points)
         model_with_outputs = model_transformer.transform(transformation_layout)
-        engine = self._get_engine(model_with_outputs)
+        engine = EngineFactory.create(model_with_outputs)
 
-        subset_indices = list(range(self.max_number_samples))
-        self._prepare_for_statistics_collection(model)
-        for input_data in tqdm(self.dataset.get_inference_data(subset_indices), total=self.max_number_samples):
+        for input_data in tqdm(islice(self.dataset.get_inference_data(), self.stat_subset_size), total=self.stat_subset_size):
             outputs = engine.infer(input_data)
             processed_outputs = self._process_outputs(outputs)
             self._register_statistics(processed_outputs, self.statistic_points)
@@ -74,8 +71,8 @@ class StatisticsAggregator(ABC):
             for _statistic_point in _statistic_points:
                 for _, tensor_collectors in _statistic_point.algorithm_to_tensor_collectors.items():
                     for tensor_collector in tensor_collectors:
-                        self.max_number_samples = max(
-                            self.max_number_samples, tensor_collector.num_samples)
+                        self.stat_subset_size = max(
+                            self.stat_subset_size, tensor_collector.num_samples)
 
     @abstractmethod
     def _register_statistics(self,
@@ -86,14 +83,6 @@ class StatisticsAggregator(ABC):
 
         :param outputs: prepared raw model outputs
         :param statistic_points: StatisticPointsContainer instance with the statistic points
-        """
-    
-    @abstractmethod
-    def _prepare_for_statistics_collection(self, model: TModel) -> None:
-        """
-        Prepare the envinronment for the statistics collection.
-
-        :param model: backend-specific model instance
         """
 
     @staticmethod
@@ -108,20 +97,10 @@ class StatisticsAggregator(ABC):
 
     @staticmethod
     @abstractmethod
-    def _process_outputs(outputs: ModelOutput) -> Dict[str, NNCFTensor]:
+    def _process_outputs(outputs: Any) -> Dict[str, NNCFTensor]:
         """
         Post-process model outputs for the further statistics collection.
         
         :param outputs: raw model outputs
         :return: processed model outputs in Dict[str, NNCFTensor] format
-        """
-
-    @staticmethod
-    @abstractmethod
-    def _get_engine(model: TModel) -> Engine:
-        """
-        Create the backend-specific Engine instance.
-
-        :param model: backend-specific model instance
-        :return: backend-specific Engine instance
         """

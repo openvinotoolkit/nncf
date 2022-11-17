@@ -29,7 +29,6 @@ from nncf.experimental.onnx.graph.transformations.commands import ONNXTargetPoin
 from nncf.experimental.onnx.statistics.collectors import ONNXMeanStatisticCollector
 from nncf.experimental.onnx.statistics.collectors import ONNXNNCFCollectorTensorProcessor
 from nncf.experimental.onnx.tensor import ONNXNNCFTensor
-from nncf.experimental.onnx.engine import ONNXEngine
 from nncf.quantization.algorithms.fast_bias_correction.backend import ALGO_BACKENDS
 from nncf.quantization.algorithms.fast_bias_correction.backend import FBCAlgoBackend
 
@@ -106,7 +105,3 @@ class ONNXFBCAlgoBackend(FBCAlgoBackend):
     @staticmethod
     def process_model_output(raw_data: Dict, output_name: str) -> ONNXNNCFTensor:
         return ONNXNNCFTensor(raw_data[output_name])
-
-    @staticmethod
-    def get_engine(model: onnx.ModelProto) -> ONNXEngine:
-        return ONNXEngine(model)

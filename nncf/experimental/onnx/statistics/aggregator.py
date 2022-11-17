@@ -16,14 +16,13 @@ from typing import Dict
 import numpy as np
 import onnx
 
-from nncf import Dataset
+from nncf.data.dataset import Dataset
 from nncf.common.graph.definitions import NNCFGraphNodeType
-from nncf.common.graph.factory import NNCFGraphFactory
+from nncf.common.factory import NNCFGraphFactory
 from nncf.common.graph.transformations.commands import TargetType
 from nncf.common.graph.transformations.layout import TransformationLayout
 from nncf.common.tensor_statistics.aggregator import StatisticPointsContainer
 from nncf.common.tensor_statistics.aggregator import StatisticsAggregator
-from nncf.experimental.onnx.engine import ONNXEngine
 from nncf.experimental.onnx.graph.onnx_graph import ONNXGraph
 from nncf.experimental.onnx.graph.transformations.commands import ONNXOutputInsertionCommand
 from nncf.experimental.onnx.tensor import ONNXNNCFTensor
@@ -32,8 +31,15 @@ from nncf.experimental.onnx.tensor import ONNXNNCFTensor
 class ONNXStatisticsAggregator(StatisticsAggregator):
     def __init__(self, dataset: Dataset):
         super().__init__(dataset)
-    
-    def _register_statistics(self, outputs: Dict[str, ONNXNNCFTensor], statistic_points: StatisticPointsContainer) -> None:
+
+    def collect_statistics(self, model: onnx.ModelProto) -> None:
+        self._nncf_graph = NNCFGraphFactory.create(model)
+        self._onnx_graph = ONNXGraph(model)
+        super().collect_statistics(model)
+
+    def _register_statistics(self,
+                             outputs: Dict[str, ONNXNNCFTensor],
+                             statistic_points: StatisticPointsContainer) -> None:
         for node_name, _statistic_points in statistic_points.items():
             for statistic_point in _statistic_points:
                 if NNCFGraphNodeType.INPUT_NODE in statistic_point.target_point.target_node_name:
@@ -52,10 +58,6 @@ class ONNXStatisticsAggregator(StatisticsAggregator):
                 else:
                     RuntimeError('The statistics should be collected only from the input of output edges of the node')
 
-    def _prepare_for_statistics_collection(self, model: onnx.ModelProto) -> None:
-        self._nncf_graph = NNCFGraphFactory.create(model)
-        self._onnx_graph = ONNXGraph(model)
-
     @staticmethod
     def _get_transformation_layout_extra_outputs(statistic_points: StatisticPointsContainer) -> TransformationLayout:
         transformation_layout = TransformationLayout()
@@ -72,7 +74,3 @@ class ONNXStatisticsAggregator(StatisticsAggregator):
     @staticmethod
     def _process_outputs(outputs: Dict[str, np.ndarray]) -> Dict[str, ONNXNNCFTensor]:
         return {n: ONNXNNCFTensor(v) for n, v in outputs.items()}
-
-    @staticmethod
-    def _get_engine(model: onnx.ModelProto) -> ONNXEngine:
-        return ONNXEngine(model)

@@ -14,8 +14,6 @@
 from typing import Dict, List, Optional, TypeVar, Union
 
 from nncf import Dataset
-from nncf.common.engine import Engine
-from nncf.common.graph.model_transformer import ModelTransformer
 from nncf.common.hardware.config import HWConfigType
 from nncf.common.quantization.structs import QuantizationPreset
 from nncf.common.utils.backend import BackendType
@@ -121,7 +119,6 @@ class PostTrainingQuantization(Algorithm):
         return output
 
     def _create_statistics_aggregator(self,
-                                      engine: Engine,
                                       dataset: Dataset,
                                       backend: BackendType) -> StatisticsAggregator:
         """
@@ -136,21 +133,7 @@ class PostTrainingQuantization(Algorithm):
         if backend == BackendType.ONNX:
             from nncf.experimental.onnx.statistics.aggregator import \
                 ONNXStatisticsAggregator
-            return ONNXStatisticsAggregator(engine, dataset)
-        return None
-
-    def _create_model_transformer(self, model: TModel, backend: BackendType) -> ModelTransformer:
-        """
-        Creates backend-specific ModelTransformer.
-
-        :param model: input model for the ModelTransformer
-        :param backend: model backend type for the further differentiations
-        :return: backnd-specific ModelTransformer
-        """
-        if backend == BackendType.ONNX:
-            from nncf.experimental.onnx.graph.model_transformer import \
-                ONNXModelTransformer
-            return ONNXModelTransformer(model)
+            return ONNXStatisticsAggregator(dataset)
         return None
 
     def _get_prepared_model_for_compression(self, model: TModel, backend: BackendType) -> TModel:
@@ -181,8 +164,7 @@ class PostTrainingQuantization(Algorithm):
                 algo_statistic_points = algorithm.get_statistic_points(modified_model)
                 statistics_aggregator.register_stastistic_points(algo_statistic_points)
 
-            model_transformer = self._create_model_transformer(modified_model, backend)
-            statistics_aggregator.collect_statistics(model_transformer)
+            statistics_aggregator.collect_statistics(modified_model)
             statistic_points = statistics_aggregator.statistic_points
 
         for algorithm in self.algorithms:

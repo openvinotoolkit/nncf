@@ -28,7 +28,8 @@ from nncf.quantization.algorithms.algorithm import AlgorithmParameters
 from nncf.quantization.algorithms.algorithm import Algorithm
 from nncf.quantization.algorithms.fast_bias_correction.backend import ALGO_BACKENDS
 from nncf.common.engine import Engine
-from nncf.common.graph.factory import NNCFGraphFactory
+from nncf.common.factory import NNCFGraphFactory
+from nncf.common.factory import EngineFactory
 from nncf.common.graph.model_transformer import ModelTransformer
 from nncf.common.tensor_statistics.statistic_point import StatisticPoint
 from nncf.common.tensor_statistics.statistic_point import StatisticPointsContainer
@@ -148,7 +149,7 @@ class FastBiasCorrection(Algorithm):
             input_blob = self._create_input_data(input_shape,
                                                  input_fp,
                                                  input_name)
-            engine = self._backend_entity.get_engine(extracted_model)
+            engine = EngineFactory.create(extracted_model)
             bias_shift = self._get_bias_shift(
                 engine=engine,
                 model=extracted_model,

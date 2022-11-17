@@ -17,7 +17,6 @@ from abc import abstractmethod
 from typing import TypeVar, Dict, Union, Optional
 
 from nncf.common.tensor_statistics.statistic_point import StatisticPointsContainer
-from nncf.common.engine import Engine
 from nncf.common.utils.backend import BackendType
 from nncf import Dataset
 
@@ -63,7 +62,7 @@ class Algorithm(ABC):
         :return: model after algorithm
         """
         if statistic_points is None:
-            return self._apply(model, engine=None, statistic_points=None, dataset=dataset)
+            return self._apply(model, statistic_points=None, dataset=dataset)
         _statistic_points = self.get_statistic_points(model)
         for edge_name in _statistic_points.keys():
             if statistic_points.get(edge_name) is None:

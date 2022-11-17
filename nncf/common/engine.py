@@ -13,11 +13,9 @@
 
 from abc import ABC
 from abc import abstractmethod
-from typing import TypeVar
+from typing import TypeVar, Any
 
 TModel = TypeVar('TModel')
-ModelInput = TypeVar('ModelInput')
-ModelOutput = TypeVar('ModelOutput')
 
 
 class Engine(ABC):
@@ -25,11 +23,8 @@ class Engine(ABC):
     The basic class aims to provide the interface to infer the model.
     """
 
-    def __init__(self):
-        self._model = None
-
     @abstractmethod
-    def infer(self, input_data: ModelInput) -> ModelOutput:
+    def infer(self, input_data: Any) -> Any:
         """
         Runs model on the provided input_data.
         Returns the dictionary of model outputs by node names.

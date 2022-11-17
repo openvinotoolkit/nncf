@@ -43,8 +43,7 @@ from nncf.quantization.algorithms.min_max.utils import calculate_activation_quan
 from nncf.quantization.algorithms.min_max.utils import calculate_weight_quantizer_parameters
 from nncf.quantization.algorithms.definitions import RangeType
 from nncf.quantization.algorithms.definitions import Granularity
-from nncf.common.engine import Engine
-from nncf.common.graph.factory import NNCFGraphFactory
+from nncf.common.factory import NNCFGraphFactory
 from nncf.common.tensor_statistics.statistic_point import StatisticPoint
 from nncf.common.tensor_statistics.statistic_point import StatisticPointsContainer
 

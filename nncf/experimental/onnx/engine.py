@@ -14,7 +14,6 @@
 from typing import Dict
 
 import numpy as np
-import onnx
 import onnxruntime as rt
 
 from nncf.common.engine import Engine
@@ -26,7 +25,6 @@ class ONNXEngine(Engine):
     """
 
     def __init__(self, model, **rt_session_options):
-        super().__init__()
         self.input_names = set()
 
         # TODO: Do not force it to use CPUExecutionProvider
@@ -37,7 +35,6 @@ class ONNXEngine(Engine):
         serialized_model = model.SerializeToString()
         self.sess = rt.InferenceSession(serialized_model, **rt_session_options)
 
-        self.input_names.clear()
         for inp in self.sess.get_inputs():
             self.input_names.add(inp.name)
 

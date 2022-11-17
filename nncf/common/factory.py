@@ -25,3 +25,23 @@ class NNCFGraphFactory:
             return GraphConverter.create_nncf_graph(model)
         raise RuntimeError('Cannot create backend-specific graph'
                            'because {} is not supported!'.format(model_backend))
+
+class ModelTransformerFactory:
+    @staticmethod
+    def create(model):
+        model_backend = get_backend(model)
+        if model_backend == BackendType.ONNX:
+            from nncf.experimental.onnx.graph.model_transformer import ONNXModelTransformer
+            return ONNXModelTransformer(model)
+        raise RuntimeError('Cannot create backend-specific model transformer'
+                           'because {} is not supported!'.format(model_backend))
+
+class EngineFactory:
+    @staticmethod
+    def create(model):
+        model_backend = get_backend(model)
+        if model_backend == BackendType.ONNX:
+            from nncf.experimental.onnx.engine import ONNXEngine
+            return ONNXEngine(model)
+        raise RuntimeError('Cannot create backend-specific engine'
+                           'because {} is not supported!'.format(model_backend))
