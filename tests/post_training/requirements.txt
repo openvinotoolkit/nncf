@@ -5,7 +5,6 @@ torchvision
 onnx
 onnxruntime
 pytest
-openvino>=2022.1
 openvino-dev>=2022.1
 timm
 sklearn

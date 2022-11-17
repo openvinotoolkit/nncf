@@ -1,4 +1,4 @@
-# Post-training Quantization Confirmance Suite
+# Post-training Quantization Conformance Suite
 This is the test suite that takes PyTorch Timm models and runs post-training quantization on ImageNet dataset for the following three representations:
 - PyTorch
 - ONNX
