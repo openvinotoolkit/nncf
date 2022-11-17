@@ -51,7 +51,8 @@ class StatisticsAggregator(ABC):
         model_with_outputs = model_transformer.transform(transformation_layout)
         engine = EngineFactory.create(model_with_outputs)
 
-        for input_data in tqdm(islice(self.dataset.get_inference_data(), self.stat_subset_size), total=self.stat_subset_size):
+        for input_data in tqdm(islice(self.dataset.get_inference_data(), self.stat_subset_size),
+                               total=self.stat_subset_size):
             outputs = engine.infer(input_data)
             processed_outputs = self._process_outputs(outputs)
             self._register_statistics(processed_outputs, self.statistic_points)
@@ -100,7 +101,7 @@ class StatisticsAggregator(ABC):
     def _process_outputs(outputs: Any) -> Dict[str, NNCFTensor]:
         """
         Post-process model outputs for the further statistics collection.
-        
+
         :param outputs: raw model outputs
         :return: processed model outputs in Dict[str, NNCFTensor] format
         """
