@@ -487,7 +487,7 @@ class ElasticWidthHandler(SingleElasticityHandler):
     """
     An interface for handling elastic width dimension in the network, i.e. define number of channels in the layers.
     """
-    _state_names = EWHandlerStateNames
+    _width_state_names = EWHandlerStateNames
 
     def __init__(self, target_model: NNCFNetwork,
                  filter_importance_fn: Callable[[torch.Tensor, int], torch.Tensor],
@@ -552,7 +552,7 @@ class ElasticWidthHandler(SingleElasticityHandler):
         :param state: Output of `get_state()` method.
         """
         super().load_state(state)
-        self.width_num_params_indicator = state[self._state_names.WIDTH_NUM_PARAMS_INDICATOR]
+        self.width_num_params_indicator = state[self._width_state_names.WIDTH_NUM_PARAMS_INDICATOR]
 
     def get_state(self) -> Dict[str, Any]:
         """
@@ -561,7 +561,7 @@ class ElasticWidthHandler(SingleElasticityHandler):
         :return: state of the object
         """
         state = super().get_state()
-        state[self._state_names.WIDTH_NUM_PARAMS_INDICATOR] = self.width_num_params_indicator
+        state[self._width_state_names.WIDTH_NUM_PARAMS_INDICATOR] = self.width_num_params_indicator
         return state
 
     def get_transformation_commands(self) -> List[TransformationCommand]:

@@ -50,7 +50,7 @@ class ElasticDepthHandler(SingleElasticityHandler):
     """
     An interface for handling elastic depth dimension in the network, i.e. skip some layers in the model.
     """
-    _state_names = EDHandlerStateNames
+    _depth_state_names = EDHandlerStateNames
 
     def __init__(self, target_model: NNCFNetwork,
                  skipped_blocks: BuildingBlocks,
@@ -104,7 +104,7 @@ class ElasticDepthHandler(SingleElasticityHandler):
         :param state: Output of `get_state()` method.
         """
         super().load_state(state)
-        self.depth_indicator = state[self._state_names.DEPTH_INDICATOR]
+        self.depth_indicator = state[self._depth_state_names.DEPTH_INDICATOR]
 
     def get_state(self) -> Dict[str, Any]:
         """
@@ -113,7 +113,7 @@ class ElasticDepthHandler(SingleElasticityHandler):
         :return: state of the object
         """
         state = super().get_state()
-        state[self._state_names.DEPTH_INDICATOR] = self.depth_indicator
+        state[self._depth_state_names.DEPTH_INDICATOR] = self.depth_indicator
         return state
 
     def get_search_space(self) -> ElasticDepthSearchSpace:

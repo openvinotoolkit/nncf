@@ -135,6 +135,7 @@ class SingleElasticityHandler(ElasticityHandler, ABC):
     """
     An interface for handling a single elasticity dimension in the network, e.g. elastic width or depth.
     """
+    _state_names = SEHandlerStateNames
 
     @abstractmethod
     def get_search_space(self) -> ElasticSearchSpace:
@@ -170,7 +171,7 @@ class SingleElasticityHandler(ElasticityHandler, ABC):
 
         :param state: Output of `get_state()` method.
         """
-        active_config = state[SEHandlerStateNames.ACTIVE_CONFIG]
+        active_config = state[self._state_names.ACTIVE_CONFIG]
         self.activate_subnet_for_config(active_config)
 
     def get_state(self) -> Dict[str, Any]:
@@ -182,7 +183,7 @@ class SingleElasticityHandler(ElasticityHandler, ABC):
         """
         active_config = self.get_active_config()
         return {
-            SEHandlerStateNames.ACTIVE_CONFIG: active_config,
+            self._state_names.ACTIVE_CONFIG: active_config,
         }
 
 
