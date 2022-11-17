@@ -28,6 +28,14 @@ class PTAccuracyAwareTrainingRunner(BaseAccuracyAwareTrainingRunner):
 
     checkpoint_path_extension = '.pth'
 
+    def initialize_training_loop_fns(self, train_epoch_fn, validate_fn, configure_optimizers_fn, dump_checkpoint_fn,
+                                     tensorboard_writer=None, log_dir=None):
+        super().initialize_training_loop_fns(train_epoch_fn, validate_fn, configure_optimizers_fn, dump_checkpoint_fn,
+                                             tensorboard_writer, log_dir)
+        if is_main_process():
+            # Only the main process should initialize and create a log directory, other processes don't use it
+            self._initialize_log_dir(log_dir)
+
     def retrieve_uncompressed_model_accuracy(self, model):
         if hasattr(model, 'original_model_accuracy') or hasattr(model.module, 'original_model_accuracy'):
             if isinstance(model, (torch.nn.DataParallel, torch.nn.parallel.DistributedDataParallel)):
@@ -109,6 +117,16 @@ class PTAccuracyAwareTrainingRunner(BaseAccuracyAwareTrainingRunner):
             resuming_checkpoint = torch.load(checkpoint_path, map_location='cpu')
             resuming_model_state_dict = resuming_checkpoint.get('state_dict', resuming_checkpoint)
             load_state(model, resuming_model_state_dict, is_resume=True)
+
+    def add_tensorboard_scalar(self, key, data, step):
+        if not is_main_process():
+            return
+        super().add_tensorboard_scalar(key, data, step)
+
+    def add_tensorboard_image(self, key, data, step):
+        if not is_main_process():
+            return
+        super().add_tensorboard_image(key, data, step)
 
 
 class PTAdaptiveCompressionLevelTrainingRunner(BaseAdaptiveCompressionLevelTrainingRunner,

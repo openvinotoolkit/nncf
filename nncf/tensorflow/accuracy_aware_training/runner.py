@@ -30,6 +30,12 @@ class TFAccuracyAwareTrainingRunner(BaseAccuracyAwareTrainingRunner):
 
     checkpoint_path_extension = '.pt'
 
+    def initialize_training_loop_fns(self, train_epoch_fn, validate_fn, configure_optimizers_fn, dump_checkpoint_fn,
+                                     tensorboard_writer=None, log_dir=None):
+        super().initialize_training_loop_fns(train_epoch_fn, validate_fn, configure_optimizers_fn, dump_checkpoint_fn,
+                                             tensorboard_writer, log_dir)
+        self._initialize_log_dir(log_dir)
+
     def retrieve_uncompressed_model_accuracy(self, model):
         if not hasattr(model, 'original_model_accuracy'):
             raise RuntimeError('Original model does not contain the pre-calculated reference metric value')

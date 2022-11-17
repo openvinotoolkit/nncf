@@ -402,12 +402,6 @@ class BaseAccuracyAwareTrainingRunner(TrainingRunner, ABC):
         self._dump_checkpoint_fn = dump_checkpoint_fn
         self._tensorboard_writer = tensorboard_writer
 
-        self._log_dir = log_dir if log_dir is not None else osp.join(os.getcwd(), 'runs')
-        self._log_dir = configure_accuracy_aware_paths(self._log_dir)
-        self._checkpoint_save_dir = self._log_dir
-        if self._tensorboard_writer is None and TENSORBOARD_AVAILABLE:
-            self._tensorboard_writer = SummaryWriter(self._log_dir)
-
     def stop_training(self, compression_controller):
         if compression_controller.compression_stage() == CompressionStage.FULLY_COMPRESSED \
                 and self.early_stopping_fn is not None:
@@ -432,6 +426,13 @@ class BaseAccuracyAwareTrainingRunner(TrainingRunner, ABC):
         resuming_checkpoint_path = self._best_checkpoint
         nncf_logger.info('Loading the best checkpoint found during training {}...'.format(resuming_checkpoint_path))
         self._load_checkpoint(model, resuming_checkpoint_path)
+
+    def _initialize_log_dir(self, log_dir):
+        self._log_dir = log_dir if log_dir is not None else osp.join(os.getcwd(), 'runs')
+        self._log_dir = configure_accuracy_aware_paths(self._log_dir)
+        self._checkpoint_save_dir = self._log_dir
+        if self._tensorboard_writer is None and TENSORBOARD_AVAILABLE:
+            self._tensorboard_writer = SummaryWriter(self._log_dir)
 
 
 class BaseAdaptiveCompressionLevelTrainingRunner(BaseAccuracyAwareTrainingRunner, ABC):
