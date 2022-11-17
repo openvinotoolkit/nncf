@@ -16,7 +16,6 @@ from typing import Dict
 import numpy as np
 import onnx
 
-from nncf.data.dataset import Dataset
 from nncf.common.graph.definitions import NNCFGraphNodeType
 from nncf.common.factory import NNCFGraphFactory
 from nncf.common.graph.transformations.commands import TargetType
@@ -29,8 +28,6 @@ from nncf.experimental.onnx.tensor import ONNXNNCFTensor
 
 
 class ONNXStatisticsAggregator(StatisticsAggregator):
-    def __init__(self, dataset: Dataset):
-        super().__init__(dataset)
 
     def collect_statistics(self, model: onnx.ModelProto) -> None:
         self._nncf_graph = NNCFGraphFactory.create(model)

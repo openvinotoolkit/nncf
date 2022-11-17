@@ -55,10 +55,10 @@ def run(onnx_model_path: str, output_file_path: str, dataset: nncf.Dataset,
 
     onnx.checker.check_model(original_model)
 
-    engine = ONNXEngine()
-
-    engine.rt_session_options['providers'] = ["OpenVINOExecutionProvider"]
-    engine.set_model(original_model)
+    rt_session_options = {
+        'providers': 'OpenVINOExecutionProvider'
+    }
+    engine = ONNXEngine(original_model, **rt_session_options)
 
     elapsed_times = []
 
