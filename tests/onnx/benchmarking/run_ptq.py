@@ -103,7 +103,7 @@ def preprocess_config(config: Dict[str, List], mode: str) -> None:
     :return: None.
     """
     if len(config[mode]) < 2:
-        return config
+        return
     to_remove_indices = []
     for i, config_entry in enumerate(config[mode]):
         if config_entry.get(AccuracyCheckerConstansts.LAUNCHERS)[0].get(
