@@ -11,13 +11,25 @@
  limitations under the License.
 """
 
+from typing import TypeVar
+
+from nncf.common.graph.graph import NNCFGraph
+from nncf.common.graph.model_transformer import ModelTransformer
 from nncf.common.utils.backend import BackendType
 from nncf.common.utils.backend import get_backend
+from nncf.common.engine import Engine
 
+TModel = TypeVar('TModel')
 
 class NNCFGraphFactory:
     @staticmethod
-    def create(model):
+    def create(model: TModel) -> NNCFGraph:
+        """
+        Factory method to create backend-specific NNCFGraph instance based on the input model.
+
+        :param model: backend-specific model instance
+        :return: backend-specific NNCFGraph instance
+        """
         model_backend = get_backend(model)
         if model_backend == BackendType.ONNX:
             from nncf.experimental.onnx.graph.nncf_graph_builder import GraphConverter
@@ -28,7 +40,13 @@ class NNCFGraphFactory:
 
 class ModelTransformerFactory:
     @staticmethod
-    def create(model):
+    def create(model: TModel) -> ModelTransformer:
+        """
+        Factory method to create backend-specific ModelTransformer instance based on the input model.
+
+        :param model: backend-specific model instance
+        :return: backend-specific ModelTransformer instance
+        """
         model_backend = get_backend(model)
         if model_backend == BackendType.ONNX:
             from nncf.experimental.onnx.graph.model_transformer import ONNXModelTransformer
@@ -38,7 +56,13 @@ class ModelTransformerFactory:
 
 class EngineFactory:
     @staticmethod
-    def create(model):
+    def create(model: TModel) -> Engine:
+        """
+        Factory method to create backend-specific Engine instance based on the input model.
+
+        :param model: backend-specific model instance
+        :return: backend-specific Engine instance
+        """
         model_backend = get_backend(model)
         if model_backend == BackendType.ONNX:
             from nncf.experimental.onnx.engine import ONNXEngine

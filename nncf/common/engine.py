@@ -26,9 +26,9 @@ class Engine(ABC):
     @abstractmethod
     def infer(self, input_data: Any) -> Any:
         """
-        Runs model on the provided input_data.
-        Returns the dictionary of model outputs by node names.
+        Runs model on the provided input data.
+        Returns the raw model outputs.
 
         :param input_data: inputs for the model transformed with the inputs_transforms
-        :return output_data: models output after outputs_transforms
+        :return: raw model outputs
         """
