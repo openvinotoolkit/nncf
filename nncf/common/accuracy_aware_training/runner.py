@@ -12,19 +12,15 @@
 """
 
 from __future__ import annotations
-from typing import Callable
-from typing import Dict
-from typing import List
-from typing import Optional
-from typing import Union
-from typing import Tuple
-from typing import TypeVar
-from abc import ABC
-from abc import abstractmethod
+
 import io
 import os
 import os.path as osp
 import pathlib
+from abc import ABC
+from abc import abstractmethod
+from typing import Callable, Dict, List, Optional, Union, Tuple, TypeVar, TYPE_CHECKING
+
 from nncf.api.compression import CompressionAlgorithmController
 from nncf.api.compression import CompressionStage
 from nncf.common.utils.backend import infer_backend_from_compression_controller
@@ -40,7 +36,6 @@ from nncf.config.schemata.defaults import AA_MAXIMAL_TOTAL_EPOCHS
 from nncf.config.schemata.defaults import AA_MINIMAL_COMPRESSION_RATE_STEP
 from nncf.config.schemata.defaults import AA_PATIENCE_EPOCHS
 
-from typing import TYPE_CHECKING
 if TYPE_CHECKING:
     from nncf.torch.accuracy_aware_training.runner import PTAdaptiveCompressionLevelTrainingRunner
     from nncf.tensorflow.accuracy_aware_training.runner import TFAdaptiveCompressionLevelTrainingRunner
