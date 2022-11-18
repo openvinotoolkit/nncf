@@ -27,7 +27,6 @@ from nncf.common.graph.transformations.commands import TargetPoint
 from nncf.quantization.algorithms.algorithm import AlgorithmParameters
 from nncf.quantization.algorithms.algorithm import Algorithm
 from nncf.quantization.algorithms.fast_bias_correction.backend import ALGO_BACKENDS
-from nncf.common.engine import Engine
 from nncf.common.factory import NNCFGraphFactory
 from nncf.common.factory import EngineFactory
 from nncf.common.graph.model_transformer import ModelTransformer
