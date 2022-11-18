@@ -27,8 +27,8 @@ from nncf.common.graph.transformations.commands import TargetPoint
 from nncf.quantization.algorithms.algorithm import AlgorithmParameters
 from nncf.quantization.algorithms.algorithm import Algorithm
 from nncf.quantization.algorithms.fast_bias_correction.backend import ALGO_BACKENDS
-from nncf.common.engine import Engine
-from nncf.common.graph.factory import NNCFGraphFactory
+from nncf.common.factory import NNCFGraphFactory
+from nncf.common.factory import EngineFactory
 from nncf.common.graph.model_transformer import ModelTransformer
 from nncf.common.tensor_statistics.statistic_point import StatisticPoint
 from nncf.common.tensor_statistics.statistic_point import StatisticPointsContainer
@@ -114,7 +114,6 @@ class FastBiasCorrection(Algorithm):
 
     def _apply(self,
                model: TModel,
-               engine: Optional[Engine] = None,
                statistic_points: Optional[StatisticPointsContainer] = None,
                dataset: Optional[Dataset] = None) -> TModel:
         self._set_backend_entity(model)
@@ -150,7 +149,6 @@ class FastBiasCorrection(Algorithm):
                                                  input_fp,
                                                  input_name)
             bias_shift = self._get_bias_shift(
-                engine=engine,
                 model=extracted_model,
                 input_blob=input_blob,
                 channel_axis=channel_axis,
@@ -266,12 +264,10 @@ class FastBiasCorrection(Algorithm):
         :return: dictionary of the blob by input name
         """
         input_blob = self._backend_entity.create_blob(input_shape, input_fp)
-        input_data = self._backend_entity.nncf_tensor(input_blob)
-        input_data = {input_name: input_data}
+        input_data = {input_name: input_blob}
         return input_data
 
     def _get_bias_shift(self,
-                        engine: Engine,
                         model: TModel,
                         input_blob: Dict[str, NNCFTensor],
                         channel_axis: Tuple[int],
@@ -288,7 +284,7 @@ class FastBiasCorrection(Algorithm):
         :param output_name: name of the output tensor for the data collection
         :return: calculated bias shift
         """
-        engine.set_model(model)
+        engine = EngineFactory.create(model)
         raw_output = engine.infer(input_blob)
         q_outputs = self._backend_entity.process_model_output(raw_output, output_name)
         q_outputs = self._backend_entity.tensor_processor.mean_per_channel(q_outputs, channel_axis).tensor
