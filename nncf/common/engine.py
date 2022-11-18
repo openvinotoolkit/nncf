@@ -22,11 +22,11 @@ class Engine(ABC):
     """
 
     @abstractmethod
-    def infer(self, input: Any) -> Any:
+    def infer(self, input_data: Any) -> Any:
         """
         Runs model on the provided input data.
         Returns the raw model outputs.
 
-        :param input: inputs for the model
+        :param input_data: inputs for the model
         :return: raw model outputs
         """
