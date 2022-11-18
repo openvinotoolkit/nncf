@@ -10,9 +10,6 @@
  See the License for the specific language governing permissions and
  limitations under the License.
 """
-from copy import deepcopy
-from pathlib import Path
-
 from typing import Any
 from typing import Dict
 from typing import List
@@ -24,10 +21,8 @@ import torch
 from nncf import NNCFConfig
 from nncf.config.structures import BNAdaptationInitArgs
 from nncf.experimental.torch.nas.bootstrapNAS import EpochBasedTrainingAlgorithm
-from nncf.experimental.torch.nas.bootstrapNAS.training.training_algorithm import EBTrainAlgoStateNames
 from nncf.torch.model_creation import create_nncf_network
 from tests.torch.helpers import create_ones_mock_dataloader
-from tests.torch.nas.creators import create_bootstrap_training_model_and_ctrl
 from tests.torch.nas.helpers import move_model_to_cuda_if_available
 from tests.torch.nas.models.synthetic import ThreeConvModel
 from tests.torch.nas.test_scheduler import fixture_schedule_params  # pylint: disable=unused-import
@@ -86,7 +81,7 @@ class TestProgressiveTrainingController:
                                          )
         bn_adapt_run_patch = mocker.patch(
             "nncf.common.initialization.batchnorm_adaptation.BatchnormAdaptationAlgorithm.run")
-        model, bn_adapt_args, nncf_config = prepare_test_model(test_desc, bn_adapt_section_is_called)
+        model, _, nncf_config = prepare_test_model(test_desc, bn_adapt_section_is_called)
         model = create_nncf_network(model, nncf_config)
 
         training_algorithm = EpochBasedTrainingAlgorithm.from_config(model, nncf_config)
