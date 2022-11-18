@@ -2,7 +2,9 @@ import os
 import re
 import logging
 from pathlib import Path
+import copy
 import numpy as np
+import pytest
 
 import torch
 import nncf
@@ -11,16 +13,15 @@ from torchvision import datasets
 from torchvision import transforms
 from torchvision.transforms import InterpolationMode
 
-import pytest
-
 import timm
 from tqdm import tqdm
 from sklearn.metrics import accuracy_score
 
 import openvino.runtime as ov
 
+from tests.common.command import Command
 from model_scope import get_validation_scope
-import copy
+
 
 NOT_AVAILABLE_MESSAGE = "N/A"
 DEFAULT_VAL_THREADS = 4
@@ -79,13 +80,14 @@ def export_to_onnx(model, save_path, data_sample):
 
 
 def export_to_ir(model_path, save_path, model_name):
-    command_line = f"mo -m {model_path} -o {save_path} -n {model_name}"
-    os.popen(command_line).read()
+    runner = Command(f"mo -m {model_path} -o {save_path} -n {model_name}")
+    runner.run()
 
 
 def run_benchmark(model_path):
-    command_line = f"benchmark_app -m {model_path} -d CPU -niter 300"
-    cmd_output = os.popen(command_line).read()
+    runner = Command(f"benchmark_app -m {model_path} -d CPU -niter 300")
+    runner.run()
+    cmd_output = " ".join(runner.output)
 
     match = re.search(r"Throughput\: (.+?) FPS", cmd_output)
     if match is not None:
