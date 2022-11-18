@@ -49,6 +49,10 @@ def pytest_addoption(parser):
         "--weekly-models", type=str, default=None, help="Path to models' weights for weekly tests"
     )
     parser.addoption(
+        "--mixed-precision", action="store_true", default=False, help="Enable mixed precision for the"
+                                                                                  " nncf weekly test"
+    )
+    parser.addoption(
         "--sota-checkpoints-dir", type=str, default=None, help="Path to checkpoints directory for sota accuracy test"
     )
     parser.addoption(
@@ -120,6 +124,11 @@ def enable_imagenet(request):
 @pytest.fixture(scope="module")
 def weekly_models_path(request):
     return request.config.getoption("--weekly-models")
+
+
+@pytest.fixture(scope="module")
+def mixed_precision(request):
+    return request.config.getoption("--mixed-precision")
 
 
 @pytest.fixture(scope="module")

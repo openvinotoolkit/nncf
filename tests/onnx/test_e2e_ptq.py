@@ -299,17 +299,6 @@ class TestBenchmark:
                                    program="accuracy_checker.py", is_quantized=False)
         run_command(command)
 
-    @pytest.mark.e2e_eval_reference_model
-    @pytest.mark.parametrize("task_type, model_name", MODELS)
-    def test_reference_model_performance(
-            self, task_type, model_name, model_dir, data_dir, anno_dir, output_dir, eval_size):
-
-        check_xfail(model_name)
-
-        command = self.get_command(task_type, model_name, model_dir, data_dir, anno_dir, output_dir, eval_size,
-                                   program="performance_checker.py", is_quantized=False)
-        run_command(command)
-
     @pytest.mark.e2e_ptq
     @pytest.mark.dependency()
     @pytest.mark.parametrize("task_type, model_name", MODELS)
@@ -324,22 +313,6 @@ class TestBenchmark:
         model_dir = ckpt_dir
         command = self.get_command(task_type, model_name, model_dir, data_dir, anno_dir, output_dir, eval_size,
                                    program="accuracy_checker.py", is_quantized=True)
-        run_command(command)
-
-    @pytest.mark.e2e_ptq
-    @pytest.mark.dependency()
-    @pytest.mark.parametrize("task_type, model_name", MODELS)
-    def test_quantized_model_performance(
-            self, request, task_type, model_name, ckpt_dir, data_dir, anno_dir, output_dir, eval_size):
-
-        # Run PTQ first
-        depends(request, ["TestPTQ::test_ptq_model" + request.node.name.lstrip("test_quantized_model_performance")])
-        check_xfail(model_name)
-        check_quantized_xfail(model_name)
-
-        model_dir = ckpt_dir
-        command = self.get_command(task_type, model_name, model_dir, data_dir, anno_dir, output_dir, eval_size,
-                                   program="performance_checker.py", is_quantized=True)
         run_command(command)
 
 

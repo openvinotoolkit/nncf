@@ -13,11 +13,11 @@
 
 from abc import ABC
 from abc import abstractmethod
+from enum import IntEnum
 from typing import Any, Dict, List, Optional, Tuple, TypeVar
 
 from nncf.api.statistics import Statistics
 from nncf.common.graph.transformations.layout import TransformationLayout
-from nncf.common.utils.ordered_enum import OrderedEnum
 
 TModel = TypeVar('TModel')
 
@@ -121,7 +121,7 @@ class CompressionScheduler(ABC):
         """
 
 
-class CompressionStage(OrderedEnum):
+class CompressionStage(IntEnum):
     """
     Specifies the compression stage for the model.
     """
@@ -390,7 +390,7 @@ class CompressionAlgorithmBuilder(ABC):
         """
 
 
-class CompressionLevel(OrderedEnum):
+class CompressionLevel(IntEnum):
     """
     Legacy class, now replaced by CompressionStage.
     Supports backward compatibility of older checkpoints produced with NNCF.

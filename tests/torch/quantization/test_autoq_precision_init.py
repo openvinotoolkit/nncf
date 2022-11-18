@@ -19,7 +19,6 @@ import torch
 from torch import nn
 import torch.utils.data
 from random import random
-from torchvision.models import inception_v3
 from torchvision.models import mobilenet_v2
 from torchvision.models import resnet50
 
@@ -38,6 +37,7 @@ from tests.torch.quantization.quantization_helpers import compare_multi_gpu_dump
 from tests.torch.quantization.quantization_helpers import get_quantization_config_without_range_init
 # pylint:disable=unused-import
 from tests.torch.modules.test_rnn import _seed
+from tests.torch.test_models import inception_v3
 from tests.torch.test_models import squeezenet1_1
 
 

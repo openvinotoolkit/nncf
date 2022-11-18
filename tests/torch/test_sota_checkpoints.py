@@ -68,6 +68,7 @@ class EvalRunParamsStruct:
         self.multiprocessing_distributed = multiprocessing_distributed
 
 
+@pytest.mark.nightly
 class TestSotaCheckpoints:
     param_list = []
     train_param_list = []

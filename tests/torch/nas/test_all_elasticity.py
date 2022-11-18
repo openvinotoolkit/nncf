@@ -300,10 +300,12 @@ REF_COMPRESSION_STATE_FOR_TWO_CONV = {
                 },
                 'states_of_handlers': {
                     'depth': {
-                        'active_config': [0]
+                        'active_config': [0],
+                        'depth_indicator': 1
                     },
                     'width': {
-                        'active_config': {0: 1}
+                        'active_config': {0: 1},
+                        'width_num_params_indicator': -1
                     }
                 }
             }

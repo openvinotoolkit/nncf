@@ -65,10 +65,12 @@ class PTAccuracyAwareTrainingRunner(BaseAccuracyAwareTrainingRunner):
                                              tensorboard_writer=tensorboard_writer, log_dir=log_dir)
         self._log_dir = self._log_dir if self._log_dir is not None \
             else os.path.join(os.getcwd(), 'runs')
-        self._log_dir = configure_accuracy_aware_paths(self._log_dir)
-        self._checkpoint_save_dir = self._log_dir
         if self._tensorboard_writer is None and TENSORBOARD_AVAILABLE:
             self._tensorboard_writer = SummaryWriter(self._log_dir)
+        if is_main_process():
+            # Only the main process should create a log directory
+            self._log_dir = configure_accuracy_aware_paths(self._log_dir)
+            self._checkpoint_save_dir = self._log_dir
 
     def retrieve_uncompressed_model_accuracy(self, model):
         if hasattr(model, 'original_model_accuracy') or hasattr(model.module, 'original_model_accuracy'):
