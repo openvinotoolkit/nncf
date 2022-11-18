@@ -13,9 +13,7 @@
 
 from abc import ABC
 from abc import abstractmethod
-from typing import TypeVar, Any
-
-TModel = TypeVar('TModel')
+from typing import Any
 
 
 class Engine(ABC):
@@ -24,11 +22,11 @@ class Engine(ABC):
     """
 
     @abstractmethod
-    def infer(self, input_data: Any) -> Any:
+    def infer(self, input: Any) -> Any:
         """
         Runs model on the provided input data.
         Returns the raw model outputs.
 
-        :param input_data: inputs for the model transformed with the inputs_transforms
+        :param input: inputs for the model
         :return: raw model outputs
         """

@@ -38,14 +38,14 @@ class ONNXEngine(Engine):
         for inp in self.sess.get_inputs():
             self.input_names.add(inp.name)
 
-    def infer(self, input_data: Dict[str, np.ndarray]) -> Dict[str, np.ndarray]:
+    def infer(self, input: Dict[str, np.ndarray]) -> Dict[str, np.ndarray]:
         """
-        Runs model on the provided input_data via ONNXRuntime InferenceSession.
+        Runs model on the provided input via ONNXRuntime InferenceSession.
         Returns the dictionary of model outputs by node names.
-        :param input_data: inputs for the model transformed with the inputs_transforms
-        :return output_data: models output after outputs_transforms
+        :param input: inputs for the model
+        :return output_data: models outputs
         """
-        output_tensors = self.sess.run([], {k: v for k, v in input_data.items() if k in self.input_names})
+        output_tensors = self.sess.run([], {k: v for k, v in input.items() if k in self.input_names})
         model_outputs = self.sess.get_outputs()
 
         return {output.name: tensor for tensor, output in zip(output_tensors, model_outputs)}

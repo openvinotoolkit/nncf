@@ -21,6 +21,7 @@ from nncf.common.engine import Engine
 
 TModel = TypeVar('TModel')
 
+
 class NNCFGraphFactory:
     @staticmethod
     def create(model: TModel) -> NNCFGraph:
