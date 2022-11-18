@@ -12,7 +12,7 @@
 """
 
 import os
-from typing import Dict, List, Optional
+from typing import List, Optional
 import nncf
 
 import numpy as np
@@ -31,16 +31,10 @@ from openvino.tools.accuracy_checker.evaluators import ModelEvaluator
 # pylint: disable=unused-import
 # This import need to register custom Conerter
 from tests.onnx.benchmarking.accuracy_checker import MSCocoSegmentationToVOCConverter
-
 from tests.onnx.quantization.common import find_ignored_scopes
 
 
 # pylint: disable=redefined-outer-name,protected-access
-
-class AccuracyCheckerConstansts:
-    LAUNCHERS = 'launchers'
-    FRAMEWORK = 'framework'
-    ONNXRUNTIME_KEY = 'onnx_runtime'
 
 
 def process_fn(data_item, model_evaluator: ModelEvaluator, has_batch_dim: Optional[bool] = False):
@@ -94,32 +88,13 @@ def run(onnx_model_path: str, output_model_path: str, dataset: nncf.Dataset,
     onnx.checker.check_model(output_model_path)
 
 
-def preprocess_config(config: Dict[str, List], mode: str) -> None:
-    """
-    Removes non ONNXRuntime launchers from the config.
-
-    :param config: Config to update.
-    :param mode: Key to get models configuration.
-    :return: None.
-    """
-    if len(config[mode]) < 2:
-        return
-    to_remove_indices = []
-    for i, config_entry in enumerate(config[mode]):
-        if config_entry.get(AccuracyCheckerConstansts.LAUNCHERS)[0].get(
-                AccuracyCheckerConstansts.FRAMEWORK) != AccuracyCheckerConstansts.ONNXRUNTIME_KEY:
-            to_remove_indices.append(i)
-    for index in sorted(to_remove_indices, reverse=True):
-        del config[mode][index]
-
-
 if __name__ == '__main__':
     parser = build_arguments_parser()
     parser.add_argument("--output-model-dir", "-o", required=True,
                         help="Directory path to save output quantized ONNX model", type=str)
     args = parser.parse_args()
+    args['target_frameworks'] = ['onnx_runtime']
     config, mode = ConfigReader.merge(args)
-    preprocess_config(config, mode)
 
     assert mode == "models"
     for config_entry in config[mode]:
