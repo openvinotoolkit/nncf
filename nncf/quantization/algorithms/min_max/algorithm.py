@@ -212,7 +212,6 @@ class MinMaxQuantization(Algorithm):
         :param nncf_graph: NNCFGraph instance.
         :return: SingleConfigQuantizerSetup for the current NNCFGraph entity.
         """
-        nncf_graph = self._filter_nncf_graph(nncf_graph)
         ip_graph = InsertionPointGraph(nncf_graph)
         pattern = self._backend_entity.hw_fused_patterns.get_full_pattern_graph()
         ip_graph = ip_graph.get_ip_graph_with_merged_hw_optimized_operations(pattern)

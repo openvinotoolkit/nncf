@@ -14,6 +14,7 @@
 from collections import deque
 from copy import copy
 from copy import deepcopy
+from functools import partial
 from typing import Any
 from typing import Callable
 from typing import Dict
@@ -85,6 +86,7 @@ class QuantizerPropagationStateGraph(nx.DiGraph):
                  target_scopes: List[str] = None):
         super().__init__()
         ip_graph = deepcopy(ip_graph)
+        ip_graph = self._filter_constant_subgraphs(ip_graph)
         self._created_prop_quantizer_counter = 0
 
         self._ignored_scopes = deepcopy(ignored_scopes)
@@ -172,6 +174,33 @@ class QuantizerPropagationStateGraph(nx.DiGraph):
             if node_metatype == metatype:
                 output.append(node)
         return output
+
+    def _filter_constant_subgraphs(self, ip_graph: InsertionPointGraph):
+        """
+        Removes all Constant nodes from InsertionPointGraph, making it inference graph.
+
+        :param ip_graph: The original InsertionPointGraph.
+        :return: InsertionPointGraph without Constant nodes.
+        """
+
+        def traverse_function(curr_node, output, visited_nodes):
+            if curr_node in visited_nodes:
+                return True, output
+            output.append(curr_node)
+            visited_nodes.append(curr_node)
+            return False, output
+
+        start_nodes = ip_graph.get_input_nodes()
+        visited_nodes = []
+        partial_traverse_function = partial(traverse_function, visited_nodes=visited_nodes)
+        traversed_node_keys = []
+        for star_node in start_nodes:
+            traversed_node_keys += ip_graph.traverse_graph(star_node, partial_traverse_function)
+        all_nodes_keys = ip_graph.get_all_node_keys()
+        constant_nodes = [node_key for node_key in all_nodes_keys if node_key not in traversed_node_keys]
+        ip_graph.remove_nodes(constant_nodes)
+        return ip_graph
+
 
     def _insertion_point_to_quant_insertion_point(self,
                                                   ip: Union[PreHookInsertionPoint,

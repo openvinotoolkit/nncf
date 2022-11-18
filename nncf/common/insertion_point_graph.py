@@ -11,6 +11,8 @@
  limitations under the License.
 """
 
+from typing import Callable, Any, Tuple
+
 from collections import defaultdict
 from copy import deepcopy
 from enum import Enum
@@ -25,6 +27,7 @@ from nncf.common.graph import NNCFGraph
 from nncf.common.graph import NNCFNodeName
 from nncf.common.graph.graph_matching import find_subgraphs_matching_pattern
 from nncf.common.graph.patterns import GraphPattern
+from nncf.common.graph.operator_metatypes import INPUT_NOOP_METATYPES
 
 
 class InsertionPointGraphNodeType(Enum):
@@ -242,6 +245,72 @@ class InsertionPointGraph(nx.DiGraph):
         for nncf_node in nncf_graph.get_all_nodes():
             allowed_post_hook_insertion_points.append(PostHookInsertionPoint(nncf_node.node_name))
         return allowed_post_hook_insertion_points
+
+    def get_input_nodes(self) -> List[str]:
+        output = []
+        for node in self.nodes:
+            if 'regular_node_data' not in self.nodes[node]:
+                continue
+            if self.nodes[node]['is_merged']:
+                for nncf_node in self.nodes[node]['merged_node_list']:
+                    node_k = nncf_node.data['key']
+                    if self._base_nx_graph.nodes[node_k]['metatype'] in INPUT_NOOP_METATYPES:
+                        output.append(node)
+                        break
+            else:
+                if self.nodes[node]['regular_node_data'].metatype in INPUT_NOOP_METATYPES:
+                    output.append(node)
+        return output
+
+    def get_all_node_keys(self) -> List[str]:
+        """
+        Returns all keys of all nodes.
+
+        :return: All keys of all nodes.
+        """
+        return list(self.nodes)
+
+    def remove_nodes(self, nodes_keys: List[str]) -> None:
+        """
+        Removes nodes from the graph with corresponding 'node_keys'.
+
+        :param nodes_keys: Node keys to remove.
+        :return: None.
+        """
+        self.remove_nodes_from(nodes_keys)
+
+    def get_next_nodes(self, node_key: str) -> List[str]:
+        """
+        Returns consumer nodes of provided node with key 'node_key'.
+
+        :param node_key: Producer node key.
+        :return: List of consumer nodes of provided node.
+        """
+        return self.succ[node_key]
+
+    def traverse_graph(self,
+                       curr_node_key: str,
+                       traverse_function: Callable[[str, List[Any]], Tuple[bool, List[Any]]]):
+        """
+        Traverses graph forward starting from node with key equals 'curr_node_key' .
+
+        :param curr_node_key: Node key from which traversal is started.
+        :param traverse_function: Function describing condition of traversal continuation/termination.
+        :param traverse_forward: Flag specifying direction of traversal.
+        :return:
+        """
+        output = []
+        return self._traverse_graph_recursive_helper(curr_node_key, traverse_function, output)
+
+    def _traverse_graph_recursive_helper(self, curr_node_key: str,
+                                         traverse_function: Callable[[str, List[Any]], Tuple[bool, List[Any]]],
+                                         output: List[Any]):
+        is_finished, output = traverse_function(curr_node_key, output)
+        get_nodes_fn = self.get_next_nodes
+        if not is_finished:
+            for node in get_nodes_fn(curr_node_key):
+                self._traverse_graph_recursive_helper(node, traverse_function, output)
+        return output
 
     def get_ip_graph_with_merged_hw_optimized_operations(self,
                                                          full_fusing_pattern: GraphPattern) \
