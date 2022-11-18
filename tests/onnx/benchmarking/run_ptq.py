@@ -31,10 +31,10 @@ from openvino.tools.accuracy_checker.evaluators import ModelEvaluator
 # pylint: disable=unused-import
 # This import need to register custom Conerter
 from tests.onnx.benchmarking.accuracy_checker import MSCocoSegmentationToVOCConverter
-
 from tests.onnx.quantization.common import find_ignored_scopes
 
-#pylint: disable=redefined-outer-name,protected-access
+
+# pylint: disable=redefined-outer-name,protected-access
 
 
 def process_fn(data_item, model_evaluator: ModelEvaluator, has_batch_dim: Optional[bool] = False):
@@ -93,6 +93,7 @@ if __name__ == '__main__':
     parser.add_argument("--output-model-dir", "-o", required=True,
                         help="Directory path to save output quantized ONNX model", type=str)
     args = parser.parse_args()
+    args['target_frameworks'] = ['onnx_runtime']
     config, mode = ConfigReader.merge(args)
 
     assert mode == "models"
