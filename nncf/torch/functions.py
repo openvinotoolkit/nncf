@@ -47,10 +47,5 @@ class STThreshold(torch.autograd.Function):
         return output
 
     @staticmethod
-<<<<<<< HEAD
     def backward(ctx: Any, *grad_outputs: Any) -> Any:
-        return grad_outputs[0]
-=======
-    def backward(ctx, grad_output):
-        return grad_output, None
->>>>>>> Initial Commit for Movement Sparsity
+        return grad_outputs[0], None
