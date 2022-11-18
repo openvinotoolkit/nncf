@@ -14,6 +14,7 @@
 import inspect
 from collections import OrderedDict
 from enum import Enum
+from enum import IntEnum
 from typing import Callable
 from typing import Dict
 from typing import List
@@ -37,7 +38,6 @@ from nncf.common.insertion_point_graph import InsertionPointGraph
 from nncf.common.insertion_point_graph import PostHookInsertionPoint
 from nncf.common.insertion_point_graph import PreHookInsertionPoint
 from nncf.common.utils.logger import logger as nncf_logger
-from nncf.common.utils.ordered_enum import OrderedEnum
 from nncf.torch.debug import CombinedDebugInterface
 from nncf.torch.debug import debuggable_forward
 from nncf.common.utils.debug import is_debug
@@ -109,7 +109,7 @@ class LoadStateListener:
         self.hook.remove()
 
 
-class PTInsertionType(OrderedEnum):
+class PTInsertionType(IntEnum):
     NNCF_MODULE_PRE_OP = 0
     NNCF_MODULE_POST_OP = 1
     OPERATOR_PRE_HOOK = 2

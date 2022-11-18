@@ -10,17 +10,19 @@
  See the License for the specific language governing permissions and
  limitations under the License.
 """
-
 from abc import ABC
 from abc import abstractmethod
+from itertools import islice
+from typing import Dict, TypeVar, Any
 
-from typing import TypeVar
+from tqdm import tqdm
 
-from nncf import Dataset
+from nncf.common.factory import ModelTransformerFactory
+from nncf.common.factory import EngineFactory
 from nncf.common.graph.transformations.layout import TransformationLayout
+from nncf.common.tensor import NNCFTensor
 from nncf.common.tensor_statistics.statistic_point import StatisticPointsContainer
-from nncf.common.engine import Engine
-from nncf.common.graph.model_transformer import ModelTransformer
+from nncf.data.dataset import Dataset
 
 TensorType = TypeVar('TensorType')
 TModel = TypeVar('TModel')
@@ -31,30 +33,36 @@ class StatisticsAggregator(ABC):
     Base class for statistics collection.
     """
 
-    def __init__(self, engine: Engine, dataset: Dataset):
-        self.engine = engine
+    def __init__(self, dataset: Dataset):
         self.dataset = dataset
-        self.is_calculate_metric = False
-        self.max_number_samples = 0
+        self.stat_subset_size = 0
         self.statistic_points = StatisticPointsContainer()
 
-    def collect_statistics(self, model_transformer: ModelTransformer) -> None:
+    def collect_statistics(self, model: TModel) -> None:
         """
         Collects statistics for registered StatisticPoints.
         The statistics are stored in self.statistic_points.
 
-        :param model_transformer: ModelTransformer intance with the model
+        :param model: backend-specific model instance
         """
+        model_transformer = ModelTransformerFactory.create(model)
+
         transformation_layout = self._get_transformation_layout_extra_outputs(self.statistic_points)
         model_with_outputs = model_transformer.transform(transformation_layout)
-        self.engine.set_model(model_with_outputs)
-        self.engine.set_dataset(self.dataset)
-        self.engine.compute_statistics(self.statistic_points, self.max_number_samples)
+        engine = EngineFactory.create(model_with_outputs)
 
-    def register_stastistic_points(self, statistic_points: StatisticPointsContainer):
+        for input_data in tqdm(islice(self.dataset.get_inference_data(), self.stat_subset_size),
+                               total=self.stat_subset_size):
+            outputs = engine.infer(input_data)
+            processed_outputs = self._process_outputs(outputs)
+            self._register_statistics(processed_outputs, self.statistic_points)
+
+    def register_stastistic_points(self, statistic_points: StatisticPointsContainer) -> None:
         """
         Register statistic points for statistics collection and recalculates the maximum number samples
         for collecting statistics, based on the maximum value from the all algorithms.
+
+        :param statistic_points: StatisticPointsContainer instance with the statistic points
         """
         for _, _statistic_points in statistic_points.items():
             for _statistic_point in _statistic_points:
@@ -64,15 +72,36 @@ class StatisticsAggregator(ABC):
             for _statistic_point in _statistic_points:
                 for _, tensor_collectors in _statistic_point.algorithm_to_tensor_collectors.items():
                     for tensor_collector in tensor_collectors:
-                        self.max_number_samples = max(self.max_number_samples, tensor_collector.num_samples)
+                        self.stat_subset_size = max(
+                            self.stat_subset_size, tensor_collector.num_samples)
 
     @abstractmethod
-    def _get_transformation_layout_extra_outputs(
-            self,
-            statistic_points: StatisticPointsContainer) -> TransformationLayout:
+    def _register_statistics(self,
+                             outputs: Dict[str, NNCFTensor],
+                             statistic_points: StatisticPointsContainer) -> None:
+        """
+        Process prepared raw model outputs and statistic points for the further usage.
+
+        :param outputs: prepared raw model outputs
+        :param statistic_points: StatisticPointsContainer instance with the statistic points
+        """
+
+    @staticmethod
+    @abstractmethod
+    def _get_transformation_layout_extra_outputs(statistic_points: StatisticPointsContainer) -> TransformationLayout:
         """
         Create backend-specific transformation layout for the further statistics collection
 
         :param statistic_points: StatisticPointsContainer to add outputs
         :return: TransformationLayout with the corresponding transformations
+        """
+
+    @staticmethod
+    @abstractmethod
+    def _process_outputs(outputs: Any) -> Dict[str, NNCFTensor]:
+        """
+        Post-process model outputs for the further statistics collection.
+
+        :param outputs: raw model outputs
+        :return: processed model outputs in Dict[str, NNCFTensor] format
         """

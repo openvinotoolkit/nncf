@@ -1,0 +1,10 @@
+--extra-index-url https://download.pytorch.org/whl/cpu
+torch
+--extra-index-url https://download.pytorch.org/whl/cpu
+torchvision
+onnx
+onnxruntime
+pytest
+openvino-dev>=2022.1
+timm
+sklearn

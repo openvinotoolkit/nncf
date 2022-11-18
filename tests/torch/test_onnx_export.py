@@ -1,7 +1,9 @@
-import pytest
 from typing import Any
-import torch
+
 import onnx
+import pytest
+import torch
+from torch import nn
 
 from nncf import NNCFConfig
 from nncf.torch.exporter import PTExporter
@@ -9,6 +11,9 @@ from tests.torch.helpers import MockModel
 from tests.torch.helpers import create_compressed_model_and_algo_for_test
 from tests.torch.helpers import get_nodes_by_type
 from tests.torch.helpers import load_exported_onnx_version
+from tests.torch.helpers import register_bn_adaptation_init_args
+from tests.torch.test_compressed_graph import SingleLayerModelDesc
+from tests.torch.test_compressed_graph import get_basic_quantization_config
 
 
 class ModelForIONamingTest(torch.nn.Module):
@@ -97,3 +102,15 @@ def test_exported_version(tmp_path: str, save_format: str, ref_opset: int):
     model_proto = onnx.load_model(onnx_checkpoint_path)
     # pylint: disable=no-member
     assert model_proto.opset_import[0].version == ref_opset
+
+
+def test_can_export_single_batch_bn(tmp_path):
+    test_path = tmp_path.joinpath('test.onnx')
+    synthetic_model_desc = SingleLayerModelDesc(layer=nn.BatchNorm2d(4), input_sample_sizes=([1, 4, 1, 1]))
+    config = get_basic_quantization_config(input_sample_sizes=synthetic_model_desc.get_input_sample_sizes(),
+                                           input_info=synthetic_model_desc.get_input_info())
+    register_bn_adaptation_init_args(config)
+    model = synthetic_model_desc.get_model()
+    _, compression_ctrl = create_compressed_model_and_algo_for_test(model, config)
+    compression_ctrl.export_model(str(test_path))
+    assert test_path.exists()

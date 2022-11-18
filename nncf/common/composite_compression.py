@@ -225,7 +225,7 @@ class CompositeCompressionAlgorithmController(CompressionAlgorithmController):
         result = None
         for ctrl in self.child_ctrls:
             current_level = ctrl.compression_stage()
-            if not result:
+            if result is None:
                 result = current_level
             else:
                 result += current_level

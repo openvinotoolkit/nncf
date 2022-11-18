@@ -11,14 +11,14 @@
  limitations under the License.
 """
 
-from nncf.common.utils.ordered_enum import OrderedEnum
+from enum import Enum
 
 
-class Granularity(OrderedEnum):
+class Granularity(Enum):
     PERTENSOR = 'pertensor'
     PERCHANNEL = 'perchannel'
 
 
-class RangeType(OrderedEnum):
+class RangeType(Enum):
     MINMAX = 'min_max'
     MEAN_MINMAX = 'mean_min_max'

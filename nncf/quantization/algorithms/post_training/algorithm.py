@@ -14,8 +14,6 @@
 from typing import Dict, List, Optional, TypeVar, Union
 
 from nncf import Dataset
-from nncf.common.engine import Engine
-from nncf.common.graph.model_transformer import ModelTransformer
 from nncf.common.hardware.config import HWConfigType
 from nncf.common.quantization.structs import QuantizationPreset
 from nncf.common.utils.backend import BackendType
@@ -120,20 +118,7 @@ class PostTrainingQuantization(Algorithm):
                     output.add_statistic_point(statistic_point)
         return output
 
-    def _create_engine(self, backend: BackendType) -> Engine:
-        """
-        Creates backend-specific Engine.
-
-        :param backend: model backend type for the further differentiations
-        :return: backnd-specific Engine
-        """
-        if backend == BackendType.ONNX:
-            from nncf.experimental.onnx.engine import ONNXEngine
-            return ONNXEngine()
-        return None
-
     def _create_statistics_aggregator(self,
-                                      engine: Engine,
                                       dataset: Dataset,
                                       backend: BackendType) -> StatisticsAggregator:
         """
@@ -148,21 +133,7 @@ class PostTrainingQuantization(Algorithm):
         if backend == BackendType.ONNX:
             from nncf.experimental.onnx.statistics.aggregator import \
                 ONNXStatisticsAggregator
-            return ONNXStatisticsAggregator(engine, dataset)
-        return None
-
-    def _create_model_transformer(self, model: TModel, backend: BackendType) -> ModelTransformer:
-        """
-        Creates backend-specific ModelTransformer.
-
-        :param model: input model for the ModelTransformer
-        :param backend: model backend type for the further differentiations
-        :return: backnd-specific ModelTransformer
-        """
-        if backend == BackendType.ONNX:
-            from nncf.experimental.onnx.graph.model_transformer import \
-                ONNXModelTransformer
-            return ONNXModelTransformer(model)
+            return ONNXStatisticsAggregator(dataset)
         return None
 
     def _get_prepared_model_for_compression(self, model: TModel, backend: BackendType) -> TModel:
@@ -175,12 +146,11 @@ class PostTrainingQuantization(Algorithm):
 
     def _apply(self,
                model: TModel,
-               engine: Optional[Engine] = None,
                statistic_points: Optional[StatisticPointsContainer] = None,
                dataset: Optional[Dataset] = None) -> TModel:
 
         modified_model = model
-        if engine is None and statistic_points is None:
+        if statistic_points is None:
             backend = get_backend(model)
 
             # TODO (KodiaqQ): Remove after ONNX is removed from experimental
@@ -189,18 +159,14 @@ class PostTrainingQuantization(Algorithm):
                     'You are using experimental ONNX backend for the Post-training quantization.')
             modified_model = self._get_prepared_model_for_compression(modified_model, backend)
 
-            if engine is None:
-                engine = self._create_engine(backend)
-
-            statistics_aggregator = self._create_statistics_aggregator(engine, dataset, backend)
+            statistics_aggregator = self._create_statistics_aggregator(dataset, backend)
             for algorithm in self.algorithms:
                 algo_statistic_points = algorithm.get_statistic_points(modified_model)
                 statistics_aggregator.register_stastistic_points(algo_statistic_points)
 
-            model_transformer = self._create_model_transformer(modified_model, backend)
-            statistics_aggregator.collect_statistics(model_transformer)
+            statistics_aggregator.collect_statistics(modified_model)
             statistic_points = statistics_aggregator.statistic_points
 
         for algorithm in self.algorithms:
-            modified_model = algorithm.apply(modified_model, engine, statistic_points)
+            modified_model = algorithm.apply(modified_model, statistic_points)
         return modified_model

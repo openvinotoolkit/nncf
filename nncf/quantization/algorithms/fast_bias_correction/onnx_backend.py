@@ -116,7 +116,7 @@ class ONNXFBCAlgoBackend(FBCAlgoBackend):
 
     @staticmethod
     def process_model_output(raw_data: Dict, output_name: str) -> ONNXNNCFTensor:
-        return raw_data[output_name]
+        return ONNXNNCFTensor(raw_data[output_name])
 
     @staticmethod
     def is_quantized_weights(node: NNCFNode, model: onnx.ModelProto) -> bool:
