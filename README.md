@@ -169,23 +169,26 @@ If you want to optimize a model from TensorFlow, install TensorFlow by following
 
 Install the package and its dependencies by running the following in the repository root directory:
 ```
-python setup.py install
+pip install .
 ```
-Alternatively, If you don't install any backend you can install NNCF and PyTorch in one line with:
+
+Note that if you install NNCF in this manner, the backend frameworks supported by NNCF will not be explicitly installed. NNCF will try to work with whatever backend versions you have installed in your Python environment.
+
+If you want to install both NNCF and the supported PyTorch version in one line, you can do this by running:
 ```
-python setup.py install --torch
+pip install .[torch]
 ```
-Install NNCF and TensorFlow in one line:
+For installation of NNCF along with TensorFlow, run:
 ```
-python setup.py install --tf
+pip install .[tf]
 ```
-(Experimental) Install NNCF for ONNXRuntime-OpenVINO
+(Experimental) For installation of NNCF for ONNXRuntime-OpenVINO, run:
 ```bash
-python setup.py install --onnx
+pip install .[onnx]
 ```
 
 
-_NB_: For launching example scripts in this repository, we recommend replacing the `install` option above with `develop` and setting the `PYTHONPATH` variable to the root of the checked-out repository.
+_NB_: For launching example scripts in this repository, we recommend setting the `PYTHONPATH` variable to the root of the checked-out repository once the installation is completed.
 
 #### As a PyPI package:
 
@@ -193,15 +196,15 @@ NNCF can be installed as a regular PyPI package via pip:
 ```
 pip install nncf
 ```
-Alternatively, If you don't install any backend you can install NNCF and PyTorch in one line with:
+Use the same `pip install` syntax as above to install NNCF along with the backend package versions in one go, i.e. for NNCF with PyTorch, run:
 ```
 pip install nncf[torch]
 ```
-Install NNCF and TensorFlow in one line:
+For installation of NNCF along with TensorFlow, run:
 ```
 pip install nncf[tf]
 ```
-(Experimental) Install NNCF for ONNXRuntime-OpenVINO
+(Experimental) For installation of NNCF for ONNXRuntime-OpenVINO, run:
 ```bash
 pip install nncf[onnx]
 ```
