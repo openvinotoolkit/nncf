@@ -11,14 +11,14 @@
  limitations under the License.
 """
 
+from enum import IntEnum
 from typing import Any
 from typing import Dict
 
-from nncf.common.utils.ordered_enum import OrderedEnum
 from nncf.common.stateful_classes_registry import CommonStatefulClassesRegistry
 
 
-class TransformationPriority(OrderedEnum):
+class TransformationPriority(IntEnum):
     """
     Defines priorities for compression and service operations that are
     added as modifications to the original model graph in order to turn it into a
@@ -44,7 +44,7 @@ class TransformationPriority(OrderedEnum):
 TARGET_TYPE_STATE_ATTR = 'name'
 
 
-class TargetType(OrderedEnum):
+class TargetType(IntEnum):
     """
     Describes the types of locations in the model that can be modified using NNCF
     in order to create a compressed model.
@@ -102,7 +102,7 @@ class TargetType(OrderedEnum):
         return TargetType[state[TARGET_TYPE_STATE_ATTR]]
 
 
-class TransformationType(OrderedEnum):
+class TransformationType(IntEnum):
     """
     Defines the types of transformations that can be applied to a location in the control
      flow graph of the model.
