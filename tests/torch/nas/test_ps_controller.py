@@ -16,7 +16,6 @@ from typing import List
 from typing import NamedTuple
 
 import pytest
-import torch
 
 from nncf import NNCFConfig
 from nncf.config.structures import BNAdaptationInitArgs
