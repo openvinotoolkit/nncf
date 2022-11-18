@@ -18,13 +18,13 @@ learning frameworks.
 
 - Support of various compression algorithms, applied during a model fine-tuning process to achieve a better performance-accuracy trade-off:
   
-  |Compression algorithm|PyTorch|TensorFlow|
-  | :--- | :---: | :---: |
-  |[Quantization](./docs/compression_algorithms/Quantization.md) | Supported | Supported |
-  |[Mixed-Precision Quantization](./docs/compression_algorithms/Quantization.md#mixed_precision_quantization) | Supported | Not supported |
-  |[Binarization](./docs/compression_algorithms/Binarization.md) | Supported | Not supported |
-  |[Sparsity](./docs/compression_algorithms/Sparsity.md) | Supported | Supported |
-  |[Filter pruning](./docs/compression_algorithms/Pruning.md) | Supported | Supported |
+|Compression algorithm|PyTorch|TensorFlow|
+| :--- | :---: | :---: |
+|[Quantization](./docs/compression_algorithms/Quantization.md) | Supported | Supported |
+|[Mixed-Precision Quantization](./docs/compression_algorithms/Quantization.md#mixed_precision_quantization) | Supported | Not supported |
+|[Binarization](./docs/compression_algorithms/Binarization.md) | Supported | Not supported |
+|[Sparsity](./docs/compression_algorithms/Sparsity.md) | Supported | Supported |
+|[Filter pruning](./docs/compression_algorithms/Pruning.md) | Supported | Supported |
 
 - Automatic, configurable model graph transformation to obtain the compressed model.
   > **NOTE**: Limited support for TensorFlow models. The models created using Sequential or Keras Functional API are only supported.
@@ -154,10 +154,10 @@ See [third_party_integration](./third_party_integration) for examples of code mo
 - Ubuntu\* 18.04 or later (64-bit)
 - Python\* 3.7 or later
 - Supported frameworks:
-  - PyTorch\* >=1.5.0, <=1.9.1 (1.8.0 not supported)
+  - PyTorch\* 1.12.1
   - TensorFlow\* >=2.4.0, <=2.8.2
 
-This repository is tested on Python* 3.7+, PyTorch* 1.9.1 (NVidia CUDA\* Toolkit 10.2) and TensorFlow* 2.8.2 (NVidia CUDA\* Toolkit 11.2).
+This repository is tested on Python* 3.8.10, PyTorch* 1.12.1 (NVidia CUDA\* Toolkit 11.7) and TensorFlow* 2.8.2 (NVidia CUDA\* Toolkit 11.2).
 
 ## Installation
 We suggest to install or use the package in the [Python virtual environment](https://docs.python.org/3/tutorial/venv.html).
@@ -370,6 +370,7 @@ to find instruction and links to exact configuration files and final checkpoints
 - [FAQ](./docs/FAQ.md)
 - [Notebooks](https://github.com/openvinotoolkit/openvino_notebooks#-model-training)
 - [HuggingFace Optimum Intel](https://huggingface.co/docs/optimum/intel/optimization_ov) utilizes NNCF as a compression backend within the renowned `transformers` repository.
+- [Model Optimization Guide](https://docs.openvino.ai/latest/openvino_docs_model_optimization_guide.html)
 
 ## Legal Information
 [*] Other names and brands may be claimed as the property of others.

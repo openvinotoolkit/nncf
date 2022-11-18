@@ -11,20 +11,20 @@
  limitations under the License.
 """
 
-from typing import List
-from typing import Optional
+from typing import List, Optional
 
-import numpy as np
 import onnx
+import onnxruntime as rt
 
-from nncf.experimental.post_training.compression_builder import CompressionBuilder
-from nncf.experimental.post_training.algorithms.quantization import PostTrainingQuantization
-from nncf.experimental.post_training.algorithms.quantization import PostTrainingQuantizationParameters
+from nncf.experimental.quantization.compression_builder import CompressionBuilder
+from nncf.quantization.algorithms.post_training.algorithm import PostTrainingQuantization
+from nncf.quantization.algorithms.post_training.algorithm import PostTrainingQuantizationParameters
 from nncf.experimental.onnx.common import infer_input_shape
-from nncf.experimental.onnx.datasets.imagenet_dataset import create_imagenet_torch_dataset
-from nncf.experimental.post_training.api.metric import Accuracy
+from examples.experimental.onnx.classification.imagenet_dataset import create_dataloader
+from examples.experimental.onnx.classification.imagenet_dataset import create_dataset
 from nncf.common.utils.logger import logger as nncf_logger
 from examples.experimental.onnx.common.argparser import get_common_argument_parser
+from examples.experimental.onnx.classification.accuracy import Accuracy
 
 
 def run(onnx_model_path: str, output_model_path: str,
@@ -43,10 +43,10 @@ def run(onnx_model_path: str, output_model_path: str,
 
     input_shape, input_name = infer_input_shape(original_model, input_shape, input_name)
 
-    # Step 1: Initialize the data loader and metric (if it is needed).
-    dataset = create_imagenet_torch_dataset(
-        dataset_path, input_name=input_name,
-        input_shape=input_shape, batch_size=batch_size, shuffle=shuffle)
+    # Step 1: Initialize the data loader, dataset and metric (if it is needed).
+    dataloader = create_dataloader(dataset_path, input_shape=input_shape,
+                                   batch_size=batch_size, shuffle=shuffle)
+    dataset = create_dataset(dataloader, input_name)
     metric = Accuracy(top_k=1)
 
     # Step 2: Create a pipeline of compression algorithms.
@@ -69,17 +69,35 @@ def run(onnx_model_path: str, output_model_path: str,
     nncf_logger.info(
         "The quantized model is saved on {}".format(output_model_path))
 
-    onnx.checker.check_model(output_model_path)
-
     # Step 6: (Optional) Validate the quantized model.
     if evaluate:
         nncf_logger.info("Validation of the quantized model "
                          "on the validation part of the dataset.")
 
-        metrics = builder.evaluate(
-            quantized_model, metric, dataset, outputs_transforms=lambda x: np.concatenate(x, axis=0))
+        logging_step = 1000
+
+        so = rt.SessionOptions()
+        so.log_severity_level = 3
+        providers = ['OpenVINOExecutionProvider']
+        provider_options = [{'device_type': 'CPU_FP32'}]
+
+        sess = rt.InferenceSession(quantized_model.SerializeToString(), so, providers, provider_options)
+
+        input_name = sess.get_inputs()[0].name
+        outputs = sess.get_outputs()
+        output_names = list(map(lambda output: output.name, outputs))
+
+        for i, (images, target) in enumerate(dataloader):
+            output = sess.run(output_names, {input_name: images.numpy()})[0]
+            metric.update(output, target.numpy())
+            if i != 0 and i % logging_step == 0:
+                print("{} samples validated".format(i))
+
+        metrics = metric.avg_value
         for metric_name, metric_value in metrics.items():
             nncf_logger.info("{}: {}".format(metric_name, metric_value))
+
+    onnx.checker.check_model(output_model_path)
 
 
 if __name__ == '__main__':

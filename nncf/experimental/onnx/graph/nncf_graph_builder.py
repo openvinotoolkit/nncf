@@ -288,7 +288,14 @@ class GraphConverter:
                 tensor_shape = GraphConverter._get_tensor_shape(onnx_graph, output_edge)
 
                 output_node_id = nncf_graph.get_node_by_name(output_node.name).node_id
-                onnx_dtype = onnx_graph.get_edge_dtype_name(output_edge)
+                try:
+                    onnx_dtype = onnx_graph.get_edge_dtype_name(output_edge)
+                except RuntimeError:
+                    # If the edge was not added during inference of ONNX model,
+                    # we do not add it to NNCFGraph.
+                    # Particularly, BatchNorm exported in Training mode has unused outputs edges:
+                    # mean, var, saved_mean, saved_var.
+                    continue
                 nncf_dtype = GraphConverter.convert_onnx_dtype_to_nncf_dtype(onnx_dtype)
 
                 input_nodes = onnx_graph.get_nodes_by_input(output_edge)

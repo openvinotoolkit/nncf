@@ -41,6 +41,7 @@ class ModelType(Enum):
     :param TRANSFORMER: Transformer-based models
         (https://arxiv.org/pdf/1706.03762.pdf)
     """
+
     TRANSFORMER = 'transformer'
 
 

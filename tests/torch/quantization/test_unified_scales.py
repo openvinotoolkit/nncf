@@ -708,7 +708,9 @@ class TestsWithONNXInspection:
         compressed_model.forward(test_input1)
 
         onnx_path = str(tmp_path / "model.onnx")
-        compression_ctrl.export_model(onnx_path)
+        # Exporting the operator ::chunk to ONNX opset version 9 is not supported.
+        # Support for this operator was added in version 11
+        compression_ctrl.export_model(onnx_path, save_format='onnx_11')
 
         onnx_model = onnx.load(onnx_path)
 
