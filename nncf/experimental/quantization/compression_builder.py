@@ -17,11 +17,8 @@ from copy import deepcopy
 
 from nncf import Dataset
 from nncf.common.utils.logger import logger as nncf_logger
-from nncf.common.graph.model_transformer import ModelTransformer
 from nncf.common.utils.backend import BackendType
 from nncf.common.utils.backend import get_backend
-
-from nncf.common.engine import Engine
 from nncf.quantization.algorithms.algorithm import Algorithm
 from nncf.common.tensor_statistics.aggregator import StatisticsAggregator
 
@@ -88,8 +85,7 @@ class CompressionBuilder:
             statistic_points = algorithm.get_statistic_points(_model)
             statistics_aggregator.register_stastistic_points(statistic_points)
 
-        model_transformer = self._create_model_transformer(_model, backend)
-        statistics_aggregator.collect_statistics(model_transformer)
+        statistics_aggregator.collect_statistics(_model)
 
         for algorithm in self.algorithms:
             modified_model = algorithm.apply(_model, statistics_aggregator.statistic_points)
