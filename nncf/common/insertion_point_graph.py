@@ -247,18 +247,23 @@ class InsertionPointGraph(nx.DiGraph):
         return allowed_post_hook_insertion_points
 
     def get_input_nodes(self) -> List[str]:
+        """
+        Returns all Input Nodes, nodes having any of INPUT_NOOP_METATYPES.
+
+        :return: All Input Nodes.
+        """
         output = []
         for node in self.nodes:
-            if 'regular_node_data' not in self.nodes[node]:
+            if InsertionPointGraph.REGULAR_NODE_REF_NODE_ATTR not in self.nodes[node]:
                 continue
-            if self.nodes[node]['is_merged']:
-                for nncf_node in self.nodes[node]['merged_node_list']:
-                    node_k = nncf_node.data['key']
-                    if self._base_nx_graph.nodes[node_k]['metatype'] in INPUT_NOOP_METATYPES:
+            if self.nodes[node][InsertionPointGraph.IS_MERGED_NODE_ATTR]:
+                for nncf_node in self.nodes[node][InsertionPointGraph.MERGED_NNCF_NODE_LIST_NODE_ATTR]:
+                    node_k = nncf_node.data[NNCFGraph.KEY_NODE_ATTR]
+                    if self._base_nx_graph.nodes[node_k][NNCFGraph.METATYPE_ATTR] in INPUT_NOOP_METATYPES:
                         output.append(node)
                         break
             else:
-                if self.nodes[node]['regular_node_data'].metatype in INPUT_NOOP_METATYPES:
+                if self.nodes[node][InsertionPointGraph.REGULAR_NODE_REF_NODE_ATTR].metatype in INPUT_NOOP_METATYPES:
                     output.append(node)
         return output
 
