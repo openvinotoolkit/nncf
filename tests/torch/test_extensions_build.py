@@ -19,7 +19,7 @@ def test_force_cuda_build(tmp_path):
     then with TORCH_CUDA_ARCH_LIST were forced to be built
     '''
     venv_path = create_venv_with_nncf(tmp_path,
-            package_type='pip_local', venv_type='venv', extras={'torch'})
+            package_type='pip_local', venv_type='venv', extra_reqs={'torch'})
     cuda_home = os.environ.get('CUDA_HOME') or os.environ.get('CUDA_PATH')
     if cuda_home is None:
         try:
@@ -32,8 +32,6 @@ def test_force_cuda_build(tmp_path):
                     cuda_home = None
         if not cuda_home and not torch.cuda.is_available():
             pytest.skip('There is no CUDA on the machine. The test will be skipped')
-
-    venv_path = tmp_venv_with_nncf
 
     torch_build_dir = tmp_path / 'extensions'
     export_env_variables = "export CUDA_VISIBLE_DEVICES='' export TORCH_EXTENSIONS_DIR={}".format(torch_build_dir)

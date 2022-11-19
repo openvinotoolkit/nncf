@@ -15,7 +15,8 @@ import pytest
 from typing import Dict
 
 COMMON_SCOPE_MARKS_VS_OPTIONS = {
-    "install": "--run-install-tests",
+    # for instance
+    # "slow": "--run-slow",
 }
 
 def skip_marked_cases_if_options_not_specified(config, items, marks_vs_options: Dict[str, str]) -> None:
@@ -24,6 +25,7 @@ def skip_marked_cases_if_options_not_specified(config, items, marks_vs_options: 
         for mark, option in options_not_given.items():
             if mark in item.keywords:
                 item.add_marker(
-                        pytest.mark.skip(reason=f"This test case requires an option {option} to be specified for pytest.")
+                        pytest.mark.skip(
+                            reason=f"This test case requires an option {option} to be specified for pytest."
+                            )
                         )
-

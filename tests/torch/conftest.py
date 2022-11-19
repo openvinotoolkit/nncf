@@ -17,7 +17,7 @@ try:
 except: #pylint: disable=bare-except
     torch = None
 
-from tests.shared.install_fixtures import tmp_venv_with_nncf
+from tests.shared.install_fixtures import tmp_venv_with_nncf #pylint:disable=unused-import
 from tests.shared.case_collection import skip_marked_cases_if_options_not_specified
 from tests.shared.case_collection import COMMON_SCOPE_MARKS_VS_OPTIONS
 
@@ -72,11 +72,6 @@ def pytest_addoption(parser):
     )
     parser.addoption(
         "--imagenet", action="store_true", default=False, help="Enable tests with imagenet"
-    )
-    parser.addoption(
-        "--run-install-tests", type=str, help="If specified, will run the install tests, otherwise these are skipped. "
-                                              "Takes values of either 'CPU' or 'GPU', testing CPU or GPU installations "
-                                              "correspondingly."
     )
     parser.addoption(
         "--backward-compat-models", type=str, default=None, help="Path to NNCF-traned model checkpoints that are tested"

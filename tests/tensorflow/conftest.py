@@ -12,7 +12,6 @@
 """
 import pytest
 
-from tests.shared.install_fixtures import tmp_venv_with_nncf
 from tests.shared.case_collection import COMMON_SCOPE_MARKS_VS_OPTIONS
 from tests.shared.case_collection import skip_marked_cases_if_options_not_specified
 
@@ -64,9 +63,6 @@ def pytest_addoption(parser):
     )
     parser.addoption(
         "--models-dir", type=str, default=None, help="Path to checkpoints directory for weekly tests"
-    )
-    parser.addoption(
-        "--run-install-tests", action="store_true", default=None, help="If specified, will run the install tests, otherwise these are skipped."
     )
 
 

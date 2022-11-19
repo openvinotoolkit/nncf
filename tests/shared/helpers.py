@@ -11,8 +11,6 @@
  limitations under the License.
 """
 
-import os
-import shutil
 import subprocess
 import sys
 from abc import ABC
@@ -28,7 +26,6 @@ from pathlib import Path
 
 from tests.shared.paths import GITHUB_REPO_URL
 from tests.shared.paths import PROJECT_ROOT
-from tests.shared.paths import TEST_ROOT
 
 TensorType = TypeVar('TensorType')
 
@@ -94,51 +91,6 @@ def create_venv_with_nncf(tmp_path: Path, package_type: str, venv_type: str, ext
 
     return venv_path
 
-
-def run_install_checks(venv_path, tmp_path, package_type, test_dir, install_type=''):
-    python_executable_with_venv = '. {0}/bin/activate && {0}/bin/python'.format(venv_path)
-    pip_with_venv = '. {0}/bin/activate && {0}/bin/pip'.format(venv_path)
-
-    run_path = tmp_path / 'run'
-
-    shutil.copy(TEST_ROOT / test_dir / 'install_checks.py', run_path)
-
-    # Do additional install step for sdist/bdist packages
-    if package_type == 'sdist':
-        for file_name in os.listdir(os.path.join(PROJECT_ROOT, 'dist')):
-            if file_name.endswith('.tar.gz'):
-                package_name = file_name
-                break
-        else:
-            raise FileNotFoundError('NNCF package not found')
-
-
-        option = test_dir
-        if option == 'tensorflow':
-            option = 'tf'
-
-        subprocess.run(
-            '{} install {}/dist/{}[{}] '.format(pip_with_venv,
-                                                PROJECT_ROOT,
-                                                package_name,
-                                                option),
-            check=True, shell=True)
-    elif package_type == "bdist_wheel":
-        subprocess.run(
-            "{} install {}/dist/*.whl ".format(pip_with_venv, PROJECT_ROOT), check=True, shell=True)
-
-    if install_type.lower() == 'cpu':
-        install_mode = 'cpu'
-    elif install_type.lower() == 'gpu':
-        install_mode = 'cuda'
-    else:
-        install_mode = ''
-    subprocess.run(
-        '{} {}/install_checks.py {} {}'.format(python_executable_with_venv,
-                                               run_path,
-                                               install_mode,
-                                               package_type),
-        check=True, shell=True, cwd=run_path)
 
 
 class BaseTensorListComparator(ABC):

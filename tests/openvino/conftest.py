@@ -11,6 +11,7 @@
  limitations under the License.
 """
 
+#pylint:disable=unused-import
 import pytest
 from tests.shared.install_fixtures import tmp_venv_with_nncf
 from tests.shared.case_collection import COMMON_SCOPE_MARKS_VS_OPTIONS
@@ -18,14 +19,7 @@ from tests.shared.case_collection import skip_marked_cases_if_options_not_specif
 
 
 def pytest_addoption(parser):
-    parser.addoption(
-        "--run-install-tests", action="store_true", default=None, help="If specified, will run the install tests, otherwise these are skipped."
-    )
-
-
-@pytest.fixture(scope="module")
-def install_tests(request):
-    return request.config.getoption("--run-install-tests", skip=True)
+    pass
 
 
 # Custom markers specifying tests to be run only if a specific option
