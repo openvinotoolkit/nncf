@@ -191,6 +191,9 @@ class QuantizerPropagationStateGraph(nx.DiGraph):
             return False, output
 
         start_nodes = ip_graph.get_input_nodes()
+        if not start_nodes:
+            # Skip for tests where there is no input node.
+            return ip_graph
         visited_nodes = []
         partial_traverse_function = partial(traverse_function, visited_nodes=visited_nodes)
         traversed_node_keys = []
@@ -200,7 +203,6 @@ class QuantizerPropagationStateGraph(nx.DiGraph):
         constant_nodes = [node_key for node_key in all_nodes_keys if node_key not in traversed_node_keys]
         ip_graph.remove_nodes(constant_nodes)
         return ip_graph
-
 
     def _insertion_point_to_quant_insertion_point(self,
                                                   ip: Union[PreHookInsertionPoint,
