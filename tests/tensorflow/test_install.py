@@ -14,8 +14,8 @@
 import pytest
 import subprocess
 
-from tests.common.paths import PROJECT_ROOT
-from tests.common.helpers import run_install_checks
+from tests.shared.paths import PROJECT_ROOT
+from tests.shared.helpers import run_install_checks
 
 
 @pytest.fixture(name="venv_type",
@@ -31,11 +31,19 @@ def package_type_(request):
     return request.param
 
 
-def test_install(tmp_venv_with_nncf, tmp_path, package_type):
+@pytest.fixture(name="extras",
+                params=[{"tf"}],
+                ids=["tf"])
+def extras_(request):
+    return request.param
+
+@pytest.mark.install
+def test_install(tmp_path, tmp_venv_with_nncf, package_type, extras):
     run_install_checks(tmp_venv_with_nncf, tmp_path, package_type, test_dir='tensorflow')
 
 
-def test_install_with_examples_and_tests_requirements(tmp_venv_with_nncf, tmp_path, package_type):
+@pytest.mark.install
+def test_install_with_examples_and_tests_requirements(tmp_path, tmp_venv_with_nncf, package_type, extras):
     pip_with_venv = '. {0}/bin/activate && {0}/bin/pip'.format(tmp_venv_with_nncf)
     subprocess.call(
         '{} install -r {}/examples/tensorflow/requirements.txt'.format(pip_with_venv, PROJECT_ROOT),

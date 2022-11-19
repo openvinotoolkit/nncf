@@ -6,19 +6,20 @@ import shutil
 
 import torch
 
-from tests.common.paths import TEST_ROOT
-from tests.torch.helpers import Command
+from tests.shared.paths import TEST_ROOT
+from tests.shared.command import Command
+from tests.shared.helpers import create_venv_with_nncf
 
 EXTENSIONS_BUILD_FILENAME = 'extensions_build_checks.py'
 
 
-@pytest.mark.parametrize("venv_type, package_type,install_type",
-                         [('venv', 'develop', 'GPU')])
-def test_force_cuda_build(tmp_venv_with_nncf, install_type, tmp_path, package_type):
+def test_force_cuda_build(tmp_path):
     '''
     Check that CUDA Extensions weren't initially built and \
     then with TORCH_CUDA_ARCH_LIST were forced to be built
     '''
+    venv_path = create_venv_with_nncf(tmp_path,
+            package_type='pip_local', venv_type='venv', extras={'torch'})
     cuda_home = os.environ.get('CUDA_HOME') or os.environ.get('CUDA_PATH')
     if cuda_home is None:
         try:

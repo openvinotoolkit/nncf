@@ -20,7 +20,7 @@ from torchvision import models
 import onnx
 # pylint: disable=no-member
 
-from tests.common.paths import TEST_ROOT
+from tests.shared.paths import TEST_ROOT
 from tests.onnx.quantization.common import ModelToTest
 from tests.onnx.quantization.common import min_max_quantize_model
 from tests.onnx.quantization.common import compare_nncf_graph

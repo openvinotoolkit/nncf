@@ -21,12 +21,14 @@ from typing import Callable
 from typing import List
 from typing import TypeVar
 from typing import Union
+from typing import Set
 
 import numpy as np
+from pathlib import Path
 
-from tests.common.paths import GITHUB_REPO_URL
-from tests.common.paths import PROJECT_ROOT
-from tests.common.paths import TEST_ROOT
+from tests.shared.paths import GITHUB_REPO_URL
+from tests.shared.paths import PROJECT_ROOT
+from tests.shared.paths import TEST_ROOT
 
 TensorType = TypeVar('TensorType')
 
@@ -41,7 +43,7 @@ def get_cli_dict_args(args):
     return cli_args
 
 
-def create_venv_with_nncf(tmp_path, package_type, venv_type, extra_reqs):
+def create_venv_with_nncf(tmp_path: Path, package_type: str, venv_type: str, extra_reqs: Set[str] = None):
     venv_path = tmp_path / 'venv'
     venv_path.mkdir()
 
@@ -58,26 +60,34 @@ def create_venv_with_nncf(tmp_path, package_type, venv_type, extra_reqs):
 
     run_path = tmp_path / 'run'
     run_path.mkdir()
+    extra_reqs_str = ''
+    if extra_reqs is not None and extra_reqs:
+        extra_reqs_str = ','.join(extra_reqs)
 
     if package_type == 'pip_pypi':
         subprocess.run(
-            f'{pip_with_venv} install nncf[{extra_reqs}]', check=True, shell=True)
+            f'{pip_with_venv} install nncf[{extra_reqs_str}]', check=True, shell=True)
     elif package_type == 'pip_local':
         subprocess.run(
-            f'{pip_with_venv} install {PROJECT_ROOT}[{extra_reqs}]', check=True, shell=True)
+            f'{pip_with_venv} install {PROJECT_ROOT}[{extra_reqs_str}]', check=True, shell=True)
     elif package_type == 'pip_e_local':
         subprocess.run(
-            f'{pip_with_venv} install -e {PROJECT_ROOT}[{extra_reqs}]', check=True, shell=True)
+            f'{pip_with_venv} install -e {PROJECT_ROOT}[{extra_reqs_str}]', check=True, shell=True)
     elif package_type == 'pip_git_develop':
         subprocess.run(
-            f'{pip_with_venv} install git+{GITHUB_REPO_URL}@develop#egg=nncf[{extra_reqs}]', check=True, shell=True)
+            f'{pip_with_venv} install git+{GITHUB_REPO_URL}@develop#egg=nncf[{extra_reqs_str}]', check=True, shell=True)
     else:
+        options_str = None
+        if extra_reqs is not None and extra_reqs:
+            options_str = ''
+            for extra in extra_reqs:
+                options_str += f'--{extra} '
         subprocess.run(
             '{python} {nncf_repo_root}/setup.py {package_type} {options}'.format(
                 python=python_executable_with_venv,
                 nncf_repo_root=PROJECT_ROOT,
                 package_type=package_type,
-                options=f'--{extra_reqs}' if extra_reqs else ''),
+                options=options_str if options_str is not None else ''),
             check=True,
             shell=True,
             cwd=PROJECT_ROOT)

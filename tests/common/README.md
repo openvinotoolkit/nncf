@@ -1,0 +1,1 @@
+This folder contains test cases validating NNCF's framework-agnostic code. Do not store auxiliary test code that is meant to be reused across framework-specific test suites - use the "shared" folder for that purpose.

@@ -12,12 +12,18 @@
 """
 
 import pytest
-from tests.common.helpers import run_install_checks
+from tests.shared.helpers import run_install_checks
 
 
 @pytest.fixture(name="venv_type",
                 params=["virtualenv", "venv"])
 def venv_type_(request):
+    return request.param
+
+@pytest.fixture(name="extras",
+                params=[{"torch"}],
+                ids=["torch"])
+def extras_(request):
     return request.param
 
 
@@ -27,6 +33,6 @@ def venv_type_(request):
 def package_type_(request):
     return request.param
 
-
-def test_install(tmp_venv_with_nncf, install_type, tmp_path, package_type):
+@pytest.mark.install
+def test_install(tmp_path, tmp_venv_with_nncf, package_type, venv_type, extras, install_type):
     run_install_checks(tmp_venv_with_nncf, tmp_path, package_type, test_dir='torch', install_type=install_type)
