@@ -48,7 +48,8 @@ class GraphConverter:
         node_type = node.op_type
         metatype = ONNX_OPERATION_METATYPES.get_operator_metatype_by_op_name(node_type)
         if metatype == ONNXConstantMetatype:  # We don't need to quantize Constants
-            nncf_logger.debug('The metatype is ONNXConstantMetatype, which in not quantizable. Skipping this node.')
+            nncf_logger.debug('The metatype is ONNXConstantMetatype, which means that the node is Constant.'
+                              'All constant nodes are not added to NNCFGraph. The node is skipped.')
             return False
         if metatype == UnknownMetatype:
             node_name = node.name
@@ -226,10 +227,12 @@ class GraphConverter:
         GraphConverter._add_nncf_output_nodes(onnx_graph, nncf_graph)
         return nncf_graph
 
+
 class ONNXExtendedLayerAttributes(BaseLayerAttributes):
     """
     This class stores extended attributes of modules/layers for the algorithms.
     """
+
     def __init__(self, input_tensor_names, output_tensor_names):
         """
         :param input_tensor_names: List of the input tensor/edge names of the module/layer

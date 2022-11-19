@@ -156,13 +156,23 @@ class FBCAlgoBackend(ABC):
 
     @staticmethod
     @abstractmethod
-    def get_initializer_value(model: TModel, initializer_name: str) -> np.ndarray:
+    def get_bias_value(model: TModel, node: NNCFNode) -> np.ndarray:
         """
-        Returns initializer value in the NumPy format.
+        Returns bias value in the NumPy format of provided node.
 
         :param model: Backend-specific model for the initializer finding.
-        :param initializer_name: Name of the tensor/initializer to find in the model.
-        :return: Initializer value in the NumPy format.
+        :param node: Node of NNCFGraph with bias value.
+        :return: Bias value in the NumPy format.
+        """
+    @staticmethod
+    @abstractmethod
+    def is_quantized_weights(node: NNCFNode, model: TModel) -> bool:
+        """
+        Checks whether the node is quantised or not
+
+        :param node: NNCFNode with the attributes
+        :param nncf_graph: NNCFGraph for the traverce
+        :return: boolean indicating whether the node has a quantized weights or not
         """
 
     @staticmethod
