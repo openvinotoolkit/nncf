@@ -101,9 +101,9 @@ class ONNXMinMaxAlgoBackend(MinMaxAlgoBackend):
                                                 window_size)
 
     @staticmethod
-    def get_weight_tensor(model: onnx.ModelProto, node_name: str) -> Tuple[str, np.ndarray]:
+    def get_weight_tensor(model: onnx.ModelProto, node: NNCFNode) -> Tuple[str, np.ndarray]:
         onnx_graph = ONNXGraph(model)
-        node = onnx_graph.get_node_by_name(node_name)
+        node = onnx_graph.get_node_by_name(node.node_name)
         return onnx_graph.get_weight_tensor(node)
 
     @staticmethod

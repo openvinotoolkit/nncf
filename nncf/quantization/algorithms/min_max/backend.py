@@ -138,12 +138,12 @@ class MinMaxAlgoBackend(ABC):
 
     @staticmethod
     @abstractmethod
-    def get_weight_tensor(model: TModel, node_name: str) -> Tuple[str, np.ndarray]:
+    def get_weight_tensor(model: TModel, node: NNCFNode) -> Tuple[str, np.ndarray]:
         """
         Returns node's weight tensor name.
 
         :param model: Backend-specific model for the initializer finding.
-        :param node_name: Name of the node to find its weight.
+        :param node: NNCFNode to find its weight.
         :return: Weight tensor name and its value.
         """
 
