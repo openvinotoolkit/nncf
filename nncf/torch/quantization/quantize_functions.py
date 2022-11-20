@@ -154,8 +154,8 @@ class ExportQuantizeToFakeQuantize(torch.autograd.Function):
 class ExportQuantizeToONNXQuantDequant(torch.autograd.Function):
     @staticmethod
     def symbolic(g, input_, y_scale, y_zero_point):
-        quantized = g.op("QuantizeLinear", input_, y_scale, y_zero_point)
-        dequantized = g.op("DequantizeLinear", quantized, y_scale, y_zero_point)
+        quantized = g.op("QuantizeLinear", input_, y_scale, y_zero_point, axis_i=0)
+        dequantized = g.op("DequantizeLinear", quantized, y_scale, y_zero_point, axis_i=0)
         return dequantized
 
     @staticmethod

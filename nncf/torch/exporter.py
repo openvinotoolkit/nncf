@@ -205,12 +205,12 @@ class PTExporter(Exporter):
                 retval = dummy_forward(self._model)
                 output_names = generate_output_names_list(count_tensors(retval))
 
-            with BNTrainingStateSwitcher(model, False):
-                torch.onnx.export(model, tuple(input_tensor_list), save_path,
-                                  input_names=input_names,
-                                  output_names=output_names,
-                                  opset_version=opset_version,
-                                  training=torch.onnx.TrainingMode.TRAINING)
+            torch.onnx.export(model, tuple(input_tensor_list), save_path,
+                              input_names=input_names,
+                              output_names=output_names,
+                              opset_version=opset_version,
+                              training=torch.onnx.TrainingMode.EVAL
+            )
             model.enable_dynamic_graph_building()
         model.forward = original_forward
         model.to(original_device)

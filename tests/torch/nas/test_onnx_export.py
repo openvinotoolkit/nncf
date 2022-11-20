@@ -13,6 +13,7 @@
 import numpy as np
 import onnx
 import onnxruntime as rt
+import pytest
 import torch
 
 from nncf.experimental.torch.nas.bootstrapNAS.elasticity.elasticity_dim import ElasticityDim
@@ -36,6 +37,7 @@ def check_onnx_weights(ctrl, path_to_onnx, ref_orig_weights, expected_num_nodes)
     assert len(onnx_model.graph.node) == expected_num_nodes
 
 
+# @pytest.mark.xfail(reason="unexpected Identity node on export with EVAL mode. Need to change the way of comparing")
 def test_multi_elasticity_weights_in_onnx(tmp_path):
     _, ctrl = create_bnas_model_and_ctrl_by_test_desc(THREE_CONV_TEST_DESC)
     multi_elasticity_handler = ctrl.multi_elasticity_handler
@@ -45,7 +47,7 @@ def test_multi_elasticity_weights_in_onnx(tmp_path):
     last_conv = orig_model.last_conv
 
     path_to_onnx = tmp_path / 'supernet.onnx'
-    ref_orig_weights = [conv1.weight, conv1.bias, conv2.weight, conv2.bias, last_conv.weight, last_conv.bias]
+    ref_orig_weights = [conv1.weight, conv2.weight, last_conv.weight, last_conv.bias]
     check_onnx_weights(ctrl, path_to_onnx, ref_orig_weights, 5)
 
     multi_elasticity_handler.disable_all()
@@ -53,19 +55,19 @@ def test_multi_elasticity_weights_in_onnx(tmp_path):
     multi_elasticity_handler.activate_minimum_subnet()
     path_to_onnx = tmp_path / 'kernel_stage.onnx'
     ref_weight1 = ref_kernel_transform(conv1.weight)
-    ref_orig_weights = [ref_weight1, conv1.bias, conv2.weight, conv2.bias, last_conv.weight, last_conv.bias]
+    ref_orig_weights = [ref_weight1, conv2.weight, last_conv.weight, last_conv.bias]
     check_onnx_weights(ctrl, path_to_onnx, ref_orig_weights, 5)
 
     multi_elasticity_handler.enable_elasticity(ElasticityDim.DEPTH)
     multi_elasticity_handler.activate_minimum_subnet()
     path_to_onnx = tmp_path / 'depth_stage.onnx'
-    ref_orig_weights = [ref_weight1, conv1.bias, last_conv.weight, last_conv.bias]
+    ref_orig_weights = [ref_weight1, last_conv.weight, last_conv.bias]
     check_onnx_weights(ctrl, path_to_onnx, ref_orig_weights, 4)
 
     multi_elasticity_handler.enable_elasticity(ElasticityDim.WIDTH)
     multi_elasticity_handler.activate_minimum_subnet()
     path_to_onnx = tmp_path / 'width_stage.onnx'
-    ref_orig_weights = [ref_weight1[:1], conv1.bias[:1], last_conv.weight[:, :1, :, :], last_conv.bias[:1]]
+    ref_orig_weights = [ref_weight1[:1], last_conv.weight[:, :1, :, :], last_conv.bias[:1]]
     check_onnx_weights(ctrl, path_to_onnx, ref_orig_weights, 4)
 
 
