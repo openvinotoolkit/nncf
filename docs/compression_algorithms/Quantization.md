@@ -185,7 +185,7 @@ among all configurations with a compression ratio below the specified threshold.
 
 By default, the compression ratio is 1.5. It should be enough to compress the model with no more than 1% accuracy drop.
 But if it doesn't happen, the lower ratio can be set by `compression_ratio` parameter in the `precision` section of
-configuration file.
+configuration file. E.g. uniformly int8 quantized model is 1 in compression ratio, 2 - for uniform int4 quantization, 0.25 - for uniform int32 quantization.
 
 To avoid the exponential search procedure, we apply the following restriction: layers with a small average Hessian
 trace value are quantized to lower bitwidth and vice versa.
