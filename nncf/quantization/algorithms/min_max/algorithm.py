@@ -222,7 +222,8 @@ class MinMaxQuantization(Algorithm):
         """
         node_name = quantization_point.insertion_point.target_node_name
         weight_quantization_target_point = self._backend_entity.target_point(TargetType.OPERATION_WITH_WEIGHTS,
-                                                                             node_name)
+                                                                             node_name,
+                                                                             None)
         self._quantization_target_points.add(weight_quantization_target_point)
 
     def _add_activation_quantization_target_point(self,

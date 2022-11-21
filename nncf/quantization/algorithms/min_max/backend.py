@@ -13,7 +13,7 @@
 
 from abc import ABC
 from abc import abstractmethod
-from typing import Dict, TypeVar, Tuple, List
+from typing import Dict, TypeVar, Tuple, List, Optional
 
 import numpy as np
 from nncf.common.graph.graph import NNCFNode
@@ -83,7 +83,7 @@ class MinMaxAlgoBackend(ABC):
 
     @staticmethod
     @abstractmethod
-    def target_point(target_type: TargetType, target_node_name: str, port_id: int = None) -> TargetPoint:
+    def target_point(target_type: TargetType, target_node_name: str, port_id: Optional[int] = None) -> TargetPoint:
         """
         Returns backend-specific target point.
 

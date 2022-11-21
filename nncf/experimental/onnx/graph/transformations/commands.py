@@ -22,7 +22,7 @@ from nncf.quantization.algorithms.min_max.utils import QuantizerLayerParameters
 
 
 class ONNXTargetPoint(TargetPoint):
-    def __init__(self, target_type: TargetType, target_node_name: str, port_id: int = None):
+    def __init__(self, target_type: TargetType, target_node_name: str, port_id: Optional[int] = None):
         super().__init__(target_type)
         self.target_node_name = target_node_name
         self.port_id = port_id
