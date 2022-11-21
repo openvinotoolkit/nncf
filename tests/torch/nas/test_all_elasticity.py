@@ -401,10 +401,7 @@ def test_can_restore_from_state():
     _, training_ctrl = resume_compression_from_state(nncf_network, old_state, empty_nncf_config)
 
     new_state = training_ctrl.get_compression_state()
-    assert old_state == REF_COMPRESSION_STATE_FOR_TWO_CONV
-    REF_NEW_STATE = deepcopy(REF_COMPRESSION_STATE_FOR_TWO_CONV)
-    REF_NEW_STATE['builder_state']['progressive_shrinking'].update({'bn_adaptation_params': {}})
-    assert new_state == REF_NEW_STATE
+    assert new_state == old_state
 
 
 def test_can_restore_and_get_the_same_output():
