@@ -168,7 +168,7 @@ class FBCAlgoBackend(ABC):
     @abstractmethod
     def is_quantized_weights(node: NNCFNode, model: TModel) -> bool:
         """
-        Checks whether the node is quantised or not
+        Checks whether the node is quantized or not
 
         :param node: NNCFNode with the attributes
         :param nncf_graph: NNCFGraph for the traverce
