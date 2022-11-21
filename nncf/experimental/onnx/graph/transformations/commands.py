@@ -20,25 +20,26 @@ from nncf.common.graph.transformations.commands import TargetType
 from nncf.common.graph.transformations.commands import TargetPoint
 from nncf.quantization.algorithms.min_max.utils import QuantizerLayerParameters
 
+
 class ONNXTargetPoint(TargetPoint):
-    def __init__(self, target_type: TargetType, target_node_name: str, input_port_id: Optional[int] = None):
+    def __init__(self, target_type: TargetType, target_node_name: str, port_id: int = None):
         super().__init__(target_type)
         self.target_node_name = target_node_name
-        self.input_port_id = input_port_id
+        self.port_id = port_id
 
     def __eq__(self, other: 'ONNXTargetPoint') -> bool:
         return isinstance(other, ONNXTargetPoint) and \
                self.type == other.type and self.target_node_name == other.target_node_name and \
-               self.input_port_id == other.input_port_id
+               self.port_id == other.port_id
 
     def __hash__(self) -> int:
-        return hash((self.target_node_name, self.input_port_id, self._target_type))
+        return hash((self.target_node_name, self.port_id, self._target_type))
 
     def __lt__(self, other: 'ONNXTargetPoint') -> bool:
         # The ONNXTargetPoint should have the way to compare.
         # NNCF has to be able returning the Quantization Target Points in the deterministic way.
         # MinMaxQuantizationAlgorithm returns the sorted Set of such ONNXTargetPoints.
-        params = ['_target_type', 'target_node_name', 'input_port_id']
+        params = ['_target_type', 'target_node_name', 'port_id']
         for param in params:
             if self.__getattribute__(param) < other.__getattribute__(param):
                 return True

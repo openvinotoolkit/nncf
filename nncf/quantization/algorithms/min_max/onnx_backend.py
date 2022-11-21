@@ -74,8 +74,8 @@ class ONNXMinMaxAlgoBackend(MinMaxAlgoBackend):
     @staticmethod
     def target_point(target_type: TargetType,
                      target_node_name: str = None,
-                     input_port_id: int = None) -> ONNXTargetPoint:
-        return ONNXTargetPoint(target_type, target_node_name, input_port_id)
+                     port_id: int = None) -> ONNXTargetPoint:
+        return ONNXTargetPoint(target_type, target_node_name, port_id)
 
     @staticmethod
     def quantizer_insertion_command(target_point: ONNXTargetPoint,

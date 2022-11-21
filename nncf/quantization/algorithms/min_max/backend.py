@@ -83,13 +83,13 @@ class MinMaxAlgoBackend(ABC):
 
     @staticmethod
     @abstractmethod
-    def target_point(target_type: TargetType, target_node_name: str, input_port_id: int = None) -> TargetPoint:
+    def target_point(target_type: TargetType, target_node_name: str, port_id: int = None) -> TargetPoint:
         """
         Returns backend-specific target point.
 
         :param target_type: Type of the location that should be modified.
         :param target_node_name: Name of the located node.
-        :param input_port_id: Port ID of the tensor for the statistics distribution.
+        :param port_id: Port ID of the tensor for the statistics distribution.
         :return: Backend-specific TargetPoint.
         """
 

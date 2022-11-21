@@ -39,19 +39,19 @@ class ONNXStatisticsAggregator(StatisticsAggregator):
                              statistic_points: StatisticPointsContainer) -> None:
         for node_name, _statistic_points in statistic_points.items():
             for statistic_point in _statistic_points:
+                port_id = statistic_point.target_point.port_id
                 if NNCFGraphNodeType.INPUT_NODE in statistic_point.target_point.target_node_name:
                     nncf_node_name = self._nncf_graph.get_node_by_name(statistic_point.target_point.target_node_name)
                     onnx_nodes_after_input_node = [edge.to_node for edge in
                                                    self._nncf_graph.get_output_edges(nncf_node_name)]
                     for onnx_node_name in onnx_nodes_after_input_node:
-                        edge_name = self._onnx_graph.get_node_edge_names(onnx_node_name.node_name)['input'][0]
+                        edge_name = self._onnx_graph.get_node_edge_names(onnx_node_name.node_name)['input'][port_id]
                         statistic_point.register_tensor(outputs[edge_name])
                 elif statistic_point.target_point.type == TargetType.POST_LAYER_OPERATION:
-                    edge_name = self._onnx_graph.get_node_edge_names(node_name)['output'][0]
+                    edge_name = self._onnx_graph.get_node_edge_names(node_name)['output'][port_id]
                     statistic_point.register_tensor(outputs[edge_name])
                 elif statistic_point.target_point.type == TargetType.PRE_LAYER_OPERATION:
-                    edge_name = self._onnx_graph.get_node_edge_names(node_name)['input'][
-                        statistic_point.target_point.input_port_id]
+                    edge_name = self._onnx_graph.get_node_edge_names(node_name)['input'][port_id]
                     statistic_point.register_tensor(outputs[edge_name])
                 else:
                     RuntimeError('The statistics should be collected only from the input of output edges of the node')

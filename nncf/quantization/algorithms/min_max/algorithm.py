@@ -237,8 +237,10 @@ class MinMaxQuantization(Algorithm):
         # If quantization of Model Input node
         if NNCFGraphNodeType.INPUT_NODE in node_name:
             # There is only onde node - input_node
+            output_port_id = 0
             activation_quantization_target_point = self._backend_entity.target_point(TargetType.POST_LAYER_OPERATION,
-                                                                                     node_name)
+                                                                                     node_name,
+                                                                                     output_port_id)
         # If not Model Input node
         # If Quantization of node's input
         elif quantization_point.insertion_point.input_port_id is not None:
@@ -248,8 +250,10 @@ class MinMaxQuantization(Algorithm):
                                                                                      input_port_id)
         # If quantization of node's output
         else:
+            output_port_id = 0
             activation_quantization_target_point = self._backend_entity.target_point(TargetType.POST_LAYER_OPERATION,
-                                                                                     node_name)
+                                                                                     node_name,
+                                                                                     output_port_id)
         self._quantization_target_points.add(activation_quantization_target_point)
 
     def _get_quantization_target_points(self, model: TModel) -> Set[TargetPoint]:
@@ -272,7 +276,7 @@ class MinMaxQuantization(Algorithm):
             if quantization_point.is_weight_quantization_point():
                 self._add_weight_quantization_target_point(quantization_point)
             elif quantization_point.is_activation_quantization_point():
-                self._add_activation_quantization_target_point(nncf_graph, quantization_point)
+                self._add_activation_quantization_target_point(quantization_point)
             else:
                 raise RuntimeError('Incorrect quantization point')
         self._quantization_target_points = sorted(self._quantization_target_points)
