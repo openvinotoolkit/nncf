@@ -11,7 +11,7 @@
  limitations under the License.
 """
 
-from typing import Optional, List
+from typing import List
 import numpy as np
 
 from nncf.common.graph.transformations.commands import Command, TransformationCommand
@@ -22,7 +22,7 @@ from nncf.quantization.algorithms.min_max.utils import QuantizerLayerParameters
 
 
 class ONNXTargetPoint(TargetPoint):
-    def __init__(self, target_type: TargetType, target_node_name: str, port_id: Optional[int] = None):
+    def __init__(self, target_type: TargetType, target_node_name: str, port_id: int = None):
         super().__init__(target_type)
         self.target_node_name = target_node_name
         self.port_id = port_id
