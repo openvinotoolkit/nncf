@@ -235,7 +235,6 @@ class MinMaxQuantization(Algorithm):
         :param quantization_point: SingleConfigQuantizationPoint for the needed layer.
         """
         node_name = quantization_point.insertion_point.target_node_name
-        node = nncf_graph.get_node_by_name(node_name)
         # If quantization of Model Input node
         if NNCFGraphNodeType.INPUT_NODE in node_name:
             # There is only onde node - input_node

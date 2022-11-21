@@ -323,11 +323,10 @@ class FastBiasCorrection(Algorithm):
         for node in biased_nodes:
             if not self._is_node_with_bias(node):
                 continue
-            input_tensor_names, _ = self._backend_entity.get_tensor_names(node)
-            edge_name = input_tensor_names[0]
+            input_port_id = 0
             pre_layer_statistic_point = self._backend_entity.target_point(TargetType.PRE_LAYER_OPERATION,
                                                                           node.node_name,
-                                                                          edge_name)
+                                                                          input_port_id)
             post_layer_statistic_point = self._backend_entity.target_point(TargetType.POST_LAYER_OPERATION,
                                                                            node.node_name)
             channel_axis = self._backend_entity.channel_axis_by_types[node.node_type]
