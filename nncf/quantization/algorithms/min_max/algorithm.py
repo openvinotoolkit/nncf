@@ -97,7 +97,7 @@ class MinMaxQuantizationParameters(AlgorithmParameters):
         """
 
     def _determine_weight_activation_modes(self, preset: QuantizationPreset) -> Tuple[
-            QuantizationMode, QuantizationMode]:
+        QuantizationMode, QuantizationMode]:
         weight_mode = QuantizationPreset.get_params_configured_by_preset(preset, QuantizerGroup.WEIGHTS)['mode']
         activation_mode = QuantizationPreset.get_params_configured_by_preset(preset, QuantizerGroup.ACTIVATIONS)['mode']
         return weight_mode, activation_mode
@@ -109,7 +109,6 @@ class MinMaxQuantizationParameters(AlgorithmParameters):
 
 
 class MinMaxQuantization(Algorithm):
-
     """
     Post-training MinMaxQuantization algorithm implementation.
 
@@ -214,16 +213,22 @@ class MinMaxQuantization(Algorithm):
         final_setup = solver.get_final_quantizer_setup(finalized_proposal)
         return final_setup
 
-    def _add_weight_quantization_target_point(self, quantization_point: SingleConfigQuantizationPoint) -> None:
+    def _add_weight_quantization_target_point(self, quantization_point: SingleConfigQuantizationPoint,
+                                              model: TModel,
+                                              nncf_graph: NNCFGraph) -> None:
         """
         Adds weight quantization target point to the set of existing points.
 
         :param quantization_point: SingleConfigQuantizationPoint for the needed layer.
+        :param model: Model in the original framework.
+        :param nncf_graph: The built NNCFGraph of the model.
         """
         node_name = quantization_point.insertion_point.target_node_name
+        node = nncf_graph.get_node_by_name(node_name)
+        port_id = self._backend_entity.get_weight_tensor_port_id(model, node)
         weight_quantization_target_point = self._backend_entity.target_point(TargetType.OPERATION_WITH_WEIGHTS,
                                                                              node_name,
-                                                                             None)
+                                                                             port_id)
         self._quantization_target_points.add(weight_quantization_target_point)
 
     def _add_activation_quantization_target_point(self,
@@ -275,7 +280,7 @@ class MinMaxQuantization(Algorithm):
         quantizer_setup = self._get_quantizer_setup(nncf_graph)
         for quantization_point in quantizer_setup.quantization_points.values():
             if quantization_point.is_weight_quantization_point():
-                self._add_weight_quantization_target_point(quantization_point)
+                self._add_weight_quantization_target_point(quantization_point, model, nncf_graph)
             elif quantization_point.is_activation_quantization_point():
                 self._add_activation_quantization_target_point(quantization_point)
             else:
@@ -316,7 +321,7 @@ class MinMaxQuantization(Algorithm):
             elif quantization_target_point.type in [TargetType.PRE_LAYER_OPERATION, TargetType.POST_LAYER_OPERATION]:
                 def filter_func(point):
                     return MinMaxQuantization in point.algorithm_to_tensor_collectors and \
-                        point.target_point.type == quantization_target_point.type
+                           point.target_point.type == quantization_target_point.type
 
                 for tensor_collector in statistic_points.get_algo_statistics_for_node(
                         target_node_name,

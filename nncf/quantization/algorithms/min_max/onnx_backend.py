@@ -107,6 +107,16 @@ class ONNXMinMaxAlgoBackend(MinMaxAlgoBackend):
         return onnx_graph.get_weight_tensor(node)
 
     @staticmethod
+    def get_weight_tensor_port_id(model: onnx.ModelProto, node: NNCFNode) -> int:
+        onnx_graph = ONNXGraph(model)
+        node = onnx_graph.get_node_by_name(node.node_name)
+        weight_tensor_name, _ = onnx_graph.get_weight_tensor(node)
+        for i, input_name in enumerate(node.input):
+            if input_name == weight_tensor_name:
+                return i
+        return -1
+
+    @staticmethod
     def get_tensor_names(node: NNCFNode) -> Tuple[List[str], List[str]]:
         return node.layer_attributes.input_tensor_names, \
                node.layer_attributes.output_tensor_names
