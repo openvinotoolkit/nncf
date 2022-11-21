@@ -20,8 +20,8 @@ from nncf.common.utils.backend import get_backend
 
 from nncf.quantization.algorithms.algorithm import Algorithm
 from nncf.common.tensor_statistics.aggregator import StatisticsAggregator
-from nncf.telemetry_wrapper.telemetry import NNCFTelemetry
-from nncf.telemetry_wrapper.telemetry import NNCF_ONNX_CATEGORY
+from nncf.telemetry import NNCFTelemetry
+from nncf.telemetry.events import NNCF_ONNX_CATEGORY
 
 TModel = TypeVar('TModel')
 

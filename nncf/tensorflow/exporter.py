@@ -17,8 +17,8 @@ import tensorflow as tf
 from tensorflow.python.framework.convert_to_constants import convert_variables_to_constants_v2
 
 from nncf.common.exporter import Exporter
-from nncf.telemetry_wrapper.telemetry import NNCFTelemetry
-from nncf.telemetry_wrapper.telemetry import NNCF_TF_CATEGORY
+from nncf.telemetry import NNCFTelemetry
+from nncf.telemetry.events import NNCF_TF_CATEGORY
 
 
 # TODO(andrey-churkin): Add support for `input_names` and `output_names`

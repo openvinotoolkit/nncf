@@ -30,9 +30,9 @@ from nncf.config import NNCFConfig
 from nncf.config.extractors import extract_algorithm_names
 from nncf.config.structures import ModelEvaluationArgs
 from nncf.config.utils import is_accuracy_aware_training
-from nncf.telemetry_wrapper.telemetry import NNCFTelemetry
-from nncf.telemetry_wrapper.telemetry import NNCF_PT_CATEGORY
-from nncf.telemetry_wrapper.telemetry import get_algo_names_from_builder
+from nncf.telemetry import NNCFTelemetry
+from nncf.telemetry.events import NNCF_PT_CATEGORY
+from nncf.telemetry.events import get_algo_names_from_builder
 from nncf.torch.algo_selector import NoCompressionAlgorithmBuilder
 from nncf.torch.algo_selector import PT_COMPRESSION_ALGORITHMS
 from nncf.torch.composite_compression import PTCompositeCompressionAlgorithmBuilder

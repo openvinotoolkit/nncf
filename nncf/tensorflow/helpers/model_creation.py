@@ -22,9 +22,9 @@ from nncf.common.compression import BaseCompressionAlgorithmController as BaseCo
 from nncf.config.structures import ModelEvaluationArgs
 from nncf.config.utils import is_accuracy_aware_training
 from nncf.config.utils import is_experimental_quantization
-from nncf.telemetry_wrapper.telemetry import NNCFTelemetry
-from nncf.telemetry_wrapper.telemetry import NNCF_TF_CATEGORY
-from nncf.telemetry_wrapper.telemetry import get_algo_names_from_builder
+from nncf.telemetry import NNCFTelemetry
+from nncf.telemetry.events import NNCF_TF_CATEGORY
+from nncf.telemetry.events import get_algo_names_from_builder
 from nncf.tensorflow.accuracy_aware_training.keras_model_utils import accuracy_aware_fit
 from nncf.tensorflow.api.compression import TFCompressionAlgorithmBuilder
 from nncf.config.extractors import extract_algorithm_names

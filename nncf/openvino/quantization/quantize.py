@@ -31,8 +31,8 @@ from nncf.common.quantization.structs import QuantizationPreset
 from nncf.common.utils.logger import logger as nncf_logger
 from nncf.openvino.engine import OVEngine
 from nncf.openvino.quantization.accuracy_aware import NMSEBasedAccuracyAware
-from nncf.telemetry_wrapper.telemetry import NNCFTelemetry
-from nncf.telemetry_wrapper.telemetry import NNCF_OV_CATEGORY
+from nncf.telemetry import NNCFTelemetry
+from nncf.telemetry.events import NNCF_OV_CATEGORY
 
 
 def _convert_openvino_model_to_compressed_model(model: ov.Model,

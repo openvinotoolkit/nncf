@@ -27,12 +27,12 @@ def test_telemetry_is_mocked_if_env_vars_defined(mocker, env_var_to_define):
     with mock.patch.dict(os.environ, {env_var_to_define: "1"}):
         # Need to reload the module where the logic concerning
         # env vars and telemetry object is evaluated
-        from nncf.telemetry_wrapper import telemetry
-        importlib.reload(telemetry)
+        from nncf.telemetry import wrapper
+        importlib.reload(wrapper)
 
         # telemetry alias will no longer be available after reload,
         # so importing via a full name
-        from nncf.telemetry_wrapper.telemetry import NNCFTelemetry
+        from nncf.telemetry import NNCFTelemetry
         assert isinstance(NNCFTelemetry, MagicMock)
     # cleanup
-    importlib.reload(telemetry)
+    importlib.reload(wrapper)
