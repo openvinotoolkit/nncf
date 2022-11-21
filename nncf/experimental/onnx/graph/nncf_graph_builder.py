@@ -30,6 +30,7 @@ from nncf.common.utils.logger import logger as nncf_logger
 
 from nncf.experimental.onnx.graph.onnx_graph import ONNXGraph
 from nncf.experimental.onnx.graph.metatypes.onnx_metatypes import ONNX_OPERATION_METATYPES
+from nncf.experimental.onnx.graph.metatypes.onnx_metatypes import WEIGHT_LAYER_METATYPES
 from nncf.experimental.onnx.graph.metatypes.onnx_metatypes import ONNXConstantMetatype
 
 
@@ -188,10 +189,16 @@ class GraphConverter:
         for node in filter(GraphConverter._is_valid_onnx_metatype, onnx_graph.get_all_nodes()):
             metatype = ONNX_OPERATION_METATYPES.get_operator_metatype_by_op_name(node.op_type)
             layer_attributes = ONNXExtendedLayerAttributes(node.input, node.output)
+            is_shared, layer_name = None, None
+            if metatype in WEIGHT_LAYER_METATYPES:
+                is_shared = onnx_graph.is_node_shared(node)
+                layer_name = onnx_graph.get_node_layer_name(node)
             nncf_graph.add_nncf_node(node_name=node.name,
                                      node_type=node.op_type,
                                      node_metatype=metatype,
-                                     layer_attributes=layer_attributes)
+                                     layer_attributes=layer_attributes,
+                                     layer_name=layer_name,
+                                     is_shared=is_shared)
         for output_node in filter(GraphConverter._is_valid_onnx_metatype, onnx_graph.get_all_nodes()):
             output_edges = onnx_graph.get_node_edge_names(output_node.name)['output']
             for output_edge in output_edges:
