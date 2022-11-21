@@ -122,7 +122,8 @@ class ONNXModelTransformer(ModelTransformer):
                 if transformation.target_point.type == TargetType.POST_LAYER_OPERATION:
                     edge_name = onnx_graph.get_node_edge_names(node_name)['output'][0]
                 elif transformation.target_point.type == TargetType.PRE_LAYER_OPERATION:
-                    edge_name = transformation.target_point.edge_name
+                    edge_name = onnx_graph.get_node_edge_names(node_name)['input'][
+                        transformation.target_point.input_port_id]
                 else:
                     raise RuntimeError
                 extra_model_outputs.add(edge_name)
@@ -198,7 +199,8 @@ class ONNXModelTransformer(ModelTransformer):
             node = onnx_graph.get_node_by_name(transformation.target_point.target_node_name)
             target_edge_name, _ = onnx_graph.get_weight_tensor(node)
         elif transformation.target_point.type == TargetType.PRE_LAYER_OPERATION:
-            target_edge_name = transformation.target_point.edge_name
+            target_edge_name = onnx_graph.get_node_edge_names(transformation.target_point.target_node_name)['input'][
+                transformation.target_point.input_port_id]
         elif transformation.target_point.type == TargetType.POST_LAYER_OPERATION:
             if NNCFGraphNodeType.INPUT_NODE in transformation.target_point.target_node_name:  # ADD INPUT NODE CASE
                 nncf_node_name = self._nncf_graph.get_node_by_name(transformation.target_point.target_node_name)

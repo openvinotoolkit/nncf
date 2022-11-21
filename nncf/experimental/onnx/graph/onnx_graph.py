@@ -353,7 +353,7 @@ class ONNXGraph:
         :param node: Node.
         :return: True whether node shares a wight - otherwise False.
         """
-        weight_tensor_name = self.get_weight_tensor_name(node)
+        weight_tensor_name, _ = self.get_weight_tensor(node)
         nodes = self.get_nodes_by_input(weight_tensor_name)
         return len(nodes) > 1
 
@@ -364,5 +364,5 @@ class ONNXGraph:
         :param node: Node.
         :return: Name of a weight tensor or None if the node does not have a weight.
         """
-        weight_tensor_name = self.get_weight_tensor_name(node)
+        weight_tensor_name, _ = self.get_weight_tensor(node)
         return weight_tensor_name

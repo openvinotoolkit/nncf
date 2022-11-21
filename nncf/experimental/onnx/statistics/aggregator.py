@@ -50,7 +50,8 @@ class ONNXStatisticsAggregator(StatisticsAggregator):
                     edge_name = self._onnx_graph.get_node_edge_names(node_name)['output'][0]
                     statistic_point.register_tensor(outputs[edge_name])
                 elif statistic_point.target_point.type == TargetType.PRE_LAYER_OPERATION:
-                    edge_name = statistic_point.target_point.edge_name
+                    edge_name = self._onnx_graph.get_node_edge_names(node_name)['input'][
+                        statistic_point.target_point.input_port_id]
                     statistic_point.register_tensor(outputs[edge_name])
                 else:
                     RuntimeError('The statistics should be collected only from the input of output edges of the node')

@@ -244,11 +244,10 @@ class MinMaxQuantization(Algorithm):
         # If not Model Input node
         # If Quantization of node's input
         elif quantization_point.insertion_point.input_port_id is not None:
-            input_tensor_names, _ = self._backend_entity.get_tensor_names(node)
-            edge_name = input_tensor_names[quantization_point.insertion_point.input_port_id]
+            input_port_id = quantization_point.insertion_point.input_port_id
             activation_quantization_target_point = self._backend_entity.target_point(TargetType.PRE_LAYER_OPERATION,
                                                                                      node_name,
-                                                                                     edge_name)
+                                                                                     input_port_id)
         # If quantization of node's output
         else:
             activation_quantization_target_point = self._backend_entity.target_point(TargetType.POST_LAYER_OPERATION,
