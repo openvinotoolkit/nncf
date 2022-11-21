@@ -351,7 +351,7 @@ class ONNXGraph:
         Returns whether the node share a weight.
 
         :param node: Node.
-        :return: True whether node shares a wight - otherwise False.
+        :return: True whether node shares a weight - otherwise False.
         """
         weight_tensor_name, _ = self.get_weight_tensor(node)
         nodes = self.get_nodes_by_input(weight_tensor_name)

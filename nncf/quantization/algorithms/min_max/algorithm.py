@@ -226,7 +226,6 @@ class MinMaxQuantization(Algorithm):
         self._quantization_target_points.add(weight_quantization_target_point)
 
     def _add_activation_quantization_target_point(self,
-                                                  nncf_graph: NNCFGraph,
                                                   quantization_point: SingleConfigQuantizationPoint) -> None:
         """
         Adds activation quantization target point to the set of existing points.
