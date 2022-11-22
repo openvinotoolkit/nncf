@@ -110,7 +110,7 @@ class MovementSparsifier(nn.Module):
     def __init__(
         self,
         target_module_node: NNCFNode,
-        sparse_cfg: SparseConfig,
+        sparse_cfg: SparseConfig = SparseConfig(mode=SparseStructure.FINE),
         frozen: bool = True,
         compression_lr_multiplier: Optional[float] = None,
         layer_loss_lambda: float = 0.5,
@@ -180,8 +180,8 @@ class MovementSparsifier(nn.Module):
         ctx.binary_mask = mask
         return mask
 
-    def apply_binary_mask(self, param_tensor, isbias=False):
-        ctx = self.bias_ctx if isbias else self.weight_ctx
+    def apply_binary_mask(self, param_tensor, is_bias=False):
+        ctx = self.bias_ctx if is_bias else self.weight_ctx
         return ctx.apply_binary_mask(param_tensor)
 
     @staticmethod

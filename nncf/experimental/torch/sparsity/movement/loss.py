@@ -12,7 +12,6 @@
 """
 
 import torch
-
 from nncf.torch.compression_method_api import PTCompressionLoss
 
 
@@ -20,23 +19,9 @@ class ImportanceLoss(PTCompressionLoss):
     def __init__(self, sparse_layers=None, penalty_scheduler=None):
         super().__init__()
         self._sparse_layers = sparse_layers
-        self.disabled = False
         self.penalty_scheduler = penalty_scheduler
 
-    def set_layers(self, sparse_layers):
-        self._sparse_layers = sparse_layers
-
-    def disable(self):
-        if not self.disabled:
-            self.disabled = True
-
-            for sparse_layer in self._sparse_layers:
-                sparse_layer.freeze_importance()
-
     def calculate(self) -> torch.Tensor:
-        # TODO, how about frozen?
-        if self.disabled:
-            return 0.
         if not self._sparse_layers:
             return 0.
         loss = self._sparse_layers[0].loss()
@@ -46,32 +31,3 @@ class ImportanceLoss(PTCompressionLoss):
         if self.penalty_scheduler is not None:
             multiplier = self.penalty_scheduler.current_importance_lambda
         return loss / len(self._sparse_layers) * multiplier
-
-
-class SparseLossForPerLayerSparsity(ImportanceLoss):
-    def __init__(self, sparse_layers=None, target=1.0, p=0.05):
-        super().__init__(sparse_layers)
-        self.per_layer_target = {}
-        for sparse_layer in self._sparse_layers:
-            self.per_layer_target[sparse_layer] = self.target
-
-    def calculate(self) -> torch.Tensor:
-        if self.disabled:
-            return 0
-
-        params = 0
-        sparse_prob_sum = 0
-        sparse_layers_loss = 0
-        for sparse_layer in self._sparse_layers:
-            if not self.disabled and not sparse_layer.sparsify:
-                raise AssertionError(
-                    "Invalid state of SparseLoss and SparsifiedWeight: mask is frozen for enabled loss")
-            if sparse_layer.sparsify:
-                sw_loss = sparse_layer.loss()
-                params_layer = sw_loss.view(-1).size(0)
-                params += params_layer
-                sparse_layers_loss -= torch.abs(sw_loss.sum() / params_layer - self.per_layer_target[sparse_layer])
-                sparse_prob_sum += torch.sigmoid(sparse_layer.mask).sum()
-
-        self.mean_sparse_prob = (sparse_prob_sum / params).item()
-        return (sparse_layers_loss / self.p).pow(2)

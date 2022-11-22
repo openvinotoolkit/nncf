@@ -24,25 +24,16 @@ class StructuredMaskRule:
         self,
         keywords: Union[List[str], str],
         prune_by_row: bool,
-        prune_grid: Tuple[int, int],
-        rule_name: Optional[str] = None,
-        binary_mask_slice: Union[Tuple[slice, slice], Tuple[slice]] = (
-            slice(None),
-            slice(None),
-        ),
-        # TODO(yujie): delete this slice for now. May added later for torchvision transformers.
+        prune_grid: Tuple[int, int]
     ) -> None:
         self.keywords: List[str] = [keywords] if isinstance(keywords, str) else keywords
         self.prune_by_row = prune_by_row
         self.prune_grid = prune_grid
-        self.rule_name = "undefined" if rule_name is None else str(rule_name)
-        self.binary_mask_slice = binary_mask_slice
 
-    def __repr__(self) -> str:
-        return "<%s \"%s\" with config=\"%r\">" % (
+    def __str__(self) -> str:
+        return "%s(%s)" % (
             self.__class__.__name__,
-            self.rule_name,
-            self.__dict__,
+            ', '.join(f'{k}={v}' for k, v in self.__dict__.items())
         )
 
 
@@ -56,24 +47,17 @@ class BaseStructuredMaskStrategy:
         raise NotImplementedError()
 
 
-@STRUCTURED_MASK_STRATEGY.register("huggingface_bert")
-class HuggingFaceBertStructuredMaskStrategy(BaseStructuredMaskStrategy):
+class BaseTransformerStructuredMaskStrategy(BaseStructuredMaskStrategy):
     MHSA_Q: str = "query"
     MHSA_K: str = "key"
     MHSA_V: str = "value"
-    MHSA_O: str = "BertSelfOutput"
-    FFN_I: str = "BertIntermediate"
-    FFN_O: str = "BertOutput"
+    MHSA_O: str = "output"
+    FFN_I: str = "feed_forward_intermediate"
+    FFN_O: str = "feed_forward_output"
 
     def __init__(self, dim_per_head: int) -> None:
         super().__init__()
         self.dim_per_head = dim_per_head
-
-    @classmethod
-    def from_compressed_model(cls, compressed_model: NNCFNetwork):
-        hidden_dim = compressed_model.nncf_module.bert.config.hidden_size
-        num_heads = compressed_model.nncf_module.bert.config.num_attention_heads
-        return cls(dim_per_head=hidden_dim // num_heads)
 
     @property
     def strategy_by_group_type(self) -> Dict[BuildingBlockType, List[StructuredMaskRule]]:
@@ -106,8 +90,24 @@ class HuggingFaceBertStructuredMaskStrategy(BaseStructuredMaskStrategy):
         return config
 
 
+@STRUCTURED_MASK_STRATEGY.register("huggingface_bert")
+class HuggingFaceTransformerStructuredMaskStrategy(BaseTransformerStructuredMaskStrategy):
+    MHSA_Q: str = "query"
+    MHSA_K: str = "key"
+    MHSA_V: str = "value"
+    MHSA_O: str = "BertSelfOutput"
+    FFN_I: str = "BertIntermediate"
+    FFN_O: str = "BertOutput"
+
+    @classmethod
+    def from_compressed_model(cls, compressed_model: NNCFNetwork):
+        hidden_dim = compressed_model.nncf_module.bert.config.hidden_size
+        num_heads = compressed_model.nncf_module.bert.config.num_attention_heads
+        return cls(dim_per_head=hidden_dim // num_heads)
+
+
 @STRUCTURED_MASK_STRATEGY.register("huggingface_wav2vec2")
-class HuggingFaceWav2Vec2StructuredMaskStrategy(HuggingFaceBertStructuredMaskStrategy):
+class HuggingFaceWav2Vec2StructuredMaskStrategy(BaseTransformerStructuredMaskStrategy):
     MHSA_Q: str = "q_proj"
     MHSA_K: str = "k_proj"
     MHSA_V: str = "v_proj"
@@ -123,7 +123,7 @@ class HuggingFaceWav2Vec2StructuredMaskStrategy(HuggingFaceBertStructuredMaskStr
 
 
 @STRUCTURED_MASK_STRATEGY.register("huggingface_swin")
-class HuggingFaceSwinStructuredMaskStrategy(BaseStructuredMaskStrategy):
+class HuggingFaceSwinStructuredMaskStrategy(BaseTransformerStructuredMaskStrategy):
     MHSA_Q: str = "query"
     MHSA_K: str = "key"
     MHSA_V: str = "value"
@@ -131,101 +131,6 @@ class HuggingFaceSwinStructuredMaskStrategy(BaseStructuredMaskStrategy):
     FFN_I: str = "SwinIntermediate"
     FFN_O: str = "SwinOutput"
 
-    # Description of config in HuggingFace's Swin
-    # swin.config.depth: a list specifiying the number of Swin Transformer Block in each stage.
-    #                    E.g. depth of Swin-b is [2, 2, 18, 2], meaning there 4 stages.
-    #
-    # swin.config.num_heads: a list of specifiying the number of self-attention head in each stage/
-    #                        E.g. Swin-b has [4, 8, 16, 32]. Together with depth config, stage 3 has 18 Swin Transformer Blocks,
-    #                        each Swin transformer block in this stage has 16 attention heads.
-    #
-    # swin.config.encoder_stride: synonymous to the number of output dimension in each self-attention head, dim_per_head
-
-    def __init__(self, dim_per_head: int) -> None:
-        super().__init__()
-        self.dim_per_head = dim_per_head
-
     @classmethod
     def from_compressed_model(cls, compressed_model: NNCFNetwork):
-        return cls(
-            dim_per_head=compressed_model.nncf_module.swin.config.encoder_stride
-        )
-
-    @property
-    def strategy_by_group_type(self) -> Dict[str, List[StructuredMaskRule]]:
-        config = {
-            BuildingBlockType.MSHA: [
-                StructuredMaskRule(
-                    keywords=[self.MHSA_Q, self.MHSA_K, self.MHSA_V],
-                    prune_by_row=True,
-                    prune_grid=(self.dim_per_head, -1),
-                ),
-                StructuredMaskRule(
-                    keywords=[self.MHSA_O],
-                    prune_by_row=False,
-                    prune_grid=(-1, self.dim_per_head),
-                ),
-            ],
-            BuildingBlockType.FF: [
-                StructuredMaskRule(
-                    keywords=[self.FFN_I],
-                    prune_by_row=True,
-                    prune_grid=(1, -1),
-                ),
-                StructuredMaskRule(
-                    keywords=[self.FFN_O],
-                    prune_by_row=False,
-                    prune_grid=(-1, 1),
-                ),
-            ],
-        }
-        return config
-
-
-# TODO: not tested msft swin. The BuildingBlockType may not work
-@STRUCTURED_MASK_STRATEGY.register("microsoft_swin")
-class MSFTSwinStructuredMaskStrategy(BaseStructuredMaskStrategy):
-    MHSA_QKV: str = "qkv"
-    MHSA_O: str = "output"
-    FFN_I: str = "fc1"
-    FFN_O: str = "fc2"
-
-    def __init__(self, hidden_dim: int, num_heads: int) -> None:
-        super().__init__()
-        self.hidden_dim = hidden_dim
-        self.num_heads = num_heads
-
-    @property
-    def strategy_by_group_type(self) -> Dict[str, List[StructuredMaskRule]]:
-        head_dim = self.hidden_dim // self.num_heads
-        config = {
-            BuildingBlockType.MSHA: [
-                StructuredMaskRule(
-                    keywords=[self.MHSA_QKV],
-                    prune_by_row=True,
-                    prune_grid=(head_dim, -1),
-                    binary_mask_slice=(slice(head_dim * i, head_dim * (i + 1)),),
-                )
-                for i in range(3)
-            ]
-            + [
-                StructuredMaskRule(
-                    keywords=[self.MHSA_O],
-                    prune_by_row=False,
-                    prune_grid=(-1, head_dim),
-                )
-            ],
-            BuildingBlockType.FF: [
-                StructuredMaskRule(
-                    keywords=[self.FFN_I],
-                    prune_by_row=True,
-                    prune_grid=(1, -1),
-                ),
-                StructuredMaskRule(
-                    keywords=[self.FFN_O],
-                    prune_by_row=False,
-                    prune_grid=(-1, 1),
-                ),
-            ],
-        }
-        return config
+        return cls(dim_per_head=compressed_model.nncf_module.swin.config.encoder_stride)

@@ -15,7 +15,6 @@ from transformers import TrainingArguments
 from transformers.trainer_callback import TrainerControl
 from transformers.trainer_callback import TrainerState
 
-from nncf.common.sparsity.schedulers import PolynomialThresholdScheduler
 from nncf.common.sparsity.statistics import MovementSparsityStatistics
 from nncf.common.utils.helpers import matches_any
 from nncf.common.utils.helpers import should_consider_scope
@@ -29,6 +28,7 @@ from nncf.experimental.torch.sparsity.movement.algo import MovementSparsifier
 from nncf.experimental.torch.sparsity.movement.algo import MovementSparsityController
 from nncf.experimental.torch.sparsity.movement.algo import SparseStructure
 from nncf.experimental.torch.sparsity.movement.algo import SUPPORTED_NNCF_MODULES
+from nncf.experimental.torch.sparsity.movement.scheduler import MovementPolynomialThresholdScheduler
 from nncf.experimental.torch.sparsity.movement.structured_mask_strategy import STRUCTURED_MASK_STRATEGY
 from nncf.experimental.torch.sparsity.movement.structured_mask_handler import StructuredMaskContext, StructuredMaskHandler
 from nncf.experimental.torch.sparsity.movement.layers import SparseConfig
@@ -95,7 +95,7 @@ def test_can_create_movement_sparsity_layers(tmp_path, nncf_config_builder):
     nncf_config = nncf_config_builder.build(log_dir=tmp_path)
     compression_ctrl, compressed_model = create_compressed_model(bert_tiny_torch_model(), nncf_config)
     assert isinstance(compression_ctrl, MovementSparsityController)
-    assert isinstance(compression_ctrl.scheduler, PolynomialThresholdScheduler)
+    assert isinstance(compression_ctrl.scheduler, MovementPolynomialThresholdScheduler)
 
     for scope, module in compressed_model.get_nncf_modules().items():
         count_movement_op = 0
@@ -117,6 +117,7 @@ def test_can_create_movement_sparsity_layers(tmp_path, nncf_config_builder):
         else:
             assert count_movement_op == 0
 
+
 @pytest.mark.parametrize('enable_structured_masking', [True, False])
 @pytest.mark.parametrize(('model_obj', 'ref_supported_model_family'), [
     (bert_tiny_torch_model(), 'huggingface_bert'),
@@ -137,8 +138,6 @@ def test_can_create_structured_mask_handler_if_supported(tmp_path, enable_struct
     else:
         compression_ctrl, compressed_model = create_compressed_model(model_obj, nncf_config)
         assert (not hasattr(compression_ctrl, '_structured_mask_handler')) or compression_ctrl._structured_mask_handler is None
-
-
 
 
 def get_linear_layer_equiv_weight_bias(module: NNCFLinear):

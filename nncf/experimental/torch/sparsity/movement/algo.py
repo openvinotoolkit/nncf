@@ -31,7 +31,8 @@ from nncf.torch.graph.transformations.commands import PTTargetPoint
 from nncf.torch.graph.transformations.commands import TransformationPriority
 from nncf.experimental.torch.sparsity.movement.layers import MovementSparsifier, SparseConfig, SparseStructure
 from nncf.experimental.torch.sparsity.movement.layers import SparseConfigByScope
-from nncf.experimental.torch.sparsity.movement.loss import ImportanceLoss, SparseLossForPerLayerSparsity
+from nncf.experimental.torch.sparsity.movement.loss import ImportanceLoss
+from nncf.experimental.torch.sparsity.movement.scheduler import MovementPolynomialThresholdScheduler
 from nncf.experimental.torch.sparsity.movement.structured_mask_handler import StructuredMaskHandler, SparsifiedModuleInfoGroup
 from nncf.torch.module_operations import UpdateWeightAndBias
 from nncf.torch.utils import get_world_size, get_model_device
@@ -118,8 +119,7 @@ class MovementSparsityController(BaseSparsityAlgoController):
         self._distributed = False
         sparsify_operations = [m.operand for m in self.sparsified_module_info]
         params = deepcopy(algo_config.get('params', {}))
-        scheduler_cls = SPARSITY_SCHEDULERS.get('threshold_polynomial_decay')  # TODO(yujie): hard coded this scheduler name
-        self._scheduler = scheduler_cls(self, params)
+        self._scheduler = MovementPolynomialThresholdScheduler(self, params)
         self._loss = ImportanceLoss(sparsify_operations, self.scheduler)
 
         # TODO: review - perhaps not the right place
@@ -143,9 +143,6 @@ class MovementSparsityController(BaseSparsityAlgoController):
         if self.scheduler.current_sparsity_level >= self.scheduler.warmup_end_epoch:
             return CompressionStage.FULLY_COMPRESSED
         return CompressionStage.PARTIALLY_COMPRESSED
-
-    def freeze(self):
-        self._loss.disable()
 
     def distributed(self):
         if not dist.is_initialized():
@@ -187,7 +184,8 @@ class MovementSparsityController(BaseSparsityAlgoController):
         return ncor_values / nvalues
 
     def statistics(self, quickly_collected_only=False) -> NNCFStatistics:
-        collector = PTSparseModelStatisticsCollector(self.model, self.sparsified_module_info)
+        collector = PTSparseModelStatisticsCollector(self.model, self.sparsified_module_info,
+                                                     supports_sparse_bias=True)
         model_statistics = collector.collect()
 
         stats = MovementSparsityStatistics(model_statistics,
@@ -232,7 +230,7 @@ class MovementSparsityController(BaseSparsityAlgoController):
                             minfo.operand.apply_binary_mask(module.weight)
                         if hasattr(module, 'bias') and module.bias is not None:
                             sparse_state_dict[name + '.bias'] = \
-                                minfo.operand.apply_binary_mask(module.bias, isbias=True)
+                                minfo.operand.apply_binary_mask(module.bias, is_bias=True)
 
         model_state_dict = self.model.state_dict()
         for key, value in sparse_state_dict.items():
