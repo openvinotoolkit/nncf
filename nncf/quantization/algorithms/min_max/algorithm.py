@@ -96,8 +96,8 @@ class MinMaxQuantizationParameters(AlgorithmParameters):
         Serialize all MinMaxQuantization parameters to JSON.
         """
 
-    def _determine_weight_activation_modes(self, preset: QuantizationPreset) -> Tuple[
-        QuantizationMode, QuantizationMode]:
+    def _determine_weight_activation_modes(self,
+                                           preset: QuantizationPreset) -> Tuple[QuantizationMode, QuantizationMode]:
         weight_mode = QuantizationPreset.get_params_configured_by_preset(preset, QuantizerGroup.WEIGHTS)['mode']
         activation_mode = QuantizationPreset.get_params_configured_by_preset(preset, QuantizerGroup.ACTIVATIONS)['mode']
         return weight_mode, activation_mode

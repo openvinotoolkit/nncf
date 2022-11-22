@@ -164,14 +164,15 @@ class FBCAlgoBackend(ABC):
         :param node: Node of NNCFGraph with bias value.
         :return: Bias value in the NumPy format.
         """
+
     @staticmethod
     @abstractmethod
     def is_quantized_weights(node: NNCFNode, model: TModel) -> bool:
         """
-        Checks whether the node is quantized or not
+        Checks whether the node is quantized or not.
 
-        :param node: NNCFNode with the attributes
-        :param nncf_graph: NNCFGraph for the traverce
+        :param node: NNCFNode to check.
+        :param model: Backend-specific model.
         :return: boolean indicating whether the node has a quantized weights or not
         """
 
