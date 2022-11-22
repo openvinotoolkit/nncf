@@ -12,7 +12,7 @@
 """
 
 from copy import deepcopy
-from typing import Dict, List, Tuple
+from typing import Dict, List, Tuple, Optional
 import numpy as np
 import onnx
 
@@ -107,14 +107,14 @@ class ONNXMinMaxAlgoBackend(MinMaxAlgoBackend):
         return onnx_graph.get_weight_tensor(node)
 
     @staticmethod
-    def get_weight_tensor_port_id(model: onnx.ModelProto, node: NNCFNode) -> int:
+    def get_weight_tensor_port_id(model: onnx.ModelProto, node: NNCFNode) -> Optional[int]:
         onnx_graph = ONNXGraph(model)
         node = onnx_graph.get_node_by_name(node.node_name)
         weight_tensor_name, _ = onnx_graph.get_weight_tensor(node)
         for i, input_name in enumerate(node.input):
             if input_name == weight_tensor_name:
                 return i
-        return -1
+        return None
 
     @staticmethod
     def get_tensor_names(node: NNCFNode) -> Tuple[List[str], List[str]]:

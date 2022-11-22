@@ -226,6 +226,8 @@ class MinMaxQuantization(Algorithm):
         node_name = quantization_point.insertion_point.target_node_name
         node = nncf_graph.get_node_by_name(node_name)
         port_id = self._backend_entity.get_weight_tensor_port_id(model, node)
+        if port_id is None:
+            raise RuntimeError(f'Could not find the port_id for the node {node_name}')
         weight_quantization_target_point = self._backend_entity.target_point(TargetType.OPERATION_WITH_WEIGHTS,
                                                                              node_name,
                                                                              port_id)
