@@ -271,7 +271,7 @@ def test_node_locator_finds_postprocessing_nodes(model_to_test):
     quantizable_layer_nodes = [QuantizableWeightedLayerNode(weight_node, [QuantizerConfig()]) for weight_node in
                                weight_nodes]
 
-    quant_prop_graph = QuantizerPropagationStateGraph(ip_graph)
+    quant_prop_graph = QuantizerPropagationStateGraph(ip_graph, quantizable_layer_nodes)
     post_processing_node_locator = PostprocessingNodeLocator(quant_prop_graph, quantizable_layer_nodes,
                                                              [TopKTestMetatype, NMSTestMetatype])
     ignored_node_keys = post_processing_node_locator.get_post_processing_node_keys()
