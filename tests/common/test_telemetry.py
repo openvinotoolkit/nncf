@@ -32,7 +32,7 @@ def test_telemetry_is_mocked_if_env_vars_defined(mocker, env_var_to_define):
 
         # telemetry alias will no longer be available after reload,
         # so importing via a full name
-        from nncf.telemetry import NNCFTelemetry
+        from nncf.telemetry.wrapper import NNCFTelemetry
         assert isinstance(NNCFTelemetry, MagicMock)
     # cleanup
     importlib.reload(wrapper)
