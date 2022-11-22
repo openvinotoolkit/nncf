@@ -69,10 +69,10 @@ class TrainingRunner(ABC):
     via wrapping user-supplied functions such as `train_epoch_fn` and `validate_fn`.
     """
 
+    CHECKPOINT_PATH_EXTENSION: str
     uncompressed_model_accuracy: float
     maximal_total_epochs: int
     minimal_tolerable_accuracy: float
-    checkpoint_path_extension: str
 
     @abstractmethod
     def train_epoch(self, model: TModel, compression_controller: CompressionAlgorithmController) -> None:
@@ -377,7 +377,7 @@ class BaseAccuracyAwareTrainingRunner(TrainingRunner, ABC):
             checkpoint_path = self._dump_checkpoint_fn(model, compression_controller, self, self._checkpoint_save_dir)
         else:
             checkpoint_path = osp.join(self._checkpoint_save_dir,
-                                       f'acc_aware_checkpoint_last{self.checkpoint_path_extension}')
+                                       f'acc_aware_checkpoint_last{self.CHECKPOINT_PATH_EXTENSION}')
             self._save_checkpoint(model, compression_controller, checkpoint_path)
         nncf_logger.info("The checkpoint is saved in {}".format(checkpoint_path))
 
@@ -409,7 +409,7 @@ class BaseAccuracyAwareTrainingRunner(TrainingRunner, ABC):
         return False
 
     def _save_best_checkpoint(self, model, compression_controller):
-        best_path = osp.join(self._checkpoint_save_dir, f'acc_aware_checkpoint_best{self.checkpoint_path_extension}')
+        best_path = osp.join(self._checkpoint_save_dir, f'acc_aware_checkpoint_best{self.CHECKPOINT_PATH_EXTENSION}')
         self._best_checkpoint = best_path
         self._save_checkpoint(model, compression_controller, best_path)
         nncf_logger.info('Saved the best model to {}'.format(best_path))
@@ -471,7 +471,7 @@ class BaseAdaptiveCompressionLevelTrainingRunner(BaseAccuracyAwareTrainingRunner
 
     def _save_best_checkpoint(self, model, compression_controller):
         best_checkpoint_filename = f'acc_aware_checkpoint_best_' \
-                                   f'{self.compression_rate_target:.3f}{self.checkpoint_path_extension}'
+                                   f'{self.compression_rate_target:.3f}{self.CHECKPOINT_PATH_EXTENSION}'
         best_path = osp.join(self._checkpoint_save_dir, best_checkpoint_filename)
 
         accuracy_budget = self.best_val_metric_value - self.minimal_tolerable_accuracy

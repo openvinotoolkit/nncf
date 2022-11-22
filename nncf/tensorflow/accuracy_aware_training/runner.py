@@ -28,7 +28,7 @@ class TFAccuracyAwareTrainingRunner(BaseAccuracyAwareTrainingRunner):
     The Training Runner implementation for TensorFlow training code.
     """
 
-    checkpoint_path_extension = '.pt'
+    CHECKPOINT_PATH_EXTENSION = '.pt'
 
     def initialize_training_loop_fns(self, train_epoch_fn, validate_fn, configure_optimizers_fn, dump_checkpoint_fn,
                                      tensorboard_writer=None, log_dir=None):
@@ -108,7 +108,7 @@ class TFAdaptiveCompressionLevelTrainingRunner(BaseAdaptiveCompressionLevelTrain
             checkpoint_path = self._dump_checkpoint_fn(model, compression_controller, self, self._checkpoint_save_dir)
         else:
             checkpoint_path = osp.join(self._checkpoint_save_dir,
-                                       f'acc_aware_checkpoint_last{self.checkpoint_path_extension}')
+                                       f'acc_aware_checkpoint_last{self.CHECKPOINT_PATH_EXTENSION}')
             self._save_checkpoint(model, compression_controller, checkpoint_path)
         nncf_logger.info("The checkpoint is saved in {}".format(checkpoint_path))
 

@@ -26,7 +26,7 @@ class PTAccuracyAwareTrainingRunner(BaseAccuracyAwareTrainingRunner):
     The Training Runner implementation for PyTorch training code.
     """
 
-    checkpoint_path_extension = '.pth'
+    CHECKPOINT_PATH_EXTENSION = '.pth'
 
     def initialize_training_loop_fns(self, train_epoch_fn, validate_fn, configure_optimizers_fn, dump_checkpoint_fn,
                                      tensorboard_writer=None, log_dir=None):
