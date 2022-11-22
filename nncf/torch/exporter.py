@@ -20,6 +20,7 @@ import torch
 from nncf.common.exporter import Exporter
 from nncf.common.utils.logger import logger as nncf_logger
 from nncf.telemetry import NNCFTelemetry
+from nncf.telemetry import tracked_function
 from nncf.telemetry.events import NNCF_PT_CATEGORY
 from nncf.torch.dynamic_graph.graph_tracer import create_dummy_forward_fn
 from nncf.torch.dynamic_graph.graph_tracer import create_mock_tensor
@@ -46,12 +47,15 @@ def count_tensors(model_retval: Any) -> int:
     return count
 
 
+class PTExportFormat:
+    ONNX = 'onnx'
+
+
 class PTExporter(Exporter):
     """
     This class provides export of the compressed model to the ONNX format.
     """
 
-    _ONNX_FORMAT = 'onnx'
     _ONNX_DEFAULT_OPSET = 13
 
 
@@ -66,7 +70,7 @@ class PTExporter(Exporter):
             str: short form of the save_format
             dict: additional arguments for exporter
         """
-        if save_format.startswith(PTExporter._ONNX_FORMAT):
+        if save_format.startswith(PTExportFormat.ONNX):
             split_format = save_format.split('_')
             opset = None
 
@@ -85,10 +89,11 @@ class PTExporter(Exporter):
                     )
                 )
 
-            return PTExporter._ONNX_FORMAT, {'opset_version': opset}
+            return PTExportFormat.ONNX, {'opset_version': opset}
         return save_format, {}
 
-    def export_model(self, save_path: str, save_format: Optional[str] = None) -> None:
+    @tracked_function(NNCF_PT_CATEGORY, ["save_format"])
+    def export_model(self, save_path: str, save_format: Optional[str] = PTExportFormat.ONNX) -> None:
         """
         Exports the compressed model to the specified format.
 
@@ -100,18 +105,13 @@ class PTExporter(Exporter):
             The ONNX format will be used if `save_format` is not specified.
         """
 
-        NNCFTelemetry.start_session(NNCF_PT_CATEGORY)
-
         fn_args = {'save_path': save_path}
-
-        if save_format is None:
-            save_format = PTExporter._ONNX_FORMAT
 
         save_format, extra_args = PTExporter.parse_format(save_format)
         fn_args.update(extra_args)
 
         format_to_export_fn = {
-            PTExporter._ONNX_FORMAT: self._export_to_onnx,
+            PTExportFormat.ONNX: self._export_to_onnx,
         }
 
         export_fn = format_to_export_fn.get(save_format)
@@ -121,13 +121,7 @@ class PTExporter(Exporter):
             raise ValueError(f'Unsupported saving format: \'{save_format}\'. '
                              f'Available formats: {available_formats}')
 
-        NNCFTelemetry.send_event(event_category=NNCF_PT_CATEGORY,
-                                 event_action="export_model_started",
-                                 event_label=save_format)
-
         export_fn(**fn_args)
-
-        NNCFTelemetry.end_session(NNCF_PT_CATEGORY)
 
     def _export_to_onnx(self, save_path: str, opset_version: int) -> None:
         """

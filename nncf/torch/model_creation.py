@@ -29,10 +29,10 @@ from nncf.common.utils.logger import logger as nncf_logger
 from nncf.config import NNCFConfig
 from nncf.config.extractors import extract_algorithm_names
 from nncf.config.structures import ModelEvaluationArgs
+from nncf.config.telemetry_extractors import CompressionStartedFromConfig
 from nncf.config.utils import is_accuracy_aware_training
-from nncf.telemetry import NNCFTelemetry
+from nncf.telemetry import tracked_function
 from nncf.telemetry.events import NNCF_PT_CATEGORY
-from nncf.telemetry.events import get_algo_names_from_builder
 from nncf.torch.algo_selector import NoCompressionAlgorithmBuilder
 from nncf.torch.algo_selector import PT_COMPRESSION_ALGORITHMS
 from nncf.torch.composite_compression import PTCompositeCompressionAlgorithmBuilder
@@ -45,6 +45,7 @@ from nncf.torch.utils import is_main_process
 from nncf.torch.utils import maybe_convert_legacy_names_in_compress_state
 
 
+@tracked_function(NNCF_PT_CATEGORY, [CompressionStartedFromConfig(argname="config"), ])
 def create_compressed_model(model: Module,
                             config: NNCFConfig,
                             compression_state: Optional[Dict[str, Any]] = None,
@@ -88,7 +89,6 @@ def create_compressed_model(model: Module,
     is an instance of CompositeCompressionController) and the model ready for compression parameter training wrapped
     as an object of NNCFNetwork."""
 
-    NNCFTelemetry.start_session(NNCF_PT_CATEGORY)
     set_debug_log_dir(config.get("log_dir", "."))
 
     is_legacy_model_state_dict = compression_state is not None and \
@@ -101,10 +101,6 @@ def create_compressed_model(model: Module,
     nncf_network = create_nncf_network(model, config, dummy_forward_fn, wrap_inputs_fn, wrap_outputs_fn)
 
     builder = create_compression_algorithm_builder(config, should_init)
-
-    NNCFTelemetry.send_event(event_category=NNCF_PT_CATEGORY,
-                             event_action='compression_started',
-                             event_label=','.join(get_algo_names_from_builder(builder)))
 
     is_state_loadable = not is_legacy_model_state_dict and compression_state is not None
     if is_state_loadable:
@@ -129,7 +125,6 @@ def create_compressed_model(model: Module,
             compressed_model_graph.visualize_graph(osp.join(config.get("log_dir", "."), "compressed_graph.dot"))
 
     synchronize_all_processes_in_distributed_mode()
-    NNCFTelemetry.end_session(NNCF_PT_CATEGORY)
     return compression_ctrl, compressed_model
 
 

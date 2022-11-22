@@ -20,6 +20,19 @@ NNCF_PT_CATEGORY = 'nncf_pt'
 NNCF_ONNX_CATEGORY = 'nncf_onnx'
 NNCF_OV_CATEGORY = 'nncf_ov'
 
+CURRENT_CATEGORY = None
+
+def set_current_category(category: str):
+    global CURRENT_CATEGORY
+    CURRENT_CATEGORY = category
+
+def get_current_category() -> Optional[str]:
+    return CURRENT_CATEGORY
+
+def unset_current_category():
+    global CURRENT_CATEGORY
+    CURRENT_CATEGORY = None
+
 def get_algo_names_from_builder(builder: CompressionAlgorithmBuilder) -> List[str]:
     if isinstance(builder, CompositeCompressionAlgorithmBuilder):
         algo_names = sorted([x.name for x in builder.child_builders])

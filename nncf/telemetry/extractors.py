@@ -1,0 +1,53 @@
+"""
+ Copyright (c) 2022 Intel Corporation
+ Licensed under the Apache License, Version 2.0 (the "License");
+ you may not use this file except in compliance with the License.
+ You may obtain a copy of the License at
+      http://www.apache.org/licenses/LICENSE-2.0
+ Unless required by applicable law or agreed to in writing, software
+ distributed under the License is distributed on an "AS IS" BASIS,
+ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ See the License for the specific language governing permissions and
+ limitations under the License.
+"""
+from abc import ABC
+from abc import abstractmethod
+from typing import Any
+from typing import Optional
+
+SerializableData = Union[str, Dict]
+
+@dataclass
+class CollectedEvent:
+    name: str
+    data: SerializableData = None  # GA limitations
+    int_data: int = None
+
+
+class TelemetryExtractor(ABC):
+    def __init__(self, argname: Optional[str] = None):
+        self._argname = argname
+
+    @property
+    def argname(self) -> Optional[str]:
+        return self._argname
+
+    @abstractmethod
+    def extract(self, argvalue: Any) -> CollectedEvent:
+        pass
+
+
+class VerbatimTelemetryExtractor(TelemetryExtractor):
+    def extract(self, argvalue: SerializableData) -> CollectedEvent:
+        return CollectedEvent(event_name=self._argname,
+                              data=argvalue)
+
+#
+# class ImplicitlyDefaultedParam(VerbatimTelemetryExtractor):
+#     def __init__(self, argname: str, default_value: Any):
+#         super().__init__(argname)
+#         self._default_value = default_value
+#
+#     def extract(self, argvalue: Any) -> CollectedEvent:
+#         val = argvalue if argvalue is not None else self._default_value
+#         return super().extract(val)

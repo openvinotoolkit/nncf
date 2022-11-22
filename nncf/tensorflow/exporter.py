@@ -18,7 +18,14 @@ from tensorflow.python.framework.convert_to_constants import convert_variables_t
 
 from nncf.common.exporter import Exporter
 from nncf.telemetry import NNCFTelemetry
+from nncf.telemetry import tracked_function
 from nncf.telemetry.events import NNCF_TF_CATEGORY
+
+
+class TFExportFormat:
+    SAVED_MODEL = 'tf'
+    KERAS_H5 = 'h5'
+    FROZEN_GRAPH = 'frozen_graph'
 
 
 # TODO(andrey-churkin): Add support for `input_names` and `output_names`
@@ -28,10 +35,8 @@ class TFExporter(Exporter):
     TensorFlow SavedModel, or Keras H5 formats.
     """
 
-    _SAVED_MODEL_FORMAT = 'tf'
-    _KERAS_H5_FORMAT = 'h5'
-    _FROZEN_GRAPH_FORMAT = 'frozen_graph'
 
+    @tracked_function(NNCF_TF_CATEGORY, ["save_format"])
     def export_model(self, save_path: str, save_format: Optional[str] = None) -> None:
         """
         Exports the compressed model to the specified format.
@@ -44,17 +49,15 @@ class TFExporter(Exporter):
                 - `frozen_graph` for export to the Frozen Graph format.
             The Frozen Graph format will be used if `save_format` is not specified.
         """
-        NNCFTelemetry.start_session(NNCF_TF_CATEGORY)
 
         if save_format is None:
-            save_format = TFExporter._FROZEN_GRAPH_FORMAT
+            save_format = TFExportFormat.FROZEN_GRAPH
 
         format_to_export_fn = {
-            TFExporter._SAVED_MODEL_FORMAT: self._export_to_saved_model,
-            TFExporter._KERAS_H5_FORMAT: self._export_to_h5,
-            TFExporter._FROZEN_GRAPH_FORMAT: self._export_to_frozen_graph,
+            TFExportFormat.SAVED_MODEL: self._export_to_saved_model,
+            TFExportFormat.KERAS_H5: self._export_to_h5,
+            TFExportFormat.FROZEN_GRAPH: self._export_to_frozen_graph,
         }
-
 
         export_fn = format_to_export_fn.get(save_format)
 
@@ -63,12 +66,7 @@ class TFExporter(Exporter):
             raise ValueError(f'Unsupported saving format: \'{save_format}\'. '
                              f'Available formats: {available_formats}')
 
-        NNCFTelemetry.send_event(event_category=NNCF_TF_CATEGORY,
-                                 event_action="export_model_started",
-                                 event_label=save_format)
         export_fn(save_path)
-
-        NNCFTelemetry.end_session(NNCF_TF_CATEGORY)
 
     def _export_to_saved_model(self, save_path: str) -> None:
         """
@@ -76,7 +74,7 @@ class TFExporter(Exporter):
 
         :param save_path: The path where the model will be saved.
         """
-        self._model.save(save_path, save_format=TFExporter._SAVED_MODEL_FORMAT)
+        self._model.save(save_path, save_format=TFExportFormat.SAVED_MODEL)
         model = tf.saved_model.load(save_path)
         tf.saved_model.save(model, save_path)
 
@@ -86,7 +84,7 @@ class TFExporter(Exporter):
 
         :param save_path: The path where the model will be saved.
         """
-        self._model.save(save_path, save_format=TFExporter._KERAS_H5_FORMAT)
+        self._model.save(save_path, save_format=TFExportFormat.KERAS_H5)
 
     def _export_to_frozen_graph(self, save_path: str) -> None:
         """

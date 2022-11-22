@@ -1,5 +1,5 @@
 """
- Copyright (c) 2022 Intel Corporation
+ Copyright (c) 2020-2022 Intel Corporation
  Licensed under the Apache License, Version 2.0 (the "License");
  you may not use this file except in compliance with the License.
  You may obtain a copy of the License at
@@ -11,7 +11,14 @@
  limitations under the License.
 """
 
-from nncf.telemetry.wrapper import NNCFTelemetry
-from nncf.telemetry.decorator import tracked_function
+from nncf.telemetry.extractors import CollectedEvent
 from nncf.telemetry.extractors import TelemetryExtractor
+from nncf.config import NNCFConfig
+from nncf.config.extractors import extract_algorithm_names
 
+
+class CompressionStartedFromConfig(TelemetryExtractor):
+    def extract(self, config: NNCFConfig) -> CollectedEvent
+        algo_names = extract_algorithm_names(config)
+        return CollectedEvent(name="compression_started",
+                              data=",".join(algo_names))

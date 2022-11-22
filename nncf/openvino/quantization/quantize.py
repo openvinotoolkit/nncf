@@ -24,6 +24,7 @@ import openvino.runtime as ov
 from openvino.tools import pot
 
 from nncf.data import Dataset
+from nncf.openvino.quantization.telemetry_extractors import CompressionStarted
 from nncf.parameters import IgnoredScope
 from nncf.parameters import ModelType
 from nncf.parameters import TargetDevice
@@ -32,6 +33,7 @@ from nncf.common.utils.logger import logger as nncf_logger
 from nncf.openvino.engine import OVEngine
 from nncf.openvino.quantization.accuracy_aware import NMSEBasedAccuracyAware
 from nncf.telemetry import NNCFTelemetry
+from nncf.telemetry import tracked_function
 from nncf.telemetry.events import NNCF_OV_CATEGORY
 
 
@@ -96,6 +98,7 @@ def _create_ignored_scope_config(ignored_scope: Optional[IgnoredScope]) -> Dict:
     return ignored
 
 
+@tracked_function(NNCF_OV_CATEGORY, [CompressionStarted(), "target_device", "preset"])
 def quantize_impl(model: ov.Model,
                   calibration_dataset: Dataset,
                   preset: QuantizationPreset,
@@ -108,7 +111,6 @@ def quantize_impl(model: ov.Model,
     Implementation of the `quantize()` method for the OpenVINO backend.
     """
 
-    NNCFTelemetry.start_session(NNCF_OV_CATEGORY)
     pot.utils.logger.init_logger(
         level=logging.getLevelName(nncf_logger.getEffectiveLevel())
     )
@@ -127,11 +129,6 @@ def quantize_impl(model: ov.Model,
         }
     ]
 
-    algo_names = sorted([x['name'] for x in algorithms])
-    NNCFTelemetry.send_event(event_category=NNCF_OV_CATEGORY,
-                             event_action='compression_started',
-                             event_label=','.join(algo_names))
-
     NNCFTelemetry.send_event(event_category=NNCF_OV_CATEGORY,
                              event_action='target_device',
                              event_label=target_device.value)
@@ -141,9 +138,6 @@ def quantize_impl(model: ov.Model,
 
     pot_model = _convert_openvino_model_to_compressed_model(model, target_device)
 
-    NNCFTelemetry.send_event(event_category=NNCF_OV_CATEGORY,
-                             event_action='ov_model_converted_to_compressed',
-                             event_label='')
     engine_config = {
         'device': 'CPU',
         'stat_requests_number': 2,
@@ -153,20 +147,8 @@ def quantize_impl(model: ov.Model,
     engine = OVEngine(engine_config, calibration_dataset, calibration_dataset)
     pipeline = pot.create_pipeline(algorithms, engine)
     compressed_model = pipeline.run(pot_model)
-
     pot.compress_model_weights(compressed_model)
-
-    NNCFTelemetry.send_event(event_category=NNCF_OV_CATEGORY,
-                             event_action='model_compressed',
-                             event_label='')
-
     quantized_model = _convert_compressed_model_to_openvino_model(compressed_model)
-
-    NNCFTelemetry.send_event(event_category=NNCF_OV_CATEGORY,
-                             event_action='compressed_model_converted_to_ov',
-                             event_label='')
-    NNCFTelemetry.end_session(NNCF_OV_CATEGORY)
-
     return quantized_model
 
 

@@ -17,11 +17,14 @@ from nncf import Dataset
 from nncf.common.utils.logger import logger as nncf_logger
 from nncf.common.utils.backend import BackendType
 from nncf.common.utils.backend import get_backend
+from nncf.experimental.quantization.telemetry_extractors import CompressionStartedFromBuilder
 
 from nncf.quantization.algorithms.algorithm import Algorithm
 from nncf.common.tensor_statistics.aggregator import StatisticsAggregator
 from nncf.telemetry import NNCFTelemetry
+from nncf.telemetry import tracked_function
 from nncf.telemetry.events import NNCF_ONNX_CATEGORY
+from nncf.telemetry.events import NNCF_TF_CATEGORY
 
 TModel = TypeVar('TModel')
 
@@ -66,6 +69,7 @@ class CompressionBuilder:
 
         return None
 
+    @tracked_function(NNCF_TF_CATEGORY, [CompressionStartedFromBuilder(argname="self"), ])
     def apply(self, model: TModel, dataset: Dataset) -> TModel:
         """
         Apply compression algorithms to the 'model'.
@@ -78,11 +82,7 @@ class CompressionBuilder:
         5) Collect all statistics.
         6) Apply algorithms.
         """
-        NNCFTelemetry.start_session(NNCF_ONNX_CATEGORY)
         algo_names = sorted([x.__class__.__name__ for x in self.algorithms])
-        NNCFTelemetry.send_event(event_category=NNCF_ONNX_CATEGORY,
-                                 event_action='compression_started',
-                                 event_label=','.join(algo_names))
 
         if not self.algorithms:
             nncf_logger.info('There are no algorithms added. The original model will be returned.')
@@ -105,5 +105,4 @@ class CompressionBuilder:
 
         for algorithm in self.algorithms:
             modified_model = algorithm.apply(modified_model, statistics_aggregator.statistic_points)
-        NNCFTelemetry.end_session(NNCF_ONNX_CATEGORY)
         return modified_model
