@@ -167,6 +167,17 @@ class FBCAlgoBackend(ABC):
 
     @staticmethod
     @abstractmethod
+    def get_bias_port_id(model: TModel, node: NNCFNode) -> int:
+        """
+        Returns bias Port ID corresponding to the node.
+
+        :param model: Backend-specific model.
+        :param node: Node of NNCFGraph with bias value.
+        :return: Port ID corresponding to bias.
+        """
+
+    @staticmethod
+    @abstractmethod
     def get_activation_port_ids_for_bias_node(model: TModel, node: NNCFNode) -> Tuple[int, int]:
         """
         Returns Input Port ID and Output Port ID corresponding to activation input and output edges for

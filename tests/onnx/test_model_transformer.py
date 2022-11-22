@@ -150,7 +150,8 @@ def test_bias_correction(layers, values, refs):
     model = LinearModel().onnx_model
     transformation_layout = TransformationLayout()
     for conv_layer, bias_value in zip(layers, values):
-        target_point = ONNXTargetPoint(TargetType.LAYER, conv_layer)
+        bias_port_id = 2
+        target_point = ONNXTargetPoint(TargetType.LAYER, conv_layer, bias_port_id)
         command = ONNXBiasCorrectionCommand(target_point, bias_value, np.inf)
         transformation_layout.register(command)
 

@@ -209,7 +209,7 @@ class ONNXModelTransformer(ModelTransformer):
                                                self._nncf_graph.get_output_edges(nncf_node_name)]
                 for onnx_node_name in onnx_nodes_after_input_node:
                     target_edge_name = onnx_graph.get_node_edge_names(onnx_node_name.node_name)['input'][
-                transformation.target_point.port_id]
+                        transformation.target_point.port_id]
                     break
             else:
                 target_edge_name = onnx_graph.get_node_edge_names(transformation.target_point.target_node_name)[
@@ -313,9 +313,8 @@ class ONNXModelTransformer(ModelTransformer):
         :param transformations: lisf of the bias correction transformations
         """
         onnx_graph = ONNXGraph(self._model)
-        bias_tensor_position = 2
-
         for transformation in transformations:
+            bias_tensor_position = transformation.target_point.port_id
             node_name = transformation.target_point.target_node_name
             onnx_node = onnx_graph.get_node_by_name(node_name)
             bias_initializer_name = onnx_node.input[bias_tensor_position]

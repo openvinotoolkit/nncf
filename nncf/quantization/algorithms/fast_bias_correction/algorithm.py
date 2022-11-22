@@ -61,7 +61,6 @@ class FastBiasCorrectionParameters(AlgorithmParameters):
 
 
 class FastBiasCorrection(Algorithm):
-
     """
     Post-training FastBiasCorrection algorithm implementation
 
@@ -160,8 +159,10 @@ class FastBiasCorrection(Algorithm):
 
             if magnitude < self.threshold:
                 nncf_logger.debug(f'{node_name} bias would be changed')
+                bias_port_id = self._backend_entity.get_bias_port_id(model, node)
                 target_point = self._backend_entity.target_point(TargetType.LAYER,
-                                                                 node.node_name)
+                                                                 node.node_name,
+                                                                 bias_port_id)
                 bias_correction_command = self._backend_entity.bias_correction_command(target_point,
                                                                                        updated_bias,
                                                                                        self.threshold)
@@ -180,9 +181,10 @@ class FastBiasCorrection(Algorithm):
         :param node_name: name of the current layer
         :return: collected mean tensor data and shape for the further bias calculation
         """
+
         def input_filter_func(point):
             return FastBiasCorrection in point.algorithm_to_tensor_collectors and \
-                point.target_point.type == TargetType.PRE_LAYER_OPERATION
+                   point.target_point.type == TargetType.PRE_LAYER_OPERATION
 
         input_fp = []
         input_shape = []
@@ -202,9 +204,10 @@ class FastBiasCorrection(Algorithm):
         :param node_name: name of the current layer
         :return: collected mean tensor data for the further bias calculation
         """
+
         def output_filter_func(point):
             return FastBiasCorrection in point.algorithm_to_tensor_collectors and \
-                point.target_point.type == TargetType.POST_LAYER_OPERATION
+                   point.target_point.type == TargetType.POST_LAYER_OPERATION
 
         output_fp = []
         for tensor_collector in statistic_points.get_algo_statistics_for_node(
@@ -323,7 +326,7 @@ class FastBiasCorrection(Algorithm):
         for node in biased_nodes:
             if not self._is_node_with_bias(node):
                 continue
-            input_port_id, output_port_id = self._backend_entity.get_activation_port_ids_for_bias_node(node)
+            input_port_id, output_port_id = self._backend_entity.get_activation_port_ids_for_bias_node(model, node)
             pre_layer_statistic_point = self._backend_entity.target_point(TargetType.PRE_LAYER_OPERATION,
                                                                           node.node_name,
                                                                           input_port_id)

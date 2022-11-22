@@ -79,7 +79,7 @@ class ONNXFBCAlgoBackend(FBCAlgoBackend):
     def mean_statistic_collector(reduction_shape: ReductionShape,
                                  num_samples: int = None,
                                  window_size: int = None) -> ONNXMeanStatisticCollector:
-        return ONNXMeanStatisticCollector(reduction_shape,  num_samples, window_size)
+        return ONNXMeanStatisticCollector(reduction_shape, num_samples, window_size)
 
     @staticmethod
     def nncf_tensor(tensor: np.ndarray) -> ONNXNNCFTensor:
@@ -88,7 +88,7 @@ class ONNXFBCAlgoBackend(FBCAlgoBackend):
     @staticmethod
     def get_tensor_names(node: NNCFNode):
         return node.layer_attributes.input_tensor_names, \
-            node.layer_attributes.output_tensor_names
+               node.layer_attributes.output_tensor_names
 
     @staticmethod
     def create_blob(shape: Tuple[int], data: List[float]) -> np.ndarray:
@@ -117,6 +117,10 @@ class ONNXFBCAlgoBackend(FBCAlgoBackend):
     @staticmethod
     def get_activation_port_ids_for_bias_node(model: onnx.ModelProto, node: NNCFNode) -> Tuple[int, int]:
         return 0, 0
+
+    @staticmethod
+    def get_bias_port_id(model: onnx.ModelProto, node: NNCFNode) -> int:
+        return 2
 
     @staticmethod
     def process_model_output(raw_data: Dict, output_name: str) -> ONNXNNCFTensor:
