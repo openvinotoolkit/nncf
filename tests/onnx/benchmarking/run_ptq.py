@@ -93,7 +93,6 @@ if __name__ == '__main__':
     parser.add_argument("--output-model-dir", "-o", required=True,
                         help="Directory path to save output quantized ONNX model", type=str)
     args = parser.parse_args()
-    
     args.target_framework = 'onnx_runtime'
     config, mode = ConfigReader.merge(args)
 
