@@ -323,7 +323,7 @@ class FastBiasCorrection(Algorithm):
         for node in biased_nodes:
             if not self._is_node_with_bias(node):
                 continue
-            input_port_id, output_port_id = 0, 0
+            input_port_id, output_port_id = self._backend_entity.get_activation_port_ids_for_bias_node(node)
             pre_layer_statistic_point = self._backend_entity.target_point(TargetType.PRE_LAYER_OPERATION,
                                                                           node.node_name,
                                                                           input_port_id)

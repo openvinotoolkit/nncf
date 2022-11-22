@@ -115,6 +115,10 @@ class ONNXFBCAlgoBackend(FBCAlgoBackend):
             raise RuntimeError('Could not find the bias value of the node') from e
 
     @staticmethod
+    def get_activation_port_ids_for_bias_node(model: onnx.ModelProto, node: NNCFNode) -> Tuple[int, int]:
+        return 0, 0
+
+    @staticmethod
     def process_model_output(raw_data: Dict, output_name: str) -> ONNXNNCFTensor:
         return ONNXNNCFTensor(raw_data[output_name])
 

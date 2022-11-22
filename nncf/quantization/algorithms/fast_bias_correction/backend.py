@@ -167,6 +167,18 @@ class FBCAlgoBackend(ABC):
 
     @staticmethod
     @abstractmethod
+    def get_activation_port_ids_for_bias_node(model: TModel, node: NNCFNode) -> Tuple[int, int]:
+        """
+        Returns Input Port ID and Output Port ID corresponding to activation input and output edges for
+        the node.
+        Supports only nodes that could have bias value.
+
+        :param model: Backend-specific model.
+        :param node: Node of NNCFGraph with bias value.
+        """
+
+    @staticmethod
+    @abstractmethod
     def is_quantized_weights(node: NNCFNode, model: TModel) -> bool:
         """
         Checks whether the node is quantized or not.
