@@ -55,8 +55,8 @@ class ThreeConvModel(nn.Module):
 
     def __init__(self):
         super().__init__()
-        self.conv1 = create_conv(1, 3, 5)
-        self.conv_to_skip = create_conv(3, 3, 1)
+        self.conv1 = create_conv(1, 3, 5, bias=False)
+        self.conv_to_skip = create_conv(3, 3, 1, bias=False)
         self.last_conv = create_conv(3, 1, 1)
         self.mode = ThreeConvModelMode.ORIGINAL
         self._forward_fn_per_mode = {
@@ -109,8 +109,7 @@ class ThreeConvModel(nn.Module):
         # there may be a minor floating-point error in the 6th sign
         ref_weights = self.conv1.weight[:1, :, :, :]
         ref_weights = ref_kernel_transform(ref_weights, transition_matrix=self._transition_matrix)
-        ref_bias = self.conv1.bias[:1]
-        o1 = do_conv2d(self.conv1, x, padding=1, weight=ref_weights, bias=ref_bias)
+        o1 = do_conv2d(self.conv1, x, padding=1, weight=ref_weights)
         o3 = o1 + o1
         ref_weights_last = self.last_conv.weight[:, :1, :, :]
         ref_bias_last = self.last_conv.bias[:1]

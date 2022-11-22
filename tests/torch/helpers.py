@@ -73,16 +73,18 @@ def fill_params_of_model_by_normal(model, std=1.0):
         param.data = torch.normal(0, std, size=param.data.size())
 
 
-def create_conv(in_channels, out_channels, kernel_size, weight_init=1, bias_init=0, padding=0, stride=1, dim=2):
+def create_conv(in_channels, out_channels, kernel_size,
+                weight_init=1, bias_init=0, padding=0, stride=1, dim=2, bias=True):
     conv_dim_map = {
         1: nn.Conv1d,
         2: nn.Conv2d,
         3: nn.Conv3d,
     }
 
-    conv = conv_dim_map[dim](in_channels, out_channels, kernel_size, padding=padding, stride=stride)
+    conv = conv_dim_map[dim](in_channels, out_channels, kernel_size, padding=padding, stride=stride, bias=bias)
     fill_conv_weight(conv, weight_init, dim)
-    fill_bias(conv, bias_init)
+    if bias:
+        fill_bias(conv, bias_init)
 
     return conv
 
@@ -485,9 +487,10 @@ def create_dataloader_with_num_workers(create_dataloader, num_workers, sample_ty
 
 
 def load_exported_onnx_version(nncf_config: NNCFConfig, model: torch.nn.Module,
-                               path_to_storage_dir: Path) -> onnx.ModelProto:
+                               path_to_storage_dir: Path,
+                               save_format: str = None) -> onnx.ModelProto:
     _, compression_ctrl = create_compressed_model_and_algo_for_test(model, nncf_config)
     onnx_checkpoint_path = path_to_storage_dir / 'model.onnx'
-    compression_ctrl.export_model(str(onnx_checkpoint_path))
+    compression_ctrl.export_model(str(onnx_checkpoint_path), save_format=save_format)
     model_proto = onnx.load_model(str(onnx_checkpoint_path))
     return model_proto
