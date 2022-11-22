@@ -123,5 +123,5 @@ class ProgressiveShrinkingBuilder(PTCompressionAlgorithmBuilder):
         self._progressivity_of_elasticity = [ElasticityDim.from_str(dim) for dim in progressivity_of_elasticity]
         self._bn_adapt_params = state_without_name[self._state_names.BN_ADAPTATION_PARAMS]
         bn_adapt_algo_kwargs = get_bn_adapt_algo_kwargs(self.config,
-                                                        state_without_name[self._bn_adapt_params])
+                                                        self._bn_adapt_params)
         self._bn_adaptation = BatchnormAdaptationAlgorithm(**bn_adapt_algo_kwargs) if bn_adapt_algo_kwargs else None
