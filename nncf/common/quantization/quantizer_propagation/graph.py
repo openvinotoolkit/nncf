@@ -83,12 +83,14 @@ class QuantizerPropagationStateGraph(nx.DiGraph):
     BARRIER_NODE_KEY_POSTFIX = "BARRIER"
 
     def __init__(self, ip_graph: InsertionPointGraph,
-                 quantizable_layer_nodes: List[str],
+                 quantizable_layer_nodes: List[NNCFNode],
                  ignored_scopes: List[str] = None,
                  target_scopes: List[str] = None):
         super().__init__()
         ip_graph = deepcopy(ip_graph)
-        quantizable_layer_node_keys = [node.node.data['key'] for node in quantizable_layer_nodes]
+        quantizable_layer_node_keys = []
+        if quantizable_layer_nodes is not None:
+            quantizable_layer_node_keys = [node.node.data['key'] for node in quantizable_layer_nodes]
         ip_graph = self._filter_constant_subgraphs(ip_graph, quantizable_layer_node_keys)
         self._created_prop_quantizer_counter = 0
 
@@ -178,7 +180,7 @@ class QuantizerPropagationStateGraph(nx.DiGraph):
                 output.append(node)
         return output
 
-    def _filter_constant_subgraphs(self, ip_graph: InsertionPointGraph, quantizable_layer_nodes):
+    def _filter_constant_subgraphs(self, ip_graph: InsertionPointGraph, quantizable_layer_node_keys: List[str]):
         """
         Removes all Constant nodes from InsertionPointGraph, making it inference graph.
 
@@ -197,7 +199,10 @@ class QuantizerPropagationStateGraph(nx.DiGraph):
         if not input_nodes:
             # Skip for tests where there is no input node.
             return ip_graph
-        weight_nodes = [ip_graph.get_merged_node_from_single_node(weight_node) for weight_node in quantizable_layer_nodes]
+        weight_nodes = []
+        if quantizable_layer_node_keys is not None:
+            weight_nodes = [ip_graph.get_merged_node_from_single_node(weight_node) for weight_node in
+                            quantizable_layer_node_keys]
         visited_nodes = []
         partial_traverse_function = partial(traverse_function, visited_nodes=visited_nodes)
         traversed_node_keys = []
