@@ -74,13 +74,13 @@ class FBCAlgoBackend(ABC):
 
     @staticmethod
     @abstractmethod
-    def target_point(target_type: TargetType, target_node_name: str, edge_name: str = None) -> TargetPoint:
+    def target_point(target_type: TargetType, target_node_name: str, port_id: int) -> TargetPoint:
         """
         Returns backend-specific target point.
 
         :param target_type: Type of the location that should be modified.
         :param target_node_name: Name of the located node.
-        :param edge_name: Name of the tensor for the statistics disctribution.
+        :param port_id: Port ID of the tensor for the statistics distribution.
         :return: Backend-specific TargetPoint.
         """
 

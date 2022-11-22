@@ -73,8 +73,8 @@ class ONNXMinMaxAlgoBackend(MinMaxAlgoBackend):
 
     @staticmethod
     def target_point(target_type: TargetType,
-                     target_node_name: str = None,
-                     port_id: int = None) -> ONNXTargetPoint:
+                     target_node_name: str,
+                     port_id: int) -> ONNXTargetPoint:
         return ONNXTargetPoint(target_type, target_node_name, port_id)
 
     @staticmethod
