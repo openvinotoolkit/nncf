@@ -466,6 +466,7 @@ class QuantizerPropagationSolver:
         """
         self._num_potential_quantized_activations = 0
         quant_prop_graph = QuantizerPropagationStateGraph(ip_graph,
+                                                          self._quantizable_layer_nodes,
                                                           self._ignored_scopes,
                                                           self._target_scopes)
         if self._post_processing_marker_metatypes is not None:

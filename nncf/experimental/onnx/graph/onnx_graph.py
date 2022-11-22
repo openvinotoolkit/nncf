@@ -21,6 +21,7 @@ from nncf.experimental.onnx.model_normalizer import ONNXModelNormalizer
 from nncf.experimental.onnx.graph.metatypes.onnx_metatypes import ONNX_OPERATION_METATYPES
 from nncf.experimental.onnx.graph.metatypes.onnx_metatypes import ONNXIdentityMetatype
 from nncf.experimental.onnx.graph.metatypes.onnx_metatypes import ONNXReshapeMetatype
+from nncf.experimental.onnx.graph.metatypes.onnx_metatypes import ONNXDequantizeLinearMetatype
 
 
 # pylint: disable=no-member
@@ -219,6 +220,11 @@ class ONNXGraph:
                 tensor_value = self.get_initializers_value(node.input[0])
                 reshaped_tensor_value = tensor_value.reshape(shape)
                 return tensor_name, reshaped_tensor_value
+            if metatype == ONNXDequantizeLinearMetatype:
+                dequiantizer_input = self.get_node_edge_names(node.name)['input']
+                quantize_linear_node = self.get_nodes_by_output(dequiantizer_input[0])[0]
+                weight_name = self.get_node_edge_names(quantize_linear_node.name)['input'][0]
+                return self.get_initializer(weight_name).name, self.get_initializers_value(weight_name)
             raise RuntimeError('Could not find the weight value of the node') from e
 
     def get_node_index(self, node_name: str) -> int:
@@ -353,7 +359,7 @@ class ONNXGraph:
         :param node: Node.
         :return: True whether node shares a wight - otherwise False.
         """
-        weight_tensor_name = self.get_weight_tensor_name(node)
+        weight_tensor_name, _ = self.get_weight_tensor(node)
         nodes = self.get_nodes_by_input(weight_tensor_name)
         return len(nodes) > 1
 
@@ -364,5 +370,5 @@ class ONNXGraph:
         :param node: Node.
         :return: Name of a weight tensor or None if the node does not have a weight.
         """
-        weight_tensor_name = self.get_weight_tensor_name(node)
+        weight_tensor_name, _ = self.get_weight_tensor(node)
         return weight_tensor_name

@@ -267,6 +267,17 @@ class InsertionPointGraph(nx.DiGraph):
                     output.append(node)
         return output
 
+    def get_merged_node_from_single_node(self, node_key: str):
+        for node in self.nodes:
+            if InsertionPointGraph.REGULAR_NODE_REF_NODE_ATTR not in self.nodes[node]:
+                continue
+            if self.nodes[node][InsertionPointGraph.IS_MERGED_NODE_ATTR]:
+                for nncf_node in self.nodes[node][InsertionPointGraph.MERGED_NNCF_NODE_LIST_NODE_ATTR]:
+                    node_k = nncf_node.data[NNCFGraph.KEY_NODE_ATTR]
+                    if node_key == node_k:
+                        return node
+        return node_key
+
     def get_all_node_keys(self) -> List[str]:
         """
         Returns all keys of all nodes.
