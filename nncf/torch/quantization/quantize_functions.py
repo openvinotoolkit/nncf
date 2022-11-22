@@ -138,7 +138,12 @@ def _quantize_autograd_to_range(input_, input_low, input_high, levels):
 class ExportQuantizeToFakeQuantize(torch.autograd.Function):
     @staticmethod
     def symbolic(g, input_, levels, input_low, input_high, output_low, output_high):
-        return g.op(add_domain("FakeQuantize"), input_, input_low, input_high, output_low, output_high, levels_i=levels)
+        output = g.op(
+            add_domain("FakeQuantize"), input_, input_low, input_high, output_low, output_high, levels_i=levels
+        )
+        # setType is needed for proper shape inference of custom op on ONNX export. Should work for torch >= 1.14
+        output.setType(input_.type())
+        return output
 
     @staticmethod
     def forward(ctx, input_, levels, input_low, input_high, output_low, output_high):
