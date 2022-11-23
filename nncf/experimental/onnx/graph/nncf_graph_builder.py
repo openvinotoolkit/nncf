@@ -12,8 +12,6 @@
 """
 from typing import Union, List
 
-from collections import deque
-
 import onnx
 from onnx import ModelProto
 from onnx import NodeProto  # pylint: disable=no-name-in-module
