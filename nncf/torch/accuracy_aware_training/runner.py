@@ -22,7 +22,6 @@ from nncf.common.accuracy_aware_training.runner import BaseAdaptiveCompressionLe
 
 try:
     from torch.utils.tensorboard import SummaryWriter
-    import tensorboard.summary
 
     TENSORBOARD_AVAILABLE = True
 except ImportError:
