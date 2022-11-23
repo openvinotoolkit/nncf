@@ -13,7 +13,7 @@
 
 from abc import ABC
 from abc import abstractmethod
-from typing import Dict, TypeVar, Tuple, List
+from typing import Dict, TypeVar, Tuple, List, Optional
 
 import numpy as np
 from nncf.common.graph.graph import NNCFNode
@@ -83,13 +83,13 @@ class MinMaxAlgoBackend(ABC):
 
     @staticmethod
     @abstractmethod
-    def target_point(target_type: TargetType, target_node_name: str, edge_name: str = None) -> TargetPoint:
+    def target_point(target_type: TargetType, target_node_name: str, port_id: int) -> TargetPoint:
         """
         Returns backend-specific target point.
 
         :param target_type: Type of the location that should be modified.
         :param target_node_name: Name of the located node.
-        :param edge_name: Name of the tensor for the statistics disctribution.
+        :param port_id: Port ID of the tensor for the statistics distribution.
         :return: Backend-specific TargetPoint.
         """
 
@@ -138,13 +138,23 @@ class MinMaxAlgoBackend(ABC):
 
     @staticmethod
     @abstractmethod
-    def get_weight_tensor(model: TModel, node_name: str) -> Tuple[str, np.ndarray]:
+    def get_weight_tensor(model: TModel, node: NNCFNode) -> Tuple[str, np.ndarray]:
         """
-        Returns node's weight tensor name.
+        Returns node's weight tensor name and its value.
 
         :param model: Backend-specific model for the initializer finding.
-        :param node_name: Name of the node to find its weight.
+        :param node: NNCFNode to find its weight.
         :return: Weight tensor name and its value.
+        """
+
+    @staticmethod
+    def get_weight_tensor_port_id(model: TModel, node: NNCFNode) -> Optional[int]:
+        """
+        Returns node's weight tensor input port ID.
+
+        :param model: Backend-specific model for the initializer finding.
+        :param node: NNCFNode to find its weight input port ID.
+        :return: The input port ID of the weight.  None if the weight tensor was not found.
         """
 
     @staticmethod

@@ -12,7 +12,7 @@
 """
 
 from copy import deepcopy
-from typing import Dict, List, Tuple
+from typing import Dict, List, Tuple, Optional
 import numpy as np
 import onnx
 
@@ -73,9 +73,9 @@ class ONNXMinMaxAlgoBackend(MinMaxAlgoBackend):
 
     @staticmethod
     def target_point(target_type: TargetType,
-                     target_node_name: str = None,
-                     edge_name: str = None) -> ONNXTargetPoint:
-        return ONNXTargetPoint(target_type, target_node_name, edge_name)
+                     target_node_name: str,
+                     port_id: int) -> ONNXTargetPoint:
+        return ONNXTargetPoint(target_type, target_node_name, port_id)
 
     @staticmethod
     def quantizer_insertion_command(target_point: ONNXTargetPoint,
@@ -101,10 +101,20 @@ class ONNXMinMaxAlgoBackend(MinMaxAlgoBackend):
                                                 window_size)
 
     @staticmethod
-    def get_weight_tensor(model: onnx.ModelProto, node_name: str) -> Tuple[str, np.ndarray]:
+    def get_weight_tensor(model: onnx.ModelProto, node: NNCFNode) -> Tuple[str, np.ndarray]:
         onnx_graph = ONNXGraph(model)
-        node = onnx_graph.get_node_by_name(node_name)
+        node = onnx_graph.get_node_by_name(node.node_name)
         return onnx_graph.get_weight_tensor(node)
+
+    @staticmethod
+    def get_weight_tensor_port_id(model: onnx.ModelProto, node: NNCFNode) -> Optional[int]:
+        onnx_graph = ONNXGraph(model)
+        node = onnx_graph.get_node_by_name(node.node_name)
+        weight_tensor_name, _ = onnx_graph.get_weight_tensor(node)
+        for i, input_name in enumerate(node.input):
+            if input_name == weight_tensor_name:
+                return i
+        return None
 
     @staticmethod
     def get_tensor_names(node: NNCFNode) -> Tuple[List[str], List[str]]:

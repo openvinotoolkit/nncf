@@ -61,9 +61,9 @@ class ONNXFBCAlgoBackend(FBCAlgoBackend):
 
     @staticmethod
     def target_point(target_type: TargetType,
-                     target_node_name: str = None,
-                     edge_name: str = None) -> ONNXTargetPoint:
-        return ONNXTargetPoint(target_type, target_node_name, edge_name)
+                     target_node_name: str,
+                     port_id: int) -> ONNXTargetPoint:
+        return ONNXTargetPoint(target_type, target_node_name, port_id)
 
     @staticmethod
     def bias_correction_command(target_point: ONNXTargetPoint,
@@ -79,7 +79,7 @@ class ONNXFBCAlgoBackend(FBCAlgoBackend):
     def mean_statistic_collector(reduction_shape: ReductionShape,
                                  num_samples: int = None,
                                  window_size: int = None) -> ONNXMeanStatisticCollector:
-        return ONNXMeanStatisticCollector(reduction_shape,  num_samples, window_size)
+        return ONNXMeanStatisticCollector(reduction_shape, num_samples, window_size)
 
     @staticmethod
     def nncf_tensor(tensor: np.ndarray) -> ONNXNNCFTensor:
@@ -88,7 +88,7 @@ class ONNXFBCAlgoBackend(FBCAlgoBackend):
     @staticmethod
     def get_tensor_names(node: NNCFNode):
         return node.layer_attributes.input_tensor_names, \
-            node.layer_attributes.output_tensor_names
+               node.layer_attributes.output_tensor_names
 
     @staticmethod
     def create_blob(shape: Tuple[int], data: List[float]) -> np.ndarray:
@@ -115,15 +115,28 @@ class ONNXFBCAlgoBackend(FBCAlgoBackend):
             raise RuntimeError('Could not find the bias value of the node') from e
 
     @staticmethod
+    def get_activation_port_ids_for_bias_node(model: onnx.ModelProto, node: NNCFNode) -> Tuple[int, int]:
+        return 0, 0
+
+    @staticmethod
+    def get_bias_port_id(model: onnx.ModelProto, node: NNCFNode) -> int:
+        return 2
+
+    @staticmethod
     def process_model_output(raw_data: Dict, output_name: str) -> ONNXNNCFTensor:
         return ONNXNNCFTensor(raw_data[output_name])
 
     @staticmethod
     def is_quantized_weights(node: NNCFNode, model: onnx.ModelProto) -> bool:
         onnx_graph = ONNXGraph(model)
+        # We assume that the weight is on the first-index
+        weight_input_index = 1
         input_edge_names = onnx_graph.get_node_edge_names(node.node_name)['input']
-        nodes = onnx_graph.get_nodes_by_output(input_edge_names[1])
-        assert len(nodes) == 1
-        weight_dequantizer = nodes[0]
+        nodes_after_weight = onnx_graph.get_nodes_by_output(input_edge_names[weight_input_index])
+        if not nodes_after_weight:
+            return False
+        # We assume that there is only one node after weight
+        assert len(nodes_after_weight) == 1
+        weight_dequantizer = nodes_after_weight[0]
         metatype = ONNX_OPERATION_METATYPES.get_operator_metatype_by_op_name(weight_dequantizer.op_type)
         return metatype == ONNXDequantizeLinearMetatype
