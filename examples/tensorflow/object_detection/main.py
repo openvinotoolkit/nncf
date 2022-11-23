@@ -352,7 +352,7 @@ def run(config):
             timer = Timer()
             timer.tic()
 
-            def train_epoch_fn(compression_ctrl, model, optimizer, lr_scheduler, epoch):
+            def train_epoch_fn(compression_ctrl, model, epoch, optimizer, lr_scheduler):
                 train_step = create_train_step_fn(strategy, model, loss_fn, optimizer)
                 train_epoch(train_step, compression_ctrl, epoch, initial_epoch, steps_per_epoch,
                             optimizer, checkpoint_manager, train_dist_dataset, train_summary_writer,
@@ -368,6 +368,8 @@ def run(config):
             compress_model = acc_aware_training_loop.run(compress_model,
                                                          train_epoch_fn=train_epoch_fn,
                                                          validate_fn=validate_fn,
+                                                         tensorboard_writer=SummaryWriter(config.log_dir,
+                                                                                          'accuracy_aware_training'),
                                                          log_dir=config.log_dir)
         else:
             train(train_step, test_step, eval_metric, train_dist_dataset, test_dist_dataset,

@@ -19,12 +19,10 @@ import os.path as osp
 import pathlib
 from abc import ABC
 from abc import abstractmethod
-from typing import Callable, Dict, List, Optional, Union, Tuple, TypeVar, TYPE_CHECKING
+from typing import Callable, Dict, List, Optional, Union, Tuple, TypeVar
 
 from nncf.api.compression import CompressionAlgorithmController
 from nncf.api.compression import CompressionStage
-from nncf.common.utils.backend import infer_backend_from_compression_controller
-from nncf.common.utils.backend import BackendType
 from nncf.common.utils.helpers import configure_accuracy_aware_paths
 from nncf.common.utils.logger import logger as nncf_logger
 from nncf.common.utils.tensorboard import prepare_for_tensorboard
@@ -36,31 +34,18 @@ from nncf.config.schemata.defaults import AA_MAXIMAL_TOTAL_EPOCHS
 from nncf.config.schemata.defaults import AA_MINIMAL_COMPRESSION_RATE_STEP
 from nncf.config.schemata.defaults import AA_PATIENCE_EPOCHS
 
-if TYPE_CHECKING:
-    from nncf.torch.accuracy_aware_training.runner import PTAdaptiveCompressionLevelTrainingRunner
-    from nncf.tensorflow.accuracy_aware_training.runner import TFAdaptiveCompressionLevelTrainingRunner
-
-try:
-    from torch.utils.tensorboard import SummaryWriter
-
-    TENSORBOARD_AVAILABLE = True
-except ImportError:
-    TENSORBOARD_AVAILABLE = False
-
-try:
-    import matplotlib.pyplot as plt
-    import PIL.Image
-    from torchvision.transforms import ToTensor
-
-    IMG_PACKAGES_AVAILABLE = True
-except ImportError:
-    IMG_PACKAGES_AVAILABLE = False
-
-
 TModel = TypeVar('TModel')
 OptimizerType = TypeVar('OptimizerType')
 LRSchedulerType = TypeVar('LRSchedulerType')
 TensorboardWriterType = TypeVar('TensorboardWriterType')
+
+try:
+    import matplotlib.pyplot as plt
+    import PIL.Image
+
+    IMG_PACKAGES_AVAILABLE = True
+except ImportError:
+    IMG_PACKAGES_AVAILABLE = False
 
 
 class TrainingRunner(ABC):
@@ -151,9 +136,9 @@ class TrainingRunner(ABC):
 
     @abstractmethod
     def initialize_training_loop_fns(self, train_epoch_fn: Callable[[CompressionAlgorithmController, TModel,
+                                                                     Optional[int],
                                                                      Optional[OptimizerType],
-                                                                     Optional[LRSchedulerType],
-                                                                     Optional[int]], None],
+                                                                     Optional[LRSchedulerType]], None],
                                      validate_fn: Callable[[TModel, Optional[int]], float],
                                      configure_optimizers_fn: Callable[[], Tuple[OptimizerType, LRSchedulerType]],
                                      dump_checkpoint_fn: Callable[
@@ -182,111 +167,6 @@ class TrainingRunner(ABC):
         param model: The model object in which the state will be loaded.
         """
 
-    @abstractmethod
-    def _save_checkpoint(self, model: TModel, compression_controller: CompressionAlgorithmController,
-                         checkpoint_path: str) -> None:
-        """
-        Save a model to the disk.
-
-        :param model: The model to be saved
-        :param checkpoint_path: The path to save the checkpoint to
-        :param compression_controller: The compression controller to be used during
-        model fine-tuning
-        """
-
-    def _load_checkpoint(self, model, checkpoint_path):
-        """
-        Load model from path.
-
-        :param model: The model object in which the state will be loaded.
-        :param checkpoint_path: The path where model checkpoint is stored.
-        """
-
-
-class TrainingRunnerCreator(ABC):
-    """
-    Declares the factory method returning TrainingRunner object
-    """
-
-    @abstractmethod
-    def create_training_loop(self) -> TrainingRunner:
-        pass
-
-
-class EarlyExitTrainingRunnerCreator(TrainingRunnerCreator):
-    """
-    Class creates an Early Exit Training Runner depending on an used backend.
-    """
-
-    def __init__(self, accuracy_aware_training_params: Dict[str, object],
-                 compression_controller: CompressionAlgorithmController,
-                 lr_updates_needed: bool, verbose: bool, dump_checkpoints: bool):
-        self.accuracy_aware_training_params = accuracy_aware_training_params
-        self.compression_controller = compression_controller
-        self.lr_updates_needed = lr_updates_needed
-        self.verbose = verbose
-        self.dump_checkpoints = dump_checkpoints
-
-    def create_training_loop(self) -> TrainingRunner:
-        """
-        Creates an object of AccuracyAwareTrainingRunner depending on user backend
-
-        :return: AccuracyAwareTrainingRunner object
-        """
-        nncf_backend = infer_backend_from_compression_controller(self.compression_controller)
-        if nncf_backend is BackendType.TORCH:
-            from nncf.torch.accuracy_aware_training.runner import PTAccuracyAwareTrainingRunner #pylint: disable=cyclic-import
-            return PTAccuracyAwareTrainingRunner(self.accuracy_aware_training_params, self.lr_updates_needed,
-                                                 self.verbose, self.dump_checkpoints)
-        if nncf_backend == BackendType.TENSORFLOW:
-            from nncf.tensorflow.accuracy_aware_training.runner import TFAccuracyAwareTrainingRunner #pylint: disable=cyclic-import
-            return TFAccuracyAwareTrainingRunner(self.accuracy_aware_training_params,
-                                                 self.verbose, self.dump_checkpoints)
-        raise RuntimeError('Got an unsupported value of nncf_backend')
-
-
-class AdaptiveCompressionLevelTrainingRunnerCreator(TrainingRunnerCreator):
-    """
-    Class creates an Adaptive Compression Level Training Runner depending on an used backend.
-    """
-
-    def __init__(self, accuracy_aware_training_params: Dict[str, object],
-                 compression_controller: CompressionAlgorithmController,
-                 lr_updates_needed: bool, verbose: bool, minimal_compression_rate: float,
-                 maximal_compression_rate: float, dump_checkpoints: bool):
-        self.accuracy_aware_training_params = accuracy_aware_training_params
-        self.compression_controller = compression_controller
-        self.lr_updates_needed = lr_updates_needed
-        self.verbose = verbose
-        self.minimal_compression_rate = minimal_compression_rate
-        self.maximal_compression_rate = maximal_compression_rate
-        self.dump_checkpoints = dump_checkpoints
-
-    def create_training_loop(self) -> Union[PTAdaptiveCompressionLevelTrainingRunner,
-                                            TFAdaptiveCompressionLevelTrainingRunner]:
-        """
-        Creates an object of AdaptiveCompressionLevelTrainingRunner depending on user backend
-
-        :return: AdaptiveCompressionLevelTrainingRunner object
-        """
-        nncf_backend = infer_backend_from_compression_controller(self.compression_controller)
-
-        if nncf_backend is BackendType.TORCH:
-            from nncf.torch.accuracy_aware_training.runner import PTAdaptiveCompressionLevelTrainingRunner #pylint: disable=cyclic-import
-            return PTAdaptiveCompressionLevelTrainingRunner(self.accuracy_aware_training_params,
-                                                            self.lr_updates_needed, self.verbose,
-                                                            self.dump_checkpoints,
-                                                            self.minimal_compression_rate,
-                                                            self.maximal_compression_rate)
-        if nncf_backend == BackendType.TENSORFLOW:
-            from nncf.tensorflow.accuracy_aware_training.runner import TFAdaptiveCompressionLevelTrainingRunner #pylint: disable=cyclic-import
-            return TFAdaptiveCompressionLevelTrainingRunner(self.accuracy_aware_training_params,
-                                                            self.lr_updates_needed, self.verbose,
-                                                            self.dump_checkpoints,
-                                                            self.minimal_compression_rate,
-                                                            self.maximal_compression_rate)
-        raise RuntimeError('Got an unsupported value of nncf_backend')
-
 
 class BaseAccuracyAwareTrainingRunner(TrainingRunner, ABC):
     """
@@ -295,7 +175,7 @@ class BaseAccuracyAwareTrainingRunner(TrainingRunner, ABC):
     """
 
     def __init__(self, accuracy_aware_training_params: Dict[str, object], verbose=True,
-                 dump_checkpoints=True, lr_updates_needed=True, **kwargs):
+                 dump_checkpoints=True, lr_updates_needed=True):
         self.maximal_relative_accuracy_drop = accuracy_aware_training_params.get(
             'maximal_relative_accuracy_degradation', 1.0)
         self.maximal_absolute_accuracy_drop = accuracy_aware_training_params.get(
@@ -305,25 +185,25 @@ class BaseAccuracyAwareTrainingRunner(TrainingRunner, ABC):
         self.verbose = verbose
         self.dump_checkpoints = dump_checkpoints
 
+        self.base_lr_reduction_factor_during_search = 1.0
+        self.lr_updates_needed = lr_updates_needed
+
         self.accuracy_budget = None
         self.is_higher_metric_better = True
-        self._compressed_training_history = []
-        self._best_checkpoint = None
+        self.optimizer = None
+        self.lr_scheduler = None
 
         self.training_epoch_count = 0
         self.cumulative_epoch_count = 0
         self.best_val_metric_value = 0
         self.current_val_metric_value = 0
 
-        self.optimizer = None
-        self.lr_scheduler = None
+        self._compressed_training_history = []
+        self._best_checkpoint = None
 
-        self.base_lr_reduction_factor_during_search = 1.0
-        self.lr_updates_needed = lr_updates_needed
-        self.load_checkpoint_fn = None
-        self.early_stopping_fn = None
-        self.update_learning_rate_fn = None
-
+        self._load_checkpoint_fn = None
+        self._early_stopping_fn = None
+        self._update_learning_rate_fn = None
         self._train_epoch_fn = None
         self._validate_fn = None
         self._configure_optimizers_fn = None
@@ -404,8 +284,8 @@ class BaseAccuracyAwareTrainingRunner(TrainingRunner, ABC):
 
     def stop_training(self, compression_controller):
         if compression_controller.compression_stage() == CompressionStage.FULLY_COMPRESSED \
-                and self.early_stopping_fn is not None:
-            return self.early_stopping_fn(self.current_val_metric_value)
+                and self._early_stopping_fn is not None:
+            return self._early_stopping_fn(self.current_val_metric_value)
         return False
 
     def _save_best_checkpoint(self, model, compression_controller):
@@ -413,14 +293,6 @@ class BaseAccuracyAwareTrainingRunner(TrainingRunner, ABC):
         self._best_checkpoint = best_path
         self._save_checkpoint(model, compression_controller, best_path)
         nncf_logger.info('Saved the best model to {}'.format(best_path))
-
-    def add_tensorboard_scalar(self, key, data, step):
-        if self.verbose and self._tensorboard_writer is not None:
-            self._tensorboard_writer.add_scalar(key, data, step)
-
-    def add_tensorboard_image(self, key, data, step):
-        if self.verbose and self._tensorboard_writer is not None:
-            self._tensorboard_writer.add_image(key, data, step)
 
     def load_best_checkpoint(self, model):
         resuming_checkpoint_path = self._best_checkpoint
@@ -431,8 +303,47 @@ class BaseAccuracyAwareTrainingRunner(TrainingRunner, ABC):
         self._log_dir = log_dir if log_dir is not None else osp.join(os.getcwd(), 'runs')
         self._log_dir = configure_accuracy_aware_paths(self._log_dir)
         self._checkpoint_save_dir = self._log_dir
-        if self._tensorboard_writer is None and TENSORBOARD_AVAILABLE:
-            self._tensorboard_writer = SummaryWriter(self._log_dir)
+
+    @abstractmethod
+    def add_tensorboard_scalar(self, key, data, step):
+        """
+        Add a scalar to tensorboard
+
+        :param key: Scalar key name
+        :param data: Scalar data
+        :param step: Logging step
+        """
+
+    @abstractmethod
+    def add_tensorboard_image(self, key, data, step):
+        """
+        Add an image to tensorboard
+
+        :param key: Image key name
+        :param data: Image data
+        :param step: Logging step
+        """
+
+    @abstractmethod
+    def _save_checkpoint(self, model: TModel, compression_controller: CompressionAlgorithmController,
+                         checkpoint_path: str) -> None:
+        """
+        Save a model to the disk.
+
+        :param model: The model to be saved
+        :param checkpoint_path: The path to save the checkpoint to
+        :param compression_controller: The compression controller to be used during
+            model fine-tuning
+        """
+
+    @abstractmethod
+    def _load_checkpoint(self, model: TModel, checkpoint_path: str) -> None:
+        """
+        Load model from path.
+
+        :param model: The model object in which the state will be loaded.
+        :param checkpoint_path: The path where model checkpoint is stored.
+        """
 
 
 class BaseAdaptiveCompressionLevelTrainingRunner(BaseAccuracyAwareTrainingRunner, ABC):
@@ -523,7 +434,6 @@ class BaseAdaptiveCompressionLevelTrainingRunner(BaseAccuracyAwareTrainingRunner
             plt.savefig(buf, format='jpeg')
             buf.seek(0)
             image = PIL.Image.open(buf)
-            image = ToTensor()(image)
             self.add_tensorboard_image('compression/accuracy_aware/acc_budget_vs_comp_rate', image,
                                        len(self.compressed_training_history))
 

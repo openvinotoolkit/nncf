@@ -26,8 +26,8 @@ from nncf.common.utils.logger import logger as nncf_logger
 from nncf.common.utils.registry import Registry
 from nncf.config.config import NNCFConfig
 from nncf.config.extractors import extract_accuracy_aware_training_params
-from nncf.common.accuracy_aware_training.runner import EarlyExitTrainingRunnerCreator
-from nncf.common.accuracy_aware_training.runner import AdaptiveCompressionLevelTrainingRunnerCreator
+from nncf.common.accuracy_aware_training.runner_factory import EarlyExitTrainingRunnerCreator
+from nncf.common.accuracy_aware_training.runner_factory import AdaptiveCompressionLevelTrainingRunnerCreator
 
 TModel = TypeVar('TModel')
 ADAPTIVE_COMPRESSION_CONTROLLERS = Registry('adaptive_compression_controllers')
@@ -73,9 +73,9 @@ class BaseEarlyExitCompressionTrainingLoop(TrainingLoop, ABC):
             tensorboard_writer=None, log_dir=None, update_learning_rate_fn=None):
         self.runner.initialize_training_loop_fns(train_epoch_fn, validate_fn, configure_optimizers_fn,
                                                  dump_checkpoint_fn, tensorboard_writer, log_dir)
-        self.runner.load_checkpoint_fn = load_checkpoint_fn
-        self.runner.early_stopping_fn = early_stopping_fn
-        self.runner.update_learning_rate_fn = update_learning_rate_fn
+        self.runner._load_checkpoint_fn = load_checkpoint_fn
+        self.runner._early_stopping_fn = early_stopping_fn
+        self.runner._update_learning_rate_fn = update_learning_rate_fn
 
         return self._run_early_exit_training_loop(model)
 
@@ -256,9 +256,9 @@ class AdaptiveCompressionTrainingLoop(BaseEarlyExitCompressionTrainingLoop):
             tensorboard_writer=None, log_dir=None, update_learning_rate_fn=None):
         self.runner.initialize_training_loop_fns(train_epoch_fn, validate_fn, configure_optimizers_fn,
                                                  dump_checkpoint_fn, tensorboard_writer, log_dir)
-        self.runner.load_checkpoint_fn = load_checkpoint_fn
-        self.runner.early_stopping_fn = early_stopping_fn
-        self.runner.update_learning_rate_fn = update_learning_rate_fn
+        self.runner._load_checkpoint_fn = load_checkpoint_fn
+        self.runner._early_stopping_fn = early_stopping_fn
+        self.runner._update_learning_rate_fn = update_learning_rate_fn
 
         model = self._run_initial_training_phase(model)
         self.runner.reset_training()

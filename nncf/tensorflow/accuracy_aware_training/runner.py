@@ -74,19 +74,27 @@ class TFAccuracyAwareTrainingRunner(BaseAccuracyAwareTrainingRunner):
         self.current_val_metric_value = 0
 
     def update_learning_rate(self):
-        if self.update_learning_rate_fn is not None:
-            self.update_learning_rate_fn(self.lr_scheduler,
-                                         self.training_epoch_count,
-                                         self.current_val_metric_value)
+        if self._update_learning_rate_fn is not None:
+            self._update_learning_rate_fn(self.lr_scheduler,
+                                          self.training_epoch_count,
+                                          self.current_val_metric_value)
 
     def _save_checkpoint(self, model, compression_controller, checkpoint_path):
         model.save_weights(checkpoint_path)
 
     def _load_checkpoint(self, model, checkpoint_path):
-        if self.load_checkpoint_fn is not None:
-            self.load_checkpoint_fn(model, checkpoint_path)
+        if self._load_checkpoint_fn is not None:
+            self._load_checkpoint_fn(model, checkpoint_path)
         else:
             model.load_weights(checkpoint_path)
+
+    def add_tensorboard_scalar(self, key, data, step):
+        if self.verbose and self._tensorboard_writer is not None:
+            self._tensorboard_writer.add_scalar(key, data, step)
+
+    def add_tensorboard_image(self, key, data, step):
+        if self.verbose and self._tensorboard_writer is not None:
+            self._tensorboard_writer.add_image(key, data, step)
 
 
 class TFAdaptiveCompressionLevelTrainingRunner(BaseAdaptiveCompressionLevelTrainingRunner,

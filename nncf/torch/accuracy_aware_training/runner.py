@@ -13,11 +13,20 @@
 
 import torch
 from torch.optim.lr_scheduler import ReduceLROnPlateau
+from torchvision.transforms import ToTensor
 
 from nncf.torch.checkpoint_loading import load_state
 from nncf.torch.accuracy_aware_training.utils import is_main_process
 from nncf.common.accuracy_aware_training.runner import BaseAccuracyAwareTrainingRunner
 from nncf.common.accuracy_aware_training.runner import BaseAdaptiveCompressionLevelTrainingRunner
+
+try:
+    from torch.utils.tensorboard import SummaryWriter
+    import tensorboard.summary
+
+    TENSORBOARD_AVAILABLE = True
+except ImportError:
+    TENSORBOARD_AVAILABLE = False
 
 
 class PTAccuracyAwareTrainingRunner(BaseAccuracyAwareTrainingRunner):
@@ -35,6 +44,8 @@ class PTAccuracyAwareTrainingRunner(BaseAccuracyAwareTrainingRunner):
         if is_main_process():
             # Only the main process should initialize and create a log directory, other processes don't use it
             self._initialize_log_dir(log_dir)
+            if self._tensorboard_writer is None and TENSORBOARD_AVAILABLE:
+                self._tensorboard_writer = SummaryWriter(self._log_dir)
 
     def retrieve_uncompressed_model_accuracy(self, model):
         if hasattr(model, 'original_model_accuracy') or hasattr(model.module, 'original_model_accuracy'):
@@ -59,10 +70,10 @@ class PTAccuracyAwareTrainingRunner(BaseAccuracyAwareTrainingRunner):
         super().dump_statistics(model, compression_controller)
 
     def update_learning_rate(self):
-        if self.update_learning_rate_fn is not None:
-            self.update_learning_rate_fn(self.lr_scheduler,
-                                         self.training_epoch_count,
-                                         self.current_val_metric_value)
+        if self._update_learning_rate_fn is not None:
+            self._update_learning_rate_fn(self.lr_scheduler,
+                                          self.training_epoch_count,
+                                          self.current_val_metric_value)
         else:
             if self.lr_scheduler is not None and self.lr_updates_needed:
                 self.lr_scheduler.step(
@@ -111,22 +122,22 @@ class PTAccuracyAwareTrainingRunner(BaseAccuracyAwareTrainingRunner):
         torch.save(checkpoint, checkpoint_path)
 
     def _load_checkpoint(self, model, checkpoint_path):
-        if self.load_checkpoint_fn is not None:
-            self.load_checkpoint_fn(model, checkpoint_path)
+        if self._load_checkpoint_fn is not None:
+            self._load_checkpoint_fn(model, checkpoint_path)
         else:
             resuming_checkpoint = torch.load(checkpoint_path, map_location='cpu')
             resuming_model_state_dict = resuming_checkpoint.get('state_dict', resuming_checkpoint)
             load_state(model, resuming_model_state_dict, is_resume=True)
 
     def add_tensorboard_scalar(self, key, data, step):
-        if not is_main_process():
-            return
-        super().add_tensorboard_scalar(key, data, step)
+        if is_main_process():
+            if self.verbose and self._tensorboard_writer is not None:
+                self._tensorboard_writer.add_scalar(key, data, step)
 
     def add_tensorboard_image(self, key, data, step):
-        if not is_main_process():
-            return
-        super().add_tensorboard_image(key, data, step)
+        if is_main_process():
+            if self.verbose and self._tensorboard_writer is not None:
+                self._tensorboard_writer.add_image(key, ToTensor()(data), step)
 
 
 class PTAdaptiveCompressionLevelTrainingRunner(BaseAdaptiveCompressionLevelTrainingRunner,
