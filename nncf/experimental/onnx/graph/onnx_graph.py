@@ -209,7 +209,7 @@ class ONNXGraph:
             weight_port_id = self.get_weight_tensor_port_id(node)
             weight_input = self.get_node_edge_names(node.name)['input'][weight_port_id]
             return self.get_initializer(weight_input).name, self.get_initializers_value(weight_input)
-        except RuntimeError:
+        except RuntimeError as exc:
             weight_port_id = self.get_weight_tensor_port_id(node)
             parent_node_on_weight_port = self.get_parents(node)[weight_port_id]
             nodes = deque([parent_node_on_weight_port])
@@ -223,24 +223,24 @@ class ONNXGraph:
                         return self._get_tensor_from_zero_input(current_node)
                     if metatype == ONNXReshapeMetatype:
                         return self._get_weight_tensor_with_reshape(current_node)
-                    else:
-                        weight_port_id = self.get_weight_tensor_port_id(current_node)
-                        if weight_port_id is None:
-                            # The node does not have weight
-                            continue
-                        weight_input = self.get_node_edge_names(current_node.name)['input'][weight_port_id]
-                        return self.get_initializer(weight_input).name, self.get_initializers_value(weight_input)
+                    weight_port_id = self.get_weight_tensor_port_id(current_node)
+                    if weight_port_id is None:
+                        # The node does not have weight
+                        continue
+                    weight_input = self.get_node_edge_names(current_node.name)['input'][weight_port_id]
+                    return self.get_initializer(weight_input).name, self.get_initializers_value(weight_input)
                 except RuntimeError:
                     continue
-        raise RuntimeError('Could not find the weight value of the node')
+            raise RuntimeError('Could not find the weight value of the node') from exc
 
     def _get_param_from_weight_definitions(self, node: onnx.NodeProto, parameter: str) -> Optional[int]:
         metatype = ONNX_OPERATION_METATYPES.get_operator_metatype_by_op_name(node.op_type)
         if metatype in WEIGHT_LAYER_METATYPES:
-            parameter = metatype.weight_definitions.__getattribute__(parameter)
+            parameter = getattr(metatype.weight_definitions, parameter)
             if parameter is not None:
                 return parameter
             raise RuntimeError(f'The metatype {metatype} does not have {parameter} attribute')
+        return None
 
     def get_weight_tensor_port_id(self, node: onnx.NodeProto) -> Optional[int]:
         """
