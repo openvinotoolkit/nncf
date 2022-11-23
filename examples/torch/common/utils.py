@@ -265,3 +265,18 @@ class MockDataset(data.Dataset):
                 img = self._transform(img)
             return img, 0
         raise ValueError
+
+
+class NullContextManager:
+    """
+    Dummy context manager that do nothing.
+    """
+
+    def __init__(self, *args, **kwargs):
+        pass
+
+    def __enter__(self, *args, **kwargs):
+        pass
+
+    def __exit__(self, *args, **kwargs):
+        pass

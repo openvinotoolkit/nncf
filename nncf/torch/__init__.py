@@ -25,11 +25,6 @@ if parse_version(BKC_TORCH_VERSION).base_version != torch_version:
          bkc=BKC_TORCH_VERSION,
          curr=torch.__version__
     ))
-elif torch_version < '1.5.0' or torch_version == '1.8.0':
-    raise RuntimeError(
-        "NNCF supports torch>=1.5.0, <=1.8.1, !=1.8.0, while current torch version is {curr}".format(
-        curr=torch.__version__
-    ))
 
 # NNCF builds extensions based on torch load() function
 # This function has a bug inside which patch_extension_build_function() solves

@@ -11,6 +11,8 @@
  limitations under the License.
 """
 
+from typing import Any
+
 import torch
 
 from nncf.common.utils.logger import logger as nncf_logger
@@ -18,6 +20,7 @@ from nncf.torch.utils import add_domain
 
 from .extensions import BinarizedFunctionsCUDA
 
+# pylint:disable=abstract-method
 class XNORBinarizeFn(torch.autograd.Function):
     """ Binarizes x into `scale` * { +1; -1}, where +1 or -1 are chosen based
         on whether the x element value is >0 or <0. `scale` is determined as mean of absolute
@@ -45,10 +48,11 @@ class XNORBinarizeFn(torch.autograd.Function):
         return output
 
     @staticmethod
-    def backward(ctx, grad_output):
-        return grad_output
+    def backward(ctx: Any, *grad_outputs: Any) -> Any:
+        return grad_outputs[0]
 
 
+# pylint:disable=abstract-method
 class DOREFABinarizeFn(torch.autograd.Function):
     """ Binarizes x into `scale` * { +1; -1}, where +1 or -1 are chosen based
         on whether the x element value is >0 or <0. `scale` is determined as mean of absolute
@@ -76,11 +80,12 @@ class DOREFABinarizeFn(torch.autograd.Function):
         return output
 
     @staticmethod
-    def backward(ctx, grad_output):
-        return grad_output
+    def backward(ctx: Any, *grad_outputs: Any) -> Any:
+        return grad_outputs[0]
 
 
 # Activation binarization function
+# pylint:disable=abstract-method
 class ActivationBinarizationScaleThresholdFn(torch.autograd.Function):
     @staticmethod
     def symbolic(g, x, scale, threshold):
@@ -106,7 +111,8 @@ class ActivationBinarizationScaleThresholdFn(torch.autograd.Function):
         return output
 
     @staticmethod
-    def backward(ctx, grad_output):
+    def backward(ctx: Any, *grad_outputs: Any) -> Any:
+        grad_output = grad_outputs[0]
         if grad_output.is_cuda:
             if not grad_output.is_contiguous():
                 nncf_logger.debug("grad_output is not contiguous!")

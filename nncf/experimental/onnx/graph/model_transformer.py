@@ -26,12 +26,12 @@ from nncf.experimental.onnx.graph.transformations.commands import ONNXBiasCorrec
 from nncf.experimental.onnx.graph.transformations.commands import ONNXModelExtractionCommand
 from nncf.experimental.onnx.graph.transformations.commands import ONNXOutputInsertionCommand
 from nncf.experimental.onnx.graph.transformations.commands import ONNXQuantizerInsertionCommand
-from nncf.experimental.post_training.factories import NNCFGraphFactory
-from nncf.experimental.post_training.graph.model_transformer import StaticModelTransformerBase
+from nncf.common.factory import NNCFGraphFactory
+from nncf.common.graph.model_transformer import ModelTransformer
 
 
 # pylint: disable=no-member
-class ONNXModelTransformer(StaticModelTransformerBase):
+class ONNXModelTransformer(ModelTransformer):
     QUANTIZER_NAME_PREFIX = 'QuantizeLinear_'
     DEQUANTIZER_NAME_PREFIX = 'DequantizeLinear_'
     SCALE_TENSOR_NAME_PREFIX = 'scale_'
@@ -40,6 +40,7 @@ class ONNXModelTransformer(StaticModelTransformerBase):
     def __init__(self, model: onnx.ModelProto):
         super().__init__(model)
         self._model = deepcopy(model)
+        self._nncf_graph = NNCFGraphFactory.create(self._model)
 
     def transform(self, transformation_layout: TransformationLayout) -> onnx.ModelProto:
         """
@@ -114,12 +115,12 @@ class ONNXModelTransformer(StaticModelTransformerBase):
                 nncf_node_name = nncf_graph.get_node_by_name(transformation.target_point.target_node_name)
                 onnx_nodes_after_input_node = [edge.to_node for edge in nncf_graph.get_output_edges(nncf_node_name)]
                 for onnx_node_name in onnx_nodes_after_input_node:
-                    input_edge_names.append(onnx_graph.get_node_edges(onnx_node_name.node_name)['input'][0])
+                    input_edge_names.append(onnx_graph.get_node_edge_names(onnx_node_name.node_name)['input'][0])
                 extra_model_outputs.update(input_edge_names)
                 input_edge_names = []
             else:
                 if transformation.target_point.type == TargetType.POST_LAYER_OPERATION:
-                    edge_name = onnx_graph.get_node_edges(node_name)['output'][0]
+                    edge_name = onnx_graph.get_node_edge_names(node_name)['output'][0]
                 elif transformation.target_point.type == TargetType.PRE_LAYER_OPERATION:
                     edge_name = transformation.target_point.edge_name
                 else:
@@ -186,28 +187,28 @@ class ONNXModelTransformer(StaticModelTransformerBase):
         """
         # TODO: optimize: could be insertion of quantizers done in one operations
         self._added_target_edges = Counter()
+        onnx_graph = ONNXGraph(self._model)
         for transformation in transformations:
-            self._insert_quantizer_dequantizer(transformation)
+            self._insert_quantizer_dequantizer(transformation, onnx_graph)
 
     def _get_target_edge_name(self, transformation: ONNXQuantizerInsertionCommand, onnx_graph: ONNXGraph) -> \
             Optional[str]:
         target_edge_name = None
         if transformation.target_point.type == TargetType.OPERATION_WITH_WEIGHTS:
-            target_edge_name = onnx_graph.get_weight_tensor_with_initializer(
+            target_edge_name = onnx_graph.get_weight_tensor_name(
                 transformation.target_point.target_node_name)
         elif transformation.target_point.type == TargetType.PRE_LAYER_OPERATION:
             target_edge_name = transformation.target_point.edge_name
         elif transformation.target_point.type == TargetType.POST_LAYER_OPERATION:
             if NNCFGraphNodeType.INPUT_NODE in transformation.target_point.target_node_name:  # ADD INPUT NODE CASE
-
-                nncf_graph = NNCFGraphFactory.create(self._model)
-                nncf_node_name = nncf_graph.get_node_by_name(transformation.target_point.target_node_name)
-                onnx_nodes_after_input_node = [edge.to_node for edge in nncf_graph.get_output_edges(nncf_node_name)]
+                nncf_node_name = self._nncf_graph.get_node_by_name(transformation.target_point.target_node_name)
+                onnx_nodes_after_input_node = [edge.to_node for edge in
+                                               self._nncf_graph.get_output_edges(nncf_node_name)]
                 for onnx_node_name in onnx_nodes_after_input_node:
-                    target_edge_name = onnx_graph.get_node_edges(onnx_node_name.node_name)['input'][0]
+                    target_edge_name = onnx_graph.get_node_edge_names(onnx_node_name.node_name)['input'][0]
                     break
             else:
-                target_edge_name = onnx_graph.get_node_edges(transformation.target_point.target_node_name)[
+                target_edge_name = onnx_graph.get_node_edge_names(transformation.target_point.target_node_name)[
                     'output'][0]
         else:
             raise RuntimeError(
@@ -270,8 +271,8 @@ class ONNXModelTransformer(StaticModelTransformerBase):
         onnx_zero_point = onnx.helper.make_tensor(zero_point_tensor_name, tensor_type, dims, zero_point)
         return onnx_scale, onnx_zero_point
 
-    def _insert_quantizer_dequantizer(self, transformation: ONNXQuantizerInsertionCommand) -> None:
-        onnx_graph = ONNXGraph(self._model)
+    def _insert_quantizer_dequantizer(self, transformation: ONNXQuantizerInsertionCommand,
+                                      onnx_graph: ONNXGraph) -> None:
         target_edge_name = self._get_target_edge_name(transformation, onnx_graph)
         quantizer, dequantizer = self._get_quantize_dequantize_nodes(transformation, target_edge_name)
         onnx_scale, onnx_zero_point = self._get_scale_zero_point_tensors(transformation, quantizer, dequantizer)

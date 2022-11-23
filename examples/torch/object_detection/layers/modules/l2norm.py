@@ -10,6 +10,7 @@
  See the License for the specific language governing permissions and
  limitations under the License.
 """
+from typing import Any
 
 import torch
 from torch import nn
@@ -45,6 +46,7 @@ class L2Norm(nn.Module):
         return L2NormFunction.apply(x, self.weight, self)
 
 
+# pylint:disable=abstract-method
 class L2NormFunction(torch.autograd.Function):
     @staticmethod
     def forward(ctx, x, weight, l2NormParams):
@@ -54,8 +56,8 @@ class L2NormFunction(torch.autograd.Function):
         return out
 
     @staticmethod
-    def backward(ctx, grad_out):
-        return grad_out
+    def backward(ctx: Any, *grad_outputs: Any) -> Any:
+        return grad_outputs[0]
 
     @staticmethod
     def symbolic(g, x, weight, l2NormParams):

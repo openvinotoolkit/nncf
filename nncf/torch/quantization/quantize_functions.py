@@ -10,6 +10,8 @@
  See the License for the specific language governing permissions and
  limitations under the License.
 """
+from typing import Any
+
 import torch
 
 from nncf.torch.utils import add_domain
@@ -20,6 +22,7 @@ from nncf.torch.dynamic_graph.patch_pytorch import register_operator
 from nncf.torch.functions import STRound, clamp
 
 
+# pylint:disable=abstract-method
 class QuantizeSymmetric(torch.autograd.Function):
     @staticmethod
     def forward(ctx, input_, scale, level_low, level_high, levels):
@@ -48,7 +51,8 @@ class QuantizeSymmetric(torch.autograd.Function):
         return output
 
     @staticmethod
-    def backward(ctx, grad_output):
+    def backward(ctx: Any, *grad_outputs: Any) -> Any:
+        grad_output = grad_outputs[0]
         input_, input_low, input_range = ctx.saved_tensors
         levels = ctx.levels
         level_low = ctx.level_low
@@ -70,6 +74,7 @@ class QuantizeSymmetric(torch.autograd.Function):
         return grad_input, grad_scale, None, None, None
 
 
+# pylint:disable=abstract-method
 class QuantizeAsymmetric(torch.autograd.Function):
     @staticmethod
     def forward(ctx, input_, input_low, input_range, level_low, level_high, levels):
@@ -95,7 +100,8 @@ class QuantizeAsymmetric(torch.autograd.Function):
         return output
 
     @staticmethod
-    def backward(ctx, grad_output):
+    def backward(ctx: Any, *grad_outputs: Any) -> Any:
+        grad_output = grad_outputs[0]
         input_, input_low, input_range = ctx.saved_tensors
         levels = ctx.levels
         level_low = ctx.level_low
@@ -128,26 +134,33 @@ def _quantize_autograd_to_range(input_, input_low, input_high, levels):
     return output
 
 
+# pylint:disable=abstract-method
 class ExportQuantizeToFakeQuantize(torch.autograd.Function):
     @staticmethod
     def symbolic(g, input_, levels, input_low, input_high, output_low, output_high):
-        return g.op(add_domain("FakeQuantize"), input_, input_low, input_high, output_low, output_high, levels_i=levels)
+        output = g.op(
+            add_domain("FakeQuantize"), input_, input_low, input_high, output_low, output_high, levels_i=levels
+        )
+        # setType is needed for proper shape inference of custom op on ONNX export. Should work for torch >= 1.14
+        output.setType(input_.type())
+        return output
 
     @staticmethod
     def forward(ctx, input_, levels, input_low, input_high, output_low, output_high):
         return torch.clone(input_)
 
     @staticmethod
-    def backward(ctx, grad_output):
+    def backward(ctx: Any, *grad_outputs: Any) -> Any:
         # backward is not used during export
-        return grad_output
+        return grad_outputs[0]
 
 
+# pylint:disable=abstract-method
 class ExportQuantizeToONNXQuantDequant(torch.autograd.Function):
     @staticmethod
     def symbolic(g, input_, y_scale, y_zero_point):
-        quantized = g.op("QuantizeLinear", input_, y_scale, y_zero_point)
-        dequantized = g.op("DequantizeLinear", quantized, y_scale, y_zero_point)
+        quantized = g.op("QuantizeLinear", input_, y_scale, y_zero_point, axis_i=0)
+        dequantized = g.op("DequantizeLinear", quantized, y_scale, y_zero_point, axis_i=0)
         return dequantized
 
     @staticmethod
@@ -155,9 +168,9 @@ class ExportQuantizeToONNXQuantDequant(torch.autograd.Function):
         return torch.clone(input_)
 
     @staticmethod
-    def backward(ctx, grad_output):
+    def backward(ctx: Any, *grad_outputs: Any) -> Any:
         # backward is not used during export
-        return grad_output
+        return grad_outputs[0]
 
 
 def get_scale_zp_from_input_low_input_high(level_low, level_high, input_low, input_high):
@@ -197,6 +210,7 @@ def asymmetric_quantize(input_, levels, level_low, level_high, input_low, input_
     return QuantizeAsymmetric.apply(input_, input_low_tuned, input_range_tuned, level_low, level_high, levels)
 
 
+# pylint:disable=abstract-method
 class TuneRange(torch.autograd.Function):
     @staticmethod
     def forward(ctx, input_low, input_range, levels):
@@ -224,5 +238,7 @@ class TuneRange(torch.autograd.Function):
         return new_input_low, new_input_range
 
     @staticmethod
-    def backward(ctx, grad_input_low, grad_input_range):
+    def backward(ctx: Any, *grad_outputs: Any) -> Any:
+        grad_input_low = grad_outputs[0]
+        grad_input_range = grad_outputs[1]
         return grad_input_low, grad_input_range, None

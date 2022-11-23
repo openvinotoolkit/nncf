@@ -47,7 +47,8 @@ class EvalRunParamsStruct:
                  diff_fp32_max_: float,
                  model_name_: str,
                  diff_target_min_: float,
-                 diff_target_max_: float
+                 diff_target_max_: float,
+                 multiprocessing_distributed: bool
                  ):
         self.config_name_ = config_name_
         self.reference_ = reference_
@@ -64,8 +65,10 @@ class EvalRunParamsStruct:
         self.model_name_ = model_name_
         self.diff_target_min_ = diff_target_min_
         self.diff_target_max_ = diff_target_max_
+        self.multiprocessing_distributed = multiprocessing_distributed
 
 
+@pytest.mark.nightly
 class TestSotaCheckpoints:
     param_list = []
     train_param_list = []
@@ -313,10 +316,12 @@ class TestSotaCheckpoints:
                     scale_val = model_dict[model_name].get('scale_value', {})
                 else:
                     scale_val = '[58.4795,57.1429,57.4713]'
-                diff_fp32_min = model_dict[model_name].get('diff_fp32_min') if not None else None
-                diff_fp32_max = model_dict[model_name].get('diff_fp32_max') if not None else None
-                diff_target_min = model_dict[model_name].get('diff_target_min') if not None else None
-                diff_target_max = model_dict[model_name].get('diff_target_max') if not None else None
+                diff_fp32_min = model_dict[model_name].get('diff_fp32_min')
+                diff_fp32_max = model_dict[model_name].get('diff_fp32_max')
+                diff_target_min = model_dict[model_name].get('diff_target_min')
+                diff_target_max = model_dict[model_name].get('diff_target_max')
+                multiprocessing_distributed = model_dict[model_name].get('multiprocessing_distributed', False)
+
                 param_list.append(EvalRunParamsStruct(config_name,
                                                       reference,
                                                       expected,
@@ -331,7 +336,8 @@ class TestSotaCheckpoints:
                                                       diff_fp32_max,
                                                       model_name,
                                                       diff_target_min,
-                                                      diff_target_max))
+                                                      diff_target_max,
+                                                      multiprocessing_distributed))
                 ids_list.append(model_name)
                 if model_dict[model_name].get('compression_description', {}):
                     train_param_list.append((config_name,
@@ -364,6 +370,8 @@ class TestSotaCheckpoints:
             cmd += " --pretrained"
         if eval_test_struct.batch_:
             cmd += " -b {}".format(eval_test_struct.batch_)
+        if eval_test_struct.multiprocessing_distributed:
+            cmd += " --multiprocessing-distributed"
         exit_code, err_str = self.run_cmd(cmd, cwd=PROJECT_ROOT)
 
         is_ok = (exit_code == 0 and metrics_dump_file_path.exists())

@@ -42,10 +42,15 @@ ElasticDepthConfig = List[BlockId]  # list of block indexes
 ElasticDepthSearchSpace = List[ElasticDepthConfig]  # grouped list of block indexes
 
 
+class EDHandlerStateNames:
+    DEPTH_INDICATOR = 'depth_indicator'
+
+
 class ElasticDepthHandler(SingleElasticityHandler):
     """
     An interface for handling elastic depth dimension in the network, i.e. skip some layers in the model.
     """
+    _depth_state_names = EDHandlerStateNames
 
     def __init__(self, target_model: NNCFNetwork,
                  skipped_blocks: BuildingBlocks,
@@ -92,6 +97,24 @@ class ElasticDepthHandler(SingleElasticityHandler):
         """
         self._depth_indicator = depth_indicator
         self._is_search_space_obsolete = True
+
+    def load_state(self, state: Dict[str, Any]) -> None:
+        """
+        Initializes object from the state.
+        :param state: Output of `get_state()` method.
+        """
+        super().load_state(state)
+        self.depth_indicator = state[self._depth_state_names.DEPTH_INDICATOR]
+
+    def get_state(self) -> Dict[str, Any]:
+        """
+        Returns a dictionary with Python data structures (dict, list, tuple, str, int, float, True, False, None) that
+        represents state of the object.
+        :return: state of the object
+        """
+        state = super().get_state()
+        state[self._depth_state_names.DEPTH_INDICATOR] = self.depth_indicator
+        return state
 
     def get_search_space(self) -> ElasticDepthSearchSpace:
         """

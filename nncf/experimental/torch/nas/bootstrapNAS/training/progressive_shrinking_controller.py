@@ -14,6 +14,10 @@ from typing import Any
 from typing import Dict
 from typing import List
 from typing import NoReturn
+from typing import Optional
+from typing import Tuple
+
+from nncf.experimental.torch.nas.bootstrapNAS.elasticity.onnx_export import NASExporter
 
 from nncf.api.compression import CompressionLoss
 from nncf.api.compression import CompressionScheduler
@@ -229,6 +233,34 @@ class ProgressiveShrinkingController(BNASTrainingController):
         state[self._ps_state_names.ELASTICITY_CONTROLLER_STATE] = self._elasticity_ctrl.get_state()
         state[self._ps_state_names.LR_GLOBAL_SCHEDULE_STATE] = self._lr_schedule_config
         return state
+
+    def export_model(self, save_path: str,
+                     save_format: Optional[str] = None,
+                     input_names: Optional[List[str]] = None,
+                     output_names: Optional[List[str]] = None,
+                     model_args: Optional[Tuple[Any, ...]] = None) -> None:
+        """
+        Exports the compressed model to the specified format for deployment.
+
+        Makes method-specific preparations of the model, (e.g. removing auxiliary
+        layers that were used for the model compression), then exports the model to
+        the specified path.
+
+        :param save_path: The path where the model will be saved.
+        :param save_format: Saving format. The default format will
+            be used if `save_format` is not specified.
+        :param input_names: Names to be assigned to the input tensors of the model.
+        :param output_names: Names to be assigned to the output tensors of the model.
+        :param model_args: Tuple of additional positional and keyword arguments
+            which are required for the model's forward during export. Should be
+            specified in the following format:
+                - (a, b, {'x': None, 'y': y}) for positional and keyword arguments.
+                - (a, b, {}) for positional arguments only.
+                - ({'x': None, 'y': y},) for keyword arguments only.
+        """
+        self.prepare_for_export()
+        exporter = NASExporter(self.model, input_names, output_names, model_args)
+        exporter.export_model(save_path, save_format)
 
     def _run_batchnorm_adaptation(self, model):
         if self._bn_adaptation is None:

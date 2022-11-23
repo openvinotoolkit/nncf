@@ -1,9 +1,9 @@
 # Setup
 
 ### PyTorch
-Install PyTorch and Torchvision using the [PyTorch installation guide](https://pytorch.org/get-started/locally/#start-locally). NNCF currently supports PyTorch >=1.5.0, <=1.9.1 (1.8.0 not supported). For this quickstart, PyTorch 1.9.1 and Torchvision 0.10.1 with CUDA 11.1 was installed using:
+Install PyTorch and Torchvision using the [PyTorch installation guide](https://pytorch.org/get-started/locally/#start-locally). NNCF currently supports PyTorch 1.12.1. For this quickstart, PyTorch 1.12.1 and Torchvision 0.13.1 with CUDA 11.3 was installed using:
 ```bash
-pip install torch==1.9.1+cu111 torchvision==0.10.1+cu111 -f https://download.pytorch.org/whl/torch_stable.html
+pip install torch==1.12.1+cu113 torchvision==0.13.1+cu113 --extra-index-url https://download.pytorch.org/whl/cu113
 ```
 
 
