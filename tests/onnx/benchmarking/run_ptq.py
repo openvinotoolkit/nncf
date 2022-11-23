@@ -30,9 +30,8 @@ from openvino.tools.accuracy_checker.evaluators import ModelEvaluator
 
 # pylint: disable=unused-import
 # This import need to register custom Conerter
-from accuracy_checker import MSCocoSegmentationToVOCConverter
-from utils import find_ignored_scopes
-
+from tests.onnx.benchmarking.accuracy_checker import MSCocoSegmentationToVOCConverter
+from tests.onnx.quantization.common import find_ignored_scopes
 
 # pylint: disable=redefined-outer-name,protected-access
 
