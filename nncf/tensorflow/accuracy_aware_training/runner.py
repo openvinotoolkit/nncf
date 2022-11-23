@@ -31,9 +31,11 @@ class TFAccuracyAwareTrainingRunner(BaseAccuracyAwareTrainingRunner):
     CHECKPOINT_PATH_EXTENSION = '.pt'
 
     def initialize_training_loop_fns(self, train_epoch_fn, validate_fn, configure_optimizers_fn, dump_checkpoint_fn,
-                                     tensorboard_writer=None, log_dir=None):
+                                     tensorboard_writer=None, log_dir=None,
+                                     load_checkpoint_fn=None, early_stopping_fn=None, update_learning_rate_fn=None):
         super().initialize_training_loop_fns(train_epoch_fn, validate_fn, configure_optimizers_fn, dump_checkpoint_fn,
-                                             tensorboard_writer, log_dir)
+                                             tensorboard_writer, log_dir,
+                                             load_checkpoint_fn, early_stopping_fn, update_learning_rate_fn)
         self._initialize_log_dir(log_dir)
 
     def retrieve_uncompressed_model_accuracy(self, model):

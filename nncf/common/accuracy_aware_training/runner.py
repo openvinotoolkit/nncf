@@ -143,8 +143,9 @@ class TrainingRunner(ABC):
                                      configure_optimizers_fn: Callable[[], Tuple[OptimizerType, LRSchedulerType]],
                                      dump_checkpoint_fn: Callable[
                                          [TModel, CompressionAlgorithmController, 'TrainingRunner', str], None],
-                                     tensorboard_writer: TensorboardWriterType = None,
-                                     log_dir: Union[str, pathlib.Path] = None):
+                                     tensorboard_writer: Optional[TensorboardWriterType] = None,
+                                     log_dir: Optional[Union[str, pathlib.Path]] = None,
+                                     **kwargs):
         """
         Register the user-supplied functions to be used to control the training process.
 
@@ -201,13 +202,13 @@ class BaseAccuracyAwareTrainingRunner(TrainingRunner, ABC):
         self._compressed_training_history = []
         self._best_checkpoint = None
 
-        self._load_checkpoint_fn = None
-        self._early_stopping_fn = None
-        self._update_learning_rate_fn = None
         self._train_epoch_fn = None
         self._validate_fn = None
         self._configure_optimizers_fn = None
         self._dump_checkpoint_fn = None
+        self._load_checkpoint_fn = None
+        self._early_stopping_fn = None
+        self._update_learning_rate_fn = None
 
         self._log_dir = None
         self._checkpoint_save_dir = None
@@ -267,19 +268,16 @@ class BaseAccuracyAwareTrainingRunner(TrainingRunner, ABC):
     def configure_optimizers(self):
         self.optimizer, self.lr_scheduler = self._configure_optimizers_fn()
 
-    def initialize_training_loop_fns(self, train_epoch_fn: Callable[[CompressionAlgorithmController, TModel,
-                                                                     Optional[OptimizerType],
-                                                                     Optional[LRSchedulerType],
-                                                                     Optional[int]], None],
-                                     validate_fn: Callable[[TModel, Optional[float]], float],
-                                     configure_optimizers_fn: Callable[[], Tuple[OptimizerType, LRSchedulerType]],
-                                     dump_checkpoint_fn: Callable[
-                                         [TModel, CompressionAlgorithmController, TrainingRunner, str], None],
-                                     tensorboard_writer=None, log_dir=None):
+    def initialize_training_loop_fns(self, train_epoch_fn, validate_fn, configure_optimizers_fn, dump_checkpoint_fn,
+                                     tensorboard_writer=None, log_dir=None,
+                                     load_checkpoint_fn=None, early_stopping_fn=None, update_learning_rate_fn=None):
         self._train_epoch_fn = train_epoch_fn
         self._validate_fn = validate_fn
         self._configure_optimizers_fn = configure_optimizers_fn
         self._dump_checkpoint_fn = dump_checkpoint_fn
+        self._load_checkpoint_fn = load_checkpoint_fn
+        self._early_stopping_fn = early_stopping_fn
+        self._update_learning_rate_fn = update_learning_rate_fn
         self._tensorboard_writer = tensorboard_writer
 
     def stop_training(self, compression_controller):
