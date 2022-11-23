@@ -402,6 +402,18 @@ class ONNXIdentityMetatype(ONNXOpMetatype):
     op_names = ['Identity']
 
 
+@ONNX_OPERATION_METATYPES.register()
+class ONNXQuantizeLinearMetatype(ONNXOpMetatype):
+    name = 'QuantizeLinearOp'
+    op_names = ['QuantizeLinear']
+
+
+@ONNX_OPERATION_METATYPES.register()
+class ONNXDequantizeLinearMetatype(ONNXOpMetatype):
+    name = 'DequantizeLinearOp'
+    op_names = ['DequantizeLinear']
+
+
 WEIGHT_LAYER_METATYPES = [ONNXConvolutionMetatype,
                           ONNXConvolutionTransposeMetatype,
                           ONNXLinearMetatype]

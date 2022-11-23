@@ -12,7 +12,7 @@
 """
 
 from copy import deepcopy
-from typing import Dict, List, Tuple
+from typing import Dict, List, Tuple, Optional
 import numpy as np
 import onnx
 
@@ -37,6 +37,7 @@ from nncf.experimental.onnx.hardware.fused_patterns import ONNX_HW_FUSED_PATTERN
 from nncf.experimental.onnx.quantization.default_quantization import DEFAULT_ONNX_QUANT_TRAIT_TO_OP_DICT
 from nncf.experimental.onnx.statistics.collectors import ONNXMeanMinMaxStatisticCollector
 from nncf.experimental.onnx.statistics.collectors import ONNXMinMaxStatisticCollector
+from nncf.experimental.onnx.graph.onnx_graph import ONNXGraph
 
 from nncf.quantization.algorithms.min_max.backend import MinMaxAlgoBackend
 from nncf.quantization.algorithms.min_max.backend import ALGO_BACKENDS
@@ -72,9 +73,9 @@ class ONNXMinMaxAlgoBackend(MinMaxAlgoBackend):
 
     @staticmethod
     def target_point(target_type: TargetType,
-                     target_node_name: str = None,
-                     edge_name: str = None) -> ONNXTargetPoint:
-        return ONNXTargetPoint(target_type, target_node_name, edge_name)
+                     target_node_name: str,
+                     port_id: int) -> ONNXTargetPoint:
+        return ONNXTargetPoint(target_type, target_node_name, port_id)
 
     @staticmethod
     def quantizer_insertion_command(target_point: ONNXTargetPoint,
@@ -85,7 +86,7 @@ class ONNXMinMaxAlgoBackend(MinMaxAlgoBackend):
     def minmax_statistic_collector(use_abs_max: bool,
                                    reduction_shape: ReductionShape,
                                    num_samples: int = None) -> ONNXMinMaxStatisticCollector:
-        return ONNXMinMaxStatisticCollector(use_abs_max, reduction_shape,  num_samples)
+        return ONNXMinMaxStatisticCollector(use_abs_max, reduction_shape, num_samples)
 
     @staticmethod
     def mean_minmax_statistic_collector(use_per_sample_stats: bool,
@@ -100,17 +101,25 @@ class ONNXMinMaxAlgoBackend(MinMaxAlgoBackend):
                                                 window_size)
 
     @staticmethod
-    def get_initializer_value(model: onnx.ModelProto, initializer_name: str) -> np.ndarray:
-        for initializer in model.graph.initializer:
-            if initializer.name == initializer_name:
-                return onnx.numpy_helper.to_array(initializer)
-        raise RuntimeError(
-            'There is no initializer with the name {}'.format(initializer_name))
+    def get_weight_tensor(model: onnx.ModelProto, node: NNCFNode) -> Tuple[str, np.ndarray]:
+        onnx_graph = ONNXGraph(model)
+        node = onnx_graph.get_node_by_name(node.node_name)
+        return onnx_graph.get_weight_tensor(node)
+
+    @staticmethod
+    def get_weight_tensor_port_id(model: onnx.ModelProto, node: NNCFNode) -> Optional[int]:
+        onnx_graph = ONNXGraph(model)
+        node = onnx_graph.get_node_by_name(node.node_name)
+        weight_tensor_name, _ = onnx_graph.get_weight_tensor(node)
+        for i, input_name in enumerate(node.input):
+            if input_name == weight_tensor_name:
+                return i
+        return None
 
     @staticmethod
     def get_tensor_names(node: NNCFNode) -> Tuple[List[str], List[str]]:
         return node.layer_attributes.input_tensor_names, \
-            node.layer_attributes.output_tensor_names
+               node.layer_attributes.output_tensor_names
 
     @staticmethod
     def get_weight_config(config: QuantizerConfig, model: onnx.ModelProto) -> QuantizerConfig:
