@@ -32,9 +32,9 @@ def test_can_print_by_default(_nncf_caplog):
         pass
 
     assert _nncf_caplog.record_tuples == [
-        ('nncf', 20, ' █████             | 1 / 3'),
-        ('nncf', 20, ' ██████████        | 2 / 3'),
-        ('nncf', 20, ' ████████████████  | 3 / 3')
+        ('nncf', 20, ' |█████           | 1 / 3'),
+        ('nncf', 20, ' |██████████      | 2 / 3'),
+        ('nncf', 20, ' |████████████████| 3 / 3')
     ]
 
 
@@ -43,9 +43,9 @@ def test_can_print_by_default__with_enumerate_and_total(_nncf_caplog):
         pass
 
     assert _nncf_caplog.record_tuples == [
-        ('nncf', 20, ' █████             | 1 / 3'),
-        ('nncf', 20, ' ██████████        | 2 / 3'),
-        ('nncf', 20, ' ████████████████  | 3 / 3')
+        ('nncf', 20, ' |█████           | 1 / 3'),
+        ('nncf', 20, ' |██████████      | 2 / 3'),
+        ('nncf', 20, ' |████████████████| 3 / 3')
     ]
 
 
@@ -57,8 +57,8 @@ def test_can_print_with_another_logger(_nncf_caplog):
         pass
 
     assert _nncf_caplog.record_tuples == [
-        ('test', 20, ' ████████          | 1 / 2'),
-        ('test', 20, ' ████████████████  | 2 / 2')
+        ('test', 20, ' |████████        | 1 / 2'),
+        ('test', 20, ' |████████████████| 2 / 2')
     ]
 
 
@@ -101,9 +101,9 @@ def test_can_print_collections_less_than_num_lines(_nncf_caplog):
         pass
 
     assert _nncf_caplog.record_tuples == [
-        ('nncf', 20, 'desc █████             | 1 / 3'),
-        ('nncf', 20, 'desc ██████████        | 2 / 3'),
-        ('nncf', 20, 'desc ████████████████  | 3 / 3')
+        ('nncf', 20, 'desc |█████           | 1 / 3'),
+        ('nncf', 20, 'desc |██████████      | 2 / 3'),
+        ('nncf', 20, 'desc |████████████████| 3 / 3')
     ]
 
 
@@ -112,9 +112,9 @@ def test_can_print_collections_bigger_than_num_lines(_nncf_caplog):
         pass
 
     assert _nncf_caplog.record_tuples == [
-        ('nncf', 20, ' ███████           | 5 / 11'),
-        ('nncf', 20, ' ██████████████    | 10 / 11'),
-        ('nncf', 20, ' ████████████████  | 11 / 11')
+        ('nncf', 20, ' |███████         | 5 / 11'),
+        ('nncf', 20, ' |██████████████  | 10 / 11'),
+        ('nncf', 20, ' |████████████████| 11 / 11')
     ]
 
 
@@ -132,6 +132,6 @@ def test_can_limit_number_of_iterations(_nncf_caplog):
         pass
 
     assert _nncf_caplog.record_tuples == [
-        ('nncf', 20, ' ████████          | 1 / 2'),
-        ('nncf', 20, ' ████████████████  | 2 / 2')
+        ('nncf', 20, ' |████████        | 1 / 2'),
+        ('nncf', 20, ' |████████████████| 2 / 2')
     ]
