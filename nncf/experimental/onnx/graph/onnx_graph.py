@@ -212,20 +212,37 @@ class ONNXGraph:
             node = self.get_nodes_by_output(weight_input)[0]
             metatype = ONNX_OPERATION_METATYPES.get_operator_metatype_by_op_name(node.op_type)
             if metatype == ONNXIdentityMetatype:
-                tensor_name = self.get_initializer(node.input[0]).name
-                return tensor_name, self.get_initializers_value(tensor_name)
+                return self._get_idnetity_tensor(node)
             if metatype == ONNXReshapeMetatype:
-                tensor_name = node.output[0]
-                shape = self.get_initializers_value(node.input[1])
-                tensor_value = self.get_initializers_value(node.input[0])
-                reshaped_tensor_value = tensor_value.reshape(shape)
-                return tensor_name, reshaped_tensor_value
+                return self._get_weight_tensor_with_reshape(node)
             if metatype == ONNXDequantizeLinearMetatype:
-                dequiantizer_input = self.get_node_edge_names(node.name)['input']
-                quantize_linear_node = self.get_nodes_by_output(dequiantizer_input[0])[0]
-                weight_name = self.get_node_edge_names(quantize_linear_node.name)['input'][0]
-                return self.get_initializer(weight_name).name, self.get_initializers_value(weight_name)
+                return self._get_dequantize_branch_weigth(node)
             raise RuntimeError('Could not find the weight value of the node') from e
+
+    def _get_weight_tensor_with_reshape(self, node: onnx.NodeProto):
+        tensor_name = node.output[0]
+        shape = self.get_initializers_value(node.input[1])
+        tensor_value = self.get_initializers_value(node.input[0])
+        reshaped_tensor_value = tensor_value.reshape(shape)
+        return tensor_name, reshaped_tensor_value
+
+    def _get_idnetity_tensor(self, node: onnx.NodeProto):
+        tensor_name = self.get_initializer(node.input[0]).name
+        return tensor_name, self.get_initializers_value(tensor_name)
+
+    def _get_dequantize_branch_weight(self, node: onnx.NodeProto):
+        dequiantizer_input = self.get_node_edge_names(node.name)['input']
+        quantize_linear_node = self.get_nodes_by_output(dequiantizer_input[0])[0]
+        quantize_linear_weight_name = self.get_node_edge_names(quantize_linear_node.name)['input'][0]
+        try:
+            return self.get_initializer(quantize_linear_weight_name).name, self.get_initializers_value(
+                quantize_linear_weight_name)
+        except RuntimeError as e:
+            node_before_q_l = self.get_nodes_by_output(quantize_linear_weight_name)[0]
+            metatype = ONNX_OPERATION_METATYPES.get_operator_metatype_by_op_name(node_before_q_l.op_type)
+            if metatype == ONNXReshapeMetatype:
+                return self._get_weight_tensor_with_reshape(node_before_q_l)
+            quantize_linear_weight_name = self.get_node_edge_names(quantize_linear_node.name)['input'][0]
 
     def get_node_index(self, node_name: str) -> int:
         """
