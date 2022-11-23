@@ -158,6 +158,16 @@ class MinMaxAlgoBackend(ABC):
         """
 
     @staticmethod
+    def get_channel_axis(model: TModel, node: NNCFNode) -> int:
+        """
+        Returns node's weight's channel for per-channel quantization.
+
+        :param model: Backend-specific model for the initializer finding.
+        :param node: NNCFNode to find its weight input port ID.
+        :return: The channel axis.
+        """
+
+    @staticmethod
     @abstractmethod
     def get_tensor_names(node: NNCFNode) -> Tuple[List[str], List[str]]:
         """

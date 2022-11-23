@@ -101,10 +101,9 @@ class ONNXFBCAlgoBackend(FBCAlgoBackend):
     @staticmethod
     def get_bias_value(model: onnx.ModelProto, node: NNCFNode) -> np.ndarray:
         onnx_graph = ONNXGraph(model)
-        node = onnx_graph.get_node_by_name(node.node_name)
-        # We uses 2nd value from the tensor names
-        # because of the bias tensor placement on this position.
-        bias_input_name = node.input[2]
+        onnx_node = onnx_graph.get_node_by_name(node.node_name)
+        bias_port_id = onnx_graph.get_bias_tensor_port_id(onnx_node)
+        bias_input_name = onnx_node.input[bias_port_id]
         try:
             return onnx_graph.get_initializers_value(bias_input_name)
         except RuntimeError as e:
@@ -120,7 +119,9 @@ class ONNXFBCAlgoBackend(FBCAlgoBackend):
 
     @staticmethod
     def get_bias_port_id(model: onnx.ModelProto, node: NNCFNode) -> int:
-        return 2
+        onnx_graph = ONNXGraph(model)
+        onnx_node = onnx_graph.get_node_by_name(node.node_name)
+        return onnx_graph.get_bias_tensor_port_id(onnx_node)
 
     @staticmethod
     def process_model_output(raw_data: Dict, output_name: str) -> ONNXNNCFTensor:
@@ -129,10 +130,11 @@ class ONNXFBCAlgoBackend(FBCAlgoBackend):
     @staticmethod
     def is_quantized_weights(node: NNCFNode, model: onnx.ModelProto) -> bool:
         onnx_graph = ONNXGraph(model)
+        onnx_node = onnx_graph.get_node_by_name(node.node_name)
         # We assume that the weight is on the first-index
-        weight_input_index = 1
+        weight_port_id = onnx_graph.get_weight_tensor_port_id(onnx_node)
         input_edge_names = onnx_graph.get_node_edge_names(node.node_name)['input']
-        nodes_after_weight = onnx_graph.get_nodes_by_output(input_edge_names[weight_input_index])
+        nodes_after_weight = onnx_graph.get_nodes_by_output(input_edge_names[weight_port_id])
         if not nodes_after_weight:
             return False
         # We assume that there is only one node after weight

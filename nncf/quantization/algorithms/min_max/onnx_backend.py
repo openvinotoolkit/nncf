@@ -103,18 +103,20 @@ class ONNXMinMaxAlgoBackend(MinMaxAlgoBackend):
     @staticmethod
     def get_weight_tensor(model: onnx.ModelProto, node: NNCFNode) -> Tuple[str, np.ndarray]:
         onnx_graph = ONNXGraph(model)
-        node = onnx_graph.get_node_by_name(node.node_name)
-        return onnx_graph.get_weight_tensor(node)
+        onnx_node = onnx_graph.get_node_by_name(node.node_name)
+        return onnx_graph.get_weight_tensor(onnx_node)
 
     @staticmethod
     def get_weight_tensor_port_id(model: onnx.ModelProto, node: NNCFNode) -> Optional[int]:
         onnx_graph = ONNXGraph(model)
-        node = onnx_graph.get_node_by_name(node.node_name)
-        weight_tensor_name, _ = onnx_graph.get_weight_tensor(node)
-        for i, input_name in enumerate(node.input):
-            if input_name == weight_tensor_name:
-                return i
-        return None
+        onnx_node = onnx_graph.get_node_by_name(node.node_name)
+        return onnx_graph.get_weight_tensor_port_id(onnx_node)
+
+    @staticmethod
+    def get_weight_tensor_quantization_axis(model: onnx.ModelProto, node: NNCFNode) -> Optional[int]:
+        onnx_graph = ONNXGraph(model)
+        onnx_node = onnx_graph.get_node_by_name(node.node_name)
+        return onnx_graph.get_channel_axis(onnx_node)
 
     @staticmethod
     def get_tensor_names(node: NNCFNode) -> Tuple[List[str], List[str]]:

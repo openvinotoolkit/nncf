@@ -11,8 +11,7 @@
  limitations under the License.
 """
 
-from typing import Union
-from typing import List
+from typing import Union, List, Optional
 
 import numpy as np
 
@@ -44,18 +43,25 @@ def calculate_scale_level(max_val: Union[float, np.ndarray], min_val: Union[floa
     return (max_val - min_val) / 2 ** num_bits
 
 
-def calculate_weight_quantizer_parameters(weight_tensor: np.ndarray, quantizer_config: QuantizerConfig) -> \
-        QuantizerLayerParameters:
+def calculate_weight_quantizer_parameters(weight_tensor: np.ndarray, quantizer_config: QuantizerConfig,
+                                          axis: Optional[int]) -> QuantizerLayerParameters:
     """
     Calculates Quantizer/Dequantizer layer attributes for weight quantizer such as scale, zero_points and
     quantization mode: symmetric, asymmetric.
+
+    :param weight_tensor: Weight tensor to calculate quantizer attributes.
+    :param quantizer_config: Config of Quantizer.
+    :param axis: In per-channel case - the axis for the quantization. In per-tensor - ignored.
+    :return: Parameters of Quantizer.
     """
     per_channel = quantizer_config.per_channel
     num_bits = quantizer_config.num_bits
     mode = quantizer_config.mode
 
     if per_channel:
-        axes = tuple(range(len(weight_tensor.shape))[1:])
+        axes = list(range(len(weight_tensor.shape)))
+        axes.pop(axis)
+        axes = tuple(axes)
     else:
         axes = None
     input_high = np.amax(weight_tensor, axis=axes)

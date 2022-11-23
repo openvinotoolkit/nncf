@@ -37,9 +37,9 @@ class OpWeightDef:
         """
         Initializes a definition of the weight.
 
-        :param port_id: Zero-based argument number of the operation to
-            which this weight tensor corresponds.
-        :param channel_axis: Channel axis for per-channel quantization.
+        :param weight_port_id: Input port of the node's weight.
+        :param channel_axis: Axis for per-channel quantization.
+        :param bias_port_id: Input port of the node's bias.
         """
         self.weight_port_id = weight_port_id
         self.channel_axis = channel_axis
@@ -47,7 +47,7 @@ class OpWeightDef:
 
 
 class ONNXOpWithWeightsMetatype(ONNXOpMetatype):
-    weight_definition = None  # type: List[OpWeightDef]
+    weight_definition = None  # type: OpWeightDef
 
 
 @ONNX_OPERATION_METATYPES.register()

@@ -22,6 +22,7 @@ from nncf.experimental.onnx.model_normalizer import ONNXModelNormalizer
 from nncf.experimental.onnx.graph.metatypes.onnx_metatypes import ONNX_OPERATION_METATYPES
 from nncf.experimental.onnx.graph.metatypes.onnx_metatypes import ONNXIdentityMetatype
 from nncf.experimental.onnx.graph.metatypes.onnx_metatypes import ONNXReshapeMetatype
+from nncf.experimental.onnx.graph.metatypes.onnx_metatypes import ONNXQuantizeLinearMetatype
 from nncf.experimental.onnx.graph.metatypes.onnx_metatypes import WEIGHT_LAYER_METATYPES
 
 
@@ -204,35 +205,69 @@ class ONNXGraph:
         :param node: Node, in which the weight tensor finally applied.
         :return: Weight tensor name and its value.
         """
-        nodes = deque([node])
-        while nodes:
-            current_node = nodes.popleft()
-            node_parents = self.get_parents(current_node)
-            nodes.extendleft(node_parents)
-            metatype = ONNX_OPERATION_METATYPES.get_operator_metatype_by_op_name(current_node.op_type)
-            if metatype == ONNXIdentityMetatype:
-                return self._get_identity_tensor(current_node)
-            if metatype == ONNXReshapeMetatype:
-                return self._get_weight_tensor_with_reshape(current_node)
-            else:
+        try:
+            weight_port_id = self.get_weight_tensor_port_id(node)
+            weight_input = self.get_node_edge_names(node.name)['input'][weight_port_id]
+            return self.get_initializer(weight_input).name, self.get_initializers_value(weight_input)
+        except RuntimeError:
+            weight_port_id = self.get_weight_tensor_port_id(node)
+            parent_node_on_weight_port = self.get_parents(node)[weight_port_id]
+            nodes = deque([parent_node_on_weight_port])
+            while nodes:
                 try:
-                    weight_port_id = self._get_weight_tensor_port_id(current_node)
-                    if weight_port_id == -1:
-                        raise RuntimeError(f'The {metatype} does not have weight port id')
-                    weight_input = self.get_node_edge_names(current_node.name)['input'][weight_port_id]
-                    return self.get_initializer(weight_input).name, self.get_initializers_value(weight_input)
+                    current_node = nodes.popleft()
+                    node_parents = self.get_parents(current_node)
+                    nodes.extendleft(node_parents)
+                    metatype = ONNX_OPERATION_METATYPES.get_operator_metatype_by_op_name(current_node.op_type)
+                    if metatype in [ONNXIdentityMetatype, ONNXQuantizeLinearMetatype]:
+                        return self._get_tensor_from_zero_input(current_node)
+                    if metatype == ONNXReshapeMetatype:
+                        return self._get_weight_tensor_with_reshape(current_node)
+                    else:
+                        weight_port_id = self.get_weight_tensor_port_id(current_node)
+                        if weight_port_id is None:
+                            # The node does not have weight
+                            continue
+                        weight_input = self.get_node_edge_names(current_node.name)['input'][weight_port_id]
+                        return self.get_initializer(weight_input).name, self.get_initializers_value(weight_input)
                 except RuntimeError:
                     continue
         raise RuntimeError('Could not find the weight value of the node')
 
-    def _get_weight_tensor_port_id(self, node: onnx.NodeProto) -> int:
+    def _get_param_from_weight_definitions(self, node: onnx.NodeProto, parameter: str) -> Optional[int]:
         metatype = ONNX_OPERATION_METATYPES.get_operator_metatype_by_op_name(node.op_type)
         if metatype in WEIGHT_LAYER_METATYPES:
-            weight_port_id = metatype.weight_definitions.weight_port_id
-            if weight_port_id is not None:
-                return weight_port_id
-            raise RuntimeError('Dynamic weight index is not supported. e.g. MatMul')
-        return -1
+            parameter = metatype.weight_definitions.__getattribute__(parameter)
+            if parameter is not None:
+                return parameter
+            raise RuntimeError(f'The metatype {metatype} does not have {parameter} attribute')
+
+    def get_weight_tensor_port_id(self, node: onnx.NodeProto) -> Optional[int]:
+        """
+        Returns input port id, where a weight tensor should output.
+
+        :param node: Node, for which input port id is returned,
+        :return: input port id, where a weight tensor should output.
+        """
+        return self._get_param_from_weight_definitions(node, 'weight_port_id')
+
+    def get_channel_axis(self, node: onnx.NodeProto) -> Optional[int]:
+        """
+        Returns channel axis for per-channel quantization.
+
+        :param node: Node, for which channel axis id is returned,
+        :return: Channel axis for per-channel quantization.
+        """
+        return self._get_param_from_weight_definitions(node, 'channel_axis')
+
+    def get_bias_tensor_port_id(self, node: onnx.NodeProto) -> Optional[int]:
+        """
+        Returns input port id, where a bias tensor should output.
+
+        :param node: Node, for which input port id is returned,
+        :return: input port id, where a weight bias should output.
+        """
+        return self._get_param_from_weight_definitions(node, 'bias_port_id')
 
     def _get_weight_tensor_with_reshape(self, node: onnx.NodeProto) -> Tuple[str, np.ndarray]:
         tensor_name = node.output[0]
@@ -241,7 +276,7 @@ class ONNXGraph:
         reshaped_tensor_value = tensor_value.reshape(shape)
         return tensor_name, reshaped_tensor_value
 
-    def _get_identity_tensor(self, node: onnx.NodeProto) -> Tuple[str, np.ndarray]:
+    def _get_tensor_from_zero_input(self, node: onnx.NodeProto) -> Tuple[str, np.ndarray]:
         tensor_name = self.get_initializer(node.input[0]).name
         return tensor_name, self.get_initializers_value(tensor_name)
 
@@ -358,6 +393,12 @@ class ONNXGraph:
         return onnx.TensorProto.DataType.Name(self.get_edge_dtype(edge_name))
 
     def get_parents(self, node: onnx.NodeProto) -> List[onnx.NodeProto]:
+        """
+        Returns parents of the node.
+
+        :param node_name: The child node.
+        :return: All children nodes.
+        """
         output = []
         for inp in node.input:
             output.extend(self.get_nodes_by_output(inp))
@@ -367,7 +408,7 @@ class ONNXGraph:
         """
         Returns children of the node.
 
-        :param node_name: The parent node.
+        :param node: The parent node.
         :return: All children nodes.
         """
         output = []

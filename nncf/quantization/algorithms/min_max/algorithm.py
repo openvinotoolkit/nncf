@@ -343,7 +343,8 @@ class MinMaxQuantization(Algorithm):
                 except RuntimeError as er:
                     nncf_logger.exception(er)
                     continue
-                parameters = calculate_weight_quantizer_parameters(weight_tensor, weight_quantizer_config)
+                axis = self._backend_entity.get_weight_tensor_quantization_axis(model, node)
+                parameters = calculate_weight_quantizer_parameters(weight_tensor, weight_quantizer_config, axis)
 
                 command = self._backend_entity.quantizer_insertion_command(quantization_target_point, parameters)
                 transformation_commands.append(command)
