@@ -285,6 +285,7 @@ REF_COMPRESSION_STATE_FOR_TWO_CONV = {
                 }
             },
             'progressivity_of_elasticity': ['kernel', 'width', 'depth'],
+            'bn_adaptation_params': {'num_bn_adaptation_samples': 2},
         }
     },
     'ctrl_state': {
