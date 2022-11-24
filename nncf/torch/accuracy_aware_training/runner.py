@@ -70,7 +70,8 @@ class PTAccuracyAwareTrainingRunner(BaseAccuracyAwareTrainingRunner):
         if self._update_learning_rate_fn is not None:
             self._update_learning_rate_fn(self.lr_scheduler,
                                           self.training_epoch_count,
-                                          self.current_val_metric_value)
+                                          self.current_val_metric_value,
+                                          self.current_loss)
         else:
             if self.lr_scheduler is not None and self.lr_updates_needed:
                 self.lr_scheduler.step(

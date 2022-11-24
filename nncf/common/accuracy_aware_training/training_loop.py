@@ -435,7 +435,7 @@ class AccuracyAwareTrainingMode:
 
 def create_accuracy_aware_training_loop(nncf_config: NNCFConfig,
                                         compression_ctrl: CompressionAlgorithmController,
-                                        **additional_runner_args) -> TrainingLoop:
+                                        **additional_runner_args) -> BaseEarlyExitCompressionTrainingLoop:
     """
     Creates an accuracy aware training loop corresponding to NNCFConfig and CompressionAlgorithmController.
     :param: nncf_config: An instance of the NNCFConfig.
