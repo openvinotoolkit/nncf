@@ -14,6 +14,10 @@ from typing import Any
 from typing import Dict
 from typing import List
 from typing import NoReturn
+from typing import Optional
+from typing import Tuple
+
+from nncf.experimental.torch.nas.bootstrapNAS.elasticity.onnx_export import NASExporter
 
 from nncf.api.compression import CompressionLoss
 from nncf.api.compression import CompressionScheduler
@@ -82,7 +86,7 @@ class ProgressiveShrinkingController(BNASTrainingController):
         else:
             nncf_logger.info("Stage LR scheduler in use")
             lr_scheduler = StageLRScheduler(optimizer, train_iters)
-        self._scheduler.set_lr_scheduler(lr_scheduler)
+        self._scheduler.lr_scheduler = lr_scheduler
 
     @property
     def lr_schedule_config(self) -> str:
@@ -144,7 +148,8 @@ class ProgressiveShrinkingController(BNASTrainingController):
         Performs some action on active subnet or supernet before validation. For instance, it can be the batchnorm
         adaptation to achieve the best accuracy on validation.
         """
-        self._run_batchnorm_adaptation(self._target_model)
+        if self._bn_adaptation:
+            self._run_batchnorm_adaptation(self._target_model)
 
     def get_total_num_epochs(self) -> int:
         """
@@ -230,7 +235,35 @@ class ProgressiveShrinkingController(BNASTrainingController):
         state[self._ps_state_names.LR_GLOBAL_SCHEDULE_STATE] = self._lr_schedule_config
         return state
 
+    def export_model(self, save_path: str,
+                     save_format: Optional[str] = None,
+                     input_names: Optional[List[str]] = None,
+                     output_names: Optional[List[str]] = None,
+                     model_args: Optional[Tuple[Any, ...]] = None) -> None:
+        """
+        Exports the compressed model to the specified format for deployment.
+
+        Makes method-specific preparations of the model, (e.g. removing auxiliary
+        layers that were used for the model compression), then exports the model to
+        the specified path.
+
+        :param save_path: The path where the model will be saved.
+        :param save_format: Saving format. The default format will
+            be used if `save_format` is not specified.
+        :param input_names: Names to be assigned to the input tensors of the model.
+        :param output_names: Names to be assigned to the output tensors of the model.
+        :param model_args: Tuple of additional positional and keyword arguments
+            which are required for the model's forward during export. Should be
+            specified in the following format:
+                - (a, b, {'x': None, 'y': y}) for positional and keyword arguments.
+                - (a, b, {}) for positional arguments only.
+                - ({'x': None, 'y': y},) for keyword arguments only.
+        """
+        self.prepare_for_export()
+        exporter = NASExporter(self.model, input_names, output_names, model_args)
+        exporter.export_model(save_path, save_format)
+
     def _run_batchnorm_adaptation(self, model):
         if self._bn_adaptation is None:
-            raise RuntimeError("Missing initialization of Batchnorm Adaptation algorithm")
+            nncf_logger.warning("Batchnorm adaptation requested but it hasn't been enabled for training.")
         self._bn_adaptation.run(model)

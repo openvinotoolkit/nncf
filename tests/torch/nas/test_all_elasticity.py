@@ -13,6 +13,7 @@
 
 import pytest
 import torch
+from nncf.experimental.torch.nas.bootstrapNAS.elasticity.onnx_export import NASExporter
 from torch.backends import cudnn
 
 from examples.torch.common.models.classification.resnet_cifar10 import resnet50_cifar10
@@ -284,6 +285,7 @@ REF_COMPRESSION_STATE_FOR_TWO_CONV = {
                 }
             },
             'progressivity_of_elasticity': ['kernel', 'width', 'depth'],
+            'bn_adaptation_params': {'num_bn_adaptation_samples': 2},
         }
     },
     'ctrl_state': {
@@ -433,3 +435,28 @@ def test_can_restore_and_get_the_same_output():
     ref_model.mode = ThreeConvModelMode.WIDTH_STAGE
     ref_output = ref_model(input_)
     assert torch.equal(actual_output, ref_output)
+
+
+###########################
+# Export to ONNX
+###########################
+
+def test_export_to_onnx(tmp_path, mocker):
+    _, ctrl, _ = create_bootstrap_nas_training_algo('resnet18')
+    multi_elasticity_handler = ctrl.multi_elasticity_handler
+    export_spy = mocker.spy(NASExporter, '_torch_export_call')
+
+    multi_elasticity_handler.disable_all()
+    multi_elasticity_handler.enable_elasticity(ElasticityDim.KERNEL)
+    multi_elasticity_handler.activate_minimum_subnet()
+    ctrl.export_model(str(tmp_path / 'kernel.onnx'))
+
+    multi_elasticity_handler.enable_elasticity(ElasticityDim.DEPTH)
+    multi_elasticity_handler.activate_minimum_subnet()
+    ctrl.export_model(str(tmp_path / 'depth.onnx'))
+
+    multi_elasticity_handler.enable_elasticity(ElasticityDim.WIDTH)
+    multi_elasticity_handler.width_handler.width_num_params_indicator = 1
+    multi_elasticity_handler.activate_minimum_subnet()
+    ctrl.export_model(str(tmp_path / 'width.onnx'))
+    assert export_spy.call_count == 3

@@ -75,5 +75,5 @@ class ProgressBar:
             num_empty = self._width - num_filled
             filled = '█' * num_filled
             empty = ' ' * num_empty
-            self._logger.info('{desc} {filled} {empty} | {index} / {total}'.format(
+            self._logger.info('{desc} |{filled}{empty}| {index} / {total}'.format(
                 desc=self._desc, filled=filled, empty=empty, index=self._index, total=self._total))

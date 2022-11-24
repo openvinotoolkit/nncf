@@ -13,6 +13,8 @@
 
 from typing import Dict, List, Optional, TypeVar, Union
 
+from copy import deepcopy
+
 from nncf import Dataset
 from nncf.common.hardware.config import HWConfigType
 from nncf.common.quantization.structs import QuantizationPreset
@@ -136,28 +138,19 @@ class PostTrainingQuantization(Algorithm):
             return ONNXStatisticsAggregator(dataset)
         return None
 
-    def _get_prepared_model_for_compression(self, model: TModel, backend: BackendType) -> TModel:
-        if backend == BackendType.ONNX:
-            from nncf.experimental.onnx.model_normalizer import \
-                ONNXModelNormalizer
-            return ONNXModelNormalizer.normalize_model(model, convert_opset_version=True)
-
-        return None
-
     def _apply(self,
                model: TModel,
                statistic_points: Optional[StatisticPointsContainer] = None,
                dataset: Optional[Dataset] = None) -> TModel:
 
-        modified_model = model
+        modified_model = deepcopy(model)
         if statistic_points is None:
-            backend = get_backend(model)
+            backend = get_backend(modified_model)
 
             # TODO (KodiaqQ): Remove after ONNX is removed from experimental
             if backend == BackendType.ONNX:
                 nncf_logger.warning(
                     'You are using experimental ONNX backend for the Post-training quantization.')
-            modified_model = self._get_prepared_model_for_compression(modified_model, backend)
 
             statistics_aggregator = self._create_statistics_aggregator(dataset, backend)
             for algorithm in self.algorithms:

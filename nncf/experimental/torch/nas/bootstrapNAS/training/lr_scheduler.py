@@ -15,6 +15,7 @@ from abc import abstractmethod
 import math
 from typing import Any
 from typing import Dict
+from typing import List
 from typing import Optional
 from typing import TypeVar
 
@@ -106,6 +107,8 @@ class BaseLRScheduler(BaseCompressionScheduler):
     def from_state(cls, state: Dict[str, Any], optimizer: OptimizerType):
         return cls(optimizer, **state)
 
+    def get_last_lr(self) -> List[Any]:
+        return [group['lr'] for group in self._optimizer.param_groups]
 
 class GlobalLRScheduler(BaseLRScheduler):
     """

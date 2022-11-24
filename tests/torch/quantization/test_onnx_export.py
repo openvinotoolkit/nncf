@@ -79,7 +79,8 @@ def test_onnx_export_to_quantize_dequantize(tmp_path):
     nncf_config = get_config_for_export_mode(should_be_onnx_standard=True)
     nncf_config['target_device'] = 'TRIAL'
     onnx_model_proto = load_exported_onnx_version(nncf_config, model,
-                                                  path_to_storage_dir=tmp_path)
+                                                  path_to_storage_dir=tmp_path,
+                                                  save_format='onnx_13')
     num_q = 0
     num_dq = 0
     num_model_nodes = 0
@@ -136,11 +137,7 @@ def test_onnx_export_to_quantize_dequantize_per_channel(per_channel: bool,
     quantizer._export_mode = export_mode
 
     x = torch.rand(INPUT_TENSOR_SHAPE)
-    if quantizer.per_channel and export_mode is QuantizerExportMode.ONNX_QUANTIZE_DEQUANTIZE_PAIRS:
-        with pytest.raises(RuntimeError):
-            quantizer.run_export_quantization(x)
-    else:
-        quantizer.run_export_quantization(x)
+    quantizer.run_export_quantization(x)
 
 
 class TargetCompressionIdxTestModel(torch.nn.Module):

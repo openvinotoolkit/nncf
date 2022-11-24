@@ -70,7 +70,7 @@ from tests.torch.test_models.synthetic import PoolUnPool
 from tests.torch.test_models.synthetic import ReshapeModel
 from tests.torch.test_models.synthetic import TransposeModel
 from tests.common.graph.nx_graph import compare_nx_graph_with_reference
-from tests.common.paths import TEST_ROOT
+from tests.shared.paths import TEST_ROOT
 
 
 def get_basic_quantization_config(quantization_type='symmetric', input_sample_sizes=None, input_info: Dict = None):

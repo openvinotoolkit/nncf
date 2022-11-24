@@ -88,8 +88,7 @@ class CompressionBuilder:
             statistic_points = algorithm.get_statistic_points(_model)
             statistics_aggregator.register_stastistic_points(statistic_points)
 
-        model_transformer = self._create_model_transformer(_model, backend)
-        statistics_aggregator.collect_statistics(model_transformer)
+        statistics_aggregator.collect_statistics(_model)
 
         for algorithm in self.algorithms:
             modified_model = algorithm.apply(_model, statistics_aggregator.statistic_points)

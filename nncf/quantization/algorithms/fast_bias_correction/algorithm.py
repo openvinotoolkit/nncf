@@ -15,7 +15,6 @@ from typing import Dict, Tuple, List, TypeVar, Union, Optional
 
 import numpy as np
 from nncf import Dataset
-from nncf.common.graph import NNCFGraph
 from nncf.common.graph import NNCFNode
 from nncf.common.tensor import NNCFTensor
 from nncf.common.utils.logger import logger as nncf_logger
@@ -62,7 +61,6 @@ class FastBiasCorrectionParameters(AlgorithmParameters):
 
 
 class FastBiasCorrection(Algorithm):
-
     """
     Post-training FastBiasCorrection algorithm implementation
 
@@ -131,7 +129,7 @@ class FastBiasCorrection(Algorithm):
             if not self._is_node_with_bias(node):
                 nncf_logger.debug('Skipping node {} because there is no bias'.format(node_name))
                 continue
-            if not self._is_quantized_weights(node, nncf_graph):
+            if not self._backend_entity.is_quantized_weights(node, model):
                 nncf_logger.debug('Skipping node {} because weights was not quantized'.format(node_name))
                 continue
 
@@ -155,17 +153,16 @@ class FastBiasCorrection(Algorithm):
                 output_fp=output_fp,
                 output_name=output_name)
 
-            # We uses 2nd value from the tensor names
-            # because of the bias tensor placement on this position.
-            bias_tensor_name = input_tensor_names[2]
-            current_bias = self._backend_entity.get_initializer_value(model, bias_tensor_name)
+            current_bias = self._backend_entity.get_bias_value(model, node)
             updated_bias = current_bias + bias_shift
             magnitude = self._get_bias_shift_magnitude(current_bias, updated_bias)
 
             if magnitude < self.threshold:
                 nncf_logger.debug(f'{node_name} bias would be changed')
+                bias_port_id = self._backend_entity.get_bias_port_id(model, node)
                 target_point = self._backend_entity.target_point(TargetType.LAYER,
-                                                                 node.node_name)
+                                                                 node.node_name,
+                                                                 bias_port_id)
                 bias_correction_command = self._backend_entity.bias_correction_command(target_point,
                                                                                        updated_bias,
                                                                                        self.threshold)
@@ -184,9 +181,10 @@ class FastBiasCorrection(Algorithm):
         :param node_name: name of the current layer
         :return: collected mean tensor data and shape for the further bias calculation
         """
+
         def input_filter_func(point):
             return FastBiasCorrection in point.algorithm_to_tensor_collectors and \
-                point.target_point.type == TargetType.PRE_LAYER_OPERATION
+                   point.target_point.type == TargetType.PRE_LAYER_OPERATION
 
         input_fp = []
         input_shape = []
@@ -206,9 +204,10 @@ class FastBiasCorrection(Algorithm):
         :param node_name: name of the current layer
         :return: collected mean tensor data for the further bias calculation
         """
+
         def output_filter_func(point):
             return FastBiasCorrection in point.algorithm_to_tensor_collectors and \
-                point.target_point.type == TargetType.POST_LAYER_OPERATION
+                   point.target_point.type == TargetType.POST_LAYER_OPERATION
 
         output_fp = []
         for tensor_collector in statistic_points.get_algo_statistics_for_node(
@@ -303,20 +302,6 @@ class FastBiasCorrection(Algorithm):
         return len(input_tensor_names) > 2
 
     @staticmethod
-    def _is_quantized_weights(node: NNCFNode, nncf_graph: NNCFGraph) -> bool:
-        """
-        Checks whether the node is quantised or not
-
-        :param node: NNCFNode with the attributes
-        :param nncf_graph: NNCFGraph for the traverce
-        :return: boolean indicating whether the node has a quantized weights or not
-        """
-        # TODO (KodiaqQ): Should be updated to take account of backend specifics
-        input_nodes = nncf_graph.get_previous_nodes(node)
-        weight_dequantizer = input_nodes[1]
-        return weight_dequantizer.node_type == 'DequantizeLinear'
-
-    @staticmethod
     def _get_bias_shift_magnitude(current_bias_value: np.ndarray, updated_bias_value: np.ndarray) -> float:
         """
         Calculates bias shift magnitude based on the current and updated values
@@ -341,13 +326,13 @@ class FastBiasCorrection(Algorithm):
         for node in biased_nodes:
             if not self._is_node_with_bias(node):
                 continue
-            input_tensor_names, _ = self._backend_entity.get_tensor_names(node)
-            edge_name = input_tensor_names[0]
+            input_port_id, output_port_id = self._backend_entity.get_activation_port_ids_for_bias_node(model, node)
             pre_layer_statistic_point = self._backend_entity.target_point(TargetType.PRE_LAYER_OPERATION,
                                                                           node.node_name,
-                                                                          edge_name)
+                                                                          input_port_id)
             post_layer_statistic_point = self._backend_entity.target_point(TargetType.POST_LAYER_OPERATION,
-                                                                           node.node_name)
+                                                                           node.node_name,
+                                                                           output_port_id)
             channel_axis = self._backend_entity.channel_axis_by_types[node.node_type]
 
             self._add_statistic_point(statistic_container,

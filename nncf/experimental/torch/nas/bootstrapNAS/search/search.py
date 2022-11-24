@@ -185,7 +185,6 @@ class SearchAlgorithm(BaseSearchAlgorithm):
         super().__init__()
         self._model = model
         self._elasticity_ctrl = elasticity_ctrl
-        self._elasticity_ctrl.multi_elasticity_handler.activate_maximum_subnet()
         search_config = nncf_config.get('bootstrapNAS', {}).get('search', {})
         self.num_obj = None
         self.search_params = SearchParams.from_dict(search_config)
@@ -217,7 +216,8 @@ class SearchAlgorithm(BaseSearchAlgorithm):
         self._result = None
         bn_adapt_params = search_config.get('batchnorm_adaptation', {})
         bn_adapt_algo_kwargs = get_bn_adapt_algo_kwargs(nncf_config, bn_adapt_params)
-        self.bn_adaptation = BatchnormAdaptationAlgorithm(**bn_adapt_algo_kwargs)
+        self.bn_adaptation = BatchnormAdaptationAlgorithm(**bn_adapt_algo_kwargs) if bn_adapt_algo_kwargs else None
+
         self._problem = None
         self.checkpoint_save_dir = None
         self.type_var = np.int
@@ -308,6 +308,7 @@ class SearchAlgorithm(BaseSearchAlgorithm):
         :return: Elasticity controller with discovered sub-network, sub-network configuration and
                 its performance metrics.
         """
+        self._elasticity_ctrl.multi_elasticity_handler.activate_maximum_subnet()
         nncf_logger.info("Searching for optimal subnet.")
         if ref_acc != 100:
             self.search_params.ref_acc = ref_acc
@@ -331,6 +332,8 @@ class SearchAlgorithm(BaseSearchAlgorithm):
                                                                             self._elasticity_ctrl)
         self._evaluator_handlers.append(self._efficiency_evaluator_handler)
         self._evaluator_handlers.append(self._accuracy_evaluator_handler)
+        self.maximal_vals = [evaluator_handler.current_value for evaluator_handler
+                                  in self._evaluator_handlers]
 
         self._problem = SearchProblem(self)
         self._result = minimize(self._problem, self._algorithm,
@@ -341,15 +344,19 @@ class SearchAlgorithm(BaseSearchAlgorithm):
 
         if self.best_config is not None:
             self._elasticity_ctrl.multi_elasticity_handler.activate_subnet_for_config(self.best_config)
-            self.bn_adaptation.run(self._model)
+            if self.bn_adaptation is not None:
+                self.bn_adaptation.run(self._model)
+            ret_vals = self.best_vals
         else:
             nncf_logger.warning("Couldn't find a subnet that satisfies the requirements. Returning maximum subnet.")
             self._elasticity_ctrl.multi_elasticity_handler.activate_maximum_subnet()
-            self.bn_adaptation.run(self._model)
+            if self.bn_adaptation is not None:
+                self.bn_adaptation.run(self._model)
             self.best_config = self._elasticity_ctrl.multi_elasticity_handler.get_active_config()
             self.best_vals = [None, None]
+            ret_vals = self.maximal_vals
 
-        return self._elasticity_ctrl, self.best_config, [abs(elem) for elem in self.best_vals if elem is not None]
+        return self._elasticity_ctrl, self.best_config, [abs(elem) for elem in ret_vals if elem is not None]
 
     def visualize_search_progression(self, filename='search_progression') -> NoReturn:
         """
@@ -464,7 +471,7 @@ class SearchProblem(Problem):
             for evaluator_handler in self._evaluator_handlers:
                 in_cache, value = evaluator_handler.retrieve_from_cache(tuple(x_i))
                 if not in_cache:
-                    if not bn_adaption_executed:
+                    if not bn_adaption_executed and self._search.bn_adaptation is not None:
                         self._search.bn_adaptation.run(self._model)
                         bn_adaption_executed = True
                     value = evaluator_handler.evaluate_and_add_to_cache_from_pymoo(tuple(x_i))

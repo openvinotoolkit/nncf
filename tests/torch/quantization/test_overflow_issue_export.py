@@ -332,7 +332,7 @@ def test_are_qdq_exported_per_tensor_weights_tensors_clipped(tmp_path):
         assert quantizer.quantizer_module_ref._half_range  # pylint: disable=protected-access
 
     onnx_checkpoint_path = str(tmp_path / 'model.onnx')
-    compression_ctrl.export_model(onnx_checkpoint_path, input_names=['input'])
+    compression_ctrl.export_model(onnx_checkpoint_path, input_names=['input'], save_format='onnx_13')
 
     onnx_model = onnx.load(onnx_checkpoint_path)  # pylint: disable=no-member
 
@@ -372,7 +372,7 @@ def test_is_pytorch_output_the_same_as_onnx_qdq_overflow_fix_applied(tmp_path, m
     compressed_model, compression_ctrl = create_compressed_model_and_algo_for_test(model, nncf_config)
 
     onnx_checkpoint_path = str(tmp_path / 'model.onnx')
-    compression_ctrl.export_model(onnx_checkpoint_path)
+    compression_ctrl.export_model(onnx_checkpoint_path, save_format='onnx_13')
     input_tensors = [np.random.normal(size=[1, 1, 20, 20]), np.random.uniform(size=[1, 1, 20, 20]),
                      100 * np.random.normal(size=[1, 1, 20, 20]), 100 * np.random.uniform(size=[1, 1, 20, 20])]
     for input_tensor in input_tensors:
