@@ -70,7 +70,7 @@ class TestQuantizerPropagationStateGraph:
     @pytest.fixture()
     def mock_qp_graph():
         ip_graph = get_ip_graph_for_test(get_two_branch_mock_model_graph())
-        qpsg = QPSG(ip_graph, [])
+        qpsg = QPSG(ip_graph)
 
         qpsg.nodes['5 /F_0'][QPSG.OPERATOR_METATYPE_NODE_ATTR] = CatTestMetatype
         qpsg.skip_check = False
@@ -80,7 +80,7 @@ class TestQuantizerPropagationStateGraph:
 
     def test_build_quantizer_propagation_state_graph_from_ip_graph(self):
         ip_graph = get_ip_graph_for_test(get_two_branch_mock_model_graph())
-        quant_prop_graph = QPSG(ip_graph, [])
+        quant_prop_graph = QPSG(ip_graph)
         assert len(ip_graph.nodes) == len(quant_prop_graph.nodes)
         assert len(ip_graph.edges) == len(quant_prop_graph.edges)
 
@@ -718,7 +718,7 @@ class TestQuantizerPropagationStateGraph:
     def model_graph_qpsg(self):
         mock_graph = self.get_model_graph()
         ip_graph = get_ip_graph_for_test(mock_graph)
-        quant_prop_graph = QPSG(ip_graph, [])
+        quant_prop_graph = QPSG(ip_graph)
         return quant_prop_graph
 
     def test_merge_quantizer_into_path(self, model_graph_qpsg, merge_quantizer_into_path_test_struct):
@@ -1031,7 +1031,7 @@ class TestRedundantQuantizerMerge:
     def model_graph_qpsg(self):
         mock_graph = self.get_model_graph()
         ip_graph = get_ip_graph_for_test(mock_graph)
-        quant_prop_graph = QPSG(ip_graph, [])
+        quant_prop_graph = QPSG(ip_graph)
         return quant_prop_graph
 
     @staticmethod
@@ -1129,7 +1129,7 @@ class TestUnifinedScaleTypeAfterMergeQuantizers:
         mock_graph = get_nncf_graph_from_mock_nx_graph(mock_graph)
 
         ip_graph = get_ip_graph_for_test(mock_graph)
-        qpsg = QPSG(ip_graph, [])
+        qpsg = QPSG(ip_graph)
 
         operator_node_key_vs_trait_dict = {
             '0 /A_0': QuantizationTrait.QUANTIZATION_AGNOSTIC,
@@ -1543,7 +1543,7 @@ class TestOutputQuantAsWeightsSetup:
     def model_graph_qpsg(self):
         ip_graph = get_ip_graph_for_test(MODEL_GRAPH,
                                          weighted_node_names=[node.node_name for node in MODEL_GRAPH.get_all_nodes()])
-        quant_prop_graph = QPSG(ip_graph, [])
+        quant_prop_graph = QPSG(ip_graph)
         return quant_prop_graph
 
     def test_create_quantizer_setup_with_output_quant_as_weights_ops(self, model_graph_qpsg: QPSG,

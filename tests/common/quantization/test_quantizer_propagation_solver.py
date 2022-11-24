@@ -186,7 +186,7 @@ class TestQuantizerPropagationSolver:
         nncf_graph = get_nncf_graph_from_mock_nx_graph(mock_graph)
         ip_graph = get_ip_graph_for_test(nncf_graph)
 
-        qp_graph = QPSG(ip_graph, [])
+        qp_graph = QPSG(ip_graph)
         quant_prop_solver = QuantizerPropagationSolver(run_consistency_checks=True,
                                                        default_trait_to_metatype_map=DEFAULT_TEST_QUANT_TRAIT_MAP)
         qp_graph = quant_prop_solver.set_allowed_quantization_types_for_operator_nodes(qp_graph)
@@ -1018,7 +1018,7 @@ class TestQuantizerPropagationSolver:
         # Graph preparation
         nncf_graph = get_branching_model_graph()
         ip_graph = get_ip_graph_for_test(nncf_graph)
-        quant_prop_graph = QPSG(ip_graph, [])
+        quant_prop_graph = QPSG(ip_graph)
         for node in quant_prop_graph.nodes.values():
             node[QPSG.QUANTIZATION_TRAIT_NODE_ATTR] = QuantizationTrait.QUANTIZATION_AGNOSTIC
 
@@ -1066,7 +1066,7 @@ class TestQuantizerPropagationSolver:
     def prepare_propagation_graph_state(ip_graph: InsertionPointGraph,
                                         init_node_to_trait_configs_and_target_node_dict: Dict[
                                             str, Tuple]) -> Tuple[List[PropagatingQuantizer], QPSG]:
-        quant_prop_graph = QPSG(ip_graph, [])
+        quant_prop_graph = QPSG(ip_graph)
         prop_quantizers = []
         for node in quant_prop_graph.nodes.values():
             node[QPSG.QUANTIZATION_TRAIT_NODE_ATTR] = QuantizationTrait.QUANTIZATION_AGNOSTIC
@@ -1694,7 +1694,7 @@ class TestQuantizerPropagationSolver:
 
     def test_quantizers_are_not_set_up_for_integer_inputs(self, ip_graph_with_int_edges):
         quant_prop_solver = QuantizerPropagationSolver()
-        quant_prop_graph = QPSG(ip_graph_with_int_edges, [])
+        quant_prop_graph = QPSG(ip_graph_with_int_edges)
         for node in quant_prop_graph.nodes.values():
             node[QPSG.QUANTIZATION_TRAIT_NODE_ATTR] = QuantizationTrait.QUANTIZATION_AGNOSTIC
 

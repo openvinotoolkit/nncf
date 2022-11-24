@@ -37,6 +37,7 @@ from nncf.common.graph import OperatorMetatype
 from nncf.common.graph.transformations.commands import TargetPoint
 from nncf.common.hardware.config import HWConfig
 from nncf.common.insertion_point_graph import InsertionPointGraph
+from nncf.common.insertion_point_graph import ConstantNodesFilter
 from nncf.common.quantization.quantizer_propagation.graph import QuantizerPropagationStateGraph
 from nncf.common.quantization.quantizer_propagation.grouping import QuantizersWaitingForMergeManager
 from nncf.common.quantization.quantizer_propagation.structs import PropagatingQuantizer
@@ -465,8 +466,11 @@ class QuantizerPropagationSolver:
         configurations.
         """
         self._num_potential_quantized_activations = 0
-        quant_prop_graph = QuantizerPropagationStateGraph(ip_graph,
-                                                          self._quantizable_layer_nodes,
+        quantizable_layer_node_keys = []
+        if self._quantizable_layer_nodes is not None:
+            quantizable_layer_node_keys = [node.node.data['key'] for node in self._quantizable_layer_nodes]
+        filtered_ip_graph = ConstantNodesFilter.filter(ip_graph, quantizable_layer_node_keys)
+        quant_prop_graph = QuantizerPropagationStateGraph(filtered_ip_graph,
                                                           self._ignored_scopes,
                                                           self._target_scopes)
         if self._post_processing_marker_metatypes is not None:

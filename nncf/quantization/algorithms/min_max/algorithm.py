@@ -232,6 +232,17 @@ class MinMaxQuantization(Algorithm):
                                                                              port_id)
         self._quantization_target_points.add(weight_quantization_target_point)
 
+    def _get_activation_quantization_axis(self, quantizer_config: QuantizerConfig) -> Optional[int]:
+        """
+        Returns quantization axis for activation quantizer.
+
+        :param quantizer_config: Quantization configuration
+        :return: Quantization axis in per-channel case. None in per-tensor case.
+        """
+        if quantizer_config.per_channel:
+            return 1
+        return None
+
     def _add_activation_quantization_target_point(self,
                                                   quantization_point: SingleConfigQuantizationPoint) -> None:
         """
@@ -315,7 +326,7 @@ class MinMaxQuantization(Algorithm):
                 except RuntimeError as er:
                     nncf_logger.exception(er)
                     continue
-                axis = self._backend_entity.get_weight_tensor_quantization_axis(model, node)
+                axis = self._backend_entity.get_weight_tensor_quantization_axis(model, node, weight_quantizer_config)
                 parameters = calculate_weight_quantizer_parameters(weight_tensor, weight_quantizer_config, axis)
 
                 command = self._backend_entity.quantizer_insertion_command(quantization_target_point, parameters)
@@ -329,8 +340,10 @@ class MinMaxQuantization(Algorithm):
                         target_node_name,
                         filter_func,
                         MinMaxQuantization):
+                    axis = self._get_activation_quantization_axis(self._parameters.activation_quantizer_config)
                     parameters = calculate_activation_quantizer_parameters(tensor_collector.get_statistics(),
-                                                                           self._parameters.activation_quantizer_config)
+                                                                           self._parameters.activation_quantizer_config,
+                                                                           axis)
                     command = self._backend_entity.quantizer_insertion_command(quantization_target_point, parameters)
                     transformation_commands.append(command)
             else:

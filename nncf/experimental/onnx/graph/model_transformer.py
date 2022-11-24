@@ -223,9 +223,7 @@ class ONNXModelTransformer(ModelTransformer):
 
     def _get_quantize_dequantize_nodes(self, transformation: ONNXQuantizerInsertionCommand, target_edge_name: str) -> \
             Tuple[onnx.NodeProto, onnx.NodeProto]:
-        scale = transformation.quantizer_parameters.scale
-        per_channel = isinstance(scale, list)
-        axis = 0 if per_channel else None
+        axis = transformation.quantizer_parameters.axis
 
         cnt = self._added_target_edges[target_edge_name]
 

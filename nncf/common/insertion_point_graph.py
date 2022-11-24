@@ -11,14 +11,13 @@
  limitations under the License.
 """
 
-from typing import Callable, Any, Tuple
+from typing import Callable, Any, Tuple, Set, Dict, List
 
 from collections import defaultdict
+from functools import partial
+from itertools import chain
 from copy import deepcopy
 from enum import Enum
-from typing import Dict
-from typing import List
-from typing import Set
 
 import networkx as nx
 
@@ -91,8 +90,8 @@ class InsertionPointGraph(nx.DiGraph):
         If left unspecified, every node in `nncf_graph` will be allowed to have a single post-hook for its output
          (post-hooking separate tensors in an operation's output is not currently supported)
         """
-        #pylint:disable=too-many-branches
-        #pylint:disable=too-many-statements
+        # pylint:disable=too-many-branches
+        # pylint:disable=too-many-statements
         super().__init__()
         self._base_nx_graph = deepcopy(nncf_graph.get_nx_graph_copy())
         if weight_modifiable_node_names is None:
@@ -212,7 +211,7 @@ class InsertionPointGraph(nx.DiGraph):
             from_node = self.nodes[from_node_key]
             to_node = self.nodes[to_node_key]
             if from_node[self.NODE_TYPE_NODE_ATTR] is InsertionPointGraphNodeType.POST_HOOK and \
-               to_node[self.NODE_TYPE_NODE_ATTR] is InsertionPointGraphNodeType.PRE_HOOK:
+                    to_node[self.NODE_TYPE_NODE_ATTR] is InsertionPointGraphNodeType.PRE_HOOK:
                 post_hook_has_integer_outputs = False
                 for follower_node_key in self.successors(from_node_key):
                     if self.edges[from_node_key, follower_node_key][self.IS_INTEGER_PATH_EDGE_ATTR]:
@@ -406,3 +405,39 @@ class InsertionPointGraph(nx.DiGraph):
     @staticmethod
     def get_post_hook_node_key(node_key: str) -> str:
         return InsertionPointGraph.POST_HOOK_ID_PREFIX + node_key
+
+
+class ConstantNodesFilter:
+    @staticmethod
+    def filter(ip_graph: InsertionPointGraph, quantizable_layer_node_keys: List[str]) -> InsertionPointGraph:
+        """
+        Removes all Constant nodes from InsertionPointGraph, making it inference graph.
+
+        :param ip_graph: The original InsertionPointGraph.
+        :return: InsertionPointGraph without Constant nodes.
+        """
+
+        def traverse_function(curr_node, output, visited_nodes):
+            if curr_node in visited_nodes:
+                return True, output
+            output.append(curr_node)
+            visited_nodes.append(curr_node)
+            return False, output
+
+        input_nodes = ip_graph.get_input_nodes()
+        if not input_nodes:
+            # Skip for tests where there is no input node.
+            return ip_graph
+        weight_nodes = []
+        if quantizable_layer_node_keys is not None:
+            weight_nodes = [ip_graph.get_merged_node_from_single_node_key(weight_node) for weight_node in
+                            quantizable_layer_node_keys]
+        visited_nodes = []
+        partial_traverse_function = partial(traverse_function, visited_nodes=visited_nodes)
+        traversed_node_keys = []
+        for star_node in chain(input_nodes, weight_nodes):
+            traversed_node_keys += ip_graph.traverse_graph(star_node, partial_traverse_function)
+        all_nodes_keys = ip_graph.get_all_node_keys()
+        constant_nodes = [node_key for node_key in all_nodes_keys if node_key not in traversed_node_keys]
+        ip_graph.remove_nodes(constant_nodes)
+        return ip_graph

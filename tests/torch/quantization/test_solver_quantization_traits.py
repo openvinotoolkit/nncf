@@ -27,7 +27,7 @@ def test_set_quantization_traits_for_quant_prop_graph_nodes():
     nncf_graph = get_nncf_graph_from_mock_nx_graph(mock_graph)
     ip_graph = get_ip_graph_for_test(nncf_graph)
 
-    quant_prop_graph = QPSG(ip_graph, [])
+    quant_prop_graph = QPSG(ip_graph)
     quant_prop_solver = QuantizerPropagationSolver(default_trait_to_metatype_map=DEFAULT_PT_QUANT_TRAIT_TO_OP_DICT,
                                                    run_consistency_checks=True)
     quant_prop_graph = quant_prop_solver.set_allowed_quantization_types_for_operator_nodes(quant_prop_graph)
