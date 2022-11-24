@@ -18,7 +18,6 @@ import pytest
 import torch
 import numpy as np
 
-from nncf.torch.layers import NNCF_LINEAR_MODULES_DICT
 from nncf.torch.module_operations import UpdateWeightAndBias
 from nncf.torch.pruning.filter_pruning.algo import FilterPruningController
 from nncf.torch.pruning.filter_pruning.functions import l2_filter_norm
