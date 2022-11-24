@@ -182,8 +182,7 @@ class EarlyExitCompressionTrainingLoop(BaseEarlyExitCompressionTrainingLoop):
         accuracy_aware_training_params = extract_accuracy_aware_training_params(nncf_config)
         runner_factory = EarlyExitTrainingRunnerCreator(accuracy_aware_training_params,
                                                         compression_controller,
-                                                        lr_updates_needed, verbose,
-                                                        dump_checkpoints)
+                                                        verbose, dump_checkpoints, lr_updates_needed)
 
         self.runner = runner_factory.create_training_loop()
         self.compression_controller = compression_controller
@@ -214,10 +213,9 @@ class AdaptiveCompressionTrainingLoop(BaseEarlyExitCompressionTrainingLoop):
         accuracy_aware_training_params = extract_accuracy_aware_training_params(nncf_config)
         runner_factory = AdaptiveCompressionLevelTrainingRunnerCreator(accuracy_aware_training_params,
                                                                        self.adaptive_controller,
-                                                                       lr_updates_needed, verbose,
+                                                                       verbose, dump_checkpoints, lr_updates_needed,
                                                                        minimal_compression_rate,
-                                                                       maximal_compression_rate,
-                                                                       dump_checkpoints)
+                                                                       maximal_compression_rate)
         self.runner = runner_factory.create_training_loop()
         self.runner.adaptive_controller = self.adaptive_controller
 

@@ -39,7 +39,7 @@ class EarlyExitTrainingRunnerCreator(TrainingRunnerCreator):
 
     def __init__(self, accuracy_aware_training_params: Dict[str, object],
                  compression_controller: CompressionAlgorithmController,
-                 lr_updates_needed: bool, verbose: bool, dump_checkpoints: bool):
+                 verbose: bool, dump_checkpoints: bool, lr_updates_needed: bool):
         self.accuracy_aware_training_params = accuracy_aware_training_params
         self.compression_controller = compression_controller
         self.lr_updates_needed = lr_updates_needed
@@ -55,12 +55,12 @@ class EarlyExitTrainingRunnerCreator(TrainingRunnerCreator):
         nncf_backend = infer_backend_from_compression_controller(self.compression_controller)
         if nncf_backend is BackendType.TORCH:
             from nncf.torch.accuracy_aware_training.runner import PTAccuracyAwareTrainingRunner
-            return PTAccuracyAwareTrainingRunner(self.accuracy_aware_training_params, self.lr_updates_needed,
-                                                 self.verbose, self.dump_checkpoints)
+            return PTAccuracyAwareTrainingRunner(self.accuracy_aware_training_params, self.verbose,
+                                                 self.dump_checkpoints, self.lr_updates_needed)
         if nncf_backend == BackendType.TENSORFLOW:
             from nncf.tensorflow.accuracy_aware_training.runner import TFAccuracyAwareTrainingRunner
-            return TFAccuracyAwareTrainingRunner(self.accuracy_aware_training_params,
-                                                 self.verbose, self.dump_checkpoints)
+            return TFAccuracyAwareTrainingRunner(self.accuracy_aware_training_params, self.verbose,
+                                                 self.dump_checkpoints, self.lr_updates_needed)
         raise RuntimeError('Got an unsupported value of nncf_backend')
 
 
@@ -71,8 +71,8 @@ class AdaptiveCompressionLevelTrainingRunnerCreator(TrainingRunnerCreator):
 
     def __init__(self, accuracy_aware_training_params: Dict[str, object],
                  compression_controller: CompressionAlgorithmController,
-                 lr_updates_needed: bool, verbose: bool, minimal_compression_rate: float,
-                 maximal_compression_rate: float, dump_checkpoints: bool):
+                 verbose: bool, dump_checkpoints: bool, lr_updates_needed: bool,
+                 minimal_compression_rate: float, maximal_compression_rate: float):
         self.accuracy_aware_training_params = accuracy_aware_training_params
         self.compression_controller = compression_controller
         self.lr_updates_needed = lr_updates_needed
@@ -92,15 +92,15 @@ class AdaptiveCompressionLevelTrainingRunnerCreator(TrainingRunnerCreator):
         if nncf_backend is BackendType.TORCH:
             from nncf.torch.accuracy_aware_training.runner import PTAdaptiveCompressionLevelTrainingRunner
             return PTAdaptiveCompressionLevelTrainingRunner(self.accuracy_aware_training_params,
-                                                            self.lr_updates_needed, self.verbose,
-                                                            self.dump_checkpoints,
+                                                            self.verbose, self.dump_checkpoints,
+                                                            self.lr_updates_needed,
                                                             self.minimal_compression_rate,
                                                             self.maximal_compression_rate)
         if nncf_backend == BackendType.TENSORFLOW:
             from nncf.tensorflow.accuracy_aware_training.runner import TFAdaptiveCompressionLevelTrainingRunner
             return TFAdaptiveCompressionLevelTrainingRunner(self.accuracy_aware_training_params,
-                                                            self.lr_updates_needed, self.verbose,
-                                                            self.dump_checkpoints,
+                                                            self.verbose, self.dump_checkpoints,
+                                                            self.lr_updates_needed,
                                                             self.minimal_compression_rate,
                                                             self.maximal_compression_rate)
         raise RuntimeError('Got an unsupported value of nncf_backend')
