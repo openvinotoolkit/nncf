@@ -112,13 +112,14 @@ class PTAccuracyAwareTrainingRunner(BaseAccuracyAwareTrainingRunner):
         super().dump_checkpoint(model, compression_controller)
 
     def _save_checkpoint(self, model, compression_controller, checkpoint_path):
+        optimizers = self.optimizer if isinstance(self.optimizer, (tuple, list)) else [self.optimizer]
         checkpoint = {
             'epoch': self.cumulative_epoch_count + 1,
             'state_dict': model.state_dict(),
             'compression_state': compression_controller.get_compression_state(),
             'best_metric_val': self.best_val_metric_value,
             'current_val_metric_value': self.current_val_metric_value,
-            'optimizer': self.optimizer.state_dict(),
+            'optimizer': [optimizer.state_dict() for optimizer in optimizers],
         }
         torch.save(checkpoint, checkpoint_path)
 
