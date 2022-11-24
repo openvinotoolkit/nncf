@@ -12,7 +12,6 @@
 """
 
 from copy import deepcopy
-from functools import partial
 from typing import Dict, Tuple, List, Set, TypeVar, Union, Optional
 
 from nncf import Dataset

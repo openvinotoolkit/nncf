@@ -13,7 +13,7 @@
 
 from abc import ABC
 from abc import abstractmethod
-from typing import Dict, TypeVar, Tuple, List, Optional
+from typing import Dict, TypeVar, Tuple, List
 
 import numpy as np
 from nncf.common.graph.graph import NNCFNode
