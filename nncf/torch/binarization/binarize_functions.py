@@ -19,6 +19,8 @@ from nncf.common.utils.logger import logger as nncf_logger
 from nncf.torch.utils import add_domain
 
 from .extensions import BinarizedFunctionsCUDA
+from torch.onnx.symbolic_helper import _unsqueeze_helper  # pylint:disable=protected-access
+
 
 # pylint:disable=abstract-method
 class XNORBinarizeFn(torch.autograd.Function):
@@ -28,7 +30,7 @@ class XNORBinarizeFn(torch.autograd.Function):
     @staticmethod
     def symbolic(g, x):
         zero = g.constant(0, [1], 'float')
-        zero = g.op("Unsqueeze", zero, axes_i=[1, 2, 3])
+        zero = _unsqueeze_helper(g, zero, [1, 2, 3])
         scale = g.op("Abs", x)
         scale = g.op("ReduceMean", scale, axes_i=[1, 2, 3])
         scale_neg = g.op("Neg", scale)
@@ -60,7 +62,7 @@ class DOREFABinarizeFn(torch.autograd.Function):
     @staticmethod
     def symbolic(g, x):
         zero = g.constant(0, [1], 'float')
-        zero = g.op("Unsqueeze", zero, axes_i=[1, 2, 3])
+        zero = _unsqueeze_helper(g, zero, [1, 2, 3])
         scale = g.op("Abs", x)
         scale = g.op("ReduceMean", scale, axes_i=[0, 1, 2, 3])
         scale_neg = g.op("Neg", scale)
@@ -90,9 +92,9 @@ class ActivationBinarizationScaleThresholdFn(torch.autograd.Function):
     @staticmethod
     def symbolic(g, x, scale, threshold):
         zero = g.constant(0, [1], 'float')
-        zero = g.op("Unsqueeze", zero, axes_i=[0, 2, 3])
+        zero = _unsqueeze_helper(g, zero, [0, 2, 3])
         threshold = g.op("Mul", threshold, scale)
-        scale = g.op("Unsqueeze", scale, axes_i=[0, 2, 3])
+        scale = _unsqueeze_helper(g, scale, [0, 2, 3])
         return g.op(add_domain("FakeQuantize"), x, threshold, threshold, zero, scale, levels_i=2)
 
     @staticmethod
