@@ -20,6 +20,7 @@ import torch
 from nncf.common.graph import NNCFGraph
 from nncf.common.graph import NNCFNodeName
 from nncf.common.graph.layer_attributes import ConvolutionLayerAttributes
+from nncf.common.graph.layer_attributes import LinearLayerAttributes
 from nncf.torch.graph.graph import NNCFNode
 from nncf.torch.layers import NNCF_GENERAL_CONV_MODULES_DICT
 from nncf.torch.layers import NNCF_LINEAR_MODULES_DICT
@@ -78,16 +79,20 @@ def _calculate_output_shape(graph: NNCFGraph, node: NNCFNode) -> Tuple[int, ...]
     :return: output shape
     """
     in_edge = graph.get_input_edges(node)[0]
-    shape = list(in_edge.tensor_shape)[2:]
+    shape = list(in_edge.tensor_shape)
     attrs = node.layer_attributes
 
-    assert isinstance(attrs, ConvolutionLayerAttributes)
-
-    for i, _ in enumerate(shape):
-        if attrs.transpose:
-            shape[i] = (shape[i] - 1) * attrs.stride[i] - 2 * attrs.padding_values[i] + attrs.kernel_size[i]
-        else:
-            shape[i] = (shape[i] + 2 * attrs.padding_values[i] - attrs.kernel_size[i]) // attrs.stride[i] + 1
+    if isinstance(attrs, ConvolutionLayerAttributes):
+        shape = shape[2:]
+        for i, _ in enumerate(shape):
+            if attrs.transpose:
+                shape[i] = (shape[i] - 1) * attrs.stride[i] - 2 * attrs.padding_values[i] + attrs.kernel_size[i]
+            else:
+                shape[i] = (shape[i] + 2 * attrs.padding_values[i] - attrs.kernel_size[i]) // attrs.stride[i] + 1
+    elif isinstance(attrs, LinearLayerAttributes):
+        shape = shape[:-1] + [attrs.out_features]
+    else:
+        raise RuntimeError(f'Unexpected node type {node.node_type} is fed to _calculate_output_shape')
     return tuple(shape)
 
 
@@ -100,25 +105,20 @@ def collect_output_shapes(graph: NNCFGraph) -> Dict[NNCFNodeName, List[int]]:
     :return: Dictionary of output dimension shapes. E.g {node_name: (height, width)}
     """
     modules_out_shapes = {}
-    for node in graph.get_nodes_by_types([v.op_func_name for v in NNCF_GENERAL_CONV_MODULES_DICT]):
-        output_edges = graph.get_output_edges(node)
-        if output_edges:
-            out_edge = output_edges[0]
-            out_shape = out_edge.tensor_shape[2:]
-        else:
-            # For disconnected NNCFGraph when node have no output edge
-            out_shape = _calculate_output_shape(graph, node)
-            nncf_logger.error("Node %s have no output edge in NNCFGraph", node.node_name)
-        modules_out_shapes[node.node_name] = out_shape
-
-    for node in graph.get_nodes_by_types([v.op_func_name for v in NNCF_LINEAR_MODULES_DICT]):
-        output_edges = graph.get_output_edges(node)
-        if output_edges:
-            out_edge = graph.get_output_edges(node)[0]
-            out_shape = out_edge.tensor_shape
+    output_shape_collecting_info = [
+       (NNCF_GENERAL_CONV_MODULES_DICT, slice(2, None)),
+       (NNCF_LINEAR_MODULES_DICT, slice(None)),
+    ]
+    for nncf_module_type, shape_slice in output_shape_collecting_info:
+        for node in graph.get_nodes_by_types([v.op_func_name for v in nncf_module_type]):
+            output_edges = graph.get_output_edges(node)
+            if output_edges:
+                out_edge = output_edges[0]
+                out_shape = out_edge.tensor_shape[shape_slice]
+            else:
+                # For disconnected NNCFGraph when node have no output edge
+                out_shape = _calculate_output_shape(graph, node)
+                nncf_logger.error("Node %s have no output edge in NNCFGraph", node.node_name)
             modules_out_shapes[node.node_name] = out_shape
-        else:
-            # For disconnected NNCFGraph when node have no output edge
-            nncf_logger.error("Node %s have no output edge in NNCFGraph", node.node_name)
-            modules_out_shapes[node.node_name] = node.layer_attributes.out_features
+
     return modules_out_shapes

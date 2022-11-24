@@ -810,27 +810,25 @@ def test_clusters_for_multiple_forward(repeat_seq_of_shared_convs,
     ("model"),
     (
         BigPruningTestModel,
-        PruningTestModelConcatBN
+        PruningTestModelConcatBN,
+        PruningTestBatchedLinear,
     )
 )
 def test_func_calculation_flops_for_conv(model):
     # Check _calculate_output_shape that used for disconnected graph
     config = get_basic_pruning_config([1, 1, 8, 8])
     config['compression']['algorithm'] = 'filter_pruning'
-    config['compression']['pruning_init'] = 0.4
-    config['compression']['params']['pruning_flops_target'] = 0.4
+    config['compression']['pruning_init'] = 0.0
+    config['compression']['params']['pruning_flops_target'] = 0.0
     model = model()
-    pruned_model, _ = create_compressed_model_and_algo_for_test(model, config)
+    pruned_model, compression_controller = create_compressed_model_and_algo_for_test(model, config)
 
     graph = pruned_model.get_original_graph()
 
     # pylint:disable=protected-access
-    for node_name, ref_shape in collect_output_shapes(graph).items():
+    for node_name, ref_shape in compression_controller._output_shapes.items():
         # ref_shape get from tracing graph
         node = graph.get_node_by_name(node_name)
-        if node.node_type in [v.op_func_name for v in NNCF_LINEAR_MODULES_DICT]:
-            continue
-
         shape = _calculate_output_shape(graph, node)
         assert ref_shape == shape, f"Incorrect calculation output name for {node_name}"
 
@@ -842,11 +840,21 @@ def test_disconnected_graph():
     config['compression']['params']['pruning_target'] = 0.5
     config['compression']['params']['prune_first_conv'] = True
     model = DisconectedGraphModel()
-    pruned_model, _ = create_compressed_model_and_algo_for_test(model, config)
+    pruned_model, compression_controller = create_compressed_model_and_algo_for_test(model, config)
     graph = pruned_model.get_original_graph()
 
-    conv1 = graph.get_node_by_name('DisconectedGraphModel/NNCFConv2d[conv1]/conv2d_0')
-    conv2 = graph.get_node_by_name('DisconectedGraphModel/NNCFConv2d[conv2]/conv2d_0')
-
-    assert sum(conv1.data['output_mask'].tensor) == 8
-    assert sum(conv2.data['output_mask'].tensor) == 8
+    nodes_output_mask_map = {
+        'DisconectedGraphModel/NNCFConv2d[conv1]/conv2d_0': ((8, 8), None),
+        'DisconectedGraphModel/NNCFConv2d[conv2]/conv2d_0': ((8, 8), 8),
+        'DisconectedGraphModel/NNCFConv2d[conv3]/conv2d_0': ((8, 8), 1),
+        'DisconectedGraphModel/NNCFLinear[fc]/linear_0': ((1, 3), None),
+    }
+    # pylint:disable=protected-access
+    collected_shapes = compression_controller._output_shapes
+    for name, (shape, mask_sum) in nodes_output_mask_map.items():
+        node = graph.get_node_by_name(name)
+        if mask_sum is None:
+            assert node.data['output_mask'] is None
+        else:
+            assert sum(node.data['output_mask'].tensor) == mask_sum
+        assert collected_shapes[name] == shape
