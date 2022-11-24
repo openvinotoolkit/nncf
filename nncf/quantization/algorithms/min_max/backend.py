@@ -148,13 +148,13 @@ class MinMaxAlgoBackend(ABC):
         """
 
     @staticmethod
-    def get_weight_tensor_port_id(model: TModel, node: NNCFNode) -> Optional[int]:
+    def get_weight_tensor_port_id(model: TModel, node: NNCFNode) -> int:
         """
         Returns node's weight tensor input port ID.
 
         :param model: Backend-specific model for the initializer finding.
         :param node: NNCFNode to find its weight input port ID.
-        :return: The input port ID of the weight.  None if the weight tensor was not found.
+        :return: The input port ID of the weight.
         """
 
     @staticmethod

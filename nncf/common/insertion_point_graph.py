@@ -267,7 +267,14 @@ class InsertionPointGraph(nx.DiGraph):
                     output.append(node)
         return output
 
-    def get_merged_node_from_single_node(self, node_key: str):
+    def get_merged_node_from_single_node_key(self, node_key: str) -> str:
+        """
+        Returns the merged node key if the corresponding node with 'node_key' was merged.
+        Otherwise retuns the 'node_key'.
+
+        :param node_key: The key of the node which is checking on the merged.
+        :return: The merged node key. 'node_key' if it was not merged.
+        """
         for node in self.nodes:
             if InsertionPointGraph.REGULAR_NODE_REF_NODE_ATTR not in self.nodes[node]:
                 continue

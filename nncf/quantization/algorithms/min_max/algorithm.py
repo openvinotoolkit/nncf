@@ -178,32 +178,6 @@ class MinMaxQuantization(Algorithm):
                                                                         num_samples=self._parameters.number_samples)
         raise RuntimeError('This range type is not supported!')
 
-    def _filter_nncf_graph(self, nncf_graph: NNCFGraph) -> NNCFGraph:
-        """
-        Removes all Constant nodes from NNCFGraph, making it inference graph.
-
-        :param nncf_graph: The original NNCFGraph.
-        :return: NNCFGraph without Constan nodes.
-        """
-
-        def traverse_function(curr_node, output, visited_nodes):
-            if curr_node in visited_nodes:
-                return True, output
-            output.append(curr_node)
-            visited_nodes.append(curr_node)
-            return False, output
-
-        start_nodes = nncf_graph.get_input_nodes()
-        visited_nodes = []
-        partial_traverse_function = partial(traverse_function, visited_nodes=visited_nodes)
-        traversed_nodes = []
-        for star_node in start_nodes:
-            traversed_nodes += nncf_graph.traverse_graph(star_node, partial_traverse_function)
-        all_nodes = nncf_graph.get_all_nodes()
-        constant_nodes = [node for node in all_nodes if node not in traversed_nodes]
-        nncf_graph.remove_nodes(constant_nodes)
-        return nncf_graph
-
     def _get_quantizer_setup(self, nncf_graph: NNCFGraph) -> SingleConfigQuantizerSetup:
         """
         Returns SingleConfigQuantizerSetup instance based on the input NNCFGraph.
@@ -253,8 +227,6 @@ class MinMaxQuantization(Algorithm):
         node_name = quantization_point.insertion_point.target_node_name
         node = nncf_graph.get_node_by_name(node_name)
         port_id = self._backend_entity.get_weight_tensor_port_id(model, node)
-        if port_id is None:
-            raise RuntimeError(f'Could not find the port_id for the node {node_name}')
         weight_quantization_target_point = self._backend_entity.target_point(TargetType.OPERATION_WITH_WEIGHTS,
                                                                              node_name,
                                                                              port_id)

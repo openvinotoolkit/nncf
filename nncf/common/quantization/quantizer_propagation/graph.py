@@ -201,7 +201,7 @@ class QuantizerPropagationStateGraph(nx.DiGraph):
             return ip_graph
         weight_nodes = []
         if quantizable_layer_node_keys is not None:
-            weight_nodes = [ip_graph.get_merged_node_from_single_node(weight_node) for weight_node in
+            weight_nodes = [ip_graph.get_merged_node_from_single_node_key(weight_node) for weight_node in
                             quantizable_layer_node_keys]
         visited_nodes = []
         partial_traverse_function = partial(traverse_function, visited_nodes=visited_nodes)

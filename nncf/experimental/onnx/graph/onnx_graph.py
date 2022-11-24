@@ -233,16 +233,16 @@ class ONNXGraph:
                     continue
             raise RuntimeError('Could not find the weight value of the node') from exc
 
-    def _get_param_from_weight_definitions(self, node: onnx.NodeProto, parameter: str) -> Optional[int]:
+    def _get_param_from_weight_definitions(self, node: onnx.NodeProto, parameter: str) -> int:
         metatype = ONNX_OPERATION_METATYPES.get_operator_metatype_by_op_name(node.op_type)
         if metatype in WEIGHT_LAYER_METATYPES:
             parameter = getattr(metatype.weight_definitions, parameter)
             if parameter is not None:
                 return parameter
             raise RuntimeError(f'The metatype {metatype} does not have {parameter} attribute')
-        return None
+        raise RuntimeError(f'The metatype {metatype} does not belong to a list of metatypes with a weight tensor.')
 
-    def get_weight_tensor_port_id(self, node: onnx.NodeProto) -> Optional[int]:
+    def get_weight_tensor_port_id(self, node: onnx.NodeProto) -> int:
         """
         Returns input port id, where a weight tensor should output.
 
@@ -251,16 +251,19 @@ class ONNXGraph:
         """
         return self._get_param_from_weight_definitions(node, 'weight_port_id')
 
-    def get_channel_axis(self, node: onnx.NodeProto) -> Optional[int]:
+    def get_channel_axis(self, node: onnx.NodeProto) -> int:
         """
         Returns channel axis for per-channel quantization.
 
         :param node: Node, for which channel axis id is returned,
         :return: Channel axis for per-channel quantization.
         """
+        axis = self._get_param_from_weight_definitions(node, 'channel_axis')
+        if axis is None:
+            raise RuntimeError(f'Could not find the port_id for the node {node.name}')
         return self._get_param_from_weight_definitions(node, 'channel_axis')
 
-    def get_bias_tensor_port_id(self, node: onnx.NodeProto) -> Optional[int]:
+    def get_bias_tensor_port_id(self, node: onnx.NodeProto) -> int:
         """
         Returns input port id, where a bias tensor should output.
 
@@ -396,7 +399,7 @@ class ONNXGraph:
         """
         Returns parents of the node.
 
-        :param node_name: The child node.
+        :param node: The child node.
         :return: All children nodes.
         """
         output = []

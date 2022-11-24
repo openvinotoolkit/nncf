@@ -147,7 +147,7 @@ class NNCFGraphPatternIO:
         self.output_edges = output_edges
 
 
-#pylint:disable=too-many-public-methods
+# pylint:disable=too-many-public-methods
 class NNCFGraph:
     """
     Wrapper over a regular directed acyclic graph that represents a control flow/execution graph of a DNN
@@ -512,7 +512,7 @@ class NNCFGraph:
             nncf_logger.warning('Graphviz is not installed - only the .dot model visualization format will be used. '
                                 'Install pygraphviz into your Python environment and graphviz system-wide to enable '
                                 'PNG rendering.')
-        except Exception:  #pylint:disable=broad-except
+        except Exception:  # pylint:disable=broad-except
             nncf_logger.warning('Failed to render graph to PNG')
 
     def get_graph_for_structure_analysis(self, extended: bool = False) -> nx.DiGraph:
@@ -673,18 +673,3 @@ class NNCFGraph:
         for nx_edge in self._nx_graph.edges:
             yield self.get_edge(self.get_node_by_key(nx_edge[0]),
                                 self.get_node_by_key(nx_edge[1]))
-
-    def remove_nodes(self, nodes: List[NNCFNode]) -> None:
-        """
-        Removes nodes from the Graph.
-
-        :param nodes: Nodes to be removed.
-        """
-        node_keys = [node.data[NNCFGraph.KEY_NODE_ATTR] for node in nodes]
-        node_ids = [node.data[NNCFGraph.ID_NODE_ATTR] for node in nodes]
-        self._nx_graph.remove_nodes_from(node_keys)
-        self._node_ids_vs_layer_names = {node_id: layer_name for node_id, layer_name in
-                                         self._node_ids_vs_layer_names.items() if
-                                         node_id not in node_ids}
-        self._node_id_to_key_dict = {node_id: key_dict for node_id, key_dict in self._node_id_to_key_dict.items() if
-                                     node_id not in node_ids}
