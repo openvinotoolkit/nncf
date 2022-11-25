@@ -82,6 +82,11 @@ class IdentityTestMetatype(TestMetatype):
     name = 'identity'
 
 
+@METATYPES_FOR_TEST.register()
+class ReshapeTestMetatype(TestMetatype):
+    name = 'reshape'
+
+
 WEIGHT_LAYER_METATYPES = [LinearTestMetatype, Conv2dTestMetatype, MatMulTestMetatype]
 
 DEFAULT_TEST_QUANT_TRAIT_MAP = {

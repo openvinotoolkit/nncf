@@ -26,44 +26,18 @@ from nncf.common.graph.operator_metatypes import InputNoopMetatype
 from nncf.common.insertion_point_graph import InsertionPointGraph
 from nncf.common.utils.registry import Registry
 
-from tests.common.quantization.metatypes import TestMetatype
 from tests.common.quantization.metatypes import Conv2dTestMetatype
 from tests.common.quantization.metatypes import IdentityTestMetatype
 from tests.common.quantization.metatypes import LinearTestMetatype
 from tests.common.quantization.metatypes import TopKTestMetatype
 from tests.common.quantization.metatypes import NMSTestMetatype
 from tests.common.quantization.metatypes import WEIGHT_LAYER_METATYPES
+from tests.common.quantization.common import NNCFGraphToTest
+from tests.common.quantization.common import NodeWithType
 
 from collections import Counter
 
-ALL_SYNTHETIC_NNCF_GRAPH = Registry('ONNX_SYNTHETIC_MODELS')
-
-
-class NodeWithType:
-    def __init__(self, name: str, op_type: TestMetatype):
-        self.node_name = name
-        self.node_op_type = op_type
-
-
-class NNCFGraphToTest:
-    def __init__(self, nodes: List[NodeWithType], node_edges):
-        self.nncf_graph = NNCFGraph()
-        for node in nodes:
-            self.nncf_graph.add_nncf_node(node_name=node.node_name,
-                                          node_type=node.node_op_type.name,
-                                          node_metatype=node.node_op_type,
-                                          layer_attributes=None)
-        input_port_counter = Counter()
-        output_port_counter = Counter()
-        for from_node, to_nodes in node_edges.items():
-            output_node_id = self.nncf_graph.get_node_by_name(from_node).node_id
-            for to_node in to_nodes:
-                input_node_id = self.nncf_graph.get_node_by_name(to_node).node_id
-                self.nncf_graph.add_edge_between_nncf_nodes(output_node_id, input_node_id, [1],
-                                                            input_port_counter[input_node_id],
-                                                            output_port_counter[output_node_id], Dtype.FLOAT)
-                input_port_counter[input_node_id] += 1
-                output_port_counter[output_node_id] += 1
+ALL_SYNTHETIC_NNCF_GRAPH = Registry('SYNTHETIC_MODELS')
 
 
 @ALL_SYNTHETIC_NNCF_GRAPH.register()
@@ -271,7 +245,7 @@ def test_node_locator_finds_postprocessing_nodes(model_to_test):
     quantizable_layer_nodes = [QuantizableWeightedLayerNode(weight_node, [QuantizerConfig()]) for weight_node in
                                weight_nodes]
 
-    quant_prop_graph = QuantizerPropagationStateGraph(ip_graph, quantizable_layer_nodes)
+    quant_prop_graph = QuantizerPropagationStateGraph(ip_graph)
     post_processing_node_locator = PostprocessingNodeLocator(quant_prop_graph, quantizable_layer_nodes,
                                                              [TopKTestMetatype, NMSTestMetatype])
     ignored_node_keys = post_processing_node_locator.get_post_processing_node_keys()

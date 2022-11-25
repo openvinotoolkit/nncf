@@ -292,6 +292,14 @@ class InsertionPointGraph(nx.DiGraph):
         """
         return list(self.nodes)
 
+    def get_all_edges(self) -> List[str]:
+        """
+        Returns graph edges.
+
+        :return: Graph edges.
+        """
+        return self.edges
+
     def remove_nodes(self, nodes_keys: List[str]) -> None:
         """
         Removes nodes from the graph with corresponding 'node_keys'.
