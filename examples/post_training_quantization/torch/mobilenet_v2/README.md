@@ -1,5 +1,5 @@
 # Post-Training Quantization of MobileNet v2 PyTorch Model
-This sample demonstrates how to use Post-Training Quantization API from Neural Network Compression Framework (NNCF) to quantize PyTorch models on the example of [MobileNet v2](https://huggingface.co/AlexKoff88/mobilenet_v2_food101)quatization, pretrained on [Food101](https://pytorch.org/vision/stable/generated/torchvision.datasets.Food101.html) dataset.
+This sample demonstrates how to use Post-Training Quantization API from Neural Network Compression Framework (NNCF) to quantize PyTorch models on the example of [MobileNet v2](https://huggingface.co/AlexKoff88/mobilenet_v2_food101) quantization, pretrained on [Food101](https://pytorch.org/vision/stable/generated/torchvision.datasets.Food101.html) dataset.
 
 
 The sample includes the following steps:
