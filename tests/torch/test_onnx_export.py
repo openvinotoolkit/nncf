@@ -86,8 +86,9 @@ def test_exporter_parser_format(save_format: str, refs: Any):
 
 @pytest.mark.parametrize('save_format, ref_opset',
                          (
-                             ('onnx', 10),
+                             ('onnx', 13),
                              ('onnx_9', 9),
+                             ('onnx_10', 10),
                              ('onnx_11', 11)
                          )
                         )
