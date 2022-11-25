@@ -654,7 +654,7 @@ class QuantizationBuilder(TFCompressionAlgorithmBuilder):
                     is_finished = False
             return is_finished, preprocessing_nodes
 
-        return traverse_graph(nncf_graph, nncf_graph.get_input_nodes(), traverse_fn)
+        return traverse_graph(nncf_graph, traverse_fn, nncf_graph.get_input_nodes())
 
     def _get_quantized_nodes_for_output(self, nncf_graph: NNCFGraph,
                                         insertion_points: List[str],

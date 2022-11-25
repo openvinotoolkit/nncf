@@ -236,7 +236,7 @@ class BasePruningAlgoBuilder(TFCompressionAlgorithmBuilder):
         bn_layer_names = []
         for layer_node in layer_nodes:
             for next_node in graph.get_next_nodes(layer_node):
-                for bn_node in traverse_graph(graph, next_node, self._get_bn_for_node):
+                for bn_node in traverse_graph(graph, self._get_bn_for_node, next_node):
                     bn_layer_name = get_layer_identifier(bn_node)
                     if bn_layer_name not in bn_layer_names:
                         bn_layer_names.append(bn_layer_name)

@@ -13,13 +13,12 @@
 
 from typing import TypeVar, Callable, List, Union, Tuple, Optional, Any
 
-from nncf.common.graph.graph import NNCFGraph
-from nncf.common.insertion_point_graph import InsertionPointGraph
+import networkx as nx
 
 Node = TypeVar('Node')
 
 
-def traverse_graph(graph: Union[NNCFGraph, InsertionPointGraph],
+def traverse_graph(graph: nx.DiGraph,
                    traverse_function: Callable[[Node, List[Any]], Tuple[bool, List[Any]]],
                    start_nodes: Optional[List[Node]] = None,
                    traverse_forward: bool = True):

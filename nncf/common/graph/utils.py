@@ -63,7 +63,7 @@ def get_first_nodes_of_type(graph: NNCFGraph, op_types: List[str]) -> List[NNCFN
     partial_traverse_function = partial(traverse_function,
                                         type_check_fn=lambda x: x in op_types,
                                         visited=visited)
-    return traverse_graph(graph, graph_roots, partial_traverse_function)
+    return traverse_graph(graph, partial_traverse_function, graph_roots)
 
 
 def get_split_axis(input_shapes: List[List[int]], output_shapes: List[List[int]]) -> int:
