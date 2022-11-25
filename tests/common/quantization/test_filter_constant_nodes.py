@@ -14,6 +14,7 @@
 import pytest
 
 from collections import Counter
+import re
 
 from nncf.common.insertion_point_graph import ConstantNodesFilter
 from nncf.common.quantization.structs import QuantizableWeightedLayerNode
@@ -170,9 +171,8 @@ def filter_edge(edge: str) -> str:
     :return: Filtered edge.
     """
     splitted_edge = edge.split(' ')
-    if len(splitted_edge) == 2:
-        return splitted_edge[-1]
-    if len(splitted_edge) == 4:
-        return ''.join([edge for i, edge in enumerate(splitted_edge) if i != 2])
-    if len(splitted_edge) == 5:
-        return ''.join([edge for i, edge in enumerate(splitted_edge) if i != 2 and i != 3])
+    filtered_edge = []
+    for word in splitted_edge:
+        if re.match("[0-9]+", word) is None:
+            filtered_edge.append(word)
+    return ''.join(filtered_edge)
