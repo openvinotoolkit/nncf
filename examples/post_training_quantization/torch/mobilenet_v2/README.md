@@ -20,7 +20,7 @@ pip install -r requirements.txt
 
 # Run Sample
 It's pretty simple. The sample does not require additional preparation. It will do the preparation itself, such as loading the dataset and model, etc.
-> **NOTE**: If you have already downloaded the [Food101](https://pytorch.org/vision/stable/generated/torchvision.datasets.Food101.html) dataset to the disk, please provide the path to the daatset to avoid re-downloading.
+> **NOTE**: If you have already downloaded the [Food101](https://pytorch.org/vision/stable/generated/torchvision.datasets.Food101.html) dataset to the disk, please provide the path to the dataset to avoid re-downloading.
 ```
 python main.py [PATH_TO_DATASET]
 ```
