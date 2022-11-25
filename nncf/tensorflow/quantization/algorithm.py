@@ -30,6 +30,7 @@ from nncf.common.graph import OUTPUT_NOOP_METATYPES
 from nncf.common.graph.transformations.commands import TargetPoint
 from nncf.common.graph.transformations.commands import TransformationPriority
 from nncf.common.graph.utils import get_first_nodes_of_type
+from nncf.common.graph.traversal import traverse_graph
 from nncf.common.hardware.config import HWConfigType
 from nncf.common.hardware.config import HW_CONFIG_TYPE_TARGET_DEVICE_MAP
 from nncf.common.initialization.batchnorm_adaptation import BatchnormAdaptationAlgorithm
@@ -653,11 +654,7 @@ class QuantizationBuilder(TFCompressionAlgorithmBuilder):
                     is_finished = False
             return is_finished, preprocessing_nodes
 
-        for nncf_node in nncf_graph.get_input_nodes():
-            preprocessing_nodes_for_this_input = nncf_graph.traverse_graph(nncf_node, traverse_fn)
-            retval += preprocessing_nodes_for_this_input
-
-        return retval
+        return traverse_graph(nncf_graph, nncf_graph.get_input_nodes(), traverse_fn)
 
     def _get_quantized_nodes_for_output(self, nncf_graph: NNCFGraph,
                                         insertion_points: List[str],

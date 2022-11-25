@@ -27,6 +27,7 @@ from nncf.common.graph import NNCFNode
 from nncf.common.graph import NNCFNodeName
 from nncf.common.graph.layer_attributes import LinearLayerAttributes
 from nncf.common.graph.layer_attributes import ConvolutionLayerAttributes
+from nncf.common.graph.traversal import traverse_graph
 from nncf.common.tensor import NNCFTensor
 from nncf.common.utils.registry import Registry
 
@@ -80,10 +81,7 @@ def get_sources_of_node(nncf_node: NNCFNode, graph: NNCFGraph, sources_types: Li
     if nncf_node.node_type in sources_types:
         nncf_nodes = graph.get_previous_nodes(nncf_node)
 
-    source_nodes = []
-    for node in nncf_nodes:
-        source_nodes.extend(graph.traverse_graph(node, partial_traverse_function, False))
-    return source_nodes
+    return traverse_graph(graph, start_nodes=nncf_nodes, traverse_function=partial_traverse_function)
 
 
 def find_next_nodes_not_of_types(graph: NNCFGraph, nncf_node: NNCFNode, types: List[str]) -> List[NNCFNode]:
@@ -106,10 +104,7 @@ def find_next_nodes_not_of_types(graph: NNCFGraph, nncf_node: NNCFNode, types: L
     if nncf_node.node_type not in types:
         nncf_nodes = graph.get_next_nodes(nncf_node)
 
-    next_nodes = []
-    for node in nncf_nodes:
-        next_nodes.extend(graph.traverse_graph(node, partial_traverse_function))
-    return next_nodes
+    return traverse_graph(graph, start_nodes=nncf_nodes, traverse_function=partial_traverse_function)
 
 
 def get_next_nodes_of_types(graph: NNCFGraph, nncf_node: NNCFNode, types: List[str]) -> List[NNCFNode]:
@@ -130,10 +125,7 @@ def get_next_nodes_of_types(graph: NNCFGraph, nncf_node: NNCFNode, types: List[s
     if nncf_node.node_type in sources_types:
         nncf_nodes = graph.get_next_nodes(nncf_node)
 
-    next_nodes = []
-    for node in nncf_nodes:
-        next_nodes.extend(graph.traverse_graph(node, partial_traverse_function))
-    return next_nodes
+    return traverse_graph(graph, start_nodes=nncf_nodes, traverse_function=partial_traverse_function)
 
 
 def get_rounded_pruned_element_number(total: int, sparsity_rate: float, multiple_of: int = 8) -> int:
@@ -180,11 +172,9 @@ def get_last_nodes_of_type(graph: NNCFGraph, op_types: List[str]) -> List[NNCFNo
     partial_traverse_function = partial(traverse_function,
                                         type_check_fn=lambda x: x in op_types,
                                         visited=visited)
-    last_nodes_of_type = []
-    for output in graph_outputs:
-        last_nodes_of_type.extend(graph.traverse_graph(output, partial_traverse_function, False))
 
-    return last_nodes_of_type
+    return traverse_graph(graph, start_nodes=graph_outputs, traverse_function=partial_traverse_function,
+                          traverse_forward=False)
 
 
 def get_previous_convs(graph: NNCFGraph, nncf_node: NNCFNode,

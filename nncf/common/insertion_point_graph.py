@@ -11,11 +11,10 @@
  limitations under the License.
 """
 
-from typing import Callable, Any, Tuple, Set, Dict, List
+from typing import Set, Dict, List
 
 from collections import defaultdict
 from functools import partial
-from itertools import chain
 from copy import deepcopy
 from enum import Enum
 
@@ -27,6 +26,7 @@ from nncf.common.graph import NNCFNodeName
 from nncf.common.graph.graph_matching import find_subgraphs_matching_pattern
 from nncf.common.graph.patterns import GraphPattern
 from nncf.common.graph.operator_metatypes import INPUT_NOOP_METATYPES
+from nncf.common.graph.traversal import traverse_graph
 
 
 class InsertionPointGraphNodeType(Enum):
@@ -318,30 +318,6 @@ class InsertionPointGraph(nx.DiGraph):
         """
         return self.succ[node_key]
 
-    def traverse_graph(self,
-                       curr_node_key: str,
-                       traverse_function: Callable[[str, List[Any]], Tuple[bool, List[Any]]]):
-        """
-        Traverses graph forward starting from node with key equals 'curr_node_key' .
-
-        :param curr_node_key: Node key from which traversal is started.
-        :param traverse_function: Function describing condition of traversal continuation/termination.
-        :param traverse_forward: Flag specifying direction of traversal.
-        :return:
-        """
-        output = []
-        return self._traverse_graph_recursive_helper(curr_node_key, traverse_function, output)
-
-    def _traverse_graph_recursive_helper(self, curr_node_key: str,
-                                         traverse_function: Callable[[str, List[Any]], Tuple[bool, List[Any]]],
-                                         output: List[Any]):
-        is_finished, output = traverse_function(curr_node_key, output)
-        get_nodes_fn = self.get_next_nodes
-        if not is_finished:
-            for node in get_nodes_fn(curr_node_key):
-                self._traverse_graph_recursive_helper(node, traverse_function, output)
-        return output
-
     def get_ip_graph_with_merged_hw_optimized_operations(self,
                                                          full_fusing_pattern: GraphPattern) \
             -> 'InsertionPointGraph':
@@ -442,9 +418,9 @@ class ConstantNodesFilter:
                             quantizable_layer_node_keys]
         visited_nodes = []
         partial_traverse_function = partial(traverse_function, visited_nodes=visited_nodes)
-        traversed_node_keys = []
-        for star_node in chain(input_nodes, weight_nodes):
-            traversed_node_keys += ip_graph.traverse_graph(star_node, partial_traverse_function)
+        start_nodes = input_nodes + weight_nodes
+        traversed_node_keys = traverse_graph(ip_graph, traverse_function=partial_traverse_function,
+                                             start_nodes=start_nodes)
         all_nodes_keys = ip_graph.get_all_node_keys()
         constant_nodes = [node_key for node_key in all_nodes_keys if node_key not in traversed_node_keys]
         ip_graph.remove_nodes(constant_nodes)

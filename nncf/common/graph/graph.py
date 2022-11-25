@@ -337,31 +337,6 @@ class NNCFGraph:
         edges = [self.get_edge(node, to_node) for to_node in output_nodes]
         return sorted(edges, key=lambda x: x.output_port_id)
 
-    def traverse_graph(self,
-                       curr_node: NNCFNode,
-                       traverse_function: Callable[[NNCFNode, List[Any]], Tuple[bool, List[Any]]],
-                       traverse_forward: bool = True):
-        """
-        Traverses graph up or down starting form `curr_node` node.
-
-        :param curr_node: Node from which traversal is started.
-        :param traverse_function: Function describing condition of traversal continuation/termination.
-        :param traverse_forward: Flag specifying direction of traversal.
-        :return:
-        """
-        output = []
-        return self._traverse_graph_recursive_helper(curr_node, traverse_function, output, traverse_forward)
-
-    def _traverse_graph_recursive_helper(self, curr_node: NNCFNode,
-                                         traverse_function: Callable[[NNCFNode, List[Any]], Tuple[bool, List[Any]]],
-                                         output: List[Any], traverse_forward: bool):
-        is_finished, output = traverse_function(curr_node, output)
-        get_nodes_fn = self.get_next_nodes if traverse_forward else self.get_previous_nodes
-        if not is_finished:
-            for node in get_nodes_fn(curr_node):
-                self._traverse_graph_recursive_helper(node, traverse_function, output, traverse_forward)
-        return output
-
     def add_nncf_node(self, node_name: str,
                       node_type: str,
                       node_metatype: Type[OperatorMetatype],
