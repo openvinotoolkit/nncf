@@ -258,10 +258,10 @@ class ONNXGraph:
         :param node: Node, for which channel axis id is returned,
         :return: Channel axis for per-channel quantization.
         """
-        axis = self._get_param_from_weight_definitions(node, 'channel_axis')
+        axis = self._get_param_from_weight_definitions(node, 'weight_channel_axis')
         if axis is None:
             raise RuntimeError(f'Could not find the port_id for the node {node.name}')
-        return self._get_param_from_weight_definitions(node, 'channel_axis')
+        return self._get_param_from_weight_definitions(node, 'weight_channel_axis')
 
     def get_bias_tensor_port_id(self, node: onnx.NodeProto) -> int:
         """

@@ -33,16 +33,16 @@ class OpWeightDef:
     Contains information about the weight of operation.
     """
 
-    def __init__(self, weight_port_id: Optional[int], channel_axis: int, bias_port_id: Optional[int]):
+    def __init__(self, weight_port_id: Optional[int], weight_channel_axis: int, bias_port_id: Optional[int]):
         """
         Initializes a definition of the weight.
 
         :param weight_port_id: Input port of the node's weight.
-        :param channel_axis: Axis for per-channel quantization.
+        :param weight_channel_axis: Axis for weight per-channel quantization, meaning the number of output filters.
         :param bias_port_id: Input port of the node's bias.
         """
         self.weight_port_id = weight_port_id
-        self.channel_axis = channel_axis
+        self.weight_channel_axis = weight_channel_axis
         self.bias_port_id = bias_port_id
 
 
@@ -55,7 +55,7 @@ class ONNXConvolutionMetatype(ONNXOpWithWeightsMetatype):
     name = 'ConvOp'
     op_names = ['Conv']
     hw_config_names = [HWConfigOpName.CONVOLUTION]
-    weight_definitions = OpWeightDef(weight_port_id=1, channel_axis=0, bias_port_id=2)
+    weight_definitions = OpWeightDef(weight_port_id=1, weight_channel_axis=0, bias_port_id=2)
 
 
 @ONNX_OPERATION_METATYPES.register()
@@ -63,7 +63,7 @@ class ONNXConvolutionTransposeMetatype(ONNXOpWithWeightsMetatype):
     name = 'ConvTransposeOp'
     op_names = ['ConvTranspose']
     hw_config_names = [HWConfigOpName.CONVOLUTION]
-    weight_definitions = OpWeightDef(weight_port_id=1, channel_axis=1, bias_port_id=2)
+    weight_definitions = OpWeightDef(weight_port_id=1, weight_channel_axis=1, bias_port_id=2)
 
 
 @ONNX_OPERATION_METATYPES.register()
@@ -72,7 +72,7 @@ class ONNXLinearMetatype(ONNXOpWithWeightsMetatype):
     op_names = ['Gemm']
     hw_config_names = [HWConfigOpName.MATMUL]
     # TODO(kshpv): Update weight_port_id to None and detects it dynamically
-    weight_definitions = OpWeightDef(weight_port_id=1, channel_axis=0, bias_port_id=2)
+    weight_definitions = OpWeightDef(weight_port_id=1, weight_channel_axis=0, bias_port_id=2)
 
 
 @ONNX_OPERATION_METATYPES.register()
