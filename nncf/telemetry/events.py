@@ -11,6 +11,7 @@
  limitations under the License.
 """
 from typing import List
+from typing import Optional
 
 from nncf.api.compression import CompressionAlgorithmBuilder
 from nncf.common.composite_compression import CompositeCompressionAlgorithmBuilder
@@ -22,16 +23,20 @@ NNCF_OV_CATEGORY = 'nncf_ov'
 
 CURRENT_CATEGORY = None
 
+
 def set_current_category(category: str):
     global CURRENT_CATEGORY
     CURRENT_CATEGORY = category
 
+
 def get_current_category() -> Optional[str]:
     return CURRENT_CATEGORY
+
 
 def unset_current_category():
     global CURRENT_CATEGORY
     CURRENT_CATEGORY = None
+
 
 def get_algo_names_from_builder(builder: CompressionAlgorithmBuilder) -> List[str]:
     if isinstance(builder, CompositeCompressionAlgorithmBuilder):

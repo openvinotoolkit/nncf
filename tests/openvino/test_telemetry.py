@@ -11,7 +11,7 @@
  limitations under the License.
 """
 
-from tests.common.helpers import telemetry_send_event_test_driver
+from tests.shared.helpers import telemetry_send_event_test_driver
 
 from openvino.runtime import Model, Shape, Type, op, opset8
 

@@ -14,7 +14,7 @@
 from tests.tensorflow.helpers import get_empty_config
 from tests.tensorflow.helpers import get_mock_model
 from tests.tensorflow.helpers import create_compressed_model_and_algo_for_test
-from tests.common.helpers import telemetry_send_event_test_driver
+from tests.shared.helpers import telemetry_send_event_test_driver
 
 def test_telemetry_is_sent(mocker):
     def use_nncf_fn():

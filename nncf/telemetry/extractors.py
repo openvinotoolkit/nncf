@@ -12,10 +12,14 @@
 """
 from abc import ABC
 from abc import abstractmethod
+from dataclasses import dataclass
 from typing import Any
+from typing import Dict
 from typing import Optional
+from typing import Union
 
 SerializableData = Union[str, Dict]
+
 
 @dataclass
 class CollectedEvent:
@@ -39,15 +43,5 @@ class TelemetryExtractor(ABC):
 
 class VerbatimTelemetryExtractor(TelemetryExtractor):
     def extract(self, argvalue: SerializableData) -> CollectedEvent:
-        return CollectedEvent(event_name=self._argname,
+        return CollectedEvent(name=self._argname,
                               data=argvalue)
-
-#
-# class ImplicitlyDefaultedParam(VerbatimTelemetryExtractor):
-#     def __init__(self, argname: str, default_value: Any):
-#         super().__init__(argname)
-#         self._default_value = default_value
-#
-#     def extract(self, argvalue: Any) -> CollectedEvent:
-#         val = argvalue if argvalue is not None else self._default_value
-#         return super().extract(val)

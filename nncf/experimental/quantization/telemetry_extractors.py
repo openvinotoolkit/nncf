@@ -13,13 +13,9 @@
 
 from nncf.telemetry.extractors import CollectedEvent
 from nncf.telemetry.extractors import TelemetryExtractor
-from nncf.config import NNCFConfig
-from nncf.experimental.quantization.compression_builder import CompressionBuilder
-from nncf.config.extractors import extract_algorithm_names
 
 
 class CompressionStartedFromBuilder(TelemetryExtractor):
-    def extract(self, builder: CompressionBuilder) -> CollectedEvent:
+    def extract(self, argvalue: 'CompressionBuilder') -> CollectedEvent:
         return CollectedEvent(name="compression_started",
-                              data=",".join(builder.algorithms))
-
+                              data=",".join([algo.__class__.__name__ for algo in argvalue.algorithms]))

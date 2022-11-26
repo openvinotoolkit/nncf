@@ -18,7 +18,7 @@ from nncf.config.extractors import extract_algorithm_names
 
 
 class CompressionStartedFromConfig(TelemetryExtractor):
-    def extract(self, config: NNCFConfig) -> CollectedEvent
-        algo_names = extract_algorithm_names(config)
+    def extract(self, argvalue: NNCFConfig) -> CollectedEvent:
+        algo_names = extract_algorithm_names(argvalue)
         return CollectedEvent(name="compression_started",
                               data=",".join(algo_names))

@@ -14,6 +14,7 @@ import os
 import importlib
 from unittest import mock
 from unittest.mock import MagicMock
+from unittest.mock import call
 
 import pytest
 
@@ -70,14 +71,27 @@ def test_tracked_function(mocker):
         pass
 
     fn_to_test("bar", "baz", "qux")
-    assert start_session_event_spy.call_count == 4
-    assert end_session_event_spy.call_count == 4
-    assert send_event_spy == 4
+    assert start_session_event_spy.call_count == 1
+    assert end_session_event_spy.call_count == 1
+    assert send_event_spy.call_count == 4
 
     expected_call_args_list = [
-        (CATEGORY_FOR_TEST, NAME_OF_EVENT_FOR_TEST, "baz"),
-        (CATEGORY_FOR_TEST, NAME_OF_EVENT_FOR_TEST),
-        (CATEGORY_FOR_TEST, NAME_OF_EVENT_FOR_TEST, "qux"),
-        (CATEGORY_FOR_TEST, NAME_OF_EVENT_FOR_TEST, "bazbaz")]
+        call(event_category=CATEGORY_FOR_TEST,
+             event_action="arg2",
+             event_label="baz",
+             event_value=None),
+        call(event_category=CATEGORY_FOR_TEST,
+             event_action=NAME_OF_EVENT_FOR_TEST,
+             event_label=None,
+             event_value=None),
+        call(event_category=CATEGORY_FOR_TEST,
+             event_action="arg3",
+             event_label="qux",
+             event_value=None),
+        call(event_category=CATEGORY_FOR_TEST,
+             event_action=NAME_OF_EVENT_FOR_TEST,
+             event_label="bazbaz",
+             event_value=EVENT_INT_DATA)
+        ]
 
     assert send_event_spy.call_args_list == expected_call_args_list

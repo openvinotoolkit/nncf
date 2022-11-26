@@ -13,7 +13,7 @@
 
 from tests.onnx.quantization.common import min_max_quantize_model
 from tests.onnx.models import LinearModel
-from tests.common.helpers import telemetry_send_event_test_driver
+from tests.shared.helpers import telemetry_send_event_test_driver
 
 def test_telemetry_is_sent(mocker):
     def use_nncf_fn():

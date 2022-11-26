@@ -17,7 +17,6 @@ import tensorflow as tf
 from tensorflow.python.framework.convert_to_constants import convert_variables_to_constants_v2
 
 from nncf.common.exporter import Exporter
-from nncf.telemetry import NNCFTelemetry
 from nncf.telemetry import tracked_function
 from nncf.telemetry.events import NNCF_TF_CATEGORY
 

@@ -8,4 +8,3 @@ class CompressionStarted(TelemetryExtractor):
     def extract(self, _: Any) -> CollectedEvent:
         return CollectedEvent(name="compression_started",
                               data="DefaultQuantization")
-

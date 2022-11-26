@@ -19,7 +19,6 @@ import torch
 
 from nncf.common.exporter import Exporter
 from nncf.common.utils.logger import logger as nncf_logger
-from nncf.telemetry import NNCFTelemetry
 from nncf.telemetry import tracked_function
 from nncf.telemetry.events import NNCF_PT_CATEGORY
 from nncf.torch.dynamic_graph.graph_tracer import create_dummy_forward_fn
