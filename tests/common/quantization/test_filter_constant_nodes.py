@@ -60,7 +60,7 @@ class ModelToTest1:
                  NodeWithType('Identity_1', IdentityTestMetatype),
                  NodeWithType('Reshape_1', ReshapeTestMetatype),
                  NodeWithType('Identity_2', IdentityTestMetatype),
-                 NodeWithType('FC_2', IdentityTestMetatype),
+                 NodeWithType('FC_2', LinearTestMetatype),
                  NodeWithType('Identity_3', IdentityTestMetatype),
                  NodeWithType('Output_1', OutputNoopMetatype),
                  ]
@@ -105,7 +105,7 @@ class ModelToTest2:
                  NodeWithType('Identity_1', IdentityTestMetatype),
                  NodeWithType('Conv_1', Conv2dTestMetatype),
                  NodeWithType('Identity_2', IdentityTestMetatype),
-                 NodeWithType('FC_2', IdentityTestMetatype),
+                 NodeWithType('FC_2', LinearTestMetatype),
                  NodeWithType('Identity_3', IdentityTestMetatype),
                  NodeWithType('Output_1', OutputNoopMetatype),
                  ]
@@ -118,12 +118,60 @@ class ModelToTest2:
                      NodeWithType('Identity_1', IdentityTestMetatype),
                      NodeWithType('Conv_1', Conv2dTestMetatype),
                      NodeWithType('Identity_2', IdentityTestMetatype),
-                     NodeWithType('FC_2', IdentityTestMetatype),
+                     NodeWithType('FC_2', LinearTestMetatype),
                      NodeWithType('Output_1', OutputNoopMetatype),
                      ]
         ref_edges = [('Input_1', 'Conv_1'), ('Conv_2', 'FC_1'), ('Identity_1', 'FC_1'),
                      ('Conv_1', 'Identity_1'), ('FC_1', 'Identity_2'),
                      ('Identity_2', 'FC_2'), ('FC_2', 'Output_1')]
+
+        original_mock_graph = create_mock_graph(nodes, node_edges)
+        self.nncf_graph = get_nncf_graph_from_mock_nx_graph(original_mock_graph)
+        reference_mock_graph = create_mock_graph(ref_nodes, ref_edges)
+        self.ref_nncf_graph = get_nncf_graph_from_mock_nx_graph(reference_mock_graph)
+
+
+@SYNTHETIC_NNCF_GRAPH_WITH_CONSTANT_SUBGRAPHS.register()
+class ModelToTest3:
+    #       Original graph                            Filtered graph
+    #                               (Graph will not be filtered, because there is no Input node)
+    #          Identity_1                               Identity_1
+    #             |                                        |
+    #           Conv_1  Identity_2                       Conv_1  Identity_2
+    #             |    /                                   |    /
+    #            FC_1                                     FC_1
+    #             |                                        |
+    #          Identity_3                               Identity_3
+    #             |                                        |
+    #           FC_2 --- Identity_4                      FC_2 --- Identity_4
+    #             |                                        |
+    #           Output_1                                 Output_1
+
+    def __init__(self):
+        nodes = [NodeWithType('Identity_1', IdentityTestMetatype),
+                 NodeWithType('Conv_1', Conv2dTestMetatype),
+                 NodeWithType('FC_1', LinearTestMetatype),
+                 NodeWithType('Identity_2', IdentityTestMetatype),
+                 NodeWithType('Identity_3', IdentityTestMetatype),
+                 NodeWithType('FC_2', LinearTestMetatype),
+                 NodeWithType('Identity_4', IdentityTestMetatype),
+                 NodeWithType('Output_1', OutputNoopMetatype),
+                 ]
+        node_edges = [('Identity_1', 'Conv_1'), ('Conv_1', 'FC_1'), ('Identity_2', 'FC_1'),
+                      ('FC_1', 'Identity_3'), ('Identity_3', 'FC_2'),
+                      ('Identity_4', 'FC_2'), ('FC_2', 'Output_1')]
+        ref_nodes = [NodeWithType('Identity_1', IdentityTestMetatype),
+                     NodeWithType('Conv_1', Conv2dTestMetatype),
+                     NodeWithType('FC_1', LinearTestMetatype),
+                     NodeWithType('Identity_2', IdentityTestMetatype),
+                     NodeWithType('Identity_3', IdentityTestMetatype),
+                     NodeWithType('FC_2', LinearTestMetatype),
+                     NodeWithType('Identity_4', IdentityTestMetatype),
+                     NodeWithType('Output_1', OutputNoopMetatype),
+                     ]
+        ref_edges = [('Identity_1', 'Conv_1'), ('Conv_1', 'FC_1'), ('Identity_2', 'FC_1'),
+                     ('FC_1', 'Identity_3'), ('Identity_3', 'FC_2'),
+                     ('Identity_4', 'FC_2'), ('FC_2', 'Output_1')]
 
         original_mock_graph = create_mock_graph(nodes, node_edges)
         self.nncf_graph = get_nncf_graph_from_mock_nx_graph(original_mock_graph)
