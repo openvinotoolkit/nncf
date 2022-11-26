@@ -75,10 +75,15 @@ def calculate_weight_quantizer_parameters(weight_tensor: np.ndarray, quantizer_c
 
 def calculate_activation_quantizer_parameters(statistics: MinMaxTensorStatistic,
                                               quantizer_config: QuantizerConfig,
-                                              axis: Optional[int]) -> QuantizerLayerParameters:
+                                              axis: Optional[int] = None) -> QuantizerLayerParameters:
     """
     Calculates Quantizer/Dequantizer layer attributes for activation quantizer such as scale, zero_points and
     quantization mode: symmetric, asymmetric.
+
+    :param statistics: Collected statistics for the quantized insertion.
+    :param quantizer_config: Config of the quantization configuration.
+    :param axis: Axis of the quantization. None in a per-tensor quantization case.
+    :return: Parameters of the quantizer/dequantizer layers.
     """
     per_channel = quantizer_config.per_channel
     num_bits = quantizer_config.num_bits

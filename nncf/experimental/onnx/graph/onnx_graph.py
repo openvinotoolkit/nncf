@@ -251,7 +251,7 @@ class ONNXGraph:
         """
         return self._get_param_from_weight_definitions(node, 'weight_port_id')
 
-    def weight_channel_axis(self, node: onnx.NodeProto) -> int:
+    def get_weight_channel_axis(self, node: onnx.NodeProto) -> int:
         """
         Returns a channel axis for weight per-channel quantization.
 
