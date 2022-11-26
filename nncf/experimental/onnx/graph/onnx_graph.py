@@ -273,6 +273,13 @@ class ONNXGraph:
         return self._get_param_from_weight_definitions(node, 'bias_port_id')
 
     def _get_weight_tensor_with_reshape(self, node: onnx.NodeProto) -> Tuple[str, np.ndarray]:
+        """
+        Returns node's weight tensor name and its value in the case when reshape node is placed after the weight.
+        The returned weight tensor will be reshaped according to a shape attribute of the reshape node.
+
+        :param node: Reshape node, whose input is weight tensor.
+        :return: The weight tensor name and its value with applied the reshape operation.
+        """
         tensor_name = node.output[0]
         shape = self.get_initializers_value(node.input[1])
         tensor_value = self.get_initializers_value(node.input[0])
@@ -280,6 +287,12 @@ class ONNXGraph:
         return tensor_name, reshaped_tensor_value
 
     def _get_tensor_from_zero_input(self, node: onnx.NodeProto) -> Tuple[str, np.ndarray]:
+        """
+        Returns the weight tensor name and its value, which is located on the 0-index input port of the node.
+
+        :param node: Node, which takes on the 0-index input port id the weight tensor.
+        :return: The weight tensor name and its value.
+        """
         tensor_name = self.get_initializer(node.input[0]).name
         return tensor_name, self.get_initializers_value(tensor_name)
 

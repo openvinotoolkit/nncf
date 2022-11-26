@@ -13,7 +13,7 @@
 
 from abc import ABC
 from abc import abstractmethod
-from typing import Dict, TypeVar, Tuple, List
+from typing import Dict, TypeVar, Tuple, List, Optional
 
 import numpy as np
 from nncf.common.graph.graph import NNCFNode
@@ -155,6 +155,18 @@ class MinMaxAlgoBackend(ABC):
         :param model: Backend-specific model for the initializer finding.
         :param node: NNCFNode to find its weight input port ID.
         :return: The input port ID of the weight.
+        """
+
+    @staticmethod
+    def get_weight_tensor_quantization_axis(model: TModel, node: NNCFNode,
+                                            quantizer_config: QuantizerConfig) -> Optional[int]:
+        """
+        Returns the axis for the quantization of the weight tensor of the node.
+
+        :param model: Backend-specific model.
+        :param node: Node, which weight tensor is quantized.
+        :param quantizer_config: Config of quantization of the specific node.
+        :return: None in a case of per-tensor quantization, an axis number in a case of per-channel quantization.
         """
 
     @staticmethod
