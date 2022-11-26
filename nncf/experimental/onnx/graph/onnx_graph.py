@@ -206,11 +206,11 @@ class ONNXGraph:
         :return: Weight tensor name and its value.
         """
         try:
-            weight_port_id = self.get_weight_tensor_port_id(node)
+            weight_port_id = self.get_weight_port_id(node)
             weight_input = self.get_node_edge_names(node.name)['input'][weight_port_id]
             return self.get_initializer(weight_input).name, self.get_initializers_value(weight_input)
         except RuntimeError as exc:
-            weight_port_id = self.get_weight_tensor_port_id(node)
+            weight_port_id = self.get_weight_port_id(node)
             parent_node_on_weight_port = self.get_parents(node)[weight_port_id]
             nodes = deque([parent_node_on_weight_port])
             while nodes:
@@ -223,7 +223,7 @@ class ONNXGraph:
                         return self._get_tensor_from_zero_input(current_node)
                     if metatype == ONNXReshapeMetatype:
                         return self._get_weight_tensor_with_reshape(current_node)
-                    weight_port_id = self.get_weight_tensor_port_id(current_node)
+                    weight_port_id = self.get_weight_port_id(current_node)
                     if weight_port_id is None:
                         # The node does not have weight
                         continue
@@ -242,7 +242,7 @@ class ONNXGraph:
             raise RuntimeError(f'The metatype {metatype} does not have {parameter} attribute')
         raise RuntimeError(f'The metatype {metatype} does not belong to a list of metatypes with a weight tensor.')
 
-    def get_weight_tensor_port_id(self, node: onnx.NodeProto) -> int:
+    def get_weight_port_id(self, node: onnx.NodeProto) -> int:
         """
         Returns input port id, where a weight tensor should output.
 
@@ -251,11 +251,11 @@ class ONNXGraph:
         """
         return self._get_param_from_weight_definitions(node, 'weight_port_id')
 
-    def get_channel_axis(self, node: onnx.NodeProto) -> int:
+    def weight_channel_axis(self, node: onnx.NodeProto) -> int:
         """
-        Returns channel axis for per-channel quantization.
+        Returns a channel axis for weight per-channel quantization.
 
-        :param node: Node, for which channel axis id is returned,
+        :param node: Node, for which weight per-channel axis id is returned,
         :return: Channel axis for per-channel quantization.
         """
         axis = self._get_param_from_weight_definitions(node, 'weight_channel_axis')

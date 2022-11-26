@@ -110,7 +110,7 @@ class ONNXMinMaxAlgoBackend(MinMaxAlgoBackend):
     def get_weight_tensor_port_id(model: onnx.ModelProto, node: NNCFNode) -> int:
         onnx_graph = ONNXGraph(model)
         onnx_node = onnx_graph.get_node_by_name(node.node_name)
-        return onnx_graph.get_weight_tensor_port_id(onnx_node)
+        return onnx_graph.get_weight_port_id(onnx_node)
 
     @staticmethod
     def get_weight_tensor_quantization_axis(model: onnx.ModelProto, node: NNCFNode,
@@ -119,7 +119,7 @@ class ONNXMinMaxAlgoBackend(MinMaxAlgoBackend):
             return None
         onnx_graph = ONNXGraph(model)
         onnx_node = onnx_graph.get_node_by_name(node.node_name)
-        return onnx_graph.get_channel_axis(onnx_node)
+        return onnx_graph.weight_channel_axis(onnx_node)
 
     @staticmethod
     def get_tensor_names(node: NNCFNode) -> Tuple[List[str], List[str]]:

@@ -158,7 +158,7 @@ class MinMaxAlgoBackend(ABC):
         """
 
     @staticmethod
-    def get_channel_axis(model: TModel, node: NNCFNode) -> int:
+    def weight_channel_axis(model: TModel, node: NNCFNode) -> int:
         """
         Returns node's weight's channel for per-channel quantization.
 

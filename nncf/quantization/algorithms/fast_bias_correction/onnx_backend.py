@@ -132,7 +132,7 @@ class ONNXFBCAlgoBackend(FBCAlgoBackend):
         onnx_graph = ONNXGraph(model)
         onnx_node = onnx_graph.get_node_by_name(node.node_name)
         # We assume that the weight is on the first-index
-        weight_port_id = onnx_graph.get_weight_tensor_port_id(onnx_node)
+        weight_port_id = onnx_graph.get_weight_port_id(onnx_node)
         input_edge_names = onnx_graph.get_node_edge_names(node.node_name)['input']
         nodes_after_weight = onnx_graph.get_nodes_by_output(input_edge_names[weight_port_id])
         if not nodes_after_weight:
