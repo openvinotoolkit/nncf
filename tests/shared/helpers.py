@@ -44,16 +44,19 @@ def create_venv_with_nncf(tmp_path: Path, package_type: str, venv_type: str, ext
     venv_path = tmp_path / 'venv'
     venv_path.mkdir()
 
-    python_executable_with_venv = '. {0}/bin/activate && {0}/bin/python'.format(venv_path)
-    pip_with_venv = '. {0}/bin/activate && {0}/bin/pip'.format(venv_path)
+    python_executable_with_venv = f'. {venv_path}/bin/activate && {venv_path}/bin/python'
+    pip_with_venv = f'. {venv_path}/bin/activate && {venv_path}/bin/pip'
 
-    version_string = '{}.{}'.format(sys.version_info[0], sys.version_info[1])
+    version_string = f'{sys.version_info[0]}.{sys.version_info[1]}'
     if venv_type == 'virtualenv':
-        subprocess.call('virtualenv -ppython{} {}'.format(version_string, venv_path), shell=True)
+        subprocess.call(f'virtualenv -ppython{version_string} {venv_path}', shell=True)
     elif venv_type == 'venv':
-        subprocess.call('python{} -m venv {}'.format(version_string, venv_path), shell=True)
-        subprocess.call('{} install --upgrade pip'.format(pip_with_venv), shell=True)
-        subprocess.call('{} install wheel'.format(pip_with_venv), shell=True)
+        subprocess.call(f'python{version_string} -m venv {venv_path}', shell=True)
+    subprocess.call(f'{pip_with_venv} install --upgrade pip', shell=True)
+    subprocess.call(f'{pip_with_venv} install wheel', shell=True)
+
+    if package_type in ['build_s', 'build_w']:
+        subprocess.call(f'{pip_with_venv} install build', shell=True)
 
     run_path = tmp_path / 'run'
     run_path.mkdir()
@@ -73,22 +76,14 @@ def create_venv_with_nncf(tmp_path: Path, package_type: str, venv_type: str, ext
     elif package_type == 'pip_git_develop':
         subprocess.run(
             f'{pip_with_venv} install git+{GITHUB_REPO_URL}@develop#egg=nncf[{extra_reqs_str}]', check=True, shell=True)
-    else:
-        options_str = None
-        if extra_reqs is not None and extra_reqs:
-            options_str = ''
-            for extra in extra_reqs:
-                options_str += f'--{extra} '
+    elif package_type == 'build_s':
         subprocess.run(
-            '{python} {nncf_repo_root}/setup.py {package_type} {options}'.format(
-                python=python_executable_with_venv,
-                nncf_repo_root=PROJECT_ROOT,
-                package_type=package_type,
-                options=options_str if options_str is not None else ''),
-            check=True,
-            shell=True,
-            cwd=PROJECT_ROOT)
-
+            f'{python_executable_with_venv} -m build -s', check=True, shell=True, cwd=PROJECT_ROOT)
+    elif package_type == 'build_w':
+        subprocess.run(
+            f'{python_executable_with_venv} -m build -w', check=True, shell=True, cwd=PROJECT_ROOT)
+    else:
+        raise RuntimeError(f"Invalid package type: {package_type}")
     return venv_path
 
 

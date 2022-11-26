@@ -29,22 +29,25 @@ def run_install_checks(venv_path: Path, tmp_path: Path, package_type: str, backe
     python_executable_with_venv = f'. {venv_path}/bin/activate && {venv_path}/bin/python'
     pip_with_venv = f'. {venv_path}/bin/activate && {venv_path}/bin/pip'
 
-    # Do additional install step for sdist/bdist packages
-    if package_type == 'sdist':
-        for file_path in (PROJECT_ROOT / 'dist').iterdir():
-            file_name = str(file_path)
-            if file_name.endswith('.tar.gz'):
-                package_name = file_name
-                break
-        else:
+
+    if package_type in ['build_s', 'build_w']:
+        # Do additional install step for sdist/bdist packages
+        def find_file_by_extension(directory: Path, extension: str) -> str:
+            for file_path in directory.iterdir():
+                file_path_str = str(file_path)
+                if file_path_str.endswith(extension):
+                    return file_path_str
             raise FileNotFoundError('NNCF package not found')
 
+
+        if package_type == 'build_s':
+            package_path = find_file_by_extension(PROJECT_ROOT / 'dist', '.tar.gz')
+        elif package_type == "build_w":
+            package_path = find_file_by_extension(PROJECT_ROOT / 'dist', '.whl')
+
         subprocess.run(
-            f'{pip_with_venv} install {PROJECT_ROOT}/dist/{package_name}[{backend}] ',
-            check=True, shell=True)
-    elif package_type == "bdist_wheel":
-        subprocess.run(
-            f"{pip_with_venv} install {PROJECT_ROOT}/dist/*.whl ", check=True, shell=True)
+            f'{pip_with_venv} install {package_path}[{backend}] ',
+                check=True, shell=True)
 
     run_path = tmp_path / 'run'
     install_checks_py_name = f'install_checks_{backend}.py'
@@ -63,8 +66,8 @@ def venv_type_(request):
 
 
 @pytest.fixture(name="package_type",
-                params=["install", "develop", "sdist", "bdist_wheel",
-                        "pip_pypi", "pip_local", "pip_e_local", "pip_git_develop"])
+                params=["pip_local", "pip_e_local", "pip_git_develop",
+                        "pip_pypi", "build_s", "build_w"])
 def package_type_(request):
     return request.param
 
