@@ -32,10 +32,10 @@ class ONNXOpMetatype(OperatorMetatype):
 @dataclass
 class OpWeightDef:
     """
-    Contains information about the weight of operation.
+    Contains the information about the weight and bias of the operation.
     :param weight_channel_axis: Axis for weight per-channel quantization, meaning the number of output filters.
     :param weight_port_id: Input port of the node's weight.
-    If the value is None the weight_channel_axis should be determined dynamically.
+    If the value is None the weight_port_id should be determined dynamically.
     :param bias_port_id: Input port of the node's bias.
     If the value is None it means that the Metatype does not have bias.
     """

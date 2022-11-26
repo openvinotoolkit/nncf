@@ -248,9 +248,9 @@ class InsertionPointGraph(nx.DiGraph):
 
     def get_input_nodes(self) -> List[str]:
         """
-        Returns all Input Nodes, nodes having any of INPUT_NOOP_METATYPES.
+        Returns all input nodes, nodes having any of INPUT_NOOP_METATYPES.
 
-        :return: All Input Nodes.
+        :return: A list of input nodes.
         """
         output = []
         for node in self.nodes:
@@ -269,11 +269,12 @@ class InsertionPointGraph(nx.DiGraph):
 
     def get_merged_node_from_single_node_key(self, node_key: str) -> str:
         """
-        Returns the merged node key if the corresponding node with 'node_key' was merged.
-        Otherwise retuns the 'node_key'.
+        Returns the node key of the composite node,
+        if the corresponding node with 'node_key' was merged into it during the graph initialization.
+        Otherwise, returns the original 'node_key'.
 
         :param node_key: The key of the node which is checking on the merged.
-        :return: The merged node key. 'node_key' if it was not merged.
+        :return: The node key of the composite node. Original 'node_key' if the node was not merged.
         """
         for node in self.nodes:
             if InsertionPointGraph.REGULAR_NODE_REF_NODE_ATTR not in self.nodes[node]:
