@@ -11,24 +11,26 @@
  limitations under the License.
 """
 
-from typing import TypeVar, Callable, List, Union, Tuple, Optional, Any
-
-import networkx as nx
+from typing import TypeVar, Callable, List, Tuple, Optional, Any
 
 Node = TypeVar('Node')
+TraversingGraph = TypeVar('TraversingGraph')
 
 
-def traverse_graph(graph: nx.DiGraph,
+def traverse_graph(graph: TraversingGraph,
                    traverse_function: Callable[[Node, List[Any]], Tuple[bool, List[Any]]],
                    start_nodes: Optional[List[Node]] = None,
-                   traverse_forward: bool = True):
+                   traverse_forward: bool = True) -> List[Node]:
     """
-    Traverses graph up or down starting form `curr_node` node.
+    Traverses graph forward or backward starting from 'start_nodes'.
+    If 'start_nodes' is None, then traversing starts from the Input nodes of the graph.
+    The traverse logic should be implemented through 'traverse_function'.
 
-    :param curr_node: Node from which traversal is started.
+    :param graph: Any graph that implements get_next_nodes, get_previous_nodes and get_input_nodes functions.
     :param traverse_function: Function describing condition of traversal continuation/termination.
+    :param start_nodes: Nodes from which traversal is started.
     :param traverse_forward: Flag specifying direction of traversal.
-    :return:
+    :return: The traversed path.
     """
 
     def _traverse_graph_recursive_helper(curr_node: Node,
@@ -42,7 +44,7 @@ def traverse_graph(graph: nx.DiGraph,
         return output
 
     output = []
-    if not start_nodes:
+    if start_nodes is None:
         start_nodes = graph.get_input_nodes()
     for node in start_nodes:
         _traverse_graph_recursive_helper(node, traverse_function, output, traverse_forward)
