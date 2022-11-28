@@ -9,4 +9,4 @@ virtualenv
 pyparsing<3.0
 
 # Required for search_buidling_blocks tests
-transformers
+transformers==4.23.1
