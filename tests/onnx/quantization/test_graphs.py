@@ -18,14 +18,11 @@ from tests.onnx.quantization.common import infer_model, min_max_quantize_model
 from tests.onnx.quantization.common import compare_nncf_graph
 from tests.onnx.models import ALL_SYNTHETIC_MODELS
 from tests.onnx.models import MultiInputOutputModel
-from tests.onnx.models import ReshapeWeightModel
 
 
 @pytest.mark.parametrize('model_cls_to_test', ALL_SYNTHETIC_MODELS.values())
 def test_syntetic_models_graph(model_cls_to_test):
     if model_cls_to_test == MultiInputOutputModel:
-        pytest.skip('min_max_quantize_model does not support many inputs for now.')
-    if model_cls_to_test != ReshapeWeightModel:
         pytest.skip('min_max_quantize_model does not support many inputs for now.')
     model_to_test = model_cls_to_test()
     quantized_model = min_max_quantize_model(model_to_test.input_shape[0], model_to_test.onnx_model)

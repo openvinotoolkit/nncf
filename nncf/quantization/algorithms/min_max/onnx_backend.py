@@ -122,6 +122,12 @@ class ONNXMinMaxAlgoBackend(MinMaxAlgoBackend):
         return onnx_graph.get_weight_channel_axis(onnx_node)
 
     @staticmethod
+    def get_activation_quantization_axis(quantizer_config: QuantizerConfig) -> Optional[int]:
+        if quantizer_config.per_channel:
+            return 1
+        return None
+
+    @staticmethod
     def get_tensor_names(node: NNCFNode) -> Tuple[List[str], List[str]]:
         return node.layer_attributes.input_tensor_names, \
                node.layer_attributes.output_tensor_names

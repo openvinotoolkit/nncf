@@ -170,6 +170,18 @@ class MinMaxAlgoBackend(ABC):
         """
 
     @staticmethod
+    def get_activation_quantization_axis(quantizer_config: QuantizerConfig) -> Optional[int]:
+        """
+        Returns quantization axis for activation quantizer.
+
+        :param quantizer_config: Quantization configuration
+        :return: Quantization axis in per-channel case. None in per-tensor case.
+        """
+        if quantizer_config.per_channel:
+            return 1
+        return None
+
+    @staticmethod
     @abstractmethod
     def get_tensor_names(node: NNCFNode) -> Tuple[List[str], List[str]]:
         """
