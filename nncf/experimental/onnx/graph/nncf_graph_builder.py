@@ -48,15 +48,15 @@ class GraphConverter:
         """
         node_type = node.op_type
         metatype = ONNX_OPERATION_METATYPES.get_operator_metatype_by_op_name(node_type)
-        if metatype == ONNXConstantMetatype:  # We don't need to quantize Constants
-            nncf_logger.debug('The metatype is ONNXConstantMetatype, which means that the node is Constant.'
-                              'All constant nodes are not added to NNCFGraph. The node is skipped.')
+        if metatype == ONNXConstantMetatype:
+            # We don't need to quantize Constants
             return False
         if metatype == UnknownMetatype:
             node_name = node.name
             nncf_logger.warning(
                 'The node with name {} with type {} was mapped to UnknownMetatype,'
                 ' which means that there was not registered such NNCF metatype. '
+                'It could lead to not the best optimized model.'
                 'Please, Inform the NNCF developers about this message.'.format(
                     node_name, node_type))
             return True
