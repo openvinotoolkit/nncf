@@ -36,7 +36,7 @@ class TFExporter(Exporter):
 
 
     @tracked_function(NNCF_TF_CATEGORY, ["save_format"])
-    def export_model(self, save_path: str, save_format: Optional[str] = None) -> None:
+    def export_model(self, save_path: str, save_format: str = TFExportFormat.FROZEN_GRAPH) -> None:
         """
         Exports the compressed model to the specified format.
 
@@ -48,9 +48,6 @@ class TFExporter(Exporter):
                 - `frozen_graph` for export to the Frozen Graph format.
             The Frozen Graph format will be used if `save_format` is not specified.
         """
-
-        if save_format is None:
-            save_format = TFExportFormat.FROZEN_GRAPH
 
         format_to_export_fn = {
             TFExportFormat.SAVED_MODEL: self._export_to_saved_model,

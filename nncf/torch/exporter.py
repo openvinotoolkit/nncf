@@ -92,7 +92,7 @@ class PTExporter(Exporter):
         return save_format, {}
 
     @tracked_function(NNCF_PT_CATEGORY, ["save_format"])
-    def export_model(self, save_path: str, save_format: Optional[str] = PTExportFormat.ONNX) -> None:
+    def export_model(self, save_path: str, save_format: str = PTExportFormat.ONNX) -> None:
         """
         Exports the compressed model to the specified format.
 

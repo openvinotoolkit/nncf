@@ -32,7 +32,6 @@ from nncf.common.quantization.structs import QuantizationPreset
 from nncf.common.utils.logger import logger as nncf_logger
 from nncf.openvino.engine import OVEngine
 from nncf.openvino.quantization.accuracy_aware import NMSEBasedAccuracyAware
-from nncf.telemetry import NNCFTelemetry
 from nncf.telemetry import tracked_function
 from nncf.telemetry.events import NNCF_OV_CATEGORY
 

@@ -14,15 +14,18 @@ from abc import ABC
 from abc import abstractmethod
 from dataclasses import dataclass
 from typing import Any
-from typing import Dict
 from typing import Optional
-from typing import Union
 
-SerializableData = Union[str, Dict]
+SerializableData = str
 
 
 @dataclass
 class CollectedEvent:
+    """
+    name: The name for the event, will be sent as `event_action`
+    data: Optional - the data associated with the event. Must be a string - serialize to string if it is not.
+    int_data: Optional - the integer data associated with the event. Must be a positive integer.
+    """
     name: str
     data: SerializableData = None  # GA limitations
     int_data: int = None

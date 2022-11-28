@@ -40,11 +40,3 @@ def telemetry_category(category: str) -> str:
     _set_current_category(category)
     yield category
     _set_current_category(previous_category)
-
-
-def get_algo_names_from_builder(builder: CompressionAlgorithmBuilder) -> List[str]:
-    if isinstance(builder, CompositeCompressionAlgorithmBuilder):
-        algo_names = sorted([x.name for x in builder.child_builders])
-    else:
-        algo_names = [builder.name, ]
-    return algo_names

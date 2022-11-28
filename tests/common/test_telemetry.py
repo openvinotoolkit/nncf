@@ -14,6 +14,8 @@ import os
 import importlib
 from unittest import mock
 from unittest.mock import call
+from unittest.mock import MagicMock
+from typing import Tuple
 
 import pytest
 
@@ -41,6 +43,14 @@ def test_telemetry_is_mocked_if_env_vars_defined(mocker, env_var_to_define):
     # cleanup
     importlib.reload(wrapper)
 
+@pytest.fixture(name="spies")
+def spies_(request, mocker) -> Tuple[MagicMock, MagicMock, MagicMock]:
+    from nncf.telemetry import NNCFTelemetry
+    send_event_spy = mocker.spy(NNCFTelemetry, "send_event")
+    start_session_event_spy = mocker.spy(NNCFTelemetry, "start_session")
+    end_session_event_spy = mocker.spy(NNCFTelemetry, "end_session")
+    return (send_event_spy, start_session_event_spy, end_session_event_spy)
+
 
 CATEGORY_FOR_TEST = "test_category"
 NAME_OF_EVENT_FOR_TEST = "test_category"
@@ -48,11 +58,8 @@ CONSTANT_DEFAULT_ARGVALUE = "foo"
 EVENT_INT_DATA = 665
 
 
-def test_tracked_function(mocker):
-    from nncf.telemetry import NNCFTelemetry
-    send_event_spy = mocker.spy(NNCFTelemetry, "send_event")
-    start_session_event_spy = mocker.spy(NNCFTelemetry, "start_session")
-    end_session_event_spy = mocker.spy(NNCFTelemetry, "end_session")
+def test_tracked_function(mocker, spies):
+    send_event_spy, start_session_event_spy, end_session_event_spy = spies
 
     class DoubleArgExtractor(TelemetryExtractor):
         def extract(self, argvalue: str) -> CollectedEvent:
@@ -70,7 +77,7 @@ def test_tracked_function(mocker):
     def fn_to_test(arg1, arg2, arg3 = CONSTANT_DEFAULT_ARGVALUE):
         pass
 
-    fn_to_test("bar", "baz", "qux")
+    fn_to_test("bar", "baz")
     assert start_session_event_spy.call_count == 1
     assert end_session_event_spy.call_count == 1
     assert send_event_spy.call_count == 4
@@ -86,7 +93,7 @@ def test_tracked_function(mocker):
              event_value=None),
         call(event_category=CATEGORY_FOR_TEST,
              event_action="arg3",
-             event_label="qux",
+             event_label=CONSTANT_DEFAULT_ARGVALUE,
              event_value=None),
         call(event_category=CATEGORY_FOR_TEST,
              event_action=NAME_OF_EVENT_FOR_TEST,
@@ -99,26 +106,22 @@ def test_tracked_function(mocker):
 
 CATEGORY_FOR_TEST2 = "test_category2"
 
+@tracked_function(category=CATEGORY_FOR_TEST, collectors=["arg"])
+def inner_same(arg):
+    return arg
 
-def test_nested_function_categories(mocker):
-    from nncf.telemetry import NNCFTelemetry
-    send_event_spy = mocker.spy(NNCFTelemetry, "send_event")
-    start_session_event_spy = mocker.spy(NNCFTelemetry, "start_session")
-    end_session_event_spy = mocker.spy(NNCFTelemetry, "end_session")
+@tracked_function(category=CATEGORY_FOR_TEST2, collectors=["arg"])
+def inner_other(arg):
+    return arg
 
-    @tracked_function(category=CATEGORY_FOR_TEST, collectors=["arg"])
-    def inner_same(arg):
-        return arg
+@tracked_function(category=CATEGORY_FOR_TEST, collectors=["arg"])
+def outer(arg, same: bool):
+    if same:
+        return inner_same(arg)
+    return inner_other(arg)
 
-    @tracked_function(category=CATEGORY_FOR_TEST2, collectors=["arg"])
-    def inner_other(arg):
-        return arg
-
-    @tracked_function(category=CATEGORY_FOR_TEST, collectors=["arg"])
-    def outer(arg, same: bool):
-        if same:
-            return inner_same(arg)
-        inner_other(arg)
+def test_nested_function_same_categories(mocker, spies):
+    send_event_spy, start_session_event_spy, end_session_event_spy = spies
 
     outer("foo", same=True)
 
@@ -129,12 +132,41 @@ def test_nested_function_categories(mocker):
     expected_call_args_list = [
         call(event_category=CATEGORY_FOR_TEST,
              event_action="arg",
-             event_label="1",
+             event_label="foo",
              event_value=None),
         call(event_category=CATEGORY_FOR_TEST,
              event_action="arg",
-             event_label="1",
+             event_label="foo",
              event_value=None) ]
 
     assert send_event_spy.call_args_list == expected_call_args_list
 
+def test_nested_function_different_categories(mocker, spies):
+    send_event_spy, start_session_event_spy, end_session_event_spy = spies
+
+    outer("foo", same=False)
+
+    assert start_session_event_spy.call_count == 2
+    assert end_session_event_spy.call_count == 2
+    assert send_event_spy.call_count == 2
+
+    expected_call_args_list = [
+        call(event_category=CATEGORY_FOR_TEST,
+             event_action="arg",
+             event_label="foo",
+             event_value=None),
+        call(event_category=CATEGORY_FOR_TEST2,
+             event_action="arg",
+             event_label="foo",
+             event_value=None) ]
+
+    assert send_event_spy.call_args_list == expected_call_args_list
+
+    expected_session_call_args_list = [
+        call(CATEGORY_FOR_TEST),
+        call(CATEGORY_FOR_TEST2)
+        ]
+
+
+    assert start_session_event_spy.call_args_list == expected_session_call_args_list
+    assert end_session_event_spy.call_args_list == list(reversed(expected_session_call_args_list))

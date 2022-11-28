@@ -38,7 +38,10 @@ class tracked_function:
             approach for more complex event reporting.
         """
         self._category = category
-        self._collectors = [VerbatimTelemetryExtractor(x) if isinstance(x, str) else x for x in collectors]
+        if collectors is not None:
+            self._collectors = [VerbatimTelemetryExtractor(x) if isinstance(x, str) else x for x in collectors]
+        else:
+            self._collectors = []
 
     def __call__(self, fn: Callable) -> Callable:
         fn_signature = inspect.signature(fn)
