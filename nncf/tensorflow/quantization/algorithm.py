@@ -631,8 +631,6 @@ class QuantizationBuilder(TFCompressionAlgorithmBuilder):
         return quantizer_setup
 
     def _get_input_preprocessing_nodes(self, nncf_graph: NNCFGraph, model: tf.keras.Model) -> List[NNCFNode]:
-        retval = []
-
         def traverse_fn(node: NNCFNode, preprocessing_nodes: List[NNCFNode]) -> Tuple[bool, List[NNCFNode]]:
             is_finished = True
             successors = nncf_graph.get_next_nodes(node)
