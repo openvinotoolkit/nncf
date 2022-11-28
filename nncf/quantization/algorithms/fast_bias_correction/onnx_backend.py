@@ -104,14 +104,13 @@ class ONNXFBCAlgoBackend(FBCAlgoBackend):
         onnx_node = onnx_graph.get_node_by_name(node.node_name)
         bias_port_id = onnx_graph.get_bias_tensor_port_id(onnx_node)
         bias_input_name = onnx_node.input[bias_port_id]
-        try:
+        if onnx_graph.has_initializer(bias_input_name):
             return onnx_graph.get_initializers_value(bias_input_name)
-        except RuntimeError as e:
-            node = onnx_graph.get_nodes_by_output(bias_input_name)[0]
-            metatype = ONNX_OPERATION_METATYPES.get_operator_metatype_by_op_name(node.op_type)
-            if metatype == ONNXIdentityMetatype:
-                return onnx_graph.get_initializers_value(node.input[0])
-            raise RuntimeError('Could not find the bias value of the node') from e
+        node = onnx_graph.get_nodes_by_output(bias_input_name)[0]
+        metatype = ONNX_OPERATION_METATYPES.get_operator_metatype_by_op_name(node.op_type)
+        if metatype == ONNXIdentityMetatype:
+            return onnx_graph.get_initializers_value(node.input[0])
+        raise RuntimeError('Could not find the bias value of the node')
 
     @staticmethod
     def get_activation_port_ids_for_bias_node(model: onnx.ModelProto, node: NNCFNode) -> Tuple[int, int]:

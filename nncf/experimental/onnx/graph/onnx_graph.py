@@ -206,33 +206,27 @@ class ONNXGraph:
         :param node: Node, in which the weight tensor finally applied.
         :return: Weight tensor name and its value.
         """
-        try:
-            weight_port_id = self.get_weight_port_id(node)
-            weight_input = self.get_node_edge_names(node.name)['input'][weight_port_id]
+        weight_port_id = self.get_weight_port_id(node)
+        weight_input = self.get_node_edge_names(node.name)['input'][weight_port_id]
+        if self.has_initializer(weight_input):
             return self.get_initializer(weight_input).name, self.get_initializers_value(weight_input)
-        except RuntimeError as exc:
-            weight_port_id = self.get_weight_port_id(node)
-            parent_node_on_weight_port = self.get_parents(node)[weight_port_id]
-            nodes = deque([parent_node_on_weight_port])
-            while nodes:
-                try:
-                    current_node = nodes.popleft()
-                    node_parents = self.get_parents(current_node)
-                    nodes.extendleft(node_parents)
-                    metatype = ONNX_OPERATION_METATYPES.get_operator_metatype_by_op_name(current_node.op_type)
-                    if metatype in [ONNXIdentityMetatype, ONNXQuantizeLinearMetatype]:
-                        return self._get_tensor_from_zero_input(current_node)
-                    if metatype == ONNXReshapeMetatype:
-                        return self._get_weight_tensor_with_reshape(current_node)
-                    weight_port_id = self.get_weight_port_id(current_node)
-                    if weight_port_id is None:
-                        # The node does not have weight
-                        continue
-                    weight_input = self.get_node_edge_names(current_node.name)['input'][weight_port_id]
-                    return self.get_initializer(weight_input).name, self.get_initializers_value(weight_input)
-                except RuntimeError:
-                    continue
-            raise RuntimeError('Could not find the weight value of the node') from exc
+        weight_port_id = self.get_weight_port_id(node)
+        parent_node_on_weight_port = self.get_parents(node)[weight_port_id]
+        nodes = deque([parent_node_on_weight_port])
+        while nodes:
+            current_node = nodes.popleft()
+            node_parents = self.get_parents(current_node)
+            nodes.extendleft(node_parents)
+            metatype = ONNX_OPERATION_METATYPES.get_operator_metatype_by_op_name(current_node.op_type)
+            if metatype in [ONNXIdentityMetatype, ONNXQuantizeLinearMetatype]:
+                return self._get_tensor_from_zero_input(current_node)
+            if metatype == ONNXReshapeMetatype:
+                return self._get_weight_tensor_with_reshape(current_node)
+            if metatype in WEIGHT_LAYER_METATYPES:
+                weight_port_id = self.get_weight_port_id(current_node)
+                weight_input = self.get_node_edge_names(current_node.name)['input'][weight_port_id]
+                return self.get_initializer(weight_input).name, self.get_initializers_value(weight_input)
+        raise RuntimeError('Could not find the weight tensor of the node')
 
     @staticmethod
     def _get_weight_definitions(node: onnx.NodeProto) -> OpWeightDef:
@@ -331,6 +325,18 @@ class ONNXGraph:
                 tensor = numpy_helper.to_array(init)
                 return tensor
         raise RuntimeError('There is no initializer with the name {}'.format(initializer_name))
+
+    def has_initializer(self, initializer_name: str) -> bool:
+        """
+        Returns True whether the model has the initializer with the name equals to initializer_name.
+
+        :param initializer_name: Name of the initializer.
+        :return: True if the model has such initializer, False - otherwise.
+        """
+        for init in self.onnx_model.graph.initializer:
+            if init.name == initializer_name:
+                return True
+        return False
 
     def get_initializer(self, initializer_name: str) -> onnx.TensorProto:
         """

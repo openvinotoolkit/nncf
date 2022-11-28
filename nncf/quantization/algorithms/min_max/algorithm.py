@@ -316,18 +316,13 @@ class MinMaxQuantization(Algorithm):
             target_node_name = quantization_target_point.target_node_name
             node = nncf_graph.get_node_by_name(target_node_name)
             if quantization_target_point.type == TargetType.OPERATION_WITH_WEIGHTS:
-                try:
-                    weight_tensor_name, weight_tensor = self._backend_entity.get_weight_tensor(model, node)
-                    # If the nodes share one weight tensor, we should have only one quantizer on that
-                    if weight_tensor_name in weight_initializer_names:
-                        continue
-                    weight_initializer_names.add(weight_tensor_name)
-                except RuntimeError as er:
-                    nncf_logger.exception(er)
+                weight_tensor_name, weight_tensor = self._backend_entity.get_weight_tensor(model, node)
+                # If the nodes share one weight tensor, we should have only one quantizer on that
+                if weight_tensor_name in weight_initializer_names:
                     continue
+                weight_initializer_names.add(weight_tensor_name)
                 axis = self._backend_entity.get_weight_tensor_quantization_axis(model, node, weight_quantizer_config)
                 parameters = calculate_weight_quantizer_parameters(weight_tensor, weight_quantizer_config, axis)
-
                 command = self._backend_entity.quantizer_insertion_command(quantization_target_point, parameters)
                 transformation_commands.append(command)
             elif quantization_target_point.type in [TargetType.PRE_LAYER_OPERATION, TargetType.POST_LAYER_OPERATION]:
