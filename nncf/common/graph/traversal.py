@@ -16,7 +16,6 @@ from abc import ABC
 from abc import abstractmethod
 
 Node = TypeVar('Node')
-TraversingGraph = TypeVar('TraversingGraph')
 
 
 class TraversableGraph(ABC):
