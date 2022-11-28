@@ -19,7 +19,8 @@ class BackendType(Enum):
     TORCH = 'Torch'
     TENSORFLOW = 'Tensorflow'
     ONNX = 'ONNX'
-    OPENVINO = 'OpenVINO'
+    OPENVINO_POT = 'OpenVINO_POT'
+    OPENVINO_NATIVE = 'OpenVINO_NATIVE'
 
 
 def get_backend(model) -> BackendType:
@@ -50,7 +51,8 @@ def get_backend(model) -> BackendType:
 
     try:
         import openvino.runtime as ov
-        available_frameworks.append('OpenVINO')
+        available_frameworks.append('OpenVINO_POT')
+        available_frameworks.append('OpenVINO_NATIVE')
     except ImportError:
         ov = None
 
@@ -64,7 +66,7 @@ def get_backend(model) -> BackendType:
         return BackendType.ONNX
 
     if ov is not None and isinstance(model, ov.Model):
-        return BackendType.OPENVINO
+        return BackendType.OPENVINO_POT
 
     raise RuntimeError('Could not infer the backend framework from the model type because '
                        'the framework is not available or the model type is unsupported. '

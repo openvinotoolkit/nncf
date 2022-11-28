@@ -60,7 +60,7 @@ def quantize(model: TModel,
     :return: The quantized model.
     """
     backend = get_backend(model)
-    if backend == BackendType.OPENVINO:
+    if backend == BackendType.OPENVINO_POT:
         from nncf.openvino.quantization.quantize import quantize_impl
         return quantize_impl(model, calibration_dataset, preset, target_device, subset_size,
                              fast_bias_correction, model_type, ignored_scope)
@@ -124,7 +124,7 @@ def quantize_with_accuracy_control(model: ModelType,
     :return: The quantized model.
     """
     backend = get_backend(model)
-    if backend == BackendType.OPENVINO:
+    if backend == BackendType.OPENVINO_POT:
         from nncf.openvino.quantization.quantize import quantize_with_accuracy_control_impl
         return quantize_with_accuracy_control_impl(model, calibration_dataset, validation_dataset, validation_fn,
                                                    max_drop, preset, target_device, subset_size,
