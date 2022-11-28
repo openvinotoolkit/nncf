@@ -219,7 +219,9 @@ class ONNXGraph:
             nodes.extendleft(node_parents)
             metatype = ONNX_OPERATION_METATYPES.get_operator_metatype_by_op_name(current_node.op_type)
             if metatype in [ONNXIdentityMetatype, ONNXQuantizeLinearMetatype]:
-                return self._get_tensor_from_zero_input(current_node)
+                if self.has_initializer(current_node.input[0]):
+                    return self._get_tensor_from_zero_input(current_node)
+                continue
             if metatype == ONNXReshapeMetatype:
                 return self._get_weight_tensor_with_reshape(current_node)
             if metatype in WEIGHT_LAYER_METATYPES:
