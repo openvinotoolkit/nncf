@@ -26,6 +26,7 @@ from nncf.common.graph import NNCFNodeName
 from nncf.common.graph.graph_matching import find_subgraphs_matching_pattern
 from nncf.common.graph.patterns import GraphPattern
 from nncf.common.graph.operator_metatypes import INPUT_NOOP_METATYPES
+from nncf.common.graph.traversal import TraversableGraph
 from nncf.common.graph.traversal import traverse_graph
 from nncf.common.utils.logger import logger as nncf_logger
 
@@ -53,7 +54,7 @@ class PostHookInsertionPoint:
         return self.target_node_name
 
 
-class InsertionPointGraph(nx.DiGraph):
+class InsertionPointGraph(nx.DiGraph, TraversableGraph):
     """
     This graph is built from the NNCFGraph representation of the model control flow graph and adds ephemeral
     "insertion point nodes" into the NNCF model graph representation corresponding to operator pre- and
@@ -248,7 +249,7 @@ class InsertionPointGraph(nx.DiGraph):
 
     def get_input_nodes(self) -> List[str]:
         """
-        Returns all input nodes, nodes having any of INPUT_NOOP_METATYPES.
+        Returns all input nodes, meaning the nodes which belong to any of INPUT_NOOP_METATYPES metatype.
 
         :return: A list of input nodes.
         """
@@ -319,6 +320,15 @@ class InsertionPointGraph(nx.DiGraph):
         :return: List of consumer nodes of provided node.
         """
         return self.succ[node_key]
+
+    def get_previous_nodes(self, node_key: str) -> List[str]:
+        """
+        Returns producer nodes of provided node with key 'node_key'.
+
+        :param node_key: Consumer node key.
+        :return: List of node keys of producer nodes of the provided node.
+        """
+        return self.pred[node_key]
 
     def get_ip_graph_with_merged_hw_optimized_operations(self,
                                                          full_fusing_pattern: GraphPattern) \

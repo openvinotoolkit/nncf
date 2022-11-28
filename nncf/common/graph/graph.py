@@ -13,7 +13,7 @@
 import os
 from collections import defaultdict
 from copy import deepcopy
-from typing import Any, Callable, Dict, KeysView, List, Tuple, Type, ValuesView
+from typing import Any, Dict, KeysView, List, Tuple, Type, ValuesView
 from typing import Generator
 
 import networkx as nx
@@ -25,6 +25,7 @@ from nncf.common.graph.layer_attributes import Dtype
 from nncf.common.graph.operator_metatypes import INPUT_NOOP_METATYPES
 from nncf.common.graph.operator_metatypes import OUTPUT_NOOP_METATYPES
 from nncf.common.graph.operator_metatypes import OperatorMetatype
+from nncf.common.graph.traversal import TraversableGraph
 from nncf.common.utils.dot_file_rw import write_dot_graph
 from nncf.common.utils.logger import logger as nncf_logger
 
@@ -148,7 +149,7 @@ class NNCFGraphPatternIO:
 
 
 # pylint:disable=too-many-public-methods
-class NNCFGraph:
+class NNCFGraph(TraversableGraph):
     """
     Wrapper over a regular directed acyclic graph that represents a control flow/execution graph of a DNN
     providing some useful methods for graph traversal.

@@ -12,12 +12,42 @@
 """
 
 from typing import TypeVar, Callable, List, Tuple, Optional, Any
+from abc import ABC
+from abc import abstractmethod
 
 Node = TypeVar('Node')
 TraversingGraph = TypeVar('TraversingGraph')
 
 
-def traverse_graph(graph: TraversingGraph,
+class TraversableGraph(ABC):
+    @abstractmethod
+    def get_next_nodes(self, node: Node) -> List[Node]:
+        """
+        Returns the consumer nodes of a provided node.
+
+        :param node: Producer node.
+        :return: List of consumer nodes of provided node.
+        """
+
+    @abstractmethod
+    def get_previous_nodes(self, node: Node) -> List[Node]:
+        """
+        Returns producer nodes of provided node.
+
+        :param node: Consumer node.
+        :return: List of producers nodes of provided node.
+        """
+
+    @abstractmethod
+    def get_input_nodes(self) -> List[Node]:
+        """
+        Returns all input nodes of the graph.
+
+        :return: A list of input nodes.
+        """
+
+
+def traverse_graph(graph: TraversableGraph,
                    traverse_function: Callable[[Node, List[Any]], Tuple[bool, List[Any]]],
                    start_nodes: Optional[List[Node]] = None,
                    traverse_forward: bool = True) -> List[Node]:
@@ -30,6 +60,7 @@ def traverse_graph(graph: TraversingGraph,
     :param traverse_function: Function describing condition of traversal continuation/termination.
     :param start_nodes: Nodes from which traversal is started.
     :param traverse_forward: Flag specifying direction of traversal.
+    If it is set to True the traversing will be done in forward direction, if - False in the backward direction.
     :return: The traversed path.
     """
 
