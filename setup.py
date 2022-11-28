@@ -119,11 +119,8 @@ EXTRAS_REQUIRE = {
         "setuptools==59.5.0"
     ],
     "onnx": [
-        "torch==1.12.1",
-        "torchvision==0.13.1",
         "onnx==1.12.0",
-        "protobuf==3.20.1",
-        "onnxruntime-openvino==1.13.1",
+        "onnxruntime-openvino==1.13.1"
     ],
     "openvino": [
         "openvino-dev"
