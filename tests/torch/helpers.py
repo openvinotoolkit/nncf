@@ -40,8 +40,8 @@ from nncf.torch.layers import NNCF_MODULES_MAP
 from nncf.torch.model_creation import create_compressed_model
 from nncf.torch.nncf_network import NNCFNetwork
 from nncf.torch.utils import get_all_modules_by_type
-from tests.common.command import Command as BaseCommand
-from tests.common.helpers import BaseTensorListComparator
+from tests.shared.command import Command as BaseCommand
+from tests.shared.helpers import BaseTensorListComparator
 
 TensorType = Union[torch.Tensor, np.ndarray, numbers.Number]
 

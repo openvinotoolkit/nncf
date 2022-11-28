@@ -31,7 +31,7 @@ import pytest
 from nncf.common.utils.logger import logger as nncf_logger
 from pytest_dependency import depends
 
-from tests.common.paths import PROJECT_ROOT
+from tests.shared.paths import PROJECT_ROOT
 from tests.onnx.conftest import ONNX_TEST_ROOT
 
 BG_COLOR_GREEN_HEX = 'ccffcc'

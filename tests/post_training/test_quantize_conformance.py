@@ -19,7 +19,7 @@ from sklearn.metrics import accuracy_score
 
 import openvino.runtime as ov
 
-from tests.common.command import Command
+from tests.shared.command import Command
 from model_scope import get_validation_scope
 
 

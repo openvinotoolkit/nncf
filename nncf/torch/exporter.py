@@ -50,7 +50,7 @@ class PTExporter(Exporter):
     """
 
     _ONNX_FORMAT = 'onnx'
-    _ONNX_DEFAULT_OPSET = 10
+    _ONNX_DEFAULT_OPSET = 13
 
 
     @staticmethod

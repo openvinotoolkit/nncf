@@ -30,8 +30,8 @@ from nncf.common.compression import BaseCompressionAlgorithmController as BaseCo
 from nncf.common.compression import BaseControllerStateNames
 from nncf.common.hardware.config import HWConfigType
 from nncf.config import NNCFConfig
-from tests.common.config_factory import ConfigFactory
-from tests.common.paths import TEST_ROOT
+from tests.shared.config_factory import ConfigFactory
+from tests.shared.paths import TEST_ROOT
 from tests.torch.helpers import Command
 from tests.torch.sample_test_validator import create_command_line
 

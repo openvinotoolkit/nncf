@@ -25,7 +25,7 @@ from nncf.experimental.onnx.model_normalizer import ONNXModelNormalizer
 from tests.onnx.conftest import ONNX_TEST_ROOT
 
 from tests.onnx.models import ALL_SYNTHETIC_MODELS
-from tests.common.paths import TEST_ROOT
+from tests.shared.paths import TEST_ROOT
 from tests.onnx.quantization.common import ModelToTest
 from tests.onnx.quantization.common import check_nx_graph
 

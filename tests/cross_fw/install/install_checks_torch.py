@@ -20,7 +20,7 @@ import sys
 import torch
 
 if len(sys.argv) != 3:
-    raise RuntimeError("Must be run with an execution type as argument (either 'cpu' or 'cuda') and package type")
+    raise RuntimeError("Must be run with an execution type as argument (either 'cpu' or 'gpu') and package type")
 execution_type = sys.argv[1]
 package_type = sys.argv[2]
 

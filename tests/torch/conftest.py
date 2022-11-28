@@ -17,7 +17,9 @@ try:
 except: #pylint: disable=bare-except
     torch = None
 
-from tests.common.helpers import create_venv_with_nncf
+from tests.shared.install_fixtures import tmp_venv_with_nncf #pylint:disable=unused-import
+from tests.shared.case_collection import skip_marked_cases_if_options_not_specified
+from tests.shared.case_collection import COMMON_SCOPE_MARKS_VS_OPTIONS
 
 
 pytest.register_assert_rewrite('tests.torch.helpers')
@@ -70,9 +72,6 @@ def pytest_addoption(parser):
     )
     parser.addoption(
         "--imagenet", action="store_true", default=False, help="Enable tests with imagenet"
-    )
-    parser.addoption(
-        "--test-install-type", type=str, help="Type of installation, use CPU or GPU for appropriate install"
     )
     parser.addoption(
         "--backward-compat-models", type=str, default=None, help="Path to NNCF-traned model checkpoints that are tested"
@@ -153,7 +152,7 @@ def ov_data_dir(request):
 
 @pytest.fixture(scope="module")
 def install_type(request):
-    return request.config.getoption("--test-install-type")
+    return request.config.getoption("--run-install-tests", skip=True)
 
 
 @pytest.fixture(scope="module")
@@ -197,13 +196,6 @@ def pip_cache_dir(request):
     return request.config.getoption("--pip-cache-dir")
 
 
-@pytest.fixture(scope="function")
-def tmp_venv_with_nncf(install_type, tmp_path, package_type, venv_type):  # pylint:disable=redefined-outer-name
-    if install_type is None:
-        pytest.skip("Please specify type of installation")
-    venv_path = create_venv_with_nncf(tmp_path, package_type, venv_type, extra_reqs='torch')
-    return venv_path
-
 
 @pytest.fixture
 def runs_subprocess_in_precommit():
@@ -225,3 +217,12 @@ def runs_subprocess_in_precommit():
 @pytest.fixture(scope="module")
 def cuda_ip(request):
     return request.config.getoption("--cuda-ip")
+
+# Custom markers specifying tests to be run only if a specific option
+# is present on the pytest command line must be registered here.
+MARKS_VS_OPTIONS = {
+    **COMMON_SCOPE_MARKS_VS_OPTIONS
+}
+
+def pytest_collection_modifyitems(config, items):
+    skip_marked_cases_if_options_not_specified(config, items, MARKS_VS_OPTIONS)
