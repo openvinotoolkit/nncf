@@ -352,7 +352,7 @@ def run(config):
             timer = Timer()
             timer.tic()
 
-            def train_epoch_fn(compression_ctrl, model, epoch, optimizer, lr_scheduler):
+            def train_epoch_fn(compression_ctrl, model, epoch, **kwargs):
                 train_step = create_train_step_fn(strategy, model, loss_fn, optimizer)
                 train_epoch(train_step, compression_ctrl, epoch, initial_epoch, steps_per_epoch,
                             optimizer, checkpoint_manager, train_dist_dataset, train_summary_writer,

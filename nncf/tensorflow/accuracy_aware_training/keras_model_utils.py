@@ -57,7 +57,7 @@ def accuracy_aware_fit(cls_instance, train_dataset, compression_ctrl,
                 steps=data_handler.inferred_steps
                 )
 
-    def train_epoch_fn(compression_ctrl, model, epoch, optimizer, lr_scheduler):
+    def train_epoch_fn(compression_ctrl, model, epoch, **kwargs):
         model.reset_metrics()
 
         if model.train_function is None:

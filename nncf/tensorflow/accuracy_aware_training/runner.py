@@ -28,8 +28,6 @@ class TFAccuracyAwareTrainingRunner(BaseAccuracyAwareTrainingRunner):
     The Training Runner implementation for TensorFlow training code.
     """
 
-    CHECKPOINT_PATH_EXTENSION = '.pt'
-
     def initialize_training_loop_fns(self, train_epoch_fn, validate_fn, configure_optimizers_fn, dump_checkpoint_fn,
                                      tensorboard_writer=None, log_dir=None,
                                      load_checkpoint_fn=None, early_stopping_fn=None, update_learning_rate_fn=None):
@@ -90,6 +88,10 @@ class TFAccuracyAwareTrainingRunner(BaseAccuracyAwareTrainingRunner):
         else:
             model.load_weights(checkpoint_path)
 
+    def _make_checkpoint_path(self, is_best, compression_rate=None):
+        extension = '.pt'
+        return osp.join(self._checkpoint_save_dir, f'acc_aware_checkpoint_{"best" if is_best else "last"}{extension}')
+
     def add_tensorboard_scalar(self, key, data, step):
         if self.verbose and self._tensorboard_writer is not None:
             self._tensorboard_writer.add_scalar(key, data, step)
@@ -117,10 +119,19 @@ class TFAdaptiveCompressionLevelTrainingRunner(BaseAdaptiveCompressionLevelTrain
         if self._dump_checkpoint_fn is not None:
             checkpoint_path = self._dump_checkpoint_fn(model, compression_controller, self, self._checkpoint_save_dir)
         else:
-            checkpoint_path = osp.join(self._checkpoint_save_dir,
-                                       f'acc_aware_checkpoint_last{self.CHECKPOINT_PATH_EXTENSION}')
+            checkpoint_path = self._make_checkpoint_path(is_best=False)
             self._save_checkpoint(model, compression_controller, checkpoint_path)
         nncf_logger.info("The checkpoint is saved in {}".format(checkpoint_path))
 
         if is_best_checkpoint:
             self._save_best_checkpoint(model, compression_controller)
+
+    def _make_checkpoint_path(self, is_best, compression_rate=None):
+        extension = '.pt'
+        base_path = osp.join(self._checkpoint_save_dir, 'acc_aware_checkpoint')
+        if is_best:
+            if compression_rate is None:
+                raise ValueError('Compression rate cannot be None')
+            return f'{base_path}_best_{compression_rate:.3f}{extension}'
+        else:
+            return f'{base_path}_last{extension}'

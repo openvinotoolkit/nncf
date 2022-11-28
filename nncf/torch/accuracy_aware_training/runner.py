@@ -11,6 +11,8 @@
  limitations under the License.
 """
 
+import os.path as osp
+
 import torch
 from torch.optim.lr_scheduler import ReduceLROnPlateau
 from torchvision.transforms import ToTensor
@@ -33,8 +35,6 @@ class PTAccuracyAwareTrainingRunner(BaseAccuracyAwareTrainingRunner):
     BaseAccuracyAwareTrainingRunner
     The Training Runner implementation for PyTorch training code.
     """
-
-    CHECKPOINT_PATH_EXTENSION = '.pth'
 
     def initialize_training_loop_fns(self, train_epoch_fn, validate_fn, configure_optimizers_fn, dump_checkpoint_fn,
                                      tensorboard_writer=None, log_dir=None,
@@ -131,6 +131,10 @@ class PTAccuracyAwareTrainingRunner(BaseAccuracyAwareTrainingRunner):
             resuming_model_state_dict = resuming_checkpoint.get('state_dict', resuming_checkpoint)
             load_state(model, resuming_model_state_dict, is_resume=True)
 
+    def _make_checkpoint_path(self, is_best, compression_rate=None):
+        extension = '.pth'
+        return osp.join(self._checkpoint_save_dir, f'acc_aware_checkpoint_{"best" if is_best else "last"}{extension}')
+
     def add_tensorboard_scalar(self, key, data, step):
         if is_main_process():
             if self.verbose and self._tensorboard_writer is not None:
@@ -149,3 +153,13 @@ class PTAdaptiveCompressionLevelTrainingRunner(BaseAdaptiveCompressionLevelTrain
         super().__init__(accuracy_aware_training_params, verbose, dump_checkpoints, lr_updates_needed,
                          minimal_compression_rate=minimal_compression_rate,
                          maximal_compression_rate=maximal_compression_rate)
+
+    def _make_checkpoint_path(self, is_best, compression_rate=None):
+        extension = '.pth'
+        base_path = osp.join(self._checkpoint_save_dir, 'acc_aware_checkpoint')
+        if is_best:
+            if compression_rate is None:
+                raise ValueError('Compression rate cannot be None')
+            return f'{base_path}_best_{compression_rate:.3f}{extension}'
+        else:
+            return f'{base_path}_last{extension}'
