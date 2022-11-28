@@ -312,23 +312,23 @@ class InsertionPointGraph(nx.DiGraph, TraversableGraph):
         """
         self.remove_nodes_from(nodes_keys)
 
-    def get_next_nodes(self, node_key: str) -> List[str]:
+    def get_next_nodes(self, node: str) -> List[str]:
         """
-        Returns consumer nodes of provided node with key 'node_key'.
+        Returns consumer nodes of provided node.
 
-        :param node_key: Producer node key.
+        :param node: Producer node key.
         :return: List of consumer nodes of provided node.
         """
-        return self.succ[node_key]
+        return self.succ[node]
 
-    def get_previous_nodes(self, node_key: str) -> List[str]:
+    def get_previous_nodes(self, node: str) -> List[str]:
         """
-        Returns producer nodes of provided node with key 'node_key'.
+        Returns producer nodes of provided node.
 
-        :param node_key: Consumer node key.
+        :param node: Consumer node key.
         :return: List of node keys of producer nodes of the provided node.
         """
-        return self.pred[node_key]
+        return self.pred[node]
 
     def get_ip_graph_with_merged_hw_optimized_operations(self,
                                                          full_fusing_pattern: GraphPattern) \

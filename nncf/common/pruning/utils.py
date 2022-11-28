@@ -81,7 +81,8 @@ def get_sources_of_node(nncf_node: NNCFNode, graph: NNCFGraph, sources_types: Li
     if nncf_node.node_type in sources_types:
         nncf_nodes = graph.get_previous_nodes(nncf_node)
 
-    return traverse_graph(graph, traverse_function=partial_traverse_function, start_nodes=nncf_nodes, traverse_forward=False)
+    return traverse_graph(graph, traverse_function=partial_traverse_function,
+                          start_nodes=nncf_nodes, traverse_forward=False)
 
 
 def find_next_nodes_not_of_types(graph: NNCFGraph, nncf_node: NNCFNode, types: List[str]) -> List[NNCFNode]:
