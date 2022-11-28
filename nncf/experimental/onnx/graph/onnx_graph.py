@@ -20,6 +20,7 @@ import numpy as np
 
 from nncf.experimental.onnx.model_normalizer import ONNXModelNormalizer
 from nncf.experimental.onnx.graph.metatypes.onnx_metatypes import ONNX_OPERATION_METATYPES
+from nncf.experimental.onnx.graph.metatypes.onnx_metatypes import OpWeightDef
 from nncf.experimental.onnx.graph.metatypes.onnx_metatypes import ONNXIdentityMetatype
 from nncf.experimental.onnx.graph.metatypes.onnx_metatypes import ONNXReshapeMetatype
 from nncf.experimental.onnx.graph.metatypes.onnx_metatypes import ONNXQuantizeLinearMetatype
@@ -233,13 +234,17 @@ class ONNXGraph:
                     continue
             raise RuntimeError('Could not find the weight value of the node') from exc
 
-    def _get_param_from_weight_definitions(self, node: onnx.NodeProto, parameter: str) -> int:
+    @staticmethod
+    def _get_weight_definitions(node: onnx.NodeProto) -> OpWeightDef:
+        """
+        Returns the weight_definitions of the node's metatype.
+
+        :param node: Node from which weight definition is obtained.
+        :return: weight definition of the node.
+        """
         metatype = ONNX_OPERATION_METATYPES.get_operator_metatype_by_op_name(node.op_type)
         if metatype in WEIGHT_LAYER_METATYPES:
-            parameter = getattr(metatype.weight_definitions, parameter)
-            if parameter is not None:
-                return parameter
-            raise RuntimeError(f'The metatype {metatype} does not have {parameter} attribute')
+            return metatype.weight_definitions
         raise RuntimeError(f'The metatype {metatype} does not belong to a list of metatypes with a weight tensor.')
 
     def get_weight_port_id(self, node: onnx.NodeProto) -> int:
@@ -249,7 +254,10 @@ class ONNXGraph:
         :param node: Node, for which input port id is returned,
         :return: input port id, where a weight tensor should output.
         """
-        return self._get_param_from_weight_definitions(node, 'weight_port_id')
+        weight_definitions = self._get_weight_definitions(node)
+        if weight_definitions.weight_port_id is not None:
+            return weight_definitions.weight_port_id
+        raise RuntimeError(f'The metatype {node} does not have weight_port_id attribute')
 
     def get_weight_channel_axis(self, node: onnx.NodeProto) -> int:
         """
@@ -258,10 +266,10 @@ class ONNXGraph:
         :param node: Node, for which weight per-channel axis id is returned,
         :return: Channel axis for per-channel quantization.
         """
-        axis = self._get_param_from_weight_definitions(node, 'weight_channel_axis')
-        if axis is None:
-            raise RuntimeError(f'Could not find the port_id for the node {node.name}')
-        return self._get_param_from_weight_definitions(node, 'weight_channel_axis')
+        weight_definitions = self._get_weight_definitions(node)
+        if weight_definitions.weight_channel_axis is not None:
+            return weight_definitions.weight_channel_axis
+        raise RuntimeError(f'The node {node} does not have weight_channel_axis attribute')
 
     def get_bias_tensor_port_id(self, node: onnx.NodeProto) -> int:
         """
@@ -270,7 +278,10 @@ class ONNXGraph:
         :param node: Node, for which input port id is returned,
         :return: input port id, where a weight bias should output.
         """
-        return self._get_param_from_weight_definitions(node, 'bias_port_id')
+        weight_definitions = self._get_weight_definitions(node)
+        if weight_definitions.bias_port_id is not None:
+            return weight_definitions.bias_port_id
+        raise RuntimeError(f'The node {node} does not have bias_port_id attribute')
 
     def _get_weight_tensor_with_reshape(self, node: onnx.NodeProto) -> Tuple[str, np.ndarray]:
         """
