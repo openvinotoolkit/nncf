@@ -53,7 +53,9 @@ def traverse_graph(graph: TraversableGraph,
                    traverse_forward: bool = True) -> List[Node]:
     """
     Traverses graph forward or backward starting from 'start_nodes'.
-    If 'start_nodes' is None, then traversing starts from the Input nodes of the graph.
+    The traversing starts iteratively from the 'start_nodes' list.
+    If 'start_nodes' is None, then traversing starts from the input nodes of the graph.
+    The order of input nodes is based on the returned list of get_input_nodes function of TraversableGraph.
     The traverse logic should be implemented through 'traverse_function'.
 
     :param graph: Any graph that implements get_next_nodes, get_previous_nodes and get_input_nodes functions.
