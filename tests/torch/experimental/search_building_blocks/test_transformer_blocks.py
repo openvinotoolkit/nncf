@@ -254,7 +254,7 @@ LIST_FILTER_BLOCK_DESCS = [
                  277, 280, 296],
         num_ops_in_block=[7, 7, 7, 19, 7, 7, 19, 7, 7, 19, 7, 19, 7, 7, 19, 7, 19, 7, 7, 19, 7, 19, 7, 19, 7],
         overlapping_blocks_ids_min={3, 6, 9, 11, 14, 16, 19, 21, 23},
-        overlapping_blocks_ids_seq={3, 6, 8, 10, 13, 15, 18, 20, 22}
+        overlapping_blocks_ids_seq={2, 5, 8, 10, 13, 15, 18, 20, 22}
     ),
     FilterBlockTestDesc(
         name='mobilenet-v3',
