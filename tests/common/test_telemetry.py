@@ -13,7 +13,6 @@
 import os
 import importlib
 from unittest import mock
-from unittest.mock import MagicMock
 from unittest.mock import call
 
 import pytest
@@ -23,6 +22,7 @@ from nncf.definitions import NNCF_DEV_ENV_VAR_NAME
 from nncf.telemetry import TelemetryExtractor
 from nncf.telemetry import tracked_function
 from nncf.telemetry.extractors import CollectedEvent
+from nncf.telemetry.wrapper import NNCFTelemetryStub
 
 
 @pytest.mark.parametrize("env_var_to_define", [NNCF_CI_ENV_VAR_NAME,
@@ -37,7 +37,7 @@ def test_telemetry_is_mocked_if_env_vars_defined(mocker, env_var_to_define):
         # telemetry alias will no longer be available after reload,
         # so importing via a full name
         from nncf.telemetry.wrapper import NNCFTelemetry
-        assert isinstance(NNCFTelemetry, MagicMock)
+        assert isinstance(NNCFTelemetry, NNCFTelemetryStub)
     # cleanup
     importlib.reload(wrapper)
 

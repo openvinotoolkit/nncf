@@ -11,7 +11,7 @@
  limitations under the License.
 """
 import os
-from typing import List
+from unittest.mock import MagicMock
 
 from nncf import __version__
 from nncf.common.utils.logger import logger as nncf_logger
@@ -20,6 +20,8 @@ from nncf.definitions import NNCF_DEV_ENV_VAR_NAME
 
 # MEASUREMENT_ID = 'G-4Z7Y9HHRMD'  # GA4
 MEASUREMENT_ID = 'UA-242812675-1'
+
+NNCFTelemetryStub = MagicMock
 
 # For recommendations on proper usage of categories, actions, labels and values, see:
 # https://support.google.com/analytics/answer/1033068
@@ -31,5 +33,4 @@ except ImportError:
     NNCFTelemetry = None
 
 if os.getenv(NNCF_CI_ENV_VAR_NAME) or os.getenv(NNCF_DEV_ENV_VAR_NAME) or NNCFTelemetry is None:
-    from unittest.mock import MagicMock
-    NNCFTelemetry = MagicMock()
+    NNCFTelemetry = NNCFTelemetryStub()

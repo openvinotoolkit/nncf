@@ -29,6 +29,9 @@ class CollectedEvent:
 
 
 class TelemetryExtractor(ABC):
+    """
+    Interface for custom telemetry extractors, to be used with the `nncf.telemetry.tracked_function` decorator.
+    """
     def __init__(self, argname: Optional[str] = None):
         self._argname = argname
 
@@ -38,6 +41,10 @@ class TelemetryExtractor(ABC):
 
     @abstractmethod
     def extract(self, argvalue: Any) -> CollectedEvent:
+        """
+        Implement this method to prepare the telemetry event data from the tracked function's argument value
+        passed via `argvalue`.
+         """
         pass
 
 

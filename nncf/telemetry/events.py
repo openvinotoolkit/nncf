@@ -10,6 +10,7 @@
  See the License for the specific language governing permissions and
  limitations under the License.
 """
+from contextlib import contextmanager
 from typing import List
 from typing import Optional
 
@@ -24,18 +25,21 @@ NNCF_OV_CATEGORY = 'nncf_ov'
 CURRENT_CATEGORY = None
 
 
-def set_current_category(category: str):
+def _set_current_category(category: str):
     global CURRENT_CATEGORY
     CURRENT_CATEGORY = category
 
 
-def get_current_category() -> Optional[str]:
+def _get_current_category() -> Optional[str]:
     return CURRENT_CATEGORY
 
 
-def unset_current_category():
-    global CURRENT_CATEGORY
-    CURRENT_CATEGORY = None
+@contextmanager
+def telemetry_category(category: str):
+    previous_category = _get_current_category()
+    _set_current_category(category)
+    yield category
+    _set_current_category(previous_category)
 
 
 def get_algo_names_from_builder(builder: CompressionAlgorithmBuilder) -> List[str]:
