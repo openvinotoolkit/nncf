@@ -20,7 +20,7 @@ from tensorflow.python.ops.init_ops import Constant
 
 from nncf import NNCFConfig
 from nncf.tensorflow.helpers.model_creation import create_compressed_model
-from tests.common.helpers import BaseTensorListComparator
+from tests.shared.helpers import BaseTensorListComparator
 
 from examples.tensorflow.common.object_detection.datasets.builder import COCODatasetBuilder
 from examples.tensorflow.classification.datasets.builder import DatasetBuilder

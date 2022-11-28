@@ -18,7 +18,7 @@ import sys
 
 import pytest
 from nncf.torch import BKC_TORCH_VERSION
-from tests.common.paths import PROJECT_ROOT
+from tests.shared.paths import PROJECT_ROOT
 from tests.torch.helpers import Command
 
 TRANSFORMERS_COMMIT = "bd469c40659ce76c81f69c7726759d249b4aef49"

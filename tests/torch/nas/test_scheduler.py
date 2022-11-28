@@ -76,7 +76,7 @@ class TestScheduler:
         scheduler = BootstrapNASScheduler(training_ctrl_mock, schedule_params, LIST_DIMS__KDW, LIST_DIMS__KDW)
         optimizer_mock = mocker.stub()
         optimizer_mock.param_groups = [{'lr': 1}]
-        scheduler.set_lr_scheduler(StageLRScheduler(optimizer_mock, 10))
+        scheduler.lr_scheduler = StageLRScheduler(optimizer_mock, 10)
         scheduler.epoch_step()
         ref_desc = StageDescriptor(train_dims=[ElasticityDim.KERNEL],
                                    epochs=1, init_lr=DEFAULT_STAGE_LR_RATE, epochs_lr=1)
@@ -127,7 +127,7 @@ class TestScheduler:
                                                        schedule_params, lr_schedule_config)
         scheduler = training_algo.scheduler
         lr_scheduler = GlobalLRScheduler(mocker.stub(), mocker.stub(), base_lr=None, num_epochs=None)
-        scheduler.set_lr_scheduler(lr_scheduler)
+        scheduler.lr_scheduler = lr_scheduler
         scheduler.epoch_step()
         assert is_handler_enabled_map == {
             ElasticityDim.WIDTH: False,

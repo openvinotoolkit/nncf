@@ -74,13 +74,13 @@ class FBCAlgoBackend(ABC):
 
     @staticmethod
     @abstractmethod
-    def target_point(target_type: TargetType, target_node_name: str, edge_name: str = None) -> TargetPoint:
+    def target_point(target_type: TargetType, target_node_name: str, port_id: int) -> TargetPoint:
         """
         Returns backend-specific target point.
 
         :param target_type: Type of the location that should be modified.
         :param target_node_name: Name of the located node.
-        :param edge_name: Name of the tensor for the statistics disctribution.
+        :param port_id: Port ID of the tensor for the statistics distribution.
         :return: Backend-specific TargetPoint.
         """
 
@@ -156,13 +156,47 @@ class FBCAlgoBackend(ABC):
 
     @staticmethod
     @abstractmethod
-    def get_initializer_value(model: TModel, initializer_name: str) -> np.ndarray:
+    def get_bias_value(model: TModel, node: NNCFNode) -> np.ndarray:
         """
-        Returns initializer value in the NumPy format.
+        Returns bias value in the NumPy format of provided node.
 
         :param model: Backend-specific model for the initializer finding.
-        :param initializer_name: Name of the tensor/initializer to find in the model.
-        :return: Initializer value in the NumPy format.
+        :param node: Node of NNCFGraph with bias value.
+        :return: Bias value in the NumPy format.
+        """
+
+    @staticmethod
+    @abstractmethod
+    def get_bias_port_id(model: TModel, node: NNCFNode) -> int:
+        """
+        Returns bias Port ID corresponding to the node.
+
+        :param model: Backend-specific model.
+        :param node: Node of NNCFGraph with bias value.
+        :return: Port ID corresponding to bias.
+        """
+
+    @staticmethod
+    @abstractmethod
+    def get_activation_port_ids_for_bias_node(model: TModel, node: NNCFNode) -> Tuple[int, int]:
+        """
+        Returns Input Port ID and Output Port ID corresponding to activation input and output edges for
+        the node.
+        Supports only nodes that could have bias value.
+
+        :param model: Backend-specific model.
+        :param node: Node of NNCFGraph with bias value.
+        """
+
+    @staticmethod
+    @abstractmethod
+    def is_quantized_weights(node: NNCFNode, model: TModel) -> bool:
+        """
+        Checks whether the node is quantized or not.
+
+        :param node: NNCFNode to check.
+        :param model: Backend-specific model.
+        :return: boolean indicating whether the node has a quantized weights or not
         """
 
     @staticmethod

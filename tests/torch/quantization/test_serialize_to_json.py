@@ -10,7 +10,7 @@ from nncf.common.quantization.quantizer_setup import WeightQuantizationInsertion
 from nncf.common.quantization.structs import QuantizerConfig
 from nncf.torch.dynamic_graph.context import Scope
 from nncf.torch.graph.transformations.commands import PTTargetPoint
-from tests.common.serialization import check_serialization
+from tests.shared.serialization import check_serialization
 
 DUMMY_STR = 'dummy'
 

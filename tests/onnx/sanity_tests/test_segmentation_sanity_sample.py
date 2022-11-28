@@ -21,7 +21,7 @@ import numpy as np
 
 from examples.experimental.onnx.semantic_segmentation.onnx_ptq_segmentation import run
 from tests.onnx.quantization.common import get_dataset_for_test
-from tests.common.paths import TEST_ROOT
+from tests.shared.paths import TEST_ROOT
 
 MODELS_NAME = [
     'icnet_camvid',

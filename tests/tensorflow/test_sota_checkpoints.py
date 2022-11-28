@@ -33,9 +33,9 @@ from collections import OrderedDict
 from yattag import Doc
 from pathlib import Path
 
-from tests.common.paths import DATASET_DEFINITIONS_PATH
-from tests.common.paths import TEST_ROOT
-from tests.common.paths import PROJECT_ROOT
+from tests.shared.paths import DATASET_DEFINITIONS_PATH
+from tests.shared.paths import TEST_ROOT
+from tests.shared.paths import PROJECT_ROOT
 
 BG_COLOR_GREEN_HEX = 'ccffcc'
 BG_COLOR_YELLOW_HEX = 'ffffcc'

@@ -51,10 +51,13 @@ from tests.torch.nas.models.vgg_k7 import VGG11_K7
 
 # TODO(nlyalyus) reduce number of creators and descriptors. create wrapper of TrainingAlgorithm  (ticket 81015)
 def create_bootstrap_training_model_and_ctrl(model,
-                                             nncf_config: NNCFConfig) -> Tuple[NNCFNetwork, BNASTrainingController]:
+                                             nncf_config: NNCFConfig,
+                                             register_bn_adapt: bool = True) \
+                                             -> Tuple[NNCFNetwork, BNASTrainingController]:
     algo_name = nncf_config.get('bootstrapNAS', {}).get('training', {}).get('algorithm', 'progressive_shrinking')
     nncf_network = create_nncf_network(model, nncf_config)
-    register_bn_adaptation_init_args(nncf_config)
+    if register_bn_adapt:
+        register_bn_adaptation_init_args(nncf_config)
     ctrl, model = create_compressed_model_from_algo_names(nncf_network, nncf_config, [algo_name], False)
 
     # Default optimizer

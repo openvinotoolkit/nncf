@@ -194,7 +194,8 @@ def test_onnx_export_to_fake_quantize_with_adjust_pad(tmp_path):
     register_bn_adaptation_init_args(nncf_config)
 
     onnx_model_proto = load_exported_onnx_version(nncf_config, model,
-                                                  path_to_storage_dir=tmp_path)
+                                                  path_to_storage_dir=tmp_path,
+                                                  save_format='onnx_10')
     num_fq = 0
     num_model_nodes = 0
     num_adjust_pad_nodes = 0

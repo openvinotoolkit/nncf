@@ -86,7 +86,7 @@ class ProgressiveShrinkingController(BNASTrainingController):
         else:
             nncf_logger.info("Stage LR scheduler in use")
             lr_scheduler = StageLRScheduler(optimizer, train_iters)
-        self._scheduler.set_lr_scheduler(lr_scheduler)
+        self._scheduler.lr_scheduler = lr_scheduler
 
     @property
     def lr_schedule_config(self) -> str:
@@ -148,7 +148,8 @@ class ProgressiveShrinkingController(BNASTrainingController):
         Performs some action on active subnet or supernet before validation. For instance, it can be the batchnorm
         adaptation to achieve the best accuracy on validation.
         """
-        self._run_batchnorm_adaptation(self._target_model)
+        if self._bn_adaptation:
+            self._run_batchnorm_adaptation(self._target_model)
 
     def get_total_num_epochs(self) -> int:
         """
@@ -264,5 +265,5 @@ class ProgressiveShrinkingController(BNASTrainingController):
 
     def _run_batchnorm_adaptation(self, model):
         if self._bn_adaptation is None:
-            raise RuntimeError("Missing initialization of Batchnorm Adaptation algorithm")
+            nncf_logger.warning("Batchnorm adaptation requested but it hasn't been enabled for training.")
         self._bn_adaptation.run(model)
