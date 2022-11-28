@@ -29,9 +29,9 @@ class OVModelTransformer(ModelTransformer):
 
     def transform(self, transformation_layout: TransformationLayout) -> ov.Model:
         """
-        Applies transformations by type-callback on the model
+        Applies transformations by type-callback on the model.
 
-        :param transformations: lisf of the TransformationCommand transformations
+        :param transformations: lisf of the TransformationCommand transformations.
         """
         output_insert_transformations = []
         transformations = transformation_layout.transformations
@@ -47,9 +47,9 @@ class OVModelTransformer(ModelTransformer):
 
     def _apply_output_insertion_transformations(self, transformations: List[OVOutputInsertionCommand]) -> None:
         """
-        Applies incoming transformations to the model
+        Applies incoming transformations to the model.
 
-        :param transformations: list of the OVOutputInsertionCommand transformations
+        :param transformations: list of the OVOutputInsertionCommand transformations.
         """
         extra_model_outputs = self._get_extra_model_outputs(transformations)
         model_with_intermediate_outputs = self._insert_outputs(self._model, outputs=extra_model_outputs)
@@ -58,11 +58,10 @@ class OVModelTransformer(ModelTransformer):
     def _get_extra_model_outputs(self,
                                  transformations: List[OVOutputInsertionCommand]) -> List[ov.Output]:
         """
-        Collects extra model outputs based on transformations
+        Collects extra model outputs based on transformations.
 
-        :param nncf_graph: NNCFGraph
-        :param transformations: lisf of the OVOutputInsertionCommand
-        :return: list of the output names
+        :param transformations: lisf of the OVOutputInsertionCommand.
+        :return: list of the output names.
         """
 
         extra_model_outputs = []

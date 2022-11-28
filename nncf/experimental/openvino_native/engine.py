@@ -41,13 +41,13 @@ class OVNativeEngine(Engine):
         """
         Runs model on the provided input via OpenVINO Runtime.
         Returns the dictionary of model outputs by node names.
-        :param input_data: inputs for the model
-        :return output_data: models outputs
+        :param input_data: inputs for the model.
+        :return output_data: models outputs.
         """
         model_outputs = self.compiled_model(
             {k: v.tensor for k, v in input_data.items() if k in self.input_names})
 
         return {
-            out.get_node().get_friendly_name(): OVNNCFTensor(model_outputs[self.compiled_model.output(i)])
-            for i, out in enumerate(model_outputs)
+            out.get_node().get_friendly_name(): OVNNCFTensor(data)
+            for out, data in model_outputs.items()
         }
