@@ -129,13 +129,6 @@ def quantize_impl(model: ov.Model,
         }
     ]
 
-    NNCFTelemetry.send_event(event_category=NNCF_OV_CATEGORY,
-                             event_action='target_device',
-                             event_label=target_device.value)
-    NNCFTelemetry.send_event(event_category=NNCF_OV_CATEGORY,
-                             event_action='preset',
-                             event_label=preset.value)
-
     pot_model = _convert_openvino_model_to_compressed_model(model, target_device)
 
     engine_config = {

@@ -30,13 +30,13 @@ def _set_current_category(category: str):
     CURRENT_CATEGORY = category
 
 
-def _get_current_category() -> Optional[str]:
+def get_current_category() -> Optional[str]:
     return CURRENT_CATEGORY
 
 
 @contextmanager
-def telemetry_category(category: str):
-    previous_category = _get_current_category()
+def telemetry_category(category: str) -> str:
+    previous_category = get_current_category()
     _set_current_category(category)
     yield category
     _set_current_category(previous_category)

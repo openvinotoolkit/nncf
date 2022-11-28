@@ -95,3 +95,46 @@ def test_tracked_function(mocker):
         ]
 
     assert send_event_spy.call_args_list == expected_call_args_list
+
+
+CATEGORY_FOR_TEST2 = "test_category2"
+
+
+def test_nested_function_categories(mocker):
+    from nncf.telemetry import NNCFTelemetry
+    send_event_spy = mocker.spy(NNCFTelemetry, "send_event")
+    start_session_event_spy = mocker.spy(NNCFTelemetry, "start_session")
+    end_session_event_spy = mocker.spy(NNCFTelemetry, "end_session")
+
+    @tracked_function(category=CATEGORY_FOR_TEST, collectors=["arg"])
+    def inner_same(arg):
+        return arg
+
+    @tracked_function(category=CATEGORY_FOR_TEST2, collectors=["arg"])
+    def inner_other(arg):
+        return arg
+
+    @tracked_function(category=CATEGORY_FOR_TEST, collectors=["arg"])
+    def outer(arg, same: bool):
+        if same:
+            return inner_same(arg)
+        inner_other(arg)
+
+    outer("foo", same=True)
+
+    assert start_session_event_spy.call_count == 1
+    assert end_session_event_spy.call_count == 1
+    assert send_event_spy.call_count == 2
+
+    expected_call_args_list = [
+        call(event_category=CATEGORY_FOR_TEST,
+             event_action="arg",
+             event_label="1",
+             event_value=None),
+        call(event_category=CATEGORY_FOR_TEST,
+             event_action="arg",
+             event_label="1",
+             event_value=None) ]
+
+    assert send_event_spy.call_args_list == expected_call_args_list
+

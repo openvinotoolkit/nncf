@@ -15,6 +15,7 @@ import inspect
 from typing import Callable
 from typing import List, Union
 
+from nncf.telemetry.events import get_current_category
 from nncf.telemetry.events import telemetry_category
 from nncf.telemetry.wrapper import NNCFTelemetry
 from nncf.telemetry.extractors import TelemetryExtractor
@@ -30,10 +31,11 @@ class tracked_function:
     def __init__(self, category: str = None, collectors: List[Union[str, TelemetryExtractor]] = None):
         """
         :param category: A category to be attributed to the events. If set to None, no events will be sent.
-        :param collectors: Add argument names in this list as string values to send an event with an "action" equal
-        to the argument name and "label" equal to the argument value before the function start. The argument must be
-        either a string or a dictionary of strings. If that is not the case, instead of argument names you can specify
-        an object of a customized `TelemetryExtractor` subclass; use the same approach for more complex event reporting.
+        :param collectors: Add argument names in this list as string values to send an event with an "action" equal to
+            the argument name and "label" equal to the argument value before the function start.
+            The argument must be either a string or a dictionary of strings. If that is not the case, instead of
+            argument names you can specify an object of a customized `TelemetryExtractor` subclass; use the same
+            approach for more complex event reporting.
         """
         self._category = category
         self._collectors = [VerbatimTelemetryExtractor(x) if isinstance(x, str) else x for x in collectors]
@@ -51,9 +53,11 @@ class tracked_function:
                 event = collector.extract(argvalue)
                 events.append(event)
 
+            previous_category = get_current_category()
             with telemetry_category(self._category) as category:
                 if category is not None:
-                    NNCFTelemetry.start_session(self._category)
+                    if category != previous_category:
+                        NNCFTelemetry.start_session(self._category)
                     for event in events:
                         NNCFTelemetry.send_event(event_category=category,
                                                  event_action=event.name,
@@ -62,7 +66,7 @@ class tracked_function:
 
                 retval = fn(*args, **kwargs)
 
-                if category is not None:
+                if category is not None and category != previous_category:
                     NNCFTelemetry.end_session(self._category)
             return retval
 
