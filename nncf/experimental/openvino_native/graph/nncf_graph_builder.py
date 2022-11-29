@@ -30,6 +30,7 @@ class GraphConverter:
     def _is_valid_openvino_metatype(node: ov.Node) -> bool:
         """
         Checks whether the node has the metatype which should be added to the NNCFGraph.
+
         :param node: Node to be checked.
         :return: True if the metatype is valid and False if not.
         """
@@ -48,6 +49,7 @@ class GraphConverter:
     def convert_ov_dtype_to_nncf_dtype(ov_dtype: str) -> Dtype:
         """
         Converts the primitive types from the OpenVINO domain to the NNCF domain.
+
         :param ov_dtype: OpenVINO primitive typename.
         :return: NNCF primitive type.
         """
@@ -74,6 +76,7 @@ class GraphConverter:
         Creates NNCFGraph from OpenVINO Model.
         All nodes from model which have valid metatype are added to NNCFGraph.
         Then, corresponding edges are added to the NNCFGraph with shape, type, output and input port ids.
+
         :param model: OpenVINO model.
         :return: NNCFGraph.
         """

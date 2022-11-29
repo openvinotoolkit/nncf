@@ -41,6 +41,7 @@ class OVNativeEngine(Engine):
         """
         Runs model on the provided input via OpenVINO Runtime.
         Returns the dictionary of model outputs by node names.
+
         :param input_data: inputs for the model.
         :return output_data: models outputs.
         """

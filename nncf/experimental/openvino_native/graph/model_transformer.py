@@ -22,7 +22,15 @@ from nncf.experimental.openvino_native.graph.transformations.commands import OVO
 
 
 class OVModelTransformer(ModelTransformer):
+    """
+    Applies transformations to an OpenVINO model.
+    """
     def __init__(self, model: ov.Model):
+        """
+        Initializes Model Transformer.
+
+        :param model: OpenVINO model to be transformed.
+        """
         super().__init__(model)
         self._model = model.clone()
         self.name_to_node_mapping = {op.get_friendly_name(): op for op in self._model.get_ops()}
