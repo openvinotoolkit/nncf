@@ -16,7 +16,7 @@ from typing import List
 
 from nncf.common.graph import NNCFGraph, NNCFNode
 from nncf.common.pruning.utils import traverse_function
-from nncf.common.graph.traversal import traverse_graph
+
 from nncf.common.utils.logger import logger
 
 
@@ -63,7 +63,11 @@ def get_first_nodes_of_type(graph: NNCFGraph, op_types: List[str]) -> List[NNCFN
     partial_traverse_function = partial(traverse_function,
                                         type_check_fn=lambda x: x in op_types,
                                         visited=visited)
-    return traverse_graph(graph, partial_traverse_function, graph_roots)
+
+    first_nodes_of_type = []
+    for root in graph_roots:
+        first_nodes_of_type.extend(graph.traverse_graph(root, partial_traverse_function))
+    return first_nodes_of_type
 
 
 def get_split_axis(input_shapes: List[List[int]], output_shapes: List[List[int]]) -> int:

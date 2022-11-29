@@ -14,7 +14,6 @@
 from typing import Set, Dict, List
 
 from collections import defaultdict
-from functools import partial
 from copy import deepcopy
 from enum import Enum
 
@@ -26,8 +25,6 @@ from nncf.common.graph import NNCFNodeName
 from nncf.common.graph.graph_matching import find_subgraphs_matching_pattern
 from nncf.common.graph.patterns import GraphPattern
 from nncf.common.graph.operator_metatypes import INPUT_NOOP_METATYPES
-from nncf.common.graph.traversal import TraversableGraph
-from nncf.common.graph.traversal import traverse_graph
 from nncf.common.utils.logger import logger as nncf_logger
 
 
@@ -54,7 +51,7 @@ class PostHookInsertionPoint:
         return self.target_node_name
 
 
-class InsertionPointGraph(nx.DiGraph, TraversableGraph):
+class InsertionPointGraph(nx.DiGraph):
     """
     This graph is built from the NNCFGraph representation of the model control flow graph and adds ephemeral
     "insertion point nodes" into the NNCF model graph representation corresponding to operator pre- and
@@ -287,49 +284,6 @@ class InsertionPointGraph(nx.DiGraph, TraversableGraph):
                         return node
         return node_key
 
-    def get_all_node_keys(self) -> List[str]:
-        """
-        Returns all keys of all nodes.
-
-        :return: All keys of all nodes.
-        """
-        return list(self.nodes)
-
-    def get_all_edges(self) -> List[str]:
-        """
-        Returns graph edges.
-
-        :return: Graph edges.
-        """
-        return self.edges
-
-    def remove_nodes(self, nodes_keys: List[str]) -> None:
-        """
-        Removes nodes from the graph with corresponding 'node_keys'.
-
-        :param nodes_keys: Node keys to remove.
-        :return: None.
-        """
-        self.remove_nodes_from(nodes_keys)
-
-    def get_next_nodes(self, node: str) -> List[str]:
-        """
-        Returns consumer nodes of provided node.
-
-        :param node: Producer node key.
-        :return: List of consumer nodes of provided node.
-        """
-        return self.succ[node]
-
-    def get_previous_nodes(self, node: str) -> List[str]:
-        """
-        Returns producer nodes of provided node.
-
-        :param node: Consumer node key.
-        :return: List of node keys of producer nodes of the provided node.
-        """
-        return self.pred[node]
-
     def get_ip_graph_with_merged_hw_optimized_operations(self,
                                                          full_fusing_pattern: GraphPattern) \
             -> 'InsertionPointGraph':
@@ -412,14 +366,6 @@ class ConstantNodesFilter:
         :param ip_graph: The original InsertionPointGraph.
         :return: InsertionPointGraph without Constant nodes.
         """
-
-        def traverse_function(curr_node, output, visited_nodes):
-            if curr_node in visited_nodes:
-                return True, output
-            output.append(curr_node)
-            visited_nodes.append(curr_node)
-            return False, output
-
         input_nodes = ip_graph.get_input_nodes()
         if not input_nodes:
             nncf_logger.debug('The Filtration of Constant nodes of InsertionPointGraph is skipped,'
@@ -430,12 +376,12 @@ class ConstantNodesFilter:
         if quantizable_layer_node_keys is not None:
             weight_nodes = [ip_graph.get_merged_node_from_single_node_key(weight_node) for weight_node in
                             quantizable_layer_node_keys]
-        visited_nodes = []
-        partial_traverse_function = partial(traverse_function, visited_nodes=visited_nodes)
+        visited_nodes = set()
         start_nodes = input_nodes + weight_nodes
-        traversed_node_keys = traverse_graph(ip_graph, traverse_function=partial_traverse_function,
-                                             start_nodes=start_nodes)
-        all_nodes_keys = ip_graph.get_all_node_keys()
-        constant_nodes = [node_key for node_key in all_nodes_keys if node_key not in traversed_node_keys]
-        ip_graph.remove_nodes(constant_nodes)
+        for node in start_nodes:
+            for node_from, node_to in nx.bfs_edges(ip_graph, source=node):
+                visited_nodes.add(node_from)
+                visited_nodes.add(node_to)
+        constant_nodes = [node for node in ip_graph.nodes if node not in visited_nodes]
+        ip_graph.remove_nodes_from(constant_nodes)
         return ip_graph

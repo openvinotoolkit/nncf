@@ -13,7 +13,7 @@
 import os
 from collections import defaultdict
 from copy import deepcopy
-from typing import Any, Dict, KeysView, List, Tuple, Type, ValuesView
+from typing import Any, Callable, Dict, KeysView, List, Tuple, Type, ValuesView
 from typing import Generator
 
 import networkx as nx
@@ -25,7 +25,6 @@ from nncf.common.graph.layer_attributes import Dtype
 from nncf.common.graph.operator_metatypes import INPUT_NOOP_METATYPES
 from nncf.common.graph.operator_metatypes import OUTPUT_NOOP_METATYPES
 from nncf.common.graph.operator_metatypes import OperatorMetatype
-from nncf.common.graph.traversal import TraversableGraph
 from nncf.common.utils.dot_file_rw import write_dot_graph
 from nncf.common.utils.logger import logger as nncf_logger
 
@@ -148,8 +147,8 @@ class NNCFGraphPatternIO:
         self.output_edges = output_edges
 
 
-# pylint:disable=too-many-public-methods
-class NNCFGraph(TraversableGraph):
+#pylint:disable=too-many-public-methods
+class NNCFGraph:
     """
     Wrapper over a regular directed acyclic graph that represents a control flow/execution graph of a DNN
     providing some useful methods for graph traversal.
@@ -338,6 +337,31 @@ class NNCFGraph(TraversableGraph):
         edges = [self.get_edge(node, to_node) for to_node in output_nodes]
         return sorted(edges, key=lambda x: x.output_port_id)
 
+    def traverse_graph(self,
+                       curr_node: NNCFNode,
+                       traverse_function: Callable[[NNCFNode, List[Any]], Tuple[bool, List[Any]]],
+                       traverse_forward: bool = True):
+        """
+        Traverses graph up or down starting form `curr_node` node.
+
+        :param curr_node: Node from which traversal is started.
+        :param traverse_function: Function describing condition of traversal continuation/termination.
+        :param traverse_forward: Flag specifying direction of traversal.
+        :return:
+        """
+        output = []
+        return self._traverse_graph_recursive_helper(curr_node, traverse_function, output, traverse_forward)
+
+    def _traverse_graph_recursive_helper(self, curr_node: NNCFNode,
+                                         traverse_function: Callable[[NNCFNode, List[Any]], Tuple[bool, List[Any]]],
+                                         output: List[Any], traverse_forward: bool):
+        is_finished, output = traverse_function(curr_node, output)
+        get_nodes_fn = self.get_next_nodes if traverse_forward else self.get_previous_nodes
+        if not is_finished:
+            for node in get_nodes_fn(curr_node):
+                self._traverse_graph_recursive_helper(node, traverse_function, output, traverse_forward)
+        return output
+
     def add_nncf_node(self, node_name: str,
                       node_type: str,
                       node_metatype: Type[OperatorMetatype],
@@ -488,7 +512,7 @@ class NNCFGraph(TraversableGraph):
             nncf_logger.warning('Graphviz is not installed - only the .dot model visualization format will be used. '
                                 'Install pygraphviz into your Python environment and graphviz system-wide to enable '
                                 'PNG rendering.')
-        except Exception:  # pylint:disable=broad-except
+        except Exception:  #pylint:disable=broad-except
             nncf_logger.warning('Failed to render graph to PNG')
 
     def get_graph_for_structure_analysis(self, extended: bool = False) -> nx.DiGraph:

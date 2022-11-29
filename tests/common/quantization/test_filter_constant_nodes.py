@@ -198,15 +198,15 @@ def test_constant_nodes_filter(model_to_test):
 
 def check_ip_graphs_are_equal(graph_1: InsertionPointGraph, graph_2: InsertionPointGraph):
     graph_1_node_keys_without_index = [graph_1_node_key.split(' ')[-1] for graph_1_node_key in
-                                       graph_1.get_all_node_keys()]
+                                       graph_1.nodes.keys()]
     graph_2_node_keys_without_index = [graph_2_node_key.split(' ')[-1] for graph_2_node_key in
-                                       graph_2.get_all_node_keys()]
+                                       graph_2.nodes.keys()]
     assert Counter(graph_1_node_keys_without_index) == Counter(graph_2_node_keys_without_index)
 
     graph_1_filtered_edges, graph_2_filtered_edges = [], []
-    for edge in graph_1.get_all_edges():
+    for edge in graph_1.edges:
         graph_1_filtered_edges.append((filter_edge(edge[0]), filter_edge(edge[1])))
-    for edge in graph_2.get_all_edges():
+    for edge in graph_2.edges:
         graph_2_filtered_edges.append((filter_edge(edge[0]), filter_edge(edge[1])))
     assert Counter(graph_1_filtered_edges) == Counter(graph_2_filtered_edges)
 

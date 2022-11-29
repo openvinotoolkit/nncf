@@ -32,7 +32,6 @@ from nncf.common.pruning.utils import is_prunable_depthwise_conv
 from nncf.common.pruning.utils import get_output_channels
 from nncf.common.utils.logger import logger as nncf_logger
 from nncf.common.compression import BaseCompressionAlgorithmController
-from nncf.common.graph.traversal import traverse_graph
 from nncf.config.extractors import extract_algo_specific_config
 from nncf.config.schemata.defaults import PRUNE_BATCH_NORMS
 from nncf.config.schemata.defaults import PRUNE_DOWNSAMPLE_CONVS
@@ -236,7 +235,7 @@ class BasePruningAlgoBuilder(TFCompressionAlgorithmBuilder):
         bn_layer_names = []
         for layer_node in layer_nodes:
             for next_node in graph.get_next_nodes(layer_node):
-                for bn_node in traverse_graph(graph, self._get_bn_for_node, next_node):
+                for bn_node in graph.traverse_graph(next_node, self._get_bn_for_node):
                     bn_layer_name = get_layer_identifier(bn_node)
                     if bn_layer_name not in bn_layer_names:
                         bn_layer_names.append(bn_layer_name)
