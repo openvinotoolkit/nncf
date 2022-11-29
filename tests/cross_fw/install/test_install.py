@@ -16,6 +16,7 @@ import pytest
 from typing import List
 from pathlib import Path
 import shutil
+import os
 
 from tests.shared.paths import PROJECT_ROOT
 from tests.shared.paths import TEST_ROOT
@@ -54,9 +55,11 @@ def run_install_checks(venv_path: Path, tmp_path: Path, package_type: str, backe
     install_checks_py_path = TEST_ROOT / 'cross_fw' / 'install' / install_checks_py_name
     final_install_checks_py_path = run_path / install_checks_py_name
     shutil.copy(install_checks_py_path, final_install_checks_py_path)
+    env = os.environ.copy()
+    env['PYTHONPATH'] = str(PROJECT_ROOT)  # need this to be able to import from tests.* in install_checks_*.py
     subprocess.run(
         f'{python_executable_with_venv} {final_install_checks_py_path} {install_type} {package_type}',
-        check=True, shell=True, cwd=run_path)
+        check=True, shell=True, cwd=run_path, env=env)
 
 
 @pytest.fixture(name="venv_type",
@@ -94,6 +97,8 @@ class TestInstall:
                      backend: str, venv_type: str, package_type: str,
                      backend_clopt: List[str], host_configuration_clopt: str):
         skip_if_backend_not_selected(backend, backend_clopt)
+        if backend == 'openvino' and 'pypi' in package_type:
+            pytest.xfail('Disabled until OV backend is exposed in a release')
         venv_path = create_venv_with_nncf(tmp_path, package_type, venv_type, extra_reqs={backend})
         run_install_checks(venv_path, tmp_path, package_type, backend=backend,
                 install_type=host_configuration_clopt)
@@ -103,6 +108,8 @@ class TestInstall:
                                             backend: str, venv_type: str, package_type: str,
                                             backend_clopt: List[str], host_configuration_clopt: str):
         skip_if_backend_not_selected(backend, backend_clopt)
+        if backend == 'openvino' and 'pypi' in package_type:
+            pytest.xfail('Disabled until OV backend is exposed in a release')
         venv_path = create_venv_with_nncf(tmp_path, package_type, venv_type, extra_reqs={backend})
         pip_with_venv = f'. {venv_path}/bin/activate && {venv_path}/bin/pip'
         subprocess.call(

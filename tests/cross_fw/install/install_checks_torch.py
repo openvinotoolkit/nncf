@@ -53,7 +53,7 @@ if execution_type == "cpu":
     output_tensor = QuantizedFunctionsCPU.Quantize_forward(input_tensor, input_low_tensor, input_high_tensor, levels)
     output_tensor = BinarizedFunctionsCPU.ActivationBinarize_forward(output_tensor, scale_tensor, threshold_tensor)
     output_tensor = BinarizedFunctionsCPU.WeightBinarize_forward(output_tensor, True)
-elif execution_type == "cuda":
+elif execution_type == "gpu":
     input_tensor = input_tensor.cuda()
     input_low_tensor = input_low_tensor.cuda()
     input_high_tensor = input_high_tensor.cuda()
