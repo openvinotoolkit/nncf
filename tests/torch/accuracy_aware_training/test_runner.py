@@ -81,6 +81,7 @@ def test_runner(num_steps, learning_rate, reference_metric):
         return optimizer, None
 
     runner.initialize_training_loop_fns(train_fn, validate_fn, configure_optimizers_fn, None)
+    runner.initialize_logging()
     runner.reset_training()
     runner.train_epoch(model, compression_ctrl)
     metric_value = runner.validate(model)

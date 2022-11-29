@@ -72,8 +72,9 @@ class BaseEarlyExitCompressionTrainingLoop(TrainingLoop, ABC):
             dump_checkpoint_fn=None, load_checkpoint_fn=None, early_stopping_fn=None,
             tensorboard_writer=None, log_dir=None, update_learning_rate_fn=None):
         self.runner.initialize_training_loop_fns(train_epoch_fn, validate_fn, configure_optimizers_fn,
-                                                 dump_checkpoint_fn, tensorboard_writer, log_dir,
-                                                 load_checkpoint_fn, early_stopping_fn, update_learning_rate_fn)
+                                                 dump_checkpoint_fn, load_checkpoint_fn, early_stopping_fn,
+                                                 update_learning_rate_fn)
+        self.runner.initialize_logging(log_dir, tensorboard_writer)
         return self._run_early_exit_training_loop(model)
 
     def _run_early_exit_training_loop(self, model):
@@ -250,8 +251,9 @@ class AdaptiveCompressionTrainingLoop(BaseEarlyExitCompressionTrainingLoop):
             dump_checkpoint_fn=None, load_checkpoint_fn=None, early_stopping_fn=None,
             tensorboard_writer=None, log_dir=None, update_learning_rate_fn=None):
         self.runner.initialize_training_loop_fns(train_epoch_fn, validate_fn, configure_optimizers_fn,
-                                                 dump_checkpoint_fn, tensorboard_writer, log_dir,
-                                                 load_checkpoint_fn, early_stopping_fn, update_learning_rate_fn)
+                                                 dump_checkpoint_fn, load_checkpoint_fn, early_stopping_fn,
+                                                 update_learning_rate_fn)
+        self.runner.initialize_logging(log_dir, tensorboard_writer)
         model = self._run_initial_training_phase(model)
         self.runner.reset_training()
         self.runner.validate(model)

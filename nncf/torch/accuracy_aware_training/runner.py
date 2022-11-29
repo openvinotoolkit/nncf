@@ -36,17 +36,13 @@ class PTAccuracyAwareTrainingRunner(BaseAccuracyAwareTrainingRunner):
     The Training Runner implementation for PyTorch training code.
     """
 
-    def initialize_training_loop_fns(self, train_epoch_fn, validate_fn, configure_optimizers_fn, dump_checkpoint_fn,
-                                     tensorboard_writer=None, log_dir=None,
-                                     load_checkpoint_fn=None, early_stopping_fn=None, update_learning_rate_fn=None):
-        super().initialize_training_loop_fns(train_epoch_fn, validate_fn, configure_optimizers_fn, dump_checkpoint_fn,
-                                             tensorboard_writer, log_dir,
-                                             load_checkpoint_fn, early_stopping_fn, update_learning_rate_fn)
-        if is_main_process():
-            # Only the main process should initialize and create a log directory, other processes don't use it
-            self._initialize_log_dir(log_dir)
-            if self._tensorboard_writer is None and TENSORBOARD_AVAILABLE:
-                self._tensorboard_writer = SummaryWriter(self._log_dir)
+    def initialize_logging(self, log_dir=None, tensorboard_writer=None):
+        if not is_main_process():
+            return
+        # Only the main process should initialize and create a log directory, other processes don't use it
+        super().initialize_logging(log_dir, tensorboard_writer)
+        if self._tensorboard_writer is None and TENSORBOARD_AVAILABLE:
+            self._tensorboard_writer = SummaryWriter(self._log_dir)
 
     def retrieve_uncompressed_model_accuracy(self, model):
         if hasattr(model, 'original_model_accuracy') or hasattr(model.module, 'original_model_accuracy'):
@@ -161,5 +157,4 @@ class PTAdaptiveCompressionLevelTrainingRunner(BaseAdaptiveCompressionLevelTrain
             if compression_rate is None:
                 raise ValueError('Compression rate cannot be None')
             return f'{base_path}_best_{compression_rate:.3f}{extension}'
-        else:
-            return f'{base_path}_last{extension}'
+        return f'{base_path}_last{extension}'

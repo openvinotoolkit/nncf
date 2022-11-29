@@ -142,8 +142,6 @@ class TrainingRunner(ABC):
                                      configure_optimizers_fn: Callable[[], Tuple[OptimizerType, LRSchedulerType]],
                                      dump_checkpoint_fn: Callable[
                                          [TModel, CompressionAlgorithmController, 'TrainingRunner', str], None],
-                                     tensorboard_writer: Optional[TensorboardWriterType] = None,
-                                     log_dir: Optional[Union[str, pathlib.Path]] = None,
                                      **kwargs):
         """
         Register the user-supplied functions to be used to control the training process.
@@ -155,8 +153,15 @@ class TrainingRunner(ABC):
         :param configure_optimizers_fn: a method to instantiate an optimizer and a learning
         rate scheduler (to be called inside the `configure_optimizers` of the TrainingRunner).
         :param dump_checkpoint_fn: a method to dump a checkpoint.
-        :param tensorboard_writer: The tensorboard object to be used for logging.
+        """
+
+    def initialize_logging(self, log_dir: Optional[Union[str, pathlib.Path]] = None,
+                           tensorboard_writer: Optional[TensorboardWriterType] = None):
+        """
+        Initialize logging related variables
+
         :param log_dir: The path to be used for logging and checkpoint saving.
+        :param tensorboard_writer: The tensorboard object to be used for logging.
         """
 
     @abstractmethod
@@ -267,7 +272,6 @@ class BaseAccuracyAwareTrainingRunner(TrainingRunner):
         self.optimizer, self.lr_scheduler = self._configure_optimizers_fn()
 
     def initialize_training_loop_fns(self, train_epoch_fn, validate_fn, configure_optimizers_fn, dump_checkpoint_fn,
-                                     tensorboard_writer=None, log_dir=None,
                                      load_checkpoint_fn=None, early_stopping_fn=None, update_learning_rate_fn=None):
         self._train_epoch_fn = train_epoch_fn
         self._validate_fn = validate_fn
@@ -276,6 +280,11 @@ class BaseAccuracyAwareTrainingRunner(TrainingRunner):
         self._load_checkpoint_fn = load_checkpoint_fn
         self._early_stopping_fn = early_stopping_fn
         self._update_learning_rate_fn = update_learning_rate_fn
+
+    def initialize_logging(self, log_dir=None, tensorboard_writer=None):
+        self._log_dir = log_dir if log_dir is not None else osp.join(os.getcwd(), 'runs')
+        self._log_dir = configure_accuracy_aware_paths(self._log_dir)
+        self._checkpoint_save_dir = self._log_dir
         self._tensorboard_writer = tensorboard_writer
 
     def stop_training(self, compression_controller):
@@ -294,11 +303,6 @@ class BaseAccuracyAwareTrainingRunner(TrainingRunner):
         resuming_checkpoint_path = self._best_checkpoint
         nncf_logger.info('Loading the best checkpoint found during training {}...'.format(resuming_checkpoint_path))
         self._load_checkpoint(model, resuming_checkpoint_path)
-
-    def _initialize_log_dir(self, log_dir):
-        self._log_dir = log_dir if log_dir is not None else osp.join(os.getcwd(), 'runs')
-        self._log_dir = configure_accuracy_aware_paths(self._log_dir)
-        self._checkpoint_save_dir = self._log_dir
 
     @abstractmethod
     def add_tensorboard_scalar(self, key, data, step):

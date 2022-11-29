@@ -28,14 +28,6 @@ class TFAccuracyAwareTrainingRunner(BaseAccuracyAwareTrainingRunner):
     The Training Runner implementation for TensorFlow training code.
     """
 
-    def initialize_training_loop_fns(self, train_epoch_fn, validate_fn, configure_optimizers_fn, dump_checkpoint_fn,
-                                     tensorboard_writer=None, log_dir=None,
-                                     load_checkpoint_fn=None, early_stopping_fn=None, update_learning_rate_fn=None):
-        super().initialize_training_loop_fns(train_epoch_fn, validate_fn, configure_optimizers_fn, dump_checkpoint_fn,
-                                             tensorboard_writer, log_dir,
-                                             load_checkpoint_fn, early_stopping_fn, update_learning_rate_fn)
-        self._initialize_log_dir(log_dir)
-
     def retrieve_uncompressed_model_accuracy(self, model):
         if not hasattr(model, 'original_model_accuracy'):
             raise RuntimeError('Original model does not contain the pre-calculated reference metric value')
@@ -133,5 +125,4 @@ class TFAdaptiveCompressionLevelTrainingRunner(BaseAdaptiveCompressionLevelTrain
             if compression_rate is None:
                 raise ValueError('Compression rate cannot be None')
             return f'{base_path}_best_{compression_rate:.3f}{extension}'
-        else:
-            return f'{base_path}_last{extension}'
+        return f'{base_path}_last{extension}'
