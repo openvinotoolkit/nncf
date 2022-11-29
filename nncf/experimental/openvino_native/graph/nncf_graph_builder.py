@@ -60,6 +60,7 @@ class GraphConverter:
         Creates NNCFGraph from OpenVINO Model.
         All nodes from model which have valid metatype are added to NNCFGraph.
         Then, corresponding edges are added to the NNCFGraph with shape, type, output and input port ids.
+
         :param model: OpenVINO model.
         :return: NNCFGraph.
         """

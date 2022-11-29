@@ -27,7 +27,6 @@ class OVModelTransformer(ModelTransformer):
     """
     Applies transformations to an OpenVINO model.
     """
-
     def __init__(self, model: ov.Model):
         """
         Initializes Model Transformer.
