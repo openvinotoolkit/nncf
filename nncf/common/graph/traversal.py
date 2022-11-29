@@ -15,6 +15,8 @@ from typing import TypeVar, Callable, List, Tuple, Optional, Any
 from abc import ABC
 from abc import abstractmethod
 
+from collections import deque
+
 Node = TypeVar('Node')
 
 
@@ -65,19 +67,17 @@ def traverse_graph(graph: TraversableGraph,
     :return: The traversed path.
     """
 
-    def _traverse_graph_recursive_helper(curr_node: Node,
-                                         traverse_function: Callable[[Node, List[Any]], Tuple[bool, List[Any]]],
-                                         output: List[Any], traverse_forward: bool):
-        is_finished, output = traverse_function(curr_node, output)
-        get_nodes_fn = graph.get_next_nodes if traverse_forward else graph.get_previous_nodes
-        if not is_finished:
-            for node in get_nodes_fn(curr_node):
-                _traverse_graph_recursive_helper(node, traverse_function, output, traverse_forward)
-        return output
-
     output = []
     if start_nodes is None:
-        start_nodes = graph.get_input_nodes()
-    for node in start_nodes:
-        _traverse_graph_recursive_helper(node, traverse_function, output, traverse_forward)
+        next_nodes = deque(graph.get_input_nodes())
+    else:
+        next_nodes = deque(start_nodes)
+    get_nodes_fn = graph.get_next_nodes if traverse_forward else graph.get_previous_nodes
+    while next_nodes:
+        node = next_nodes.popleft()
+        is_finished, output = traverse_function(node, output)
+        if is_finished:
+            continue
+        next_nodes.extend(get_nodes_fn(node))
+
     return output
