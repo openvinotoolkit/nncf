@@ -24,4 +24,4 @@ EXCLUDED_MODULES_PATTERNS = (
     '.*?tf_[^\\.]*'
 )
 
-load_nncf_modules(EXCLUDED_MODULES_PATTERNS, True)
+load_nncf_modules(EXCLUDED_MODULES_PATTERNS)
