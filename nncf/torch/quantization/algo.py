@@ -86,6 +86,7 @@ from nncf.torch.debug import CallCountTracker
 from nncf.torch.debug import DebugInterface
 from nncf.torch.dynamic_graph.context import TracingContext
 from nncf.torch.graph.graph import PTNNCFGraph
+from nncf.torch.graph import operator_metatypes
 from nncf.torch.graph.operator_metatypes import PTConv2dMetatype
 from nncf.torch.graph.operator_metatypes import PTDepthwiseConv2dSubtype
 from nncf.torch.graph.transformations.commands import PTInsertionCommand
@@ -144,8 +145,45 @@ from nncf.torch.utils import get_state_dict_names_with_modules
 from nncf.torch.utils import is_main_process
 from nncf.torch.utils import get_model_dtype
 from torch import nn
-
 QUANTIZER_BUILDER_STATE_VERSION_SAVE_NAME = 'version'
+QUANTIZATION_LAYER_METATYPES = [
+    # Ops that both in the CPU HW config and in the NNCF module with layer attributes
+    operator_metatypes.PTConv1dMetatype,
+    operator_metatypes.PTDepthwiseConv1dSubtype,
+    operator_metatypes.PTConv2dMetatype,
+    operator_metatypes.PTDepthwiseConv2dSubtype,
+    operator_metatypes.PTConv3dMetatype,
+    operator_metatypes.PTDepthwiseConv3dSubtype,
+    operator_metatypes.PTConvTranspose1dMetatype,
+    operator_metatypes.PTConvTranspose2dMetatype,
+    operator_metatypes.PTConvTranspose3dMetatype,
+    operator_metatypes.PTLinearMetatype,
+    #operator_metatypes.PTMatMulMetatype,
+    ## Ops in the CPU HW config and not the NNCF modules with layer attributes
+    #operator_metatypes.PTAddMetatype,
+    #operator_metatypes.PTMulMetatype,
+    #operator_metatypes.PTMaxMetatype,
+    #operator_metatypes.PTLessMetatype,
+    #operator_metatypes.PTLessEqualMetatype,
+    #operator_metatypes.PTGreaterMetatype,
+    #operator_metatypes.PTGreaterEqualMetatype,
+    #operator_metatypes.PTDivMetatype,
+    #operator_metatypes.PTMinMetatype,
+    #operator_metatypes.PTEqualsMetatype,
+    #operator_metatypes.PTSubMetatype,
+    #operator_metatypes.PTNotEqualMetatype,
+    #operator_metatypes.PTModMetatype,
+    #operator_metatypes.PTLogicalOrMetatype,
+    #operator_metatypes.PTLogicalXorMetatype,
+    #operator_metatypes.PTLogicalAndMetatype,
+    #operator_metatypes.PTLogicalNotMetatype,
+    ## Ops not in the CPU HW config and in the NNCF modules with layer attributes
+    operator_metatypes.PTBatchNormMetatype,
+    operator_metatypes.PTGroupNormMetatype,
+    operator_metatypes.PTLayerNormMetatype,
+    operator_metatypes.PTEmbeddingMetatype,#???
+    operator_metatypes.PTEmbeddingBagMetatype,#???
+]
 
 
 class QuantizerBuilderStateVersion(IntEnum):
@@ -257,7 +295,8 @@ class QuantizerSetupGeneratorBase:
         raise NotImplementedError
 
     def get_quantizable_module_nodes(self) -> List[QuantizableWeightedLayerNode]:
-        weighted_nodes = self._target_model.get_weighted_original_graph_nodes()
+        weighted_nodes_legacy = self._target_model.get_weighted_original_graph_nodes()
+        weighted_nodes= self._target_model.get_graph().get_nodes_by_metatypes(QUANTIZATION_LAYER_METATYPES)
         quantized_modules_with_potential_qconfig = []
 
         weighted_nodes = self._filter_by_ignored_algo(weighted_nodes)
