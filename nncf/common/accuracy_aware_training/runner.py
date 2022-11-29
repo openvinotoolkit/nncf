@@ -390,9 +390,7 @@ class BaseAdaptiveCompressionLevelTrainingRunner(BaseAccuracyAwareTrainingRunner
         super().dump_statistics(model, compression_controller)
 
     def _save_best_checkpoint(self, model, compression_controller):
-        best_checkpoint_filename = self._make_checkpoint_path(is_best=True,
-                                                              compression_rate=self.compression_rate_target)
-        best_path = osp.join(self._checkpoint_save_dir, best_checkpoint_filename)
+        best_path = self._make_checkpoint_path(is_best=True, compression_rate=self.compression_rate_target)
 
         accuracy_budget = self.best_val_metric_value - self.minimal_tolerable_accuracy
         if self.compression_rate_target in self._best_checkpoints and \
