@@ -24,7 +24,7 @@ import openvino.runtime as ov
 from openvino.tools import pot
 
 from nncf.data import Dataset
-from nncf.openvino.quantization.telemetry_extractors import CompressionStarted
+from nncf.quantization.telemetry_extractors import CompressionStartedWithQuantizeApi
 from nncf.parameters import IgnoredScope
 from nncf.parameters import ModelType
 from nncf.parameters import TargetDevice
@@ -97,7 +97,7 @@ def _create_ignored_scope_config(ignored_scope: Optional[IgnoredScope]) -> Dict:
     return ignored
 
 
-@tracked_function(NNCF_OV_CATEGORY, [CompressionStarted(), "target_device", "preset"])
+@tracked_function(NNCF_OV_CATEGORY, [CompressionStartedWithQuantizeApi(), "target_device", "preset"])
 def quantize_impl(model: ov.Model,
                   calibration_dataset: Dataset,
                   preset: QuantizationPreset,

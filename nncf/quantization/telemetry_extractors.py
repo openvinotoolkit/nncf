@@ -4,7 +4,7 @@ from nncf.telemetry.extractors import CollectedEvent
 from nncf.telemetry.extractors import TelemetryExtractor
 
 
-class CompressionStarted(TelemetryExtractor):
+class CompressionStartedWithQuantizeApi(TelemetryExtractor):
     def extract(self, _: Any) -> CollectedEvent:
         return CollectedEvent(name="compression_started",
-                              data="DefaultQuantization")
+                              data="quantize_api")
