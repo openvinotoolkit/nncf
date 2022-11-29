@@ -59,6 +59,18 @@ def traverse_graph(graph: TraversableGraph,
     The order of input nodes is based on the returned list of get_input_nodes function of TraversableGraph.
     The traverse logic should be implemented through 'traverse_function'.
 
+    'traverse_function' should implement the logic of adding or not adding the node to the output path.
+    Also, it should determine whether the current traversing should be stopped or not.
+    So the input of this function should be a tuple of the current node and a list of the current path.
+    The output is the tuple of a flag whether to stop the current traversing or not and the list of output.
+    The example of a naive implementation:
+
+    def traverse_function(node: Node, output: List[Node]) -> Tuple[bool, List[Node]]:
+        if node in output:
+            return True, output
+        output.append(node)
+        return False, output
+
     :param graph: Any graph that implements get_next_nodes, get_previous_nodes and get_input_nodes functions.
     :param traverse_function: Function describing condition of traversal continuation/termination.
     :param start_nodes: Nodes from which traversal is started.
