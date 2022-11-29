@@ -142,6 +142,9 @@ def main_worker(current_gpu, config: SampleConfig):
 
     model.to(config.device)
 
+    if model_name == 'efficient_net':
+        model.set_swish(memory_efficient=False)
+
     # define optimizer
     params_to_optimize = get_parameter_groups(model, config)
     optimizer, _ = make_optimizer(params_to_optimize, config)

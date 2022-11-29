@@ -125,6 +125,9 @@ def main_worker(current_gpu, config: SampleConfig):
 
     model.to(config.device)
 
+    if model_name == 'efficient_net':
+        model.set_swish(memory_efficient=False)
+
     validate(val_loader, model, criterion, config)
 
     def validate_model_fn(model_, loader):
