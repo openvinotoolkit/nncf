@@ -254,11 +254,11 @@ class InsertionPointGraph(nx.DiGraph, TraversableGraph):
         :return: A list of input nodes.
         """
         output = []
-        for node in self.nodes:
-            if InsertionPointGraph.REGULAR_NODE_REF_NODE_ATTR not in self.nodes[node]:
+        for node, data in self.nodes.items():
+            if InsertionPointGraph.REGULAR_NODE_REF_NODE_ATTR not in data:
                 continue
-            if self.nodes[node][InsertionPointGraph.IS_MERGED_NODE_ATTR]:
-                for nncf_node in self.nodes[node][InsertionPointGraph.MERGED_NNCF_NODE_LIST_NODE_ATTR]:
+            if data[InsertionPointGraph.IS_MERGED_NODE_ATTR]:
+                for nncf_node in data[InsertionPointGraph.MERGED_NNCF_NODE_LIST_NODE_ATTR]:
                     node_k = nncf_node.data[NNCFGraph.KEY_NODE_ATTR]
                     if self._base_nx_graph.nodes[node_k][NNCFGraph.METATYPE_ATTR] in INPUT_NOOP_METATYPES:
                         output.append(node)
@@ -277,11 +277,11 @@ class InsertionPointGraph(nx.DiGraph, TraversableGraph):
         :param node_key: The key of the node which is checking on the merged.
         :return: The node key of the composite node. Original 'node_key' if the node was not merged.
         """
-        for node in self.nodes:
-            if InsertionPointGraph.REGULAR_NODE_REF_NODE_ATTR not in self.nodes[node]:
+        for node, data in self.nodes.items():
+            if InsertionPointGraph.REGULAR_NODE_REF_NODE_ATTR not in data:
                 continue
-            if self.nodes[node][InsertionPointGraph.IS_MERGED_NODE_ATTR]:
-                for nncf_node in self.nodes[node][InsertionPointGraph.MERGED_NNCF_NODE_LIST_NODE_ATTR]:
+            if data[InsertionPointGraph.IS_MERGED_NODE_ATTR]:
+                for nncf_node in data[InsertionPointGraph.MERGED_NNCF_NODE_LIST_NODE_ATTR]:
                     node_k = nncf_node.data[NNCFGraph.KEY_NODE_ATTR]
                     if node_key == node_k:
                         return node
