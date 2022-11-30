@@ -84,7 +84,7 @@ def create_venv_with_nncf(tmp_path: Path, package_type: str, venv_type: str, ext
     # compiled for CUDA 10.2. Thus need to direct pip installation specifically for
     # torch, otherwise the NNCF will only work in CPU mode.
     torch_extra_index = " --extra-index-url https://download.pytorch.org/whl/cu116"
-    if "torch" in extra_reqs:
+    if "torch" in extra_reqs and 'build' not in package_type:
         run_cmd_line += torch_extra_index
 
     subprocess.run(run_cmd_line, check=True, shell=True, cwd=PROJECT_ROOT)
