@@ -26,6 +26,7 @@ from nncf.parameters import ModelType
 from nncf.parameters import TargetDevice
 
 
+
 def quantize(model: TModel,
              calibration_dataset: Dataset,
              preset: QuantizationPreset = QuantizationPreset.PERFORMANCE,

@@ -10,14 +10,13 @@
  See the License for the specific language governing permissions and
  limitations under the License.
 """
-
+from tests.shared.datasets import MockDataset
 from tests.shared.helpers import telemetry_send_event_test_driver
 
 from openvino.runtime import Model, Shape, Type, op, opset8
 
 import nncf
 from nncf import Dataset
-import numpy as np
 
 INPUT_SHAPE = [2, 1, 1, 1]
 def get_mock_model() -> Model:
@@ -26,22 +25,10 @@ def get_mock_model() -> Model:
     softmax_node = opset8.softmax(param_node, softmax_axis)
     return Model(softmax_node, [param_node], 'mock')
 
-class MockDataset:
-    def __init__(self):
-        self.n = 0
-
-    def __iter__(self):
-        return self
-
-    def __next__(self):
-        if self.n < 1:
-            self.n += 1
-            return np.ones(INPUT_SHAPE)
-        raise StopIteration
 
 def test_telemetry_is_sent(mocker):
     def use_nncf_fn():
         model_to_test = get_mock_model()
 
-        _ = nncf.quantize(model_to_test, Dataset(MockDataset()))
+        _ = nncf.quantize(model_to_test, Dataset(MockDataset(INPUT_SHAPE)))
     telemetry_send_event_test_driver(mocker, use_nncf_fn)
