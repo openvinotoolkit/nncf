@@ -155,6 +155,7 @@ class TrainingRunner(ABC):
         :param dump_checkpoint_fn: a method to dump a checkpoint.
         """
 
+    @abstractmethod
     def initialize_logging(self, log_dir: Optional[Union[str, pathlib.Path]] = None,
                            tensorboard_writer: Optional[TensorboardWriterType] = None):
         """

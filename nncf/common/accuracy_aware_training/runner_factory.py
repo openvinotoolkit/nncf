@@ -16,6 +16,7 @@ from abc import abstractmethod
 from typing import Dict
 
 from nncf.api.compression import CompressionAlgorithmController
+from nncf.common.accuracy_aware_training.runner import BaseAccuracyAwareTrainingRunner
 from nncf.common.accuracy_aware_training.runner import BaseAdaptiveCompressionLevelTrainingRunner
 from nncf.common.accuracy_aware_training.runner import TrainingRunner
 from nncf.common.utils.backend import infer_backend_from_compression_controller
@@ -46,7 +47,7 @@ class EarlyExitTrainingRunnerCreator(TrainingRunnerCreator):
         self.verbose = verbose
         self.dump_checkpoints = dump_checkpoints
 
-    def create_training_loop(self) -> TrainingRunner:
+    def create_training_loop(self) -> BaseAccuracyAwareTrainingRunner:
         """
         Creates an object of AccuracyAwareTrainingRunner depending on user backend
 

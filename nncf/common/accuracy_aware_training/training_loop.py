@@ -94,7 +94,7 @@ class BaseEarlyExitCompressionTrainingLoop(TrainingLoop, ABC):
         self.runner.dump_statistics(model, self.compression_controller)
 
         nncf_logger.info('Results of the initialization step:')
-        self.print_accuracy_statistics(compressed_model_accuracy, uncompressed_model_accuracy,
+        self.print_accuracy_statistics(uncompressed_model_accuracy, compressed_model_accuracy,
                                        accuracy_drop, rel_accuracy_drop, accuracy_budget)
 
         if self._accuracy_criterion_satisfied(accuracy_budget, self.compression_controller):
@@ -115,12 +115,12 @@ class BaseEarlyExitCompressionTrainingLoop(TrainingLoop, ABC):
                                                                   compressed_model_accuracy)
             if self._accuracy_criterion_satisfied(accuracy_budget, self.compression_controller):
                 nncf_logger.info('The accuracy criteria is reached after {} epoch.'.format(epoch))
-                self.print_accuracy_statistics(compressed_model_accuracy, uncompressed_model_accuracy,
+                self.print_accuracy_statistics(uncompressed_model_accuracy, compressed_model_accuracy,
                                                accuracy_drop, rel_accuracy_drop, accuracy_budget)
                 break
 
             nncf_logger.info('Results of {} epoch:'.format(epoch))
-            self.print_accuracy_statistics(compressed_model_accuracy, uncompressed_model_accuracy,
+            self.print_accuracy_statistics(uncompressed_model_accuracy, compressed_model_accuracy,
                                            accuracy_drop, rel_accuracy_drop, accuracy_budget)
 
             if self.runner.stop_training(self.compression_controller):
@@ -133,13 +133,13 @@ class BaseEarlyExitCompressionTrainingLoop(TrainingLoop, ABC):
         return model
 
     @staticmethod
-    def print_accuracy_statistics(compressed_model_accuracy,
-                                  uncompressed_model_accuracy,
+    def print_accuracy_statistics(uncompressed_model_accuracy,
+                                  compressed_model_accuracy,
                                   accuracy_drop,
                                   rel_accuracy_drop,
                                   accuracy_budget):
-        nncf_logger.info('Compressed model accuracy: {:.4f}'.format(compressed_model_accuracy))
         nncf_logger.info('Original model accuracy: {:.4f}'.format(uncompressed_model_accuracy))
+        nncf_logger.info('Compressed model accuracy: {:.4f}'.format(compressed_model_accuracy))
         nncf_logger.info('Absolute accuracy drop: {:.4f}'.format(accuracy_drop))
         nncf_logger.info('Relative accuracy drop: {:.2f}%'.format(rel_accuracy_drop))
         nncf_logger.info('Accuracy budget: {:.4f}'.format(accuracy_budget))
