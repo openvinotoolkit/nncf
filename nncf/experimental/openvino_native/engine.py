@@ -17,25 +17,23 @@ import numpy as np
 import openvino.runtime as ov
 
 from nncf.common.engine import Engine
-from nncf.experimental.openvino_native.tensor import OVNNCFTensor
-
+from nncf.parameters import TargetDevice
 
 class OVNativeEngine(Engine):
     """
-    Implementation of the engine for OpenVINO_NATIVE backend.
+    Implementation of the engine for OpenVINO backend.
 
     OVNativeEngine uses
     [OpenVINO Runtime](https://docs.openvino.ai/latest/openvino_docs_OV_UG_OV_Runtime_User_Guide.html)
     to infer the model.
     """
 
-    def __init__(self, model, target_device='CPU'):
+    def __init__(self, model, target_device: TargetDevice = TargetDevice.CPU):
         self.input_names = set()
 
         ie = ov.Core()
-        self.compiled_model = ie.compile_model(model=model, device_name=target_device)
-        for inp in model.get_parameters():
-            self.input_names.add(inp.get_friendly_name())
+        self.compiled_model = ie.compile_model(model, target_device.value)
+        self.input_names = set(inp.get_friendly_name() for inp in model.get_parameters())
 
     def infer(self, input_data: Dict[str, np.ndarray]) -> Dict[str, np.ndarray]:
         """
@@ -45,10 +43,11 @@ class OVNativeEngine(Engine):
         :param input_data: inputs for the model.
         :return output_data: models outputs.
         """
-        model_outputs = self.compiled_model(
-            {k: v.tensor for k, v in input_data.items() if k in self.input_names})
+        model_inputs = {}
+        for name in self.input_names:
+            if name not in input_data:
+                raise RuntimeError(f'Missing a required input: {name} to run the model.')
+            model_inputs[name] = input_data[name]
 
-        return {
-            out.get_node().get_friendly_name(): OVNNCFTensor(data)
-            for out, data in model_outputs.items()
-        }
+        model_outputs = self.compiled_model(model_inputs)
+        return {out.get_node().get_friendly_name(): data for out, data in model_outputs.items()}

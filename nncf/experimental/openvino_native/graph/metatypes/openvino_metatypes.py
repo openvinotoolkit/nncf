@@ -419,6 +419,18 @@ class OVPadMetatype(OVOpMetatype):
 
 
 @OV_OPERATION_METATYPES.register()
+class OVReadValueMetatype(OVOpMetatype):
+    name = 'ReadValueOp'
+    op_names = ['ReadValue']
+
+
+@OV_OPERATION_METATYPES.register()
+class OVAssignMetatype(OVOpMetatype):
+    name = 'AssignOp'
+    op_names = ['Assign']
+
+
+@OV_OPERATION_METATYPES.register()
 @INPUT_NOOP_METATYPES.register()
 class OVParameterMetatype(OVOpMetatype):
     name = 'ParameterOp'

@@ -14,6 +14,7 @@
 from typing import List
 
 import openvino.runtime as ov
+from openvino.runtime import opset9 as opset
 
 from nncf.common.graph.model_transformer import ModelTransformer
 from nncf.common.graph.transformations.layout import TransformationLayout
@@ -25,6 +26,7 @@ class OVModelTransformer(ModelTransformer):
     """
     Applies transformations to an OpenVINO model.
     """
+
     def __init__(self, model: ov.Model):
         """
         Initializes Model Transformer.
@@ -60,8 +62,7 @@ class OVModelTransformer(ModelTransformer):
         :param transformations: list of the OVOutputInsertionCommand transformations.
         """
         extra_model_outputs = self._get_extra_model_outputs(transformations)
-        model_with_intermediate_outputs = self._insert_outputs(self._model, outputs=extra_model_outputs)
-        self._model = model_with_intermediate_outputs
+        self._model = self._insert_outputs(self._model, outputs=extra_model_outputs)
 
     def _get_extra_model_outputs(self,
                                  transformations: List[OVOutputInsertionCommand]) -> List[ov.Output]:
@@ -71,7 +72,6 @@ class OVModelTransformer(ModelTransformer):
         :param transformations: lisf of the OVOutputInsertionCommand.
         :return: list of the output names.
         """
-
         extra_model_outputs = []
         for transformation in transformations:
             node_name = transformation.target_point.target_node_name
@@ -88,7 +88,8 @@ class OVModelTransformer(ModelTransformer):
 
         return extra_model_outputs
 
-    def _insert_outputs(self, model: ov.Model, outputs: List[ov.Output] = None) -> ov.Model:
+    @staticmethod
+    def _insert_outputs(model: ov.Model, outputs: List[ov.Output]) -> ov.Model:
         """
         Takes a model and adds outputs based on the list of ov.Output.
 
@@ -96,16 +97,13 @@ class OVModelTransformer(ModelTransformer):
         :param outputs: list of ov.Output.
         :return: modified model.
         """
-        if outputs is None:
-            raise RuntimeError("Parameter outputs cannot be None.")
-
         model_outputs = model.get_results()
         params = model.get_parameters()
         extra_model_outputs = []
         for output in outputs:
             output_name = output.get_node().get_friendly_name()
             port_id = output.get_index()
-            result = ov.opset9.result(output, name=f'Result_{output_name}.{port_id}')
+            result = opset.result(output, name=f'Result_{output_name}.{port_id}')
             extra_model_outputs.append(result)
 
         return ov.Model(model_outputs + extra_model_outputs, params)

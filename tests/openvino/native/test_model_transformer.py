@@ -18,12 +18,11 @@ import numpy as np
 from nncf.common.graph.transformations.commands import TargetType
 from nncf.common.graph.transformations.layout import TransformationLayout
 from nncf.experimental.openvino_native.engine import OVNativeEngine
-from nncf.experimental.openvino_native.tensor import OVNNCFTensor
 from nncf.experimental.openvino_native.graph.model_transformer import OVModelTransformer
 from nncf.experimental.openvino_native.graph.transformations.commands import OVTargetPoint
 from nncf.experimental.openvino_native.graph.transformations.commands import OVOutputInsertionCommand
 
-from tests.openvino_native.models import LinearModel
+from tests.openvino.native.models import LinearModel
 
 REF_OUTPUT_SHAPES = {'Result_Matmul': (1, 3, 2, 5), 'Result_Add': (1, 3, 2, 4)}
 TARGET_LAYERS = [['Add'], ['MatMul'], ['Add', 'MatMul']]
@@ -33,8 +32,7 @@ TARGET_POST_LAYERS_OUTPUT = [['Result_Add.0'], ['Result_MatMul.0'], ['Result_Add
 
 def test_infer_original_model():
     model = LinearModel().ov_model
-    input_data = {inp.get_friendly_name(): OVNNCFTensor(np.random.rand(*inp.shape))
-                  for inp in model.get_parameters()}
+    input_data = {inp.get_friendly_name(): np.random.rand(*inp.shape) for inp in model.get_parameters()}
 
     engine = OVNativeEngine(model)
     outputs = engine.infer(input_data)

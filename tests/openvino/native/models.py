@@ -13,6 +13,7 @@
 
 import numpy as np
 import openvino.runtime as ov
+from openvino.runtime import opset9 as opset
 
 
 class OVReferenceModel:
@@ -23,13 +24,13 @@ class OVReferenceModel:
 class LinearModel(OVReferenceModel):
     def __init__(self):
         input_shape = [1, 3, 4, 2]
-        input_1 = ov.opset9.parameter(input_shape, name="Input")
-        reshape = ov.opset9.reshape(input_1, (1, 3, 2, 4), special_zero=False, name='Reshape')
+        input_1 = opset.parameter(input_shape, name="Input")
+        reshape = opset.reshape(input_1, (1, 3, 2, 4), special_zero=False, name='Reshape')
         data = np.random.rand(1, 3, 4, 5).astype(np.float32)
-        matmul = ov.opset9.matmul(reshape, data, transpose_a=False, transpose_b=False, name="MatMul")
-        add = ov.opset9.add(reshape, np.random.rand(1, 3, 2, 4).astype(np.float32), name="Add")
-        r1 = ov.opset9.result(matmul, name="Result_Matmul")
-        r2 = ov.opset9.result(add, name="Result_Add")
+        matmul = opset.matmul(reshape, data, transpose_a=False, transpose_b=False, name="MatMul")
+        add = opset.add(reshape, np.random.rand(1, 3, 2, 4).astype(np.float32), name="Add")
+        r1 = opset.result(matmul, name="Result_Matmul")
+        r2 = opset.result(add, name="Result_Add")
         model = ov.Model([r1, r2], [input_1])
 
         super().__init__(model)
