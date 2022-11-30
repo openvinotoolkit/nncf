@@ -260,9 +260,8 @@ class InsertionPointGraph(nx.DiGraph):
                     if self._base_nx_graph.nodes[node_k][NNCFGraph.METATYPE_ATTR] in INPUT_NOOP_METATYPES:
                         output.append(node)
                         break
-            else:
-                if self.nodes[node][InsertionPointGraph.REGULAR_NODE_REF_NODE_ATTR].metatype in INPUT_NOOP_METATYPES:
-                    output.append(node)
+            elif data[InsertionPointGraph.REGULAR_NODE_REF_NODE_ATTR].metatype in INPUT_NOOP_METATYPES:
+                output.append(node)
         return output
 
     def get_merged_node_from_single_node_key(self, node_key: str) -> str:
@@ -362,8 +361,10 @@ class ConstantNodesFilter:
     def filter(ip_graph: InsertionPointGraph, quantizable_layer_node_keys: List[str]) -> InsertionPointGraph:
         """
         Removes all Constant nodes from InsertionPointGraph, making it inference graph.
+        The traversing starts from the input nodes and nodes with weights.
 
         :param ip_graph: The original InsertionPointGraph.
+        :param quantizable_layer_node_keys: Keys of the nodes which have weights.
         :return: InsertionPointGraph without Constant nodes.
         """
         input_nodes = ip_graph.get_input_nodes()
