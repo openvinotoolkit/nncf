@@ -44,16 +44,19 @@ def create_venv_with_nncf(tmp_path: Path, package_type: str, venv_type: str, ext
     venv_path = tmp_path / 'venv'
     venv_path.mkdir()
 
-    python_executable_with_venv = '. {0}/bin/activate && {0}/bin/python'.format(venv_path)
-    pip_with_venv = '. {0}/bin/activate && {0}/bin/pip'.format(venv_path)
+    python_executable_with_venv = f'. {venv_path}/bin/activate && {venv_path}/bin/python'
+    pip_with_venv = f'. {venv_path}/bin/activate && {venv_path}/bin/pip'
 
-    version_string = '{}.{}'.format(sys.version_info[0], sys.version_info[1])
+    version_string = f'{sys.version_info[0]}.{sys.version_info[1]}'
     if venv_type == 'virtualenv':
-        subprocess.call('virtualenv -ppython{} {}'.format(version_string, venv_path), shell=True)
+        subprocess.call(f'virtualenv -ppython{version_string} {venv_path}', shell=True)
     elif venv_type == 'venv':
-        subprocess.call('python{} -m venv {}'.format(version_string, venv_path), shell=True)
-        subprocess.call('{} install --upgrade pip'.format(pip_with_venv), shell=True)
-        subprocess.call('{} install wheel'.format(pip_with_venv), shell=True)
+        subprocess.call(f'python{version_string} -m venv {venv_path}', shell=True)
+    subprocess.call(f'{pip_with_venv} install --upgrade pip', shell=True)
+    subprocess.call(f'{pip_with_venv} install wheel', shell=True)
+
+    if package_type in ['build_s', 'build_w']:
+        subprocess.call(f'{pip_with_venv} install build', shell=True)
 
     run_path = tmp_path / 'run'
     run_path.mkdir()
@@ -62,33 +65,29 @@ def create_venv_with_nncf(tmp_path: Path, package_type: str, venv_type: str, ext
         extra_reqs_str = ','.join(extra_reqs)
 
     if package_type == 'pip_pypi':
-        subprocess.run(
-            f'{pip_with_venv} install nncf[{extra_reqs_str}]', check=True, shell=True)
+        run_cmd_line = f'{pip_with_venv} install nncf[{extra_reqs_str}]'
     elif package_type == 'pip_local':
-        subprocess.run(
-            f'{pip_with_venv} install {PROJECT_ROOT}[{extra_reqs_str}]', check=True, shell=True)
+        run_cmd_line = f'{pip_with_venv} install {PROJECT_ROOT}[{extra_reqs_str}]'
     elif package_type == 'pip_e_local':
-        subprocess.run(
-            f'{pip_with_venv} install -e {PROJECT_ROOT}[{extra_reqs_str}]', check=True, shell=True)
+        run_cmd_line = f'{pip_with_venv} install -e {PROJECT_ROOT}[{extra_reqs_str}]'
     elif package_type == 'pip_git_develop':
-        subprocess.run(
-            f'{pip_with_venv} install git+{GITHUB_REPO_URL}@develop#egg=nncf[{extra_reqs_str}]', check=True, shell=True)
+        run_cmd_line = f'{pip_with_venv} install git+{GITHUB_REPO_URL}@develop#egg=nncf[{extra_reqs_str}]'
+    elif package_type == 'build_s':
+        run_cmd_line = f'{python_executable_with_venv} -m build -s'
+    elif package_type == 'build_w':
+        run_cmd_line = f'{python_executable_with_venv} -m build -w'
     else:
-        options_str = None
-        if extra_reqs is not None and extra_reqs:
-            options_str = ''
-            for extra in extra_reqs:
-                options_str += f'--{extra} '
-        subprocess.run(
-            '{python} {nncf_repo_root}/setup.py {package_type} {options}'.format(
-                python=python_executable_with_venv,
-                nncf_repo_root=PROJECT_ROOT,
-                package_type=package_type,
-                options=options_str if options_str is not None else ''),
-            check=True,
-            shell=True,
-            cwd=PROJECT_ROOT)
+        raise RuntimeError(f"Invalid package type: {package_type}")
 
+    # Currently CI runs on RTX3090s, which require CUDA 11 to work.
+    # Current torch, however (v1.12), is installed via pip using .whl packages
+    # compiled for CUDA 10.2. Thus need to direct pip installation specifically for
+    # torch, otherwise the NNCF will only work in CPU mode.
+    torch_extra_index = " --extra-index-url https://download.pytorch.org/whl/cu116"
+    if "torch" in extra_reqs:
+        run_cmd_line += torch_extra_index
+
+    subprocess.run(run_cmd_line, check=True, shell=True, cwd=PROJECT_ROOT)
     return venv_path
 
 
