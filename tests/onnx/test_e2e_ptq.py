@@ -426,18 +426,19 @@ class TestBenchmarkResult:
         df = df.fillna("-")
 
         with open(output_fp, "w", encoding="utf-8") as fp:
-            fp.write(f"""
-            <html>
-            <head>
-            <style>
-            table, th, td {{font-size:10pt; border:1px solid black; border-collapse:collapse; text-align:center;}}
-            th, td {{padding: 5px; }}
-            {_style_rows()}
-            </style>
-            </head>
-            <body>
-            {legend_info}
-            {df.style.format({(hier_col_name, "FP32"): "({:.2f})"}).set_precision(2).render()}
-            </body>
-            </html>
-            """)
+            fp.write(
+f"""
+<html>
+<head>
+<style>
+table, th, td {{font-size:10pt; border:1px solid black; border-collapse:collapse; text-align:center;}}
+th, td {{padding: 5px; }}
+{_style_rows()}
+</style>
+</head>
+<body>
+{legend_info}
+{df.style.format({(hier_col_name, "FP32"): "({:.2f})"}).set_precision(2).render()}
+</body>
+</html>
+""")
