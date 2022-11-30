@@ -103,7 +103,7 @@ class OVConstantMetatype(OVOpMetatype):
 
 
 @OV_OPERATION_METATYPES.register()
-class OVAddLayerMetatype(OVOpMetatype):
+class OVAddMetatype(OVOpMetatype):
     name = 'AddOp'
     op_names = ['Add']
     hw_config_names = [HWConfigOpName.ADD]
@@ -117,14 +117,14 @@ class OVSubMetatype(OVOpMetatype):
 
 
 @OV_OPERATION_METATYPES.register()
-class OVMulLayerMetatype(OVOpMetatype):
+class OVMulMetatype(OVOpMetatype):
     name = 'MulOp'
     op_names = ['Multiply']
     hw_config_names = [HWConfigOpName.MULTIPLY]
 
 
 @OV_OPERATION_METATYPES.register()
-class OVDivLayerMetatype(OVOpMetatype):
+class OVDivMetatype(OVOpMetatype):
     name = 'DivOp'
     op_names = ['Divide']
     hw_config_names = [HWConfigOpName.DIVIDE]
@@ -162,6 +162,12 @@ class OVMVNMetatype(OVOpMetatype):
     name = 'MVNOp'
     op_names = ['MVN']
     hw_config_names = [HWConfigOpName.MVN]
+
+
+@OV_OPERATION_METATYPES.register()
+class OVNormalizeL2Metatype(OVOpMetatype):
+    name = 'NormalizeL2Op'
+    op_names = ['NormalizeL2']
 
 
 @OV_OPERATION_METATYPES.register()
@@ -264,6 +270,12 @@ class OVXorMetatype(OVOpMetatype):
 class OVFloorMetatype(OVOpMetatype):
     name = 'FloorOp'
     op_names = ['Floor']
+
+
+@OV_OPERATION_METATYPES.register()
+class OVFloorModMetatype(OVOpMetatype):
+    name = 'FloorModOp'
+    op_names = ['FloorMod']
     hw_config_names = [HWConfigOpName.FLOORMOD]
 
 
@@ -288,7 +300,7 @@ class OVSqrtMetatype(OVOpMetatype):
 
 
 @OV_OPERATION_METATYPES.register()
-class OVSPowerMetatype(OVOpMetatype):
+class OVPowerMetatype(OVOpMetatype):
     name = 'PowerOp'
     op_names = ['Power']
     hw_config_names = [HWConfigOpName.POWER]
