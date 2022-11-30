@@ -11,7 +11,6 @@
  limitations under the License.
 """
 
-from typing import Optional
 import os
 import tensorflow as tf
 from tensorflow.python.framework.convert_to_constants import convert_variables_to_constants_v2

@@ -109,7 +109,6 @@ def quantize_impl(model: ov.Model,
     """
     Implementation of the `quantize()` method for the OpenVINO backend.
     """
-
     pot.utils.logger.init_logger(
         level=logging.getLevelName(nncf_logger.getEffectiveLevel())
     )
@@ -202,8 +201,6 @@ def quantize_with_accuracy_control_impl(model: ov.Model,
     compressed_model = pipeline.run(pot_model)
     pot.compress_model_weights(compressed_model)
 
-
     quantized_model = _convert_compressed_model_to_openvino_model(compressed_model)
-
 
     return quantized_model
