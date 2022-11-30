@@ -19,6 +19,7 @@ from openvino.runtime import opset9 as opset
 from nncf.common.graph.model_transformer import ModelTransformer
 from nncf.common.graph.transformations.layout import TransformationLayout
 from nncf.common.graph.transformations.commands import TargetType
+from nncf.experimental.openvino_native.graph.transformations.commands import OVQuantizerInsertionCommand
 from nncf.experimental.openvino_native.graph.transformations.commands import OVOutputInsertionCommand
 from nncf.experimental.openvino_native.graph.transformations.commands import OVFQNodeRemovingCommand
 
@@ -127,3 +128,38 @@ class OVModelTransformer(ModelTransformer):
                 for target_in in node_output.get_target_inputs():
                     target_in.replace_source_output(node_input)
             del self.name_to_node_mapping[transformation.target_point.target_node_name]
+
+    def _apply_quantizer_insertion_transformations(
+            self,
+            transformations: List[OVQuantizerInsertionCommand]) -> None:
+        """
+        Applies transformations on the model
+        :param transformations: lisf of the TransformationCommand transformations
+        """
+        for transformation in transformations:
+            self._insert_fake_quantize_op(transformation)
+
+    def _insert_fake_quantize_op(self, transformation: OVQuantizerInsertionCommand) -> None:
+        fq_params = transformation.quantizer_parameters
+        input_low = fq_params.input_low
+        input_high = fq_params.input_high
+        output_low = fq_params.output_low
+        output_high = fq_params.output_high
+        levels = fq_params.levels
+
+        target_node = self.name_to_node_mapping[transformation.target_point.target_node_name]
+        port_id = transformation.target_point.port_id
+        # TODO: Add FQ name f'FakeQuantize_{transformation.target_point.target_node_name}.{port_id}'
+        if transformation.target_point.type in [TargetType.PRE_LAYER_OPERATION, TargetType.OPERATION_WITH_WEIGHTS]:
+            inp_node = target_node.input(port_id)
+            input_node_output = inp_node.get_source_output()
+            fq = ov.opset9.fake_quantize(input_node_output, input_low, input_high, output_low, output_high, levels)
+            inp_node.replace_source_output(fq.output(0))
+        elif transformation.target_point.type == TargetType.POST_LAYER_OPERATION:
+            output = target_node.output(port_id)
+            target_inputs = output.get_target_inputs()
+            fq = ov.opset9.fake_quantize(output, input_low, input_high, output_low, output_high, levels)
+            for inp_node in target_inputs:
+                inp_node.replace_source_output(fq.output(0))
+        else:
+            raise RuntimeError(f'Incorrect target point type {transformation.target_point.type}')

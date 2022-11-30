@@ -70,6 +70,12 @@ class OVFQNodeRemovingCommand(TransformationCommand):
         """
         super().__init__(TransformationType.REMOVE, target_point)
 
+
+class OVQuantizerInsertionCommand(OVInsertionCommand):
+    def __init__(self, target_point: OVTargetPoint, quantizer_parameters: FQParameters):
+        super().__init__(target_point)
+        self.quantizer_parameters = quantizer_parameters
+
     def union(self, other: 'TransformationCommand') -> 'TransformationCommand':
         # Have a look at nncf/torch/graph/transformations/commands/PTInsertionCommand
         raise NotImplementedError()
