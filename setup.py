@@ -120,6 +120,7 @@ INSTALL_REQUIRES = ["ninja>=1.10.0.post2, <1.11",
                     "tqdm>=4.54.1",
                     "natsort>=7.1.0",
                     "pandas>=1.1.5,<1.4.0rc0",
+                    "tabulate>=0.8.3",
                     "scikit-learn>=0.24.0",
                     "wheel>=0.36.1",
                     "openvino-telemetry"]

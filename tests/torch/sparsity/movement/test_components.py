@@ -1,55 +1,48 @@
-from unittest.mock import Mock, call
+from typing import Any, Dict
+from unittest.mock import Mock
+from unittest.mock import call
 
 import pytest
+from pytest import approx
 import torch
-from nncf.common.sparsity.statistics import (MovementSparsityStatistics,
-                                             SparsifiedLayerSummary,
-                                             SparsifiedModelStatistics)
+
+from nncf.torch import create_compressed_model
+from nncf.common.sparsity.statistics import MovementSparsityStatistics
+from nncf.common.sparsity.statistics import SparsifiedLayerSummary
+from nncf.common.sparsity.statistics import SparsifiedModelStatistics
 from nncf.common.statistics import NNCFStatistics
 from nncf.common.utils.helpers import create_table
-from nncf.torch import create_compressed_model
-from nncf.experimental.torch.sparsity.movement.layers import MovementSparsifier, SparseConfig, SparseStructure
 from nncf.experimental.torch.sparsity.movement.functions import binary_mask_by_threshold
+from nncf.experimental.torch.sparsity.movement.layers import SparseConfigByScope
+from nncf.experimental.torch.sparsity.movement.layers import SparseStructure
 from nncf.experimental.torch.sparsity.movement.loss import ImportanceLoss
-from nncf.experimental.torch.sparsity.movement.structured_mask_handler import StructuredMaskContextGroup, StructuredMaskHandler, StructuredMaskContext
-from nncf.experimental.torch.sparsity.movement.structured_mask_strategy import STRUCTURED_MASK_STRATEGY
-from pytest import approx
-from tests.torch.sparsity.movement.helpers import (ConfigBuilder,
-                                                   bert_tiny_unpretrained)
-from tests.torch.test_algo_common import BasicLinearTestModel
-from tests.torch.sparsity.movement.helpers import BertRunRecipe
-from tests.torch.sparsity.movement.helpers import mock_linear_nncf_node
+from tests.torch.sparsity.movement.helpers import LinearRunRecipe
 from tests.torch.sparsity.movement.helpers import ensure_tensor
-from tests.torch.sparsity.movement.helpers import ParamDict
-from nncf.experimental.torch.search_building_blocks.search_blocks import BuildingBlockType
-import numpy as np
-from collections import OrderedDict
-
 
 desc_test_sparsifier_forward = {
     "block": dict(
-        sparse_structure_by_scopes=[{"mode": "block", "sparse_factors": [2, 2], "target_scopes": "{re}fc"}],
+        sparse_structure_by_scopes=[{"mode": "block", "sparse_factors": [2, 2], "target_scopes": "{re}model"}],
         init_weight_importance=ensure_tensor([[0, 1], [0, 1]]),
         init_bias_importance=ensure_tensor([1, 0]),
         ref_masked_weight=ensure_tensor([[0, 0, 2, 3], [0, 0, 6, 7], [0, 0, 10, 11], [0, 0, 14, 15]]),
         ref_masked_bias=ensure_tensor([0, 1, 0, 0]),
     ),
     "per_row": dict(
-        sparse_structure_by_scopes=[{"mode": "per_dim", "axis": 0, "target_scopes": "{re}fc"}],
+        sparse_structure_by_scopes=[{"mode": "per_dim", "axis": 0, "target_scopes": "{re}model"}],
         init_weight_importance=ensure_tensor([[0], [1], [0], [1]]),
         init_bias_importance=ensure_tensor([1, 1, 0, 0]),
         ref_masked_weight=ensure_tensor([[0] * 4, [4, 5, 6, 7], [0] * 4, [12, 13, 14, 15]]),
         ref_masked_bias=ensure_tensor([0, 1, 0, 0]),
     ),
     "per_column": dict(
-        sparse_structure_by_scopes=[{"mode": "per_dim", "axis": 1, "target_scopes": "{re}fc"}],
+        sparse_structure_by_scopes=[{"mode": "per_dim", "axis": 1, "target_scopes": "{re}model"}],
         init_weight_importance=ensure_tensor([0, 1, 0, 1]),
         init_bias_importance=ensure_tensor([0]),
         ref_masked_weight=ensure_tensor([[0, 1, 0, 3], [0, 5, 0, 7], [0, 9, 0, 11], [0, 13, 0, 15]]),
         ref_masked_bias=ensure_tensor([0, 0, 0, 0]),
     ),
     "fine": dict(
-        sparse_structure_by_scopes=[{"mode": "fine", "sparse_factors": [1, 1], "target_scopes": "{re}fc"}],
+        sparse_structure_by_scopes=[{"mode": "fine", "sparse_factors": [1, 1], "target_scopes": "{re}model"}],
         init_weight_importance=ensure_tensor([[0, 1, 1, 1], [0, 1, 1, 1], [1] * 4, [0] * 4]),
         init_bias_importance=ensure_tensor([0, 0, 0, 1]),
         ref_masked_weight=ensure_tensor([[0, 1, 2, 3], [0, 5, 6, 7], [8, 9, 10, 11], [0] * 4]),
@@ -61,24 +54,43 @@ desc_test_sparsifier_forward = {
 @pytest.mark.parametrize('desc', desc_test_sparsifier_forward.values(),
                          ids=desc_test_sparsifier_forward.keys())
 def test_sparsifier_forward(tmp_path, desc):
-    nncf_config = ConfigBuilder(sparse_structure_by_scopes=desc['sparse_structure_by_scopes'],
-                                enable_structured_masking=False)\
-        .build(log_dir=tmp_path, input_info=[{"sample_size": [1, 4]}])
-    model = BasicLinearTestModel(size=4)
-    compression_ctrl, compressed_model = create_compressed_model(model, nncf_config)
+    has_bias = desc['init_bias_importance'] is not None
+    recipe = LinearRunRecipe.from_default(
+        input_size=4,
+        num_classes=4,
+        bias=has_bias,
+        sparse_structure_by_scopes=desc['sparse_structure_by_scopes'],
+        enable_structured_masking=False,
+        log_dir=tmp_path)
+    model = recipe.model
+    compression_ctrl, compressed_model = create_compressed_model(model,
+                                                                 recipe.nncf_config,
+                                                                 dump_graphs=False)
     compressed_model.train()
     minfo = compression_ctrl.sparsified_module_info[0]
-    operand = minfo.operand
-    model.fc.weight.data.copy_(torch.arange(16).reshape(4, 4).float())
-    model.fc.bias.data.copy_(torch.arange(4).float())
+    module, operand = minfo.module, minfo.operand
+    model.model.weight.data.copy_(torch.arange(16).reshape(4, 4).float())
     operand.weight_importance.data.copy_(desc['init_weight_importance'])
-    operand.bias_importance.data.copy_(desc['init_bias_importance'])
+    if has_bias:
+        model.model.bias.data.copy_(torch.arange(4).float())
+        operand.bias_importance.data.copy_(desc['init_bias_importance'])
     operand.importance_threshold = 0.5
-    ori_weight, ori_bias = minfo.module.weight, minfo.module.bias
-    masked_weight, masked_bias = operand(ori_weight, ori_bias)  # sparsifier forward function
-    # TODO: add requires_grad check for operand forward in train/test
+    masked_weight, masked_bias = operand(module.weight, module.bias)
     assert torch.allclose(masked_weight, desc['ref_masked_weight'])
     assert torch.allclose(masked_bias, desc['ref_masked_bias'])
+
+    compressed_model.eval()
+    with torch.no_grad():
+        masked_weight, masked_bias = operand(module.weight, module.bias)
+        assert torch.allclose(masked_weight, desc['ref_masked_weight'])
+        assert torch.allclose(masked_bias, desc['ref_masked_bias'])
+
+    # In eval mode, changes to importance_threshold will not be propagated to masks.
+    operand.importance_threshold = 2
+    with torch.no_grad():
+        masked_weight, masked_bias = operand(module.weight, module.bias)
+        assert torch.allclose(masked_weight, desc['ref_masked_weight'])
+        assert torch.allclose(masked_bias, desc['ref_masked_bias'])
 
 
 @pytest.mark.parametrize(("input_tensor", "threshold", "max_percentile", "ref_output_tensor"), [
@@ -171,3 +183,55 @@ class TestMovementSparsityStatistics:
         nncf_stats.register('movement_sparsity', movement_stats)
         assert hasattr(nncf_stats, 'movement_sparsity')
         assert nncf_stats.movement_sparsity == movement_stats
+
+
+class TestSparseConfigByScope:
+    @pytest.mark.parametrize('config', [
+        {
+            "target_scopes": "{re}fine"
+        },
+        {
+            "mode": "fine",
+            "target_scopes": "{re}fine"
+        },
+        {
+            "mode": "fine",
+            "sparse_factors": [1, 1],
+            "target_scopes": "{re}fine"
+        },
+        {
+            "mode": "block",
+            "sparse_factors": [32, 32],
+            "target_scopes": "{re}block"
+        },
+        {
+            "mode": "per_dim",
+            "axis": 0,
+            "target_scopes": "{re}prune_row"
+        },
+        {
+            "mode": "per_dim",
+            "axis": 1,
+            "target_scopes": "prune_column"
+        }
+    ])
+    def test_create_sparse_config_by_scope(self, config: Dict[str, Any]):
+        sparse_config_by_scope = SparseConfigByScope.from_config(config)
+        assert isinstance(sparse_config_by_scope, SparseConfigByScope)
+        ref_target_scopes = config.pop('target_scopes')
+        assert sorted(sparse_config_by_scope.target_scopes) == sorted(ref_target_scopes)
+        sparse_config = sparse_config_by_scope.sparse_config
+        ref_mode = config.pop('mode', 'fine')
+        if ref_mode == 'fine':
+            ref_sparse_config = dict(mode=SparseStructure.FINE,
+                                     sparse_factors=(1, 1),
+                                     sparse_axis=None)
+        elif ref_mode == 'block':
+            ref_sparse_config = dict(mode=SparseStructure.BLOCK,
+                                     sparse_factors=tuple(config['sparse_factors']),
+                                     sparse_axis=None)
+        else:
+            ref_sparse_config = dict(mode=SparseStructure.PER_DIM,
+                                     sparse_factors=None,
+                                     sparse_axis=int(config['axis']))
+        assert sparse_config.__dict__ == ref_sparse_config

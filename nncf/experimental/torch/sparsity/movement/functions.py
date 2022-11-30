@@ -1,5 +1,5 @@
 """
- Copyright (c) 2019 Intel Corporation
+ Copyright (c) 2022 Intel Corporation
  Licensed under the Apache License, Version 2.0 (the "License");
  you may not use this file except in compliance with the License.
  You may obtain a copy of the License at
@@ -10,7 +10,6 @@
  See the License for the specific language governing permissions and
  limitations under the License.
 """
-
 import torch
 
 from nncf.torch.dynamic_graph.patch_pytorch import register_operator
@@ -18,7 +17,7 @@ from nncf.torch.functions import STThreshold
 
 
 @register_operator()
-def binary_mask_by_threshold(importance, threshold=0.5, max_percentile=0.98):
+def binary_mask_by_threshold(importance, threshold: float = 0.5, max_percentile: float = 0.98) -> torch.Tensor:
     with torch.no_grad():
         max_threshold = torch.quantile(importance, q=max_percentile).item()
     return STThreshold.apply(importance, min(threshold, max_threshold))

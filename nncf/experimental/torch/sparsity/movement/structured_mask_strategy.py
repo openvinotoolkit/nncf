@@ -1,5 +1,19 @@
+"""
+ Copyright (c) 2022 Intel Corporation
+ Licensed under the Apache License, Version 2.0 (the "License");
+ you may not use this file except in compliance with the License.
+ You may obtain a copy of the License at
+      http://www.apache.org/licenses/LICENSE-2.0
+ Unless required by applicable law or agreed to in writing, software
+ distributed under the License is distributed on an "AS IS" BASIS,
+ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ See the License for the specific language governing permissions and
+ limitations under the License.
+"""
+from abc import ABC
+from abc import abstractmethod
 import inspect
-from typing import Dict, List, Optional, Sequence, Tuple, Union
+from typing import Dict, List, Tuple, Union
 
 from nncf.common.utils.registry import Registry
 from nncf.experimental.torch.search_building_blocks.search_blocks import BuildingBlockType
@@ -8,8 +22,7 @@ from nncf.torch.nncf_network import NNCFNetwork
 STRUCTURED_MASK_STRATEGY = Registry("structured_mask_strategy")
 
 
-def detect_supported_model_family(model):
-    # TODO: review and discuss
+def detect_supported_model_family(model: NNCFNetwork):
     model_pymodules = inspect.getmodule(model.get_nncf_wrapped_model()).__name__.split(".")
     if len(model_pymodules) >= 3 and model_pymodules[:2] == ['transformers', 'models']:
         # the case of input model defined by HuggingFace's transformers
@@ -37,17 +50,19 @@ class StructuredMaskRule:
         )
 
 
-class BaseStructuredMaskStrategy:
-    @property
-    def strategy_by_group_type(self):
-        return {}
-
+class BaseStructuredMaskStrategy(ABC):
     @classmethod
+    @abstractmethod
     def from_compressed_model(cls, compressed_model: NNCFNetwork):
-        raise NotImplementedError()
+        pass
+
+    @property
+    @abstractmethod
+    def rules_by_group_type(self) -> Dict[BuildingBlockType, List[StructuredMaskRule]]:
+        pass
 
 
-class BaseTransformerStructuredMaskStrategy(BaseStructuredMaskStrategy):
+class BaseTransformerStructuredMaskStrategy(BaseStructuredMaskStrategy, ABC):
     MHSA_Q: str = "query"
     MHSA_K: str = "key"
     MHSA_V: str = "value"
@@ -60,7 +75,7 @@ class BaseTransformerStructuredMaskStrategy(BaseStructuredMaskStrategy):
         self.dim_per_head = dim_per_head
 
     @property
-    def strategy_by_group_type(self) -> Dict[BuildingBlockType, List[StructuredMaskRule]]:
+    def rules_by_group_type(self) -> Dict[BuildingBlockType, List[StructuredMaskRule]]:
         config = {
             BuildingBlockType.MSHA: [
                 StructuredMaskRule(
@@ -133,4 +148,13 @@ class HuggingFaceSwinStructuredMaskStrategy(BaseTransformerStructuredMaskStrateg
 
     @classmethod
     def from_compressed_model(cls, compressed_model: NNCFNetwork):
-        return cls(dim_per_head=compressed_model.nncf_module.swin.config.encoder_stride)
+        model_config = compressed_model.nncf_module.swin.config
+        dim_per_head_list = []
+        for i, num_head in enumerate(model_config.num_heads):
+            hidden_size = model_config.embed_dim * int(2 ** i)
+            dim_per_head = hidden_size // num_head
+            dim_per_head_list.append(dim_per_head)
+        if any(dim != dim_per_head_list[0] for dim in dim_per_head_list[1:]):
+            raise NotImplementedError('Currently we only support SwinTransformers '
+                                      'whose attention heads all have the same dimension.')
+        return cls(dim_per_head=dim_per_head_list[0])

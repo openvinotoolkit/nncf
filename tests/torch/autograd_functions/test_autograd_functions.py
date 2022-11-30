@@ -2,16 +2,14 @@ import math
 
 import pytest
 import torch
-from nncf.torch.functions import STRound, STThreshold
+
+from nncf.torch.functions import STRound
+from nncf.torch.functions import STThreshold
 
 
 @pytest.mark.parametrize("use_cuda", [True, False])
 @pytest.mark.parametrize("requires_grad", [True, False])
 class TestAutogradFunction:
-    @staticmethod
-    def get_device(use_cuda):
-        return torch.device('cuda' if use_cuda else 'cpu')
-
     @pytest.mark.parametrize(("input_", "ref_output"), [
         ([[1.2, -3.4], [5.6, 7.89]], [[1., -3.], [6., 8.]]),
         ([[[1.5]]], [[[2.]]]),
@@ -23,7 +21,7 @@ class TestAutogradFunction:
     def test_STRound(self, input_, ref_output, use_cuda, requires_grad):
         if not torch.cuda.is_available() and use_cuda is True:
             pytest.skip("Skipping CUDA test cases for CPU only setups")
-        device = self.get_device(use_cuda)
+        device = torch.device('cuda' if use_cuda else 'cpu')
         input_tensor = torch.tensor(input_, device=device, requires_grad=requires_grad)
         output_tensor = STRound.apply(input_tensor)
         ref_output_tensor = torch.tensor(ref_output, device=device)
@@ -47,7 +45,7 @@ class TestAutogradFunction:
     def test_STThreshold(self, input_, threshold, ref_output, use_cuda, requires_grad):
         if not torch.cuda.is_available() and use_cuda is True:
             pytest.skip("Skipping CUDA test cases for CPU only setups")
-        device = self.get_device(use_cuda)
+        device = torch.device('cuda' if use_cuda else 'cpu')
         input_tensor = torch.tensor(input_, device=device, requires_grad=requires_grad)
         output_tensor = STThreshold.apply(input_tensor, threshold)
         ref_output_tensor = torch.tensor(ref_output, device=device)

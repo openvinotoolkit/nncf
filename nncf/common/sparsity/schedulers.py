@@ -231,7 +231,6 @@ class AdaptiveSparsityScheduler(SparsityScheduler):
     """
     Sparsity scheduler with an adaptive schedule.
     """
-
     def __init__(self, controller: SparsityController, params: dict):
         """
         Initializes a sparsity scheduler with an adaptive schedule.

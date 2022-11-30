@@ -1,5 +1,5 @@
 """
- Copyright (c) 2019-2020 Intel Corporation
+ Copyright (c) 2022 Intel Corporation
  Licensed under the Apache License, Version 2.0 (the "License");
  you may not use this file except in compliance with the License.
  You may obtain a copy of the License at
@@ -10,24 +10,27 @@
  See the License for the specific language governing permissions and
  limitations under the License.
 """
+from typing import List, Optional
 
-import torch
+
+from nncf.common.schedulers import BaseCompressionScheduler
 from nncf.torch.compression_method_api import PTCompressionLoss
 
 
 class ImportanceLoss(PTCompressionLoss):
-    def __init__(self, sparse_layers=None, penalty_scheduler=None):
+    def __init__(self, sparse_layers: Optional[List] = None,
+                 penalty_scheduler: Optional[BaseCompressionScheduler] = None):
         super().__init__()
-        self._sparse_layers = sparse_layers
+        self.sparse_layers = sparse_layers
         self.penalty_scheduler = penalty_scheduler
 
-    def calculate(self) -> torch.Tensor:
-        if not self._sparse_layers:
+    def calculate(self):
+        if not self.sparse_layers:
             return 0.
-        loss = self._sparse_layers[0].loss()
-        for sparse_layer in self._sparse_layers[1:]:
+        loss = self.sparse_layers[0].loss()
+        for sparse_layer in self.sparse_layers[1:]:
             loss = loss + sparse_layer.loss()
         multiplier = 1.0
         if self.penalty_scheduler is not None:
             multiplier = self.penalty_scheduler.current_importance_lambda
-        return loss / len(self._sparse_layers) * multiplier
+        return loss / len(self.sparse_layers) * multiplier

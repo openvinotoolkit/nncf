@@ -42,7 +42,7 @@ class STRound(torch.autograd.Function):
 # pylint:disable=abstract-method
 class STThreshold(torch.autograd.Function):
     @staticmethod
-    def forward(ctx, input_, threshold=0.5):
+    def forward(ctx, input_, threshold: float = 0.5):
         output = (input_ > threshold).type(input_.dtype)
         return output
 

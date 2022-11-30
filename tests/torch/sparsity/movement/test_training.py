@@ -1,13 +1,14 @@
-import sys
+from copy import deepcopy
 import os
-from typing import Dict, Union
 from pathlib import Path
+import sys
+from typing import Dict, Union
+
+import jstyleson as json
 import pytest
 from pytest import approx
-import jstyleson as json
-from copy import deepcopy
-
 import torch.cuda
+
 from tests.common.helpers import PROJECT_ROOT
 from tests.common.helpers import TEST_ROOT
 from tests.torch.helpers import Command
@@ -32,7 +33,7 @@ class MovementGlueHandler:
     def get_metric_value_from_checkpoint(self, checkpoint_save_dir: str) -> Dict[str, Union[float, int]]:
         checkpoint_path = self.get_checkpoint_path(checkpoint_save_dir)
         state_path = checkpoint_path / "trainer_state.json"
-        with open(state_path, "r") as f:
+        with open(state_path, "r", encoding='utf-8') as f:
             state_dict = json.load(f)
         max_step = max(log["step"] for log in state_dict["log_history"])
 
@@ -160,11 +161,6 @@ class MovementTrainingValidator(BaseSampleValidator):
         runner = Command(cmd)
         env_with_cuda_reproducibility = os.environ.copy()
         env_with_cuda_reproducibility["CUBLAS_WORKSPACE_CONFIG"] = ":4096:8"
-        if not self._desc.cpu_only_:
-            dev_ids = os.environ["CUDA_VISIBLE_DEVICES"].split(",")
-            n_process = self._desc.n_process
-            env_with_cuda_reproducibility["CUDA_VISIBLE_DEVICES"] = ",".join(
-                dev_ids[:n_process])
         runner.kwargs.update(env=env_with_cuda_reproducibility)
         runner.run(timeout=self._desc.timeout_)
 
@@ -225,55 +221,55 @@ mrpc_movement_desc_template = \
 
 MOVEMENT_DESCRIPTORS = {
     "mrpc_cuda_1proc": deepcopy(mrpc_movement_desc_template)
-    .expected_eval_f1(approx(0.81, abs=0.05))
+    .expected_eval_f1(approx(0.81, abs=0.06))
     .expected_eval_acc(approx(0.71, abs=0.06))
-    .expected_rela_sparsity(approx(0.20, abs=0.12)),
+    .expected_rela_sparsity(approx(0.20, abs=0.20)),
 
     "mrpc_cuda_1proc_fp16": deepcopy(mrpc_movement_desc_template)
     .enable_autocast_fp16()
-    .expected_eval_f1(approx(0.81, abs=0.05))
+    .expected_eval_f1(approx(0.81, abs=0.06))
     .expected_eval_acc(approx(0.71, abs=0.06))
-    .expected_rela_sparsity(approx(0.20, abs=0.12)),
+    .expected_rela_sparsity(approx(0.20, abs=0.20)),
 
 
     "mrpc_cuda_2proc_dp": deepcopy(mrpc_movement_desc_template)
     .batch_size(32)
     .data_parallel(n_process=2)
-    .expected_eval_f1(approx(0.81, abs=0.05))
+    .expected_eval_f1(approx(0.81, abs=0.06))
     .expected_eval_acc(approx(0.71, abs=0.06))
-    .expected_rela_sparsity(approx(0.20, abs=0.12)),
+    .expected_rela_sparsity(approx(0.20, abs=0.20)),
 
 
     "mrpc_cuda_2proc_dp_fp16": deepcopy(mrpc_movement_desc_template)
     .batch_size(32)
     .data_parallel(n_process=2)
     .enable_autocast_fp16()
-    .expected_eval_f1(approx(0.81, abs=0.05))
+    .expected_eval_f1(approx(0.81, abs=0.06))
     .expected_eval_acc(approx(0.71, abs=0.06))
-    .expected_rela_sparsity(approx(0.20, abs=0.12)),
+    .expected_rela_sparsity(approx(0.20, abs=0.20)),
 
 
     "mrpc_cuda_2proc_ddp": deepcopy(mrpc_movement_desc_template)
     .batch_size(32)
     .distributed_data_parallel(n_process=2)
-    .expected_eval_f1(approx(0.81, abs=0.05))
+    .expected_eval_f1(approx(0.81, abs=0.06))
     .expected_eval_acc(approx(0.71, abs=0.06))
-    .expected_rela_sparsity(approx(0.20, abs=0.12)),
+    .expected_rela_sparsity(approx(0.20, abs=0.20)),
 
 
     "mrpc_cuda_2proc_ddp_fp16": deepcopy(mrpc_movement_desc_template)
     .batch_size(32)
     .distributed_data_parallel(n_process=2)
     .enable_autocast_fp16()
-    .expected_eval_f1(approx(0.81, abs=0.05))
+    .expected_eval_f1(approx(0.81, abs=0.06))
     .expected_eval_acc(approx(0.71, abs=0.06))
-    .expected_rela_sparsity(approx(0.20, abs=0.12)),
+    .expected_rela_sparsity(approx(0.20, abs=0.20)),
 
     "mrpc_cpu_1proc": deepcopy(mrpc_movement_desc_template)
     .cpu_only()
-    .expected_eval_f1(approx(0.81, abs=0.05))
+    .expected_eval_f1(approx(0.81, abs=0.06))
     .expected_eval_acc(approx(0.71, abs=0.06))
-    .expected_rela_sparsity(approx(0.20, abs=0.12)),
+    .expected_rela_sparsity(approx(0.20, abs=0.20)),
 }
 
 
@@ -285,17 +281,15 @@ def finalize_desc(desc, is_long_training, dataset_dir, tmp_path_factory, weekly_
     return desc.finalize(dataset_dir, tmp_path_factory, weekly_models_path)
 
 
-@pytest.fixture(
-    name="movement_desc_long", scope="module", params=MOVEMENT_DESCRIPTORS.values(), ids=list(MOVEMENT_DESCRIPTORS.keys())
-)
+@pytest.fixture(name="movement_desc_long", scope="module", params=MOVEMENT_DESCRIPTORS.values(),
+                ids=list(MOVEMENT_DESCRIPTORS.keys()))
 def fixture_movement_desc_long(request, dataset_dir, tmp_path_factory, weekly_models_path):
     desc: MovementTrainingTestDescriptor = request.param
     return finalize_desc(desc, True, dataset_dir, tmp_path_factory, weekly_models_path)
 
 
-@pytest.fixture(
-    name="movement_desc_short", scope="module", params=MOVEMENT_DESCRIPTORS.values(), ids=list(MOVEMENT_DESCRIPTORS.keys())
-)
+@pytest.fixture(name="movement_desc_short", scope="module", params=MOVEMENT_DESCRIPTORS.values(),
+                ids=list(MOVEMENT_DESCRIPTORS.keys()))
 def fixture_movement_desc_short(request, dataset_dir, tmp_path_factory, weekly_models_path):
     desc: MovementTrainingTestDescriptor = request.param
     desc = deepcopy(desc).quick_check()
