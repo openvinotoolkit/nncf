@@ -321,7 +321,6 @@ class TestBenchmarkResult:
     def parse_df(self, reference_model_accuracy, quantized_model_accuracy):
         df = reference_model_accuracy.join(quantized_model_accuracy)
 
-        df = df.reset_index()
         df = df.rename({"model": "Model", "metric_name": "Metrics type",
                         "model_accuracy": "FP32",
                         "CPUExecutionProvider": "CPU-EP_INT8",
