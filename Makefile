@@ -17,4 +17,4 @@ pylint-onnx:
 		tests/onnx examples/experimental/onnx
 
 test-install-onnx:
-	pytest tests/cross_fw/install/test_install.py --backend onnx
+	pytest tests/cross_fw/install/ --backend onnx
