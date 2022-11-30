@@ -16,7 +16,6 @@ limitations under the License.
 
 # pylint: disable=redefined-outer-name
 
-import itertools
 import json
 import math
 import os
@@ -47,10 +46,8 @@ else:
     ENV_VARS["PYTHONPATH"] = str(PROJECT_ROOT)
 
 TASKS = ["classification", "object_detection_segmentation"]
-MODELS = list(itertools.chain(*[
-    [(task, os.path.splitext(model)[0])
-     for model in os.listdir(BENCHMARKING_DIR / task / "onnx_models_configs")]
-    for task in TASKS]))
+MODELS = [(task, os.path.splitext(model)[0]) for task in TASKS for model in
+          os.listdir(BENCHMARKING_DIR / task / "onnx_models_configs")]
 
 XFAIL_MODELS = {}
 
@@ -64,6 +61,7 @@ XFAIL_QUANTIZED_MODELS = {
 #  if onnxruntime-openvino actually has a relevant dataset_definitions.yml file somewhere within its own
 #  site-packages directory.
 DATASET_DEFINITIONS_PATH_ONNX = BENCHMARKING_DIR / 'dataset_definitions.yml'
+
 
 def check_xfail(model_name):
     if model_name in XFAIL_MODELS:
@@ -155,10 +153,11 @@ def _read_csv(root_dir: Path, key: str) -> pd.DataFrame:
         csv_fp = str(root_dir / task / f"accuracy_checker-{key}.csv")
         dfs += [pd.read_csv(csv_fp)]
     df = pd.concat(dfs, axis=0)
-    df = df[["model", "metric_value", "metric_name"]]
+    df = df[["model", "metric_value", "metric_name", "tags"]]
     df = df.set_index("model")
     df["model_accuracy"] = df["metric_value"] * 100.0
-    df = df[["model_accuracy", "metric_name"]]
+    df = df[["model_accuracy", "metric_name", "tags"]]
+    df = df.pivot_table('model_accuracy', ['model', 'metric_name'], 'tags')
     return df
 
 
@@ -207,6 +206,7 @@ class TestPTQ:
     @pytest.mark.dependency()
     @pytest.mark.parametrize("task_type, model_name", MODELS)
     def test_ptq_model(self, task_type, model_name, model_dir, data_dir, anno_dir, ckpt_dir, ptq_size):
+
         check_xfail(model_name)
 
         program_path = BENCHMARKING_DIR / "run_ptq.py"
@@ -319,25 +319,28 @@ class TestBenchmark:
 @pytest.mark.run(order=3)
 class TestBenchmarkResult:
     def parse_df(self, reference_model_accuracy, quantized_model_accuracy):
-        df = reference_model_accuracy.join(quantized_model_accuracy, lsuffix="_FP32", rsuffix="_INT8")
+        df = reference_model_accuracy.join(quantized_model_accuracy)
 
         df = df.reset_index()
-        df = df.rename({"model": "Model", "metric_name_FP32": "Metrics type",
-                        "model_accuracy_FP32": "FP32", "model_accuracy_INT8": "INT8",
-                        "diff_target_min_FP32": "diff_target_min",
-                        "diff_target_max_FP32": "diff_target_max"}, axis=1)
+        df = df.rename({"model": "Model", "metric_name": "Metrics type",
+                        "model_accuracy": "FP32",
+                        "CPUExecutionProvider": "CPU-EP_INT8",
+                        "OpenVINOExecutionProvider": "OV-EP_INT8"}, axis=1)
 
-        df["Diff FP32"] = df["INT8"] - df["FP32"]
+        df["Diff OV-EP FP32"] = df["OV-EP_INT8"] - df["FP32"]
+        df["Diff CPU-EP FP32"] = df["CPU-EP_INT8"] - df["FP32"]
         # TODO: Change E2E test to make "Expected FP32" column effective.
         df["Expected FP32"] = df["FP32"]
-        df["Diff Expected"] = df["INT8"] - df["Expected FP32"]
+        df["Diff OV-EP Expected"] = df["OV-EP_INT8"] - df["Expected FP32"]
 
         return df
 
     @pytest.mark.e2e_ptq
     @pytest.mark.dependency()
     @pytest.mark.parametrize("task_type, model_name", MODELS)
-    def test_model_accuracy(self, request, task_type, model_name, reference_model_accuracy, quantized_model_accuracy):
+    @pytest.mark.parametrize("is_ov_ep", [True, False])
+    def test_model_accuracy(self, request, task_type, model_name, is_ov_ep, reference_model_accuracy,
+                            quantized_model_accuracy):
         # Run PTQ first
         depends(request, ["TestPTQ::test_ptq_model" + request.node.name.lstrip("test_quantized_model_performance")])
         check_xfail(model_name)
@@ -366,26 +369,29 @@ class TestBenchmarkResult:
         red_rows = []
         green_rows = []
 
-        for idx, row in df.iterrows():
-            if math.isnan(row["INT8"]):
-                red_rows += [idx]
-            elif row["diff_target_min"] < row["Diff FP32"] < row["diff_target_max"]:
-                green_rows += [idx]
-            else:
-                yellow_rows += [idx]
+        # for idx, row in df.iterrows():
+        #     if math.isnan(row["INT8"]):
+        #         red_rows += [idx]
+        #     elif row["diff_target_min"] < row["Diff FP32"] < row["diff_target_max"]:
+        #         green_rows += [idx]
+        #     else:
+        #         yellow_rows += [idx]
 
-        df = df[["Model", "Metrics type", "Expected FP32", "FP32", "INT8", "Diff FP32", "Diff Expected"]]
+        df = df[["Model", "Metrics type", "Expected FP32", "FP32", "OV-EP_INT8", "Diff OV-EP FP32", "Diff OV-EP Expected", "CPU-EP_INT8",
+                 "Diff CPU-EP FP32"]]
         # Add ONNXRuntime-OpenVINOExecutionProvider multi-column on the top of 3 ~ 6 columns
-        hier_col_name = "ONNXRuntime-OpenVINOExecutionProvider"
+        ov_ep_col_name = "ONNXRuntime-OpenVINOExecutionProvider"
+        cpu_ep_col_name = "ONNXRuntime-CPUExecutionProvider"
         df.columns = pd.MultiIndex.from_tuples(
-            [("", col) for col in df.columns[:3]] + [(hier_col_name, col) for col in df.columns[3:]]
+            [("", col) for col in df.columns[:3]] + [(ov_ep_col_name, col) for col in df.columns[3:7]] + [
+                (cpu_ep_col_name, col) for col in df.columns[7:]]
         )
 
         def _style_rows():
             styles = []
-            # 3 ~ 6 columns are allowed to be colored.
+            # 3 ~ 8 columns are allowed to be colored.
 
-            for col in range(3, 7):
+            for col in range(3, 9):
                 for idx in yellow_rows:
                     styles.append(f"""
                     .row{idx}.col{col} {{background-color: #{BG_COLOR_YELLOW_HEX};}}
@@ -437,7 +443,7 @@ class TestBenchmarkResult:
             </head>
             <body>
             {legend_info}
-            {df.style.format({(hier_col_name, "FP32"): "({:.2f})"}).set_precision(2).render()}
+            {df.style.format({(ov_ep_col_name, "FP32"): "({:.2f})"}).set_precision(2).render()}
             </body>
             </html>
             """)
