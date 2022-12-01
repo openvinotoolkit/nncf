@@ -28,18 +28,18 @@ class tracked_function:
     will in general result in a telemetry session being created and a set of events being sent before
     function execution. The category of the session and events will be determined by parameters to the decorator.
     """
-    def __init__(self, category: str = None, collectors: List[Union[str, TelemetryExtractor]] = None):
+    def __init__(self, category: str = None, extractors: List[Union[str, TelemetryExtractor]] = None):
         """
         :param category: A category to be attributed to the events. If set to None, no events will be sent.
-        :param collectors: Add argument names in this list as string values to send an event with an "action" equal to
+        :param extractors: Add argument names in this list as string values to send an event with an "action" equal to
             the argument name and "label" equal to the argument value before the function start.
             The argument must be either a string or a dictionary of strings. If that is not the case, instead of
             argument names you can specify an object of a customized `TelemetryExtractor` subclass; use the same
             approach for more complex event reporting.
         """
         self._category = category
-        if collectors is not None:
-            self._collectors = [VerbatimTelemetryExtractor(x) if isinstance(x, str) else x for x in collectors]
+        if extractors is not None:
+            self._collectors = [VerbatimTelemetryExtractor(x) if isinstance(x, str) else x for x in extractors]
         else:
             self._collectors = []
 

@@ -73,7 +73,7 @@ def test_tracked_function(mocker, spies):
             return CollectedEvent(name=NAME_OF_EVENT_FOR_TEST)
 
     @tracked_function(category=CATEGORY_FOR_TEST,
-                      collectors=["arg2", NoArgExtractor("arg1"), "arg3", DoubleArgExtractor("arg2")])
+                      extractors=["arg2", NoArgExtractor("arg1"), "arg3", DoubleArgExtractor("arg2")])
     def fn_to_test(arg1, arg2, arg3 = CONSTANT_DEFAULT_ARGVALUE):
         pass
 
@@ -106,15 +106,15 @@ def test_tracked_function(mocker, spies):
 
 CATEGORY_FOR_TEST2 = "test_category2"
 
-@tracked_function(category=CATEGORY_FOR_TEST, collectors=["arg"])
+@tracked_function(category=CATEGORY_FOR_TEST, extractors=["arg"])
 def inner_same(arg):
     return arg
 
-@tracked_function(category=CATEGORY_FOR_TEST2, collectors=["arg"])
+@tracked_function(category=CATEGORY_FOR_TEST2, extractors=["arg"])
 def inner_other(arg):
     return arg
 
-@tracked_function(category=CATEGORY_FOR_TEST, collectors=["arg"])
+@tracked_function(category=CATEGORY_FOR_TEST, extractors=["arg"])
 def outer(arg, same: bool):
     if same:
         return inner_same(arg)

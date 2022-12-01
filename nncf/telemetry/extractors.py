@@ -13,10 +13,12 @@
 from abc import ABC
 from abc import abstractmethod
 from dataclasses import dataclass
+from enum import Enum
 from typing import Any
 from typing import Optional
+from typing import Union
 
-SerializableData = str
+SerializableData = Union[str, Enum]
 
 
 @dataclass
@@ -53,5 +55,7 @@ class TelemetryExtractor(ABC):
 
 class VerbatimTelemetryExtractor(TelemetryExtractor):
     def extract(self, argvalue: SerializableData) -> CollectedEvent:
+        if isinstance(argvalue, Enum):
+            argvalue = str(argvalue.value)
         return CollectedEvent(name=self._argname,
                               data=argvalue)
