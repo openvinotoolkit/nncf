@@ -18,22 +18,36 @@ import pytest
 from nncf.common.graph.operator_metatypes import InputNoopMetatype
 from nncf.common.graph.operator_metatypes import OutputNoopMetatype
 from nncf.experimental.openvino_native.graph.metatypes.openvino_metatypes import OVAddMetatype
+from nncf.experimental.openvino_native.graph.metatypes.openvino_metatypes import OVConcatMetatype
 from nncf.experimental.openvino_native.graph.metatypes.openvino_metatypes import OVConstantMetatype
+from nncf.experimental.openvino_native.graph.metatypes.openvino_metatypes import OVConvolutionMetatype
 from nncf.experimental.openvino_native.graph.metatypes.openvino_metatypes import OVMatMulMetatype
+from nncf.experimental.openvino_native.graph.metatypes.openvino_metatypes import OVMulMetatype
+from nncf.experimental.openvino_native.graph.metatypes.openvino_metatypes import OVReluMetatype
 from nncf.experimental.openvino_native.graph.metatypes.openvino_metatypes import OVReshapeMetatype
+from nncf.experimental.openvino_native.graph.metatypes.openvino_metatypes import OVSubMetatype
+from nncf.experimental.openvino_native.graph.metatypes.openvino_metatypes import OVTransposeMetatype
+
 from nncf.experimental.openvino_native.graph.nncf_graph_builder import GraphConverter
 
+from tests.openvino.native.models import ConvModel
 from tests.openvino.native.models import LinearModel
 
+TEST_MODELS = [LinearModel, ConvModel]
 REF_METATYPES_COUNTERS = [
     [InputNoopMetatype, OVConstantMetatype, OVReshapeMetatype,
      OVConstantMetatype, OVAddMetatype, OVConstantMetatype, OVMatMulMetatype,
-     OutputNoopMetatype, OutputNoopMetatype]]
+     OutputNoopMetatype, OutputNoopMetatype],
+    [InputNoopMetatype, InputNoopMetatype, OVConstantMetatype, OVMulMetatype,
+     OVConstantMetatype, OVAddMetatype, OVConstantMetatype, OVSubMetatype,
+     OVConstantMetatype, OVConvolutionMetatype, OVReluMetatype, OVConcatMetatype,
+     OVTransposeMetatype, OVConstantMetatype, OutputNoopMetatype]]
 
 
-@pytest.mark.parametrize("ref_metatypes", REF_METATYPES_COUNTERS)
-def test_mapping_onnx_metatypes(ref_metatypes):
-    model = LinearModel().ov_model
+@pytest.mark.parametrize(("model_creator_func, ref_metatypes"),
+                         zip(TEST_MODELS, REF_METATYPES_COUNTERS))
+def test_mapping_openvino_metatypes(model_creator_func, ref_metatypes):
+    model = model_creator_func().ov_model
     nncf_graph = GraphConverter.create_nncf_graph(model)
     actual_metatypes = [node.metatype for node in nncf_graph.get_all_nodes()]
     assert Counter(ref_metatypes) == Counter(actual_metatypes)

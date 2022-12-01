@@ -34,3 +34,28 @@ class LinearModel(OVReferenceModel):
         model = ov.Model([r1, r2], [input_1])
 
         super().__init__(model)
+
+
+class ConvModel(OVReferenceModel):
+    def __init__(self):
+        input_1 = opset.parameter([1, 3, 4, 2], name="Input_1")
+        mean = np.random.rand(1, 3, 1, 1).astype(np.float32)
+        scale = np.random.rand(1, 3, 1, 1).astype(np.float32) + 1e-4
+        subtract = opset.subtract(input_1, mean, name="Sub")
+        kernel = np.random.rand(3, 3, 1, 1).astype(np.float32) / scale
+        strides = [1, 1]
+        pads = [0, 0]
+        dilations = [1, 1]
+        conv = opset.convolution(subtract, kernel, strides, pads, pads, dilations, name="Conv")
+        relu = opset.relu(conv, name="Relu")
+
+        input_2 = opset.parameter([1, 3, 2, 4], name="Input_2")
+        add = opset.add(input_2, (-1) * mean, name="Add")
+        multiply = opset.multiply(add, 1 / scale, name="Mul")
+        transpose = opset.transpose(multiply, [0, 1, 3, 2], name="Transpose")
+
+        cat = opset.concat([relu, transpose], axis=0)
+        result = opset.result(cat, name="Result")
+        model = ov.Model([result], [input_1, input_2])
+
+        super().__init__(model)

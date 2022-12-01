@@ -48,7 +48,7 @@ class OVConvolutionBackpropDataMetatype(OVOpMetatype):
 @OV_OPERATION_METATYPES.register()
 class OVReluMetatype(OVOpMetatype):
     name = 'ReluOp'
-    op_names = ['ReLU']
+    op_names = ['Relu']
 
 
 @OV_OPERATION_METATYPES.register()
