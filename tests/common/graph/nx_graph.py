@@ -12,8 +12,12 @@
 """
 
 import os
+from dataclasses import dataclass
 from functools import partial
+from functools import total_ordering
 from pathlib import Path
+from typing import Optional
+
 import networkx as nx
 
 from nncf.common.utils.dot_file_rw import read_dot_graph
@@ -28,14 +32,57 @@ def sort_dot(path):
     content.remove(start_line)
     content.remove(end_line)
 
-    def graph_key(line, offset):
+    @total_ordering
+    class LineOrder:
+        """Helper structure to sort node lines before edge lines in .dot graphs, and within the edge lines -
+        edges with lower starting IDs first, for edges with identical starting IDs - edges with lower ending IDs
+        first."""
+
+        def __init__(self,
+                     node_id: Optional[int] = None,
+                     edge_start_id: Optional[int] = None,
+                     edge_end_id: Optional[int] = None):
+            if node_id is not None:
+                if edge_start_id is not None or edge_end_id is not None:
+                    raise RuntimeError("Invalid node order parsed from graph line - "
+                                       "must specify either `node_id` or a pair of `edge_start_id`/`edge_end_id`!")
+            else:
+                if edge_start_id is None or edge_end_id is None:
+                    raise RuntimeError("Invalid node order - must specify both `edge_start_id` and `edge_end_id` "
+                                       "if node_id is None!")
+            self.node_id = node_id
+            self.edge_start_id = edge_start_id
+            self.edge_end_id = edge_end_id
+
+        def __lt__(self, other: 'LineOrder'):
+            if self.node_id is not None:
+                if other.node_id is None:
+                    return True
+                if self.node_id < other.node_id:
+                    return True
+                return False
+            else:
+                if other.node_id is not None:
+                    return False
+                if self.edge_start_id < other.edge_start_id:
+                    return True
+                if self.edge_start_id > other.edge_start_id:
+                    return False
+                if self.edge_end_id < other.edge_end_id:
+                    return True
+                return False
+
+    def graph_key(line: str) -> LineOrder:
         key = line.split(' ')[0].replace('"', '')
         if '->' in line:
-            key += line.split(' ')[3].replace('"', '')
-            return int(key) + offset
-        return int(key)
+            start_id = int(key)
+            end_id_str = line.split(' ')[3].replace('"', '')
+            end_id = int(end_id_str)
+            return LineOrder(edge_start_id=start_id, edge_end_id=end_id)
+        else:
+            return LineOrder(node_id=int(key))
 
-    sorted_content = sorted(content, key=partial(graph_key, offset=len(content)))
+    sorted_content = sorted(content, key=graph_key)
     with open(path, 'w', encoding='utf8') as f:
         f.write(start_line)
         f.writelines(sorted_content)
