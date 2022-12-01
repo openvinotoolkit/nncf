@@ -43,8 +43,6 @@ from tests.onnx.quantization.common import infer_model
                           ]
                          )
 def test_min_max_quantization_graph(tmp_path, model_to_test, model):
-    if model_to_test.model_name == 'mobilenet_v3_small':
-        pytest.skip('Ticket 97942')
     onnx_model_dir = str(TEST_ROOT.joinpath('onnx', 'data', 'models'))
     onnx_model_path = str(TEST_ROOT.joinpath(onnx_model_dir, model_to_test.model_name))
     if not os.path.isdir(onnx_model_dir):
@@ -54,5 +52,8 @@ def test_min_max_quantization_graph(tmp_path, model_to_test, model):
 
     original_model = onnx.load(onnx_model_path)
     quantized_model = min_max_quantize_model(model_to_test.input_shape, original_model)
-    compare_nncf_graph(quantized_model, model_to_test.path_ref_graph)
+    compare_nncf_graph(quantized_model, model_to_test.path_ref_graph, True)
+    if model_to_test.model_name == 'mobilenet_v3_small':
+        # 'Ticket 97942'
+        return
     infer_model(model_to_test.input_shape, quantized_model)

@@ -284,18 +284,28 @@ class InsertionPointGraph(nx.DiGraph):
         return node_key
 
     def get_ip_graph_with_merged_hw_optimized_operations(self,
-                                                         full_fusing_pattern: GraphPattern) \
+                                                         full_fusing_pattern: GraphPattern,
+                                                         known_non_constant_node_keys: Optional[List[str]]) \
             -> 'InsertionPointGraph':
         """
         Returns an InsertionPointGraph in which the nodes that match a HW-specific list of patterns are fused into a
         single node; the resulting InsertionPointGraph no longer has accessible the pre- and post-hooks that were
         located in  the middle of the fused pattern.
+        If the InsertionPointGraph should be filtered from constant nodes before the node fusing,
+        then 'known_non_constant_node_keys' should be pass. This is the list of the node known that are non constansts.
+
         :param full_fusing_pattern: The GraphPatttern object representing a composition of fusing pattern variants.
+        :param known_non_constant_node_keys: Keys of the nodes which known to be non constant.
         :return: The InsertionPointGraph with nodes fused according to pattern matching.
         """
         # pylint:disable=too-many-branches
         merged_ip_graph = deepcopy(self)
-        matches = find_subgraphs_matching_pattern(self._base_nx_graph, full_fusing_pattern)
+        filtered_ip_graph = deepcopy(self)
+        if known_non_constant_node_keys is not None:
+            start_traversing_node_keys = [node.node.data[NNCFGraph.KEY_NODE_ATTR] for node in
+                                           known_non_constant_node_keys]
+            filtered_ip_graph = ConstantNodesFilter.filter(filtered_ip_graph, start_traversing_node_keys)
+        matches = find_subgraphs_matching_pattern(filtered_ip_graph._base_nx_graph, full_fusing_pattern)
         for match in matches:
             if len(match) == 1:
                 continue
@@ -358,13 +368,13 @@ class InsertionPointGraph(nx.DiGraph):
 
 class ConstantNodesFilter:
     @staticmethod
-    def filter(ip_graph: InsertionPointGraph, quantizable_layer_node_keys: Optional[List[str]]) -> InsertionPointGraph:
+    def filter(ip_graph: InsertionPointGraph, start_traversing_node_keys: Optional[List[str]]) -> InsertionPointGraph:
         """
         Removes all Constant nodes from InsertionPointGraph, making it inference graph.
         The traversing starts from the input nodes and nodes with weights.
 
         :param ip_graph: The original InsertionPointGraph.
-        :param quantizable_layer_node_keys: Keys of the nodes which have weights.
+        :param start_traversing_node_keys: Keys of the nodes from which the traversing will be start.
         :return: InsertionPointGraph without Constant nodes.
         """
         input_nodes = ip_graph.get_input_nodes()
@@ -374,9 +384,9 @@ class ConstantNodesFilter:
                               ' from which the traversing should be started.')
             return ip_graph
         weight_nodes = []
-        if quantizable_layer_node_keys is not None:
+        if start_traversing_node_keys is not None:
             weight_nodes = [ip_graph.get_merged_node_from_single_node_key(weight_node) for weight_node in
-                            quantizable_layer_node_keys]
+                            start_traversing_node_keys]
         visited_nodes = set()
         start_nodes = input_nodes + weight_nodes
         for node in start_nodes:
@@ -385,4 +395,6 @@ class ConstantNodesFilter:
                 visited_nodes.add(node_to)
         constant_nodes = [node for node in ip_graph.nodes if node not in visited_nodes]
         ip_graph.remove_nodes_from(constant_nodes)
+        constant_nodes_base_nx_graph = [node for node in constant_nodes if node in ip_graph._base_nx_graph.nodes]
+        ip_graph._base_nx_graph.remove_nodes_from(constant_nodes_base_nx_graph)
         return ip_graph

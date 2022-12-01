@@ -21,6 +21,18 @@ from nncf.experimental.onnx.graph.metatypes.onnx_metatypes import ONNXSubMetatyp
 from nncf.experimental.onnx.graph.metatypes.onnx_metatypes import ONNXMulLayerMetatype
 
 
+def _create_elememntwise_op_without_const(pattern, elementwise_metatype):
+    if elementwise_metatype == ONNXAddLayerMetatype:
+        label_attr = 'ADD'
+    if elementwise_metatype == ONNXMulLayerMetatype:
+        label_attr = 'MUL'
+    if elementwise_metatype == ONNXSubMetatype:
+        label_attr = 'SUB'
+    elementwise_node = pattern.add_node(**{GraphPattern.LABEL_ATTR: label_attr,
+                                           GraphPattern.METATYPE_ATTR: elementwise_metatype})
+    return elementwise_node
+
+
 def create_swish_activation() -> GraphPattern:
     pattern = GraphPattern()
 
@@ -52,81 +64,36 @@ def create_swish_activation() -> GraphPattern:
 
 def create_input_preprocessing_pattern() -> GraphPattern:
     pattern = GraphPattern()
+    el_nodes_metatypes = [(ONNXAddLayerMetatype, ONNXMulLayerMetatype), (ONNXMulLayerMetatype, ONNXAddLayerMetatype)]
+    for el_nodes_metatype in el_nodes_metatypes:
+        model_input_node = pattern.add_node(**{GraphPattern.LABEL_ATTR: 'MODEL_INPUT',
+                                               GraphPattern.METATYPE_ATTR: NNCFGraphNodeType.INPUT_NODE})
+        first_el_node = _create_elememntwise_op_without_const(pattern, el_nodes_metatype[0])
+        second_el_node = _create_elememntwise_op_without_const(pattern, el_nodes_metatype[1])
 
-    model_input_node_1 = pattern.add_node(**{GraphPattern.LABEL_ATTR: 'MODEL_INPUT',
-                                             GraphPattern.METATYPE_ATTR: NNCFGraphNodeType.INPUT_NODE})
-    add_node_1 = pattern.add_node(**{GraphPattern.LABEL_ATTR: 'ADD',
-                                     GraphPattern.METATYPE_ATTR: ONNXAddLayerMetatype})
-    mul_node_1 = pattern.add_node(**{GraphPattern.LABEL_ATTR: 'MUL',
-                                     GraphPattern.METATYPE_ATTR: ONNXMulLayerMetatype})
+        pattern.add_edge(model_input_node, first_el_node)
+        pattern.add_edge(first_el_node, second_el_node)
 
-    pattern.add_edge(model_input_node_1, add_node_1)
-    pattern.add_edge(add_node_1, mul_node_1)
+    el_nodes_metatypes = [ONNXAddLayerMetatype, ONNXMulLayerMetatype]
+    for el_nodes_metatype in el_nodes_metatypes:
+        model_input_node = pattern.add_node(**{GraphPattern.LABEL_ATTR: 'MODEL_INPUT',
+                                               GraphPattern.METATYPE_ATTR: NNCFGraphNodeType.INPUT_NODE})
+        el_node = _create_elememntwise_op_without_const(pattern, el_nodes_metatype)
 
-    model_input_node_2 = pattern.add_node(**{GraphPattern.LABEL_ATTR: 'MODEL_INPUT',
-                                             GraphPattern.METATYPE_ATTR: NNCFGraphNodeType.INPUT_NODE})
-    mul_node_2 = pattern.add_node(**{GraphPattern.LABEL_ATTR: 'MUL',
-                                     GraphPattern.METATYPE_ATTR: ONNXMulLayerMetatype})
-    add_node_2 = pattern.add_node(**{GraphPattern.LABEL_ATTR: 'ADD',
-                                     GraphPattern.METATYPE_ATTR: ONNXAddLayerMetatype})
-
-    pattern.add_edge(model_input_node_2, mul_node_2)
-    pattern.add_edge(mul_node_2, add_node_2)
-
-    model_input_node_3 = pattern.add_node(**{GraphPattern.LABEL_ATTR: 'MODEL_INPUT',
-                                             GraphPattern.METATYPE_ATTR: NNCFGraphNodeType.INPUT_NODE})
-    add_node_3 = pattern.add_node(**{GraphPattern.LABEL_ATTR: 'ADD',
-                                     GraphPattern.METATYPE_ATTR: ONNXAddLayerMetatype})
-
-    pattern.add_edge(model_input_node_3, add_node_3)
-
-    model_input_node_4 = pattern.add_node(**{GraphPattern.LABEL_ATTR: 'MODEL_INPUT',
-                                             GraphPattern.METATYPE_ATTR: NNCFGraphNodeType.INPUT_NODE})
-    mul_node_4 = pattern.add_node(**{GraphPattern.LABEL_ATTR: 'MUL',
-                                     GraphPattern.METATYPE_ATTR: ONNXMulLayerMetatype})
-
-    pattern.add_edge(model_input_node_4, mul_node_4)
-
-    return pattern
-
-
-def create_decomposed_batch_norm() -> GraphPattern:
-    pattern = GraphPattern()
-
-    model_input_node = pattern.add_node(**{GraphPattern.LABEL_ATTR: '*INPUT_NODE*',
-                                           GraphPattern.METATYPE_ATTR: GraphPattern.NON_PATTERN_NODE_TYPE})
-    mul_node = pattern.add_node(**{GraphPattern.LABEL_ATTR: 'MUL',
-                                   GraphPattern.METATYPE_ATTR: ONNXMulLayerMetatype})
-    add_node = pattern.add_node(**{GraphPattern.LABEL_ATTR: 'ADD',
-                                   GraphPattern.METATYPE_ATTR: ONNXAddLayerMetatype})
-
-    pattern.add_edge(model_input_node, mul_node)
-    pattern.add_edge(mul_node, add_node)
-
+        pattern.add_edge(model_input_node, el_node)
     return pattern
 
 
 def create_scale_shift() -> GraphPattern:
     pattern = GraphPattern()
+    el_nodes_metatypes = [(ONNXAddLayerMetatype, ONNXMulLayerMetatype), (ONNXMulLayerMetatype, ONNXAddLayerMetatype)]
+    for el_nodes_metatype in el_nodes_metatypes:
+        model_input_node = pattern.add_node(**{GraphPattern.LABEL_ATTR: '*INPUT_NODE*',
+                                               GraphPattern.METATYPE_ATTR: GraphPattern.NON_PATTERN_NODE_TYPE})
+        first_el_node = _create_elememntwise_op_without_const(pattern, el_nodes_metatype[0])
+        second_el_node = _create_elememntwise_op_without_const(pattern, el_nodes_metatype[1])
 
-    model_input_node_1 = pattern.add_node(**{GraphPattern.LABEL_ATTR: '*INPUT_NODE*',
-                                             GraphPattern.METATYPE_ATTR: GraphPattern.NON_PATTERN_NODE_TYPE})
-    mul_node_1 = pattern.add_node(**{GraphPattern.LABEL_ATTR: 'MUL',
-                                     GraphPattern.METATYPE_ATTR: ONNXMulLayerMetatype})
-    add_node_1 = pattern.add_node(**{GraphPattern.LABEL_ATTR: 'ADD',
-                                     GraphPattern.METATYPE_ATTR: ONNXAddLayerMetatype})
-
-    pattern.add_edge(model_input_node_1, mul_node_1)
-    pattern.add_edge(mul_node_1, add_node_1)
-
-    model_input_node_2 = pattern.add_node(**{GraphPattern.LABEL_ATTR: '*INPUT_NODE*',
-                                             GraphPattern.METATYPE_ATTR: GraphPattern.NON_PATTERN_NODE_TYPE})
-    mul_node_2 = pattern.add_node(**{GraphPattern.LABEL_ATTR: 'MUL',
-                                     GraphPattern.METATYPE_ATTR: ONNXMulLayerMetatype})
-    add_node_2 = pattern.add_node(**{GraphPattern.LABEL_ATTR: 'SUB',
-                                     GraphPattern.METATYPE_ATTR: ONNXSubMetatype})
-
-    pattern.add_edge(model_input_node_2, mul_node_2)
-    pattern.add_edge(mul_node_2, add_node_2)
+        pattern.add_edge(model_input_node, first_el_node)
+        pattern.add_edge(first_el_node, second_el_node)
 
     return pattern

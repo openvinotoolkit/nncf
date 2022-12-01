@@ -29,7 +29,6 @@ from nncf.common.utils.logger import logger as nncf_logger
 from nncf.experimental.onnx.graph.onnx_graph import ONNXGraph
 from nncf.experimental.onnx.graph.metatypes.onnx_metatypes import ONNX_OPERATION_METATYPES
 from nncf.experimental.onnx.graph.metatypes.onnx_metatypes import WEIGHT_LAYER_METATYPES
-from nncf.experimental.onnx.graph.metatypes.onnx_metatypes import ONNXConstantMetatype
 
 
 class GraphConverter:
@@ -85,7 +84,7 @@ class GraphConverter:
             onnx_dtype = onnx_graph.get_edge_dtype_name(input_name)
             nncf_dtype = GraphConverter.convert_onnx_dtype_to_nncf_dtype(onnx_dtype)
             output_port_id = 0
-            for node in filter(GraphConverter._is_valid_onnx_metatype, to_nodes):
+            for node in to_nodes:
                 to_node_id = nncf_graph.get_node_by_name(node.name).node_id
                 input_port_id = ONNXGraph.get_input_port_id_for_node_after_input(input_name, node)
                 nncf_graph.add_edge_between_nncf_nodes(
@@ -121,7 +120,7 @@ class GraphConverter:
             onnx_dtype = onnx_graph.get_edge_dtype_name(output_name)
             nncf_dtype = GraphConverter.convert_onnx_dtype_to_nncf_dtype(onnx_dtype)
             input_port_id = 0
-            for node in filter(GraphConverter._is_valid_onnx_metatype, from_nodes):
+            for node in from_nodes:
                 from_node_id = nncf_graph.get_node_by_name(node.name).node_id
                 output_port_id = ONNXGraph.get_output_port_id_for_node_before_output(output_name, node)
                 nncf_graph.add_edge_between_nncf_nodes(

@@ -185,12 +185,11 @@ class MinMaxQuantization(Algorithm):
         :return: SingleConfigQuantizerSetup for the current NNCFGraph entity.
         """
         ip_graph = InsertionPointGraph(nncf_graph)
-        pattern = self._backend_entity.hw_fused_patterns.get_full_pattern_graph()
-        ip_graph = ip_graph.get_ip_graph_with_merged_hw_optimized_operations(pattern)
-
         weight_nodes = nncf_graph.get_nodes_by_metatypes(self._backend_entity.layers_with_weights_metatypes)
         quantizable_layer_nodes = [QuantizableWeightedLayerNode(weight_node, [QuantizerConfig()])
                                    for weight_node in weight_nodes]
+        pattern = self._backend_entity.hw_fused_patterns.get_full_pattern_graph()
+        ip_graph = ip_graph.get_ip_graph_with_merged_hw_optimized_operations(pattern, quantizable_layer_nodes)
 
         hw_config_type = self._parameters.target_device
         hw_config_path = self._backend_entity.hw_config.get_path_to_hw_config(hw_config_type)
