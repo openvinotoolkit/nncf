@@ -45,10 +45,15 @@ def run_install_checks(venv_path: Path, tmp_path: Path, package_type: str, backe
             package_path = find_file_by_extension(PROJECT_ROOT / 'dist', '.tar.gz')
         elif package_type == "build_w":
             package_path = find_file_by_extension(PROJECT_ROOT / 'dist', '.whl')
-
-        subprocess.run(
-            f'{pip_with_venv} install {package_path}[{backend}] ',
-                check=True, shell=True)
+        # Currently CI runs on RTX3090s, which require CUDA 11 to work.
+        # Current torch, however (v1.12), is installed via pip using .whl packages
+        # compiled for CUDA 10.2. Thus need to direct pip installation specifically for
+        # torch, otherwise the NNCF will only work in CPU mode.
+        torch_extra_index = " --extra-index-url https://download.pytorch.org/whl/cu116"
+        run_cmd_line = f'{pip_with_venv} install {package_path}[{backend}]'
+        if backend == "torch":
+            run_cmd_line += torch_extra_index
+        subprocess.run(run_cmd_line, check=True, shell=True)
 
     run_path = tmp_path / 'run'
     install_checks_py_name = f'install_checks_{backend}.py'
@@ -99,6 +104,8 @@ class TestInstall:
         skip_if_backend_not_selected(backend, backend_clopt)
         if backend == 'openvino' and 'pypi' in package_type:
             pytest.xfail('Disabled until OV backend is exposed in a release')
+        if backend == 'torch' and 'pypi' in package_type:
+            pytest.xfail('Disabled until NNCF with torch version supporting CUDA 11.6 backend is exposed in a release')
         venv_path = create_venv_with_nncf(tmp_path, package_type, venv_type, extra_reqs={backend})
         run_install_checks(venv_path, tmp_path, package_type, backend=backend,
                 install_type=host_configuration_clopt)
@@ -110,6 +117,8 @@ class TestInstall:
         skip_if_backend_not_selected(backend, backend_clopt)
         if backend == 'openvino' and 'pypi' in package_type:
             pytest.xfail('Disabled until OV backend is exposed in a release')
+        if backend == 'torch' and 'pypi' in package_type:
+            pytest.xfail('Disabled until NNCF with torch version supporting CUDA 11.6 backend is exposed in a release')
         venv_path = create_venv_with_nncf(tmp_path, package_type, venv_type, extra_reqs={backend})
         pip_with_venv = f'. {venv_path}/bin/activate && {venv_path}/bin/pip'
         subprocess.call(
