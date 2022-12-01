@@ -285,7 +285,7 @@ class InsertionPointGraph(nx.DiGraph):
 
     def get_ip_graph_with_merged_hw_optimized_operations(self,
                                                          full_fusing_pattern: GraphPattern,
-                                                         known_non_constant_node_keys: Optional[List[str]]) \
+                                                         known_non_constant_node_keys: Optional[List[str]] = None) \
             -> 'InsertionPointGraph':
         """
         Returns an InsertionPointGraph in which the nodes that match a HW-specific list of patterns are fused into a
@@ -303,7 +303,7 @@ class InsertionPointGraph(nx.DiGraph):
         filtered_ip_graph = deepcopy(self)
         if known_non_constant_node_keys is not None:
             start_traversing_node_keys = [node.node.data[NNCFGraph.KEY_NODE_ATTR] for node in
-                                           known_non_constant_node_keys]
+                                          known_non_constant_node_keys]
             filtered_ip_graph = ConstantNodesFilter.filter(filtered_ip_graph, start_traversing_node_keys)
         matches = find_subgraphs_matching_pattern(filtered_ip_graph._base_nx_graph, full_fusing_pattern)
         for match in matches:
