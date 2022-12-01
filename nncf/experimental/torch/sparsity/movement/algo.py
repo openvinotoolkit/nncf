@@ -74,7 +74,8 @@ class MovementSparsityBuilder(BaseSparsityAlgoBuilder):
             raise RuntimeError(f'"{node_name}" is matched by multiple items in `sparse_structure_by_scopes`.')
 
         return MovementSparsifier(target_module_node, sparse_cfg=sparse_cfg, frozen=False,
-                                  compression_lr_multiplier=compression_lr_multiplier)
+                                  compression_lr_multiplier=compression_lr_multiplier,
+                                  layerwise_loss_lambda=0.5)
 
     def _sparsify_weights(self, target_model: NNCFNetwork) -> List[PTInsertionCommand]:
         device = get_model_device(target_model)
@@ -124,7 +125,7 @@ class MovementSparsityController(BaseSparsityAlgoController):
         params = deepcopy(algo_config.get('params', {}))
         self._distributed = False
         self._scheduler = MovementPolynomialThresholdScheduler(self, params)
-        self._loss = ImportanceLoss(sparsify_operations, self.scheduler)
+        self._loss = ImportanceLoss(sparsify_operations)
         self._config = config
 
         if self._scheduler.enable_structured_masking:
@@ -182,6 +183,11 @@ class MovementSparsityController(BaseSparsityAlgoController):
 
         self._distributed = True
 
+    def freeze(self):
+        self._loss.disable()
+        for minfo in self.sparsified_module_info:
+            minfo.operand.requires_grad_(False)
+
     def statistics(self, quickly_collected_only=False) -> NNCFStatistics:
         collector = PTSparseModelStatisticsCollector(self.model, self.sparsified_module_info,
                                                      supports_sparse_bias=True)
@@ -189,7 +195,7 @@ class MovementSparsityController(BaseSparsityAlgoController):
 
         stats = MovementSparsityStatistics(model_statistics,
                                            self.scheduler.current_importance_threshold,
-                                           self.scheduler.current_importance_lambda)
+                                           self.scheduler.current_importance_regularization_factor)
 
         nncf_stats = NNCFStatistics()
         nncf_stats.register('movement_sparsity', stats)

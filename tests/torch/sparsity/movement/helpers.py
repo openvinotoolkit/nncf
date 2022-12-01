@@ -28,13 +28,13 @@ from transformers.trainer_callback import TrainerControl
 from transformers.trainer_callback import TrainerState
 
 from nncf import NNCFConfig
+from nncf.torch.nncf_network import NNCFNetwork
 from nncf.api.compression import CompressionAlgorithmController
 from nncf.common.graph.graph import NNCFGraph
 from nncf.common.graph.graph import NNCFNode
 from nncf.common.graph.layer_attributes import LinearLayerAttributes
 from nncf.common.utils.tensorboard import prepare_for_tensorboard
 from nncf.experimental.torch.sparsity.movement.algo import MovementSparsifier
-from nncf.torch.nncf_network import NNCFNetwork
 
 
 def mock_linear_nncf_node(in_features: int = 1, out_features: int = 1,

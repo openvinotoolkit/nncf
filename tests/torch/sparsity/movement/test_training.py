@@ -161,6 +161,15 @@ class MovementTrainingValidator(BaseSampleValidator):
         runner = Command(cmd)
         env_with_cuda_reproducibility = os.environ.copy()
         env_with_cuda_reproducibility["CUBLAS_WORKSPACE_CONFIG"] = ":4096:8"
+        if not self._desc.cpu_only_:
+            CUDA_ENV_KEY = 'CUDA_VISIBLE_DEVICES'
+            n_process = self._desc.n_process
+            if CUDA_ENV_KEY not in os.environ:
+                dev_ids = list(map(str, range(n_process)))
+            else:
+                all_dev_ids = os.environ[CUDA_ENV_KEY].split(",")
+                dev_ids = all_dev_ids[:n_process]
+            env_with_cuda_reproducibility[CUDA_ENV_KEY] = ','.join(dev_ids)
         runner.kwargs.update(env=env_with_cuda_reproducibility)
         runner.run(timeout=self._desc.timeout_)
 
@@ -223,13 +232,13 @@ MOVEMENT_DESCRIPTORS = {
     "mrpc_cuda_1proc": deepcopy(mrpc_movement_desc_template)
     .expected_eval_f1(approx(0.81, abs=0.06))
     .expected_eval_acc(approx(0.71, abs=0.06))
-    .expected_rela_sparsity(approx(0.20, abs=0.20)),
+    .expected_rela_sparsity(approx(0.28, abs=0.20)),
 
     "mrpc_cuda_1proc_fp16": deepcopy(mrpc_movement_desc_template)
     .enable_autocast_fp16()
     .expected_eval_f1(approx(0.81, abs=0.06))
     .expected_eval_acc(approx(0.71, abs=0.06))
-    .expected_rela_sparsity(approx(0.20, abs=0.20)),
+    .expected_rela_sparsity(approx(0.28, abs=0.20)),
 
 
     "mrpc_cuda_2proc_dp": deepcopy(mrpc_movement_desc_template)
@@ -237,7 +246,7 @@ MOVEMENT_DESCRIPTORS = {
     .data_parallel(n_process=2)
     .expected_eval_f1(approx(0.81, abs=0.06))
     .expected_eval_acc(approx(0.71, abs=0.06))
-    .expected_rela_sparsity(approx(0.20, abs=0.20)),
+    .expected_rela_sparsity(approx(0.28, abs=0.20)),
 
 
     "mrpc_cuda_2proc_dp_fp16": deepcopy(mrpc_movement_desc_template)
@@ -246,7 +255,7 @@ MOVEMENT_DESCRIPTORS = {
     .enable_autocast_fp16()
     .expected_eval_f1(approx(0.81, abs=0.06))
     .expected_eval_acc(approx(0.71, abs=0.06))
-    .expected_rela_sparsity(approx(0.20, abs=0.20)),
+    .expected_rela_sparsity(approx(0.28, abs=0.20)),
 
 
     "mrpc_cuda_2proc_ddp": deepcopy(mrpc_movement_desc_template)
@@ -254,7 +263,7 @@ MOVEMENT_DESCRIPTORS = {
     .distributed_data_parallel(n_process=2)
     .expected_eval_f1(approx(0.81, abs=0.06))
     .expected_eval_acc(approx(0.71, abs=0.06))
-    .expected_rela_sparsity(approx(0.20, abs=0.20)),
+    .expected_rela_sparsity(approx(0.28, abs=0.20)),
 
 
     "mrpc_cuda_2proc_ddp_fp16": deepcopy(mrpc_movement_desc_template)
@@ -263,13 +272,13 @@ MOVEMENT_DESCRIPTORS = {
     .enable_autocast_fp16()
     .expected_eval_f1(approx(0.81, abs=0.06))
     .expected_eval_acc(approx(0.71, abs=0.06))
-    .expected_rela_sparsity(approx(0.20, abs=0.20)),
+    .expected_rela_sparsity(approx(0.28, abs=0.20)),
 
     "mrpc_cpu_1proc": deepcopy(mrpc_movement_desc_template)
     .cpu_only()
     .expected_eval_f1(approx(0.81, abs=0.06))
     .expected_eval_acc(approx(0.71, abs=0.06))
-    .expected_rela_sparsity(approx(0.20, abs=0.20)),
+    .expected_rela_sparsity(approx(0.28, abs=0.20)),
 }
 
 
@@ -297,6 +306,7 @@ def fixture_movement_desc_short(request, dataset_dir, tmp_path_factory, weekly_m
 
 
 class TestMovementTraining:
+    @pytest.mark.weekly
     def test_compression_movement_long_train(self, movement_desc_long: MovementTrainingTestDescriptor, mocker):
         if (not movement_desc_long.cpu_only_) and torch.cuda.device_count() < movement_desc_long.n_process:
             pytest.skip(f"No enough cuda devices to run {movement_desc_long}")
@@ -306,6 +316,7 @@ class TestMovementTraining:
         self._validate_model_is_saved(movement_desc_long)
         self._validate_train_metric(movement_desc_long)
 
+    @pytest.mark.nightly
     def test_compression_movement_short_train(self, movement_desc_short: MovementTrainingTestDescriptor, mocker):
         if (not movement_desc_short.cpu_only_) and torch.cuda.device_count() < movement_desc_short.n_process:
             pytest.skip(f"No enough cuda devices to run {movement_desc_short}")

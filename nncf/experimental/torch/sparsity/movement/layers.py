@@ -55,22 +55,36 @@ class SparseConfig:
         self.sparse_axis = None
         self.mode = mode
         if self.mode == SparseStructure.FINE:
+            if not ((isinstance(sparse_factors, (tuple, list)) and tuple(sparse_factors) == (1, 1)) or
+                    sparse_factors is None):
+                raise ValueError(
+                    f'{error_prefix} Fine sparse structure expects `sparse_factors` to be [1, 1] or unspecified.')
+            if sparse_axis is not None:
+                raise ValueError(
+                    f'{error_prefix} Fine sparse structure does not expect specified `axis`.')
             self.sparse_factors = (1, 1)
 
         if self.mode == SparseStructure.BLOCK:
             if sparse_factors is None:
                 raise ValueError(
-                    '{} Missing `sparse_factors`. Block sparsity structure expects it specified.'.format(error_prefix))
+                    f'{error_prefix} Missing `sparse_factors`. Block sparsity structure expects it specified.')
             if not (isinstance(sparse_factors, (tuple, list)) and len(sparse_factors) == 2):
-                raise ValueError('{} Invalid format of `sparse_factors`. '
-                                 'Block sparsity structure expects tuple of two numbers')
+                raise ValueError(
+                    f'{error_prefix} Invalid format of `sparse_factors. '
+                    'Block sparsity structure expects tuple of two numbers.')
+            if sparse_axis is not None:
+                raise ValueError(
+                    f'{error_prefix} Block sparse structure does not expect specified `axis`.')
             self.sparse_factors = tuple(sparse_factors)
 
         if self.mode == SparseStructure.PER_DIM:
             if sparse_axis is None:
                 raise ValueError(
-                    '{} Missing `axis`. Sparsity structure per dimension expects it specified.'.format(error_prefix))
-            self.sparse_axis = sparse_axis
+                    f'{error_prefix} Missing `axis`. Per-dim sparsity structure expects it specified.')
+            if sparse_factors is not None:
+                raise ValueError(
+                    f'{error_prefix} Per-dim sparsity structure does not expect specified `sparse_factors`.')
+            self.sparse_axis = int(sparse_axis)
 
     @classmethod
     def from_config(cls, config: Dict[str, Any]) -> 'SparseConfig':
@@ -113,14 +127,15 @@ class MovementSparsifier(nn.Module):
         sparse_cfg: SparseConfig = SparseConfig(mode=SparseStructure.FINE),
         frozen: bool = True,
         compression_lr_multiplier: Optional[float] = None,
-        layer_loss_lambda: float = 0.5,
+        layerwise_loss_lambda: float = 0.5,
     ):
         super().__init__()
         self.target_module_node = target_module_node
         self.prune_bias = (target_module_node.layer_attributes.bias not in (False, None))
         self.frozen = frozen
-        self.layer_loss_lambda = layer_loss_lambda
+        self.layerwise_loss_lambda = layerwise_loss_lambda
         self._importance_threshold = -math.inf
+        self._importance_regularization_factor = 0.
 
         weight_shape = target_module_node.layer_attributes.get_weight_shape()
         self.weight_ctx = BinaryMask(weight_shape)
@@ -158,6 +173,14 @@ class MovementSparsifier(nn.Module):
     def importance_threshold(self, value: float):
         self._importance_threshold = value
 
+    @property
+    def importance_regularization_factor(self):
+        return self._importance_regularization_factor
+
+    @importance_regularization_factor.setter
+    def importance_regularization_factor(self, value: float):
+        self._importance_regularization_factor = value
+
     def forward(self, weight: torch.Tensor, bias: Optional[torch.Tensor] = None
                 ) -> Tuple[torch.Tensor, Optional[torch.Tensor]]:
         if is_tracing_state():
@@ -173,17 +196,19 @@ class MovementSparsifier(nn.Module):
                 masked_bias = apply_binary_mask_impl(bias_mask, bias)
         return masked_weight, masked_bias
 
-    def apply_binary_mask(self, param_tensor: torch.Tensor, is_bias=False) -> torch.Tensor:
+    def apply_binary_mask(self, param_tensor: torch.Tensor, is_bias: bool = False) -> torch.Tensor:
         ctx = self.bias_ctx if is_bias else self.weight_ctx
         return ctx.apply_binary_mask(param_tensor)
 
     def loss(self) -> torch.Tensor:
+        if self.importance_regularization_factor == 0.:
+            return torch.tensor(0., device=self._get_device())
         layer_loss = torch.mean(torch.sigmoid(self.weight_importance)) * \
-            self.layer_loss_lambda * math.prod(self.sparse_factors)
+            self.layerwise_loss_lambda * math.prod(self.sparse_factors)
         if self.prune_bias:
             layer_loss += torch.mean(torch.sigmoid(self.bias_importance)) * \
-                self.layer_loss_lambda * float(self.sparse_factors[0])
-        return layer_loss
+                self.layerwise_loss_lambda * float(self.sparse_factors[0])
+        return layer_loss * self.importance_regularization_factor
 
     def requires_grad_(self, requires_grad: bool = True):
         super().requires_grad_(requires_grad)
@@ -191,6 +216,9 @@ class MovementSparsifier(nn.Module):
 
     def extra_repr(self) -> str:
         return 'sparse_structure: {} {}'.format(self.sparse_structure.value, self.sparse_factors)
+
+    def _get_device(self):
+        return self.weight_importance.device
 
     def _calc_training_binary_mask(self, isbias: bool = False):
         ctx = self.bias_ctx if isbias else self.weight_ctx
@@ -208,7 +236,7 @@ class MovementSparsifier(nn.Module):
         if isbias:
             return importance.repeat_interleave(self.sparse_factors[0], dim=0)
         return importance.repeat_interleave(self.sparse_factors[0], dim=0)\
-                         .repeat_interleave(self.sparse_factors[1], dim=1)
+            .repeat_interleave(self.sparse_factors[1], dim=1)
 
     @staticmethod
     def _get_weight_importance_shape(weight_shape, sparse_factors: Tuple[int, int],

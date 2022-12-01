@@ -51,6 +51,7 @@ THRESHOLD_NAME_IN_MOVEMENT_STAT = 'movement_sparsity/importance_threshold'
 RELA_SPARSITY_NAME_IN_MOVEMENT_STAT = 'movement_sparsity/relative_sparsity'
 MODEL_SPARSITY_NAME_IN_MOVEMENT_STAT = 'movement_sparsity/model_sparsity'
 
+
 desc_sparse_structures = {
     "explicit_mixed": [
         {"mode": "block", "sparse_factors": [2, 2], "target_scopes": "{re}attention"},
@@ -83,7 +84,7 @@ desc_sparse_structures = {
 }
 
 
-desc_wrong_sparse_structures = {
+desc_improper_sparse_structures = {
     "block_not_divisible": dict(
         sparse_structure_by_scopes=[
             {"mode": "block", "sparse_factors": [3, 3], "target_scopes": "{re}attention"}
@@ -115,147 +116,305 @@ desc_wrong_sparse_structures = {
 }
 
 
-def check_sparsified_layer_mode(sparsifier: MovementSparsifier, module: NNCFLinear, config: SparseConfig):
-    weight_shape = module.weight.shape
-    assert isinstance(sparsifier.weight_importance, CompressionParameter)
-    if config.mode == SparseStructure.BLOCK:
-        ref_weight_shape = [
-            weight_shape[0] // config.sparse_factors[0],
-            weight_shape[1] // config.sparse_factors[1]
-        ]
-    elif config.mode == SparseStructure.PER_DIM:
-        ref_weight_shape = [1, weight_shape[1]] if config.sparse_axis == 0 else [weight_shape[0], 1]
-    else:
-        ref_weight_shape = weight_shape
-    ref_weight_importance = torch.zeros(ref_weight_shape)
-    assert torch.allclose(sparsifier.weight_importance,
-                          ref_weight_importance)
-
-    if module.bias is not None:
-        assert isinstance(sparsifier.bias_importance, CompressionParameter)
-        ref_bias_importance = torch.zeros([ref_weight_importance.shape[0]])
-        assert torch.allclose(sparsifier.bias_importance, ref_bias_importance)
-
-
-@pytest.mark.parametrize('sparse_structure_by_scopes', desc_sparse_structures.values(),
-                         ids=desc_sparse_structures.keys())
-@pytest.mark.parametrize('recipe', [
-    BertRunRecipe.from_default(hidden_size=4, intermediate_size=6),
-    BertRunRecipe.from_default(hidden_size=4, intermediate_size=6, ffn_bias=False),
-    SwinRunRecipe.from_default(depths=[1, 1], num_heads=[2, 4], mlp_ratio=1.5, qkv_bias=False)
-], ids=['bert', 'bert_no_ffn_bias', 'swin_no_qkv_bias'])
-def test_can_create_movement_sparsity_layers(sparse_structure_by_scopes, recipe: BaseMockRunRecipe):
-    recipe.set('sparse_structure_by_scopes', sparse_structure_by_scopes)
-    compression_ctrl, compressed_model = create_compressed_model(recipe.model,
-                                                                 recipe.nncf_config,
-                                                                 dump_graphs=False)
-    assert isinstance(compression_ctrl, MovementSparsityController)
-    assert isinstance(compression_ctrl.scheduler, MovementPolynomialThresholdScheduler)
-
-    configs = recipe.get('sparse_structure_by_scopes')
-    sparse_configs_by_scopes = [SparseConfigByScope.from_config(c) for c in configs]
-    for scope, module in compressed_model.get_nncf_modules().items():
-        if not hasattr(module, 'pre_ops'):
-            continue
-        count_movement_op = 0
-        for op in module.pre_ops.values():
-            if isinstance(op, UpdateWeightAndBias) and isinstance(op.operand, MovementSparsifier):
-                count_movement_op += 1
-                sparse_config = SparseConfig(SparseStructure.FINE, (1, 1))
-                for sparse_config_by_scope in sparse_configs_by_scopes:
-                    if matches_any(str(scope), sparse_config_by_scope.target_scopes):
-                        sparse_config = sparse_config_by_scope.sparse_config
-                        break
-                check_sparsified_layer_mode(op.operand, module, sparse_config)
-        if should_consider_scope(str(scope), recipe.get('ignored_scopes')) and \
-                isinstance(module, tuple(SUPPORTED_NNCF_MODULES)):
-            assert count_movement_op == 1
+class TestControllerCreation:
+    def check_sparsified_layer_mode(self, sparsifier: MovementSparsifier,
+                                    module: NNCFLinear,
+                                    config: SparseConfig):
+        weight_shape = module.weight.shape
+        assert isinstance(sparsifier.weight_importance, CompressionParameter)
+        if config.mode == SparseStructure.BLOCK:
+            ref_weight_shape = [
+                weight_shape[0] // config.sparse_factors[0],
+                weight_shape[1] // config.sparse_factors[1]
+            ]
+        elif config.mode == SparseStructure.PER_DIM:
+            ref_weight_shape = [1, weight_shape[1]] if config.sparse_axis == 0 else [weight_shape[0], 1]
         else:
-            assert count_movement_op == 0
+            ref_weight_shape = weight_shape
+        ref_weight_importance = torch.zeros(ref_weight_shape)
+        assert torch.allclose(sparsifier.weight_importance,
+                              ref_weight_importance)
 
+        if module.bias is not None:
+            assert isinstance(sparsifier.bias_importance, CompressionParameter)
+            ref_bias_importance = torch.zeros([ref_weight_importance.shape[0]])
+            assert torch.allclose(sparsifier.bias_importance, ref_bias_importance)
 
-@ pytest.mark.parametrize('desc', desc_wrong_sparse_structures.values(),
-                          ids=desc_wrong_sparse_structures.keys())
-def test_error_on_wrong_sparse_structure_by_scopes(desc: dict):
-    recipe = BertRunRecipe.from_default(sparse_structure_by_scopes=desc['sparse_structure_by_scopes'])
-    with pytest.raises(desc['error'], match=desc['match']):
-        create_compressed_model(recipe.model, recipe.nncf_config, dump_graphs=False)
+    @pytest.mark.parametrize('sparse_structure_by_scopes', desc_sparse_structures.values(),
+                             ids=desc_sparse_structures.keys())
+    @pytest.mark.parametrize('recipe', [
+        BertRunRecipe.from_default(hidden_size=4, intermediate_size=6),
+        BertRunRecipe.from_default(hidden_size=4, intermediate_size=6, ffn_bias=False),
+        SwinRunRecipe.from_default(depths=[1, 1], num_heads=[2, 4], mlp_ratio=1.5, qkv_bias=False)
+    ], ids=['bert', 'bert_no_ffn_bias', 'swin_no_qkv_bias'])
+    def test_can_create_movement_sparsity_layers(self, sparse_structure_by_scopes, recipe: BaseMockRunRecipe):
+        recipe.set('sparse_structure_by_scopes', sparse_structure_by_scopes)
+        compression_ctrl, compressed_model = create_compressed_model(recipe.model,
+                                                                     recipe.nncf_config,
+                                                                     dump_graphs=False)
+        assert isinstance(compression_ctrl, MovementSparsityController)
+        assert isinstance(compression_ctrl.scheduler, MovementPolynomialThresholdScheduler)
 
+        configs = recipe.get('sparse_structure_by_scopes')
+        sparse_configs_by_scopes = [SparseConfigByScope.from_config(c) for c in configs]
+        for scope, module in compressed_model.get_nncf_modules().items():
+            if not hasattr(module, 'pre_ops'):
+                continue
+            count_movement_op = 0
+            for op in module.pre_ops.values():
+                if isinstance(op, UpdateWeightAndBias) and isinstance(op.operand, MovementSparsifier):
+                    count_movement_op += 1
+                    sparse_config = SparseConfig(SparseStructure.FINE, (1, 1))
+                    for sparse_config_by_scope in sparse_configs_by_scopes:
+                        if matches_any(str(scope), sparse_config_by_scope.target_scopes):
+                            sparse_config = sparse_config_by_scope.sparse_config
+                            break
+                    self.check_sparsified_layer_mode(op.operand, module, sparse_config)
+            if should_consider_scope(str(scope), recipe.get('ignored_scopes')) and \
+                    isinstance(module, tuple(SUPPORTED_NNCF_MODULES)):
+                assert count_movement_op == 1
+            else:
+                assert count_movement_op == 0
 
-@pytest.mark.parametrize('recipe', [
-    Conv2dRunRecipe.from_default(),
-    LinearRunRecipe.from_default(ignored_scopes=['{re}model'])
-])
-def test_error_on_no_supported_layers(recipe: BaseMockRunRecipe):
-    with pytest.raises(RuntimeError, match='No sparsifiable layer'):
-        create_compressed_model(recipe.model, recipe.nncf_config, dump_graphs=False)
+    @pytest.mark.parametrize('desc', desc_improper_sparse_structures.values(),
+                             ids=desc_improper_sparse_structures.keys())
+    def test_error_on_wrong_sparse_structure_by_scopes(self, desc: dict):
+        recipe = BertRunRecipe.from_default(sparse_structure_by_scopes=desc['sparse_structure_by_scopes'])
+        with pytest.raises(desc['error'], match=desc['match']):
+            create_compressed_model(recipe.model, recipe.nncf_config, dump_graphs=False)
 
+    @pytest.mark.parametrize('recipe', [
+        Conv2dRunRecipe.from_default(),
+        LinearRunRecipe.from_default(ignored_scopes=['{re}model'])
+    ])
+    def test_error_on_no_supported_layers(self, recipe: BaseMockRunRecipe):
+        with pytest.raises(RuntimeError, match='No sparsifiable layer'):
+            create_compressed_model(recipe.model, recipe.nncf_config, dump_graphs=False)
 
-@pytest.mark.parametrize('enable_structured_masking', [True, False])
-@pytest.mark.parametrize('run_recipe_cls',
-                         [BertRunRecipe, Wav2Vec2RunRecipe, SwinRunRecipe, LinearRunRecipe])
-def test_can_create_structured_mask_handler_if_supported(enable_structured_masking: bool,
-                                                         run_recipe_cls: BaseMockRunRecipe):
-    recipe = run_recipe_cls.from_default(enable_structured_masking=enable_structured_masking)
-    if enable_structured_masking is True:
-        if recipe.supports_structured_masking:
+    @pytest.mark.parametrize('enable_structured_masking', [True, False])
+    @pytest.mark.parametrize('run_recipe_cls',
+                             [BertRunRecipe, Wav2Vec2RunRecipe, SwinRunRecipe, LinearRunRecipe])
+    def test_can_create_structured_mask_handler_if_supported(self, enable_structured_masking: bool,
+                                                             run_recipe_cls: BaseMockRunRecipe):
+        recipe = run_recipe_cls.from_default(enable_structured_masking=enable_structured_masking)
+        if enable_structured_masking is True:
+            if recipe.supports_structured_masking:
+                compression_ctrl, _ = create_compressed_model(recipe.model,
+                                                              recipe.nncf_config,
+                                                              dump_graphs=False)
+                assert hasattr(compression_ctrl, '_structured_mask_handler')
+                handler = getattr(compression_ctrl, '_structured_mask_handler')
+                assert isinstance(handler, StructuredMaskHandler)
+                assert isinstance(handler.strategy, STRUCTURED_MASK_STRATEGY.get(recipe.model_family))
+            else:
+                with pytest.raises(RuntimeError, match=r'no supported model'):
+                    create_compressed_model(recipe.model, recipe.nncf_config, dump_graphs=False)
+        else:
             compression_ctrl, _ = create_compressed_model(recipe.model,
                                                           recipe.nncf_config,
                                                           dump_graphs=False)
-            assert hasattr(compression_ctrl, '_structured_mask_handler')
-            handler = getattr(compression_ctrl, '_structured_mask_handler')
-            assert isinstance(handler, StructuredMaskHandler)
-            assert isinstance(handler.strategy, STRUCTURED_MASK_STRATEGY.get(recipe.model_family))
-        else:
-            with pytest.raises(RuntimeError, match=r'no supported model'):
-                create_compressed_model(recipe.model, recipe.nncf_config, dump_graphs=False)
-    else:
+            assert (not hasattr(compression_ctrl, '_structured_mask_handler')
+                    ) or getattr(compression_ctrl, '_structured_mask_handler') is None
+
+
+class TestControllerStats:
+    def test_calculate_sparsity(self):
+        recipe = Conv2dPlusLinearRunrecipe.from_default()
+        model = recipe.model
+        for p in model.parameters():
+            torch.nn.init.constant_(p, 1.)
+        conv_numel, linear_numel = 56, 6
+        compression_ctrl, _ = create_compressed_model(model,
+                                                      recipe.nncf_config,
+                                                      dump_graphs=False)
+        minfo = compression_ctrl.sparsified_module_info[0]
+        initialize_sparsifer_parameters(minfo.operand, -1, 1)
+        # initialized importance score for weight: [-1, -0.33, 0.33, 1], bias: [-1, 1]
+        for threshold, ref_num_zeros in zip([-2, -0.5, 0, 0.5, 2], [0, 2, 3, 4, 4, 6]):
+            minfo.operand.importance_threshold = threshold
+            minfo.operand(minfo.module.weight, minfo.module.bias)  # update binary_mask
+            stat = compression_ctrl.statistics().movement_sparsity.model_statistics
+            assert stat.sparsity_level == ref_num_zeros / (conv_numel + linear_numel)
+            assert stat.sparsity_level_for_layers == ref_num_zeros / linear_numel
+
+    @pytest.mark.parametrize(('warmup_start_epoch', 'warmup_end_epoch'),
+                             [(1, 2), (0, 1), (2, 3), (2, 5)])
+    def test_importance_threshold_and_regularization_factor_range(self, tmp_path,
+                                                                  warmup_start_epoch: int,
+                                                                  warmup_end_epoch: int):
+        batch_size = 1
+        steps_per_epoch = 2
+        recipe = LinearRunRecipe.from_default(warmup_start_epoch=warmup_start_epoch,
+                                              warmup_end_epoch=warmup_end_epoch,
+                                              steps_per_epoch=steps_per_epoch,
+                                              log_dir=tmp_path)
+        compression_ctrl, compressed_model = create_compressed_model(recipe.model,
+                                                                     recipe.nncf_config,
+                                                                     dump_graphs=False)
+        callback = CompressionCallback(compression_ctrl)
+        mock_dataset = recipe.generate_mock_dataset(batch_size * steps_per_epoch)
+        trainer = build_compression_trainer(tmp_path, compression_ctrl, compressed_model,
+                                            train_dataset=mock_dataset,
+                                            callback=callback,
+                                            per_device_train_batch_size=batch_size,
+                                            num_train_epochs=3)
+        trainer.train()
+
+        importance_regularization_factor = recipe.scheduler_params.importance_regularization_factor
+        init_importance_threshold = recipe.scheduler_params.init_importance_threshold
+        final_importance_threshold = recipe.scheduler_params.final_importance_threshold
+        for step, log in callback.get_compression_log().items():
+            # step starts from 1
+            if step <= warmup_start_epoch * steps_per_epoch:
+                assert log[FACTOR_NAME_IN_MOVEMENT_STAT] == approx(0.0)
+                assert log[THRESHOLD_NAME_IN_MOVEMENT_STAT] == approx(init_importance_threshold)
+            elif step > warmup_end_epoch * steps_per_epoch:
+                assert log[FACTOR_NAME_IN_MOVEMENT_STAT] == approx(importance_regularization_factor)
+                assert log[THRESHOLD_NAME_IN_MOVEMENT_STAT] == approx(final_importance_threshold)
+            else:
+                assert 0.0 <= log[FACTOR_NAME_IN_MOVEMENT_STAT] <= importance_regularization_factor + 1e-6
+                assert init_importance_threshold - 1e-6 <= \
+                    log[THRESHOLD_NAME_IN_MOVEMENT_STAT] <= final_importance_threshold + 1e-6
+
+    @pytest.mark.parametrize('enable_structured_masking', [True, False])
+    def test_increasing_sparsity_stats_before_warmup_ends(self, tmp_path, enable_structured_masking: bool):
+        recipe = BertRunRecipe.from_default(hidden_size=4,
+                                            intermediate_size=6,
+                                            enable_structured_masking=enable_structured_masking,
+                                            log_dir=tmp_path)
+        recipe.scheduler_params.steps_per_epoch = 5
+        compression_ctrl, compressed_model = create_compressed_model(recipe.model,
+                                                                     recipe.nncf_config,
+                                                                     dump_graphs=False)
+
+        assert isinstance(compression_ctrl.statistics().movement_sparsity, MovementSparsityStatistics)
+        trainer = build_compression_trainer(tmp_path, compression_ctrl, compressed_model,
+                                            batch_size=4,
+                                            train_dataset=recipe.generate_mock_dataset(20),
+                                            learning_rate=0.10)
+        trainer.train()
+        log_by_step = trainer.compression_callback.get_compression_log()
+        warmup_end_step = recipe.scheduler_params.steps_per_epoch * recipe.scheduler_params.warmup_end_epoch
+
+        for key in [FACTOR_NAME_IN_MOVEMENT_STAT,
+                    THRESHOLD_NAME_IN_MOVEMENT_STAT,
+                    RELA_SPARSITY_NAME_IN_MOVEMENT_STAT,
+                    MODEL_SPARSITY_NAME_IN_MOVEMENT_STAT]:
+            stat = [log[key] for log in log_by_step.values()]
+            assert is_roughly_non_decreasing(stat[:warmup_end_step], atol=1e-2)
+
+    @pytest.mark.parametrize('enable_structured_masking', [True, False])
+    def test_fixed_sparsity_stats_after_warmup_ends(self, tmp_path, enable_structured_masking: bool):
+        recipe = BertRunRecipe.from_default(hidden_size=4,
+                                            intermediate_size=6,
+                                            enable_structured_masking=enable_structured_masking,
+                                            log_dir=tmp_path)
+        recipe.scheduler_params.steps_per_epoch = 5
+        compression_ctrl, compressed_model = create_compressed_model(recipe.model,
+                                                                     recipe.nncf_config,
+                                                                     dump_graphs=False)
+        trainer = build_compression_trainer(tmp_path, compression_ctrl, compressed_model,
+                                            batch_size=4,
+                                            train_dataset=recipe.generate_mock_dataset(20),
+                                            learning_rate=0.10)
+        trainer.train()
+        log_by_step = trainer.compression_callback.get_compression_log()
+        warmup_end_step = recipe.scheduler_params.steps_per_epoch * recipe.scheduler_params.warmup_end_epoch
+
+        for key in [RELA_SPARSITY_NAME_IN_MOVEMENT_STAT,
+                    MODEL_SPARSITY_NAME_IN_MOVEMENT_STAT]:
+            stat = [log[key] for log in log_by_step.values()]
+            if enable_structured_masking is True:
+                assert stat[warmup_end_step - 1] >= stat[warmup_end_step]
+            else:
+                assert stat[warmup_end_step - 1] <= stat[warmup_end_step] + 1e-2
+            assert is_roughly_of_same_value(stat[warmup_end_step:], atol=1e-7)
+
+
+class TestControllerCompressionInfo:
+
+    def test_controller_compression_stage(self):
+        recipe = LinearRunRecipe.from_default(warmup_start_epoch=1,
+                                              warmup_end_epoch=2,
+                                              steps_per_epoch=None)
         compression_ctrl, _ = create_compressed_model(recipe.model,
                                                       recipe.nncf_config,
                                                       dump_graphs=False)
-        assert (not hasattr(compression_ctrl, '_structured_mask_handler')
-                ) or getattr(compression_ctrl, '_structured_mask_handler') is None
+        assert compression_ctrl.compression_stage() is CompressionStage.UNCOMPRESSED
+        # epoch 0
+        compression_ctrl.scheduler.epoch_step()
+        assert compression_ctrl.compression_stage() is CompressionStage.UNCOMPRESSED
+        compression_ctrl.scheduler.step()
+        assert compression_ctrl.compression_stage() is CompressionStage.UNCOMPRESSED
+        # epoch 1
+        compression_ctrl.scheduler.epoch_step()
+        assert compression_ctrl.compression_stage() is CompressionStage.PARTIALLY_COMPRESSED
+        compression_ctrl.scheduler.step()
+        assert compression_ctrl.compression_stage() is CompressionStage.PARTIALLY_COMPRESSED
+        # epoch 2 & 3
+        for _ in range(2, 4):
+            compression_ctrl.scheduler.epoch_step()
+            assert compression_ctrl.compression_stage() is CompressionStage.FULLY_COMPRESSED
+            compression_ctrl.scheduler.step()
+            assert compression_ctrl.compression_stage() is CompressionStage.FULLY_COMPRESSED
+
+    def test_controller_compression_ratio(self, mocker):
+        recipe = LinearRunRecipe.from_default()
+        compression_ctrl, _ = create_compressed_model(recipe.model,
+                                                      recipe.nncf_config,
+                                                      dump_graphs=False)
+        mock_stat = NNCFStatistics()
+        mock_stat.register('movement_sparsity',
+                           MovementSparsityStatistics(mocker.Mock(sparsity_level=0.6), 1, 1))
+        stat = mocker.patch.object(compression_ctrl, 'statistics', mocker.Mock(return_value=mock_stat))
+        assert stat.is_called_once()
+        assert compression_ctrl.compression_rate == 0.6
 
 
-def calc_linear_layer_equiv_weight_bias(module: NNCFLinear):
-    in_features = module.in_features
-    zero_input = torch.zeros((1, in_features))
-    eye_input = torch.eye(in_features)
-    with torch.no_grad():
-        bias = module(zero_input)
-        weight = module(eye_input) - bias
-    return weight.T, bias
+class TestControllerONNXExport:
+
+    def check_onnx_has_sparsified_param(self, compressed_model, compression_ctrl, onnx_path):
+        ref_params = {}
+        module_vs_name_map = {module: name for name, module in compressed_model.named_modules()}
+        for minfo in compression_ctrl.sparsified_module_info:
+            with torch.no_grad():
+                weight, bias = minfo.operand(minfo.module.weight, minfo.module.bias)
+            name = module_vs_name_map[minfo.module]
+            ref_params[name + '.weight'] = weight
+            if bias is not None:
+                ref_params[name + '.bias'] = bias
+
+        # temporary solution to preserve param names in onnx model
+        with patch("torch.onnx.export", wraps=partial(torch.onnx.export, do_constant_folding=False)):
+            compression_ctrl.export_model(onnx_path)
+        onnx_model = onnx.load(onnx_path)
+
+        for t in onnx_model.graph.initializer:
+            if t.name in ref_params:
+                ref_param = ref_params.pop(t.name).numpy()
+                onnx_param = numpy_helper.to_array(t)
+                assert np.allclose(ref_param, onnx_param)
+        assert len(ref_params) == 0
+
+    @pytest.mark.parametrize('recipe', [
+        LinearRunRecipe.from_default(),
+        LinearRunRecipe.from_default(bias=False)
+    ])
+    def test_export_onnx_has_sparsified_param(self, tmp_path: Path, recipe: BaseMockRunRecipe):
+        compression_ctrl, compressed_model = create_compressed_model(recipe.model,
+                                                                     recipe.nncf_config,
+                                                                     dump_graphs=False)
+        for minfo in compression_ctrl.sparsified_module_info:
+            initialize_sparsifer_parameters(minfo.operand)
+        for threshold in [-0.5, 0.5]:
+            compressed_model.train()
+            for minfo in compression_ctrl.sparsified_module_info:
+                minfo.operand.importance_threshold = threshold
+            onnx_path = tmp_path / f'model_thres{threshold}.onnx'
+            self.check_onnx_has_sparsified_param(compressed_model, compression_ctrl, onnx_path)
 
 
-@pytest.mark.parametrize("sparse_structure_by_scopes", [
-    [{"mode": "block", "sparse_factors": [2, 2], "target_scopes": "{re}model"}],
-    [{"mode": "per_dim", "axis": 0, "target_scopes": "{re}model"}],
-    [{"mode": "per_dim", "axis": 1, "target_scopes": "{re}model"}],
-    [{"mode": "fine", "sparse_factors": [1, 1], "target_scopes": "{re}model"}],
-])
-@pytest.mark.parametrize('model_bias', [True, False])
-def test_layer_actual_behavior_matches_sparsifer_mask(sparse_structure_by_scopes, model_bias: bool):
-    recipe = LinearRunRecipe.from_default(bias=model_bias,
-                                          sparse_structure_by_scopes=sparse_structure_by_scopes)
-    compression_ctrl, _ = create_compressed_model(recipe.model,
-                                                  recipe.nncf_config,
-                                                  dump_graphs=False)
-    module_info = compression_ctrl.sparsified_module_info[0]
-    operand = module_info.operand
-    initialize_sparsifer_parameters(operand)
-    operand.importance_threshold = 0.
-    ori_weight, ori_bias = module_info.module.weight, module_info.module.bias
-    masked_weight, masked_bias = operand(ori_weight, ori_bias)  # sparsifier forward function
-    equiv_weight, equiv_bias = calc_linear_layer_equiv_weight_bias(module_info.module)
-    assert torch.allclose(equiv_weight, masked_weight)
-    if module_info.module.bias is not None:
-        assert torch.allclose(equiv_bias, masked_bias)
-    else:
-        assert masked_bias is None
-        assert torch.allclose(equiv_bias, torch.zeros_like(equiv_bias))
-
-
-desc_test_controller_structured_mask_filling = {
+desc_test_controller_structured_mask_resolution = {
     "prune_1head_1channel": dict(
         unstructured_binary_mask=TransformerBlockItemOrderedDict(
             mhsa_q=dict(weight=ensure_tensor([[1, 0, 0, 0], [1, 0, 0, 0], [0, 0, 0, 0], [0, 0, 0, 0]]),
@@ -360,330 +519,137 @@ desc_test_controller_structured_mask_filling = {
 }
 
 
-@pytest.mark.parametrize('desc', desc_test_controller_structured_mask_filling.values(),
-                         ids=desc_test_controller_structured_mask_filling.keys())
-def test_controller_structured_mask_filling(tmp_path: Path, desc: dict):
-    mhsa_qkv_bias = (desc['unstructured_binary_mask']['mhsa_q']['bias'] is not None)
-    mhsa_o_bias = (desc['unstructured_binary_mask']['mhsa_o']['bias'] is not None)
-    ffn_bias = (desc['unstructured_binary_mask']['ffn_i']['bias'] is not None)
-    recipe = BertRunRecipe.from_default(log_dir=tmp_path, mhsa_qkv_bias=mhsa_qkv_bias,
-                                        mhsa_o_bias=mhsa_o_bias, ffn_bias=ffn_bias)
-    compression_ctrl, compressed_model = create_compressed_model(recipe.model,
-                                                                 recipe.nncf_config,
-                                                                 dump_graphs=False)
-    compressed_model.train()
-    module_dict = recipe.get_nncf_modules_in_transformer_block_order(compressed_model)[0]
-    module_vs_operand_map = {minfo.module: minfo.operand for minfo in compression_ctrl.sparsified_module_info}
-    for unstructured_binary_mask, module in zip(desc['unstructured_binary_mask'].values(), module_dict.values()):
-        operand = module_vs_operand_map[module]
-        operand.weight_ctx.binary_mask = unstructured_binary_mask['weight']
-        assert (operand.prune_bias is False and unstructured_binary_mask['bias'] is None) or \
-            (operand.prune_bias is True and unstructured_binary_mask['bias'] is not None)
-        if operand.prune_bias:
-            operand.bias_ctx.binary_mask = unstructured_binary_mask['bias']
+class TestComponentUpdateInTraining:
 
-    compression_ctrl.reset_independent_structured_mask()
-    compression_ctrl.resolve_structured_mask()
-    compression_ctrl.populate_structured_mask()
-
-    for ref_structured_binary_mask, module in zip(desc['ref_structured_binary_mask'].values(), module_dict.values()):
-        operand = module_vs_operand_map[module]
-        assert torch.allclose(operand.weight_ctx.binary_mask, ref_structured_binary_mask['weight'])
-        if operand.prune_bias:
-            assert torch.allclose(operand.bias_ctx.binary_mask, ref_structured_binary_mask['bias'])
-
-
-@ pytest.mark.parametrize(('warmup_start_epoch', 'warmup_end_epoch'),
-                          [(1, 2), (0, 1), (2, 3), (2, 5)])
-def test_importance_threshold_and_regularization_factor_range(tmp_path,
-                                                              warmup_start_epoch: int,
-                                                              warmup_end_epoch: int):
-    batch_size = 1
-    steps_per_epoch = 2
-    recipe = LinearRunRecipe.from_default(warmup_start_epoch=warmup_start_epoch,
-                                          warmup_end_epoch=warmup_end_epoch,
-                                          steps_per_epoch=steps_per_epoch,
-                                          log_dir=tmp_path)
-    compression_ctrl, compressed_model = create_compressed_model(recipe.model,
-                                                                 recipe.nncf_config,
-                                                                 dump_graphs=False)
-    callback = CompressionCallback(compression_ctrl)
-    mock_dataset = recipe.generate_mock_dataset(batch_size * steps_per_epoch)
-    trainer = build_compression_trainer(tmp_path, compression_ctrl, compressed_model,
-                                        train_dataset=mock_dataset,
-                                        callback=callback,
-                                        per_device_train_batch_size=batch_size,
-                                        num_train_epochs=3)
-    trainer.train()
-
-    importance_regularization_factor = recipe.scheduler_params.importance_regularization_factor
-    init_importance_threshold = recipe.scheduler_params.init_importance_threshold
-    final_importance_threshold = recipe.scheduler_params.final_importance_threshold
-    for step, log in callback.get_compression_log().items():
-        # step starts from 1
-        if step <= warmup_start_epoch * steps_per_epoch:
-            assert log[FACTOR_NAME_IN_MOVEMENT_STAT] == approx(0.0)
-            assert log[THRESHOLD_NAME_IN_MOVEMENT_STAT] == approx(init_importance_threshold)
-        elif step > warmup_end_epoch * steps_per_epoch:
-            assert log[FACTOR_NAME_IN_MOVEMENT_STAT] == approx(importance_regularization_factor)
-            assert log[THRESHOLD_NAME_IN_MOVEMENT_STAT] == approx(final_importance_threshold)
-        else:
-            assert 0.0 <= log[FACTOR_NAME_IN_MOVEMENT_STAT] <= importance_regularization_factor + 1e-6
-            assert init_importance_threshold - 1e-6 <= \
-                log[THRESHOLD_NAME_IN_MOVEMENT_STAT] <= final_importance_threshold + 1e-6
-
-
-def test_importance_score_update(tmp_path):
-    batch_size = 2
-    steps_per_epoch = 2
-    recipe = LinearRunRecipe.from_default(steps_per_epoch=steps_per_epoch, log_dir=tmp_path)
-    compression_ctrl, compressed_model = create_compressed_model(recipe.model,
-                                                                 recipe.nncf_config,
-                                                                 dump_graphs=False)
-
-    class CheckImportanceCallback(CompressionCallback):
-        def on_step_end(self, args: TrainingArguments, state: TrainerState, control: TrainerControl, **kwargs):
-            super().on_step_end(args, state, control, **kwargs)
-            for sparse_module in self.compression_ctrl.sparsified_module_info:
-                sparsifier = sparse_module.operand
-                ref_requires_grad = state.epoch <= recipe.scheduler_params.warmup_end_epoch
-                assert torch.count_nonzero(sparsifier.weight_importance) > 0
-                assert sparsifier.weight_importance.requires_grad is ref_requires_grad
-                if sparsifier.prune_bias is not None:
-                    assert torch.count_nonzero(sparsifier.bias_importance) > 0
-                    assert sparsifier.bias_importance.requires_grad is ref_requires_grad
-
-    callback = CheckImportanceCallback(compression_ctrl)
-    mock_dataset = recipe.generate_mock_dataset(steps_per_epoch * batch_size)
-    trainer = build_compression_trainer(tmp_path, compression_ctrl, compressed_model,
-                                        train_dataset=mock_dataset, callback=callback,
-                                        batch_size=batch_size)
-    trainer.train()
-
-
-def test_compression_loss_update(tmp_path):
-    steps_per_epoch = 2
-    recipe = LinearRunRecipe.from_default(steps_per_epoch=steps_per_epoch, log_dir=tmp_path)
-    compression_ctrl, compressed_model = create_compressed_model(recipe.model,
-                                                                 recipe.nncf_config,
-                                                                 dump_graphs=False)
-
-    class CheckCompressionLossCallback(CompressionCallback):
-        def on_step_end(self, args: TrainingArguments, state: TrainerState, control: TrainerControl, **kwargs):
-            super().on_step_end(args, state, control, **kwargs)
-            assert isinstance(self.compression_ctrl.loss, ImportanceLoss)
-            for layer in self.compression_ctrl.loss.sparse_layers:
-                assert isinstance(layer, MovementSparsifier)
-            # check gradient
-            loss_compress = self.compression_ctrl.loss()
-            assert loss_compress.requires_grad is (state.epoch <= recipe.scheduler_params.warmup_end_epoch)
-            # check value
-            if state.epoch <= recipe.scheduler_params.warmup_start_epoch:
-                assert not torch.is_nonzero(loss_compress)
-            elif self.compression_ctrl.scheduler.current_importance_lambda > 0.:
-                assert loss_compress > 0.
-
-    trainer = build_compression_trainer(tmp_path, compression_ctrl, compressed_model,
-                                        train_dataset=recipe.generate_mock_dataset(steps_per_epoch),
-                                        callback=CheckCompressionLossCallback(compression_ctrl))
-    trainer.train()
-
-
-@pytest.mark.parametrize('recipe', [
-    LinearRunRecipe.from_default(bias=True),
-    LinearRunRecipe.from_default(bias=False),
-    SwinRunRecipe.from_default(),
-])
-def test_binary_mask_update(tmp_path, recipe: BaseMockRunRecipe):
-    steps_per_epoch = 5
-    recipe.scheduler_params.steps_per_epoch = steps_per_epoch
-    recipe.set_log_dir(tmp_path)
-    compression_ctrl, compressed_model = create_compressed_model(recipe.model,
-                                                                 recipe.nncf_config,
-                                                                 dump_graphs=False)
-
-    class CheckBinaryMaskCallback(CompressionCallback):
-        def on_step_end(self, args: TrainingArguments, state: TrainerState, control: TrainerControl, **kwargs):
-            super().on_step_end(args, state, control, **kwargs)
-            if state.epoch <= recipe.scheduler_params.warmup_start_epoch:
-                for minfo in self.compression_ctrl.sparsified_module_info:
-                    weight_mask = minfo.operand.weight_ctx.binary_mask
-                    ref_weight_mask = torch.ones_like(minfo.module.weight.data)
-                    assert torch.allclose(weight_mask, ref_weight_mask)
-                    if minfo.operand.prune_bias:
-                        bias_mask = minfo.operand.bias_ctx.binary_mask
-                        ref_bias_mask = torch.ones_like(minfo.module.bias.data)
-                        assert torch.allclose(bias_mask, ref_bias_mask)
-            elif state.epoch >= recipe.scheduler_params.warmup_end_epoch:
-                count_sparse_modules = 0
-                for minfo in self.compression_ctrl.sparsified_module_info:
-                    weight_mask = minfo.operand.weight_ctx.binary_mask
-                    if torch.mean(weight_mask) < 1:
-                        count_sparse_modules += 1
-                    if minfo.operand.prune_bias:
-                        bias_mask = minfo.operand.bias_ctx.binary_mask
-                        if torch.mean(bias_mask) < 1.:
-                            count_sparse_modules += 1
-                assert count_sparse_modules > 0
-
-    trainer = build_compression_trainer(tmp_path, compression_ctrl, compressed_model,
-                                        train_dataset=recipe.generate_mock_dataset(steps_per_epoch),
-                                        callback=CheckBinaryMaskCallback(compression_ctrl))
-    trainer.train()
-
-
-@pytest.mark.parametrize('enable_structured_masking', [True, False])
-def test_increasing_sparsity_stats_before_warmup_ends(tmp_path, enable_structured_masking: bool):
-    recipe = BertRunRecipe.from_default(hidden_size=4,
-                                        intermediate_size=6,
-                                        enable_structured_masking=enable_structured_masking,
-                                        log_dir=tmp_path)
-    recipe.scheduler_params.steps_per_epoch = 5
-    compression_ctrl, compressed_model = create_compressed_model(recipe.model,
-                                                                 recipe.nncf_config,
-                                                                 dump_graphs=False)
-
-    assert isinstance(compression_ctrl.statistics().movement_sparsity, MovementSparsityStatistics)
-    trainer = build_compression_trainer(tmp_path, compression_ctrl, compressed_model,
-                                        batch_size=4,
-                                        train_dataset=recipe.generate_mock_dataset(20),
-                                        learning_rate=0.10)
-    trainer.train()
-    log_by_step = trainer.compression_callback.get_compression_log()
-    warmup_end_step = recipe.scheduler_params.steps_per_epoch * recipe.scheduler_params.warmup_end_epoch
-
-    for key in [FACTOR_NAME_IN_MOVEMENT_STAT,
-                THRESHOLD_NAME_IN_MOVEMENT_STAT,
-                RELA_SPARSITY_NAME_IN_MOVEMENT_STAT,
-                MODEL_SPARSITY_NAME_IN_MOVEMENT_STAT]:
-        stat = [log[key] for log in log_by_step.values()]
-        assert is_roughly_non_decreasing(stat[:warmup_end_step], atol=1e-2)
-
-
-@pytest.mark.parametrize('enable_structured_masking', [True, False])
-def test_fixed_sparsity_stats_after_warmup_ends(tmp_path, enable_structured_masking):
-    recipe = BertRunRecipe.from_default(hidden_size=4,
-                                        intermediate_size=6,
-                                        enable_structured_masking=enable_structured_masking,
-                                        log_dir=tmp_path)
-    recipe.scheduler_params.steps_per_epoch = 5
-    compression_ctrl, compressed_model = create_compressed_model(recipe.model,
-                                                                 recipe.nncf_config,
-                                                                 dump_graphs=False)
-    trainer = build_compression_trainer(tmp_path, compression_ctrl, compressed_model,
-                                        batch_size=4,
-                                        train_dataset=recipe.generate_mock_dataset(20),
-                                        learning_rate=0.10)
-    trainer.train()
-    log_by_step = trainer.compression_callback.get_compression_log()
-    warmup_end_step = recipe.scheduler_params.steps_per_epoch * recipe.scheduler_params.warmup_end_epoch
-
-    for key in [RELA_SPARSITY_NAME_IN_MOVEMENT_STAT,
-                MODEL_SPARSITY_NAME_IN_MOVEMENT_STAT]:
-        stat = [log[key] for log in log_by_step.values()]
-        if enable_structured_masking is True:
-            assert stat[warmup_end_step - 1] >= stat[warmup_end_step]
-        else:
-            assert stat[warmup_end_step - 1] <= stat[warmup_end_step] + 1e-2
-        assert is_roughly_of_same_value(stat[warmup_end_step:], atol=1e-7)
-
-
-def check_onnx_has_sparsified_param(compressed_model, compression_ctrl, onnx_path):
-    ref_params = {}
-    module_vs_name_map = {module: name for name, module in compressed_model.named_modules()}
-    for minfo in compression_ctrl.sparsified_module_info:
-        with torch.no_grad():
-            weight, bias = minfo.operand(minfo.module.weight, minfo.module.bias)
-        name = module_vs_name_map[minfo.module]
-        ref_params[name + '.weight'] = weight
-        if bias is not None:
-            ref_params[name + '.bias'] = bias
-
-    # temporary solution to preserve param names in onnx model
-    with patch("torch.onnx.export", wraps=partial(torch.onnx.export, do_constant_folding=False)):
-        compression_ctrl.export_model(onnx_path)
-    onnx_model = onnx.load(onnx_path)
-
-    for t in onnx_model.graph.initializer:
-        if t.name in ref_params:
-            ref_param = ref_params.pop(t.name).numpy()
-            onnx_param = numpy_helper.to_array(t)
-            assert np.allclose(ref_param, onnx_param)
-    assert len(ref_params) == 0
-
-
-@pytest.mark.parametrize('recipe', [
-    LinearRunRecipe.from_default(),
-    LinearRunRecipe.from_default(bias=False)
-])
-def test_export_onnx_has_sparsified_param(tmp_path: Path, recipe: BaseMockRunRecipe):
-    compression_ctrl, compressed_model = create_compressed_model(recipe.model,
-                                                                 recipe.nncf_config,
-                                                                 dump_graphs=False)
-    for minfo in compression_ctrl.sparsified_module_info:
-        initialize_sparsifer_parameters(minfo.operand)
-    for threshold in [-0.5, 0.5]:
+    @pytest.mark.parametrize('desc', desc_test_controller_structured_mask_resolution.values(),
+                             ids=desc_test_controller_structured_mask_resolution.keys())
+    def test_controller_structured_mask_resolution(self, tmp_path: Path, desc: dict):
+        mhsa_qkv_bias = (desc['unstructured_binary_mask']['mhsa_q']['bias'] is not None)
+        mhsa_o_bias = (desc['unstructured_binary_mask']['mhsa_o']['bias'] is not None)
+        ffn_bias = (desc['unstructured_binary_mask']['ffn_i']['bias'] is not None)
+        recipe = BertRunRecipe.from_default(log_dir=tmp_path, mhsa_qkv_bias=mhsa_qkv_bias,
+                                            mhsa_o_bias=mhsa_o_bias, ffn_bias=ffn_bias)
+        compression_ctrl, compressed_model = create_compressed_model(recipe.model,
+                                                                     recipe.nncf_config,
+                                                                     dump_graphs=False)
         compressed_model.train()
-        for minfo in compression_ctrl.sparsified_module_info:
-            minfo.operand.importance_threshold = threshold
-        onnx_path = tmp_path / f'model_thres{threshold}.onnx'
-        check_onnx_has_sparsified_param(compressed_model, compression_ctrl, onnx_path)
+        module_dict = recipe.get_nncf_modules_in_transformer_block_order(compressed_model)[0]
+        module_vs_operand_map = {minfo.module: minfo.operand for minfo in compression_ctrl.sparsified_module_info}
+        for unstructured_binary_mask, module in zip(desc['unstructured_binary_mask'].values(), module_dict.values()):
+            operand = module_vs_operand_map[module]
+            operand.weight_ctx.binary_mask = unstructured_binary_mask['weight']
+            assert (operand.prune_bias is False and unstructured_binary_mask['bias'] is None) or \
+                (operand.prune_bias is True and unstructured_binary_mask['bias'] is not None)
+            if operand.prune_bias:
+                operand.bias_ctx.binary_mask = unstructured_binary_mask['bias']
 
+        compression_ctrl.reset_independent_structured_mask()
+        compression_ctrl.resolve_structured_mask()
+        compression_ctrl.populate_structured_mask()
 
-def test_controller_compression_stage():
-    recipe = LinearRunRecipe.from_default(warmup_start_epoch=1,
-                                          warmup_end_epoch=2,
-                                          steps_per_epoch=None)
-    compression_ctrl, _ = create_compressed_model(recipe.model,
-                                                  recipe.nncf_config,
-                                                  dump_graphs=False)
-    assert compression_ctrl.compression_stage() is CompressionStage.UNCOMPRESSED
-    # epoch 0
-    compression_ctrl.scheduler.epoch_step()
-    assert compression_ctrl.compression_stage() is CompressionStage.UNCOMPRESSED
-    compression_ctrl.scheduler.step()
-    assert compression_ctrl.compression_stage() is CompressionStage.UNCOMPRESSED
-    # epoch 1
-    compression_ctrl.scheduler.epoch_step()
-    assert compression_ctrl.compression_stage() is CompressionStage.PARTIALLY_COMPRESSED
-    compression_ctrl.scheduler.step()
-    assert compression_ctrl.compression_stage() is CompressionStage.PARTIALLY_COMPRESSED
-    # epoch 2 & 3
-    for _ in range(2, 4):
-        compression_ctrl.scheduler.epoch_step()
-        assert compression_ctrl.compression_stage() is CompressionStage.FULLY_COMPRESSED
-        compression_ctrl.scheduler.step()
-        assert compression_ctrl.compression_stage() is CompressionStage.FULLY_COMPRESSED
+        for ref_structured_binary_mask, module in zip(
+                desc['ref_structured_binary_mask'].values(),
+                module_dict.values()):
+            operand = module_vs_operand_map[module]
+            assert torch.allclose(operand.weight_ctx.binary_mask, ref_structured_binary_mask['weight'])
+            if operand.prune_bias:
+                assert torch.allclose(operand.bias_ctx.binary_mask, ref_structured_binary_mask['bias'])
 
+    def test_importance_score_update(self, tmp_path):
+        batch_size = 2
+        steps_per_epoch = 2
+        recipe = LinearRunRecipe.from_default(steps_per_epoch=steps_per_epoch, log_dir=tmp_path)
+        compression_ctrl, compressed_model = create_compressed_model(recipe.model,
+                                                                     recipe.nncf_config,
+                                                                     dump_graphs=False)
 
-def test_controller_calculate_movement_stat():
-    recipe = Conv2dPlusLinearRunrecipe.from_default()
-    model = recipe.model
-    for p in model.parameters():
-        torch.nn.init.constant_(p, 1.)
-    conv_numel, linear_numel = 56, 6
-    compression_ctrl, _ = create_compressed_model(model,
-                                                  recipe.nncf_config,
-                                                  dump_graphs=False)
-    minfo = compression_ctrl.sparsified_module_info[0]
-    initialize_sparsifer_parameters(minfo.operand, -1, 1)
-    # initialized importance score for weight: [-1, -0.33, 0.33, 1], bias: [-1, 1]
-    for threshold, ref_num_zeros in zip([-2, -0.5, 0, 0.5, 2], [0, 2, 3, 4, 4, 6]):
-        minfo.operand.importance_threshold = threshold
-        minfo.operand(minfo.module.weight, minfo.module.bias)  # update binary_mask
-        stat = compression_ctrl.statistics().movement_sparsity.model_statistics
-        assert stat.sparsity_level == ref_num_zeros / (conv_numel + linear_numel)
-        assert stat.sparsity_level_for_layers == ref_num_zeros / linear_numel
+        class CheckImportanceCallback(CompressionCallback):
+            def on_step_end(self, args: TrainingArguments, state: TrainerState, control: TrainerControl, **kwargs):
+                super().on_step_end(args, state, control, **kwargs)
+                for sparse_module in self.compression_ctrl.sparsified_module_info:
+                    sparsifier = sparse_module.operand
+                    ref_requires_grad = state.epoch <= recipe.scheduler_params.warmup_end_epoch
+                    assert torch.count_nonzero(sparsifier.weight_importance) > 0
+                    assert sparsifier.weight_importance.requires_grad is ref_requires_grad
+                    if sparsifier.prune_bias is not None:
+                        assert torch.count_nonzero(sparsifier.bias_importance) > 0
+                        assert sparsifier.bias_importance.requires_grad is ref_requires_grad
 
+        callback = CheckImportanceCallback(compression_ctrl)
+        mock_dataset = recipe.generate_mock_dataset(steps_per_epoch * batch_size)
+        trainer = build_compression_trainer(tmp_path, compression_ctrl, compressed_model,
+                                            train_dataset=mock_dataset, callback=callback,
+                                            batch_size=batch_size)
+        trainer.train()
 
-def test_controller_compression_ratio(mocker):
-    recipe = LinearRunRecipe.from_default()
-    compression_ctrl, _ = create_compressed_model(recipe.model,
-                                                  recipe.nncf_config,
-                                                  dump_graphs=False)
-    mock_stat = NNCFStatistics()
-    mock_stat.register('movement_sparsity',
-                       MovementSparsityStatistics(mocker.Mock(sparsity_level=0.6), 1, 1))
-    stat = mocker.patch.object(compression_ctrl, 'statistics', mocker.Mock(return_value=mock_stat))
-    assert stat.is_called_once()
-    assert compression_ctrl.compression_rate == 0.6
+    def test_compression_loss_update(self, tmp_path):
+        steps_per_epoch = 2
+        recipe = LinearRunRecipe.from_default(steps_per_epoch=steps_per_epoch, log_dir=tmp_path)
+        compression_ctrl, compressed_model = create_compressed_model(recipe.model,
+                                                                     recipe.nncf_config,
+                                                                     dump_graphs=False)
+
+        class CheckCompressionLossCallback(CompressionCallback):
+            def on_step_end(self, args: TrainingArguments, state: TrainerState, control: TrainerControl, **kwargs):
+                super().on_step_end(args, state, control, **kwargs)
+                assert isinstance(self.compression_ctrl.loss, ImportanceLoss)
+                for layer in self.compression_ctrl.loss.sparse_layers:
+                    assert isinstance(layer, MovementSparsifier)
+                loss = self.compression_ctrl.loss()
+                # check gradient
+                if recipe.scheduler_params.warmup_start_epoch < state.epoch and \
+                        state.epoch <= recipe.scheduler_params.warmup_end_epoch and \
+                        self.compression_ctrl.scheduler.current_importance_regularization_factor > 0:
+                    assert isinstance(loss, torch.Tensor)
+                    assert loss.requires_grad is True
+                    assert loss > 0.
+                else:
+                    assert (isinstance(loss, float) and loss == 0.) or \
+                        (isinstance(loss, torch.Tensor) and not loss.is_nonzero())
+
+        trainer = build_compression_trainer(tmp_path, compression_ctrl, compressed_model,
+                                            train_dataset=recipe.generate_mock_dataset(steps_per_epoch),
+                                            callback=CheckCompressionLossCallback(compression_ctrl))
+        trainer.train()
+
+    @pytest.mark.parametrize('recipe', [
+        LinearRunRecipe.from_default(bias=True),
+        LinearRunRecipe.from_default(bias=False),
+        SwinRunRecipe.from_default(),
+    ])
+    def test_binary_mask_update(self, tmp_path, recipe: BaseMockRunRecipe):
+        steps_per_epoch = 5
+        recipe.scheduler_params.steps_per_epoch = steps_per_epoch
+        recipe.set_log_dir(tmp_path)
+        compression_ctrl, compressed_model = create_compressed_model(recipe.model,
+                                                                     recipe.nncf_config,
+                                                                     dump_graphs=False)
+
+        class CheckBinaryMaskCallback(CompressionCallback):
+            def on_step_end(self, args: TrainingArguments, state: TrainerState, control: TrainerControl, **kwargs):
+                super().on_step_end(args, state, control, **kwargs)
+                if state.epoch <= recipe.scheduler_params.warmup_start_epoch:
+                    for minfo in self.compression_ctrl.sparsified_module_info:
+                        weight_mask = minfo.operand.weight_ctx.binary_mask
+                        ref_weight_mask = torch.ones_like(minfo.module.weight.data)
+                        assert torch.allclose(weight_mask, ref_weight_mask)
+                        if minfo.operand.prune_bias:
+                            bias_mask = minfo.operand.bias_ctx.binary_mask
+                            ref_bias_mask = torch.ones_like(minfo.module.bias.data)
+                            assert torch.allclose(bias_mask, ref_bias_mask)
+                elif state.epoch >= recipe.scheduler_params.warmup_end_epoch:
+                    count_sparse_modules = 0
+                    for minfo in self.compression_ctrl.sparsified_module_info:
+                        weight_mask = minfo.operand.weight_ctx.binary_mask
+                        if torch.mean(weight_mask) < 1:
+                            count_sparse_modules += 1
+                        if minfo.operand.prune_bias:
+                            bias_mask = minfo.operand.bias_ctx.binary_mask
+                            if torch.mean(bias_mask) < 1.:
+                                count_sparse_modules += 1
+                    assert count_sparse_modules > 0
+
+        trainer = build_compression_trainer(tmp_path, compression_ctrl, compressed_model,
+                                            train_dataset=recipe.generate_mock_dataset(steps_per_epoch),
+                                            callback=CheckBinaryMaskCallback(compression_ctrl))
+        trainer.train()

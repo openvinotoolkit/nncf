@@ -10,27 +10,27 @@
  See the License for the specific language governing permissions and
  limitations under the License.
 """
-from typing import List, Optional
+from typing import List
 
-
-from nncf.common.schedulers import BaseCompressionScheduler
+from nncf.experimental.torch.sparsity.movement.layers import MovementSparsifier
 from nncf.torch.compression_method_api import PTCompressionLoss
 
 
 class ImportanceLoss(PTCompressionLoss):
-    def __init__(self, sparse_layers: Optional[List] = None,
-                 penalty_scheduler: Optional[BaseCompressionScheduler] = None):
+    def __init__(self, sparse_layers: List[MovementSparsifier]):
         super().__init__()
         self.sparse_layers = sparse_layers
-        self.penalty_scheduler = penalty_scheduler
+        self._disabled = False
+
+    def disable(self):
+        self._disabled = True
 
     def calculate(self):
-        if not self.sparse_layers:
+        if not self.sparse_layers or self._disabled:
             return 0.
         loss = self.sparse_layers[0].loss()
+        n = 1
         for sparse_layer in self.sparse_layers[1:]:
-            loss = loss + sparse_layer.loss()
-        multiplier = 1.0
-        if self.penalty_scheduler is not None:
-            multiplier = self.penalty_scheduler.current_importance_lambda
-        return loss / len(self.sparse_layers) * multiplier
+            loss = loss * (n / (n + 1)) + sparse_layer.loss() / (n + 1)  # avoid overflow
+            n += 1
+        return loss

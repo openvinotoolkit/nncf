@@ -52,7 +52,7 @@ class MovementPolynomialThresholdScheduler(BaseCompressionScheduler):
         self.final_importance_threshold: float = params.get('final_importance_threshold', 0.)
         self.warmup_start_epoch: int = params.get('warmup_start_epoch', 1)
         self.warmup_end_epoch: int = params.get('warmup_end_epoch', 2)
-        self.importance_target_lambda: float = params.get('importance_regularization_factor', 0.1)
+        self.final_importance_regularization_factor: float = params.get('importance_regularization_factor', 0.1)
         self.enable_structured_masking: bool = params.get('enable_structured_masking', True)
         self._steps_per_epoch = params.get('steps_per_epoch', None)
 
@@ -74,13 +74,13 @@ class MovementPolynomialThresholdScheduler(BaseCompressionScheduler):
             power=self.power,
             concave=True
         )
-        self._cached_importance_threshold = None
-        self._is_importance_frozen = False
+        self._cached_importance_threshold_lambda = None
+        self._is_controller_frozen = False
         self._steps_in_current_epoch = 0
         self._should_skip = False
 
     @property
-    def current_stage(self):
+    def current_stage(self) -> MovementSchedulerStage:
         if self._steps_per_epoch is None or self.current_step < self.warmup_start_epoch * self._steps_per_epoch:
             return MovementSchedulerStage.PRE_WARMUP
         if self.current_step < self.warmup_end_epoch * self._steps_per_epoch:
@@ -88,13 +88,13 @@ class MovementPolynomialThresholdScheduler(BaseCompressionScheduler):
         return MovementSchedulerStage.POST_WARMUP
 
     @property
-    def current_importance_lambda(self) -> float:
+    def current_importance_regularization_factor(self) -> float:
         current_stage = self.current_stage
         if current_stage == MovementSchedulerStage.PRE_WARMUP:
-            return 0
+            return 0.
         if current_stage == MovementSchedulerStage.IN_WARMUP:
-            return self._calculate_current_scheduled_value(0, self.importance_target_lambda)
-        return self.importance_target_lambda
+            return self._calculate_current_scheduled_value(0., self.final_importance_regularization_factor)
+        return self.final_importance_regularization_factor
 
     @property
     def current_importance_threshold(self) -> float:
@@ -133,14 +133,14 @@ class MovementPolynomialThresholdScheduler(BaseCompressionScheduler):
             self._steps_in_current_epoch = self._current_step % self._steps_per_epoch + 1
 
     def _schedule_operand_threshold(self):
-        if self.current_stage == MovementSchedulerStage.POST_WARMUP and (not self._is_importance_frozen):
-            self._freeze_importance()
+        if self.current_stage == MovementSchedulerStage.POST_WARMUP and (not self._is_controller_frozen):
             if self.enable_structured_masking:
                 self._controller.reset_independent_structured_mask()
                 self._controller.resolve_structured_mask()
                 self._controller.populate_structured_mask()
-            self._is_importance_frozen = True
-        self._update_operand_importance_threshold()
+            self._controller.freeze()
+            self._is_controller_frozen = True
+        self._update_operand_importance_threshold_lambda()
 
     def _calculate_current_scheduled_value(self, start_value: float, end_value: float) -> float:
         assert self.current_stage == MovementSchedulerStage.IN_WARMUP
@@ -150,15 +150,13 @@ class MovementPolynomialThresholdScheduler(BaseCompressionScheduler):
         scale = self._schedule(schedule_epoch, schedule_step, self._steps_per_epoch)
         return start_value + scale * (end_value - start_value)
 
-    def _freeze_importance(self):
-        for minfo in self._controller.sparsified_module_info:
-            minfo.operand.requires_grad_(False)
-
-    def _update_operand_importance_threshold(self):
-        if self.current_importance_threshold != self._cached_importance_threshold:
+    def _update_operand_importance_threshold_lambda(self):
+        current = (self.current_importance_threshold, self.current_importance_regularization_factor)
+        if current != self._cached_importance_threshold_lambda:
             for minfo in self._controller.sparsified_module_info:
                 minfo.operand.importance_threshold = self.current_importance_threshold
-        self.cached_importance_threshold = self.current_importance_threshold
+                minfo.operand.importance_regularization_factor = self.current_importance_regularization_factor
+        self._cached_importance_threshold_lambda = current
 
     def _maybe_should_skip(self) -> None:
         """
