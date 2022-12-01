@@ -14,11 +14,16 @@
 import openvino.runtime as ov
 
 from nncf.common.graph import NNCFGraph
+from nncf.common.graph.definitions import NNCFGraphNodeType
 from nncf.common.graph.layer_attributes import Dtype
+from nncf.common.graph.operator_metatypes import InputNoopMetatype
+from nncf.common.graph.operator_metatypes import OutputNoopMetatype
 from nncf.common.graph.operator_metatypes import UnknownMetatype
 from nncf.common.utils.logger import logger as nncf_logger
 
 from nncf.experimental.openvino_native.graph.metatypes.openvino_metatypes import OV_OPERATION_METATYPES
+from nncf.experimental.openvino_native.graph.metatypes.openvino_metatypes import OVParameterMetatype
+from nncf.experimental.openvino_native.graph.metatypes.openvino_metatypes import OVResultMetatype
 
 
 class GraphConverter:
@@ -82,14 +87,25 @@ class GraphConverter:
         """
         nncf_graph = NNCFGraph()
 
+        for param in model.get_parameters():
+            nncf_graph.add_nncf_node(node_name=param.get_friendly_name(),
+                                     node_type=NNCFGraphNodeType.INPUT_NODE,
+                                     node_metatype=InputNoopMetatype)
+
+        for result in model.get_results():
+            nncf_graph.add_nncf_node(node_name=result.get_friendly_name(),
+                                     node_type=NNCFGraphNodeType.OUTPUT_NODE,
+                                     node_metatype=OutputNoopMetatype)
+
         for node in filter(GraphConverter._is_valid_openvino_metatype, model.get_ops()):
-            ov_dtype = node.get_element_type()
+            ov_dtype = node.get_element_type().get_type_name()
             nncf_dtype = GraphConverter.convert_ov_dtype_to_nncf_dtype(ov_dtype)
             node_type = node.get_type_name()
             metatype = OV_OPERATION_METATYPES.get_operator_metatype_by_op_name(node_type)
-            nncf_graph.add_nncf_node(node_name=node.get_friendly_name(),
-                                     node_type=nncf_dtype,
-                                     node_metatype=metatype)
+            if metatype not in [OVResultMetatype, OVParameterMetatype]:
+                nncf_graph.add_nncf_node(node_name=node.get_friendly_name(),
+                                        node_type=nncf_dtype,
+                                        node_metatype=metatype)
 
         for op in filter(GraphConverter._is_valid_openvino_metatype, model.get_ops()):
             in_node_id = nncf_graph.get_node_by_name(op.get_friendly_name()).node_id
