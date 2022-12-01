@@ -17,6 +17,7 @@ import torch
 from torch import nn
 
 from nncf.config import NNCFConfig
+from nncf.torch.dynamic_graph.context import no_nncf_trace
 from tests.torch.test_models.pnasnet import CellB
 from tests.torch.helpers import create_bn, create_conv, fill_linear_weight
 from tests.torch.helpers import create_transpose_conv
@@ -633,14 +634,17 @@ class DisconectedGraphModel(nn.Module):
 
     def forward(self, x):
         x = self.conv1(x)
-        # Broke tracing graph by copy function
-        x = copy.copy(x)
+        # Broke tracing graph by no_nncf_trace
+        with no_nncf_trace():
+            x = self.relu(x)
         x = self.relu(x)
         x = self.conv2(x)
         x = self.conv3(x)
         x = x.view(-1, 64)
         x = self.fc(x)
-        # Broke tracing graph by copy function
+        # Broke tracing graph by no_nncf_trace
+        with no_nncf_trace():
+            x = self.relu(x)
         x = copy.copy(x)
         return x
 
