@@ -15,8 +15,9 @@ import torch.nn.functional as F
 from torch import nn
 from torch.nn.utils import weight_norm
 
-
-# Implementation from: https://github.com/locuslab/TCN/tree/2f8c2b817050206397458dfd1f5a25ce8a32fe65
+# pylint:disable=line-too-long
+# This file is adapted from
+# https://github.com/intel-analytics/analytics-zoo/blob/bb58d5f62b0ed2b02b50cc748bc3e4301548a3e2/pyzoo/zoo/automl/model/tcn.py
 
 class Chomp1d(nn.Module):
     def __init__(self, chomp_size):
