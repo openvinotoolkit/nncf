@@ -177,6 +177,15 @@ class SummaryWriter:
                 tf.summary.scalar(metric_name, value, step=step)
         self.writer.flush()
 
+    def add_scalar(self, metric_name, value, step):
+        with self.writer.as_default():
+            tf.summary.scalar(metric_name, value, step=step)
+
+    def add_image(self, metric_name, image, step):
+        with self.writer.as_default():
+            image_tensor = np.asarray(image, np.uint8)[np.newaxis]
+            tf.summary.image(metric_name, image_tensor, step=step)
+
     def close(self):
         self.writer.close()
 
