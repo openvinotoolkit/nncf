@@ -299,7 +299,7 @@ class MinMaxQuantization(Algorithm):
         quantization_target_points = self._get_quantization_target_points(model)
         weight_quantizer_config = self._backend_entity.get_weight_config(self._parameters.weight_quantizer_config,
                                                                          model)
-        weight_initializer_names = set()
+        weight_tensor_names = set()
 
         for quantization_target_point in quantization_target_points:
             target_node_name = quantization_target_point.target_node_name
@@ -307,9 +307,9 @@ class MinMaxQuantization(Algorithm):
             if quantization_target_point.type == TargetType.OPERATION_WITH_WEIGHTS:
                 weight_tensor_name, weight_tensor = self._backend_entity.get_weight_tensor(model, node)
                 # If the nodes share one weight tensor, we should have only one quantizer on that
-                if weight_tensor_name in weight_initializer_names:
+                if weight_tensor_name in weight_tensor_names:
                     continue
-                weight_initializer_names.add(weight_tensor_name)
+                weight_tensor_names.add(weight_tensor_name)
                 axis = self._backend_entity.get_weight_tensor_quantization_axis(model, node, weight_quantizer_config)
                 parameters = calculate_weight_quantizer_parameters(weight_tensor, weight_quantizer_config, axis)
                 command = self._backend_entity.quantizer_insertion_command(quantization_target_point, parameters)

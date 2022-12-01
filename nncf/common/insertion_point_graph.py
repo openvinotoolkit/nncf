@@ -11,7 +11,7 @@
  limitations under the License.
 """
 
-from typing import Set, Dict, List
+from typing import Set, Dict, List, Optional
 
 from collections import defaultdict
 from copy import deepcopy
@@ -358,7 +358,7 @@ class InsertionPointGraph(nx.DiGraph):
 
 class ConstantNodesFilter:
     @staticmethod
-    def filter(ip_graph: InsertionPointGraph, quantizable_layer_node_keys: List[str]) -> InsertionPointGraph:
+    def filter(ip_graph: InsertionPointGraph, quantizable_layer_node_keys: Optional[List[str]]) -> InsertionPointGraph:
         """
         Removes all Constant nodes from InsertionPointGraph, making it inference graph.
         The traversing starts from the input nodes and nodes with weights.

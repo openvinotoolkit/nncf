@@ -56,7 +56,7 @@ class GraphConverter:
             nncf_logger.warning(
                 'The node with name {} with type {} was mapped to UnknownMetatype,'
                 ' which means that there was not registered such NNCF metatype. '
-                'It could lead to not the best optimized model.'
+                'It could lead to not the best optimized model. '
                 'Please, Inform the NNCF developers about this message.'.format(
                     node_name, node_type))
             return True

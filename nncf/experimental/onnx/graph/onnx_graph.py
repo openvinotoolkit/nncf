@@ -200,6 +200,8 @@ class ONNXGraph:
         return output
 
     def get_weight_tensor(self, node: onnx.NodeProto) -> Tuple[str, np.ndarray]:
+        # TODO(kshpv): Need to generalize the logic of searching the weight and
+        #  extend to the MatMul case.
         """
         Returns node's weight tensor name and its value.
 
@@ -210,7 +212,6 @@ class ONNXGraph:
         weight_input = self.get_node_edge_names(node.name)['input'][weight_port_id]
         if self.has_initializer(weight_input):
             return self.get_initializer(weight_input).name, self.get_initializers_value(weight_input)
-        weight_port_id = self.get_weight_port_id(node)
         parent_node_on_weight_port = self.get_parents(node)[weight_port_id]
         nodes = deque([parent_node_on_weight_port])
         while nodes:
