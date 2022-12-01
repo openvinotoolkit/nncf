@@ -11,8 +11,6 @@
  limitations under the License.
 """
 
-from __future__ import annotations
-
 import io
 import os
 import os.path as osp
