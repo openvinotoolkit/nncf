@@ -105,16 +105,12 @@ def ptq_quantize_model(
     return quantized_model
 
 
-def compare_nncf_graph(quantized_model: onnx.ModelProto, path_ref_graph: str,
-                       generate_ref_graphs: bool = False) -> None:
+def compare_nncf_graph(quantized_model: onnx.ModelProto, path_ref_graph: str) -> None:
     nncf_graph = GraphConverter.create_nncf_graph(quantized_model)
     nx_graph = nncf_graph.get_graph_for_structure_analysis(extended=True)
 
     data_dir = os.path.join(TEST_ROOT, 'onnx', REFERENCE_GRAPHS_TEST_ROOT)
     path_to_dot = os.path.abspath(os.path.join(data_dir, path_ref_graph))
-
-    if generate_ref_graphs:
-        write_dot_graph(nx_graph, path_to_dot)
 
     compare_nx_graph_with_reference(nx_graph, path_to_dot, check_edge_attrs=True)
 
