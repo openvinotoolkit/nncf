@@ -17,6 +17,7 @@ import tensorflow as tf
 from addict import Dict
 from pytest import approx
 
+from nncf.api.compression import CompressionStage
 from nncf.tensorflow.layers.wrapper import NNCFWrapper
 from nncf.tensorflow.sparsity.magnitude.algorithm import MagnitudeSparsityController
 from nncf.tensorflow.sparsity.magnitude.functions import normed_magnitude
@@ -80,7 +81,7 @@ def test_compression_controller_state():
         algo_name: {
             CtrlStateNames.SCHEDULER: {'current_step': 500, 'current_epoch': 10},
             CtrlStateNames.LOSS: {},
-            CtrlStateNames.COMPRESSION_STAGE: None,
+            CtrlStateNames.COMPRESSION_STAGE: CompressionStage.PARTIALLY_COMPRESSED,
         }
     }
     compression_ctrl.load_state(new_state)

@@ -13,11 +13,13 @@
 
 from math import floor
 from typing import List, Set
+from math import isclose
 
 import tensorflow as tf
 
 from nncf import NNCFConfig
 from nncf.api.compression import CompressionLoss
+from nncf.api.compression import CompressionStage
 from nncf.common.graph import NNCFGraph
 from nncf.common.initialization.batchnorm_adaptation import BatchnormAdaptationAlgorithm
 from nncf.common.pruning.clusterization import Cluster
@@ -158,6 +160,16 @@ class FilterPruningController(BasePruningAlgoController):
     @property
     def loss(self) -> CompressionLoss:
         return self._loss
+
+    def compression_stage(self) -> CompressionStage:
+        target_pruning_level = self.scheduler.target_level
+        actual_pruning_level = self.pruning_rate
+        if actual_pruning_level == 0:
+            return CompressionStage.UNCOMPRESSED
+        if isclose(actual_pruning_level, target_pruning_level, abs_tol=1e-5) or \
+                actual_pruning_level > target_pruning_level:
+            return CompressionStage.FULLY_COMPRESSED
+        return CompressionStage.PARTIALLY_COMPRESSED
 
     @property
     def compression_rate(self) -> float:

@@ -11,11 +11,7 @@
  limitations under the License.
 """
 
-import pkgutil
-import re
-import sys
-
-import nncf
+from tests.cross_fw.install.common import load_nncf_modules
 
 EXCLUDED_MODULES_PATTERNS = (
     'nncf\\.onnx.*',
@@ -29,22 +25,4 @@ EXCLUDED_MODULES_PATTERNS = (
     '.*?tf_[^\\.]*'
 )
 
-
-def excluded_module(name):
-    for pattern in EXCLUDED_MODULES_PATTERNS:
-        if re.fullmatch(pattern, name):
-            return True
-    return False
-
-
-def onerror(name):
-    if not excluded_module(name):
-        raise RuntimeError(f'Could not import {name}')
-
-
-for loader, module_name, _ in pkgutil.walk_packages(nncf.__path__,
-                                                    nncf.__name__ + '.',
-                                                    onerror):
-    if module_name in sys.modules or excluded_module(module_name):
-        continue
-    loader.find_module(module_name).load_module(module_name)
+load_nncf_modules(EXCLUDED_MODULES_PATTERNS)
