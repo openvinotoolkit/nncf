@@ -183,6 +183,7 @@ def _read_json(fpath: Path) -> pd.DataFrame:
 
     df["model_accuracy"] = df["target"] * 100.0
     df["metric_name"] = df["metric_type"]
+    df = df.drop(columns='metric_type')
 
     return df
 
@@ -321,8 +322,13 @@ class TestBenchmarkResult:
     def parse_df(self, reference_model_accuracy, quantized_model_accuracy):
         df = reference_model_accuracy.join(quantized_model_accuracy)
 
-        df = df.rename({"model": "Model", "metric_name": "Metrics type",
+        df.insert(0, 'Model', '')
+        df['Model'] = [df.iloc[i].name[0] for i in range(len(df.index))]
+        df = df.reset_index(drop=True)
+        df = df.rename({"metric_name": "Metrics type",
                         "model_accuracy": "FP32",
+                        "diff_target_min_FP32": "diff_target_min",
+                        "diff_target_max_FP32": "diff_target_max",
                         "CPUExecutionProvider": "CPU-EP_INT8",
                         "OpenVINOExecutionProvider": "OV-EP_INT8"}, axis=1)
 
@@ -367,17 +373,22 @@ class TestBenchmarkResult:
         yellow_rows = []
         red_rows = []
         green_rows = []
+        import math
+        for idx, row in df.iterrows():
+            if math.isnan(row["OV-EP_INT8"]):
+                red_rows += [idx]
+            elif math.isnan(row["CPU-EP_INT8"]):
+                red_rows += [idx]
+            elif reference_model_accuracy.iloc[idx]["diff_target_min"] < row["Diff OV-EP FP32"] < \
+                    reference_model_accuracy.iloc[idx]["diff_target_max"]:
+                green_rows += [idx]
+            else:
+                red_rows += [idx]
 
-        # for idx, row in df.iterrows():
-        #     if math.isnan(row["INT8"]):
-        #         red_rows += [idx]
-        #     elif row["diff_target_min"] < row["Diff FP32"] < row["diff_target_max"]:
-        #         green_rows += [idx]
-        #     else:
-        #         yellow_rows += [idx]
-
-        df = df[["Model", "Metrics type", "Expected FP32", "FP32", "OV-EP_INT8", "Diff OV-EP FP32", "Diff OV-EP Expected", "CPU-EP_INT8",
-                 "Diff CPU-EP FP32"]]
+        df = df[
+            ["Model", "Metrics type", "Expected FP32", "FP32", "OV-EP_INT8", "Diff OV-EP FP32", "Diff OV-EP Expected",
+             "CPU-EP_INT8",
+             "Diff CPU-EP FP32"]]
         # Add ONNXRuntime-OpenVINOExecutionProvider multi-column on the top of 3 ~ 6 columns
         ov_ep_col_name = "ONNXRuntime-OpenVINOExecutionProvider"
         cpu_ep_col_name = "ONNXRuntime-CPUExecutionProvider"
