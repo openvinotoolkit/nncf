@@ -40,29 +40,6 @@ class GraphConverter:
     DEFAULT_TENSOR_SHAPE = [1]
 
     @staticmethod
-    def _is_valid_onnx_metatype(node: NodeProto) -> bool:
-        """
-        Checks whether the node has the metatype which should be added to the NNCFGraph.
-        :param node: Node to be checked.
-        :return: True if the metatype is valid and False if not.
-        """
-        node_type = node.op_type
-        metatype = ONNX_OPERATION_METATYPES.get_operator_metatype_by_op_name(node_type)
-        if metatype == ONNXConstantMetatype:
-            # We don't need to quantize Constants
-            return False
-        if metatype == UnknownMetatype:
-            node_name = node.name
-            nncf_logger.warning(
-                'The node with name {} with type {} was mapped to UnknownMetatype,'
-                ' which means that there was not registered such NNCF metatype. '
-                'It could lead to not the best optimized model. '
-                'Please, Inform the NNCF developers about this message.'.format(
-                    node_name, node_type))
-            return True
-        return True
-
-    @staticmethod
     def _get_tensor_shape(onnx_graph: onnx.GraphProto, tensor: Union[str, onnx.ValueInfoProto]) -> List[int]:
         """
         Returns the shape of the 'tensor'.
@@ -184,7 +161,7 @@ class GraphConverter:
         """
         nncf_graph = NNCFGraph()
         onnx_graph = ONNXGraph(onnx_model)
-        for node in filter(GraphConverter._is_valid_onnx_metatype, onnx_graph.get_all_nodes()):
+        for node in onnx_graph.get_all_nodes():
             metatype = ONNX_OPERATION_METATYPES.get_operator_metatype_by_op_name(node.op_type)
             layer_attributes = ONNXExtendedLayerAttributes(node.input, node.output)
             is_shared, layer_name = None, None
@@ -197,7 +174,7 @@ class GraphConverter:
                                      layer_attributes=layer_attributes,
                                      layer_name=layer_name,
                                      is_shared=is_shared)
-        for output_node in filter(GraphConverter._is_valid_onnx_metatype, onnx_graph.get_all_nodes()):
+        for output_node in onnx_graph.get_all_nodes():
             output_edges = onnx_graph.get_node_edge_names(output_node.name)['output']
             for output_edge in output_edges:
                 tensor_shape = GraphConverter._get_tensor_shape(onnx_graph, output_edge)
@@ -217,7 +194,7 @@ class GraphConverter:
                 if not input_nodes:
                     # if this node is output
                     continue
-                for input_node in filter(GraphConverter._is_valid_onnx_metatype, input_nodes):
+                for input_node in input_nodes:
                     port_ids = ONNXGraph.get_port_ids_between_nodes(output_node, input_node)
                     input_port_id = port_ids['input_port_id']
                     output_port_id = port_ids['output_port_id']
