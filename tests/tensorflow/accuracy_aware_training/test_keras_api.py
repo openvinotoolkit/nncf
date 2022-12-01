@@ -88,9 +88,9 @@ def get_const_target_mock_regression_dataset(num_samples=20, img_size=10, target
      'reference_final_metric',
      'should_raise_runtime_error'),
     (
-            ({'maximal_relative_accuracy_degradation': 30.0}, 0.846153, 0.141971, False),
+            ({'maximal_relative_accuracy_degradation': 30.0}, 0.807692, 0.141976, False),
             ({'maximal_relative_accuracy_degradation': 1.0}, 0.0, 0.0, True),
-            ({'maximal_absolute_accuracy_degradation': 0.10}, 0.846153, 0.141971, False),
+            ({'maximal_absolute_accuracy_degradation': 0.10}, 0.846153, 0.104070, False),
     )
 )
 def test_adaptive_compression_training_loop(max_accuracy_degradation, final_compression_rate,
@@ -107,6 +107,7 @@ def test_adaptive_compression_training_loop(max_accuracy_degradation, final_comp
     params = {
         "initial_training_phase_epochs": initial_training_phase_epochs,
         "patience_epochs": patience_epochs,
+        "lr_reduction_factor": 1,
     }
     params.update(max_accuracy_degradation)
     accuracy_aware_config = {

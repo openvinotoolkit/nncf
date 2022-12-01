@@ -21,6 +21,7 @@ import tensorflow as tf
 from nncf import NNCFConfig
 from nncf.api.compression import CompressionLoss
 from nncf.api.compression import CompressionScheduler
+from nncf.api.compression import CompressionStage
 from nncf.common.compression import BaseCompressionAlgorithmController
 from nncf.common.graph import INPUT_NOOP_METATYPES
 from nncf.common.graph import NNCFGraph
@@ -721,3 +722,6 @@ class QuantizationController(BaseCompressionAlgorithmController):
         nncf_stats = NNCFStatistics()
         nncf_stats.register('quantization', stats)
         return nncf_stats
+
+    def compression_stage(self) -> CompressionStage:
+        return CompressionStage.FULLY_COMPRESSED

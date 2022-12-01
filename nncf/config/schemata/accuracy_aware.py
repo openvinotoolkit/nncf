@@ -18,6 +18,7 @@ from nncf.config.schemata.basic import with_attributes
 from nncf.config.schemata.defaults import AA_COMPRESSION_RATE_STEP_REDUCTION_FACTOR
 from nncf.config.schemata.defaults import AA_INITIAL_COMPRESSION_RATE_STEP
 from nncf.config.schemata.defaults import AA_INITIAL_TRAINING_PHASE_EPOCHS
+from nncf.config.schemata.defaults import AA_LR_REDUCTION_FACTOR
 from nncf.config.schemata.defaults import AA_MAXIMAL_TOTAL_EPOCHS
 from nncf.config.schemata.defaults import AA_MINIMAL_COMPRESSION_RATE_STEP
 from nncf.config.schemata.defaults import AA_PATIENCE_EPOCHS
@@ -61,6 +62,11 @@ ADAPTIVE_COMPRESSION_LEVEL_TRAINING_SCHEMA = {
                                     description="Factor used to reduce the compression rate change step "
                                                 "in the adaptive compression training loop.",
                                     default=AA_COMPRESSION_RATE_STEP_REDUCTION_FACTOR),
+                "lr_reduction_factor":
+                    with_attributes(NUMBER,
+                                    description="Factor used to reduce the learning rate after compression rate step "
+                                                "is reduced",
+                                    default=AA_LR_REDUCTION_FACTOR),
                 "minimal_compression_rate_step":
                     with_attributes(NUMBER,
                                     description="The minimal compression rate change step value "

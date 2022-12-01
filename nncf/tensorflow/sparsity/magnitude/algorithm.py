@@ -18,6 +18,7 @@ import tensorflow as tf
 from nncf import NNCFConfig
 from nncf.api.compression import CompressionLoss
 from nncf.api.compression import CompressionScheduler
+from nncf.api.compression import CompressionStage
 from nncf.common.graph import OUTPUT_NOOP_METATYPES
 from nncf.common.accuracy_aware_training.training_loop import ADAPTIVE_COMPRESSION_CONTROLLERS
 from nncf.common.graph.transformations.commands import TransformationPriority
@@ -247,6 +248,13 @@ class MagnitudeSparsityController(BaseSparsityController):
         nncf_stats = NNCFStatistics()
         nncf_stats.register('magnitude_sparsity', stats)
         return nncf_stats
+
+    def compression_stage(self) -> CompressionStage:
+        if self.scheduler.current_sparsity_level == 0:
+            return CompressionStage.UNCOMPRESSED
+        if self.scheduler.current_sparsity_level >= self.scheduler.target_level:
+            return CompressionStage.FULLY_COMPRESSED
+        return CompressionStage.PARTIALLY_COMPRESSED
 
     def _run_batchnorm_adaptation(self):
         if self._bn_adaptation is None:

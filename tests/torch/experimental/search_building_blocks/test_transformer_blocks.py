@@ -27,6 +27,10 @@ from torch import nn
 from transformers import AutoModelForAudioClassification
 from transformers import AutoModelForImageClassification
 from transformers import AutoModelForQuestionAnswering
+from transformers import BertConfig
+from transformers import SwinConfig
+from transformers import ViTConfig
+from transformers import Wav2Vec2Config
 
 from nncf.experimental.torch.search_building_blocks.search_blocks import BlockFilteringStrategy
 from nncf.experimental.torch.search_building_blocks.search_blocks import BuildingBlockType
@@ -94,26 +98,22 @@ LIST_CASES = [
     TransformerSearchBBlockParamsCase(
         name='BERT',
         input_info=[dict(sample_size=[1, 10], type='long')] * 3,
-        model_creator=partial(AutoModelForQuestionAnswering.from_pretrained,
-                              'bert-base-uncased'),
+        model_creator=partial(AutoModelForQuestionAnswering.from_config, BertConfig()),
     ),
     TransformerSearchBBlockParamsCase(
         name='ViT',
         input_info=dict(sample_size=[1, 3, 224, 224]),
-        model_creator=partial(AutoModelForImageClassification.from_pretrained,
-                              'google/vit-base-patch16-224'),
+        model_creator=partial(AutoModelForImageClassification.from_config, ViTConfig()),
     ),
     TransformerSearchBBlockParamsCase(
         name='wave2vec 2.0',
         input_info=dict(sample_size=[1, 400]),
-        model_creator=partial(AutoModelForAudioClassification.from_pretrained,
-                              'anton-l/wav2vec2-base-ft-keyword-spotting'),
+        model_creator=partial(AutoModelForAudioClassification.from_config, Wav2Vec2Config()),
     ),
     TransformerSearchBBlockParamsCase(
         name='SWIN MS',
         input_info=dict(sample_size=[1, 3, 224, 224]),
-        model_creator=partial(AutoModelForImageClassification.from_pretrained,
-                              'microsoft/swin-tiny-patch4-window7-224'),
+        model_creator=partial(AutoModelForImageClassification.from_config, SwinConfig()),
     ),
     TransformerSearchBBlockParamsCase(
         name='one MHSA',
