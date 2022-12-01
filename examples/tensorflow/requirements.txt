@@ -4,11 +4,3 @@ tensorflow_hub
 tensorflow_addons==0.14.0
 opencv-python
 pycocotools==2.0.4
-# Installing NNCF using python setup.py install or develop,
-# and then installing tensorflow_datasets above breaks the protobuf package
-# as available from the `google` namespace package, leading to "ModuleNotFoundError:".
-# Interestingly the issue is not reproduced when installing NNCF via pip.
-# To remedy this in the setup.py case, need to force a reinstallation of the protobuf package.
-# This cannot be done via requirements.txt in any way other than requesting another version of the
-# package with respect to the one installed. What follows is a hack to do so and force reinstallation.
-protobuf==3.19.1
