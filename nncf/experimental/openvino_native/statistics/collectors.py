@@ -89,7 +89,7 @@ class ONNXMinMaxStatisticCollector(MinMaxStatisticCollector):
         return OVMinMaxTensorStatistic(self._min_values.tensor, self._max_values.tensor)
 
 
-class ONNXMeanMinMaxStatisticCollector(MeanMinMaxStatisticCollector):
+class OVMeanMinMaxStatisticCollector(MeanMinMaxStatisticCollector):
     @staticmethod
     def _get_processor() -> NNCFCollectorTensorProcessor:
         return OVNNCFCollectorTensorProcessor()
@@ -97,11 +97,11 @@ class ONNXMeanMinMaxStatisticCollector(MeanMinMaxStatisticCollector):
     def _register_input(self, x: OVNNCFTensor):
         self._register_input_common(x)
 
-    def _get_statistics(self) -> ONNXMinMaxTensorStatistic:
-        return ONNXMinMaxTensorStatistic(self._min_aggregate().tensor, self._max_aggregate().tensor)
+    def _get_statistics(self) -> OVMinMaxTensorStatistic:
+        return OVMinMaxTensorStatistic(self._min_aggregate().tensor, self._max_aggregate().tensor)
 
 
-class ONNXMeanStatisticCollector(MeanStatisticCollector):
+class OVMeanStatisticCollector(MeanStatisticCollector):
     @staticmethod
     def _get_processor() -> NNCFCollectorTensorProcessor:
         return OVNNCFCollectorTensorProcessor()

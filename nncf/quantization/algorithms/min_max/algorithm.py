@@ -173,6 +173,10 @@ class MinMaxQuantization(Algorithm):
             from nncf.quantization.algorithms.min_max.onnx_backend import \
                 ONNXMinMaxAlgoBackend
             self._backend_entity = ONNXMinMaxAlgoBackend()
+        elif model_backend == BackendType.OPENVINO:
+            from nncf.experimental.openvino_native.quantization.algorithms.min_max.openvino_backend import \
+                OVMinMaxAlgoBackend
+            self._backend_entity = OVMinMaxAlgoBackend()
         else:
             raise RuntimeError('Cannot return backend-specific entity'
                                'because {} is not supported!'.format(model_backend))
@@ -364,7 +368,6 @@ class MinMaxQuantization(Algorithm):
 
         for quantization_target_point, qconfig in quantization_target_points.items():
             target_node_name = quantization_target_point.target_node_name
-            node = nncf_graph.get_node_by_name(target_node_name)
             if quantization_target_point.type == TargetType.OPERATION_WITH_WEIGHTS:
                 weight_tensor_name, weight_tensor = self._backend_entity.get_weight_tensor(model,
                                                                                            quantization_target_point)

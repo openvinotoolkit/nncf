@@ -17,6 +17,7 @@ from copy import deepcopy
 
 from nncf import Dataset
 from nncf.parameters import TargetDevice
+from nncf.common.logging import nncf_logger
 from nncf.common.quantization.structs import QuantizationPreset
 from nncf.common.utils.backend import BackendType
 from nncf.common.utils.backend import get_backend
@@ -172,6 +173,10 @@ class PostTrainingQuantization(Algorithm):
             from nncf.onnx.statistics.aggregator import \
                 ONNXStatisticsAggregator
             return ONNXStatisticsAggregator(dataset)
+        if backend == BackendType.OPENVINO:
+            from nncf.experimental.openvino_native.statistics.aggregator import \
+                OVStatisticsAggregator
+            return OVStatisticsAggregator(dataset)
         return None
 
     def _apply(self,
@@ -183,6 +188,8 @@ class PostTrainingQuantization(Algorithm):
         if statistic_points is None:
             backend = get_backend(modified_model)
 
+            if backend == BackendType.OPENVINO:
+                nncf_logger.warning('You are using experimental OpenVINO backend for the Post-training quantization.')
             statistics_aggregator = self._create_statistics_aggregator(dataset, backend)
             for algorithm in self.algorithms:
                 algo_statistic_points = algorithm.get_statistic_points(modified_model)

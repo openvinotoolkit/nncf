@@ -20,6 +20,7 @@ from nncf.common.graph.operator_metatypes import InputNoopMetatype
 from nncf.common.graph.operator_metatypes import OutputNoopMetatype
 
 from nncf.experimental.openvino_native.graph.metatypes.openvino_metatypes import OV_OPERATION_METATYPES
+from nncf.experimental.openvino_native.graph.metatypes.openvino_metatypes import GENERAL_WEIGHT_LAYER_METATYPES
 from nncf.experimental.openvino_native.graph.metatypes.openvino_metatypes import OVParameterMetatype
 from nncf.experimental.openvino_native.graph.metatypes.openvino_metatypes import OVResultMetatype
 
@@ -55,6 +56,22 @@ class GraphConverter:
         return Dtype(conversion_map[ov_dtype])
 
     @staticmethod
+    def _add_nncf_node(node: ov.Node, graph: NNCFGraph) -> None:
+        """
+        Creates NNCFNode from OpenVINO node and adds to the NNCFGraph.
+
+        :param node: OpenVINO node.
+        :param graph: NNCFGraph.
+        """
+        ov_dtype = node.get_element_type()
+        nncf_dtype = GraphConverter.convert_ov_dtype_to_nncf_dtype(ov_dtype)
+        node_type = node.get_type_name()
+        metatype = OV_OPERATION_METATYPES.get_operator_metatype_by_op_name(node_type)
+        graph.add_nncf_node(node_name=node.get_friendly_name(),
+                            node_type=nncf_dtype,
+                            node_metatype=metatype)
+
+    @staticmethod
     def create_nncf_graph(model: ov.Model) -> NNCFGraph:
         """
         Creates NNCFGraph from OpenVINO Model.
@@ -65,26 +82,45 @@ class GraphConverter:
         :return: NNCFGraph.
         """
         nncf_graph = NNCFGraph()
+        visited = set()
+        inference_nodes = []
 
         for param in model.get_parameters():
             nncf_graph.add_nncf_node(node_name=param.get_friendly_name(),
                                      node_type=NNCFGraphNodeType.INPUT_NODE,
                                      node_metatype=InputNoopMetatype)
+            visited.add(param.get_friendly_name())
+            inference_nodes.extend([inp.get_node() for inp in param.output(0).get_target_inputs()])
 
         for result in model.get_results():
             nncf_graph.add_nncf_node(node_name=result.get_friendly_name(),
                                      node_type=NNCFGraphNodeType.OUTPUT_NODE,
                                      node_metatype=OutputNoopMetatype)
+            visited.add(result.get_friendly_name())
+
+        while inference_nodes:
+            node = inference_nodes[0]
+            inference_nodes = inference_nodes[1:]
+            if node.get_friendly_name() not in visited and GraphConverter._is_valid_openvino_metatype(node):
+                GraphConverter._add_nncf_node(node, nncf_graph)
+                visited.add(node.get_friendly_name())
+                inference_nodes.extend([inp.get_node() for out in node.outputs()
+                                        for inp in out.get_target_inputs()])
 
         for node in model.get_ops():
-            ov_dtype = node.get_element_type().get_type_name()
-            nncf_dtype = GraphConverter.convert_ov_dtype_to_nncf_dtype(ov_dtype)
             node_type = node.get_type_name()
             metatype = OV_OPERATION_METATYPES.get_operator_metatype_by_op_name(node_type)
-            if metatype not in [OVResultMetatype, OVParameterMetatype]:
-                nncf_graph.add_nncf_node(node_name=node.get_friendly_name(),
-                                        node_type=nncf_dtype,
-                                        node_metatype=metatype)
+            # Add nodes from constant subgraphs
+            if node.get_friendly_name() not in visited:
+                GraphConverter._add_nncf_node(node, nncf_graph)
+            # Set weight port id
+            elif metatype in GENERAL_WEIGHT_LAYER_METATYPES:
+                for inp in node.input_values():
+                    inp_name = inp.get_node().get_friendly_name()
+                    if inp_name not in visited:
+                        nncf_node = nncf_graph.get_node_by_name(node.get_friendly_name())
+                        nncf_node.layer_attributes.weight_port_id = inp.get_index()
+                        break
 
         for op in model.get_ops():
             in_node_id = nncf_graph.get_node_by_name(op.get_friendly_name()).node_id

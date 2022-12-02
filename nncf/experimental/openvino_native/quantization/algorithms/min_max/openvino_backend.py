@@ -11,33 +11,31 @@
  limitations under the License.
 """
 
-from copy import deepcopy
-from typing import Dict, List, Tuple, Optional
+from typing import Dict, List, Tuple
 import numpy as np
-import onnx
+import openvino.runtime as ov
 
 from nncf.common.graph.graph import NNCFNode
 from nncf.common.graph.operator_metatypes import OperatorMetatype
 from nncf.common.graph.patterns import HWFusedPatterns
+from nncf.common.graph.transformations.commands import TargetPoint
 from nncf.common.graph.transformations.commands import TargetType
 from nncf.common.hardware.config import HWConfig
 from nncf.common.quantization.structs import QuantizerConfig
 from nncf.common.tensor_statistics.collectors import ReductionShape
 from nncf.common.utils.backend import BackendType
-from nncf.common.utils.logger import logger as nncf_logger
 
 from nncf.experimental.openvino_native.graph.metatypes.openvino_metatypes import GENERAL_WEIGHT_LAYER_METATYPES
 from nncf.experimental.openvino_native.graph.transformations.commands import OVQuantizerInsertionCommand
 from nncf.experimental.openvino_native.graph.transformations.commands import OVTargetPoint
 from nncf.experimental.openvino_native.graph.model_transformer import OVModelTransformer
 
-from nncf.experimental.openvino_natve.hardware.config import ONNXHWConfig
-from nncf.experimental.openvino_natve.hardware.fused_patterns import ONNX_HW_FUSED_PATTERNS
-from nncf.experimental.openvino_natve.quantization.default_quantization import DEFAULT_ONNX_QUANT_TRAIT_TO_OP_DICT
+from nncf.experimental.openvino_native.hardware.config import OVHWConfig
+from nncf.experimental.openvino_native.hardware.fused_patterns import OPENVINO_HW_FUSED_PATTERNS
+from nncf.experimental.openvino_native.quantization.default_quantization import DEFAULT_OV_QUANT_TRAIT_TO_OP_DICT
 
 from nncf.experimental.openvino_native.statistics.collectors import OVMeanMinMaxStatisticCollector
-from nncf.experimental.openvino_natve.statistics.collectors import OVMinMaxStatisticCollector
-from nncf.experimental.openvino_natve.graph.onnx_graph import ONNXGraph
+from nncf.experimental.openvino_native.statistics.collectors import OVMinMaxStatisticCollector
 
 from nncf.quantization.algorithms.min_max.backend import MinMaxAlgoBackend
 from nncf.quantization.algorithms.min_max.backend import ALGO_BACKENDS
@@ -57,15 +55,15 @@ class OVMinMaxAlgoBackend(MinMaxAlgoBackend):
 
     @property
     def hw_fused_patterns(self) -> HWFusedPatterns:
-        return ONNX_HW_FUSED_PATTERNS
+        return OPENVINO_HW_FUSED_PATTERNS
 
     @property
     def hw_config(self) -> HWConfig:
-        return ONNXHWConfig
+        return OVHWConfig
 
     @property
     def quant_trait_op_dict(self) -> Dict[int, OperatorMetatype]:
-        return DEFAULT_ONNX_QUANT_TRAIT_TO_OP_DICT
+        return DEFAULT_OV_QUANT_TRAIT_TO_OP_DICT
 
     @staticmethod
     def model_transformer(model: ov.Model) -> OVModelTransformer:
@@ -101,35 +99,18 @@ class OVMinMaxAlgoBackend(MinMaxAlgoBackend):
                                               window_size)
 
     @staticmethod
-    def get_weight_tensor(model: onnx.ModelProto, node: NNCFNode) -> Tuple[str, np.ndarray]:
-        onnx_graph = ONNXGraph(model)
-        node = onnx_graph.get_node_by_name(node.node_name)
-        return onnx_graph.get_weight_tensor(node)
+    def get_weight_tensor(model: ov.Model, target_point: TargetPoint) -> Tuple[str, np.ndarray]:
+        for node in model.get_ops():
+            if node.get_friendly_name() == target_point.target_node_name:
+                const_node = node.input_value(target_point.port_id).get_node()
+                weight_tensor = const_node.get_data()
+                return const_node.get_friendly_name(), weight_tensor
+        raise RuntimeError(f'Could not find node: {target_point.target_node_name} in model.')
 
     @staticmethod
-    def get_weight_tensor_port_id(model: onnx.ModelProto, node: NNCFNode) -> Optional[int]:
-        onnx_graph = ONNXGraph(model)
-        node = onnx_graph.get_node_by_name(node.node_name)
-        weight_tensor_name, _ = onnx_graph.get_weight_tensor(node)
-        for i, input_name in enumerate(node.input):
-            if input_name == weight_tensor_name:
-                return i
-        return None
+    def get_weight_tensor_port_id(model: ov.Model, node: NNCFNode) -> int:
+        return node.layer_attributes.weight_port_id
 
     @staticmethod
-    def get_tensor_names(node: NNCFNode) -> Tuple[List[str], List[str]]:
-        return node.layer_attributes.input_tensor_names, \
-               node.layer_attributes.output_tensor_names
-
-    @staticmethod
-    def get_weight_config(config: QuantizerConfig, model: onnx.ModelProto) -> QuantizerConfig:
-        config = deepcopy(config)
-        if model.opset_import[0].version < 13:
-            config.per_channel = False
-            nncf_logger.warning(
-                f"Model opset version is {model.opset_import[0].version} < 13. "
-                "Per-channel quantization is not supported. "
-                "Set weight_quantizer_config.per_channel = False"
-            )
-
+    def get_weight_config(config: QuantizerConfig, model: ov.Model) -> QuantizerConfig:
         return config
