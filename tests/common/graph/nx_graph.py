@@ -12,8 +12,6 @@
 """
 
 import os
-from dataclasses import dataclass
-from functools import partial
 from functools import total_ordering
 from pathlib import Path
 from typing import Optional
@@ -55,22 +53,22 @@ def sort_dot(path):
             self.edge_end_id = edge_end_id
 
         def __lt__(self, other: 'LineOrder'):
+            #pylint:disable=too-many-return-statements
             if self.node_id is not None:
                 if other.node_id is None:
                     return True
                 if self.node_id < other.node_id:
                     return True
                 return False
-            else:
-                if other.node_id is not None:
-                    return False
-                if self.edge_start_id < other.edge_start_id:
-                    return True
-                if self.edge_start_id > other.edge_start_id:
-                    return False
-                if self.edge_end_id < other.edge_end_id:
-                    return True
+            if other.node_id is not None:
                 return False
+            if self.edge_start_id < other.edge_start_id:
+                return True
+            if self.edge_start_id > other.edge_start_id:
+                return False
+            if self.edge_end_id < other.edge_end_id:
+                return True
+            return False
 
     def graph_key(line: str) -> LineOrder:
         key = line.split(' ')[0].replace('"', '')

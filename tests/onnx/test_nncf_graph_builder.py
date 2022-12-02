@@ -18,8 +18,6 @@ import torch
 from torchvision import models
 import onnx
 
-from nncf.common.utils.dot_file_rw import read_dot_graph
-from nncf.common.utils.dot_file_rw import write_dot_graph
 from nncf.experimental.onnx.graph.nncf_graph_builder import GraphConverter
 from nncf.experimental.onnx.model_normalizer import ONNXModelNormalizer
 from tests.common.graph.nx_graph import compare_nx_graph_with_reference
@@ -28,7 +26,6 @@ from tests.onnx.conftest import ONNX_TEST_ROOT
 from tests.onnx.models import ALL_SYNTHETIC_MODELS
 from tests.shared.paths import TEST_ROOT
 from tests.onnx.quantization.common import ModelToTest
-from tests.onnx.quantization.common import check_nx_graph
 
 REFERENCE_GRAPHS_DIR = ONNX_TEST_ROOT / 'data' / 'reference_graphs' / 'original_nncf_graph'
 
