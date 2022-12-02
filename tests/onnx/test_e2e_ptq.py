@@ -178,10 +178,10 @@ def _read_json(fpath: Path) -> pd.DataFrame:
                 rows += [row]
 
     df = pd.DataFrame(rows)
-    df = df[["model", "target", "metric_type", "diff_target_min", "diff_target_max"]]
+    df = df[["model", "target_fp32", "target_int8", "metric_type", "diff_target_min", "diff_target_max"]]
     df = df.set_index("model")
 
-    df["model_accuracy"] = df["target"] * 100.0
+    df["model_accuracy"] = df["target_fp32"] * 100.0
     df["metric_name"] = df["metric_type"]
     df = df.drop(columns='metric_type')
 
@@ -327,8 +327,6 @@ class TestBenchmarkResult:
         df = df.reset_index(drop=True)
         df = df.rename({"metric_name": "Metrics type",
                         "model_accuracy": "FP32",
-                        "diff_target_min_FP32": "diff_target_min",
-                        "diff_target_max_FP32": "diff_target_max",
                         "CPUExecutionProvider": "CPU-EP_INT8",
                         "OpenVINOExecutionProvider": "OV-EP_INT8"}, axis=1)
 
@@ -336,7 +334,7 @@ class TestBenchmarkResult:
         df["Diff CPU-EP FP32"] = df["CPU-EP_INT8"] - df["FP32"]
         # TODO: Change E2E test to make "Expected FP32" column effective.
         df["Expected FP32"] = df["FP32"]
-        df["Diff OV-EP Expected"] = df["OV-EP_INT8"] - df["Expected FP32"]
+        df["Diff OV-EP Expected"] = df['target_int8'] * 100 - df["FP32"]
 
         return df
 
@@ -375,26 +373,35 @@ class TestBenchmarkResult:
         green_rows = []
         import math
         for idx, row in df.iterrows():
-            if math.isnan(row["OV-EP_INT8"]):
-                red_rows += [idx]
-            elif math.isnan(row["CPU-EP_INT8"]):
-                red_rows += [idx]
-            elif reference_model_accuracy.iloc[idx]["diff_target_min"] < row["Diff OV-EP FP32"] < \
-                    reference_model_accuracy.iloc[idx]["diff_target_max"]:
-                green_rows += [idx]
-            else:
-                red_rows += [idx]
+            for i, model_name in enumerate(reference_model_accuracy.index):
+                if model_name == row['Model']:
+                    if math.isnan(row["OV-EP_INT8"]):
+                        red_rows += [idx]
+                    elif reference_model_accuracy.iloc[i]["diff_target_min"] < row["OV-EP_INT8"] - (
+                            reference_model_accuracy.iloc[i]["target_int8"] * 100) < reference_model_accuracy.iloc[i][
+                        "diff_target_max"]:
+                        green_rows += [idx]
+                    elif not (reference_model_accuracy.iloc[i]["diff_target_min"] < row["OV-EP_INT8"] - row["FP32"] <
+                              reference_model_accuracy.iloc[i]["diff_target_max"]):
+                        red_rows += [idx]
+                    else:
+                        yellow_rows += [idx]
 
-        df = df[
-            ["Model", "Metrics type", "Expected FP32", "FP32", "OV-EP_INT8", "Diff OV-EP FP32", "Diff OV-EP Expected",
-             "CPU-EP_INT8",
-             "Diff CPU-EP FP32"]]
+        df = df[["Model", "Metrics type", "Expected FP32", "FP32", "CPU-EP_INT8", "Diff CPU-EP FP32", "OV-EP_INT8",
+                 "Diff OV-EP FP32", "Diff OV-EP Expected", ]]
+        column_names = df.columns.values
+        column_names[4] = 'INT8'
+        column_names[5] = 'Diff FP32'
+        column_names[6] = 'INT8'
+        column_names[7] = 'Diff FP32'
+        column_names[8] = 'Diff Expected'
+        df.columns = column_names
         # Add ONNXRuntime-OpenVINOExecutionProvider multi-column on the top of 3 ~ 6 columns
-        ov_ep_col_name = "ONNXRuntime-OpenVINOExecutionProvider"
-        cpu_ep_col_name = "ONNXRuntime-CPUExecutionProvider"
+        ov_ep_col_name = "OpenVINOExecutionProvider"
+        cpu_ep_col_name = "CPUExecutionProvider"
         df.columns = pd.MultiIndex.from_tuples(
-            [("", col) for col in df.columns[:3]] + [(ov_ep_col_name, col) for col in df.columns[3:7]] + [
-                (cpu_ep_col_name, col) for col in df.columns[7:]]
+            [("", col) for col in df.columns[:4]] + [(cpu_ep_col_name, col) for col in df.columns[4:6]] + [
+                (ov_ep_col_name, col) for col in df.columns[6:]]
         )
 
         def _style_rows():
