@@ -128,11 +128,6 @@ class ONNXMinMaxAlgoBackend(MinMaxAlgoBackend):
         return None
 
     @staticmethod
-    def get_tensor_names(node: NNCFNode) -> Tuple[List[str], List[str]]:
-        return node.layer_attributes.input_tensor_names, \
-               node.layer_attributes.output_tensor_names
-
-    @staticmethod
     def get_weight_config(config: QuantizerConfig, model: onnx.ModelProto) -> QuantizerConfig:
         config = deepcopy(config)
         if model.opset_import[0].version < 13:

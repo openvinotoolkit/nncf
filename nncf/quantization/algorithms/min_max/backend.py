@@ -181,16 +181,6 @@ class MinMaxAlgoBackend(ABC):
 
     @staticmethod
     @abstractmethod
-    def get_tensor_names(node: NNCFNode) -> Tuple[List[str], List[str]]:
-        """
-        Returns tuple of the lists with the input & output tensor names respectively.
-
-        :param node: NNCFNode with the layer_attributes.
-        :return: Tuple of the lists with the names.
-        """
-
-    @staticmethod
-    @abstractmethod
     def get_weight_config(config: QuantizerConfig, model: TModel) -> QuantizerConfig:
         """
         Returns backend-specific configuration based on the input model attributes.
