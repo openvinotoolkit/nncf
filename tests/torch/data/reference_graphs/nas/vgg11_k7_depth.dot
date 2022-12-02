@@ -60,8 +60,8 @@ strict digraph  {
 "4 VGG11_K7/Sequential[features]/NNCFConv2d[0]/conv2d_0" -> "5 VGG11_K7/Sequential[features]/NNCFBatchNorm2d[1]/batch_norm_0"  [label="(1, 64, 32, 32)", style=solid];
 "5 VGG11_K7/Sequential[features]/NNCFBatchNorm2d[1]/batch_norm_0" -> "6 VGG11_K7/Sequential[features]/ReLU[2]/relu__0"  [label="(1, 64, 32, 32)", style=solid];
 "6 VGG11_K7/Sequential[features]/ReLU[2]/relu__0" -> "7 VGG11_K7/Sequential[features]/MaxPool2d[3]/max_pool2d_0"  [label="(1, 64, 32, 32)", style=solid];
-"8 VGG11_K7/Sequential[features]/NNCFConv2d[4]/ModuleDict[pre_ops]/UpdateWeight[3]/ElasticKernelConv2DOp[op]/linear_0" -> "9 VGG11_K7/Sequential[features]/NNCFConv2d[4]/ModuleDict[pre_ops]/UpdateWeight[3]/ElasticKernelConv2DOp[op]/view_0"  [label="(8192, 25)", style=solid];
 "7 VGG11_K7/Sequential[features]/MaxPool2d[3]/max_pool2d_0" -> "11 VGG11_K7/Sequential[features]/NNCFConv2d[4]/conv2d_0"  [label="(1, 64, 16, 16)", style=solid];
+"8 VGG11_K7/Sequential[features]/NNCFConv2d[4]/ModuleDict[pre_ops]/UpdateWeight[3]/ElasticKernelConv2DOp[op]/linear_0" -> "9 VGG11_K7/Sequential[features]/NNCFConv2d[4]/ModuleDict[pre_ops]/UpdateWeight[3]/ElasticKernelConv2DOp[op]/view_0"  [label="(8192, 25)", style=solid];
 "9 VGG11_K7/Sequential[features]/NNCFConv2d[4]/ModuleDict[pre_ops]/UpdateWeight[3]/ElasticKernelConv2DOp[op]/view_0" -> "10 VGG11_K7/Sequential[features]/NNCFConv2d[4]/ModuleDict[pre_ops]/UpdateWeight[3]/ElasticKernelConv2DOp[op]/view_1"  [label="(128, 64, 25)", style=solid];
 "10 VGG11_K7/Sequential[features]/NNCFConv2d[4]/ModuleDict[pre_ops]/UpdateWeight[3]/ElasticKernelConv2DOp[op]/view_1" -> "11 VGG11_K7/Sequential[features]/NNCFConv2d[4]/conv2d_0"  [label="(128, 64, 5, 5)", style=solid];
 "11 VGG11_K7/Sequential[features]/NNCFConv2d[4]/conv2d_0" -> "12 VGG11_K7/Sequential[features]/NNCFBatchNorm2d[5]/batch_norm_0"  [label="(1, 128, 16, 16)", style=solid];

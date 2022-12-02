@@ -184,9 +184,9 @@ strict digraph  {
 "4 ResNeXt/NNCFBatchNorm2d[bn1]/batch_norm_0" -> "5 ResNeXt/relu_0";
 "5 ResNeXt/relu_0" -> "6 ResNeXt/SymmetricQuantizer/symmetric_quantize_0";
 "6 ResNeXt/SymmetricQuantizer/symmetric_quantize_0" -> "8 ResNeXt/Sequential[layer1]/Block[0]/NNCFConv2d[conv1]/conv2d_0";
+"6 ResNeXt/SymmetricQuantizer/symmetric_quantize_0" -> "22 ResNeXt/Sequential[layer1]/Block[0]/Sequential[shortcut]/NNCFConv2d[0]/conv2d_0";
 "7 ResNeXt/Sequential[layer1]/Block[0]/NNCFConv2d[conv1]/ModuleDict[pre_ops]/UpdateWeight[0]/SymmetricQuantizer[op]/symmetric_quantize_0" -> "8 ResNeXt/Sequential[layer1]/Block[0]/NNCFConv2d[conv1]/conv2d_0";
 "8 ResNeXt/Sequential[layer1]/Block[0]/NNCFConv2d[conv1]/conv2d_0" -> "9 ResNeXt/Sequential[layer1]/Block[0]/NNCFBatchNorm2d[bn1]/batch_norm_0";
-"6 ResNeXt/SymmetricQuantizer/symmetric_quantize_0" -> "22 ResNeXt/Sequential[layer1]/Block[0]/Sequential[shortcut]/NNCFConv2d[0]/conv2d_0";
 "9 ResNeXt/Sequential[layer1]/Block[0]/NNCFBatchNorm2d[bn1]/batch_norm_0" -> "10 ResNeXt/Sequential[layer1]/Block[0]/relu_0";
 "10 ResNeXt/Sequential[layer1]/Block[0]/relu_0" -> "11 ResNeXt/Sequential[layer1]/Block[0]/SymmetricQuantizer/symmetric_quantize_0";
 "11 ResNeXt/Sequential[layer1]/Block[0]/SymmetricQuantizer/symmetric_quantize_0" -> "13 ResNeXt/Sequential[layer1]/Block[0]/NNCFConv2d[conv2]/conv2d_0";
