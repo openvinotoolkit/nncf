@@ -11,7 +11,6 @@
  limitations under the License.
 """
 
-import onnx
 import pytest
 
 from tests.onnx.conftest import ONNX_MODEL_DIR
@@ -19,6 +18,7 @@ from tests.onnx.quantization.common import ModelToTest
 from tests.onnx.quantization.common import compare_nncf_graph
 from tests.onnx.quantization.common import infer_model
 from tests.onnx.quantization.common import min_max_quantize_model
+from tests.onnx.quantization.helper import load_model_with_zero_weights
 
 
 @pytest.mark.parametrize(('model_to_test'),
@@ -31,7 +31,7 @@ def test_min_max_quantization_graph(tmp_path, model_to_test):
         pytest.skip('Ticket 96049')
     onnx_model_path = ONNX_MODEL_DIR / (model_to_test.model_name + '.onnx')
 
-    original_model = onnx.load(onnx_model_path)
+    original_model = load_model_with_zero_weights(onnx_model_path)
     quantized_model = min_max_quantize_model(model_to_test.input_shape, original_model)
     compare_nncf_graph(quantized_model, model_to_test.path_ref_graph)
     infer_model(model_to_test.input_shape, quantized_model)
