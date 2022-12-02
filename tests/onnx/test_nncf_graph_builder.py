@@ -60,10 +60,7 @@ def test_compare_nncf_graph_synthetic_models(model_cls_to_test):
                           ]
                          )
 def test_compare_nncf_graph_classification_real_models(tmp_path, model_to_test, model):
-    onnx_model_dir = TEST_ROOT / 'onnx' / 'data' / 'models'
-    onnx_model_path = onnx_model_dir / model_to_test.model_name
-    if not os.path.isdir(onnx_model_dir):
-        os.mkdir(onnx_model_dir)
+    onnx_model_path = tmp_path / model_to_test.model_name
     x = torch.randn(model_to_test.input_shape, requires_grad=False)
     torch.onnx.export(model, x, onnx_model_path, opset_version=13)
 
