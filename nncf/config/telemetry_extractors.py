@@ -1,5 +1,5 @@
 """
- Copyright (c) 2022 Intel Corporation
+ Copyright (c) 2020-2022 Intel Corporation
  Licensed under the Apache License, Version 2.0 (the "License");
  you may not use this file except in compliance with the License.
  You may obtain a copy of the License at
@@ -11,12 +11,14 @@
  limitations under the License.
 """
 
-import os
-NNCF_PACKAGE_ROOT_DIR = os.path.dirname(os.path.abspath(__file__))
-HW_CONFIG_RELATIVE_DIR = "common/hardware/configs"
+from nncf.telemetry.extractors import CollectedEvent
+from nncf.telemetry.extractors import TelemetryExtractor
+from nncf.config import NNCFConfig
+from nncf.config.extractors import extract_algorithm_names
 
-# Environment variables below, if set, mark the execution environment
-# so that certain actions within NNCF proper, such as telemetry event collection or
-# debug dumps, are performed or not performed
-NNCF_CI_ENV_VAR_NAME = "NNCF_CI"  # Must be set in CI environments
-NNCF_DEV_ENV_VAR_NAME = "NNCF_DEV"  # Must be set in environments of the NNCF dev team machines
+
+class CompressionStartedFromConfig(TelemetryExtractor):
+    def extract(self, argvalue: NNCFConfig) -> CollectedEvent:
+        algo_names = extract_algorithm_names(argvalue)
+        return CollectedEvent(name="compression_started",
+                              data=",".join(algo_names))

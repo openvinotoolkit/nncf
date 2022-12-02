@@ -15,13 +15,14 @@ from typing import TypeVar
 
 from nncf import Dataset
 from nncf.common.utils.logger import logger as nncf_logger
-from nncf.common.graph.model_transformer import ModelTransformer
 from nncf.common.utils.backend import BackendType
 from nncf.common.utils.backend import get_backend
+from nncf.experimental.quantization.telemetry_extractors import CompressionStartedFromBuilder
 
-from nncf.common.engine import Engine
 from nncf.quantization.algorithms.algorithm import Algorithm
 from nncf.common.tensor_statistics.aggregator import StatisticsAggregator
+from nncf.telemetry import tracked_function
+from nncf.telemetry.events import NNCF_ONNX_CATEGORY
 
 TModel = TypeVar('TModel')
 
@@ -66,6 +67,7 @@ class CompressionBuilder:
 
         return None
 
+    @tracked_function(NNCF_ONNX_CATEGORY, [CompressionStartedFromBuilder(argname="self"), ])
     def apply(self, model: TModel, dataset: Dataset) -> TModel:
         """
         Apply compression algorithms to the 'model'.
@@ -91,6 +93,7 @@ class CompressionBuilder:
         modified_model = self._get_prepared_model_for_compression(model, backend)
 
         statistics_aggregator = self._create_statistics_aggregator(dataset, backend)
+
         for algorithm in self.algorithms:
             statistic_points = algorithm.get_statistic_points(modified_model)
             statistics_aggregator.register_stastistic_points(statistic_points)

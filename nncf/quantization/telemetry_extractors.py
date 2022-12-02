@@ -11,12 +11,13 @@
  limitations under the License.
 """
 
-import os
-NNCF_PACKAGE_ROOT_DIR = os.path.dirname(os.path.abspath(__file__))
-HW_CONFIG_RELATIVE_DIR = "common/hardware/configs"
+from typing import Any
 
-# Environment variables below, if set, mark the execution environment
-# so that certain actions within NNCF proper, such as telemetry event collection or
-# debug dumps, are performed or not performed
-NNCF_CI_ENV_VAR_NAME = "NNCF_CI"  # Must be set in CI environments
-NNCF_DEV_ENV_VAR_NAME = "NNCF_DEV"  # Must be set in environments of the NNCF dev team machines
+from nncf.telemetry.extractors import CollectedEvent
+from nncf.telemetry.extractors import TelemetryExtractor
+
+
+class CompressionStartedWithQuantizeApi(TelemetryExtractor):
+    def extract(self, _: Any) -> CollectedEvent:
+        return CollectedEvent(name="compression_started",
+                              data="quantize_api")

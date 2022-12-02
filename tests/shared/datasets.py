@@ -10,13 +10,22 @@
  See the License for the specific language governing permissions and
  limitations under the License.
 """
+from copy import deepcopy
+from typing import List
 
-import os
-NNCF_PACKAGE_ROOT_DIR = os.path.dirname(os.path.abspath(__file__))
-HW_CONFIG_RELATIVE_DIR = "common/hardware/configs"
+import numpy as np
 
-# Environment variables below, if set, mark the execution environment
-# so that certain actions within NNCF proper, such as telemetry event collection or
-# debug dumps, are performed or not performed
-NNCF_CI_ENV_VAR_NAME = "NNCF_CI"  # Must be set in CI environments
-NNCF_DEV_ENV_VAR_NAME = "NNCF_DEV"  # Must be set in environments of the NNCF dev team machines
+
+class MockDataset:
+    def __init__(self, shape: List[int]):
+        self.n = 0
+        self.shape = deepcopy(shape)
+
+    def __iter__(self):
+        return self
+
+    def __next__(self):
+        if self.n < 1:
+            self.n += 1
+            return np.ones(self.shape, dtype=np.float32)
+        raise StopIteration

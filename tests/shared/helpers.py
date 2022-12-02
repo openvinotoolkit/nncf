@@ -138,3 +138,10 @@ class BaseTensorListComparator(ABC):
         cls._check_assertion(test, reference, lambda x, y: np.testing.assert_raises(AssertionError,
                                                                                     np.testing.assert_array_less,
                                                                                     x, y))
+
+
+def telemetry_send_event_test_driver(mocker, use_nncf_fn: Callable):
+    from nncf.telemetry import NNCFTelemetry
+    telemetry_send_event_spy = mocker.spy(NNCFTelemetry, "send_event")
+    use_nncf_fn()
+    telemetry_send_event_spy.assert_called()

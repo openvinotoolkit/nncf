@@ -11,12 +11,14 @@
  limitations under the License.
 """
 
-import os
-NNCF_PACKAGE_ROOT_DIR = os.path.dirname(os.path.abspath(__file__))
-HW_CONFIG_RELATIVE_DIR = "common/hardware/configs"
+from nncf import NNCFConfig
+from tests.shared.helpers import telemetry_send_event_test_driver
+from tests.torch.helpers import TwoConvTestModel
+from tests.torch.helpers import create_compressed_model_and_algo_for_test
 
-# Environment variables below, if set, mark the execution environment
-# so that certain actions within NNCF proper, such as telemetry event collection or
-# debug dumps, are performed or not performed
-NNCF_CI_ENV_VAR_NAME = "NNCF_CI"  # Must be set in CI environments
-NNCF_DEV_ENV_VAR_NAME = "NNCF_DEV"  # Must be set in environments of the NNCF dev team machines
+
+def test_telemetry_is_sent(mocker):
+    def use_nncf_fn():
+        config = NNCFConfig({"input_info": { "sample_size": [1, 1, 32, 32] } })
+        create_compressed_model_and_algo_for_test(TwoConvTestModel(), config)
+    telemetry_send_event_test_driver(mocker, use_nncf_fn)
