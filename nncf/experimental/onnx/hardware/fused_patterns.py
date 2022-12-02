@@ -21,6 +21,7 @@ from nncf.experimental.onnx.hardware.pattern_operations import ARITHMETIC_OPERAT
 
 from nncf.experimental.onnx.hardware.patterns import create_swish_activation
 from nncf.experimental.onnx.hardware.patterns import create_input_preprocessing_pattern
+from nncf.experimental.onnx.hardware.patterns import create_decomposed_batch_norm
 from nncf.experimental.onnx.hardware.patterns import create_scale_shift
 
 
@@ -33,8 +34,7 @@ def _get_onnx_hw_fused_patterns() -> HWFusedPatterns:
 
     batch_norm = GraphPattern()
     batch_norm.add_node(**BATCH_NORMALIZATION_OPERATIONS)
-    scale_shift = create_scale_shift()
-    decomposed_batch_norm = scale_shift
+    decomposed_batch_norm = create_decomposed_batch_norm()
     batch_norms = batch_norm | decomposed_batch_norm
     hw_fused_patterns.register(batch_norms, BATCH_NORMALIZATION_OPERATIONS['label'], match=False)
 
@@ -64,6 +64,7 @@ def _get_onnx_hw_fused_patterns() -> HWFusedPatterns:
     hw_fused_patterns.register(input_preprocessing_pattern,
                                'INPUT_PREPROCESSING', match=True)
 
+    scale_shift = create_scale_shift()
     hw_fused_patterns.register(scale_shift, 'SCALE_SHIFT', match=True)
 
     return hw_fused_patterns
