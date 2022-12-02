@@ -14,7 +14,8 @@
 from typing import NamedTuple, Union
 import onnx
 from onnx import TensorProto
-from onnx.external_data_helper import _get_all_tensors, uses_external_data
+from onnx.external_data_helper import uses_external_data
+from nncf.experimental.onnx.graph.onnx_graph import ONNXGraph
 import numpy as np
 import os
 
@@ -81,18 +82,34 @@ TENSOR_TYPE_MAP = {
 }
 
 
-def load_model_with_zero_weights(model_path: Union[str, Path]) -> onnx.ModelProto:
+def load_model_topology_with_zero_weights(model_path: Union[str, Path]) -> onnx.ModelProto:
+    """
+    Loads onnx model and fills the all external tensors by zeros.
+
+    :param model_path: Path to the onnx model to load.
+    :return: Onnx model with filled the all external tensors by zeros.
+    """
     model = onnx.load_model(model_path, load_external_data=False)
-    for tensor in _get_all_tensors(model):
+    onnx_graph = ONNXGraph(model)
+    for tensor in onnx_graph.onnx_model.graph.initializer:
         if uses_external_data(tensor):
             np_dtype = TENSOR_TYPE_MAP[tensor.data_type].np_dtype
             np_tensor = np.zeros(list(tensor.dims), dtype=np_dtype)
-            my_tensor = onnx.numpy_helper.from_array(np_tensor, name=tensor.name)
-            tensor.CopyFrom(my_tensor)
+            tensor_with_zeros = onnx.numpy_helper.from_array(np_tensor, name=tensor.name)
+            tensor.CopyFrom(tensor_with_zeros)
     return model
 
 
-def save_model_without_tensors(model: onnx.ModelProto, model_filename: Path, model_dir: Path):
+def save_model_without_tensors(model: onnx.ModelProto, model_filename: Path, model_dir: Path) -> None:
+    """
+    Saves the onnx model topology to 'model_dir' with the name equals to 'model_filename'.
+    Saved model does not contain tensors.
+
+    :param model: Onnx model to save.
+    :param model_filename: File name of the saved onnx model.
+    :param model_dir: Directory to save the model.
+    :return: None.
+    """
     tensors_location = Path('tensors')
     onnx.save_model(model, model_dir / model_filename, save_as_external_data=True, location=tensors_location)
     tensors_path = (model_dir / tensors_location)
