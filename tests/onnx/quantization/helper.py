@@ -82,19 +82,19 @@ TENSOR_TYPE_MAP = {
 }
 
 
-def load_model_topology_with_zero_weights(model_path: Union[str, Path]) -> onnx.ModelProto:
+def load_model_topology_with_random_weights(model_path: Union[str, Path]) -> onnx.ModelProto:
     """
-    Loads onnx model and fills the all external tensors by zeros.
+    Loads onnx model and fills the all external tensors by random values.
 
     :param model_path: Path to the onnx model to load.
-    :return: Onnx model with filled the all external tensors by zeros.
+    :return: Onnx model with filled the all external tensors by random values.
     """
     model = onnx.load_model(model_path, load_external_data=False)
     onnx_graph = ONNXGraph(model)
     for tensor in onnx_graph.onnx_model.graph.initializer:
         if uses_external_data(tensor):
             np_dtype = TENSOR_TYPE_MAP[tensor.data_type].np_dtype
-            np_tensor = np.zeros(list(tensor.dims), dtype=np_dtype)
+            np_tensor = np.random.random(list(tensor.dims)).astype(np_dtype)
             tensor_with_zeros = onnx.numpy_helper.from_array(np_tensor, name=tensor.name)
             tensor.CopyFrom(tensor_with_zeros)
     return model
