@@ -14,11 +14,9 @@ from typing import Union, List
 
 import onnx
 from onnx import ModelProto
-from onnx import NodeProto  # pylint: disable=no-name-in-module
 
 from nncf.common.graph import NNCFGraph
 from nncf.common.graph.definitions import NNCFGraphNodeType
-from nncf.common.graph.operator_metatypes import UnknownMetatype
 from nncf.common.graph.layer_attributes import BaseLayerAttributes, Dtype
 from nncf.common.graph.definitions import MODEL_INPUT_OP_NAME
 from nncf.common.graph.definitions import MODEL_OUTPUT_OP_NAME

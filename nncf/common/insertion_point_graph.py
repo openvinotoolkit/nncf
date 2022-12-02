@@ -244,6 +244,25 @@ class InsertionPointGraph(nx.DiGraph):
             allowed_post_hook_insertion_points.append(PostHookInsertionPoint(nncf_node.node_name))
         return allowed_post_hook_insertion_points
 
+    def remove_nodes_from(self, nodes: List[str]) -> None:
+        """
+        Removes nodes from the InsertionPointGraph and its _base_nx_graph.
+
+        :param nodes: List of the nodes to remove.
+        :return:
+        """
+        super().remove_nodes_from(nodes)
+        constant_nodes_base_nx_graph = [node for node in nodes if node in self._base_nx_graph]
+        self._base_nx_graph.remove_nodes_from(constant_nodes_base_nx_graph)
+
+    def get_base_nx_graph(self) -> nx.DiGraph:
+        """
+        Returns the self._base_nx_graph.
+
+        :return: The self._base_nx_graph.
+        """
+        return self._base_nx_graph
+
     def get_input_nodes(self) -> List[str]:
         """
         Returns all input nodes, meaning the nodes which belong to any of INPUT_NOOP_METATYPES metatype.
@@ -305,7 +324,7 @@ class InsertionPointGraph(nx.DiGraph):
             start_traversing_node_keys = [node.node.data[NNCFGraph.KEY_NODE_ATTR] for node in
                                           known_non_constant_node_keys]
             filtered_ip_graph = ConstantNodesFilter.filter(filtered_ip_graph, start_traversing_node_keys)
-        matches = find_subgraphs_matching_pattern(filtered_ip_graph._base_nx_graph, full_fusing_pattern)
+        matches = find_subgraphs_matching_pattern(filtered_ip_graph.get_base_nx_graph(), full_fusing_pattern)
         for match in matches:
             if len(match) == 1:
                 continue
@@ -395,6 +414,4 @@ class ConstantNodesFilter:
                 visited_nodes.add(node_to)
         constant_nodes = [node for node in ip_graph.nodes if node not in visited_nodes]
         ip_graph.remove_nodes_from(constant_nodes)
-        constant_nodes_base_nx_graph = [node for node in constant_nodes if node in ip_graph._base_nx_graph.nodes]
-        ip_graph._base_nx_graph.remove_nodes_from(constant_nodes_base_nx_graph)
         return ip_graph
