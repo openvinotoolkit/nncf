@@ -2,7 +2,7 @@ from pathlib import Path
 
 import pytest
 
-from tests.common.helpers import TEST_ROOT
+from tests.shared.paths import TEST_ROOT
 from tests.torch.helpers import Command
 from tests.torch.test_sanity_third_party import TransformersVirtualEnvInstaller
 from tests.torch.test_sanity_third_party import create_command_line

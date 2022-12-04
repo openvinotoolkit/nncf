@@ -24,7 +24,6 @@ from tests.torch.sparsity.movement.helpers import BertRunRecipe
 from tests.torch.sparsity.movement.helpers import SwinRunRecipe
 from tests.torch.sparsity.movement.helpers import TransformerBlockItemOrderedDict
 from tests.torch.sparsity.movement.helpers import Wav2Vec2RunRecipe
-from tests.torch.sparsity.movement.helpers import ensure_tensor
 from tests.torch.sparsity.movement.helpers import mock_linear_nncf_node
 
 STRUCTURED_MASK_SUPPORTED_RECIPES = [
@@ -41,35 +40,35 @@ STRUCTURED_MASK_SUPPORTED_RECIPES = [
 
 desc_test_update_independent_structured_mask = {
     "prune1row": dict(
-        weight_binary_mask=ensure_tensor([[1, 1, 0], [1, 1, 0], [0, 0, 0]]),
-        bias_binary_mask=ensure_tensor([1, 0, 0]),
+        weight_binary_mask=torch.FloatTensor([[1, 1, 0], [1, 1, 0], [0, 0, 0]]),
+        bias_binary_mask=torch.FloatTensor([1, 0, 0]),
         prune_grid=(1, 3),
-        ref_independent_structured_mask=ensure_tensor([[1], [1], [0]])
+        ref_independent_structured_mask=torch.FloatTensor([[1], [1], [0]])
     ),
     "prune1col": dict(
-        weight_binary_mask=ensure_tensor([[1, 1, 0], [1, 1, 0], [0, 0, 0]]),
-        bias_binary_mask=ensure_tensor([1, 0, 0]),
+        weight_binary_mask=torch.FloatTensor([[1, 1, 0], [1, 1, 0], [0, 0, 0]]),
+        bias_binary_mask=torch.FloatTensor([1, 0, 0]),
         prune_grid=(3, 1),
-        ref_independent_structured_mask=ensure_tensor([[1, 1, 0]])
+        ref_independent_structured_mask=torch.FloatTensor([[1, 1, 0]])
     ),
     "prune1col_nobias": dict(
-        weight_binary_mask=ensure_tensor([[1, 1, 0], [1, 1, 0], [0, 0, 0]]),
+        weight_binary_mask=torch.FloatTensor([[1, 1, 0], [1, 1, 0], [0, 0, 0]]),
         bias_binary_mask=None,
         prune_grid=(3, 1),
-        ref_independent_structured_mask=ensure_tensor([[1, 1, 0]])
+        ref_independent_structured_mask=torch.FloatTensor([[1, 1, 0]])
     ),
     "not_pruneable": dict(
-        weight_binary_mask=ensure_tensor([[1, 1, 0], [1, 1, 0], [0, 0, 0]]),
-        bias_binary_mask=ensure_tensor([1, 1, 1]),
+        weight_binary_mask=torch.FloatTensor([[1, 1, 0], [1, 1, 0], [0, 0, 0]]),
+        bias_binary_mask=torch.FloatTensor([1, 1, 1]),
         prune_grid=(1, 3),
-        ref_independent_structured_mask=ensure_tensor([[1], [1], [1]])
+        ref_independent_structured_mask=torch.FloatTensor([[1], [1], [1]])
     )
 }
 
 desc_test_gather_statistics_from_operand = {
     "row_prune_with_bias": dict(
-        weight_mask=ensure_tensor([[0] * 4, [0] * 4, [1] * 4, [1] * 4]),
-        bias_mask=ensure_tensor([0, 0, 1, 1]),
+        weight_mask=torch.FloatTensor([[0] * 4, [0] * 4, [1] * 4, [1] * 4]),
+        bias_mask=torch.FloatTensor([0, 0, 1, 1]),
         prune_grid=(2, 4),
         prune_by_row=True,
         pruned_weight_shape=(2, 4),
@@ -77,7 +76,7 @@ desc_test_gather_statistics_from_operand = {
         head_to_keep=[1]
     ),
     "row_prune_without_bias": dict(
-        weight_mask=ensure_tensor([[0] * 4, [0] * 4, [1] * 4, [1] * 4]),
+        weight_mask=torch.FloatTensor([[0] * 4, [0] * 4, [1] * 4, [1] * 4]),
         bias_mask=None,
         prune_grid=(2, 4),
         prune_by_row=True,
@@ -86,8 +85,8 @@ desc_test_gather_statistics_from_operand = {
         head_to_keep=[1]
     ),
     "col_prune_with_bias": dict(
-        weight_mask=ensure_tensor([[1, 1, 1, 0]] * 4),
-        bias_mask=ensure_tensor([1, 1, 1, 1]),
+        weight_mask=torch.FloatTensor([[1, 1, 1, 0]] * 4),
+        bias_mask=torch.FloatTensor([1, 1, 1, 1]),
         prune_grid=(4, 1),
         prune_by_row=False,
         pruned_weight_shape=(4, 3),
@@ -95,7 +94,7 @@ desc_test_gather_statistics_from_operand = {
         head_to_keep=[0, 1, 2]
     ),
     "col_prune_without_bias": dict(
-        weight_mask=ensure_tensor([[1, 1, 1, 0]] * 4),
+        weight_mask=torch.FloatTensor([[1, 1, 1, 0]] * 4),
         bias_mask=None,
         prune_grid=(4, 1),
         prune_by_row=False,
@@ -167,7 +166,7 @@ class TestStructuredMaskContext:
         # use 'meta' device for check since it does not need gpus
         mock_meta_mask = torch.ones((1, 1), device=torch.device('meta'))
         with caplog.at_level(logging.WARNING, logger='nncf'):
-            mocker.patch.object(logging.getLogger('nncf'), 'propagate', return_value=True)
+            mocker.patch.object(logging.getLogger('nncf'), 'propagate', True)
             setattr(ctx, mask_name, mock_meta_mask)
             assert getattr(ctx, mask_name).device == torch.device('meta')
         assert f'Changing {mask_name} device' in caplog.text
@@ -186,12 +185,12 @@ class TestStructuredMaskContext:
                            desc['ref_independent_structured_mask'])
 
     @pytest.mark.parametrize('desc', [
-        dict(mask=ensure_tensor([[1, 0, 1]]),
+        dict(mask=torch.FloatTensor([[1, 0, 1]]),
              prune_grid=(2, 1),
-             ref_binary_mask=ensure_tensor([[1, 0, 1], [1, 0, 1]])),
-        dict(mask=ensure_tensor([[1], [0], [1]]),
+             ref_binary_mask=torch.FloatTensor([[1, 0, 1], [1, 0, 1]])),
+        dict(mask=torch.FloatTensor([[1], [0], [1]]),
              prune_grid=(1, 2),
-             ref_binary_mask=ensure_tensor([[1, 1], [0, 0], [1, 1]]))
+             ref_binary_mask=torch.FloatTensor([[1, 1], [0, 0], [1, 1]]))
     ])
     def test_populate_dependent_structured_mask(self, desc: dict):
         sparsifier = Mock()
@@ -262,38 +261,38 @@ class TestStructuredMaskRule:
 desc_test_resolve_dependent_structured = {
     "prune_1head_1channel": dict(
         independent_structured=TransformerBlockItemOrderedDict(
-            mhsa_q=ensure_tensor([[1], [0]]),
-            mhsa_k=ensure_tensor([[1], [0]]),
-            mhsa_v=ensure_tensor([[1], [0]]),
-            mhsa_o=ensure_tensor([[1, 0]]),
-            ffn_i=ensure_tensor([[1], [1], [0]]),
-            ffn_o=ensure_tensor([[1, 1, 0]]),
+            mhsa_q=torch.FloatTensor([[1], [0]]),
+            mhsa_k=torch.FloatTensor([[1], [0]]),
+            mhsa_v=torch.FloatTensor([[1], [0]]),
+            mhsa_o=torch.FloatTensor([[1, 0]]),
+            ffn_i=torch.FloatTensor([[1], [1], [0]]),
+            ffn_o=torch.FloatTensor([[1, 1, 0]]),
         ),
         dependent_structured=TransformerBlockItemOrderedDict(
-            mhsa_q=ensure_tensor([[1], [0]]),
-            mhsa_k=ensure_tensor([[1], [0]]),
-            mhsa_v=ensure_tensor([[1], [0]]),
-            mhsa_o=ensure_tensor([[1, 0]]),
-            ffn_i=ensure_tensor([[1], [1], [0]]),
-            ffn_o=ensure_tensor([[1, 1, 0]]),
+            mhsa_q=torch.FloatTensor([[1], [0]]),
+            mhsa_k=torch.FloatTensor([[1], [0]]),
+            mhsa_v=torch.FloatTensor([[1], [0]]),
+            mhsa_o=torch.FloatTensor([[1, 0]]),
+            ffn_i=torch.FloatTensor([[1], [1], [0]]),
+            ffn_o=torch.FloatTensor([[1, 1, 0]]),
         ),
     ),
     "prune_0head_0channel": dict(
         independent_structured=TransformerBlockItemOrderedDict(
-            mhsa_q=ensure_tensor([[1], [0]]),
-            mhsa_k=ensure_tensor([[1], [0]]),
-            mhsa_v=ensure_tensor([[0], [1]]),
-            mhsa_o=ensure_tensor([[1, 0]]),
-            ffn_i=ensure_tensor([[1], [1], [0]]),
-            ffn_o=ensure_tensor([[1, 0, 1]]),
+            mhsa_q=torch.FloatTensor([[1], [0]]),
+            mhsa_k=torch.FloatTensor([[1], [0]]),
+            mhsa_v=torch.FloatTensor([[0], [1]]),
+            mhsa_o=torch.FloatTensor([[1, 0]]),
+            ffn_i=torch.FloatTensor([[1], [1], [0]]),
+            ffn_o=torch.FloatTensor([[1, 0, 1]]),
         ),
         dependent_structured=TransformerBlockItemOrderedDict(
-            mhsa_q=ensure_tensor([[1], [1]]),
-            mhsa_k=ensure_tensor([[1], [1]]),
-            mhsa_v=ensure_tensor([[1], [1]]),
-            mhsa_o=ensure_tensor([[1, 1]]),
-            ffn_i=ensure_tensor([[1], [1], [1]]),
-            ffn_o=ensure_tensor([[1, 1, 1]]),
+            mhsa_q=torch.FloatTensor([[1], [1]]),
+            mhsa_k=torch.FloatTensor([[1], [1]]),
+            mhsa_v=torch.FloatTensor([[1], [1]]),
+            mhsa_o=torch.FloatTensor([[1, 1]]),
+            ffn_i=torch.FloatTensor([[1], [1], [1]]),
+            ffn_o=torch.FloatTensor([[1, 1, 1]]),
         ),
     )
 }
@@ -301,21 +300,13 @@ desc_test_resolve_dependent_structured = {
 
 class TestStructuredMaskHandler:
     # pylint: disable=protected-access
-    def get_handler_from_ctrl(self, compression_ctrl):
-        handler = compression_ctrl._structured_mask_handler
-        all_ctxes = []
-        for group in handler._structured_mask_ctx_groups:
-            all_ctxes.extend(group.structured_mask_context_list)
-        return handler, all_ctxes
-
-    # pylint: disable=protected-access
     @pytest.mark.parametrize('run_recipe', STRUCTURED_MASK_SUPPORTED_RECIPES,
                              ids=[r.model_family for r in STRUCTURED_MASK_SUPPORTED_RECIPES])
     def test_create_ctx_groups(self, run_recipe):
         compression_ctrl, _ = create_compressed_model(run_recipe.model,
                                                       run_recipe.nncf_config,
                                                       dump_graphs=False)
-        handler, _ = self.get_handler_from_ctrl(compression_ctrl)
+        handler, _ = self._get_handler_from_ctrl(compression_ctrl)
         num_transformer_blocks = sum(tbinfo.num_hidden_layers for tbinfo in run_recipe.transformer_block_info)
         assert len(handler._structured_mask_ctx_groups) == num_transformer_blocks * 2
         handler._structured_mask_ctx_groups.sort(key=lambda group: group.group_type.value)
@@ -335,7 +326,7 @@ class TestStructuredMaskHandler:
         compression_ctrl, _ = create_compressed_model(run_recipe.model,
                                                       run_recipe.nncf_config,
                                                       dump_graphs=False)
-        handler, all_ctxes = self.get_handler_from_ctrl(compression_ctrl)
+        handler, all_ctxes = self._get_handler_from_ctrl(compression_ctrl)
         mock_methods = [mocker.patch.object(ctx, 'update_independent_structured_mask_from_operand')
                         for ctx in all_ctxes]
         handler.update_independent_structured_mask()
@@ -349,12 +340,12 @@ class TestStructuredMaskHandler:
         compression_ctrl, compressed_model = create_compressed_model(run_recipe.model,
                                                                      run_recipe.nncf_config,
                                                                      dump_graphs=False)
-        handler, all_ctxes = self.get_handler_from_ctrl(compression_ctrl)
+        handler, all_ctxes = self._get_handler_from_ctrl(compression_ctrl)
         module_dict = run_recipe.get_nncf_modules_in_transformer_block_order(compressed_model)[0]
-        module_2_node_name = {minfo.module: minfo.module_node_name
-                              for minfo in compression_ctrl.sparsified_module_info}
-        node_name_2_context = {ctx.module_node_name: ctx for ctx in all_ctxes}
-        ctxes = [node_name_2_context[module_2_node_name[m]] for m in module_dict.values()]
+        module_vs_node_name_map = {minfo.module: minfo.module_node_name
+                                   for minfo in compression_ctrl.sparsified_module_info}
+        node_name_vs_context_map = {ctx.module_node_name: ctx for ctx in all_ctxes}
+        ctxes = [node_name_vs_context_map[module_vs_node_name_map[m]] for m in module_dict.values()]
         for ctx, param in zip(ctxes, desc['independent_structured'].values()):
             ctx.independent_structured_mask = param
 
@@ -367,7 +358,7 @@ class TestStructuredMaskHandler:
         compression_ctrl, _ = create_compressed_model(run_recipe.model,
                                                       run_recipe.nncf_config,
                                                       dump_graphs=False)
-        handler, all_ctxes = self.get_handler_from_ctrl(compression_ctrl)
+        handler, all_ctxes = self._get_handler_from_ctrl(compression_ctrl)
         mock_methods = [mocker.patch.object(ctx, 'populate_dependent_structured_mask_to_operand')
                         for ctx in all_ctxes]
         handler.populate_dependent_structured_mask_to_operand()
@@ -381,7 +372,7 @@ class TestStructuredMaskHandler:
         compression_ctrl, _ = create_compressed_model(run_recipe.model,
                                                       run_recipe.nncf_config,
                                                       dump_graphs=False)
-        handler, _ = self.get_handler_from_ctrl(compression_ctrl)
+        handler, _ = self._get_handler_from_ctrl(compression_ctrl)
         df = handler.report_structured_sparsity(
             tmp_path, file_name=file_name, to_csv=True, to_markdown=True,
             max_num_of_kept_heads_to_report=max_num_of_kept_heads_to_report)
@@ -399,6 +390,14 @@ class TestStructuredMaskHandler:
                 assert re.fullmatch(r'\[[0-9]+ items\]', item) is not None
         assert Path(tmp_path, f'{file_name}.csv').is_file()
         assert Path(tmp_path, f'{file_name}.md').is_file()
+
+    # pylint: disable=protected-access
+    def _get_handler_from_ctrl(self, compression_ctrl):
+        handler = compression_ctrl._structured_mask_handler
+        all_ctxes = []
+        for group in handler._structured_mask_ctx_groups:
+            all_ctxes.extend(group.structured_mask_context_list)
+        return handler, all_ctxes
 
 
 class TestStructuredMaskStrategy:

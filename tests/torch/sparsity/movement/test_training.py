@@ -9,8 +9,8 @@ import pytest
 from pytest import approx
 import torch.cuda
 
-from tests.common.helpers import PROJECT_ROOT
-from tests.common.helpers import TEST_ROOT
+from tests.shared.paths import PROJECT_ROOT
+from tests.shared.paths import TEST_ROOT
 from tests.torch.helpers import Command
 from tests.torch.sample_test_validator import BaseSampleTestCaseDescriptor
 from tests.torch.sample_test_validator import BaseSampleValidator

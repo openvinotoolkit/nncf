@@ -57,7 +57,7 @@ class PTSparseModelStatisticsCollector(BaseSparseModelStatisticsCollector):
                 bias = minfo.module.bias
                 name = f'{minfo.module_node_name}/bias'
                 if self._supports_sparse_bias:
-                    sparse_bias = minfo.operand.apply_binary_mask(bias, is_bias=True)  # TODO: breaking changes
+                    sparse_bias = minfo.operand.apply_binary_mask(bias, is_bias=True)  # TODO(yujie): breaking changes
                     weights_descriptions.append(
                         WeightDescription(name, list(sparse_bias.shape),
                                           sparse_bias.count_nonzero().item(), is_sparse=True)

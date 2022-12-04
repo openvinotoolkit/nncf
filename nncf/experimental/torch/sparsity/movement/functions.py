@@ -17,9 +17,9 @@ from nncf.torch.functions import STThreshold
 
 
 @register_operator()
-def binary_mask_by_threshold(importance: torch.Tensor,
+def binary_mask_by_threshold(input_tensor: torch.Tensor,
                              threshold: float = 0.5,
                              max_percentile: float = 0.98) -> torch.Tensor:
     with torch.no_grad():
-        max_threshold = torch.quantile(importance, q=max_percentile).item()
-    return STThreshold.apply(importance, min(threshold, max_threshold))
+        max_threshold = torch.quantile(input_tensor, q=max_percentile).item()
+    return STThreshold.apply(input_tensor, min(threshold, max_threshold))

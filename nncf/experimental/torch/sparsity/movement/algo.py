@@ -10,7 +10,6 @@
  See the License for the specific language governing permissions and
  limitations under the License.
 """
-from collections import OrderedDict
 from copy import deepcopy
 from typing import List
 
@@ -200,29 +199,3 @@ class MovementSparsityController(BaseSparsityAlgoController):
         nncf_stats = NNCFStatistics()
         nncf_stats.register('movement_sparsity', stats)
         return nncf_stats
-
-    def prepare_for_export(self):
-        """
-        Applies pruning masks to layer weights before exporting the model to ONNX.
-        """
-        self._propagate_masks()
-
-    def _propagate_masks(self):
-        sparse_state_dict = OrderedDict()
-        module_vs_name_map = {module: name for name, module in self.model.named_modules()}
-        with torch.no_grad():
-            for minfo in self.sparsified_module_info:
-                operand = minfo.operand
-                module = minfo.module
-                name = module_vs_name_map[module]
-                sparse_state_dict[name + '.weight'] = \
-                    operand.apply_binary_mask(module.weight)
-                if hasattr(module, 'bias') and module.bias is not None:
-                    sparse_state_dict[name + '.bias'] = \
-                        operand.apply_binary_mask(module.bias, is_bias=True)
-
-        model_state_dict = self.model.state_dict()
-        for key, value in sparse_state_dict.items():
-            assert key in model_state_dict, f'sparse parameter <{key}> is not found in model state dict.'
-            model_state_dict[key] = value
-        self.model.load_state_dict(model_state_dict)

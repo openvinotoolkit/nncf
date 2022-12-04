@@ -36,7 +36,7 @@ class TestSchedulerCreation:
     ])
     def test_warn_on_improper_config(self, desc: dict, mocker, caplog):
         with caplog.at_level(logging.WARNING, logger='nncf'):
-            mocker.patch.object(logging.getLogger('nncf'), 'propagate', return_value=True)
+            mocker.patch.object(logging.getLogger('nncf'), 'propagate', True)
             _ = MovementPolynomialThresholdScheduler(controller=MagicMock(), params=desc['params'].__dict__)
         assert desc['match'] in caplog.text
 
@@ -197,10 +197,6 @@ class TestSchedulerStepAction:
             getattr(controller.resolve_structured_mask, assert_fn)()
             getattr(controller.populate_structured_mask, assert_fn)()
 
-        def assert_controller_freeze_calls(is_called_once: bool):
-            assert_fn = 'assert_called_once' if is_called_once else 'assert_not_called'
-            getattr(controller.freeze, assert_fn)()
-
         params = SchedulerParams(warmup_start_epoch=0, warmup_end_epoch=1, steps_per_epoch=2,
                                  enable_structured_masking=enable_structured_masking)
         scheduler = MovementPolynomialThresholdScheduler(controller, params=params.__dict__)
@@ -209,17 +205,17 @@ class TestSchedulerStepAction:
         scheduler.step()
         scheduler.epoch_step()
         assert_controller_structured_masking_calls(is_called_once=False)
-        assert_controller_freeze_calls(is_called_once=False)
+        controller.freeze.assert_not_called()
         scheduler.step()
         assert_controller_structured_masking_calls(
             is_called_once=enable_structured_masking)  # check called at this step
-        assert_controller_freeze_calls(is_called_once=True)
+        controller.freeze.assert_called_once()
         scheduler.step()
         scheduler.epoch_step()
         scheduler.step()
         scheduler.step()
         assert_controller_structured_masking_calls(is_called_once=enable_structured_masking)  # check only called once
-        assert_controller_freeze_calls(is_called_once=True)
+        controller.freeze.assert_called_once()
 
 
 class TestSchedulerInferStepsPerEpoch:

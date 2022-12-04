@@ -279,7 +279,7 @@ class StructuredMaskHandler:
         return df
 
     def _gather_statistics_dataframe(self, max_num_of_kept_heads_to_report: int = 20) -> pd.DataFrame:
-        module_2_name = {module: name for name, module in self.compressed_model.named_modules()}
+        module_vs_name_map = {module: name for name, module in self.compressed_model.named_modules()}
         entry_list = []
         for group in self._structured_mask_ctx_groups:
             ctxes = sorted(group.structured_mask_context_list,
@@ -289,7 +289,7 @@ class StructuredMaskHandler:
                 if len(stats.head_or_channel_id_to_keep) > max_num_of_kept_heads_to_report:  # avoid too long display
                     stats.head_or_channel_id_to_keep = f'[{len(stats.head_or_channel_id_to_keep)} items]'
                 module = self.compressed_model.get_containing_module(stats.module_node_name)
-                torch_module_name = module_2_name[module]
+                torch_module_name = module_vs_name_map[module]
                 entry_list.append(dict(
                     group_id=group.group_id,
                     type=group.group_type.value,
