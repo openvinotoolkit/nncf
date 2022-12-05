@@ -77,8 +77,7 @@ def sort_dot(path):
             end_id_str = line.split(' ')[3].replace('"', '')
             end_id = int(end_id_str)
             return LineOrder(edge_start_id=start_id, edge_end_id=end_id)
-        else:
-            return LineOrder(node_id=int(key))
+        return LineOrder(node_id=int(key))
 
     sorted_content = sorted(content, key=graph_key)
     with open(path, 'w', encoding='utf8') as f:
