@@ -12,12 +12,13 @@
 """
 
 from typing import NamedTuple, Union
+from copy import deepcopy
 import onnx
 from onnx import TensorProto
 from onnx.external_data_helper import uses_external_data
 from nncf.experimental.onnx.graph.onnx_graph import ONNXGraph
 import numpy as np
-import os
+import tempfile
 
 from pathlib import Path
 
@@ -82,7 +83,7 @@ TENSOR_TYPE_MAP = {
 }
 
 
-def load_model_topology_with_random_weights(model_path: Union[str, Path]) -> onnx.ModelProto:
+def load_model_topology_with_zeros_weights(model_path: Union[str, Path]) -> onnx.ModelProto:
     """
     Loads onnx model and fills the all external tensors by random values.
 
@@ -94,24 +95,24 @@ def load_model_topology_with_random_weights(model_path: Union[str, Path]) -> onn
     for tensor in onnx_graph.onnx_model.graph.initializer:
         if uses_external_data(tensor):
             np_dtype = TENSOR_TYPE_MAP[tensor.data_type].np_dtype
-            np_tensor = np.random.random(list(tensor.dims)).astype(np_dtype)
+            np_tensor = np.zeros(list(tensor.dims)).astype(np_dtype)
             tensor_with_zeros = onnx.numpy_helper.from_array(np_tensor, name=tensor.name)
             tensor.CopyFrom(tensor_with_zeros)
+            del tensor.external_data[:]
+            tensor.data_location = TensorProto.DEFAULT
     return model
 
 
-def save_model_without_tensors(model: onnx.ModelProto, model_filename: Path, model_dir: Path) -> None:
+def save_model_without_tensors(model: onnx.ModelProto, model_path: Path) -> None:
     """
     Saves the onnx model topology to 'model_dir' with the name equals to 'model_filename'.
     Saved model does not contain tensors.
 
     :param model: Onnx model to save.
-    :param model_filename: File name of the saved onnx model.
-    :param model_dir: Directory to save the model.
+    :param model_path: Path to save the onnx model.
     :return: None.
     """
     tensors_location = Path('tensors')
-    onnx.save_model(model, model_dir / model_filename, save_as_external_data=True, location=tensors_location)
-    tensors_path = (model_dir / tensors_location)
-    if tensors_path.exists():
-        os.remove(tensors_path)
+    copy_model = deepcopy(model)
+    with tempfile.TemporaryDirectory() as tmpfile:
+        onnx.save_model(copy_model, model_path, save_as_external_data=True, location=Path(tmpfile) / tensors_location, size_threshold=0)
