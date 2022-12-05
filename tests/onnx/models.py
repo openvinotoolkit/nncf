@@ -44,9 +44,10 @@ class ONNXReferenceModel:
 
 @ALL_SYNTHETIC_MODELS.register()
 class LinearModel(ONNXReferenceModel):
+    INPUT_NAME = "X"
     def __init__(self):
         input_shape = [1, 3, 32, 32]
-        model_input_name = "X"
+        model_input_name = self.INPUT_NAME
         X = onnx.helper.make_tensor_value_info(model_input_name,
                                                onnx.TensorProto.FLOAT,
                                                input_shape)

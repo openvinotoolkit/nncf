@@ -261,7 +261,10 @@ class ProgressiveShrinkingController(BNASTrainingController):
         """
         self.prepare_for_export()
         exporter = NASExporter(self.model, input_names, output_names, model_args)
-        exporter.export_model(save_path, save_format)
+        if save_format is not None:
+            exporter.export_model(save_path, save_format)
+        else:
+            exporter.export_model(save_path)
 
     def _run_batchnorm_adaptation(self, model):
         if self._bn_adaptation is None:

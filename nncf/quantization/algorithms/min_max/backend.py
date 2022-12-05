@@ -148,23 +148,35 @@ class MinMaxAlgoBackend(ABC):
         """
 
     @staticmethod
-    def get_weight_tensor_port_id(model: TModel, node: NNCFNode) -> Optional[int]:
+    def get_weight_tensor_port_id(model: TModel, node: NNCFNode) -> int:
         """
         Returns node's weight tensor input port ID.
 
         :param model: Backend-specific model for the initializer finding.
         :param node: NNCFNode to find its weight input port ID.
-        :return: The input port ID of the weight.  None if the weight tensor was not found.
+        :return: The input port ID of the weight.
+        """
+
+    @staticmethod
+    def get_weight_tensor_quantization_axis(model: TModel, node: NNCFNode,
+                                            quantizer_config: QuantizerConfig) -> Optional[int]:
+        """
+        Returns the axis for the quantization of the weight tensor of the node.
+
+        :param model: Backend-specific model.
+        :param node: Node, which weight tensor is quantized.
+        :param quantizer_config: Config of quantization of the specific node.
+        :return: None in a case of per-tensor quantization, an axis number in a case of per-channel quantization.
         """
 
     @staticmethod
     @abstractmethod
-    def get_tensor_names(node: NNCFNode) -> Tuple[List[str], List[str]]:
+    def get_activation_quantization_axis(quantizer_config: QuantizerConfig) -> Optional[int]:
         """
-        Returns tuple of the lists with the input & output tensor names respectively.
+        Returns quantization axis for activation quantizer.
 
-        :param node: NNCFNode with the layer_attributes.
-        :return: Tuple of the lists with the names.
+        :param quantizer_config: Quantization configuration
+        :return: Quantization axis in per-channel case. None in per-tensor case.
         """
 
     @staticmethod

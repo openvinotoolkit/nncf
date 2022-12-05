@@ -29,7 +29,10 @@ from nncf.common.utils.logger import logger as nncf_logger
 from nncf.config import NNCFConfig
 from nncf.config.extractors import extract_algorithm_names
 from nncf.config.structures import ModelEvaluationArgs
+from nncf.config.telemetry_extractors import CompressionStartedFromConfig
 from nncf.config.utils import is_accuracy_aware_training
+from nncf.telemetry import tracked_function
+from nncf.telemetry.events import NNCF_PT_CATEGORY
 from nncf.torch.algo_selector import NoCompressionAlgorithmBuilder
 from nncf.torch.algo_selector import PT_COMPRESSION_ALGORITHMS
 from nncf.torch.composite_compression import PTCompositeCompressionAlgorithmBuilder
@@ -42,6 +45,7 @@ from nncf.torch.utils import is_main_process
 from nncf.torch.utils import maybe_convert_legacy_names_in_compress_state
 
 
+@tracked_function(NNCF_PT_CATEGORY, [CompressionStartedFromConfig(argname="config"), ])
 def create_compressed_model(model: Module,
                             config: NNCFConfig,
                             compression_state: Optional[Dict[str, Any]] = None,
@@ -78,7 +82,8 @@ def create_compressed_model(model: Module,
     function, which is a no-operation function and marks the tensors as inputs to be traced by NNCF in the internal
     graph representation. Output is the tuple of (args, kwargs), where args and kwargs are the same as were supplied in
     input, but each tensor in the original input. Must be specified if dummy_forward_fn is specified.
-    :param dump_graphs: Whether or not should also dump the internal graph representation of the
+    :param wrap_outputs_fn: same as `wrap_inputs_fn`, but applies to model outputs
+    :param dump_graphs: Whether to dump the internal graph representation of the
     original and compressed models in the .dot format into the log directory.
     :return: A controller for the compression algorithm (or algorithms, in which case the controller
     is an instance of CompositeCompressionController) and the model ready for compression parameter training wrapped
@@ -96,6 +101,7 @@ def create_compressed_model(model: Module,
     nncf_network = create_nncf_network(model, config, dummy_forward_fn, wrap_inputs_fn, wrap_outputs_fn)
 
     builder = create_compression_algorithm_builder(config, should_init)
+
     is_state_loadable = not is_legacy_model_state_dict and compression_state is not None
     if is_state_loadable:
         builder.load_state(compression_state[BaseController.BUILDER_STATE])

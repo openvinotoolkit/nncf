@@ -11,8 +11,7 @@
  limitations under the License.
 """
 
-from typing import Union
-from typing import List
+from typing import Union, List, Optional
 
 import numpy as np
 
@@ -26,10 +25,11 @@ class QuantizerLayerParameters:
     Class handles Quantizer/Dequantizer layer attributes.
     """
 
-    def __init__(self, scale: List[float], zero_point: List[int], mode: QuantizationMode):
+    def __init__(self, scale: List[float], zero_point: List[int], mode: QuantizationMode, axis: Optional[int]):
         self.scale = scale
         self.zero_point = zero_point
         self.mode = mode
+        self.axis = axis
 
 
 def calculate_scale_level(max_val: Union[float, np.ndarray], min_val: Union[float, np.ndarray],
@@ -44,41 +44,55 @@ def calculate_scale_level(max_val: Union[float, np.ndarray], min_val: Union[floa
     return (max_val - min_val) / 2 ** num_bits
 
 
-def calculate_weight_quantizer_parameters(weight_tensor: np.ndarray, quantizer_config: QuantizerConfig) -> \
-        QuantizerLayerParameters:
+def calculate_weight_quantizer_parameters(weight_tensor: np.ndarray, quantizer_config: QuantizerConfig,
+                                          axis: Optional[int]) -> QuantizerLayerParameters:
     """
     Calculates Quantizer/Dequantizer layer attributes for weight quantizer such as scale, zero_points and
     quantization mode: symmetric, asymmetric.
+
+    :param weight_tensor: Weight tensor to calculate quantizer attributes.
+    :param quantizer_config: Config of Quantizer.
+    :param axis: In per-channel case - the axis for the quantization. In per-tensor - ignored.
+    :return: Parameters of Quantizer.
     """
     per_channel = quantizer_config.per_channel
     num_bits = quantizer_config.num_bits
     mode = quantizer_config.mode
 
     if per_channel:
-        axes = tuple(range(len(weight_tensor.shape))[1:])
+        assert axis is not None
+        axes = list(range(len(weight_tensor.shape)))
+        axes.pop(axis)
+        axes = tuple(axes)
     else:
         axes = None
     input_high = np.amax(weight_tensor, axis=axes)
     input_low = np.amin(weight_tensor, axis=axes)
     scales = calculate_scale_level(input_high, input_low, num_bits, mode)
     zero_points = np.zeros_like(scales, dtype=np.int64)
-    return QuantizerLayerParameters(scales.tolist(), zero_points.tolist(), mode)
+    return QuantizerLayerParameters(scales.tolist(), zero_points.tolist(), mode, axis)
 
 
 def calculate_activation_quantizer_parameters(statistics: MinMaxTensorStatistic,
-                                              quantizer_config: QuantizerConfig) -> QuantizerLayerParameters:
+                                              quantizer_config: QuantizerConfig,
+                                              axis: Optional[int] = None) -> QuantizerLayerParameters:
     """
     Calculates Quantizer/Dequantizer layer attributes for activation quantizer such as scale, zero_points and
     quantization mode: symmetric, asymmetric.
+
+    :param statistics: Collected statistics for the quantized insertion.
+    :param quantizer_config: Config of the quantization configuration.
+    :param axis: Axis of the quantization. None in a per-tensor quantization case.
+    :return: Parameters of the quantizer/dequantizer layers.
     """
+    per_channel = quantizer_config.per_channel
     num_bits = quantizer_config.num_bits
+    mode = quantizer_config.mode
     input_low = statistics.min_values
     input_high = statistics.max_values
-    if input_low < 0:
-        mode = QuantizationMode.SYMMETRIC
-    else:
-        mode = QuantizationMode.ASYMMETRIC
-
+    if per_channel:
+        assert axis is not None
+        raise RuntimeError('Currently per-channel is not supported for activation tensors.')
     scales = calculate_scale_level(input_high, input_low, num_bits, mode)
     zero_points = np.zeros_like(scales, dtype=np.int64)
-    return QuantizerLayerParameters(scales.tolist(), zero_points.tolist(), mode)
+    return QuantizerLayerParameters(scales.tolist(), zero_points.tolist(), mode, axis)

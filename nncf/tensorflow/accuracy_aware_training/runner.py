@@ -69,7 +69,8 @@ class TFAccuracyAwareTrainingRunner(BaseAccuracyAwareTrainingRunner):
         if self._update_learning_rate_fn is not None:
             self._update_learning_rate_fn(self.lr_scheduler,
                                           self.training_epoch_count,
-                                          self.current_val_metric_value)
+                                          self.current_val_metric_value,
+                                          self.current_loss)
 
     def _save_checkpoint(self, model, compression_controller, checkpoint_path):
         model.save_weights(checkpoint_path)
