@@ -14,9 +14,10 @@
 from functools import partial
 from typing import List
 
+from nncf import NNCFConfig
 from nncf.common.graph import NNCFGraph, NNCFNode
 from nncf.common.pruning.utils import traverse_function
-
+from nncf.common.utils.helpers import matches_any
 from nncf.common.utils.logger import logger
 
 
@@ -89,3 +90,48 @@ def get_split_axis(input_shapes: List[List[int]], output_shapes: List[List[int]]
         logger.warning('Identity split/concat node detected')
 
     return axis
+
+
+def check_config_matches_graph(config: NNCFConfig, graph: NNCFGraph) -> None:
+    """
+    Rise RuntimeError in case if configs does not match graph.
+
+    :param config: An instance of NNCFConfig that defines compression methods.
+    :param graph: The model graph.
+    """
+
+    node_list = graph.get_all_nodes()
+
+    def _find_unused_paterns(patterns):
+        if not patterns:
+            return []
+
+        if not isinstance(patterns, list):
+            patterns = [patterns]
+
+        used_patterns = set()
+        for node in node_list:
+            for pattern in patterns:
+                if matches_any(node.node_name, pattern):
+                    used_patterns.add(pattern)
+        return list(set(patterns) - used_patterns)
+
+    def _check_scopes(scope_name):
+        err_msg = ""
+        unused_pattern = _find_unused_paterns(config.get(scope_name))
+        if unused_pattern:
+            err_msg += f"NNCF config in global part contains unused patterns in '{scope_name}': {unused_pattern}\n"
+
+        algo_configs = config.get("compression", [])
+        algo_configs = [algo_configs] if isinstance(algo_configs, dict) else algo_configs
+        for algo_config in algo_configs:
+            algo_name = algo_config.get("algorithm")
+            unused_pattern = _find_unused_paterns(algo_config.get(scope_name))
+            if unused_pattern:
+                err_msg += f"NNCF config for '{algo_name}' algorithm contains unused patterns for " \
+                           f"'{scope_name}': {unused_pattern}\n"
+        if err_msg:
+            raise RuntimeError(err_msg)
+
+    _check_scopes("ignored_scopes")
+    _check_scopes("target_scopes")

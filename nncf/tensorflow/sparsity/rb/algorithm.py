@@ -11,17 +11,22 @@
  limitations under the License.
 """
 from copy import deepcopy
-from typing import Set, List
+from typing import List
+from typing import Set
 
 import numpy as np
 import tensorflow as tf
 
 from nncf import NNCFConfig
+from nncf.common.accuracy_aware_training.training_loop import ADAPTIVE_COMPRESSION_CONTROLLERS
 from nncf.common.graph.transformations.commands import TransformationPriority
+from nncf.common.graph.utils import check_config_matches_graph
+from nncf.common.schedulers import StubCompressionScheduler
 from nncf.common.sparsity.schedulers import SPARSITY_SCHEDULERS
 from nncf.common.sparsity.schedulers import SparsityScheduler
 from nncf.common.sparsity.statistics import RBSparsityStatistics
 from nncf.common.statistics import NNCFStatistics
+from nncf.common.utils.helpers import should_consider_scope
 from nncf.config.extractors import extract_algo_specific_config
 from nncf.config.schemata.defaults import SPARSITY_INIT
 from nncf.config.schemata.defaults import SPARSITY_LEVEL_SETTING_MODE
@@ -31,16 +36,14 @@ from nncf.tensorflow.graph.converter import TFModelConverterFactory
 from nncf.tensorflow.graph.transformations.commands import TFInsertionCommand
 from nncf.tensorflow.graph.transformations.commands import TFLayerWeight
 from nncf.tensorflow.graph.transformations.layout import TFTransformationLayout
-from nncf.tensorflow.graph.utils import get_original_name_and_instance_idx
 from nncf.tensorflow.graph.utils import get_nncf_operations
-from nncf.tensorflow.sparsity.base_algorithm import BaseSparsityController
+from nncf.tensorflow.graph.utils import get_original_name_and_instance_idx
 from nncf.tensorflow.sparsity.base_algorithm import SPARSITY_LAYER_METATYPES
+from nncf.tensorflow.sparsity.base_algorithm import BaseSparsityController
+from nncf.tensorflow.sparsity.collector import TFSparseModelStatisticsCollector
 from nncf.tensorflow.sparsity.rb.loss import SparseLoss
 from nncf.tensorflow.sparsity.rb.operation import RBSparsifyingWeight
-from nncf.tensorflow.sparsity.collector import TFSparseModelStatisticsCollector
-from nncf.common.utils.helpers import should_consider_scope
-from nncf.common.accuracy_aware_training.training_loop import ADAPTIVE_COMPRESSION_CONTROLLERS
-from nncf.common.schedulers import StubCompressionScheduler
+
 
 @TF_COMPRESSION_ALGORITHMS.register('rb_sparsity')
 class RBSparsityBuilder(TFCompressionAlgorithmBuilder):
@@ -52,6 +55,9 @@ class RBSparsityBuilder(TFCompressionAlgorithmBuilder):
     def get_transformation_layout(self, model: tf.keras.Model) -> TFTransformationLayout:
         converter = TFModelConverterFactory.create(model)
         nncf_graph = converter.convert()
+
+        check_config_matches_graph(self.config, nncf_graph)
+
         transformations = TFTransformationLayout()
 
         processed_shared_layer_names = set()  # type: Set[str]

@@ -24,6 +24,7 @@ from torch.nn import Module
 
 from nncf.api.compression import CompressionAlgorithmController
 from nncf.common.compression import BaseCompressionAlgorithmController as BaseController
+from nncf.common.graph.utils import check_config_matches_graph
 from nncf.common.utils.debug import set_debug_log_dir
 from nncf.common.utils.logger import logger as nncf_logger
 from nncf.config import NNCFConfig
@@ -100,6 +101,8 @@ def create_compressed_model(model: Module,
 
     nncf_network = create_nncf_network(model, config, dummy_forward_fn, wrap_inputs_fn, wrap_outputs_fn)
 
+    check_config_matches_graph(config, nncf_network.get_original_graph())
+
     builder = create_compression_algorithm_builder(config, should_init)
 
     is_state_loadable = not is_legacy_model_state_dict and compression_state is not None
@@ -116,7 +119,7 @@ def create_compressed_model(model: Module,
 
     try:
         if is_legacy_model_state_dict:
-            from nncf.torch import load_state #pylint: disable=cyclic-import
+            from nncf.torch import load_state  # pylint: disable=cyclic-import
             state_dict_to_load = compression_state.get('state_dict', compression_state)
             load_state(compressed_model, state_dict_to_load, is_resume=True)
     finally:

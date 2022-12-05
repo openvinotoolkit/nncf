@@ -24,26 +24,27 @@ from nncf.api.compression import CompressionScheduler
 from nncf.api.compression import CompressionStage
 from nncf.common.compression import BaseCompressionAlgorithmController
 from nncf.common.graph import INPUT_NOOP_METATYPES
+from nncf.common.graph import OUTPUT_NOOP_METATYPES
 from nncf.common.graph import NNCFGraph
 from nncf.common.graph import NNCFNode
 from nncf.common.graph import NNCFNodeName
-from nncf.common.graph import OUTPUT_NOOP_METATYPES
 from nncf.common.graph.transformations.commands import TargetPoint
 from nncf.common.graph.transformations.commands import TransformationPriority
+from nncf.common.graph.utils import check_config_matches_graph
 from nncf.common.graph.utils import get_first_nodes_of_type
-from nncf.common.hardware.config import HWConfigType
 from nncf.common.hardware.config import HW_CONFIG_TYPE_TARGET_DEVICE_MAP
+from nncf.common.hardware.config import HWConfigType
 from nncf.common.initialization.batchnorm_adaptation import BatchnormAdaptationAlgorithm
 from nncf.common.insertion_point_graph import InsertionPointGraph
 from nncf.common.quantization.config_assignment import assign_qconfig_lists_to_modules
 from nncf.common.quantization.quantizer_propagation.solver import QuantizerPropagationSolver
 from nncf.common.quantization.quantizer_setup import ActivationQuantizationInsertionPoint
+from nncf.common.quantization.quantizer_setup import QuantizationPointId
 from nncf.common.quantization.quantizer_setup import SingleConfigQuantizerSetup
 from nncf.common.quantization.structs import QuantizableWeightedLayerNode
-from nncf.common.quantization.structs import QuantizationPreset
 from nncf.common.quantization.structs import QuantizationConstraints
 from nncf.common.quantization.structs import QuantizationMode
-from nncf.common.quantization.quantizer_setup import QuantizationPointId
+from nncf.common.quantization.structs import QuantizationPreset
 from nncf.common.quantization.structs import QuantizerConfig
 from nncf.common.quantization.structs import QuantizerGroup
 from nncf.common.schedulers import BaseCompressionScheduler
@@ -66,8 +67,8 @@ from nncf.tensorflow.graph.metatypes.tf_ops import TFOpWithWeightsMetatype
 from nncf.tensorflow.graph.transformations.commands import TFAfterLayer
 from nncf.tensorflow.graph.transformations.commands import TFBeforeLayer
 from nncf.tensorflow.graph.transformations.commands import TFInsertionCommand
-from nncf.tensorflow.graph.transformations.commands import TFMultiLayerPoint
 from nncf.tensorflow.graph.transformations.commands import TFLayerWeight
+from nncf.tensorflow.graph.transformations.commands import TFMultiLayerPoint
 from nncf.tensorflow.graph.transformations.layout import TFTransformationLayout
 from nncf.tensorflow.graph.utils import get_original_name_and_instance_idx
 from nncf.tensorflow.hardware.config import TFHWConfig
@@ -428,8 +429,12 @@ class QuantizationBuilder(TFCompressionAlgorithmBuilder):
         self._bn_adaptation.run(model)
 
     def _get_quantizer_setup(self, model: tf.keras.Model) -> TFQuantizationSetup:
+        # pylint:disable=too-many-statements
         converter = TFModelConverterFactory.create(model)
         nncf_graph = converter.convert()
+
+        check_config_matches_graph(self.config, nncf_graph)
+
         nodes = nncf_graph.get_all_nodes()
         for node in nodes:
             if node.metatype in NOT_SUPPORT_LAYER_METATYPES:
@@ -593,7 +598,7 @@ class QuantizationBuilder(TFCompressionAlgorithmBuilder):
         if custom_layer_node_names:
             logger.warning('Custom layers [{}] '
                            'will be ignored during quantization since it is not yet supported in NNCF'.format(
-                ", ".join([str(l) for l in custom_layer_node_names])))
+                               ", ".join([str(l) for l in custom_layer_node_names])))
         ignored_scopes_for_solver = self.ignored_scopes_per_group[QuantizerGroup.ACTIVATIONS] + \
                                     input_preprocessing_node_names + custom_layer_node_names
 
