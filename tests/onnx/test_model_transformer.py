@@ -44,7 +44,7 @@ def test_quantizer_insertion(target_layers, should_raise, quantizer_number):
     for target_layer in target_layers:
         target_point = ONNXTargetPoint(TargetType.POST_LAYER_OPERATION, target_layer, 0)
         command = ONNXQuantizerInsertionCommand(target_point,
-                                                QuantizerLayerParameters([1.0], [0], QuantizationMode.SYMMETRIC))
+                                                QuantizerLayerParameters([1.0], [0], QuantizationMode.SYMMETRIC, None))
         transformation_layout.register(command)
 
     model_transformer = ONNXModelTransformer(model)
@@ -93,7 +93,7 @@ def test_inserted_quantizer_parameters(test_parameters):
     model = LinearModel().onnx_model
     transformation_layout = TransformationLayout()
     quantizer_parameters = QuantizerLayerParameters(test_parameters.scale, test_parameters.zero_point,
-                                                    test_parameters.mode)
+                                                    test_parameters.mode, None)
     target_point = ONNXTargetPoint(TargetType.POST_LAYER_OPERATION, test_parameters.target_layer, 0)
     command = ONNXQuantizerInsertionCommand(target_point, quantizer_parameters)
     transformation_layout.register(command)
