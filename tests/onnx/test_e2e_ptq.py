@@ -361,7 +361,7 @@ class TestBenchmark:
 @pytest.mark.run(order=3)
 class TestBenchmarkResult:
     def join_reference_and_quantized_frames(self, reference_model_accuracy: pd.DataFrame,
-                                            quantized_model_accuracy: pd.DataFrame) -> pd.DataFrame:
+                                            quantized_model_accuracy: pd.DataFrame, ov_ep_only: bool) -> pd.DataFrame:
         df = reference_model_accuracy.join(quantized_model_accuracy)
 
         df.insert(0, 'Model', '')
@@ -369,13 +369,13 @@ class TestBenchmarkResult:
         df = df.reset_index(drop=True)
         df = df.rename({"metric_name": "Metrics type",
                         "model_accuracy": "FP32",
-                        "CPUExecutionProvider": "CPU-EP_INT8",
                         "OpenVINOExecutionProvider": "OV-EP_INT8"}, axis=1)
-
         df["Diff OV-EP FP32"] = df["OV-EP_INT8"] - df["FP32"]
-        df["Diff CPU-EP FP32"] = df["CPU-EP_INT8"] - df["FP32"]
         df["Expected FP32"] = df["target_fp32"] * 100
         df["Diff OV-EP Expected"] = df['target_int8'] * 100 - df["FP32"]
+        if not ov_ep_only:
+            df = df.rename({"CPUExecutionProvider": "CPU-EP_INT8"}, axis=1)
+            df["Diff CPU-EP FP32"] = df["CPU-EP_INT8"] - df["FP32"]
 
         return df
 
@@ -476,13 +476,13 @@ th, td {{padding: 5px; }}
     @pytest.mark.dependency()
     @pytest.mark.parametrize("task_type, model_name", MODELS)
     def test_model_accuracy(self, request, task_type, model_name, reference_model_accuracy,
-                            quantized_model_accuracy):
+                            quantized_model_accuracy, ov_ep_only):
         # Run PTQ first
         depends(request, ["TestPTQ::test_ptq_model" + request.node.name.lstrip("test_quantized_model_performance")])
         check_xfail(model_name)
         check_quantized_xfail(model_name)
 
-        df = self.join_reference_and_quantized_frames(reference_model_accuracy, quantized_model_accuracy)
+        df = self.join_reference_and_quantized_frames(reference_model_accuracy, quantized_model_accuracy, ov_ep_only)
         df = df.set_index("Model")
         this_model_accuracy = df[df.index.str.contains(model_name)]
 
@@ -499,7 +499,7 @@ th, td {{padding: 5px; }}
     def test_generate_report(self, reference_model_accuracy, quantized_model_accuracy, output_dir, ov_ep_only):
         output_fp = str(output_dir / REPORT_NAME)
 
-        df = self.join_reference_and_quantized_frames(reference_model_accuracy, quantized_model_accuracy)
+        df = self.join_reference_and_quantized_frames(reference_model_accuracy, quantized_model_accuracy, ov_ep_only)
         row_colors = self.get_row_colors(df, reference_model_accuracy)
         df = self.generate_final_data_frame(df, ov_ep_only)
         self.generate_html(df, row_colors, output_fp)
