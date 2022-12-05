@@ -14,7 +14,6 @@
 import os
 import re
 import subprocess
-import sys
 import tempfile
 from pathlib import Path
 
@@ -22,28 +21,27 @@ import nncf
 import numpy as np
 import openvino.runtime as ov
 import torch
-from sklearn.metrics import accuracy_score
+from fastdownload import FastDownload
 from openvino.offline_transformations import compress_quantize_weights_transformation
-from torchvision import datasets
-from torchvision import models
-from torchvision import transforms
+from sklearn.metrics import accuracy_score
+from torchvision import datasets, models, transforms
 from tqdm import tqdm
 
-FOOD101_CLASSES = 101
 ROOT = Path(__file__).parent.resolve()
-DATASET_PATH = Path(sys.argv[1]) if len(sys.argv) > 1 else ROOT / 'dataset'
-CHECKPOINT_URL = 'https://huggingface.co/AlexKoff88/mobilenet_v2_food101/resolve/main/pytorch_model.bin'
+CHECKPOINT_URL = 'https://huggingface.co/alexsu52/mobilenet_v2_imagenette/resolve/main/pytorch_model.bin'
+DATASET_URL = 'https://s3.amazonaws.com/fast-ai-imageclas/imagenette2-320.tgz'
+DATASET_PATH = '~/.nncf'
+DATASET_CLASSES = 10
 
 
-def fix_names(state_dict):
-    state_dict = {key.replace('module.', ''): value for (key, value) in state_dict.items()}
-    return state_dict
+def download_dataset():
+    downloader = FastDownload(base=DATASET_PATH, archive='downloaded', data='extracted')
+    return downloader.get(DATASET_URL)
 
 
 def load_checkpoint(model):  
     checkpoint = torch.hub.load_state_dict_from_url(CHECKPOINT_URL, progress=False)
-    weights = fix_names(checkpoint['state_dict'])
-    model.load_state_dict(weights)
+    model.load_state_dict(checkpoint['state_dict'])
     return model
 
 
@@ -95,23 +93,23 @@ def ov_model_size(ir_path, m_type='Mb'):
 ###########################################################################
 # Create a PyTorch model and dataset
 ###########################################################################
+dataset_path = download_dataset()
+
 normalize = transforms.Normalize(mean=[0.485, 0.456, 0.406],
                                     std=[0.229, 0.224, 0.225])
-val_dataset = datasets.Food101(
-    root=DATASET_PATH,
-    split = 'test', 
+val_dataset = datasets.ImageFolder(
+    root=str(dataset_path / 'val'),
     transform = transforms.Compose([
         transforms.Resize(256),
         transforms.CenterCrop(224),
         transforms.ToTensor(),
         normalize,
-    ]),
-    download = True
+    ])
 )
 val_loader = torch.utils.data.DataLoader(
         val_dataset, batch_size=128, num_workers=4, shuffle=False)
 
-model = models.mobilenet_v2(num_classes=FOOD101_CLASSES) 
+model = models.mobilenet_v2(num_classes=DATASET_CLASSES) 
 model.eval()
 model = load_checkpoint(model)
 
