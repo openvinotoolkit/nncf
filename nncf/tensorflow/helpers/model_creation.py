@@ -20,8 +20,11 @@ from nncf import NNCFConfig
 from nncf.api.compression import CompressionAlgorithmController
 from nncf.common.compression import BaseCompressionAlgorithmController as BaseController
 from nncf.config.structures import ModelEvaluationArgs
+from nncf.config.telemetry_extractors import CompressionStartedFromConfig
 from nncf.config.utils import is_accuracy_aware_training
 from nncf.config.utils import is_experimental_quantization
+from nncf.telemetry import tracked_function
+from nncf.telemetry.events import NNCF_TF_CATEGORY
 from nncf.tensorflow.accuracy_aware_training.keras_model_utils import accuracy_aware_fit
 from nncf.tensorflow.api.compression import TFCompressionAlgorithmBuilder
 from nncf.config.extractors import extract_algorithm_names
@@ -55,6 +58,7 @@ def create_compression_algorithm_builder(config: NNCFConfig,
     return TFCompositeCompressionAlgorithmBuilder(config, should_init)
 
 
+@tracked_function(NNCF_TF_CATEGORY, [CompressionStartedFromConfig(argname="config"), ])
 def create_compressed_model(model: tf.keras.Model,
                             config: NNCFConfig,
                             compression_state: Optional[Dict[str, Any]] = None) \
@@ -94,6 +98,7 @@ def create_compressed_model(model: tf.keras.Model,
             original_model_accuracy = evaluation_args.eval_fn(model)
 
     builder = create_compression_algorithm_builder(config, should_init=not compression_state)
+
     if compression_state:
         builder.load_state(compression_state[BaseController.BUILDER_STATE])
     compressed_model = builder.apply_to(model)

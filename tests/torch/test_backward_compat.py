@@ -31,14 +31,14 @@ from nncf.torch.nncf_network import LEGACY_ACT_STORAGE_NAME
 from nncf.torch.nncf_network import MODEL_WRAPPED_BY_NNCF_ATTR_NAME
 from nncf.torch.quantization.algo import QUANTIZER_BUILDER_STATE_VERSION_SAVE_NAME
 from nncf.torch.quantization.algo import QuantizerBuilderStateVersion
-from tests.common.paths import TEST_ROOT
+from tests.shared.paths import TEST_ROOT
 from tests.torch.helpers import create_ones_mock_dataloader
 from tests.torch.helpers import register_bn_adaptation_init_args
 from tests.torch.quantization.test_range_init import SingleConv2dIdentityModel
 from tests.torch.test_compressed_graph import get_basic_quantization_config
 from tests.torch.helpers import create_compressed_model_and_algo_for_test
 from tests.torch.helpers import Command
-from tests.common.helpers import get_cli_dict_args
+from tests.shared.helpers import get_cli_dict_args
 from tests.torch.test_sanity_sample import create_command_line
 
 GLOBAL_CONFIG = {

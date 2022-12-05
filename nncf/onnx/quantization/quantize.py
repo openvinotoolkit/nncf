@@ -16,6 +16,7 @@ from typing import Optional
 import onnx
 
 from nncf.data import Dataset
+from nncf.quantization.telemetry_extractors import CompressionStartedWithQuantizeApi
 from nncf.parameters import convert_ignored_scope_to_list
 from nncf.parameters import IgnoredScope
 from nncf.parameters import ModelType
@@ -23,8 +24,11 @@ from nncf.parameters import TargetDevice
 from nncf.common.quantization.structs import QuantizationPreset
 from nncf.quantization.algorithms.post_training.algorithm import PostTrainingQuantization
 from nncf.quantization.algorithms.post_training.algorithm  import PostTrainingQuantizationParameters
+from nncf.telemetry import tracked_function
+from nncf.telemetry.events import NNCF_ONNX_CATEGORY
 
 
+@tracked_function(NNCF_ONNX_CATEGORY, [CompressionStartedWithQuantizeApi(), "target_device", "preset"])
 def quantize_impl(model: onnx.ModelProto,
                   calibration_dataset: Dataset,
                   preset: QuantizationPreset,

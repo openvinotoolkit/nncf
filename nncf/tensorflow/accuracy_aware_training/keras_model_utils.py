@@ -57,7 +57,7 @@ def accuracy_aware_fit(cls_instance, train_dataset, compression_ctrl,
                 steps=data_handler.inferred_steps
                 )
 
-    def train_epoch_fn(compression_ctrl, model, epoch):
+    def train_epoch_fn(compression_ctrl, model, epoch, **kwargs):
         model.reset_metrics()
 
         if model.train_function is None:
@@ -104,6 +104,11 @@ def accuracy_aware_fit(cls_instance, train_dataset, compression_ctrl,
             return_dict=True)
         return result_dict_to_val_metric_fn(val_logs)
 
+    current_optimizer = copy.copy(compression_ctrl.model.optimizer)
+
+    def configure_optimizers_fn():
+        optimizer = copy.copy(current_optimizer)
+        return optimizer, None
 
     callbacks.on_train_begin()
     cls_instance.original_model_accuracy = uncompressed_model_accuracy
@@ -111,6 +116,7 @@ def accuracy_aware_fit(cls_instance, train_dataset, compression_ctrl,
     cls_instance = acc_aware_training_loop.run(cls_instance,
                                                train_epoch_fn=train_epoch_fn,
                                                validate_fn=validate_fn,
+                                               configure_optimizers_fn=configure_optimizers_fn,
                                                tensorboard_writer=tensorboard_writer,
                                                log_dir=log_dir)
     callbacks.on_train_end()

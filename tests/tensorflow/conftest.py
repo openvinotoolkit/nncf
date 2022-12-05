@@ -11,7 +11,10 @@
  limitations under the License.
 """
 import pytest
-from tests.common.helpers import create_venv_with_nncf
+
+from tests.shared.case_collection import COMMON_SCOPE_MARKS_VS_OPTIONS
+from tests.shared.case_collection import skip_marked_cases_if_options_not_specified
+
 try:
     import tensorflow as tf
 except ImportError:
@@ -61,9 +64,6 @@ def pytest_addoption(parser):
     parser.addoption(
         "--models-dir", type=str, default=None, help="Path to checkpoints directory for weekly tests"
     )
-    parser.addoption(
-        "--run-install-tests", action="store_true", default=False, help="To run installation tests"
-    )
 
 
 @pytest.fixture(scope="module")
@@ -108,12 +108,14 @@ def models_dir(request):
 
 @pytest.fixture(scope="module")
 def install_tests(request):
-    return request.config.getoption("--run-install-tests")
+    return request.config.getoption("--run-install-tests", skip=True)
 
 
-@pytest.fixture(scope="function")
-def tmp_venv_with_nncf(tmp_path, package_type, venv_type, install_tests):  # pylint:disable=redefined-outer-name
-    if not install_tests:
-        pytest.skip('To test the installation, use --run-install-tests option.')
-    venv_path = create_venv_with_nncf(tmp_path, package_type, venv_type, extra_reqs='tf')
-    return venv_path
+# Custom markers specifying tests to be run only if a specific option
+# is present on the pytest command line must be registered here.
+MARKS_VS_OPTIONS = {
+    **COMMON_SCOPE_MARKS_VS_OPTIONS
+}
+
+def pytest_collection_modifyitems(config, items):
+    skip_marked_cases_if_options_not_specified(config, items, MARKS_VS_OPTIONS)

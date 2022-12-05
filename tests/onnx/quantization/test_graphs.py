@@ -12,7 +12,6 @@
 """
 
 # pylint: disable=no-member, redefined-outer-name, no-name-in-module
-
 import pytest
 
 from tests.onnx.quantization.common import infer_model, min_max_quantize_model
@@ -27,5 +26,5 @@ def test_syntetic_models_graph(model_cls_to_test):
         pytest.skip('min_max_quantize_model does not support many inputs for now.')
     model_to_test = model_cls_to_test()
     quantized_model = min_max_quantize_model(model_to_test.input_shape[0], model_to_test.onnx_model)
-    infer_model(model_to_test.input_shape[0], quantized_model)
     compare_nncf_graph(quantized_model, 'synthetic/' + model_to_test.path_ref_graph)
+    infer_model(model_to_test.input_shape[0], quantized_model)

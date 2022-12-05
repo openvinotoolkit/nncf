@@ -31,6 +31,7 @@ from nncf.torch.nncf_network import NNCFNetwork
 class PSBuilderStateNames:
     ELASTICITY_BUILDER_STATE = 'elasticity_builder_state'
     PROGRESSIVITY_OF_ELASTICITY = 'progressivity_of_elasticity'
+    BN_ADAPTATION_PARAMS = 'bn_adaptation_params'
 
 
 @PT_COMPRESSION_ALGORITHMS.register('progressive_shrinking')
@@ -46,9 +47,9 @@ class ProgressiveShrinkingBuilder(PTCompressionAlgorithmBuilder):
 
     def __init__(self, nncf_config: NNCFConfig, should_init: bool = True):
         super().__init__(nncf_config, should_init)
-        bn_adapt_params = self._algo_config.get('batchnorm_adaptation', {})
-        bn_adapt_algo_kwargs = get_bn_adapt_algo_kwargs(nncf_config, bn_adapt_params)
-        self._bn_adaptation = BatchnormAdaptationAlgorithm(**bn_adapt_algo_kwargs)
+        self._bn_adapt_params = self._algo_config.get('batchnorm_adaptation', {})
+        bn_adapt_algo_kwargs = get_bn_adapt_algo_kwargs(nncf_config, self._bn_adapt_params)
+        self._bn_adaptation = BatchnormAdaptationAlgorithm(**bn_adapt_algo_kwargs) if bn_adapt_algo_kwargs else None
 
         default_progressivity = map(lambda x: x.value, self.DEFAULT_PROGRESSIVITY)
         progressivity_of_elasticity = self._algo_config.get('progressivity_of_elasticity', default_progressivity)
@@ -105,7 +106,8 @@ class ProgressiveShrinkingBuilder(PTCompressionAlgorithmBuilder):
         """
         return {
             self._state_names.ELASTICITY_BUILDER_STATE: self._elasticity_builder.get_state(),
-            self._state_names.PROGRESSIVITY_OF_ELASTICITY: [d.value for d in self._progressivity_of_elasticity]
+            self._state_names.PROGRESSIVITY_OF_ELASTICITY: [d.value for d in self._progressivity_of_elasticity],
+            self._state_names.BN_ADAPTATION_PARAMS: self._bn_adapt_params
         }
 
     def _load_state_without_name(self, state_without_name: Dict[str, Any]):
@@ -119,3 +121,7 @@ class ProgressiveShrinkingBuilder(PTCompressionAlgorithmBuilder):
         progressivity_of_elasticity = state_without_name[self._state_names.PROGRESSIVITY_OF_ELASTICITY]
         # No conflict resolving with the related config options, parameters are overridden by compression state
         self._progressivity_of_elasticity = [ElasticityDim.from_str(dim) for dim in progressivity_of_elasticity]
+        self._bn_adapt_params = state_without_name[self._state_names.BN_ADAPTATION_PARAMS]
+        bn_adapt_algo_kwargs = get_bn_adapt_algo_kwargs(self.config,
+                                                        self._bn_adapt_params)
+        self._bn_adaptation = BatchnormAdaptationAlgorithm(**bn_adapt_algo_kwargs) if bn_adapt_algo_kwargs else None

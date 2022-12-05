@@ -11,6 +11,28 @@
  limitations under the License.
 """
 
+# *WARNING*: Do not run this file directly by `python setup.py install`
+# or with any other parameter - this is an outdated and error-prone way
+# to install Python packages and causes particular problems with namespace
+# packages such as `protobuf`.
+# Refer to the table below for well-known and supported alternatives with
+# the same behaviour:
+# +-------------------------------------------------------------------------------+
+# |           Old command           |                New command                  |
+# +---------------------------------+---------------------------------------------+
+# | python setup.py install         |  pip install .                              |
+# | python setup.py develop         |  pip install -e .                           |
+# | python setup.py develop --*arg* |  pip install --install-option="*arg*" -e  . |
+# | python setup.py sdist           |  python -m build -s                         | <-- using the "build" package
+# | python setup.py bdist_wheel     |  python -m build -w                         | <-- https://pypi.org/project/build/
+# +---------------------------------+---------------------------------------------+
+#
+# PyPA in general recommends to move away from setup.py and use pyproject.toml
+# instead. This doesn't fit us as we currently want to do custom stuff during
+# installation such as setting version based on the commit SHA for repo-based
+# installs.
+
+
 import glob
 import stat
 import sys
@@ -22,22 +44,25 @@ import re
 from setuptools import setup, find_packages
 
 here = os.path.abspath(os.path.dirname(__file__))
-proper_version = '59.5.0'
+BKC_SETUPTOOLS_VERSION = '59.5.0'
 
-with open("{}/README.md".format(here), "r", encoding="utf8") as fh:
-    long_description = fh.read()
 
-if "--tf" in sys.argv:
-    import setuptools
-    from pkg_resources import parse_version
-    setuptools_version = parse_version(setuptools.__version__).base_version
-    if setuptools_version < '43.0.0':
-        raise RuntimeError(
-            "To properly install NNCF, please install setuptools>=43.0.0, "
-            f"while current setuptools version is {setuptools.__version__}. "
-            f"Recommended version is {proper_version}."
-        )
+import setuptools
+from pkg_resources import parse_version
+setuptools_version = parse_version(setuptools.__version__).base_version
+if setuptools_version < '43.0.0':
+    raise RuntimeError(
+        "To properly install NNCF, please install setuptools>=43.0.0, "
+        f"while current setuptools version is {setuptools.__version__}. "
+        f"Recommended version is {BKC_SETUPTOOLS_VERSION}."
+    )
 
+python_version = sys.version_info
+if python_version < (3, 7, 0):
+    print("Only Python >= 3.7.0 is supported")
+    sys.exit(0)
+
+version_string = "{}{}".format(sys.version_info[0], sys.version_info[1])
 
 is_installing_editable = "develop" in sys.argv
 is_building_release = not is_installing_editable and "--release" in sys.argv
@@ -96,34 +121,22 @@ INSTALL_REQUIRES = ["ninja>=1.10.0.post2, <1.11",
                     "natsort>=7.1.0",
                     "pandas>=1.1.5,<1.4.0rc0",
                     "scikit-learn>=0.24.0",
-                    "wheel>=0.36.1"]
+                    "wheel>=0.36.1",
+                    "openvino-telemetry"]
 
-
-python_version = sys.version_info
-if python_version < (3, 7, 0):
-    print("Only Python >= 3.7.0 is supported")
-    sys.exit(0)
-
-version_string = "{}{}".format(sys.version_info[0], sys.version_info[1])
 
 EXTRAS_REQUIRE = {
     "tests": ["pytest"],
     "docs": [],
     "tf": [
-        "tensorflow~=2.8.2",
+        "tensorflow~=2.8.4",
     ],
     "torch": [
         "torch==1.12.1",
-        # Please see
-        # https://stackoverflow.com/questions/70520120/attributeerror-module-setuptools-distutils-has-no-attribute-version
-        "setuptools==59.5.0"
     ],
     "onnx": [
-        "torch==1.12.1",
-        "torchvision==0.13.1",
         "onnx==1.12.0",
-        "protobuf==3.20.1",
-        "onnxruntime-openvino==1.13.1",
+        "onnxruntime-openvino==1.13.1"
     ],
     "openvino": [
         "openvino-dev"
@@ -132,34 +145,14 @@ EXTRAS_REQUIRE = {
 
 EXTRAS_REQUIRE["all"] = [
     EXTRAS_REQUIRE["tf"],
-    EXTRAS_REQUIRE["torch"]
+    EXTRAS_REQUIRE["torch"],
+    EXTRAS_REQUIRE["onnx"],
+    EXTRAS_REQUIRE["openvino"],
 ]
 
-SETUP_REQUIRES = []
 
-if "--torch" in sys.argv:
-    INSTALL_REQUIRES.extend(EXTRAS_REQUIRE["torch"])
-    sys.argv.remove("--torch")
-
-if "--tf" in sys.argv:
-    # See also: https://github.com/tensorflow/tensorflow/issues/56077
-    # This is a temporary patch, that limites the protobuf version from above
-    INSTALL_REQUIRES.extend(["protobuf>=3.9.2,<3.20"])
-    INSTALL_REQUIRES.extend(EXTRAS_REQUIRE["tf"])
-    sys.argv.remove("--tf")
-
-if "--onnx" in sys.argv:
-    INSTALL_REQUIRES.extend(EXTRAS_REQUIRE["onnx"])
-    sys.argv.remove("--onnx")
-
-if "--openvino" in sys.argv:
-    INSTALL_REQUIRES.extend(EXTRAS_REQUIRE["openvino"])
-    SETUP_REQUIRES.extend(EXTRAS_REQUIRE["openvino"])
-    sys.argv.remove("--openvino")
-
-if "--all" in sys.argv:
-    INSTALL_REQUIRES.extend(EXTRAS_REQUIRE["all"])
-    sys.argv.remove("--all")
+with open("{}/README.md".format(here), "r", encoding="utf8") as fh:
+    long_description = fh.read()
 
 setup(
     name="nncf",
@@ -179,7 +172,6 @@ setup(
         "Operating System :: OS Independent",
     ],
     install_requires=INSTALL_REQUIRES,
-    setup_requires=SETUP_REQUIRES,
     extras_require=EXTRAS_REQUIRE,
     keywords=["compression", "quantization", "sparsity", "mixed-precision-training",
               "quantization-aware-training", "hawq", "classification",

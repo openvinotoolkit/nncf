@@ -42,9 +42,9 @@ def test_quantizer_insertion(target_layers, should_raise, quantizer_number):
     transformation_layout = TransformationLayout()
 
     for target_layer in target_layers:
-        target_point = ONNXTargetPoint(TargetType.POST_LAYER_OPERATION, target_layer)
+        target_point = ONNXTargetPoint(TargetType.POST_LAYER_OPERATION, target_layer, 0)
         command = ONNXQuantizerInsertionCommand(target_point,
-                                                QuantizerLayerParameters([1.0], [0], QuantizationMode.SYMMETRIC))
+                                                QuantizerLayerParameters([1.0], [0], QuantizationMode.SYMMETRIC, None))
         transformation_layout.register(command)
 
     model_transformer = ONNXModelTransformer(model)
@@ -93,8 +93,8 @@ def test_inserted_quantizer_parameters(test_parameters):
     model = LinearModel().onnx_model
     transformation_layout = TransformationLayout()
     quantizer_parameters = QuantizerLayerParameters(test_parameters.scale, test_parameters.zero_point,
-                                                    test_parameters.mode)
-    target_point = ONNXTargetPoint(TargetType.POST_LAYER_OPERATION, test_parameters.target_layer)
+                                                    test_parameters.mode, None)
+    target_point = ONNXTargetPoint(TargetType.POST_LAYER_OPERATION, test_parameters.target_layer, 0)
     command = ONNXQuantizerInsertionCommand(target_point, quantizer_parameters)
     transformation_layout.register(command)
 
@@ -125,7 +125,7 @@ def test_output_insertion(target_layers, target_layer_outputs):
     model = LinearModel().onnx_model
     transformation_layout = TransformationLayout()
     for target_layer in target_layers:
-        target_point = ONNXTargetPoint(TargetType.POST_LAYER_OPERATION, target_layer)
+        target_point = ONNXTargetPoint(TargetType.POST_LAYER_OPERATION, target_layer, 0)
         command = ONNXOutputInsertionCommand(target_point)
         transformation_layout.register(command)
 
@@ -150,7 +150,8 @@ def test_bias_correction(layers, values, refs):
     model = LinearModel().onnx_model
     transformation_layout = TransformationLayout()
     for conv_layer, bias_value in zip(layers, values):
-        target_point = ONNXTargetPoint(TargetType.LAYER, conv_layer)
+        bias_port_id = 2
+        target_point = ONNXTargetPoint(TargetType.LAYER, conv_layer, bias_port_id)
         command = ONNXBiasCorrectionCommand(target_point, bias_value, np.inf)
         transformation_layout.register(command)
 

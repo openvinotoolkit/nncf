@@ -120,9 +120,11 @@ class ONNXModelTransformer(ModelTransformer):
                 input_edge_names = []
             else:
                 if transformation.target_point.type == TargetType.POST_LAYER_OPERATION:
-                    edge_name = onnx_graph.get_node_edge_names(node_name)['output'][0]
+                    edge_name = onnx_graph.get_node_edge_names(node_name)['output'][
+                        transformation.target_point.port_id]
                 elif transformation.target_point.type == TargetType.PRE_LAYER_OPERATION:
-                    edge_name = transformation.target_point.edge_name
+                    edge_name = onnx_graph.get_node_edge_names(node_name)['input'][
+                        transformation.target_point.port_id]
                 else:
                     raise RuntimeError
                 extra_model_outputs.add(edge_name)
@@ -195,21 +197,23 @@ class ONNXModelTransformer(ModelTransformer):
             Optional[str]:
         target_edge_name = None
         if transformation.target_point.type == TargetType.OPERATION_WITH_WEIGHTS:
-            target_edge_name = onnx_graph.get_weight_tensor_name(
-                transformation.target_point.target_node_name)
+            target_edge_name = onnx_graph.get_node_edge_names(transformation.target_point.target_node_name)['input'][
+                transformation.target_point.port_id]
         elif transformation.target_point.type == TargetType.PRE_LAYER_OPERATION:
-            target_edge_name = transformation.target_point.edge_name
+            target_edge_name = onnx_graph.get_node_edge_names(transformation.target_point.target_node_name)['input'][
+                transformation.target_point.port_id]
         elif transformation.target_point.type == TargetType.POST_LAYER_OPERATION:
             if NNCFGraphNodeType.INPUT_NODE in transformation.target_point.target_node_name:  # ADD INPUT NODE CASE
                 nncf_node_name = self._nncf_graph.get_node_by_name(transformation.target_point.target_node_name)
                 onnx_nodes_after_input_node = [edge.to_node for edge in
                                                self._nncf_graph.get_output_edges(nncf_node_name)]
                 for onnx_node_name in onnx_nodes_after_input_node:
-                    target_edge_name = onnx_graph.get_node_edge_names(onnx_node_name.node_name)['input'][0]
+                    target_edge_name = onnx_graph.get_node_edge_names(onnx_node_name.node_name)['input'][
+                        transformation.target_point.port_id]
                     break
             else:
                 target_edge_name = onnx_graph.get_node_edge_names(transformation.target_point.target_node_name)[
-                    'output'][0]
+                    'output'][transformation.target_point.port_id]
         else:
             raise RuntimeError(
                 'Could not find the edge corresponding to node {}'.format(
@@ -219,9 +223,7 @@ class ONNXModelTransformer(ModelTransformer):
 
     def _get_quantize_dequantize_nodes(self, transformation: ONNXQuantizerInsertionCommand, target_edge_name: str) -> \
             Tuple[onnx.NodeProto, onnx.NodeProto]:
-        scale = transformation.quantizer_parameters.scale
-        per_channel = isinstance(scale, list)
-        axis = 0 if per_channel else None
+        axis = transformation.quantizer_parameters.axis
 
         cnt = self._added_target_edges[target_edge_name]
 
@@ -309,9 +311,8 @@ class ONNXModelTransformer(ModelTransformer):
         :param transformations: lisf of the bias correction transformations
         """
         onnx_graph = ONNXGraph(self._model)
-        bias_tensor_position = 2
-
         for transformation in transformations:
+            bias_tensor_position = transformation.target_point.port_id
             node_name = transformation.target_point.target_node_name
             onnx_node = onnx_graph.get_node_by_name(node_name)
             bias_initializer_name = onnx_node.input[bias_tensor_position]

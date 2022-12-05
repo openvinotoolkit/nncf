@@ -24,7 +24,7 @@ from nncf.experimental.onnx.graph.nncf_graph_builder import GraphConverter
 from tests.onnx.conftest import ONNX_TEST_ROOT
 
 from tests.onnx.models import ALL_SYNTHETIC_MODELS
-from tests.common.paths import TEST_ROOT
+from tests.shared.paths import TEST_ROOT
 from tests.onnx.quantization.common import ModelToTest
 from tests.onnx.quantization.common import check_nx_graph
 from tests.onnx.utils import convert_opset_version
@@ -49,31 +49,28 @@ def test_compare_nncf_graph_synthetic_models(model_cls_to_test, generate_ref_gra
 
 
 @pytest.mark.parametrize(('model_to_test', 'model'),
-                         [(ModelToTest('resnet18', [1, 3, 224, 224]), models.resnet18()),
-                          (ModelToTest('mobilenet_v2', [1, 3, 224, 224]), models.mobilenet_v2()),
-                          (ModelToTest('mobilenet_v3_small', [1, 3, 224, 224]), models.mobilenet_v3_small()),
-                          (ModelToTest('inception_v3', [1, 3, 224, 224]), models.inception_v3()),
-                          (ModelToTest('googlenet', [1, 3, 224, 224]), models.googlenet()),
-                          (ModelToTest('vgg16', [1, 3, 224, 224]), models.vgg16()),
-                          (ModelToTest('shufflenet_v2_x1_0', [1, 3, 224, 224]), models.shufflenet_v2_x1_0()),
-                          (ModelToTest('squeezenet1_0', [1, 3, 224, 224]), models.squeezenet1_0()),
-                          (ModelToTest('densenet121', [1, 3, 224, 224]), models.densenet121()),
-                          (ModelToTest('mnasnet0_5', [1, 3, 224, 224]), models.mnasnet0_5()),
+                         [(ModelToTest('resnet18', [1, 3, 224, 224]), models.resnet18(pretrained=True)),
+                          (ModelToTest('mobilenet_v2', [1, 3, 224, 224]), models.mobilenet_v2(pretrained=True)),
+                          (ModelToTest('mobilenet_v3_small', [1, 3, 224, 224]),
+                           models.mobilenet_v3_small(pretrained=True)),
+                          (ModelToTest('inception_v3', [1, 3, 224, 224]), models.inception_v3(pretrained=True)),
+                          (ModelToTest('googlenet', [1, 3, 224, 224]), models.googlenet(pretrained=True)),
+                          (ModelToTest('vgg16', [1, 3, 224, 224]), models.vgg16(pretrained=True)),
+                          (ModelToTest('shufflenet_v2_x1_0', [1, 3, 224, 224]),
+                           models.shufflenet_v2_x1_0(pretrained=True)),
+                          (ModelToTest('squeezenet1_0', [1, 3, 224, 224]), models.squeezenet1_0(pretrained=True)),
+                          (ModelToTest('densenet121', [1, 3, 224, 224]), models.densenet121(pretrained=True)),
+                          (ModelToTest('mnasnet0_5', [1, 3, 224, 224]), models.mnasnet0_5(pretrained=True)),
                           ]
                          )
 @pytest.mark.parametrize("generate_ref_graphs", [False])
 def test_compare_nncf_graph_classification_real_models(tmp_path, model_to_test, model, generate_ref_graphs):
-    if model_to_test.model_name in ['inception_v3', 'googlenet', 'vgg16']:
-        # The model skipping will be remove when correct NNCFGraph building will be merged
-        pytest.skip('Ticket 96177')
     onnx_model_dir = TEST_ROOT / 'onnx' / 'data' / 'models'
     onnx_model_path = onnx_model_dir / model_to_test.model_name
     if not os.path.isdir(onnx_model_dir):
         os.mkdir(onnx_model_dir)
     x = torch.randn(model_to_test.input_shape, requires_grad=False)
-    # Ticket 96177
-    # Export will be changed to Eval mode when correct building of NNCFGraph will be merged
-    torch.onnx.export(model, x, onnx_model_path, opset_version=13, training=torch.onnx.TrainingMode.TRAINING)
+    torch.onnx.export(model, x, onnx_model_path, opset_version=13)
 
     original_model = onnx.load(onnx_model_path)
 

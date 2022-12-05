@@ -3,5 +3,4 @@ tensorflow_datasets==4.2.0
 tensorflow_hub
 tensorflow_addons==0.14.0
 opencv-python
-protobuf~=3.19
 pycocotools==2.0.4

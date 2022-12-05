@@ -22,7 +22,7 @@ import onnxruntime as rt
 
 from nncf import Dataset
 from nncf.common.utils.dot_file_rw import write_dot_graph
-from tests.common.paths import TEST_ROOT
+from tests.shared.paths import TEST_ROOT
 from tests.common.graph.nx_graph import compare_nx_graph_with_reference
 from tests.common.graph.nx_graph import check_nx_graph
 from tests.onnx.utils import convert_opset_version

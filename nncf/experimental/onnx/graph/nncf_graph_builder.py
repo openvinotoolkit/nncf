@@ -15,11 +15,9 @@ from typing import Union, List
 from collections import Counter
 import onnx
 from onnx import ModelProto
-from onnx import NodeProto  # pylint: disable=no-name-in-module
 
 from nncf.common.graph import NNCFGraph
 from nncf.common.graph.definitions import NNCFGraphNodeType
-from nncf.common.graph.operator_metatypes import UnknownMetatype
 from nncf.common.graph.layer_attributes import BaseLayerAttributes, Dtype
 from nncf.common.graph.definitions import MODEL_INPUT_OP_NAME
 from nncf.common.graph.definitions import MODEL_OUTPUT_OP_NAME
@@ -29,7 +27,7 @@ from nncf.common.utils.logger import logger as nncf_logger
 
 from nncf.experimental.onnx.graph.onnx_graph import ONNXGraph
 from nncf.experimental.onnx.graph.metatypes.onnx_metatypes import ONNX_OPERATION_METATYPES
-from nncf.experimental.onnx.graph.metatypes.onnx_metatypes import ONNXConstantMetatype
+from nncf.experimental.onnx.graph.metatypes.onnx_metatypes import WEIGHT_LAYER_METATYPES
 
 
 class GraphConverter:
@@ -131,28 +129,6 @@ class GraphConverter:
         return model
 
     @staticmethod
-    def _is_valid_onnx_metatype(node: NodeProto) -> bool:
-        """
-        Checks whether the node has the metatype which should be added to the NNCFGraph.
-        :param node: Node to be checked.
-        :return: True if the metatype is valid and False if not.
-        """
-        node_type = node.op_type
-        metatype = ONNX_OPERATION_METATYPES.get_operator_metatype_by_op_name(node_type)
-        if metatype == ONNXConstantMetatype:  # We don't need to quantize Constants
-            nncf_logger.debug('The metatype is ONNXConstantMetatype, which in not quantizable. Skipping this node.')
-            return False
-        if metatype == UnknownMetatype:
-            node_name = node.name
-            nncf_logger.warning(
-                'The node with name {} with type {} was mapped to UnknownMetatype,'
-                ' which means that there was not registered such NNCF metatype. '
-                'Please, Inform the NNCF developers about this message.'.format(
-                    node_name, node_type))
-            return True
-        return True
-
-    @staticmethod
     def _get_tensor_shape(onnx_graph: onnx.GraphProto, tensor: Union[str, onnx.ValueInfoProto]) -> List[int]:
         """
         Returns the shape of the 'tensor'.
@@ -198,7 +174,7 @@ class GraphConverter:
             onnx_dtype = onnx_graph.get_edge_dtype_name(input_name)
             nncf_dtype = GraphConverter.convert_onnx_dtype_to_nncf_dtype(onnx_dtype)
             output_port_id = 0
-            for node in filter(GraphConverter._is_valid_onnx_metatype, to_nodes):
+            for node in to_nodes:
                 to_node_id = nncf_graph.get_node_by_name(node.name).node_id
                 input_port_id = ONNXGraph.get_input_port_id_for_node_after_input(input_name, node)
                 nncf_graph.add_edge_between_nncf_nodes(
@@ -234,7 +210,7 @@ class GraphConverter:
             onnx_dtype = onnx_graph.get_edge_dtype_name(output_name)
             nncf_dtype = GraphConverter.convert_onnx_dtype_to_nncf_dtype(onnx_dtype)
             input_port_id = 0
-            for node in filter(GraphConverter._is_valid_onnx_metatype, from_nodes):
+            for node in from_nodes:
                 from_node_id = nncf_graph.get_node_by_name(node.name).node_id
                 output_port_id = ONNXGraph.get_output_port_id_for_node_before_output(output_name, node)
                 nncf_graph.add_edge_between_nncf_nodes(
@@ -275,14 +251,20 @@ class GraphConverter:
         onnx_model = GraphConverter._preprocess_model(onnx_model)
         nncf_graph = NNCFGraph()
         onnx_graph = ONNXGraph(onnx_model)
-        for node in filter(GraphConverter._is_valid_onnx_metatype, onnx_graph.get_all_nodes()):
+        for node in onnx_graph.get_all_nodes():
             metatype = ONNX_OPERATION_METATYPES.get_operator_metatype_by_op_name(node.op_type)
             layer_attributes = ONNXExtendedLayerAttributes(node.input, node.output)
+            is_shared, layer_name = None, None
+            if metatype in WEIGHT_LAYER_METATYPES:
+                is_shared = onnx_graph.is_node_shared(node)
+                layer_name = onnx_graph.get_node_layer_name(node)
             nncf_graph.add_nncf_node(node_name=node.name,
                                      node_type=node.op_type,
                                      node_metatype=metatype,
-                                     layer_attributes=layer_attributes)
-        for output_node in filter(GraphConverter._is_valid_onnx_metatype, onnx_graph.get_all_nodes()):
+                                     layer_attributes=layer_attributes,
+                                     layer_name=layer_name,
+                                     is_shared=is_shared)
+        for output_node in onnx_graph.get_all_nodes():
             output_edges = onnx_graph.get_node_edge_names(output_node.name)['output']
             for output_edge in output_edges:
                 tensor_shape = GraphConverter._get_tensor_shape(onnx_graph, output_edge)
@@ -302,7 +284,7 @@ class GraphConverter:
                 if not input_nodes:
                     # if this node is output
                     continue
-                for input_node in filter(GraphConverter._is_valid_onnx_metatype, input_nodes):
+                for input_node in input_nodes:
                     port_ids = ONNXGraph.get_port_ids_between_nodes(output_node, input_node)
                     input_port_id = port_ids['input_port_id']
                     output_port_id = port_ids['output_port_id']

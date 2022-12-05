@@ -123,7 +123,12 @@ class BootstrapNASScheduler(BaseCompressionScheduler):
         self._is_elasticity_dims_validated = False
         self._lr_scheduler = None
 
-    def set_lr_scheduler(self, lr_scheduler: BaseLRScheduler):
+    @property
+    def lr_scheduler(self):
+        return self._lr_scheduler
+
+    @lr_scheduler.setter
+    def lr_scheduler(self, lr_scheduler: BaseLRScheduler) -> None:
         self._lr_scheduler = lr_scheduler
 
     @property

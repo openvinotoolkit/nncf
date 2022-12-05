@@ -30,6 +30,7 @@ from nncf.common.insertion_point_graph import InsertionPointGraph
 from nncf.common.insertion_point_graph import PostHookInsertionPoint
 from nncf.common.insertion_point_graph import PreHookInsertionPoint
 from tests.common.quantization.metatypes import METATYPES_FOR_TEST
+from tests.common.quantization.metatypes import TestMetatype
 
 OP_NAMES_IN_TEST_WITH_MODULE_ATTRIBUTES = [
     'conv1d',
@@ -44,6 +45,23 @@ OP_NAMES_IN_TEST_WITH_MODULE_ATTRIBUTES = [
     'embedding',
     'embedding_bag'
 ]
+
+
+class NodeWithType:
+    def __init__(self, name: str, op_type: TestMetatype):
+        self.node_name = name
+        self.node_op_type = op_type
+
+
+def create_mock_graph(nodes: List[NodeWithType], node_edges: List[Tuple[str, str]]) -> nx.DiGraph:
+    mock_graph = nx.DiGraph()
+    for node in nodes:
+        mock_node_attrs = get_mock_nncf_node_attrs(op_name=node.node_name, metatype=node.node_op_type)
+        mock_graph.add_node(node.node_name, **mock_node_attrs)
+    mock_graph.add_edges_from(node_edges)
+    mark_input_ports_lexicographically_based_on_input_node_key(mock_graph)
+    return mock_graph
+
 
 def mark_input_ports_lexicographically_based_on_input_node_key(graph: nx.DiGraph):
     for node_key in graph.nodes:
@@ -143,14 +161,18 @@ def get_two_branch_mock_model_graph() -> NNCFGraph:
 MOCK_OPERATOR_NAME = "conv_transpose2d"
 
 
-def get_mock_nncf_node_attrs(op_name=None, scope_str=None):
+def get_mock_nncf_node_attrs(op_name=None, scope_str=None, metatype=None):
     op_name_to_set = op_name if op_name is not None else MOCK_OPERATOR_NAME
     if scope_str is None:
         scope_str = ''
-    return {
+    output = {
         NNCFGraph.NODE_NAME_ATTR: f'{scope_str}/{op_name_to_set}_0',
-        NNCFGraph.NODE_TYPE_ATTR: op_name_to_set
+        NNCFGraph.NODE_TYPE_ATTR: op_name_to_set,
+        NNCFGraph.METATYPE_ATTR: metatype
     }
+    if metatype is None:
+        del output[NNCFGraph.METATYPE_ATTR]
+    return output
 
 
 def _add_nodes_with_layer_attrs(nx_graph: nx.DiGraph, node_keys: List[str],

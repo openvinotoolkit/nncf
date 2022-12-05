@@ -11,14 +11,23 @@
  limitations under the License.
 """
 
-from typing import Callable, Dict, List, Optional
+from typing import Callable, Dict, List, Optional, Tuple
 
+from collections import deque
 import onnx
 from onnx import numpy_helper  # pylint: disable=no-name-in-module
 import numpy as np
 
+from nncf.experimental.onnx.graph.metatypes.onnx_metatypes import ONNX_OPERATION_METATYPES
+from nncf.experimental.onnx.graph.metatypes.onnx_metatypes import OpWeightDef
+from nncf.experimental.onnx.graph.metatypes.onnx_metatypes import ONNXIdentityMetatype
+from nncf.experimental.onnx.graph.metatypes.onnx_metatypes import ONNXReshapeMetatype
+from nncf.experimental.onnx.graph.metatypes.onnx_metatypes import ONNXQuantizeLinearMetatype
+from nncf.experimental.onnx.graph.metatypes.onnx_metatypes import WEIGHT_LAYER_METATYPES
+
 
 # pylint: disable=no-member
+# pylint: disable=too-many-public-methods
 
 class ONNXGraph:
     """
@@ -189,17 +198,110 @@ class ONNXGraph:
                 output.append(node)
         return output
 
-    def get_weight_tensor_name(self, node_name: str) -> str:
-        # TODO(kshpv): add search of input weight tensor
+    def get_weight_tensor(self, node: onnx.NodeProto) -> Tuple[str, np.ndarray]:
+        # TODO(kshpv): Need to generalize the logic of searching the weight and
+        #  extend to the MatMul case.
         """
-        Returns weight tensor name from the 1-index.
+        Returns node's weight tensor name and its value.
 
-        :param node_name: Name of the node.
-        :return: Weight tensor name.
+        :param node: Node, in which the weight tensor finally applied.
+        :return: Weight tensor name and its value.
         """
-        node_inputs = self.get_node_edge_names(node_name)['input']
-        weight_tensor = node_inputs[1]
-        return weight_tensor
+        weight_port_id = self.get_weight_port_id(node)
+        weight_input = self.get_node_edge_names(node.name)['input'][weight_port_id]
+        if self.has_initializer(weight_input):
+            return self.get_initializer(weight_input).name, self.get_initializers_value(weight_input)
+        parent_node_on_weight_port = self.get_parents(node)[weight_port_id]
+        nodes = deque([parent_node_on_weight_port])
+        while nodes:
+            current_node = nodes.popleft()
+            node_parents = self.get_parents(current_node)
+            nodes.extendleft(node_parents)
+            metatype = ONNX_OPERATION_METATYPES.get_operator_metatype_by_op_name(current_node.op_type)
+            if metatype in [ONNXIdentityMetatype, ONNXQuantizeLinearMetatype]:
+                if self.has_initializer(current_node.input[0]):
+                    return self._get_tensor_from_zero_input(current_node)
+                continue
+            if metatype == ONNXReshapeMetatype:
+                return self._get_weight_tensor_with_reshape(current_node)
+            if metatype in WEIGHT_LAYER_METATYPES:
+                weight_port_id = self.get_weight_port_id(current_node)
+                weight_input = self.get_node_edge_names(current_node.name)['input'][weight_port_id]
+                return self.get_initializer(weight_input).name, self.get_initializers_value(weight_input)
+        raise RuntimeError('Could not find the weight tensor of the node')
+
+    @staticmethod
+    def _get_weight_definitions(node: onnx.NodeProto) -> OpWeightDef:
+        """
+        Returns the weight_definitions of the node's metatype.
+
+        :param node: Node from which weight definition is obtained.
+        :return: weight definition of the node.
+        """
+        metatype = ONNX_OPERATION_METATYPES.get_operator_metatype_by_op_name(node.op_type)
+        if metatype in WEIGHT_LAYER_METATYPES:
+            return metatype.weight_definitions
+        raise RuntimeError(f'The metatype {metatype} does not belong to a list of metatypes with a weight tensor.')
+
+    def get_weight_port_id(self, node: onnx.NodeProto) -> int:
+        """
+        Returns input port id, where a weight tensor should output.
+
+        :param node: Node, for which input port id is returned,
+        :return: input port id, where a weight tensor should output.
+        """
+        weight_definitions = self._get_weight_definitions(node)
+        if weight_definitions.weight_port_id is not None:
+            return weight_definitions.weight_port_id
+        raise RuntimeError(f'The metatype {node} does not have weight_port_id attribute')
+
+    def get_weight_channel_axis(self, node: onnx.NodeProto) -> int:
+        """
+        Returns a channel axis for weight per-channel quantization.
+
+        :param node: Node, for which weight per-channel axis id is returned,
+        :return: Channel axis for per-channel quantization.
+        """
+        weight_definitions = self._get_weight_definitions(node)
+        if weight_definitions.weight_channel_axis is not None:
+            return weight_definitions.weight_channel_axis
+        raise RuntimeError(f'The node {node} does not have weight_channel_axis attribute')
+
+    def get_bias_tensor_port_id(self, node: onnx.NodeProto) -> int:
+        """
+        Returns input port id, where a bias tensor should output.
+
+        :param node: Node, for which input port id is returned,
+        :return: input port id, where a weight bias should output.
+        """
+        weight_definitions = self._get_weight_definitions(node)
+        if weight_definitions.bias_port_id is not None:
+            return weight_definitions.bias_port_id
+        raise RuntimeError(f'The node {node} does not have bias_port_id attribute')
+
+    def _get_weight_tensor_with_reshape(self, node: onnx.NodeProto) -> Tuple[str, np.ndarray]:
+        """
+        Returns node's weight tensor name and its value in the case when reshape node is placed after the weight.
+        The returned weight tensor will be reshaped according to a shape attribute of the reshape node.
+
+        :param node: Reshape node, whose input is weight tensor.
+        :return: The weight tensor name and its value with applied the reshape operation.
+        """
+        tensor_name = node.output[0]
+        shape = self.get_initializers_value(node.input[1])
+        tensor_value = self.get_initializers_value(node.input[0])
+        reshaped_tensor_value = tensor_value.reshape(shape)
+        return tensor_name, reshaped_tensor_value
+
+    def _get_tensor_from_zero_input(self, node: onnx.NodeProto) -> Tuple[str, np.ndarray]:
+        """
+        Returns the weight tensor name and its value, which is located on the 0-index input port of the node.
+
+        :param node: Node, which takes on the 0-index input port id the weight tensor.
+        :return: The weight tensor name and its value.
+        """
+        tensor_name = self.get_initializer(node.input[0]).name
+        return tensor_name, self.get_initializers_value(tensor_name)
 
     def get_node_index(self, node_name: str) -> int:
         """
@@ -225,6 +327,18 @@ class ONNXGraph:
                 tensor = numpy_helper.to_array(init)
                 return tensor
         raise RuntimeError('There is no initializer with the name {}'.format(initializer_name))
+
+    def has_initializer(self, initializer_name: str) -> bool:
+        """
+        Returns True whether the model has the initializer with the name equals to initializer_name.
+
+        :param initializer_name: Name of the initializer.
+        :return: True if the model has such initializer, False - otherwise.
+        """
+        for init in self.onnx_model.graph.initializer:
+            if init.name == initializer_name:
+                return True
+        return False
 
     def get_initializer(self, initializer_name: str) -> onnx.TensorProto:
         """
@@ -312,3 +426,49 @@ class ONNXGraph:
         :return: The Name of the datatype.
         """
         return onnx.TensorProto.DataType.Name(self.get_edge_dtype(edge_name))
+
+    def get_parents(self, node: onnx.NodeProto) -> List[onnx.NodeProto]:
+        """
+        Returns parents of the node.
+
+        :param node: The child node.
+        :return: All children nodes.
+        """
+        output = []
+        for inp in node.input:
+            output.extend(self.get_nodes_by_output(inp))
+        return output
+
+    def get_children(self, node: onnx.NodeProto) -> List[onnx.NodeProto]:
+        """
+        Returns children of the node.
+
+        :param node: The parent node.
+        :return: All children nodes.
+        """
+        output = []
+        node_edges = self.get_node_edge_names(node.name)['output']
+        for node_edge in node_edges:
+            output.extend(self.get_nodes_by_input(node_edge))
+        return output
+
+    def is_node_shared(self, node: onnx.NodeProto) -> bool:
+        """
+        Returns whether the node share a weight.
+
+        :param node: Node.
+        :return: True whether node shares a weight - otherwise False.
+        """
+        weight_tensor_name, _ = self.get_weight_tensor(node)
+        nodes = self.get_nodes_by_input(weight_tensor_name)
+        return len(nodes) > 1
+
+    def get_node_layer_name(self, node: onnx.NodeProto) -> Optional[str]:
+        """
+        Returns name of a weight tensor if it exists.
+
+        :param node: Node.
+        :return: Name of a weight tensor or None if the node does not have a weight.
+        """
+        weight_tensor_name, _ = self.get_weight_tensor(node)
+        return weight_tensor_name
