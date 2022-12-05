@@ -28,7 +28,7 @@ from tests.onnx.models import ALL_SYNTHETIC_MODELS
 from tests.shared.paths import TEST_ROOT
 from tests.onnx.quantization.common import ModelToTest
 from tests.onnx.quantization.common import check_nx_graph
-from tests.onnx.quantization.helper import load_model_topology_with_random_weights
+from tests.onnx.weightless_model import load_model_topology_with_zeros_weights
 
 REFERENCE_GRAPHS_DIR = ONNX_TEST_ROOT / 'data' / 'reference_graphs' / 'original_nncf_graph'
 
@@ -105,7 +105,7 @@ def test_compare_nncf_graph_detection_real_models(tmp_path, model_to_test, gener
     onnx_model_path = onnx_model_dir / (model_to_test.model_name + '.onnx')
     if not os.path.isdir(onnx_model_dir):
         os.mkdir(onnx_model_dir)
-    original_model = load_model_topology_with_random_weights(onnx_model_path)
+    original_model = load_model_topology_with_zeros_weights(onnx_model_path)
 
     convert_opset_version = True
     if model_to_test.model_name == 'MaskRCNN-12':
