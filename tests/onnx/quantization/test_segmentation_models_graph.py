@@ -12,21 +12,32 @@
 """
 
 import pytest
+from unittest.mock import patch
 
+from nncf.common.tensor_statistics.collectors import TensorStatisticCollectorBase
+from nncf.common.tensor_statistics.aggregator import StatisticsAggregator
 from tests.onnx.conftest import ONNX_MODEL_DIR
 from tests.onnx.quantization.common import ModelToTest
 from tests.onnx.quantization.common import compare_nncf_graph
 from tests.onnx.quantization.common import infer_model
 from tests.onnx.quantization.common import min_max_quantize_model
 from tests.onnx.weightless_model import load_model_topology_with_zeros_weights
+from tests.onnx.quantization.common import mock_calculate_activation_quantizer_parameters
+from tests.onnx.quantization.common import mock_get_statistics
+from tests.onnx.quantization.common import mock_collect_statistics
 
-
+@patch('nncf.quantization.algorithms.min_max.algorithm.calculate_activation_quantizer_parameters',
+       new=mock_calculate_activation_quantizer_parameters)
 @pytest.mark.parametrize(('model_to_test'),
                          [ModelToTest('icnet_camvid', [1, 3, 768, 960]),
                           ModelToTest('unet_camvid', [1, 3, 368, 480]),
                           ]
                          )
 def test_min_max_quantization_graph(tmp_path, model_to_test):
+    mockObject = StatisticsAggregator
+    mockObject.collect_statistics = mock_collect_statistics
+    mockObject_ = TensorStatisticCollectorBase
+    mockObject_.get_statistics = mock_get_statistics
     if model_to_test.model_name == 'unet_camvid':
         pytest.skip('Ticket 96049')
     onnx_model_path = ONNX_MODEL_DIR / (model_to_test.model_name + '.onnx')

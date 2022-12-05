@@ -20,13 +20,9 @@ from torchvision import models
 from tests.onnx.quantization.common import ModelToTest
 import torch
 import onnx
-import numpy as np
-
-from nncf.experimental.onnx.graph.onnx_graph import ONNXGraph
 
 from tests.shared.paths import TEST_ROOT
 from tests.onnx.weightless_model import save_model_without_tensors
-from tests.onnx.weightless_model import load_model_topology_with_zeros_weights
 
 
 @pytest.mark.parametrize(
@@ -39,9 +35,6 @@ def test_save_weightless_model(tmp_path, model_to_test, model):
     onnx_model = onnx.load_model(onnx_model_path)
 
     with tempfile.TemporaryDirectory() as tmpdir:
-        save_model_without_tensors(onnx_model, tmpdir / Path('weightless_model.onnx'))
-        weigtless_model = load_model_topology_with_zeros_weights(tmpdir / Path('weightless_model.onnx'))
-        onnx.save_model(weigtless_model, 'weightless_model.onnx')
-        weigtless_model_onnx_graph = ONNXGraph(weigtless_model)
-        for initializer_weightless in weigtless_model_onnx_graph.onnx_model.graph.initializer:
-            assert np.count_nonzero(weigtless_model_onnx_graph.get_initializers_value(initializer_weightless.name)) == 0
+        weightless_model_path = tmpdir / Path('weightless_model.onnx')
+        save_model_without_tensors(onnx_model, weightless_model_path)
+        assert weightless_model_path.stat().st_size < Path(onnx_model_path).stat().st_size

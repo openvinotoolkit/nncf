@@ -12,6 +12,7 @@
 """
 
 import pytest
+from unittest.mock import patch
 
 from tests.onnx.conftest import ONNX_MODEL_DIR
 from tests.onnx.quantization.common import ModelToTest
@@ -21,17 +22,30 @@ from tests.onnx.quantization.common import min_max_quantize_model
 from tests.onnx.quantization.common import find_ignored_scopes
 from tests.onnx.weightless_model import load_model_topology_with_zeros_weights
 
+from nncf.common.tensor_statistics.collectors import TensorStatisticCollectorBase
+from nncf.common.tensor_statistics.aggregator import StatisticsAggregator
+from tests.onnx.quantization.common import mock_calculate_activation_quantizer_parameters
+from tests.onnx.quantization.common import mock_get_statistics
+from tests.onnx.quantization.common import mock_collect_statistics
+
 TEST_DATA = [ModelToTest('ssd_mobilenet_v1_12', [1, 300, 300, 3]),
              ModelToTest('ssd-12', [1, 3, 1200, 1200]),
              ModelToTest('yolov2-coco-9', [1, 3, 416, 416]),
-             ModelToTest('MaskRCNN-12', [3, 30, 30]),
+             ModelToTest('MaskRCNN-12', [3, 1200, 800]),
              ModelToTest('retinanet-9', [1, 3, 480, 640]),
              ModelToTest('fcn-resnet50-12', [1, 3, 480, 640])
              ]
 
 
+@patch('nncf.quantization.algorithms.min_max.algorithm.calculate_activation_quantizer_parameters',
+       new=mock_calculate_activation_quantizer_parameters)
 @pytest.mark.parametrize(('model_to_test'), TEST_DATA, ids=[model_to_test.model_name for model_to_test in TEST_DATA])
 def test_min_max_quantization_graph(tmp_path, model_to_test):
+    mockObject = StatisticsAggregator
+    mockObject.collect_statistics = mock_collect_statistics
+    mockObject_ = TensorStatisticCollectorBase
+    mockObject_.get_statistics = mock_get_statistics
+
     if model_to_test.model_name == 'ssd_mobilenet_v1_12':
         pytest.skip('Ticket 96156')
     convert_opset_version = True
