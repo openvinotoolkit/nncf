@@ -18,8 +18,6 @@ from nncf.common.graph.definitions import NNCFGraphNodeType
 from nncf.common.graph.layer_attributes import Dtype
 from nncf.common.graph.operator_metatypes import InputNoopMetatype
 from nncf.common.graph.operator_metatypes import OutputNoopMetatype
-from nncf.common.graph.operator_metatypes import UnknownMetatype
-from nncf.common.utils.logger import logger as nncf_logger
 
 from nncf.experimental.openvino_native.graph.metatypes.openvino_metatypes import OV_OPERATION_METATYPES
 from nncf.experimental.openvino_native.graph.metatypes.openvino_metatypes import OVParameterMetatype
@@ -30,25 +28,6 @@ class GraphConverter:
     """
     Builds the NNCFGraph from an OpenVINO model.
     """
-
-    @staticmethod
-    def _is_valid_openvino_metatype(node: ov.Node) -> bool:
-        """
-        Checks whether the node has the metatype which should be added to the NNCFGraph.
-
-        :param node: Node to be checked.
-        :return: True if the metatype is valid and False if not.
-        """
-        node_type = node.get_type_name()
-        metatype = OV_OPERATION_METATYPES.get_operator_metatype_by_op_name(node_type)
-        if metatype == UnknownMetatype:
-            node_name = node.get_friendly_name()
-            nncf_logger.warning(
-                'The node with name {} with type {} was mapped to UnknownMetatype,'
-                ' which means that there was not registered such NNCF metatype. '
-                'Please, Inform the NNCF developers about this message.'.format(
-                    node_name, node_type))
-        return True
 
     @staticmethod
     def convert_ov_dtype_to_nncf_dtype(ov_dtype: str) -> Dtype:
@@ -97,7 +76,7 @@ class GraphConverter:
                                      node_type=NNCFGraphNodeType.OUTPUT_NODE,
                                      node_metatype=OutputNoopMetatype)
 
-        for node in filter(GraphConverter._is_valid_openvino_metatype, model.get_ops()):
+        for node in model.get_ops():
             ov_dtype = node.get_element_type().get_type_name()
             nncf_dtype = GraphConverter.convert_ov_dtype_to_nncf_dtype(ov_dtype)
             node_type = node.get_type_name()
@@ -107,24 +86,22 @@ class GraphConverter:
                                         node_type=nncf_dtype,
                                         node_metatype=metatype)
 
-        for op in filter(GraphConverter._is_valid_openvino_metatype, model.get_ops()):
+        for op in model.get_ops():
             in_node_id = nncf_graph.get_node_by_name(op.get_friendly_name()).node_id
             for output_port_id, out in enumerate(op.outputs()):
                 for inp in out.get_target_inputs():
                     out_node = inp.get_node()
-                    if GraphConverter._is_valid_openvino_metatype(out_node):
-                        tensor_shape = list(out.shape)
-                        output_node_id = nncf_graph.get_node_by_name(out_node.get_friendly_name()).node_id
-
-                        ov_dtype = op.get_element_type().get_type_name()
-                        nncf_dtype = GraphConverter.convert_ov_dtype_to_nncf_dtype(ov_dtype)
-                        nncf_graph.add_edge_between_nncf_nodes(
-                            from_node_id=in_node_id,
-                            to_node_id=output_node_id,
-                            tensor_shape=tensor_shape,
-                            input_port_id=inp.get_index(),
-                            output_port_id=output_port_id,
-                            dtype=Dtype(nncf_dtype)
-                        )
+                    tensor_shape = list(out.shape)
+                    output_node_id = nncf_graph.get_node_by_name(out_node.get_friendly_name()).node_id
+                    ov_dtype = op.get_element_type().get_type_name()
+                    nncf_dtype = GraphConverter.convert_ov_dtype_to_nncf_dtype(ov_dtype)
+                    nncf_graph.add_edge_between_nncf_nodes(
+                        from_node_id=in_node_id,
+                        to_node_id=output_node_id,
+                        tensor_shape=tensor_shape,
+                        input_port_id=inp.get_index(),
+                        output_port_id=output_port_id,
+                        dtype=Dtype(nncf_dtype)
+                    )
 
         return nncf_graph

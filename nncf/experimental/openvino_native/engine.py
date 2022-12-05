@@ -28,7 +28,7 @@ class OVNativeEngine(Engine):
     to infer the model.
     """
 
-    def __init__(self, model, target_device: TargetDevice = TargetDevice.CPU):
+    def __init__(self, model: ov.Model, target_device: TargetDevice = TargetDevice.CPU):
         self.input_names = set()
 
         ie = ov.Core()
