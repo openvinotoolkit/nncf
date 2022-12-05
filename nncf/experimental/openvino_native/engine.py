@@ -29,7 +29,8 @@ class OVNativeEngine(Engine):
     """
 
     def __init__(self, model: ov.Model, target_device: TargetDevice = TargetDevice.CPU):
-        self.input_names = set()
+        if target_device == TargetDevice.ANY:
+            target_device = TargetDevice.CPU
 
         ie = ov.Core()
         self.compiled_model = ie.compile_model(model, target_device.value)
