@@ -178,9 +178,9 @@ def eval_size(request):
 def ov_ep_only(request):
     ov_ep_only = request.config.getoption("--ov_ep_only")
     if ov_ep_only:
-        nncf_logger.log("The accuracy validation will be done on the OpenVINOExecutionProvider provider only.")
+        nncf_logger.info("The accuracy validation will be done on the OpenVINOExecutionProvider provider only.")
         return ov_ep_only
-    nncf_logger.log(
+    nncf_logger.info(
         "The accuracy validation will be done on the OpenVINOExecutionProvider and CPUExecutionProvider providers.")
     return ov_ep_only
 
