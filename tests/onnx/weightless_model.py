@@ -115,4 +115,5 @@ def save_model_without_tensors(model: onnx.ModelProto, model_path: Path) -> None
     tensors_location = Path('tensors')
     copy_model = deepcopy(model)
     with tempfile.TemporaryDirectory() as tmpfile:
-        onnx.save_model(copy_model, model_path, save_as_external_data=True, location=Path(tmpfile) / tensors_location, size_threshold=0)
+        onnx.save_model(copy_model, model_path, save_as_external_data=True, location=Path(tmpfile) / tensors_location,
+                        size_threshold=0)
