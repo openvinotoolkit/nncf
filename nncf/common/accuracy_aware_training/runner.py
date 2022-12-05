@@ -135,7 +135,7 @@ class TrainingRunner(ABC):
     def initialize_training_loop_fns(self, train_epoch_fn: Callable[[CompressionAlgorithmController, TModel,
                                                                      Optional[int],
                                                                      Optional[OptimizerType],
-                                                                     Optional[LRSchedulerType]], None],
+                                                                     Optional[LRSchedulerType]], float],
                                      validate_fn: Callable[[TModel, Optional[int]], float],
                                      configure_optimizers_fn: Callable[[], Tuple[OptimizerType, LRSchedulerType]],
                                      dump_checkpoint_fn: Callable[
@@ -201,6 +201,7 @@ class BaseAccuracyAwareTrainingRunner(TrainingRunner):
         self.cumulative_epoch_count = 0
         self.best_val_metric_value = 0
         self.current_val_metric_value = 0
+        self.current_loss = 0
 
         self._compressed_training_history = []
         self._best_checkpoint = None
@@ -220,11 +221,11 @@ class BaseAccuracyAwareTrainingRunner(TrainingRunner):
     def train_epoch(self, model, compression_controller):
         compression_controller.scheduler.epoch_step()
         # assuming that epoch number is only used for logging in train_fn:
-        self._train_epoch_fn(compression_controller,
-                             model,
-                             epoch=self.cumulative_epoch_count,
-                             optimizer=self.optimizer,
-                             lr_scheduler=self.lr_scheduler)
+        self.current_loss = self._train_epoch_fn(compression_controller,
+                                                 model,
+                                                 epoch=self.cumulative_epoch_count,
+                                                 optimizer=self.optimizer,
+                                                 lr_scheduler=self.lr_scheduler)
         self.training_epoch_count += 1
         self.cumulative_epoch_count += 1
 
