@@ -17,8 +17,7 @@ from torch import nn
 
 from nncf.torch.layers import NNCFConv2d
 from nncf.torch.module_operations import UpdateWeightAndBias
-from nncf.torch.pruning.filter_pruning.layers import FilterPruningMask, inplace_apply_filter_binary_mask, \
-    apply_filter_binary_mask
+from nncf.torch.pruning.filter_pruning.layers import FilterPruningMask, apply_filter_binary_mask
 from tests.torch.helpers import fill_conv_weight, fill_bias
 
 
@@ -76,9 +75,6 @@ def test_assert_broadcastable_mask_and_weight_shape():
     mask = torch.zeros(10)
 
     with pytest.raises(RuntimeError):
-        inplace_apply_filter_binary_mask(mask, nncf_module.weight.data, Scope())
-
-    with pytest.raises(RuntimeError):
         apply_filter_binary_mask(mask, nncf_module.weight.data)
 
 
@@ -90,23 +86,6 @@ def test_assert_broadcastable_mask_and_weight_shape():
                            torch.tensor([0, 1], dtype=torch.float32)),
                           ])
 class TestApplyMasks:
-    @staticmethod
-    def test_inplace_apply_filter_binary_mask(mask, reference_weight, reference_bias):
-        """
-        Test that inplace_apply_filter_binary_mask changes the input weight and returns valid result.
-        """
-        nncf_module = NNCFConv2d(1, 2, 2)
-        fill_conv_weight(nncf_module, 1)
-        fill_bias(nncf_module, 1)
-
-        result_weight = inplace_apply_filter_binary_mask(mask, nncf_module.weight.data, Scope())
-        assert torch.allclose(result_weight, reference_weight)
-        assert torch.allclose(nncf_module.weight, reference_weight)
-
-        result_bias = inplace_apply_filter_binary_mask(mask, nncf_module.bias.data, Scope())
-        assert torch.allclose(result_bias, reference_bias)
-        assert torch.allclose(nncf_module.bias, reference_bias)
-
     @staticmethod
     def test_apply_filter_binary_mask(mask, reference_weight, reference_bias):
         """
