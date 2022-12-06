@@ -10,7 +10,8 @@
  See the License for the specific language governing permissions and
  limitations under the License.
 """
-
+from nncf import nncf_logger
+from nncf.common.logging.logger import warn_bkc_version_mismatch
 # pylint: skip-file
 from nncf.version import BKC_TF_VERSION
 
@@ -19,17 +20,10 @@ from pkg_resources import parse_version
 
 tensorflow_version = parse_version(tensorflow.__version__).base_version
 if not tensorflow_version.startswith(BKC_TF_VERSION[:-2]):
-    import warnings
-    warnings.warn("NNCF provides best results with tensorflow=={bkc}, "
-                   "while current tensorflow version is {curr} - consider switching to tensorflow=={bkc}".format(
-         bkc=BKC_TF_VERSION,
-         curr=tensorflow.__version__
-    ))
+    warn_bkc_version_mismatch("tensorflow", BKC_TF_VERSION, tensorflow.__version__)
 elif not ('2.4' <= tensorflow_version[:3] <= '2.8'):
-   raise RuntimeError(
-        'NNCF only supports 2.4.0 <= tensorflow <= 2.8.*, while current tensorflow version is {curr}'.format(
-        curr=tensorflow.__version__
-   ))
+    raise RuntimeError(
+       f'NNCF only supports 2.4.0 <= tensorflow <= 2.8.*, while current tensorflow version is {tensorflow.__version__}')
 
 
 from nncf.tensorflow.helpers import create_compressed_model

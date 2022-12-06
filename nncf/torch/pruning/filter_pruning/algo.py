@@ -40,7 +40,7 @@ from nncf.common.pruning.utils import get_prunable_layers_in_out_channels
 from nncf.common.schedulers import StubCompressionScheduler
 from nncf.common.statistics import NNCFStatistics
 from nncf.common.utils.debug import is_debug
-from nncf.common.utils.logger import logger as nncf_logger
+from nncf.common.logging import nncf_logger
 from nncf.config.extractors import extract_bn_adaptation_init_params
 from nncf.torch.algo_selector import PT_COMPRESSION_ALGORITHMS
 from nncf.torch.compression_method_api import PTCompressionAlgorithmController
@@ -169,7 +169,7 @@ class FilterPruningController(BasePruningAlgoController):
             self.normalize_weights = False
             if params.get('load_ranking_coeffs_path'):
                 coeffs_path = params.get('load_ranking_coeffs_path')
-                nncf_logger.info('Loading ranking coefficients from file {}'.format(coeffs_path))
+                nncf_logger.info(f'Loading ranking coefficients from file {coeffs_path}')
                 try:
                     with open(coeffs_path, 'r', encoding='utf8') as coeffs_file:
                         loaded_coeffs = json.load(coeffs_file)
@@ -177,7 +177,7 @@ class FilterPruningController(BasePruningAlgoController):
                     raise Exception('Can\'t load json with ranking coefficients. Please, check format of json file '
                                     'and path to the file.') from err
                 ranking_coeffs = {key: tuple(loaded_coeffs[key]) for key in loaded_coeffs}
-                nncf_logger.info('Loaded ranking coefficients = {}'.format(ranking_coeffs))
+                nncf_logger.debug(f'Loaded ranking coefficients = {ranking_coeffs}')
                 self.ranking_coeffs = ranking_coeffs
             else:
                 # Ranking can't be trained without registered init struct LeGRInitArgs
@@ -192,16 +192,15 @@ class FilterPruningController(BasePruningAlgoController):
                     legr_params['max_pruning'] = self._scheduler.target_level
                 self.legr = LeGR(self, target_model, legr_init_args, **legr_params)
                 self.ranking_coeffs = self.legr.train_global_ranking()
-                nncf_logger.info('Trained ranking coefficients = {}'.format(self.ranking_coeffs))
+                nncf_logger.debug(f'Trained ranking coefficients = {self.ranking_coeffs}')
                 # Unwrapping parallelized model
-                target_model = distributed_wrapping_init_args.unwrap_model(target_model)
+                _ = distributed_wrapping_init_args.unwrap_model(target_model)
         else:
             self.ranking_coeffs = {node.node_name: (1, 0) for node in self.pruned_module_groups_info.get_all_nodes()}
 
         # Saving ranking coefficients to the specified file
         if params.get('save_ranking_coeffs_path'):
-            nncf_logger.info(
-                'Saving ranking coefficients to the file {}'.format(params.get('save_ranking_coeffs_path')))
+            nncf_logger.info(f'Saving ranking coefficients to the file {params.get("save_ranking_coeffs_path")}')
             with open(params.get('save_ranking_coeffs_path'), 'w', encoding='utf8') as f:
                 json.dump(self.ranking_coeffs, f)
 
@@ -348,8 +347,7 @@ class FilterPruningController(BasePruningAlgoController):
             with torch.no_grad():
                 if self.all_weights:
                     if groupwise_pruning_levels_set:
-                        raise RuntimeError('Cannot set group-wise pruning levels with '
-                                           'all_weights=True')
+                        raise RuntimeError('Cannot set group-wise pruning levels with all_weights=True')
                     # Non-uniform (global) importance-score-based pruning according
                     # to the global pruning level
                     if self.prune_flops:
@@ -586,7 +584,7 @@ class FilterPruningController(BasePruningAlgoController):
         self._propagate_masks()
 
         pruned_layers_stats = self.get_stats_for_pruned_modules()
-        nncf_logger.debug('Pruned layers statistics: \n%s', pruned_layers_stats.draw())
+        nncf_logger.info('Pruned layers statistics: \n%s', pruned_layers_stats.draw())
 
     def compression_stage(self) -> CompressionStage:
         target_pruning_level = self.scheduler.target_level

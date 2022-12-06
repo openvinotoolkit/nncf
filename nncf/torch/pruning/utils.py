@@ -26,7 +26,7 @@ from nncf.torch.layers import NNCF_GENERAL_CONV_MODULES_DICT
 from nncf.torch.layers import NNCF_LINEAR_MODULES_DICT
 from nncf.torch.tensor import PTNNCFTensor
 from nncf.torch.nncf_network import NNCFNetwork
-from nncf.common.utils.logger import logger as nncf_logger
+from nncf.common.logging import nncf_logger
 
 
 def get_bn_node_for_conv(graph: NNCFGraph, conv_node: NNCFNode) -> Optional[NNCFNode]:
@@ -118,7 +118,7 @@ def collect_output_shapes(graph: NNCFGraph) -> Dict[NNCFNodeName, List[int]]:
             else:
                 # For disconnected NNCFGraph when node have no output edge
                 out_shape = _calculate_output_shape(graph, node)
-                nncf_logger.error("Node %s have no output edge in NNCFGraph", node.node_name)
+                nncf_logger.debug(f"Node {node.node_name} has no output edge in NNCFGraph")
             modules_out_shapes[node.node_name] = out_shape
 
     return modules_out_shapes

@@ -11,16 +11,16 @@
  limitations under the License.
 """
 
-from nncf.common.utils.logger import logger as nncf_logger
+from nncf.common.logging import nncf_logger
 
 
 class ProgressBar:
     """
-    A basic progress bar specifically for the logger.
+    A basic progress bar specifically for the logging.
     It does not print at the same line, instead it logs multiple lines intentionally to avoid multiprocessing issues.
     Works as a decorator for iterable.
     :param iterable: iterable to decorate with a progressbar.
-    :param logger: logger to print a progress, nncf_logger by default
+    :param logger: logging to print a progress, nncf_logger by default
     :param desc: prefix for the printed line, empty by default
     :param num_lines:  defines the number of lines to log
     :param total: the expected total number of iterations
@@ -38,8 +38,8 @@ class ProgressBar:
         self._total = None
         if total is not None:
             if not isinstance(total, (int, float)) or total <= 0:
-                logger.warning('Progress bar is disabled because the expected total number of iterations is invalid: '
-                               'it should be an integer and more than 0')
+                logger.error('Progress bar is disabled because the expected total number of iterations is invalid: '
+                             'it should be an integer and more than 0')
                 return
             self._total = int(total)
 
@@ -47,13 +47,13 @@ class ProgressBar:
             try:
                 self._total = len(iterable)
             except (TypeError, AttributeError):
-                logger.warning('Progress bar is disabled because the given iterable is invalid: '
-                               'it does not implement __len__ method')
+                logger.error('Progress bar is disabled because the given iterable is invalid: '
+                             'it does not implement __len__ method')
                 return
 
         if not isinstance(num_lines, int) or num_lines <= 1:
-            logger.warning('Progress bar is disabled because the given number of lines for logging is invalid: '
-                           'it should be an integer and more than 1')
+            logger.error('Progress bar is disabled because the given number of lines for logging is invalid: '
+                         'it should be an integer and more than 1')
             return
 
         self._step = max(1, self._total // (self._num_lines - 1))

@@ -17,7 +17,6 @@ from typing import Type
 
 from nncf.common.graph.definitions import NNCFGraphNodeType
 from nncf.common.utils.registry import Registry
-from nncf.common.utils.logger import logger as nncf_logger
 
 
 class OperatorMetatype:
@@ -117,11 +116,6 @@ class OperatorMetatypeRegistry(Registry):
         :return: The operator metatype.
         """
         if op_name not in self._op_name_to_op_meta_dict:
-            nncf_logger.warning(
-                f'The node with name {op_name} was mapped to UnknownMetatype,'
-                ' which means that there was not registered such NNCF metatype. '
-                'It could lead to not the best optimized model. '
-                'Please, Inform the NNCF developers about this message.')
             return UnknownMetatype
         return self._op_name_to_op_meta_dict[op_name]
 

@@ -25,7 +25,7 @@ from torch.nn.modules.loss import _Loss
 from torch.utils.data import DataLoader
 
 from nncf.torch.initialization import wrap_dataloader_for_init, PTInitializingDataLoader
-from nncf.common.utils.logger import logger as nncf_logger
+from nncf.common.logging import nncf_logger
 
 
 class ParameterHandler:
@@ -136,7 +136,7 @@ class HessianTraceEstimator:
             if diff_avg < tolerance:
                 return mean_avg_traces_per_param
             avg_total_trace = mean_avg_total_trace
-            nncf_logger.info('{}# difference_avg={} avg_trace={}'.format(i, diff_avg, avg_total_trace))
+            nncf_logger.debug(f'{i}# difference_avg={diff_avg} avg_trace={avg_total_trace}')
 
         return mean_avg_traces_per_param
 

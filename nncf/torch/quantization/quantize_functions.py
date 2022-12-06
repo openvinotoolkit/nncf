@@ -15,7 +15,7 @@ from typing import Any
 import torch
 
 from nncf.torch.utils import add_domain
-from nncf.common.utils.logger import logger as nncf_logger
+from nncf.common.logging import nncf_logger
 
 from nncf.torch.quantization.extensions import QuantizedFunctionsCPU, QuantizedFunctionsCUDA
 from nncf.torch.dynamic_graph.patch_pytorch import register_operator

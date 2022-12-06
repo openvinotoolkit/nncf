@@ -21,7 +21,7 @@ from nncf.common.utils.helpers import matches_any
 from nncf.torch.dynamic_graph.scope import ScopeElement
 from nncf.torch.dynamic_graph.scope import Scope
 
-from nncf.common.utils.logger import logger as nncf_logger
+from nncf.common.logging import nncf_logger
 
 
 
@@ -97,7 +97,7 @@ def replace_modules(model: nn.Module, replace_fn, affected_scopes, ignored_scope
             replaced_scope.push(replaced_scope_element)
             if module is not replaced_module:
                 if matches_any(str(child_scope), ignored_scopes):
-                    nncf_logger.info("Ignored wrapping modules specified in scope: {}".format(child_scope))
+                    nncf_logger.info(f"Not processing a module that matched to ignored scope in config: {child_scope}")
                     continue
                 if eval_op_scopes is None:
                     eval_op_scopes = []
@@ -109,13 +109,11 @@ def replace_modules(model: nn.Module, replace_fn, affected_scopes, ignored_scope
                         is_ignored = False
                         break
                 if is_ignored and eval_op_scopes:
-                    nncf_logger.info(
-                        "Ignored wrapping modules not called in eval mode in scope: {}".format(child_scope))
+                    nncf_logger.info(f"Not processing a module not called in eval mode: {child_scope}")
                     continue
 
                 if target_scopes is None or matches_any(str(child_scope), target_scopes):
-                    nncf_logger.info("Wrapping module {} by {}".format(str(child_scope),
-                                                                       str(replaced_scope)))
+                    nncf_logger.debug(f"Wrapping module {str(child_scope)} by {str(replaced_scope)}")
                     set_replaced_module_by_name(model, name, replaced_module)
                     affected_scopes.append(replaced_scope)
             elif is_nncf_module(replaced_module):

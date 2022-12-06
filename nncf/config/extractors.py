@@ -19,7 +19,7 @@ from typing import Any
 
 from nncf.common.quantization.initialization.range import PerLayerRangeInitConfig
 from nncf.common.quantization.initialization.range import RangeInitConfig
-from nncf.common.utils.logger import logger
+from nncf.common.logging import nncf_logger
 from nncf.config.config import NNCFConfig
 from nncf.config.schemata.defaults import NUM_BN_ADAPTATION_SAMPLES
 from nncf.config.structures import BNAdaptationInitArgs
@@ -94,13 +94,13 @@ def extract_range_init_params(config: NNCFConfig, algorithm_name: str = 'quantiz
         range_init_args = config.get_extra_struct(QuantizationRangeInitArgs)
     except KeyError:
         if not init_range_config_dict_or_list:
-            logger.warning('Initializer section not specified for quantization algorithm in NNCF config and '
-                           'quantization init args not supplied - the necessary parameters are not specified '
-                           'to run the quantizer range initialization algorithm')
+            nncf_logger.warning('Initializer section not specified for quantization algorithm in NNCF config and '
+                                'quantization init args not supplied - the quantizer range initialization algorithm '
+                                'cannot proceed.')
             return None
 
     if not init_range_config_dict_or_list:
-        logger.warning('Enabling quantization range initialization with default parameters.')
+        nncf_logger.warning('Enabling quantization range initialization with default parameters.')
         init_range_config_dict_or_list = {'num_init_samples': 256}
 
     max_num_init_samples = 0

@@ -14,7 +14,7 @@ from typing import Any
 from typing import Dict
 from typing import List
 
-from nncf.common.utils.logger import logger as nncf_logger
+from nncf.common.logging import nncf_logger
 from nncf.experimental.torch.nas.bootstrapNAS.elasticity.elasticity_dim import ElasticityDim
 
 DEFAULT_STAGE_LR_RATE = 3.5e-06

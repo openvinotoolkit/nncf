@@ -25,7 +25,7 @@ from nncf.common.quantization.structs import QuantizerConfig
 from nncf.common.tensor_statistics.collectors import ReductionShape
 from nncf.common.tensor_statistics.statistics import MinMaxTensorStatistic
 from nncf.common.utils.backend import BackendType
-from nncf.common.utils.logger import logger as nncf_logger
+from nncf.common.logging import nncf_logger
 
 from nncf.experimental.onnx.graph.metatypes.onnx_metatypes import WEIGHT_LAYER_METATYPES
 from nncf.experimental.onnx.graph.metatypes.onnx_metatypes import ONNXNonMaxSuppressionMetatype
@@ -130,10 +130,7 @@ class ONNXMinMaxAlgoBackend(MinMaxAlgoBackend):
         config = deepcopy(config)
         if model.opset_import[0].version < 13:
             config.per_channel = False
-            nncf_logger.warning(
-                f"Model opset version is {model.opset_import[0].version} < 13. "
-                "Per-channel quantization is not supported. "
-                "Set weight_quantizer_config.per_channel = False"
-            )
+            nncf_logger.warning(f"Model opset version is {model.opset_import[0].version} < 13 - "
+                                "will not use per-channel quantization because it is not supported in this opset.")
 
         return config

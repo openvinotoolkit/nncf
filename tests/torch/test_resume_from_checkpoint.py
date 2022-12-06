@@ -16,7 +16,7 @@ from functools import partial
 import pytest
 from torch.nn import DataParallel
 
-from nncf.common.utils.logger import logger as nncf_logger
+from nncf.common.logging import nncf_logger
 from nncf.torch import load_state
 from nncf.torch import register_default_init_args
 from nncf.torch.compression_method_api import PTCompressionAlgorithmBuilder

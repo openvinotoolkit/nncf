@@ -17,7 +17,7 @@ from typing import Optional
 from typing import Tuple
 
 from nncf.common.schedulers import BaseCompressionScheduler
-from nncf.common.utils.logger import logger as nncf_logger
+from nncf.common.logging import nncf_logger
 from nncf.experimental.torch.nas.bootstrapNAS.elasticity.elasticity_dim import ElasticityDim
 from nncf.experimental.torch.nas.bootstrapNAS.training.base_training import BNASTrainingAlgorithm
 from nncf.experimental.torch.nas.bootstrapNAS.training.lr_scheduler import BaseLRScheduler
@@ -288,6 +288,6 @@ class BootstrapNASScheduler(BaseCompressionScheduler):
 
             if desc.init_lr is not None and desc.epochs_lr is None:
                 nncf_logger.warning(
-                    "Stage learning rate in use but epochs_lr value for stage wasn't set. "
-                    "Using number of epochs for stage {epochs}".format(epochs=desc.epochs))
+                    f"Stage learning rate in use but epochs_lr value for stage wasn't set. "
+                    f"Using number of epochs for stage {desc.epochs}")
                 desc.epochs_lr = desc.epochs

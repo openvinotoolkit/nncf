@@ -33,7 +33,7 @@ from nncf.common.utils.helpers import product_dict
 from nncf.common.utils.os import safe_open
 from nncf.definitions import HW_CONFIG_RELATIVE_DIR
 from nncf.definitions import NNCF_PACKAGE_ROOT_DIR
-from nncf.common.utils.logger import logger as nncf_logger
+from nncf.common.logging import nncf_logger
 
 class HWConfigType(Enum):
     CPU = 'CPU'

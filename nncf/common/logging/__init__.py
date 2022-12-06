@@ -11,26 +11,4 @@
  limitations under the License.
 """
 
-import logging
-from contextlib import contextmanager
-
-from nncf.common.logging import nncf_logger
-
-DEBUG_LOG_DIR = "./nncf_debug"
-
-
-def is_debug():
-    return nncf_logger.getEffectiveLevel() == logging.DEBUG
-
-
-def set_debug_log_dir(dir_: str):
-    global DEBUG_LOG_DIR
-    DEBUG_LOG_DIR = dir_
-
-
-@contextmanager
-def nncf_debug():
-    from nncf.common.logging.logger import set_log_level #pylint: disable=cyclic-import
-    set_log_level(logging.DEBUG)
-    yield
-    set_log_level(logging.INFO)
+from nncf.common.logging.logger import nncf_logger

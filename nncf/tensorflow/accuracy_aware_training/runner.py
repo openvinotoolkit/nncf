@@ -20,7 +20,7 @@ from tensorflow.keras.optimizers import schedules  # pylint:disable=no-name-in-m
 from nncf.common.accuracy_aware_training.runner import BaseAccuracyAwareTrainingRunner
 from nncf.common.accuracy_aware_training.runner import BaseAdaptiveCompressionLevelTrainingRunner
 from nncf.common.schedulers import StubCompressionScheduler
-from nncf.common.utils.logger import logger as nncf_logger
+from nncf.common.logging import nncf_logger
 
 
 class TFAccuracyAwareTrainingRunner(BaseAccuracyAwareTrainingRunner):
@@ -59,7 +59,8 @@ class TFAccuracyAwareTrainingRunner(BaseAccuracyAwareTrainingRunner):
             elif isinstance(scheduler, schedules.PiecewiseConstantDecay):
                 scheduler.values = [lr * self.base_lr_reduction_factor_during_search for lr in scheduler.values]
             else:
-                nncf_logger.warning(f"Learning rate scheduler {scheduler} is not supported yet. Not reducing lr.")
+                nncf_logger.warning(f"Learning rate scheduler {scheduler} is not supported yet."
+                                    f"Won't change the learning rate.")
 
         self.training_epoch_count = 0
         self.best_val_metric_value = 0
@@ -114,7 +115,7 @@ class TFAdaptiveCompressionLevelTrainingRunner(BaseAdaptiveCompressionLevelTrain
         else:
             checkpoint_path = self._make_checkpoint_path(is_best=False)
             self._save_checkpoint(model, compression_controller, checkpoint_path)
-        nncf_logger.info("The checkpoint is saved in {}".format(checkpoint_path))
+        nncf_logger.info(f"Saved the checkpoint to {checkpoint_path}")
 
         if is_best_checkpoint:
             self._save_best_checkpoint(model, compression_controller)

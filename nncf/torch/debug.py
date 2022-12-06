@@ -10,11 +10,10 @@
  See the License for the specific language governing permissions and
  limitations under the License.
 """
-import warnings
 from typing import List, Dict
 
 from torch.nn import Module
-from nncf.common.utils.logger import logger as nncf_logger
+from nncf.common.logging import nncf_logger
 
 
 class CallCountTracker:
@@ -24,11 +23,11 @@ class CallCountTracker:
 
     def init_with_key_list(self, key_list: List):
         self.call_counts = {key: 0 for key in key_list}
-        nncf_logger.debug("{} tracker: registered {} entries".format(self.name, len(self.call_counts)))
+        nncf_logger.debug(f"{self.name} tracker: registered {len(self.call_counts)} entries")
 
     def register_call(self, key, counts=None):
         if key not in self.call_counts:
-            warnings.warn("DEBUG: {} tracker: called an unregistered module: {}".format(self.name, key))
+            nncf_logger.debug("DEBUG: {} tracker: called an unregistered module: {}".format(self.name, key))
             return
         if counts is None:
             self.call_counts[key] += 1

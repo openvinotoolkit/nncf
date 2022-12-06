@@ -16,7 +16,7 @@ from typing import Dict, Tuple, List, TypeVar, Union, Optional
 import numpy as np
 from nncf import Dataset
 from nncf.common.tensor import NNCFTensor
-from nncf.common.utils.logger import logger as nncf_logger
+from nncf.common.logging import nncf_logger
 from nncf.common.graph.transformations.commands import TargetType
 from nncf.common.graph.transformations.layout import TransformationLayout
 from nncf.common.utils.backend import BackendType
@@ -125,10 +125,10 @@ class FastBiasCorrection(Algorithm):
             node_name = node.node_name
 
             if not self._backend_entity.is_node_with_bias(node):
-                nncf_logger.debug('Skipping node {} because there is no bias'.format(node_name))
+                nncf_logger.debug(f'Skipping node {node_name} because there is no bias')
                 continue
             if not self._backend_entity.is_quantized_weights(node, model):
-                nncf_logger.debug('Skipping node {} because weights was not quantized'.format(node_name))
+                nncf_logger.debug(f'Skipping node {node_name} because weights were not quantized')
                 continue
 
             input_fp, input_shape = self._get_fp_inputs(statistic_points, node_name)

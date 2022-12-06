@@ -16,7 +16,7 @@ from typing import Callable
 import tensorflow as tf
 
 from nncf.common.statistics import NNCFStatistics
-from nncf.common.utils.logger import logger as nncf_logger
+from nncf.common.logging import nncf_logger
 
 
 class StatisticsCallback(tf.keras.callbacks.Callback):
