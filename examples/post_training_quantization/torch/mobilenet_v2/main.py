@@ -16,7 +16,6 @@ import re
 import subprocess
 import tempfile
 from pathlib import Path
-from typing import Tuple
 
 import nncf
 import numpy as np
@@ -31,7 +30,7 @@ from tqdm import tqdm
 ROOT = Path(__file__).parent.resolve()
 CHECKPOINT_URL = 'https://huggingface.co/alexsu52/mobilenet_v2_imagenette/resolve/main/pytorch_model.bin'
 DATASET_URL = 'https://s3.amazonaws.com/fast-ai-imageclas/imagenette2-320.tgz'
-DATASET_PATH = '~/.nncf'
+DATASET_PATH = '~/.cache/nncf'
 DATASET_CLASSES = 10
 
 
@@ -80,15 +79,21 @@ def run_benchmark(model: ov.Model, verbose: bool = True) -> float:
     return float(match.group(1))
 
 
-def get_model_size(ir_path: Path, m_type: str = 'Mb') -> Tuple[float, float]:
+def get_model_size(ir_path: Path, m_type: str = 'Mb', 
+                   verbose: bool = True) -> float:
     xml_size = os.path.getsize(ir_path)
     bin_size = os.path.getsize(ir_path.replace('xml', 'bin'))
     for t in ['bytes', 'Kb', 'Mb']:
         if m_type == t:
-            return (xml_size, bin_size)
+            break
         xml_size /= 1024
         bin_size /= 1024
-    return (xml_size, bin_size)
+    model_size = xml_size + bin_size 
+    if verbose:
+        print(f'Model graph (xml):   {xml_size:.3f} Mb')
+        print(f'Model weights (bin): {bin_size:.3f} Mb')
+        print(f'Model size:          {model_size:.3f} Mb')      
+    return model_size
 
 ###############################################################################
 # Create a PyTorch model and dataset
@@ -159,12 +164,10 @@ int8_ir_path = f'{ROOT}/mobilenet_v2_int8.xml'
 ov.serialize(ov_model, fp32_ir_path)
 ov.serialize(ov_quantized_model, int8_ir_path)
 
-fp32_model_size = get_model_size(fp32_ir_path)
-int8_model_size = get_model_size(int8_ir_path)
-print(f'[3/7] Save FP32 model: {fp32_ir_path} ({sum(fp32_model_size):.3f} Mb = '
-      f'{fp32_model_size[0]:.3f} Mb (xml) + {fp32_model_size[1]:.3f} Mb (bin))')
-print(f'[4/7] Save INT8 model: {int8_ir_path} ({sum(int8_model_size):.3f} Mb = '
-      f'{int8_model_size[0]:.3f} Mb (xml) + {int8_model_size[1]:.3f} Mb (bin))')
+print(f'[3/7] Save FP32 model: {fp32_ir_path}')
+fp32_model_size = get_model_size(fp32_ir_path, verbose=True)
+print(f'[4/7] Save INT8 model: {int8_ir_path}')
+int8_model_size = get_model_size(int8_ir_path, verbose=True)
 
 # Using [the dynamic shape feature](https://docs.openvino.ai/latest/openvino_docs_OV_UG_DynamicShapes.html)
 # to compute the last batch of the validation dataset
@@ -184,6 +187,6 @@ print(f'Accuracy @ top1: {int8_top1:.3f}')
 
 print('[7/7] Report:')
 print(f'Accuracy drop: {fp32_top1 - int8_top1:.3f}')
-print(f'Model compression rate: {sum(fp32_model_size) / sum(int8_model_size):.3f}')
+print(f'Model compression rate: {fp32_model_size / int8_model_size:.3f}')
 # https://docs.openvino.ai/latest/openvino_docs_optimization_guide_dldt_optimization_guide.html
 print(f'Performance speed up (throughput mode): {int8_fps / fp32_fps:.3f}')
