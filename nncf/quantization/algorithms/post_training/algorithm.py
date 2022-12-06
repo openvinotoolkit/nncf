@@ -27,6 +27,8 @@ from nncf.quantization.algorithms.definitions import Granularity
 from nncf.quantization.algorithms.definitions import RangeType
 from nncf.quantization.algorithms.fast_bias_correction.algorithm import FastBiasCorrection
 from nncf.quantization.algorithms.fast_bias_correction.algorithm import FastBiasCorrectionParameters
+from nncf.quantization.algorithms.bias_correction.algorithm import BiasCorrection
+from nncf.quantization.algorithms.bias_correction.algorithm import BiasCorrectionParameters
 from nncf.quantization.algorithms.min_max.algorithm import MinMaxQuantization
 from nncf.quantization.algorithms.min_max.algorithm import MinMaxQuantizationParameters
 from nncf.common.tensor_statistics.aggregator import StatisticsAggregator
@@ -50,7 +52,8 @@ class PostTrainingQuantizationParameters(AlgorithmParameters):
                  number_samples: int = 300,
                  target_device: HWConfigType = HWConfigType.CPU,
                  quantize_outputs: bool = False,
-                 ignored_scopes: Optional[List[str]] = None
+                 ignored_scopes: Optional[List[str]] = None,
+                 fast_bias_correction: bool = True,
                  ):
         self.algorithms = {MinMaxQuantization: MinMaxQuantizationParameters(
             preset=preset,
@@ -63,10 +66,17 @@ class PostTrainingQuantizationParameters(AlgorithmParameters):
             target_device=target_device,
             quantize_outputs=quantize_outputs,
             ignored_scopes=ignored_scopes
-        ),
-            FastBiasCorrection: FastBiasCorrectionParameters(
+        )}
+
+        bias_correction_algo = {BiasCorrection: BiasCorrectionParameters(
             number_samples=number_samples
         )}
+
+        if fast_bias_correction:
+            bias_correction_algo = {FastBiasCorrection: FastBiasCorrectionParameters(
+                number_samples=number_samples
+            )}
+        self.algorithms.update(bias_correction_algo)
 
     def to_json(self) -> Dict[str, Union[str, float, int]]:
         pass
@@ -76,10 +86,10 @@ class PostTrainingQuantization(Algorithm):
     """
     Implements Post-Training Quantization algorithm, which basically includes:
     1) MinMaxQuantization
-    2) FastBiasCorrection
+    2) FastBiasCorrection or BiasCorrection
     3) ChannelAlignment
 
-    Disclaimer: currently, it only supports MinMaxQuantization & FastBiasCorrection.
+    Disclaimer: currently, it only supports MinMaxQuantization, FastBiasCorrection & BiasCorrection.
     ChannelAlignment will be added soon.
 
     """
@@ -106,6 +116,9 @@ class PostTrainingQuantization(Algorithm):
             if algorithm == FastBiasCorrection:
                 fast_bc_algo = FastBiasCorrection(parameters)
                 algorithms_list.append(fast_bc_algo)
+            if algorithm == BiasCorrection:
+                bc_algo = BiasCorrection(parameters)
+                algorithms_list.append(bc_algo)
         return algorithms_list
 
     @property

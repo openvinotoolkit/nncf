@@ -80,3 +80,16 @@ class PercentileTensorStatistic(TensorStatistic):
                                         other.percentile_vs_values_dict[pct]):
                 return False
         return True
+
+class BatchTensorStatistic(TensorStatistic):
+    """
+    Base class for the statistics that collects as mean per-batch
+    """
+    def __init__(self, values):
+        """
+        :param values: Сollected per-batch values.
+        """
+        self.values = values
+
+    def __eq__(self, other: 'BatchTensorStatistic') -> bool:
+        return self.tensor_eq(self.values, other.values)

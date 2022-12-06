@@ -28,7 +28,6 @@ from nncf.quantization.algorithms.algorithm import Algorithm
 from nncf.quantization.algorithms.fast_bias_correction.backend import ALGO_BACKENDS
 from nncf.common.factory import NNCFGraphFactory
 from nncf.common.factory import EngineFactory
-from nncf.common.graph.model_transformer import ModelTransformer
 from nncf.common.tensor_statistics.statistic_point import StatisticPoint
 from nncf.common.tensor_statistics.statistic_point import StatisticPointsContainer
 
@@ -140,7 +139,7 @@ class FastBiasCorrection(Algorithm):
             input_name = input_tensor_names[0]
             output_name = output_tensor_names[0]
 
-            extracted_model = self._extract_submodel(model_transformer, [input_name], [output_name])
+            extracted_model = self._extract_submodel(model, [input_name], [output_name])
 
             channel_axis = self._backend_entity.channel_axis_by_types[node.node_type]
             input_blob = self._create_input_data(input_shape,
@@ -164,8 +163,7 @@ class FastBiasCorrection(Algorithm):
                                                                  node.node_name,
                                                                  bias_port_id)
                 bias_correction_command = self._backend_entity.bias_correction_command(target_point,
-                                                                                       updated_bias,
-                                                                                       self.threshold)
+                                                                                       updated_bias)
                 transformation_layout.register(bias_correction_command)
             else:
                 nncf_logger.debug(f'{node_name} bias skipped by threshold')
@@ -218,17 +216,18 @@ class FastBiasCorrection(Algorithm):
         return output_fp
 
     def _extract_submodel(self,
-                          model_transformer: ModelTransformer,
+                          model: TModel,
                           input_names: List[str],
                           output_names: List[str]) -> TModel:
         """
         Extracts sub-model from the original based on the input & output tensor names
 
-        :param model_transformer: ModelTransformer instance
+        :param model: backend-specific model
         :param input_names: list of the input names
         :param output_names: list of the output names
         :return: backend-specific sub-model
         """
+        model_transformer = self._backend_entity.model_transformer(model)
         model_extraction_command = self._backend_entity.model_extraction_command(input_names,
                                                                                  output_names)
         me_transformation_layout = TransformationLayout()

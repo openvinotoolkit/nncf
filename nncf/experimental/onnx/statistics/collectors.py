@@ -17,6 +17,7 @@ import numpy as np
 
 from nncf.common.tensor import NNCFTensor
 from nncf.common.tensor import TensorElementsType
+from nncf.common.tensor_statistics.collectors import BatchStatisticCollector
 from nncf.common.tensor_statistics.collectors import MinMaxStatisticCollector
 from nncf.common.tensor_statistics.collectors import NNCFCollectorTensorProcessor
 from nncf.common.tensor_statistics.collectors import MeanMinMaxStatisticCollector
@@ -24,6 +25,7 @@ from nncf.common.tensor_statistics.collectors import MeanStatisticCollector
 from nncf.experimental.onnx.tensor import ONNXNNCFTensor
 from nncf.experimental.onnx.statistics.statistics import ONNXMinMaxTensorStatistic
 from nncf.experimental.onnx.statistics.statistics import ONNXMeanTensorStatistic
+from nncf.experimental.onnx.statistics.statistics import ONNXBatchTensorStatistic
 
 
 class ONNXNNCFCollectorTensorProcessor(NNCFCollectorTensorProcessor):
@@ -62,6 +64,10 @@ class ONNXNNCFCollectorTensorProcessor(NNCFCollectorTensorProcessor):
         x = np.moveaxis(x.tensor, axis, 1)
         t = x.reshape(x.shape[0], x.shape[1], -1)
         return ONNXNNCFTensor(np.mean(t, axis=(0, 2)))
+
+    @staticmethod
+    def batch_mean(x: NNCFTensor) -> NNCFTensor:
+        return ONNXNNCFTensor(np.mean(x.tensor, axis=0, keepdims=True))
 
     @staticmethod
     def stack(x: Union[List[NNCFTensor], Deque[NNCFTensor]], axis: int = 0) -> NNCFTensor:
@@ -111,3 +117,15 @@ class ONNXMeanStatisticCollector(MeanStatisticCollector):
 
     def _get_statistics(self) -> ONNXMeanTensorStatistic:
         return ONNXMeanTensorStatistic(self._mean_aggregate().tensor, self._shape())
+
+
+class ONNXBatchStatisticCollector(BatchStatisticCollector):
+    @staticmethod
+    def _get_processor() -> NNCFCollectorTensorProcessor:
+        return ONNXNNCFCollectorTensorProcessor()
+
+    def _register_input(self, x: ONNXNNCFTensor):
+        self._register_input_common(x)
+
+    def _get_statistics(self) -> ONNXBatchTensorStatistic:
+        return ONNXBatchTensorStatistic(self._all_values)
