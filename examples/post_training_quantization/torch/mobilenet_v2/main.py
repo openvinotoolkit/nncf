@@ -16,13 +16,14 @@ import re
 import subprocess
 import tempfile
 from pathlib import Path
+from typing import Tuple
 
 import nncf
 import numpy as np
 import openvino.runtime as ov
 import torch
 from fastdownload import FastDownload
-from openvino.offline_transformations import compress_quantize_weights_transformation
+from openvino.tools import mo
 from sklearn.metrics import accuracy_score
 from torchvision import datasets, models, transforms
 from tqdm import tqdm
@@ -34,18 +35,24 @@ DATASET_PATH = '~/.nncf'
 DATASET_CLASSES = 10
 
 
-def download_dataset():
-    downloader = FastDownload(base=DATASET_PATH, archive='downloaded', data='extracted')
+def download_dataset() -> Path:
+    downloader = FastDownload(base=DATASET_PATH, 
+                              archive='downloaded', 
+                              data='extracted')
     return downloader.get(DATASET_URL)
 
 
-def load_checkpoint(model):  
-    checkpoint = torch.hub.load_state_dict_from_url(CHECKPOINT_URL, progress=False)
+def load_checkpoint(model: torch.nn.Module) -> torch.nn.Module:  
+    checkpoint = torch.hub.load_state_dict_from_url(
+        CHECKPOINT_URL, 
+        map_location=torch.device('cpu'), 
+        progress=False)
     model.load_state_dict(checkpoint['state_dict'])
     return model
 
 
-def validate(model, val_loader):
+def validate(model: ov.CompiledModel, 
+             val_loader: torch.utils.data.DataLoader) -> float:
     predictions = []
     references = []
 
@@ -61,16 +68,7 @@ def validate(model, val_loader):
     return accuracy_score(predictions, references)
 
 
-def ov_convert(model, args):
-    onnx_model_path = f'{tempfile.gettempdir()}/model.onnx'
-    torch.onnx.export(model, args, onnx_model_path, verbose=False)
-
-    ov_model = ov.Core().read_model(onnx_model_path)
-    compress_quantize_weights_transformation(ov_model)
-    return ov_model
-
-
-def ov_benchmark(model, verbose=True):
+def ov_benchmark(model: ov.Model, verbose: bool = True) -> float:
     ov_model_path = f'{tempfile.gettempdir()}/model.xml'
     ov.serialize(model, ov_model_path)
 
@@ -82,13 +80,15 @@ def ov_benchmark(model, verbose=True):
     return float(match.group(1))
 
 
-def ov_model_size(ir_path, m_type='Mb'):
-    model_size = os.path.getsize(ir_path) + os.path.getsize(ir_path.replace('xml', 'bin'))
+def ov_model_size(ir_path: Path, m_type: str = 'Mb') -> Tuple[float, float]:
+    xml_size = os.path.getsize(ir_path)
+    bin_size = os.path.getsize(ir_path.replace('xml', 'bin'))
     for t in ['bytes', 'Kb', 'Mb']:
         if m_type == t:
-            return model_size
-        model_size /= 1024
-    return model_size
+            return (xml_size, bin_size)
+        xml_size /= 1024
+        bin_size /= 1024
+    return (xml_size, bin_size)
 
 ###########################################################################
 # Create a PyTorch model and dataset
@@ -118,7 +118,7 @@ model = load_checkpoint(model)
 ###########################################################################
 
 '''
-Transformation function transforms a data item into model input.
+The transformation function transforms a data item into model input data.
 
 To validate the transform function use the following code:
 >> for data_item in val_loader:
@@ -128,6 +128,17 @@ def transform_fn(data_item):
     images, _ = data_item
     return images
 
+'''
+The calibration dataset is a small, no label, representative dataset
+(~100-500 samples) that is used to estimate the range, i.e. (min, max) of all
+floating point activation tensors in the model, to initialize the quantization
+parameters.
+
+The easiest way to define a calibration dataset is to use a training or
+validation dataset and a transformation function to remove labels from the data
+item and prepare model input data. The quantize method uses a small subset
+(default: 300 samples) of the calibration data set.
+'''
 calibration_dataset = nncf.Dataset(val_loader, transform_fn)
 quantized_model = nncf.quantize(model, calibration_dataset)
 
@@ -136,8 +147,9 @@ quantized_model = nncf.quantize(model, calibration_dataset)
 ###########################################################################
 
 dummy_input = torch.randn(1, 3, 224, 224)
-ov_model = ov_convert(model.cpu(), dummy_input)
-ov_quantized_model = ov_convert(quantized_model.cpu(), dummy_input)
+ov_model = mo.convert_model(model.cpu(), example_input=dummy_input)
+ov_quantized_model = mo.convert_model(quantized_model.cpu(), 
+                                      example_input=dummy_input)
 
 print('[1/7] Benchmark FP32 model:')
 fp32_fps = ov_benchmark(ov_model, verbose=True)
@@ -151,8 +163,10 @@ ov.serialize(ov_quantized_model, int8_ir_path)
 
 fp32_model_size = ov_model_size(fp32_ir_path)
 int8_model_size = ov_model_size(int8_ir_path)
-print(f'[3/7] Save FP32 model: {fp32_ir_path} ({fp32_model_size:.3f} Mb)')
-print(f'[4/7] Save INT8 model: {int8_ir_path} ({int8_model_size:.3f} Mb)')
+print(f'[3/7] Save FP32 model: {fp32_ir_path} ({sum(fp32_model_size):.3f} Mb = '
+      f'{fp32_model_size[0]:.3f} Mb (xml) + {fp32_model_size[1]:.3f} Mb (bin))')
+print(f'[4/7] Save INT8 model: {int8_ir_path} ({sum(int8_model_size):.3f} Mb = '
+      f'{int8_model_size[0]:.3f} Mb (xml) + {int8_model_size[1]:.3f} Mb (bin))')
 
 # Using [the dynamic shape feature](https://docs.openvino.ai/latest/openvino_docs_OV_UG_DynamicShapes.html)
 # to compute the last batch of the validation dataset
@@ -172,6 +186,6 @@ print(f'Accuracy @ top1: {int8_top1:.3f}')
 
 print('[7/7] Report:')
 print(f'Accuracy drop: {fp32_top1 - int8_top1:.3f}')
-print(f'Compression rate: {fp32_model_size / int8_model_size:.3f}')
-# https://docs.openvino.ai/2018_R5/_docs_IE_DG_Intro_to_Performance.html
-print(f'Performance speed up (throughput mode): {int8_fps / fp32_fps:.3f}') 
+print(f'Model compression rate: {sum(fp32_model_size) / sum(int8_model_size):.3f}')
+# https://docs.openvino.ai/latest/openvino_docs_optimization_guide_dldt_optimization_guide.html
+print(f'Performance speed up (throughput mode): {int8_fps / fp32_fps:.3f}')
