@@ -338,7 +338,7 @@ class TestBenchmark:
         check_xfail(model_name)
 
         command = self.get_command(task_type, model_name, model_dir, data_dir, anno_dir, output_dir, eval_size,
-                                   program="accuracy_checker.py", is_quantized=False)
+                                   program="accuracy_checker.py", is_quantized=False, ov_ep_only=True)
         run_command(command)
 
     @pytest.mark.e2e_ptq
