@@ -205,7 +205,8 @@ def quantize_impl(model: torch.nn.Module,
         config=nncf_config,
         dummy_forward_fn=dummy_forward_fn,
         wrap_inputs_fn=wrap_inputs,
-        wrap_outputs_fn=wrap_outputs
+        wrap_outputs_fn=wrap_outputs,
+        dump_graphs=False
     )
     compression_ctrl.prepare_for_export()
     compressed_model.disable_dynamic_graph_building()
