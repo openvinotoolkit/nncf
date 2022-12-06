@@ -445,8 +445,8 @@ class BaseQuantizer(nn.Module):
                 # Impossible to determine proper axis for per-channel quantization because we have
                 # scale shape ~ [1, 1, 1, 1], therefore falling back to per-tensor style export
                 axis = 1  # default value by opset, ignored in per-tensor quantization anyway
-                y_scale = y_scale.flatten()
-                y_zero_point = y_zero_point.flatten()
+                y_scale = y_scale.flatten()[0]
+                y_zero_point = y_zero_point.flatten()[0]
             else:
                 axis = possible_axes[0]
 
