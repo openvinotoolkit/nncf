@@ -347,6 +347,8 @@ strict digraph  {
 "75 SSD_VGG/MultiOutputSequential[basenet]/NNCFBatchNorm2d[31]/batch_norm_0" -> "76 SSD_VGG/MultiOutputSequential[basenet]/ReLU[32]/relu__0";
 "76 SSD_VGG/MultiOutputSequential[basenet]/ReLU[32]/relu__0" -> "77 SSD_VGG/MultiOutputSequential[basenet]/ReLU[32]/SymmetricQuantizer/symmetric_quantize_0";
 "77 SSD_VGG/MultiOutputSequential[basenet]/ReLU[32]/SymmetricQuantizer/symmetric_quantize_0" -> "78 SSD_VGG/MultiOutputSequential[basenet]/MaxPool2d[33]/max_pool2d_0";
+"77 SSD_VGG/MultiOutputSequential[basenet]/ReLU[32]/SymmetricQuantizer/symmetric_quantize_0" -> "115 SSD_VGG/NNCFUserL2Norm[L2Norm]/pow_0";
+"77 SSD_VGG/MultiOutputSequential[basenet]/ReLU[32]/SymmetricQuantizer/symmetric_quantize_0" -> "119 SSD_VGG/NNCFUserL2Norm[L2Norm]/div_0";
 "78 SSD_VGG/MultiOutputSequential[basenet]/MaxPool2d[33]/max_pool2d_0" -> "82 SSD_VGG/MultiOutputSequential[basenet]/NNCFConv2d[34]/conv2d_0";
 "79 SSD_VGG/MultiOutputSequential[basenet]/NNCFConv2d[34]/ModuleDict[pre_ops]/UpdateWeight[0]/RBSparsifyingWeight[op]/calc_rb_binary_mask_0" -> "80 SSD_VGG/MultiOutputSequential[basenet]/NNCFConv2d[34]/ModuleDict[pre_ops]/UpdateWeight[0]/RBSparsifyingWeight[op]/apply_binary_mask_0";
 "80 SSD_VGG/MultiOutputSequential[basenet]/NNCFConv2d[34]/ModuleDict[pre_ops]/UpdateWeight[0]/RBSparsifyingWeight[op]/apply_binary_mask_0" -> "81 SSD_VGG/MultiOutputSequential[basenet]/NNCFConv2d[34]/ModuleDict[pre_ops]/UpdateWeight[1]/SymmetricQuantizer[op]/symmetric_quantize_0";
@@ -368,8 +370,6 @@ strict digraph  {
 "96 SSD_VGG/MultiOutputSequential[basenet]/NNCFConv2d[40]/conv2d_0" -> "97 SSD_VGG/MultiOutputSequential[basenet]/NNCFBatchNorm2d[41]/batch_norm_0";
 "97 SSD_VGG/MultiOutputSequential[basenet]/NNCFBatchNorm2d[41]/batch_norm_0" -> "98 SSD_VGG/MultiOutputSequential[basenet]/ReLU[42]/relu__0";
 "98 SSD_VGG/MultiOutputSequential[basenet]/ReLU[42]/relu__0" -> "99 SSD_VGG/MultiOutputSequential[basenet]/ReLU[42]/SymmetricQuantizer/symmetric_quantize_0";
-"77 SSD_VGG/MultiOutputSequential[basenet]/ReLU[32]/SymmetricQuantizer/symmetric_quantize_0" -> "115 SSD_VGG/NNCFUserL2Norm[L2Norm]/pow_0";
-"77 SSD_VGG/MultiOutputSequential[basenet]/ReLU[32]/SymmetricQuantizer/symmetric_quantize_0" -> "119 SSD_VGG/NNCFUserL2Norm[L2Norm]/div_0";
 "99 SSD_VGG/MultiOutputSequential[basenet]/ReLU[42]/SymmetricQuantizer/symmetric_quantize_0" -> "100 SSD_VGG/MultiOutputSequential[basenet]/MaxPool2d[43]/max_pool2d_0";
 "100 SSD_VGG/MultiOutputSequential[basenet]/MaxPool2d[43]/max_pool2d_0" -> "104 SSD_VGG/MultiOutputSequential[basenet]/NNCFConv2d[44]/conv2d_0";
 "101 SSD_VGG/MultiOutputSequential[basenet]/NNCFConv2d[44]/ModuleDict[pre_ops]/UpdateWeight[0]/RBSparsifyingWeight[op]/calc_rb_binary_mask_0" -> "102 SSD_VGG/MultiOutputSequential[basenet]/NNCFConv2d[44]/ModuleDict[pre_ops]/UpdateWeight[0]/RBSparsifyingWeight[op]/apply_binary_mask_0";

@@ -363,10 +363,10 @@ strict digraph  {
 "3 ShuffleNetV2/NNCFConv2d[conv1]/conv2d_0" -> "4 ShuffleNetV2/NNCFBatchNorm2d[bn1]/batch_norm_0";
 "4 ShuffleNetV2/NNCFBatchNorm2d[bn1]/batch_norm_0" -> "5 ShuffleNetV2/relu_0";
 "5 ShuffleNetV2/relu_0" -> "8 ShuffleNetV2/Sequential[layer1]/DownBlock[0]/NNCFConv2d[conv1]/conv2d_0";
+"5 ShuffleNetV2/relu_0" -> "17 ShuffleNetV2/Sequential[layer1]/DownBlock[0]/NNCFConv2d[conv3]/conv2d_0";
 "6 ShuffleNetV2/Sequential[layer1]/DownBlock[0]/NNCFConv2d[conv1]/ModuleDict[pre_ops]/UpdateWeight[0]/RBSparsifyingWeight[op]/calc_rb_binary_mask_0" -> "7 ShuffleNetV2/Sequential[layer1]/DownBlock[0]/NNCFConv2d[conv1]/ModuleDict[pre_ops]/UpdateWeight[0]/RBSparsifyingWeight[op]/apply_binary_mask_0";
 "7 ShuffleNetV2/Sequential[layer1]/DownBlock[0]/NNCFConv2d[conv1]/ModuleDict[pre_ops]/UpdateWeight[0]/RBSparsifyingWeight[op]/apply_binary_mask_0" -> "8 ShuffleNetV2/Sequential[layer1]/DownBlock[0]/NNCFConv2d[conv1]/conv2d_0";
 "8 ShuffleNetV2/Sequential[layer1]/DownBlock[0]/NNCFConv2d[conv1]/conv2d_0" -> "9 ShuffleNetV2/Sequential[layer1]/DownBlock[0]/NNCFBatchNorm2d[bn1]/batch_norm_0";
-"5 ShuffleNetV2/relu_0" -> "17 ShuffleNetV2/Sequential[layer1]/DownBlock[0]/NNCFConv2d[conv3]/conv2d_0";
 "9 ShuffleNetV2/Sequential[layer1]/DownBlock[0]/NNCFBatchNorm2d[bn1]/batch_norm_0" -> "12 ShuffleNetV2/Sequential[layer1]/DownBlock[0]/NNCFConv2d[conv2]/conv2d_0";
 "10 ShuffleNetV2/Sequential[layer1]/DownBlock[0]/NNCFConv2d[conv2]/ModuleDict[pre_ops]/UpdateWeight[0]/RBSparsifyingWeight[op]/calc_rb_binary_mask_0" -> "11 ShuffleNetV2/Sequential[layer1]/DownBlock[0]/NNCFConv2d[conv2]/ModuleDict[pre_ops]/UpdateWeight[0]/RBSparsifyingWeight[op]/apply_binary_mask_0";
 "11 ShuffleNetV2/Sequential[layer1]/DownBlock[0]/NNCFConv2d[conv2]/ModuleDict[pre_ops]/UpdateWeight[0]/RBSparsifyingWeight[op]/apply_binary_mask_0" -> "12 ShuffleNetV2/Sequential[layer1]/DownBlock[0]/NNCFConv2d[conv2]/conv2d_0";
@@ -454,13 +454,13 @@ strict digraph  {
 "90 ShuffleNetV2/Sequential[layer1]/BasicBlock[3]/ShuffleBlock[shuffle]/view_0" -> "91 ShuffleNetV2/Sequential[layer1]/BasicBlock[3]/ShuffleBlock[shuffle]/permute_0";
 "91 ShuffleNetV2/Sequential[layer1]/BasicBlock[3]/ShuffleBlock[shuffle]/permute_0" -> "92 ShuffleNetV2/Sequential[layer1]/BasicBlock[3]/ShuffleBlock[shuffle]/reshape_0";
 "92 ShuffleNetV2/Sequential[layer1]/BasicBlock[3]/ShuffleBlock[shuffle]/reshape_0" -> "95 ShuffleNetV2/Sequential[layer2]/DownBlock[0]/NNCFConv2d[conv1]/conv2d_0";
+"92 ShuffleNetV2/Sequential[layer1]/BasicBlock[3]/ShuffleBlock[shuffle]/reshape_0" -> "104 ShuffleNetV2/Sequential[layer2]/DownBlock[0]/NNCFConv2d[conv3]/conv2d_0";
 "93 ShuffleNetV2/Sequential[layer2]/DownBlock[0]/NNCFConv2d[conv1]/ModuleDict[pre_ops]/UpdateWeight[0]/RBSparsifyingWeight[op]/calc_rb_binary_mask_0" -> "94 ShuffleNetV2/Sequential[layer2]/DownBlock[0]/NNCFConv2d[conv1]/ModuleDict[pre_ops]/UpdateWeight[0]/RBSparsifyingWeight[op]/apply_binary_mask_0";
 "94 ShuffleNetV2/Sequential[layer2]/DownBlock[0]/NNCFConv2d[conv1]/ModuleDict[pre_ops]/UpdateWeight[0]/RBSparsifyingWeight[op]/apply_binary_mask_0" -> "95 ShuffleNetV2/Sequential[layer2]/DownBlock[0]/NNCFConv2d[conv1]/conv2d_0";
 "95 ShuffleNetV2/Sequential[layer2]/DownBlock[0]/NNCFConv2d[conv1]/conv2d_0" -> "96 ShuffleNetV2/Sequential[layer2]/DownBlock[0]/NNCFBatchNorm2d[bn1]/batch_norm_0";
 "96 ShuffleNetV2/Sequential[layer2]/DownBlock[0]/NNCFBatchNorm2d[bn1]/batch_norm_0" -> "99 ShuffleNetV2/Sequential[layer2]/DownBlock[0]/NNCFConv2d[conv2]/conv2d_0";
 "97 ShuffleNetV2/Sequential[layer2]/DownBlock[0]/NNCFConv2d[conv2]/ModuleDict[pre_ops]/UpdateWeight[0]/RBSparsifyingWeight[op]/calc_rb_binary_mask_0" -> "98 ShuffleNetV2/Sequential[layer2]/DownBlock[0]/NNCFConv2d[conv2]/ModuleDict[pre_ops]/UpdateWeight[0]/RBSparsifyingWeight[op]/apply_binary_mask_0";
 "98 ShuffleNetV2/Sequential[layer2]/DownBlock[0]/NNCFConv2d[conv2]/ModuleDict[pre_ops]/UpdateWeight[0]/RBSparsifyingWeight[op]/apply_binary_mask_0" -> "99 ShuffleNetV2/Sequential[layer2]/DownBlock[0]/NNCFConv2d[conv2]/conv2d_0";
-"92 ShuffleNetV2/Sequential[layer1]/BasicBlock[3]/ShuffleBlock[shuffle]/reshape_0" -> "104 ShuffleNetV2/Sequential[layer2]/DownBlock[0]/NNCFConv2d[conv3]/conv2d_0";
 "99 ShuffleNetV2/Sequential[layer2]/DownBlock[0]/NNCFConv2d[conv2]/conv2d_0" -> "100 ShuffleNetV2/Sequential[layer2]/DownBlock[0]/NNCFBatchNorm2d[bn2]/batch_norm_0";
 "100 ShuffleNetV2/Sequential[layer2]/DownBlock[0]/NNCFBatchNorm2d[bn2]/batch_norm_0" -> "101 ShuffleNetV2/Sequential[layer2]/DownBlock[0]/relu_0";
 "101 ShuffleNetV2/Sequential[layer2]/DownBlock[0]/relu_0" -> "116 ShuffleNetV2/Sequential[layer2]/DownBlock[0]/cat_0";

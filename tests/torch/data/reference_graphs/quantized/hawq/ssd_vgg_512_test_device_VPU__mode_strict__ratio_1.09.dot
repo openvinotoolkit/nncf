@@ -401,12 +401,16 @@ strict digraph  {
 "80 SSD_VGG/MultiOutputSequential[basenet]/NNCFConv2d[33]/conv2d_0" -> "81 SSD_VGG/MultiOutputSequential[basenet]/ReLU[34]/relu__0";
 "81 SSD_VGG/MultiOutputSequential[basenet]/ReLU[34]/relu__0" -> "82 SSD_VGG/MultiOutputSequential[basenet]/ReLU[34]/SymmetricQuantizer/symmetric_quantize_0";
 "82 SSD_VGG/MultiOutputSequential[basenet]/ReLU[34]/SymmetricQuantizer/symmetric_quantize_0" -> "91 SSD_VGG/MultiOutputSequential[extras]/NNCFConv2d[0]/conv2d_0";
+"82 SSD_VGG/MultiOutputSequential[basenet]/ReLU[34]/SymmetricQuantizer/symmetric_quantize_0" -> "146 SSD_VGG/SSDDetectionOutput[detection_head]/ModuleList[heads]/SSDHead[1]/NNCFConv2d[loc]/pad_0";
+"82 SSD_VGG/MultiOutputSequential[basenet]/ReLU[34]/SymmetricQuantizer/symmetric_quantize_0" -> "149 SSD_VGG/SSDDetectionOutput[detection_head]/ModuleList[heads]/SSDHead[1]/NNCFConv2d[conf]/pad_0";
 "83 SSD_VGG/NNCFUserL2Norm[L2Norm]/pow_0" -> "84 SSD_VGG/NNCFUserL2Norm[L2Norm]/sum_0";
 "84 SSD_VGG/NNCFUserL2Norm[L2Norm]/sum_0" -> "85 SSD_VGG/NNCFUserL2Norm[L2Norm]/sqrt_0";
 "85 SSD_VGG/NNCFUserL2Norm[L2Norm]/sqrt_0" -> "86 SSD_VGG/NNCFUserL2Norm[L2Norm]/__add___0";
 "86 SSD_VGG/NNCFUserL2Norm[L2Norm]/__add___0" -> "87 SSD_VGG/NNCFUserL2Norm[L2Norm]/div_0";
 "87 SSD_VGG/NNCFUserL2Norm[L2Norm]/div_0" -> "88 SSD_VGG/NNCFUserL2Norm[L2Norm]/__rmul___0";
 "88 SSD_VGG/NNCFUserL2Norm[L2Norm]/__rmul___0" -> "89 SSD_VGG/NNCFUserL2Norm[L2Norm]/SymmetricQuantizer/symmetric_quantize_0";
+"89 SSD_VGG/NNCFUserL2Norm[L2Norm]/SymmetricQuantizer/symmetric_quantize_0" -> "136 SSD_VGG/SSDDetectionOutput[detection_head]/ModuleList[heads]/SSDHead[0]/NNCFConv2d[loc]/pad_0";
+"89 SSD_VGG/NNCFUserL2Norm[L2Norm]/SymmetricQuantizer/symmetric_quantize_0" -> "139 SSD_VGG/SSDDetectionOutput[detection_head]/ModuleList[heads]/SSDHead[0]/NNCFConv2d[conf]/pad_0";
 "90 SSD_VGG/MultiOutputSequential[extras]/NNCFConv2d[0]/ModuleDict[pre_ops]/UpdateWeight[0]/SymmetricQuantizer[op]/symmetric_quantize_0" -> "91 SSD_VGG/MultiOutputSequential[extras]/NNCFConv2d[0]/conv2d_0";
 "91 SSD_VGG/MultiOutputSequential[extras]/NNCFConv2d[0]/conv2d_0" -> "92 SSD_VGG/MultiOutputSequential[extras]/ReLU[1]/relu__0";
 "92 SSD_VGG/MultiOutputSequential[extras]/ReLU[1]/relu__0" -> "93 SSD_VGG/MultiOutputSequential[extras]/ReLU[1]/SymmetricQuantizer/symmetric_quantize_0";
@@ -417,10 +421,6 @@ strict digraph  {
 "96 SSD_VGG/MultiOutputSequential[extras]/NNCFConv2d[2]/conv2d_0_apad" -> "96 SSD_VGG/MultiOutputSequential[extras]/NNCFConv2d[2]/conv2d_0";
 "96 SSD_VGG/MultiOutputSequential[extras]/NNCFConv2d[2]/conv2d_0" -> "97 SSD_VGG/MultiOutputSequential[extras]/ReLU[3]/relu__0";
 "97 SSD_VGG/MultiOutputSequential[extras]/ReLU[3]/relu__0" -> "98 SSD_VGG/MultiOutputSequential[extras]/ReLU[3]/SymmetricQuantizer/symmetric_quantize_0";
-"82 SSD_VGG/MultiOutputSequential[basenet]/ReLU[34]/SymmetricQuantizer/symmetric_quantize_0" -> "146 SSD_VGG/SSDDetectionOutput[detection_head]/ModuleList[heads]/SSDHead[1]/NNCFConv2d[loc]/pad_0";
-"82 SSD_VGG/MultiOutputSequential[basenet]/ReLU[34]/SymmetricQuantizer/symmetric_quantize_0" -> "149 SSD_VGG/SSDDetectionOutput[detection_head]/ModuleList[heads]/SSDHead[1]/NNCFConv2d[conf]/pad_0";
-"89 SSD_VGG/NNCFUserL2Norm[L2Norm]/SymmetricQuantizer/symmetric_quantize_0" -> "136 SSD_VGG/SSDDetectionOutput[detection_head]/ModuleList[heads]/SSDHead[0]/NNCFConv2d[loc]/pad_0";
-"89 SSD_VGG/NNCFUserL2Norm[L2Norm]/SymmetricQuantizer/symmetric_quantize_0" -> "139 SSD_VGG/SSDDetectionOutput[detection_head]/ModuleList[heads]/SSDHead[0]/NNCFConv2d[conf]/pad_0";
 "98 SSD_VGG/MultiOutputSequential[extras]/ReLU[3]/SymmetricQuantizer/symmetric_quantize_0" -> "100 SSD_VGG/MultiOutputSequential[extras]/NNCFConv2d[4]/conv2d_0";
 "98 SSD_VGG/MultiOutputSequential[extras]/ReLU[3]/SymmetricQuantizer/symmetric_quantize_0" -> "156 SSD_VGG/SSDDetectionOutput[detection_head]/ModuleList[heads]/SSDHead[2]/NNCFConv2d[loc]/pad_0";
 "98 SSD_VGG/MultiOutputSequential[extras]/ReLU[3]/SymmetricQuantizer/symmetric_quantize_0" -> "159 SSD_VGG/SSDDetectionOutput[detection_head]/ModuleList[heads]/SSDHead[2]/NNCFConv2d[conf]/pad_0";

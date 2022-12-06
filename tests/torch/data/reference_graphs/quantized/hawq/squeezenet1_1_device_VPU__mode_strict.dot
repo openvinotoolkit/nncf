@@ -259,9 +259,9 @@ strict digraph  {
 "94 SqueezeNet/Sequential[features]/Fire[11]/NNCFConv2d[squeeze]/conv2d_0" -> "95 SqueezeNet/Sequential[features]/Fire[11]/ReLU[squeeze_activation]/relu__0";
 "95 SqueezeNet/Sequential[features]/Fire[11]/ReLU[squeeze_activation]/relu__0" -> "96 SqueezeNet/Sequential[features]/Fire[11]/ReLU[squeeze_activation]/SymmetricQuantizer/symmetric_quantize_0";
 "96 SqueezeNet/Sequential[features]/Fire[11]/ReLU[squeeze_activation]/SymmetricQuantizer/symmetric_quantize_0" -> "98 SqueezeNet/Sequential[features]/Fire[11]/NNCFConv2d[expand1x1]/conv2d_0";
+"96 SqueezeNet/Sequential[features]/Fire[11]/ReLU[squeeze_activation]/SymmetricQuantizer/symmetric_quantize_0" -> "102 SqueezeNet/Sequential[features]/Fire[11]/NNCFConv2d[expand3x3]/pad_0";
 "97 SqueezeNet/Sequential[features]/Fire[11]/NNCFConv2d[expand1x1]/ModuleDict[pre_ops]/UpdateWeight[0]/SymmetricQuantizer[op]/symmetric_quantize_0" -> "98 SqueezeNet/Sequential[features]/Fire[11]/NNCFConv2d[expand1x1]/conv2d_0";
 "98 SqueezeNet/Sequential[features]/Fire[11]/NNCFConv2d[expand1x1]/conv2d_0" -> "99 SqueezeNet/Sequential[features]/Fire[11]/ReLU[expand1x1_activation]/relu__0";
-"96 SqueezeNet/Sequential[features]/Fire[11]/ReLU[squeeze_activation]/SymmetricQuantizer/symmetric_quantize_0" -> "102 SqueezeNet/Sequential[features]/Fire[11]/NNCFConv2d[expand3x3]/pad_0";
 "99 SqueezeNet/Sequential[features]/Fire[11]/ReLU[expand1x1_activation]/relu__0" -> "100 SqueezeNet/Sequential[features]/Fire[11]/ReLU[expand1x1_activation]/SymmetricQuantizer/symmetric_quantize_0";
 "100 SqueezeNet/Sequential[features]/Fire[11]/ReLU[expand1x1_activation]/SymmetricQuantizer/symmetric_quantize_0" -> "106 SqueezeNet/Sequential[features]/Fire[11]/cat_0";
 "101 SqueezeNet/Sequential[features]/Fire[11]/NNCFConv2d[expand3x3]/ModuleDict[pre_ops]/UpdateWeight[1]/SymmetricQuantizer[op]/symmetric_quantize_0" -> "103 SqueezeNet/Sequential[features]/Fire[11]/NNCFConv2d[expand3x3]/conv2d_0";

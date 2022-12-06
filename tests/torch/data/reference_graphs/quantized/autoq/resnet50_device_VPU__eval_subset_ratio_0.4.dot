@@ -342,8 +342,8 @@ strict digraph  {
 "5 ResNet/ReLU[relu]/relu__0" -> "6 ResNet/ReLU[relu]/SymmetricQuantizer/symmetric_quantize_0";
 "6 ResNet/ReLU[relu]/SymmetricQuantizer/symmetric_quantize_0" -> "7 ResNet/MaxPool2d[maxpool]/max_pool2d_0";
 "7 ResNet/MaxPool2d[maxpool]/max_pool2d_0" -> "9 ResNet/Sequential[layer1]/Bottleneck[0]/NNCFConv2d[conv1]/conv2d_0";
-"8 ResNet/Sequential[layer1]/Bottleneck[0]/NNCFConv2d[conv1]/ModuleDict[pre_ops]/UpdateWeight[0]/SymmetricQuantizer[op]/symmetric_quantize_0" -> "9 ResNet/Sequential[layer1]/Bottleneck[0]/NNCFConv2d[conv1]/conv2d_0";
 "7 ResNet/MaxPool2d[maxpool]/max_pool2d_0" -> "24 ResNet/Sequential[layer1]/Bottleneck[0]/Sequential[downsample]/NNCFConv2d[0]/conv2d_0";
+"8 ResNet/Sequential[layer1]/Bottleneck[0]/NNCFConv2d[conv1]/ModuleDict[pre_ops]/UpdateWeight[0]/SymmetricQuantizer[op]/symmetric_quantize_0" -> "9 ResNet/Sequential[layer1]/Bottleneck[0]/NNCFConv2d[conv1]/conv2d_0";
 "9 ResNet/Sequential[layer1]/Bottleneck[0]/NNCFConv2d[conv1]/conv2d_0" -> "10 ResNet/Sequential[layer1]/Bottleneck[0]/NNCFBatchNorm2d[bn1]/batch_norm_0";
 "10 ResNet/Sequential[layer1]/Bottleneck[0]/NNCFBatchNorm2d[bn1]/batch_norm_0" -> "11 ResNet/Sequential[layer1]/Bottleneck[0]/ReLU[relu]/relu__0";
 "11 ResNet/Sequential[layer1]/Bottleneck[0]/ReLU[relu]/relu__0" -> "12 ResNet/Sequential[layer1]/Bottleneck[0]/ReLU[relu]/SymmetricQuantizer/symmetric_quantize_0";
@@ -428,6 +428,7 @@ strict digraph  {
 "83 ResNet/Sequential[layer2]/Bottleneck[0]/__iadd___0" -> "84 ResNet/Sequential[layer2]/Bottleneck[0]/ReLU[relu]/relu__2";
 "84 ResNet/Sequential[layer2]/Bottleneck[0]/ReLU[relu]/relu__2" -> "85 ResNet/Sequential[layer2]/Bottleneck[0]/ReLU[relu]/SymmetricQuantizer/symmetric_quantize_2";
 "85 ResNet/Sequential[layer2]/Bottleneck[0]/ReLU[relu]/SymmetricQuantizer/symmetric_quantize_2" -> "87 ResNet/Sequential[layer2]/Bottleneck[1]/NNCFConv2d[conv1]/conv2d_0";
+"85 ResNet/Sequential[layer2]/Bottleneck[0]/ReLU[relu]/SymmetricQuantizer/symmetric_quantize_2" -> "101 ResNet/Sequential[layer2]/Bottleneck[1]/__iadd___0";
 "86 ResNet/Sequential[layer2]/Bottleneck[1]/NNCFConv2d[conv1]/ModuleDict[pre_ops]/UpdateWeight[0]/SymmetricQuantizer[op]/symmetric_quantize_0" -> "87 ResNet/Sequential[layer2]/Bottleneck[1]/NNCFConv2d[conv1]/conv2d_0";
 "87 ResNet/Sequential[layer2]/Bottleneck[1]/NNCFConv2d[conv1]/conv2d_0" -> "88 ResNet/Sequential[layer2]/Bottleneck[1]/NNCFBatchNorm2d[bn1]/batch_norm_0";
 "88 ResNet/Sequential[layer2]/Bottleneck[1]/NNCFBatchNorm2d[bn1]/batch_norm_0" -> "89 ResNet/Sequential[layer2]/Bottleneck[1]/ReLU[relu]/relu__0";
@@ -443,7 +444,6 @@ strict digraph  {
 "96 ResNet/Sequential[layer2]/Bottleneck[1]/ReLU[relu]/SymmetricQuantizer/symmetric_quantize_1" -> "98 ResNet/Sequential[layer2]/Bottleneck[1]/NNCFConv2d[conv3]/conv2d_0";
 "97 ResNet/Sequential[layer2]/Bottleneck[1]/NNCFConv2d[conv3]/ModuleDict[pre_ops]/UpdateWeight[0]/SymmetricQuantizer[op]/symmetric_quantize_0" -> "98 ResNet/Sequential[layer2]/Bottleneck[1]/NNCFConv2d[conv3]/conv2d_0";
 "98 ResNet/Sequential[layer2]/Bottleneck[1]/NNCFConv2d[conv3]/conv2d_0" -> "99 ResNet/Sequential[layer2]/Bottleneck[1]/NNCFBatchNorm2d[bn3]/batch_norm_0";
-"85 ResNet/Sequential[layer2]/Bottleneck[0]/ReLU[relu]/SymmetricQuantizer/symmetric_quantize_2" -> "101 ResNet/Sequential[layer2]/Bottleneck[1]/__iadd___0";
 "99 ResNet/Sequential[layer2]/Bottleneck[1]/NNCFBatchNorm2d[bn3]/batch_norm_0" -> "100 ResNet/Sequential[layer2]/Bottleneck[1]/NNCFBatchNorm2d[bn3]/SymmetricQuantizer/symmetric_quantize_0";
 "100 ResNet/Sequential[layer2]/Bottleneck[1]/NNCFBatchNorm2d[bn3]/SymmetricQuantizer/symmetric_quantize_0" -> "101 ResNet/Sequential[layer2]/Bottleneck[1]/__iadd___0";
 "101 ResNet/Sequential[layer2]/Bottleneck[1]/__iadd___0" -> "102 ResNet/Sequential[layer2]/Bottleneck[1]/ReLU[relu]/relu__2";

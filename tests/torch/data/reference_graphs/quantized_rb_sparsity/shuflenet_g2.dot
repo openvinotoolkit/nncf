@@ -545,6 +545,7 @@ strict digraph  {
 "88 ShuffleNet/Sequential[layer1]/Bottleneck[2]/__add___0" -> "89 ShuffleNet/Sequential[layer1]/Bottleneck[2]/relu_2";
 "89 ShuffleNet/Sequential[layer1]/Bottleneck[2]/relu_2" -> "90 ShuffleNet/Sequential[layer1]/Bottleneck[2]/SymmetricQuantizer/symmetric_quantize_2";
 "90 ShuffleNet/Sequential[layer1]/Bottleneck[2]/SymmetricQuantizer/symmetric_quantize_2" -> "94 ShuffleNet/Sequential[layer1]/Bottleneck[3]/NNCFConv2d[conv1]/conv2d_0";
+"90 ShuffleNet/Sequential[layer1]/Bottleneck[2]/SymmetricQuantizer/symmetric_quantize_2" -> "115 ShuffleNet/Sequential[layer1]/Bottleneck[3]/__add___0";
 "91 ShuffleNet/Sequential[layer1]/Bottleneck[3]/NNCFConv2d[conv1]/ModuleDict[pre_ops]/UpdateWeight[0]/RBSparsifyingWeight[op]/calc_rb_binary_mask_0" -> "92 ShuffleNet/Sequential[layer1]/Bottleneck[3]/NNCFConv2d[conv1]/ModuleDict[pre_ops]/UpdateWeight[0]/RBSparsifyingWeight[op]/apply_binary_mask_0";
 "92 ShuffleNet/Sequential[layer1]/Bottleneck[3]/NNCFConv2d[conv1]/ModuleDict[pre_ops]/UpdateWeight[0]/RBSparsifyingWeight[op]/apply_binary_mask_0" -> "93 ShuffleNet/Sequential[layer1]/Bottleneck[3]/NNCFConv2d[conv1]/ModuleDict[pre_ops]/UpdateWeight[1]/SymmetricQuantizer[op]/symmetric_quantize_0";
 "93 ShuffleNet/Sequential[layer1]/Bottleneck[3]/NNCFConv2d[conv1]/ModuleDict[pre_ops]/UpdateWeight[1]/SymmetricQuantizer[op]/symmetric_quantize_0" -> "94 ShuffleNet/Sequential[layer1]/Bottleneck[3]/NNCFConv2d[conv1]/conv2d_0";
@@ -553,7 +554,6 @@ strict digraph  {
 "96 ShuffleNet/Sequential[layer1]/Bottleneck[3]/relu_0" -> "97 ShuffleNet/Sequential[layer1]/Bottleneck[3]/SymmetricQuantizer/symmetric_quantize_0";
 "97 ShuffleNet/Sequential[layer1]/Bottleneck[3]/SymmetricQuantizer/symmetric_quantize_0" -> "98 ShuffleNet/Sequential[layer1]/Bottleneck[3]/ShuffleBlock[shuffle1]/view_0";
 "98 ShuffleNet/Sequential[layer1]/Bottleneck[3]/ShuffleBlock[shuffle1]/view_0" -> "99 ShuffleNet/Sequential[layer1]/Bottleneck[3]/ShuffleBlock[shuffle1]/permute_0";
-"90 ShuffleNet/Sequential[layer1]/Bottleneck[2]/SymmetricQuantizer/symmetric_quantize_2" -> "115 ShuffleNet/Sequential[layer1]/Bottleneck[3]/__add___0";
 "99 ShuffleNet/Sequential[layer1]/Bottleneck[3]/ShuffleBlock[shuffle1]/permute_0" -> "100 ShuffleNet/Sequential[layer1]/Bottleneck[3]/ShuffleBlock[shuffle1]/contiguous_0";
 "100 ShuffleNet/Sequential[layer1]/Bottleneck[3]/ShuffleBlock[shuffle1]/contiguous_0" -> "101 ShuffleNet/Sequential[layer1]/Bottleneck[3]/ShuffleBlock[shuffle1]/view_1";
 "101 ShuffleNet/Sequential[layer1]/Bottleneck[3]/ShuffleBlock[shuffle1]/view_1" -> "105 ShuffleNet/Sequential[layer1]/Bottleneck[3]/NNCFConv2d[conv2]/conv2d_0";
