@@ -95,14 +95,22 @@ class MinMaxAlgoBackend(ABC):
 
     @staticmethod
     @abstractmethod
+<<<<<<< HEAD
     def create_activation_quantizer_insertion_command(target_point: TargetPoint,
                                                       quantizer_config: QuantizerConfig,
                                                       statistics: MinMaxTensorStatistic) -> TransformationCommand:
+=======
+    def quantizer_insertion_command(target_point: TargetPoint,
+                                    quantizer_config: QuantizerConfig,
+                                    statistics: Union[MinMaxTensorStatistic, np.ndarray]) \
+                                    -> TransformationCommand:
+>>>>>>> dcba5889... Refactor quantization parameters
         """
         Returns backend-specific quantizer insertion command.
 
         :param target_point: Target location for the correction.
         :param quantizer_config: QuantizerConfig instance for the current layer.
+<<<<<<< HEAD
         :param statistics: MinMaxTensorStatistic to calculate activation quantization parameters.
         :return: Backend-specific TransformationCommand for the quantizer insertion operation.
         """
@@ -120,6 +128,9 @@ class MinMaxAlgoBackend(ABC):
         :param quantizer_config: QuantizerConfig instance for the current layer.
         :param weight_tensor: weight tensor to calculate weight quantization parameters.
         :param node: NNCFNode with the attributes.
+=======
+        :param statistics: MinMaxTensorStatistic or weight tensor to calculate quantization parameters.
+>>>>>>> dcba5889... Refactor quantization parameters
         :return: Backend-specific TransformationCommand for the quantizer insertion operation.
         """
 

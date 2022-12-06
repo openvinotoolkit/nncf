@@ -12,22 +12,19 @@
 """
 
 from nncf.common.graph.graph_matching import GraphPattern
-from nncf.experimental.openvino_native.graph.metatypes.onnx_metatypes import OVConvolutionMetatype
-from nncf.experimental.openvino_native.graph.metatypes.onnx_metatypes import OVConvolutionBackpropDataMetatype
-from nncf.experimental.openvino_native.graph.metatypes.onnx_metatypes import OVMatMulMetatype
-from nncf.experimental.openvino_native.graph.metatypes.onnx_metatypes import OVBatchNormMetatype
-from nncf.experimental.openvino_native.graph.metatypes.onnx_metatypes import OVReluMetatype
-from nncf.experimental.openvino_native.graph.metatypes.onnx_metatypes import OVLeakyReluMetatype
-from nncf.experimental.openvino_native.graph.metatypes.onnx_metatypes import OVThresholdedReluMetatype
-from nncf.experimental.openvino_native.graph.metatypes.onnx_metatypes import OVEluMetatype
-from nncf.experimental.openvino_native.graph.metatypes.onnx_metatypes import OVPReluMetatype
-from nncf.experimental.openvino_native.graph.metatypes.onnx_metatypes import OVSigmoidMetatype
-from nncf.experimental.openvino_native.graph.metatypes.onnx_metatypes import OVHardSigmoidMetatype
-from nncf.experimental.openvino_native.graph.metatypes.onnx_metatypes import OVHardSwishMetatype
-from nncf.experimental.openvino_native.graph.metatypes.onnx_metatypes import OVAddMetatype
-from nncf.experimental.openvino_native.graph.metatypes.onnx_metatypes import OVMulMetatype
-from nncf.experimental.openvino_native.graph.metatypes.onnx_metatypes import OVDivMetatype
-from nncf.experimental.openvino_native.graph.metatypes.onnx_metatypes import OVSubMetatype
+from nncf.experimental.openvino_native.graph.metatypes.openvino_metatypes import OVConvolutionMetatype
+from nncf.experimental.openvino_native.graph.metatypes.openvino_metatypes import OVConvolutionBackpropDataMetatype
+from nncf.experimental.openvino_native.graph.metatypes.openvino_metatypes import OVMatMulMetatype
+from nncf.experimental.openvino_native.graph.metatypes.openvino_metatypes import OVBatchNormMetatype
+from nncf.experimental.openvino_native.graph.metatypes.openvino_metatypes import OVReluMetatype
+from nncf.experimental.openvino_native.graph.metatypes.openvino_metatypes import OVEluMetatype
+from nncf.experimental.openvino_native.graph.metatypes.openvino_metatypes import OVPReluMetatype
+from nncf.experimental.openvino_native.graph.metatypes.openvino_metatypes import OVSigmoidMetatype
+from nncf.experimental.openvino_native.graph.metatypes.openvino_metatypes import OVHardSigmoidMetatype
+from nncf.experimental.openvino_native.graph.metatypes.openvino_metatypes import OVAddMetatype
+from nncf.experimental.openvino_native.graph.metatypes.openvino_metatypes import OVMulMetatype
+from nncf.experimental.openvino_native.graph.metatypes.openvino_metatypes import OVDivMetatype
+from nncf.experimental.openvino_native.graph.metatypes.openvino_metatypes import OVSubMetatype
 
 LINEAR_OPERATIONS = {GraphPattern.METATYPE_ATTR: [OVConvolutionMetatype,
                                                   OVConvolutionBackpropDataMetatype,
@@ -43,7 +40,6 @@ ATOMIC_ACTIVATIONS_OPERATIONS = {GraphPattern.METATYPE_ATTR: [OVReluMetatype,
                                                               OVPReluMetatype,
                                                               OVSigmoidMetatype,
                                                               OVHardSigmoidMetatype,
-                                                              OVHardSwishMetatype
                                                               ],
                                    GraphPattern.LABEL_ATTR: 'ATOMIC_ACTIVATIONS'}
 

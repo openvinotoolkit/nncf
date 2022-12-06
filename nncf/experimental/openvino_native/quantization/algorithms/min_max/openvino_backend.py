@@ -11,7 +11,7 @@
  limitations under the License.
 """
 
-from typing import Dict, List, Tuple
+from typing import Dict, List, Tuple, Union
 import numpy as np
 import openvino.runtime as ov
 
@@ -22,12 +22,15 @@ from nncf.common.graph.transformations.commands import TargetPoint
 from nncf.common.graph.transformations.commands import TargetType
 from nncf.common.hardware.config import HWConfig
 from nncf.common.quantization.structs import QuantizerConfig
+# from nncf.common.quantization.structs import QuantizationMode
 from nncf.common.tensor_statistics.collectors import ReductionShape
+from nncf.common.tensor_statistics.statistics import MinMaxTensorStatistic
 from nncf.common.utils.backend import BackendType
 
 from nncf.experimental.openvino_native.graph.metatypes.openvino_metatypes import GENERAL_WEIGHT_LAYER_METATYPES
 from nncf.experimental.openvino_native.graph.transformations.commands import OVQuantizerInsertionCommand
 from nncf.experimental.openvino_native.graph.transformations.commands import OVTargetPoint
+from nncf.experimental.openvino_native.graph.transformations.commands import OVQuantizerLayerParameters
 from nncf.experimental.openvino_native.graph.model_transformer import OVModelTransformer
 
 from nncf.experimental.openvino_native.hardware.config import OVHWConfig
@@ -39,10 +42,10 @@ from nncf.experimental.openvino_native.statistics.collectors import OVMinMaxStat
 
 from nncf.quantization.algorithms.min_max.backend import MinMaxAlgoBackend
 from nncf.quantization.algorithms.min_max.backend import ALGO_BACKENDS
-from nncf.quantization.algorithms.min_max.utils import QuantizerLayerParameters
+# from nncf.quantization.algorithms.min_max.utils import QuantizerLayerParameters
 
 
-@ALGO_BACKENDS.register(BackendType.OPENVINO_NATIVE)
+@ALGO_BACKENDS.register(BackendType.OPENVINO)
 class OVMinMaxAlgoBackend(MinMaxAlgoBackend):
 
     @property
@@ -77,7 +80,10 @@ class OVMinMaxAlgoBackend(MinMaxAlgoBackend):
 
     @staticmethod
     def quantizer_insertion_command(target_point: OVTargetPoint,
-                                    parameters: QuantizerLayerParameters) -> OVQuantizerInsertionCommand:
+                                    quantizer_config: QuantizerConfig,
+                                    statistics: Union[MinMaxTensorStatistic, np.ndarray],
+                                    ) -> OVQuantizerInsertionCommand:
+        parameters = OVQuantizerLayerParameters(statistics, quantizer_config)
         return OVQuantizerInsertionCommand(target_point, parameters)
 
     @staticmethod
@@ -114,3 +120,29 @@ class OVMinMaxAlgoBackend(MinMaxAlgoBackend):
     @staticmethod
     def get_weight_config(config: QuantizerConfig, model: ov.Model) -> QuantizerConfig:
         return config
+
+
+# class OVQuantizerLayerParameters:
+#     """
+#     Class handles FakeQuantize op attributes.
+#     """
+#     def __init__(self,
+#                  statistics: Union[MinMaxTensorStatistic, np.ndarray],
+#                  quantizer_config: QuantizerConfig):
+#         # initialize_quantizer_parameters(statistics, quantizer_config)
+#         if isinstance(statistics, MinMaxTensorStatistic):
+#             self.input_low = np.array(statistics.min_values)
+#             self.input_high = np.array(statistics.max_values)
+#         else:
+#             per_channel = quantizer_config.per_channel
+#             axes = tuple(range(len(statistics.shape))[1:]) if per_channel else None
+#             self.input_low = np.amin(statistics, axis=axes)
+#             self.input_high = np.amax(statistics, axis=axes)
+
+#         self.levels = 2 ** quantizer_config.num_bits
+#         if quantizer_config.mode == QuantizationMode.SYMMETRIC:
+#             self.output_low = np.full_like(self.input_low, fill_value=-self.levels / 2)
+#             self.output_high = np.full_like(self.input_high, fill_value=self.levels / 2 - 1)
+#         else:
+#             self.output_low = np.zeros_like(self.input_low)
+#             self.output_high = np.full_like(self.input_high, fill_value=self.levels - 1)

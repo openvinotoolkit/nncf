@@ -112,4 +112,27 @@ class QuantizedModel(OVReferenceModel):
         result = opset.result(matmul, name="Result")
         model = ov.Model([result], [input_1, input_2])
 
+class WeightsModel(OVReferenceModel):
+    def __init__(self):
+        input_1 = opset.parameter([1, 3, 5, 5], name="Input_1")
+        kernel = np.random.rand(3, 3, 1, 1).astype(np.float32)
+        strides = [1, 1]
+        pads = [0, 0]
+        dilations = [1, 1]
+        conv = opset.convolution(input_1, kernel, strides, pads, pads, dilations, name="Conv")
+        kernel_2 = np.random.rand(3, 3, 1, 1).astype(np.float32)
+        output_shape = [1, 1]
+        conv_tr = opset.convolution_backprop_data(conv, kernel_2, output_shape, strides, pads, pads, dilations, name="Conv_backprop")
+
+        weights_1 = np.random.rand(1, 3, 1, 4).astype(np.float32)
+        matmul_1 = opset.matmul(conv_tr, weights_1, transpose_a=False, transpose_b=False, name="MatMul_1")
+        weights_0 = np.random.rand(1, 3, 1, 1).astype(np.float32)
+        matmul_0 = opset.matmul(weights_0, matmul_1, transpose_a=False, transpose_b=False, name="MatMul_0")
+        matmul = opset.matmul(matmul_0, matmul_1, transpose_a=False, transpose_b=True, name="MatMul")
+        matmul_const = opset.matmul(weights_1, weights_0, transpose_a=True, transpose_b=False, name="MatMul_const")
+
+        add = opset.add(matmul_const, matmul)
+        result = opset.result(add, name="Result")
+        model = ov.Model([result], [input_1])
+
         super().__init__(model)

@@ -77,7 +77,7 @@ class OVNNCFCollectorTensorProcessor(NNCFCollectorTensorProcessor):
         return np.sum(tensor.tensor)
 
 
-class ONNXMinMaxStatisticCollector(MinMaxStatisticCollector):
+class OVMinMaxStatisticCollector(MinMaxStatisticCollector):
     @staticmethod
     def _get_processor() -> NNCFCollectorTensorProcessor:
         return OVNNCFCollectorTensorProcessor()

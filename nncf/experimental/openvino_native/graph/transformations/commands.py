@@ -11,10 +11,16 @@
  limitations under the License.
 """
 
+from typing import Union
+import numpy as np
+
 from nncf.common.graph.transformations.commands import TargetPoint
 from nncf.common.graph.transformations.commands import TargetType
 from nncf.common.graph.transformations.commands import TransformationCommand
 from nncf.common.graph.transformations.commands import TransformationType
+from nncf.common.quantization.structs import QuantizerConfig
+from nncf.common.quantization.structs import QuantizationMode
+from nncf.common.tensor_statistics.statistics import MinMaxTensorStatistic
 
 
 class OVTargetPoint(TargetPoint):
@@ -44,6 +50,31 @@ class OVTargetPoint(TargetPoint):
         return False
 
 
+class OVQuantizerLayerParameters:
+    """
+    Class handles FakeQuantize op attributes.
+    """
+    def __init__(self,
+                 statistics: Union[MinMaxTensorStatistic, np.ndarray],
+                 quantizer_config: QuantizerConfig):
+        # initialize_quantizer_parameters(statistics, quantizer_config)
+        if isinstance(statistics, MinMaxTensorStatistic):
+            self.input_low = np.array(statistics.min_values)
+            self.input_high = np.array(statistics.max_values)
+        else:
+            per_channel = quantizer_config.per_channel
+            axes = tuple(range(len(statistics.shape))[1:]) if per_channel else None
+            self.input_low = np.amin(statistics, axis=axes)
+            self.input_high = np.amax(statistics, axis=axes)
+
+        self.levels = 2 ** quantizer_config.num_bits
+        if quantizer_config.mode == QuantizationMode.SYMMETRIC:
+            self.output_low = np.full_like(self.input_low, fill_value=-self.levels / 2)
+            self.output_high = np.full_like(self.input_high, fill_value=self.levels / 2 - 1)
+        else:
+            self.output_low = np.zeros_like(self.input_low)
+            self.output_high = np.full_like(self.input_high, fill_value=self.levels - 1)
+
 class OVInsertionCommand(TransformationCommand):
     def __init__(self, target_point: OVTargetPoint):
         super().__init__(TransformationType.INSERT, target_point)
@@ -72,7 +103,7 @@ class OVFQNodeRemovingCommand(TransformationCommand):
 
 
 class OVQuantizerInsertionCommand(OVInsertionCommand):
-    def __init__(self, target_point: OVTargetPoint, quantizer_parameters: FQParameters):
+    def __init__(self, target_point: OVTargetPoint, quantizer_parameters: OVQuantizerLayerParameters):
         super().__init__(target_point)
         self.quantizer_parameters = quantizer_parameters
 

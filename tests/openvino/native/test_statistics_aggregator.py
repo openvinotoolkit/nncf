@@ -26,7 +26,6 @@ from nncf.quantization.algorithms.post_training.algorithm import PostTrainingQua
 from nncf.quantization.algorithms.post_training.algorithm  import PostTrainingQuantizationParameters
 
 from tests.openvino.native.models import LinearModel
-from tests.openvino.native.quantization.common import get_dataset_for_test
 
 INPUT_SHAPE = [3, 10, 10]
 
