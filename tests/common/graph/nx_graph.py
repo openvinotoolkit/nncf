@@ -12,6 +12,7 @@
 """
 
 import os
+import re
 from functools import total_ordering
 from pathlib import Path
 from typing import Optional
@@ -71,13 +72,20 @@ def sort_dot(path):
             return False
 
     def graph_key(line: str) -> LineOrder:
-        key = line.split(' ')[0].replace('"', '')
-        if '->' in line:
-            start_id = int(key)
-            end_id_str = line.split(' ')[3].replace('"', '')
-            end_id = int(end_id_str)
+        extract_ids_regex = r'^"(\d+) '
+        start_id_matches = re.search(extract_ids_regex, line)
+        if start_id_matches is None:
+            raise RuntimeError(f"Could not parse first node ID in node name: {line}")
+        start_id = int(start_id_matches.group(1))
+        edge_indicator = ' -> '
+        if edge_indicator in line:
+            end_node_and_attrs_str = line.split(edge_indicator)[1]
+            end_id_matches = re.search(extract_ids_regex, end_node_and_attrs_str)
+            if end_id_matches is None:
+                raise RuntimeError(f"Could not parse end node ID in node name: {end_node_and_attrs_str}")
+            end_id = int(end_id_matches.group(1))
             return LineOrder(edge_start_id=start_id, edge_end_id=end_id)
-        return LineOrder(node_id=int(key))
+        return LineOrder(node_id=int(start_id))
 
     sorted_content = sorted(content, key=graph_key)
     with open(path, 'w', encoding='utf8') as f:
