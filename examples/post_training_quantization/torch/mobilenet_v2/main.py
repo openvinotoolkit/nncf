@@ -68,7 +68,7 @@ def validate(model: ov.CompiledModel,
     return accuracy_score(predictions, references)
 
 
-def ov_benchmark(model: ov.Model, verbose: bool = True) -> float:
+def run_benchmark(model: ov.Model, verbose: bool = True) -> float:
     ov_model_path = f'{tempfile.gettempdir()}/model.xml'
     ov.serialize(model, ov_model_path)
 
@@ -80,7 +80,7 @@ def ov_benchmark(model: ov.Model, verbose: bool = True) -> float:
     return float(match.group(1))
 
 
-def ov_model_size(ir_path: Path, m_type: str = 'Mb') -> Tuple[float, float]:
+def get_model_size(ir_path: Path, m_type: str = 'Mb') -> Tuple[float, float]:
     xml_size = os.path.getsize(ir_path)
     bin_size = os.path.getsize(ir_path.replace('xml', 'bin'))
     for t in ['bytes', 'Kb', 'Mb']:
@@ -90,9 +90,9 @@ def ov_model_size(ir_path: Path, m_type: str = 'Mb') -> Tuple[float, float]:
         bin_size /= 1024
     return (xml_size, bin_size)
 
-###########################################################################
+###############################################################################
 # Create a PyTorch model and dataset
-###########################################################################
+###############################################################################
 dataset_path = download_dataset()
 
 normalize = transforms.Normalize(mean=[0.485, 0.456, 0.406],
@@ -113,10 +113,9 @@ model = models.mobilenet_v2(num_classes=DATASET_CLASSES)
 model.eval()
 model = load_checkpoint(model)
 
-###########################################################################
+###############################################################################
 # Quantize a PyTorch model
-###########################################################################
-
+###############################################################################
 '''
 The transformation function transforms a data item into model input data.
 
@@ -142,27 +141,26 @@ item and prepare model input data. The quantize method uses a small subset
 calibration_dataset = nncf.Dataset(val_loader, transform_fn)
 quantized_model = nncf.quantize(model, calibration_dataset)
 
-###########################################################################
+###############################################################################
 # Benchmark performance, calculate compression rate and validate accuracy
-###########################################################################
-
+###############################################################################
 dummy_input = torch.randn(1, 3, 224, 224)
 ov_model = mo.convert_model(model.cpu(), example_input=dummy_input)
 ov_quantized_model = mo.convert_model(quantized_model.cpu(), 
                                       example_input=dummy_input)
 
 print('[1/7] Benchmark FP32 model:')
-fp32_fps = ov_benchmark(ov_model, verbose=True)
+fp32_fps = run_benchmark(ov_model, verbose=True)
 print('[2/7] Benchmark INT8 model:')
-int8_fps = ov_benchmark(ov_quantized_model, verbose=True)
+int8_fps = run_benchmark(ov_quantized_model, verbose=True)
 
 fp32_ir_path = f'{ROOT}/mobilenet_v2_fp32.xml'
 int8_ir_path = f'{ROOT}/mobilenet_v2_int8.xml'
 ov.serialize(ov_model, fp32_ir_path)
 ov.serialize(ov_quantized_model, int8_ir_path)
 
-fp32_model_size = ov_model_size(fp32_ir_path)
-int8_model_size = ov_model_size(int8_ir_path)
+fp32_model_size = get_model_size(fp32_ir_path)
+int8_model_size = get_model_size(int8_ir_path)
 print(f'[3/7] Save FP32 model: {fp32_ir_path} ({sum(fp32_model_size):.3f} Mb = '
       f'{fp32_model_size[0]:.3f} Mb (xml) + {fp32_model_size[1]:.3f} Mb (bin))')
 print(f'[4/7] Save INT8 model: {int8_ir_path} ({sum(int8_model_size):.3f} Mb = '
