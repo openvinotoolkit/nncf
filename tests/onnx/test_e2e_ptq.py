@@ -67,7 +67,8 @@ OV_EP_COL_NAME = "OpenVINOExecutionProvider"
 CPU_EP_COL_NAME = "CPUExecutionProvider"
 REPORT_NAME = 'report.html'
 
-REPORT_LEGEND = f"""
+REPORT_LEGEND = \
+f"""
 <p>legend:</p>
 <p>
     <span style='Background-color: #{BG_COLOR_GREEN_HEX}'>
@@ -441,28 +442,25 @@ class TestBenchmarkResult:
 
             for col in range(4, len(df.columns)):
                 for idx in row_colors['yellow']:
-                    styles.append(f"""
-                    .row{idx}.col{col} {{background-color: #{BG_COLOR_YELLOW_HEX};}}
-                    """)
+                    styles.append(f""".row{idx}.col{col} {{background-color: #{BG_COLOR_YELLOW_HEX};}}""")
                 for idx in row_colors['red']:
-                    styles.append(f"""
-                    .row{idx}.col{col} {{background-color: #{BG_COLOR_RED_HEX};}}
-                    """)
+                    styles.append(f""".row{idx}.col{col} {{background-color: #{BG_COLOR_RED_HEX};}}""")
                 for idx in row_colors['green']:
-                    styles.append(f"""
-                    .row{idx}.col{col} {{background-color: #{BG_COLOR_GREEN_HEX};}}
-                    """)
+                    styles.append(f""".row{idx}.col{col} {{background-color: #{BG_COLOR_GREEN_HEX};}}""")
 
             return "\n".join(styles)
 
         with open(output_fp, "w", encoding="utf-8") as fp:
-            html_page = f"""<html>
+            html_page = \
+f"""
+<html>
 <head>
-<style>
-table, th, td {{font-size:10pt; border:1px solid black; border-collapse:collapse; text-align:center;}}
-th, td {{padding: 5px; }}
-{_style_rows()}
-</style>
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; style-src 'self' 'unsafe-inline'">
+    <style>
+    table, th, td {{font-size:10pt; border:1px solid black; border-collapse:collapse; text-align:center;}}
+    th, td {{padding: 5px; }}
+    {_style_rows()}
+    </style>
 </head>
 <body>
 {REPORT_LEGEND}
