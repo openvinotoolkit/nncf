@@ -12,7 +12,7 @@
 """
 
 from copy import deepcopy
-from typing import Dict, List, Tuple, Optional
+from typing import Dict, List, Tuple, Optional, Union
 import numpy as np
 import onnx
 
@@ -22,7 +22,9 @@ from nncf.common.graph.patterns import HWFusedPatterns
 from nncf.common.graph.transformations.commands import TargetType
 from nncf.common.hardware.config import HWConfig
 from nncf.common.quantization.structs import QuantizerConfig
+from nncf.common.quantization.structs import QuantizationMode
 from nncf.common.tensor_statistics.collectors import ReductionShape
+from nncf.common.tensor_statistics.statistics import MinMaxTensorStatistic
 from nncf.common.utils.backend import BackendType
 from nncf.common.utils.logger import logger as nncf_logger
 
@@ -41,7 +43,6 @@ from nncf.experimental.onnx.graph.onnx_graph import ONNXGraph
 
 from nncf.quantization.algorithms.min_max.backend import MinMaxAlgoBackend
 from nncf.quantization.algorithms.min_max.backend import ALGO_BACKENDS
-from nncf.quantization.algorithms.min_max.utils import QuantizerLayerParameters
 
 
 @ALGO_BACKENDS.register(BackendType.ONNX)
@@ -79,7 +80,16 @@ class ONNXMinMaxAlgoBackend(MinMaxAlgoBackend):
 
     @staticmethod
     def quantizer_insertion_command(target_point: ONNXTargetPoint,
-                                    parameters: QuantizerLayerParameters) -> ONNXQuantizerInsertionCommand:
+                                    quantizer_config: QuantizerConfig,
+                                    statistics: Union[MinMaxTensorStatistic, np.ndarray],
+                                    node: NNCFNode) -> ONNXQuantizerInsertionCommand:
+        if isinstance(statistics, MinMaxTensorStatistic):
+            axis = 1 if quantizer_config.per_channel else None
+            parameters = calculate_activation_quantizer_parameters(statistics, quantizer_config, axis)
+        else:
+            axis = node.metatype.weight_definitions.weight_channel_axis if quantizer_config.per_channel else None
+            parameters = calculate_weight_quantizer_parameters(statistics, quantizer_config, axis)
+
         return ONNXQuantizerInsertionCommand(target_point, parameters)
 
     @staticmethod
@@ -101,31 +111,14 @@ class ONNXMinMaxAlgoBackend(MinMaxAlgoBackend):
                                                 window_size)
 
     @staticmethod
-    def get_weight_tensor(model: onnx.ModelProto, node: NNCFNode) -> Tuple[str, np.ndarray]:
+    def get_weight_tensor(model: onnx.ModelProto, target_point: ONNXTargetPoint) -> Tuple[str, np.ndarray]:
         onnx_graph = ONNXGraph(model)
-        onnx_node = onnx_graph.get_node_by_name(node.node_name)
-        return onnx_graph.get_weight_tensor(onnx_node)
+        node = onnx_graph.get_node_by_name(target_point.target_node_name)
+        return onnx_graph.get_weight_tensor(node)
 
     @staticmethod
-    def get_weight_tensor_port_id(model: onnx.ModelProto, node: NNCFNode) -> int:
-        onnx_graph = ONNXGraph(model)
-        onnx_node = onnx_graph.get_node_by_name(node.node_name)
-        return onnx_graph.get_weight_port_id(onnx_node)
-
-    @staticmethod
-    def get_weight_tensor_quantization_axis(model: onnx.ModelProto, node: NNCFNode,
-                                            quantizer_config: QuantizerConfig) -> Optional[int]:
-        if not quantizer_config.per_channel:
-            return None
-        onnx_graph = ONNXGraph(model)
-        onnx_node = onnx_graph.get_node_by_name(node.node_name)
-        return onnx_graph.get_weight_channel_axis(onnx_node)
-
-    @staticmethod
-    def get_activation_quantization_axis(quantizer_config: QuantizerConfig) -> Optional[int]:
-        if quantizer_config.per_channel:
-            return 1
-        return None
+    def get_weight_tensor_port_id(node: NNCFNode) -> int:
+        return node.metatype.weight_definitions.weight_port_id
 
     @staticmethod
     def get_weight_config(config: QuantizerConfig, model: onnx.ModelProto) -> QuantizerConfig:
@@ -139,3 +132,81 @@ class ONNXMinMaxAlgoBackend(MinMaxAlgoBackend):
             )
 
         return config
+
+
+class ONNXQuantizerLayerParameters:
+    """
+    Class handles Quantizer/Dequantizer layer attributes.
+    """
+
+    def __init__(self, scale: List[float], zero_point: List[int], mode: QuantizationMode, axis: Optional[int]):
+        self.scale = scale
+        self.zero_point = zero_point
+        self.mode = mode
+        self.axis = axis
+
+
+def calculate_scale_level(max_val: Union[float, np.ndarray], min_val: Union[float, np.ndarray],
+                          num_bits: int,
+                          mode: QuantizationMode) -> Union[float, np.ndarray]:
+    """
+    Calculates Quantizer/Dequantizer layer scale level.
+    """
+    if mode == QuantizationMode.SYMMETRIC:
+        input_abs_max = np.maximum(np.abs(max_val), np.abs(min_val))
+        return input_abs_max / ((2 ** num_bits - 1) / 2)
+    return (max_val - min_val) / 2 ** num_bits
+
+
+def calculate_weight_quantizer_parameters(weight_tensor: np.ndarray, quantizer_config: QuantizerConfig,
+                                          axis: Optional[int]) -> ONNXQuantizerLayerParameters:
+    """
+    Calculates Quantizer/Dequantizer layer attributes for weight quantizer such as scale, zero_points and
+    quantization mode: symmetric, asymmetric.
+
+    :param weight_tensor: Weight tensor to calculate quantizer attributes.
+    :param quantizer_config: Config of Quantizer.
+    :param axis: In per-channel case - the axis for the quantization. In per-tensor - ignored.
+    :return: Parameters of Quantizer.
+    """
+    per_channel = quantizer_config.per_channel
+    num_bits = quantizer_config.num_bits
+    mode = quantizer_config.mode
+
+    if per_channel:
+        assert axis is not None
+        axes = list(range(len(weight_tensor.shape)))
+        axes.pop(axis)
+        axes = tuple(axes)
+    else:
+        axes = None
+    input_high = np.amax(weight_tensor, axis=axes)
+    input_low = np.amin(weight_tensor, axis=axes)
+    scales = calculate_scale_level(input_high, input_low, num_bits, mode)
+    zero_points = np.zeros_like(scales, dtype=np.int64)
+    return ONNXQuantizerLayerParameters(scales.tolist(), zero_points.tolist(), mode, axis)
+
+
+def calculate_activation_quantizer_parameters(statistics: MinMaxTensorStatistic,
+                                              quantizer_config: QuantizerConfig,
+                                              axis: Optional[int] = None) -> ONNXQuantizerLayerParameters:
+    """
+    Calculates Quantizer/Dequantizer layer attributes for activation quantizer such as scale, zero_points and
+    quantization mode: symmetric, asymmetric.
+
+    :param statistics: Collected statistics for the quantized insertion.
+    :param quantizer_config: Config of the quantization configuration.
+    :param axis: Axis of the quantization. None in a per-tensor quantization case.
+    :return: Parameters of the quantizer/dequantizer layers.
+    """
+    per_channel = quantizer_config.per_channel
+    num_bits = quantizer_config.num_bits
+    mode = quantizer_config.mode
+    input_low = statistics.min_values
+    input_high = statistics.max_values
+    if per_channel:
+        assert axis is not None
+        raise RuntimeError('Currently per-channel is not supported for activation tensors.')
+    scales = calculate_scale_level(input_high, input_low, num_bits, mode)
+    zero_points = np.zeros_like(scales, dtype=np.int64)
+    return ONNXQuantizerLayerParameters(scales.tolist(), zero_points.tolist(), mode, axis)
