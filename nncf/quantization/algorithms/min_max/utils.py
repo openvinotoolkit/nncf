@@ -98,7 +98,7 @@ def get_level_low_level_high(tensor_type: np.dtype, mode: QuantizationMode) -> T
 
     :param tensor_type:
     :param mode:
-    :return:
+    :return: Minimum level and maximum level of the quantizer.
     """
     if tensor_type == np.uint8:
         return 0, 255
