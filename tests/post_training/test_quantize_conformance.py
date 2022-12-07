@@ -211,9 +211,14 @@ def test_ptq_timm(data, output, result, model_args): # pylint: disable=W0703
     torch.multiprocessing.set_sharing_strategy(
         "file_system"
     )  # W/A to avoid RuntimeError
+    logging.getLogger().setLevel(logging.INFO)
 
     model_name = model_args["name"]
     model_quantization_params = model_args["quantization_params"]
+
+    logging.info(f"Quantizing model: '{model_name}', with parameters: "
+                 f"{model_quantization_params}")
+
     try:
         output_folder = Path(output)
         output_folder.mkdir(parents=True, exist_ok=True)
@@ -328,6 +333,8 @@ def test_ptq_timm(data, output, result, model_args): # pylint: disable=W0703
                 q_ov_perf,
             ]
         )
+        logging.info(f"Quantization results: {result[-1]}")
+
     except Exception as error:
         result.append([model_name, error, "-", "-", "-", "-", "-", "-", "-"])
         logging.error(
