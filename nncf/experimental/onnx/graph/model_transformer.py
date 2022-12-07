@@ -15,11 +15,11 @@ from typing import List, Optional, Tuple
 from copy import deepcopy
 from collections import Counter
 import onnx
+import numpy as np
 
 from nncf.common.graph.graph import NNCFGraph
 from nncf.common.graph.transformations.commands import TargetType
 from nncf.common.graph.transformations.layout import TransformationLayout
-from nncf.common.quantization.structs import QuantizationMode
 from nncf.common.graph.definitions import NNCFGraphNodeType
 from nncf.experimental.onnx.graph.onnx_graph import ONNXGraph
 from nncf.experimental.onnx.graph.transformations.commands import ONNXBiasCorrectionCommand
@@ -256,21 +256,26 @@ class ONNXModelTransformer(ModelTransformer):
                                       dequantizer: onnx.NodeProto) -> Tuple[onnx.TensorProto, onnx.TensorProto]:
         scale = transformation.quantizer_parameters.scale
         zero_point = transformation.quantizer_parameters.zero_point
-        mode = transformation.quantizer_parameters.mode
+        tensor_type = transformation.quantizer_parameters.tensor_type
 
         per_channel = isinstance(scale, list)
 
         zero_point = [zero_point] if not isinstance(zero_point, list) else zero_point
 
         scale = [scale] if not isinstance(scale, list) else scale
-        tensor_type = onnx.TensorProto.UINT8 if mode == QuantizationMode.ASYMMETRIC else onnx.TensorProto.INT8
+        if tensor_type == np.uint8:
+            onnx_tensor_type = onnx.TensorProto.UINT8
+        elif tensor_type == np.int8:
+            onnx_tensor_type = onnx.TensorProto.INT8
+        else:
+            raise RuntimeError('Incorrect tensor type.')
         dims = [len(scale)] if per_channel else []
         assert quantizer.input[1] == dequantizer.input[1] and quantizer.input[2] == dequantizer.input[2]
         scale_tensor_name = quantizer.input[1]
         zero_point_tensor_name = quantizer.input[2]
 
         onnx_scale = onnx.helper.make_tensor(scale_tensor_name, onnx.TensorProto.FLOAT, dims, scale)
-        onnx_zero_point = onnx.helper.make_tensor(zero_point_tensor_name, tensor_type, dims, zero_point)
+        onnx_zero_point = onnx.helper.make_tensor(zero_point_tensor_name, onnx_tensor_type, dims, zero_point)
         return onnx_scale, onnx_zero_point
 
     def _insert_quantizer_dequantizer(self, transformation: ONNXQuantizerInsertionCommand,
