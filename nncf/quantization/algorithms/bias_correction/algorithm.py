@@ -159,7 +159,7 @@ class BiasCorrection(Algorithm):
             magnitude = self._get_bias_shift_magnitude(current_bias, updated_bias)
 
             if magnitude < self.threshold:
-                nncf_logger.info(f'{node_name} bias would be changed. Magnitude: {magnitude}')
+                nncf_logger.debug(f'{node_name} bias would be changed. Magnitude: {magnitude}')
                 bias_port_id = self._backend_entity.get_bias_port_id(model, node)
                 target_point = self._backend_entity.target_point(TargetType.LAYER,
                                                                  node.node_name,
@@ -170,7 +170,7 @@ class BiasCorrection(Algorithm):
                 model_copy = self._correct_bias(model_copy, bias_correction_command)
                 main_transformations_layout.register(bias_correction_command)
             else:
-                nncf_logger.info(f'{node_name} bias skipped by threshold. Magnitude: {magnitude}')
+                nncf_logger.debug(f'{node_name} bias skipped by threshold. Magnitude: {magnitude}')
 
             self._collect_new_stats(nncf_graph, model_copy_subgraph, feed_dicts, subgraph_data)
             self._remove_unnecessary_stats(node_name, subgraphs_data)
@@ -394,7 +394,7 @@ class BiasCorrection(Algorithm):
         node_inputs_name = subgraphs_data[node_name]['input_node_names']
         for node_input_name in node_inputs_name:
             if node_input_name not in needed_stats_list and node_input_name in self._fp_inputs:
-                nncf_logger.info('Dropped %s', node_input_name)
+                nncf_logger.debug('Dropped %s', node_input_name)
                 self._fp_inputs[node_input_name] = []
 
     def _get_current_stats_list(self, current_node_name: str, subgraphs_data: Dict[str, Dict]) -> List[str]:

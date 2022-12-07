@@ -113,7 +113,7 @@ class ONNXNodeRemovingCommand(TransformationCommand):
         """
         :param target_point: The TargetPoint instance for the layer that contains information for removing.
         """
-        super().__init__(TransformationType.CHANGE, target_point)
+        super().__init__(TransformationType.REMOVE, target_point)
 
     def union(self, other: 'TransformationCommand') -> 'TransformationCommand':
         # Have a look at nncf/torch/graph/transformations/commands/PTInsertionCommand
