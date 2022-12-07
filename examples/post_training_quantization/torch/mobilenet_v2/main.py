@@ -55,10 +55,10 @@ def validate(model: ov.CompiledModel,
     predictions = []
     references = []
 
-    output_name = model.outputs[0]
+    output = model.outputs[0]
 
     for images, target in tqdm(val_loader):
-        pred = model(images)[output_name]
+        pred = model(images)[output]
         predictions.append(np.argmax(pred, axis=1))
         references.append(target)
 
