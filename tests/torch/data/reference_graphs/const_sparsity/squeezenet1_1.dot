@@ -101,8 +101,8 @@ strict digraph  {
 "5 SqueezeNet/Sequential[features]/Fire[3]/NNCFConv2d[squeeze]/ModuleDict[pre_ops]/UpdateWeight[0]/BinaryMask[op]/apply_binary_mask_0" -> "6 SqueezeNet/Sequential[features]/Fire[3]/NNCFConv2d[squeeze]/conv2d_0";
 "6 SqueezeNet/Sequential[features]/Fire[3]/NNCFConv2d[squeeze]/conv2d_0" -> "7 SqueezeNet/Sequential[features]/Fire[3]/ReLU[squeeze_activation]/relu__0";
 "7 SqueezeNet/Sequential[features]/Fire[3]/ReLU[squeeze_activation]/relu__0" -> "9 SqueezeNet/Sequential[features]/Fire[3]/NNCFConv2d[expand1x1]/conv2d_0";
-"8 SqueezeNet/Sequential[features]/Fire[3]/NNCFConv2d[expand1x1]/ModuleDict[pre_ops]/UpdateWeight[0]/BinaryMask[op]/apply_binary_mask_0" -> "9 SqueezeNet/Sequential[features]/Fire[3]/NNCFConv2d[expand1x1]/conv2d_0";
 "7 SqueezeNet/Sequential[features]/Fire[3]/ReLU[squeeze_activation]/relu__0" -> "12 SqueezeNet/Sequential[features]/Fire[3]/NNCFConv2d[expand3x3]/conv2d_0";
+"8 SqueezeNet/Sequential[features]/Fire[3]/NNCFConv2d[expand1x1]/ModuleDict[pre_ops]/UpdateWeight[0]/BinaryMask[op]/apply_binary_mask_0" -> "9 SqueezeNet/Sequential[features]/Fire[3]/NNCFConv2d[expand1x1]/conv2d_0";
 "9 SqueezeNet/Sequential[features]/Fire[3]/NNCFConv2d[expand1x1]/conv2d_0" -> "10 SqueezeNet/Sequential[features]/Fire[3]/ReLU[expand1x1_activation]/relu__0";
 "10 SqueezeNet/Sequential[features]/Fire[3]/ReLU[expand1x1_activation]/relu__0" -> "14 SqueezeNet/Sequential[features]/Fire[3]/cat_0";
 "11 SqueezeNet/Sequential[features]/Fire[3]/NNCFConv2d[expand3x3]/ModuleDict[pre_ops]/UpdateWeight[0]/BinaryMask[op]/apply_binary_mask_0" -> "12 SqueezeNet/Sequential[features]/Fire[3]/NNCFConv2d[expand3x3]/conv2d_0";

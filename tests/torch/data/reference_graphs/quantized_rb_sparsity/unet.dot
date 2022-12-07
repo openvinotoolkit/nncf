@@ -180,6 +180,7 @@ strict digraph  {
 "13 UNet/ModuleList[down_path]/UNetConvBlock[0]/Sequential[block]/NNCFBatchNorm2d[4]/batch_norm_0" -> "14 UNet/ModuleList[down_path]/UNetConvBlock[0]/Sequential[block]/ReLU[5]/relu_0";
 "14 UNet/ModuleList[down_path]/UNetConvBlock[0]/Sequential[block]/ReLU[5]/relu_0" -> "15 UNet/ModuleList[down_path]/UNetConvBlock[0]/Sequential[block]/ReLU[5]/SymmetricQuantizer/symmetric_quantize_0";
 "15 UNet/ModuleList[down_path]/UNetConvBlock[0]/Sequential[block]/ReLU[5]/SymmetricQuantizer/symmetric_quantize_0" -> "16 UNet/max_pool2d_0";
+"15 UNet/ModuleList[down_path]/UNetConvBlock[0]/Sequential[block]/ReLU[5]/SymmetricQuantizer/symmetric_quantize_0" -> "144 UNet/ModuleList[up_path]/UNetUpBlock[3]/__getitem___0";
 "16 UNet/max_pool2d_0" -> "20 UNet/ModuleList[down_path]/UNetConvBlock[1]/Sequential[block]/NNCFConv2d[0]/conv2d_0";
 "17 UNet/ModuleList[down_path]/UNetConvBlock[1]/Sequential[block]/NNCFConv2d[0]/ModuleDict[pre_ops]/UpdateWeight[0]/RBSparsifyingWeight[op]/calc_rb_binary_mask_0" -> "18 UNet/ModuleList[down_path]/UNetConvBlock[1]/Sequential[block]/NNCFConv2d[0]/ModuleDict[pre_ops]/UpdateWeight[0]/RBSparsifyingWeight[op]/apply_binary_mask_0";
 "18 UNet/ModuleList[down_path]/UNetConvBlock[1]/Sequential[block]/NNCFConv2d[0]/ModuleDict[pre_ops]/UpdateWeight[0]/RBSparsifyingWeight[op]/apply_binary_mask_0" -> "19 UNet/ModuleList[down_path]/UNetConvBlock[1]/Sequential[block]/NNCFConv2d[0]/ModuleDict[pre_ops]/UpdateWeight[1]/SymmetricQuantizer[op]/symmetric_quantize_0";
@@ -195,6 +196,7 @@ strict digraph  {
 "28 UNet/ModuleList[down_path]/UNetConvBlock[1]/Sequential[block]/NNCFBatchNorm2d[4]/batch_norm_0" -> "29 UNet/ModuleList[down_path]/UNetConvBlock[1]/Sequential[block]/ReLU[5]/relu_0";
 "29 UNet/ModuleList[down_path]/UNetConvBlock[1]/Sequential[block]/ReLU[5]/relu_0" -> "30 UNet/ModuleList[down_path]/UNetConvBlock[1]/Sequential[block]/ReLU[5]/SymmetricQuantizer/symmetric_quantize_0";
 "30 UNet/ModuleList[down_path]/UNetConvBlock[1]/Sequential[block]/ReLU[5]/SymmetricQuantizer/symmetric_quantize_0" -> "31 UNet/max_pool2d_1";
+"30 UNet/ModuleList[down_path]/UNetConvBlock[1]/Sequential[block]/ReLU[5]/SymmetricQuantizer/symmetric_quantize_0" -> "123 UNet/ModuleList[up_path]/UNetUpBlock[2]/__getitem___0";
 "31 UNet/max_pool2d_1" -> "35 UNet/ModuleList[down_path]/UNetConvBlock[2]/Sequential[block]/NNCFConv2d[0]/conv2d_0";
 "32 UNet/ModuleList[down_path]/UNetConvBlock[2]/Sequential[block]/NNCFConv2d[0]/ModuleDict[pre_ops]/UpdateWeight[0]/RBSparsifyingWeight[op]/calc_rb_binary_mask_0" -> "33 UNet/ModuleList[down_path]/UNetConvBlock[2]/Sequential[block]/NNCFConv2d[0]/ModuleDict[pre_ops]/UpdateWeight[0]/RBSparsifyingWeight[op]/apply_binary_mask_0";
 "33 UNet/ModuleList[down_path]/UNetConvBlock[2]/Sequential[block]/NNCFConv2d[0]/ModuleDict[pre_ops]/UpdateWeight[0]/RBSparsifyingWeight[op]/apply_binary_mask_0" -> "34 UNet/ModuleList[down_path]/UNetConvBlock[2]/Sequential[block]/NNCFConv2d[0]/ModuleDict[pre_ops]/UpdateWeight[1]/SymmetricQuantizer[op]/symmetric_quantize_0";
@@ -210,6 +212,7 @@ strict digraph  {
 "43 UNet/ModuleList[down_path]/UNetConvBlock[2]/Sequential[block]/NNCFBatchNorm2d[4]/batch_norm_0" -> "44 UNet/ModuleList[down_path]/UNetConvBlock[2]/Sequential[block]/ReLU[5]/relu_0";
 "44 UNet/ModuleList[down_path]/UNetConvBlock[2]/Sequential[block]/ReLU[5]/relu_0" -> "45 UNet/ModuleList[down_path]/UNetConvBlock[2]/Sequential[block]/ReLU[5]/SymmetricQuantizer/symmetric_quantize_0";
 "45 UNet/ModuleList[down_path]/UNetConvBlock[2]/Sequential[block]/ReLU[5]/SymmetricQuantizer/symmetric_quantize_0" -> "46 UNet/max_pool2d_2";
+"45 UNet/ModuleList[down_path]/UNetConvBlock[2]/Sequential[block]/ReLU[5]/SymmetricQuantizer/symmetric_quantize_0" -> "102 UNet/ModuleList[up_path]/UNetUpBlock[1]/__getitem___0";
 "46 UNet/max_pool2d_2" -> "50 UNet/ModuleList[down_path]/UNetConvBlock[3]/Sequential[block]/NNCFConv2d[0]/conv2d_0";
 "47 UNet/ModuleList[down_path]/UNetConvBlock[3]/Sequential[block]/NNCFConv2d[0]/ModuleDict[pre_ops]/UpdateWeight[0]/RBSparsifyingWeight[op]/calc_rb_binary_mask_0" -> "48 UNet/ModuleList[down_path]/UNetConvBlock[3]/Sequential[block]/NNCFConv2d[0]/ModuleDict[pre_ops]/UpdateWeight[0]/RBSparsifyingWeight[op]/apply_binary_mask_0";
 "48 UNet/ModuleList[down_path]/UNetConvBlock[3]/Sequential[block]/NNCFConv2d[0]/ModuleDict[pre_ops]/UpdateWeight[0]/RBSparsifyingWeight[op]/apply_binary_mask_0" -> "49 UNet/ModuleList[down_path]/UNetConvBlock[3]/Sequential[block]/NNCFConv2d[0]/ModuleDict[pre_ops]/UpdateWeight[1]/SymmetricQuantizer[op]/symmetric_quantize_0";
@@ -261,12 +264,9 @@ strict digraph  {
 "93 UNet/ModuleList[up_path]/UNetUpBlock[0]/UNetConvBlock[conv_block]/Sequential[block]/NNCFConv2d[3]/conv2d_0" -> "94 UNet/ModuleList[up_path]/UNetUpBlock[0]/UNetConvBlock[conv_block]/Sequential[block]/NNCFBatchNorm2d[4]/batch_norm_0";
 "94 UNet/ModuleList[up_path]/UNetUpBlock[0]/UNetConvBlock[conv_block]/Sequential[block]/NNCFBatchNorm2d[4]/batch_norm_0" -> "95 UNet/ModuleList[up_path]/UNetUpBlock[0]/UNetConvBlock[conv_block]/Sequential[block]/ReLU[5]/relu_0";
 "95 UNet/ModuleList[up_path]/UNetUpBlock[0]/UNetConvBlock[conv_block]/Sequential[block]/ReLU[5]/relu_0" -> "96 UNet/ModuleList[up_path]/UNetUpBlock[0]/UNetConvBlock[conv_block]/Sequential[block]/ReLU[5]/SymmetricQuantizer/symmetric_quantize_0";
+"96 UNet/ModuleList[up_path]/UNetUpBlock[0]/UNetConvBlock[conv_block]/Sequential[block]/ReLU[5]/SymmetricQuantizer/symmetric_quantize_0" -> "100 UNet/ModuleList[up_path]/UNetUpBlock[1]/NNCFConvTranspose2d[up]/conv_transpose2d_0";
 "97 UNet/ModuleList[up_path]/UNetUpBlock[1]/NNCFConvTranspose2d[up]/ModuleDict[pre_ops]/UpdateWeight[0]/RBSparsifyingWeight[op]/calc_rb_binary_mask_0" -> "98 UNet/ModuleList[up_path]/UNetUpBlock[1]/NNCFConvTranspose2d[up]/ModuleDict[pre_ops]/UpdateWeight[0]/RBSparsifyingWeight[op]/apply_binary_mask_0";
 "98 UNet/ModuleList[up_path]/UNetUpBlock[1]/NNCFConvTranspose2d[up]/ModuleDict[pre_ops]/UpdateWeight[0]/RBSparsifyingWeight[op]/apply_binary_mask_0" -> "99 UNet/ModuleList[up_path]/UNetUpBlock[1]/NNCFConvTranspose2d[up]/ModuleDict[pre_ops]/UpdateWeight[1]/SymmetricQuantizer[op]/symmetric_quantize_0";
-"15 UNet/ModuleList[down_path]/UNetConvBlock[0]/Sequential[block]/ReLU[5]/SymmetricQuantizer/symmetric_quantize_0" -> "144 UNet/ModuleList[up_path]/UNetUpBlock[3]/__getitem___0";
-"30 UNet/ModuleList[down_path]/UNetConvBlock[1]/Sequential[block]/ReLU[5]/SymmetricQuantizer/symmetric_quantize_0" -> "123 UNet/ModuleList[up_path]/UNetUpBlock[2]/__getitem___0";
-"45 UNet/ModuleList[down_path]/UNetConvBlock[2]/Sequential[block]/ReLU[5]/SymmetricQuantizer/symmetric_quantize_0" -> "102 UNet/ModuleList[up_path]/UNetUpBlock[1]/__getitem___0";
-"96 UNet/ModuleList[up_path]/UNetUpBlock[0]/UNetConvBlock[conv_block]/Sequential[block]/ReLU[5]/SymmetricQuantizer/symmetric_quantize_0" -> "100 UNet/ModuleList[up_path]/UNetUpBlock[1]/NNCFConvTranspose2d[up]/conv_transpose2d_0";
 "99 UNet/ModuleList[up_path]/UNetUpBlock[1]/NNCFConvTranspose2d[up]/ModuleDict[pre_ops]/UpdateWeight[1]/SymmetricQuantizer[op]/symmetric_quantize_0" -> "100 UNet/ModuleList[up_path]/UNetUpBlock[1]/NNCFConvTranspose2d[up]/conv_transpose2d_0";
 "100 UNet/ModuleList[up_path]/UNetUpBlock[1]/NNCFConvTranspose2d[up]/conv_transpose2d_0" -> "101 UNet/ModuleList[up_path]/UNetUpBlock[1]/NNCFConvTranspose2d[up]/SymmetricQuantizer/symmetric_quantize_0";
 "101 UNet/ModuleList[up_path]/UNetUpBlock[1]/NNCFConvTranspose2d[up]/SymmetricQuantizer/symmetric_quantize_0" -> "103 UNet/ModuleList[up_path]/UNetUpBlock[1]/cat_0";

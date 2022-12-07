@@ -982,9 +982,9 @@ strict digraph  {
 "4 DenseNet/NNCFConv2d[conv1]/ModuleDict[pre_ops]/UpdateWeight[1]/SymmetricQuantizer[op]/symmetric_quantize_0" -> "5 DenseNet/NNCFConv2d[conv1]/conv2d_0";
 "5 DenseNet/NNCFConv2d[conv1]/conv2d_0" -> "6 DenseNet/NNCFConv2d[conv1]/SymmetricQuantizer/symmetric_quantize_0";
 "6 DenseNet/NNCFConv2d[conv1]/SymmetricQuantizer/symmetric_quantize_0" -> "7 DenseNet/Sequential[dense1]/Bottleneck[0]/NNCFBatchNorm2d[bn1]/batch_norm_0";
+"6 DenseNet/NNCFConv2d[conv1]/SymmetricQuantizer/symmetric_quantize_0" -> "22 DenseNet/Sequential[dense1]/Bottleneck[0]/cat_0";
 "7 DenseNet/Sequential[dense1]/Bottleneck[0]/NNCFBatchNorm2d[bn1]/batch_norm_0" -> "8 DenseNet/Sequential[dense1]/Bottleneck[0]/relu_0";
 "8 DenseNet/Sequential[dense1]/Bottleneck[0]/relu_0" -> "9 DenseNet/Sequential[dense1]/Bottleneck[0]/SymmetricQuantizer/symmetric_quantize_0";
-"6 DenseNet/NNCFConv2d[conv1]/SymmetricQuantizer/symmetric_quantize_0" -> "22 DenseNet/Sequential[dense1]/Bottleneck[0]/cat_0";
 "9 DenseNet/Sequential[dense1]/Bottleneck[0]/SymmetricQuantizer/symmetric_quantize_0" -> "13 DenseNet/Sequential[dense1]/Bottleneck[0]/NNCFConv2d[conv1]/conv2d_0";
 "10 DenseNet/Sequential[dense1]/Bottleneck[0]/NNCFConv2d[conv1]/ModuleDict[pre_ops]/UpdateWeight[0]/RBSparsifyingWeight[op]/calc_rb_binary_mask_0" -> "11 DenseNet/Sequential[dense1]/Bottleneck[0]/NNCFConv2d[conv1]/ModuleDict[pre_ops]/UpdateWeight[0]/RBSparsifyingWeight[op]/apply_binary_mask_0";
 "11 DenseNet/Sequential[dense1]/Bottleneck[0]/NNCFConv2d[conv1]/ModuleDict[pre_ops]/UpdateWeight[0]/RBSparsifyingWeight[op]/apply_binary_mask_0" -> "12 DenseNet/Sequential[dense1]/Bottleneck[0]/NNCFConv2d[conv1]/ModuleDict[pre_ops]/UpdateWeight[1]/SymmetricQuantizer[op]/symmetric_quantize_0";
@@ -1067,6 +1067,7 @@ strict digraph  {
 "84 DenseNet/Sequential[dense1]/Bottleneck[4]/NNCFConv2d[conv2]/conv2d_0" -> "85 DenseNet/Sequential[dense1]/Bottleneck[4]/NNCFConv2d[conv2]/SymmetricQuantizer/symmetric_quantize_0";
 "85 DenseNet/Sequential[dense1]/Bottleneck[4]/NNCFConv2d[conv2]/SymmetricQuantizer/symmetric_quantize_0" -> "86 DenseNet/Sequential[dense1]/Bottleneck[4]/cat_0";
 "86 DenseNet/Sequential[dense1]/Bottleneck[4]/cat_0" -> "87 DenseNet/Sequential[dense1]/Bottleneck[5]/NNCFBatchNorm2d[bn1]/batch_norm_0";
+"86 DenseNet/Sequential[dense1]/Bottleneck[4]/cat_0" -> "102 DenseNet/Sequential[dense1]/Bottleneck[5]/cat_0";
 "87 DenseNet/Sequential[dense1]/Bottleneck[5]/NNCFBatchNorm2d[bn1]/batch_norm_0" -> "88 DenseNet/Sequential[dense1]/Bottleneck[5]/relu_0";
 "88 DenseNet/Sequential[dense1]/Bottleneck[5]/relu_0" -> "89 DenseNet/Sequential[dense1]/Bottleneck[5]/SymmetricQuantizer/symmetric_quantize_0";
 "89 DenseNet/Sequential[dense1]/Bottleneck[5]/SymmetricQuantizer/symmetric_quantize_0" -> "93 DenseNet/Sequential[dense1]/Bottleneck[5]/NNCFConv2d[conv1]/conv2d_0";
@@ -1076,10 +1077,9 @@ strict digraph  {
 "93 DenseNet/Sequential[dense1]/Bottleneck[5]/NNCFConv2d[conv1]/conv2d_0" -> "94 DenseNet/Sequential[dense1]/Bottleneck[5]/NNCFBatchNorm2d[bn2]/batch_norm_0";
 "94 DenseNet/Sequential[dense1]/Bottleneck[5]/NNCFBatchNorm2d[bn2]/batch_norm_0" -> "95 DenseNet/Sequential[dense1]/Bottleneck[5]/relu_1";
 "95 DenseNet/Sequential[dense1]/Bottleneck[5]/relu_1" -> "96 DenseNet/Sequential[dense1]/Bottleneck[5]/SymmetricQuantizer/symmetric_quantize_1";
+"96 DenseNet/Sequential[dense1]/Bottleneck[5]/SymmetricQuantizer/symmetric_quantize_1" -> "100 DenseNet/Sequential[dense1]/Bottleneck[5]/NNCFConv2d[conv2]/conv2d_0";
 "97 DenseNet/Sequential[dense1]/Bottleneck[5]/NNCFConv2d[conv2]/ModuleDict[pre_ops]/UpdateWeight[0]/RBSparsifyingWeight[op]/calc_rb_binary_mask_0" -> "98 DenseNet/Sequential[dense1]/Bottleneck[5]/NNCFConv2d[conv2]/ModuleDict[pre_ops]/UpdateWeight[0]/RBSparsifyingWeight[op]/apply_binary_mask_0";
 "98 DenseNet/Sequential[dense1]/Bottleneck[5]/NNCFConv2d[conv2]/ModuleDict[pre_ops]/UpdateWeight[0]/RBSparsifyingWeight[op]/apply_binary_mask_0" -> "99 DenseNet/Sequential[dense1]/Bottleneck[5]/NNCFConv2d[conv2]/ModuleDict[pre_ops]/UpdateWeight[1]/SymmetricQuantizer[op]/symmetric_quantize_0";
-"86 DenseNet/Sequential[dense1]/Bottleneck[4]/cat_0" -> "102 DenseNet/Sequential[dense1]/Bottleneck[5]/cat_0";
-"96 DenseNet/Sequential[dense1]/Bottleneck[5]/SymmetricQuantizer/symmetric_quantize_1" -> "100 DenseNet/Sequential[dense1]/Bottleneck[5]/NNCFConv2d[conv2]/conv2d_0";
 "99 DenseNet/Sequential[dense1]/Bottleneck[5]/NNCFConv2d[conv2]/ModuleDict[pre_ops]/UpdateWeight[1]/SymmetricQuantizer[op]/symmetric_quantize_0" -> "100 DenseNet/Sequential[dense1]/Bottleneck[5]/NNCFConv2d[conv2]/conv2d_0";
 "100 DenseNet/Sequential[dense1]/Bottleneck[5]/NNCFConv2d[conv2]/conv2d_0" -> "101 DenseNet/Sequential[dense1]/Bottleneck[5]/NNCFConv2d[conv2]/SymmetricQuantizer/symmetric_quantize_0";
 "101 DenseNet/Sequential[dense1]/Bottleneck[5]/NNCFConv2d[conv2]/SymmetricQuantizer/symmetric_quantize_0" -> "102 DenseNet/Sequential[dense1]/Bottleneck[5]/cat_0";

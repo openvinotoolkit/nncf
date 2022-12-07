@@ -307,11 +307,11 @@ strict digraph  {
 "93 MobileNetSSD/MultiOutputSequential[basenet]/Sequential[11]/NNCFConv2d[3]/conv2d_0" -> "94 MobileNetSSD/MultiOutputSequential[basenet]/Sequential[11]/NNCFBatchNorm2d[4]/batch_norm_0";
 "94 MobileNetSSD/MultiOutputSequential[basenet]/Sequential[11]/NNCFBatchNorm2d[4]/batch_norm_0" -> "95 MobileNetSSD/MultiOutputSequential[basenet]/Sequential[11]/ReLU[5]/relu__0";
 "95 MobileNetSSD/MultiOutputSequential[basenet]/Sequential[11]/ReLU[5]/relu__0" -> "97 MobileNetSSD/MultiOutputSequential[basenet]/Sequential[12]/NNCFConv2d[0]/conv2d_0";
+"95 MobileNetSSD/MultiOutputSequential[basenet]/Sequential[11]/ReLU[5]/relu__0" -> "145 MobileNetSSD/SSDDetectionOutput[detection_head]/ModuleList[heads]/SSDHead[0]/NNCFConv2d[loc]/conv2d_0";
+"95 MobileNetSSD/MultiOutputSequential[basenet]/Sequential[11]/ReLU[5]/relu__0" -> "147 MobileNetSSD/SSDDetectionOutput[detection_head]/ModuleList[heads]/SSDHead[0]/NNCFConv2d[conf]/conv2d_0";
 "96 MobileNetSSD/MultiOutputSequential[basenet]/Sequential[12]/NNCFConv2d[0]/ModuleDict[pre_ops]/UpdateWeight[0]/BinaryMask[op]/apply_binary_mask_0" -> "97 MobileNetSSD/MultiOutputSequential[basenet]/Sequential[12]/NNCFConv2d[0]/conv2d_0";
 "97 MobileNetSSD/MultiOutputSequential[basenet]/Sequential[12]/NNCFConv2d[0]/conv2d_0" -> "98 MobileNetSSD/MultiOutputSequential[basenet]/Sequential[12]/NNCFBatchNorm2d[1]/batch_norm_0";
 "98 MobileNetSSD/MultiOutputSequential[basenet]/Sequential[12]/NNCFBatchNorm2d[1]/batch_norm_0" -> "99 MobileNetSSD/MultiOutputSequential[basenet]/Sequential[12]/ReLU[2]/relu__0";
-"95 MobileNetSSD/MultiOutputSequential[basenet]/Sequential[11]/ReLU[5]/relu__0" -> "145 MobileNetSSD/SSDDetectionOutput[detection_head]/ModuleList[heads]/SSDHead[0]/NNCFConv2d[loc]/conv2d_0";
-"95 MobileNetSSD/MultiOutputSequential[basenet]/Sequential[11]/ReLU[5]/relu__0" -> "147 MobileNetSSD/SSDDetectionOutput[detection_head]/ModuleList[heads]/SSDHead[0]/NNCFConv2d[conf]/conv2d_0";
 "99 MobileNetSSD/MultiOutputSequential[basenet]/Sequential[12]/ReLU[2]/relu__0" -> "101 MobileNetSSD/MultiOutputSequential[basenet]/Sequential[12]/NNCFConv2d[3]/conv2d_0";
 "100 MobileNetSSD/MultiOutputSequential[basenet]/Sequential[12]/NNCFConv2d[3]/ModuleDict[pre_ops]/UpdateWeight[0]/BinaryMask[op]/apply_binary_mask_0" -> "101 MobileNetSSD/MultiOutputSequential[basenet]/Sequential[12]/NNCFConv2d[3]/conv2d_0";
 "101 MobileNetSSD/MultiOutputSequential[basenet]/Sequential[12]/NNCFConv2d[3]/conv2d_0" -> "102 MobileNetSSD/MultiOutputSequential[basenet]/Sequential[12]/NNCFBatchNorm2d[4]/batch_norm_0";
