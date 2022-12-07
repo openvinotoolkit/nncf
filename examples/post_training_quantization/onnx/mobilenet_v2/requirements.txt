@@ -1,0 +1,6 @@
+onnx
+torchvision
+tqdm
+scikit-learn
+fastdownload
+onnxruntime-openvino
