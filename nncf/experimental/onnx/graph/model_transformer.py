@@ -298,8 +298,10 @@ class ONNXModelTransformer(ModelTransformer):
                     if inp == target_edge_name:
                         node.input[i] = dequantizer.output[0]
 
-        self._model.graph.initializer.extend([onnx_scale])
-        self._model.graph.initializer.extend([onnx_zero_point])
+        onnx_scale_value_info = onnx.helper.make_tensor_value_info(onnx_scale.name, onnx_scale.data_type, onnx_scale.dims)
+        onnx_zero_point_info = onnx.helper.make_tensor_value_info(onnx_zero_point.name, onnx_zero_point.data_type, onnx_zero_point.dims)
+        self._model.graph.initializer.extend([onnx_scale, onnx_zero_point])
+        self._model.graph.input.extend([onnx_scale_value_info, onnx_zero_point_info])
         insert_index = onnx_graph.get_node_index(input_nodes[0].name)
         self._model.graph.node.insert(insert_index, quantizer)
         self._model.graph.node.insert(insert_index + 1, dequantizer)
