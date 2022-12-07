@@ -26,6 +26,7 @@ from pathlib import Path
 from tempfile import TemporaryDirectory
 
 import pandas as pd
+from yattag import Doc
 
 import pytest
 from pytest_dependency import depends
@@ -66,29 +67,6 @@ DATASET_DEFINITIONS_PATH_ONNX = BENCHMARKING_DIR / 'dataset_definitions.yml'
 OV_EP_COL_NAME = "OpenVINOExecutionProvider"
 CPU_EP_COL_NAME = "CPUExecutionProvider"
 REPORT_NAME = 'report.html'
-
-REPORT_LEGEND = \
-f"""
-<p>legend:</p>
-<p>
-    <span style='Background-color: #{BG_COLOR_GREEN_HEX}'>
-        Thresholds for FP32 and Expected are passed
-    </span>
-</p>
-<p>
-    <span style='Background-color: #{BG_COLOR_YELLOW_HEX}'>
-        Thresholds for Expected is failed, but for FP32 passed
-    </span>
-</p>
-<p>
-    <span style='Background-color: #{BG_COLOR_RED_HEX}'>
-        Thresholds for FP32 and Expected are failed
-    </span>
-</p>
-<p>
-    If Reference FP32 value in parentheses, it takes from "target" field of .json file
-</p>
-"""
 
 
 def check_xfail(model_name):
@@ -380,23 +358,23 @@ class TestBenchmarkResult:
 
         return df
 
-    def get_row_colors(self, df: pd.DataFrame, reference_model_accuracy: pd.DataFrame) -> Dict[str, Set[int]]:
-        row_colors = {'green': set(), 'red': set(), 'yellow': set()}
+    def get_row_colors(self, df: pd.DataFrame, reference_model_accuracy: pd.DataFrame) -> Dict[int, str]:
+        row_colors = {}
 
         for idx, row in df.iterrows():
             for i, model_name in enumerate(reference_model_accuracy.index):
                 if model_name == row['Model']:
                     if math.isnan(row["OV-EP_INT8"]):
-                        row_colors['red'].add(idx)
+                        row_colors[idx] = BG_COLOR_RED_HEX
                     elif reference_model_accuracy.iloc[i]["diff_target_min"] < row["OV-EP_INT8"] - (
                             reference_model_accuracy.iloc[i]["target_int8"] * 100) < reference_model_accuracy.iloc[i][
                         "diff_target_max"]:
-                        row_colors['green'].add(idx)
+                        row_colors[idx] = BG_COLOR_GREEN_HEX
                     elif not (reference_model_accuracy.iloc[i]["diff_target_min"] < row["OV-EP_INT8"] - row["FP32"] <
                               reference_model_accuracy.iloc[i]["diff_target_max"]):
-                        row_colors['red'].add(idx)
+                        row_colors[idx] = BG_COLOR_RED_HEX
                     else:
-                        row_colors['yellow'].add(idx)
+                        row_colors[idx] = BG_COLOR_YELLOW_HEX
         return row_colors
 
     def generate_final_data_frame(self, df: pd.DataFrame, ov_ep_only: bool) -> pd.DataFrame:
@@ -435,40 +413,34 @@ class TestBenchmarkResult:
         df = df.fillna("-")
         return df
 
-    def generate_html(self, df: pd.DataFrame, row_colors: Dict[str, Set[int]], output_fp: str) -> None:
-        def _style_rows():
-            styles = []
-            # 4 - last columns are allowed to be colored.
+    def generate_html(self, df: pd.DataFrame, row_colors: Dict[int, str], output_fp: str) -> None:
+        doc, tag, text = Doc().tagtext()
+        doc.asis('<!DOCTYPE html>')
+        with tag('head'):
+            with tag('style'):
+                doc.asis("green_text" + "{Background-color: " + f"#{BG_COLOR_GREEN_HEX}" + "}")
+                doc.asis("yellow_text" + "{Background-color: " + f"#{BG_COLOR_YELLOW_HEX}" + "}")
+                doc.asis("red_text" + "{Background-color: " + f"#{BG_COLOR_RED_HEX}" + "}")
+        with tag('p'):
+            text('legend: ')
+        with tag('p'):
+            with tag('green_text'):
+                text('Thresholds for FP32 and Expected are passed')
+        with tag('p'):
+            with tag('yellow_text'):
+                text('Thresholds for Expected is failed, but for FP32 passed')
+        with tag('p'):
+            with tag('red_text'):
+                text('Thresholds for FP32 and Expected are failed')
+        with tag('p'):
+            text('If Reference FP32 value in parentheses, it takes from "target" field of .json file')
+        with tag('p'):
+            def color_row(col):
+                return ['background-color: #' + row_colors[i] for i, x in col.iteritems()]
 
-            for col in range(4, len(df.columns)):
-                for idx in row_colors['yellow']:
-                    styles.append(f""".row{idx}.col{col} {{background-color: #{BG_COLOR_YELLOW_HEX};}}""")
-                for idx in row_colors['red']:
-                    styles.append(f""".row{idx}.col{col} {{background-color: #{BG_COLOR_RED_HEX};}}""")
-                for idx in row_colors['green']:
-                    styles.append(f""".row{idx}.col{col} {{background-color: #{BG_COLOR_GREEN_HEX};}}""")
-
-            return "\n".join(styles)
-
-        with open(output_fp, "w", encoding="utf-8") as fp:
-            html_page = \
-f"""
-<html>
-<head>
-    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; style-src 'self' 'unsafe-inline'">
-    <style>
-    table, th, td {{font-size:10pt; border:1px solid black; border-collapse:collapse; text-align:center;}}
-    th, td {{padding: 5px; }}
-    {_style_rows()}
-    </style>
-</head>
-<body>
-{REPORT_LEGEND}
-{df.style.format({(OV_EP_COL_NAME, "FP32"): "({:.2f})"}).set_precision(2).render()}
-</body>
-</html>
-"""
-            fp.write(html_page)
+            doc.asis(df.style.apply(color_row).render())
+        with open(output_fp, 'w', encoding='utf8') as f:
+            f.write(doc.getvalue())
 
     @pytest.mark.e2e_ptq
     @pytest.mark.dependency()
