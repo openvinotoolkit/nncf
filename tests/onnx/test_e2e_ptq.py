@@ -299,7 +299,7 @@ class TestBenchmark:
             "-m", str(model_dir / task_type / model_file_name),
             "-s", str(data_dir),
             "-a", str(anno_dir),
-            "--csv_result", str(output_dir / out_file_name),
+            "--csv_result", str(output_dir / out_file_name)
         ]
 
         if ov_ep_only:
