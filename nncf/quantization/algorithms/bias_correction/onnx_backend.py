@@ -40,6 +40,8 @@ from nncf.quantization.algorithms.bias_correction.backend import BiasCorrectionA
 from nncf.experimental.onnx.graph.onnx_graph import ONNXGraph
 from nncf.experimental.onnx.graph.metatypes.onnx_metatypes import ONNXIdentityMetatype
 
+
+#pylint:disable=too-many-public-methods
 @ALGO_BACKENDS.register(BackendType.ONNX)
 class ONNXBiasCorrectionAlgoBackend(BiasCorrectionAlgoBackend):
 

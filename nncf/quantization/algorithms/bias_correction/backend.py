@@ -32,6 +32,7 @@ OutputType = TypeVar('OutputType')
 ALGO_BACKENDS = Registry('algo_backends')
 
 
+#pylint:disable=too-many-public-methods
 class BiasCorrectionAlgoBackend(ABC):
 
     @property
