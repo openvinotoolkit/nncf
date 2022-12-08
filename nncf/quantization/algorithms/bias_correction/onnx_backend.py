@@ -36,12 +36,12 @@ from nncf.experimental.onnx.statistics.collectors import ONNXBatchStatisticColle
 from nncf.experimental.onnx.statistics.collectors import ONNXNNCFCollectorTensorProcessor
 from nncf.experimental.onnx.tensor import ONNXNNCFTensor
 from nncf.quantization.algorithms.bias_correction.backend import ALGO_BACKENDS
-from nncf.quantization.algorithms.bias_correction.backend import BCAlgoBackend
+from nncf.quantization.algorithms.bias_correction.backend import BiasCorrectionAlgoBackend
 from nncf.experimental.onnx.graph.onnx_graph import ONNXGraph
 from nncf.experimental.onnx.graph.metatypes.onnx_metatypes import ONNXIdentityMetatype
 
 @ALGO_BACKENDS.register(BackendType.ONNX)
-class ONNXBCAlgoBackend(BCAlgoBackend):
+class ONNXBiasCorrectionAlgoBackend(BiasCorrectionAlgoBackend):
 
     @property
     def layers_with_bias_metatypes(self) -> List[str]:
@@ -185,3 +185,8 @@ class ONNXBCAlgoBackend(BCAlgoBackend):
         weight_dequantizer = nodes_after_weight[0]
         metatype = ONNX_OPERATION_METATYPES.get_operator_metatype_by_op_name(weight_dequantizer.op_type)
         return metatype == ONNXDequantizeLinearMetatype
+
+    @staticmethod
+    def is_node_with_bias(node: NNCFNode) -> bool:
+        input_tensor_names = node.layer_attributes.input_tensor_names
+        return len(input_tensor_names) > 2

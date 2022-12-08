@@ -125,7 +125,7 @@ class FastBiasCorrection(Algorithm):
         for node in biased_nodes:
             node_name = node.node_name
 
-            if not self._is_node_with_bias(node):
+            if not self._backend_entity.is_node_with_bias(node):
                 nncf_logger.debug('Skipping node {} because there is no bias'.format(node_name))
                 continue
             if not self._backend_entity.is_quantized_weights(node, model):
@@ -289,17 +289,6 @@ class FastBiasCorrection(Algorithm):
         bias_shift = np.array(output_fp) - q_outputs
         return bias_shift
 
-    def _is_node_with_bias(self, node: NNCFNode) -> bool:
-        """
-        Checks whether the node has a bias or not
-
-        :param node: NNCFNode with the attributes
-        :return: boolean indicating whether the node has a bias or not
-        """
-        # TODO (KodiaqQ): Should be updated to take account of backend specifics
-        input_tensor_names, _ = self._backend_entity.get_tensor_names(node)
-        return len(input_tensor_names) > 2
-
     @staticmethod
     def _get_bias_shift_magnitude(current_bias_value: np.ndarray, updated_bias_value: np.ndarray) -> float:
         """
@@ -323,7 +312,7 @@ class FastBiasCorrection(Algorithm):
         statistic_container = StatisticPointsContainer()
 
         for node in biased_nodes:
-            if not self._is_node_with_bias(node):
+            if not self._backend_entity.is_node_with_bias(node):
                 continue
             input_port_id, output_port_id = self._backend_entity.get_activation_port_ids_for_bias_node(model, node)
             pre_layer_statistic_point = self._backend_entity.target_point(TargetType.PRE_LAYER_OPERATION,

@@ -209,3 +209,13 @@ class FBCAlgoBackend(ABC):
         :param output_name: Name of the output layer or tensor name.
         :return: Processed output as NNCFTensor.
         """
+
+    @staticmethod
+    @abstractmethod
+    def is_node_with_bias(node: NNCFNode) -> bool:
+        """
+        Checks whether the node has a bias or not.
+
+        :param node: NNCFNode with the attributes.
+        :return: Boolean indicating whether the node has a bias or not.
+        """

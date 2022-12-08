@@ -32,7 +32,7 @@ OutputType = TypeVar('OutputType')
 ALGO_BACKENDS = Registry('algo_backends')
 
 
-class BCAlgoBackend(ABC):
+class BiasCorrectionAlgoBackend(ABC):
 
     @property
     @abstractmethod
@@ -106,7 +106,7 @@ class BCAlgoBackend(ABC):
         """
         Returns backend-specific mean statistic collector.
 
-        :param reduction_shape: Channel axes for the statistics aggregation.
+        :param reduction_shape: Channel axis for the statistics aggregation.
         :param num_samples: Maximum number of samples to collect.
         :param window_size: The maximum size of the samples queue.
         :return: Backend-specific TensorStatisticCollectorBase for the statistics calculation.
@@ -219,5 +219,15 @@ class BCAlgoBackend(ABC):
 
         :param node: NNCFNode to check.
         :param model: Backend-specific model.
-        :return: boolean indicating whether the node has a quantized weights or not
+        :return: boolean indicating whether the node has a quantized weights or not.
+        """
+
+    @staticmethod
+    @abstractmethod
+    def is_node_with_bias(node: NNCFNode) -> bool:
+        """
+        Checks whether the node has a bias or not.
+
+        :param node: NNCFNode with the attributes.
+        :return: Boolean indicating whether the node has a bias or not.
         """

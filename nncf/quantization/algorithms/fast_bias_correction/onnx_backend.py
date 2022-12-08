@@ -140,3 +140,8 @@ class ONNXFBCAlgoBackend(FBCAlgoBackend):
         weight_dequantizer = nodes_after_weight[0]
         metatype = ONNX_OPERATION_METATYPES.get_operator_metatype_by_op_name(weight_dequantizer.op_type)
         return metatype == ONNXDequantizeLinearMetatype
+
+    @staticmethod
+    def is_node_with_bias(node: NNCFNode) -> bool:
+        input_tensor_names = node.layer_attributes.input_tensor_names
+        return len(input_tensor_names) > 2

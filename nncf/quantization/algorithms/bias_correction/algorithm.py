@@ -116,8 +116,8 @@ class BiasCorrection(Algorithm):
         model_backend = get_backend(model)
         if model_backend == BackendType.ONNX:
             from nncf.quantization.algorithms.bias_correction.onnx_backend import \
-                ONNXBCAlgoBackend
-            self._backend_entity = ONNXBCAlgoBackend()
+                ONNXBiasCorrectionAlgoBackend
+            self._backend_entity = ONNXBiasCorrectionAlgoBackend()
         else:
             raise RuntimeError('Cannot return backend-specific entity'
                                'because {} is not supported!'.format(model_backend))
@@ -139,7 +139,7 @@ class BiasCorrection(Algorithm):
         for node_name, subgraph_data in subgraphs_data.items():
             node = nncf_graph.get_node_by_name(node_name)
 
-            if not self._is_node_with_bias(node):
+            if not self._backend_entity.is_node_with_bias(node):
                 nncf_logger.debug('Skipping node {} because there is no bias'.format(node_name))
                 continue
             if not self._backend_entity.is_quantized_weights(node, model):
@@ -521,14 +521,3 @@ class BiasCorrection(Algorithm):
                 activation_input = self._backend_entity.get_node_through_quantizer(biased_node, nncf_graph)
                 biased_after_param_nodes[biased_node.node_name] = activation_input.node_name
         return biased_after_param_nodes
-
-    def _is_node_with_bias(self, node: NNCFNode) -> bool:
-        """
-        Checks whether the node has a bias or not.
-
-        :param node: NNCFNode with the attributes.
-        :return: Boolean indicating whether the node has a bias or not.
-        """
-        # TODO (KodiaqQ): Should be updated to take account of backend specifics
-        input_tensor_names, _ = self._backend_entity.get_tensor_names(node)
-        return len(input_tensor_names) > 2
