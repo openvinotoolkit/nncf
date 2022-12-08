@@ -42,6 +42,7 @@ from nncf.torch.graph.operator_metatypes import (
     PTInputNoopMetatype,
     PTInterpolateMetatype,
     PTLinearMetatype,
+    PTEmbeddingMetatype,
     PTMatMulMetatype,
     PTMaxMetatype,
     PTMaxPool2dMetatype,
@@ -71,6 +72,7 @@ from nncf.common.pruning.operations import (
     TransposeConvolutionPruningOp,
     BatchNormPruningOp,
     LinearPruningOp,
+    EmbeddingPruningOp,
     GroupNormPruningOp,
     LayerNormPruningOp,
     ConcatPruningOp,
@@ -312,6 +314,24 @@ class PTLinearPruningOp(LinearPruningOp, PTPruner):
         nncf_logger.debug(
             'Reordered output channels (first 10 reorder indexes {}) of Linear: {} '.format(reorder_indexes[:10],
                                                                                             node.data['key']))
+
+
+@PT_PRUNING_OPERATOR_METATYPES.register('embedding')
+class PTEmbeddingPruningOp(EmbeddingPruningOp, PTPruner):
+    subtypes = [PTEmbeddingMetatype]
+
+    @classmethod
+    def output_reorder(cls, model: NNCFNetwork, node: NNCFNode, graph: NNCFGraph):
+        reorder_indexes = node.data['output_mask']
+        if reorder_indexes is None:
+            return
+        embedding = model.get_containing_module(node.node_name)
+        reorder_indexes = reorder_indexes.tensor
+        embedding.weight.data = torch.index_select(embedding.weight.data, 1, reorder_indexes)
+        nncf_logger.debug(
+            'Reordered output channels (first 10 reorder indexes {}) of Embedding: {} '.format(reorder_indexes[:10],
+                                                                                               node.data['key']))
+
 
 @PT_PRUNING_OPERATOR_METATYPES.register('batch_norm')
 class PTBatchNormPruningOp(BatchNormPruningOp, PTPruner):
