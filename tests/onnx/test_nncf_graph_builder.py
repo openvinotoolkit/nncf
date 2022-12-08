@@ -25,7 +25,7 @@ from tests.onnx.conftest import ONNX_TEST_ROOT
 from tests.onnx.models import ALL_SYNTHETIC_MODELS
 from tests.shared.paths import TEST_ROOT
 from tests.onnx.quantization.common import ModelToTest
-from tests.onnx.utils import convert_opset_version
+from tests.onnx.opset_converter import convert_opset_version
 
 REFERENCE_GRAPHS_DIR = ONNX_TEST_ROOT / 'data' / 'reference_graphs' / 'original_nncf_graph'
 

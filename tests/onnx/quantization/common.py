@@ -24,7 +24,7 @@ from nncf import Dataset
 from tests.shared.paths import TEST_ROOT
 from tests.common.graph.nx_graph import compare_nx_graph_with_reference
 from tests.common.graph.nx_graph import check_nx_graph
-from tests.onnx.utils import convert_opset_version
+from tests.onnx.opset_converter import convert_opset_version
 from nncf.experimental.quantization.compression_builder import CompressionBuilder
 from nncf.quantization.algorithms.min_max.algorithm import MinMaxQuantization
 from nncf.quantization.algorithms.min_max.algorithm import MinMaxQuantizationParameters

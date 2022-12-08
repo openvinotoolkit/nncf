@@ -32,7 +32,7 @@ from openvino.tools.accuracy_checker.evaluators import ModelEvaluator
 # This import need to register custom Conerter
 from tests.onnx.benchmarking.accuracy_checker import MSCocoSegmentationToVOCConverter
 from tests.onnx.quantization.common import find_ignored_scopes
-from tests.onnx.utils import convert_opset_version
+from tests.onnx.opset_converter import convert_opset_version
 
 
 # pylint: disable=redefined-outer-name,protected-access
