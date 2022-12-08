@@ -149,7 +149,7 @@ def validate_accuracy(model_path, val_loader):
     return accuracy_score(predictions, references)
 
 
-def benchmark_torch_model(model, dataloader, model_name, output_path):
+def validate_torch_model(model, dataloader, model_name, output_path):
     data_sample, _ = next(iter(dataloader))
     # Dump model
     onnx_path = Path(output_path) / (model_name + ".onnx")
@@ -157,37 +157,44 @@ def benchmark_torch_model(model, dataloader, model_name, output_path):
     ov_path = Path(output_path) / (model_name + ".xml")
     export_to_ir(onnx_path, output_path, model_name)
 
-    # Benchmark performance
-    performance = benchmark_performance(ov_path, model_name)
     # Validate accuracy
     accuracy = validate_accuracy(ov_path, dataloader)
-    return performance, accuracy
+    return ov_path, accuracy
 
 
-def benchmark_onnx_model(model, dataloader, model_name, output_path):
+def validate_onnx_model(model, dataloader, model_name, output_path):
     # Dump model
     onnx_path = Path(output_path) / (model_name + ".onnx")
     onnx.save(model, onnx_path)
     ov_path = Path(output_path) / (model_name + ".xml")
     export_to_ir(onnx_path, output_path, model_name)
 
-    # Benchmark performance
-    performance = benchmark_performance(ov_path, model_name)
     # Validate accuracy
     accuracy = validate_accuracy(ov_path, dataloader)
-    return performance, accuracy
+    return ov_path, accuracy
 
 
-def benchmark_ov_model(model, dataloader, model_name, output_path):
+def validate_ov_model(model, dataloader, model_name, output_path):
     # Dump model
     ov_path = Path(output_path) / (model_name + ".xml")
     ov.serialize(model, str(ov_path))
 
-    # Benchmark performance
-    performance = benchmark_performance(ov_path, model_name)
     # Validate accuracy
     accuracy = validate_accuracy(ov_path, dataloader)
-    return performance, accuracy
+    return ov_path, accuracy
+
+
+def benchmark_models(paths, names):
+    performance_list = []
+
+    for model_path, model_name in zip(paths, names):
+        if model_path is not None and model_name is not None:
+            performance = benchmark_performance(model_path, model_name)
+            performance_list.append(performance)
+        else:
+            performance_list.append("-")
+    
+    return performance_list
 
 
 @pytest.fixture(scope="session")
@@ -227,21 +234,24 @@ def test_ptq_timm(data, output, result, model_args): # pylint: disable=W0703
         transform = get_model_transform(model)
 
         batch_one_dataloader = get_torch_dataloader(data, transform, batch_size=1)
+        val_dataloader = get_torch_dataloader(data, transform, batch_size=128)
         # benchmark original models (once)
-        orig_perf, orig_acc = benchmark_torch_model(
+        orig_model_path, orig_acc = validate_torch_model(
             model, batch_one_dataloader, model_name, output_folder
         )
 
-        val_dataloader = get_torch_dataloader(data, transform, batch_size=128)
-
-        def transform_fn(data_item):
-            images, _ = data_item
-            return images
-
-        calibration_dataset = nncf.Dataset(val_dataloader, transform_fn)
+        # keep paths and names for performance benchmarking
+        ov_model_paths = [orig_model_path]
+        model_names = [model_name]
 
         # quantize PyTorch model
         try:
+            def transform_fn(data_item):
+                images, _ = data_item
+                return images
+
+            calibration_dataset = nncf.Dataset(val_dataloader, transform_fn)
+
             torch_quantized_model = nncf.quantize(
                 model, calibration_dataset, **model_quantization_params
             )
@@ -249,15 +259,19 @@ def test_ptq_timm(data, output, result, model_args): # pylint: disable=W0703
             torch_output_path = output_folder / "torch"
             torch_output_path.mkdir(parents=True, exist_ok=True)
             q_torch_model_name = model_name + "_torch_int8"
-            q_torch_perf, q_torch_acc = benchmark_torch_model(
+            ov_model_path, q_torch_acc = validate_torch_model(
                 torch_quantized_model,
                 batch_one_dataloader,
                 q_torch_model_name,
                 torch_output_path,
             )
+            ov_model_paths.append(ov_model_path)
+            model_names.append(q_torch_model_name)
+
         except Exception as error:
-            q_torch_perf = re.escape(str(error))
-            q_torch_acc = "-"
+            q_torch_acc = re.escape(str(error))
+            ov_model_paths.append(None)
+            model_names.append(None)
 
         # quantize ONNX model
         try:
@@ -280,15 +294,18 @@ def test_ptq_timm(data, output, result, model_args): # pylint: disable=W0703
             onnx_output_path = output_folder / "onnx"
             onnx_output_path.mkdir(parents=True, exist_ok=True)
             q_onnx_model_name = model_name + "_onnx_int8"
-            q_onnx_perf, q_onnx_acc = benchmark_onnx_model(
+            ov_model_path, q_onnx_acc = validate_onnx_model(
                 onnx_quantized_model,
                 batch_one_dataloader,
                 q_onnx_model_name,
                 onnx_output_path,
             )
+            ov_model_paths.append(ov_model_path)
+            model_names.append(q_torch_model_name)
         except Exception as error:
-            q_onnx_perf = re.escape(str(error))
-            q_onnx_acc = "-"
+            q_onnx_acc = re.escape(str(error))
+            ov_model_paths.append(None)
+            model_names.append(None)
 
         # quantize OpenVINO model
         try:
@@ -309,16 +326,21 @@ def test_ptq_timm(data, output, result, model_args): # pylint: disable=W0703
             ov_output_path = output_folder / "openvino"
             ov_output_path.mkdir(parents=True, exist_ok=True)
             q_ov_model_name = model_name + "_ov_int8"
-            q_ov_perf, q_ov_acc = benchmark_ov_model(
+            ov_model_path, q_ov_acc = validate_ov_model(
                 ov_quantized_model,
                 batch_one_dataloader,
                 q_ov_model_name,
                 ov_output_path,
             )
+            ov_model_paths.append(ov_model_path)
+            model_names.append(q_torch_model_name)
         except Exception as error:
-            q_ov_perf = re.escape(str(error))
-            q_ov_acc = "-"
+            q_ov_acc = re.escape(str(error))
+            ov_model_paths.append(None)
+            model_names.append(None)
 
+        # bechmark performance of all models sequentially
+        perf_results = benchmark_models(ov_model_paths, model_names)
         result.append(
             [
                 model_name,
@@ -326,11 +348,7 @@ def test_ptq_timm(data, output, result, model_args): # pylint: disable=W0703
                 q_torch_acc,
                 q_onnx_acc,
                 q_ov_acc,
-                orig_perf,
-                q_torch_perf,
-                q_onnx_perf,
-                q_ov_perf,
-            ]
+            ] + perf_results
         )
         logging.info(f"Quantization results: {result[-1]}")
 
