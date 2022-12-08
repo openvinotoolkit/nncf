@@ -29,8 +29,8 @@ class QuantizerLayerParameters:
     :param axis: Axis for per-channel quantization. Should be none in case of per-tensor.
     :param tensor_type: Signed or Unsigned tensor type.
     """
-    scale: List[float]
-    zero_point: List[int]
+    scale: np.ndarray
+    zero_point: np.ndarray
     mode: QuantizationMode
     axis: Optional[int] = None
     tensor_type: Optional[np.dtype] = None
@@ -66,7 +66,7 @@ def calculate_scale_zero_point(max_val: np.ndarray, min_val: np.ndarray, level_l
         input_abs_max = np.maximum(np.abs(max_val), np.abs(min_val))
         max_val = input_abs_max
         min_val = -input_abs_max
-    scale = (max_val - min_val) / float(level_high - level_low)
+    scale = np.array((max_val - min_val) / float(level_high - level_low))
     if mode == QuantizationMode.SYMMETRIC:
         zero_point = np.zeros_like(scale, dtype=np.int32)
     else:
@@ -107,7 +107,7 @@ def calculate_weight_quantizer_parameters(weight_tensor: np.ndarray, quantizer_c
     tensor_type = np.uint8 if np.all(input_low >= 0) else np.int8
     level_low, level_high = get_level_low_level_high(tensor_type)
     scales, zero_points = calculate_scale_zero_point(input_high, input_low, level_low, level_high, mode)
-    return QuantizerLayerParameters(scales.tolist(), zero_points.tolist(), mode, axis, tensor_type)
+    return QuantizerLayerParameters(scales, zero_points, mode, axis, tensor_type)
 
 
 def calculate_activation_quantizer_parameters(statistics: MinMaxTensorStatistic,
@@ -132,4 +132,4 @@ def calculate_activation_quantizer_parameters(statistics: MinMaxTensorStatistic,
     tensor_type = np.uint8 if np.all(input_low >= 0) else np.int8
     level_low, level_high = get_level_low_level_high(tensor_type)
     scales, zero_points = calculate_scale_zero_point(input_high, input_low, level_low, level_high, mode)
-    return QuantizerLayerParameters(scales.tolist(), zero_points.tolist(), mode, axis, tensor_type)
+    return QuantizerLayerParameters(scales, zero_points, mode, axis, tensor_type)
