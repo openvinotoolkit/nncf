@@ -30,7 +30,7 @@ from nncf.common.graph import NNCFNode
 from nncf.common.graph import NNCFNodeName
 from nncf.common.graph.transformations.commands import TargetPoint
 from nncf.common.graph.transformations.commands import TransformationPriority
-from nncf.common.graph.utils import check_config_matches_graph
+from nncf.common.graph.utils import check_scope_names_match_graph
 from nncf.common.graph.utils import get_first_nodes_of_type
 from nncf.common.hardware.config import HW_CONFIG_TYPE_TARGET_DEVICE_MAP
 from nncf.common.hardware.config import HWConfigType
@@ -433,7 +433,7 @@ class QuantizationBuilder(TFCompressionAlgorithmBuilder):
         converter = TFModelConverterFactory.create(model)
         nncf_graph = converter.convert()
 
-        check_config_matches_graph(self.config, nncf_graph)
+        check_scope_names_match_graph(self.config, nncf_graph)
 
         nodes = nncf_graph.get_all_nodes()
         for node in nodes:

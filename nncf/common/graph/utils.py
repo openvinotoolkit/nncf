@@ -13,6 +13,7 @@
 
 from functools import partial
 from typing import List
+from typing import Union
 
 from nncf import NNCFConfig
 from nncf.common.graph import NNCFGraph, NNCFNode
@@ -92,46 +93,49 @@ def get_split_axis(input_shapes: List[List[int]], output_shapes: List[List[int]]
     return axis
 
 
-def check_config_matches_graph(config: NNCFConfig, graph: NNCFGraph) -> None:
+def check_scope_names_match_graph(config: NNCFConfig, graph: NNCFGraph) -> None:
     """
-    Rise RuntimeError in case if configs does not match graph.
+    Raise RuntimeError in case if scope names in NNCF config do not match model graph.
 
-    :param config: An instance of NNCFConfig that defines compression methods.
+    :param config: An instance of NNCFConfig.
     :param graph: The model graph.
     """
 
     node_list = graph.get_all_nodes()
 
-    def _find_unused_paterns(patterns):
+    def _find_not_matched_paterns(patterns: Union[List, str]) -> List:
         if not patterns:
             return []
 
         if not isinstance(patterns, list):
             patterns = [patterns]
 
-        used_patterns = set()
+        matched_patterns = set()
         for node in node_list:
             for pattern in patterns:
                 if matches_any(node.node_name, pattern):
-                    used_patterns.add(pattern)
-        return list(set(patterns) - used_patterns)
+                    matched_patterns.add(pattern)
+        return list(set(patterns) - matched_patterns)
 
-    def _check_scopes(scope_name):
+    def _check_scopes(config_part_name: str, cfg_part: NNCFConfig) -> str:
+        not_matched_ignored_scopes = _find_not_matched_paterns(cfg_part.get("ignored_scopes", []))
+        not_matched_target_scopes = _find_not_matched_paterns(cfg_part.get("target_scopes", []))
+
         err_msg = ""
-        unused_pattern = _find_unused_paterns(config.get(scope_name))
-        if unused_pattern:
-            err_msg += f"NNCF config in global part contains unused patterns in '{scope_name}': {unused_pattern}\n"
+        if not_matched_ignored_scopes:
+            err_msg += f" - in {config_part_name} 'ignored_scopes': {not_matched_ignored_scopes}\n"
+        if not_matched_target_scopes:
+            err_msg += f" - in {config_part_name} 'target_scopes': {not_matched_target_scopes}\n"
+        return err_msg
 
-        algo_configs = config.get("compression", [])
-        algo_configs = [algo_configs] if isinstance(algo_configs, dict) else algo_configs
-        for algo_config in algo_configs:
-            algo_name = algo_config.get("algorithm")
-            unused_pattern = _find_unused_paterns(algo_config.get(scope_name))
-            if unused_pattern:
-                err_msg += f"NNCF config for '{algo_name}' algorithm contains unused patterns for " \
-                           f"'{scope_name}': {unused_pattern}\n"
-        if err_msg:
-            raise RuntimeError(err_msg)
+    err_message = ""
+    err_message += _check_scopes("global part", config)
 
-    _check_scopes("ignored_scopes")
-    _check_scopes("target_scopes")
+    algo_configs = config.get("compression", [])
+    algo_configs = [algo_configs] if not isinstance(algo_configs, list) else algo_configs
+    for algo_config in algo_configs:
+        err_message += _check_scopes(f"'{algo_config['algorithm']}' algorithm", algo_config)
+
+    if err_message:
+        err_message = "NNCF config contains scope names which do not match model graph:\n" + err_message
+        raise RuntimeError(err_message)

@@ -23,7 +23,7 @@ from nncf.common.graph import NNCFGraph
 from nncf.common.graph import NNCFNode
 from nncf.common.graph import NNCFNodeName
 from nncf.common.graph.transformations.commands import TransformationPriority
-from nncf.common.graph.utils import check_config_matches_graph
+from nncf.common.graph.utils import check_scope_names_match_graph
 from nncf.common.pruning.clusterization import Cluster
 from nncf.common.pruning.clusterization import Clusterization
 from nncf.common.pruning.mask_propagation import MaskPropagationAlgorithm
@@ -116,7 +116,7 @@ class BasePruningAlgoBuilder(TFCompressionAlgorithmBuilder):
         converter = TFModelConverterFactory.create(model)
         self._graph = converter.convert()
 
-        check_config_matches_graph(self.config, self._graph)
+        check_scope_names_match_graph(self.config, self._graph)
 
         groups_of_nodes_to_prune = self._pruning_node_selector.create_pruning_groups(self._graph)
 

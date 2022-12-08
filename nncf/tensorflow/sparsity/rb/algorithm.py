@@ -20,7 +20,7 @@ import tensorflow as tf
 from nncf import NNCFConfig
 from nncf.common.accuracy_aware_training.training_loop import ADAPTIVE_COMPRESSION_CONTROLLERS
 from nncf.common.graph.transformations.commands import TransformationPriority
-from nncf.common.graph.utils import check_config_matches_graph
+from nncf.common.graph.utils import check_scope_names_match_graph
 from nncf.common.schedulers import StubCompressionScheduler
 from nncf.common.sparsity.schedulers import SPARSITY_SCHEDULERS
 from nncf.common.sparsity.schedulers import SparsityScheduler
@@ -56,7 +56,7 @@ class RBSparsityBuilder(TFCompressionAlgorithmBuilder):
         converter = TFModelConverterFactory.create(model)
         nncf_graph = converter.convert()
 
-        check_config_matches_graph(self.config, nncf_graph)
+        check_scope_names_match_graph(self.config, nncf_graph)
 
         transformations = TFTransformationLayout()
 
