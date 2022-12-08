@@ -81,10 +81,6 @@ class ONNXFBCAlgoBackend(FBCAlgoBackend):
         return ONNXMeanStatisticCollector(reduction_shape, num_samples, window_size)
 
     @staticmethod
-    def nncf_tensor(tensor: np.ndarray) -> ONNXNNCFTensor:
-        return ONNXNNCFTensor(tensor)
-
-    @staticmethod
     def get_tensor_names(node: NNCFNode):
         return node.layer_attributes.input_tensor_names, \
                node.layer_attributes.output_tensor_names

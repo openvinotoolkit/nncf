@@ -20,7 +20,6 @@ from nncf.common.graph.transformations.commands import TargetPoint
 from nncf.common.graph.transformations.commands import TransformationCommand
 from nncf.common.graph.transformations.commands import TargetType
 from nncf.common.tensor import NNCFTensor
-from nncf.common.tensor import TensorType
 from nncf.common.graph import NNCFNode
 from nncf.common.tensor_statistics.collectors import TensorStatisticCollectorBase
 from nncf.common.tensor_statistics.collectors import ReductionShape
@@ -121,16 +120,6 @@ class FBCAlgoBackend(ABC):
         :param num_samples: Maximum number of samples to collect.
         :param window_size: The maximum size of the samples queue.
         :return: Backend-specific TensorStatisticCollectorBase for the statistics calculation.
-        """
-
-    @staticmethod
-    @abstractmethod
-    def nncf_tensor(tensor: TensorType) -> NNCFTensor:
-        """
-        Returns backend-specific NNCFTensor.
-
-        :param tensor: Tensor data for the wrapping.
-        :return: NNCFTensor.
         """
 
     @staticmethod
