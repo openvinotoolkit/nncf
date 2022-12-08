@@ -48,7 +48,7 @@ class GraphConverter:
         """
         for i, node in enumerate(model.graph.node):
             if node.name == '':
-                node.name = f'{node.op_type}_{str(i)}'
+                node.name = node.op_type + '_nncf_' + str(i)
 
         name_counter = Counter([node.name for node in model.graph.node])
 
