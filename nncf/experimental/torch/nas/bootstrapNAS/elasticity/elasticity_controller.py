@@ -22,7 +22,6 @@ from nncf.api.compression import CompressionStage
 from nncf.common.schedulers import BaseCompressionScheduler
 from nncf.common.statistics import NNCFStatistics
 from nncf.experimental.torch.nas.bootstrapNAS.elasticity.multi_elasticity_handler import MultiElasticityHandler
-from nncf.experimental.torch.nas.bootstrapNAS.elasticity.onnx_export import NASExporter
 from nncf.torch.algo_selector import ZeroCompressionLoss
 from nncf.torch.compression_method_api import PTCompressionAlgorithmController
 from nncf.torch.nncf_network import NNCFNetwork
@@ -104,34 +103,3 @@ class ElasticityController(PTCompressionAlgorithmController):
         state = super().get_state()
         state[self._ec_state_names.MULTI_ELASTICITY_HANDLER_STATE] = self.multi_elasticity_handler.get_state()
         return state
-
-    def export_model(self, save_path: str,
-                     save_format: Optional[str] = None,
-                     input_names: Optional[List[str]] = None,
-                     output_names: Optional[List[str]] = None,
-                     model_args: Optional[Tuple[Any, ...]] = None) -> None:
-        """
-        Exports the compressed model to the specified format for deployment.
-
-        Makes method-specific preparations of the model, (e.g. removing auxiliary
-        layers that were used for the model compression), then exports the model to
-        the specified path.
-
-        :param save_path: The path where the model will be saved.
-        :param save_format: Saving format. The default format will
-            be used if `save_format` is not specified.
-        :param input_names: Names to be assigned to the input tensors of the model.
-        :param output_names: Names to be assigned to the output tensors of the model.
-        :param model_args: Tuple of additional positional and keyword arguments
-            which are required for the model's forward during export. Should be
-            specified in the following format:
-                - (a, b, {'x': None, 'y': y}) for positional and keyword arguments.
-                - (a, b, {}) for positional arguments only.
-                - ({'x': None, 'y': y},) for keyword arguments only.
-        """
-        self.prepare_for_export()
-        exporter = NASExporter(self.model, input_names, output_names, model_args)
-        if save_format is not None:
-            exporter.export_model(save_path, save_format)
-        else:
-            exporter.export_model(save_path)
