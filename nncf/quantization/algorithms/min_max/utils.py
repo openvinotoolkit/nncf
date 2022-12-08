@@ -87,23 +87,20 @@ def calculate_weight_quantizer_parameters(weight_tensor: np.ndarray, quantizer_c
     input_high = np.amax(weight_tensor, axis=axes)
     input_low = np.amin(weight_tensor, axis=axes)
     tensor_type = np.uint8 if np.all(input_low >= 0) else np.int8
-    level_low, level_high = get_level_low_level_high(tensor_type, mode)
+    level_low, level_high = get_level_low_level_high(tensor_type)
     scales, zero_points = calculate_scale_level(input_high, input_low, level_low, level_high, mode)
     return QuantizerLayerParameters(scales.tolist(), zero_points.tolist(), mode, axis, tensor_type)
 
 
-def get_level_low_level_high(tensor_type: np.dtype, mode: QuantizationMode) -> Tuple[int, int]:
+def get_level_low_level_high(tensor_type: np.dtype) -> Tuple[int, int]:
     """
     Returns the minimum and maximum level for the quantizer.
 
-    :param tensor_type:
-    :param mode:
+    :param tensor_type: Value type of the tensor. Could be INT8 or UINT8.
     :return: Minimum level and maximum level of the quantizer.
     """
     if tensor_type == np.uint8:
         return 0, 255
-    if mode == QuantizationMode.SYMMETRIC:
-        return -128, 127
     return -128, 127
 
 
@@ -127,6 +124,6 @@ def calculate_activation_quantizer_parameters(statistics: MinMaxTensorStatistic,
         assert axis is not None
         raise RuntimeError('Currently per-channel is not supported for activation tensors.')
     tensor_type = np.uint8 if np.all(input_low >= 0) else np.int8
-    level_low, level_high = get_level_low_level_high(tensor_type, mode)
+    level_low, level_high = get_level_low_level_high(tensor_type)
     scales, zero_points = calculate_scale_level(input_high, input_low, level_low, level_high, mode)
     return QuantizerLayerParameters(scales.tolist(), zero_points.tolist(), mode, axis, tensor_type)
