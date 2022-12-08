@@ -421,6 +421,7 @@ class TestBenchmarkResult:
                 doc.asis("green_text" + "{Background-color: " + f"#{BG_COLOR_GREEN_HEX}" + "}")
                 doc.asis("yellow_text" + "{Background-color: " + f"#{BG_COLOR_YELLOW_HEX}" + "}")
                 doc.asis("red_text" + "{Background-color: " + f"#{BG_COLOR_RED_HEX}" + "}")
+                doc.asis("report_table" + "border-collapse: collapse; border: 1px solid;")
         with tag('p'):
             text('legend: ')
         with tag('p'):
@@ -434,11 +435,28 @@ class TestBenchmarkResult:
                 text('Thresholds for FP32 and Expected are failed')
         with tag('p'):
             text('If Reference FP32 value in parentheses, it takes from "target" field of .json file')
-        with tag('p'):
-            def color_row(col):
-                return ['background-color: #' + row_colors[i] for i, x in col.iteritems()]
+        with tag('report_table'):
+            with tag('table', border="1", cellpadding="5"):
+                with tag('tr'):
+                    for up_col, _ in df.columns:
+                        with tag('td'):
+                            text(up_col)
+                with tag('tr'):
+                    for _, bot_col in df.columns:
+                        with tag('td'):
+                            text(bot_col)
+                with tag('tr'):
+                    for idx, row in df.iterrows():
+                        with tag('tr'):
+                            for i, elem in enumerate(row):
+                                additional_attrs = {}
+                                if i > 3:
+                                    additional_attrs = {'bgcolor': f'{row_colors[idx]}'}
+                                with tag('td', **additional_attrs):
+                                    if isinstance(elem, float):
+                                        elem = round(elem, 2)
+                                    text(elem)
 
-            doc.asis(df.style.apply(color_row).render())
         with open(output_fp, 'w', encoding='utf8') as f:
             f.write(doc.getvalue())
 
