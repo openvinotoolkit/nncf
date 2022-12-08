@@ -10,6 +10,7 @@ def convert_opset_version(model: onnx.ModelProto, opset_version: int = TARGET_OP
     """
     Tries to convert 'model' Opset Version to 'opset_version'.
     If the 'model' can not be converted returns the original 'model'.
+
     :param model: ONNX model to convert.
     :param opset_version: target Opset Version.
     :return: Converted ONNX model or Original ONNX model.
@@ -27,20 +28,3 @@ def convert_opset_version(model: onnx.ModelProto, opset_version: int = TARGET_OP
             f"Couldn't convert target model to the Opset Version {opset_version}. "
             f"Using the copy of the original model")
         return model
-
-
-def convert_ir_version(model: onnx.ModelProto, ir_version: int = TARGET_IR_VERSION) -> onnx.ModelProto:
-    """
-    Creates a new model from the 'model' graph with the target IR Version.
-    :param model: ONNX model to convert.
-    :param ir_version: Target IR Version.
-    :return: Converted ONNX model.
-    """
-    op = onnx.OperatorSetIdProto()
-    op.version = model.opset_import[0].version
-    modified_model = onnx.helper.make_model(model.graph, ir_version=ir_version, opset_imports=[op])
-    onnx.checker.check_model(modified_model)
-    nncf_logger.info(
-        'The model was successfully converted  to the IR Version = {}'.format(
-            modified_model.ir_version))
-    return modified_model

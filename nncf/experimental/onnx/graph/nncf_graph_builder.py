@@ -38,21 +38,17 @@ class GraphConverter:
     DEFAULT_TENSOR_SHAPE = [1]
 
     @staticmethod
-    def _preprocess_model(model: onnx.ModelProto) -> onnx.ModelProto:
-        model = GraphConverter._replace_empty_node_name(model)
-        return model
-
-    @staticmethod
     def _replace_empty_node_name(model: onnx.ModelProto) -> onnx.ModelProto:
         """
         Sets a unique name to every node in 'model' with empty name field.
         NNCFGraph expects every node to have a unique name.
+
         :param model: ONNX model.
         :return: ONNX model with filled nodes.
         """
         for i, node in enumerate(model.graph.node):
             if node.name == '':
-                node.name = node.op_type + '_nncf_' + str(i)
+                node.name = f'{node.op_type}_{str(i)}'
 
         name_counter = Counter([node.name for node in model.graph.node])
 
@@ -184,7 +180,7 @@ class GraphConverter:
         :param onnx_model: ONNX model.
         :return: NNCFGraph.
         """
-        onnx_model = GraphConverter._preprocess_model(onnx_model)
+        onnx_model = GraphConverter._replace_empty_node_name(onnx_model)
         nncf_graph = NNCFGraph()
         onnx_graph = ONNXGraph(onnx_model)
         for node in onnx_graph.get_all_nodes():
