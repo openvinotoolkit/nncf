@@ -13,7 +13,7 @@
 
 from abc import ABC
 from abc import abstractmethod
-from typing import Dict, TypeVar, Tuple, List, Optional, Union
+from typing import Dict, TypeVar, Tuple, List
 
 import numpy as np
 from nncf.common.graph.graph import NNCFNode
@@ -95,16 +95,30 @@ class MinMaxAlgoBackend(ABC):
 
     @staticmethod
     @abstractmethod
-    def quantizer_insertion_command(target_point: TargetPoint,
-                                    quantizer_config: QuantizerConfig,
-                                    statistics: Union[MinMaxTensorStatistic, np.ndarray],
-                                    node: NNCFNode) -> TransformationCommand:
+    def activation_quantizer_insertion_command(target_point: TargetPoint,
+                                               quantizer_config: QuantizerConfig,
+                                               statistics: MinMaxTensorStatistic) -> TransformationCommand:
         """
         Returns backend-specific quantizer insertion command.
 
         :param target_point: Target location for the correction.
         :param quantizer_config: QuantizerConfig instance for the current layer.
-        :param statistics: MinMaxTensorStatistic or weight tensor to calculate quantization parameters.
+        :param statistics: MinMaxTensorStatistic to calculate activation quantization parameters.
+        :return: Backend-specific TransformationCommand for the quantizer insertion operation.
+        """
+
+    @staticmethod
+    @abstractmethod
+    def weight_quantizer_insertion_command(target_point: TargetPoint,
+                                           quantizer_config: QuantizerConfig,
+                                           weight_tensor: np.ndarray,
+                                           node: NNCFNode) -> TransformationCommand:
+        """
+        Returns backend-specific quantizer insertion command.
+
+        :param target_point: Target location for the correction.
+        :param quantizer_config: QuantizerConfig instance for the current layer.
+        :param weight_tensor: weight tensor to calculate weight quantization parameters.
         :param node: NNCFNode with the attributes.
         :return: Backend-specific TransformationCommand for the quantizer insertion operation.
         """
