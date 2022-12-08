@@ -15,7 +15,7 @@ limitations under the License.
 """
 
 # pylint: disable=redefined-outer-name
-from typing import List, Dict, Set
+from typing import List, Dict
 
 import json
 import math
@@ -27,6 +27,7 @@ from tempfile import TemporaryDirectory
 
 import pandas as pd
 from yattag import Doc
+from yattag import indent
 
 import pytest
 from pytest_dependency import depends
@@ -421,7 +422,7 @@ class TestBenchmarkResult:
                 doc.asis("green_text" + "{Background-color: " + f"#{BG_COLOR_GREEN_HEX}" + "}")
                 doc.asis("yellow_text" + "{Background-color: " + f"#{BG_COLOR_YELLOW_HEX}" + "}")
                 doc.asis("red_text" + "{Background-color: " + f"#{BG_COLOR_RED_HEX}" + "}")
-                doc.asis("report_table" + "border-collapse: collapse; border: 1px solid;")
+                doc.asis("report_table" + " border-collapse: collapse; border: 1px solid;")
         with tag('p'):
             text('legend: ')
         with tag('p'):
@@ -436,11 +437,17 @@ class TestBenchmarkResult:
         with tag('p'):
             text('If Reference FP32 value in parentheses, it takes from "target" field of .json file')
         with tag('report_table'):
+            first_row = ['', '', '', '', CPU_EP_COL_NAME, OV_EP_COL_NAME]
             with tag('table', border="1", cellpadding="5"):
                 with tag('tr'):
-                    for up_col, _ in df.columns:
-                        with tag('td'):
-                            text(up_col)
+                    for col_name in first_row:
+                        additional_attrs = {}
+                        if col_name == CPU_EP_COL_NAME:
+                            additional_attrs = {'colspan': 2}
+                        elif col_name == OV_EP_COL_NAME:
+                            additional_attrs = {'colspan': 3}
+                        with tag('td', **additional_attrs):
+                            text(col_name)
                 with tag('tr'):
                     for _, bot_col in df.columns:
                         with tag('td'):
@@ -450,7 +457,7 @@ class TestBenchmarkResult:
                         with tag('tr'):
                             for i, elem in enumerate(row):
                                 additional_attrs = {}
-                                if i > 3:
+                                if i > 3: # Color only from 4th column
                                     additional_attrs = {'bgcolor': f'{row_colors[idx]}'}
                                 with tag('td', **additional_attrs):
                                     if isinstance(elem, float):
@@ -458,7 +465,7 @@ class TestBenchmarkResult:
                                     text(elem)
 
         with open(output_fp, 'w', encoding='utf8') as f:
-            f.write(doc.getvalue())
+            f.write(indent(doc.getvalue(), indent_text=True))
 
     @pytest.mark.e2e_ptq
     @pytest.mark.dependency()
