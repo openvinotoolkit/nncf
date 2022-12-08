@@ -14,7 +14,6 @@ from torchvision import transforms
 from torchvision.transforms import InterpolationMode
 
 import timm
-from tqdm import tqdm
 from sklearn.metrics import accuracy_score
 
 import openvino.runtime as ov
@@ -137,7 +136,7 @@ def validate_accuracy(model_path, val_loader):
 
     infer_queue.set_callback(process_result)
 
-    for i, (images, target) in tqdm(enumerate(val_loader)):
+    for i, (images, target) in enumerate(val_loader):
         # W/A for memory leaks when using torch DataLoader and OpenVINO
         image_copies = copy.deepcopy(images.numpy())
         infer_queue.start_async(image_copies, userdata=i)
