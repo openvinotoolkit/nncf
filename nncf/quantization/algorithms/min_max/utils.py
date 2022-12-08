@@ -36,8 +36,20 @@ class QuantizerLayerParameters:
     tensor_type: Optional[np.dtype] = None
 
 
-def calculate_scale_level(max_val: np.ndarray, min_val: np.ndarray, level_low: int, level_high: int,
-                          mode: QuantizationMode) -> Tuple[np.ndarray, np.ndarray]:
+def get_level_low_level_high(tensor_type: np.dtype) -> Tuple[int, int]:
+    """
+    Returns the minimum and maximum level for the quantizer.
+
+    :param tensor_type: Value type of the tensor. Could be INT8 or UINT8.
+    :return: Minimum level and maximum level of the quantizer.
+    """
+    if tensor_type == np.uint8:
+        return 0, 255
+    return -128, 127
+
+
+def calculate_scale_zero_point(max_val: np.ndarray, min_val: np.ndarray, level_low: int, level_high: int,
+                               mode: QuantizationMode) -> Tuple[np.ndarray, np.ndarray]:
     """
     Calculates Quantizer/Dequantizer layer scale level.
     Returns scale and zero_point values foe the quantizer.
@@ -56,9 +68,15 @@ def calculate_scale_level(max_val: np.ndarray, min_val: np.ndarray, level_low: i
         min_val = -input_abs_max
     scale = (max_val - min_val) / float(level_high - level_low)
     if mode == QuantizationMode.SYMMETRIC:
-        zero_point = np.zeros_like(scale).astype(np.int64)
+        zero_point = np.zeros_like(scale, dtype=np.int32)
     else:
-        zero_point = np.round(level_low - min_val / scale).astype(np.int64)
+        zero_point = np.round(level_low - min_val / scale).astype(np.int32)
+
+        level_low *= np.ones_like(zero_point, dtype=np.int32)
+        level_high *= np.ones_like(zero_point, dtype=np.int32)
+
+        zero_point = np.maximum(zero_point, level_low)
+        zero_point = np.minimum(zero_point, level_high)
 
     return scale, zero_point
 
@@ -88,20 +106,8 @@ def calculate_weight_quantizer_parameters(weight_tensor: np.ndarray, quantizer_c
     input_low = np.amin(weight_tensor, axis=axes)
     tensor_type = np.uint8 if np.all(input_low >= 0) else np.int8
     level_low, level_high = get_level_low_level_high(tensor_type)
-    scales, zero_points = calculate_scale_level(input_high, input_low, level_low, level_high, mode)
+    scales, zero_points = calculate_scale_zero_point(input_high, input_low, level_low, level_high, mode)
     return QuantizerLayerParameters(scales.tolist(), zero_points.tolist(), mode, axis, tensor_type)
-
-
-def get_level_low_level_high(tensor_type: np.dtype) -> Tuple[int, int]:
-    """
-    Returns the minimum and maximum level for the quantizer.
-
-    :param tensor_type: Value type of the tensor. Could be INT8 or UINT8.
-    :return: Minimum level and maximum level of the quantizer.
-    """
-    if tensor_type == np.uint8:
-        return 0, 255
-    return -128, 127
 
 
 def calculate_activation_quantizer_parameters(statistics: MinMaxTensorStatistic,
@@ -125,5 +131,5 @@ def calculate_activation_quantizer_parameters(statistics: MinMaxTensorStatistic,
         raise RuntimeError('Currently per-channel is not supported for activation tensors.')
     tensor_type = np.uint8 if np.all(input_low >= 0) else np.int8
     level_low, level_high = get_level_low_level_high(tensor_type)
-    scales, zero_points = calculate_scale_level(input_high, input_low, level_low, level_high, mode)
+    scales, zero_points = calculate_scale_zero_point(input_high, input_low, level_low, level_high, mode)
     return QuantizerLayerParameters(scales.tolist(), zero_points.tolist(), mode, axis, tensor_type)
