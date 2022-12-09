@@ -105,7 +105,8 @@ def calculate_weight_quantizer_parameters(weight_tensor: np.ndarray, quantizer_c
         axes = None
     input_high = np.amax(weight_tensor, axis=axes)
     input_low = np.amin(weight_tensor, axis=axes)
-    tensor_type = np.uint8 if np.all(input_low >= 0) else np.int8
+    # The weight is restricted to have only signed range.
+    tensor_type = np.int8
     level_low, level_high = get_level_low_level_high(tensor_type)
     scales, zero_points = calculate_scale_zero_point(input_high, input_low, level_low, level_high, mode)
     return QuantizerLayerParameters(scales, zero_points, mode, axis, tensor_type)
