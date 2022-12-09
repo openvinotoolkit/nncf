@@ -13,7 +13,7 @@
 
 import pytest
 from nncf.common.quantization.structs import QuantizationMode
-from nncf.quantization.algorithms.min_max.utils import calculate_scale_zero_point
+from nncf.experimental.onnx.quantization.quantizer_parameters import calculate_scale_zero_point
 import numpy as np
 from dataclasses import dataclass
 
