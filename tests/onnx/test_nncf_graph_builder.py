@@ -18,35 +18,28 @@ import torch
 from torchvision import models
 import onnx
 
-from nncf.common.utils.dot_file_rw import read_dot_graph
-from nncf.common.utils.dot_file_rw import write_dot_graph
 from nncf.experimental.onnx.graph.nncf_graph_builder import GraphConverter
-from nncf.experimental.onnx.model_normalizer import ONNXModelNormalizer
+from tests.common.graph.nx_graph import compare_nx_graph_with_reference
 from tests.onnx.conftest import ONNX_TEST_ROOT
 
 from tests.onnx.models import ALL_SYNTHETIC_MODELS
 from tests.shared.paths import TEST_ROOT
 from tests.onnx.quantization.common import ModelToTest
-from tests.onnx.quantization.common import check_nx_graph
+from tests.onnx.opset_converter import convert_opset_version
 from tests.onnx.weightless_model import load_model_topology_with_zeros_weights
 
 REFERENCE_GRAPHS_DIR = ONNX_TEST_ROOT / 'data' / 'reference_graphs' / 'original_nncf_graph'
 
 
 @pytest.mark.parametrize("model_cls_to_test", ALL_SYNTHETIC_MODELS.values())
-@pytest.mark.parametrize("generate_ref_graphs", [False])
-def test_compare_nncf_graph_synthetic_models(model_cls_to_test, generate_ref_graphs):
+def test_compare_nncf_graph_synthetic_models(model_cls_to_test):
     model_to_test = model_cls_to_test()
     path_to_dot = REFERENCE_GRAPHS_DIR / 'synthetic' / model_to_test.path_ref_graph
 
     nncf_graph = GraphConverter.create_nncf_graph(model_to_test.onnx_model)
     nx_graph = nncf_graph.get_graph_for_structure_analysis(extended=True)
 
-    if generate_ref_graphs:
-        write_dot_graph(nx_graph, path_to_dot)
-
-    expected_graph = read_dot_graph(path_to_dot)
-    check_nx_graph(nx_graph, expected_graph)
+    compare_nx_graph_with_reference(nx_graph, path_to_dot)
 
 
 @pytest.mark.parametrize(('model_to_test', 'model'),
@@ -64,28 +57,19 @@ def test_compare_nncf_graph_synthetic_models(model_cls_to_test, generate_ref_gra
                           (ModelToTest('mnasnet0_5', [1, 3, 224, 224]), models.mnasnet0_5(pretrained=True)),
                           ]
                          )
-@pytest.mark.parametrize("generate_ref_graphs", [False])
-def test_compare_nncf_graph_classification_real_models(tmp_path, model_to_test, model, generate_ref_graphs):
-    onnx_model_dir = TEST_ROOT / 'onnx' / 'data' / 'models'
-    onnx_model_path = onnx_model_dir / model_to_test.model_name
-    if not os.path.isdir(onnx_model_dir):
-        os.mkdir(onnx_model_dir)
+def test_compare_nncf_graph_classification_real_models(tmp_path, model_to_test, model):
+    onnx_model_path = tmp_path / model_to_test.model_name
     x = torch.randn(model_to_test.input_shape, requires_grad=False)
     torch.onnx.export(model, x, onnx_model_path, opset_version=13)
 
     original_model = onnx.load(onnx_model_path)
-    original_model = ONNXModelNormalizer.normalize_model(original_model)
 
     path_to_dot = REFERENCE_GRAPHS_DIR / model_to_test.path_ref_graph
 
     nncf_graph = GraphConverter.create_nncf_graph(original_model)
     nx_graph = nncf_graph.get_graph_for_structure_analysis(extended=True)
 
-    if generate_ref_graphs:
-        write_dot_graph(nx_graph, path_to_dot)
-
-    expected_graph = read_dot_graph(path_to_dot)
-    check_nx_graph(nx_graph, expected_graph)
+    compare_nx_graph_with_reference(nx_graph, path_to_dot)
 
 
 @pytest.mark.parametrize(('model_to_test'),
@@ -96,26 +80,19 @@ def test_compare_nncf_graph_classification_real_models(tmp_path, model_to_test, 
                           ModelToTest('fcn-resnet50-12', [1, 3, 480, 640])
                           ]
                          )
-@pytest.mark.parametrize("generate_ref_graphs", [False])
-def test_compare_nncf_graph_detection_real_models(tmp_path, model_to_test, generate_ref_graphs):
+def test_compare_nncf_graph_detection_real_models(tmp_path, model_to_test):
     onnx_model_dir = TEST_ROOT / 'onnx' / 'data' / 'models'
     onnx_model_path = onnx_model_dir / (model_to_test.model_name + '.onnx')
     if not os.path.isdir(onnx_model_dir):
         os.mkdir(onnx_model_dir)
     original_model = load_model_topology_with_zeros_weights(onnx_model_path)
 
-    convert_opset_version = True
-    if model_to_test.model_name == 'MaskRCNN-12':
-        convert_opset_version = False
-    original_model = ONNXModelNormalizer.normalize_model(original_model, convert_opset_version)
+    if model_to_test.model_name != 'MaskRCNN-12':
+        original_model = convert_opset_version(original_model)
 
     path_to_dot = REFERENCE_GRAPHS_DIR / model_to_test.path_ref_graph
 
     nncf_graph = GraphConverter.create_nncf_graph(original_model)
     nx_graph = nncf_graph.get_graph_for_structure_analysis(extended=True)
 
-    if generate_ref_graphs:
-        write_dot_graph(nx_graph, path_to_dot)
-
-    expected_graph = read_dot_graph(path_to_dot)
-    check_nx_graph(nx_graph, expected_graph)
+    compare_nx_graph_with_reference(nx_graph, path_to_dot)

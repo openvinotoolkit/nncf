@@ -324,8 +324,8 @@ strict digraph  {
 "5 ResNet/ReLU[relu]/relu__0" -> "6 ResNet/ReLU[relu]/AsymmetricQuantizer/asymmetric_quantize_0";
 "6 ResNet/ReLU[relu]/AsymmetricQuantizer/asymmetric_quantize_0" -> "7 ResNet/MaxPool2d[maxpool]/max_pool2d_0";
 "7 ResNet/MaxPool2d[maxpool]/max_pool2d_0" -> "9 ResNet/Sequential[layer1]/Bottleneck[0]/NNCFConv2d[conv1]/conv2d_0";
-"8 ResNet/Sequential[layer1]/Bottleneck[0]/NNCFConv2d[conv1]/ModuleDict[pre_ops]/UpdateWeight[0]/SymmetricQuantizer[op]/symmetric_quantize_0" -> "9 ResNet/Sequential[layer1]/Bottleneck[0]/NNCFConv2d[conv1]/conv2d_0";
 "7 ResNet/MaxPool2d[maxpool]/max_pool2d_0" -> "23 ResNet/Sequential[layer1]/Bottleneck[0]/Sequential[downsample]/NNCFConv2d[0]/conv2d_0";
+"8 ResNet/Sequential[layer1]/Bottleneck[0]/NNCFConv2d[conv1]/ModuleDict[pre_ops]/UpdateWeight[0]/SymmetricQuantizer[op]/symmetric_quantize_0" -> "9 ResNet/Sequential[layer1]/Bottleneck[0]/NNCFConv2d[conv1]/conv2d_0";
 "9 ResNet/Sequential[layer1]/Bottleneck[0]/NNCFConv2d[conv1]/conv2d_0" -> "10 ResNet/Sequential[layer1]/Bottleneck[0]/NNCFBatchNorm2d[bn1]/batch_norm_0";
 "10 ResNet/Sequential[layer1]/Bottleneck[0]/NNCFBatchNorm2d[bn1]/batch_norm_0" -> "11 ResNet/Sequential[layer1]/Bottleneck[0]/ReLU[relu]/relu__0";
 "11 ResNet/Sequential[layer1]/Bottleneck[0]/ReLU[relu]/relu__0" -> "12 ResNet/Sequential[layer1]/Bottleneck[0]/ReLU[relu]/AsymmetricQuantizer/asymmetric_quantize_0";

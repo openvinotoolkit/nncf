@@ -109,7 +109,7 @@ def _get_default_quantization_config(preset: QuantizationPreset,
         'preset': preset.value,
         'initializer': {
             'range': {'num_init_samples': subset_size},
-            'batchnorm_adaptation': {'num_bn_adaptation_samples': subset_size}
+            'batchnorm_adaptation': {'num_bn_adaptation_samples': 0}
         },
         'overflow_fix': 'first_layer_only'
     }

@@ -118,6 +118,6 @@ nncf_debug/
 
 # NNCF examples
 examples/experimental/onnx/mobilenet_v2/mobilenet_v2_quantization/
-examples/experimental/openvino/mobilenet_v2/mobilenet_v2_quantization/
+examples/post_training_quantization/openvino/mobilenet_v2/mobilenet_v2_*
 examples/experimental/tensorflow/mobilenet_v2/mobilenet_v2_quantization/
-examples/experimental/torch/mobilenet_v2/mobilenet_v2_quantization/
+examples/post_training_quantization/torch/mobilenet_v2/mobilenet_v2_*

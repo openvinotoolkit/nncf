@@ -12,6 +12,7 @@
 """
 from typing import Union, List
 
+from collections import Counter
 import onnx
 from onnx import ModelProto
 
@@ -35,6 +36,29 @@ class GraphConverter:
     """
 
     DEFAULT_TENSOR_SHAPE = [1]
+
+    @staticmethod
+    def _replace_empty_node_name(model: onnx.ModelProto) -> onnx.ModelProto:
+        """
+        Sets a unique name to every node in 'model' with empty name field.
+        NNCFGraph expects every node to have a unique name.
+
+        :param model: ONNX model.
+        :return: ONNX model with filled nodes.
+        """
+        for i, node in enumerate(model.graph.node):
+            if node.name == '':
+                node.name = node.op_type + '_nncf_' + str(i)
+
+        name_counter = Counter([node.name for node in model.graph.node])
+
+        if max(name_counter.values()) > 1:
+            raise RuntimeError(
+                f"Nodes {[(name, cnt) for name, cnt in name_counter.items() if cnt > 1]} "
+                "(name, counts) occurred more than once. "
+                "NNCF expects every node to have a unique name.")
+
+        return model
 
     @staticmethod
     def _get_tensor_shape(onnx_graph: onnx.GraphProto, tensor: Union[str, onnx.ValueInfoProto]) -> List[int]:
@@ -156,6 +180,7 @@ class GraphConverter:
         :param onnx_model: ONNX model.
         :return: NNCFGraph.
         """
+        onnx_model = GraphConverter._replace_empty_node_name(onnx_model)
         nncf_graph = NNCFGraph()
         onnx_graph = ONNXGraph(onnx_model)
         for node in onnx_graph.get_all_nodes():

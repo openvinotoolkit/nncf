@@ -102,14 +102,15 @@ strict digraph  {
 "100 SmallModel/add_0" [id=100, type=add];
 "101 /nncf_model_output_0" [id=101, type=nncf_model_output];
 "0 /nncf_model_input_0" -> "1 SymmetricQuantizer/symmetric_quantize_0";
+"1 SymmetricQuantizer/symmetric_quantize_0" -> "19 SmallModel/NNCFConv2d[conv_input]/conv2d_0";
 "2 /nncf_model_input_1" -> "3 SymmetricQuantizer/symmetric_quantize_1";
 "3 SymmetricQuantizer/symmetric_quantize_1" -> "7 SmallModel/NNCFConv2d[conv_cubic1]/conv2d_0";
+"3 SymmetricQuantizer/symmetric_quantize_1" -> "100 SmallModel/add_0";
 "4 SmallModel/NNCFConv2d[conv_cubic1]/ModuleDict[pre_ops]/UpdateWeight[0]/RBSparsifyingWeight[op]/calc_rb_binary_mask_0" -> "5 SmallModel/NNCFConv2d[conv_cubic1]/ModuleDict[pre_ops]/UpdateWeight[0]/RBSparsifyingWeight[op]/apply_binary_mask_0";
 "5 SmallModel/NNCFConv2d[conv_cubic1]/ModuleDict[pre_ops]/UpdateWeight[0]/RBSparsifyingWeight[op]/apply_binary_mask_0" -> "6 SmallModel/NNCFConv2d[conv_cubic1]/ModuleDict[pre_ops]/UpdateWeight[1]/SymmetricQuantizer[op]/symmetric_quantize_0";
 "6 SmallModel/NNCFConv2d[conv_cubic1]/ModuleDict[pre_ops]/UpdateWeight[1]/SymmetricQuantizer[op]/symmetric_quantize_0" -> "7 SmallModel/NNCFConv2d[conv_cubic1]/conv2d_0";
 "7 SmallModel/NNCFConv2d[conv_cubic1]/conv2d_0" -> "8 SmallModel/ReLU[relu]/relu_0";
 "8 SmallModel/ReLU[relu]/relu_0" -> "9 SmallModel/ReLU[relu]/SymmetricQuantizer/symmetric_quantize_0";
-"1 SymmetricQuantizer/symmetric_quantize_0" -> "19 SmallModel/NNCFConv2d[conv_input]/conv2d_0";
 "9 SmallModel/ReLU[relu]/SymmetricQuantizer/symmetric_quantize_0" -> "13 SmallModel/NNCFConv2d[conv_cubic2]/conv2d_0";
 "10 SmallModel/NNCFConv2d[conv_cubic2]/ModuleDict[pre_ops]/UpdateWeight[0]/RBSparsifyingWeight[op]/calc_rb_binary_mask_0" -> "11 SmallModel/NNCFConv2d[conv_cubic2]/ModuleDict[pre_ops]/UpdateWeight[0]/RBSparsifyingWeight[op]/apply_binary_mask_0";
 "11 SmallModel/NNCFConv2d[conv_cubic2]/ModuleDict[pre_ops]/UpdateWeight[0]/RBSparsifyingWeight[op]/apply_binary_mask_0" -> "12 SmallModel/NNCFConv2d[conv_cubic2]/ModuleDict[pre_ops]/UpdateWeight[1]/SymmetricQuantizer[op]/symmetric_quantize_0";
@@ -134,7 +135,6 @@ strict digraph  {
 "28 SmallModel/SmallBlock[residual1]/ReLU[relu]/SymmetricQuantizer/symmetric_quantize_0" -> "32 SmallModel/SmallBlock[residual1]/NNCFConv2d[conv2]/conv2d_0";
 "29 SmallModel/SmallBlock[residual1]/NNCFConv2d[conv2]/ModuleDict[pre_ops]/UpdateWeight[0]/RBSparsifyingWeight[op]/calc_rb_binary_mask_0" -> "30 SmallModel/SmallBlock[residual1]/NNCFConv2d[conv2]/ModuleDict[pre_ops]/UpdateWeight[0]/RBSparsifyingWeight[op]/apply_binary_mask_0";
 "30 SmallModel/SmallBlock[residual1]/NNCFConv2d[conv2]/ModuleDict[pre_ops]/UpdateWeight[0]/RBSparsifyingWeight[op]/apply_binary_mask_0" -> "31 SmallModel/SmallBlock[residual1]/NNCFConv2d[conv2]/ModuleDict[pre_ops]/UpdateWeight[1]/SymmetricQuantizer[op]/symmetric_quantize_0";
-"3 SymmetricQuantizer/symmetric_quantize_1" -> "100 SmallModel/add_0";
 "31 SmallModel/SmallBlock[residual1]/NNCFConv2d[conv2]/ModuleDict[pre_ops]/UpdateWeight[1]/SymmetricQuantizer[op]/symmetric_quantize_0" -> "32 SmallModel/SmallBlock[residual1]/NNCFConv2d[conv2]/conv2d_0";
 "32 SmallModel/SmallBlock[residual1]/NNCFConv2d[conv2]/conv2d_0" -> "33 SmallModel/SmallBlock[residual1]/NNCFConv2d[conv2]/SymmetricQuantizer/symmetric_quantize_0";
 "33 SmallModel/SmallBlock[residual1]/NNCFConv2d[conv2]/SymmetricQuantizer/symmetric_quantize_0" -> "34 SmallModel/SmallBlock[residual1]/add_0";

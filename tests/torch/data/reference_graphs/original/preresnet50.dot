@@ -171,12 +171,12 @@ strict digraph  {
 "1 PreActResNet/Sequential[layer1]/PreActBottleneck[0]/BatchNorm2d[bn1]/batch_norm_0" -> "2 PreActResNet/Sequential[layer1]/PreActBottleneck[0]/relu_0";
 "2 PreActResNet/Sequential[layer1]/PreActBottleneck[0]/relu_0" -> "3 PreActResNet/Sequential[layer1]/PreActBottleneck[0]/Sequential[shortcut]/Conv2d[0]/conv2d_0";
 "2 PreActResNet/Sequential[layer1]/PreActBottleneck[0]/relu_0" -> "4 PreActResNet/Sequential[layer1]/PreActBottleneck[0]/Conv2d[conv1]/conv2d_0";
+"3 PreActResNet/Sequential[layer1]/PreActBottleneck[0]/Sequential[shortcut]/Conv2d[0]/conv2d_0" -> "11 PreActResNet/Sequential[layer1]/PreActBottleneck[0]/__iadd___0";
 "4 PreActResNet/Sequential[layer1]/PreActBottleneck[0]/Conv2d[conv1]/conv2d_0" -> "5 PreActResNet/Sequential[layer1]/PreActBottleneck[0]/BatchNorm2d[bn2]/batch_norm_0";
 "5 PreActResNet/Sequential[layer1]/PreActBottleneck[0]/BatchNorm2d[bn2]/batch_norm_0" -> "6 PreActResNet/Sequential[layer1]/PreActBottleneck[0]/relu_1";
 "6 PreActResNet/Sequential[layer1]/PreActBottleneck[0]/relu_1" -> "7 PreActResNet/Sequential[layer1]/PreActBottleneck[0]/Conv2d[conv2]/conv2d_0";
 "7 PreActResNet/Sequential[layer1]/PreActBottleneck[0]/Conv2d[conv2]/conv2d_0" -> "8 PreActResNet/Sequential[layer1]/PreActBottleneck[0]/BatchNorm2d[bn3]/batch_norm_0";
 "8 PreActResNet/Sequential[layer1]/PreActBottleneck[0]/BatchNorm2d[bn3]/batch_norm_0" -> "9 PreActResNet/Sequential[layer1]/PreActBottleneck[0]/relu_2";
-"3 PreActResNet/Sequential[layer1]/PreActBottleneck[0]/Sequential[shortcut]/Conv2d[0]/conv2d_0" -> "11 PreActResNet/Sequential[layer1]/PreActBottleneck[0]/__iadd___0";
 "9 PreActResNet/Sequential[layer1]/PreActBottleneck[0]/relu_2" -> "10 PreActResNet/Sequential[layer1]/PreActBottleneck[0]/Conv2d[conv3]/conv2d_0";
 "10 PreActResNet/Sequential[layer1]/PreActBottleneck[0]/Conv2d[conv3]/conv2d_0" -> "11 PreActResNet/Sequential[layer1]/PreActBottleneck[0]/__iadd___0";
 "11 PreActResNet/Sequential[layer1]/PreActBottleneck[0]/__iadd___0" -> "12 PreActResNet/Sequential[layer1]/PreActBottleneck[1]/BatchNorm2d[bn1]/batch_norm_0";
@@ -270,12 +270,12 @@ strict digraph  {
 "91 PreActResNet/Sequential[layer3]/PreActBottleneck[1]/relu_2" -> "92 PreActResNet/Sequential[layer3]/PreActBottleneck[1]/Conv2d[conv3]/conv2d_0";
 "92 PreActResNet/Sequential[layer3]/PreActBottleneck[1]/Conv2d[conv3]/conv2d_0" -> "93 PreActResNet/Sequential[layer3]/PreActBottleneck[1]/__iadd___0";
 "93 PreActResNet/Sequential[layer3]/PreActBottleneck[1]/__iadd___0" -> "94 PreActResNet/Sequential[layer3]/PreActBottleneck[2]/BatchNorm2d[bn1]/batch_norm_0";
+"93 PreActResNet/Sequential[layer3]/PreActBottleneck[1]/__iadd___0" -> "103 PreActResNet/Sequential[layer3]/PreActBottleneck[2]/__iadd___0";
 "94 PreActResNet/Sequential[layer3]/PreActBottleneck[2]/BatchNorm2d[bn1]/batch_norm_0" -> "95 PreActResNet/Sequential[layer3]/PreActBottleneck[2]/relu_0";
 "95 PreActResNet/Sequential[layer3]/PreActBottleneck[2]/relu_0" -> "96 PreActResNet/Sequential[layer3]/PreActBottleneck[2]/Conv2d[conv1]/conv2d_0";
 "96 PreActResNet/Sequential[layer3]/PreActBottleneck[2]/Conv2d[conv1]/conv2d_0" -> "97 PreActResNet/Sequential[layer3]/PreActBottleneck[2]/BatchNorm2d[bn2]/batch_norm_0";
 "97 PreActResNet/Sequential[layer3]/PreActBottleneck[2]/BatchNorm2d[bn2]/batch_norm_0" -> "98 PreActResNet/Sequential[layer3]/PreActBottleneck[2]/relu_1";
 "98 PreActResNet/Sequential[layer3]/PreActBottleneck[2]/relu_1" -> "99 PreActResNet/Sequential[layer3]/PreActBottleneck[2]/Conv2d[conv2]/conv2d_0";
-"93 PreActResNet/Sequential[layer3]/PreActBottleneck[1]/__iadd___0" -> "103 PreActResNet/Sequential[layer3]/PreActBottleneck[2]/__iadd___0";
 "99 PreActResNet/Sequential[layer3]/PreActBottleneck[2]/Conv2d[conv2]/conv2d_0" -> "100 PreActResNet/Sequential[layer3]/PreActBottleneck[2]/BatchNorm2d[bn3]/batch_norm_0";
 "100 PreActResNet/Sequential[layer3]/PreActBottleneck[2]/BatchNorm2d[bn3]/batch_norm_0" -> "101 PreActResNet/Sequential[layer3]/PreActBottleneck[2]/relu_2";
 "101 PreActResNet/Sequential[layer3]/PreActBottleneck[2]/relu_2" -> "102 PreActResNet/Sequential[layer3]/PreActBottleneck[2]/Conv2d[conv3]/conv2d_0";

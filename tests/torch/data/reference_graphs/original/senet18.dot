@@ -115,13 +115,13 @@ strict digraph  {
 "0 SENet/Conv2d[conv1]/conv2d_0" -> "1 SENet/BatchNorm2d[bn1]/batch_norm_0";
 "1 SENet/BatchNorm2d[bn1]/batch_norm_0" -> "2 SENet/relu_0";
 "2 SENet/relu_0" -> "3 SENet/Sequential[layer1]/PreActBlock[0]/BatchNorm2d[bn1]/batch_norm_0";
+"2 SENet/relu_0" -> "15 SENet/Sequential[layer1]/PreActBlock[0]/__iadd___0";
 "3 SENet/Sequential[layer1]/PreActBlock[0]/BatchNorm2d[bn1]/batch_norm_0" -> "4 SENet/Sequential[layer1]/PreActBlock[0]/relu_0";
 "4 SENet/Sequential[layer1]/PreActBlock[0]/relu_0" -> "5 SENet/Sequential[layer1]/PreActBlock[0]/Conv2d[conv1]/conv2d_0";
 "5 SENet/Sequential[layer1]/PreActBlock[0]/Conv2d[conv1]/conv2d_0" -> "6 SENet/Sequential[layer1]/PreActBlock[0]/BatchNorm2d[bn2]/batch_norm_0";
 "6 SENet/Sequential[layer1]/PreActBlock[0]/BatchNorm2d[bn2]/batch_norm_0" -> "7 SENet/Sequential[layer1]/PreActBlock[0]/relu_1";
 "7 SENet/Sequential[layer1]/PreActBlock[0]/relu_1" -> "8 SENet/Sequential[layer1]/PreActBlock[0]/Conv2d[conv2]/conv2d_0";
 "8 SENet/Sequential[layer1]/PreActBlock[0]/Conv2d[conv2]/conv2d_0" -> "9 SENet/Sequential[layer1]/PreActBlock[0]/avg_pool2d_0";
-"2 SENet/relu_0" -> "15 SENet/Sequential[layer1]/PreActBlock[0]/__iadd___0";
 "8 SENet/Sequential[layer1]/PreActBlock[0]/Conv2d[conv2]/conv2d_0" -> "14 SENet/Sequential[layer1]/PreActBlock[0]/__mul___0";
 "9 SENet/Sequential[layer1]/PreActBlock[0]/avg_pool2d_0" -> "10 SENet/Sequential[layer1]/PreActBlock[0]/Conv2d[fc1]/conv2d_0";
 "10 SENet/Sequential[layer1]/PreActBlock[0]/Conv2d[fc1]/conv2d_0" -> "11 SENet/Sequential[layer1]/PreActBlock[0]/relu_2";
@@ -223,9 +223,9 @@ strict digraph  {
 "94 SENet/Sequential[layer4]/PreActBlock[0]/sigmoid_0" -> "95 SENet/Sequential[layer4]/PreActBlock[0]/__mul___0";
 "95 SENet/Sequential[layer4]/PreActBlock[0]/__mul___0" -> "96 SENet/Sequential[layer4]/PreActBlock[0]/__iadd___0";
 "96 SENet/Sequential[layer4]/PreActBlock[0]/__iadd___0" -> "97 SENet/Sequential[layer4]/PreActBlock[1]/BatchNorm2d[bn1]/batch_norm_0";
+"96 SENet/Sequential[layer4]/PreActBlock[0]/__iadd___0" -> "109 SENet/Sequential[layer4]/PreActBlock[1]/__iadd___0";
 "97 SENet/Sequential[layer4]/PreActBlock[1]/BatchNorm2d[bn1]/batch_norm_0" -> "98 SENet/Sequential[layer4]/PreActBlock[1]/relu_0";
 "98 SENet/Sequential[layer4]/PreActBlock[1]/relu_0" -> "99 SENet/Sequential[layer4]/PreActBlock[1]/Conv2d[conv1]/conv2d_0";
-"96 SENet/Sequential[layer4]/PreActBlock[0]/__iadd___0" -> "109 SENet/Sequential[layer4]/PreActBlock[1]/__iadd___0";
 "99 SENet/Sequential[layer4]/PreActBlock[1]/Conv2d[conv1]/conv2d_0" -> "100 SENet/Sequential[layer4]/PreActBlock[1]/BatchNorm2d[bn2]/batch_norm_0";
 "100 SENet/Sequential[layer4]/PreActBlock[1]/BatchNorm2d[bn2]/batch_norm_0" -> "101 SENet/Sequential[layer4]/PreActBlock[1]/relu_1";
 "101 SENet/Sequential[layer4]/PreActBlock[1]/relu_1" -> "102 SENet/Sequential[layer4]/PreActBlock[1]/Conv2d[conv2]/conv2d_0";

@@ -401,12 +401,12 @@ strict digraph  {
 "3 PNASNet/NNCFBatchNorm2d[bn1]/batch_norm_0" -> "4 PNASNet/relu_0";
 "4 PNASNet/relu_0" -> "6 PNASNet/Sequential[layer1]/CellB[0]/SepConv[sep_conv1]/NNCFConv2d[conv1]/conv2d_0";
 "4 PNASNet/relu_0" -> "9 PNASNet/Sequential[layer1]/CellB[0]/SepConv[sep_conv2]/NNCFConv2d[conv1]/conv2d_0";
-"5 PNASNet/Sequential[layer1]/CellB[0]/SepConv[sep_conv1]/NNCFConv2d[conv1]/ModuleDict[pre_ops]/UpdateWeight[0]/BinaryMask[op]/apply_binary_mask_0" -> "6 PNASNet/Sequential[layer1]/CellB[0]/SepConv[sep_conv1]/NNCFConv2d[conv1]/conv2d_0";
-"6 PNASNet/Sequential[layer1]/CellB[0]/SepConv[sep_conv1]/NNCFConv2d[conv1]/conv2d_0" -> "7 PNASNet/Sequential[layer1]/CellB[0]/SepConv[sep_conv1]/NNCFBatchNorm2d[bn1]/batch_norm_0";
-"8 PNASNet/Sequential[layer1]/CellB[0]/SepConv[sep_conv2]/NNCFConv2d[conv1]/ModuleDict[pre_ops]/UpdateWeight[0]/BinaryMask[op]/apply_binary_mask_0" -> "9 PNASNet/Sequential[layer1]/CellB[0]/SepConv[sep_conv2]/NNCFConv2d[conv1]/conv2d_0";
 "4 PNASNet/relu_0" -> "11 PNASNet/Sequential[layer1]/CellB[0]/max_pool2d_0";
 "4 PNASNet/relu_0" -> "13 PNASNet/Sequential[layer1]/CellB[0]/SepConv[sep_conv3]/NNCFConv2d[conv1]/conv2d_0";
+"5 PNASNet/Sequential[layer1]/CellB[0]/SepConv[sep_conv1]/NNCFConv2d[conv1]/ModuleDict[pre_ops]/UpdateWeight[0]/BinaryMask[op]/apply_binary_mask_0" -> "6 PNASNet/Sequential[layer1]/CellB[0]/SepConv[sep_conv1]/NNCFConv2d[conv1]/conv2d_0";
+"6 PNASNet/Sequential[layer1]/CellB[0]/SepConv[sep_conv1]/NNCFConv2d[conv1]/conv2d_0" -> "7 PNASNet/Sequential[layer1]/CellB[0]/SepConv[sep_conv1]/NNCFBatchNorm2d[bn1]/batch_norm_0";
 "7 PNASNet/Sequential[layer1]/CellB[0]/SepConv[sep_conv1]/NNCFBatchNorm2d[bn1]/batch_norm_0" -> "15 PNASNet/Sequential[layer1]/CellB[0]/__add___0";
+"8 PNASNet/Sequential[layer1]/CellB[0]/SepConv[sep_conv2]/NNCFConv2d[conv1]/ModuleDict[pre_ops]/UpdateWeight[0]/BinaryMask[op]/apply_binary_mask_0" -> "9 PNASNet/Sequential[layer1]/CellB[0]/SepConv[sep_conv2]/NNCFConv2d[conv1]/conv2d_0";
 "9 PNASNet/Sequential[layer1]/CellB[0]/SepConv[sep_conv2]/NNCFConv2d[conv1]/conv2d_0" -> "10 PNASNet/Sequential[layer1]/CellB[0]/SepConv[sep_conv2]/NNCFBatchNorm2d[bn1]/batch_norm_0";
 "10 PNASNet/Sequential[layer1]/CellB[0]/SepConv[sep_conv2]/NNCFBatchNorm2d[bn1]/batch_norm_0" -> "15 PNASNet/Sequential[layer1]/CellB[0]/__add___0";
 "11 PNASNet/Sequential[layer1]/CellB[0]/max_pool2d_0" -> "17 PNASNet/Sequential[layer1]/CellB[0]/__add___1";
