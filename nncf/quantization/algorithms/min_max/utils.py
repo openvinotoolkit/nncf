@@ -11,7 +11,7 @@
  limitations under the License.
 """
 
-from typing import Tuple, List, Optional
+from typing import Tuple, Optional
 from dataclasses import dataclass
 import numpy as np
 from nncf.common.quantization.structs import QuantizerConfig
@@ -23,6 +23,7 @@ from nncf.common.tensor_statistics.statistics import MinMaxTensorStatistic
 class QuantizerLayerParameters:
     """
     Class handles Quantizer layer attributes.
+
     :param scale: Quantizer scale.
     :param zero_point: Quantizer zero point.
     :param mode: Quantizer mode. Could be Symmetric or Asymmetric.
