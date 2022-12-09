@@ -7,13 +7,23 @@ from typing import Any, Dict, List, Optional
 from unittest.mock import Mock
 from unittest.mock import patch
 
-from datasets import Dataset  # pylint: disable=no-name-in-module
 import numpy as np
 from pytest import approx
 import torch
 import torch.nn
 import torch.nn.functional as F
 import torch.utils.data
+
+from nncf import NNCFConfig
+from nncf.api.compression import CompressionAlgorithmController
+from nncf.common.graph.graph import NNCFGraph
+from nncf.common.graph.graph import NNCFNode
+from nncf.common.graph.layer_attributes import LinearLayerAttributes
+from nncf.common.utils.tensorboard import prepare_for_tensorboard
+from nncf.experimental.torch.sparsity.movement.algo import MovementSparsifier
+from nncf.torch.nncf_network import NNCFNetwork
+
+from datasets import Dataset  # pylint: disable=no-name-in-module
 from transformers import AutoModelForAudioClassification
 from transformers import AutoModelForImageClassification
 from transformers import AutoModelForSequenceClassification
@@ -27,15 +37,6 @@ from transformers.trainer import Trainer
 from transformers.trainer_callback import TrainerCallback
 from transformers.trainer_callback import TrainerControl
 from transformers.trainer_callback import TrainerState
-
-from nncf import NNCFConfig
-from nncf.torch.nncf_network import NNCFNetwork
-from nncf.api.compression import CompressionAlgorithmController
-from nncf.common.graph.graph import NNCFGraph
-from nncf.common.graph.graph import NNCFNode
-from nncf.common.graph.layer_attributes import LinearLayerAttributes
-from nncf.common.utils.tensorboard import prepare_for_tensorboard
-from nncf.experimental.torch.sparsity.movement.algo import MovementSparsifier
 
 
 def mock_linear_nncf_node(in_features: int = 1, out_features: int = 1,
@@ -96,7 +97,7 @@ class SchedulerParams:
     def __init__(self, power: int = 3,
                  warmup_start_epoch: int = 1,
                  warmup_end_epoch: int = 3,
-                 init_importance_threshold: float = -1.0,
+                 init_importance_threshold: Optional[float] = -1.0,
                  final_importance_threshold: float = 0.0,
                  importance_regularization_factor: float = 0.1,
                  steps_per_epoch: Optional[int] = 4,
@@ -249,17 +250,18 @@ class BaseMockRunRecipe(ABC):
             return self.algo_config.scheduler_params.__dict__[key]
         raise KeyError(f'{key} not found.')
 
-    def set(self, key: str, value):
-        if key == 'log_dir':
-            self.set_log_dir(value)
-        elif key in self.model_keys:
-            setattr(self.model_config, key, value)
-        elif key in self.algo_keys:
-            setattr(self.algo_config, key, value)
-        elif key in self.scheduler_keys:
-            setattr(self.algo_config.scheduler_params, key, value)
-        else:
-            raise KeyError(f'"{key}" not found.')
+    def set(self, **kwargs):
+        for key, value in kwargs.items():
+            if key == 'log_dir':
+                self.set_log_dir(value)
+            elif key in self.model_keys:
+                setattr(self.model_config, key, value)
+            elif key in self.algo_keys:
+                setattr(self.algo_config, key, value)
+            elif key in self.scheduler_keys:
+                setattr(self.algo_config.scheduler_params, key, value)
+            else:
+                raise KeyError(f'"{key}" not found.')
 
     def generate_mock_dataset(self, num_samples: int = 16, seed: int = 42,
                               float_low: float = -1., float_high: float = 1.,
@@ -687,6 +689,7 @@ def build_compression_trainer(output_dir,
         optim="adamw_torch",
         remove_unused_columns=False,
         seed=42,
+        data_seed=42,
         full_determinism=True,
         report_to="none",
         disable_tqdm=True,

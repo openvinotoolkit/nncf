@@ -89,9 +89,8 @@ class MovementSparsityBuilder(BaseSparsityAlgoBuilder):
                 continue
 
             logger.info("Adding Weight Sparsifier in scope: {}".format(node_name))
-            compression_lr_multiplier = \
-                self.config.get_redefinable_global_param_value_for_algo('compression_lr_multiplier',
-                                                                        self.name)
+            compression_lr_multiplier = self.config.get_redefinable_global_param_value_for_algo(
+                'compression_lr_multiplier', self.name)
             sparsifying_operation = self.create_weight_sparsifying_operation(module_node, compression_lr_multiplier)
             hook = UpdateWeightAndBias(sparsifying_operation).to(device)
             insertion_commands.append(

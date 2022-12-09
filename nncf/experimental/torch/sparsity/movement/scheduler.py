@@ -11,12 +11,16 @@
  limitations under the License.
 """
 from enum import Enum
+import math
 from typing import Any, Dict, Optional
 
-from nncf.api.compression import CompressionAlgorithmController
+import numpy as np
+import torch
+
 from nncf.common.schedulers import BaseCompressionScheduler
 from nncf.common.schedulers import PolynomialDecaySchedule
 from nncf.common.utils.logger import logger
+from nncf.torch.sparsity.base_algo import BaseSparsityAlgoController
 
 
 class MovementSchedulerStage(Enum):
@@ -37,7 +41,7 @@ class MovementPolynomialThresholdScheduler(BaseCompressionScheduler):
     scheduler will start calculation only after `steps_per_epoch` is calculated.
     """
 
-    def __init__(self, controller: CompressionAlgorithmController, params: dict):
+    def __init__(self, controller: BaseSparsityAlgoController, params: dict):
         """
         TODO: revise docstring
         Initializes a sparsity scheduler with a polynomial decay schedule.
@@ -48,7 +52,7 @@ class MovementPolynomialThresholdScheduler(BaseCompressionScheduler):
         super().__init__()
         self._controller = controller
         self.power: float = params.get('power', 3)
-        self.init_importance_threshold: float = params.get('init_importance_threshold', -1.)
+        self.init_importance_threshold: Optional[float] = params.get('init_importance_threshold', None)
         self.final_importance_threshold: float = params.get('final_importance_threshold', 0.)
         self.warmup_start_epoch: int = params.get('warmup_start_epoch', 1)
         self.warmup_end_epoch: int = params.get('warmup_end_epoch', 2)
@@ -64,7 +68,11 @@ class MovementPolynomialThresholdScheduler(BaseCompressionScheduler):
         if self.warmup_start_epoch < 0 or self.warmup_end_epoch <= self.warmup_start_epoch:
             raise ValueError('Movement sparsity requires 0 <= warmup_start_epoch < warmup_end_epoch.')
 
-        if self.init_importance_threshold >= self.final_importance_threshold:
+        if self.final_importance_regularization_factor < 0:
+            raise ValueError('`importance_regularization_factor` should not be a negative number.')
+
+        if self.init_importance_threshold is not None and \
+                self.init_importance_threshold >= self.final_importance_threshold:
             logger.warning('`init_importance_threshold` is equal to or greater than `final_importance_threshold`. '
                            'Movement sparsity may not work as expected.')
 
@@ -93,17 +101,18 @@ class MovementPolynomialThresholdScheduler(BaseCompressionScheduler):
         if current_stage == MovementSchedulerStage.PRE_WARMUP:
             return 0.
         if current_stage == MovementSchedulerStage.IN_WARMUP:
-            return self._calculate_current_scheduled_value(0., self.final_importance_regularization_factor)
+            return self._calc_current_scheduled_value(0., self.final_importance_regularization_factor)
         return self.final_importance_regularization_factor
 
     @property
     def current_importance_threshold(self) -> float:
         current_stage = self.current_stage
         if current_stage == MovementSchedulerStage.PRE_WARMUP:
-            return self.init_importance_threshold
+            return -math.inf
         if current_stage == MovementSchedulerStage.IN_WARMUP:
-            return self._calculate_current_scheduled_value(self.init_importance_threshold,
-                                                           self.final_importance_threshold)
+            assert self.init_importance_threshold is not None
+            return self._calc_current_scheduled_value(self.init_importance_threshold,
+                                                      self.final_importance_threshold)
         return self.final_importance_threshold
 
     def epoch_step(self, next_epoch: Optional[int] = None) -> None:
@@ -133,6 +142,14 @@ class MovementPolynomialThresholdScheduler(BaseCompressionScheduler):
             self._steps_in_current_epoch = self._current_step % self._steps_per_epoch + 1
 
     def _schedule_operand_threshold(self):
+        if self.init_importance_threshold is None and self.current_stage == MovementSchedulerStage.IN_WARMUP:
+            adaptive_init_threshold = self._calc_init_threshold_from_controller(target_sparsity=0.001)
+            logger.info('Movement sparsity automatically calculates `init_importance_threshold` as '
+                        f'{adaptive_init_threshold} so that warmup starts from ~0.1% relative sparsity.')
+            if adaptive_init_threshold >= self.final_importance_threshold:
+                logger.warning('The auto-calculated `init_importance_threshold` is equal to or greater than '
+                               '`final_importance_threshold`. Movement sparsity may not work as expected.')
+            self.init_importance_threshold = adaptive_init_threshold
         if self.current_stage == MovementSchedulerStage.POST_WARMUP and (not self._is_controller_frozen):
             if self.enable_structured_masking:
                 self._controller.reset_independent_structured_mask()
@@ -140,17 +157,34 @@ class MovementPolynomialThresholdScheduler(BaseCompressionScheduler):
                 self._controller.populate_structured_mask()
             self._controller.freeze()
             self._is_controller_frozen = True
-        self._update_operand_importance_threshold_lambda()
+        self._update_operand_importance_threshold_and_factor()
 
-    def _calculate_current_scheduled_value(self, start_value: float, end_value: float) -> float:
+    def _calc_current_scheduled_value(self, start_value: float, end_value: float) -> float:
         assert self.current_stage == MovementSchedulerStage.IN_WARMUP
+        assert self._steps_per_epoch is not None
         schedule_current_step = self.current_step - self.warmup_start_epoch * self._steps_per_epoch
         schedule_epoch = schedule_current_step // self._steps_per_epoch
         schedule_step = schedule_current_step % self._steps_per_epoch
         scale = self._schedule(schedule_epoch, schedule_step, self._steps_per_epoch)
         return start_value + scale * (end_value - start_value)
 
-    def _update_operand_importance_threshold_lambda(self):
+    @torch.no_grad()
+    def _calc_init_threshold_from_controller(self, target_sparsity: float = 0.001) -> float:
+        assert 0. <= target_sparsity < 1.
+        importance_arrays = []
+        for minfo in self._controller.sparsified_module_info:
+            op = minfo.operand
+            weight = op.get_importance(is_bias=False, expanded=True)
+            importance_arrays.append(weight.detach().cpu().view(-1).numpy())
+            if op.prune_bias:
+                bias = weight = op.get_importance(is_bias=True, expanded=True)
+                importance_arrays.append(bias.detach().cpu().view(-1).numpy())
+        all_importances = np.concatenate(importance_arrays)
+        k = min(all_importances.size - 1, int(all_importances.size * target_sparsity))
+        all_importances.partition(k)  # we only need the k-th smallest value
+        return float(all_importances[k])
+
+    def _update_operand_importance_threshold_and_factor(self):
         current = (self.current_importance_threshold, self.current_importance_regularization_factor)
         if current != self._cached_importance_threshold_lambda:
             for minfo in self._controller.sparsified_module_info:

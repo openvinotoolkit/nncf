@@ -1,11 +1,18 @@
 import argparse
 import logging
 from pathlib import Path
-from typing import List, Optional, Tuple
+from typing import Dict, List, Optional, Tuple
+
+import jstyleson
+import numpy as np
+
+from nncf import NNCFConfig
+from nncf.api.compression import CompressionAlgorithmController
+from nncf.common.utils.tensorboard import prepare_for_tensorboard
+from nncf.torch import create_compressed_model
 
 import datasets
 import evaluate
-import numpy as np
 from transformers import AutoConfig
 from transformers import AutoModelForSequenceClassification
 from transformers import AutoTokenizer
@@ -17,11 +24,6 @@ from transformers.trainer import TrainerCallback
 from transformers.trainer import TrainerControl
 from transformers.trainer import TrainerState
 from transformers.trainer import TrainingArguments
-
-from nncf import NNCFConfig
-from nncf.api.compression import CompressionAlgorithmController
-from nncf.common.utils.tensorboard import prepare_for_tensorboard
-from nncf.torch import create_compressed_model
 
 quick_check_num = 10
 task_to_sample_keys = {
@@ -42,6 +44,7 @@ def parse_args() -> Tuple[argparse.Namespace, TrainingArguments]:
     parser.add_argument('--max_seq_length', type=int, default=128, help='Maximum length for model input sequences.')
     parser.add_argument('--nncf_config', type=str, default=None, help='Path to NNCF configuration json file.')
     parser.add_argument('--no_cuda', action='store_true', help='Whether to disable cuda devices.')
+    parser.add_argument('--seed', type=int, default=42, help='Experiment seed for training and datasets.')
     parser.add_argument(
         '--quick_check', action='store_true',
         help=f'If set, we will train the model without pretrained weights on only {quick_check_num} samples.')
@@ -53,6 +56,8 @@ def parse_args() -> Tuple[argparse.Namespace, TrainingArguments]:
     # post parser checks and overrides
     assert args.task_name in task_to_sample_keys, f'Task name should be in {list(task_to_sample_keys)}.'
     training_args.no_cuda = args.no_cuda
+    training_args.data_seed = args.seed
+    training_args.seed = args.seed
     training_args.label_names = ["labels"]
     training_args.remove_unused_columns = False
     training_args.overwrite_output_dir = True
@@ -64,7 +69,7 @@ def parse_args() -> Tuple[argparse.Namespace, TrainingArguments]:
 class CompressionCallback(TrainerCallback):
     def __init__(self, compression_ctrl: CompressionAlgorithmController):
         self.compression_ctrl = compression_ctrl
-        self._last_log_step = None
+        self.compression_logs = []
 
     def on_epoch_begin(self, *args, **kwargs):
         self.compression_ctrl.scheduler.epoch_step()
@@ -72,42 +77,51 @@ class CompressionCallback(TrainerCallback):
     def on_step_begin(self, *args, **kwargs):
         self.compression_ctrl.scheduler.step()
 
-    def on_log(self, args: TrainingArguments, state: TrainerState, control: TrainerControl, **kwargs):
-        step = state.global_step
-        if step == self._last_log_step:
-            return
-        status = {"step": step}
-        if state.epoch is not None:
-            status["epoch"] = round(state.epoch, 2)
+    def on_epoch_end(self, args: TrainingArguments, state: TrainerState, control: TrainerControl, **kwargs):
+        stats = self._gather_compression_stats(state.global_step, state.epoch)
+        self.compression_logs.append(stats)
+
+    def _gather_compression_stats(self, step: int, epoch: Optional[float]) -> Dict[str, float]:
+        status = {'step': step}
+        if epoch is not None:
+            status['epoch'] = round(epoch, 2)
         stats = prepare_for_tensorboard(self.compression_ctrl.statistics())
         result = {**status, **stats}
-        state.log_history.append(result)
-        self._last_log_step = step
+        return result
 
 
 class CompressionTrainer(Trainer):
-    def __init__(self, compression_ctrl: Optional[CompressionAlgorithmController], *args,
+    def __init__(self, compression_ctrl: Optional[CompressionAlgorithmController],
+                 shuffle_training_data: bool = True, *args,
                  callbacks: Optional[List[TrainerCallback]] = None, **kwargs):
         self.compression_ctrl = compression_ctrl
+        self._compression_callback = None
         if compression_ctrl is not None:
-            if callbacks:
-                nncf_logger.warning('You passed a customized callback list to `CompressionTrainer`. '
-                                    'Please ensure `.epoch_step()` and `.step()` are called for '
-                                    '`compression_ctrl.scheduler`, otherwise compression may be incorrect.')
-            else:
-                compression_callback = CompressionCallback(compression_ctrl)
-                callbacks = [compression_callback]
-        self.compression_callbacks = callbacks
+            self._compression_callback = CompressionCallback(compression_ctrl)
+            callbacks = [self._compression_callback] + (callbacks or [])
         super().__init__(callbacks=callbacks, *args, **kwargs)
         if not (self.args.local_rank == -1 or self.args.no_cuda or compression_ctrl is None):
             compression_ctrl.distributed()
+        # if not shuffle_training_data:
+        self.get_train_dataloader = self.get_eval_dataloader
+        self.yujie_data = []
 
     def compute_loss(self, model, inputs, return_outputs=False):
+        to_save = {}
+        for k, v in inputs.items():
+            to_save[k] = v.cpu().numpy().tolist()
+        self.yujie_data.append(to_save)
+
         loss, outputs = super().compute_loss(model, inputs, return_outputs=True)
         if self.compression_ctrl is not None:
             loss_compress = self.compression_ctrl.loss()
             loss = loss + loss_compress
         return (loss, outputs) if return_outputs else loss
+
+    def get_compression_logs(self) -> Optional[List[Dict[str, float]]]:
+        if self._compression_callback is None:
+            return None
+        return self._compression_callback.compression_logs
 
 
 def prepare_dataset(args, training_args):
@@ -203,11 +217,22 @@ def main():
         trainer.save_model()
         trainer.log_metrics("train", metrics)
         trainer.save_metrics("train", metrics)
+        compression_logs = trainer.get_compression_logs()
+        if compression_logs:
+            trainer.log_metrics("compression", compression_logs[-1])
+            trainer.save_metrics("compression", compression_logs[-1])
+            compression_log_str = jstyleson.dumps(compression_logs, indent=2) + "\n"
+            compression_log_path = Path(training_args.output_dir, "compression_state.json")
+            with open(compression_log_path, "w", encoding="utf-8") as f:
+                f.write(compression_log_str)
     if training_args.do_eval:
         metrics = trainer.evaluate()
         trainer.log_metrics("eval", metrics)
         trainer.save_metrics("eval", metrics)
     trainer.save_state()
+    import torch
+
+    # torch.save(trainer.yujie_data, f'dataseed-mega1-seed{training_args.seed}.bin')
 
 
 if __name__ == "__main__":

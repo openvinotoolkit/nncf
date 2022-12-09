@@ -11,7 +11,6 @@
  limitations under the License.
 """
 from functools import reduce
-import logging
 from pathlib import Path
 from typing import Dict, Iterable, List, Optional, Tuple, Union
 
@@ -19,9 +18,6 @@ import pandas as pd
 import torch
 import torch.nn.functional as F
 
-from nncf.torch.layers import NNCFLinear
-from nncf.torch.nncf_network import NNCFNetwork
-from nncf.torch.sparsity.base_algo import SparseModuleInfo
 from nncf.common.graph.graph import NNCFNodeName
 from nncf.common.graph.layer_attributes import LinearLayerAttributes
 from nncf.common.utils.logger import logger
@@ -31,6 +27,9 @@ from nncf.experimental.torch.search_building_blocks.search_blocks import get_bui
 from nncf.experimental.torch.sparsity.movement.layers import MovementSparsifier
 from nncf.experimental.torch.sparsity.movement.structured_mask_strategy import BaseStructuredMaskStrategy
 from nncf.experimental.torch.sparsity.movement.structured_mask_strategy import StructuredMaskRule
+from nncf.torch.layers import NNCFLinear
+from nncf.torch.nncf_network import NNCFNetwork
+from nncf.torch.sparsity.base_algo import SparseModuleInfo
 
 SUPPORTED_NNCF_MODULES = [NNCFLinear]
 EXPECTED_NODE_LAYER_ATTRS = [LinearLayerAttributes]
@@ -190,15 +189,6 @@ class StructuredMaskContext:
         return inflated_mask
 
 
-class SparsifiedModuleInfoGroup:
-    def __init__(self, group_id: int,
-                 group_type: BuildingBlockType,
-                 sparse_module_info: List[SparseModuleInfo]) -> None:
-        self.group_id = group_id
-        self.group_type = group_type
-        self.sparse_module_info = sparse_module_info
-
-
 class StructuredMaskContextGroup:
     def __init__(self, group_id: int,
                  group_type: BuildingBlockType,
@@ -226,17 +216,13 @@ class StructuredMaskHandler:
         self.rules_by_group_type = strategy.rules_by_group_type
         self.compressed_model = compressed_model
         self.sparsified_module_info_list = sparsified_module_info_list
-
-        self._sparsified_module_info_groups = self._get_prunable_sparsified_module_info_group(
-            compressed_model, sparsified_module_info_list)
         self._structured_mask_ctx_groups = self._create_structured_mask_context_groups(
-            self._sparsified_module_info_groups,
-            self.rules_by_group_type)
+            compressed_model, sparsified_module_info_list, self.rules_by_group_type)
 
         logging_str_l = ['Structured mask contexts by group:']
         for group in self._structured_mask_ctx_groups:
             logging_str_l.append(str(group))
-        logging.info('\n'.join(logging_str_l))
+        logger.info('\n'.join(logging_str_l))
 
     def update_independent_structured_mask(self):
         for group in self._structured_mask_ctx_groups:
@@ -299,10 +285,11 @@ class StructuredMaskHandler:
         return pd.DataFrame(entry_list)
 
     @staticmethod
-    def _get_prunable_sparsified_module_info_group(
+    def _create_structured_mask_context_groups(
             compressed_model: NNCFNetwork,
             sparsified_module_info_list: List[SparseModuleInfo],
-    ) -> List[SparsifiedModuleInfoGroup]:
+            rules_by_group_type: Dict[BuildingBlockType, List[StructuredMaskRule]],
+    ) -> List[StructuredMaskContextGroup]:
         module_vs_sparse_module_info_map = {minfo.module: minfo for minfo in sparsified_module_info_list}
         building_blocks, _ = get_building_blocks(compressed_model,
                                                  target_block_types=[BuildingBlockType.MSHA, BuildingBlockType.FF],
@@ -310,38 +297,22 @@ class StructuredMaskHandler:
                                                  hw_fused_ops=True)
         groups = []
         for group_id, building_block in enumerate(building_blocks):
-            sparsified_module_info = []
+            group_type = building_block.block_type
+            ctxes = []
             for op_addr in building_block.op_addresses:
                 if op_addr.operator_name in [m.op_func_name for m in SUPPORTED_NNCF_MODULES]:
                     module = compressed_model.get_module_by_scope(op_addr.scope_in_model)
-                    module_info = module_vs_sparse_module_info_map[module]
-                    sparsified_module_info.append(module_info)
-            groups.append(SparsifiedModuleInfoGroup(group_id,
-                                                    building_block.block_type,
-                                                    sparsified_module_info))
-        return groups
-
-    @staticmethod
-    def _create_structured_mask_context_groups(
-        sparsified_module_info_groups: List[SparsifiedModuleInfoGroup],
-        rules_by_group_type: Dict[BuildingBlockType, List[StructuredMaskRule]]
-    ) -> List[StructuredMaskContextGroup]:
-        groups = []
-        for group in sparsified_module_info_groups:
-            group_type = group.group_type
-            group_id = group.group_id
-            ctxes = []
-            for minfo in group.sparse_module_info:
-                for rule in rules_by_group_type[group_type]:
-                    if contains_any(minfo.module_node_name, rule.keywords):
-                        ctx = StructuredMaskContext(minfo.operand,
-                                                    minfo.module_node_name,
-                                                    rule.prune_grid,
-                                                    rule.prune_by_row)
-                        ctxes.append(ctx)
-                        break
-                else:
-                    raise ValueError("No structured mask rule found for "
-                                     f"[{group_type}]{minfo.module_node_name}.")
+                    minfo = module_vs_sparse_module_info_map[module]
+                    for rule in rules_by_group_type[group_type]:
+                        if contains_any(minfo.module_node_name, rule.keywords):
+                            ctx = StructuredMaskContext(minfo.operand,
+                                                        minfo.module_node_name,
+                                                        rule.prune_grid,
+                                                        rule.prune_by_row)
+                            ctxes.append(ctx)
+                            break
+                    else:
+                        raise ValueError("No structured mask rule found for "
+                                         f"[{group_type}]{minfo.module_node_name}.")
             groups.append(StructuredMaskContextGroup(group_id, group_type, ctxes))
         return groups

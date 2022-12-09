@@ -144,7 +144,6 @@ class MovementSparsifier(nn.Module):
 
         weight_importance_shape = self._get_weight_importance_shape(
             weight_shape, self.sparse_factors, self.sparse_structure)
-        self._bool_expand_importance = (tuple(weight_importance_shape) != tuple(weight_shape))
         self.weight_importance = CompressionParameter(
             torch.zeros(weight_importance_shape),
             requires_grad=not self.frozen,
@@ -200,6 +199,17 @@ class MovementSparsifier(nn.Module):
         ctx = self.bias_ctx if is_bias else self.weight_ctx
         return ctx.apply_binary_mask(param_tensor)
 
+    def get_importance(self, is_bias: bool = False, expanded: bool = True) -> torch.Tensor:
+        if is_bias and (not self.prune_bias):
+            raise ValueError('The layer to sparsify does not contain bias.')
+        importance = self.bias_importance if is_bias else self.weight_importance
+        if (not expanded) or self.sparse_factors == [1, 1]:
+            return importance
+        expand_factors = [self.sparse_factors[0]] if is_bias else self.sparse_factors
+        for dim, factor in enumerate(expand_factors):
+            importance = importance.repeat_interleave(factor, dim=dim)
+        return importance
+
     def loss(self) -> torch.Tensor:
         if self.frozen or self.importance_regularization_factor == 0.:
             return torch.tensor(0., device=self._get_device())
@@ -217,26 +227,17 @@ class MovementSparsifier(nn.Module):
     def extra_repr(self) -> str:
         return 'sparse_structure: {} {}'.format(self.sparse_structure.value, self.sparse_factors)
 
-    def _get_device(self):
+    def _get_device(self) -> torch.device:
         return self.weight_importance.device
 
     def _calc_training_binary_mask(self, is_bias: bool = False):
         ctx = self.bias_ctx if is_bias else self.weight_ctx
         if (not self.training) or self.frozen:
             return ctx.binary_mask
-        importance = self.bias_importance if is_bias else self.weight_importance
-        mask = binary_mask_by_threshold(self._expand_importance(importance, is_bias),
+        mask = binary_mask_by_threshold(self.get_importance(is_bias, expanded=True),
                                         self.importance_threshold)
         ctx.binary_mask = mask
         return mask
-
-    def _expand_importance(self, importance: torch.Tensor, is_bias=False) -> torch.Tensor:
-        if not self._bool_expand_importance:
-            return importance
-        if is_bias:
-            return importance.repeat_interleave(self.sparse_factors[0], dim=0)
-        return importance.repeat_interleave(self.sparse_factors[0], dim=0)\
-            .repeat_interleave(self.sparse_factors[1], dim=1)
 
     @staticmethod
     def _get_weight_importance_shape(weight_shape, sparse_factors: Tuple[int, int],

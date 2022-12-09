@@ -1,9 +1,8 @@
 from collections import defaultdict
-from itertools import chain
+import math
 from pathlib import Path
 from typing import Optional
 
-from datasets import Dataset  # pylint: disable=no-name-in-module
 import numpy as np
 import onnx
 from onnx import numpy_helper
@@ -11,14 +10,7 @@ import onnxruntime
 import pytest
 from pytest import approx
 import torch
-from transformers import TrainingArguments
-from transformers.trainer_callback import TrainerControl
-from transformers.trainer_callback import TrainerState
 
-from nncf.torch import create_compressed_model
-from nncf.torch.layer_utils import CompressionParameter
-from nncf.torch.layers import NNCFLinear
-from nncf.torch.module_operations import UpdateWeightAndBias
 from nncf.api.compression import CompressionStage
 from nncf.common.sparsity.statistics import MovementSparsityStatistics
 from nncf.common.statistics import NNCFStatistics
@@ -34,6 +26,10 @@ from nncf.experimental.torch.sparsity.movement.layers import SparseConfigByScope
 from nncf.experimental.torch.sparsity.movement.scheduler import MovementPolynomialThresholdScheduler
 from nncf.experimental.torch.sparsity.movement.structured_mask_handler import StructuredMaskHandler
 from nncf.experimental.torch.sparsity.movement.structured_mask_strategy import STRUCTURED_MASK_STRATEGY
+from nncf.torch import create_compressed_model
+from nncf.torch.layer_utils import CompressionParameter
+from nncf.torch.layers import NNCFLinear
+from nncf.torch.module_operations import UpdateWeightAndBias
 from tests.torch.sparsity.movement.helpers import BaseMockRunRecipe
 from tests.torch.sparsity.movement.helpers import BertRunRecipe
 from tests.torch.sparsity.movement.helpers import CompressionCallback
@@ -48,6 +44,11 @@ from tests.torch.sparsity.movement.helpers import force_update_sparsifer_binary_
 from tests.torch.sparsity.movement.helpers import initialize_sparsifier_parameters_by_linspace
 from tests.torch.sparsity.movement.helpers import is_roughly_non_decreasing
 from tests.torch.sparsity.movement.helpers import is_roughly_of_same_value
+
+from datasets import Dataset  # pylint: disable=no-name-in-module
+from transformers import TrainingArguments
+from transformers.trainer_callback import TrainerControl
+from transformers.trainer_callback import TrainerState
 
 FACTOR_NAME_IN_MOVEMENT_STAT = 'movement_sparsity/importance_regularization_factor'
 THRESHOLD_NAME_IN_MOVEMENT_STAT = 'movement_sparsity/importance_threshold'
@@ -129,7 +130,7 @@ class TestControllerCreation:
         SwinRunRecipe.from_default(depths=[1, 1], num_heads=[2, 4], mlp_ratio=1.5, qkv_bias=False)
     ], ids=['bert', 'bert_no_ffn_bias', 'bert_with_compression_lr_multiplier', 'swin_no_qkv_bias'])
     def test_can_create_movement_sparsity_layers(self, sparse_structure_by_scopes, recipe: BaseMockRunRecipe):
-        recipe.set('sparse_structure_by_scopes', sparse_structure_by_scopes)
+        recipe.set(sparse_structure_by_scopes=sparse_structure_by_scopes)
         compression_ctrl, compressed_model = create_compressed_model(recipe.model,
                                                                      recipe.nncf_config,
                                                                      dump_graphs=False)
@@ -266,8 +267,14 @@ class TestControllerStats:
                                                                   warmup_end_epoch: int):
         batch_size = 1
         steps_per_epoch = 2
+        init_importance_threshold = -1.
+        importance_regularization_factor = 1.
+        final_importance_threshold = 1.
         recipe = LinearRunRecipe.from_default(warmup_start_epoch=warmup_start_epoch,
                                               warmup_end_epoch=warmup_end_epoch,
+                                              init_importance_threshold=init_importance_threshold,
+                                              final_importance_threshold=final_importance_threshold,
+                                              importance_regularization_factor=importance_regularization_factor,
                                               steps_per_epoch=steps_per_epoch,
                                               log_dir=tmp_path)
         compression_ctrl, compressed_model = create_compressed_model(recipe.model,
@@ -282,21 +289,19 @@ class TestControllerStats:
                                             num_train_epochs=3)
         trainer.train()
 
-        importance_regularization_factor = recipe.scheduler_params.importance_regularization_factor
-        init_importance_threshold = recipe.scheduler_params.init_importance_threshold
-        final_importance_threshold = recipe.scheduler_params.final_importance_threshold
         for step, log in callback.get_compression_log().items():
             # step starts from 1
             if step <= warmup_start_epoch * steps_per_epoch:
                 assert log[FACTOR_NAME_IN_MOVEMENT_STAT] == approx(0.0)
-                assert log[THRESHOLD_NAME_IN_MOVEMENT_STAT] == approx(init_importance_threshold)
+                assert log[THRESHOLD_NAME_IN_MOVEMENT_STAT] == -math.inf
             elif step > warmup_end_epoch * steps_per_epoch:
                 assert log[FACTOR_NAME_IN_MOVEMENT_STAT] == approx(importance_regularization_factor)
                 assert log[THRESHOLD_NAME_IN_MOVEMENT_STAT] == approx(final_importance_threshold)
             else:
-                assert 0.0 <= log[FACTOR_NAME_IN_MOVEMENT_STAT] <= importance_regularization_factor + 1e-6
-                assert init_importance_threshold - 1e-6 <= \
-                    log[THRESHOLD_NAME_IN_MOVEMENT_STAT] <= final_importance_threshold + 1e-6
+                atol = 1e-6
+                assert 0.0 <= log[FACTOR_NAME_IN_MOVEMENT_STAT] <= importance_regularization_factor + atol
+                assert init_importance_threshold - atol <= \
+                    log[THRESHOLD_NAME_IN_MOVEMENT_STAT] <= final_importance_threshold + atol
 
     @pytest.mark.parametrize('enable_structured_masking', [True, False])
     def test_increasing_sparsity_stats_before_warmup_ends(self, tmp_path, enable_structured_masking: bool):
@@ -429,7 +434,7 @@ class TestModelSaving:
         output_names = [item.name for item in sess.get_outputs()]
         onnx_output_dict = defaultdict(list)
         for i in range(len(dataset)):
-            item = dataset[i:i+1]
+            item = dataset[i:i + 1]
             onnx_input = {}
             for input_name, input_info in zip(input_names, recipe.model_input_info):
                 onnx_input[input_name] = np.array(item[input_info['keyword']],
@@ -467,13 +472,20 @@ class TestModelSaving:
 
     def _onnx_model_has_target_linear_param(self, onnx_model: onnx.ModelProto,
                                             target_param: np.ndarray) -> bool:
-        for item in chain(onnx_model.graph.initializer, onnx_model.graph.node):
-            if hasattr(item, 'raw_data'):
-                onnx_weight = numpy_helper.to_array(item)
-                # linear weight may be transposed when do_constant_folding=True
-                for weight in [onnx_weight, onnx_weight.T]:
-                    if weight.shape == target_param.shape and np.allclose(weight, target_param):
-                        return True
+        tensor_protos = []
+        for item in onnx_model.graph.initializer:
+            if isinstance(item, onnx.TensorProto):
+                tensor_protos.append(item)
+        for node in onnx_model.graph.node:
+            for attribute in node.attribute:
+                if hasattr(attribute, 't') and isinstance(attribute.t, onnx.TensorProto):
+                    tensor_protos.append(attribute.t)
+        for tensor_proto in tensor_protos:
+            onnx_weight = numpy_helper.to_array(tensor_proto)
+            # linear weight may be transposed when do_constant_folding=True
+            for weight in [onnx_weight, onnx_weight.T]:
+                if weight.shape == target_param.shape and np.allclose(weight, target_param):
+                    return True
         return False
 
     def test_model_state_dict(self):
@@ -651,7 +663,7 @@ class TestComponentUpdateInTraining:
                                                                      recipe.nncf_config,
                                                                      dump_graphs=False)
 
-        class CheckImportanceCallback(CompressionCallback):
+        class CheckImportanceScoreCallback(CompressionCallback):
             def on_step_end(self, args: TrainingArguments, state: TrainerState, control: TrainerControl, **kwargs):
                 super().on_step_end(args, state, control, **kwargs)
                 for sparse_module in self.compression_ctrl.sparsified_module_info:
@@ -663,7 +675,7 @@ class TestComponentUpdateInTraining:
                         assert torch.count_nonzero(sparsifier.bias_importance) > 0
                         assert sparsifier.bias_importance.requires_grad is ref_requires_grad
 
-        callback = CheckImportanceCallback(compression_ctrl)
+        callback = CheckImportanceScoreCallback(compression_ctrl)
         mock_dataset = recipe.generate_mock_dataset(steps_per_epoch * batch_size)
         trainer = build_compression_trainer(tmp_path, compression_ctrl, compressed_model,
                                             train_dataset=mock_dataset, callback=callback,
@@ -685,6 +697,7 @@ class TestComponentUpdateInTraining:
                     assert isinstance(layer, MovementSparsifier)
                 loss = self.compression_ctrl.loss()
                 # check gradient
+                assert state.epoch is not None
                 if recipe.scheduler_params.warmup_start_epoch < state.epoch and \
                         state.epoch <= recipe.scheduler_params.warmup_end_epoch and \
                         self.compression_ctrl.scheduler.current_importance_regularization_factor > 0:
@@ -740,4 +753,28 @@ class TestComponentUpdateInTraining:
         trainer = build_compression_trainer(tmp_path, compression_ctrl, compressed_model,
                                             train_dataset=recipe.generate_mock_dataset(steps_per_epoch),
                                             callback=CheckBinaryMaskCallback(compression_ctrl))
+        trainer.train()
+
+    def test_adaptive_init_importance_threshold_update(self, tmp_path):
+        steps_per_epoch = 4
+        recipe = LinearRunRecipe.from_default(bias=True,
+                                              init_importance_threshold=None,
+                                              steps_per_epoch=steps_per_epoch,
+                                              log_dir=tmp_path)
+        compression_ctrl, compressed_model = create_compressed_model(recipe.model,
+                                                                     recipe.nncf_config,
+                                                                     dump_graphs=False)
+
+        class CheckInitImportanceThresholdCallback(CompressionCallback):
+            def on_step_begin(self, args: TrainingArguments, state: TrainerState, control: TrainerControl, **kwargs):
+                super().on_step_begin(args, state, control, **kwargs)
+                if state.global_step < recipe.scheduler_params.warmup_start_epoch * steps_per_epoch:
+                    assert self.compression_ctrl.scheduler.init_importance_threshold is None
+                else:
+                    assert isinstance(self.compression_ctrl.scheduler.init_importance_threshold, float)
+
+        trainer = build_compression_trainer(tmp_path, compression_ctrl, compressed_model,
+                                            train_dataset=recipe.generate_mock_dataset(steps_per_epoch),
+                                            batch_size=1,
+                                            callback=CheckInitImportanceThresholdCallback(compression_ctrl))
         trainer.train()

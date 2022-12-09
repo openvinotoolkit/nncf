@@ -8,7 +8,7 @@ import pytest
 import torch
 
 from nncf.config import NNCFConfig
-from nncf.torch import create_compressed_model
+from nncf.experimental.torch.search_building_blocks.search_blocks import BuildingBlockType
 from nncf.experimental.torch.sparsity.movement.layers import MovementSparsifier
 from nncf.experimental.torch.sparsity.movement.layers import SparseConfig
 from nncf.experimental.torch.sparsity.movement.layers import SparseStructure
@@ -18,7 +18,7 @@ from nncf.experimental.torch.sparsity.movement.structured_mask_handler import St
 from nncf.experimental.torch.sparsity.movement.structured_mask_strategy import STRUCTURED_MASK_STRATEGY
 from nncf.experimental.torch.sparsity.movement.structured_mask_strategy import StructuredMaskRule
 from nncf.experimental.torch.sparsity.movement.structured_mask_strategy import detect_supported_model_family
-from nncf.experimental.torch.search_building_blocks.search_blocks import BuildingBlockType
+from nncf.torch import create_compressed_model
 from tests.torch.sparsity.movement.helpers import BaseMockRunRecipe
 from tests.torch.sparsity.movement.helpers import BertRunRecipe
 from tests.torch.sparsity.movement.helpers import SwinRunRecipe

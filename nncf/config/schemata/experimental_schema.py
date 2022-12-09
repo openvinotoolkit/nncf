@@ -313,7 +313,7 @@ MOVEMENT_SCHEDULER_PARAMS_SCHEMA = {
     "properties": {
         "power": with_attributes(NUMBER,
                                  description="For polynomial scheduler - determines the corresponding power value."),
-        "init_importance_threshold": with_attributes(NUMBER,
+        "init_importance_threshold": with_attributes({"oneOf": [NUMBER, NULL]},
                                                      description="importance masking threshold @ warmup_start_epoch"),
         "warmup_start_epoch": with_attributes(NUMBER,
                                               description="Index of the starting epoch for importance masking threshold"

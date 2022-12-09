@@ -1,4 +1,4 @@
-from typing import Any, Dict
+from typing import Any, Dict, Tuple
 from unittest.mock import Mock
 from unittest.mock import call
 
@@ -313,6 +313,31 @@ class TestSparsifier:
             assert operand.bias_importance.requires_grad is set_grad
             assert operand.frozen is (not set_grad)
             assert operand.loss().requires_grad is set_grad
+
+    @pytest.mark.parametrize(('sparse_cfg', 'bias', 'ref_weight_importance_shape'), [
+        (SparseConfig(SparseStructure.FINE), True, (4, 6)),
+        (SparseConfig(SparseStructure.BLOCK, (2, 3)), True, (2, 2)),
+        (SparseConfig(SparseStructure.PER_DIM, sparse_axis=0), True, (4, 1)),
+        (SparseConfig(SparseStructure.PER_DIM, sparse_axis=1), False, (1, 6))
+    ])
+    def test_get_importance_shape(self, sparse_cfg: SparseConfig, bias: bool,
+                                  ref_weight_importance_shape: Tuple[int, int]):
+        weight_shape = (4, 6)
+        operand = MovementSparsifier(mock_linear_nncf_node(weight_shape[1], weight_shape[0], bias=bias),
+                                     sparse_cfg=sparse_cfg,
+                                     frozen=False)
+        weight_importance = operand.get_importance(is_bias=False, expanded=False)
+        assert weight_importance.shape == torch.Size(ref_weight_importance_shape)
+        weight_importance_expanded = operand.get_importance(is_bias=False, expanded=True)
+        assert weight_importance_expanded.shape == torch.Size(weight_shape)
+        if bias:
+            bias_importance = operand.get_importance(is_bias=True, expanded=False)
+            assert bias_importance.shape == torch.Size(ref_weight_importance_shape[:1])
+            bias_importance_expanded = operand.get_importance(is_bias=True, expanded=True)
+            assert bias_importance_expanded.shape == torch.Size(weight_shape[:1])
+        else:
+            with pytest.raises(ValueError):
+                operand.get_importance(is_bias=True)
 
 
 class TestFunctions:
