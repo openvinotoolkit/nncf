@@ -156,14 +156,23 @@ def eval_size(request):
 
 
 @pytest.fixture(scope="module")
-def ov_ep_only(request):
-    ov_ep_only = request.config.getoption("--ov_ep_only")
-    if ov_ep_only:
-        nncf_logger.info("The accuracy validation will be done on the OpenVINOExecutionProvider provider only.")
-        return ov_ep_only
-    nncf_logger.info(
-        "The accuracy validation will be done on the OpenVINOExecutionProvider and CPUExecutionProvider providers.")
-    return ov_ep_only
+def is_ov_ep(request):
+    disable_ov_ep = request.config.getoption("--disable-ov-ep")
+    if disable_ov_ep:
+        nncf_logger.info("The accuracy validation of the quantized models is disabled for OpenVINOExecutionProvider.")
+    else:
+        nncf_logger.info("The accuracy validation of the quantized models is enabled for OpenVINOExecutionProvider.")
+    return not disable_ov_ep
+
+
+@pytest.fixture(scope="module")
+def is_cpu_ep(request):
+    enable_cpu_ep = request.config.getoption("--enable-cpu-ep")
+    if enable_cpu_ep:
+        nncf_logger.info("The accuracy validation of quantized models is enabled for CPUExecutionProvider.")
+    else:
+        nncf_logger.info("The accuracy validation of quantized models is disabled for CPUExecutionProvider.")
+    return enable_cpu_ep
 
 
 def _read_accuracy_checker_result(root_dir: Path, key: str) -> pd.DataFrame:
@@ -261,14 +270,10 @@ class TestPTQ:
 @pytest.mark.run(order=2)
 class TestBenchmark:
     @staticmethod
-    def get_command(
-            task_type: str,
-            model_name: str,
-            model_dir: Path,
-            data_dir: Path,
-            anno_dir: Path,
-            output_dir: Path,
-            eval_size: int, program: str, is_quantized: bool, ov_ep_only: bool) -> List[str]:
+    def get_ac_command(task_type: str, model_name: str, model_dir: Path,
+                       data_dir: Path, anno_dir: Path, output_dir: Path,
+                       eval_size: int, program: str, is_quantized: bool,
+                       is_ov_ep: bool, is_cpu_ep: bool) -> List[str]:
 
         program_path = BENCHMARKING_DIR / program
 
@@ -302,10 +307,10 @@ class TestBenchmark:
             "-a", str(anno_dir),
             "--csv_result", str(output_dir / out_file_name)
         ]
-
-        if ov_ep_only:
+        if is_ov_ep and not is_cpu_ep:
             com_line += ["--target_tags", 'OpenVINOExecutionProvider']
-
+        if not is_ov_ep and is_cpu_ep:
+            com_line += ["--target_tags", 'CPUExecutionProvider']
         if eval_size is not None:
             com_line += ["-ss", str(eval_size)]
 
@@ -317,16 +322,16 @@ class TestBenchmark:
             self, task_type, model_name, model_dir, data_dir, anno_dir, output_dir, eval_size):
 
         check_xfail(model_name)
-
-        command = self.get_command(task_type, model_name, model_dir, data_dir, anno_dir, output_dir, eval_size,
-                                   program="accuracy_checker.py", is_quantized=False, ov_ep_only=True)
+        # Reference accuracy validation is perfomed on CPUExecutionProvider
+        command = self.get_ac_command(task_type, model_name, model_dir, data_dir, anno_dir, output_dir, eval_size,
+                                      program="accuracy_checker.py", is_quantized=False, is_ov_ep=False, is_cpu_ep=True)
         run_command(command)
 
     @pytest.mark.e2e_ptq
     @pytest.mark.dependency()
     @pytest.mark.parametrize("task_type, model_name", MODELS)
-    def test_quantized_model_accuracy(
-            self, request, task_type, model_name, ckpt_dir, data_dir, anno_dir, output_dir, eval_size, ov_ep_only):
+    def test_quantized_model_accuracy(self, request, task_type, model_name, ckpt_dir, data_dir, anno_dir, output_dir,
+                                      eval_size, is_ov_ep, is_cpu_ep):
 
         # Run PTQ first
         depends(request, ["TestPTQ::test_ptq_model" + request.node.name.lstrip("test_quantized_model_accuracy")])
@@ -334,91 +339,95 @@ class TestBenchmark:
         check_quantized_xfail(model_name)
 
         model_dir = ckpt_dir
-        command = self.get_command(task_type, model_name, model_dir, data_dir, anno_dir, output_dir, eval_size,
-                                   program="accuracy_checker.py", is_quantized=True, ov_ep_only=ov_ep_only)
+        command = self.get_ac_command(task_type, model_name, model_dir, data_dir, anno_dir, output_dir, eval_size,
+                                      program="accuracy_checker.py", is_quantized=True, is_ov_ep=is_ov_ep,
+                                      is_cpu_ep=is_cpu_ep)
         run_command(command)
 
 
 @pytest.mark.run(order=3)
 class TestBenchmarkResult:
     def join_reference_and_quantized_frames(self, reference_model_accuracy: pd.DataFrame,
-                                            quantized_model_accuracy: pd.DataFrame, ov_ep_only: bool) -> pd.DataFrame:
+                                            quantized_model_accuracy: pd.DataFrame) -> pd.DataFrame:
         df = reference_model_accuracy.join(quantized_model_accuracy)
 
         df.insert(0, 'Model', '')
         df['Model'] = [df.iloc[i].name[0] for i in range(len(df.index))]
         df = df.reset_index(drop=True)
         df = df.rename({"metric_name": "Metrics type",
-                        "model_accuracy": "FP32",
-                        "OpenVINOExecutionProvider": "OV-EP_INT8"}, axis=1)
-        df["Diff OV-EP FP32"] = df["OV-EP_INT8"] - df["FP32"]
-        df["Expected FP32"] = df["target_fp32"] * 100
-        df["Diff OV-EP Expected"] = df['target_int8'] * 100 - df["FP32"]
-        if not ov_ep_only:
+                        "model_accuracy": "FP32"}, axis=1)
+        if OV_EP_COL_NAME in df.columns:
+            df = df.rename({"OpenVINOExecutionProvider": "OV-EP_INT8"}, axis=1)
+            df["Diff OV-EP FP32"] = df["OV-EP_INT8"] - df["FP32"]
+            df["Expected FP32"] = df["target_fp32"] * 100
+            df["Diff OV-EP Expected"] = df['target_int8'] * 100 - df["FP32"]
+        if CPU_EP_COL_NAME in df.columns:
             df = df.rename({"CPUExecutionProvider": "CPU-EP_INT8"}, axis=1)
             df["Diff CPU-EP FP32"] = df["CPU-EP_INT8"] - df["FP32"]
-
         return df
 
-    def get_row_colors(self, df: pd.DataFrame, reference_model_accuracy: pd.DataFrame) -> Dict[int, str]:
+    @staticmethod
+    def get_row_colors(df: pd.DataFrame, reference_model_accuracy: pd.DataFrame, int8_col_name: str) -> Dict[int, str]:
         row_colors = {}
-
         for idx, row in df.iterrows():
             for i, model_name in enumerate(reference_model_accuracy.index):
                 if model_name == row['Model']:
-                    if math.isnan(row["OV-EP_INT8"]):
+                    diff_target_min = reference_model_accuracy.iloc[i]["diff_target_min"]
+                    diff_target_max = reference_model_accuracy.iloc[i]["diff_target_max"]
+                    target_int8 = reference_model_accuracy.iloc[i]["target_int8"] * 100
+                    int8 = row[int8_col_name]
+                    fp32 = row["FP32"]
+                    if math.isnan(int8):
                         row_colors[idx] = BG_COLOR_RED_HEX
-                    elif reference_model_accuracy.iloc[i]["diff_target_min"] < row["OV-EP_INT8"] - (
-                            reference_model_accuracy.iloc[i]["target_int8"] * 100) < reference_model_accuracy.iloc[i][
-                        "diff_target_max"]:
+                    elif diff_target_min < int8 - target_int8 < diff_target_max:
                         row_colors[idx] = BG_COLOR_GREEN_HEX
-                    elif not (reference_model_accuracy.iloc[i]["diff_target_min"] < row["OV-EP_INT8"] - row["FP32"] <
-                              reference_model_accuracy.iloc[i]["diff_target_max"]):
+                    elif not (diff_target_min < int8 - fp32 < diff_target_max):
                         row_colors[idx] = BG_COLOR_RED_HEX
                     else:
                         row_colors[idx] = BG_COLOR_YELLOW_HEX
+                    continue
         return row_colors
 
-    def generate_final_data_frame(self, df: pd.DataFrame, ov_ep_only: bool) -> pd.DataFrame:
+    def generate_final_data_frame(self, df: pd.DataFrame) -> pd.DataFrame:
         # Add parenthesses, because FP32 metrics were taken from reference.
         df['FP32'] = df['FP32'].astype(str)
         for idx, row in df.iterrows():
             df.at[idx, 'FP32'] = f"({row['FP32']})"
+        df = df.fillna("-")
+        is_cpu_ep = True if "CPU-EP_INT8" in df.columns else False
+        is_ov_ep = True if "OV-EP_INT8" in df.columns else False
 
-        if not ov_ep_only:
-            df = df[["Model", "Metrics type", "Expected FP32", "FP32",
-                     "CPU-EP_INT8", "Diff CPU-EP FP32",
-                     "OV-EP_INT8", "Diff OV-EP FP32", "Diff OV-EP Expected", ]]
-            column_names = df.columns.values
-            column_names[4] = 'INT8'
-            column_names[5] = 'Diff FP32'
-            column_names[6] = 'INT8'
-            column_names[7] = 'Diff FP32'
-            column_names[8] = 'Diff Expected'
-            df.columns = column_names
+        new_columns_order = ["Model", "Metrics type", "Expected FP32", "FP32"]
+        column_names = ["Model", "Metrics type", "Expected FP32", "FP32"]
+        if is_cpu_ep:
+            new_columns_order.extend(["CPU-EP_INT8", "Diff CPU-EP FP32"])
+            column_names.extend(['INT8', 'Diff FP32'])
+        if is_ov_ep:
+            new_columns_order.extend(["OV-EP_INT8", "Diff OV-EP FP32", "Diff OV-EP Expected"])
+            column_names.extend(['INT8', 'Diff FP32', 'Diff Expected'])
+        df = df[new_columns_order]
+        df.columns = column_names
+        if is_cpu_ep and is_ov_ep:
             df.columns = pd.MultiIndex.from_tuples(
                 [("", col) for col in df.columns[:4]] + [(CPU_EP_COL_NAME, col) for col in df.columns[4:6]] + [
                     (OV_EP_COL_NAME, col) for col in df.columns[6:]]
             )
-        else:
-            df = df[["Model", "Metrics type", "Expected FP32", "FP32",
-                     "OV-EP_INT8", "Diff OV-EP FP32", "Diff OV-EP Expected"]]
-            column_names = df.columns.values
-            column_names[4] = 'INT8'
-            column_names[5] = 'Diff FP32'
-            column_names[6] = 'Diff Expected'
-            df.columns = column_names
-            df.columns = pd.MultiIndex.from_tuples(
-                [("", col) for col in df.columns[:4]] + [(OV_EP_COL_NAME, col) for col in df.columns[4:]]
-            )
-
-        df = df.fillna("-")
+            return df
+        provider_name = CPU_EP_COL_NAME if is_cpu_ep else OV_EP_COL_NAME
+        df.columns = pd.MultiIndex.from_tuples(
+            [("", col) for col in df.columns[:4]] + [(provider_name, col) for col in df.columns[4:]]
+        )
         return df
 
-    def generate_html(self, df: pd.DataFrame, row_colors: Dict[int, str], output_fp: str) -> None:
-        up_columns_counter = Counter()
-        for up_col, _ in df.columns:
-            up_columns_counter[up_col] += 1
+    def generate_html(self, df: pd.DataFrame, reference_model_accuracy: pd.DataFrame, output_fp: str) -> None:
+        cpu_ep_row_colors, ov_ep_row_colors = {}, {}
+        is_ov_ep = OV_EP_COL_NAME in df.columns
+        is_cpu_ep = CPU_EP_COL_NAME in df.columns
+        if is_cpu_ep:
+            cpu_ep_row_colors = self.get_row_colors(df, reference_model_accuracy, "CPU-EP_INT8")
+        if is_ov_ep:
+            ov_ep_row_colors = self.get_row_colors(df, reference_model_accuracy, "OV-EP_INT8")
+
         doc, tag, text = Doc().tagtext()
         doc.asis('<!DOCTYPE html>')
         with tag('head'):
@@ -441,24 +450,36 @@ class TestBenchmarkResult:
         with tag('p'):
             text('If Reference FP32 value in parentheses, it takes from "target" field of .json file')
         with tag('report_table'):
-            with tag('tr'):
-                visited_cols = set()
-                for up_col, _ in df.columns:
-                    if up_col not in visited_cols:
-                        visited_cols.add(up_col)
-                        with tag('td', colspan=up_columns_counter[up_col]):
-                            text(up_col)
-            with tag('tr'):
-                for _, bot_col in df.columns:
-                    with tag('td'):
-                        text(bot_col)
+            with tag('table', border="1", cellpadding="5"):
+                # First row with merging cells with the same name
+                with tag('tr'):
+                    prev_el, _ = df.columns[0]
+                    cnt = 1
+                    for up_col, _ in df.columns[1:]:
+                        if up_col != prev_el:
+                            with tag('td', colspan=cnt):
+                                text(prev_el)
+                            cnt = 0
+                        prev_el = up_col
+                        cnt += 1
+                    with tag('td', colspan=cnt):
+                        text(prev_el)
+                # Second row
+                with tag('tr'):
+                    for _, bot_col in df.columns:
+                        with tag('td'):
+                            text(bot_col)
+                # Data cells
                 with tag('tr'):
                     for idx, row in df.iterrows():
                         with tag('tr'):
                             for i, elem in enumerate(row):
                                 additional_attrs = {}
-                                if i > 3: # Color only from 4th column
-                                    additional_attrs = {'bgcolor': f'{row_colors[idx]}'}
+                                up_col, bot_col = df.columns[i]
+                                if up_col == OV_EP_COL_NAME:
+                                    additional_attrs = {'bgcolor': f'{ov_ep_row_colors[idx]}'}
+                                elif up_col == CPU_EP_COL_NAME:
+                                    additional_attrs = {'bgcolor': f'{cpu_ep_row_colors[idx]}'}
                                 with tag('td', **additional_attrs):
                                     if isinstance(elem, float):
                                         elem = round(elem, 2)
@@ -471,13 +492,13 @@ class TestBenchmarkResult:
     @pytest.mark.dependency()
     @pytest.mark.parametrize("task_type, model_name", MODELS)
     def test_model_accuracy(self, request, task_type, model_name, reference_model_accuracy,
-                            quantized_model_accuracy, ov_ep_only):
+                            quantized_model_accuracy):
         # Run PTQ first
         depends(request, ["TestPTQ::test_ptq_model" + request.node.name.lstrip("test_quantized_model_performance")])
         check_xfail(model_name)
         check_quantized_xfail(model_name)
 
-        df = self.join_reference_and_quantized_frames(reference_model_accuracy, quantized_model_accuracy, ov_ep_only)
+        df = self.join_reference_and_quantized_frames(reference_model_accuracy, quantized_model_accuracy)
         df = df.set_index("Model")
         this_model_accuracy = df[df.index.str.contains(model_name)]
 
@@ -491,10 +512,8 @@ class TestBenchmarkResult:
 
     @pytest.mark.e2e_ptq
     @pytest.mark.run(order=4)
-    def test_generate_report(self, reference_model_accuracy, quantized_model_accuracy, output_dir, ov_ep_only):
+    def test_generate_report(self, reference_model_accuracy, quantized_model_accuracy, output_dir):
         output_fp = str(output_dir / REPORT_NAME)
-
-        df = self.join_reference_and_quantized_frames(reference_model_accuracy, quantized_model_accuracy, ov_ep_only)
-        row_colors = self.get_row_colors(df, reference_model_accuracy)
-        df = self.generate_final_data_frame(df, ov_ep_only)
-        self.generate_html(df, row_colors, output_fp)
+        df = self.join_reference_and_quantized_frames(reference_model_accuracy, quantized_model_accuracy)
+        df = self.generate_final_data_frame(df)
+        self.generate_html(df, reference_model_accuracy, output_fp)
