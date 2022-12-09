@@ -95,9 +95,9 @@ class MinMaxAlgoBackend(ABC):
 
     @staticmethod
     @abstractmethod
-    def activation_quantizer_insertion_command(target_point: TargetPoint,
-                                               quantizer_config: QuantizerConfig,
-                                               statistics: MinMaxTensorStatistic) -> TransformationCommand:
+    def create_activation_quantizer_insertion_command(target_point: TargetPoint,
+                                                      quantizer_config: QuantizerConfig,
+                                                      statistics: MinMaxTensorStatistic) -> TransformationCommand:
         """
         Returns backend-specific quantizer insertion command.
 
@@ -109,10 +109,10 @@ class MinMaxAlgoBackend(ABC):
 
     @staticmethod
     @abstractmethod
-    def weight_quantizer_insertion_command(target_point: TargetPoint,
-                                           quantizer_config: QuantizerConfig,
-                                           weight_tensor: np.ndarray,
-                                           node: NNCFNode) -> TransformationCommand:
+    def create_weight_quantizer_insertion_command(target_point: TargetPoint,
+                                                  quantizer_config: QuantizerConfig,
+                                                  weight_tensor: np.ndarray,
+                                                  node: NNCFNode) -> TransformationCommand:
         """
         Returns backend-specific quantizer insertion command.
 

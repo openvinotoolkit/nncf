@@ -80,18 +80,19 @@ class ONNXMinMaxAlgoBackend(MinMaxAlgoBackend):
         return ONNXTargetPoint(target_type, target_node_name, port_id)
 
     @staticmethod
-    def activation_quantizer_insertion_command(target_point: ONNXTargetPoint,
-                                               quantizer_config: QuantizerConfig,
-                                               statistics: MinMaxTensorStatistic) -> ONNXQuantizerInsertionCommand:
+    def create_activation_quantizer_insertion_command(target_point: ONNXTargetPoint,
+                                                      quantizer_config: QuantizerConfig,
+                                                      statistics: MinMaxTensorStatistic) \
+                                                      -> ONNXQuantizerInsertionCommand:
         axis = 1 if quantizer_config.per_channel else None
         parameters = calculate_activation_quantizer_parameters(statistics, quantizer_config, axis)
         return ONNXQuantizerInsertionCommand(target_point, parameters)
 
     @staticmethod
-    def weight_quantizer_insertion_command(target_point: ONNXTargetPoint,
-                                           quantizer_config: QuantizerConfig,
-                                           weight_tensor: np.ndarray,
-                                           node: NNCFNode) -> ONNXQuantizerInsertionCommand:
+    def create_weight_quantizer_insertion_command(target_point: ONNXTargetPoint,
+                                                  quantizer_config: QuantizerConfig,
+                                                  weight_tensor: np.ndarray,
+                                                  node: NNCFNode) -> ONNXQuantizerInsertionCommand:
         axis = node.metatype.weight_definitions.weight_channel_axis if quantizer_config.per_channel else None
         parameters = calculate_weight_quantizer_parameters(weight_tensor, quantizer_config, axis)
         return ONNXQuantizerInsertionCommand(target_point, parameters)

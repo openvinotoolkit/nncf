@@ -308,7 +308,7 @@ class MinMaxQuantization(Algorithm):
                 if weight_tensor_name in weight_tensor_names:
                     continue
                 weight_tensor_names.add(weight_tensor_name)
-                command = self._backend_entity.weight_quantizer_insertion_command(
+                command = self._backend_entity.create_weight_quantizer_insertion_command(
                     quantization_target_point, weight_quantizer_config, weight_tensor, node)
                 transformation_commands.append(command)
             elif quantization_target_point.type in [TargetType.PRE_LAYER_OPERATION, TargetType.POST_LAYER_OPERATION]:
@@ -320,7 +320,7 @@ class MinMaxQuantization(Algorithm):
                         target_node_name,
                         filter_func,
                         MinMaxQuantization):
-                    command = self._backend_entity.activation_quantizer_insertion_command(
+                    command = self._backend_entity.create_activation_quantizer_insertion_command(
                                     quantization_target_point,
                                     self._parameters.activation_quantizer_config,
                                     tensor_collector.get_statistics())
