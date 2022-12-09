@@ -12,8 +12,8 @@
 """
 
 from copy import deepcopy
-from typing import Dict, Tuple, List, Set, TypeVar, Union, Optional
-
+from typing import Dict, List, TypeVar, Optional
+from collections import OrderedDict
 from nncf import Dataset
 from nncf.common.graph.definitions import NNCFGraphNodeType
 from nncf.common.graph.graph import NNCFGraph
@@ -31,6 +31,8 @@ from nncf.common.quantization.structs import QuantizationMode
 from nncf.common.quantization.structs import QuantizerConfig
 from nncf.common.quantization.structs import QuantizationPreset
 from nncf.common.quantization.structs import QuantizerGroup
+from nncf.common.quantization.structs import QuantizationConstraints
+
 from nncf.common.tensor_statistics.collectors import TensorStatisticCollectorBase
 from nncf.common.utils.backend import BackendType
 from nncf.common.utils.backend import get_backend
@@ -59,51 +61,49 @@ class MinMaxQuantizationParameters(AlgorithmParameters):
                                       per_channel=False)
 
     def __init__(self,
+                 number_samples: int = 300,
                  preset: QuantizationPreset = QuantizationPreset.PERFORMANCE,
                  weight_bits: int = 8,
                  weight_granularity: Granularity = Granularity.PERCHANNEL,
+                 weight_signedness_to_force: Optional[bool] = None,
                  activation_bits: int = 8,
                  activation_granularity: Granularity = Granularity.PERTENSOR,
-                 number_samples: int = 100,
+                 activation_signedness_to_force: Optional[bool] = None,
                  target_device: HWConfigType = HWConfigType.CPU,
                  range_type: RangeType = RangeType.MEAN_MINMAX,
                  quantize_outputs: bool = False,
-                 ignored_scopes: List[str] = None,
+                 ignored_scopes: Optional[List[str]] = None,
                  ):
         """
-        :param weight_quantizer_config: QuantizerConfig instance for the weights.
-        :param activation_quantizer_config: QuantizerConfig instance for the activations.
+        TODO: add docs!
+        weight_signedness_to_force
+        activation_signedness_to_force
         :param number_samples: Number of samples for the statistics collection.
         :param target_device: Target device for the settings of the quantization pipeline.
         :param range_type: Range types for the quantizer's parameters.
         :param quantize_outputs: Boolean value that says whether quantize outputs or not.
         :param ignored_scopes: List of the layers that should not quantized during the process.
         """
-        weight_mode, activation_mode = self._determine_weight_activation_modes(preset)
-        self.weight_quantizer_config = self._determine_quantizer_config(weight_bits, weight_granularity, weight_mode)
-        self.activation_quantizer_config = self._determine_quantizer_config(activation_bits, activation_granularity,
-                                                                            activation_mode)
         self.number_samples = number_samples
         self.target_device = HWConfigType.from_str(HW_CONFIG_TYPE_TARGET_DEVICE_MAP[target_device.value])
         self.range_type = range_type
         self.quantize_outputs = quantize_outputs
         self.ignored_scopes = [] if ignored_scopes is None else ignored_scopes
-
-    def to_json(self) -> Dict[str, Union[str, float, int]]:
-        """
-        Serialize all MinMaxQuantization parameters to JSON.
-        """
-
-    def _determine_weight_activation_modes(self,
-                                           preset: QuantizationPreset) -> Tuple[QuantizationMode, QuantizationMode]:
-        weight_mode = QuantizationPreset.get_params_configured_by_preset(preset, QuantizerGroup.WEIGHTS)['mode']
-        activation_mode = QuantizationPreset.get_params_configured_by_preset(preset, QuantizerGroup.ACTIVATIONS)['mode']
-        return weight_mode, activation_mode
-
-    def _determine_quantizer_config(self, number_bits: int,
-                                    granularity: Granularity, mode: QuantizationMode) -> QuantizerConfig:
-        return QuantizerConfig(num_bits=number_bits, mode=mode,
-                               per_channel=granularity == Granularity.PERCHANNEL)
+        self.global_quantizer_constraints = {}
+        weight_quantizer_constraints_dict = {
+            **QuantizationPreset.get_params_configured_by_preset(preset, QuantizerGroup.WEIGHTS),
+            'num_bits': weight_bits,
+            'per_channel': weight_granularity == Granularity.PERCHANNEL,
+            'signedness_to_force': weight_signedness_to_force}
+        activation_quantizer_constraints_dict = {
+            **QuantizationPreset.get_params_configured_by_preset(preset, QuantizerGroup.ACTIVATIONS),
+            'num_bits': activation_bits,
+            'per_channel': activation_granularity == Granularity.PERCHANNEL,
+            'signedness_to_force': activation_signedness_to_force}
+        for q_group, constraints in [
+            (QuantizerGroup.WEIGHTS, QuantizationConstraints(**weight_quantizer_constraints_dict)),
+            (QuantizerGroup.ACTIVATIONS, QuantizationConstraints(**activation_quantizer_constraints_dict))]:
+            self.global_quantizer_constraints[q_group] = constraints
 
 
 class MinMaxQuantization(Algorithm):
@@ -133,7 +133,7 @@ class MinMaxQuantization(Algorithm):
         self.nncf_graph = None
         # It prevents the duplicate weight quantizers from being added.
         # It can happen when you have layers that share the identical weight tensor.
-        self._quantization_target_points = set()  # type: Set[TargetPoint]
+        self._quantization_target_points_to_qconfig = OrderedDict()  # type: OrderedDict[TargetPoint, QuantizerConfig]
         self._parameters = parameters
 
     @property
@@ -196,11 +196,13 @@ class MinMaxQuantization(Algorithm):
 
         post_processing_types = self._backend_entity.post_processing_metatypes
         solver = QuantizerPropagationSolver(ignored_scopes=self._parameters.ignored_scopes,
+                                            target_scopes=None,
                                             hw_config=hw_config,
                                             default_trait_to_metatype_map=self._backend_entity.quant_trait_op_dict,
                                             default_qconfig_list=[default_config],
                                             quantizable_layer_nodes=quantizable_layer_nodes,
                                             quantize_outputs=self._parameters.quantize_outputs,
+                                            global_constraints=self._parameters.global_quantizer_constraints,
                                             post_processing_marker_metatypes=post_processing_types)
 
         quantization_proposal = solver.run_on_ip_graph(ip_graph)
@@ -210,8 +212,7 @@ class MinMaxQuantization(Algorithm):
         final_setup = solver.get_final_quantizer_setup(finalized_proposal)
         return final_setup
 
-    def _add_weight_quantization_target_point(self, quantization_point: SingleConfigQuantizationPoint,
-                                              model: TModel,
+    def _add_weight_quantization_target_point(self, model: TModel, quantization_point: SingleConfigQuantizationPoint,
                                               nncf_graph: NNCFGraph) -> None:
         """
         Adds weight quantization target point to the set of existing points.
@@ -226,7 +227,8 @@ class MinMaxQuantization(Algorithm):
         weight_quantization_target_point = self._backend_entity.target_point(TargetType.OPERATION_WITH_WEIGHTS,
                                                                              node_name,
                                                                              port_id)
-        self._quantization_target_points.add(weight_quantization_target_point)
+        weight_quantizer_config = self._backend_entity.get_weight_config(model, quantization_point.qconfig)
+        self._quantization_target_points_to_qconfig[weight_quantization_target_point] = weight_quantizer_config
 
     def _add_activation_quantization_target_point(self,
                                                   quantization_point: SingleConfigQuantizationPoint) -> None:
@@ -257,9 +259,9 @@ class MinMaxQuantization(Algorithm):
             activation_quantization_target_point = self._backend_entity.target_point(TargetType.POST_LAYER_OPERATION,
                                                                                      node_name,
                                                                                      output_port_id)
-        self._quantization_target_points.add(activation_quantization_target_point)
+        self._quantization_target_points_to_qconfig[activation_quantization_target_point] = quantization_point.qconfig
 
-    def _get_quantization_target_points(self, model: TModel) -> Set[TargetPoint]:
+    def _get_quantization_target_points(self, model: TModel) -> OrderedDict[TargetPoint, QuantizerConfig]:
         """
         Returns Quantization Target Points.
         In the Compression Pipeline logic NNCF assumes that the compression pipeline works only on the single model.
@@ -272,18 +274,18 @@ class MinMaxQuantization(Algorithm):
         """
         nncf_graph = NNCFGraphFactory.create(model) if self.nncf_graph is None else self.nncf_graph
 
-        if self._quantization_target_points:
-            return self._quantization_target_points
+        if self._quantization_target_points_to_qconfig:
+            return self._quantization_target_points_to_qconfig
         quantizer_setup = self._get_quantizer_setup(nncf_graph)
         for quantization_point in quantizer_setup.quantization_points.values():
             if quantization_point.is_weight_quantization_point():
-                self._add_weight_quantization_target_point(quantization_point, model, nncf_graph)
+                self._add_weight_quantization_target_point(model, quantization_point, nncf_graph)
             elif quantization_point.is_activation_quantization_point():
                 self._add_activation_quantization_target_point(quantization_point)
             else:
                 raise RuntimeError('Incorrect quantization point')
-        self._quantization_target_points = sorted(self._quantization_target_points)
-        return self._quantization_target_points
+        self._quantization_target_points_to_qconfig = sorted(self._quantization_target_points_to_qconfig)
+        return self._quantization_target_points_to_qconfig
 
     def _apply(self,
                model: TModel,
@@ -294,11 +296,9 @@ class MinMaxQuantization(Algorithm):
         model_transformer = self._backend_entity.model_transformer(model)
 
         quantization_target_points = self._get_quantization_target_points(model)
-        weight_quantizer_config = self._backend_entity.get_weight_config(self._parameters.weight_quantizer_config,
-                                                                         model)
         weight_tensor_names = set()
 
-        for quantization_target_point in quantization_target_points:
+        for quantization_target_point, qconfig in quantization_target_points.items():
             target_node_name = quantization_target_point.target_node_name
             node = nncf_graph.get_node_by_name(target_node_name)
             if quantization_target_point.type == TargetType.OPERATION_WITH_WEIGHTS:
@@ -309,7 +309,7 @@ class MinMaxQuantization(Algorithm):
                     continue
                 weight_tensor_names.add(weight_tensor_name)
                 command = self._backend_entity.create_weight_quantizer_insertion_command(
-                    quantization_target_point, weight_quantizer_config, weight_tensor, node)
+                    quantization_target_point, qconfig, weight_tensor, node)
                 transformation_commands.append(command)
             elif quantization_target_point.type in [TargetType.PRE_LAYER_OPERATION, TargetType.POST_LAYER_OPERATION]:
                 def filter_func(point):
@@ -321,9 +321,7 @@ class MinMaxQuantization(Algorithm):
                         filter_func,
                         MinMaxQuantization):
                     command = self._backend_entity.create_activation_quantizer_insertion_command(
-                                    quantization_target_point,
-                                    self._parameters.activation_quantizer_config,
-                                    tensor_collector.get_statistics())
+                        quantization_target_point, qconfig, tensor_collector.get_statistics())
                     transformation_commands.append(command)
             else:
                 raise RuntimeError('Inccorrect type of Quantization Target Point!')
@@ -338,13 +336,13 @@ class MinMaxQuantization(Algorithm):
         self._set_backend_entity(model)
         quantization_target_points = self._get_quantization_target_points(model)
         output = StatisticPointsContainer()
-        for quantization_target_point in quantization_target_points:
+        for quantization_target_point, qconfig in quantization_target_points.items():
             if quantization_target_point.type in [TargetType.PRE_LAYER_OPERATION, TargetType.POST_LAYER_OPERATION]:
                 nncf_logger.debug(
                     'Adding {} Quantization Target Point to the Statistics Points,'
                     ' which outputs will be used for statistics collection'.format(
                         quantization_target_point.target_node_name))
-                stat_collector = self._get_stat_collector(self._parameters.activation_quantizer_config)
+                stat_collector = self._get_stat_collector(qconfig)
                 output.add_statistic_point(StatisticPoint(target_point=quantization_target_point,
                                                           tensor_collector=stat_collector,
                                                           algorithm=MinMaxQuantization))

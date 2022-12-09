@@ -28,12 +28,6 @@ class AlgorithmParameters(ABC):
     Base class for Post-Training algorithm parameters.
     """
 
-    @abstractmethod
-    def to_json(self) -> Dict[str, Union[str, float, int]]:
-        """
-        Serializes algorithm parameters to JSON format.
-        """
-
 
 class Algorithm(ABC):
     """
