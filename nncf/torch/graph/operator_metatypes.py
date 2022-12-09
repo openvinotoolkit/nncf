@@ -19,6 +19,7 @@ from typing import TypeVar
 
 from nncf.common.graph.definitions import NNCFGraphNodeType
 from nncf.common.graph.layer_attributes import BaseLayerAttributes
+from nncf.common.graph.layer_attributes import GenericWeightedLayerAttributes
 from nncf.common.graph.layer_attributes import ConvolutionLayerAttributes
 from nncf.common.graph.operator_metatypes import INPUT_NOOP_METATYPES
 from nncf.common.graph.operator_metatypes import NOOP_METATYPES
@@ -26,6 +27,7 @@ from nncf.common.graph.operator_metatypes import OUTPUT_NOOP_METATYPES
 from nncf.common.graph.operator_metatypes import OperatorMetatype
 from nncf.common.graph.operator_metatypes import OperatorMetatypeRegistry
 from nncf.common.hardware.opset import HWConfigOpName
+from nncf.torch.layers import NNCF_MODULES_DICT
 from nncf.torch.dynamic_graph.patch_pytorch import NamespaceTarget
 
 ModuleAttributes = TypeVar('ModuleAttributes', bound=BaseLayerAttributes)
@@ -54,10 +56,11 @@ class PTOperatorMetatype(OperatorMetatype):
                                 NamespaceTarget.TORCH_TENSOR: [],
                                 NamespaceTarget.TORCH: []}  # type: Dict[NamespaceTarget, List[str]]
 
-    subtypes = []  # type: List[Type[OperatorMetatype]]
+    subtypes = []  # type: List[Type[PTOperatorMetatype]]
+    module_metatype = None
 
     @classmethod
-    def get_subtypes(cls) -> List[Type[OperatorMetatype]]:
+    def get_subtypes(cls) -> List[Type['PTOperatorMetatype']]:
         return cls.subtypes
 
     @classmethod
@@ -92,6 +95,18 @@ class PTOperatorMetatype(OperatorMetatype):
             return None
 
         return matches[0]
+
+
+def add_module_metatype(operator_metatype: PTOperatorMetatype):
+    module_subtypes = []
+    prefix = 'PTModule'
+    for subtype in operator_metatype.get_subtypes():
+        module_subtype = type(prefix + subtype.__name__[2:], (subtype,), {})
+        subtype.module_metatype = module_subtype
+        module_subtypes.append(module_subtype)
+    operator_metatype.module_metatype = type(prefix + operator_metatype.__name__[2:], (operator_metatype,),
+                      {'subtypes': module_subtypes})
+    return operator_metatype
 
 
 class PTOperatorSubtype(PTOperatorMetatype):
@@ -796,19 +811,15 @@ def get_operator_metatypes() -> List[Type[OperatorMetatype]]:
 
 
 OPERATORS_WITH_WEIGHTS_METATYPES = [
-    PTConv1dMetatype,
-    PTConv2dMetatype,
-    PTConv3dMetatype,
-    PTDepthwiseConv1dSubtype,
-    PTDepthwiseConv2dSubtype,
-    PTDepthwiseConv3dSubtype,
-    PTLinearMetatype,
-    PTBatchNormMetatype,
-    PTGroupNormMetatype,
-    PTLayerNormMetatype,
-    PTConvTranspose1dMetatype,
-    PTConvTranspose2dMetatype,
-    PTConvTranspose3dMetatype,
-    PTEmbeddingMetatype,
-    PTEmbeddingBagMetatype,
+    add_module_metatype(
+        PT_OPERATOR_METATYPES.get_operator_metatype_by_op_name(
+            module.op_func_name)).module_metatype
+    for module in NNCF_MODULES_DICT
 ]
+
+OPERATORS_WITH_WEIGHTS_METATYPES.extend([
+    subtype for metatype in OPERATORS_WITH_WEIGHTS_METATYPES
+    for subtype in metatype.get_subtypes()
+])
+
+OPERATORS_WITH_WEIGHTS_METATYPES = list(set(OPERATORS_WITH_WEIGHTS_METATYPES))

@@ -398,6 +398,8 @@ def get_model_device(model: torch.nn.Module) -> torch.device:
         device = torch.device('cpu')
     return device
 
+def warning_deprecated(msg):
+    warnings.warn(msg, DeprecationWarning)
 
 def get_model_dtype(model: torch.nn.Module) -> torch.dtype:
     try:
