@@ -209,6 +209,21 @@ class MultiElasticityHandler(ElasticityHandler):
             self._state_names.IS_HANDLER_ENABLED_MAP: is_handler_enabled_map
         }
 
+    def get_search_space(self) -> Dict[str, Any]:
+        """
+        Returns a dictionary with Python data structures (dict, list, tuple, str, int, float, True, False, None) that
+        represents the search space of the super-network.
+
+        :return: search space
+        """
+        active_handlers = {
+            dim: self._handlers[dim] for dim in self._handlers if self._is_handler_enabled_map[dim]
+        }
+        space = {}
+        for handler_id, handler in active_handlers.items():
+            space[handler_id.value] = handler.get_search_space()
+        return space
+
     def enable_all(self) -> None:
         """
         Enables all elasticities for being selected on sampling subnets.

@@ -1,0 +1,1582 @@
+From 193c9e67e6a25a10ac4af770b4b491c2859d7907 Mon Sep 17 00:00:00 2001
+From: "J. Pablo Munoz" <pablo.munoz@intel.com>
+Date: Wed, 30 Nov 2022 17:00:14 -0800
+Subject: [PATCH] Enable BootstrapNAS
+
+---
+ examples/pytorch/language-modeling/run_clm.py |  87 ++++++--
+ examples/pytorch/question-answering/run_qa.py |  72 ++++++-
+ .../pytorch/question-answering/trainer_qa.py  |   5 +-
+ .../pytorch/text-classification/run_glue.py   |  88 +++++++--
+ .../pytorch/text-classification/run_xnli.py   |  74 ++++++-
+ .../pytorch/token-classification/run_ner.py   |  90 +++++++--
+ .../nncf_bootstrapnas_bert_config_conll.json  |  65 ++++++
+ .../nncf_bootstrapnas_bert_config_mrpc.json   |  65 ++++++
+ .../nncf_bootstrapnas_bert_config_squad.json  |  69 +++++++
+ .../nncf_bootstrapnas_bert_config_xnli.json   |  65 ++++++
+ src/transformers/modeling_utils.py            |  20 ++
+ src/transformers/models/bert/modeling_bert.py |   4 +-
+ src/transformers/pytorch_utils.py             |   2 +
+ src/transformers/trainer.py                   | 187 ++++++++++++++++--
+ src/transformers/trainer_callback.py          |   6 +
+ src/transformers/training_args.py             |  13 +-
+ src/transformers/utils/__init__.py            |   1 +
+ 17 files changed, 825 insertions(+), 88 deletions(-)
+ create mode 100644 nncf_bootstrapnas_config/nncf_bootstrapnas_bert_config_conll.json
+ create mode 100644 nncf_bootstrapnas_config/nncf_bootstrapnas_bert_config_mrpc.json
+ create mode 100644 nncf_bootstrapnas_config/nncf_bootstrapnas_bert_config_squad.json
+ create mode 100644 nncf_bootstrapnas_config/nncf_bootstrapnas_bert_config_xnli.json
+
+diff --git a/examples/pytorch/language-modeling/run_clm.py b/examples/pytorch/language-modeling/run_clm.py
+index fe03cde7c..7f694f118 100755
+--- a/examples/pytorch/language-modeling/run_clm.py
++++ b/examples/pytorch/language-modeling/run_clm.py
+@@ -30,6 +30,8 @@ from itertools import chain
+ from typing import Optional
+ 
+ import datasets
++import onnx
++import torch
+ from datasets import load_dataset
+ 
+ import evaluate
+@@ -52,6 +54,8 @@ from transformers.trainer_utils import get_last_checkpoint
+ from transformers.utils import check_min_version, send_example_telemetry
+ from transformers.utils.versions import require_version
+ 
++from nncf import NNCFConfig
++from nncf.experimental.torch.nas.bootstrapNAS import SearchAlgorithm
+ 
+ # Will error if the minimal version of Transformers is not installed. Remove at your own risks.
+ check_min_version("4.23.0")
+@@ -373,22 +377,6 @@ def main():
+             "You can do it from another script, save it, and load it from here, using --tokenizer_name."
+         )
+ 
+-    if model_args.model_name_or_path:
+-        model = AutoModelForCausalLM.from_pretrained(
+-            model_args.model_name_or_path,
+-            from_tf=bool(".ckpt" in model_args.model_name_or_path),
+-            config=config,
+-            cache_dir=model_args.cache_dir,
+-            revision=model_args.model_revision,
+-            use_auth_token=True if model_args.use_auth_token else None,
+-        )
+-    else:
+-        model = AutoModelForCausalLM.from_config(config)
+-        n_params = sum(dict((p.data_ptr(), p.numel()) for p in model.parameters()).values())
+-        logger.info(f"Training new model from scratch - Total size={n_params/2**20:.2f}M params")
+-
+-    model.resize_token_embeddings(len(tokenizer))
+-
+     # Preprocessing the datasets.
+     # First we tokenize all the texts.
+     if training_args.do_train:
+@@ -503,6 +491,47 @@ def main():
+             preds = preds[:, :-1].reshape(-1)
+             return metric.compute(predictions=preds, references=labels)
+ 
++    nncf_config = None
++    if training_args.nncf_config is not None:
++        nncf_config = NNCFConfig.from_json(training_args.nncf_config)
++        if nncf_config.get("log_dir") is None:
++            nncf_config["log_dir"] = training_args.output_dir
++        if not os.path.exists(training_args.output_dir) and training_args.local_rank in [-1, 0]:
++            os.makedirs(nncf_config["log_dir"])
++
++    if model_args.model_name_or_path:
++        retval = AutoModelForCausalLM.from_pretrained(
++            model_args.model_name_or_path,
++            from_tf=bool(".ckpt" in model_args.model_name_or_path),
++            config=config,
++            cache_dir=model_args.cache_dir,
++            revision=model_args.model_revision,
++            use_auth_token=True if model_args.use_auth_token else None,
++            nncf_config=nncf_config,
++            nncf_eval=nncf_config is not None and training_args.do_eval and not training_args.do_train
++        )
++    else:
++        retval = AutoModelForCausalLM.from_config(config)
++        n_params = sum(dict((p.data_ptr(), p.numel()) for p in retval.parameters()).values())
++        logger.info(f"Training new model from scratch - Total size={n_params / 2 ** 20:.2f}M params")
++
++
++    if nncf_config is None:
++        model = retval
++        compression_ctrl = None
++    else:
++        compression_ctrl, model = retval
++
++    model.resize_token_embeddings(len(tokenizer))
++
++    if training_args.to_onnx:
++        if nncf_config is not None:
++           compression_ctrl.export_model(training_args.to_onnx)
++        else:
++           model.to('cpu')
++           dummy_tensor = torch.ones([1, config.n_positions], dtype=torch.long)
++           onnx.export(model, dummy_tensor, training_args.to_onnx)
++
+     # Initialize our Trainer
+     trainer = Trainer(
+         model=model,
+@@ -516,6 +545,7 @@ def main():
+         preprocess_logits_for_metrics=preprocess_logits_for_metrics
+         if training_args.do_eval and not is_torch_tpu_available()
+         else None,
++        compression_ctrl=compression_ctrl
+     )
+ 
+     # Training
+@@ -526,6 +556,8 @@ def main():
+         elif last_checkpoint is not None:
+             checkpoint = last_checkpoint
+         train_result = trainer.train(resume_from_checkpoint=checkpoint)
++        if nncf_config is not None:
++            train_result, model, elasticity_ctrl = train_result
+         trainer.save_model()  # Saves the tokenizer too for easy upload
+ 
+         metrics = train_result.metrics
+@@ -539,6 +571,29 @@ def main():
+         trainer.save_metrics("train", metrics)
+         trainer.save_state()
+ 
++        if nncf_config is not None and training_args.do_search:
++            search_algo = SearchAlgorithm.from_config(model, elasticity_ctrl, nncf_config)
++
++            def validate_model_func(model_, dataset_):
++                #trainer.model will be used to evaluate(trainer.model = model)
++                metrics = trainer.evaluate(eval_dataset=dataset_)
++                try:
++                    perplexity = math.exp(metrics["eval_loss"])
++                except OverflowError:
++                    perplexity = float("inf")
++                return perplexity
++
++            elasticity_ctrl, best_config, performance_metrics = search_algo.run(validate_model_func,
++                                                                                 eval_dataset,
++                                                                                 training_args.output_dir)
++            logger.info("Best config: {best_config}".format(best_config=best_config))
++            logger.info("Performance metrics: {performance_metrics}".format(performance_metrics=performance_metrics))
++
++            search_algo.visualize_search_progression()
++            # Best found subnet
++            elasticity_ctrl.multi_elasticity_handler.activate_subnet_for_config(best_config)
++            elasticity_ctrl.export_model(osp.join(config.log_dir, "best_subnet.onnx"))
++
+     # Evaluation
+     if training_args.do_eval:
+         logger.info("*** Evaluate ***")
+diff --git a/examples/pytorch/question-answering/run_qa.py b/examples/pytorch/question-answering/run_qa.py
+index 1240623b5..813b26ec8 100755
+--- a/examples/pytorch/question-answering/run_qa.py
++++ b/examples/pytorch/question-answering/run_qa.py
+@@ -25,6 +25,7 @@ from dataclasses import dataclass, field
+ from typing import Optional
+ 
+ import datasets
++import torch
+ from datasets import load_dataset
+ 
+ import evaluate
+@@ -47,6 +48,10 @@ from transformers.utils import check_min_version, send_example_telemetry
+ from transformers.utils.versions import require_version
+ from utils_qa import postprocess_qa_predictions
+ 
++from torch import onnx
++
++from nncf import NNCFConfig
++from nncf.experimental.torch.nas.bootstrapNAS import SearchAlgorithm
+ 
+ # Will error if the minimal version of Transformers is not installed. Remove at your own risks.
+ check_min_version("4.23.0")
+@@ -327,14 +332,6 @@ def main():
+         revision=model_args.model_revision,
+         use_auth_token=True if model_args.use_auth_token else None,
+     )
+-    model = AutoModelForQuestionAnswering.from_pretrained(
+-        model_args.model_name_or_path,
+-        from_tf=bool(".ckpt" in model_args.model_name_or_path),
+-        config=config,
+-        cache_dir=model_args.cache_dir,
+-        revision=model_args.model_revision,
+-        use_auth_token=True if model_args.use_auth_token else None,
+-    )
+ 
+     # Tokenizer check: this script requires a fast tokenizer.
+     if not isinstance(tokenizer, PreTrainedTokenizerFast):
+@@ -599,6 +596,41 @@ def main():
+     def compute_metrics(p: EvalPrediction):
+         return metric.compute(predictions=p.predictions, references=p.label_ids)
+ 
++    nncf_config = None
++    if training_args.nncf_config is not None:
++        nncf_config = NNCFConfig.from_json(training_args.nncf_config)
++        if nncf_config.get("log_dir") is None:
++            nncf_config["log_dir"] = training_args.output_dir
++        if not os.path.exists(training_args.output_dir) and training_args.local_rank in [-1, 0]:
++            os.makedirs(nncf_config["log_dir"])
++
++    retval = AutoModelForQuestionAnswering.from_pretrained(
++        model_args.model_name_or_path,
++        from_tf=bool(".ckpt" in model_args.model_name_or_path),
++        config=config,
++        cache_dir=model_args.cache_dir,
++        revision=model_args.model_revision,
++        use_auth_token=True if model_args.use_auth_token else None,
++        nncf_config=nncf_config,
++        nncf_eval=nncf_config is not None and training_args.do_eval and not training_args.do_train
++    )
++
++    if nncf_config is None:
++        model = retval
++        compression_ctrl = None
++    else:
++        compression_ctrl, model = retval
++
++    if training_args.to_onnx:
++    # Expecting the following forward signature:
++    # (input_ids, attention_mask, token_type_ids, ...)
++        if nncf_config is not None:
++            compression_ctrl.export_model(training_args.to_onnx)
++        else:
++            model.to('cpu')
++            dummy_tensor = torch.ones([1, 384], dtype=torch.long)
++            onnx.export(model, (dummy_tensor, dummy_tensor, dummy_tensor), training_args.to_onnx)
++
+     # Initialize our Trainer
+     trainer = QuestionAnsweringTrainer(
+         model=model,
+@@ -610,6 +642,7 @@ def main():
+         data_collator=data_collator,
+         post_process_function=post_processing_function,
+         compute_metrics=compute_metrics,
++        compression_ctrl=compression_ctrl
+     )
+ 
+     # Training
+@@ -620,6 +653,8 @@ def main():
+         elif last_checkpoint is not None:
+             checkpoint = last_checkpoint
+         train_result = trainer.train(resume_from_checkpoint=checkpoint)
++        if nncf_config is not None:
++            train_result, model, elasticity_ctrl = train_result
+         trainer.save_model()  # Saves the tokenizer too for easy upload
+ 
+         metrics = train_result.metrics
+@@ -632,6 +667,27 @@ def main():
+         trainer.save_metrics("train", metrics)
+         trainer.save_state()
+ 
++        if nncf_config is not None and training_args.do_search:
++            search_algo = SearchAlgorithm.from_config(model, elasticity_ctrl, nncf_config)
++
++            def validate_model_func(model_, dataset_):
++                #trainer.model will be used to evaluate(trainer.model = model)
++                metrics = trainer.evaluate(eval_dataset=dataset_)
++                return metrics['eval_f1']
++
++            elasticity_ctrl, best_config, performance_metrics = search_algo.run(validate_model_func,
++                                                                                 eval_dataset,
++                                                                                 training_args.output_dir)
++            logger.info("Best config: {best_config}".format(best_config=best_config))
++            logger.info("Performance metrics: {performance_metrics}".format(performance_metrics=performance_metrics))
++
++            if training_args.local_rank in [-1, 0]:
++                search_algo.visualize_search_progression()
++                search_algo.search_progression_to_csv()
++                # Best found subnet
++                elasticity_ctrl.multi_elasticity_handler.activate_subnet_for_config(best_config)
++                elasticity_ctrl.export_model(os.path.join(training_args.output_dir, "best_subnet.onnx"))
++
+     # Evaluation
+     if training_args.do_eval:
+         logger.info("*** Evaluate ***")
+diff --git a/examples/pytorch/question-answering/trainer_qa.py b/examples/pytorch/question-answering/trainer_qa.py
+index 59d7a084c..c2b161b4f 100644
+--- a/examples/pytorch/question-answering/trainer_qa.py
++++ b/examples/pytorch/question-answering/trainer_qa.py
+@@ -31,7 +31,7 @@ class QuestionAnsweringTrainer(Trainer):
+         self.eval_examples = eval_examples
+         self.post_process_function = post_process_function
+ 
+-    def evaluate(self, eval_dataset=None, eval_examples=None, ignore_keys=None, metric_key_prefix: str = "eval"):
++    def evaluate(self, eval_dataset=None, eval_examples=None, ignore_keys=None, metric_key_prefix: str = "eval", active_subnet=None):
+         eval_dataset = self.eval_dataset if eval_dataset is None else eval_dataset
+         eval_dataloader = self.get_eval_dataloader(eval_dataset)
+         eval_examples = self.eval_examples if eval_examples is None else eval_examples
+@@ -61,6 +61,9 @@ class QuestionAnsweringTrainer(Trainer):
+                 if not key.startswith(f"{metric_key_prefix}_"):
+                     metrics[f"{metric_key_prefix}_{key}"] = metrics.pop(key)
+ 
++            if active_subnet is not None:
++                metrics.update(active_subnet)
++
+             self.log(metrics)
+         else:
+             metrics = {}
+diff --git a/examples/pytorch/text-classification/run_glue.py b/examples/pytorch/text-classification/run_glue.py
+index 3eb423f08..b35ad32d9 100755
+--- a/examples/pytorch/text-classification/run_glue.py
++++ b/examples/pytorch/text-classification/run_glue.py
+@@ -29,6 +29,8 @@ from datasets import load_dataset
+ 
+ import evaluate
+ import transformers
++from nncf import NNCFConfig
++from nncf.experimental.torch.nas.bootstrapNAS import SearchAlgorithm
+ from transformers import (
+     AutoConfig,
+     AutoModelForSequenceClassification,
+@@ -366,15 +368,6 @@ def main():
+         revision=model_args.model_revision,
+         use_auth_token=True if model_args.use_auth_token else None,
+     )
+-    model = AutoModelForSequenceClassification.from_pretrained(
+-        model_args.model_name_or_path,
+-        from_tf=bool(".ckpt" in model_args.model_name_or_path),
+-        config=config,
+-        cache_dir=model_args.cache_dir,
+-        revision=model_args.model_revision,
+-        use_auth_token=True if model_args.use_auth_token else None,
+-        ignore_mismatched_sizes=model_args.ignore_mismatched_sizes,
+-    )
+ 
+     # Preprocessing the raw_datasets
+     if data_args.task_name is not None:
+@@ -400,12 +393,12 @@ def main():
+     # Some models have set the order of the labels to use, so let's make sure we do use it.
+     label_to_id = None
+     if (
+-        model.config.label2id != PretrainedConfig(num_labels=num_labels).label2id
++        config.label2id != PretrainedConfig(num_labels=num_labels).label2id
+         and data_args.task_name is not None
+         and not is_regression
+     ):
+         # Some have all caps in their config, some don't.
+-        label_name_to_id = {k.lower(): v for k, v in model.config.label2id.items()}
++        label_name_to_id = {k.lower(): v for k, v in config.label2id.items()}
+         if list(sorted(label_name_to_id.keys())) == list(sorted(label_list)):
+             label_to_id = {i: int(label_name_to_id[label_list[i]]) for i in range(num_labels)}
+         else:
+@@ -418,11 +411,11 @@ def main():
+         label_to_id = {v: i for i, v in enumerate(label_list)}
+ 
+     if label_to_id is not None:
+-        model.config.label2id = label_to_id
+-        model.config.id2label = {id: label for label, id in config.label2id.items()}
++        config.label2id = label_to_id
++        config.id2label = {id: label for label, id in config.label2id.items()}
+     elif data_args.task_name is not None and not is_regression:
+-        model.config.label2id = {l: i for i, l in enumerate(label_list)}
+-        model.config.id2label = {id: label for label, id in config.label2id.items()}
++        config.label2id = {l: i for i, l in enumerate(label_list)}
++        config.id2label = {id: label for label, id in config.label2id.items()}
+ 
+     if data_args.max_seq_length > tokenizer.model_max_length:
+         logger.warning(
+@@ -458,6 +451,46 @@ def main():
+             max_train_samples = min(len(train_dataset), data_args.max_train_samples)
+             train_dataset = train_dataset.select(range(max_train_samples))
+ 
++    nncf_config = None
++    if training_args.nncf_config is not None:
++        nncf_config = NNCFConfig.from_json(training_args.nncf_config)
++
++        if nncf_config.get("log_dir") is None:
++            nncf_config["log_dir"] = training_args.output_dir
++
++        if not os.path.exists(training_args.output_dir) and training_args.local_rank in [-1, 0]:
++            os.makedirs(nncf_config["log_dir"])
++
++    retval = AutoModelForSequenceClassification.from_pretrained(
++        model_args.model_name_or_path,
++        from_tf=bool(".ckpt" in model_args.model_name_or_path),
++        config=config,
++        cache_dir=model_args.cache_dir,
++        revision=model_args.model_revision,
++        use_auth_token=True if model_args.use_auth_token else None,
++        nncf_config=nncf_config,
++        nncf_eval=nncf_config is not None and training_args.do_eval and not training_args.do_train
++    )
++
++    if nncf_config is None:
++        model = retval
++        compression_ctrl = None
++    else:
++        compression_ctrl, model = retval
++
++    if training_args.to_onnx:
++    # Expecting the following forward signature:
++    # (input_ids, attention_mask, token_type_ids, ...)
++        if nncf_config is not None:
++            compression_ctrl.export_model(training_args.to_onnx)
++        else:
++            model.to('cpu')
++            import torch
++            from torch import onnx
++            dummy_tensor = torch.ones([1, 128], dtype=torch.long)
++            onnx.export(model, (dummy_tensor, dummy_tensor, dummy_tensor),
++                        training_args.to_onnx, opset_version=10)
++
+     if training_args.do_eval:
+         if "validation" not in raw_datasets and "validation_matched" not in raw_datasets:
+             raise ValueError("--do_eval requires a validation dataset")
+@@ -518,8 +551,10 @@ def main():
+         compute_metrics=compute_metrics,
+         tokenizer=tokenizer,
+         data_collator=data_collator,
++        compression_ctrl=compression_ctrl
+     )
+ 
++
+     # Training
+     if training_args.do_train:
+         checkpoint = None
+@@ -528,6 +563,8 @@ def main():
+         elif last_checkpoint is not None:
+             checkpoint = last_checkpoint
+         train_result = trainer.train(resume_from_checkpoint=checkpoint)
++        if nncf_config is not None:
++            train_result, model, elasticity_ctrl = train_result
+         metrics = train_result.metrics
+         max_train_samples = (
+             data_args.max_train_samples if data_args.max_train_samples is not None else len(train_dataset)
+@@ -540,6 +577,27 @@ def main():
+         trainer.save_metrics("train", metrics)
+         trainer.save_state()
+ 
++        if nncf_config is not None and training_args.do_search:
++            search_algo = SearchAlgorithm.from_config(model, elasticity_ctrl, nncf_config)
++
++            def validate_model_func(model_, dataset_):
++                #trainer.model will be used to evaluate(trainer.model = model)
++                metrics = trainer.evaluate(eval_dataset=dataset_)
++                return metrics['eval_accuracy'] * 100
++
++            elasticity_ctrl, best_config, performance_metrics = search_algo.run(validate_model_func,
++                                                                                 eval_dataset,
++                                                                                 training_args.output_dir)
++            logger.info("Best config: {best_config}".format(best_config=best_config))
++            logger.info("Performance metrics: {performance_metrics}".format(performance_metrics=performance_metrics))
++
++            if training_args.local_rank in [-1, 0]:
++                search_algo.visualize_search_progression()
++                search_algo.search_progression_to_csv()
++                # Best found subnet
++                elasticity_ctrl.multi_elasticity_handler.activate_subnet_for_config(best_config)
++                elasticity_ctrl.export_model(os.path.join(training_args.output_dir, "best_subnet.onnx"))
++
+     # Evaluation
+     if training_args.do_eval:
+         logger.info("*** Evaluate ***")
+diff --git a/examples/pytorch/text-classification/run_xnli.py b/examples/pytorch/text-classification/run_xnli.py
+index 55523edfc..384d4bbb6 100755
+--- a/examples/pytorch/text-classification/run_xnli.py
++++ b/examples/pytorch/text-classification/run_xnli.py
+@@ -26,10 +26,13 @@ from typing import Optional
+ 
+ import datasets
+ import numpy as np
++import torch
+ from datasets import load_dataset
+ 
+ import evaluate
+ import transformers
++from nncf import NNCFConfig
++from nncf.experimental.torch.nas.bootstrapNAS import SearchAlgorithm
+ from transformers import (
+     AutoConfig,
+     AutoModelForSequenceClassification,
+@@ -282,15 +285,6 @@ def main():
+         revision=model_args.model_revision,
+         use_auth_token=True if model_args.use_auth_token else None,
+     )
+-    model = AutoModelForSequenceClassification.from_pretrained(
+-        model_args.model_name_or_path,
+-        from_tf=bool(".ckpt" in model_args.model_name_or_path),
+-        config=config,
+-        cache_dir=model_args.cache_dir,
+-        revision=model_args.model_revision,
+-        use_auth_token=True if model_args.use_auth_token else None,
+-        ignore_mismatched_sizes=model_args.ignore_mismatched_sizes,
+-    )
+ 
+     # Preprocessing the datasets
+     # Padding strategy
+@@ -367,6 +361,43 @@ def main():
+     else:
+         data_collator = None
+ 
++    nncf_config = None
++    if training_args.nncf_config is not None:
++        nncf_config = NNCFConfig.from_json(training_args.nncf_config)
++
++        if nncf_config.get("log_dir") is None:
++            nncf_config["log_dir"] = training_args.output_dir
++
++        if not os.path.exists(training_args.output_dir) and training_args.local_rank in [-1, 0]:
++            os.makedirs(nncf_config["log_dir"])
++
++    retval = AutoModelForSequenceClassification.from_pretrained(
++        model_args.model_name_or_path,
++        from_tf=bool(".ckpt" in model_args.model_name_or_path),
++        config=config,
++        cache_dir=model_args.cache_dir,
++        revision=model_args.model_revision,
++        use_auth_token=True if model_args.use_auth_token else None,
++        nncf_config=nncf_config,
++        nncf_eval=nncf_config is not None and training_args.do_eval and not training_args.do_train
++    )
++
++    if nncf_config is None:
++        model = retval
++        compression_ctrl = None
++    else:
++        compression_ctrl, model = retval
++
++    if training_args.to_onnx:
++        # Expecting the following forward signature:
++        # (input_ids, attention_mask, token_type_ids, ...)
++        if nncf_config is not None:
++            compression_ctrl.export_model(training_args.to_onnx)
++        else:
++            model.to('cpu')
++            dummy_tensor = torch.ones([1, training_args.max_seq_length], dtype=torch.long)
++            torch.onnx.export(model, (dummy_tensor, dummy_tensor, dummy_tensor), training_args.to_onnx)
++
+     # Initialize our Trainer
+     trainer = Trainer(
+         model=model,
+@@ -376,8 +407,10 @@ def main():
+         compute_metrics=compute_metrics,
+         tokenizer=tokenizer,
+         data_collator=data_collator,
++        compression_ctrl=compression_ctrl
+     )
+ 
++
+     # Training
+     if training_args.do_train:
+         checkpoint = None
+@@ -386,6 +419,8 @@ def main():
+         elif last_checkpoint is not None:
+             checkpoint = last_checkpoint
+         train_result = trainer.train(resume_from_checkpoint=checkpoint)
++        if nncf_config is not None:
++            train_result, model, elasticity_ctrl = train_result
+         metrics = train_result.metrics
+         max_train_samples = (
+             data_args.max_train_samples if data_args.max_train_samples is not None else len(train_dataset)
+@@ -398,6 +433,27 @@ def main():
+         trainer.save_metrics("train", metrics)
+         trainer.save_state()
+ 
++        if nncf_config is not None and training_args.do_search:
++            search_algo = SearchAlgorithm.from_config(model, elasticity_ctrl, nncf_config)
++
++            def validate_model_func(model_, dataset_):
++                #trainer.model will be used to evaluate(trainer.model = model)
++                metrics = trainer.evaluate(eval_dataset=dataset_)
++                return metrics['eval_accuracy'] * 100
++
++            elasticity_ctrl, best_config, performance_metrics = search_algo.run(validate_model_func,
++                                                                                 eval_dataset,
++                                                                                 training_args.output_dir)
++            logger.info("Best config: {best_config}".format(best_config=best_config))
++            logger.info("Performance metrics: {performance_metrics}".format(performance_metrics=performance_metrics))
++
++            if training_args.local_rank in [-1, 0]:
++                search_algo.visualize_search_progression()
++                search_algo.search_progression_to_csv()
++                # Best found subnet
++                elasticity_ctrl.multi_elasticity_handler.activate_subnet_for_config(best_config)
++                elasticity_ctrl.export_model(os.path.join(training_args.output_dir, "best_subnet.onnx"))
++
+     # Evaluation
+     if training_args.do_eval:
+         logger.info("*** Evaluate ***")
+diff --git a/examples/pytorch/token-classification/run_ner.py b/examples/pytorch/token-classification/run_ner.py
+index 52cbbb87b..6a846376d 100755
+--- a/examples/pytorch/token-classification/run_ner.py
++++ b/examples/pytorch/token-classification/run_ner.py
+@@ -30,7 +30,11 @@ import numpy as np
+ from datasets import ClassLabel, load_dataset
+ 
+ import evaluate
++import torch
+ import transformers
++from nncf import NNCFConfig
++from nncf.experimental.torch.nas.bootstrapNAS import SearchAlgorithm
++from torch import onnx
+ from transformers import (
+     AutoConfig,
+     AutoModelForTokenClassification,
+@@ -366,15 +370,6 @@ def main():
+             use_auth_token=True if model_args.use_auth_token else None,
+         )
+ 
+-    model = AutoModelForTokenClassification.from_pretrained(
+-        model_args.model_name_or_path,
+-        from_tf=bool(".ckpt" in model_args.model_name_or_path),
+-        config=config,
+-        cache_dir=model_args.cache_dir,
+-        revision=model_args.model_revision,
+-        use_auth_token=True if model_args.use_auth_token else None,
+-        ignore_mismatched_sizes=model_args.ignore_mismatched_sizes,
+-    )
+ 
+     # Tokenizer check: this script requires a fast tokenizer.
+     if not isinstance(tokenizer, PreTrainedTokenizerFast):
+@@ -385,25 +380,25 @@ def main():
+         )
+ 
+     # Model has labels -> use them.
+-    if model.config.label2id != PretrainedConfig(num_labels=num_labels).label2id:
+-        if list(sorted(model.config.label2id.keys())) == list(sorted(label_list)):
++    if config.label2id != PretrainedConfig(num_labels=num_labels).label2id:
++        if list(sorted(config.label2id.keys())) == list(sorted(label_list)):
+             # Reorganize `label_list` to match the ordering of the model.
+             if labels_are_int:
+-                label_to_id = {i: int(model.config.label2id[l]) for i, l in enumerate(label_list)}
+-                label_list = [model.config.id2label[i] for i in range(num_labels)]
++                label_to_id = {i: int(config.label2id[l]) for i, l in enumerate(label_list)}
++                label_list = [config.id2label[i] for i in range(num_labels)]
+             else:
+-                label_list = [model.config.id2label[i] for i in range(num_labels)]
++                label_list = [config.id2label[i] for i in range(num_labels)]
+                 label_to_id = {l: i for i, l in enumerate(label_list)}
+         else:
+             logger.warning(
+                 "Your model seems to have been trained with labels, but they don't match the dataset: ",
+-                f"model labels: {list(sorted(model.config.label2id.keys()))}, dataset labels:"
++                f"model labels: {list(sorted(config.label2id.keys()))}, dataset labels:"
+                 f" {list(sorted(label_list))}.\nIgnoring the model labels as a result.",
+             )
+ 
+     # Set the correspondences label/ID inside the model config
+-    model.config.label2id = {l: i for i, l in enumerate(label_list)}
+-    model.config.id2label = {i: l for i, l in enumerate(label_list)}
++    config.label2id = {l: i for i, l in enumerate(label_list)}
++    config.id2label = {i: l for i, l in enumerate(label_list)}
+ 
+     # Map that sends B-Xxx label to its I-Xxx counterpart
+     b_to_i_label = []
+@@ -504,6 +499,43 @@ def main():
+     # Data collator
+     data_collator = DataCollatorForTokenClassification(tokenizer, pad_to_multiple_of=8 if training_args.fp16 else None)
+ 
++    nncf_config = None
++    if training_args.nncf_config is not None:
++        nncf_config = NNCFConfig.from_json(training_args.nncf_config)
++        if nncf_config.get("log_dir") is None:
++            nncf_config["log_dir"] = training_args.output_dir
++        if not os.path.exists(training_args.output_dir) and training_args.local_rank in [-1, 0]:
++            os.makedirs(nncf_config["log_dir"])
++
++    retval = AutoModelForTokenClassification.from_pretrained(
++        model_args.model_name_or_path,
++        from_tf=bool(".ckpt" in model_args.model_name_or_path),
++        config=config,
++        cache_dir=model_args.cache_dir,
++        revision=model_args.model_revision,
++        use_auth_token=True if model_args.use_auth_token else None,
++        nncf_config=nncf_config,
++        nncf_eval=nncf_config is not None and training_args.do_eval and not training_args.do_train
++    )
++
++    if nncf_config is None:
++        model = retval
++        compression_ctrl = None
++    else:
++        compression_ctrl, model = retval
++
++
++    if training_args.to_onnx:
++    # Expecting the following forward signature:
++    # (input_ids, attention_mask, token_type_ids, ...)
++        if nncf_config is not None:
++            compression_ctrl.export_model(training_args.to_onnx)
++        else:
++            model.to('cpu')
++            dummy_tensor = torch.ones([1, 128], dtype=torch.long)
++            onnx.export(model, (dummy_tensor, dummy_tensor, dummy_tensor), training_args.to_onnx,
++                        opset_version=10)
++
+     # Metrics
+     metric = evaluate.load("seqeval")
+ 
+@@ -549,6 +581,7 @@ def main():
+         tokenizer=tokenizer,
+         data_collator=data_collator,
+         compute_metrics=compute_metrics,
++        compression_ctrl=compression_ctrl
+     )
+ 
+     # Training
+@@ -559,6 +592,8 @@ def main():
+         elif last_checkpoint is not None:
+             checkpoint = last_checkpoint
+         train_result = trainer.train(resume_from_checkpoint=checkpoint)
++        if nncf_config is not None:
++            train_result, model, elasticity_ctrl = train_result
+         metrics = train_result.metrics
+         trainer.save_model()  # Saves the tokenizer too for easy upload
+ 
+@@ -571,6 +606,27 @@ def main():
+         trainer.save_metrics("train", metrics)
+         trainer.save_state()
+ 
++        if nncf_config is not None and training_args.do_search:
++            search_algo = SearchAlgorithm.from_config(model, elasticity_ctrl, nncf_config)
++
++            def validate_model_func(model_, dataset_):
++                #trainer.model will be used to evaluate(trainer.model = model)
++                metrics = trainer.evaluate(eval_dataset=dataset_)
++                return metrics['eval_accuracy'] * 100
++
++            elasticity_ctrl, best_config, performance_metrics = search_algo.run(validate_model_func,
++                                                                                 eval_dataset,
++                                                                                 training_args.output_dir)
++            logger.info("Best config: {best_config}".format(best_config=best_config))
++            logger.info("Performance metrics: {performance_metrics}".format(performance_metrics=performance_metrics))
++
++            if training_args.local_rank in [-1, 0]:
++                search_algo.visualize_search_progression()
++                search_algo.search_progression_to_csv()
++                # Best found subnet
++                elasticity_ctrl.multi_elasticity_handler.activate_subnet_for_config(best_config)
++                elasticity_ctrl.export_model(os.path.join(training_args.output_dir, "best_subnet.onnx"))
++
+     # Evaluation
+     if training_args.do_eval:
+         logger.info("*** Evaluate ***")
+diff --git a/nncf_bootstrapnas_config/nncf_bootstrapnas_bert_config_conll.json b/nncf_bootstrapnas_config/nncf_bootstrapnas_bert_config_conll.json
+new file mode 100644
+index 000000000..4e9e3a788
+--- /dev/null
++++ b/nncf_bootstrapnas_config/nncf_bootstrapnas_bert_config_conll.json
+@@ -0,0 +1,65 @@
++{
++    "input_info": [
++        {
++            "sample_size": [1, 128],
++            "type": "long"
++        },
++        {
++            "sample_size": [1, 128],
++            "type": "long"
++        },
++        {
++            "sample_size": [1, 128],
++            "type": "long"
++        }
++    ],
++    "bootstrapNAS": {
++        "training": {
++            "algorithm": "progressive_shrinking",
++            "progressivity_of_elasticity": ["depth", "width"],
++            "batchnorm_adaptation": {
++                "num_bn_adaptation_samples": 0
++            },
++            "schedule": {
++                "list_stage_descriptions": [
++                    {"train_dims": ["depth", "width"], "epochs": 3, "depth_indicator": 1, "width_indicator": 3, "init_lr": 5e-5, "epochs_lr": 3, "sample_rate": 5}
++                ]
++            },
++            "elasticity": {
++                "available_elasticity_dims": ["depth", "width"],
++                "width": {
++                    "overwrite_groups": [
++                        [
++                            "BertForTokenClassification/BertModel[bert]/BertEncoder[encoder]/ModuleList[layer]/BertLayer[0]/BertIntermediate[intermediate]/NNCFLinear[dense]/linear_0",
++                            "BertForTokenClassification/BertModel[bert]/BertEncoder[encoder]/ModuleList[layer]/BertLayer[1]/BertIntermediate[intermediate]/NNCFLinear[dense]/linear_0",
++                            "BertForTokenClassification/BertModel[bert]/BertEncoder[encoder]/ModuleList[layer]/BertLayer[2]/BertIntermediate[intermediate]/NNCFLinear[dense]/linear_0"
++                        ]
++                    ],
++                    "overwrite_groups_widths": [[3072, 2912, 2760]]
++                },
++                "depth": {
++                    "mode": "manual",
++                    "skipped_blocks": [
++                        [
++                            "BertForTokenClassification/BertModel[bert]/BertEncoder[encoder]/ModuleList[layer]/BertLayer[9]/BertOutput[output]/NNCFLayerNorm[LayerNorm]/layer_norm_0",
++                            "BertForTokenClassification/BertModel[bert]/BertEncoder[encoder]/ModuleList[layer]/BertLayer[10]/BertOutput[output]/__add___0"
++                        ],
++                        [
++                            "BertForTokenClassification/BertModel[bert]/BertEncoder[encoder]/ModuleList[layer]/BertLayer[10]/BertOutput[output]/NNCFLayerNorm[LayerNorm]/layer_norm_0",
++                            "BertForTokenClassification/BertModel[bert]/BertEncoder[encoder]/ModuleList[layer]/BertLayer[11]/BertOutput[output]/__add___0"
++                        ]
++                    ]
++                }
++            }
++        },
++        "search": {
++            "algorithm": "NSGA2",
++            "batchnorm_adaptation": {
++                "num_bn_adaptation_samples": 0
++            },
++            "num_evals": 20,
++            "population": 4,
++            "ref_acc": 99.17
++        }
++    }
++}
+diff --git a/nncf_bootstrapnas_config/nncf_bootstrapnas_bert_config_mrpc.json b/nncf_bootstrapnas_config/nncf_bootstrapnas_bert_config_mrpc.json
+new file mode 100644
+index 000000000..87b234560
+--- /dev/null
++++ b/nncf_bootstrapnas_config/nncf_bootstrapnas_bert_config_mrpc.json
+@@ -0,0 +1,65 @@
++{
++    "input_info": [
++        {
++            "sample_size": [1, 128],
++            "type": "long"
++        },
++        {
++            "sample_size": [1, 128],
++            "type": "long"
++        },
++        {
++            "sample_size": [1, 128],
++            "type": "long"
++        }
++    ],
++    "bootstrapNAS": {
++        "training": {
++            "algorithm": "progressive_shrinking",
++            "progressivity_of_elasticity": ["depth", "width"],
++            "batchnorm_adaptation": {
++                "num_bn_adaptation_samples": 0
++            },
++            "schedule": {
++                "list_stage_descriptions": [
++                    {"train_dims": ["depth", "width"], "epochs": 5, "depth_indicator": 1,  "width_indicator": 3, "init_lr": 5e-5, "epochs_lr": 5}
++                ]
++            },
++            "elasticity": {
++                "available_elasticity_dims": ["depth", "width"],
++                "width": {
++                    "overwrite_groups": [
++                        [
++                            "BertForSequenceClassification/BertModel[bert]/BertEncoder[encoder]/ModuleList[layer]/BertLayer[0]/BertIntermediate[intermediate]/NNCFLinear[dense]/linear_0",
++                            "BertForSequenceClassification/BertModel[bert]/BertEncoder[encoder]/ModuleList[layer]/BertLayer[1]/BertIntermediate[intermediate]/NNCFLinear[dense]/linear_0",
++                            "BertForSequenceClassification/BertModel[bert]/BertEncoder[encoder]/ModuleList[layer]/BertLayer[2]/BertIntermediate[intermediate]/NNCFLinear[dense]/linear_0"
++                        ]
++                    ],
++                    "overwrite_groups_widths": [[3072, 2456, 1992]]
++                },
++                "depth": {
++                    "mode": "manual",
++                    "skipped_blocks": [
++                        [
++                            "BertForSequenceClassification/BertModel[bert]/BertEncoder[encoder]/ModuleList[layer]/BertLayer[9]/BertOutput[output]/NNCFLayerNorm[LayerNorm]/layer_norm_0",
++                            "BertForSequenceClassification/BertModel[bert]/BertEncoder[encoder]/ModuleList[layer]/BertLayer[10]/BertOutput[output]/__add___0"
++                        ],
++                        [
++                            "BertForSequenceClassification/BertModel[bert]/BertEncoder[encoder]/ModuleList[layer]/BertLayer[10]/BertOutput[output]/NNCFLayerNorm[LayerNorm]/layer_norm_0",
++                            "BertForSequenceClassification/BertModel[bert]/BertEncoder[encoder]/ModuleList[layer]/BertLayer[11]/BertOutput[output]/__add___0"
++                        ]
++                    ]
++                }
++            }
++        },
++        "search": {
++            "algorithm": "NSGA2",
++            "batchnorm_adaptation": {
++                "num_bn_adaptation_samples": 0
++            },
++            "num_evals": 20,
++            "population": 4,
++            "ref_acc": 84.56
++        }
++    }
++}
+diff --git a/nncf_bootstrapnas_config/nncf_bootstrapnas_bert_config_squad.json b/nncf_bootstrapnas_config/nncf_bootstrapnas_bert_config_squad.json
+new file mode 100644
+index 000000000..856f6247d
+--- /dev/null
++++ b/nncf_bootstrapnas_config/nncf_bootstrapnas_bert_config_squad.json
+@@ -0,0 +1,69 @@
++{
++    "input_info": [
++        {
++            "sample_size": [1, 384],
++            "type": "long"
++        },
++        {
++            "sample_size": [1, 384],
++            "type": "long"
++        },
++        {
++            "sample_size": [1, 384],
++            "type": "long"
++        }
++    ],
++    "bootstrapNAS": {
++        "training": {
++            "algorithm": "progressive_shrinking",
++            "progressivity_of_elasticity": ["depth", "width"],
++            "batchnorm_adaptation": {
++                "num_bn_adaptation_samples": 0
++            },
++            "schedule": {
++                "list_stage_descriptions": [
++                    {"train_dims": ["depth", "width"], "epochs": 2, "depth_indicator": 1, "width_indicator": 3, "init_lr": 3e-5, "epochs_lr": 2, "sample_rate": 5}
++                ]
++            },
++            "elasticity": {
++                "available_elasticity_dims": ["depth", "width"],
++                "width": {
++                    "overwrite_groups": [
++                        ["BertForQuestionAnswering/BertModel[bert]/BertEncoder[encoder]/ModuleList[layer]/BertLayer[0]/BertIntermediate[intermediate]/NNCFLinear[dense]/linear_0"],
++                        ["BertForQuestionAnswering/BertModel[bert]/BertEncoder[encoder]/ModuleList[layer]/BertLayer[1]/BertIntermediate[intermediate]/NNCFLinear[dense]/linear_0"],
++                        ["BertForQuestionAnswering/BertModel[bert]/BertEncoder[encoder]/ModuleList[layer]/BertLayer[2]/BertIntermediate[intermediate]/NNCFLinear[dense]/linear_0"],
++                        ["BertForQuestionAnswering/BertModel[bert]/BertEncoder[encoder]/ModuleList[layer]/BertLayer[3]/BertIntermediate[intermediate]/NNCFLinear[dense]/linear_0"],
++                        ["BertForQuestionAnswering/BertModel[bert]/BertEncoder[encoder]/ModuleList[layer]/BertLayer[4]/BertIntermediate[intermediate]/NNCFLinear[dense]/linear_0"],
++                        ["BertForQuestionAnswering/BertModel[bert]/BertEncoder[encoder]/ModuleList[layer]/BertLayer[5]/BertIntermediate[intermediate]/NNCFLinear[dense]/linear_0"],
++                        ["BertForQuestionAnswering/BertModel[bert]/BertEncoder[encoder]/ModuleList[layer]/BertLayer[6]/BertIntermediate[intermediate]/NNCFLinear[dense]/linear_0"],
++                        ["BertForQuestionAnswering/BertModel[bert]/BertEncoder[encoder]/ModuleList[layer]/BertLayer[7]/BertIntermediate[intermediate]/NNCFLinear[dense]/linear_0"],
++                        ["BertForQuestionAnswering/BertModel[bert]/BertEncoder[encoder]/ModuleList[layer]/BertLayer[8]/BertIntermediate[intermediate]/NNCFLinear[dense]/linear_0"],
++                        ["BertForQuestionAnswering/BertModel[bert]/BertEncoder[encoder]/ModuleList[layer]/BertLayer[9]/BertIntermediate[intermediate]/NNCFLinear[dense]/linear_0"],
++                        ["BertForQuestionAnswering/BertModel[bert]/BertEncoder[encoder]/ModuleList[layer]/BertLayer[10]/BertIntermediate[intermediate]/NNCFLinear[dense]/linear_0"],
++                        ["BertForQuestionAnswering/BertModel[bert]/BertEncoder[encoder]/ModuleList[layer]/BertLayer[11]/BertIntermediate[intermediate]/NNCFLinear[dense]/linear_0"]
++                    ],
++                    "overwrite_groups_widths": [[4096, 3272, 2656], [4096, 3272, 2656], [4096, 3272, 2656], [4096, 3272, 2656], [4096, 3272, 2656], [4096, 3272, 2656],
++                                                [4096, 3272, 2656], [4096, 3272, 2656], [4096, 3272, 2656], [4096, 3272, 2656], [4096, 3272, 2656], [4096, 3272, 2656]]
++                },
++                "depth": {
++                    "mode": "manual",
++                    "skipped_blocks": [
++                        [
++                            "BertForQuestionAnswering/BertModel[bert]/BertEncoder[encoder]/ModuleList[layer]/BertLayer[12]/BertOutput[output]/NNCFLayerNorm[LayerNorm]/layer_norm_0",
++                            "BertForQuestionAnswering/BertModel[bert]/BertEncoder[encoder]/ModuleList[layer]/BertLayer[13]/BertOutput[output]/NNCFLayerNorm[LayerNorm]/layer_norm_0"
++                        ]
++                    ]
++                }
++            }
++        },
++        "search": {
++            "algorithm": "NSGA2",
++            "batchnorm_adaptation": {
++                "num_bn_adaptation_samples": 0
++            },
++            "num_evals": 100,
++            "population": 20,
++            "ref_acc": 93.21
++        }
++    }
++}
+diff --git a/nncf_bootstrapnas_config/nncf_bootstrapnas_bert_config_xnli.json b/nncf_bootstrapnas_config/nncf_bootstrapnas_bert_config_xnli.json
+new file mode 100644
+index 000000000..cc34cdcdc
+--- /dev/null
++++ b/nncf_bootstrapnas_config/nncf_bootstrapnas_bert_config_xnli.json
+@@ -0,0 +1,65 @@
++{
++    "input_info": [
++        {
++            "sample_size": [1, 128],
++            "type": "long"
++        },
++        {
++            "sample_size": [1, 128],
++            "type": "long"
++        },
++        {
++            "sample_size": [1, 128],
++            "type": "long"
++        }
++    ],
++    "bootstrapNAS": {
++        "training": {
++            "algorithm": "progressive_shrinking",
++            "progressivity_of_elasticity": ["depth", "width"],
++            "batchnorm_adaptation": {
++                "num_bn_adaptation_samples": 0
++            },
++            "schedule": {
++                "list_stage_descriptions": [
++                    {"train_dims": ["depth", "width"], "epochs": 2, "depth_indicator": 2, "width_indicator": 3, "init_lr": 5e-5, "epochs_lr": 2}
++                ]
++            },
++            "elasticity": {
++                "available_elasticity_dims": ["depth", "width"],
++                "width": {
++                    "overwrite_groups": [
++                        [
++                            "BertForSequenceClassification/BertModel[bert]/BertEncoder[encoder]/ModuleList[layer]/BertLayer[0]/BertIntermediate[intermediate]/NNCFLinear[dense]/linear_0",
++                            "BertForSequenceClassification/BertModel[bert]/BertEncoder[encoder]/ModuleList[layer]/BertLayer[1]/BertIntermediate[intermediate]/NNCFLinear[dense]/linear_0",
++                            "BertForSequenceClassification/BertModel[bert]/BertEncoder[encoder]/ModuleList[layer]/BertLayer[2]/BertIntermediate[intermediate]/NNCFLinear[dense]/linear_0"
++                        ]
++                    ],
++                    "overwrite_groups_widths" : [[3072, 2912, 2760]]
++                },
++                "depth": {
++                    "mode": "manual",
++                    "skipped_blocks": [
++                        [
++                            "BertForSequenceClassification/BertModel[bert]/BertEncoder[encoder]/ModuleList[layer]/BertLayer[9]/BertOutput[output]/NNCFLayerNorm[LayerNorm]/layer_norm_0",
++                            "BertForSequenceClassification/BertModel[bert]/BertEncoder[encoder]/ModuleList[layer]/BertLayer[10]/BertOutput[output]/__add___0"
++                        ],
++                        [
++                            "BertForSequenceClassification/BertModel[bert]/BertEncoder[encoder]/ModuleList[layer]/BertLayer[10]/BertOutput[output]/NNCFLayerNorm[LayerNorm]/layer_norm_0",
++                            "BertForSequenceClassification/BertModel[bert]/BertEncoder[encoder]/ModuleList[layer]/BertLayer[11]/BertOutput[output]/__add___0"
++                        ]
++                    ]
++                }
++            }
++        },
++        "search": {
++            "algorithm": "NSGA2",
++            "batchnorm_adaptation": {
++                "num_bn_adaptation_samples": 0
++            },
++            "num_evals": 20,
++            "population": 5,
++            "ref_acc": 77.68
++        }
++    }
++}
+diff --git a/src/transformers/modeling_utils.py b/src/transformers/modeling_utils.py
+index 5f4fccd33..468335b48 100644
+--- a/src/transformers/modeling_utils.py
++++ b/src/transformers/modeling_utils.py
+@@ -27,6 +27,9 @@ from functools import partial
+ from typing import Any, Callable, Dict, List, Optional, Tuple, Union
+ 
+ import torch
++from nncf.torch.model_creation import create_nncf_network
++from nncf.experimental.torch.nas.bootstrapNAS.training.model_creator_helpers import \
++    create_compressed_model_from_algo_names
+ from packaging import version
+ from torch import Tensor, device, nn
+ from torch.nn import CrossEntropyLoss
+@@ -1497,6 +1500,7 @@ class PreTrainedModel(nn.Module, ModuleUtilsMixin, GenerationMixin, PushToHubMix
+         push_to_hub: bool = False,
+         max_shard_size: Union[int, str] = "10GB",
+         safe_serialization: bool = False,
++        nncf_compression_state: Dict = None,
+         **kwargs,
+     ):
+         """
+@@ -1901,6 +1905,8 @@ class PreTrainedModel(nn.Module, ModuleUtilsMixin, GenerationMixin, PushToHubMix
+         load_in_8bit_skip_modules = kwargs.pop("load_in_8bit_skip_modules", None)
+         subfolder = kwargs.pop("subfolder", "")
+         commit_hash = kwargs.pop("_commit_hash", None)
++        nncf_config = kwargs.pop("nncf_config", None)
++        nncf_eval = kwargs.pop("nncf_eval", False)
+ 
+         if trust_remote_code is True:
+             logger.warning(
+@@ -2321,6 +2327,13 @@ class PreTrainedModel(nn.Module, ModuleUtilsMixin, GenerationMixin, PushToHubMix
+             if dtype_orig is not None:
+                 torch.set_default_dtype(dtype_orig)
+ 
++            if nncf_config is not None and nncf_eval:
++                nncf_network = create_nncf_network(model, nncf_config)
++                algo_name = nncf_config.get('bootstrapNAS', {}).get('training', {}).get('algorithm', 'progressive_shrinking')
++                compression_ctrl, model = create_compressed_model_from_algo_names(nncf_network, nncf_config,
++                                                                                  algo_names=[algo_name])
++                return compression_ctrl, model
++
+             model, missing_keys, unexpected_keys, mismatched_keys, error_msgs = cls._load_pretrained_model(
+                 model,
+                 state_dict,
+@@ -2344,6 +2357,13 @@ class PreTrainedModel(nn.Module, ModuleUtilsMixin, GenerationMixin, PushToHubMix
+         # Set model in evaluation mode to deactivate DropOut modules by default
+         model.eval()
+ 
++        if nncf_config is not None:
++            nncf_network = create_nncf_network(model, nncf_config)
++            algo_name = nncf_config.get('bootstrapNAS', {}).get('training', {}).get('algorithm', 'progressive_shrinking')
++            compression_ctrl, model = create_compressed_model_from_algo_names(nncf_network, nncf_config,
++                                                                              algo_names=[algo_name])
++            return compression_ctrl, model
++
+         # Dispatch model with hooks on all devices if necessary
+         if device_map is not None:
+             dispatch_model(model, device_map=device_map, offload_dir=offload_folder)
+diff --git a/src/transformers/models/bert/modeling_bert.py b/src/transformers/models/bert/modeling_bert.py
+index 11664f66c..ee37ddd2d 100755
+--- a/src/transformers/models/bert/modeling_bert.py
++++ b/src/transformers/models/bert/modeling_bert.py
+@@ -268,7 +268,7 @@ class BertSelfAttention(nn.Module):
+         self.is_decoder = config.is_decoder
+ 
+     def transpose_for_scores(self, x: torch.Tensor) -> torch.Tensor:
+-        new_x_shape = x.size()[:-1] + (self.num_attention_heads, self.attention_head_size)
++        new_x_shape = x.size()[:-1] + (self.num_attention_heads, -1)
+         x = x.view(new_x_shape)
+         return x.permute(0, 2, 1, 3)
+ 
+@@ -357,7 +357,7 @@ class BertSelfAttention(nn.Module):
+         context_layer = torch.matmul(attention_probs, value_layer)
+ 
+         context_layer = context_layer.permute(0, 2, 1, 3).contiguous()
+-        new_context_layer_shape = context_layer.size()[:-2] + (self.all_head_size,)
++        new_context_layer_shape = context_layer.size()[:-2] + (-1,)
+         context_layer = context_layer.view(new_context_layer_shape)
+ 
+         outputs = (context_layer, attention_probs) if output_attentions else (context_layer,)
+diff --git a/src/transformers/pytorch_utils.py b/src/transformers/pytorch_utils.py
+index d94e049b5..0a5741dbd 100644
+--- a/src/transformers/pytorch_utils.py
++++ b/src/transformers/pytorch_utils.py
+@@ -88,6 +88,8 @@ def prune_linear_layer(layer: nn.Linear, index: torch.LongTensor, dim: int = 0)
+     return new_layer
+ 
+ 
++import nncf
++@nncf.torch.register_module()
+ class Conv1D(nn.Module):
+     """
+     1D-convolutional layer as defined by Radford et al. for OpenAI GPT (and also used in GPT-2).
+diff --git a/src/transformers/trainer.py b/src/transformers/trainer.py
+index 214e7a978..75c139923 100755
+--- a/src/transformers/trainer.py
++++ b/src/transformers/trainer.py
+@@ -29,11 +29,12 @@ import sys
+ import time
+ import warnings
+ from collections.abc import Mapping
++from functools import partial
+ from pathlib import Path
+ from typing import TYPE_CHECKING, Any, Callable, Dict, List, Optional, Tuple, Union
+ 
+ from tqdm.auto import tqdm
+-
++from nncf.torch.nncf_network import NNCFNetwork
+ 
+ # Integrations must be imported before ML frameworks:
+ from .integrations import (  # isort: split
+@@ -55,6 +56,8 @@ import numpy as np
+ import torch
+ import torch.distributed as dist
+ from packaging import version
++from nncf.api.compression import CompressionStage
++from nncf.experimental.torch.nas.bootstrapNAS.training.progressive_shrinking_controller import ProgressiveShrinkingController
+ from torch import nn
+ from torch.utils.data import DataLoader, Dataset, RandomSampler, SequentialSampler
+ from torch.utils.data.distributed import DistributedSampler
+@@ -132,6 +135,7 @@ from .trainer_utils import (
+ from .training_args import OptimizerNames, ParallelMode, TrainingArguments
+ from .utils import (
+     CONFIG_NAME,
++    NNCF_CONFIG_NAME,
+     WEIGHTS_INDEX_NAME,
+     WEIGHTS_NAME,
+     find_labels,
+@@ -199,6 +203,7 @@ logger = logging.get_logger(__name__)
+ 
+ 
+ # Name of the files used for checkpointing
++ELASTICITY_STATE = "elasticity_state.pt"
+ TRAINING_ARGS_NAME = "training_args.bin"
+ TRAINER_STATE_NAME = "trainer_state.json"
+ OPTIMIZER_NAME = "optimizer.pt"
+@@ -304,12 +309,15 @@ class Trainer:
+         callbacks: Optional[List[TrainerCallback]] = None,
+         optimizers: Tuple[torch.optim.Optimizer, torch.optim.lr_scheduler.LambdaLR] = (None, None),
+         preprocess_logits_for_metrics: Callable[[torch.Tensor, torch.Tensor], torch.Tensor] = None,
++        compression_ctrl: ProgressiveShrinkingController = None
+     ):
+         if args is None:
+             output_dir = "tmp_trainer"
+             logger.info(f"No `TrainingArguments` passed, using `output_dir={output_dir}`.")
+             args = TrainingArguments(output_dir=output_dir)
+         self.args = args
++
++        self.compression_ctrl = compression_ctrl
+         # Seed must be set before instantiating the model when using model
+         enable_full_determinism(self.args.seed) if self.args.full_determinism else set_seed(self.args.seed)
+         self.hp_name = None
+@@ -623,7 +631,10 @@ class Trainer:
+         self.current_flos = 0
+         self.hp_search_backend = None
+         self.use_tune_checkpoints = False
+-        default_label_names = find_labels(self.model.__class__)
++        model_class = self.model.__class__
++        if isinstance(self.model, NNCFNetwork):
++            model_class = self.model.get_nncf_wrapped_model().__class__
++        default_label_names = find_labels(model_class)
+         self.label_names = default_label_names if self.args.label_names is None else self.args.label_names
+         self.control = self.callback_handler.on_init_end(self.args, self.state, self.control)
+ 
+@@ -708,7 +719,10 @@ class Trainer:
+     def _set_signature_columns_if_needed(self):
+         if self._signature_columns is None:
+             # Inspect model forward signature to keep only the arguments it accepts.
+-            signature = inspect.signature(self.model.forward)
++            if isinstance(self.model, NNCFNetwork):
++                signature = inspect.signature(self.model.get_nncf_wrapped_model().forward)
++            else:
++                signature = inspect.signature(self.model.forward)
+             self._signature_columns = list(signature.parameters.keys())
+             # Labels may be named label or label_ids, the default data collator handles that.
+             self._signature_columns += list(set(["label", "label_ids"] + self.label_names))
+@@ -1146,6 +1160,25 @@ class Trainer:
+             )
+         return self.lr_scheduler
+ 
++    def update_lr_scheduler_func(self):
++        global state_dict, load_state_dict
++
++        def state_dict(scheduler) -> Dict[str, Any]:
++            """
++            Returns the state of the scheduler as a :class:`dict`.
++            """
++            return {key: value for key, value in scheduler.__dict__.items() if key != '_optimizer'}
++
++        def load_state_dict(scheduler, state_dict: Dict[str, Any]):
++            """
++            Loads the schedulers state.
++            :param state_dict (dict): scheduler state.
++            """
++            scheduler.__dict__.update(state_dict)
++
++        self.lr_scheduler.state_dict = partial(state_dict, self.lr_scheduler)
++        self.lr_scheduler.load_state_dict = partial(load_state_dict, self.lr_scheduler)
++
+     def num_examples(self, dataloader: DataLoader) -> int:
+         """
+         Helper to get number of samples in a [`~torch.utils.data.DataLoader`] by accessing its dataset. When
+@@ -1231,6 +1264,9 @@ class Trainer:
+                 self.state.save_to_json(os.path.join(output_dir, TRAINER_STATE_NAME))
+                 torch.save(self.optimizer.state_dict(), os.path.join(output_dir, OPTIMIZER_NAME))
+                 torch.save(self.lr_scheduler.state_dict(), os.path.join(output_dir, SCHEDULER_NAME))
++                if self.compression_ctrl is not None:
++                    elasticity_state = self.compression_ctrl.elasticity_controller.get_compression_state()
++                    torch.save(elasticity_state, os.path.join(output_dir, ELASTICITY_STATE))
+ 
+     def call_model_init(self, trial=None):
+         model_init_argcount = number_of_arguments(self.model_init)
+@@ -1409,6 +1445,8 @@ class Trainer:
+ 
+             if self.args.ddp_bucket_cap_mb is not None:
+                 kwargs["bucket_cap_mb"] = self.args.ddp_bucket_cap_mb
++            if self.compression_ctrl is not None:
++                self.compression_ctrl.distributed()
+             model = nn.parallel.DistributedDataParallel(
+                 model,
+                 device_ids=[self.args.local_rank] if self.args._n_gpu != 0 else None,
+@@ -1518,7 +1556,28 @@ class Trainer:
+         total_train_batch_size = args.train_batch_size * args.gradient_accumulation_steps * args.world_size
+ 
+         len_dataloader = None
+-        if has_length(train_dataloader):
++        if self.compression_ctrl is not None:
++            #save nncf_config
++            nncf_config_save_path = os.path.join(args.output_dir, NNCF_CONFIG_NAME)
++            shutil.copyfile(args.nncf_config, nncf_config_save_path)
++
++            self.best_compression_stage = CompressionStage.UNCOMPRESSED
++
++            assert has_length(train_dataloader), "dataset has no __len__"
++            len_dataloader = len(train_dataloader)
++            num_update_steps_per_epoch = len_dataloader // args.gradient_accumulation_steps
++            num_update_steps_per_epoch = max(num_update_steps_per_epoch, 1)
++            num_examples = self.num_examples(train_dataloader)
++            self.create_optimizer()
++            #use our own lr scheduler
++            self.compression_ctrl.set_training_lr_scheduler_args(self.optimizer, num_update_steps_per_epoch)
++            self.lr_scheduler = self.compression_ctrl.scheduler.lr_scheduler
++            self.update_lr_scheduler_func()
++
++            num_train_epochs = self.compression_ctrl.get_total_num_epochs()
++            max_steps = math.ceil(num_train_epochs * num_update_steps_per_epoch)
++            num_train_samples = self.num_examples(train_dataloader) * num_train_epochs
++        elif has_length(train_dataloader):
+             len_dataloader = len(train_dataloader)
+             num_update_steps_per_epoch = len_dataloader // args.gradient_accumulation_steps
+             num_update_steps_per_epoch = max(num_update_steps_per_epoch, 1)
+@@ -1687,6 +1746,21 @@ class Trainer:
+                     _ = list(train_dataloader.sampler)
+ 
+         for epoch in range(epochs_trained, num_train_epochs):
++            if self.compression_ctrl is not None:
++                self.compression_ctrl.scheduler.epoch_step()
++                self.compression_stage = self.compression_ctrl.compression_stage()
++
++                def get_search_space(compression_ctrl):
++                    m_handler = compression_ctrl.multi_elasticity_handler
++                    active_handlers = {
++                        dim: m_handler._handlers[dim] for dim in m_handler._handlers if m_handler._is_handler_enabled_map[dim]
++                    }
++                    space = {}
++                    for handler_id, handler in active_handlers.items():
++                        space[handler_id.value] = handler.get_search_space()
++                    return space
++
++                logger.info(get_search_space(self.compression_ctrl))
+             if isinstance(train_dataloader, DataLoader) and isinstance(train_dataloader.sampler, DistributedSampler):
+                 train_dataloader.sampler.set_epoch(epoch)
+             elif hasattr(train_dataloader, "dataset") and isinstance(train_dataloader.dataset, IterableDatasetShard):
+@@ -1790,6 +1864,8 @@ class Trainer:
+                             )
+ 
+                     # Optimizer step
++                    if self.compression_ctrl is not None:
++                        self.compression_ctrl.step()
+                     optimizer_was_run = True
+                     if self.deepspeed:
+                         pass  # called outside the loop
+@@ -1811,7 +1887,7 @@ class Trainer:
+                     if optimizer_was_run and not self.deepspeed:
+                         self.lr_scheduler.step()
+ 
+-                    model.zero_grad()
++                    model.zero_grad(set_to_none=True)
+                     self.state.global_step += 1
+                     self.state.epoch = epoch + (step + 1) / steps_in_epoch
+                     self.control = self.callback_handler.on_step_end(args, self.state, self.control)
+@@ -1832,6 +1908,8 @@ class Trainer:
+ 
+             self.control = self.callback_handler.on_epoch_end(args, self.state, self.control)
+             self._maybe_log_save_evaluate(tr_loss, model, trial, epoch, ignore_keys_for_eval)
++            if self.compression_ctrl is not None:
++                self.best_compression_stage = max(self.compression_stage, self.best_compression_stage)
+ 
+             if DebugOption.TPU_METRICS_DEBUG in self.args.debug:
+                 if is_torch_tpu_available():
+@@ -1878,6 +1956,9 @@ class Trainer:
+ 
+         self.control = self.callback_handler.on_train_end(args, self.state, self.control)
+ 
++        if self.compression_ctrl is not None:
++            return TrainOutput(self.state.global_step, train_loss, metrics), model, self.compression_ctrl.elasticity_controller
++
+         return TrainOutput(self.state.global_step, train_loss, metrics)
+ 
+     def _load_from_checkpoint(self, resume_from_checkpoint, model=None):
+@@ -2040,20 +2121,36 @@ class Trainer:
+             self.log(logs)
+ 
+         metrics = None
++        metrics_minsubnet = None
++        metrics_supernet = None
+         if self.control.should_evaluate:
+-            if isinstance(self.eval_dataset, dict):
+-                for eval_dataset_name, eval_dataset in self.eval_dataset.items():
+-                    metrics = self.evaluate(
+-                        eval_dataset=eval_dataset,
+-                        ignore_keys=ignore_keys_for_eval,
+-                        metric_key_prefix=f"eval_{eval_dataset_name}",
+-                    )
++            if self.compression_ctrl is not None:
++                self.compression_ctrl.multi_elasticity_handler.activate_minimum_subnet()
++                active_subnet = self.compression_ctrl.multi_elasticity_handler.get_active_config()
++                logger.info(f'Minimum SubNet={active_subnet}')
++                metrics_minsubnet = self.evaluate(ignore_keys=ignore_keys_for_eval, active_subnet={'Minimum SubNet': str(active_subnet)})
++                self._report_to_hp_search(trial, epoch, metrics_minsubnet)
++
++                self.compression_ctrl.multi_elasticity_handler.activate_supernet()
++                active_subnet = self.compression_ctrl.multi_elasticity_handler.get_active_config()
++                logger.info(f'SuperNet={active_subnet}')
++                metrics_supernet = self.evaluate(ignore_keys=ignore_keys_for_eval, active_subnet={'SuperNet': str(active_subnet)})
++                self._report_to_hp_search(trial, epoch, metrics_supernet)
+             else:
+-                metrics = self.evaluate(ignore_keys=ignore_keys_for_eval)
+-            self._report_to_hp_search(trial, self.state.global_step, metrics)
++                if isinstance(self.eval_dataset, dict):
++                    for eval_dataset_name, eval_dataset in self.eval_dataset.items():
++                        metrics = self.evaluate(
++                            eval_dataset=eval_dataset,
++                            ignore_keys=ignore_keys_for_eval,
++                            metric_key_prefix=f"eval_{eval_dataset_name}",
++                        )
++                else:
++                    metrics = self.evaluate(ignore_keys=ignore_keys_for_eval)
++                self._report_to_hp_search(trial, self.state.global_step, metrics)
+ 
+         if self.control.should_save:
+-            self._save_checkpoint(model, trial, metrics=metrics)
++            self._save_checkpoint(model, trial, metrics=metrics, metrics_minsubnet=metrics_minsubnet,
++                                  metrics_supernet=metrics_supernet)
+             self.control = self.callback_handler.on_save(self.args, self.state, self.control)
+ 
+     def _load_rng_state(self, checkpoint):
+@@ -2097,7 +2194,13 @@ class Trainer:
+         if is_torch_tpu_available():
+             xm.set_rng_state(checkpoint_rng_state["xla"])
+ 
+-    def _save_checkpoint(self, model, trial, metrics=None):
++    def is_bootstrapNAS_best_accuracy(self, metric_value, best_metric_value, operator,
++                                         compression_stage, best_compression_stage):
++        is_best_by_accuracy = operator(metric_value, best_metric_value) and compression_stage == best_compression_stage
++        is_best = is_best_by_accuracy or compression_stage > best_compression_stage
++        return is_best
++
++    def _save_checkpoint(self, model, trial, metrics=None,  metrics_minsubnet=None, metrics_supernet=None):
+         # In all cases, including ddp/dp/deepspeed, self.model is always a reference to the model we
+         # want to save except FullyShardedDDP.
+         # assert unwrap_model(model) is self.model, "internal model should be a reference to self.model"
+@@ -2182,9 +2285,42 @@ class Trainer:
+                 self.state.best_metric = metric_value
+                 self.state.best_model_checkpoint = output_dir
+ 
++        #BootstrapNAS state
++        if (
++            self.compression_ctrl is not None and self.args.metric_for_best_model is not None
++            and metrics_supernet is not None and metrics_minsubnet is not None
++        ):
++            metric_to_check = self.args.metric_for_best_model
++            if not metric_to_check.startswith("eval_"):
++                metric_to_check = f"eval_{metric_to_check}"
++            metric_supernet_value = metrics_supernet[metric_to_check]
++            metrics_minsubnet_value = metrics_minsubnet[metric_to_check]
++
++            self.state.supernet_acc = metric_supernet_value
++            self.state.min_subnet_acc = metrics_minsubnet_value
++
++            operator = np.greater if self.args.greater_is_better else np.less
++            if(
++                self.state.supernet_best_acc is None
++                or self.state.best_supernet_model_checkpoint is None
++                or self.is_bootstrapNAS_best_accuracy(metric_supernet_value, self.state.supernet_best_acc, operator,
++                                                          self.compression_stage, self.best_compression_stage)
++            ):
++                self.state.supernet_best_acc = metric_supernet_value
++                self.state.best_supernet_model_checkpoint = output_dir
++            if(
++                self.state.min_subnet_best_acc is None
++                or self.is_bootstrapNAS_best_accuracy(metrics_minsubnet_value, self.state.min_subnet_best_acc, operator,
++                                                          self.compression_stage, self.best_compression_stage)
++            ):
++                self.state.min_subnet_best_acc = metrics_minsubnet_value
++
+         # Save the Trainer state
+         if self.args.should_save:
+             self.state.save_to_json(os.path.join(output_dir, TRAINER_STATE_NAME))
++            if self.compression_ctrl is not None:
++                elasticity_state = self.compression_ctrl.elasticity_controller.get_compression_state()
++                torch.save(elasticity_state, os.path.join(output_dir, ELASTICITY_STATE))
+ 
+         # Save RNG state in non-distributed training
+         rng_states = {
+@@ -2657,10 +2793,15 @@ class Trainer:
+         # Save a trained model and configuration using `save_pretrained()`.
+         # They can then be reloaded using `from_pretrained()`
+         if not isinstance(self.model, PreTrainedModel):
+-            if isinstance(unwrap_model(self.model), PreTrainedModel):
++            unwrapped_model = unwrap_model(self.model)
++            if isinstance(unwrapped_model, NNCFNetwork):
++                is_pretrained = isinstance(unwrapped_model.get_nncf_wrapped_model(), PreTrainedModel)
++            else:
++                is_pretrained = isinstance(unwrapped_model, PreTrainedModel)
++            if is_pretrained:
+                 if state_dict is None:
+-                    state_dict = self.model.state_dict()
+-                unwrap_model(self.model).save_pretrained(output_dir, state_dict=state_dict)
++                    state_dict = unwrapped_model.state_dict()
++                unwrapped_model.save_pretrained(output_dir, state_dict=state_dict)
+             else:
+                 logger.info("Trainer.model is not a `PreTrainedModel`, only saving its state dict.")
+                 if state_dict is None:
+@@ -2671,6 +2812,10 @@ class Trainer:
+         if self.tokenizer is not None:
+             self.tokenizer.save_pretrained(output_dir)
+ 
++        if self.compression_ctrl is not None:
++            elasticity_state = self.compression_ctrl.elasticity_controller.get_compression_state()
++            torch.save(elasticity_state, os.path.join(output_dir, ELASTICITY_STATE))
++
+         # Good practice: save your training arguments together with the trained model
+         torch.save(self.args, os.path.join(output_dir, TRAINING_ARGS_NAME))
+ 
+@@ -2739,6 +2884,7 @@ class Trainer:
+         eval_dataset: Optional[Dataset] = None,
+         ignore_keys: Optional[List[str]] = None,
+         metric_key_prefix: str = "eval",
++        active_subnet: Dict[str, str] = None
+     ) -> Dict[str, float]:
+         """
+         Run evaluation and returns metrics.
+@@ -2781,6 +2927,9 @@ class Trainer:
+             metric_key_prefix=metric_key_prefix,
+         )
+ 
++        if active_subnet is not None:
++            output.metrics.update(active_subnet)
++
+         total_batch_size = self.args.eval_batch_size * self.args.world_size
+         output.metrics.update(
+             speed_metrics(
+diff --git a/src/transformers/trainer_callback.py b/src/transformers/trainer_callback.py
+index 8749e5f3f..7fc5471d4 100644
+--- a/src/transformers/trainer_callback.py
++++ b/src/transformers/trainer_callback.py
+@@ -88,6 +88,12 @@ class TrainerState:
+     trial_name: str = None
+     trial_params: Dict[str, Union[str, float, int, bool]] = None
+ 
++    #BootstrapNAS
++    supernet_best_acc: float = None
++    supernet_acc: float = None
++    min_subnet_best_acc: float = None
++    min_subnet_acc: float = None
++
+     def __post_init__(self):
+         if self.log_history is None:
+             self.log_history = []
+diff --git a/src/transformers/training_args.py b/src/transformers/training_args.py
+index 170315fe2..25eb83d3d 100644
+--- a/src/transformers/training_args.py
++++ b/src/transformers/training_args.py
+@@ -137,6 +137,8 @@ class TrainingArguments:
+             Whether to run training or not. This argument is not directly used by [`Trainer`], it's intended to be used
+             by your training/evaluation scripts instead. See the [example
+             scripts](https://github.com/huggingface/transformers/tree/main/examples) for more details.
++        do_search (:obj:`bool`, `optional`, defaults to :obj:`False`):
++            Whether to run BootstrapNAS searching or not.
+         do_eval (`bool`, *optional*):
+             Whether to run evaluation on the validation set or not. Will be set to `True` if `evaluation_strategy` is
+             different from `"no"`. This argument is not directly used by [`Trainer`], it's intended to be used by your
+@@ -514,6 +516,7 @@ class TrainingArguments:
+     )
+ 
+     do_train: bool = field(default=False, metadata={"help": "Whether to run training."})
++    do_search: bool = field(default=False, metadata={"help": "Whether to run BootstrapNAS search."})
+     do_eval: bool = field(default=False, metadata={"help": "Whether to run eval on the dev set."})
+     do_predict: bool = field(default=False, metadata={"help": "Whether to run predictions on the test set."})
+     evaluation_strategy: Union[IntervalStrategy, str] = field(
+@@ -993,6 +996,12 @@ class TrainingArguments:
+         },
+     )
+ 
++    nncf_config: str = field(default=None,
++                             metadata={"help": "NNCF configuration .json file for compression-enabled training"})
++
++    to_onnx: str = field(default=None,
++                         metadata={"help": "Name of the ONNX model file to export the model to."})
++
+     def __post_init__(self):
+         # Handle --use_env option in torch.distributed.launch (local_rank not passed as an arg then).
+         # This needs to happen before any call to self.device or self.n_gpu.
+@@ -1452,7 +1461,9 @@ class TrainingArguments:
+                 device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+                 # Sometimes the line in the postinit has not been run before we end up here, so just checking we're not at
+                 # the default value.
+-                self._n_gpu = torch.cuda.device_count()
++                self._n_gpu = torch.cuda.device_count() if self.nncf_config is None else 1
++                if self.nncf_config is not None and torch.cuda.device_count() > 1:
++                    logger.warning("Currently BootstrapNAS only supports 1 GPU/distributed training")
+         else:
+             # Here, we'll use torch.distributed.
+             # Initializes the distributed backend which will take care of synchronizing nodes/GPUs
+diff --git a/src/transformers/utils/__init__.py b/src/transformers/utils/__init__.py
+index 2269f2254..2e5b3fa1c 100644
+--- a/src/transformers/utils/__init__.py
++++ b/src/transformers/utils/__init__.py
+@@ -163,6 +163,7 @@ FLAX_WEIGHTS_INDEX_NAME = "flax_model.msgpack.index.json"
+ SAFE_WEIGHTS_NAME = "model.safetensors"
+ SAFE_WEIGHTS_INDEX_NAME = "model.safetensors.index.json"
+ CONFIG_NAME = "config.json"
++NNCF_CONFIG_NAME = "nncf_config.json"
+ FEATURE_EXTRACTOR_NAME = "preprocessor_config.json"
+ MODEL_CARD_NAME = "modelcard.json"
+ 
+-- 
+2.17.1
+
