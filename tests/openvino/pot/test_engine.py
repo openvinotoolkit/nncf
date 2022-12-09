@@ -16,7 +16,6 @@ from typing import Iterable
 from typing import Any
 from typing import List
 
-import pytest
 import numpy as np
 import openvino.runtime as ov
 from openvino.tools import pot
