@@ -254,10 +254,15 @@ def output(pytestconfig):
 @pytest.fixture(scope="session")
 def subset(pytestconfig):
     return pytestconfig.getoption("subset")
-
+ 
 
 @pytest.fixture(scope="session")
-def result(pytestconfig):        val_dataloader = get_torch_dataloader(data, transform, batch_size=128)
+def result(pytestconfig):
+    return pytestconfig.test_results
+
+
+@pytest.mark.parametrize("model_args", get_validation_scope())
+def test_ptq_timm(data, output, subset, result, model_args): # pylint: disable=W0703
     ILSVRC_VALIDATION_SUBSET_SIZE = subset
     torch.multiprocessing.set_sharing_strategy(
         "file_system"
