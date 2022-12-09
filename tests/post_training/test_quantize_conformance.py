@@ -24,6 +24,7 @@ from model_scope import get_validation_scope
 
 NOT_AVAILABLE_MESSAGE = "N/A"
 DEFAULT_VAL_THREADS = 4
+ILSVRC_VALIDATION_SUBSET_SIZE = 50000
 
 
 def create_timm_model(name):
@@ -55,7 +56,6 @@ def get_model_transform(model):
             normalize,
         ]
     )
-
     return transform
 
 
@@ -138,6 +138,8 @@ def validate_accuracy(model_path, val_loader):
 
     for i, (images, target) in enumerate(val_loader):
         # W/A for memory leaks when using torch DataLoader and OpenVINO
+        if i >= ILSVRC_VALIDATION_SUBSET_SIZE:
+            break
         image_copies = copy.deepcopy(images.numpy())
         infer_queue.start_async(image_copies, userdata=i)
         references[i] = target
@@ -208,12 +210,18 @@ def output(pytestconfig):
 
 
 @pytest.fixture(scope="session")
+def subset(pytestconfig):
+    return pytestconfig.getoption("subset")
+
+
+@pytest.fixture(scope="session")
 def result(pytestconfig):
-    return pytestconfig.test_results
+    return pytestconfig.test_results 
 
 
 @pytest.mark.parametrize("model_args", get_validation_scope())
-def test_ptq_timm(data, output, result, model_args): # pylint: disable=W0703
+def test_ptq_timm(data, output, subset, result, model_args): # pylint: disable=W0703
+    ILSVRC_VALIDATION_SUBSET_SIZE = subset
     torch.multiprocessing.set_sharing_strategy(
         "file_system"
     )  # W/A to avoid RuntimeError

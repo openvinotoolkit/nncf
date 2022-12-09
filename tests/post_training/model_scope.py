@@ -8,7 +8,7 @@ def get_validation_scope() -> List[dict]:
     # Basic
     #model_scope.append({"name": "vgg11", "quantization_params": {}})
     model_scope.append({"name": "resnet18", "quantization_params": {}})
-    model_scope.append({"name": "mobilenetv2_050", "quantization_params": {"preset":QuantizationPreset.MIXED}})
+    # model_scope.append({"name": "mobilenetv2_050", "quantization_params": {"preset":QuantizationPreset.MIXED}})
     # model_scope.append({"name": "repvgg_a2", "quantization_params": {}})
     # model_scope.append({"name": "densenet121", "quantization_params": {}})
     # model_scope.append({"name": "tf_inception_v3", "quantization_params": {"preset":QuantizationPreset.MIXED}})

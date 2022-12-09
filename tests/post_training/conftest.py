@@ -5,6 +5,7 @@ from pathlib import Path
 def pytest_addoption(parser):
     parser.addoption("--data", action="store")
     parser.addoption("--output", action="store", default="./tmp/")
+    parser.addoption("--subset", action="store", default=5000)
 
 def pytest_configure(config):
     config.test_results = []
