@@ -10,7 +10,7 @@
  See the License for the specific language governing permissions and
  limitations under the License.
 """
-from typing import List, Optional, Tuple
+from typing import List, Optional, Tuple, Set
 
 from copy import deepcopy
 from collections import Counter
@@ -97,7 +97,7 @@ class ONNXModelTransformer(ModelTransformer):
     def _get_extra_model_outputs(self,
                                  nncf_graph: NNCFGraph,
                                  onnx_graph: ONNXGraph,
-                                 transformations: List[ONNXOutputInsertionCommand]) -> None:
+                                 transformations: List[ONNXOutputInsertionCommand]) -> Set[str]:
         """
         Collects extra model outputs based on transformations
 
@@ -302,8 +302,13 @@ class ONNXModelTransformer(ModelTransformer):
                     if inp == target_edge_name:
                         node.input[i] = dequantizer.output[0]
 
-        self._model.graph.initializer.extend([onnx_scale_tensor])
-        self._model.graph.initializer.extend([onnx_zero_point_tensor])
+        onnx_scale_value_info = onnx.helper.make_tensor_value_info(onnx_scale_tensor.name, onnx_scale_tensor.data_type,
+                                                                   onnx_scale_tensor.dims)
+        onnx_zero_point_info = onnx.helper.make_tensor_value_info(onnx_zero_point_tensor.name,
+                                                                  onnx_zero_point_tensor.data_type,
+                                                                  onnx_zero_point_tensor.dims)
+        self._model.graph.initializer.extend([onnx_scale_tensor, onnx_zero_point_tensor])
+        self._model.graph.input.extend([onnx_scale_value_info, onnx_zero_point_info])
         insert_index = onnx_graph.get_node_index(input_nodes[0].name)
         self._model.graph.node.insert(insert_index, quantizer)
         self._model.graph.node.insert(insert_index + 1, dequantizer)

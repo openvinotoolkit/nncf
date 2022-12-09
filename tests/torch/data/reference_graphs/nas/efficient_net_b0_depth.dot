@@ -331,6 +331,7 @@ strict digraph  {
 "80 EfficientNet/ModuleList[_blocks]/MBConvBlock[5]/NNCFUserConv2dStaticSamePadding[_depthwise_conv]/conv2d_0" -> "81 EfficientNet/ModuleList[_blocks]/MBConvBlock[5]/NNCFUserConv2dStaticSamePadding[_project_conv]/conv2d_0"  [label="(1, 240, 15, 15)", style=solid];
 "81 EfficientNet/ModuleList[_blocks]/MBConvBlock[5]/NNCFUserConv2dStaticSamePadding[_project_conv]/conv2d_0" -> "82 EfficientNet/ModuleList[_blocks]/MBConvBlock[5]/NNCFBatchNorm2d[_bn2]/batch_norm_0"  [label="(1, 80, 15, 15)", style=solid];
 "82 EfficientNet/ModuleList[_blocks]/MBConvBlock[5]/NNCFBatchNorm2d[_bn2]/batch_norm_0" -> "83 EfficientNet/ModuleList[_blocks]/MBConvBlock[6]/NNCFUserConv2dStaticSamePadding[_expand_conv]/conv2d_0"  [label="(1, 80, 15, 15)", style=solid];
+"82 EfficientNet/ModuleList[_blocks]/MBConvBlock[5]/NNCFBatchNorm2d[_bn2]/batch_norm_0" -> "102 EfficientNet/ModuleList[_blocks]/MBConvBlock[6]/__add___0"  [label="(1, 80, 15, 15)", style=solid];
 "83 EfficientNet/ModuleList[_blocks]/MBConvBlock[6]/NNCFUserConv2dStaticSamePadding[_expand_conv]/conv2d_0" -> "84 EfficientNet/ModuleList[_blocks]/MBConvBlock[6]/NNCFBatchNorm2d[_bn0]/batch_norm_0"  [label="(1, 480, 15, 15)", style=solid];
 "84 EfficientNet/ModuleList[_blocks]/MBConvBlock[6]/NNCFBatchNorm2d[_bn0]/batch_norm_0" -> "85 EfficientNet/ModuleList[_blocks]/MBConvBlock[6]/MemoryEfficientSwish[_swish]/sigmoid_0"  [label="(1, 480, 15, 15)", style=solid];
 "84 EfficientNet/ModuleList[_blocks]/MBConvBlock[6]/NNCFBatchNorm2d[_bn0]/batch_norm_0" -> "86 EfficientNet/ModuleList[_blocks]/MBConvBlock[6]/MemoryEfficientSwish[_swish]/__mul___0"  [label="(1, 480, 15, 15)", style=solid];
@@ -351,7 +352,6 @@ strict digraph  {
 "96 EfficientNet/ModuleList[_blocks]/MBConvBlock[6]/MemoryEfficientSwish[_swish]/__mul___2" -> "97 EfficientNet/ModuleList[_blocks]/MBConvBlock[6]/NNCFUserConv2dStaticSamePadding[_se_expand]/conv2d_0"  [label="(1, 20, 1, 1)", style=solid];
 "97 EfficientNet/ModuleList[_blocks]/MBConvBlock[6]/NNCFUserConv2dStaticSamePadding[_se_expand]/conv2d_0" -> "98 EfficientNet/ModuleList[_blocks]/MBConvBlock[6]/sigmoid_0"  [label="(1, 480, 1, 1)", style=solid];
 "98 EfficientNet/ModuleList[_blocks]/MBConvBlock[6]/sigmoid_0" -> "99 EfficientNet/ModuleList[_blocks]/MBConvBlock[6]/__mul___0"  [label="(1, 480, 1, 1)", style=solid];
-"82 EfficientNet/ModuleList[_blocks]/MBConvBlock[5]/NNCFBatchNorm2d[_bn2]/batch_norm_0" -> "102 EfficientNet/ModuleList[_blocks]/MBConvBlock[6]/__add___0"  [label="(1, 80, 15, 15)", style=solid];
 "99 EfficientNet/ModuleList[_blocks]/MBConvBlock[6]/__mul___0" -> "100 EfficientNet/ModuleList[_blocks]/MBConvBlock[6]/NNCFUserConv2dStaticSamePadding[_project_conv]/conv2d_0"  [label="(1, 480, 15, 15)", style=solid];
 "100 EfficientNet/ModuleList[_blocks]/MBConvBlock[6]/NNCFUserConv2dStaticSamePadding[_project_conv]/conv2d_0" -> "101 EfficientNet/ModuleList[_blocks]/MBConvBlock[6]/NNCFBatchNorm2d[_bn2]/batch_norm_0"  [label="(1, 80, 15, 15)", style=solid];
 "101 EfficientNet/ModuleList[_blocks]/MBConvBlock[6]/NNCFBatchNorm2d[_bn2]/batch_norm_0" -> "102 EfficientNet/ModuleList[_blocks]/MBConvBlock[6]/__add___0"  [label="(1, 80, 15, 15)", style=solid];

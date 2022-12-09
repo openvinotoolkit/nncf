@@ -11,6 +11,7 @@
  limitations under the License.
 """
 import os
+import sys
 from unittest.mock import MagicMock
 
 from nncf import __version__
@@ -32,5 +33,9 @@ except ImportError:
     nncf_logger.debug("openvino_telemetry package not found. No telemetry will be sent.")
     NNCFTelemetry = None
 
-if os.getenv(NNCF_CI_ENV_VAR_NAME) or os.getenv(NNCF_DEV_ENV_VAR_NAME) or NNCFTelemetry is None:
+# Currently the easiest way to disable telemetry in tests. Will break telemetry if pytest is used in NNCF package code.
+_IS_IN_PYTEST_CONTEXT = "pytest" in sys.modules
+
+if os.getenv(NNCF_CI_ENV_VAR_NAME) or os.getenv(NNCF_DEV_ENV_VAR_NAME) \
+        or _IS_IN_PYTEST_CONTEXT or NNCFTelemetry is None:
     NNCFTelemetry = NNCFTelemetryStub()

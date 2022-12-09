@@ -20,10 +20,10 @@ strict digraph  {
 "3 ConvGeluGetItem/NNCFLinear[fc1]/linear_0" -> "4 ConvGeluGetItem/NNCFLinear[fc1]/SymmetricQuantizer/symmetric_quantize_0";
 "4 ConvGeluGetItem/NNCFLinear[fc1]/SymmetricQuantizer/symmetric_quantize_0" -> "5 ConvGeluGetItem/Dropout[dp]/dropout_0";
 "5 ConvGeluGetItem/Dropout[dp]/dropout_0" -> "6 ConvGeluGetItem/transpose_0";
+"5 ConvGeluGetItem/Dropout[dp]/dropout_0" -> "13 ConvGeluGetItem/__add___0";
 "6 ConvGeluGetItem/transpose_0" -> "8 ConvGeluGetItem/NNCFConv1d[conv1]/conv1d_0";
 "7 ConvGeluGetItem/NNCFConv1d[conv1]/ModuleDict[pre_ops]/UpdateWeight[0]/SymmetricQuantizer[op]/symmetric_quantize_0" -> "8 ConvGeluGetItem/NNCFConv1d[conv1]/conv1d_0";
 "8 ConvGeluGetItem/NNCFConv1d[conv1]/conv1d_0" -> "9 ConvGeluGetItem/__getitem___0";
-"5 ConvGeluGetItem/Dropout[dp]/dropout_0" -> "13 ConvGeluGetItem/__add___0";
 "9 ConvGeluGetItem/__getitem___0" -> "10 ConvGeluGetItem/gelu_0";
 "10 ConvGeluGetItem/gelu_0" -> "11 ConvGeluGetItem/SymmetricQuantizer/symmetric_quantize_0";
 "11 ConvGeluGetItem/SymmetricQuantizer/symmetric_quantize_0" -> "12 ConvGeluGetItem/transpose_1";

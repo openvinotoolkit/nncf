@@ -12,6 +12,7 @@
 """
 import os
 import importlib
+import sys
 from unittest import mock
 from unittest.mock import call
 from unittest.mock import MagicMock
@@ -26,11 +27,32 @@ from nncf.telemetry import tracked_function
 from nncf.telemetry.extractors import CollectedEvent
 from nncf.telemetry.wrapper import NNCFTelemetryStub
 
+@pytest.fixture(name="hide_pytest")
+def hide_pytest_(request):
+    with mock.patch.dict(sys.modules):
+        del sys.modules["pytest"]
+        yield request
+
+
+def test_telemetry_is_not_mocked_in_normal_conditions(hide_pytest):
+    with mock.patch.dict(os.environ, clear=True):
+        # Need to reload the module where the logic concerning
+        # env vars and telemetry object is evaluated
+        from nncf.telemetry import wrapper
+        importlib.reload(wrapper)
+
+        # telemetry alias will no longer be available after reload,
+        # so importing via a full name
+        from nncf.telemetry.wrapper import NNCFTelemetry
+        assert not isinstance(NNCFTelemetry, NNCFTelemetryStub)
+    # cleanup
+    importlib.reload(wrapper)
+
 
 @pytest.mark.parametrize("env_var_to_define", [NNCF_CI_ENV_VAR_NAME,
                                                NNCF_DEV_ENV_VAR_NAME])
-def test_telemetry_is_mocked_if_env_vars_defined(mocker, env_var_to_define):
-    with mock.patch.dict(os.environ, {env_var_to_define: "1"}):
+def test_telemetry_is_mocked_if_env_vars_defined(env_var_to_define, hide_pytest):
+    with mock.patch.dict(os.environ, {env_var_to_define: "1"}, clear=True):
         # Need to reload the module where the logic concerning
         # env vars and telemetry object is evaluated
         from nncf.telemetry import wrapper
@@ -42,6 +64,7 @@ def test_telemetry_is_mocked_if_env_vars_defined(mocker, env_var_to_define):
         assert isinstance(NNCFTelemetry, NNCFTelemetryStub)
     # cleanup
     importlib.reload(wrapper)
+
 
 @pytest.fixture(name="spies")
 def spies_(request, mocker) -> Tuple[MagicMock, MagicMock, MagicMock]:

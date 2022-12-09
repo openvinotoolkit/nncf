@@ -230,9 +230,9 @@ strict digraph  {
 "4 PreActResNet/Sequential[layer1]/PreActBottleneck[0]/relu_0" -> "6 PreActResNet/Sequential[layer1]/PreActBottleneck[0]/Sequential[shortcut]/NNCFConv2d[0]/conv2d_0";
 "4 PreActResNet/Sequential[layer1]/PreActBottleneck[0]/relu_0" -> "8 PreActResNet/Sequential[layer1]/PreActBottleneck[0]/NNCFConv2d[conv1]/conv2d_0";
 "5 PreActResNet/Sequential[layer1]/PreActBottleneck[0]/Sequential[shortcut]/NNCFConv2d[0]/ModuleDict[pre_ops]/UpdateWeight[0]/BinaryMask[op]/apply_binary_mask_0" -> "6 PreActResNet/Sequential[layer1]/PreActBottleneck[0]/Sequential[shortcut]/NNCFConv2d[0]/conv2d_0";
+"6 PreActResNet/Sequential[layer1]/PreActBottleneck[0]/Sequential[shortcut]/NNCFConv2d[0]/conv2d_0" -> "17 PreActResNet/Sequential[layer1]/PreActBottleneck[0]/__iadd___0";
 "7 PreActResNet/Sequential[layer1]/PreActBottleneck[0]/NNCFConv2d[conv1]/ModuleDict[pre_ops]/UpdateWeight[0]/BinaryMask[op]/apply_binary_mask_0" -> "8 PreActResNet/Sequential[layer1]/PreActBottleneck[0]/NNCFConv2d[conv1]/conv2d_0";
 "8 PreActResNet/Sequential[layer1]/PreActBottleneck[0]/NNCFConv2d[conv1]/conv2d_0" -> "9 PreActResNet/Sequential[layer1]/PreActBottleneck[0]/NNCFBatchNorm2d[bn2]/batch_norm_0";
-"6 PreActResNet/Sequential[layer1]/PreActBottleneck[0]/Sequential[shortcut]/NNCFConv2d[0]/conv2d_0" -> "17 PreActResNet/Sequential[layer1]/PreActBottleneck[0]/__iadd___0";
 "9 PreActResNet/Sequential[layer1]/PreActBottleneck[0]/NNCFBatchNorm2d[bn2]/batch_norm_0" -> "10 PreActResNet/Sequential[layer1]/PreActBottleneck[0]/relu_1";
 "10 PreActResNet/Sequential[layer1]/PreActBottleneck[0]/relu_1" -> "12 PreActResNet/Sequential[layer1]/PreActBottleneck[0]/NNCFConv2d[conv2]/conv2d_0";
 "11 PreActResNet/Sequential[layer1]/PreActBottleneck[0]/NNCFConv2d[conv2]/ModuleDict[pre_ops]/UpdateWeight[0]/BinaryMask[op]/apply_binary_mask_0" -> "12 PreActResNet/Sequential[layer1]/PreActBottleneck[0]/NNCFConv2d[conv2]/conv2d_0";

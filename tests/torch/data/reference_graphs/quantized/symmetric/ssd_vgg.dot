@@ -286,12 +286,16 @@ strict digraph  {
 "82 SSD_VGG/MultiOutputSequential[basenet]/NNCFBatchNorm2d[48]/batch_norm_0" -> "83 SSD_VGG/MultiOutputSequential[basenet]/ReLU[49]/relu__0";
 "83 SSD_VGG/MultiOutputSequential[basenet]/ReLU[49]/relu__0" -> "84 SSD_VGG/MultiOutputSequential[basenet]/ReLU[49]/SymmetricQuantizer/symmetric_quantize_0";
 "84 SSD_VGG/MultiOutputSequential[basenet]/ReLU[49]/SymmetricQuantizer/symmetric_quantize_0" -> "93 SSD_VGG/MultiOutputSequential[extras]/NNCFConv2d[0]/conv2d_0";
+"84 SSD_VGG/MultiOutputSequential[basenet]/ReLU[49]/SymmetricQuantizer/symmetric_quantize_0" -> "141 SSD_VGG/SSDDetectionOutput[detection_head]/ModuleList[heads]/SSDHead[1]/NNCFConv2d[loc]/conv2d_0";
+"84 SSD_VGG/MultiOutputSequential[basenet]/ReLU[49]/SymmetricQuantizer/symmetric_quantize_0" -> "143 SSD_VGG/SSDDetectionOutput[detection_head]/ModuleList[heads]/SSDHead[1]/NNCFConv2d[conf]/conv2d_0";
 "85 SSD_VGG/NNCFUserL2Norm[L2Norm]/pow_0" -> "86 SSD_VGG/NNCFUserL2Norm[L2Norm]/sum_0";
 "86 SSD_VGG/NNCFUserL2Norm[L2Norm]/sum_0" -> "87 SSD_VGG/NNCFUserL2Norm[L2Norm]/sqrt_0";
 "87 SSD_VGG/NNCFUserL2Norm[L2Norm]/sqrt_0" -> "88 SSD_VGG/NNCFUserL2Norm[L2Norm]/__add___0";
 "88 SSD_VGG/NNCFUserL2Norm[L2Norm]/__add___0" -> "89 SSD_VGG/NNCFUserL2Norm[L2Norm]/div_0";
 "89 SSD_VGG/NNCFUserL2Norm[L2Norm]/div_0" -> "90 SSD_VGG/NNCFUserL2Norm[L2Norm]/__rmul___0";
 "90 SSD_VGG/NNCFUserL2Norm[L2Norm]/__rmul___0" -> "91 SSD_VGG/NNCFUserL2Norm[L2Norm]/SymmetricQuantizer/symmetric_quantize_0";
+"91 SSD_VGG/NNCFUserL2Norm[L2Norm]/SymmetricQuantizer/symmetric_quantize_0" -> "133 SSD_VGG/SSDDetectionOutput[detection_head]/ModuleList[heads]/SSDHead[0]/NNCFConv2d[loc]/conv2d_0";
+"91 SSD_VGG/NNCFUserL2Norm[L2Norm]/SymmetricQuantizer/symmetric_quantize_0" -> "135 SSD_VGG/SSDDetectionOutput[detection_head]/ModuleList[heads]/SSDHead[0]/NNCFConv2d[conf]/conv2d_0";
 "92 SSD_VGG/MultiOutputSequential[extras]/NNCFConv2d[0]/ModuleDict[pre_ops]/UpdateWeight[0]/SymmetricQuantizer[op]/symmetric_quantize_0" -> "93 SSD_VGG/MultiOutputSequential[extras]/NNCFConv2d[0]/conv2d_0";
 "93 SSD_VGG/MultiOutputSequential[extras]/NNCFConv2d[0]/conv2d_0" -> "94 SSD_VGG/MultiOutputSequential[extras]/NNCFBatchNorm2d[1]/batch_norm_0";
 "94 SSD_VGG/MultiOutputSequential[extras]/NNCFBatchNorm2d[1]/batch_norm_0" -> "95 SSD_VGG/MultiOutputSequential[extras]/ReLU[2]/relu__0";
@@ -299,10 +303,6 @@ strict digraph  {
 "96 SSD_VGG/MultiOutputSequential[extras]/ReLU[2]/SymmetricQuantizer/symmetric_quantize_0" -> "98 SSD_VGG/MultiOutputSequential[extras]/NNCFConv2d[3]/conv2d_0";
 "97 SSD_VGG/MultiOutputSequential[extras]/NNCFConv2d[3]/ModuleDict[pre_ops]/UpdateWeight[0]/SymmetricQuantizer[op]/symmetric_quantize_0" -> "98 SSD_VGG/MultiOutputSequential[extras]/NNCFConv2d[3]/conv2d_0";
 "98 SSD_VGG/MultiOutputSequential[extras]/NNCFConv2d[3]/conv2d_0" -> "99 SSD_VGG/MultiOutputSequential[extras]/NNCFBatchNorm2d[4]/batch_norm_0";
-"84 SSD_VGG/MultiOutputSequential[basenet]/ReLU[49]/SymmetricQuantizer/symmetric_quantize_0" -> "141 SSD_VGG/SSDDetectionOutput[detection_head]/ModuleList[heads]/SSDHead[1]/NNCFConv2d[loc]/conv2d_0";
-"84 SSD_VGG/MultiOutputSequential[basenet]/ReLU[49]/SymmetricQuantizer/symmetric_quantize_0" -> "143 SSD_VGG/SSDDetectionOutput[detection_head]/ModuleList[heads]/SSDHead[1]/NNCFConv2d[conf]/conv2d_0";
-"91 SSD_VGG/NNCFUserL2Norm[L2Norm]/SymmetricQuantizer/symmetric_quantize_0" -> "133 SSD_VGG/SSDDetectionOutput[detection_head]/ModuleList[heads]/SSDHead[0]/NNCFConv2d[loc]/conv2d_0";
-"91 SSD_VGG/NNCFUserL2Norm[L2Norm]/SymmetricQuantizer/symmetric_quantize_0" -> "135 SSD_VGG/SSDDetectionOutput[detection_head]/ModuleList[heads]/SSDHead[0]/NNCFConv2d[conf]/conv2d_0";
 "99 SSD_VGG/MultiOutputSequential[extras]/NNCFBatchNorm2d[4]/batch_norm_0" -> "100 SSD_VGG/MultiOutputSequential[extras]/ReLU[5]/relu__0";
 "100 SSD_VGG/MultiOutputSequential[extras]/ReLU[5]/relu__0" -> "101 SSD_VGG/MultiOutputSequential[extras]/ReLU[5]/SymmetricQuantizer/symmetric_quantize_0";
 "101 SSD_VGG/MultiOutputSequential[extras]/ReLU[5]/SymmetricQuantizer/symmetric_quantize_0" -> "103 SSD_VGG/MultiOutputSequential[extras]/NNCFConv2d[6]/conv2d_0";
