@@ -11,7 +11,8 @@
  limitations under the License.
 """
 
-from typing import List, Optional
+from typing import Optional, Tuple
+from dataclasses import dataclass
 import numpy as np
 from nncf.common.quantization.structs import QuantizationMode
 from nncf.common.quantization.structs import QuantizerConfig

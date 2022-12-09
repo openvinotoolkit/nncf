@@ -44,10 +44,10 @@ def test_quantizer_insertion(target_layers, should_raise, quantizer_number):
     for target_layer in target_layers:
         target_point = ONNXTargetPoint(TargetType.POST_LAYER_OPERATION, target_layer, 0)
         command = ONNXQuantizerInsertionCommand(
-                    target_point,
-                    ONNXQuantizerLayerParameters(np.array(1.0), np.array(0),
-                                                                         QuantizationMode.SYMMETRIC, None,
-                                                                         tensor_type=np.int8))
+            target_point,
+            ONNXQuantizerLayerParameters(np.array(1.0), np.array(0),
+                                         QuantizationMode.SYMMETRIC, None,
+                                         tensor_type=np.int8))
         transformation_layout.register(command)
 
     model_transformer = ONNXModelTransformer(model)
@@ -96,7 +96,8 @@ def test_inserted_quantizer_parameters(test_parameters):
     model = LinearModel().onnx_model
     transformation_layout = TransformationLayout()
     quantizer_parameters = ONNXQuantizerLayerParameters(test_parameters.scale, test_parameters.zero_point,
-                                                        test_parameters.mode, None, tensor_type=test_parameters.onnx_dtype)
+                                                        test_parameters.mode, None,
+                                                        tensor_type=test_parameters.onnx_dtype)
     target_point = ONNXTargetPoint(TargetType.POST_LAYER_OPERATION, test_parameters.target_layer, 0)
     command = ONNXQuantizerInsertionCommand(target_point, quantizer_parameters)
     transformation_layout.register(command)
@@ -120,7 +121,7 @@ def test_inserted_quantizer_parameters(test_parameters):
 
 
 TARGET_LAYERS = [['ReLU1'], ['Conv1', 'BN1'], ['Conv1', 'BN1', 'ReLU1']]
-TARGET_LAYERS_OUTPUT = [['ReLU1_Y'], ['Conv1_Y', 'BN1_Y'],  ['Conv1_Y', 'BN1_Y', 'ReLU1_Y']]
+TARGET_LAYERS_OUTPUT = [['ReLU1_Y'], ['Conv1_Y', 'BN1_Y'], ['Conv1_Y', 'BN1_Y', 'ReLU1_Y']]
 
 
 @pytest.mark.parametrize('target_layers, target_layer_outputs', zip(TARGET_LAYERS, TARGET_LAYERS_OUTPUT))
@@ -137,16 +138,18 @@ def test_output_insertion(target_layers, target_layer_outputs):
     transformed_model = model_transformer.transform(transformation_layout)
     # TODO(kshpv): The problem occurs because shaope field is missing,
     #  but this is essential for some dynamic models such as Mask-RCNN
-    #onnx.checker.check_model(transformed_model)
+    # onnx.checker.check_model(transformed_model)
 
     onnx_graph = ONNXGraph(transformed_model)
     # Should be topologically sorted
     for i in range(len(target_layers)):
         assert onnx_graph.get_model_outputs()[i].name in target_layer_outputs
 
+
 CONV_LAYERS = [['Conv1', 'Conv2']]
 BIAS_VALUES = [[np.full((32,), 2), np.full((10,), 3)]]
 BIAS_REFERENCES = [[2.0, 3.0]]
+
 
 @pytest.mark.parametrize('layers, values, refs', zip(CONV_LAYERS, BIAS_VALUES, BIAS_REFERENCES))
 def test_bias_correction(layers, values, refs):
