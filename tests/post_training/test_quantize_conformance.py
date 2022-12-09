@@ -28,7 +28,7 @@ from utils import run_benchmark
 
 NOT_AVAILABLE_MESSAGE = "N/A"
 DEFAULT_VAL_THREADS = 4
-ILSVRC_VALIDATION_SUBSET_SIZE = 50000
+ILSVRC_VALIDATION_SUBSET_SIZE = 5000
 
 class QuantizerBase(metaclass=ABCMeta):
     """ Base class for an executor """
@@ -144,6 +144,35 @@ class ONNXQuantizer(QuantizerBase):
         return ov_path, accuracy, q_model_name
 
 
+@QuantizerFactory.register("openvino")
+class OpenVINOQuantizer(QuantizerBase):
+    """ OpenVINO quantizer class"""
+
+    def quantize(self, model, dataloader, quantization_params):
+        def transform_fn(data_item):
+            images, _ = data_item
+            return images.numpy()
+
+        calibration_dataset = nncf.Dataset(dataloader, transform_fn)
+        quantized_model = nncf.quantize(
+            model, calibration_dataset, **quantization_params
+        )
+        return quantized_model
+
+    def validate(self, model, dataloader, model_name, output_folder):
+        output_path = output_folder / "openvino"
+        output_path.mkdir(parents=True, exist_ok=True)
+        q_model_name = model_name + "_ov_int8"
+
+        # Dump model
+        ov_path = Path(output_path) / (q_model_name + ".xml")
+        ov.serialize(model, str(ov_path))
+        # Validate accuracy
+        accuracy = validate_accuracy(ov_path, dataloader)
+
+        return ov_path, accuracy, q_model_name
+
+
 def benchmark_performance(model_path, model_name):
     """
     Receives the OpenVINO IR model and runs benchmark tool for it
@@ -160,13 +189,13 @@ def benchmark_performance(model_path, model_name):
             )
             model_perf = NOT_AVAILABLE_MESSAGE
     except BaseException as error:
-        logging.error(f"Error when becnhmarking the model: model_name. Details: {error}")
+        logging.error(f"Error when becnhmarking the model: {model_name}. Details: {error}")
 
     return model_perf
 
 
 def validate_accuracy(model_path, val_loader):
-    dataset_size = len(val_loader)
+    dataset_size = min(len(val_loader), ILSVRC_VALIDATION_SUBSET_SIZE)
     predictions = [0] * dataset_size
     references = [-1] * dataset_size
 
@@ -186,7 +215,7 @@ def validate_accuracy(model_path, val_loader):
 
     for i, (images, target) in enumerate(val_loader):
         # W/A for memory leaks when using torch DataLoader and OpenVINO
-        if i >= ILSVRC_VALIDATION_SUBSET_SIZE:
+        if i > dataset_size - 1:
             break
         image_copies = copy.deepcopy(images.numpy())
         infer_queue.start_async(image_copies, userdata=i)
@@ -197,16 +226,6 @@ def validate_accuracy(model_path, val_loader):
     references = np.concatenate(references, axis=0)
 
     return accuracy_score(predictions, references)
-
-
-def validate_ov_model(model, dataloader, model_name, output_path):
-    # Dump model
-    ov_path = Path(output_path) / (model_name + ".xml")
-    ov.serialize(model, str(ov_path))
-
-    # Validate accuracy
-    accuracy = validate_accuracy(ov_path, dataloader)
-    return ov_path, accuracy
 
 
 def benchmark_models(paths, names):
@@ -238,12 +257,7 @@ def subset(pytestconfig):
 
 
 @pytest.fixture(scope="session")
-def result(pytestconfig):
-    return pytestconfig.test_results 
-
-
-@pytest.mark.parametrize("model_args", get_validation_scope())
-def test_ptq_timm(data, output, subset, result, model_args): # pylint: disable=W0703
+def result(pytestconfig):        val_dataloader = get_torch_dataloader(data, transform, batch_size=128)
     ILSVRC_VALIDATION_SUBSET_SIZE = subset
     torch.multiprocessing.set_sharing_strategy(
         "file_system"
@@ -265,11 +279,6 @@ def test_ptq_timm(data, output, subset, result, model_args): # pylint: disable=W
         transform = get_model_transform(model)
 
         batch_one_dataloader = get_torch_dataloader(data, transform, batch_size=1)
-        val_dataloader = get_torch_dataloader(data, transform, batch_size=128)
-        # benchmark original models (once)
-        #orig_model_path, orig_acc = validate_torch_model(
-        #    model, batch_one_dataloader, model_name, output_folder
-        #)
 
         orig_model_path, orig_acc, _ = QuantizerFactory.validate(
                                                 "torch", model, batch_one_dataloader,
@@ -278,81 +287,40 @@ def test_ptq_timm(data, output, subset, result, model_args): # pylint: disable=W
         # keep paths and names for performance benchmarking
         ov_model_paths = [orig_model_path]
         model_names = [model_name]
+        accuracy_results = [orig_acc]
 
-        # quantize PyTorch model
-        try:
-            q_torch_model = QuantizerFactory.quantize("torch", model, val_dataloader, quantization_params)
-            ov_model_path, q_torch_acc, q_torch_model_name = QuantizerFactory.validate(
-                                                "torch", q_torch_model, batch_one_dataloader,
-                                                model_name, output_folder)
+        def get_backend_model(backend):
+            if backend == "torch":
+                return model
+            elif backend == "onnx":
+                return onnx.load(output_folder / (model_name + ".onnx"))
+            elif backend == "openvino":
+                return ov.Core().read_model(output_folder / (model_name + ".xml"))
+            return None                
 
-            ov_model_paths.append(ov_model_path)
-            model_names.append(q_torch_model_name)
+        for backend, _ in QuantizerFactory.registry.items():
+            try:
+                model = get_backend_model(backend)
+                q_model = QuantizerFactory.quantize(backend, model, batch_one_dataloader, quantization_params)
+                ov_model_path, q_acc, q_model_name = QuantizerFactory.validate(
+                                                    backend, q_model, batch_one_dataloader,
+                                                    model_name, output_folder)
 
-        except Exception as error:
-            q_torch_acc = re.escape(str(error))
-            ov_model_paths.append(None)
-            model_names.append(None)
+                ov_model_paths.append(ov_model_path)
+                model_names.append(q_model_name)
+                accuracy_results.append(q_acc)
 
-        # quantize ONNX model
-        try:
-            onnx_model_path = output_folder / (model_name + ".onnx")
-            onnx_model = onnx.load(onnx_model_path)
+            except Exception as error:
+                logging.error(f"Error when handling the model: {model_name} at backend: {backend}."
+                                " Details: {error}")
+                accuracy_results.append(re.escape(str(error)))
+                ov_model_paths.append(None)
+                model_names.append(None)
 
-            q_onnx_model = QuantizerFactory.quantize("onnx", onnx_model, batch_one_dataloader, quantization_params)
-            ov_model_path, q_onnx_acc, q_onnx_model_name = QuantizerFactory.validate(
-                                                "onnx", q_onnx_model, batch_one_dataloader,
-                                                model_name, output_folder)
-
-            ov_model_paths.append(ov_model_path)
-            model_names.append(q_onnx_model_name)
-        except Exception as error:
-            q_onnx_acc = re.escape(str(error))
-            ov_model_paths.append(None)
-            model_names.append(None)
-
-        # quantize OpenVINO model
-        try:
-
-            def ov_transform_fn(data_item):
-                images, _ = data_item
-                return images.numpy()
-
-            ov_calibration_dataset = nncf.Dataset(batch_one_dataloader, ov_transform_fn)
-
-            ov_model_path = output_folder / (model_name + ".xml")
-            core = ov.Core()
-            ov_model = core.read_model(ov_model_path)
-            ov_quantized_model = nncf.quantize(
-                ov_model, ov_calibration_dataset, **quantization_params
-            )
-
-            ov_output_path = output_folder / "openvino"
-            ov_output_path.mkdir(parents=True, exist_ok=True)
-            q_ov_model_name = model_name + "_ov_int8"
-            ov_model_path, q_ov_acc = validate_ov_model(
-                ov_quantized_model,
-                batch_one_dataloader,
-                q_ov_model_name,
-                ov_output_path,
-            )
-            ov_model_paths.append(ov_model_path)
-            model_names.append(q_torch_model_name)
-        except Exception as error:
-            q_ov_acc = re.escape(str(error))
-            ov_model_paths.append(None)
-            model_names.append(None)
-
-        # bechmark performance of all models sequentially
         perf_results = benchmark_models(ov_model_paths, model_names)
-        result.append(
-            [
-                model_name,
-                orig_acc,
-                q_torch_acc,
-                q_onnx_acc,
-                q_ov_acc,
-            ] + perf_results
+        result.append([model_name] + 
+            accuracy_results + 
+            perf_results
         )
         logging.info(f"Quantization results: {result[-1]}")
 
