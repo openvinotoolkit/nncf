@@ -365,7 +365,8 @@ class TestBenchmarkResult:
             df["Diff CPU-EP FP32"] = df["CPU-EP_INT8"] - df["FP32"]
         return df
 
-    def get_row_colors(df: pd.DataFrame, reference_model_accuracy: pd.DataFrame, int8_col_name: str) -> Dict[int, str]:
+    def get_row_colors(self, df: pd.DataFrame, reference_model_accuracy: pd.DataFrame,
+                       int8_col_name: str) -> Dict[int, str]:
         row_colors = {}
         for idx, row in df.iterrows():
             for i, model_name in enumerate(reference_model_accuracy.index):
