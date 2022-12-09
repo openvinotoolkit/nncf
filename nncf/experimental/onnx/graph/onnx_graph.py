@@ -18,7 +18,6 @@ import onnx
 from onnx import numpy_helper  # pylint: disable=no-name-in-module
 import numpy as np
 
-from nncf.experimental.onnx.model_normalizer import ONNXModelNormalizer
 from nncf.experimental.onnx.graph.metatypes.onnx_metatypes import ONNX_OPERATION_METATYPES
 from nncf.experimental.onnx.graph.metatypes.onnx_metatypes import OpWeightDef
 from nncf.experimental.onnx.graph.metatypes.onnx_metatypes import ONNXIdentityMetatype
@@ -42,7 +41,7 @@ class ONNXGraph:
 
     def _update_activation_tensors(self, do_shape_inference: bool = False) -> None:
         if do_shape_inference:
-            self.onnx_model = ONNXModelNormalizer.infer_models_shape(self.onnx_model)
+            self.onnx_model = onnx.shape_inference.infer_shapes(self.onnx_model)
         self._activations_tensor_name_to_value_info = {tensor.name: tensor for tensor in
                                                        self.onnx_model.graph.value_info}
         model_inputs_name_to_value_info = {tensor.name: tensor for tensor in self.onnx_model.graph.input}

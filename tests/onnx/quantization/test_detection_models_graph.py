@@ -53,7 +53,7 @@ def test_min_max_quantization_graph(tmp_path, model_to_test):
                           'copy__43/Postprocessor/BatchMultiClassNonMaxSuppression/map/while/Less', 'add']
 
     quantized_model = min_max_quantize_model(model_to_test.input_shape, original_model,
-                                             convert_opset_version=convert_opset_version,
+                                             convert_model_opset=convert_opset_version,
                                              ignored_scopes=ignored_scopes)
     compare_nncf_graph(quantized_model, model_to_test.path_ref_graph)
     infer_model(model_to_test.input_shape, quantized_model)
