@@ -17,7 +17,6 @@ limitations under the License.
 # pylint: disable=redefined-outer-name
 from typing import List, Dict
 
-from collections import Counter
 import json
 import math
 import os
@@ -318,11 +317,11 @@ class TestBenchmark:
 
     @pytest.mark.e2e_eval_reference_model
     @pytest.mark.parametrize("task_type, model_name", MODELS)
-    def test_reference_model_accuracy(
-            self, task_type, model_name, model_dir, data_dir, anno_dir, output_dir, eval_size):
+    def test_reference_model_accuracy(self, task_type, model_name, model_dir,
+                                      data_dir, anno_dir, output_dir, eval_size):
 
         check_xfail(model_name)
-        # Reference accuracy validation is perfomed on CPUExecutionProvider
+        # Reference accuracy validation is performed on CPUExecutionProvider
         command = self.get_ac_command(task_type, model_name, model_dir, data_dir, anno_dir, output_dir, eval_size,
                                       program="accuracy_checker.py", is_quantized=False, is_ov_ep=False, is_cpu_ep=True)
         run_command(command)
@@ -366,7 +365,6 @@ class TestBenchmarkResult:
             df["Diff CPU-EP FP32"] = df["CPU-EP_INT8"] - df["FP32"]
         return df
 
-    @staticmethod
     def get_row_colors(df: pd.DataFrame, reference_model_accuracy: pd.DataFrame, int8_col_name: str) -> Dict[int, str]:
         row_colors = {}
         for idx, row in df.iterrows():
@@ -381,7 +379,7 @@ class TestBenchmarkResult:
                         row_colors[idx] = BG_COLOR_RED_HEX
                     elif diff_target_min < int8 - target_int8 < diff_target_max:
                         row_colors[idx] = BG_COLOR_GREEN_HEX
-                    elif not (diff_target_min < int8 - fp32 < diff_target_max):
+                    elif not diff_target_min < int8 - fp32 < diff_target_max:
                         row_colors[idx] = BG_COLOR_RED_HEX
                     else:
                         row_colors[idx] = BG_COLOR_YELLOW_HEX
@@ -394,8 +392,8 @@ class TestBenchmarkResult:
         for idx, row in df.iterrows():
             df.at[idx, 'FP32'] = f"({row['FP32']})"
         df = df.fillna("-")
-        is_cpu_ep = True if "CPU-EP_INT8" in df.columns else False
-        is_ov_ep = True if "OV-EP_INT8" in df.columns else False
+        is_cpu_ep = "CPU-EP_INT8" in df.columns
+        is_ov_ep = "OV-EP_INT8" in df.columns
 
         new_columns_order = ["Model", "Metrics type", "Expected FP32", "FP32"]
         column_names = ["Model", "Metrics type", "Expected FP32", "FP32"]
