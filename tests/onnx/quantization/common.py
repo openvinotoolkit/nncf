@@ -24,7 +24,7 @@ from nncf import Dataset
 from tests.shared.paths import TEST_ROOT
 from tests.common.graph.nx_graph import compare_nx_graph_with_reference
 from tests.common.graph.nx_graph import check_nx_graph
-
+from tests.onnx.opset_converter import convert_opset_version
 from nncf.experimental.quantization.compression_builder import CompressionBuilder
 from nncf.quantization.algorithms.min_max.algorithm import MinMaxQuantization
 from nncf.quantization.algorithms.min_max.algorithm import MinMaxQuantizationParameters
@@ -75,14 +75,16 @@ def _get_input_key(original_model: onnx.ModelProto) -> str:
 
 
 def min_max_quantize_model(
-        input_shape: List[int], original_model: onnx.ModelProto, convert_opset_version: bool = True,
+        input_shape: List[int], original_model: onnx.ModelProto, convert_model_opset: bool = True,
         ignored_scopes: List[str] = None, dataset_has_batch_size: bool = False) -> onnx.ModelProto:
+    if convert_model_opset:
+        original_model = convert_opset_version(original_model)
     onnx_graph = ONNXGraph(original_model)
     input_dtype = onnx_graph.get_edge_dtype(original_model.graph.input[0].name)
     input_np_dtype = onnx.helper.mapping.TENSOR_TYPE_TO_NP_TYPE[input_dtype]
     dataset = get_random_dataset_for_test(_get_input_key(
         original_model), input_shape, input_np_dtype, dataset_has_batch_size)
-    builder = CompressionBuilder(convert_opset_version)
+    builder = CompressionBuilder()
     builder.add_algorithm(
         MinMaxQuantization(MinMaxQuantizationParameters(number_samples=1, ignored_scopes=ignored_scopes)))
     quantized_model = builder.apply(original_model, dataset)
@@ -90,14 +92,16 @@ def min_max_quantize_model(
 
 
 def ptq_quantize_model(
-        input_shape: List[int], original_model: onnx.ModelProto, convert_opset_version: bool = True,
+        input_shape: List[int], original_model: onnx.ModelProto, convert_model_opset: bool = True,
         ignored_scopes: List[str] = None, dataset_has_batch_size: bool = False) -> onnx.ModelProto:
+    if convert_model_opset:
+        original_model = convert_opset_version(original_model)
     onnx_graph = ONNXGraph(original_model)
     input_dtype = onnx_graph.get_edge_dtype(original_model.graph.input[0].name)
     input_np_dtype = onnx.helper.mapping.TENSOR_TYPE_TO_NP_TYPE[input_dtype]
     dataset = get_random_dataset_for_test(_get_input_key(
         original_model), input_shape, input_np_dtype, dataset_has_batch_size)
-    builder = CompressionBuilder(convert_opset_version)
+    builder = CompressionBuilder()
     builder.add_algorithm(
         PostTrainingQuantization(PostTrainingQuantizationParameters(number_samples=1, ignored_scopes=ignored_scopes)))
     quantized_model = builder.apply(original_model, dataset)
