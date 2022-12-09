@@ -17,6 +17,7 @@ limitations under the License.
 # pylint: disable=redefined-outer-name
 from typing import List, Dict
 
+from collections import Counter
 import json
 import math
 import os
@@ -415,6 +416,9 @@ class TestBenchmarkResult:
         return df
 
     def generate_html(self, df: pd.DataFrame, row_colors: Dict[int, str], output_fp: str) -> None:
+        up_columns_counter = Counter()
+        for up_col, _ in df.columns:
+            up_columns_counter[up_col] += 1
         doc, tag, text = Doc().tagtext()
         doc.asis('<!DOCTYPE html>')
         with tag('head'):
@@ -437,21 +441,17 @@ class TestBenchmarkResult:
         with tag('p'):
             text('If Reference FP32 value in parentheses, it takes from "target" field of .json file')
         with tag('report_table'):
-            first_row = ['', '', '', '', CPU_EP_COL_NAME, OV_EP_COL_NAME]
-            with tag('table', border="1", cellpadding="5"):
-                with tag('tr'):
-                    for col_name in first_row:
-                        additional_attrs = {}
-                        if col_name == CPU_EP_COL_NAME:
-                            additional_attrs = {'colspan': 2}
-                        elif col_name == OV_EP_COL_NAME:
-                            additional_attrs = {'colspan': 3}
-                        with tag('td', **additional_attrs):
-                            text(col_name)
-                with tag('tr'):
-                    for _, bot_col in df.columns:
-                        with tag('td'):
-                            text(bot_col)
+            with tag('tr'):
+                visited_cols = set()
+                for up_col, _ in df.columns:
+                    if up_col not in visited_cols:
+                        visited_cols.add(up_col)
+                        with tag('td', colspan=up_columns_counter[up_col]):
+                            text(up_col)
+            with tag('tr'):
+                for _, bot_col in df.columns:
+                    with tag('td'):
+                        text(bot_col)
                 with tag('tr'):
                     for idx, row in df.iterrows():
                         with tag('tr'):
