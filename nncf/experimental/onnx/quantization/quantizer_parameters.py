@@ -11,16 +11,15 @@
  limitations under the License.
 """
 
-from typing import Tuple, Optional
-from dataclasses import dataclass
+from typing import List, Optional
 import numpy as np
-from nncf.common.quantization.structs import QuantizerConfig
 from nncf.common.quantization.structs import QuantizationMode
+from nncf.common.quantization.structs import QuantizerConfig
 from nncf.common.tensor_statistics.statistics import MinMaxTensorStatistic
 
 
 @dataclass
-class QuantizerLayerParameters:
+class ONNXQuantizerLayerParameters:
     """
     Class handles Quantizer layer attributes.
 
@@ -83,7 +82,7 @@ def calculate_scale_zero_point(max_val: np.ndarray, min_val: np.ndarray, level_l
 
 
 def calculate_weight_quantizer_parameters(weight_tensor: np.ndarray, quantizer_config: QuantizerConfig,
-                                          axis: Optional[int]) -> QuantizerLayerParameters:
+                                          axis: Optional[int]) -> ONNXQuantizerLayerParameters:
     """
     Calculates Quantizer/Dequantizer layer attributes for weight quantizer such as scale, zero_points and
     quantization mode: symmetric, asymmetric.
@@ -109,12 +108,12 @@ def calculate_weight_quantizer_parameters(weight_tensor: np.ndarray, quantizer_c
     tensor_type = np.int8
     level_low, level_high = get_level_low_level_high(tensor_type)
     scales, zero_points = calculate_scale_zero_point(input_high, input_low, level_low, level_high, mode)
-    return QuantizerLayerParameters(scales, zero_points, mode, axis, tensor_type)
+    return ONNXQuantizerLayerParameters(scales, zero_points, mode, axis, tensor_type)
 
 
 def calculate_activation_quantizer_parameters(statistics: MinMaxTensorStatistic,
                                               quantizer_config: QuantizerConfig,
-                                              axis: Optional[int] = None) -> QuantizerLayerParameters:
+                                              axis: Optional[int] = None) -> ONNXQuantizerLayerParameters:
     """
     Calculates Quantizer/Dequantizer layer attributes for activation quantizer such as scale, zero_points and
     quantization mode: symmetric, asymmetric.
@@ -134,4 +133,4 @@ def calculate_activation_quantizer_parameters(statistics: MinMaxTensorStatistic,
     tensor_type = np.uint8 if np.all(input_low >= 0) else np.int8
     level_low, level_high = get_level_low_level_high(tensor_type)
     scales, zero_points = calculate_scale_zero_point(input_high, input_low, level_low, level_high, mode)
-    return QuantizerLayerParameters(scales, zero_points, mode, axis, tensor_type)
+    return ONNXQuantizerLayerParameters(scales, zero_points, mode, axis, tensor_type)

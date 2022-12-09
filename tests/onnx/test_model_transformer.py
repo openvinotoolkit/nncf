@@ -26,7 +26,7 @@ from nncf.experimental.onnx.graph.transformations.commands import ONNXOutputInse
 from nncf.common.quantization.structs import QuantizationMode
 from nncf.experimental.onnx.graph.model_transformer import ONNXModelTransformer
 from nncf.experimental.onnx.graph.onnx_graph import ONNXGraph
-from nncf.quantization.algorithms.min_max.utils import QuantizerLayerParameters
+from nncf.experimental.onnx.quantization.quantizer_parameters import ONNXQuantizerLayerParameters
 
 from tests.onnx.models import LinearModel
 
@@ -43,8 +43,9 @@ def test_quantizer_insertion(target_layers, should_raise, quantizer_number):
 
     for target_layer in target_layers:
         target_point = ONNXTargetPoint(TargetType.POST_LAYER_OPERATION, target_layer, 0)
-        command = ONNXQuantizerInsertionCommand(target_point,
-                                                QuantizerLayerParameters(np.array(1.0), np.array(0),
+        command = ONNXQuantizerInsertionCommand(
+                    target_point,
+                    ONNXQuantizerLayerParameters(np.array(1.0), np.array(0),
                                                                          QuantizationMode.SYMMETRIC, None,
                                                                          tensor_type=np.int8))
         transformation_layout.register(command)
@@ -94,8 +95,8 @@ class QuantizerParameters:
 def test_inserted_quantizer_parameters(test_parameters):
     model = LinearModel().onnx_model
     transformation_layout = TransformationLayout()
-    quantizer_parameters = QuantizerLayerParameters(test_parameters.scale, test_parameters.zero_point,
-                                                    test_parameters.mode, None, tensor_type=test_parameters.onnx_dtype)
+    quantizer_parameters = ONNXQuantizerLayerParameters(test_parameters.scale, test_parameters.zero_point,
+                                                        test_parameters.mode, None, tensor_type=test_parameters.onnx_dtype)
     target_point = ONNXTargetPoint(TargetType.POST_LAYER_OPERATION, test_parameters.target_layer, 0)
     command = ONNXQuantizerInsertionCommand(target_point, quantizer_parameters)
     transformation_layout.register(command)
