@@ -34,7 +34,7 @@ DATASET_PATH = '~/.cache/nncf/datasets'
 DATASET_CLASSES = 10
 
 
-def download(url:str, path:str) -> Path:
+def download(url: str, path: str) -> Path:
     downloader = FastDownload(base=path, 
                               archive='downloaded', 
                               data='extracted')
