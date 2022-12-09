@@ -13,7 +13,7 @@
 
 from abc import ABC
 from abc import abstractmethod
-from typing import List, Tuple, TypeVar
+from typing import List, Tuple, TypeVar, Optional
 
 import numpy as np
 from nncf.common.graph.transformations.commands import TargetPoint
@@ -111,8 +111,8 @@ class FBCAlgoBackend(ABC):
     @staticmethod
     @abstractmethod
     def mean_statistic_collector(reduction_shape: ReductionShape,
-                                 num_samples: int = None,
-                                 window_size: int = None) -> TensorStatisticCollectorBase:
+                                 num_samples: Optional[int] = None,
+                                 window_size: Optional[int] = None) -> TensorStatisticCollectorBase:
         """
         Returns backend-specific mean statistic collector.
 

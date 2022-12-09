@@ -11,7 +11,7 @@
  limitations under the License.
 """
 
-from typing import Dict, Tuple, List
+from typing import Dict, Tuple, List, Optional
 import onnx
 import numpy as np
 from nncf.common.graph.transformations.commands import TargetType
@@ -90,8 +90,8 @@ class ONNXBiasCorrectionAlgoBackend(BiasCorrectionAlgoBackend):
 
     @staticmethod
     def mean_statistic_collector(reduction_shape: ReductionShape,
-                                 num_samples: int = None,
-                                 window_size: int = None) -> ONNXMeanStatisticCollector:
+                                 num_samples: Optional[int] = None,
+                                 window_size: Optional[int] = None) -> ONNXMeanStatisticCollector:
         return ONNXMeanStatisticCollector(reduction_shape,  num_samples, window_size)
 
     @staticmethod

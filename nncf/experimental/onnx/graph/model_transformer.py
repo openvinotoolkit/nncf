@@ -346,7 +346,7 @@ class ONNXModelTransformer(ModelTransformer):
         onnx_model_exctactor = onnx.utils.Extractor(self._model)
         return onnx_model_exctactor.extract_model(transformation.inputs, transformation.outputs)
 
-    def _apply_node_removing_transformation(self, transformations: List[ONNXNodeRemovingCommand]) -> onnx.ModelProto:
+    def _apply_node_removing_transformation(self, transformations: List[ONNXNodeRemovingCommand]) -> None:
         """
         Removes the the layers from the model.
 
