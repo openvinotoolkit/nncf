@@ -137,5 +137,11 @@ def check_scope_names_match_graph(config: NNCFConfig, graph: NNCFGraph) -> None:
         err_message += _check_scopes(f"'{algo_config['algorithm']}' algorithm", algo_config)
 
     if err_message:
-        err_message = "NNCF config contains scope names which do not match model graph:\n" + err_message
+        err_message = "No match has been found among the model operations " \
+                      "for the following ignored/target scope definitions:\n" \
+                      + err_message \
+                      + "Refer to the compressed_graph.dot to discover the operations " \
+                      "in the model currently visible to NNCF and specify the ignored/target " \
+                      "scopes in terms of the names there."
+
         raise RuntimeError(err_message)
