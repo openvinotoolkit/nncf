@@ -284,7 +284,7 @@ class MinMaxQuantization(Algorithm):
                 self._add_activation_quantization_target_point(quantization_point)
             else:
                 raise RuntimeError('Incorrect quantization point')
-        self._quantization_target_points_to_qconfig = sorted(self._quantization_target_points_to_qconfig)
+        self._quantization_target_points_to_qconfig = OrderedDict(sorted(self._quantization_target_points_to_qconfig.items()))
         return self._quantization_target_points_to_qconfig
 
     def _apply(self,

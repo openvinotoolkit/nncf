@@ -126,7 +126,7 @@ class ONNXMinMaxAlgoBackend(MinMaxAlgoBackend):
         return node.metatype.weight_definitions.weight_port_id
 
     @staticmethod
-    def get_weight_config(config: QuantizerConfig, model: onnx.ModelProto) -> QuantizerConfig:
+    def get_weight_config(model: onnx.ModelProto, config: QuantizerConfig) -> QuantizerConfig:
         config = deepcopy(config)
         if model.opset_import[0].version < 13:
             config.per_channel = False
