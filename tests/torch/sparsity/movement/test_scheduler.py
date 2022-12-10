@@ -16,6 +16,7 @@ from tests.torch.sparsity.movement.helpers import BertRunRecipe
 from tests.torch.sparsity.movement.helpers import LinearRunRecipe
 from tests.torch.sparsity.movement.helpers import SchedulerParams
 from tests.torch.sparsity.movement.helpers import SwinRunRecipe
+from tests.torch.sparsity.movement.helpers import force_update_sparsifier_binary_masks_by_threshold
 from tests.torch.sparsity.movement.helpers import initialize_sparsifier_parameters_by_linspace
 
 
@@ -290,32 +291,41 @@ class TestSchedulerInferStepsPerEpoch:
 
 
 class TestSchedulerAdaptiveInitThreshold:
-    @pytest.mark.parametrize(('recipe', 'ref_threshold'), [
-        (BertRunRecipe.from_default(), -1),
-        (BertRunRecipe.from_default(num_hidden_layers=24, num_attention_heads=16,
-                                    intermediate_size=4096, hidden_size=1024
-                                    ), -0.99840),
-        (SwinRunRecipe.from_default(image_size=384, patch_size=4, window_size=12,
-                                    embed_dim=192, mlp_ratio=4,
-                                    depths=(2, 2, 18, 2), num_heads=(6, 12, 24, 48)
-                                    ), -0.99837)
+    @pytest.mark.parametrize('desc', [
+        dict(recipe=BertRunRecipe.from_default(),
+             ref_threshold=0.,
+             ref_sparsity=0.0541),
+        dict(recipe=BertRunRecipe.from_default(num_hidden_layers=24, num_attention_heads=16,
+                                               intermediate_size=4096, hidden_size=1024),
+             ref_threshold=0.2879,
+             ref_sparsity=0.0010),
+        dict(recipe=SwinRunRecipe.from_default(image_size=384, patch_size=4, window_size=12,
+                                               embed_dim=192, mlp_ratio=4,
+                                               depths=(2, 2, 18, 2), num_heads=(6, 12, 24, 48)),
+             ref_threshold=8.3142,
+             ref_sparsity=0.0010),
     ], ids=['bert_toy', 'bert_large', 'swin_large'])
-    def test_set_init_importance_threshold(self, recipe: BaseMockRunRecipe, ref_threshold: float):
-        from nncf.common.utils.logger import set_log_level
-        set_log_level(logging.ERROR)
+    def test_set_init_importance_threshold(self, desc: dict):
+        recipe: BaseMockRunRecipe = desc['recipe']
+        ref_threshold: float = desc['ref_threshold']
+        ref_sparsity: float = desc['ref_sparsity']
         recipe.set(steps_per_epoch=10, warmup_start_epoch=0,
-                   enable_structured_masking=False, init_importance_threshold=None)
+                   enable_structured_masking=False, init_importance_threshold=None,
+                   final_importance_threshold=1e3)
         compression_ctrl, _ = create_compressed_model(recipe.model,
                                                       recipe.nncf_config,
                                                       dump_graphs=False)
-        for minfo in compression_ctrl.sparsified_module_info:
-            initialize_sparsifier_parameters_by_linspace(minfo.operand, -1., 1.)
+        for i, minfo in enumerate(sorted(compression_ctrl.sparsified_module_info,
+                                         key=lambda x: x.module_node_name)):
+            initialize_sparsifier_parameters_by_linspace(minfo.operand, i * 2, i * 2 + 1)
         scheduler = compression_ctrl.scheduler
         scheduler.epoch_step()
         scheduler.step()
-        assert scheduler.init_importance_threshold == approx(ref_threshold, abs=1e-5)
+        for minfo in compression_ctrl.sparsified_module_info:
+            force_update_sparsifier_binary_masks_by_threshold(minfo.operand)
+        assert scheduler.init_importance_threshold == approx(ref_threshold, abs=1e-4)
         stat = compression_ctrl.statistics().movement_sparsity
-        assert stat.model_statistics.sparsity_level_for_layers == approx(0.001, abs=1e-3)
+        assert stat.model_statistics.sparsity_level_for_layers == approx(ref_sparsity, abs=1e-4)
         assert stat.importance_threshold == approx(ref_threshold, abs=1e-4)
 
     @pytest.mark.parametrize(('target_sparsity', 'ref_threshold'),

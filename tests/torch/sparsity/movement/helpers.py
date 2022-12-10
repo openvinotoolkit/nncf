@@ -71,9 +71,10 @@ def initialize_sparsifier_parameters_by_linspace(operand: MovementSparsifier,
 
 
 # pylint: disable=protected-access
-def force_update_sparsifer_binary_masks_by_threshold(operand: MovementSparsifier,
-                                                     threshold: float):
-    operand.importance_threshold = threshold
+def force_update_sparsifier_binary_masks_by_threshold(operand: MovementSparsifier,
+                                                      threshold: Optional[float] = None):
+    if threshold is not None:
+        operand.importance_threshold = threshold
     with patch.object(operand, 'training', True),\
             patch.object(operand, 'frozen', False):
         operand._calc_training_binary_mask()

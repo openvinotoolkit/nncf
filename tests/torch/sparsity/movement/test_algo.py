@@ -40,7 +40,7 @@ from tests.torch.sparsity.movement.helpers import SwinRunRecipe
 from tests.torch.sparsity.movement.helpers import TransformerBlockItemOrderedDict
 from tests.torch.sparsity.movement.helpers import Wav2Vec2RunRecipe
 from tests.torch.sparsity.movement.helpers import build_compression_trainer
-from tests.torch.sparsity.movement.helpers import force_update_sparsifer_binary_masks_by_threshold
+from tests.torch.sparsity.movement.helpers import force_update_sparsifier_binary_masks_by_threshold
 from tests.torch.sparsity.movement.helpers import initialize_sparsifier_parameters_by_linspace
 from tests.torch.sparsity.movement.helpers import is_roughly_non_decreasing
 from tests.torch.sparsity.movement.helpers import is_roughly_of_same_value
@@ -414,7 +414,7 @@ class TestModelSaving:
         dataset = recipe.generate_mock_dataset(num_samples, seed=42)
         for i, minfo in enumerate(compression_ctrl.sparsified_module_info):
             initialize_sparsifier_parameters_by_linspace(minfo.operand, seed=i)
-            force_update_sparsifer_binary_masks_by_threshold(minfo.operand, 0.)
+            force_update_sparsifier_binary_masks_by_threshold(minfo.operand, 0.)
 
         trainer = build_compression_trainer(tmp_path, compression_ctrl, compressed_model)
         torch_outputs = trainer.predict(dataset).predictions
@@ -456,7 +456,7 @@ class TestModelSaving:
         assert len(compression_ctrl.sparsified_module_info) == 1
         minfo = compression_ctrl.sparsified_module_info[0]
         initialize_sparsifier_parameters_by_linspace(minfo.operand)
-        force_update_sparsifer_binary_masks_by_threshold(minfo.operand, 0.)
+        force_update_sparsifier_binary_masks_by_threshold(minfo.operand, 0.)
         with torch.no_grad():
             ref_weight, ref_bias = minfo.operand(minfo.module.weight, minfo.module.bias)
 

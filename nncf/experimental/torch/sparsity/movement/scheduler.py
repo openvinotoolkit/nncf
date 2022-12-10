@@ -17,10 +17,10 @@ from typing import Any, Dict, Optional
 import numpy as np
 import torch
 
+from nncf.api.compression import CompressionAlgorithmController
 from nncf.common.schedulers import BaseCompressionScheduler
 from nncf.common.schedulers import PolynomialDecaySchedule
 from nncf.common.utils.logger import logger
-from nncf.torch.sparsity.base_algo import BaseSparsityAlgoController
 
 
 class MovementSchedulerStage(Enum):
@@ -41,7 +41,7 @@ class MovementPolynomialThresholdScheduler(BaseCompressionScheduler):
     scheduler will start calculation only after `steps_per_epoch` is calculated.
     """
 
-    def __init__(self, controller: BaseSparsityAlgoController, params: dict):
+    def __init__(self, controller: CompressionAlgorithmController, params: dict):
         """
         TODO: revise docstring
         Initializes a sparsity scheduler with a polynomial decay schedule.
@@ -173,11 +173,11 @@ class MovementPolynomialThresholdScheduler(BaseCompressionScheduler):
         assert 0. <= target_sparsity < 1.
         importance_arrays = []
         for minfo in self._controller.sparsified_module_info:
-            op = minfo.operand
-            weight = op.get_importance(is_bias=False, expanded=True)
+            operand = minfo.operand
+            weight = operand.get_importance(is_bias=False, expanded=True)
             importance_arrays.append(weight.detach().cpu().view(-1).numpy())
-            if op.prune_bias:
-                bias = weight = op.get_importance(is_bias=True, expanded=True)
+            if operand.prune_bias:
+                bias = operand.get_importance(is_bias=True, expanded=True)
                 importance_arrays.append(bias.detach().cpu().view(-1).numpy())
         all_importances = np.concatenate(importance_arrays)
         k = min(all_importances.size - 1, int(all_importances.size * target_sparsity))

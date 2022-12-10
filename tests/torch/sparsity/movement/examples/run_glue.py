@@ -92,7 +92,7 @@ class CompressionCallback(TrainerCallback):
 
 class CompressionTrainer(Trainer):
     def __init__(self, compression_ctrl: Optional[CompressionAlgorithmController],
-                 shuffle_training_data: bool = True, *args,
+                 *args, shuffle_training_data: bool = True,
                  callbacks: Optional[List[TrainerCallback]] = None, **kwargs):
         self.compression_ctrl = compression_ctrl
         self._compression_callback = None
@@ -102,16 +102,10 @@ class CompressionTrainer(Trainer):
         super().__init__(callbacks=callbacks, *args, **kwargs)
         if not (self.args.local_rank == -1 or self.args.no_cuda or compression_ctrl is None):
             compression_ctrl.distributed()
-        # if not shuffle_training_data:
-        self.get_train_dataloader = self.get_eval_dataloader
-        self.yujie_data = []
+        if not shuffle_training_data:
+            self.get_train_dataloader = self.get_eval_dataloader
 
     def compute_loss(self, model, inputs, return_outputs=False):
-        to_save = {}
-        for k, v in inputs.items():
-            to_save[k] = v.cpu().numpy().tolist()
-        self.yujie_data.append(to_save)
-
         loss, outputs = super().compute_loss(model, inputs, return_outputs=True)
         if self.compression_ctrl is not None:
             loss_compress = self.compression_ctrl.loss()
@@ -230,9 +224,6 @@ def main():
         trainer.log_metrics("eval", metrics)
         trainer.save_metrics("eval", metrics)
     trainer.save_state()
-    import torch
-
-    # torch.save(trainer.yujie_data, f'dataseed-mega1-seed{training_args.seed}.bin')
 
 
 if __name__ == "__main__":
