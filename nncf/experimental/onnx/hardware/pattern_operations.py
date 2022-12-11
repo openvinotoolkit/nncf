@@ -14,6 +14,7 @@
 from nncf.common.graph.patterns import merge_two_types_of_operations
 from nncf.common.graph.graph_matching import GraphPattern
 from nncf.experimental.onnx.graph.metatypes.onnx_metatypes import ONNXConvolutionMetatype
+from nncf.experimental.onnx.graph.metatypes.onnx_metatypes import ONNXDepthwiseConvolutionMetatype
 from nncf.experimental.onnx.graph.metatypes.onnx_metatypes import ONNXConvolutionTransposeMetatype
 from nncf.experimental.onnx.graph.metatypes.onnx_metatypes import ONNXLinearMetatype
 from nncf.experimental.onnx.graph.metatypes.onnx_metatypes import ONNXMatMulMetatype
@@ -32,6 +33,7 @@ from nncf.experimental.onnx.graph.metatypes.onnx_metatypes import ONNXDivLayerMe
 from nncf.experimental.onnx.graph.metatypes.onnx_metatypes import ONNXSubMetatype
 
 LINEAR_OPERATIONS = {GraphPattern.METATYPE_ATTR: [ONNXConvolutionMetatype,
+                                                  ONNXDepthwiseConvolutionMetatype,
                                                   ONNXConvolutionTransposeMetatype,
                                                   ONNXLinearMetatype,
                                                   ONNXMatMulMetatype
