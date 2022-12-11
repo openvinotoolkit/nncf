@@ -41,23 +41,27 @@ class PostTrainingQuantizationParameters(AlgorithmParameters):
     """
 
     def __init__(self,
-                 preset: QuantizationPreset = QuantizationPreset.PERFORMANCE,
-                 weight_bits: int = 8,
-                 weight_granularity: Granularity = Granularity.PERCHANNEL,
-                 activation_bits: int = 8,
-                 activation_granularity: Granularity = Granularity.PERTENSOR,
-                 range_type: RangeType = RangeType.MEAN_MINMAX,
                  number_samples: int = 300,
+                 preset: QuantizationPreset = QuantizationPreset.PERFORMANCE,
+                 weight_bits: Optional[int] = None,
+                 weight_granularity: Optional[int] = None,
+                 weight_signedness_to_force: Optional[bool] = None,
+                 activation_bits: Optional[int] = None,
+                 activation_granularity: Optional[int] = None,
+                 activation_signedness_to_force: Optional[bool] = None,
                  target_device: HWConfigType = HWConfigType.CPU,
+                 range_type: RangeType = RangeType.MEAN_MINMAX,
                  quantize_outputs: bool = False,
-                 ignored_scopes: Optional[List[str]] = None
+                 ignored_scopes: Optional[List[str]] = None,
                  ):
         self.algorithms = {MinMaxQuantization: MinMaxQuantizationParameters(
             preset=preset,
             weight_bits=weight_bits,
             weight_granularity=weight_granularity,
+            weight_signedness_to_force=weight_signedness_to_force,
             activation_bits=activation_bits,
             activation_granularity=activation_granularity,
+            activation_signedness_to_force=activation_signedness_to_force,
             range_type=range_type,
             number_samples=number_samples,
             target_device=target_device,
@@ -67,9 +71,6 @@ class PostTrainingQuantizationParameters(AlgorithmParameters):
             FastBiasCorrection: FastBiasCorrectionParameters(
             number_samples=number_samples
         )}
-
-    def to_json(self) -> Dict[str, Union[str, float, int]]:
-        pass
 
 
 class PostTrainingQuantization(Algorithm):
