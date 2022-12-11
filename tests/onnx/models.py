@@ -705,3 +705,34 @@ class OneDepthwiseConvolutionalModel(ONNXReferenceModel):
         model = onnx.helper.make_model(graph_def, opset_imports=[op])
         onnx.checker.check_model(model)
         super().__init__(model, [input_shape], 'one_depthwiseconvolutional_model.dot')
+
+class InputOutputModel(ONNXReferenceModel):
+    def __init__(self):
+        input_shape = [1, 3, 3, 3]
+        model_input_name = "X"
+        X = onnx.helper.make_tensor_value_info(model_input_name,
+                                               onnx.TensorProto.FLOAT,
+                                               input_shape)
+
+        model_output_name = "Y"
+        Y = onnx.helper.make_tensor_value_info(model_output_name,
+                                               onnx.TensorProto.FLOAT,
+                                               input_shape)
+        identity_node = onnx.helper.make_node(
+            name="Identity",
+            op_type="Identity",
+            inputs=["X"],
+            outputs=["Y"]
+        )
+        graph_def = onnx.helper.make_graph(
+            nodes=[identity_node],
+            name="ConvNet",
+            inputs=[X],
+            outputs=[Y],
+        )
+
+        op = onnx.OperatorSetIdProto()
+        op.version = OPSET_VERSION
+        model = onnx.helper.make_model(graph_def, opset_imports=[op])
+        onnx.checker.check_model(model)
+        super().__init__(model, [input_shape], 'input_output_model.dot')
