@@ -388,7 +388,7 @@ class TestBenchmarkResult:
         return row_colors
 
     def generate_final_data_frame(self, df: pd.DataFrame) -> pd.DataFrame:
-        # Add parenthesses, because FP32 metrics were taken from reference.
+        # Add parentheses, because FP32 metrics were taken from reference.
         df['FP32'] = df['FP32'].astype(str)
         for idx, row in df.iterrows():
             df.at[idx, 'FP32'] = f"({row['FP32']})"
@@ -418,15 +418,8 @@ class TestBenchmarkResult:
         )
         return df
 
-    def generate_html(self, df: pd.DataFrame, reference_model_accuracy: pd.DataFrame, output_fp: str) -> None:
-        cpu_ep_row_colors, ov_ep_row_colors = {}, {}
-        is_ov_ep = OV_EP_COL_NAME in df.columns
-        is_cpu_ep = CPU_EP_COL_NAME in df.columns
-        if is_cpu_ep:
-            cpu_ep_row_colors = self.get_row_colors(df, reference_model_accuracy, "CPU-EP_INT8")
-        if is_ov_ep:
-            ov_ep_row_colors = self.get_row_colors(df, reference_model_accuracy, "OV-EP_INT8")
-
+    def generate_html(self, df: pd.DataFrame, cpu_ep_row_colors: Dict[int, str], ov_ep_row_colors: Dict[int, str],
+                      output_fp: str) -> None:
         doc, tag, text = Doc().tagtext()
         doc.asis('<!DOCTYPE html>')
         with tag('head'):
@@ -514,5 +507,12 @@ class TestBenchmarkResult:
     def test_generate_report(self, reference_model_accuracy, quantized_model_accuracy, output_dir):
         output_fp = str(output_dir / REPORT_NAME)
         df = self.join_reference_and_quantized_frames(reference_model_accuracy, quantized_model_accuracy)
+        cpu_ep_row_colors, ov_ep_row_colors = {}, {}
+        is_ov_ep = OV_EP_COL_NAME in df.columns
+        is_cpu_ep = CPU_EP_COL_NAME in df.columns
+        if is_cpu_ep:
+            cpu_ep_row_colors = self.get_row_colors(df, reference_model_accuracy, "CPU-EP_INT8")
+        if is_ov_ep:
+            ov_ep_row_colors = self.get_row_colors(df, reference_model_accuracy, "OV-EP_INT8")
         df = self.generate_final_data_frame(df)
-        self.generate_html(df, reference_model_accuracy, output_fp)
+        self.generate_html(df, cpu_ep_row_colors, ov_ep_row_colors, output_fp)
