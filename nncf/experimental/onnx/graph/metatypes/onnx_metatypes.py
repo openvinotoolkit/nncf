@@ -484,6 +484,7 @@ WEIGHT_LAYER_METATYPES = [ONNXConvolutionMetatype,
                           ONNXLinearMetatype]
 
 LAYERS_WITH_BIAS_METATYPES = [ONNXConvolutionMetatype,
+                              ONNXDepthwiseConvolutionMetatype,
                               ONNXConvolutionTransposeMetatype]
 
 
