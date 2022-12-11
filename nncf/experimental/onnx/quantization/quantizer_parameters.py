@@ -49,7 +49,7 @@ def get_level_low_level_high(tensor_type: np.dtype, num_bits: int) -> Tuple[int,
     """
     if tensor_type == np.uint8:
         return 0, 2 ** num_bits - 1
-    return -2 ** num_bits, 2 ** num_bits - 1
+    return - (2 ** num_bits) // 2, (2 ** num_bits) // 2 - 1
 
 
 def calculate_scale_zero_point(max_val: np.ndarray, min_val: np.ndarray, level_low: int, level_high: int,
