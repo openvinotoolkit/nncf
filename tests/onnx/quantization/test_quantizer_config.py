@@ -1,10 +1,9 @@
-
 import pytest
 
 from nncf.common.quantization.structs import QuantizationPreset
 from nncf.common.quantization.structs import QuantizerGroup
-from nncf.quantization.algorithms.min_max.algorithm import MinMaxQuantization
-from nncf.quantization.algorithms.min_max.algorithm import MinMaxQuantizationParameters
+from nncf.quantization.algorithms.post_training.algorithm import PostTrainingQuantization
+from nncf.quantization.algorithms.post_training.algorithm import PostTrainingQuantizationParameters
 from nncf.quantization.algorithms.definitions import Granularity
 from tests.common.quantization.mock_graphs import NodeWithType
 from tests.common.quantization.metatypes import Conv2dTestMetatype
@@ -44,9 +43,16 @@ class NNCFGraphToTest:
 def test_quantizer_config_from_min_max_params(weight_granularity, activation_granularity, preset, weight_bits,
                                               activation_bits,
                                               weight_signedness_to_force, activation_signedness_to_force, nncf_graph):
-    min_max_algo = MinMaxQuantization(
-        MinMaxQuantizationParameters(weight_granularity=weight_granularity,
-                                     activation_granularity=activation_granularity))
+    algo = PostTrainingQuantization(
+        PostTrainingQuantizationParameters(preset=preset,
+                                           weight_bits=weight_bits,
+                                           weight_granularity=weight_granularity,
+                                           weight_signedness_to_force=weight_signedness_to_force,
+                                           activation_bits=activation_bits,
+                                           activation_granularity=activation_granularity,
+                                           activation_signedness_to_force=activation_signedness_to_force,
+                                           ))
+    min_max_algo = algo.algorithms[0]
     min_max_algo._backend_entity = ONNXMinMaxAlgoBackend()
     q_setup = min_max_algo._get_quantizer_setup(nncf_graph.nncf_graph)
     q_g_to_quantization_mode = {}
