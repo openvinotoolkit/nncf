@@ -13,6 +13,7 @@
 
 from copy import deepcopy
 from typing import Dict, List, TypeVar, Optional
+from typing import OrderedDict as OrderedDict_
 from collections import OrderedDict
 from nncf import Dataset
 from nncf.common.graph.definitions import NNCFGraphNodeType
@@ -273,7 +274,7 @@ class MinMaxQuantization(Algorithm):
                                                                                      output_port_id)
         self._quantization_target_points_to_qconfig[activation_quantization_target_point] = quantization_point.qconfig
 
-    def _get_quantization_target_points(self, model: TModel) -> OrderedDict[TargetPoint, QuantizerConfig]:
+    def _get_quantization_target_points(self, model: TModel) -> OrderedDict_[TargetPoint, QuantizerConfig]:
         """
         Returns Quantization Target Points.
         In the Compression Pipeline logic NNCF assumes that the compression pipeline works only on the single model.
