@@ -14,6 +14,8 @@
 from typing import List, Type, Optional
 from dataclasses import dataclass
 
+import onnx
+from nncf.experimental.onnx.graph.onnx_graph import ONNXGraph
 from nncf.common.graph.operator_metatypes import OperatorMetatype
 from nncf.common.graph.operator_metatypes import OperatorMetatypeRegistry
 from nncf.common.hardware.opset import HWConfigOpName
@@ -33,6 +35,23 @@ class ONNXOpMetatype(OperatorMetatype):
     def get_subtypes(cls) -> List[Type[OperatorMetatype]]:
         return cls.subtypes
 
+    @classmethod
+    def matches(cls, model, node: onnx.NodeProto) -> bool:
+        return node.op_type in cls.op_names
+
+    @classmethod
+    def determine_subtype(cls, model, node: onnx.NodeProto) -> Optional[Type[OperatorMetatype]]:
+        matches = []
+        for subtype in cls.get_subtypes():
+            if subtype.matches(model, node):
+                matches.append(subtype)
+        if len(matches) > 1:
+            raise RuntimeError('Multiple subtypes match operator call - '
+                               'cannot determine single subtype.')
+        if not matches:
+            return None
+        return matches[0]
+
 
 @dataclass
 class OpWeightDef:
@@ -51,13 +70,23 @@ class OpWeightDef:
 
 
 class ONNXOpWithWeightsMetatype(ONNXOpMetatype):
-    weight_definition = None  # type: OpWeightDef
+    weight_definitions = None  # type: OpWeightDef
 
 
 @ONNX_OPERATION_METATYPES.register()
 class ONNXDepthwiseConvolutionMetatype(ONNXOpWithWeightsMetatype):
     name = 'DepthwiseConvOp'
+    op_names = ['Conv']
     hw_config_names = [HWConfigOpName.DEPTHWISECONVOLUTION]
+    weight_definitions = OpWeightDef(weight_channel_axis=0, weight_port_id=1, bias_port_id=2)
+
+    @classmethod
+    def matches(cls, model, node: onnx.NodeProto) -> bool:
+        return _is_depthwise_conv(model, node)
+
+    @classmethod
+    def determine_subtype(cls, model, node: onnx.NodeProto) -> Optional[Type[OperatorMetatype]]:
+        return
 
 
 @ONNX_OPERATION_METATYPES.register()
@@ -466,3 +495,19 @@ def get_operator_metatypes() -> List[Type[OperatorMetatype]]:
     :return: List of operator metatypes .
     """
     return list(ONNX_OPERATION_METATYPES.registry_dict.values())
+
+
+def _is_depthwise_conv(model, node: onnx.NodeProto) -> bool:
+    conv_group = None
+    for attribute in node.attribute:
+        if attribute.name == 'group':
+            conv_group = onnx.helper.get_attribute_value(attribute)
+    if conv_group is None:
+        return False
+    onnx_graph = ONNXGraph(model)
+    _, tensor_value = onnx_graph.get_weight_tensor(node)
+    conv_out_channels = tensor_value.shape[0]
+    conv_in_channels = tensor_value.shape[1] * conv_group
+    if conv_out_channels % conv_in_channels == 0 and conv_group == conv_in_channels:
+        return True
+    return False

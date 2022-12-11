@@ -63,11 +63,11 @@ class MinMaxQuantizationParameters(AlgorithmParameters):
     def __init__(self,
                  number_samples: int = 300,
                  preset: QuantizationPreset = QuantizationPreset.PERFORMANCE,
-                 weight_bits: int = 8,
-                 weight_granularity: Granularity = Granularity.PERCHANNEL,
+                 weight_bits: Optional[int] = None,
+                 weight_granularity: Optional[int] = None,
                  weight_signedness_to_force: Optional[bool] = None,
-                 activation_bits: int = 8,
-                 activation_granularity: Granularity = Granularity.PERTENSOR,
+                 activation_bits: Optional[int] = None,
+                 activation_granularity: Optional[int] = None,
                  activation_signedness_to_force: Optional[bool] = None,
                  target_device: HWConfigType = HWConfigType.CPU,
                  range_type: RangeType = RangeType.MEAN_MINMAX,
@@ -90,20 +90,33 @@ class MinMaxQuantizationParameters(AlgorithmParameters):
         self.quantize_outputs = quantize_outputs
         self.ignored_scopes = [] if ignored_scopes is None else ignored_scopes
         self.global_quantizer_constraints = {}
-        weight_quantizer_constraints_dict = {
-            **QuantizationPreset.get_params_configured_by_preset(preset, QuantizerGroup.WEIGHTS),
-            'num_bits': weight_bits,
-            'per_channel': weight_granularity == Granularity.PERCHANNEL,
-            'signedness_to_force': weight_signedness_to_force}
-        activation_quantizer_constraints_dict = {
-            **QuantizationPreset.get_params_configured_by_preset(preset, QuantizerGroup.ACTIVATIONS),
-            'num_bits': activation_bits,
-            'per_channel': activation_granularity == Granularity.PERCHANNEL,
-            'signedness_to_force': activation_signedness_to_force}
+        weight_quantizer_constraints_dict = self.get_global_constraints(
+            QuantizationPreset.get_params_configured_by_preset(preset, QuantizerGroup.WEIGHTS)['mode'], weight_bits,
+            weight_granularity, weight_signedness_to_force)
+        activation_quantizer_constraints_dict = self._get_global_constraints(
+            QuantizationPreset.get_params_configured_by_preset(preset, QuantizerGroup.ACTIVATIONS)['mode'],
+            activation_bits, activation_granularity, activation_signedness_to_force)
         for q_group, constraints in [
             (QuantizerGroup.WEIGHTS, QuantizationConstraints(**weight_quantizer_constraints_dict)),
             (QuantizerGroup.ACTIVATIONS, QuantizationConstraints(**activation_quantizer_constraints_dict))]:
             self.global_quantizer_constraints[q_group] = constraints
+        self.default_qconfig = self._get_default_qconfig(self.global_quantizer_constraints[QuantizerGroup.ACTIVATIONS])
+
+    def _get_default_qconfig(self, constraints: QuantizationConstraints = None):
+        qconfig = deepcopy(self.DEFAULT_QCONFIG)
+        if constraints is not None:
+            qconfig = constraints.apply_constraints_to(qconfig)
+        return qconfig
+
+    def _get_global_constraints(self, mode, num_bits, granularity, signedness_to_force):
+        quantizer_constraints_dict = {'mode': mode}
+        if num_bits is not None:
+            quantizer_constraints_dict['num_bits'] = num_bits
+        if granularity is not None:
+            quantizer_constraints_dict['per_channel'] = granularity == Granularity.PERCHANNEL
+        if signedness_to_force is not None:
+            quantizer_constraints_dict['signedness_to_force'] = signedness_to_force
+        return quantizer_constraints_dict
 
 
 class MinMaxQuantization(Algorithm):
@@ -192,14 +205,13 @@ class MinMaxQuantization(Algorithm):
         hw_config_type = self._parameters.target_device
         hw_config_path = self._backend_entity.hw_config.get_path_to_hw_config(hw_config_type)
         hw_config = self._backend_entity.hw_config.from_json(hw_config_path)
-        default_config = deepcopy(self._parameters.DEFAULT_QCONFIG)
 
         post_processing_types = self._backend_entity.post_processing_metatypes
         solver = QuantizerPropagationSolver(ignored_scopes=self._parameters.ignored_scopes,
                                             target_scopes=None,
                                             hw_config=hw_config,
                                             default_trait_to_metatype_map=self._backend_entity.quant_trait_op_dict,
-                                            default_qconfig_list=[default_config],
+                                            default_qconfig_list=[self._parameters.default_qconfig],
                                             quantizable_layer_nodes=quantizable_layer_nodes,
                                             quantize_outputs=self._parameters.quantize_outputs,
                                             global_constraints=self._parameters.global_quantizer_constraints,
@@ -284,7 +296,8 @@ class MinMaxQuantization(Algorithm):
                 self._add_activation_quantization_target_point(quantization_point)
             else:
                 raise RuntimeError('Incorrect quantization point')
-        self._quantization_target_points_to_qconfig = OrderedDict(sorted(self._quantization_target_points_to_qconfig.items()))
+        self._quantization_target_points_to_qconfig = OrderedDict(
+            sorted(self._quantization_target_points_to_qconfig.items()))
         return self._quantization_target_points_to_qconfig
 
     def _apply(self,
