@@ -15,7 +15,6 @@ from typing import List, Type, Optional
 from dataclasses import dataclass
 
 import onnx
-from nncf.experimental.onnx.graph.onnx_graph import ONNXGraph
 from nncf.common.graph.operator_metatypes import OperatorMetatype
 from nncf.common.graph.operator_metatypes import OperatorMetatypeRegistry
 from nncf.common.hardware.opset import HWConfigOpName
@@ -504,8 +503,13 @@ def _is_depthwise_conv(model, node: onnx.NodeProto) -> bool:
             conv_group = onnx.helper.get_attribute_value(attribute)
     if conv_group is None:
         return False
-    onnx_graph = ONNXGraph(model)
-    _, tensor_value = onnx_graph.get_weight_tensor(node)
+    tensor_value = None
+    initializer_name = node.input[1]
+    for init in model.graph.initializer:
+        if init.name == initializer_name:
+            tensor_value = onnx.numpy_helper.to_array(init)
+    if tensor_value is None:
+        return False
     conv_out_channels = tensor_value.shape[0]
     conv_in_channels = tensor_value.shape[1] * conv_group
     if conv_out_channels % conv_in_channels == 0 and conv_group == conv_in_channels:

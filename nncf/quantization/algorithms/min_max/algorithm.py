@@ -90,7 +90,7 @@ class MinMaxQuantizationParameters(AlgorithmParameters):
         self.quantize_outputs = quantize_outputs
         self.ignored_scopes = [] if ignored_scopes is None else ignored_scopes
         self.global_quantizer_constraints = {}
-        weight_quantizer_constraints_dict = self.get_global_constraints(
+        weight_quantizer_constraints_dict = self._get_global_constraints(
             QuantizationPreset.get_params_configured_by_preset(preset, QuantizerGroup.WEIGHTS)['mode'], weight_bits,
             weight_granularity, weight_signedness_to_force)
         activation_quantizer_constraints_dict = self._get_global_constraints(
