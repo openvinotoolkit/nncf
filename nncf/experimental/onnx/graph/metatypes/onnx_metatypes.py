@@ -23,10 +23,15 @@ ONNX_OPERATION_METATYPES = OperatorMetatypeRegistry('onnx_operator_metatypes')
 
 class ONNXOpMetatype(OperatorMetatype):
     op_names = []  # type: List[str]
+    subtypes = []  # type: List[Type[OperatorMetatype]]
 
     @classmethod
     def get_all_aliases(cls) -> List[str]:
         return cls.op_names
+
+    @classmethod
+    def get_subtypes(cls) -> List[Type[OperatorMetatype]]:
+        return cls.subtypes
 
 
 @dataclass
@@ -50,11 +55,18 @@ class ONNXOpWithWeightsMetatype(ONNXOpMetatype):
 
 
 @ONNX_OPERATION_METATYPES.register()
+class ONNXDepthwiseConvolutionMetatype(ONNXOpWithWeightsMetatype):
+    name = 'DepthwiseConvOp'
+    hw_config_names = [HWConfigOpName.DEPTHWISECONVOLUTION]
+
+
+@ONNX_OPERATION_METATYPES.register()
 class ONNXConvolutionMetatype(ONNXOpWithWeightsMetatype):
     name = 'ConvOp'
     op_names = ['Conv']
     hw_config_names = [HWConfigOpName.CONVOLUTION]
     weight_definitions = OpWeightDef(weight_channel_axis=0, weight_port_id=1, bias_port_id=2)
+    subtypes = [ONNXDepthwiseConvolutionMetatype]
 
 
 @ONNX_OPERATION_METATYPES.register()
@@ -439,6 +451,7 @@ class ONNXDequantizeLinearMetatype(ONNXOpMetatype):
 
 
 WEIGHT_LAYER_METATYPES = [ONNXConvolutionMetatype,
+                          ONNXDepthwiseConvolutionMetatype,
                           ONNXConvolutionTransposeMetatype,
                           ONNXLinearMetatype]
 
