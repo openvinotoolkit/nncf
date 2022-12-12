@@ -21,17 +21,16 @@
     {
       "algorithm": "movement_sparsity",
       "params": {
-        "warmup_start_epoch": 1,
-        "warmup_end_epoch": 3,
-        "init_importance_threshold": -1,
+        "warmup_start_epoch": 3,
+        "warmup_end_epoch": 6,
         "final_importance_threshold": 0,
-        "importance_regularization_factor": 0.005,
-        "enable_structured_masking": true,
+        "importance_regularization_factor": 0.01,
+        "enable_structured_masking": true
       },
       "sparse_structure_by_scopes": [
         {
           "mode": "block",
-          "sparse_factors": [32, 32],
+          "sparse_factors": [64, 64],
           "target_scopes": "{re}.*attention.*"
         },
         {

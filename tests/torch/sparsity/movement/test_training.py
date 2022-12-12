@@ -32,16 +32,9 @@ class MovementGlueHandler:
 
     def get_metric_value_from_checkpoint(self, checkpoint_save_dir: str) -> Dict[str, Union[float, int]]:
         checkpoint_path = self.get_checkpoint_path(checkpoint_save_dir)
-        state_path = checkpoint_path / "trainer_state.json"
-        with open(state_path, "r", encoding='utf-8') as f:
-            state_dict = json.load(f)
-        max_step = max(log["step"] for log in state_dict["log_history"])
-
-        # gather useful info in one dict
-        result = dict(step=max_step)
-        for log in state_dict["log_history"]:
-            if log["step"] == max_step:
-                result.update(log)
+        result_path = checkpoint_path / "all_results.json"
+        with open(result_path, "r", encoding='utf-8') as f:
+            result = json.load(f)
         return result
 
 
@@ -53,15 +46,15 @@ class MovementTrainingTestDescriptor(BaseSampleTestCaseDescriptor):
         self.model_name_ = "google/bert_uncased_L-2_H-128_A-2"
         self.enable_autocast_fp16_ = False
         self.distributed_data_parallel_ = False
-        self.n_process = 1
+        self.n_card = 1
         self.cpu_only_ = False
         self.execution_arg = "single_card"
-        self.timeout_ = 10 * 60  # 10 mins
+        self.timeout_ = 8 * 60  # 8 mins
         self.expected_eval_acc_ = None
         self.expected_eval_f1_ = None
         self.expected_rela_sparsity_ = None
-        self.num_train_epochs_ = 6
-        self.learning_rate_ = 1e-4
+        self.num_train_epochs_ = 9
+        self.learning_rate_ = 5e-5
         self.seed_ = None
         self.output_dir = None
         self.quick_check_ = False
@@ -113,12 +106,12 @@ class MovementTrainingTestDescriptor(BaseSampleTestCaseDescriptor):
         self.seed_ = seed_
         return self
 
-    def distributed_data_parallel(self, distributed_data_parallel_=True, n_process=2):
+    def distributed_data_parallel(self, distributed_data_parallel_=True, n_card=2):
         if distributed_data_parallel_ is True:
             assert self.cpu_only_ is False
         self.execution_arg = "multiprocessing-distributed"
         self.distributed_data_parallel_ = distributed_data_parallel_
-        self.n_process = n_process
+        self.n_card = n_card
         return self
 
     def cpu_only(self, cpu_only_=True):
@@ -127,10 +120,10 @@ class MovementTrainingTestDescriptor(BaseSampleTestCaseDescriptor):
         self.cpu_only_ = cpu_only_
         return self
 
-    def data_parallel(self, data_parallel_=True, n_process=2):
+    def data_parallel(self, data_parallel_=True, n_card=2):
         if data_parallel_:
             self.execution_arg = "data-parallel"
-        self.n_process = n_process
+        self.n_card = n_card
         return self
 
     def enable_autocast_fp16(self, enable_autocast_fp16_: bool = True):
@@ -163,12 +156,12 @@ class MovementTrainingValidator(BaseSampleValidator):
         env_with_cuda_reproducibility["CUBLAS_WORKSPACE_CONFIG"] = ":4096:8"
         if not self._desc.cpu_only_:
             CUDA_ENV_KEY = 'CUDA_VISIBLE_DEVICES'
-            n_process = self._desc.n_process
+            n_card = self._desc.n_card
             if CUDA_ENV_KEY not in os.environ:
-                dev_ids = list(map(str, range(n_process)))
+                dev_ids = list(map(str, range(n_card)))
             else:
                 all_dev_ids = os.environ[CUDA_ENV_KEY].split(",")
-                dev_ids = all_dev_ids[:n_process]
+                dev_ids = all_dev_ids[:n_card]
             env_with_cuda_reproducibility[CUDA_ENV_KEY] = ','.join(dev_ids)
         runner.kwargs.update(env=env_with_cuda_reproducibility)
         runner.run(timeout=self._desc.timeout_)
@@ -208,7 +201,7 @@ class MovementTrainingValidator(BaseSampleValidator):
         cli_args = ' '.join(map(str, cli_args_l))
         extra_for_ddp = ""
         if self._desc.distributed_data_parallel_:
-            extra_for_ddp = f"-m torch.distributed.run --nproc_per_node={self._desc.n_process}"
+            extra_for_ddp = f"-m torch.distributed.run --nproc_per_node={self._desc.n_card}"
         return f"PYTHONPATH={project_root} {sys.executable} {extra_for_ddp} {main_py} {cli_args}"
 
     def setup_spy(self, mocker):
@@ -223,70 +216,69 @@ mrpc_movement_desc_template = \
     .model_name("google/bert_uncased_L-2_H-128_A-2")\
     .real_dataset("mrpc")\
     .config_name("bert_tiny_uncased_mrpc_movement.json")\
-    .learning_rate(1e-4)\
+    .learning_rate(5e-5)\
     .batch_size(64)\
-    .num_train_epochs(6)\
-    .seed(42)\
+    .num_train_epochs(9)\
+    .seed(42)
 
 MOVEMENT_DESCRIPTORS = {
-    "mrpc_cuda_1proc": deepcopy(mrpc_movement_desc_template)
-    .expected_eval_f1(approx(0.81, abs=0.06))
-    .expected_eval_acc(approx(0.71, abs=0.06))
-    .expected_rela_sparsity(approx(0.28, abs=0.20)),
+    "mrpc_cuda_1card": deepcopy(mrpc_movement_desc_template)
+    .expected_eval_f1(approx(0.81, abs=0.02))
+    .expected_eval_acc(approx(0.68, abs=0.03))
+    .expected_rela_sparsity(approx(0.48, abs=0.05)),
 
-    "mrpc_cuda_1proc_fp16": deepcopy(mrpc_movement_desc_template)
+    "mrpc_cuda_1card_fp16": deepcopy(mrpc_movement_desc_template)
     .enable_autocast_fp16()
-    .expected_eval_f1(approx(0.81, abs=0.06))
-    .expected_eval_acc(approx(0.71, abs=0.06))
-    .expected_rela_sparsity(approx(0.28, abs=0.20)),
+    .expected_eval_f1(approx(0.81, abs=0.02))
+    .expected_eval_acc(approx(0.68, abs=0.03))
+    .expected_rela_sparsity(approx(0.48, abs=0.05)),
 
-
-    "mrpc_cuda_2proc_dp": deepcopy(mrpc_movement_desc_template)
+    "mrpc_cuda_2cards_dp": deepcopy(mrpc_movement_desc_template)
     .batch_size(32)
-    .data_parallel(n_process=2)
-    .expected_eval_f1(approx(0.81, abs=0.06))
-    .expected_eval_acc(approx(0.71, abs=0.06))
-    .expected_rela_sparsity(approx(0.28, abs=0.20)),
+    .data_parallel(n_card=2)
+    .expected_eval_f1(approx(0.81, abs=0.02))
+    .expected_eval_acc(approx(0.68, abs=0.03))
+    .expected_rela_sparsity(approx(0.48, abs=0.05)),
 
-
-    "mrpc_cuda_2proc_dp_fp16": deepcopy(mrpc_movement_desc_template)
+    "mrpc_cuda_2cards_dp_fp16": deepcopy(mrpc_movement_desc_template)
     .batch_size(32)
-    .data_parallel(n_process=2)
+    .data_parallel(n_card=2)
     .enable_autocast_fp16()
-    .expected_eval_f1(approx(0.81, abs=0.06))
-    .expected_eval_acc(approx(0.71, abs=0.06))
-    .expected_rela_sparsity(approx(0.28, abs=0.20)),
+    .expected_eval_f1(approx(0.81, abs=0.02))
+    .expected_eval_acc(approx(0.68, abs=0.03))
+    .expected_rela_sparsity(approx(0.48, abs=0.05)),
 
-
-    "mrpc_cuda_2proc_ddp": deepcopy(mrpc_movement_desc_template)
+    "mrpc_cuda_2cards_ddp": deepcopy(mrpc_movement_desc_template)
     .batch_size(32)
-    .distributed_data_parallel(n_process=2)
-    .expected_eval_f1(approx(0.81, abs=0.06))
-    .expected_eval_acc(approx(0.71, abs=0.06))
-    .expected_rela_sparsity(approx(0.28, abs=0.20)),
+    .distributed_data_parallel(n_card=2)
+    .expected_eval_f1(approx(0.81, abs=0.02))
+    .expected_eval_acc(approx(0.68, abs=0.03))
+    .expected_rela_sparsity(approx(0.48, abs=0.05)),
 
-
-    "mrpc_cuda_2proc_ddp_fp16": deepcopy(mrpc_movement_desc_template)
+    "mrpc_cuda_2cards_ddp_fp16": deepcopy(mrpc_movement_desc_template)
     .batch_size(32)
-    .distributed_data_parallel(n_process=2)
+    .distributed_data_parallel(n_card=2)
     .enable_autocast_fp16()
-    .expected_eval_f1(approx(0.81, abs=0.06))
-    .expected_eval_acc(approx(0.71, abs=0.06))
-    .expected_rela_sparsity(approx(0.28, abs=0.20)),
+    .expected_eval_f1(approx(0.81, abs=0.02))
+    .expected_eval_acc(approx(0.68, abs=0.03))
+    .expected_rela_sparsity(approx(0.48, abs=0.05)),
 
-    "mrpc_cpu_1proc": deepcopy(mrpc_movement_desc_template)
+    "mrpc_cpu_1card": deepcopy(mrpc_movement_desc_template)
     .cpu_only()
-    .expected_eval_f1(approx(0.81, abs=0.06))
-    .expected_eval_acc(approx(0.71, abs=0.06))
-    .expected_rela_sparsity(approx(0.28, abs=0.20)),
+    .expected_eval_f1(approx(0.81, abs=0.02))
+    .expected_eval_acc(approx(0.68, abs=0.03))
+    .expected_rela_sparsity(approx(0.48, abs=0.05)),
 }
 
 
-def finalize_desc(desc, is_long_training, dataset_dir, tmp_path_factory, weekly_models_path):
+def finalize_desc(desc: MovementTrainingTestDescriptor, is_long_training: bool,
+                  dataset_dir, tmp_path_factory, weekly_models_path):
     if is_long_training and (weekly_models_path is None):
         pytest.skip('Skip the test for long training since `--weekly-models` option is not specified.')
     if (not is_long_training) and (weekly_models_path is not None):
         pytest.skip('Skip the test for short training since a long run will be checked.')
+    if desc.cpu_only_ or (desc.n_card > 1 and not desc.distributed_data_parallel_):
+        pytest.xfail('Training gets stuck in pytest, but is working fine if launched in normal bash.')
     return desc.finalize(dataset_dir, tmp_path_factory, weekly_models_path)
 
 
@@ -308,7 +300,7 @@ def fixture_movement_desc_short(request, dataset_dir, tmp_path_factory, weekly_m
 class TestMovementTraining:
     @pytest.mark.weekly
     def test_compression_movement_long_train(self, movement_desc_long: MovementTrainingTestDescriptor, mocker):
-        if (not movement_desc_long.cpu_only_) and torch.cuda.device_count() < movement_desc_long.n_process:
+        if (not movement_desc_long.cpu_only_) and torch.cuda.device_count() < movement_desc_long.n_card:
             pytest.skip(f"No enough cuda devices to run {movement_desc_long}")
         validator = movement_desc_long.get_validator()
         args = validator.get_default_args()
@@ -318,7 +310,7 @@ class TestMovementTraining:
 
     @pytest.mark.nightly
     def test_compression_movement_short_train(self, movement_desc_short: MovementTrainingTestDescriptor, mocker):
-        if (not movement_desc_short.cpu_only_) and torch.cuda.device_count() < movement_desc_short.n_process:
+        if (not movement_desc_short.cpu_only_) and torch.cuda.device_count() < movement_desc_short.n_card:
             pytest.skip(f"No enough cuda devices to run {movement_desc_short}")
         validator = movement_desc_short.get_validator()
         args = validator.get_default_args()

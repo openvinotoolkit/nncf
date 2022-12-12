@@ -91,8 +91,7 @@ class CompressionCallback(TrainerCallback):
 
 
 class CompressionTrainer(Trainer):
-    def __init__(self, compression_ctrl: Optional[CompressionAlgorithmController],
-                 *args, shuffle_training_data: bool = True,
+    def __init__(self, compression_ctrl: Optional[CompressionAlgorithmController], *args,
                  callbacks: Optional[List[TrainerCallback]] = None, **kwargs):
         self.compression_ctrl = compression_ctrl
         self._compression_callback = None
@@ -102,8 +101,6 @@ class CompressionTrainer(Trainer):
         super().__init__(callbacks=callbacks, *args, **kwargs)
         if not (self.args.local_rank == -1 or self.args.no_cuda or compression_ctrl is None):
             compression_ctrl.distributed()
-        if not shuffle_training_data:
-            self.get_train_dataloader = self.get_eval_dataloader
 
     def compute_loss(self, model, inputs, return_outputs=False):
         loss, outputs = super().compute_loss(model, inputs, return_outputs=True)
@@ -151,7 +148,7 @@ def prepare_dataset(args, training_args):
     return train_dataset, eval_dataset, num_labels
 
 
-def prepare_model(args, training_args, num_labels):
+def prepare_model(args: argparse.Namespace, training_args: TrainingArguments, num_labels: int):
     config = AutoConfig.from_pretrained(
         args.model_name_or_path,
         num_labels=num_labels,

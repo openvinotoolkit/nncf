@@ -478,9 +478,11 @@ class TestModelSaving:
                 tensor_protos.append(item)
         for node in onnx_model.graph.node:
             for attribute in node.attribute:
-                if hasattr(attribute, 't') and isinstance(attribute.t, onnx.TensorProto):
+                if attribute.HasField('t') and isinstance(attribute.t, onnx.TensorProto):
                     tensor_protos.append(attribute.t)
         for tensor_proto in tensor_protos:
+            if (not tensor_proto.HasField('raw_data')) or tensor_proto.raw_data is None:
+                continue
             onnx_weight = numpy_helper.to_array(tensor_proto)
             # linear weight may be transposed when do_constant_folding=True
             for weight in [onnx_weight, onnx_weight.T]:
