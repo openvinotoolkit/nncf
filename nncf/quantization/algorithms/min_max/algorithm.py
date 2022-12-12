@@ -18,6 +18,7 @@ from collections import OrderedDict
 from nncf import Dataset
 from nncf.common.graph.definitions import NNCFGraphNodeType
 from nncf.common.graph.graph import NNCFGraph
+from nncf.common.graph.graph import NNCFNode
 from nncf.common.graph.transformations.commands import TargetType
 from nncf.common.graph.transformations.commands import TargetPoint
 from nncf.common.graph.transformations.layout import TransformationLayout
@@ -33,6 +34,7 @@ from nncf.common.quantization.structs import QuantizerConfig
 from nncf.common.quantization.structs import QuantizationPreset
 from nncf.common.quantization.structs import QuantizerGroup
 from nncf.common.quantization.structs import QuantizationConstraints
+from nncf.common.quantization.config_assignment import assign_qconfig_lists_to_modules
 
 from nncf.common.tensor_statistics.collectors import TensorStatisticCollectorBase
 from nncf.common.utils.backend import BackendType
@@ -169,6 +171,14 @@ class MinMaxQuantization(Algorithm):
             raise RuntimeError('Cannot return backend-specific entity'
                                'because {} is not supported!'.format(model_backend))
 
+    def _assign_qconfig_lists_to_modules(self, weighted_nodes: List[NNCFNode],
+                                         hw_config) -> Dict[NNCFNode, List[QuantizerConfig]]:
+        global_constraints = self._parameters.global_quantizer_constraints[QuantizerGroup.WEIGHTS]
+        return assign_qconfig_lists_to_modules(nodes_with_weights=weighted_nodes,
+                                               default_weight_qconfig=self._parameters.default_qconfig,
+                                               global_constraints=global_constraints,
+                                               hw_config=hw_config)
+
     def _get_stat_collector(self, quantizer_config: QuantizerConfig) -> TensorStatisticCollectorBase:
         """
         Creates and returns statistic collector instance based on the quantizer's configuration.
@@ -196,17 +206,22 @@ class MinMaxQuantization(Algorithm):
         :param nncf_graph: NNCFGraph instance.
         :return: SingleConfigQuantizerSetup for the current NNCFGraph entity.
         """
-        ip_graph = InsertionPointGraph(nncf_graph)
-        weight_nodes = nncf_graph.get_nodes_by_metatypes(self._backend_entity.layers_with_weights_metatypes)
-        quantizable_layer_nodes = [QuantizableWeightedLayerNode(weight_node, [QuantizerConfig()])
-                                   for weight_node in weight_nodes]
-        pattern = self._backend_entity.hw_fused_patterns.get_full_pattern_graph()
-        ip_graph = ip_graph.get_ip_graph_with_merged_hw_optimized_operations(pattern, quantizable_layer_nodes)
-
         hw_config_type = self._parameters.target_device
         hw_config_path = self._backend_entity.hw_config.get_path_to_hw_config(hw_config_type)
         hw_config = self._backend_entity.hw_config.from_json(hw_config_path)
-
+        ip_graph = InsertionPointGraph(nncf_graph)
+        weight_nodes = nncf_graph.get_nodes_by_metatypes(self._backend_entity.layers_with_weights_metatypes)
+        weighted_node_and_qconf_lists = assign_qconfig_lists_to_modules(nodes_with_weights=weight_nodes,
+                                                                        default_weight_qconfig=self._parameters.DEFAULT_QCONFIG,
+                                                                        global_weight_constraints=
+                                                                        self._parameters.global_quantizer_constraints[
+                                                                            QuantizerGroup.WEIGHTS],
+                                                                        scope_overrides_dict=None,
+                                                                        hw_config=hw_config)
+        quantizable_layer_nodes = [QuantizableWeightedLayerNode(node, qconf_list) for node, qconf_list
+                                   in weighted_node_and_qconf_lists.items()]
+        pattern = self._backend_entity.hw_fused_patterns.get_full_pattern_graph()
+        ip_graph = ip_graph.get_ip_graph_with_merged_hw_optimized_operations(pattern, quantizable_layer_nodes)
         post_processing_types = self._backend_entity.post_processing_metatypes
         solver = QuantizerPropagationSolver(ignored_scopes=self._parameters.ignored_scopes,
                                             target_scopes=None,
