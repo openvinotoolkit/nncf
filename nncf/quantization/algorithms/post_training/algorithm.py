@@ -11,7 +11,7 @@
  limitations under the License.
 """
 
-from typing import Dict, List, Optional, TypeVar, Union
+from typing import Dict, List, Optional, TypeVar
 
 from copy import deepcopy
 
@@ -23,7 +23,6 @@ from nncf.common.utils.backend import get_backend
 from nncf.common.utils.logger import logger as nncf_logger
 from nncf.quantization.algorithms.algorithm import Algorithm
 from nncf.quantization.algorithms.algorithm import AlgorithmParameters
-from nncf.quantization.algorithms.definitions import Granularity
 from nncf.quantization.algorithms.definitions import RangeType
 from nncf.quantization.algorithms.fast_bias_correction.algorithm import FastBiasCorrection
 from nncf.quantization.algorithms.fast_bias_correction.algorithm import FastBiasCorrectionParameters
