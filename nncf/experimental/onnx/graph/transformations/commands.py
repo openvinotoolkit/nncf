@@ -109,6 +109,7 @@ class ONNXNodeRemovingCommand(TransformationCommand):
     """
     Removes nodes from the model.
     """
+
     def __init__(self, target_point: ONNXTargetPoint):
         """
         :param target_point: The TargetPoint instance for the layer that contains information for removing.

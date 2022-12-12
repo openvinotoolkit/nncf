@@ -348,7 +348,7 @@ class ONNXModelTransformer(ModelTransformer):
 
     def _apply_node_removing_transformation(self, transformations: List[ONNXNodeRemovingCommand]) -> None:
         """
-        Removes the the layers from the model.
+        Removes the layers from the model.
 
         :param transformations: lisf of the node removing transformations.
         """
