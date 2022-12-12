@@ -54,7 +54,7 @@ def test_default_quantizer_config(nncf_graph):
         if quantization_point.is_weight_quantization_point():
             assert quantization_point.qconfig == weight_default_config
         if quantization_point.is_activation_quantization_point():
-            quantization_point.qconfig == activation_default_config
+            assert quantization_point.qconfig == activation_default_config
 
 
 @pytest.mark.parametrize('weight_granularity', [Granularity.PERCHANNEL, Granularity.PERTENSOR])
