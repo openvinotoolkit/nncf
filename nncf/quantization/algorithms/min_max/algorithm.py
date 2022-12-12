@@ -12,13 +12,11 @@
 """
 
 from copy import deepcopy
-from typing import Dict, List, TypeVar, Optional
-from typing import OrderedDict as OrderedDict_
-from collections import OrderedDict
+from typing import Dict, List, TypeVar, Optional, OrderedDict
+from collections import OrderedDict as OrderedDict_
 from nncf import Dataset
 from nncf.common.graph.definitions import NNCFGraphNodeType
 from nncf.common.graph.graph import NNCFGraph
-from nncf.common.graph.graph import NNCFNode
 from nncf.common.graph.transformations.commands import TargetType
 from nncf.common.graph.transformations.commands import TargetPoint
 from nncf.common.graph.transformations.layout import TransformationLayout
@@ -78,14 +76,27 @@ class MinMaxQuantizationParameters(AlgorithmParameters):
                  ignored_scopes: Optional[List[str]] = None,
                  ):
         """
-        TODO: add docs!
-        weight_signedness_to_force
-        activation_signedness_to_force
         :param number_samples: Number of samples for the statistics collection.
+        :param preset: Preset parameter for Quantization. Defines the mode: symmetric or asymmetric of the activation quantizers.
+        :param weight_bits: Bitwidth for the weight quantizers.
+        :param weight_granularity: Type of quantization granularity for weight quantizers.
+        Could be per-channel or per-tensor.
+        :param weight_signedness_to_force: Defines whether the datatype of the weight quantizers should be forced.
+        True if the quantizer *must* be signed, False if *must* be unsigned,
+        None if the signed/unsigned attribute should be determined based on the incoming activation
+        statistics during range initialization.
+        :param activation_bits: Bitwidth for the activation quantizers.
+        :param activation_granularity: Type of quantization granularity for activation quantizers.
+        Could be per-channel or per-tensor.
+        :param activation_signedness_to_force: Defines whether the datatype of the activation quantizers
+         should be forced. True if the quantizer *must* be signed, False if *must* be unsigned,
+        None if the signed/unsigned attribute should be determined based on the incoming activation
+        statistics during range initialization.
+        activation_signedness_to_force
         :param target_device: Target device for the settings of the quantization pipeline.
-        :param range_type: Range types for the quantizer's parameters.
+        :param range_type: Type of statistics range calculation.
         :param quantize_outputs: Boolean value that says whether quantize outputs or not.
-        :param ignored_scopes: List of the layers that should not quantized during the process.
+        :param ignored_scopes: List of the layers which input must not be quantized.
         """
         self.number_samples = number_samples
         self.target_device = HWConfigType.from_str(HW_CONFIG_TYPE_TARGET_DEVICE_MAP[target_device.value])
@@ -93,63 +104,50 @@ class MinMaxQuantizationParameters(AlgorithmParameters):
         self.quantize_outputs = quantize_outputs
         self.ignored_scopes = [] if ignored_scopes is None else ignored_scopes
         self.global_quantizer_constraints = {}
-        weight_quantizer_constraints_dict = self._get_global_constraints(
-            QuantizationPreset.get_params_configured_by_preset(preset, QuantizerGroup.WEIGHTS)['mode'], weight_bits,
-            weight_granularity, weight_signedness_to_force)
-        activation_quantizer_constraints_dict = self._get_global_constraints(
-            QuantizationPreset.get_params_configured_by_preset(preset, QuantizerGroup.ACTIVATIONS)['mode'],
-            activation_bits, activation_granularity, activation_signedness_to_force)
+        weight_quantizer_constraints_dict = {
+            'mode': QuantizationPreset.get_params_configured_by_preset(preset, QuantizerGroup.WEIGHTS)['mode'],
+            'num_bits': weight_bits,
+            'per_channel': weight_granularity == Granularity.PERCHANNEL,
+            'signedness_to_force': weight_signedness_to_force}
+        activation_quantizer_constraints_dict = {
+            'mode': QuantizationPreset.get_params_configured_by_preset(preset, QuantizerGroup.ACTIVATIONS)['mode'],
+            'num_bits': activation_bits,
+            'per_channel': activation_granularity == Granularity.PERCHANNEL,
+            'signedness_to_force': activation_signedness_to_force}
         for q_group, constraints in [
             (QuantizerGroup.WEIGHTS, QuantizationConstraints(**weight_quantizer_constraints_dict)),
             (QuantizerGroup.ACTIVATIONS, QuantizationConstraints(**activation_quantizer_constraints_dict))]:
             self.global_quantizer_constraints[q_group] = constraints
         self.default_qconfig = self._get_default_qconfig(self.global_quantizer_constraints[QuantizerGroup.ACTIVATIONS])
 
-    def _get_default_qconfig(self, constraints: QuantizationConstraints = None):
+    def _get_default_qconfig(self, constraints: QuantizationConstraints = None) -> QuantizerConfig:
+        """
+        Returns default quantizer configuration, based on the provided constraints.
+
+        :param constraints: Quantization constraints.
+        :return: Quantizer config.
+        """
         qconfig = deepcopy(self.DEFAULT_QCONFIG)
         if constraints is not None:
             qconfig = constraints.apply_constraints_to(qconfig)
         return qconfig
 
-    def _get_global_constraints(self, mode, num_bits, granularity, signedness_to_force):
-        quantizer_constraints_dict = {'mode': mode}
-        if num_bits is not None:
-            quantizer_constraints_dict['num_bits'] = num_bits
-        if granularity is not None:
-            quantizer_constraints_dict['per_channel'] = granularity == Granularity.PERCHANNEL
-        if signedness_to_force is not None:
-            quantizer_constraints_dict['signedness_to_force'] = signedness_to_force
-        return quantizer_constraints_dict
-
 
 class MinMaxQuantization(Algorithm):
     """
-    Post-training MinMaxQuantization algorithm implementation.
+    Post-training MinMaxQuantization algorithm.
 
-    The main purpose of this algorithm to insert FakeQuantizes
-    (or pairs of Quantizer-Dequantizer operations) into the model.
-    This operation is very expressive and allows mapping values from arbitrary input and output ranges.
-    This algorithm projects (discretize) the input values to the low-precision data type
-    using affine transformation (with clamp and rounding) and then re-project discrete values back to the
-    original range and data type.
-    It can be considered as an emulation of the quantization/dequantization process which happens at runtime.
-
-    :param weight_quantizer_config: QuantizerConfig instance for the weights.
-    :param activation_quantizer_config: QuantizerConfig instance for the activations.
-    :param number_samples: The number of the samples for the statistics collection.
-    :param target_device: Target device for the settings of the quantization pipeline.
-    :param range_type: Range types for the quantizer's parameters.
-    :param quantize_outputs: Boolean value that says whether quantize outputs or not.
-    :param ignored_scopes: List of the layers that should not quantized during the process.
-    :param nncf_graph: NNCFGraph class for the algorithm.
-    :param _quantization_target_points: Set of the unique target points.
+    The algorithm modifies the model by inserting additional nodes, which emulates the quantization of the data flow.
+    The algorithm calibrates the parameters of the inserted nodes by collecting the statistics in the insertion points.
+    The modified model is returned after the work of the algorithm, which can be perfomed via the original framework.
+    It is expected that the inference of the obtained model in the int8 mode would be faster than the original model.
     """
 
     def __init__(self, parameters: MinMaxQuantizationParameters):
         self.nncf_graph = None
         # It prevents the duplicate weight quantizers from being added.
         # It can happen when you have layers that share the identical weight tensor.
-        self._quantization_target_points_to_qconfig = OrderedDict()  # type: OrderedDict[TargetPoint, QuantizerConfig]
+        self._quantization_target_points_to_qconfig = OrderedDict_()  # type: OrderedDict[TargetPoint, QuantizerConfig]
         self._parameters = parameters
 
     @property
@@ -170,14 +168,6 @@ class MinMaxQuantization(Algorithm):
         else:
             raise RuntimeError('Cannot return backend-specific entity'
                                'because {} is not supported!'.format(model_backend))
-
-    def _assign_qconfig_lists_to_modules(self, weighted_nodes: List[NNCFNode],
-                                         hw_config) -> Dict[NNCFNode, List[QuantizerConfig]]:
-        global_constraints = self._parameters.global_quantizer_constraints[QuantizerGroup.WEIGHTS]
-        return assign_qconfig_lists_to_modules(nodes_with_weights=weighted_nodes,
-                                               default_weight_qconfig=self._parameters.default_qconfig,
-                                               global_constraints=global_constraints,
-                                               hw_config=hw_config)
 
     def _get_stat_collector(self, quantizer_config: QuantizerConfig) -> TensorStatisticCollectorBase:
         """
@@ -209,10 +199,10 @@ class MinMaxQuantization(Algorithm):
         hw_config_type = self._parameters.target_device
         hw_config_path = self._backend_entity.hw_config.get_path_to_hw_config(hw_config_type)
         hw_config = self._backend_entity.hw_config.from_json(hw_config_path)
-        ip_graph = InsertionPointGraph(nncf_graph)
         weight_nodes = nncf_graph.get_nodes_by_metatypes(self._backend_entity.layers_with_weights_metatypes)
         weighted_node_and_qconf_lists = assign_qconfig_lists_to_modules(nodes_with_weights=weight_nodes,
-                                                                        default_weight_qconfig=self._parameters.DEFAULT_QCONFIG,
+                                                                        default_weight_qconfig=
+                                                                        self._parameters.DEFAULT_QCONFIG,
                                                                         global_weight_constraints=
                                                                         self._parameters.global_quantizer_constraints[
                                                                             QuantizerGroup.WEIGHTS],
@@ -221,6 +211,7 @@ class MinMaxQuantization(Algorithm):
         quantizable_layer_nodes = [QuantizableWeightedLayerNode(node, qconf_list) for node, qconf_list
                                    in weighted_node_and_qconf_lists.items()]
         pattern = self._backend_entity.hw_fused_patterns.get_full_pattern_graph()
+        ip_graph = InsertionPointGraph(nncf_graph)
         ip_graph = ip_graph.get_ip_graph_with_merged_hw_optimized_operations(pattern, quantizable_layer_nodes)
         post_processing_types = self._backend_entity.post_processing_metatypes
         solver = QuantizerPropagationSolver(ignored_scopes=self._parameters.ignored_scopes,
@@ -289,7 +280,7 @@ class MinMaxQuantization(Algorithm):
                                                                                      output_port_id)
         self._quantization_target_points_to_qconfig[activation_quantization_target_point] = quantization_point.qconfig
 
-    def _get_quantization_target_points(self, model: TModel) -> OrderedDict_[TargetPoint, QuantizerConfig]:
+    def _get_quantization_target_points(self, model: TModel) -> OrderedDict[TargetPoint, QuantizerConfig]:
         """
         Returns Quantization Target Points.
         In the Compression Pipeline logic NNCF assumes that the compression pipeline works only on the single model.
@@ -312,7 +303,7 @@ class MinMaxQuantization(Algorithm):
                 self._add_activation_quantization_target_point(quantization_point)
             else:
                 raise RuntimeError('Incorrect quantization point')
-        self._quantization_target_points_to_qconfig = OrderedDict(
+        self._quantization_target_points_to_qconfig = OrderedDict_(
             sorted(self._quantization_target_points_to_qconfig.items()))
         return self._quantization_target_points_to_qconfig
 
@@ -331,24 +322,22 @@ class MinMaxQuantization(Algorithm):
             target_node_name = quantization_target_point.target_node_name
             node = nncf_graph.get_node_by_name(target_node_name)
             if quantization_target_point.type == TargetType.OPERATION_WITH_WEIGHTS:
-                weight_tensor_name, weight_tensor = self._backend_entity.get_weight_tensor(
-                    model, quantization_target_point)
+                weight_tensor_name, weight_tensor = self._backend_entity.get_weight_tensor(model,
+                                                                                           quantization_target_point)
                 # If the nodes share one weight tensor, we should have only one quantizer on that
                 if weight_tensor_name in weight_tensor_names:
                     continue
                 weight_tensor_names.add(weight_tensor_name)
-                command = self._backend_entity.create_weight_quantizer_insertion_command(
-                    quantization_target_point, qconfig, weight_tensor, node)
+                command = self._backend_entity.create_weight_quantizer_insertion_command(quantization_target_point,
+                                                                                         qconfig, weight_tensor, node)
                 transformation_commands.append(command)
             elif quantization_target_point.type in [TargetType.PRE_LAYER_OPERATION, TargetType.POST_LAYER_OPERATION]:
                 def filter_func(point):
                     return MinMaxQuantization in point.algorithm_to_tensor_collectors and \
                            point.target_point.type == quantization_target_point.type
 
-                for tensor_collector in statistic_points.get_algo_statistics_for_node(
-                        target_node_name,
-                        filter_func,
-                        MinMaxQuantization):
+                for tensor_collector in statistic_points.get_algo_statistics_for_node(target_node_name, filter_func,
+                                                                                      MinMaxQuantization):
                     command = self._backend_entity.create_activation_quantizer_insertion_command(
                         quantization_target_point, qconfig, tensor_collector.get_statistics())
                     transformation_commands.append(command)
