@@ -59,8 +59,8 @@ from nncf.torch.dynamic_graph.transform_graph import replace_modules_by_nncf_mod
 from nncf.torch.graph.graph import PTNNCFGraph
 from nncf.torch.graph.graph_builder import GraphBuilder
 from nncf.torch.graph.graph_builder import GraphConverter
+from nncf.torch.graph.operator_metatypes import OPERATORS_WITH_WEIGHTS_METATYPES
 from nncf.torch.graph.operator_metatypes import PTSplitMetatype
-from nncf.torch.graph.transformations.commands import PTInsertionCommand
 from nncf.torch.graph.transformations.commands import PTTargetPoint
 from nncf.torch.graph.transformations.layout import PTTransformationLayout
 from nncf.torch.knowledge_distillation.knowledge_distillation_handler import KnowledgeDistillationLossHandler
@@ -436,7 +436,7 @@ class NNCFNetwork(nn.Module, PostGraphBuildActing):
                     continue
             nodes_in_scope = self._original_graph.get_op_nodes_in_scope(nncf_module_scope)
             for node in nodes_in_scope:
-                if node.layer_attributes is not None:  # TODO(vshampor): implement more explicit filtering
+                if node.metatype in OPERATORS_WITH_WEIGHTS_METATYPES:
                     retval.append(node)
         return retval
 
