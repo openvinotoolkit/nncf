@@ -35,8 +35,8 @@ DATASET_CLASSES = 10
 
 
 def download_dataset() -> Path:
-    downloader = FastDownload(base=DATASET_PATH, 
-                              archive='downloaded', 
+    downloader = FastDownload(base=DATASET_PATH,
+                              archive='downloaded',
                               data='extracted')
     return downloader.get(DATASET_URL)
 
@@ -45,32 +45,28 @@ def download_model() -> Path:
     return download_url(MODEL_URL, Path(MODEL_PATH).resolve())
 
 
-def validate(
-    model_path, 
-    val_loader: torch.utils.data.DataLoader,
-    providers: List[str] = ['OpenVINOExecutionProvider'],
-    provider_options: Dict[str, str] = [{'device_type' : 'CPU_FP32'}]
-) -> float:
-    sess = onnxruntime.InferenceSession(model_path, providers=providers, 
+def validate(path_to_model: str, data_loader: torch.utils.data.DataLoader,
+             providers: List[str], provider_options: Dict[str, str]) -> float:
+    sess = onnxruntime.InferenceSession(path_to_model, providers=providers,
                                         provider_options=provider_options)
-    input_name = sess.get_inputs()[0].name
-    output_names = [sess.get_outputs()[0].name]
+    _input_name = sess.get_inputs()[0].name
+    _output_names = [sess.get_outputs()[0].name]
 
     predictions = []
     references = []
-    for images, target in tqdm(val_loader):
-        pred = sess.run(output_names, {input_name: images.numpy()})[0]
+    for images, target in tqdm(data_loader):
+        pred = sess.run(_output_names, {_input_name: images.numpy()})[0]
         predictions.append(np.argmax(pred, axis=1))
         references.append(target)
 
     predictions = np.concatenate(predictions, axis=0)
-    references = np.concatenate(references, axis=0)  
+    references = np.concatenate(references, axis=0)
     return accuracy_score(predictions, references)
 
 
-def run_benchmark(model_path: str, shape: Optional[List[int]] = None, 
+def run_benchmark(path_to_model: str, shape: Optional[List[int]] = None,
                   verbose: bool = True) -> float:
-    command = f'benchmark_app -m {model_path} -d CPU -api async -t 15'
+    command = f'benchmark_app -m {path_to_model} -d CPU -api async -t 15'
     if shape is not None:
         command += f' -shape [{",".join(str(x) for x in shape)}]'
     cmd_output = subprocess.check_output(command, shell=True)
@@ -103,31 +99,28 @@ model = onnx.load(model_path)
 
 ###############################################################################
 # Quantize an ONNX model
-'''
-The transformation function transforms a data item into model input data.
 
-To validate the transform function use the following code:
->> sess = onnxruntime.InferenceSession(model_path)
->> outpu_names = [output.name for output in sess.get_outputs()]
->> for data_item in val_loader:
->>    sess.run(outpu_names, input_feed=model(transform_fn(data_item))
-'''
+# The transformation function transforms a data item into model input data.
+#
+# To validate the transform function use the following code:
+# >> sess = onnxruntime.InferenceSession(model_path)
+# >> outpu_names = [output.name for output in sess.get_outputs()]
+# >> for data_item in val_loader:
+# >>    sess.run(outpu_names, input_feed=model(transform_fn(data_item))
 input_name = model.graph.input[0].name
 def transform_fn(data_item):
     images, _ = data_item
     return {input_name: images.numpy()}
 
-'''
-The calibration dataset is a small, no label, representative dataset
-(~100-500 samples) that is used to estimate the range, i.e. (min, max) of all
-floating point activation tensors in the model, to initialize the quantization
-parameters.
+# The calibration dataset is a small, no label, representative dataset
+# (~100-500 samples) that is used to estimate the range, i.e. (min, max) of all
+# floating point activation tensors in the model, to initialize the quantization
+# parameters.
 
-The easiest way to define a calibration dataset is to use a training or
-validation dataset and a transformation function to remove labels from the data
-item and prepare model input data. The quantize method uses a small subset
-(default: 300 samples) of the calibration data set.
-'''
+# The easiest way to define a calibration dataset is to use a training or
+# validation dataset and a transformation function to remove labels from the data
+# item and prepare model input data. The quantize method uses a small subset
+# (default: 300 samples) of the calibration data set.
 calibration_dataset = nncf.Dataset(val_loader, transform_fn)
 quantized_model = nncf.quantize(model, calibration_dataset)
 
@@ -148,11 +141,15 @@ print('[4/7] Benchmark INT8 model:')
 int8_fps = run_benchmark(int8_model_path, shape=[1,3,224,224], verbose=True)
 
 print('[5/7] Validate OpenVINO FP32 model:')
-fp32_top1 = validate(fp32_model_path, val_loader)
+fp32_top1 = validate(fp32_model_path, val_loader,
+                     providers = ['OpenVINOExecutionProvider'],
+                     provider_options = [{'device_type' : 'CPU_FP32'}])
 print(f'Accuracy @ top1: {fp32_top1:.3f}')
 
 print('[6/7] Validate OpenVINO INT8 model:')
-int8_top1 = validate(int8_model_path, val_loader)
+int8_top1 = validate(int8_model_path, val_loader,
+                     providers = ['OpenVINOExecutionProvider'],
+                     provider_options = [{'device_type' : 'CPU_FP32'}])
 print(f'Accuracy @ top1: {int8_top1:.3f}')
 
 print('[7/7] Report:')
