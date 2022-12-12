@@ -14,7 +14,8 @@ pylint-onnx:
 	pylint --rcfile .pylintrc				\
 		nncf/experimental/onnx				\
 		nncf/quantization					\
-		tests/onnx examples/experimental/onnx
+		tests/onnx                          \
+		examples/post_training_quantization/onnx
 
 test-install-onnx:
 	pytest tests/cross_fw/install/ --backend onnx
