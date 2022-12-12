@@ -396,7 +396,8 @@ class MeanStatisticCollector(OfflineTensorStatisticCollector):
 
 class BatchStatisticCollector(OfflineTensorStatisticCollector):
     """
-    Collector that aggregates statistics as mean along input batch.
+    Collects tensor samples, where each tensor is averaged along the batch axis (and only that axis).
+    Each sample stays available for usage in further stages of the algorithm.
     """
 
     def __init__(self,
