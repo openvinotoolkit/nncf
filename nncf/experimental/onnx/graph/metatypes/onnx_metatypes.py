@@ -35,11 +35,11 @@ class ONNXOpMetatype(OperatorMetatype):
         return cls.subtypes
 
     @classmethod
-    def matches(cls, model, node: onnx.NodeProto) -> bool:
+    def matches(cls, model: onnx.ModelProto, node: onnx.NodeProto) -> Optional[bool]:
         return node.op_type in cls.op_names
 
     @classmethod
-    def determine_subtype(cls, model, node: onnx.NodeProto) -> Optional[Type[OperatorMetatype]]:
+    def determine_subtype(cls, model: onnx.ModelProto, node: onnx.NodeProto) -> Optional[Type[OperatorMetatype]]:
         matches = []
         for subtype in cls.get_subtypes():
             if subtype.matches(model, node):
@@ -80,12 +80,8 @@ class ONNXDepthwiseConvolutionMetatype(ONNXOpWithWeightsMetatype):
     weight_definitions = OpWeightDef(weight_channel_axis=0, weight_port_id=1, bias_port_id=2)
 
     @classmethod
-    def matches(cls, model, node: onnx.NodeProto) -> bool:
+    def matches(cls, model: onnx.ModelProto, node: onnx.NodeProto) -> bool:
         return _is_depthwise_conv(model, node)
-
-    @classmethod
-    def determine_subtype(cls, model, node: onnx.NodeProto) -> Optional[Type[OperatorMetatype]]:
-        return
 
 
 @ONNX_OPERATION_METATYPES.register()
@@ -497,7 +493,14 @@ def get_operator_metatypes() -> List[Type[OperatorMetatype]]:
     return list(ONNX_OPERATION_METATYPES.registry_dict.values())
 
 
-def _is_depthwise_conv(model, node: onnx.NodeProto) -> bool:
+def _is_depthwise_conv(model: onnx.ModelProto, node: onnx.NodeProto) -> bool:
+    """
+    Returns True if the convolution is depthwise, False - otherwise.
+
+    :param model: ONNX model to get the node's weight.
+    :param node: Convolution node to check whether it is depthwise.
+    :return: True if the convolution is depthwise, False - otherwise.
+    """
     conv_group = None
     for attribute in node.attribute:
         if attribute.name == 'group':

@@ -104,33 +104,28 @@ class MinMaxQuantizationParameters(AlgorithmParameters):
         self.quantize_outputs = quantize_outputs
         self.ignored_scopes = [] if ignored_scopes is None else ignored_scopes
         self.global_quantizer_constraints = {}
+        if weight_granularity is not None:
+            weight_granularity = weight_granularity == Granularity.PERCHANNEL
+        else:
+            weight_granularity = None
+        if activation_granularity is not None:
+            activation_granularity = activation_granularity == Granularity.PERCHANNEL
+        else:
+            activation_granularity = None
         weight_quantizer_constraints_dict = {
             'mode': QuantizationPreset.get_params_configured_by_preset(preset, QuantizerGroup.WEIGHTS)['mode'],
             'num_bits': weight_bits,
-            'per_channel': weight_granularity == Granularity.PERCHANNEL,
+            'per_channel': weight_granularity,
             'signedness_to_force': weight_signedness_to_force}
         activation_quantizer_constraints_dict = {
             'mode': QuantizationPreset.get_params_configured_by_preset(preset, QuantizerGroup.ACTIVATIONS)['mode'],
             'num_bits': activation_bits,
-            'per_channel': activation_granularity == Granularity.PERCHANNEL,
+            'per_channel': activation_granularity,
             'signedness_to_force': activation_signedness_to_force}
         for q_group, constraints in [
             (QuantizerGroup.WEIGHTS, QuantizationConstraints(**weight_quantizer_constraints_dict)),
             (QuantizerGroup.ACTIVATIONS, QuantizationConstraints(**activation_quantizer_constraints_dict))]:
             self.global_quantizer_constraints[q_group] = constraints
-        self.default_qconfig = self._get_default_qconfig(self.global_quantizer_constraints[QuantizerGroup.ACTIVATIONS])
-
-    def _get_default_qconfig(self, constraints: QuantizationConstraints = None) -> QuantizerConfig:
-        """
-        Returns default quantizer configuration, based on the provided constraints.
-
-        :param constraints: Quantization constraints.
-        :return: Quantizer config.
-        """
-        qconfig = deepcopy(self.DEFAULT_QCONFIG)
-        if constraints is not None:
-            qconfig = constraints.apply_constraints_to(qconfig)
-        return qconfig
 
 
 class MinMaxQuantization(Algorithm):
@@ -189,6 +184,18 @@ class MinMaxQuantization(Algorithm):
                                                                         num_samples=self._parameters.number_samples)
         raise RuntimeError('This range type is not supported!')
 
+    def _get_default_qconfig(self, constraints: QuantizationConstraints = None) -> QuantizerConfig:
+        """
+        Returns default quantizer configuration, based on the provided constraints.
+
+        :param constraints: Quantization constraints.
+        :return: Quantizer config.
+        """
+        qconfig = deepcopy(self._parameters.DEFAULT_QCONFIG)
+        if constraints is not None:
+            qconfig = constraints.apply_constraints_to(qconfig)
+        return qconfig
+
     def _get_quantizer_setup(self, nncf_graph: NNCFGraph) -> SingleConfigQuantizerSetup:
         """
         Returns SingleConfigQuantizerSetup instance based on the input NNCFGraph.
@@ -200,9 +207,10 @@ class MinMaxQuantization(Algorithm):
         hw_config_path = self._backend_entity.hw_config.get_path_to_hw_config(hw_config_type)
         hw_config = self._backend_entity.hw_config.from_json(hw_config_path)
         weight_nodes = nncf_graph.get_nodes_by_metatypes(self._backend_entity.layers_with_weights_metatypes)
+        default_weight_qconfig = self._get_default_qconfig(
+            self._parameters.global_quantizer_constraints[QuantizerGroup.WEIGHTS])
         weighted_node_and_qconf_lists = assign_qconfig_lists_to_modules(nodes_with_weights=weight_nodes,
-                                                                        default_weight_qconfig=
-                                                                        self._parameters.DEFAULT_QCONFIG,
+                                                                        default_weight_qconfig=default_weight_qconfig,
                                                                         global_weight_constraints=
                                                                         self._parameters.global_quantizer_constraints[
                                                                             QuantizerGroup.WEIGHTS],
@@ -218,7 +226,9 @@ class MinMaxQuantization(Algorithm):
                                             target_scopes=None,
                                             hw_config=hw_config,
                                             default_trait_to_metatype_map=self._backend_entity.quant_trait_op_dict,
-                                            default_qconfig_list=[self._parameters.default_qconfig],
+                                            default_qconfig_list=[self._get_default_qconfig(
+                                                self._parameters.global_quantizer_constraints[
+                                                    QuantizerGroup.ACTIVATIONS])],
                                             quantizable_layer_nodes=quantizable_layer_nodes,
                                             quantize_outputs=self._parameters.quantize_outputs,
                                             global_constraints=self._parameters.global_quantizer_constraints,
