@@ -2,6 +2,8 @@ import pytest
 
 from nncf.common.quantization.structs import QuantizationPreset
 from nncf.common.quantization.structs import QuantizerGroup
+from nncf.common.quantization.structs import QuantizerConfig
+from nncf.common.quantization.structs import QuantizationMode
 from nncf.quantization.algorithms.post_training.algorithm import PostTrainingQuantization
 from nncf.quantization.algorithms.post_training.algorithm import PostTrainingQuantizationParameters
 from nncf.quantization.algorithms.definitions import Granularity
@@ -32,6 +34,29 @@ class NNCFGraphToTest:
         self.nncf_graph = get_nncf_graph_from_mock_nx_graph(original_mock_graph)
 
 
+@pytest.mark.parametrize('nncf_graph', [NNCFGraphToTest()])
+def test_default_quantizer_config(nncf_graph):
+    algo = PostTrainingQuantization(PostTrainingQuantizationParameters())
+    min_max_algo = algo.algorithms[0]
+    min_max_algo._backend_entity = ONNXMinMaxAlgoBackend()
+    q_setup = min_max_algo._get_quantizer_setup(nncf_graph.nncf_graph)
+
+    weight_default_config = QuantizerConfig(mode=QuantizationMode.SYMMETRIC,
+                                            num_bits=8,
+                                            signedness_to_force=True,
+                                            per_channel=True)
+    activation_default_config = QuantizerConfig(mode=QuantizationMode.SYMMETRIC,
+                                                num_bits=8,
+                                                signedness_to_force=None,
+                                                per_channel=False)
+
+    for quantization_point in q_setup.quantization_points.values():
+        if quantization_point.is_weight_quantization_point():
+            assert quantization_point.qconfig == weight_default_config
+        if quantization_point.is_activation_quantization_point():
+            quantization_point.qconfig == activation_default_config
+
+
 @pytest.mark.parametrize('weight_granularity', [Granularity.PERCHANNEL, Granularity.PERTENSOR])
 @pytest.mark.parametrize('activation_granularity', [Granularity.PERCHANNEL, Granularity.PERTENSOR])
 @pytest.mark.parametrize('preset', [QuantizationPreset.MIXED, QuantizationPreset.PERFORMANCE])
@@ -40,9 +65,9 @@ class NNCFGraphToTest:
 @pytest.mark.parametrize('weight_signedness_to_force', [True, False, None])
 @pytest.mark.parametrize('activation_signedness_to_force', [True, False, None])
 @pytest.mark.parametrize('nncf_graph', [NNCFGraphToTest()])
-def test_quantizer_config_from_min_max_params(weight_granularity, activation_granularity, preset, weight_bits,
-                                              activation_bits,
-                                              weight_signedness_to_force, activation_signedness_to_force, nncf_graph):
+def test_quantizer_config_from_ptq_params(weight_granularity, activation_granularity, preset, weight_bits,
+                                          activation_bits,
+                                          weight_signedness_to_force, activation_signedness_to_force, nncf_graph):
     algo = PostTrainingQuantization(
         PostTrainingQuantizationParameters(preset=preset,
                                            weight_bits=weight_bits,
