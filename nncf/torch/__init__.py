@@ -26,12 +26,6 @@ if parse_version(BKC_TORCH_VERSION).base_version != torch_version:
          curr=torch.__version__
     ))
 
-# NNCF builds extensions based on torch load() function
-# This function has a bug inside which patch_extension_build_function() solves
-# This bug will be fixed in torch 1.8.0
-from nncf.torch.dynamic_graph.patch_pytorch import patch_extension_build_function
-# It must be called before importing packages containing CUDA extensions
-patch_extension_build_function()
 
 # Required for correct COMPRESSION_ALGORITHMS registry functioning
 from nncf.torch.binarization import algo as binarization_algo
