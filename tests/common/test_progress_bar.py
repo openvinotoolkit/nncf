@@ -69,7 +69,7 @@ def test_invalid_num_lines_leads_to_disabling_progress_bar(num_lines, _nncf_capl
 
     assert len(_nncf_caplog.records) == 1
     record = next(iter(_nncf_caplog.records))
-    assert record.levelno == logging.WARNING
+    assert record.levelno == logging.ERROR
 
 
 @pytest.mark.parametrize('total', [0, -1, 's'])
@@ -79,7 +79,7 @@ def test_invalid_total_leads_to_disabling_progress_bar(total, _nncf_caplog):
 
     assert len(_nncf_caplog.records) == 1
     record = next(iter(_nncf_caplog.records))
-    assert record.levelno == logging.WARNING
+    assert record.levelno == logging.ERROR
 
 
 def test_can_iterate_over_empty_iterable(caplog):
@@ -124,7 +124,7 @@ def test_can_iterate_with_warning_for_iterable_without_len(_nncf_caplog):
 
     assert len(_nncf_caplog.records) == 1
     record = next(iter(_nncf_caplog.records))
-    assert record.levelno == logging.WARNING
+    assert record.levelno == logging.ERROR
 
 
 def test_can_limit_number_of_iterations(_nncf_caplog):
