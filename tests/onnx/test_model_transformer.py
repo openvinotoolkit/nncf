@@ -175,7 +175,11 @@ def test_bias_correction(layers, values, refs):
         bias_value = onnx.numpy_helper.to_array(bias_tensor)
         assert np.mean(bias_value) == bias_reference
 
-TARGET_LAYERS = [('DequantizeLinear_X_1', 'QuantizeLinear_X_1', 'QuantizeLinear_Avg_Pool1_Y_1', 'DequantizeLinear_Avg_Pool1_Y_1')]
+
+TARGET_LAYERS = [('DequantizeLinear_X_1',
+                  'QuantizeLinear_X_1',
+                  'QuantizeLinear_Avg_Pool1_Y_1',
+                  'DequantizeLinear_Avg_Pool1_Y_1')]
 
 @pytest.mark.parametrize('target_layers', TARGET_LAYERS)
 def test_node_removing(target_layers):
