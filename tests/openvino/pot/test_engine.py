@@ -23,6 +23,7 @@ from addict import Dict
 
 from nncf.data.dataset import Dataset
 from nncf.openvino.engine import OVEngine
+from nncf.openvino.engine import calc_per_sample_metrics
 from tests.openvino.pot.utils import convert_openvino_model_to_compressed_model
 from tests.openvino.native.models import LinearModel
 
@@ -122,3 +123,15 @@ def test_predict_output():
     for expected, actual in zip(expected_per_sample, actual_per_sample):
         assert expected['sample_id'] == actual['sample_id']
         assert np.allclose(expected['result'], actual['result'])
+
+
+def test_calc_per_sample():
+    dataset = Dataset(
+        iter(DummyDataset(shape=(1, 3, 4, 2)))  # Can iterate only once
+    )
+    ov_model = LinearModel().ov_model
+    compiled_model = ov.Core().compile_model(ov_model, device_name='CPU')
+
+    # Check that we iterate through dataset only once during
+    # per-sample metrics calculation.
+    _ = calc_per_sample_metrics(compiled_model, val_func, dataset, [0, 2, 4])
