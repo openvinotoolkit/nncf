@@ -11,36 +11,75 @@
  limitations under the License.
 """
 
-from typing import List, Optional, Union
+from typing import Optional, Tuple
+from dataclasses import dataclass
 import numpy as np
-
 from nncf.common.quantization.structs import QuantizationMode
 from nncf.common.quantization.structs import QuantizerConfig
 from nncf.common.tensor_statistics.statistics import MinMaxTensorStatistic
 
 
+@dataclass
 class ONNXQuantizerLayerParameters:
     """
-    Class handles Quantizer/Dequantizer layer attributes.
+    Class handles Quantizer layer attributes.
+
+    :param scale: Quantizer scale.
+    :param zero_point: Quantizer zero point.
+    :param mode: Quantizer mode. Could be Symmetric or Asymmetric.
+    :param axis: Axis for per-channel quantization. Should be none in case of per-tensor.
+    :param tensor_type: Signed or Unsigned tensor type.
     """
+    scale: np.ndarray
+    zero_point: np.ndarray
+    mode: QuantizationMode
+    axis: Optional[int] = None
+    tensor_type: Optional[np.dtype] = None
 
-    def __init__(self, scale: List[float], zero_point: List[int], mode: QuantizationMode, axis: Optional[int]):
-        self.scale = scale
-        self.zero_point = zero_point
-        self.mode = mode
-        self.axis = axis
+
+def get_level_low_level_high(tensor_type: np.dtype) -> Tuple[int, int]:
+    """
+    Returns the minimum and maximum level for the quantizer.
+
+    :param tensor_type: Value type of the tensor. Could be INT8 or UINT8.
+    :return: Minimum level and maximum level of the quantizer.
+    """
+    if tensor_type == np.uint8:
+        return 0, 255
+    return -128, 127
 
 
-def calculate_scale_level(max_val: Union[float, np.ndarray], min_val: Union[float, np.ndarray],
-                          num_bits: int,
-                          mode: QuantizationMode) -> Union[float, np.ndarray]:
+def calculate_scale_zero_point(max_val: np.ndarray, min_val: np.ndarray, level_low: int, level_high: int,
+                               mode: QuantizationMode) -> Tuple[np.ndarray, np.ndarray]:
     """
     Calculates Quantizer/Dequantizer layer scale level.
+    Returns scale and zero_point values foe the quantizer.
+
+    :param max_val: The maximum value of the input tensor.
+    :param min_val: The minimum value of the input tensor.
+    :param level_low: The minimum level of quantizer quants.
+    :param level_high: The maximum level of quantizer quants.
+    :param mode: Symmetric or Asymmetric mode.
+    :return: Scale and Zero point values.
+
     """
     if mode == QuantizationMode.SYMMETRIC:
         input_abs_max = np.maximum(np.abs(max_val), np.abs(min_val))
-        return input_abs_max / ((2 ** num_bits - 1) / 2)
-    return (max_val - min_val) / 2 ** num_bits
+        max_val = input_abs_max
+        min_val = -input_abs_max
+    scale = np.array((max_val - min_val) / float(level_high - level_low))
+    if mode == QuantizationMode.SYMMETRIC:
+        zero_point = np.zeros_like(scale, dtype=np.int32)
+    else:
+        zero_point = np.round(level_low - min_val / scale).astype(np.int32)
+
+        level_low *= np.ones_like(zero_point, dtype=np.int32)
+        level_high *= np.ones_like(zero_point, dtype=np.int32)
+
+        zero_point = np.maximum(zero_point, level_low)
+        zero_point = np.minimum(zero_point, level_high)
+
+    return scale, zero_point
 
 
 def calculate_weight_quantizer_parameters(weight_tensor: np.ndarray, quantizer_config: QuantizerConfig,
@@ -55,7 +94,6 @@ def calculate_weight_quantizer_parameters(weight_tensor: np.ndarray, quantizer_c
     :return: Parameters of Quantizer.
     """
     per_channel = quantizer_config.per_channel
-    num_bits = quantizer_config.num_bits
     mode = quantizer_config.mode
 
     if per_channel:
@@ -67,9 +105,11 @@ def calculate_weight_quantizer_parameters(weight_tensor: np.ndarray, quantizer_c
         axes = None
     input_high = np.amax(weight_tensor, axis=axes)
     input_low = np.amin(weight_tensor, axis=axes)
-    scales = calculate_scale_level(input_high, input_low, num_bits, mode)
-    zero_points = np.zeros_like(scales, dtype=np.int64)
-    return ONNXQuantizerLayerParameters(scales.tolist(), zero_points.tolist(), mode, axis)
+    # The weight is restricted to have only signed range.
+    tensor_type = np.int8
+    level_low, level_high = get_level_low_level_high(tensor_type)
+    scales, zero_points = calculate_scale_zero_point(input_high, input_low, level_low, level_high, mode)
+    return ONNXQuantizerLayerParameters(scales, zero_points, mode, axis, tensor_type)
 
 
 def calculate_activation_quantizer_parameters(statistics: MinMaxTensorStatistic,
@@ -85,13 +125,13 @@ def calculate_activation_quantizer_parameters(statistics: MinMaxTensorStatistic,
     :return: Parameters of the quantizer/dequantizer layers.
     """
     per_channel = quantizer_config.per_channel
-    num_bits = quantizer_config.num_bits
+    input_low = np.array(statistics.min_values)
+    input_high = np.array(statistics.max_values)
     mode = quantizer_config.mode
-    input_low = statistics.min_values
-    input_high = statistics.max_values
     if per_channel:
         assert axis is not None
         raise RuntimeError('Currently per-channel is not supported for activation tensors.')
-    scales = calculate_scale_level(input_high, input_low, num_bits, mode)
-    zero_points = np.zeros_like(scales, dtype=np.int64)
-    return ONNXQuantizerLayerParameters(scales.tolist(), zero_points.tolist(), mode, axis)
+    tensor_type = np.uint8 if np.all(input_low >= 0) else np.int8
+    level_low, level_high = get_level_low_level_high(tensor_type)
+    scales, zero_points = calculate_scale_zero_point(input_high, input_low, level_low, level_high, mode)
+    return ONNXQuantizerLayerParameters(scales, zero_points, mode, axis, tensor_type)

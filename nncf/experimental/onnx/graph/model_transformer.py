@@ -15,11 +15,11 @@ from typing import List, Optional, Tuple, Set
 from copy import deepcopy
 from collections import Counter
 import onnx
+import numpy as np
 
 from nncf.common.graph.graph import NNCFGraph
 from nncf.common.graph.transformations.commands import TargetType
 from nncf.common.graph.transformations.layout import TransformationLayout
-from nncf.common.quantization.structs import QuantizationMode
 from nncf.common.graph.definitions import NNCFGraphNodeType
 from nncf.experimental.onnx.graph.onnx_graph import ONNXGraph
 from nncf.experimental.onnx.graph.transformations.commands import ONNXBiasCorrectionCommand
@@ -256,28 +256,32 @@ class ONNXModelTransformer(ModelTransformer):
                                       dequantizer: onnx.NodeProto) -> Tuple[onnx.TensorProto, onnx.TensorProto]:
         scale = transformation.quantizer_parameters.scale
         zero_point = transformation.quantizer_parameters.zero_point
-        mode = transformation.quantizer_parameters.mode
+        tensor_type = transformation.quantizer_parameters.tensor_type
 
-        per_channel = isinstance(scale, list)
-
-        zero_point = [zero_point] if not isinstance(zero_point, list) else zero_point
-
-        scale = [scale] if not isinstance(scale, list) else scale
-        tensor_type = onnx.TensorProto.UINT8 if mode == QuantizationMode.ASYMMETRIC else onnx.TensorProto.INT8
-        dims = [len(scale)] if per_channel else []
+        per_channel = scale.ndim > 0
+        dims = scale.shape if per_channel else []
+        onnx_scale = [scale.tolist()] if not per_channel else scale.tolist()
+        onnx_zero_point = [zero_point.tolist()] if not per_channel else zero_point.tolist()
+        if tensor_type == np.uint8:
+            onnx_tensor_type = onnx.TensorProto.UINT8
+        elif tensor_type == np.int8:
+            onnx_tensor_type = onnx.TensorProto.INT8
+        else:
+            raise RuntimeError('Incorrect tensor type.')
         assert quantizer.input[1] == dequantizer.input[1] and quantizer.input[2] == dequantizer.input[2]
         scale_tensor_name = quantizer.input[1]
         zero_point_tensor_name = quantizer.input[2]
-
-        onnx_scale = onnx.helper.make_tensor(scale_tensor_name, onnx.TensorProto.FLOAT, dims, scale)
-        onnx_zero_point = onnx.helper.make_tensor(zero_point_tensor_name, tensor_type, dims, zero_point)
-        return onnx_scale, onnx_zero_point
+        onnx_scale_tensor = onnx.helper.make_tensor(scale_tensor_name, onnx.TensorProto.FLOAT, dims, onnx_scale)
+        onnx_zero_point_tensor = onnx.helper.make_tensor(zero_point_tensor_name, onnx_tensor_type, dims,
+                                                         onnx_zero_point)
+        return onnx_scale_tensor, onnx_zero_point_tensor
 
     def _insert_quantizer_dequantizer(self, transformation: ONNXQuantizerInsertionCommand,
                                       onnx_graph: ONNXGraph) -> None:
         target_edge_name = self._get_target_edge_name(transformation, onnx_graph)
         quantizer, dequantizer = self._get_quantize_dequantize_nodes(transformation, target_edge_name)
-        onnx_scale, onnx_zero_point = self._get_scale_zero_point_tensors(transformation, quantizer, dequantizer)
+        onnx_scale_tensor, onnx_zero_point_tensor = self._get_scale_zero_point_tensors(transformation, quantizer,
+                                                                                       dequantizer)
 
         # If several nodes on one edge
         input_nodes = []
@@ -298,11 +302,12 @@ class ONNXModelTransformer(ModelTransformer):
                     if inp == target_edge_name:
                         node.input[i] = dequantizer.output[0]
 
-        onnx_scale_value_info = onnx.helper.make_tensor_value_info(onnx_scale.name, onnx_scale.data_type,
-                                                                   onnx_scale.dims)
-        onnx_zero_point_info = onnx.helper.make_tensor_value_info(onnx_zero_point.name, onnx_zero_point.data_type,
-                                                                  onnx_zero_point.dims)
-        self._model.graph.initializer.extend([onnx_scale, onnx_zero_point])
+        onnx_scale_value_info = onnx.helper.make_tensor_value_info(onnx_scale_tensor.name, onnx_scale_tensor.data_type,
+                                                                   onnx_scale_tensor.dims)
+        onnx_zero_point_info = onnx.helper.make_tensor_value_info(onnx_zero_point_tensor.name,
+                                                                  onnx_zero_point_tensor.data_type,
+                                                                  onnx_zero_point_tensor.dims)
+        self._model.graph.initializer.extend([onnx_scale_tensor, onnx_zero_point_tensor])
         self._model.graph.input.extend([onnx_scale_value_info, onnx_zero_point_info])
         insert_index = onnx_graph.get_node_index(input_nodes[0].name)
         self._model.graph.node.insert(insert_index, quantizer)
