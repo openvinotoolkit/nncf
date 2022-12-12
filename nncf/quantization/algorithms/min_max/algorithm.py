@@ -84,7 +84,7 @@ class MinMaxQuantizationParameters(AlgorithmParameters):
         self.activation_quantizer_config = self._determine_quantizer_config(activation_bits, activation_granularity,
                                                                             activation_mode)
         self.number_samples = number_samples
-        self.target_device = HWConfigType.from_str(HW_CONFIG_TYPE_TARGET_DEVICE_MAP[target_device.value])
+        self.target_device = HWConfigType(HW_CONFIG_TYPE_TARGET_DEVICE_MAP[target_device.value])
         self.range_type = range_type
         self.quantize_outputs = quantize_outputs
         self.ignored_scopes = [] if ignored_scopes is None else ignored_scopes

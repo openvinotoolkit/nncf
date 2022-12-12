@@ -269,7 +269,7 @@ class QuantizationBuilder(TFCompressionAlgorithmBuilder):
 
         self.hw_config = None
         if self._target_device != "TRIAL":
-            hw_config_type = HWConfigType.from_str(HW_CONFIG_TYPE_TARGET_DEVICE_MAP[self._target_device])
+            hw_config_type = HWConfigType(HW_CONFIG_TYPE_TARGET_DEVICE_MAP[self._target_device])
             hw_config_path = TFHWConfig.get_path_to_hw_config(hw_config_type)
             self.hw_config = TFHWConfig.from_json(hw_config_path)
 
@@ -306,7 +306,7 @@ class QuantizationBuilder(TFCompressionAlgorithmBuilder):
         params_dict_from_config = quant_config.get(group_name, {})
         preset = quant_config.get('preset')
         if self._target_device in ['ANY', 'CPU', 'GPU'] or self._target_device == 'TRIAL' and preset is not None:
-            preset = QuantizationPreset.from_str(quant_config.get('preset', 'performance'))
+            preset = QuantizationPreset(quant_config.get('preset', 'performance'))
             params_dict = preset.get_params_configured_by_preset(quantizer_group)
             overrided_params = params_dict.keys() & params_dict_from_config.keys()
             if overrided_params:

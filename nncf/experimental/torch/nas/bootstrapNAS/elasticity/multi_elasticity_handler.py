@@ -187,12 +187,12 @@ class MultiElasticityHandler(ElasticityHandler):
         is_handler_enabled_map = state[self._state_names.IS_HANDLER_ENABLED_MAP]
 
         for dim_str, handler_state in states_of_handlers.items():
-            dim = ElasticityDim.from_str(dim_str)
+            dim = ElasticityDim(dim_str)
             if dim in self._handlers:
                 self._handlers[dim].load_state(handler_state)
 
         for dim_str, is_enabled in is_handler_enabled_map.items():
-            dim = ElasticityDim.from_str(dim_str)
+            dim = ElasticityDim(dim_str)
             self._is_handler_enabled_map[dim] = is_enabled
 
     def get_state(self) -> Dict[str, Any]:

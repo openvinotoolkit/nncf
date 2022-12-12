@@ -62,14 +62,6 @@ class BitwidthAssignmentMode(Enum):
     STRICT = 'strict'
     LIBERAL = 'liberal'
 
-    @staticmethod
-    def from_str(config_value: str) -> 'BitwidthAssignmentMode':
-        if config_value == BitwidthAssignmentMode.STRICT.value:
-            return BitwidthAssignmentMode.STRICT
-        if config_value == BitwidthAssignmentMode.LIBERAL.value:
-            return BitwidthAssignmentMode.LIBERAL
-        raise RuntimeError("Unknown bitwidth assignment mode")
-
 
 class HAWQPrecisionInitParams(BasePrecisionInitParams):
     def __init__(self,
@@ -106,7 +98,7 @@ class HAWQPrecisionInitParams(BasePrecisionInitParams):
             tolerance=hawq_init_config_dict.get('tolerance', HAWQ_TOLERANCE),
             compression_ratio=hawq_init_config_dict.get('compression_ratio', HAWQ_COMPRESSION_RATIO),
             dump_hawq_data=hawq_init_config_dict.get('dump_init_precision_data', HAWQ_DUMP_INIT_PRECISION_DATA),
-            bitwidth_assignment_mode=BitwidthAssignmentMode.from_str(
+            bitwidth_assignment_mode=BitwidthAssignmentMode(
                 hawq_init_config_dict.get('bitwidth_assignment_mode', BitwidthAssignmentMode.LIBERAL.value)
             )
         )

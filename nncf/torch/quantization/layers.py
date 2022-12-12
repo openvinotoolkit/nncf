@@ -49,14 +49,6 @@ class QuantizerExportMode(Enum):
     FAKE_QUANTIZE = "fake_quantize"
     ONNX_QUANTIZE_DEQUANTIZE_PAIRS = "quantize_dequantize"
 
-    @staticmethod
-    def from_str(config_value: str) -> 'HWConfigType':
-        if config_value == QuantizerExportMode.FAKE_QUANTIZE.value:
-            return QuantizerExportMode.FAKE_QUANTIZE
-        if config_value == QuantizerExportMode.ONNX_QUANTIZE_DEQUANTIZE_PAIRS.value:
-            return QuantizerExportMode.ONNX_QUANTIZE_DEQUANTIZE_PAIRS
-        raise RuntimeError("Unknown quantizer ONNX export mode string")
-
 
 class PTQSpecStateNames:
     NUM_BITS = 'num_bits'
