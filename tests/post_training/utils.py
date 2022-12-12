@@ -56,7 +56,7 @@ def export_to_onnx(model, save_path, data_sample):
         data_sample,
         save_path,
         export_params=True,
-        opset_version=13,
+        opset_version=14,    # fix offset to 14 
         do_constant_folding=False,
     )
 

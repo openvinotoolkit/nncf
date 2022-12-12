@@ -1,5 +1,6 @@
 from abc import ABCMeta, abstractmethod
-from typing import Callable, Any
+from typing import Callable
+from multiprocessing import Pool
 
 import os
 import re
@@ -28,7 +29,7 @@ from utils import run_benchmark
 
 NOT_AVAILABLE_MESSAGE = "N/A"
 DEFAULT_VAL_THREADS = 4
-ILSVRC_VALIDATION_SUBSET_SIZE = 5000
+ILSVRC_VALIDATION_SUBSET_SIZE = 500
 
 class QuantizerBase(metaclass=ABCMeta):
     """ Base class for an executor """
@@ -257,8 +258,19 @@ def subset(pytestconfig):
 
 
 @pytest.fixture(scope="session")
-def result(pytestconfig):        val_dataloader = get_torch_dataloader(data, transform, batch_size=128)
+def result(pytestconfig):
+    return pytestconfig.test_results 
+
+
+@pytest.mark.parametrize("model_args", get_validation_scope())
+def test_ptq_timm(data, output, subset, result, model_args): # pylint: disable=W0703
     ILSVRC_VALIDATION_SUBSET_SIZE = subset
+    BACKEND_ORDER = {
+        "torch": 0,
+        "onnx": 1,
+        "openvino": 2
+    }
+
     torch.multiprocessing.set_sharing_strategy(
         "file_system"
     )  # W/A to avoid RuntimeError
@@ -285,9 +297,13 @@ def result(pytestconfig):        val_dataloader = get_torch_dataloader(data, tra
                                                 model_name, output_folder, False)
 
         # keep paths and names for performance benchmarking
-        ov_model_paths = [orig_model_path]
-        model_names = [model_name]
-        accuracy_results = [orig_acc]
+        ov_model_paths = ["-"] * (len(BACKEND_ORDER)+1) # +1 for original model characteristics
+        model_names = ["-"] * (len(BACKEND_ORDER)+1)
+        accuracy_results = ["-"] * (len(BACKEND_ORDER)+1)
+
+        ov_model_paths[0] = orig_model_path
+        model_names[0] = model_name
+        accuracy_results[0] = orig_acc
 
         def get_backend_model(backend):
             if backend == "torch":
@@ -296,27 +312,38 @@ def result(pytestconfig):        val_dataloader = get_torch_dataloader(data, tra
                 return onnx.load(output_folder / (model_name + ".onnx"))
             elif backend == "openvino":
                 return ov.Core().read_model(output_folder / (model_name + ".xml"))
-            return None                
+            return None
 
-        for backend, _ in QuantizerFactory.registry.items():
+        def quantize_and_validate(backend):
+            ov_model_path, q_acc, q_model_name = "-", "-", "-"
             try:
+                dataloader = get_torch_dataloader(data, transform, batch_size=1)
                 model = get_backend_model(backend)
-                q_model = QuantizerFactory.quantize(backend, model, batch_one_dataloader, quantization_params)
+                q_model = QuantizerFactory.quantize(backend, model, dataloader, quantization_params)
                 ov_model_path, q_acc, q_model_name = QuantizerFactory.validate(
-                                                    backend, q_model, batch_one_dataloader,
+                                                    backend, q_model, dataloader,
                                                     model_name, output_folder)
-
-                ov_model_paths.append(ov_model_path)
-                model_names.append(q_model_name)
-                accuracy_results.append(q_acc)
-
             except Exception as error:
                 logging.error(f"Error when handling the model: {model_name} at backend: {backend}."
-                                " Details: {error}")
-                accuracy_results.append(re.escape(str(error)))
-                ov_model_paths.append(None)
-                model_names.append(None)
+                            " Details: {error}")
+            return backend, ov_model_path, q_acc, q_model_name
 
+        try:
+            with Pool() as pool:
+                q_results = pool.map(quantize_and_validate, QuantizerFactory.registry.keys())
+
+            ov_model_paths[BACKEND_ORDER[q_results[0]]] = q_results[1]
+            model_names[BACKEND_ORDER[q_results[0]]] = q_results[2]
+            accuracy_results[BACKEND_ORDER[q_results[0]]] = q_results[3]
+
+        except Exception as error:
+            logging.error(f"Error when running quantization in parallel."
+                          f" Details: {error}")
+            accuracy_results.append(re.escape(str(error)))
+            ov_model_paths.append(None)
+            model_names.append(None)
+
+        # benchmark sequentially
         perf_results = benchmark_models(ov_model_paths, model_names)
         result.append([model_name] + 
             accuracy_results + 
