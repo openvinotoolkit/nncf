@@ -16,7 +16,7 @@ from typing import Dict, List, Optional, TypeVar
 from copy import deepcopy
 
 from nncf import Dataset
-from nncf.common.hardware.config import HWConfigType
+from nncf.parameters import TargetDevice
 from nncf.common.quantization.structs import QuantizationPreset
 from nncf.common.utils.backend import BackendType
 from nncf.common.utils.backend import get_backend
@@ -48,7 +48,7 @@ class PostTrainingQuantizationParameters(AlgorithmParameters):
                  activation_bits: Optional[int] = None,
                  activation_granularity: Optional[int] = None,
                  activation_signedness_to_force: Optional[bool] = None,
-                 target_device: HWConfigType = HWConfigType.CPU,
+                 target_device: TargetDevice = TargetDevice.ANY,
                  range_type: RangeType = RangeType.MEAN_MINMAX,
                  quantize_outputs: bool = False,
                  ignored_scopes: Optional[List[str]] = None,

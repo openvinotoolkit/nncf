@@ -20,6 +20,7 @@ from nncf.common.graph.graph import NNCFGraph
 from nncf.common.graph.transformations.commands import TargetType
 from nncf.common.graph.transformations.commands import TargetPoint
 from nncf.common.graph.transformations.layout import TransformationLayout
+from nncf.parameters import TargetDevice
 from nncf.common.hardware.config import HWConfigType
 from nncf.common.hardware.config import HW_CONFIG_TYPE_TARGET_DEVICE_MAP
 from nncf.common.insertion_point_graph import InsertionPointGraph
@@ -70,7 +71,7 @@ class MinMaxQuantizationParameters(AlgorithmParameters):
                  activation_bits: Optional[int] = None,
                  activation_granularity: Optional[int] = None,
                  activation_signedness_to_force: Optional[bool] = None,
-                 target_device: HWConfigType = HWConfigType.CPU,
+                 target_device: TargetDevice = TargetDevice.ANY,
                  range_type: RangeType = RangeType.MEAN_MINMAX,
                  quantize_outputs: bool = False,
                  ignored_scopes: Optional[List[str]] = None,
