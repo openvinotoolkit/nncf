@@ -26,9 +26,9 @@ from nncf.common.graph.operator_metatypes import OutputNoopMetatype
 from nncf.common.graph.operator_metatypes import InputNoopMetatype
 from tests.common.quantization.test_filter_constant_nodes import create_mock_graph
 from tests.common.quantization.test_filter_constant_nodes import get_nncf_graph_from_mock_nx_graph
-from nncf.quantization.algorithms.min_max.onnx_backend import \
-    ONNXMinMaxAlgoBackend
+from nncf.quantization.algorithms.min_max.onnx_backend import ONNXMinMaxAlgoBackend
 
+# pylint: disable=protected-access
 
 class NNCFGraphToTest:
     def __init__(self):

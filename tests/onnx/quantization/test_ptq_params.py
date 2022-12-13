@@ -24,7 +24,7 @@ from nncf.quantization.algorithms.min_max.onnx_backend import \
     ONNXMinMaxAlgoBackend
 from tests.onnx.models import LinearModel
 from tests.onnx.quantization.test_quantizer_config import NNCFGraphToTest
-
+# pylint: disable=protected-access
 
 @pytest.mark.parametrize('target_device',
                          [TargetDevice.ANY, TargetDevice.CPU, TargetDevice.GPU, TargetDevice.VPU])
@@ -44,7 +44,7 @@ def test_range_type(range_type):
     assert min_max_algo._parameters.range_type == range_type
     stat_points = min_max_algo.get_statistic_points(model)
 
-    for node_name, stat_point in stat_points.items():
+    for _, stat_point in stat_points.items():
         for stat_point_ in stat_point:
             for tensor_collector in stat_point_.algorithm_to_tensor_collectors[MinMaxQuantization]:
                 if range_type == RangeType.MINMAX:
