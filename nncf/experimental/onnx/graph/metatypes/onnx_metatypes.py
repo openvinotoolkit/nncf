@@ -188,7 +188,7 @@ class ONNXConstantMetatype(ONNXOpMetatype):
 @ONNX_OPERATION_METATYPES.register()
 class ONNXAddLayerMetatype(ONNXOpMetatype):
     name = 'AddOp'
-    op_names = ['Add']
+    op_names = ['Add', 'Sum']
     hw_config_names = [HWConfigOpName.ADD]
 
 
@@ -211,13 +211,6 @@ class ONNXDivLayerMetatype(ONNXOpMetatype):
     name = 'DivOp'
     op_names = ['Div']
     hw_config_names = [HWConfigOpName.DIVIDE]
-
-
-@ONNX_OPERATION_METATYPES.register()
-class ONNXSumMetatype(ONNXOpMetatype):
-    name = 'SumOp'
-    op_names = ['Sum']
-    hw_config_names = [HWConfigOpName.REDUCESUM]
 
 
 @ONNX_OPERATION_METATYPES.register()
