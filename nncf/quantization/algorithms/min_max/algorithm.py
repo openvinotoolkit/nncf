@@ -39,8 +39,6 @@ from nncf.common.utils.logger import logger as nncf_logger
 from nncf.quantization.algorithms.algorithm import Algorithm
 from nncf.quantization.algorithms.algorithm import AlgorithmParameters
 from nncf.quantization.algorithms.min_max.backend import ALGO_BACKENDS
-from nncf.quantization.algorithms.min_max.utils import calculate_activation_quantizer_parameters
-from nncf.quantization.algorithms.min_max.utils import calculate_weight_quantizer_parameters
 from nncf.quantization.algorithms.definitions import RangeType
 from nncf.quantization.algorithms.definitions import Granularity
 from nncf.common.factory import NNCFGraphFactory
@@ -224,7 +222,7 @@ class MinMaxQuantization(Algorithm):
         """
         node_name = quantization_point.insertion_point.target_node_name
         node = nncf_graph.get_node_by_name(node_name)
-        port_id = self._backend_entity.get_weight_tensor_port_id(model, node)
+        port_id = self._backend_entity.get_weight_tensor_port_id(node)
         weight_quantization_target_point = self._backend_entity.target_point(TargetType.OPERATION_WITH_WEIGHTS,
                                                                              node_name,
                                                                              port_id)
@@ -304,14 +302,14 @@ class MinMaxQuantization(Algorithm):
             target_node_name = quantization_target_point.target_node_name
             node = nncf_graph.get_node_by_name(target_node_name)
             if quantization_target_point.type == TargetType.OPERATION_WITH_WEIGHTS:
-                weight_tensor_name, weight_tensor = self._backend_entity.get_weight_tensor(model, node)
+                weight_tensor_name, weight_tensor = self._backend_entity.get_weight_tensor(
+                    model, quantization_target_point)
                 # If the nodes share one weight tensor, we should have only one quantizer on that
                 if weight_tensor_name in weight_tensor_names:
                     continue
                 weight_tensor_names.add(weight_tensor_name)
-                axis = self._backend_entity.get_weight_tensor_quantization_axis(model, node, weight_quantizer_config)
-                parameters = calculate_weight_quantizer_parameters(weight_tensor, weight_quantizer_config, axis)
-                command = self._backend_entity.quantizer_insertion_command(quantization_target_point, parameters)
+                command = self._backend_entity.create_weight_quantizer_insertion_command(
+                    quantization_target_point, weight_quantizer_config, weight_tensor, node)
                 transformation_commands.append(command)
             elif quantization_target_point.type in [TargetType.PRE_LAYER_OPERATION, TargetType.POST_LAYER_OPERATION]:
                 def filter_func(point):
@@ -322,12 +320,10 @@ class MinMaxQuantization(Algorithm):
                         target_node_name,
                         filter_func,
                         MinMaxQuantization):
-                    axis = self._backend_entity.get_activation_quantization_axis(
-                        self._parameters.activation_quantizer_config)
-                    parameters = calculate_activation_quantizer_parameters(tensor_collector.get_statistics(),
-                                                                           self._parameters.activation_quantizer_config,
-                                                                           axis)
-                    command = self._backend_entity.quantizer_insertion_command(quantization_target_point, parameters)
+                    command = self._backend_entity.create_activation_quantizer_insertion_command(
+                                    quantization_target_point,
+                                    self._parameters.activation_quantizer_config,
+                                    tensor_collector.get_statistics())
                     transformation_commands.append(command)
             else:
                 raise RuntimeError('Inccorrect type of Quantization Target Point!')

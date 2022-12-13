@@ -16,8 +16,10 @@ from typing import Callable
 from typing import Iterable
 from typing import Any
 from typing import List
+from typing import Dict
 
 from openvino.tools import pot
+import openvino.runtime as ov
 
 from nncf.api.compression import TModel
 from nncf.data import Dataset
@@ -79,6 +81,21 @@ class DatasetWrapper:
         for _ in iterable:
             length = length + 1
         return length
+
+
+def calc_per_sample_metrics(compiled_model: ov.CompiledModel,
+                            val_func: Callable[[ov.CompiledModel, Iterable[Any]], float],
+                            dataset: Dataset,
+                            subset_indices: List[int]) -> List[Dict[str, Any]]:
+    per_sample_metrics = []
+    for inputs in dataset.get_data(subset_indices):
+        value = val_func(compiled_model, [inputs])
+        per_sample_metrics.append({
+            'sample_id': len(per_sample_metrics),
+            'metric_name': 'original_metric',
+            'result': value
+        })
+    return per_sample_metrics
 
 
 # TODO(andrey-churkin): This class should be refactored. We will be able to do that when
@@ -145,14 +162,10 @@ class OVEngine(pot.IEEngine):
 
         if self.use_original_metric:
             compiled_model = self._ie.compile_model(model=self._model, device_name=self._device)
-            per_sample_metrics = []
-            for i in subset_indices:
-                metric_value = self._validation_fn(compiled_model, self._validation_dataset.get_data(indices=[i]))
-                per_sample_metrics.append({
-                    'sample_id': len(per_sample_metrics),
-                    'metric_name': 'original_metric',
-                    'result': metric_value
-                })
+            per_sample_metrics = calc_per_sample_metrics(compiled_model,
+                                                         self._validation_fn,
+                                                         self._validation_dataset,
+                                                         subset_indices)
         else:
             dataset_wrapper = DatasetWrapper(self._validation_dataset.get_inference_data(subset_indices))
             ans = super().predict(None, dataset_wrapper, None, True, None)

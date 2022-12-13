@@ -22,32 +22,23 @@ import numpy as np
 import openvino.runtime as ov
 import torch
 from fastdownload import FastDownload
-from openvino.tools import mo
 from sklearn.metrics import accuracy_score
-from torchvision import datasets, models, transforms
+from torchvision import datasets, transforms
 from tqdm import tqdm
 
 ROOT = Path(__file__).parent.resolve()
-CHECKPOINT_URL = 'https://huggingface.co/alexsu52/mobilenet_v2_imagenette/resolve/main/pytorch_model.bin'
+MODEL_URL = 'https://huggingface.co/alexsu52/mobilenet_v2_imagenette/resolve/main/openvino_model.tgz'
+MODEL_PATH = '~/.cache/nncf/models'
 DATASET_URL = 'https://s3.amazonaws.com/fast-ai-imageclas/imagenette2-320.tgz'
 DATASET_PATH = '~/.cache/nncf/datasets'
 DATASET_CLASSES = 10
 
 
-def download_dataset() -> Path:
-    downloader = FastDownload(base=DATASET_PATH, 
+def download(url: str, path: str) -> Path:
+    downloader = FastDownload(base=path, 
                               archive='downloaded', 
                               data='extracted')
-    return downloader.get(DATASET_URL)
-
-
-def load_checkpoint(model: torch.nn.Module) -> torch.nn.Module:  
-    checkpoint = torch.hub.load_state_dict_from_url(
-        CHECKPOINT_URL, 
-        map_location=torch.device('cpu'), 
-        progress=False)
-    model.load_state_dict(checkpoint['state_dict'])
-    return model
+    return downloader.get(url)
 
 
 def validate(model: ov.Model, 
@@ -97,9 +88,9 @@ def get_model_size(ir_path: str, m_type: str = 'Mb',
     return model_size
 
 ###############################################################################
-# Create a PyTorch model and dataset
+# Create an OpenVINO model and dataset
 
-dataset_path = download_dataset()
+dataset_path = download(DATASET_URL, DATASET_PATH)
 
 normalize = transforms.Normalize(mean=[0.485, 0.456, 0.406],
                                  std=[0.229, 0.224, 0.225])
@@ -113,15 +104,13 @@ val_dataset = datasets.ImageFolder(
     ])
 )
 val_loader = torch.utils.data.DataLoader(
-        val_dataset, batch_size=128, num_workers=4, shuffle=False)
+    val_dataset, batch_size=1, shuffle=False)
 
-model = models.mobilenet_v2(num_classes=DATASET_CLASSES) 
-model.eval()
-model = load_checkpoint(model)
+model_path = download(MODEL_URL, MODEL_PATH)
+model = ov.Core().read_model(model_path / 'mobilenet_v2_fp32.xml')
 
 ###############################################################################
-# Quantize a PyTorch model
-
+# Quantize an OpenVINO model
 '''
 The transformation function transforms a data item into model input data.
 
@@ -150,17 +139,13 @@ quantized_model = nncf.quantize(model, calibration_dataset)
 ###############################################################################
 # Benchmark performance, calculate compression rate and validate accuracy
 
-ov_model = mo.convert_model(model.cpu(), input_shape=[-1,3,224,224])
-ov_quantized_model = mo.convert_model(quantized_model.cpu(),
-                                      input_shape=[-1,3,224,224])
-
 fp32_ir_path = f'{ROOT}/mobilenet_v2_fp32.xml'
-ov.serialize(ov_model, fp32_ir_path)
+ov.serialize(model, fp32_ir_path)
 print(f'[1/7] Save FP32 model: {fp32_ir_path}')
 fp32_model_size = get_model_size(fp32_ir_path, verbose=True)
 
 int8_ir_path = f'{ROOT}/mobilenet_v2_int8.xml'
-ov.serialize(ov_quantized_model, int8_ir_path)
+ov.serialize(quantized_model, int8_ir_path)
 print(f'[2/7] Save INT8 model: {int8_ir_path}')
 int8_model_size = get_model_size(int8_ir_path, verbose=True)
 
@@ -170,11 +155,11 @@ print('[4/7] Benchmark INT8 model:')
 int8_fps = run_benchmark(int8_ir_path, shape=[1,3,224,224], verbose=True)
 
 print('[5/7] Validate OpenVINO FP32 model:')
-fp32_top1 = validate(ov_model, val_loader)
+fp32_top1 = validate(model, val_loader)
 print(f'Accuracy @ top1: {fp32_top1:.3f}')
 
 print('[6/7] Validate OpenVINO INT8 model:')
-int8_top1 = validate(ov_quantized_model, val_loader)
+int8_top1 = validate(quantized_model, val_loader)
 print(f'Accuracy @ top1: {int8_top1:.3f}')
 
 print('[7/7] Report:')
