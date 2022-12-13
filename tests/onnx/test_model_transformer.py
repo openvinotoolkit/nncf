@@ -23,12 +23,15 @@ from nncf.experimental.onnx.graph.transformations.commands import ONNXBiasCorrec
 from nncf.common.graph.transformations.commands import TargetType
 from nncf.experimental.onnx.graph.transformations.commands import ONNXQuantizerInsertionCommand
 from nncf.experimental.onnx.graph.transformations.commands import ONNXOutputInsertionCommand
+from nncf.experimental.onnx.graph.transformations.commands import ONNXNodeRemovingCommand
 from nncf.common.quantization.structs import QuantizationMode
 from nncf.experimental.onnx.graph.model_transformer import ONNXModelTransformer
 from nncf.experimental.onnx.graph.onnx_graph import ONNXGraph
 from nncf.experimental.onnx.quantization.quantizer_parameters import ONNXQuantizerLayerParameters
 
 from tests.onnx.models import LinearModel
+from tests.onnx.quantization.common import min_max_quantize_model
+from tests.onnx.quantization.common import compare_nncf_graph
 
 TARGET_LAYERS = [('Non_Existing_Edge',), ('Conv1',), ('Conv1', 'BN1', 'ReLU1')]
 SHOULD_RAISE_EXCEPTION = [True, False, False]
@@ -158,7 +161,7 @@ def test_bias_correction(layers, values, refs):
     for conv_layer, bias_value in zip(layers, values):
         bias_port_id = 2
         target_point = ONNXTargetPoint(TargetType.LAYER, conv_layer, bias_port_id)
-        command = ONNXBiasCorrectionCommand(target_point, bias_value, np.inf)
+        command = ONNXBiasCorrectionCommand(target_point, bias_value)
         transformation_layout.register(command)
 
     model_transformer = ONNXModelTransformer(model)
@@ -171,3 +174,28 @@ def test_bias_correction(layers, values, refs):
         bias_tensor = onnx_graph.get_initializer(bias_tensor_name)
         bias_value = onnx.numpy_helper.to_array(bias_tensor)
         assert np.mean(bias_value) == bias_reference
+
+
+TARGET_LAYERS = [('DequantizeLinear_X_1',
+                  'QuantizeLinear_X_1',
+                  'QuantizeLinear_Avg_Pool1_Y_1',
+                  'DequantizeLinear_Avg_Pool1_Y_1')]
+
+@pytest.mark.parametrize('target_layers', TARGET_LAYERS)
+def test_node_removing(target_layers):
+    model_to_test = LinearModel()
+    onnx_model = model_to_test.onnx_model
+
+    quantized_model = min_max_quantize_model(model_to_test.input_shape[0], onnx_model)
+
+    transformation_layout = TransformationLayout()
+
+    for target_layer in target_layers:
+        target_point = ONNXTargetPoint(TargetType.LAYER, target_layer, 0)
+        command = ONNXNodeRemovingCommand(target_point)
+        transformation_layout.register(command)
+
+    model_transformer = ONNXModelTransformer(quantized_model)
+
+    transformed_model = model_transformer.transform(transformation_layout)
+    compare_nncf_graph(transformed_model, 'synthetic/' + 'removed_nodes_in_' + model_to_test.path_ref_graph)

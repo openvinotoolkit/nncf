@@ -15,7 +15,6 @@ from typing import Dict, Tuple, List, TypeVar, Union, Optional
 
 import numpy as np
 from nncf import Dataset
-from nncf.common.graph import NNCFNode
 from nncf.common.tensor import NNCFTensor
 from nncf.common.utils.logger import logger as nncf_logger
 from nncf.common.graph.transformations.commands import TargetType
@@ -28,7 +27,6 @@ from nncf.quantization.algorithms.algorithm import Algorithm
 from nncf.quantization.algorithms.fast_bias_correction.backend import ALGO_BACKENDS
 from nncf.common.factory import NNCFGraphFactory
 from nncf.common.factory import EngineFactory
-from nncf.common.graph.model_transformer import ModelTransformer
 from nncf.common.tensor_statistics.statistic_point import StatisticPoint
 from nncf.common.tensor_statistics.statistic_point import StatisticPointsContainer
 
@@ -126,7 +124,7 @@ class FastBiasCorrection(Algorithm):
         for node in biased_nodes:
             node_name = node.node_name
 
-            if not self._is_node_with_bias(node):
+            if not self._backend_entity.is_node_with_bias(node):
                 nncf_logger.debug('Skipping node {} because there is no bias'.format(node_name))
                 continue
             if not self._backend_entity.is_quantized_weights(node, model):
@@ -140,7 +138,7 @@ class FastBiasCorrection(Algorithm):
             input_name = input_tensor_names[0]
             output_name = output_tensor_names[0]
 
-            extracted_model = self._extract_submodel(model_transformer, [input_name], [output_name])
+            extracted_model = self._extract_submodel(model, [input_name], [output_name])
 
             channel_axis = self._backend_entity.channel_axis_by_types[node.node_type]
             input_blob = self._create_input_data(input_shape,
@@ -164,8 +162,7 @@ class FastBiasCorrection(Algorithm):
                                                                  node.node_name,
                                                                  bias_port_id)
                 bias_correction_command = self._backend_entity.bias_correction_command(target_point,
-                                                                                       updated_bias,
-                                                                                       self.threshold)
+                                                                                       updated_bias)
                 transformation_layout.register(bias_correction_command)
             else:
                 nncf_logger.debug(f'{node_name} bias skipped by threshold')
@@ -218,17 +215,18 @@ class FastBiasCorrection(Algorithm):
         return output_fp
 
     def _extract_submodel(self,
-                          model_transformer: ModelTransformer,
+                          model: TModel,
                           input_names: List[str],
                           output_names: List[str]) -> TModel:
         """
         Extracts sub-model from the original based on the input & output tensor names
 
-        :param model_transformer: ModelTransformer instance
+        :param model: backend-specific model
         :param input_names: list of the input names
         :param output_names: list of the output names
         :return: backend-specific sub-model
         """
+        model_transformer = self._backend_entity.model_transformer(model)
         model_extraction_command = self._backend_entity.model_extraction_command(input_names,
                                                                                  output_names)
         me_transformation_layout = TransformationLayout()
@@ -290,17 +288,6 @@ class FastBiasCorrection(Algorithm):
         bias_shift = np.array(output_fp) - q_outputs
         return bias_shift
 
-    def _is_node_with_bias(self, node: NNCFNode) -> bool:
-        """
-        Checks whether the node has a bias or not
-
-        :param node: NNCFNode with the attributes
-        :return: boolean indicating whether the node has a bias or not
-        """
-        # TODO (KodiaqQ): Should be updated to take account of backend specifics
-        input_tensor_names, _ = self._backend_entity.get_tensor_names(node)
-        return len(input_tensor_names) > 2
-
     @staticmethod
     def _get_bias_shift_magnitude(current_bias_value: np.ndarray, updated_bias_value: np.ndarray) -> float:
         """
@@ -324,7 +311,7 @@ class FastBiasCorrection(Algorithm):
         statistic_container = StatisticPointsContainer()
 
         for node in biased_nodes:
-            if not self._is_node_with_bias(node):
+            if not self._backend_entity.is_node_with_bias(node):
                 continue
             input_port_id, output_port_id = self._backend_entity.get_activation_port_ids_for_bias_node(model, node)
             pre_layer_statistic_point = self._backend_entity.target_point(TargetType.PRE_LAYER_OPERATION,

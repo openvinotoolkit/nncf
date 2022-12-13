@@ -26,6 +26,7 @@ from nncf.experimental.onnx.graph.transformations.commands import ONNXBiasCorrec
 from nncf.experimental.onnx.graph.transformations.commands import ONNXModelExtractionCommand
 from nncf.experimental.onnx.graph.transformations.commands import ONNXOutputInsertionCommand
 from nncf.experimental.onnx.graph.transformations.commands import ONNXQuantizerInsertionCommand
+from nncf.experimental.onnx.graph.transformations.commands import ONNXNodeRemovingCommand
 from nncf.common.factory import NNCFGraphFactory
 from nncf.common.graph.model_transformer import ModelTransformer
 
@@ -51,6 +52,7 @@ class ONNXModelTransformer(ModelTransformer):
         quantizer_insert_transformations = []
         output_insert_transformations = []
         bias_correction_transformations = []
+        node_removing_transformations = []
         model_extraction_transformation = None
 
         transformations = transformation_layout.transformations
@@ -64,6 +66,8 @@ class ONNXModelTransformer(ModelTransformer):
                 bias_correction_transformations.append(transformation)
             elif isinstance(transformation, ONNXModelExtractionCommand):
                 model_extraction_transformation = transformation
+            elif isinstance(transformation, ONNXNodeRemovingCommand):
+                node_removing_transformations.append(transformation)
 
         if quantizer_insert_transformations:
             self._apply_quantizer_insertion_transformations(quantizer_insert_transformations)
@@ -72,7 +76,9 @@ class ONNXModelTransformer(ModelTransformer):
         if bias_correction_transformations:
             self._apply_bias_correction_transformations(bias_correction_transformations)
         if model_extraction_transformation:
-            return self._apply_model_extraction_transformation(model_extraction_transformation)
+            self._model = self._apply_model_extraction_transformation(model_extraction_transformation)
+        if node_removing_transformations:
+            self._apply_node_removing_transformation(node_removing_transformations)
 
         return self._model
 
@@ -308,7 +314,7 @@ class ONNXModelTransformer(ModelTransformer):
                                                                   onnx_zero_point_tensor.data_type,
                                                                   onnx_zero_point_tensor.dims)
         self._model.graph.initializer.extend([onnx_scale_tensor, onnx_zero_point_tensor])
-        self._model.graph.input.extend([onnx_scale_value_info, onnx_zero_point_info])
+        self._model.graph.value_info.extend([onnx_scale_value_info, onnx_zero_point_info])
         insert_index = onnx_graph.get_node_index(input_nodes[0].name)
         self._model.graph.node.insert(insert_index, quantizer)
         self._model.graph.node.insert(insert_index + 1, dequantizer)
@@ -334,6 +340,32 @@ class ONNXModelTransformer(ModelTransformer):
     def _apply_model_extraction_transformation(self, transformation: ONNXModelExtractionCommand) -> onnx.ModelProto:
         """
         Extracts sub-model from the original based on the inputs and outputs names
+
+        :param transformation: model extraction transformation
         """
         onnx_model_exctactor = onnx.utils.Extractor(self._model)
         return onnx_model_exctactor.extract_model(transformation.inputs, transformation.outputs)
+
+    def _apply_node_removing_transformation(self, transformations: List[ONNXNodeRemovingCommand]) -> None:
+        """
+        Removes the layers from the model.
+
+        :param transformations: lisf of the node removing transformations.
+        """
+        onnx_graph = ONNXGraph(self._model)
+        for transformation in transformations:
+            node = onnx_graph.get_node_by_name(transformation.target_point.target_node_name)
+
+            node_children = onnx_graph.get_children(node)
+            for node_child in node_children:
+                for input_id, input_obj in enumerate(node_child.input):
+                    if input_obj == node.output[0]:
+                        node_child.input.remove(node.output[0])
+                        node_child.input.insert(input_id, node.input[0])
+
+            initializers = {i.name: i for i in self._model.graph.initializer}
+            for initializer_name in node.input:
+                if initializer_name in initializers:
+                    self._model.graph.initializer.remove(initializers[initializer_name])
+
+            self._model.graph.node.remove(node)
