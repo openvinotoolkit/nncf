@@ -1,6 +1,7 @@
 from abc import ABCMeta, abstractmethod
 from typing import Callable
-from multiprocessing import Pool
+from multiprocessing.pool import ThreadPool as Pool
+import dill
 
 import os
 import re
@@ -25,6 +26,9 @@ from utils import get_torch_dataloader
 from utils import export_to_onnx
 from utils import export_to_ir
 from utils import run_benchmark
+
+from nncf.common.utils.logger import logger as nncf_logger
+nncf_logger.setLevel(logging.ERROR)
 
 
 NOT_AVAILABLE_MESSAGE = "N/A"
@@ -242,6 +246,47 @@ def benchmark_models(paths, names):
     return performance_list
 
 
+def dill_encoded(payload):
+            fun, args = dill.loads(payload)
+            return fun(*args)
+
+        
+def apply_async(pool, fun, args):
+    payload = dill.dumps((fun, args))
+    return pool.apply_async(dill_encoded, (payload,))
+
+
+def get_backend_model(backend, model_name, output_folder):
+    if backend == "torch":
+        torch_model = create_timm_model(model_name)
+        torch_model.eval().cpu()
+        return torch_model
+    elif backend == "onnx":
+        return onnx.load(output_folder / (model_name + ".onnx"))
+    elif backend == "openvino":
+        return ov.Core().read_model(output_folder / (model_name + ".xml"))
+    return None 
+
+
+def quantize_and_validate(backend, model_name, output_folder, model_config, quantization_params, data):
+    ov_model_path, q_acc, q_model_name = "-", "-", "-"
+    print("============ Multiprocessing ================")
+    print(f"{backend}, {model_name}, {output_folder}")       
+
+    try:
+        transform = get_model_transform(model_config)
+        dataloader = get_torch_dataloader(data, transform, batch_size=1)
+        orig_model = get_backend_model(backend, model_name, output_folder)
+        q_model = QuantizerFactory.quantize(backend, orig_model, dataloader, quantization_params)
+        ov_model_path, q_acc, q_model_name = QuantizerFactory.validate(
+                                            backend, q_model, dataloader,
+                                            model_name, output_folder)
+    except Exception as error:
+        logging.error(f"Error when handling the model: {model_name} at backend: {backend}."
+                    f" Details: {error}")
+    return backend, ov_model_path, q_acc, q_model_name
+
+
 @pytest.fixture(scope="session")
 def data(pytestconfig):
     return pytestconfig.getoption("data")
@@ -288,13 +333,13 @@ def test_ptq_timm(data, output, subset, result, model_args): # pylint: disable=W
 
         model = create_timm_model(model_name)
         model.eval().cpu()
-        transform = get_model_transform(model)
-
+        model_config = copy.deepcopy(model.default_cfg)
+        transform = get_model_transform(model_config)
         batch_one_dataloader = get_torch_dataloader(data, transform, batch_size=1)
-
         orig_model_path, orig_acc, _ = QuantizerFactory.validate(
                                                 "torch", model, batch_one_dataloader,
                                                 model_name, output_folder, False)
+        del model, transform, batch_one_dataloader
 
         # keep paths and names for performance benchmarking
         ov_model_paths = ["-"] * (len(BACKEND_ORDER)+1) # +1 for original model characteristics
@@ -305,43 +350,27 @@ def test_ptq_timm(data, output, subset, result, model_args): # pylint: disable=W
         model_names[0] = model_name
         accuracy_results[0] = orig_acc
 
-        def get_backend_model(backend):
-            if backend == "torch":
-                return model
-            elif backend == "onnx":
-                return onnx.load(output_folder / (model_name + ".onnx"))
-            elif backend == "openvino":
-                return ov.Core().read_model(output_folder / (model_name + ".xml"))
-            return None
-
-        def quantize_and_validate(backend):
-            ov_model_path, q_acc, q_model_name = "-", "-", "-"
-            try:
-                dataloader = get_torch_dataloader(data, transform, batch_size=1)
-                model = get_backend_model(backend)
-                q_model = QuantizerFactory.quantize(backend, model, dataloader, quantization_params)
-                ov_model_path, q_acc, q_model_name = QuantizerFactory.validate(
-                                                    backend, q_model, dataloader,
-                                                    model_name, output_folder)
-            except Exception as error:
-                logging.error(f"Error when handling the model: {model_name} at backend: {backend}."
-                            " Details: {error}")
-            return backend, ov_model_path, q_acc, q_model_name
-
         try:
-            with Pool() as pool:
-                q_results = pool.map(quantize_and_validate, QuantizerFactory.registry.keys())
+            pool  = Pool(processes=len(BACKEND_ORDER))
+            jobs = []
 
-            ov_model_paths[BACKEND_ORDER[q_results[0]]] = q_results[1]
-            model_names[BACKEND_ORDER[q_results[0]]] = q_results[2]
-            accuracy_results[BACKEND_ORDER[q_results[0]]] = q_results[3]
+            for backend in QuantizerFactory.registry.keys():
+                job = pool.apply_async(quantize_and_validate, (backend, model_name, output_folder, model_config, quantization_params, data))
+                jobs.append(job)
+
+            for job in jobs:
+                r = job.get()
+                ov_model_paths[BACKEND_ORDER[r[0]]] = r[1]
+                accuracy_results[BACKEND_ORDER[r[0]]] = r[2]
+                model_names[BACKEND_ORDER[r[0]]] = r[3]
+
+            pool.close()
+            pool.join()
 
         except Exception as error:
             logging.error(f"Error when running quantization in parallel."
                           f" Details: {error}")
-            accuracy_results.append(re.escape(str(error)))
-            ov_model_paths.append(None)
-            model_names.append(None)
+            accuracy_results[1] = re.escape(str(error))
 
         # benchmark sequentially
         perf_results = benchmark_models(ov_model_paths, model_names)

@@ -17,8 +17,7 @@ def create_timm_model(name):
     return model
 
 
-def get_model_transform(model):
-    config = model.default_cfg
+def get_model_transform(config):
     normalize = transforms.Normalize(mean=config["mean"], std=config["std"])
     input_size = config["input_size"]
     resize_size = tuple(int(x / config["crop_pct"]) for x in input_size[-2:])
@@ -45,7 +44,7 @@ def get_model_transform(model):
 def get_torch_dataloader(folder, transform, batch_size=1):
     val_dataset = datasets.ImageFolder(root=folder, transform=transform)
     val_loader = torch.utils.data.DataLoader(
-        val_dataset, batch_size=batch_size, num_workers=2, shuffle=False
+        val_dataset, batch_size=batch_size, num_workers=4, shuffle=False
     )
     return val_loader
 
