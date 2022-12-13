@@ -3,9 +3,14 @@ models:
     launchers:
       - framework: onnx_runtime
         execution_providers: ['OpenVINOExecutionProvider']
+        tags: ['OpenVINOExecutionProvider']
         adapter:
           type: segmentation
-
+      - framework: onnx_runtime
+        execution_providers: ['CPUExecutionProvider']
+        tags: ['CPUExecutionProvider']
+        adapter:
+          type: segmentation
     datasets:
       - name: mscoco_segmentation_to_voc
         annotation_conversion:

@@ -4,6 +4,16 @@ models:
   - framework: onnx_runtime
     adapter: classification
     execution_providers: ['OpenVINOExecutionProvider']
+    tags: ['OpenVINOExecutionProvider']
+    inputs:
+      - name: images:0
+        type: INPUT
+        shape: [ 1, 224, 224, 3 ]
+        layout: "NHWC"
+  - framework: onnx_runtime
+    adapter: classification
+    execution_providers: ['CPUExecutionProvider']
+    tags: ['CPUExecutionProvider']
     inputs:
       - name: images:0
         type: INPUT

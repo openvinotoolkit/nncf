@@ -32,12 +32,12 @@ def pytest_addoption(parser):
     parser.addoption(
         "--ckpt-dir", type=str, default=None,
         help="[e2e-test-onnx-model-zoo] (Optional) Directory path to save quantized models. "
-        "If it is not provided, tempfile.TemporaryDirectory will be used."
+             "If it is not provided, tempfile.TemporaryDirectory will be used."
     )
     parser.addoption(
         "--anno-dir", type=str, default=None,
         help="[e2e-test-onnx-model-zoo] (Optional) Directory path for dataset annotations "
-        "If it is not provided, tempfile.TemporaryDirectory will be used."
+             "If it is not provided, tempfile.TemporaryDirectory will be used."
     )
     parser.addoption(
         "--ptq-size", type=int, default=100,
@@ -46,7 +46,17 @@ def pytest_addoption(parser):
     parser.addoption(
         "--eval-size", type=int, default=None,
         help="[e2e-test-onnx-model-zoo] Dataset subsample size for evaluation. "
-        "If not provided, full dataset is used for evaluation."
+             "If not provided, full dataset is used for evaluation."
+    )
+    parser.addoption(
+        "--disable-ov-ep", action="store_true", default=False,
+        help="[e2e-test-onnx-model-zoo] If the parameter is set then the accuracy validation of the quantized models "
+             "will be disabled for OpenVINOExecutionProvider."
+    )
+    parser.addoption(
+        "--enable-cpu-ep", action="store_true", default=False,
+        help="[e2e-test-onnx-model-zoo] If the parameter is set then the accuracy validation of the quantized models "
+             "will be enabled for CPUExecutionProvider."
     )
 
 
