@@ -18,3 +18,15 @@ pylint-onnx:
 
 test-install-onnx:
 	pytest tests/cross_fw/install/ --backend onnx
+
+test-e2e-ptq-ov-ep-only:
+	pytest tests/onnx -m e2e_ptq --model-dir /models --data-dir /datasets --output-dir outputs --anno-dir /annots \
+    --junitxml outputs/nncf-tests.xml --ptq-size 100 --eval-size 1000
+
+test-e2e-ptq-ep-only:
+	pytest tests/onnx -m e2e_ptq --model-dir /models --data-dir /datasets --output-dir outputs --anno-dir /annots \
+    --junitxml outputs/nncf-tests.xml --ptq-size 100 --eval-size 1000 --enable-cpu-ep --disable-ov-ep
+
+test-e2e-ptq-ov-cpu-eps:
+	pytest tests/onnx -m e2e_ptq --model-dir /models --data-dir /datasets --output-dir outputs --anno-dir /annots  \
+	--junitxml outputs/nncf-tests.xml --ptq-size 100 --eval-size 1000 --enable-cpu-ep
