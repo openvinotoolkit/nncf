@@ -14,7 +14,7 @@
 from abc import ABC
 from abc import abstractmethod
 
-from typing import TypeVar, Dict, Union, Optional
+from typing import TypeVar, Dict, Optional
 
 from nncf.common.tensor_statistics.statistic_point import StatisticPointsContainer
 from nncf.common.utils.backend import BackendType

@@ -78,7 +78,8 @@ class MinMaxQuantizationParameters(AlgorithmParameters):
                  ):
         """
         :param number_samples: Number of samples for the statistics collection.
-        :param preset: Preset parameter for Quantization. Defines the mode: symmetric or asymmetric of the activation quantizers.
+        :param preset: Preset parameter for Quantization.
+        Defines the mode: symmetric or asymmetric of the activation quantizers.
         :param weight_bits: Bitwidth for the weight quantizers.
         :param weight_granularity: Type of quantization granularity for weight quantizers.
         Could be per-channel or per-tensor.
@@ -253,7 +254,7 @@ class MinMaxQuantization(Algorithm):
         weight_quantization_target_point = self._backend_entity.target_point(TargetType.OPERATION_WITH_WEIGHTS,
                                                                              node_name,
                                                                              port_id)
-        weight_quantizer_config = self._backend_entity.get_weight_config(model, quantization_point.qconfig)
+        weight_quantizer_config = self._backend_entity.get_weight_config(quantization_point.qconfig, model)
         self._quantization_target_points_to_qconfig[weight_quantization_target_point] = weight_quantizer_config
 
     def _add_activation_quantization_target_point(self,

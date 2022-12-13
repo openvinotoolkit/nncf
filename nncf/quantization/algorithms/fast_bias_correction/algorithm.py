@@ -11,7 +11,7 @@
  limitations under the License.
 """
 
-from typing import Dict, Tuple, List, TypeVar, Union, Optional
+from typing import Dict, Tuple, List, TypeVar, Optional
 
 import numpy as np
 from nncf import Dataset

@@ -56,7 +56,8 @@ class PostTrainingQuantizationParameters(AlgorithmParameters):
                  ):
         """
         :param number_samples: Number of samples for the statistics collection.
-        :param preset: Preset parameter for Quantization. Defines the mode: symmetric or asymmetric of the activation quantizers.
+        :param preset: Preset parameter for Quantization.
+        Defines the mode: symmetric or asymmetric of the activation quantizers.
         :param weight_bits: Bitwidth for the weight quantizers.
         :param weight_granularity: Type of quantization granularity for weight quantizers.
         Could be per-channel or per-tensor.
