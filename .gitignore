@@ -117,7 +117,7 @@ examples/torch/object_detection/eval/
 nncf_debug/
 
 # NNCF examples
-examples/experimental/onnx/mobilenet_v2/mobilenet_v2_quantization/
+examples/post_training_quantization/onnx/mobilenet_v2/mobilenet_v2_*
 examples/post_training_quantization/openvino/mobilenet_v2/mobilenet_v2_*
 examples/experimental/tensorflow/mobilenet_v2/mobilenet_v2_quantization/
 examples/post_training_quantization/torch/mobilenet_v2/mobilenet_v2_*
