@@ -21,6 +21,8 @@ from nncf.quantization.algorithms.post_training.algorithm import PostTrainingQua
 from nncf.quantization.algorithms.post_training.algorithm import PostTrainingQuantizationParameters
 from nncf.quantization.algorithms.definitions import Granularity
 from tests.common.quantization.mock_graphs import NodeWithType
+from nncf.experimental.onnx.statistics.collectors import ONNXMeanMinMaxStatisticCollector
+from nncf.experimental.onnx.statistics.collectors import ONNXMinMaxStatisticCollector
 from nncf.experimental.onnx.graph.metatypes.onnx_metatypes import ONNXConvolutionMetatype
 from nncf.experimental.onnx.graph.metatypes.onnx_metatypes import ONNXDepthwiseConvolutionMetatype
 from nncf.common.graph.operator_metatypes import OutputNoopMetatype
@@ -28,6 +30,7 @@ from nncf.common.graph.operator_metatypes import InputNoopMetatype
 from tests.common.quantization.test_filter_constant_nodes import create_mock_graph
 from tests.common.quantization.test_filter_constant_nodes import get_nncf_graph_from_mock_nx_graph
 from nncf.quantization.algorithms.min_max.onnx_backend import ONNXMinMaxAlgoBackend
+from nncf.quantization.algorithms.definitions import RangeType
 
 
 # pylint: disable=protected-access
@@ -152,3 +155,34 @@ def test_depthwise_conv_default_quantizer_config(nncf_graph):
             assert quantization_point.qconfig == weight_default_config
         if quantization_point.is_activation_quantization_point():
             assert quantization_point.qconfig == activation_default_config
+
+
+@pytest.mark.parametrize('range_type', [RangeType.MINMAX, RangeType.MEAN_MINMAX])
+@pytest.mark.parametrize('q_config_mode', [QuantizationMode.SYMMETRIC, QuantizationMode.ASYMMETRIC])
+@pytest.mark.parametrize('q_config_per_channel', [True, False])
+def test_get_stat_collector(range_type, q_config_mode, q_config_per_channel):
+    algo = PostTrainingQuantization(PostTrainingQuantizationParameters(range_type=range_type))
+    min_max_algo = algo.algorithms[0]
+    min_max_algo._backend_entity = ONNXMinMaxAlgoBackend()
+    q_config = QuantizerConfig(num_bits=8,
+                               mode=q_config_mode,
+                               per_channel=q_config_per_channel)
+    tensor_collector = min_max_algo._get_stat_collector(q_config)
+    if q_config_per_channel:
+        assert isinstance(tensor_collector, ONNXMinMaxStatisticCollector)
+        assert tensor_collector._reduction_shape == (0, 2, 3)
+        if q_config_mode == QuantizationMode.SYMMETRIC:
+            assert tensor_collector._use_abs_max
+        elif q_config_mode == QuantizationMode.ASYMMETRIC:
+            assert not tensor_collector._use_abs_max
+
+    else:
+        assert tensor_collector._reduction_shape is None
+        if range_type == RangeType.MINMAX:
+            assert isinstance(tensor_collector, ONNXMinMaxStatisticCollector)
+        elif range_type == RangeType.MEAN_MINMAX:
+            assert isinstance(tensor_collector, ONNXMeanMinMaxStatisticCollector)
+        if q_config_mode == QuantizationMode.SYMMETRIC:
+            assert tensor_collector._use_abs_max
+        elif q_config_mode == QuantizationMode.ASYMMETRIC:
+            assert not tensor_collector._use_abs_max

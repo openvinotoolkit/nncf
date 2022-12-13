@@ -171,6 +171,10 @@ class MinMaxQuantization(Algorithm):
         """
         is_symmetric = quantizer_config.mode == QuantizationMode.SYMMETRIC
         axes = (0, 2, 3) if quantizer_config.per_channel else None
+        if quantizer_config.per_channel:
+            return self._backend_entity.minmax_statistic_collector(use_abs_max=is_symmetric,
+                                                                   reduction_shape=axes,
+                                                                   num_samples=self._parameters.number_samples)
         if self._parameters.range_type == RangeType.MINMAX:
             return self._backend_entity.minmax_statistic_collector(use_abs_max=is_symmetric,
                                                                    reduction_shape=axes,
