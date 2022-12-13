@@ -140,7 +140,7 @@ def check_scope_names_match_graph(config: NNCFConfig, graph: NNCFGraph) -> None:
         err_message = "No match has been found among the model operations " \
                       "for the following ignored/target scope definitions:\n" \
                       + err_message \
-                      + "Refer to the compressed_graph.dot to discover the operations " \
+                      + "Refer to the original_graph.dot to discover the operations " \
                       "in the model currently visible to NNCF and specify the ignored/target " \
                       "scopes in terms of the names there."
 
