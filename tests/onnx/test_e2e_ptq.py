@@ -506,10 +506,10 @@ class TestBenchmarkResult:
     @pytest.mark.run(order=4)
     def test_generate_report(self, reference_model_accuracy, quantized_model_accuracy, output_dir):
         output_fp = str(output_dir / REPORT_NAME)
-        df = self.join_reference_and_quantized_frames(reference_model_accuracy, quantized_model_accuracy)
         cpu_ep_row_colors, ov_ep_row_colors = {}, {}
-        is_ov_ep = OV_EP_COL_NAME in df.columns
-        is_cpu_ep = CPU_EP_COL_NAME in df.columns
+        is_ov_ep = OV_EP_COL_NAME in quantized_model_accuracy.columns
+        is_cpu_ep = CPU_EP_COL_NAME in quantized_model_accuracy.columns
+        df = self.join_reference_and_quantized_frames(reference_model_accuracy, quantized_model_accuracy)
         if is_cpu_ep:
             cpu_ep_row_colors = self.get_row_colors(df, reference_model_accuracy, "CPU-EP_INT8")
         if is_ov_ep:

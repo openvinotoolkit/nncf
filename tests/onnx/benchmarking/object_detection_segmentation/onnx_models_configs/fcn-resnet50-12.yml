@@ -19,6 +19,7 @@ models:
           has_background: True
           sort_annotations: True
           semantic_only: True
+          convert_mask: False
           # Do not change masks_dir path
           masks_dir: mscoco_to_voc_seg_masks
           # Only evaluate on VOC labels
