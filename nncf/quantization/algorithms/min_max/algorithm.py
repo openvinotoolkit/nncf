@@ -13,7 +13,7 @@
 
 from copy import deepcopy
 from typing import Dict, List, TypeVar, Optional, OrderedDict
-from collections import OrderedDict as OrderedDict_
+import collections
 from nncf import Dataset
 from nncf.common.graph.definitions import NNCFGraphNodeType
 from nncf.common.graph.graph import NNCFGraph
@@ -106,24 +106,42 @@ class MinMaxQuantizationParameters(AlgorithmParameters):
         self.quantize_outputs = quantize_outputs
         self.ignored_scopes = [] if ignored_scopes is None else ignored_scopes
         self.global_quantizer_constraints = {}
+        weight_per_channel, activation_per_channel = None, None
         if weight_granularity is not None:
-            weight_granularity = weight_granularity == Granularity.PERCHANNEL
+            weight_per_channel = weight_granularity == Granularity.PERCHANNEL
         if activation_granularity is not None:
-            activation_granularity = activation_granularity == Granularity.PERCHANNEL
-        weight_quantizer_constraints_dict = {
-            'mode': QuantizationPreset.get_params_configured_by_preset(preset, QuantizerGroup.WEIGHTS)['mode'],
-            'num_bits': weight_bits,
-            'per_channel': weight_granularity,
-            'signedness_to_force': weight_signedness_to_force}
-        activation_quantizer_constraints_dict = {
-            'mode': QuantizationPreset.get_params_configured_by_preset(preset, QuantizerGroup.ACTIVATIONS)['mode'],
-            'num_bits': activation_bits,
-            'per_channel': activation_granularity,
-            'signedness_to_force': activation_signedness_to_force}
-        for q_group, constraints in [
-            (QuantizerGroup.WEIGHTS, QuantizationConstraints(**weight_quantizer_constraints_dict)),
-            (QuantizerGroup.ACTIVATIONS, QuantizationConstraints(**activation_quantizer_constraints_dict))]:
-            self.global_quantizer_constraints[q_group] = constraints
+            activation_per_channel = activation_granularity == Granularity.PERCHANNEL
+        q_weight_constraints = self._get_quantizer_constraints(QuantizerGroup.WEIGHTS, preset, weight_bits,
+                                                               weight_per_channel, weight_signedness_to_force)
+        q_activation_constraints = self._get_quantizer_constraints(QuantizerGroup.ACTIVATIONS, preset, activation_bits,
+                                                                   activation_per_channel,
+                                                                   activation_signedness_to_force)
+        self.global_quantizer_constraints[QuantizerGroup.WEIGHTS] = q_weight_constraints
+        self.global_quantizer_constraints[QuantizerGroup.ACTIVATIONS] = q_activation_constraints
+
+    def _get_quantizer_constraints(self, group: QuantizerGroup, preset: QuantizationPreset, num_bits: Optional[int],
+                                   per_channel: Optional[bool],
+                                   signedness_to_force: Optional[bool]) -> QuantizationConstraints:
+        """
+        Returns QuantizationConstraints for the provided quantizer group
+
+        :param group: Quantizer groups.
+        :param preset: Quantization preset.
+        :param num_bits: Bitwidth of Quantizers.
+        :param per_channel: Per-channel ot per-tensor granularity
+        :param signedness_to_force: True if the quantizer *must* be signed, False if *must* be unsigned,
+        None if the signed/unsigned attribute should be determined based on the incoming activation
+        statistics during range initialization.
+        :return:
+        """
+        constraints = {'mode': preset.get_params_configured_by_preset(group)['mode']}
+        if num_bits is not None:
+            constraints['num_bits'] = num_bits
+        if per_channel is not None:
+            constraints['per_channel'] = per_channel
+        if signedness_to_force is not None:
+            constraints['signedness_to_force'] = signedness_to_force
+        return QuantizationConstraints(**constraints)
 
 
 class MinMaxQuantization(Algorithm):
@@ -140,7 +158,7 @@ class MinMaxQuantization(Algorithm):
         self.nncf_graph = None
         # It prevents the duplicate weight quantizers from being added.
         # It can happen when you have layers that share the identical weight tensor.
-        self._quantization_target_points_to_qconfig = OrderedDict_()  # type: OrderedDict[TargetPoint, QuantizerConfig]
+        self._quantization_target_points_to_qconfig = collections.OrderedDict()  # type: OrderedDict[TargetPoint, QuantizerConfig]
         self._parameters = parameters
 
     @property
@@ -315,7 +333,7 @@ class MinMaxQuantization(Algorithm):
                 self._add_activation_quantization_target_point(quantization_point)
             else:
                 raise RuntimeError('Incorrect quantization point')
-        self._quantization_target_points_to_qconfig = OrderedDict_(
+        self._quantization_target_points_to_qconfig = collections.OrderedDict(
             sorted(self._quantization_target_points_to_qconfig.items()))
         return self._quantization_target_points_to_qconfig
 

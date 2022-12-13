@@ -66,14 +66,15 @@ def calculate_scale_zero_point(max_val: np.ndarray, min_val: np.ndarray, level_l
     :return: Scale and Zero point values.
 
     """
+    scale, zero_point = None, None
     if mode == QuantizationMode.SYMMETRIC:
         input_abs_max = np.maximum(np.abs(max_val), np.abs(min_val))
         max_val = input_abs_max
         min_val = -input_abs_max
-    scale = np.array((max_val - min_val) / float(level_high - level_low))
-    if mode == QuantizationMode.SYMMETRIC:
+        scale = np.array((max_val - min_val) / float(level_high - level_low))
         zero_point = np.zeros_like(scale, dtype=np.int32)
     elif mode == QuantizationMode.ASYMMETRIC:
+        scale = np.array((max_val - min_val) / float(level_high - level_low))
         zero_point = np.round(level_low - min_val / scale).astype(np.int32)
 
         level_low *= np.ones_like(zero_point, dtype=np.int32)
@@ -131,10 +132,11 @@ def calculate_activation_quantizer_parameters(statistics: MinMaxTensorStatistic,
     """
     input_low = np.array(statistics.min_values)
     input_high = np.array(statistics.max_values)
-    if quantizer_config.signedness_to_force:
-        tensor_type = np.int8
-    elif quantizer_config.signedness_to_force is None:
+    tensor_type = None
+    if quantizer_config.signedness_to_force is None:
         tensor_type = np.uint8 if np.all(input_low >= 0) else np.int8
+    elif quantizer_config.signedness_to_force:
+        tensor_type = np.int8
     elif not quantizer_config.signedness_to_force:
         tensor_type = np.uint8
     level_low, level_high = get_level_low_level_high(tensor_type, quantizer_config.num_bits)

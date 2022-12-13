@@ -489,6 +489,10 @@ def get_operator_metatypes() -> List[Type[OperatorMetatype]]:
 def _is_depthwise_conv(model: onnx.ModelProto, node: onnx.NodeProto) -> bool:
     """
     Returns True if the convolution is depthwise, False - otherwise.
+    Depthwise convolution is a convolution satisfies the following rule:
+    groups == in_channels and out_channels == K*in_channels, where K is a positive integer.
+    Weight tensor of a convolution consists of the following dimension:
+    (out_channels, in_channels / groups, kernel_size[0], kernel_size[1]).
 
     :param model: ONNX model to get the node's weight.
     :param node: Convolution node to check whether it is depthwise.
@@ -500,15 +504,16 @@ def _is_depthwise_conv(model: onnx.ModelProto, node: onnx.NodeProto) -> bool:
             conv_group = onnx.helper.get_attribute_value(attribute)
     if conv_group is None:
         return False
-    tensor_value = None
+    weight_tensor_value = None
     initializer_name = node.input[1]
     for init in model.graph.initializer:
         if init.name == initializer_name:
-            tensor_value = onnx.numpy_helper.to_array(init)
-    if tensor_value is None:
+            weight_tensor_value = onnx.numpy_helper.to_array(init)
+    if weight_tensor_value is None:
         return False
-    conv_out_channels = tensor_value.shape[0]
-    conv_in_channels = tensor_value.shape[1] * conv_group
-    if conv_out_channels % conv_in_channels == 0 and conv_group == conv_in_channels:
+    conv_out_channels = weight_tensor_value.shape[0]
+    conv_in_channels = weight_tensor_value.shape[1] * conv_group
+    if conv_out_channels % conv_in_channels == 0 and conv_out_channels // conv_in_channels > 0 and\
+            conv_group == conv_in_channels:
         return True
     return False
