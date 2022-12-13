@@ -54,11 +54,6 @@ class FastBiasCorrectionParameters(AlgorithmParameters):
         self.number_samples = number_samples
         self.threshold = threshold
 
-    def to_json(self) -> Dict[str, Union[str, float, int]]:
-        """
-        Serialize all FastBiasCorrection parameters to JSON.
-        """
-
 
 class FastBiasCorrection(Algorithm):
     """

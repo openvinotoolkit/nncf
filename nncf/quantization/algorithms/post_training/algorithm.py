@@ -24,6 +24,7 @@ from nncf.common.utils.logger import logger as nncf_logger
 from nncf.quantization.algorithms.algorithm import Algorithm
 from nncf.quantization.algorithms.algorithm import AlgorithmParameters
 from nncf.quantization.algorithms.definitions import RangeType
+from nncf.quantization.algorithms.definitions import Granularity
 from nncf.quantization.algorithms.fast_bias_correction.algorithm import FastBiasCorrection
 from nncf.quantization.algorithms.fast_bias_correction.algorithm import FastBiasCorrectionParameters
 from nncf.quantization.algorithms.min_max.algorithm import MinMaxQuantization
@@ -43,10 +44,10 @@ class PostTrainingQuantizationParameters(AlgorithmParameters):
                  number_samples: int = 300,
                  preset: QuantizationPreset = QuantizationPreset.PERFORMANCE,
                  weight_bits: Optional[int] = None,
-                 weight_granularity: Optional[int] = None,
+                 weight_granularity: Optional[Granularity] = None,
                  weight_signedness_to_force: Optional[bool] = None,
                  activation_bits: Optional[int] = None,
-                 activation_granularity: Optional[int] = None,
+                 activation_granularity: Optional[Granularity] = None,
                  activation_signedness_to_force: Optional[bool] = None,
                  target_device: TargetDevice = TargetDevice.ANY,
                  range_type: RangeType = RangeType.MEAN_MINMAX,

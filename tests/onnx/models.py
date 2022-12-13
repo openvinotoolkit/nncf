@@ -45,6 +45,7 @@ class ONNXReferenceModel:
 @ALL_SYNTHETIC_MODELS.register()
 class LinearModel(ONNXReferenceModel):
     INPUT_NAME = "X"
+
     def __init__(self):
         input_shape = [1, 3, 32, 32]
         model_input_name = self.INPUT_NAME
@@ -704,7 +705,8 @@ class OneDepthwiseConvolutionalModel(ONNXReferenceModel):
         op.version = OPSET_VERSION
         model = onnx.helper.make_model(graph_def, opset_imports=[op])
         onnx.checker.check_model(model)
-        super().__init__(model, [input_shape], 'one_depthwiseconvolutional_model.dot')
+        super().__init__(model, [input_shape], 'one_depthwise_convolutional_model.dot')
+
 
 class InputOutputModel(ONNXReferenceModel):
     def __init__(self):

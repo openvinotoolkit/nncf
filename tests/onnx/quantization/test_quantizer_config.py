@@ -75,9 +75,10 @@ def test_default_quantizer_config(nncf_graph):
 @pytest.mark.parametrize('preset', [QuantizationPreset.MIXED, QuantizationPreset.PERFORMANCE])
 @pytest.mark.parametrize('weight_bits', [8])
 @pytest.mark.parametrize('activation_bits', [8])
-@pytest.mark.parametrize('weight_signedness_to_force', [True, False])
-@pytest.mark.parametrize('activation_signedness_to_force', [True, False])
+@pytest.mark.parametrize('weight_signedness_to_force', [None])
+@pytest.mark.parametrize('activation_signedness_to_force', [None])
 @pytest.mark.parametrize('nncf_graph', [NNCFGraphToTest()])
+# TODO(kshpv): add activation_signedness_to_force and weight_signedness_to_force
 def test_quantizer_config_from_ptq_params(weight_granularity, activation_granularity, preset, weight_bits,
                                           activation_bits,
                                           weight_signedness_to_force, activation_signedness_to_force, nncf_graph):
@@ -85,10 +86,10 @@ def test_quantizer_config_from_ptq_params(weight_granularity, activation_granula
         PostTrainingQuantizationParameters(preset=preset,
                                            weight_bits=weight_bits,
                                            weight_granularity=weight_granularity,
-                                           # weight_signedness_to_force=weight_signedness_to_force,
+                                           weight_signedness_to_force=weight_signedness_to_force,
                                            activation_bits=activation_bits,
                                            activation_granularity=activation_granularity,
-                                           # activation_signedness_to_force=activation_signedness_to_force
+                                           activation_signedness_to_force=activation_signedness_to_force
                                            ))
     min_max_algo = algo.algorithms[0]
     min_max_algo._backend_entity = ONNXMinMaxAlgoBackend()
@@ -101,9 +102,11 @@ def test_quantizer_config_from_ptq_params(weight_granularity, activation_granula
             assert quantization_point.qconfig.mode == q_g_to_quantization_mode[QuantizerGroup.WEIGHTS]
             assert quantization_point.qconfig.per_channel == (weight_granularity == Granularity.PERCHANNEL)
             assert quantization_point.qconfig.num_bits == weight_bits
-            # assert quantization_point.qconfig.signedness_to_force == weight_signedness_to_force
+            if weight_signedness_to_force is not None:
+                assert quantization_point.qconfig.signedness_to_force == weight_signedness_to_force
         if quantization_point.is_activation_quantization_point():
             assert quantization_point.qconfig.per_channel == (activation_granularity == Granularity.PERCHANNEL)
             assert quantization_point.qconfig.num_bits == activation_bits
             assert quantization_point.qconfig.mode == q_g_to_quantization_mode[QuantizerGroup.ACTIVATIONS]
-            # assert quantization_point.qconfig.signedness_to_force == activation_signedness_to_force
+            if activation_signedness_to_force is not None:
+                assert quantization_point.qconfig.signedness_to_force == activation_signedness_to_force

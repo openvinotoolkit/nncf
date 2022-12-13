@@ -107,12 +107,8 @@ class MinMaxQuantizationParameters(AlgorithmParameters):
         self.global_quantizer_constraints = {}
         if weight_granularity is not None:
             weight_granularity = weight_granularity == Granularity.PERCHANNEL
-        else:
-            weight_granularity = None
         if activation_granularity is not None:
             activation_granularity = activation_granularity == Granularity.PERCHANNEL
-        else:
-            activation_granularity = None
         weight_quantizer_constraints_dict = {
             'mode': QuantizationPreset.get_params_configured_by_preset(preset, QuantizerGroup.WEIGHTS)['mode'],
             'num_bits': weight_bits,
