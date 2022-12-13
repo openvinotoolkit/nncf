@@ -50,6 +50,7 @@ def get_torch_dataloader(folder, transform, batch_size=1):
 
 
 def export_to_onnx(model, save_path, data_sample):
+    print(f"Export to ONNX: {save_path}")
     torch.onnx.export(
         model,
         data_sample,
@@ -61,6 +62,7 @@ def export_to_onnx(model, save_path, data_sample):
 
 
 def export_to_ir(model_path, save_path, model_name):
+    print(f"Export to IR: {save_path}")
     runner = Command(f"mo -m {model_path} -o {save_path} -n {model_name}")
     runner.run()
 
