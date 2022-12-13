@@ -759,7 +759,7 @@ class QuantizationBuilder(PTCompressionAlgorithmBuilder):
                         if target_node in get_first_nodes_of_type(target_model_graph, ['conv2d']):
                             half_range = True
                             quantizers_with_overflow_fix_str = 'first convolution weight quantizers'
-                    else:
+                    elif self._overflow_fix != 'disable':
                         raise RuntimeError(f"Unknown overflow fix type: {self._overflow_fix}")
                     if half_range:
                         nncf_logger.debug(f'Overflow issue fix will be applied to {quantizers_with_overflow_fix_str}')

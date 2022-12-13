@@ -200,21 +200,21 @@ def is_traced_tensor(obj):
 
 class _ModuleState:
     def __init__(self, base_module: Module = None):
-        self._training_state = {}
-        self._requires_grad_state = {}
+        self._training_state = {}  # type: Dict[str, bool]
+        self._requires_grad_state = {}  # type: Dict[str, bool]
         if base_module is not None:
             for module_name, module in base_module.named_modules():
                 self.training_state[module_name] = module.training
 
-            for p in base_module.parameters():
-                self.requires_grad_state[p] = p.requires_grad
+            for param_name, param in base_module.named_parameters():
+                self.requires_grad_state[param_name] = param.requires_grad
 
     @property
-    def training_state(self) -> Dict[Module, bool]:
+    def training_state(self) -> Dict[str, bool]:
         return self._training_state
 
     @property
-    def requires_grad_state(self) -> Dict[Parameter, bool]:
+    def requires_grad_state(self) -> Dict[str, bool]:
         return self._requires_grad_state
 
 
@@ -234,8 +234,8 @@ def load_module_state(base_module: Module, state: _ModuleState, strict=False) ->
             if strict:
                 raise RuntimeError(msg) from e
 
-    for p in base_module.parameters():
-        p.requires_grad = state.requires_grad_state[p]
+    for name, param in base_module.named_parameters():
+        param.requires_grad = state.requires_grad_state[name]
 
 
 @contextmanager

@@ -528,7 +528,7 @@ class QuantizationBuilder(TFCompressionAlgorithmBuilder):
                 quantizers_with_overflow_fix_str = 'all weight quantizers'
             elif self._overflow_fix == 'first_layer_only':
                 quantizers_with_overflow_fix_str = 'first convolution weight quantizers'
-            else:
+            elif self._overflow_fix != 'disable':
                 raise RuntimeError(f"Unknown overflow fix type: {self._overflow_fix}")
             nncf_logger.info(f'Overflow issue fix was applied to {quantizers_with_overflow_fix_str}.')
 

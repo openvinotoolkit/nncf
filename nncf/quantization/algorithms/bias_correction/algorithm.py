@@ -19,6 +19,7 @@ from collections import deque
 
 from functools import partial
 from nncf import Dataset
+from nncf import nncf_logger
 from nncf.common.graph import NNCFGraph
 from nncf.common.graph import NNCFNode
 from nncf.common.graph.transformations.commands import TransformationCommand
@@ -33,7 +34,6 @@ from nncf.common.factory import NNCFGraphFactory
 from nncf.common.factory import EngineFactory
 from nncf.common.tensor_statistics.statistic_point import StatisticPoint
 from nncf.common.tensor_statistics.statistic_point import StatisticPointsContainer
-from nncf.common.utils.logger import logger as nncf_logger
 
 TModel = TypeVar('TModel')
 
@@ -140,10 +140,10 @@ class BiasCorrection(Algorithm):
             node = nncf_graph.get_node_by_name(node_name)
 
             if not self._backend_entity.is_node_with_bias(node):
-                nncf_logger.debug('Skipping node {} because there is no bias'.format(node_name))
+                nncf_logger.debug(f'Skipping node {node_name} because there is no bias')
                 continue
             if not self._backend_entity.is_quantized_weights(node, model):
-                nncf_logger.debug('Skipping node {} because weights was not quantized'.format(node_name))
+                nncf_logger.debug(f'Skipping node {node_name} because weights was not quantized')
                 continue
 
             # We do not make an additional copy of the model because
