@@ -258,7 +258,8 @@ class TestPTQ:
             "-o", str(ckpt_dir),
             "-s", str(data_dir),
             "-a", str(anno_dir),
-            "-ss", str(ptq_size)
+            "-ss", str(ptq_size),
+            "--target_tags", 'OpenVINOExecutionProvider'
         ]
 
         com_str = ' '.join(com_line)
