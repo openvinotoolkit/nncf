@@ -132,13 +132,9 @@ def calculate_activation_quantizer_parameters(statistics: MinMaxTensorStatistic,
     """
     input_low = np.array(statistics.min_values)
     input_high = np.array(statistics.max_values)
-    tensor_type = None
-    if quantizer_config.signedness_to_force is None:
-        tensor_type = np.uint8 if np.all(input_low >= 0) else np.int8
-    elif quantizer_config.signedness_to_force:
-        tensor_type = np.int8
-    elif not quantizer_config.signedness_to_force:
-        tensor_type = np.uint8
+    tensor_type = np.uint8 if np.all(input_low >= 0) else np.int8
+    if quantizer_config.signedness_to_force is not None:
+        tensor_type = np.int8 if quantizer_config.signedness_to_force else np.uint8
     level_low, level_high = get_level_low_level_high(tensor_type, quantizer_config.num_bits)
     scales, zero_points = calculate_scale_zero_point(input_high, input_low, level_low, level_high,
                                                      quantizer_config.mode)
