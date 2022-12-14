@@ -203,7 +203,7 @@ class QuantizerSetupGeneratorBase:
         preset = quant_config.get('preset')
         if self._target_device in ['ANY', 'CPU', 'GPU'] or \
                 (self._target_device is None and preset is not None):
-            preset = QuantizationPreset.from_str(quant_config.get('preset', QUANTIZATION_PRESET))
+            preset = QuantizationPreset(quant_config.get('preset', QUANTIZATION_PRESET))
             params_dict = preset.get_params_configured_by_preset(quantizer_group)
             overridden_params = params_dict.keys() & params_dict_from_config.keys()
             if overridden_params:
@@ -468,7 +468,7 @@ class QuantizationBuilder(PTCompressionAlgorithmBuilder):
         hw_config_type = None
         target_device = self.config.get('target_device', 'ANY')
         if target_device != 'TRIAL':
-            hw_config_type = HWConfigType.from_str(HW_CONFIG_TYPE_TARGET_DEVICE_MAP[target_device])
+            hw_config_type = HWConfigType(HW_CONFIG_TYPE_TARGET_DEVICE_MAP[target_device])
         if hw_config_type is not None:
             hw_config_path = PTHWConfig.get_path_to_hw_config(hw_config_type)
             self.hw_config = PTHWConfig.from_json(hw_config_path)
@@ -572,7 +572,7 @@ class QuantizationBuilder(PTCompressionAlgorithmBuilder):
 
             hw_config_type = None
             if self.hw_config is not None:
-                hw_config_type = HWConfigType.from_str(self.hw_config.target_device)
+                hw_config_type = HWConfigType(self.hw_config.target_device)
             precision_init_params = AutoQPrecisionInitParams.from_config(init_precision_config,
                                                                          precision_init_args,
                                                                          hw_config_type)

@@ -53,7 +53,7 @@ class ProgressiveShrinkingBuilder(PTCompressionAlgorithmBuilder):
 
         default_progressivity = map(lambda x: x.value, self.DEFAULT_PROGRESSIVITY)
         progressivity_of_elasticity = self._algo_config.get('progressivity_of_elasticity', default_progressivity)
-        self._progressivity_of_elasticity = list(map(ElasticityDim.from_str, progressivity_of_elasticity))
+        self._progressivity_of_elasticity = list(map(ElasticityDim, progressivity_of_elasticity))
         self._elasticity_builder = ElasticityBuilder(self.config, self.should_init)
 
         self._lr_schedule_config = self._algo_config.get('lr_schedule', {})
@@ -120,7 +120,7 @@ class ProgressiveShrinkingBuilder(PTCompressionAlgorithmBuilder):
         self._elasticity_builder.load_state(elasticity_builder_state)
         progressivity_of_elasticity = state_without_name[self._state_names.PROGRESSIVITY_OF_ELASTICITY]
         # No conflict resolving with the related config options, parameters are overridden by compression state
-        self._progressivity_of_elasticity = [ElasticityDim.from_str(dim) for dim in progressivity_of_elasticity]
+        self._progressivity_of_elasticity = [ElasticityDim(dim) for dim in progressivity_of_elasticity]
         self._bn_adapt_params = state_without_name[self._state_names.BN_ADAPTATION_PARAMS]
         bn_adapt_algo_kwargs = get_bn_adapt_algo_kwargs(self.config,
                                                         self._bn_adapt_params)
