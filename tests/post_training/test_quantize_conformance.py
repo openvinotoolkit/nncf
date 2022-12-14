@@ -1,8 +1,5 @@
 from abc import ABCMeta, abstractmethod
 from typing import Callable
-from multiprocessing.pool import ThreadPool as Pool
-import concurrent
-import dill
 
 import os
 import re
@@ -34,7 +31,7 @@ nncf_logger.setLevel(logging.ERROR)
 
 NOT_AVAILABLE_MESSAGE = "N/A"
 DEFAULT_VAL_THREADS = 4
-ILSVRC_VALIDATION_SUBSET_SIZE = 500
+ILSVRC_VALIDATION_SUBSET_SIZE = 5000
 
 class QuantizerBase(metaclass=ABCMeta):
     """ Base class for an executor """
@@ -175,9 +172,6 @@ class OpenVINOQuantizer(QuantizerBase):
         ov.serialize(model, str(ov_path))
         # Validate accuracy
         accuracy = validate_accuracy(ov_path, dataloader)
-
-        print(f"Validated accuracy for {model_name}: {accuracy}")
-
         return ov_path, accuracy, q_model_name
 
 
@@ -203,7 +197,6 @@ def benchmark_performance(model_path, model_name):
 
 
 def validate_accuracy(model_path, val_loader):
-    print(f"Validate model: {model_path}")
     dataset_size = min(len(val_loader), ILSVRC_VALIDATION_SUBSET_SIZE)
     predictions = [0] * dataset_size
     references = [-1] * dataset_size
@@ -250,16 +243,6 @@ def benchmark_models(paths, names):
     return performance_list
 
 
-def dill_encoded(payload):
-            fun, args = dill.loads(payload)
-            return fun(*args)
-
-        
-def apply_async(pool, fun, args):
-    payload = dill.dumps((fun, args))
-    return pool.apply_async(dill_encoded, (payload,))
-
-
 def get_backend_model(backend, model_name, output_folder):
     if backend == "torch":
         torch_model = create_timm_model(model_name)
@@ -274,17 +257,13 @@ def get_backend_model(backend, model_name, output_folder):
 
 def quantize_and_validate(backend, model_name, output_folder, model_config, quantization_params, data):
     ov_model_path, q_acc, q_model_name = "-", "-", "-"
-    print("============ Multiprocessing ================")
-    print(f"{backend}, {model_name}, {output_folder}")       
 
     try:
         transform = get_model_transform(model_config)
         dataloader = get_torch_dataloader(data, transform, batch_size=1)
         orig_model = get_backend_model(backend, model_name, output_folder)
 
-        print(f"Quantize: {backend}") 
         q_model = QuantizerFactory.quantize(backend, orig_model, dataloader, quantization_params)
-        print(f"Validate: {backend}") 
         ov_model_path, q_acc, q_model_name = QuantizerFactory.validate(
                                             backend, q_model, dataloader,
                                             model_name, output_folder)
@@ -358,28 +337,11 @@ def test_ptq_timm(data, output, subset, result, model_args): # pylint: disable=W
         accuracy_results[0] = orig_acc
 
         try:
-            #pool  = Pool(processes=len(BACKEND_ORDER))
-            jobs = []
-
-            #with concurrent.futures.ThreadPoolExecutor(max_workers=len(BACKEND_ORDER)) as executor:
-                #for backend in QuantizerFactory.registry.keys():
-                    #job = executor.submit(quantize_and_validate, backend, model_name, output_folder, model_config, quantization_params, data)
-                    #jobs.append(job)
-
-                #job = pool.apply_async(quantize_and_validate, (backend, model_name, output_folder, model_config, quantization_params, data))
-                #jobs.append(job)
-            #concurrent.futures.wait(jobs)
-            #for job in jobs:
-            #for job in concurrent.futures.as_completed(jobs):
-            #    r = job.result()
             for backend in QuantizerFactory.registry.keys():
                 r = quantize_and_validate(backend, model_name, output_folder, model_config, quantization_params, data)
                 ov_model_paths[BACKEND_ORDER[r[0]]+1] = r[1]
                 accuracy_results[BACKEND_ORDER[r[0]]+1] = r[2]
                 model_names[BACKEND_ORDER[r[0]]+1] = r[3]
-
-            #pool.close()
-            #pool.join()
 
         except Exception as error:
             logging.error(f"Error when running quantization in parallel."
@@ -387,7 +349,6 @@ def test_ptq_timm(data, output, subset, result, model_args): # pylint: disable=W
             accuracy_results[1] = re.escape(str(error))
 
         # benchmark sequentially
-        print(f"Paths to benchmark: {ov_model_paths}")
         perf_results = benchmark_models(ov_model_paths, model_names)
         result.append([model_name] + 
             accuracy_results + 
