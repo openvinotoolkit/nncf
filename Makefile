@@ -17,18 +17,25 @@ pylint-onnx:
 		tests/onnx examples/experimental/onnx
 
 test-install-onnx:
-	pytest tests/cross_fw/install/ --backend onnx
+	pytest tests/cross_fw/install/ --backend onnx --junitxml nncf-tests.xml
 
-ONNX_PTQ_SIZE=100
-ONNX_PTQ_EVAL_SIZE=1000
-ONNX_E2E_OPTIONS=--model-dir /models --data-dir /datasets --output-dir outputs --anno-dir /annots \
-    --junitxml outputs/nncf-tests.xml --ptq-size $(ONNX_PTQ_SIZE) --eval-size $(ONNX_PTQ_EVAL_SIZE)
+ONNX_E2E_PTQ_SIZE ?= 100
+ONNX_E2E_PTQ_EVAL_SIZE ?= 1000
+ONNX_E2E_PTQ_MODELS_DIR ?=
+ONNX_E2E_PTQ_DATA_DIR ?=
+ONNX_E2E_PTQ_OUTPUT_DIR ?=
+ONNX_E2E_PTQ_ANNO_DIR ?=
+ONNX_E2E_PTQ_JUNITXML ?=
+ONNX_E2E_OPTIONS=--model-dir ${ONNX_E2E_PTQ_MODELS_DIR} --data-dir ${ONNX_E2E_PTQ_DATA_DIR}  \
+				 --output-dir ${ONNX_E2E_PTQ_OUTPUT_DIR} --anno-dir ${ONNX_E2E_PTQ_ANNO_DIR} \
+                 --junitxml ${ONNX_E2E_PTQ_JUNITXML} --ptq-size ${ONNX_E2E_PTQ_SIZE} \
+                 --eval-size ${ONNX_E2E_PTQ_EVAL_SIZE}
 
 test-e2e-ptq-ov-ep-only:
-	pytest tests/onnx -m e2e_ptq $(ONNX_E2E_OPTIONS)
+	pytest tests/onnx -m e2e_ptq ${ONNX_E2E_OPTIONS}
 
 test-e2e-ptq-cpu-ep-only:
-	pytest tests/onnx -m e2e_ptq $(ONNX_E2E_OPTIONS) --enable-cpu-ep --disable-ov-ep
+	pytest tests/onnx -m e2e_ptq ${ONNX_E2E_OPTIONS} --enable-cpu-ep --disable-ov-ep
 
 test-e2e-ptq-ov-cpu-eps:
-	pytest tests/onnx -m e2e_ptq $(ONNX_E2E_OPTIONS) --enable-cpu-ep
+	pytest tests/onnx -m e2e_ptq ${ONNX_E2E_OPTIONS} --enable-cpu-ep
