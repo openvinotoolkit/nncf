@@ -19,6 +19,7 @@ from pathlib import Path
 from typing import List
 
 import networkx as nx
+import torch.nn.functional as F
 import pytest
 import torch
 from torch import nn
@@ -149,24 +150,36 @@ def test_weight_normed_modules_are_replaced_correctly():
     assert len(wrapped_conv._forward_pre_hooks) == 1
 
 
-@register_module()
 class ModuleOfUser(torch.nn.Module):
     def __init__(self):
         super().__init__()
         self.weight = torch.nn.Parameter(torch.ones([1]))
+        self.conv = torch.nn.Conv2d(1, 1, 1)
 
     def forward(self, input_):
-        return input_ * self.weight
+        x = input_ * self.weight
+        x += torch.rand_like(x)
+        x = F.conv2d(x, self.conv.weight)
+        x = self.conv(x)
+        shape = x.shape
+        return x.view(-1).view(shape)
+
+
+@register_module()
+class RegisteredModuleOfUser(ModuleOfUser):
+    pass
 
 
 class TwoConvTestModelWithUserModule(TwoConvTestModel):
     def __init__(self):
         super().__init__()
         self.user_module = ModuleOfUser()
+        self.registered_user_module = RegisteredModuleOfUser()
 
     def forward(self, x):
         x = super().forward(x)
         x = self.user_module(x)
+        x = self.registered_user_module(x)
         return x
 
 
@@ -175,16 +188,21 @@ def test_custom_module_registering():
     nncf_model = NNCFNetwork(model, input_infos=[ModelInputInfo([1, 1, 4, 4])])  # type: NNCFNetwork
 
     from nncf.torch.layers import UNWRAPPED_USER_MODULES
-    assert ModuleOfUser in UNWRAPPED_USER_MODULES.registry_dict.values()
+    assert RegisteredModuleOfUser in UNWRAPPED_USER_MODULES.registry_dict.values()
 
     # pylint: disable=protected-access
-    assert isinstance(nncf_model.user_module, ModuleOfUser)
-    assert isinstance(nncf_model.user_module, _NNCFModuleMixin)
-    assert type(nncf_model.user_module).__name__ == "NNCFUserModuleOfUser"
+    modules = [nncf_model.registered_user_module, nncf_model.registered_user_module.conv,
+               nncf_model.user_module.conv]
+    base_modules = [RegisteredModuleOfUser, torch.nn.Conv2d, torch.nn.Conv2d]
+    names = ["NNCFUserRegisteredModuleOfUser", "NNCFConv2d", "NNCFConv2d"]
+    for module, base_module, name in zip(modules, base_modules, names):
+        assert isinstance(module, base_module)
+        assert isinstance(module, _NNCFModuleMixin)
+        assert type(module).__name__ == name
 
-    user_module_attrs = dir(nncf_model.user_module)
-    for attr in dir(_NNCFModuleMixin):
-        assert attr in user_module_attrs
+        module_attrs = dir(module)
+        for attr in dir(_NNCFModuleMixin):
+            assert attr in module_attrs
 
 
 # pylint: disable=protected-access
