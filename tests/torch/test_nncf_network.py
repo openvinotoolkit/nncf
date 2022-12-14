@@ -161,8 +161,7 @@ class ModuleOfUser(torch.nn.Module):
         x += torch.rand_like(x)
         x = F.conv2d(x, self.conv.weight)
         x = self.conv(x)
-        shape = x.shape
-        return x.view(-1).view(shape)
+        return x
 
 
 @register_module()
@@ -189,6 +188,7 @@ def test_custom_module_registering():
 
     from nncf.torch.layers import UNWRAPPED_USER_MODULES
     assert RegisteredModuleOfUser in UNWRAPPED_USER_MODULES.registry_dict.values()
+    assert not ModuleOfUser in UNWRAPPED_USER_MODULES.registry_dict.values()
 
     # pylint: disable=protected-access
     modules = [nncf_model.registered_user_module, nncf_model.registered_user_module.conv,
