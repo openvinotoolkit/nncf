@@ -1,3 +1,15 @@
+"""
+ Copyright (c) 2022 Intel Corporation
+ Licensed under the Apache License, Version 2.0 (the "License");
+ you may not use this file except in compliance with the License.
+ You may obtain a copy of the License at
+      http://www.apache.org/licenses/LICENSE-2.0
+ Unless required by applicable law or agreed to in writing, software
+ distributed under the License is distributed on an "AS IS" BASIS,
+ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ See the License for the specific language governing permissions and
+ limitations under the License.
+"""
 import argparse
 import logging
 from pathlib import Path
@@ -27,8 +39,8 @@ from transformers.trainer import TrainingArguments
 
 quick_check_num = 10
 task_to_sample_keys = {
-    "mrpc": ("sentence1", "sentence2"),
-    "sst2": ("sentence",),
+    'mrpc': ('sentence1', 'sentence2'),
+    'sst2': ('sentence',),
 }
 dataset_columns = ['labels', 'input_ids', 'token_type_ids', 'attention_mask', 'position_ids']
 nncf_logger = logging.getLogger('nncf')
@@ -40,7 +52,7 @@ def parse_args() -> Tuple[argparse.Namespace, TrainingArguments]:
         '--task_name', type=str, default='mrpc',
         help=f'Task name for GLUE. Supported tasks: {list(task_to_sample_keys)}.')
     parser.add_argument('--model_name_or_path', type=str, default='bert-base-uncased',
-                        help="Path to pretrained model or model identifier from huggingface.co/models.")
+                        help='Path to pretrained model or model identifier from huggingface.co/models.')
     parser.add_argument('--max_seq_length', type=int, default=128, help='Maximum length for model input sequences.')
     parser.add_argument('--nncf_config', type=str, default=None, help='Path to NNCF configuration json file.')
     parser.add_argument('--no_cuda', action='store_true', help='Whether to disable cuda devices.')
@@ -58,7 +70,7 @@ def parse_args() -> Tuple[argparse.Namespace, TrainingArguments]:
     training_args.no_cuda = args.no_cuda
     training_args.data_seed = args.seed
     training_args.seed = args.seed
-    training_args.label_names = ["labels"]
+    training_args.label_names = ['labels']
     training_args.remove_unused_columns = False
     training_args.overwrite_output_dir = True
     training_args.report_to = []
@@ -116,15 +128,15 @@ class CompressionTrainer(Trainer):
 
 
 def prepare_dataset(args, training_args):
-    raw_datasets = datasets.load_dataset("glue", args.task_name)  # pylint: disable=no-member
-    num_labels = len(raw_datasets["train"].features["label"].names)
+    raw_datasets = datasets.load_dataset('glue', args.task_name)  # pylint: disable=no-member
+    num_labels = len(raw_datasets['train'].features['label'].names)
     tokenizer = AutoTokenizer.from_pretrained(args.model_name_or_path)
 
     def tokenize_fn(samples):
         sample_keys = task_to_sample_keys[args.task_name]
         max_length = min(args.max_seq_length, tokenizer.model_max_length)
         result = tokenizer(*(samples[key] for key in sample_keys),
-                           padding="max_length",
+                           padding='max_length',
                            max_length=max_length,
                            truncation=True)
         result['position_ids'] = list(range(max_length))
@@ -184,7 +196,7 @@ def main():
         compression_ctrl, model = create_compressed_model(model, nncf_config)
 
     # trainer
-    metric = evaluate.load("glue", args.task_name)
+    metric = evaluate.load('glue', args.task_name)
 
     def compute_metrics(p: EvalPrediction):
         logits = p.predictions[0] if isinstance(p.predictions, tuple) else p.predictions
@@ -206,22 +218,22 @@ def main():
         train_result = trainer.train()
         metrics = train_result.metrics
         trainer.save_model()
-        trainer.log_metrics("train", metrics)
-        trainer.save_metrics("train", metrics)
+        trainer.log_metrics('train', metrics)
+        trainer.save_metrics('train', metrics)
         compression_logs = trainer.get_compression_logs()
         if compression_logs:
-            trainer.log_metrics("compression", compression_logs[-1])
-            trainer.save_metrics("compression", compression_logs[-1])
-            compression_log_str = jstyleson.dumps(compression_logs, indent=2) + "\n"
-            compression_log_path = Path(training_args.output_dir, "compression_state.json")
-            with open(compression_log_path, "w", encoding="utf-8") as f:
+            trainer.log_metrics('compression', compression_logs[-1])
+            trainer.save_metrics('compression', compression_logs[-1])
+            compression_log_str = jstyleson.dumps(compression_logs, indent=2) + '\n'
+            compression_log_path = Path(training_args.output_dir, 'compression_state.json')
+            with open(compression_log_path, 'w', encoding='utf-8') as f:
                 f.write(compression_log_str)
     if training_args.do_eval:
         metrics = trainer.evaluate()
-        trainer.log_metrics("eval", metrics)
-        trainer.save_metrics("eval", metrics)
+        trainer.log_metrics('eval', metrics)
+        trainer.save_metrics('eval', metrics)
     trainer.save_state()
 
 
-if __name__ == "__main__":
+if __name__ == '__main__':
     main()

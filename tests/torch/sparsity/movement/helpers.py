@@ -1,3 +1,15 @@
+"""
+ Copyright (c) 2022 Intel Corporation
+ Licensed under the Apache License, Version 2.0 (the "License");
+ you may not use this file except in compliance with the License.
+ You may obtain a copy of the License at
+      http://www.apache.org/licenses/LICENSE-2.0
+ Unless required by applicable law or agreed to in writing, software
+ distributed under the License is distributed on an "AS IS" BASIS,
+ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ See the License for the specific language governing permissions and
+ limitations under the License.
+"""
 from abc import ABC
 from abc import abstractmethod
 from collections import OrderedDict
@@ -95,14 +107,14 @@ def is_roughly_of_same_value(x_list, atol: float = 1e-6) -> bool:
 
 
 class SchedulerParams:
-    def __init__(self, power: int = 3,
-                 warmup_start_epoch: int = 1,
-                 warmup_end_epoch: int = 3,
+    def __init__(self, power: Optional[int] = 3,
+                 warmup_start_epoch: Optional[int] = 1,
+                 warmup_end_epoch: Optional[int] = 3,
                  init_importance_threshold: Optional[float] = -1.0,
-                 final_importance_threshold: float = 0.0,
-                 importance_regularization_factor: float = 0.1,
+                 final_importance_threshold: Optional[float] = 0.0,
+                 importance_regularization_factor: Optional[float] = 0.1,
                  steps_per_epoch: Optional[int] = 4,
-                 enable_structured_masking: bool = True):
+                 enable_structured_masking: Optional[bool] = True):
         self.power = power
         self.warmup_start_epoch = warmup_start_epoch
         self.warmup_end_epoch = warmup_end_epoch
@@ -111,6 +123,9 @@ class SchedulerParams:
         self.importance_regularization_factor = importance_regularization_factor
         self.steps_per_epoch = steps_per_epoch
         self.enable_structured_masking = enable_structured_masking
+
+    def to_dict(self) -> Dict[str, Any]:
+        return {key: value for key, value in self.__dict__.items() if value is not None}
 
 
 class NNCFAlgoConfig:
@@ -127,12 +142,12 @@ class NNCFAlgoConfig:
         self.ignored_scopes = ignored_scopes or []
         self.compression_lr_multiplier = compression_lr_multiplier
 
-    def to_dict(self):
+    def to_dict(self) -> Dict[str, Any]:
         result = {
-            "algorithm": "movement_sparsity",
-            "params": self.scheduler_params.__dict__,
-            "sparse_structure_by_scopes": self.sparse_structure_by_scopes,
-            "ignored_scopes": self.ignored_scopes,
+            'algorithm': 'movement_sparsity',
+            'params': self.scheduler_params.to_dict(),
+            'sparse_structure_by_scopes': self.sparse_structure_by_scopes,
+            'ignored_scopes': self.ignored_scopes,
         }
         if self.compression_lr_multiplier is not None:
             result['compression_lr_multiplier'] = self.compression_lr_multiplier
@@ -168,9 +183,9 @@ class BaseMockRunRecipe(ABC):
                  log_dir=None) -> None:
         self.model_config = model_config
         self.algo_config = algo_config
-        self.model_keys = set(self.model_config.__dict__)
-        self.scheduler_keys = set(self.algo_config.scheduler_params.__dict__)
-        self.algo_keys = set(self.algo_config.__dict__)
+        self._model_keys = set(self.model_config.__dict__)
+        self._scheduler_keys = set(self.algo_config.scheduler_params.__dict__)
+        self._algo_keys = set(self.algo_config.__dict__)
         self.set_log_dir(log_dir)
 
     @classmethod
@@ -215,8 +230,8 @@ class BaseMockRunRecipe(ABC):
     @property
     def nncf_config(self) -> NNCFConfig:
         config_dict = {
-            "input_info": self.model_input_info,
-            "compression": self.algo_config.to_dict()}
+            'input_info': self.model_input_info,
+            'compression': self.algo_config.to_dict()}
         if self.log_dir is not None:
             config_dict['log_dir'] = str(self.log_dir)
         return NNCFConfig.from_dict(config_dict)
@@ -243,30 +258,31 @@ class BaseMockRunRecipe(ABC):
     def get(self, key: str):
         if key == 'log_dir':
             return self.log_dir
-        if key in self.model_keys:
-            return self.model_config.__dict__[key]
-        if key in self.algo_keys:
-            return self.algo_config.__dict__[key]
-        if key in self.scheduler_keys:
-            return self.algo_config.scheduler_params.__dict__[key]
-        raise KeyError(f'{key} not found.')
+        if key in self._model_keys:
+            return getattr(self.model_config, key)
+        if key in self._algo_keys:
+            return getattr(self.algo_config, key)
+        if key in self._scheduler_keys:
+            return getattr(self.algo_config.scheduler_params, key)
+        raise KeyError(f'"{key}" not found.')
 
     def set(self, **kwargs):
         for key, value in kwargs.items():
             if key == 'log_dir':
                 self.set_log_dir(value)
-            elif key in self.model_keys:
+            elif key in self._model_keys:
                 setattr(self.model_config, key, value)
-            elif key in self.algo_keys:
+            elif key in self._algo_keys:
                 setattr(self.algo_config, key, value)
-            elif key in self.scheduler_keys:
+            elif key in self._scheduler_keys:
                 setattr(self.algo_config.scheduler_params, key, value)
             else:
                 raise KeyError(f'"{key}" not found.')
 
-    def generate_mock_dataset(self, num_samples: int = 16, seed: int = 42,
+    def generate_mock_dataset(self, num_samples: int = 16,
                               float_low: float = -1., float_high: float = 1.,
-                              int_low: int = 0, int_high: int = 2) -> Dataset:
+                              int_low: int = 0, int_high: int = 2,
+                              seed: int = 42) -> Dataset:
         g = torch.Generator()
         g.manual_seed(seed)
         input_dict = {}
@@ -304,11 +320,11 @@ class Wav2Vec2RunRecipe(BaseMockRunRecipe):
 
     default_algo_config = NNCFAlgoConfig(
         sparse_structure_by_scopes=[
-            {"mode": "block", "sparse_factors": [2, 2], "target_scopes": "{re}Wav2Vec2Attention"},
-            {"mode": "per_dim", "axis": 0, "target_scopes": "{re}intermediate_dense"},
-            {"mode": "per_dim", "axis": 1, "target_scopes": "{re}output_dense"},
+            {'mode': 'block', 'sparse_factors': [2, 2], 'target_scopes': '{re}Wav2Vec2Attention'},
+            {'mode': 'per_dim', 'axis': 0, 'target_scopes': '{re}intermediate_dense'},
+            {'mode': 'per_dim', 'axis': 1, 'target_scopes': '{re}output_dense'},
         ],
-        ignored_scopes=["{re}feature_extractor"],
+        ignored_scopes=['{re}feature_extractor'],
         scheduler_params=SchedulerParams(),
     )
 
@@ -317,7 +333,7 @@ class Wav2Vec2RunRecipe(BaseMockRunRecipe):
 
     @property
     def model_input_info(self) -> List[dict]:
-        return [{"sample_size": [1, 32], "keyword": "input_values"}]
+        return [{'sample_size': [1, 32], 'keyword': 'input_values'}]
 
     @property
     def transformer_block_info(self) -> List[TransformerBlockInfo]:
@@ -362,11 +378,11 @@ class BertRunRecipe(BaseMockRunRecipe):
     )
     default_algo_config = NNCFAlgoConfig(
         sparse_structure_by_scopes=[
-            {"mode": "block", "sparse_factors": [2, 2], "target_scopes": "{re}attention"},
-            {"mode": "per_dim", "axis": 0, "target_scopes": "{re}BertIntermediate"},
-            {"mode": "per_dim", "axis": 1, "target_scopes": "{re}BertOutput"},
+            {'mode': 'block', 'sparse_factors': [2, 2], 'target_scopes': '{re}attention'},
+            {'mode': 'per_dim', 'axis': 0, 'target_scopes': '{re}BertIntermediate'},
+            {'mode': 'per_dim', 'axis': 1, 'target_scopes': '{re}BertOutput'},
         ],
-        ignored_scopes=["{re}embedding", "{re}pooler", "{re}classifier"],
+        ignored_scopes=['{re}embedding', '{re}pooler', '{re}classifier'],
         scheduler_params=SchedulerParams(),
     )
 
@@ -375,7 +391,7 @@ class BertRunRecipe(BaseMockRunRecipe):
                  log_dir=None) -> None:
         super().__init__(model_config, algo_config, log_dir)
         extra_model_keys = {'mhsa_qkv_bias', 'mhsa_o_bias', 'ffn_bias'}
-        self.model_keys = self.model_keys.union(extra_model_keys)
+        self._model_keys = self._model_keys.union(extra_model_keys)
         for key in extra_model_keys:
             value = getattr(self.model_config, key, True)
             setattr(self.model_config, key, value)
@@ -398,10 +414,10 @@ class BertRunRecipe(BaseMockRunRecipe):
     def model_input_info(self) -> List[dict]:
         dim = self.model_config.max_position_embeddings
         return [
-            {"sample_size": [1, dim], "type": "long", "keyword": "input_ids"},
-            {"sample_size": [1, dim], "type": "long", "keyword": "attention_mask"},
-            {"sample_size": [1, dim], "type": "long", "keyword": "token_type_ids"},
-            {"sample_size": [1, dim], "type": "long", "keyword": "position_ids"},
+            {'sample_size': [1, dim], 'type': 'long', 'keyword': 'input_ids'},
+            {'sample_size': [1, dim], 'type': 'long', 'keyword': 'attention_mask'},
+            {'sample_size': [1, dim], 'type': 'long', 'keyword': 'token_type_ids'},
+            {'sample_size': [1, dim], 'type': 'long', 'keyword': 'position_ids'},
         ]
 
     @property
@@ -447,11 +463,11 @@ class SwinRunRecipe(BaseMockRunRecipe):
     )
     default_algo_config = NNCFAlgoConfig(
         sparse_structure_by_scopes=[
-            {"mode": "block", "sparse_factors": [2, 2], "target_scopes": "{re}attention"},
-            {"mode": "per_dim", "axis": 0, "target_scopes": "{re}SwinIntermediate"},
-            {"mode": "per_dim", "axis": 1, "target_scopes": "{re}SwinOutput"},
+            {'mode': 'block', 'sparse_factors': [2, 2], 'target_scopes': '{re}attention'},
+            {'mode': 'per_dim', 'axis': 0, 'target_scopes': '{re}SwinIntermediate'},
+            {'mode': 'per_dim', 'axis': 1, 'target_scopes': '{re}SwinOutput'},
         ],
-        ignored_scopes=["{re}embedding", "{re}pooler", "{re}classifier"],
+        ignored_scopes=['{re}embedding', '{re}pooler', '{re}classifier'],
         scheduler_params=SchedulerParams(),
     )
 
@@ -461,8 +477,8 @@ class SwinRunRecipe(BaseMockRunRecipe):
     @property
     def model_input_info(self) -> List[dict]:
         img_size = self.model_config.image_size
-        return [{"sample_size": [1, self.model_config.num_channels, img_size, img_size],
-                 "keyword": 'pixel_values'}]
+        return [{'sample_size': [1, self.model_config.num_channels, img_size, img_size],
+                 'keyword': 'pixel_values'}]
 
     @property
     def transformer_block_info(self) -> List[TransformerBlockInfo]:
@@ -507,8 +523,8 @@ class LinearForClassification(PreTrainedModel):
         logits = self.model(tensor)
         if labels is not None:
             loss = F.cross_entropy(logits, labels)
-            return {"loss": loss, "logits": logits}
-        return {"logits": logits}
+            return {'loss': loss, 'logits': logits}
+        return {'logits': logits}
 
 
 class Conv2dForClassification(LinearForClassification):
@@ -554,7 +570,7 @@ class LinearRunRecipe(BaseMockRunRecipe):
 
     @property
     def model_input_info(self) -> List[dict]:
-        return [{"sample_size": [1, self.model_config.input_size], "keyword": "tensor"}]
+        return [{'sample_size': [1, self.model_config.input_size], 'keyword': 'tensor'}]
 
     @property
     def transformer_block_info(self) -> List[TransformerBlockInfo]:
@@ -586,8 +602,8 @@ class Conv2dRunRecipe(LinearRunRecipe):
 
     @property
     def model_input_info(self) -> List[dict]:
-        return [{"sample_size": [1, 3, self.model_config.input_size, self.model_config.input_size],
-                 "keyword": "tensor"}]
+        return [{'sample_size': [1, 3, self.model_config.input_size, self.model_config.input_size],
+                 'keyword': 'tensor'}]
 
 
 class Conv2dPlusLinearRunrecipe(LinearRunRecipe):
@@ -610,8 +626,8 @@ class Conv2dPlusLinearRunrecipe(LinearRunRecipe):
 
     @property
     def model_input_info(self) -> List[dict]:
-        return [{"sample_size": [1, 3, self.model_config.input_size, self.model_config.input_size],
-                 "keyword": "tensor"}]
+        return [{'sample_size': [1, 3, self.model_config.input_size, self.model_config.input_size],
+                 'keyword': 'tensor'}]
 
 
 class CompressionTrainer(Trainer):
@@ -680,19 +696,19 @@ def build_compression_trainer(output_dir,
                               **training_kwargs) -> CompressionTrainer:
     training_args = dict(
         output_dir=Path(output_dir),
-        label_names=["labels"],
-        evaluation_strategy="epoch",
+        label_names=['labels'],
+        evaluation_strategy='epoch',
         logging_steps=1,
         per_device_train_batch_size=batch_size,
         per_device_eval_batch_size=batch_size,
         num_train_epochs=6,
         learning_rate=1e-3,
-        optim="adamw_torch",
+        optim='adamw_torch',
         remove_unused_columns=False,
         seed=42,
         data_seed=42,
         full_determinism=True,
-        report_to="none",
+        report_to='none',
         disable_tqdm=True,
         no_cuda=True,
     )

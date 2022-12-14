@@ -14,10 +14,8 @@ from enum import Enum
 import math
 from typing import Any, Dict, Optional
 
-import numpy as np
 import torch
 
-from nncf.api.compression import CompressionAlgorithmController
 from nncf.common.schedulers import BaseCompressionScheduler
 from nncf.common.schedulers import PolynomialDecaySchedule
 from nncf.common.utils.logger import logger
@@ -41,7 +39,7 @@ class MovementPolynomialThresholdScheduler(BaseCompressionScheduler):
     scheduler will start calculation only after `steps_per_epoch` is calculated.
     """
 
-    def __init__(self, controller: CompressionAlgorithmController, params: dict):
+    def __init__(self, controller: 'MovementSparsityController', params: dict):
         """
         TODO: revise docstring
         Initializes a sparsity scheduler with a polynomial decay schedule.
@@ -54,11 +52,15 @@ class MovementPolynomialThresholdScheduler(BaseCompressionScheduler):
         self.power: float = params.get('power', 3)
         self.init_importance_threshold: Optional[float] = params.get('init_importance_threshold', None)
         self.final_importance_threshold: float = params.get('final_importance_threshold', 0.)
-        self.warmup_start_epoch: int = params.get('warmup_start_epoch', 1)
-        self.warmup_end_epoch: int = params.get('warmup_end_epoch', 2)
-        self.final_importance_regularization_factor: float = params.get('importance_regularization_factor', 0.1)
+        self.warmup_start_epoch: int = params.get('warmup_start_epoch', None)
+        self.warmup_end_epoch: int = params.get('warmup_end_epoch', None)
+        self.importance_regularization_factor: float = params.get('importance_regularization_factor', None)
         self.enable_structured_masking: bool = params.get('enable_structured_masking', True)
         self._steps_per_epoch = params.get('steps_per_epoch', None)
+
+        if None in [self.warmup_start_epoch, self.warmup_end_epoch, self.importance_regularization_factor]:
+            raise ValueError('`warmup_start_epoch`, `warmup_start_epoch` and `importance_regularization_factor` '
+                             'are required in config for Movement Sparsity.')
 
         if self._steps_per_epoch is None and self.warmup_start_epoch < 1:
             raise ValueError('`warmup_start_epoch` must be >= 1 to enable the auto calculation of '
@@ -68,7 +70,7 @@ class MovementPolynomialThresholdScheduler(BaseCompressionScheduler):
         if self.warmup_start_epoch < 0 or self.warmup_end_epoch <= self.warmup_start_epoch:
             raise ValueError('Movement sparsity requires 0 <= warmup_start_epoch < warmup_end_epoch.')
 
-        if self.final_importance_regularization_factor < 0:
+        if self.importance_regularization_factor < 0:
             raise ValueError('`importance_regularization_factor` should not be a negative number.')
 
         if self.init_importance_threshold is not None and \
@@ -101,8 +103,8 @@ class MovementPolynomialThresholdScheduler(BaseCompressionScheduler):
         if current_stage == MovementSchedulerStage.PRE_WARMUP:
             return 0.
         if current_stage == MovementSchedulerStage.IN_WARMUP:
-            return self._calc_current_scheduled_value(0., self.final_importance_regularization_factor)
-        return self.final_importance_regularization_factor
+            return self._calc_current_scheduled_value(0., self.importance_regularization_factor)
+        return self.importance_regularization_factor
 
     @property
     def current_importance_threshold(self) -> float:
@@ -170,19 +172,22 @@ class MovementPolynomialThresholdScheduler(BaseCompressionScheduler):
 
     @torch.no_grad()
     def _calc_init_threshold_from_controller(self, target_sparsity: float = 0.001) -> float:
+        # Calculate the k-th smallest value over all importance scores as the initial importance threhsold
+        # so that roughly k weight elements are masked and thus target sparsity is achieved. We conduct this on
+        # CPU to (1) limit GPU memory usage; (2) avoid the non-deterministic behavior of `torch.Tensor.kthvalue`
+        # on CUDA.
         assert 0. <= target_sparsity < 1.
-        importance_arrays = []
+        importance_tensors = []
         for minfo in self._controller.sparsified_module_info:
             operand = minfo.operand
             weight = operand.get_importance(is_bias=False, expanded=True)
-            importance_arrays.append(weight.detach().cpu().view(-1).numpy())
+            importance_tensors.append(weight.detach().cpu().view(-1))
             if operand.prune_bias:
                 bias = operand.get_importance(is_bias=True, expanded=True)
-                importance_arrays.append(bias.detach().cpu().view(-1).numpy())
-        all_importances = np.concatenate(importance_arrays)
-        k = min(all_importances.size - 1, int(all_importances.size * target_sparsity))
-        all_importances.partition(k)  # we only need the k-th smallest value
-        return float(all_importances[k])
+                importance_tensors.append(bias.detach().cpu().view(-1))
+        all_importances = torch.cat(importance_tensors)
+        k = min(all_importances.numel(), int(all_importances.numel() * target_sparsity) + 1)  # k starts from 1
+        return all_importances.kthvalue(k).values.item()
 
     def _update_operand_importance_threshold_and_factor(self):
         current = (self.current_importance_threshold, self.current_importance_regularization_factor)
@@ -210,7 +215,7 @@ class MovementPolynomialThresholdScheduler(BaseCompressionScheduler):
 
         if self._steps_per_epoch is None:
             self._should_skip = True
-            logger.warning('Scheduler set to update sparsity level per optimizer step, '
-                           'but steps_per_epoch was not set in config. Will only start updating '
-                           'sparsity level after measuring the actual steps per epoch as signaled '
-                           'by a .epoch_step() call.')
+            logger.info('Scheduler set to update sparsity level per optimizer step, '
+                        'but steps_per_epoch was not set in config. Will only start updating '
+                        'sparsity level after measuring the actual steps per epoch as signaled '
+                        'by a .epoch_step() call.')

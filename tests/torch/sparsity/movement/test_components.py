@@ -1,3 +1,15 @@
+"""
+ Copyright (c) 2022 Intel Corporation
+ Licensed under the Apache License, Version 2.0 (the "License");
+ you may not use this file except in compliance with the License.
+ You may obtain a copy of the License at
+      http://www.apache.org/licenses/LICENSE-2.0
+ Unless required by applicable law or agreed to in writing, software
+ distributed under the License is distributed on an "AS IS" BASIS,
+ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ See the License for the specific language governing permissions and
+ limitations under the License.
+"""
 from typing import Any, Dict, Tuple
 from unittest.mock import Mock
 from unittest.mock import call
@@ -27,31 +39,31 @@ from tests.torch.sparsity.movement.helpers import mock_linear_nncf_node
 class TestSparseConfigByScope:
     @pytest.mark.parametrize('config', [
         {
-            "target_scopes": "{re}fine"
+            'target_scopes': '{re}fine'
         },
         {
-            "mode": "fine",
-            "target_scopes": "{re}fine"
+            'mode': 'fine',
+            'target_scopes': '{re}fine'
         },
         {
-            "mode": "fine",
-            "sparse_factors": [1, 1],
-            "target_scopes": "{re}fine"
+            'mode': 'fine',
+            'sparse_factors': [1, 1],
+            'target_scopes': '{re}fine'
         },
         {
-            "mode": "block",
-            "sparse_factors": [32, 32],
-            "target_scopes": "{re}block"
+            'mode': 'block',
+            'sparse_factors': [32, 32],
+            'target_scopes': '{re}block'
         },
         {
-            "mode": "per_dim",
-            "axis": 0,
-            "target_scopes": "{re}prune_row"
+            'mode': 'per_dim',
+            'axis': 0,
+            'target_scopes': '{re}prune_row'
         },
         {
-            "mode": "per_dim",
-            "axis": 1,
-            "target_scopes": "prune_column"
+            'mode': 'per_dim',
+            'axis': 1,
+            'target_scopes': 'prune_column'
         }
     ])
     def test_create_sparse_config_by_scope(self, config: Dict[str, Any]):
@@ -115,29 +127,29 @@ class TestSparseConfigByScope:
 
 
 desc_test_sparsifier_forward = {
-    "block": dict(
-        sparse_structure_by_scopes=[{"mode": "block", "sparse_factors": [2, 2], "target_scopes": "{re}model"}],
+    'block': dict(
+        sparse_structure_by_scopes=[{'mode': 'block', 'sparse_factors': [2, 2], 'target_scopes': '{re}model'}],
         init_weight_importance=torch.FloatTensor([[0, 1], [0, 1]]),
         init_bias_importance=torch.FloatTensor([1, 0]),
         ref_masked_weight=torch.FloatTensor([[0, 0, 2, 3], [0, 0, 6, 7], [0, 0, 10, 11], [0, 0, 14, 15]]),
         ref_masked_bias=torch.FloatTensor([0, 1, 0, 0]),
     ),
-    "per_row": dict(
-        sparse_structure_by_scopes=[{"mode": "per_dim", "axis": 0, "target_scopes": "{re}model"}],
+    'per_row': dict(
+        sparse_structure_by_scopes=[{'mode': 'per_dim', 'axis': 0, 'target_scopes': '{re}model'}],
         init_weight_importance=torch.FloatTensor([[0], [1], [0], [1]]),
         init_bias_importance=torch.FloatTensor([1, 1, 0, 0]),
         ref_masked_weight=torch.FloatTensor([[0] * 4, [4, 5, 6, 7], [0] * 4, [12, 13, 14, 15]]),
         ref_masked_bias=torch.FloatTensor([0, 1, 0, 0]),
     ),
-    "per_column": dict(
-        sparse_structure_by_scopes=[{"mode": "per_dim", "axis": 1, "target_scopes": "{re}model"}],
+    'per_column': dict(
+        sparse_structure_by_scopes=[{'mode': 'per_dim', 'axis': 1, 'target_scopes': '{re}model'}],
         init_weight_importance=torch.FloatTensor([0, 1, 0, 1]),
         init_bias_importance=torch.FloatTensor([0]),
         ref_masked_weight=torch.FloatTensor([[0, 1, 0, 3], [0, 5, 0, 7], [0, 9, 0, 11], [0, 13, 0, 15]]),
         ref_masked_bias=torch.FloatTensor([0, 0, 0, 0]),
     ),
-    "fine": dict(
-        sparse_structure_by_scopes=[{"mode": "fine", "sparse_factors": [1, 1], "target_scopes": "{re}model"}],
+    'fine': dict(
+        sparse_structure_by_scopes=[{'mode': 'fine', 'sparse_factors': [1, 1], 'target_scopes': '{re}model'}],
         init_weight_importance=torch.FloatTensor([[0, 1, 1, 1], [0, 1, 1, 1], [1] * 4, [0] * 4]),
         init_bias_importance=torch.FloatTensor([0, 0, 0, 1]),
         ref_masked_weight=torch.FloatTensor([[0, 1, 2, 3], [0, 5, 6, 7], [8, 9, 10, 11], [0] * 4]),
@@ -186,26 +198,26 @@ class TestSparsifier:
             assert torch.allclose(masked_weight, desc['ref_masked_weight'])
             assert torch.allclose(masked_bias, desc['ref_masked_bias'])
 
-    @pytest.mark.parametrize("sparse_structure_by_scopes", [
+    @pytest.mark.parametrize('sparse_structure_by_scopes', [
         [{
-            "mode": "block",
-            "sparse_factors": [2, 2],
-            "target_scopes": "{re}model"
+            'mode': 'block',
+            'sparse_factors': [2, 2],
+            'target_scopes': '{re}model'
         }],
         [{
-            "mode": "per_dim",
-            "axis": 0,
-            "target_scopes": "{re}model"
+            'mode': 'per_dim',
+            'axis': 0,
+            'target_scopes': '{re}model'
         }],
         [{
-            "mode": "per_dim",
-            "axis": 1,
-            "target_scopes": "{re}model"
+            'mode': 'per_dim',
+            'axis': 1,
+            'target_scopes': '{re}model'
         }],
         [{
-            "mode": "fine",
-            "sparse_factors": [1, 1],
-            "target_scopes": "{re}model"
+            'mode': 'fine',
+            'sparse_factors': [1, 1],
+            'target_scopes': '{re}model'
         }],
     ])
     @pytest.mark.parametrize('model_bias', [True, False])
@@ -341,7 +353,7 @@ class TestSparsifier:
 
 
 class TestFunctions:
-    @pytest.mark.parametrize(("input_tensor", "threshold", "max_percentile", "ref_output_tensor"), [
+    @pytest.mark.parametrize(('input_tensor', 'threshold', 'max_percentile', 'ref_output_tensor'), [
         (torch.FloatTensor([1, 2, 3, 4]), 0.0, 0.9, torch.FloatTensor([1, 1, 1, 1])),
         (torch.FloatTensor([1, 2, 3, 4]), 2.5, 0.8, torch.FloatTensor([0, 0, 1, 1])),
         (torch.FloatTensor([1, 2, 3, 4]), 2.5, 0.2, torch.FloatTensor([0, 1, 1, 1])),
@@ -349,13 +361,13 @@ class TestFunctions:
         (torch.FloatTensor([1, 1, 1, 1]), 5.0, 0.8, torch.FloatTensor([0, 0, 0, 0])),
     ])
     @pytest.mark.parametrize('requires_grad', [True, False])
-    @pytest.mark.parametrize("use_cuda", [True, False])
+    @pytest.mark.parametrize('use_cuda', [True, False])
     def test_binary_mask_by_threshold(self, input_tensor: torch.Tensor,
                                       threshold: float, max_percentile: float,
                                       ref_output_tensor: torch.Tensor,
                                       requires_grad: bool, use_cuda: bool):
         if not torch.cuda.is_available() and use_cuda is True:
-            pytest.skip("Skipping CUDA test cases for CPU only setups")
+            pytest.skip('Skipping CUDA test cases for CPU only setups')
         device = torch.device('cuda' if use_cuda else 'cpu')
         input_tensor = input_tensor.clone().to(device).requires_grad_(requires_grad)
         output_tensor = binary_mask_by_threshold(input_tensor, threshold, max_percentile)

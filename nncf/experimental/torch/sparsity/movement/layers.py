@@ -29,20 +29,9 @@ from nncf.torch.utils import no_jit_trace
 
 
 class SparseStructure(str, Enum):
-    FINE = "fine"
-    BLOCK = "block"
-    PER_DIM = "per_dim"
-
-    @classmethod
-    def from_str(cls, mode: str) -> 'SparseStructure':
-        if mode == SparseStructure.FINE.value:
-            return SparseStructure.FINE
-        if mode == SparseStructure.BLOCK.value:
-            return SparseStructure.BLOCK
-        if mode == SparseStructure.PER_DIM.value:
-            return SparseStructure.PER_DIM
-        raise RuntimeError(f"Unknown sparse structure: {mode}."
-                           f"List of supported: {[e.value for e in SparseStructure]}")
+    FINE = 'fine'
+    BLOCK = 'block'
+    PER_DIM = 'per_dim'
 
 
 class SparseConfig:
@@ -92,7 +81,7 @@ class SparseConfig:
         Creates the object from its config.
         """
         mode_str = config.get('mode', SparseStructure.FINE.value)
-        mode = SparseStructure.from_str(mode_str)
+        mode = SparseStructure(mode_str)
         sparse_factors = config.get('sparse_factors')
         axis = config.get('axis')
         return cls(mode, sparse_factors, axis)
@@ -111,10 +100,10 @@ class SparseConfigByScope:
         """
         Creates the object from its representation .
         """
-        error_prefix = 'Invalid sparse structure by scopes {}.'.format(config)
+        error_prefix = f'Invalid sparse structure by scopes {config}.'
         target_scopes = config.get('target_scopes')
         if not target_scopes:
-            raise ValueError('{} Missing `target_scopes`.'.format(error_prefix))
+            raise ValueError(f'{error_prefix} Missing `target_scopes`.')
         sparse_config = SparseConfig.from_config(config)
         return cls(sparse_config, target_scopes)
 
@@ -225,7 +214,7 @@ class MovementSparsifier(nn.Module):
         self.frozen = not requires_grad
 
     def extra_repr(self) -> str:
-        return 'sparse_structure: {} {}'.format(self.sparse_structure.value, self.sparse_factors)
+        return f'sparse_structure: {self.sparse_structure.value} {self.sparse_factors}'
 
     def _get_device(self) -> torch.device:
         return self.weight_importance.device
@@ -251,8 +240,8 @@ class MovementSparsifier(nn.Module):
 
         if sparse_structure == SparseStructure.PER_DIM:
             score_shape = []
-            for axes, (dim, factor) in enumerate(zip(weight_shape, sparse_factors)):
-                assert dim % factor == 0, '{} is not a factor of axes {} with dim size {}'.format(factor, axes, dim)
+            for axis, (dim, factor) in enumerate(zip(weight_shape, sparse_factors)):
+                assert dim % factor == 0, f'{factor} is not a factor of axis {axis} with dim size {dim}.'
                 score_shape.append(dim // factor)
             return tuple(score_shape)
 
@@ -263,12 +252,12 @@ class MovementSparsifier(nn.Module):
         sparse_factors = sparse_config.sparse_factors
         if sparse_config.mode == SparseStructure.BLOCK:
             r, c = sparse_factors
-            assert weight_shape[0] % r == 0, "r: {} is not a factor of dim axis 0".format(r)
-            assert weight_shape[1] % c == 0, "c: {} is not a factor of dim axis 1".format(c)
+            assert weight_shape[0] % r == 0, f'r: {r} is not a factor of dim axis 0.'
+            assert weight_shape[1] % c == 0, f'c: {c} is not a factor of dim axis 1.'
 
         if sparse_config.mode == SparseStructure.PER_DIM:
             if sparse_config.sparse_axis < 0 or sparse_config.sparse_axis >= len(weight_shape):
-                raise ValueError("Invalid axis id {}, axes range {}".format(
+                raise ValueError('Invalid axis id {}, axes range {}'.format(
                     sparse_config.sparse_axis,
                     list(range(len(weight_shape)))))
             sparse_factors = deepcopy(weight_shape)

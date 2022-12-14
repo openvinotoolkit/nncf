@@ -26,11 +26,9 @@ class ImportanceLoss(PTCompressionLoss):
         self._disabled = True
 
     def calculate(self):
-        if not self.sparse_layers or self._disabled:
+        if self._disabled:
             return 0.
-        loss = self.sparse_layers[0].loss()
-        n = 1
-        for sparse_layer in self.sparse_layers[1:]:
+        loss = 0.
+        for n, sparse_layer in enumerate(self.sparse_layers):
             loss = loss * (n / (n + 1)) + sparse_layer.loss() / (n + 1)  # avoid overflow
-            n += 1
         return loss

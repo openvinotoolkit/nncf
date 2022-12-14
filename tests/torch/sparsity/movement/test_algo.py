@@ -1,3 +1,15 @@
+"""
+ Copyright (c) 2022 Intel Corporation
+ Licensed under the Apache License, Version 2.0 (the "License");
+ you may not use this file except in compliance with the License.
+ You may obtain a copy of the License at
+      http://www.apache.org/licenses/LICENSE-2.0
+ Unless required by applicable law or agreed to in writing, software
+ distributed under the License is distributed on an "AS IS" BASIS,
+ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ See the License for the specific language governing permissions and
+ limitations under the License.
+"""
 from collections import defaultdict
 import math
 from pathlib import Path
@@ -57,63 +69,63 @@ MODEL_SPARSITY_NAME_IN_MOVEMENT_STAT = 'movement_sparsity/model_sparsity'
 
 
 desc_sparse_structures = {
-    "explicit_mixed": [
-        {"mode": "block", "sparse_factors": [2, 2], "target_scopes": "{re}attention"},
-        {"mode": "per_dim", "axis": 0, "target_scopes": "{re}Intermediate"},
-        {"mode": "per_dim", "axis": 1, "target_scopes": "{re}(?<!Self)Output"},
+    'explicit_mixed': [
+        {'mode': 'block', 'sparse_factors': [2, 2], 'target_scopes': '{re}attention'},
+        {'mode': 'per_dim', 'axis': 0, 'target_scopes': '{re}Intermediate'},
+        {'mode': 'per_dim', 'axis': 1, 'target_scopes': '{re}(?<!Self)Output'},
     ],
-    "implicit_all_fine": [],
-    "explicit_all_fine": [
-        {"mode": "fine", "sparse_factors": [1, 1], "target_scopes": "{re}.*"}
+    'implicit_all_fine': [],
+    'explicit_all_fine': [
+        {'mode': 'fine', 'sparse_factors': [1, 1], 'target_scopes': '{re}.*'}
     ],
-    "all_block": [
-        {"mode": "block", "sparse_factors": [2, 2], "target_scopes": "{re}.*"}
+    'all_block': [
+        {'mode': 'block', 'sparse_factors': [2, 2], 'target_scopes': '{re}.*'}
     ],
-    "all_per_row": [
-        {"mode": "per_dim", "axis": 0, "target_scopes": "{re}.*"}
+    'all_per_row': [
+        {'mode': 'per_dim', 'axis': 0, 'target_scopes': '{re}.*'}
     ],
-    "all_per_col": [
-        {"mode": "per_dim", "axis": 1, "target_scopes": "{re}.*"}
+    'all_per_col': [
+        {'mode': 'per_dim', 'axis': 1, 'target_scopes': '{re}.*'}
     ],
-    "mixed_of_explicit_block_and_implicit_fine": [
-        {"mode": "block", "sparse_factors": [2, 2], "target_scopes": "{re}.*query.*"}
+    'mixed_of_explicit_block_and_implicit_fine': [
+        {'mode': 'block', 'sparse_factors': [2, 2], 'target_scopes': '{re}.*query.*'}
     ],
-    "mixed_of_explicit_per_dim_and_implicit_fine": [
-        {"mode": "per_dim", "axis": 0, "target_scopes": "{re}Intermediate.*"}
+    'mixed_of_explicit_per_dim_and_implicit_fine': [
+        {'mode': 'per_dim', 'axis': 0, 'target_scopes': '{re}Intermediate.*'}
     ],
-    "mixed_of_explicit_block_or_per_dim_and_implicit_fine": [
-        {"mode": "per_dim", "axis": 0, "target_scopes": "{re}Intermediate.*"},
-        {"mode": "block", "sparse_factors": [2, 2], "target_scopes": "{re}.*attention.*"}
+    'mixed_of_explicit_block_or_per_dim_and_implicit_fine': [
+        {'mode': 'per_dim', 'axis': 0, 'target_scopes': '{re}Intermediate.*'},
+        {'mode': 'block', 'sparse_factors': [2, 2], 'target_scopes': '{re}.*attention.*'}
     ]
 }
 
 
 desc_improper_sparse_structures = {
-    "block_not_divisible": dict(
+    'block_not_divisible': dict(
         sparse_structure_by_scopes=[
-            {"mode": "block", "sparse_factors": [3, 3], "target_scopes": "{re}attention"}
+            {'mode': 'block', 'sparse_factors': [3, 3], 'target_scopes': '{re}attention'}
         ],
         error=AssertionError,
         match='not a factor of dim axis'
     ),
-    "per_dim_wrong_axis": dict(
+    'per_dim_wrong_axis': dict(
         sparse_structure_by_scopes=[
-            {"mode": "per_dim", "axis": 2, "target_scopes": "{re}attention"},
+            {'mode': 'per_dim', 'axis': 2, 'target_scopes': '{re}attention'},
         ],
         error=ValueError,
         match='Invalid axis id'
     ),
-    "duplicate_matches_conflit_config": dict(
+    'duplicate_matches_conflit_config': dict(
         sparse_structure_by_scopes=[
-            {"mode": "block", "sparse_factors": [2, 2], "target_scopes": "{re}attention"},
-            {"mode": "per_dim", "axis": 0, "target_scopes": "{re}query"},
+            {'mode': 'block', 'sparse_factors': [2, 2], 'target_scopes': '{re}attention'},
+            {'mode': 'per_dim', 'axis': 0, 'target_scopes': '{re}query'},
         ],
         error=RuntimeError,
         match='matched by multiple'),
-    "duplicate_matches_same_config": dict(
+    'duplicate_matches_same_config': dict(
         sparse_structure_by_scopes=[
-            {"mode": "per_dim", "axis": 0, "target_scopes": "{re}attention"},
-            {"mode": "per_dim", "axis": 0, "target_scopes": "{re}query"},
+            {'mode': 'per_dim', 'axis': 0, 'target_scopes': '{re}attention'},
+            {'mode': 'per_dim', 'axis': 0, 'target_scopes': '{re}query'},
         ],
         error=RuntimeError,
         match='matched by multiple')
@@ -517,7 +529,7 @@ class TestModelSaving:
 
 
 desc_test_controller_structured_mask_resolution = {
-    "prune_1head_1channel": dict(
+    'prune_1head_1channel': dict(
         unstructured_binary_mask=TransformerBlockItemOrderedDict(
             mhsa_q=dict(weight=torch.FloatTensor([[1, 0, 0, 0], [1, 0, 0, 0], [0, 0, 0, 0], [0, 0, 0, 0]]),
                         bias=torch.FloatTensor([0, 0, 0, 0])),
@@ -547,7 +559,7 @@ desc_test_controller_structured_mask_resolution = {
                        bias=torch.FloatTensor([1, 1, 1, 1])),
         )
     ),
-    "prune_1head_1channel_no_mhsa_qkv_bias": dict(
+    'prune_1head_1channel_no_mhsa_qkv_bias': dict(
         unstructured_binary_mask=TransformerBlockItemOrderedDict(
             mhsa_q=dict(weight=torch.FloatTensor([[0, 0, 0, 0], [0, 0, 0, 0], [1, 0, 0, 0], [1, 0, 0, 0]]), bias=None),
             mhsa_k=dict(weight=torch.FloatTensor([[0, 0, 0, 0], [0, 0, 0, 0], [0, 1, 0, 0], [0, 0, 0, 0]]), bias=None),
@@ -571,7 +583,7 @@ desc_test_controller_structured_mask_resolution = {
                        bias=torch.FloatTensor([1, 1, 1, 1])),
         )
     ),
-    "prune_1channel_no_mhsa_o_bias": dict(
+    'prune_1channel_no_mhsa_o_bias': dict(
         unstructured_binary_mask=TransformerBlockItemOrderedDict(
             mhsa_q=dict(weight=torch.FloatTensor([[0, 0, 0, 0], [0, 0, 0, 0], [1, 0, 0, 0], [1, 0, 0, 0]]),
                         bias=torch.FloatTensor([1, 0, 0, 0])),
@@ -596,7 +608,7 @@ desc_test_controller_structured_mask_resolution = {
                        bias=torch.FloatTensor([1, 1, 1, 1]))
         )
     ),
-    "prune_none_no_ffn_bias": dict(
+    'prune_none_no_ffn_bias': dict(
         unstructured_binary_mask=TransformerBlockItemOrderedDict(
             mhsa_q=dict(weight=torch.FloatTensor([[1, 0, 0, 0], [0, 0, 0, 0], [0, 0, 0, 0], [1, 0, 0, 0]]),
                         bias=torch.FloatTensor([1, 0, 0, 0])),

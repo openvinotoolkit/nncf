@@ -1,6 +1,19 @@
+"""
+ Copyright (c) 2022 Intel Corporation
+ Licensed under the Apache License, Version 2.0 (the "License");
+ you may not use this file except in compliance with the License.
+ You may obtain a copy of the License at
+      http://www.apache.org/licenses/LICENSE-2.0
+ Unless required by applicable law or agreed to in writing, software
+ distributed under the License is distributed on an "AS IS" BASIS,
+ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ See the License for the specific language governing permissions and
+ limitations under the License.
+"""
 import logging
 from pathlib import Path
 import re
+from typing import List, Tuple
 from unittest.mock import Mock
 
 import pandas as pd
@@ -15,6 +28,7 @@ from nncf.experimental.torch.sparsity.movement.layers import SparseStructure
 from nncf.experimental.torch.sparsity.movement.structured_mask_handler import StructuredMaskContext
 from nncf.experimental.torch.sparsity.movement.structured_mask_handler import StructuredMaskContextGroup
 from nncf.experimental.torch.sparsity.movement.structured_mask_handler import StructuredMaskContextStatistics
+from nncf.experimental.torch.sparsity.movement.structured_mask_handler import StructuredMaskHandler
 from nncf.experimental.torch.sparsity.movement.structured_mask_strategy import STRUCTURED_MASK_STRATEGY
 from nncf.experimental.torch.sparsity.movement.structured_mask_strategy import StructuredMaskRule
 from nncf.experimental.torch.sparsity.movement.structured_mask_strategy import detect_supported_model_family
@@ -39,25 +53,25 @@ STRUCTURED_MASK_SUPPORTED_RECIPES = [
 ]
 
 desc_test_update_independent_structured_mask = {
-    "prune1row": dict(
+    'prune1row': dict(
         weight_binary_mask=torch.FloatTensor([[1, 1, 0], [1, 1, 0], [0, 0, 0]]),
         bias_binary_mask=torch.FloatTensor([1, 0, 0]),
         prune_grid=(1, 3),
         ref_independent_structured_mask=torch.FloatTensor([[1], [1], [0]])
     ),
-    "prune1col": dict(
+    'prune1col': dict(
         weight_binary_mask=torch.FloatTensor([[1, 1, 0], [1, 1, 0], [0, 0, 0]]),
         bias_binary_mask=torch.FloatTensor([1, 0, 0]),
         prune_grid=(3, 1),
         ref_independent_structured_mask=torch.FloatTensor([[1, 1, 0]])
     ),
-    "prune1col_nobias": dict(
+    'prune1col_nobias': dict(
         weight_binary_mask=torch.FloatTensor([[1, 1, 0], [1, 1, 0], [0, 0, 0]]),
         bias_binary_mask=None,
         prune_grid=(3, 1),
         ref_independent_structured_mask=torch.FloatTensor([[1, 1, 0]])
     ),
-    "not_pruneable": dict(
+    'not_pruneable': dict(
         weight_binary_mask=torch.FloatTensor([[1, 1, 0], [1, 1, 0], [0, 0, 0]]),
         bias_binary_mask=torch.FloatTensor([1, 1, 1]),
         prune_grid=(1, 3),
@@ -66,7 +80,7 @@ desc_test_update_independent_structured_mask = {
 }
 
 desc_test_gather_statistics_from_operand = {
-    "row_prune_with_bias": dict(
+    'row_prune_with_bias': dict(
         weight_mask=torch.FloatTensor([[0] * 4, [0] * 4, [1] * 4, [1] * 4]),
         bias_mask=torch.FloatTensor([0, 0, 1, 1]),
         prune_grid=(2, 4),
@@ -75,7 +89,7 @@ desc_test_gather_statistics_from_operand = {
         pruned_bias_shape=(2,),
         head_to_keep=[1]
     ),
-    "row_prune_without_bias": dict(
+    'row_prune_without_bias': dict(
         weight_mask=torch.FloatTensor([[0] * 4, [0] * 4, [1] * 4, [1] * 4]),
         bias_mask=None,
         prune_grid=(2, 4),
@@ -84,7 +98,7 @@ desc_test_gather_statistics_from_operand = {
         pruned_bias_shape=(0,),
         head_to_keep=[1]
     ),
-    "col_prune_with_bias": dict(
+    'col_prune_with_bias': dict(
         weight_mask=torch.FloatTensor([[1, 1, 1, 0]] * 4),
         bias_mask=torch.FloatTensor([1, 1, 1, 1]),
         prune_grid=(4, 1),
@@ -93,7 +107,7 @@ desc_test_gather_statistics_from_operand = {
         pruned_bias_shape=(4,),
         head_to_keep=[0, 1, 2]
     ),
-    "col_prune_without_bias": dict(
+    'col_prune_without_bias': dict(
         weight_mask=torch.FloatTensor([[1, 1, 1, 0]] * 4),
         bias_mask=None,
         prune_grid=(4, 1),
@@ -233,7 +247,7 @@ class TestStructuredMaskContext:
         operand = MovementSparsifier(node, SparseConfig(SparseStructure.FINE))
         ctx = StructuredMaskContext(operand, node.node_name, grid_size, prune_by_row)
         row_or_col = 'row' if prune_by_row else 'column'
-        ref_str = f'<StructuredMaskContext({row_or_col} prune by {grid_size}) for "{node.node_name}">'
+        ref_str = f'StructuredMaskContext({row_or_col} prune by {grid_size}, "{node.node_name}")'
         assert str(ctx) == ref_str
 
 
@@ -242,11 +256,14 @@ class TestStructuredMaskContextGroup:
     def test_string_representation(self, num_contexts: int):
         ctxes = [Mock(__str__=Mock(return_value=f'ctx{i}')) for i in range(num_contexts)]
         ctx_group = StructuredMaskContextGroup(0, BuildingBlockType.FF, ctxes)
+        prefix = f'StructuredMaskContextGroup[0]({BuildingBlockType.FF}): '
         if num_contexts == 0:
-            assert str(ctx_group) == f'[0]{BuildingBlockType.FF}: []'
+            assert str(ctx_group) == f'{prefix}[]'
         else:
-            assert str(ctx_group) == f'[0]{BuildingBlockType.FF}: [%s\n]' % (
-                ''.join(f'\n\tctx{i}' for i in range(num_contexts)))
+            assert str(ctx_group) == '{prefix}[{ctxes}\n]'.format(
+                prefix=prefix,
+                ctxes=''.join(f'\n\tctx{i}' for i in range(num_contexts))
+            )
 
 
 class TestStructuredMaskRule:
@@ -259,7 +276,7 @@ class TestStructuredMaskRule:
 
 
 desc_test_resolve_dependent_structured = {
-    "prune_1head_1channel": dict(
+    'prune_1head_1channel': dict(
         independent_structured=TransformerBlockItemOrderedDict(
             mhsa_q=torch.FloatTensor([[1], [0]]),
             mhsa_k=torch.FloatTensor([[1], [0]]),
@@ -277,7 +294,7 @@ desc_test_resolve_dependent_structured = {
             ffn_o=torch.FloatTensor([[1, 1, 0]]),
         ),
     ),
-    "prune_0head_0channel": dict(
+    'prune_0head_0channel': dict(
         independent_structured=TransformerBlockItemOrderedDict(
             mhsa_q=torch.FloatTensor([[1], [0]]),
             mhsa_k=torch.FloatTensor([[1], [0]]),
@@ -379,7 +396,7 @@ class TestStructuredMaskHandler:
         assert isinstance(df, pd.DataFrame)
         columns = df.columns.to_list()
         mock_stat = StructuredMaskContextStatistics(*([mocker.Mock()] * 6))
-        ref_columns = ["group_id", "type", "torch_module", *mock_stat.__dict__.keys()]
+        ref_columns = ['group_id', 'type', 'torch_module', *mock_stat.__dict__.keys()]
         assert sorted(columns) == sorted(ref_columns)
         assert len(df) == 6 * sum(tbinfo.num_hidden_layers for tbinfo in run_recipe.transformer_block_info)
         for item in df['head_or_channel_id_to_keep']:
@@ -392,7 +409,8 @@ class TestStructuredMaskHandler:
         assert Path(tmp_path, f'{file_name}.md').is_file()
 
     # pylint: disable=protected-access
-    def _get_handler_from_ctrl(self, compression_ctrl):
+    def _get_handler_from_ctrl(self, compression_ctrl) -> Tuple[StructuredMaskHandler,
+                                                                List[StructuredMaskContext]]:
         handler = compression_ctrl._structured_mask_handler
         all_ctxes = []
         for group in handler._structured_mask_ctx_groups:
