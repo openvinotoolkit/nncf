@@ -146,7 +146,7 @@ class PTAccuracyAwareTrainingRunner(BaseAccuracyAwareTrainingRunner):
 class PTAdaptiveCompressionLevelTrainingRunner(BaseAdaptiveCompressionLevelTrainingRunner,
                                                PTAccuracyAwareTrainingRunner):
     def __init__(self, accuracy_aware_training_params, verbose=True, dump_checkpoints=True, lr_updates_needed=True,
-                 minimal_compression_rate=0.05, maximal_compression_rate=0.95):
+                 minimal_compression_rate=0.0, maximal_compression_rate=0.95):
         super().__init__(accuracy_aware_training_params, verbose, dump_checkpoints, lr_updates_needed,
                          minimal_compression_rate=minimal_compression_rate,
                          maximal_compression_rate=maximal_compression_rate)

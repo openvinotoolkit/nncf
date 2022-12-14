@@ -162,10 +162,10 @@ class MagnitudeSparsityController(BaseSparsityAlgoController):
         if self._mode == 'local':
             return CompressionStage.FULLY_COMPRESSED
 
-        if self.scheduler.current_sparsity_level == 0:
-            return CompressionStage.UNCOMPRESSED
         if self.scheduler.current_sparsity_level >= self.scheduler.target_level:
             return CompressionStage.FULLY_COMPRESSED
+        if self.scheduler.current_sparsity_level == 0:
+            return CompressionStage.UNCOMPRESSED
         return CompressionStage.PARTIALLY_COMPRESSED
 
     def _run_batchnorm_adaptation(self):

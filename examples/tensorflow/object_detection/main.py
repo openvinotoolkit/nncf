@@ -28,6 +28,7 @@ from nncf.config.structures import ModelEvaluationArgs
 from nncf.tensorflow.utils.state import TFCompressionState
 from nncf.tensorflow.utils.state import TFCompressionStateLoader
 
+from examples.common.utils import print_maximal_degradation_warning
 from examples.tensorflow.common.argparser import get_common_argument_parser
 from examples.tensorflow.common.distributed import get_distribution_strategy
 from examples.tensorflow.common.logger import logger
@@ -201,8 +202,8 @@ def train_epoch(train_step, compression_ctrl, epoch, initial_epoch, steps_per_ep
 
 
 def train(train_step, test_step, eval_metric, train_dist_dataset, test_dist_dataset, initial_epoch, initial_step,
-    epochs, steps_per_epoch, checkpoint_manager, compression_ctrl, log_dir, optimizer, num_test_batches, print_freq):
-
+          epochs, steps_per_epoch, checkpoint_manager, compression_ctrl, log_dir, optimizer, num_test_batches,
+          print_freq):
     train_summary_writer = SummaryWriter(log_dir, 'train')
     validation_summary_writer = SummaryWriter(log_dir, 'validation')
     compression_summary_writer = SummaryWriter(log_dir, 'compression')
@@ -365,12 +366,13 @@ def run(config):
                 return metric_result['AP']
 
             acc_aware_training_loop = create_accuracy_aware_training_loop(nncf_config, compression_ctrl)
-            compress_model = acc_aware_training_loop.run(compress_model,
-                                                         train_epoch_fn=train_epoch_fn,
-                                                         validate_fn=validate_fn,
-                                                         tensorboard_writer=SummaryWriter(config.log_dir,
-                                                                                          'accuracy_aware_training'),
-                                                         log_dir=config.log_dir)
+            final_statistics = acc_aware_training_loop.run(compress_model,
+                                                           train_epoch_fn=train_epoch_fn,
+                                                           validate_fn=validate_fn,
+                                                           tensorboard_writer=SummaryWriter(config.log_dir,
+                                                                                            'accuracy_aware_training'),
+                                                           log_dir=config.log_dir)
+            print_maximal_degradation_warning(config, final_statistics, logger)
         else:
             train(train_step, test_step, eval_metric, train_dist_dataset, test_dist_dataset,
                   initial_epoch, initial_step, epochs, steps_per_epoch, checkpoint_manager,

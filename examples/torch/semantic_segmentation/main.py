@@ -28,8 +28,9 @@ from examples.torch.common.argparser import parse_args
 from torch.optim.lr_scheduler import ReduceLROnPlateau
 
 import examples.torch.semantic_segmentation.utils.data as data_utils
-from examples.torch.semantic_segmentation.utils import loss_funcs
 import examples.torch.semantic_segmentation.utils.transforms as JT
+from examples.common.utils import print_maximal_degradation_warning
+from examples.torch.semantic_segmentation.utils import loss_funcs
 from examples.torch.common.argparser import get_common_argument_parser
 from examples.torch.common.example_logger import logger
 from examples.torch.common.execution import get_execution_mode
@@ -580,6 +581,7 @@ def main_worker(current_gpu, config):
                                             configure_optimizers_fn=configure_optimizers_fn,
                                             tensorboard_writer=config.tb,
                                             log_dir=config.log_dir)
+        print_maximal_degradation_warning(config, acc_aware_training_loop.final_statistics, logger)
 
     elif 'train' in config.mode:
         train(model, model_without_dp, compression_ctrl, train_loader, val_loader, criterion, color_encoding, config,
