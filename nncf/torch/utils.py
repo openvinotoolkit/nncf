@@ -17,7 +17,7 @@ import numpy as np
 import random
 import torch
 from torch import distributed as dist, nn
-from torch.nn import Module, Parameter
+from torch.nn import Module
 
 from nncf.common.graph import NNCFNodeName
 from nncf.common.logging.logger import warning_deprecated

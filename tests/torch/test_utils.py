@@ -56,7 +56,7 @@ def test_training_mode_switcher(_seed, model: nn.Module):
 def test_bn_training_state_switcher(_seed, model: nn.Module):
 
     def check_were_only_bn_training_state_changed(model: nn.Module, saved_state: _ModuleState):
-        for name, module in model.modules():
+        for name, module in model.named_modules():
             if isinstance(module, (nn.BatchNorm1d,
                                nn.BatchNorm2d,
                                nn.BatchNorm3d)):

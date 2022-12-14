@@ -272,15 +272,6 @@ MATCH_KEY_DESC_LIST = [
         .keys_to_load(['1', 'module.1']).model_keys(['1'])
         .matched(['1']).unexpected(['module.1']),
 
-    # can match legacy activation quantizer storage name
-    MatchKeyDesc(num_loaded=2)
-        .keys_to_load([LEGACY_ACT_STORAGE_NAME + '.relu_0.' + OP1,
-                       LEGACY_ACT_STORAGE_NAME + '.relu_0.' + OP2])
-        .model_keys([EXTERNAL_QUANTIZERS_STORAGE_NAME + '.relu_0.' + OP1,
-                     EXTERNAL_QUANTIZERS_STORAGE_NAME + '.relu_0.' + OP2])
-        .all_matched()
-        .with_deprecation_warning(),
-
     # can match new format of activation quantizer with |INPUT and |OUTPUT
     MatchKeyDesc(num_loaded=2)
         .keys_to_load(['relu_0.' + OP1, 'relu_0.' + OP2]).model_keys(['relu_0|OUTPUT.' + OP1, 'relu_0|INPUT.' + OP2])
@@ -460,6 +451,31 @@ MATCH_KEY_DESC_LIST = [
         .keys_to_load(['module.nncf_module.1.1', '2.2']).model_keys(['module.1', 'module.2'])
         .keys_to_ignore(['1', '2.2'])
         .skipped(['module.1', '2.2']).missing(['module.2']).unexpected(['module.nncf_module.1.1']),
+
+    # optional parameter - not necessary in checkpoint can be initialized by default in the model
+    # can match legacy activation quantizer + new format with |INPUT and |OUTPUT
+    MatchKeyDesc(num_loaded=2)
+        .keys_to_load([LEGACY_ACT_STORAGE_NAME + '.RELU_0.' + OP1,
+                       LEGACY_ACT_STORAGE_NAME + '.RELU_0.' + OP2])
+        .model_keys([EXTERNAL_QUANTIZERS_STORAGE_NAME + '.RELU_0|OUTPUT.' + OP1,
+                     EXTERNAL_QUANTIZERS_STORAGE_NAME + '.RELU_0|INPUT.' + OP2])
+        .all_matched()
+        .with_deprecation_warning(),
+
+    # can match unified FQ
+    MatchKeyDesc(num_loaded=1)
+        .keys_to_load(['module.' + LEGACY_ACT_STORAGE_NAME + '.RELU_0.' + OP1,
+                       'module.' + LEGACY_ACT_STORAGE_NAME + '.RELU_1.' + OP1])
+        .model_keys([EXTERNAL_QUANTIZERS_STORAGE_NAME + '.RELU_0|OUTPUT;RELU_1|OUTPUT.' + OP1])
+        .all_matched()
+        .with_deprecation_warning(),
+
+    MatchKeyDesc(num_loaded=1)
+        .keys_to_load(['module.' + EXTERNAL_QUANTIZERS_STORAGE_NAME + '.RELU_0.' + OP1,
+                       'module.' + EXTERNAL_QUANTIZERS_STORAGE_NAME + '.RELU_1.' + OP1])
+        .model_keys([EXTERNAL_QUANTIZERS_STORAGE_NAME + '.RELU_0|OUTPUT;RELU_1|OUTPUT.' + OP1])
+        .all_matched()
+        .with_deprecation_warning(),
 
     MatchKeyDesc(num_loaded=1)
         .keys_to_load(['module.' + EXTERNAL_QUANTIZERS_STORAGE_NAME + '.RELU_0.' + OP1,
