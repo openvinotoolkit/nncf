@@ -429,17 +429,12 @@ class QuantizationBuilder(TFCompressionAlgorithmBuilder):
         self._bn_adaptation.run(model)
 
     def _get_quantizer_setup(self, model: tf.keras.Model) -> TFQuantizationSetup:
-        # pylint:disable=too-many-statements
         converter = TFModelConverterFactory.create(model)
         nncf_graph = converter.convert()
 
         check_scope_names_match_graph(self.config, nncf_graph)
 
-        nodes = nncf_graph.get_all_nodes()
-        for node in nodes:
-            if node.metatype in NOT_SUPPORT_LAYER_METATYPES:
-                logger.warning('The layer {} is not supported by the quantization algorithm'
-                               .format(get_original_name_and_instance_idx(node.node_name)[0]))
+        self._raise_not_supported_warning(nncf_graph)
 
         quantizable_weighted_layer_nodes = self._get_quantizable_weighted_layer_nodes(nncf_graph)
         custom_layer_nodes = self._get_custom_layer_node_names(nncf_graph, converter)
@@ -522,6 +517,12 @@ class QuantizationBuilder(TFCompressionAlgorithmBuilder):
         self._raise_overflow_fix_warning(applied_overflow_fix)
 
         return setup
+
+    def _raise_not_supported_warning(self, graph: NNCFGraph) -> None:
+        for node in graph.get_all_nodes():
+            if node.metatype in NOT_SUPPORT_LAYER_METATYPES:
+                logger.warning('The layer {} is not supported by the quantization algorithm'
+                               .format(get_original_name_and_instance_idx(node.node_name)[0]))
 
     def _raise_overflow_fix_warning(self, applied_overflow_fix: bool):
         if applied_overflow_fix:
