@@ -1,31 +1,24 @@
-from abc import ABCMeta, abstractmethod
-from typing import Callable
-
+import copy
+import logging
 import os
 import re
-import logging
+from abc import ABCMeta, abstractmethod
 from pathlib import Path
-import copy
+from typing import Callable
+
 import numpy as np
+import onnx
+import openvino.runtime as ov
 import pytest
+import torch
+from model_scope import get_validation_scope
+from sklearn.metrics import accuracy_score
+from utils import (create_timm_model, export_to_ir, export_to_onnx,
+                   get_model_transform, get_torch_dataloader, run_benchmark)
 
 import nncf
-import torch
-import onnx
-
-from sklearn.metrics import accuracy_score
-
-import openvino.runtime as ov
-
-from model_scope import get_validation_scope
-from utils import create_timm_model
-from utils import get_model_transform
-from utils import get_torch_dataloader
-from utils import export_to_onnx
-from utils import export_to_ir
-from utils import run_benchmark
-
 from nncf.common.utils.logger import logger as nncf_logger
+
 nncf_logger.setLevel(logging.ERROR)
 
 
@@ -33,39 +26,48 @@ NOT_AVAILABLE_MESSAGE = "N/A"
 DEFAULT_VAL_THREADS = 4
 ILSVRC_VALIDATION_SUBSET_SIZE = 5000
 
+
 class QuantizerBase(metaclass=ABCMeta):
-    """ Base class for an executor """
+    """Base class for an executor"""
+
     def __init__(self, name):
         super().__init__()
         self.name = name
 
     @abstractmethod
-    def quantize(self, ):
-        """ Abstract method to quantize the model in a certain framework """
+    def quantize(
+        self,
+    ):
+        """Abstract method to quantize the model in a certain framework"""
         return False
- 
+
+
 class QuantizerFactory:
-    """ The factory class for creating quantizers"""
- 
+    """The factory class for creating quantizers"""
+
     registry = {}
     """ Internal registry for available quantizers """
- 
+
     @classmethod
     def register(cls, target_type=None) -> Callable:
         def inner_wrapper(wrapped_class: QuantizerBase) -> Callable:
-            registered_name = wrapped_class.__name__ if target_type == None else target_type
+            registered_name = (
+                wrapped_class.__name__ if target_type == None else target_type
+            )
             if registered_name in cls.registry:
-                logging.warning('Executor %s already exists. Will replace it', registered_name)
+                logging.warning(
+                    "Executor %s already exists. Will replace it", registered_name
+                )
             cls.registry[registered_name] = wrapped_class
             return wrapped_class
- 
+
         return inner_wrapper
- 
+
     @classmethod
     def quantize(cls, quantizer_name, *args, **kwargs):
         if quantizer_name not in cls.registry:
             raise ValueError("Quantizer type does not exist")
- 
+
         quantizer = cls.registry[quantizer_name](quantizer_name)
         return quantizer.quantize(*args, **kwargs)
 
@@ -73,18 +75,19 @@ class QuantizerFactory:
     def validate(cls, quantizer_name, *args, **kwargs):
         if quantizer_name not in cls.registry:
             raise ValueError("Quantizer type does not exist")
- 
+
         quantizer = cls.registry[quantizer_name](quantizer_name)
         return quantizer.validate(*args, **kwargs)
 
+
 @QuantizerFactory.register("torch")
 class TorchQuantizer(QuantizerBase):
-    """ Torch quantizer class"""
+    """Torch quantizer class"""
 
     def quantize(self, model, dataloader, quantization_params):
         def transform_fn(data_item):
-                images, _ = data_item
-                return images
+            images, _ = data_item
+            return images
 
         calibration_dataset = nncf.Dataset(dataloader, transform_fn)
 
@@ -93,7 +96,7 @@ class TorchQuantizer(QuantizerBase):
         )
         return quantized_model
 
-    def validate(self, model, dataloader, model_name, output_folder, quantized=True):    
+    def validate(self, model, dataloader, model_name, output_folder, quantized=True):
         torch_model_name = model_name
         torch_output_path = output_folder
 
@@ -116,14 +119,14 @@ class TorchQuantizer(QuantizerBase):
 
 @QuantizerFactory.register("onnx")
 class ONNXQuantizer(QuantizerBase):
-    """ ONNX quantizer class"""
+    """ONNX quantizer class"""
 
     def quantize(self, model, dataloader, quantization_params):
         onnx_input_name = model.graph.input[0].name
 
         def transform_fn(data_item):
-                images, _ = data_item
-                return {onnx_input_name: images.numpy()}
+            images, _ = data_item
+            return {onnx_input_name: images.numpy()}
 
         calibration_dataset = nncf.Dataset(dataloader, transform_fn)
 
@@ -149,7 +152,7 @@ class ONNXQuantizer(QuantizerBase):
 
 @QuantizerFactory.register("openvino")
 class OpenVINOQuantizer(QuantizerBase):
-    """ OpenVINO quantizer class"""
+    """OpenVINO quantizer class"""
 
     def quantize(self, model, dataloader, quantization_params):
         def transform_fn(data_item):
@@ -191,7 +194,9 @@ def benchmark_performance(model_path, model_name):
             )
             model_perf = NOT_AVAILABLE_MESSAGE
     except BaseException as error:
-        logging.error(f"Error when becnhmarking the model: {model_name}. Details: {error}")
+        logging.error(
+            f"Error when becnhmarking the model: {model_name}. Details: {error}"
+        )
 
     return model_perf
 
@@ -239,7 +244,7 @@ def benchmark_models(paths, names):
             performance_list.append(performance)
         else:
             performance_list.append("-")
-    
+
     return performance_list
 
 
@@ -252,10 +257,12 @@ def get_backend_model(backend, model_name, output_folder):
         return onnx.load(output_folder / (model_name + ".onnx"))
     elif backend == "openvino":
         return ov.Core().read_model(output_folder / (model_name + ".xml"))
-    return None 
+    return None
 
 
-def quantize_and_validate(backend, model_name, output_folder, model_config, quantization_params, data):
+def quantize_and_validate(
+    backend, model_name, output_folder, model_config, quantization_params, data
+):
     ov_model_path, q_acc, q_model_name = "-", "-", "-"
 
     try:
@@ -263,13 +270,17 @@ def quantize_and_validate(backend, model_name, output_folder, model_config, quan
         dataloader = get_torch_dataloader(data, transform, batch_size=1)
         orig_model = get_backend_model(backend, model_name, output_folder)
 
-        q_model = QuantizerFactory.quantize(backend, orig_model, dataloader, quantization_params)
+        q_model = QuantizerFactory.quantize(
+            backend, orig_model, dataloader, quantization_params
+        )
         ov_model_path, q_acc, q_model_name = QuantizerFactory.validate(
-                                            backend, q_model, dataloader,
-                                            model_name, output_folder)
+            backend, q_model, dataloader, model_name, output_folder
+        )
     except Exception as error:
-        logging.error(f"Error when handling the model: {model_name} at backend: {backend}."
-                    f" Details: {error}")
+        logging.error(
+            f"Error when handling the model: {model_name} at backend: {backend}."
+            f" Details: {error}"
+        )
     return backend, ov_model_path, q_acc, q_model_name
 
 
@@ -290,17 +301,13 @@ def subset(pytestconfig):
 
 @pytest.fixture(scope="session")
 def result(pytestconfig):
-    return pytestconfig.test_results 
+    return pytestconfig.test_results
 
 
 @pytest.mark.parametrize("model_args", get_validation_scope())
-def test_ptq_timm(data, output, subset, result, model_args): # pylint: disable=W0703
+def test_ptq_timm(data, output, subset, result, model_args):  # pylint: disable=W0703
     ILSVRC_VALIDATION_SUBSET_SIZE = subset
-    BACKEND_ORDER = {
-        "torch": 0,
-        "onnx": 1,
-        "openvino": 2
-    }
+    BACKEND_ORDER = {"torch": 0, "onnx": 1, "openvino": 2}
 
     torch.multiprocessing.set_sharing_strategy(
         "file_system"
@@ -310,8 +317,9 @@ def test_ptq_timm(data, output, subset, result, model_args): # pylint: disable=W
     model_name = model_args["name"]
     quantization_params = model_args["quantization_params"]
 
-    logging.info(f"Quantizing model: '{model_name}', with parameters: "
-                 f"{quantization_params}")
+    logging.info(
+        f"Quantizing model: '{model_name}', with parameters: " f"{quantization_params}"
+    )
 
     try:
         output_folder = Path(output)
@@ -323,14 +331,16 @@ def test_ptq_timm(data, output, subset, result, model_args): # pylint: disable=W
         transform = get_model_transform(model_config)
         batch_one_dataloader = get_torch_dataloader(data, transform, batch_size=1)
         orig_model_path, orig_acc, _ = QuantizerFactory.validate(
-                                                "torch", model, batch_one_dataloader,
-                                                model_name, output_folder, False)
+            "torch", model, batch_one_dataloader, model_name, output_folder, False
+        )
         del model, transform, batch_one_dataloader
 
         # keep paths and names for performance benchmarking
-        ov_model_paths = ["-"] * (len(BACKEND_ORDER)+1) # +1 for original model characteristics
-        model_names = ["-"] * (len(BACKEND_ORDER)+1)
-        accuracy_results = ["-"] * (len(BACKEND_ORDER)+1)
+        ov_model_paths = ["-"] * (
+            len(BACKEND_ORDER) + 1
+        )  # +1 for original model characteristics
+        model_names = ["-"] * (len(BACKEND_ORDER) + 1)
+        accuracy_results = ["-"] * (len(BACKEND_ORDER) + 1)
 
         ov_model_paths[0] = orig_model_path
         model_names[0] = model_name
@@ -338,22 +348,27 @@ def test_ptq_timm(data, output, subset, result, model_args): # pylint: disable=W
 
         try:
             for backend in QuantizerFactory.registry.keys():
-                r = quantize_and_validate(backend, model_name, output_folder, model_config, quantization_params, data)
-                ov_model_paths[BACKEND_ORDER[r[0]]+1] = r[1]
-                accuracy_results[BACKEND_ORDER[r[0]]+1] = r[2]
-                model_names[BACKEND_ORDER[r[0]]+1] = r[3]
+                r = quantize_and_validate(
+                    backend,
+                    model_name,
+                    output_folder,
+                    model_config,
+                    quantization_params,
+                    data,
+                )
+                ov_model_paths[BACKEND_ORDER[r[0]] + 1] = r[1]
+                accuracy_results[BACKEND_ORDER[r[0]] + 1] = r[2]
+                model_names[BACKEND_ORDER[r[0]] + 1] = r[3]
 
         except Exception as error:
-            logging.error(f"Error when running quantization in parallel."
-                          f" Details: {error}")
+            logging.error(
+                f"Error when running quantization in parallel." f" Details: {error}"
+            )
             accuracy_results[1] = re.escape(str(error))
 
         # benchmark sequentially
         perf_results = benchmark_models(ov_model_paths, model_names)
-        result.append([model_name] + 
-            accuracy_results + 
-            perf_results
-        )
+        result.append([model_name] + accuracy_results + perf_results)
         logging.info(f"Quantization results: {result[-1]}")
 
     except Exception as error:
