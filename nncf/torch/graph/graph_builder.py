@@ -21,8 +21,6 @@ import torch
 
 from nncf.common.graph import INPUT_NOOP_METATYPES
 from nncf.common.graph import LayerName
-from nncf.common.graph.operator_metatypes import UnknownMetatype
-from nncf.common.graph.layer_attributes import GenericWeightedLayerAttributes
 from nncf.common.graph.layer_attributes import MultipleInputLayerAttributes
 from nncf.common.graph.layer_attributes import ReshapeLayerAttributes
 from nncf.common.graph.layer_attributes import MultipleOutputLayerAttributes
@@ -69,15 +67,13 @@ class GraphConverter:
             layer_name = str(dynamic_graph_node.op_exec_context.op_address.scope_in_model)
 
             metatype = PT_OPERATOR_METATYPES.get_operator_metatype_by_op_name(op_address.operator_name)
-            if metatype is not UnknownMetatype:
-                if not isinstance(dynamic_graph_node.layer_attributes, GenericWeightedLayerAttributes):
-                    subtype = metatype.determine_subtype(dynamic_graph_node.layer_attributes)
-                else:
-                    subtype = None
-                if subtype is not None:
-                    metatype = subtype
-                if dynamic_graph_node.is_called_inside_nncf_module and metatype.module_metatype is not None:
-                    metatype = metatype.module_metatype
+            if metatype.get_subtypes():
+                subtype = metatype.determine_subtype(dynamic_graph_node.layer_attributes,
+                                                     functions_kwargs=dynamic_graph_node.__dict__)
+            else:
+                subtype = None
+            if subtype is not None:
+                metatype = subtype
 
             is_integer_input = False
             if metatype in INPUT_NOOP_METATYPES and input_infos is not None:

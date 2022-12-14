@@ -57,7 +57,7 @@ def replace_modules_by_nncf_modules(model: nn.Module, ignored_scopes=None, targe
                                     reset: bool = False) -> (nn.Module, List[Scope]):
     replace_fn = partial(replace_module_by_nncf_module)
     affected_scopes = []  # type: List
-    return replace_modules(model, replace_fn, affected_scopes,
+    return replace_modules(model, replace_fn, is_nncf_module, affected_scopes,
                            ignored_scopes=ignored_scopes, target_scopes=target_scopes,
                            eval_op_scopes=eval_op_scopes, reset=reset)
 
@@ -71,7 +71,8 @@ def set_replaced_module_by_name(model, name, replaced_module):
 
 
 # pylint: disable=too-many-branches
-def replace_modules(model: nn.Module, replace_fn, affected_scopes, ignored_scopes=None, target_scopes=None, memo=None,
+def replace_modules(model: nn.Module, replace_fn, stop_branching_fn, affected_scopes,
+                    ignored_scopes=None, target_scopes=None, memo=None,
                     current_scope=None, eval_op_scopes: List[Scope] = None, reset: bool = False):
     if memo is None:
         memo = set()
@@ -121,9 +122,13 @@ def replace_modules(model: nn.Module, replace_fn, affected_scopes, ignored_scope
                 affected_scopes.append(replaced_scope)
                 if reset:
                     replaced_module.reset()
-        if replaced_module is None:
-            replaced_module = module
 
-        _, affected_scopes = replace_modules(replaced_module, replace_fn, affected_scopes, ignored_scopes,
-                                             target_scopes, memo, child_scope, eval_op_scopes, reset=reset)
+        if stop_branching_fn(module):
+            continue
+
+        # Prevent recursive call for replaced modules
+        if replaced_module is None or module is replaced_module:
+            _, affected_scopes = replace_modules(module, replace_fn, stop_branching_fn,
+                                                 affected_scopes, ignored_scopes,
+                                                 target_scopes, memo, child_scope, eval_op_scopes, reset=reset)
     return model, affected_scopes

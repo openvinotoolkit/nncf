@@ -86,7 +86,6 @@ from nncf.torch.debug import CallCountTracker
 from nncf.torch.debug import DebugInterface
 from nncf.torch.dynamic_graph.context import TracingContext
 from nncf.torch.graph.graph import PTNNCFGraph
-from nncf.torch.graph import operator_metatypes
 from nncf.torch.graph.operator_metatypes import PTConv2dMetatype
 from nncf.torch.graph.operator_metatypes import PTDepthwiseConv2dSubtype
 from nncf.torch.graph.transformations.commands import PTInsertionCommand
