@@ -27,6 +27,7 @@ from torch.nn.utils import weight_norm
 from nncf.common.graph import NNCFNode
 from nncf.common.graph.definitions import MODEL_INPUT_OP_NAME
 from nncf.common.graph.definitions import MODEL_OUTPUT_OP_NAME
+from nncf.common.graph.operator_metatypes import UnknownMetatype
 from nncf.common.graph.transformations.commands import TargetType
 from nncf.common.graph.transformations.commands import TransformationPriority
 from nncf.common.insertion_point_graph import InsertionPointGraph
@@ -40,6 +41,7 @@ from nncf.torch import register_module
 from nncf.torch.dynamic_graph.context import PreHookId
 from nncf.torch.dynamic_graph.graph_tracer import ModelInputInfo
 from nncf.torch.dynamic_graph.operation_address import OperationAddress
+from nncf.torch.graph.graph import PTNNCFGraph
 from nncf.torch.graph.graph_builder import GraphBuilder
 from nncf.torch.graph.operator_metatypes import PTInputNoopMetatype
 from nncf.torch.graph.operator_metatypes import PTOutputNoopMetatype
@@ -209,6 +211,21 @@ def test_get_op_nodes_in_scope():
     for module_scope, _ in fake_nncf_modules.items():
         matching_nncf_nodes = nncf_graph.get_op_nodes_in_scope(module_scope)
         assert not matching_nncf_nodes
+
+
+def test_nncf_node_attrs_are_consistent():
+    # Check that node returned from `add_nncf_node`
+    # refer to the save `data` dict as node returned by
+    # `get_node_by_id` and `get_op_nodes_in_scope`
+    nncf_graph = PTNNCFGraph()
+    new_node = nncf_graph.add_nncf_node(node_name='dummy',
+                                        node_type='dummy',
+                                        layer_name='dummy',
+                                        node_metatype=UnknownMetatype)
+    new_node_saved = nncf_graph.get_node_by_id(new_node.node_id)
+    assert new_node.data is new_node_saved.data
+    nodes_in_scope = nncf_graph.get_op_nodes_in_scope(nncf_graph.get_scope_by_node_name('dummy'))
+    assert new_node.data is nodes_in_scope[0].data
 
 
 class InsertionPointTestModel(nn.Module):

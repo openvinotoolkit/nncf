@@ -432,7 +432,7 @@ class NNCFGraph:
         attrs[NNCFGraph.IGNORED_ALGOS_ATTR] = ignored_algorithms
         self._nx_graph.add_node(node_key, **attrs)
 
-        node = NNCFNode(node_id, node_name, data=attrs)
+        node = NNCFNode(node_id, node_name, data=self._nx_graph.nodes[node_key])
 
         if node.metatype in INPUT_NOOP_METATYPES:
             self._input_nncf_nodes[node_id] = node
