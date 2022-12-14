@@ -126,6 +126,6 @@ def replace_modules(model: nn.Module, replace_fn, affected_scopes, ignored_scope
         if replaced_module is None:
             replaced_module = module
 
-        _, affected_scopes = replace_modules(replaced_module, replace_fn, affected_scopes, ignored_scopes, target_scopes,
-                                             memo, child_scope, eval_op_scopes, reset=reset)
+        _, affected_scopes = replace_modules(replaced_module, replace_fn, affected_scopes, ignored_scopes,
+                                             target_scopes, memo, child_scope, eval_op_scopes, reset=reset)
     return model, affected_scopes
