@@ -17,7 +17,7 @@ import numpy as np
 from nncf.common.quantization.structs import QuantizationMode
 from nncf.common.quantization.structs import QuantizerConfig
 from nncf.common.tensor_statistics.statistics import MinMaxTensorStatistic
-from nncf.common.utils.logger import logger
+from nncf.common.logging import nncf_logger
 
 
 @dataclass
@@ -107,8 +107,8 @@ def calculate_weight_quantizer_parameters(weight_tensor: np.ndarray, quantizer_c
     # The weight is restricted to have only signed range.
     tensor_type = np.int8
     if quantizer_config.signedness_to_force is not None and not quantizer_config.signedness_to_force:
-        logger.warning('The HW expects to have signed quantization of weights, '
-                       'while the quantizer configuration for weights contains signedness_to_force=False.')
+        nncf_logger.warning('The HW expects to have signed quantization of weights, '
+                            'while the quantizer configuration for weights contains signedness_to_force=False.')
         tensor_type = np.uint8
     input_high = np.amax(weight_tensor, axis=axes)
     input_low = np.amin(weight_tensor, axis=axes)
