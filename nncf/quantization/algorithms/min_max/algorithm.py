@@ -12,7 +12,7 @@
 """
 
 from copy import deepcopy
-from typing import Dict, List, TypeVar, Optional, OrderedDict
+from typing import Dict, List, TypeVar, Optional, OrderedDict, Tuple
 import collections
 from nncf import Dataset
 from nncf.common.graph.definitions import NNCFGraphNodeType
@@ -72,7 +72,7 @@ class MinMaxQuantizationParameters(AlgorithmParameters):
                  activation_granularity: Optional[Granularity] = None,
                  activation_signedness_to_force: Optional[bool] = None,
                  target_device: TargetDevice = TargetDevice.ANY,
-                 range_type: RangeType = RangeType.MEAN_MINMAX,
+                 range_type: Optional[RangeType] = None,
                  quantize_outputs: bool = False,
                  ignored_scopes: Optional[List[str]] = None,
                  ):
@@ -158,7 +158,8 @@ class MinMaxQuantization(Algorithm):
         self.nncf_graph = None
         # It prevents the duplicate weight quantizers from being added.
         # It can happen when you have layers that share the identical weight tensor.
-        self._quantization_target_points_to_qconfig = collections.OrderedDict()  # type: OrderedDict[TargetPoint, QuantizerConfig]
+        self._quantization_target_points_to_qconfig = \
+            collections.OrderedDict()  # type: OrderedDict[TargetPoint, QuantizerConfig]
         self._parameters = parameters
 
     @property
@@ -180,6 +181,25 @@ class MinMaxQuantization(Algorithm):
             raise RuntimeError('Cannot return backend-specific entity'
                                'because {} is not supported!'.format(model_backend))
 
+    def _get_default_statistics_collector(self, is_symmetric: bool,
+                                          axes: Optional[Tuple], per_channel: bool) -> TensorStatisticCollectorBase:
+        """
+        Returns the default StatisticCollector.
+
+        :param is_symmetric: True if the quantizer has symmetric mode. False if asymmetric.
+        :param axes: Axes to reduce in the statistic tensor.
+        :param per_channel: True if per-channel statistics. False if per-tensor.
+        :return: StatisticCollector.
+        """
+        if per_channel:
+            return self._backend_entity.minmax_statistic_collector(use_abs_max=is_symmetric,
+                                                                   reduction_shape=axes,
+                                                                   num_samples=self._parameters.number_samples)
+        return self._backend_entity.mean_minmax_statistic_collector(use_per_sample_stats=False,
+                                                                    use_abs_max=is_symmetric,
+                                                                    reduction_shape=axes,
+                                                                    num_samples=self._parameters.number_samples)
+
     def _get_stat_collector(self, quantizer_config: QuantizerConfig) -> TensorStatisticCollectorBase:
         """
         Creates and returns statistic collector instance based on the quantizer's configuration.
@@ -189,10 +209,8 @@ class MinMaxQuantization(Algorithm):
         """
         is_symmetric = quantizer_config.mode == QuantizationMode.SYMMETRIC
         axes = (0, 2, 3) if quantizer_config.per_channel else None
-        if quantizer_config.per_channel:
-            return self._backend_entity.minmax_statistic_collector(use_abs_max=is_symmetric,
-                                                                   reduction_shape=axes,
-                                                                   num_samples=self._parameters.number_samples)
+        if self._parameters.range_type is None or quantizer_config.per_channel:
+            return self._get_default_statistics_collector(is_symmetric, axes, quantizer_config.per_channel)
         if self._parameters.range_type == RangeType.MINMAX:
             return self._backend_entity.minmax_statistic_collector(use_abs_max=is_symmetric,
                                                                    reduction_shape=axes,
