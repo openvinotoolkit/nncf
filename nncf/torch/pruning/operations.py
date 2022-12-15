@@ -82,7 +82,7 @@ from nncf.common.pruning.operations import (
 
 from nncf.common.pruning.utils import PruningOperationsMetatypeRegistry
 from nncf.common.pruning.utils import is_prunable_depthwise_conv
-from nncf.common.utils.logger import logger as nncf_logger
+from nncf.common.logging import nncf_logger
 from nncf.torch.layers import NNCF_WRAPPED_USER_MODULES_DICT
 from nncf.torch.nncf_network import NNCFNetwork
 from nncf.torch.pruning.tensor_processor import PTNNCFPruningTensorProcessor
@@ -182,8 +182,9 @@ class PTConvolutionPruningOp(ConvolutionPruningOp, PTPruner):
             node_module.in_channels = new_num_channels
             node_module.weight = torch.nn.Parameter(node_module.weight[broadcasted_mask].view(new_weight_shape))
 
-        nncf_logger.info('Pruned Convolution {} by input mask. Old input filters number: {}, new filters number:'
-                         ' {}.'.format(node.data['key'], old_num_channels, new_num_channels))
+        nncf_logger.debug(
+            f'Pruned Convolution {node.data["key"]} by input mask. '
+            f'Old input filters number: {old_num_channels}, new filters number: {new_num_channels}.')
 
     @classmethod
     def output_prune(cls, model: NNCFNetwork, node: NNCFNode, graph: NNCFGraph) -> None:
@@ -202,8 +203,9 @@ class PTConvolutionPruningOp(ConvolutionPruningOp, PTPruner):
         if node_module.bias is not None:
             node_module.bias = torch.nn.Parameter(node_module.bias[bool_mask])
 
-        nncf_logger.info('Pruned Convolution {} by pruning mask. Old output filters number: {}, new filters number:'
-                         ' {}.'.format(node.data['key'], old_num_clannels, node_module.out_channels))
+        nncf_logger.debug(
+            f'Pruned Convolution {node.data["key"]} by pruning mask. '
+            f'Old output filters number: {old_num_clannels}, new filters number: {node_module.out_channels}.')
 
     @classmethod
     def input_reorder(cls, model: NNCFNetwork, node: NNCFNode, graph: NNCFGraph):
@@ -217,8 +219,8 @@ class PTConvolutionPruningOp(ConvolutionPruningOp, PTPruner):
         conv = model.get_containing_module(node.node_name)
         conv.weight.data = torch.index_select(conv.weight.data, 1, reorder_indexes)
         nncf_logger.debug(
-            'Reordered input channels (first 10 reorder indexes {}) of Convolution: {} '.format(reorder_indexes[:10],
-                                                                                                node.data['key']))
+            f'Reordered input channels (first 10 reorder indexes {reorder_indexes[:10]}) '
+            f'of Convolution: {node.data["key"]} ')
 
     @classmethod
     def output_reorder(cls, model: NNCFNetwork, node: NNCFNode, graph: NNCFGraph):
@@ -231,8 +233,8 @@ class PTConvolutionPruningOp(ConvolutionPruningOp, PTPruner):
         if conv.bias is not None:
             conv.bias.data = torch.index_select(conv.bias.data, 0, reorder_indexes)
         nncf_logger.debug(
-            'Reordered output channels (first 10 reorder indexes {}) of Convolution: {} '.format(reorder_indexes[:10],
-                                                                                                 node.data['key']))
+            f'Reordered output channels (first 10 reorder indexes {reorder_indexes[:10]}) '
+            f'of Convolution: {node.data["key"]} ')
 
 
 @PT_PRUNING_OPERATOR_METATYPES.register('transpose_convolution')
@@ -247,13 +249,14 @@ class PTTransposeConvolutionPruningOp(TransposeConvolutionPruningOp, PTPruner):
         bool_mask = torch.tensor(input_mask, dtype=torch.bool)
 
         node_module = model.get_containing_module(node.node_name)
-        old_num_clannels = int(node_module.weight.size(0))
+        old_num_channels = int(node_module.weight.size(0))
 
         node_module.in_channels = int(torch.sum(bool_mask))
         node_module.weight = torch.nn.Parameter(node_module.weight[bool_mask])
 
-        nncf_logger.info('Pruned ConvTranspose {} by input mask. Old input filters number: {}, new filters number:'
-                         ' {}.'.format(node.data['key'], old_num_clannels, node_module.in_channels))
+        nncf_logger.debug(
+            f'Pruned ConvTranspose {node.data["key"]} by input mask. '
+            f'Old input filters number: {old_num_channels}, new filters number: {node_module.in_channels}.')
 
     @classmethod
     def output_prune(cls, model: NNCFNetwork, node: NNCFNode, graph: NNCFGraph) -> None:
@@ -265,7 +268,7 @@ class PTTransposeConvolutionPruningOp(TransposeConvolutionPruningOp, PTPruner):
         new_num_channels = int(torch.sum(bool_mask))
 
         node_module = model.get_containing_module(node.node_name)
-        old_num_clannels = int(node_module.weight.size(1))
+        old_num_channels = int(node_module.weight.size(1))
 
         in_channels = node_module.weight.size(0)
         broadcasted_mask = bool_mask.repeat(in_channels).view(in_channels, bool_mask.size(0))
@@ -278,8 +281,9 @@ class PTTransposeConvolutionPruningOp(TransposeConvolutionPruningOp, PTPruner):
         if node_module.bias is not None:
             node_module.bias = torch.nn.Parameter(node_module.bias[bool_mask])
 
-        nncf_logger.info('Pruned ConvTranspose {} by pruning mask. Old output filters number: {}, new filters number:'
-                         ' {}.'.format(node.data['key'], old_num_clannels, node_module.out_channels))
+        nncf_logger.debug(
+            f'Pruned ConvTranspose {node.data["key"]} by pruning mask. '
+            f'Old output filters number: {old_num_channels}, new filters number: {node_module.out_channels}.')
 
 
 @PT_PRUNING_OPERATOR_METATYPES.register('linear')
@@ -335,8 +339,9 @@ class PTBatchNormPruningOp(BatchNormPruningOp, PTPruner):
         node_module.running_mean = torch.nn.Parameter(node_module.running_mean[bool_mask], requires_grad=False)
         node_module.running_var = torch.nn.Parameter(node_module.running_var[bool_mask], requires_grad=False)
 
-        nncf_logger.info('Pruned BatchNorm {} by input mask. Old num features: {}, new num features:'
-                         ' {}.'.format(node.data['key'], old_num_clannels, new_num_channels))
+        nncf_logger.debug(
+            f'Pruned BatchNorm {node.data["key"]} by input mask. '
+            f'Old num features: {old_num_clannels}, new num features: {new_num_channels}.')
 
     @classmethod
     def input_reorder(cls, model: NNCFNetwork, node: NNCFNode, graph: NNCFGraph):
@@ -355,8 +360,7 @@ class PTBatchNormPruningOp(BatchNormPruningOp, PTPruner):
         bn.running_var.data = torch.index_select(bn.running_var.data, 0, reorder_indexes)
 
         nncf_logger.debug(
-            'Reordered channels (first 10 reorder indexes {}) of BatchNorm: {} '.format(reorder_indexes[:10],
-                                                                                        node.data['key']))
+            f'Reordered channels (first 10 reorder indexes {reorder_indexes[:10]}) of BatchNorm: {node.data["key"]} ')
 
 
 @PT_PRUNING_OPERATOR_METATYPES.register('group_norm')
@@ -381,8 +385,9 @@ class PTGroupNormPruningOp(GroupNormPruningOp, PTPruner):
         node_module.weight = torch.nn.Parameter(node_module.weight[bool_mask])
         node_module.bias = torch.nn.Parameter(node_module.bias[bool_mask])
 
-        nncf_logger.info('Pruned GroupNorm {} by input mask. Old num features: {}, new num features:'
-                         ' {}.'.format(node.data['key'], old_num_clannels, new_num_channels))
+        nncf_logger.debug(
+            f'Pruned GroupNorm {node.data["key"]} by input mask. '
+            f'Old num features: {old_num_clannels}, new num features: {new_num_channels}.')
 
 
 @PT_PRUNING_OPERATOR_METATYPES.register('layer_norm')
@@ -427,8 +432,9 @@ class PTElementwisePruningOp(ElementwisePruningOp, PTPruner):
             node_module.weight = torch.nn.Parameter(node_module.weight[bool_mask])
             node_module.n_channels = new_num_channels
 
-            nncf_logger.info('Pruned Elementwise {} by input mask. Old num features: {}, new num features:'
-                             ' {}.'.format(node.data['key'], old_num_clannels, new_num_channels))
+            nncf_logger.debig(
+                f'Pruned Elementwise {node.data["key"]} by input mask. '
+                f'Old num features: {old_num_clannels}, new num features: {new_num_channels}.')
 
 
 @PT_PRUNING_OPERATOR_METATYPES.register('stop_propagation_ops')
@@ -471,7 +477,7 @@ class ModelPruner(MaskPropagationAlgorithm):
                     node_cls.input_prune(self._model, node, self._graph)
                     node_cls.output_prune(self._model, node, self._graph)
                     pruned_node_modules.append(node_module)
-            nncf_logger.info('Finished mask applying step')
+            nncf_logger.info('Finished applying pruning masks.')
 
     def prune_model(self):
         """

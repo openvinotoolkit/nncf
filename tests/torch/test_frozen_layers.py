@@ -1,7 +1,7 @@
 import pytest
 
 from nncf import NNCFConfig
-from nncf.common.utils.logger import logger as nncf_logger
+from nncf.common.logging import nncf_logger
 from nncf.config.structures import QuantizationRangeInitArgs
 from nncf.torch.initialization import wrap_dataloader_for_init
 from nncf.torch.utils import get_all_modules_by_type

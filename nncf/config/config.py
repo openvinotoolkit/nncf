@@ -20,7 +20,7 @@ from typing import Type
 import jsonschema
 import jstyleson as json
 
-from nncf.common.utils.logger import logger
+from nncf.common.logging import nncf_logger
 from nncf.common.utils.os import safe_open
 from nncf.config.definitions import SCHEMA_VISUALIZATION_URL
 from nncf.config.schema import REF_VS_ALGO_SCHEMA
@@ -106,7 +106,7 @@ class NNCFConfig(dict):
         try:
             jsonschema.validate(loaded_json, NNCFConfig.schema())
         except jsonschema.ValidationError as e:
-            logger.error('Invalid NNCF config supplied!')
+            nncf_logger.error('Invalid NNCF config supplied!')
             absolute_path_parts = [str(x) for x in e.absolute_path]
             if not NNCFConfig._is_path_to_algorithm_name(absolute_path_parts):
                 e.message += f"\nRefer to the NNCF config schema documentation at " \

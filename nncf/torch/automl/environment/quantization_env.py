@@ -39,7 +39,7 @@ from sklearn.preprocessing import MinMaxScaler
 from nncf.common.initialization.batchnorm_adaptation import BatchnormAdaptationAlgorithm
 from nncf.common.quantization.structs import QuantizerConfig
 from nncf.config.extractors import extract_bn_adaptation_init_params
-from nncf.common.utils.logger import logger
+from nncf.common.logging import nncf_logger
 from nncf.common.hardware.config import HWConfigType
 from nncf.common.utils.debug import DEBUG_LOG_DIR
 from nncf.common.utils.debug import is_debug
@@ -97,8 +97,9 @@ class ModelSizeCalculator:
             if qid in per_quantizer_bw:
                 model_size += nparam * per_quantizer_bw[qid]
             else:
-                logger.warning("[ModelSizeCalculator] Missing Bitwidth of QID: {}, using {} bits"
-                               .format(str(qid), ModelSizeCalculator.FLOAT_BITWIDTH))
+                nncf_logger.warning(
+                    f"[ModelSizeCalculator] Missing Bitwidth of QID: {str(qid)}, "
+                    f"using {ModelSizeCalculator.FLOAT_BITWIDTH} bits")
                 model_size += nparam * ModelSizeCalculator.FLOAT_BITWIDTH
         return model_size
 
@@ -136,7 +137,7 @@ class QuantizationEnv:
                  params: QuantizationEnvParams
                  ):
 
-        logger.info("[Q.Env] Instantiating NNCF Quantization Environment")
+        nncf_logger.info("[Q.Env] Instantiating NNCF Quantization Environment...")
         self.qctrl = quantization_controller
         self.qmodel = model
         self.eval_loader = eval_loader
@@ -193,14 +194,12 @@ class QuantizationEnv:
                 for bitwidth, qconf_list in bw_vs_qconfigs_dict.items():
                     target_qconf = qconf_list[0]
                     if len(qconf_list) > 1:
-                        logger.warning("Received multiple quantizer configurations {qc_lst} for same bitwidth {bw} "
-                                       "for quantizer {q} - AutoQ can currently only choose among bitwidths, but not "
-                                       "within quantizer configuration space with the same bitwidths. Selecting {qc} "
-                                       "as the target configuration for bitwidth {bw}".format(
-                            qc_lst=";".join([str(qconf) for qconf in qconf_list]),
-                            bw=bitwidth,
-                            q=str(qid),
-                            qc=str(target_qconf)))
+                        nncf_logger.warning(
+                            f"Received multiple quantizer configurations "
+                            f"{';'.join([str(qconf) for qconf in qconf_list])} for same bitwidth {bitwidth} for "
+                            f"quantizer {str(qid)} - AutoQ can currently only choose among bitwidths, but not within "
+                            f"quantizer configuration space with the same bitwidths. Selecting {str(target_qconf)} as "
+                            f"the target configuration for bitwidth {bitwidth}")
                     conf_list_to_set.append(target_qconf)
 
                 self.qconfig_space_map[qid] = conf_list_to_set
@@ -453,13 +452,13 @@ class QuantizationEnv:
 
 
     def _evaluate_pretrained_model(self):
-        logger.info("[Q.Env] Evaluating Pretrained Model")
+        nncf_logger.info("[Q.Env] Evaluating Pretrained Model")
         self.qctrl.disable_weight_quantization()
         self.qctrl.disable_activation_quantization()
 
         with torch.no_grad():
             self.pretrained_score = self.eval_fn(self.qmodel, self.eval_loader)
-            logger.info("Pretrained Score: {:.3f}".format(self.pretrained_score))
+            nncf_logger.info(f"Pretrained Score: {self.pretrained_score:.3f}")
 
         self.qctrl.enable_weight_quantization()
         self.qctrl.enable_activation_quantization()
@@ -479,7 +478,7 @@ class QuantizationEnv:
             raise NotImplementedError("Post-Quantization fine tuning is not implemented.")
         with torch.no_grad():
             quantized_score = self.eval_fn(self.qmodel, self.eval_loader)
-            logger.info("[Q.Env] Quantized Score: {:.3f}".format(quantized_score))
+            nncf_logger.info(f"[Q.Env] Quantized Score: {quantized_score:.3f}")
         return quantized_score
 
 
@@ -515,7 +514,7 @@ class QuantizationEnv:
                     if current_model_size <= self.target_model_size:
                         break
         else:
-            logger.info("[Q.Env] Skipping Model Size Constraint")
+            nncf_logger.info("[Q.Env] Skipping the model size constraint.")
 
         return self.master_df['action'].tolist()
 
@@ -588,9 +587,8 @@ class QuantizationEnv:
         self._apply_quantizer_configs_to_model(configs_to_set)
 
         for idx, qid in zip(self.master_df.index, self.master_df['qid']):
-            logger.info("[Q.Env] {:50} | {}".format(
-                str(self.qctrl.all_quantizations[find_qid_by_str(self.qctrl, qid)]),
-                idx))
+            nncf_logger.info(
+                f"[Q.Env] {str(self.qctrl.all_quantizations[find_qid_by_str(self.qctrl, qid)]):50} | {idx}")
 
         quantized_score = self._run_quantization_pipeline(finetune=self.finetune)
 

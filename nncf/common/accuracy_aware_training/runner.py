@@ -22,7 +22,7 @@ from typing import Callable, Dict, List, Optional, Union, Tuple, TypeVar
 from nncf.api.compression import CompressionAlgorithmController
 from nncf.api.compression import CompressionStage
 from nncf.common.utils.helpers import configure_accuracy_aware_paths
-from nncf.common.utils.logger import logger as nncf_logger
+from nncf.common.logging import nncf_logger
 from nncf.common.utils.tensorboard import prepare_for_tensorboard
 from nncf.config.schemata.defaults import AA_COMPRESSION_RATE_STEP_REDUCTION_FACTOR
 from nncf.config.schemata.defaults import AA_INITIAL_COMPRESSION_RATE_STEP
@@ -263,7 +263,7 @@ class BaseAccuracyAwareTrainingRunner(TrainingRunner):
         else:
             checkpoint_path = self._make_checkpoint_path(is_best=False)
             self._save_checkpoint(model, compression_controller, checkpoint_path)
-        nncf_logger.info("The checkpoint is saved in {}".format(checkpoint_path))
+        nncf_logger.info("Saved the checkpoint to {}".format(checkpoint_path))
 
         if is_best_checkpoint:
             self._save_best_checkpoint(model, compression_controller)
@@ -301,7 +301,7 @@ class BaseAccuracyAwareTrainingRunner(TrainingRunner):
 
     def load_best_checkpoint(self, model):
         resuming_checkpoint_path = self._best_checkpoint
-        nncf_logger.info('Loading the best checkpoint found during training {}...'.format(resuming_checkpoint_path))
+        nncf_logger.info('Loading the best checkpoint found during training: {}'.format(resuming_checkpoint_path))
         self._load_checkpoint(model, resuming_checkpoint_path)
 
     @abstractmethod
@@ -416,11 +416,12 @@ class BaseAdaptiveCompressionLevelTrainingRunner(BaseAccuracyAwareTrainingRunner
                 best_checkpoint_compression_rate = checkpoint_rate
                 break
         if best_checkpoint_compression_rate is None:
-            nncf_logger.warning('Could not load the model')
+            nncf_logger.error('Could not load the model - no models with positive accuracy budget in '
+                              'compression training history.')
             return
 
         resuming_checkpoint_path = self._best_checkpoints[best_checkpoint_compression_rate][0]
-        nncf_logger.info('Loading the best checkpoint found during training {}...'.format(resuming_checkpoint_path))
+        nncf_logger.info('Loading the best checkpoint found during training: {}'.format(resuming_checkpoint_path))
         self._load_checkpoint(model, resuming_checkpoint_path)
 
     @property

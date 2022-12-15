@@ -33,7 +33,7 @@ from nncf.common.graph.layer_attributes import MultipleOutputLayerAttributes
 from nncf.common.graph.layer_attributes import Dtype
 from nncf.common.graph.utils import get_concat_axis
 from nncf.common.graph.utils import get_split_axis
-from nncf.common.utils.logger import logger as nncf_logger
+from nncf.common.logging import nncf_logger
 from nncf.tensorflow.graph.metatypes.common import DECONV_LAYER_METATYPES
 from nncf.tensorflow.graph.metatypes.common import DEPTHWISE_CONV_LAYER_METATYPES
 from nncf.tensorflow.graph.metatypes.common import \
@@ -212,10 +212,10 @@ class BaseFunctionalSequentialConverter(TFModelConverter):
                     if graphdef_weight_node_name in graphdef_name_to_layer_var_map:
                         weight_node_name = graphdef_name_to_layer_var_map[graphdef_weight_node_name]
                     else:
-                        nncf_logger.warning('Could not associate a weighted custom layer node {} '
-                                            'with a weight attribute of the custom layer - the corresponding weight '
-                                            'will not be compressed! Make sure that the corresponding custom layer '
-                                            'weight has a name.'.format(pretty_node_name))
+                        nncf_logger.warning(f'Could not associate a weighted custom layer node {pretty_node_name} '
+                                            f'with a weight attribute of the custom layer - the corresponding weight '
+                                            f'will not be compressed! Make sure that the corresponding custom layer '
+                                            f'weight has a name.')
 
                 custom_layer_info.node_infos[pretty_node_name] = CustomLayerNodeInfo(
                     graphdef_node_name=node.name,

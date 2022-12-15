@@ -28,7 +28,7 @@ import torch
 from nncf.common.graph.definitions import MODEL_OUTPUT_OP_NAME
 from nncf.common.graph.graph import NNCFGraph
 from nncf.common.graph.graph import NNCFNodeName
-from nncf.common.utils.logger import logger as nncf_logger
+from nncf.common.logging import nncf_logger
 from nncf.experimental.torch.search_building_blocks.search_graph import SearchGraph
 from nncf.experimental.torch.search_building_blocks.search_graph import SearchGraphNode
 from nncf.experimental.torch.search_building_blocks.search_graph import \

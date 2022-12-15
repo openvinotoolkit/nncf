@@ -20,7 +20,7 @@ from nncf.common.hardware.config import HWConfigType
 from nncf.common.quantization.structs import QuantizationPreset
 from nncf.common.utils.backend import BackendType
 from nncf.common.utils.backend import get_backend
-from nncf.common.utils.logger import logger as nncf_logger
+from nncf.common.logging import nncf_logger
 from nncf.quantization.algorithms.algorithm import Algorithm
 from nncf.quantization.algorithms.algorithm import AlgorithmParameters
 from nncf.quantization.algorithms.definitions import Granularity
@@ -162,8 +162,7 @@ class PostTrainingQuantization(Algorithm):
 
             # TODO (KodiaqQ): Remove after ONNX is removed from experimental
             if backend == BackendType.ONNX:
-                nncf_logger.warning(
-                    'You are using experimental ONNX backend for the Post-training quantization.')
+                nncf_logger.warning('You are using the experimental ONNX backend for post-training quantization.')
 
             statistics_aggregator = self._create_statistics_aggregator(dataset, backend)
             for algorithm in self.algorithms:

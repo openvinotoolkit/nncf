@@ -17,7 +17,7 @@ from typing import List
 from nncf.common.graph import NNCFGraph, NNCFNode
 from nncf.common.pruning.utils import traverse_function
 
-from nncf.common.utils.logger import logger
+from nncf.common.logging import nncf_logger
 
 
 def get_concat_axis(input_shapes: List[List[int]], output_shapes: List[List[int]]) -> int:
@@ -40,7 +40,7 @@ def get_concat_axis(input_shapes: List[List[int]], output_shapes: List[List[int]
     if axis is None:
         if none_dim is None:
             axis = -1
-            logger.warning('Identity concat node detected')
+            nncf_logger.debug('Identity concat node detected')
         else:
             axis = none_dim
 
@@ -86,6 +86,6 @@ def get_split_axis(input_shapes: List[List[int]], output_shapes: List[List[int]]
 
     if axis is None:
         axis = -1
-        logger.warning('Identity split/concat node detected')
+        nncf_logger.debug('Identity split/concat node detected')
 
     return axis

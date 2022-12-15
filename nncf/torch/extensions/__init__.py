@@ -8,7 +8,7 @@ from abc import ABC, abstractmethod
 from torch.utils.cpp_extension import _get_build_directory
 
 from nncf.common.utils.registry import Registry
-from nncf.common.utils.logger import logger as nncf_logger
+from nncf.common.logging import nncf_logger
 
 EXTENSIONS = Registry('extensions')
 

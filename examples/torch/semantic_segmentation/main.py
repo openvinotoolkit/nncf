@@ -479,7 +479,6 @@ def main_worker(current_gpu, config):
         print_args(config)
 
     set_seed(config)
-    logger.info(config)
 
     dataset = get_dataset(config.dataset)
     color_encoding = dataset.color_encoding

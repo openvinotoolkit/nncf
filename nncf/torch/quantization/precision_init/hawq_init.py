@@ -18,7 +18,6 @@ from pathlib import Path
 from typing import Any, Callable, Dict, List, NamedTuple, Set, Tuple
 
 import torch
-import warnings
 from bisect import bisect_left
 from copy import deepcopy
 from operator import itemgetter
@@ -28,7 +27,7 @@ from torch.nn.modules.loss import _Loss
 
 from nncf.common.graph import NNCFNodeName
 from nncf.common.quantization.structs import QuantizerConfig
-from nncf.common.utils.logger import logger as nncf_logger
+from nncf.common.logging import nncf_logger
 from nncf.common.utils.os import safe_open
 from nncf.common.utils.debug import is_debug
 from nncf.config.schemata.defaults import HAWQ_DUMP_INIT_PRECISION_DATA
@@ -266,7 +265,7 @@ class HAWQPrecisionInitializer(BasePrecisionInitializer):
         weight_quantizer_ids_in_execution_order = list(self._weight_quantizations_by_execution_order.keys())
 
         if not weight_qconfig_sequences_in_trace_order:
-            warnings.warn('All bitwidths configurations are incompatible with HW Config!', RuntimeWarning)
+            nncf_logger.error('All bitwidths configurations are incompatible with HW Config!')
             return None
 
         weight_qconfig_sequences_in_trace_order = \
@@ -279,8 +278,8 @@ class HAWQPrecisionInitializer(BasePrecisionInitializer):
                                                                             self._groups_of_adjacent_quantizers,
                                                                             traces_order)
         if not weight_qconfig_sequences_in_trace_order:
-            warnings.warn('No bitwidths configurations are left after removing inconsistent groups of weight quantizers'
-                          ' with adjacent activation quantizers!', RuntimeWarning)
+            nncf_logger.error('No bitwidths configurations are left after removing inconsistent groups of '
+                              'weight quantizers with adjacent activation quantizers!')
             return self._algo.get_quantizer_setup_for_current_state()
 
         compression_ratio_per_qconfig = self.get_compression_ratio_per_qconfig_sequence(
@@ -304,10 +303,11 @@ class HAWQPrecisionInitializer(BasePrecisionInitializer):
         chosen_qconfig_sequence_in_execution_order = traces_order.get_execution_order_configs(
             chosen_qconfig_sequence_in_traces_order)
         bitwidth_sequence = [qconfig.num_bits for qconfig in chosen_qconfig_sequence_in_execution_order]
-        nncf_logger.info('Chosen HAWQ bitwidth sequence with ratio={:.2f}, bitwidth per weightable layer={}'.format(
-            compression_ratio_per_qconfig[qconfig_sequence_index], bitwidth_sequence))
-        nncf_logger.debug('Order of the weightable layers in the HAWQ bitwidth sequence (in descending order of average'
-                          ' Hessian traces) ={}'.format(traces_order))
+        nncf_logger.info(
+            f'Chosen HAWQ bitwidth sequence with ratio={compression_ratio_per_qconfig[qconfig_sequence_index]:.2f}, '
+            f'bitwidth per weightable layer={bitwidth_sequence}')
+        nncf_logger.debug(f'Order of the weightable layers in the HAWQ bitwidth sequence '
+                          f'(in descending order of average Hessian traces) = {traces_order}')
 
         final_quantizer_setup = self.get_quantizer_setup_for_qconfig_sequence(chosen_qconfig_sequence_in_traces_order,
                                                                               traces_order)

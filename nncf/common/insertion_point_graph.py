@@ -25,7 +25,7 @@ from nncf.common.graph import NNCFNodeName
 from nncf.common.graph.graph_matching import find_subgraphs_matching_pattern
 from nncf.common.graph.patterns import GraphPattern
 from nncf.common.graph.operator_metatypes import INPUT_NOOP_METATYPES
-from nncf.common.utils.logger import logger as nncf_logger
+from nncf.common.logging import nncf_logger
 
 
 class InsertionPointGraphNodeType(Enum):
@@ -398,9 +398,7 @@ class ConstantNodesFilter:
         """
         input_nodes = ip_graph.get_input_nodes()
         if not input_nodes:
-            nncf_logger.debug('The Filtration of Constant nodes of InsertionPointGraph is skipped,'
-                              ' because the graph does not have Input nodes,'
-                              ' from which the traversing should be started.')
+            nncf_logger.debug('Skipped filtering - no input nodes found')
             return ip_graph
         weight_nodes = []
         if start_traversing_node_keys is not None:

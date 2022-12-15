@@ -12,7 +12,7 @@ from nncf.torch.dynamic_graph.graph_tracer import ModelInputInfo, create_mock_te
 from nncf.torch.utils import get_model_device
 from nncf.torch.utils import is_tensor, is_traced_tensor
 from nncf.torch.nested_objects_traversal import objwalk
-from nncf.common.utils.logger import logger as nncf_logger
+from nncf.common.logging import nncf_logger
 from nncf.torch.dynamic_graph.context import forward_nncf_trace
 
 
@@ -97,7 +97,7 @@ class InputInfoWrapManager:
                 continue
 
             if param_name not in bound_model_params.arguments:
-                nncf_logger.warning("A call to a compressed model's forward occured without one of the params"
+                nncf_logger.warning("A call to a compressed model's forward occurred without one of the params"
                                     "specified in input_infos! Input compression may be incorrect. Trying to recover "
                                     "by wrapping the default value for the parameter.")
                 bound_model_params.apply_defaults()
@@ -107,9 +107,9 @@ class InputInfoWrapManager:
                 bound_model_params.arguments[param_name] = nncf_model_input(bound_model_params.arguments[param_name])
             else:
                 # Default was None - cannot wrap as-is. Will wrap a dummy tensor as specified in
-                # input infos - will conserve the call order of nncf_model_input nodes,
+                # input infos - will preserve the call order of nncf_model_input nodes,
                 # and the post-hooks for the input node will execute. The result won't go anywhere, though.
-                nncf_logger.warning("Wrapping a dummy tensor for input {}".format(param_name))
+                nncf_logger.info("Wrapping a dummy tensor for input {}".format(param_name))
                 info_for_missing_input = self._fwd_params_to_input_infos_odict[param_name]
                 device = 'cuda'
                 if self._module_ref_for_device is not None:

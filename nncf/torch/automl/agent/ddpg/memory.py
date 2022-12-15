@@ -14,10 +14,11 @@
 
 from __future__ import absolute_import
 from collections import deque, namedtuple
-import warnings
 import random
 
 import numpy as np
+
+from nncf import nncf_logger
 
 # [reference] https://github.com/matthiasplappert/keras-rl/blob/master/rl/memory.py
 
@@ -41,9 +42,8 @@ def sample_batch_indexes(low, high, size):
         # Not enough data. Help ourselves with sampling from the range, but the same index
         # can occur multiple times. This is not good and should be avoided by picking a
         # large enough warm-up phase.
-        warnings.warn(
-            'Not enough entries to sample without replacement.'
-            'Consider increasing your warm-up phase to avoid oversampling!')
+        nncf_logger.warning('Not enough entries to sample without replacement. Consider increasing your warm-up '
+                            'phase to avoid oversampling!')
         batch_idxs = np.random.random_integers(low, high - 1, size=size)
     assert len(batch_idxs) == size
     return batch_idxs

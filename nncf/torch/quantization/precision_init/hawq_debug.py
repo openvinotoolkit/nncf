@@ -19,7 +19,7 @@ import torch
 from torch import Tensor
 
 from nncf.common.utils.dot_file_rw import write_dot_graph
-from nncf.common.utils.logger import logger as nncf_logger
+from nncf.common.logging import nncf_logger
 from nncf.torch.nncf_network import ExtraCompressionModuleType
 from nncf.torch.nncf_network import NNCFNetwork
 from nncf.torch.quantization.adjust_padding import add_adjust_padding_nodes
@@ -109,11 +109,13 @@ class HAWQDebugger:
         ax.scatter(ms_m, cm_m, s=30, facecolors='none', edgecolors='b', label='median from all metrics')
         ax.legend()
         plt.savefig(os.path.join(self._dump_dir, 'Pareto_Frontier'))
-        nncf_logger.info(
-            'Distribution of HAWQ metrics: min_value={:.3f}, max_value={:.3f}, median_value={:.3f}, '
-            'median_index={}, total_number={}'.format(cm.min().item(), cm.max().item(), cm_m,
-                                                      qconfig_index,
-                                                      len(metric_per_qconfig_sequence)))
+        nncf_logger.debug(
+            f'Distribution of HAWQ metrics: '
+            f'min_value={cm.min().item():.3f}, '
+            f'max_value={cm.max().item():.3f}, '
+            f'median_value={cm_m:.3f}, '
+            f'median_index={qconfig_index}, '
+            f'total_number={len(metric_per_qconfig_sequence)}')
 
     def dump_metric_flops(self, metric_per_qconfig_sequence: List[Tensor], flops_per_config: List[float],
                           choosen_qconfig_index: int):

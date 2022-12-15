@@ -44,7 +44,7 @@ from nncf.experimental.torch.nas.bootstrapNAS.search.evaluator_handler import Ac
 from nncf.experimental.torch.nas.bootstrapNAS.search.evaluator_handler import EfficiencyEvaluatorHandler
 from nncf import NNCFConfig
 from nncf.common.initialization.batchnorm_adaptation import BatchnormAdaptationAlgorithm
-from nncf.common.utils.logger import logger as nncf_logger
+from nncf.common.logging import nncf_logger
 from nncf.config.extractors import get_bn_adapt_algo_kwargs
 from nncf.experimental.torch.nas.bootstrapNAS.elasticity.elasticity_controller import ElasticityController
 from nncf.experimental.torch.nas.bootstrapNAS.elasticity.multi_elasticity_handler import SubnetConfig
@@ -458,10 +458,9 @@ class SearchProblem(Problem):
             sample = self._elasticity_handler.get_config_from_pymoo(x_i)
             self._elasticity_handler.activate_subnet_for_config(sample)
             if sample != self._elasticity_handler.get_active_config():
-                nncf_logger.warning("Requested configuration was invalid")
-                nncf_logger.warning("Requested: {sample}".format(sample=sample))
-                nncf_logger.warning("Provided: {config}".format(
-                                    config=self._elasticity_handler.get_active_config()))
+                nncf_logger.debug("Requested configuration was invalid")
+                nncf_logger.debug(f"Requested: {sample}")
+                nncf_logger.debug(f"Provided: {self._elasticity_handler.get_active_config()}")
                 self._search.bad_requests.append((sample, self._elasticity_handler.get_active_config()))
 
             result = [sample]

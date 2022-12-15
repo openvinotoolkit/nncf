@@ -24,7 +24,7 @@ from nncf.common.graph.transformations.commands import TargetType
 from nncf.common.schedulers import BaseCompressionScheduler
 from nncf.common.schedulers import StubCompressionScheduler
 from nncf.common.sparsity.controller import SparsityController
-from nncf.common.utils.logger import logger as nncf_logger
+from nncf.common.logging import nncf_logger
 from nncf.torch.algo_selector import ZeroCompressionLoss
 from nncf.torch.compression_method_api import PTCompressionAlgorithmBuilder
 from nncf.torch.compression_method_api import PTCompressionAlgorithmController
@@ -65,10 +65,9 @@ class BaseSparsityAlgoBuilder(PTCompressionAlgorithmBuilder):
             node_name = module_node.node_name
 
             if not self._should_consider_scope(node_name):
-                nncf_logger.info("Ignored adding Weight Sparsifier in scope: {}".format(node_name))
+                nncf_logger.info(f"Ignored adding weight sparsifier for operation: {node_name}")
                 continue
 
-            nncf_logger.info("Adding Weight Sparsifier in scope: {}".format(node_name))
             compression_lr_multiplier = \
                 self.config.get_redefinable_global_param_value_for_algo('compression_lr_multiplier',
                                                                         self.name)

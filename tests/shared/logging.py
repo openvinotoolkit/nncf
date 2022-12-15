@@ -10,27 +10,13 @@
  See the License for the specific language governing permissions and
  limitations under the License.
 """
+import pytest
 
-import logging
-from contextlib import contextmanager
-
-from nncf.common.logging import nncf_logger
-
-DEBUG_LOG_DIR = "./nncf_debug"
+from nncf import nncf_logger
 
 
-def is_debug():
-    return nncf_logger.getEffectiveLevel() == logging.DEBUG
-
-
-def set_debug_log_dir(dir_: str):
-    global DEBUG_LOG_DIR
-    DEBUG_LOG_DIR = dir_
-
-
-@contextmanager
-def nncf_debug():
-    from nncf.common.logging.logger import set_log_level #pylint: disable=cyclic-import
-    set_log_level(logging.DEBUG)
-    yield
-    set_log_level(logging.INFO)
+@pytest.fixture()
+def nncf_caplog(caplog):
+    nncf_logger.propagate = True
+    yield caplog
+    nncf_logger.propagate = False

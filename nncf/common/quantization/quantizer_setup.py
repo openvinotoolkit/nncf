@@ -28,7 +28,7 @@ from nncf.common.quantization.structs import QuantizerConfig
 from nncf.common.quantization.structs import UnifiedScaleType
 from nncf.common.quantization.structs import WeightQuantizerId
 from nncf.common.stateful_classes_registry import CommonStatefulClassesRegistry
-from nncf.common.utils.logger import logger as nncf_logger
+from nncf.common.logging import nncf_logger
 
 QuantizationPointId = int
 
@@ -315,12 +315,12 @@ class QuantizerSetupBase:
     def remove_unified_scale_from_point(self, qp_id: QuantizationPointId):
         gid = self.get_unified_scale_group_id(qp_id)
         if gid is None:
-            nncf_logger.debug("Attempted to remove QP id {} from associated unified scale group, but the QP"
-                              "is not in any unified scale group - ignoring.".format(qp_id))
+            nncf_logger.debug(f"Attempted to remove QP id {qp_id} from associated unified scale group, but the QP"
+                              f"is not in any unified scale group - ignoring.")
             return
         self.unified_scale_groups[gid].discard(qp_id)
         if not self.unified_scale_groups[gid]:
-            nncf_logger.debug("Removed last entry from a unified scale group {} - removing group itself".format(gid))
+            nncf_logger.debug(f"Removed last entry from a unified scale group {gid} - removing group itself")
             self.unified_scale_groups.pop(gid)
 
     def equivalent_to(self, other: 'QuantizerSetupBase') -> bool:

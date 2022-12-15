@@ -19,7 +19,7 @@ import tensorflow as tf
 from nncf.common.quantization.initialization.range import RangeInitCollectorParams
 from nncf.common.quantization.initialization.range import RangeInitConfig
 from nncf.common.quantization.structs import QuantizerGroup
-from nncf.common.utils.progress_bar import ProgressBar
+from nncf.common.logging.progress_bar import ProgressBar
 from nncf.tensorflow.quantization.init_range import TFRangeInitParams
 from nncf.tensorflow.quantization.init_range import RangeInitializer
 from nncf.tensorflow.tensor_statistics.reduction import get_axes

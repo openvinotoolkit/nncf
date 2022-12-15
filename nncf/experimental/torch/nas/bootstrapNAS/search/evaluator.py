@@ -20,7 +20,7 @@ from typing import Tuple
 from typing import TypeVar
 import csv
 
-from nncf.common.utils.logger import logger as nncf_logger
+from nncf.common.logging import nncf_logger
 
 DataLoaderType = TypeVar('DataLoaderType')
 TModel = TypeVar('TModel')
@@ -101,8 +101,7 @@ class BaseEvaluator:
         :param measurement: value for the evaluator's metric.
         :return:
         """
-        nncf_logger.info("Add to evaluator {name}: {subnet_config_repr}, {measurement}".format(
-                         name=self.name, subnet_config_repr=subnet_config_repr, measurement=measurement))
+        nncf_logger.debug(f"Add to evaluator {self.name}: {subnet_config_repr}, {measurement}")
         self.cache[subnet_config_repr] = measurement
 
     def retrieve_from_cache(self, subnet_config_repr: Tuple[float, ...]) -> Tuple[bool, float]:

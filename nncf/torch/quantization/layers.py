@@ -25,7 +25,7 @@ from nncf.torch.checkpoint_loading import OPTIONAL_PARAMETERS_REGISTRY
 from nncf.common.utils.debug import is_debug
 from nncf.torch.functions import clamp
 from nncf.common.graph import NNCFNodeName
-from nncf.common.utils.logger import logger as nncf_logger
+from nncf.common.logging import nncf_logger
 from nncf.common.quantization.structs import QuantizationMode, QuantizerConfig, QuantizerSpec
 from nncf.common.quantization.quantizers import calculate_symmetric_level_ranges
 from nncf.common.quantization.quantizers import calculate_asymmetric_level_ranges
@@ -354,14 +354,14 @@ class BaseQuantizer(nn.Module):
                           log_module_name: str = None):
         """min_values and max_values must have the same shape as specified in self.scale_shape"""
         if self.initialized:
-            nncf_logger.debug("Skipped initializing {} - loaded from checkpoint".format(log_module_name))
+            nncf_logger.debug(f"Skipped initializing {log_module_name} - loaded from checkpoint")
             return
 
         if torch.all(torch.isinf(min_values)) or torch.all(torch.isinf(max_values)):
-            raise ValueError('Statistics are not collected for {}'.format(log_module_name))
+            raise ValueError(f'Statistics are not collected for {log_module_name}')
 
         if torch.any(torch.eq(min_values, np.inf)) or torch.any(torch.eq(max_values, -np.inf)):
-            raise ValueError('Some of the values in statistics have infinite value for {}'.format(log_module_name))
+            raise ValueError(f'Some of the values in statistics have infinite value for {log_module_name}')
 
         own_device = get_model_device(self)
         min_values = min_values.to(own_device)
@@ -626,7 +626,7 @@ class SymmetricQuantizer(BaseQuantizer):
     def _apply_minmax_init(self, min_values, max_values, log_module_name: str = None):
         sign = torch.any(torch.lt(min_values, 0))
         if self._signedness_to_force is not None and sign != self._signedness_to_force:
-            nncf_logger.warning("Forcing signed to {} for module {}".format(self._signedness_to_force, log_module_name))
+            nncf_logger.debug(f"Forcing signed to {self._signedness_to_force} for module {log_module_name}")
             sign = self._signedness_to_force
         self.signed = int(sign)
 
@@ -638,9 +638,8 @@ class SymmetricQuantizer(BaseQuantizer):
         if self._is_using_log_scale_storage:
             self._scale_param_storage.data.log_()
 
-        nncf_logger.info("Set sign: {} and scale: {} for {}".format(self.signed,
-                                                                    get_flat_tensor_contents_string(self.scale),
-                                                                    log_module_name))
+        nncf_logger.debug(
+            f"Set sign: {self.signed} and scale: {get_flat_tensor_contents_string(self.scale)} for {log_module_name}")
 
     def broadcast_initialized_params(self, src: int = 0):
         super().broadcast_initialized_params(src)
@@ -776,9 +775,9 @@ class AsymmetricQuantizer(BaseQuantizer):
 
         self.input_low.data = (min_values - correction).data
 
-        nncf_logger.info("Set input_low: {} and input_range: {} for {}"
-                         .format(get_flat_tensor_contents_string(self.input_low),
-                                 get_flat_tensor_contents_string(self.input_range), log_module_name))
+        nncf_logger.debug(
+            f"Set input_low: {get_flat_tensor_contents_string(self.input_low)} "
+            f"and input_range: {get_flat_tensor_contents_string(self.input_range)} for {log_module_name}")
 
     def broadcast_initialized_params(self, src: int = 0):
         super().broadcast_initialized_params(src)
