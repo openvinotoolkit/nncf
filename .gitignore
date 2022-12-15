@@ -103,6 +103,7 @@ ENV/
 
 # PyCharm
 .idea
+.run
 
 # snapshots
 *.tar

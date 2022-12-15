@@ -26,8 +26,8 @@ from torch import nn
 import torch.utils.data
 from numpy.random import random_sample
 from torch.utils import model_zoo
-from torchvision.models import MobileNetV2
-from torchvision.models import mobilenet_v2
+from tests.torch.test_models.mobilenet import MobileNetV2
+from tests.torch.test_models.mobilenet import mobilenet_v2
 from torchvision.models import resnet50
 from torchvision.transforms import transforms
 
