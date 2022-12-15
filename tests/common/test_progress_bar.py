@@ -15,6 +15,8 @@ import logging
 import pytest
 
 from nncf.common.logging.progress_bar import ProgressBar
+from tests.shared.logging import nncf_caplog #pylint:disable=unused-import
+#pylint:disable=redefined-outer-name
 
 TEST_RANGE = range(3)
 
