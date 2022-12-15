@@ -1,0 +1,31 @@
+models:
+  - name: ResNet101-DUC-12
+    launchers:
+      - framework: dlsdk
+        device: CPU      
+        adapter:
+          type: duc_segmentation
+          ds_rate: 8
+          cell_width: 2
+
+    datasets:
+      - name: cityscapes
+        annotation_conversion:
+          converter: cityscapes
+          dataset_root_dir: /mnt/nn_icv_cv_externalN/nn_icv_cv_externalN/omz-validation-datasets/Cityscapes/data
+
+        data_source: /mnt/nn_icv_cv_externalN/nn_icv_cv_externalN/omz-validation-datasets/Cityscapes/data
+        annotation: cityscapes.pickle
+        dataset_meta: cityscapes.json
+        preprocessing:
+          - type: bgr_to_rgb
+          - type: resize
+            size: 800
+          - type: normalization
+            mean: (122.675, 116.669, 104.008)
+        postprocessing:
+          - type: resize_segmentation_mask
+            apply_to: annotation
+            size: 800
+        metrics:
+          - type: mean_iou

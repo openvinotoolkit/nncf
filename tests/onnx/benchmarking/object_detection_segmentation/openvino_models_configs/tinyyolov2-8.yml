@@ -1,0 +1,45 @@
+models:
+  - name: tinyyolov2-8
+    launchers:
+      - framework: dlsdk
+        device: CPU
+        adapter:
+          type: yolo_v2
+          anchors: tiny_yolo_v2
+
+
+    datasets:
+      - name: VOC2012_without_background
+        annotation_conversion:
+          converter: voc_detection
+          annotations_dir: /mnt/nn_icv_cv_externalN/nn_icv_cv_externalN/omz-validation-datasets/VOCdevkit/VOC2012/Annotations
+          images_dir: /mnt/nn_icv_cv_externalN/nn_icv_cv_externalN/omz-validation-datasets/VOCdevkit/VOC2012/JPEGImages
+          imageset_file: /mnt/nn_icv_cv_externalN/nn_icv_cv_externalN/omz-validation-datasets/VOCdevkit/VOC2012/ImageSets/Main/val.txt
+          has_background: False
+        data_source: /mnt/nn_icv_cv_externalN/nn_icv_cv_externalN/omz-validation-datasets/VOCdevkit/VOC2012/JPEGImages
+        annotation: voc12_without_background.pickle
+        dataset_meta: voc12_without_background.json        
+
+        preprocessing:
+          - type: resize
+            size: 416
+            interpolation: LINEAR
+
+        postprocessing:
+          - type: filter
+            apply_to: prediction
+            min_confidence: 0.01
+            remove_filtered: True
+          - type: nms
+            overlap: 0.5
+            include_boundaries: False
+          - type: resize_prediction_boxes
+          - type: clip_boxes
+            apply_to: prediction
+
+        metrics:
+          - type: map
+            ignore_difficult: True
+            include_boundaries: True
+            presenter: print_scalar
+            allow_multiple_matches_per_ignored: True

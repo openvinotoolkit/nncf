@@ -314,7 +314,7 @@ class ONNXModelTransformer(ModelTransformer):
                                                                   onnx_zero_point_tensor.data_type,
                                                                   onnx_zero_point_tensor.dims)
         self._model.graph.initializer.extend([onnx_scale_tensor, onnx_zero_point_tensor])
-        self._model.graph.value_info.extend([onnx_scale_value_info, onnx_zero_point_info])
+        self._model.graph.input.extend([onnx_scale_value_info, onnx_zero_point_info])
         insert_index = onnx_graph.get_node_index(input_nodes[0].name)
         self._model.graph.node.insert(insert_index, quantizer)
         self._model.graph.node.insert(insert_index + 1, dequantizer)

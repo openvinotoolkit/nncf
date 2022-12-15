@@ -1,0 +1,42 @@
+models:
+- name: efficientnet-lite4-11
+  launchers:
+  - framework: dlsdk
+    adapter: classification
+    device: CPU
+    inputs:
+      - name: images:0
+        type: INPUT
+        shape: [ 1, 224, 224, 3 ]
+        layout: "NHWC"
+  datasets:
+  - name: imagenet_1000_classes
+    annotation_conversion:
+      converter: imagenet
+      annotation_file: /mnt/nn_icv_cv_externalN/nn_icv_cv_externalN/omz-validation-datasets/val.txt
+    annotation: imagenet1000.pickle
+    data_source: /mnt/nn_icv_cv_externalN/nn_icv_cv_externalN/omz-validation-datasets/ILSVRC2012_img_val
+    # annotation_conversion:
+    #   converter: imagenet
+    #   annotation_file: /mnt/nn_icv_cv_externalN/nn_icv_cv_externalN/omz-validation-datasets/val_1000.txt
+    # data_source: /mnt/nn_icv_cv_externalN/nn_icv_cv_externalN/omz-validation-datasets/ILSVRC2012_img_val
+    reader: pillow_imread
+    preprocessing:
+      - type: resize
+        size: 256
+        aspect_ratio_scale: greater
+        use_pillow: true
+        interpolation: BILINEAR
+
+      - type: crop
+        size: 224
+        use_pillow: true
+
+      - type: normalization
+        mean: (127.0, 127.0, 127.0)
+        std: (128.0, 128.0, 128.0)
+
+    metrics:
+    - name: accuracy@top1
+      type: accuracy
+      top_k: 1

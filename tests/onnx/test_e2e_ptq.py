@@ -15,7 +15,7 @@ limitations under the License.
 """
 
 # pylint: disable=redefined-outer-name
-from typing import List, Dict
+from typing import List, Dict, Optional
 
 import json
 import math
@@ -34,6 +34,7 @@ from pytest_dependency import depends
 
 from nncf.common.utils.logger import logger as nncf_logger
 from tests.shared.paths import PROJECT_ROOT
+from tests.shared.command import Command
 from tests.onnx.conftest import ONNX_TEST_ROOT
 
 BG_COLOR_GREEN_HEX = 'ccffcc'
@@ -57,6 +58,9 @@ XFAIL_MODELS = {}
 XFAIL_QUANTIZED_MODELS = {
 }
 
+POT_XFAIL_QUANTIZED_MODELS = {
+}
+
 # TODO(vshampor): Somehow installing onnxruntime-openvino does not install the OV package in the way
 #  that we are used to, and accuracy checker invocations cannot find the dataset_definitions.yml
 #  file using the regular path pointing to site-packages, hence the need for using a copy of
@@ -67,6 +71,7 @@ DATASET_DEFINITIONS_PATH_ONNX = BENCHMARKING_DIR / 'dataset_definitions.yml'
 
 OV_EP_COL_NAME = "OpenVINOExecutionProvider"
 CPU_EP_COL_NAME = "CPUExecutionProvider"
+POT_EP_COL_NAME = "POT"
 REPORT_NAME = 'report.html'
 
 
@@ -74,10 +79,17 @@ def check_xfail(model_name):
     if model_name in XFAIL_MODELS:
         pytest.xfail("ONNXRuntime-OVEP cannot execute the reference model")
 
-
 def check_quantized_xfail(model_name):
     if model_name in XFAIL_QUANTIZED_MODELS:
         pytest.xfail("ONNXRuntime-OVEP cannot execute the quantized model")
+
+def check_pot_quantized_xfail(model_name):
+    if model_name in POT_XFAIL_QUANTIZED_MODELS:
+        pytest.xfail("POT can not quantize the model")
+
+def check_skip_model(model_name: str, model_names_to_test: Optional[List[str]]):
+    if model_names_to_test is not None and model_name not in model_names_to_test:
+        pytest.skip('The model {model_name} is skipped, because it was not included in --model-names.')
 
 
 def run_command(command: List[str]):
@@ -102,6 +114,14 @@ def model_dir(request):
         pytest.skip(f"--model-dir option is required to run {request.node.name}")
     return Path(option)
 
+@pytest.fixture(scope="module")
+def model_names_to_test(request):
+    option = request.config.getoption("--model-names")
+    if option is None:
+        nncf_logger.info('All models will be tested')
+        return option
+    option = option.split(' ')
+    return option
 
 @pytest.fixture(scope="module")
 def data_dir(request):
@@ -173,18 +193,27 @@ def is_cpu_ep(request):
         nncf_logger.info("The accuracy validation of quantized models is disabled for CPUExecutionProvider.")
     return enable_cpu_ep
 
+@pytest.fixture(scope="module")
+def is_pot(request):
+    enable_pot = request.config.getoption("--enable-pot")
+    if enable_pot:
+        nncf_logger.info("The quantization by POT is enabled.")
+    return enable_pot
 
-def _read_accuracy_checker_result(root_dir: Path, key: str) -> pd.DataFrame:
+
+def _read_accuracy_checker_result(root_dir: Path, key: str, is_pot: bool) -> pd.DataFrame:
     dfs = []
     for task in TASKS:
         csv_fp = str(root_dir / task / f"accuracy_checker-{key}.csv")
         dfs += [pd.read_csv(csv_fp)]
+
     df = pd.concat(dfs, axis=0)
-    df = df[["model", "metric_value", "metric_name", "tags"]]
+    additional_column = 'tags' if not is_pot else 'device'
+    df = df[["model", "metric_value", "metric_name", additional_column]]
     df = df.set_index("model")
     df["model_accuracy"] = df["metric_value"] * 100.0
-    df = df[["model_accuracy", "metric_name", "tags"]]
-    df = df.pivot_table('model_accuracy', ['model', 'metric_name'], 'tags')
+    df = df[["model_accuracy", "metric_name", additional_column]]
+    df = df.pivot_table('model_accuracy', ['model', 'metric_name'], additional_column)
     return df
 
 
@@ -225,7 +254,14 @@ def reference_model_accuracy(scope="module"):
 @pytest.fixture
 def quantized_model_accuracy(output_dir, scope="function"):
     root_dir = output_dir
-    return _read_accuracy_checker_result(root_dir, "quantized")
+    return _read_accuracy_checker_result(root_dir, "quantized", is_pot=False)
+
+@pytest.fixture
+def quantized_pot_model_accuracy(output_dir, is_pot, scope="function"):
+    if not is_pot:
+        return None
+    root_dir = output_dir
+    return _read_accuracy_checker_result(root_dir, "pot-quantized", is_pot)
 
 
 @pytest.mark.e2e_ptq
@@ -233,8 +269,8 @@ def quantized_model_accuracy(output_dir, scope="function"):
 class TestPTQ:
     @pytest.mark.dependency()
     @pytest.mark.parametrize("task_type, model_name", MODELS)
-    def test_ptq_model(self, task_type, model_name, model_dir, data_dir, anno_dir, ckpt_dir, ptq_size):
-
+    def test_ptq_model(self, task_type, model_name, model_names_to_test, model_dir, data_dir, anno_dir, ckpt_dir, ptq_size):
+        check_skip_model(model_name, model_names_to_test)
         check_xfail(model_name)
 
         program_path = BENCHMARKING_DIR / "run_ptq.py"
@@ -265,6 +301,39 @@ class TestPTQ:
         nncf_logger.info(f"Run command: {com_str}")
         run_command(com_line)
 
+    def get_ir_model(self, model_path, model_name, output_dir):
+        runner = Command(f"mo -m {model_path} -o {output_dir} -n {model_name}")
+        runner.run()
+
+    def get_quantized_pot_model(self, model_dir, model_name, config_path):
+        model_topology = str(model_dir / model_name) + '.xml'
+        model_weights = str(model_dir / model_name) + '.bin'
+        output_pot_model_dir = str(model_dir / model_name)
+        runner = Command(f'pot -q default -m {model_topology} -w {model_weights} \
+         --ac-config {config_path} --engine accuracy_checker --output-dir {output_pot_model_dir} --name {model_name} --direct-dump')
+        runner.run()
+
+
+    @pytest.mark.dependency()
+    @pytest.mark.parametrize("task_type, model_name", MODELS)
+    def test_pot_model(self, task_type, model_name, model_dir, model_names_to_test, anno_dir, ckpt_dir, ptq_size):
+        check_skip_model(model_name, model_names_to_test)
+        check_pot_quantized_xfail(model_name)
+
+        task_path = BENCHMARKING_DIR / task_type
+        config_path = task_path / "openvino_models_configs" / (model_name + ".yml")
+
+        ckpt_dir = ckpt_dir / task_type
+        if not os.path.exists(ckpt_dir):
+            os.makedirs(ckpt_dir)
+        anno_dir = anno_dir / str(ptq_size)
+        if not os.path.exists(anno_dir):
+            os.makedirs(anno_dir)
+
+        model_path = model_dir / task_type / (model_name + ".onnx")
+        ir_model_dir = ckpt_dir / 'openvino'
+        self.get_ir_model(model_path, model_name,  ir_model_dir)
+        self.get_quantized_pot_model(ir_model_dir, model_name, config_path)
 
 @pytest.mark.run(order=2)
 class TestBenchmark:
@@ -272,12 +341,14 @@ class TestBenchmark:
     def get_ac_command(task_type: str, model_name: str, model_dir: Path,
                        data_dir: Path, anno_dir: Path, output_dir: Path,
                        eval_size: int, program: str, is_quantized: bool,
-                       is_ov_ep: bool, is_cpu_ep: bool) -> List[str]:
+                       is_ov_ep: bool, is_cpu_ep: bool, is_pot: bool) -> List[str]:
 
         program_path = BENCHMARKING_DIR / program
-
         task_path = BENCHMARKING_DIR / task_type
+
         config_path = task_path / "onnx_models_configs" / (model_name + ".yml")
+        if is_pot:
+            config_path = task_path / "openvino_models_configs" / (model_name + ".yml")
 
         output_dir = output_dir / task_type
         if not output_dir.exists():
@@ -290,12 +361,17 @@ class TestBenchmark:
         out_file_name = os.path.splitext(program)[0]
 
         if is_quantized:
-            out_file_name += "-quantized.csv"
+            if is_pot:
+                out_file_name += '-pot-quantized.csv'
+            else:
+                out_file_name += "-quantized.csv"
         else:
             out_file_name += "-reference.csv"
 
         model_file_name = model_name + "-quantized" if is_quantized else model_name
         model_file_name += ".onnx"
+        if is_pot:
+            model_file_name = model_dir / task_type / Path('openvino') / Path(model_name) / Path('optimized')
 
         com_line = [
             sys.executable, str(program_path),
@@ -317,9 +393,9 @@ class TestBenchmark:
 
     @pytest.mark.e2e_eval_reference_model
     @pytest.mark.parametrize("task_type, model_name", MODELS)
-    def test_reference_model_accuracy(self, task_type, model_name, model_dir,
+    def test_reference_model_accuracy(self, task_type, model_name, model_names_to_test, model_dir,
                                       data_dir, anno_dir, output_dir, eval_size):
-
+        check_skip_model(model_name, model_names_to_test)
         check_xfail(model_name)
         # Reference accuracy validation is performed on CPUExecutionProvider
         command = self.get_ac_command(task_type, model_name, model_dir, data_dir, anno_dir, output_dir, eval_size,
@@ -329,9 +405,9 @@ class TestBenchmark:
     @pytest.mark.e2e_ptq
     @pytest.mark.dependency()
     @pytest.mark.parametrize("task_type, model_name", MODELS)
-    def test_quantized_model_accuracy(self, request, task_type, model_name, ckpt_dir, data_dir, anno_dir, output_dir,
+    def test_quantized_model_accuracy(self, request, task_type, model_name, model_names_to_test, ckpt_dir, data_dir, anno_dir, output_dir,
                                       eval_size, is_ov_ep, is_cpu_ep):
-
+        check_skip_model(model_name, model_names_to_test)
         # Run PTQ first
         depends(request, ["TestPTQ::test_ptq_model" + request.node.name.lstrip("test_quantized_model_accuracy")])
         check_xfail(model_name)
@@ -340,7 +416,24 @@ class TestBenchmark:
         model_dir = ckpt_dir
         command = self.get_ac_command(task_type, model_name, model_dir, data_dir, anno_dir, output_dir, eval_size,
                                       program="accuracy_checker.py", is_quantized=True, is_ov_ep=is_ov_ep,
-                                      is_cpu_ep=is_cpu_ep)
+                                      is_cpu_ep=is_cpu_ep, is_pot=False)
+        run_command(command)
+
+    @pytest.mark.e2e_ptq
+    @pytest.mark.dependency()
+    @pytest.mark.parametrize("task_type, model_name", MODELS)
+    def test_quantized_pot_model_accuracy(self, request, task_type, model_name, model_names_to_test, ckpt_dir, data_dir, anno_dir, output_dir,
+                                      eval_size):
+        check_skip_model(model_name, model_names_to_test)
+        # Run POT first
+        depends(request, ["TestPTQ::test_pot_model" + request.node.name.lstrip("test_quantized_pot_model_accuracy")])
+        check_xfail(model_name)
+        check_quantized_xfail(model_name)
+
+        model_dir = ckpt_dir
+        command = self.get_ac_command(task_type, model_name, model_dir, data_dir, anno_dir, output_dir, eval_size,
+                                      program="accuracy_checker.py", is_quantized=True, is_ov_ep=False,
+                                      is_cpu_ep=False, is_pot=True)
         run_command(command)
 
 
@@ -349,12 +442,15 @@ class TestBenchmarkResult:
     def join_reference_and_quantized_frames(self, reference_model_accuracy: pd.DataFrame,
                                             quantized_model_accuracy: pd.DataFrame) -> pd.DataFrame:
         df = reference_model_accuracy.join(quantized_model_accuracy)
-
         df.insert(0, 'Model', '')
         df['Model'] = [df.iloc[i].name[0] for i in range(len(df.index))]
         df = df.reset_index(drop=True)
         df = df.rename({"metric_name": "Metrics type",
                         "model_accuracy": "FP32"}, axis=1)
+        if 'CPU' in df.columns:
+            # POT
+            df = df.rename({"CPU": "POT_INT8"}, axis=1)
+            df["Diff POT FP32"] = df["POT_INT8"] - df["FP32"]
         if OV_EP_COL_NAME in df.columns:
             df = df.rename({"OpenVINOExecutionProvider": "OV-EP_INT8"}, axis=1)
             df["Diff OV-EP FP32"] = df["OV-EP_INT8"] - df["FP32"]
@@ -378,12 +474,10 @@ class TestBenchmarkResult:
                     fp32 = row["FP32"]
                     if math.isnan(int8):
                         row_colors[idx] = BG_COLOR_RED_HEX
-                    elif diff_target_min < int8 - target_int8 < diff_target_max:
+                    elif int8 - fp32 > -1.0:
                         row_colors[idx] = BG_COLOR_GREEN_HEX
-                    elif not diff_target_min < int8 - fp32 < diff_target_max:
-                        row_colors[idx] = BG_COLOR_RED_HEX
                     else:
-                        row_colors[idx] = BG_COLOR_YELLOW_HEX
+                        row_colors[idx] = BG_COLOR_RED_HEX
                     continue
         return row_colors
 
@@ -395,7 +489,7 @@ class TestBenchmarkResult:
         df = df.fillna("-")
         is_cpu_ep = "CPU-EP_INT8" in df.columns
         is_ov_ep = "OV-EP_INT8" in df.columns
-
+        is_pot = 'POT_INT8' in df.columns
         new_columns_order = ["Model", "Metrics type", "Expected FP32", "FP32"]
         column_names = ["Model", "Metrics type", "Expected FP32", "FP32"]
         if is_cpu_ep:
@@ -404,21 +498,24 @@ class TestBenchmarkResult:
         if is_ov_ep:
             new_columns_order.extend(["OV-EP_INT8", "Diff OV-EP FP32", "Diff OV-EP Expected"])
             column_names.extend(['INT8', 'Diff FP32', 'Diff Expected'])
+        if is_pot:
+            new_columns_order.extend(["POT_INT8", "Diff POT FP32"])
+            column_names.extend(['INT8', 'Diff FP32'])
         df = df[new_columns_order]
         df.columns = column_names
-        if is_cpu_ep and is_ov_ep:
-            df.columns = pd.MultiIndex.from_tuples(
-                [("", col) for col in df.columns[:4]] + [(CPU_EP_COL_NAME, col) for col in df.columns[4:6]] + [
-                    (OV_EP_COL_NAME, col) for col in df.columns[6:]]
-            )
-            return df
-        provider_name = CPU_EP_COL_NAME if is_cpu_ep else OV_EP_COL_NAME
-        df.columns = pd.MultiIndex.from_tuples(
-            [("", col) for col in df.columns[:4]] + [(provider_name, col) for col in df.columns[4:]]
-        )
+        columns = [("", col) for col in df.columns[:4]]
+        if is_cpu_ep:
+            columns += [(CPU_EP_COL_NAME, col) for col in df.columns[4:6]]
+        if is_ov_ep and is_cpu_ep:
+            columns += [(OV_EP_COL_NAME, col) for col in df.columns[6:9]]
+        elif is_ov_ep:
+            columns += [(OV_EP_COL_NAME, col) for col in df.columns[4:7]]
+        if is_pot:
+            columns += [(POT_EP_COL_NAME, col) for col in df.columns[-2:]]
+        df.columns = pd.MultiIndex.from_tuples(columns)
         return df
 
-    def generate_html(self, df: pd.DataFrame, cpu_ep_row_colors: Dict[int, str], ov_ep_row_colors: Dict[int, str],
+    def generate_html(self, df: pd.DataFrame, cpu_ep_row_colors: Dict[int, str], ov_ep_row_colors: Dict[int, str], pot_row_colors: Dict[int, str],
                       output_fp: str) -> None:
         doc, tag, text = Doc().tagtext()
         doc.asis('<!DOCTYPE html>')
@@ -472,6 +569,8 @@ class TestBenchmarkResult:
                                     additional_attrs = {'bgcolor': f'{ov_ep_row_colors[idx]}'}
                                 elif up_col == CPU_EP_COL_NAME:
                                     additional_attrs = {'bgcolor': f'{cpu_ep_row_colors[idx]}'}
+                                elif up_col == POT_EP_COL_NAME:
+                                    additional_attrs = {'bgcolor': f'{pot_row_colors[idx]}'}
                                 with tag('td', **additional_attrs):
                                     if isinstance(elem, float):
                                         elem = round(elem, 2)
@@ -483,8 +582,9 @@ class TestBenchmarkResult:
     @pytest.mark.e2e_ptq
     @pytest.mark.dependency()
     @pytest.mark.parametrize("task_type, model_name", MODELS)
-    def test_model_accuracy(self, request, task_type, model_name, reference_model_accuracy,
+    def test_model_accuracy(self, request, task_type, model_name, model_names_to_test, reference_model_accuracy,
                             quantized_model_accuracy):
+        check_skip_model(model_name, model_names_to_test)
         # Run PTQ first
         depends(request, ["TestPTQ::test_ptq_model" + request.node.name.lstrip("test_quantized_model_performance")])
         check_xfail(model_name)
@@ -504,15 +604,21 @@ class TestBenchmarkResult:
 
     @pytest.mark.e2e_ptq
     @pytest.mark.run(order=4)
-    def test_generate_report(self, reference_model_accuracy, quantized_model_accuracy, output_dir):
+    def test_generate_report(self, reference_model_accuracy, quantized_model_accuracy, quantized_pot_model_accuracy, output_dir):
         output_fp = str(output_dir / REPORT_NAME)
+        cpu_ep_row_colors, ov_ep_row_colors, pot_row_colors = {}, {}, {}
+        is_ov_ep = OV_EP_COL_NAME in quantized_model_accuracy.columns
+        is_cpu_ep = CPU_EP_COL_NAME in quantized_model_accuracy.columns
+        is_pot = False
+        if quantized_pot_model_accuracy is not None:
+            is_pot = True
+            quantized_model_accuracy = quantized_model_accuracy.join(quantized_pot_model_accuracy)
         df = self.join_reference_and_quantized_frames(reference_model_accuracy, quantized_model_accuracy)
-        cpu_ep_row_colors, ov_ep_row_colors = {}, {}
-        is_ov_ep = OV_EP_COL_NAME in df.columns
-        is_cpu_ep = CPU_EP_COL_NAME in df.columns
         if is_cpu_ep:
             cpu_ep_row_colors = self.get_row_colors(df, reference_model_accuracy, "CPU-EP_INT8")
         if is_ov_ep:
             ov_ep_row_colors = self.get_row_colors(df, reference_model_accuracy, "OV-EP_INT8")
+        if is_pot:
+            pot_row_colors = self.get_row_colors(df, reference_model_accuracy, "POT_INT8")
         df = self.generate_final_data_frame(df)
-        self.generate_html(df, cpu_ep_row_colors, ov_ep_row_colors, output_fp)
+        self.generate_html(df, cpu_ep_row_colors, ov_ep_row_colors, pot_row_colors, output_fp)

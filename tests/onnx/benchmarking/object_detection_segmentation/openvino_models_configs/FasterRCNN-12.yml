@@ -1,0 +1,40 @@
+models:
+  - name: FasterRCNN-12
+    launchers:
+      - framework: dlsdk
+        device: CPU
+        adapter:
+          type: faster_rcnn_onnx
+          boxes_out: '6379'
+          scores_out: '6383'
+          labels_out: '6381'
+        inputs:
+          - name: image
+            type: INPUT
+            layout: "CHW"
+    datasets:
+      - name: ms_coco_detection_80_class_with_background
+        data_source: /mnt/nn_icv_cv_externalN/nn_icv_cv_externalN/omz-validation-datasets/MSCOCO/val2017
+        annotation_conversion:
+          converter: mscoco_detection
+          annotation_file: /mnt/nn_icv_cv_externalN/nn_icv_cv_externalN/omz-validation-datasets/MSCOCO/annotations/instances_val2017.json
+          has_background: True
+          sort_annotations: True
+          use_full_label_map: False
+        annotation: mscoco_det_80_bkgr.pickle
+        dataset_meta: mscoco_det_80_bkgr.json
+
+        preprocessing:
+          - type: resize
+            size: 800
+            aspect_ratio_scale: mask_rcnn_benchmark_aspect_ratio
+            factor: 32
+            include_boundary: True
+            interpolation: LINEAR
+          - type: normalization
+            mean: (102.9801, 115.9465, 122.7717)
+
+        metrics:
+          - type: coco_precision
+            threshold: .5:.05:.95
+

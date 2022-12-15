@@ -1,0 +1,42 @@
+models:
+  - name: tiny-yolov3-11
+    launchers:
+      - framework: dlsdk
+        device: CPU
+        adapter:
+          type: yolo_v3_onnx
+          boxes_out: yolonms_layer_1
+          scores_out: yolonms_layer_1:1
+          indices_out: yolonms_layer_1:2
+        inputs:
+          - name: image_shape
+            type: ORIG_IMAGE_INFO
+
+    datasets:
+      - name: ms_coco_detection_80_class_without_background
+        data_source: /mnt/nn_icv_cv_externalN/nn_icv_cv_externalN/omz-validation-datasets/MSCOCO/val2017
+        annotation_conversion:
+          converter: mscoco_detection
+          annotation_file: /mnt/nn_icv_cv_externalN/nn_icv_cv_externalN/omz-validation-datasets/MSCOCO/annotations/instances_val2017.json
+          has_background: False
+          sort_annotations: True
+          use_full_label_map: False
+        annotation: mscoco_det_80.pickle
+        dataset_meta: mscoco_det_80.json
+        reader: pillow_imread
+        preprocessing:
+          - type: resize
+            size: 416
+            interpolation: BICUBIC
+            use_pillow: True
+            aspect_ratio_scale: fit_to_window
+          - type: padding
+            pad_value: 128, 128, 128
+            size: 416
+          - type: normalization
+            std: 255
+
+        metrics:
+          - type: coco_precision
+            max_detections: 100
+            threshold: .5:.05:.95

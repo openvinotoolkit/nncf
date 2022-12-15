@@ -1,0 +1,77 @@
+models:
+  - name: MaskRCNN-12-det
+    launchers:
+      - framework: dlsdk
+        device: CPU
+        adapter:
+          type: mask_rcnn
+          boxes_out: '6568'
+          classes_out: '6570'
+          scores_out: '6572'
+          raw_masks_out: '6887'
+        inputs:
+          - name: image
+            type: INPUT
+            layout: "CHW"
+    datasets:
+      - name: ms_coco_detection_80_class_with_background
+        data_source: /mnt/nn_icv_cv_externalN/nn_icv_cv_externalN/omz-validation-datasets/MSCOCO/val2017
+        annotation_conversion:
+          converter: mscoco_detection
+          annotation_file: /mnt/nn_icv_cv_externalN/nn_icv_cv_externalN/omz-validation-datasets/MSCOCO/annotations/instances_val2017.json
+          has_background: True
+          sort_annotations: True
+          use_full_label_map: False
+        annotation: mscoco_mask_rcnn_80.pickle
+        dataset_meta: mscoco_mask_rcnn_80.json
+        preprocessing:
+          - type: resize
+            size: 800
+            aspect_ratio_scale: mask_rcnn_benchmark_aspect_ratio
+            factor: 32
+            include_boundary: True
+            interpolation: LINEAR
+          - type: normalization
+            mean: (102.9801, 115.9465, 122.7717)
+
+        metrics:
+          - type: coco_precision
+            threshold: .5:.05:.95
+
+  - name: MaskRCNN-12-inst-seg
+    launchers:
+      - framework: dlsdk
+        device: CPU
+        adapter:
+          type: mask_rcnn
+          boxes_out: '6568'
+          classes_out: '6570'
+          scores_out: '6572'
+          raw_masks_out: '6887'
+        inputs:
+          - name: image
+            type: INPUT
+            layout: "CHW"
+
+    datasets:
+      - name: ms_coco_mask_rcnn_short_80_classes
+        annotation_conversion:
+          converter: mscoco_mask_rcnn
+          annotation_file: /mnt/nn_icv_cv_externalN/nn_icv_cv_externalN/omz-validation-datasets/MSCOCO/annotations/instances_val2017.json
+          has_background: True
+          sort_annotations: True
+        annotation: mscoco_mask_rcnn_80.pickle
+        dataset_meta: mscoco_mask_rcnn_80.json
+        data_source: /mnt/nn_icv_cv_externalN/nn_icv_cv_externalN/omz-validation-datasets/MSCOCO/val2017
+        preprocessing:
+          - type: resize
+            size: 800
+            aspect_ratio_scale: mask_rcnn_benchmark_aspect_ratio
+            factor: 32
+            include_boundary: True
+            interpolation: LINEAR
+          - type: normalization
+            mean: (102.9801, 115.9465, 122.7717)
+
+        metrics:
+          - type: coco_orig_segm_precision
