@@ -12,7 +12,6 @@
 """
 
 #pylint:disable=too-many-lines
-import warnings
 from collections import Counter
 from collections import OrderedDict
 from collections import deque
@@ -58,7 +57,7 @@ from nncf.common.utils.debug import DEBUG_LOG_DIR
 from nncf.common.utils.debug import is_debug
 from nncf.common.utils.dot_file_rw import write_dot_graph
 from nncf.common.utils.helpers import matches_any
-from nncf.common.utils.logger import logger as nncf_logger
+from nncf.common.logging import nncf_logger
 from nncf.common.graph.operator_metatypes import UnknownMetatype
 from nncf.common.graph.graph import NNCFGraph
 
@@ -583,7 +582,7 @@ class QuantizerPropagationSolver:
         if not abort_merge:
             # All quantizers that are dominated by the current branching node are waiting
             # for the merge - should merge them now
-            nncf_logger.debug("Merging PQs: {}".format(",".join([str(pq.id) for pq in waiting_pqs_list])))
+            nncf_logger.debug(f"Merging PQs: {','.join([str(pq.id) for pq in waiting_pqs_list])}")
             qconfs_list = [pq.potential_quant_configs for pq in waiting_pqs_list]
             merged_qconf_list, branch_qconf_lists = \
                 self.get_merged_qconfigs_for_downward_branching_case(qconfs_list)
@@ -591,9 +590,8 @@ class QuantizerPropagationSolver:
             if merged_qconf_list is None and \
                     self._propagation_strategy == PropagationStrategy.MERGE_WITH_SINGLE_FQ_RESULT:
                 all_confs = '\n'.join(', '.join([f'[{str(qconf)}]' for qconf in qconfs]) for qconfs in qconfs_list)
-                nncf_logger.warning("Could not merge the quantizers at branching point {} - no common quantizer "
-                                    "configurations found among the following: \n{}".format(
-                    branching_node_key, all_confs))
+                nncf_logger.debug(f"Could not merge the quantizers at branching point {branching_node_key} - "
+                                  f"no common quantizer configurations found among the following: \n{all_confs}")
 
             merge_pqs = quant_prop_graph.merge_quantizers_for_branching_node(waiting_pqs_list,
                                                                              merged_qconf_list,
@@ -605,7 +603,7 @@ class QuantizerPropagationSolver:
                 else:
                     unmerged_pqs.append(waiting_pqs_list[idx])
         else:
-            nncf_logger.debug("Merge aborted for PQs {}".format(",".join([str(pq.id) for pq in waiting_pqs_list])))
+            nncf_logger.debug(f"Merge aborted for PQs {','.join([str(pq.id) for pq in waiting_pqs_list])}")
             merge_pqs = []
             unmerged_pqs = waiting_pqs_list
 
@@ -783,7 +781,7 @@ class QuantizerPropagationSolver:
 
                 quant_det_id = node[QuantizerPropagationStateGraph.OPERATOR_METATYPE_NODE_ATTR]
                 if quant_det_id is None:
-                    warnings.warn("Unknown metatype for operator node: {}".format(node_key))
+                    nncf_logger.debug("Unknown metatype for operator node: {}".format(node_key))
                     trait = QuantizationTrait.QUANTIZATION_AGNOSTIC
                 elif quant_det_id is UnknownMetatype:
                     trait = QuantizationTrait.NON_QUANTIZABLE
@@ -834,9 +832,9 @@ class QuantizerPropagationSolver:
                     break
             else:
                 trait = QuantizationTrait.QUANTIZATION_AGNOSTIC
-                nncf_logger.debug("Operation metatype {} encountered, but it has no default "
-                                  "quantization trait and the HW config entry is not given for it - "
-                                  "assuming quantization-agnostic.".format(op_meta))
+                nncf_logger.debug(f"Operation metatype {op_meta} encountered, but it has no default "
+                                  f"quantization trait and the HW config entry is not given for it - "
+                                  f"assuming quantization-agnostic.")
         else:
             # There IS a valid HW config name for the metatype, but it is deliberately not specified
             # in the config, which means that it should execute in FP32
@@ -907,7 +905,7 @@ class QuantizerPropagationSolver:
                 num_input_activations = quant_prop_graph.get_num_input_activations(node_key)
                 self._num_potential_quantized_activations += num_input_activations
                 if node_key in quant_prop_graph.ignored_node_keys:
-                    nncf_logger.info("Ignored adding Activation input quantizer for: {}".format(node_key))
+                    nncf_logger.info(f"Not adding activation input quantizer for operation: {node_key}")
                     continue
                 self._setup_initial_quantizers_for_operator_node(node_key, quant_prop_graph)
 
@@ -1077,9 +1075,8 @@ class QuantizerPropagationSolver:
                         "Unified scales currently do not support per-channel configuration - dropping"
                         "per-channel configuration options for {} resulted in no valid quantization "
                         "configs!".format(op_meta_name))
-                nncf_logger.warning(
-                    "Unified scales currently do not support per-channel configuration - dropping"
-                    "per-channel configuration options for {}".format(op_meta_name))
+                nncf_logger.warning(f"Unified scales currently do not support per-channel configuration - dropping"
+                                    f"per-channel configuration options for {op_meta_name}")
                 qconf_list = per_tensor_qconf_list
 
         pred_ip_key_vs_qconf_dict = OrderedDict()
@@ -1094,8 +1091,8 @@ class QuantizerPropagationSolver:
             if not edge[QuantizerPropagationStateGraph.IS_INTEGER_PATH_EDGE_ATTR]:
                 pred_ip_key_vs_qconf_dict[pred_ip_key] = qconf_list
             else:
-                nncf_logger.debug("Detected integer input {} - won't set up "
-                                  "a propagating quantizer for it".format(pred_ip_key))
+                nncf_logger.debug(f"Detected integer input {pred_ip_key} - won't set up "
+                                  f"a propagating quantizer for it")
 
         if not pred_ip_key_vs_qconf_dict:
             # All inputs to the operator were integer
@@ -1330,7 +1327,7 @@ class QuantizerPropagationSolver:
             qconfigs_union.update(set(branch_qconfig_list))
         merged_qconfig_list = []
 
-        nncf_logger.debug("Union of configs: {}".format(";".join([str(qc) for qc in qconfigs_union])))
+        nncf_logger.debug(f"Union of configs: {';'.join([str(qc) for qc in qconfigs_union])}")
 
         def compatible_with_requant(qconf: QuantizerConfig,
                                     other_qconf_list: List[QuantizerConfig]) -> bool:
@@ -1352,13 +1349,13 @@ class QuantizerPropagationSolver:
         elif self._propagation_strategy == PropagationStrategy.MERGE_WITH_SINGLE_FQ_RESULT:
             compatible_fn = compatible_wo_requant
         else:
-            raise RuntimeError("Unknown propagation strategy: {}".format(self._propagation_strategy))
+            raise RuntimeError(f"Unknown propagation strategy: {self._propagation_strategy}")
 
         for qconf in qconfigs_union:
             if all(compatible_fn(qconf, qconf_list) for qconf_list in potential_qconfigs_for_each_branch):
                 merged_qconfig_list.append(qconf)
 
-        nncf_logger.debug("Merged list before sorting: {}".format(";".join([str(qc) for qc in merged_qconfig_list])))
+        nncf_logger.debug(f"Merged list before sorting: {';'.join([str(qc) for qc in merged_qconfig_list])}")
 
         if not merged_qconfig_list:
             # Impossible to produce a merged configuration space of any kind, won't merge
@@ -1370,14 +1367,12 @@ class QuantizerPropagationSolver:
             potential_qconfigs_for_each_branch)
 
         qconfig_and_priority_list_sorted_by_priority = sorted(qconfig_and_priority_list, key=lambda x: x[1])
-        nncf_logger.debug(
-            "Priority-sorted merge qconfigs: {}".format(";".join(
-                [str(qc_tup[1]) + ':' + str(qc_tup[0]) for qc_tup in
-                 qconfig_and_priority_list_sorted_by_priority])))
+        config_list_to_print = ";".join([str(qc_tup[1]) + ':' + str(qc_tup[0]) for qc_tup in
+                                         qconfig_and_priority_list_sorted_by_priority])
+        nncf_logger.debug(f"Priority-sorted merge qconfigs: {config_list_to_print}")
 
         merged_qconfig_list = self.__disambiguate_config_list(qconfig_and_priority_list_sorted_by_priority)
-        nncf_logger.debug(
-            "Disambiguated merge qconfig list: {}".format(";".join([str(qc) for qc in merged_qconfig_list])))
+        nncf_logger.debug(f"Disambiguated merge qconfig list: {';'.join([str(qc) for qc in merged_qconfig_list])}")
 
         merged_qconfig_list_counter = Counter(merged_qconfig_list)
         resulting_branch_qconfig_lists = [None for _ in potential_qconfigs_for_each_branch]

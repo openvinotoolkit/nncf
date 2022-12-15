@@ -19,7 +19,7 @@ from typing import Optional
 
 from nncf.common.graph import NNCFNodeName
 from nncf.common.graph.transformations.commands import TransformationCommand
-from nncf.common.utils.logger import logger as nncf_logger
+from nncf.common.logging import nncf_logger
 from nncf.experimental.torch.nas.bootstrapNAS.elasticity.base_handler import BaseElasticityParams
 from nncf.experimental.torch.nas.bootstrapNAS.elasticity.base_handler import ELASTICITY_BUILDERS
 from nncf.experimental.torch.nas.bootstrapNAS.elasticity.base_handler import ELASTICITY_HANDLERS_MAP
@@ -215,8 +215,8 @@ class ElasticDepthHandler(SingleElasticityHandler):
                 indexes_of_pairs = width_handler.find_pairs_of_nodes_with_different_width(pairs_of_nodes)
                 if indexes_of_pairs:
                     result = [element for idx, element in enumerate(config) if idx not in indexes_of_pairs]
-                    nncf_logger.debug('The blocks with indexes {} are not skipped to avoid inconsistency with width'.
-                                      format(indexes_of_pairs))
+                    nncf_logger.debug(
+                        f'The blocks with indexes {indexes_of_pairs} are not skipped to avoid inconsistency with width')
         return result
 
     def get_names_of_skipped_nodes(self) -> List[NNCFNodeName]:
@@ -242,7 +242,7 @@ class ElasticDepthHandler(SingleElasticityHandler):
 
         for block_index in block_indexes_to_remove:
             config.remove(block_index)
-            nncf_logger.debug('The block #{} is not skipped to not violate progressive shrinking'.format(block_index))
+            nncf_logger.debug(f'The block #{block_index} is not skipped to not violate progressive shrinking')
         return config
 
     def _get_block_indexes_to_remove(self, block_index: int, config: ElasticDepthConfig) -> ElasticDepthConfig:
@@ -253,7 +253,7 @@ class ElasticDepthHandler(SingleElasticityHandler):
             if group_index is not None:
                 found = True
                 if len(group) - group_index > self.depth_indicator:
-                    nncf_logger.debug('The block with {} did not pass the depth_indicator test'.format(block_index))
+                    nncf_logger.debug(f'The block with {block_index} did not pass the depth_indicator test')
                     block_indexes_to_remove.append(block_index)
                     break
                 valid_block_indexes = [group[group_index]]
@@ -261,8 +261,8 @@ class ElasticDepthHandler(SingleElasticityHandler):
                     if group[i] in config:
                         valid_block_indexes.append(group[i])
                     else:
-                        nncf_logger.debug('The block #{} or #{} did not satisfy requirement of next static block'.
-                                          format(block_index, valid_block_indexes))
+                        nncf_logger.debug(f'The block #{block_index} or #{valid_block_indexes} '
+                                          f'did not satisfy requirement of next static block')
                         for valid_block_index in valid_block_indexes:
                             block_indexes_to_remove.append(valid_block_index)
                         break
@@ -405,9 +405,7 @@ class ElasticDepthBuilder(SingleElasticityBuilder):
         nncf_logger.info("Blocks for skipping (changing the depth of model):")
         new_line = '\n'
         str_bs = [str(block) for block in blocks_for_info]
-        nncf_logger.info(f"""[{new_line.join(str_bs)}
-                        ]
-                        """)
+        nncf_logger.info(f"\n[{new_line.join(str_bs)}]\n\n")
 
         tracing_context.set_elastic_blocks(self._skipped_blocks)
         node_names_per_block = self._get_node_names_per_block(target_model, self._skipped_blocks)
@@ -423,9 +421,8 @@ class ElasticDepthBuilder(SingleElasticityBuilder):
         params_from_state = state[SingleElasticityBuilder._state_names.ELASTICITY_PARAMS]
         params = ElasticDepthParams.from_state(params_from_state)
         if self._params and self._params != params:
-            nncf_logger.warning(
-                'Different elasticity parameters were provided in two places: on init and on loading '
-                'state. The one from state is taken by ignoring the ones from init.')
+            nncf_logger.warning('Different elasticity parameters were provided in two places: on init and on loading '
+                                'state. The one from state is taken by ignoring the ones from init.')
         self._params = params
         skipped_blocks_from_state = state[self._state_names.SKIPPED_BLOCKS]
         self._skip_dependencies = state[self._state_names.SKIPPED_BLOCKS_DEPENDENCIES]

@@ -3,7 +3,7 @@ from typing import Optional
 from typing import Tuple
 from typing import TypeVar
 
-from nncf.common.utils.logger import logger as nncf_logger
+from nncf.common.logging import nncf_logger
 
 BaseEvaluatorType = TypeVar('BaseEvaluatorType')
 ElasticControllerType = TypeVar('ElasticControllerType')
@@ -84,16 +84,15 @@ class AccuracyEvaluatorHandler(BaseEvaluatorHandler):
         """
         self.ref_acc = search_params.ref_acc
         if self.input_model_value > self.ref_acc - 0.01 or self.input_model_value < self.ref_acc + 0.01:
-            nncf_logger.warning("Accuracy obtained from evaluation {value} differs from "
-                                        "reference accuracy {ref_acc}".format(value=self.input_model_value,
-                                                                              ref_acc=self.ref_acc))
+            nncf_logger.warning(
+                f"Accuracy obtained from evaluation {self.input_model_value} "
+                f"differs from reference accuracy {self.ref_acc}")
             if self.ref_acc == -1:
                 nncf_logger.info("Adjusting reference accuracy to accuracy obtained from evaluation")
                 self.ref_acc = self.input_model_value
             else:
                 if self.ref_acc >= 100:
-                    nncf_logger.error("Reference accuracy value is invalid: {val}".format(
-                        val=self.ref_acc))
+                    nncf_logger.error(f"Reference accuracy value is invalid: {self.ref_acc}")
                 nncf_logger.info("Using reference accuracy.")
                 self.input_model_value = self.ref_acc
         search_params.ref_acc = self.ref_acc

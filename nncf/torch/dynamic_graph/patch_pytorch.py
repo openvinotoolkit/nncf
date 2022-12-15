@@ -15,13 +15,12 @@ from enum import Enum
 
 from typing import List
 
-import warnings
-
 import torch
 import torch.utils.cpp_extension
 from torch.nn import DataParallel
 from torch.nn.parallel import DistributedDataParallel
 
+from nncf import nncf_logger
 from nncf.torch.dynamic_graph.trace_tensor import TracedTensor
 from nncf.torch.dynamic_graph.wrappers import ignore_scope
 from nncf.torch.dynamic_graph.wrappers import wrap_module_call
@@ -158,7 +157,7 @@ def patch_namespace_opname(namespace, op_info: PatchedOperatorInfo):
         ORIGINAL_OPERATORS.append(OriginalOpInfo(op_name, namespace, orig))
         setattr(namespace, op_name, wrap_operator(orig, op_info))
     else:
-        warnings.warn("Not patching {} since it is missing in this version of PyTorch".format(op_name))
+        nncf_logger.debug("Not patching {} since it is missing in this version of PyTorch".format(op_name))
 
 
 def get_all_functions_from_namespace(namespace: NamespaceTarget, do_filter: bool = True) -> List[str]:

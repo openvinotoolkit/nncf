@@ -14,7 +14,6 @@
 from typing import List, Optional, Tuple
 
 import os
-import warnings
 
 import numpy as np
 import onnx
@@ -66,11 +65,6 @@ class ModelToTest:
 
 def _get_input_key(original_model: onnx.ModelProto) -> str:
     input_keys = [node.name for node in original_model.graph.input]
-    if len(input_keys) != 1:
-        warnings.warn(
-            f"The number of inputs should be 1(!={len(input_keys)}). "
-            "Use input_keys[0]={input_keys[0]}.")
-
     return input_keys[0]
 
 

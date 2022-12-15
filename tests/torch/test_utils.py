@@ -14,12 +14,12 @@ from tests.torch.quantization.test_overflow_issue_export import DepthWiseConvTes
 from tests.torch.modules.test_rnn import _seed
 
 
-def compare_saved_model_state_and_current_model_state(module: nn.Module, model_state: _ModuleState):
-    for ch in module.modules():
-        assert model_state.training_state[ch] == ch.training
+def compare_saved_model_state_and_current_model_state(model: nn.Module, model_state: _ModuleState):
+    for name, module in model.named_modules():
+        assert model_state.training_state[name] == module.training
 
-    for p in module.parameters():
-        assert p.requires_grad == model_state.requires_grad_state[p]
+    for name, param in model.named_parameters():
+        assert param.requires_grad == model_state.requires_grad_state[name]
 
 
 def randomly_change_model_state(module: nn.Module, compression_params_only: bool = False):
@@ -55,14 +55,14 @@ def test_training_mode_switcher(_seed, model: nn.Module):
                                    DepthWiseConvTestModel(), EightConvTestModel()])
 def test_bn_training_state_switcher(_seed, model: nn.Module):
 
-    def check_were_only_bn_training_state_changed(module: nn.Module, saved_state: _ModuleState):
-        for ch in module.modules():
-            if isinstance(ch, (nn.BatchNorm1d,
+    def check_were_only_bn_training_state_changed(model: nn.Module, saved_state: _ModuleState):
+        for name, module in model.named_modules():
+            if isinstance(module, (nn.BatchNorm1d,
                                nn.BatchNorm2d,
                                nn.BatchNorm3d)):
-                assert ch.training
+                assert module.training
             else:
-                assert ch.training == saved_state.training_state[ch]
+                assert module.training == saved_state.training_state[name]
 
     runner = DataLoaderBNAdaptationRunner(model, 'cuda')
 

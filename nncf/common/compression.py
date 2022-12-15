@@ -25,7 +25,7 @@ from nncf.api.compression import CompressionAlgorithmController
 from nncf.common.schedulers import StubCompressionScheduler
 from nncf.common.utils.backend import BackendType
 from nncf.common.utils.backend import get_backend
-from nncf.common.utils.logger import logger as nncf_logger
+from nncf.common.logging import nncf_logger
 from nncf.common.utils.registry import Registry
 from nncf.config.extractors import extract_algo_specific_config
 from nncf.config.extractors import extract_bn_adaptation_init_params
@@ -141,9 +141,9 @@ class BaseCompressionAlgorithmController(CompressionAlgorithmController):
             if self._state_names.COMPRESSION_STAGE in state:
                 compression_stage = state[self._state_names.COMPRESSION_STAGE]
                 if self.compression_stage() != compression_stage:
-                    nncf_logger.warning('Current CompressionStage ({}) of the compression controller does '
-                                        'not correspond to the value found in '
-                                        'the checkpoint ({})'.format(self.compression_stage(), compression_stage))
+                    nncf_logger.warning(
+                        f'Current CompressionStage ({self.compression_stage()}) of the compression controller '
+                        f'does not correspond to the value found in the checkpoint ({compression_stage})')
             self.loss.load_state(algo_state[self._state_names.LOSS])
             self.scheduler.load_state(algo_state[self._state_names.SCHEDULER])
 

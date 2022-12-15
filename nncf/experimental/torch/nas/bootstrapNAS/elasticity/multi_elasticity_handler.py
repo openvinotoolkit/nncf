@@ -20,7 +20,7 @@ from typing import OrderedDict as OrderedDictType
 from typing import Tuple
 
 from nncf.common.pruning.weights_flops_calculator import WeightsFlopsCalculator
-from nncf.common.utils.logger import logger as nncf_logger
+from nncf.common.logging import nncf_logger
 from nncf.experimental.torch.nas.bootstrapNAS.elasticity.base_handler import ElasticityConfig
 from nncf.experimental.torch.nas.bootstrapNAS.elasticity.base_handler import ElasticityHandler
 from nncf.experimental.torch.nas.bootstrapNAS.elasticity.base_handler import SingleElasticityHandler
@@ -172,10 +172,8 @@ class MultiElasticityHandler(ElasticityHandler):
                 resolved_config = handler.resolve_conflicts_with_other_elasticities(sub_config, other_active_handlers)
                 handler.activate_subnet_for_config(resolved_config)
                 if sub_config != resolved_config:
-                    nncf_logger.warning("Config for {handler_id} mismatch. "
-                                        "Requested: {sub_config}. Resolved: {resolved_config}".format(
-                                        handler_id=handler_id, sub_config=sub_config,
-                                        resolved_config=resolved_config))
+                    nncf_logger.warning(
+                        f'Config for {handler_id} mismatch. Requested: {sub_config}. Resolved: {resolved_config}')
 
     def load_state(self, state: Dict[str, Any]) -> None:
         """
@@ -187,12 +185,12 @@ class MultiElasticityHandler(ElasticityHandler):
         is_handler_enabled_map = state[self._state_names.IS_HANDLER_ENABLED_MAP]
 
         for dim_str, handler_state in states_of_handlers.items():
-            dim = ElasticityDim.from_str(dim_str)
+            dim = ElasticityDim(dim_str)
             if dim in self._handlers:
                 self._handlers[dim].load_state(handler_state)
 
         for dim_str, is_enabled in is_handler_enabled_map.items():
-            dim = ElasticityDim.from_str(dim_str)
+            dim = ElasticityDim(dim_str)
             self._is_handler_enabled_map[dim] = is_enabled
 
     def get_state(self) -> Dict[str, Any]:

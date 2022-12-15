@@ -10,7 +10,6 @@
  See the License for the specific language governing permissions and
  limitations under the License.
 """
-import os
 from collections import defaultdict
 from copy import deepcopy
 from typing import Any, Callable, Dict, KeysView, List, Tuple, Type, ValuesView
@@ -18,7 +17,6 @@ from typing import Generator
 
 import networkx as nx
 import networkx.algorithms.isomorphism as iso
-from networkx.drawing.nx_agraph import to_agraph
 
 from nncf.common.graph.layer_attributes import BaseLayerAttributes
 from nncf.common.graph.layer_attributes import Dtype
@@ -26,7 +24,6 @@ from nncf.common.graph.operator_metatypes import INPUT_NOOP_METATYPES
 from nncf.common.graph.operator_metatypes import OUTPUT_NOOP_METATYPES
 from nncf.common.graph.operator_metatypes import OperatorMetatype
 from nncf.common.utils.dot_file_rw import write_dot_graph
-from nncf.common.utils.logger import logger as nncf_logger
 
 NNCFNodeName = str
 LayerName = str
@@ -432,7 +429,7 @@ class NNCFGraph:
         attrs[NNCFGraph.IGNORED_ALGOS_ATTR] = ignored_algorithms
         self._nx_graph.add_node(node_key, **attrs)
 
-        node = NNCFNode(node_id, node_name, data=attrs)
+        node = NNCFNode(node_id, node_name, data=self._nx_graph.nodes[node_key])
 
         if node.metatype in INPUT_NOOP_METATYPES:
             self._input_nncf_nodes[node_id] = node
@@ -503,17 +500,6 @@ class NNCFGraph:
     def visualize_graph(self, path: str):
         out_graph = self._get_graph_for_visualization()
         write_dot_graph(out_graph, path)
-        try:
-            A = to_agraph(out_graph)
-            A.layout('dot')
-            png_path = os.path.splitext(path)[0] + '.png'
-            A.draw(png_path)
-        except ImportError:
-            nncf_logger.warning('Graphviz is not installed - only the .dot model visualization format will be used. '
-                                'Install pygraphviz into your Python environment and graphviz system-wide to enable '
-                                'PNG rendering.')
-        except Exception:  #pylint:disable=broad-except
-            nncf_logger.warning('Failed to render graph to PNG')
 
     def get_graph_for_structure_analysis(self, extended: bool = False) -> nx.DiGraph:
         """

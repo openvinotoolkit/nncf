@@ -28,7 +28,7 @@ import torch
 from nncf.common.graph.definitions import MODEL_OUTPUT_OP_NAME
 from nncf.common.graph.graph import NNCFGraph
 from nncf.common.graph.graph import NNCFNodeName
-from nncf.common.utils.logger import logger as nncf_logger
+from nncf.common.logging import nncf_logger
 from nncf.experimental.torch.search_building_blocks.search_graph import SearchGraph
 from nncf.experimental.torch.search_building_blocks.search_graph import SearchGraphNode
 from nncf.experimental.torch.search_building_blocks.search_graph import \
@@ -117,14 +117,6 @@ class BuildingBlockType(Enum):
     FF = 'FF'
     Unknown = 'unknown'
 
-    @staticmethod
-    def from_str(config_value: str) -> 'BuildingBlockType':
-        if config_value == BuildingBlockType.MSHA.value:
-            return BuildingBlockType.MSHA
-        if config_value == BuildingBlockType.FF.value:
-            return BuildingBlockType.FF
-        return BuildingBlockType.Unknown
-
     def __eq__(self, other: 'BuildingBlockType'):
         return self.__dict__ == other.__dict__
 
@@ -172,7 +164,7 @@ class ExtendedBuildingBlock:
 
         :param state: Output of `get_state()` method.
         """
-        bbtype = BuildingBlockType.from_str(state[cls._state_names.BLOCK_TYPE])
+        bbtype = BuildingBlockType(state[cls._state_names.BLOCK_TYPE])
         bblock = BuildingBlock.from_state(state[cls._state_names.BASIC_BLOCK])
         op_addresses = {OperationAddress.from_str(op_address_state) for op_address_state in
                         state[cls._state_names.OP_ADDRESSES]}
@@ -344,14 +336,6 @@ class BlockFilteringStrategy(Enum):
     """
     KEEP_SMALL = 'keep_small'
     KEEP_SEQUENTIAL = 'keep_sequential'
-
-    @staticmethod
-    def from_str(config_value: str) -> 'BlockFilteringStrategy':
-        if config_value == BlockFilteringStrategy.KEEP_SMALL.value:
-            return BlockFilteringStrategy.KEEP_SMALL
-        if config_value == BlockFilteringStrategy.KEEP_SEQUENTIAL.value:
-            return BlockFilteringStrategy.KEEP_SEQUENTIAL
-        raise RuntimeError('Unknown Block Filtering Strategy string')
 
 
 def get_building_blocks(compressed_model: NNCFNetwork,

@@ -18,7 +18,7 @@ import os
 
 from nncf.common.utils.debug import is_debug
 from nncf.common.hardware.config import HWConfigType
-from nncf.common.utils.logger import logger
+from nncf.common.logging import nncf_logger
 from nncf.common.utils.os import safe_open
 from nncf.config.schemata.defaults import AUTOQ_EVAL_SUBSET_RATIO
 from nncf.config.schemata.defaults import AUTOQ_ITER_NUMBER
@@ -136,8 +136,8 @@ class AutoQPrecisionInitializer(BasePrecisionInitializer):
                                          json.dumps(self._init_args.config['compression'],
                                          indent=4, sort_keys=False).replace("\n", "\n\n"), 0)
             except ModuleNotFoundError:
-                logger.warning("Tensorboard installation not found! Install tensorboard Python package "
-                               "in order for AutoQ tensorboard statistics data to be dumped")
+                nncf_logger.warning("Tensorboard installation not found! Install tensorboard Python package "
+                                    "in order for AutoQ tensorboard statistics data to be dumped")
 
         start_ts = datetime.now()
 
@@ -192,11 +192,11 @@ class AutoQPrecisionInitializer(BasePrecisionInitializer):
             final_quantizer_setup.quantization_points[qp_id].qconfig = qconf
 
         str_bw = [str(element) for element in self.get_bitwidth_per_scope(final_quantizer_setup)]
-        logger.info('\n'.join(['[AutoQ]\n\"bitwidth_per_scope\": [', ',\n'.join(str_bw), ']']))
-        logger.info('[AutoQ] best_reward: {}'.format(best_reward))
-        logger.info('[AutoQ] best_policy: {}'.format(best_policy))
-        logger.info("[AutoQ] Search Complete")
-        logger.info("[AutoQ] Elapsed time of AutoQ Precision Initialization (): {}".format(end_ts-start_ts))
+        nncf_logger.info('\n'.join(['[AutoQ]\n\"bitwidth_per_scope\": [', ',\n'.join(str_bw), ']']))
+        nncf_logger.info('[AutoQ] best_reward: {}'.format(best_reward))
+        nncf_logger.info('[AutoQ] best_policy: {}'.format(best_policy))
+        nncf_logger.info("[AutoQ] Search completed.")
+        nncf_logger.info("[AutoQ] Elapsed time of AutoQ Precision Initialization (): {}".format(end_ts - start_ts))
         return final_quantizer_setup
 
 
@@ -231,11 +231,13 @@ class AutoQPrecisionInitializer(BasePrecisionInitializer):
             observation = deepcopy(observation2)
 
             if done:  # end of episode
-                logger.info(
-                    '## Episode[{}], reward: {:.3f}, acc: {:.3f}, model_ratio: {:.3f}, '
-                    'model_size(MB): {:.2f}, BOP_ratio: {:.3f}\n' \
-                    .format(episode, episode_reward, info['accuracy'], info['model_ratio'],
-                    info['model_size']/8e6, info['bop_ratio']))
+                nncf_logger.info(
+                    f'## Episode[{episode}], '
+                    f'reward: {episode_reward:.3f}, '
+                    f'acc: {info["accuracy"]:.3f}, '
+                    f'model_ratio: {info["model_ratio"]:.3f}, '
+                    f'model_size(MB): {info["model_size"] / 8e6:.2f}, '
+                    f'BOP_ratio: {info["bop_ratio"]:.3f}\n')
 
                 # Replay Buffer Management
                 if agent.memory.nb_entries % (len(env.master_df)+1) > 0:
@@ -307,11 +309,13 @@ class AutoQPrecisionInitializer(BasePrecisionInitializer):
                     best_policy = deepcopy(env.master_df['action'])
                     info_tuple = (episode, best_reward, info['accuracy'], info['model_ratio'], info['bop_ratio'])
                     self._dump_best_episode(info_tuple, bit_stats_df, env)
-                    log_str = '## Episode[{}] New best policy: {}, reward: {:.3f}, \
-                    acc: {:.3f}, model_ratio: {:.3f}, BOP_ratio: {:.3f}'\
-                        .format(episode, best_policy.values.tolist(), best_reward,
-                                info['accuracy'], info['model_ratio'],  info['bop_ratio'])
-                    logger.info("\033[92m {}\033[00m" .format(log_str))
+                    log_str = f'## Episode[{episode}] ' \
+                              f'New best policy: {best_policy.values.tolist()}, ' \
+                              f'reward: {best_reward:.3f}, ' \
+                              f'acc: {info["accuracy"]:.3f}, ' \
+                              f'model_ratio: {info["model_ratio"]:.3f},' \
+                              f' BOP_ratio: {info["bop_ratio"]:.3f}'
+                    nncf_logger.info(f"\033[92m {log_str}\033[00m")
 
                 episodic_info_tuple = (episode, final_reward, best_reward,
                                        info['accuracy'], info['model_ratio'], info['bop_ratio'],
@@ -320,8 +324,8 @@ class AutoQPrecisionInitializer(BasePrecisionInitializer):
 
                 episode_elapsed = time.time() - episode_start_ts
 
-                logger.info('## Episode[{}] Policy: \n{}\n'.format(episode, env.master_df['action'].to_string()))
-                logger.info('## Episode[{}] Elapsed: {:.3f}\n'.format(episode, episode_elapsed))
+                nncf_logger.info(f'## Episode[{episode}] Policy: \n{env.master_df["action"].to_string()}\n')
+                nncf_logger.info(f'## Episode[{episode}] Elapsed: {episode_elapsed:.3f}\n')
 
                 episode += 1
 
