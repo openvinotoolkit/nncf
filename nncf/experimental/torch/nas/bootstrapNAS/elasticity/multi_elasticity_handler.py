@@ -66,17 +66,17 @@ class MultiElasticityHandler(ElasticityHandler):
                  handlers: OrderedDictType[ElasticityDim, SingleElasticityHandler],
                  target_model: NNCFNetwork):
         GENERAL_CONV_LAYER_METATYPES = [
-            PTConv1dMetatype,
+            PTConv1dMetatype.module_metatype,
             PTDepthwiseConv1dSubtype,
-            PTConv2dMetatype,
+            PTConv2dMetatype.module_metatype,
             PTDepthwiseConv2dSubtype,
-            PTConv3dMetatype,
+            PTConv3dMetatype.module_metatype,
             PTDepthwiseConv3dSubtype,
-            PTConvTranspose2dMetatype,
-            PTConvTranspose3dMetatype
+            PTConvTranspose2dMetatype.module_metatype,
+            PTConvTranspose3dMetatype.module_metatype,
         ]
         LINEAR_LAYER_METATYPES = [
-            PTLinearMetatype
+            PTLinearMetatype.module_metatype
         ]
         self._handlers = handlers
         self._target_model = target_model

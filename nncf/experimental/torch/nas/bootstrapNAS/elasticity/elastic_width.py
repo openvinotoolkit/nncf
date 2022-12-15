@@ -946,9 +946,9 @@ class ElasticWidthBuilder(SingleElasticityBuilder):
         node_name_vs_dynamic_input_width_op_map = OrderedDict()
 
         metatype_vs_elastic_op_creator = {
-            PTConv2dMetatype: self._create_elastic_conv_width_op,
+            PTConv2dMetatype.module_metatype: self._create_elastic_conv_width_op,
             PTDepthwiseConv2dSubtype: self._create_elastic_conv_width_op,
-            PTLinearMetatype: self._create_elastic_linear_width_op
+            PTLinearMetatype.module_metatype: self._create_elastic_linear_width_op
         }
 
         for i, grouped_node_names in enumerate(self._grouped_node_names_to_prune):
@@ -995,11 +995,11 @@ class ElasticWidthBuilder(SingleElasticityBuilder):
             pruned_module_groups_info.add_cluster(cluster)
 
         metatype_vs_dynamic_input_op_creator = {
-            PTConv2dMetatype: self._create_dynamic_conv_input_op,
+            PTConv2dMetatype.module_metatype: self._create_dynamic_conv_input_op,
             PTDepthwiseConv2dSubtype: self._create_dynamic_dw_conv_input_op,
-            PTBatchNormMetatype: self._create_dynamic_bn_input_op,
-            PTLayerNormMetatype: self._create_dynamic_ln_input_op,
-            PTLinearMetatype: self._create_dynamic_linear_input_op
+            PTBatchNormMetatype.module_metatype: self._create_dynamic_bn_input_op,
+            PTLayerNormMetatype.module_metatype: self._create_dynamic_ln_input_op,
+            PTLinearMetatype.module_metatype: self._create_dynamic_linear_input_op
         }
         for metatype, op_creator in metatype_vs_dynamic_input_op_creator.items():
             nodes = graph.get_nodes_by_metatypes([metatype])

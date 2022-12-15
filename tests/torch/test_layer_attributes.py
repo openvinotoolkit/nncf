@@ -154,7 +154,7 @@ LIST_TEST_DESCS = [
             groups=2,
             transpose=False,
             padding_values=(0, 0)),
-        metatype_cls=PTDepthwiseConv2dSubtype
+        metatype_cls=PTConv2dMetatype
     ),
     LayerAttributesTestDesc(
         module=nn.Conv1d(1, 1, 1),

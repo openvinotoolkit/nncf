@@ -38,7 +38,7 @@ class SubnetGraph:
 
             metatype = compression_node.metatype
             color = None
-            if metatype == PTConv2dMetatype:
+            if metatype == PTConv2dMetatype.module_metatype:
                 color = 'lightblue'
             if metatype == PTDepthwiseConv2dSubtype:
                 operator_name = f'DW_{operator_name}'

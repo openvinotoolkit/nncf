@@ -135,7 +135,11 @@ class PTModuleOperatorSubtype(PTOperatorSubtype):
 def add_module_metatype(operator_metatype: PTOperatorMetatype):
     prefix = 'PTModule'
     module_metatype = type(prefix + operator_metatype.__name__[2:], (PTModuleOperatorSubtype,),
-                           {'hw_config_names': operator_metatype.hw_config_names,
+                           {'external_op_names':
+                               operator_metatype.external_op_names,
+                            'module_to_function_names ':
+                                operator_metatype.module_to_function_names,
+                            'hw_config_names': operator_metatype.hw_config_names,
                             'subtypes': operator_metatype.get_subtypes()})
     operator_metatype.set_module_metatype(module_metatype)
     PT_OPERATOR_METATYPES.register()(module_metatype)
