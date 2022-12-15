@@ -17,7 +17,16 @@ from nncf.torch.compression_method_api import PTCompressionLoss
 
 
 class ImportanceLoss(PTCompressionLoss):
+    """
+    Module to calculate the compression loss of movement sparsity.
+    """
+
     def __init__(self, sparse_layers: List[MovementSparsifier]):
+        """
+        Initializes the loss of movement sparsity in its algorithm controller.
+
+        :param sparse_layers: List of movement sparsity operands for each layer to sparsify.
+        """
         super().__init__()
         self.sparse_layers = sparse_layers
         self._disabled = False

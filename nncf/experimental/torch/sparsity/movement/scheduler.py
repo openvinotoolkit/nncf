@@ -10,7 +10,7 @@
  See the License for the specific language governing permissions and
  limitations under the License.
 """
-from enum import Enum
+from enum import IntEnum
 import math
 from typing import Any, Dict, Optional
 
@@ -21,7 +21,7 @@ from nncf.common.schedulers import PolynomialDecaySchedule
 from nncf.common.utils.logger import logger
 
 
-class MovementSchedulerStage(Enum):
+class MovementSchedulerStage(IntEnum):
     PRE_WARMUP = 0
     IN_WARMUP = 1
     POST_WARMUP = 2
@@ -29,7 +29,8 @@ class MovementSchedulerStage(Enum):
 
 class MovementPolynomialThresholdScheduler(BaseCompressionScheduler):
     """
-    Movement Sparsity scheduler with a polynomial decay schedule.
+    Movement Sparsity scheduler with a polynomial decay schedule for importance
+    threshold and importance regularization factor.
 
     The scheduler will update importance threshold and importance regularization
     factor per optimizer step. Parameter `steps_per_epoch` should be provided
@@ -39,13 +40,12 @@ class MovementPolynomialThresholdScheduler(BaseCompressionScheduler):
     scheduler will start calculation only after `steps_per_epoch` is calculated.
     """
 
-    def __init__(self, controller: 'MovementSparsityController', params: dict):
+    def __init__(self, controller: 'MovementSparsityController', params: Dict[str, Any]):
         """
-        TODO: revise docstring
-        Initializes a sparsity scheduler with a polynomial decay schedule.
+        Initializes a movement sparsity scheduler with a polynomial decay schedule.
 
-        :param controller: Sparsity algorithm controller.
-        :param params: Parameters of the scheduler.
+        :param controller: Movement Sparsity algorithm controller.
+        :param params: Parameters for the scheduler.
         """
         super().__init__()
         self._controller = controller
@@ -55,7 +55,7 @@ class MovementPolynomialThresholdScheduler(BaseCompressionScheduler):
         self.warmup_start_epoch: int = params.get('warmup_start_epoch', None)
         self.warmup_end_epoch: int = params.get('warmup_end_epoch', None)
         self.importance_regularization_factor: float = params.get('importance_regularization_factor', None)
-        self.enable_structured_masking: bool = params.get('enable_structured_masking', True)
+        self.enable_structured_masking: bool = params.get('enable_structured_masking', False)
         self._steps_per_epoch = params.get('steps_per_epoch', None)
 
         if None in [self.warmup_start_epoch, self.warmup_end_epoch, self.importance_regularization_factor]:
@@ -215,7 +215,6 @@ class MovementPolynomialThresholdScheduler(BaseCompressionScheduler):
 
         if self._steps_per_epoch is None:
             self._should_skip = True
-            logger.info('Scheduler set to update sparsity level per optimizer step, '
-                        'but steps_per_epoch was not set in config. Will only start updating '
-                        'sparsity level after measuring the actual steps per epoch as signaled '
-                        'by a .epoch_step() call.')
+            logger.info('Movement Sparsity scheduler updates importance threshold and regularization'
+                        'factor per optimizer step, but steps_per_epoch was not set in config. Will '
+                        'measure the actual steps per epoch as signaled by a .epoch_step() call.')

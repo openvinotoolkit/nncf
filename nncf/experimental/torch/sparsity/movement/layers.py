@@ -13,7 +13,7 @@
 from copy import deepcopy
 from enum import Enum
 import math
-from typing import Any, Dict, Optional, Tuple
+from typing import Any, Dict, List, Optional, Tuple, Union
 
 import torch
 from torch import nn
@@ -35,10 +35,21 @@ class SparseStructure(str, Enum):
 
 
 class SparseConfig:
+    """
+    Defines the sparse structure config with required options for a certain supported layer.
+    """
+
     def __init__(self,
                  mode: SparseStructure,
                  sparse_factors: Optional[Tuple[int, int]] = None,
                  sparse_axis: Optional[int] = None):
+        """
+        Parses and validates the sparse structure for movement sparsity.
+
+        :param mode: The sparse structure mode.
+        :param sparse_factors: Block shape to sparsify as a whole in a weight. Required when `mode` is "block".
+        :param sparse_axis: The dimension to sparsify in a weight. Required when `mode` is "per_dim".
+        """
         error_prefix = 'Invalid sparse config.'
         self.sparse_factors = None
         self.sparse_axis = None
@@ -91,14 +102,19 @@ class SparseConfig:
 
 
 class SparseConfigByScope:
-    def __init__(self, sparse_config: SparseConfig, target_scopes: str):
+    """
+    Defines an entry for `sparse_structure_by_scopes` in movement sparsity configuration.
+    It includes the sparse config, and the target scopes it is applied to.
+    """
+
+    def __init__(self, sparse_config: SparseConfig, target_scopes: Union[str, List[str]]):
         self.sparse_config = sparse_config
         self.target_scopes = target_scopes
 
     @classmethod
     def from_config(cls, config: Dict[str, Any]) -> 'SparseConfigByScope':
         """
-        Creates the object from its representation .
+        Creates the object from its representation.
         """
         error_prefix = f'Invalid sparse structure by scopes {config}.'
         target_scopes = config.get('target_scopes')
@@ -110,6 +126,10 @@ class SparseConfigByScope:
 
 @COMPRESSION_MODULES.register()
 class MovementSparsifier(nn.Module):
+    """
+    Defines the operand of movement sparsity for supported layers.
+    """
+
     def __init__(
         self,
         target_module_node: NNCFNode,
@@ -118,6 +138,15 @@ class MovementSparsifier(nn.Module):
         compression_lr_multiplier: Optional[float] = None,
         layerwise_loss_lambda: float = 0.5,
     ):
+        """
+        Initializes the operand of movement sparsity for a certain layer.
+
+        :param target_module_node: Node name of the module this operand is related to.
+        :param sparse_cfg: Sparse structure config for the module to sparsify.
+        :param frozen: Whether the operand is frozen, i.e., binary masks are fixed.
+        :param compression_lr_multiplier: The value of gradient multiplier for learnable parameters in the operand.
+        :param layerwise_loss_lambda: The extra factor of compression loss for this specific layer.
+        """
         super().__init__()
         self.target_module_node = target_module_node
         self.prune_bias = (target_module_node.layer_attributes.bias not in (False, None))
@@ -126,7 +155,8 @@ class MovementSparsifier(nn.Module):
         self._importance_threshold = -math.inf
         self._importance_regularization_factor = 0.
 
-        weight_shape = target_module_node.layer_attributes.get_weight_shape()
+        weight_shape: List[int] = target_module_node.layer_attributes.get_weight_shape()
+        assert len(weight_shape) == 2, 'Unsupported module with weight shape not in 2D.'
         self.weight_ctx = BinaryMask(weight_shape)
         self.sparse_factors = self._get_sparse_factors(weight_shape, sparse_cfg)
         self.sparse_structure = sparse_cfg.mode
@@ -229,7 +259,8 @@ class MovementSparsifier(nn.Module):
         return mask
 
     @staticmethod
-    def _get_weight_importance_shape(weight_shape, sparse_factors: Tuple[int, int],
+    def _get_weight_importance_shape(weight_shape: List[int],
+                                     sparse_factors: Tuple[int, int],
                                      sparse_structure: SparseStructure) -> Tuple[int, int]:
         if sparse_structure == SparseStructure.FINE:
             return weight_shape
@@ -248,7 +279,8 @@ class MovementSparsifier(nn.Module):
         raise RuntimeError('Unknown sparse structure.')
 
     @staticmethod
-    def _get_sparse_factors(weight_shape, sparse_config: SparseConfig) -> Tuple[int, int]:
+    def _get_sparse_factors(weight_shape: List[int],
+                            sparse_config: SparseConfig) -> Tuple[int, int]:
         sparse_factors = sparse_config.sparse_factors
         if sparse_config.mode == SparseStructure.BLOCK:
             r, c = sparse_factors
@@ -257,16 +289,21 @@ class MovementSparsifier(nn.Module):
 
         if sparse_config.mode == SparseStructure.PER_DIM:
             if sparse_config.sparse_axis < 0 or sparse_config.sparse_axis >= len(weight_shape):
-                raise ValueError('Invalid axis id {}, axes range {}'.format(
+                raise ValueError('Invalid axis id {}, axes range is [0, {}]'.format(
                     sparse_config.sparse_axis,
-                    list(range(len(weight_shape)))))
+                    len(weight_shape))
+                )
             sparse_factors = deepcopy(weight_shape)
             sparse_factors[sparse_config.sparse_axis] = 1
             sparse_factors = tuple(sparse_factors)
         return sparse_factors
 
 
-class MaskCalculationHook():
+class MaskCalculationHook:
+    """
+    Hook for naming the binary masks of `MovementSparsifier` in torch model state dict.
+    """
+
     def __init__(self, module: nn.Module):
         # pylint: disable=protected-access
         self.hook = module._register_state_dict_hook(self.hook_fn)

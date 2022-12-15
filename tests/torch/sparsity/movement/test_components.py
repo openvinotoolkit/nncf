@@ -64,6 +64,11 @@ class TestSparseConfigByScope:
             'mode': 'per_dim',
             'axis': 1,
             'target_scopes': 'prune_column'
+        },
+        {
+            'mode': 'per_dim',
+            'axis': 1,
+            'target_scopes': ['prune_column', '{re}another_block']
         }
     ])
     def test_create_sparse_config_by_scope(self, config: Dict[str, Any]):

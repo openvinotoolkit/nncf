@@ -54,12 +54,28 @@ class StructuredMaskContextStatistics:
 
 
 class StructuredMaskContext:
+    """
+    Context to interact with the operand of a module in movement sparsity.
+
+    This context can resolve the independent structured mask from operand, and can refresh the binary
+    mask back to operand with dependent structured mask. Serves as an agent for `StructuredMaskHandler`
+    to conduct structured mask resolution.
+    """
+
     def __init__(self,
                  sparsifier_operand: MovementSparsifier,
                  module_node_name: NNCFNodeName,
                  grid_size: Tuple[int, int],
                  prune_by_row: bool,
                  ):
+        """
+        Initializes the context of the target module for structured masking.
+
+        :param sparsifier_operand: Operand for the target module.
+        :param module_node_name: Node name of the target module.
+        :param grid_size: The grid shape for resolving the independent structured mask.
+        :param prune_by_row: Determines whether to resolve the independent structured mask by row or column.
+        """
         self.sparsifier_operand = sparsifier_operand
         self.module_node_name = module_node_name
         operand_mask: torch.Tensor = sparsifier_operand.weight_ctx.binary_mask   # type: ignore
@@ -78,38 +94,38 @@ class StructuredMaskContext:
     @property
     def independent_structured_mask(self) -> Optional[torch.Tensor]:
         if self._independent_structured_mask is None:
-            logger.warning('Independent structured mask has not been calculated. Return None.')
+            logger.debug('Independent structured mask has not been calculated. Return None.')
         return self._independent_structured_mask
 
     @independent_structured_mask.setter
     @torch.no_grad()
     def independent_structured_mask(self, tensor: torch.Tensor):
         if self.structured_mask_shape != tensor.shape:
-            raise ValueError('Wrong shape about independent structured mask')
+            raise ValueError('Wrong shape about independent structured mask.')
         if self._independent_structured_mask is None:
             self._independent_structured_mask = tensor.clone()
         else:
             if self._independent_structured_mask.device != tensor.device:
-                logger.warning('Changing independent_structured_mask device to %s', tensor.device)
+                logger.debug('Changing independent_structured_mask device to %s', tensor.device)
                 self._independent_structured_mask = self._independent_structured_mask.to(tensor.device)
             self._independent_structured_mask.copy_(tensor)
 
     @property
     def dependent_structured_mask(self) -> Optional[torch.Tensor]:
         if self._dependent_structured_mask is None:
-            logger.warning('Dependent structured mask has not been calculated. Return None.')
+            logger.debug('Dependent structured mask has not been calculated. Return None.')
         return self._dependent_structured_mask
 
     @dependent_structured_mask.setter
     @torch.no_grad()
     def dependent_structured_mask(self, tensor: torch.Tensor):
         if self.structured_mask_shape != tensor.shape:
-            raise ValueError('Wrong shape about dependent structured mask')
+            raise ValueError('Wrong shape about dependent structured mask.')
         if self._dependent_structured_mask is None:
             self._dependent_structured_mask = tensor.clone()
         else:
             if self._dependent_structured_mask.device != tensor.device:
-                logger.warning('Changing dependent_structured_mask device to %s', tensor.device)
+                logger.debug('Changing dependent_structured_mask device to %s', tensor.device)
                 self._dependent_structured_mask = self._dependent_structured_mask.to(tensor.device)
             self._dependent_structured_mask.copy_(tensor)
 
@@ -208,13 +224,22 @@ class StructuredMaskHandler:
     This handler gathers sparsifiable layers together as groups according to the building block
     they belong to, e.g., multi-head self-attention or feed-forward network in Transformers.
     Within each group, it refreshes the binary masks from unstructured to structured ones,
-    while considering the pruning dependencies across layers.
+    while considering the pruning dependencies across layers. All these operations are conducted
+    via the `StructuredMaskContext` of each module that supports structured masking.
     """
 
     def __init__(self,
                  compressed_model: NNCFNetwork,
                  sparsified_module_info_list: List[SparseModuleInfo],
                  strategy: BaseStructuredMaskStrategy):
+        """
+        Initializes the handler for structured masking in movement sparsity.
+
+        :param compressed_model: The wrapped compressed model.
+        :param sparsified_module_info_list: List of `SparsifiedModuleInfo` in the
+            controller of `compressed_model`.
+        :param strategy: Strategy of structured masking for the `compressed_model`.
+        """
         self.strategy = strategy
         self.rules_by_group_type = strategy.rules_by_group_type
         self.compressed_model = compressed_model
@@ -254,7 +279,7 @@ class StructuredMaskHandler:
                 ctx.populate_dependent_structured_mask_to_operand()
 
     def report_structured_sparsity(self,
-                                   save_dir,
+                                   save_dir: str,
                                    file_name: str = 'structured_sparsity',
                                    to_csv: bool = False,
                                    to_markdown: bool = True,

@@ -58,6 +58,10 @@ class StructuredMaskRule:
 
 
 class BaseStructuredMaskStrategy(ABC):
+    """
+    Strategy that defines how structured masking is conducted for certain
+    building blocks in a model.
+    """
     @classmethod
     @abstractmethod
     def from_compressed_model(cls, compressed_model: NNCFNetwork):

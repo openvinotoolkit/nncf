@@ -96,7 +96,10 @@ desc_sparse_structures = {
     'mixed_of_explicit_block_or_per_dim_and_implicit_fine': [
         {'mode': 'per_dim', 'axis': 0, 'target_scopes': '{re}Intermediate.*'},
         {'mode': 'block', 'sparse_factors': [2, 2], 'target_scopes': '{re}.*attention.*'}
-    ]
+    ],
+    'block_with_target_scopes_list': [
+        {'mode': 'block', 'sparse_factors': [2, 2], 'target_scopes': ['{re}query', '{re}key']}
+    ],
 }
 
 

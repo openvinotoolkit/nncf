@@ -188,6 +188,7 @@ class RBSparsityStatistics(Statistics):
         )
         return pretty_string
 
+
 class MovementSparsityStatistics(Statistics):
     """
     Contains statistics of the movement-sparsity algorithm.
@@ -195,17 +196,14 @@ class MovementSparsityStatistics(Statistics):
 
     def __init__(self,
                  model_statistics: SparsifiedModelStatistics,
-                 importance_threshold,
-                 importance_regularization_factor):
+                 importance_threshold: float,
+                 importance_regularization_factor: float):
         """
         Initializes statistics of the movement-sparsity algorithm.
 
         :param model_statistics: Statistics of the sparsified model.
-        :param importance_threshold: importance threshold for
-            sparsity binary mask
-        :param importance_regularization_factor: penalty factor of
-            importance score
-
+        :param importance_threshold: Importance threshold for sparsity binary mask.
+        :param importance_regularization_factor: Penalty factor of importance score.
         """
         self.model_statistics = model_statistics
         self.importance_threshold = importance_threshold
