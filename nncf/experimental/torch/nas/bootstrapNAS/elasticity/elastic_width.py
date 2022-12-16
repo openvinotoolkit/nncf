@@ -258,12 +258,10 @@ class ElasticOutputWidthOp(ElasticWidthOp):
         if fixed_width_list:
             fixed_width_list.sort(reverse=True)
             if fixed_width_list[0] > max_width:
-                nncf_logger.warning(f"Width list for {node_name} "
-                                    f"contains invalid values: {fixed_width_list}, {max_width}")
-                self._width_list = self._generate_width_list(self._max_width, params)
+                raise RuntimeError(f"Width list for {node_name} "
+                                   f"contains invalid values: {fixed_width_list}, {max_width}")
             if fixed_width_list[0] != max_width:
-                nncf_logger.warning(f"Max width for {node_name} is not aligned with pre-trained model")
-                fixed_width_list[0] = max_width
+                raise RuntimeError(f"Max width for {node_name} is not aligned with pre-trained model")
             self._width_list = fixed_width_list
         else:
             self._width_list = self._generate_width_list(self._max_width, params)
@@ -335,8 +333,7 @@ class ElasticOutputWidthOp(ElasticWidthOp):
                 if p.max_num_widths == len(width_list):
                     break
                 if 0 >= multiplier > 1:
-                    nncf_logger.warning(f"Wrong value for multiplier: {multiplier}. Skipping ")
-                    continue
+                    raise RuntimeError(f"Wrong value for multiplier: {multiplier}")
                 w = int(max_width * multiplier)
                 w = w - (w % ALIGNMENT_CONSTANT_FOR_MULTIPLIERS)
                 w = max(w, p.min_width)
@@ -819,7 +816,7 @@ class ElasticWidthHandler(SingleElasticityHandler):
                          f'Width: {start_width} vs {end_width}. Shapes: {start_output_shape} vs {end_output_shape}'
             else:
                 continue
-            nncf_logger.warning(
+            nncf_logger.debug(
                 f'The block [\n\t{start_node_name},\n\t{end_node_name}\n]\n can`t be skipped, because {reason}')
             pair_indexes.append(idx)
         return pair_indexes
