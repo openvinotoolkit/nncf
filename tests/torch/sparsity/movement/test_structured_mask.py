@@ -20,6 +20,7 @@ import pandas as pd
 import pytest
 import torch
 
+from nncf.common.logging import nncf_logger
 from nncf.config import NNCFConfig
 from nncf.experimental.torch.search_building_blocks.search_blocks import BuildingBlockType
 from nncf.experimental.torch.sparsity.movement.layers import MovementSparsifier
@@ -179,8 +180,8 @@ class TestStructuredMaskContext:
         setattr(ctx, mask_name, torch.ones((1, 1)))
         # use 'meta' device for check since it does not need gpus
         mock_meta_mask = torch.ones((1, 1), device=torch.device('meta'))
-        with caplog.at_level(logging.DEBUG, logger='nncf'):
-            mocker.patch.object(logging.getLogger('nncf'), 'propagate', True)
+        with caplog.at_level(logging.DEBUG, logger=nncf_logger.name):
+            mocker.patch.object(nncf_logger, 'propagate', True)
             setattr(ctx, mask_name, mock_meta_mask)
             assert getattr(ctx, mask_name).device == torch.device('meta')
         assert f'Changing {mask_name} device' in caplog.text

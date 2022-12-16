@@ -30,16 +30,18 @@ from tests.torch.sample_test_validator import BaseSampleValidator
 
 class MovementGlueHandler:
     def get_executable(self) -> Path:
-        return TEST_ROOT.joinpath('torch', 'sparsity', 'movement', 'examples', self._get_main_filename() + '.py')
+        return TEST_ROOT.joinpath('torch', 'sparsity', 'movement',
+                                  'training_scripts', self._get_main_filename() + '.py')
 
     @staticmethod
-    def get_checkpoint_path(checkpoint_save_dir):
+    def get_checkpoint_path(checkpoint_save_dir) -> Path:
         return Path(checkpoint_save_dir)
 
     def get_main_location(self) -> str:
-        return '.'.join(['tests', 'torch', 'sparsity', 'movement', 'examples', self._get_main_filename()])
+        return '.'.join(['tests', 'torch', 'sparsity', 'movement',
+                         'training_scripts', self._get_main_filename()])
 
-    def _get_main_filename(self):
+    def _get_main_filename(self) -> str:
         return 'run_glue'
 
     def get_metric_value_from_checkpoint(self, checkpoint_save_dir: str) -> Dict[str, Union[float, int]]:
@@ -84,7 +86,7 @@ class MovementTrainingTestDescriptor(BaseSampleTestCaseDescriptor):
 
     @property
     def config_directory(self) -> Path:
-        return TEST_ROOT.joinpath('torch', 'sparsity', 'movement', 'examples')
+        return TEST_ROOT.joinpath('torch', 'sparsity', 'movement', 'training_scripts')
 
     def model_name(self, model_name_):
         self.model_name_ = model_name_

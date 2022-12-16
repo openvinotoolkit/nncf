@@ -16,23 +16,13 @@ from collections import OrderedDict
 from copy import deepcopy
 from pathlib import Path
 from typing import Any, Dict, List, Optional
-from unittest.mock import Mock
-from unittest.mock import patch
 
-import numpy as np
-from pytest import approx
 import torch
 import torch.nn
 import torch.nn.functional as F
 import torch.utils.data
 
 from nncf import NNCFConfig
-from nncf.api.compression import CompressionAlgorithmController
-from nncf.common.graph.graph import NNCFGraph
-from nncf.common.graph.graph import NNCFNode
-from nncf.common.graph.layer_attributes import LinearLayerAttributes
-from nncf.common.utils.tensorboard import prepare_for_tensorboard
-from nncf.experimental.torch.sparsity.movement.algo import MovementSparsifier
 from nncf.torch.nncf_network import NNCFNetwork
 
 from datasets import Dataset  # pylint: disable=no-name-in-module
@@ -43,67 +33,7 @@ from transformers import BertConfig
 from transformers import PreTrainedModel
 from transformers import PretrainedConfig
 from transformers import SwinConfig
-from transformers import TrainingArguments
 from transformers import Wav2Vec2Config
-from transformers.trainer import Trainer
-from transformers.trainer_callback import TrainerCallback
-from transformers.trainer_callback import TrainerControl
-from transformers.trainer_callback import TrainerState
-
-
-def mock_linear_nncf_node(in_features: int = 1, out_features: int = 1,
-                          bias: bool = True, node_name: str = 'linear') -> NNCFNode:
-    graph = NNCFGraph()
-    linear = graph.add_nncf_node(
-        node_name, 'linear', Mock(),
-        LinearLayerAttributes(True, in_features, out_features, bias=bias))
-    return linear
-
-
-def initialize_sparsifier_parameters_by_linspace(operand: MovementSparsifier,
-                                                 linspace_start: float = -1, linspace_end: float = 1,
-                                                 seed: int = 42):
-    device = operand.weight_importance.device
-    g = torch.Generator(device=device)
-    g.manual_seed(seed)
-    with torch.no_grad():
-        weight_rand_idx = torch.randperm(operand.weight_importance.numel(), generator=g, device=device)
-        weight_init_tensor = torch.linspace(linspace_start, linspace_end,
-                                            steps=operand.weight_importance.numel(),
-                                            device=device)[weight_rand_idx]\
-            .reshape_as(operand.weight_importance)
-        operand.weight_importance.copy_(weight_init_tensor)
-        if operand.prune_bias:
-            bias_rand_idx = torch.randperm(operand.bias_importance.numel(), generator=g, device=device)
-            bias_init_tensor = torch.linspace(linspace_start, linspace_end,
-                                              steps=operand.bias_importance.numel(),
-                                              device=device)[bias_rand_idx]\
-                .reshape_as(operand.bias_importance)
-            operand.bias_importance.copy_(bias_init_tensor)
-
-
-# pylint: disable=protected-access
-def force_update_sparsifier_binary_masks_by_threshold(operand: MovementSparsifier,
-                                                      threshold: Optional[float] = None):
-    if threshold is not None:
-        operand.importance_threshold = threshold
-    with patch.object(operand, 'training', True),\
-            patch.object(operand, 'frozen', False):
-        operand._calc_training_binary_mask()
-        if operand.prune_bias:
-            operand._calc_training_binary_mask(is_bias=True)
-
-
-def is_roughly_non_decreasing(x_list, atol: float = 0.01) -> bool:
-    x_list = list(x_list)
-    assert atol >= 0
-    return all(a <= b + atol for a, b in zip(x_list[:-1], x_list[1:]))
-
-
-def is_roughly_of_same_value(x_list, atol: float = 1e-6) -> bool:
-    x_list = list(x_list)
-    assert atol >= 0
-    return all(x == approx(x_list[0], abs=atol) for x in x_list[1:])
 
 
 class SchedulerParams:
@@ -251,8 +181,10 @@ class BaseMockRunRecipe(ABC):
         pass
 
     def set_log_dir(self, log_dir=None):
-        self.log_dir = str(log_dir)
-        if log_dir is not None:
+        if log_dir is None:
+            self.log_dir = None
+        else:
+            self.log_dir = str(log_dir)
             Path(log_dir).mkdir(exist_ok=True, parents=True)
 
     def get(self, key: str):
@@ -606,7 +538,7 @@ class Conv2dRunRecipe(LinearRunRecipe):
                  'keyword': 'tensor'}]
 
 
-class Conv2dPlusLinearRunrecipe(LinearRunRecipe):
+class Conv2dPlusLinearRunRecipe(LinearRunRecipe):
     model_family = 'conv2d+linear'
     supports_structured_masking = False
     default_model_config = PretrainedConfig(
@@ -628,110 +560,3 @@ class Conv2dPlusLinearRunrecipe(LinearRunRecipe):
     def model_input_info(self) -> List[dict]:
         return [{'sample_size': [1, 3, self.model_config.input_size, self.model_config.input_size],
                  'keyword': 'tensor'}]
-
-
-class CompressionTrainer(Trainer):
-    def __init__(self,
-                 compression_ctrl: Optional[CompressionAlgorithmController],
-                 *args,
-                 callbacks: Optional[List[TrainerCallback]] = None,
-                 **kwargs):
-        self.compression_ctrl = compression_ctrl
-        if compression_ctrl is not None:
-            if not callbacks:
-                compression_callback = CompressionCallback(compression_ctrl)
-                callbacks = [compression_callback]
-                self.compression_callback = compression_callback
-            else:
-                assert len(callbacks) == 1
-                self.compression_callback = callbacks[0]
-        super().__init__(callbacks=callbacks, *args, **kwargs)
-        if not (self.args.local_rank == -1 or self.args.no_cuda or compression_ctrl is None):
-            compression_ctrl.distributed()
-
-    def compute_loss(self, model, inputs, return_outputs=False):
-        loss, outputs = super().compute_loss(model, inputs, return_outputs=True)
-        if self.compression_ctrl is not None:
-            loss_compress = self.compression_ctrl.loss()
-            loss = loss + loss_compress
-        return (loss, outputs) if return_outputs else loss
-
-
-class CompressionCallback(TrainerCallback):
-    def __init__(self, compression_ctrl: CompressionAlgorithmController) -> None:
-        self.compression_ctrl = compression_ctrl
-        self._compression_log_by_step = OrderedDict()
-
-    def on_epoch_begin(self, args: TrainingArguments, state: TrainerState, control: TrainerControl, **kwargs):
-        self.compression_ctrl.scheduler.epoch_step()
-
-    def on_step_begin(self, args: TrainingArguments, state: TrainerState, control: TrainerControl, **kwargs):
-        self.compression_ctrl.scheduler.step()
-
-    def on_step_end(self, args: TrainingArguments, state: TrainerState, control: TrainerControl, **kwargs):
-        stats = self.compression_ctrl.statistics()
-        stat_dict = prepare_for_tensorboard(stats)
-        stat_dict.update(step=state.global_step, epoch=state.epoch)
-        self._compression_log_by_step[state.global_step] = stat_dict
-
-    def on_train_end(self, args: TrainingArguments, state: TrainerState, control: TrainerControl, **kwargs):
-        self._training_log = state.log_history
-
-    def get_compression_log(self, step_starts_from_1=True):
-        if step_starts_from_1:
-            return self._compression_log_by_step
-        return {(step - 1): log for step, log in self._compression_log_by_step.items()}
-
-    def get_train_log(self):
-        return self._training_log
-
-
-def build_compression_trainer(output_dir,
-                              compression_ctrl: CompressionAlgorithmController,
-                              compressed_model: NNCFNetwork,
-                              train_dataset: Optional[Dataset] = None,
-                              eval_dataset: Optional[Dataset] = None,
-                              callback: Optional[CompressionCallback] = None,
-                              batch_size: int = 1,
-                              **training_kwargs) -> CompressionTrainer:
-    training_args = dict(
-        output_dir=Path(output_dir),
-        label_names=['labels'],
-        evaluation_strategy='epoch',
-        logging_steps=1,
-        per_device_train_batch_size=batch_size,
-        per_device_eval_batch_size=batch_size,
-        num_train_epochs=6,
-        learning_rate=1e-3,
-        optim='adamw_torch',
-        remove_unused_columns=False,
-        seed=42,
-        data_seed=42,
-        full_determinism=True,
-        report_to='none',
-        disable_tqdm=True,
-        no_cuda=True,
-    )
-    if eval_dataset is None:
-        training_args['evaluation_strategy'] = 'no'
-    training_args.update(training_kwargs)
-    training_args = TrainingArguments(**training_args)
-
-    def compute_metrics(eval_pred):
-        logits, labels = eval_pred
-        predictions = np.argmax(logits, axis=-1)
-        return dict(acc=(predictions == labels).mean())
-
-    if callback is None:
-        callback = CompressionCallback(compression_ctrl)
-
-    trainer = CompressionTrainer(
-        model=compressed_model,
-        args=training_args,
-        compression_ctrl=compression_ctrl,
-        callbacks=[callback],
-        train_dataset=train_dataset,
-        eval_dataset=eval_dataset,
-        compute_metrics=compute_metrics,
-    )
-    return trainer

@@ -23,6 +23,7 @@ from pytest import approx
 from nncf.experimental.torch.sparsity.movement.scheduler import MovementPolynomialThresholdScheduler
 from nncf.experimental.torch.sparsity.movement.scheduler import MovementSchedulerStage
 from nncf.torch.model_creation import create_compressed_model
+from nncf.common.logging import nncf_logger
 from tests.torch.sparsity.movement.helpers import BaseMockRunRecipe
 from tests.torch.sparsity.movement.helpers import BertRunRecipe
 from tests.torch.sparsity.movement.helpers import LinearRunRecipe
@@ -42,7 +43,7 @@ class TestSchedulerCreation:
         ref = dict(power=3, warmup_start_epoch=1, warmup_end_epoch=2,
                    init_importance_threshold=None, final_importance_threshold=0.,
                    importance_regularization_factor=1, _steps_per_epoch=None,
-                   enable_structured_masking=False)
+                   enable_structured_masking=True)
         for key, value in ref.items():
             assert hasattr(scheduler, key) and getattr(scheduler, key) == value
 
@@ -80,8 +81,8 @@ class TestSchedulerCreation:
              match='`init_importance_threshold` is equal to or greater'),
     ])
     def test_warn_on_improper_config(self, desc: dict, mocker, caplog):
-        with caplog.at_level(logging.WARNING, logger='nncf'):
-            mocker.patch.object(logging.getLogger('nncf'), 'propagate', True)
+        with caplog.at_level(logging.WARNING, logger=nncf_logger.name):
+            mocker.patch.object(nncf_logger, 'propagate', True)
             _ = MovementPolynomialThresholdScheduler(controller=MagicMock(), params=desc['params'].to_dict())
         assert desc['match'] in caplog.text
 

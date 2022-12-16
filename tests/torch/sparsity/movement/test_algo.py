@@ -45,7 +45,7 @@ from nncf.torch.module_operations import UpdateWeightAndBias
 from tests.torch.sparsity.movement.helpers import BaseMockRunRecipe
 from tests.torch.sparsity.movement.helpers import BertRunRecipe
 from tests.torch.sparsity.movement.helpers import CompressionCallback
-from tests.torch.sparsity.movement.helpers import Conv2dPlusLinearRunrecipe
+from tests.torch.sparsity.movement.helpers import Conv2dPlusLinearRunRecipe
 from tests.torch.sparsity.movement.helpers import Conv2dRunRecipe
 from tests.torch.sparsity.movement.helpers import LinearRunRecipe
 from tests.torch.sparsity.movement.helpers import SwinRunRecipe
@@ -257,7 +257,7 @@ class TestControllerCreation:
 
 class TestControllerStats:
     def test_calculate_sparsity(self):
-        recipe = Conv2dPlusLinearRunrecipe.from_default()
+        recipe = Conv2dPlusLinearRunRecipe.from_default()
         model = recipe.model
         for p in model.parameters():
             torch.nn.init.constant_(p, 1.)
@@ -419,7 +419,7 @@ class TestModelSaving:
         Wav2Vec2RunRecipe.from_default(),
         SwinRunRecipe.from_default(),
         LinearRunRecipe.from_default(),
-        Conv2dPlusLinearRunrecipe.from_default()
+        Conv2dPlusLinearRunRecipe.from_default()
     ])
     def test_same_outputs_in_torch_and_exported_onnx(self, tmp_path: Path, recipe: BaseMockRunRecipe):
         num_samples = 4
@@ -461,7 +461,7 @@ class TestModelSaving:
 
     @pytest.mark.parametrize('linear_recipe', [
         LinearRunRecipe.from_default(bias=True),
-        Conv2dPlusLinearRunrecipe.from_default(bias=False)
+        Conv2dPlusLinearRunRecipe.from_default(bias=False)
     ])
     def test_exported_onnx_has_sparsified_param(self, tmp_path: Path, linear_recipe: BaseMockRunRecipe):
         compression_ctrl, _ = create_compressed_model(linear_recipe.model,

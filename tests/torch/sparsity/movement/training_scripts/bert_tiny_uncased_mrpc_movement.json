@@ -23,7 +23,6 @@
       "params": {
         "warmup_start_epoch": 3,
         "warmup_end_epoch": 6,
-        "final_importance_threshold": 0,
         "importance_regularization_factor": 0.01,
         "enable_structured_masking": true
       },
@@ -44,7 +43,7 @@
           "target_scopes": "{re}.*BertOutput.*"
         }
       ],
-      "ignored_scopes": ["{re}embedding", "{re}pooler", "{re}classifier"]
+      "ignored_scopes": ["{re}pooler", "{re}classifier"]
     }
   ]
 }

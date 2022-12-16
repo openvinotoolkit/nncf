@@ -16,9 +16,9 @@ from typing import Any, Dict, Optional
 
 import torch
 
+from nncf.common.logging import nncf_logger
 from nncf.common.schedulers import BaseCompressionScheduler
 from nncf.common.schedulers import PolynomialDecaySchedule
-from nncf.common.utils.logger import logger
 
 
 class MovementSchedulerStage(IntEnum):
@@ -55,7 +55,7 @@ class MovementPolynomialThresholdScheduler(BaseCompressionScheduler):
         self.warmup_start_epoch: int = params.get('warmup_start_epoch', None)
         self.warmup_end_epoch: int = params.get('warmup_end_epoch', None)
         self.importance_regularization_factor: float = params.get('importance_regularization_factor', None)
-        self.enable_structured_masking: bool = params.get('enable_structured_masking', False)
+        self.enable_structured_masking: bool = params.get('enable_structured_masking', True)
         self._steps_per_epoch = params.get('steps_per_epoch', None)
 
         if None in [self.warmup_start_epoch, self.warmup_end_epoch, self.importance_regularization_factor]:
@@ -75,8 +75,8 @@ class MovementPolynomialThresholdScheduler(BaseCompressionScheduler):
 
         if self.init_importance_threshold is not None and \
                 self.init_importance_threshold >= self.final_importance_threshold:
-            logger.warning('`init_importance_threshold` is equal to or greater than `final_importance_threshold`. '
-                           'Movement sparsity may not work as expected.')
+            nncf_logger.warning('`init_importance_threshold` is equal to or greater than '
+                                '`final_importance_threshold`. Movement sparsity may not work as expected.')
 
         self._schedule = PolynomialDecaySchedule(
             initial_value=0., target_value=1.,
@@ -146,11 +146,11 @@ class MovementPolynomialThresholdScheduler(BaseCompressionScheduler):
     def _schedule_operand_threshold(self):
         if self.init_importance_threshold is None and self.current_stage == MovementSchedulerStage.IN_WARMUP:
             adaptive_init_threshold = self._calc_init_threshold_from_controller(target_sparsity=0.001)
-            logger.info('Movement sparsity automatically calculates `init_importance_threshold` as '
-                        f'{adaptive_init_threshold} so that warmup starts from ~0.1% relative sparsity.')
+            nncf_logger.info('Movement sparsity automatically calculates `init_importance_threshold` as '
+                             f'{adaptive_init_threshold} so that warmup starts from ~0.1% relative sparsity.')
             if adaptive_init_threshold >= self.final_importance_threshold:
-                logger.warning('The auto-calculated `init_importance_threshold` is equal to or greater than '
-                               '`final_importance_threshold`. Movement sparsity may not work as expected.')
+                nncf_logger.warning('The auto-calculated `init_importance_threshold` is equal to or greater than '
+                                    '`final_importance_threshold`. Movement sparsity may not work as expected.')
             self.init_importance_threshold = adaptive_init_threshold
         if self.current_stage == MovementSchedulerStage.POST_WARMUP and (not self._is_controller_frozen):
             if self.enable_structured_masking:
@@ -215,6 +215,6 @@ class MovementPolynomialThresholdScheduler(BaseCompressionScheduler):
 
         if self._steps_per_epoch is None:
             self._should_skip = True
-            logger.info('Movement Sparsity scheduler updates importance threshold and regularization'
-                        'factor per optimizer step, but steps_per_epoch was not set in config. Will '
-                        'measure the actual steps per epoch as signaled by a .epoch_step() call.')
+            nncf_logger.info('Movement Sparsity scheduler updates importance threshold and regularization'
+                             'factor per optimizer step, but steps_per_epoch was not set in config. Will '
+                             'measure the actual steps per epoch as signaled by a .epoch_step() call.')

@@ -20,8 +20,8 @@ import torch.nn.functional as F
 
 from nncf.common.graph.graph import NNCFNodeName
 from nncf.common.graph.layer_attributes import LinearLayerAttributes
+from nncf.common.logging import nncf_logger
 from nncf.common.utils.helpers import matches_any
-from nncf.common.utils.logger import logger
 from nncf.experimental.torch.search_building_blocks.search_blocks import BlockFilteringStrategy
 from nncf.experimental.torch.search_building_blocks.search_blocks import BuildingBlockType
 from nncf.experimental.torch.search_building_blocks.search_blocks import get_building_blocks
@@ -94,7 +94,7 @@ class StructuredMaskContext:
     @property
     def independent_structured_mask(self) -> Optional[torch.Tensor]:
         if self._independent_structured_mask is None:
-            logger.debug('Independent structured mask has not been calculated. Return None.')
+            nncf_logger.debug('Independent structured mask has not been calculated. Return None.')
         return self._independent_structured_mask
 
     @independent_structured_mask.setter
@@ -106,14 +106,14 @@ class StructuredMaskContext:
             self._independent_structured_mask = tensor.clone()
         else:
             if self._independent_structured_mask.device != tensor.device:
-                logger.debug('Changing independent_structured_mask device to %s', tensor.device)
+                nncf_logger.debug('Changing independent_structured_mask device to %s', tensor.device)
                 self._independent_structured_mask = self._independent_structured_mask.to(tensor.device)
             self._independent_structured_mask.copy_(tensor)
 
     @property
     def dependent_structured_mask(self) -> Optional[torch.Tensor]:
         if self._dependent_structured_mask is None:
-            logger.debug('Dependent structured mask has not been calculated. Return None.')
+            nncf_logger.debug('Dependent structured mask has not been calculated. Return None.')
         return self._dependent_structured_mask
 
     @dependent_structured_mask.setter
@@ -125,7 +125,7 @@ class StructuredMaskContext:
             self._dependent_structured_mask = tensor.clone()
         else:
             if self._dependent_structured_mask.device != tensor.device:
-                logger.debug('Changing dependent_structured_mask device to %s', tensor.device)
+                nncf_logger.debug('Changing dependent_structured_mask device to %s', tensor.device)
                 self._dependent_structured_mask = self._dependent_structured_mask.to(tensor.device)
             self._dependent_structured_mask.copy_(tensor)
 
@@ -247,9 +247,9 @@ class StructuredMaskHandler:
         self._structured_mask_ctx_groups = self._create_structured_mask_context_groups(
             compressed_model, sparsified_module_info_list, self.rules_by_group_type)
 
-        logger.debug('Totally %d structured mask context groups.', len(self._structured_mask_ctx_groups))
+        nncf_logger.debug('Totally %d structured mask context groups.', len(self._structured_mask_ctx_groups))
         for structured_mask_ctx_group in self._structured_mask_ctx_groups:
-            logger.debug('%s', structured_mask_ctx_group)
+            nncf_logger.debug('%s', structured_mask_ctx_group)
 
     def update_independent_structured_mask(self):
         for group in self._structured_mask_ctx_groups:
