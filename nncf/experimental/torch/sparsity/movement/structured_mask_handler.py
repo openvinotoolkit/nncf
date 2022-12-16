@@ -317,7 +317,7 @@ class StructuredMaskHandler:
     ) -> List[StructuredMaskContextGroup]:
         module_vs_sparse_module_info_map = {minfo.module: minfo for minfo in sparsified_module_info_list}
         building_blocks, _ = get_building_blocks(compressed_model,
-                                                 target_block_types=[BuildingBlockType.MSHA, BuildingBlockType.FF],
+                                                 target_block_types=[BuildingBlockType.MHSA, BuildingBlockType.FF],
                                                  block_filter_strategy=BlockFilteringStrategy.KEEP_SMALL,
                                                  hw_fused_ops=True)
         groups = []

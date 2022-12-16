@@ -336,7 +336,7 @@ class TestStructuredMaskHandler:
         for i in range(num_transformer_blocks, num_transformer_blocks * 2):
             group_mhsa = handler._structured_mask_ctx_groups[i]
             assert isinstance(group_mhsa, StructuredMaskContextGroup)
-            assert group_mhsa.group_type == BuildingBlockType.MSHA
+            assert group_mhsa.group_type == BuildingBlockType.MHSA
             assert len(group_mhsa.structured_mask_context_list) == 4
 
     def test_update_independent_structured_mask(self, mocker):
@@ -445,7 +445,7 @@ class TestStructuredMaskStrategy:
         assert strategy.dim_per_head == ref_dim_per_head
         rules_by_group_type = strategy.rules_by_group_type
         for group_type, rule_list in rules_by_group_type.items():
-            assert group_type in [BuildingBlockType.MSHA, BuildingBlockType.FF]
+            assert group_type in [BuildingBlockType.MHSA, BuildingBlockType.FF]
             assert isinstance(rule_list, list)
             for rule in rule_list:
                 assert isinstance(rule, StructuredMaskRule)

@@ -93,7 +93,7 @@ class BaseTransformerStructuredMaskStrategy(BaseStructuredMaskStrategy, ABC):
     @property
     def rules_by_group_type(self) -> Dict[BuildingBlockType, List[StructuredMaskRule]]:
         config = {
-            BuildingBlockType.MSHA: [
+            BuildingBlockType.MHSA: [
                 StructuredMaskRule(
                     keywords=[self.MHSA_Q, self.MHSA_K, self.MHSA_V],
                     prune_by_row=True,
