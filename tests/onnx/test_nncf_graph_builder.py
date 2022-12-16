@@ -38,7 +38,7 @@ def test_compare_nncf_graph_synthetic_models(model_cls_to_test):
     nncf_graph = GraphConverter.create_nncf_graph(model_to_test.onnx_model)
     nx_graph = nncf_graph.get_graph_for_structure_analysis(extended=True)
 
-    compare_nx_graph_with_reference(nx_graph, path_to_dot)
+    compare_nx_graph_with_reference(nx_graph, path_to_dot, check_edge_attrs=True)
 
 CLASSIFICATION_MODEL_DEF_AND_OBJ = [
         (ModelToTest('resnet18', [1, 3, 224, 224]), models.resnet18(pretrained=True)),
@@ -68,7 +68,7 @@ def test_compare_nncf_graph_classification_real_models(tmp_path, model_to_test, 
     nncf_graph = GraphConverter.create_nncf_graph(original_model)
     nx_graph = nncf_graph.get_graph_for_structure_analysis(extended=True)
 
-    compare_nx_graph_with_reference(nx_graph, path_to_dot)
+    compare_nx_graph_with_reference(nx_graph, path_to_dot, check_edge_attrs=True)
 
 DETECTION_MODELS = [ModelToTest('ssd-12', [1, 3, 1200, 1200]),
                     ModelToTest('yolov2-coco-9', [1, 3, 416, 416]),
@@ -94,4 +94,4 @@ def test_compare_nncf_graph_detection_real_models(tmp_path, model_to_test):
     nncf_graph = GraphConverter.create_nncf_graph(original_model)
     nx_graph = nncf_graph.get_graph_for_structure_analysis(extended=True)
 
-    compare_nx_graph_with_reference(nx_graph, path_to_dot)
+    compare_nx_graph_with_reference(nx_graph, path_to_dot, check_edge_attrs=True)
