@@ -286,8 +286,7 @@ def run(config):
 
     # Create dataset
     train_builder, test_builder = get_dataset_builders(config, strategy.num_replicas_in_sync)
-    train_dataset = train_builder.build()
-    test_dataset = test_builder.build()
+    train_dataset, test_dataset = train_builder.build(), test_builder.build()
     train_dist_dataset = strategy.experimental_distribute_dataset(train_dataset)
     test_dist_dataset = strategy.experimental_distribute_dataset(test_dataset)
 
@@ -379,8 +378,7 @@ def run(config):
                   initial_epoch, initial_step, epochs, steps_per_epoch, checkpoint_manager,
                   compression_ctrl, config.log_dir, optimizer, num_test_batches, config.print_freq)
 
-    statistics = compression_ctrl.statistics()
-    logger.info(statistics.to_str())
+    logger.info(compression_ctrl.statistics().to_str())
     metric_result = evaluate(test_step, eval_metric, test_dist_dataset, num_test_batches, config.print_freq)
     logger.info('Validation metric = {}'.format(metric_result))
 
