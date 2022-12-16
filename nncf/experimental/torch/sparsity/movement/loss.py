@@ -12,6 +12,8 @@
 """
 from typing import List
 
+import torch
+
 from nncf.experimental.torch.sparsity.movement.layers import MovementSparsifier
 from nncf.torch.compression_method_api import PTCompressionLoss
 
@@ -30,13 +32,14 @@ class ImportanceLoss(PTCompressionLoss):
         super().__init__()
         self.sparse_layers = sparse_layers
         self._disabled = False
+        self._device = next(sparse_layers[0].parameters()).device
 
     def disable(self):
         self._disabled = True
 
     def calculate(self):
         if self._disabled:
-            return 0.
+            return torch.zeros([], device=self._device)
         loss = 0.
         for n, sparse_layer in enumerate(self.sparse_layers):
             loss = loss * (n / (n + 1)) + sparse_layer.loss() / (n + 1)  # avoid overflow
