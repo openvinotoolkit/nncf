@@ -60,13 +60,12 @@ strict digraph  {
 "58 /features/features.12/expand3x3/Conv" [id=58, type=Conv];
 "59 /features/features.12/expand3x3_activation/Relu" [id=59, type=Relu];
 "60 /features/features.12/Concat" [id=60, type=Concat];
-"61 /classifier/classifier.0/Dropout" [id=61, type=Dropout];
-"62 /classifier/classifier.1/Conv" [id=62, type=Conv];
-"63 /classifier/classifier.2/Relu" [id=63, type=Relu];
-"64 /classifier/classifier.3/GlobalAveragePool" [id=64, type=GlobalAveragePool];
-"65 /Flatten" [id=65, type=Flatten];
-"66 nncf_model_input_0" [id=66, type=nncf_model_input];
-"67 nncf_model_output_0" [id=67, type=nncf_model_output];
+"61 /classifier/classifier.1/Conv" [id=61, type=Conv];
+"62 /classifier/classifier.2/Relu" [id=62, type=Relu];
+"63 /classifier/classifier.3/GlobalAveragePool" [id=63, type=GlobalAveragePool];
+"64 /Flatten" [id=64, type=Flatten];
+"65 nncf_model_input_0" [id=65, type=nncf_model_input];
+"66 nncf_model_output_0" [id=66, type=nncf_model_output];
 "0 /features/features.0/Conv" -> "1 /features/features.1/Relu"  [label="[1, 96, 109, 109]", style=solid];
 "1 /features/features.1/Relu" -> "2 /features/features.2/MaxPool"  [label="[1, 96, 109, 109]", style=solid];
 "2 /features/features.2/MaxPool" -> "3 /features/features.3/squeeze/Conv"  [label="[1, 96, 54, 54]", style=solid];
@@ -135,11 +134,10 @@ strict digraph  {
 "57 /features/features.12/expand1x1_activation/Relu" -> "60 /features/features.12/Concat"  [label="[1, 256, 13, 13]", style=solid];
 "58 /features/features.12/expand3x3/Conv" -> "59 /features/features.12/expand3x3_activation/Relu"  [label="[1, 256, 13, 13]", style=solid];
 "59 /features/features.12/expand3x3_activation/Relu" -> "60 /features/features.12/Concat"  [label="[1, 256, 13, 13]", style=solid];
-"60 /features/features.12/Concat" -> "61 /classifier/classifier.0/Dropout"  [label="[1, 512, 13, 13]", style=solid];
-"61 /classifier/classifier.0/Dropout" -> "62 /classifier/classifier.1/Conv"  [label="[1, 512, 13, 13]", style=solid];
-"62 /classifier/classifier.1/Conv" -> "63 /classifier/classifier.2/Relu"  [label="[1, 1000, 13, 13]", style=solid];
-"63 /classifier/classifier.2/Relu" -> "64 /classifier/classifier.3/GlobalAveragePool"  [label="[1, 1000, 13, 13]", style=solid];
-"64 /classifier/classifier.3/GlobalAveragePool" -> "65 /Flatten"  [label="[1, 1000, 1, 1]", style=solid];
-"65 /Flatten" -> "67 nncf_model_output_0"  [label="[1, 1000]", style=solid];
-"66 nncf_model_input_0" -> "0 /features/features.0/Conv"  [label="[1, 3, 224, 224]", style=solid];
+"60 /features/features.12/Concat" -> "61 /classifier/classifier.1/Conv"  [label="[1, 512, 13, 13]", style=solid];
+"61 /classifier/classifier.1/Conv" -> "62 /classifier/classifier.2/Relu"  [label="[1, 1000, 13, 13]", style=solid];
+"62 /classifier/classifier.2/Relu" -> "63 /classifier/classifier.3/GlobalAveragePool"  [label="[1, 1000, 13, 13]", style=solid];
+"63 /classifier/classifier.3/GlobalAveragePool" -> "64 /Flatten"  [label="[1, 1000, 1, 1]", style=solid];
+"64 /Flatten" -> "66 nncf_model_output_0"  [label="[1, 1000]", style=solid];
+"65 nncf_model_input_0" -> "0 /features/features.0/Conv"  [label="[1, 3, 224, 224]", style=solid];
 }
