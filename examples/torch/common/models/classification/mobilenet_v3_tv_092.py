@@ -41,16 +41,16 @@ class SqueezeExcitation(nn.Module):
         self.relu = nn.ReLU(inplace=True)
         self.fc2 = nn.Conv2d(squeeze_channels, input_channels, 1)
 
-    def _scale(self, input: Tensor, inplace: bool) -> Tensor:
-        scale = F.adaptive_avg_pool2d(input, 1)
+    def _scale(self, input_: Tensor, inplace: bool) -> Tensor:
+        scale = F.adaptive_avg_pool2d(input_, 1)
         scale = self.fc1(scale)
         scale = self.relu(scale)
         scale = self.fc2(scale)
         return F.hardsigmoid(scale, inplace=inplace)
 
-    def forward(self, input: Tensor) -> Tensor:
-        scale = self._scale(input, True)
-        return scale * input
+    def forward(self, input_: Tensor) -> Tensor:
+        scale = self._scale(input_, True)
+        return scale * input_
 
 
 class InvertedResidualConfig:
@@ -76,7 +76,7 @@ class InvertedResidual(nn.Module):
     def __init__(self, cnf: InvertedResidualConfig, norm_layer: Callable[..., nn.Module],
                  se_layer: Callable[..., nn.Module] = SqueezeExcitation):
         super().__init__()
-        if not (1 <= cnf.stride <= 2):
+        if not 1 <= cnf.stride <= 2:
             raise ValueError('illegal stride value')
 
         self.use_res_connect = cnf.stride == 1 and cnf.input_channels == cnf.out_channels
@@ -105,10 +105,10 @@ class InvertedResidual(nn.Module):
         self.out_channels = cnf.out_channels
         self._is_cn = cnf.stride > 1
 
-    def forward(self, input: Tensor) -> Tensor:
-        result = self.block(input)
+    def forward(self, input_: Tensor) -> Tensor:
+        result = self.block(input_)
         if self.use_res_connect:
-            result += input
+            result += input_
         return result
 
 
@@ -136,8 +136,8 @@ class MobileNetV3(nn.Module):
 
         if not inverted_residual_setting:
             raise ValueError("The inverted_residual_setting should not be empty")
-        elif not (isinstance(inverted_residual_setting, Sequence) and
-                  all([isinstance(s, InvertedResidualConfig) for s in inverted_residual_setting])):
+        if not (isinstance(inverted_residual_setting, Sequence) and
+                all(isinstance(s, InvertedResidualConfig) for s in inverted_residual_setting)):
             raise TypeError("The inverted_residual_setting should be List[InvertedResidualConfig]")
 
         if block is None:

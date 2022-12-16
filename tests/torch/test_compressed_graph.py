@@ -31,7 +31,6 @@ from tests.torch.test_models.synthetic import MMDivConv
 from tests.torch.test_models.synthetic import MatMulDivConv
 from torch import nn
 import torch.nn.functional as F
-import torchvision
 
 from nncf.common.hardware.config import HWConfigType
 from nncf.common.quantization.quantizer_setup import ActivationQuantizationInsertionPoint

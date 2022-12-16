@@ -361,7 +361,7 @@
   "nncf_module.features.18.0.pre_ops.0.op._num_bits": false,
   "nncf_module.features.18.0.pre_ops.0.op._scale_param_storage": false,
   "nncf_module.features.18.0.pre_ops.0.op.signed_tensor": false,
-  "nncf_module.features.18.0.weight": false,
+  "nncf_module.features.18.0.weight": true,
   "nncf_module.features.18.1.bias": false,
   "nncf_module.features.18.1.weight": false,
   "nncf_module.features.2.conv.0.0.pre_ops.0.op._num_bits": false,

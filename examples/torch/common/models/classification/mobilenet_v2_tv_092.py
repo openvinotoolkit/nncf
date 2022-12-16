@@ -80,7 +80,7 @@ class InvertedResidual(nn.Module):
         expand_ratio: int,
         norm_layer: Optional[Callable[..., nn.Module]] = None
     ) -> None:
-        super(InvertedResidual, self).__init__()
+        super().__init__()
         self.stride = stride
         assert stride in [1, 2]
 
@@ -108,8 +108,7 @@ class InvertedResidual(nn.Module):
     def forward(self, x: Tensor) -> Tensor:
         if self.use_res_connect:
             return x + self.conv(x)
-        else:
-            return self.conv(x)
+        return self.conv(x)
 
 
 class MobileNetV2(nn.Module):
@@ -135,7 +134,7 @@ class MobileNetV2(nn.Module):
             norm_layer: Module specifying the normalization layer to use
 
         """
-        super(MobileNetV2, self).__init__()
+        super().__init__()
 
         if block is None:
             block = InvertedResidual
