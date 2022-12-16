@@ -275,6 +275,9 @@ def model_eval_fn(model, strategy, model_builder, test_dist_dataset, num_test_ba
 
 
 def run(config):
+    if config.disable_tensor_float_32_execution:
+        tf.config.experimental.enable_tensor_float_32_execution(False)
+
     strategy = get_distribution_strategy(config)
     if config.metrics_dump is not None:
         write_metrics(0, config.metrics_dump)

@@ -149,6 +149,9 @@ def load_compression_state(ckpt_path: str):
 
 
 def run(config):
+    if config.disable_tensor_float_32_execution:
+        tf.config.experimental.enable_tensor_float_32_execution(False)
+    
     strategy = get_distribution_strategy(config)
     if config.metrics_dump is not None:
         write_metrics(0, config.metrics_dump)
