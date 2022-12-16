@@ -110,10 +110,10 @@ class BuildingBlock:
 class BuildingBlockType(Enum):
     """
     Describes type of building block for transformers-based network.
-    `MSHA` type is characterized by the presence 4 FC and 2 MatMul layers.
+    `MHSA` type is characterized by the presence 4 FC and 2 MatMul layers.
     `FF` type is characterized by the presence 2 FC layers.
     """
-    MSHA = 'MSHA'
+    MHSA = 'MHSA'
     FF = 'FF'
     Unknown = 'unknown'
 
@@ -659,7 +659,7 @@ def get_type_building_block(op_addresses_in_block: Set[OperationAddress]) -> Bui
         if op_address.operator_name in PTLinearMetatype.get_all_aliases():
             count_fc += 1
     if count_fc == 4 and count_matmul == 2:
-        return BuildingBlockType.MSHA
+        return BuildingBlockType.MHSA
     if count_fc == 2 and count_matmul == 0:
         return BuildingBlockType.FF
     return BuildingBlockType.Unknown
