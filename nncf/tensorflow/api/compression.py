@@ -13,10 +13,17 @@
 
 from typing import Any
 from typing import Dict
+from typing import Tuple
 from typing import TypeVar
+from typing import Union
+
+import tensorflow as tf
 
 from nncf import NNCFConfig
 from nncf.common.compression import BaseCompressionAlgorithmBuilder
+from nncf.common.graph import NNCFGraph
+from nncf.tensorflow.graph.converter import TFModelConverter
+from nncf.tensorflow.graph.converter import TFModelConverterFactory
 from nncf.tensorflow.graph.model_transformer import TFModelTransformer
 
 TModel = TypeVar('TModel')
@@ -51,6 +58,7 @@ class TFCompressionAlgorithmBuilder(BaseCompressionAlgorithmBuilder):
 
         :param state_without_name: Output of `_get_state_without_name()` method.
         """
+
     def apply_to(self, model: TModel) -> TModel:
         """
         Applies algorithm-specific modifications to the model.
@@ -67,3 +75,19 @@ class TFCompressionAlgorithmBuilder(BaseCompressionAlgorithmBuilder):
             self.initialize(transformed_model)
 
         return transformed_model
+
+    def _get_model_converter_and_graph(self, model: TModel) -> Tuple[TFModelConverter, NNCFGraph]:
+        """
+        Check ignored/target scopes before return model converter and model graph.
+
+        :param model: The original uncompressed model.
+
+        :return convertor: Converter for TF models.
+        :return nncf_graph: The `NNCFGraph` object that represents the TF model.
+        """
+        converter = TFModelConverterFactory.create(model)
+        nncf_graph = converter.convert()
+
+        self._check_scopes_in_graph(nncf_graph)
+
+        return converter, nncf_graph

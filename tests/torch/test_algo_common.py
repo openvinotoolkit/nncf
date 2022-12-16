@@ -13,7 +13,8 @@
 import copy
 import os
 from functools import reduce
-from typing import Dict, List
+from typing import Dict
+from typing import List
 
 import onnx
 import pytest
@@ -22,6 +23,7 @@ from torch import nn
 
 from nncf import NNCFConfig
 from nncf.api.compression import CompressionStage
+from nncf.torch.algo_selector import PT_COMPRESSION_ALGORITHMS
 from nncf.torch.compression_method_api import DOMAIN_CUSTOM_OPS_NAME
 from tests.torch.helpers import BasicConvTestModel
 from tests.torch.helpers import create_compressed_model_and_algo_for_test
@@ -342,3 +344,17 @@ def test_compression_loss_gpu_device_compatibility(config):
     register_bn_adaptation_init_args(config)
     _, compression_ctrl = create_compressed_model_and_algo_for_test(model, config)
     compression_ctrl.loss()
+
+
+NOT_SUPPORT_SCOPES_ALGO = ["knowledge_distillation", "NoCompressionAlgorithm"]
+@pytest.mark.parametrize("algo_name", PT_COMPRESSION_ALGORITHMS.registry_dict.keys() - NOT_SUPPORT_SCOPES_ALGO)
+def test_raise_runtimeerror_for_not_matched_scope_names(algo_name):
+    model = BasicLinearTestModel()
+    config = ConfigCreator().add_algo(algo_name).create()
+    config["compression"][0]["ignored_scopes"] = ["unknown"]
+    if algo_name == "quantization":
+        config['compression']["initializer"] = {"batchnorm_adaptation": {"num_bn_adaptation_samples": 0}}
+
+    with pytest.raises(RuntimeError) as exc_info:
+        create_compressed_model_and_algo_for_test(model, config)
+    assert "No match has been found among the model" in str(exc_info.value)

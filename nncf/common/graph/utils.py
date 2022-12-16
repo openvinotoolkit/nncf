@@ -15,11 +15,13 @@ from functools import partial
 from typing import List
 from typing import Union
 
-from nncf import NNCFConfig
-from nncf.common.graph import NNCFGraph, NNCFNode
+from nncf.common.graph import NNCFGraph
+from nncf.common.graph import NNCFNode
 from nncf.common.pruning.utils import traverse_function
 from nncf.common.utils.helpers import matches_any
 from nncf.common.utils.logger import logger
+from nncf.parameters import IgnoredScope
+from nncf.parameters import convert_ignored_scope_to_list
 
 
 def get_concat_axis(input_shapes: List[List[int]], output_shapes: List[List[int]]) -> int:
@@ -93,55 +95,29 @@ def get_split_axis(input_shapes: List[List[int]], output_shapes: List[List[int]]
     return axis
 
 
-def check_scope_names_match_graph(config: NNCFConfig, graph: NNCFGraph) -> None:
+def get_not_matched_scopes(scope: Union[List[str], str, IgnoredScope], nodes: List[NNCFNode]) -> List[str]:
     """
-    Raise RuntimeError in case if scope names in NNCF config do not match model graph.
+    Return list of scope that do not match node list.
 
-    :param config: An instance of NNCFConfig.
+    :param scope: List of ignored/target scope or instance of IgnoredScope.
     :param graph: The model graph.
+
+    :return : List of not matched scopes.
     """
 
-    node_list = graph.get_all_nodes()
+    if isinstance(scope, str):
+        patterns = [scope]
+    elif isinstance(scope, IgnoredScope):
+        patterns = convert_ignored_scope_to_list(scope)
+    else:
+        patterns = scope
 
-    def _find_not_matched_paterns(patterns: Union[List, str]) -> List:
-        if not patterns:
-            return []
+    if not patterns:
+        return []
 
-        if not isinstance(patterns, list):
-            patterns = [patterns]
-
-        matched_patterns = set()
-        for node in node_list:
-            for pattern in patterns:
-                if matches_any(node.node_name, pattern):
-                    matched_patterns.add(pattern)
-        return list(set(patterns) - matched_patterns)
-
-    def _check_scopes(config_part_name: str, cfg_part: NNCFConfig) -> str:
-        not_matched_ignored_scopes = _find_not_matched_paterns(cfg_part.get("ignored_scopes", []))
-        not_matched_target_scopes = _find_not_matched_paterns(cfg_part.get("target_scopes", []))
-
-        err_msg = ""
-        if not_matched_ignored_scopes:
-            err_msg += f" - in {config_part_name} 'ignored_scopes': {not_matched_ignored_scopes}\n"
-        if not_matched_target_scopes:
-            err_msg += f" - in {config_part_name} 'target_scopes': {not_matched_target_scopes}\n"
-        return err_msg
-
-    err_message = ""
-    err_message += _check_scopes("global part", config)
-
-    algo_configs = config.get("compression", [])
-    algo_configs = [algo_configs] if not isinstance(algo_configs, list) else algo_configs
-    for algo_config in algo_configs:
-        err_message += _check_scopes(f"'{algo_config['algorithm']}' algorithm", algo_config)
-
-    if err_message:
-        err_message = "No match has been found among the model operations " \
-                      "for the following ignored/target scope definitions:\n" \
-                      + err_message \
-                      + "Refer to the original_graph.dot to discover the operations " \
-                      "in the model currently visible to NNCF and specify the ignored/target " \
-                      "scopes in terms of the names there."
-
-        raise RuntimeError(err_message)
+    matched_patterns = set()
+    for node in nodes:
+        for pattern in patterns:
+            if matches_any(node.node_name, pattern):
+                matched_patterns.add(pattern)
+    return list(set(patterns) - matched_patterns)

@@ -24,7 +24,6 @@ from torch.nn import Module
 
 from nncf.api.compression import CompressionAlgorithmController
 from nncf.common.compression import BaseCompressionAlgorithmController as BaseController
-from nncf.common.graph.utils import check_scope_names_match_graph
 from nncf.common.utils.debug import set_debug_log_dir
 from nncf.common.utils.logger import logger as nncf_logger
 from nncf.config import NNCFConfig
@@ -100,8 +99,6 @@ def create_compressed_model(model: Module,
     should_init = compression_state is None
 
     nncf_network = create_nncf_network(model, config, dummy_forward_fn, wrap_inputs_fn, wrap_outputs_fn)
-
-    check_scope_names_match_graph(config, nncf_network.get_original_graph())
 
     builder = create_compression_algorithm_builder(config, should_init)
 

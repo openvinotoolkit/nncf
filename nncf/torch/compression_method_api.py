@@ -136,6 +136,8 @@ class PTCompressionAlgorithmBuilder(BaseCompressionAlgorithmBuilder):
         :param model: An instance of NNCFNetwork for the algorithm to be applied to.
         :return: NNCFNetwork with algorithm-specific modifications applied
         """
+        self._check_scopes_in_graph(model.get_original_graph())
+
         layout = self._get_transformation_layout(model)
         self._handle_frozen_layers(model)
         return layout

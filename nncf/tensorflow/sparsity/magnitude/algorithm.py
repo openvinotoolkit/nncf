@@ -22,7 +22,6 @@ from nncf.api.compression import CompressionStage
 from nncf.common.accuracy_aware_training.training_loop import ADAPTIVE_COMPRESSION_CONTROLLERS
 from nncf.common.graph import OUTPUT_NOOP_METATYPES
 from nncf.common.graph.transformations.commands import TransformationPriority
-from nncf.common.graph.utils import check_scope_names_match_graph
 from nncf.common.initialization.batchnorm_adaptation import BatchnormAdaptationAlgorithm
 from nncf.common.schedulers import StubCompressionScheduler
 from nncf.common.sparsity.schedulers import SPARSITY_SCHEDULERS
@@ -36,7 +35,6 @@ from nncf.config.schemata.defaults import MAGNITUDE_SPARSITY_WEIGHT_IMPORTANCE
 from nncf.config.schemata.defaults import SPARSITY_INIT
 from nncf.tensorflow.algorithm_selector import TF_COMPRESSION_ALGORITHMS
 from nncf.tensorflow.api.compression import TFCompressionAlgorithmBuilder
-from nncf.tensorflow.graph.converter import TFModelConverterFactory
 from nncf.tensorflow.graph.metatypes.tf_ops import WEIGHTABLE_TF_OP_METATYPES
 from nncf.tensorflow.graph.transformations.commands import TFInsertionCommand
 from nncf.tensorflow.graph.transformations.commands import TFLayerWeight
@@ -61,10 +59,7 @@ class MagnitudeSparsityBuilder(TFCompressionAlgorithmBuilder):
         self._op_names = []
 
     def get_transformation_layout(self, model: tf.keras.Model) -> TFTransformationLayout:
-        converter = TFModelConverterFactory.create(model)
-        nncf_graph = converter.convert()
-
-        check_scope_names_match_graph(self.config, nncf_graph)
+        converter, nncf_graph = self._get_model_converter_and_graph(model)
 
         transformations = TFTransformationLayout()
 

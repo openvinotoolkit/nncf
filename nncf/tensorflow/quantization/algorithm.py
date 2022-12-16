@@ -30,7 +30,6 @@ from nncf.common.graph import NNCFNode
 from nncf.common.graph import NNCFNodeName
 from nncf.common.graph.transformations.commands import TargetPoint
 from nncf.common.graph.transformations.commands import TransformationPriority
-from nncf.common.graph.utils import check_scope_names_match_graph
 from nncf.common.graph.utils import get_first_nodes_of_type
 from nncf.common.hardware.config import HW_CONFIG_TYPE_TARGET_DEVICE_MAP
 from nncf.common.hardware.config import HWConfigType
@@ -56,7 +55,6 @@ from nncf.config.extractors import extract_range_init_params
 from nncf.tensorflow.algorithm_selector import TF_COMPRESSION_ALGORITHMS
 from nncf.tensorflow.api.compression import TFCompressionAlgorithmBuilder
 from nncf.tensorflow.graph.converter import TFModelConverter
-from nncf.tensorflow.graph.converter import TFModelConverterFactory
 from nncf.tensorflow.graph.metatypes.common import ELEMENTWISE_LAYER_METATYPES
 from nncf.tensorflow.graph.metatypes.common import GENERAL_CONV_LAYER_METATYPES
 from nncf.tensorflow.graph.metatypes.common import LAYER_METATYPES_AGNOSTIC_TO_DATA_PRECISION
@@ -429,10 +427,7 @@ class QuantizationBuilder(TFCompressionAlgorithmBuilder):
         self._bn_adaptation.run(model)
 
     def _get_quantizer_setup(self, model: tf.keras.Model) -> TFQuantizationSetup:
-        converter = TFModelConverterFactory.create(model)
-        nncf_graph = converter.convert()
-
-        check_scope_names_match_graph(self.config, nncf_graph)
+        converter, nncf_graph = self._get_model_converter_and_graph(model)
 
         self._raise_not_supported_warning(nncf_graph)
 
