@@ -33,7 +33,6 @@ from nncf.torch.graph.operator_metatypes import PTConv3dMetatype
 from nncf.torch.graph.operator_metatypes import PTConvTranspose1dMetatype
 from nncf.torch.graph.operator_metatypes import PTConvTranspose2dMetatype
 from nncf.torch.graph.operator_metatypes import PTConvTranspose3dMetatype
-from nncf.torch.graph.operator_metatypes import PTDepthwiseConv2dSubtype
 from nncf.torch.graph.operator_metatypes import PTEmbeddingBagMetatype
 from nncf.torch.graph.operator_metatypes import PTEmbeddingMetatype
 from nncf.torch.graph.operator_metatypes import PTGroupNormMetatype
