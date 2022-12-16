@@ -135,8 +135,6 @@ EXTRAS_REQUIRE = {
         "torch~=1.13.0",
     ],
     "onnx": [
-        "torch~=1.13.0",
-        "torchvision~=0.14.0",
         "onnx==1.12.0",
         "onnxruntime-openvino==1.13.1"
     ],
