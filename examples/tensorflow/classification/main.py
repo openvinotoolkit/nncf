@@ -165,8 +165,7 @@ def run(config):
     train_builder, validation_builder = get_dataset_builders(config, strategy.num_replicas_in_sync)
     train_dataset, validation_dataset = train_builder.build(), validation_builder.build()
 
-    nncf_config = config.nncf_config
-    nncf_config = register_default_init_args(nncf_config=nncf_config,
+    nncf_config = register_default_init_args(nncf_config=config.nncf_config,
                                              data_loader=train_dataset,
                                              batch_size=train_builder.global_batch_size)
 

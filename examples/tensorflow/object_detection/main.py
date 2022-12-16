@@ -284,8 +284,7 @@ def run(config):
 
     # Create dataset
     train_builder, test_builder = get_dataset_builders(config, strategy.num_replicas_in_sync)
-    train_dataset = train_builder.build()
-    test_dataset = test_builder.build()
+    train_dataset, test_dataset = train_builder.build(), test_builder.build()
     train_dist_dataset = strategy.experimental_distribute_dataset(train_dataset)
     test_dist_dataset = strategy.experimental_distribute_dataset(test_dataset)
 
@@ -366,13 +365,13 @@ def run(config):
                 return metric_result['AP']
 
             acc_aware_training_loop = create_accuracy_aware_training_loop(nncf_config, compression_ctrl)
-            final_statistics = acc_aware_training_loop.run(compress_model,
-                                                           train_epoch_fn=train_epoch_fn,
-                                                           validate_fn=validate_fn,
-                                                           tensorboard_writer=SummaryWriter(config.log_dir,
-                                                                                            'accuracy_aware_training'),
-                                                           log_dir=config.log_dir)
-            print_maximal_degradation_warning(config, final_statistics, logger)
+            compress_model = acc_aware_training_loop.run(compress_model,
+                                                         train_epoch_fn=train_epoch_fn,
+                                                         validate_fn=validate_fn,
+                                                         tensorboard_writer=SummaryWriter(config.log_dir,
+                                                                                          'accuracy_aware_training'),
+                                                         log_dir=config.log_dir)
+            print_maximal_degradation_warning(config, acc_aware_training_loop.final_statistics, logger)
         else:
             train(train_step, test_step, eval_metric, train_dist_dataset, test_dist_dataset,
                   initial_epoch, initial_step, epochs, steps_per_epoch, checkpoint_manager,
