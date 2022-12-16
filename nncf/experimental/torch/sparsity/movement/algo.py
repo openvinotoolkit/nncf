@@ -32,6 +32,7 @@ from nncf.experimental.torch.sparsity.movement.layers import SparseConfigByScope
 from nncf.experimental.torch.sparsity.movement.layers import SparseStructure
 from nncf.experimental.torch.sparsity.movement.loss import ImportanceLoss
 from nncf.experimental.torch.sparsity.movement.scheduler import MovementPolynomialThresholdScheduler
+from nncf.experimental.torch.sparsity.movement.scheduler import MovementSchedulerParams
 from nncf.experimental.torch.sparsity.movement.structured_mask_handler import StructuredMaskHandler
 from nncf.experimental.torch.sparsity.movement.structured_mask_strategy import STRUCTURED_MASK_STRATEGY
 from nncf.experimental.torch.sparsity.movement.structured_mask_strategy import detect_supported_model_family
@@ -122,7 +123,8 @@ class MovementSparsityController(BaseSparsityAlgoController):
         sparsify_operations = [m.operand for m in self.sparsified_module_info]
         params = deepcopy(algo_config.get('params', {}))
         self._distributed = False
-        self._scheduler = MovementPolynomialThresholdScheduler(self, params)
+        self._scheduler_params = MovementSchedulerParams.from_dict(params)
+        self._scheduler = MovementPolynomialThresholdScheduler(self, self._scheduler_params)
         self._loss = ImportanceLoss(sparsify_operations)
         self._config = config
 
@@ -157,9 +159,9 @@ class MovementSparsityController(BaseSparsityAlgoController):
         self._structured_mask_handler.report_structured_sparsity(self._config.get('log_dir', '.'))
 
     def compression_stage(self) -> CompressionStage:
-        if self.scheduler.current_epoch < self.scheduler.warmup_start_epoch:
+        if self.scheduler.current_epoch < self._scheduler_params.warmup_start_epoch:
             return CompressionStage.UNCOMPRESSED
-        if self.scheduler.current_epoch >= self.scheduler.warmup_end_epoch:
+        if self.scheduler.current_epoch >= self._scheduler_params.warmup_end_epoch:
             return CompressionStage.FULLY_COMPRESSED
         return CompressionStage.PARTIALLY_COMPRESSED
 

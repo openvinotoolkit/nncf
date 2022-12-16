@@ -12,8 +12,7 @@
 """
 
 # TODO(yujie): in the mid of refactoring this helper. temporal status
-from tests.torch.sparsity.movement.helpers.config import NNCFAlgoConfig
-from tests.torch.sparsity.movement.helpers.config import SchedulerParams
+from tests.torch.sparsity.movement.helpers.config import MovementAlgoConfig
 from tests.torch.sparsity.movement.helpers.run_recipe import BaseMockRunRecipe
 from tests.torch.sparsity.movement.helpers.run_recipe import BertRunRecipe
 from tests.torch.sparsity.movement.helpers.run_recipe import Conv2dPlusLinearRunRecipe

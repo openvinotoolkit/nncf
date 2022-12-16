@@ -21,6 +21,7 @@ from onnx import numpy_helper
 import onnxruntime
 import pytest
 from pytest import approx
+from scipy.special import softmax
 import torch
 
 from nncf.api.compression import CompressionStage
@@ -64,7 +65,7 @@ from transformers.trainer_callback import TrainerState
 
 FACTOR_NAME_IN_MOVEMENT_STAT = 'movement_sparsity/importance_regularization_factor'
 THRESHOLD_NAME_IN_MOVEMENT_STAT = 'movement_sparsity/importance_threshold'
-RELA_SPARSITY_NAME_IN_MOVEMENT_STAT = 'movement_sparsity/relative_sparsity'
+LINEAR_LAYER_SPARSITY_NAME_IN_MOVEMENT_STAT = 'movement_sparsity/linear_layer_sparsity'
 MODEL_SPARSITY_NAME_IN_MOVEMENT_STAT = 'movement_sparsity/model_sparsity'
 
 
@@ -145,15 +146,15 @@ class TestControllerCreation:
         SwinRunRecipe.from_default(depths=[1, 1], num_heads=[2, 4], mlp_ratio=1.5, qkv_bias=False)
     ], ids=['bert', 'bert_no_ffn_bias', 'bert_with_compression_lr_multiplier', 'swin_no_qkv_bias'])
     def test_can_create_movement_sparsity_layers(self, sparse_structure_by_scopes, recipe: BaseMockRunRecipe):
-        recipe.set(sparse_structure_by_scopes=sparse_structure_by_scopes)
+        recipe.algo_config.sparse_structure_by_scopes = sparse_structure_by_scopes
         compression_ctrl, compressed_model = create_compressed_model(recipe.model,
                                                                      recipe.nncf_config,
                                                                      dump_graphs=False)
         assert isinstance(compression_ctrl, MovementSparsityController)
         assert isinstance(compression_ctrl.scheduler, MovementPolynomialThresholdScheduler)
 
-        configs = recipe.get('sparse_structure_by_scopes')
-        compression_lr_multiplier = recipe.get('compression_lr_multiplier')
+        configs = recipe.algo_config.sparse_structure_by_scopes
+        compression_lr_multiplier = recipe.algo_config.compression_lr_multiplier
         sparse_configs_by_scopes = [SparseConfigByScope.from_config(c) for c in configs]
         for scope, module in compressed_model.get_nncf_modules().items():
             if not hasattr(module, 'pre_ops'):
@@ -168,7 +169,7 @@ class TestControllerCreation:
                             sparse_config = sparse_config_by_scope.sparse_config
                             break
                     self._check_sparsified_layer_mode(op.operand, module, sparse_config, compression_lr_multiplier)
-            if should_consider_scope(str(scope), recipe.get('ignored_scopes')) and \
+            if should_consider_scope(str(scope), recipe.algo_config.ignored_scopes) and \
                     isinstance(module, tuple(SUPPORTED_NNCF_MODULES)):
                 assert count_movement_op == 1
             else:
@@ -340,7 +341,7 @@ class TestControllerStats:
 
         for key in [FACTOR_NAME_IN_MOVEMENT_STAT,
                     THRESHOLD_NAME_IN_MOVEMENT_STAT,
-                    RELA_SPARSITY_NAME_IN_MOVEMENT_STAT,
+                    LINEAR_LAYER_SPARSITY_NAME_IN_MOVEMENT_STAT,
                     MODEL_SPARSITY_NAME_IN_MOVEMENT_STAT]:
             stat = [log[key] for log in log_by_step.values()]
             assert is_roughly_non_decreasing(stat[:warmup_end_step], atol=1e-2)
@@ -363,7 +364,7 @@ class TestControllerStats:
         log_by_step = trainer.compression_callback.get_compression_log()
         warmup_end_step = recipe.scheduler_params.steps_per_epoch * recipe.scheduler_params.warmup_end_epoch
 
-        for key in [RELA_SPARSITY_NAME_IN_MOVEMENT_STAT,
+        for key in [LINEAR_LAYER_SPARSITY_NAME_IN_MOVEMENT_STAT,
                     MODEL_SPARSITY_NAME_IN_MOVEMENT_STAT]:
             stat = [log[key] for log in log_by_step.values()]
             if enable_structured_masking is True:
@@ -419,7 +420,12 @@ class TestModelSaving:
         Wav2Vec2RunRecipe.from_default(),
         SwinRunRecipe.from_default(),
         LinearRunRecipe.from_default(),
-        Conv2dPlusLinearRunRecipe.from_default()
+        Conv2dPlusLinearRunRecipe.from_default(),
+        SwinRunRecipe.from_default(image_size=384, patch_size=4, window_size=12,
+                                   embed_dim=192, mlp_ratio=4,
+                                   depths=(2, 2, 5, 2), num_heads=(6, 12, 24, 48),
+                                   num_classes=32,
+                                   enable_structured_masking=False),
     ])
     def test_same_outputs_in_torch_and_exported_onnx(self, tmp_path: Path, recipe: BaseMockRunRecipe):
         num_samples = 4
@@ -439,7 +445,8 @@ class TestModelSaving:
         compression_ctrl.export_model(onnx_model_path)
         onnx_output_dict = self._get_onnx_model_inference_outputs(onnx_model_path, dataset, recipe)
         onnx_outputs = next(iter(onnx_output_dict.values()))
-        assert np.allclose(onnx_outputs, torch_outputs, atol=1e-6)
+        assert np.allclose(softmax(onnx_outputs, axis=-1),
+                           softmax(torch_outputs, axis=-1), atol=1e-6)
 
     def _get_onnx_model_inference_outputs(self, onnx_model_path: str,
                                           dataset: Dataset,
@@ -783,12 +790,13 @@ class TestComponentUpdateInTraining:
                                                                      dump_graphs=False)
 
         class CheckInitImportanceThresholdCallback(CompressionCallback):
+            # pylint: disable=protected-access
             def on_step_begin(self, args: TrainingArguments, state: TrainerState, control: TrainerControl, **kwargs):
                 super().on_step_begin(args, state, control, **kwargs)
                 if state.global_step < recipe.scheduler_params.warmup_start_epoch * steps_per_epoch:
-                    assert self.compression_ctrl.scheduler.init_importance_threshold is None
+                    assert self.compression_ctrl.scheduler._init_importance_threshold is None
                 else:
-                    assert isinstance(self.compression_ctrl.scheduler.init_importance_threshold, float)
+                    assert isinstance(self.compression_ctrl.scheduler._init_importance_threshold, float)
 
         trainer = build_compression_trainer(tmp_path, compression_ctrl, compressed_model,
                                             train_dataset=recipe.generate_mock_dataset(steps_per_epoch),

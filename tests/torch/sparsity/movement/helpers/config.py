@@ -11,37 +11,30 @@
  limitations under the License.
 """
 from typing import Any, Dict, List, Optional
+from nncf.experimental.torch.sparsity.movement.scheduler import MovementSchedulerParams
 
 
-class SchedulerParams:
-    def __init__(self, power: Optional[int] = 3,
-                 warmup_start_epoch: Optional[int] = 1,
-                 warmup_end_epoch: Optional[int] = 3,
-                 init_importance_threshold: Optional[float] = -1.0,
-                 final_importance_threshold: Optional[float] = 0.0,
-                 importance_regularization_factor: Optional[float] = 0.1,
-                 steps_per_epoch: Optional[int] = 4,
-                 enable_structured_masking: Optional[bool] = True):
-        self.power = power
-        self.warmup_start_epoch = warmup_start_epoch
-        self.warmup_end_epoch = warmup_end_epoch
-        self.init_importance_threshold = init_importance_threshold
-        self.final_importance_threshold = final_importance_threshold
-        self.importance_regularization_factor = importance_regularization_factor
-        self.steps_per_epoch = steps_per_epoch
-        self.enable_structured_masking = enable_structured_masking
-
-    def to_dict(self) -> Dict[str, Any]:
-        return {key: value for key, value in self.__dict__.items() if value is not None}
+def convert_scheduler_params_to_dict(params: MovementSchedulerParams) -> Dict[str, Any]:
+    result = {}
+    for key, value in params.__dict__.items():
+        if value is not None:
+            result[key] = value
+    return result
 
 
-class NNCFAlgoConfig:
+class MovementAlgoConfig:
     def __init__(self, sparse_structure_by_scopes: Optional[List[Dict]] = None,
                  ignored_scopes: Optional[List[str]] = None,
                  compression_lr_multiplier: Optional[float] = None,
-                 scheduler_params: Optional[SchedulerParams] = None,
+                 scheduler_params: Optional[MovementSchedulerParams] = None,
                  **scheduler_overrides):
-        self.scheduler_params = scheduler_params or SchedulerParams()
+        self.scheduler_params = scheduler_params or MovementSchedulerParams(
+            warmup_start_epoch=1,
+            warmup_end_epoch=3,
+            init_importance_threshold=-1.0,
+            importance_regularization_factor=0.1,
+            steps_per_epoch=4,
+        )
         for k, v in scheduler_overrides.items():
             assert hasattr(self.scheduler_params, k)
             setattr(self.scheduler_params, k, v)
@@ -52,7 +45,7 @@ class NNCFAlgoConfig:
     def to_dict(self) -> Dict[str, Any]:
         result = {
             'algorithm': 'movement_sparsity',
-            'params': self.scheduler_params.to_dict(),
+            'params': convert_scheduler_params_to_dict(self.scheduler_params),
             'sparse_structure_by_scopes': self.sparse_structure_by_scopes,
             'ignored_scopes': self.ignored_scopes,
         }

@@ -15,7 +15,7 @@ from abc import abstractmethod
 from collections import OrderedDict
 from copy import deepcopy
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any, List
 
 import torch
 import torch.nn
@@ -24,6 +24,7 @@ import torch.utils.data
 
 from nncf import NNCFConfig
 from nncf.torch.nncf_network import NNCFNetwork
+from tests.torch.sparsity.movement.helpers.config import MovementAlgoConfig
 
 from datasets import Dataset  # pylint: disable=no-name-in-module
 from transformers import AutoModelForAudioClassification
@@ -34,54 +35,6 @@ from transformers import PreTrainedModel
 from transformers import PretrainedConfig
 from transformers import SwinConfig
 from transformers import Wav2Vec2Config
-
-
-class SchedulerParams:
-    def __init__(self, power: Optional[int] = 3,
-                 warmup_start_epoch: Optional[int] = 1,
-                 warmup_end_epoch: Optional[int] = 3,
-                 init_importance_threshold: Optional[float] = -1.0,
-                 final_importance_threshold: Optional[float] = 0.0,
-                 importance_regularization_factor: Optional[float] = 0.1,
-                 steps_per_epoch: Optional[int] = 4,
-                 enable_structured_masking: Optional[bool] = True):
-        self.power = power
-        self.warmup_start_epoch = warmup_start_epoch
-        self.warmup_end_epoch = warmup_end_epoch
-        self.init_importance_threshold = init_importance_threshold
-        self.final_importance_threshold = final_importance_threshold
-        self.importance_regularization_factor = importance_regularization_factor
-        self.steps_per_epoch = steps_per_epoch
-        self.enable_structured_masking = enable_structured_masking
-
-    def to_dict(self) -> Dict[str, Any]:
-        return {key: value for key, value in self.__dict__.items() if value is not None}
-
-
-class NNCFAlgoConfig:
-    def __init__(self, sparse_structure_by_scopes: Optional[List[Dict]] = None,
-                 ignored_scopes: Optional[List[str]] = None,
-                 compression_lr_multiplier: Optional[float] = None,
-                 scheduler_params: Optional[SchedulerParams] = None,
-                 **scheduler_overrides):
-        self.scheduler_params = scheduler_params or SchedulerParams()
-        for k, v in scheduler_overrides.items():
-            assert hasattr(self.scheduler_params, k)
-            setattr(self.scheduler_params, k, v)
-        self.sparse_structure_by_scopes = sparse_structure_by_scopes or []
-        self.ignored_scopes = ignored_scopes or []
-        self.compression_lr_multiplier = compression_lr_multiplier
-
-    def to_dict(self) -> Dict[str, Any]:
-        result = {
-            'algorithm': 'movement_sparsity',
-            'params': self.scheduler_params.to_dict(),
-            'sparse_structure_by_scopes': self.sparse_structure_by_scopes,
-            'ignored_scopes': self.ignored_scopes,
-        }
-        if self.compression_lr_multiplier is not None:
-            result['compression_lr_multiplier'] = self.compression_lr_multiplier
-        return result
 
 
 class TransformerBlockInfo:
@@ -106,20 +59,18 @@ class BaseMockRunRecipe(ABC):
     model_family: str
     supports_structured_masking: bool
     default_model_config = PretrainedConfig()
-    default_algo_config = NNCFAlgoConfig()
+    default_algo_config = MovementAlgoConfig()
 
     def __init__(self, model_config: PretrainedConfig,
-                 algo_config: NNCFAlgoConfig,
+                 algo_config: MovementAlgoConfig,
                  log_dir=None) -> None:
         self.model_config = model_config
         self.algo_config = algo_config
-        self._model_keys = set(self.model_config.__dict__)
-        self._scheduler_keys = set(self.algo_config.scheduler_params.__dict__)
-        self._algo_keys = set(self.algo_config.__dict__)
         self.set_log_dir(log_dir)
 
     @classmethod
     def from_default(cls, log_dir=None, **override_kwargs):
+        # TODO(yujie): refactor override_kwargs
         model_config = deepcopy(cls.default_model_config)
         algo_config = deepcopy(cls.default_algo_config)
         scheduler_config = algo_config.scheduler_params
@@ -187,30 +138,6 @@ class BaseMockRunRecipe(ABC):
             self.log_dir = str(log_dir)
             Path(log_dir).mkdir(exist_ok=True, parents=True)
 
-    def get(self, key: str):
-        if key == 'log_dir':
-            return self.log_dir
-        if key in self._model_keys:
-            return getattr(self.model_config, key)
-        if key in self._algo_keys:
-            return getattr(self.algo_config, key)
-        if key in self._scheduler_keys:
-            return getattr(self.algo_config.scheduler_params, key)
-        raise KeyError(f'"{key}" not found.')
-
-    def set(self, **kwargs):
-        for key, value in kwargs.items():
-            if key == 'log_dir':
-                self.set_log_dir(value)
-            elif key in self._model_keys:
-                setattr(self.model_config, key, value)
-            elif key in self._algo_keys:
-                setattr(self.algo_config, key, value)
-            elif key in self._scheduler_keys:
-                setattr(self.algo_config.scheduler_params, key, value)
-            else:
-                raise KeyError(f'"{key}" not found.')
-
     def generate_mock_dataset(self, num_samples: int = 16,
                               float_low: float = -1., float_high: float = 1.,
                               int_low: int = 0, int_high: int = 2,
@@ -250,14 +177,13 @@ class Wav2Vec2RunRecipe(BaseMockRunRecipe):
         num_labels=2,
     )
 
-    default_algo_config = NNCFAlgoConfig(
+    default_algo_config = MovementAlgoConfig(
         sparse_structure_by_scopes=[
             {'mode': 'block', 'sparse_factors': [2, 2], 'target_scopes': '{re}Wav2Vec2Attention'},
             {'mode': 'per_dim', 'axis': 0, 'target_scopes': '{re}intermediate_dense'},
             {'mode': 'per_dim', 'axis': 1, 'target_scopes': '{re}output_dense'},
         ],
         ignored_scopes=['{re}feature_extractor'],
-        scheduler_params=SchedulerParams(),
     )
 
     def _create_model(self) -> torch.nn.Module:
@@ -308,22 +234,20 @@ class BertRunRecipe(BaseMockRunRecipe):
         mhsa_o_bias=True,
         ffn_bias=True
     )
-    default_algo_config = NNCFAlgoConfig(
+    default_algo_config = MovementAlgoConfig(
         sparse_structure_by_scopes=[
             {'mode': 'block', 'sparse_factors': [2, 2], 'target_scopes': '{re}attention'},
             {'mode': 'per_dim', 'axis': 0, 'target_scopes': '{re}BertIntermediate'},
             {'mode': 'per_dim', 'axis': 1, 'target_scopes': '{re}BertOutput'},
         ],
         ignored_scopes=['{re}embedding', '{re}pooler', '{re}classifier'],
-        scheduler_params=SchedulerParams(),
     )
 
     def __init__(self, model_config: BertConfig,
-                 algo_config: NNCFAlgoConfig,
+                 algo_config: MovementAlgoConfig,
                  log_dir=None) -> None:
         super().__init__(model_config, algo_config, log_dir)
         extra_model_keys = {'mhsa_qkv_bias', 'mhsa_o_bias', 'ffn_bias'}
-        self._model_keys = self._model_keys.union(extra_model_keys)
         for key in extra_model_keys:
             value = getattr(self.model_config, key, True)
             setattr(self.model_config, key, value)
@@ -392,15 +316,15 @@ class SwinRunRecipe(BaseMockRunRecipe):
         mlp_ratio=3 / 4,
         num_labels=2,
         qkv_bias=True,
+        num_classes=2,
     )
-    default_algo_config = NNCFAlgoConfig(
+    default_algo_config = MovementAlgoConfig(
         sparse_structure_by_scopes=[
             {'mode': 'block', 'sparse_factors': [2, 2], 'target_scopes': '{re}attention'},
             {'mode': 'per_dim', 'axis': 0, 'target_scopes': '{re}SwinIntermediate'},
             {'mode': 'per_dim', 'axis': 1, 'target_scopes': '{re}SwinOutput'},
         ],
         ignored_scopes=['{re}embedding', '{re}pooler', '{re}classifier'],
-        scheduler_params=SchedulerParams(),
     )
 
     def _create_model(self) -> torch.nn.Module:
@@ -490,7 +414,7 @@ class LinearRunRecipe(BaseMockRunRecipe):
         input_size=4,
         bias=True
     )
-    default_algo_config = NNCFAlgoConfig(
+    default_algo_config = MovementAlgoConfig(
         enable_structured_masking=False
     )
 
@@ -522,7 +446,7 @@ class Conv2dRunRecipe(LinearRunRecipe):
         input_size=4,
         bias=True
     )
-    default_algo_config = NNCFAlgoConfig(
+    default_algo_config = MovementAlgoConfig(
         enable_structured_masking=False
     )
 
@@ -546,7 +470,7 @@ class Conv2dPlusLinearRunRecipe(LinearRunRecipe):
         input_size=4,
         bias=True
     )
-    default_algo_config = NNCFAlgoConfig(
+    default_algo_config = MovementAlgoConfig(
         enable_structured_masking=False
     )
 

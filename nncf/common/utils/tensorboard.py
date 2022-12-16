@@ -72,7 +72,7 @@ def _(stats, algorithm_name):
 def _(stats, algorithm_name):
     tensorboard_stats = {
         f'{algorithm_name}/model_sparsity': stats.model_statistics.sparsity_level,
-        f'{algorithm_name}/relative_sparsity': stats.model_statistics.sparsity_level_for_layers,
+        f'{algorithm_name}/linear_layer_sparsity': stats.model_statistics.sparsity_level_for_layers,
         f'{algorithm_name}/importance_threshold': stats.importance_threshold,
         f'{algorithm_name}/importance_regularization_factor': stats.importance_regularization_factor,
     }

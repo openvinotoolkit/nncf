@@ -343,5 +343,5 @@ class TestMovementTraining:
         if desc.expected_eval_f1_ is not None:
             assert metrics['eval_f1'] == approx(desc.expected_eval_f1_)
         if desc.expected_rela_sparsity_ is not None:
-            assert metrics['movement_sparsity/relative_sparsity'] == approx(
+            assert metrics['movement_sparsity/linear_layer_sparsity'] == approx(
                 desc.expected_rela_sparsity_)

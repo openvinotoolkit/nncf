@@ -22,9 +22,95 @@ from nncf.common.schedulers import PolynomialDecaySchedule
 
 
 class MovementSchedulerStage(IntEnum):
+    """
+    Describes the current stage of training with movement sparsity.
+    """
     PRE_WARMUP = 0
     IN_WARMUP = 1
     POST_WARMUP = 2
+
+
+class MovementSchedulerParams:
+    """
+    Stores the params for `MovementPolynomialThresholdScheduler`.
+    """
+
+    def __init__(self,
+                 warmup_start_epoch: int,
+                 warmup_end_epoch: int,
+                 importance_regularization_factor: float,
+                 init_importance_threshold: Optional[float] = None,
+                 final_importance_threshold: float = 0.,
+                 power: float = 3,
+                 steps_per_epoch: Optional[int] = None,
+                 enable_structured_masking: bool = True):
+        """
+        Initializes and validates the params for scheduler.
+
+        :param warmup_start_epoch: Index of the starting epoch (include) for warmup stage.
+        :param warmup_end_epoch: Index of the end epoch (exclude) for warmup stage.
+        :param importance_regularization_factor: The regularization factor on weight importance scores.
+        :param init_importance_threshold: The initial value of importance threshold during warmup stage.
+        :param final_importance_threshold: The final value of importance threshold during warmup stage.
+        :param power: The power value of polynomial decay for threshold update during warmup stage.
+        :param steps_per_epoch: Number of training steps in one epoch.
+        :param enable_structured_masking: Whether to do structured mask resolution after warmup stage.
+        """
+        self.power = power
+        self.warmup_start_epoch = warmup_start_epoch
+        self.warmup_end_epoch = warmup_end_epoch
+        self.init_importance_threshold = init_importance_threshold
+        self.final_importance_threshold = final_importance_threshold
+        self.importance_regularization_factor = importance_regularization_factor
+        self.steps_per_epoch = steps_per_epoch
+        self.enable_structured_masking = enable_structured_masking
+
+    @classmethod
+    def from_dict(cls, params: Dict[str, Any]) -> 'MovementSchedulerParams':
+        """
+        Initialize `MovementSchedulerParams` class from Dict.
+
+        :param params: Dict with parameters of movement sparsity scheduler.
+        :return: The `MovementSchedulerParams` object.
+        """
+        power: float = params.get('power', 3.)
+        init_importance_threshold: Optional[float] = params.get('init_importance_threshold', None)
+        final_importance_threshold: float = params.get('final_importance_threshold', 0.)
+        warmup_start_epoch: int = params.get('warmup_start_epoch', None)
+        warmup_end_epoch: int = params.get('warmup_end_epoch', None)
+        importance_regularization_factor: float = params.get('importance_regularization_factor', None)
+        enable_structured_masking: bool = params.get('enable_structured_masking', True)
+        steps_per_epoch = params.get('steps_per_epoch', None)
+
+        if None in [warmup_start_epoch, warmup_end_epoch, importance_regularization_factor]:
+            raise ValueError('`warmup_start_epoch`, `warmup_start_epoch` and `importance_regularization_factor` '
+                             'are required in config for Movement Sparsity.')
+
+        if steps_per_epoch is None and warmup_start_epoch < 1:
+            raise ValueError('`warmup_start_epoch` must be >= 1 to enable the auto calculation of '
+                             '`steps_per_epoch`. Please either change `warmup_start_epoch` to a larger '
+                             'number or specify `steps_per_epoch` in the config.')
+
+        if warmup_start_epoch < 0 or warmup_end_epoch <= warmup_start_epoch:
+            raise ValueError('Movement sparsity requires 0 <= warmup_start_epoch < warmup_end_epoch.')
+
+        if importance_regularization_factor < 0:
+            raise ValueError('`importance_regularization_factor` should not be a negative number.')
+
+        if init_importance_threshold is not None and \
+                init_importance_threshold >= final_importance_threshold:
+            nncf_logger.warning('`init_importance_threshold` is equal to or greater than '
+                                '`final_importance_threshold`. Movement sparsity may not work as expected.')
+        return cls(
+            warmup_start_epoch=warmup_start_epoch,
+            warmup_end_epoch=warmup_end_epoch,
+            importance_regularization_factor=importance_regularization_factor,
+            init_importance_threshold=init_importance_threshold,
+            final_importance_threshold=final_importance_threshold,
+            power=power,
+            steps_per_epoch=steps_per_epoch,
+            enable_structured_masking=enable_structured_masking,
+        )
 
 
 class MovementPolynomialThresholdScheduler(BaseCompressionScheduler):
@@ -40,7 +126,7 @@ class MovementPolynomialThresholdScheduler(BaseCompressionScheduler):
     scheduler will start calculation only after `steps_per_epoch` is calculated.
     """
 
-    def __init__(self, controller: 'MovementSparsityController', params: Dict[str, Any]):
+    def __init__(self, controller: 'MovementSparsityController', params: MovementSchedulerParams):
         """
         Initializes a movement sparsity scheduler with a polynomial decay schedule.
 
@@ -49,41 +135,15 @@ class MovementPolynomialThresholdScheduler(BaseCompressionScheduler):
         """
         super().__init__()
         self._controller = controller
-        self.power: float = params.get('power', 3)
-        self.init_importance_threshold: Optional[float] = params.get('init_importance_threshold', None)
-        self.final_importance_threshold: float = params.get('final_importance_threshold', 0.)
-        self.warmup_start_epoch: int = params.get('warmup_start_epoch', None)
-        self.warmup_end_epoch: int = params.get('warmup_end_epoch', None)
-        self.importance_regularization_factor: float = params.get('importance_regularization_factor', None)
-        self.enable_structured_masking: bool = params.get('enable_structured_masking', True)
-        self._steps_per_epoch = params.get('steps_per_epoch', None)
-
-        if None in [self.warmup_start_epoch, self.warmup_end_epoch, self.importance_regularization_factor]:
-            raise ValueError('`warmup_start_epoch`, `warmup_start_epoch` and `importance_regularization_factor` '
-                             'are required in config for Movement Sparsity.')
-
-        if self._steps_per_epoch is None and self.warmup_start_epoch < 1:
-            raise ValueError('`warmup_start_epoch` must be >= 1 to enable the auto calculation of '
-                             '`steps_per_epoch`. Please either change `warmup_start_epoch` to a larger '
-                             'number or specify `steps_per_epoch` in the config.')
-
-        if self.warmup_start_epoch < 0 or self.warmup_end_epoch <= self.warmup_start_epoch:
-            raise ValueError('Movement sparsity requires 0 <= warmup_start_epoch < warmup_end_epoch.')
-
-        if self.importance_regularization_factor < 0:
-            raise ValueError('`importance_regularization_factor` should not be a negative number.')
-
-        if self.init_importance_threshold is not None and \
-                self.init_importance_threshold >= self.final_importance_threshold:
-            nncf_logger.warning('`init_importance_threshold` is equal to or greater than '
-                                '`final_importance_threshold`. Movement sparsity may not work as expected.')
-
+        self._params = params
         self._schedule = PolynomialDecaySchedule(
             initial_value=0., target_value=1.,
-            target_epoch=(self.warmup_end_epoch - self.warmup_start_epoch),
-            power=self.power,
+            target_epoch=(self._params.warmup_end_epoch - self._params.warmup_start_epoch),
+            power=self._params.power,
             concave=True
         )
+        self._steps_per_epoch = self._params.steps_per_epoch
+        self._init_importance_threshold = self._params.init_importance_threshold
         self._cached_importance_threshold_lambda = None
         self._is_controller_frozen = False
         self._steps_in_current_epoch = 0
@@ -91,9 +151,10 @@ class MovementPolynomialThresholdScheduler(BaseCompressionScheduler):
 
     @property
     def current_stage(self) -> MovementSchedulerStage:
-        if self._steps_per_epoch is None or self.current_step < self.warmup_start_epoch * self._steps_per_epoch:
+        if self._steps_per_epoch is None or \
+                self.current_step < self._params.warmup_start_epoch * self._steps_per_epoch:
             return MovementSchedulerStage.PRE_WARMUP
-        if self.current_step < self.warmup_end_epoch * self._steps_per_epoch:
+        if self.current_step < self._params.warmup_end_epoch * self._steps_per_epoch:
             return MovementSchedulerStage.IN_WARMUP
         return MovementSchedulerStage.POST_WARMUP
 
@@ -103,8 +164,8 @@ class MovementPolynomialThresholdScheduler(BaseCompressionScheduler):
         if current_stage == MovementSchedulerStage.PRE_WARMUP:
             return 0.
         if current_stage == MovementSchedulerStage.IN_WARMUP:
-            return self._calc_current_scheduled_value(0., self.importance_regularization_factor)
-        return self.importance_regularization_factor
+            return self._calc_current_scheduled_value(0., self._params.importance_regularization_factor)
+        return self._params.importance_regularization_factor
 
     @property
     def current_importance_threshold(self) -> float:
@@ -112,10 +173,14 @@ class MovementPolynomialThresholdScheduler(BaseCompressionScheduler):
         if current_stage == MovementSchedulerStage.PRE_WARMUP:
             return -math.inf
         if current_stage == MovementSchedulerStage.IN_WARMUP:
-            assert self.init_importance_threshold is not None
-            return self._calc_current_scheduled_value(self.init_importance_threshold,
-                                                      self.final_importance_threshold)
-        return self.final_importance_threshold
+            assert self._init_importance_threshold is not None
+            return self._calc_current_scheduled_value(self._init_importance_threshold,
+                                                      self._params.final_importance_threshold)
+        return self._params.final_importance_threshold
+
+    @property
+    def enable_structured_masking(self) -> bool:
+        return self._params.enable_structured_masking
 
     def epoch_step(self, next_epoch: Optional[int] = None) -> None:
         super().epoch_step(next_epoch)
@@ -144,16 +209,17 @@ class MovementPolynomialThresholdScheduler(BaseCompressionScheduler):
             self._steps_in_current_epoch = self._current_step % self._steps_per_epoch + 1
 
     def _schedule_operand_threshold(self):
-        if self.init_importance_threshold is None and self.current_stage == MovementSchedulerStage.IN_WARMUP:
+        if self._params.init_importance_threshold is None and \
+                self.current_stage == MovementSchedulerStage.IN_WARMUP:
             adaptive_init_threshold = self._calc_init_threshold_from_controller(target_sparsity=0.001)
             nncf_logger.info('Movement sparsity automatically calculates `init_importance_threshold` as '
                              f'{adaptive_init_threshold} so that warmup starts from ~0.1% relative sparsity.')
-            if adaptive_init_threshold >= self.final_importance_threshold:
+            if adaptive_init_threshold >= self._params.final_importance_threshold:
                 nncf_logger.warning('The auto-calculated `init_importance_threshold` is equal to or greater than '
                                     '`final_importance_threshold`. Movement sparsity may not work as expected.')
-            self.init_importance_threshold = adaptive_init_threshold
+            self._init_importance_threshold = adaptive_init_threshold
         if self.current_stage == MovementSchedulerStage.POST_WARMUP and (not self._is_controller_frozen):
-            if self.enable_structured_masking:
+            if self._params.enable_structured_masking:
                 self._controller.reset_independent_structured_mask()
                 self._controller.resolve_structured_mask()
                 self._controller.populate_structured_mask()
@@ -164,7 +230,7 @@ class MovementPolynomialThresholdScheduler(BaseCompressionScheduler):
     def _calc_current_scheduled_value(self, start_value: float, end_value: float) -> float:
         assert self.current_stage == MovementSchedulerStage.IN_WARMUP
         assert self._steps_per_epoch is not None
-        schedule_current_step = self.current_step - self.warmup_start_epoch * self._steps_per_epoch
+        schedule_current_step = self.current_step - self._params.warmup_start_epoch * self._steps_per_epoch
         schedule_epoch = schedule_current_step // self._steps_per_epoch
         schedule_step = schedule_current_step % self._steps_per_epoch
         scale = self._schedule(schedule_epoch, schedule_step, self._steps_per_epoch)

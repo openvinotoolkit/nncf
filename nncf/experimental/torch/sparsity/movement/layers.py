@@ -25,7 +25,6 @@ from nncf.torch.layer_utils import CompressionParameter
 from nncf.torch.sparsity.functions import apply_binary_mask as apply_binary_mask_impl
 from nncf.torch.sparsity.layers import BinaryMask
 from nncf.torch.utils import is_tracing_state
-from nncf.torch.utils import no_jit_trace
 
 
 class SparseStructure(str, Enum):
@@ -202,9 +201,8 @@ class MovementSparsifier(nn.Module):
     def forward(self, weight: torch.Tensor, bias: Optional[torch.Tensor] = None
                 ) -> Tuple[torch.Tensor, Optional[torch.Tensor]]:
         if is_tracing_state():
-            with no_jit_trace():
-                masked_weight = weight.mul(self.weight_ctx.binary_mask)
-                masked_bias = None if bias is None else bias.mul(self.bias_ctx.binary_mask)
+            masked_weight = weight.mul(self.weight_ctx.binary_mask)
+            masked_bias = None if bias is None else bias.mul(self.bias_ctx.binary_mask)
         else:
             weight_mask = self._calc_training_binary_mask(is_bias=False)
             masked_weight = apply_binary_mask_impl(weight_mask, weight)
