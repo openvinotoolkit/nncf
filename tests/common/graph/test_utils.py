@@ -26,15 +26,15 @@ def test_get_concat_axis(input_shape, output_shape, possible_axes):
     ("1", ["1"]),
     (["A", "B"], []),
     (["1", "2"], ["1", "2"]),
-    (["{re}\d"], ["{re}\d"]),
-    (["{re}\w"], []),
+    ([r"{re}\d"], [r"{re}\d"]),
+    ([r"{re}\w"], []),
     (["A", "B", "{re}.*", "1"], ["1"]),
     (IgnoredScope(names=["A", "B"]), []),
     (IgnoredScope(names=["1", "2"]), ["1", "2"]),
-    (IgnoredScope(patterns=["\d"]), ["{re}\d"]),
-    (IgnoredScope(patterns=["\w"]), []),
+    (IgnoredScope(patterns=[r"\d"]), [r"{re}\d"]),
+    (IgnoredScope(patterns=[r"\w"]), []),
 ])
 def test_get_not_matched_scopes(scope, ref):
     node_lists = [NNCFNode(1, "A"), NNCFNode(2, "B")]
     not_matched = get_not_matched_scopes(scope, node_lists)
-    assert not len(set(not_matched) - set(ref))
+    assert not set(not_matched) - set(ref)

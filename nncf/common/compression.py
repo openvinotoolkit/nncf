@@ -296,14 +296,14 @@ class BaseCompressionAlgorithmBuilder(CompressionAlgorithmBuilder):
 
         if not_matched_ignored_scopes or not_matched_target_scopes:
             err_message = "No match has been found among the model operations " \
-                          f"for the following ignored/target scope definitions for {self.name} algorithm:\n" \
+                          f"for the following ignored/target scope definitions for '{self.name}' algorithm:\n" \
 
             if not_matched_ignored_scopes:
                 err_message += f" - ignored_scope: {not_matched_ignored_scopes}\n"
             if not_matched_target_scopes:
                 err_message += f" - target_scope: {not_matched_target_scopes}\n"
 
-            err_message += "\nRefer to the original_graph.dot to discover the operations " \
+            err_message += "Refer to the original_graph.dot to discover the operations " \
                            "in the model currently visible to NNCF and specify the ignored/target " \
                            "scopes in terms of the names there."
 

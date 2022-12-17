@@ -15,9 +15,6 @@ from typing import Any
 from typing import Dict
 from typing import Tuple
 from typing import TypeVar
-from typing import Union
-
-import tensorflow as tf
 
 from nncf import NNCFConfig
 from nncf.common.compression import BaseCompressionAlgorithmBuilder

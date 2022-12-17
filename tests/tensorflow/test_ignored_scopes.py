@@ -65,7 +65,7 @@ def test_ignored_scopes():
 
 NOT_SUPPORT_SCOPES_ALGO = ["NoCompressionAlgorithm"]
 @pytest.mark.parametrize("algo_name", TF_COMPRESSION_ALGORITHMS.registry_dict.keys() - NOT_SUPPORT_SCOPES_ALGO)
-def test_raise_runtimeerror_on_not_matched_scope_names(algo_name):
+def test_raise_runtimeerror_for_not_matched_scope_names(algo_name):
     model = get_mock_model()
     config = get_empty_config()
     config['compression'] = {'algorithm': algo_name, 'ignored_scopes': ['unknown']}
