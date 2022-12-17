@@ -15,7 +15,7 @@ from typing import Any
 import torch
 
 from nncf.torch.utils import add_domain
-from nncf.common.utils.logger import logger as nncf_logger
+from nncf.common.logging import nncf_logger
 
 from nncf.torch.quantization.extensions import QuantizedFunctionsCPU, QuantizedFunctionsCUDA
 from nncf.torch.dynamic_graph.patch_pytorch import register_operator
@@ -158,13 +158,13 @@ class ExportQuantizeToFakeQuantize(torch.autograd.Function):
 # pylint:disable=abstract-method
 class ExportQuantizeToONNXQuantDequant(torch.autograd.Function):
     @staticmethod
-    def symbolic(g, input_, y_scale, y_zero_point):
-        quantized = g.op("QuantizeLinear", input_, y_scale, y_zero_point, axis_i=0)
-        dequantized = g.op("DequantizeLinear", quantized, y_scale, y_zero_point, axis_i=0)
+    def symbolic(g, input_, y_scale, y_zero_point, axis):
+        quantized = g.op("QuantizeLinear", input_, y_scale, y_zero_point, axis_i=axis)
+        dequantized = g.op("DequantizeLinear", quantized, y_scale, y_zero_point, axis_i=axis)
         return dequantized
 
     @staticmethod
-    def forward(ctx, input_, y_scale, y_zero_point):
+    def forward(ctx, input_, y_scale, y_zero_point, axis):
         return torch.clone(input_)
 
     @staticmethod

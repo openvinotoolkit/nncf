@@ -13,14 +13,13 @@
 
 from abc import ABC
 from abc import abstractmethod
-from typing import List, Tuple, TypeVar
+from typing import List, Tuple, TypeVar, Optional
 
 import numpy as np
 from nncf.common.graph.transformations.commands import TargetPoint
 from nncf.common.graph.transformations.commands import TransformationCommand
 from nncf.common.graph.transformations.commands import TargetType
 from nncf.common.tensor import NNCFTensor
-from nncf.common.tensor import TensorType
 from nncf.common.graph import NNCFNode
 from nncf.common.tensor_statistics.collectors import TensorStatisticCollectorBase
 from nncf.common.tensor_statistics.collectors import ReductionShape
@@ -112,8 +111,8 @@ class FBCAlgoBackend(ABC):
     @staticmethod
     @abstractmethod
     def mean_statistic_collector(reduction_shape: ReductionShape,
-                                 num_samples: int = None,
-                                 window_size: int = None) -> TensorStatisticCollectorBase:
+                                 num_samples: Optional[int] = None,
+                                 window_size: Optional[int] = None) -> TensorStatisticCollectorBase:
         """
         Returns backend-specific mean statistic collector.
 
@@ -121,16 +120,6 @@ class FBCAlgoBackend(ABC):
         :param num_samples: Maximum number of samples to collect.
         :param window_size: The maximum size of the samples queue.
         :return: Backend-specific TensorStatisticCollectorBase for the statistics calculation.
-        """
-
-    @staticmethod
-    @abstractmethod
-    def nncf_tensor(tensor: TensorType) -> NNCFTensor:
-        """
-        Returns backend-specific NNCFTensor.
-
-        :param tensor: Tensor data for the wrapping.
-        :return: NNCFTensor.
         """
 
     @staticmethod
@@ -208,4 +197,14 @@ class FBCAlgoBackend(ABC):
         :param raw_data: Backend-specific output from the model.
         :param output_name: Name of the output layer or tensor name.
         :return: Processed output as NNCFTensor.
+        """
+
+    @staticmethod
+    @abstractmethod
+    def is_node_with_bias(node: NNCFNode) -> bool:
+        """
+        Checks whether the node has a bias or not.
+
+        :param node: NNCFNode with the attributes.
+        :return: Boolean indicating whether the node has a bias or not.
         """

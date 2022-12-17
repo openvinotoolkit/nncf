@@ -225,9 +225,9 @@ strict digraph  {
 "4 SENet/NNCFBatchNorm2d[bn1]/batch_norm_0" -> "5 SENet/relu_0";
 "5 SENet/relu_0" -> "6 SENet/AsymmetricQuantizer/asymmetric_quantize_0";
 "6 SENet/AsymmetricQuantizer/asymmetric_quantize_0" -> "7 SENet/Sequential[layer1]/PreActBlock[0]/NNCFBatchNorm2d[bn1]/batch_norm_0";
+"6 SENet/AsymmetricQuantizer/asymmetric_quantize_0" -> "30 SENet/Sequential[layer1]/PreActBlock[0]/__iadd___0";
 "7 SENet/Sequential[layer1]/PreActBlock[0]/NNCFBatchNorm2d[bn1]/batch_norm_0" -> "8 SENet/Sequential[layer1]/PreActBlock[0]/relu_0";
 "8 SENet/Sequential[layer1]/PreActBlock[0]/relu_0" -> "9 SENet/Sequential[layer1]/PreActBlock[0]/AsymmetricQuantizer/asymmetric_quantize_0";
-"6 SENet/AsymmetricQuantizer/asymmetric_quantize_0" -> "30 SENet/Sequential[layer1]/PreActBlock[0]/__iadd___0";
 "9 SENet/Sequential[layer1]/PreActBlock[0]/AsymmetricQuantizer/asymmetric_quantize_0" -> "11 SENet/Sequential[layer1]/PreActBlock[0]/NNCFConv2d[conv1]/conv2d_0";
 "10 SENet/Sequential[layer1]/PreActBlock[0]/NNCFConv2d[conv1]/ModuleDict[pre_ops]/UpdateWeight[0]/AsymmetricQuantizer[op]/asymmetric_quantize_0" -> "11 SENet/Sequential[layer1]/PreActBlock[0]/NNCFConv2d[conv1]/conv2d_0";
 "11 SENet/Sequential[layer1]/PreActBlock[0]/NNCFConv2d[conv1]/conv2d_0" -> "12 SENet/Sequential[layer1]/PreActBlock[0]/NNCFBatchNorm2d[bn2]/batch_norm_0";
@@ -308,6 +308,7 @@ strict digraph  {
 "81 SENet/Sequential[layer2]/PreActBlock[0]/AsymmetricQuantizer/asymmetric_quantize_5" -> "82 SENet/Sequential[layer2]/PreActBlock[0]/__iadd___0";
 "82 SENet/Sequential[layer2]/PreActBlock[0]/__iadd___0" -> "83 SENet/Sequential[layer2]/PreActBlock[0]/AsymmetricQuantizer/asymmetric_quantize_6";
 "83 SENet/Sequential[layer2]/PreActBlock[0]/AsymmetricQuantizer/asymmetric_quantize_6" -> "84 SENet/Sequential[layer2]/PreActBlock[1]/NNCFBatchNorm2d[bn1]/batch_norm_0";
+"83 SENet/Sequential[layer2]/PreActBlock[0]/AsymmetricQuantizer/asymmetric_quantize_6" -> "107 SENet/Sequential[layer2]/PreActBlock[1]/__iadd___0";
 "84 SENet/Sequential[layer2]/PreActBlock[1]/NNCFBatchNorm2d[bn1]/batch_norm_0" -> "85 SENet/Sequential[layer2]/PreActBlock[1]/relu_0";
 "85 SENet/Sequential[layer2]/PreActBlock[1]/relu_0" -> "86 SENet/Sequential[layer2]/PreActBlock[1]/AsymmetricQuantizer/asymmetric_quantize_0";
 "86 SENet/Sequential[layer2]/PreActBlock[1]/AsymmetricQuantizer/asymmetric_quantize_0" -> "88 SENet/Sequential[layer2]/PreActBlock[1]/NNCFConv2d[conv1]/conv2d_0";
@@ -319,12 +320,11 @@ strict digraph  {
 "92 SENet/Sequential[layer2]/PreActBlock[1]/NNCFConv2d[conv2]/ModuleDict[pre_ops]/UpdateWeight[0]/AsymmetricQuantizer[op]/asymmetric_quantize_0" -> "93 SENet/Sequential[layer2]/PreActBlock[1]/NNCFConv2d[conv2]/conv2d_0";
 "93 SENet/Sequential[layer2]/PreActBlock[1]/NNCFConv2d[conv2]/conv2d_0" -> "94 SENet/Sequential[layer2]/PreActBlock[1]/NNCFConv2d[conv2]/AsymmetricQuantizer/asymmetric_quantize_0";
 "94 SENet/Sequential[layer2]/PreActBlock[1]/NNCFConv2d[conv2]/AsymmetricQuantizer/asymmetric_quantize_0" -> "95 SENet/Sequential[layer2]/PreActBlock[1]/avg_pool2d_0";
+"94 SENet/Sequential[layer2]/PreActBlock[1]/NNCFConv2d[conv2]/AsymmetricQuantizer/asymmetric_quantize_0" -> "105 SENet/Sequential[layer2]/PreActBlock[1]/__mul___0";
 "95 SENet/Sequential[layer2]/PreActBlock[1]/avg_pool2d_0" -> "96 SENet/Sequential[layer2]/PreActBlock[1]/AsymmetricQuantizer/asymmetric_quantize_2";
 "96 SENet/Sequential[layer2]/PreActBlock[1]/AsymmetricQuantizer/asymmetric_quantize_2" -> "98 SENet/Sequential[layer2]/PreActBlock[1]/NNCFConv2d[fc1]/conv2d_0";
 "97 SENet/Sequential[layer2]/PreActBlock[1]/NNCFConv2d[fc1]/ModuleDict[pre_ops]/UpdateWeight[0]/AsymmetricQuantizer[op]/asymmetric_quantize_0" -> "98 SENet/Sequential[layer2]/PreActBlock[1]/NNCFConv2d[fc1]/conv2d_0";
 "98 SENet/Sequential[layer2]/PreActBlock[1]/NNCFConv2d[fc1]/conv2d_0" -> "99 SENet/Sequential[layer2]/PreActBlock[1]/relu_2";
-"83 SENet/Sequential[layer2]/PreActBlock[0]/AsymmetricQuantizer/asymmetric_quantize_6" -> "107 SENet/Sequential[layer2]/PreActBlock[1]/__iadd___0";
-"94 SENet/Sequential[layer2]/PreActBlock[1]/NNCFConv2d[conv2]/AsymmetricQuantizer/asymmetric_quantize_0" -> "105 SENet/Sequential[layer2]/PreActBlock[1]/__mul___0";
 "99 SENet/Sequential[layer2]/PreActBlock[1]/relu_2" -> "100 SENet/Sequential[layer2]/PreActBlock[1]/AsymmetricQuantizer/asymmetric_quantize_3";
 "100 SENet/Sequential[layer2]/PreActBlock[1]/AsymmetricQuantizer/asymmetric_quantize_3" -> "102 SENet/Sequential[layer2]/PreActBlock[1]/NNCFConv2d[fc2]/conv2d_0";
 "101 SENet/Sequential[layer2]/PreActBlock[1]/NNCFConv2d[fc2]/ModuleDict[pre_ops]/UpdateWeight[0]/AsymmetricQuantizer[op]/asymmetric_quantize_0" -> "102 SENet/Sequential[layer2]/PreActBlock[1]/NNCFConv2d[fc2]/conv2d_0";

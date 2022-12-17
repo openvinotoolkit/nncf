@@ -16,7 +16,6 @@ from torch import nn
 
 from nncf.torch.layer_utils import COMPRESSION_MODULES
 from nncf.common.graph import NNCFNodeName
-from nncf.torch.utils import is_tracing_state, no_jit_trace
 
 
 @COMPRESSION_MODULES.register()
@@ -51,13 +50,10 @@ class FilterPruningMask(nn.Module):
 
             # For weights self.mask_applying_dim should be used, for bias dim=0
             dim = 0 if param_name == 'bias' else self.mask_applying_dim
-            if is_tracing_state():
-                with no_jit_trace():
-                    new_params.append(inplace_apply_filter_binary_mask(self.binary_filter_pruning_mask, param_value,
-                                                                       node_name_for_logging=self.node_name, dim=dim))
-            else:
-                new_params.append(apply_filter_binary_mask(self.binary_filter_pruning_mask, param_value,
-                                                           node_name_for_logging=self.node_name, dim=dim))
+            new_params.append(
+                apply_filter_binary_mask(self.binary_filter_pruning_mask, param_value,
+                                         node_name_for_logging=self.node_name, dim=dim)
+            )
         return new_params
 
 
@@ -68,34 +64,21 @@ def broadcast_filter_mask(filter_mask, shape, dim=0):
     return broadcasted_filter_mask
 
 
-def inplace_apply_filter_binary_mask(filter_mask: torch.Tensor,
-                                     conv_weight: torch.nn.Parameter,
-                                     node_name_for_logging: NNCFNodeName = '', dim=0):
+def apply_filter_binary_mask(filter_mask: torch.Tensor,
+                             module_parameter: torch.nn.Parameter,
+                             node_name_for_logging: NNCFNodeName = '',
+                             dim: int = 0):
     """
-    Inplace applying binary filter mask to weight (or bias) of the convolution
-    (by first dim of the conv weight).
-    :param filter_mask: binary mask (should have the same shape as first dim of conv weight)
-    :param conv_weight: weight or bias of convolution
+    Applying binary filter mask to parameter of the module - usually to weight/bias of convolution or linear layer.
+    Mask is applied to a given dimension without overriding parameter's values.
+    :param filter_mask: binary mask (should have the same shape as conv weight on the given dimension)
+    :param module_parameter: a tensor representing a module parameter (e.g. weight or bias of convolution)
+    :param node_name_for_logging: name of the module to which the mask is applied
+    :param dim: a dimension to apply the mask (0 by default)
     :return: result with applied mask
     """
-    if filter_mask.size(0) != conv_weight.size(dim):
+    if filter_mask.size(0) != module_parameter.size(dim):
         raise RuntimeError("Shape of mask = {} for module {} isn't broadcastable to weight shape={}."
-                           " ".format(filter_mask.shape, node_name_for_logging, conv_weight.shape))
-    broadcasted_filter_mask = broadcast_filter_mask(filter_mask, conv_weight.shape, dim)
-    return conv_weight.mul_(broadcasted_filter_mask)
-
-
-def apply_filter_binary_mask(filter_mask, conv_weight, node_name_for_logging: NNCFNodeName = '', dim=0):
-    """
-    Applying binary filter mask to weight (or bias) of the convolution (applying by first dim of the conv weight)
-    without changing the weight.
-    :param filter_mask: binary mask (should have the same shape as first dim of conv weight)
-    :param conv_weight: weight or bias of convolution
-    :return: result with applied mask
-    """
-    if filter_mask.size(0) != conv_weight.size(dim):
-        raise RuntimeError("Shape of mask = {} for module {} isn't broadcastable to weight shape={}."
-                           " ".format(filter_mask.shape, node_name_for_logging, conv_weight.shape))
-
-    broadcasted_filter_mask = broadcast_filter_mask(filter_mask, conv_weight.shape, dim)
-    return broadcasted_filter_mask * conv_weight
+                           " ".format(filter_mask.shape, node_name_for_logging, module_parameter.shape))
+    broadcasted_filter_mask = broadcast_filter_mask(filter_mask, module_parameter.shape, dim)
+    return module_parameter.mul(broadcasted_filter_mask)

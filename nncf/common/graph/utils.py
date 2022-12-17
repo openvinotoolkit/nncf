@@ -17,9 +17,9 @@ from typing import Union
 
 from nncf.common.graph import NNCFGraph
 from nncf.common.graph import NNCFNode
+from nncf.common.logging import nncf_logger
 from nncf.common.pruning.utils import traverse_function
 from nncf.common.utils.helpers import matches_any
-from nncf.common.utils.logger import logger
 from nncf.parameters import IgnoredScope
 from nncf.parameters import convert_ignored_scope_to_list
 
@@ -44,7 +44,7 @@ def get_concat_axis(input_shapes: List[List[int]], output_shapes: List[List[int]
     if axis is None:
         if none_dim is None:
             axis = -1
-            logger.warning('Identity concat node detected')
+            nncf_logger.debug('Identity concat node detected')
         else:
             axis = none_dim
 
@@ -90,7 +90,7 @@ def get_split_axis(input_shapes: List[List[int]], output_shapes: List[List[int]]
 
     if axis is None:
         axis = -1
-        logger.warning('Identity split/concat node detected')
+        nncf_logger.debug('Identity split/concat node detected')
 
     return axis
 

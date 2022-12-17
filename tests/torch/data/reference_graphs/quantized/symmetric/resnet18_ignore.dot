@@ -117,8 +117,8 @@ strict digraph  {
 "5 ResNet/relu_0" -> "6 ResNet/SymmetricQuantizer/symmetric_quantize_0";
 "6 ResNet/SymmetricQuantizer/symmetric_quantize_0" -> "7 ResNet/MaxPool2d[maxpool]/max_pool2d_0";
 "7 ResNet/MaxPool2d[maxpool]/max_pool2d_0" -> "9 ResNet/Sequential[layer1]/BasicBlock[0]/NNCFConv2d[conv1]/conv2d_0";
-"8 ResNet/Sequential[layer1]/BasicBlock[0]/NNCFConv2d[conv1]/ModuleDict[pre_ops]/UpdateWeight[0]/SymmetricQuantizer[op]/symmetric_quantize_0" -> "9 ResNet/Sequential[layer1]/BasicBlock[0]/NNCFConv2d[conv1]/conv2d_0";
 "7 ResNet/MaxPool2d[maxpool]/max_pool2d_0" -> "17 ResNet/Sequential[layer1]/BasicBlock[0]/__iadd___0";
+"8 ResNet/Sequential[layer1]/BasicBlock[0]/NNCFConv2d[conv1]/ModuleDict[pre_ops]/UpdateWeight[0]/SymmetricQuantizer[op]/symmetric_quantize_0" -> "9 ResNet/Sequential[layer1]/BasicBlock[0]/NNCFConv2d[conv1]/conv2d_0";
 "9 ResNet/Sequential[layer1]/BasicBlock[0]/NNCFConv2d[conv1]/conv2d_0" -> "10 ResNet/Sequential[layer1]/BasicBlock[0]/NNCFBatchNorm2d[bn1]/batch_norm_0";
 "10 ResNet/Sequential[layer1]/BasicBlock[0]/NNCFBatchNorm2d[bn1]/batch_norm_0" -> "11 ResNet/Sequential[layer1]/BasicBlock[0]/relu_0";
 "11 ResNet/Sequential[layer1]/BasicBlock[0]/relu_0" -> "12 ResNet/Sequential[layer1]/BasicBlock[0]/SymmetricQuantizer/symmetric_quantize_0";
@@ -208,6 +208,7 @@ strict digraph  {
 "89 ResNet/Sequential[layer4]/BasicBlock[0]/__iadd___0" -> "90 ResNet/Sequential[layer4]/BasicBlock[0]/relu_1";
 "90 ResNet/Sequential[layer4]/BasicBlock[0]/relu_1" -> "91 ResNet/Sequential[layer4]/BasicBlock[0]/SymmetricQuantizer/symmetric_quantize_1";
 "91 ResNet/Sequential[layer4]/BasicBlock[0]/SymmetricQuantizer/symmetric_quantize_1" -> "93 ResNet/Sequential[layer4]/BasicBlock[1]/NNCFConv2d[conv1]/conv2d_0";
+"91 ResNet/Sequential[layer4]/BasicBlock[0]/SymmetricQuantizer/symmetric_quantize_1" -> "101 ResNet/Sequential[layer4]/BasicBlock[1]/__iadd___0";
 "92 ResNet/Sequential[layer4]/BasicBlock[1]/NNCFConv2d[conv1]/ModuleDict[pre_ops]/UpdateWeight[0]/SymmetricQuantizer[op]/symmetric_quantize_0" -> "93 ResNet/Sequential[layer4]/BasicBlock[1]/NNCFConv2d[conv1]/conv2d_0";
 "93 ResNet/Sequential[layer4]/BasicBlock[1]/NNCFConv2d[conv1]/conv2d_0" -> "94 ResNet/Sequential[layer4]/BasicBlock[1]/NNCFBatchNorm2d[bn1]/batch_norm_0";
 "94 ResNet/Sequential[layer4]/BasicBlock[1]/NNCFBatchNorm2d[bn1]/batch_norm_0" -> "95 ResNet/Sequential[layer4]/BasicBlock[1]/relu_0";
@@ -215,7 +216,6 @@ strict digraph  {
 "96 ResNet/Sequential[layer4]/BasicBlock[1]/SymmetricQuantizer/symmetric_quantize_0" -> "98 ResNet/Sequential[layer4]/BasicBlock[1]/NNCFConv2d[conv2]/conv2d_0";
 "97 ResNet/Sequential[layer4]/BasicBlock[1]/NNCFConv2d[conv2]/ModuleDict[pre_ops]/UpdateWeight[0]/SymmetricQuantizer[op]/symmetric_quantize_0" -> "98 ResNet/Sequential[layer4]/BasicBlock[1]/NNCFConv2d[conv2]/conv2d_0";
 "98 ResNet/Sequential[layer4]/BasicBlock[1]/NNCFConv2d[conv2]/conv2d_0" -> "99 ResNet/Sequential[layer4]/BasicBlock[1]/NNCFBatchNorm2d[bn2]/batch_norm_0";
-"91 ResNet/Sequential[layer4]/BasicBlock[0]/SymmetricQuantizer/symmetric_quantize_1" -> "101 ResNet/Sequential[layer4]/BasicBlock[1]/__iadd___0";
 "99 ResNet/Sequential[layer4]/BasicBlock[1]/NNCFBatchNorm2d[bn2]/batch_norm_0" -> "100 ResNet/Sequential[layer4]/BasicBlock[1]/NNCFBatchNorm2d[bn2]/SymmetricQuantizer/symmetric_quantize_0";
 "100 ResNet/Sequential[layer4]/BasicBlock[1]/NNCFBatchNorm2d[bn2]/SymmetricQuantizer/symmetric_quantize_0" -> "101 ResNet/Sequential[layer4]/BasicBlock[1]/__iadd___0";
 "101 ResNet/Sequential[layer4]/BasicBlock[1]/__iadd___0" -> "102 ResNet/Sequential[layer4]/BasicBlock[1]/relu_1";

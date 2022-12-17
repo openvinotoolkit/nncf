@@ -106,7 +106,7 @@ class PerLayerRangeInitConfig(RangeInitConfig):
         target_group_str = dct.get('target_quantizer_group')
         target_group = None
         if target_group_str is not None:
-            target_group = QuantizerGroup.from_str(target_group_str)
+            target_group = QuantizerGroup(target_group_str)
 
         return cls(base_config, target_scopes, ignored_scopes, target_group)
 

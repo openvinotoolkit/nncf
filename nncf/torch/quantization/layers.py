@@ -25,7 +25,7 @@ from nncf.torch.checkpoint_loading import OPTIONAL_PARAMETERS_REGISTRY
 from nncf.common.utils.debug import is_debug
 from nncf.torch.functions import clamp
 from nncf.common.graph import NNCFNodeName
-from nncf.common.utils.logger import logger as nncf_logger
+from nncf.common.logging import nncf_logger
 from nncf.common.quantization.structs import QuantizationMode, QuantizerConfig, QuantizerSpec
 from nncf.common.quantization.quantizers import calculate_symmetric_level_ranges
 from nncf.common.quantization.quantizers import calculate_asymmetric_level_ranges
@@ -33,8 +33,9 @@ from nncf.common.quantization.quantizer_setup import QuantizerSetupBase
 from nncf.common.quantization.quantizer_setup import QuantizationPointId
 from nncf.torch.graph.transformations.commands import TargetType
 from nncf.torch.graph.transformations.commands import PTTargetPoint
+from nncf.torch.quantization.quantize_functions import ExportQuantizeToONNXQuantDequant
 from nncf.torch.quantization.quantize_functions import symmetric_quantize, asymmetric_quantize, \
-    ExportQuantizeToFakeQuantize, get_scale_zp_from_input_low_input_high, ExportQuantizeToONNXQuantDequant, TuneRange
+    ExportQuantizeToFakeQuantize, get_scale_zp_from_input_low_input_high, TuneRange
 from nncf.torch.layer_utils import COMPRESSION_MODULES, CompressionParameter
 from nncf.common.utils.registry import Registry
 from nncf.torch.utils import get_flat_tensor_contents_string, no_jit_trace, is_tracing_state
@@ -47,14 +48,6 @@ INITIALIZABLE_MODULES = Registry('initializable_modules')
 class QuantizerExportMode(Enum):
     FAKE_QUANTIZE = "fake_quantize"
     ONNX_QUANTIZE_DEQUANTIZE_PAIRS = "quantize_dequantize"
-
-    @staticmethod
-    def from_str(config_value: str) -> 'HWConfigType':
-        if config_value == QuantizerExportMode.FAKE_QUANTIZE.value:
-            return QuantizerExportMode.FAKE_QUANTIZE
-        if config_value == QuantizerExportMode.ONNX_QUANTIZE_DEQUANTIZE_PAIRS.value:
-            return QuantizerExportMode.ONNX_QUANTIZE_DEQUANTIZE_PAIRS
-        raise RuntimeError("Unknown quantizer ONNX export mode string")
 
 
 class PTQSpecStateNames:
@@ -361,14 +354,14 @@ class BaseQuantizer(nn.Module):
                           log_module_name: str = None):
         """min_values and max_values must have the same shape as specified in self.scale_shape"""
         if self.initialized:
-            nncf_logger.debug("Skipped initializing {} - loaded from checkpoint".format(log_module_name))
+            nncf_logger.debug(f"Skipped initializing {log_module_name} - loaded from checkpoint")
             return
 
         if torch.all(torch.isinf(min_values)) or torch.all(torch.isinf(max_values)):
-            raise ValueError('Statistics are not collected for {}'.format(log_module_name))
+            raise ValueError(f'Statistics are not collected for {log_module_name}')
 
         if torch.any(torch.eq(min_values, np.inf)) or torch.any(torch.eq(max_values, -np.inf)):
-            raise ValueError('Some of the values in statistics have infinite value for {}'.format(log_module_name))
+            raise ValueError(f'Some of the values in statistics have infinite value for {log_module_name}')
 
         own_device = get_model_device(self)
         min_values = min_values.to(own_device)
@@ -428,14 +421,31 @@ class BaseQuantizer(nn.Module):
             levels = level_high - level_low + 1
         return x, levels, input_low, input_high
 
-    def _prepare_qdq_export_quantization(self, x: torch.Tensor):
+    def _prepare_qdq_export_quantization(self, x: torch.Tensor) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor, int]:
         x, level_high, level_low, input_low, input_high = self._prepare_export_quantization(x)
         with no_jit_trace():
             y_scale, y_zero_point = get_scale_zp_from_input_low_input_high(level_low,
                                                                            level_high,
                                                                            input_low,
                                                                            input_high)
-        return x, y_scale, y_zero_point
+            possible_axes = self._possible_per_channel_dimensions()
+            if len(possible_axes) > 1:
+                raise RuntimeError(
+                    f"Impossible to determine the per-channel axis for a scale shape {self.scale_shape} - "
+                    f"more than one dimension is >1")
+            if not possible_axes:
+                # Impossible to determine proper axis for per-channel quantization because we have
+                # scale shape ~ [1, 1, 1, 1], therefore falling back to per-tensor style export
+                axis = 1  # default value by opset, ignored in per-tensor quantization anyway
+                y_scale = y_scale.flatten()[0]
+                y_zero_point = y_zero_point.flatten()[0]
+            else:
+                axis = possible_axes[0]
+
+        return x, y_scale, y_zero_point, axis
+
+    def _possible_per_channel_dimensions(self) -> List[int]:
+        return [i for i in range(len(self.scale_shape)) if self.scale_shape[i] > 1]
 
     def run_export_quantization(self, x: torch.Tensor):
         with torch.no_grad():
@@ -447,13 +457,8 @@ class BaseQuantizer(nn.Module):
                                                           input_low,
                                                           input_high)
             if self._export_mode == QuantizerExportMode.ONNX_QUANTIZE_DEQUANTIZE_PAIRS:
-                x, y_scale, y_zero_point = self._prepare_qdq_export_quantization(x)
-                if self.per_channel and y_zero_point.numel() > 1:
-                    if torch.allclose(y_scale - y_scale[0], torch.zeros_like(y_scale)) and \
-                            torch.allclose(y_zero_point - y_zero_point[0], torch.zeros_like(y_zero_point)):
-                        y_scale, y_zero_point = y_scale[0], y_zero_point[0]
-                        return ExportQuantizeToONNXQuantDequant.apply(x, y_scale, y_zero_point)
-                return ExportQuantizeToONNXQuantDequant.apply(x, y_scale, y_zero_point)
+                x, y_scale, y_zero_point, axis = self._prepare_qdq_export_quantization(x)
+                return ExportQuantizeToONNXQuantDequant.apply(x, y_scale, y_zero_point, axis)
         raise RuntimeError('Unknown export mode')
 
     def extra_repr(self):
@@ -621,7 +626,7 @@ class SymmetricQuantizer(BaseQuantizer):
     def _apply_minmax_init(self, min_values, max_values, log_module_name: str = None):
         sign = torch.any(torch.lt(min_values, 0))
         if self._signedness_to_force is not None and sign != self._signedness_to_force:
-            nncf_logger.warning("Forcing signed to {} for module {}".format(self._signedness_to_force, log_module_name))
+            nncf_logger.debug(f"Forcing signed to {self._signedness_to_force} for module {log_module_name}")
             sign = self._signedness_to_force
         self.signed = int(sign)
 
@@ -633,9 +638,8 @@ class SymmetricQuantizer(BaseQuantizer):
         if self._is_using_log_scale_storage:
             self._scale_param_storage.data.log_()
 
-        nncf_logger.info("Set sign: {} and scale: {} for {}".format(self.signed,
-                                                                    get_flat_tensor_contents_string(self.scale),
-                                                                    log_module_name))
+        nncf_logger.debug(
+            f"Set sign: {self.signed} and scale: {get_flat_tensor_contents_string(self.scale)} for {log_module_name}")
 
     def broadcast_initialized_params(self, src: int = 0):
         super().broadcast_initialized_params(src)
@@ -771,9 +775,9 @@ class AsymmetricQuantizer(BaseQuantizer):
 
         self.input_low.data = (min_values - correction).data
 
-        nncf_logger.info("Set input_low: {} and input_range: {} for {}"
-                         .format(get_flat_tensor_contents_string(self.input_low),
-                                 get_flat_tensor_contents_string(self.input_range), log_module_name))
+        nncf_logger.debug(
+            f"Set input_low: {get_flat_tensor_contents_string(self.input_low)} "
+            f"and input_range: {get_flat_tensor_contents_string(self.input_range)} for {log_module_name}")
 
     def broadcast_initialized_params(self, src: int = 0):
         super().broadcast_initialized_params(src)

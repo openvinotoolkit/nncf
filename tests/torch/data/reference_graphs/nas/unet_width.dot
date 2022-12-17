@@ -79,9 +79,9 @@ strict digraph  {
 "4 UNet/ModuleList[down_path]/UNetConvBlock[0]/Sequential[block]/NNCFConv2d[3]/conv2d_0" -> "5 UNet/ModuleList[down_path]/UNetConvBlock[0]/Sequential[block]/NNCFBatchNorm2d[4]/batch_norm_0"  [label="(1, 64, 360, 480)", style=solid];
 "5 UNet/ModuleList[down_path]/UNetConvBlock[0]/Sequential[block]/NNCFBatchNorm2d[4]/batch_norm_0" -> "6 UNet/ModuleList[down_path]/UNetConvBlock[0]/Sequential[block]/ReLU[5]/relu_0"  [label="(1, 64, 360, 480)", style=solid];
 "6 UNet/ModuleList[down_path]/UNetConvBlock[0]/Sequential[block]/ReLU[5]/relu_0" -> "7 UNet/max_pool2d_0"  [label="(1, 64, 360, 480)", style=solid];
+"6 UNet/ModuleList[down_path]/UNetConvBlock[0]/Sequential[block]/ReLU[5]/relu_0" -> "63 UNet/ModuleList[up_path]/UNetUpBlock[3]/__getitem___0"  [label="(1, 64, 360, 480)", style=solid];
 "7 UNet/max_pool2d_0" -> "8 UNet/ModuleList[down_path]/UNetConvBlock[1]/Sequential[block]/NNCFConv2d[0]/conv2d_0"  [label="(1, 64, 180, 240)", style=solid];
 "8 UNet/ModuleList[down_path]/UNetConvBlock[1]/Sequential[block]/NNCFConv2d[0]/conv2d_0" -> "9 UNet/ModuleList[down_path]/UNetConvBlock[1]/Sequential[block]/NNCFBatchNorm2d[1]/batch_norm_0"  [label="(1, 128, 180, 240)", style=solid];
-"6 UNet/ModuleList[down_path]/UNetConvBlock[0]/Sequential[block]/ReLU[5]/relu_0" -> "63 UNet/ModuleList[up_path]/UNetUpBlock[3]/__getitem___0"  [label="(1, 64, 360, 480)", style=solid];
 "9 UNet/ModuleList[down_path]/UNetConvBlock[1]/Sequential[block]/NNCFBatchNorm2d[1]/batch_norm_0" -> "10 UNet/ModuleList[down_path]/UNetConvBlock[1]/Sequential[block]/ReLU[2]/relu_0"  [label="(1, 128, 180, 240)", style=solid];
 "10 UNet/ModuleList[down_path]/UNetConvBlock[1]/Sequential[block]/ReLU[2]/relu_0" -> "11 UNet/ModuleList[down_path]/UNetConvBlock[1]/Sequential[block]/NNCFConv2d[3]/conv2d_0"  [label="(1, 128, 180, 240)", style=solid];
 "11 UNet/ModuleList[down_path]/UNetConvBlock[1]/Sequential[block]/NNCFConv2d[3]/conv2d_0" -> "12 UNet/ModuleList[down_path]/UNetConvBlock[1]/Sequential[block]/NNCFBatchNorm2d[4]/batch_norm_0"  [label="(1, 128, 180, 240)", style=solid];

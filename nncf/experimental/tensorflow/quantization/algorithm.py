@@ -13,7 +13,7 @@
 
 from typing import List, Optional, Dict, Any
 
-from nncf.common.utils.logger import logger
+from nncf.common.logging import nncf_logger
 from nncf.common.graph import NNCFGraph
 from nncf.common.graph import NNCFNode
 from nncf.common.graph.utils import get_first_nodes_of_type
@@ -262,7 +262,7 @@ class QuantizationBuilderV2(QuantizationBuilder):
         # Find out which metatypes unsupported by the quantization algorithm
         for node in nncf_graph.get_all_nodes():
             if node.metatype in UNSUPPORTED_TF_OP_METATYPES:
-                logger.warning(
+                nncf_logger.warning(
                     'The operation {} is unsupported by the quantization algorithm.'.format(node.node_name)
                 )
 

@@ -4,7 +4,7 @@
             "end_node_name": "SelfAttention/NNCFLinear[o]/linear_0",
             "start_node_name": "/nncf_model_input_0"
         },
-        "block_type": "MSHA",
+        "block_type": "MHSA",
         "op_addresses": [
             "SelfAttention/NNCFLinear[k]/linear_0",
             "SelfAttention/NNCFLinear[o]/linear_0",

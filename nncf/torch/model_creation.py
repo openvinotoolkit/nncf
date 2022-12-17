@@ -25,7 +25,7 @@ from torch.nn import Module
 from nncf.api.compression import CompressionAlgorithmController
 from nncf.common.compression import BaseCompressionAlgorithmController as BaseController
 from nncf.common.utils.debug import set_debug_log_dir
-from nncf.common.utils.logger import logger as nncf_logger
+from nncf.common.logging import nncf_logger
 from nncf.config import NNCFConfig
 from nncf.config.extractors import extract_algorithm_names
 from nncf.config.structures import ModelEvaluationArgs
@@ -185,7 +185,7 @@ def create_nncf_network(model,
             evaluation_args = config.get_extra_struct(ModelEvaluationArgs)
             with torch.no_grad():
                 original_model_accuracy = evaluation_args.eval_fn(model)
-                nncf_logger.info("Non-compressed model accuracy = {}".format(original_model_accuracy))
+                nncf_logger.info(f"Uncompressed model accuracy = {original_model_accuracy}")
 
     nncf_network = NNCFNetwork(model, input_infos=input_info_list,
                                dummy_forward_fn=dummy_forward_fn,
@@ -209,12 +209,10 @@ def synchronize_all_processes_in_distributed_mode():
         # Exception can be raised during running barrier
         # if the backend not in the supported list https://pytorch.org/docs/stable/distributed.html
         except RuntimeError as err:
+            nncf_logger.warning("Training pipeline spawned an error while "
+                                "synchronizing distributed training processes:")
             nncf_logger.warning(err)
-            nncf_logger.warning(
-                "NNCF continues work, while does not guarantee that "
-                "the processes will finish model's compression at the same time. "
-                "If your training pipeline demands the processes be synchronized, please, "
-                "keep attention to that error")
+            nncf_logger.warning("Desynchronization of distributed processes may occur.")
 
 
 def create_compression_algorithm_builder(config: NNCFConfig, should_init=True) -> PTCompressionAlgorithmBuilder:

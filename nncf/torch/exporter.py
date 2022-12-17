@@ -11,14 +11,13 @@
  limitations under the License.
 """
 from typing import Any
-from typing import Optional
 from typing import Tuple
 from functools import partial
 from copy import copy
 import torch
 
 from nncf.common.exporter import Exporter
-from nncf.common.utils.logger import logger as nncf_logger
+from nncf.common.logging import nncf_logger
 from nncf.telemetry import tracked_function
 from nncf.telemetry.events import NNCF_PT_CATEGORY
 from nncf.torch.dynamic_graph.graph_tracer import create_dummy_forward_fn
@@ -82,11 +81,8 @@ class PTExporter(Exporter):
                 raise ValueError("Incorrect save_format, expected 'onnx' or 'onnx_<opset_version>'.")
 
             if opset != PTExporter._ONNX_DEFAULT_OPSET:
-                nncf_logger.warning(
-                    'Using {} ONNX opset version. Recommended version is {}.'.format(
-                        opset, PTExporter._ONNX_DEFAULT_OPSET
-                    )
-                )
+                nncf_logger.warning(f'Exporting to ONNX opset {opset}, which is not guaranteed to work with NNCF. '
+                                    f'Recommended opset export version is {PTExporter._ONNX_DEFAULT_OPSET}.')
 
             return PTExportFormat.ONNX, {'opset_version': opset}
         return save_format, {}

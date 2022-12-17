@@ -18,7 +18,6 @@ import onnx
 from onnx import numpy_helper  # pylint: disable=no-name-in-module
 import numpy as np
 
-from nncf.experimental.onnx.model_normalizer import ONNXModelNormalizer
 from nncf.experimental.onnx.graph.metatypes.onnx_metatypes import ONNX_OPERATION_METATYPES
 from nncf.experimental.onnx.graph.metatypes.onnx_metatypes import OpWeightDef
 from nncf.experimental.onnx.graph.metatypes.onnx_metatypes import ONNXIdentityMetatype
@@ -42,7 +41,7 @@ class ONNXGraph:
 
     def _update_activation_tensors(self, do_shape_inference: bool = False) -> None:
         if do_shape_inference:
-            self.onnx_model = ONNXModelNormalizer.infer_models_shape(self.onnx_model)
+            self.onnx_model = onnx.shape_inference.infer_shapes(self.onnx_model)
         self._activations_tensor_name_to_value_info = {tensor.name: tensor for tensor in
                                                        self.onnx_model.graph.value_info}
         model_inputs_name_to_value_info = {tensor.name: tensor for tensor in self.onnx_model.graph.input}
@@ -212,7 +211,7 @@ class ONNXGraph:
         weight_input = self.get_node_edge_names(node.name)['input'][weight_port_id]
         if self.has_initializer(weight_input):
             return self.get_initializer(weight_input).name, self.get_initializers_value(weight_input)
-        parent_node_on_weight_port = self.get_parents(node)[weight_port_id]
+        parent_node_on_weight_port = self.get_nodes_by_output(weight_input)[0]
         nodes = deque([parent_node_on_weight_port])
         while nodes:
             current_node = nodes.popleft()

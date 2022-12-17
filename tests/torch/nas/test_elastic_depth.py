@@ -10,7 +10,6 @@
  See the License for the specific language governing permissions and
  limitations under the License.
 """
-from pathlib import Path
 from typing import List
 from typing import Optional
 
@@ -22,7 +21,6 @@ import torch
 from torch import nn
 
 from nncf.experimental.torch.nas.bootstrapNAS.elasticity.elasticity_dim import ElasticityDim
-from nncf.experimental.torch.nas.bootstrapNAS.elasticity.onnx_export import NASExporter
 from nncf.experimental.torch.search_building_blocks.search_blocks import BuildingBlock
 from nncf.experimental.torch.search_building_blocks.search_blocks import get_building_blocks
 from nncf.torch import register_operator
@@ -189,11 +187,6 @@ def test_skip_one_block_resnet18(mocker):
     assert id(spy_agent_conv2d.call_args_list[2][0][1]) != id(spy_agent_bn.call_args_list[2][0][1])  # TracedTensor
 
 
-def nas_export(model, save_path: Path):
-    exporter = NASExporter(model)
-    exporter.export_model(str(save_path))
-
-
 def test_can_export_model_with_one_skipped_block_resnet18(tmp_path):
     model = ResNet18()
     move_model_to_cuda_if_available(model)
@@ -204,15 +197,15 @@ def test_can_export_model_with_one_skipped_block_resnet18(tmp_path):
     orig_onnx_model_path = tmp_path / "resnet18.onnx"
     onnx_model_without_block_path = tmp_path / "resnet18_with_one_skipped_block.onnx"
 
-    compressed_model, _ = create_compressed_model_and_algo_for_test(model, nncf_config)
+    compressed_model, ctrl = create_compressed_model_and_algo_for_test(model, nncf_config)
     compressed_model.get_tracing_context().set_elastic_blocks(skipped_blocks)
     # export model to onnx
     ctx = compressed_model.get_tracing_context()
-    nas_export(compressed_model, orig_onnx_model_path)
+    ctrl.export_model(str(orig_onnx_model_path))
 
     ctx.elastic_depth = True  # activate mode with elastic depth
     ctx.set_active_skipped_block([0])
-    nas_export(compressed_model, onnx_model_without_block_path)
+    ctrl.export_model(str(onnx_model_without_block_path))
 
     # load onnx graphs
     # pylint:disable=no-member
@@ -220,9 +213,12 @@ def test_can_export_model_with_one_skipped_block_resnet18(tmp_path):
     onnx_resnet18_without_one_block = load_model_fn(onnx_model_without_block_path)
     onnx_resnet18_orig = load_model_fn(orig_onnx_model_path)
 
-    # count of node in skipped block  == 5
-    assert len(onnx_resnet18_orig.graph.node) == 69
-    assert len(onnx_resnet18_without_one_block.graph.node) == 67
+    # Temporary variable for number of nodes is required to avoid hang. When assertion happens on calculation of number
+    # of nodes it tries to output the whole expression (onnx node), and sometimes it causes pytest to freeze.
+    num_all_nodes = len(onnx_resnet18_orig.graph.node)
+    num_not_skipped_nodes = len(onnx_resnet18_without_one_block.graph.node)
+    assert num_all_nodes == 65
+    assert num_not_skipped_nodes == 63
 
     input_tensor = np.ones(nncf_config['input_info'][0]['sample_size'])
     device = get_model_device(compressed_model)

@@ -161,7 +161,7 @@ def configure_logging(sample_logger, config):
 
     nncf_log_file_handler = logging.FileHandler(osp.join(config.log_dir, NNCF_LOG_FILE_NAME))
     nncf_log_file_handler.setFormatter(logging.Formatter("%(levelname)s:%(name)s:%(message)s"))
-    from nncf.common.utils.logger import logger as nncf_logger
+    from nncf.common.logging import nncf_logger
     nncf_logger.addHandler(nncf_log_file_handler)
 
 
@@ -189,8 +189,10 @@ def create_code_snapshot(root, dst_path, extensions=(".py", ".json", ".cpp", ".c
 
 
 def print_args(config, logger=default_logger):
+    logger.info("\nConfiguration parameters:")
     for arg in sorted(config):
         logger.info("{: <27s}: {}".format(arg, config.get(arg)))
+    logger.info("\n")
 
 
 def make_link(src, dst, exists_ok=True):

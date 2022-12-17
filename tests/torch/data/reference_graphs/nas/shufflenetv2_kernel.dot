@@ -344,11 +344,11 @@ strict digraph  {
 "92 ShuffleNetV2/Sequential[layer2]/BasicBlock[1]/ShuffleBlock[shuffle]/permute_0" -> "93 ShuffleNetV2/Sequential[layer2]/BasicBlock[1]/ShuffleBlock[shuffle]/reshape_0"  [label="(1, 48, 2, 8, 8)", style=solid];
 "93 ShuffleNetV2/Sequential[layer2]/BasicBlock[1]/ShuffleBlock[shuffle]/reshape_0" -> "94 ShuffleNetV2/Sequential[layer2]/BasicBlock[2]/SplitBlock[split]/__getitem___0"  [label="(1, 96, 8, 8)", style=solid];
 "93 ShuffleNetV2/Sequential[layer2]/BasicBlock[1]/ShuffleBlock[shuffle]/reshape_0" -> "95 ShuffleNetV2/Sequential[layer2]/BasicBlock[2]/SplitBlock[split]/__getitem___1"  [label="(1, 96, 8, 8)", style=solid];
+"94 ShuffleNetV2/Sequential[layer2]/BasicBlock[2]/SplitBlock[split]/__getitem___0" -> "104 ShuffleNetV2/Sequential[layer2]/BasicBlock[2]/cat_0"  [label="(1, 48, 8, 8)", style=solid];
 "95 ShuffleNetV2/Sequential[layer2]/BasicBlock[2]/SplitBlock[split]/__getitem___1" -> "96 ShuffleNetV2/Sequential[layer2]/BasicBlock[2]/NNCFConv2d[conv1]/conv2d_0"  [label="(1, 48, 8, 8)", style=solid];
 "96 ShuffleNetV2/Sequential[layer2]/BasicBlock[2]/NNCFConv2d[conv1]/conv2d_0" -> "97 ShuffleNetV2/Sequential[layer2]/BasicBlock[2]/NNCFBatchNorm2d[bn1]/batch_norm_0"  [label="(1, 48, 8, 8)", style=solid];
 "97 ShuffleNetV2/Sequential[layer2]/BasicBlock[2]/NNCFBatchNorm2d[bn1]/batch_norm_0" -> "98 ShuffleNetV2/Sequential[layer2]/BasicBlock[2]/relu_0"  [label="(1, 48, 8, 8)", style=solid];
 "98 ShuffleNetV2/Sequential[layer2]/BasicBlock[2]/relu_0" -> "99 ShuffleNetV2/Sequential[layer2]/BasicBlock[2]/NNCFConv2d[conv2]/conv2d_0"  [label="(1, 48, 8, 8)", style=solid];
-"94 ShuffleNetV2/Sequential[layer2]/BasicBlock[2]/SplitBlock[split]/__getitem___0" -> "104 ShuffleNetV2/Sequential[layer2]/BasicBlock[2]/cat_0"  [label="(1, 48, 8, 8)", style=solid];
 "99 ShuffleNetV2/Sequential[layer2]/BasicBlock[2]/NNCFConv2d[conv2]/conv2d_0" -> "100 ShuffleNetV2/Sequential[layer2]/BasicBlock[2]/NNCFBatchNorm2d[bn2]/batch_norm_0"  [label="(1, 48, 8, 8)", style=solid];
 "100 ShuffleNetV2/Sequential[layer2]/BasicBlock[2]/NNCFBatchNorm2d[bn2]/batch_norm_0" -> "101 ShuffleNetV2/Sequential[layer2]/BasicBlock[2]/NNCFConv2d[conv3]/conv2d_0"  [label="(1, 48, 8, 8)", style=solid];
 "101 ShuffleNetV2/Sequential[layer2]/BasicBlock[2]/NNCFConv2d[conv3]/conv2d_0" -> "102 ShuffleNetV2/Sequential[layer2]/BasicBlock[2]/NNCFBatchNorm2d[bn3]/batch_norm_0"  [label="(1, 48, 8, 8)", style=solid];

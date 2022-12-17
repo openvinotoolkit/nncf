@@ -37,7 +37,7 @@ from nncf.common.graph.transformations.commands import TransformationPriority
 from nncf.common.insertion_point_graph import InsertionPointGraph
 from nncf.common.insertion_point_graph import PostHookInsertionPoint
 from nncf.common.insertion_point_graph import PreHookInsertionPoint
-from nncf.common.utils.logger import logger as nncf_logger
+from nncf.common.logging import nncf_logger
 from nncf.torch.debug import CombinedDebugInterface
 from nncf.torch.debug import debuggable_forward
 from nncf.common.utils.debug import is_debug
@@ -59,8 +59,8 @@ from nncf.torch.dynamic_graph.transform_graph import replace_modules_by_nncf_mod
 from nncf.torch.graph.graph import PTNNCFGraph
 from nncf.torch.graph.graph_builder import GraphBuilder
 from nncf.torch.graph.graph_builder import GraphConverter
+from nncf.torch.graph.operator_metatypes import OPERATORS_WITH_WEIGHTS_METATYPES
 from nncf.torch.graph.operator_metatypes import PTSplitMetatype
-from nncf.torch.graph.transformations.commands import PTInsertionCommand
 from nncf.torch.graph.transformations.commands import PTTargetPoint
 from nncf.torch.graph.transformations.layout import PTTransformationLayout
 from nncf.torch.knowledge_distillation.knowledge_distillation_handler import KnowledgeDistillationLossHandler
@@ -436,7 +436,7 @@ class NNCFNetwork(nn.Module, PostGraphBuildActing):
                     continue
             nodes_in_scope = self._original_graph.get_op_nodes_in_scope(nncf_module_scope)
             for node in nodes_in_scope:
-                if node.layer_attributes is not None:  # TODO(vshampor): implement more explicit filtering
+                if node.metatype in OPERATORS_WITH_WEIGHTS_METATYPES:
                     retval.append(node)
         return retval
 
@@ -596,9 +596,9 @@ class NNCFNetwork(nn.Module, PostGraphBuildActing):
             try:
                 scope = self._compressed_graph.get_scope_by_node_name(node_name)
             except RuntimeError:
-                nncf_logger.debug("Node {} not found in compressed graph when trying to determine containing module, "
-                                  "trying the original graph to see if the node was present there "
-                                  "during graph building")
+                nncf_logger.debug(f"Node {node_name} not found in compressed graph when trying to determine "
+                                  f"the containing module, trying the original graph to see if the node was "
+                                  f"present there during graph building")
                 scope = self._original_graph.get_scope_by_node_name(node_name)
         else:
             scope = self._original_graph.get_scope_by_node_name(node_name)

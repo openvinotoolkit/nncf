@@ -15,7 +15,7 @@ from typing import Any
 
 import torch
 
-from nncf.common.utils.logger import logger as nncf_logger
+from nncf.common.logging import nncf_logger
 from nncf.torch.utils import add_domain
 
 from .extensions import BinarizedFunctionsCUDA

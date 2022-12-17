@@ -13,8 +13,10 @@
 
 from typing import TypeVar
 
+from copy import deepcopy
+
 from nncf import Dataset
-from nncf.common.utils.logger import logger as nncf_logger
+from nncf.common.logging import nncf_logger
 from nncf.common.utils.backend import BackendType
 from nncf.common.utils.backend import get_backend
 from nncf.experimental.quantization.telemetry_extractors import CompressionStartedFromBuilder
@@ -32,9 +34,8 @@ class CompressionBuilder:
     The main class applies the compression algorithms to the model according to their order.
     """
 
-    def __init__(self, convert_opset_version: bool = True):
+    def __init__(self):
         self.algorithms = []
-        self.convert_opset_version = convert_opset_version
 
     def add_algorithm(self, algorithm: Algorithm) -> None:
         """
@@ -60,13 +61,6 @@ class CompressionBuilder:
             return ONNXStatisticsAggregator(dataset)
         return None
 
-    def _get_prepared_model_for_compression(self, model: TModel, backend: BackendType) -> TModel:
-        if backend == BackendType.ONNX:
-            from nncf.experimental.onnx.model_normalizer import ONNXModelNormalizer
-            return ONNXModelNormalizer.normalize_model(model, self.convert_opset_version)
-
-        return None
-
     @tracked_function(NNCF_ONNX_CATEGORY, [CompressionStartedFromBuilder(argname="self"), ])
     def apply(self, model: TModel, dataset: Dataset) -> TModel:
         """
@@ -80,26 +74,26 @@ class CompressionBuilder:
         5) Collect all statistics.
         6) Apply algorithms.
         """
-
         if not self.algorithms:
-            nncf_logger.info('There are no algorithms added. The original model will be returned.')
+            nncf_logger.warning('No algorithms specified for compression - '
+                                'doing nothing and returning the original model')
             return model
 
-        backend = get_backend(model)
+        _model = deepcopy(model)
+        backend = get_backend(_model)
 
         # TODO (KodiaqQ): Remove after ONNX is removed from experimental
         if backend == BackendType.ONNX:
-            nncf_logger.warning('You are using experimental ONNX backend for the Post-training quantization.')
-        modified_model = self._get_prepared_model_for_compression(model, backend)
+            nncf_logger.warning('You are using the experimental ONNX backend for post-training quantization.')
 
         statistics_aggregator = self._create_statistics_aggregator(dataset, backend)
 
         for algorithm in self.algorithms:
-            statistic_points = algorithm.get_statistic_points(modified_model)
+            statistic_points = algorithm.get_statistic_points(_model)
             statistics_aggregator.register_stastistic_points(statistic_points)
 
-        statistics_aggregator.collect_statistics(modified_model)
+        statistics_aggregator.collect_statistics(_model)
 
         for algorithm in self.algorithms:
-            modified_model = algorithm.apply(modified_model, statistics_aggregator.statistic_points)
+            modified_model = algorithm.apply(_model, statistics_aggregator.statistic_points)
         return modified_model

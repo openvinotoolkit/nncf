@@ -793,3 +793,22 @@ def get_operator_metatypes() -> List[Type[OperatorMetatype]]:
     :return: List of operator metatypes .
     """
     return list(PT_OPERATOR_METATYPES.registry_dict.values())
+
+
+OPERATORS_WITH_WEIGHTS_METATYPES = [
+    PTConv1dMetatype,
+    PTConv2dMetatype,
+    PTConv3dMetatype,
+    PTDepthwiseConv1dSubtype,
+    PTDepthwiseConv2dSubtype,
+    PTDepthwiseConv3dSubtype,
+    PTLinearMetatype,
+    PTBatchNormMetatype,
+    PTGroupNormMetatype,
+    PTLayerNormMetatype,
+    PTConvTranspose1dMetatype,
+    PTConvTranspose2dMetatype,
+    PTConvTranspose3dMetatype,
+    PTEmbeddingMetatype,
+    PTEmbeddingBagMetatype,
+]

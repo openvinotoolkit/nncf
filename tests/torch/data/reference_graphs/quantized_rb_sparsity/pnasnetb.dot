@@ -793,9 +793,9 @@ strict digraph  {
 "93 PNASNet/Sequential[layer1]/CellB[2]/SepConv[sep_conv3]/NNCFBatchNorm2d[bn1]/SymmetricQuantizer/symmetric_quantize_0" -> "97 PNASNet/Sequential[layer1]/CellB[2]/__add___1";
 "94 PNASNet/Sequential[layer1]/CellB[2]/__add___0" -> "95 PNASNet/Sequential[layer1]/CellB[2]/relu_0";
 "95 PNASNet/Sequential[layer1]/CellB[2]/relu_0" -> "96 PNASNet/Sequential[layer1]/CellB[2]/SymmetricQuantizer/symmetric_quantize_0";
+"96 PNASNet/Sequential[layer1]/CellB[2]/SymmetricQuantizer/symmetric_quantize_0" -> "100 PNASNet/Sequential[layer1]/CellB[2]/cat_0";
 "97 PNASNet/Sequential[layer1]/CellB[2]/__add___1" -> "98 PNASNet/Sequential[layer1]/CellB[2]/relu_1";
 "98 PNASNet/Sequential[layer1]/CellB[2]/relu_1" -> "99 PNASNet/Sequential[layer1]/CellB[2]/SymmetricQuantizer/symmetric_quantize_1";
-"96 PNASNet/Sequential[layer1]/CellB[2]/SymmetricQuantizer/symmetric_quantize_0" -> "100 PNASNet/Sequential[layer1]/CellB[2]/cat_0";
 "99 PNASNet/Sequential[layer1]/CellB[2]/SymmetricQuantizer/symmetric_quantize_1" -> "100 PNASNet/Sequential[layer1]/CellB[2]/cat_0";
 "100 PNASNet/Sequential[layer1]/CellB[2]/cat_0" -> "104 PNASNet/Sequential[layer1]/CellB[2]/NNCFConv2d[conv2]/conv2d_0";
 "101 PNASNet/Sequential[layer1]/CellB[2]/NNCFConv2d[conv2]/ModuleDict[pre_ops]/UpdateWeight[0]/RBSparsifyingWeight[op]/calc_rb_binary_mask_0" -> "102 PNASNet/Sequential[layer1]/CellB[2]/NNCFConv2d[conv2]/ModuleDict[pre_ops]/UpdateWeight[0]/RBSparsifyingWeight[op]/apply_binary_mask_0";

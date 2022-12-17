@@ -18,6 +18,7 @@ import jsonschema
 
 from nncf.config.definitions import ALGO_NAME_VS_README_URL
 from nncf.config.definitions import SCHEMA_VISUALIZATION_URL
+from nncf.config.schemata.defaults import TARGET_DEVICE
 from nncf.config.schemata.experimental_schema import EXPERIMENTAL_REF_VS_ALGO_SCHEMA
 from nncf.config.schemata.accuracy_aware import ACCURACY_AWARE_MODES_VS_SCHEMA
 from nncf.config.schemata.accuracy_aware import ACCURACY_AWARE_TRAINING_SCHEMA
@@ -118,7 +119,8 @@ NNCF_CONFIG_SCHEMA = {
                         "performance for this type of device. The default 'ANY' means "
                         "compatible quantization supported by any HW. Set "
                         "this value to 'TRIAL' if you are going to use a custom "
-                        "quantization schema."),
+                        "quantization schema.",
+            default=TARGET_DEVICE),
         "compression": make_object_or_array_of_objects_schema(
             {"oneOf": [
                     {"$ref": f"#/$defs/{algo_name}"} for algo_name in REF_VS_ALGO_SCHEMA

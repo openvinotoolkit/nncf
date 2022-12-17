@@ -44,7 +44,7 @@ from nncf.common.pruning.utils import get_prunable_layers_in_out_channels
 from nncf.common.pruning.utils import is_prunable_depthwise_conv
 from nncf.common.pruning.shape_pruning_processor import ShapePruningProcessor
 from nncf.common.tensor import NNCFTensor
-from nncf.common.utils.logger import logger as nncf_logger
+from nncf.common.logging import nncf_logger
 from nncf.experimental.torch.nas.bootstrapNAS.elasticity.base_handler import BaseElasticityParams
 from nncf.experimental.torch.nas.bootstrapNAS.elasticity.base_handler import ELASTICITY_BUILDERS
 from nncf.experimental.torch.nas.bootstrapNAS.elasticity.base_handler import ELASTICITY_HANDLERS_MAP
@@ -258,12 +258,10 @@ class ElasticOutputWidthOp(ElasticWidthOp):
         if fixed_width_list:
             fixed_width_list.sort(reverse=True)
             if fixed_width_list[0] > max_width:
-                nncf_logger.warning(f"Width list for {node_name} "
-                                    f"contains invalid values: {fixed_width_list}, {max_width}")
-                self._width_list = self._generate_width_list(self._max_width, params)
+                raise RuntimeError(f"Width list for {node_name} "
+                                   f"contains invalid values: {fixed_width_list}, {max_width}")
             if fixed_width_list[0] != max_width:
-                nncf_logger.warning(f"Max width for {node_name} is not aligned with pre-trained model")
-                fixed_width_list[0] = max_width
+                raise RuntimeError(f"Max width for {node_name} is not aligned with pre-trained model")
             self._width_list = fixed_width_list
         else:
             self._width_list = self._generate_width_list(self._max_width, params)
@@ -335,8 +333,7 @@ class ElasticOutputWidthOp(ElasticWidthOp):
                 if p.max_num_widths == len(width_list):
                     break
                 if 0 >= multiplier > 1:
-                    nncf_logger.warning("Wrong value for multiplier: {}. Skipping ".format(multiplier))
-                    continue
+                    raise RuntimeError(f"Wrong value for multiplier: {multiplier}")
                 w = int(max_width * multiplier)
                 w = w - (w % ALIGNMENT_CONSTANT_FOR_MULTIPLIERS)
                 w = max(w, p.min_width)
@@ -456,7 +453,7 @@ class ElasticOutputWidthConv2DOp(ElasticOutputWidthOp, nn.Module):
         :param bias: bias tensor to be trimmed
         :return: list of trimmed convolution parameters
         """
-        nncf_logger.debug('Conv2d with active width={} in scope={}'.format(self._active_width, self._node_name))
+        nncf_logger.debug(f'Conv2d with active width={self._active_width} in scope={self._node_name}')
         num_out_channels = self._active_width
         new_bias = None if bias is None else bias[:num_out_channels]
         new_weights = weight[:num_out_channels, :, :, :]
@@ -658,11 +655,11 @@ class ElasticWidthHandler(SingleElasticityHandler):
                     was_set = True
 
             if not was_set and node_name not in names_of_processed_nodes:
-                nncf_logger.debug('input width was not set in scope={}'.format(node.node_name))
+                nncf_logger.debug(f'input width was not set in scope={node.node_name}')
 
             if self._add_dynamic_inputs:
                 if node_name in self._add_dynamic_inputs and not was_set:
-                    nncf_logger.debug("setting input width by user's request for scope={}".format(node_name))
+                    nncf_logger.debug(f"setting input width by user's request for scope={node_name}")
                     nodes_to_check = [node]
                     while any(elem is None for elem in input_masks):
                         previous_nodes = []
@@ -688,8 +685,7 @@ class ElasticWidthHandler(SingleElasticityHandler):
                             dynamic_input_width_op.set_active_width(input_width)
                             was_set = True
                     if was_set:
-                        nncf_logger.debug("Success setting up user's request for dynamic input at "
-                                          "scope={}".format(node_name))
+                        nncf_logger.debug(f"Success setting up user's request for dynamic input at scope={node_name}")
 
     def get_active_in_out_width_values(self) -> Tuple[Dict[NNCFNodeName, int], Dict[NNCFNodeName, int]]:
         """
@@ -820,8 +816,8 @@ class ElasticWidthHandler(SingleElasticityHandler):
                          f'Width: {start_width} vs {end_width}. Shapes: {start_output_shape} vs {end_output_shape}'
             else:
                 continue
-            nncf_logger.warning('The block [\n\t{},\n\t{}\n]\n can`t be skipped, because {}'.format(
-                start_node_name, end_node_name, reason))
+            nncf_logger.debug(
+                f'The block [\n\t{start_node_name},\n\t{end_node_name}\n]\n can`t be skipped, because {reason}')
             pair_indexes.append(idx)
         return pair_indexes
 
@@ -846,7 +842,7 @@ class ElasticWidthHandler(SingleElasticityHandler):
             op = first_elastic_width_info.elastic_op
             selected_width = selection_rule(op)
             elastic_width_config[cluster.id] = selected_width
-            nncf_logger.debug('Select width={} for group #{}'.format(cluster.id, selected_width))
+            nncf_logger.debug(f'Select width={cluster.id} for group #{selected_width}')
         return elastic_width_config
 
     @staticmethod
@@ -1006,7 +1002,7 @@ class ElasticWidthBuilder(SingleElasticityBuilder):
             nodes = graph.get_nodes_by_metatypes([metatype])
             for node in nodes:
                 node_name = node.node_name
-                nncf_logger.info("Adding Dynamic Input Op for {} in scope: {}".format(metatype.name, node_name))
+                nncf_logger.debug(f"Adding Dynamic Input Op for {metatype.name} in scope: {node_name}")
                 layer_attrs = node.layer_attributes
                 update_module_params = op_creator(layer_attrs, node_name).to(device)
                 node_name_vs_dynamic_input_width_op_map[node_name] = update_module_params.op
@@ -1066,7 +1062,7 @@ class ElasticWidthBuilder(SingleElasticityBuilder):
                                       params: ElasticWidthParams,
                                       fixed_width_list: Optional[List[int]] = None) -> ElasticOutputWidthConv2DOp:
         assert isinstance(conv_layer_attrs, ConvolutionLayerAttributes)
-        nncf_logger.info("Adding Dynamic Conv2D Layer in scope: {}".format(str(node_name)))
+        nncf_logger.debug(f"Adding Dynamic Conv2D Layer in scope: {str(node_name)}")
         if fixed_width_list is None:
             fixed_width_list = []
         return ElasticOutputWidthConv2DOp(conv_layer_attrs.out_channels, node_name,
@@ -1080,7 +1076,7 @@ class ElasticWidthBuilder(SingleElasticityBuilder):
         assert isinstance(linear_layer_attrs, LinearLayerAttributes)
         if fixed_width_list is None:
             fixed_width_list = []
-        nncf_logger.info("Adding Dynamic Linear Layer in scope: {}".format(str(node_name)))
+        nncf_logger.debug(f"Adding Dynamic Linear Layer in scope: {str(node_name)}")
         return ElasticOutputWidthLinearOp(linear_layer_attrs.out_features, node_name, params,
                                           fixed_width_list=fixed_width_list)
 

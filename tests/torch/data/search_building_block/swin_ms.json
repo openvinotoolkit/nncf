@@ -4,7 +4,7 @@
             "end_node_name": "SwinForImageClassification/SwinModel[swin]/SwinEncoder[encoder]/ModuleList[layers]/SwinStage[0]/ModuleList[blocks]/SwinLayer[0]/SwinAttention[attention]/SwinSelfOutput[output]/NNCFLinear[dense]/linear_0",
             "start_node_name": "SwinForImageClassification/SwinModel[swin]/SwinEncoder[encoder]/ModuleList[layers]/SwinStage[0]/ModuleList[blocks]/SwinLayer[0]/view_3"
         },
-        "block_type": "MSHA",
+        "block_type": "MHSA",
         "op_addresses": [
             "SwinForImageClassification/SwinModel[swin]/SwinEncoder[encoder]/ModuleList[layers]/SwinStage[0]/ModuleList[blocks]/SwinLayer[0]/SwinAttention[attention]/SwinSelfAttention[self]/Dropout[dropout]/dropout_0",
             "SwinForImageClassification/SwinModel[swin]/SwinEncoder[encoder]/ModuleList[layers]/SwinStage[0]/ModuleList[blocks]/SwinLayer[0]/SwinAttention[attention]/SwinSelfAttention[self]/NNCFLinear[key]/linear_0",
@@ -56,7 +56,7 @@
             "end_node_name": "SwinForImageClassification/SwinModel[swin]/SwinEncoder[encoder]/ModuleList[layers]/SwinStage[0]/ModuleList[blocks]/SwinLayer[1]/SwinAttention[attention]/SwinSelfOutput[output]/NNCFLinear[dense]/linear_0",
             "start_node_name": "SwinForImageClassification/SwinModel[swin]/SwinEncoder[encoder]/ModuleList[layers]/SwinStage[0]/ModuleList[blocks]/SwinLayer[1]/view_3"
         },
-        "block_type": "MSHA",
+        "block_type": "MHSA",
         "op_addresses": [
             "SwinForImageClassification/SwinModel[swin]/SwinEncoder[encoder]/ModuleList[layers]/SwinStage[0]/ModuleList[blocks]/SwinLayer[1]/SwinAttention[attention]/SwinSelfAttention[self]/Dropout[dropout]/dropout_0",
             "SwinForImageClassification/SwinModel[swin]/SwinEncoder[encoder]/ModuleList[layers]/SwinStage[0]/ModuleList[blocks]/SwinLayer[1]/SwinAttention[attention]/SwinSelfAttention[self]/NNCFLinear[key]/linear_0",
@@ -111,7 +111,7 @@
             "end_node_name": "SwinForImageClassification/SwinModel[swin]/SwinEncoder[encoder]/ModuleList[layers]/SwinStage[1]/ModuleList[blocks]/SwinLayer[0]/SwinAttention[attention]/SwinSelfOutput[output]/NNCFLinear[dense]/linear_0",
             "start_node_name": "SwinForImageClassification/SwinModel[swin]/SwinEncoder[encoder]/ModuleList[layers]/SwinStage[1]/ModuleList[blocks]/SwinLayer[0]/view_3"
         },
-        "block_type": "MSHA",
+        "block_type": "MHSA",
         "op_addresses": [
             "SwinForImageClassification/SwinModel[swin]/SwinEncoder[encoder]/ModuleList[layers]/SwinStage[1]/ModuleList[blocks]/SwinLayer[0]/SwinAttention[attention]/SwinSelfAttention[self]/Dropout[dropout]/dropout_0",
             "SwinForImageClassification/SwinModel[swin]/SwinEncoder[encoder]/ModuleList[layers]/SwinStage[1]/ModuleList[blocks]/SwinLayer[0]/SwinAttention[attention]/SwinSelfAttention[self]/NNCFLinear[key]/linear_0",
@@ -163,7 +163,7 @@
             "end_node_name": "SwinForImageClassification/SwinModel[swin]/SwinEncoder[encoder]/ModuleList[layers]/SwinStage[1]/ModuleList[blocks]/SwinLayer[1]/SwinAttention[attention]/SwinSelfOutput[output]/NNCFLinear[dense]/linear_0",
             "start_node_name": "SwinForImageClassification/SwinModel[swin]/SwinEncoder[encoder]/ModuleList[layers]/SwinStage[1]/ModuleList[blocks]/SwinLayer[1]/view_3"
         },
-        "block_type": "MSHA",
+        "block_type": "MHSA",
         "op_addresses": [
             "SwinForImageClassification/SwinModel[swin]/SwinEncoder[encoder]/ModuleList[layers]/SwinStage[1]/ModuleList[blocks]/SwinLayer[1]/SwinAttention[attention]/SwinSelfAttention[self]/Dropout[dropout]/dropout_0",
             "SwinForImageClassification/SwinModel[swin]/SwinEncoder[encoder]/ModuleList[layers]/SwinStage[1]/ModuleList[blocks]/SwinLayer[1]/SwinAttention[attention]/SwinSelfAttention[self]/NNCFLinear[key]/linear_0",
@@ -218,7 +218,7 @@
             "end_node_name": "SwinForImageClassification/SwinModel[swin]/SwinEncoder[encoder]/ModuleList[layers]/SwinStage[2]/ModuleList[blocks]/SwinLayer[0]/SwinAttention[attention]/SwinSelfOutput[output]/NNCFLinear[dense]/linear_0",
             "start_node_name": "SwinForImageClassification/SwinModel[swin]/SwinEncoder[encoder]/ModuleList[layers]/SwinStage[2]/ModuleList[blocks]/SwinLayer[0]/view_3"
         },
-        "block_type": "MSHA",
+        "block_type": "MHSA",
         "op_addresses": [
             "SwinForImageClassification/SwinModel[swin]/SwinEncoder[encoder]/ModuleList[layers]/SwinStage[2]/ModuleList[blocks]/SwinLayer[0]/SwinAttention[attention]/SwinSelfAttention[self]/Dropout[dropout]/dropout_0",
             "SwinForImageClassification/SwinModel[swin]/SwinEncoder[encoder]/ModuleList[layers]/SwinStage[2]/ModuleList[blocks]/SwinLayer[0]/SwinAttention[attention]/SwinSelfAttention[self]/NNCFLinear[key]/linear_0",
@@ -270,7 +270,7 @@
             "end_node_name": "SwinForImageClassification/SwinModel[swin]/SwinEncoder[encoder]/ModuleList[layers]/SwinStage[2]/ModuleList[blocks]/SwinLayer[1]/SwinAttention[attention]/SwinSelfOutput[output]/NNCFLinear[dense]/linear_0",
             "start_node_name": "SwinForImageClassification/SwinModel[swin]/SwinEncoder[encoder]/ModuleList[layers]/SwinStage[2]/ModuleList[blocks]/SwinLayer[1]/view_3"
         },
-        "block_type": "MSHA",
+        "block_type": "MHSA",
         "op_addresses": [
             "SwinForImageClassification/SwinModel[swin]/SwinEncoder[encoder]/ModuleList[layers]/SwinStage[2]/ModuleList[blocks]/SwinLayer[1]/SwinAttention[attention]/SwinSelfAttention[self]/Dropout[dropout]/dropout_0",
             "SwinForImageClassification/SwinModel[swin]/SwinEncoder[encoder]/ModuleList[layers]/SwinStage[2]/ModuleList[blocks]/SwinLayer[1]/SwinAttention[attention]/SwinSelfAttention[self]/NNCFLinear[key]/linear_0",
@@ -325,7 +325,7 @@
             "end_node_name": "SwinForImageClassification/SwinModel[swin]/SwinEncoder[encoder]/ModuleList[layers]/SwinStage[2]/ModuleList[blocks]/SwinLayer[2]/SwinAttention[attention]/SwinSelfOutput[output]/NNCFLinear[dense]/linear_0",
             "start_node_name": "SwinForImageClassification/SwinModel[swin]/SwinEncoder[encoder]/ModuleList[layers]/SwinStage[2]/ModuleList[blocks]/SwinLayer[2]/view_3"
         },
-        "block_type": "MSHA",
+        "block_type": "MHSA",
         "op_addresses": [
             "SwinForImageClassification/SwinModel[swin]/SwinEncoder[encoder]/ModuleList[layers]/SwinStage[2]/ModuleList[blocks]/SwinLayer[2]/SwinAttention[attention]/SwinSelfAttention[self]/Dropout[dropout]/dropout_0",
             "SwinForImageClassification/SwinModel[swin]/SwinEncoder[encoder]/ModuleList[layers]/SwinStage[2]/ModuleList[blocks]/SwinLayer[2]/SwinAttention[attention]/SwinSelfAttention[self]/NNCFLinear[key]/linear_0",
@@ -377,7 +377,7 @@
             "end_node_name": "SwinForImageClassification/SwinModel[swin]/SwinEncoder[encoder]/ModuleList[layers]/SwinStage[2]/ModuleList[blocks]/SwinLayer[3]/SwinAttention[attention]/SwinSelfOutput[output]/NNCFLinear[dense]/linear_0",
             "start_node_name": "SwinForImageClassification/SwinModel[swin]/SwinEncoder[encoder]/ModuleList[layers]/SwinStage[2]/ModuleList[blocks]/SwinLayer[3]/view_3"
         },
-        "block_type": "MSHA",
+        "block_type": "MHSA",
         "op_addresses": [
             "SwinForImageClassification/SwinModel[swin]/SwinEncoder[encoder]/ModuleList[layers]/SwinStage[2]/ModuleList[blocks]/SwinLayer[3]/SwinAttention[attention]/SwinSelfAttention[self]/Dropout[dropout]/dropout_0",
             "SwinForImageClassification/SwinModel[swin]/SwinEncoder[encoder]/ModuleList[layers]/SwinStage[2]/ModuleList[blocks]/SwinLayer[3]/SwinAttention[attention]/SwinSelfAttention[self]/NNCFLinear[key]/linear_0",
@@ -432,7 +432,7 @@
             "end_node_name": "SwinForImageClassification/SwinModel[swin]/SwinEncoder[encoder]/ModuleList[layers]/SwinStage[2]/ModuleList[blocks]/SwinLayer[4]/SwinAttention[attention]/SwinSelfOutput[output]/NNCFLinear[dense]/linear_0",
             "start_node_name": "SwinForImageClassification/SwinModel[swin]/SwinEncoder[encoder]/ModuleList[layers]/SwinStage[2]/ModuleList[blocks]/SwinLayer[4]/view_3"
         },
-        "block_type": "MSHA",
+        "block_type": "MHSA",
         "op_addresses": [
             "SwinForImageClassification/SwinModel[swin]/SwinEncoder[encoder]/ModuleList[layers]/SwinStage[2]/ModuleList[blocks]/SwinLayer[4]/SwinAttention[attention]/SwinSelfAttention[self]/Dropout[dropout]/dropout_0",
             "SwinForImageClassification/SwinModel[swin]/SwinEncoder[encoder]/ModuleList[layers]/SwinStage[2]/ModuleList[blocks]/SwinLayer[4]/SwinAttention[attention]/SwinSelfAttention[self]/NNCFLinear[key]/linear_0",
@@ -484,7 +484,7 @@
             "end_node_name": "SwinForImageClassification/SwinModel[swin]/SwinEncoder[encoder]/ModuleList[layers]/SwinStage[2]/ModuleList[blocks]/SwinLayer[5]/SwinAttention[attention]/SwinSelfOutput[output]/NNCFLinear[dense]/linear_0",
             "start_node_name": "SwinForImageClassification/SwinModel[swin]/SwinEncoder[encoder]/ModuleList[layers]/SwinStage[2]/ModuleList[blocks]/SwinLayer[5]/view_3"
         },
-        "block_type": "MSHA",
+        "block_type": "MHSA",
         "op_addresses": [
             "SwinForImageClassification/SwinModel[swin]/SwinEncoder[encoder]/ModuleList[layers]/SwinStage[2]/ModuleList[blocks]/SwinLayer[5]/SwinAttention[attention]/SwinSelfAttention[self]/Dropout[dropout]/dropout_0",
             "SwinForImageClassification/SwinModel[swin]/SwinEncoder[encoder]/ModuleList[layers]/SwinStage[2]/ModuleList[blocks]/SwinLayer[5]/SwinAttention[attention]/SwinSelfAttention[self]/NNCFLinear[key]/linear_0",
@@ -539,7 +539,7 @@
             "end_node_name": "SwinForImageClassification/SwinModel[swin]/SwinEncoder[encoder]/ModuleList[layers]/SwinStage[3]/ModuleList[blocks]/SwinLayer[0]/SwinAttention[attention]/SwinSelfOutput[output]/NNCFLinear[dense]/linear_0",
             "start_node_name": "SwinForImageClassification/SwinModel[swin]/SwinEncoder[encoder]/ModuleList[layers]/SwinStage[3]/ModuleList[blocks]/SwinLayer[0]/view_3"
         },
-        "block_type": "MSHA",
+        "block_type": "MHSA",
         "op_addresses": [
             "SwinForImageClassification/SwinModel[swin]/SwinEncoder[encoder]/ModuleList[layers]/SwinStage[3]/ModuleList[blocks]/SwinLayer[0]/SwinAttention[attention]/SwinSelfAttention[self]/Dropout[dropout]/dropout_0",
             "SwinForImageClassification/SwinModel[swin]/SwinEncoder[encoder]/ModuleList[layers]/SwinStage[3]/ModuleList[blocks]/SwinLayer[0]/SwinAttention[attention]/SwinSelfAttention[self]/NNCFLinear[key]/linear_0",
@@ -591,7 +591,7 @@
             "end_node_name": "SwinForImageClassification/SwinModel[swin]/SwinEncoder[encoder]/ModuleList[layers]/SwinStage[3]/ModuleList[blocks]/SwinLayer[1]/SwinAttention[attention]/SwinSelfOutput[output]/NNCFLinear[dense]/linear_0",
             "start_node_name": "SwinForImageClassification/SwinModel[swin]/SwinEncoder[encoder]/ModuleList[layers]/SwinStage[3]/ModuleList[blocks]/SwinLayer[1]/view_3"
         },
-        "block_type": "MSHA",
+        "block_type": "MHSA",
         "op_addresses": [
             "SwinForImageClassification/SwinModel[swin]/SwinEncoder[encoder]/ModuleList[layers]/SwinStage[3]/ModuleList[blocks]/SwinLayer[1]/SwinAttention[attention]/SwinSelfAttention[self]/Dropout[dropout]/dropout_0",
             "SwinForImageClassification/SwinModel[swin]/SwinEncoder[encoder]/ModuleList[layers]/SwinStage[3]/ModuleList[blocks]/SwinLayer[1]/SwinAttention[attention]/SwinSelfAttention[self]/NNCFLinear[key]/linear_0",

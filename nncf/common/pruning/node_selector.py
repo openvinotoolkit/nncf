@@ -30,7 +30,7 @@ from nncf.common.pruning.model_analysis import ModelAnalyzer
 from nncf.common.pruning.clusterization import Clusterization
 from nncf.common.pruning.model_analysis import cluster_special_ops
 from nncf.common.pruning.clusterization import Cluster
-from nncf.common.utils.logger import logger as nncf_logger
+from nncf.common.logging import nncf_logger
 from nncf.common.utils.helpers import should_consider_scope
 from nncf.common.pruning.utils import is_conv_with_downsampling
 from nncf.common.pruning.utils import is_prunable_depthwise_conv
@@ -319,13 +319,11 @@ class PruningNodeSelector:
                         if message:
                             cannot_prune_messages.append(message)
 
-                nncf_logger.info('Group of nodes [{}] can\'t be pruned, because some nodes should\'t be pruned, '
-                                 'error messages for this nodes: {}.'.format(
-                                    ', '.join(nodes_names),
-                                    ', '.join(cannot_prune_messages)))
+                nncf_logger.debug(f'Could not prune node group [{", ".join(nodes_names)}], '
+                                  f'reason: {", ".join(cannot_prune_messages)}.')
                 pruned_nodes_clusterization.delete_cluster(cluster.id)
             else:
-                nncf_logger.info('Group of nodes [{}] will be pruned together.'.format(", ".join(nodes_names)))
+                nncf_logger.debug(f'Node group [{", ".join(nodes_names)}] will be pruned together.')
 
     def _is_module_prunable(self, graph: NNCFGraph, node: NNCFNode) -> PruningAnalysisDecision:
         """

@@ -23,6 +23,7 @@ from nncf.common.graph import NNCFGraph
 from nncf.common.graph import NNCFNode
 from nncf.common.graph import NNCFNodeName
 from nncf.common.graph.transformations.commands import TransformationPriority
+from nncf.common.logging import nncf_logger
 from nncf.common.pruning.clusterization import Cluster
 from nncf.common.pruning.clusterization import Clusterization
 from nncf.common.pruning.mask_propagation import MaskPropagationAlgorithm
@@ -31,7 +32,6 @@ from nncf.common.pruning.statistics import PrunedLayerSummary
 from nncf.common.pruning.structs import PrunedLayerInfoBase
 from nncf.common.pruning.utils import get_output_channels
 from nncf.common.pruning.utils import is_prunable_depthwise_conv
-from nncf.common.utils.logger import logger as nncf_logger
 from nncf.config.extractors import extract_algo_specific_config
 from nncf.config.schemata.defaults import PRUNE_BATCH_NORMS
 from nncf.config.schemata.defaults import PRUNE_DOWNSAMPLE_CONVS
@@ -138,7 +138,7 @@ class BasePruningAlgoBuilder(TFCompressionAlgorithmBuilder):
                     shared_layers.add(layer_name)
                 # Check that we need to prune weights in this op
                 assert self._is_pruned_layer(layer)
-                nncf_logger.info('Adding Weight Pruner in: %s', layer_name)
+                nncf_logger.debug(f'Will prune the weights for the layer: {layer_name}')
 
                 _, layer_info = converter.get_layer_info_for_node(node.node_name)
                 for weight_def in node.metatype.weight_definitions:
@@ -177,14 +177,14 @@ class BasePruningAlgoBuilder(TFCompressionAlgorithmBuilder):
                 continue
             if spec_node.is_shared():
                 shared_layers.add(layer_name)
-            nncf_logger.info('Adding Weight Pruner in: %s', layer_name)
+            nncf_logger.debug(f'Will prune the weights for the layer: {layer_name}')
 
             _, layer_info = converter.get_layer_info_for_node(spec_node.node_name)
             for weight_def in spec_node.metatype.weight_definitions:
                 if spec_node.metatype is TFBatchNormalizationLayerMetatype \
                         and not layer.scale and weight_def.weight_attr_name == 'gamma':
                     nncf_logger.debug('Fused gamma parameter encountered in BatchNormalization layer. '
-                                      'Do not add mask to it.')
+                                      'Won\'t add a pruning mask to it.')
                     continue
 
                 transformations.register(
