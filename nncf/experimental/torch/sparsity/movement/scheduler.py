@@ -209,7 +209,7 @@ class MovementPolynomialThresholdScheduler(BaseCompressionScheduler):
             self._steps_in_current_epoch = self._current_step % self._steps_per_epoch + 1
 
     def _schedule_operand_threshold(self):
-        if self._params.init_importance_threshold is None and \
+        if self._init_importance_threshold is None and \
                 self.current_stage == MovementSchedulerStage.IN_WARMUP:
             adaptive_init_threshold = self._calc_init_threshold_from_controller(target_sparsity=0.001)
             nncf_logger.info('Movement sparsity automatically calculates `init_importance_threshold` as '
