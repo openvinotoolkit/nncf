@@ -61,7 +61,8 @@ class DuplicateFilter:
 
 
 def warning_deprecated(msg):
-    warnings.warn(msg, DeprecationWarning)
+    # Note: must use FutureWarning in order not to get suppressed by default
+    warnings.warn(msg, FutureWarning, stacklevel=2)
 
 
 @contextmanager
