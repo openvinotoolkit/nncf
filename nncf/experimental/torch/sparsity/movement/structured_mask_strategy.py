@@ -23,6 +23,15 @@ STRUCTURED_MASK_STRATEGY = Registry('structured_mask_strategy')
 
 
 def detect_supported_model_family(model: NNCFNetwork) -> Optional[str]:
+    """
+    Returns the model family name if the model is supported by movement sparsity to conduct structured
+    masking. Such name can be used as the key in `STRUCTURED_MASK_STRATEGY` to get the corresponding
+    structured mask strategy.
+
+    :param model: The compressed model wrapped by NNCF.
+    :return: The string name of the model family that `model` belongs to. If `model` is not supported,
+        then returns None.
+    """
     model_pymodules = inspect.getmodule(model.get_nncf_wrapped_model()).__name__.split('.')
     if len(model_pymodules) >= 3 and model_pymodules[:2] == ['transformers', 'models']:
         # the case of input model defined by HuggingFace's transformers
@@ -65,7 +74,11 @@ class BaseStructuredMaskStrategy(ABC):
     @classmethod
     @abstractmethod
     def from_compressed_model(cls, compressed_model: NNCFNetwork):
-        pass
+        """
+        Initializes the structured mask strategy from the compressed model.
+
+        :param compressed_model: The model wrapped by NNCF.
+        """
 
     @property
     @abstractmethod
@@ -87,6 +100,11 @@ class BaseTransformerStructuredMaskStrategy(BaseStructuredMaskStrategy, ABC):
     FFN_O: str = '{re}feed_forward_output'
 
     def __init__(self, dim_per_head: int) -> None:
+        """
+        Initializes the structured mask strategy for transformer models.
+
+        :param dim_per_head: Dimension of one attention head in transformer blocks.
+        """
         super().__init__()
         self.dim_per_head = dim_per_head
 

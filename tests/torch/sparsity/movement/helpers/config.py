@@ -10,7 +10,9 @@
  See the License for the specific language governing permissions and
  limitations under the License.
 """
+from copy import deepcopy
 from typing import Any, Dict, List, Optional
+
 from nncf.experimental.torch.sparsity.movement.scheduler import MovementSchedulerParams
 
 
@@ -23,21 +25,20 @@ def convert_scheduler_params_to_dict(params: MovementSchedulerParams) -> Dict[st
 
 
 class MovementAlgoConfig:
-    def __init__(self, sparse_structure_by_scopes: Optional[List[Dict]] = None,
+    default_scheduler_params = MovementSchedulerParams(
+        warmup_start_epoch=1,
+        warmup_end_epoch=3,
+        init_importance_threshold=-1.0,
+        importance_regularization_factor=0.1,
+        steps_per_epoch=4,
+    )
+
+    def __init__(self, scheduler_params: Optional[MovementSchedulerParams] = None,
+                 sparse_structure_by_scopes: Optional[List[Dict]] = None,
                  ignored_scopes: Optional[List[str]] = None,
-                 compression_lr_multiplier: Optional[float] = None,
-                 scheduler_params: Optional[MovementSchedulerParams] = None,
-                 **scheduler_overrides):
-        self.scheduler_params = scheduler_params or MovementSchedulerParams(
-            warmup_start_epoch=1,
-            warmup_end_epoch=3,
-            init_importance_threshold=-1.0,
-            importance_regularization_factor=0.1,
-            steps_per_epoch=4,
-        )
-        for k, v in scheduler_overrides.items():
-            assert hasattr(self.scheduler_params, k)
-            setattr(self.scheduler_params, k, v)
+                 compression_lr_multiplier: Optional[float] = None):
+        self.scheduler_params = scheduler_params or \
+            deepcopy(MovementAlgoConfig.default_scheduler_params)
         self.sparse_structure_by_scopes = sparse_structure_by_scopes or []
         self.ignored_scopes = ignored_scopes or []
         self.compression_lr_multiplier = compression_lr_multiplier

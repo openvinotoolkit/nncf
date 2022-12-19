@@ -11,7 +11,6 @@
  limitations under the License.
 """
 import argparse
-import logging
 from pathlib import Path
 from typing import Dict, List, Optional, Tuple
 
@@ -43,23 +42,25 @@ task_to_sample_keys = {
     'sst2': ('sentence',),
 }
 dataset_columns = ['labels', 'input_ids', 'token_type_ids', 'attention_mask', 'position_ids']
-nncf_logger = logging.getLogger('nncf')
 
 
 def parse_args() -> Tuple[argparse.Namespace, TrainingArguments]:
     parser = argparse.ArgumentParser('GLUE')
-    parser.add_argument(
-        '--task_name', type=str, default='mrpc',
-        help=f'Task name for GLUE. Supported tasks: {list(task_to_sample_keys)}.')
+    parser.add_argument('--task_name', type=str, default='mrpc',
+                        help=f'Task name for GLUE. Supported tasks: {list(task_to_sample_keys)}.')
     parser.add_argument('--model_name_or_path', type=str, default='bert-base-uncased',
                         help='Path to pretrained model or model identifier from huggingface.co/models.')
-    parser.add_argument('--max_seq_length', type=int, default=128, help='Maximum length for model input sequences.')
-    parser.add_argument('--nncf_config', type=str, default=None, help='Path to NNCF configuration json file.')
-    parser.add_argument('--no_cuda', action='store_true', help='Whether to disable cuda devices.')
-    parser.add_argument('--seed', type=int, default=42, help='Experiment seed for training and datasets.')
-    parser.add_argument(
-        '--quick_check', action='store_true',
-        help=f'If set, we will train the model without pretrained weights on only {quick_check_num} samples.')
+    parser.add_argument('--max_seq_length', type=int, default=128,
+                        help='Maximum length for model input sequences.')
+    parser.add_argument('--nncf_config', type=str, default=None,
+                        help='Path to NNCF configuration json file.')
+    parser.add_argument('--no_cuda', action='store_true',
+                        help='Whether to disable cuda devices.')
+    parser.add_argument('--seed', type=int, default=42,
+                        help='Experiment seed for training and datasets.')
+    parser.add_argument('--quick_check', action='store_true',
+                        help='If set True, will train the model without pretrained weights on only '
+                        f'{quick_check_num} samples.')
 
     args, other_args = parser.parse_known_args()
     retval = HfArgumentParser(TrainingArguments).parse_args_into_dataclasses(other_args)
@@ -74,7 +75,6 @@ def parse_args() -> Tuple[argparse.Namespace, TrainingArguments]:
     training_args.remove_unused_columns = False
     training_args.overwrite_output_dir = True
     training_args.report_to = []
-    training_args.per_device_eval_batch_size = training_args.per_device_train_batch_size
     return args, training_args
 
 

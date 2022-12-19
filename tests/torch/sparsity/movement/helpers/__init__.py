@@ -11,19 +11,24 @@
  limitations under the License.
 """
 
-# TODO(yujie): in the mid of refactoring this helper. temporal status
 from tests.torch.sparsity.movement.helpers.config import MovementAlgoConfig
 from tests.torch.sparsity.movement.helpers.run_recipe import BaseMockRunRecipe
 from tests.torch.sparsity.movement.helpers.run_recipe import BertRunRecipe
 from tests.torch.sparsity.movement.helpers.run_recipe import Conv2dPlusLinearRunRecipe
 from tests.torch.sparsity.movement.helpers.run_recipe import Conv2dRunRecipe
+from tests.torch.sparsity.movement.helpers.run_recipe import DictInTransformerBlockOrder
 from tests.torch.sparsity.movement.helpers.run_recipe import LinearRunRecipe
 from tests.torch.sparsity.movement.helpers.run_recipe import SwinRunRecipe
-from tests.torch.sparsity.movement.helpers.run_recipe import TransformerBlockItemOrderedDict
 from tests.torch.sparsity.movement.helpers.run_recipe import Wav2Vec2RunRecipe
 from tests.torch.sparsity.movement.helpers.trainer import CompressionCallback
 from tests.torch.sparsity.movement.helpers.trainer import CompressionTrainer
 from tests.torch.sparsity.movement.helpers.trainer import build_compression_trainer
+from tests.torch.sparsity.movement.helpers.utils import FACTOR_NAME_IN_MOVEMENT_STAT
+from tests.torch.sparsity.movement.helpers.utils import LINEAR_LAYER_SPARSITY_NAME_IN_MOVEMENT_STAT
+from tests.torch.sparsity.movement.helpers.utils import MODEL_SPARSITY_NAME_IN_MOVEMENT_STAT
+from tests.torch.sparsity.movement.helpers.utils import MRPC_CONFIG_FILE_NAME
+from tests.torch.sparsity.movement.helpers.utils import THRESHOLD_NAME_IN_MOVEMENT_STAT
+from tests.torch.sparsity.movement.helpers.utils import TRAINING_SCRIPTS_PATH
 from tests.torch.sparsity.movement.helpers.utils import force_update_sparsifier_binary_masks_by_threshold
 from tests.torch.sparsity.movement.helpers.utils import initialize_sparsifier_parameters_by_linspace
 from tests.torch.sparsity.movement.helpers.utils import is_roughly_non_decreasing

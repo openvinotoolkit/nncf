@@ -131,6 +131,10 @@ class StructuredMaskContext:
 
     @torch.no_grad()
     def update_independent_structured_mask_from_operand(self):
+        """
+        Gets the current unstructured binary mask from operand, resolves it to the independent structured one, and
+        stores in `self.independent_structured_mask` for later use in `StructuredMaskHandler`.
+        """
         weight_binary_mask = self.sparsifier_operand.weight_ctx.binary_mask.detach().clone()
         mask_by_grid = F.max_pool2d(
             weight_binary_mask.unsqueeze(0), kernel_size=self.grid_size, stride=self.grid_size).squeeze(0)
@@ -148,15 +152,23 @@ class StructuredMaskContext:
         return structured_mask
 
     def populate_dependent_structured_mask_to_operand(self):
+        """
+        Updates the actual binary masks in operand with `self.dependent_structured_mask`.
+        """
         structured_mask_inflated = self._inflate_structured_mask(self.dependent_structured_mask, self.grid_size)
         self.sparsifier_operand.weight_ctx.binary_mask = structured_mask_inflated
         if self.sparsifier_operand.prune_bias is True:
             self.sparsifier_operand.bias_ctx.binary_mask = structured_mask_inflated.amax(dim=1)
 
     def gather_statistics_from_operand(self) -> StructuredMaskContextStatistics:
+        """
+        Collects the structured mask statistics from the binary masks in operand.
+
+        :return: A `StructuredMaskContextStatistics` object.
+        """
         node = self.sparsifier_operand.target_module_node
         assert isinstance(node.layer_attributes, tuple(EXPECTED_NODE_LAYER_ATTRS))
-        weight_shape: Tuple[int, int] = tuple(list(node.layer_attributes.get_weight_shape()))
+        weight_shape: Tuple[int, int] = tuple(node.layer_attributes.get_weight_shape())
         bias_shape: Tuple[int] = (node.layer_attributes.get_bias_shape(),
                                   ) if self.sparsifier_operand.prune_bias else (0,)
 
@@ -204,17 +216,18 @@ class StructuredMaskContext:
 class StructuredMaskContextGroup:
     def __init__(self, group_id: int,
                  group_type: BuildingBlockType,
-                 structured_mask_context_list: List[StructuredMaskContext]) -> None:
+                 structured_mask_contexts: List[StructuredMaskContext]) -> None:
         self.group_id = group_id
         self.group_type = group_type
-        self.structured_mask_context_list = structured_mask_context_list
+        self.structured_mask_contexts = structured_mask_contexts
 
     def __str__(self) -> str:
-        if not self.structured_mask_context_list:
-            ctx_str = '[]'
+        if not self.structured_mask_contexts:
+            ctxes_str = '[]'
         else:
-            ctx_str = '[\n\t{}\n]'.format('\n\t'.join(map(str, self.structured_mask_context_list)))
-        return f'{self.__class__.__name__}[{self.group_id}]({self.group_type}): {ctx_str}'
+            ctxes = (f'\n\t{ctx}' for ctx in self.structured_mask_contexts)
+            ctxes_str = '[{}\n]'.format(''.join(ctxes))
+        return f'{self.__class__.__name__}[{self.group_id}]({self.group_type}): {ctxes_str}'
 
 
 class StructuredMaskHandler:
@@ -238,7 +251,7 @@ class StructuredMaskHandler:
         :param compressed_model: The wrapped compressed model.
         :param sparsified_module_info_list: List of `SparsifiedModuleInfo` in the
             controller of `compressed_model`.
-        :param strategy: Strategy of structured masking for the `compressed_model`.
+        :param strategy: Strategy of resolving structured masks for the `compressed_model`.
         """
         self.strategy = strategy
         self.rules_by_group_type = strategy.rules_by_group_type
@@ -252,16 +265,23 @@ class StructuredMaskHandler:
             nncf_logger.debug('%s', structured_mask_ctx_group)
 
     def update_independent_structured_mask(self):
+        """
+        Asks all contexts in `self._structured_mask_ctx_groups` to calculate the independent structured mask.
+        """
         for group in self._structured_mask_ctx_groups:
-            for ctx in group.structured_mask_context_list:
+            for ctx in group.structured_mask_contexts:
                 ctx.update_independent_structured_mask_from_operand()
 
     def resolve_dependent_structured_mask(self):
+        """
+        Within each context group, it reads the independent structured masks of related layers and
+        resolves the structured masks based on dependency rules defined in `self.rules_by_group_type`.
+        """
         for group in self._structured_mask_ctx_groups:
             group_type = group.group_type
             if group_type not in self.rules_by_group_type:
-                raise ValueError(f'No strucrtured mask strategy for group_type="{group_type}"')
-            ctxes = group.structured_mask_context_list
+                raise ValueError(f'No structured mask strategy for group_type="{group_type}"')
+            ctxes = group.structured_mask_contexts
             row_prune_ctxes = list(filter(lambda ctx: ctx.prune_by_row, ctxes))
             col_prune_ctxes = list(filter(lambda ctx: not ctx.prune_by_row, ctxes))
             independent_masks = [ctx.independent_structured_mask for ctx in row_prune_ctxes] + \
@@ -274,28 +294,38 @@ class StructuredMaskHandler:
                     ctx.dependent_structured_mask = coarse_mask.t()
 
     def populate_dependent_structured_mask_to_operand(self):
+        """
+        Asks all contexts in `self._structured_mask_ctx_groups` to update the actual binary masks in operand.
+        """
         for group in self._structured_mask_ctx_groups:
-            for ctx in group.structured_mask_context_list:
+            for ctx in group.structured_mask_contexts:
                 ctx.populate_dependent_structured_mask_to_operand()
 
     def report_structured_sparsity(self,
                                    save_dir: str,
                                    file_name: str = 'structured_sparsity',
-                                   to_csv: bool = False,
-                                   to_markdown: bool = True,
+                                   to_csv: bool = True,
                                    max_num_of_kept_heads_to_report: int = 20) -> pd.DataFrame:
+        """
+        Generates a report file that describes the structured mask statistics for each context group.
+
+        :param save_dir: The folder to save the report file.
+        :param file_name: File name of the report.
+        :param to_csv: Whether to dump the report file in csv format.
+        :param max_num_of_kept_heads_to_report: The max number of heads or channels to display that are
+            preserved after structured masking. Used to avoid showing too many elements in the list.
+        :return: The structured mask statistics in `pandas.DataFrame` format.
+        """
         df = self._gather_statistics_dataframe(max_num_of_kept_heads_to_report)
         if to_csv:
             df.to_csv(Path(save_dir, f'{file_name}.csv'))
-        if to_markdown:
-            df.to_markdown(Path(save_dir, f'{file_name}.md'))
         return df
 
     def _gather_statistics_dataframe(self, max_num_of_kept_heads_to_report: int = 20) -> pd.DataFrame:
         module_vs_name_map = {module: name for name, module in self.compressed_model.named_modules()}
         entry_list = []
         for group in self._structured_mask_ctx_groups:
-            ctxes = sorted(group.structured_mask_context_list,
+            ctxes = sorted(group.structured_mask_contexts,
                            key=lambda ctx: ctx.sparsifier_operand.target_module_node.node_id)
             for ctx in ctxes:
                 stats = ctx.gather_statistics_from_operand()

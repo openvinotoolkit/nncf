@@ -23,6 +23,15 @@ from nncf.common.graph.graph import NNCFGraph
 from nncf.common.graph.graph import NNCFNode
 from nncf.common.graph.layer_attributes import LinearLayerAttributes
 from nncf.experimental.torch.sparsity.movement.algo import MovementSparsifier
+from tests.shared.paths import TEST_ROOT
+
+FACTOR_NAME_IN_MOVEMENT_STAT = 'movement_sparsity/importance_regularization_factor'
+THRESHOLD_NAME_IN_MOVEMENT_STAT = 'movement_sparsity/importance_threshold'
+LINEAR_LAYER_SPARSITY_NAME_IN_MOVEMENT_STAT = 'movement_sparsity/linear_layer_sparsity'
+MODEL_SPARSITY_NAME_IN_MOVEMENT_STAT = 'movement_sparsity/model_sparsity'
+
+TRAINING_SCRIPTS_PATH = TEST_ROOT.joinpath('torch', 'sparsity', 'movement', 'training_scripts')
+MRPC_CONFIG_FILE_NAME = 'bert_tiny_uncased_mrpc_movement.json'
 
 
 def mock_linear_nncf_node(in_features: int = 1, out_features: int = 1,
@@ -68,10 +77,10 @@ def force_update_sparsifier_binary_masks_by_threshold(operand: MovementSparsifie
             operand._calc_training_binary_mask(is_bias=True)
 
 
-def is_roughly_non_decreasing(x_list, atol: float = 0.01) -> bool:
+def is_roughly_non_decreasing(x_list, rtol: float = 1e-5, atol: float = 1e-8) -> bool:
     x_list = list(x_list)
-    assert atol >= 0
-    return all(a <= b + atol for a, b in zip(x_list[:-1], x_list[1:]))
+    assert rtol >= 0 and atol >= 0
+    return all(a <= b + atol + rtol * abs(b) for a, b in zip(x_list[:-1], x_list[1:]))
 
 
 def is_roughly_of_same_value(x_list, atol: float = 1e-6) -> bool:

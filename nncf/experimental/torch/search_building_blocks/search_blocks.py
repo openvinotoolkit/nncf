@@ -121,7 +121,7 @@ class BuildingBlockType(Enum):
         return self.__dict__ == other.__dict__
 
     def __hash__(self) -> int:
-        return hash((self.__class__.__name__, self.name))
+        return hash(self.name)
 
 
 class EBBlocksStateNames:

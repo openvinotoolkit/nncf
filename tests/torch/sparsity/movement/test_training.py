@@ -22,16 +22,17 @@ from pytest import approx
 import torch.cuda
 
 from tests.shared.paths import PROJECT_ROOT
-from tests.shared.paths import TEST_ROOT
 from tests.torch.helpers import Command
 from tests.torch.sample_test_validator import BaseSampleTestCaseDescriptor
 from tests.torch.sample_test_validator import BaseSampleValidator
+from tests.torch.sparsity.movement.helpers import LINEAR_LAYER_SPARSITY_NAME_IN_MOVEMENT_STAT
+from tests.torch.sparsity.movement.helpers import MRPC_CONFIG_FILE_NAME
+from tests.torch.sparsity.movement.helpers import TRAINING_SCRIPTS_PATH
 
 
 class MovementGlueHandler:
     def get_executable(self) -> Path:
-        return TEST_ROOT.joinpath('torch', 'sparsity', 'movement',
-                                  'training_scripts', self._get_main_filename() + '.py')
+        return TRAINING_SCRIPTS_PATH.joinpath(self._get_main_filename() + '.py')
 
     @staticmethod
     def get_checkpoint_path(checkpoint_save_dir) -> Path:
@@ -66,7 +67,7 @@ class MovementTrainingTestDescriptor(BaseSampleTestCaseDescriptor):
         self.timeout_ = 8 * 60  # 8 mins
         self.expected_eval_acc_ = None
         self.expected_eval_f1_ = None
-        self.expected_rela_sparsity_ = None
+        self.expected_linear_layer_sparsity_ = None
         self.num_train_epochs_ = 9
         self.learning_rate_ = 5e-5
         self.seed_ = None
@@ -86,7 +87,7 @@ class MovementTrainingTestDescriptor(BaseSampleTestCaseDescriptor):
 
     @property
     def config_directory(self) -> Path:
-        return TEST_ROOT.joinpath('torch', 'sparsity', 'movement', 'training_scripts')
+        return TRAINING_SCRIPTS_PATH
 
     def model_name(self, model_name_):
         self.model_name_ = model_name_
@@ -104,8 +105,8 @@ class MovementTrainingTestDescriptor(BaseSampleTestCaseDescriptor):
         self.expected_eval_f1_ = expected
         return self
 
-    def expected_rela_sparsity(self, expected):
-        self.expected_rela_sparsity_ = expected
+    def expected_linear_layer_sparsity(self, expected):
+        self.expected_linear_layer_sparsity_ = expected
         return self
 
     def num_train_epochs(self, num_train_epochs: int):
@@ -172,7 +173,7 @@ class MovementTrainingValidator(BaseSampleValidator):
             CUDA_ENV_KEY = 'CUDA_VISIBLE_DEVICES'
             n_card = self._desc.n_card
             if CUDA_ENV_KEY not in os.environ:
-                dev_ids = list(map(str, range(n_card)))
+                dev_ids = [str(i) for i in range(n_card)]
             else:
                 all_dev_ids = os.environ[CUDA_ENV_KEY].split(',')
                 dev_ids = all_dev_ids[:n_card]
@@ -229,7 +230,7 @@ mrpc_movement_desc_template = \
     MovementTrainingTestDescriptor()\
     .model_name('google/bert_uncased_L-2_H-128_A-2')\
     .real_dataset('mrpc')\
-    .config_name('bert_tiny_uncased_mrpc_movement.json')\
+    .config_name(MRPC_CONFIG_FILE_NAME)\
     .learning_rate(5e-5)\
     .batch_size(64)\
     .num_train_epochs(9)\
@@ -239,20 +240,20 @@ MOVEMENT_DESCRIPTORS = {
     'mrpc_cuda_1card': deepcopy(mrpc_movement_desc_template)
     .expected_eval_f1(approx(0.81, abs=0.02))
     .expected_eval_acc(approx(0.68, abs=0.03))
-    .expected_rela_sparsity(approx(0.48, abs=0.05)),
+    .expected_linear_layer_sparsity(approx(0.48, abs=0.05)),
 
     'mrpc_cuda_1card_fp16': deepcopy(mrpc_movement_desc_template)
     .enable_autocast_fp16()
     .expected_eval_f1(approx(0.81, abs=0.02))
     .expected_eval_acc(approx(0.68, abs=0.03))
-    .expected_rela_sparsity(approx(0.48, abs=0.05)),
+    .expected_linear_layer_sparsity(approx(0.48, abs=0.05)),
 
     'mrpc_cuda_2cards_dp': deepcopy(mrpc_movement_desc_template)
     .batch_size(32)
     .data_parallel(n_card=2)
     .expected_eval_f1(approx(0.81, abs=0.02))
     .expected_eval_acc(approx(0.68, abs=0.03))
-    .expected_rela_sparsity(approx(0.48, abs=0.05)),
+    .expected_linear_layer_sparsity(approx(0.48, abs=0.05)),
 
     'mrpc_cuda_2cards_dp_fp16': deepcopy(mrpc_movement_desc_template)
     .batch_size(32)
@@ -260,14 +261,14 @@ MOVEMENT_DESCRIPTORS = {
     .enable_autocast_fp16()
     .expected_eval_f1(approx(0.81, abs=0.02))
     .expected_eval_acc(approx(0.68, abs=0.03))
-    .expected_rela_sparsity(approx(0.48, abs=0.05)),
+    .expected_linear_layer_sparsity(approx(0.48, abs=0.05)),
 
     'mrpc_cuda_2cards_ddp': deepcopy(mrpc_movement_desc_template)
     .batch_size(32)
     .distributed_data_parallel(n_card=2)
     .expected_eval_f1(approx(0.81, abs=0.02))
     .expected_eval_acc(approx(0.68, abs=0.03))
-    .expected_rela_sparsity(approx(0.48, abs=0.05)),
+    .expected_linear_layer_sparsity(approx(0.48, abs=0.05)),
 
     'mrpc_cuda_2cards_ddp_fp16': deepcopy(mrpc_movement_desc_template)
     .batch_size(32)
@@ -275,13 +276,13 @@ MOVEMENT_DESCRIPTORS = {
     .enable_autocast_fp16()
     .expected_eval_f1(approx(0.81, abs=0.02))
     .expected_eval_acc(approx(0.68, abs=0.03))
-    .expected_rela_sparsity(approx(0.48, abs=0.05)),
+    .expected_linear_layer_sparsity(approx(0.48, abs=0.05)),
 
     'mrpc_cpu_1card': deepcopy(mrpc_movement_desc_template)
     .cpu_only()
     .expected_eval_f1(approx(0.81, abs=0.02))
     .expected_eval_acc(approx(0.68, abs=0.03))
-    .expected_rela_sparsity(approx(0.48, abs=0.05)),
+    .expected_linear_layer_sparsity(approx(0.48, abs=0.05)),
 }
 
 
@@ -297,14 +298,14 @@ def finalize_desc(desc: MovementTrainingTestDescriptor, is_long_training: bool,
 
 
 @pytest.fixture(name='movement_desc_long', scope='module', params=MOVEMENT_DESCRIPTORS.values(),
-                ids=list(MOVEMENT_DESCRIPTORS.keys()))
+                ids=MOVEMENT_DESCRIPTORS.keys())
 def fixture_movement_desc_long(request, dataset_dir, tmp_path_factory, weekly_models_path):
     desc: MovementTrainingTestDescriptor = request.param
     return finalize_desc(desc, True, dataset_dir, tmp_path_factory, weekly_models_path)
 
 
 @pytest.fixture(name='movement_desc_short', scope='module', params=MOVEMENT_DESCRIPTORS.values(),
-                ids=list(MOVEMENT_DESCRIPTORS.keys()))
+                ids=MOVEMENT_DESCRIPTORS.keys())
 def fixture_movement_desc_short(request, dataset_dir, tmp_path_factory, weekly_models_path):
     desc: MovementTrainingTestDescriptor = request.param
     desc = deepcopy(desc).quick_check()
@@ -342,6 +343,6 @@ class TestMovementTraining:
             assert metrics['eval_accuracy'] == approx(desc.expected_eval_acc_)
         if desc.expected_eval_f1_ is not None:
             assert metrics['eval_f1'] == approx(desc.expected_eval_f1_)
-        if desc.expected_rela_sparsity_ is not None:
-            assert metrics['movement_sparsity/linear_layer_sparsity'] == approx(
-                desc.expected_rela_sparsity_)
+        if desc.expected_linear_layer_sparsity_ is not None:
+            assert metrics[LINEAR_LAYER_SPARSITY_NAME_IN_MOVEMENT_STAT] == \
+                approx(desc.expected_linear_layer_sparsity_)

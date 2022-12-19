@@ -80,7 +80,8 @@ class MovementSparsityBuilder(BaseSparsityAlgoBuilder):
     def _sparsify_weights(self, target_model: NNCFNetwork) -> List[PTInsertionCommand]:
         device = get_model_device(target_model)
         sparsified_module_nodes = target_model.get_weighted_original_graph_nodes(
-            nncf_module_names=[m.__name__ for m in SUPPORTED_NNCF_MODULES])
+            nncf_module_names=[m.__name__ for m in SUPPORTED_NNCF_MODULES]
+        )
         insertion_commands = []
         for module_node in sparsified_module_nodes:
             node_name = module_node.node_name
@@ -91,7 +92,8 @@ class MovementSparsityBuilder(BaseSparsityAlgoBuilder):
 
             nncf_logger.debug('Adding Weight Sparsifier in scope: %s', node_name)
             compression_lr_multiplier = self.config.get_redefinable_global_param_value_for_algo(
-                'compression_lr_multiplier', self.name)
+                'compression_lr_multiplier', self.name
+            )
             sparsifying_operation = self.create_weight_sparsifying_operation(module_node, compression_lr_multiplier)
             hook = UpdateWeightAndBias(sparsifying_operation).to(device)
             insertion_commands.append(
@@ -103,10 +105,11 @@ class MovementSparsityBuilder(BaseSparsityAlgoBuilder):
             )
             sparsified_module = target_model.get_containing_module(node_name)
             self._sparsified_module_info.append(
-                SparseModuleInfo(node_name, sparsified_module, sparsifying_operation))
+                SparseModuleInfo(node_name, sparsified_module, sparsifying_operation)
+            )
 
         if not insertion_commands:
-            raise RuntimeError('No sparsifiable layer found for movement sparisty algorithm.')
+            raise RuntimeError('No sparsifiable layer found for movement sparsity algorithm.')
         return insertion_commands
 
     def _build_controller(self, model: NNCFNetwork) -> PTCompressionAlgorithmController:
@@ -131,10 +134,11 @@ class MovementSparsityController(BaseSparsityAlgoController):
         if self._scheduler.enable_structured_masking:
             model_family = detect_supported_model_family(self.model)
             if model_family not in STRUCTURED_MASK_STRATEGY.registry_dict:
+                supported_model_families = list(STRUCTURED_MASK_STRATEGY.registry_dict.keys())
                 raise RuntimeError(
                     'You set `enable_structured_masking=True`, but no supported model is detected. '
-                    'Supported model families: {}'.format(
-                        list(STRUCTURED_MASK_STRATEGY.registry_dict.keys())))
+                    f'Supported model families: {supported_model_families}.'
+                )
             strategy_cls = STRUCTURED_MASK_STRATEGY.get(model_family)
             strategy = strategy_cls.from_compressed_model(self.model)
             self._structured_mask_handler = StructuredMaskHandler(self.model,
@@ -146,14 +150,23 @@ class MovementSparsityController(BaseSparsityAlgoController):
         return self.statistics().movement_sparsity.model_statistics.sparsity_level
 
     def reset_independent_structured_mask(self):
+        """
+        Asks the structured mask handler to gather independent masks in the model.
+        """
         assert self._scheduler.enable_structured_masking is True
         self._structured_mask_handler.update_independent_structured_mask()
 
     def resolve_structured_mask(self):
+        """
+        Asks the structured mask handler to resolve dependent masks in the model.
+        """
         assert self._scheduler.enable_structured_masking is True
         self._structured_mask_handler.resolve_dependent_structured_mask()
 
     def populate_structured_mask(self):
+        """
+        Asks the structured mask handler to update structured binary masks in model operands.
+        """
         assert self._scheduler.enable_structured_masking is True
         self._structured_mask_handler.populate_dependent_structured_mask_to_operand()
         self._structured_mask_handler.report_structured_sparsity(self._config.get('log_dir', '.'))
@@ -189,7 +202,8 @@ class MovementSparsityController(BaseSparsityAlgoController):
             minfo.operand.requires_grad_(False)
 
     def statistics(self, quickly_collected_only=False) -> NNCFStatistics:
-        collector = PTSparseModelStatisticsCollector(self.model, self.sparsified_module_info,
+        collector = PTSparseModelStatisticsCollector(self.model,
+                                                     self.sparsified_module_info,
                                                      supports_sparse_bias=True)
         model_statistics = collector.collect()
 

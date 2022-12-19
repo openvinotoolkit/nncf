@@ -10,6 +10,7 @@
  See the License for the specific language governing permissions and
  limitations under the License.
 """
+from dataclasses import dataclass
 import math
 
 import pytest
@@ -19,25 +20,58 @@ from nncf.torch.functions import STRound
 from nncf.torch.functions import STThreshold
 
 
+@dataclass
+class STRoundTestCase:
+    input_tensor: torch.Tensor
+    ref_output_tensor: torch.Tensor
+
+
+@dataclass
+class STThresholdTestCase:
+    input_tensor: torch.Tensor
+    threshold: float
+    ref_output_tensor: torch.Tensor
+
+
 @pytest.mark.parametrize("use_cuda", [True, False])
 @pytest.mark.parametrize("requires_grad", [True, False])
 class TestAutogradFunction:
-    @pytest.mark.parametrize(("input_", "ref_output"), [
-        (torch.tensor([[1.2, -3.4], [5.6, 7.89]]), torch.tensor([[1., -3.], [6., 8.]])),
-        (torch.tensor([[[1.5]]]), torch.tensor([[[2.]]])),
-        (torch.tensor([2.5]), torch.tensor([2.])),
-        (torch.tensor(4.2), torch.tensor(4.)),  # scalar tensor
-        (torch.tensor([math.inf, 1.1, -math.inf]), torch.tensor([math.inf, 1., -math.inf])),
-        (torch.tensor([math.nan, 2.1]), torch.tensor([math.nan, 2.]))
+    @pytest.fixture(autouse=True)
+    def check_cuda(self, use_cuda: bool):
+        if use_cuda and (not torch.cuda.is_available()):
+            pytest.skip("Skipping CUDA test cases for CPU only setups.")
+
+    @pytest.mark.parametrize('test_case', [
+        STRoundTestCase(
+            input_tensor=torch.tensor([[1.2, -3.4], [5.6, 7.89]]),
+            ref_output_tensor=torch.tensor([[1., -3.], [6., 8.]])
+        ),
+        STRoundTestCase(
+            input_tensor=torch.tensor([[[1.5]]]),
+            ref_output_tensor=torch.tensor([[[2.]]])
+        ),
+        STRoundTestCase(
+            input_tensor=torch.tensor([2.5]),
+            ref_output_tensor=torch.tensor([2.])
+        ),
+        STRoundTestCase(
+            input_tensor=torch.tensor(4.2),  # scalar tensor
+            ref_output_tensor=torch.tensor(4.)
+        ),
+        STRoundTestCase(
+            input_tensor=torch.tensor([math.inf, 1.1, -math.inf]),
+            ref_output_tensor=torch.tensor([math.inf, 1., -math.inf])
+        ),
+        STRoundTestCase(
+            input_tensor=torch.tensor([math.nan, 2.1]),
+            ref_output_tensor=torch.tensor([math.nan, 2.])
+        )
     ])
-    def test_STRound(self, input_: torch.Tensor, ref_output: torch.Tensor,
-                     use_cuda: bool, requires_grad: bool):
-        if not torch.cuda.is_available() and use_cuda is True:
-            pytest.skip("Skipping CUDA test cases for CPU only setups")
+    def test_STRound(self, test_case: STRoundTestCase, use_cuda: bool, requires_grad: bool):
         device = torch.device('cuda' if use_cuda else 'cpu')
-        input_tensor = input_.clone().to(device).requires_grad_(requires_grad)
+        input_tensor = test_case.input_tensor.clone().to(device).requires_grad_(requires_grad)
         output_tensor = STRound.apply(input_tensor)
-        ref_output_tensor = ref_output.clone().to(device)
+        ref_output_tensor = test_case.ref_output_tensor.clone().to(device)
         assert output_tensor.device == input_tensor.device
         assert output_tensor.requires_grad is requires_grad
         assert torch.allclose(output_tensor, ref_output_tensor, equal_nan=True)
@@ -47,22 +81,43 @@ class TestAutogradFunction:
             ref_grad_tensor = torch.ones_like(input_tensor)
             assert torch.allclose(input_tensor.grad, ref_grad_tensor)
 
-    @pytest.mark.parametrize(("input_", "threshold", "ref_output"), [
-        (torch.tensor([[1.2, -3.4], [5.6, 7.89]]), 4.0, torch.tensor([[0., 0.], [1., 1.]])),
-        (torch.tensor([[[1.5]]]), 1., torch.tensor([[[1.]]])),
-        (torch.tensor([2.5]), -10., torch.tensor([1.])),
-        (torch.tensor(4.2), 4., torch.tensor(1.)),  # scalar tensor
-        (torch.tensor([math.inf, 1.1, -math.inf]), 2., torch.tensor([1., 0., 0.])),
-        (torch.tensor([math.nan, 2.1]), 2., torch.tensor([0., 1.]))
+    @pytest.mark.parametrize('test_case', [
+        STThresholdTestCase(
+            input_tensor=torch.tensor([[1.2, -3.4], [5.6, 7.89]]),
+            threshold=4.0,
+            ref_output_tensor=torch.tensor([[0., 0.], [1., 1.]])
+        ),
+        STThresholdTestCase(
+            input_tensor=torch.tensor([[[1.5]]]),
+            threshold=1.,
+            ref_output_tensor=torch.tensor([[[1.]]])
+        ),
+        STThresholdTestCase(
+            input_tensor=torch.tensor([2.5]),
+            threshold=-10.,
+            ref_output_tensor=torch.tensor([1.])
+        ),
+        STThresholdTestCase(
+            input_tensor=torch.tensor(4.2),  # scalar tensor
+            threshold=4.,
+            ref_output_tensor=torch.tensor(1.)
+        ),
+        STThresholdTestCase(
+            input_tensor=torch.tensor([math.inf, 1.1, -math.inf]),
+            threshold=2.,
+            ref_output_tensor=torch.tensor([1., 0., 0.])
+        ),
+        STThresholdTestCase(
+            input_tensor=torch.tensor([math.nan, 2.1]),
+            threshold=2.,
+            ref_output_tensor=torch.tensor([0., 1.])
+        )
     ])
-    def test_STThreshold(self, input_: torch.Tensor, ref_output: torch.Tensor,
-                         threshold: float, use_cuda: bool, requires_grad: bool):
-        if not torch.cuda.is_available() and use_cuda is True:
-            pytest.skip("Skipping CUDA test cases for CPU only setups")
+    def test_STThreshold(self, test_case: STThresholdTestCase, use_cuda: bool, requires_grad: bool):
         device = torch.device('cuda' if use_cuda else 'cpu')
-        input_tensor = input_.clone().to(device).requires_grad_(requires_grad)
-        output_tensor = STThreshold.apply(input_tensor, threshold)
-        ref_output_tensor = ref_output.clone().to(device)
+        input_tensor = test_case.input_tensor.clone().to(device).requires_grad_(requires_grad)
+        output_tensor = STThreshold.apply(input_tensor, test_case.threshold)
+        ref_output_tensor = test_case.ref_output_tensor.clone().to(device)
         assert output_tensor.device == input_tensor.device
         assert output_tensor.requires_grad is requires_grad
         assert torch.allclose(output_tensor, ref_output_tensor)

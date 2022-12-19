@@ -14,12 +14,11 @@ from pathlib import Path
 
 import pytest
 
-from tests.shared.paths import TEST_ROOT
 from tests.torch.helpers import Command
+from tests.torch.sparsity.movement.helpers import MRPC_CONFIG_FILE_NAME
+from tests.torch.sparsity.movement.helpers import TRAINING_SCRIPTS_PATH
 from tests.torch.test_sanity_third_party import TransformersVirtualEnvInstaller
 from tests.torch.test_sanity_third_party import create_command_line
-
-NNCF_CONFIG_PATH = Path(TEST_ROOT, 'torch', 'sparsity', 'movement', 'examples')
 
 
 @pytest.fixture(scope='class')
@@ -50,7 +49,7 @@ class TestMovementWithTransformers:
 
     @pytest.mark.dependency(depends=['install_transformers'], name='glue_movement_train')
     def test_movement_glue_train(self):
-        nncf_config = NNCF_CONFIG_PATH / 'bert_tiny_uncased_mrpc_movement.json'
+        nncf_config = TRAINING_SCRIPTS_PATH / MRPC_CONFIG_FILE_NAME
         output_dir = Path(self.temp_folder['models'], nncf_config.stem)
         com_line = 'examples/pytorch/text-classification/run_glue.py --model_name_or_path ' \
                    'google/bert_uncased_L-2_H-128_A-2 --task_name mrpc --do_train ' \
@@ -64,7 +63,7 @@ class TestMovementWithTransformers:
 
     @pytest.mark.dependency(depends=['install_transformers', 'glue_movement_train'])
     def test_movement_glue_eval(self):
-        nncf_config = NNCF_CONFIG_PATH / 'bert_tiny_uncased_mrpc_movement.json'
+        nncf_config = TRAINING_SCRIPTS_PATH / MRPC_CONFIG_FILE_NAME
         model_dir = Path(self.temp_folder['models'], nncf_config.stem)
         output_dir = Path(self.temp_folder['models'], nncf_config.stem + '_eval')
         com_line = 'examples/pytorch/text-classification/run_glue.py --model_name_or_path {model_dir}' \

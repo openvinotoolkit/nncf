@@ -288,85 +288,97 @@ BOOTSTRAP_NAS_SCHEMA = {
 # Movement Sparsity
 ########################################################################################################################
 
-SPARSE_STRUCTURE_MODE = ['fine', 'block', 'per_dim']
+MOVEMENT_SPARSE_STRUCTURE_MODE = ['fine', 'block', 'per_dim']
+MOVEMENT_POWER = 3.
+MOVEMENT_FINAL_IMPORTANCE_THRESHOLD = 0.
+MOVEMENT_ENABLE_STRUCTURED_MASKING = True
 
 MOVEMENT_SPARSE_STRUCTURE_BY_SCOPES_SCHEMA = {
-    "type": "object",
-    "properties": {
-        "mode":
-        with_attributes(STRING,
-                        description="Defines in which mode a supported layer will be sparsified.",
-                        enum=SPARSE_STRUCTURE_MODE),
-        "sparse_factors":
-        with_attributes(ARRAY_OF_NUMBERS,
-                        description='The block shape for weights to sparsify. Required when `mode`="block".'),
-        "axis":
-        with_attributes(NUMBER,
-                        description='The dimension for weights to sparsify. Required when `mode`="per_dim".'),
-        "target_scopes":
-        with_attributes({"oneOf": [STRING, ARRAY_OF_STRINGS]},
-                        description='Model control flow graph node scopes to be considered in this mode.')
+    'type': 'object',
+    'properties': {
+        'mode':
+            with_attributes(STRING,
+                            description='Defines in which mode a supported layer will be sparsified.',
+                            enum=MOVEMENT_SPARSE_STRUCTURE_MODE),
+        'sparse_factors':
+            with_attributes(ARRAY_OF_NUMBERS,
+                            description='The block shape for weights to sparsify. Required when `mode`="block".'),
+        'axis':
+            with_attributes(NUMBER,
+                            description='The dimension for weights to sparsify. Required when `mode`="per_dim".'),
+        'target_scopes':
+            with_attributes(make_string_or_array_of_strings_schema(),
+                            description='Model control flow graph node scopes to be considered in this mode.')
     },
-    "additionalProperties": False,
+    'additionalProperties': False,
+    'required': ['mode', 'target_scopes']
 }
 
 MOVEMENT_SCHEDULER_PARAMS_SCHEMA = {
-    "type": "object",
-    "properties": {
-        "power":
-        with_attributes(NUMBER,
-                        description='The power value of polynomial decay for threshold update during warmup stage. '
-                                    'Optional. Default is 3.'),
-        "init_importance_threshold":
-        with_attributes(NUMBER,
-                        description='The initial value of importance threshold during warmup stage. Optional. By '
-                        'default, this is adaptively decided during training so that the model is with about 0.1% '
-                        'relative sparsity on involved layers at the beginning of warmup stage.'),
-        "warmup_start_epoch":
-        with_attributes(NUMBER,
-                        description='Index of the starting epoch (include) for warmup stage.'),
-        "final_importance_threshold":
-        with_attributes(NUMBER,
-                        description='The final value of importance threshold during '
-                                    'warmup stage. Optional. Default is 0.'),
-        "warmup_end_epoch":
-        with_attributes(NUMBER,
-                        description="Index of the end epoch (exclude) for warmup stage."),
-        "importance_regularization_factor":
-        with_attributes(NUMBER,
-                        description='The regularization factor on weight importance scores. With a larger positive '
-                        'value, more model weights will be regarded as less important and thus be sparsified.'),
-        "enable_structured_masking":
-        with_attributes(BOOLEAN,
-                        description='Whether to do structured mask resolution after warmup stage. Only supports '
-                        'structured masking on multi-head self-attention blocks and feed-forward networks now. '
-                        'Optional. Default is false.'),
-        "steps_per_epoch":
-        with_attributes(NUMBER,
-                        description='Number of training steps in one epoch, used for proper threshold updates. '
-                        'Optional if warmup_start_epoch >=1 since this can be counted in the 1st epoch. Otherwise '
-                        'users have to specify it.'),
+    'type': 'object',
+    'properties': {
+        'warmup_start_epoch':
+            with_attributes(NUMBER,
+                            description='Index of the starting epoch (include) for warmup stage.'),
+        'warmup_end_epoch':
+            with_attributes(NUMBER,
+                            description='Index of the end epoch (exclude) for warmup stage.'),
+        'importance_regularization_factor':
+            with_attributes(NUMBER,
+                            description='The regularization factor on weight importance scores. With a larger '
+                                        'positive value, more model weights will be regarded as less important '
+                                        'and thus be sparsified.'),
+        'enable_structured_masking':
+            with_attributes(BOOLEAN,
+                            description='Whether to do structured mask resolution after warmup stage. Only '
+                                        'supports structured masking on multi-head self-attention blocks and '
+                                        'feed-forward networks now.',
+                            default=MOVEMENT_ENABLE_STRUCTURED_MASKING),
+        'power':
+            with_attributes(NUMBER,
+                            description='The power value of polynomial decay for threshold and '
+                                        'regularization factor update during warmup stage.',
+                            default=MOVEMENT_POWER),
+        'init_importance_threshold':
+            with_attributes(NUMBER,
+                            description='The initial value of importance threshold during warmup stage. If not '
+                                        'specified, this will be automatically decided during training so that '
+                                        'the model is with about 0.1% linear layer sparsity on involved layers at '
+                                        'the beginning of warmup stage.'),
+        'final_importance_threshold':
+            with_attributes(NUMBER,
+                            description='The final value of importance threshold during warmup stage.',
+                            default=MOVEMENT_FINAL_IMPORTANCE_THRESHOLD),
+
+        'steps_per_epoch':
+            with_attributes(NUMBER,
+                            description='Number of training steps in one epoch, used for proper threshold and '
+                                        'regularization factor updates. Optional if warmup_start_epoch >=1 since '
+                                        'this can be counted in the 1st epoch. Otherwise users have to specify it.'),
     },
-    "additionalProperties": False
+    'additionalProperties': False,
+    'required': ['warmup_start_epoch',
+                 'warmup_end_epoch',
+                 'importance_regularization_factor']
 }
 
 
 MOVEMENT_SPARSITY_SCHEMA = {
     **BASIC_COMPRESSION_ALGO_SCHEMA,
-    "properties": {
-        "algorithm": {
-            "const": MOVEMENT_SPARSITY_ALGO_NAME_IN_CONFIG
+    'properties': {
+        'algorithm': {
+            'const': MOVEMENT_SPARSITY_ALGO_NAME_IN_CONFIG
         },
-        "params": MOVEMENT_SCHEDULER_PARAMS_SCHEMA,
-        "sparse_structure_by_scopes": {
-            "type": "array",
-            "items": MOVEMENT_SPARSE_STRUCTURE_BY_SCOPES_SCHEMA,
-            "description": 'Describes how each supported layer will be sparsified.'
+        'params': MOVEMENT_SCHEDULER_PARAMS_SCHEMA,
+        'sparse_structure_by_scopes': {
+            'type': 'array',
+            'items': MOVEMENT_SPARSE_STRUCTURE_BY_SCOPES_SCHEMA,
+            'description': 'Describes how each supported layer will be sparsified.'
         },
         **SCOPING_PROPERTIES,
         **COMPRESSION_LR_MULTIPLIER_PROPERTY
     },
-    "additionalProperties": False
+    'additionalProperties': False
 }
 
 ########################################################################################################################

@@ -20,6 +20,14 @@ from nncf.torch.functions import STThreshold
 def binary_mask_by_threshold(input_tensor: torch.Tensor,
                              threshold: float = 0.5,
                              max_percentile: float = 0.98) -> torch.Tensor:
+    """
+    Conduct straight-through thresholding function while limits the maximum threshold.
+
+    :param input_tensor: The tensor to conduct thresholding.
+    :param threshold: The criterion for thresholding.
+    :param max_percentile: Specifies the `q`-th quantiles of the input tensor.
+    :return: The mask for the input tensor with the threshold limited by `max_percentile`.
+    """
     with torch.no_grad():
         max_threshold = torch.quantile(input_tensor, q=max_percentile).item()
     return STThreshold.apply(input_tensor, min(threshold, max_threshold))

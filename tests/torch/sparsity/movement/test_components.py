@@ -11,15 +11,11 @@
  limitations under the License.
 """
 from typing import Any, Dict, Tuple
-from unittest.mock import Mock
-from unittest.mock import call
+from unittest.mock import MagicMock
 
 import pytest
-from pytest import approx
 import torch
 
-from nncf.torch import create_compressed_model
-from nncf.torch.layers import NNCFLinear
 from nncf.common.sparsity.statistics import MovementSparsityStatistics
 from nncf.common.sparsity.statistics import SparsifiedLayerSummary
 from nncf.common.sparsity.statistics import SparsifiedModelStatistics
@@ -31,6 +27,8 @@ from nncf.experimental.torch.sparsity.movement.layers import SparseConfig
 from nncf.experimental.torch.sparsity.movement.layers import SparseConfigByScope
 from nncf.experimental.torch.sparsity.movement.layers import SparseStructure
 from nncf.experimental.torch.sparsity.movement.loss import ImportanceLoss
+from nncf.torch import create_compressed_model
+from nncf.torch.layers import NNCFLinear
 from tests.torch.sparsity.movement.helpers import LinearRunRecipe
 from tests.torch.sparsity.movement.helpers import initialize_sparsifier_parameters_by_linspace
 from tests.torch.sparsity.movement.helpers import mock_linear_nncf_node
@@ -136,28 +134,43 @@ desc_test_sparsifier_forward = {
         sparse_structure_by_scopes=[{'mode': 'block', 'sparse_factors': [2, 2], 'target_scopes': '{re}model'}],
         init_weight_importance=torch.FloatTensor([[0, 1], [0, 1]]),
         init_bias_importance=torch.FloatTensor([1, 0]),
-        ref_masked_weight=torch.FloatTensor([[0, 0, 2, 3], [0, 0, 6, 7], [0, 0, 10, 11], [0, 0, 14, 15]]),
+        ref_masked_weight=torch.FloatTensor([[0, 0, 2, 3],
+                                             [0, 0, 6, 7],
+                                             [0, 0, 10, 11],
+                                             [0, 0, 14, 15]]),
         ref_masked_bias=torch.FloatTensor([0, 1, 0, 0]),
     ),
     'per_row': dict(
         sparse_structure_by_scopes=[{'mode': 'per_dim', 'axis': 0, 'target_scopes': '{re}model'}],
         init_weight_importance=torch.FloatTensor([[0], [1], [0], [1]]),
         init_bias_importance=torch.FloatTensor([1, 1, 0, 0]),
-        ref_masked_weight=torch.FloatTensor([[0] * 4, [4, 5, 6, 7], [0] * 4, [12, 13, 14, 15]]),
+        ref_masked_weight=torch.FloatTensor([[0, 0, 0, 0],
+                                             [4, 5, 6, 7],
+                                             [0, 0, 0, 0],
+                                             [12, 13, 14, 15]]),
         ref_masked_bias=torch.FloatTensor([0, 1, 0, 0]),
     ),
     'per_column': dict(
         sparse_structure_by_scopes=[{'mode': 'per_dim', 'axis': 1, 'target_scopes': '{re}model'}],
         init_weight_importance=torch.FloatTensor([0, 1, 0, 1]),
         init_bias_importance=torch.FloatTensor([0]),
-        ref_masked_weight=torch.FloatTensor([[0, 1, 0, 3], [0, 5, 0, 7], [0, 9, 0, 11], [0, 13, 0, 15]]),
+        ref_masked_weight=torch.FloatTensor([[0, 1, 0, 3],
+                                             [0, 5, 0, 7],
+                                             [0, 9, 0, 11],
+                                             [0, 13, 0, 15]]),
         ref_masked_bias=torch.FloatTensor([0, 0, 0, 0]),
     ),
     'fine': dict(
         sparse_structure_by_scopes=[{'mode': 'fine', 'sparse_factors': [1, 1], 'target_scopes': '{re}model'}],
-        init_weight_importance=torch.FloatTensor([[0, 1, 1, 1], [0, 1, 1, 1], [1] * 4, [0] * 4]),
+        init_weight_importance=torch.FloatTensor([[0, 1, 1, 1],
+                                                  [0, 1, 1, 1],
+                                                  [1, 1, 1, 1],
+                                                  [0, 0, 0, 0]]),
         init_bias_importance=torch.FloatTensor([0, 0, 0, 1]),
-        ref_masked_weight=torch.FloatTensor([[0, 1, 2, 3], [0, 5, 6, 7], [8, 9, 10, 11], [0] * 4]),
+        ref_masked_weight=torch.FloatTensor([[0, 1, 2, 3],
+                                             [0, 5, 6, 7],
+                                             [8, 9, 10, 11],
+                                             [0, 0, 0, 0]]),
         ref_masked_bias=torch.FloatTensor([0, 0, 0, 3]),
     ),
 }
@@ -168,14 +181,12 @@ class TestSparsifier:
                              ids=desc_test_sparsifier_forward.keys())
     def test_sparsifier_forward(self, tmp_path, desc):
         has_bias = desc['init_bias_importance'] is not None
-        recipe = LinearRunRecipe.from_default(
-            input_size=4,
-            num_classes=4,
-            bias=has_bias,
-            sparse_structure_by_scopes=desc['sparse_structure_by_scopes'])
-        model = recipe.model
+        recipe = LinearRunRecipe(log_dir=tmp_path)
+        recipe.algo_config_(sparse_structure_by_scopes=desc['sparse_structure_by_scopes'])
+        recipe.model_config_(input_size=4, num_labels=4, bias=has_bias)
+        model = recipe.model()
         compression_ctrl, compressed_model = create_compressed_model(model,
-                                                                     recipe.nncf_config,
+                                                                     recipe.nncf_config(),
                                                                      dump_graphs=False)
         compressed_model.train()
         minfo = compression_ctrl.sparsified_module_info[0]
@@ -226,11 +237,12 @@ class TestSparsifier:
         }],
     ])
     @pytest.mark.parametrize('model_bias', [True, False])
-    def test_layer_actual_behavior_matches_sparsifer_mask(self, sparse_structure_by_scopes, model_bias: bool):
-        recipe = LinearRunRecipe.from_default(bias=model_bias,
-                                              sparse_structure_by_scopes=sparse_structure_by_scopes)
-        compression_ctrl, _ = create_compressed_model(recipe.model,
-                                                      recipe.nncf_config,
+    def test_layer_actual_behavior_matches_sparsifier_mask(self, sparse_structure_by_scopes, model_bias: bool):
+        recipe = LinearRunRecipe()
+        recipe.model_config_(bias=model_bias)
+        recipe.algo_config_(sparse_structure_by_scopes=sparse_structure_by_scopes)
+        compression_ctrl, _ = create_compressed_model(recipe.model(),
+                                                      recipe.nncf_config(),
                                                       dump_graphs=False)
         module_info = compression_ctrl.sparsified_module_info[0]
         operand = module_info.operand
@@ -264,9 +276,9 @@ class TestSparsifier:
         ref_masked_weight = torch.Tensor([[0., 2], [0, 4]])
         assert torch.allclose(masked_weight, ref_masked_weight)
         bias = torch.Tensor([1., 2])
-        mssked_bias = operand.apply_binary_mask(bias, is_bias=True)
+        masked_bias = operand.apply_binary_mask(bias, is_bias=True)
         ref_masked_bias = torch.Tensor([0., 2])
-        assert torch.allclose(mssked_bias, ref_masked_bias)
+        assert torch.allclose(masked_bias, ref_masked_bias)
 
     @pytest.mark.parametrize('layerwise_loss_lambda', [0.5, 2.0])
     @pytest.mark.parametrize('importance_regularization_factor', [0., 1.])
@@ -398,30 +410,45 @@ class TestImportanceLoss:
             disable=True,
             sparse_layers_loss=(1.,),
             ref_output=1.
-        ),
-        dict(
-            disable=False,
-            sparse_layers_loss=(),
-            ref_output=0.
-        ),
+        )
     ])
     @pytest.mark.parametrize('requires_grad', [True, False])
-    def test_importance_loss_forward(self, desc, requires_grad: bool):
-        sparse_layers = [Mock(loss=Mock(return_value=torch.tensor(loss_val, requires_grad=requires_grad)))
-                         for loss_val in desc['sparse_layers_loss']]
-        loss = ImportanceLoss(sparse_layers)
-        if desc['disable']:
-            loss.disable()
-        output = loss()
+    @pytest.mark.parametrize('use_cuda', [True, False])
+    def test_importance_loss_forward(self, desc, requires_grad: bool, use_cuda: bool):
+        if (not torch.cuda.is_available()) and use_cuda:
+            pytest.skip("Skipping CUDA test cases for CPU only setups")
+        device = torch.device('cuda' if use_cuda else 'cpu')
+        operands = []
+        for loss_val in desc['sparse_layers_loss']:
+            operand = MovementSparsifier(mock_linear_nncf_node(), frozen=False)
+            if use_cuda:
+                operand = operand.cuda()
+            loss_tensor = torch.tensor(loss_val, requires_grad=requires_grad, device=device)
+            operand.loss = MagicMock(return_value=loss_tensor)
+            operands.append(operand)
 
-        if desc['disable'] or not desc['sparse_layers_loss']:
-            assert isinstance(output, float) and output == approx(0.)
+        loss_module = ImportanceLoss(operands)
+        if desc['disable']:
+            loss_module.disable()
+        output = loss_module()
+        assert isinstance(output, torch.Tensor) and output.device.type == device.type
+        if desc['disable']:
+            assert output.requires_grad is False
+            assert torch.allclose(output, torch.zeros_like(output))
         else:
-            for sparse_layer in sparse_layers:
-                assert sparse_layer.method_calls == [call.loss()]
-            assert isinstance(output, torch.Tensor)
+            for operand in operands:
+                operand.loss.assert_called_once()
             assert output.requires_grad is requires_grad
             assert torch.allclose(output, torch.tensor(desc['ref_output']))
+
+    def test_importance_loss_adapts_to_device_change(self):
+        sparsifier = MovementSparsifier(mock_linear_nncf_node(), frozen=False)
+        loss_module = ImportanceLoss([sparsifier])
+        loss_cpu = loss_module()
+        assert loss_cpu.device.type == 'cpu'
+        sparsifier.cuda()
+        loss_cuda = loss_module()
+        assert loss_cuda.device.type == 'cuda'
 
 
 class TestMovementSparsityStatistics:

@@ -27,7 +27,7 @@ from nncf.torch.sparsity.layers import BinaryMask
 from nncf.torch.utils import is_tracing_state
 
 
-class SparseStructure(str, Enum):
+class SparseStructure(Enum):
     FINE = 'fine'
     BLOCK = 'block'
     PER_DIM = 'per_dim'
@@ -43,7 +43,7 @@ class SparseConfig:
                  sparse_factors: Optional[Tuple[int, int]] = None,
                  sparse_axis: Optional[int] = None):
         """
-        Parses and validates the sparse structure for movement sparsity.
+        Parses and validates the sparse structure of a certain layer for movement sparsity.
 
         :param mode: The sparse structure mode.
         :param sparse_factors: Block shape to sparsify as a whole in a weight. Required when `mode` is "block".
@@ -56,39 +56,40 @@ class SparseConfig:
         if self.mode == SparseStructure.FINE:
             if not ((isinstance(sparse_factors, (tuple, list)) and tuple(sparse_factors) == (1, 1)) or
                     sparse_factors is None):
-                raise ValueError(
-                    f'{error_prefix} Fine sparse structure expects `sparse_factors` to be [1, 1] or unspecified.')
+                raise ValueError(f'{error_prefix} Fine sparse structure expects `sparse_factors` '
+                                 'to be [1, 1] or unspecified.')
             if sparse_axis is not None:
-                raise ValueError(
-                    f'{error_prefix} Fine sparse structure does not expect specified `axis`.')
+                raise ValueError(f'{error_prefix} Fine sparse structure does not expect '
+                                 'specified `axis`.')
             self.sparse_factors = (1, 1)
 
         if self.mode == SparseStructure.BLOCK:
             if sparse_factors is None:
-                raise ValueError(
-                    f'{error_prefix} Missing `sparse_factors`. Block sparsity structure expects it specified.')
+                raise ValueError(f'{error_prefix} Missing `sparse_factors`. Block sparsity '
+                                 'structure expects it specified.')
             if not (isinstance(sparse_factors, (tuple, list)) and len(sparse_factors) == 2):
-                raise ValueError(
-                    f'{error_prefix} Invalid format of `sparse_factors. '
-                    'Block sparsity structure expects tuple of two numbers.')
+                raise ValueError(f'{error_prefix} Invalid format of `sparse_factors. '
+                                 'Block sparsity structure expects tuple of two numbers.')
             if sparse_axis is not None:
-                raise ValueError(
-                    f'{error_prefix} Block sparse structure does not expect specified `axis`.')
+                raise ValueError(f'{error_prefix} Block sparse structure does not expect '
+                                 'specified `axis`.')
             self.sparse_factors = tuple(sparse_factors)
 
         if self.mode == SparseStructure.PER_DIM:
             if sparse_axis is None:
-                raise ValueError(
-                    f'{error_prefix} Missing `axis`. Per-dim sparsity structure expects it specified.')
+                raise ValueError(f'{error_prefix} Missing `axis`. Per-dim sparsity structure '
+                                 'expects it to be specified.')
             if sparse_factors is not None:
-                raise ValueError(
-                    f'{error_prefix} Per-dim sparsity structure does not expect specified `sparse_factors`.')
+                raise ValueError(f'{error_prefix} Per-dim sparsity structure does not expect '
+                                 'specified `sparse_factors`.')
             self.sparse_axis = int(sparse_axis)
 
     @classmethod
     def from_config(cls, config: Dict[str, Any]) -> 'SparseConfig':
         """
         Creates the object from its config.
+
+        :param config: A dict that describes the sparse structure.
         """
         mode_str = config.get('mode', SparseStructure.FINE.value)
         mode = SparseStructure(mode_str)
@@ -103,10 +104,16 @@ class SparseConfig:
 class SparseConfigByScope:
     """
     Defines an entry for `sparse_structure_by_scopes` in movement sparsity configuration.
-    It includes the sparse config, and the target scopes it is applied to.
+    It includes the sparse structure config, and the target scopes it is applied to.
     """
 
     def __init__(self, sparse_config: SparseConfig, target_scopes: Union[str, List[str]]):
+        """
+        Initializes the object that describes the sparse structure and the layers it matches.
+
+        :param sparse_config: `SparseConfig` object that describes the sparse structure config.
+        :param target_scopes: The scopes to match with this `sparse_config`.
+        """
         self.sparse_config = sparse_config
         self.target_scopes = target_scopes
 
@@ -114,6 +121,8 @@ class SparseConfigByScope:
     def from_config(cls, config: Dict[str, Any]) -> 'SparseConfigByScope':
         """
         Creates the object from its representation.
+
+        :param config: A dict that describes the sparse structure.
         """
         error_prefix = f'Invalid sparse structure by scopes {config}.'
         target_scopes = config.get('target_scopes')
@@ -148,7 +157,7 @@ class MovementSparsifier(nn.Module):
         """
         super().__init__()
         self.target_module_node = target_module_node
-        self.prune_bias = (target_module_node.layer_attributes.bias not in (False, None))
+        self.prune_bias = bool(target_module_node.layer_attributes.bias)
         self.frozen = frozen
         self.layerwise_loss_lambda = layerwise_loss_lambda
         self._importance_threshold = -math.inf
@@ -161,7 +170,8 @@ class MovementSparsifier(nn.Module):
         self.sparse_structure = sparse_cfg.mode
 
         weight_importance_shape = self._get_weight_importance_shape(
-            weight_shape, self.sparse_factors, self.sparse_structure)
+            weight_shape, self.sparse_factors, self.sparse_structure
+        )
         self.weight_importance = CompressionParameter(
             torch.zeros(weight_importance_shape),
             requires_grad=not self.frozen,
@@ -217,6 +227,12 @@ class MovementSparsifier(nn.Module):
         return ctx.apply_binary_mask(param_tensor)
 
     def get_importance(self, is_bias: bool = False, expanded: bool = True) -> torch.Tensor:
+        """
+        Gets the importance score parameter of the operand.
+
+        :param is_bias: If true, will return the bias importance. Otherwise will return the weight importance.
+        :param expanded: Whether should expand the importance to the same shape as module weight or bias.
+        """
         if is_bias and (not self.prune_bias):
             raise ValueError('The layer to sparsify does not contain bias.')
         importance = self.bias_importance if is_bias else self.weight_importance
@@ -239,6 +255,8 @@ class MovementSparsifier(nn.Module):
 
     def requires_grad_(self, requires_grad: bool = True):
         super().requires_grad_(requires_grad)
+        if not requires_grad:
+            self.zero_grad(set_to_none=True)  # avoid further unexpected update with Adam optimizer
         self.frozen = not requires_grad
 
     def extra_repr(self) -> str:
@@ -251,8 +269,10 @@ class MovementSparsifier(nn.Module):
         ctx = self.bias_ctx if is_bias else self.weight_ctx
         if (not self.training) or self.frozen:
             return ctx.binary_mask
-        mask = binary_mask_by_threshold(self.get_importance(is_bias, expanded=True),
-                                        self.importance_threshold)
+        mask = binary_mask_by_threshold(
+            input_tensor=self.get_importance(is_bias, expanded=True),
+            threshold=self.importance_threshold
+        )
         ctx.binary_mask = mask
         return mask
 

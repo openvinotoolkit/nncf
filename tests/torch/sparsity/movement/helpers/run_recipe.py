@@ -14,8 +14,9 @@ from abc import ABC
 from abc import abstractmethod
 from collections import OrderedDict
 from copy import deepcopy
+from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, List
+from typing import Any, Dict, List, Optional, Union
 
 import torch
 import torch.nn
@@ -23,6 +24,8 @@ import torch.nn.functional as F
 import torch.utils.data
 
 from nncf import NNCFConfig
+from nncf.experimental.torch.sparsity.movement.scheduler import MovementSchedulerParams
+from nncf.torch.dynamic_graph.graph_tracer import ModelInputInfo
 from nncf.torch.nncf_network import NNCFNetwork
 from tests.torch.sparsity.movement.helpers.config import MovementAlgoConfig
 
@@ -37,22 +40,29 @@ from transformers import SwinConfig
 from transformers import Wav2Vec2Config
 
 
+@dataclass
 class TransformerBlockInfo:
-    def __init__(self, num_hidden_layers: int = 1,
-                 hidden_size: int = 4,
-                 intermediate_size: int = 3,
-                 dim_per_head: int = 2):
-        self.num_hidden_layers = num_hidden_layers
-        self.hidden_size = hidden_size
-        self.intermediate_size = intermediate_size
-        self.dim_per_head = dim_per_head
+    num_hidden_layers: int
+    hidden_size: int
+    intermediate_size: int
+    dim_per_head: int
 
 
-class TransformerBlockItemOrderedDict(OrderedDict):
+class DictInTransformerBlockOrder(OrderedDict):
     def __init__(self, mhsa_q: Any, mhsa_k: Any, mhsa_v: Any,
                  mhsa_o: Any, ffn_i: Any, ffn_o: Any) -> None:
         super().__init__(mhsa_q=mhsa_q, mhsa_k=mhsa_k, mhsa_v=mhsa_v,
                          mhsa_o=mhsa_o, ffn_i=ffn_i, ffn_o=ffn_o)
+
+
+class _MISSING_TYPE:
+    """
+    A sentinel class used to detect if some arguments are not provided in a
+    function call. Useful when `None` is an acceptable value for arguments.
+    """
+
+
+MISSING = _MISSING_TYPE()
 
 
 class BaseMockRunRecipe(ABC):
@@ -61,36 +71,16 @@ class BaseMockRunRecipe(ABC):
     default_model_config = PretrainedConfig()
     default_algo_config = MovementAlgoConfig()
 
-    def __init__(self, model_config: PretrainedConfig,
-                 algo_config: MovementAlgoConfig,
+    def __init__(self, model_config: Optional[PretrainedConfig] = None,
+                 algo_config: Optional[MovementAlgoConfig] = None,
                  log_dir=None) -> None:
-        self.model_config = model_config
-        self.algo_config = algo_config
-        self.set_log_dir(log_dir)
-
-    @classmethod
-    def from_default(cls, log_dir=None, **override_kwargs):
-        # TODO(yujie): refactor override_kwargs
-        model_config = deepcopy(cls.default_model_config)
-        algo_config = deepcopy(cls.default_algo_config)
-        scheduler_config = algo_config.scheduler_params
-        model_keys = set(model_config.__dict__)
-        scheduler_keys = set(scheduler_config.__dict__)
-        algo_keys = set(algo_config.__dict__)
-        for key, value in override_kwargs.items():
-            if key in model_keys:
-                setattr(model_config, key, value)
-            elif key in algo_keys:
-                setattr(algo_config, key, value)
-            elif key in scheduler_keys:
-                setattr(scheduler_config, key, value)
-            else:
-                raise ValueError(f'Unknown config: {key}')
-        return cls(model_config, algo_config, log_dir)
+        self.model_config = model_config or deepcopy(self.default_model_config)
+        self.algo_config = algo_config or deepcopy(self.default_algo_config)
+        self.log_dir_(log_dir)
 
     @property
     @abstractmethod
-    def model_input_info(self) -> List[dict]:
+    def model_input_info(self) -> List[ModelInputInfo]:
         pass
 
     @property
@@ -99,44 +89,81 @@ class BaseMockRunRecipe(ABC):
         pass
 
     @property
-    def model(self) -> torch.nn.Module:
-        torch_model = self._create_model()
-        g = torch.Generator()
-        g.manual_seed(42)
-        with torch.no_grad():
-            for _, parameter in torch_model.named_parameters():
-                parameter.normal_(generator=g)
-        return torch_model
-
-    @property
-    def nncf_config(self) -> NNCFConfig:
-        config_dict = {
-            'input_info': self.model_input_info,
-            'compression': self.algo_config.to_dict()}
-        if self.log_dir is not None:
-            config_dict['log_dir'] = str(self.log_dir)
-        return NNCFConfig.from_dict(config_dict)
-
-    @property
-    def scheduler_params(self):
+    def scheduler_params(self) -> MovementSchedulerParams:
         return self.algo_config.scheduler_params
 
-    @staticmethod
-    @abstractmethod
-    def get_nncf_modules_in_transformer_block_order(
-            compressed_model: NNCFNetwork) -> List[TransformerBlockItemOrderedDict]:
-        pass
+    def algo_config_(
+        self, sparse_structure_by_scopes: Union[List[Dict[str, Any]], _MISSING_TYPE] = MISSING,
+        ignored_scopes: Union[List[str], _MISSING_TYPE] = MISSING,
+        compression_lr_multiplier: Union[float, None, _MISSING_TYPE] = MISSING,
+    ):
+        if sparse_structure_by_scopes is not MISSING:
+            self.algo_config.sparse_structure_by_scopes = sparse_structure_by_scopes
+        if ignored_scopes is not MISSING:
+            self.algo_config.ignored_scopes = ignored_scopes
+        if compression_lr_multiplier is not MISSING:
+            self.algo_config.compression_lr_multiplier = compression_lr_multiplier
+        return self
 
-    @abstractmethod
-    def _create_model(self) -> torch.nn.Module:
-        pass
+    def scheduler_params_(
+        self, warmup_start_epoch: Union[int, _MISSING_TYPE] = MISSING,
+        warmup_end_epoch: Union[int, _MISSING_TYPE] = MISSING,
+        importance_regularization_factor: Union[float, _MISSING_TYPE] = MISSING,
+        enable_structured_masking: Union[bool, _MISSING_TYPE] = MISSING,
+        init_importance_threshold: Union[float, None, _MISSING_TYPE] = MISSING,
+        final_importance_threshold: Union[float, _MISSING_TYPE] = MISSING,
+        power: Union[float, _MISSING_TYPE] = MISSING,
+        steps_per_epoch: Union[int, None, _MISSING_TYPE] = MISSING,
+    ):
+        if warmup_start_epoch is not MISSING:
+            self.algo_config.scheduler_params.warmup_start_epoch = warmup_start_epoch
+        if warmup_end_epoch is not MISSING:
+            self.algo_config.scheduler_params.warmup_end_epoch = warmup_end_epoch
+        if importance_regularization_factor is not MISSING:
+            self.algo_config.scheduler_params.importance_regularization_factor = importance_regularization_factor
+        if enable_structured_masking is not MISSING:
+            self.algo_config.scheduler_params.enable_structured_masking = enable_structured_masking
+        if init_importance_threshold is not MISSING:
+            self.algo_config.scheduler_params.init_importance_threshold = init_importance_threshold
+        if final_importance_threshold is not MISSING:
+            self.algo_config.scheduler_params.final_importance_threshold = final_importance_threshold
+        if power is not MISSING:
+            self.algo_config.scheduler_params.power = power
+        if steps_per_epoch is not MISSING:
+            self.algo_config.scheduler_params.steps_per_epoch = steps_per_epoch
+        return self
 
-    def set_log_dir(self, log_dir=None):
+    def model_config_(self, **kwargs):
+        # There are too many keywords in `PretrainedConfig`. Not reasonable to
+        # specify them all as arguments of this function.
+        for key, value in kwargs.items():
+            setattr(self.model_config, key, value)
+        return self
+
+    def log_dir_(self, log_dir=None):
         if log_dir is None:
             self.log_dir = None
         else:
             self.log_dir = str(log_dir)
             Path(log_dir).mkdir(exist_ok=True, parents=True)
+        return self
+
+    def model(self, init_seed: int = 42) -> torch.nn.Module:
+        torch_model = self._create_model()
+        g = torch.Generator()
+        g.manual_seed(init_seed)
+        with torch.no_grad():
+            for _, parameter in torch_model.named_parameters():
+                parameter.normal_(generator=g)
+        return torch_model
+
+    def nncf_config(self) -> NNCFConfig:
+        config_dict = {
+            'input_info': self.dumps_model_input_info(),
+            'compression': self.algo_config.to_dict()}
+        if self.log_dir is not None:
+            config_dict['log_dir'] = str(self.log_dir)
+        return NNCFConfig.from_dict(config_dict)
 
     def generate_mock_dataset(self, num_samples: int = 16,
                               float_low: float = -1., float_high: float = 1.,
@@ -146,10 +173,10 @@ class BaseMockRunRecipe(ABC):
         g.manual_seed(seed)
         input_dict = {}
         for input_info in self.model_input_info:
-            shape = list(input_info.get('sample_size'))
-            keyword = input_info.get('keyword')
-            if input_info.get('type', 'float') == 'float':
-                tensor = torch.rand((num_samples, *shape[1:]), dtype=torch.float, generator=g) \
+            shape = list(input_info.shape)
+            keyword = input_info.keyword
+            if input_info.type == torch.float32:
+                tensor = torch.rand((num_samples, *shape[1:]), dtype=torch.float32, generator=g) \
                     * (float_high - float_low) + float_low
             else:
                 tensor = torch.randint(int_low, int_high, (num_samples, *shape[1:]), generator=g)
@@ -157,6 +184,31 @@ class BaseMockRunRecipe(ABC):
         input_dict['labels'] = torch.arange(self.model_config.num_labels).repeat(
             num_samples // self.model_config.num_labels + 1)[:num_samples]
         return Dataset.from_dict(input_dict)
+
+    def dumps_model_input_info(self, model_input_info: Optional[List[ModelInputInfo]] = None
+                               ) -> List[Dict[str, Any]]:
+        if model_input_info is None:
+            model_input_info = self.model_input_info
+        result = []
+        for info in model_input_info:
+            item = {'sample_size': info.shape,
+                    'type': info.torch_type_to_string(info.type)}
+            if info.keyword is not None:
+                item['keyword'] = info.keyword
+            if info.filler is not None:
+                item['filler'] = info.filler
+            result.append(item)
+        return result
+
+    @staticmethod
+    @abstractmethod
+    def get_nncf_modules_in_transformer_block_order(
+            compressed_model: NNCFNetwork) -> List[DictInTransformerBlockOrder]:
+        pass
+
+    @abstractmethod
+    def _create_model(self) -> torch.nn.Module:
+        pass
 
 
 class Wav2Vec2RunRecipe(BaseMockRunRecipe):
@@ -176,7 +228,6 @@ class Wav2Vec2RunRecipe(BaseMockRunRecipe):
         classifier_proj_size=3,
         num_labels=2,
     )
-
     default_algo_config = MovementAlgoConfig(
         sparse_structure_by_scopes=[
             {'mode': 'block', 'sparse_factors': [2, 2], 'target_scopes': '{re}Wav2Vec2Attention'},
@@ -186,12 +237,9 @@ class Wav2Vec2RunRecipe(BaseMockRunRecipe):
         ignored_scopes=['{re}feature_extractor'],
     )
 
-    def _create_model(self) -> torch.nn.Module:
-        return AutoModelForAudioClassification.from_config(self.model_config)
-
     @property
-    def model_input_info(self) -> List[dict]:
-        return [{'sample_size': [1, 32], 'keyword': 'input_values'}]
+    def model_input_info(self) -> List[ModelInputInfo]:
+        return [ModelInputInfo(shape=[1, 32], keyword='input_values')]
 
     @property
     def transformer_block_info(self) -> List[TransformerBlockInfo]:
@@ -205,10 +253,10 @@ class Wav2Vec2RunRecipe(BaseMockRunRecipe):
 
     @staticmethod
     def get_nncf_modules_in_transformer_block_order(
-            compressed_model: NNCFNetwork) -> List[TransformerBlockItemOrderedDict]:
+            compressed_model: NNCFNetwork) -> List[DictInTransformerBlockOrder]:
         modules = []
         for block in compressed_model.nncf_module.wav2vec2.encoder.layers:
-            modules.append(TransformerBlockItemOrderedDict(
+            modules.append(DictInTransformerBlockOrder(
                 block.attention.q_proj,
                 block.attention.k_proj,
                 block.attention.v_proj,
@@ -217,6 +265,9 @@ class Wav2Vec2RunRecipe(BaseMockRunRecipe):
                 block.feed_forward.output_dense)
             )
         return modules
+
+    def _create_model(self) -> torch.nn.Module:
+        return AutoModelForAudioClassification.from_config(self.model_config)
 
 
 class BertRunRecipe(BaseMockRunRecipe):
@@ -243,37 +294,14 @@ class BertRunRecipe(BaseMockRunRecipe):
         ignored_scopes=['{re}embedding', '{re}pooler', '{re}classifier'],
     )
 
-    def __init__(self, model_config: BertConfig,
-                 algo_config: MovementAlgoConfig,
-                 log_dir=None) -> None:
-        super().__init__(model_config, algo_config, log_dir)
-        extra_model_keys = {'mhsa_qkv_bias', 'mhsa_o_bias', 'ffn_bias'}
-        for key in extra_model_keys:
-            value = getattr(self.model_config, key, True)
-            setattr(self.model_config, key, value)
-
-    def _create_model(self) -> torch.nn.Module:
-        model = AutoModelForSequenceClassification.from_config(self.model_config)
-        for block in model.bert.encoder.layer:
-            if not self.model_config.mhsa_qkv_bias:
-                block.attention.self.query.bias = None
-                block.attention.self.key.bias = None
-                block.attention.self.value.bias = None
-            if not self.model_config.mhsa_o_bias:
-                block.attention.output.dense.bias = None
-            if not self.model_config.ffn_bias:
-                block.intermediate.dense.bias = None
-                block.output.dense.bias = None
-        return model
-
     @property
-    def model_input_info(self) -> List[dict]:
+    def model_input_info(self) -> List[ModelInputInfo]:
         dim = self.model_config.max_position_embeddings
         return [
-            {'sample_size': [1, dim], 'type': 'long', 'keyword': 'input_ids'},
-            {'sample_size': [1, dim], 'type': 'long', 'keyword': 'attention_mask'},
-            {'sample_size': [1, dim], 'type': 'long', 'keyword': 'token_type_ids'},
-            {'sample_size': [1, dim], 'type': 'long', 'keyword': 'position_ids'},
+            ModelInputInfo(shape=[1, dim], type_str='long', keyword='input_ids'),
+            ModelInputInfo(shape=[1, dim], type_str='long', keyword='attention_mask'),
+            ModelInputInfo(shape=[1, dim], type_str='long', keyword='token_type_ids'),
+            ModelInputInfo(shape=[1, dim], type_str='long', keyword='position_ids'),
         ]
 
     @property
@@ -288,10 +316,10 @@ class BertRunRecipe(BaseMockRunRecipe):
 
     @staticmethod
     def get_nncf_modules_in_transformer_block_order(
-            compressed_model: NNCFNetwork) -> List[TransformerBlockItemOrderedDict]:
+            compressed_model: NNCFNetwork) -> List[DictInTransformerBlockOrder]:
         modules = []
         for block in compressed_model.nncf_module.bert.encoder.layer:
-            modules.append(TransformerBlockItemOrderedDict(
+            modules.append(DictInTransformerBlockOrder(
                 block.attention.self.query,
                 block.attention.self.key,
                 block.attention.self.value,
@@ -300,6 +328,20 @@ class BertRunRecipe(BaseMockRunRecipe):
                 block.output.dense)
             )
         return modules
+
+    def _create_model(self) -> torch.nn.Module:
+        model = AutoModelForSequenceClassification.from_config(self.model_config)
+        for block in model.bert.encoder.layer:
+            if not getattr(self.model_config, 'mhsa_qkv_bias', True):
+                block.attention.self.query.bias = None
+                block.attention.self.key.bias = None
+                block.attention.self.value.bias = None
+            if not getattr(self.model_config, 'mhsa_o_bias', True):
+                block.attention.output.dense.bias = None
+            if not getattr(self.model_config, 'ffn_bias', True):
+                block.intermediate.dense.bias = None
+                block.output.dense.bias = None
+        return model
 
 
 class SwinRunRecipe(BaseMockRunRecipe):
@@ -316,7 +358,6 @@ class SwinRunRecipe(BaseMockRunRecipe):
         mlp_ratio=3 / 4,
         num_labels=2,
         qkv_bias=True,
-        num_classes=2,
     )
     default_algo_config = MovementAlgoConfig(
         sparse_structure_by_scopes=[
@@ -327,14 +368,13 @@ class SwinRunRecipe(BaseMockRunRecipe):
         ignored_scopes=['{re}embedding', '{re}pooler', '{re}classifier'],
     )
 
-    def _create_model(self) -> torch.nn.Module:
-        return AutoModelForImageClassification.from_config(self.model_config)
-
     @property
-    def model_input_info(self) -> List[dict]:
+    def model_input_info(self) -> List[ModelInputInfo]:
         img_size = self.model_config.image_size
-        return [{'sample_size': [1, self.model_config.num_channels, img_size, img_size],
-                 'keyword': 'pixel_values'}]
+        return [
+            ModelInputInfo(shape=[1, self.model_config.num_channels, img_size, img_size],
+                           keyword='pixel_values')
+        ]
 
     @property
     def transformer_block_info(self) -> List[TransformerBlockInfo]:
@@ -354,11 +394,11 @@ class SwinRunRecipe(BaseMockRunRecipe):
 
     @staticmethod
     def get_nncf_modules_in_transformer_block_order(
-            compressed_model: NNCFNetwork) -> List[TransformerBlockItemOrderedDict]:
+            compressed_model: NNCFNetwork) -> List[DictInTransformerBlockOrder]:
         modules = []
         for layer in compressed_model.nncf_module.swin.encoder.layers:
             for block in layer.blocks:
-                modules.append(TransformerBlockItemOrderedDict(
+                modules.append(DictInTransformerBlockOrder(
                     block.attention.self.query,
                     block.attention.self.key,
                     block.attention.self.value,
@@ -368,12 +408,15 @@ class SwinRunRecipe(BaseMockRunRecipe):
                 )
         return modules
 
+    def _create_model(self) -> torch.nn.Module:
+        return AutoModelForImageClassification.from_config(self.model_config)
+
 
 class LinearForClassification(PreTrainedModel):
 
-    def __init__(self, input_size: int = 4, bias: bool = True, num_classes: int = 2):
+    def __init__(self, input_size: int = 4, bias: bool = True, num_labels: int = 2):
         super().__init__(PretrainedConfig())
-        self.model = torch.nn.Linear(input_size, num_classes, bias=bias)
+        self.model = torch.nn.Linear(input_size, num_labels, bias=bias)
 
     def forward(self, tensor, labels=None):
         logits = self.model(tensor)
@@ -385,10 +428,10 @@ class LinearForClassification(PreTrainedModel):
 
 class Conv2dForClassification(LinearForClassification):
 
-    def __init__(self, input_size: int = 4, bias: bool = True, num_classes: int = 2):
-        super().__init__(input_size, bias, num_classes)
+    def __init__(self, input_size: int = 4, bias: bool = True, num_labels: int = 2):
+        super().__init__(input_size, bias, num_labels)
         self.model = torch.nn.Sequential(
-            torch.nn.Conv2d(3, num_classes, kernel_size=3, stride=1, padding=1, bias=bias),
+            torch.nn.Conv2d(3, num_labels, kernel_size=3, stride=1, padding=1, bias=bias),
             torch.nn.AdaptiveAvgPool2d(1),
             torch.nn.Flatten(),
         )
@@ -396,13 +439,13 @@ class Conv2dForClassification(LinearForClassification):
 
 class Conv2dPlusLinearForClassification(LinearForClassification):
 
-    def __init__(self, input_size: int = 4, bias: bool = True, num_classes: int = 2):
-        super().__init__(input_size, bias, num_classes)
+    def __init__(self, input_size: int = 4, bias: bool = True, num_labels: int = 2):
+        super().__init__(input_size, bias, num_labels)
         self.model = torch.nn.Sequential(
-            torch.nn.Conv2d(3, num_classes, kernel_size=3, stride=1, padding=1, bias=bias),
+            torch.nn.Conv2d(3, num_labels, kernel_size=3, stride=1, padding=1, bias=bias),
             torch.nn.AdaptiveAvgPool2d(1),
             torch.nn.Flatten(),
-            torch.nn.Linear(num_classes, num_classes, bias=bias)
+            torch.nn.Linear(num_labels, num_labels, bias=bias)
         )
 
 
@@ -410,31 +453,35 @@ class LinearRunRecipe(BaseMockRunRecipe):
     model_family = 'linear'
     supports_structured_masking = False
     default_model_config = PretrainedConfig(
-        num_classes=2,
+        num_labels=2,
         input_size=4,
         bias=True
     )
     default_algo_config = MovementAlgoConfig(
-        enable_structured_masking=False
+        MovementSchedulerParams(warmup_start_epoch=1, warmup_end_epoch=3,
+                                importance_regularization_factor=0.1,
+                                enable_structured_masking=False,
+                                init_importance_threshold=-1.0,
+                                steps_per_epoch=4)
     )
 
     def _create_model(self) -> torch.nn.Module:
         model_config = self.model_config
         return LinearForClassification(input_size=model_config.input_size,
                                        bias=model_config.bias,
-                                       num_classes=model_config.num_classes)
+                                       num_labels=model_config.num_labels)
 
     @property
-    def model_input_info(self) -> List[dict]:
-        return [{'sample_size': [1, self.model_config.input_size], 'keyword': 'tensor'}]
+    def model_input_info(self) -> List[ModelInputInfo]:
+        return [ModelInputInfo(shape=[1, self.model_config.input_size], keyword='tensor')]
 
     @property
     def transformer_block_info(self) -> List[TransformerBlockInfo]:
         return []
 
     @staticmethod
-    def get_nncf_modules_in_transformer_block_order(
-            compressed_model: NNCFNetwork) -> List[TransformerBlockItemOrderedDict]:
+    def get_nncf_modules_in_transformer_block_order(compressed_model: NNCFNetwork
+                                                    ) -> List[DictInTransformerBlockOrder]:
         return []
 
 
@@ -442,45 +489,39 @@ class Conv2dRunRecipe(LinearRunRecipe):
     model_family = 'conv2d'
     supports_structured_masking = False
     default_model_config = PretrainedConfig(
-        num_classes=2,
+        num_labels=2,
         input_size=4,
         bias=True
-    )
-    default_algo_config = MovementAlgoConfig(
-        enable_structured_masking=False
     )
 
     def _create_model(self) -> torch.nn.Module:
         model_config = self.model_config
         return Conv2dForClassification(input_size=model_config.input_size,
                                        bias=model_config.bias,
-                                       num_classes=model_config.num_classes)
+                                       num_labels=model_config.num_labels)
 
     @property
-    def model_input_info(self) -> List[dict]:
-        return [{'sample_size': [1, 3, self.model_config.input_size, self.model_config.input_size],
-                 'keyword': 'tensor'}]
+    def model_input_info(self) -> List[ModelInputInfo]:
+        input_size = self.model_config.input_size
+        return [ModelInputInfo(shape=[1, 3, input_size, input_size], keyword='tensor')]
 
 
 class Conv2dPlusLinearRunRecipe(LinearRunRecipe):
     model_family = 'conv2d+linear'
     supports_structured_masking = False
     default_model_config = PretrainedConfig(
-        num_classes=2,
+        num_labels=2,
         input_size=4,
         bias=True
-    )
-    default_algo_config = MovementAlgoConfig(
-        enable_structured_masking=False
     )
 
     def _create_model(self) -> torch.nn.Module:
         model_config = self.model_config
         return Conv2dPlusLinearForClassification(input_size=model_config.input_size,
                                                  bias=model_config.bias,
-                                                 num_classes=model_config.num_classes)
+                                                 num_labels=model_config.num_labels)
 
     @property
-    def model_input_info(self) -> List[dict]:
-        return [{'sample_size': [1, 3, self.model_config.input_size, self.model_config.input_size],
-                 'keyword': 'tensor'}]
+    def model_input_info(self) -> List[ModelInputInfo]:
+        input_size = self.model_config.input_size
+        return [ModelInputInfo(shape=[1, 3, input_size, input_size], keyword='tensor')]
