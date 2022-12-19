@@ -23,17 +23,17 @@ from nncf.torch.graph.operator_metatypes import OPERATORS_WITH_WEIGHTS_METATYPES
 DEFAULT_PT_QUANT_TRAIT_TO_OP_DICT = {
     QuantizationTrait.INPUTS_QUANTIZABLE: [
         operator_metatypes.PTConv2dMetatype,
-        operator_metatypes.PTConv2dMetatype.module_metatype,
+        operator_metatypes.PTModuleConv2dMetatype,
         operator_metatypes.PTConv3dMetatype,
-        operator_metatypes.PTConv3dMetatype.module_metatype,
+        operator_metatypes.PTModuleConv3dMetatype,
         operator_metatypes.PTConvTranspose2dMetatype,
-        operator_metatypes.PTConvTranspose2dMetatype.module_metatype,
+        operator_metatypes.PTModuleConvTranspose2dMetatype,
         operator_metatypes.PTConvTranspose3dMetatype,
-        operator_metatypes.PTConvTranspose3dMetatype.module_metatype,
+        operator_metatypes.PTModuleConvTranspose3dMetatype,
         operator_metatypes.PTDepthwiseConv2dSubtype,
         operator_metatypes.PTDepthwiseConv3dSubtype,
         operator_metatypes.PTLinearMetatype,
-        operator_metatypes.PTLinearMetatype.module_metatype,
+        operator_metatypes.PTModuleLinearMetatype,
         operator_metatypes.PTHardTanhMetatype,
         operator_metatypes.PTHardSwishMetatype,
         operator_metatypes.PTHardSigmoidMetatype,
@@ -42,7 +42,7 @@ DEFAULT_PT_QUANT_TRAIT_TO_OP_DICT = {
         operator_metatypes.PTPRELUMetatype,
         operator_metatypes.PTLeakyRELUMetatype,
         operator_metatypes.PTLayerNormMetatype,
-        operator_metatypes.PTLayerNormMetatype.module_metatype,
+        operator_metatypes.PTModuleLayerNormMetatype,
         operator_metatypes.PTGELUMetatype,
         operator_metatypes.PTAddMetatype,
         operator_metatypes.PTMulMetatype,
@@ -53,7 +53,7 @@ DEFAULT_PT_QUANT_TRAIT_TO_OP_DICT = {
         operator_metatypes.PTRoundMetatype,
         operator_metatypes.PTPixelShuffleMetatype,
         operator_metatypes.PTBatchNormMetatype,
-        operator_metatypes.PTBatchNormMetatype.module_metatype,
+        operator_metatypes.PTModuleBatchNormMetatype,
         operator_metatypes.PTAvgPool2dMetatype,
         operator_metatypes.PTAvgPool3dMetatype
     ],
@@ -68,9 +68,9 @@ DEFAULT_PT_QUANT_TRAIT_TO_OP_DICT = {
     ],
     QuantizationTrait.OUTPUT_QUANTIZATION_AS_WEIGHTS: [
         operator_metatypes.PTEmbeddingMetatype,
-        operator_metatypes.PTEmbeddingMetatype.module_metatype,
+        operator_metatypes.PTModuleEmbeddingMetatype,
         operator_metatypes.PTEmbeddingBagMetatype,
-        operator_metatypes.PTEmbeddingBagMetatype.module_metatype
+        operator_metatypes.PTModuleEmbeddingBagMetatype
     ]
 }  # type: Dict[QuantizationTrait, List[PTOperatorMetatype]]
 

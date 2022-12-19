@@ -86,7 +86,7 @@ from nncf.torch.debug import CallCountTracker
 from nncf.torch.debug import DebugInterface
 from nncf.torch.dynamic_graph.context import TracingContext
 from nncf.torch.graph.graph import PTNNCFGraph
-from nncf.torch.graph.operator_metatypes import PTConv2dMetatype
+from nncf.torch.graph.operator_metatypes import PTModuleConv2dMetatype
 from nncf.torch.graph.operator_metatypes import PTDepthwiseConv2dSubtype
 from nncf.torch.graph.transformations.commands import PTInsertionCommand
 from nncf.torch.graph.transformations.commands import PTTargetPoint
@@ -821,7 +821,7 @@ class QuantizationBuilder(PTCompressionAlgorithmBuilder):
             if weight_bitwidth:
                 is_applicable = False
                 target_node = target_model_graph.get_node_by_name(op_node_name)
-                if target_node.metatype in [PTConv2dMetatype.module_metatype, PTDepthwiseConv2dSubtype]:
+                if target_node.metatype in [PTModuleConv2dMetatype, PTDepthwiseConv2dSubtype]:
                     layer_attrs = target_node.layer_attributes
                     assert isinstance(layer_attrs, ConvolutionLayerAttributes)
                     padding_values = set(layer_attrs.padding_values)

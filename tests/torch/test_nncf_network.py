@@ -48,6 +48,7 @@ from nncf.torch.graph.operator_metatypes import PTInputNoopMetatype
 from nncf.torch.graph.operator_metatypes import PTOutputNoopMetatype
 from nncf.torch.graph.operator_metatypes import PTReshapeMetatype
 from nncf.torch.graph.operator_metatypes import PTConv2dMetatype
+from nncf.torch.graph.operator_metatypes import PTModuleConv2dMetatype
 from nncf.torch.graph.transformations.commands import PTInsertionCommand
 from nncf.torch.graph.transformations.commands import PTTargetPoint
 from nncf.torch.graph.transformations.layout import PTTransformationLayout
@@ -211,11 +212,11 @@ def test_custom_module_registering():
        'TwoConvTestModelWithUserModule/ModuleOfUser[user_module]/rand_like_0': UnknownMetatype,
        'TwoConvTestModelWithUserModule/ModuleOfUser[user_module]/conv2d_0': PTConv2dMetatype,
         'TwoConvTestModelWithUserModule/ModuleOfUser[user_module]/NNCFConv2d[conv]/conv2d_0':
-            PTConv2dMetatype.module_metatype,
+            PTModuleConv2dMetatype,
        'TwoConvTestModelWithUserModule/NNCFUserRegisteredModuleOfUser[registered_user_module]/rand_like_0':
            UnknownMetatype,
        'TwoConvTestModelWithUserModule/NNCFUserRegisteredModuleOfUser[registered_user_module]/conv2d_0':
-            PTConv2dMetatype.module_metatype,
+            PTModuleConv2dMetatype,
         'TwoConvTestModelWithUserModule/NNCFUserRegisteredModuleOfUser[registered_user_module]/Conv2d[conv]/conv2d_0':
            PTConv2dMetatype,
     }
@@ -537,22 +538,23 @@ class TestInsertionPointGraph:
                 assert pre_hook_ip.target_node_name == nncf_node.node_name
 
     def test_operator_metatype_marking(self):
-        from nncf.torch.graph.operator_metatypes import PTBatchNormMetatype, PTRELUMetatype, \
-            PTMaxPool2dMetatype, PTTransposeMetatype, \
-            PTConvTranspose2dMetatype, PTDepthwiseConv2dSubtype, PTAddMetatype, PTAvgPool2dMetatype, PTLinearMetatype
+        from nncf.torch.graph.operator_metatypes import (PTBatchNormMetatype, PTModuleBatchNormMetatype,
+            PTRELUMetatype, PTMaxPool2dMetatype, PTTransposeMetatype,
+            PTConvTranspose2dMetatype, PTModuleConvTranspose2dMetatype, PTDepthwiseConv2dSubtype,
+            PTAddMetatype, PTAvgPool2dMetatype, PTLinearMetatype, PTModuleLinearMetatype)
         ref_scope_vs_metatype_dict = {
             "/" + MODEL_INPUT_OP_NAME + "_0": PTInputNoopMetatype,
             "ModelForMetatypeTesting/NNCFConv2d[conv_regular]/conv2d_0":
-                PTConv2dMetatype.module_metatype,
+                PTModuleConv2dMetatype,
             "ModelForMetatypeTesting/NNCFBatchNorm2d[bn]/batch_norm_0":
-                PTBatchNormMetatype.module_metatype,
+                PTModuleBatchNormMetatype,
             "ModelForMetatypeTesting/batch_norm_0": PTBatchNormMetatype,
             "ModelForMetatypeTesting/relu_0": PTRELUMetatype,
             "ModelForMetatypeTesting/transpose__0": PTTransposeMetatype,
             "ModelForMetatypeTesting/MaxPool2d[max_pool2d]/max_pool2d_0":
                 PTMaxPool2dMetatype,
             "ModelForMetatypeTesting/NNCFConvTranspose2d[conv_transpose]/conv_transpose2d_0":
-                PTConvTranspose2dMetatype.module_metatype,
+                PTModuleConvTranspose2dMetatype,
             "ModelForMetatypeTesting/conv_transpose2d_0": PTConvTranspose2dMetatype,
             "ModelForMetatypeTesting/__add___0": PTAddMetatype,
             "ModelForMetatypeTesting/NNCFConv2d[conv_depthwise]/conv2d_0":
@@ -563,7 +565,7 @@ class TestInsertionPointGraph:
                 PTAvgPool2dMetatype,
             'ModelForMetatypeTesting/flatten_0': PTReshapeMetatype,
             "ModelForMetatypeTesting/NNCFLinear[linear]/linear_0":
-                PTLinearMetatype.module_metatype,
+                PTModuleLinearMetatype,
             "ModelForMetatypeTesting/linear_0": PTLinearMetatype,
             "/" + MODEL_OUTPUT_OP_NAME + "_0": PTOutputNoopMetatype,
         }
