@@ -28,7 +28,6 @@ from nncf.config.structures import ModelEvaluationArgs
 from nncf.tensorflow.utils.state import TFCompressionState
 from nncf.tensorflow.utils.state import TFCompressionStateLoader
 
-from examples.common.utils import print_maximal_degradation_warning
 from examples.tensorflow.common.argparser import get_common_argument_parser
 from examples.tensorflow.common.distributed import get_distribution_strategy
 from examples.tensorflow.common.logger import logger
@@ -371,7 +370,7 @@ def run(config):
                                                          tensorboard_writer=SummaryWriter(config.log_dir,
                                                                                           'accuracy_aware_training'),
                                                          log_dir=config.log_dir)
-            print_maximal_degradation_warning(config, acc_aware_training_loop.final_statistics, logger)
+            acc_aware_training_loop.print_maximal_degradation_warning(logger)
         else:
             train(train_step, test_step, eval_metric, train_dist_dataset, test_dist_dataset,
                   initial_epoch, initial_step, epochs, steps_per_epoch, checkpoint_manager,

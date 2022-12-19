@@ -26,7 +26,6 @@ from nncf.tensorflow.initialization import register_default_init_args
 from nncf.tensorflow.utils.state import TFCompressionState
 from nncf.tensorflow.utils.state import TFCompressionStateLoader
 
-from examples.common.utils import print_maximal_degradation_warning
 from examples.tensorflow.classification.datasets.builder import DatasetBuilder
 from examples.tensorflow.common.argparser import get_common_argument_parser
 from examples.tensorflow.common.callbacks import get_callbacks
@@ -250,7 +249,7 @@ def run(config):
         if is_accuracy_aware_training(config):
             logger.info('starting an accuracy-aware training loop...')
             result_dict_to_val_metric_fn = lambda results: 100 * results['acc@1']
-            final_statistics = compress_model.accuracy_aware_fit(
+            acc_aware_training_loop = compress_model.accuracy_aware_fit(
                 train_dataset,
                 compression_ctrl,
                 nncf_config=config.nncf_config,
@@ -262,7 +261,7 @@ def run(config):
                 uncompressed_model_accuracy=uncompressed_model_accuracy,
                 result_dict_to_val_metric_fn=result_dict_to_val_metric_fn,
                 **validation_kwargs)
-            print_maximal_degradation_warning(config, final_statistics, logger)
+            acc_aware_training_loop.print_maximal_degradation_warning(logger)
         else:
             logger.info('training...')
             compress_model.fit(

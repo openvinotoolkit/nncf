@@ -22,7 +22,6 @@ from torch.utils import data
 from examples.torch.common.argparser import parse_args
 from torch.optim.lr_scheduler import ReduceLROnPlateau
 
-from examples.common.utils import print_maximal_degradation_warning
 from examples.torch.common import restricted_pickle_module
 from examples.torch.common.argparser import get_common_argument_parser
 from examples.torch.common.distributed import DistributedSampler
@@ -252,7 +251,7 @@ def main_worker(current_gpu, config):
                                           configure_optimizers_fn=configure_optimizers_fn,
                                           tensorboard_writer=config.tb,
                                           log_dir=config.log_dir)
-        print_maximal_degradation_warning(config, acc_aware_training_loop.final_statistics, logger)
+        acc_aware_training_loop.print_maximal_degradation_warning(logger)
     elif 'train' in config.mode:
         train(net, compression_ctrl, train_data_loader, test_data_loader, criterion, optimizer, config, lr_scheduler)
 

@@ -37,7 +37,6 @@ from torchvision.datasets import CIFAR10
 from torchvision.datasets import CIFAR100
 from torchvision.models import InceptionOutputs
 
-from examples.common.utils import print_maximal_degradation_warning
 from examples.torch.common.argparser import parse_args
 from examples.torch.common.argparser import get_common_argument_parser
 from examples.torch.common.example_logger import logger
@@ -284,7 +283,7 @@ def main_worker(current_gpu, config: SampleConfig):
                                                 configure_optimizers_fn=configure_optimizers_fn,
                                                 tensorboard_writer=config.tb,
                                                 log_dir=config.log_dir)
-            print_maximal_degradation_warning(config, acc_aware_training_loop.final_statistics, logger)
+            acc_aware_training_loop.print_maximal_degradation_warning(logger)
         else:
             train(config, compression_ctrl, model, criterion, train_criterion_fn, lr_scheduler, model_name, optimizer,
                   train_loader, train_sampler, val_loader, best_acc1)
