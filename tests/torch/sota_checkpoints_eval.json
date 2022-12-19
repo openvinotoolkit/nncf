@@ -140,7 +140,7 @@
                 "resume": "mobilenet_v2_imagenet_int4_int8.pth",
                 "model_description": "MobileNet V2",
                 "compression_description": "Mixed, 58.88% INT8 / 41.12% INT4",
-                "diff_fp32_min": -1,
+                "diff_fp32_min": -1.2,
                 "diff_fp32_max": 0.4
             },
             "mobilenet_v2_imagenet_rb_sparsity_int8": {
