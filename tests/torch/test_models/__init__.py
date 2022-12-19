@@ -5,6 +5,7 @@ from .googlenet import *
 from .inceptionv3 import *
 from .lenet import *
 from .mobilenet import *
+from .mobilenet_v3 import *
 from .pnasnet import *
 from .preact_resnet import *
 from .resnet import *

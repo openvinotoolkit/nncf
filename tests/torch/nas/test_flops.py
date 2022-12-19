@@ -13,7 +13,7 @@
 from functools import partial
 
 import pytest
-from torchvision.models import mobilenet_v2
+from tests.torch.test_models import mobilenet_v2
 from torchvision.models import resnet50
 
 from examples.torch.common.models.classification.mobilenet_v2_cifar10 import mobilenet_v2_cifar10
