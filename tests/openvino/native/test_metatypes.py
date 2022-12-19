@@ -27,6 +27,7 @@ from nncf.experimental.openvino_native.graph.metatypes.openvino_metatypes import
 from nncf.experimental.openvino_native.graph.metatypes.openvino_metatypes import OVReshapeMetatype
 from nncf.experimental.openvino_native.graph.metatypes.openvino_metatypes import OVSubtractMetatype
 from nncf.experimental.openvino_native.graph.metatypes.openvino_metatypes import OVTransposeMetatype
+from nncf.experimental.openvino_native.graph.metatypes.openvino_metatypes import GENERAL_WEIGHT_LAYER_METATYPES
 
 from nncf.experimental.openvino_native.graph.nncf_graph_builder import GraphConverter
 
@@ -53,8 +54,6 @@ def test_mapping_openvino_metatypes(model_creator_func, ref_metatypes):
     actual_metatypes = [node.metatype for node in nncf_graph.get_all_nodes()]
     assert Counter(ref_metatypes) == Counter(actual_metatypes)
 
-
-from nncf.experimental.openvino_native.graph.metatypes.openvino_metatypes import GENERAL_WEIGHT_LAYER_METATYPES
 
 REF_WEIGHTS_PORT_IDS = {
      'Conv': 1,

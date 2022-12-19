@@ -22,7 +22,6 @@ from nncf.common.graph.transformations.commands import TargetPoint
 from nncf.common.graph.transformations.commands import TargetType
 from nncf.common.hardware.config import HWConfig
 from nncf.common.quantization.structs import QuantizerConfig
-# from nncf.common.quantization.structs import QuantizationMode
 from nncf.common.tensor_statistics.collectors import ReductionShape
 from nncf.common.tensor_statistics.statistics import MinMaxTensorStatistic
 from nncf.common.utils.backend import BackendType
@@ -30,12 +29,13 @@ from nncf.common.utils.backend import BackendType
 from nncf.experimental.openvino_native.graph.metatypes.openvino_metatypes import GENERAL_WEIGHT_LAYER_METATYPES
 from nncf.experimental.openvino_native.graph.transformations.commands import OVQuantizerInsertionCommand
 from nncf.experimental.openvino_native.graph.transformations.commands import OVTargetPoint
-from nncf.experimental.openvino_native.graph.transformations.commands import OVQuantizerLayerParameters
 from nncf.experimental.openvino_native.graph.model_transformer import OVModelTransformer
 
 from nncf.experimental.openvino_native.hardware.config import OVHWConfig
 from nncf.experimental.openvino_native.hardware.fused_patterns import OPENVINO_HW_FUSED_PATTERNS
 from nncf.experimental.openvino_native.quantization.default_quantization import DEFAULT_OV_QUANT_TRAIT_TO_OP_DICT
+from nncf.experimental.openvino_native.quantization.quantizer_parameters import calculate_activation_quantizer_parameters
+from nncf.experimental.openvino_native.quantization.quantizer_parameters import calculate_weight_quantizer_parameters
 
 from nncf.experimental.openvino_native.statistics.collectors import OVMeanMinMaxStatisticCollector
 from nncf.experimental.openvino_native.statistics.collectors import OVMinMaxStatisticCollector
@@ -79,11 +79,20 @@ class OVMinMaxAlgoBackend(MinMaxAlgoBackend):
         return OVTargetPoint(target_type, target_node_name, port_id)
 
     @staticmethod
-    def quantizer_insertion_command(target_point: OVTargetPoint,
-                                    quantizer_config: QuantizerConfig,
-                                    statistics: Union[MinMaxTensorStatistic, np.ndarray],
-                                    ) -> OVQuantizerInsertionCommand:
-        parameters = OVQuantizerLayerParameters(statistics, quantizer_config)
+    def create_activation_quantizer_insertion_command(target_point: OVTargetPoint,
+                                                      quantizer_config: QuantizerConfig,
+                                                      statistics: MinMaxTensorStatistic) \
+                                                      -> OVQuantizerInsertionCommand:
+        parameters = calculate_activation_quantizer_parameters(statistics, quantizer_config)
+        return OVQuantizerInsertionCommand(target_point, parameters)
+
+    @staticmethod
+    def create_weight_quantizer_insertion_command(target_point: OVTargetPoint,
+                                                  quantizer_config: QuantizerConfig,
+                                                  weight_tensor: np.ndarray,
+                                                  node: NNCFNode) -> OVQuantizerInsertionCommand:
+        axis = node.metatype.weight_definitions.weight_channel_axis if quantizer_config.per_channel else None
+        parameters = calculate_weight_quantizer_parameters(weight_tensor, quantizer_config, axis)
         return OVQuantizerInsertionCommand(target_point, parameters)
 
     @staticmethod
@@ -120,29 +129,3 @@ class OVMinMaxAlgoBackend(MinMaxAlgoBackend):
     @staticmethod
     def get_weight_config(config: QuantizerConfig, model: ov.Model) -> QuantizerConfig:
         return config
-
-
-# class OVQuantizerLayerParameters:
-#     """
-#     Class handles FakeQuantize op attributes.
-#     """
-#     def __init__(self,
-#                  statistics: Union[MinMaxTensorStatistic, np.ndarray],
-#                  quantizer_config: QuantizerConfig):
-#         # initialize_quantizer_parameters(statistics, quantizer_config)
-#         if isinstance(statistics, MinMaxTensorStatistic):
-#             self.input_low = np.array(statistics.min_values)
-#             self.input_high = np.array(statistics.max_values)
-#         else:
-#             per_channel = quantizer_config.per_channel
-#             axes = tuple(range(len(statistics.shape))[1:]) if per_channel else None
-#             self.input_low = np.amin(statistics, axis=axes)
-#             self.input_high = np.amax(statistics, axis=axes)
-
-#         self.levels = 2 ** quantizer_config.num_bits
-#         if quantizer_config.mode == QuantizationMode.SYMMETRIC:
-#             self.output_low = np.full_like(self.input_low, fill_value=-self.levels / 2)
-#             self.output_high = np.full_like(self.input_high, fill_value=self.levels / 2 - 1)
-#         else:
-#             self.output_low = np.zeros_like(self.input_low)
-#             self.output_high = np.full_like(self.input_high, fill_value=self.levels - 1)
