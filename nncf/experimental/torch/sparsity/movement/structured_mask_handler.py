@@ -53,10 +53,10 @@ class StructuredMaskContextStatistics:
         Initializes the statistics for the target linear module of a structured mask context.
 
         :param weight_shape: Shape of the original weight in a linear layer.
-        :param pruned_weight_shape: Shape of the weight after structured mask resolution, 
+        :param pruned_weight_shape: Shape of the weight after structured mask resolution,
             discarding the pruned regions.
         :param bias_shape: Shape of the original bias in a linear layer.
-        :param pruned_bias_shape: Shape of the bias after structured mask resolution, 
+        :param pruned_bias_shape: Shape of the bias after structured mask resolution,
             discarding the pruned regions.
         :param head_or_channel_id_to_keep: If the layer belongs to multi-head self-attention block,
             specifies the preserved head ids after structured masking. If the layer belongs to feed-

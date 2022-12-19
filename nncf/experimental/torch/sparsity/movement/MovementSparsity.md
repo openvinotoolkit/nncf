@@ -74,7 +74,7 @@ Following arguments have been defaulted to work well out of the box. However, yo
 
 - `initial_importance_threshold` & `final_importance_threshold`: Optional. In Movement Sparsity, a weight will be masked if an importance score is lower than the threshold. The threshold gradually increases from `initial_importance_threshold` to `final_importance_threshold` during warm-up stage. By default, `final_importance_threshold` is set to 0, and `initial_importance_threshold` is adaptively determined at the beginning of warm-up such that the model is at about 0.1% sparsity level in sparsifying layers. Specifying these arguments customizes starting and ending importance threshold values.
 - `power`: Optional. The importance threshold and regularization factor follow a concave polynomial warm-up schedule where its decay factor is parameterized by `power`. Default is 3.
-- `steps_per_epoch`: Optional. Number of steps per epoch is needed for threshold and regularization factor scheduling. It varies by dataset size and training hyperparameters. By default, this can be automatically derived during 1st epoch without any side effect, as long as `warmup_start_epoch` >= 1. Specification of `steps_per_epoch` is only required when warm-up sparsification is intended to start at epoch [0, 1).
+- `steps_per_epoch`: Optional. Number of steps per epoch is needed for threshold and regularization factor scheduling. It varies by dataset size and training hyperparameters. By default, this can be automatically derived during the first epoch without any side effect, as long as `warmup_start_epoch` >= 1. Specification of `steps_per_epoch` is only required when warm-up sparsification is intended to start at the first epoch.
 
 #### References
 

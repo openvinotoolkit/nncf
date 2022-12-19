@@ -35,7 +35,7 @@ class MovementSchedulerStage(IntEnum):
 
 class MovementSchedulerParams:
     """
-    Stores the params to initialize the scheduler of movement sparsity. 
+    Stores the params to initialize the scheduler of movement sparsity.
     """
 
     def __init__(self,
