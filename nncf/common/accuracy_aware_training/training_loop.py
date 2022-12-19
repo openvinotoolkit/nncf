@@ -376,7 +376,8 @@ class AdaptiveCompressionTrainingLoop(BaseEarlyExitCompressionTrainingLoop):
         self.runner.maximal_total_epochs = self.runner.initial_training_phase_epochs
         model = self._run_early_exit_training_loop(model)
         self.runner.maximal_total_epochs = maximal_total_epochs
-        self._final_model_compression_rate, self._final_model_accuracy = 0.0, 0.0
+        self._final_model_accuracy = 0.0
+        self._final_model_compression_rate = 0.0
 
         nncf_logger.info('Initial training phase finished.')
         return model

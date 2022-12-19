@@ -108,6 +108,11 @@ class PTAccuracyAwareTrainingRunner(BaseAccuracyAwareTrainingRunner):
             return
         super().dump_checkpoint(model, compression_controller)
 
+    def load_best_checkpoint(self, model):
+        if not is_main_process():
+            return
+        super().load_best_checkpoint(model)
+
     def _save_checkpoint(self, model, compression_controller, checkpoint_path):
         optimizers = self.optimizer if isinstance(self.optimizer, (tuple, list)) else [self.optimizer]
         checkpoint = {
