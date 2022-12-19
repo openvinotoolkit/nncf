@@ -35,7 +35,7 @@ class MovementSchedulerStage(IntEnum):
 
 class MovementSchedulerParams:
     """
-    Stores the params for `MovementPolynomialThresholdScheduler`.
+    Stores the params to initialize the scheduler of movement sparsity. 
     """
 
     def __init__(self,
@@ -51,8 +51,8 @@ class MovementSchedulerParams:
         """
         Initializes and validates the params for scheduler.
 
-        :param warmup_start_epoch: Index of the starting epoch (include) for warmup stage.
-        :param warmup_end_epoch: Index of the end epoch (exclude) for warmup stage.
+        :param warmup_start_epoch: Index of the starting epoch (inclusive) for warmup stage.
+        :param warmup_end_epoch: Index of the end epoch (exclusive) for warmup stage.
         :param importance_regularization_factor: The regularization factor on weight importance scores.
         :param enable_structured_masking: Whether to do structured mask resolution after warmup stage.
         :param init_importance_threshold: The initial value of importance threshold during warmup stage.
@@ -89,10 +89,10 @@ class MovementSchedulerParams:
     @classmethod
     def from_dict(cls, params: Dict[str, Any]) -> 'MovementSchedulerParams':
         """
-        Initialize `MovementSchedulerParams` class from Dict.
+        Initialize `MovementSchedulerParams` object from the config in dict format.
 
-        :param params: Dict with parameters of movement sparsity scheduler.
-        :return: The `MovementSchedulerParams` object.
+        :param params: A dict that specifies the parameters of movement sparsity scheduler.
+        :return: A `MovementSchedulerParams` object that stores the parameters from `params`.
         """
         warmup_start_epoch: int = params.get('warmup_start_epoch', None)
         warmup_end_epoch: int = params.get('warmup_end_epoch', None)
@@ -138,7 +138,7 @@ class MovementPolynomialThresholdScheduler(BaseCompressionScheduler):
         """
         Initializes a movement sparsity scheduler with a polynomial decay schedule.
 
-        :param controller: Movement Sparsity algorithm controller.
+        :param controller: Movement sparsity algorithm controller.
         :param params: Parameters for the scheduler.
         """
         super().__init__()
@@ -173,7 +173,7 @@ class MovementPolynomialThresholdScheduler(BaseCompressionScheduler):
         stays zero before warmup stage, and gradually increases during warmup, and stays at
         the fixed value after warmup.
 
-        :return: The value of importance regularization factor.
+        :return: The value of importance regularization factor at the current step.
         """
         current_stage = self.current_stage
         if current_stage == MovementSchedulerStage.PRE_WARMUP:
@@ -189,7 +189,7 @@ class MovementPolynomialThresholdScheduler(BaseCompressionScheduler):
         stays `-math.inf` before warmup stage, and gradually increases from `self._init_importance_threshold`
         during warmup, and finally stays fixed at the specified final value.
 
-        :return: The value of importance threshold.
+        :return: The value of importance threshold at the current step.
         """
         current_stage = self.current_stage
         if current_stage == MovementSchedulerStage.PRE_WARMUP:
@@ -236,7 +236,7 @@ class MovementPolynomialThresholdScheduler(BaseCompressionScheduler):
         """
         Asks and updates the controller during training steps. It (1) updates the importance threshold
         and importance regularization factor in the operand at each step; (2) freezes the controller
-        after warmup; (3) Calculates the initial importance threshold if unspecified; (4) Conduct
+        after warmup; (3) calculates the initial importance threshold if unspecified; (4) conducts
         structured masking if supported.
         """
         if self._init_importance_threshold is None and \

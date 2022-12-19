@@ -43,7 +43,7 @@ def detect_supported_model_family(model: NNCFNetwork) -> Optional[str]:
 
 class StructuredMaskRule:
     """
-    Defines the rule to resolve the structured mask in a certain layer.
+    Defines the rule to resolve the structured mask in a sparsifiable layer.
     """
 
     def __init__(self,
@@ -71,6 +71,7 @@ class BaseStructuredMaskStrategy(ABC):
     Strategy that defines how structured masking is conducted for certain
     building blocks in a model.
     """
+
     @classmethod
     @abstractmethod
     def from_compressed_model(cls, compressed_model: NNCFNetwork):
@@ -92,6 +93,17 @@ class BaseStructuredMaskStrategy(ABC):
 
 
 class BaseTransformerStructuredMaskStrategy(BaseStructuredMaskStrategy, ABC):
+    """
+    Base structured mask strategy class for Transformer models.
+
+    :param MHSA_Q: Match string for query layer in multi-head self-attention.
+    :param MHSA_K: Match string for key layer in multi-head self-attention.
+    :param MHSA_V: Match string for value layer in multi-head self-attention.
+    :param MHSA_O: Match string for output layer in multi-head self-attention.
+    :param FFN_I: Match string for intermediate layer in feed-forward network.
+    :param FFN_O: Match string for output layer in feed-forward network.
+    """
+
     MHSA_Q: str = '{re}query'
     MHSA_K: str = '{re}key'
     MHSA_V: str = '{re}value'

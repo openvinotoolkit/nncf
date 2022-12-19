@@ -21,7 +21,7 @@ def binary_mask_by_threshold(input_tensor: torch.Tensor,
                              threshold: float = 0.5,
                              max_percentile: float = 0.98) -> torch.Tensor:
     """
-    Conduct straight-through thresholding function while limits the maximum threshold.
+    Conduct straight-through thresholding function while limiting the maximum threshold.
 
     :param input_tensor: The tensor to conduct thresholding.
     :param threshold: The criterion for thresholding.
