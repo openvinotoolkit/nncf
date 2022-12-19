@@ -131,14 +131,16 @@ def test_adaptive_compression_training_loop(max_accuracy_degradation, final_comp
 
     result_dict_to_val_metric_fn = lambda results: results['inverse_loss']
 
-    final_statistics = compress_model.accuracy_aware_fit(dataset,
-                                                         compression_ctrl,
-                                                         nncf_config=config,
-                                                         callbacks=compression_callbacks,
-                                                         initial_epoch=0,
-                                                         steps_per_epoch=steps_per_epoch,
-                                                         uncompressed_model_accuracy=uncompressed_model_accuracy,
-                                                         result_dict_to_val_metric_fn=result_dict_to_val_metric_fn)
+    acc_aware_training_loop = compress_model.accuracy_aware_fit(
+        dataset,
+        compression_ctrl,
+        nncf_config=config,
+        callbacks=compression_callbacks,
+        initial_epoch=0,
+        steps_per_epoch=steps_per_epoch,
+        uncompressed_model_accuracy=uncompressed_model_accuracy,
+        result_dict_to_val_metric_fn=result_dict_to_val_metric_fn)
+    final_statistics = acc_aware_training_loop.final_statistics
     assert final_statistics['accuracy'] == pytest.approx(reference_final_metric, 1e-4)
     assert final_statistics['compression_rate'] == pytest.approx(final_compression_rate, 1e-3)
 
@@ -184,16 +186,17 @@ def test_early_exit_compression_training_loop(max_accuracy_degradation,
 
     result_dict_to_val_metric_fn = lambda results: results['inverse_loss']
 
-    final_statistics = compress_model.accuracy_aware_fit(dataset,
-                                                         compression_ctrl,
-                                                         nncf_config=config,
-                                                         callbacks=compression_callbacks,
-                                                         initial_epoch=0,
-                                                         steps_per_epoch=steps_per_epoch,
-                                                         uncompressed_model_accuracy=uncompressed_model_accuracy,
-                                                         result_dict_to_val_metric_fn=result_dict_to_val_metric_fn)
+    acc_aware_training_loop = compress_model.accuracy_aware_fit(
+        dataset,
+        compression_ctrl,
+        nncf_config=config,
+        callbacks=compression_callbacks,
+        initial_epoch=0,
+        steps_per_epoch=steps_per_epoch,
+        uncompressed_model_accuracy=uncompressed_model_accuracy,
+        result_dict_to_val_metric_fn=result_dict_to_val_metric_fn)
     original_model_accuracy = compress_model.original_model_accuracy
-    compressed_model_accuracy = final_statistics['accuracy']
+    compressed_model_accuracy = acc_aware_training_loop.final_statistics['accuracy']
 
     if "maximal_absolute_accuracy_degradation" in max_accuracy_degradation:
         assert (original_model_accuracy - compressed_model_accuracy) <= \
