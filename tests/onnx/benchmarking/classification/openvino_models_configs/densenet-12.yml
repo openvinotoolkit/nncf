@@ -8,9 +8,9 @@ models:
       - name: imagenet_1000_classes
         annotation_conversion:
           converter: imagenet
-          annotation_file: /mnt/nn_icv_cv_externalN/nn_icv_cv_externalN/omz-validation-datasets/val.txt
+          annotation_file: val.txt
         annotation: imagenet1000.pickle
-        data_source: /mnt/nn_icv_cv_externalN/nn_icv_cv_externalN/omz-validation-datasets/ILSVRC2012_img_val
+        data_source: ILSVRC2012_img_val
         reader: pillow_imread
         preprocessing:
           - type: resize

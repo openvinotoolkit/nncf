@@ -12,11 +12,11 @@ models:
       - name: VOC2012_without_background
         annotation_conversion:
           converter: voc_detection
-          annotations_dir: /mnt/nn_icv_cv_externalN/nn_icv_cv_externalN/omz-validation-datasets/VOCdevkit/VOC2012/Annotations
-          images_dir: /mnt/nn_icv_cv_externalN/nn_icv_cv_externalN/omz-validation-datasets/VOCdevkit/VOC2012/JPEGImages
-          imageset_file: /mnt/nn_icv_cv_externalN/nn_icv_cv_externalN/omz-validation-datasets/VOCdevkit/VOC2012/ImageSets/Main/val.txt
+          annotations_dir: VOCdevkit/VOC2012/Annotations
+          images_dir: VOCdevkit/VOC2012/JPEGImages
+          imageset_file: VOCdevkit/VOC2012/ImageSets/Main/val.txt
           has_background: False
-        data_source: /mnt/nn_icv_cv_externalN/nn_icv_cv_externalN/omz-validation-datasets/VOCdevkit/VOC2012/JPEGImages
+        data_source: VOCdevkit/VOC2012/JPEGImages
         annotation: voc12_without_background.pickle
         dataset_meta: voc12_without_background.json        
 

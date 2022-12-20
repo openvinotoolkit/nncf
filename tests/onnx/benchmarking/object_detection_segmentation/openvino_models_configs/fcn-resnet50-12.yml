@@ -9,7 +9,7 @@ models:
       - name: mscoco_segmentation_to_voc
         annotation_conversion:
           converter: mscoco_segmentation_to_voc
-          annotation_file: /mnt/nn_icv_cv_externalN/nn_icv_cv_externalN/omz-validation-datasets/MSCOCO/annotations/instances_val2017.json
+          annotation_file: MSCOCO/annotations/instances_val2017.json
           has_background: True
           sort_annotations: True
           semantic_only: True
@@ -20,7 +20,7 @@ models:
           convert_COCO_to_VOC_labels: True
         annotation: mscoco_segmentation_to_voc.pickle
         dataset_meta: mscoco_segmentation_to_voc.json
-        data_source: /mnt/nn_icv_cv_externalN/nn_icv_cv_externalN/omz-validation-datasets/MSCOCO/val2017
+        data_source: MSCOCO/val2017
         # Do not change segmentation_masks_source path
         segmentation_masks_source: .
 

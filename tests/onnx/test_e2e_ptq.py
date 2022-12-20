@@ -28,6 +28,7 @@ from tempfile import TemporaryDirectory
 import pandas as pd
 from yattag import Doc
 from yattag import indent
+import yaml
 
 import pytest
 from pytest_dependency import depends
@@ -263,6 +264,23 @@ def quantized_pot_model_accuracy(output_dir, is_pot, scope="function"):
     root_dir = output_dir
     return _read_accuracy_checker_result(root_dir, "pot-quantized", is_pot)
 
+def modify_ac_config(config_path, data_dir, anno_dir):
+    data = None
+    with open(config_path, 'r') as f:
+        data = yaml.load(f, Loader=yaml.loader.SafeLoader)
+        data['models'][0]['datasets'][0]['data_source'] = str(data_dir / Path(data['models'][0]['datasets'][0]['data_source']))
+        data['models'][0]['datasets'][0]['annotation_conversion']['annotation_file'] = str(data_dir / Path(data['models'][0]['datasets'][0]['annotation_conversion']['annotation_file']))
+        data['models'][0]['datasets'][0]['annotation'] = str(anno_dir / Path(data['models'][0]['datasets'][0]['annotation']))
+    with open(new_config_dir, 'w') as f:
+        f.write( yaml.dump(data, default_flow_style=False))
+
+@pytest.mark.parametrize("task_type, model_name", MODELS)
+def test_modify_config(task_type, model_name, model_names_to_test, data_dir, anno_dir):
+    check_skip_model(model_name, model_names_to_test)
+    task_path = BENCHMARKING_DIR / task_type
+    config_path = task_path / "openvino_models_configs" / (model_name + ".yml")
+    modify_ac_config(config_path,  data_dir, anno_dir)
+
 
 @pytest.mark.e2e_ptq
 @pytest.mark.run(order=1)
@@ -304,7 +322,8 @@ class TestPTQ:
         runner = Command(f"mo -m {model_path} -o {output_dir} -n {model_name}")
         runner.run()
 
-    def get_quantized_pot_model(self, model_dir, model_name, config_path):
+    def get_quantized_pot_model(self, model_dir, model_name, config_path, data_dir, anno_dir):
+        modify_ac_config(config_path,  data_dir, anno_dir)
         model_topology = str(model_dir / model_name) + '.xml'
         model_weights = str(model_dir / model_name) + '.bin'
         output_pot_model_dir = str(model_dir / model_name)
@@ -315,7 +334,7 @@ class TestPTQ:
 
     @pytest.mark.dependency()
     @pytest.mark.parametrize("task_type, model_name", MODELS)
-    def test_pot_model(self, task_type, model_name, model_dir, model_names_to_test, anno_dir, ckpt_dir, ptq_size):
+    def test_pot_model(self, task_type, model_name, model_dir, model_names_to_test, data_dir, anno_dir, ckpt_dir, ptq_size):
         check_skip_model(model_name, model_names_to_test)
         check_pot_quantized_xfail(model_name)
 
@@ -332,7 +351,8 @@ class TestPTQ:
         model_path = model_dir / task_type / (model_name + ".onnx")
         ir_model_dir = ckpt_dir / 'openvino'
         self.get_ir_model(model_path, model_name,  ir_model_dir)
-        self.get_quantized_pot_model(ir_model_dir, model_name, config_path)
+        self.modify_ac_config(config_path, data_dir, anno_dir)
+        self.get_quantized_pot_model(ir_model_dir, model_name, config_path, data_dir, anno_dir)
 
 @pytest.mark.run(order=2)
 class TestBenchmark:

@@ -4,5 +4,6 @@ pytest-ordering>=0.6
 torch==1.12.1
 torchvision==0.13.1
 yattag
+pyyaml
 # Pandas requires it for styling in e2e report generation
 Jinja2==3.1.1

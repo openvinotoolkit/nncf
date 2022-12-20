@@ -15,10 +15,10 @@ models:
             layout: "NHWC"
     datasets:
       - name: ms_coco_detection_80_class_with_background
-        data_source: /mnt/nn_icv_cv_externalN/nn_icv_cv_externalN/omz-validation-datasets/MSCOCO/val2017
+        data_source: MSCOCO/val2017
         annotation_conversion:
           converter: mscoco_detection
-          annotation_file: /mnt/nn_icv_cv_externalN/nn_icv_cv_externalN/omz-validation-datasets/MSCOCO/annotations/instances_val2017.json
+          annotation_file: MSCOCO/annotations/instances_val2017.json
           has_background: True
           sort_annotations: True
           use_full_label_map: False
