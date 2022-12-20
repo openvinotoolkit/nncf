@@ -1,7 +1,7 @@
 pytest-mock>=3.3.1
 pytest-dependency>=0.5.1
 pytest-ordering>=0.6
-torch==1.12.1
-torchvision==0.13.1
+torch==1.13.0
+torchvision==0.14.0
 # Pandas requires it for styling in e2e report generation
 Jinja2==3.1.1
