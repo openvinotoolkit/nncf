@@ -24,6 +24,26 @@ from nncf.parameters import IgnoredScope
 from nncf.parameters import convert_ignored_scope_to_list
 
 
+def matches_any(tested_str: str, str_or_list_to_match_to: Union[List[str], str]) -> bool:
+    """
+    Return True if tested_str matches at least one element in str_or_list_to_match_to.
+    """
+
+    if str_or_list_to_match_to is None:
+        return False
+
+    str_list = [str_or_list_to_match_to] if isinstance(str_or_list_to_match_to, str) else str_or_list_to_match_to
+    for item in str_list:
+        if "{re}" in item:
+            regex = item.replace("{re}", "")
+            if re.search(regex, tested_str):
+                return True
+        else:
+            if tested_str == item:
+                return True
+    return False
+
+
 def should_consider_scope(
     serializable_id: Union[QuantizerId, NNCFNodeName],
     ignored_scopes: List[str],
@@ -45,22 +65,6 @@ def should_consider_scope(
     string_id = str(serializable_id)
     return (target_scopes is None or matches_any(string_id, target_scopes)) \
                and not matches_any(string_id, ignored_scopes)
-
-
-def matches_any(tested_str: str, str_or_list_to_match_to: Union[List[str], str]) -> bool:
-    if str_or_list_to_match_to is None:
-        return False
-
-    str_list = [str_or_list_to_match_to] if isinstance(str_or_list_to_match_to, str) else str_or_list_to_match_to
-    for item in str_list:
-        if "{re}" in item:
-            regex = item.replace("{re}", "")
-            if re.search(regex, tested_str):
-                return True
-        else:
-            if tested_str == item:
-                return True
-    return False
 
 
 def get_not_matched_scopes(scope: Union[List[str], str, IgnoredScope], nodes: List[NNCFNode]) -> List[str]:
