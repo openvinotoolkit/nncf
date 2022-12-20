@@ -114,9 +114,9 @@ class BasePruningAlgoBuilder(TFCompressionAlgorithmBuilder):
             a list of pruning mask insertions.
         """
         converter = TFModelConverterFactory.create(model)
-        nncf_graph = converter.convert()
+        self._graph = converter.convert()
 
-        check_scopes_in_graph(nncf_graph, self.ignored_scopes, self.target_scopes)
+        check_scopes_in_graph(self._graph, self.ignored_scopes, self.target_scopes)
 
         groups_of_nodes_to_prune = self._pruning_node_selector.create_pruning_groups(self._graph)
 
