@@ -1,3 +1,10 @@
+
+JUNITXML_PATH ?= nncf-tests.xml
+MODELS_DIR ?= /models
+DATA_DIR ?= /datasets
+OUTPUT_DIR ?= /output
+ANNO_DIR ?= /annots
+
 install-onnx-dev:
 	pip install -U pip
 	pip install -e .[onnx]
@@ -9,7 +16,7 @@ install-onnx-dev:
 	pip install pylint==2.13.9
 
 test-onnx:
-	pytest tests/onnx --junitxml nncf-tests.xml
+	pytest tests/onnx --junitxml ${JUNITXML_PATH}
 
 PYFILES := $(shell find examples/post_training_quantization/onnx -type f -name "*.py")
 pylint-onnx:
@@ -20,18 +27,13 @@ pylint-onnx:
 		$(PYFILES)                         
 
 test-install-onnx:
-	pytest tests/cross_fw/install/ --backend onnx --junitxml nncf-tests.xml
+	pytest tests/cross_fw/install/ --backend onnx --junitxml ${JUNITXML_PATH}
 
 ONNX_E2E_PTQ_SIZE ?= 100
 ONNX_E2E_PTQ_EVAL_SIZE ?= 1000
-ONNX_E2E_PTQ_MODELS_DIR ?=
-ONNX_E2E_PTQ_DATA_DIR ?=
-ONNX_E2E_PTQ_OUTPUT_DIR ?=
-ONNX_E2E_PTQ_ANNO_DIR ?=
-ONNX_E2E_PTQ_JUNITXML ?=
-ONNX_E2E_OPTIONS=--model-dir ${ONNX_E2E_PTQ_MODELS_DIR} --data-dir ${ONNX_E2E_PTQ_DATA_DIR}  \
-				 --output-dir ${ONNX_E2E_PTQ_OUTPUT_DIR} --anno-dir ${ONNX_E2E_PTQ_ANNO_DIR} \
-                 --junitxml ${ONNX_E2E_PTQ_JUNITXML} --ptq-size ${ONNX_E2E_PTQ_SIZE} \
+ONNX_E2E_OPTIONS=--model-dir ${MODELS_DIR} --data-dir ${DATA_DIR}  \
+				 --output-dir ${OUTPUT_DIR} --anno-dir ${ANNO_DIR} \
+                 --junitxml ${JUNITXML_PATH} --ptq-size ${ONNX_E2E_PTQ_SIZE} \
                  --eval-size ${ONNX_E2E_PTQ_EVAL_SIZE}
 
 test-e2e-ptq-ov-ep-only:
@@ -40,5 +42,3 @@ test-e2e-ptq-ov-ep-only:
 test-e2e-ptq-cpu-ep-only:
 	pytest tests/onnx -m e2e_ptq ${ONNX_E2E_OPTIONS} --enable-cpu-ep --disable-ov-ep
 
-test-e2e-ptq-ov-cpu-eps:
-	pytest tests/onnx -m e2e_ptq ${ONNX_E2E_OPTIONS} --enable-cpu-ep
