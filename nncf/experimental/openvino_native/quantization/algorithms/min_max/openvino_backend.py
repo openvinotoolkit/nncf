@@ -11,7 +11,7 @@
  limitations under the License.
 """
 
-from typing import Dict, List, Tuple, Union
+from typing import Dict, List, Tuple
 import numpy as np
 import openvino.runtime as ov
 
@@ -42,7 +42,6 @@ from nncf.experimental.openvino_native.statistics.collectors import OVMinMaxStat
 
 from nncf.quantization.algorithms.min_max.backend import MinMaxAlgoBackend
 from nncf.quantization.algorithms.min_max.backend import ALGO_BACKENDS
-# from nncf.quantization.algorithms.min_max.utils import QuantizerLayerParameters
 
 
 @ALGO_BACKENDS.register(BackendType.OPENVINO)

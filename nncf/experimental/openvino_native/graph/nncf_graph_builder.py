@@ -11,18 +11,20 @@
  limitations under the License.
 """
 
+from typing import List, Optional, Type
 import openvino.runtime as ov
 
+from nncf.common.graph import BaseLayerAttributes
 from nncf.common.graph import NNCFGraph
 from nncf.common.graph.definitions import NNCFGraphNodeType
 from nncf.common.graph.layer_attributes import Dtype
 from nncf.common.graph.operator_metatypes import InputNoopMetatype
+from nncf.common.graph.operator_metatypes import OperatorMetatype
 from nncf.common.graph.operator_metatypes import OutputNoopMetatype
 
 from nncf.experimental.openvino_native.graph.metatypes.openvino_metatypes import OV_OPERATION_METATYPES
 from nncf.experimental.openvino_native.graph.metatypes.openvino_metatypes import GENERAL_WEIGHT_LAYER_METATYPES
-from nncf.experimental.openvino_native.graph.metatypes.openvino_metatypes import OVParameterMetatype
-from nncf.experimental.openvino_native.graph.metatypes.openvino_metatypes import OVResultMetatype
+from nncf.experimental.openvino_native.graph.metatypes.openvino_metatypes import OVConvolutionBackpropDataMetatype
 
 
 class GraphConverter:
@@ -56,6 +58,20 @@ class GraphConverter:
         return Dtype(conversion_map[ov_dtype])
 
     @staticmethod
+    def _filter_weight_input_ports(inputs: List[ov.Input], metatype: Type[OperatorMetatype]) -> List[ov.Input]:
+        """
+        Specifies the possible weight ports of the OpenVINO node.
+
+        :param inputs: OpenVINO node inputs.
+        :param metatype: NNCF meta type which corresponds to operation.
+        :return: OpenVINO node inputs that may contain weights.
+        """
+        if metatype == OVConvolutionBackpropDataMetatype:
+            return inputs[:2]
+        else:
+            return inputs
+
+    @staticmethod
     def _add_nncf_node(node: ov.Node, graph: NNCFGraph) -> None:
         """
         Creates NNCFNode from OpenVINO node and adds to the NNCFGraph.
@@ -63,7 +79,7 @@ class GraphConverter:
         :param node: OpenVINO node.
         :param graph: NNCFGraph.
         """
-        ov_dtype = node.get_element_type()
+        ov_dtype = node.get_element_type().get_type_name()
         nncf_dtype = GraphConverter.convert_ov_dtype_to_nncf_dtype(ov_dtype)
         node_type = node.get_type_name()
         metatype = OV_OPERATION_METATYPES.get_operator_metatype_by_op_name(node_type)
@@ -101,11 +117,10 @@ class GraphConverter:
         while inference_nodes:
             node = inference_nodes[0]
             inference_nodes = inference_nodes[1:]
-            if node.get_friendly_name() not in visited and GraphConverter._is_valid_openvino_metatype(node):
+            if node.get_friendly_name() not in visited:
                 GraphConverter._add_nncf_node(node, nncf_graph)
                 visited.add(node.get_friendly_name())
-                inference_nodes.extend([inp.get_node() for out in node.outputs()
-                                        for inp in out.get_target_inputs()])
+                inference_nodes.extend([inp.get_node() for out in node.outputs() for inp in out.get_target_inputs()])
 
         for node in model.get_ops():
             node_type = node.get_type_name()
@@ -115,11 +130,11 @@ class GraphConverter:
                 GraphConverter._add_nncf_node(node, nncf_graph)
             # Set weight port id
             elif metatype in GENERAL_WEIGHT_LAYER_METATYPES:
-                for inp in node.input_values():
-                    inp_name = inp.get_node().get_friendly_name()
+                for inp in GraphConverter._filter_weight_input_ports(node.inputs(), metatype):
+                    inp_name = inp.get_source_output().get_node().get_friendly_name()
                     if inp_name not in visited:
                         nncf_node = nncf_graph.get_node_by_name(node.get_friendly_name())
-                        nncf_node.layer_attributes.weight_port_id = inp.get_index()
+                        nncf_node.layer_attributes = OVWeightedLayerAttributes(weight_port_id=inp.get_index())
                         break
 
         for op in model.get_ops():
@@ -141,3 +156,17 @@ class GraphConverter:
                     )
 
         return nncf_graph
+
+
+class OVWeightedLayerAttributes(BaseLayerAttributes):
+    """
+    This class stores weight and bias port indices of layers for the algorithms.
+    """
+
+    def __init__(self, weight_port_id: Optional[int] = None, bias_port_id: Optional[int] = None):
+        """
+        :param weight_port_id: Index of weight port. Should be None if layer without weights.
+        :param bias_port_id: Index of bias port. Should be None if layer without bias.
+        """
+        self.weight_port_id = weight_port_id
+        self.bias_port_id = bias_port_id

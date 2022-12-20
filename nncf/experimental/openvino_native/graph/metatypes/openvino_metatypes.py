@@ -11,8 +11,8 @@
  limitations under the License.
 """
 
-from typing import List
-from typing import Type
+from typing import List, Type
+from dataclasses import dataclass
 
 from nncf.common.graph.operator_metatypes import INPUT_NOOP_METATYPES
 from nncf.common.graph.operator_metatypes import OUTPUT_NOOP_METATYPES
@@ -31,18 +31,42 @@ class OVOpMetatype(OperatorMetatype):
         return cls.op_names
 
 
+@dataclass
+class OpWeightDef:
+    """
+    Contains the information about the weight of the operation.
+
+    :param weight_channel_axis: Axis for weight per-channel quantization, meaning the number of output filters.
+    """
+    weight_channel_axis: int
+
+
+class OVOpWithWeightsMetatype(OVOpMetatype):
+    weight_definition = None  # type: OpWeightDef
+
+
 @OV_OPERATION_METATYPES.register()
 class OVConvolutionMetatype(OVOpMetatype):
     name = 'ConvOp'
     op_names = ['Convolution']
     hw_config_names = [HWConfigOpName.CONVOLUTION]
+    weight_definitions = OpWeightDef(weight_channel_axis=0)
 
 
 @OV_OPERATION_METATYPES.register()
 class OVConvolutionBackpropDataMetatype(OVOpMetatype):
-    name = 'ConvTransposeOp'
+    name = 'ConvBackpropDataOp'
     op_names = ['ConvolutionBackpropData']
     hw_config_names = [HWConfigOpName.CONVOLUTION]
+    weight_definitions = OpWeightDef(weight_channel_axis=0)
+
+
+@OV_OPERATION_METATYPES.register()
+class OVMatMulMetatype(OVOpMetatype):
+    name = 'MatMulOp'
+    op_names = ['MatMul']
+    hw_config_names = [HWConfigOpName.MATMUL]
+    weight_definitions = OpWeightDef(weight_channel_axis=0)
 
 
 @OV_OPERATION_METATYPES.register()
@@ -364,13 +388,6 @@ class OVLogMetatype(OVOpMetatype):
 class OVRoiAlignMetatype(OVOpMetatype):
     name = 'RoiAlignOp'
     op_names = ['ROIAlign']
-
-
-@OV_OPERATION_METATYPES.register()
-class OVMatMulMetatype(OVOpMetatype):
-    name = 'MatMulOp'
-    op_names = ['MatMul']
-    hw_config_names = [HWConfigOpName.MATMUL]
 
 
 @OV_OPERATION_METATYPES.register()

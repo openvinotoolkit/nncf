@@ -133,8 +133,9 @@ class OVModelTransformer(ModelTransformer):
             self,
             transformations: List[OVQuantizerInsertionCommand]) -> None:
         """
-        Applies transformations on the model
-        :param transformations: lisf of the TransformationCommand transformations
+        Applies transformations on the model.
+
+        :param transformations: List of the OVQuantizerInsertionCommand transformations.
         """
         for transformation in transformations:
             self._insert_fake_quantize_op(transformation)

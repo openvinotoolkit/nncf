@@ -184,7 +184,10 @@ class PostTrainingQuantization(Algorithm):
                statistic_points: Optional[StatisticPointsContainer] = None,
                dataset: Optional[Dataset] = None) -> TModel:
 
-        modified_model = deepcopy(model)
+        if backend == BackendType.OPENVINO:
+            modified_model = model.clone()
+        else:
+            modified_model = deepcopy(model)
         if statistic_points is None:
             backend = get_backend(modified_model)
 

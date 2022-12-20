@@ -68,8 +68,7 @@ def test_determining_weights_port():
      nncf_graph = GraphConverter.create_nncf_graph(model)
      counter = 0
      for node in nncf_graph.get_all_nodes():
-          if node.metatype in GENERAL_WEIGHT_LAYER_METATYPES:
-               if 'weight_port_id' in node.layer_attributes:
-                    counter += 1
-                    assert node.layer_attributes.weight_port_id == REF_WEIGHTS_PORT_IDS[node.node_name]
-     assert counter == len(REF_METATYPES_COUNTERS)
+          if node.layer_attributes is not None:
+               counter += 1
+               assert node.layer_attributes.weight_port_id == REF_WEIGHTS_PORT_IDS[node.node_name]
+     assert counter == len(REF_WEIGHTS_PORT_IDS)

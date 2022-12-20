@@ -360,6 +360,7 @@ class MinMaxQuantization(Algorithm):
                statistic_points: Optional[StatisticPointsContainer] = None,
                dataset: Optional[Dataset] = None) -> TModel:
         transformation_layout, transformation_commands = TransformationLayout(), []
+        nncf_graph = NNCFGraphFactory.create(model) if self.nncf_graph is None else self.nncf_graph
         model_transformer = self._backend_entity.model_transformer(model)
 
         quantization_target_points = self._get_quantization_target_points(model)
@@ -367,6 +368,7 @@ class MinMaxQuantization(Algorithm):
 
         for quantization_target_point, qconfig in quantization_target_points.items():
             target_node_name = quantization_target_point.target_node_name
+            node = nncf_graph.get_node_by_name(target_node_name)
             if quantization_target_point.type == TargetType.OPERATION_WITH_WEIGHTS:
                 weight_tensor_name, weight_tensor = self._backend_entity.get_weight_tensor(model,
                                                                                            quantization_target_point)

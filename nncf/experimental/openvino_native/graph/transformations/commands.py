@@ -11,16 +11,11 @@
  limitations under the License.
 """
 
-from typing import Union
-import numpy as np
-
 from nncf.common.graph.transformations.commands import TargetPoint
 from nncf.common.graph.transformations.commands import TargetType
 from nncf.common.graph.transformations.commands import TransformationCommand
 from nncf.common.graph.transformations.commands import TransformationType
-from nncf.common.quantization.structs import QuantizerConfig
-from nncf.common.quantization.structs import QuantizationMode
-from nncf.common.tensor_statistics.statistics import MinMaxTensorStatistic
+from nncf.experimental.openvino_native.quantization.quantizer_parameters import OVQuantizerLayerParameters
 
 
 class OVTargetPoint(TargetPoint):
@@ -48,3 +43,28 @@ class OVTargetPoint(TargetPoint):
             if self.__getattribute__(param) > other.__getattribute__(param):
                 return False
         return False
+
+
+class OVInsertionCommand(TransformationCommand):
+    def __init__(self, target_point: OVTargetPoint):
+        super().__init__(TransformationType.INSERT, target_point)
+
+    def union(self, other: 'TransformationCommand') -> 'TransformationCommand':
+        # Have a look at nncf/torch/graph/transformations/commands/PTInsertionCommand
+        raise NotImplementedError()
+
+
+class OVOutputInsertionCommand(OVInsertionCommand):
+    def union(self, other: 'TransformationCommand') -> 'TransformationCommand':
+        # Have a look at nncf/torch/graph/transformations/commands/PTInsertionCommand
+        raise NotImplementedError()
+
+
+class OVQuantizerInsertionCommand(OVInsertionCommand):
+    def __init__(self, target_point: OVTargetPoint, quantizer_parameters: OVQuantizerLayerParameters):
+        super().__init__(target_point)
+        self.quantizer_parameters = quantizer_parameters
+
+    def union(self, other: 'TransformationCommand') -> 'TransformationCommand':
+        # Have a look at nncf/torch/graph/transformations/commands/PTInsertionCommand
+        raise NotImplementedError()

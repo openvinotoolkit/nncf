@@ -14,6 +14,7 @@
 import numpy as np
 
 from nncf.common.tensor import NNCFTensor
+from nncf.parameters import TargetDevice
 
 
 class OVNNCFTensor(NNCFTensor):
@@ -26,4 +27,4 @@ class OVNNCFTensor(NNCFTensor):
 
     @property
     def device(self):
-        return 'CPU'
+        return TargetDevice.CPU.value
