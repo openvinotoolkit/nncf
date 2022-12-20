@@ -22,6 +22,11 @@ def pytest_addoption(parser):
         help="[e2e-test-onnx-model-zoo] Directory path to OMZ validation datasets"
     )
     parser.addoption(
+        "--model-names", type=str, default=None,
+        help="[e2e-test-onnx-model-zoo] String containing model names. "
+             "Please, provide the model names using ' ' as a separator."
+    )
+    parser.addoption(
         "--data-dir", type=str, default=None,
         help="[e2e-test-onnx-model-zoo] Directory path to OMZ validation datasets"
     )

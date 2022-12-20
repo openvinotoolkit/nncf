@@ -15,7 +15,7 @@ limitations under the License.
 """
 
 # pylint: disable=redefined-outer-name
-from typing import List, Dict
+from typing import List, Dict, Optional
 
 import json
 import math
@@ -80,6 +80,11 @@ def check_quantized_xfail(model_name):
         pytest.xfail("ONNXRuntime-OVEP cannot execute the quantized model")
 
 
+def check_skip_model(model_name: str, model_names_to_test: Optional[List[str]]):
+    if model_names_to_test is not None and model_name not in model_names_to_test:
+        pytest.skip(f'The model {model_name} is skipped, because it was not included in --model-names.')
+
+
 def run_command(command: List[str]):
     com_str = ' '.join(command)
     nncf_logger.info(f"Run command: {com_str}")
@@ -101,6 +106,16 @@ def model_dir(request):
     if option is None:
         pytest.skip(f"--model-dir option is required to run {request.node.name}")
     return Path(option)
+
+
+@pytest.fixture(scope="module")
+def model_names_to_test(request):
+    option = request.config.getoption("--model-names")
+    if option is None:
+        nncf_logger.info('All models will be tested')
+        return option
+    option = option.split(' ')
+    return option
 
 
 @pytest.fixture(scope="module")
@@ -233,8 +248,9 @@ def quantized_model_accuracy(output_dir, scope="function"):
 class TestPTQ:
     @pytest.mark.dependency()
     @pytest.mark.parametrize("task_type, model_name", MODELS)
-    def test_ptq_model(self, task_type, model_name, model_dir, data_dir, anno_dir, ckpt_dir, ptq_size):
-
+    def test_ptq_model(self, task_type, model_name, model_names_to_test, model_dir, data_dir, anno_dir, ckpt_dir,
+                       ptq_size):
+        check_skip_model(model_name, model_names_to_test)
         check_xfail(model_name)
 
         program_path = BENCHMARKING_DIR / "run_ptq.py"
@@ -318,9 +334,9 @@ class TestBenchmark:
 
     @pytest.mark.e2e_eval_reference_model
     @pytest.mark.parametrize("task_type, model_name", MODELS)
-    def test_reference_model_accuracy(self, task_type, model_name, model_dir,
+    def test_reference_model_accuracy(self, task_type, model_name, model_names_to_test, model_dir,
                                       data_dir, anno_dir, output_dir, eval_size):
-
+        check_skip_model(model_name, model_names_to_test)
         check_xfail(model_name)
         # Reference accuracy validation is performed on CPUExecutionProvider
         command = self.get_ac_command(task_type, model_name, model_dir, data_dir, anno_dir, output_dir, eval_size,
@@ -330,9 +346,9 @@ class TestBenchmark:
     @pytest.mark.e2e_ptq
     @pytest.mark.dependency()
     @pytest.mark.parametrize("task_type, model_name", MODELS)
-    def test_quantized_model_accuracy(self, request, task_type, model_name, ckpt_dir, data_dir, anno_dir, output_dir,
-                                      eval_size, is_ov_ep, is_cpu_ep):
-
+    def test_quantized_model_accuracy(self, request, task_type, model_name, model_names_to_test, ckpt_dir, data_dir,
+                                      anno_dir, output_dir, eval_size, is_ov_ep, is_cpu_ep):
+        check_skip_model(model_name, model_names_to_test)
         # Run PTQ first
         depends(request, ["TestPTQ::test_ptq_model" + request.node.name.lstrip("test_quantized_model_accuracy")])
         check_xfail(model_name)
@@ -484,8 +500,9 @@ class TestBenchmarkResult:
     @pytest.mark.e2e_ptq
     @pytest.mark.dependency()
     @pytest.mark.parametrize("task_type, model_name", MODELS)
-    def test_model_accuracy(self, request, task_type, model_name, reference_model_accuracy,
+    def test_model_accuracy(self, request, task_type, model_name, model_names_to_test, reference_model_accuracy,
                             quantized_model_accuracy):
+        check_skip_model(model_name, model_names_to_test)
         # Run PTQ first
         depends(request, ["TestPTQ::test_ptq_model" + request.node.name.lstrip("test_quantized_model_performance")])
         check_xfail(model_name)
