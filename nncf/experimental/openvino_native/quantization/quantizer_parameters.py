@@ -55,8 +55,8 @@ def calculate_weight_quantizer_parameters(weight_tensor: np.ndarray, quantizer_c
         axes = tuple(axes)
     else:
         axes = None
-    input_high = np.amax(weight_tensor, axis=axes)
-    input_low = np.amin(weight_tensor, axis=axes)
+    input_high = np.amax(weight_tensor, axis=axes, keepdims=True)
+    input_low = np.amin(weight_tensor, axis=axes, keepdims=True)
 
     levels = 2 ** quantizer_config.num_bits
     if quantizer_config.mode == QuantizationMode.SYMMETRIC:
