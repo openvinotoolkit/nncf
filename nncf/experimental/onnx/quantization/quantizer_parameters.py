@@ -107,9 +107,8 @@ def calculate_weight_quantizer_parameters(weight_tensor: np.ndarray, quantizer_c
     # The weight is restricted to have only signed range.
     tensor_type = np.int8
     if quantizer_config.signedness_to_force is not None and not quantizer_config.signedness_to_force:
-        nncf_logger.warning('The HW expects to have signed quantization of weights, '
-                            'while the quantizer configuration for weights contains signedness_to_force=False.')
-        tensor_type = np.uint8
+        raise ValueError('The HW expects to have signed quantization of weights, '
+                         'while the quantizer configuration for weights contains signedness_to_force=False.')
     input_high = np.amax(weight_tensor, axis=axes)
     input_low = np.amin(weight_tensor, axis=axes)
     level_low, level_high = get_level_low_level_high(tensor_type, quantizer_config.num_bits)

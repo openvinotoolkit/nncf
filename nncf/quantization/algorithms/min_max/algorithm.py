@@ -78,22 +78,22 @@ class MinMaxQuantizationParameters(AlgorithmParameters):
         """
         :param number_samples: Number of samples for the statistics collection.
         :param preset: Preset parameter for Quantization.
-        Defines the mode: symmetric or asymmetric of the activation quantizers.
+            Defines the mode: symmetric or asymmetric of the activation quantizers.
         :param weight_bits: Bitwidth for the weight quantizers.
         :param weight_granularity: Type of quantization granularity for weight quantizers.
-        Could be per-channel or per-tensor.
+            Could be per-channel or per-tensor.
         :param weight_signedness_to_force: Defines whether the datatype of the weight quantizers should be forced.
-        True if the quantizer *must* be signed, False if *must* be unsigned,
-        None if the signed/unsigned attribute should be determined based on the incoming activation
-        statistics during range initialization.
+            True if the quantizer *must* be signed, False if *must* be unsigned,
+            None if the signed/unsigned attribute should be determined based on the incoming activation
+            statistics during range initialization.
         :param activation_bits: Bitwidth for the activation quantizers.
         :param activation_granularity: Type of quantization granularity for activation quantizers.
-        Could be per-channel or per-tensor.
+            Could be per-channel or per-tensor.
         :param activation_signedness_to_force: Defines whether the datatype of the activation quantizers
-         should be forced. True if the quantizer *must* be signed, False if *must* be unsigned,
-        None if the signed/unsigned attribute should be determined based on the incoming activation
-        statistics during range initialization.
-        activation_signedness_to_force
+            should be forced. True if the quantizer *must* be signed, False if *must* be unsigned,
+            None if the signed/unsigned attribute should be determined based on the incoming activation
+            statistics during range initialization.
+            activation_signedness_to_force
         :param target_device: Target device for the settings of the quantization pipeline.
         :param range_type: Type of statistics range calculation.
         :param quantize_outputs: Boolean value that says whether quantize outputs or not.
@@ -105,15 +105,14 @@ class MinMaxQuantizationParameters(AlgorithmParameters):
         self.quantize_outputs = quantize_outputs
         self.ignored_scopes = [] if ignored_scopes is None else ignored_scopes
         self.global_quantizer_constraints = {}
-        weight_per_channel, activation_per_channel = None, None
         if weight_granularity is not None:
-            weight_per_channel = weight_granularity == Granularity.PERCHANNEL
+            weight_granularity = weight_granularity == Granularity.PERCHANNEL
         if activation_granularity is not None:
-            activation_per_channel = activation_granularity == Granularity.PERCHANNEL
+            activation_granularity = activation_granularity == Granularity.PERCHANNEL
         q_weight_constraints = self._get_quantizer_constraints(QuantizerGroup.WEIGHTS, preset, weight_bits,
-                                                               weight_per_channel, weight_signedness_to_force)
+                                                               weight_granularity, weight_signedness_to_force)
         q_activation_constraints = self._get_quantizer_constraints(QuantizerGroup.ACTIVATIONS, preset, activation_bits,
-                                                                   activation_per_channel,
+                                                                   activation_granularity,
                                                                    activation_signedness_to_force)
         self.global_quantizer_constraints[QuantizerGroup.WEIGHTS] = q_weight_constraints
         self.global_quantizer_constraints[QuantizerGroup.ACTIVATIONS] = q_activation_constraints
@@ -126,12 +125,12 @@ class MinMaxQuantizationParameters(AlgorithmParameters):
 
         :param group: Quantizer groups.
         :param preset: Quantization preset.
-        :param num_bits: Bitwidth of Quantizers.
-        :param per_channel: Per-channel ot per-tensor granularity
+        :param num_bits: Bitwidth of quantizers.
+        :param per_channel: Per-channel ot per-tensor granularity.
         :param signedness_to_force: True if the quantizer *must* be signed, False if *must* be unsigned,
-        None if the signed/unsigned attribute should be determined based on the incoming activation
-        statistics during range initialization.
-        :return:
+            None if the signed/unsigned attribute should be determined based on the incoming activation
+            statistics during range initialization.
+        :return: QuantizationConstraints.
         """
         constraints = {'mode': preset.get_params_configured_by_preset(group)['mode']}
         if num_bits is not None:
