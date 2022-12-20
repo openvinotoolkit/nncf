@@ -187,3 +187,39 @@ class RBSparsityStatistics(Statistics):
             f'Statistics of the RB-sparsity algorithm:\n{algorithm_string}'
         )
         return pretty_string
+
+
+class MovementSparsityStatistics(Statistics):
+    """
+    Contains statistics of the movement-sparsity algorithm.
+    """
+
+    def __init__(self,
+                 model_statistics: SparsifiedModelStatistics,
+                 importance_threshold: float,
+                 importance_regularization_factor: float):
+        """
+        Initializes statistics of the movement-sparsity algorithm.
+
+        :param model_statistics: Statistics of the sparsified model.
+        :param importance_threshold: Importance threshold for sparsity binary mask.
+        :param importance_regularization_factor: Penalty factor of importance score.
+        """
+        self.model_statistics = model_statistics
+        self.importance_threshold = importance_threshold
+        self.importance_regularization_factor = importance_regularization_factor
+
+    def to_str(self) -> str:
+        algorithm_string = create_table(
+            header=['Statistic\'s name', 'Value'],
+            rows=[
+                ['Mask Importance Threshold', self.importance_threshold],
+                ['Importance Regularization Factor', self.importance_regularization_factor],
+            ]
+        )
+
+        pretty_string = (
+            f'{self.model_statistics.to_str()}\n\n'
+            f'Statistics of the movement-sparsity algorithm:\n{algorithm_string}'
+        )
+        return pretty_string

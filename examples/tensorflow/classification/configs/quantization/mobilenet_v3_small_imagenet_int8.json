@@ -17,6 +17,8 @@
         }
     },
 
+    "disable_tensor_float_32_execution": true,
+
     "dataset": "imagenet2012",
     "dataset_type": "tfds",
 

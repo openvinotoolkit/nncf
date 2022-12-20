@@ -221,6 +221,9 @@ def train(train_step, train_dist_dataset, initial_epoch, initial_step,
 
 
 def run_train(config):
+    if config.disable_tensor_float_32_execution:
+        tf.config.experimental.enable_tensor_float_32_execution(False)
+
     strategy = get_distribution_strategy(config)
 
     # Create dataset

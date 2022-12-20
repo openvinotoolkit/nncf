@@ -236,6 +236,16 @@ LIST_TEST_DESCS = [
         metatype_cls=PTLinearMetatype
     ),
     LayerAttributesTestDesc(
+        module=nn.Linear(1, 1, bias=False),
+        model_input_info_list=[ModelInputInfo([1, 1, 1, 1])],
+        layer_attributes=LinearLayerAttributes(
+            weight_requires_grad=True,
+            in_features=1,
+            out_features=1,
+            bias=False),
+        metatype_cls=PTLinearMetatype
+    ),
+    LayerAttributesTestDesc(
         module=nn.Embedding(2, 1),
         model_input_info_list=[ModelInputInfo([1, 1], type_str='long')],
         layer_attributes=GenericWeightedLayerAttributes(
