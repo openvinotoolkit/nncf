@@ -7,7 +7,7 @@ from nncf.torch.dynamic_graph.trace_tensor import TracedTensor
 from nncf.torch.dynamic_graph.trace_tensor import TensorMeta
 
 
-def test_get_all_aliaces_is_valid():
+def test_get_all_aliases_is_valid():
     operator_names_to_function_name = {}
     for operator in PT_OPERATOR_METATYPES.registry_dict:
         operator_names_to_function_name[operator] = PT_OPERATOR_METATYPES.get(operator).get_all_aliases()
