@@ -27,6 +27,14 @@ from nncf.parameters import convert_ignored_scope_to_list
 def matches_any(tested_str: str, str_or_list_to_match_to: Union[List[str], str]) -> bool:
     """
     Return True if tested_str matches at least one element in str_or_list_to_match_to.
+
+    :param tested_str: One of the supported entity types to be matched - currently possible to pass either
+        NNCFNodeName (to refer to the original model operations) or QuantizerId (to refer to specific quantizers).
+    :param str_or_list_to_match_to: A list of strings specifying for the serializable_id. Entries of the strings
+        may be prefixed with `{re}` to enable regex matching.
+
+    :return: A boolean value specifying whether a tested_str should matches at least one element
+        in str_or_list_to_match_to.
     """
 
     if str_or_list_to_match_to is None:
@@ -50,11 +58,10 @@ def should_consider_scope(
     target_scopes: Optional[List[str]] = None,
 ) -> bool:
     """
-    Used when an entity arising during compression has to be compared to an allowlist or a denylist of strings
-    (potentially regex-enabled) that is defined in an NNCFConfig .json.
+    Used when an entity arising during compression has to be compared to an allowlist or a denylist of strings.
 
     :param serializable_id: One of the supported entity types to be matched - currently possible to pass either
-    NNCFNodeName (to refer to the original model operations) or QuantizerId (to refer to specific quantizers)
+        NNCFNodeName (to refer to the original model operations) or QuantizerId (to refer to specific quantizers)
     :param ignored_scopes: A list of strings specifying a denylist for the serializable_id. Entries of the list
         may be prefixed with `{re}` to enable regex matching.
     :param target_scopes: A list of strings specifying an allowlist for the serializable_id. Entries of the list
