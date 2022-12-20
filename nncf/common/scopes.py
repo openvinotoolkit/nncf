@@ -104,7 +104,8 @@ def check_scopes_in_graph(
     Raise RuntimeError in case if ignored/target scope names do not match model graph.
 
     :param graph: The model graph.
-    :param ignored_scopes: The instance of IgnoredScope or a list of strings specifying a denylist for the serializable_id.
+    :param ignored_scopes: The instance of IgnoredScope or a list of strings specifying a denylist
+        for the serializable_id.
     :param target_scopes: A list of strings specifying an allowlist for the serializable_id.
     """
     node_list = graph.get_all_nodes()
@@ -114,7 +115,7 @@ def check_scopes_in_graph(
     if not_matched_ignored_scopes or not_matched_target_scopes:
         err_message = (
             "No match has been found among the model operations "
-            f"for the following ignored/target scope definitions:\n"
+            "for the following ignored/target scope definitions:\n"
         )
         if not_matched_ignored_scopes:
             err_message += f" - ignored_scope: {not_matched_ignored_scopes}\n"
