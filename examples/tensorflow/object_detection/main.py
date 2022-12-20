@@ -373,7 +373,7 @@ def run(config):
                                                          tensorboard_writer=SummaryWriter(config.log_dir,
                                                                                           'accuracy_aware_training'),
                                                          log_dir=config.log_dir)
-            acc_aware_training_loop.print_maximal_degradation_warning(logger)
+            logger.info(f'Final model statistics:\n{acc_aware_training_loop.final_statistics.to_str()}')
         else:
             train(train_step, test_step, eval_metric, train_dist_dataset, test_dist_dataset,
                   initial_epoch, initial_step, epochs, steps_per_epoch, checkpoint_manager,

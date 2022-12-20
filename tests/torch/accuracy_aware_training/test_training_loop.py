@@ -132,8 +132,8 @@ def test_adaptive_compression_training_loop(max_accuracy_degradation,
                                         validate_fn=partial(validate_fn, train_loader=train_loader),
                                         configure_optimizers_fn=configure_optimizers_fn)
     final_statistics = acc_aware_training_loop.final_statistics
-    assert final_statistics['compression_rate'] == pytest.approx(final_compression_rate, 1e-3)
-    assert final_statistics['accuracy'] == pytest.approx(reference_final_metric, 1e-4)
+    assert final_statistics.compression_rate== pytest.approx(final_compression_rate, 1e-3)
+    assert final_statistics.compressed_accuracy == pytest.approx(reference_final_metric, 1e-4)
 
 
 @pytest.mark.parametrize(
@@ -290,9 +290,9 @@ def test_adaptive_compression_training_loop_failing(
                                         configure_optimizers_fn=configure_optimizers_fn)
     statistics = acc_aware_training_loop.final_statistics
     accuracy_degradation_key = next(iter(max_accuracy_degradation.keys()))
-    assert statistics[accuracy_degradation_key.replace('maximal_', '')] > \
+    assert getattr(statistics, accuracy_degradation_key.replace('maximal_', '')) > \
            config['accuracy_aware_training']['params'][accuracy_degradation_key]
-    assert statistics['compression_rate'] < pruning_target
+    assert statistics.compression_rate < pruning_target
 
 
 @pytest.mark.parametrize(
@@ -357,7 +357,7 @@ def test_early_exit_training_loop(max_accuracy_degradation,
                                              validate_fn=partial(validate_fn, train_loader=train_loader),
                                              configure_optimizers_fn=configure_optimizers_fn)
     original_model_accuracy = model.original_model_accuracy
-    compressed_model_accuracy = early_stopping_training_loop.final_statistics['accuracy']
+    compressed_model_accuracy = early_stopping_training_loop.final_statistics.compressed_accuracy
     if "maximal_absolute_accuracy_degradation" in max_accuracy_degradation:
         assert (original_model_accuracy - compressed_model_accuracy) <= \
                max_accuracy_degradation["maximal_absolute_accuracy_degradation"]

@@ -131,7 +131,7 @@ def test_adaptive_compression_training_loop(max_accuracy_degradation, final_comp
 
     result_dict_to_val_metric_fn = lambda results: results['inverse_loss']
 
-    acc_aware_training_loop = compress_model.accuracy_aware_fit(
+    final_statistics = compress_model.accuracy_aware_fit(
         dataset,
         compression_ctrl,
         nncf_config=config,
@@ -140,9 +140,8 @@ def test_adaptive_compression_training_loop(max_accuracy_degradation, final_comp
         steps_per_epoch=steps_per_epoch,
         uncompressed_model_accuracy=uncompressed_model_accuracy,
         result_dict_to_val_metric_fn=result_dict_to_val_metric_fn)
-    final_statistics = acc_aware_training_loop.final_statistics
-    assert final_statistics['accuracy'] == pytest.approx(reference_final_metric, 1e-4)
-    assert final_statistics['compression_rate'] == pytest.approx(final_compression_rate, 1e-3)
+    assert final_statistics.compressed_accuracy == pytest.approx(reference_final_metric, 1e-4)
+    assert final_statistics.compression_rate == pytest.approx(final_compression_rate, 1e-3)
 
 
 @pytest.mark.parametrize(
@@ -186,7 +185,7 @@ def test_early_exit_compression_training_loop(max_accuracy_degradation,
 
     result_dict_to_val_metric_fn = lambda results: results['inverse_loss']
 
-    acc_aware_training_loop = compress_model.accuracy_aware_fit(
+    final_statistics = compress_model.accuracy_aware_fit(
         dataset,
         compression_ctrl,
         nncf_config=config,
@@ -196,7 +195,7 @@ def test_early_exit_compression_training_loop(max_accuracy_degradation,
         uncompressed_model_accuracy=uncompressed_model_accuracy,
         result_dict_to_val_metric_fn=result_dict_to_val_metric_fn)
     original_model_accuracy = compress_model.original_model_accuracy
-    compressed_model_accuracy = acc_aware_training_loop.final_statistics['accuracy']
+    compressed_model_accuracy = final_statistics.compressed_accuracy
 
     if "maximal_absolute_accuracy_degradation" in max_accuracy_degradation:
         assert (original_model_accuracy - compressed_model_accuracy) <= \

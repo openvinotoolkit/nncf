@@ -283,7 +283,7 @@ def main_worker(current_gpu, config: SampleConfig):
                                                 configure_optimizers_fn=configure_optimizers_fn,
                                                 tensorboard_writer=config.tb,
                                                 log_dir=config.log_dir)
-            acc_aware_training_loop.print_maximal_degradation_warning(logger)
+            logger.info(f'Final model statistics:\n{acc_aware_training_loop.final_statistics.to_str()}')
         else:
             train(config, compression_ctrl, model, criterion, train_criterion_fn, lr_scheduler, model_name, optimizer,
                   train_loader, train_sampler, val_loader, best_acc1)
