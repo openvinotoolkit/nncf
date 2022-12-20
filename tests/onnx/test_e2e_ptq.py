@@ -32,7 +32,7 @@ from yattag import indent
 import pytest
 from pytest_dependency import depends
 
-from nncf.common.utils.logger import logger as nncf_logger
+from nncf.common.logging.logger import nncf_logger
 from tests.shared.paths import PROJECT_ROOT
 from tests.onnx.conftest import ONNX_TEST_ROOT
 
