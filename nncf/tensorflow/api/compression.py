@@ -19,6 +19,7 @@ from typing import TypeVar
 from nncf import NNCFConfig
 from nncf.common.compression import BaseCompressionAlgorithmBuilder
 from nncf.common.graph import NNCFGraph
+from nncf.common.scopes import check_scopes_in_graph
 from nncf.tensorflow.graph.converter import TFModelConverter
 from nncf.tensorflow.graph.converter import TFModelConverterFactory
 from nncf.tensorflow.graph.model_transformer import TFModelTransformer
@@ -85,6 +86,6 @@ class TFCompressionAlgorithmBuilder(BaseCompressionAlgorithmBuilder):
         converter = TFModelConverterFactory.create(model)
         nncf_graph = converter.convert()
 
-        self._check_scopes_in_graph(nncf_graph)
+        check_scopes_in_graph(nncf_graph, self.ignored_scopes, self.target_scopes)
 
         return converter, nncf_graph

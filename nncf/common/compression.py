@@ -22,10 +22,8 @@ from typing import TypeVar
 from nncf import NNCFConfig
 from nncf.api.compression import CompressionAlgorithmBuilder
 from nncf.api.compression import CompressionAlgorithmController
-from nncf.common.graph.graph import NNCFGraph
 from nncf.common.logging import nncf_logger
 from nncf.common.schedulers import StubCompressionScheduler
-from nncf.common.scopes import get_not_matched_scopes
 from nncf.common.utils.backend import BackendType
 from nncf.common.utils.backend import get_backend
 from nncf.common.utils.registry import Registry
@@ -284,27 +282,3 @@ class BaseCompressionAlgorithmBuilder(CompressionAlgorithmBuilder):
 
     def _parse_bn_adapt_params(self) -> Optional[Dict]:
         return extract_bn_adaptation_init_params(self.config, self.name)
-
-    def _check_scopes_in_graph(self, graph: NNCFGraph) -> None:
-        """
-        Raise RuntimeError in case if ignored/target scope names do not match model graph.
-
-        :param graph: The model graph.
-        """
-        not_matched_ignored_scopes = get_not_matched_scopes(self.ignored_scopes, graph.get_all_nodes())
-        not_matched_target_scopes = get_not_matched_scopes(self.target_scopes, graph.get_all_nodes())
-
-        if not_matched_ignored_scopes or not_matched_target_scopes:
-            err_message = "No match has been found among the model operations " \
-                          f"for the following ignored/target scope definitions for '{self.name}' algorithm:\n" \
-
-            if not_matched_ignored_scopes:
-                err_message += f" - ignored_scope: {not_matched_ignored_scopes}\n"
-            if not_matched_target_scopes:
-                err_message += f" - target_scope: {not_matched_target_scopes}\n"
-
-            err_message += "Refer to the original_graph.dot to discover the operations " \
-                           "in the model currently visible to NNCF and specify the ignored/target " \
-                           "scopes in terms of the names there."
-
-            raise RuntimeError(err_message)

@@ -16,6 +16,7 @@ from typing import List
 from typing import Optional
 from typing import Union
 
+from nncf.common.graph import NNCFGraph
 from nncf.common.graph import NNCFNode
 from nncf.common.graph import NNCFNodeName
 from nncf.common.quantization.structs import QuantizerId
@@ -23,19 +24,22 @@ from nncf.parameters import IgnoredScope
 from nncf.parameters import convert_ignored_scope_to_list
 
 
-def should_consider_scope(serializable_id: Union[QuantizerId, NNCFNodeName],
-                          ignored_scopes: List[str],
-                          target_scopes: Optional[List[str]] = None) -> bool:
+def should_consider_scope(
+    serializable_id: Union[QuantizerId, NNCFNodeName],
+    ignored_scopes: List[str],
+    target_scopes: Optional[List[str]] = None,
+) -> bool:
     """
     Used when an entity arising during compression has to be compared to an allowlist or a denylist of strings
     (potentially regex-enabled) that is defined in an NNCFConfig .json.
 
     :param serializable_id: One of the supported entity types to be matched - currently possible to pass either
     NNCFNodeName (to refer to the original model operations) or QuantizerId (to refer to specific quantizers)
-    :param target_scopes: A list of strings specifying an allowlist for the serializable_id. Entries of the list
-        may be prefixed with `{re}` to enable regex matching.
     :param ignored_scopes: A list of strings specifying a denylist for the serializable_id. Entries of the list
         may be prefixed with `{re}` to enable regex matching.
+    :param target_scopes: A list of strings specifying an allowlist for the serializable_id. Entries of the list
+        may be prefixed with `{re}` to enable regex matching.
+
     :return: A boolean value specifying whether a serializable_id should be considered (i.e. "not ignored", "targeted")
     """
     string_id = str(serializable_id)
@@ -43,15 +47,14 @@ def should_consider_scope(serializable_id: Union[QuantizerId, NNCFNodeName],
                and not matches_any(string_id, ignored_scopes)
 
 
-def matches_any(tested_str: str,
-                str_or_list_to_match_to: Union[List[str], str]) -> bool:
+def matches_any(tested_str: str, str_or_list_to_match_to: Union[List[str], str]) -> bool:
     if str_or_list_to_match_to is None:
         return False
 
     str_list = [str_or_list_to_match_to] if isinstance(str_or_list_to_match_to, str) else str_or_list_to_match_to
     for item in str_list:
-        if '{re}' in item:
-            regex = item.replace('{re}', '')
+        if "{re}" in item:
+            regex = item.replace("{re}", "")
             if re.search(regex, tested_str):
                 return True
         else:
@@ -86,3 +89,38 @@ def get_not_matched_scopes(scope: Union[List[str], str, IgnoredScope], nodes: Li
             if matches_any(node.node_name, pattern):
                 matched_patterns.add(pattern)
     return list(set(patterns) - matched_patterns)
+
+
+def check_scopes_in_graph(
+    graph: NNCFGraph,
+    ignored_scopes: Union[IgnoredScope, List[str]],
+    target_scopes: Optional[List[str]] = None,
+) -> None:
+    """
+    Raise RuntimeError in case if ignored/target scope names do not match model graph.
+
+    :param graph: The model graph.
+    :param ignored_scopes: The instance of IgnoredScope or a list of strings specifying a denylist for the serializable_id.
+    :param target_scopes: A list of strings specifying an allowlist for the serializable_id.
+    """
+    node_list = graph.get_all_nodes()
+    not_matched_ignored_scopes = get_not_matched_scopes(ignored_scopes, node_list)
+    not_matched_target_scopes = get_not_matched_scopes(target_scopes, node_list)
+
+    if not_matched_ignored_scopes or not_matched_target_scopes:
+        err_message = (
+            "No match has been found among the model operations "
+            f"for the following ignored/target scope definitions:\n"
+        )
+        if not_matched_ignored_scopes:
+            err_message += f" - ignored_scope: {not_matched_ignored_scopes}\n"
+        if not_matched_target_scopes:
+            err_message += f" - target_scope: {not_matched_target_scopes}\n"
+
+        err_message += (
+            "Refer to the original_graph.dot to discover the operations "
+            "in the model currently visible to NNCF and specify the ignored/target "
+            "scopes in terms of the names there."
+        )
+
+        raise RuntimeError(err_message)
