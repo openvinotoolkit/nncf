@@ -35,6 +35,7 @@ from nncf.common.hardware.config import HW_CONFIG_TYPE_TARGET_DEVICE_MAP
 from nncf.common.hardware.config import HWConfigType
 from nncf.common.initialization.batchnorm_adaptation import BatchnormAdaptationAlgorithm
 from nncf.common.insertion_point_graph import InsertionPointGraph
+from nncf.common.logging import nncf_logger
 from nncf.common.quantization.config_assignment import assign_qconfig_lists_to_modules
 from nncf.common.quantization.quantizer_propagation.solver import QuantizerPropagationSolver
 from nncf.common.quantization.quantizer_setup import ActivationQuantizationInsertionPoint
@@ -47,10 +48,10 @@ from nncf.common.quantization.structs import QuantizationPreset
 from nncf.common.quantization.structs import QuantizerConfig
 from nncf.common.quantization.structs import QuantizerGroup
 from nncf.common.schedulers import BaseCompressionScheduler
+from nncf.common.scopes import check_scopes_in_graph
+from nncf.common.scopes import should_consider_scope
 from nncf.common.stateful_classes_registry import TF_STATEFUL_CLASSES
 from nncf.common.statistics import NNCFStatistics
-from nncf.common.scopes import should_consider_scope
-from nncf.common.logging import nncf_logger
 from nncf.config.extractors import extract_range_init_params
 from nncf.config.schemata.defaults import QUANTIZATION_OVERFLOW_FIX
 from nncf.config.schemata.defaults import QUANTIZE_INPUTS
@@ -59,6 +60,7 @@ from nncf.config.schemata.defaults import TARGET_DEVICE
 from nncf.tensorflow.algorithm_selector import TF_COMPRESSION_ALGORITHMS
 from nncf.tensorflow.api.compression import TFCompressionAlgorithmBuilder
 from nncf.tensorflow.graph.converter import TFModelConverter
+from nncf.tensorflow.graph.converter import TFModelConverterFactory
 from nncf.tensorflow.graph.metatypes.common import ELEMENTWISE_LAYER_METATYPES
 from nncf.tensorflow.graph.metatypes.common import GENERAL_CONV_LAYER_METATYPES
 from nncf.tensorflow.graph.metatypes.common import LINEAR_LAYER_METATYPES
@@ -430,7 +432,10 @@ class QuantizationBuilder(TFCompressionAlgorithmBuilder):
         self._bn_adaptation.run(model)
 
     def _get_quantizer_setup(self, model: tf.keras.Model) -> TFQuantizationSetup:
-        converter, nncf_graph = self._get_model_converter_and_graph(model)
+        converter = TFModelConverterFactory.create(model)
+        nncf_graph = converter.convert()
+
+        check_scopes_in_graph(nncf_graph, self.ignored_scopes, self.target_scopes)
 
         self._raise_not_supported_warning(nncf_graph)
 

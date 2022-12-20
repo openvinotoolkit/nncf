@@ -21,16 +21,18 @@ from nncf import NNCFConfig
 from nncf.common.accuracy_aware_training.training_loop import ADAPTIVE_COMPRESSION_CONTROLLERS
 from nncf.common.graph.transformations.commands import TransformationPriority
 from nncf.common.schedulers import StubCompressionScheduler
+from nncf.common.scopes import check_scopes_in_graph
+from nncf.common.scopes import should_consider_scope
 from nncf.common.sparsity.schedulers import SPARSITY_SCHEDULERS
 from nncf.common.sparsity.schedulers import SparsityScheduler
 from nncf.common.sparsity.statistics import RBSparsityStatistics
 from nncf.common.statistics import NNCFStatistics
-from nncf.common.scopes import should_consider_scope
 from nncf.config.extractors import extract_algo_specific_config
 from nncf.config.schemata.defaults import SPARSITY_INIT
 from nncf.config.schemata.defaults import SPARSITY_LEVEL_SETTING_MODE
 from nncf.tensorflow.algorithm_selector import TF_COMPRESSION_ALGORITHMS
 from nncf.tensorflow.api.compression import TFCompressionAlgorithmBuilder
+from nncf.tensorflow.graph.converter import TFModelConverterFactory
 from nncf.tensorflow.graph.transformations.commands import TFInsertionCommand
 from nncf.tensorflow.graph.transformations.commands import TFLayerWeight
 from nncf.tensorflow.graph.transformations.layout import TFTransformationLayout
@@ -51,7 +53,10 @@ class RBSparsityBuilder(TFCompressionAlgorithmBuilder):
         self._op_names = []
 
     def get_transformation_layout(self, model: tf.keras.Model) -> TFTransformationLayout:
-        converter, nncf_graph = self._get_model_converter_and_graph(model)
+        converter = TFModelConverterFactory.create(model)
+        nncf_graph = converter.convert()
+
+        check_scopes_in_graph(nncf_graph, self.ignored_scopes, self.target_scopes)
 
         transformations = TFTransformationLayout()
 

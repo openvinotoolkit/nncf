@@ -32,12 +32,14 @@ from nncf.common.pruning.statistics import PrunedLayerSummary
 from nncf.common.pruning.structs import PrunedLayerInfoBase
 from nncf.common.pruning.utils import get_output_channels
 from nncf.common.pruning.utils import is_prunable_depthwise_conv
+from nncf.common.scopes import check_scopes_in_graph
 from nncf.config.extractors import extract_algo_specific_config
 from nncf.config.schemata.defaults import PRUNE_BATCH_NORMS
 from nncf.config.schemata.defaults import PRUNE_DOWNSAMPLE_CONVS
 from nncf.config.schemata.defaults import PRUNE_FIRST_CONV
 from nncf.config.schemata.defaults import PRUNING_INIT
 from nncf.tensorflow.api.compression import TFCompressionAlgorithmBuilder
+from nncf.tensorflow.graph.converter import TFModelConverterFactory
 from nncf.tensorflow.graph.metatypes.keras_layers import TFBatchNormalizationLayerMetatype
 from nncf.tensorflow.graph.model_transformer import TFModelTransformer
 from nncf.tensorflow.graph.transformations.commands import TFInsertionCommand
@@ -111,7 +113,10 @@ class BasePruningAlgoBuilder(TFCompressionAlgorithmBuilder):
         :return: The instance of the `TransformationLayout` class containing
             a list of pruning mask insertions.
         """
-        converter, self._graph = self._get_model_converter_and_graph(model)
+        converter = TFModelConverterFactory.create(model)
+        nncf_graph = converter.convert()
+
+        check_scopes_in_graph(nncf_graph, self.ignored_scopes, self.target_scopes)
 
         groups_of_nodes_to_prune = self._pruning_node_selector.create_pruning_groups(self._graph)
 
