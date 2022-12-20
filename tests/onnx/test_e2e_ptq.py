@@ -89,7 +89,7 @@ def check_pot_quantized_xfail(model_name):
 
 def check_skip_model(model_name: str, model_names_to_test: Optional[List[str]]):
     if model_names_to_test is not None and model_name not in model_names_to_test:
-        pytest.skip('The model {model_name} is skipped, because it was not included in --model-names.')
+        pytest.skip(f'The model {model_name} is skipped, because it was not included in --model-names.')
 
 
 def run_command(command: List[str]):
@@ -298,7 +298,6 @@ class TestPTQ:
         ]
 
         com_str = ' '.join(com_line)
-        nncf_logger.info(f"Run command: {com_str}")
         run_command(com_line)
 
     def get_ir_model(self, model_path, model_name, output_dir):
