@@ -17,7 +17,7 @@ from functools import partial
 import pytest
 import torch
 
-from nncf.common.utils.logger import logger as nncf_logger
+from nncf.common.logging import nncf_logger
 from nncf.experimental.torch.nas.bootstrapNAS.elasticity.base_handler import SEHBuilderStateNames
 from nncf.experimental.torch.nas.bootstrapNAS.elasticity.elastic_depth import EDBuilderStateNames
 from nncf.experimental.torch.nas.bootstrapNAS.elasticity.elastic_kernel import EKBuilderStateNames

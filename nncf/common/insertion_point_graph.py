@@ -11,12 +11,11 @@
  limitations under the License.
 """
 
+from typing import Set, Dict, List, Optional
+
 from collections import defaultdict
 from copy import deepcopy
 from enum import Enum
-from typing import Dict
-from typing import List
-from typing import Set
 
 import networkx as nx
 
@@ -25,6 +24,8 @@ from nncf.common.graph import NNCFGraph
 from nncf.common.graph import NNCFNodeName
 from nncf.common.graph.graph_matching import find_subgraphs_matching_pattern
 from nncf.common.graph.patterns import GraphPattern
+from nncf.common.graph.operator_metatypes import INPUT_NOOP_METATYPES
+from nncf.common.logging import nncf_logger
 
 
 class InsertionPointGraphNodeType(Enum):
@@ -88,8 +89,8 @@ class InsertionPointGraph(nx.DiGraph):
         If left unspecified, every node in `nncf_graph` will be allowed to have a single post-hook for its output
          (post-hooking separate tensors in an operation's output is not currently supported)
         """
-        #pylint:disable=too-many-branches
-        #pylint:disable=too-many-statements
+        # pylint:disable=too-many-branches
+        # pylint:disable=too-many-statements
         super().__init__()
         self._base_nx_graph = deepcopy(nncf_graph.get_nx_graph_copy())
         if weight_modifiable_node_names is None:
@@ -209,7 +210,7 @@ class InsertionPointGraph(nx.DiGraph):
             from_node = self.nodes[from_node_key]
             to_node = self.nodes[to_node_key]
             if from_node[self.NODE_TYPE_NODE_ATTR] is InsertionPointGraphNodeType.POST_HOOK and \
-               to_node[self.NODE_TYPE_NODE_ATTR] is InsertionPointGraphNodeType.PRE_HOOK:
+                    to_node[self.NODE_TYPE_NODE_ATTR] is InsertionPointGraphNodeType.PRE_HOOK:
                 post_hook_has_integer_outputs = False
                 for follower_node_key in self.successors(from_node_key):
                     if self.edges[from_node_key, follower_node_key][self.IS_INTEGER_PATH_EDGE_ATTR]:
@@ -243,19 +244,87 @@ class InsertionPointGraph(nx.DiGraph):
             allowed_post_hook_insertion_points.append(PostHookInsertionPoint(nncf_node.node_name))
         return allowed_post_hook_insertion_points
 
+    def remove_nodes_from(self, nodes: List[str]) -> None:
+        """
+        Removes nodes from the InsertionPointGraph and its _base_nx_graph.
+
+        :param nodes: List of the nodes to remove.
+        :return:
+        """
+        super().remove_nodes_from(nodes)
+        constant_nodes_base_nx_graph = [node for node in nodes if node in self._base_nx_graph]
+        self._base_nx_graph.remove_nodes_from(constant_nodes_base_nx_graph)
+
+    def get_base_nx_graph(self) -> nx.DiGraph:
+        """
+        Returns the self._base_nx_graph.
+
+        :return: The self._base_nx_graph.
+        """
+        return self._base_nx_graph
+
+    def get_input_nodes(self) -> List[str]:
+        """
+        Returns all input nodes, meaning the nodes which belong to any of INPUT_NOOP_METATYPES metatype.
+
+        :return: A list of input nodes.
+        """
+        output = []
+        for node, data in self.nodes.items():
+            if InsertionPointGraph.REGULAR_NODE_REF_NODE_ATTR not in data:
+                continue
+            if data[InsertionPointGraph.IS_MERGED_NODE_ATTR]:
+                for nncf_node in data[InsertionPointGraph.MERGED_NNCF_NODE_LIST_NODE_ATTR]:
+                    node_k = nncf_node.data[NNCFGraph.KEY_NODE_ATTR]
+                    if self._base_nx_graph.nodes[node_k][NNCFGraph.METATYPE_ATTR] in INPUT_NOOP_METATYPES:
+                        output.append(node)
+                        break
+            elif data[InsertionPointGraph.REGULAR_NODE_REF_NODE_ATTR].metatype in INPUT_NOOP_METATYPES:
+                output.append(node)
+        return output
+
+    def get_merged_node_from_single_node_key(self, node_key: str) -> str:
+        """
+        Returns the node key of the composite node,
+        if the corresponding node with 'node_key' was merged into it during the graph initialization.
+        Otherwise, returns the original 'node_key'.
+
+        :param node_key: The key of the node which is checking on the merged.
+        :return: The node key of the composite node. Original 'node_key' if the node was not merged.
+        """
+        for node, data in self.nodes.items():
+            if InsertionPointGraph.REGULAR_NODE_REF_NODE_ATTR not in data:
+                continue
+            if data[InsertionPointGraph.IS_MERGED_NODE_ATTR]:
+                for nncf_node in data[InsertionPointGraph.MERGED_NNCF_NODE_LIST_NODE_ATTR]:
+                    node_k = nncf_node.data[NNCFGraph.KEY_NODE_ATTR]
+                    if node_key == node_k:
+                        return node
+        return node_key
+
     def get_ip_graph_with_merged_hw_optimized_operations(self,
-                                                         full_fusing_pattern: GraphPattern) \
+                                                         full_fusing_pattern: GraphPattern,
+                                                         known_non_constant_node_keys: Optional[List[str]] = None) \
             -> 'InsertionPointGraph':
         """
         Returns an InsertionPointGraph in which the nodes that match a HW-specific list of patterns are fused into a
         single node; the resulting InsertionPointGraph no longer has accessible the pre- and post-hooks that were
         located in  the middle of the fused pattern.
+        If the InsertionPointGraph should be filtered from constant nodes before the node fusing,
+        then 'known_non_constant_node_keys' should be pass. This is the list of the node known that are non constansts.
+
         :param full_fusing_pattern: The GraphPatttern object representing a composition of fusing pattern variants.
+        :param known_non_constant_node_keys: Keys of the nodes which known to be non constant.
         :return: The InsertionPointGraph with nodes fused according to pattern matching.
         """
         # pylint:disable=too-many-branches
         merged_ip_graph = deepcopy(self)
-        matches = find_subgraphs_matching_pattern(self._base_nx_graph, full_fusing_pattern)
+        filtered_ip_graph = deepcopy(self)
+        if known_non_constant_node_keys is not None:
+            start_traversing_node_keys = [node.node.data[NNCFGraph.KEY_NODE_ATTR] for node in
+                                          known_non_constant_node_keys]
+            filtered_ip_graph = ConstantNodesFilter.filter(filtered_ip_graph, start_traversing_node_keys)
+        matches = find_subgraphs_matching_pattern(filtered_ip_graph.get_base_nx_graph(), full_fusing_pattern)
         for match in matches:
             if len(match) == 1:
                 continue
@@ -314,3 +383,33 @@ class InsertionPointGraph(nx.DiGraph):
     @staticmethod
     def get_post_hook_node_key(node_key: str) -> str:
         return InsertionPointGraph.POST_HOOK_ID_PREFIX + node_key
+
+
+class ConstantNodesFilter:
+    @staticmethod
+    def filter(ip_graph: InsertionPointGraph, start_traversing_node_keys: Optional[List[str]]) -> InsertionPointGraph:
+        """
+        Removes all Constant nodes from InsertionPointGraph, making it inference graph.
+        The traversing starts from the input nodes and nodes with weights.
+
+        :param ip_graph: The original InsertionPointGraph.
+        :param start_traversing_node_keys: Keys of the nodes from which the traversing will be start.
+        :return: InsertionPointGraph without Constant nodes.
+        """
+        input_nodes = ip_graph.get_input_nodes()
+        if not input_nodes:
+            nncf_logger.debug('Skipped filtering - no input nodes found')
+            return ip_graph
+        weight_nodes = []
+        if start_traversing_node_keys is not None:
+            weight_nodes = [ip_graph.get_merged_node_from_single_node_key(weight_node) for weight_node in
+                            start_traversing_node_keys]
+        visited_nodes = set()
+        start_nodes = input_nodes + weight_nodes
+        for node in start_nodes:
+            for node_from, node_to in nx.bfs_edges(ip_graph, source=node):
+                visited_nodes.add(node_from)
+                visited_nodes.add(node_to)
+        constant_nodes = [node for node in ip_graph.nodes if node not in visited_nodes]
+        ip_graph.remove_nodes_from(constant_nodes)
+        return ip_graph

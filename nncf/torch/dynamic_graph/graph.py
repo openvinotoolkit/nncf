@@ -22,7 +22,7 @@ from torch import Tensor
 
 from nncf.common.graph import Dtype
 from nncf.common.graph.layer_attributes import BaseLayerAttributes
-from nncf.common.utils.logger import logger as nncf_logger
+from nncf.common.logging import nncf_logger
 from nncf.torch.dynamic_graph.scope import Scope
 from nncf.torch.dynamic_graph.trace_tensor import TensorMeta
 from nncf.torch.dynamic_graph.trace_tensor import TracedTensor
@@ -95,10 +95,10 @@ class DefaultInputsMatcher(InputsMatcher):
                 if not tm_comparator(saved_input, actual_input):
                     return False
         if matched_with_unexpected_tensors:
-            nncf_logger.debug("Had to match a node to an op which has tensors at positions where there were no tensors "
-                              "at graph building time:\nNode input metas: {}, but op input metas: {}".format(
-                saved_inputs, actual_inputs
-            ))
+            nncf_logger.debug(
+                f"Had to match a node to an op which has tensors at positions where there were "
+                f"no tensors at graph building time:\n"
+                f"Node input metas: {saved_inputs}, but op input metas: {actual_inputs}")
         return True
 
 
@@ -241,7 +241,7 @@ class DefaultScopeNodeMatcher:
         name_parts = (str(op_exec_context.scope_in_model), op_exec_context.operator_name)
         node_key = '{idx} {uri}'.format(uri='/'.join(name_parts), idx=node_id)
 
-        nncf_logger.debug("New node added to NNCF graph: {}".format(node_key))
+        nncf_logger.debug(f"New node added to NNCF graph: {node_key}")
 
         self._node_id_to_key_dict[node_id] = node_key
         attrs = {
@@ -302,7 +302,7 @@ class DefaultScopeNodeMatcher:
         if len(node_candidates) == 1:
             result = node_candidates[0]
         if len(node_candidates) > 1:
-            nncf_logger.warning("More than one node matches input")
+            nncf_logger.debug(f"More than one node was matched against context {op_exec_context}")
             result = node_candidates[0]
 
         return result
@@ -355,7 +355,7 @@ class IterationScopeNodeMatcher(DefaultScopeNodeMatcher):
                 if has_input_outside_iteration:
                     node_name = str(op_exec_context.op_address)
                     first_nodes[node_name] = node
-                    nncf_logger.debug('Found first iteration node: {} in scope: {}'.format(name, iter_scope))
+                    nncf_logger.debug(f'Found first iteration node: {name} in scope: {iter_scope}')
 
     def add_node(self, op_exec_context: OperationExecutionContext, inputs,
                  layer_attrs: BaseLayerAttributes = None,
@@ -406,7 +406,7 @@ class IterationScopeNodeMatcher(DefaultScopeNodeMatcher):
         if len(node_candidates) == 1:
             result = node_candidates[0]
         if len(node_candidates) > 1:
-            nncf_logger.warning("More than one node matches input")
+            nncf_logger.debug(f"More than one node was matched against context {op_exec_context}")
             result = node_candidates[0]
 
         return result

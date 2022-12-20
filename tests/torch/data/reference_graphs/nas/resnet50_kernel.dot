@@ -181,11 +181,11 @@ strict digraph  {
 "2 ResNet/NNCFBatchNorm2d[bn1]/batch_norm_0" -> "3 ResNet/relu_0"  [label="(1, 64, 32, 32)", style=solid];
 "3 ResNet/relu_0" -> "4 ResNet/MaxPool2d[maxpool]/max_pool2d_0"  [label="(1, 64, 32, 32)", style=solid];
 "4 ResNet/MaxPool2d[maxpool]/max_pool2d_0" -> "5 ResNet/Sequential[layer1]/Bottleneck[0]/NNCFConv2d[conv1]/conv2d_0"  [label="(1, 64, 16, 16)", style=solid];
+"4 ResNet/MaxPool2d[maxpool]/max_pool2d_0" -> "13 ResNet/Sequential[layer1]/Bottleneck[0]/Sequential[shortcut]/NNCFConv2d[0]/conv2d_0"  [label="(1, 64, 16, 16)", style=solid];
 "5 ResNet/Sequential[layer1]/Bottleneck[0]/NNCFConv2d[conv1]/conv2d_0" -> "6 ResNet/Sequential[layer1]/Bottleneck[0]/NNCFBatchNorm2d[bn1]/batch_norm_0"  [label="(1, 64, 16, 16)", style=solid];
 "6 ResNet/Sequential[layer1]/Bottleneck[0]/NNCFBatchNorm2d[bn1]/batch_norm_0" -> "7 ResNet/Sequential[layer1]/Bottleneck[0]/relu_0"  [label="(1, 64, 16, 16)", style=solid];
 "7 ResNet/Sequential[layer1]/Bottleneck[0]/relu_0" -> "8 ResNet/Sequential[layer1]/Bottleneck[0]/NNCFConv2d[conv2]/conv2d_0"  [label="(1, 64, 16, 16)", style=solid];
 "8 ResNet/Sequential[layer1]/Bottleneck[0]/NNCFConv2d[conv2]/conv2d_0" -> "9 ResNet/Sequential[layer1]/Bottleneck[0]/NNCFBatchNorm2d[bn2]/batch_norm_0"  [label="(1, 64, 16, 16)", style=solid];
-"4 ResNet/MaxPool2d[maxpool]/max_pool2d_0" -> "13 ResNet/Sequential[layer1]/Bottleneck[0]/Sequential[shortcut]/NNCFConv2d[0]/conv2d_0"  [label="(1, 64, 16, 16)", style=solid];
 "9 ResNet/Sequential[layer1]/Bottleneck[0]/NNCFBatchNorm2d[bn2]/batch_norm_0" -> "10 ResNet/Sequential[layer1]/Bottleneck[0]/relu_1"  [label="(1, 64, 16, 16)", style=solid];
 "10 ResNet/Sequential[layer1]/Bottleneck[0]/relu_1" -> "11 ResNet/Sequential[layer1]/Bottleneck[0]/NNCFConv2d[conv3]/conv2d_0"  [label="(1, 64, 16, 16)", style=solid];
 "11 ResNet/Sequential[layer1]/Bottleneck[0]/NNCFConv2d[conv3]/conv2d_0" -> "12 ResNet/Sequential[layer1]/Bottleneck[0]/NNCFBatchNorm2d[bn3]/batch_norm_0"  [label="(1, 256, 16, 16)", style=solid];

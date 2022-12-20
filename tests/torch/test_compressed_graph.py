@@ -31,7 +31,6 @@ from tests.torch.test_models.synthetic import MMDivConv
 from tests.torch.test_models.synthetic import MatMulDivConv
 from torch import nn
 import torch.nn.functional as F
-import torchvision
 
 from nncf.common.hardware.config import HWConfigType
 from nncf.common.quantization.quantizer_setup import ActivationQuantizationInsertionPoint
@@ -224,8 +223,8 @@ TEST_MODELS_DESC = [
     ModelDesc("shuflenet_g2", test_models.ShuffleNetG2, [1, 3, 32, 32]),
     ModelDesc("ssd_vgg", test_models.ssd_vgg300, [2, 3, 300, 300]),
     ModelDesc("ssd_mobilenet", test_models.ssd_mobilenet, [2, 3, 300, 300]),
-    ModelDesc("mobilenet_v2", torchvision.models.MobileNetV2, [2, 3, 32, 32]),
-    ModelDesc("mobilenet_v3_small", torchvision.models.mobilenet_v3_small, [2, 3, 32, 32]),
+    ModelDesc("mobilenet_v2", test_models.mobilenet_v2, [2, 3, 32, 32]),
+    ModelDesc("mobilenet_v3_small", test_models.mobilenet_v3_small, [2, 3, 32, 32]),
     ModelDesc("resnext29_32x4d", test_models.ResNeXt29_32x4d, [1, 3, 32, 32]),
     ModelDesc("pnasnetb", test_models.PNASNetB, [1, 3, 32, 32]),
     ModelDesc("senet18", test_models.SENet18, [1, 3, 32, 32]),
@@ -741,7 +740,7 @@ TEST_HW_MODELS_DESC = [
     ModelDesc("resnet50", test_models.ResNet50, [1, 3, 32, 32]),
     ModelDesc("inception_v3", partial(test_models.Inception3, aux_logits=True, transform_input=True),
               [2, 3, 299, 299]),
-    ModelDesc("mobilenet_v2", torchvision.models.MobileNetV2, [2, 3, 32, 32])
+    ModelDesc("mobilenet_v2", test_models.MobileNetV2, [2, 3, 32, 32])
 ]
 
 TYPE_HW = [(HWConfigType.CPU), (HWConfigType.GPU), (HWConfigType.VPU)]

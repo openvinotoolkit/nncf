@@ -626,10 +626,12 @@ strict digraph  {
 "67 Inception3/InceptionA[Mixed_5b]/cat_0" -> "69 Inception3/InceptionA[Mixed_5c]/BasicConv2d[branch1x1]/NNCFConv2d[conv]/conv2d_0";
 "67 Inception3/InceptionA[Mixed_5b]/cat_0" -> "74 Inception3/InceptionA[Mixed_5c]/BasicConv2d[branch5x5_1]/NNCFConv2d[conv]/conv2d_0";
 "67 Inception3/InceptionA[Mixed_5b]/cat_0" -> "84 Inception3/InceptionA[Mixed_5c]/BasicConv2d[branch3x3dbl_1]/NNCFConv2d[conv]/conv2d_0";
+"67 Inception3/InceptionA[Mixed_5b]/cat_0" -> "100 Inception3/InceptionA[Mixed_5c]/avg_pool2d_0";
 "68 Inception3/InceptionA[Mixed_5c]/BasicConv2d[branch1x1]/NNCFConv2d[conv]/ModuleDict[pre_ops]/UpdateWeight[0]/SymmetricQuantizer[op]/symmetric_quantize_0" -> "69 Inception3/InceptionA[Mixed_5c]/BasicConv2d[branch1x1]/NNCFConv2d[conv]/conv2d_0";
 "69 Inception3/InceptionA[Mixed_5c]/BasicConv2d[branch1x1]/NNCFConv2d[conv]/conv2d_0" -> "70 Inception3/InceptionA[Mixed_5c]/BasicConv2d[branch1x1]/NNCFBatchNorm2d[bn]/batch_norm_0";
 "70 Inception3/InceptionA[Mixed_5c]/BasicConv2d[branch1x1]/NNCFBatchNorm2d[bn]/batch_norm_0" -> "71 Inception3/InceptionA[Mixed_5c]/BasicConv2d[branch1x1]/relu__0";
 "71 Inception3/InceptionA[Mixed_5c]/BasicConv2d[branch1x1]/relu__0" -> "72 Inception3/InceptionA[Mixed_5c]/BasicConv2d[branch1x1]/AsymmetricQuantizer/asymmetric_quantize_0";
+"72 Inception3/InceptionA[Mixed_5c]/BasicConv2d[branch1x1]/AsymmetricQuantizer/asymmetric_quantize_0" -> "107 Inception3/InceptionA[Mixed_5c]/cat_0";
 "73 Inception3/InceptionA[Mixed_5c]/BasicConv2d[branch5x5_1]/NNCFConv2d[conv]/ModuleDict[pre_ops]/UpdateWeight[0]/SymmetricQuantizer[op]/symmetric_quantize_0" -> "74 Inception3/InceptionA[Mixed_5c]/BasicConv2d[branch5x5_1]/NNCFConv2d[conv]/conv2d_0";
 "74 Inception3/InceptionA[Mixed_5c]/BasicConv2d[branch5x5_1]/NNCFConv2d[conv]/conv2d_0" -> "75 Inception3/InceptionA[Mixed_5c]/BasicConv2d[branch5x5_1]/NNCFBatchNorm2d[bn]/batch_norm_0";
 "75 Inception3/InceptionA[Mixed_5c]/BasicConv2d[branch5x5_1]/NNCFBatchNorm2d[bn]/batch_norm_0" -> "76 Inception3/InceptionA[Mixed_5c]/BasicConv2d[branch5x5_1]/relu__0";
@@ -639,6 +641,7 @@ strict digraph  {
 "79 Inception3/InceptionA[Mixed_5c]/BasicConv2d[branch5x5_2]/NNCFConv2d[conv]/conv2d_0" -> "80 Inception3/InceptionA[Mixed_5c]/BasicConv2d[branch5x5_2]/NNCFBatchNorm2d[bn]/batch_norm_0";
 "80 Inception3/InceptionA[Mixed_5c]/BasicConv2d[branch5x5_2]/NNCFBatchNorm2d[bn]/batch_norm_0" -> "81 Inception3/InceptionA[Mixed_5c]/BasicConv2d[branch5x5_2]/relu__0";
 "81 Inception3/InceptionA[Mixed_5c]/BasicConv2d[branch5x5_2]/relu__0" -> "82 Inception3/InceptionA[Mixed_5c]/BasicConv2d[branch5x5_2]/AsymmetricQuantizer/asymmetric_quantize_0";
+"82 Inception3/InceptionA[Mixed_5c]/BasicConv2d[branch5x5_2]/AsymmetricQuantizer/asymmetric_quantize_0" -> "107 Inception3/InceptionA[Mixed_5c]/cat_0";
 "83 Inception3/InceptionA[Mixed_5c]/BasicConv2d[branch3x3dbl_1]/NNCFConv2d[conv]/ModuleDict[pre_ops]/UpdateWeight[0]/SymmetricQuantizer[op]/symmetric_quantize_0" -> "84 Inception3/InceptionA[Mixed_5c]/BasicConv2d[branch3x3dbl_1]/NNCFConv2d[conv]/conv2d_0";
 "84 Inception3/InceptionA[Mixed_5c]/BasicConv2d[branch3x3dbl_1]/NNCFConv2d[conv]/conv2d_0" -> "85 Inception3/InceptionA[Mixed_5c]/BasicConv2d[branch3x3dbl_1]/NNCFBatchNorm2d[bn]/batch_norm_0";
 "85 Inception3/InceptionA[Mixed_5c]/BasicConv2d[branch3x3dbl_1]/NNCFBatchNorm2d[bn]/batch_norm_0" -> "86 Inception3/InceptionA[Mixed_5c]/BasicConv2d[branch3x3dbl_1]/relu__0";
@@ -659,9 +662,6 @@ strict digraph  {
 "96 Inception3/InceptionA[Mixed_5c]/BasicConv2d[branch3x3dbl_3]/NNCFConv2d[conv]/conv2d_0" -> "97 Inception3/InceptionA[Mixed_5c]/BasicConv2d[branch3x3dbl_3]/NNCFBatchNorm2d[bn]/batch_norm_0";
 "97 Inception3/InceptionA[Mixed_5c]/BasicConv2d[branch3x3dbl_3]/NNCFBatchNorm2d[bn]/batch_norm_0" -> "98 Inception3/InceptionA[Mixed_5c]/BasicConv2d[branch3x3dbl_3]/relu__0";
 "98 Inception3/InceptionA[Mixed_5c]/BasicConv2d[branch3x3dbl_3]/relu__0" -> "99 Inception3/InceptionA[Mixed_5c]/BasicConv2d[branch3x3dbl_3]/AsymmetricQuantizer/asymmetric_quantize_0";
-"67 Inception3/InceptionA[Mixed_5b]/cat_0" -> "100 Inception3/InceptionA[Mixed_5c]/avg_pool2d_0";
-"72 Inception3/InceptionA[Mixed_5c]/BasicConv2d[branch1x1]/AsymmetricQuantizer/asymmetric_quantize_0" -> "107 Inception3/InceptionA[Mixed_5c]/cat_0";
-"82 Inception3/InceptionA[Mixed_5c]/BasicConv2d[branch5x5_2]/AsymmetricQuantizer/asymmetric_quantize_0" -> "107 Inception3/InceptionA[Mixed_5c]/cat_0";
 "99 Inception3/InceptionA[Mixed_5c]/BasicConv2d[branch3x3dbl_3]/AsymmetricQuantizer/asymmetric_quantize_0" -> "107 Inception3/InceptionA[Mixed_5c]/cat_0";
 "100 Inception3/InceptionA[Mixed_5c]/avg_pool2d_0" -> "101 Inception3/InceptionA[Mixed_5c]/SymmetricQuantizer/symmetric_quantize_0";
 "101 Inception3/InceptionA[Mixed_5c]/SymmetricQuantizer/symmetric_quantize_0" -> "103 Inception3/InceptionA[Mixed_5c]/BasicConv2d[branch_pool]/NNCFConv2d[conv]/conv2d_0";

@@ -207,6 +207,9 @@ def restore_compressed_model(config, strategy, model_builder, ckpt_path=None):
 
 def run_evaluation(config, eval_timeout=None):
     """Runs evaluation on checkpoint save directory"""
+    if config.disable_tensor_float_32_execution:
+        tf.config.experimental.enable_tensor_float_32_execution(False)
+
     strategy = get_distribution_strategy(config)
     if config.metrics_dump is not None:
         write_metrics(0, config.metrics_dump)

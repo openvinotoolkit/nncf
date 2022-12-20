@@ -24,13 +24,16 @@ import openvino.runtime as ov
 from openvino.tools import pot
 
 from nncf.data import Dataset
+from nncf.quantization.telemetry_extractors import CompressionStartedWithQuantizeApi
 from nncf.parameters import IgnoredScope
 from nncf.parameters import ModelType
 from nncf.parameters import TargetDevice
 from nncf.common.quantization.structs import QuantizationPreset
-from nncf.common.utils.logger import logger as nncf_logger
+from nncf.common.logging import nncf_logger
 from nncf.openvino.engine import OVEngine
 from nncf.openvino.quantization.accuracy_aware import NMSEBasedAccuracyAware
+from nncf.telemetry import tracked_function
+from nncf.telemetry.events import NNCF_OV_CATEGORY
 
 
 def _convert_openvino_model_to_compressed_model(model: ov.Model,
@@ -94,6 +97,7 @@ def _create_ignored_scope_config(ignored_scope: Optional[IgnoredScope]) -> Dict:
     return ignored
 
 
+@tracked_function(NNCF_OV_CATEGORY, [CompressionStartedWithQuantizeApi(), "target_device", "preset"])
 def quantize_impl(model: ov.Model,
                   calibration_dataset: Dataset,
                   preset: QuantizationPreset,
@@ -108,13 +112,6 @@ def quantize_impl(model: ov.Model,
     pot.utils.logger.init_logger(
         level=logging.getLevelName(nncf_logger.getEffectiveLevel())
     )
-    pot_model = _convert_openvino_model_to_compressed_model(model, target_device)
-
-    engine_config = {
-        'device': 'CPU',
-        'stat_requests_number': 2,
-        'eval_requests_number': 2,
-    }
 
     algorithms = [
         {
@@ -130,13 +127,19 @@ def quantize_impl(model: ov.Model,
         }
     ]
 
+    pot_model = _convert_openvino_model_to_compressed_model(model, target_device)
+
+    engine_config = {
+        'device': 'CPU',
+        'stat_requests_number': 2,
+        'eval_requests_number': 2,
+    }
+
     engine = OVEngine(engine_config, calibration_dataset, calibration_dataset)
     pipeline = pot.create_pipeline(algorithms, engine)
     compressed_model = pipeline.run(pot_model)
     pot.compress_model_weights(compressed_model)
-
     quantized_model = _convert_compressed_model_to_openvino_model(compressed_model)
-
     return quantized_model
 
 

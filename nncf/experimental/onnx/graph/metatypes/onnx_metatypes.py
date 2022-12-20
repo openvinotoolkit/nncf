@@ -11,8 +11,8 @@
  limitations under the License.
 """
 
-from typing import List
-from typing import Type
+from typing import List, Type, Optional
+from dataclasses import dataclass
 
 from nncf.common.graph.operator_metatypes import OperatorMetatype
 from nncf.common.graph.operator_metatypes import OperatorMetatypeRegistry
@@ -29,25 +29,49 @@ class ONNXOpMetatype(OperatorMetatype):
         return cls.op_names
 
 
+@dataclass
+class OpWeightDef:
+    """
+    Contains the information about the weight and bias of the operation.
+
+    :param weight_channel_axis: Axis for weight per-channel quantization, meaning the number of output filters.
+    :param weight_port_id: Input port of the node's weight.
+    If the value is None the weight_port_id should be determined dynamically.
+    :param bias_port_id: Input port of the node's bias.
+    If the value is None it means that the Metatype does not have bias.
+    """
+    weight_channel_axis: int
+    weight_port_id: Optional[int] = None
+    bias_port_id: Optional[int] = None
+
+
+class ONNXOpWithWeightsMetatype(ONNXOpMetatype):
+    weight_definition = None  # type: OpWeightDef
+
+
 @ONNX_OPERATION_METATYPES.register()
-class ONNXConvolutionMetatype(ONNXOpMetatype):
+class ONNXConvolutionMetatype(ONNXOpWithWeightsMetatype):
     name = 'ConvOp'
     op_names = ['Conv']
     hw_config_names = [HWConfigOpName.CONVOLUTION]
+    weight_definitions = OpWeightDef(weight_channel_axis=0, weight_port_id=1, bias_port_id=2)
 
 
 @ONNX_OPERATION_METATYPES.register()
-class ONNXConvolutionTransposeMetatype(ONNXOpMetatype):
+class ONNXConvolutionTransposeMetatype(ONNXOpWithWeightsMetatype):
     name = 'ConvTransposeOp'
     op_names = ['ConvTranspose']
     hw_config_names = [HWConfigOpName.CONVOLUTION]
+    weight_definitions = OpWeightDef(weight_channel_axis=1, weight_port_id=1, bias_port_id=2)
 
 
 @ONNX_OPERATION_METATYPES.register()
-class ONNXLinearMetatype(ONNXOpMetatype):
+class ONNXLinearMetatype(ONNXOpWithWeightsMetatype):
     name = 'LinearOp'
     op_names = ['Gemm']
     hw_config_names = [HWConfigOpName.MATMUL]
+    # TODO(kshpv): Update weight_port_id to None and detects it dynamically
+    weight_definitions = OpWeightDef(weight_channel_axis=0, weight_port_id=1, bias_port_id=2)
 
 
 @ONNX_OPERATION_METATYPES.register()

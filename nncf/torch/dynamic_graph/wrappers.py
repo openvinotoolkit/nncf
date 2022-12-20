@@ -11,7 +11,6 @@
  limitations under the License.
 """
 
-import warnings
 from copy import deepcopy
 from typing import Callable
 from typing import List
@@ -33,7 +32,7 @@ from nncf.common.graph.layer_attributes import GenericWeightedLayerAttributes
 from nncf.common.graph.layer_attributes import GroupNormLayerAttributes
 from nncf.common.graph.layer_attributes import LinearLayerAttributes
 from nncf.common.utils.debug import is_debug
-from nncf.common.utils.logger import logger as nncf_logger
+from nncf.common.logging import nncf_logger
 from nncf.torch.dynamic_graph.context import TracingContext
 from nncf.torch.dynamic_graph.context import get_current_context
 from nncf.torch.dynamic_graph.op_input_processing import OperatorInput
@@ -50,8 +49,8 @@ def _warn_data_parallel():
     if getattr(_warn_data_parallel, 'warned_once', False):
         return
     _warn_data_parallel.warned_once = True
-    warnings.warn("You are using DataParallel, which may cause significant performance issues with dynamic graph "
-                  "building. Consider using distributed training (DistributedDataParallel) instead")
+    nncf_logger.warning("You are using DataParallel, which may cause significant performance issues with dynamic graph "
+                        "building. Consider using distributed training (DistributedDataParallel) instead.")
 
 
 def ignore_scope(cls):
@@ -60,7 +59,7 @@ def ignore_scope(cls):
     return cls
 
 
-OP_NAMES_REQUIRING_MODULE_ATTRS = [v.op_func_name for v in NNCF_MODULES_DICT] + ['group_norm']
+OP_NAMES_REQUIRING_MODULE_ATTRS = [v.op_func_name for v in NNCF_MODULES_DICT]
 
 
 def wrap_operator(operator, operator_info: 'PatchedOperatorInfo'):
@@ -246,7 +245,8 @@ def _get_layer_attributes(module: TorchModule, operator_name: str) -> BaseLayerA
     if isinstance(module, Linear):
         return LinearLayerAttributes(weight_requires_grad=getattr(module, weight_attr).requires_grad,
                                      in_features=module.in_features,
-                                     out_features=module.out_features)
+                                     out_features=module.out_features,
+                                     bias=module.bias is not None)
     if hasattr(module, 'weight') or is_weight_norm_applied:
         return GenericWeightedLayerAttributes(weight_requires_grad=getattr(module, weight_attr).requires_grad,
                                               weight_shape=module.weight.shape)

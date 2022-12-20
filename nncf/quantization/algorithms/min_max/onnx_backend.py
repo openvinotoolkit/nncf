@@ -12,7 +12,7 @@
 """
 
 from copy import deepcopy
-from typing import Dict, List, Tuple, Optional
+from typing import Dict, List, Tuple
 import numpy as np
 import onnx
 
@@ -23,8 +23,9 @@ from nncf.common.graph.transformations.commands import TargetType
 from nncf.common.hardware.config import HWConfig
 from nncf.common.quantization.structs import QuantizerConfig
 from nncf.common.tensor_statistics.collectors import ReductionShape
+from nncf.common.tensor_statistics.statistics import MinMaxTensorStatistic
 from nncf.common.utils.backend import BackendType
-from nncf.common.utils.logger import logger as nncf_logger
+from nncf.common.logging import nncf_logger
 
 from nncf.experimental.onnx.graph.metatypes.onnx_metatypes import WEIGHT_LAYER_METATYPES
 from nncf.experimental.onnx.graph.metatypes.onnx_metatypes import ONNXNonMaxSuppressionMetatype
@@ -35,13 +36,14 @@ from nncf.experimental.onnx.graph.transformations.commands import ONNXTargetPoin
 from nncf.experimental.onnx.hardware.config import ONNXHWConfig
 from nncf.experimental.onnx.hardware.fused_patterns import ONNX_HW_FUSED_PATTERNS
 from nncf.experimental.onnx.quantization.default_quantization import DEFAULT_ONNX_QUANT_TRAIT_TO_OP_DICT
+from nncf.experimental.onnx.quantization.quantizer_parameters import calculate_activation_quantizer_parameters
+from nncf.experimental.onnx.quantization.quantizer_parameters import calculate_weight_quantizer_parameters
 from nncf.experimental.onnx.statistics.collectors import ONNXMeanMinMaxStatisticCollector
 from nncf.experimental.onnx.statistics.collectors import ONNXMinMaxStatisticCollector
 from nncf.experimental.onnx.graph.onnx_graph import ONNXGraph
 
 from nncf.quantization.algorithms.min_max.backend import MinMaxAlgoBackend
 from nncf.quantization.algorithms.min_max.backend import ALGO_BACKENDS
-from nncf.quantization.algorithms.min_max.utils import QuantizerLayerParameters
 
 
 @ALGO_BACKENDS.register(BackendType.ONNX)
@@ -78,8 +80,21 @@ class ONNXMinMaxAlgoBackend(MinMaxAlgoBackend):
         return ONNXTargetPoint(target_type, target_node_name, port_id)
 
     @staticmethod
-    def quantizer_insertion_command(target_point: ONNXTargetPoint,
-                                    parameters: QuantizerLayerParameters) -> ONNXQuantizerInsertionCommand:
+    def create_activation_quantizer_insertion_command(target_point: ONNXTargetPoint,
+                                                      quantizer_config: QuantizerConfig,
+                                                      statistics: MinMaxTensorStatistic) \
+                                                      -> ONNXQuantizerInsertionCommand:
+        axis = 1 if quantizer_config.per_channel else None
+        parameters = calculate_activation_quantizer_parameters(statistics, quantizer_config, axis)
+        return ONNXQuantizerInsertionCommand(target_point, parameters)
+
+    @staticmethod
+    def create_weight_quantizer_insertion_command(target_point: ONNXTargetPoint,
+                                                  quantizer_config: QuantizerConfig,
+                                                  weight_tensor: np.ndarray,
+                                                  node: NNCFNode) -> ONNXQuantizerInsertionCommand:
+        axis = node.metatype.weight_definitions.weight_channel_axis if quantizer_config.per_channel else None
+        parameters = calculate_weight_quantizer_parameters(weight_tensor, quantizer_config, axis)
         return ONNXQuantizerInsertionCommand(target_point, parameters)
 
     @staticmethod
@@ -101,35 +116,21 @@ class ONNXMinMaxAlgoBackend(MinMaxAlgoBackend):
                                                 window_size)
 
     @staticmethod
-    def get_weight_tensor(model: onnx.ModelProto, node: NNCFNode) -> Tuple[str, np.ndarray]:
+    def get_weight_tensor(model: onnx.ModelProto, target_point: ONNXTargetPoint) -> Tuple[str, np.ndarray]:
         onnx_graph = ONNXGraph(model)
-        node = onnx_graph.get_node_by_name(node.node_name)
+        node = onnx_graph.get_node_by_name(target_point.target_node_name)
         return onnx_graph.get_weight_tensor(node)
 
     @staticmethod
-    def get_weight_tensor_port_id(model: onnx.ModelProto, node: NNCFNode) -> Optional[int]:
-        onnx_graph = ONNXGraph(model)
-        node = onnx_graph.get_node_by_name(node.node_name)
-        weight_tensor_name, _ = onnx_graph.get_weight_tensor(node)
-        for i, input_name in enumerate(node.input):
-            if input_name == weight_tensor_name:
-                return i
-        return None
-
-    @staticmethod
-    def get_tensor_names(node: NNCFNode) -> Tuple[List[str], List[str]]:
-        return node.layer_attributes.input_tensor_names, \
-               node.layer_attributes.output_tensor_names
+    def get_weight_tensor_port_id(node: NNCFNode) -> int:
+        return node.metatype.weight_definitions.weight_port_id
 
     @staticmethod
     def get_weight_config(config: QuantizerConfig, model: onnx.ModelProto) -> QuantizerConfig:
         config = deepcopy(config)
         if model.opset_import[0].version < 13:
             config.per_channel = False
-            nncf_logger.warning(
-                f"Model opset version is {model.opset_import[0].version} < 13. "
-                "Per-channel quantization is not supported. "
-                "Set weight_quantizer_config.per_channel = False"
-            )
+            nncf_logger.warning(f"Model opset version is {model.opset_import[0].version} < 13 - "
+                                "will not use per-channel quantization because it is not supported in this opset.")
 
         return config

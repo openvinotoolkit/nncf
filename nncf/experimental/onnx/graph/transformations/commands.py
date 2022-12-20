@@ -18,7 +18,7 @@ from nncf.common.graph.transformations.commands import Command, TransformationCo
 from nncf.common.graph.transformations.commands import TransformationType
 from nncf.common.graph.transformations.commands import TargetType
 from nncf.common.graph.transformations.commands import TargetPoint
-from nncf.quantization.algorithms.min_max.utils import QuantizerLayerParameters
+from nncf.experimental.onnx.quantization.quantizer_parameters import ONNXQuantizerLayerParameters
 
 
 class ONNXTargetPoint(TargetPoint):
@@ -58,7 +58,7 @@ class ONNXInsertionCommand(TransformationCommand):
 
 
 class ONNXQuantizerInsertionCommand(ONNXInsertionCommand):
-    def __init__(self, target_point: ONNXTargetPoint, quantizer_parameters: QuantizerLayerParameters):
+    def __init__(self, target_point: ONNXTargetPoint, quantizer_parameters: ONNXQuantizerLayerParameters):
         super().__init__(target_point)
         self.quantizer_parameters = quantizer_parameters
 
@@ -76,16 +76,13 @@ class ONNXBiasCorrectionCommand(TransformationCommand):
     """
     Corrects bias value in the model based on the input value.
     """
-    def __init__(self, target_point: ONNXTargetPoint, bias_value: np.ndarray, threshold: float):
+    def __init__(self, target_point: ONNXTargetPoint, bias_value: np.ndarray):
         """
         :param target_point: The TargetPoint instance for the correction that contains layer's information.
         :param bias_value: The bias shift value (numpy format) that will be added to the original bias value.
-        :param threshold: The floating-point value against which it is shift magnitude compares.
-            For the details see the Fast/BiasCorrectionParameters.
         """
         super().__init__(TransformationType.CHANGE, target_point)
         self.bias_value = bias_value
-        self.threshold = threshold
 
     def union(self, other: 'TransformationCommand') -> 'TransformationCommand':
         # Have a look at nncf/torch/graph/transformations/commands/PTInsertionCommand
@@ -105,5 +102,20 @@ class ONNXModelExtractionCommand(Command):
         self.outputs = outputs
 
     def union(self, other: 'Command') -> 'Command':
+        # Have a look at nncf/torch/graph/transformations/commands/PTInsertionCommand
+        raise NotImplementedError()
+
+class ONNXNodeRemovingCommand(TransformationCommand):
+    """
+    Removes nodes from the model.
+    """
+
+    def __init__(self, target_point: ONNXTargetPoint):
+        """
+        :param target_point: The TargetPoint instance for the layer that contains information for removing.
+        """
+        super().__init__(TransformationType.REMOVE, target_point)
+
+    def union(self, other: 'TransformationCommand') -> 'TransformationCommand':
         # Have a look at nncf/torch/graph/transformations/commands/PTInsertionCommand
         raise NotImplementedError()

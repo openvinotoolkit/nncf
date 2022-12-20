@@ -16,6 +16,7 @@ from typing import Optional
 from nncf.api.statistics import Statistics
 from nncf.common.sparsity.statistics import MagnitudeSparsityStatistics
 from nncf.common.sparsity.statistics import RBSparsityStatistics
+from nncf.common.sparsity.statistics import MovementSparsityStatistics
 from nncf.common.sparsity.statistics import ConstSparsityStatistics
 from nncf.common.quantization.statistics import QuantizationStatistics
 from nncf.common.pruning.statistics import FilterPruningStatistics
@@ -52,6 +53,16 @@ class NNCFStatistics(Statistics):
         :return: Instance of the `RBSparsityStatistics` class.
         """
         return self._storage.get('rb_sparsity')
+
+    @property
+    def movement_sparsity(self) -> Optional[MovementSparsityStatistics]:
+        """
+        Returns statistics of the movement sparsity algorithm. If statistics
+        have not been collected, `None` will be returned.
+
+        :return: Instance of the `MovementSparsityStatistics` class.
+        """
+        return self._storage.get('movement_sparsity')
 
     @property
     def const_sparsity(self) -> Optional[ConstSparsityStatistics]:
@@ -108,7 +119,7 @@ class NNCFStatistics(Statistics):
         """
 
         available_algorithms = [
-            'magnitude_sparsity', 'rb_sparsity', 'const_sparsity',
+            'magnitude_sparsity', 'rb_sparsity', 'movement_sparsity', 'const_sparsity',
             'quantization', 'filter_pruning', 'binarization'
         ]
         if algorithm_name not in available_algorithms:

@@ -527,11 +527,11 @@ strict digraph  {
 "4 PNASNet/NNCFBatchNorm2d[bn1]/batch_norm_0" -> "5 PNASNet/relu_0";
 "5 PNASNet/relu_0" -> "6 PNASNet/AsymmetricQuantizer/asymmetric_quantize_0";
 "6 PNASNet/AsymmetricQuantizer/asymmetric_quantize_0" -> "8 PNASNet/Sequential[layer1]/CellB[0]/SepConv[sep_conv1]/NNCFConv2d[conv1]/conv2d_0";
-"7 PNASNet/Sequential[layer1]/CellB[0]/SepConv[sep_conv1]/NNCFConv2d[conv1]/ModuleDict[pre_ops]/UpdateWeight[0]/AsymmetricQuantizer[op]/asymmetric_quantize_0" -> "8 PNASNet/Sequential[layer1]/CellB[0]/SepConv[sep_conv1]/NNCFConv2d[conv1]/conv2d_0";
-"8 PNASNet/Sequential[layer1]/CellB[0]/SepConv[sep_conv1]/NNCFConv2d[conv1]/conv2d_0" -> "9 PNASNet/Sequential[layer1]/CellB[0]/SepConv[sep_conv1]/NNCFBatchNorm2d[bn1]/batch_norm_0";
 "6 PNASNet/AsymmetricQuantizer/asymmetric_quantize_0" -> "12 PNASNet/Sequential[layer1]/CellB[0]/SepConv[sep_conv2]/NNCFConv2d[conv1]/conv2d_0";
 "6 PNASNet/AsymmetricQuantizer/asymmetric_quantize_0" -> "15 PNASNet/Sequential[layer1]/CellB[0]/max_pool2d_0";
 "6 PNASNet/AsymmetricQuantizer/asymmetric_quantize_0" -> "17 PNASNet/Sequential[layer1]/CellB[0]/SepConv[sep_conv3]/NNCFConv2d[conv1]/conv2d_0";
+"7 PNASNet/Sequential[layer1]/CellB[0]/SepConv[sep_conv1]/NNCFConv2d[conv1]/ModuleDict[pre_ops]/UpdateWeight[0]/AsymmetricQuantizer[op]/asymmetric_quantize_0" -> "8 PNASNet/Sequential[layer1]/CellB[0]/SepConv[sep_conv1]/NNCFConv2d[conv1]/conv2d_0";
+"8 PNASNet/Sequential[layer1]/CellB[0]/SepConv[sep_conv1]/NNCFConv2d[conv1]/conv2d_0" -> "9 PNASNet/Sequential[layer1]/CellB[0]/SepConv[sep_conv1]/NNCFBatchNorm2d[bn1]/batch_norm_0";
 "9 PNASNet/Sequential[layer1]/CellB[0]/SepConv[sep_conv1]/NNCFBatchNorm2d[bn1]/batch_norm_0" -> "10 PNASNet/Sequential[layer1]/CellB[0]/SepConv[sep_conv1]/NNCFBatchNorm2d[bn1]/AsymmetricQuantizer/asymmetric_quantize_0";
 "10 PNASNet/Sequential[layer1]/CellB[0]/SepConv[sep_conv1]/NNCFBatchNorm2d[bn1]/AsymmetricQuantizer/asymmetric_quantize_0" -> "20 PNASNet/Sequential[layer1]/CellB[0]/__add___0";
 "11 PNASNet/Sequential[layer1]/CellB[0]/SepConv[sep_conv2]/NNCFConv2d[conv1]/ModuleDict[pre_ops]/UpdateWeight[0]/AsymmetricQuantizer[op]/asymmetric_quantize_0" -> "12 PNASNet/Sequential[layer1]/CellB[0]/SepConv[sep_conv2]/NNCFConv2d[conv1]/conv2d_0";
@@ -629,8 +629,8 @@ strict digraph  {
 "94 PNASNet/Sequential[layer1]/CellB[3]/SepConv[sep_conv3]/NNCFBatchNorm2d[bn1]/AsymmetricQuantizer/asymmetric_quantize_0" -> "98 PNASNet/Sequential[layer1]/CellB[3]/__add___1";
 "95 PNASNet/Sequential[layer1]/CellB[3]/__add___0" -> "96 PNASNet/Sequential[layer1]/CellB[3]/relu_0";
 "96 PNASNet/Sequential[layer1]/CellB[3]/relu_0" -> "97 PNASNet/Sequential[layer1]/CellB[3]/AsymmetricQuantizer/asymmetric_quantize_0";
-"98 PNASNet/Sequential[layer1]/CellB[3]/__add___1" -> "99 PNASNet/Sequential[layer1]/CellB[3]/relu_1";
 "97 PNASNet/Sequential[layer1]/CellB[3]/AsymmetricQuantizer/asymmetric_quantize_0" -> "101 PNASNet/Sequential[layer1]/CellB[3]/cat_0";
+"98 PNASNet/Sequential[layer1]/CellB[3]/__add___1" -> "99 PNASNet/Sequential[layer1]/CellB[3]/relu_1";
 "99 PNASNet/Sequential[layer1]/CellB[3]/relu_1" -> "100 PNASNet/Sequential[layer1]/CellB[3]/AsymmetricQuantizer/asymmetric_quantize_1";
 "100 PNASNet/Sequential[layer1]/CellB[3]/AsymmetricQuantizer/asymmetric_quantize_1" -> "101 PNASNet/Sequential[layer1]/CellB[3]/cat_0";
 "101 PNASNet/Sequential[layer1]/CellB[3]/cat_0" -> "103 PNASNet/Sequential[layer1]/CellB[3]/NNCFConv2d[conv2]/conv2d_0";

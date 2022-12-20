@@ -1,0 +1,5 @@
+torchvision>=0.12, <0.14
+tqdm
+scikit-learn
+fastdownload
+openvino-dev~=2022.3.0.dev

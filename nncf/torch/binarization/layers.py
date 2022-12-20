@@ -21,7 +21,7 @@ from nncf.torch.quantization.layers import get_per_channel_scale_shape
 from nncf.torch.binarization.binarize_functions import XNORBinarizeFn, DOREFABinarizeFn
 from nncf.torch.binarization.binarize_functions import ActivationBinarizationScaleThresholdFn
 
-from nncf.common.utils.logger import logger as nncf_logger
+from nncf.common.logging import nncf_logger
 
 BINARIZATION_MODULES = Registry('binarization_modules')
 
@@ -124,7 +124,7 @@ class ActivationBinarizationScaleThreshold(ActivationBinarizer):
             top_num = max(1, round(d.shape[0]*0.001))
             topk_res = d.topk(top_num)
             scale = topk_res[0].min()
-            nncf_logger.info("Binarized activation scale set to: {}".format(scale.item()))
+            nncf_logger.debug(f"Binarized activation scale set to: {scale.item()}")
             self.scale.data[:] = scale.log()
             self.is_scale_initialized = True
 

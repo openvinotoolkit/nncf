@@ -15,12 +15,28 @@ from typing import Any
 
 import torch
 
-from nncf.common.utils.logger import logger as nncf_logger
+from nncf.common.logging import nncf_logger
 from nncf.torch.utils import add_domain
 
 from .extensions import BinarizedFunctionsCUDA
-from torch.onnx.symbolic_helper import _unsqueeze_helper  # pylint:disable=protected-access
+from torch.onnx.symbolic_helper import _is_constant  # pylint:disable=protected-access
 
+
+def _unsqueeze_helper(g, input_, axes_i):
+    # Unsqueeze handling for different opsets inspired by torch.onnx.symbolic_helper._unsqueeze_helper
+    # The original unsqueeze_helper cannot be used in 1.13 since it references
+    # an `.opset` attribute on the `g` argument which is not there. The original intent
+    # of this in pytorch was to allow accessing opset info in the symbolic fn's
+    # code (see PR #84728 in the pytorch repo), but somehow the `symbolic` functions
+    # that we define are called from the C++ code, and they pass the old torch._C.Graph
+    # object as `g` instead of the torch.onnx._internal.jit_utils.GraphContext as it
+    # should be.
+    # The effect is that we can only do opset>=13-style unsqueeze here and hope that
+    # the user did not request an older opset.
+    if _is_constant(axes_i[0]):
+        axes = g.op("Constant", value_t=torch.tensor(axes_i, dtype=torch.long))
+        return g.op("Unsqueeze", input_, axes)
+    return g.op("Unsqueeze", input_, axes_i=axes_i[0])
 
 # pylint:disable=abstract-method
 class XNORBinarizeFn(torch.autograd.Function):

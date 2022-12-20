@@ -66,7 +66,7 @@ class ElasticityBuilder(PTCompressionAlgorithmBuilder):
 
         all_elasticity_dims = {e.value for e in ElasticityDim}
         available_elasticity_dims_str = self._algo_config.get('available_elasticity_dims', all_elasticity_dims)
-        self._available_elasticity_dims = list(map(ElasticityDim.from_str, available_elasticity_dims_str))
+        self._available_elasticity_dims = list(map(ElasticityDim, available_elasticity_dims_str))
         self._elasticity_builders = OrderedDict()  # type: Dict[ElasticityDim, SingleElasticityBuilder]
         self._builder_states = None
 
@@ -113,7 +113,7 @@ class ElasticityBuilder(PTCompressionAlgorithmBuilder):
 
         if self._builder_states is not None:
             for dim_str, builder_state in self._builder_states.items():
-                dim = ElasticityDim.from_str(dim_str)
+                dim = ElasticityDim(dim_str)
                 if dim in self._elasticity_builders:
                     self._elasticity_builders[dim].load_state(builder_state)
 
@@ -154,4 +154,4 @@ class ElasticityBuilder(PTCompressionAlgorithmBuilder):
         available_elasticity_dims_state = state_without_name[self._state_names.AVAILABLE_ELASTICITY_DIMS]
 
         # No conflict resolving with the related config options, parameters are overridden by compression state
-        self._available_elasticity_dims = list(map(ElasticityDim.from_str, available_elasticity_dims_state))
+        self._available_elasticity_dims = list(map(ElasticityDim, available_elasticity_dims_state))

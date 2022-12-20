@@ -719,20 +719,63 @@ long_string = textwrap.dedent('''\
 <a id="37-logging"></a>
 <a id="logging"></a>
 ### 3.7 Logging 
+Use the logger object built into NNCF for all purposes of logging within the NNCF package code.
+Do not use `print(...)` or other ways of output.
 
-For logging functions that expect a pattern-string (with %-placeholders) as
-their first argument: Always call them with a string literal (not an f-string!)
-as their first argument with pattern-parameters as subsequent arguments. Some
-logging implementations collect the unexpanded pattern-string as a queryable
-field. It also prevents spending time rendering a message that no logger is
-configured to output.
+Correct:
 
 ```python
-# Correct:
-import nncf
-from nncf.common.utils.logger import logger as nncf_logger
-nncf_logger.info('Test message: %s', nncf.__version__)
+from nncf.common.logging import nncf_logger
+
+nncf_logger.info("This is an info-level log message")
 ```
+
+Wrong:
+```python
+print("This is an info-level log message")
+```
+
+For logging functions that expect a pattern-string (with %-placeholders) as
+their first argument - consider calling them with a string literal (not an f-string!)
+as their first argument with pattern-parameters as subsequent arguments, if constructing the log message takes a long
+time or is otherwise hurtful to performance.
+
+```python
+import nncf
+from nncf.common.logging import nncf_logger
+
+# OK:
+nncf_logger.info('Test message: %s', nncf.__version__)
+
+# Also OK:
+nncf_logger.info(f'Test message: {nncf.__version__}')
+
+# Probably not OK:
+for i in range(1000000):
+    nncf_logger.info(f'Test message: {sum(range(10000000))}')
+```
+
+Use proper logging levels (https://docs.python.org/3/library/logging.html#logging-levels) when printing out a message to the logger.
+
+DEBUG - for NNCF internal information that can be utilized during debug sessions.
+
+INFO - for good-to-know information such as progress bar or activity indicators, short summaries or effects of non-default, user-defined configuration on execution (i.e. which parts of the model were ignored due to application of "ignored_scopes" arguments).
+It should be possible to safely ignore any of the INFO messages.
+This level is suitable for pretty-printing, displaying the messages that guide the user or displaying other data that could be valuable for the user, but not necessarily for the developer.
+
+WARNING - for unexpected events during execution that the user should know about, or for non-obvious effects of the current configuration.
+
+ERROR - for reporting failures that impair the functionality without causing a fatal exception.
+
+CRITICAL - for logging information relevant to NNCF total failures. Currently not used since this functionality is instead achieved with the text in the exceptions.
+
+The default logging level is INFO, meaning that the user will see INFO, WARNING, ERROR and CRITICAL messages.
+At these levels the logging should be as terse as possible, and the number of NNCF-created log lines should not scale with the increase in the number of operations in the model (i.e. avoid logging every simple quantizer operation being set up by NNCF - summarize the result instead)
+
+At all log levels the log lines should not be duplicated during execution, if possible.
+
+For deprecation warnings, use `nncf.common.logging.logger.warning_deprecated` instead of the regular `nncf_logger.warning`.
+This ensures that the deprecation warning is seen to the user at all NNCF log levels.
 
 <a id="s3.8-error-messages"></a>
 <a id="38-error-messages"></a>

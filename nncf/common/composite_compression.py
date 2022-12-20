@@ -322,7 +322,10 @@ class CompositeCompressionAlgorithmController(CompressionAlgorithmController):
             assert backend is BackendType.TORCH
             from nncf.torch.exporter import PTExporter #pylint: disable=cyclic-import
             exporter = PTExporter(self.model, input_names, output_names, model_args)
-        exporter.export_model(save_path, save_format)
+        if save_format is not None:
+            exporter.export_model(save_path, save_format)
+        else:
+            exporter.export_model(save_path)
 
     def disable_scheduler(self) -> None:
         self._scheduler = CompositeCompressionScheduler()

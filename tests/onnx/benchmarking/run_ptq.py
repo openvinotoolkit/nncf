@@ -22,7 +22,6 @@ from functools import partial
 from nncf.experimental.quantization.compression_builder import CompressionBuilder
 from nncf.quantization.algorithms.post_training.algorithm import PostTrainingQuantization
 from nncf.quantization.algorithms.post_training.algorithm import PostTrainingQuantizationParameters
-from nncf.common.utils.logger import logger as nncf_logger
 
 from openvino.tools.accuracy_checker.config import ConfigReader
 from openvino.tools.accuracy_checker.argparser import build_arguments_parser
@@ -30,8 +29,9 @@ from openvino.tools.accuracy_checker.evaluators import ModelEvaluator
 
 # pylint: disable=unused-import
 # This import need to register custom Conerter
-from tests.onnx.benchmarking.accuracy_checker import MSCocoSegmentationToVOCConverter
 from tests.onnx.quantization.common import find_ignored_scopes
+from tests.onnx.opset_converter import convert_opset_version
+
 
 # pylint: disable=redefined-outer-name,protected-access
 
@@ -51,21 +51,24 @@ def run(onnx_model_path: str, output_model_path: str, dataset: nncf.Dataset,
         num_init_samples: int,
         ignored_scopes: Optional[List[str]] = None,
         disallowed_op_types: Optional[List[str]] = None,
-        convert_opset_version: bool = True):
+        convert_model_opset: bool = True):
 
-    nncf_logger.info("Post-Training Quantization Parameters:")
+    print("Post-Training Quantization Parameters:")
     onnx.checker.check_model(onnx_model_path)
     original_model = onnx.load(onnx_model_path)
-    nncf_logger.info(f"The model is loaded from {onnx_model_path}")
+    print(f"The model is loaded from {onnx_model_path}")
     if ignored_scopes is None:
         ignored_scopes = []
     if disallowed_op_types is not None:
         ignored_scopes += find_ignored_scopes(disallowed_op_types, original_model)
-    nncf_logger.info(f"  number of samples: {num_init_samples}")
-    nncf_logger.info(f"  ignored_scopes: {ignored_scopes}")
+    print(f"  number of samples: {num_init_samples}")
+    print(f"  ignored_scopes: {ignored_scopes}")
+
+    # Step 0: Convert model opset
+    model = convert_opset_version(original_model) if convert_model_opset else original_model
 
     # Step 1: Create a pipeline of compression algorithms.
-    builder = CompressionBuilder(convert_opset_version)
+    builder = CompressionBuilder()
 
     # Step 2: Create the quantization algorithm and add to the builder.
     quantization_parameters = PostTrainingQuantizationParameters(
@@ -76,13 +79,12 @@ def run(onnx_model_path: str, output_model_path: str, dataset: nncf.Dataset,
     builder.add_algorithm(quantization)
 
     # Step 4: Execute the pipeline.
-    nncf_logger.info("Post-Training Quantization has just started!")
-    quantized_model = builder.apply(original_model, dataset)
+    print("Post-Training Quantization has just started!")
+    quantized_model = builder.apply(model, dataset)
 
     # Step 5: Save the quantized model.
     onnx.save(quantized_model, output_model_path)
-    nncf_logger.info(
-        "The quantized model is saved on {}".format(output_model_path))
+    print("The quantized model is saved to: {}".format(output_model_path))
 
     onnx.checker.check_model(output_model_path)
 
@@ -108,7 +110,7 @@ if __name__ == '__main__':
         ignored_scopes = config_entry.get("ignored_scopes", None)
         disallowed_op_types = config_entry.get("disallowed_op_types", None)
         has_batch_dim = config_entry.get("has_batch_dim", False)
-        convert_opset_version = config_entry.get("convert_opset_version", True)
+        convert_model_opset = config_entry.get("convert_opset_version", True)
 
         dataset_config = config_entry["datasets"][0]
         options = {
@@ -137,4 +139,4 @@ if __name__ == '__main__':
             num_init_samples,
             ignored_scopes,
             disallowed_op_types,
-            convert_opset_version)
+            convert_model_opset)

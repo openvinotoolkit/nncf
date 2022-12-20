@@ -24,7 +24,7 @@ from nncf.common.quantization.structs import NonWeightQuantizerId
 from nncf.torch.quantization.structs import NonWeightQuantizerInfo
 
 
-from nncf.common.utils.logger import logger as nncf_logger
+from nncf.common.logging import nncf_logger
 
 
 class BitwidthGraph:
@@ -109,7 +109,7 @@ class BitwidthGraph:
                 group_id_str = 'UNDEFINED'
                 group_id = groups_of_adjacent_quantizers.get_group_id_for_quantizer(wq_id)
                 if group_id is None:
-                    nncf_logger.error('No group for weight quantizer for: {}'.format(wq_id))
+                    nncf_logger.debug(f'No group for weight quantizer for: {wq_id}')
                 else:
                     group_id_str = str(group_id)
                 nx_node_to_draw_upon['label'] += '_G' + group_id_str
@@ -166,7 +166,7 @@ class BitwidthGraph:
                 group_id_str = 'UNDEFINED'
                 group_id = groups_of_adjacent_quantizers.get_group_id_for_quantizer(quantizer_id)
                 if node_id is None:
-                    nncf_logger.error('No group for activation quantizer: {}'.format(target_nncf_node_key))
+                    nncf_logger.debug(f'No group for activation quantizer: {target_nncf_node_key}')
                 else:
                     group_id_str = str(group_id)
                 activation_fq_node['label'] += "_G" + group_id_str

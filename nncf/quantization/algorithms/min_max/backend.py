@@ -13,7 +13,7 @@
 
 from abc import ABC
 from abc import abstractmethod
-from typing import Dict, TypeVar, Tuple, List, Optional
+from typing import Dict, TypeVar, Tuple, List
 
 import numpy as np
 from nncf.common.graph.graph import NNCFNode
@@ -25,9 +25,9 @@ from nncf.common.graph.transformations.commands import TransformationCommand
 from nncf.common.hardware.config import HWConfig
 from nncf.common.tensor_statistics.collectors import ReductionShape
 from nncf.common.tensor_statistics.collectors import TensorStatisticCollectorBase
+from nncf.common.tensor_statistics.statistics import MinMaxTensorStatistic
 from nncf.common.utils.registry import Registry
 from nncf.common.quantization.structs import QuantizerConfig
-from nncf.quantization.algorithms.min_max.utils import QuantizerLayerParameters
 from nncf.common.graph.model_transformer import ModelTransformer
 
 TModel = TypeVar('TModel')
@@ -95,13 +95,31 @@ class MinMaxAlgoBackend(ABC):
 
     @staticmethod
     @abstractmethod
-    def quantizer_insertion_command(target_point: TargetPoint,
-                                    parameters: QuantizerLayerParameters) -> TransformationCommand:
+    def create_activation_quantizer_insertion_command(target_point: TargetPoint,
+                                                      quantizer_config: QuantizerConfig,
+                                                      statistics: MinMaxTensorStatistic) -> TransformationCommand:
         """
         Returns backend-specific quantizer insertion command.
 
         :param target_point: Target location for the correction.
-        :param parameters: QuantizerLayerParameters instance for the command.
+        :param quantizer_config: QuantizerConfig instance for the current layer.
+        :param statistics: MinMaxTensorStatistic to calculate activation quantization parameters.
+        :return: Backend-specific TransformationCommand for the quantizer insertion operation.
+        """
+
+    @staticmethod
+    @abstractmethod
+    def create_weight_quantizer_insertion_command(target_point: TargetPoint,
+                                                  quantizer_config: QuantizerConfig,
+                                                  weight_tensor: np.ndarray,
+                                                  node: NNCFNode) -> TransformationCommand:
+        """
+        Returns backend-specific quantizer insertion command.
+
+        :param target_point: Target location for the correction.
+        :param quantizer_config: QuantizerConfig instance for the current layer.
+        :param weight_tensor: weight tensor to calculate weight quantization parameters.
+        :param node: NNCFNode with the attributes.
         :return: Backend-specific TransformationCommand for the quantizer insertion operation.
         """
 
@@ -138,33 +156,22 @@ class MinMaxAlgoBackend(ABC):
 
     @staticmethod
     @abstractmethod
-    def get_weight_tensor(model: TModel, node: NNCFNode) -> Tuple[str, np.ndarray]:
+    def get_weight_tensor(model: TModel, target_point: TargetPoint) -> Tuple[str, np.ndarray]:
         """
         Returns node's weight tensor name and its value.
 
         :param model: Backend-specific model for the initializer finding.
-        :param node: NNCFNode to find its weight.
+        :param target_point: Backend-specific TargetPoint to find its weight.
         :return: Weight tensor name and its value.
         """
 
     @staticmethod
-    def get_weight_tensor_port_id(model: TModel, node: NNCFNode) -> Optional[int]:
+    def get_weight_tensor_port_id(model: TModel, node: NNCFNode) -> int:
         """
         Returns node's weight tensor input port ID.
 
-        :param model: Backend-specific model for the initializer finding.
         :param node: NNCFNode to find its weight input port ID.
-        :return: The input port ID of the weight.  None if the weight tensor was not found.
-        """
-
-    @staticmethod
-    @abstractmethod
-    def get_tensor_names(node: NNCFNode) -> Tuple[List[str], List[str]]:
-        """
-        Returns tuple of the lists with the input & output tensor names respectively.
-
-        :param node: NNCFNode with the layer_attributes.
-        :return: Tuple of the lists with the names.
+        :return: The input port ID of the weight.
         """
 
     @staticmethod

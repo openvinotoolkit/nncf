@@ -21,7 +21,7 @@ from nncf.common.graph import NNCFGraph
 from nncf.common.pruning.mask_propagation import MaskPropagationAlgorithm
 from nncf.common.pruning.utils import PruningOperationsMetatypeRegistry
 from nncf.torch.nncf_network import NNCFNetwork
-from nncf.common.utils.logger import logger as nncf_logger
+from nncf.common.logging import nncf_logger
 
 
 class FilterReorderingAlgorithm(MaskPropagationAlgorithm):

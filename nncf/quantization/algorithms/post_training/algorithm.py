@@ -13,18 +13,22 @@
 
 from typing import Dict, List, Optional, TypeVar, Union
 
+from copy import deepcopy
+
 from nncf import Dataset
 from nncf.common.hardware.config import HWConfigType
 from nncf.common.quantization.structs import QuantizationPreset
 from nncf.common.utils.backend import BackendType
 from nncf.common.utils.backend import get_backend
-from nncf.common.utils.logger import logger as nncf_logger
+from nncf.common.logging import nncf_logger
 from nncf.quantization.algorithms.algorithm import Algorithm
 from nncf.quantization.algorithms.algorithm import AlgorithmParameters
 from nncf.quantization.algorithms.definitions import Granularity
 from nncf.quantization.algorithms.definitions import RangeType
 from nncf.quantization.algorithms.fast_bias_correction.algorithm import FastBiasCorrection
 from nncf.quantization.algorithms.fast_bias_correction.algorithm import FastBiasCorrectionParameters
+from nncf.quantization.algorithms.bias_correction.algorithm import BiasCorrection
+from nncf.quantization.algorithms.bias_correction.algorithm import BiasCorrectionParameters
 from nncf.quantization.algorithms.min_max.algorithm import MinMaxQuantization
 from nncf.quantization.algorithms.min_max.algorithm import MinMaxQuantizationParameters
 from nncf.common.tensor_statistics.aggregator import StatisticsAggregator
@@ -48,7 +52,8 @@ class PostTrainingQuantizationParameters(AlgorithmParameters):
                  number_samples: int = 300,
                  target_device: HWConfigType = HWConfigType.CPU,
                  quantize_outputs: bool = False,
-                 ignored_scopes: Optional[List[str]] = None
+                 ignored_scopes: Optional[List[str]] = None,
+                 fast_bias_correction: bool = True,
                  ):
         self.algorithms = {MinMaxQuantization: MinMaxQuantizationParameters(
             preset=preset,
@@ -61,10 +66,17 @@ class PostTrainingQuantizationParameters(AlgorithmParameters):
             target_device=target_device,
             quantize_outputs=quantize_outputs,
             ignored_scopes=ignored_scopes
-        ),
-            FastBiasCorrection: FastBiasCorrectionParameters(
+        )}
+
+        bias_correction_algo = {BiasCorrection: BiasCorrectionParameters(
             number_samples=number_samples
         )}
+
+        if fast_bias_correction:
+            bias_correction_algo = {FastBiasCorrection: FastBiasCorrectionParameters(
+                number_samples=number_samples
+            )}
+        self.algorithms.update(bias_correction_algo)
 
     def to_json(self) -> Dict[str, Union[str, float, int]]:
         pass
@@ -74,10 +86,10 @@ class PostTrainingQuantization(Algorithm):
     """
     Implements Post-Training Quantization algorithm, which basically includes:
     1) MinMaxQuantization
-    2) FastBiasCorrection
+    2) FastBiasCorrection or BiasCorrection
     3) ChannelAlignment
 
-    Disclaimer: currently, it only supports MinMaxQuantization & FastBiasCorrection.
+    Disclaimer: currently, it only supports MinMaxQuantization, FastBiasCorrection & BiasCorrection.
     ChannelAlignment will be added soon.
 
     """
@@ -104,6 +116,9 @@ class PostTrainingQuantization(Algorithm):
             if algorithm == FastBiasCorrection:
                 fast_bc_algo = FastBiasCorrection(parameters)
                 algorithms_list.append(fast_bc_algo)
+            if algorithm == BiasCorrection:
+                bc_algo = BiasCorrection(parameters)
+                algorithms_list.append(bc_algo)
         return algorithms_list
 
     @property
@@ -136,28 +151,18 @@ class PostTrainingQuantization(Algorithm):
             return ONNXStatisticsAggregator(dataset)
         return None
 
-    def _get_prepared_model_for_compression(self, model: TModel, backend: BackendType) -> TModel:
-        if backend == BackendType.ONNX:
-            from nncf.experimental.onnx.model_normalizer import \
-                ONNXModelNormalizer
-            return ONNXModelNormalizer.normalize_model(model, convert_opset_version=True)
-
-        return None
-
     def _apply(self,
                model: TModel,
                statistic_points: Optional[StatisticPointsContainer] = None,
                dataset: Optional[Dataset] = None) -> TModel:
 
-        modified_model = model
+        modified_model = deepcopy(model)
         if statistic_points is None:
-            backend = get_backend(model)
+            backend = get_backend(modified_model)
 
             # TODO (KodiaqQ): Remove after ONNX is removed from experimental
             if backend == BackendType.ONNX:
-                nncf_logger.warning(
-                    'You are using experimental ONNX backend for the Post-training quantization.')
-            modified_model = self._get_prepared_model_for_compression(modified_model, backend)
+                nncf_logger.warning('You are using the experimental ONNX backend for post-training quantization.')
 
             statistics_aggregator = self._create_statistics_aggregator(dataset, backend)
             for algorithm in self.algorithms:

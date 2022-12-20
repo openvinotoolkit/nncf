@@ -87,7 +87,7 @@ def check_skip_model(model_name: str, model_names_to_test: Optional[List[str]]):
 
 def run_command(command: List[str]):
     com_str = ' '.join(command)
-    nncf_logger.info(f"Run command: {com_str}")
+    print(f"Run command: {com_str}")
     with subprocess.Popen(command,
                           stdout=subprocess.PIPE,
                           stderr=subprocess.STDOUT,
@@ -96,7 +96,7 @@ def run_command(command: List[str]):
         outs, _ = result.communicate()
 
         if result.returncode != 0:
-            nncf_logger.error(outs.decode("utf-8"))
+            print(outs.decode("utf-8"))
             pytest.fail()
 
 
@@ -141,7 +141,7 @@ def anno_dir(request):
         yield Path(option)
     else:
         with TemporaryDirectory() as tmp_dir:
-            nncf_logger.info(f"Use anno_dir: {tmp_dir}")
+            print(f"Use anno_dir: {tmp_dir}")
             yield Path(tmp_dir)
 
 
@@ -152,7 +152,7 @@ def ckpt_dir(request):
         yield Path(option)
     else:
         with TemporaryDirectory() as tmp_dir:
-            nncf_logger.info(f"Use ckpt_dir: {tmp_dir}")
+            print(f"Use ckpt_dir: {tmp_dir}")
             yield Path(tmp_dir)
 
 
@@ -165,7 +165,7 @@ def ptq_size(request):
 def eval_size(request):
     option = request.config.getoption("--eval-size")
     if option is None:
-        nncf_logger.warning("--eval-size is not provided. Use full dataset for evaluation")
+        print("--eval-size is not provided. Use full dataset for evaluation")
     return option
 
 
@@ -279,7 +279,7 @@ class TestPTQ:
         ]
 
         com_str = ' '.join(com_line)
-        nncf_logger.info(f"Run command: {com_str}")
+        print(f"Run command: {com_str}")
         run_command(com_line)
 
 

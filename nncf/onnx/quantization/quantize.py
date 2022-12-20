@@ -16,6 +16,7 @@ from typing import Optional
 import onnx
 
 from nncf.data import Dataset
+from nncf.quantization.telemetry_extractors import CompressionStartedWithQuantizeApi
 from nncf.parameters import convert_ignored_scope_to_list
 from nncf.parameters import IgnoredScope
 from nncf.parameters import ModelType
@@ -23,8 +24,11 @@ from nncf.parameters import TargetDevice
 from nncf.common.quantization.structs import QuantizationPreset
 from nncf.quantization.algorithms.post_training.algorithm import PostTrainingQuantization
 from nncf.quantization.algorithms.post_training.algorithm  import PostTrainingQuantizationParameters
+from nncf.telemetry import tracked_function
+from nncf.telemetry.events import NNCF_ONNX_CATEGORY
 
 
+@tracked_function(NNCF_ONNX_CATEGORY, [CompressionStartedWithQuantizeApi(), "target_device", "preset"])
 def quantize_impl(model: onnx.ModelProto,
                   calibration_dataset: Dataset,
                   preset: QuantizationPreset,
@@ -38,9 +42,6 @@ def quantize_impl(model: onnx.ModelProto,
     """
     if model_type is not None:
         raise ValueError(f'model_type={model_type} is not supported')
-    if fast_bias_correction is False:
-        raise ValueError(f'fast_bias_correction={fast_bias_correction} is not '
-                          'supported')
     if ignored_scope is not None and ignored_scope.types is not None:
         raise RuntimeError('Quantization algorithm from the ONNX backend '
                            'does not support operation types in the ignored '
@@ -50,7 +51,8 @@ def quantize_impl(model: onnx.ModelProto,
         preset=preset,
         target_device=target_device,
         number_samples=subset_size,
-        ignored_scopes=convert_ignored_scope_to_list(ignored_scope)
+        ignored_scopes=convert_ignored_scope_to_list(ignored_scope),
+        fast_bias_correction=fast_bias_correction
     )
 
     quantization_algorithm = PostTrainingQuantization(quantization_parameters)

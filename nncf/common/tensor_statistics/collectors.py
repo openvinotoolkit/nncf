@@ -20,7 +20,6 @@ import numpy as np
 from nncf.common.tensor import NNCFTensor
 from nncf.common.tensor import TensorType
 from nncf.common.tensor import TensorElementsType
-from nncf.common.utils.logger import logger
 from nncf.common.tensor_statistics.reduction import get_per_channel_history
 
 ReductionShape = Tuple[int]
@@ -48,12 +47,8 @@ class TensorStatisticCollectorBase(ABC):
     def register_input(self, x: TensorType) -> TensorType:
         """Registers input tensor"""
         if not self._enabled:
-            logger.debug(
-                'The collector is disabled, the tensor will not be registered')
             return x
         if self._num_samples is not None and self._collected_samples >= self._num_samples:
-            logger.debug(
-                'The number of samples is exceeded, the tensor will not be registered')
             return x
         if self._reduction_shape is None:
             self._reduction_shape = tuple(range(len(x.shape)))
@@ -376,7 +371,10 @@ class MeanStatisticCollector(OfflineTensorStatisticCollector):
         pass
 
     def _register_input_common(self, x: NNCFTensor):
-        self._all_values.append(self._tensor_processor.mean_per_channel(x, self._reduction_shape))
+        if self._reduction_shape == 0:
+            self._all_values.append(self._tensor_processor.batch_mean(x))
+        else:
+            self._all_values.append(self._tensor_processor.mean_per_channel(x, self._reduction_shape))
         self._all_shapes.append(x.shape)
 
     def _reset(self):
@@ -389,6 +387,34 @@ class MeanStatisticCollector(OfflineTensorStatisticCollector):
 
     def _shape(self):
         return self._all_shapes[0]
+
+
+class BatchStatisticCollector(OfflineTensorStatisticCollector):
+    """
+    Collects tensor samples, where each tensor is averaged along the batch axis (and only that axis).
+    Each sample stays available for usage in further stages of the algorithm.
+    """
+
+    def __init__(self,
+                 num_samples: Optional[int] = None) -> None:
+        """
+        :param num_samples: Optional parameter for statistic collection that regulates
+            the number of samples that will be processed.
+        """
+        super().__init__(num_samples=num_samples)
+        self._tensor_processor = self._get_processor()
+        self._all_values = []
+
+    @staticmethod
+    @abstractmethod
+    def _get_processor():
+        pass
+
+    def _register_input_common(self, x: NNCFTensor):
+        self._all_values.append(self._tensor_processor.batch_mean(x).tensor)
+
+    def _reset(self):
+        self._all_values.clear()
 
 
 class MedianMADStatisticCollector(OfflineTensorStatisticCollector):
