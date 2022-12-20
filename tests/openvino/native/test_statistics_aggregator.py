@@ -12,18 +12,13 @@
 """
 
 import pytest
-
 from typing import List, Tuple
-
 import numpy as np
 
 from nncf import Dataset
-
 from nncf.quantization.algorithms.definitions import RangeType
 from nncf.quantization.algorithms.min_max.algorithm import MinMaxQuantizationParameters
 from nncf.quantization.algorithms.min_max.algorithm import MinMaxQuantization
-from nncf.quantization.algorithms.post_training.algorithm import PostTrainingQuantization
-from nncf.quantization.algorithms.post_training.algorithm  import PostTrainingQuantizationParameters
 from nncf.experimental.openvino_native.statistics.aggregator import OVStatisticsAggregator
 
 from tests.openvino.native.models import LinearModel
@@ -34,14 +29,14 @@ DATASET_SAMPLES = [np.zeros(INPUT_SHAPE, dtype=np.float32),
                    np.zeros(INPUT_SHAPE, dtype=np.float32),
                    np.zeros(INPUT_SHAPE, dtype=np.float32)]
 
-DATASET_SAMPLES[0][0][0, 0, 0, 0] = 128  # max
-DATASET_SAMPLES[0][0][0, 0, 0, 1] = -128  # min
+DATASET_SAMPLES[0][0, 0, 0, 0] = 128  # max
+DATASET_SAMPLES[0][0, 0, 0, 1] = -128  # min
 
-DATASET_SAMPLES[1][0][0, 0, 0, 0] = 1  # max
-DATASET_SAMPLES[1][0][0, 0, 0, 1] = -10  # min
+DATASET_SAMPLES[1][0, 0, 0, 0] = 1  # max
+DATASET_SAMPLES[1][0, 0, 0, 1] = -10  # min
 
-DATASET_SAMPLES[2][0][0, 0, 0, 0] = 0.1  # max
-DATASET_SAMPLES[2][0][0, 0, 0, 1] = -1  # min
+DATASET_SAMPLES[2][0, 0, 0, 0] = 0.1  # max
+DATASET_SAMPLES[2][0, 0, 0, 1] = -1  # min
 
 
 class TestParameters:
