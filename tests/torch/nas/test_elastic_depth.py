@@ -218,8 +218,14 @@ def test_can_export_model_with_one_skipped_block_resnet18(tmp_path):
     # of nodes it tries to output the whole expression (onnx node), and sometimes it causes pytest to freeze.
     num_all_nodes = len(onnx_resnet18_orig.graph.node)
     num_not_skipped_nodes = len(onnx_resnet18_without_one_block.graph.node)
-    assert num_all_nodes == 65
-    assert num_not_skipped_nodes == 63
+    ref_num_nodes = 65
+    ref_not_skipped_nodes = 63
+    if parse_version(torch.__version__) < parse_version('1.12'):
+        # different ONNX format for older pytorch version - no Identity nodes
+        ref_num_nodes = 49
+        ref_not_skipped_nodes = 48
+    assert num_all_nodes == ref_num_nodes
+    assert num_not_skipped_nodes == ref_not_skipped_nodes
 
     input_tensor = np.ones(nncf_config['input_info'][0]['sample_size'])
     device = get_model_device(compressed_model)
