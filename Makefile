@@ -28,7 +28,7 @@ create_onnx_ptq_e2e_venv:
 	pip install cython
 	yes | pip uninstall onnxruntime-openvino
 	git clone https://github.com/openvinotoolkit/openvino.git
-	cd openvino && git checkout b2feb56b22e52de6171bfdbd5899db5c74de28f7
+	cd openvino && git checkout 74758c0ca5fc7b76e21b490406cb2d81c048dc4e
 	cd openvino && git submodule update --init --recursive && chmod +x install_build_dependencies.sh
 	cd openvino && sudo -E bash ./install_build_dependencies.sh
 	cd openvino && mkdir build
