@@ -120,7 +120,7 @@ def transform_fn(data_item):
 # The easiest way to define a calibration dataset is to use a training or
 # validation dataset and a transformation function to remove labels from the data
 # item and prepare model input data. The quantize method uses a small subset
-# (default: 300 samples) of the calibration data set.
+# (default: 300 samples) of the calibration dataset.
 calibration_dataset = nncf.Dataset(val_loader, transform_fn)
 quantized_model = nncf.quantize(model, calibration_dataset)
 
