@@ -17,7 +17,6 @@ import numpy as np
 from nncf.common.quantization.structs import QuantizationMode
 from nncf.common.quantization.structs import QuantizerConfig
 from nncf.common.tensor_statistics.statistics import MinMaxTensorStatistic
-from nncf.common.logging import nncf_logger
 
 
 @dataclass

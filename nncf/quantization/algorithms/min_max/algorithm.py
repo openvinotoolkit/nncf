@@ -93,7 +93,6 @@ class MinMaxQuantizationParameters(AlgorithmParameters):
             should be forced. True if the quantizer *must* be signed, False if *must* be unsigned,
             None if the signed/unsigned attribute should be determined based on the incoming activation
             statistics during range initialization.
-            activation_signedness_to_force
         :param target_device: Target device for the settings of the quantization pipeline.
         :param range_type: Type of statistics range calculation.
         :param quantize_outputs: Boolean value that says whether quantize outputs or not.

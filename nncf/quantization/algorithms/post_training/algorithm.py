@@ -60,22 +60,21 @@ class PostTrainingQuantizationParameters(AlgorithmParameters):
         """
         :param number_samples: Number of samples for the statistics collection.
         :param preset: Preset parameter for Quantization.
-        Defines the mode: symmetric or asymmetric of the activation quantizers.
+            Defines the mode: symmetric or asymmetric of the activation quantizers.
         :param weight_bits: Bitwidth for the weight quantizers.
         :param weight_granularity: Type of quantization granularity for weight quantizers.
-        Could be per-channel or per-tensor.
+            Could be per-channel or per-tensor.
         :param weight_signedness_to_force: Defines whether the datatype of the weight quantizers should be forced.
-        True if the quantizer *must* be signed, False if *must* be unsigned,
-        None if the signed/unsigned attribute should be determined based on the incoming activation
-        statistics during range initialization.
+            True if the quantizer *must* be signed, False if *must* be unsigned,
+            None if the signed/unsigned attribute should be determined based on the incoming activation
+            statistics during range initialization.
         :param activation_bits: Bitwidth for the activation quantizers.
         :param activation_granularity: Type of quantization granularity for activation quantizers.
-        Could be per-channel or per-tensor.
+            Could be per-channel or per-tensor.
         :param activation_signedness_to_force: Defines whether the datatype of the activation quantizers
-         should be forced. True if the quantizer *must* be signed, False if *must* be unsigned,
-        None if the signed/unsigned attribute should be determined based on the incoming activation
-        statistics during range initialization.
-        activation_signedness_to_force
+            should be forced. True if the quantizer *must* be signed, False if *must* be unsigned,
+            None if the signed/unsigned attribute should be determined based on the incoming activation
+            statistics during range initialization.
         :param target_device: Target device for the settings of the quantization pipeline.
         :param range_type: Type of statistics range calculation.
         :param quantize_outputs: Boolean value that says whether quantize outputs or not.
