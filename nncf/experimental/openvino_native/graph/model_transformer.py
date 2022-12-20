@@ -47,6 +47,7 @@ class OVModelTransformer(ModelTransformer):
         """
         output_insert_transformations = []
         fq_nodes_removing_transformations = []
+        quantizer_insert_transformations = []
         transformations = transformation_layout.transformations
 
         for transformation in transformations:
@@ -54,11 +55,15 @@ class OVModelTransformer(ModelTransformer):
                 output_insert_transformations.append(transformation)
             elif isinstance(transformation, OVFQNodeRemovingCommand):
                 fq_nodes_removing_transformations.append(transformation)
+            elif isinstance(transformation, OVQuantizerInsertionCommand):
+                quantizer_insert_transformations.append(transformation)
 
         if output_insert_transformations:
             self._apply_output_insertion_transformations(output_insert_transformations)
         if fq_nodes_removing_transformations:
             self._apply_fq_nodes_removing_transformation(fq_nodes_removing_transformations)
+        if quantizer_insert_transformations:
+            self._apply_quantizer_insertion_transformations(quantizer_insert_transformations)
 
         return self._model
 

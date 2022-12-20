@@ -68,8 +68,7 @@ class GraphConverter:
         """
         if metatype == OVConvolutionBackpropDataMetatype:
             return inputs[:2]
-        else:
-            return inputs
+        return inputs
 
     @staticmethod
     def _add_nncf_node(node: ov.Node, graph: NNCFGraph) -> None:

@@ -122,7 +122,7 @@ class OVMinMaxAlgoBackend(MinMaxAlgoBackend):
         raise RuntimeError(f'Could not find node: {target_point.target_node_name} in model.')
 
     @staticmethod
-    def get_weight_tensor_port_id(model: ov.Model, node: NNCFNode) -> int:
+    def get_weight_tensor_port_id(node: NNCFNode) -> int:
         return node.layer_attributes.weight_port_id
 
     @staticmethod

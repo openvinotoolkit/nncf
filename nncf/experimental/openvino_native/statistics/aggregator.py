@@ -41,7 +41,7 @@ class OVStatisticsAggregator(StatisticsAggregator):
                 if statistic_point.target_point.type == TargetType.POST_LAYER_OPERATION:
                     stat_node_name = node_name
                 elif statistic_point.target_point.type == TargetType.PRE_LAYER_OPERATION:
-                    node = self.name_to_node_mapping[node_name]
+                    node = self._name_to_node_mapping[node_name]
                     stat_node_name = node.input_value(port_id).get_node().get_friendly_name()
                 else:
                     RuntimeError('The statistics should be collected only from the inputs or outputs of the node.')

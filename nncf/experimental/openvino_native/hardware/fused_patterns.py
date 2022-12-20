@@ -42,7 +42,6 @@ def _get_openvino_hw_fused_patterns() -> HWFusedPatterns:
     arithmetic_ops.add_node(**ARITHMETIC_OPERATIONS)
     hw_fused_patterns.register(arithmetic_ops, ARITHMETIC_OPERATIONS['label'], match=False)
 
-
     batch_norm_activations_permutation = batch_norm + activations | \
                                          activations + batch_norm | \
                                          batch_norm | activations

@@ -183,13 +183,11 @@ class PostTrainingQuantization(Algorithm):
                model: TModel,
                statistic_points: Optional[StatisticPointsContainer] = None,
                dataset: Optional[Dataset] = None) -> TModel:
-
+        backend = get_backend(model)
         if backend == BackendType.OPENVINO:
             modified_model = model.clone()
         else:
             modified_model = deepcopy(model)
-        if statistic_points is None:
-            backend = get_backend(modified_model)
 
             if backend == BackendType.OPENVINO:
                 nncf_logger.warning('You are using experimental OpenVINO backend for the Post-training quantization.')
