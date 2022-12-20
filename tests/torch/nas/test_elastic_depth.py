@@ -18,6 +18,7 @@ import onnx
 import onnxruntime as rt
 import pytest
 import torch
+from pkg_resources import parse_version
 from torch import nn
 
 from nncf.experimental.torch.nas.bootstrapNAS.elasticity.elasticity_dim import ElasticityDim
@@ -439,6 +440,8 @@ class TwoBranchesAfterInput(nn.Module):
         return x * self.dummy + x
 
 
+@pytest.mark.skipif(parse_version(torch.__version__) < parse_version("1.9"),
+                    reason="Test uses torch.permute attribute, which is not presented in the current torch version")
 @pytest.mark.parametrize('model_creator', (
         TwoPermute, ChunkConcat, TwoBranchesBeforeInput, TwoBranchesAfterInput))
 def test_can_skip_trivial_block(model_creator):
