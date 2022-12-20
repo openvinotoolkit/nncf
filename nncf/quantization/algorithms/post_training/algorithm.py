@@ -47,10 +47,10 @@ class PostTrainingQuantizationParameters(AlgorithmParameters):
                  preset: QuantizationPreset = QuantizationPreset.PERFORMANCE,
                  weight_bits: Optional[int] = None,
                  weight_granularity: Optional[Granularity] = None,
-                 weight_signedness_to_force: Optional[bool] = None,
+                 signed_weights: Optional[bool] = None,
                  activation_bits: Optional[int] = None,
                  activation_granularity: Optional[Granularity] = None,
-                 activation_signedness_to_force: Optional[bool] = None,
+                 signed_activations: Optional[bool] = None,
                  target_device: TargetDevice = TargetDevice.ANY,
                  range_type: RangeType = RangeType.MEAN_MINMAX,
                  quantize_outputs: bool = False,
@@ -64,14 +64,14 @@ class PostTrainingQuantizationParameters(AlgorithmParameters):
         :param weight_bits: Bitwidth for the weight quantizers.
         :param weight_granularity: Type of quantization granularity for weight quantizers.
             Could be per-channel or per-tensor.
-        :param weight_signedness_to_force: Defines whether the datatype of the weight quantizers should be forced.
+        :param signed_weights: Defines whether the datatype of the weight quantizers should be forced.
             True if the quantizer *must* be signed, False if *must* be unsigned,
             None if the signed/unsigned attribute should be determined based on the incoming activation
             statistics during range initialization.
         :param activation_bits: Bitwidth for the activation quantizers.
         :param activation_granularity: Type of quantization granularity for activation quantizers.
             Could be per-channel or per-tensor.
-        :param activation_signedness_to_force: Defines whether the datatype of the activation quantizers
+        :param signed_activations: Defines whether the datatype of the activation quantizers
             should be forced. True if the quantizer *must* be signed, False if *must* be unsigned,
             None if the signed/unsigned attribute should be determined based on the incoming activation
             statistics during range initialization.
@@ -84,10 +84,10 @@ class PostTrainingQuantizationParameters(AlgorithmParameters):
             preset=preset,
             weight_bits=weight_bits,
             weight_granularity=weight_granularity,
-            weight_signedness_to_force=weight_signedness_to_force,
+            signed_weights=signed_weights,
             activation_bits=activation_bits,
             activation_granularity=activation_granularity,
-            activation_signedness_to_force=activation_signedness_to_force,
+            signed_activations=signed_activations,
             range_type=range_type,
             number_samples=number_samples,
             target_device=target_device,

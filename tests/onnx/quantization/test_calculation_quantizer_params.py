@@ -12,6 +12,8 @@
 """
 
 import pytest
+import numpy as np
+from dataclasses import dataclass
 from nncf.common.quantization.structs import QuantizationMode
 from nncf.common.quantization.structs import QuantizerConfig
 from nncf.experimental.onnx.quantization.quantizer_parameters import calculate_scale_zero_point
@@ -20,8 +22,6 @@ from nncf.experimental.onnx.quantization.quantizer_parameters import calculate_w
 from nncf.experimental.onnx.quantization.quantizer_parameters import get_level_low_level_high
 from nncf.experimental.onnx.quantization.quantizer_parameters import ONNXQuantizerLayerParameters
 from nncf.experimental.onnx.statistics.statistics import ONNXMinMaxTensorStatistic
-import numpy as np
-from dataclasses import dataclass
 
 
 @dataclass
@@ -115,7 +115,7 @@ def test_calculate_levels(num_bits, tensor_type, ref_levels):
 class CaseToTestActivationQParams:
     num_bits: int
     mode: QuantizationMode
-    signedness_to_force: bool
+    activations_signed: bool
     per_channel: bool
     axis: int
     ref_tensor_type: np.ndarray
@@ -123,25 +123,25 @@ class CaseToTestActivationQParams:
 
 CASES_FOR_TEST = (CaseToTestActivationQParams(num_bits=8,
                                               mode=QuantizationMode.SYMMETRIC,
-                                              signedness_to_force=None,
+                                              activations_signed=None,
                                               per_channel=False,
                                               axis=None,
                                               ref_tensor_type=np.int8),
                   CaseToTestActivationQParams(num_bits=8,
                                               mode=QuantizationMode.ASYMMETRIC,
-                                              signedness_to_force=None,
+                                              activations_signed=None,
                                               per_channel=False,
                                               axis=None,
                                               ref_tensor_type=np.int8),
                   CaseToTestActivationQParams(num_bits=8,
                                               mode=QuantizationMode.SYMMETRIC,
-                                              signedness_to_force=None,
+                                              activations_signed=None,
                                               per_channel=True,
                                               axis=1,
                                               ref_tensor_type=np.int8),
                   CaseToTestActivationQParams(num_bits=8,
                                               mode=QuantizationMode.SYMMETRIC,
-                                              signedness_to_force=None,
+                                              activations_signed=None,
                                               per_channel=True,
                                               axis=1,
                                               ref_tensor_type=np.int8),
@@ -153,7 +153,7 @@ def test_calculate_activation_quantizer_parameters(case_to_test):
     statistics = ONNXMinMaxTensorStatistic(-1 * np.ones((3, 10, 10)), np.ones((3, 10, 10)))
     qconfig = QuantizerConfig(num_bits=case_to_test.num_bits,
                               mode=case_to_test.mode,
-                              signedness_to_force=case_to_test.signedness_to_force,
+                              signedness_to_force=case_to_test.activations_signed,
                               per_channel=case_to_test.per_channel)
     ref_quantize_params = ONNXQuantizerLayerParameters(-1 * np.ones((3, 10, 10)), np.ones((3, 10, 10)),
                                                        mode=case_to_test.mode,
@@ -169,7 +169,7 @@ def test_calculate_activation_quantizer_parameters(case_to_test):
 def test_calculate_weight_quantizer_parameters(case_to_test):
     qconfig = QuantizerConfig(num_bits=case_to_test.num_bits,
                               mode=case_to_test.mode,
-                              signedness_to_force=case_to_test.signedness_to_force,
+                              signedness_to_force=case_to_test.activations_signed,
                               per_channel=case_to_test.per_channel)
     ref_quantize_params = ONNXQuantizerLayerParameters(-1 * np.ones((3, 10, 10)), np.ones((3, 10, 10)),
                                                        mode=case_to_test.mode,

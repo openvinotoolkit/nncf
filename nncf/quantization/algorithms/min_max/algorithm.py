@@ -66,10 +66,10 @@ class MinMaxQuantizationParameters(AlgorithmParameters):
                  preset: QuantizationPreset = QuantizationPreset.PERFORMANCE,
                  weight_bits: Optional[int] = None,
                  weight_granularity: Optional[Granularity] = None,
-                 weight_signedness_to_force: Optional[bool] = None,
+                 signed_weights: Optional[bool] = None,
                  activation_bits: Optional[int] = None,
                  activation_granularity: Optional[Granularity] = None,
-                 activation_signedness_to_force: Optional[bool] = None,
+                 signed_activations: Optional[bool] = None,
                  target_device: TargetDevice = TargetDevice.ANY,
                  range_type: Optional[RangeType] = None,
                  quantize_outputs: bool = False,
@@ -82,14 +82,14 @@ class MinMaxQuantizationParameters(AlgorithmParameters):
         :param weight_bits: Bitwidth for the weight quantizers.
         :param weight_granularity: Type of quantization granularity for weight quantizers.
             Could be per-channel or per-tensor.
-        :param weight_signedness_to_force: Defines whether the datatype of the weight quantizers should be forced.
+        :param signed_weights: Defines whether the datatype of the weight quantizers should be forced.
             True if the quantizer *must* be signed, False if *must* be unsigned,
             None if the signed/unsigned attribute should be determined based on the incoming activation
             statistics during range initialization.
         :param activation_bits: Bitwidth for the activation quantizers.
         :param activation_granularity: Type of quantization granularity for activation quantizers.
             Could be per-channel or per-tensor.
-        :param activation_signedness_to_force: Defines whether the datatype of the activation quantizers
+        :param signed_activations: Defines whether the datatype of the activation quantizers
             should be forced. True if the quantizer *must* be signed, False if *must* be unsigned,
             None if the signed/unsigned attribute should be determined based on the incoming activation
             statistics during range initialization.
@@ -109,10 +109,10 @@ class MinMaxQuantizationParameters(AlgorithmParameters):
         if activation_granularity is not None:
             activation_granularity = activation_granularity == Granularity.PERCHANNEL
         q_weight_constraints = self._get_quantizer_constraints(QuantizerGroup.WEIGHTS, preset, weight_bits,
-                                                               weight_granularity, weight_signedness_to_force)
+                                                               weight_granularity, signed_weights)
         q_activation_constraints = self._get_quantizer_constraints(QuantizerGroup.ACTIVATIONS, preset, activation_bits,
                                                                    activation_granularity,
-                                                                   activation_signedness_to_force)
+                                                                   signed_activations)
         self.global_quantizer_constraints[QuantizerGroup.WEIGHTS] = q_weight_constraints
         self.global_quantizer_constraints[QuantizerGroup.ACTIVATIONS] = q_activation_constraints
 
@@ -120,9 +120,9 @@ class MinMaxQuantizationParameters(AlgorithmParameters):
                                    per_channel: Optional[bool],
                                    signedness_to_force: Optional[bool]) -> QuantizationConstraints:
         """
-        Returns QuantizationConstraints for the provided quantizer group
+        Returns QuantizationConstraints for the provided quantizer group.
 
-        :param group: Quantizer groups.
+        :param group: Quantizer group.
         :param preset: Quantization preset.
         :param num_bits: Bitwidth of quantizers.
         :param per_channel: Per-channel ot per-tensor granularity.
