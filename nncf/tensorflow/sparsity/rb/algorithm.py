@@ -25,7 +25,7 @@ from nncf.common.sparsity.schedulers import SPARSITY_SCHEDULERS
 from nncf.common.sparsity.schedulers import SparsityScheduler
 from nncf.common.sparsity.statistics import RBSparsityStatistics
 from nncf.common.statistics import NNCFStatistics
-from nncf.common.utils.helpers import should_consider_scope
+from nncf.common.scopes import should_consider_scope
 from nncf.config.extractors import extract_algo_specific_config
 from nncf.config.schemata.defaults import SPARSITY_INIT
 from nncf.config.schemata.defaults import SPARSITY_LEVEL_SETTING_MODE

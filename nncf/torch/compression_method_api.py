@@ -30,8 +30,8 @@ from nncf.api.compression import CompressionLoss
 from nncf.common.compression import BaseCompressionAlgorithmBuilder
 from nncf.common.compression import BaseCompressionAlgorithmController
 from nncf.common.graph import NNCFNodeName
-from nncf.common.utils.helpers import should_consider_scope
 from nncf.common.logging import nncf_logger
+from nncf.common.scopes import should_consider_scope
 from nncf.config import NNCFConfig
 from nncf.torch.graph.transformations.layout import PTTransformationLayout
 from nncf.torch.layers import NNCF_MODULES_DICT

@@ -49,7 +49,7 @@ from nncf.common.quantization.structs import QuantizerGroup
 from nncf.common.schedulers import BaseCompressionScheduler
 from nncf.common.stateful_classes_registry import TF_STATEFUL_CLASSES
 from nncf.common.statistics import NNCFStatistics
-from nncf.common.utils.helpers import should_consider_scope
+from nncf.common.scopes import should_consider_scope
 from nncf.common.logging import nncf_logger
 from nncf.config.extractors import extract_range_init_params
 from nncf.config.schemata.defaults import QUANTIZATION_OVERFLOW_FIX

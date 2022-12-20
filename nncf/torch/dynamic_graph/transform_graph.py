@@ -12,17 +12,19 @@
 """
 from copy import deepcopy
 from functools import partial
-from torch import nn
 from typing import List
+from typing import Tuple
 
-from nncf.torch.layers import NNCF_MODULES_DICT, NNCF_MODULES, \
-    add_nncf_functionality_to_user_module, NNCF_WRAPPED_USER_MODULES_DICT
-from nncf.common.utils.helpers import matches_any
-from nncf.torch.dynamic_graph.scope import ScopeElement
-from nncf.torch.dynamic_graph.scope import Scope
+from torch import nn
 
 from nncf.common.logging import nncf_logger
-
+from nncf.common.scopes import matches_any
+from nncf.torch.dynamic_graph.scope import Scope
+from nncf.torch.dynamic_graph.scope import ScopeElement
+from nncf.torch.layers import NNCF_MODULES
+from nncf.torch.layers import NNCF_MODULES_DICT
+from nncf.torch.layers import NNCF_WRAPPED_USER_MODULES_DICT
+from nncf.torch.layers import add_nncf_functionality_to_user_module
 
 
 def is_nncf_module(module):
@@ -43,7 +45,7 @@ def replace_module_by_nncf_module(module: nn.Module):
             if not module.__class__.__name__ == nncf_module_type.__name__:
                 nncf_module = nncf_module_type.from_module(module)
             return nncf_module
-    from nncf.torch.layers import UNWRAPPED_USER_MODULES #pylint: disable=cyclic-import
+    from nncf.torch.layers import UNWRAPPED_USER_MODULES  # pylint: disable=cyclic-import
     for _, user_module_type in UNWRAPPED_USER_MODULES.registry_dict.items():
         if module.__class__ == user_module_type:
             nncf_module = deepcopy(module)
@@ -54,7 +56,7 @@ def replace_module_by_nncf_module(module: nn.Module):
 
 def replace_modules_by_nncf_modules(model: nn.Module, ignored_scopes=None, target_scopes=None,
                                     eval_op_scopes: List[Scope] = None,
-                                    reset: bool = False) -> (nn.Module, List[Scope]):
+                                    reset: bool = False) -> Tuple[nn.Module, List[Scope]]:
     replace_fn = partial(replace_module_by_nncf_module)
     affected_scopes = []  # type: List
     return replace_modules(model, replace_fn, affected_scopes,

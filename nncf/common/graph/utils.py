@@ -13,15 +13,11 @@
 
 from functools import partial
 from typing import List
-from typing import Union
 
 from nncf.common.graph import NNCFGraph
 from nncf.common.graph import NNCFNode
 from nncf.common.logging import nncf_logger
 from nncf.common.pruning.utils import traverse_function
-from nncf.common.utils.helpers import matches_any
-from nncf.parameters import IgnoredScope
-from nncf.parameters import convert_ignored_scope_to_list
 
 
 def get_concat_axis(input_shapes: List[List[int]], output_shapes: List[List[int]]) -> int:
@@ -93,31 +89,3 @@ def get_split_axis(input_shapes: List[List[int]], output_shapes: List[List[int]]
         nncf_logger.debug('Identity split/concat node detected')
 
     return axis
-
-
-def get_not_matched_scopes(scope: Union[List[str], str, IgnoredScope], nodes: List[NNCFNode]) -> List[str]:
-    """
-    Return list of scope that do not match node list.
-
-    :param scope: List of ignored/target scope or instance of IgnoredScope.
-    :param graph: The model graph.
-
-    :return : List of not matched scopes.
-    """
-
-    if isinstance(scope, str):
-        patterns = [scope]
-    elif isinstance(scope, IgnoredScope):
-        patterns = convert_ignored_scope_to_list(scope)
-    else:
-        patterns = scope
-
-    if not patterns:
-        return []
-
-    matched_patterns = set()
-    for node in nodes:
-        for pattern in patterns:
-            if matches_any(node.node_name, pattern):
-                matched_patterns.add(pattern)
-    return list(set(patterns) - matched_patterns)

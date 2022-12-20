@@ -23,11 +23,11 @@ from nncf import NNCFConfig
 from nncf.api.compression import CompressionAlgorithmBuilder
 from nncf.api.compression import CompressionAlgorithmController
 from nncf.common.graph.graph import NNCFGraph
-from nncf.common.graph.utils import get_not_matched_scopes
+from nncf.common.logging import nncf_logger
 from nncf.common.schedulers import StubCompressionScheduler
+from nncf.common.scopes import get_not_matched_scopes
 from nncf.common.utils.backend import BackendType
 from nncf.common.utils.backend import get_backend
-from nncf.common.logging import nncf_logger
 from nncf.common.utils.registry import Registry
 from nncf.config.extractors import extract_algo_specific_config
 from nncf.config.extractors import extract_bn_adaptation_init_params

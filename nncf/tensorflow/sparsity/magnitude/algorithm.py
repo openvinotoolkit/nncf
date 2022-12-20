@@ -24,11 +24,11 @@ from nncf.common.graph import OUTPUT_NOOP_METATYPES
 from nncf.common.graph.transformations.commands import TransformationPriority
 from nncf.common.initialization.batchnorm_adaptation import BatchnormAdaptationAlgorithm
 from nncf.common.schedulers import StubCompressionScheduler
+from nncf.common.scopes import should_consider_scope
 from nncf.common.sparsity.schedulers import SPARSITY_SCHEDULERS
 from nncf.common.sparsity.statistics import LayerThreshold
 from nncf.common.sparsity.statistics import MagnitudeSparsityStatistics
 from nncf.common.statistics import NNCFStatistics
-from nncf.common.utils.helpers import should_consider_scope
 from nncf.config.extractors import extract_algo_specific_config
 from nncf.config.extractors import extract_bn_adaptation_init_params
 from nncf.config.schemata.defaults import MAGNITUDE_SPARSITY_WEIGHT_IMPORTANCE
