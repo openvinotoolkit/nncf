@@ -185,5 +185,8 @@ class PTExporter(Exporter):
         except torch.onnx.errors.SymbolicValueError:
             # May have failed for reasons of missing and unspecifiable shape inference
             # for quantizer ops in torch==1.13, try to export with a workaround.
-            nncf_logger.warning("Encountered shape inferencing failures during ONNX export. The model was exported with a workaround - some of the operations may have been exported using `org.pytorch.aten` domain.")
+            nncf_logger.warning(
+                "Encountered shape inferencing failures during ONNX export. "
+                "The model was exported with a workaround - some of the operations may have been exported using "
+                "the `org.pytorch.aten` domain.")
             fn(operator_export_type=OperatorExportTypes.ONNX_ATEN_FALLBACK)
