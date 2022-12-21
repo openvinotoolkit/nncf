@@ -149,7 +149,7 @@ def test_maximal_compression_rate():
         'BigPruningTestModel/NNCFLinear[linear]/linear_0',
         'BigPruningTestModel/NNCFConvTranspose2d[up]/conv_transpose2d_0']
 
-    pruned_model, pruning_algo = create_compressed_model_and_algo_for_test(BigPruningTestModel(), config)
+    _, pruning_algo = create_compressed_model_and_algo_for_test(BigPruningTestModel(), config)
 
     maximal_compression_rate = pruning_algo.maximal_compression_rate
     for comp_rate in np.linspace(0, maximal_compression_rate, 10):

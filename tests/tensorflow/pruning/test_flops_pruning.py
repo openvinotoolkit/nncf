@@ -130,7 +130,7 @@ def test_maximal_compression_rate():
 
     model = get_test_model_shared_convs([1, 8, 8, 1])
     model.compile()
-    compressed_model, compression_ctrl = create_compressed_model_and_algo_for_test(model, config)
+    _, compression_ctrl = create_compressed_model_and_algo_for_test(model, config)
 
     maximal_compression_rate = compression_ctrl.maximal_compression_rate
     for comp_rate in np.linspace(0, maximal_compression_rate, 10):
