@@ -253,6 +253,10 @@ def depends_on_pretrained_train(request, test_case_id: str, current_multiprocess
     "multiprocessing_distributed", [True, False],
     ids=['distributed', 'dataparallel'])
 def test_trained_model_eval(request, config, tmp_path, multiprocessing_distributed, case_common_dirs):
+    if parse_version(torchvision.__version__) < parse_version("0.13") and 'voc' in str(config["dataset_path"]):
+        pytest.skip(f'Test calls sample that uses `datasets.VOCDetection.parse_voc_xml` function from latest '
+                    f'torchvision.\nThe signature of the function is not compatible with the corresponding signature '
+                    f'from the current torchvision version : {torchvision.__version__}')
     depends_on_pretrained_train(request, config["test_case_id"], multiprocessing_distributed)
     config_factory = ConfigFactory(config['nncf_config'], tmp_path / 'config.json')
     config_factory.config = update_compression_algo_dict_with_legr_save_load_params(config_factory.config,
