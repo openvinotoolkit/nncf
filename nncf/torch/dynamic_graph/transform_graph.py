@@ -23,7 +23,6 @@ from torch import nn
 
 from nncf.common.logging import nncf_logger
 from nncf.common.scopes import matches_any
-from nncf.common.utils.helpers import matches_any
 from nncf.torch.dynamic_graph.scope import Scope
 from nncf.torch.dynamic_graph.scope import ScopeElement
 from nncf.torch.layers import NNCF_MODULES
