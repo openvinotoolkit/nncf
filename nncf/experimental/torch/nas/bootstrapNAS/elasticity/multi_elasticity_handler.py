@@ -31,15 +31,15 @@ from nncf.experimental.torch.nas.bootstrapNAS.elasticity.elastic_kernel import E
 from nncf.experimental.torch.nas.bootstrapNAS.elasticity.elastic_width import ElasticWidthHandler
 from nncf.experimental.torch.nas.bootstrapNAS.elasticity.elastic_width import ElasticWidthSearchSpace
 from nncf.experimental.torch.nas.bootstrapNAS.elasticity.elasticity_dim import ElasticityDim
-from nncf.torch.graph.operator_metatypes import PTConv1dMetatype
-from nncf.torch.graph.operator_metatypes import PTConv2dMetatype
-from nncf.torch.graph.operator_metatypes import PTConv3dMetatype
-from nncf.torch.graph.operator_metatypes import PTConvTranspose2dMetatype
-from nncf.torch.graph.operator_metatypes import PTConvTranspose3dMetatype
+from nncf.torch.graph.operator_metatypes import PTModuleConv1dMetatype
+from nncf.torch.graph.operator_metatypes import PTModuleConv2dMetatype
+from nncf.torch.graph.operator_metatypes import PTModuleConv3dMetatype
+from nncf.torch.graph.operator_metatypes import PTModuleConvTranspose2dMetatype
+from nncf.torch.graph.operator_metatypes import PTModuleConvTranspose3dMetatype
 from nncf.torch.graph.operator_metatypes import PTDepthwiseConv1dSubtype
 from nncf.torch.graph.operator_metatypes import PTDepthwiseConv2dSubtype
 from nncf.torch.graph.operator_metatypes import PTDepthwiseConv3dSubtype
-from nncf.torch.graph.operator_metatypes import PTLinearMetatype
+from nncf.torch.graph.operator_metatypes import PTModuleLinearMetatype
 from nncf.torch.nncf_network import NNCFNetwork
 from nncf.torch.pruning.utils import collect_output_shapes
 
@@ -66,17 +66,17 @@ class MultiElasticityHandler(ElasticityHandler):
                  handlers: OrderedDictType[ElasticityDim, SingleElasticityHandler],
                  target_model: NNCFNetwork):
         GENERAL_CONV_LAYER_METATYPES = [
-            PTConv1dMetatype,
+            PTModuleConv1dMetatype,
             PTDepthwiseConv1dSubtype,
-            PTConv2dMetatype,
+            PTModuleConv2dMetatype,
             PTDepthwiseConv2dSubtype,
-            PTConv3dMetatype,
+            PTModuleConv3dMetatype,
             PTDepthwiseConv3dSubtype,
-            PTConvTranspose2dMetatype,
-            PTConvTranspose3dMetatype
+            PTModuleConvTranspose2dMetatype,
+            PTModuleConvTranspose3dMetatype,
         ]
         LINEAR_LAYER_METATYPES = [
-            PTLinearMetatype
+            PTModuleLinearMetatype
         ]
         self._handlers = handlers
         self._target_model = target_model

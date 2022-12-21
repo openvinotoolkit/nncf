@@ -13,6 +13,8 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 """
+import os
+
 from tests.shared.paths import TEST_ROOT
 
 
@@ -48,6 +50,17 @@ def pytest_addoption(parser):
         help="[e2e-test-onnx-model-zoo] Dataset subsample size for evaluation. "
         "If not provided, full dataset is used for evaluation."
     )
+    parser.addoption(
+        "--regen-dot", action="store_true", default=False, help="If specified, the "
+                                                                "reference .dot files will be regenerated "
+                                                                "using the current state of the repository."
+
+    )
+
+def pytest_configure(config):
+    regen_dot = config.getoption('--regen-dot', False)
+    if regen_dot:
+        os.environ["NNCF_TEST_REGEN_DOT"] = "1"
 
 
 ONNX_TEST_ROOT = TEST_ROOT / 'onnx'

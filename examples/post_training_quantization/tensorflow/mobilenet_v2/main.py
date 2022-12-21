@@ -17,55 +17,31 @@ import subprocess
 from pathlib import Path
 from typing import List, Optional
 
-import nncf
-import numpy as np
 import openvino.runtime as ov
-import torch
-from fastdownload import FastDownload
+import tensorflow as tf
+import tensorflow_datasets as tfds
+from keras.utils import data_utils
 from openvino.tools import mo
-from sklearn.metrics import accuracy_score
-from torchvision import datasets, models, transforms
 from tqdm import tqdm
 
+import nncf
+
 ROOT = Path(__file__).parent.resolve()
-CHECKPOINT_URL = 'https://huggingface.co/alexsu52/mobilenet_v2_imagenette/resolve/main/pytorch_model.bin'
-DATASET_URL = 'https://s3.amazonaws.com/fast-ai-imageclas/imagenette2-320.tgz'
-DATASET_PATH = '~/.cache/nncf/datasets'
+WEIGHTS_URL = 'https://huggingface.co/alexsu52/mobilenet_v2_imagenette/resolve/main/tf_model.h5'
 DATASET_CLASSES = 10
 
 
-def download_dataset() -> Path:
-    downloader = FastDownload(base=DATASET_PATH, 
-                              archive='downloaded', 
-                              data='extracted')
-    return downloader.get(DATASET_URL)
-
-
-def load_checkpoint(model: torch.nn.Module) -> torch.nn.Module:  
-    checkpoint = torch.hub.load_state_dict_from_url(
-        CHECKPOINT_URL, 
-        map_location=torch.device('cpu'), 
-        progress=False)
-    model.load_state_dict(checkpoint['state_dict'])
-    return model
-
-
 def validate(model: ov.Model, 
-             val_loader: torch.utils.data.DataLoader) -> float:
-    predictions = []
-    references = []
-
+             val_loader: tf.data.Dataset) -> tf.Tensor:
     compiled_model = ov.compile_model(model)
     output = compiled_model.outputs[0]
 
-    for images, target in tqdm(val_loader):
+    metric = tf.keras.metrics.CategoricalAccuracy(name='acc@1')
+    for images, labels in tqdm(val_loader):
         pred = compiled_model(images)[output]
-        predictions.append(np.argmax(pred, axis=1))
-        references.append(target)
-
-    predictions = np.concatenate(predictions, axis=0)
-    references = np.concatenate(references, axis=0)  
-    return accuracy_score(predictions, references)
+        metric.update_state(labels, pred) 
+   
+    return metric.result()
 
 
 def run_benchmark(model_path: str, shape: Optional[List[int]] = None, 
@@ -97,30 +73,60 @@ def get_model_size(ir_path: str, m_type: str = 'Mb',
     return model_size
 
 ###############################################################################
-# Create a PyTorch model and dataset
+# Create a Tensorflow model and dataset
 
-dataset_path = download_dataset()
+def center_crop(image: tf.Tensor,
+                image_size: int,
+                crop_padding: int) -> tf.Tensor:
+    shape = tf.shape(image)
+    image_height = shape[0]
+    image_width = shape[1]
 
-normalize = transforms.Normalize(mean=[0.485, 0.456, 0.406],
-                                 std=[0.229, 0.224, 0.225])
-val_dataset = datasets.ImageFolder(
-    root=f'{dataset_path}/val',
-    transform = transforms.Compose([
-        transforms.Resize(256),
-        transforms.CenterCrop(224),
-        transforms.ToTensor(),
-        normalize,
-    ])
-)
-val_loader = torch.utils.data.DataLoader(
-        val_dataset, batch_size=128, num_workers=4, shuffle=False)
+    padded_center_crop_size = tf.cast(
+        ((image_size / (image_size + crop_padding)) *
+         tf.cast(tf.minimum(image_height, image_width), tf.float32)),
+        tf.int32)
 
-model = models.mobilenet_v2(num_classes=DATASET_CLASSES) 
-model.eval()
-model = load_checkpoint(model)
+    offset_height = ((image_height - padded_center_crop_size) + 1) // 2
+    offset_width = ((image_width - padded_center_crop_size) + 1) // 2
+
+    image = tf.image.crop_to_bounding_box(
+        image,
+        offset_height=offset_height,
+        offset_width=offset_width,
+        target_height=padded_center_crop_size,
+        target_width=padded_center_crop_size)
+
+    image = tf.compat.v1.image.resize(
+        image,
+        [image_size, image_size],
+        method=tf.image.ResizeMethod.BILINEAR,
+        align_corners=False)
+
+    return image
+
+
+def preprocess_for_eval(image, label):
+    image = center_crop(image, 224, 32)
+    image = tf.keras.applications.mobilenet_v2.preprocess_input(image)
+    image = tf.image.convert_image_dtype(image, tf.float32)
+
+    label = tf.one_hot(label, DATASET_CLASSES)
+
+    return image, label
+
+
+val_dataset = tfds.load('imagenette/320px-v2', split='validation', 
+                        shuffle_files=False, as_supervised=True)
+val_dataset = val_dataset.map(preprocess_for_eval).batch(128)
+
+weights_path = data_utils.get_file('mobilenet_v2_imagenette_weights.h5', 
+                                   WEIGHTS_URL, cache_subdir='models')
+model = tf.keras.applications.MobileNetV2(weights=weights_path, 
+                                          classes=DATASET_CLASSES)
 
 ###############################################################################
-# Quantize a PyTorch model
+# Quantize a Tensorflow model
 
 '''
 The transformation function transforms a data item into model input data.
@@ -144,15 +150,14 @@ validation dataset and a transformation function to remove labels from the data
 item and prepare model input data. The quantize method uses a small subset
 (default: 300 samples) of the calibration dataset.
 '''
-calibration_dataset = nncf.Dataset(val_loader, transform_fn)
+calibration_dataset = nncf.Dataset(val_dataset, transform_fn)
 quantized_model = nncf.quantize(model, calibration_dataset)
 
 ###############################################################################
 # Benchmark performance, calculate compression rate and validate accuracy
 
-ov_model = mo.convert_model(model.cpu(), input_shape=[-1,3,224,224])
-ov_quantized_model = mo.convert_model(quantized_model.cpu(),
-                                      input_shape=[-1,3,224,224])
+ov_model = mo.convert_model(model)
+ov_quantized_model = mo.convert_model(quantized_model)
 
 fp32_ir_path = f'{ROOT}/mobilenet_v2_fp32.xml'
 ov.serialize(ov_model, fp32_ir_path)
@@ -165,16 +170,16 @@ print(f'[2/7] Save INT8 model: {int8_ir_path}')
 int8_model_size = get_model_size(int8_ir_path, verbose=True)
 
 print('[3/7] Benchmark FP32 model:')
-fp32_fps = run_benchmark(fp32_ir_path, shape=[1,3,224,224], verbose=True)
+fp32_fps = run_benchmark(fp32_ir_path, shape=[1,224,224,3], verbose=True)
 print('[4/7] Benchmark INT8 model:')
-int8_fps = run_benchmark(int8_ir_path, shape=[1,3,224,224], verbose=True)
+int8_fps = run_benchmark(int8_ir_path, shape=[1,224,224,3], verbose=True)
 
 print('[5/7] Validate OpenVINO FP32 model:')
-fp32_top1 = validate(ov_model, val_loader)
+fp32_top1 = validate(ov_model, val_dataset)
 print(f'Accuracy @ top1: {fp32_top1:.3f}')
 
 print('[6/7] Validate OpenVINO INT8 model:')
-int8_top1 = validate(ov_quantized_model, val_loader)
+int8_top1 = validate(ov_quantized_model, val_dataset)
 print(f'Accuracy @ top1: {int8_top1:.3f}')
 
 print('[7/7] Report:')
