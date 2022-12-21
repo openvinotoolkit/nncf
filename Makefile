@@ -8,14 +8,15 @@ endif
 
 ###############################################################################
 # ONNX backend
-install-onnx-dev:
+install-onnx-test:
 	pip install -U pip
 	pip install -e .[onnx]
 	pip install -r tests/onnx/requirements.txt
+	pip install -r tests/cross_fw/install/requirements.txt
 	pip install -r tests/onnx/benchmarking/requirements.txt
 	pip install -r examples/post_training_quantization/onnx/mobilenet_v2/requirements.txt
 
-	# Install pylint
+install-onnx-dev: install-onnx-test 
 	pip install pylint==$(PYLINT_VERSION)
 
 test-onnx:
@@ -30,16 +31,19 @@ pylint-onnx:
 		$(ONNX_PYFILES)
 
 test-install-onnx:
-	pytest tests/cross_fw/install/ --backend onnx --junitxml ${JUNITXML_PATH}
+	pytest tests/cross_fw/install/ -s       \
+		--backend onnx                      \
+		--junitxml ${JUNITXML_PATH}
 
 ###############################################################################
 # OpenVino backend
-install-openvino-dev:
+install-openvino-test:
 	pip install -U pip
 	pip install -e .[openvino]
 	pip install -r tests/openvino/requirements.txt
+	pip install -r tests/cross_fw/install/requirements.txt
 
-	# Install pylint
+install-openvino-dev: install-openvino-test
 	pip install pylint==$(PYLINT_VERSION)
 
 test-openvino:
@@ -58,13 +62,14 @@ test-install-openvino:
 
 ###############################################################################
 # TensorFlow backend
-install-tensorflow-dev:
+install-tensorflow-test:
 	pip install -U pip
 	pip install -e .[tf]
 	pip install -r tests/tensorflow/requirements.txt
+	pip install -r tests/cross_fw/install/requirements.txt
 	pip install -r examples/tensorflow/requirements.txt
 
-	# Install pylint
+install-tensorflow-dev: install-tensorflow-test
 	pip install pylint==$(PYLINT_VERSION)
 
 test-tensorflow:
@@ -85,13 +90,14 @@ test-install-tensorflow:
 
 ###############################################################################
 # PyTorch backend
-install-torch-dev:
+install-torch-test:
 	pip install -U pip
 	pip install -e .[torch]
 	pip install -r tests/torch/requirements.txt
+	pip install -r tests/cross_fw/install/requirements.txt
 	pip install -r examples/torch/requirements.txt
 
-	# Install pylint
+install-torch-dev: install-torch-test
 	pip install pylint==$(PYLINT_VERSION)
 
 test-torch:
