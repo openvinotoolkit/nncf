@@ -271,15 +271,8 @@ def modify_ac_config(config_path, data_dir, anno_dir):
         data['models'][0]['datasets'][0]['data_source'] = str(data_dir / Path(data['models'][0]['datasets'][0]['data_source']))
         data['models'][0]['datasets'][0]['annotation_conversion']['annotation_file'] = str(data_dir / Path(data['models'][0]['datasets'][0]['annotation_conversion']['annotation_file']))
         data['models'][0]['datasets'][0]['annotation'] = str(anno_dir / Path(data['models'][0]['datasets'][0]['annotation']))
-    with open(new_config_dir, 'w') as f:
+    with open(config_path, 'w') as f:
         f.write( yaml.dump(data, default_flow_style=False))
-
-@pytest.mark.parametrize("task_type, model_name", MODELS)
-def test_modify_config(task_type, model_name, model_names_to_test, data_dir, anno_dir):
-    check_skip_model(model_name, model_names_to_test)
-    task_path = BENCHMARKING_DIR / task_type
-    config_path = task_path / "openvino_models_configs" / (model_name + ".yml")
-    modify_ac_config(config_path,  data_dir, anno_dir)
 
 
 @pytest.mark.e2e_ptq
