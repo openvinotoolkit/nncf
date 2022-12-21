@@ -321,7 +321,7 @@ class FilterPruningController(BasePruningAlgoController):
             else:
                 left = middle
         flops, params_num = self._calculate_flops_and_weights_in_uniformly_pruned_model(right)
-        if flops < target_flops:
+        if flops <= target_flops:
             self.current_flops = flops
             self.current_params_num = params_num
             return right
@@ -612,6 +612,12 @@ class FilterPruningController(BasePruningAlgoController):
     def disable_scheduler(self):
         self._scheduler = StubCompressionScheduler()
         self._scheduler.current_pruning_level = 0.0
+
+    @property
+    def maximal_compression_rate(self) -> float:
+        max_flops, _ = self._calculate_flops_and_weights_in_uniformly_pruned_model(1.0)
+        max_compression_rate = 1 - max_flops / max(self.full_flops, 1)
+        return max_compression_rate
 
     def _calculate_num_of_sparse_elements_by_node(self) -> Dict[str, int]:
         num_of_sparse_elements_by_node = {}

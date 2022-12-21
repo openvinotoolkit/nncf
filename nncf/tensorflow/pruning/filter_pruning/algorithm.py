@@ -240,6 +240,12 @@ class FilterPruningController(BasePruningAlgoController):
         if run_batchnorm_adaptation:
             self._run_batchnorm_adaptation()
 
+    @property
+    def maximal_compression_rate(self) -> float:
+        max_flops, _ = self._calculate_flops_and_weights_in_uniformly_pruned_model(1.0)
+        max_compression_rate = 1 - max_flops / max(self.full_flops, 1)
+        return max_compression_rate
+
     def _init_pruned_layers_params(self, output_channels):
         # 1. Collect nodes output shapes
         self._output_shapes = collect_output_shapes(self._model, self._original_graph)
@@ -438,7 +444,7 @@ class FilterPruningController(BasePruningAlgoController):
             else:
                 left = middle
         flops, params_num = self._calculate_flops_and_weights_in_uniformly_pruned_model(right)
-        if flops < target_flops:
+        if flops <= target_flops:
             self.current_flops = flops
             self.current_params_num = params_num
             return right

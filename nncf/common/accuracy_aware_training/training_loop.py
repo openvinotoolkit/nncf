@@ -209,6 +209,11 @@ class AdaptiveCompressionTrainingLoop(BaseEarlyExitCompressionTrainingLoop):
             raise RuntimeError('No compression algorithm supported by the accuracy-aware training '
                                'runner was specified in the config')
 
+        if maximal_compression_rate > self.adaptive_controller.maximal_compression_rate:
+            maximal_compression_rate = self.adaptive_controller.maximal_compression_rate
+            nncf_logger.warning(f'Updated training loop maximal compression rate by the maximal compression rate '
+                                f'supported by the controller: {maximal_compression_rate:.4f}')
+
         accuracy_aware_training_params = extract_accuracy_aware_training_params(nncf_config)
         runner_factory = AdaptiveCompressionLevelTrainingRunnerCreator(accuracy_aware_training_params,
                                                                        self.adaptive_controller,
