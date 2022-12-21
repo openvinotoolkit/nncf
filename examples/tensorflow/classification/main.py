@@ -148,7 +148,21 @@ def load_compression_state(ckpt_path: str):
     return checkpoint.compression_state.state
 
 
+def get_model_accuracy(model_fn, model_params, nncf_config,
+                       validation_dataset, validation_steps):
+    with TFModelManager(model_fn, nncf_config, **model_params) as model:
+        model.compile(metrics=[tf.keras.metrics.CategoricalAccuracy(name='acc@1')])
+        results = model.evaluate(
+            validation_dataset,
+            steps=validation_steps,
+            return_dict=True)
+        return 100 * results['acc@1']
+
+
 def run(config):
+    if config.disable_tensor_float_32_execution:
+        tf.config.experimental.enable_tensor_float_32_execution(False)
+
     strategy = get_distribution_strategy(config)
     if config.metrics_dump is not None:
         write_metrics(0, config.metrics_dump)
@@ -176,13 +190,11 @@ def run(config):
     resume_training = config.ckpt_path is not None
 
     if is_accuracy_aware_training(config):
-        with TFModelManager(model_fn, nncf_config, **model_params) as model:
-            model.compile(metrics=[tf.keras.metrics.CategoricalAccuracy(name='acc@1')])
-            results = model.evaluate(
-                validation_dataset,
-                steps=validation_steps,
-                return_dict=True)
-            uncompressed_model_accuracy = 100 * results['acc@1']
+        uncompressed_model_accuracy = get_model_accuracy(model_fn,
+                                                         model_params,
+                                                         nncf_config,
+                                                         validation_dataset,
+                                                         validation_steps)
 
     compression_state = None
     if resume_training:

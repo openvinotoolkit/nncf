@@ -27,7 +27,7 @@ from nncf.common.pruning.clusterization import Cluster
 from nncf.common.pruning.clusterization import Clusterization
 from nncf.common.pruning.mask_propagation import MaskPropagationAlgorithm
 from nncf.common.pruning.utils import is_prunable_depthwise_conv
-from nncf.common.utils.logger import logger as nncf_logger
+from nncf.common.logging import nncf_logger
 from nncf.config.extractors import extract_algo_specific_config
 from nncf.torch.algo_selector import ZeroCompressionLoss
 from nncf.torch.compression_method_api import PTCompressionAlgorithmBuilder
@@ -81,14 +81,13 @@ class BasePruningAlgoBuilder(PTCompressionAlgorithmBuilder):
         learned_ranking = 'interlayer_ranking_type' in params and params['interlayer_ranking_type'] == 'learned_ranking'
         if not learned_ranking:
             return
-        nncf_logger.info('For learning global ranking `prune_first_conv`, `prune_downsample_convs`, '
-                         '`all_weights` are setting to True by default. It is not recommended to set this params'
-                         ' to False.')
+        nncf_logger.info('LeGR pruning sets `prune_first_conv`, `prune_downsample_convs`, '
+                         '`all_weights` to True by default. Adjusting this is not recommended.')
         params.setdefault('prune_first_conv', True)
         params.setdefault('prune_downsample_convs', True)
         if params.get('all_weights') is False:
-            raise Exception('In case of `interlayer_ranking_type`=`learned_ranking`, `all_weights` must be set to True,'
-                            ' plese, change this in config settings.')
+            raise Exception('For LeGR pruning the `all_weights` config parameter be set to `true`.'
+                            'Adjust the config accordingly if you want to proceed.')
         params.setdefault('all_weights', True)
 
     def _get_transformation_layout(self, target_model: NNCFNetwork) -> PTTransformationLayout:
@@ -115,7 +114,7 @@ class BasePruningAlgoBuilder(PTCompressionAlgorithmBuilder):
                 # Check that we need to prune weights in this op
                 assert self._is_pruned_module(module)
 
-                nncf_logger.info("Adding Weight Pruner in scope: {}".format(node_name))
+                nncf_logger.info(f"Will prune the weights for the operation: {node_name}")
                 pruning_block = self.create_weight_pruning_operation(module, node_name)
                 # Hook for weights and bias
                 hook = UpdateWeightAndBias(pruning_block).to(device)

@@ -16,7 +16,7 @@ from typing import TypeVar
 from copy import deepcopy
 
 from nncf import Dataset
-from nncf.common.utils.logger import logger as nncf_logger
+from nncf.common.logging import nncf_logger
 from nncf.common.utils.backend import BackendType
 from nncf.common.utils.backend import get_backend
 from nncf.experimental.quantization.telemetry_extractors import CompressionStartedFromBuilder
@@ -75,7 +75,8 @@ class CompressionBuilder:
         6) Apply algorithms.
         """
         if not self.algorithms:
-            nncf_logger.info('There are no algorithms added. The original model will be returned.')
+            nncf_logger.warning('No algorithms specified for compression - '
+                                'doing nothing and returning the original model')
             return model
 
         _model = deepcopy(model)
@@ -83,7 +84,7 @@ class CompressionBuilder:
 
         # TODO (KodiaqQ): Remove after ONNX is removed from experimental
         if backend == BackendType.ONNX:
-            nncf_logger.warning('You are using experimental ONNX backend for the Post-training quantization.')
+            nncf_logger.warning('You are using the experimental ONNX backend for post-training quantization.')
 
         statistics_aggregator = self._create_statistics_aggregator(dataset, backend)
 

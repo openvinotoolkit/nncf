@@ -135,7 +135,7 @@ def test_transformer_building_blocks(desc: TransformerSearchBBlockParamsCase):
     nncf_model, _ = create_compressed_model_and_algo_for_test(model, nncf_config)
 
     ext_blocks, _ = get_building_blocks(nncf_model,
-                                        target_block_types=[BuildingBlockType.MSHA, BuildingBlockType.FF],
+                                        target_block_types=[BuildingBlockType.MHSA, BuildingBlockType.FF],
                                         block_filter_strategy=BlockFilteringStrategy.KEEP_SMALL,
                                         hw_fused_ops=True)
     check_extended_blocks(desc.name, ext_blocks)

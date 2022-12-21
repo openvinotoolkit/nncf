@@ -14,7 +14,7 @@ import time
 
 from torch import nn
 
-from nncf.common.utils.logger import logger as nncf_logger
+from nncf.common.logging import nncf_logger
 from nncf.config.schemata.defaults import PRUNING_LEGR_GENERATIONS
 from nncf.config.schemata.defaults import PRUNING_LEGR_MAX_PRUNING
 from nncf.config.schemata.defaults import PRUNING_LEGR_RANDOM_SEED
@@ -100,14 +100,12 @@ class LeGR:
             generation_time = time.time() - end
             end = time.time()
 
-            nncf_logger.info('Generation = {episode}, '
-                             'Reward = {reward:.3f}, '
-                             'Time = {time:.3f} \n'.format(episode=episode, reward=episode_reward[0],
-                                                           time=generation_time))
+            nncf_logger.info(
+                f'Generation = {episode}, Reward = {episode_reward[0]:.3f}, Time = {generation_time:.3f} \n')
             reward_list.append(episode_reward[0])
         self.env.reset()
         nncf_logger.info('Finished training LeGR ranking coefficients.')
-        nncf_logger.info('Evolution algorithm rewards history = {}'.format(reward_list))
+        nncf_logger.info(f'Evolution algorithm rewards history = {reward_list}')
 
         best_ranking = self.agent.get_best_action()
         return best_ranking

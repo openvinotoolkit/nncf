@@ -26,8 +26,8 @@ from torch import nn
 import torch.utils.data
 from numpy.random import random_sample
 from torch.utils import model_zoo
-from torchvision.models import MobileNetV2
-from torchvision.models import mobilenet_v2
+from tests.torch.test_models.mobilenet import MobileNetV2
+from tests.torch.test_models.mobilenet import mobilenet_v2
 from torchvision.models import resnet50
 from torchvision.transforms import transforms
 
@@ -537,8 +537,8 @@ def get_skipped_quantized_weight_node_names() -> List[NNCFNodeName]:
 
 def test_disable_quantizer_gradients():
     _, parameters_to_restore, model, *_ = disable_quantizer_gradients()
-    assert len(parameters_to_restore.originally_disabled_gradients) == 354
-    assert len(parameters_to_restore.skipped_gradients_to_enable) == 3
+    assert len(parameters_to_restore.originally_disabled_gradients) == 353
+    assert len(parameters_to_restore.skipped_gradients_to_enable) == 2
     actual_requires_grad_per_param = get_requires_grad_per_param(model)
     path_to_ref = str(TEST_ROOT / 'torch/data/hawq_reference/mobilenet_v2_requires_grad_per_param.json')
     compare_with_ref_if_exists(actual_requires_grad_per_param, path_to_ref)

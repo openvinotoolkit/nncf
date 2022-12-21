@@ -220,12 +220,18 @@ def get_common_argument_parser(**flags):
     parser.add_argument(
         "--disable-compression",
         help="Disable compression",
-        action="store_true",
+        action="store_true"
     )
 
     parser.add_argument(
         '--seed', default=None, type=int,
         help='Specific seed for initializing pseudo-random number generators.')
+
+    parser.add_argument(
+        '--disable_tensor_float_32_execution',
+        help="Disable exection in TensorFloat-32",
+        action="store_true"
+    )
 
     return parser
 

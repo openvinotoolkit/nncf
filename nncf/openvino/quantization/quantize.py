@@ -29,7 +29,7 @@ from nncf.parameters import IgnoredScope
 from nncf.parameters import ModelType
 from nncf.parameters import TargetDevice
 from nncf.common.quantization.structs import QuantizationPreset
-from nncf.common.utils.logger import logger as nncf_logger
+from nncf.common.logging import nncf_logger
 from nncf.openvino.engine import OVEngine
 from nncf.openvino.quantization.accuracy_aware import NMSEBasedAccuracyAware
 from nncf.telemetry import tracked_function

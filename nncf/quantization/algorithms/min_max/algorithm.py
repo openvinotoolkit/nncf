@@ -38,7 +38,7 @@ from nncf.common.quantization.config_assignment import assign_qconfig_lists_to_m
 from nncf.common.tensor_statistics.collectors import TensorStatisticCollectorBase
 from nncf.common.utils.backend import BackendType
 from nncf.common.utils.backend import get_backend
-from nncf.common.utils.logger import logger as nncf_logger
+from nncf.common.logging import nncf_logger
 
 from nncf.quantization.algorithms.algorithm import Algorithm
 from nncf.quantization.algorithms.algorithm import AlgorithmParameters
@@ -101,7 +101,7 @@ class MinMaxQuantizationParameters(AlgorithmParameters):
         :param ignored_scopes: List of the layers which input must not be quantized.
         """
         self.number_samples = number_samples
-        self.target_device = HWConfigType.from_str(HW_CONFIG_TYPE_TARGET_DEVICE_MAP[target_device.value])
+        self.target_device = HWConfigType(HW_CONFIG_TYPE_TARGET_DEVICE_MAP[target_device.value])
         self.range_type = range_type
         self.quantize_outputs = quantize_outputs
         self.ignored_scopes = [] if ignored_scopes is None else ignored_scopes
@@ -386,16 +386,12 @@ class MinMaxQuantization(Algorithm):
         output = StatisticPointsContainer()
         for quantization_target_point, qconfig in quantization_target_points.items():
             if quantization_target_point.type in [TargetType.PRE_LAYER_OPERATION, TargetType.POST_LAYER_OPERATION]:
-                nncf_logger.debug(
-                    'Adding {} Quantization Target Point to the Statistics Points,'
-                    ' which outputs will be used for statistics collection'.format(
-                        quantization_target_point.target_node_name))
+                nncf_logger.debug(f'Adding target point {quantization_target_point.target_node_name} '
+                                  f'for statistics collection')
                 stat_collector = self._get_stat_collector(qconfig)
                 output.add_statistic_point(StatisticPoint(target_point=quantization_target_point,
                                                           tensor_collector=stat_collector,
                                                           algorithm=MinMaxQuantization))
             else:
-                nncf_logger.debug(
-                    'Skipping {} Quantization Target Point, which is used for weights quantization'.format(
-                        quantization_target_point))
+                nncf_logger.debug(f'Skipping collection at {quantization_target_point} - this is a weight quantizer')
         return output

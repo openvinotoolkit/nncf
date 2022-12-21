@@ -13,7 +13,7 @@
 
 import onnx
 from onnx.version_converter import convert_version, ConvertError  # pylint: disable=no-name-in-module
-from nncf.common.utils.logger import logger as nncf_logger
+from nncf.common.logging import nncf_logger
 
 TARGET_OPSET_VERSION = 13
 TARGET_IR_VERSION = 7

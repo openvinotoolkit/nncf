@@ -19,12 +19,12 @@ from typing import Tuple
 
 import torch
 import torch.nn.functional as F
-import warnings
 from torch import nn
 from torch.nn import init
 from torch.nn.utils.rnn import PackedSequence
 from torch.nn.utils.weight_norm import WeightNorm
 
+from nncf import nncf_logger
 from nncf.torch.dynamic_graph.context import forward_nncf_trace
 from nncf.torch.utils import no_jit_trace
 from nncf.torch.checkpoint_loading import OPTIONAL_PARAMETERS_REGISTRY
@@ -711,10 +711,10 @@ class NNCF_RNN(nn.Module):
                              "representing the probability of an element being "
                              "zeroed")
         if dropout > 0 and num_layers == 1:
-            warnings.warn("dropout option adds dropout after all but last "
-                          "recurrent layer, so non-zero dropout expects "
-                          "num_layers greater than 1, but got dropout={} and "
-                          "num_layers={}".format(dropout, num_layers))
+            nncf_logger.debug(
+                f"dropout option adds dropout after all but last recurrent layer, "
+                f"so non-zero dropout expects num_layers greater than 1, "
+                f"but got dropout={dropout} and num_layers={num_layers}")
 
         if mode == 'LSTM':
             gate_size = 4 * hidden_size

@@ -33,22 +33,13 @@ from nncf.common.utils.helpers import product_dict
 from nncf.common.utils.os import safe_open
 from nncf.definitions import HW_CONFIG_RELATIVE_DIR
 from nncf.definitions import NNCF_PACKAGE_ROOT_DIR
-from nncf.common.utils.logger import logger as nncf_logger
+from nncf.common.logging import nncf_logger
+
 
 class HWConfigType(Enum):
     CPU = 'CPU'
     GPU = 'GPU'
     VPU = 'VPU'
-
-    @staticmethod
-    def from_str(config_value: str) -> 'HWConfigType':
-        if config_value == HWConfigType.CPU.value:
-            return HWConfigType.CPU
-        if config_value == HWConfigType.GPU.value:
-            return HWConfigType.GPU
-        if config_value == HWConfigType.VPU.value:
-            return HWConfigType.VPU
-        raise RuntimeError('Unknown HW config type string')
 
 
 HW_CONFIG_TYPE_TARGET_DEVICE_MAP = {

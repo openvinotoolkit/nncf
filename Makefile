@@ -3,6 +3,7 @@ install-onnx-dev:
 	pip install -e .[onnx]
 	pip install -r tests/onnx/requirements.txt
 	pip install -r tests/onnx/benchmarking/requirements.txt
+	pip install -r examples/post_training_quantization/onnx/mobilenet_v2/requirements.txt
 
 	# Install pylint
 	pip install pylint==2.13.9
@@ -10,11 +11,13 @@ install-onnx-dev:
 test-onnx:
 	pytest tests/onnx --junitxml nncf-tests.xml
 
+PYFILES := $(shell find examples/post_training_quantization/onnx -type f -name "*.py")
 pylint-onnx:
-	pylint --rcfile .pylintrc				\
-		nncf/experimental/onnx				\
-		nncf/quantization					\
-		tests/onnx examples/experimental/onnx
+	pylint --rcfile .pylintrc               \
+		nncf/experimental/onnx              \
+		nncf/quantization                   \
+		tests/onnx                          \
+		$(PYFILES)                         
 
 test-install-onnx:
 	pytest tests/cross_fw/install/ --backend onnx

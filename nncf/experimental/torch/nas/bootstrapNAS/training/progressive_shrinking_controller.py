@@ -21,7 +21,7 @@ from nncf.api.compression import CompressionScheduler
 from nncf.api.compression import CompressionStage
 from nncf.common.initialization.batchnorm_adaptation import BatchnormAdaptationAlgorithm
 from nncf.common.statistics import NNCFStatistics
-from nncf.common.utils.logger import logger as nncf_logger
+from nncf.common.logging import nncf_logger
 from nncf.experimental.torch.nas.bootstrapNAS.training.lr_scheduler import GlobalLRScheduler
 from nncf.experimental.torch.nas.bootstrapNAS.training.lr_scheduler import StageLRScheduler
 from nncf.experimental.torch.nas.bootstrapNAS.training.scheduler import NASSchedulerParams
@@ -137,8 +137,7 @@ class ProgressiveShrinkingController(BNASTrainingController):
         """
         if self._scheduler.current_step % self._sample_rate == 0:
             self.multi_elasticity_handler.activate_random_subnet()
-            nncf_logger.debug(
-                'Active config: {}'.format(self.multi_elasticity_handler.get_active_config()))
+            nncf_logger.debug(f'Active config: {self.multi_elasticity_handler.get_active_config()}')
 
     def prepare_for_validation(self) -> None:
         """
