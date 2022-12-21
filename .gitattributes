@@ -5,3 +5,5 @@
 * text=auto eol=lf
 *.{tfrecord,h5} binary
 tests/onnx/onnxruntime_openvino-1.14.0-cp38-cp38-linux_x86_64.whl filter=lfs diff=lfs merge=lfs -text
+tests/onnx/openvino-2022.3.0-8784-cp38-cp38-manylinux_2_31_x86_64.whl filter=lfs diff=lfs merge=lfs -text
+tests/onnx/openvino_dev-2022.3.0-8784-py3-none-any.whl filter=lfs diff=lfs merge=lfs -text
