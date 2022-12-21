@@ -45,7 +45,7 @@ def set_log_level(level: int):
 
 def disable_logging():
     """
-    Disables NNCF logging entirely. `DeprecationWarning`s are still shown.
+    Disables NNCF logging entirely. `FutureWarning`s are still shown.
     """
     nncf_logger.handlers = []
 
@@ -60,9 +60,12 @@ class DuplicateFilter:
         return retval
 
 
+NNCFDeprecationWarning = FutureWarning
+
+
 def warning_deprecated(msg):
     # Note: must use FutureWarning in order not to get suppressed by default
-    warnings.warn(msg, FutureWarning, stacklevel=2)
+    warnings.warn(msg, NNCFDeprecationWarning, stacklevel=2)
 
 
 @contextmanager
