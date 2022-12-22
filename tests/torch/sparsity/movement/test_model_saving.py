@@ -19,6 +19,7 @@ import onnx
 from onnx import numpy_helper
 import onnxruntime
 import pytest
+from pkg_resources import parse_version
 from scipy.special import softmax
 import torch
 
@@ -71,6 +72,9 @@ class TestONNXExport:
             list(state_before.values()), list(state_after.values())
         )
 
+    @pytest.mark.skipif(parse_version(torch.__version__) < parse_version("1.12"),
+                        reason=f"torch {torch.__version__} is not compatible with installed transformers package. "
+                               f"Some tests may fail with segmentation fault")
     @pytest.mark.parametrize('recipe', [
         BertRunRecipe(),
         Wav2Vec2RunRecipe(),

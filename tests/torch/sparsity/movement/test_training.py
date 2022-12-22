@@ -18,6 +18,7 @@ from typing import Dict, Union
 
 import jstyleson as json
 import pytest
+from pkg_resources import parse_version
 from pytest import approx
 import torch.cuda
 
@@ -323,6 +324,9 @@ class TestMovementTraining:
         self._validate_model_is_saved(movement_desc_long)
         self._validate_train_metric(movement_desc_long)
 
+    @pytest.mark.skipif(parse_version(torch.__version__) < parse_version("1.12"),
+                        reason=f"torch {torch.__version__} may not compatible with installed transformers package. "
+                               f"Some tests may fail with error")
     @pytest.mark.nightly
     def test_compression_movement_short_train(self, movement_desc_short: MovementTrainingTestDescriptor, mocker):
         if (not movement_desc_short.cpu_only_) and torch.cuda.device_count() < movement_desc_short.n_card:
