@@ -277,4 +277,4 @@ def test_full_ignored_scope():
     config = get_basic_quantization_config()
     config['compression']['ignored_scopes'] = ["{re}.*"]
     ctrl, _ = create_compressed_model(test_models.AlexNet(), config)
-    statistics = ctrl.statistics().quantization
+    ctrl.statistics()

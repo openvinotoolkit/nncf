@@ -130,4 +130,4 @@ def test_full_ignored_scope():
     config['compression']['ignored_scopes'] = ["{re}.*"]
     model = test_models.MobileNetV2(input_shape=tuple(shape[1:]))
     _, compression_ctrl = create_compressed_model_and_algo_for_test(model, config, force_no_init=True)
-    statistics = compression_ctrl.statistics().quantization
+    compression_ctrl.statistics()
