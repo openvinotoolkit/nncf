@@ -242,7 +242,10 @@ class FilterPruningController(BasePruningAlgoController):
 
     @property
     def maximal_compression_rate(self) -> float:
-        max_compression_rate = 1 - self._min_prunable_flops / max(self.full_flops, 1)
+        if self.prune_flops:
+            max_compression_rate = 1 - self._min_prunable_flops / max(self.full_flops, 1)
+        else:
+            max_compression_rate = 1.0
         return max_compression_rate
 
     def _init_pruned_layers_params(self, output_channels):
