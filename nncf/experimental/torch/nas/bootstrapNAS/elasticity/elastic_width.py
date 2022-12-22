@@ -54,11 +54,11 @@ from nncf.experimental.torch.nas.bootstrapNAS.elasticity.base_handler import Sin
 from nncf.experimental.torch.nas.bootstrapNAS.elasticity.elasticity_dim import ElasticityDim
 from nncf.experimental.torch.nas.bootstrapNAS.elasticity.filter_reorder import FilterReorderingAlgorithm
 from nncf.torch.graph.graph import PTNNCFGraph
-from nncf.torch.graph.operator_metatypes import PTBatchNormMetatype
-from nncf.torch.graph.operator_metatypes import PTLayerNormMetatype
-from nncf.torch.graph.operator_metatypes import PTConv2dMetatype
+from nncf.torch.graph.operator_metatypes import PTModuleBatchNormMetatype
+from nncf.torch.graph.operator_metatypes import PTModuleLayerNormMetatype
+from nncf.torch.graph.operator_metatypes import PTModuleConv2dMetatype
 from nncf.torch.graph.operator_metatypes import PTDepthwiseConv2dSubtype
-from nncf.torch.graph.operator_metatypes import PTLinearMetatype
+from nncf.torch.graph.operator_metatypes import PTModuleLinearMetatype
 from nncf.torch.graph.transformations.commands import PTInsertionCommand
 from nncf.torch.graph.transformations.commands import PTTargetPoint
 from nncf.torch.layers import NNCFConv2d
@@ -943,9 +943,9 @@ class ElasticWidthBuilder(SingleElasticityBuilder):
         node_name_vs_dynamic_input_width_op_map = OrderedDict()
 
         metatype_vs_elastic_op_creator = {
-            PTConv2dMetatype: self._create_elastic_conv_width_op,
+            PTModuleConv2dMetatype: self._create_elastic_conv_width_op,
             PTDepthwiseConv2dSubtype: self._create_elastic_conv_width_op,
-            PTLinearMetatype: self._create_elastic_linear_width_op
+            PTModuleLinearMetatype: self._create_elastic_linear_width_op
         }
 
         for i, grouped_node_names in enumerate(self._grouped_node_names_to_prune):
@@ -992,11 +992,11 @@ class ElasticWidthBuilder(SingleElasticityBuilder):
             pruned_module_groups_info.add_cluster(cluster)
 
         metatype_vs_dynamic_input_op_creator = {
-            PTConv2dMetatype: self._create_dynamic_conv_input_op,
+            PTModuleConv2dMetatype: self._create_dynamic_conv_input_op,
             PTDepthwiseConv2dSubtype: self._create_dynamic_dw_conv_input_op,
-            PTBatchNormMetatype: self._create_dynamic_bn_input_op,
-            PTLayerNormMetatype: self._create_dynamic_ln_input_op,
-            PTLinearMetatype: self._create_dynamic_linear_input_op
+            PTModuleBatchNormMetatype: self._create_dynamic_bn_input_op,
+            PTModuleLayerNormMetatype: self._create_dynamic_ln_input_op,
+            PTModuleLinearMetatype: self._create_dynamic_linear_input_op
         }
         for metatype, op_creator in metatype_vs_dynamic_input_op_creator.items():
             nodes = graph.get_nodes_by_metatypes([metatype])
