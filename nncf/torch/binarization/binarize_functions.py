@@ -19,7 +19,19 @@ from nncf.common.logging import nncf_logger
 from nncf.torch.utils import add_domain
 
 from .extensions import BinarizedFunctionsCUDA
-from torch.onnx.symbolic_helper import _is_constant  # pylint:disable=protected-access
+from torch import _C  # pylint:disable=protected-access
+
+
+def _is_value(x: Any) -> bool:
+    return isinstance(x, _C.Value)
+
+# Implementation is copy-pasted from torch.onnx.symbolic_helper.
+# It's need to support torch < 1.9, since there's no such function in such versions of torch.
+def _is_constant(value: Any) -> bool:
+    return not _is_value(value) or value.node().kind() in {
+        "onnx::Constant",
+        "prim::Constant",
+    }
 
 
 def _unsqueeze_helper(g, input_, axes_i):
@@ -37,6 +49,7 @@ def _unsqueeze_helper(g, input_, axes_i):
         axes = g.op("Constant", value_t=torch.tensor(axes_i, dtype=torch.long))
         return g.op("Unsqueeze", input_, axes)
     return g.op("Unsqueeze", input_, axes_i=axes_i[0])
+
 
 # pylint:disable=abstract-method
 class XNORBinarizeFn(torch.autograd.Function):

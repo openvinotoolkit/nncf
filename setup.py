@@ -132,14 +132,14 @@ EXTRAS_REQUIRE = {
         "tensorflow~=2.8.4",
     ],
     "torch": [
-        "torch~=1.13.0",
+        "torch>=1.8.2,<1.14",
     ],
     "onnx": [
         "onnx==1.12.0",
         "onnxruntime-openvino==1.13.1"
     ],
     "openvino": [
-        "openvino-dev"
+        "openvino-dev~=2022.2.0"
     ]
 }
 

@@ -17,20 +17,20 @@ from nncf.common.quantization.structs import QuantizationPreset
 from nncf.common.quantization.structs import QuantizerGroup
 from nncf.common.quantization.structs import QuantizerConfig
 from nncf.common.quantization.structs import QuantizationMode
+from nncf.common.graph.operator_metatypes import OutputNoopMetatype
+from nncf.common.graph.operator_metatypes import InputNoopMetatype
+from nncf.quantization.algorithms.definitions import RangeType
 from nncf.quantization.algorithms.post_training.algorithm import PostTrainingQuantization
+from nncf.quantization.algorithms.min_max.onnx_backend import ONNXMinMaxAlgoBackend
 from nncf.quantization.algorithms.post_training.algorithm import PostTrainingQuantizationParameters
 from nncf.quantization.algorithms.definitions import Granularity
-from tests.common.quantization.mock_graphs import NodeWithType
 from nncf.experimental.onnx.statistics.collectors import ONNXMeanMinMaxStatisticCollector
 from nncf.experimental.onnx.statistics.collectors import ONNXMinMaxStatisticCollector
 from nncf.experimental.onnx.graph.metatypes.onnx_metatypes import ONNXConvolutionMetatype
 from nncf.experimental.onnx.graph.metatypes.onnx_metatypes import ONNXDepthwiseConvolutionMetatype
-from nncf.common.graph.operator_metatypes import OutputNoopMetatype
-from nncf.common.graph.operator_metatypes import InputNoopMetatype
 from tests.common.quantization.test_filter_constant_nodes import create_mock_graph
 from tests.common.quantization.test_filter_constant_nodes import get_nncf_graph_from_mock_nx_graph
-from nncf.quantization.algorithms.min_max.onnx_backend import ONNXMinMaxAlgoBackend
-from nncf.quantization.algorithms.definitions import RangeType
+from tests.common.quantization.mock_graphs import NodeWithType
 
 
 # pylint: disable=protected-access
@@ -57,7 +57,7 @@ class NNCFGraphToTestDepthwiseConv:
         #       Original graph
         #          Input_1
         #             |
-        #           Conv_1
+        #        DepthwiseConv_1
         #             |
         #           Output_1
         nodes = [NodeWithType('Input_1', InputNoopMetatype),
@@ -97,21 +97,20 @@ def test_default_quantizer_config(nncf_graph):
 @pytest.mark.parametrize('preset', [QuantizationPreset.MIXED, QuantizationPreset.PERFORMANCE])
 @pytest.mark.parametrize('weight_bits', [8])
 @pytest.mark.parametrize('activation_bits', [8])
-@pytest.mark.parametrize('weight_signedness_to_force', [None])
-@pytest.mark.parametrize('activation_signedness_to_force', [None])
+@pytest.mark.parametrize('signed_weights', [None])
+@pytest.mark.parametrize('signed_activations', [None])
 @pytest.mark.parametrize('nncf_graph', [NNCFGraphToTest()])
-# TODO(kshpv): add activation_signedness_to_force and weight_signedness_to_force
+# TODO(kshpv): add signed_activations and signed_weights which should be independent from HW config.
 def test_quantizer_config_from_ptq_params(weight_granularity, activation_granularity, preset, weight_bits,
-                                          activation_bits,
-                                          weight_signedness_to_force, activation_signedness_to_force, nncf_graph):
+                                          activation_bits, signed_weights, signed_activations, nncf_graph):
     algo = PostTrainingQuantization(
         PostTrainingQuantizationParameters(preset=preset,
                                            weight_bits=weight_bits,
                                            weight_granularity=weight_granularity,
-                                           weight_signedness_to_force=weight_signedness_to_force,
+                                           signed_weights=signed_weights,
                                            activation_bits=activation_bits,
                                            activation_granularity=activation_granularity,
-                                           activation_signedness_to_force=activation_signedness_to_force
+                                           signed_activations=signed_activations
                                            ))
     min_max_algo = algo.algorithms[0]
     min_max_algo._backend_entity = ONNXMinMaxAlgoBackend()
@@ -124,14 +123,14 @@ def test_quantizer_config_from_ptq_params(weight_granularity, activation_granula
             assert quantization_point.qconfig.mode == q_g_to_quantization_mode[QuantizerGroup.WEIGHTS]
             assert quantization_point.qconfig.per_channel == (weight_granularity == Granularity.PERCHANNEL)
             assert quantization_point.qconfig.num_bits == weight_bits
-            if weight_signedness_to_force is not None:
-                assert quantization_point.qconfig.signedness_to_force == weight_signedness_to_force
+            if signed_weights is not None:
+                assert quantization_point.qconfig.signedness_to_force == signed_weights
         if quantization_point.is_activation_quantization_point():
             assert quantization_point.qconfig.per_channel == (activation_granularity == Granularity.PERCHANNEL)
             assert quantization_point.qconfig.num_bits == activation_bits
             assert quantization_point.qconfig.mode == q_g_to_quantization_mode[QuantizerGroup.ACTIVATIONS]
-            if activation_signedness_to_force is not None:
-                assert quantization_point.qconfig.signedness_to_force == activation_signedness_to_force
+            if signed_activations is not None:
+                assert quantization_point.qconfig.signedness_to_force == signed_activations
 
 
 @pytest.mark.parametrize('nncf_graph', [NNCFGraphToTestDepthwiseConv()])

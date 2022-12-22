@@ -23,7 +23,10 @@ from nncf.quantization.algorithms.min_max.algorithm import MinMaxQuantization
 from nncf.quantization.algorithms.min_max.onnx_backend import \
     ONNXMinMaxAlgoBackend
 from tests.onnx.models import LinearModel
+from tests.onnx.models import OneDepthwiseConvolutionalModel
 from tests.onnx.quantization.test_quantizer_config import NNCFGraphToTest
+
+
 # pylint: disable=protected-access
 
 @pytest.mark.parametrize('target_device',
@@ -35,22 +38,48 @@ def test_target_device(target_device):
     assert min_max_algo._parameters.target_device.value == HW_CONFIG_TYPE_TARGET_DEVICE_MAP[target_device.value]
 
 
-@pytest.mark.parametrize('range_type', [RangeType.MINMAX, RangeType.MEAN_MINMAX])
-def test_range_type(range_type):
+@pytest.mark.parametrize('range_type', [RangeType.MINMAX, RangeType.MEAN_MINMAX, None])
+@pytest.mark.parametrize('original_model', [LinearModel()])
+def test_range_type_per_tensor(range_type, original_model):
     algo = PostTrainingQuantization(PostTrainingQuantizationParameters(range_type=range_type))
     min_max_algo = algo.algorithms[0]
     min_max_algo._backend_entity = ONNXMinMaxAlgoBackend()
-    model = LinearModel().onnx_model
+    model = original_model.onnx_model
     assert min_max_algo._parameters.range_type == range_type
     stat_points = min_max_algo.get_statistic_points(model)
 
     for _, stat_point in stat_points.items():
         for stat_point_ in stat_point:
             for tensor_collector in stat_point_.algorithm_to_tensor_collectors[MinMaxQuantization]:
+                if range_type is None:
+                    # default tensor_collector for per-tensor
+                    assert isinstance(tensor_collector, ONNXMeanMinMaxStatisticCollector)
                 if range_type == RangeType.MINMAX:
                     assert isinstance(tensor_collector, ONNXMinMaxStatisticCollector)
                 elif range_type == RangeType.MEAN_MINMAX:
                     assert isinstance(tensor_collector, ONNXMeanMinMaxStatisticCollector)
+
+
+@pytest.mark.parametrize('range_type', [RangeType.MINMAX, RangeType.MEAN_MINMAX, None])
+@pytest.mark.parametrize('original_model', [OneDepthwiseConvolutionalModel()])
+def test_range_type_per_channel(range_type, original_model):
+    algo = PostTrainingQuantization(PostTrainingQuantizationParameters(range_type=range_type))
+    min_max_algo = algo.algorithms[0]
+    min_max_algo._backend_entity = ONNXMinMaxAlgoBackend()
+    model = original_model.onnx_model
+    assert min_max_algo._parameters.range_type == range_type
+    stat_points = min_max_algo.get_statistic_points(model)
+
+    for _, stat_point in stat_points.items():
+        for stat_point_ in stat_point:
+            for tensor_collector in stat_point_.algorithm_to_tensor_collectors[MinMaxQuantization]:
+                # Range_type does not affect per-channel tensor_collector
+                if range_type is None:
+                    assert isinstance(tensor_collector, ONNXMinMaxStatisticCollector)
+                if range_type == RangeType.MINMAX:
+                    assert isinstance(tensor_collector, ONNXMinMaxStatisticCollector)
+                elif range_type == RangeType.MEAN_MINMAX:
+                    assert isinstance(tensor_collector, ONNXMinMaxStatisticCollector)
 
 
 @pytest.mark.parametrize('quantize_outputs', [False, True])

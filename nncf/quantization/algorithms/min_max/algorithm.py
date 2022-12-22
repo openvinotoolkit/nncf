@@ -12,7 +12,7 @@
 """
 
 from copy import deepcopy
-from typing import Dict, List, TypeVar, Optional, OrderedDict
+from typing import Dict, List, TypeVar, Optional, OrderedDict, Tuple
 import collections
 from nncf import Dataset
 from nncf.common.graph.definitions import NNCFGraphNodeType
@@ -34,7 +34,6 @@ from nncf.common.quantization.structs import QuantizationPreset
 from nncf.common.quantization.structs import QuantizerGroup
 from nncf.common.quantization.structs import QuantizationConstraints
 from nncf.common.quantization.config_assignment import assign_qconfig_lists_to_modules
-
 from nncf.common.tensor_statistics.collectors import TensorStatisticCollectorBase
 from nncf.common.utils.backend import BackendType
 from nncf.common.utils.backend import get_backend
@@ -67,34 +66,33 @@ class MinMaxQuantizationParameters(AlgorithmParameters):
                  preset: QuantizationPreset = QuantizationPreset.PERFORMANCE,
                  weight_bits: Optional[int] = None,
                  weight_granularity: Optional[Granularity] = None,
-                 weight_signedness_to_force: Optional[bool] = None,
+                 signed_weights: Optional[bool] = None,
                  activation_bits: Optional[int] = None,
                  activation_granularity: Optional[Granularity] = None,
-                 activation_signedness_to_force: Optional[bool] = None,
+                 signed_activations: Optional[bool] = None,
                  target_device: TargetDevice = TargetDevice.ANY,
-                 range_type: RangeType = RangeType.MEAN_MINMAX,
+                 range_type: Optional[RangeType] = None,
                  quantize_outputs: bool = False,
                  ignored_scopes: Optional[List[str]] = None,
                  ):
         """
         :param number_samples: Number of samples for the statistics collection.
         :param preset: Preset parameter for Quantization.
-        Defines the mode: symmetric or asymmetric of the activation quantizers.
+            Defines the mode: symmetric or asymmetric of the activation quantizers.
         :param weight_bits: Bitwidth for the weight quantizers.
         :param weight_granularity: Type of quantization granularity for weight quantizers.
-        Could be per-channel or per-tensor.
-        :param weight_signedness_to_force: Defines whether the datatype of the weight quantizers should be forced.
-        True if the quantizer *must* be signed, False if *must* be unsigned,
-        None if the signed/unsigned attribute should be determined based on the incoming activation
-        statistics during range initialization.
+            Could be per-channel or per-tensor.
+        :param signed_weights: Defines whether the datatype of the weight quantizers should be forced.
+            True if the quantizer *must* be signed, False if *must* be unsigned,
+            None if the signed/unsigned attribute should be determined based on the incoming activation
+            statistics during range initialization.
         :param activation_bits: Bitwidth for the activation quantizers.
         :param activation_granularity: Type of quantization granularity for activation quantizers.
-        Could be per-channel or per-tensor.
-        :param activation_signedness_to_force: Defines whether the datatype of the activation quantizers
-         should be forced. True if the quantizer *must* be signed, False if *must* be unsigned,
-        None if the signed/unsigned attribute should be determined based on the incoming activation
-        statistics during range initialization.
-        activation_signedness_to_force
+            Could be per-channel or per-tensor.
+        :param signed_activations: Defines whether the datatype of the activation quantizers
+            should be forced. True if the quantizer *must* be signed, False if *must* be unsigned,
+            None if the signed/unsigned attribute should be determined based on the incoming activation
+            statistics during range initialization.
         :param target_device: Target device for the settings of the quantization pipeline.
         :param range_type: Type of statistics range calculation.
         :param quantize_outputs: Boolean value that says whether quantize outputs or not.
@@ -106,16 +104,15 @@ class MinMaxQuantizationParameters(AlgorithmParameters):
         self.quantize_outputs = quantize_outputs
         self.ignored_scopes = [] if ignored_scopes is None else ignored_scopes
         self.global_quantizer_constraints = {}
-        weight_per_channel, activation_per_channel = None, None
         if weight_granularity is not None:
-            weight_per_channel = weight_granularity == Granularity.PERCHANNEL
+            weight_granularity = weight_granularity == Granularity.PERCHANNEL
         if activation_granularity is not None:
-            activation_per_channel = activation_granularity == Granularity.PERCHANNEL
+            activation_granularity = activation_granularity == Granularity.PERCHANNEL
         q_weight_constraints = self._get_quantizer_constraints(QuantizerGroup.WEIGHTS, preset, weight_bits,
-                                                               weight_per_channel, weight_signedness_to_force)
+                                                               weight_granularity, signed_weights)
         q_activation_constraints = self._get_quantizer_constraints(QuantizerGroup.ACTIVATIONS, preset, activation_bits,
-                                                                   activation_per_channel,
-                                                                   activation_signedness_to_force)
+                                                                   activation_granularity,
+                                                                   signed_activations)
         self.global_quantizer_constraints[QuantizerGroup.WEIGHTS] = q_weight_constraints
         self.global_quantizer_constraints[QuantizerGroup.ACTIVATIONS] = q_activation_constraints
 
@@ -123,16 +120,16 @@ class MinMaxQuantizationParameters(AlgorithmParameters):
                                    per_channel: Optional[bool],
                                    signedness_to_force: Optional[bool]) -> QuantizationConstraints:
         """
-        Returns QuantizationConstraints for the provided quantizer group
+        Returns QuantizationConstraints for the provided quantizer group.
 
-        :param group: Quantizer groups.
+        :param group: Quantizer group.
         :param preset: Quantization preset.
-        :param num_bits: Bitwidth of Quantizers.
-        :param per_channel: Per-channel ot per-tensor granularity
+        :param num_bits: Bitwidth of quantizers.
+        :param per_channel: Per-channel ot per-tensor granularity.
         :param signedness_to_force: True if the quantizer *must* be signed, False if *must* be unsigned,
-        None if the signed/unsigned attribute should be determined based on the incoming activation
-        statistics during range initialization.
-        :return:
+            None if the signed/unsigned attribute should be determined based on the incoming activation
+            statistics during range initialization.
+        :return: QuantizationConstraints.
         """
         constraints = {'mode': preset.get_params_configured_by_preset(group)['mode']}
         if num_bits is not None:
@@ -158,7 +155,8 @@ class MinMaxQuantization(Algorithm):
         self.nncf_graph = None
         # It prevents the duplicate weight quantizers from being added.
         # It can happen when you have layers that share the identical weight tensor.
-        self._quantization_target_points_to_qconfig = collections.OrderedDict()  # type: OrderedDict[TargetPoint, QuantizerConfig]
+        self._quantization_target_points_to_qconfig = \
+            collections.OrderedDict()  # type: OrderedDict[TargetPoint, QuantizerConfig]
         self._parameters = parameters
 
     @property
@@ -180,6 +178,25 @@ class MinMaxQuantization(Algorithm):
             raise RuntimeError('Cannot return backend-specific entity'
                                'because {} is not supported!'.format(model_backend))
 
+    def _get_default_statistics_collector(self, is_symmetric: bool,
+                                          axes: Optional[Tuple], per_channel: bool) -> TensorStatisticCollectorBase:
+        """
+        Returns the default StatisticCollector.
+
+        :param is_symmetric: True if the quantizer has symmetric mode. False if asymmetric.
+        :param axes: Axes to reduce in the statistic tensor.
+        :param per_channel: True if per-channel statistics. False if per-tensor.
+        :return: StatisticCollector.
+        """
+        if per_channel:
+            return self._backend_entity.minmax_statistic_collector(use_abs_max=is_symmetric,
+                                                                   reduction_shape=axes,
+                                                                   num_samples=self._parameters.number_samples)
+        return self._backend_entity.mean_minmax_statistic_collector(use_per_sample_stats=False,
+                                                                    use_abs_max=is_symmetric,
+                                                                    reduction_shape=axes,
+                                                                    num_samples=self._parameters.number_samples)
+
     def _get_stat_collector(self, quantizer_config: QuantizerConfig) -> TensorStatisticCollectorBase:
         """
         Creates and returns statistic collector instance based on the quantizer's configuration.
@@ -189,10 +206,8 @@ class MinMaxQuantization(Algorithm):
         """
         is_symmetric = quantizer_config.mode == QuantizationMode.SYMMETRIC
         axes = (0, 2, 3) if quantizer_config.per_channel else None
-        if quantizer_config.per_channel:
-            return self._backend_entity.minmax_statistic_collector(use_abs_max=is_symmetric,
-                                                                   reduction_shape=axes,
-                                                                   num_samples=self._parameters.number_samples)
+        if self._parameters.range_type is None or quantizer_config.per_channel:
+            return self._get_default_statistics_collector(is_symmetric, axes, quantizer_config.per_channel)
         if self._parameters.range_type == RangeType.MINMAX:
             return self._backend_entity.minmax_statistic_collector(use_abs_max=is_symmetric,
                                                                    reduction_shape=axes,
