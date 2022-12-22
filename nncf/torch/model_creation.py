@@ -116,7 +116,7 @@ def create_compressed_model(model: Module,
 
     try:
         if is_legacy_model_state_dict:
-            from nncf.torch import load_state #pylint: disable=cyclic-import
+            from nncf.torch import load_state  # pylint: disable=cyclic-import
             state_dict_to_load = compression_state.get('state_dict', compression_state)
             load_state(compressed_model, state_dict_to_load, is_resume=True)
     finally:

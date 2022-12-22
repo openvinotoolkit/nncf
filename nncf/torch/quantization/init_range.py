@@ -33,7 +33,7 @@ from nncf.common.quantization.structs import QuantizationMode
 from nncf.common.quantization.structs import QuantizerGroup
 from nncf.common.quantization.structs import QuantizerId
 from nncf.common.quantization.structs import WeightQuantizerId
-from nncf.common.utils.helpers import should_consider_scope
+from nncf.common.scopes import should_consider_scope
 from nncf.common.tensor_statistics.collectors import TensorStatisticCollectorBase
 from nncf.common.tensor_statistics.collectors import ReductionShape
 from nncf.torch.graph.graph import PTNNCFGraph

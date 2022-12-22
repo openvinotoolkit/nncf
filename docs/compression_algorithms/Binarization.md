@@ -36,12 +36,12 @@ Training binarized networks requires special scheduling of the training process.
             "lr_poly_drop_duration_epochs": 30,  // Duration, in epochs, of the learning rate dropping process.
             "disable_wd_start_epoch": 60  // Epoch to disable weight decay in the optimizer
         },
-    
-        "ignored_scopes": ["ResNet/Linear[fc]",
-                           "ResNet/Conv2d[conv1]",
-                           "ResNet/Sequential[layer2]/BasicBlock[0]/Sequential[downsample]",
-                           "ResNet/Sequential[layer3]/BasicBlock[0]/Sequential[downsample]",
-                           "ResNet/Sequential[layer4]/BasicBlock[0]/Sequential[downsample]"]
+
+        "ignored_scopes": ["ResNet/NNCFLinear[fc]/linear_0",
+                           "ResNet/NNCFConv2d[conv1]/conv2d_0",
+                           "ResNet/Sequential[layer2]/BasicBlock[0]/Sequential[downsample]/NNCFConv2d[0]/conv2d_0",
+                           "ResNet/Sequential[layer3]/BasicBlock[0]/Sequential[downsample]/NNCFConv2d[0]/conv2d_0",
+                           "ResNet/Sequential[layer4]/BasicBlock[0]/Sequential[downsample]/NNCFConv2d[0]/conv2d_0"]
     }
 }
 ```

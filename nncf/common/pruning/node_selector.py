@@ -12,28 +12,30 @@
 """
 
 from collections import defaultdict
-from typing import Dict, List, Optional
+from typing import Dict
+from typing import List
+from typing import Optional
 
 from nncf.common.graph import NNCFGraph
 from nncf.common.graph import NNCFNode
-from nncf.common.pruning.utils import get_output_channels
-from nncf.common.pruning.utils import get_sources_of_node
 from nncf.common.graph.utils import get_first_nodes_of_type
-from nncf.common.pruning.utils import get_previous_convs
-from nncf.common.pruning.utils import is_grouped_conv
-from nncf.common.pruning.utils import is_batched_linear
+from nncf.common.logging import nncf_logger
+from nncf.common.pruning.clusterization import Cluster
+from nncf.common.pruning.clusterization import Clusterization
+from nncf.common.pruning.mask_propagation import MaskPropagationAlgorithm
+from nncf.common.pruning.model_analysis import ModelAnalyzer
+from nncf.common.pruning.model_analysis import cluster_special_ops
 from nncf.common.pruning.utils import PruningAnalysisDecision
 from nncf.common.pruning.utils import PruningAnalysisReason
 from nncf.common.pruning.utils import PruningOperationsMetatypeRegistry
-from nncf.common.pruning.mask_propagation import MaskPropagationAlgorithm
-from nncf.common.pruning.model_analysis import ModelAnalyzer
-from nncf.common.pruning.clusterization import Clusterization
-from nncf.common.pruning.model_analysis import cluster_special_ops
-from nncf.common.pruning.clusterization import Cluster
-from nncf.common.logging import nncf_logger
-from nncf.common.utils.helpers import should_consider_scope
+from nncf.common.pruning.utils import get_output_channels
+from nncf.common.pruning.utils import get_previous_convs
+from nncf.common.pruning.utils import get_sources_of_node
+from nncf.common.pruning.utils import is_batched_linear
 from nncf.common.pruning.utils import is_conv_with_downsampling
+from nncf.common.pruning.utils import is_grouped_conv
 from nncf.common.pruning.utils import is_prunable_depthwise_conv
+from nncf.common.scopes import should_consider_scope
 
 
 class PruningNodeSelector:

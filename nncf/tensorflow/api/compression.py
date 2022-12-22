@@ -51,6 +51,7 @@ class TFCompressionAlgorithmBuilder(BaseCompressionAlgorithmBuilder):
 
         :param state_without_name: Output of `_get_state_without_name()` method.
         """
+
     def apply_to(self, model: TModel) -> TModel:
         """
         Applies algorithm-specific modifications to the model.
