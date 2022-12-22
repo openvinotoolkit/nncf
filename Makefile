@@ -1,6 +1,5 @@
 PYLINT_VERSION := 2.13.9
 JUNITXML_PATH ?= nncf-tests.xml
-DATA_ARG := ''
 
 ifdef DATA
 	DATA_ARG := --data $(DATA)
@@ -42,6 +41,8 @@ install-openvino-test:
 	pip install -e .[openvino]
 	pip install -r tests/openvino/requirements.txt
 	pip install -r tests/cross_fw/install/requirements.txt
+	pip install -r examples/experimental/openvino/bert/requirements.txt
+	pip install -r examples/experimental/openvino/yolo_v5/requirements.txt
 
 install-openvino-dev: install-openvino-test
 	pip install pylint==$(PYLINT_VERSION)
@@ -53,7 +54,7 @@ pylint-openvino:
 	pylint --rcfile .pylintrc               \
 		nncf/openvino/                      \
 		tests/openvino/                     \
-        examples/experimental/openvino/
+		examples/experimental/openvino/
 
 test-install-openvino:
 	pytest tests/cross_fw/install -s        \
