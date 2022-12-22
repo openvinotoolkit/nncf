@@ -615,10 +615,7 @@ class FilterPruningController(BasePruningAlgoController):
 
     @property
     def maximal_compression_rate(self) -> float:
-        if self.prune_flops:
-            max_compression_rate = 1 - self._min_prunable_flops / max(self.full_flops, 1)
-        else:
-            max_compression_rate = 1.0
+        max_compression_rate = 1 - self._min_prunable_flops / max(self.full_flops, 1) if self.prune_flops else 1.0
         return max_compression_rate
 
     def _calculate_num_of_sparse_elements_by_node(self) -> Dict[str, int]:
