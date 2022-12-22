@@ -183,7 +183,6 @@ class PrunedModelTheoreticalBorderline(Statistics):
         self.minimum_possible_params = min_prunable_params
         self.total_flops = total_flops
         self.total_params = total_params
-        self.maximal_pruning_rate = 1 - min_prunable_flops / max(total_flops, 1)
 
     def to_str(self) -> str:
         algorithm_string = create_table(
@@ -195,7 +194,6 @@ class PrunedModelTheoreticalBorderline(Statistics):
                                                                   f' {self.total_flops / self._giga:.3f}'],
                 ['MParams minimum possible after pruning / total', f'{self.minimum_possible_params / self._mega:.3f} /'
                                                                    f' {self.total_params / self._mega:.3f}'],
-                ['Maximal pruning rate', f'{self.maximal_pruning_rate:.4f}'],
             ]
         )
 

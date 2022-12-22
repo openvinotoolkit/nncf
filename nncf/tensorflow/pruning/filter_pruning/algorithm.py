@@ -242,10 +242,8 @@ class FilterPruningController(BasePruningAlgoController):
 
     @property
     def maximal_compression_rate(self) -> float:
-        stats = PrunedModelTheoreticalBorderline(
-            self._pruned_layers_num, self._prunable_layers_num, self._min_prunable_flops,
-            self._min_prunable_params, self.full_flops, self.full_params_num)
-        return stats.maximal_pruning_rate
+        max_compression_rate = 1 - self._min_prunable_flops / max(self.full_flops, 1)
+        return max_compression_rate
 
     def _init_pruned_layers_params(self, output_channels):
         # 1. Collect nodes output shapes
