@@ -13,7 +13,7 @@
 
 from typing import Optional, Dict, Any
 
-from nncf.common.utils.logger import logger
+from nncf.common.logging import nncf_logger
 from nncf.common.utils.registry import Registry
 from nncf.common.schedulers import PolynomialDecaySchedule
 from nncf.common.schedulers import ExponentialDecaySchedule
@@ -186,10 +186,10 @@ class PolynomialSparsityScheduler(SparsityScheduler):
 
             if self._steps_per_epoch is None:
                 self._should_skip = True
-                logger.warning('Scheduler set to update sparsity level per optimizer step, '
-                               'but steps_per_epoch was not set in config. Will only start updating '
-                               'sparsity level after measuring the actual steps per epoch as signaled '
-                               'by a .epoch_step() call.')
+                nncf_logger.warning('Scheduler set to update sparsity level per optimizer step, '
+                                    'but steps_per_epoch was not set in config. Will only start updating '
+                                    'sparsity level after measuring the actual steps per epoch as signaled '
+                                    'by a .epoch_step() call.')
 
 
 @SPARSITY_SCHEDULERS.register('exponential')

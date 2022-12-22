@@ -23,7 +23,7 @@ from nncf.api.compression import CompressionStage
 from nncf.common.graph.transformations.commands import TargetType
 from nncf.common.graph.transformations.commands import TransformationPriority
 from nncf.common.statistics import NNCFStatistics
-from nncf.common.utils.logger import logger as nncf_logger
+from nncf.common.logging import nncf_logger
 from nncf.config import NNCFConfig
 from nncf.config.extractors import extract_algo_specific_config
 from nncf.config.schemata.defaults import BINARIZATION_MODE
@@ -75,13 +75,13 @@ class BinarizationBuilder(PTCompressionAlgorithmBuilder):
         insertion_commands = []
         for module_node in module_nodes:
             if not self._should_consider_scope(module_node.node_name):
-                nncf_logger.info("Ignored adding binarizers in scope: {}".format(module_node.node_name))
+                nncf_logger.info(f"Ignored adding binarizers in scope: {module_node.node_name}")
                 continue
 
-            nncf_logger.info("Adding Weight binarizer in scope: {}".format(module_node.node_name))
+            nncf_logger.debug(f"Adding weight binarizer in scope: {module_node.node_name}")
             op_weights = self.__create_binarize_module().to(device)
 
-            nncf_logger.info("Adding Activation binarizer in scope: {}".format(module_node.node_name))
+            nncf_logger.debug(f"Adding activation binarizer in scope: {module_node.node_name}")
 
             compression_lr_multiplier = self.config.get_redefinable_global_param_value_for_algo(
                 'compression_lr_multiplier',
@@ -209,11 +209,11 @@ class BinarizationController(QuantizationControllerBase):
             drow["Layer name"] = layer_name
             drow["Layer type"] = layer_type
             drow["Binarized"] = 'Y' if is_binarized else 'N'
-            drow["MAC count"] = "{:.3f}G".format(ops * 1e-9)
-            drow["MAC share"] = "{:2.1f}%".format(ops / ops_total * 100)
+            drow["MAC count"] = f"{ops * 1e-9:.3f}G"
+            drow["MAC share"] = f"{ops / ops_total * 100:2.1f}%"
             row = [drow[h] for h in header]
             table_data.append(row)
 
         table.add_rows(table_data)
         nncf_logger.info(table.draw())
-        nncf_logger.info("Total binarized MAC share: {:.1f}%".format(ops_bin / ops_total * 100))
+        nncf_logger.info(f"Total binarized MAC share: {ops_bin / ops_total * 100:.1f}%")

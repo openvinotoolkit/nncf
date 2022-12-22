@@ -12,6 +12,7 @@
 """
 from collections import Counter
 from typing import Dict
+from typing import Any
 from typing import List
 from typing import Optional
 from typing import Tuple
@@ -22,7 +23,7 @@ from torch import Tensor
 
 from nncf.common.graph import Dtype
 from nncf.common.graph.layer_attributes import BaseLayerAttributes
-from nncf.common.utils.logger import logger as nncf_logger
+from nncf.common.logging import nncf_logger
 from nncf.torch.dynamic_graph.scope import Scope
 from nncf.torch.dynamic_graph.trace_tensor import TensorMeta
 from nncf.torch.dynamic_graph.trace_tensor import TracedTensor
@@ -95,10 +96,10 @@ class DefaultInputsMatcher(InputsMatcher):
                 if not tm_comparator(saved_input, actual_input):
                     return False
         if matched_with_unexpected_tensors:
-            nncf_logger.debug("Had to match a node to an op which has tensors at positions where there were no tensors "
-                              "at graph building time:\nNode input metas: {}, but op input metas: {}".format(
-                saved_inputs, actual_inputs
-            ))
+            nncf_logger.debug(
+                f"Had to match a node to an op which has tensors at positions where there were "
+                f"no tensors at graph building time:\n"
+                f"Node input metas: {saved_inputs}, but op input metas: {actual_inputs}")
         return True
 
 
@@ -161,16 +162,36 @@ class OperationExecutionContext:
         return self.op_address.call_order
 
 
+class DynamicGraphNodeParameters:
+    def __init__(self, layer_attributes: BaseLayerAttributes,
+                 ignored_algorithms: List[str],
+                 is_called_inside_nncf_module: bool):
+        self.layer_attributes = layer_attributes
+        self.ignored_algorithms = ignored_algorithms
+        self.is_called_inside_nncf_module = is_called_inside_nncf_module
+
+
 class DynamicGraphNode:
     def __init__(self, node_id: int, node_key: str, layer_attributes: BaseLayerAttributes,
                  op_exec_context: OperationExecutionContext, ignored_algorithms: List[str],
-                 is_in_iteration_scope: bool):
+                 is_called_inside_nncf_module: bool, is_in_iteration_scope: bool):
         self.node_id = node_id
         self.node_key = node_key
         self.layer_attributes = layer_attributes
         self.op_exec_context = op_exec_context
         self.ignored_algorithms = ignored_algorithms
+        self.is_called_inside_nncf_module = is_called_inside_nncf_module
         self.is_in_iteration_scope = is_in_iteration_scope
+
+    @classmethod
+    def build_from_nx_node_dict(cls, nx_node_dict: Dict[str, Any]) -> 'DynamicGraphNode':
+        return cls(node_id=nx_node_dict[DynamicGraph.ID_NODE_ATTR],
+                   node_key=nx_node_dict[DynamicGraph.KEY_NODE_ATTR],
+                   layer_attributes=nx_node_dict.get(DynamicGraph.LAYER_ATTRIBUTES),
+                   op_exec_context=nx_node_dict[DynamicGraph.OP_EXEC_CONTEXT_NODE_ATTR],
+                   ignored_algorithms=nx_node_dict[DynamicGraph.IGNORED_ALGOS_NODE_ATTR],
+                   is_called_inside_nncf_module=nx_node_dict[DynamicGraph.IS_CALLED_INSIDE_NNCF_MODULE],
+                   is_in_iteration_scope=nx_node_dict[DynamicGraph.IS_IN_ITERATION_SCOPE_NODE_ATTR])
 
     def __eq__(self, other: 'DynamicGraphNode') -> bool:
         return self.__dict__ == other.__dict__
@@ -221,27 +242,20 @@ class DefaultScopeNodeMatcher:
                     nx_node_candidates[successor_node_key] = successor_node
 
         node_candidates = {}  # type: Dict[str, DynamicGraphNode]
-        for nx_node_key, nx_node in nx_node_candidates.items():
-            node_candidates[nx_node_key] = DynamicGraphNode(
-                node_id=nx_node[DynamicGraph.ID_NODE_ATTR],
-                node_key=nx_node[DynamicGraph.KEY_NODE_ATTR],
-                layer_attributes=nx_node.get(DynamicGraph.LAYER_ATTRIBUTES),
-                op_exec_context=nx_node[DynamicGraph.OP_EXEC_CONTEXT_NODE_ATTR],
-                ignored_algorithms=nx_node[DynamicGraph.IGNORED_ALGOS_NODE_ATTR],
-                is_in_iteration_scope=nx_node[DynamicGraph.IS_IN_ITERATION_SCOPE_NODE_ATTR])
+        for nx_node_key, nx_node_dict in nx_node_candidates.items():
+            node_candidates[nx_node_key] = DynamicGraphNode.build_from_nx_node_dict(nx_node_dict)
 
         return node_candidates
 
     def add_node(self, op_exec_context: OperationExecutionContext, inputs,
-                 layer_attrs: BaseLayerAttributes = None,
-                 ignored_algorithms: List[str] = None,
+                 node_parameters: DynamicGraphNodeParameters,
                  is_in_iteration_scope: bool = False) -> DynamicGraphNode:
         node_id = len(self._node_id_to_key_dict)
 
         name_parts = (str(op_exec_context.scope_in_model), op_exec_context.operator_name)
         node_key = '{idx} {uri}'.format(uri='/'.join(name_parts), idx=node_id)
 
-        nncf_logger.debug("New node added to NNCF graph: {}".format(node_key))
+        nncf_logger.debug(f"New node added to NNCF graph: {node_key}")
 
         self._node_id_to_key_dict[node_id] = node_key
         attrs = {
@@ -250,13 +264,14 @@ class DefaultScopeNodeMatcher:
             DynamicGraph.OP_EXEC_CONTEXT_NODE_ATTR: op_exec_context,
             DynamicGraph.IS_IN_ITERATION_SCOPE_NODE_ATTR: is_in_iteration_scope
         }
-        if layer_attrs is not None:
-            attrs[DynamicGraph.LAYER_ATTRIBUTES] = layer_attrs
+        if node_parameters.layer_attributes is not None:
+            attrs[DynamicGraph.LAYER_ATTRIBUTES] = node_parameters.layer_attributes
 
-        if ignored_algorithms is not None:
-            attrs[DynamicGraph.IGNORED_ALGOS_NODE_ATTR] = ignored_algorithms
+        if node_parameters.ignored_algorithms is not None:
+            attrs[DynamicGraph.IGNORED_ALGOS_NODE_ATTR] = node_parameters.ignored_algorithms
         else:
             attrs[DynamicGraph.IGNORED_ALGOS_NODE_ATTR] = []
+        attrs[DynamicGraph.IS_CALLED_INSIDE_NNCF_MODULE] = node_parameters.is_called_inside_nncf_module
 
         self._nx_graph.add_node(node_key, **attrs)
 
@@ -273,12 +288,7 @@ class DefaultScopeNodeMatcher:
             self._nx_graph.edges[parent, node_key][DynamicGraph.ACTIVATION_DTYPE_EDGE_ATTR] = info.dtype
 
         nx_node_dict = self._nx_graph.nodes[node_key]
-        node = DynamicGraphNode(node_id=nx_node_dict[DynamicGraph.ID_NODE_ATTR],
-                                node_key=nx_node_dict[DynamicGraph.KEY_NODE_ATTR],
-                                layer_attributes=nx_node_dict.get(DynamicGraph.LAYER_ATTRIBUTES),
-                                op_exec_context=nx_node_dict[DynamicGraph.OP_EXEC_CONTEXT_NODE_ATTR],
-                                ignored_algorithms=nx_node_dict[DynamicGraph.IGNORED_ALGOS_NODE_ATTR],
-                                is_in_iteration_scope=nx_node_dict[DynamicGraph.IS_IN_ITERATION_SCOPE_NODE_ATTR])
+        node = DynamicGraphNode.build_from_nx_node_dict(nx_node_dict)
 
         if not has_traced_inputs:
             self._inputless_nodes[node_key] = node
@@ -302,7 +312,7 @@ class DefaultScopeNodeMatcher:
         if len(node_candidates) == 1:
             result = node_candidates[0]
         if len(node_candidates) > 1:
-            nncf_logger.warning("More than one node matches input")
+            nncf_logger.debug(f"More than one node was matched against context {op_exec_context}")
             result = node_candidates[0]
 
         return result
@@ -355,14 +365,12 @@ class IterationScopeNodeMatcher(DefaultScopeNodeMatcher):
                 if has_input_outside_iteration:
                     node_name = str(op_exec_context.op_address)
                     first_nodes[node_name] = node
-                    nncf_logger.debug('Found first iteration node: {} in scope: {}'.format(name, iter_scope))
+                    nncf_logger.debug(f'Found first iteration node: {name} in scope: {iter_scope}')
 
     def add_node(self, op_exec_context: OperationExecutionContext, inputs,
-                 layer_attrs: BaseLayerAttributes = None,
-                 ignored_algorithms: List[str] = None,
+                 node_parameters: DynamicGraphNodeParameters,
                  is_in_iteration_scope: bool = True) -> DynamicGraphNode:
-        node = super().add_node(op_exec_context, inputs, layer_attrs, ignored_algorithms,
-                                is_in_iteration_scope=True)
+        node = super().add_node(op_exec_context, inputs, node_parameters, is_in_iteration_scope=True)
         self.save_first_iteration_node(inputs, node)
         return node
 
@@ -406,7 +414,7 @@ class IterationScopeNodeMatcher(DefaultScopeNodeMatcher):
         if len(node_candidates) == 1:
             result = node_candidates[0]
         if len(node_candidates) > 1:
-            nncf_logger.warning("More than one node matches input")
+            nncf_logger.debug(f"More than one node was matched against context {op_exec_context}")
             result = node_candidates[0]
 
         return result
@@ -469,8 +477,7 @@ class NodeManager:
                  tensor_metas: List[TensorMeta],
                  tm_comparators_per_scope: List[Tuple[TensorMetaComparator, List[str]]],
                  inputs,
-                 layer_attrs: BaseLayerAttributes = None,
-                 ignored_algorithms: List[str] = None) -> DynamicGraphNode:
+                 node_parameters: DynamicGraphNodeParameters) -> DynamicGraphNode:
         matcher = self.choose_matcher(op_address)
         tm_comparators = self.choose_tm_comparators(op_address, tm_comparators_per_scope)
         op_exec_context = OperationExecutionContext(op_address.operator_name,
@@ -479,7 +486,7 @@ class NodeManager:
                                                     tensor_metas,
                                                     tm_comparators=tm_comparators)
 
-        return matcher.add_node(op_exec_context, inputs, layer_attrs, ignored_algorithms)
+        return matcher.add_node(op_exec_context, inputs, node_parameters)
 
 
 class DynamicGraph:
@@ -499,6 +506,7 @@ class DynamicGraph:
     INPUT_PORT_ID_EDGE_ATTR = 'input_port_id'
     OUTPUT_PORT_ID_EDGE_ATTR = 'output_port_id'
     IGNORED_ALGOS_NODE_ATTR = 'ignored_algos'
+    IS_CALLED_INSIDE_NNCF_MODULE = 'is_called_inside_nncf_module'
     IS_IN_ITERATION_SCOPE_NODE_ATTR = 'is_in_iteration_scope'
 
     def __init__(self):
@@ -527,10 +535,9 @@ class DynamicGraph:
                  tensor_metas: List[TensorMeta],
                  input_comparators_per_scope: List[Tuple[TensorMetaComparator, List[str]]],
                  inputs,
-                 layer_attrs: BaseLayerAttributes = None,
-                 ignored_algorithms: List[str] = None) -> DynamicGraphNode:
-        node = self.match_manager.add_node(op_address, tensor_metas, input_comparators_per_scope, inputs,
-                                           layer_attrs, ignored_algorithms)
+                 node_parameters: DynamicGraphNodeParameters) -> DynamicGraphNode:
+        node = self.match_manager.add_node(op_address, tensor_metas, input_comparators_per_scope,
+                                           inputs, node_parameters)
 
         from nncf.common.graph.definitions import MODEL_OUTPUT_OP_NAME #pylint: disable=cyclic-import
         from nncf.common.graph.definitions import MODEL_INPUT_OP_NAME #pylint: disable=cyclic-import
@@ -553,15 +560,7 @@ class DynamicGraph:
     def get_all_nodes(self) -> List[DynamicGraphNode]:
         all_nodes = []
         for node_key in self._node_id_to_key_dict.values():
-            nx_node = self._nx_graph.nodes[node_key]
-            dynamic_graph_node = DynamicGraphNode(
-                node_id=nx_node[DynamicGraph.ID_NODE_ATTR],
-                node_key=nx_node[DynamicGraph.KEY_NODE_ATTR],
-                layer_attributes=nx_node.get(DynamicGraph.LAYER_ATTRIBUTES),
-                op_exec_context=nx_node[DynamicGraph.OP_EXEC_CONTEXT_NODE_ATTR],
-                ignored_algorithms=nx_node[DynamicGraph.IGNORED_ALGOS_NODE_ATTR],
-                is_in_iteration_scope=nx_node[DynamicGraph.IS_IN_ITERATION_SCOPE_NODE_ATTR]
-            )
+            dynamic_graph_node = DynamicGraphNode.build_from_nx_node_dict(self._nx_graph.nodes[node_key])
             all_nodes.append(dynamic_graph_node)
         return all_nodes
 

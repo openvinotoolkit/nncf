@@ -36,7 +36,7 @@ from nncf.common.pruning.utils import get_rounded_pruned_element_number
 from nncf.common.statistics import NNCFStatistics
 from nncf.common.pruning.statistics import PrunedModelTheoreticalBorderline
 from nncf.common.utils.debug import is_debug
-from nncf.common.utils.logger import logger as nncf_logger
+from nncf.common.logging import nncf_logger
 from nncf.common.schedulers import StubCompressionScheduler
 from nncf.common.accuracy_aware_training.training_loop import ADAPTIVE_COMPRESSION_CONTROLLERS
 from nncf.config.extractors import extract_bn_adaptation_init_params

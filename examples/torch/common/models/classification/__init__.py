@@ -17,3 +17,5 @@ from .efficientnet import *
 from .mobilenet_v2_cifar10 import *
 from .resnet_cifar10 import *
 from .vgg11_bn_cifar10 import *
+from .mobilenet_v2_tv_092 import *
+from .mobilenet_v3_tv_092 import *

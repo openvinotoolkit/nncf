@@ -20,8 +20,9 @@ from torch import nn
 from torch.optim import SGD
 from torch.nn import functional as F
 
-from nncf.torch import AdaptiveCompressionTrainingLoop
-from nncf.torch import EarlyExitCompressionTrainingLoop
+from nncf.common.accuracy_aware_training.training_loop import AdaptiveCompressionTrainingLoop
+from nncf.common.accuracy_aware_training.training_loop import EarlyExitCompressionTrainingLoop
+
 from nncf.torch.initialization import register_default_init_args
 
 from tests.torch.helpers import create_compressed_model_and_algo_for_test

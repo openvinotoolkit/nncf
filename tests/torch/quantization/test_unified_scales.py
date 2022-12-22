@@ -617,10 +617,11 @@ class SimplerModelForUnifiedScalesTesting(torch.nn.Module):
 
 
 class TwoEmbeddingAddModel(torch.nn.Module):
+    EMBEDDING_IO_SHAPE = [10, 10]
     def __init__(self):
         super().__init__()
-        self.embedding1 = torch.nn.Embedding(10, 10)
-        self.embedding2 = torch.nn.Embedding(10, 10)
+        self.embedding1 = torch.nn.Embedding(*self.EMBEDDING_IO_SHAPE)
+        self.embedding2 = torch.nn.Embedding(*self.EMBEDDING_IO_SHAPE)
 
     def forward(self, x):
         y1 = self.embedding1(x)
@@ -780,12 +781,19 @@ class TestsWithONNXInspection:
 
         unified_fq_node_inputs = [resolve_constant_node_inputs_to_values(fq_node, onnx_model.graph)
                                   for fq_node in fq_nodes_with_expected_unified_scales]
+
         # delete weights from input dict
-        for item in unified_fq_node_inputs:
-            item.pop(min(item.keys()))
+        for inputs_for_single_fq in unified_fq_node_inputs:
+            weight_input_names = []
+            for input_name, input_tensor in inputs_for_single_fq.items():
+                if list(input_tensor.shape) == TwoEmbeddingAddModel.EMBEDDING_IO_SHAPE:
+                    weight_input_names.append(input_name)
+            for weight_input_name in weight_input_names:
+                inputs_for_single_fq.pop(weight_input_name)
+
+        ref_values = list(unified_fq_node_inputs[0].values())
         for inputs_dict in unified_fq_node_inputs[1:]:
             curr_values = list(inputs_dict.values())
-            ref_values = list(unified_fq_node_inputs[0].values())
             assert curr_values == ref_values  # All inputs for unified scale quantizers must be equal
 
 

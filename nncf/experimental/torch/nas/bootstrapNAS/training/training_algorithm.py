@@ -24,7 +24,7 @@ import torch
 from nncf import NNCFConfig
 from nncf.api.compression import CompressionAlgorithmController
 from nncf.api.compression import CompressionStage
-from nncf.common.utils.logger import logger as nncf_logger
+from nncf.common.logging import nncf_logger
 from nncf.config.structures import BNAdaptationInitArgs
 from nncf.experimental.torch.nas.bootstrapNAS.elasticity.elasticity_controller import ElasticityController
 from nncf.experimental.torch.nas.bootstrapNAS.training.base_training import BNASTrainingController
@@ -170,8 +170,9 @@ class EpochBasedTrainingAlgorithm:
             self._training_ctrl.multi_elasticity_handler.activate_minimum_subnet()
             min_subnet_acc1, acc5, loss = self._validate_subnet(val_fn, val_loader)
             if log_validation_info:
-                nncf_logger.info('* Acc@1 {:.3f} Acc@5 {:.3f} for Minimal SubNet={}'.format(
-                    min_subnet_acc1, acc5, self._training_ctrl.multi_elasticity_handler.get_active_config()))
+                nncf_logger.info(
+                    f'* Acc@1 {min_subnet_acc1:.3f} Acc@5 {acc5:.3f} '
+                    f'for Minimal SubNet={self._training_ctrl.multi_elasticity_handler.get_active_config()}')
             if is_main_process() and log_validation_info:
                 tensorboard_writer.add_scalar("val/min_subnet_loss", loss, len(val_loader) * epoch)
                 tensorboard_writer.add_scalar("val/min_subnet_top1", min_subnet_acc1, len(val_loader) * epoch)
@@ -182,8 +183,9 @@ class EpochBasedTrainingAlgorithm:
             self._training_ctrl.multi_elasticity_handler.activate_supernet()
             supernet_acc1, acc5, loss = self._validate_subnet(val_fn, val_loader)
             if log_validation_info:
-                nncf_logger.info('* Acc@1 {:.3f} Acc@5 {:.3f} of SuperNet={}'.format(
-                    supernet_acc1, acc5, self._training_ctrl.multi_elasticity_handler.get_active_config()))
+                nncf_logger.info(
+                    f'* Acc@1 {supernet_acc1:.3f} Acc@5 {acc5:.3f} '
+                    f'of SuperNet={self._training_ctrl.multi_elasticity_handler.get_active_config()}')
 
             if is_main_process() and log_validation_info:
                 tensorboard_writer.add_scalar("val/supernet_loss", loss, len(val_loader) * epoch)
@@ -251,7 +253,7 @@ class EpochBasedTrainingAlgorithm:
         """
         if not Path(resuming_checkpoint_path).is_file():
             raise FileNotFoundError("no checkpoint found at '{}'".format(resuming_checkpoint_path))
-        nncf_logger.info("=> loading checkpoint '{}'".format(resuming_checkpoint_path))
+        nncf_logger.info(f"=> loading checkpoint '{resuming_checkpoint_path}'")
         checkpoint = torch.load(resuming_checkpoint_path, map_location='cpu')
 
         training_state = checkpoint[cls._state_names.TRAINING_ALGO_STATE]

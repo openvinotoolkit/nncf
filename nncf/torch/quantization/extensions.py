@@ -15,6 +15,7 @@ import os.path
 import torch
 from torch.utils.cpp_extension import load
 
+from nncf.common.logging.logger import extension_is_loading_info_log
 from nncf.torch.extensions import CudaNotAvailableStub, ExtensionsType, ExtensionLoader, EXTENSIONS
 from nncf.definitions import NNCF_PACKAGE_ROOT_DIR
 
@@ -73,9 +74,10 @@ class QuantizedFunctionsCUDALoader(ExtensionLoader):
         return 'quantized_functions_cuda'
 
 
-QuantizedFunctionsCPU = QuantizedFunctionsCPULoader.load()
+with extension_is_loading_info_log("quantization"):
+    QuantizedFunctionsCPU = QuantizedFunctionsCPULoader.load()
 
-if torch.cuda.is_available():
-    QuantizedFunctionsCUDA = QuantizedFunctionsCUDALoader.load()
-else:
-    QuantizedFunctionsCUDA = CudaNotAvailableStub
+    if torch.cuda.is_available():
+        QuantizedFunctionsCUDA = QuantizedFunctionsCUDALoader.load()
+    else:
+        QuantizedFunctionsCUDA = CudaNotAvailableStub

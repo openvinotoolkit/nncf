@@ -19,7 +19,7 @@ from torch import nn
 from nncf.torch.nncf_network import NNCFNetwork
 from nncf.torch.compression_method_api import PTCompressionLoss
 from nncf.torch.nested_objects_traversal import NestedObjectIndex
-from nncf.common.utils.logger import logger as nncf_logger
+from nncf.common.logging import nncf_logger
 
 
 class KnowledgeDistillationLoss(PTCompressionLoss):
@@ -36,11 +36,11 @@ class KnowledgeDistillationLoss(PTCompressionLoss):
         if kd_type == 'softmax':
             def kd_loss_fn(teacher_output: torch.Tensor, student_output: torch.Tensor):
                 if len(student_output.shape) != 2 or len(teacher_output.shape) != 2:
-                    nncf_logger.debug("Incompatible number of dimensions of the model output tensor for softmax KD "
-                                      "(student - {}, teacher - {}, number of dims {} should be == 2)"
-                                      " - ignoring!".format(student_output.shape,
-                                                            teacher_output.shape,
-                                                            len(student_output.shape)))
+                    nncf_logger.debug(
+                        f"Incompatible number of dimensions of the model output tensor for softmax KD "
+                        f"(student - {student_output.shape}, "
+                        f"teacher - {teacher_output.shape}, "
+                        f"number of dims for both should be == 2) - ignoring!")
                     return torch.zeros([1]).to(student_output.device)
                 return scale * -(nn.functional.log_softmax(student_output / temperature, dim=1) *
                                  nn.functional.softmax(teacher_output / temperature, dim=1)).mean() \
@@ -49,11 +49,11 @@ class KnowledgeDistillationLoss(PTCompressionLoss):
             def kd_loss_fn(teacher_output: torch.Tensor, student_output: torch.Tensor):
                 mse = torch.nn.MSELoss()
                 if len(teacher_output.shape) < 2:
-                    nncf_logger.debug("Incompatible number of dimensions of the model output tensor for MSE KD "
-                                      "(student - {}, teacher - {}, number of dims {} should be > 1)"
-                                      " (most likely loss) - ignoring!".format(student_output.shape,
-                                                                               teacher_output.shape,
-                                                                               len(student_output.shape)))
+                    nncf_logger.debug(
+                        f"Incompatible number of dimensions of the model output tensor for MSE KD "
+                        f"(student - {student_output.shape}, "
+                        f"teacher - {teacher_output.shape}, "
+                        f"number of dims {len(student_output.shape)} should be > 1) (most likely loss) - ignoring!")
                     return torch.zeros([1]).to(student_output.device)
                 return scale * mse(teacher_output, student_output)
         self._kd_loss_handler = target_model.create_knowledge_distillation_loss_handler(original_model, partial(

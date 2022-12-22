@@ -14,7 +14,7 @@ from typing import Any
 from typing import Dict
 from typing import List
 
-from nncf.common.utils.logger import logger as nncf_logger
+from nncf.common.logging import nncf_logger
 from nncf.experimental.torch.nas.bootstrapNAS.elasticity.elasticity_dim import ElasticityDim
 
 DEFAULT_STAGE_LR_RATE = 3.5e-06
@@ -70,7 +70,7 @@ class StageDescriptor:
         """
         train_dims = config.get(cls._state_names.TRAIN_DIMS, ['kernel'])
         kwargs = {
-            cls._state_names.TRAIN_DIMS: [ElasticityDim.from_str(dim) for dim in train_dims],
+            cls._state_names.TRAIN_DIMS: [ElasticityDim(dim) for dim in train_dims],
             cls._state_names.EPOCHS: config.get(cls._state_names.EPOCHS, 1),
             cls._state_names.REORG_WEIGHTS: config.get(cls._state_names.REORG_WEIGHTS, False),
             cls._state_names.WIDTH_INDICATOR: config.get(cls._state_names.WIDTH_INDICATOR, 1),
@@ -91,7 +91,7 @@ class StageDescriptor:
         """
         kwargs = state.copy()
         train_dims = state[cls._state_names.TRAIN_DIMS]
-        kwargs[cls._state_names.TRAIN_DIMS] = [ElasticityDim.from_str(dim) for dim in train_dims]
+        kwargs[cls._state_names.TRAIN_DIMS] = [ElasticityDim(dim) for dim in train_dims]
         return cls(**kwargs)
 
     def get_state(self) -> Dict[str, Any]:

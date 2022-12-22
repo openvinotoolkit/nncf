@@ -10,7 +10,9 @@
  See the License for the specific language governing permissions and
  limitations under the License.
 """
+import logging
 import os
+import re
 from typing import Dict, List, Set
 
 import pytest
@@ -112,6 +114,7 @@ class MatchKeyDesc:
         self.is_resume = is_resume
         self.expects_error = expects_error
         self.has_deprecation_warning = False
+        self.warning_msg_pattern = None
 
     def __str__(self):
         result = '-'.join(self.state_dict_to_load.keys()) + '__TO__' + '-'.join(self.model_state_dict.keys())
@@ -169,6 +172,10 @@ class MatchKeyDesc:
 
     def with_deprecation_warning(self):
         self.has_deprecation_warning = True
+        return self
+
+    def with_warning(self, warning_msg_pattern: str):
+        self.warning_msg_pattern = warning_msg_pattern
         return self
 
 
@@ -272,15 +279,6 @@ MATCH_KEY_DESC_LIST = [
         .keys_to_load(['1', 'module.1']).model_keys(['1'])
         .matched(['1']).unexpected(['module.1']),
 
-    # can match legacy activation quantizer storage name
-    MatchKeyDesc(num_loaded=2)
-        .keys_to_load([LEGACY_ACT_STORAGE_NAME + '.relu_0.' + OP1,
-                       LEGACY_ACT_STORAGE_NAME + '.relu_0.' + OP2])
-        .model_keys([EXTERNAL_QUANTIZERS_STORAGE_NAME + '.relu_0.' + OP1,
-                     EXTERNAL_QUANTIZERS_STORAGE_NAME + '.relu_0.' + OP2])
-        .all_matched()
-        .with_deprecation_warning(),
-
     # can match new format of activation quantizer with |INPUT and |OUTPUT
     MatchKeyDesc(num_loaded=2)
         .keys_to_load(['relu_0.' + OP1, 'relu_0.' + OP2]).model_keys(['relu_0|OUTPUT.' + OP1, 'relu_0|INPUT.' + OP2])
@@ -327,14 +325,14 @@ MATCH_KEY_DESC_LIST = [
                        'module.' + LEGACY_ACT_STORAGE_NAME + '.relu_1.' + OP1])
         .model_keys([EXTERNAL_QUANTIZERS_STORAGE_NAME + '.relu_0|OUTPUT;relu_1|OUTPUT.' + OP1])
         .all_matched()
-        .with_deprecation_warning(),
+        .with_warning(r".*Unified parameters.*"),
 
     MatchKeyDesc(num_loaded=1)
         .keys_to_load(['module.' + EXTERNAL_QUANTIZERS_STORAGE_NAME + '.relu_0.' + OP1,
                        'module.' + EXTERNAL_QUANTIZERS_STORAGE_NAME + '.relu_1.' + OP1])
         .model_keys([EXTERNAL_QUANTIZERS_STORAGE_NAME + '.relu_0|OUTPUT;relu_1|OUTPUT.' + OP1])
         .all_matched()
-        .with_deprecation_warning(),
+        .with_warning(r".*Unified parameters.*"),
 
     MatchKeyDesc(num_loaded=1)
         .keys_to_load(['module.' + EXTERNAL_QUANTIZERS_STORAGE_NAME + '.relu_0.' + OP1,
@@ -342,7 +340,7 @@ MATCH_KEY_DESC_LIST = [
                        'module.' + EXTERNAL_QUANTIZERS_STORAGE_NAME + '.relu_2.' + OP1])
         .model_keys([EXTERNAL_QUANTIZERS_STORAGE_NAME + '.relu_0|OUTPUT;relu_2|OUTPUT;relu_1|OUTPUT.' + OP1])
         .all_matched()
-        .with_deprecation_warning(),
+        .with_warning(r".*Unified parameters.*"),
 
     # not matched common operation
     MatchKeyDesc(num_loaded=1, expects_error=True)
@@ -410,14 +408,14 @@ MATCH_KEY_DESC_LIST = [
                        'module.' + LEGACY_ACT_STORAGE_NAME + '.RELU_1.' + OP1])
         .model_keys([EXTERNAL_QUANTIZERS_STORAGE_NAME + '.RELU_0|OUTPUT;RELU_1|OUTPUT.' + OP1])
         .all_matched()
-        .with_deprecation_warning(),
+        .with_warning(r".*Unified parameters.*"),
 
     MatchKeyDesc(num_loaded=1)
         .keys_to_load(['module.' + EXTERNAL_QUANTIZERS_STORAGE_NAME + '.RELU_0.' + OP1,
                        'module.' + EXTERNAL_QUANTIZERS_STORAGE_NAME + '.RELU_1.' + OP1])
         .model_keys([EXTERNAL_QUANTIZERS_STORAGE_NAME + '.RELU_0|OUTPUT;RELU_1|OUTPUT.' + OP1])
         .all_matched()
-        .with_deprecation_warning(),
+        .with_warning(r".*Unified parameters.*"),
 
     MatchKeyDesc(num_loaded=1)
         .keys_to_load(['module.' + EXTERNAL_QUANTIZERS_STORAGE_NAME + '.RELU_0.' + OP1,
@@ -425,7 +423,7 @@ MATCH_KEY_DESC_LIST = [
                        'module.' + EXTERNAL_QUANTIZERS_STORAGE_NAME + '.RELU_2.' + OP1])
         .model_keys([EXTERNAL_QUANTIZERS_STORAGE_NAME + '.RELU_0|OUTPUT;RELU_2|OUTPUT;RELU_1|OUTPUT.' + OP1])
         .all_matched()
-        .with_deprecation_warning(),
+        .with_warning(r".*Unified parameters.*"),
 
     # not matched common operation
     MatchKeyDesc(num_loaded=1, expects_error=True)
@@ -477,14 +475,14 @@ MATCH_KEY_DESC_LIST = [
                        'module.' + LEGACY_ACT_STORAGE_NAME + '.RELU_1.' + OP1])
         .model_keys([EXTERNAL_QUANTIZERS_STORAGE_NAME + '.RELU_0|OUTPUT;RELU_1|OUTPUT.' + OP1])
         .all_matched()
-        .with_deprecation_warning(),
+        .with_warning(r".*Unified parameters.*"),
 
     MatchKeyDesc(num_loaded=1)
         .keys_to_load(['module.' + EXTERNAL_QUANTIZERS_STORAGE_NAME + '.RELU_0.' + OP1,
                        'module.' + EXTERNAL_QUANTIZERS_STORAGE_NAME + '.RELU_1.' + OP1])
         .model_keys([EXTERNAL_QUANTIZERS_STORAGE_NAME + '.RELU_0|OUTPUT;RELU_1|OUTPUT.' + OP1])
         .all_matched()
-        .with_deprecation_warning(),
+        .with_warning(r".*Unified parameters.*"),
 
     MatchKeyDesc(num_loaded=1)
         .keys_to_load(['module.' + EXTERNAL_QUANTIZERS_STORAGE_NAME + '.RELU_0.' + OP1,
@@ -492,7 +490,7 @@ MATCH_KEY_DESC_LIST = [
                        'module.' + EXTERNAL_QUANTIZERS_STORAGE_NAME + '.RELU_2.' + OP1])
         .model_keys([EXTERNAL_QUANTIZERS_STORAGE_NAME + '.RELU_0|OUTPUT;RELU_2|OUTPUT;RELU_1|OUTPUT.' + OP1])
         .all_matched()
-        .with_deprecation_warning(),
+        .with_warning(r".*Unified parameters.*"),
 
     # not matched common operation
     MatchKeyDesc(num_loaded=1, expects_error=True)
@@ -545,7 +543,7 @@ MATCH_KEY_DESC_LIST = [
 
 
 @pytest.mark.parametrize('desc', MATCH_KEY_DESC_LIST, ids=[str(d) for d in MATCH_KEY_DESC_LIST])
-def test_match_key(desc: MatchKeyDesc, mocker):
+def test_match_key(desc: MatchKeyDesc, mocker, nncf_caplog):
     desc.setup_test(mocker)
 
     key_matcher = KeyMatcher(desc.is_resume, desc.state_dict_to_load, desc.model_state_dict, desc.ignored_keys)
@@ -563,4 +561,12 @@ def test_match_key(desc: MatchKeyDesc, mocker):
         with pytest.raises(RuntimeError):
             key_matcher.handle_problematic_keys()
     else:
-        key_matcher.handle_problematic_keys()
+        with nncf_caplog.at_level(logging.WARNING):
+            key_matcher.handle_problematic_keys()
+            if desc.warning_msg_pattern is not None:
+                for record in nncf_caplog.records:
+                    matches = re.search(desc.warning_msg_pattern, record.message)
+                    if matches is not None:
+                        break
+                else:
+                    pytest.fail("warning pattern not found")

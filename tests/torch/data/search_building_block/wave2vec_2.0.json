@@ -4,7 +4,7 @@
             "end_node_name": "Wav2Vec2ForSequenceClassification/Wav2Vec2Model[wav2vec2]/Wav2Vec2Encoder[encoder]/ModuleList[layers]/Wav2Vec2EncoderLayer[0]/__add___0",
             "start_node_name": "Wav2Vec2ForSequenceClassification/Wav2Vec2Model[wav2vec2]/Wav2Vec2Encoder[encoder]/Dropout[dropout]/dropout_0"
         },
-        "block_type": "MSHA",
+        "block_type": "MHSA",
         "op_addresses": [
             "Wav2Vec2ForSequenceClassification/Wav2Vec2Model[wav2vec2]/Wav2Vec2Encoder[encoder]/ModuleList[layers]/Wav2Vec2EncoderLayer[0]/Dropout[dropout]/dropout_0",
             "Wav2Vec2ForSequenceClassification/Wav2Vec2Model[wav2vec2]/Wav2Vec2Encoder[encoder]/ModuleList[layers]/Wav2Vec2EncoderLayer[0]/Wav2Vec2Attention[attention]/NNCFLinear[k_proj]/linear_0",
@@ -63,7 +63,7 @@
             "end_node_name": "Wav2Vec2ForSequenceClassification/Wav2Vec2Model[wav2vec2]/Wav2Vec2Encoder[encoder]/ModuleList[layers]/Wav2Vec2EncoderLayer[1]/__add___0",
             "start_node_name": "Wav2Vec2ForSequenceClassification/Wav2Vec2Model[wav2vec2]/Wav2Vec2Encoder[encoder]/ModuleList[layers]/Wav2Vec2EncoderLayer[0]/NNCFLayerNorm[final_layer_norm]/layer_norm_0"
         },
-        "block_type": "MSHA",
+        "block_type": "MHSA",
         "op_addresses": [
             "Wav2Vec2ForSequenceClassification/Wav2Vec2Model[wav2vec2]/Wav2Vec2Encoder[encoder]/ModuleList[layers]/Wav2Vec2EncoderLayer[1]/Dropout[dropout]/dropout_0",
             "Wav2Vec2ForSequenceClassification/Wav2Vec2Model[wav2vec2]/Wav2Vec2Encoder[encoder]/ModuleList[layers]/Wav2Vec2EncoderLayer[1]/Wav2Vec2Attention[attention]/NNCFLinear[k_proj]/linear_0",
@@ -122,7 +122,7 @@
             "end_node_name": "Wav2Vec2ForSequenceClassification/Wav2Vec2Model[wav2vec2]/Wav2Vec2Encoder[encoder]/ModuleList[layers]/Wav2Vec2EncoderLayer[2]/__add___0",
             "start_node_name": "Wav2Vec2ForSequenceClassification/Wav2Vec2Model[wav2vec2]/Wav2Vec2Encoder[encoder]/ModuleList[layers]/Wav2Vec2EncoderLayer[1]/NNCFLayerNorm[final_layer_norm]/layer_norm_0"
         },
-        "block_type": "MSHA",
+        "block_type": "MHSA",
         "op_addresses": [
             "Wav2Vec2ForSequenceClassification/Wav2Vec2Model[wav2vec2]/Wav2Vec2Encoder[encoder]/ModuleList[layers]/Wav2Vec2EncoderLayer[2]/Dropout[dropout]/dropout_0",
             "Wav2Vec2ForSequenceClassification/Wav2Vec2Model[wav2vec2]/Wav2Vec2Encoder[encoder]/ModuleList[layers]/Wav2Vec2EncoderLayer[2]/Wav2Vec2Attention[attention]/NNCFLinear[k_proj]/linear_0",
@@ -181,7 +181,7 @@
             "end_node_name": "Wav2Vec2ForSequenceClassification/Wav2Vec2Model[wav2vec2]/Wav2Vec2Encoder[encoder]/ModuleList[layers]/Wav2Vec2EncoderLayer[3]/__add___0",
             "start_node_name": "Wav2Vec2ForSequenceClassification/Wav2Vec2Model[wav2vec2]/Wav2Vec2Encoder[encoder]/ModuleList[layers]/Wav2Vec2EncoderLayer[2]/NNCFLayerNorm[final_layer_norm]/layer_norm_0"
         },
-        "block_type": "MSHA",
+        "block_type": "MHSA",
         "op_addresses": [
             "Wav2Vec2ForSequenceClassification/Wav2Vec2Model[wav2vec2]/Wav2Vec2Encoder[encoder]/ModuleList[layers]/Wav2Vec2EncoderLayer[3]/Dropout[dropout]/dropout_0",
             "Wav2Vec2ForSequenceClassification/Wav2Vec2Model[wav2vec2]/Wav2Vec2Encoder[encoder]/ModuleList[layers]/Wav2Vec2EncoderLayer[3]/Wav2Vec2Attention[attention]/NNCFLinear[k_proj]/linear_0",
@@ -240,7 +240,7 @@
             "end_node_name": "Wav2Vec2ForSequenceClassification/Wav2Vec2Model[wav2vec2]/Wav2Vec2Encoder[encoder]/ModuleList[layers]/Wav2Vec2EncoderLayer[4]/__add___0",
             "start_node_name": "Wav2Vec2ForSequenceClassification/Wav2Vec2Model[wav2vec2]/Wav2Vec2Encoder[encoder]/ModuleList[layers]/Wav2Vec2EncoderLayer[3]/NNCFLayerNorm[final_layer_norm]/layer_norm_0"
         },
-        "block_type": "MSHA",
+        "block_type": "MHSA",
         "op_addresses": [
             "Wav2Vec2ForSequenceClassification/Wav2Vec2Model[wav2vec2]/Wav2Vec2Encoder[encoder]/ModuleList[layers]/Wav2Vec2EncoderLayer[4]/Dropout[dropout]/dropout_0",
             "Wav2Vec2ForSequenceClassification/Wav2Vec2Model[wav2vec2]/Wav2Vec2Encoder[encoder]/ModuleList[layers]/Wav2Vec2EncoderLayer[4]/Wav2Vec2Attention[attention]/NNCFLinear[k_proj]/linear_0",
@@ -299,7 +299,7 @@
             "end_node_name": "Wav2Vec2ForSequenceClassification/Wav2Vec2Model[wav2vec2]/Wav2Vec2Encoder[encoder]/ModuleList[layers]/Wav2Vec2EncoderLayer[5]/__add___0",
             "start_node_name": "Wav2Vec2ForSequenceClassification/Wav2Vec2Model[wav2vec2]/Wav2Vec2Encoder[encoder]/ModuleList[layers]/Wav2Vec2EncoderLayer[4]/NNCFLayerNorm[final_layer_norm]/layer_norm_0"
         },
-        "block_type": "MSHA",
+        "block_type": "MHSA",
         "op_addresses": [
             "Wav2Vec2ForSequenceClassification/Wav2Vec2Model[wav2vec2]/Wav2Vec2Encoder[encoder]/ModuleList[layers]/Wav2Vec2EncoderLayer[5]/Dropout[dropout]/dropout_0",
             "Wav2Vec2ForSequenceClassification/Wav2Vec2Model[wav2vec2]/Wav2Vec2Encoder[encoder]/ModuleList[layers]/Wav2Vec2EncoderLayer[5]/Wav2Vec2Attention[attention]/NNCFLinear[k_proj]/linear_0",
@@ -358,7 +358,7 @@
             "end_node_name": "Wav2Vec2ForSequenceClassification/Wav2Vec2Model[wav2vec2]/Wav2Vec2Encoder[encoder]/ModuleList[layers]/Wav2Vec2EncoderLayer[6]/__add___0",
             "start_node_name": "Wav2Vec2ForSequenceClassification/Wav2Vec2Model[wav2vec2]/Wav2Vec2Encoder[encoder]/ModuleList[layers]/Wav2Vec2EncoderLayer[5]/NNCFLayerNorm[final_layer_norm]/layer_norm_0"
         },
-        "block_type": "MSHA",
+        "block_type": "MHSA",
         "op_addresses": [
             "Wav2Vec2ForSequenceClassification/Wav2Vec2Model[wav2vec2]/Wav2Vec2Encoder[encoder]/ModuleList[layers]/Wav2Vec2EncoderLayer[6]/Dropout[dropout]/dropout_0",
             "Wav2Vec2ForSequenceClassification/Wav2Vec2Model[wav2vec2]/Wav2Vec2Encoder[encoder]/ModuleList[layers]/Wav2Vec2EncoderLayer[6]/Wav2Vec2Attention[attention]/NNCFLinear[k_proj]/linear_0",
@@ -417,7 +417,7 @@
             "end_node_name": "Wav2Vec2ForSequenceClassification/Wav2Vec2Model[wav2vec2]/Wav2Vec2Encoder[encoder]/ModuleList[layers]/Wav2Vec2EncoderLayer[7]/__add___0",
             "start_node_name": "Wav2Vec2ForSequenceClassification/Wav2Vec2Model[wav2vec2]/Wav2Vec2Encoder[encoder]/ModuleList[layers]/Wav2Vec2EncoderLayer[6]/NNCFLayerNorm[final_layer_norm]/layer_norm_0"
         },
-        "block_type": "MSHA",
+        "block_type": "MHSA",
         "op_addresses": [
             "Wav2Vec2ForSequenceClassification/Wav2Vec2Model[wav2vec2]/Wav2Vec2Encoder[encoder]/ModuleList[layers]/Wav2Vec2EncoderLayer[7]/Dropout[dropout]/dropout_0",
             "Wav2Vec2ForSequenceClassification/Wav2Vec2Model[wav2vec2]/Wav2Vec2Encoder[encoder]/ModuleList[layers]/Wav2Vec2EncoderLayer[7]/Wav2Vec2Attention[attention]/NNCFLinear[k_proj]/linear_0",
@@ -476,7 +476,7 @@
             "end_node_name": "Wav2Vec2ForSequenceClassification/Wav2Vec2Model[wav2vec2]/Wav2Vec2Encoder[encoder]/ModuleList[layers]/Wav2Vec2EncoderLayer[8]/__add___0",
             "start_node_name": "Wav2Vec2ForSequenceClassification/Wav2Vec2Model[wav2vec2]/Wav2Vec2Encoder[encoder]/ModuleList[layers]/Wav2Vec2EncoderLayer[7]/NNCFLayerNorm[final_layer_norm]/layer_norm_0"
         },
-        "block_type": "MSHA",
+        "block_type": "MHSA",
         "op_addresses": [
             "Wav2Vec2ForSequenceClassification/Wav2Vec2Model[wav2vec2]/Wav2Vec2Encoder[encoder]/ModuleList[layers]/Wav2Vec2EncoderLayer[8]/Dropout[dropout]/dropout_0",
             "Wav2Vec2ForSequenceClassification/Wav2Vec2Model[wav2vec2]/Wav2Vec2Encoder[encoder]/ModuleList[layers]/Wav2Vec2EncoderLayer[8]/Wav2Vec2Attention[attention]/NNCFLinear[k_proj]/linear_0",
@@ -535,7 +535,7 @@
             "end_node_name": "Wav2Vec2ForSequenceClassification/Wav2Vec2Model[wav2vec2]/Wav2Vec2Encoder[encoder]/ModuleList[layers]/Wav2Vec2EncoderLayer[9]/__add___0",
             "start_node_name": "Wav2Vec2ForSequenceClassification/Wav2Vec2Model[wav2vec2]/Wav2Vec2Encoder[encoder]/ModuleList[layers]/Wav2Vec2EncoderLayer[8]/NNCFLayerNorm[final_layer_norm]/layer_norm_0"
         },
-        "block_type": "MSHA",
+        "block_type": "MHSA",
         "op_addresses": [
             "Wav2Vec2ForSequenceClassification/Wav2Vec2Model[wav2vec2]/Wav2Vec2Encoder[encoder]/ModuleList[layers]/Wav2Vec2EncoderLayer[9]/Dropout[dropout]/dropout_0",
             "Wav2Vec2ForSequenceClassification/Wav2Vec2Model[wav2vec2]/Wav2Vec2Encoder[encoder]/ModuleList[layers]/Wav2Vec2EncoderLayer[9]/Wav2Vec2Attention[attention]/NNCFLinear[k_proj]/linear_0",
@@ -594,7 +594,7 @@
             "end_node_name": "Wav2Vec2ForSequenceClassification/Wav2Vec2Model[wav2vec2]/Wav2Vec2Encoder[encoder]/ModuleList[layers]/Wav2Vec2EncoderLayer[10]/__add___0",
             "start_node_name": "Wav2Vec2ForSequenceClassification/Wav2Vec2Model[wav2vec2]/Wav2Vec2Encoder[encoder]/ModuleList[layers]/Wav2Vec2EncoderLayer[9]/NNCFLayerNorm[final_layer_norm]/layer_norm_0"
         },
-        "block_type": "MSHA",
+        "block_type": "MHSA",
         "op_addresses": [
             "Wav2Vec2ForSequenceClassification/Wav2Vec2Model[wav2vec2]/Wav2Vec2Encoder[encoder]/ModuleList[layers]/Wav2Vec2EncoderLayer[10]/Dropout[dropout]/dropout_0",
             "Wav2Vec2ForSequenceClassification/Wav2Vec2Model[wav2vec2]/Wav2Vec2Encoder[encoder]/ModuleList[layers]/Wav2Vec2EncoderLayer[10]/Wav2Vec2Attention[attention]/NNCFLinear[k_proj]/linear_0",
@@ -653,7 +653,7 @@
             "end_node_name": "Wav2Vec2ForSequenceClassification/Wav2Vec2Model[wav2vec2]/Wav2Vec2Encoder[encoder]/ModuleList[layers]/Wav2Vec2EncoderLayer[11]/__add___0",
             "start_node_name": "Wav2Vec2ForSequenceClassification/Wav2Vec2Model[wav2vec2]/Wav2Vec2Encoder[encoder]/ModuleList[layers]/Wav2Vec2EncoderLayer[10]/NNCFLayerNorm[final_layer_norm]/layer_norm_0"
         },
-        "block_type": "MSHA",
+        "block_type": "MHSA",
         "op_addresses": [
             "Wav2Vec2ForSequenceClassification/Wav2Vec2Model[wav2vec2]/Wav2Vec2Encoder[encoder]/ModuleList[layers]/Wav2Vec2EncoderLayer[11]/Dropout[dropout]/dropout_0",
             "Wav2Vec2ForSequenceClassification/Wav2Vec2Model[wav2vec2]/Wav2Vec2Encoder[encoder]/ModuleList[layers]/Wav2Vec2EncoderLayer[11]/Wav2Vec2Attention[attention]/NNCFLinear[k_proj]/linear_0",

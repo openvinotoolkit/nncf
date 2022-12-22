@@ -11,6 +11,8 @@
  limitations under the License.
 """
 
+TARGET_DEVICE = 'ANY'
+
 NUM_BN_ADAPTATION_SAMPLES = 2000
 NUM_INIT_SAMPLES = 256
 MIN_PERCENTILE = 0.1

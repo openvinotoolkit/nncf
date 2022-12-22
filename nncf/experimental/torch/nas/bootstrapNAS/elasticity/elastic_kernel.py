@@ -28,7 +28,7 @@ from nncf.common.graph.layer_attributes import ConvolutionLayerAttributes
 from nncf.common.graph.transformations.commands import TargetType
 from nncf.common.graph.transformations.commands import TransformationCommand
 from nncf.common.graph.transformations.commands import TransformationPriority
-from nncf.common.utils.logger import logger as nncf_logger
+from nncf.common.logging import nncf_logger
 from nncf.experimental.torch.nas.bootstrapNAS.elasticity.base_handler import BaseElasticityParams
 from nncf.experimental.torch.nas.bootstrapNAS.elasticity.base_handler import ELASTICITY_BUILDERS
 from nncf.experimental.torch.nas.bootstrapNAS.elasticity.base_handler import ELASTICITY_HANDLERS_MAP
@@ -227,7 +227,7 @@ class ElasticKernelConv2DOp(ElasticKernelOp, nn.Module):
         :return: modified weight
         """
         kernel_size = self.get_active_kernel_size()
-        nncf_logger.debug('Conv2d with active kernel size={} in scope={}'.format(kernel_size, self.node_name))
+        nncf_logger.debug(f'Conv2d with active kernel size={kernel_size} in scope={self.node_name}')
 
         result = weight
         if is_tracing_state():
@@ -247,7 +247,7 @@ class ElasticKernelConv2DOp(ElasticKernelOp, nn.Module):
 
         :param kernel_size: kernel size value
         """
-        nncf_logger.debug('set active elastic_kernel={} in scope={}'.format(kernel_size, self.node_name))
+        nncf_logger.debug(f'set active elastic_kernel={kernel_size} in scope={self.node_name}')
         assert kernel_size % 2 > 0, 'kernel size should be odd number'
         if kernel_size not in self.kernel_size_list and kernel_size != self.max_kernel_size:
             raise ValueError(
@@ -464,7 +464,7 @@ class ElasticKernelBuilder(SingleElasticityBuilder):
             self._node_names_to_make_elastic = [node.node_name for node in all_elastic_kernel_nodes]
 
         for node_name in self._node_names_to_make_elastic:
-            nncf_logger.info("Adding Elastic Kernel op for Conv2D in scope: {}".format(node_name))
+            nncf_logger.debug(f"Adding Elastic Kernel op for Conv2D in scope: {node_name}")
             node = graph.get_node_by_name(node_name)
             layer_attrs = node.layer_attributes
             assert isinstance(layer_attrs, ConvolutionLayerAttributes), 'Conv2D can have elastic kernel only'
@@ -496,7 +496,7 @@ class ElasticKernelBuilder(SingleElasticityBuilder):
                 if max_kernel_size >= 3:
                     crop_op = ElasticKernelInputForExternalPadding(elastic_kernel_op, max_kernel_size)
                     op = UpdateInputs(crop_op).to(device)
-                    nncf_logger.warning('Padded input will be cropped for {}'.format(node_name))
+                    nncf_logger.debug(f'Padded input will be cropped for {node_name}')
                     pad_commands.append(
                         PTInsertionCommand(
                             PTTargetPoint(
@@ -511,7 +511,7 @@ class ElasticKernelBuilder(SingleElasticityBuilder):
                 # Padding
                 ap = ElasticKernelPaddingAdjustment(elastic_kernel_op)
                 pad_op = UpdatePadding(ap).to(device)
-                nncf_logger.warning('Padding will be adjusted for {}'.format(node_name))
+                nncf_logger.debug(f'Padding will be adjusted for {node_name}')
                 pad_commands.append(
                     PTInsertionCommand(
                         PTTargetPoint(
@@ -537,9 +537,8 @@ class ElasticKernelBuilder(SingleElasticityBuilder):
         params_from_state = state[SingleElasticityBuilder._state_names.ELASTICITY_PARAMS]
         params = ElasticKernelParams.from_state(params_from_state)
         if self._params and self._params != params:
-            nncf_logger.warning(
-                'Different elasticity parameters were provided in two places: on init and on loading '
-                'state. The one from state is taken by ignoring the ones from init.')
+            nncf_logger.warning('Different elasticity parameters were provided in two places: on init and on loading '
+                                'state. The one from state is taken by ignoring the ones from init.')
         self._params = params
         self._node_names_to_make_elastic = state[self._state_names.NODE_NAMES_TO_MAKE_ELASTIC]
 

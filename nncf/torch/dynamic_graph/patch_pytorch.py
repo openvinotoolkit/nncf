@@ -15,15 +15,12 @@ from enum import Enum
 
 from typing import List
 
-import warnings
-
 import torch
 import torch.utils.cpp_extension
 from torch.nn import DataParallel
 from torch.nn.parallel import DistributedDataParallel
 
-from nncf.common.utils.logger import logger
-from nncf.common.utils.os import safe_open
+from nncf import nncf_logger
 from nncf.torch.dynamic_graph.trace_tensor import TracedTensor
 from nncf.torch.dynamic_graph.wrappers import ignore_scope
 from nncf.torch.dynamic_graph.wrappers import wrap_module_call
@@ -160,7 +157,7 @@ def patch_namespace_opname(namespace, op_info: PatchedOperatorInfo):
         ORIGINAL_OPERATORS.append(OriginalOpInfo(op_name, namespace, orig))
         setattr(namespace, op_name, wrap_operator(orig, op_info))
     else:
-        warnings.warn("Not patching {} since it is missing in this version of PyTorch".format(op_name))
+        nncf_logger.debug("Not patching {} since it is missing in this version of PyTorch".format(op_name))
 
 
 def get_all_functions_from_namespace(namespace: NamespaceTarget, do_filter: bool = True) -> List[str]:
@@ -272,62 +269,3 @@ def unpatch_torch_operators():
 
     for orig_op_info in ORIGINAL_OPERATORS:
         setattr(orig_op_info.namespace, orig_op_info.name, orig_op_info.op)
-
-
-def patch_extension_build_function():
-    """
-    The function patches PyTorch and fix a bug inside CUDA extensions building;
-    The bug must be fixed with a new PyTorch 1.8.0
-    """
-    try:
-        torch_version_numbers = torch.__version__.split('+', maxsplit=1)[0]
-        # get major, minor and patch number, ignore other version info like .dev
-        split_torch_version = list(map(int, torch_version_numbers.split('.')[:3]))
-
-    except ValueError as e:
-        logger.warning('Skip applying a patch to building extension with a reason: '
-                       'Cannot parse a PyTorch version with the error {}'.format(e))
-        return
-
-    if split_torch_version < [1, 8, 0]:
-        if torch.__version__ not in ('1.5.1', '1.7.0', '1.7.1'):
-            logger.warning('Skip applying a patch to building extension with a reason: '
-                           'PyTorch version is not supported for this')
-            return
-
-        def sort_arch_flags(func):
-            def wrapped(*args, **kwargs):
-                flags = func(*args, **kwargs)
-                return sorted(flags)
-
-            return wrapped
-
-        # pylint:disable=protected-access
-        torch.utils.cpp_extension._get_cuda_arch_flags = \
-            sort_arch_flags(torch.utils.cpp_extension._get_cuda_arch_flags)
-
-    else:
-        import re
-        import sys
-        from pathlib import Path
-
-        # A hackish backport of the https://github.com/pytorch/pytorch/pull/56015 fix.
-        def remove_nvcc_dep_build(func):
-            def wrapped(*args, **kwargs):
-                func(*args, **kwargs)
-                if len(args) > 0:
-                    target_ninja_file_path = args[0]
-                else:
-                    target_ninja_file_path = kwargs['path']
-                with safe_open(Path(target_ninja_file_path), 'r') as ninja_build_file:
-                    ninja_file_contents = ninja_build_file.read()
-                with safe_open(Path(target_ninja_file_path), 'w') as ninja_build_file:
-                    ninja_build_file.write(re.sub(r'--generate-dependencies-with-compile --dependency-output \$out\.d',
-                                                  '', ninja_file_contents))
-
-            return wrapped
-
-        if sys.platform != 'win32':
-            # pylint:disable=protected-access
-            torch.utils.cpp_extension._write_ninja_file = \
-                remove_nvcc_dep_build(torch.utils.cpp_extension._write_ninja_file)

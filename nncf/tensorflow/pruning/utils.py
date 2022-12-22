@@ -19,7 +19,7 @@ from typing import List, Dict
 from nncf.common.graph import NNCFNode
 from nncf.common.graph import NNCFGraph
 from nncf.common.graph import NNCFNodeName
-from nncf.common.utils.logger import logger as nncf_logger
+from nncf.common.logging import nncf_logger
 from nncf.tensorflow.graph.utils import unwrap_layer
 from nncf.tensorflow.graph.utils import get_original_name_and_instance_idx
 from nncf.tensorflow.graph.metatypes.common import GENERAL_CONV_LAYER_METATYPES
@@ -52,7 +52,7 @@ def get_filters_num(layer: NNCFWrapper):
 
     if layer_metatype is TFBatchNormalizationLayerMetatype and not layer.layer.scale:
         nncf_logger.debug('Fused gamma parameter encountered in BatchNormalization layer. '
-                          'Use beta parameter instead to calculate the number of filters.')
+                          'Using beta parameter instead to calculate the number of filters.')
         weight_attr = 'beta'
 
     filter_axis = get_filter_axis(layer, weight_attr)
