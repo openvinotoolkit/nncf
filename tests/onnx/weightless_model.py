@@ -22,6 +22,8 @@ import tempfile
 
 from pathlib import Path
 
+# pylint: disable=no-member
+
 # TODO(kshpv): This maaping should be removed after upgrading to the onnx > 1.12
 
 TensorDtypeMap = NamedTuple(
