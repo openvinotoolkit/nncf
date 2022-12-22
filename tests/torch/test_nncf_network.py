@@ -39,6 +39,7 @@ from nncf.common.utils.dot_file_rw import get_graph_without_data
 from nncf.common.utils.dot_file_rw import read_dot_graph
 from nncf.common.utils.dot_file_rw import write_dot_graph
 from nncf.torch import register_module
+from nncf.torch.dynamic_graph.scope import Scope
 from nncf.torch.dynamic_graph.context import PreHookId
 from nncf.torch.dynamic_graph.graph_tracer import ModelInputInfo
 from nncf.torch.dynamic_graph.operation_address import OperationAddress
@@ -778,3 +779,12 @@ def test_deepcopy_nncf_network():
     register_bn_adaptation_init_args(config)
     sparse_quantized_model, _ = create_compressed_model_and_algo_for_test(model, config)
     _ = deepcopy(sparse_quantized_model)
+
+
+def test_insertion_point_target_point_translation():
+    op_address = OperationAddress('dummy', Scope(), 0)
+    for target_type in [PTInsertionType.NNCF_MODULE_POST_OP, TargetType.AFTER_LAYER]:
+        with pytest.raises(RuntimeError):
+            PTInsertionPoint(target_type, op_address)
+    target_type = TargetType.POST_LAYER_OPERATION
+    assert PTInsertionPoint(target_type, op_address).insertion_type == PTInsertionType.NNCF_MODULE_POST_OP
