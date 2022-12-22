@@ -136,3 +136,16 @@ class WeightsModel(OVReferenceModel):
         model = ov.Model([result], [input_1])
 
         super().__init__(model)
+
+
+class MatMul2DModel(OVReferenceModel):
+    def __init__(self):
+        input_shape = [3, 5]
+        input_1 = opset.parameter(input_shape, name="Input")
+        data = np.random.rand(5, 2).astype(np.float32)
+        matmul = opset.matmul(input_1, data, transpose_a=False, transpose_b=False, name="MatMul")
+        add = opset.add(matmul, np.random.rand(1, 2).astype(np.float32), name="Add")
+        result_1 = opset.result(add, name="Result")
+        model = ov.Model(result_1, input_1)
+
+        super().__init__(model)

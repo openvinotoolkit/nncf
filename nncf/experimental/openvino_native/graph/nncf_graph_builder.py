@@ -78,12 +78,10 @@ class GraphConverter:
         :param node: OpenVINO node.
         :param graph: NNCFGraph.
         """
-        ov_dtype = node.get_element_type().get_type_name()
-        nncf_dtype = GraphConverter.convert_ov_dtype_to_nncf_dtype(ov_dtype)
         node_type = node.get_type_name()
         metatype = OV_OPERATION_METATYPES.get_operator_metatype_by_op_name(node_type)
         graph.add_nncf_node(node_name=node.get_friendly_name(),
-                            node_type=nncf_dtype,
+                            node_type=node_type,
                             node_metatype=metatype)
 
     @staticmethod
