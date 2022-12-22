@@ -33,23 +33,23 @@ from nncf.experimental.onnx.graph.nncf_graph_builder import GraphConverter
 from nncf.experimental.onnx.graph.onnx_graph import ONNXGraph
 from nncf.common.quantization.structs import QuantizationMode
 from nncf.experimental.onnx.quantization.quantizer_parameters import ONNXQuantizerLayerParameters
+from nncf.common.tensor_statistics.collectors import TensorStatisticCollectorBase
+from nncf.common.tensor_statistics.aggregator import StatisticsAggregator
 
 REFERENCE_GRAPHS_TEST_ROOT = 'data/reference_graphs/quantization'
 
 
-def mock_collect_statistics(self, model):
-    return
-
-
-def mock_get_statistics(self):
-    return None
-
-
-def mock_calculate_activation_quantizer_parameters(statistics,
-                                                   quantizer_config,
-                                                   axis) -> ONNXQuantizerLayerParameters:
-    return ONNXQuantizerLayerParameters(np.array(0), np.array(0), mode=QuantizationMode.SYMMETRIC, axis=None,
-                                        tensor_type=np.uint8)
+def mock_collect_statistics(mocker):
+    calculate_activation_quantizer_parameters_m = mocker.patch(
+        'nncf.quantization.algorithms.min_max.onnx_backend.calculate_activation_quantizer_parameters')
+    calculate_activation_quantizer_parameters_m.return_value = ONNXQuantizerLayerParameters(np.array(0), np.array(0),
+                                                                                            mode=QuantizationMode.SYMMETRIC,
+                                                                                            axis=None,
+                                                                                            tensor_type=np.uint8)
+    mock_collect_statistics = mocker.spy(StatisticsAggregator, 'collect_statistics')
+    mock_collect_statistics.return_value = None
+    mock_get_statistics = mocker.spy(TensorStatisticCollectorBase, 'get_statistics')
+    mock_get_statistics.return_value = None
 
 
 def get_random_dataset_for_test(input_key: str,
