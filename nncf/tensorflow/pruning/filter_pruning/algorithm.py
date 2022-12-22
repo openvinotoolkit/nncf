@@ -191,8 +191,8 @@ class FilterPruningController(BasePruningAlgoController):
     def statistics(self, quickly_collected_only: bool = False) -> NNCFStatistics:
         if not quickly_collected_only and is_debug():
             stats = PrunedModelTheoreticalBorderline(
-                self._pruned_layers_num, self._prunable_layers_num, self._max_prunable_flops,
-                self._max_prunable_params, self.full_flops, self.full_params_num)
+                self._pruned_layers_num, self._prunable_layers_num, self._min_prunable_flops,
+                self._min_prunable_params, self.full_flops, self.full_params_num)
 
             nncf_logger.debug(stats.to_str())
 
@@ -242,8 +242,10 @@ class FilterPruningController(BasePruningAlgoController):
 
     @property
     def maximal_compression_rate(self) -> float:
-        max_compression_rate = 1 - self._min_prunable_flops / max(self.full_flops, 1)
-        return max_compression_rate
+        stats = PrunedModelTheoreticalBorderline(
+            self._pruned_layers_num, self._prunable_layers_num, self._min_prunable_flops,
+            self._min_prunable_params, self.full_flops, self.full_params_num)
+        return stats.maximal_pruning_rate
 
     def _init_pruned_layers_params(self, output_channels):
         # 1. Collect nodes output shapes

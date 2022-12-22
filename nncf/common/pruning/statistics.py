@@ -161,8 +161,8 @@ class PrunedModelTheoreticalBorderline(Statistics):
     def __init__(self,
                  num_pruned_layers: int,
                  num_prunable_layers: int,
-                 max_prunable_flops: float,
-                 max_prunable_params: float,
+                 min_prunable_flops: float,
+                 min_prunable_params: float,
                  total_flops: int,
                  total_params: int):
         """
@@ -170,8 +170,8 @@ class PrunedModelTheoreticalBorderline(Statistics):
 
         :param num_pruned_layers: Number of layers which was actually pruned.
         :param num_prunable_layers: Number of layers which have prunable type.
-        :param max_prunable_flops: Number of flops for pruned model with pruning level = 1.
-        :param max_prunable_params: Number of weights for pruned model with pruning level = 1.
+        :param min_prunable_flops: Number of flops for pruned model with pruning level = 1.
+        :param min_prunable_params: Number of weights for pruned model with pruning level = 1.
         :param total_flops: The total amount of FLOPS in the model.
         :param total_params: The total amount of weights in the model.
         """
@@ -179,10 +179,11 @@ class PrunedModelTheoreticalBorderline(Statistics):
         self._mega = 1e6
         self.pruned_layers_num = num_pruned_layers
         self.prunable_layers_num = num_prunable_layers
-        self.minimum_possible_flops = max_prunable_flops
-        self.minimum_possible_params = max_prunable_params
+        self.minimum_possible_flops = min_prunable_flops
+        self.minimum_possible_params = min_prunable_params
         self.total_flops = total_flops
         self.total_params = total_params
+        self.maximal_pruning_rate = 1 - min_prunable_flops / max(total_flops, 1)
 
     def to_str(self) -> str:
         algorithm_string = create_table(
@@ -194,6 +195,7 @@ class PrunedModelTheoreticalBorderline(Statistics):
                                                                   f' {self.total_flops / self._giga:.3f}'],
                 ['MParams minimum possible after pruning / total', f'{self.minimum_possible_params / self._mega:.3f} /'
                                                                    f' {self.total_params / self._mega:.3f}'],
+                ['Maximal pruning rate', f'{self.maximal_pruning_rate:.4f}'],
             ]
         )
 
