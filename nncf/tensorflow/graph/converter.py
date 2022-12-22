@@ -762,9 +762,11 @@ def _get_linear_layer_attributes(layer: tf.keras.layers.Layer) -> LinearLayerAtt
     channel_axis = get_input_channel_axis(layer)
     in_features = layer.get_input_shape_at(0)[channel_axis]
     out_features = layer.get_output_shape_at(0)[channel_axis]
+    bias = layer.use_bias
     return LinearLayerAttributes(layer.trainable,
                                  in_features,
-                                 out_features)
+                                 out_features,
+                                 bias)
 
 
 def _get_reshape_layer_attributes(layer: tf.keras.layers.Layer) -> ReshapeLayerAttributes:

@@ -50,10 +50,10 @@ def get_random_dataset_for_test(input_key: str,
 
 
 def get_dataset_for_test(samples: List[Tuple[np.ndarray, int]], input_name: str):
-
     def transform_fn(data_item):
-        inputs, targets = data_item
-        return {input_name: [inputs], "targets": targets}
+        inputs = data_item
+        return {input_name: [inputs]}
+
     return Dataset(samples, transform_fn)
 
 class ModelToTest:

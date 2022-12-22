@@ -1028,13 +1028,13 @@ strict digraph  {
 "461 ConstantOfShape_680" -> "464 NonMaxSuppression_683"  [label="[1]", style=solid];
 "462 Constant_681" -> "463 ConstantOfShape_682"  [label="[1]", style=dashed];
 "463 ConstantOfShape_682" -> "464 NonMaxSuppression_683"  [label="[1]", style=solid];
-"464 NonMaxSuppression_683" -> "469 Slice_688"  [label="[1, 3]", style=dashed];
-"464 NonMaxSuppression_683" -> "476 Slice_695"  [label="[1, 3]", style=dashed];
+"464 NonMaxSuppression_683" -> "469 Slice_688"  [label="[1]", style=dashed];
+"464 NonMaxSuppression_683" -> "476 Slice_695"  [label="[1]", style=dashed];
 "465 Constant_684" -> "469 Slice_688"  [label="[1]", style=dashed];
 "466 Constant_685" -> "469 Slice_688"  [label="[1]", style=dashed];
 "467 Constant_686" -> "469 Slice_688"  [label="[1]", style=dashed];
 "468 Constant_687" -> "469 Slice_688"  [label="[1]", style=dashed];
-"469 Slice_688" -> "471 Gather_690"  [label="[1, 3]", style=dashed];
+"469 Slice_688" -> "471 Gather_690"  [label="[1]", style=dashed];
 "470 Constant_689" -> "471 Gather_690"  [label="[]", style=dashed];
 "471 Gather_690" -> "484 Mul_703"  [label="[1]", style=dashed];
 "471 Gather_690" -> "509 Gather_729"  [label="[1]", style=dashed];
@@ -1042,7 +1042,7 @@ strict digraph  {
 "473 Constant_692" -> "476 Slice_695"  [label="[1]", style=dashed];
 "474 Constant_693" -> "476 Slice_695"  [label="[1]", style=dashed];
 "475 Constant_694" -> "476 Slice_695"  [label="[1]", style=dashed];
-"476 Slice_695" -> "478 Gather_697"  [label="[1, 3]", style=dashed];
+"476 Slice_695" -> "478 Gather_697"  [label="[1]", style=dashed];
 "477 Constant_696" -> "478 Gather_697"  [label="[]", style=dashed];
 "478 Gather_697" -> "485 Add_704"  [label="[1]", style=dashed];
 "478 Gather_697" -> "500 Gather_720"  [label="[1]", style=dashed];
@@ -1081,7 +1081,7 @@ strict digraph  {
 "507 Gather_727" -> "508 Unsqueeze_bboxes"  [label="[1]", style=solid];
 "508 Unsqueeze_bboxes" -> "516 nncf_model_output_0"  [label="[1, 1, 4]", style=solid];
 "509 Gather_729" -> "510 Unsqueeze_730"  [label="[1]", style=dashed];
-"510 Unsqueeze_730" -> "512 Add_labels"  [label="[1, 1]", style=dashed];
+"510 Unsqueeze_730" -> "512 Add_labels"  [label="[1]", style=dashed];
 "511 Constant_731" -> "512 Add_labels"  [label="[]", style=dashed];
 "512 Add_labels" -> "517 nncf_model_output_1"  [label="[1, 1]", style=dashed];
 "513 Gather_733" -> "514 Unsqueeze_scores"  [label="[1]", style=solid];

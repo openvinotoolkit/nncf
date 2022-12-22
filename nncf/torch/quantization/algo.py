@@ -86,7 +86,7 @@ from nncf.torch.debug import CallCountTracker
 from nncf.torch.debug import DebugInterface
 from nncf.torch.dynamic_graph.context import TracingContext
 from nncf.torch.graph.graph import PTNNCFGraph
-from nncf.torch.graph.operator_metatypes import PTConv2dMetatype
+from nncf.torch.graph.operator_metatypes import PTModuleConv2dMetatype
 from nncf.torch.graph.operator_metatypes import PTDepthwiseConv2dSubtype
 from nncf.torch.graph.transformations.commands import PTInsertionCommand
 from nncf.torch.graph.transformations.commands import PTTargetPoint
@@ -103,6 +103,7 @@ from nncf.torch.nncf_network import NNCFNetwork
 from nncf.torch.quantization.adjust_padding import AdjustPaddingArgs
 from nncf.torch.quantization.adjust_padding import CalculatePaddingAdjustment
 from nncf.torch.quantization.default_quantization import DEFAULT_PT_QUANT_TRAIT_TO_OP_DICT
+from nncf.torch.quantization.default_quantization import QUANTIZATION_LAYER_METATYPES
 from nncf.torch.quantization.init_precision import PrecisionInitializerFactory
 from nncf.torch.quantization.init_range import DataLoaderRangeInitializeRunner
 from nncf.torch.quantization.init_range import PTRangeInitParams
@@ -144,9 +145,7 @@ from nncf.torch.utils import get_state_dict_names_with_modules
 from nncf.torch.utils import is_main_process
 from nncf.torch.utils import get_model_dtype
 from torch import nn
-
 QUANTIZER_BUILDER_STATE_VERSION_SAVE_NAME = 'version'
-
 
 class QuantizerBuilderStateVersion(IntEnum):
     # In Quantization builder state SingleConfigQuantizerSetup is being saved as quantizer setup.
@@ -257,7 +256,7 @@ class QuantizerSetupGeneratorBase:
         raise NotImplementedError
 
     def get_quantizable_module_nodes(self) -> List[QuantizableWeightedLayerNode]:
-        weighted_nodes = self._target_model.get_weighted_original_graph_nodes()
+        weighted_nodes = self._target_model.get_original_graph().get_nodes_by_metatypes(QUANTIZATION_LAYER_METATYPES)
         quantized_modules_with_potential_qconfig = []
 
         weighted_nodes = self._filter_by_ignored_algo(weighted_nodes)
@@ -822,7 +821,7 @@ class QuantizationBuilder(PTCompressionAlgorithmBuilder):
             if weight_bitwidth:
                 is_applicable = False
                 target_node = target_model_graph.get_node_by_name(op_node_name)
-                if target_node.metatype in [PTConv2dMetatype, PTDepthwiseConv2dSubtype]:
+                if target_node.metatype in [PTModuleConv2dMetatype, PTDepthwiseConv2dSubtype]:
                     layer_attrs = target_node.layer_attributes
                     assert isinstance(layer_attrs, ConvolutionLayerAttributes)
                     padding_values = set(layer_attrs.padding_values)

@@ -13,6 +13,7 @@
 
 from nncf.common.quantization.quantizer_propagation.structs import QuantizationTrait
 from nncf.experimental.onnx.graph.metatypes.onnx_metatypes import ONNXConvolutionMetatype
+from nncf.experimental.onnx.graph.metatypes.onnx_metatypes import ONNXDepthwiseConvolutionMetatype
 from nncf.experimental.onnx.graph.metatypes.onnx_metatypes import ONNXConvolutionTransposeMetatype
 from nncf.experimental.onnx.graph.metatypes.onnx_metatypes import ONNXLinearMetatype
 from nncf.experimental.onnx.graph.metatypes.onnx_metatypes import ONNXMatMulMetatype
@@ -36,6 +37,7 @@ from nncf.common.graph.operator_metatypes import UnknownMetatype
 DEFAULT_ONNX_QUANT_TRAIT_TO_OP_DICT = {
     QuantizationTrait.INPUTS_QUANTIZABLE: [
         ONNXConvolutionMetatype,
+        ONNXDepthwiseConvolutionMetatype,
         ONNXConvolutionTransposeMetatype,
         ONNXLinearMetatype,
         ONNXMatMulMetatype,

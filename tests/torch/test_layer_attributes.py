@@ -33,7 +33,6 @@ from nncf.torch.graph.operator_metatypes import PTConv3dMetatype
 from nncf.torch.graph.operator_metatypes import PTConvTranspose1dMetatype
 from nncf.torch.graph.operator_metatypes import PTConvTranspose2dMetatype
 from nncf.torch.graph.operator_metatypes import PTConvTranspose3dMetatype
-from nncf.torch.graph.operator_metatypes import PTDepthwiseConv2dSubtype
 from nncf.torch.graph.operator_metatypes import PTEmbeddingBagMetatype
 from nncf.torch.graph.operator_metatypes import PTEmbeddingMetatype
 from nncf.torch.graph.operator_metatypes import PTGroupNormMetatype
@@ -154,7 +153,7 @@ LIST_TEST_DESCS = [
             groups=2,
             transpose=False,
             padding_values=(0, 0)),
-        metatype_cls=PTDepthwiseConv2dSubtype
+        metatype_cls=PTConv2dMetatype
     ),
     LayerAttributesTestDesc(
         module=nn.Conv1d(1, 1, 1),
@@ -233,6 +232,16 @@ LIST_TEST_DESCS = [
             weight_requires_grad=True,
             in_features=1,
             out_features=1),
+        metatype_cls=PTLinearMetatype
+    ),
+    LayerAttributesTestDesc(
+        module=nn.Linear(1, 1, bias=False),
+        model_input_info_list=[ModelInputInfo([1, 1, 1, 1])],
+        layer_attributes=LinearLayerAttributes(
+            weight_requires_grad=True,
+            in_features=1,
+            out_features=1,
+            bias=False),
         metatype_cls=PTLinearMetatype
     ),
     LayerAttributesTestDesc(

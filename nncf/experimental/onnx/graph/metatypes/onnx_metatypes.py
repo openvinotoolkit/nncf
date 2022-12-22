@@ -14,6 +14,7 @@
 from typing import List, Type, Optional
 from dataclasses import dataclass
 
+import onnx
 from nncf.common.graph.operator_metatypes import OperatorMetatype
 from nncf.common.graph.operator_metatypes import OperatorMetatypeRegistry
 from nncf.common.hardware.opset import HWConfigOpName
@@ -23,10 +24,32 @@ ONNX_OPERATION_METATYPES = OperatorMetatypeRegistry('onnx_operator_metatypes')
 
 class ONNXOpMetatype(OperatorMetatype):
     op_names = []  # type: List[str]
+    subtypes = []  # type: List[Type[OperatorMetatype]]
 
     @classmethod
     def get_all_aliases(cls) -> List[str]:
         return cls.op_names
+
+    @classmethod
+    def get_subtypes(cls) -> List[Type[OperatorMetatype]]:
+        return cls.subtypes
+
+    @classmethod
+    def matches(cls, model: onnx.ModelProto, node: onnx.NodeProto) -> Optional[bool]:
+        return node.op_type in cls.op_names
+
+    @classmethod
+    def determine_subtype(cls, model: onnx.ModelProto, node: onnx.NodeProto) -> Optional[Type[OperatorMetatype]]:
+        matches = []
+        for subtype in cls.get_subtypes():
+            if subtype.matches(model, node):
+                matches.append(subtype)
+        if len(matches) > 1:
+            raise RuntimeError('Multiple subtypes match operator call - '
+                               'cannot determine single subtype.')
+        if not matches:
+            return None
+        return matches[0]
 
 
 @dataclass
@@ -46,7 +69,19 @@ class OpWeightDef:
 
 
 class ONNXOpWithWeightsMetatype(ONNXOpMetatype):
-    weight_definition = None  # type: OpWeightDef
+    weight_definitions = None  # type: OpWeightDef
+
+
+@ONNX_OPERATION_METATYPES.register()
+class ONNXDepthwiseConvolutionMetatype(ONNXOpWithWeightsMetatype):
+    name = 'DepthwiseConvOp'
+    op_names = ['Conv']
+    hw_config_names = [HWConfigOpName.DEPTHWISECONVOLUTION]
+    weight_definitions = OpWeightDef(weight_channel_axis=0, weight_port_id=1, bias_port_id=2)
+
+    @classmethod
+    def matches(cls, model: onnx.ModelProto, node: onnx.NodeProto) -> bool:
+        return _is_depthwise_conv(model, node)
 
 
 @ONNX_OPERATION_METATYPES.register()
@@ -55,6 +90,7 @@ class ONNXConvolutionMetatype(ONNXOpWithWeightsMetatype):
     op_names = ['Conv']
     hw_config_names = [HWConfigOpName.CONVOLUTION]
     weight_definitions = OpWeightDef(weight_channel_axis=0, weight_port_id=1, bias_port_id=2)
+    subtypes = [ONNXDepthwiseConvolutionMetatype]
 
 
 @ONNX_OPERATION_METATYPES.register()
@@ -152,7 +188,7 @@ class ONNXConstantMetatype(ONNXOpMetatype):
 @ONNX_OPERATION_METATYPES.register()
 class ONNXAddLayerMetatype(ONNXOpMetatype):
     name = 'AddOp'
-    op_names = ['Add']
+    op_names = ['Add', 'Sum']
     hw_config_names = [HWConfigOpName.ADD]
 
 
@@ -175,13 +211,6 @@ class ONNXDivLayerMetatype(ONNXOpMetatype):
     name = 'DivOp'
     op_names = ['Div']
     hw_config_names = [HWConfigOpName.DIVIDE]
-
-
-@ONNX_OPERATION_METATYPES.register()
-class ONNXSumMetatype(ONNXOpMetatype):
-    name = 'SumOp'
-    op_names = ['Sum']
-    hw_config_names = [HWConfigOpName.REDUCESUM]
 
 
 @ONNX_OPERATION_METATYPES.register()
@@ -439,10 +468,12 @@ class ONNXDequantizeLinearMetatype(ONNXOpMetatype):
 
 
 WEIGHT_LAYER_METATYPES = [ONNXConvolutionMetatype,
+                          ONNXDepthwiseConvolutionMetatype,
                           ONNXConvolutionTransposeMetatype,
                           ONNXLinearMetatype]
 
 LAYERS_WITH_BIAS_METATYPES = [ONNXConvolutionMetatype,
+                              ONNXDepthwiseConvolutionMetatype,
                               ONNXConvolutionTransposeMetatype]
 
 
@@ -453,3 +484,36 @@ def get_operator_metatypes() -> List[Type[OperatorMetatype]]:
     :return: List of operator metatypes .
     """
     return list(ONNX_OPERATION_METATYPES.registry_dict.values())
+
+
+def _is_depthwise_conv(model: onnx.ModelProto, node: onnx.NodeProto) -> bool:
+    """
+    Returns True if the convolution is depthwise, False - otherwise.
+    Depthwise convolution is a convolution satisfies the following rule:
+    groups == in_channels and out_channels == K*in_channels, where K is a positive integer.
+    Weight tensor of a convolution consists of the following dimension:
+    (out_channels, in_channels / groups, kernel_size[0], kernel_size[1]).
+
+    :param model: ONNX model to get the node's weight.
+    :param node: Convolution node to check whether it is depthwise.
+    :return: True if the convolution is depthwise, False - otherwise.
+    """
+    conv_group = None
+    for attribute in node.attribute:
+        if attribute.name == 'group':
+            conv_group = onnx.helper.get_attribute_value(attribute)
+    if conv_group is None:
+        return False
+    weight_tensor_value = None
+    initializer_name = node.input[1]
+    for init in model.graph.initializer:
+        if init.name == initializer_name:
+            weight_tensor_value = onnx.numpy_helper.to_array(init)
+    if weight_tensor_value is None:
+        return False
+    conv_out_channels = weight_tensor_value.shape[0]
+    conv_in_channels = weight_tensor_value.shape[1] * conv_group
+    if conv_out_channels % conv_in_channels == 0 and conv_out_channels // conv_in_channels > 0 and\
+            conv_group == conv_in_channels:
+        return True
+    return False

@@ -190,7 +190,9 @@ def _execute_op(op_address: 'OperationAddress',
         node = ctx.find_operator_node(tensor_metas, op_address)
         if node is None:
             layer_attrs, ignored_algos = _collect_module_attrs_and_ignored_algorithms(ctx, op_name)
-            node = ctx.maybe_add_node(processed_input, tensor_metas, op_address, layer_attrs, ignored_algos)
+            is_called_inside_nncf_module = isinstance(ctx.get_current_module(), _NNCFModuleMixin)
+            node = ctx.maybe_add_node(processed_input, tensor_metas, op_address,
+                                      layer_attrs, ignored_algos, is_called_inside_nncf_module)
         if is_debug() and node is not None:
             ctx.register_node_call(node)
 
@@ -245,7 +247,8 @@ def _get_layer_attributes(module: TorchModule, operator_name: str) -> BaseLayerA
     if isinstance(module, Linear):
         return LinearLayerAttributes(weight_requires_grad=getattr(module, weight_attr).requires_grad,
                                      in_features=module.in_features,
-                                     out_features=module.out_features)
+                                     out_features=module.out_features,
+                                     bias=module.bias is not None)
     if hasattr(module, 'weight') or is_weight_norm_applied:
         return GenericWeightedLayerAttributes(weight_requires_grad=getattr(module, weight_attr).requires_grad,
                                               weight_shape=module.weight.shape)
