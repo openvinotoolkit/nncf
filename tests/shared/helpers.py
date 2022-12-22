@@ -49,14 +49,14 @@ def create_venv_with_nncf(tmp_path: Path, package_type: str, venv_type: str, ext
 
     version_string = f'{sys.version_info[0]}.{sys.version_info[1]}'
     if venv_type == 'virtualenv':
-        subprocess.call(f'virtualenv -ppython{version_string} {venv_path}', shell=True)
+        subprocess.check_call(f'virtualenv -ppython{version_string} {venv_path}', shell=True)
     elif venv_type == 'venv':
-        subprocess.call(f'python{version_string} -m venv {venv_path}', shell=True)
-    subprocess.call(f'{pip_with_venv} install --upgrade pip', shell=True)
-    subprocess.call(f'{pip_with_venv} install wheel', shell=True)
+        subprocess.check_call(f'python{version_string} -m venv {venv_path}', shell=True)
+    subprocess.check_call(f'{pip_with_venv} install --upgrade pip', shell=True)
+    subprocess.check_call(f'{pip_with_venv} install wheel', shell=True)
 
     if package_type in ['build_s', 'build_w']:
-        subprocess.call(f'{pip_with_venv} install build', shell=True)
+        subprocess.check_call(f'{pip_with_venv} install build', shell=True)
 
     run_path = tmp_path / 'run'
     run_path.mkdir()
