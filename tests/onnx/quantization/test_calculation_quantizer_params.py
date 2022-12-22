@@ -93,11 +93,15 @@ class CaseToTestScaleZP:
                                                     ref_zero_point=-9 * np.ones((10, 10), dtype=np.int32))
                                   )
                          )
-def test_calculate_scale_zero_point(case):
-    assert np.allclose((case.ref_scale, case.ref_zero_point),
+@pytest.mark.parametrize('tensor_type', [np.int8, np.uint8])
+def test_calculate_scale_zero_point(case, tensor_type):
+    ref_scale = case.ref_scale.copy()
+    if tensor_type == np.uint8 and case.mode == QuantizationMode.SYMMETRIC:
+        ref_scale /= 2
+    assert np.allclose((ref_scale, case.ref_zero_point),
                        calculate_scale_zero_point(max_val=case.max_val, min_val=case.min_val,
                                                   level_low=case.level_low, level_high=case.level_high,
-                                                  mode=case.mode))
+                                                  mode=case.mode, tensor_type=tensor_type))
 
 
 @pytest.mark.parametrize('num_bits, tensor_type, ref_levels', ((0, np.int8, (-1, -1)),
