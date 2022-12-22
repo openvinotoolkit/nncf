@@ -23,6 +23,7 @@ from nncf.common.graph.definitions import MODEL_INPUT_OP_NAME
 from nncf.common.graph.definitions import MODEL_OUTPUT_OP_NAME
 from nncf.common.graph.operator_metatypes import InputNoopMetatype
 from nncf.common.graph.operator_metatypes import OutputNoopMetatype
+from nncf.common.graph.operator_metatypes import UnknownMetatype
 from nncf.common.logging import nncf_logger
 
 from nncf.experimental.onnx.graph.onnx_graph import ONNXGraph
@@ -185,6 +186,11 @@ class GraphConverter:
         onnx_graph = ONNXGraph(onnx_model)
         for node in onnx_graph.get_all_nodes():
             metatype = ONNX_OPERATION_METATYPES.get_operator_metatype_by_op_name(node.op_type)
+            if metatype is not UnknownMetatype:
+                if metatype.get_subtypes():
+                    subtype = metatype.determine_subtype(onnx_model, node)
+                    if subtype is not None:
+                        metatype = subtype
             layer_attributes = ONNXExtendedLayerAttributes(node.input, node.output)
             is_shared, layer_name = None, None
             if metatype in WEIGHT_LAYER_METATYPES:

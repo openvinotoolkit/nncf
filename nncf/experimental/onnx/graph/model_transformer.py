@@ -360,12 +360,14 @@ class ONNXModelTransformer(ModelTransformer):
             for node_child in node_children:
                 for input_id, input_obj in enumerate(node_child.input):
                     if input_obj == node.output[0]:
-                        node_child.input.remove(node.output[0])
-                        node_child.input.insert(input_id, node.input[0])
+                        node_child.input[input_id] = node.input[0]
 
             initializers = {i.name: i for i in self._model.graph.initializer}
+            value_infos = {i.name: i for i in self._model.graph.value_info}
             for initializer_name in node.input:
                 if initializer_name in initializers:
                     self._model.graph.initializer.remove(initializers[initializer_name])
+                if initializer_name in value_infos:
+                    self._model.graph.value_info.remove(value_infos[initializer_name])
 
             self._model.graph.node.remove(node)

@@ -45,6 +45,7 @@ class ONNXReferenceModel:
 @ALL_SYNTHETIC_MODELS.register()
 class LinearModel(ONNXReferenceModel):
     INPUT_NAME = "X"
+
     def __init__(self):
         input_shape = [1, 3, 32, 32]
         model_input_name = self.INPUT_NAME
@@ -647,3 +648,93 @@ class ManyInputPortsQuantizableModel(ONNXReferenceModel):
         model = onnx.helper.make_model(graph_def, opset_imports=[op])
         onnx.checker.check_model(model)
         super().__init__(model, [input_shape], 'many_input_ports_quantizable_model.dot')
+
+
+class OneDepthwiseConvolutionalModel(ONNXReferenceModel):
+    def __init__(self):
+        input_shape = [1, 3, 10, 10]
+        model_input_name = "X"
+        X = onnx.helper.make_tensor_value_info(model_input_name,
+                                               onnx.TensorProto.FLOAT,
+                                               input_shape)
+        conv_group = 3
+        conv1_in_channels, conv1_out_channels, conv1_kernel_shape = 3 // conv_group, 27, (1, 1)
+
+        conv1_W = np.ones(shape=(conv1_out_channels, conv1_in_channels, *conv1_kernel_shape)).astype(np.float32)
+        conv1_B = np.ones(shape=conv1_out_channels).astype(np.float32)
+
+        model_output_name = "Y"
+        Y = onnx.helper.make_tensor_value_info(model_output_name,
+                                               onnx.TensorProto.FLOAT,
+                                               [1, conv1_out_channels, 10, 10])
+
+        conv1_W_initializer_tensor_name = "Conv1_W"
+        conv1_W_initializer_tensor = create_initializer_tensor(
+            name=conv1_W_initializer_tensor_name,
+            tensor_array=conv1_W,
+            data_type=onnx.TensorProto.FLOAT)
+        conv1_B_initializer_tensor_name = "Conv1_B"
+        conv1_B_initializer_tensor = create_initializer_tensor(
+            name=conv1_B_initializer_tensor_name,
+            tensor_array=conv1_B,
+            data_type=onnx.TensorProto.FLOAT)
+
+        conv1_node = onnx.helper.make_node(
+            name="Conv1",
+            op_type="Conv",
+            inputs=[
+                model_input_name, conv1_W_initializer_tensor_name,
+                conv1_B_initializer_tensor_name
+            ],
+            outputs=[model_output_name],
+            group=conv_group,
+            kernel_shape=conv1_kernel_shape,
+        )
+
+        graph_def = onnx.helper.make_graph(
+            nodes=[conv1_node],
+            name="ConvNet",
+            inputs=[X],
+            outputs=[Y],
+            initializer=[
+                conv1_W_initializer_tensor, conv1_B_initializer_tensor
+            ],
+        )
+
+        op = onnx.OperatorSetIdProto()
+        op.version = OPSET_VERSION
+        model = onnx.helper.make_model(graph_def, opset_imports=[op])
+        onnx.checker.check_model(model)
+        super().__init__(model, [input_shape], 'one_depthwise_convolutional_model.dot')
+
+
+class InputOutputModel(ONNXReferenceModel):
+    def __init__(self):
+        input_shape = [1, 3, 3, 3]
+        model_input_name = "X"
+        X = onnx.helper.make_tensor_value_info(model_input_name,
+                                               onnx.TensorProto.FLOAT,
+                                               input_shape)
+
+        model_output_name = "Y"
+        Y = onnx.helper.make_tensor_value_info(model_output_name,
+                                               onnx.TensorProto.FLOAT,
+                                               input_shape)
+        identity_node = onnx.helper.make_node(
+            name="Identity",
+            op_type="Identity",
+            inputs=["X"],
+            outputs=["Y"]
+        )
+        graph_def = onnx.helper.make_graph(
+            nodes=[identity_node],
+            name="ConvNet",
+            inputs=[X],
+            outputs=[Y],
+        )
+
+        op = onnx.OperatorSetIdProto()
+        op.version = OPSET_VERSION
+        model = onnx.helper.make_model(graph_def, opset_imports=[op])
+        onnx.checker.check_model(model)
+        super().__init__(model, [input_shape], 'input_output_model.dot')
