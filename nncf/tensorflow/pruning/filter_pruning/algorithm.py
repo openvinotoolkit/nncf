@@ -163,7 +163,7 @@ class FilterPruningController(BasePruningAlgoController):
 
     def compression_stage(self) -> CompressionStage:
         target_pruning_level = self.scheduler.target_level
-        actual_pruning_level = self.pruning_rate
+        actual_pruning_level = self.pruning_level
         if actual_pruning_level == 0:
             return CompressionStage.UNCOMPRESSED
         if isclose(actual_pruning_level, target_pruning_level, abs_tol=1e-5) or \
@@ -175,7 +175,7 @@ class FilterPruningController(BasePruningAlgoController):
     def compression_rate(self) -> float:
         if self.prune_flops:
             return 1 - self.current_flops / self.full_flops
-        return self.pruning_rate
+        return self.pruning_level
 
     @compression_rate.setter
     def compression_rate(self, compression_rate: float) -> None:
@@ -219,11 +219,11 @@ class FilterPruningController(BasePruningAlgoController):
                           run_batchnorm_adaptation: bool = False):
         """
         Setup pruning masks in accordance to provided pruning level
-        :param pruning_level: pruning ration
+        :param pruning_level: pruning ratio
         :return:
         """
-        # Pruning rate from scheduler can be percentage of params that should be pruned
-        self.pruning_rate = pruning_level
+        # Pruning level from scheduler can be percentage of params that should be pruned
+        self.pruning_level = pruning_level
         if not self.frozen:
             nncf_logger.info('Computing filter importance scores and binary masks...')
             if self.all_weights:
