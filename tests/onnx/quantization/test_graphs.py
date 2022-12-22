@@ -25,7 +25,7 @@ from tests.onnx.quantization.common import mock_collect_statistics
 from tests.onnx.models import ALL_SYNTHETIC_MODELS
 from tests.onnx.models import MultiInputOutputModel
 
-@patch('nncf.quantization.algorithms.min_max.algorithm.calculate_activation_quantizer_parameters',
+@patch('nncf.quantization.algorithms.min_max.onnx_backend.calculate_activation_quantizer_parameters',
        new=mock_calculate_activation_quantizer_parameters)
 @pytest.mark.parametrize('model_cls_to_test', ALL_SYNTHETIC_MODELS.values())
 def test_syntetic_models_graph(model_cls_to_test):

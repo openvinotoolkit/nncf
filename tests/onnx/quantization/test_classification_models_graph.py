@@ -29,7 +29,7 @@ from tests.onnx.quantization.common import mock_calculate_activation_quantizer_p
 from tests.onnx.quantization.common import mock_get_statistics
 from tests.onnx.quantization.common import mock_collect_statistics
 
-@patch('nncf.quantization.algorithms.min_max.algorithm.calculate_activation_quantizer_parameters',
+@patch('nncf.quantization.algorithms.min_max.onnx_backend.calculate_activation_quantizer_parameters',
        new=mock_calculate_activation_quantizer_parameters)
 @pytest.mark.parametrize(('model_to_test', 'model'),
                          [(ModelToTest('resnet18', [1, 3, 224, 224]), models.resnet18(pretrained=True)),

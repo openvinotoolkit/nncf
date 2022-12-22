@@ -32,7 +32,7 @@ from nncf.quantization.algorithms.post_training.algorithm import PostTrainingQua
 from nncf.experimental.onnx.graph.nncf_graph_builder import GraphConverter
 from nncf.experimental.onnx.graph.onnx_graph import ONNXGraph
 from nncf.common.quantization.structs import QuantizationMode
-from nncf.quantization.algorithms.min_max.utils import QuantizerLayerParameters
+from nncf.experimental.onnx.quantization.quantizer_parameters import ONNXQuantizerLayerParameters
 
 REFERENCE_GRAPHS_TEST_ROOT = 'data/reference_graphs/quantization'
 
@@ -47,10 +47,9 @@ def mock_get_statistics(self):
 
 def mock_calculate_activation_quantizer_parameters(statistics,
                                                    quantizer_config,
-                                                   axis) -> QuantizerLayerParameters:
-    return QuantizerLayerParameters(0, 0, mode=QuantizationMode.SYMMETRIC, axis=None)
-
-
+                                                   axis) -> ONNXQuantizerLayerParameters:
+    return ONNXQuantizerLayerParameters(np.array(0), np.array(0), mode=QuantizationMode.SYMMETRIC, axis=None,
+                                        tensor_type=np.uint8)
 
 
 def get_random_dataset_for_test(input_key: str,
@@ -58,12 +57,12 @@ def get_random_dataset_for_test(input_key: str,
                                 input_dtype: np.dtype,
                                 has_batch_dim: bool,
                                 length: Optional[int] = 10):
-
     def transform_fn(item):
         tensor = np.random.random(input_shape).astype(input_dtype)
         if has_batch_dim:
             tensor = np.squeeze(np.random.random(input_shape).astype(input_dtype), axis=0)
         return {input_key: tensor}
+
     return Dataset(list(range(length)), transform_fn)
 
 
@@ -73,6 +72,7 @@ def get_dataset_for_test(samples: List[Tuple[np.ndarray, int]], input_name: str)
         return {input_name: [inputs]}
 
     return Dataset(samples, transform_fn)
+
 
 class ModelToTest:
     def __init__(self, model_name: str, input_shape: List[int]):

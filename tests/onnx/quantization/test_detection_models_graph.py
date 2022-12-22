@@ -37,7 +37,7 @@ TEST_DATA = [ModelToTest('ssd_mobilenet_v1_12', [1, 300, 300, 3]),
              ]
 
 
-@patch('nncf.quantization.algorithms.min_max.algorithm.calculate_activation_quantizer_parameters',
+@patch('nncf.quantization.algorithms.min_max.onnx_backend.calculate_activation_quantizer_parameters',
        new=mock_calculate_activation_quantizer_parameters)
 @pytest.mark.parametrize(('model_to_test'), TEST_DATA, ids=[model_to_test.model_name for model_to_test in TEST_DATA])
 def test_min_max_quantization_graph(tmp_path, model_to_test):
