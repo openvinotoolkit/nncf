@@ -64,7 +64,6 @@ def calculate_scale_zero_point(max_val: np.ndarray, min_val: np.ndarray, level_l
     :param mode: Symmetric or Asymmetric mode.
     :param tensor_type: Value type of the tensor. Could be INT8 or UINT8.
     :return: Scale and Zero point values.
-
     """
     scale, zero_point = None, None
     if mode == QuantizationMode.SYMMETRIC:
