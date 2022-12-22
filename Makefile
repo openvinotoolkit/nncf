@@ -35,6 +35,5 @@ create_onnx_ptq_e2e_venv:
 	git lfs pull --include ${NNCF_DIR}tests/onnx/openvino_dev-2022.3.0-8784-py3-none-any.whl
 	pip install ${NNCF_DIR}/tests/onnx/openvino-2022.3.0-8784-cp38-cp38-manylinux_2_31_x86_64.whl
 	pip install ${NNCF_DIR}/tests/onnx/openvino_dev-2022.3.0-8784-py3-none-any.whl
-	export LD_LIBRARY_PATH=LD_LIBRARY_PATH:${WORKSPACE}/venv_onnx/lib/python3.8/site-packages/openvino/libs
 	pip install ${NNCF_DIR}/tests/onnx/onnxruntime_openvino-1.14.0-cp38-cp38-linux_x86_64.whl
 	pip install numpy==1.23.1
