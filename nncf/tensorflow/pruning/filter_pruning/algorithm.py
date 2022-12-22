@@ -140,7 +140,7 @@ class FilterPruningController(BasePruningAlgoController):
 
         self._pruned_layers_num = len(self._pruned_layer_groups_info.get_all_nodes())
         self._prunable_layers_num = len(self._original_graph.get_nodes_by_types(self._prunable_types))
-        self._max_prunable_flops, self._max_prunable_params = \
+        self._min_prunable_flops, self._min_prunable_params = \
             self._calculate_flops_and_weights_in_uniformly_pruned_model(1.)
 
         self._weights_normalizer = tensor_l2_normalizer  # for all weights in common case
@@ -242,8 +242,7 @@ class FilterPruningController(BasePruningAlgoController):
 
     @property
     def maximal_compression_rate(self) -> float:
-        max_flops, _ = self._calculate_flops_and_weights_in_uniformly_pruned_model(1.0)
-        max_compression_rate = 1 - max_flops / max(self.full_flops, 1)
+        max_compression_rate = 1 - self._min_prunable_flops / max(self.full_flops, 1)
         return max_compression_rate
 
     def _init_pruned_layers_params(self, output_channels):
