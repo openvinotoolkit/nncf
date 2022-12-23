@@ -74,7 +74,7 @@ def run_benchmark(model_path: str, shape: Optional[List[int]] = None,
 def get_model_size(ir_path: str, m_type: str = 'Mb', 
                    verbose: bool = True) -> float:
     xml_size = os.path.getsize(ir_path)
-    bin_size = os.path.getsize(os.path.splitext(ir_path)[0] + '.bin')
+    bin_size = os.path.getsize(ir_path.replace('xml', 'bin'))
     for t in ['bytes', 'Kb', 'Mb']:
         if m_type == t:
             break
@@ -131,7 +131,7 @@ parameters.
 The easiest way to define a calibration dataset is to use a training or
 validation dataset and a transformation function to remove labels from the data
 item and prepare model input data. The quantize method uses a small subset
-(default: 300 samples) of the calibration dataset.
+(default: 300 samples) of the calibration data set.
 '''
 calibration_dataset = nncf.Dataset(val_loader, transform_fn)
 quantized_model = nncf.quantize(model, calibration_dataset)
