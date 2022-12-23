@@ -56,6 +56,7 @@ class FastBiasCorrectionParameters(AlgorithmParameters):
 class FastBiasCorrection(Algorithm):
     """
     Post-training FastBiasCorrection algorithm implementation
+
     The main purpose of this algorithm to reduce quantization error
     via correction the bias of the Convolutions, FullyConnected, etc. layers.
     The algorithm pipeline is very simple:
@@ -90,6 +91,7 @@ class FastBiasCorrection(Algorithm):
     def _set_backend_entity(self, model: TModel) -> None:
         """
         Creates a helper class with a backed-specific logic of the algorithm
+
         :param model: backend-specific input model
         """
         model_backend = get_backend(model)
@@ -288,6 +290,7 @@ class FastBiasCorrection(Algorithm):
     def _get_bias_shift_magnitude(current_bias_value: np.ndarray, updated_bias_value: np.ndarray) -> float:
         """
         Calculates bias shift magnitude based on the current and updated values
+
         :param current_bias_value: the original bias value
         :param updated_bias_value: the updated bias value
         :return: magnitude between original and updated bias values
