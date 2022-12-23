@@ -75,6 +75,7 @@ def get_filter_pruning_config():
     config['compression']['params']['prune_first_conv'] = True
     return config
 
+
 @pytest.mark.parametrize('config_provider',
                          (get_quantization_config_without_range_init, get_basic_asym_quantization_config,
                           get_basic_sparsity_config, get_basic_magnitude_sparsity_config,
@@ -99,6 +100,7 @@ class TestCompressionAlgos:
 
         assert os.path.exists(test_path)
         PTTensorListComparator.check_equal(list(state_before.values()), list(state_after.values()))
+
 
 @pytest.mark.parametrize(('config_provider', 'mask_getter'),
                          [
