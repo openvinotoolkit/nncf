@@ -24,80 +24,50 @@ from nncf.experimental.onnx.quantization.quantizer_parameters import ONNXQuantiz
 from nncf.experimental.onnx.statistics.statistics import ONNXMinMaxTensorStatistic
 
 
-@dataclass
-class CaseToTestScaleZP:
-    max_val: np.ndarray
-    min_val: np.ndarray
-    level_low: int
-    level_high: int
-    mode: QuantizationMode
-    ref_scale: np.ndarray
-    ref_zero_point: np.ndarray
+@pytest.mark.parametrize(('max_val, min_val, level_low, level_high, mode, ref_scale, ref_zero_point'),
+                         ((np.zeros((10, 10)), np.zeros((10, 10)), -128, 127, QuantizationMode.SYMMETRIC,
+                           np.zeros((10, 10)),
+                           np.zeros((10, 10), dtype=np.int32)),
 
+                          (np.zeros((10, 10)), np.zeros((10, 10)), -128, 127, QuantizationMode.ASYMMETRIC,
+                           np.zeros((10, 10)),
+                           -128 * np.ones((10, 10), dtype=np.int32)),
 
-@pytest.mark.parametrize('case', (CaseToTestScaleZP(max_val=np.zeros((10, 10)),
-                                                    min_val=np.zeros((10, 10)),
-                                                    level_low=-128,
-                                                    level_high=127,
-                                                    mode=QuantizationMode.SYMMETRIC,
-                                                    ref_scale=np.zeros((10, 10)),
-                                                    ref_zero_point=np.zeros((10, 10), dtype=np.int32)),
-                                  CaseToTestScaleZP(max_val=np.zeros((10, 10)),
-                                                    min_val=np.zeros((10, 10)),
-                                                    level_low=-128,
-                                                    level_high=127,
-                                                    mode=QuantizationMode.ASYMMETRIC,
-                                                    ref_scale=np.zeros((10, 10)),
-                                                    ref_zero_point=-128 * np.ones((10, 10), dtype=np.int32)),
-                                  CaseToTestScaleZP(max_val=np.ones((10, 10)),
-                                                    min_val=np.zeros((10, 10)),
-                                                    level_low=10,
-                                                    level_high=999,
-                                                    mode=QuantizationMode.SYMMETRIC,
-                                                    ref_scale=0.00202224 * np.ones((10, 10)),
-                                                    ref_zero_point=np.zeros((10, 10), dtype=np.int32)),
-                                  CaseToTestScaleZP(max_val=np.ones((10, 10)),
-                                                    min_val=np.zeros((10, 10)),
-                                                    level_low=10,
-                                                    level_high=999,
-                                                    mode=QuantizationMode.ASYMMETRIC,
-                                                    ref_scale=0.001011122 * np.ones((10, 10)),
-                                                    ref_zero_point=10 * np.ones((10, 10), dtype=np.int32)),
-                                  CaseToTestScaleZP(max_val=10 * np.ones((10, 10)),
-                                                    min_val=-np.ones((10, 10)),
-                                                    level_low=0,
-                                                    level_high=1000,
-                                                    mode=QuantizationMode.SYMMETRIC,
-                                                    ref_scale=0.02 * np.ones((10, 10)),
-                                                    ref_zero_point=np.zeros((10, 10), dtype=np.int32)),
-                                  CaseToTestScaleZP(max_val=10 * np.ones((10, 10)),
-                                                    min_val=-np.ones((10, 10)),
-                                                    level_low=0,
-                                                    level_high=1000,
-                                                    mode=QuantizationMode.ASYMMETRIC,
-                                                    ref_scale=0.011 * np.ones((10, 10)),
-                                                    ref_zero_point=91 * np.ones((10, 10), dtype=np.int32)),
-                                  CaseToTestScaleZP(max_val=10 * np.ones((10, 10)),
-                                                    min_val=-np.ones((10, 10)),
-                                                    level_low=-10,
-                                                    level_high=-1,
-                                                    mode=QuantizationMode.SYMMETRIC,
-                                                    ref_scale=2.2222222 * np.ones((10, 10)),
-                                                    ref_zero_point=np.zeros((10, 10), dtype=np.int32)),
-                                  CaseToTestScaleZP(max_val=10 * np.ones((10, 10)),
-                                                    min_val=-np.ones((10, 10)),
-                                                    level_low=-10,
-                                                    level_high=-1,
-                                                    mode=QuantizationMode.ASYMMETRIC,
-                                                    ref_scale=1.22222222 * np.ones((10, 10)),
-                                                    ref_zero_point=-9 * np.ones((10, 10), dtype=np.int32))
-                                  )
+                          (np.ones((10, 10)), np.zeros((10, 10)), 10, 999, QuantizationMode.SYMMETRIC,
+                           0.00202224 * np.ones((10, 10)),
+                           np.zeros((10, 10), dtype=np.int32)),
+
+                          (np.ones((10, 10)), np.zeros((10, 10)), 10, 999, QuantizationMode.ASYMMETRIC,
+                           0.001011122 * np.ones((10, 10)),
+                           10 * np.ones((10, 10), dtype=np.int32)),
+
+                          (10 * np.ones((10, 10)), -np.ones((10, 10)), 0, 1000, QuantizationMode.SYMMETRIC,
+                           0.02 * np.ones((10, 10)),
+                           np.zeros((10, 10), dtype=np.int32)),
+
+                          (10 * np.ones((10, 10)), -np.ones((10, 10)), 0, 1000, QuantizationMode.ASYMMETRIC,
+                           0.011 * np.ones((10, 10)),
+                           91 * np.ones((10, 10), dtype=np.int32)),
+
+                          (10 * np.ones((10, 10)), -np.ones((10, 10)), -10, -1, QuantizationMode.SYMMETRIC,
+                           2.2222222 * np.ones((10, 10)),
+                           np.zeros((10, 10), dtype=np.int32)),
+
+                          (10 * np.ones((10, 10)), -np.ones((10, 10)), -10, -1, QuantizationMode.ASYMMETRIC,
+                           1.22222222 * np.ones((10, 10)),
+                           -9 * np.ones((10, 10), dtype=np.int32))
+                          )
                          )
-def test_calculate_scale_zero_point(case):
-    assert np.allclose((case.ref_scale, case.ref_zero_point),
-                       calculate_scale_zero_point(max_val=case.max_val, min_val=case.min_val,
-                                                  level_low=case.level_low, level_high=case.level_high,
-                                                  mode=case.mode))
+@pytest.mark.parametrize('tensor_type', [np.int8, np.uint8])
+def test_calculate_scale_zero_point(max_val, min_val, level_low, level_high, mode, ref_scale, ref_zero_point,
+                                    tensor_type):
+    ref_scale_ = ref_scale.copy()
+    if tensor_type == np.uint8 and mode == QuantizationMode.SYMMETRIC:
+        ref_scale_ /= 2
+    assert np.allclose((ref_scale_, ref_zero_point),
+                       calculate_scale_zero_point(max_val=max_val, min_val=min_val,
+                                                  level_low=level_low, level_high=level_high,
+                                                  mode=mode, tensor_type=tensor_type))
 
 
 @pytest.mark.parametrize('num_bits, tensor_type, ref_levels', ((0, np.int8, (-1, -1)),

@@ -52,7 +52,7 @@ def get_level_low_level_high(tensor_type: np.dtype, num_bits: int) -> Tuple[int,
 
 
 def calculate_scale_zero_point(max_val: np.ndarray, min_val: np.ndarray, level_low: int, level_high: int,
-                               mode: QuantizationMode) -> Tuple[np.ndarray, np.ndarray]:
+                               mode: QuantizationMode, tensor_type: np.dtype) -> Tuple[np.ndarray, np.ndarray]:
     """
     Calculates Quantizer/Dequantizer layer scale level.
     Returns scale and zero_point values foe the quantizer.
@@ -62,14 +62,14 @@ def calculate_scale_zero_point(max_val: np.ndarray, min_val: np.ndarray, level_l
     :param level_low: The minimum level of quantizer quants.
     :param level_high: The maximum level of quantizer quants.
     :param mode: Symmetric or Asymmetric mode.
+    :param tensor_type: Value type of the tensor. Could be INT8 or UINT8.
     :return: Scale and Zero point values.
-
     """
     scale, zero_point = None, None
     if mode == QuantizationMode.SYMMETRIC:
         input_abs_max = np.maximum(np.abs(max_val), np.abs(min_val))
         max_val = input_abs_max
-        min_val = -input_abs_max
+        min_val = np.zeros_like(input_abs_max) if tensor_type == np.uint8 else -input_abs_max
         scale = np.array((max_val - min_val) / float(level_high - level_low))
         zero_point = np.zeros_like(scale, dtype=np.int32)
     elif mode == QuantizationMode.ASYMMETRIC:
@@ -112,7 +112,7 @@ def calculate_weight_quantizer_parameters(weight_tensor: np.ndarray, quantizer_c
     input_low = np.amin(weight_tensor, axis=axes)
     level_low, level_high = get_level_low_level_high(tensor_type, quantizer_config.num_bits)
     scales, zero_points = calculate_scale_zero_point(input_high, input_low, level_low, level_high,
-                                                     quantizer_config.mode)
+                                                     quantizer_config.mode, tensor_type)
     return ONNXQuantizerLayerParameters(scales, zero_points, quantizer_config.mode, axis, tensor_type)
 
 
@@ -135,5 +135,5 @@ def calculate_activation_quantizer_parameters(statistics: MinMaxTensorStatistic,
         tensor_type = np.int8 if quantizer_config.signedness_to_force else np.uint8
     level_low, level_high = get_level_low_level_high(tensor_type, quantizer_config.num_bits)
     scales, zero_points = calculate_scale_zero_point(input_high, input_low, level_low, level_high,
-                                                     quantizer_config.mode)
+                                                     quantizer_config.mode, tensor_type)
     return ONNXQuantizerLayerParameters(scales, zero_points, quantizer_config.mode, axis, tensor_type)
