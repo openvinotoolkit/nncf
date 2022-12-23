@@ -65,6 +65,7 @@ class FastBiasCorrectionAlgoBackend(ABC):
     def model_transformer(model: TModel) -> ModelTransformer:
         """
         Returns backend-specific ModelTransformer instance.
+
         :param model: Backend-specific model to create ModelTransformer.
         :return: ModelTransformer instance.
         """
@@ -74,6 +75,7 @@ class FastBiasCorrectionAlgoBackend(ABC):
     def target_point(target_type: TargetType, target_node_name: str, port_id: int) -> TargetPoint:
         """
         Returns backend-specific target point.
+
         :param target_type: Type of the location that should be modified.
         :param target_node_name: Name of the located node.
         :param port_id: Port ID of the tensor for the statistics distribution.
@@ -87,6 +89,7 @@ class FastBiasCorrectionAlgoBackend(ABC):
                                 threshold: float) -> TransformationCommand:
         """
         Returns backend-specific bias correction command.
+
         :param target_point: Target location for the correction.
         :param bias_value: New value for the bias.
         :param threshold: Parametrized threshold for the shift magnitude comparison.
@@ -98,6 +101,7 @@ class FastBiasCorrectionAlgoBackend(ABC):
     def model_extraction_command(inputs: List[str], outputs: List[str]) -> TransformationCommand:
         """
         Returns backend-specific bias correction.
+
         :param inputs: List of the input names for sub-model beggining.
         :param outputs: List of the output names for sub-model end.
         :return: Backend-specific TransformationCommand for the model extraction.
@@ -110,6 +114,7 @@ class FastBiasCorrectionAlgoBackend(ABC):
                                  window_size: Optional[int] = None) -> TensorStatisticCollectorBase:
         """
         Returns backend-specific mean statistic collector.
+
         :param reduction_shape: Channel axes for the statistics aggregation.
         :param num_samples: Maximum number of samples to collect.
         :param window_size: The maximum size of the samples queue.
@@ -121,6 +126,7 @@ class FastBiasCorrectionAlgoBackend(ABC):
     def get_input_output_names(biased_node: NNCFNode) -> Tuple[str, str]:
         """
         Returns tuple of the input & output names respectively.
+
         :param biased_node: NNCFNode biased node.
         :return: Tuple of the input & output names.
         """
@@ -130,6 +136,7 @@ class FastBiasCorrectionAlgoBackend(ABC):
     def create_blob(shape: Tuple[int], data: List[float]) -> np.ndarray:
         """
         Creates the backend-specific (because of layout) blob.
+
         :param shape: Shape of the blob.
         :param data: Data to fill the blob.
         :return: np.ndarray blob.
@@ -140,6 +147,7 @@ class FastBiasCorrectionAlgoBackend(ABC):
     def get_bias_value(model: TModel, bias_node: NNCFNode) -> np.ndarray:
         """
         Returns bias value in the NumPy format of provided node.
+
         :param model: Backend-specific model for the initializer finding.
         :param bias_node: Node of NNCFGraph with bias value.
         :return: Bias value in the NumPy format.
@@ -150,6 +158,7 @@ class FastBiasCorrectionAlgoBackend(ABC):
     def get_bias_port_id(model: TModel, bias_node: NNCFNode) -> int:
         """
         Returns bias Port ID corresponding to the node.
+
         :param model: Backend-specific model.
         :param bias_node: Node of NNCFGraph with bias value.
         :return: Port ID corresponding to bias.
@@ -162,6 +171,7 @@ class FastBiasCorrectionAlgoBackend(ABC):
         Returns Input Port ID and Output Port ID corresponding to activation input and output edges for
         the node.
         Supports only nodes that could have bias value.
+
         :param model: Backend-specific model.
         :param node: Node of NNCFGraph with bias value.
         """
@@ -171,6 +181,7 @@ class FastBiasCorrectionAlgoBackend(ABC):
     def is_quantized_weights(biased_node: NNCFNode, nncf_graph: NNCFGraph) -> bool:
         """
         Checks whether the node is quantized or not, based on a backend-specific way.
+
         :param biased_node: NNCFNode to check.
         :param nncf_graph: NNCFGraph instance.
         :return: boolean indicating whether the node has a quantized weights or not
@@ -181,6 +192,7 @@ class FastBiasCorrectionAlgoBackend(ABC):
     def process_model_output(raw_data: OutputType, output_name: str) -> NNCFTensor:
         """
         Returns backend-specific processed output from the model.
+
         :param raw_data: Backend-specific output from the model.
         :param output_name: Name of the output layer or tensor name.
         :return: Processed output as NNCFTensor.
@@ -191,6 +203,7 @@ class FastBiasCorrectionAlgoBackend(ABC):
     def is_node_with_bias(biased_node: NNCFNode) -> bool:
         """
         Checks whether the node has a bias or not.
+
         :param biased_node: NNCFNode to check.
         :return: Boolean indicating whether the node has a bias or not.
         """
@@ -200,6 +213,7 @@ class FastBiasCorrectionAlgoBackend(ABC):
     def get_bias_node(biased_node: NNCFNode, nncf_graph: NNCFGraph) -> Optional[NNCFNode]:
         """
         Returns node that contains bias, if it exists.
+
         :param biased_node: NNCFNode with the attributes.
         :param nncf_graph: NNCFGraph instance.
         :return: Optional NNCFNode with potential bias.

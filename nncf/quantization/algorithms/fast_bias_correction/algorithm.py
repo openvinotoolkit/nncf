@@ -36,6 +36,7 @@ TModel = TypeVar('TModel')
 class FastBiasCorrectionParameters(AlgorithmParameters):
     """
     Parameters of FastBiasCorrection algorithm
+
     :param number_samples: The number of the samples for the statistics collection.
     :param threshold: The magnitude threshold that regulates the application of the shift.
     """
@@ -66,6 +67,7 @@ class FastBiasCorrection(Algorithm):
         the sub-graph and further quantization output calculation;
         - in the end we corrects the original bias by the difference (shift)
         between floating-point and quantized outputs.
+
     :param number_samples: The number of the samples for the statistics collection.
     :param threshold: The magnitude threshold that regulates the application of the shift.
     :param nncf_graph: NNCFGraph class for the algorithm.
@@ -167,6 +169,7 @@ class FastBiasCorrection(Algorithm):
     def _get_fp_inputs(self, statistic_points: StatisticPointsContainer, node_name: str) -> Tuple[List, List]:
         """
         Makes out per-layer needed data from the floating-point collected statistics
+
         :param statistic_points: filled StatisticPointsContainer
         :param node_name: name of the current layer
         :return: collected mean tensor data and shape for the further bias calculation
@@ -189,6 +192,7 @@ class FastBiasCorrection(Algorithm):
     def _get_fp_outputs(self, statistic_points: StatisticPointsContainer, node_name: str) -> List[np.ndarray]:
         """
         Makes out per-layer needed data from the floating-point collected statistics
+
         :param statistic_points: filled StatisticPointsContainer
         :param node_name: name of the current layer
         :return: collected mean tensor data for the further bias calculation
@@ -212,6 +216,7 @@ class FastBiasCorrection(Algorithm):
                           output_names: List[str]) -> TModel:
         """
         Extracts sub-model from the original based on the input & output tensor names
+
         :param model: backend-specific model
         :param input_names: list of the input names
         :param output_names: list of the output names
@@ -228,6 +233,7 @@ class FastBiasCorrection(Algorithm):
     def _add_statistic_point(self, container: StatisticPointsContainer, point: TargetPoint, axis: int) -> None:
         """
         Adds specific statistic point
+
         :param container: StatisticPointsContainer
         :param point: TargetPoint for statistic collection
         :param axis: channel axis for the statistics calculation
@@ -244,6 +250,7 @@ class FastBiasCorrection(Algorithm):
                            input_name: str) -> Dict[str, NNCFTensor]:
         """
         Creates input blob for the bias shift calculation
+
         :param input_shape: input shape for the blob
         :param input_fp: input data for the blob
         :param input_name: name for the output dict
@@ -261,6 +268,7 @@ class FastBiasCorrection(Algorithm):
                         output_name: str) -> np.ndarray:
         """
         Calculates bias shift for the further corretion
+
         :param engine: backend-specific engine instance for the model execution
         :param model: backend-specific sub-model for the execution
         :param input_blob: input data for the execution
