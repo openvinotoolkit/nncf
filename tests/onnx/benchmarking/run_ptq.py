@@ -19,9 +19,6 @@ import numpy as np
 import onnx
 from functools import partial
 
-from nncf.quantization.algorithms.post_training.algorithm import PostTrainingQuantization
-from nncf.quantization.algorithms.post_training.algorithm import PostTrainingQuantizationParameters
-
 from openvino.tools.accuracy_checker.config import ConfigReader
 from openvino.tools.accuracy_checker.argparser import build_arguments_parser
 from openvino.tools.accuracy_checker.evaluators import ModelEvaluator
@@ -41,7 +38,7 @@ def process_fn(data_item, model_evaluator: ModelEvaluator, has_batch_dim: Option
 
     if len(filled_inputs) == 1:
         return {k: np.squeeze(v, axis=0)
-                if has_batch_dim else v for k, v in filled_inputs[0].items()}
+        if has_batch_dim else v for k, v in filled_inputs[0].items()}
 
     raise Exception("len(filled_inputs) should be one.")
 
@@ -51,7 +48,6 @@ def run(onnx_model_path: str, output_model_path: str, dataset: nncf.Dataset,
         ignored_scopes: Optional[List[str]] = None,
         disallowed_op_types: Optional[List[str]] = None,
         convert_model_opset: bool = True):
-
     print("Post-Training Quantization Parameters:")
     onnx.checker.check_model(onnx_model_path)
     original_model = onnx.load(onnx_model_path)
@@ -63,21 +59,11 @@ def run(onnx_model_path: str, output_model_path: str, dataset: nncf.Dataset,
     print(f"  number of samples: {num_init_samples}")
     print(f"  ignored_scopes: {ignored_scopes}")
 
-    # Step 0: Convert model opset
+    # Convert the model opset if needed.
     model = convert_opset_version(original_model) if convert_model_opset else original_model
-
-    # Step 1: Create the quantization algorithm and add to the builder.
-    quantization_parameters = PostTrainingQuantizationParameters(
-        number_samples=num_init_samples,
-        ignored_scopes=ignored_scopes
-    )
-    quantization = PostTrainingQuantization(quantization_parameters)
-
-    # Step 2: Execute the pipeline.
-    print("Post-Training Quantization has just started!")
-    quantized_model = quantization.apply(model, dataset=dataset)
-
-    # Step 3: Save the quantized model.
+    # Execute the pipeline.
+    quantized_model = nncf.quantize(model, dataset)
+    # Save the quantized model.
     onnx.save(quantized_model, output_model_path)
     print("The quantized model is saved to: {}".format(output_model_path))
 
