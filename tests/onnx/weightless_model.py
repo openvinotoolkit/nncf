@@ -87,7 +87,7 @@ TENSOR_TYPE_MAP = {
 
 def load_model_topology_with_zeros_weights(model_path: Union[str, Path]) -> onnx.ModelProto:
     """
-    Loads onnx model and fills the all external tensors by random values.
+    Loads onnx model and fills the all external tensors by zeros values.
 
     :param model_path: Path to the onnx model to load.
     :return: Onnx model with filled the all external tensors by random values.
@@ -107,8 +107,7 @@ def load_model_topology_with_zeros_weights(model_path: Union[str, Path]) -> onnx
 
 def save_model_without_tensors(model: onnx.ModelProto, model_path: Path) -> None:
     """
-    Saves the onnx model topology to 'model_dir' with the name equals to 'model_filename'.
-    Saved model does not contain tensors.
+    Saves the onnx model topology to 'model_path'. Saved model does not contain tensors.
 
     :param model: Onnx model to save.
     :param model_path: Path to save the onnx model.
