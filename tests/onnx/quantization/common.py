@@ -24,7 +24,6 @@ from tests.shared.paths import TEST_ROOT
 from tests.common.graph.nx_graph import compare_nx_graph_with_reference
 from tests.common.graph.nx_graph import check_nx_graph
 from tests.onnx.opset_converter import convert_opset_version
-from nncf.experimental.quantization.compression_builder import CompressionBuilder
 from nncf.quantization.algorithms.min_max.algorithm import MinMaxQuantization
 from nncf.quantization.algorithms.min_max.algorithm import MinMaxQuantizationParameters
 from nncf.quantization.algorithms.post_training.algorithm import PostTrainingQuantization
@@ -40,12 +39,12 @@ def get_random_dataset_for_test(input_key: str,
                                 input_dtype: np.dtype,
                                 has_batch_dim: bool,
                                 length: Optional[int] = 10):
-
     def transform_fn(item):
         tensor = np.random.random(input_shape).astype(input_dtype)
         if has_batch_dim:
             tensor = np.squeeze(np.random.random(input_shape).astype(input_dtype), axis=0)
         return {input_key: tensor}
+
     return Dataset(list(range(length)), transform_fn)
 
 
@@ -55,6 +54,7 @@ def get_dataset_for_test(samples: List[Tuple[np.ndarray, int]], input_name: str)
         return {input_name: [inputs]}
 
     return Dataset(samples, transform_fn)
+
 
 class ModelToTest:
     def __init__(self, model_name: str, input_shape: List[int]):
@@ -78,10 +78,9 @@ def min_max_quantize_model(
     input_np_dtype = onnx.helper.mapping.TENSOR_TYPE_TO_NP_TYPE[input_dtype]
     dataset = get_random_dataset_for_test(_get_input_key(
         original_model), input_shape, input_np_dtype, dataset_has_batch_size)
-    builder = CompressionBuilder()
-    builder.add_algorithm(
-        MinMaxQuantization(MinMaxQuantizationParameters(number_samples=1, ignored_scopes=ignored_scopes)))
-    quantized_model = builder.apply(original_model, dataset)
+    min_max_quantization = MinMaxQuantization(
+        MinMaxQuantizationParameters(number_samples=1, ignored_scopes=ignored_scopes))
+    quantized_model = min_max_quantization.apply(original_model, dataset=dataset)
     return quantized_model
 
 
@@ -95,10 +94,9 @@ def ptq_quantize_model(
     input_np_dtype = onnx.helper.mapping.TENSOR_TYPE_TO_NP_TYPE[input_dtype]
     dataset = get_random_dataset_for_test(_get_input_key(
         original_model), input_shape, input_np_dtype, dataset_has_batch_size)
-    builder = CompressionBuilder()
-    builder.add_algorithm(
-        PostTrainingQuantization(PostTrainingQuantizationParameters(number_samples=1, ignored_scopes=ignored_scopes)))
-    quantized_model = builder.apply(original_model, dataset)
+    post_training_quantization = PostTrainingQuantization(
+        PostTrainingQuantizationParameters(number_samples=1, ignored_scopes=ignored_scopes))
+    quantized_model = post_training_quantization.apply(original_model, dataset=dataset)
     return quantized_model
 
 
@@ -115,7 +113,6 @@ def compare_nncf_graph(quantized_model: onnx.ModelProto, path_ref_graph: str) ->
 def compare_nncf_graph_onnx_models(quantized_model: onnx.ModelProto, _quantized_model: onnx.ModelProto) -> None:
     nncf_graph = GraphConverter.create_nncf_graph(quantized_model)
     nx_graph = nncf_graph.get_graph_for_structure_analysis(extended=True)
-
     _nncf_graph = GraphConverter.create_nncf_graph(_quantized_model)
     _nx_graph = _nncf_graph.get_graph_for_structure_analysis(extended=True)
 
