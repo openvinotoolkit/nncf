@@ -1,3 +1,5 @@
+JUNITXML_PATH ?= nncf-tests.xml
+
 install-onnx-dev:
 	pip install -U pip
 	pip install -e .[onnx]
@@ -9,7 +11,7 @@ install-onnx-dev:
 	pip install pylint==2.13.9
 
 test-onnx:
-	pytest tests/onnx --junitxml nncf-tests.xml
+	pytest tests/onnx --junitxml ${JUNITXML_PATH}
 
 PYFILES := $(shell find examples/post_training_quantization/onnx -type f -name "*.py")
 pylint-onnx:
@@ -20,4 +22,4 @@ pylint-onnx:
 		$(PYFILES)                         
 
 test-install-onnx:
-	pytest tests/cross_fw/install/ --backend onnx
+	pytest tests/cross_fw/install/ --backend onnx --junitxml ${JUNITXML_PATH}
