@@ -46,7 +46,8 @@ class OVFastBiasCorrectionAlgoBackend(FastBiasCorrectionAlgoBackend):
     def channel_axis_by_types(self) -> Dict[OVOpMetatype, int]:
         return {
             OV_OPERATION_METATYPES.get_operator_metatype_by_op_name('Convolution'): 1,
-            OV_OPERATION_METATYPES.get_operator_metatype_by_op_name('ConvolutionBackpropData'): 1
+            OV_OPERATION_METATYPES.get_operator_metatype_by_op_name('ConvolutionBackpropData'): 1,
+            OV_OPERATION_METATYPES.get_operator_metatype_by_op_name('MatMul'): -1
         }
 
     @property
@@ -77,13 +78,14 @@ class OVFastBiasCorrectionAlgoBackend(FastBiasCorrectionAlgoBackend):
         return OVMeanStatisticCollector(reduction_shape, num_samples, window_size)
 
     @staticmethod
-    def get_tensor_names(node: NNCFNode, nncf_graph: NNCFGraph) -> Tuple[List[str], List[str]]:
+    def get_input_output_names(node: NNCFNode, nncf_graph: NNCFGraph) -> Tuple[str, str]:
         input_name = node.node_name
         output_name = node.node_name
-        add_bias_node = nncf_graph.get_next_nodes(node)[0]
-        if add_bias_node.metatype == OV_OPERATION_METATYPES.get_operator_metatype_by_op_name('Add'):
-            output_name = add_bias_node.node_name
-        return [input_name], [output_name]
+
+        bias_node = OVFastBiasCorrectionAlgoBackend.get_bias_node(node, nncf_graph)
+        if bias_node is not None:
+            output_name = bias_node.node_name
+        return input_name, output_name
 
     @staticmethod
     def create_blob(shape: Tuple[int], data: List[float]) -> np.ndarray:
@@ -94,22 +96,20 @@ class OVFastBiasCorrectionAlgoBackend(FastBiasCorrectionAlgoBackend):
         return blob
 
     @staticmethod
-    def get_bias_value(model: ov.Model, node: NNCFNode) -> np.ndarray:
+    def get_bias_value(model: ov.Model, bias_node: NNCFNode) -> np.ndarray:
         ops_dict = {op.get_friendly_name(): op for op in model.get_ops()}
-        bias_port_id = node.metatype.weight_definitions.bias_port_id
 
-        biased_node = ops_dict[node.node_name]
-        potential_bias = biased_node.input_value(bias_port_id).node
+        bias_node = ops_dict[bias_node.node_name]
         skip_metatypes = ['Convert']
         needed_bias_type = 'Constant'
 
-        potential_bias_queue = deque([potential_bias])
+        potential_bias_queue = deque([n.node for n in bias_node.input_values()])
         while potential_bias_queue:
             potential_bias = potential_bias_queue.popleft()
             if potential_bias.get_type_name() in skip_metatypes:
                 # We goes thorough 0 port in assumption that bias graph without branching
                 potential_bias_queue.append(potential_bias.input_value(0).node)
-            elif potential_bias.metatype == needed_bias_type:
+            elif potential_bias.get_type_name() == needed_bias_type:
                 bias_value = potential_bias.get_data()
                 return bias_value.flatten(), bias_value.shape
             continue
@@ -117,35 +117,34 @@ class OVFastBiasCorrectionAlgoBackend(FastBiasCorrectionAlgoBackend):
         raise RuntimeError('Could not find the bias value of the node')
 
     @staticmethod
-    def get_activation_port_ids_for_bias_node(model: ov.Model, node: NNCFNode) -> Tuple[int, int]:
+    def get_activation_port_ids_for_bias_node(model: ov.Model, biased_node: NNCFNode) -> Tuple[int, int]:
         return 0, 0
 
     @staticmethod
-    def is_quantized_weights(node: NNCFNode, nncf_graph: NNCFGraph) -> bool:
-        weight_port_id = node.metatype.weight_definitions.weight_port_id
-        weight_node = nncf_graph.get_input_edges(node)[weight_port_id].from_node
+    def is_quantized_weights(biased_node: NNCFNode, nncf_graph: NNCFGraph) -> bool:
+        weight_port_id = biased_node.layer_attributes.weight_port_id
+        weight_node = nncf_graph.get_input_edges(biased_node)[weight_port_id].from_node
         fq_type = OV_OPERATION_METATYPES.get_operator_metatype_by_op_name('FakeQuantize')
         return weight_node.metatype == fq_type
 
     @staticmethod
-    def get_bias_port_id(node: NNCFNode) -> int:
-        return node.metatype.weight_definitions.bias_port_id
+    def get_bias_port_id(bias_node: NNCFNode) -> int:
+        return bias_node.layer_attributes.weight_port_id
 
     @staticmethod
     def process_model_output(raw_data: Dict, output_name: str) -> OVNNCFTensor:
         return OVNNCFTensor(raw_data[output_name])
 
     @staticmethod
-    def is_node_with_bias(node: NNCFNode, nncf_graph: NNCFGraph) -> bool:
-        bias_node = OVFastBiasCorrectionAlgoBackend.get_bias_node(node, nncf_graph)
+    def is_node_with_bias(biased_node: NNCFNode, nncf_graph: NNCFGraph) -> bool:
+        bias_node = OVFastBiasCorrectionAlgoBackend.get_bias_node(biased_node, nncf_graph)
         if bias_node is None:
             return False
-
-        bias_port_id = node.metatype.weight_definitions.bias_port_id
+        
         needed_bias_type = OV_OPERATION_METATYPES.get_operator_metatype_by_op_name('Constant')
         skip_metatypes = [OV_OPERATION_METATYPES.get_operator_metatype_by_op_name('Convert')]
 
-        potential_bias_queue = deque([nncf_graph.get_previous_nodes(bias_node)[bias_port_id]])
+        potential_bias_queue = deque(nncf_graph.get_previous_nodes(bias_node))
         while potential_bias_queue:
             potential_bias = potential_bias_queue.popleft()
             if potential_bias.metatype in skip_metatypes:
@@ -157,8 +156,8 @@ class OVFastBiasCorrectionAlgoBackend(FastBiasCorrectionAlgoBackend):
         return False
 
     @staticmethod
-    def get_bias_node(node: NNCFNode, nncf_graph: NNCFGraph) -> Optional[NNCFNode]:
-        add_bias_node = nncf_graph.get_next_nodes(node)[0]
+    def get_bias_node(biased_node: NNCFNode, nncf_graph: NNCFGraph) -> Optional[NNCFNode]:
+        add_bias_node = nncf_graph.get_next_nodes(biased_node)[0]
         if add_bias_node.metatype == OV_OPERATION_METATYPES.get_operator_metatype_by_op_name('Add'):
             return add_bias_node
         return None

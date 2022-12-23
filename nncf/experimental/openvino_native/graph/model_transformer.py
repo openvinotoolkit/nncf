@@ -129,9 +129,12 @@ class OVModelTransformer(ModelTransformer):
         """
         for transformation in transformations:
             node_name = transformation.target_point.target_node_name
+
             biased_node = self.name_to_node_mapping[node_name]
-            biased_port = biased_node.input(1)
-            potential_bias = biased_node.input_value(1).node
+            bias_port_id = transformation.target_point.port_id
+            biased_port = biased_node.input(bias_port_id)
+            potential_bias = biased_node.input_value(bias_port_id).node
+
             if potential_bias.get_type_name() == 'Convert':
                 biased_port = potential_bias.input(0)
                 potential_bias = potential_bias.input_value(0).node

@@ -36,7 +36,6 @@ TModel = TypeVar('TModel')
 class FastBiasCorrectionParameters(AlgorithmParameters):
     """
     Parameters of FastBiasCorrection algorithm
-
     :param number_samples: The number of the samples for the statistics collection.
     :param threshold: The magnitude threshold that regulates the application of the shift.
     """
@@ -56,7 +55,6 @@ class FastBiasCorrectionParameters(AlgorithmParameters):
 class FastBiasCorrection(Algorithm):
     """
     Post-training FastBiasCorrection algorithm implementation
-
     The main purpose of this algorithm to reduce quantization error
     via correction the bias of the Convolutions, FullyConnected, etc. layers.
     The algorithm pipeline is very simple:
@@ -68,7 +66,6 @@ class FastBiasCorrection(Algorithm):
         the sub-graph and further quantization output calculation;
         - in the end we corrects the original bias by the difference (shift)
         between floating-point and quantized outputs.
-
     :param number_samples: The number of the samples for the statistics collection.
     :param threshold: The magnitude threshold that regulates the application of the shift.
     :param nncf_graph: NNCFGraph class for the algorithm.
@@ -91,7 +88,6 @@ class FastBiasCorrection(Algorithm):
     def _set_backend_entity(self, model: TModel) -> None:
         """
         Creates a helper class with a backed-specific logic of the algorithm
-
         :param model: backend-specific input model
         """
         model_backend = get_backend(model)
@@ -118,30 +114,26 @@ class FastBiasCorrection(Algorithm):
         nncf_graph = NNCFGraphFactory.create(model)
 
         layers_with_bias_types = self._backend_entity.layers_with_bias_metatypes
-        topological_nodes = nncf_graph.topological_sort()
-        biased_nodes = [n for n in topological_nodes if n.metatype in layers_with_bias_types]
+        biased_nodes = nncf_graph.get_nodes_by_metatypes(layers_with_bias_types)
 
-        for node in biased_nodes:
-            node_name = node.node_name
-
-            if not self._backend_entity.is_node_with_bias(node, nncf_graph):
-                nncf_logger.debug(f'Skipping node {node_name} because there is no bias')
+        for biased_node in biased_nodes:
+            if not self._backend_entity.is_node_with_bias(biased_node, nncf_graph):
+                nncf_logger.debug(f'Skipping node {biased_node.node_name} because there is no bias')
                 continue
-            if not self._backend_entity.is_quantized_weights(node, nncf_graph):
-                nncf_logger.debug(f'Skipping node {node_name} because weights were not quantized')
+            if not self._backend_entity.is_quantized_weights(biased_node, nncf_graph):
+                nncf_logger.debug(f'Skipping node {biased_node.node_name} because weights were not quantized')
                 continue
 
-            input_fp, input_shape = self._get_fp_inputs(statistic_points, node_name)
-            bias_node = self._backend_entity.get_bias_node(node, nncf_graph)
+            input_fp, input_shape = self._get_fp_inputs(statistic_points, biased_node.node_name)
+
+            bias_node = self._backend_entity.get_bias_node(biased_node, nncf_graph)
             output_fp = self._get_fp_outputs(statistic_points, bias_node.node_name)
 
-            input_tensor_names, output_tensor_names = self._backend_entity.get_tensor_names(node, nncf_graph)
-            input_name = input_tensor_names[0]
-            output_name = output_tensor_names[0]
+            input_name, output_name = self._backend_entity.get_input_output_names(biased_node, nncf_graph)
 
             extracted_model = self._extract_submodel(model, [input_name], [output_name])
 
-            channel_axis = self._backend_entity.channel_axis_by_types[node.metatype]
+            channel_axis = self._backend_entity.channel_axis_by_types[biased_node.metatype]
             input_blob = self._create_input_data(input_shape,
                                                  input_fp,
                                                  input_name)
@@ -157,7 +149,7 @@ class FastBiasCorrection(Algorithm):
             magnitude = self._get_bias_shift_magnitude(current_bias, updated_bias)
 
             if magnitude < self.threshold:
-                nncf_logger.debug(f'{node_name} bias would be changed')
+                nncf_logger.debug(f'{biased_node.node_name} bias would be changed')
                 bias_port_id = self._backend_entity.get_bias_port_id(bias_node)
                 target_point = self._backend_entity.target_point(TargetType.LAYER,
                                                                  bias_node.node_name,
@@ -167,7 +159,7 @@ class FastBiasCorrection(Algorithm):
                                                                                        updated_bias)
                 transformation_layout.register(bias_correction_command)
             else:
-                nncf_logger.debug(f'{node_name} bias skipped by threshold. Magnitude: {magnitude}')
+                nncf_logger.debug(f'{biased_node.node_name} bias skipped by threshold. Magnitude: {magnitude}')
 
         quantized_model = model_transformer.transform(transformation_layout)
         return quantized_model
@@ -175,7 +167,6 @@ class FastBiasCorrection(Algorithm):
     def _get_fp_inputs(self, statistic_points: StatisticPointsContainer, node_name: str) -> Tuple[List, List]:
         """
         Makes out per-layer needed data from the floating-point collected statistics
-
         :param statistic_points: filled StatisticPointsContainer
         :param node_name: name of the current layer
         :return: collected mean tensor data and shape for the further bias calculation
@@ -198,7 +189,6 @@ class FastBiasCorrection(Algorithm):
     def _get_fp_outputs(self, statistic_points: StatisticPointsContainer, node_name: str) -> List[np.ndarray]:
         """
         Makes out per-layer needed data from the floating-point collected statistics
-
         :param statistic_points: filled StatisticPointsContainer
         :param node_name: name of the current layer
         :return: collected mean tensor data for the further bias calculation
@@ -222,7 +212,6 @@ class FastBiasCorrection(Algorithm):
                           output_names: List[str]) -> TModel:
         """
         Extracts sub-model from the original based on the input & output tensor names
-
         :param model: backend-specific model
         :param input_names: list of the input names
         :param output_names: list of the output names
@@ -239,7 +228,6 @@ class FastBiasCorrection(Algorithm):
     def _add_statistic_point(self, container: StatisticPointsContainer, point: TargetPoint, axis: int) -> None:
         """
         Adds specific statistic point
-
         :param container: StatisticPointsContainer
         :param point: TargetPoint for statistic collection
         :param axis: channel axis for the statistics calculation
@@ -256,7 +244,6 @@ class FastBiasCorrection(Algorithm):
                            input_name: str) -> Dict[str, NNCFTensor]:
         """
         Creates input blob for the bias shift calculation
-
         :param input_shape: input shape for the blob
         :param input_fp: input data for the blob
         :param input_name: name for the output dict
@@ -274,7 +261,6 @@ class FastBiasCorrection(Algorithm):
                         output_name: str) -> np.ndarray:
         """
         Calculates bias shift for the further corretion
-
         :param engine: backend-specific engine instance for the model execution
         :param model: backend-specific sub-model for the execution
         :param input_blob: input data for the execution
@@ -294,7 +280,6 @@ class FastBiasCorrection(Algorithm):
     def _get_bias_shift_magnitude(current_bias_value: np.ndarray, updated_bias_value: np.ndarray) -> float:
         """
         Calculates bias shift magnitude based on the current and updated values
-
         :param current_bias_value: the original bias value
         :param updated_bias_value: the updated bias value
         :return: magnitude between original and updated bias values
