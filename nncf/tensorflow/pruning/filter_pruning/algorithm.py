@@ -233,7 +233,7 @@ class FilterPruningController(BasePruningAlgoController):
                     self._set_binary_masks_for_pruned_layers_globally(pruning_level)
             else:
                 if self.prune_flops:
-                    # Looking for a layerwise pruning rate needed for the required flops pruning rate
+                    # Looking for a layerwise pruning level needed for the required flops pruning level
                     pruning_level = self._find_uniform_pruning_level_for_target_flops(pruning_level)
                 self._set_binary_masks_for_pruned_layers_groupwise(pruning_level)
 
