@@ -14,7 +14,7 @@
 from abc import ABC
 from abc import abstractmethod
 
-from typing import TypeVar, Dict, Optional
+from typing import TypeVar, Dict, Union, Optional
 
 from nncf.common.tensor_statistics.statistic_point import StatisticPointsContainer
 from nncf.common.utils.backend import BackendType
@@ -27,6 +27,12 @@ class AlgorithmParameters(ABC):
     """
     Base class for Post-Training algorithm parameters.
     """
+
+    @abstractmethod
+    def to_json(self) -> Dict[str, Union[str, float, int]]:
+        """
+        Serializes algorithm parameters to JSON format.
+        """
 
 
 class Algorithm(ABC):

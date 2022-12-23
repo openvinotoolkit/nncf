@@ -11,7 +11,7 @@
  limitations under the License.
 """
 
-from typing import Dict, Tuple, List, TypeVar, Optional
+from typing import Dict, Tuple, List, TypeVar, Union, Optional
 
 import numpy as np
 from nncf import Dataset
@@ -51,6 +51,11 @@ class FastBiasCorrectionParameters(AlgorithmParameters):
         """
         self.number_samples = number_samples
         self.threshold = threshold
+
+    def to_json(self) -> Dict[str, Union[str, float, int]]:
+        """
+        Serialize all FastBiasCorrection parameters to JSON.
+        """
 
 
 class FastBiasCorrection(Algorithm):

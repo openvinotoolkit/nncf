@@ -19,7 +19,6 @@ from nncf.experimental.onnx.graph.nncf_graph_builder import GraphConverter
 from nncf.common.graph.operator_metatypes import InputNoopMetatype
 from nncf.common.graph.operator_metatypes import OutputNoopMetatype
 from nncf.experimental.onnx.graph.metatypes.onnx_metatypes import ONNXConvolutionMetatype
-from nncf.experimental.onnx.graph.metatypes.onnx_metatypes import ONNXDepthwiseConvolutionMetatype
 from nncf.experimental.onnx.graph.metatypes.onnx_metatypes import ONNXBatchNormMetatype
 from nncf.experimental.onnx.graph.metatypes.onnx_metatypes import ONNXReluMetatype
 from nncf.experimental.onnx.graph.metatypes.onnx_metatypes import ONNXGlobalAveragePoolMetatype
@@ -31,16 +30,14 @@ from nncf.experimental.onnx.graph.metatypes.onnx_metatypes import ONNXShapeMetat
 from tests.onnx.models import LinearModel
 from tests.onnx.models import MultiInputOutputModel
 from tests.onnx.models import ModelWithIntEdges
-from tests.onnx.models import OneDepthwiseConvolutionalModel
 
-TEST_MODELS = [LinearModel, MultiInputOutputModel, ModelWithIntEdges, OneDepthwiseConvolutionalModel]
+TEST_MODELS = [LinearModel, MultiInputOutputModel, ModelWithIntEdges]
 REF_METATYPES_COUNTERS = [
     [InputNoopMetatype, ONNXConvolutionMetatype, ONNXBatchNormMetatype, ONNXReluMetatype, ONNXGlobalAveragePoolMetatype,
      ONNXConvolutionMetatype, OutputNoopMetatype],
     [InputNoopMetatype, InputNoopMetatype, InputNoopMetatype,
      ONNXConcatLayerMetatype, ONNXAddLayerMetatype, OutputNoopMetatype, OutputNoopMetatype],
-    [InputNoopMetatype, ONNXConstantOfShapeMetatype, ONNXShapeMetatype, OutputNoopMetatype],
-    [InputNoopMetatype, ONNXDepthwiseConvolutionMetatype, OutputNoopMetatype]]
+    [InputNoopMetatype, ONNXConstantOfShapeMetatype, ONNXShapeMetatype, OutputNoopMetatype]]
 
 
 @pytest.mark.parametrize(("model_creator_func, ref_metatypes"),
