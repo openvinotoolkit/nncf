@@ -22,9 +22,9 @@ from nncf.common.accuracy_aware_training.training_loop import ADAPTIVE_COMPRESSI
 from nncf.common.graph import NNCFNode
 from nncf.common.graph.transformations.commands import TargetType
 from nncf.common.logging import nncf_logger
+from nncf.common.scopes import matches_any
 from nncf.common.sparsity.statistics import MovementSparsityStatistics
 from nncf.common.statistics import NNCFStatistics
-from nncf.common.utils.helpers import matches_any
 from nncf.config.extractors import extract_algo_specific_config
 from nncf.experimental.torch.sparsity.movement.layers import MovementSparsifier
 from nncf.experimental.torch.sparsity.movement.layers import SparseConfig

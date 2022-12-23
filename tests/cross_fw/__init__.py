@@ -10,19 +10,3 @@
  See the License for the specific language governing permissions and
  limitations under the License.
 """
-
-from tests.cross_fw.install.common import load_nncf_modules
-
-EXCLUDED_MODULES_PATTERNS = (
-    'nncf\\.openvino.*',
-    'nncf\\.tensorflow.*',
-    'nncf\\.torch.*',
-    'nncf\\.experimental\\.tensorflow.*',
-    'nncf\\.experimental\\.torch.*',
-    'nncf\\.experimental\\.openvino.*',
-    '.*?openvino_[^\\.]*',
-    '.*?torch_[^\\.]*',
-    '.*?tf_[^\\.]*'
-)
-
-load_nncf_modules(EXCLUDED_MODULES_PATTERNS)

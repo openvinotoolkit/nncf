@@ -19,16 +19,17 @@ from nncf import NNCFConfig
 from nncf.api.compression import CompressionLoss
 from nncf.api.compression import CompressionScheduler
 from nncf.api.compression import CompressionStage
-from nncf.common.graph import OUTPUT_NOOP_METATYPES
 from nncf.common.accuracy_aware_training.training_loop import ADAPTIVE_COMPRESSION_CONTROLLERS
+from nncf.common.graph import OUTPUT_NOOP_METATYPES
 from nncf.common.graph.transformations.commands import TransformationPriority
 from nncf.common.initialization.batchnorm_adaptation import BatchnormAdaptationAlgorithm
 from nncf.common.schedulers import StubCompressionScheduler
+from nncf.common.scopes import check_scopes_in_graph
+from nncf.common.scopes import should_consider_scope
 from nncf.common.sparsity.schedulers import SPARSITY_SCHEDULERS
 from nncf.common.sparsity.statistics import LayerThreshold
 from nncf.common.sparsity.statistics import MagnitudeSparsityStatistics
 from nncf.common.statistics import NNCFStatistics
-from nncf.common.utils.helpers import should_consider_scope
 from nncf.config.extractors import extract_algo_specific_config
 from nncf.config.extractors import extract_bn_adaptation_init_params
 from nncf.config.schemata.defaults import MAGNITUDE_SPARSITY_WEIGHT_IMPORTANCE
@@ -43,8 +44,8 @@ from nncf.tensorflow.graph.transformations.layout import TFTransformationLayout
 from nncf.tensorflow.graph.utils import collect_wrapped_layers
 from nncf.tensorflow.graph.utils import get_original_name_and_instance_idx
 from nncf.tensorflow.loss import TFZeroCompressionLoss
-from nncf.tensorflow.sparsity.base_algorithm import BaseSparsityController
 from nncf.tensorflow.sparsity.base_algorithm import SPARSITY_LAYER_METATYPES
+from nncf.tensorflow.sparsity.base_algorithm import BaseSparsityController
 from nncf.tensorflow.sparsity.collector import TFSparseModelStatisticsCollector
 from nncf.tensorflow.sparsity.magnitude.functions import WEIGHT_IMPORTANCE_FUNCTIONS
 from nncf.tensorflow.sparsity.magnitude.functions import calc_magnitude_binary_mask
@@ -62,6 +63,9 @@ class MagnitudeSparsityBuilder(TFCompressionAlgorithmBuilder):
     def get_transformation_layout(self, model: tf.keras.Model) -> TFTransformationLayout:
         converter = TFModelConverterFactory.create(model)
         nncf_graph = converter.convert()
+
+        check_scopes_in_graph(nncf_graph, self.ignored_scopes, self.target_scopes)
+
         transformations = TFTransformationLayout()
 
         processed_shared_layer_names = set()  # type: Set[str]

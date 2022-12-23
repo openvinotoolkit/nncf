@@ -14,10 +14,10 @@
 from functools import partial
 from typing import List
 
-from nncf.common.graph import NNCFGraph, NNCFNode
-from nncf.common.pruning.utils import traverse_function
-
+from nncf.common.graph import NNCFGraph
+from nncf.common.graph import NNCFNode
 from nncf.common.logging import nncf_logger
+from nncf.common.pruning.utils import traverse_function
 
 
 def get_concat_axis(input_shapes: List[List[int]], output_shapes: List[List[int]]) -> int:

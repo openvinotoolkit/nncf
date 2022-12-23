@@ -17,26 +17,29 @@ from collections import OrderedDict
 from collections import deque
 from copy import deepcopy
 from enum import Enum
+from functools import partial
 from typing import Deque
 from typing import Dict
 from typing import List
 from typing import Optional
 from typing import Set
 from typing import Tuple
-from functools import partial
 
 import networkx as nx
 
 from nncf.common.graph import INPUT_NOOP_METATYPES
+from nncf.common.graph import OUTPUT_NOOP_METATYPES
 from nncf.common.graph import NNCFNodeName
+from nncf.common.graph import OperatorMetatype
+from nncf.common.graph.graph import NNCFGraph
 from nncf.common.graph.operator_metatypes import InputNoopMetatype
 from nncf.common.graph.operator_metatypes import OutputNoopMetatype
-from nncf.common.graph import OUTPUT_NOOP_METATYPES
-from nncf.common.graph import OperatorMetatype
+from nncf.common.graph.operator_metatypes import UnknownMetatype
 from nncf.common.graph.transformations.commands import TargetPoint
 from nncf.common.hardware.config import HWConfig
-from nncf.common.insertion_point_graph import InsertionPointGraph
 from nncf.common.insertion_point_graph import ConstantNodesFilter
+from nncf.common.insertion_point_graph import InsertionPointGraph
+from nncf.common.logging import nncf_logger
 from nncf.common.quantization.quantizer_propagation.graph import QuantizerPropagationStateGraph
 from nncf.common.quantization.quantizer_propagation.grouping import QuantizersWaitingForMergeManager
 from nncf.common.quantization.quantizer_propagation.structs import PropagatingQuantizer
@@ -53,13 +56,10 @@ from nncf.common.quantization.structs import QuantizationMode
 from nncf.common.quantization.structs import QuantizerConfig
 from nncf.common.quantization.structs import QuantizerGroup
 from nncf.common.quantization.structs import UnifiedScaleType
+from nncf.common.scopes import matches_any
 from nncf.common.utils.debug import DEBUG_LOG_DIR
 from nncf.common.utils.debug import is_debug
 from nncf.common.utils.dot_file_rw import write_dot_graph
-from nncf.common.utils.helpers import matches_any
-from nncf.common.logging import nncf_logger
-from nncf.common.graph.operator_metatypes import UnknownMetatype
-from nncf.common.graph.graph import NNCFGraph
 
 
 class TransitionStatus(Enum):

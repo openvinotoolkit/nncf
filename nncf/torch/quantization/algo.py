@@ -15,19 +15,22 @@ import shutil
 from collections import Counter
 from collections import OrderedDict
 from copy import deepcopy
+from enum import IntEnum
 from pathlib import Path
 from string import Template
-from typing import Any, Union
+from typing import Any
 from typing import Dict
 from typing import List
 from typing import Optional
 from typing import Set
 from typing import Tuple
-from enum import IntEnum
+from typing import Union
 
 import networkx as nx
 import numpy as np
 import torch
+from torch import nn
+
 from nncf.api.compression import CompressionLoss
 from nncf.api.compression import CompressionScheduler
 from nncf.api.compression import CompressionStage
@@ -40,12 +43,14 @@ from nncf.common.graph.layer_attributes import WeightedLayerAttributes
 from nncf.common.graph.transformations.commands import TargetPoint
 from nncf.common.graph.transformations.commands import TargetType
 from nncf.common.graph.utils import get_first_nodes_of_type
+from nncf.common.hardware.config import HW_CONFIG_TYPE_TARGET_DEVICE_MAP
 from nncf.common.hardware.config import HWConfig
 from nncf.common.hardware.config import HWConfigType
-from nncf.common.hardware.config import HW_CONFIG_TYPE_TARGET_DEVICE_MAP
 from nncf.common.initialization.batchnorm_adaptation import BatchnormAdaptationAlgorithm
 from nncf.common.insertion_point_graph import InsertionPointGraph
 from nncf.common.insertion_point_graph import InsertionPointGraphNodeType
+from nncf.common.logging import nncf_logger
+from nncf.common.logging.logger import DuplicateFilter
 from nncf.common.quantization.config_assignment import assign_qconfig_lists_to_modules
 from nncf.common.quantization.quantizer_setup import DEFAULT_QUANTIZER_CONFIG
 from nncf.common.quantization.quantizer_setup import MultiConfigQuantizerSetup
@@ -60,12 +65,10 @@ from nncf.common.quantization.structs import QuantizerGroup
 from nncf.common.quantization.structs import QuantizerId
 from nncf.common.quantization.structs import WeightQuantizerId
 from nncf.common.schedulers import BaseCompressionScheduler
+from nncf.common.scopes import matches_any
 from nncf.common.statistics import NNCFStatistics
 from nncf.common.utils.debug import is_debug
 from nncf.common.utils.dot_file_rw import write_dot_graph
-from nncf.common.utils.helpers import matches_any
-from nncf.common.logging.logger import DuplicateFilter
-from nncf.common.logging import nncf_logger
 from nncf.common.utils.os import safe_open
 from nncf.config import NNCFConfig
 from nncf.config.extractors import extract_algo_specific_config
@@ -86,8 +89,8 @@ from nncf.torch.debug import CallCountTracker
 from nncf.torch.debug import DebugInterface
 from nncf.torch.dynamic_graph.context import TracingContext
 from nncf.torch.graph.graph import PTNNCFGraph
-from nncf.torch.graph.operator_metatypes import PTModuleConv2dMetatype
 from nncf.torch.graph.operator_metatypes import PTDepthwiseConv2dSubtype
+from nncf.torch.graph.operator_metatypes import PTModuleConv2dMetatype
 from nncf.torch.graph.transformations.commands import PTInsertionCommand
 from nncf.torch.graph.transformations.commands import PTTargetPoint
 from nncf.torch.graph.transformations.commands import TransformationPriority
@@ -108,16 +111,16 @@ from nncf.torch.quantization.init_precision import PrecisionInitializerFactory
 from nncf.torch.quantization.init_range import DataLoaderRangeInitializeRunner
 from nncf.torch.quantization.init_range import PTRangeInitParams
 from nncf.torch.quantization.init_range import StatCollectorGenerator
-from nncf.torch.quantization.layers import BaseQuantizer
-from nncf.torch.quantization.layers import PTQuantizerSpec
 from nncf.torch.quantization.layers import QUANTIZATION_MODULES
+from nncf.torch.quantization.layers import BaseQuantizer
+from nncf.torch.quantization.layers import PTQuantizationPoint
+from nncf.torch.quantization.layers import PTQuantizerSetup
+from nncf.torch.quantization.layers import PTQuantizerSpec
 from nncf.torch.quantization.layers import QuantizerConfig
 from nncf.torch.quantization.layers import QuantizerExportMode
 from nncf.torch.quantization.layers import QuantizersSwitcher
 from nncf.torch.quantization.layers import SymmetricQuantizer
 from nncf.torch.quantization.layers import get_scale_shape
-from nncf.torch.quantization.layers import PTQuantizerSetup
-from nncf.torch.quantization.layers import PTQuantizationPoint
 from nncf.torch.quantization.metrics import MemoryConsumptionStatisticsCollector
 from nncf.torch.quantization.metrics import PTQuantizationStatisticsCollector
 from nncf.torch.quantization.metrics import QuantizationShareBuildTimeInfo
@@ -125,8 +128,8 @@ from nncf.torch.quantization.metrics import ShareEdgesQuantizedDataPathStatistic
 from nncf.torch.quantization.precision_constraints import HardwareQuantizationConstraints
 from nncf.torch.quantization.precision_init.adjacent_quantizers import GroupsOfAdjacentQuantizers
 from nncf.torch.quantization.precision_init.autoq_init import AutoQPrecisionInitParams
-from nncf.torch.quantization.precision_init.base_init import BasePrecisionInitParams
 from nncf.torch.quantization.precision_init.base_init import BasePrecisionInitializer
+from nncf.torch.quantization.precision_init.base_init import BasePrecisionInitParams
 from nncf.torch.quantization.precision_init.hawq_init import HAWQPrecisionInitParams
 from nncf.torch.quantization.precision_init.manual_init import ManualPrecisionInitParams
 from nncf.torch.quantization.schedulers import QUANTIZATION_SCHEDULERS
@@ -138,13 +141,13 @@ from nncf.torch.structures import QuantizationPrecisionInitArgs
 from nncf.torch.tensor_statistics.algo import TensorStatisticsCollectionBuilder
 from nncf.torch.tensor_statistics.collectors import ReductionShape
 from nncf.torch.tensor_statistics.statistics import MinMaxTensorStatistic
-from nncf.torch.tensor_statistics.statistics import pt_convert_stat_to_min_max_tensor_stat
 from nncf.torch.tensor_statistics.statistics import TensorStatistic
+from nncf.torch.tensor_statistics.statistics import pt_convert_stat_to_min_max_tensor_stat
 from nncf.torch.utils import get_model_device
+from nncf.torch.utils import get_model_dtype
 from nncf.torch.utils import get_state_dict_names_with_modules
 from nncf.torch.utils import is_main_process
-from nncf.torch.utils import get_model_dtype
-from torch import nn
+
 QUANTIZER_BUILDER_STATE_VERSION_SAVE_NAME = 'version'
 
 class QuantizerBuilderStateVersion(IntEnum):
@@ -360,7 +363,8 @@ class PropagationBasedQuantizerSetupGenerator(QuantizerSetupGeneratorBase):
         insertion_point_graph = self._target_model.get_insertion_point_graph()
         if self._debug_interface:
             self._debug_interface.visualize_insertion_point_graph(insertion_point_graph)
-        from nncf.common.quantization.quantizer_propagation.solver import QuantizerPropagationSolver #pylint: disable=cyclic-import
+        from nncf.common.quantization.quantizer_propagation.solver import \
+            QuantizerPropagationSolver  # pylint: disable=cyclic-import
 
         def str_or_list_to_list(list_or_str: Union[List[str], str]) -> List:
             if list_or_str is None:
@@ -1459,7 +1463,7 @@ class QuantizationDebugInterface(DebugInterface):
         }
         self.graph_size = 0
 
-        from nncf.common.utils.debug import DEBUG_LOG_DIR #pylint: disable=cyclic-import
+        from nncf.common.utils.debug import DEBUG_LOG_DIR  # pylint: disable=cyclic-import
         self.dump_dir = Path(DEBUG_LOG_DIR) / Path("debug_dumps")
         self.dump_dir.mkdir(parents=True, exist_ok=True)
         self.scale_dump_dir = self.dump_dir / Path("scale")

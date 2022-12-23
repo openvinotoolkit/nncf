@@ -13,17 +13,22 @@
 
 from copy import deepcopy
 from functools import partial
-from torch import nn
-from typing import List, Set, Tuple, Callable, Optional
+from typing import Callable
+from typing import List
+from typing import Optional
+from typing import Set
+from typing import Tuple
 
+from torch import nn
+
+from nncf.common.logging import nncf_logger
+from nncf.common.scopes import matches_any
+from nncf.torch.dynamic_graph.scope import Scope
+from nncf.torch.dynamic_graph.scope import ScopeElement
 from nncf.torch.layers import NNCF_MODULES
 from nncf.torch.layers import NNCF_MODULES_DICT
 from nncf.torch.layers import NNCF_WRAPPED_USER_MODULES_DICT
 from nncf.torch.layers import add_nncf_functionality_to_user_module
-from nncf.common.utils.helpers import matches_any
-from nncf.torch.dynamic_graph.scope import ScopeElement
-from nncf.torch.dynamic_graph.scope import Scope
-from nncf.common.logging import nncf_logger
 
 
 def is_nncf_module(module: nn.Module) -> bool:
@@ -49,8 +54,8 @@ def replace_module_by_nncf_module(module: nn.Module) -> nn.Module:
     """
     Returns updated modules for modules that could be replaced by a nncf layer.
 
-    :param module: Candidat module for the replacement
-    :returns: A correcspondent nncf layer if it is possible
+    :param module: Candidate module for the replacement
+    :returns: A correspondent nncf layer if it is possible
         and given module otherwise.
     """
     for nncf_module_type, module_type in NNCF_MODULES_DICT.items():
@@ -59,7 +64,7 @@ def replace_module_by_nncf_module(module: nn.Module) -> nn.Module:
             if not module.__class__.__name__ == nncf_module_type.__name__:
                 nncf_module = nncf_module_type.from_module(module)
             return nncf_module
-    from nncf.torch.layers import UNWRAPPED_USER_MODULES #pylint: disable=cyclic-import
+    from nncf.torch.layers import UNWRAPPED_USER_MODULES  # pylint: disable=cyclic-import
     for _, user_module_type in UNWRAPPED_USER_MODULES.registry_dict.items():
         if module.__class__ == user_module_type:
             nncf_module = deepcopy(module)
@@ -82,7 +87,7 @@ def replace_modules_by_nncf_modules(model: nn.Module,
     :param model: Model to replace internal modules.
     :param ignored_scopes: List of scope all modules from that should be ignored.
     :param target_scopes: List of scope all modules from that could be replaced.
-        If present, all other scopes become ignored. Has lower prioritet that ignored_scopes.
+        If present, all other scopes become ignored. Has lower priority that ignored_scopes.
     :param eval_op_scopes: List of scopes of modules that are executed in evaluation mode only.
     :param reset: Should reset wrapped nncf modules after replacement or not.
     :returns: Tuple of a module with target children modules replaced according to `replace_fn`
@@ -137,7 +142,7 @@ def replace_modules(model: nn.Module,
         that was replaced during function execution.
     :param ignored_scopes: List of scope all modules from that should be ignored.
     :param target_scopes: List of scope all modules from that could be replaced.
-        If present, all other scopes become ignored. Has lower prioritet that ignored_scopes.
+        If present, all other scopes become ignored. Has lower priority that ignored_scopes.
     :param memo: Set of all seen before modules.
     :param current_scope: List of all scope elements of given module.
     :param eval_op_scopes: List of scopes of modules that are executed in evaluation mode only.

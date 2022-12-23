@@ -23,6 +23,7 @@ from examples.torch.common.execution import prepare_model_for_execution
 from examples.torch.common.model_loader import load_model
 from examples.torch.common.sample_config import SampleConfig
 from nncf.api.compression import CompressionStage
+from nncf.common.logging.logger import NNCFDeprecationWarning
 from nncf.torch import register_default_init_args
 from nncf.torch.checkpoint_loading import load_state
 from nncf.common.graph.definitions import MODEL_INPUT_OP_NAME
@@ -172,7 +173,7 @@ def test_renamed_activation_quantizer_storage_in_state_dict():
     register_bn_adaptation_init_args(config)
     compressed_model, _ = create_compressed_model_and_algo_for_test(model, config)
 
-    with pytest.deprecated_call():
+    with pytest.warns(NNCFDeprecationWarning):
         _ = load_state(compressed_model, old_style_sd, is_resume=True)
 
 
@@ -276,11 +277,11 @@ def test_quantization_ckpt_without_wrapped_bn_loading():
         "sample_size": [1, 3, 100, 100]
     })
     register_bn_adaptation_init_args(config)
-    with pytest.deprecated_call():
+    with pytest.warns(NNCFDeprecationWarning):
         compressed_model, _ = \
             create_compressed_model_and_algo_for_test(model, config,
                                                       compression_state=compression_state_without_bn_wrapping)
-    with pytest.deprecated_call():
+    with pytest.warns(NNCFDeprecationWarning):
         _ = load_state(compressed_model, sd_without_nncf_bn_wrapping, is_resume=True)
 
 

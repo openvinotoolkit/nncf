@@ -126,7 +126,8 @@ class PTInsertionPoint:
     }
 
     def _get_pt_insertion_type(self, target_type: TargetType) -> PTInsertionType:
-        if target_type not in PTInsertionPoint.TARGET_TYPE_VS_PT_INSERTION_TYPE_DICT:
+        if not isinstance(target_type, TargetType) or\
+            target_type not in PTInsertionPoint.TARGET_TYPE_VS_PT_INSERTION_TYPE_DICT:
             raise RuntimeError("Unsupported target type for PyTorch: {}".format(target_type))
         return PTInsertionPoint.TARGET_TYPE_VS_PT_INSERTION_TYPE_DICT[target_type]
 
