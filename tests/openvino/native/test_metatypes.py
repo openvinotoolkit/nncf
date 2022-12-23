@@ -41,7 +41,8 @@ REF_METATYPES_COUNTERS = [
     [InputNoopMetatype, InputNoopMetatype, OVConstantMetatype, OVMulMetatype,
      OVConstantMetatype, OVAddMetatype, OVConstantMetatype, OVSubMetatype,
      OVConstantMetatype, OVConvolutionMetatype, OVReluMetatype, OVConcatMetatype,
-     OVTransposeMetatype, OVConstantMetatype, OutputNoopMetatype]]
+     OVTransposeMetatype, OVConstantMetatype, OutputNoopMetatype,
+     OVConstantMetatype, OVAddMetatype]]
 
 
 @pytest.mark.parametrize(("model_creator_func, ref_metatypes"),

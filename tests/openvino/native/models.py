@@ -47,7 +47,9 @@ class ConvModel(OVReferenceModel):
         pads = [0, 0]
         dilations = [1, 1]
         conv = opset.convolution(subtract, kernel, strides, pads, pads, dilations, name="Conv")
-        relu = opset.relu(conv, name="Relu")
+        bias = opset.constant(np.zeros((1, 3, 1, 1)), dtype=np.float32, name="Bias")
+        conv_add = opset.add(conv, bias, name="Conv_Add")
+        relu = opset.relu(conv_add, name="Relu")
 
         input_2 = opset.parameter([1, 3, 2, 4], name="Input_2")
         add = opset.add(input_2, (-1) * mean, name="Add")

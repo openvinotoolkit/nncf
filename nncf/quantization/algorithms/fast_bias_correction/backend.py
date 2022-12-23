@@ -13,16 +13,19 @@
 
 from abc import ABC
 from abc import abstractmethod
-from typing import List, Tuple, TypeVar, Optional
-
+from typing import List, Tuple, TypeVar, Optional, Dict
 import numpy as np
+
+from nncf.common.graph.operator_metatypes import OperatorMetatype
 from nncf.common.graph.transformations.commands import TargetPoint
 from nncf.common.graph.transformations.commands import TransformationCommand
 from nncf.common.graph.transformations.commands import TargetType
 from nncf.common.tensor import NNCFTensor
 from nncf.common.graph import NNCFNode
+from nncf.common.graph import NNCFGraph
 from nncf.common.tensor_statistics.collectors import TensorStatisticCollectorBase
 from nncf.common.tensor_statistics.collectors import ReductionShape
+from nncf.common.tensor_statistics.collectors import NNCFCollectorTensorProcessor
 from nncf.common.utils.registry import Registry
 from nncf.common.graph.model_transformer import ModelTransformer
 
@@ -31,34 +34,33 @@ OutputType = TypeVar('OutputType')
 ALGO_BACKENDS = Registry('algo_backends')
 
 
-class FBCAlgoBackend(ABC):
+class FastBiasCorrectionAlgoBackend(ABC):
 
     @property
     @abstractmethod
-    def operation_metatypes(self):
-        """
-        Property for the backend-specific metatypes.
-        """
-
-    @property
-    @abstractmethod
-    def layers_with_bias_metatypes(self):
+    def layers_with_bias_metatypes(self) -> List[OperatorMetatype]:
         """
         Property for the backend-specific metatypes with bias.
+
+        :return: List of the OperatorMetatype with bias.
         """
 
     @property
     @abstractmethod
-    def channel_axis_by_types(self):
+    def channel_axis_by_types(self) -> Dict[OperatorMetatype, int]:
         """
         Property for the backend-specific info about channels placement in the layout.
+
+        :return: Dict of the OperatorMetatypes as keys and channels placements as int values.
         """
 
     @property
     @abstractmethod
-    def tensor_processor(self):
+    def tensor_processor(self) -> NNCFCollectorTensorProcessor:
         """
-        Returns backend-specific instance of the NNCFCollectorTensorProcessor.
+        Property for the backend-specific instance of the NNCFCollectorTensorProcessor.
+
+        :return: NNCFCollectorTensorProcessor instance
         """
 
     @staticmethod
@@ -179,12 +181,12 @@ class FBCAlgoBackend(ABC):
 
     @staticmethod
     @abstractmethod
-    def is_quantized_weights(node: NNCFNode, model: TModel) -> bool:
+    def is_quantized_weights(node: NNCFNode, nncf_graph: NNCFGraph) -> bool:
         """
-        Checks whether the node is quantized or not.
+        Checks whether the node is quantized or not, based on a backend-specific way.
 
         :param node: NNCFNode to check.
-        :param model: Backend-specific model.
+        :param nncf_graph: NNCFGraph instance.
         :return: boolean indicating whether the node has a quantized weights or not
         """
 
@@ -207,4 +209,15 @@ class FBCAlgoBackend(ABC):
 
         :param node: NNCFNode with the attributes.
         :return: Boolean indicating whether the node has a bias or not.
+        """
+
+    @staticmethod
+    @abstractmethod
+    def get_bias_node(node: NNCFNode, nncf_graph: NNCFGraph) -> Optional[NNCFNode]:
+        """
+        Returns node that contains bias, if it exists.
+
+        :param node: NNCFNode with the attributes.
+        :param nncf_graph: NNCFGraph instance.
+        :return: Optional NNCFNode with potential bias.
         """

@@ -21,8 +21,10 @@ from nncf.experimental.openvino_native.engine import OVNativeEngine
 from nncf.experimental.openvino_native.graph.model_transformer import OVModelTransformer
 from nncf.experimental.openvino_native.graph.transformations.commands import OVTargetPoint
 from nncf.experimental.openvino_native.graph.transformations.commands import OVOutputInsertionCommand
+from nncf.experimental.openvino_native.graph.transformations.commands import OVBiasCorrectionCommand
 
 from tests.openvino.native.models import LinearModel
+from tests.openvino.native.models import ConvModel
 
 REF_OUTPUT_SHAPES = {'Result_Matmul': (1, 3, 2, 5), 'Result_Add': (1, 3, 2, 4)}
 TARGET_LAYERS = [['Add'], ['MatMul'], ['Add', 'MatMul']]
@@ -40,11 +42,12 @@ def test_infer_original_model():
         assert out.shape == REF_OUTPUT_SHAPES[out_name]
 
 
-def create_transformed_model(model, target_layers, target_type, command_type):
+def create_transformed_model(model, target_layers, target_type, command_type, values=None):
     transformation_layout = TransformationLayout()
-    for target_layer in target_layers:
+    values = values if values else [None for i in target_layers]
+    for target_layer, value in zip(target_layers, values):
         target_point = OVTargetPoint(target_type, target_layer, port_id=0)
-        command = command_type(target_point)
+        command = command_type(target_point) if value is None else command_type(target_point, value)
         transformation_layout.register(command)
 
     model_transformer = OVModelTransformer(model)
@@ -85,3 +88,22 @@ def test_output_insertion_post_layer(target_layers, target_layer_outputs):
     assert len(extra_outputs) == len(target_layer_outputs)
     for out_name in extra_outputs:
         assert out_name in target_layer_outputs
+
+
+CONV_LAYERS = [['Conv_Add']]
+BIAS_VALUES = [[np.full((3,), 2)]]
+BIAS_REFERENCES = [[2.0]]
+
+
+@pytest.mark.parametrize('layers, values, refs', zip(CONV_LAYERS, BIAS_VALUES, BIAS_REFERENCES))
+def test_bias_correction(layers, values, refs):
+    model = ConvModel().ov_model
+    transformed_model = create_transformed_model(
+        model, layers, TargetType.LAYER, OVBiasCorrectionCommand, values)
+    ops_dict = {op.get_friendly_name(): op for op in transformed_model.get_ops()}
+
+    for conv_layer, bias_reference in zip(layers, refs):
+        bias_node = ops_dict[conv_layer]
+        potential_bias = bias_node.input_value(1).node
+        assert potential_bias.get_type_name() == 'Constant'
+        assert np.mean(potential_bias.get_data()) == bias_reference
