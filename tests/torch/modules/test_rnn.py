@@ -78,9 +78,7 @@ def replace_lstm(model):
     if isinstance(model, nn.LSTM):
         return replace_fn(model)
     affected_scopes = []
-    stop_branching_fn = lambda _: False
-    return replace_modules(model, replace_fn, stop_branching_fn,
-                           affected_scopes)[0]
+    return replace_modules(model, replace_fn, affected_scopes)[0]
 
 
 def clone_test_data(data_list):
