@@ -121,4 +121,4 @@ def accuracy_aware_fit(cls_instance, train_dataset, compression_ctrl,
                                                log_dir=log_dir)
     callbacks.on_train_end()
 
-    return acc_aware_training_loop.final_statistics
+    return acc_aware_training_loop.statistics

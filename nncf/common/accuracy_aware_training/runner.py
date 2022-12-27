@@ -169,7 +169,7 @@ class TrainingRunner(ABC):
         Load the most accurate model state from the fine-tuning history.
 
         param model: The model object in which the state will be loaded.
-        return: Compression rate of the returned model or the current compression rate if no model was loaded
+        return: Compression rate of the returned model.
         """
 
     @abstractmethod

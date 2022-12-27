@@ -18,6 +18,10 @@ from nncf.api.statistics import Statistics
 
 @dataclass
 class TrainingLoopStatistics(Statistics):
+    """
+    Contains statistics related to Accuracy Aware Training Loop
+    """
+
     original_accuracy: float
     compression_rate: float
     compressed_accuracy: float

@@ -64,9 +64,9 @@ class TrainingLoop(ABC):
 
     @property
     @abstractmethod
-    def final_statistics(self):
+    def statistics(self):
         """
-        Returns statistics of the final compressed model. Available after .run() call.
+        Returns statistics of the compressed model.
         """
 
 
@@ -74,6 +74,7 @@ class BaseEarlyExitCompressionTrainingLoop(TrainingLoop, ABC):
     def __init__(self):
         self.runner = None
         self.compression_controller = None
+        self._current_compression_rate = None
 
     def run(self, model: TModel, train_epoch_fn, validate_fn, configure_optimizers_fn=None,
             dump_checkpoint_fn=None, load_checkpoint_fn=None, early_stopping_fn=None,
@@ -91,28 +92,29 @@ class BaseEarlyExitCompressionTrainingLoop(TrainingLoop, ABC):
 
         self.runner.configure_optimizers()
 
-        compressed_model_accuracy = self.runner.validate(model)
+        self.runner.validate(model)
+        self._current_compression_rate = self.compression_controller.compression_rate
         self.runner.dump_statistics(model, self.compression_controller)
 
         nncf_logger.info('Initialization step results:')
-        self.log_accuracy_statistics(self._get_statistics(compressed_model_accuracy))
+        self.log_accuracy_statistics()
 
-        if self._accuracy_criterion_satisfied(compressed_model_accuracy, self.compression_controller):
+        if self._accuracy_criterion_satisfied():
             nncf_logger.info('\nReached the accuracy criteria after the initialization step.\n')
-            self._finish_early_exit_training_loop(model)
             return model
 
         for epoch in range(1, self.runner.maximal_total_epochs + 1):
             self.runner.train_epoch(model, self.compression_controller)
-            compressed_model_accuracy = self.runner.validate(model)
+            self.runner.validate(model)
+            self._current_compression_rate = self.compression_controller.compression_rate
             self.runner.dump_statistics(model, self.compression_controller)
-            if self._accuracy_criterion_satisfied(compressed_model_accuracy, self.compression_controller):
+            if self._accuracy_criterion_satisfied():
                 nncf_logger.info('Reached the accuracy criteria after epoch {}.'.format(epoch))
-                self.log_accuracy_statistics(self._get_statistics(compressed_model_accuracy))
+                self.log_accuracy_statistics()
                 break
 
             nncf_logger.info('Epoch {} results:'.format(epoch))
-            self.log_accuracy_statistics(self._get_statistics(compressed_model_accuracy))
+            self.log_accuracy_statistics()
 
             if self.runner.stop_training(self.compression_controller):
                 nncf_logger.info('Training stopped - early stopping criterion satisfied')
@@ -120,25 +122,17 @@ class BaseEarlyExitCompressionTrainingLoop(TrainingLoop, ABC):
 
             self.runner.update_learning_rate()
 
-        self._finish_early_exit_training_loop(model)
+        self._current_compression_rate = self.runner.load_best_checkpoint(model)
         return model
 
-    @staticmethod
-    def log_accuracy_statistics(stats):
-        nncf_logger.info(stats.to_str())
+    def log_accuracy_statistics(self):
+        for log_str in self.statistics.to_str().split('\n'):
+            nncf_logger.info(log_str)
 
     @property
-    def final_statistics(self) -> TrainingLoopStatistics:
-        stats = self._get_statistics(self._final_model_accuracy, self._final_model_compression_rate)
-        return stats
-
-    @staticmethod
-    def _calculate_accuracy_drop(uncompressed_model_accuracy, compressed_model_accuracy):
-        return uncompressed_model_accuracy - compressed_model_accuracy
-
-    def _get_statistics(self, compressed_accuracy, compression_rate=None) -> TrainingLoopStatistics:
-        if compression_rate is None:
-            compression_rate = self.compression_controller.compression_rate or 0.0
+    def statistics(self) -> TrainingLoopStatistics:
+        compression_rate = self._current_compression_rate or 0.0
+        compressed_accuracy = self.runner.current_val_metric_value
         uncompressed_accuracy = self.runner.uncompressed_model_accuracy
         accuracy_drop = self._calculate_accuracy_drop(uncompressed_accuracy, compressed_accuracy)
         relative_accuracy_drop = self._calculate_rel_accuracy_drop(uncompressed_accuracy, compressed_accuracy)
@@ -150,6 +144,10 @@ class BaseEarlyExitCompressionTrainingLoop(TrainingLoop, ABC):
                                        relative_accuracy_drop,
                                        accuracy_budget)
         return stats
+
+    @staticmethod
+    def _calculate_accuracy_drop(uncompressed_model_accuracy, compressed_model_accuracy):
+        return uncompressed_model_accuracy - compressed_model_accuracy
 
     @staticmethod
     def _calculate_accuracy_budget(minimal_tolerable_accuracy, compressed_model_accuracy):
@@ -164,14 +162,10 @@ class BaseEarlyExitCompressionTrainingLoop(TrainingLoop, ABC):
 
         return rel_accuracy_drop
 
-    def _accuracy_criterion_satisfied(self, compressed_model_accuracy, compression_controller):
+    def _accuracy_criterion_satisfied(self):
         accuracy_budget = self._calculate_accuracy_budget(self.runner.minimal_tolerable_accuracy,
-                                                          compressed_model_accuracy)
-        return accuracy_budget >= 0 and self.runner.is_model_fully_compressed(compression_controller)
-
-    def _finish_early_exit_training_loop(self, model):
-        self._final_model_compression_rate = self.runner.load_best_checkpoint(model)
-        self._final_model_accuracy = self.runner.current_val_metric_value
+                                                          self.runner.current_val_metric_value)
+        return accuracy_budget >= 0 and self.runner.is_model_fully_compressed(self.compression_controller)
 
 
 class EarlyExitCompressionTrainingLoop(BaseEarlyExitCompressionTrainingLoop):
@@ -227,9 +221,6 @@ class AdaptiveCompressionTrainingLoop(BaseEarlyExitCompressionTrainingLoop):
         self.runner = runner_factory.create_training_loop()
         self.runner.adaptive_controller = self.adaptive_controller
 
-        self._final_model_accuracy = 0.0
-        self._final_model_compression_rate = 0.0
-
     def _get_adaptive_compression_ctrl(self, compression_controller):
         def _adaptive_compression_controllers():
             def remove_registry_prefix(algo_name):
@@ -269,7 +260,6 @@ class AdaptiveCompressionTrainingLoop(BaseEarlyExitCompressionTrainingLoop):
         self.runner.validate(model)
 
         nncf_logger.info('Search for the optimal compression rate started.')
-        compressed_model_accuracy = self.runner.best_val_metric_value
         accuracy_budget = self._calculate_accuracy_budget(self.runner.minimal_tolerable_accuracy,
                                                           self.runner.best_val_metric_value)
         self.runner.add_tensorboard_scalar('val/accuracy_aware/accuracy_budget',
@@ -290,10 +280,7 @@ class AdaptiveCompressionTrainingLoop(BaseEarlyExitCompressionTrainingLoop):
                 force_updating_target_compression_rate
             )
 
-            nncf_logger.info(f'Original model accuracy: {self.runner.uncompressed_model_accuracy:.4f}')
-            nncf_logger.info(f'Current compressed model accuracy: {compressed_model_accuracy:.4f}')
-            nncf_logger.info(f'Current accuracy budget value: {accuracy_budget:.3f}')
-            nncf_logger.info(f'Current model compression rate value: {self.adaptive_controller.compression_rate:.3f}')
+            self.log_accuracy_statistics()
 
             if was_compression_rate_changed:
                 nncf_logger.info(f'Target compression rate value changed: {prev_compression_rate_target:.3f} -> '
@@ -319,6 +306,7 @@ class AdaptiveCompressionTrainingLoop(BaseEarlyExitCompressionTrainingLoop):
                 self.runner.load_best_checkpoint(model)
                 # set compression rate for model
                 self.adaptive_controller.compression_rate = self.runner.compression_rate_target
+                self._current_compression_rate = self.runner.compression_rate_target
                 self.runner.reset_training()
 
                 # workaround for compression statistics
@@ -349,10 +337,10 @@ class AdaptiveCompressionTrainingLoop(BaseEarlyExitCompressionTrainingLoop):
 
             self.runner.update_learning_rate()
 
-        self._final_model_compression_rate = self.runner.load_best_checkpoint(model)
-        self._final_model_accuracy = self.runner.validate(model)
-        nncf_logger.info(f'Compression rate for the final compressed model: {self._final_model_compression_rate}, '
-                         f'accuracy: {self._final_model_accuracy} '
+        self._current_compression_rate = self.runner.load_best_checkpoint(model)
+        compressed_model_accuracy = self.runner.validate(model)
+        nncf_logger.info(f'Compression rate for the final compressed model: {self._current_compression_rate}, '
+                         f'accuracy: {compressed_model_accuracy} '
                          f'(vs. original model accuracy: {self.runner.uncompressed_model_accuracy})')
         return model
 
@@ -363,8 +351,6 @@ class AdaptiveCompressionTrainingLoop(BaseEarlyExitCompressionTrainingLoop):
         self.runner.maximal_total_epochs = self.runner.initial_training_phase_epochs
         model = self._run_early_exit_training_loop(model)
         self.runner.maximal_total_epochs = maximal_total_epochs
-        self._final_model_accuracy = 0.0
-        self._final_model_compression_rate = 0.0
 
         nncf_logger.info('Initial training phase finished.')
         return model

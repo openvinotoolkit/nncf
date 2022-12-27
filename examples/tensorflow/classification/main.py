@@ -261,7 +261,7 @@ def run(config):
         if is_accuracy_aware_training(config):
             logger.info('starting an accuracy-aware training loop...')
             result_dict_to_val_metric_fn = lambda results: 100 * results['acc@1']
-            final_statistics = compress_model.accuracy_aware_fit(
+            statistics = compress_model.accuracy_aware_fit(
                 train_dataset,
                 compression_ctrl,
                 nncf_config=config.nncf_config,
@@ -273,7 +273,7 @@ def run(config):
                 uncompressed_model_accuracy=uncompressed_model_accuracy,
                 result_dict_to_val_metric_fn=result_dict_to_val_metric_fn,
                 **validation_kwargs)
-            logger.info(f'Final model statistics:\n{final_statistics.to_str()}')
+            logger.info(f'Compressed model statistics:\n{statistics.to_str()}')
         else:
             logger.info('training...')
             compress_model.fit(
