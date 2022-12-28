@@ -153,19 +153,26 @@ class OVModelTransformer(ModelTransformer):
         output_high = fq_params.output_high
         levels = fq_params.levels
 
-        target_node = self.name_to_node_mapping[transformation.target_point.target_node_name]
+        node_name = transformation.target_point.target_node_name
+        target_node = self.name_to_node_mapping[node_name]
         port_id = transformation.target_point.port_id
-        # TODO: Add FQ name f'FakeQuantize_{transformation.target_point.target_node_name}.{port_id}'
-        if transformation.target_point.type in [TargetType.PRE_LAYER_OPERATION, TargetType.OPERATION_WITH_WEIGHTS]:
+        transform_type = transformation.target_point.type
+        if transform_type in [TargetType.PRE_LAYER_OPERATION, TargetType.OPERATION_WITH_WEIGHTS]:
             inp_node = target_node.input(port_id)
             input_node_output = inp_node.get_source_output()
-            fq = ov.opset9.fake_quantize(input_node_output, input_low, input_high, output_low, output_high, levels)
+            name = 'fq_weights' if transform_type == TargetType.OPERATION_WITH_WEIGHTS else 'fq_input'
+            fq_name = f'{node_name}/{name}_{port_id}'
+            fq = ov.opset9.fake_quantize(input_node_output, input_low, input_high,
+                                         output_low, output_high, levels, name=fq_name)
             inp_node.replace_source_output(fq.output(0))
-        elif transformation.target_point.type == TargetType.POST_LAYER_OPERATION:
+        elif transform_type == TargetType.POST_LAYER_OPERATION:
             output = target_node.output(port_id)
             target_inputs = output.get_target_inputs()
-            fq = ov.opset9.fake_quantize(output, input_low, input_high, output_low, output_high, levels)
             for inp_node in target_inputs:
+                next_port_id = inp_node.get_index()
+                fq_name = f'{node_name}/fq_output_{port_id}_{next_port_id}'
+                fq = ov.opset9.fake_quantize(output, input_low, input_high,
+                                             output_low, output_high, levels, name=fq_name)
                 inp_node.replace_source_output(fq.output(0))
         else:
-            raise RuntimeError(f'Incorrect target point type {transformation.target_point.type}')
+            raise RuntimeError(f'Incorrect target point type {transform_type}')

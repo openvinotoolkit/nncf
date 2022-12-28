@@ -12,8 +12,13 @@
 """
 
 import numpy as np
+from abc import ABC, abstractmethod
 import openvino.runtime as ov
 from openvino.runtime import opset9 as opset
+
+from nncf.common.utils.registry import Registry
+
+SYNTHETIC_MODELS = Registry('OV_SYNTHETIC_MODELS')
 
 
 class OVReferenceModel:
@@ -22,31 +27,43 @@ class OVReferenceModel:
         self.ref_graph_name = f'{self.__class__.__name__}.dot'
 
 
-class LinearModel(OVReferenceModel):
+class OVReferenceModel(ABC):
     def __init__(self):
+        self._rng = np.random.default_rng(seed=0)
+        self.ref_graph_name = f'{self.__class__.__name__}.dot'
+        self.ov_model = self._create_ov_model()
+
+    @abstractmethod
+    def _create_ov_model(self) -> ov.Model:
+        pass
+
+
+@SYNTHETIC_MODELS.register()
+class LinearModel(OVReferenceModel):
+    def _create_ov_model(self):
         input_shape = [1, 3, 4, 2]
         input_1 = opset.parameter(input_shape, name="Input")
         reshape = opset.reshape(input_1, (1, 3, 2, 4), special_zero=False, name='Reshape')
-        data = np.random.rand(1, 3, 4, 5).astype(np.float32)
+        data = self._rng.random((1, 3, 4, 5)).astype(np.float32)
         matmul = opset.matmul(reshape, data, transpose_a=False, transpose_b=False, name="MatMul")
-        add = opset.add(reshape, np.random.rand(1, 3, 2, 4).astype(np.float32), name="Add")
+        add = opset.add(reshape, self._rng.random(1, 3, 2, 4).astype(np.float32), name="Add")
         r1 = opset.result(matmul, name="Result_MatMul")
         # TODO(KodiaqQ): Remove this after fix - CVS-100010
         r1.get_output_tensor(0).set_names(set(["Result_MatMul"]))
         r2 = opset.result(add, name="Result_Add")
         r2.get_output_tensor(0).set_names(set(["Result_Add"]))
         model = ov.Model([r1, r2], [input_1])
+        return model
 
-        super().__init__(model)
 
-
+@SYNTHETIC_MODELS.register()
 class ConvModel(OVReferenceModel):
-    def __init__(self):
+    def _create_ov_model(self):
         input_1 = opset.parameter([1, 3, 4, 2], name="Input_1")
-        mean = np.random.rand(1, 3, 1, 1).astype(np.float32)
-        scale = np.random.rand(1, 3, 1, 1).astype(np.float32) + 1e-4
+        mean = self._rng.random((1, 3, 1, 1)).astype(np.float32)
+        scale = self._rng.random((1, 3, 1, 1)).astype(np.float32) + 1e-4
         subtract = opset.subtract(input_1, mean, name="Sub")
-        kernel = np.random.rand(3, 3, 1, 1).astype(np.float32) / scale
+        kernel = self._rng.random((3, 3, 1, 1)).astype(np.float32) / scale
         strides = [1, 1]
         pads = [0, 0]
         dilations = [1, 1]
@@ -61,8 +78,7 @@ class ConvModel(OVReferenceModel):
         cat = opset.concat([relu, transpose], axis=0)
         result = opset.result(cat, name="Result")
         model = ov.Model([result], [input_1, input_2])
-
-        super().__init__(model)
+        return model
 
 
 class QuantizedModel(OVReferenceModel):
@@ -113,20 +129,20 @@ class QuantizedModel(OVReferenceModel):
         model = ov.Model([result], [input_1, input_2])
 
 class WeightsModel(OVReferenceModel):
-    def __init__(self):
+    def _create_ov_model(self):
         input_1 = opset.parameter([1, 3, 5, 5], name="Input_1")
-        kernel = np.random.rand(3, 3, 1, 1).astype(np.float32)
+        kernel = self._rng.random((3, 3, 1, 1)).astype(np.float32)
         strides = [1, 1]
         pads = [0, 0]
         dilations = [1, 1]
         conv = opset.convolution(input_1, kernel, strides, pads, pads, dilations, name="Conv")
-        kernel_2 = np.random.rand(3, 3, 1, 1).astype(np.float32)
+        kernel_2 = self._rng.random((3, 3, 1, 1)).astype(np.float32)
         output_shape = [1, 1]
         conv_tr = opset.convolution_backprop_data(conv, kernel_2, output_shape, strides, pads, pads, dilations, name="Conv_backprop")
 
-        weights_1 = np.random.rand(1, 3, 1, 4).astype(np.float32)
+        weights_1 = self._rng.random((1, 3, 1, 4)).astype(np.float32)
         matmul_1 = opset.matmul(conv_tr, weights_1, transpose_a=False, transpose_b=False, name="MatMul_1")
-        weights_0 = np.random.rand(1, 3, 1, 1).astype(np.float32)
+        weights_0 = self._rng.random((1, 3, 1, 1)).astype(np.float32)
         matmul_0 = opset.matmul(weights_0, matmul_1, transpose_a=False, transpose_b=False, name="MatMul_0")
         matmul = opset.matmul(matmul_0, matmul_1, transpose_a=False, transpose_b=True, name="MatMul")
         matmul_const = opset.matmul(weights_1, weights_0, transpose_a=True, transpose_b=False, name="MatMul_const")
@@ -134,18 +150,17 @@ class WeightsModel(OVReferenceModel):
         add = opset.add(matmul_const, matmul)
         result = opset.result(add, name="Result")
         model = ov.Model([result], [input_1])
+        return model
 
-        super().__init__(model)
 
-
+@SYNTHETIC_MODELS.register()
 class MatMul2DModel(OVReferenceModel):
-    def __init__(self):
+    def _create_ov_model(self):
         input_shape = [3, 5]
         input_1 = opset.parameter(input_shape, name="Input")
-        data = np.random.rand(5, 2).astype(np.float32)
+        data = self._rng.random((5, 2)).astype(np.float32)
         matmul = opset.matmul(input_1, data, transpose_a=False, transpose_b=False, name="MatMul")
-        add = opset.add(matmul, np.random.rand(1, 2).astype(np.float32), name="Add")
+        add = opset.add(matmul, self._rng.random((1, 2)).astype(np.float32), name="Add")
         result_1 = opset.result(add, name="Result")
-        model = ov.Model(result_1, input_1)
-
-        super().__init__(model)
+        model = ov.Model([result_1], [input_1])
+        return model

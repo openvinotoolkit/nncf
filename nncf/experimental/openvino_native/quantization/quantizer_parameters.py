@@ -11,7 +11,7 @@
  limitations under the License.
 """
 
-from typing import Optional
+from typing import Optional, Tuple
 from dataclasses import dataclass
 import numpy as np
 
@@ -38,6 +38,87 @@ class OVQuantizerLayerParameters:
     levels: int
 
 
+def compute_levels(quantizer_config: QuantizerConfig, is_weights: bool) -> int:
+    def_levels = 2 ** quantizer_config.num_bits
+
+    if is_weights and quantizer_config.mode == QuantizationMode.SYMMETRIC:
+        level_low = -def_levels / 2 + 1
+    else:
+        level_low = -def_levels / 2
+    level_high = def_levels / 2 - 1
+    return int(abs(level_high) + abs(level_low) + 1)
+
+
+def fix_zero_filters_symmetric(max_level: np.ndarray, eps: float = 0.01) -> np.ndarray:
+    max_range = np.max(max_level)
+    lower_threshold = np.maximum(8e-5, eps * max_range)
+    return np.maximum(lower_threshold, max_level)
+
+
+def fix_zero_filters_asymmetric(max_level: np.ndarray, min_level: np.ndarray,
+                                eps: float = 1e-8) -> Tuple[np.ndarray, np.ndarray]:
+    ranges = max_level - min_level
+    ranges = ranges if isinstance(ranges, np.ndarray) else np.array([ranges])
+    min_correction = 8 * 10e-5
+    corrections = [(np.maximum(eps * rng, rng) - rng) * 0.5 if rng > min_correction
+                   else min_correction for rng in ranges]
+    max_level = max_level + corrections
+    min_level = min_level - corrections
+    return max_level, min_level
+
+
+def tune_range(left_border: np.ndarray, right_border: np.ndarray, num_bits: int) -> Tuple[np.ndarray, np.ndarray]:
+    """ Tunes asymmetric quantization range to set zero quant precisely to zero value.
+    Function moves left or right borders to do this and doesn't make left border higher or
+    right border lesser than its original values
+    :param left_border: range left border
+    :param right_border: range right border
+    :param num_bits: number of bits to perform quantization
+    :return tuple with recomputed ranges
+    """
+    level_high = 2 ** num_bits - 1
+    s = level_high / (right_border - left_border)
+    fval = -left_border * s
+    qval = np.round(fval)
+
+    with np.errstate(invalid='ignore', divide='ignore'):
+        ra = np.where(qval < level_high, qval / (qval - level_high) * right_border, left_border)
+        rb = np.where(qval > 0.0, (qval - level_high) / qval * left_border, right_border)
+
+    range_a = right_border - ra
+    range_b = rb - left_border
+
+    mask = np.where(range_a > range_b, 1.0, 0.0)
+    inv_mask = np.abs(1.0 - mask)
+
+    ra = mask * ra + inv_mask * left_border
+    rb = inv_mask * rb + mask * right_border
+
+    return ra, rb
+
+
+def symmetric_range(min_values: np.ndarray, max_values: np.ndarray, levels: int,
+                    quantizer_config: QuantizerConfig, is_weights: bool) -> Tuple[np.ndarray, np.ndarray]:
+    max_level = fix_zero_filters_symmetric(max_values)
+    if is_weights:
+        min_level = -max_level
+    else:
+        signed = quantizer_config.signedness_to_force
+        min_level = np.zeros(max_level.shape) if np.all(min_values >= 0) and not signed else \
+            -max_level * levels / (levels - 2)
+
+    return min_level, max_level
+
+
+def asymmetric_range(min_values: np.ndarray, max_values: np.ndarray,
+                     quantizer_config: QuantizerConfig) -> Tuple[np.ndarray, np.ndarray]:
+    max_level, min_level = fix_zero_filters_asymmetric(max_values, min_values)
+    min_level = np.where(min_level < 0.0, min_level, 0.0)
+    max_level = np.where(max_level > 0.0, max_level, 0.0)
+    min_level, max_level = tune_range(min_level, max_level, quantizer_config.num_bits)
+    return min_level, max_level
+
+
 def calculate_weight_quantizer_parameters(weight_tensor: np.ndarray, quantizer_config: QuantizerConfig,
                                           axis: Optional[int]) -> OVQuantizerLayerParameters:
     """
@@ -55,17 +136,17 @@ def calculate_weight_quantizer_parameters(weight_tensor: np.ndarray, quantizer_c
         axes = tuple(axes)
     else:
         axes = None
-    input_high = np.amax(weight_tensor, axis=axes, keepdims=True)
-    input_low = np.amin(weight_tensor, axis=axes, keepdims=True)
+    min_values = np.amin(weight_tensor, axis=axes, keepdims=True)
+    max_values = np.amax(weight_tensor, axis=axes, keepdims=True)
 
-    levels = 2 ** quantizer_config.num_bits
+    levels = compute_levels(quantizer_config, is_weights=True)
     if quantizer_config.mode == QuantizationMode.SYMMETRIC:
-        output_low = np.full_like(input_low, fill_value=-levels / 2)
-        output_high = np.full_like(input_high, fill_value=levels / 2 - 1)
+        min_level, max_level = symmetric_range(min_values, max_values, levels, quantizer_config, is_weights=True)
     else:
-        output_low = np.zeros_like(input_low)
-        output_high = np.full_like(input_high, fill_value=levels - 1)
-    return OVQuantizerLayerParameters(input_low, input_high, output_low, output_high, levels)
+        min_level, max_level = asymmetric_range(min_values, max_values, quantizer_config)
+
+    output_low, output_high = min_level, max_level
+    return OVQuantizerLayerParameters(min_values, max_values, output_low, output_high, levels)
 
 
 def calculate_activation_quantizer_parameters(statistics: MinMaxTensorStatistic,
@@ -77,15 +158,14 @@ def calculate_activation_quantizer_parameters(statistics: MinMaxTensorStatistic,
     :param quantizer_config: Config of the quantization configuration.
     :return: Parameters of the FakeQuantize layer.
     """
-    input_low = np.array(statistics.min_values)
-    input_high = np.array(statistics.max_values)
-    levels = 2 ** quantizer_config.num_bits
+    levels = compute_levels(quantizer_config, is_weights=False)
+    min_values = np.array(statistics.min_values)
+    max_values = np.array(statistics.max_values)
 
     if quantizer_config.mode == QuantizationMode.SYMMETRIC:
-        output_low = np.full_like(input_low, fill_value=-levels / 2)
-        output_high = np.full_like(input_high, fill_value=levels / 2 - 1)
+        min_level, max_level = symmetric_range(min_values, max_values, levels, quantizer_config, is_weights=False)
     else:
-        output_low = np.zeros_like(input_low)
-        output_high = np.full_like(input_high, fill_value=levels - 1)
+        min_level, max_level = asymmetric_range(min_values, max_values, quantizer_config)
 
-    return OVQuantizerLayerParameters(input_low, input_high, output_low, output_high, levels)
+    output_low, output_high = min_level, max_level
+    return OVQuantizerLayerParameters(min_level, max_level, output_low, output_high, levels)

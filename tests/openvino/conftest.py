@@ -34,5 +34,6 @@ def pytest_collection_modifyitems(config, items):
 
 
 OPENVINO_TEST_ROOT = TEST_ROOT / 'openvino'
+OPENVINO_MODEL_DIR = OPENVINO_TEST_ROOT / 'data' / 'models'
 OPENVINO_POT_TEST_ROOT = OPENVINO_TEST_ROOT / 'pot'
 OPENVINO_NATIVE_TEST_ROOT = OPENVINO_TEST_ROOT / 'native'

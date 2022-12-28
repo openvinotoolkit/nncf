@@ -12,8 +12,9 @@
 """
 
 import pytest
-from typing import List
 import numpy as np
+from typing import Optional, Tuple, Union
+from dataclasses import dataclass
 
 from nncf import Dataset
 from nncf.common.graph.transformations.commands import TargetType
@@ -41,22 +42,16 @@ DATASET_SAMPLES[0][0, 2, 0, 0] = 128  # max
 DATASET_SAMPLES[0][0, 2, 0, 1] = -128  # min
 
 
+@dataclass
 class TestParameters:
-    def __init__(self, range_type, use_abs_max, reduction_shape, ref_max_val, ref_min_val):
-        self.range_type = range_type
-        self.use_abs_max = use_abs_max
-        self.reduction_shape = reduction_shape
-        self.ref_max_val = ref_max_val
-        self.ref_min_val = ref_min_val
+    range_type: RangeType
+    use_abs_max: bool
+    reduction_shape: Optional[Tuple[int]]
+    ref_max_val: Union[np.ndarray, float]
+    ref_min_val: Union[np.ndarray, float]
 
 
-def get_dataset_for_test(samples: List[np.ndarray], input_name: str) ->  Dataset:
-    def transform_fn(data_item):
-        return {input_name: data_item}
-    return Dataset(samples, transform_fn)
-
-
-@pytest.mark.parametrize('test_parameters, ',
+@pytest.mark.parametrize('test_parameters',
                          ((TestParameters(RangeType.MEAN_MINMAX, False, None, 64.5, -63.5)),
                           (TestParameters(RangeType.MEAN_MINMAX, False, (0, 2, 3), np.array((1, 0.55, 64.5)),
                                           np.array((-4.5, 0, -63.5)))),
@@ -71,8 +66,9 @@ def get_dataset_for_test(samples: List[np.ndarray], input_name: str) ->  Dataset
                           )
                          )
 def test_statistics_aggregator(test_parameters):
+    target_node_name = 'Input'
     model = LinearModel().ov_model
-    dataset = get_dataset_for_test(DATASET_SAMPLES, "Input")
+    dataset = Dataset(DATASET_SAMPLES, transform_func=lambda data: {target_node_name: data})
 
     statistics_aggregator = OVStatisticsAggregator(dataset)
     statistics_points = StatisticPointsContainer()
@@ -83,7 +79,6 @@ def test_statistics_aggregator(test_parameters):
         tensor_collector = OVMeanMinMaxStatisticCollector(False, test_parameters.use_abs_max,
                                                             test_parameters.reduction_shape,
                                                             num_samples=len(DATASET_SAMPLES))
-    target_node_name = 'Input'
     algorithm_name = 'TestAlgo'
     statistic_point_type = TargetType.POST_LAYER_OPERATION
     target_point = OVTargetPoint(statistic_point_type, target_node_name, 0)

@@ -11,10 +11,14 @@
  limitations under the License.
 """
 import os
+import json
 import networkx as nx
+import numpy as np
+from copy import deepcopy
 from pathlib import Path
 import openvino.runtime as ov
 
+from nncf import Dataset
 from nncf.common.utils.dot_file_rw import read_dot_graph
 from nncf.common.utils.dot_file_rw import write_dot_graph
 from nncf.experimental.openvino_native.graph.nncf_graph_builder import GraphConverter
@@ -97,3 +101,38 @@ def check_openvino_nx_graph(nx_graph: nx.DiGraph, expected_graph: nx.DiGraph, ch
         assert edges == expected_edges
     else:
         assert edges.keys() == expected_edges.keys()
+
+
+def get_dataset_for_test(model):
+    rng = np.random.default_rng(seed=0)
+    input_data = {}
+    for param in model.get_parameters():
+        input_shape = param.get_output_shape(0)
+        input_data[param.get_friendly_name()] = rng.uniform(0, 1, input_shape)
+
+    dataset = Dataset([input_data])
+    return dataset
+
+
+def load_json(stats_path):
+    with open(stats_path) as json_file:
+        return json.load(json_file)
+
+
+class NumpyEncoder(json.JSONEncoder):
+    """ Special json encoder for numpy types """
+    # pylint: disable=W0221, E0202
+
+    def default(self, o):
+        if isinstance(o, np.integer):
+            return int(o)
+        if isinstance(o, np.floating):
+            return float(o)
+        if isinstance(o, np.ndarray):
+            return o.tolist()
+        return json.JSONEncoder.default(self, o)
+
+
+def dump_to_json(local_path, data):
+    with open(local_path, 'w') as file:
+        json.dump(deepcopy(data), file, cls=NumpyEncoder)

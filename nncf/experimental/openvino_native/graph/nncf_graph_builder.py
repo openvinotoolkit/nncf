@@ -141,7 +141,7 @@ class GraphConverter:
                     out_node = inp.get_node()
                     tensor_shape = list(out.shape)
                     output_node_id = nncf_graph.get_node_by_name(out_node.get_friendly_name()).node_id
-                    ov_dtype = op.get_element_type().get_type_name()
+                    ov_dtype = out.get_element_type().get_type_name()
                     nncf_dtype = GraphConverter.convert_ov_dtype_to_nncf_dtype(ov_dtype)
                     nncf_graph.add_edge_between_nncf_nodes(
                         from_node_id=in_node_id,
