@@ -422,7 +422,6 @@ def test_cpu_only_mode_produces_cpu_only_model(config, tmp_path, mocker):
         "--config": config_factory.serialize(),
         "--log-dir": tmp_path,
         "--batch-size": config["batch_size"] * NUM_DEVICES,
-        "--workers": 0,  # Workaround for the PyTorch MultiProcessingDataLoader issue
         "--epochs": 1,
         "--cpu-only": True
     }
