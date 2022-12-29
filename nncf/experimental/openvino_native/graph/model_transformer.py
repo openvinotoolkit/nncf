@@ -168,11 +168,10 @@ class OVModelTransformer(ModelTransformer):
         elif transform_type == TargetType.POST_LAYER_OPERATION:
             output = target_node.output(port_id)
             target_inputs = output.get_target_inputs()
+            fq_name = f'{node_name}/fq_output_{port_id}'
+            fq = ov.opset9.fake_quantize(output, input_low, input_high,
+                                         output_low, output_high, levels, name=fq_name)
             for inp_node in target_inputs:
-                next_port_id = inp_node.get_index()
-                fq_name = f'{node_name}/fq_output_{port_id}_{next_port_id}'
-                fq = ov.opset9.fake_quantize(output, input_low, input_high,
-                                             output_low, output_high, levels, name=fq_name)
                 inp_node.replace_source_output(fq.output(0))
         else:
             raise RuntimeError(f'Incorrect target point type {transform_type}')

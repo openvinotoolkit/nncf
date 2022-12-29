@@ -24,6 +24,7 @@ from nncf.common.utils.dot_file_rw import write_dot_graph
 from nncf.experimental.openvino_native.graph.nncf_graph_builder import GraphConverter
 from tests.common.graph.nx_graph import sort_dot
 
+
 def compare_nncf_graphs(model: ov.Model, path_ref_graph: str) -> None:
     nncf_graph = GraphConverter.create_nncf_graph(model)
     nx_graph = nncf_graph.get_graph_for_structure_analysis(extended=True)

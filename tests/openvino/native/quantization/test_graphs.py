@@ -14,29 +14,32 @@
 import pytest
 import openvino.runtime as ov
 
+from nncf.common.quantization.structs import QuantizationPreset
+
 from tests.openvino.conftest import OPENVINO_NATIVE_TEST_ROOT
 from tests.openvino.omz_helpers import convert_model
 from tests.openvino.omz_helpers import download_model
 from tests.openvino.native.common import compare_nncf_graphs
 from tests.openvino.native.models import SYNTHETIC_MODELS
+from tests.openvino.native.quantization.test_fq_params_calculation import quantize_model
 
-REFERENCE_GRAPHS_DIR = OPENVINO_NATIVE_TEST_ROOT / 'data' / 'reference_graphs' / 'original_nncf_graph'
+QUANTIZED_REF_GRAPHS_DIR = OPENVINO_NATIVE_TEST_ROOT / 'data' / 'reference_graphs' / 'quantized'
 
 
 @pytest.mark.skip(reason="Enable after fixing an issue with operation outputs order")
-@pytest.mark.parametrize("model_cls_to_test", SYNTHETIC_MODELS.values())
-def test_compare_nncf_graph_synthetic_models(model_cls_to_test):
-    model_to_test = model_cls_to_test()
-    path_to_dot = REFERENCE_GRAPHS_DIR / model_to_test.ref_graph_name
-    compare_nncf_graphs(model_to_test.ov_model, path_to_dot)
+@pytest.mark.parametrize('model_creator_func', SYNTHETIC_MODELS.values())
+def test_syntetic_models_fq_placement(model_creator_func):
+    model = model_creator_func()
+    quantized_model = quantize_model(model.ov_model, QuantizationPreset.PERFORMANCE)
+
+    path_ref_graph = QUANTIZED_REF_GRAPHS_DIR / model.ref_graph_name
+    compare_nncf_graphs(quantized_model, path_ref_graph)
 
 
 OMZ_MODELS = [
     'mobilenet-v2-pytorch',
     'mobilenet-v3-small-1.0-224-tf',
     'resnet-18-pytorch',
-    'googlenet-v3-pytorch',
-
     'ssd_mobilenet_v1_coco',
     'yolo-v4-tiny-tf',
 ]
@@ -44,10 +47,11 @@ OMZ_MODELS = [
 
 @pytest.mark.skip(reason="Enable after fixing an issue with operation outputs order")
 @pytest.mark.parametrize('model_name', OMZ_MODELS)
-def test_compare_nncf_graph_omz_models(tmp_path, model_name):
+def test_omz_models_fq_placement(model_name, tmp_path):
     _ = download_model(model_name, tmp_path)
     model_path = convert_model(model_name, tmp_path)
     model = ov.Core().read_model(model_path)
+    quantized_model = quantize_model(model, QuantizationPreset.PERFORMANCE)
 
-    path_to_dot = REFERENCE_GRAPHS_DIR / f'{model_name}.dot'
-    compare_nncf_graphs(model, path_to_dot)
+    path_ref_graph = QUANTIZED_REF_GRAPHS_DIR / f'_{model_name}.dot'
+    compare_nncf_graphs(quantized_model, path_ref_graph)

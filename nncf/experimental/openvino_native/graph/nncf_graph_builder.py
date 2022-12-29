@@ -43,6 +43,7 @@ class GraphConverter:
         conversion_map = {
             'f16': 'float',
             'f32': 'float',
+            'f64': 'float',
             'i4': 'int',
             'i8': 'int',
             'i32': 'int',
