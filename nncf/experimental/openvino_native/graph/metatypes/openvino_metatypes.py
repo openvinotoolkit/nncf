@@ -456,9 +456,26 @@ class OVResultMetatype(OVOpMetatype):
     op_names = ['Result']
 
 
+@OV_OPERATION_METATYPES.register()
+class OVConvertMetatype(OVOpMetatype):
+    name = 'ConvertOp'
+    op_names = ['Convert']
+
+
+@OV_OPERATION_METATYPES.register()
+class OVFakeQuantizeMetatype(OVOpMetatype):
+    name = 'FakeQuantizeOp'
+    op_names = ['FakeQuantize']
+
+
 GENERAL_WEIGHT_LAYER_METATYPES = [OVConvolutionMetatype,
                                   OVConvolutionBackpropDataMetatype,
                                   OVMatMulMetatype]
+
+
+LAYERS_WITH_BIAS_METATYPES = [OVConvolutionMetatype,
+                              OVConvolutionBackpropDataMetatype,
+                              OVMatMulMetatype]
 
 
 def get_operator_metatypes() -> List[Type[OperatorMetatype]]:

@@ -13,9 +13,11 @@
 
 from abc import ABC
 from abc import abstractmethod
-from typing import List, Tuple, TypeVar, Optional
+from typing import List, Tuple, TypeVar, Optional, Dict
 
 import numpy as np
+
+from nncf.common.graph.operator_metatypes import OperatorMetatype
 from nncf.common.graph.transformations.commands import TargetPoint
 from nncf.common.graph.transformations.commands import TransformationCommand
 from nncf.common.graph.transformations.commands import TargetType
@@ -26,6 +28,7 @@ from nncf.common.tensor_statistics.collectors import TensorStatisticCollectorBas
 from nncf.common.tensor_statistics.collectors import ReductionShape
 from nncf.common.utils.registry import Registry
 from nncf.common.graph.model_transformer import ModelTransformer
+from nncf.common.tensor_statistics.collectors import NNCFCollectorTensorProcessor
 
 TModel = TypeVar('TModel')
 OutputType = TypeVar('OutputType')
@@ -37,21 +40,21 @@ class BiasCorrectionAlgoBackend(ABC):
 
     @property
     @abstractmethod
-    def layers_with_bias_metatypes(self):
+    def layers_with_bias_metatypes(self) -> List[OperatorMetatype]:
         """
         Property for the backend-specific metatypes with bias.
         """
 
     @property
     @abstractmethod
-    def channel_axis_by_types(self):
+    def channel_axis_by_types(self) -> Dict[OperatorMetatype, int]:
         """
         Property for the backend-specific info about channels placement in the layout.
         """
 
     @property
     @abstractmethod
-    def tensor_processor(self):
+    def tensor_processor(self) -> NNCFCollectorTensorProcessor:
         """
         Returns backend-specific instance of the NNCFCollectorTensorProcessor.
         """
@@ -125,12 +128,12 @@ class BiasCorrectionAlgoBackend(ABC):
 
     @staticmethod
     @abstractmethod
-    def get_tensor_names(node: NNCFNode) -> Tuple[List[str], List[str]]:
+    def get_input_output_names(biased_node: NNCFNode) -> Tuple[str, str]:
         """
-        Returns tuple of the lists with the input & output tensor names respectively.
+        Returns tuple of the input & output names respectively.
 
-        :param node: NNCFNode with the layer_attributes.
-        :return: Tuple of the lists with the names.
+        :param biased_node: NNCFNode biased node.
+        :return: Tuple of the input & output names.
         """
 
     @staticmethod
@@ -169,23 +172,23 @@ class BiasCorrectionAlgoBackend(ABC):
 
     @staticmethod
     @abstractmethod
-    def get_bias_value(model: TModel, node: NNCFNode) -> np.ndarray:
+    def get_bias_value(model: TModel, bias_node: NNCFNode) -> np.ndarray:
         """
         Returns bias value in the NumPy format of provided node.
 
         :param model: Backend-specific model for the initializer finding.
-        :param node: Node of NNCFGraph with bias value.
+        :param bias_node: Node of NNCFGraph with bias value.
         :return: Bias value in the NumPy format.
         """
 
     @staticmethod
     @abstractmethod
-    def get_bias_port_id(model: TModel, node: NNCFNode) -> int:
+    def get_bias_port_id(model: TModel, bias_node: NNCFNode) -> int:
         """
         Returns bias Port ID corresponding to the node.
 
         :param model: Backend-specific model.
-        :param node: Node of NNCFGraph with bias value.
+        :param bias_node: Node of NNCFGraph with bias value.
         :return: Port ID corresponding to bias.
         """
 
@@ -214,21 +217,31 @@ class BiasCorrectionAlgoBackend(ABC):
 
     @staticmethod
     @abstractmethod
-    def is_quantized_weights(node: NNCFNode, model: TModel) -> bool:
+    def is_quantized_weights(biased_node: NNCFNode, nncf_graph: NNCFGraph) -> bool:
         """
-        Checks whether the node is quantized or not.
+        Checks whether the node is quantized or not, based on a backend-specific way.
 
-        :param node: NNCFNode to check.
-        :param model: Backend-specific model.
+        :param biased_node: NNCFNode to check.
+        :param nncf_graph: NNCFGraph instance.
         :return: boolean indicating whether the node has a quantized weights or not.
         """
 
     @staticmethod
     @abstractmethod
-    def is_node_with_bias(node: NNCFNode) -> bool:
+    def is_node_with_bias(biased_node: NNCFNode) -> bool:
         """
         Checks whether the node has a bias or not.
 
-        :param node: NNCFNode with the attributes.
+        :param biased_node: NNCFNode to check.
         :return: Boolean indicating whether the node has a bias or not.
+        """
+
+    @staticmethod
+    @abstractmethod
+    def get_bias_node(biased_node: NNCFNode, nncf_graph: NNCFGraph) -> Optional[NNCFNode]:
+        """
+        Returns node that contains bias, if it exists.
+        :param biased_node: NNCFNode with the attributes.
+        :param nncf_graph: NNCFGraph instance.
+        :return: Optional NNCFNode with potential bias.
         """
