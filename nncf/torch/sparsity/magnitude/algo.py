@@ -168,6 +168,31 @@ class MagnitudeSparsityController(BaseSparsityAlgoController):
             return CompressionStage.FULLY_COMPRESSED
         return CompressionStage.PARTIALLY_COMPRESSED
 
+    @property
+    def maximal_compression_rate(self) -> float:
+        """
+        Computes the maximal compression rate for the case when all module are sparsified. Returns such value
+        that every weight except the ones equal to the maximum are pruned.
+        """
+        all_weights = self._collect_all_weights(self.sparsified_module_info)
+        if not all_weights:
+            return 0.0
+        all_weights_tensor, _ = torch.cat(all_weights).sort()
+        size = all_weights_tensor.size(0)
+
+        # Perform binary search to find the position before the maximums, e.g.:
+        #   1 2 3 3 5 6 6 8 8 8
+        #               ^
+        left, right = 0, size - 1
+        while right - left > 1:
+            middle = (left + right) // 2
+            if all_weights_tensor[middle] < all_weights_tensor[-1]:
+                left = middle
+            else:
+                right = middle
+        maximal_compression_rate = left / (size - 1)
+        return maximal_compression_rate
+
     def _run_batchnorm_adaptation(self):
         if self._bn_adaptation is None:
             self._bn_adaptation = BatchnormAdaptationAlgorithm(

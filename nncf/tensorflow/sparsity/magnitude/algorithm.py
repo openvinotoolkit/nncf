@@ -190,7 +190,7 @@ class MagnitudeSparsityController(BaseSparsityController):
         if not all_weights:
             return 0.0
         all_weights_tensor = tf.sort(tf.concat(all_weights, 0))
-        index = int(tf.cast(tf.size(all_weights_tensor), all_weights_tensor.dtype) * sparsity_level)
+        index = int(tf.cast(tf.size(all_weights_tensor) - 1, all_weights_tensor.dtype) * sparsity_level)
         threshold = all_weights_tensor[index].numpy()
         return threshold
 
@@ -255,6 +255,31 @@ class MagnitudeSparsityController(BaseSparsityController):
         if self.scheduler.current_sparsity_level >= self.scheduler.target_level:
             return CompressionStage.FULLY_COMPRESSED
         return CompressionStage.PARTIALLY_COMPRESSED
+
+    @property
+    def maximal_compression_rate(self) -> float:
+        """
+        Computes the maximal compression rate for the case when all module are sparsified. Returns such value
+        that every weight except the ones equal to the maximum are pruned.
+        """
+        all_weights = self._collect_all_weights()
+        if not all_weights:
+            return 0.0
+        all_weights_tensor = tf.sort(tf.concat(all_weights, 0))
+        size = int(tf.size(all_weights_tensor))
+
+        # Perform binary search to find the position before the maximums, e.g.:
+        #   1 2 3 3 5 6 6 8 8 8
+        #               ^
+        left, right = 0, size - 1
+        while right - left > 1:
+            middle = (left + right) // 2
+            if all_weights_tensor[middle] < all_weights_tensor[-1]:
+                left = middle
+            else:
+                right = middle
+        maximal_compression_rate = left / (size - 1)
+        return maximal_compression_rate
 
     def _run_batchnorm_adaptation(self):
         if self._bn_adaptation is None:
