@@ -169,7 +169,7 @@ def test_magnitude_algo_binary_masks_are_applied():
 def test_maximal_compression_rate():
     config = get_basic_magnitude_sparsity_config()
     config['compression']['params'] = {'weight_importance': 'abs'}
-    sparse_model, compression_ctrl = create_compressed_model_and_algo_for_test(get_magnitude_test_model(), config)
+    _, compression_ctrl = create_compressed_model_and_algo_for_test(get_magnitude_test_model(), config)
 
     # Check that after setting the maximal compression rate the resulting sparsity reflects that all the weights except
     #   the ones which are equal to the maximal weight values are sparsified
