@@ -121,3 +121,9 @@ class PTCompositeCompressionAlgorithmController(
     def prepare_for_export(self):
         for child_ctrl in self.child_ctrls:
             child_ctrl.prepare_for_export()
+
+    @property
+    def compression_rate(self) -> float:
+        sum_compression_rate = sum(child_ctrl.compression_rate for child_ctrl in self.child_ctrls)
+        mean_compression_rate = sum_compression_rate / max(len(self.child_ctrls), 1)
+        return mean_compression_rate
