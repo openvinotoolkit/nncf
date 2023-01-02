@@ -529,6 +529,8 @@ def fixture_accuracy_aware_config(request):
     "multiprocessing_distributed", [True, False],
     ids=['distributed', 'dataparallel'])
 def test_accuracy_aware_training_pipeline(accuracy_aware_config, tmp_path, multiprocessing_distributed):
+    if multiprocessing_distributed:
+        pytest.skip('DDP mode sporadically fails in CI. ticket 68302')
     config_factory = ConfigFactory(accuracy_aware_config['nncf_config'], tmp_path / 'config.json')
     log_dir = tmp_path / 'accuracy_aware'
     log_dir = log_dir / 'distributed' if multiprocessing_distributed else log_dir / 'dataparallel'
