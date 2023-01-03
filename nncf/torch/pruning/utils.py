@@ -118,7 +118,7 @@ def collect_output_shapes(graph: NNCFGraph) -> Dict[NNCFNodeName, List[int]]:
                                   shape_slice=slice(2, None)),
         OutputShapeCollectionInfo(node_types=[v.op_func_name for v in NNCF_LINEAR_MODULES_DICT],
                                   shape_slice=slice(None)),
-        OutputShapeCollectionInfo(node_types=['matmul'],
+        OutputShapeCollectionInfo(node_types=['matmul', 'bmm'],
                                   shape_slice=slice(None)),
     ]
     for info in output_shape_collecting_info:

@@ -173,7 +173,7 @@ def wrap_module_call(module_call):
 def _add_operation_attributes(node: 'DynamicGraphNode', ctx: TracingContext):
     op_address = node.op_exec_context.op_address
     # TODO(nlyalyus): support other operations: torch.addmm, torch.nn.functional.Linear, torch.bmm, torch.mm
-    if op_address.operator_name == 'matmul':
+    if op_address.operator_name in ('matmul', 'bmm'):
         graph = ctx.graph
         input_edges = graph.get_input_edges(node)
         # no input nodes when input_info tensor was bound to a *args or **kwargs on graph tracing
@@ -182,7 +182,7 @@ def _add_operation_attributes(node: 'DynamicGraphNode', ctx: TracingContext):
             activation_edge, weight_edge = input_edges
             activation_shape = activation_edge.activation_shape
             weight_shape = weight_edge.activation_shape
-            # TODO(nlyalyus): support other shapes: 1D x 1D, 1D x 2D, 2D x 1D, 1D x ND, ND x 1D
+            # TODO(nlyalyus): support other shapes: 1D x 2D, 2D x 1D, 1D x ND, ND x 1D
             # https://pytorch.org/docs/stable/generated/torch.matmul.html
             activation_dims = len(activation_shape)
             weight_dims = len(weight_shape)

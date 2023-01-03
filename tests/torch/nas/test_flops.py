@@ -16,8 +16,13 @@ from functools import partial
 import pytest
 import torch
 from torchvision.models import resnet50
+from transformers import AutoModelForAudioClassification
+from transformers import AutoModelForImageClassification
 from transformers import AutoModelForQuestionAnswering
 from transformers import BertConfig
+from transformers import SwinConfig
+from transformers import ViTConfig
+from transformers import Wav2Vec2Config
 
 from examples.torch.common.models.classification.mobilenet_v2_cifar10 import mobilenet_v2_cifar10
 from examples.torch.common.models.classification.resnet_cifar10 import resnet50_cifar10
@@ -217,10 +222,34 @@ FLOPS_DESC_LIST = [
         model_desc=GeneralModelDesc(
             model_name='BERT',
             model_builder=partial(AutoModelForQuestionAnswering.from_config, BertConfig()),
-            input_info=[dict(sample_size=[1, 10], type='long')] * 3
+            input_info=[dict(sample_size=[1, 10], type='long')] * 3,
         ),
         ref_model_stats=ModelStats(1_702_410_240, 84_936_192)
     ),
+    TestFlopsDesc(
+        model_desc=GeneralModelDesc(
+            model_name='ViT',
+            model_builder=partial(AutoModelForImageClassification.from_config, ViTConfig()),
+            input_info=[dict(sample_size=[1, 3, 224, 224])],
+        ),
+        ref_model_stats=ModelStats(35_126_123_520, 85_526_016),
+    ),
+    TestFlopsDesc(
+        model_desc=GeneralModelDesc(
+            model_name='Swin',
+            model_builder=partial(AutoModelForImageClassification.from_config, SwinConfig()),
+            input_info=[dict(sample_size=[1, 3, 224, 224])],
+        ),
+        ref_model_stats=ModelStats(8979_600_384, 27_432_960)
+    ),
+    TestFlopsDesc(
+        model_desc=GeneralModelDesc(
+            model_name='Wave2Vec2.0',
+            model_builder=partial(AutoModelForAudioClassification.from_config, Wav2Vec2Config()),
+            input_info=[dict(sample_size=[1, 400])],
+        ),
+        ref_model_stats=ModelStats(305_589_248, 94_443_008)
+    )
 ]
 
 
