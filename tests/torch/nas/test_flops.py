@@ -10,22 +10,32 @@
  See the License for the specific language governing permissions and
  limitations under the License.
 """
+from dataclasses import dataclass
 from functools import partial
 
 import pytest
-from tests.torch.test_models import mobilenet_v2
+import torch
 from torchvision.models import resnet50
+from transformers import AutoModelForQuestionAnswering
+from transformers import BertConfig
 
 from examples.torch.common.models.classification.mobilenet_v2_cifar10 import mobilenet_v2_cifar10
 from examples.torch.common.models.classification.resnet_cifar10 import resnet50_cifar10
+from nncf import NNCFConfig
 from nncf.experimental.torch.nas.bootstrapNAS.elasticity.elasticity_dim import ElasticityDim
 from tests.torch.nas.creators import create_bnas_model_and_ctrl_by_test_desc
+from tests.torch.nas.creators import create_bootstrap_training_model_and_ctrl
 from tests.torch.nas.descriptors import ModelStats
 from tests.torch.nas.descriptors import MultiElasticityTestDesc
 from tests.torch.nas.descriptors import RefModelStats
 from tests.torch.nas.descriptors import THREE_CONV_TEST_DESC
+from tests.torch.nas.helpers import move_model_to_cuda_if_available
 from tests.torch.nas.test_elastic_depth import DepthBasicConvTestModel
+from tests.torch.test_compressed_graph import BaseDesc
+from tests.torch.test_compressed_graph import GeneralModelDesc
+from tests.torch.test_compressed_graph import TorchBinaryMethodDesc
 from tests.torch.test_models import DenseNet121
+from tests.torch.test_models import mobilenet_v2
 
 RESNET50_BLOCK_TO_SKIP = [
     ["ResNet/Sequential[layer1]/Bottleneck[1]/ReLU[relu]/relu__2",
@@ -146,3 +156,104 @@ def test_multi_elasticity_flops(desc: MultiElasticityTestDesc):
     multi_elasticity_handler.activate_minimum_subnet()
     assert multi_elasticity_handler.count_flops_and_weights_for_active_subnet() == ref_model_stats.width_stage
     model.do_dummy_forward()
+
+
+@dataclass
+class TestFlopsDesc:
+    model_desc: BaseDesc
+    ref_model_stats: ModelStats
+
+
+FLOPS_DESC_LIST = [
+    TestFlopsDesc(
+        model_desc=TorchBinaryMethodDesc(
+            model_name='MatMul 4D',
+            torch_method=torch.matmul,
+            input_sample_sizes=([1, 3, 4, 6], [1, 3, 6, 5])
+        ),
+        ref_model_stats=ModelStats(
+            # flops_numpy = 2 * (num_in_features * num_out_features) * ( np.prod(output_shapes[name][:-1]) )
+            flops=2 * (6 * 5) * (3 * 4),
+            num_weights=0
+        )
+    ),
+    TestFlopsDesc(
+        model_desc=TorchBinaryMethodDesc(
+            model_name='MatMul 2D',
+            torch_method=torch.matmul,
+            input_sample_sizes=([2, 3], [3, 4])
+        ),
+        ref_model_stats=ModelStats(
+            # flops_numpy = 2 * (num_in_features * num_out_features) * ( np.prod(output_shapes[name][:-1]) )
+            flops=2 * (3 * 4) * 2,
+            num_weights=0
+        )
+    ),
+    TestFlopsDesc(
+        model_desc=TorchBinaryMethodDesc(
+            model_name='MatMul 3D',
+            torch_method=torch.matmul,
+            input_sample_sizes=([2, 3, 5], [2, 5, 7])
+        ),
+        ref_model_stats=ModelStats(
+            # flops_numpy = 2 * (num_in_features * num_out_features) * ( np.prod(output_shapes[name][:-1]) )
+            flops=2 * (5 * 7) * (2 * 3),
+            num_weights=0
+        )
+    ),
+    TestFlopsDesc(
+        model_desc=TorchBinaryMethodDesc(
+            model_name='MatMul 1D',
+            torch_method=torch.matmul,
+            input_sample_sizes=([2], [2])
+        ),
+        ref_model_stats=ModelStats(
+            # flops_numpy = 2 * (num_in_features * num_out_features) * ( np.prod(output_shapes[name][:-1]) )
+            flops=2 * (2 * 1) * 1,
+            num_weights=0
+        )
+    ),
+    TestFlopsDesc(
+        model_desc=GeneralModelDesc(
+            model_name='BERT',
+            model_builder=partial(AutoModelForQuestionAnswering.from_config, BertConfig()),
+            input_info=[dict(sample_size=[1, 10], type='long')] * 3
+        ),
+        ref_model_stats=ModelStats(1_702_410_240, 84_936_192)
+    ),
+]
+
+
+def _create_input_info(input_sample_sizes):
+    if isinstance(input_sample_sizes, tuple):
+        return [{"sample_size": sizes} for sizes in input_sample_sizes]
+    return [{"sample_size": input_sample_sizes}]
+
+
+@pytest.mark.parametrize(
+    "desc", FLOPS_DESC_LIST, ids=[m.model_desc.model_name for m in FLOPS_DESC_LIST]
+)
+def test_flops_and_weights_calculation(desc: TestFlopsDesc):
+    model_desc = desc.model_desc
+    input_info = model_desc.input_info if model_desc.input_info else _create_input_info(model_desc.input_sample_sizes)
+
+    config = {
+        "input_info": input_info,
+        "bootstrapNAS": {
+            "training": {
+                "elasticity": {
+                    'available_elasticity_dims': ['width']
+                }
+            }
+        }
+    }
+    nncf_config = NNCFConfig.from_dict(config)
+    model = model_desc.get_model()
+    move_model_to_cuda_if_available(model)
+    model, training_ctrl = create_bootstrap_training_model_and_ctrl(model, nncf_config,
+                                                                    wrap_inputs_fn=model_desc.get_wrap_inputs_fn())
+    multi_elasticity_handler = training_ctrl.multi_elasticity_handler
+
+    actual_model_stats = multi_elasticity_handler.count_flops_and_weights_for_active_subnet()
+
+    assert actual_model_stats == desc.ref_model_stats

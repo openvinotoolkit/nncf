@@ -125,6 +125,15 @@ class LinearLayerAttributes(WeightedLayerAttributes):
         return 0
 
 
+class MatmulAttributes(BaseLayerAttributes):
+    def __init__(self,
+                 in_features: int,
+                 out_features: int):
+        super().__init__()
+        self.in_features = in_features
+        self.out_features = out_features
+
+
 class ConvolutionLayerAttributes(WeightedLayerAttributes):
     """
     This class stores attributes of convolution modules/layers

@@ -18,6 +18,7 @@ from typing import List
 from typing import NamedTuple
 from typing import Optional
 from typing import Tuple
+from typing import Union
 
 from nncf.experimental.torch.nas.bootstrapNAS.elasticity.base_handler import SingleElasticityBuilder
 from nncf.experimental.torch.nas.bootstrapNAS.elasticity.base_handler import create_elasticity_builder_from_config
@@ -113,6 +114,7 @@ class MultiElasticityTestDesc(NamedTuple):
     ref_model_stats: RefModelStats = None
     blocks_to_skip: List[List[str]] = None
     input_sizes: List[int] = [1, 3, 32, 32]
+    input_info: Union[List, Dict] = None
     algo_params: Dict = {}
     name: str = None
 

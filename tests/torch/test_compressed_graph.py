@@ -463,7 +463,8 @@ class BaseDesc(IModelDesc):
 class GeneralModelDesc(BaseDesc):
     def __init__(self,
                  input_sample_sizes: Union[Tuple[List[int], ...], List[int]] = None,
-                 model_name: str = None, wrap_inputs_fn: Callable = None, model_builder=None, input_info: Dict = None):
+                 model_name: str = None, wrap_inputs_fn: Callable = None, model_builder=None,
+                 input_info: Union[Dict, List] = None):
         super().__init__(input_sample_sizes, model_name, wrap_inputs_fn, input_info)
         if not model_name and hasattr(model_builder, '__name__'):
             self.model_name = model_builder.__name__
@@ -496,14 +497,16 @@ class SingleLayerModelDesc(BaseDesc):
                 self._layer = layer
 
             def forward(self, *args, **kwargs):
-                return self._layer(*args, **kwargs)
+                output = self._layer(*args, **kwargs)
+                return output
 
         return TestModel(self.layer)
 
 
 class TorchBinaryMethodDesc(SingleLayerModelDesc):
-    def __init__(self, model_name: str, torch_method: Callable, input_info=None):
-        super().__init__(layer=torch_method, model_name=model_name, input_sample_sizes=([1], [1]),
+    def __init__(self, model_name: str, torch_method: Callable, input_info=None,
+                 input_sample_sizes: Union[Tuple[List[int], ...], List[int]] = ([1], [1])):
+        super().__init__(layer=torch_method, model_name=model_name, input_sample_sizes=input_sample_sizes,
                          wrap_inputs_fn=n_inputs_fn, input_info=input_info)
 
 

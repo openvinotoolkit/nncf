@@ -52,10 +52,11 @@ from tests.torch.nas.models.vgg_k7 import VGG11_K7
 # TODO(nlyalyus) reduce number of creators and descriptors. create wrapper of TrainingAlgorithm  (ticket 81015)
 def create_bootstrap_training_model_and_ctrl(model,
                                              nncf_config: NNCFConfig,
-                                             register_bn_adapt: bool = True) \
+                                             register_bn_adapt: bool = True,
+                                             wrap_inputs_fn = None) \
                                              -> Tuple[NNCFNetwork, BNASTrainingController]:
     algo_name = nncf_config.get('bootstrapNAS', {}).get('training', {}).get('algorithm', 'progressive_shrinking')
-    nncf_network = create_nncf_network(model, nncf_config)
+    nncf_network = create_nncf_network(model, nncf_config, wrap_inputs_fn=wrap_inputs_fn)
     if register_bn_adapt:
         register_bn_adaptation_init_args(nncf_config)
     ctrl, model = create_compressed_model_from_algo_names(nncf_network, nncf_config, [algo_name], False)
@@ -67,8 +68,9 @@ def create_bootstrap_training_model_and_ctrl(model,
 
 
 def create_bnas_model_and_ctrl_by_test_desc(desc: MultiElasticityTestDesc):
+    input_info = desc.input_info if desc.input_info else {"sample_size": desc.input_sizes}
     config = {
-        "input_info": {"sample_size": desc.input_sizes},
+        "input_info": input_info,
         "bootstrapNAS": {
             "training": {
                 "elasticity": {

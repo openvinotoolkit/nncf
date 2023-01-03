@@ -10,9 +10,10 @@
  See the License for the specific language governing permissions and
  limitations under the License.
 """
+from dataclasses import dataclass
 from typing import Dict
-from typing import Optional
 from typing import List
+from typing import Optional
 from typing import Tuple
 
 import torch
@@ -21,12 +22,12 @@ from nncf.common.graph import NNCFGraph
 from nncf.common.graph import NNCFNodeName
 from nncf.common.graph.layer_attributes import ConvolutionLayerAttributes
 from nncf.common.graph.layer_attributes import LinearLayerAttributes
+from nncf.common.logging import nncf_logger
 from nncf.torch.graph.graph import NNCFNode
 from nncf.torch.layers import NNCF_GENERAL_CONV_MODULES_DICT
 from nncf.torch.layers import NNCF_LINEAR_MODULES_DICT
-from nncf.torch.tensor import PTNNCFTensor
 from nncf.torch.nncf_network import NNCFNetwork
-from nncf.common.logging import nncf_logger
+from nncf.torch.tensor import PTNNCFTensor
 
 
 def get_bn_node_for_conv(graph: NNCFGraph, conv_node: NNCFNode) -> Optional[NNCFNode]:
@@ -96,6 +97,12 @@ def _calculate_output_shape(graph: NNCFGraph, node: NNCFNode) -> Tuple[int, ...]
     return tuple(shape)
 
 
+@dataclass
+class OutputShapeCollectionInfo:
+    shape_slice: slice
+    node_types: List[str]
+
+
 def collect_output_shapes(graph: NNCFGraph) -> Dict[NNCFNodeName, List[int]]:
     """
     Collects output dimension shapes for convolutions and fully connected layers
@@ -105,16 +112,21 @@ def collect_output_shapes(graph: NNCFGraph) -> Dict[NNCFNodeName, List[int]]:
     :return: Dictionary of output dimension shapes. E.g {node_name: (height, width)}
     """
     modules_out_shapes = {}
+
     output_shape_collecting_info = [
-       (NNCF_GENERAL_CONV_MODULES_DICT, slice(2, None)),
-       (NNCF_LINEAR_MODULES_DICT, slice(None)),
+        OutputShapeCollectionInfo(node_types=[v.op_func_name for v in NNCF_GENERAL_CONV_MODULES_DICT],
+                                  shape_slice=slice(2, None)),
+        OutputShapeCollectionInfo(node_types=[v.op_func_name for v in NNCF_LINEAR_MODULES_DICT],
+                                  shape_slice=slice(None)),
+        OutputShapeCollectionInfo(node_types=['matmul'],
+                                  shape_slice=slice(None)),
     ]
-    for nncf_module_type, shape_slice in output_shape_collecting_info:
-        for node in graph.get_nodes_by_types([v.op_func_name for v in nncf_module_type]):
+    for info in output_shape_collecting_info:
+        for node in graph.get_nodes_by_types(info.node_types):
             output_edges = graph.get_output_edges(node)
             if output_edges:
                 out_edge = output_edges[0]
-                out_shape = out_edge.tensor_shape[shape_slice]
+                out_shape = out_edge.tensor_shape[info.shape_slice]
             else:
                 # For disconnected NNCFGraph when node have no output edge
                 out_shape = _calculate_output_shape(graph, node)

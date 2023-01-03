@@ -36,6 +36,7 @@ class SearchTestDesc(NamedTuple):
     model_creator: Any
     blocks_to_skip: List[List[str]] = None
     input_sizes: List[int] = [1, 3, 32, 32]
+    input_info = None
     algo_params: Dict = {}
     name: str = None
     mode: str = "auto"

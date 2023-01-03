@@ -31,6 +31,7 @@ from nncf.experimental.torch.nas.bootstrapNAS.elasticity.elastic_kernel import E
 from nncf.experimental.torch.nas.bootstrapNAS.elasticity.elastic_width import ElasticWidthHandler
 from nncf.experimental.torch.nas.bootstrapNAS.elasticity.elastic_width import ElasticWidthSearchSpace
 from nncf.experimental.torch.nas.bootstrapNAS.elasticity.elasticity_dim import ElasticityDim
+from nncf.torch.graph.operator_metatypes import PTMatMulMetatype
 from nncf.torch.graph.operator_metatypes import PTModuleConv1dMetatype
 from nncf.torch.graph.operator_metatypes import PTModuleConv2dMetatype
 from nncf.torch.graph.operator_metatypes import PTModuleConv3dMetatype
@@ -83,7 +84,9 @@ class MultiElasticityHandler(ElasticityHandler):
         self._is_handler_enabled_map = {elasticity_dim: True for elasticity_dim in handlers}
         self._weights_calc = WeightsFlopsCalculator(
             conv_op_metatypes=GENERAL_CONV_LAYER_METATYPES,
-            linear_op_metatypes=LINEAR_LAYER_METATYPES)
+            linear_op_metatypes=LINEAR_LAYER_METATYPES,
+            matmul_op_metatypes=[PTMatMulMetatype]
+        )
         self.activate_supernet()
 
     @property

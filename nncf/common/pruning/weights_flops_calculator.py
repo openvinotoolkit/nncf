@@ -33,15 +33,18 @@ class WeightsFlopsCalculator:
 
     def __init__(self,
                  conv_op_metatypes: List[OperatorMetatype],
-                 linear_op_metatypes: List[OperatorMetatype]):
+                 linear_op_metatypes: List[OperatorMetatype],
+                 matmul_op_metatypes: List[OperatorMetatype] = None):
         """
         Constructor.
 
         :param conv_op_metatypes: List of metatypes defining convolution operations.
         :param linear_op_metatypes: List of metatypes defining linear/fully connected operations.
+        :param matmul_op_metatypes: List of metatypes defining matmul operations without weights.
         """
         self._conv_op_metatypes = conv_op_metatypes
         self._linear_op_metatypes = linear_op_metatypes
+        self._matmul_op_metatypes = [] if matmul_op_metatypes is None else matmul_op_metatypes
 
     def count_flops_and_weights(self,
                                 graph: NNCFGraph,
@@ -141,6 +144,18 @@ class WeightsFlopsCalculator:
             weights_numpy = num_in_features * num_out_features
             flops[name] = flops_numpy
             weights[name] = weights_numpy
+
+        for node in graph.get_nodes_by_metatypes(self._matmul_op_metatypes):
+            name = node.node_name
+            if name in op_addresses_to_skip:
+                continue
+
+            num_in_features = input_channels.get(name, node.layer_attributes.in_features)
+            num_out_features = output_channels.get(name, node.layer_attributes.out_features)
+
+            flops_numpy = 2 * num_in_features * num_out_features * np.prod(output_shapes[name][:-1])
+            flops[name] = flops_numpy
+            weights[name] = 0
 
         return flops, weights
 

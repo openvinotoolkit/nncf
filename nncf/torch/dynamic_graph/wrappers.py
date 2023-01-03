@@ -31,8 +31,9 @@ from nncf.common.graph.layer_attributes import ConvolutionLayerAttributes
 from nncf.common.graph.layer_attributes import GenericWeightedLayerAttributes
 from nncf.common.graph.layer_attributes import GroupNormLayerAttributes
 from nncf.common.graph.layer_attributes import LinearLayerAttributes
-from nncf.common.utils.debug import is_debug
+from nncf.common.graph.layer_attributes import MatmulAttributes
 from nncf.common.logging import nncf_logger
+from nncf.common.utils.debug import is_debug
 from nncf.torch.dynamic_graph.context import TracingContext
 from nncf.torch.dynamic_graph.context import get_current_context
 from nncf.torch.dynamic_graph.op_input_processing import OperatorInput
@@ -169,6 +170,30 @@ def wrap_module_call(module_call):
     return wrapped
 
 
+def _add_operation_attributes(node: 'DynamicGraphNode', ctx: TracingContext):
+    op_address = node.op_exec_context.op_address
+    # TODO(nlyalyus): support other operations: torch.addmm, torch.nn.functional.Linear, torch.bmm, torch.mm
+    if op_address.operator_name == 'matmul':
+        graph = ctx.graph
+        input_edges = graph.get_input_edges(node)
+        # no input nodes when input_info tensor was bound to a *args or **kwargs on graph tracing
+        if len(input_edges):
+            assert len(input_edges) == 2
+            activation_edge, weight_edge = input_edges
+            activation_shape = activation_edge.activation_shape
+            weight_shape = weight_edge.activation_shape
+            # TODO(nlyalyus): support other shapes: 1D x 1D, 1D x 2D, 2D x 1D, 1D x ND, ND x 1D
+            # https://pytorch.org/docs/stable/generated/torch.matmul.html
+            activation_dims = len(activation_shape)
+            weight_dims = len(weight_shape)
+            assert activation_dims == weight_dims, f'{activation_shape} {weight_shape}'
+            layer_attributes = MatmulAttributes(in_features=weight_shape[-1], out_features=1)
+            if activation_dims != 1 or weight_dims != 1:
+                layer_attributes = MatmulAttributes(in_features=weight_shape[-2], out_features=weight_shape[-1])
+
+            graph.set_layer_attributes_to_node(node, layer_attributes)
+
+
 def _execute_op(op_address: 'OperationAddress',
                 operator_info: 'PatchedOperatorInfo',
                 operator: Callable,
@@ -193,6 +218,8 @@ def _execute_op(op_address: 'OperationAddress',
             is_called_inside_nncf_module = isinstance(ctx.get_current_module(), _NNCFModuleMixin)
             node = ctx.maybe_add_node(processed_input, tensor_metas, op_address,
                                       layer_attrs, ignored_algos, is_called_inside_nncf_module)
+            if node is not None:
+                _add_operation_attributes(node, ctx)
         if is_debug() and node is not None:
             ctx.register_node_call(node)
 
