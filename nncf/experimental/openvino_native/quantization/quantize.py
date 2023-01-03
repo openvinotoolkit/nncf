@@ -16,14 +16,14 @@ from typing import Optional
 import openvino.runtime as ov
 
 from nncf.data import Dataset
-from nncf.quantization.telemetry_extractors import CompressionStartedWithQuantizeApi
+from nncf.common.quantization.structs import QuantizationPreset
 from nncf.parameters import convert_ignored_scope_to_list
 from nncf.parameters import IgnoredScope
 from nncf.parameters import ModelType
 from nncf.parameters import TargetDevice
-from nncf.common.quantization.structs import QuantizationPreset
 from nncf.quantization.algorithms.post_training.algorithm import PostTrainingQuantization
 from nncf.quantization.algorithms.post_training.algorithm  import PostTrainingQuantizationParameters
+from nncf.quantization.telemetry_extractors import CompressionStartedWithQuantizeApi
 from nncf.telemetry import tracked_function
 from nncf.telemetry.events import NNCF_OV_CATEGORY
 
@@ -38,14 +38,10 @@ def quantize_impl(model: ov.Model,
                   model_type: Optional[ModelType] = None,
                   ignored_scope: Optional[IgnoredScope] = None) -> ov.Model:
     """
-    Implementation of the `quantize()` method for the OpenVINO backend via the Model API.
+    Implementation of the `quantize()` method for the OpenVINO backend via the OpenVINO Runtime API.
     """
     if model_type is not None:
         raise ValueError(f'model_type={model_type} is not supported')
-    if ignored_scope is not None and ignored_scope.types is not None:
-        raise RuntimeError('Quantization algorithm from the OpenVINO backend '
-                           'does not support operation types in the ignored '
-                           'scopes yet')
 
     quantization_parameters = PostTrainingQuantizationParameters(
         preset=preset,
