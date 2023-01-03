@@ -13,6 +13,8 @@
 
 #pylint:disable=unused-import
 import pytest
+from pathlib import Path
+
 from tests.shared.install_fixtures import tmp_venv_with_nncf
 from tests.shared.case_collection import COMMON_SCOPE_MARKS_VS_OPTIONS
 from tests.shared.case_collection import skip_marked_cases_if_options_not_specified
@@ -20,7 +22,31 @@ from tests.shared.paths import TEST_ROOT
 
 
 def pytest_addoption(parser):
-    pass
+    parser.addoption(
+        "--data-dir", type=str, default=None,
+        help="[test_sanity] Directory path to OMZ validation datasets"
+    )
+    parser.addoption(
+        "--eval-size", type=int, default=None,
+        help="[test_sanity] Dataset subsample size for evaluation. "
+        "If not provided, full dataset is used for evaluation."
+    )
+
+
+@pytest.fixture(scope="module")
+def data_dir(request):
+    option = request.config.getoption("--data-dir")
+    if option is None:
+        pytest.skip(f"--data-dir option is required to run {request.node.name}")
+    return Path(option)
+
+
+@pytest.fixture(scope="module")
+def eval_size(request):
+    option = request.config.getoption("--eval-size")
+    if option is None:
+        print("--eval-size is not provided. Use full dataset for evaluation")
+    return option
 
 
 # Custom markers specifying tests to be run only if a specific option
@@ -36,3 +62,4 @@ def pytest_collection_modifyitems(config, items):
 OPENVINO_TEST_ROOT = TEST_ROOT / 'openvino'
 OPENVINO_POT_TEST_ROOT = OPENVINO_TEST_ROOT / 'pot'
 OPENVINO_NATIVE_TEST_ROOT = OPENVINO_TEST_ROOT / 'native'
+AC_CONFIGS_DIR = OPENVINO_TEST_ROOT / 'data' / 'ac_configs'
