@@ -116,7 +116,7 @@ def get_dataset_for_test(model):
 
 
 def load_json(stats_path):
-    with open(stats_path) as json_file:
+    with open(stats_path, 'r', encoding='utf8') as json_file:
         return json.load(json_file)
 
 
@@ -135,5 +135,5 @@ class NumpyEncoder(json.JSONEncoder):
 
 
 def dump_to_json(local_path, data):
-    with open(local_path, 'w') as file:
+    with open(local_path, 'w', encoding='utf8') as file:
         json.dump(deepcopy(data), file, cls=NumpyEncoder)

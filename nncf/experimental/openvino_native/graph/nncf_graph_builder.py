@@ -22,7 +22,7 @@ from nncf.common.graph.operator_metatypes import InputNoopMetatype
 from nncf.common.graph.operator_metatypes import OperatorMetatype
 from nncf.common.graph.operator_metatypes import OutputNoopMetatype
 
-from nncf.experimental.openvino_native.graph.metatypes.openvino_metatypes import OV_OPERATION_METATYPES
+from nncf.experimental.openvino_native.graph.metatypes.openvino_metatypes import OV_OPERATOR_METATYPES
 from nncf.experimental.openvino_native.graph.metatypes.openvino_metatypes import GENERAL_WEIGHT_LAYER_METATYPES
 from nncf.experimental.openvino_native.graph.metatypes.openvino_metatypes import OVConvolutionBackpropDataMetatype
 
@@ -33,7 +33,7 @@ class GraphConverter:
     """
 
     @staticmethod
-    def convert_ov_dtype_to_nncf_dtype(ov_dtype: str) -> Dtype:
+    def convert_to_nncf_dtype(ov_dtype: str) -> Dtype:
         """
         Converts the primitive types from the OpenVINO domain to the NNCF domain.
 
@@ -80,7 +80,7 @@ class GraphConverter:
         :param graph: NNCFGraph.
         """
         node_type = node.get_type_name()
-        metatype = OV_OPERATION_METATYPES.get_operator_metatype_by_op_name(node_type)
+        metatype = OV_OPERATOR_METATYPES.get_operator_metatype_by_op_name(node_type)
         graph.add_nncf_node(node_name=node.get_friendly_name(),
                             node_type=node_type,
                             node_metatype=metatype)
@@ -122,7 +122,7 @@ class GraphConverter:
 
         for node in model.get_ops():
             node_type = node.get_type_name()
-            metatype = OV_OPERATION_METATYPES.get_operator_metatype_by_op_name(node_type)
+            metatype = OV_OPERATOR_METATYPES.get_operator_metatype_by_op_name(node_type)
             # Add nodes from constant subgraphs
             if node.get_friendly_name() not in visited:
                 GraphConverter._add_nncf_node(node, nncf_graph)
@@ -143,7 +143,7 @@ class GraphConverter:
                     tensor_shape = list(out.shape)
                     output_node_id = nncf_graph.get_node_by_name(out_node.get_friendly_name()).node_id
                     ov_dtype = out.get_element_type().get_type_name()
-                    nncf_dtype = GraphConverter.convert_ov_dtype_to_nncf_dtype(ov_dtype)
+                    nncf_dtype = GraphConverter.convert_to_nncf_dtype(ov_dtype)
                     nncf_graph.add_edge_between_nncf_nodes(
                         from_node_id=in_node_id,
                         to_node_id=output_node_id,

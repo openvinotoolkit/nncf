@@ -69,6 +69,7 @@ def compare_stats(expected, actual):
         assert np.allclose(ref_output_high, output_high, atol=1e-6)
 
 
+# pylint: disable=protected-access
 def quantize_model(ov_model, preset):
     dataset = get_dataset_for_test(ov_model)
 
@@ -117,7 +118,7 @@ def test_omz_models_fq_scales(model_name, preset, tmp_path):
     quantized_model = quantize_model(model, preset)
     nodes = get_fq_nodes_stats_algo(quantized_model)
 
-    ref_stats_name = str(Path(model_path).name).split(".")[0] + f'_{preset.value}.json'
+    ref_stats_name = str(Path(model_path).name).rsplit('.', maxsplit=1)[0] + f'_{preset.value}.json'
     ref_stats_path = REFERENCE_SCALES_DIR / ref_stats_name
     if not os.path.exists(ref_stats_path):
         dump_to_json(ref_stats_path, nodes)

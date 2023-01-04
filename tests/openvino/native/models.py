@@ -138,7 +138,8 @@ class WeightsModel(OVReferenceModel):
         conv = opset.convolution(input_1, kernel, strides, pads, pads, dilations, name="Conv")
         kernel_2 = self._rng.random((3, 3, 1, 1)).astype(np.float32)
         output_shape = [1, 1]
-        conv_tr = opset.convolution_backprop_data(conv, kernel_2, output_shape, strides, pads, pads, dilations, name="Conv_backprop")
+        conv_tr = opset.convolution_backprop_data(
+            conv, kernel_2, output_shape, strides, pads, pads, dilations, name="Conv_backprop")
 
         weights_1 = self._rng.random((1, 3, 1, 4)).astype(np.float32)
         matmul_1 = opset.matmul(conv_tr, weights_1, transpose_a=False, transpose_b=False, name="MatMul_1")
