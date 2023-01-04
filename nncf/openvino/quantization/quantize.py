@@ -152,7 +152,7 @@ def quantize_with_accuracy_control_impl(model: ov.Model,
                                         target_device: TargetDevice = TargetDevice.ANY,
                                         subset_size: int = 300,
                                         fast_bias_correction: bool = True,
-                                        model_type: Optional[str] = None,
+                                        model_type: Optional[ModelType] = None,
                                         ignored_scope: Optional[IgnoredScope] = None) -> ov.Model:
     """
     Implementation of the `quantize_with_accuracy_control()` method for the OpenVINO backend.
