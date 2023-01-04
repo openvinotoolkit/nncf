@@ -33,7 +33,8 @@
     },
 
     "model_params": {
-         "input_size_hw": [368, 480]
+        "input_size_hw": [368, 480],
+        "depth": 1
     },
     "compression": {
         "algorithm": "quantization",
