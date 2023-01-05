@@ -33,8 +33,6 @@ from pymoo.optimize import minimize
 import torch
 from torch.utils.data.dataloader import DataLoader
 from torch.utils.tensorboard import SummaryWriter
-import matplotlib.pyplot as plt
-
 
 from nncf.experimental.torch.nas.bootstrapNAS.search.evaluator import AccuracyEvaluator
 from nncf.experimental.torch.nas.bootstrapNAS.search.evaluator import BaseEvaluator
@@ -49,6 +47,16 @@ from nncf.config.extractors import get_bn_adapt_algo_kwargs
 from nncf.experimental.torch.nas.bootstrapNAS.elasticity.elasticity_controller import ElasticityController
 from nncf.experimental.torch.nas.bootstrapNAS.elasticity.multi_elasticity_handler import SubnetConfig
 from nncf.torch.nncf_network import NNCFNetwork
+
+try:
+    import matplotlib.pyplot as plt
+    MATPLOTLIB_PACKAGES_AVAILABLE = True
+except ImportError as ex:
+    nncf_logger.warning(
+        f'{ex.msg} Please install NNCF package with dev extra. Use one of '
+        'the following commands "pip install .[dev]" running from '
+        'the repository root directory or "pip install nncf[dev]"')
+    MATPLOTLIB_PACKAGES_AVAILABLE = False
 
 DataLoaderType = TypeVar('DataLoaderType')
 TModel = TypeVar('TModel')
@@ -365,6 +373,9 @@ class SearchAlgorithm(BaseSearchAlgorithm):
         :param filename:
         :return:
         """
+        if not MATPLOTLIB_PACKAGES_AVAILABLE:
+            return
+
         plt.figure()
         colormap = plt.cm.get_cmap('viridis')
         col = range(int(self.search_params.num_evals / self.search_params.population))

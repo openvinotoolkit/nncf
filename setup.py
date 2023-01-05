@@ -102,7 +102,6 @@ INSTALL_REQUIRES = ["ninja>=1.10.0.post2, <1.11",
                     "addict>=2.4.0",
                     "texttable>=1.6.3",
                     "scipy>=1.3.2, <=1.10.0",
-                    "matplotlib>=3.3.4, <3.6",
                     "networkx>=2.6, <=2.8.2",  # see ticket 94048 or https://github.com/networkx/networkx/issues/5962
                     "numpy>=1.19.1, <1.24",
                     "pillow>=9.0.0",
@@ -126,6 +125,7 @@ INSTALL_REQUIRES = ["ninja>=1.10.0.post2, <1.11",
 
 
 EXTRAS_REQUIRE = {
+    "dev": ["matplotlib>=3.3.4, <3.6"],
     "tests": ["pytest"],
     "docs": [],
     "tf": [
