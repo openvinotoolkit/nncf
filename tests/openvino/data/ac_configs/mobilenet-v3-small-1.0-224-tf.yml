@@ -30,7 +30,7 @@ models:
         adapter: classification
 
     datasets:
-      - name: imagenet_1000_classes
+      - name: imagenette2-320
         preprocessing:
           - type: resize
             size: 256

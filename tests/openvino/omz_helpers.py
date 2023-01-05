@@ -11,11 +11,22 @@
  limitations under the License.
 """
 
+import pytest
 from typing import List
 import csv
 import re
+import os
+import subprocess
 
 from tests.shared.command import Command
+from tests.shared.paths import PROJECT_ROOT
+from tests.openvino.conftest import DATASET_DEFINITIONS_PATH
+
+ENV_VARS = os.environ.copy()
+if "PYTHONPATH" in ENV_VARS:
+    ENV_VARS["PYTHONPATH"] += ":" + str(PROJECT_ROOT)
+else:
+    ENV_VARS["PYTHONPATH"] = str(PROJECT_ROOT)
 
 
 def run_command(command: List[str]):
@@ -56,9 +67,29 @@ def convert_model(name, path, model_precision='FP32'):
     return model_path
 
 
+def calculate_metrics(model_path, config_path, data_dir, report_path,
+                      eval_size=None, framework='openvino', device='CPU'):
+    com_line = [
+        'accuracy_check',
+        "-c", str(config_path),
+        "-m", str(model_path),
+        "-d", str(DATASET_DEFINITIONS_PATH),
+        "-s", str(data_dir),
+        "-tf", framework,
+        "-td", device,
+        "--csv_result", str(report_path)
+    ]
+    if eval_size is not None:
+        com_line += ["-ss", str(eval_size)]
+
+    run_command(com_line)
+    metrics = get_metrics(report_path)
+    return metrics
+
+
 def get_metrics(ac_report):
     metrics = {}
-    with open(ac_report, 'r', encoding='utf8') as csvfile:
+    with open(ac_report, 'r', encoding="utf8") as csvfile:
         reader = csv.DictReader(csvfile)
         for row in reader:
             metric_name = row['metric_name']
