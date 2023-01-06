@@ -13,6 +13,7 @@
 import csv
 from abc import abstractmethod
 from enum import Enum
+from pathlib import Path
 from typing import Any
 from typing import Callable
 from typing import Dict
@@ -23,40 +24,30 @@ from typing import Tuple
 from typing import TypeVar
 
 import numpy as np
-from pathlib import Path
+import torch
 from pymoo.algorithms.moo.nsga2 import NSGA2
 from pymoo.core.problem import Problem
 from pymoo.factory import get_crossover
 from pymoo.factory import get_mutation
 from pymoo.factory import get_sampling
 from pymoo.optimize import minimize
-import torch
 from torch.utils.data.dataloader import DataLoader
 from torch.utils.tensorboard import SummaryWriter
 
-from nncf.experimental.torch.nas.bootstrapNAS.search.evaluator import AccuracyEvaluator
-from nncf.experimental.torch.nas.bootstrapNAS.search.evaluator import BaseEvaluator
-from nncf.experimental.torch.nas.bootstrapNAS.search.evaluator import MACsEvaluator
-from nncf.experimental.torch.nas.bootstrapNAS.search.evaluator_handler import BaseEvaluatorHandler
-from nncf.experimental.torch.nas.bootstrapNAS.search.evaluator_handler import AccuracyEvaluatorHandler
-from nncf.experimental.torch.nas.bootstrapNAS.search.evaluator_handler import EfficiencyEvaluatorHandler
 from nncf import NNCFConfig
 from nncf.common.initialization.batchnorm_adaptation import BatchnormAdaptationAlgorithm
 from nncf.common.logging import nncf_logger
+from nncf.common.utils.decorators import bypass_noreturn_function
 from nncf.config.extractors import get_bn_adapt_algo_kwargs
 from nncf.experimental.torch.nas.bootstrapNAS.elasticity.elasticity_controller import ElasticityController
 from nncf.experimental.torch.nas.bootstrapNAS.elasticity.multi_elasticity_handler import SubnetConfig
+from nncf.experimental.torch.nas.bootstrapNAS.search.evaluator import AccuracyEvaluator
+from nncf.experimental.torch.nas.bootstrapNAS.search.evaluator import BaseEvaluator
+from nncf.experimental.torch.nas.bootstrapNAS.search.evaluator import MACsEvaluator
+from nncf.experimental.torch.nas.bootstrapNAS.search.evaluator_handler import AccuracyEvaluatorHandler
+from nncf.experimental.torch.nas.bootstrapNAS.search.evaluator_handler import BaseEvaluatorHandler
+from nncf.experimental.torch.nas.bootstrapNAS.search.evaluator_handler import EfficiencyEvaluatorHandler
 from nncf.torch.nncf_network import NNCFNetwork
-
-try:
-    import matplotlib.pyplot as plt
-    MATPLOTLIB_PACKAGES_AVAILABLE = True
-except ImportError as ex:
-    nncf_logger.warning(
-        f'{ex.msg} Please install NNCF package with dev extra. Use one of '
-        'the following commands "pip install .[dev]" running from '
-        'the repository root directory or "pip install nncf[dev]"')
-    MATPLOTLIB_PACKAGES_AVAILABLE = False
 
 DataLoaderType = TypeVar('DataLoaderType')
 TModel = TypeVar('TModel')
@@ -366,6 +357,7 @@ class SearchAlgorithm(BaseSearchAlgorithm):
 
         return self._elasticity_ctrl, self.best_config, [abs(elem) for elem in ret_vals if elem is not None]
 
+    @bypass_noreturn_function(dependencies=['matplotlib.pyplot'])
     def visualize_search_progression(self, filename='search_progression') -> NoReturn:
         """
         Visualizes search progression and saves the resulting figure.
@@ -373,9 +365,7 @@ class SearchAlgorithm(BaseSearchAlgorithm):
         :param filename:
         :return:
         """
-        if not MATPLOTLIB_PACKAGES_AVAILABLE:
-            return
-
+        import matplotlib.pyplot as plt
         plt.figure()
         colormap = plt.cm.get_cmap('viridis')
         col = range(int(self.search_params.num_evals / self.search_params.population))
