@@ -53,5 +53,5 @@ def test_omz_models_fq_placement(model_name, tmp_path):
     model = ov.Core().read_model(model_path)
     quantized_model = quantize_model(model, QuantizationPreset.PERFORMANCE)
 
-    path_ref_graph = QUANTIZED_REF_GRAPHS_DIR / f'_{model_name}.dot'
+    path_ref_graph = QUANTIZED_REF_GRAPHS_DIR / f'{model_name}.dot'
     compare_nncf_graphs(quantized_model, path_ref_graph)

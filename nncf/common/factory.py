@@ -36,7 +36,7 @@ class NNCFGraphFactory:
             from nncf.onnx.graph.nncf_graph_builder import GraphConverter
 
             return GraphConverter.create_nncf_graph(model)
-        elif model_backend == BackendType.OPENVINO:
+        if model_backend == BackendType.OPENVINO:
             from nncf.experimental.openvino_native.graph.nncf_graph_builder import GraphConverter
             return GraphConverter.create_nncf_graph(model)
         raise RuntimeError('Cannot create backend-specific graph'
@@ -55,7 +55,7 @@ class ModelTransformerFactory:
         if model_backend == BackendType.ONNX:
             from nncf.onnx.graph.model_transformer import ONNXModelTransformer
             return ONNXModelTransformer(model)
-        elif model_backend == BackendType.OPENVINO:
+        if model_backend == BackendType.OPENVINO:
             from nncf.experimental.openvino_native.graph.model_transformer import OVModelTransformer
             return OVModelTransformer(model)
         raise RuntimeError('Cannot create backend-specific model transformer'
@@ -74,7 +74,7 @@ class EngineFactory:
         if model_backend == BackendType.ONNX:
             from nncf.onnx.engine import ONNXEngine
             return ONNXEngine(model)
-        elif model_backend == BackendType.OPENVINO:
+        if model_backend == BackendType.OPENVINO:
             from nncf.experimental.openvino_native.engine import OVNativeEngine
             return OVNativeEngine(model)
         raise RuntimeError('Cannot create backend-specific engine'
