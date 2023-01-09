@@ -30,7 +30,7 @@ from nncf.experimental.onnx.graph.onnx_graph import ONNXGraph
 from nncf.experimental.onnx.quantization.quantizer_parameters import ONNXQuantizerLayerParameters
 
 from tests.onnx.models import LinearModel
-from tests.onnx.quantization.common import ptq_quantize_model
+from tests.onnx.quantization.common import min_max_quantize_model
 from tests.onnx.quantization.common import compare_nncf_graph
 
 TARGET_LAYERS = [('Non_Existing_Edge',), ('Conv1',), ('Conv1', 'BN1', 'ReLU1')]
@@ -186,7 +186,7 @@ def test_node_removing(target_layers):
     model_to_test = LinearModel()
     onnx_model = model_to_test.onnx_model
 
-    quantized_model = ptq_quantize_model(model_to_test.input_shape[0], onnx_model)
+    quantized_model = min_max_quantize_model(model_to_test.input_shape[0], onnx_model)
 
     transformation_layout = TransformationLayout()
 
