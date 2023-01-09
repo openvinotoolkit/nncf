@@ -251,6 +251,20 @@ def _read_reference_json(fpath: Path) -> pd.DataFrame:
     return df
 
 
+def modify_ac_config(config_path, data_dir, anno_dir):
+    data = None
+    with open(config_path, 'r') as f:
+        data = yaml.load(f, Loader=yaml.loader.SafeLoader)
+        data['models'][0]['datasets'][0]['data_source'] = str(
+            data_dir / Path(data['models'][0]['datasets'][0]['data_source']))
+        data['models'][0]['datasets'][0]['annotation_conversion']['annotation_file'] = str(
+            data_dir / Path(data['models'][0]['datasets'][0]['annotation_conversion']['annotation_file']))
+        data['models'][0]['datasets'][0]['annotation'] = str(
+            anno_dir / Path(data['models'][0]['datasets'][0]['annotation']))
+    with open(config_path, 'w') as f:
+        f.write(yaml.dump(data, default_flow_style=False))
+
+
 @pytest.fixture
 def reference_model_accuracy(scope="module"):
     fpath = ONNX_TEST_ROOT / "data" / "reference_model_accuracy" / "reference.json"
@@ -313,19 +327,6 @@ class TestPTQ:
         runner = Command(f"mo -m {model_path} -o {output_dir} -n {model_name}")
         runner.run()
 
-    def modify_ac_config(self, config_path, data_dir, anno_dir):
-        data = None
-        with open(config_path, 'r') as f:
-            data = yaml.load(f, Loader=yaml.loader.SafeLoader)
-            data['models'][0]['datasets'][0]['data_source'] = str(
-                data_dir / Path(data['models'][0]['datasets'][0]['data_source']))
-            data['models'][0]['datasets'][0]['annotation_conversion']['annotation_file'] = str(
-                data_dir / Path(data['models'][0]['datasets'][0]['annotation_conversion']['annotation_file']))
-            data['models'][0]['datasets'][0]['annotation'] = str(
-                anno_dir / Path(data['models'][0]['datasets'][0]['annotation']))
-        with open(config_path, 'w') as f:
-            f.write(yaml.dump(data, default_flow_style=False))
-
     def get_quantized_pot_model(self, model_dir, model_name, config_path):
         model_topology = str(model_dir / model_name) + '.xml'
         model_weights = str(model_dir / model_name) + '.bin'
@@ -354,7 +355,7 @@ class TestPTQ:
         model_path = model_dir / task_type / (model_name + ".onnx")
         ir_model_dir = ckpt_dir / 'openvino'
         self.get_ir_model(model_path, model_name, ir_model_dir)
-        self.modify_ac_config(config_path, data_dir, anno_dir)
+        modify_ac_config(config_path, data_dir, anno_dir)
         self.get_quantized_pot_model(ir_model_dir, model_name, config_path)
 
 
@@ -368,18 +369,18 @@ class TestBenchmark:
 
         program_path = BENCHMARKING_DIR / program
         task_path = BENCHMARKING_DIR / task_type
+        anno_dir = anno_dir / str(eval_size)
+        if not anno_dir.exists():
+            anno_dir.mkdir(parents=True)
 
         config_path = task_path / "onnx_models_configs" / (model_name + ".yml")
         if is_pot:
             config_path = task_path / "openvino_models_configs" / (model_name + ".yml")
+            modify_ac_config(config_path, data_dir, anno_dir)
 
         output_dir = output_dir / task_type
         if not output_dir.exists():
             output_dir.mkdir(parents=True)
-
-        anno_dir = anno_dir / str(eval_size)
-        if not anno_dir.exists():
-            anno_dir.mkdir(parents=True)
 
         out_file_name = os.path.splitext(program)[0]
 
