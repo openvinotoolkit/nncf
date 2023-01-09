@@ -38,7 +38,7 @@ def process_fn(data_item, model_evaluator: ModelEvaluator, has_batch_dim: Option
 
     if len(filled_inputs) == 1:
         return {k: np.squeeze(v, axis=0)
-        if has_batch_dim else v for k, v in filled_inputs[0].items()}
+                if has_batch_dim else v for k, v in filled_inputs[0].items()}
 
     raise Exception("len(filled_inputs) should be one.")
 
@@ -48,6 +48,7 @@ def run(onnx_model_path: str, output_model_path: str, dataset: nncf.Dataset,
         ignored_scopes: Optional[List[str]] = None,
         disallowed_op_types: Optional[List[str]] = None,
         convert_model_opset: bool = True):
+
     print("Post-Training Quantization Parameters:")
     onnx.checker.check_model(onnx_model_path)
     original_model = onnx.load(onnx_model_path)
