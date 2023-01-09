@@ -68,22 +68,6 @@ def _get_input_key(original_model: onnx.ModelProto) -> str:
     return input_keys[0]
 
 
-def min_max_quantize_model(
-        input_shape: List[int], original_model: onnx.ModelProto, convert_model_opset: bool = True,
-        ignored_scopes: List[str] = None, dataset_has_batch_size: bool = False) -> onnx.ModelProto:
-    if convert_model_opset:
-        original_model = convert_opset_version(original_model)
-    onnx_graph = ONNXGraph(original_model)
-    input_dtype = onnx_graph.get_edge_dtype(original_model.graph.input[0].name)
-    input_np_dtype = onnx.helper.mapping.TENSOR_TYPE_TO_NP_TYPE[input_dtype]
-    dataset = get_random_dataset_for_test(_get_input_key(
-        original_model), input_shape, input_np_dtype, dataset_has_batch_size)
-    min_max_quantization = MinMaxQuantization(
-        MinMaxQuantizationParameters(number_samples=1, ignored_scopes=ignored_scopes))
-    quantized_model = min_max_quantization.apply(original_model, dataset=dataset)
-    return quantized_model
-
-
 def ptq_quantize_model(
         input_shape: List[int], original_model: onnx.ModelProto, convert_model_opset: bool = True,
         ignored_scopes: List[str] = None, dataset_has_batch_size: bool = False) -> onnx.ModelProto:
