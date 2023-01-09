@@ -134,7 +134,7 @@ class ONNXBiasCorrectionAlgoBackend(BiasCorrectionAlgoBackend):
         if onnx_graph.has_initializer(bias_input_name):
             bias_value = onnx_graph.get_initializers_value(bias_input_name)
             return bias_value, bias_value.shape
-    
+
         bias_node = onnx_graph.get_nodes_by_output(bias_input_name)[0]
         metatype = ONNX_OPERATION_METATYPES.get_operator_metatype_by_op_name(bias_node.op_type)
         if metatype == ONNXIdentityMetatype:

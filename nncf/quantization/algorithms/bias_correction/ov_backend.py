@@ -32,6 +32,8 @@ from nncf.experimental.openvino_native.graph.transformations.commands import OVM
 from nncf.experimental.openvino_native.graph.transformations.commands import OVNodeRemovingCommand
 from nncf.experimental.openvino_native.graph.transformations.commands import OVOutputInsertionCommand
 from nncf.experimental.openvino_native.graph.transformations.commands import OVTargetPoint
+# TODO (KodiaqQ): Remove this WA after merging #1444
+# pylint: disable=import-error,no-name-in-module
 from nncf.experimental.openvino_native.statistics.collectors import OVMeanStatisticCollector
 from nncf.experimental.openvino_native.statistics.collectors import OVBatchStatisticCollector
 from nncf.experimental.openvino_native.statistics.collectors import OVNNCFCollectorTensorProcessor

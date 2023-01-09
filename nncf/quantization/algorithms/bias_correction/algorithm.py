@@ -160,7 +160,11 @@ class BiasCorrection(Algorithm):
 
             feed_dicts = self._create_feed_dicts(nncf_graph, subgraph_data, statistic_points)
 
-            bias_shift = self._compute_bias_shift(biased_node, nncf_graph, model_copy_subgraph, feed_dicts, statistic_points)
+            bias_shift = self._compute_bias_shift(biased_node,
+                                                  nncf_graph,
+                                                  model_copy_subgraph,
+                                                  feed_dicts,
+                                                  statistic_points)
 
             bias_node = self._backend_entity.get_bias_node(biased_node, nncf_graph)
             current_bias, current_bias_shape = self._backend_entity.get_bias_value(model, bias_node)
@@ -399,7 +403,8 @@ class BiasCorrection(Algorithm):
         engine = EngineFactory.create(model)
         for feed_dict in feed_dicts:
             new_q_output = engine.infer(feed_dict)
-            for output_node_name, statistic_node_name in zip(subgraph_data['output_node_names'], subgraph_data['statistic_node_names']):
+            for output_node_name, statistic_node_name in zip(subgraph_data['output_node_names'],
+                                                             subgraph_data['statistic_node_names']):
                 output_node = nncf_graph.get_node_by_name(output_node_name)
                 _, output_name = self._backend_entity.get_input_output_names(output_node, nncf_graph)
                 if statistic_node_name not in self._fp_inputs:
