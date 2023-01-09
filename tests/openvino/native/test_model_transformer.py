@@ -21,8 +21,14 @@ from nncf.experimental.openvino_native.engine import OVNativeEngine
 from nncf.experimental.openvino_native.graph.model_transformer import OVModelTransformer
 from nncf.experimental.openvino_native.graph.transformations.commands import OVTargetPoint
 from nncf.experimental.openvino_native.graph.transformations.commands import OVOutputInsertionCommand
+from nncf.experimental.openvino_native.graph.transformations.commands import OVNodeRemovingCommand
 
 from tests.openvino.native.models import LinearModel
+from tests.openvino.native.models import ConvModel
+from tests.openvino.native.common import compare_nncf_graphs
+from tests.openvino.conftest import OPENVINO_NATIVE_TEST_ROOT
+
+REFERENCE_GRAPHS_DIR = OPENVINO_NATIVE_TEST_ROOT / 'data' / 'reference_graphs' / 'original_nncf_graph'
 
 REF_OUTPUT_SHAPES = {'Result_Matmul': (1, 3, 2, 5), 'Result_Add': (1, 3, 2, 4)}
 TARGET_LAYERS = [['Add'], ['MatMul'], ['Add', 'MatMul']]
@@ -85,3 +91,24 @@ def test_output_insertion_post_layer(target_layers, target_layer_outputs):
     assert len(extra_outputs) == len(target_layer_outputs)
     for out_name in extra_outputs:
         assert out_name in target_layer_outputs
+
+
+TARGET_LAYERS = [('Sub', 'Relu')]
+
+@pytest.mark.parametrize('target_layers', TARGET_LAYERS)
+def test_node_removing(target_layers):
+    model_to_test = ConvModel()
+    model = model_to_test.ov_model
+
+    transformation_layout = TransformationLayout()
+
+    for target_layer in target_layers:
+        target_point = OVTargetPoint(TargetType.LAYER, target_layer, 0)
+        command = OVNodeRemovingCommand(target_point)
+        transformation_layout.register(command)
+
+    model_transformer = OVModelTransformer(model)
+
+    transformed_model = model_transformer.transform(transformation_layout)
+    ref_name = 'removed_nodes_in_' + model_to_test.ref_graph_name
+    compare_nncf_graphs(transformed_model, REFERENCE_GRAPHS_DIR / ref_name)

@@ -20,6 +20,7 @@ from nncf.common.graph.model_transformer import ModelTransformer
 from nncf.common.graph.transformations.layout import TransformationLayout
 from nncf.common.graph.transformations.commands import TargetType
 from nncf.experimental.openvino_native.graph.transformations.commands import OVOutputInsertionCommand
+from nncf.experimental.openvino_native.graph.transformations.commands import OVNodeRemovingCommand
 
 
 class OVModelTransformer(ModelTransformer):
@@ -44,14 +45,19 @@ class OVModelTransformer(ModelTransformer):
         :param transformations: lisf of the TransformationCommand transformations.
         """
         output_insert_transformations = []
+        node_removing_transformations = []
         transformations = transformation_layout.transformations
 
         for transformation in transformations:
             if isinstance(transformation, OVOutputInsertionCommand):
                 output_insert_transformations.append(transformation)
+            elif isinstance(transformation, OVNodeRemovingCommand):
+                node_removing_transformations.append(transformation)
 
         if output_insert_transformations:
             self._apply_output_insertion_transformations(output_insert_transformations)
+        if node_removing_transformations:
+            self._apply_node_removing_transformation(node_removing_transformations)
 
         return self._model
 
@@ -107,3 +113,17 @@ class OVModelTransformer(ModelTransformer):
             extra_model_outputs.append(result)
 
         return ov.Model(model_outputs + extra_model_outputs, params)
+
+    def _apply_node_removing_transformation(self, transformations: List[OVNodeRemovingCommand]) -> None:
+        """
+        Removes the layers from the model.
+        :param transformations: lisf of the node removing transformations.
+        """
+        for transformation in transformations:
+            node = self.name_to_node_mapping[transformation.target_point.target_node_name]
+
+            node_input = node.input(0).get_source_output()
+            for node_output in node.outputs():
+                for target_in in node_output.get_target_inputs():
+                    target_in.replace_source_output(node_input)
+            del self.name_to_node_mapping[transformation.target_point.target_node_name]

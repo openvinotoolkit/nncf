@@ -57,3 +57,19 @@ class OVOutputInsertionCommand(OVInsertionCommand):
     def union(self, other: 'TransformationCommand') -> 'TransformationCommand':
         # Have a look at nncf/torch/graph/transformations/commands/PTInsertionCommand
         raise NotImplementedError()
+
+
+class OVNodeRemovingCommand(TransformationCommand):
+    """
+    Removes nodes from the model.
+    """
+
+    def __init__(self, target_point: OVTargetPoint):
+        """
+        :param target_point: The TargetPoint instance for the layer that contains information for removing.
+        """
+        super().__init__(TransformationType.REMOVE, target_point)
+
+    def union(self, other: 'TransformationCommand') -> 'TransformationCommand':
+        # Have a look at nncf/torch/graph/transformations/commands/PTInsertionCommand
+        raise NotImplementedError()

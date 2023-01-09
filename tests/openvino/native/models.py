@@ -19,6 +19,7 @@ from openvino.runtime import opset9 as opset
 class OVReferenceModel:
     def __init__(self, ov_model: ov.Model):
         self.ov_model = ov_model
+        self.ref_graph_name = f'{self.__class__.__name__}.dot'
 
 
 class LinearModel(OVReferenceModel):
