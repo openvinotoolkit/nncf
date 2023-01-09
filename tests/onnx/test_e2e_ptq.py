@@ -261,6 +261,9 @@ def modify_ac_config(config_path, data_dir, anno_dir):
             data_dir / Path(data['models'][0]['datasets'][0]['annotation_conversion']['annotation_file']))
         data['models'][0]['datasets'][0]['annotation'] = str(
             anno_dir / Path(data['models'][0]['datasets'][0]['annotation']))
+        if 'dataset_meta' in data['models'][0]['datasets'][0]:
+            data['models'][0]['datasets'][0]['dataset_meta'] = str(
+                anno_dir / Path(data['models'][0]['datasets'][0]['dataset_meta']))
     with open(config_path, 'w') as f:
         f.write(yaml.dump(data, default_flow_style=False))
 
