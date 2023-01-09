@@ -1,1 +1,3 @@
 yolov5
+openvino-dev
+torch

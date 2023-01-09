@@ -30,8 +30,23 @@ from nncf.quantization.algorithms.post_training.algorithm import PostTrainingQua
 from nncf.quantization.algorithms.post_training.algorithm import PostTrainingQuantizationParameters
 from nncf.experimental.onnx.graph.nncf_graph_builder import GraphConverter
 from nncf.experimental.onnx.graph.onnx_graph import ONNXGraph
+from nncf.common.quantization.structs import QuantizationMode
+from nncf.experimental.onnx.quantization.quantizer_parameters import ONNXQuantizerLayerParameters
 
 REFERENCE_GRAPHS_TEST_ROOT = 'data/reference_graphs/quantization'
+
+
+def mock_collect_statistics(mocker):
+    _ = mocker.patch(
+        'nncf.quantization.algorithms.min_max.onnx_backend.calculate_activation_quantizer_parameters',
+        return_value=ONNXQuantizerLayerParameters(np.array(0), np.array(0),
+                                                  mode=QuantizationMode.SYMMETRIC,
+                                                  axis=None,
+                                                  tensor_type=np.uint8))
+    _ = mocker.patch(
+        'nncf.common.tensor_statistics.aggregator.StatisticsAggregator.collect_statistics', return_value=None)
+    _ = mocker.patch(
+        'nncf.common.tensor_statistics.collectors.TensorStatisticCollectorBase.get_statistics', return_value=None)
 
 
 def get_random_dataset_for_test(input_key: str,

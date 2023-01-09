@@ -603,10 +603,10 @@ class FilterPruningController(BasePruningAlgoController):
         return self.pruning_level
 
     @compression_rate.setter
-    def compression_rate(self, pruning_rate):
+    def compression_rate(self, compression_rate):
         is_pruning_controller_frozen = self.frozen
         self.freeze(False)
-        self.set_pruning_level(pruning_rate)
+        self.set_pruning_level(compression_rate)
         self.freeze(is_pruning_controller_frozen)
 
     def disable_scheduler(self):

@@ -234,6 +234,7 @@ class MagnitudeSparsityController(BaseSparsityController):
 
     def disable_scheduler(self):
         self._scheduler = StubCompressionScheduler()
+        self._scheduler.target_level = 0.0
         self._scheduler.current_sparsity_level = 0.0
 
     def statistics(self, quickly_collected_only: bool = False) -> NNCFStatistics:
@@ -254,10 +255,10 @@ class MagnitudeSparsityController(BaseSparsityController):
         return nncf_stats
 
     def compression_stage(self) -> CompressionStage:
-        if self.scheduler.current_sparsity_level == 0:
-            return CompressionStage.UNCOMPRESSED
         if self.scheduler.current_sparsity_level >= self.scheduler.target_level:
             return CompressionStage.FULLY_COMPRESSED
+        if self.scheduler.current_sparsity_level == 0:
+            return CompressionStage.UNCOMPRESSED
         return CompressionStage.PARTIALLY_COMPRESSED
 
     def _run_batchnorm_adaptation(self):
