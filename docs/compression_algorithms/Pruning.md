@@ -40,7 +40,7 @@ The zeroed filters are frozen afterwards and the remaining model parameters are 
 **Exponential scheduler**
 
 Similar to the Baseline scheduler, during `num_init_steps` epochs model is pretrained without pruning.
-During the next `pruning steps` epochs `Exponential scheduler` gradually increasing pruning level from `pruning_init` to `pruning_target`. After each pruning training epoch pruning algorithm calculates filter importances for all convolutional filters and prune (setting to zero) `current_pruning_rate` part of filters with the smallest importance in each Convolution.  After `num_init_steps` + `pruning_steps` epochs algorithm with zeroed filters is frozen and remaining model parameters only fine-tunes.
+During the next `pruning steps` epochs `Exponential scheduler` gradually increasing pruning level from `pruning_init` to `pruning_target`. After each pruning training epoch pruning algorithm calculates filter importances for all convolutional filters and prune (setting to zero) `current_pruning_level` part of filters with the smallest importance in each Convolution.  After `num_init_steps` + `pruning_steps` epochs algorithm with zeroed filters is frozen and remaining model parameters only fine-tunes.
 
 Current pruning level $P_{i}$ (on i-th epoch) during training calculates by equation:
 $P_i = a * e^{- k * i}$

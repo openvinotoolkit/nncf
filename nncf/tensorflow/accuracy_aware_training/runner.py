@@ -19,7 +19,6 @@ from tensorflow.keras.optimizers import schedules  # pylint:disable=no-name-in-m
 
 from nncf.common.accuracy_aware_training.runner import BaseAccuracyAwareTrainingRunner
 from nncf.common.accuracy_aware_training.runner import BaseAdaptiveCompressionLevelTrainingRunner
-from nncf.common.schedulers import StubCompressionScheduler
 from nncf.common.logging import nncf_logger
 
 
@@ -59,7 +58,7 @@ class TFAccuracyAwareTrainingRunner(BaseAccuracyAwareTrainingRunner):
             elif isinstance(scheduler, schedules.PiecewiseConstantDecay):
                 scheduler.values = [lr * self.base_lr_reduction_factor_during_search for lr in scheduler.values]
             else:
-                nncf_logger.warning(f"Learning rate scheduler {scheduler} is not supported yet."
+                nncf_logger.warning(f"Learning rate scheduler {scheduler} is not supported yet. "
                                     f"Won't change the learning rate.")
 
         self.training_epoch_count = 0
@@ -98,27 +97,10 @@ class TFAccuracyAwareTrainingRunner(BaseAccuracyAwareTrainingRunner):
 class TFAdaptiveCompressionLevelTrainingRunner(BaseAdaptiveCompressionLevelTrainingRunner,
                                                TFAccuracyAwareTrainingRunner):
     def __init__(self, accuracy_aware_training_params, verbose=True, dump_checkpoints=True, lr_updates_needed=True,
-                 minimal_compression_rate=0.05, maximal_compression_rate=0.95):
+                 minimal_compression_rate=0.0, maximal_compression_rate=0.95):
         super().__init__(accuracy_aware_training_params, verbose, dump_checkpoints, lr_updates_needed,
                          minimal_compression_rate=minimal_compression_rate,
                          maximal_compression_rate=maximal_compression_rate)
-
-    def dump_checkpoint(self, model, compression_controller):
-        # a workaround because for tensorflow backend disabling compression scheduler does not work properly
-        is_best_checkpoint = (self.best_val_metric_value == self.current_val_metric_value and
-                              isinstance(compression_controller.scheduler, StubCompressionScheduler))
-        if not self.dump_checkpoints and not is_best_checkpoint:
-            return
-
-        if self._dump_checkpoint_fn is not None:
-            checkpoint_path = self._dump_checkpoint_fn(model, compression_controller, self, self._checkpoint_save_dir)
-        else:
-            checkpoint_path = self._make_checkpoint_path(is_best=False)
-            self._save_checkpoint(model, compression_controller, checkpoint_path)
-        nncf_logger.info(f"Saved the checkpoint to {checkpoint_path}")
-
-        if is_best_checkpoint:
-            self._save_best_checkpoint(model, compression_controller)
 
     def _make_checkpoint_path(self, is_best, compression_rate=None):
         extension = '.pt'

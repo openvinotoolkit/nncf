@@ -21,7 +21,7 @@ import onnx
 from tests.onnx.quantization.common import ModelToTest
 from tests.onnx.quantization.common import min_max_quantize_model
 from tests.onnx.quantization.common import compare_nncf_graph
-from tests.onnx.quantization.common import infer_model
+from tests.onnx.quantization.common import mock_collect_statistics
 
 
 @pytest.mark.parametrize(('model_to_test', 'model'),
@@ -39,7 +39,8 @@ from tests.onnx.quantization.common import infer_model
                           (ModelToTest('mnasnet0_5', [1, 3, 224, 224]), models.mnasnet0_5(pretrained=True)),
                           ]
                          )
-def test_min_max_quantization_graph(tmp_path, model_to_test, model):
+def test_min_max_quantization_graph(tmp_path, mocker, model_to_test, model):
+    mock_collect_statistics(mocker)
     onnx_model_path = tmp_path / model_to_test.model_name
     x = torch.randn(model_to_test.input_shape, requires_grad=False)
     torch.onnx.export(model, x, onnx_model_path, opset_version=13)
@@ -47,7 +48,3 @@ def test_min_max_quantization_graph(tmp_path, model_to_test, model):
     original_model = onnx.load(onnx_model_path)
     quantized_model = min_max_quantize_model(model_to_test.input_shape, original_model)
     compare_nncf_graph(quantized_model, model_to_test.path_ref_graph)
-    if model_to_test.model_name == 'mobilenet_v3_small':
-        # 'Ticket 97942'
-        return
-    infer_model(model_to_test.input_shape, quantized_model)

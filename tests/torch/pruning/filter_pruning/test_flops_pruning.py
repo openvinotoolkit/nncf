@@ -113,7 +113,7 @@ def test_init_params_for_flops_calculation(model, ref_params):
 def test_flops_calulation_for_spec_layers(model, all_weights, pruning_flops_target,
                                           ref_full_flops, ref_current_flops, ref_sizes):
     # Need check models with large size of layers because in other case
-    # different value of pruning rate give the same final size of model
+    # different value of pruning level give the same final size of model
     config = get_basic_pruning_config([1, 1, 8, 8])
     config['compression']['algorithm'] = 'filter_pruning'
     config['compression']['pruning_init'] = pruning_flops_target

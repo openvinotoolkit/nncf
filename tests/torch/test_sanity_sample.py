@@ -15,6 +15,8 @@ import json
 import os
 import shlex
 import tempfile
+from contextlib import contextmanager
+from contextlib import nullcontext
 
 import pytest
 import torch
@@ -415,6 +417,16 @@ def test_get_default_weight_decay(algo, ref_weight_decay):
     assert ref_weight_decay == get_default_weight_decay(config)
 
 
+@contextmanager
+def set_num_threads_locally(n=1):
+    old_n = torch.get_num_threads()
+    try:
+        torch.set_num_threads(n)
+        yield
+    finally:
+        torch.set_num_threads(old_n)
+
+
 def test_cpu_only_mode_produces_cpu_only_model(config, tmp_path, mocker):
     config_factory = ConfigFactory(config['nncf_config'], tmp_path / 'config.json')
     args = {
@@ -451,7 +463,11 @@ def test_cpu_only_mode_produces_cpu_only_model(config, tmp_path, mocker):
         import examples.torch.object_detection.main as sample
         mocker.spy(sample, "train")
 
-    sample.main(shlex.split(command_line))
+    # Set number of threads = 1 to avoid hang for UNet (ticket 100106).
+    # Potentially it might happen when OpenMP is used before fork.
+    # The relevant thread: https://github.com/pytorch/pytorch/issues/91547
+    with set_num_threads_locally(1) if config["sample_type"] == "semantic_segmentation" else nullcontext():
+        sample.main(shlex.split(command_line))
 
     # pylint: disable=no-member
     if config["sample_type"] == "classification":

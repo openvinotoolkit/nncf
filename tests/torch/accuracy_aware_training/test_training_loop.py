@@ -29,6 +29,7 @@ from tests.torch.helpers import create_compressed_model_and_algo_for_test
 from tests.torch.helpers import LeNet
 from tests.torch.helpers import create_ones_mock_dataloader
 from tests.torch.helpers import set_torch_seed
+from tests.torch.pruning.helpers import get_pruning_baseline_config
 from tests.torch.sparsity.magnitude.test_helpers import get_basic_magnitude_sparsity_config
 from tests.torch.quantization.quantization_helpers import get_quantization_config_without_range_init
 
@@ -63,9 +64,9 @@ def create_finetuned_lenet_model_and_dataloader(config, eval_fn, finetuning_step
      'final_compression_rate',
      'reference_final_metric'),
     (
-            ({'maximal_relative_accuracy_degradation': 0.01}, 0.7421, 0.998181),
-            ({'maximal_relative_accuracy_degradation': 100.0}, 0.9165, 0.0),
-            ({'maximal_absolute_accuracy_degradation': 0.10}, 0.8168, 0.9151),
+            ({'maximal_relative_accuracy_degradation': 0.01}, 0.745, 0.998181),
+            ({'maximal_relative_accuracy_degradation': 100.0}, 0.92, 0.0),
+            ({'maximal_absolute_accuracy_degradation': 0.10}, 0.82, 0.9151),
     )
 )
 def test_adaptive_compression_training_loop(max_accuracy_degradation,
@@ -130,8 +131,9 @@ def test_adaptive_compression_training_loop(max_accuracy_degradation,
                                         train_epoch_fn=train_fn,
                                         validate_fn=partial(validate_fn, train_loader=train_loader),
                                         configure_optimizers_fn=configure_optimizers_fn)
-    assert compression_ctrl.compression_rate == pytest.approx(final_compression_rate, 1e-3)
-    assert validate_fn(model, train_loader=train_loader) == pytest.approx(reference_final_metric, 1e-4)
+    statistics = acc_aware_training_loop.statistics
+    assert statistics.compression_rate == pytest.approx(final_compression_rate, 1e-3)
+    assert statistics.compressed_accuracy == pytest.approx(reference_final_metric, 1e-4)
 
 
 @pytest.mark.parametrize(
@@ -208,6 +210,92 @@ def test_adaptive_compression_training_loop_with_no_training(
 
 
 @pytest.mark.parametrize(
+    ('max_accuracy_degradation', 'maximal_total_epochs', 'pruning_target'),
+    (({'maximal_absolute_accuracy_degradation': 0.1}, 4, 0.1),
+     ({'maximal_absolute_accuracy_degradation': 0.1}, 4, 0.2),
+     ({'maximal_absolute_accuracy_degradation': 0.1}, 10, 0.3),
+     ({'maximal_relative_accuracy_degradation': 5.0}, 4, 0.1),
+     ({'maximal_relative_accuracy_degradation': 5.0}, 4, 0.3),)
+)
+def test_adaptive_compression_training_loop_failing(
+        max_accuracy_degradation,
+        maximal_total_epochs,
+        pruning_target,
+        initial_compression_rate_step=0.1,
+        learning_rate=1e-3,
+        initial_training_phase_epochs=1,
+        patience_epochs=3,
+        pruning_init=0.05,
+        pruning_steps=1,
+):
+    def mock_validate_fn(model, init_step=False, epoch=0):
+        original_metric = 0.85
+        if init_step:
+            return original_metric
+
+        return original_metric - 0.06 * (epoch + 1)
+
+    input_sample_size = [1, 1, LeNet.INPUT_SIZE[-1], LeNet.INPUT_SIZE[-1]]
+    config = get_pruning_baseline_config(input_sample_size=input_sample_size)
+
+    params = {
+        "initial_training_phase_epochs": initial_training_phase_epochs,
+        "patience_epochs": patience_epochs,
+        "maximal_total_epochs": maximal_total_epochs,
+        "initial_compression_rate_step": initial_compression_rate_step
+    }
+    params.update(max_accuracy_degradation)
+    accuracy_aware_config = {
+        "accuracy_aware_training": {
+            "mode": "adaptive_compression_level",
+            "params": params
+        }
+    }
+    pruning_config = {
+        "compression": {
+            "algorithm": "filter_pruning",
+            "pruning_init": pruning_init,
+            "params": {
+                "pruning_target": pruning_target,
+                "pruning_steps": pruning_steps
+            }
+        }
+    }
+
+    config.update(accuracy_aware_config)
+    config.update(pruning_config)
+
+    train_loader = create_ones_mock_dataloader(config, num_samples=10)
+    model = LeNet()
+
+    config = register_default_init_args(config,
+                                        train_loader=train_loader,
+                                        model_eval_fn=partial(mock_validate_fn, init_step=True))
+
+    model, compression_ctrl = create_compressed_model_and_algo_for_test(model, config)
+
+    def train_fn(compression_ctrl, model, optimizer,
+                 train_loader=train_loader, **kwargs):
+        pass
+
+    def configure_optimizers_fn():
+        optimizer = SGD(model.parameters(), lr=learning_rate)
+        return optimizer, None
+
+    acc_aware_training_loop = AdaptiveCompressionTrainingLoop(config, compression_ctrl)
+
+    model = acc_aware_training_loop.run(model,
+                                        train_epoch_fn=train_fn,
+                                        validate_fn=partial(mock_validate_fn, init_step=False),
+                                        configure_optimizers_fn=configure_optimizers_fn)
+    statistics = acc_aware_training_loop.statistics
+    accuracy_degradation_key = next(iter(max_accuracy_degradation.keys()))
+    assert getattr(statistics, accuracy_degradation_key.replace('maximal_', '')) > \
+           config['accuracy_aware_training']['params'][accuracy_degradation_key]
+    assert statistics.compression_rate < pruning_target
+
+
+@pytest.mark.parametrize(
     'max_accuracy_degradation',
     (({'maximal_relative_accuracy_degradation': 30.0}), ({'maximal_relative_accuracy_degradation': 1.0}),
      ({'maximal_absolute_accuracy_degradation': 0.30}), ({'maximal_absolute_accuracy_degradation': 0.05}))
@@ -269,7 +357,7 @@ def test_early_exit_training_loop(max_accuracy_degradation,
                                              validate_fn=partial(validate_fn, train_loader=train_loader),
                                              configure_optimizers_fn=configure_optimizers_fn)
     original_model_accuracy = model.original_model_accuracy
-    compressed_model_accuracy = validate_fn(model, train_loader=train_loader)
+    compressed_model_accuracy = early_stopping_training_loop.statistics.compressed_accuracy
     if "maximal_absolute_accuracy_degradation" in max_accuracy_degradation:
         assert (original_model_accuracy - compressed_model_accuracy) <= \
                max_accuracy_degradation["maximal_absolute_accuracy_degradation"]

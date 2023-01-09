@@ -28,8 +28,8 @@ from tests.tensorflow.pruning.helpers import get_batched_linear_model
 from tests.tensorflow.pruning.helpers import get_diff_cluster_channels_model
 
 
-def check_pruning_mask(mask, pruning_rate, layer_name):
-    assert np.sum(mask) == mask.size * pruning_rate, f"Incorrect masks for {layer_name}"
+def check_pruning_mask(mask, pruning_level, layer_name):
+    assert np.sum(mask) == mask.size * pruning_level, f"Incorrect masks for {layer_name}"
 
 
 @pytest.mark.parametrize(('all_weights', 'prune_batch_norms', 'ref_num_wrapped_layer'),
@@ -58,10 +58,10 @@ def test_masks_in_concat_model(all_weights, prune_batch_norms, ref_num_wrapped_l
 
         # Check masks correctness
         if not all_weights:
-            target_pruning_rate = 0.625 if layer.name == 'bn_concat' else 0.5
+            target_pruning_level = 0.625 if layer.name == 'bn_concat' else 0.5
             assert len(layer.ops_weights) == 2
             for op in layer.ops_weights.values():
-                check_pruning_mask(op['mask'].numpy(), target_pruning_rate, layer.name)
+                check_pruning_mask(op['mask'].numpy(), target_pruning_level, layer.name)
 
 @pytest.mark.parametrize(('all_weights', 'ref_num_wrapped_layer'),
                          [
@@ -88,7 +88,7 @@ def test_masks_in_split_model(all_weights, ref_num_wrapped_layer):
         if not all_weights:
             assert len(layer.ops_weights) == 2
             for op in layer.ops_weights.values():
-                check_pruning_mask(op['mask'].numpy(), pruning_rate=0.5, layer_name=layer.name)
+                check_pruning_mask(op['mask'].numpy(), pruning_level=0.5, layer_name=layer.name)
 
 
 @pytest.mark.parametrize('model_fn,ref_output_shapes',

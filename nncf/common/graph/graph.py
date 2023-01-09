@@ -656,6 +656,6 @@ class NNCFGraph:
                              data[NNCFGraph.DTYPE_EDGE_ATTR])
 
     def get_all_edges(self) -> Generator[NNCFGraphEdge, None, None]:
-        for nx_edge in self._nx_graph.edges:
+        for nx_edge in self._nx_graph.in_edges:
             yield self.get_edge(self.get_node_by_key(nx_edge[0]),
                                 self.get_node_by_key(nx_edge[1]))
