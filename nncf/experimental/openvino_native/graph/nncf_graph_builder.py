@@ -99,14 +99,15 @@ class GraphConverter:
         visited = set()
         inference_nodes = []
 
-        for param in model.get_parameters():
+        for param in sorted(model.get_parameters(), key=lambda param: param.get_friendly_name()):
             nncf_graph.add_nncf_node(node_name=param.get_friendly_name(),
                                      node_type=NNCFGraphNodeType.INPUT_NODE,
                                      node_metatype=InputNoopMetatype)
             visited.add(param.get_friendly_name())
-            inference_nodes.extend([inp.get_node() for inp in param.output(0).get_target_inputs()])
+            for inp in sorted(param.output(0).get_target_inputs(), key=lambda inp: inp.get_node().get_friendly_name()):
+                inference_nodes.append(inp.get_node())
 
-        for result in model.get_results():
+        for result in sorted(model.get_results(), key=lambda result: result.get_friendly_name()):
             nncf_graph.add_nncf_node(node_name=result.get_friendly_name(),
                                      node_type=NNCFGraphNodeType.OUTPUT_NODE,
                                      node_metatype=OutputNoopMetatype)
@@ -118,7 +119,9 @@ class GraphConverter:
             if node.get_friendly_name() not in visited:
                 GraphConverter._add_nncf_node(node, nncf_graph)
                 visited.add(node.get_friendly_name())
-                inference_nodes.extend([inp.get_node() for out in node.outputs() for inp in out.get_target_inputs()])
+                for out in node.outputs():
+                    for inp in sorted(out.get_target_inputs(), key=lambda inp: inp.get_node().get_friendly_name()):
+                        inference_nodes.append(inp.get_node())
 
         for node in model.get_ops():
             node_type = node.get_type_name()

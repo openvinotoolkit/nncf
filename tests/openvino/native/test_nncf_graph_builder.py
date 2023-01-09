@@ -23,7 +23,6 @@ from tests.openvino.native.models import SYNTHETIC_MODELS
 REFERENCE_GRAPHS_DIR = OPENVINO_NATIVE_TEST_ROOT / 'data' / 'reference_graphs' / 'original_nncf_graph'
 
 
-@pytest.mark.skip(reason="Enable after fixing an issue with operation outputs order")
 @pytest.mark.parametrize("model_cls_to_test", SYNTHETIC_MODELS.values())
 def test_compare_nncf_graph_synthetic_models(model_cls_to_test):
     model_to_test = model_cls_to_test()
@@ -36,13 +35,11 @@ OMZ_MODELS = [
     'mobilenet-v3-small-1.0-224-tf',
     'resnet-18-pytorch',
     'googlenet-v3-pytorch',
-
     'ssd_mobilenet_v1_coco',
     'yolo-v4-tiny-tf',
 ]
 
 
-@pytest.mark.skip(reason="Enable after fixing an issue with operation outputs order")
 @pytest.mark.parametrize('model_name', OMZ_MODELS)
 def test_compare_nncf_graph_omz_models(tmp_path, model_name):
     _ = download_model(model_name, tmp_path)
