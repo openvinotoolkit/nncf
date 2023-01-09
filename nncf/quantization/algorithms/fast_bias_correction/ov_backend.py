@@ -28,6 +28,8 @@ from nncf.experimental.openvino_native.graph.model_transformer import OVModelTra
 from nncf.experimental.openvino_native.graph.transformations.commands import OVBiasCorrectionCommand
 from nncf.experimental.openvino_native.graph.transformations.commands import OVModelExtractionCommand
 from nncf.experimental.openvino_native.graph.transformations.commands import OVTargetPoint
+# TODO (KodiaqQ): Remove this WA after merging #1444
+# pylint: disable=import-error,no-name-in-module
 from nncf.experimental.openvino_native.statistics.collectors import OVMeanStatisticCollector
 from nncf.experimental.openvino_native.statistics.collectors import OVNNCFCollectorTensorProcessor
 from nncf.experimental.openvino_native.tensor import OVNNCFTensor
@@ -140,7 +142,7 @@ class OVFastBiasCorrectionAlgoBackend(FastBiasCorrectionAlgoBackend):
         bias_node = OVFastBiasCorrectionAlgoBackend.get_bias_node(biased_node, nncf_graph)
         if bias_node is None:
             return False
-        
+
         needed_bias_type = OV_OPERATION_METATYPES.get_operator_metatype_by_op_name('Constant')
         skip_metatypes = [OV_OPERATION_METATYPES.get_operator_metatype_by_op_name('Convert')]
 

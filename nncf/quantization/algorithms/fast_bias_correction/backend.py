@@ -166,14 +166,14 @@ class FastBiasCorrectionAlgoBackend(ABC):
 
     @staticmethod
     @abstractmethod
-    def get_activation_port_ids_for_bias_node(model: TModel, node: NNCFNode) -> Tuple[int, int]:
+    def get_activation_port_ids_for_bias_node(model: TModel, biased_node: NNCFNode) -> Tuple[int, int]:
         """
         Returns Input Port ID and Output Port ID corresponding to activation input and output edges for
         the node.
         Supports only nodes that could have bias value.
 
         :param model: Backend-specific model.
-        :param node: Node of NNCFGraph with bias value.
+        :param biased_node: Node of NNCFGraph with bias value.
         """
 
     @staticmethod
