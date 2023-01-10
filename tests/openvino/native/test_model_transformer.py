@@ -24,7 +24,7 @@ from nncf.experimental.openvino_native.graph.transformations.commands import OVO
 from nncf.experimental.openvino_native.graph.transformations.commands import OVNodeRemovingCommand
 
 from tests.openvino.native.models import LinearModel
-from tests.openvino.native.models import ConvModel
+from tests.openvino.native.models import QuantizedModel
 from tests.openvino.native.common import compare_nncf_graphs
 from tests.openvino.conftest import OPENVINO_NATIVE_TEST_ROOT
 
@@ -93,11 +93,11 @@ def test_output_insertion_post_layer(target_layers, target_layer_outputs):
         assert out_name in target_layer_outputs
 
 
-TARGET_LAYERS = [('Sub', 'Relu')]
+TARGET_LAYERS = [('Conv_1/fq_input_0', 'Concat_1/fq_input_0', 'Conv_3/fq_weights_0', 'Add_2/fq_weights_0')]
 
 @pytest.mark.parametrize('target_layers', TARGET_LAYERS)
 def test_node_removing(target_layers):
-    model_to_test = ConvModel()
+    model_to_test = QuantizedModel()
     model = model_to_test.ov_model
 
     transformation_layout = TransformationLayout()

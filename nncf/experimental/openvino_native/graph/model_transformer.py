@@ -122,7 +122,7 @@ class OVModelTransformer(ModelTransformer):
         for transformation in transformations:
             node = self.name_to_node_mapping[transformation.target_point.target_node_name]
 
-            node_input = node.input(0).get_source_output()
+            node_input = node.input_value(0)
             for node_output in node.outputs():
                 for target_in in node_output.get_target_inputs():
                     target_in.replace_source_output(node_input)
