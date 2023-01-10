@@ -21,7 +21,7 @@ from nncf.experimental.openvino_native.engine import OVNativeEngine
 from nncf.experimental.openvino_native.graph.model_transformer import OVModelTransformer
 from nncf.experimental.openvino_native.graph.transformations.commands import OVTargetPoint
 from nncf.experimental.openvino_native.graph.transformations.commands import OVOutputInsertionCommand
-from nncf.experimental.openvino_native.graph.transformations.commands import OVNodeRemovingCommand
+from nncf.experimental.openvino_native.graph.transformations.commands import OVFQNodeRemovingCommand
 
 from tests.openvino.native.models import LinearModel
 from tests.openvino.native.models import QuantizedModel
@@ -104,7 +104,7 @@ def test_node_removing(target_layers):
 
     for target_layer in target_layers:
         target_point = OVTargetPoint(TargetType.LAYER, target_layer, 0)
-        command = OVNodeRemovingCommand(target_point)
+        command = OVFQNodeRemovingCommand(target_point)
         transformation_layout.register(command)
 
     model_transformer = OVModelTransformer(model)

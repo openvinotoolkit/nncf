@@ -20,7 +20,7 @@ from nncf.common.graph.model_transformer import ModelTransformer
 from nncf.common.graph.transformations.layout import TransformationLayout
 from nncf.common.graph.transformations.commands import TargetType
 from nncf.experimental.openvino_native.graph.transformations.commands import OVOutputInsertionCommand
-from nncf.experimental.openvino_native.graph.transformations.commands import OVNodeRemovingCommand
+from nncf.experimental.openvino_native.graph.transformations.commands import OVFQNodeRemovingCommand
 
 
 class OVModelTransformer(ModelTransformer):
@@ -45,19 +45,19 @@ class OVModelTransformer(ModelTransformer):
         :param transformations: lisf of the TransformationCommand transformations.
         """
         output_insert_transformations = []
-        node_removing_transformations = []
+        fq_nodes_removing_transformations = []
         transformations = transformation_layout.transformations
 
         for transformation in transformations:
             if isinstance(transformation, OVOutputInsertionCommand):
                 output_insert_transformations.append(transformation)
-            elif isinstance(transformation, OVNodeRemovingCommand):
-                node_removing_transformations.append(transformation)
+            elif isinstance(transformation, OVFQNodeRemovingCommand):
+                fq_nodes_removing_transformations.append(transformation)
 
         if output_insert_transformations:
             self._apply_output_insertion_transformations(output_insert_transformations)
-        if node_removing_transformations:
-            self._apply_node_removing_transformation(node_removing_transformations)
+        if fq_nodes_removing_transformations:
+            self._apply_fq_nodes_removing_transformation(fq_nodes_removing_transformations)
 
         return self._model
 
@@ -114,7 +114,7 @@ class OVModelTransformer(ModelTransformer):
 
         return ov.Model(model_outputs + extra_model_outputs, params)
 
-    def _apply_node_removing_transformation(self, transformations: List[OVNodeRemovingCommand]) -> None:
+    def _apply_fq_nodes_removing_transformation(self, transformations: List[OVFQNodeRemovingCommand]) -> None:
         """
         Removes the layers from the model.
         :param transformations: lisf of the node removing transformations.

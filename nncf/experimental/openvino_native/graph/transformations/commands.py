@@ -59,7 +59,7 @@ class OVOutputInsertionCommand(OVInsertionCommand):
         raise NotImplementedError()
 
 
-class OVNodeRemovingCommand(TransformationCommand):
+class OVFQNodeRemovingCommand(TransformationCommand):
     """
     Removes nodes from the model.
     """
