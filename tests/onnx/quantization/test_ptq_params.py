@@ -38,6 +38,13 @@ def test_target_device(target_device):
     assert min_max_algo._parameters.target_device.value == HW_CONFIG_TYPE_TARGET_DEVICE_MAP[target_device.value]
 
 
+def test_target_device_cpu_spr():
+    with pytest.raises(KeyError):
+        parameters = PostTrainingQuantizationParameters(
+            target_device=TargetDevice.CPU_SPR)
+        PostTrainingQuantization(parameters)
+
+
 @pytest.mark.parametrize('range_type', [RangeType.MINMAX, RangeType.MEAN_MINMAX, None])
 @pytest.mark.parametrize('original_model', [LinearModel()])
 def test_range_type_per_tensor(range_type, original_model):
