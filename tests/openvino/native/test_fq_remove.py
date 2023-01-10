@@ -33,7 +33,7 @@ DATA_DIR = OPENVINO_NATIVE_TEST_ROOT / 'data'
 
 
 def load_graph(graph_path: Path) -> NNCFGraph:
-    with open(graph_path) as f:
+    with open(graph_path, encoding='utf8') as f:
         data = json.load(f)
 
     graph = NNCFGraph()
@@ -71,7 +71,7 @@ class TestCase:
 def generate_test_cases(graph_path: Path, data_path: Path) -> List[TestCase]:
     graph = load_graph(graph_path)
 
-    with open(data_path) as f:
+    with open(data_path, encoding='utf8') as f:
         data = json.load(f)
 
     test_cases = []

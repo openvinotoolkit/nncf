@@ -31,13 +31,14 @@ def find_fq_nodes_to_cut(graph: NNCFGraph,
     which were founded) and the list of nodes that will be reverted to original precision when
     fake quantize nodes will be removed.
 
-    :param graph:
-    :param fq_node:
-    :param is_fq_node:
-    :param is_const_node:
-    :param is_quantizable_node:
-    :param is_quantize_agnostic_node:
-    :return:
+    :param graph: The NNCFGraph.
+    :param fq_node: The fake quantize node which we want to remove.
+    :param is_fq_node: A callable that returns `True` if a node is a fake quantize and `False` otherwise.
+    :param is_const_node: A callable that returns `True` if a node is a constant and `False` otherwise.
+    :param is_quantizable_node: A callable that returns `True` if a node is quantizable and `False` otherwise.
+    :param is_quantize_agnostic_node: A callable that returns `True` if node is agnostic and `False` otherwise.
+    :return: A tuple (fq_nodes, ops) where `fq_nodes` is the list of fake quantize nodes, ops are the list of
+        nodes that will be reverted to original precision when `fq_nodes` will be removed.
     """
     def _parse_node_relatives(node: NNCFNode, is_parents: bool):
         if is_quantizable(node):
