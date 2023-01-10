@@ -41,14 +41,13 @@ import sysconfig
 import codecs
 import os
 import re
+import setuptools
 from setuptools import setup, find_packages
+from pkg_resources import parse_version
 
 here = os.path.abspath(os.path.dirname(__file__))
 BKC_SETUPTOOLS_VERSION = '59.5.0'
 
-
-import setuptools
-from pkg_resources import parse_version
 setuptools_version = parse_version(setuptools.__version__).base_version
 if setuptools_version < '43.0.0':
     raise RuntimeError(
@@ -114,7 +113,7 @@ INSTALL_REQUIRES = ["ninja>=1.10.0.post2, <1.11",
                     # Ticket: 69520
                     "pyparsing<3.0",
                     "pymoo==0.5.0",
-                    "jsonschema==3.2.0",
+                    "jsonschema>=3.2.0",
                     "pydot>=1.4.1",
                     "jstyleson>=0.0.2",
                     "tqdm>=4.54.1",
