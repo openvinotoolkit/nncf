@@ -251,7 +251,7 @@ def _read_reference_json(fpath: Path) -> pd.DataFrame:
     return df
 
 
-def modify_ac_config(config_path, data_dir, anno_dir):
+def modify_ac_config(config_path, data_dir, anno_dir, new_config_path):
     data = None
     with open(config_path, 'r') as f:
         data = yaml.load(f, Loader=yaml.loader.SafeLoader)
@@ -264,7 +264,7 @@ def modify_ac_config(config_path, data_dir, anno_dir):
         if 'dataset_meta' in data['models'][0]['datasets'][0]:
             data['models'][0]['datasets'][0]['dataset_meta'] = str(
                 anno_dir / Path(data['models'][0]['datasets'][0]['dataset_meta']))
-    with open(config_path, 'w') as f:
+    with open(new_config_path, 'w') as f:
         f.write(yaml.dump(data, default_flow_style=False))
 
 
@@ -358,8 +358,9 @@ class TestPTQ:
         model_path = model_dir / task_type / (model_name + ".onnx")
         ir_model_dir = ckpt_dir / 'openvino'
         self.get_ir_model(model_path, model_name, ir_model_dir)
-        modify_ac_config(config_path, data_dir, anno_dir)
-        self.get_quantized_pot_model(ir_model_dir, model_name, config_path)
+        new_config_path = task_path / "openvino_models_configs" / (model_name + "_pot.yml")
+        modify_ac_config(config_path, data_dir, anno_dir, new_config_path)
+        self.get_quantized_pot_model(ir_model_dir, model_name, new_config_path)
 
 
 @pytest.mark.run(order=2)
@@ -379,7 +380,9 @@ class TestBenchmark:
         config_path = task_path / "onnx_models_configs" / (model_name + ".yml")
         if is_pot:
             config_path = task_path / "openvino_models_configs" / (model_name + ".yml")
-            modify_ac_config(config_path, data_dir, anno_dir)
+            new_config_path = task_path / "openvino_models_configs" / (model_name + "_AC.yml")
+            modify_ac_config(config_path, data_dir, anno_dir, new_config_path)
+            config_path = new_config_path
 
         output_dir = output_dir / task_type
         if not output_dir.exists():
