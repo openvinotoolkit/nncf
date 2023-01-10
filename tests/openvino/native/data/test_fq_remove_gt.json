@@ -1,0 +1,508 @@
+{
+    "FakeQuantize_5": {
+        "fq_nodes": [
+            "FakeQuantize_13",
+            "FakeQuantize_5"
+        ],
+        "ops": [
+            "MatMul_4"
+        ]
+    },
+    "FakeQuantize_13": {
+        "fq_nodes": [
+            "FakeQuantize_13",
+            "FakeQuantize_5"
+        ],
+        "ops": [
+            "MatMul_4"
+        ]
+    },
+    "FakeQuantize_20": {
+        "fq_nodes": [
+            "FakeQuantize_20"
+        ],
+        "ops": [
+            "ReduceMean_18"
+        ]
+    },
+    "FakeQuantize_27": {
+        "fq_nodes": [
+            "FakeQuantize_342",
+            "FakeQuantize_27",
+            "FakeQuantize_365"
+        ],
+        "ops": [
+            "Add_26",
+            "Convolution_364"
+        ]
+    },
+    "FakeQuantize_34": {
+        "fq_nodes": [
+            "FakeQuantize_313",
+            "FakeQuantize_34"
+        ],
+        "ops": [
+            "Add_33"
+        ]
+    },
+    "FakeQuantize_42": {
+        "fq_nodes": [
+            "FakeQuantize_48",
+            "FakeQuantize_336",
+            "FakeQuantize_42"
+        ],
+        "ops": [
+            "Convolution_335",
+            "Convolution_41"
+        ]
+    },
+    "FakeQuantize_48": {
+        "fq_nodes": [
+            "FakeQuantize_48",
+            "FakeQuantize_336",
+            "FakeQuantize_42"
+        ],
+        "ops": [
+            "Convolution_335",
+            "Convolution_41"
+        ]
+    },
+    "FakeQuantize_55": {
+        "fq_nodes": [
+            "FakeQuantize_284",
+            "FakeQuantize_55",
+            "FakeQuantize_307"
+        ],
+        "ops": [
+            "Add_54",
+            "Convolution_306"
+        ]
+    },
+    "FakeQuantize_62": {
+        "fq_nodes": [
+            "FakeQuantize_255",
+            "FakeQuantize_62"
+        ],
+        "ops": [
+            "Add_61"
+        ]
+    },
+    "FakeQuantize_70": {
+        "fq_nodes": [
+            "FakeQuantize_76",
+            "FakeQuantize_278",
+            "FakeQuantize_70"
+        ],
+        "ops": [
+            "Convolution_277",
+            "Convolution_69"
+        ]
+    },
+    "FakeQuantize_76": {
+        "fq_nodes": [
+            "FakeQuantize_76",
+            "FakeQuantize_278",
+            "FakeQuantize_70"
+        ],
+        "ops": [
+            "Convolution_277",
+            "Convolution_69"
+        ]
+    },
+    "FakeQuantize_83": {
+        "fq_nodes": [
+            "FakeQuantize_226",
+            "FakeQuantize_83",
+            "FakeQuantize_249"
+        ],
+        "ops": [
+            "Add_82",
+            "Convolution_248"
+        ]
+    },
+    "FakeQuantize_90": {
+        "fq_nodes": [
+            "FakeQuantize_197",
+            "FakeQuantize_90"
+        ],
+        "ops": [
+            "Add_89"
+        ]
+    },
+    "FakeQuantize_98": {
+        "fq_nodes": [
+            "FakeQuantize_104",
+            "FakeQuantize_220",
+            "FakeQuantize_98"
+        ],
+        "ops": [
+            "Convolution_219",
+            "Convolution_97"
+        ]
+    },
+    "FakeQuantize_104": {
+        "fq_nodes": [
+            "FakeQuantize_104",
+            "FakeQuantize_220",
+            "FakeQuantize_98"
+        ],
+        "ops": [
+            "Convolution_219",
+            "Convolution_97"
+        ]
+    },
+    "FakeQuantize_111": {
+        "fq_nodes": [
+            "FakeQuantize_168",
+            "FakeQuantize_111",
+            "FakeQuantize_191"
+        ],
+        "ops": [
+            "Add_110",
+            "Convolution_190"
+        ]
+    },
+    "FakeQuantize_119": {
+        "fq_nodes": [
+            "FakeQuantize_139",
+            "FakeQuantize_162",
+            "FakeQuantize_119"
+        ],
+        "ops": [
+            "Add_117",
+            "Convolution_161"
+        ]
+    },
+    "FakeQuantize_128": {
+        "fq_nodes": [
+            "FakeQuantize_134",
+            "FakeQuantize_128"
+        ],
+        "ops": [
+            "Convolution_127"
+        ]
+    },
+    "FakeQuantize_134": {
+        "fq_nodes": [
+            "FakeQuantize_134",
+            "FakeQuantize_128"
+        ],
+        "ops": [
+            "Convolution_127"
+        ]
+    },
+    "FakeQuantize_139": {
+        "fq_nodes": [
+            "FakeQuantize_139",
+            "FakeQuantize_162",
+            "FakeQuantize_119"
+        ],
+        "ops": [
+            "Add_117",
+            "Convolution_161"
+        ]
+    },
+    "FakeQuantize_147": {
+        "fq_nodes": [
+            "FakeQuantize_153",
+            "FakeQuantize_147"
+        ],
+        "ops": [
+            "Convolution_146"
+        ]
+    },
+    "FakeQuantize_153": {
+        "fq_nodes": [
+            "FakeQuantize_153",
+            "FakeQuantize_147"
+        ],
+        "ops": [
+            "Convolution_146"
+        ]
+    },
+    "FakeQuantize_162": {
+        "fq_nodes": [
+            "FakeQuantize_139",
+            "FakeQuantize_162",
+            "FakeQuantize_119"
+        ],
+        "ops": [
+            "Add_117",
+            "Convolution_161"
+        ]
+    },
+    "FakeQuantize_168": {
+        "fq_nodes": [
+            "FakeQuantize_168",
+            "FakeQuantize_111",
+            "FakeQuantize_191"
+        ],
+        "ops": [
+            "Add_110",
+            "Convolution_190"
+        ]
+    },
+    "FakeQuantize_176": {
+        "fq_nodes": [
+            "FakeQuantize_182",
+            "FakeQuantize_176"
+        ],
+        "ops": [
+            "Convolution_175"
+        ]
+    },
+    "FakeQuantize_182": {
+        "fq_nodes": [
+            "FakeQuantize_182",
+            "FakeQuantize_176"
+        ],
+        "ops": [
+            "Convolution_175"
+        ]
+    },
+    "FakeQuantize_191": {
+        "fq_nodes": [
+            "FakeQuantize_168",
+            "FakeQuantize_111",
+            "FakeQuantize_191"
+        ],
+        "ops": [
+            "Add_110",
+            "Convolution_190"
+        ]
+    },
+    "FakeQuantize_197": {
+        "fq_nodes": [
+            "FakeQuantize_197",
+            "FakeQuantize_90"
+        ],
+        "ops": [
+            "Add_89"
+        ]
+    },
+    "FakeQuantize_205": {
+        "fq_nodes": [
+            "FakeQuantize_211",
+            "FakeQuantize_205"
+        ],
+        "ops": [
+            "Convolution_204"
+        ]
+    },
+    "FakeQuantize_211": {
+        "fq_nodes": [
+            "FakeQuantize_211",
+            "FakeQuantize_205"
+        ],
+        "ops": [
+            "Convolution_204"
+        ]
+    },
+    "FakeQuantize_220": {
+        "fq_nodes": [
+            "FakeQuantize_104",
+            "FakeQuantize_220",
+            "FakeQuantize_98"
+        ],
+        "ops": [
+            "Convolution_219",
+            "Convolution_97"
+        ]
+    },
+    "FakeQuantize_226": {
+        "fq_nodes": [
+            "FakeQuantize_226",
+            "FakeQuantize_83",
+            "FakeQuantize_249"
+        ],
+        "ops": [
+            "Add_82",
+            "Convolution_248"
+        ]
+    },
+    "FakeQuantize_234": {
+        "fq_nodes": [
+            "FakeQuantize_240",
+            "FakeQuantize_234"
+        ],
+        "ops": [
+            "Convolution_233"
+        ]
+    },
+    "FakeQuantize_240": {
+        "fq_nodes": [
+            "FakeQuantize_240",
+            "FakeQuantize_234"
+        ],
+        "ops": [
+            "Convolution_233"
+        ]
+    },
+    "FakeQuantize_249": {
+        "fq_nodes": [
+            "FakeQuantize_226",
+            "FakeQuantize_83",
+            "FakeQuantize_249"
+        ],
+        "ops": [
+            "Add_82",
+            "Convolution_248"
+        ]
+    },
+    "FakeQuantize_255": {
+        "fq_nodes": [
+            "FakeQuantize_255",
+            "FakeQuantize_62"
+        ],
+        "ops": [
+            "Add_61"
+        ]
+    },
+    "FakeQuantize_263": {
+        "fq_nodes": [
+            "FakeQuantize_269",
+            "FakeQuantize_263"
+        ],
+        "ops": [
+            "Convolution_262"
+        ]
+    },
+    "FakeQuantize_269": {
+        "fq_nodes": [
+            "FakeQuantize_269",
+            "FakeQuantize_263"
+        ],
+        "ops": [
+            "Convolution_262"
+        ]
+    },
+    "FakeQuantize_278": {
+        "fq_nodes": [
+            "FakeQuantize_76",
+            "FakeQuantize_278",
+            "FakeQuantize_70"
+        ],
+        "ops": [
+            "Convolution_277",
+            "Convolution_69"
+        ]
+    },
+    "FakeQuantize_284": {
+        "fq_nodes": [
+            "FakeQuantize_284",
+            "FakeQuantize_55",
+            "FakeQuantize_307"
+        ],
+        "ops": [
+            "Add_54",
+            "Convolution_306"
+        ]
+    },
+    "FakeQuantize_292": {
+        "fq_nodes": [
+            "FakeQuantize_298",
+            "FakeQuantize_292"
+        ],
+        "ops": [
+            "Convolution_291"
+        ]
+    },
+    "FakeQuantize_298": {
+        "fq_nodes": [
+            "FakeQuantize_298",
+            "FakeQuantize_292"
+        ],
+        "ops": [
+            "Convolution_291"
+        ]
+    },
+    "FakeQuantize_307": {
+        "fq_nodes": [
+            "FakeQuantize_284",
+            "FakeQuantize_55",
+            "FakeQuantize_307"
+        ],
+        "ops": [
+            "Add_54",
+            "Convolution_306"
+        ]
+    },
+    "FakeQuantize_313": {
+        "fq_nodes": [
+            "FakeQuantize_313",
+            "FakeQuantize_34"
+        ],
+        "ops": [
+            "Add_33"
+        ]
+    },
+    "FakeQuantize_321": {
+        "fq_nodes": [
+            "FakeQuantize_327",
+            "FakeQuantize_321"
+        ],
+        "ops": [
+            "Convolution_320"
+        ]
+    },
+    "FakeQuantize_327": {
+        "fq_nodes": [
+            "FakeQuantize_327",
+            "FakeQuantize_321"
+        ],
+        "ops": [
+            "Convolution_320"
+        ]
+    },
+    "FakeQuantize_336": {
+        "fq_nodes": [
+            "FakeQuantize_48",
+            "FakeQuantize_336",
+            "FakeQuantize_42"
+        ],
+        "ops": [
+            "Convolution_335",
+            "Convolution_41"
+        ]
+    },
+    "FakeQuantize_342": {
+        "fq_nodes": [
+            "FakeQuantize_342",
+            "FakeQuantize_27",
+            "FakeQuantize_365"
+        ],
+        "ops": [
+            "Add_26",
+            "Convolution_364"
+        ]
+    },
+    "FakeQuantize_350": {
+        "fq_nodes": [
+            "FakeQuantize_356",
+            "FakeQuantize_350"
+        ],
+        "ops": [
+            "Convolution_349"
+        ]
+    },
+    "FakeQuantize_356": {
+        "fq_nodes": [
+            "FakeQuantize_356",
+            "FakeQuantize_350"
+        ],
+        "ops": [
+            "Convolution_349"
+        ]
+    },
+    "FakeQuantize_365": {
+        "fq_nodes": [
+            "FakeQuantize_342",
+            "FakeQuantize_27",
+            "FakeQuantize_365"
+        ],
+        "ops": [
+            "Add_26",
+            "Convolution_364"
+        ]
+    }
+}
