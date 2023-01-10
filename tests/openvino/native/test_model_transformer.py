@@ -42,11 +42,11 @@ def test_infer_original_model():
         assert out.shape == REF_OUTPUT_SHAPES[out_name]
 
 
-def create_transformed_model(model, target_layers, target_type, command_type, values=None):
+def create_transformed_model(model, target_layers, target_type, command_type, values=None, port_id=0):
     transformation_layout = TransformationLayout()
     values = values if values else [None for i in target_layers]
     for target_layer, value in zip(target_layers, values):
-        target_point = OVTargetPoint(target_type, target_layer, port_id=0)
+        target_point = OVTargetPoint(target_type, target_layer, port_id=port_id)
         command = command_type(target_point) if value is None else command_type(target_point, value)
         transformation_layout.register(command)
 
@@ -99,7 +99,7 @@ BIAS_REFERENCES = [[2.0]]
 def test_bias_correction(layers, values, refs):
     model = ConvModel().ov_model
     transformed_model = create_transformed_model(
-        model, layers, TargetType.LAYER, OVBiasCorrectionCommand, values)
+        model, layers, TargetType.LAYER, OVBiasCorrectionCommand, values, port_id=1)
     ops_dict = {op.get_friendly_name(): op for op in transformed_model.get_ops()}
 
     for conv_layer, bias_reference in zip(layers, refs):
