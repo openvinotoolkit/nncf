@@ -39,7 +39,7 @@ def parse_args():
     parser.add_argument(
         '-c',
         '--config',
-        help='Path to a config file with optimization parameters.')
+        help='Path to a config file with optimization parameters (POT format).')
 
     parser.add_argument(
         '--output-dir',
@@ -121,17 +121,20 @@ def map_preset(preset):
 
 def map_quantization_parameters(pot_parameters):    
     def _map_parameters(parameters, supported_parameters, 
-                        ignored_parameters):
+                        default_parameters, ignored_parameters):
         result = {}
         for name in parameters:
-            if name in ignored_parameters:
+            if (name in ignored_parameters or 
+                (name in default_parameters and 
+                 parameters[name] == default_parameters[name])):
                 continue
+              
             if name in supported_parameters:
                 kwarg = parameters_mapping[name](parameters[name])
                 if kwarg is not None:
                     result.update(kwarg)
             elif parameters[name] is not None:
-                _map_parameters(parameters[name], {}, [])
+                _map_parameters(parameters[name], {}, {}, [])
             else:
                 raise ValueError(f'{name} parameter is not supported')
         return result
@@ -145,13 +148,18 @@ def map_quantization_parameters(pot_parameters):
         'use_fast_bias': lambda x: {'fast_bias_correction': x}
     }
     
+    default_parameters = {
+      'use_layerwise_tuning': False
+    }
+
     ignored_parameters = [
         'dump_intermediate_model',
         'inplace_statistics',
+        'num_samples_for_tuning'
     ]                
-                
+    
     return _map_parameters(pot_parameters, parameters_mapping, 
-                           ignored_parameters)
+                           default_parameters, ignored_parameters)
     
     
 def map_paramaters(pot_algo_name, nncf_algo_name, pot_parameters):
