@@ -61,7 +61,7 @@ class OVOutputInsertionCommand(OVInsertionCommand):
 
 class OVFQNodeRemovingCommand(TransformationCommand):
     """
-    Removes nodes from the model.
+    Removes FakeQuantize nodes from the model.
     """
 
     def __init__(self, target_point: OVTargetPoint):

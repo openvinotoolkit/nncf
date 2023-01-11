@@ -107,7 +107,7 @@ class ONNXModelExtractionCommand(Command):
 
 class ONNXQDQNodeRemovingCommand(TransformationCommand):
     """
-    Removes nodes from the model.
+    Removes Quantizer or Dequantizer nodes from the model.
     """
 
     def __init__(self, target_point: ONNXTargetPoint):
