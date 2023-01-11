@@ -20,7 +20,7 @@ from openvino.tools.accuracy_checker.argparser import build_arguments_parser
 from openvino.tools.accuracy_checker.evaluators import ModelEvaluator
 
 from tests.openvino.conftest import AC_CONFIGS_DIR
-from tests.openvino.omz_helpers import DATASET_DEFINITIONS_PATH
+from tests.openvino.omz_helpers import OPENVINO_DATASET_DEFINITIONS_PATH
 from tests.openvino.omz_helpers import calculate_metrics
 from tests.openvino.omz_helpers import convert_model
 from tests.openvino.omz_helpers import download_model
@@ -40,7 +40,7 @@ def quantize_model(model_path, config_path, data_dir, framework='openvino', devi
     args = [
         "-c", str(config_path),
         "-m", str(model_path),
-        "-d", str(DATASET_DEFINITIONS_PATH),
+        "-d", str(OPENVINO_DATASET_DEFINITIONS_PATH),
         "-s", str(data_dir),
         "-tf", framework,
         "-td", device,

@@ -11,22 +11,12 @@
  limitations under the License.
 """
 
-import pytest
 from typing import List
 import csv
 import re
-import os
-import subprocess
 
 from tests.shared.command import Command
-from tests.shared.paths import PROJECT_ROOT
-from tests.openvino.conftest import DATASET_DEFINITIONS_PATH
-
-ENV_VARS = os.environ.copy()
-if "PYTHONPATH" in ENV_VARS:
-    ENV_VARS["PYTHONPATH"] += ":" + str(PROJECT_ROOT)
-else:
-    ENV_VARS["PYTHONPATH"] = str(PROJECT_ROOT)
+from tests.openvino.conftest import OPENVINO_DATASET_DEFINITIONS_PATH
 
 
 def run_command(command: List[str]):
@@ -73,7 +63,7 @@ def calculate_metrics(model_path, config_path, data_dir, report_path,
         'accuracy_check',
         "-c", str(config_path),
         "-m", str(model_path),
-        "-d", str(DATASET_DEFINITIONS_PATH),
+        "-d", str(OPENVINO_DATASET_DEFINITIONS_PATH),
         "-s", str(data_dir),
         "-tf", framework,
         "-td", device,
