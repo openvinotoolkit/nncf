@@ -19,10 +19,6 @@ import numpy as np
 import onnx
 from functools import partial
 
-from nncf.experimental.quantization.compression_builder import CompressionBuilder
-from nncf.quantization.algorithms.post_training.algorithm import PostTrainingQuantization
-from nncf.quantization.algorithms.post_training.algorithm import PostTrainingQuantizationParameters
-
 from openvino.tools.accuracy_checker.config import ConfigReader
 from openvino.tools.accuracy_checker.argparser import build_arguments_parser
 from openvino.tools.accuracy_checker.evaluators import ModelEvaluator
@@ -64,25 +60,11 @@ def run(onnx_model_path: str, output_model_path: str, dataset: nncf.Dataset,
     print(f"  number of samples: {num_init_samples}")
     print(f"  ignored_scopes: {ignored_scopes}")
 
-    # Step 0: Convert model opset
+    # Convert the model opset if needed.
     model = convert_opset_version(original_model) if convert_model_opset else original_model
-
-    # Step 1: Create a pipeline of compression algorithms.
-    builder = CompressionBuilder()
-
-    # Step 2: Create the quantization algorithm and add to the builder.
-    quantization_parameters = PostTrainingQuantizationParameters(
-        number_samples=num_init_samples,
-        ignored_scopes=ignored_scopes
-    )
-    quantization = PostTrainingQuantization(quantization_parameters)
-    builder.add_algorithm(quantization)
-
-    # Step 4: Execute the pipeline.
-    print("Post-Training Quantization has just started!")
-    quantized_model = builder.apply(model, dataset)
-
-    # Step 5: Save the quantized model.
+    # Execute the pipeline.
+    quantized_model = nncf.quantize(model, dataset)
+    # Save the quantized model.
     onnx.save(quantized_model, output_model_path)
     print("The quantized model is saved to: {}".format(output_model_path))
 

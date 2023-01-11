@@ -11,23 +11,17 @@
  limitations under the License.
 """
 import nncf
-from tests.onnx.quantization.common import min_max_quantize_model
 from tests.onnx.models import LinearModel
 from tests.shared.datasets import MockDataset
 from tests.shared.helpers import telemetry_send_event_test_driver
-
-def test_telemetry_is_sent_via_compression_builder(mocker):
-    def use_nncf_fn():
-        model_to_test = LinearModel()
-        _ = min_max_quantize_model(model_to_test.input_shape[0], model_to_test.onnx_model)
-    telemetry_send_event_test_driver(mocker, use_nncf_fn)
 
 
 def test_telemetry_is_sent_via_quantize(mocker):
     def use_nncf_fn():
         model_to_test = LinearModel()
         dataset = nncf.Dataset(MockDataset(model_to_test.input_shape[0]),
-                transform_func=lambda x: {model_to_test.INPUT_NAME: x})
+                               transform_func=lambda x: {model_to_test.INPUT_NAME: x})
 
         _ = nncf.quantize(model_to_test.onnx_model, dataset)
+
     telemetry_send_event_test_driver(mocker, use_nncf_fn)
