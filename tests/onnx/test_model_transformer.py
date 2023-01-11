@@ -23,7 +23,7 @@ from nncf.experimental.onnx.graph.transformations.commands import ONNXBiasCorrec
 from nncf.common.graph.transformations.commands import TargetType
 from nncf.experimental.onnx.graph.transformations.commands import ONNXQuantizerInsertionCommand
 from nncf.experimental.onnx.graph.transformations.commands import ONNXOutputInsertionCommand
-from nncf.experimental.onnx.graph.transformations.commands import ONNXNodeRemovingCommand
+from nncf.experimental.onnx.graph.transformations.commands import ONNXQDQNodeRemovingCommand
 from nncf.common.quantization.structs import QuantizationMode
 from nncf.experimental.onnx.graph.model_transformer import ONNXModelTransformer
 from nncf.experimental.onnx.graph.onnx_graph import ONNXGraph
@@ -192,7 +192,7 @@ def test_node_removing(target_layers):
 
     for target_layer in target_layers:
         target_point = ONNXTargetPoint(TargetType.LAYER, target_layer, 0)
-        command = ONNXNodeRemovingCommand(target_point)
+        command = ONNXQDQNodeRemovingCommand(target_point)
         transformation_layout.register(command)
 
     model_transformer = ONNXModelTransformer(quantized_model)

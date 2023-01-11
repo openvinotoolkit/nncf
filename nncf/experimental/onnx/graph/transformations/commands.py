@@ -105,7 +105,7 @@ class ONNXModelExtractionCommand(Command):
         # Have a look at nncf/torch/graph/transformations/commands/PTInsertionCommand
         raise NotImplementedError()
 
-class ONNXNodeRemovingCommand(TransformationCommand):
+class ONNXQDQNodeRemovingCommand(TransformationCommand):
     """
     Removes nodes from the model.
     """
