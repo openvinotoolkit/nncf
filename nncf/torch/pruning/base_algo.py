@@ -114,7 +114,7 @@ class BasePruningAlgoBuilder(PTCompressionAlgorithmBuilder):
                 # Check that we need to prune weights in this op
                 assert self._is_pruned_module(module)
 
-                nncf_logger.info(f"Will prune the weights for the operation: {node_name}")
+                nncf_logger.debug(f"Will prune the weights for the operation: {node_name}")
                 pruning_block = self.create_weight_pruning_operation(module, node_name)
                 # Hook for weights and bias
                 hook = UpdateWeightAndBias(pruning_block).to(device)
