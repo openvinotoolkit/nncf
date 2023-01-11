@@ -101,7 +101,7 @@ def find_version(*file_paths):
 INSTALL_REQUIRES = ["ninja>=1.10.0.post2, <1.11",
                     "addict>=2.4.0",
                     "texttable>=1.6.3",
-                    "scipy>=1.3.2, <=1.9.1",
+                    "scipy>=1.3.2, <=1.10.0",
                     "matplotlib>=3.3.4, <3.6",
                     "networkx>=2.6, <=2.8.2",  # see ticket 94048 or https://github.com/networkx/networkx/issues/5962
                     "numpy>=1.19.1, <1.24",
@@ -119,7 +119,7 @@ INSTALL_REQUIRES = ["ninja>=1.10.0.post2, <1.11",
                     "jstyleson>=0.0.2",
                     "tqdm>=4.54.1",
                     "natsort>=7.1.0",
-                    "pandas>=1.1.5,<1.4.0rc0",
+                    "pandas>=1.1.5,<=1.5.2",
                     "scikit-learn>=0.24.0",
                     "wheel>=0.36.1",
                     "openvino-telemetry"]
