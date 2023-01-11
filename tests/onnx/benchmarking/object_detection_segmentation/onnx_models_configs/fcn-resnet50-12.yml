@@ -2,7 +2,6 @@ models:
   - name: fcn-resnet50-12
     launchers:
       - framework: onnx_runtime
-        execution_providers: ['OpenVINOExecutionProvider']
         adapter:
           type: segmentation
 

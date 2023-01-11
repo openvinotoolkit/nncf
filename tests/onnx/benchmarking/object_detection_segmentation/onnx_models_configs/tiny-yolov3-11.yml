@@ -10,7 +10,6 @@ models:
         inputs:
           - name: image_shape
             type: ORIG_IMAGE_INFO
-        execution_providers: ["OpenVINOExecutionProvider"]
 
     datasets:
       - name: ms_coco_detection_80_class_without_background

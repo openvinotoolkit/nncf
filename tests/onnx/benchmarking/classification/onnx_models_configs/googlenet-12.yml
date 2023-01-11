@@ -3,7 +3,6 @@ models:
   launchers:
   - framework: onnx_runtime
     adapter: classification
-    execution_providers: ['OpenVINOExecutionProvider']
   datasets:
   - name: imagenet_1000_classes
     # read in RGB format
