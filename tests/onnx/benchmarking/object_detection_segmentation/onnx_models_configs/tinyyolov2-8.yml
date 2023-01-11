@@ -5,6 +5,7 @@ models:
         adapter:
           type: yolo_v2
           anchors: tiny_yolo_v2
+        execution_providers: ['OpenVINOExecutionProvider']
 
     datasets:
       - name: VOC2012_without_background

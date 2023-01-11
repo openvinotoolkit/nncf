@@ -2,6 +2,7 @@ models:
   - name: yolov4
     launchers:
       - framework: onnx_runtime
+        execution_providers: ['OpenVINOExecutionProvider']
         adapter:
           type: yolo_v3
           anchors: 12,16,19,36,40,28,36,75,76,55,72,146,142,110,192,243,459,401
