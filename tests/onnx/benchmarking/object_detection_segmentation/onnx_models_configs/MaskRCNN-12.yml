@@ -2,7 +2,7 @@ models:
   - name: MaskRCNN-12-det
     launchers:
       - framework: onnx_runtime
-        execution_providers: [ 'OpenVINOExecutionProvider' ]
+        execution_providers: [ 'CPUExecutionProvider' ]
         adapter:
           type: mask_rcnn
           boxes_out: '6568'
@@ -37,7 +37,7 @@ models:
   - name: MaskRCNN-12-inst-seg
     launchers:
       - framework: onnx_runtime
-        execution_providers: [ 'OpenVINOExecutionProvider' ]
+        execution_providers: [ 'CPUExecutionProvider' ]
         adapter:
           type: mask_rcnn
           boxes_out: '6568'

@@ -2,7 +2,7 @@ models:
   - name: retinanet-9
     launchers:
       - framework: onnx_runtime
-        execution_providers: ['OpenVINOExecutionProvider']
+        execution_providers: ['CPUExecutionProvider']
         adapter:
           type: retinanet_multihead
           boxes_outputs: [output6, output7, output8, output9, output10]

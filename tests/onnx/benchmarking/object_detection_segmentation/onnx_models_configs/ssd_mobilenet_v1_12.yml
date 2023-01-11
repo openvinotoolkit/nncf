@@ -2,7 +2,7 @@ models:
   - name: ssd_mobilenet_v1_12
     launchers:
       - framework: onnx_runtime
-        execution_providers: ['OpenVINOExecutionProvider']
+        execution_providers: ['CPUExecutionProvider']
         adapter:
           type: tf_object_detection
           scores_out: detection_scores

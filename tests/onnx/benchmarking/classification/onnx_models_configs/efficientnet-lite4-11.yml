@@ -3,7 +3,7 @@ models:
   launchers:
   - framework: onnx_runtime
     adapter: classification
-    execution_providers: ['OpenVINOExecutionProvider']
+    execution_providers: ['CPUExecutionProvider']
     inputs:
       - name: images:0
         type: INPUT

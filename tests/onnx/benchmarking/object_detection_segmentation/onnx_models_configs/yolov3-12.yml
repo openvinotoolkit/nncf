@@ -2,7 +2,7 @@ models:
   - name: yolov3-12
     launchers:
       - framework: onnx_runtime
-        execution_providers: ['OpenVINOExecutionProvider']
+        execution_providers: ['CPUExecutionProvider']
         adapter:
           type: yolo_v3_onnx
           boxes_out: yolonms_layer_1/ExpandDims_1:0

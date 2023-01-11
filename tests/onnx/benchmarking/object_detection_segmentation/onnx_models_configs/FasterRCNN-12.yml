@@ -2,7 +2,7 @@ models:
   - name: FasterRCNN-12
     launchers:
       - framework: onnx_runtime
-        execution_providers: [ 'OpenVINOExecutionProvider' ]
+        execution_providers: [ 'CPUExecutionProvider' ]
         adapter:
           type: faster_rcnn_onnx
           boxes_out: '6379'
