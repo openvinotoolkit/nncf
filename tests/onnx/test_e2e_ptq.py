@@ -374,8 +374,8 @@ class TestBenchmarkResult:
                 yellow_rows += [idx]
 
         df = df[["Model", "Metrics type", "Expected FP32", "FP32", "INT8", "Diff FP32", "Diff Expected"]]
-        # Add ONNXRuntime-OpenVINOExecutionProvider multi-column on the top of 3 ~ 6 columns
-        hier_col_name = "ONNXRuntime-OpenVINOExecutionProvider"
+        # Add ONNXRuntime multi-column on the top of 3 ~ 6 columns
+        hier_col_name = "ONNXRuntime"
         df.columns = pd.MultiIndex.from_tuples(
             [("", col) for col in df.columns[:3]] + [(hier_col_name, col) for col in df.columns[3:]]
         )
