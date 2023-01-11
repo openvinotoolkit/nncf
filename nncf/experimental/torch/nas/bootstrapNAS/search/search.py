@@ -37,7 +37,7 @@ from torch.utils.tensorboard import SummaryWriter
 from nncf import NNCFConfig
 from nncf.common.initialization.batchnorm_adaptation import BatchnormAdaptationAlgorithm
 from nncf.common.logging import nncf_logger
-from nncf.common.utils.decorators import bypass_noreturn_function
+from nncf.common.utils.decorators import skip_if_dependency_unavailable
 from nncf.config.extractors import get_bn_adapt_algo_kwargs
 from nncf.experimental.torch.nas.bootstrapNAS.elasticity.elasticity_controller import ElasticityController
 from nncf.experimental.torch.nas.bootstrapNAS.elasticity.multi_elasticity_handler import SubnetConfig
@@ -357,7 +357,7 @@ class SearchAlgorithm(BaseSearchAlgorithm):
 
         return self._elasticity_ctrl, self.best_config, [abs(elem) for elem in ret_vals if elem is not None]
 
-    @bypass_noreturn_function(dependencies=['matplotlib.pyplot'])
+    @skip_if_dependency_unavailable(dependencies=['matplotlib.pyplot'])
     def visualize_search_progression(self, filename='search_progression') -> NoReturn:
         """
         Visualizes search progression and saves the resulting figure.

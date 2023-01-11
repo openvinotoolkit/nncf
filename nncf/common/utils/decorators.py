@@ -19,14 +19,14 @@ from nncf.common.logging import nncf_logger
 IMPORTED_DEPENDENCIES = {}
 
 
-def bypass_noreturn_function(dependencies: List[str]) -> Callable:
+def skip_if_dependency_unavailable(dependencies: List[str]) -> Callable:
     """
-    Decorator to bypass a noreturn function if dependencies are not met.
+    Decorator factory to skip a noreturn function if dependencies are not met.
 
-    :param func: A noreturn function to decorate
-    :return: Decorated function
+    :param dependencies: A list of dependencies
+    :return: A decorator
     """
-    def wrap(func: Callable) -> Callable:
+    def wrap(func: Callable[..., None]) -> Callable[..., None]:
         def wrapped_f(*args, **kwargs):
             for libname in dependencies:
                 if libname in IMPORTED_DEPENDENCIES:
