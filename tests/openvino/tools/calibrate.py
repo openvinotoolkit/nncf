@@ -153,7 +153,16 @@ def map_quantization_parameters(pot_parameters):
     ignored_parameters = [
         'dump_intermediate_model',
         'inplace_statistics',
-        'num_samples_for_tuning'
+        'num_samples_for_tuning',
+        'batch_size',
+        'optimizer',
+        'loss',
+        'tuning_iterations',
+        'random_seed',
+        'use_ranking_subset',
+        'calibration_indices_pool',
+        'calculate_grads_on_loss_increase_only',
+        'weight_decay'
     ]
 
     return _map_parameters(pot_parameters, parameters_mapping,
@@ -173,7 +182,7 @@ def get_model_paths(model_config):
     return model_config.model, model_config.weights
 
 
-def get_accuracy_checcker_config(engine_config):
+def get_accuracy_checker_config(engine_config):
     if engine_config.type != 'accuracy_checker':
         raise ValueError(f'Engine type {engine_config.type} is not supported.')
     return engine_config
@@ -228,7 +237,7 @@ def main():
     config.configure_params()
 
     xml_path, bin_path = get_model_paths(config.model)
-    accuracy_checcker_config = get_accuracy_checcker_config(config.engine)
+    accuracy_checcker_config = get_accuracy_checker_config(config.engine)
     nncf_algorithms_config = get_nncf_algorithms_config(config.compression)
 
     output_dir = os.path.join(args.output_dir, 'optimized')
