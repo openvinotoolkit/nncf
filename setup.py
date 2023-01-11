@@ -136,7 +136,7 @@ EXTRAS_REQUIRE = {
     ],
     "onnx": [
         "onnx==1.12.0",
-        "onnxruntime-openvino==1.13.1"
+        "onnxruntime==1.13.1"
     ],
     "openvino": [
         "openvino-dev~=2022.2.0"
