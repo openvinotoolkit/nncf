@@ -257,8 +257,9 @@ def modify_ac_config(config_path, data_dir, anno_dir, new_config_path):
         data = yaml.load(f, Loader=yaml.loader.SafeLoader)
         data['models'][0]['datasets'][0]['data_source'] = str(
             data_dir / Path(data['models'][0]['datasets'][0]['data_source']))
-        data['models'][0]['datasets'][0]['annotation_conversion']['annotation_file'] = str(
-            data_dir / Path(data['models'][0]['datasets'][0]['annotation_conversion']['annotation_file']))
+        if 'annotation_file' in data['models'][0]['datasets'][0]['annotation_conversion']:
+            data['models'][0]['datasets'][0]['annotation_conversion']['annotation_file'] = str(
+                data_dir / Path(data['models'][0]['datasets'][0]['annotation_conversion']['annotation_file']))
         data['models'][0]['datasets'][0]['annotation'] = str(
             anno_dir / Path(data['models'][0]['datasets'][0]['annotation']))
         if 'dataset_meta' in data['models'][0]['datasets'][0]:
