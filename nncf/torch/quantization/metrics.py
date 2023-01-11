@@ -291,11 +291,11 @@ class ShareEdgesQuantizedDataPathStatisticsCollector(StatisticsCollector):
                         self._marking_edges(merged_original_graph, node_key, queue)
                     else:
                         is_op_non_change_precision_activation_tensor = True
-                        node_op_name = node[NNCFGraph.NODE_TYPE_ATTR]
-                        for op in DEFAULT_PT_QUANT_TRAIT_TO_OP_DICT[QuantizationTrait.INPUTS_QUANTIZABLE]:
-                            if node_op_name in op.get_all_aliases():
-                                is_op_non_change_precision_activation_tensor = False
-                                break
+                        node_metatype = node[NNCFGraph.METATYPE_ATTR]
+                        is_op_non_change_precision_activation_tensor =\
+                            node_metatype not in\
+                                DEFAULT_PT_QUANT_TRAIT_TO_OP_DICT[QuantizationTrait.INPUTS_QUANTIZABLE]
+
                         status = is_op_non_change_precision_activation_tensor and\
                             self._all_enter_edges_in_node_of_type(merged_original_graph,
                                                                   node_key, self.QUANTIZED_EDGES_ATTR)

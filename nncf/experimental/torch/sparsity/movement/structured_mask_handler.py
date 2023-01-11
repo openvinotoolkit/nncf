@@ -21,7 +21,7 @@ import torch.nn.functional as F
 from nncf.common.graph.graph import NNCFNodeName
 from nncf.common.graph.layer_attributes import LinearLayerAttributes
 from nncf.common.logging import nncf_logger
-from nncf.common.utils.helpers import matches_any
+from nncf.common.scopes import matches_any
 from nncf.experimental.torch.search_building_blocks.search_blocks import BlockFilteringStrategy
 from nncf.experimental.torch.search_building_blocks.search_blocks import BuildingBlockType
 from nncf.experimental.torch.search_building_blocks.search_blocks import get_building_blocks

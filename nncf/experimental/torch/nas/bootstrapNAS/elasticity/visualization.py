@@ -18,7 +18,7 @@ from nncf.common.graph import NNCFNode
 from nncf.common.graph import NNCFNodeName
 from nncf.common.pruning.utils import get_input_masks
 from nncf.torch.graph.graph import PTNNCFGraph
-from nncf.torch.graph.operator_metatypes import PTConv2dMetatype
+from nncf.torch.graph.operator_metatypes import PTModuleConv2dMetatype
 from nncf.torch.graph.operator_metatypes import PTDepthwiseConv2dSubtype
 from nncf.experimental.torch.nas.bootstrapNAS.elasticity.elastic_width import ElasticWidthHandler
 from nncf.experimental.torch.nas.bootstrapNAS.elasticity.multi_elasticity_handler import MultiElasticityHandler
@@ -38,7 +38,7 @@ class SubnetGraph:
 
             metatype = compression_node.metatype
             color = None
-            if metatype == PTConv2dMetatype:
+            if metatype == PTModuleConv2dMetatype:
                 color = 'lightblue'
             if metatype == PTDepthwiseConv2dSubtype:
                 operator_name = f'DW_{operator_name}'

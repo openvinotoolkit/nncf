@@ -11,7 +11,9 @@
  limitations under the License.
 """
 from collections import Counter
+from typing import Any
 from typing import Dict
+from typing import Generator
 from typing import List
 from typing import Optional
 from typing import Tuple
@@ -161,16 +163,36 @@ class OperationExecutionContext:
         return self.op_address.call_order
 
 
+class DynamicGraphNodeParameters:
+    def __init__(self, layer_attributes: BaseLayerAttributes,
+                 ignored_algorithms: List[str],
+                 is_called_inside_nncf_module: bool):
+        self.layer_attributes = layer_attributes
+        self.ignored_algorithms = ignored_algorithms
+        self.is_called_inside_nncf_module = is_called_inside_nncf_module
+
+
 class DynamicGraphNode:
     def __init__(self, node_id: int, node_key: str, layer_attributes: BaseLayerAttributes,
                  op_exec_context: OperationExecutionContext, ignored_algorithms: List[str],
-                 is_in_iteration_scope: bool):
+                 is_called_inside_nncf_module: bool, is_in_iteration_scope: bool):
         self.node_id = node_id
         self.node_key = node_key
         self.layer_attributes = layer_attributes
         self.op_exec_context = op_exec_context
         self.ignored_algorithms = ignored_algorithms
+        self.is_called_inside_nncf_module = is_called_inside_nncf_module
         self.is_in_iteration_scope = is_in_iteration_scope
+
+    @classmethod
+    def build_from_nx_node(cls, nx_node: Dict[str, Any]) -> 'DynamicGraphNode':
+        return cls(node_id=nx_node[DynamicGraph.ID_NODE_ATTR],
+                   node_key=nx_node[DynamicGraph.KEY_NODE_ATTR],
+                   layer_attributes=nx_node.get(DynamicGraph.LAYER_ATTRIBUTES),
+                   op_exec_context=nx_node[DynamicGraph.OP_EXEC_CONTEXT_NODE_ATTR],
+                   ignored_algorithms=nx_node[DynamicGraph.IGNORED_ALGOS_NODE_ATTR],
+                   is_called_inside_nncf_module=nx_node[DynamicGraph.IS_CALLED_INSIDE_NNCF_MODULE],
+                   is_in_iteration_scope=nx_node[DynamicGraph.IS_IN_ITERATION_SCOPE_NODE_ATTR])
 
     def __eq__(self, other: 'DynamicGraphNode') -> bool:
         return self.__dict__ == other.__dict__
@@ -189,6 +211,22 @@ class DynamicGraphEdge:
         self.input_port_id = input_port_id
         self.output_port_id = output_port_id
         self.dtype = dtype
+
+    @classmethod
+    def build_between_two_nx_nodes(cls,
+                                   from_nx_node: Dict[str, Any],
+                                   to_nx_node: Dict[str, Any],
+                                   nx_edge: Dict[str, Any]) -> 'DynamicGraphEdge':
+        from_node_id = from_nx_node[DynamicGraph.ID_NODE_ATTR]
+        to_node_id = to_nx_node[DynamicGraph.ID_NODE_ATTR]
+        return DynamicGraphEdge(
+            from_node_id=from_node_id,
+            to_node_id=to_node_id,
+            activation_shape=nx_edge[DynamicGraph.ACTIVATION_SHAPE_EDGE_ATTR],
+            input_port_id=nx_edge[DynamicGraph.INPUT_PORT_ID_EDGE_ATTR],
+            output_port_id=nx_edge[DynamicGraph.OUTPUT_PORT_ID_EDGE_ATTR],
+            dtype=nx_edge[DynamicGraph.ACTIVATION_DTYPE_EDGE_ATTR]
+        )
 
 
 class DefaultScopeNodeMatcher:
@@ -221,20 +259,13 @@ class DefaultScopeNodeMatcher:
                     nx_node_candidates[successor_node_key] = successor_node
 
         node_candidates = {}  # type: Dict[str, DynamicGraphNode]
-        for nx_node_key, nx_node in nx_node_candidates.items():
-            node_candidates[nx_node_key] = DynamicGraphNode(
-                node_id=nx_node[DynamicGraph.ID_NODE_ATTR],
-                node_key=nx_node[DynamicGraph.KEY_NODE_ATTR],
-                layer_attributes=nx_node.get(DynamicGraph.LAYER_ATTRIBUTES),
-                op_exec_context=nx_node[DynamicGraph.OP_EXEC_CONTEXT_NODE_ATTR],
-                ignored_algorithms=nx_node[DynamicGraph.IGNORED_ALGOS_NODE_ATTR],
-                is_in_iteration_scope=nx_node[DynamicGraph.IS_IN_ITERATION_SCOPE_NODE_ATTR])
+        for nx_node_key, nx_node_dict in nx_node_candidates.items():
+            node_candidates[nx_node_key] = DynamicGraphNode.build_from_nx_node(nx_node_dict)
 
         return node_candidates
 
     def add_node(self, op_exec_context: OperationExecutionContext, inputs,
-                 layer_attrs: BaseLayerAttributes = None,
-                 ignored_algorithms: List[str] = None,
+                 node_parameters: DynamicGraphNodeParameters,
                  is_in_iteration_scope: bool = False) -> DynamicGraphNode:
         node_id = len(self._node_id_to_key_dict)
 
@@ -250,13 +281,14 @@ class DefaultScopeNodeMatcher:
             DynamicGraph.OP_EXEC_CONTEXT_NODE_ATTR: op_exec_context,
             DynamicGraph.IS_IN_ITERATION_SCOPE_NODE_ATTR: is_in_iteration_scope
         }
-        if layer_attrs is not None:
-            attrs[DynamicGraph.LAYER_ATTRIBUTES] = layer_attrs
+        if node_parameters.layer_attributes is not None:
+            attrs[DynamicGraph.LAYER_ATTRIBUTES] = node_parameters.layer_attributes
 
-        if ignored_algorithms is not None:
-            attrs[DynamicGraph.IGNORED_ALGOS_NODE_ATTR] = ignored_algorithms
+        if node_parameters.ignored_algorithms is not None:
+            attrs[DynamicGraph.IGNORED_ALGOS_NODE_ATTR] = node_parameters.ignored_algorithms
         else:
             attrs[DynamicGraph.IGNORED_ALGOS_NODE_ATTR] = []
+        attrs[DynamicGraph.IS_CALLED_INSIDE_NNCF_MODULE] = node_parameters.is_called_inside_nncf_module
 
         self._nx_graph.add_node(node_key, **attrs)
 
@@ -273,12 +305,7 @@ class DefaultScopeNodeMatcher:
             self._nx_graph.edges[parent, node_key][DynamicGraph.ACTIVATION_DTYPE_EDGE_ATTR] = info.dtype
 
         nx_node_dict = self._nx_graph.nodes[node_key]
-        node = DynamicGraphNode(node_id=nx_node_dict[DynamicGraph.ID_NODE_ATTR],
-                                node_key=nx_node_dict[DynamicGraph.KEY_NODE_ATTR],
-                                layer_attributes=nx_node_dict.get(DynamicGraph.LAYER_ATTRIBUTES),
-                                op_exec_context=nx_node_dict[DynamicGraph.OP_EXEC_CONTEXT_NODE_ATTR],
-                                ignored_algorithms=nx_node_dict[DynamicGraph.IGNORED_ALGOS_NODE_ATTR],
-                                is_in_iteration_scope=nx_node_dict[DynamicGraph.IS_IN_ITERATION_SCOPE_NODE_ATTR])
+        node = DynamicGraphNode.build_from_nx_node(nx_node_dict)
 
         if not has_traced_inputs:
             self._inputless_nodes[node_key] = node
@@ -358,11 +385,9 @@ class IterationScopeNodeMatcher(DefaultScopeNodeMatcher):
                     nncf_logger.debug(f'Found first iteration node: {name} in scope: {iter_scope}')
 
     def add_node(self, op_exec_context: OperationExecutionContext, inputs,
-                 layer_attrs: BaseLayerAttributes = None,
-                 ignored_algorithms: List[str] = None,
+                 node_parameters: DynamicGraphNodeParameters,
                  is_in_iteration_scope: bool = True) -> DynamicGraphNode:
-        node = super().add_node(op_exec_context, inputs, layer_attrs, ignored_algorithms,
-                                is_in_iteration_scope=True)
+        node = super().add_node(op_exec_context, inputs, node_parameters, is_in_iteration_scope=True)
         self.save_first_iteration_node(inputs, node)
         return node
 
@@ -423,8 +448,9 @@ class IterationScopeNodeMatcher(DefaultScopeNodeMatcher):
                     break
         return node_candidates
 
-    def get_first_iteration_modules(self)-> Dict:
+    def get_first_iteration_modules(self) -> Dict:
         return self._first_iteration_nodes
+
 
 class NodeManager:
     def __init__(self, node_id_to_key_dict, nx_graph):
@@ -469,8 +495,7 @@ class NodeManager:
                  tensor_metas: List[TensorMeta],
                  tm_comparators_per_scope: List[Tuple[TensorMetaComparator, List[str]]],
                  inputs,
-                 layer_attrs: BaseLayerAttributes = None,
-                 ignored_algorithms: List[str] = None) -> DynamicGraphNode:
+                 node_parameters: DynamicGraphNodeParameters) -> DynamicGraphNode:
         matcher = self.choose_matcher(op_address)
         tm_comparators = self.choose_tm_comparators(op_address, tm_comparators_per_scope)
         op_exec_context = OperationExecutionContext(op_address.operator_name,
@@ -479,7 +504,7 @@ class NodeManager:
                                                     tensor_metas,
                                                     tm_comparators=tm_comparators)
 
-        return matcher.add_node(op_exec_context, inputs, layer_attrs, ignored_algorithms)
+        return matcher.add_node(op_exec_context, inputs, node_parameters)
 
 
 class DynamicGraph:
@@ -499,6 +524,7 @@ class DynamicGraph:
     INPUT_PORT_ID_EDGE_ATTR = 'input_port_id'
     OUTPUT_PORT_ID_EDGE_ATTR = 'output_port_id'
     IGNORED_ALGOS_NODE_ATTR = 'ignored_algos'
+    IS_CALLED_INSIDE_NNCF_MODULE = 'is_called_inside_nncf_module'
     IS_IN_ITERATION_SCOPE_NODE_ATTR = 'is_in_iteration_scope'
 
     def __init__(self):
@@ -527,10 +553,9 @@ class DynamicGraph:
                  tensor_metas: List[TensorMeta],
                  input_comparators_per_scope: List[Tuple[TensorMetaComparator, List[str]]],
                  inputs,
-                 layer_attrs: BaseLayerAttributes = None,
-                 ignored_algorithms: List[str] = None) -> DynamicGraphNode:
-        node = self.match_manager.add_node(op_address, tensor_metas, input_comparators_per_scope, inputs,
-                                           layer_attrs, ignored_algorithms)
+                 node_parameters: DynamicGraphNodeParameters) -> DynamicGraphNode:
+        node = self.match_manager.add_node(op_address, tensor_metas, input_comparators_per_scope,
+                                           inputs, node_parameters)
 
         from nncf.common.graph.definitions import MODEL_OUTPUT_OP_NAME #pylint: disable=cyclic-import
         from nncf.common.graph.definitions import MODEL_INPUT_OP_NAME #pylint: disable=cyclic-import
@@ -553,36 +578,53 @@ class DynamicGraph:
     def get_all_nodes(self) -> List[DynamicGraphNode]:
         all_nodes = []
         for node_key in self._node_id_to_key_dict.values():
-            nx_node = self._nx_graph.nodes[node_key]
-            dynamic_graph_node = DynamicGraphNode(
-                node_id=nx_node[DynamicGraph.ID_NODE_ATTR],
-                node_key=nx_node[DynamicGraph.KEY_NODE_ATTR],
-                layer_attributes=nx_node.get(DynamicGraph.LAYER_ATTRIBUTES),
-                op_exec_context=nx_node[DynamicGraph.OP_EXEC_CONTEXT_NODE_ATTR],
-                ignored_algorithms=nx_node[DynamicGraph.IGNORED_ALGOS_NODE_ATTR],
-                is_in_iteration_scope=nx_node[DynamicGraph.IS_IN_ITERATION_SCOPE_NODE_ATTR]
-            )
+            dynamic_graph_node = DynamicGraphNode.build_from_nx_node(self._nx_graph.nodes[node_key])
             all_nodes.append(dynamic_graph_node)
         return all_nodes
 
-    def get_all_edges(self) -> List[DynamicGraphEdge]:
-        all_edges = []
-        for from_node_key, to_node_key in self._nx_graph.edges:
-            nx_edge_attrs = self._nx_graph.edges[from_node_key, to_node_key]
-            from_node = self._nx_graph.nodes[from_node_key]
-            to_node = self._nx_graph.nodes[to_node_key]
-            from_node_id = from_node[DynamicGraph.ID_NODE_ATTR]
-            to_node_id = to_node[DynamicGraph.ID_NODE_ATTR]
-            dynamic_graph_edge = DynamicGraphEdge(
-                from_node_id=from_node_id,
-                to_node_id=to_node_id,
-                activation_shape=nx_edge_attrs[DynamicGraph.ACTIVATION_SHAPE_EDGE_ATTR],
-                input_port_id=nx_edge_attrs[DynamicGraph.INPUT_PORT_ID_EDGE_ATTR],
-                output_port_id=nx_edge_attrs[DynamicGraph.OUTPUT_PORT_ID_EDGE_ATTR],
-                dtype=nx_edge_attrs[DynamicGraph.ACTIVATION_DTYPE_EDGE_ATTR])
+    def get_all_edges(self) -> Generator[DynamicGraphEdge, None, None]:
+        """
+        Generates all edges in the graph
+        """
+        for from_nx_node_key, to_nx_node_key in self._nx_graph.in_edges:
+            yield self._get_edge(self._get_node_by_key(from_nx_node_key),
+                                 self._get_node_by_key(to_nx_node_key))
 
-            all_edges.append(dynamic_graph_edge)
-        return all_edges
+    def get_input_edges(self, node: DynamicGraphNode) -> List[DynamicGraphEdge]:
+        """
+        Returns edges of input tensors with description sorted by input port ID.
+
+        :param node: Consumer node.
+        :return: List of input edges for the node sorted by input port ID.
+        """
+        input_nodes = self._get_previous_nodes(node)
+        edges = [self._get_edge(from_node, node) for from_node in input_nodes]
+        return sorted(edges, key=lambda x: x.input_port_id)
+
+    def set_layer_attributes_to_node(self, node: DynamicGraphNode, layer_attributes: BaseLayerAttributes):
+        self._nx_graph.nodes[node.node_key][DynamicGraph.LAYER_ATTRIBUTES] = layer_attributes
 
     def is_graph_with_iteration_modules(self) -> bool:
         return len(self.match_manager.iteration_matcher.get_first_iteration_modules()) > 0
+
+    def _get_node_by_key(self, key: str) -> DynamicGraphNode:
+        """
+        :param key: key (node_name) of the node.
+        :return: DynamicGraphNode in a graph with such key.
+        """
+        return DynamicGraphNode.build_from_nx_node(self._nx_graph.nodes[key])
+
+    def _get_previous_nodes(self, node: DynamicGraphNode) -> List[DynamicGraphNode]:
+        nx_node_keys = self._nx_graph.pred[self._node_id_to_key_dict[node.node_id]]
+        return [DynamicGraphNode.build_from_nx_node(self._nx_graph.nodes[key]) for key in nx_node_keys]
+
+    def _get_edge(self, from_node: DynamicGraphNode, to_node: DynamicGraphNode) -> DynamicGraphEdge:
+        nx_edge = self._get_nx_edge(from_node, to_node)
+        from_nx_node = self._nx_graph.nodes[from_node.node_key]
+        to_nx_node = self._nx_graph.nodes[to_node.node_key]
+        return DynamicGraphEdge.build_between_two_nx_nodes(from_nx_node, to_nx_node, nx_edge)
+
+    def _get_nx_edge(self, node_u: DynamicGraphNode, node_v: DynamicGraphNode):
+        nx_node_u = self._nx_graph.nodes[self._node_id_to_key_dict[node_u.node_id]]
+        nx_node_v = self._nx_graph.nodes[self._node_id_to_key_dict[node_v.node_id]]
+        return self._nx_graph.edges[nx_node_u['key'], nx_node_v['key']]

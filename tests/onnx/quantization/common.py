@@ -24,15 +24,28 @@ from tests.shared.paths import TEST_ROOT
 from tests.common.graph.nx_graph import compare_nx_graph_with_reference
 from tests.common.graph.nx_graph import check_nx_graph
 from tests.onnx.opset_converter import convert_opset_version
-from nncf.experimental.quantization.compression_builder import CompressionBuilder
 from nncf.quantization.algorithms.min_max.algorithm import MinMaxQuantization
-from nncf.quantization.algorithms.min_max.algorithm import MinMaxQuantizationParameters
 from nncf.quantization.algorithms.post_training.algorithm import PostTrainingQuantization
 from nncf.quantization.algorithms.post_training.algorithm import PostTrainingQuantizationParameters
 from nncf.experimental.onnx.graph.nncf_graph_builder import GraphConverter
 from nncf.experimental.onnx.graph.onnx_graph import ONNXGraph
+from nncf.common.quantization.structs import QuantizationMode
+from nncf.experimental.onnx.quantization.quantizer_parameters import ONNXQuantizerLayerParameters
 
 REFERENCE_GRAPHS_TEST_ROOT = 'data/reference_graphs/quantization'
+
+
+def mock_collect_statistics(mocker):
+    _ = mocker.patch(
+        'nncf.quantization.algorithms.min_max.onnx_backend.calculate_activation_quantizer_parameters',
+        return_value=ONNXQuantizerLayerParameters(np.array(0), np.array(0),
+                                                  mode=QuantizationMode.SYMMETRIC,
+                                                  axis=None,
+                                                  tensor_type=np.uint8))
+    _ = mocker.patch(
+        'nncf.common.tensor_statistics.aggregator.StatisticsAggregator.collect_statistics', return_value=None)
+    _ = mocker.patch(
+        'nncf.common.tensor_statistics.collectors.TensorStatisticCollectorBase.get_statistics', return_value=None)
 
 
 def get_random_dataset_for_test(input_key: str,
@@ -40,21 +53,22 @@ def get_random_dataset_for_test(input_key: str,
                                 input_dtype: np.dtype,
                                 has_batch_dim: bool,
                                 length: Optional[int] = 10):
-
     def transform_fn(item):
         tensor = np.random.random(input_shape).astype(input_dtype)
         if has_batch_dim:
             tensor = np.squeeze(np.random.random(input_shape).astype(input_dtype), axis=0)
         return {input_key: tensor}
+
     return Dataset(list(range(length)), transform_fn)
 
 
 def get_dataset_for_test(samples: List[Tuple[np.ndarray, int]], input_name: str):
-
     def transform_fn(data_item):
-        inputs, targets = data_item
-        return {input_name: [inputs], "targets": targets}
+        inputs = data_item
+        return {input_name: [inputs]}
+
     return Dataset(samples, transform_fn)
+
 
 class ModelToTest:
     def __init__(self, model_name: str, input_shape: List[int]):
@@ -78,10 +92,15 @@ def min_max_quantize_model(
     input_np_dtype = onnx.helper.mapping.TENSOR_TYPE_TO_NP_TYPE[input_dtype]
     dataset = get_random_dataset_for_test(_get_input_key(
         original_model), input_shape, input_np_dtype, dataset_has_batch_size)
-    builder = CompressionBuilder()
-    builder.add_algorithm(
-        MinMaxQuantization(MinMaxQuantizationParameters(number_samples=1, ignored_scopes=ignored_scopes)))
-    quantized_model = builder.apply(original_model, dataset)
+    post_training_quantization = PostTrainingQuantization(
+        PostTrainingQuantizationParameters(number_samples=1, ignored_scopes=ignored_scopes))
+    # Using PTQ, but apply only MinMax
+    updated_algorithms = []
+    for algo in post_training_quantization.algorithms:
+        if isinstance(algo, MinMaxQuantization):
+            updated_algorithms.append(algo)
+    post_training_quantization.algorithms = updated_algorithms
+    quantized_model = post_training_quantization.apply(original_model, dataset=dataset)
     return quantized_model
 
 
@@ -95,10 +114,9 @@ def ptq_quantize_model(
     input_np_dtype = onnx.helper.mapping.TENSOR_TYPE_TO_NP_TYPE[input_dtype]
     dataset = get_random_dataset_for_test(_get_input_key(
         original_model), input_shape, input_np_dtype, dataset_has_batch_size)
-    builder = CompressionBuilder()
-    builder.add_algorithm(
-        PostTrainingQuantization(PostTrainingQuantizationParameters(number_samples=1, ignored_scopes=ignored_scopes)))
-    quantized_model = builder.apply(original_model, dataset)
+    post_training_quantization = PostTrainingQuantization(
+        PostTrainingQuantizationParameters(number_samples=1, ignored_scopes=ignored_scopes))
+    quantized_model = post_training_quantization.apply(original_model, dataset=dataset)
     return quantized_model
 
 

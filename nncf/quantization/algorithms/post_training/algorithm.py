@@ -11,20 +11,20 @@
  limitations under the License.
 """
 
-from typing import Dict, List, Optional, TypeVar, Union
+from typing import Dict, List, Optional, TypeVar
 
 from copy import deepcopy
 
 from nncf import Dataset
-from nncf.common.hardware.config import HWConfigType
+from nncf.parameters import TargetDevice
 from nncf.common.quantization.structs import QuantizationPreset
 from nncf.common.utils.backend import BackendType
 from nncf.common.utils.backend import get_backend
 from nncf.common.logging import nncf_logger
 from nncf.quantization.algorithms.algorithm import Algorithm
 from nncf.quantization.algorithms.algorithm import AlgorithmParameters
-from nncf.quantization.algorithms.definitions import Granularity
 from nncf.quantization.algorithms.definitions import RangeType
+from nncf.quantization.algorithms.definitions import Granularity
 from nncf.quantization.algorithms.fast_bias_correction.algorithm import FastBiasCorrection
 from nncf.quantization.algorithms.fast_bias_correction.algorithm import FastBiasCorrectionParameters
 from nncf.quantization.algorithms.bias_correction.algorithm import BiasCorrection
@@ -43,24 +43,51 @@ class PostTrainingQuantizationParameters(AlgorithmParameters):
     """
 
     def __init__(self,
-                 preset: QuantizationPreset = QuantizationPreset.PERFORMANCE,
-                 weight_bits: int = 8,
-                 weight_granularity: Granularity = Granularity.PERCHANNEL,
-                 activation_bits: int = 8,
-                 activation_granularity: Granularity = Granularity.PERTENSOR,
-                 range_type: RangeType = RangeType.MEAN_MINMAX,
                  number_samples: int = 300,
-                 target_device: HWConfigType = HWConfigType.CPU,
+                 preset: QuantizationPreset = QuantizationPreset.PERFORMANCE,
+                 weight_bits: Optional[int] = None,
+                 weight_granularity: Optional[Granularity] = None,
+                 signed_weights: Optional[bool] = None,
+                 activation_bits: Optional[int] = None,
+                 activation_granularity: Optional[Granularity] = None,
+                 signed_activations: Optional[bool] = None,
+                 target_device: TargetDevice = TargetDevice.ANY,
+                 range_type: RangeType = RangeType.MEAN_MINMAX,
                  quantize_outputs: bool = False,
                  ignored_scopes: Optional[List[str]] = None,
                  fast_bias_correction: bool = True,
                  ):
+        """
+        :param number_samples: Number of samples for the statistics collection.
+        :param preset: Preset parameter for Quantization.
+            Defines the mode: symmetric or asymmetric of the activation quantizers.
+        :param weight_bits: Bitwidth for the weight quantizers.
+        :param weight_granularity: Type of quantization granularity for weight quantizers.
+            Could be per-channel or per-tensor.
+        :param signed_weights: Defines whether the datatype of the weight quantizers should be forced.
+            True if the quantizer *must* be signed, False if *must* be unsigned,
+            None if the signed/unsigned attribute should be determined based on the incoming activation
+            statistics during range initialization.
+        :param activation_bits: Bitwidth for the activation quantizers.
+        :param activation_granularity: Type of quantization granularity for activation quantizers.
+            Could be per-channel or per-tensor.
+        :param signed_activations: Defines whether the datatype of the activation quantizers
+            should be forced. True if the quantizer *must* be signed, False if *must* be unsigned,
+            None if the signed/unsigned attribute should be determined based on the incoming activation
+            statistics during range initialization.
+        :param target_device: Target device for the settings of the quantization pipeline.
+        :param range_type: Type of statistics range calculation.
+        :param quantize_outputs: Boolean value that says whether quantize outputs or not.
+        :param ignored_scopes: List of the layers which input must not be quantized.
+        """
         self.algorithms = {MinMaxQuantization: MinMaxQuantizationParameters(
             preset=preset,
             weight_bits=weight_bits,
             weight_granularity=weight_granularity,
+            signed_weights=signed_weights,
             activation_bits=activation_bits,
             activation_granularity=activation_granularity,
+            signed_activations=signed_activations,
             range_type=range_type,
             number_samples=number_samples,
             target_device=target_device,
@@ -77,9 +104,6 @@ class PostTrainingQuantizationParameters(AlgorithmParameters):
                 number_samples=number_samples
             )}
         self.algorithms.update(bias_correction_algo)
-
-    def to_json(self) -> Dict[str, Union[str, float, int]]:
-        pass
 
 
 class PostTrainingQuantization(Algorithm):

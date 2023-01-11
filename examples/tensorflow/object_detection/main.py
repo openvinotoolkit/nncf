@@ -201,8 +201,8 @@ def train_epoch(train_step, compression_ctrl, epoch, initial_epoch, steps_per_ep
 
 
 def train(train_step, test_step, eval_metric, train_dist_dataset, test_dist_dataset, initial_epoch, initial_step,
-    epochs, steps_per_epoch, checkpoint_manager, compression_ctrl, log_dir, optimizer, num_test_batches, print_freq):
-
+          epochs, steps_per_epoch, checkpoint_manager, compression_ctrl, log_dir, optimizer, num_test_batches,
+          print_freq):
     train_summary_writer = SummaryWriter(log_dir, 'train')
     validation_summary_writer = SummaryWriter(log_dir, 'validation')
     compression_summary_writer = SummaryWriter(log_dir, 'compression')
@@ -287,8 +287,8 @@ def run(config):
     # Create dataset
     train_builder, test_builder = get_dataset_builders(config, strategy.num_replicas_in_sync)
     train_dataset, test_dataset = train_builder.build(), test_builder.build()
-    train_dist_dataset = strategy.experimental_distribute_dataset(train_dataset)
-    test_dist_dataset = strategy.experimental_distribute_dataset(test_dataset)
+    train_dist_dataset, test_dist_dataset = strategy.experimental_distribute_dataset(train_dataset), \
+                                            strategy.experimental_distribute_dataset(test_dataset)
 
     # Training parameters
     epochs = config.epochs
@@ -373,6 +373,7 @@ def run(config):
                                                          tensorboard_writer=SummaryWriter(config.log_dir,
                                                                                           'accuracy_aware_training'),
                                                          log_dir=config.log_dir)
+            logger.info(f'Compressed model statistics:\n{acc_aware_training_loop.statistics.to_str()}')
         else:
             train(train_step, test_step, eval_metric, train_dist_dataset, test_dist_dataset,
                   initial_epoch, initial_step, epochs, steps_per_epoch, checkpoint_manager,

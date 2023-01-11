@@ -1,5 +1,5 @@
-from collections import defaultdict
 import torch
+
 from nncf.torch.dynamic_graph.patch_pytorch import MagicFunctionsToPatch
 from nncf.torch.graph.operator_metatypes import PT_OPERATOR_METATYPES
 from nncf.torch.dynamic_graph.context import TracingContext
@@ -7,18 +7,17 @@ from nncf.torch.dynamic_graph.trace_tensor import TracedTensor
 from nncf.torch.dynamic_graph.trace_tensor import TensorMeta
 
 
-def test_metatype_op_names_do_not_intersect():
-    function_name_to_operator_metatype = defaultdict(list)
+def test_get_all_aliases_is_valid():
+    operator_names_to_function_name = {}
     for operator in PT_OPERATOR_METATYPES.registry_dict:
-        for function_name in PT_OPERATOR_METATYPES.get(operator).get_all_aliases():
-            function_name_to_operator_metatype[function_name].append(operator)
+        operator_names_to_function_name[operator] = PT_OPERATOR_METATYPES.get(operator).get_all_aliases()
 
-    duplicated_operator_metatypes = {}
-    for function_name, operator_metatypes in function_name_to_operator_metatype.items():
-        if len(operator_metatypes) > 1:
-            duplicated_operator_metatypes[function_name] = operator_metatypes
-    assert not duplicated_operator_metatypes, \
-        "There are duplicated function name in these metatypes: {}".format(duplicated_operator_metatypes)
+    invalid_metatypes = []
+    for operator_metatypes, function_names in operator_names_to_function_name.items():
+        if not function_names:
+            invalid_metatypes.append(operator_metatypes)
+    assert not invalid_metatypes, \
+        f'There are metatypes with invalid `get_all_aliaces` method: {invalid_metatypes}'
 
 
 def test_are_all_magic_functions_patched():

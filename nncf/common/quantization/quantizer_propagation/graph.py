@@ -36,6 +36,7 @@ from nncf.common.insertion_point_graph import InsertionPointGraph
 from nncf.common.insertion_point_graph import InsertionPointGraphNodeType
 from nncf.common.insertion_point_graph import PostHookInsertionPoint
 from nncf.common.insertion_point_graph import PreHookInsertionPoint
+from nncf.common.logging import nncf_logger
 from nncf.common.quantization.quantizer_propagation.grouping import UnifiedScalePropagatingQuantizerGroupManager
 from nncf.common.quantization.quantizer_propagation.structs import PropagatingQuantizer
 from nncf.common.quantization.quantizer_propagation.structs import PropagationPath
@@ -51,8 +52,7 @@ from nncf.common.quantization.quantizer_setup import WeightQuantizationInsertion
 from nncf.common.quantization.structs import QuantizationMode
 from nncf.common.quantization.structs import QuantizerConfig
 from nncf.common.quantization.structs import UnifiedScaleType
-from nncf.common.utils.helpers import should_consider_scope
-from nncf.common.logging import nncf_logger
+from nncf.common.scopes import should_consider_scope
 
 
 class QuantizerPropagationStateGraph(nx.DiGraph):

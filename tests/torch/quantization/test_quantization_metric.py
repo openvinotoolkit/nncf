@@ -271,3 +271,10 @@ def test_quantization_configuration_stats(data):
     for attr_name, expected_value in data.expected.items():
         actual_value = as_dict(getattr(stats, attr_name))
         assert expected_value == actual_value
+
+
+def test_full_ignored_scope():
+    config = get_basic_quantization_config()
+    config['compression']['ignored_scopes'] = ["{re}.*"]
+    ctrl, _ = create_compressed_model(test_models.AlexNet(), config)
+    ctrl.statistics()

@@ -122,3 +122,12 @@ def test_quantization_statistics(test_case):
     assert expected.num_wq_per_bitwidth == actual.num_wq_per_bitwidth
     assert expected.num_aq_per_bitwidth == actual.num_aq_per_bitwidth
     assert expected.ratio_of_enabled_quantizations == actual.ratio_of_enabled_quantizations
+
+
+def test_full_ignored_scope():
+    shape = [1, 96, 96, 3]
+    config = _get_basic_quantization_config('symmetric', 'per_tensor', shape)
+    config['compression']['ignored_scopes'] = ["{re}.*"]
+    model = test_models.MobileNetV2(input_shape=tuple(shape[1:]))
+    _, compression_ctrl = create_compressed_model_and_algo_for_test(model, config, force_no_init=True)
+    compression_ctrl.statistics()

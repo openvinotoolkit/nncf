@@ -19,6 +19,7 @@ from unittest.mock import Mock
 import pandas as pd
 import pytest
 import torch
+from pkg_resources import parse_version
 
 from nncf.common.logging import nncf_logger
 from nncf.config import NNCFConfig
@@ -180,6 +181,9 @@ class TestStructuredMaskContext:
         with pytest.raises(ValueError, match='Wrong shape'):
             setattr(ctx, mask_name, torch.ones(2))
 
+    @pytest.mark.skipif(parse_version(torch.__version__) < parse_version("1.12"),
+                        reason=f"torch {torch.__version__} may not compatible with installed transformers package. "
+                               f"Some tests may fail with error")
     @pytest.mark.parametrize('is_dependent_mask', [True, False],
                              ids=['dependent', 'independent'])
     def test_structured_mask_setter_with_device_change(self, is_dependent_mask: bool,

@@ -152,7 +152,7 @@ def quantize_with_accuracy_control_impl(model: ov.Model,
                                         target_device: TargetDevice = TargetDevice.ANY,
                                         subset_size: int = 300,
                                         fast_bias_correction: bool = True,
-                                        model_type: Optional[str] = None,
+                                        model_type: Optional[ModelType] = None,
                                         ignored_scope: Optional[IgnoredScope] = None) -> ov.Model:
     """
     Implementation of the `quantize_with_accuracy_control()` method for the OpenVINO backend.
@@ -177,8 +177,9 @@ def quantize_with_accuracy_control_impl(model: ov.Model,
         _ = validation_fn(compiled_model, validation_dataset.get_data(indices=[0]))
     except Exception:
         use_original_metric = False
-
-    pot.algorithms.algorithm_selector.COMPRESSION_ALGORITHMS.register('NMSEBasedAccuracyAware')(NMSEBasedAccuracyAware)
+    compression_algorithms = pot.algorithms.algorithm_selector.COMPRESSION_ALGORITHMS
+    if 'NMSEBasedAccuracyAware' not in compression_algorithms.registry_dict:
+        compression_algorithms.register('NMSEBasedAccuracyAware')(NMSEBasedAccuracyAware)
 
     algorithms = [
         {
@@ -190,7 +191,7 @@ def quantize_with_accuracy_control_impl(model: ov.Model,
                 'metric_subset_ratio': 0.5,
                 'preset': preset.value,
                 'use_fast_bias': fast_bias_correction,
-                'model_type': model_type,
+                'model_type': None if model_type is None else model_type.value,
                 'ignored': _create_ignored_scope_config(ignored_scope),
             }
         }

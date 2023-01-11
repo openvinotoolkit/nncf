@@ -19,6 +19,7 @@ EXCLUDED_MODULES_PATTERNS = (
     'nncf\\.torch.*',
     'nncf\\.experimental\\.tensorflow.*',
     'nncf\\.experimental\\.torch.*',
+    'nncf\\.experimental\\.openvino.*',
     '.*?openvino_[^\\.]*',
     '.*?torch_[^\\.]*',
     '.*?tf_[^\\.]*'

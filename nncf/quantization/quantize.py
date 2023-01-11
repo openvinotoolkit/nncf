@@ -92,7 +92,7 @@ def quantize_with_accuracy_control(model: ModelType,
                                    target_device: TargetDevice = TargetDevice.ANY,
                                    subset_size: int = 300,
                                    fast_bias_correction: bool = True,
-                                   model_type: Optional[str] = None,
+                                   model_type: Optional[ModelType] = None,
                                    ignored_scope: Optional[IgnoredScope] = None) -> ModelType:
     """
     Applies post-training quantization algorithm with accuracy control to provided model.

@@ -10,23 +10,26 @@
  See the License for the specific language governing permissions and
  limitations under the License.
 """
+import random
 from collections import OrderedDict
-from typing import Dict, Any, List
+from contextlib import contextmanager
+from typing import Any
+from typing import Dict
+from typing import List
 
 import numpy as np
-import random
 import torch
-from torch import distributed as dist, nn
+from torch import distributed as dist
+from torch import nn
 from torch.nn import Module
 
-from nncf.common.graph import NNCFNodeName
-from nncf.common.logging.logger import warning_deprecated
-from nncf.common.utils.helpers import matches_any
-from nncf.common.logging import nncf_logger
 from nncf.common.compression import BaseCompressionAlgorithmController as BaseController
+from nncf.common.graph import NNCFNodeName
+from nncf.common.logging import nncf_logger
+from nncf.common.logging.logger import warning_deprecated
+from nncf.common.scopes import matches_any
 from nncf.torch.dynamic_graph.trace_tensor import TracedTensor
 from nncf.torch.layer_utils import _NNCFModuleMixin
-from contextlib import contextmanager
 
 
 def get_node_name(module, module_name, prefix):
@@ -51,8 +54,8 @@ def get_all_modules_by_type(model, module_types=None, current_scope=None,
     if isinstance(module_types, str):
         module_types = [module_types]
     found = OrderedDict()
-    from nncf.torch.dynamic_graph.scope import Scope #pylint: disable=cyclic-import
-    from nncf.torch.dynamic_graph.scope import ScopeElement #pylint: disable=cyclic-import
+    from nncf.torch.dynamic_graph.scope import Scope  # pylint: disable=cyclic-import
+    from nncf.torch.dynamic_graph.scope import ScopeElement  # pylint: disable=cyclic-import
     if current_scope is None:
         current_scope = Scope()
         current_scope.push(ScopeElement(model.__class__.__name__))
@@ -265,7 +268,7 @@ def compute_FLOPs_hook(module, input_, output, dict_to_save, module_node_name: N
 
 
 def add_domain(name_operator: str) -> str:
-    from nncf.torch.compression_method_api import DOMAIN_CUSTOM_OPS_NAME #pylint: disable=cyclic-import
+    from nncf.torch.compression_method_api import DOMAIN_CUSTOM_OPS_NAME  # pylint: disable=cyclic-import
     return DOMAIN_CUSTOM_OPS_NAME + "::" + name_operator
 
 
@@ -363,7 +366,7 @@ def maybe_convert_legacy_names_in_compress_state(compression_state: Dict[str, An
     if not controller_state or 'quantization' not in controller_state:
         return
 
-    from nncf.torch.quantization.algo import QUANTIZER_BUILDER_STATE_VERSION_SAVE_NAME #pylint: disable=cyclic-import
+    from nncf.torch.quantization.algo import QUANTIZER_BUILDER_STATE_VERSION_SAVE_NAME  # pylint: disable=cyclic-import
     if not controller_state['quantization'].get(QUANTIZER_BUILDER_STATE_VERSION_SAVE_NAME):
         qips = controller_state['quantization']['quantizer_setup']['quantization_points']
 
