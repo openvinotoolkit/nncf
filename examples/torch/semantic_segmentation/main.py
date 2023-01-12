@@ -61,8 +61,7 @@ def main():
     train_set = MockDataset()
     train_loader = DataLoader(train_set, batch_size=4, num_workers=1, drop_last=True)
     model = UNet(n_classes=13)
-    model = torch.nn.DataParallel(model)
-    device = 'cuda'
+    device = 'cpu'
     model.to(device)
     print(model)
     optimizer = SGD(model.parameters(), lr=1e-3)
