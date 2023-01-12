@@ -65,6 +65,7 @@ To export trained model to ONNX format use the following command:
 
 To export a model to OpenVINO IR and run it using Intel Deep Learning Deployment Toolkit please refer to this [tutorial](https://software.intel.com/en-us/openvino-toolkit).
 
+<a name="results"></a>
 ### Results
 
 |Model|Compression algorithm|Dataset|Accuracy (Drop) %|NNCF config file|PyTorch checkpoint|
@@ -79,6 +80,8 @@ To export a model to OpenVINO IR and run it using Intel Deep Learning Deployment
 |UNet|INT8|Mapillary|55.87 (0.36)|[unet_mapillary_int8.json](configs/unet_mapillary_int8.json)|[Link](https://storage.openvinotoolkit.org/repositories/nncf/models/develop/torch/unet_mapillary_int8.pth)|
 |UNet|INT8 + Sparsity 60% (Magnitude)|Mapillary|55.65 (0.58)|[unet_mapillary_magnitude_sparsity_int8.json](configs/unet_mapillary_magnitude_sparsity_int8.json)|[Link](https://storage.openvinotoolkit.org/repositories/nncf/models/develop/torch/unet_mapillary_magnitude_sparsity_int8.pth)|
 
+
+<a name="filter_pruning"></a>
 #### Results for filter pruning
 |Model|Compression algorithm|Dataset|Accuracy (Drop) %|GFLOPS|MParams|NNCF config file|PyTorch checkpoint|
 | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: |

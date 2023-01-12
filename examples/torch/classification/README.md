@@ -79,6 +79,7 @@ python main.py -m export --config=configs/quantization/mobilenet_v2_imagenet_int
 
 To export a model to the OpenVINO IR and run it using the Intel® Deep Learning Deployment Toolkit, refer to this [tutorial](https://software.intel.com/en-us/openvino-toolkit).
 
+<a name="results"></a>
 ### Results for quantization
 
 |Model|Compression algorithm|Dataset|Accuracy (Drop) %|NNCF config file|PyTorch checkpoint|
@@ -109,14 +110,16 @@ To export a model to the OpenVINO IR and run it using the Intel® Deep Learning 
 
 As an example of NNCF convolution binarization capabilities, you may use the configs in `examples/torch/classification/configs/binarization` to binarize ResNet18. Use the same steps/command line parameters as for quantization (for best results, specify `--pretrained`), except for the actual binarization config path.
 
+<a name="binarization"></a>
 ### Results for binarization
+
 |Model|Compression algorithm|Dataset|Accuracy (Drop) %|NNCF config file|PyTorch Checkpoint|
 | :---: | :---: | :---: | :---: | :---: | :---: |
 |ResNet-18|None|ImageNet|69.8|[resnet18_imagenet.json](configs/binarization/resnet18_imagenet.json)|-|
 |ResNet-18|XNOR (weights), scale/threshold (activations)|ImageNet|61.63 (8.17)|[resnet18_imagenet_binarization_xnor.json](configs/binarization/resnet18_imagenet_binarization_xnor.json)|[Link](https://storage.openvinotoolkit.org/repositories/nncf/models/develop/torch/resnet18_imagenet_binarization_xnor.pth)|
 |ResNet-18|DoReFa (weights), scale/threshold (activations)|ImageNet|61.61 (8.19)|[resnet18_imagenet_binarization_dorefa.json](configs/binarization/resnet18_imagenet_binarization_dorefa.json)|[Link](https://storage.openvinotoolkit.org/repositories/nncf/models/develop/torch/resnet18_imagenet_binarization_dorefa.pth)|
 
-
+<a name="filter_pruning"></a>
 ### Results for filter pruning
 |Model|Compression algorithm|Dataset|Accuracy (Drop) %|GFLOPS|MParams|NNCF config file|PyTorch Checkpoint|
 | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: |
@@ -130,7 +133,7 @@ As an example of NNCF convolution binarization capabilities, you may use the con
 |GoogLeNet|None|ImageNet|69.72|2.99 (100%)|6.61 (100%)|[Link](configs/pruning/googlenet_imagenet.json)|-|
 |GoogLeNet|Filter pruning, 40%, geometric median criterion|ImageNet|68.89 (0.83)|1.36 (45.48%)|3.47 (52.50%)|[Link](configs/pruning/googlenet_pruning_geometric_median.json)|[Link](https://storage.openvinotoolkit.org/repositories/nncf/models/develop/torch/googlenet_imagenet_filter_pruning_geomean.pth)|
 
-
+<a name="accuracy_aware"></a>
 ### Results for accuracy-aware compressed training
 |Model|Compression algorithm|Dataset|Accuracy (Drop) %|NNCF config file|
 | :---: | :---: | :---: | :---: | :---: |

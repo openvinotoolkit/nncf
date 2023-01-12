@@ -60,6 +60,7 @@ To export trained model to ONNX format use the following command:
 
 To export a model to OpenVINO IR and run it using Intel Deep Learning Deployment Toolkit please refer to this [tutorial](https://software.intel.com/en-us/openvino-toolkit).
 
+<a name="results"></a>
 ### Results
 
 |Model|Compression algorithm|Dataset|mAP (drop) %|NNCF config file|PyTorch checkpoint|
@@ -73,6 +74,7 @@ To export a model to OpenVINO IR and run it using Intel Deep Learning Deployment
 |SSD512-VGG-BN|INT8|VOC12+07 train, VOC07 eval|80.12 (0.14)|[ssd512_vgg_voc_int8.json](configs/ssd512_vgg_voc_int8.json)|[Link](https://storage.openvinotoolkit.org/repositories/nncf/models/develop/torch/ssd512_vgg_voc_int8.pth)|
 |SSD512-VGG-BN|INT8 + Sparsity 70% (Magnitude)|VOC12+07 train, VOC07 eval|79.67 (0.59)|[ssd512_vgg_voc_magnitude_sparsity_int8.json](configs/ssd512_vgg_voc_magnitude_sparsity_int8.json)|[Link](https://storage.openvinotoolkit.org/repositories/nncf/models/develop/torch/ssd512_vgg_voc_magnitude_sparsity_int8.pth)|
 
+<a name="filter_pruning"></a>
 #### Results for filter pruning
 |Model|Compression algorithm|Dataset|mAP (drop) %|GFLOPS|MParams|NNCF config file|PyTorch checkpoint|
 | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: |
