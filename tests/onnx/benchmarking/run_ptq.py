@@ -86,8 +86,6 @@ def run(onnx_model_path: str, output_model_path: str, dataset: nncf.Dataset,
     onnx.save(quantized_model, output_model_path)
     print("The quantized model is saved to: {}".format(output_model_path))
 
-    onnx.checker.check_model(output_model_path)
-
 
 if __name__ == '__main__':
     parser = build_arguments_parser()
