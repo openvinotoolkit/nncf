@@ -311,6 +311,6 @@ class MovementPolynomialThresholdScheduler(BaseCompressionScheduler):
 
         if self._steps_per_epoch is None:
             self._should_skip = True
-            nncf_logger.info('Movement Sparsity scheduler updates importance threshold and regularization'
+            nncf_logger.info('Movement sparsity scheduler updates importance threshold and regularization'
                              'factor per optimizer step, but steps_per_epoch was not set in config. Will '
                              'measure the actual steps per epoch as signaled by a .epoch_step() call.')

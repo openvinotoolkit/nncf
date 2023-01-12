@@ -24,9 +24,7 @@ from tests.shared.paths import TEST_ROOT
 from tests.common.graph.nx_graph import compare_nx_graph_with_reference
 from tests.common.graph.nx_graph import check_nx_graph
 from tests.onnx.opset_converter import convert_opset_version
-from nncf.experimental.quantization.compression_builder import CompressionBuilder
 from nncf.quantization.algorithms.min_max.algorithm import MinMaxQuantization
-from nncf.quantization.algorithms.min_max.algorithm import MinMaxQuantizationParameters
 from nncf.quantization.algorithms.post_training.algorithm import PostTrainingQuantization
 from nncf.quantization.algorithms.post_training.algorithm import PostTrainingQuantizationParameters
 from nncf.experimental.onnx.graph.nncf_graph_builder import GraphConverter
@@ -94,10 +92,15 @@ def min_max_quantize_model(
     input_np_dtype = onnx.helper.mapping.TENSOR_TYPE_TO_NP_TYPE[input_dtype]
     dataset = get_random_dataset_for_test(_get_input_key(
         original_model), input_shape, input_np_dtype, dataset_has_batch_size)
-    builder = CompressionBuilder()
-    builder.add_algorithm(
-        MinMaxQuantization(MinMaxQuantizationParameters(number_samples=1, ignored_scopes=ignored_scopes)))
-    quantized_model = builder.apply(original_model, dataset)
+    post_training_quantization = PostTrainingQuantization(
+        PostTrainingQuantizationParameters(number_samples=1, ignored_scopes=ignored_scopes))
+    # Using PTQ, but apply only MinMax
+    updated_algorithms = []
+    for algo in post_training_quantization.algorithms:
+        if isinstance(algo, MinMaxQuantization):
+            updated_algorithms.append(algo)
+    post_training_quantization.algorithms = updated_algorithms
+    quantized_model = post_training_quantization.apply(original_model, dataset=dataset)
     return quantized_model
 
 
@@ -111,10 +114,9 @@ def ptq_quantize_model(
     input_np_dtype = onnx.helper.mapping.TENSOR_TYPE_TO_NP_TYPE[input_dtype]
     dataset = get_random_dataset_for_test(_get_input_key(
         original_model), input_shape, input_np_dtype, dataset_has_batch_size)
-    builder = CompressionBuilder()
-    builder.add_algorithm(
-        PostTrainingQuantization(PostTrainingQuantizationParameters(number_samples=1, ignored_scopes=ignored_scopes)))
-    quantized_model = builder.apply(original_model, dataset)
+    post_training_quantization = PostTrainingQuantization(
+        PostTrainingQuantizationParameters(number_samples=1, ignored_scopes=ignored_scopes))
+    quantized_model = post_training_quantization.apply(original_model, dataset=dataset)
     return quantized_model
 
 

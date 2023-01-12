@@ -31,6 +31,7 @@ class TargetDevice(Enum):
     CPU = 'CPU'
     GPU = 'GPU'
     VPU = 'VPU'
+    CPU_SPR = 'CPU_SPR'
 
 
 class ModelType(Enum):

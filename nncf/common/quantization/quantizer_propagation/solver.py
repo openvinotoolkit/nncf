@@ -781,7 +781,7 @@ class QuantizerPropagationSolver:
 
                 quant_det_id = node[QuantizerPropagationStateGraph.OPERATOR_METATYPE_NODE_ATTR]
                 if quant_det_id is None:
-                    nncf_logger.debug("Unknown metatype for operator node: {}".format(node_key))
+                    nncf_logger.debug(f"Unknown metatype for operator node: {node_key}")
                     trait = QuantizationTrait.QUANTIZATION_AGNOSTIC
                 elif quant_det_id is UnknownMetatype:
                     trait = QuantizationTrait.NON_QUANTIZABLE

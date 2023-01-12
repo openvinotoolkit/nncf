@@ -46,6 +46,8 @@ def quantize_impl(model: onnx.ModelProto,
         raise RuntimeError('Quantization algorithm from the ONNX backend '
                            'does not support operation types in the ignored '
                            'scopes yet')
+    if target_device == TargetDevice.CPU_SPR:
+        raise RuntimeError('target_device == CPU_SPR is not supported.')
 
     quantization_parameters = PostTrainingQuantizationParameters(
         preset=preset,

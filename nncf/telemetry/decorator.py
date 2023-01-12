@@ -17,7 +17,7 @@ from typing import List, Union
 
 from nncf.telemetry.events import get_current_category
 from nncf.telemetry.events import telemetry_category
-from nncf.telemetry.wrapper import NNCFTelemetry
+from nncf.telemetry.wrapper import telemetry
 from nncf.telemetry.extractors import TelemetryExtractor
 from nncf.telemetry.extractors import VerbatimTelemetryExtractor
 
@@ -60,9 +60,9 @@ class tracked_function:
             with telemetry_category(self._category) as category:
                 if category is not None:
                     if category != previous_category:
-                        NNCFTelemetry.start_session(self._category)
+                        telemetry.start_session(self._category)
                     for event in events:
-                        NNCFTelemetry.send_event(event_category=category,
+                        telemetry.send_event(event_category=category,
                                                  event_action=event.name,
                                                  event_label=event.data,
                                                  event_value=event.int_data)
@@ -70,7 +70,7 @@ class tracked_function:
                 retval = fn(*args, **kwargs)
 
                 if category is not None and category != previous_category:
-                    NNCFTelemetry.end_session(self._category)
+                    telemetry.end_session(self._category)
             return retval
 
         return wrapped

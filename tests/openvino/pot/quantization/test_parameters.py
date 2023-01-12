@@ -10,12 +10,14 @@
  See the License for the specific language governing permissions and
  limitations under the License.
 """
+import pytest
+from openvino.tools.pot.algorithms.quantization.utils import \
+    load_hardware_config
 
-from nncf.telemetry.extractors import CollectedEvent
-from nncf.telemetry.extractors import TelemetryExtractor
+from nncf.parameters import TargetDevice
 
 
-class CompressionStartedFromBuilder(TelemetryExtractor):
-    def extract(self, argvalue: 'CompressionBuilder') -> CollectedEvent:
-        return CollectedEvent(name="compression_started",
-                              data=",".join([algo.__class__.__name__ for algo in argvalue.algorithms]))
+@pytest.mark.parametrize('target_device', TargetDevice)
+def test_target_device(target_device):
+    config = {'target_device': target_device.value}
+    assert load_hardware_config(config)

@@ -584,7 +584,7 @@ class FilterPruningController(BasePruningAlgoController):
         self._propagate_masks()
 
         pruned_layers_stats = self.get_stats_for_pruned_modules()
-        nncf_logger.info('Pruned layers statistics: \n%s', pruned_layers_stats.draw())
+        nncf_logger.info(f'Pruned layers statistics: \n{pruned_layers_stats.draw()}')
 
     def compression_stage(self) -> CompressionStage:
         target_pruning_level = self.scheduler.target_level
