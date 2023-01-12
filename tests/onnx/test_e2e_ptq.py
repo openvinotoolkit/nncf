@@ -171,22 +171,22 @@ def eval_size(request):
 
 @pytest.fixture(scope="module")
 def is_ov_ep(request):
-    disable_ov_ep = request.config.getoption("--disable-ov-ep")
-    if disable_ov_ep:
-        nncf_logger.info("The accuracy validation of the quantized models is disabled for OpenVINOExecutionProvider.")
-    else:
+    enable_ov_ep = request.config.getoption("--enable-ov-ep")
+    if enable_ov_ep:
         nncf_logger.info("The accuracy validation of the quantized models is enabled for OpenVINOExecutionProvider.")
-    return not disable_ov_ep
+    else:
+        nncf_logger.info("The accuracy validation of the quantized models is disabled for OpenVINOExecutionProvider.")
+    return enable_ov_ep
 
 
 @pytest.fixture(scope="module")
 def is_cpu_ep(request):
-    enable_cpu_ep = request.config.getoption("--enable-cpu-ep")
-    if enable_cpu_ep:
-        nncf_logger.info("The accuracy validation of quantized models is enabled for CPUExecutionProvider.")
-    else:
+    disable_cpu_ep = request.config.getoption("--disable-cpu-ep")
+    if disable_cpu_ep:
         nncf_logger.info("The accuracy validation of quantized models is disabled for CPUExecutionProvider.")
-    return enable_cpu_ep
+    else:
+        nncf_logger.info("The accuracy validation of quantized models is enabled for CPUExecutionProvider.")
+    return not disable_cpu_ep
 
 
 def _read_accuracy_checker_result(root_dir: Path, key: str) -> pd.DataFrame:

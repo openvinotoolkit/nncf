@@ -56,14 +56,14 @@ def pytest_addoption(parser):
              "If not provided, full dataset is used for evaluation."
     )
     parser.addoption(
-        "--disable-ov-ep", action="store_true", default=False,
+        "--enable-ov-ep", action="store_true", default=False,
         help="[e2e-test-onnx-model-zoo] If the parameter is set then the accuracy validation of the quantized models "
-             "will be disabled for OpenVINOExecutionProvider."
+             "will be enabled for OpenVINOExecutionProvider."
     )
     parser.addoption(
-        "--enable-cpu-ep", action="store_true", default=False,
+        "--disable-cpu-ep", action="store_true", default=False,
         help="[e2e-test-onnx-model-zoo] If the parameter is set then the accuracy validation of the quantized models "
-             "will be enabled for CPUExecutionProvider."
+             "will be disabled for CPUExecutionProvider."
     )
     parser.addoption(
         "--regen-dot", action="store_true", default=False, help="If specified, the "

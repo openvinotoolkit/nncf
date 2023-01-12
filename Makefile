@@ -1,9 +1,5 @@
 PYLINT_VERSION := 2.13.9
 JUNITXML_PATH ?= nncf-tests.xml
-MODELS_DIR ?= /models
-DATA_DIR ?= /datasets
-OUTPUT_DIR ?= /output
-ANNO_DIR ?= /annots
 
 ifdef DATA
 	DATA_ARG := --data $(DATA)
@@ -37,18 +33,6 @@ test-install-onnx:
 	pytest tests/cross_fw/install/ -s       \
 		--backend onnx                      \
 		--junitxml ${JUNITXML_PATH}
-
-ONNX_E2E_PTQ_SIZE ?= 300
-ONNX_E2E_PTQ_EVAL_SIZE ?=
-ONNX_E2E_OPTIONS=--model-dir ${MODELS_DIR} --data-dir ${DATA_DIR}  \
-				 --output-dir ${OUTPUT_DIR} --anno-dir ${ANNO_DIR} \
-                 --junitxml ${JUNITXML_PATH} --ptq-size ${ONNX_E2E_PTQ_SIZE} \
-                 --eval-size ${ONNX_E2E_PTQ_EVAL_SIZE}
-
-test-e2e-ptq:
-	pytest tests/onnx -m e2e_ptq ${ONNX_E2E_OPTIONS} --enable-cpu-ep --disable-ov-ep
-
-
 
 ###############################################################################
 # OpenVino backend
