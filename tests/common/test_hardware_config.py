@@ -27,7 +27,7 @@ def test_get_hw_config_type(target_device):
 
 
 def test_get_hw_config_type_trial():
-    assert get_hw_config_type('TRIAL') == None
+    assert get_hw_config_type('TRIAL') is None
 
 
 def test_get_hw_config_type_cpu_spr():
