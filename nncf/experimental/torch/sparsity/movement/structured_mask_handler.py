@@ -124,7 +124,7 @@ class StructuredMaskContext:
             self._independent_structured_mask = tensor.clone()
         else:
             if self._independent_structured_mask.device != tensor.device:
-                nncf_logger.debug('Changing independent_structured_mask device to %s', tensor.device)
+                nncf_logger.debug(f'Changing independent_structured_mask device to {tensor.device}')
                 self._independent_structured_mask = self._independent_structured_mask.to(tensor.device)
             self._independent_structured_mask.copy_(tensor)
 
@@ -143,7 +143,7 @@ class StructuredMaskContext:
             self._dependent_structured_mask = tensor.clone()
         else:
             if self._dependent_structured_mask.device != tensor.device:
-                nncf_logger.debug('Changing dependent_structured_mask device to %s', tensor.device)
+                nncf_logger.debug(f'Changing dependent_structured_mask device to {tensor.device}', )
                 self._dependent_structured_mask = self._dependent_structured_mask.to(tensor.device)
             self._dependent_structured_mask.copy_(tensor)
 
@@ -292,7 +292,7 @@ class StructuredMaskHandler:
 
         nncf_logger.debug('Totally %d structured mask context groups.', len(self._structured_mask_ctx_groups))
         for structured_mask_ctx_group in self._structured_mask_ctx_groups:
-            nncf_logger.debug('%s', structured_mask_ctx_group)
+            nncf_logger.debug(f'{structured_mask_ctx_group}')
 
     def update_independent_structured_mask(self):
         """

@@ -394,7 +394,7 @@ class BiasCorrection(Algorithm):
         node_inputs_name = subgraphs_data[node_name]['input_node_names']
         for node_input_name in node_inputs_name:
             if node_input_name not in needed_stats_list and node_input_name in self._fp_inputs:
-                nncf_logger.debug('Dropped %s', node_input_name)
+                nncf_logger.debug(f'Dropped {node_input_name}')
                 self._fp_inputs[node_input_name] = []
 
     def _get_current_stats_list(self, current_node_name: str, subgraphs_data: Dict[str, Dict]) -> List[str]:
