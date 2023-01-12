@@ -27,7 +27,7 @@ Below is an example of the NNCF configuration file:
                 },
             ]
         },
-        "target_device": "VPU", // The target device, the specificity of which will be taken into account while compressing in order to obtain the best performance for this type of device. The default "ANY" means compatible quantization supported by any HW. The parameter takes values from the set ('CPU', 'GPU', 'VPU', 'ANY', 'TRIAL'). Set this value to 'TRIAL' if you are going to use a custom quantization schema.. Optional.
+        "target_device": "VPU", // The target device, the specificity of which will be taken into account while compressing in order to obtain the best performance for this type of device. The default "ANY" means compatible quantization supported by any HW. The parameter takes values from the set ('CPU', 'GPU', 'VPU', 'ANY', 'TRIAL', 'CPU_SPR'). Set this value to 'TRIAL' if you are going to use a custom quantization schema.. Optional.
         "compression": [ // One or more definitions for the compression algorithms to be applied to the model; either a single JSON object or an array of JSON objects. See README for each compression algorithm for a description of the available config parameters.
             {
                 "algorithm": quantization,
