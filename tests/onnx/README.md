@@ -25,14 +25,15 @@ We provide two types of tests.
     1. `--model-dir`: The directory path which includes ONNX Model ZOO models (.onnx files). See [#prepare-models](benchmarking/README.md#prepare-models) for details.
     2. `--data-dir`: The directory path which includes datasets (ImageNet2012, COCO, Cityscapes, and VOC) [#prepare-models](benchmarking/README.md#prepare-models).
     3. `--output-dir`: The directory path where the test results will be saved.
-    4. (Optional) `--ckpt-dir`: Directory path to save quantized models.
-    5. (Optional) `--anno-dir`: Directory path for dataset annotations. Please refer to [OpenVINO accuracy checker](https://github.com/openvinotoolkit/open_model_zoo/tree/master/tools/accuracy_checker).
-    6. (Optional) `--eval-size`: The number of samples for evaluation.
-    7. (Optional) `--ptq-size`: The number of samples for calibrating quantization parameters.
-    8. (Optional) `--enable-ov-ep`: If the parameter is set then the accuracy validation of the quantized models
+    4. (Optional) `--model-names`: String containing model names to test. Model name is the prefix of the name of AccuracyChecker config before the '.' symbol. Please, provide the model names using ' ' as a separator.
+    5. (Optional) `--ckpt-dir`: Directory path to save quantized models.
+    6. (Optional) `--anno-dir`: Directory path for dataset annotations. Please refer to [OpenVINO accuracy checker](https://github.com/openvinotoolkit/open_model_zoo/tree/master/tools/accuracy_checker).
+    7. (Optional) `--eval-size`: The number of samples for evaluation.
+    8. (Optional) `--ptq-size`: The number of samples for calibrating quantization parameters.
+    9. (Optional) `--enable-ov-ep`: If the parameter is set then the accuracy validation of the quantized models
              will be enabled for OpenVINOExecutionProvider.
-    9. (Optional) `--disable-cpu-ep`: If the parameter is set then the accuracy validation of the quantized models
-             will be disabled for CPUExecutionProvider. 
+    10. (Optional) `--disable-cpu-ep`: If the parameter is set then the accuracy validation of the quantized models
+              will be disabled for CPUExecutionProvider. 
 
     If you want to test the reference (not quantized) model accuracy - try the following command.
 

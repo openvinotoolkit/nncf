@@ -25,7 +25,7 @@ def pytest_addoption(parser):
     )
     parser.addoption(
         "--model-names", type=str, default=None,
-        help="[e2e-test-onnx-model-zoo] String containing model names. "
+        help="[e2e-test-onnx-model-zoo] String containing model names to test. "
              "Please, provide the model names using ' ' as a separator."
     )
     parser.addoption(
