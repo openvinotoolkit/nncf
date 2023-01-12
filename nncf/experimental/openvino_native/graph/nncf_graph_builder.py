@@ -99,15 +99,15 @@ class GraphConverter:
         visited = set()
         inference_nodes = []
 
-        for param in sorted(model.get_parameters(), key=lambda param: param.get_friendly_name()):
+        for param in model.get_parameters():
             nncf_graph.add_nncf_node(node_name=param.get_friendly_name(),
                                      node_type=NNCFGraphNodeType.INPUT_NODE,
                                      node_metatype=InputNoopMetatype)
             visited.add(param.get_friendly_name())
-            for inp in sorted(param.output(0).get_target_inputs(), key=lambda inp: inp.get_node().get_friendly_name()):
+            for inp in sorted(param.output(0).get_target_inputs(), key=lambda inp: inp.get_index()):
                 inference_nodes.append(inp.get_node())
 
-        for result in sorted(model.get_results(), key=lambda result: result.get_friendly_name()):
+        for result in model.get_results():
             nncf_graph.add_nncf_node(node_name=result.get_friendly_name(),
                                      node_type=NNCFGraphNodeType.OUTPUT_NODE,
                                      node_metatype=OutputNoopMetatype)
@@ -120,7 +120,7 @@ class GraphConverter:
                 GraphConverter._add_nncf_node(node, nncf_graph)
                 visited.add(node.get_friendly_name())
                 for out in node.outputs():
-                    for inp in sorted(out.get_target_inputs(), key=lambda inp: inp.get_node().get_friendly_name()):
+                    for inp in sorted(out.get_target_inputs(), key=lambda inp: inp.get_index()):
                         inference_nodes.append(inp.get_node())
 
         for node in model.get_ops():
@@ -164,10 +164,8 @@ class OVWeightedLayerAttributes(BaseLayerAttributes):
     This class stores weight and bias port indices of layers for the algorithms.
     """
 
-    def __init__(self, weight_port_id: Optional[int] = None, bias_port_id: Optional[int] = None):
+    def __init__(self, weight_port_id: Optional[int] = None):
         """
         :param weight_port_id: Index of weight port. Should be None if layer without weights.
-        :param bias_port_id: Index of bias port. Should be None if layer without bias.
         """
         self.weight_port_id = weight_port_id
-        self.bias_port_id = bias_port_id

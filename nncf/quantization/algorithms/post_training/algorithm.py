@@ -18,6 +18,7 @@ from copy import deepcopy
 from nncf import Dataset
 from nncf.parameters import TargetDevice
 from nncf.common.logging import nncf_logger
+from nncf.common.factory import copy_model
 from nncf.common.quantization.structs import QuantizationPreset
 from nncf.common.utils.backend import BackendType
 from nncf.common.utils.backend import get_backend
@@ -183,14 +184,12 @@ class PostTrainingQuantization(Algorithm):
                model: TModel,
                statistic_points: Optional[StatisticPointsContainer] = None,
                dataset: Optional[Dataset] = None) -> TModel:
-        backend = get_backend(model)
-        if backend == BackendType.OPENVINO:
-            modified_model = model.clone()
-        else:
-            modified_model = deepcopy(model)
-
+        modified_model = copy_model(model)
+        if statistic_points is None:
+            backend = get_backend(modified_model)
             if backend == BackendType.OPENVINO:
                 nncf_logger.warning('You are using experimental OpenVINO backend for the Post-training quantization.')
+
             statistics_aggregator = self._create_statistics_aggregator(dataset, backend)
             for algorithm in self.algorithms:
                 algo_statistic_points = algorithm.get_statistic_points(modified_model)

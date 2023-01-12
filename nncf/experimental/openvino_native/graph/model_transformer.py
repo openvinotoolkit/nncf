@@ -162,14 +162,14 @@ class OVModelTransformer(ModelTransformer):
             input_node_output = inp_node.get_source_output()
             name = 'fq_weights' if transform_type == TargetType.OPERATION_WITH_WEIGHTS else 'fq_input'
             fq_name = f'{node_name}/{name}_{port_id}'
-            fq = ov.opset9.fake_quantize(input_node_output, input_low, input_high,
+            fq = ov.opset.fake_quantize(input_node_output, input_low, input_high,
                                          output_low, output_high, levels, name=fq_name)
             inp_node.replace_source_output(fq.output(0))
         elif transform_type == TargetType.POST_LAYER_OPERATION:
             output = target_node.output(port_id)
             target_inputs = output.get_target_inputs()
             fq_name = f'{node_name}/fq_output_{port_id}'
-            fq = ov.opset9.fake_quantize(output, input_low, input_high,
+            fq = ov.opset.fake_quantize(output, input_low, input_high,
                                          output_low, output_high, levels, name=fq_name)
             for inp_node in target_inputs:
                 inp_node.replace_source_output(fq.output(0))

@@ -12,6 +12,7 @@
 """
 
 from typing import TypeVar
+from copy import deepcopy
 
 from nncf.common.graph.graph import NNCFGraph
 from nncf.common.graph.model_transformer import ModelTransformer
@@ -79,3 +80,20 @@ class EngineFactory:
             return OVNativeEngine(model)
         raise RuntimeError('Cannot create backend-specific engine'
                            'because {} is not supported!'.format(model_backend))
+
+
+# TODO(l-bat): Remove after fixing ticket: 100919
+def copy_model(model: TModel) -> TModel:
+    """
+    Function to create copy of the backend-specific model.
+
+    :param model: the backend-specific model instance
+    :return: Copy of the backend-specific model instance
+    """
+    model_backend = get_backend(model)
+    if model_backend == BackendType.OPENVINO:
+        return model.clone()
+    if model_backend == BackendType.ONNX:
+        return deepcopy(model)
+    raise RuntimeError('Cannot create backend-specific model copy '
+                        'because {} is not supported!'.format(model_backend))
