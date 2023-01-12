@@ -132,7 +132,7 @@ EXTRAS_REQUIRE = {
         "tensorflow~=2.8.4",
     ],
     "torch": [
-        "torch>=1.8.2,<1.14",
+        "torch",
     ],
     "onnx": [
         "onnx==1.12.0",
