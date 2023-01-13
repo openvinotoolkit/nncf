@@ -21,12 +21,12 @@ from nncf.common.graph.graph import NNCFGraph
 from nncf.common.graph.transformations.commands import TargetType
 from nncf.common.graph.transformations.layout import TransformationLayout
 from nncf.common.graph.definitions import NNCFGraphNodeType
-from nncf.experimental.onnx.graph.onnx_graph import ONNXGraph
-from nncf.experimental.onnx.graph.transformations.commands import ONNXBiasCorrectionCommand
-from nncf.experimental.onnx.graph.transformations.commands import ONNXModelExtractionCommand
-from nncf.experimental.onnx.graph.transformations.commands import ONNXOutputInsertionCommand
-from nncf.experimental.onnx.graph.transformations.commands import ONNXQuantizerInsertionCommand
-from nncf.experimental.onnx.graph.transformations.commands import ONNXNodeRemovingCommand
+from nncf.onnx.graph.onnx_graph import ONNXGraph
+from nncf.onnx.graph.transformations.commands import ONNXBiasCorrectionCommand
+from nncf.onnx.graph.transformations.commands import ONNXModelExtractionCommand
+from nncf.onnx.graph.transformations.commands import ONNXOutputInsertionCommand
+from nncf.onnx.graph.transformations.commands import ONNXQuantizerInsertionCommand
+from nncf.onnx.graph.transformations.commands import ONNXNodeRemovingCommand
 from nncf.common.factory import NNCFGraphFactory
 from nncf.common.graph.model_transformer import ModelTransformer
 

@@ -170,7 +170,7 @@ class PostTrainingQuantization(Algorithm):
         :return: backnd-specific StatisticsAggregator
         """
         if backend == BackendType.ONNX:
-            from nncf.experimental.onnx.statistics.aggregator import \
+            from nncf.onnx.statistics.aggregator import \
                 ONNXStatisticsAggregator
             return ONNXStatisticsAggregator(dataset)
         return None
