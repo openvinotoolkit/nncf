@@ -279,7 +279,6 @@ class TestPTQ:
         ]
 
         com_str = ' '.join(com_line)
-        print(f"Run command: {com_str}")
         run_command(com_line)
 
 
