@@ -417,14 +417,14 @@ def update_table_inplace(table_content: str, target_file: Path, anchor: str):
             raise RuntimeError(f"Anchor {anchor} not found in target file {target_file}")
 
         for idx, line in enumerate(old_lines[anchor_line:]):
-            table_start_line = idx
+            table_start_line = anchor_line + idx
             if line.startswith('|'):
                 break
         else:
             raise RuntimeError(f"Could not find an MD table to update at anchor {anchor} in {target_file}")
 
         for idx, line in enumerate(old_lines[table_start_line:]):
-            table_end_line = idx
+            table_end_line = table_start_line + idx
             if not line.startswith('|'):
                 break
 
