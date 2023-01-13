@@ -18,7 +18,7 @@ from nncf.common.graph import NNCFNode
 from nncf.common.hardware.config import HWConfig
 from nncf.common.quantization.structs import QuantizationConstraints
 from nncf.common.quantization.structs import QuantizerConfig
-from nncf.common.utils.helpers import matches_any
+from nncf.common.scopes import matches_any
 
 
 def get_scoped_quantizer_config(base_config: QuantizerConfig,

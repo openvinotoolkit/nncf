@@ -22,8 +22,8 @@ import torch
 from nncf.api.compression import CompressionStage
 from nncf.common.sparsity.statistics import MovementSparsityStatistics
 from nncf.common.statistics import NNCFStatistics
-from nncf.common.utils.helpers import matches_any
-from nncf.common.utils.helpers import should_consider_scope
+from nncf.common.scopes import matches_any
+from nncf.common.scopes import should_consider_scope
 from nncf.experimental.torch.sparsity.movement.algo import ImportanceLoss
 from nncf.experimental.torch.sparsity.movement.algo import MovementSparsifier
 from nncf.experimental.torch.sparsity.movement.algo import MovementSparsityController

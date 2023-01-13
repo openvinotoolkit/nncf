@@ -22,9 +22,9 @@ from nncf.common.accuracy_aware_training.training_loop import ADAPTIVE_COMPRESSI
 from nncf.common.graph import NNCFNode
 from nncf.common.graph.transformations.commands import TargetType
 from nncf.common.logging import nncf_logger
+from nncf.common.scopes import matches_any
 from nncf.common.sparsity.statistics import MovementSparsityStatistics
 from nncf.common.statistics import NNCFStatistics
-from nncf.common.utils.helpers import matches_any
 from nncf.config.extractors import extract_algo_specific_config
 from nncf.experimental.torch.sparsity.movement.layers import MovementSparsifier
 from nncf.experimental.torch.sparsity.movement.layers import SparseConfig
@@ -87,10 +87,10 @@ class MovementSparsityBuilder(BaseSparsityAlgoBuilder):
             node_name = module_node.node_name
 
             if not self._should_consider_scope(node_name):
-                nncf_logger.info('Ignored adding Weight Sparsifier in scope: %s', node_name)
+                nncf_logger.info(f'Ignored adding weight sparsifier in scope: {node_name}')
                 continue
 
-            nncf_logger.debug('Adding Weight Sparsifier in scope: %s', node_name)
+            nncf_logger.debug('Adding weight sparsifier in scope: {node_name}')
             compression_lr_multiplier = self.config.get_redefinable_global_param_value_for_algo(
                 'compression_lr_multiplier', self.name
             )

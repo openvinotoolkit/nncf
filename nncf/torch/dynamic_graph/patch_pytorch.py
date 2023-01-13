@@ -157,7 +157,7 @@ def patch_namespace_opname(namespace, op_info: PatchedOperatorInfo):
         ORIGINAL_OPERATORS.append(OriginalOpInfo(op_name, namespace, orig))
         setattr(namespace, op_name, wrap_operator(orig, op_info))
     else:
-        nncf_logger.debug("Not patching {} since it is missing in this version of PyTorch".format(op_name))
+        nncf_logger.debug(f"Not patching {op_name} since it is missing in this version of PyTorch")
 
 
 def get_all_functions_from_namespace(namespace: NamespaceTarget, do_filter: bool = True) -> List[str]:

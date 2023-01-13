@@ -184,4 +184,4 @@ class OVEngine(pot.IEEngine):
     @staticmethod
     def _process_batch(batch):
         index, input_data = batch
-        return [(index, None)], input_data, None
+        return [(index, None)], [input_data], None

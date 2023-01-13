@@ -18,20 +18,21 @@ from typing import Tuple
 import tensorflow as tf
 
 from nncf import NNCFConfig
-from nncf.common.graph import NNCFNode
+from nncf.common.compression import BaseCompressionAlgorithmController
 from nncf.common.graph import NNCFGraph
+from nncf.common.graph import NNCFNode
 from nncf.common.graph import NNCFNodeName
 from nncf.common.graph.transformations.commands import TransformationPriority
+from nncf.common.logging import nncf_logger
 from nncf.common.pruning.clusterization import Cluster
 from nncf.common.pruning.clusterization import Clusterization
 from nncf.common.pruning.mask_propagation import MaskPropagationAlgorithm
 from nncf.common.pruning.node_selector import PruningNodeSelector
 from nncf.common.pruning.statistics import PrunedLayerSummary
 from nncf.common.pruning.structs import PrunedLayerInfoBase
-from nncf.common.pruning.utils import is_prunable_depthwise_conv
 from nncf.common.pruning.utils import get_output_channels
-from nncf.common.logging import nncf_logger
-from nncf.common.compression import BaseCompressionAlgorithmController
+from nncf.common.pruning.utils import is_prunable_depthwise_conv
+from nncf.common.scopes import check_scopes_in_graph
 from nncf.config.extractors import extract_algo_specific_config
 from nncf.config.schemata.defaults import PRUNE_BATCH_NORMS
 from nncf.config.schemata.defaults import PRUNE_DOWNSAMPLE_CONVS
@@ -41,20 +42,20 @@ from nncf.tensorflow.api.compression import TFCompressionAlgorithmBuilder
 from nncf.tensorflow.graph.converter import TFModelConverterFactory
 from nncf.tensorflow.graph.metatypes.keras_layers import TFBatchNormalizationLayerMetatype
 from nncf.tensorflow.graph.model_transformer import TFModelTransformer
-from nncf.tensorflow.graph.transformations.commands import TFLayerWeight
 from nncf.tensorflow.graph.transformations.commands import TFInsertionCommand
+from nncf.tensorflow.graph.transformations.commands import TFLayerWeight
 from nncf.tensorflow.graph.transformations.layout import TFTransformationLayout
 from nncf.tensorflow.graph.utils import get_layer_identifier
 from nncf.tensorflow.graph.utils import get_nncf_operations
-from nncf.tensorflow.tensor import TFNNCFTensor
-from nncf.tensorflow.pruning.tensor_processor import TFNNCFPruningTensorProcessor
+from nncf.tensorflow.pruning.operations import TF_PRUNING_OPERATOR_METATYPES
 from nncf.tensorflow.pruning.operations import TFElementwisePruningOp
 from nncf.tensorflow.pruning.operations import TFIdentityMaskForwardPruningOp
-from nncf.tensorflow.pruning.operations import TF_PRUNING_OPERATOR_METATYPES
+from nncf.tensorflow.pruning.tensor_processor import TFNNCFPruningTensorProcessor
 from nncf.tensorflow.pruning.utils import get_filter_axis
 from nncf.tensorflow.pruning.utils import get_filters_num
 from nncf.tensorflow.sparsity.magnitude.operation import BinaryMask
 from nncf.tensorflow.sparsity.utils import strip_model_from_masks
+from nncf.tensorflow.tensor import TFNNCFTensor
 
 
 class PrunedLayerInfo(PrunedLayerInfoBase):
@@ -114,6 +115,9 @@ class BasePruningAlgoBuilder(TFCompressionAlgorithmBuilder):
         """
         converter = TFModelConverterFactory.create(model)
         self._graph = converter.convert()
+
+        check_scopes_in_graph(self._graph, self.ignored_scopes, self.target_scopes)
+
         groups_of_nodes_to_prune = self._pruning_node_selector.create_pruning_groups(self._graph)
 
         transformations = TFTransformationLayout()

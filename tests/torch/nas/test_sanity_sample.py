@@ -15,6 +15,8 @@ from pathlib import Path
 from typing import Dict
 
 import pytest
+import torch
+from pkg_resources import parse_version
 
 from nncf.common.initialization.batchnorm_adaptation import BatchnormAdaptationAlgorithm
 from nncf.experimental.torch.nas.bootstrapNAS.elasticity.elastic_depth import ElasticDepthHandler
@@ -98,6 +100,10 @@ def fixture_nas_desc(request, dataset_dir):
 
 
 def test_e2e_supernet_training(nas_desc: NASSampleTestDescriptor, tmp_path, mocker):
+    if parse_version(torch.__version__) < parse_version("1.9") and \
+            ('efficient_net' in nas_desc.config_name_ or 'mobilenet_v3' in nas_desc.config_name_):
+        pytest.skip(f'Test exports model with hardsigmoid operator to ONNX opset version 13.\n'
+                    f'It is not supported in the current torch version: {torch.__version__}')
     validator = nas_desc.get_validator()
     args = validator.get_default_args(tmp_path)
     validator.validate_sample(args, mocker)

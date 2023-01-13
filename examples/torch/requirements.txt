@@ -6,5 +6,5 @@ defusedxml>=0.7.0rc1
 mlflow>=1.12.1
 returns==0.14
 opencv-python>=4.4.0.46
-torchvision~=0.14.0  # the minor version should always match the torch minor version that is installed via NNCF's `pip install nncf[torch]`; TV minor version is torch minor version +1
+torchvision>=0.9.2,<0.15  # the minor version should always match the torch minor version that is installed via NNCF's `pip install nncf[torch]`; TV minor version is torch minor version +1
 efficientnet_pytorch

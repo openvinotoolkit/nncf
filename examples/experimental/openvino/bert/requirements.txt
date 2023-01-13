@@ -1,2 +1,6 @@
 datasets
 evaluate
+transformers
+torch
+openvino-dev
+numpy

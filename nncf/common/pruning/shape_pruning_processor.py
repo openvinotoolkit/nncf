@@ -85,13 +85,13 @@ class ShapePruningProcessor:
         pruning_level: float) -> \
         Tuple[Dict[str, int], Dict[str, int]]:
         """
-        Imitates filters pruning by removing `pruning_rate` percent of output filters in each pruning group
+        Imitates filters pruning by removing `pruning_level` percent of output filters in each pruning group
         and updating corresponding input channels number in `pruning_groups_next_nodes` nodes.
 
         :param graph: NNCFGraph.
         :param pruning_groups: A list of pruning groups.
         :param pruning_groups_next_nodes: A dictionary of next nodes of each pruning group.
-        :param pruning_level: Target pruning rate.
+        :param pruning_level: Target pruning level.
         :return Tuple of dictionarise of new input and output channels number {node_name: channels_num}
         """
 

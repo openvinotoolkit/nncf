@@ -43,21 +43,7 @@
       "pruning_steps": 50,
       "pruning_target": 0.4,
       "filter_importance": "geometric_median"
-    },
-    "ignored_scopes": [
-      "SSD_VGG/SSDDetectionOutput[detection_head]/ModuleList[heads]/SSDHead[0]/NNCFConv2d[loc]",
-      "SSD_VGG/SSDDetectionOutput[detection_head]/ModuleList[heads]/SSDHead[0]/NNCFConv2d[conf]",
-      "SSD_VGG/SSDDetectionOutput[detection_head]/ModuleList[heads]/SSDHead[1]/NNCFConv2d[loc]",
-      "SSD_VGG/SSDDetectionOutput[detection_head]/ModuleList[heads]/SSDHead[1]/NNCFConv2d[conf]",
-      "SSD_VGG/SSDDetectionOutput[detection_head]/ModuleList[heads]/SSDHead[2]/NNCFConv2d[loc]",
-      "SSD_VGG/SSDDetectionOutput[detection_head]/ModuleList[heads]/SSDHead[2]/NNCFConv2d[conf]",
-      "SSD_VGG/SSDDetectionOutput[detection_head]/ModuleList[heads]/SSDHead[3]/NNCFConv2d[loc]",
-      "SSD_VGG/SSDDetectionOutput[detection_head]/ModuleList[heads]/SSDHead[3]/NNCFConv2d[conf]",
-      "SSD_VGG/SSDDetectionOutput[detection_head]/ModuleList[heads]/SSDHead[4]/NNCFConv2d[loc]",
-      "SSD_VGG/SSDDetectionOutput[detection_head]/ModuleList[heads]/SSDHead[4]/NNCFConv2d[conf]",
-      "SSD_VGG/SSDDetectionOutput[detection_head]/ModuleList[heads]/SSDHead[5]/NNCFConv2d[loc]",
-      "SSD_VGG/SSDDetectionOutput[detection_head]/ModuleList[heads]/SSDHead[5]/NNCFConv2d[conf]"
-    ]
+    }
   }
   ]
 }

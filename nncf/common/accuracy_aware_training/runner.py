@@ -164,11 +164,21 @@ class TrainingRunner(ABC):
         """
 
     @abstractmethod
-    def load_best_checkpoint(self, model: TModel) -> None:
+    def load_best_checkpoint(self, model: TModel) -> float:
         """
         Load the most accurate model state from the fine-tuning history.
 
         param model: The model object in which the state will be loaded.
+        return: Compression rate of the returned model.
+        """
+
+    @abstractmethod
+    def is_model_fully_compressed(self, compression_controller) -> bool:
+        """
+        Check if model is fully compressed
+
+        param compression_controller: Compression controller used to compress the model
+        return: True if the model is fully compressed, and False otherwise
         """
 
 
@@ -254,7 +264,7 @@ class BaseAccuracyAwareTrainingRunner(TrainingRunner):
 
     def dump_checkpoint(self, model, compression_controller):
         is_best_checkpoint = (self.best_val_metric_value == self.current_val_metric_value and
-                              compression_controller.compression_stage() == CompressionStage.FULLY_COMPRESSED)
+                              self.is_model_fully_compressed(compression_controller))
         if not self.dump_checkpoints and not is_best_checkpoint:
             return
 
@@ -263,7 +273,7 @@ class BaseAccuracyAwareTrainingRunner(TrainingRunner):
         else:
             checkpoint_path = self._make_checkpoint_path(is_best=False)
             self._save_checkpoint(model, compression_controller, checkpoint_path)
-        nncf_logger.info("Saved the checkpoint to {}".format(checkpoint_path))
+        nncf_logger.info(f"Saved the checkpoint to {checkpoint_path}")
 
         if is_best_checkpoint:
             self._save_best_checkpoint(model, compression_controller)
@@ -288,21 +298,24 @@ class BaseAccuracyAwareTrainingRunner(TrainingRunner):
         self._tensorboard_writer = tensorboard_writer
 
     def stop_training(self, compression_controller):
-        if compression_controller.compression_stage() == CompressionStage.FULLY_COMPRESSED \
-                and self._early_stopping_fn is not None:
+        if self.is_model_fully_compressed(compression_controller) and self._early_stopping_fn is not None:
             return self._early_stopping_fn(self.current_val_metric_value)
         return False
 
     def _save_best_checkpoint(self, model, compression_controller):
         best_path = self._make_checkpoint_path(is_best=True)
-        self._best_checkpoint = best_path
+        self._best_checkpoint = (best_path, compression_controller.compression_rate)
         self._save_checkpoint(model, compression_controller, best_path)
-        nncf_logger.info('Saved the best model to {}'.format(best_path))
+        nncf_logger.info(f'Saved the best model to {best_path}')
 
     def load_best_checkpoint(self, model):
-        resuming_checkpoint_path = self._best_checkpoint
-        nncf_logger.info('Loading the best checkpoint found during training: {}'.format(resuming_checkpoint_path))
+        resuming_checkpoint_path, compression_rate = self._best_checkpoint
+        nncf_logger.info(f'Loading the best checkpoint found during training: {resuming_checkpoint_path}')
         self._load_checkpoint(model, resuming_checkpoint_path)
+        return compression_rate
+
+    def is_model_fully_compressed(self, compression_controller) -> bool:
+        return compression_controller.compression_stage() == CompressionStage.FULLY_COMPRESSED
 
     @abstractmethod
     def add_tensorboard_scalar(self, key, data, step):
@@ -363,7 +376,7 @@ class BaseAdaptiveCompressionLevelTrainingRunner(BaseAccuracyAwareTrainingRunner
 
     def __init__(self, accuracy_aware_training_params: Dict[str, object], verbose=True,
                  dump_checkpoints=True, lr_updates_needed=True,
-                 minimal_compression_rate=0.05, maximal_compression_rate=0.95):
+                 minimal_compression_rate=0.0, maximal_compression_rate=0.95):
         super().__init__(accuracy_aware_training_params, verbose, dump_checkpoints, lr_updates_needed)
 
         self.compression_rate_step = accuracy_aware_training_params.get('initial_compression_rate_step',
@@ -399,7 +412,7 @@ class BaseAdaptiveCompressionLevelTrainingRunner(BaseAccuracyAwareTrainingRunner
 
         self._best_checkpoints[self.compression_rate_target] = (best_path, accuracy_budget)
         self._save_checkpoint(model, compression_controller, best_path)
-        nncf_logger.info('Saved the best model to {}'.format(best_path))
+        nncf_logger.info(f'Saved the best model to {best_path}')
 
     def load_best_checkpoint(self, model):
         # load checkpoint with the highest compression rate and positive acc budget
@@ -408,7 +421,7 @@ class BaseAdaptiveCompressionLevelTrainingRunner(BaseAccuracyAwareTrainingRunner
             nncf_logger.warning('Could not produce a compressed model satisfying the set accuracy '
                                 'degradation criterion during training. Increasing the number of training '
                                 'epochs')
-            return
+            return self.compression_rate_target
 
         best_checkpoint_compression_rate = None
         for checkpoint_rate in sorted(possible_checkpoint_rates, key=lambda x: -x):
@@ -418,11 +431,12 @@ class BaseAdaptiveCompressionLevelTrainingRunner(BaseAccuracyAwareTrainingRunner
         if best_checkpoint_compression_rate is None:
             nncf_logger.error('Could not load the model - no models with positive accuracy budget in '
                               'compression training history.')
-            return
+            return self.compression_rate_target
 
         resuming_checkpoint_path = self._best_checkpoints[best_checkpoint_compression_rate][0]
-        nncf_logger.info('Loading the best checkpoint found during training: {}'.format(resuming_checkpoint_path))
+        nncf_logger.info(f'Loading the best checkpoint found during training: {resuming_checkpoint_path}')
         self._load_checkpoint(model, resuming_checkpoint_path)
+        return best_checkpoint_compression_rate
 
     @property
     def compression_rate_target(self):

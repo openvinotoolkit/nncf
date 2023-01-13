@@ -19,6 +19,7 @@ import pytest
 import torch
 
 from examples.torch.common.model_loader import load_model
+from nncf.common.logging.logger import NNCFDeprecationWarning
 from nncf.torch.checkpoint_loading import KeyMatcher
 from nncf.torch.checkpoint_loading import OPTIONAL_PARAMETERS_REGISTRY
 from nncf.torch.checkpoint_loading import ProcessedKeyStatus
@@ -548,7 +549,7 @@ def test_match_key(desc: MatchKeyDesc, mocker, nncf_caplog):
 
     key_matcher = KeyMatcher(desc.is_resume, desc.state_dict_to_load, desc.model_state_dict, desc.ignored_keys)
     if desc.has_deprecation_warning:
-        with pytest.deprecated_call():
+        with pytest.warns(NNCFDeprecationWarning):
             new_dict = key_matcher.run()
     else:
         new_dict = key_matcher.run()

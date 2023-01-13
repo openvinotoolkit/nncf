@@ -580,6 +580,7 @@ def main_worker(current_gpu, config):
                                             configure_optimizers_fn=configure_optimizers_fn,
                                             tensorboard_writer=config.tb,
                                             log_dir=config.log_dir)
+        logger.info(f'Compressed model statistics:\n{acc_aware_training_loop.statistics.to_str()}')
 
     elif 'train' in config.mode:
         train(model, model_without_dp, compression_ctrl, train_loader, val_loader, criterion, color_encoding, config,

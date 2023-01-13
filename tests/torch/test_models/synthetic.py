@@ -259,14 +259,13 @@ class ConvRelu6HSwishHSigmoid(nn.Module):
         super().__init__()
         self.conv1 = create_conv(1, 2, 2, 2)
         self.conv2 = create_conv(2, 2, 2, 2)
+        self.relu6 = torch.nn.ReLU6()
 
-    @staticmethod
-    def _hswish(x: torch.Tensor) -> torch.Tensor:
-        return x * torch.nn.functional.relu6(x + 3) / 6
+    def _hswish(self, x: torch.Tensor) -> torch.Tensor:
+        return x * self.relu6(x + 3) / 6
 
-    @staticmethod
-    def _hsigmoid(x: torch.Tensor) -> torch.Tensor:
-        return torch.nn.functional.relu6(x + 3) / 6
+    def _hsigmoid(self, x: torch.Tensor) -> torch.Tensor:
+        return self.relu6(x + 3) / 6
 
     def forward(self, x: torch.Tensor):
         z = self.conv1(x)
