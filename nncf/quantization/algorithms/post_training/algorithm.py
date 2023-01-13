@@ -184,10 +184,6 @@ class PostTrainingQuantization(Algorithm):
         if statistic_points is None:
             backend = get_backend(modified_model)
 
-            # TODO (KodiaqQ): Remove after ONNX is removed from experimental
-            if backend == BackendType.ONNX:
-                nncf_logger.warning('You are using the experimental ONNX backend for post-training quantization.')
-
             statistics_aggregator = self._create_statistics_aggregator(dataset, backend)
             for algorithm in self.algorithms:
                 algo_statistic_points = algorithm.get_statistic_points(modified_model)
