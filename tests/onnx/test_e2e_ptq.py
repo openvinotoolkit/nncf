@@ -275,6 +275,7 @@ class TestPTQ:
             "-s", str(data_dir),
             "-a", str(anno_dir),
             "-ss", str(ptq_size),
+            "--target_tags", CPU_EP_COL_NAME
         ]
 
         com_str = ' '.join(com_line)
