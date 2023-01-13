@@ -54,13 +54,18 @@ def run(onnx_model_path: str, output_model_path: str, dataset: nncf.Dataset,
     original_model = onnx.load(onnx_model_path)
     print(f"The model is loaded from {onnx_model_path}")
     print(f"  number of samples: {num_init_samples}")
+    # TODO(kshpv):: add support of types ignored_scopes
+    if ignored_scopes is None:
+        ignored_scopes = []
+    if disallowed_op_types is not None:
+        ignored_scopes += find_ignored_scopes(disallowed_op_types, original_model)
     print(f"  ignored_scopes: {ignored_scopes}")
 
     # Convert the model opset if needed.
     model = convert_opset_version(original_model) if convert_model_opset else original_model
     # Execute the pipeline.
     quantized_model = nncf.quantize(model, dataset, subset_size=num_init_samples,
-                                    ignored_scope=IgnoredScope(names=ignored_scopes, types=disallowed_op_types))
+                                    ignored_scope=IgnoredScope(names=ignored_scopes))
     # Save the quantized model.
     onnx.save(quantized_model, output_model_path)
     print("The quantized model is saved to: {}".format(output_model_path))
