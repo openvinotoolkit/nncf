@@ -74,26 +74,27 @@ TORCH_SAMPLE_TYPE_TO_DESCRIPTOR = {
             SampleReadmeSubTableDescriptor(
                 anchor='<a name="filter_pruning"></a>',
                 model_names=["resnet50_imagenet",
-                             "resnet50_pruning_geometric_median",
+                             "resnet50_imagenet_pruning_geometric_median",
                              "resnet18_imagenet",
-                             "resnet18_pruning_magnitude",
-                             "resnet18_pruning_geometric_median",
+                             "resnet18_imagenet_pruning_magnitude",
+                             "resnet18_imagenet_pruning_geometric_median",
                              "resnet34_imagenet",
-                             "resnet34_pruning_geometric_median_kd",
+                             "resnet34_imagenet_pruning_geometric_median_kd",
                              "googlenet_imagenet",
-                             "googlenet_pruning_geometric_median"],
+                             "googlenet_imagenet_pruning_geometric_median"],
                 models_duplicated_from_main_table=["resnet50_imagenet",
                                                    "resnet18_imagenet",
                                                    "resnet34_imagenet",
                                                    "googlenet_imagenet"]),
-            SampleReadmeSubTableDescriptor(
-                anchor='<a name="accuracy_aware"></a>',
-                model_names=["resnet50_imagenet",
-                             "resnet50_imagenet_accuracy_aware",
-                             "resnet18_imagenet",
-                             "resnet18_imagenet_accuracy_aware"],
-                models_duplicated_from_main_table=["resnet50_imagenet",
-                                                   "resnet18_imagenet"])
+            # Models below are currently not being measured in E2E runs.
+            # SampleReadmeSubTableDescriptor(
+            #     anchor='<a name="accuracy_aware"></a>',
+            #     model_names=["resnet50_imagenet",
+            #                  "resnet50_imagenet_pruning_accuracy_aware",
+            #                  "resnet18_imagenet",
+            #                  "resnet18_imagenet_pruning_accuracy_aware"],
+            #     models_duplicated_from_main_table=["resnet50_imagenet",
+            #                                        "resnet18_imagenet"])
         ]),
     'semantic_segmentation': SampleDescriptor(
         path_to_readme=PROJECT_ROOT / 'examples' / 'torch' / 'semantic_segmentation' / 'README.md',
@@ -244,7 +245,7 @@ def get_results_table_rows(per_sample_config_dict: Dict,
                         del model_name_vs_row[model_name]
                 subtable_rows = [header, ] + subtable_rows
                 retval[subtable_desc.anchor] = subtable_rows
-        retval[RESULTS_ANCHOR_IN_SAMPLE_OWN_README] = list(model_name_vs_row.values())
+        retval[RESULTS_ANCHOR_IN_SAMPLE_OWN_README] = [header, ] + list(model_name_vs_row.values())
         return retval
 
 
@@ -323,6 +324,36 @@ def header_name_to_link(header_name_: str) -> str:
     return link
 
 
+def update_table_inplace(table_content: str, target_file: Path, anchor: str):
+    with open(target_file, encoding='utf-8', mode='r') as f:
+        old_lines = f.readlines()
+        for idx, line in enumerate(old_lines):
+            anchor_line = idx
+            if line == anchor + '\n':
+                break
+        else:
+            raise RuntimeError(f"Anchor {anchor} not found in target file {target_file}")
+
+        for idx, line in enumerate(old_lines[anchor_line:]):
+            table_start_line = anchor_line + idx
+            if line.startswith('|'):
+                break
+        else:
+            raise RuntimeError(f"Could not find an MD table to update at anchor {anchor} in {target_file}")
+
+        for idx, line in enumerate(old_lines[table_start_line:]):
+            table_end_line = table_start_line + idx
+            if not line.startswith('|'):
+                break
+
+    content = ''.join(old_lines[:table_start_line]) + table_content + ''.join(old_lines[table_end_line:])
+    with open(target_file, encoding='utf-8', mode='w') as f:
+        f.write(content)
+
+    print(f"Successfully replaced a table in {target_file} at anchor {anchor}")
+
+
+
 def main(argv):
     parser = argparse.ArgumentParser()
     parser.add_argument('--framework', '-f', help='The framework for which the eval results are to be updated',
@@ -380,7 +411,8 @@ def main(argv):
 
     # Output the overview tables for the top-level README file
     overview_file_name = 'results_overview.md'
-    mdfile = MdUtils(file_name=overview_file_name)
+    if not args.inplace:
+        mdfile = MdUtils(file_name=overview_file_name)
 
     for sample_type in sota_checkpoints_eval:
         anchor_vs_table_rows = get_results_table_rows(sota_checkpoints_eval[sample_type],
@@ -390,48 +422,25 @@ def main(argv):
         anchor, table_rows = next(iter(anchor_vs_table_rows.items()))
         sample_desc = TORCH_SAMPLE_TYPE_TO_DESCRIPTOR[sample_type]
         if args.inplace:
-            table_str = mdfile.get_md_text()
+            tmp_mdfile = MdUtils(file_name="")
+            write_table_to_md_file(tmp_mdfile, table_rows)
+            table_str = tmp_mdfile.get_md_text()
             table_str = table_str.lstrip('\n')
             update_table_inplace(table_str,
                                  PROJECT_ROOT / 'README.md',
                                  sample_desc.result_table_anchor_in_main_readme)
         else:
             write_table_to_md_file(mdfile, table_rows)
-    mdfile.create_md_file()
-    delete_four_head_lines(overview_file_name)
+
+    if not args.inplace:
+        mdfile.create_md_file()
+        # Somehow the MDUtils outputs 4 empty lines prior to the actual table in the target file.
+        delete_four_head_lines(overview_file_name)
 
     update_target_metrics_and_thresholds(sota_checkpoints_eval, measured_metrics)
     with open(output, "w") as write_file:
         json.dump(sota_checkpoints_eval, write_file, indent=4)
 
-
-def update_table_inplace(table_content: str, target_file: Path, anchor: str):
-    with open(target_file, encoding='utf-8', mode='r') as f:
-        old_lines = f.readlines()
-        for idx, line in enumerate(old_lines):
-            anchor_line = idx
-            if line == anchor + '\n':
-                break
-        else:
-            raise RuntimeError(f"Anchor {anchor} not found in target file {target_file}")
-
-        for idx, line in enumerate(old_lines[anchor_line:]):
-            table_start_line = anchor_line + idx
-            if line.startswith('|'):
-                break
-        else:
-            raise RuntimeError(f"Could not find an MD table to update at anchor {anchor} in {target_file}")
-
-        for idx, line in enumerate(old_lines[table_start_line:]):
-            table_end_line = table_start_line + idx
-            if not line.startswith('|'):
-                break
-
-    content = ''.join(old_lines[:table_start_line]) + table_content + ''.join(old_lines[table_end_line:])
-    with open(target_file, encoding='utf-8', mode='w') as f:
-        f.write(content)
-
-    print(f"Successfully replaced a table in {target_file} at anchor {anchor}")
 
 if __name__ == '__main__':
     main(sys.argv[1:])
