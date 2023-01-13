@@ -25,15 +25,15 @@ from nncf.onnx.graph.metatypes.onnx_metatypes import ONNX_OPERATION_METATYPES
 from nncf.onnx.graph.metatypes.onnx_metatypes import ONNXIdentityMetatype
 from nncf.onnx.graph.metatypes.onnx_metatypes import ONNXDequantizeLinearMetatype
 from nncf.onnx.graph.model_transformer import ONNXModelTransformer
-from nncf.onnx.graph.transformations import ONNXBiasCorrectionCommand
-from nncf.onnx.graph.transformations import ONNXModelExtractionCommand
-from nncf.onnx.graph.transformations import ONNXTargetPoint
+from nncf.onnx.graph.transformations.commands import ONNXBiasCorrectionCommand
+from nncf.onnx.graph.transformations.commands import ONNXModelExtractionCommand
+from nncf.onnx.graph.transformations.commands import ONNXTargetPoint
 from nncf.onnx.statistics.collectors import ONNXMeanStatisticCollector
 from nncf.onnx.statistics.collectors import ONNXNNCFCollectorTensorProcessor
 from nncf.onnx.tensor import ONNXNNCFTensor
 from nncf.quantization.algorithms.fast_bias_correction.backend import ALGO_BACKENDS
 from nncf.quantization.algorithms.fast_bias_correction.backend import FBCAlgoBackend
-from nncf.onnx.graph import ONNXGraph
+from nncf.onnx.graph.onnx_graph import ONNXGraph
 
 
 @ALGO_BACKENDS.register(BackendType.ONNX)
