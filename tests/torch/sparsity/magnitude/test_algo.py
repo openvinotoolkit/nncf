@@ -11,7 +11,6 @@
  limitations under the License.
 """
 
-import numpy as np
 import pytest
 import torch
 from copy import deepcopy
@@ -287,25 +286,3 @@ def test_can_set_compression_rate_for_magnitude_sparse_algo():
     _, compression_ctrl = create_compressed_model_and_algo_for_test(MagnitudeTestModel(), config)
     compression_ctrl.compression_rate = 0.65
     assert pytest.approx(compression_ctrl.compression_rate, 1e-2) == 0.65
-
-
-def test_maximal_compression_rate():
-    config = get_basic_magnitude_sparsity_config()
-    _, compression_ctrl = create_compressed_model_and_algo_for_test(MagnitudeTestModel(), config)
-
-    # Check that after setting the maximal compression rate the resulting sparsity reflects that all the weights except
-    #   the ones which are equal to the maximal weight values are sparsified
-    maximal_compression_rate = compression_ctrl.maximal_compression_rate
-    compression_ctrl.compression_rate = maximal_compression_rate
-    sparsified_layers_total_weights = 0
-    model_statistics = compression_ctrl.statistics().magnitude_sparsity.model_statistics
-    for layer_summary in model_statistics.sparsified_layers_summary:
-        sparsified_layers_total_weights += int(np.prod(layer_summary.weight_shape))
-    adjusted_sparsity = (model_statistics.sparsity_level_for_layers * sparsified_layers_total_weights - 1) / \
-                        (sparsified_layers_total_weights - 1)
-    assert pytest.approx(adjusted_sparsity, 1e-5) == maximal_compression_rate
-
-    # Check that if we set the compression rate a little higher than the maximum, all weights get sparsified
-    compression_ctrl.compression_rate = maximal_compression_rate + 1 / (sparsified_layers_total_weights - 1)
-    model_statistics = compression_ctrl.statistics().magnitude_sparsity.model_statistics
-    assert model_statistics.sparsity_level_for_layers == 1

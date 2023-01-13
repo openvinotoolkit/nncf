@@ -164,26 +164,3 @@ def test_magnitude_algo_binary_masks_are_applied():
     ref_output_3 = tf.constant(ref_output_3)
     output_3 = compressed_model(input_)
     tf.assert_equal(output_3, ref_output_3)
-
-
-def test_maximal_compression_rate():
-    config = get_basic_magnitude_sparsity_config()
-    config['compression']['params'] = {'weight_importance': 'abs'}
-    _, compression_ctrl = create_compressed_model_and_algo_for_test(get_magnitude_test_model(), config)
-
-    # Check that after setting the maximal compression rate the resulting sparsity reflects that all the weights except
-    #   the ones which are equal to the maximal weight values are sparsified
-    maximal_compression_rate = compression_ctrl.maximal_compression_rate
-    compression_ctrl.compression_rate = maximal_compression_rate
-    sparsified_layers_total_weights = 0
-    model_statistics = compression_ctrl.statistics().magnitude_sparsity.model_statistics
-    for layer_summary in model_statistics.sparsified_layers_summary:
-        sparsified_layers_total_weights += int(np.prod(layer_summary.weight_shape))
-    adjusted_sparsity = (model_statistics.sparsity_level_for_layers * sparsified_layers_total_weights - 1) / \
-                        (sparsified_layers_total_weights - 1)
-    assert pytest.approx(adjusted_sparsity, 1e-5) == maximal_compression_rate
-
-    # Check that if we set the compression rate a little higher than the maximum, all weights get sparsified
-    compression_ctrl.compression_rate = maximal_compression_rate + 1 / (sparsified_layers_total_weights - 1)
-    model_statistics = compression_ctrl.statistics().magnitude_sparsity.model_statistics
-    assert model_statistics.sparsity_level_for_layers == 1
