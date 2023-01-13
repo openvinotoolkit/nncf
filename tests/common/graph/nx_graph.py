@@ -95,24 +95,24 @@ def sort_dot(path):
 
 
 def check_nx_graph(nx_graph: nx.DiGraph, expected_graph: nx.DiGraph, check_edge_attrs: bool = False) -> None:
-    # Check nodes attrs
     for node_name, node_attrs in nx_graph.nodes.items():
         expected_attrs = {k: str(v).strip('"') for k, v in expected_graph.nodes[node_name].items()}
         attrs = {k: str(v) for k, v in node_attrs.items()}
         assert expected_attrs == attrs
 
-    assert nx.DiGraph(expected_graph).edges == nx_graph.edges
+    assert expected_graph.edges == nx_graph.edges
 
     if check_edge_attrs:
-        for nx_graph_edges, expected_graph_edges in zip(nx_graph.edges.data(), expected_graph.edges.data()):
-            for nx_edge_attrs, expected_graph_edge_attrs in zip(nx_graph_edges, expected_graph_edges):
-                if isinstance(nx_edge_attrs, dict):
-                    nx_edge_attrs['label'] = str(nx_edge_attrs['label'])
-                    if not isinstance(expected_graph_edge_attrs['label'], list):
-                        expected_graph_edge_attrs['label'] = expected_graph_edge_attrs['label'].replace('"', '')
-                    else:
-                        expected_graph_edge_attrs['label'] = str(expected_graph_edge_attrs['label'])
-                assert nx_edge_attrs == expected_graph_edge_attrs
+        for nx_graph_edge in nx_graph.edges:
+            nx_edge_attrs = nx_graph.edges[nx_graph_edge]
+            expected_graph_edge_attrs = expected_graph.edges[nx_graph_edge]
+            if isinstance(nx_edge_attrs, dict):
+                nx_edge_attrs['label'] = str(nx_edge_attrs['label'])
+                if not isinstance(expected_graph_edge_attrs['label'], list):
+                    expected_graph_edge_attrs['label'] = expected_graph_edge_attrs['label'].replace('"', '')
+                else:
+                    expected_graph_edge_attrs['label'] = str(expected_graph_edge_attrs['label'])
+            assert nx_edge_attrs == expected_graph_edge_attrs
 
 
 def compare_nx_graph_with_reference(nx_graph: nx.DiGraph, path_to_dot: str,
@@ -138,5 +138,5 @@ def compare_nx_graph_with_reference(nx_graph: nx.DiGraph, path_to_dot: str,
         if sort_dot_graph:
             sort_dot(path_to_dot)
 
-    expected_graph = read_dot_graph(path_to_dot)
+    expected_graph = nx.DiGraph(read_dot_graph(path_to_dot))
     check_nx_graph(nx_graph, expected_graph, check_edge_attrs)

@@ -24,7 +24,7 @@ from nncf.experimental.openvino_native.graph.transformations.commands import OVO
 
 from tests.openvino.native.models import LinearModel
 
-REF_OUTPUT_SHAPES = {'Result_Matmul': (1, 3, 2, 5), 'Result_Add': (1, 3, 2, 4)}
+REF_OUTPUT_SHAPES = {'Result_MatMul': (1, 3, 2, 5), 'Result_Add': (1, 3, 2, 4)}
 TARGET_LAYERS = [['Add'], ['MatMul'], ['Add', 'MatMul']]
 TARGET_PRE_LAYERS_OUTPUT = [['Result_Reshape.0'], ['Result_Reshape.0'], ['Result_Reshape.0']]
 TARGET_POST_LAYERS_OUTPUT = [['Result_Add.0'], ['Result_MatMul.0'], ['Result_Add.0', 'Result_MatMul.0']]

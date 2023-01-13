@@ -24,41 +24,44 @@ from nncf.api.compression import CompressionScheduler
 from nncf.api.compression import CompressionStage
 from nncf.common.compression import BaseCompressionAlgorithmController
 from nncf.common.graph import INPUT_NOOP_METATYPES
+from nncf.common.graph import OUTPUT_NOOP_METATYPES
 from nncf.common.graph import NNCFGraph
 from nncf.common.graph import NNCFNode
 from nncf.common.graph import NNCFNodeName
-from nncf.common.graph import OUTPUT_NOOP_METATYPES
 from nncf.common.graph.transformations.commands import TargetPoint
 from nncf.common.graph.transformations.commands import TransformationPriority
 from nncf.common.graph.utils import get_first_nodes_of_type
-from nncf.common.hardware.config import HWConfigType
-from nncf.common.hardware.config import HW_CONFIG_TYPE_TARGET_DEVICE_MAP
+from nncf.common.hardware.config import get_hw_config_type
 from nncf.common.initialization.batchnorm_adaptation import BatchnormAdaptationAlgorithm
 from nncf.common.insertion_point_graph import InsertionPointGraph
+from nncf.common.logging import nncf_logger
 from nncf.common.quantization.config_assignment import assign_qconfig_lists_to_modules
 from nncf.common.quantization.quantizer_propagation.solver import QuantizerPropagationSolver
 from nncf.common.quantization.quantizer_setup import ActivationQuantizationInsertionPoint
+from nncf.common.quantization.quantizer_setup import QuantizationPointId
 from nncf.common.quantization.quantizer_setup import SingleConfigQuantizerSetup
 from nncf.common.quantization.structs import QuantizableWeightedLayerNode
-from nncf.common.quantization.structs import QuantizationPreset
 from nncf.common.quantization.structs import QuantizationConstraints
 from nncf.common.quantization.structs import QuantizationMode
-from nncf.common.quantization.quantizer_setup import QuantizationPointId
+from nncf.common.quantization.structs import QuantizationPreset
 from nncf.common.quantization.structs import QuantizerConfig
 from nncf.common.quantization.structs import QuantizerGroup
 from nncf.common.schedulers import BaseCompressionScheduler
+from nncf.common.scopes import check_scopes_in_graph
+from nncf.common.scopes import should_consider_scope
 from nncf.common.stateful_classes_registry import TF_STATEFUL_CLASSES
 from nncf.common.statistics import NNCFStatistics
-from nncf.common.utils.helpers import should_consider_scope
-from nncf.common.utils.logger import logger
 from nncf.config.extractors import extract_range_init_params
+from nncf.config.schemata.defaults import QUANTIZATION_OVERFLOW_FIX
+from nncf.config.schemata.defaults import QUANTIZE_INPUTS
+from nncf.config.schemata.defaults import QUANTIZE_OUTPUTS
+from nncf.config.schemata.defaults import TARGET_DEVICE
 from nncf.tensorflow.algorithm_selector import TF_COMPRESSION_ALGORITHMS
 from nncf.tensorflow.api.compression import TFCompressionAlgorithmBuilder
 from nncf.tensorflow.graph.converter import TFModelConverter
 from nncf.tensorflow.graph.converter import TFModelConverterFactory
 from nncf.tensorflow.graph.metatypes.common import ELEMENTWISE_LAYER_METATYPES
 from nncf.tensorflow.graph.metatypes.common import GENERAL_CONV_LAYER_METATYPES
-from nncf.tensorflow.graph.metatypes.common import LAYER_METATYPES_AGNOSTIC_TO_DATA_PRECISION
 from nncf.tensorflow.graph.metatypes.common import LINEAR_LAYER_METATYPES
 from nncf.tensorflow.graph.metatypes.keras_layers import TFLambdaLayerMetatype
 from nncf.tensorflow.graph.metatypes.keras_layers import TFLayerWithWeightsMetatype
@@ -66,8 +69,8 @@ from nncf.tensorflow.graph.metatypes.tf_ops import TFOpWithWeightsMetatype
 from nncf.tensorflow.graph.transformations.commands import TFAfterLayer
 from nncf.tensorflow.graph.transformations.commands import TFBeforeLayer
 from nncf.tensorflow.graph.transformations.commands import TFInsertionCommand
-from nncf.tensorflow.graph.transformations.commands import TFMultiLayerPoint
 from nncf.tensorflow.graph.transformations.commands import TFLayerWeight
+from nncf.tensorflow.graph.transformations.commands import TFMultiLayerPoint
 from nncf.tensorflow.graph.transformations.layout import TFTransformationLayout
 from nncf.tensorflow.graph.utils import get_original_name_and_instance_idx
 from nncf.tensorflow.hardware.config import TFHWConfig
@@ -85,7 +88,7 @@ from nncf.tensorflow.quantization.utils import apply_overflow_fix
 
 QUANTIZATION_LAYER_METATYPES = GENERAL_CONV_LAYER_METATYPES + LINEAR_LAYER_METATYPES
 
-NOT_SUPPORT_LAYER_METATYPES = [
+UNSUPPORTED_LAYER_METATYPES = [
     TFLambdaLayerMetatype
 ]
 
@@ -244,10 +247,10 @@ class QuantizationBuilder(TFCompressionAlgorithmBuilder):
     def __init__(self, config: NNCFConfig, should_init: bool = True):
         super().__init__(config, should_init)
 
-        self.quantize_inputs = self._algo_config.get('quantize_inputs', True)
-        self.quantize_outputs = self._algo_config.get('quantize_outputs', False)
-        self._overflow_fix = self._algo_config.get('overflow_fix', 'enable')
-        self._target_device = config.get('target_device', 'ANY')
+        self.quantize_inputs = self._algo_config.get('quantize_inputs', QUANTIZE_INPUTS)
+        self.quantize_outputs = self._algo_config.get('quantize_outputs', QUANTIZE_OUTPUTS)
+        self._overflow_fix = self._algo_config.get('overflow_fix', QUANTIZATION_OVERFLOW_FIX)
+        self._target_device = config.get('target_device', TARGET_DEVICE)
         algo_config = self._get_algo_specific_config_section()
         if self._target_device == 'VPU' and 'preset' in algo_config:
             raise RuntimeError("The VPU target device does not support presets.")
@@ -268,8 +271,8 @@ class QuantizationBuilder(TFCompressionAlgorithmBuilder):
         self._quantizer_setup = None
 
         self.hw_config = None
-        if self._target_device != "TRIAL":
-            hw_config_type = HWConfigType.from_str(HW_CONFIG_TYPE_TARGET_DEVICE_MAP[self._target_device])
+        hw_config_type = get_hw_config_type(self._target_device)
+        if hw_config_type is not None:
             hw_config_path = TFHWConfig.get_path_to_hw_config(hw_config_type)
             self.hw_config = TFHWConfig.from_json(hw_config_path)
 
@@ -306,11 +309,11 @@ class QuantizationBuilder(TFCompressionAlgorithmBuilder):
         params_dict_from_config = quant_config.get(group_name, {})
         preset = quant_config.get('preset')
         if self._target_device in ['ANY', 'CPU', 'GPU'] or self._target_device == 'TRIAL' and preset is not None:
-            preset = QuantizationPreset.from_str(quant_config.get('preset', 'performance'))
+            preset = QuantizationPreset(quant_config.get('preset', 'performance'))
             params_dict = preset.get_params_configured_by_preset(quantizer_group)
-            overrided_params = params_dict.keys() & params_dict_from_config.keys()
-            if overrided_params:
-                logger.warning('Preset quantizer parameters {} explicitly overrided.'.format(overrided_params))
+            overriden_params = params_dict.keys() & params_dict_from_config.keys()
+            if overriden_params:
+                nncf_logger.info(f'Preset quantizer parameters {overriden_params} explicitly overridden by config.')
         params_dict.update(params_dict_from_config)
         self.global_quantizer_constraints[quantizer_group] = QuantizationConstraints.from_config_dict(params_dict)
         self.ignored_scopes_per_group[quantizer_group] = params_dict_from_config.get('ignored_scopes', [])
@@ -430,11 +433,10 @@ class QuantizationBuilder(TFCompressionAlgorithmBuilder):
     def _get_quantizer_setup(self, model: tf.keras.Model) -> TFQuantizationSetup:
         converter = TFModelConverterFactory.create(model)
         nncf_graph = converter.convert()
-        nodes = nncf_graph.get_all_nodes()
-        for node in nodes:
-            if node.metatype in NOT_SUPPORT_LAYER_METATYPES:
-                logger.warning('The layer {} is not supported by the quantization algorithm'
-                               .format(get_original_name_and_instance_idx(node.node_name)[0]))
+
+        check_scopes_in_graph(nncf_graph, self.ignored_scopes, self.target_scopes)
+
+        self._raise_not_supported_warning(nncf_graph)
 
         quantizable_weighted_layer_nodes = self._get_quantizable_weighted_layer_nodes(nncf_graph)
         custom_layer_nodes = self._get_custom_layer_node_names(nncf_graph, converter)
@@ -514,21 +516,27 @@ class QuantizationBuilder(TFCompressionAlgorithmBuilder):
 
         setup = self._generate_unified_scale_groups(model, quantizer_setup, qp_id_to_index, setup)
 
-        self._raise_overflow_fix_warning(applied_overflow_fix)
+        self._log_if_overflow_fix_was_applied(applied_overflow_fix)
 
         return setup
 
-    def _raise_overflow_fix_warning(self, applied_overflow_fix: bool):
+    def _raise_not_supported_warning(self, graph: NNCFGraph) -> None:
+        for node in graph.get_all_nodes():
+            if node.metatype in UNSUPPORTED_LAYER_METATYPES:
+                nncf_logger.warning(f'Layer '
+                                    f'{get_original_name_and_instance_idx(node.node_name)[0]} '
+                                    f'is not supported by the quantization algorithm')
+
+
+    def _log_if_overflow_fix_was_applied(self, applied_overflow_fix: bool):
         if applied_overflow_fix:
             if self._overflow_fix == 'enable':
                 quantizers_with_overflow_fix_str = 'all weight quantizers'
             elif self._overflow_fix == 'first_layer_only':
                 quantizers_with_overflow_fix_str = 'first convolution weight quantizers'
-            logger.warning('The overflow issue fix will be applied. '
-                           'Now {} will effectively use only 7 bits out of '
-                           '8 bits. This resolves the overflow issue problem on AVX2 and AVX-512 machines. '
-                           'Please take a look at the documentation for a detailed information.'
-                           .format(quantizers_with_overflow_fix_str))
+            elif self._overflow_fix != 'disable':
+                raise RuntimeError(f"Unknown overflow fix type: {self._overflow_fix}")
+            nncf_logger.info(f'Overflow issue fix was applied to {quantizers_with_overflow_fix_str}.')
 
     def _generate_unified_scale_groups(self,
                                        model: tf.keras.Model,
@@ -591,9 +599,10 @@ class QuantizationBuilder(TFCompressionAlgorithmBuilder):
         input_preprocessing_nodes = self._get_input_preprocessing_nodes(nncf_graph, model)
         input_preprocessing_node_names = [n.node_name for n in input_preprocessing_nodes]
         if custom_layer_node_names:
-            logger.warning('Custom layers [{}] '
-                           'will be ignored during quantization since it is not yet supported in NNCF'.format(
-                ", ".join([str(l) for l in custom_layer_node_names])))
+            custom_layer_node_names_str = ", ".join([str(l) for l in custom_layer_node_names])
+            nncf_logger.warning(
+                f'Following custom layers will be ignored during quantization (custom layer quantization not supported '
+                f'by NNCF yet):\n[{custom_layer_node_names_str}]')
         ignored_scopes_for_solver = self.ignored_scopes_per_group[QuantizerGroup.ACTIVATIONS] + \
                                     input_preprocessing_node_names + custom_layer_node_names
 
@@ -659,28 +668,6 @@ class QuantizationBuilder(TFCompressionAlgorithmBuilder):
             retval += preprocessing_nodes_for_this_input
 
         return retval
-
-    def _get_quantized_nodes_for_output(self, nncf_graph: NNCFGraph,
-                                        insertion_points: List[str],
-                                        node_key: str,
-                                        quantized_nodes_for_output: List[NNCFNode] = None) -> List[NNCFNode]:
-        nncf_node = nncf_graph.get_node_by_key(node_key)
-        if quantized_nodes_for_output is None:
-            if node_key in insertion_points:
-                return [nncf_node]
-            quantized_nodes_for_output = []
-
-        for predecessor in nncf_graph.get_previous_nodes(nncf_node):
-            pred_node_key = nncf_graph.get_node_key_by_id(predecessor.node_id)
-            if len(nncf_graph.get_next_nodes(predecessor)) > 1:
-                logger.warning('Removing of FakeQuantize after layer {} '
-                               'with multiple outputs is not fully supported'.format(predecessor.node_name))
-            if predecessor.metatype in LAYER_METATYPES_AGNOSTIC_TO_DATA_PRECISION:
-                self._get_quantized_nodes_for_output(nncf_graph, insertion_points,
-                                                     pred_node_key, quantized_nodes_for_output)
-            elif nncf_graph.get_node_key_by_id(predecessor.node_id) in insertion_points:
-                quantized_nodes_for_output.append(predecessor)
-        return quantized_nodes_for_output
 
     def _get_fake_quantize_name(self, node_name: NNCFNodeName, input_port_id: int = None) -> str:
         original_node_name, instance_idx = get_original_name_and_instance_idx(node_name)

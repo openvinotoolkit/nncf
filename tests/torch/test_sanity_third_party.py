@@ -60,20 +60,18 @@ class CachedPipRunner:
         subprocess.run(f"{self.venv_activate} && pip {cache_dir_entry} {pip_command}",
                        check=True, shell=True, cwd=cwd)
 
-# pylint:disable=redefined-outer-name
-class TestTransformers:
-    @pytest.fixture(autouse=True)
-    def setup(self, temp_folder):
-        self.VENV_PATH = str(temp_folder["venv"])
+
+class TransformersVirtualEnvInstaller:
+    def __init__(self, venv_path, repo_path):
+        self.VENV_PATH = str(venv_path)
         self.VENV_ACTIVATE = str(". {}/bin/activate".format(self.VENV_PATH))
         self.PYTHON_EXECUTABLE = str("{}/bin/python".format(self.VENV_PATH))
-        self.TRANSFORMERS_REPO_PATH = str(os.path.join(temp_folder["repo"], "transformers"))
+        self.TRANSFORMERS_REPO_PATH = str(os.path.join(repo_path, "transformers"))
         self.CUDA_VISIBLE_STRING = "export CUDA_VISIBLE_DEVICES=0;"
         self.PATH_TO_PATCH = str(os.path.join(PROJECT_ROOT, "third_party_integration", "huggingface_transformers",
                                               "0001-Modifications-for-NNCF-usage.patch"))
 
-    @pytest.mark.dependency(name='install_trans')
-    def test_install_trans_(self, pip_cache_dir, torch_with_cuda11):
+    def install_env(self, pip_cache_dir, torch_with_cuda11):
         version_string = "{}.{}".format(sys.version_info[0], sys.version_info[1])
         subprocess.call("virtualenv -ppython{} {}".format(version_string, self.VENV_PATH), shell=True)
         pip_runner = CachedPipRunner(self.VENV_ACTIVATE, pip_cache_dir)
@@ -103,6 +101,17 @@ class TestTransformers:
         pip_runner.run_pip("install -U datasets", cwd=self.TRANSFORMERS_REPO_PATH)
         pip_runner.run_pip("install -e .", cwd=PROJECT_ROOT)
 
+
+# pylint:disable=redefined-outer-name
+class TestTransformers:
+    @pytest.fixture(autouse=True)
+    def setup(self, temp_folder):
+        self.env = TransformersVirtualEnvInstaller(temp_folder['venv'], temp_folder['repo'])
+
+    @pytest.mark.dependency(name='install_trans')
+    def test_install_trans_(self, pip_cache_dir, torch_with_cuda11):
+        self.env.install_env(pip_cache_dir, torch_with_cuda11)
+
     @pytest.mark.dependency(depends=['install_trans'], name='xnli_train')
     def test_xnli_train(self, temp_folder):
         com_line = "examples/pytorch/text-classification/run_xnli.py --model_name_or_path bert-base-chinese" \
@@ -110,8 +119,8 @@ class TestTransformers:
                    " --learning_rate 5e-5 --num_train_epochs 0.0001 --max_seq_length 128 --output_dir {}" \
                    " --save_steps 200 --nncf_config nncf_bert_config_xnli.json" \
             .format(os.path.join(temp_folder["models"], "xnli"))
-        runner = Command(create_command_line(com_line, self.VENV_ACTIVATE, self.PYTHON_EXECUTABLE,
-                                             self.CUDA_VISIBLE_STRING), self.TRANSFORMERS_REPO_PATH)
+        runner = Command(create_command_line(com_line, self.env.VENV_ACTIVATE, self.env.PYTHON_EXECUTABLE,
+                                             self.env.CUDA_VISIBLE_STRING), self.env.TRANSFORMERS_REPO_PATH)
         runner.run()
         assert os.path.exists(os.path.join(temp_folder["models"], "xnli", "pytorch_model.bin"))
 
@@ -122,8 +131,8 @@ class TestTransformers:
                    " {output} --nncf_config nncf_bert_config_xnli.json --per_gpu_eval_batch_size 24" \
                    " --max_eval_samples 10" \
             .format(output=os.path.join(temp_folder["models"], "xnli"))
-        runner = Command(create_command_line(com_line, self.VENV_ACTIVATE, self.PYTHON_EXECUTABLE,
-                                             self.CUDA_VISIBLE_STRING), self.TRANSFORMERS_REPO_PATH)
+        runner = Command(create_command_line(com_line, self.env.VENV_ACTIVATE, self.env.PYTHON_EXECUTABLE,
+                                             self.env.CUDA_VISIBLE_STRING), self.env.TRANSFORMERS_REPO_PATH)
         runner.run()
 
     @pytest.mark.dependency(depends=['install_trans'], name='squad_train')
@@ -133,8 +142,8 @@ class TestTransformers:
                    " --learning_rate 3e-5 --num_train_epochs 0.0001 --max_seq_length 384 --doc_stride 128 " \
                    " --output_dir {} --per_gpu_train_batch_size=1 --save_steps=200 --nncf_config" \
                    " nncf_bert_config_squad.json".format(os.path.join(temp_folder["models"], "squad"))
-        runner = Command(create_command_line(com_line, self.VENV_ACTIVATE, self.PYTHON_EXECUTABLE,
-                                             self.CUDA_VISIBLE_STRING), self.TRANSFORMERS_REPO_PATH)
+        runner = Command(create_command_line(com_line, self.env.VENV_ACTIVATE, self.env.PYTHON_EXECUTABLE,
+                                             self.env.CUDA_VISIBLE_STRING), self.env.TRANSFORMERS_REPO_PATH)
         runner.run()
         assert os.path.exists(os.path.join(temp_folder["models"], "squad", "pytorch_model.bin"))
 
@@ -146,8 +155,8 @@ class TestTransformers:
                    " --max_eval_samples 10" \
                    " --nncf_config nncf_bert_config_squad.json" \
             .format(output=os.path.join(temp_folder["models"], "squad"))
-        runner = Command(create_command_line(com_line, self.VENV_ACTIVATE, self.PYTHON_EXECUTABLE,
-                                             self.CUDA_VISIBLE_STRING), self.TRANSFORMERS_REPO_PATH)
+        runner = Command(create_command_line(com_line, self.env.VENV_ACTIVATE, self.env.PYTHON_EXECUTABLE,
+                                             self.env.CUDA_VISIBLE_STRING), self.env.TRANSFORMERS_REPO_PATH)
         runner.run()
 
     @pytest.mark.dependency(depends=['install_trans'], name='glue_roberta_train')
@@ -158,8 +167,8 @@ class TestTransformers:
                    " --output_dir {} --save_steps 200 --nncf_config" \
                    " nncf_roberta_config_mnli.json" \
             .format(os.path.join(temp_folder["models"], "roberta_mnli"))
-        runner = Command(create_command_line(com_line, self.VENV_ACTIVATE, self.PYTHON_EXECUTABLE,
-                                             self.CUDA_VISIBLE_STRING), self.TRANSFORMERS_REPO_PATH)
+        runner = Command(create_command_line(com_line, self.env.VENV_ACTIVATE, self.env.PYTHON_EXECUTABLE,
+                                             self.env.CUDA_VISIBLE_STRING), self.env.TRANSFORMERS_REPO_PATH)
         runner.run()
         assert os.path.exists(os.path.join(temp_folder["models"], "roberta_mnli", "pytorch_model.bin"))
 
@@ -172,8 +181,8 @@ class TestTransformers:
                    " --max_eval_samples 10" \
                    " --nncf_config nncf_roberta_config_mnli.json" \
             .format(DATASET_PATH, output=os.path.join(temp_folder["models"], "roberta_mnli"))
-        runner = Command(create_command_line(com_line, self.VENV_ACTIVATE, self.PYTHON_EXECUTABLE,
-                                             self.CUDA_VISIBLE_STRING), self.TRANSFORMERS_REPO_PATH)
+        runner = Command(create_command_line(com_line, self.env.VENV_ACTIVATE, self.env.PYTHON_EXECUTABLE,
+                                             self.env.CUDA_VISIBLE_STRING), self.env.TRANSFORMERS_REPO_PATH)
         runner.run()
 
     @pytest.mark.dependency(depends=['install_trans'], name='glue_distilbert_train')
@@ -185,8 +194,8 @@ class TestTransformers:
                    " --output_dir {} --save_steps 200 --nncf_config" \
                    " nncf_distilbert_config_sst2.json".format(DATASET_PATH, os.path.join(temp_folder["models"],
                                                                                          "distilbert_output"))
-        runner = Command(create_command_line(com_line, self.VENV_ACTIVATE, self.PYTHON_EXECUTABLE,
-                                             self.CUDA_VISIBLE_STRING), self.TRANSFORMERS_REPO_PATH)
+        runner = Command(create_command_line(com_line, self.env.VENV_ACTIVATE, self.env.PYTHON_EXECUTABLE,
+                                             self.env.CUDA_VISIBLE_STRING), self.env.TRANSFORMERS_REPO_PATH)
         runner.run()
         assert os.path.exists(os.path.join(temp_folder["models"], "distilbert_output", "pytorch_model.bin"))
 
@@ -198,8 +207,8 @@ class TestTransformers:
                    " --max_eval_samples 10" \
                    " --nncf_config nncf_distilbert_config_sst2.json" \
             .format(DATASET_PATH, output=os.path.join(temp_folder["models"], "distilbert_output"))
-        runner = Command(create_command_line(com_line, self.VENV_ACTIVATE, self.PYTHON_EXECUTABLE,
-                                             self.CUDA_VISIBLE_STRING), self.TRANSFORMERS_REPO_PATH)
+        runner = Command(create_command_line(com_line, self.env.VENV_ACTIVATE, self.env.PYTHON_EXECUTABLE,
+                                             self.env.CUDA_VISIBLE_STRING), self.env.TRANSFORMERS_REPO_PATH)
         runner.run()
 
     @pytest.mark.dependency(depends=['install_trans'], name='lm_train')
@@ -212,8 +221,8 @@ class TestTransformers:
                    " --output_dir {} --nncf_config" \
                    " nncf_gpt2_config_wikitext_hw_config.json".format(os.path.join(temp_folder["models"],
                                                                                    "lm_output"))
-        runner = Command(create_command_line(com_line, self.VENV_ACTIVATE, self.PYTHON_EXECUTABLE,
-                                             self.CUDA_VISIBLE_STRING), self.TRANSFORMERS_REPO_PATH)
+        runner = Command(create_command_line(com_line, self.env.VENV_ACTIVATE, self.env.PYTHON_EXECUTABLE,
+                                             self.env.CUDA_VISIBLE_STRING), self.env.TRANSFORMERS_REPO_PATH)
         runner.run()
         assert os.path.exists(os.path.join(temp_folder["models"], "lm_output", "pytorch_model.bin"))
 
@@ -226,8 +235,8 @@ class TestTransformers:
                    " --max_eval_samples 10" \
                    " --nncf_config nncf_gpt2_config_wikitext_hw_config.json" \
             .format(output=os.path.join(temp_folder["models"], "lm_output"))
-        runner = Command(create_command_line(com_line, self.VENV_ACTIVATE, self.PYTHON_EXECUTABLE,
-                                             self.CUDA_VISIBLE_STRING), self.TRANSFORMERS_REPO_PATH)
+        runner = Command(create_command_line(com_line, self.env.VENV_ACTIVATE, self.env.PYTHON_EXECUTABLE,
+                                             self.env.CUDA_VISIBLE_STRING), self.env.TRANSFORMERS_REPO_PATH)
         runner.run()
 
     @pytest.mark.dependency(depends=['install_trans'], name='ner_train')
@@ -239,8 +248,8 @@ class TestTransformers:
                    " --output_dir {} " \
                    " --nncf_config nncf_bert_config_conll.json".format(os.path.join(temp_folder["models"],
                                                                                     "ner_output"))
-        runner = Command(create_command_line(com_line, self.VENV_ACTIVATE, self.PYTHON_EXECUTABLE,
-                                             self.CUDA_VISIBLE_STRING), self.TRANSFORMERS_REPO_PATH)
+        runner = Command(create_command_line(com_line, self.env.VENV_ACTIVATE, self.env.PYTHON_EXECUTABLE,
+                                             self.env.CUDA_VISIBLE_STRING), self.env.TRANSFORMERS_REPO_PATH)
         runner.run()
         assert os.path.exists(os.path.join(temp_folder["models"], "ner_output", "pytorch_model.bin"))
 
@@ -252,8 +261,8 @@ class TestTransformers:
                    " --max_eval_samples 10" \
                    " --nncf_config nncf_bert_config_conll.json" \
             .format(output=os.path.join(temp_folder["models"], "ner_output"))
-        runner = Command(create_command_line(com_line, self.VENV_ACTIVATE, self.PYTHON_EXECUTABLE,
-                                             self.CUDA_VISIBLE_STRING), self.TRANSFORMERS_REPO_PATH)
+        runner = Command(create_command_line(com_line, self.env.VENV_ACTIVATE, self.env.PYTHON_EXECUTABLE,
+                                             self.env.CUDA_VISIBLE_STRING), self.env.TRANSFORMERS_REPO_PATH)
         runner.run()
 
     @pytest.mark.dependency(depends=['install_trans'])
@@ -266,7 +275,7 @@ class TestTransformers:
                    " --to_onnx {output}/model.onnx" \
                    " --nncf_config nncf_bert_config_squad.json".format(output=os.path.join(temp_folder["models"],
                                                                                            "squad"))
-        runner = Command(create_command_line(com_line, self.VENV_ACTIVATE, self.PYTHON_EXECUTABLE,
-                                             self.CUDA_VISIBLE_STRING), self.TRANSFORMERS_REPO_PATH)
+        runner = Command(create_command_line(com_line, self.env.VENV_ACTIVATE, self.env.PYTHON_EXECUTABLE,
+                                             self.env.CUDA_VISIBLE_STRING), self.env.TRANSFORMERS_REPO_PATH)
         runner.run()
         assert os.path.exists(os.path.join(temp_folder["models"], "squad", "model.onnx"))

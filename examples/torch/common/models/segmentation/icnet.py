@@ -168,14 +168,23 @@ class PyramidPooling(nn.Module):
         for dim in self.bin_dimensions:
             pad_h = (dim - (input_size_hw[0] % dim)) % dim
             pad_w = (dim - (input_size_hw[1] % dim)) % dim
-            self.paddings[dim] = [0, pad_w, 0, pad_h]
+            self.paddings[dim] = (0, pad_w, 0, pad_h)
 
     def forward(self, inputs):
         x = inputs.clone()
 
         for dim in self.bin_dimensions:
-            padded_input = F.pad(inputs, self.paddings[dim], mode='constant', value=0)
-            pooled_feature = F.adaptive_avg_pool2d(padded_input, dim)
+            # TODO(vshampor): adaptive_avg_pool2d is sensitive to input shapes being known at export-time
+            # via shape inference. FakeQuantize ops that we export do not currently provide shape inference
+            # info and it is impossible to do so in 1.13 due to a bug in PyTorch.
+            # The quantized ICNet models will most likely not be exportable to ONNX until both of the following
+            # is done: 1) torch >= 1.14 is used with NNCF, and 2) shape inference is added to FakeQuantize ONNX ops
+            # in the corresponding `symbolic` functions.
+            # See also:
+            # https://discuss.pytorch.org/t/adding-shape-inference-to-custom-operator-for-onnx-exporting/163452
+            # https://github.com/pytorch/pytorch/issues/81693
+
+            pooled_feature = F.adaptive_avg_pool2d(inputs, dim)
             pooled_feature = F.interpolate(pooled_feature, self.input_size_hw, **self.sampling_params)
             if self.mode == 'sum':
                 x += pooled_feature

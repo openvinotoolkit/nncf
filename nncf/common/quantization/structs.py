@@ -232,14 +232,6 @@ class QuantizerGroup(Enum):
     ACTIVATIONS = 'activations'
     WEIGHTS = 'weights'
 
-    @staticmethod
-    def from_str(str_: str) -> 'QuantizerGroup':
-        if str_ == QuantizerGroup.ACTIVATIONS.value:
-            return QuantizerGroup.ACTIVATIONS
-        if str_ == QuantizerGroup.WEIGHTS.value:
-            return QuantizerGroup.WEIGHTS
-        raise RuntimeError('Unknown quantizer group string')
-
 
 class QuantizableWeightedLayerNode:
     def __init__(self, node: NNCFNode, qconfig_list: List[QuantizerConfig]):
@@ -315,17 +307,10 @@ class UnifiedScaleType(Enum):
     UNIFY_ONLY_PER_TENSOR = 0
     UNIFY_ALWAYS = 1
 
+
 class QuantizationPreset(Enum):
     PERFORMANCE = 'performance'
     MIXED = 'mixed'
-
-    @staticmethod
-    def from_str(str_: str) -> 'QuantizationPreset':
-        if str_ == QuantizationPreset.PERFORMANCE.value:
-            return QuantizationPreset.PERFORMANCE
-        if str_ == QuantizationPreset.MIXED.value:
-            return QuantizationPreset.MIXED
-        raise RuntimeError('Unknown preset string.')
 
     def get_params_configured_by_preset(self, quant_group: QuantizerGroup) -> Dict:
         if quant_group == QuantizerGroup.ACTIVATIONS and self == QuantizationPreset.MIXED:

@@ -18,6 +18,7 @@ except: #pylint: disable=bare-except
     torch = None
 
 from tests.shared.install_fixtures import tmp_venv_with_nncf #pylint:disable=unused-import
+from tests.shared.logging import nncf_caplog #pylint:disable=unused-import
 from tests.shared.case_collection import skip_marked_cases_if_options_not_specified
 from tests.shared.case_collection import COMMON_SCOPE_MARKS_VS_OPTIONS
 

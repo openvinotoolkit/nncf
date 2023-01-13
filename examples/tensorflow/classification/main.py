@@ -148,7 +148,21 @@ def load_compression_state(ckpt_path: str):
     return checkpoint.compression_state.state
 
 
+def get_model_accuracy(model_fn, model_params, nncf_config,
+                       validation_dataset, validation_steps):
+    with TFModelManager(model_fn, nncf_config, **model_params) as model:
+        model.compile(metrics=[tf.keras.metrics.CategoricalAccuracy(name='acc@1')])
+        results = model.evaluate(
+            validation_dataset,
+            steps=validation_steps,
+            return_dict=True)
+        return 100 * results['acc@1']
+
+
 def run(config):
+    if config.disable_tensor_float_32_execution:
+        tf.config.experimental.enable_tensor_float_32_execution(False)
+
     strategy = get_distribution_strategy(config)
     if config.metrics_dump is not None:
         write_metrics(0, config.metrics_dump)
@@ -164,8 +178,7 @@ def run(config):
     train_builder, validation_builder = get_dataset_builders(config, strategy.num_replicas_in_sync)
     train_dataset, validation_dataset = train_builder.build(), validation_builder.build()
 
-    nncf_config = config.nncf_config
-    nncf_config = register_default_init_args(nncf_config=nncf_config,
+    nncf_config = register_default_init_args(nncf_config=config.nncf_config,
                                              data_loader=train_dataset,
                                              batch_size=train_builder.global_batch_size)
 
@@ -176,13 +189,11 @@ def run(config):
     resume_training = config.ckpt_path is not None
 
     if is_accuracy_aware_training(config):
-        with TFModelManager(model_fn, nncf_config, **model_params) as model:
-            model.compile(metrics=[tf.keras.metrics.CategoricalAccuracy(name='acc@1')])
-            results = model.evaluate(
-                validation_dataset,
-                steps=validation_steps,
-                return_dict=True)
-            uncompressed_model_accuracy = 100 * results['acc@1']
+        uncompressed_model_accuracy = get_model_accuracy(model_fn,
+                                                         model_params,
+                                                         nncf_config,
+                                                         validation_dataset,
+                                                         validation_steps)
 
     compression_state = None
     if resume_training:
@@ -250,18 +261,19 @@ def run(config):
         if is_accuracy_aware_training(config):
             logger.info('starting an accuracy-aware training loop...')
             result_dict_to_val_metric_fn = lambda results: 100 * results['acc@1']
-            compress_model.accuracy_aware_fit(train_dataset,
-                                              compression_ctrl,
-                                              nncf_config=config.nncf_config,
-                                              callbacks=callbacks,
-                                              initial_epoch=initial_epoch,
-                                              steps_per_epoch=train_steps,
-                                              tensorboard_writer=SummaryWriter(config.log_dir,
-                                                                               'accuracy_aware_training'),
-                                              log_dir=config.log_dir,
-                                              uncompressed_model_accuracy=uncompressed_model_accuracy,
-                                              result_dict_to_val_metric_fn=result_dict_to_val_metric_fn,
-                                              **validation_kwargs)
+            statistics = compress_model.accuracy_aware_fit(
+                train_dataset,
+                compression_ctrl,
+                nncf_config=config.nncf_config,
+                callbacks=callbacks,
+                initial_epoch=initial_epoch,
+                steps_per_epoch=train_steps,
+                tensorboard_writer=SummaryWriter(config.log_dir, 'accuracy_aware_training'),
+                log_dir=config.log_dir,
+                uncompressed_model_accuracy=uncompressed_model_accuracy,
+                result_dict_to_val_metric_fn=result_dict_to_val_metric_fn,
+                **validation_kwargs)
+            logger.info(f'Compressed model statistics:\n{statistics.to_str()}')
         else:
             logger.info('training...')
             compress_model.fit(
@@ -291,6 +303,7 @@ def run(config):
         logger.info('Saved to {}'.format(save_path))
 
     close_strategy_threadpool(strategy)
+
 
 def export(config):
     model, model_params = get_model(config.model,

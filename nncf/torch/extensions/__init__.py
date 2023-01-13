@@ -8,7 +8,7 @@ from abc import ABC, abstractmethod
 from torch.utils.cpp_extension import _get_build_directory
 
 from nncf.common.utils.registry import Registry
-from nncf.common.utils.logger import logger as nncf_logger
+from nncf.common.logging import nncf_logger
 
 EXTENSIONS = Registry('extensions')
 
@@ -20,7 +20,7 @@ class ExtensionsType(enum.Enum):
 def get_build_directory_for_extension(name: str) -> Path:
     build_dir = Path(_get_build_directory('nncf/' + name, verbose=False)) / torch.__version__
     if not build_dir.exists():
-        nncf_logger.debug("Creating build directory: {}".format(str(build_dir)))
+        nncf_logger.debug(f"Creating build directory: {str(build_dir)}")
         build_dir.mkdir(parents=True, exist_ok=True)
     return build_dir
 

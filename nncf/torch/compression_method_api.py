@@ -30,8 +30,9 @@ from nncf.api.compression import CompressionLoss
 from nncf.common.compression import BaseCompressionAlgorithmBuilder
 from nncf.common.compression import BaseCompressionAlgorithmController
 from nncf.common.graph import NNCFNodeName
-from nncf.common.utils.helpers import should_consider_scope
-from nncf.common.utils.logger import logger as nncf_logger
+from nncf.common.logging import nncf_logger
+from nncf.common.scopes import check_scopes_in_graph
+from nncf.common.scopes import should_consider_scope
 from nncf.config import NNCFConfig
 from nncf.torch.graph.transformations.layout import PTTransformationLayout
 from nncf.torch.layers import NNCF_MODULES_DICT
@@ -136,6 +137,8 @@ class PTCompressionAlgorithmBuilder(BaseCompressionAlgorithmBuilder):
         :param model: An instance of NNCFNetwork for the algorithm to be applied to.
         :return: NNCFNetwork with algorithm-specific modifications applied
         """
+        check_scopes_in_graph(model.get_original_graph(), self.ignored_scopes, self.target_scopes)
+
         layout = self._get_transformation_layout(model)
         self._handle_frozen_layers(model)
         return layout
@@ -196,9 +199,10 @@ class PTCompressionAlgorithmBuilder(BaseCompressionAlgorithmBuilder):
         if len(scopes_of_frozen_layers) > 0:
             is_allowed, reason = self._are_frozen_layers_allowed()
             if is_allowed:
-                nncf_logger.warning('{}, compressing them without tuning weights.\n'
-                               'Frozen layers:\n'
-                               '{}'.format(reason, scopes_to_print))
+                nncf_logger.warning(
+                    f'{reason}, compressing them without tuning weights.\n'
+                    f'Frozen layers:\n'
+                    f'{scopes_to_print}')
             else:
                 raise RuntimeError(f'{reason}.\n'
                                    f'Please unfreeze them or put into the Ignored Scope.\n'

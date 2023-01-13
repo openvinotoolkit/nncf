@@ -19,8 +19,8 @@ from typing import Optional
 from typing import Tuple
 
 import torch
-from torchvision.models import mobilenet_v2
-from torchvision.models import mobilenet_v3_small
+from tests.torch.test_models import mobilenet_v2
+from tests.torch.test_models import mobilenet_v3_small
 
 from examples.torch.common.models import efficient_net
 from nncf import NNCFConfig

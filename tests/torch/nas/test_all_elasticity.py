@@ -13,7 +13,6 @@
 
 import pytest
 import torch
-from nncf.experimental.torch.nas.bootstrapNAS.elasticity.onnx_export import NASExporter
 from torch.backends import cudnn
 
 from examples.torch.common.models.classification.resnet_cifar10 import resnet50_cifar10
@@ -22,6 +21,7 @@ from nncf.api.compression import CompressionStage
 from nncf.experimental.torch.nas.bootstrapNAS.elasticity.elasticity_dim import ElasticityDim
 from nncf.experimental.torch.nas.bootstrapNAS.elasticity.visualization import SubnetGraph
 from nncf.experimental.torch.nas.bootstrapNAS.training.model_creator_helpers import resume_compression_from_state
+from nncf.torch.exporter import PTExporter
 from nncf.torch.model_creation import create_nncf_network
 from nncf.torch.utils import manual_seed
 from tests.torch.helpers import register_bn_adaptation_init_args
@@ -141,14 +141,6 @@ def test_random_multi_elasticity(_seed, nas_model_name):
 
     multi_elasticity_handler.enable_elasticity(ElasticityDim.DEPTH)
     multi_elasticity_handler.activate_random_subnet()
-    if 'squeezenet1_0' in nas_model_name:
-        pytest.xfail(
-            f'Skip test for {nas_model_name} as it fails with error: Given groups=1, weight of '
-            'size [48, 256, 1, 1], expected input[1, 32, 4, 4] to have 256 channels, but got 32 channels instead')
-    if 'shufflenet' in nas_model_name:
-        pytest.xfail(
-            f'Skip test for {nas_model_name} as it fails with error: ValueError: too many values to unpack '
-            f'(expected 4). It is happening because the whole is not skipped, just traced operators (ticket 92199).')
     model.do_dummy_forward()
     check_subnet_visualization(multi_elasticity_handler, model, nas_model_name, stage='depth')
 
@@ -444,7 +436,7 @@ def test_can_restore_and_get_the_same_output():
 def test_export_to_onnx(tmp_path, mocker):
     _, ctrl, _ = create_bootstrap_nas_training_algo('resnet18')
     multi_elasticity_handler = ctrl.multi_elasticity_handler
-    export_spy = mocker.spy(NASExporter, '_torch_export_call')
+    export_spy = mocker.spy(PTExporter, '_torch_export_call')
 
     multi_elasticity_handler.disable_all()
     multi_elasticity_handler.enable_elasticity(ElasticityDim.KERNEL)

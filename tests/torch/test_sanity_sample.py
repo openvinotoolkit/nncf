@@ -15,9 +15,13 @@ import json
 import os
 import shlex
 import tempfile
+from contextlib import contextmanager
+from contextlib import nullcontext
 
 import pytest
 import torch
+import torchvision
+from pkg_resources import parse_version
 from pytest_dependency import depends
 
 from examples.torch.common.model_loader import COMPRESSION_STATE_ATTR
@@ -168,6 +172,10 @@ def fixture_case_common_dirs(tmp_path_factory):
                          (True, False),
                          ids=['distributed', 'dataparallel'])
 def test_pretrained_model_eval(config, tmp_path, multiprocessing_distributed, case_common_dirs):
+    if parse_version(torchvision.__version__) < parse_version("0.13") and 'voc' in str(config["dataset_path"]):
+        pytest.skip(f'Test calls sample that uses `datasets.VOCDetection.parse_voc_xml` function from latest '
+                    f'torchvision.\nThe signature of the function is not compatible with the corresponding signature '
+                    f'from the current torchvision version : {torchvision.__version__}')
     config_factory = ConfigFactory(config['nncf_config'], tmp_path / 'config.json')
     config_factory.config = update_compression_algo_dict_with_legr_save_load_params(config_factory.config,
                                                                                     case_common_dirs[
@@ -247,6 +255,10 @@ def depends_on_pretrained_train(request, test_case_id: str, current_multiprocess
     "multiprocessing_distributed", [True, False],
     ids=['distributed', 'dataparallel'])
 def test_trained_model_eval(request, config, tmp_path, multiprocessing_distributed, case_common_dirs):
+    if parse_version(torchvision.__version__) < parse_version("0.13") and 'voc' in str(config["dataset_path"]):
+        pytest.skip(f'Test calls sample that uses `datasets.VOCDetection.parse_voc_xml` function from latest '
+                    f'torchvision.\nThe signature of the function is not compatible with the corresponding signature '
+                    f'from the current torchvision version : {torchvision.__version__}')
     depends_on_pretrained_train(request, config["test_case_id"], multiprocessing_distributed)
     config_factory = ConfigFactory(config['nncf_config'], tmp_path / 'config.json')
     config_factory.config = update_compression_algo_dict_with_legr_save_load_params(config_factory.config,
@@ -405,6 +417,16 @@ def test_get_default_weight_decay(algo, ref_weight_decay):
     assert ref_weight_decay == get_default_weight_decay(config)
 
 
+@contextmanager
+def set_num_threads_locally(n=1):
+    old_n = torch.get_num_threads()
+    try:
+        torch.set_num_threads(n)
+        yield
+    finally:
+        torch.set_num_threads(old_n)
+
+
 def test_cpu_only_mode_produces_cpu_only_model(config, tmp_path, mocker):
     config_factory = ConfigFactory(config['nncf_config'], tmp_path / 'config.json')
     args = {
@@ -441,7 +463,11 @@ def test_cpu_only_mode_produces_cpu_only_model(config, tmp_path, mocker):
         import examples.torch.object_detection.main as sample
         mocker.spy(sample, "train")
 
-    sample.main(shlex.split(command_line))
+    # Set number of threads = 1 to avoid hang for UNet (ticket 100106).
+    # Potentially it might happen when OpenMP is used before fork.
+    # The relevant thread: https://github.com/pytorch/pytorch/issues/91547
+    with set_num_threads_locally(1) if config["sample_type"] == "semantic_segmentation" else nullcontext():
+        sample.main(shlex.split(command_line))
 
     # pylint: disable=no-member
     if config["sample_type"] == "classification":

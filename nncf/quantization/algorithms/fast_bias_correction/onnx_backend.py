@@ -11,7 +11,7 @@
  limitations under the License.
 """
 
-from typing import Dict, Tuple, List
+from typing import Dict, Tuple, List, Optional
 import onnx
 import numpy as np
 from nncf.common.graph.transformations.commands import TargetType
@@ -67,9 +67,8 @@ class ONNXFBCAlgoBackend(FBCAlgoBackend):
 
     @staticmethod
     def bias_correction_command(target_point: ONNXTargetPoint,
-                                bias_value: np.ndarray,
-                                threshold: float) -> ONNXBiasCorrectionCommand:
-        return ONNXBiasCorrectionCommand(target_point, bias_value, threshold)
+                                bias_value: np.ndarray) -> ONNXBiasCorrectionCommand:
+        return ONNXBiasCorrectionCommand(target_point, bias_value)
 
     @staticmethod
     def model_extraction_command(inputs: List[str], outputs: List[str]) -> ONNXModelExtractionCommand:
@@ -77,13 +76,9 @@ class ONNXFBCAlgoBackend(FBCAlgoBackend):
 
     @staticmethod
     def mean_statistic_collector(reduction_shape: ReductionShape,
-                                 num_samples: int = None,
-                                 window_size: int = None) -> ONNXMeanStatisticCollector:
+                                 num_samples: Optional[int] = None,
+                                 window_size: Optional[int] = None) -> ONNXMeanStatisticCollector:
         return ONNXMeanStatisticCollector(reduction_shape, num_samples, window_size)
-
-    @staticmethod
-    def nncf_tensor(tensor: np.ndarray) -> ONNXNNCFTensor:
-        return ONNXNNCFTensor(tensor)
 
     @staticmethod
     def get_tensor_names(node: NNCFNode):
@@ -141,3 +136,8 @@ class ONNXFBCAlgoBackend(FBCAlgoBackend):
         weight_dequantizer = nodes_after_weight[0]
         metatype = ONNX_OPERATION_METATYPES.get_operator_metatype_by_op_name(weight_dequantizer.op_type)
         return metatype == ONNXDequantizeLinearMetatype
+
+    @staticmethod
+    def is_node_with_bias(node: NNCFNode) -> bool:
+        input_tensor_names = node.layer_attributes.input_tensor_names
+        return len(input_tensor_names) > 2

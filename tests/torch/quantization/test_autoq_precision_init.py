@@ -16,10 +16,10 @@ from typing import NamedTuple
 import os
 import pytest
 import torch
+from tests.torch.test_models.mobilenet import mobilenet_v2
 from torch import nn
 import torch.utils.data
 from random import random
-from torchvision.models import mobilenet_v2
 from torchvision.models import resnet50
 
 from nncf.torch import register_default_init_args

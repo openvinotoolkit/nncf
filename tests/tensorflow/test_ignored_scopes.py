@@ -12,13 +12,17 @@
 """
 from collections import Counter
 
+import pytest
 import tensorflow as tf
 from tensorflow.keras import layers
 
+from nncf.tensorflow.algorithm_selector import TF_COMPRESSION_ALGORITHMS
 from nncf.tensorflow.layers.wrapper import NNCFWrapper
 from nncf.tensorflow.quantization import FakeQuantize
 from tests.tensorflow.helpers import create_compressed_model_and_algo_for_test
 from tests.tensorflow.quantization.test_algorithm_quantization import get_basic_quantization_config
+from tests.tensorflow.helpers import get_empty_config
+from tests.tensorflow.helpers import get_mock_model
 
 
 def test_ignored_scopes():
@@ -57,3 +61,17 @@ def test_ignored_scopes():
     nncf_wrapper_names = [layer.name for layer in compressed_model.layers if isinstance(layer, NNCFWrapper)]
     assert Counter(fake_quantize_names) == Counter(ref_fake_quantize_names)
     assert Counter(nncf_wrapper_names) == Counter(ref_nncf_wrapper_names)
+
+
+NOT_SUPPORT_SCOPES_ALGO = ["NoCompressionAlgorithm"]
+@pytest.mark.parametrize("algo_name", TF_COMPRESSION_ALGORITHMS.registry_dict.keys() - NOT_SUPPORT_SCOPES_ALGO)
+def test_raise_runtimeerror_for_not_matched_scope_names(algo_name):
+    model = get_mock_model()
+    config = get_empty_config()
+    config['compression'] = {'algorithm': algo_name, 'ignored_scopes': ['unknown']}
+    if algo_name == "quantization":
+        config['compression']["initializer"] = {"batchnorm_adaptation": {"num_bn_adaptation_samples": 0}}
+
+    with pytest.raises(RuntimeError) as exc_info:
+        create_compressed_model_and_algo_for_test(model, config)
+    assert "No match has been found among the model" in str(exc_info.value)

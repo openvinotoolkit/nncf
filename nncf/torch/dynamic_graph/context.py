@@ -25,6 +25,7 @@ from nncf.common.graph.layer_attributes import BaseLayerAttributes
 from nncf.common.utils.debug import is_debug
 from nncf.torch.dynamic_graph.graph import DynamicGraph
 from nncf.torch.dynamic_graph.graph import DynamicGraphNode
+from nncf.torch.dynamic_graph.graph import DynamicGraphNodeParameters
 from nncf.torch.dynamic_graph.op_input_processing import OperatorInput
 from nncf.torch.dynamic_graph.operation_address import OperationAddress
 from nncf.torch.dynamic_graph.scope import Scope
@@ -129,7 +130,8 @@ class TracingContext:
                        tensor_metas: List[Optional[TensorMeta]],
                        op_address: OperationAddress,
                        module_attrs: BaseLayerAttributes = None,
-                       ignored_algorithms: List[str] = None) -> Optional[DynamicGraphNode]:
+                       ignored_algorithms: List[str] = None,
+                       is_called_inside_nncf_module: bool = False) -> Optional[DynamicGraphNode]:
         if not self._may_add_nodes:
             return None
         with self._threading.cond:
@@ -139,8 +141,9 @@ class TracingContext:
             # so we need to check again if a node is already added.
             node = self.graph.find_node(op_address, tensor_metas, self._input_comparators_per_scope)
             if node is None:
-                node = self.graph.add_node(op_address, tensor_metas, self._input_comparators_per_scope,
-                                           inputs, module_attrs, ignored_algorithms)
+                node = self.graph.add_node(
+                    op_address, tensor_metas, self._input_comparators_per_scope, inputs,
+                    DynamicGraphNodeParameters(module_attrs, ignored_algorithms, is_called_inside_nncf_module))
         return node
 
     def get_caller_context(self, operator_name: str) -> OperationAddress:

@@ -14,7 +14,7 @@
 import logging
 from contextlib import contextmanager
 
-from nncf.common.utils.logger import logger as nncf_logger
+from nncf.common.logging import nncf_logger
 
 DEBUG_LOG_DIR = "./nncf_debug"
 
@@ -30,7 +30,7 @@ def set_debug_log_dir(dir_: str):
 
 @contextmanager
 def nncf_debug():
-    from nncf.common.utils.logger import set_log_level #pylint: disable=cyclic-import
+    from nncf.common.logging.logger import set_log_level #pylint: disable=cyclic-import
     set_log_level(logging.DEBUG)
     yield
     set_log_level(logging.INFO)

@@ -10,6 +10,8 @@
 
     "dataset": "coco/2017",
 
+    "disable_tensor_float_32_execution": true,
+
      "optimizer": {
         "type": "Adam",
         "schedule_type": "piecewise_constant",

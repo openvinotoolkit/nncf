@@ -41,14 +41,13 @@ import sysconfig
 import codecs
 import os
 import re
+import setuptools
 from setuptools import setup, find_packages
+from pkg_resources import parse_version
 
 here = os.path.abspath(os.path.dirname(__file__))
 BKC_SETUPTOOLS_VERSION = '59.5.0'
 
-
-import setuptools
-from pkg_resources import parse_version
 setuptools_version = parse_version(setuptools.__version__).base_version
 if setuptools_version < '43.0.0':
     raise RuntimeError(
@@ -101,8 +100,7 @@ def find_version(*file_paths):
 INSTALL_REQUIRES = ["ninja>=1.10.0.post2, <1.11",
                     "addict>=2.4.0",
                     "texttable>=1.6.3",
-                    "scipy>=1.3.2, <=1.9.1",
-                    "matplotlib>=3.3.4, <3.6",
+                    "scipy>=1.3.2, <=1.10.0",
                     "networkx>=2.6, <=2.8.2",  # see ticket 94048 or https://github.com/networkx/networkx/issues/5962
                     "numpy>=1.19.1, <1.24",
                     "pillow>=9.0.0",
@@ -114,25 +112,26 @@ INSTALL_REQUIRES = ["ninja>=1.10.0.post2, <1.11",
                     # Ticket: 69520
                     "pyparsing<3.0",
                     "pymoo==0.5.0",
-                    "jsonschema==3.2.0",
+                    "jsonschema>=3.2.0",
                     "pydot>=1.4.1",
                     "jstyleson>=0.0.2",
                     "tqdm>=4.54.1",
                     "natsort>=7.1.0",
-                    "pandas>=1.1.5,<1.4.0rc0",
+                    "pandas>=1.1.5,<=1.5.2",
                     "scikit-learn>=0.24.0",
                     "wheel>=0.36.1",
                     "openvino-telemetry"]
 
 
 EXTRAS_REQUIRE = {
+    "dev": ["matplotlib>=3.3.4, <3.6"],
     "tests": ["pytest"],
     "docs": [],
     "tf": [
         "tensorflow~=2.8.4",
     ],
     "torch": [
-        "torch==1.12.1",
+        "torch>=1.8.2,<1.14",
     ],
     "onnx": [
         "onnx==1.12.0",
@@ -163,6 +162,7 @@ setup(
     long_description=long_description,
     long_description_content_type="text/markdown",
     url="https://github.com/openvinotoolkit/nncf",
+    license="Apache-2.0",
     packages=find_packages(exclude=["tests", "tests.*",
                                     "examples", "examples.*",
                                     "tools", "tools.*"]),
