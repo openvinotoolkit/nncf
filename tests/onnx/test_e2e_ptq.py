@@ -278,7 +278,6 @@ class TestPTQ:
             "--target_tags", CPU_EP_COL_NAME
         ]
 
-        com_str = ' '.join(com_line)
         run_command(com_line)
 
 
