@@ -193,7 +193,6 @@ class ONNXModelTransformer(ModelTransformer):
 
         :param transformations: lisf of the TransformationCommand transformations
         """
-        # TODO: optimize: could be insertion of quantizers done in one operations
         self._added_target_edges = Counter()
         onnx_graph = ONNXGraph(self._model)
         for transformation in transformations:

@@ -199,8 +199,7 @@ class ONNXGraph:
         return output
 
     def get_weight_tensor(self, node: onnx.NodeProto) -> Tuple[str, np.ndarray]:
-        # TODO(kshpv): Need to generalize the logic of searching the weight and
-        #  extend to the MatMul case.
+        # TODO(kshpv): ticket: 101211
         """
         Returns node's weight tensor name and its value.
 
