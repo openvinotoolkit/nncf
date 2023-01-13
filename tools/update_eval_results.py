@@ -165,7 +165,7 @@ def build_per_model_row(table_format: str,
         row.append(f'{fp32_metric:.2f}')
     else:
         drop = fp32_metric - compressed_metric
-        row.append(f'{fp32_metric:.2f}({drop:.2f})')
+        row.append(f'{fp32_metric:.2f} ({drop:.2f})')
     if table_format == 'per_sample':
         local_config_path = '/'.join(config_path.split('/')[3:])
         config_name = local_config_path.split('/')[-1]
@@ -369,6 +369,7 @@ def main(argv):
             write_table_to_md_file(mdfile, table_rows)
             if args.inplace:
                 table_str = mdfile.get_md_text()
+                table_str = table_str.lstrip('\n')
                 update_table_inplace(table_str,
                                      sample_desc.path_to_readme,
                                      anchor)
@@ -381,9 +382,6 @@ def main(argv):
     overview_file_name = 'results_overview.md'
     mdfile = MdUtils(file_name=overview_file_name)
 
-    # Compose a mini-TOC
-    mdfile.new_line('### PyTorch models')
-    mdfile.new_line()
     for sample_type in sota_checkpoints_eval:
         anchor_vs_table_rows = get_results_table_rows(sota_checkpoints_eval[sample_type],
                                                       measured_metrics,
@@ -393,6 +391,7 @@ def main(argv):
         sample_desc = TORCH_SAMPLE_TYPE_TO_DESCRIPTOR[sample_type]
         if args.inplace:
             table_str = mdfile.get_md_text()
+            table_str = table_str.lstrip('\n')
             update_table_inplace(table_str,
                                  PROJECT_ROOT / 'README.md',
                                  sample_desc.result_table_anchor_in_main_readme)
