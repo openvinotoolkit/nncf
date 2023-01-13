@@ -40,8 +40,8 @@ import argparse
 
 from tests.shared.paths import PROJECT_ROOT
 from tests.shared.paths import TEST_ROOT
-from tests.torch.test_sota_checkpoints import DIFF_FP32_MAX_GLOBAL
-from tests.torch.test_sota_checkpoints import DIFF_FP32_MIN_GLOBAL
+from tests.shared.metric_thresholds import DIFF_FP32_MAX_GLOBAL
+from tests.shared.metric_thresholds import DIFF_FP32_MIN_GLOBAL
 
 BASE_PYTORCH_CHECKPOINT_URL = 'https://storage.openvinotoolkit.org/repositories/nncf/models/develop/'
 
