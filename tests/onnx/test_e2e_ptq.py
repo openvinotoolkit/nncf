@@ -275,7 +275,6 @@ class TestPTQ:
             "-s", str(data_dir),
             "-a", str(anno_dir),
             "-ss", str(ptq_size),
-            "--target_tags", 'OpenVINOExecutionProvider'
         ]
 
         com_str = ' '.join(com_line)
@@ -375,11 +374,11 @@ class TestBenchmarkResult:
         if OV_EP_COL_NAME in df.columns:
             df = df.rename({"OpenVINOExecutionProvider": "OV-EP_INT8"}, axis=1)
             df["Diff OV-EP FP32"] = df["OV-EP_INT8"] - df["FP32"]
-            df["Expected FP32"] = df["target_fp32"] * 100
             df["Diff OV-EP Expected"] = df['target_int8'] * 100 - df["FP32"]
         if CPU_EP_COL_NAME in df.columns:
             df = df.rename({"CPUExecutionProvider": "CPU-EP_INT8"}, axis=1)
             df["Diff CPU-EP FP32"] = df["CPU-EP_INT8"] - df["FP32"]
+        df["Expected FP32"] = df["target_fp32"] * 100
         return df
 
     def get_row_colors(self, df: pd.DataFrame, reference_model_accuracy: pd.DataFrame,
