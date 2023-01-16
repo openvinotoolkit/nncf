@@ -29,6 +29,9 @@ from tests.openvino.native.common import get_dataset_for_test
 from tests.openvino.native.common import load_json
 from tests.openvino.native.common import dump_to_json
 from tests.openvino.native.models import SYNTHETIC_MODELS
+from tests.openvino.native.models import LinearModel
+from tests.openvino.native.models import ConvModel
+from tests.openvino.native.models import MatMul2DModel
 from tests.openvino.native.models import FP16Model
 
 REFERENCE_SCALES_DIR = OPENVINO_NATIVE_TEST_ROOT / 'data' / 'reference_scales'
@@ -131,17 +134,17 @@ REF_NODES_SHAPES = {
     'MatMul2DModel': {'Input/fq_output_0': [], 'MatMul/fq_weights_1': [5, 1]},
 }
 
-@pytest.mark.parametrize('model_creator_func, ref_nodes_shapes',
-                         zip(SYNTHETIC_MODELS.values(), REF_NODES_SHAPES.values()))
-def test_syntetic_models_fq_shapes(model_creator_func, ref_nodes_shapes):
+@pytest.mark.parametrize('model_creator_func, ref_shapes',
+                         zip([LinearModel, ConvModel, MatMul2DModel], REF_NODES_SHAPES.values()))
+def test_syntetic_models_fq_shapes(model_creator_func, ref_shapes):
     model = model_creator_func()
     quantized_model = quantize_model(model.ov_model, QuantizationPreset.PERFORMANCE)
     nodes = get_fq_nodes_stats_algo(quantized_model)
-    for node_name in nodes:
-        nodes[node_name]['input_low'].shape == ref_nodes_shapes[node_name]
-        nodes[node_name]['input_high'].shape == ref_nodes_shapes[node_name]
-        nodes[node_name]['output_low'].shape == ref_nodes_shapes[node_name]
-        nodes[node_name]['output_high'].shape == ref_nodes_shapes[node_name]
+    for node_name, node in nodes.items():
+        assert node['input_low'].shape == ref_shapes[node_name]
+        assert node['input_high'].shape == ref_shapes[node_name]
+        assert node['output_low'].shape == ref_shapes[node_name]
+        assert node['output_high'].shape == ref_shapes[node_name]
 
 
 @pytest.mark.parametrize('precision', ['FP16', 'FP32'])
