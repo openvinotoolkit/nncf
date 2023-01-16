@@ -129,9 +129,9 @@ def test_omz_models_fq_scales(model_name, preset, tmp_path):
 
 
 REF_NODES_SHAPES = {
-    'LinearModel': {'Input/fq_output_0': [], 'MatMul/fq_weights_1': [1, 1, 1, 1]},
-    'ConvModel': {'Conv/fq_weights_1': [3, 1, 1, 1], 'Sub/fq_output_0': []},
-    'MatMul2DModel': {'Input/fq_output_0': [], 'MatMul/fq_weights_1': [5, 1]},
+    'LinearModel': {'Input/fq_output_0': (), 'MatMul/fq_weights_1': (1, 1, 1, 1)},
+    'ConvModel': {'Conv/fq_weights_1': (3, 1, 1, 1), 'Sub/fq_output_0': ()},
+    'MatMul2DModel': {'Input/fq_output_0': (), 'MatMul/fq_weights_1': (5, 1)},
 }
 
 @pytest.mark.parametrize('model_creator_func, ref_shapes',
