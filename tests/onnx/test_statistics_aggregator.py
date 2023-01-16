@@ -15,13 +15,13 @@ import pytest
 
 import numpy as np
 
-from nncf.experimental.onnx.statistics.aggregator import ONNXStatisticsAggregator
+from nncf.onnx.statistics.aggregator import ONNXStatisticsAggregator
 from nncf.quantization.algorithms.definitions import RangeType
-from nncf.experimental.onnx.statistics.collectors import ONNXMeanMinMaxStatisticCollector
-from nncf.experimental.onnx.statistics.collectors import ONNXMinMaxStatisticCollector
+from nncf.onnx.statistics.collectors import ONNXMeanMinMaxStatisticCollector
+from nncf.onnx.statistics.collectors import ONNXMinMaxStatisticCollector
 from nncf.common.tensor_statistics.statistic_point import StatisticPoint
 from nncf.common.tensor_statistics.statistic_point import StatisticPointsContainer
-from nncf.experimental.onnx.graph.transformations.commands import ONNXTargetPoint
+from nncf.onnx.graph.transformations.commands import ONNXTargetPoint
 from nncf.common.graph.transformations.commands import TargetType
 
 from tests.onnx.models import InputOutputModel

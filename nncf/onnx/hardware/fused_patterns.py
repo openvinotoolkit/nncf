@@ -14,15 +14,15 @@
 from nncf.common.graph.patterns import GraphPattern
 from nncf.common.graph.patterns import HWFusedPatterns
 
-from nncf.experimental.onnx.hardware.pattern_operations import LINEAR_OPERATIONS
-from nncf.experimental.onnx.hardware.pattern_operations import BATCH_NORMALIZATION_OPERATIONS
-from nncf.experimental.onnx.hardware.pattern_operations import ATOMIC_ACTIVATIONS_OPERATIONS
-from nncf.experimental.onnx.hardware.pattern_operations import ARITHMETIC_OPERATIONS
+from nncf.onnx.hardware.pattern_operations import LINEAR_OPERATIONS
+from nncf.onnx.hardware.pattern_operations import BATCH_NORMALIZATION_OPERATIONS
+from nncf.onnx.hardware.pattern_operations import ATOMIC_ACTIVATIONS_OPERATIONS
+from nncf.onnx.hardware.pattern_operations import ARITHMETIC_OPERATIONS
 
-from nncf.experimental.onnx.hardware.patterns import create_swish_activation
-from nncf.experimental.onnx.hardware.patterns import create_input_preprocessing_pattern
-from nncf.experimental.onnx.hardware.patterns import create_decomposed_batch_norm
-from nncf.experimental.onnx.hardware.patterns import create_scale_shift
+from nncf.onnx.hardware.patterns import create_swish_activation
+from nncf.onnx.hardware.patterns import create_input_preprocessing_pattern
+from nncf.onnx.hardware.patterns import create_decomposed_batch_norm
+from nncf.onnx.hardware.patterns import create_scale_shift
 
 
 def _get_onnx_hw_fused_patterns() -> HWFusedPatterns:
