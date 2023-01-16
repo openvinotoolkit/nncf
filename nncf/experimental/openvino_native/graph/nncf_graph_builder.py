@@ -104,7 +104,8 @@ class GraphConverter:
                                      node_type=NNCFGraphNodeType.INPUT_NODE,
                                      node_metatype=InputNoopMetatype)
             visited.add(param.get_friendly_name())
-            for inp in sorted(param.output(0).get_target_inputs(), key=lambda inp: inp.get_index()):
+            for inp in sorted(param.output(0).get_target_inputs(),
+                              key=lambda inp: inp.get_node().get_friendly_name()):
                 inference_nodes.append(inp.get_node())
 
         for result in model.get_results():
@@ -120,7 +121,8 @@ class GraphConverter:
                 GraphConverter._add_nncf_node(node, nncf_graph)
                 visited.add(node.get_friendly_name())
                 for out in node.outputs():
-                    for inp in sorted(out.get_target_inputs(), key=lambda inp: inp.get_index()):
+                    for inp in sorted(out.get_target_inputs(),
+                                      key=lambda inp: inp.get_node().get_friendly_name()):
                         inference_nodes.append(inp.get_node())
 
         for node in model.get_ops():

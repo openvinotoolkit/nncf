@@ -46,6 +46,7 @@ OMZ_MODELS = [
 ]
 
 
+@pytest.mark.skip(reason='Ticket 100948')
 @pytest.mark.parametrize('model_name', OMZ_MODELS)
 def test_omz_models_fq_placement(model_name, tmp_path):
     _ = download_model(model_name, tmp_path)

@@ -11,13 +11,15 @@
  limitations under the License.
 """
 
-from typing import Optional, Tuple
+from typing import List, Tuple, Type
 from dataclasses import dataclass
 import numpy as np
 
+from nncf.common.graph.operator_metatypes import OperatorMetatype
 from nncf.common.quantization.structs import QuantizationMode
 from nncf.common.quantization.structs import QuantizerConfig
 from nncf.common.tensor_statistics.statistics import MinMaxTensorStatistic
+from nncf.experimental.openvino_native.hardware.pattern_operations import TRANSPOSED_OPERATIONS
 
 
 @dataclass
@@ -144,6 +146,8 @@ def symmetric_range(min_values: np.ndarray, max_values: np.ndarray, levels: int,
         level_low = np.zeros(level_high.shape) if np.all(min_values >= 0) and not signed else \
             -level_high * levels / (levels - 2)
 
+    level_low = level_low.astype(np.float32)
+    level_high = level_high.astype(np.float32)
     return level_low, level_high
 
 
@@ -163,11 +167,30 @@ def asymmetric_range(min_values: np.ndarray, max_values: np.ndarray,
     level_low = np.where(level_low < 0.0, level_low, 0.0)
     level_high = np.where(level_high > 0.0, level_high, 0.0)
     level_low, level_high = tune_range(level_low, level_high, quantizer_config.num_bits)
+
+    level_low = level_low.astype(np.float32)
+    level_high = level_high.astype(np.float32)
     return level_low, level_high
 
 
+def get_weight_stats_shape(const_shape: List[int], metatype: Type[OperatorMetatype]) -> List[int]:
+    """
+    Calculates shapes for FakeQuantize statistics.
+
+    :param const_shape: Shape of the weight tensor.
+    :param metatype: NNCF meta type which corresponds to operation.
+    :return: Shapes for FakeQuantize statistics.
+    """
+    bounds_shape = np.ones(len(const_shape), dtype=np.int32)
+    if metatype in TRANSPOSED_OPERATIONS:
+        bounds_shape[1] = const_shape[1]
+    else:
+        bounds_shape[0] = const_shape[0]
+    return bounds_shape
+
+
 def calculate_weight_quantizer_parameters(weight_tensor: np.ndarray, quantizer_config: QuantizerConfig,
-                                          axis: Optional[int]) -> OVQuantizerLayerParameters:
+                                          metatype: Type[OperatorMetatype]) -> OVQuantizerLayerParameters:
     """
     Calculates FakeQuantize layer attributes for weight quantizer.
 
@@ -176,13 +199,13 @@ def calculate_weight_quantizer_parameters(weight_tensor: np.ndarray, quantizer_c
     :param axis: In per-channel case - the axis for the quantization. In per-tensor - ignored.
     :return: Parameters of the FakeQuantize layer.
     """
-    if quantizer_config.per_channel:
-        assert axis is not None
-        axes = list(range(len(weight_tensor.shape)))
-        axes.pop(axis)
-        axes = tuple(axes)
-    else:
-        axes = None
+    axes = []
+    bounds_shape = get_weight_stats_shape(weight_tensor.shape, metatype)
+    for i, dim in enumerate(bounds_shape):
+        if dim == 1:
+            axes.append(i)
+    axes = tuple(axes)
+
     min_values = np.amin(weight_tensor, axis=axes, keepdims=True)
     max_values = np.amax(weight_tensor, axis=axes, keepdims=True)
 
@@ -193,7 +216,7 @@ def calculate_weight_quantizer_parameters(weight_tensor: np.ndarray, quantizer_c
         level_low, level_high = asymmetric_range(min_values, max_values, quantizer_config)
 
     output_low, output_high = level_low, level_high
-    return OVQuantizerLayerParameters(min_values, max_values, output_low, output_high, levels)
+    return OVQuantizerLayerParameters(level_low, level_high, output_low, output_high, levels)
 
 
 def calculate_activation_quantizer_parameters(statistics: MinMaxTensorStatistic,

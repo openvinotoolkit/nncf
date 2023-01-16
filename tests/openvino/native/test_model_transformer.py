@@ -37,7 +37,7 @@ TARGET_LAYERS = [['Add'], ['MatMul'], ['Add', 'MatMul']]
 TARGET_PRE_LAYERS_OUTPUT = [['Result_Reshape.0'], ['Result_Reshape.0'], ['Result_Reshape.0']]
 TARGET_POST_LAYERS_OUTPUT = [['Result_Add.0'], ['Result_MatMul.0'], ['Result_Add.0', 'Result_MatMul.0']]
 TARGET_PRE_LAYER_FQS = [['Add/fq_input_0'], ['MatMul/fq_input_0'], ['Add/fq_input_0', 'MatMul/fq_input_0']]
-TARGET_POST_LAYER_FQS = [['Add/fq_output_0_0'], ['MatMul/fq_output_0_0'], ['Add/fq_output_0_0', 'MatMul/fq_output_0_0']]
+TARGET_POST_LAYER_FQS = [['Add/fq_output_0'], ['MatMul/fq_output_0'], ['Add/fq_output_0', 'MatMul/fq_output_0']]
 TARGET_WEIGHTS_FQS = [['Add/fq_weights_1'], ['MatMul/fq_weights_1'], ['Add/fq_weights_1', 'MatMul/fq_weights_1']]
 
 
@@ -132,8 +132,8 @@ def test_node_removing(target_layers):
 def test_fq_insertion_pre_layer(target_layers, ref_fq_node_names):
     model = LinearModel().ov_model
 
-    min_values = np.zeros((1, 1, 1, 1))
-    max_values = np.ones((1, 1, 1, 1))
+    min_values = np.zeros((1, 1, 1, 1)).astype(np.float32)
+    max_values = np.ones((1, 1, 1, 1)).astype(np.float32)
     quantizer_parameters = OVQuantizerLayerParameters(min_values, max_values, min_values, max_values, levels=256)
 
     transformed_model = create_transformed_model(model, target_layers, TargetType.PRE_LAYER_OPERATION,
@@ -149,8 +149,8 @@ def test_fq_insertion_pre_layer(target_layers, ref_fq_node_names):
 def test_fq_insertion_post_layer(target_layers, ref_fq_node_names):
     model = LinearModel().ov_model
 
-    min_values = np.zeros((1, 1, 1, 1))
-    max_values = np.ones((1, 1, 1, 1))
+    min_values = np.zeros((1, 1, 1, 1)).astype(np.float32)
+    max_values = np.ones((1, 1, 1, 1)).astype(np.float32)
     quantizer_parameters = OVQuantizerLayerParameters(min_values, max_values, min_values, max_values, levels=256)
     transformed_model = create_transformed_model(model, target_layers, TargetType.POST_LAYER_OPERATION,
             OVQuantizerInsertionCommand, quantizer_parameters=quantizer_parameters)
@@ -165,8 +165,8 @@ def test_fq_insertion_post_layer(target_layers, ref_fq_node_names):
 def test_fq_insertion_weights(target_layers, ref_fq_node_names):
     model = LinearModel().ov_model
 
-    min_values = np.zeros((1, 1, 1, 1))
-    max_values = np.ones((1, 1, 1, 1))
+    min_values = np.zeros((1, 1, 1, 1)).astype(np.float32)
+    max_values = np.ones((1, 1, 1, 1)).astype(np.float32)
     quantizer_parameters = OVQuantizerLayerParameters(min_values, max_values, min_values, max_values, levels=256)
     transformed_model = create_transformed_model(model, target_layers, TargetType.OPERATION_WITH_WEIGHTS,
             OVQuantizerInsertionCommand, port_id=1, quantizer_parameters=quantizer_parameters)

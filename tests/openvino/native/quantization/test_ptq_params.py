@@ -28,7 +28,6 @@ from tests.openvino.native.models import LinearModel
 
 
 # pylint: disable=protected-access
-
 @pytest.mark.parametrize('target_device',
                          [TargetDevice.ANY, TargetDevice.CPU, TargetDevice.GPU, TargetDevice.VPU])
 def test_target_device(target_device):

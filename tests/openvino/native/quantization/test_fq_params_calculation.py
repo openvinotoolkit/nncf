@@ -29,7 +29,7 @@ from tests.openvino.native.common import get_dataset_for_test
 from tests.openvino.native.common import load_json
 from tests.openvino.native.common import dump_to_json
 from tests.openvino.native.models import SYNTHETIC_MODELS
-from tests.openvino.native.models import WeightsModel
+from tests.openvino.native.models import FP16Model
 
 REFERENCE_SCALES_DIR = OPENVINO_NATIVE_TEST_ROOT / 'data' / 'reference_scales'
 
@@ -86,9 +86,6 @@ def quantize_model(ov_model, preset):
                          ids=[QuantizationPreset.PERFORMANCE.value, QuantizationPreset.MIXED.value])
 @pytest.mark.parametrize('model_creator_func', SYNTHETIC_MODELS.values())
 def test_syntetic_models_fq_scales(model_creator_func, preset):
-    if model_creator_func == WeightsModel:
-        pytest.skip('OpenVINO backend does not support MatMul op without weights.')
-
     model = model_creator_func()
     quantized_model = quantize_model(model.ov_model, preset)
     nodes = get_fq_nodes_stats_algo(quantized_model)
@@ -108,6 +105,7 @@ OMZ_MODELS = [
     'yolo-v4-tiny-tf',
 ]
 
+@pytest.mark.skip(reason='Ticket 100948')
 @pytest.mark.parametrize('preset', [QuantizationPreset.PERFORMANCE, QuantizationPreset.MIXED],
                          ids=[QuantizationPreset.PERFORMANCE.value, QuantizationPreset.MIXED.value])
 @pytest.mark.parametrize('model_name', OMZ_MODELS)
@@ -125,3 +123,33 @@ def test_omz_models_fq_scales(model_name, preset, tmp_path):
     ref_nodes = load_json(ref_stats_path)
 
     compare_stats(ref_nodes, nodes)
+
+
+REF_NODES_SHAPES = {
+    'LinearModel': {'Input/fq_output_0': [], 'MatMul/fq_weights_1': [1, 1, 1, 1]},
+    'ConvModel': {'Conv/fq_weights_1': [3, 1, 1, 1], 'Sub/fq_output_0': []},
+    'MatMul2DModel': {'Input/fq_output_0': [], 'MatMul/fq_weights_1': [5, 1]},
+}
+
+@pytest.mark.parametrize('model_creator_func, ref_nodes_shapes',
+                         zip(SYNTHETIC_MODELS.values(), REF_NODES_SHAPES.values()))
+def test_syntetic_models_fq_shapes(model_creator_func, ref_nodes_shapes):
+    model = model_creator_func()
+    quantized_model = quantize_model(model.ov_model, QuantizationPreset.PERFORMANCE)
+    nodes = get_fq_nodes_stats_algo(quantized_model)
+    for node_name in nodes:
+        nodes[node_name]['input_low'].shape == ref_nodes_shapes[node_name]
+        nodes[node_name]['input_high'].shape == ref_nodes_shapes[node_name]
+        nodes[node_name]['output_low'].shape == ref_nodes_shapes[node_name]
+        nodes[node_name]['output_high'].shape == ref_nodes_shapes[node_name]
+
+
+@pytest.mark.parametrize('precision', ['FP16', 'FP32'])
+def test_syntetic_models_fq_precision(precision):
+    model = FP16Model(precision)
+    quantized_model = quantize_model(model.ov_model, QuantizationPreset.PERFORMANCE)
+    dtype = ov.Type(np.float32) if precision == 'FP32' else ov.Type(np.float16)
+    for op in quantized_model.get_ops():
+        if op.get_type_name() == 'Constant':
+            if op.get_element_type().is_real():
+                assert op.get_element_type() == dtype

@@ -89,4 +89,11 @@ def create_scale_shift() -> GraphPattern:
     pattern.add_edge(model_input_node_2, mul_node_2)
     pattern.add_edge(mul_node_2, add_node_2)
 
+    model_input_node_3 = pattern.add_node(**{GraphPattern.LABEL_ATTR: 'MODEL_INPUT',
+                                             GraphPattern.METATYPE_ATTR: NNCFGraphNodeType.INPUT_NODE})
+    sub_node_3 = pattern.add_node(**{GraphPattern.LABEL_ATTR: 'SUB',
+                                     GraphPattern.METATYPE_ATTR: OVSubMetatype})
+
+    pattern.add_edge(model_input_node_3, sub_node_3)
+
     return pattern

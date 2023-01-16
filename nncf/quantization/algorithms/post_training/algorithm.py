@@ -13,8 +13,6 @@
 
 from typing import Dict, List, Optional, TypeVar
 
-from copy import deepcopy
-
 from nncf import Dataset
 from nncf.parameters import TargetDevice
 from nncf.common.logging import nncf_logger
@@ -187,6 +185,7 @@ class PostTrainingQuantization(Algorithm):
         modified_model = copy_model(model)
         if statistic_points is None:
             backend = get_backend(modified_model)
+            # TODO (l-bat): Remove after OpenVINO Native is removed from experimental
             if backend == BackendType.OPENVINO:
                 nncf_logger.warning('You are using experimental OpenVINO backend for the Post-training quantization.')
 

@@ -490,6 +490,12 @@ class OVAssignMetatype(OVOpMetatype):
 
 
 @OV_OPERATOR_METATYPES.register()
+class OVConvertMetatype(OVOpMetatype):
+    name = 'ConvertOp'
+    op_names = ['Convert']
+
+
+@OV_OPERATOR_METATYPES.register()
 @INPUT_NOOP_METATYPES.register()
 class OVParameterMetatype(OVOpMetatype):
     name = 'ParameterOp'
