@@ -24,7 +24,7 @@ test-onnx:
 ONNX_PYFILES := $(shell find examples/post_training_quantization/onnx -type f -name "*.py")
 pylint-onnx:
 	pylint --rcfile .pylintrc               \
-		nncf/experimental/onnx              \
+		nncf/onnx              	            \
 		nncf/quantization                   \
 		tests/onnx                          \
 		$(ONNX_PYFILES)

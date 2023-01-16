@@ -18,12 +18,12 @@ import onnx
 from onnx import numpy_helper  # pylint: disable=no-name-in-module
 import numpy as np
 
-from nncf.experimental.onnx.graph.metatypes.onnx_metatypes import ONNX_OPERATION_METATYPES
-from nncf.experimental.onnx.graph.metatypes.onnx_metatypes import OpWeightDef
-from nncf.experimental.onnx.graph.metatypes.onnx_metatypes import ONNXIdentityMetatype
-from nncf.experimental.onnx.graph.metatypes.onnx_metatypes import ONNXReshapeMetatype
-from nncf.experimental.onnx.graph.metatypes.onnx_metatypes import ONNXQuantizeLinearMetatype
-from nncf.experimental.onnx.graph.metatypes.onnx_metatypes import WEIGHT_LAYER_METATYPES
+from nncf.onnx.graph.metatypes.onnx_metatypes import ONNX_OPERATION_METATYPES
+from nncf.onnx.graph.metatypes.onnx_metatypes import OpWeightDef
+from nncf.onnx.graph.metatypes.onnx_metatypes import ONNXIdentityMetatype
+from nncf.onnx.graph.metatypes.onnx_metatypes import ONNXReshapeMetatype
+from nncf.onnx.graph.metatypes.onnx_metatypes import ONNXQuantizeLinearMetatype
+from nncf.onnx.graph.metatypes.onnx_metatypes import WEIGHT_LAYER_METATYPES
 
 
 # pylint: disable=no-member
@@ -199,8 +199,7 @@ class ONNXGraph:
         return output
 
     def get_weight_tensor(self, node: onnx.NodeProto) -> Tuple[str, np.ndarray]:
-        # TODO(kshpv): Need to generalize the logic of searching the weight and
-        #  extend to the MatMul case.
+        # TODO(kshpv): ticket: 101211
         """
         Returns node's weight tensor name and its value.
 

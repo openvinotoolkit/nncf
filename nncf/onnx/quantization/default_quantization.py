@@ -12,25 +12,25 @@
 """
 
 from nncf.common.quantization.quantizer_propagation.structs import QuantizationTrait
-from nncf.experimental.onnx.graph.metatypes.onnx_metatypes import ONNXConvolutionMetatype
-from nncf.experimental.onnx.graph.metatypes.onnx_metatypes import ONNXDepthwiseConvolutionMetatype
-from nncf.experimental.onnx.graph.metatypes.onnx_metatypes import ONNXConvolutionTransposeMetatype
-from nncf.experimental.onnx.graph.metatypes.onnx_metatypes import ONNXLinearMetatype
-from nncf.experimental.onnx.graph.metatypes.onnx_metatypes import ONNXMatMulMetatype
-from nncf.experimental.onnx.graph.metatypes.onnx_metatypes import ONNXSigmoidMetatype
-from nncf.experimental.onnx.graph.metatypes.onnx_metatypes import ONNXHardSigmoidMetatype
-from nncf.experimental.onnx.graph.metatypes.onnx_metatypes import ONNXAveragePoolMetatype
-from nncf.experimental.onnx.graph.metatypes.onnx_metatypes import ONNXGlobalAveragePoolMetatype
-from nncf.experimental.onnx.graph.metatypes.onnx_metatypes import ONNXAddLayerMetatype
-from nncf.experimental.onnx.graph.metatypes.onnx_metatypes import ONNXSubMetatype
-from nncf.experimental.onnx.graph.metatypes.onnx_metatypes import ONNXMulLayerMetatype
-from nncf.experimental.onnx.graph.metatypes.onnx_metatypes import ONNXConcatLayerMetatype
-from nncf.experimental.onnx.graph.metatypes.onnx_metatypes import ONNXBatchNormMetatype
-from nncf.experimental.onnx.graph.metatypes.onnx_metatypes import ONNXResizeMetatype
-from nncf.experimental.onnx.graph.metatypes.onnx_metatypes import ONNXSoftmaxMetatype
-from nncf.experimental.onnx.graph.metatypes.onnx_metatypes import ONNXExpMetatype
-from nncf.experimental.onnx.graph.metatypes.onnx_metatypes import ONNXQuantizeLinearMetatype
-from nncf.experimental.onnx.graph.metatypes.onnx_metatypes import ONNXDequantizeLinearMetatype
+from nncf.onnx.graph.metatypes.onnx_metatypes import ONNXConvolutionMetatype
+from nncf.onnx.graph.metatypes.onnx_metatypes import ONNXDepthwiseConvolutionMetatype
+from nncf.onnx.graph.metatypes.onnx_metatypes import ONNXConvolutionTransposeMetatype
+from nncf.onnx.graph.metatypes.onnx_metatypes import ONNXLinearMetatype
+from nncf.onnx.graph.metatypes.onnx_metatypes import ONNXMatMulMetatype
+from nncf.onnx.graph.metatypes.onnx_metatypes import ONNXSigmoidMetatype
+from nncf.onnx.graph.metatypes.onnx_metatypes import ONNXHardSigmoidMetatype
+from nncf.onnx.graph.metatypes.onnx_metatypes import ONNXAveragePoolMetatype
+from nncf.onnx.graph.metatypes.onnx_metatypes import ONNXGlobalAveragePoolMetatype
+from nncf.onnx.graph.metatypes.onnx_metatypes import ONNXAddLayerMetatype
+from nncf.onnx.graph.metatypes.onnx_metatypes import ONNXSubMetatype
+from nncf.onnx.graph.metatypes.onnx_metatypes import ONNXMulLayerMetatype
+from nncf.onnx.graph.metatypes.onnx_metatypes import ONNXConcatLayerMetatype
+from nncf.onnx.graph.metatypes.onnx_metatypes import ONNXBatchNormMetatype
+from nncf.onnx.graph.metatypes.onnx_metatypes import ONNXResizeMetatype
+from nncf.onnx.graph.metatypes.onnx_metatypes import ONNXSoftmaxMetatype
+from nncf.onnx.graph.metatypes.onnx_metatypes import ONNXExpMetatype
+from nncf.onnx.graph.metatypes.onnx_metatypes import ONNXQuantizeLinearMetatype
+from nncf.onnx.graph.metatypes.onnx_metatypes import ONNXDequantizeLinearMetatype
 
 from nncf.common.graph.operator_metatypes import UnknownMetatype
 
