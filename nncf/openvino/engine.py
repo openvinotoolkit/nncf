@@ -72,11 +72,18 @@ class DatasetWrapper:
 
     def __len__(self) -> int:
         if self._length is None:
-            self._length = DatasetWrapper._get_length(self._iterable)
+            indices = getattr(self._iterable, '_indices', None)
+            data_source = getattr(self._iterable, '_data_source', None)
+            if indices:
+                self._length = len(indices)
+            iterable = data_source if data_source else self._iterable
+            self._length = DatasetWrapper._get_length(iterable)
         return self._length
 
     @staticmethod
     def _get_length(iterable) -> int:
+        if hasattr(iterable, '__len__'):
+            return len(iterable)
         length = 0
         for _ in iterable:
             length = length + 1
