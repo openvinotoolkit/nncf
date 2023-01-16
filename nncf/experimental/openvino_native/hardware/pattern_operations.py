@@ -25,7 +25,6 @@ from nncf.experimental.openvino_native.graph.metatypes.openvino_metatypes import
 from nncf.experimental.openvino_native.graph.metatypes.openvino_metatypes import OVMulMetatype
 from nncf.experimental.openvino_native.graph.metatypes.openvino_metatypes import OVDivMetatype
 from nncf.experimental.openvino_native.graph.metatypes.openvino_metatypes import OVSubMetatype
-from nncf.experimental.openvino_native.graph.metatypes.openvino_metatypes import OVTransposeMetatype
 
 LINEAR_OPERATIONS = {GraphPattern.METATYPE_ATTR: [OVConvolutionMetatype,
                                                   OVConvolutionBackpropDataMetatype,

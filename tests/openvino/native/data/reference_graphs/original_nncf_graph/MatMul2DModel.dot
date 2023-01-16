@@ -3,11 +3,11 @@ strict digraph  {
 "1 Result" [id=1, type=nncf_model_output];
 "2 MatMul" [id=2, type=MatMul];
 "3 Add" [id=3, type=Add];
-"4 Constant_53" [id=4, type=Constant];
-"5 Constant_51" [id=5, type=Constant];
+"4 Constant_2709" [id=4, type=Constant];
+"5 Constant_2707" [id=5, type=Constant];
 "0 Input" -> "2 MatMul"  [label="[3, 5]", style=solid];
 "2 MatMul" -> "3 Add"  [label="[3, 2]", style=solid];
 "3 Add" -> "1 Result"  [label="[3, 2]", style=solid];
-"4 Constant_53" -> "3 Add"  [label="[1, 2]", style=solid];
-"5 Constant_51" -> "2 MatMul"  [label="[5, 2]", style=solid];
+"4 Constant_2709" -> "3 Add"  [label="[1, 2]", style=solid];
+"5 Constant_2707" -> "2 MatMul"  [label="[5, 2]", style=solid];
 }

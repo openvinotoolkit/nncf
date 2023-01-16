@@ -72,6 +72,32 @@ class GraphConverter:
         return inputs
 
     @staticmethod
+    def _add_edges_to_nncf_graph(model: ov.Model, graph: NNCFGraph) -> None:
+        """
+        Adds edges between NNCFNodes to the NNCFGraph.
+
+        :param model: OpenVINO model.
+        :param graph: NNCFGraph.
+        """
+        for op in model.get_ops():
+            in_node_id = graph.get_node_by_name(op.get_friendly_name()).node_id
+            for output_port_id, out in enumerate(op.outputs()):
+                for inp in out.get_target_inputs():
+                    out_node = inp.get_node()
+                    tensor_shape = list(out.shape)
+                    output_node_id = graph.get_node_by_name(out_node.get_friendly_name()).node_id
+                    ov_dtype = out.get_element_type().get_type_name()
+                    nncf_dtype = GraphConverter.convert_to_nncf_dtype(ov_dtype)
+                    graph.add_edge_between_nncf_nodes(
+                        from_node_id=in_node_id,
+                        to_node_id=output_node_id,
+                        tensor_shape=tensor_shape,
+                        input_port_id=inp.get_index(),
+                        output_port_id=output_port_id,
+                        dtype=Dtype(nncf_dtype)
+                    )
+
+    @staticmethod
     def _add_nncf_node(node: ov.Node, graph: NNCFGraph) -> None:
         """
         Creates NNCFNode from OpenVINO node and adds to the NNCFGraph.
@@ -140,24 +166,7 @@ class GraphConverter:
                         nncf_node.layer_attributes = OVWeightedLayerAttributes(weight_port_id=inp.get_index())
                         break
 
-        for op in model.get_ops():
-            in_node_id = nncf_graph.get_node_by_name(op.get_friendly_name()).node_id
-            for output_port_id, out in enumerate(op.outputs()):
-                for inp in out.get_target_inputs():
-                    out_node = inp.get_node()
-                    tensor_shape = list(out.shape)
-                    output_node_id = nncf_graph.get_node_by_name(out_node.get_friendly_name()).node_id
-                    ov_dtype = out.get_element_type().get_type_name()
-                    nncf_dtype = GraphConverter.convert_to_nncf_dtype(ov_dtype)
-                    nncf_graph.add_edge_between_nncf_nodes(
-                        from_node_id=in_node_id,
-                        to_node_id=output_node_id,
-                        tensor_shape=tensor_shape,
-                        input_port_id=inp.get_index(),
-                        output_port_id=output_port_id,
-                        dtype=Dtype(nncf_dtype)
-                    )
-
+        GraphConverter._add_edges_to_nncf_graph(model, nncf_graph)
         return nncf_graph
 
 
