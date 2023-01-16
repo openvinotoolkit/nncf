@@ -165,10 +165,10 @@ To run the samples please refer to the corresponding tutorials:
   - [Object Detection sample](examples/tensorflow/object_detection/README.md)
   - [Instance Segmentation sample](examples/tensorflow/segmentation/README.md)
 ### Post-Training Quantization
-- [PyTorch sample](examples/post_training_quantization/torch/README.md)
-- [Tensorflow sample](examples/post_training_quantization/tensorflow/README.md)
-- [ONNX sample](examples/post_training_quantization/onnx/README.md)
-- [OpenVINO sample](examples/post_training_quantization/openvino/README.md)
+- [PyTorch sample](examples/post_training_quantization/torch/mobilenet_v2/README.md)
+- [Tensorflow sample](examples/post_training_quantization/tensorflow/mobilenet_v2/README.md)
+- [ONNX sample](examples/post_training_quantization/onnx/mobilenet_v2/README.md)
+- [OpenVINO sample](examples/post_training_quantization/openvino/mobilenet_v2/README.md)
 
 ## Model Compression Notebooks 
 
