@@ -18,7 +18,7 @@ from nncf.common.graph.transformations.commands import Command, TransformationCo
 from nncf.common.graph.transformations.commands import TransformationType
 from nncf.common.graph.transformations.commands import TargetType
 from nncf.common.graph.transformations.commands import TargetPoint
-from nncf.experimental.onnx.quantization.quantizer_parameters import ONNXQuantizerLayerParameters
+from nncf.onnx.quantization.quantizer_parameters import ONNXQuantizerLayerParameters
 
 
 class ONNXTargetPoint(TargetPoint):

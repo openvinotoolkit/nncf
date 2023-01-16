@@ -43,8 +43,8 @@ def test_telemetry_is_not_mocked_in_normal_conditions(hide_pytest):
 
         # telemetry alias will no longer be available after reload,
         # so importing via a full name
-        from nncf.telemetry.wrapper import NNCFTelemetry
-        assert not isinstance(NNCFTelemetry, NNCFTelemetryStub)
+        from nncf.telemetry.wrapper import telemetry
+        assert not isinstance(telemetry, NNCFTelemetryStub)
     # cleanup
     importlib.reload(wrapper)
 
@@ -60,18 +60,18 @@ def test_telemetry_is_mocked_if_env_vars_defined(env_var_to_define, hide_pytest)
 
         # telemetry alias will no longer be available after reload,
         # so importing via a full name
-        from nncf.telemetry.wrapper import NNCFTelemetry
-        assert isinstance(NNCFTelemetry, NNCFTelemetryStub)
+        from nncf.telemetry.wrapper import telemetry
+        assert isinstance(telemetry, NNCFTelemetryStub)
     # cleanup
     importlib.reload(wrapper)
 
 
 @pytest.fixture(name="spies")
 def spies_(request, mocker) -> Tuple[MagicMock, MagicMock, MagicMock]:
-    from nncf.telemetry import NNCFTelemetry
-    send_event_spy = mocker.spy(NNCFTelemetry, "send_event")
-    start_session_event_spy = mocker.spy(NNCFTelemetry, "start_session")
-    end_session_event_spy = mocker.spy(NNCFTelemetry, "end_session")
+    from nncf.telemetry import telemetry
+    send_event_spy = mocker.spy(telemetry, "send_event")
+    start_session_event_spy = mocker.spy(telemetry, "start_session")
+    end_session_event_spy = mocker.spy(telemetry, "end_session")
     return (send_event_spy, start_session_event_spy, end_session_event_spy)
 
 

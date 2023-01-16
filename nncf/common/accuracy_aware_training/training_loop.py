@@ -109,11 +109,11 @@ class BaseEarlyExitCompressionTrainingLoop(TrainingLoop, ABC):
             self._current_compression_rate = self.compression_controller.compression_rate
             self.runner.dump_statistics(model, self.compression_controller)
             if self._accuracy_criterion_satisfied():
-                nncf_logger.info('Reached the accuracy criteria after epoch {}.'.format(epoch))
+                nncf_logger.info(f'Reached the accuracy criteria after epoch {epoch}.')
                 self.log_accuracy_statistics()
                 break
 
-            nncf_logger.info('Epoch {} results:'.format(epoch))
+            nncf_logger.info(f'Epoch {epoch} results:')
             self.log_accuracy_statistics()
 
             if self.runner.stop_training(self.compression_controller):

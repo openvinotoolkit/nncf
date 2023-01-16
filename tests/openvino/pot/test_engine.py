@@ -108,14 +108,14 @@ def test_predict_output():
     engine.set_model(pot_model)
 
     stats_layout = {}
-    stats_layout['Result_Matmul'] = {
+    stats_layout['MatMul'] = {
         'output_logits': pot.statistics.statistics.TensorStatistic(lambda a: a)
     }
 
     (actual_per_sample, actual_metric), raw_output = engine.predict(stats_layout,
                                                                     metric_per_sample=True)
 
-    raw_output = raw_output['Result_Matmul']['output_logits']
+    raw_output = raw_output['MatMul']['output_logits']
     for idx, data in enumerate(actual_per_sample):
         data['result'] = raw_output[idx]
 

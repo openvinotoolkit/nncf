@@ -22,23 +22,23 @@ from nncf.common.graph import NNCFGraph
 from nncf.common.graph.transformations.layout import TransformationLayout
 from nncf.common.graph.operator_metatypes import OperatorMetatype
 
-from nncf.experimental.onnx.graph.metatypes.onnx_metatypes import LAYERS_WITH_BIAS_METATYPES
-from nncf.experimental.onnx.graph.metatypes.onnx_metatypes import ONNX_OPERATION_METATYPES
-from nncf.experimental.onnx.graph.metatypes.onnx_metatypes import ONNXDequantizeLinearMetatype
-from nncf.experimental.onnx.graph.model_transformer import ONNXModelTransformer
-from nncf.experimental.onnx.graph.transformations.commands import ONNXBiasCorrectionCommand
-from nncf.experimental.onnx.graph.transformations.commands import ONNXModelExtractionCommand
-from nncf.experimental.onnx.graph.transformations.commands import ONNXQDQNodeRemovingCommand
-from nncf.experimental.onnx.graph.transformations.commands import ONNXOutputInsertionCommand
-from nncf.experimental.onnx.graph.transformations.commands import ONNXTargetPoint
-from nncf.experimental.onnx.statistics.collectors import ONNXMeanStatisticCollector
-from nncf.experimental.onnx.statistics.collectors import ONNXBatchStatisticCollector
-from nncf.experimental.onnx.statistics.collectors import ONNXNNCFCollectorTensorProcessor
-from nncf.experimental.onnx.tensor import ONNXNNCFTensor
+from nncf.onnx.graph.metatypes.onnx_metatypes import LAYERS_WITH_BIAS_METATYPES
+from nncf.onnx.graph.metatypes.onnx_metatypes import ONNX_OPERATION_METATYPES
+from nncf.onnx.graph.metatypes.onnx_metatypes import ONNXDequantizeLinearMetatype
+from nncf.onnx.graph.model_transformer import ONNXModelTransformer
+from nncf.onnx.graph.transformations.commands import ONNXBiasCorrectionCommand
+from nncf.onnx.graph.transformations.commands import ONNXModelExtractionCommand
+from nncf.onnx.graph.transformations.commands import ONNXQDQNodeRemovingCommand
+from nncf.onnx.graph.transformations.commands import ONNXOutputInsertionCommand
+from nncf.onnx.graph.transformations.commands import ONNXTargetPoint
+from nncf.onnx.statistics.collectors import ONNXMeanStatisticCollector
+from nncf.onnx.statistics.collectors import ONNXBatchStatisticCollector
+from nncf.onnx.statistics.collectors import ONNXNNCFCollectorTensorProcessor
+from nncf.onnx.tensor import ONNXNNCFTensor
 from nncf.quantization.algorithms.bias_correction.backend import ALGO_BACKENDS
 from nncf.quantization.algorithms.bias_correction.backend import BiasCorrectionAlgoBackend
-from nncf.experimental.onnx.graph.onnx_graph import ONNXGraph
-from nncf.experimental.onnx.graph.metatypes.onnx_metatypes import ONNXIdentityMetatype
+from nncf.onnx.graph.onnx_graph import ONNXGraph
+from nncf.onnx.graph.metatypes.onnx_metatypes import ONNXIdentityMetatype
 
 
 #pylint:disable=too-many-public-methods

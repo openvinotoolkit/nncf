@@ -18,16 +18,16 @@ import onnx
 import numpy as np
 from nncf.common.graph.transformations.layout import TransformationLayout
 
-from nncf.experimental.onnx.graph.transformations.commands import ONNXTargetPoint
-from nncf.experimental.onnx.graph.transformations.commands import ONNXBiasCorrectionCommand
+from nncf.onnx.graph.transformations.commands import ONNXTargetPoint
+from nncf.onnx.graph.transformations.commands import ONNXBiasCorrectionCommand
 from nncf.common.graph.transformations.commands import TargetType
-from nncf.experimental.onnx.graph.transformations.commands import ONNXQuantizerInsertionCommand
-from nncf.experimental.onnx.graph.transformations.commands import ONNXOutputInsertionCommand
-from nncf.experimental.onnx.graph.transformations.commands import ONNXQDQNodeRemovingCommand
+from nncf.onnx.graph.transformations.commands import ONNXQuantizerInsertionCommand
+from nncf.onnx.graph.transformations.commands import ONNXOutputInsertionCommand
+from nncf.onnx.graph.transformations.commands import ONNXQDQNodeRemovingCommand
 from nncf.common.quantization.structs import QuantizationMode
-from nncf.experimental.onnx.graph.model_transformer import ONNXModelTransformer
-from nncf.experimental.onnx.graph.onnx_graph import ONNXGraph
-from nncf.experimental.onnx.quantization.quantizer_parameters import ONNXQuantizerLayerParameters
+from nncf.onnx.graph.model_transformer import ONNXModelTransformer
+from nncf.onnx.graph.onnx_graph import ONNXGraph
+from nncf.onnx.quantization.quantizer_parameters import ONNXQuantizerLayerParameters
 
 from tests.onnx.models import LinearModel
 from tests.onnx.quantization.common import min_max_quantize_model

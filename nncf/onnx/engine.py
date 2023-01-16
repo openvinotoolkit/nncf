@@ -26,11 +26,6 @@ class ONNXEngine(Engine):
 
     def __init__(self, model, **rt_session_options):
         self.input_names = set()
-
-        # TODO: Do not force it to use CPUExecutionProvider
-        # OpenVINOExecutionProvider raises the following error.
-        # onnxruntime.capi.onnxruntime_pybind11_state.Fail: [ONNXRuntimeError] : 1
-        # : FAIL : This is an invalid model. Error: Duplicate definition of name (data).
         rt_session_options['providers'] = ['CPUExecutionProvider']
         serialized_model = model.SerializeToString()
         self.sess = rt.InferenceSession(serialized_model, **rt_session_options)

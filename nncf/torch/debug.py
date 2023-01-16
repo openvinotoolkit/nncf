@@ -27,7 +27,7 @@ class CallCountTracker:
 
     def register_call(self, key, counts=None):
         if key not in self.call_counts:
-            nncf_logger.debug("DEBUG: {} tracker: called an unregistered module: {}".format(self.name, key))
+            nncf_logger.debug(f"DEBUG: {self.name} tracker: called an unregistered module: {key}")
             return
         if counts is None:
             self.call_counts[key] += 1

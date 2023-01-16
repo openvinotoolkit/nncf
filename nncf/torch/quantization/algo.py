@@ -43,7 +43,7 @@ from nncf.common.graph.layer_attributes import WeightedLayerAttributes
 from nncf.common.graph.transformations.commands import TargetPoint
 from nncf.common.graph.transformations.commands import TargetType
 from nncf.common.graph.utils import get_first_nodes_of_type
-from nncf.common.hardware.config import HW_CONFIG_TYPE_TARGET_DEVICE_MAP
+from nncf.common.hardware.config import get_hw_config_type
 from nncf.common.hardware.config import HWConfig
 from nncf.common.hardware.config import HWConfigType
 from nncf.common.initialization.batchnorm_adaptation import BatchnormAdaptationAlgorithm
@@ -470,8 +470,7 @@ class QuantizationBuilder(PTCompressionAlgorithmBuilder):
         self._should_setup_adjust_pad_ops = True
         hw_config_type = None
         target_device = self.config.get('target_device', 'ANY')
-        if target_device != 'TRIAL':
-            hw_config_type = HWConfigType(HW_CONFIG_TYPE_TARGET_DEVICE_MAP[target_device])
+        hw_config_type = get_hw_config_type(target_device)
         if hw_config_type is not None:
             hw_config_path = PTHWConfig.get_path_to_hw_config(hw_config_type)
             self.hw_config = PTHWConfig.from_json(hw_config_path)

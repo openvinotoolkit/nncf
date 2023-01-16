@@ -141,7 +141,7 @@ class BaseTensorListComparator(ABC):
 
 
 def telemetry_send_event_test_driver(mocker, use_nncf_fn: Callable):
-    from nncf.telemetry import NNCFTelemetry
-    telemetry_send_event_spy = mocker.spy(NNCFTelemetry, "send_event")
+    from nncf.telemetry import telemetry
+    telemetry_send_event_spy = mocker.spy(telemetry, "send_event")
     use_nncf_fn()
     telemetry_send_event_spy.assert_called()

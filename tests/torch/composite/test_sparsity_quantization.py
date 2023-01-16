@@ -52,3 +52,11 @@ def test_can_quantize_inputs_for_sparsity_plus_quantization():
 
     assert len(input_quantizer) == 1
     assert isinstance(list(input_quantizer.values())[0], SymmetricQuantizer)
+
+
+def test_compression_rate_for_sparsity_plus_quantization():
+    model = BasicConvTestModel()
+    config = get_basic_sparsity_plus_quantization_config()
+    register_bn_adaptation_init_args(config)
+    _, compression_ctrl = create_compressed_model_and_algo_for_test(model, config)
+    assert compression_ctrl.compression_rate == 0.0

@@ -10,3 +10,15 @@
  See the License for the specific language governing permissions and
  limitations under the License.
 """
+
+from typing import List
+from typing import Type
+
+from nncf.common.graph import OperatorMetatype
+from nncf.common.hardware.config import HWConfig
+from nncf.onnx.graph.metatypes.onnx_metatypes import get_operator_metatypes
+
+
+class ONNXHWConfig(HWConfig):
+    def _get_available_operator_metatypes_for_matching(self) -> List[Type[OperatorMetatype]]:
+        return get_operator_metatypes()

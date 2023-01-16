@@ -77,7 +77,7 @@ SINGLE_INPUT_INFO_SCHEMA = {
 
 TARGET_DEVICE_SCHEMA = {
     "type": "string",
-    "enum": ["ANY", "CPU", "GPU", "VPU", "TRIAL"]
+    "enum": ["ANY", "CPU", "GPU", "VPU", "TRIAL", "CPU_SPR"]
 }
 
 

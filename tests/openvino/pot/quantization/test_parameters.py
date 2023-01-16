@@ -10,15 +10,14 @@
  See the License for the specific language governing permissions and
  limitations under the License.
 """
+import pytest
+from openvino.tools.pot.algorithms.quantization.utils import \
+    load_hardware_config
 
-from typing import List
-from typing import Type
-
-from nncf.common.graph import OperatorMetatype
-from nncf.common.hardware.config import HWConfig
-from nncf.experimental.onnx.graph.metatypes.onnx_metatypes import get_operator_metatypes
+from nncf.parameters import TargetDevice
 
 
-class ONNXHWConfig(HWConfig):
-    def _get_available_operator_metatypes_for_matching(self) -> List[Type[OperatorMetatype]]:
-        return get_operator_metatypes()
+@pytest.mark.parametrize('target_device', TargetDevice)
+def test_target_device(target_device):
+    config = {'target_device': target_device.value}
+    assert load_hardware_config(config)
