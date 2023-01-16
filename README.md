@@ -13,9 +13,9 @@ _For the installation instructions, [click here](#installation)._
 
 NNCF provides a suite of advanced algorithms for reducing inference time of Neural Networks executed via [OpenVINO&trade;](https://github.com/openvinotoolkit/openvino) or ONNXRuntime utilizing [OpenVINOExecutionProvider](https://onnxruntime.ai/docs/execution-providers/OpenVINO-ExecutionProvider.html) with attention to models accuracy.
 
-NNCF supports Optimization-Aware Training and Post-Training Optimization for the models from [PyTorch](https://pytorch.org/), [TensorFlow](https://www.tensorflow.org/), [ONNX](https://onnx.ai/) and [OpenVINO&trade;](https://github.com/openvinotoolkit/openvino).
+NNCF supports Compression-Aware training and Post-Training Optimization for the models from [PyTorch](https://pytorch.org/), [TensorFlow](https://www.tensorflow.org/), [ONNX](https://onnx.ai/) and [OpenVINO&trade;](https://github.com/openvinotoolkit/openvino).
 
-## Optimization-Aware Training Algorithms
+## Compression-Aware Training Algorithms
  
 |Compression algorithm|PyTorch|TensorFlow|
 | :--- | :---: | :---: |
@@ -34,14 +34,14 @@ They allow to achieve the maximum compression level or to reduce the fine-tuning
 |:--------------------| :---: | :---: |:---------:| :---: |
 | Quantization        | Supported | Supported | Supported | Supported |
 
-## Usage of Optimization-Aware Training Algorithms
+## Usage of Compression-Aware Training Algorithms
 
 The basic workflow steps:
 1) Load an optimization configuration.
 2) Pass the original model along with the optimization configuration to the `create_compressed_model` function. `create_compressed_model` function returns a model with additional modifications necessary to enable algorithm-specific compression during fine-tuning and handle to the object allowing you to control the compression during the training process.
 3) Fine-tune the modified model.
 
-NNCF provides [samples](#optimization-aware-training) and [notebooks](#model-compression-notebooks) that demonstrate the big spectrum of Optimization-Aware Training Algorithms usage scenarios for PyTorch and TensorFlow. 
+NNCF provides [samples](#compression-aware-training) and [notebooks](#model-compression-notebooks) that demonstrate the big spectrum of Compression-Aware Training Algorithms usage scenarios for PyTorch and TensorFlow. 
 
 [Compression results](#nncf-compressed-model-zoo) achievable with the NNCF-powered samples can be found in a table at 
 the end of this document.
@@ -155,7 +155,7 @@ For a quicker start with NNCF-powered compression, you can also try the sample s
 
 To run the samples please refer to the corresponding tutorials:
 
-### Optimization-Aware Training
+### Compression-Aware Training
 - PyTorch samples:
   - [Image Classification sample](examples/torch/classification/README.md)
   - [Object Detection sample](examples/torch/object_detection/README.md)
