@@ -408,55 +408,55 @@ to find instruction and links to exact configuration files and final checkpoints
 <a name="pytorch_classification"></a>
 #### Classification
 
-|PyTorch Model|<img width="115" height="1">Compression algorithm<img width="115" height="1">|Dataset|Accuracy (Drop) %|
+|PyTorch Model|Compression algorithm|Dataset|Accuracy (Drop) %|
 | :---: | :---: | :---: | :---: |
-|ResNet-50|INT8|ImageNet|76.42 (-0.26)|
-|ResNet-50|INT8 (per-tensor for weights)|ImageNet|76.37 (-0.21)|
-|ResNet-50|Mixed, 44.8% INT8 / 55.2% INT4|ImageNet|76.2 (-0.04)|
-|ResNet-50|INT8 + Sparsity 61% (RB)|ImageNet|75.43 (0.73)|
-|ResNet-50|INT8 + Sparsity 50% (RB)|ImageNet|75.55 (0.61)|
-|ResNet-50|Filter pruning, 40%, geometric median criterion|ImageNet|75.62 (0.54)|
-|Inception V3|INT8|ImageNet|78.25 (-0.91)|
-|Inception V3|INT8 + Sparsity 61% (RB)|ImageNet|77.58 (-0.24)|
-|MobileNet V2|INT8|ImageNet|71.35 (0.58)|
-|MobileNet V2|INT8 (per-tensor for weights)|ImageNet|71.3 (0.63)|
-|MobileNet V2|Mixed, 46.6% INT8 / 53.4% INT4|ImageNet|70.92 (1.01)|
-|MobileNet V2|INT8 + Sparsity 52% (RB)|ImageNet|71.11 (0.82)|
-|MobileNet V3 small|INT8|ImageNet|66.94 (0.73)|
-|SqueezeNet V1.1|INT8|ImageNet|58.28 (-0.04)|
-|SqueezeNet V1.1|INT8 (per-tensor for weights)|ImageNet|58.26 (-0.02)|
-|SqueezeNet V1.1|Mixed, 54.7% INT8 / 45.3% INT4|ImageNet|58.9 (-0.66)|
-|ResNet-18|XNOR (weights), scale/threshold (activations)|ImageNet|61.63 (8.17)|
-|ResNet-18|DoReFa (weights), scale/threshold (activations)|ImageNet|61.61 (8.19)|
-|ResNet-18|Filter pruning, 40%, magnitude criterion|ImageNet|69.26 (0.54)|
-|ResNet-18|Filter pruning, 40%, geometric median criterion|ImageNet|69.32 (0.48)|
-|ResNet-34|Filter pruning, 50%, geometric median criterion + KD|ImageNet|73.11 (0.19)|
-|GoogLeNet|Filter pruning, 40%, geometric median criterion|ImageNet|68.82 (0.93)|
+|ResNet-50|INT8|ImageNet|76.15 (-0.31)|
+|ResNet-50|INT8 (per-tensor only)|ImageNet|76.15 (-0.24)|
+|ResNet-50|Mixed, 43.12% INT8 / 56.88% INT4|ImageNet|76.15 (0.10)|
+|ResNet-50|INT8 + Sparsity 61% (RB)|ImageNet|76.15 (0.73)|
+|ResNet-50|INT8 + Sparsity 50% (RB)|ImageNet|76.15 (0.65)|
+|ResNet-50|Filter pruning, 40%, geometric median criterion|ImageNet|76.15 (0.58)|
+|Inception V3|INT8|ImageNet|77.33 (-0.12)|
+|Inception V3|INT8 + Sparsity 61% (RB)|ImageNet|77.33 (0.97)|
+|MobileNet V2|INT8|ImageNet|71.87 (0.80)|
+|MobileNet V2|INT8 (per-tensor only)|ImageNet|71.87 (0.63)|
+|MobileNet V2|Mixed, 58.88% INT8 / 41.12% INT4|ImageNet|71.87 (0.92)|
+|MobileNet V2|INT8 + Sparsity 52% (RB)|ImageNet|71.87 (0.78)|
+|MobileNet V3 small|INT8|ImageNet|67.66 (0.68)|
+|SqueezeNet V1.1|INT8|ImageNet|58.19 (-0.03)|
+|SqueezeNet V1.1|INT8 (per-tensor only)|ImageNet|58.19 (0.08)|
+|SqueezeNet V1.1|Mixed, 52.83% INT8 / 47.17% INT4|ImageNet|58.19 (0.62)|
+|ResNet-18|XNOR (weights), scale/threshold (activations)|ImageNet|69.76 (8.09)|
+|ResNet-18|DoReFa (weights), scale/threshold (activations)|ImageNet|69.76 (8.13)|
+|ResNet-18|Filter pruning, 40%, magnitude criterion|ImageNet|69.76 (0.49)|
+|ResNet-18|Filter pruning, 40%, geometric median criterion|ImageNet|69.76 (0.45)|
+|ResNet-34|Filter pruning, 50%, geometric median criterion + KD|ImageNet|73.30 (0.19)|
+|GoogLeNet|Filter pruning, 40%, geometric median criterion|ImageNet|69.77 (0.30)|
 
 <a name="pytorch_object_detection"></a>
 #### Object detection
 
 |PyTorch Model|Compression algorithm|Dataset|mAP (drop) %|
 | :---: | :---: | :---: | :---: |
-|SSD300-MobileNet|INT8 + Sparsity 70% (Magnitude)|VOC12+07 train, VOC07 eval|62.94 (-0.71)|
-|SSD300-VGG-BN|INT8|VOC12+07 train, VOC07 eval|77.96 (0.32)|
-|SSD300-VGG-BN|INT8 + Sparsity 70% (Magnitude)|VOC12+07 train, VOC07 eval|77.59 (0.69)|
-|SSD300-VGG-BN|Filter pruning, 40%, geometric median criterion|VOC12+07 train, VOC07 eval|77.72 (0.56)|
-|SSD512-VGG-BN|INT8|VOC12+07 train, VOC07 eval|80.12 (0.14)|
-|SSD512-VGG-BN|INT8 + Sparsity 70% (Magnitude)|VOC12+07 train, VOC07 eval|79.67 (0.59)|
+|SSD300-MobileNet|INT8 + Sparsity 70% (Magnitude)|Mapillary|62.23 (-0.72)|
+|SSD300-VGG-BN|INT8|Mapillary|78.28 (0.47)|
+|SSD300-VGG-BN|INT8 + Sparsity 70% (Magnitude)|Mapillary|78.28 (0.62)|
+|SSD300-VGG-BN|Filter pruning, 40%, geometric median criterion|Mapillary|78.28 (-0.07)|
+|SSD512-VGG-BN|INT8|Mapillary|80.26 (0.22)|
+|SSD512-VGG-BN|INT8 + Sparsity 70% (Magnitude)|Mapillary|80.26 (0.58)|
 
 <a name="pytorch_semantic_segmentation"></a>
 #### Semantic segmentation
 
-|PyTorch Model|<img width="125" height="1">Compression algorithm<img width="125" height="1">|Dataset|Accuracy (Drop) %|
+|PyTorch Model|Compression algorithm|Dataset|Accuracy (Drop) %|
 | :---: | :---: | :---: | :---: |
-|UNet|INT8|CamVid|71.8 (0.15)|
-|UNet|INT8 + Sparsity 60% (Magnitude)|CamVid|72.03 (-0.08)|
-|ICNet|INT8|CamVid|67.86 (0.03)|
-|ICNet|INT8 + Sparsity 60% (Magnitude)|CamVid|67.18 (0.71)|
-|UNet|INT8|Mapillary|55.87 (0.36)|
-|UNet|INT8 + Sparsity 60% (Magnitude)|Mapillary|55.65 (0.58)|
-|UNet|Filter pruning, 25%, geometric median criterion|Mapillary|55.62 (0.61)|
+|UNet|INT8|CamVid|71.95 (0.06)|
+|UNet|INT8 + Sparsity 60% (Magnitude)|CamVid|71.95 (-0.51)|
+|ICNet|INT8|CamVid|67.89 (0.00)|
+|ICNet|INT8 + Sparsity 60% (Magnitude)|CamVid|67.89 (0.73)|
+|UNet|INT8|Mapillary|56.24 (0.15)|
+|UNet|INT8 + Sparsity 60% (Magnitude)|Mapillary|56.24 (0.55)|
+|UNet|Filter pruning, 25%, geometric median criterion|Mapillary|56.24 (0.60)|
 
 <a name="pytorch_nlp"></a>
 #### NLP (HuggingFace Transformers-powered models)
