@@ -124,6 +124,11 @@ class PTCompositeCompressionAlgorithmController(
 
     @property
     def compression_rate(self) -> float:
-        sum_compression_rate = sum(child_ctrl.compression_rate for child_ctrl in self.child_ctrls)
-        mean_compression_rate = sum_compression_rate / max(len(self.child_ctrls), 1)
-        return mean_compression_rate
+        sum_compression_rate = 0
+        not_none_compression_rate_cnt = 0
+        for child_ctrl in self.child_ctrls:
+            compression_rate = child_ctrl.compression_rate
+            if compression_rate is not None:
+                sum_compression_rate += sum_compression_rate
+                not_none_compression_rate_cnt += 1
+        return sum_compression_rate / max(not_none_compression_rate_cnt, 1)
