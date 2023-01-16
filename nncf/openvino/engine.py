@@ -23,6 +23,7 @@ import openvino.runtime as ov
 
 from nncf.api.compression import TModel
 from nncf.data import Dataset
+from nncf.data.dataset import DataProvider
 
 
 # TODO(andrey-churkin): This class should be removed after refactoring of the OVEngine class.
@@ -70,20 +71,28 @@ class DatasetWrapper:
         for idx, x in enumerate(self._iterable):
             yield (idx, x)
 
+    # pylint: disable=protected-access
     def __len__(self) -> int:
         if self._length is None:
-            indices = getattr(self._iterable, '_indices', None)
-            data_source = getattr(self._iterable, '_data_source', None)
-            if indices:
-                self._length = len(indices)
+            data_source = None
+            if isinstance(self._iterable, DataProvider):
+                indices = self._iterable._indices
+                if indices:
+                    self._length = len(indices)
+                    return self._length
+                data_source = self._iterable._data_source
             iterable = data_source if data_source else self._iterable
             self._length = DatasetWrapper._get_length(iterable)
         return self._length
 
     @staticmethod
     def _get_length(iterable) -> int:
-        if hasattr(iterable, '__len__'):
-            return len(iterable)
+        try:
+            length = len(iterable)
+            return length
+        except (TypeError, AttributeError):
+            length = None
+
         length = 0
         for _ in iterable:
             length = length + 1
