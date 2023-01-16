@@ -11,7 +11,7 @@
 
 _For the installation instructions, [click here](#installation)._
 
-NNCF provides a suite of advanced algorithms for reducing inference time of Neural Networks executed via [OpenVINO&trade;](https://github.com/openvinotoolkit/openvino) or [ONNXRuntime-OpenVINOExecutionProvider](https://onnxruntime.ai/docs/execution-providers/OpenVINO-ExecutionProvider.html) with attention to models accuracy.
+NNCF provides a suite of advanced algorithms for reducing inference time of Neural Networks executed via [OpenVINO&trade;](https://github.com/openvinotoolkit/openvino) or ONNXRuntime utilizing [OpenVINOExecutionProvider](https://onnxruntime.ai/docs/execution-providers/OpenVINO-ExecutionProvider.html) with attention to models accuracy.
 
 NNCF supports Optimization-Aware Training and Post-Training Optimization for the models from [PyTorch](https://pytorch.org/), [TensorFlow](https://www.tensorflow.org/), [ONNX](https://onnx.ai/) and [OpenVINO&trade;](https://github.com/openvinotoolkit/openvino).
 
@@ -26,7 +26,7 @@ NNCF supports Optimization-Aware Training and Post-Training Optimization for the
 |[Filter pruning](./docs/compression_algorithms/Pruning.md) | Supported | Supported |
 
 All of these algorithms can be executed through [Accuracy-Aware model training](./docs/Usage.md#accuracy-aware-model-training) pipelines: [Adaptive Compression Level Training](./docs/accuracy_aware_model_training/AdaptiveCompressionLevelTraining.md) and [Early Exit Training](./docs/accuracy_aware_model_training/EarlyExitTraining.md). 
-They can reduce the fine-tuning time significantly, while achieving the necessary level of model optimization or accuracy drop.
+They allow to achieve the maximum compression level or to reduce the fine-tuning time, while staying within the range of the user-defined maximum accuracy degradation.
 
 ## Post-Training Optimization Algorithms
 
@@ -41,7 +41,7 @@ The basic workflow steps:
 2) Pass the original model along with the optimization configuration to the `create_compressed_model` function. `create_compressed_model` function returns a model with additional modifications necessary to enable algorithm-specific compression during fine-tuning and handle to the object allowing you to control the compression during the training process.
 3) Fine-tune the modified model.
 
-NNCF provides [samples](#model-compression-samples) and [notebooks](#model-compression-notebooks) that demonstrate the big spectrum of Optimization-Aware Training Algorithms usage scenarios for PyTorch and TensorFlow. 
+NNCF provides [samples](#optimization-aware-training) and [notebooks](#model-compression-notebooks) that demonstrate the big spectrum of Optimization-Aware Training Algorithms usage scenarios for PyTorch and TensorFlow. 
 
 [Compression results](#nncf-compressed-model-zoo) achievable with the NNCF-powered samples can be found in a table at 
 the end of this document.
@@ -125,7 +125,7 @@ The basic workflow steps:
 2) Initialize NNCF Dataset.
 3) Run the quantization pipeline.
 
-NNCF provides [samples](#model-compression-samples) that demonstrate the big spectrum of Post-Training Quantization usage scenarios for PyTorch, TensorFlow, ONNX, OpenVINO.
+NNCF provides [samples](#post-training-quantization) that demonstrate Post-Training Quantization usage for PyTorch, TensorFlow, ONNX, OpenVINO.
 
 ```python
 import onnx
