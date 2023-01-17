@@ -193,8 +193,8 @@ def get_weight_stats_shape(const_shape: List[int], metatype: Type[OperatorMetaty
     return bounds_shape
 
 
-def calculate_weight_quantizer_parameters(weight_tensor: np.ndarray, quantizer_config: QuantizerConfig,
-                                          metatype: Type[OperatorMetatype]) -> OVQuantizerLayerParameters:
+def calculate_weight_quantizer_parameters(statistics: MinMaxTensorStatistic,
+                                          quantizer_config: QuantizerConfig) -> OVQuantizerLayerParameters:
     """
     Calculates FakeQuantize layer attributes for weight quantizer.
 
@@ -204,24 +204,7 @@ def calculate_weight_quantizer_parameters(weight_tensor: np.ndarray, quantizer_c
     :return: Parameters of the FakeQuantize layer.
     """
     quant_group = QuantizerGroup.WEIGHTS
-    if quantizer_config.per_channel:
-        bounds_shape = get_weight_stats_shape(weight_tensor.shape, metatype)
-        axes = tuple(i for i, dim in enumerate(bounds_shape) if dim == 1)
-    else:
-        axes = None
-
-    max_values = np.amax(np.abs(weight_tensor), axis=axes, keepdims=quantizer_config.per_channel)
-
-    if quantizer_config.mode == QuantizationMode.SYMMETRIC:
-        _, _, levels = calculate_symmetric_level_ranges(quantizer_config.num_bits, signed=True, narrow_range=True)
-        level_low, level_high = symmetric_range(None, max_values, levels, quantizer_config, quant_group)
-    else:
-        _, _, levels = calculate_asymmetric_level_ranges(quantizer_config.num_bits, narrow_range=False)
-        min_values = np.amin(weight_tensor, axis=axes, keepdims=quantizer_config.per_channel)
-        level_low, level_high = asymmetric_range(min_values, max_values, quantizer_config, quant_group)
-
-    output_low, output_high = level_low, level_high
-    return OVQuantizerLayerParameters(level_low, level_high, output_low, output_high, levels)
+    return calculate_quantizer_parameters(statistics, quantizer_config, quant_group)
 
 
 def calculate_activation_quantizer_parameters(statistics: MinMaxTensorStatistic,
@@ -234,17 +217,25 @@ def calculate_activation_quantizer_parameters(statistics: MinMaxTensorStatistic,
     :return: Parameters of the FakeQuantize layer.
     """
     quant_group = QuantizerGroup.ACTIVATIONS
+    return calculate_quantizer_parameters(statistics, quantizer_config, quant_group)
+
+
+def calculate_quantizer_parameters(statistics: MinMaxTensorStatistic,
+                                   quantizer_config: QuantizerConfig, quant_group: QuantizerGroup):
     min_values = np.array(statistics.min_values)
     max_values = np.array(statistics.max_values)
 
     if quantizer_config.mode == QuantizationMode.SYMMETRIC:
-        _, _, levels = calculate_symmetric_level_ranges(quantizer_config.num_bits, signed=True, narrow_range=False)
+        narrow_range = quant_group == QuantizerGroup.WEIGHTS
+        min_values = None if quant_group == QuantizerGroup.WEIGHTS else min_values
+        _, _, levels = calculate_symmetric_level_ranges(quantizer_config.num_bits, signed=True, narrow_range=narrow_range)
         level_low, level_high = symmetric_range(min_values, max_values, levels, quantizer_config, quant_group)
     else:
         _, _, levels = calculate_asymmetric_level_ranges(quantizer_config.num_bits, narrow_range=False)
         level_low, level_high = asymmetric_range(min_values, max_values, quantizer_config, quant_group)
 
-    if not quantizer_config.per_channel:
+    if quant_group == QuantizerGroup.ACTIVATIONS and\
+        not quantizer_config.per_channel:
         level_low = np.squeeze(level_low)
         level_high = np.squeeze(level_high)
 

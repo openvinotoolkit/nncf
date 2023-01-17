@@ -14,37 +14,37 @@
 import pytest
 
 from nncf.common.graph.transformations.commands import TargetType
-from nncf.quantization.algorithms.min_max.onnx_backend import ONNXMinMaxAlgoBackend
-from nncf.onnx.statistics.collectors import ONNXMeanMinMaxStatisticCollector
-from nncf.onnx.statistics.collectors import ONNXMinMaxStatisticCollector
-from nncf.onnx.graph.nncf_graph_builder import ONNXWeightedNodesLayerAttributes
-from nncf.onnx.graph.metatypes.onnx_metatypes import ONNXConvolutionMetatype
-from nncf.onnx.graph.metatypes.onnx_metatypes import ONNXDepthwiseConvolutionMetatype
-from nncf.onnx.graph.transformations.commands import ONNXTargetPoint
+from nncf.torch.tensor_statistics.collectors import PTMinMaxStatisticCollector
+from nncf.torch.tensor_statistics.collectors import PTMeanMinMaxStatisticCollector
+from nncf.torch.graph.transformations.commands import PTTargetPoint
+from nncf.quantization.algorithms.min_max.torch_backend import PTMinMaxAlgoBackend
 
 from tests.post_training.test_quantizer_config import TemplateTestQuantizerConfig
 from tests.post_training.models import NNCFGraphToTest
 from tests.post_training.models import NNCFGraphToTestDepthwiseConv
+from tests.torch.ptq.helpers import get_single_conv_nncf_graph
+from tests.torch.ptq.helpers import get_depthwise_conv_nncf_graph
 
 
 class TestQuantizerConfig(TemplateTestQuantizerConfig):
     def get_algo_backend(self):
-        return ONNXMinMaxAlgoBackend()
+        return PTMinMaxAlgoBackend()
 
     def get_min_max_statistic_collector_cls(self):
-        return ONNXMinMaxStatisticCollector
+        return PTMinMaxStatisticCollector
 
     def get_mean_max_statistic_collector_cls(self):
-        return ONNXMeanMinMaxStatisticCollector
+        return PTMeanMinMaxStatisticCollector
 
-    def get_target_point(self, target_type: TargetType, target_node_name) -> ONNXTargetPoint:
-        return ONNXTargetPoint(target_type, target_node_name, port_id=0)
+    def get_target_point(self, target_type: TargetType, target_node_name):
+        return PTTargetPoint(target_type=target_type,
+                             target_node_name=target_node_name,
+                             input_port_id=0)
 
     @pytest.fixture
     def single_conv_nncf_graph(self) -> NNCFGraphToTest:
-        conv_layer_attrs = ONNXWeightedNodesLayerAttributes('dummy', 'dummy', (4, 4, 4, 4))
-        return NNCFGraphToTest(ONNXConvolutionMetatype, conv_layer_attrs)
+        return get_single_conv_nncf_graph()
 
     @pytest.fixture
     def depthwise_conv_nncf_graph(self) -> NNCFGraphToTestDepthwiseConv:
-        return NNCFGraphToTestDepthwiseConv(ONNXDepthwiseConvolutionMetatype)
+        return get_depthwise_conv_nncf_graph()

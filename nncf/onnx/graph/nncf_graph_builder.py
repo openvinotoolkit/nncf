@@ -186,16 +186,21 @@ class GraphConverter:
         onnx_graph = ONNXGraph(onnx_model)
         for node in onnx_graph.get_all_nodes():
             metatype = ONNX_OPERATION_METATYPES.get_operator_metatype_by_op_name(node.op_type)
-            if metatype is not UnknownMetatype:
-                if metatype.get_subtypes():
-                    subtype = metatype.determine_subtype(onnx_model, node)
-                    if subtype is not None:
-                        metatype = subtype
-            layer_attributes = ONNXExtendedLayerAttributes(node.input, node.output)
-            is_shared, layer_name = None, None
+            if metatype.get_subtypes():
+                subtype = metatype.determine_subtype(onnx_model, node)
+                if subtype is not None:
+                    metatype = subtype
+
             if metatype in WEIGHT_LAYER_METATYPES:
                 is_shared = onnx_graph.is_node_shared(node)
                 layer_name = onnx_graph.get_node_layer_name(node)
+                weight_shape = onnx_graph.get_weight_tensor(node)[1].shape
+                layer_attributes = ONNXWeightedNodesLayerAttributes(node.input, node.output,
+                                                                    weight_shape)
+            else:
+                layer_attributes = ONNXExtendedLayerAttributes(node.input, node.output)
+                is_shared, layer_name = None, None
+
             nncf_graph.add_nncf_node(node_name=node.name,
                                      node_type=node.op_type,
                                      node_metatype=metatype,
@@ -245,10 +250,21 @@ class ONNXExtendedLayerAttributes(BaseLayerAttributes):
     This class stores extended attributes of modules/layers for the algorithms.
     """
 
-    def __init__(self, input_tensor_names, output_tensor_names):
+    def __init__(self,
+                 input_tensor_names: List[str],
+                 output_tensor_names: List[str]):
         """
         :param input_tensor_names: List of the input tensor/edge names of the module/layer
         :param output_tensor_names: List of the output tensor/edge names of the module/layer
         """
         self.input_tensor_names = input_tensor_names
         self.output_tensor_names = output_tensor_names
+
+
+class ONNXWeightedNodesLayerAttributes(ONNXExtendedLayerAttributes):
+    def __init__(self,
+                 input_tensor_names: List[str],
+                 output_tensor_names: List[str],
+                 weight_shape):
+        super().__init__(input_tensor_names, output_tensor_names)
+        self.weight_shape = weight_shape

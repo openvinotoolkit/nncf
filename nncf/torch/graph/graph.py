@@ -14,9 +14,11 @@
 from typing import Dict
 from typing import List
 from typing import Tuple
+from typing import Union
 from nncf.common.graph import NNCFGraph
 from nncf.common.graph import NNCFNode
 from nncf.common.graph import NNCFNodeName
+from nncf.common.quantization.quantizer_setup import ActivationQuantizationInsertionPoint
 from nncf.torch.dynamic_graph.scope import Scope
 from nncf.torch.graph.transformations.commands import PTTargetPoint
 
@@ -41,7 +43,10 @@ class PTNNCFGraph(NNCFGraph):
             retval[port_id] = edge_attr_dict[NNCFGraph.ACTIVATION_SHAPE_EDGE_ATTR]
         return retval
 
-    def get_input_shape_for_insertion_point(self, insertion_point: PTTargetPoint) -> Tuple[int]:
+    def get_input_shape_for_insertion_point(self,
+                                            insertion_point: Union[PTTargetPoint,
+                                                                   ActivationQuantizationInsertionPoint])\
+        -> Tuple[int]:
         target_node_name = insertion_point.target_node_name
         if insertion_point.input_port_id is not None:
             quantizer_input_shape = self.get_input_shapes_for_node(

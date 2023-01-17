@@ -40,6 +40,19 @@ class PTTargetPoint(TargetPoint):
         return isinstance(other, PTTargetPoint) and \
                self.target_type == other.target_type and self.target_node_name == other.target_node_name
 
+    def __lt__(self, other: 'PTTargetPoint') -> bool:
+        # The PTTargetPoint should have the way to compare.
+        # NNCF has to be able returning the Quantization Target Points in the deterministic way.
+        # MinMaxQuantizationAlgorithm returns the sorted Set of such PTTargetPoint.
+        params = ['target_type', 'target_node_name', 'input_port_id']
+        for param in params:
+            if self.__getattribute__(param) < other.__getattribute__(param):
+                return True
+            if self.__getattribute__(param) > other.__getattribute__(param):
+                return False
+        return False
+
+
     def __str__(self):
         prefix = str(self.target_type)
         retval = prefix

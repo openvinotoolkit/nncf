@@ -16,6 +16,7 @@ from abc import abstractmethod
 from typing import Dict, TypeVar, Tuple, List
 
 import numpy as np
+from nncf.common.graph.graph import NNCFGraph
 from nncf.common.graph.graph import NNCFNode
 from nncf.common.graph.operator_metatypes import OperatorMetatype
 from nncf.common.graph.patterns import HWFusedPatterns
@@ -85,7 +86,8 @@ class MinMaxAlgoBackend(ABC):
 
     @staticmethod
     @abstractmethod
-    def create_activation_quantizer_insertion_command(target_point: TargetPoint,
+    def create_activation_quantizer_insertion_command(nncf_graph: NNCFGraph,
+                                                      target_point: TargetPoint,
                                                       quantizer_config: QuantizerConfig,
                                                       statistics: MinMaxTensorStatistic) -> TransformationCommand:
         """
@@ -99,10 +101,10 @@ class MinMaxAlgoBackend(ABC):
 
     @staticmethod
     @abstractmethod
-    def create_weight_quantizer_insertion_command(target_point: TargetPoint,
+    def create_weight_quantizer_insertion_command(nncf_graph: NNCFGraph,
+                                                  target_point: TargetPoint,
                                                   quantizer_config: QuantizerConfig,
-                                                  weight_tensor: np.ndarray,
-                                                  node: NNCFNode) -> TransformationCommand:
+                                                  statistics: MinMaxTensorStatistic) -> TransformationCommand:
         """
         Returns backend-specific quantizer insertion command.
 
@@ -115,8 +117,9 @@ class MinMaxAlgoBackend(ABC):
 
     @staticmethod
     @abstractmethod
-    def minmax_statistic_collector(use_abs_max: bool,
-                                   reduction_shape: ReductionShape,
+    def minmax_statistic_collector(nncf_graph: NNCFGraph,
+                                   target_point: TargetPoint,
+                                   quantizer_config: QuantizerConfig,
                                    num_samples: int = None) -> TensorStatisticCollectorBase:
         """
         Returns backend-specific min max statistic collector.
@@ -129,11 +132,11 @@ class MinMaxAlgoBackend(ABC):
 
     @staticmethod
     @abstractmethod
-    def mean_minmax_statistic_collector(use_per_sample_stats: bool,
-                                        use_abs_max: bool,
-                                        reduction_shape: ReductionShape,
-                                        num_samples: int = None,
-                                        window_size: int = None) -> TensorStatisticCollectorBase:
+    def mean_minmax_statistic_collector(nncf_graph: NNCFGraph,
+                                        target_point: TargetPoint,
+                                        quantizer_config: QuantizerConfig,
+                                        use_per_sample_stats: bool,
+                                        num_samples: int = None) -> TensorStatisticCollectorBase:
         """
         Returns backend-specific min max statistic collector.
 
@@ -142,17 +145,6 @@ class MinMaxAlgoBackend(ABC):
         :param num_samples: Maximum number of samples to collect.
         :param window_size: The maximum size of the samples queue.
         :return: Backend-specific TensorStatisticCollectorBase for the statistics calculation.
-        """
-
-    @staticmethod
-    @abstractmethod
-    def get_weight_tensor(model: TModel, target_point: TargetPoint) -> Tuple[str, np.ndarray]:
-        """
-        Returns node's weight tensor name and its value.
-
-        :param model: Backend-specific model for the initializer finding.
-        :param target_point: Backend-specific TargetPoint to find its weight.
-        :return: Weight tensor name and its value.
         """
 
     @staticmethod

@@ -20,7 +20,8 @@ from nncf.common.graph.definitions import NNCFGraphNodeType
 from nncf.common.factory import NNCFGraphFactory
 from nncf.common.graph.transformations.commands import TargetType
 from nncf.common.graph.transformations.layout import TransformationLayout
-from nncf.common.tensor_statistics.aggregator import StatisticPointsContainer
+from nncf.common.tensor_statistics.statistic_point import StatisticPoint
+from nncf.common.tensor_statistics.statistic_point import StatisticPointsContainer
 from nncf.common.tensor_statistics.aggregator import StatisticsAggregator
 from nncf.onnx.graph.onnx_graph import ONNXGraph
 from nncf.onnx.graph.transformations.commands import ONNXOutputInsertionCommand
@@ -34,35 +35,55 @@ class ONNXStatisticsAggregator(StatisticsAggregator):
         self._onnx_graph = ONNXGraph(model)
         super().collect_statistics(model)
 
+    def _register_activation_statistic(self, statistic_point: StatisticPointsContainer,
+                                      target_point, node_name, outputs):
+            port_id = target_point.port_id
+            if NNCFGraphNodeType.INPUT_NODE in target_point.target_node_name:
+                nncf_node_name = self._nncf_graph.get_node_by_name(target_point.target_node_name)
+                onnx_nodes_after_input_node = [edge.to_node for edge in
+                                               self._nncf_graph.get_output_edges(nncf_node_name)]
+                for onnx_node_name in onnx_nodes_after_input_node:
+                    edge_name = self._onnx_graph.get_node_edge_names(onnx_node_name.node_name)['input'][port_id]
+                    statistic_point.register_tensor(outputs[edge_name])
+            elif target_point.type == TargetType.POST_LAYER_OPERATION:
+                edge_name = self._onnx_graph.get_node_edge_names(node_name)['output'][port_id]
+                statistic_point.register_tensor(outputs[edge_name])
+            elif target_point.type == TargetType.PRE_LAYER_OPERATION:
+                edge_name = self._onnx_graph.get_node_edge_names(node_name)['input'][port_id]
+                statistic_point.register_tensor(outputs[edge_name])
+
+    def _register_weight_statistic(self, statistic_point: StatisticPointsContainer,
+                                   target_point):
+        node = self._onnx_graph.get_node_by_name(target_point.target_node_name)
+        weight_tensor = self._onnx_graph.get_weight_tensor(node)
+        statistic_point.register_tensor(ONNXNNCFTensor(weight_tensor[1]))
+
     def _register_statistics(self,
                              outputs: Dict[str, ONNXNNCFTensor],
                              statistic_points: StatisticPointsContainer) -> None:
         for node_name, _statistic_points in statistic_points.items():
             for statistic_point in _statistic_points:
-                port_id = statistic_point.target_point.port_id
-                if NNCFGraphNodeType.INPUT_NODE in statistic_point.target_point.target_node_name:
-                    nncf_node_name = self._nncf_graph.get_node_by_name(statistic_point.target_point.target_node_name)
-                    onnx_nodes_after_input_node = [edge.to_node for edge in
-                                                   self._nncf_graph.get_output_edges(nncf_node_name)]
-                    for onnx_node_name in onnx_nodes_after_input_node:
-                        edge_name = self._onnx_graph.get_node_edge_names(onnx_node_name.node_name)['input'][port_id]
-                        statistic_point.register_tensor(outputs[edge_name])
-                elif statistic_point.target_point.type == TargetType.POST_LAYER_OPERATION:
-                    edge_name = self._onnx_graph.get_node_edge_names(node_name)['output'][port_id]
-                    statistic_point.register_tensor(outputs[edge_name])
-                elif statistic_point.target_point.type == TargetType.PRE_LAYER_OPERATION:
-                    edge_name = self._onnx_graph.get_node_edge_names(node_name)['input'][port_id]
-                    statistic_point.register_tensor(outputs[edge_name])
+                target_point = statistic_point.target_point
+                if target_point.type in [TargetType.PRE_LAYER_OPERATION,
+                                         TargetType.POST_LAYER_OPERATION]:
+                    self._register_activation_statistic(statistic_point,
+                                                        target_point, node_name, outputs)
+                elif target_point.type == TargetType.OPERATION_WITH_WEIGHTS:
+                    self._register_weight_statistic(statistic_point, target_point)
                 else:
                     RuntimeError('The statistics should be collected only from the input of output edges of the node')
 
     @staticmethod
     def _get_transformation_layout_extra_outputs(statistic_points: StatisticPointsContainer) -> TransformationLayout:
+        def filter_fn(statistic_point: StatisticPoint) -> bool:
+            return statistic_point.target_point.is_weight_target_point()
+
         transformation_layout = TransformationLayout()
         transformation_commands = []
         for _statistic_points in statistic_points.values():
             for _statistic_point in _statistic_points:
-                transformation_commands.append(ONNXOutputInsertionCommand(_statistic_point.target_point))
+                if not filter_fn(_statistic_point):
+                    transformation_commands.append(ONNXOutputInsertionCommand(_statistic_point.target_point))
 
         for transformation_command in transformation_commands:
             transformation_layout.register(transformation_command)
