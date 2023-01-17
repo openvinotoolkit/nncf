@@ -59,10 +59,12 @@ class SampleDescriptor:
     sub_tables_in_own_readme: Optional[List[SampleReadmeSubTableDescriptor]] = None
 
 RESULTS_ANCHOR_IN_SAMPLE_OWN_README = '<a name="results"></a>'
+TORCH_EXAMPLES_PATH = PROJECT_ROOT / 'examples' / 'torch'
+TF_EXAMPLES_PATH = PROJECT_ROOT / 'examples' / 'tensorflow'
 
 TORCH_SAMPLE_TYPE_TO_DESCRIPTOR = {
     'classification': SampleDescriptor(
-        path_to_readme=PROJECT_ROOT / 'examples' / 'torch' / 'classification' / 'README.md',
+        path_to_readme=TORCH_EXAMPLES_PATH / 'classification' / 'README.md',
         result_table_anchor_in_main_readme='<a name="pytorch_classification"></a>',
         sub_tables_in_own_readme=[
             SampleReadmeSubTableDescriptor(
@@ -97,7 +99,7 @@ TORCH_SAMPLE_TYPE_TO_DESCRIPTOR = {
             #                                        "resnet18_imagenet"])
         ]),
     'semantic_segmentation': SampleDescriptor(
-        path_to_readme=PROJECT_ROOT / 'examples' / 'torch' / 'semantic_segmentation' / 'README.md',
+        path_to_readme=TORCH_EXAMPLES_PATH / 'semantic_segmentation' / 'README.md',
         result_table_anchor_in_main_readme='<a name="pytorch_semantic_segmentation"></a>',
         sub_tables_in_own_readme=[
             SampleReadmeSubTableDescriptor(
@@ -107,7 +109,7 @@ TORCH_SAMPLE_TYPE_TO_DESCRIPTOR = {
                 models_duplicated_from_main_table=["unet_mapillary"])
         ]),
     'object_detection': SampleDescriptor(
-        path_to_readme=PROJECT_ROOT / 'examples' / 'torch' / 'object_detection' / 'README.md',
+        path_to_readme=TORCH_EXAMPLES_PATH / 'object_detection' / 'README.md',
         result_table_anchor_in_main_readme='<a name="pytorch_object_detection"></a>',
         sub_tables_in_own_readme=[
             SampleReadmeSubTableDescriptor(
@@ -118,6 +120,35 @@ TORCH_SAMPLE_TYPE_TO_DESCRIPTOR = {
         ])
 }  # type: Dict[str, SampleDescriptor]
 
+
+TF_SAMPLE_TYPE_TO_DESCRIPTOR = {
+    'classification': SampleDescriptor(
+        path_to_readme=TF_EXAMPLES_PATH / 'classification' / 'README.md',
+        result_table_anchor_in_main_readme='<a name="tensorflow_classification"></a>',
+        sub_tables_in_own_readme=[
+            SampleReadmeSubTableDescriptor(
+                anchor='<a name="filter_pruning"></a>',
+                model_names=[
+                    "resnet50",
+                    "resnet50_imagenet_pruning_geometric_median",
+                    "resnet50_imagenet_pruning_geometric_median_int8"],
+                models_duplicated_from_main_table=["resnet50"]),
+        ]),
+    'segmentation': SampleDescriptor(
+        path_to_readme=TF_EXAMPLES_PATH / 'segmentation' / 'README.md',
+        result_table_anchor_in_main_readme='<a name="tensorflow_instance_segmentation"></a>'),
+    'object_detection': SampleDescriptor(
+        path_to_readme=TF_EXAMPLES_PATH / 'object_detection' / 'README.md',
+        result_table_anchor_in_main_readme='<a name="tensorflow_object_detection"></a>',
+        sub_tables_in_own_readme=[
+            SampleReadmeSubTableDescriptor(
+                anchor='<a name="filter_pruning"></a>',
+                model_names=["retinanet_coco",
+                             "retinanet_coco_pruning",
+                             "retinanet_coco_pruning_int8"],
+                models_duplicated_from_main_table=["ssd300_vgg_voc"])
+        ])
+}  # type: Dict[str, SampleDescriptor]
 
 def get_fp32_and_compressed_metrics(model_name_to_metric_dict: Dict,
                                     model_name: str,
@@ -136,14 +167,15 @@ def get_fp32_and_compressed_metrics(model_name_to_metric_dict: Dict,
 # columns, or use a better table manager in the future
 def get_header_row(table_format: str, sample_type: str) -> List[str]:
     assert table_format in ['overview', 'per_sample'], "Unsupported table format!"
-
-    header = ["PyTorch Model"] if table_format == 'overview' else ["Model"]
-    header.append('Compression algorithm')
-    header.append('Dataset')
-    if sample_type in ['classification', 'semantic_segmentation']:
-        header.append('Accuracy (Drop) %')
-    elif sample_type in 'object_detection':
-        header.append('mAP (drop) %')
+    header = ["Model", 'Compression algorithm', 'Dataset']
+    if sample_type == 'classification':
+        header.append('Accuracy (_drop_) %')
+    elif sample_type == 'semantic_segmentation':
+        header.append('mIoU (_drop_) %')
+    elif sample_type == 'segmentation':  # fits for TF MaskRCNN only
+        header.append('mAP (_drop_) %')
+    elif sample_type == 'object_detection':
+        header.append('mAP (_drop_) %')
     else:
         raise RuntimeError(f'{sample_type} sample type is not supported!')
 
@@ -181,14 +213,19 @@ def build_per_model_row(table_format: str,
 def get_results_table_rows(per_sample_config_dict: Dict,
                            model_name_to_metric_dict: Dict,
                            sample_type: str,
-                           table_format: str) -> Dict[str, List[List[str]]]:
+                           table_format: str,
+                           framework: str) -> Dict[str, List[List[str]]]:
 
     assert table_format in ['overview', 'per_sample'], "Unsupported table format!"
+    assert framework in ['tf', 'torch'], f"Unsupported framework: {framework}"
     model_name_vs_row = OrderedDict()
 
     for data_name_ in per_sample_config_dict:
         dataset_name = get_display_dataset_name(data_name_)
-        model_dicts = per_sample_config_dict[data_name_]
+        if framework == 'torch':
+            model_dicts = per_sample_config_dict[data_name_]
+        else:
+            model_dicts = per_sample_config_dict[data_name_]["topologies"]
         for model_name in model_dicts:
             conf_file = model_dicts[model_name].get('config', {})
             reference = None
@@ -225,7 +262,7 @@ def get_results_table_rows(per_sample_config_dict: Dict,
                                                                 conf_file,
                                                                 checkpoint_link)
 
-    sample_type_desc = TORCH_SAMPLE_TYPE_TO_DESCRIPTOR[sample_type]
+    sample_type_desc = get_sample_desc(sample_type, framework)
     header = get_header_row(table_format=table_format, sample_type=sample_type)
     if table_format == 'overview':
         rows = [header, ] + list(model_name_vs_row.values())
@@ -249,12 +286,15 @@ def get_results_table_rows(per_sample_config_dict: Dict,
         return retval
 
 
-def update_target_metrics_and_thresholds(config_dict: Dict, model_name_to_metric_dict: Dict) -> Dict:
+def update_target_metrics_and_thresholds(config_dict: Dict, model_name_to_metric_dict: Dict,
+                                         framework: str) -> Dict:
     for sample_name in config_dict:
         for dataset_name in config_dict[sample_name]:
-            dataset_dict = config_dict[sample_name][dataset_name]
-            for model_name in dataset_dict:
-                model_dict = config_dict[sample_name][dataset_name][model_name]
+            if framework == 'torch':
+                models_for_dataset_dict = config_dict[sample_name][dataset_name]
+            elif framework == 'tf':
+                models_for_dataset_dict = config_dict[sample_name][dataset_name]["topologies"]
+            for model_name, model_dict in models_for_dataset_dict.items():
                 model_dict["target"] = model_name_to_metric_dict[model_name]
                 if "reference" not in model_dict:
                     continue
@@ -353,6 +393,26 @@ def update_table_inplace(table_content: str, target_file: Path, anchor: str):
     print(f"Successfully replaced a table in {target_file} at anchor {anchor}")
 
 
+def get_per_sample_model_dict(sample_type: str, sota_checkpoints_eval_dict: Dict, framework: str) -> Dict:
+    if framework not in ['tf', 'torch']:
+        raise RuntimeError(f"Unknown framework type: {framework}")
+    if framework == 'torch':
+        return sota_checkpoints_eval_dict[sample_type]
+    return sota_checkpoints_eval_dict[sample_type]["topologies"]
+
+def filter_tfrecords_only(metrics_dict: Dict[str, float]) -> Dict[str, float]:
+    retval = {}
+    for model_name, metric_val in metrics_dict.items():
+        if model_name.endswith('_tfrecords'):
+            new_name = model_name.split('_tfrecords')[0]
+            retval[new_name] = metric_val
+    return retval
+
+
+def get_sample_desc(sample_type: str, framework: str) -> SampleDescriptor:
+    framework_sample_type_to_desc = TORCH_SAMPLE_TYPE_TO_DESCRIPTOR if framework == 'torch' else TF_SAMPLE_TYPE_TO_DESCRIPTOR
+    return framework_sample_type_to_desc[sample_type]
+
 
 def main(argv):
     parser = argparse.ArgumentParser()
@@ -385,6 +445,8 @@ def main(argv):
         output = deepcopy(config)
 
     measured_metrics = json.load(open(results, 'r'))
+    if args.framework == 'tf':
+        measured_metrics = filter_tfrecords_only(measured_metrics)
     sota_checkpoints_eval = json.load(open(config), object_pairs_hook=OrderedDict)
 
     # Output tables for per-sample README files
@@ -392,9 +454,10 @@ def main(argv):
         anchor_vs_table_rows = get_results_table_rows(sota_checkpoints_eval[sample_type],
                                                       measured_metrics,
                                                       sample_type,
-                                                      table_format='per_sample')
+                                                      table_format='per_sample',
+                                                      framework=args.framework)
         file_name = 'results_{}.md'.format(sample_type)
-        sample_desc = TORCH_SAMPLE_TYPE_TO_DESCRIPTOR[sample_type]
+        sample_desc = get_sample_desc(sample_type, args.framework)
         for anchor, table_rows in anchor_vs_table_rows.items():
             mdfile = MdUtils(file_name=file_name)
             write_table_to_md_file(mdfile, table_rows)
@@ -418,9 +481,10 @@ def main(argv):
         anchor_vs_table_rows = get_results_table_rows(sota_checkpoints_eval[sample_type],
                                                       measured_metrics,
                                                       sample_type,
-                                                      table_format='overview')
+                                                      table_format='overview',
+                                                      framework=args.framework)
         anchor, table_rows = next(iter(anchor_vs_table_rows.items()))
-        sample_desc = TORCH_SAMPLE_TYPE_TO_DESCRIPTOR[sample_type]
+        sample_desc = get_sample_desc(sample_type, args.framework)
         if args.inplace:
             tmp_mdfile = MdUtils(file_name="")
             write_table_to_md_file(tmp_mdfile, table_rows)
@@ -437,7 +501,7 @@ def main(argv):
         # Somehow the MDUtils outputs 4 empty lines prior to the actual table in the target file.
         delete_four_head_lines(overview_file_name)
 
-    update_target_metrics_and_thresholds(sota_checkpoints_eval, measured_metrics)
+    update_target_metrics_and_thresholds(sota_checkpoints_eval, measured_metrics, args.framework)
     with open(output, "w") as write_file:
         json.dump(sota_checkpoints_eval, write_file, indent=4)
 

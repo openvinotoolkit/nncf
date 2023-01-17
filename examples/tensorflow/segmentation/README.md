@@ -140,9 +140,9 @@ To export a model to the OpenVINO IR and run it using the Intel® Deep Learning 
     --data=<path_to_dataset> \
     --log-dir=../../results/quantization/maskrcnn_coco_baseline
 
-<a name='results'></a>
 
 ## Results
+<a name="results"></a>
 
 |**Model**|**Compression algorithm**|**Dataset**|**mAP (drop) %**|**NNCF config file**|**TensorFlow checkpoint**|
 | :---: | :---: | :---: | :---: | :---: | :---: |

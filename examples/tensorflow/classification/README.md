@@ -125,6 +125,7 @@ python main.py \
 To export a model to the OpenVINO IR and run it using the Intel® Deep Learning Deployment Toolkit, refer to this [tutorial](https://software.intel.com/en-us/openvino-toolkit).
 
 ### Results
+<a name="results"></a>
 
 |**Model**|**Compression algorithm**|**Dataset**|**Accuracy (Drop) %**|**NNCF config file**|**TensorFlow checkpoint**|
 | :---: | :---: | :---: | :---: | :---: | :---: |
@@ -144,6 +145,8 @@ To export a model to the OpenVINO IR and run it using the Intel® Deep Learning 
 |TensorFlow Hub MobileNet V2|Sparsity 35% (Magnitude)|ImageNet|71.90 (-0.06)|[mobilenet_v2_hub_imagenet_magnitude_sparsity.json](configs/sparsity/mobilenet_v2_hub_imagenet_magnitude_sparsity.json)|[Link](https://storage.openvinotoolkit.org/repositories/nncf/models/develop/tensorflow/tf1_mobilenet_v2_1.0_224_sparsity_35.tar.gz)|
 
 #### Results for filter pruning
+<a name="filter_pruning"></a>
+
 |**Model**|**Compression algorithm**|**Dataset**|**Accuracy (Drop) %**|**GFLOPS**|**MParams**|**NNCF config file**|**TensorFlow checkpoint**|
 | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: |
 |ResNet50|None|ImageNet|75.04|7.75 (100%)|25.5 (100%)|-|-|
@@ -151,6 +154,7 @@ To export a model to the OpenVINO IR and run it using the Intel® Deep Learning 
 |ResNet50|Filter Pruning 40%, geometric_median criterion + INT8 (per-tensor, symmetric for weights; per-tensor, symmetric for activations)|ImageNet|75.08 (-0.04)|4.27 (55.10%)|15.8 (61.96%)|[Link](configs/pruning_quantization/resnet50_imagenet_pruning_geometric_median_int8.json)|[Link](https://storage.openvinotoolkit.org/repositories/nncf/models/develop/tensorflow/resnet50_int8_w_sym_t_half_a_sym_t_pruning_40.tar.gz)|
 
 #### Results for accuracy-aware compressed training
+<a name="accuracy_aware"></a>
 
 |**Model**|**Compression algorithm**|**Dataset**|**Accuracy (Drop) %**|**NNCF config file**|
 | :---: | :---: | :---: | :---: | :---: |

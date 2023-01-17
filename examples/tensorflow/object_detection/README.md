@@ -157,9 +157,8 @@ To export a model to the OpenVINO IR and run it using the Intel® Deep Learning 
     --backbone-checkpoint=<path_to_resnet50-2018-02-07_folder>
 - Export trained model to the Keras H5 format.
 
-<a name='results'></a>
-
 ## Results
+<a name="results"></a>
 
 |**Model**|**Compression algorithm**|**Dataset**|**mAP (drop) %**|**NNCF config file**|**TensorFlow checkpoint**|
 | :---: | :---: | :---: | :---: | :---: | :---: |
@@ -171,6 +170,8 @@ To export a model to the OpenVINO IR and run it using the Intel® Deep Learning 
 |YOLOv4|Sparsity 50% (Magnitude)|COCO2017|46.54 (0.50)|[yolo_v4_coco_magnitude_sparsity.json](configs/sparsity/yolo_v4_coco_magnitude_sparsity.json)|[Link](https://storage.openvinotoolkit.org/repositories/nncf/models/develop/tensorflow/yolo_v4_sparsity_50.tar.gz)|
 
 #### Results for filter pruning
+<a name="filter_pruning"></a>
+
 |**Model**|**Compression algorithm**|**Dataset**|**mAP (drop) %**|**GFLOPS**|**MParams**|**NNCF config file**|**TensorFlow checkpoint**|
 | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: |
 |RetinaNet|None|COCO2017|33.44|194.1 (100%)|60.8 (100%)|[retinanet_coco.json](configs/retinanet_coco.json)|[Link](https://storage.openvinotoolkit.org/repositories/nncf/models/develop/tensorflow/retinanet.tar.gz)|

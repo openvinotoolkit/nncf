@@ -491,7 +491,7 @@ to find instruction and links to exact configuration files and final checkpoints
 |MobileNet V3 large|INT8 (per-channel, symmetric for weights; per-tensor, asymmetric for activations) + Sparsity 42% (RB)|ImageNet|75.29 (0.52)|
 |ResNet50|INT8 (per-tensor for weights)|ImageNet|75.0 (0.04)|
 |ResNet50|Sparsity 80% (RB)|ImageNet|74.36 (0.68)|
-|ResNet50|INT8 (per-tensor for weightsy) + Sparsity 65% (RB)|ImageNet|74.3 (0.74)|
+|ResNet50|INT8 (per-tensor for weights) + Sparsity 65% (RB)|ImageNet|74.3 (0.74)|
 |ResNet50|Filter Pruning 40%, geometric_median criterion|ImageNet|74.98 (0.06)|
 |ResNet50|Filter Pruning 40%, geometric_median criterion + INT8 (per-tensor for weights)|ImageNet|75.08 (-0.04)|
 |TensorFlow Hub MobileNet V2|Sparsity 35% (Magnitude)|ImageNet|71.90 (-0.06)|
