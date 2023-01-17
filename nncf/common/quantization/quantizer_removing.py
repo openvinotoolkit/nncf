@@ -11,42 +11,42 @@
  limitations under the License.
 """
 
-from typing import Callable
 from typing import Tuple
 from typing import List
 
 from nncf.common.graph import NNCFGraph
 from nncf.common.graph import NNCFNode
+from nncf.common.graph.operator_metatypes import OperatorMetatype
 
 
 def find_fq_nodes_to_cut(graph: NNCFGraph,
-                         fq_node: NNCFNode,
-                         is_fake_quantize: Callable[[NNCFNode], bool],
-                         is_const_node: Callable[[NNCFNode], bool],
-                         is_quantizable: Callable[[NNCFNode], bool],
-                         is_quantize_agnostic: Callable[[NNCFNode], bool]) -> Tuple[List[NNCFNode], List[NNCFNode]]:
+                         quantizer_node: NNCFNode,
+                         quantizer_metatypes: List[OperatorMetatype],
+                         const_metatypes: List[OperatorMetatype],
+                         quantizable_metatypes: List[OperatorMetatype],
+                         quantize_agnostic_metatypes: List[OperatorMetatype]) -> Tuple[List[NNCFNode], List[NNCFNode]]:
     """
-    Finds fake quantize nodes that addition to `fq_node` should be removed to get
-    the correct model for inference. Returns the list of fake quantize nodes (`fq_node` + nodes
-    which were founded) and the list of nodes that will be reverted to original precision when
-    fake quantize nodes will be removed.
+    Finds quantizer nodes that addition to `quantizer_node` should be removed to get
+    the correct model for inference. Returns the list of quantizer nodes (`quantizer_node` + nodes
+    which were found) and the list of nodes that will be reverted to original precision when
+    quantizer nodes will be removed.
 
     :param graph: The NNCFGraph.
-    :param fq_node: The fake quantize node which we want to remove.
-    :param is_fq_node: A callable that returns `True` if a node is a fake quantize and `False` otherwise.
-    :param is_const_node: A callable that returns `True` if a node is a constant and `False` otherwise.
-    :param is_quantizable_node: A callable that returns `True` if a node is quantizable and `False` otherwise.
-    :param is_quantize_agnostic_node: A callable that returns `True` if node is agnostic and `False` otherwise.
-    :return: A tuple (fq_nodes, ops) where `fq_nodes` is the list of fake quantize nodes, ops are the list of
-        nodes that will be reverted to original precision when `fq_nodes` will be removed.
+    :param quantizer_node: The quantizer node that we want to remove.
+    :param quantizer_metatypes: List of quantizer metatypes.
+    :param const_metatypes: List of constant metatypes.
+    :param quantizable_metatypes: List of quantizable metatypes.
+    :param quantize_agnostic_metatypes: List of quantize agnostic metatypes.
+    :return: A tuple (quantizer_nodes, ops) where `quantizer_nodes` is the list of quantize nodes, ops are the list of
+        nodes that will be reverted to original precision when `quantizer_nodes` will be removed.
     """
     def _parse_node_relatives(node: NNCFNode, is_parents: bool):
-        if is_quantizable(node):
+        if node.metatype in quantizable_metatypes:
             ops_to_return_in_orig_prec.add(node)
 
         relatives = graph.get_previous_nodes(node) if is_parents else graph.get_next_nodes(node)
         for relative in relatives:
-            if is_fake_quantize(relative):
+            if relative.metatype in quantizer_metatypes:
                 if is_parents:
                     if relative in seen_children:
                         continue
@@ -55,18 +55,18 @@ def find_fq_nodes_to_cut(graph: NNCFGraph,
                     to_see_children.append(relative)
                 else:
                     seen_children.append(relative)
-            elif not is_const_node(relative):
+            elif relative.metatype not in const_metatypes:
                 if relative not in seen_parents:
                     to_see_parents.append(relative)
-                if relative not in seen_children and is_quantize_agnostic(relative):
+                if relative not in seen_children and relative.metatype in quantize_agnostic_metatypes:
                     to_see_children.append(relative)
 
         seen_list = seen_parents if is_parents else seen_children
         seen_list.append(node)
 
     seen_children, seen_parents = [], []
-    to_see_children, to_see_parents = [fq_node], []
-    to_cut = [fq_node]
+    to_see_children, to_see_parents = [quantizer_node], []
+    to_cut = [quantizer_node]
     ops_to_return_in_orig_prec = set()
 
     while to_see_parents or to_see_children:
@@ -75,4 +75,4 @@ def find_fq_nodes_to_cut(graph: NNCFGraph,
         if to_see_parents:
             _parse_node_relatives(to_see_parents.pop(), is_parents=True)
 
-    return to_cut, ops_to_return_in_orig_prec
+    return to_cut, list(ops_to_return_in_orig_prec)
