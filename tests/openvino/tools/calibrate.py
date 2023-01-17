@@ -212,9 +212,6 @@ def quantize_model(xml_path, bin_path, accuracy_checcker_config,
     model_evaluator = create_model_evaluator(accuracy_checcker_config)
     model_evaluator.load_network([{'model': ov_model}])
     model_evaluator.select_dataset('')
-    # workaround to minimize time of estimation len of dataset
-    subset_size = quantization_parameters.get('subset_size', 300)
-    model_evaluator.dataset.make_subset(end=subset_size)
 
     def transform_fn(data_item):
         _, batch_annotation, batch_input, _ = data_item
