@@ -135,14 +135,14 @@ onnx_model = onnx.load_model('/model_path')
 # Provide validation part of the dataset for statistics collection for compression algorithm
 val_dataset = datasets.ImageFolder("/path")
 dataset_loader = torch.utils.data.DataLoader(val_dataset, batch_size=1)
-# Step 1: Initialize transformation function
+# Initialize transformation function
 input_name = onnx_model.graph.input[0].name
 def transform_fn(data_item):
     images, _ = data_item
     return {input_name: images.numpy()}
-# Step 2: Initialize NNCF Dataset
+# Initialize NNCF Dataset
 calibration_dataset = nncf.Dataset(dataset_loader, transform_fn)
-# Step 3: Run the quantization pipeline
+# Run the quantization pipeline
 quantized_model = nncf.quantize(onnx_model, calibration_dataset)
 ```
 ## Model Compression Samples
@@ -156,10 +156,10 @@ To run the samples please refer to the corresponding tutorials:
   - [Object Detection sample](examples/torch/object_detection/README.md)
   - [Semantic Segmentation sample](examples/torch/semantic_segmentation/README.md)
 - TensorFlow samples:
-  - [Image Classification sample](examples/tensorflow/classification/README.md)
-  - [Object Detection sample](examples/tensorflow/object_detection/README.md)
-  - [Instance Segmentation sample](examples/tensorflow/segmentation/README.md)
-- [ONNX sample](examples/post_training_quantization/onnx/mobilenet_v2/README.md)
+    - [Image Classification sample](examples/tensorflow/classification/README.md)
+    - [Object Detection sample](examples/tensorflow/object_detection/README.md)
+    - [Instance Segmentation sample](examples/tensorflow/segmentation/README.md)
+- [ONNX Post-Training Quantization sample](examples/post_training_quantization/onnx/mobilenet_v2/README.md)
 
 ## Model Compression Notebooks 
 
@@ -385,6 +385,27 @@ to find instruction and links to exact configuration files and final checkpoints
 | :---: | :---: | :---: | :---: |
 |MaskRCNN|INT8 (per-tensor for weights)|COCO2017|bbox: 37.27 (0.06)<br/>segm: 33.54 (0.02)|
 |MaskRCNN|Sparsity 50% (Magnitude)|COCO2017|bbox: 36.93 (0.40)<br/>segm: 33.23 (0.33)|
+
+### ONNX models
+
+#### Classification
+
+| ONNX Model |    Compression algorithm    | Dataset  | Accuracy (Drop) % |
+|:----------:|:---------------------------:|:--------:|:-----------------:|
+|resnet50| Post-Traininig Quantization | ImageNet |   74.63 (0.21)    | 
+|shufflenet|            Post-Traininig Quantization           |  ImageNet   |    47.25(0.18)    |
+|googlenet|            Post-Traininig Quantization           |   ImageNet  |    66.36(0.3)     |
+|squeezenet1.0|           Post-Traininig Quantization           |   ImageNet   |    54.3(0.54)     |
+|mobilenetv2|           Post-Traininig Quantization           |   ImageNet  |    71.38(0.49)    |
+|densenet|           Post-Traininig Quantization            |   ImageNet  |    60.16(0.8)     |
+|vgg16|           Post-Traininig Quantization         |   ImageNet  |    72.02(0.0)     |
+
+#### Object Detection
+
+| ONNX Model |    Compression algorithm    | Dataset  | Accuracy (Drop) % |
+|:----------:|:---------------------------:|:--------:|:-----------------:|
+|ssd|            Post-Traininig Quantization           |    MSCOCO  |    20.17(0.17)    |
+|tinyyolov2|            Post-Traininig Quantization            |  VOC2012   |      29.03(0.23)      |
 
 ## Citing
 
