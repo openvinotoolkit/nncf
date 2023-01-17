@@ -30,15 +30,15 @@ They allow to achieve the maximum compression level or to reduce the fine-tuning
 
 ## Post-Training Optimization Algorithms
 
-|Compression algorithm|PyTorch|TensorFlow|   ONNX    |OpenVINO|
-|:--------------------| :---: | :---: |:---------:| :---: |
-| Quantization        | Supported | Supported | Supported | Supported |
+| Compression algorithm                                                       |         ONNX          |TensorFlow|         PyTorch          |OpenVINO|
+|:----------------------------------------------------------------------------|:------------------------:| :---: |:------------------------:| :---: |
+| [Quantization](./docs/compression_algorithms/post_training/Quantization.md) | Supported  | Supported (Experimental)| Supported (Experimental) | Supported (Experimental)|
 
 ## Usage of Compression-Aware Training Algorithms
 
 The basic workflow steps:
 1) Load an optimization configuration.
-2) Pass the original model along with the optimization configuration to the `create_compressed_model` function. `create_compressed_model` function returns a model with additional modifications necessary to enable algorithm-specific compression during fine-tuning and handle to the object allowing you to control the compression during the training process.
+2) Pass the original model along with the optimization configuration to the `create_compressed_model` function. This function returns (1) a model with additional modifications necessary to enable algorithm-specific compression during fine-tuning and (2) a handle to the object allowing you to control the compression during the training process.
 3) Fine-tune the modified model.
 
 NNCF provides [samples](#compression-aware-training) and [notebooks](#model-compression-notebooks) that demonstrate the big spectrum of Compression-Aware Training Algorithms usage scenarios for PyTorch and TensorFlow. 
@@ -120,31 +120,45 @@ For FAQ, visit this [link](./docs/FAQ.md).
 
 ## Usage of Post-Training Quantization
 
+NNCF provides [samples](#post-training-quantization) that demonstrate Post-Training Quantization usage for PyTorch, TensorFlow, ONNX, OpenVINO.
+
+To start the algorithm the user should provide:
+1) Validation part of the dataset.
+2) Data transformation function from original dataset format to the NNCF required format.
+Every backend demands the own return value format of transformation function. 
+Please, take a look at the full [description](./docs/compression_algorithms/post_training/Quantization.md). 
+3) Original model.
+
 The basic workflow steps:
-1) Initialize the dataset transformation function.
-2) Initialize NNCF Dataset.
+1) Initialize the data transformation function.
+2) Initialize NNCF Dataset with the validation dataset.
 3) Run the quantization pipeline.
 
-NNCF provides [samples](#post-training-quantization) that demonstrate Post-Training Quantization usage for PyTorch, TensorFlow, ONNX, OpenVINO.
+#### ONNX usage example
 
 ```python
 import onnx
 import nncf
 import torch
-import torchvision.datasets as datasets
+from torchvision import datasets
 
 # Instantiate your uncompressed model
 onnx_model = onnx.load_model('/model_path')
-# Provide validation part of the dataset for statistics collection for compression algorithm
+
+# Provide validation part of the dataset
 representative_dataset = datasets.ImageFolder("/path")
 dataset_loader = torch.utils.data.DataLoader(representative_dataset, batch_size=1)
+
 # Step 1: Initialize transformation function
+# ONNX backend part of NNCF requires that transformation function returns Dict[str, np.ndarray]
 input_name = onnx_model.graph.input[0].name
 def transform_fn(data_item):
     images, _ = data_item
     return {input_name: images.numpy()}
+
 # Step 2: Initialize NNCF Dataset
 calibration_dataset = nncf.Dataset(dataset_loader, transform_fn)
+
 # Step 3: Run the quantization pipeline
 quantized_model = nncf.quantize(onnx_model, calibration_dataset)
 ```
