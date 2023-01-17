@@ -150,8 +150,8 @@ from torchvision import datasets
 onnx_model = onnx.load_model('/model_path')
 
 # Provide validation part of the dataset
-representative_dataset = datasets.ImageFolder("/path")
-dataset_loader = torch.utils.data.DataLoader(representative_dataset, batch_size=1)
+val_dataset = datasets.ImageFolder("/path")
+dataset_loader = torch.utils.data.DataLoader(val_dataset, batch_size=1)
 
 # Step 1: Initialize transformation function
 # ONNX backend part of NNCF requires that transformation function returns Dict[str, np.ndarray]

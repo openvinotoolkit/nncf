@@ -45,8 +45,8 @@ from torchvision import datasets
 # Instantiate your uncompressed model
 onnx_model = onnx.load_model('/model_path')
 # Provide validation part of the dataset for statistics collection for compression algorithm
-representative_dataset = datasets.ImageFolder("/path")
-dataset_loader = torch.utils.data.DataLoader(representative_dataset, batch_size=1)
+val_dataset = datasets.ImageFolder("/path")
+dataset_loader = torch.utils.data.DataLoader(val_dataset, batch_size=1)
 # Step 1: Initialize transformation function
 input_name = onnx_model.graph.input[0].name
 def transform_fn(data_item):
