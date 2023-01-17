@@ -100,6 +100,9 @@ def create_compressed_model(model: Module,
 
     nncf_network = create_nncf_network(model, config, dummy_forward_fn, wrap_inputs_fn, wrap_outputs_fn)
 
+    if dump_graphs and is_main_process():
+        nncf_network.get_graph().visualize_graph(osp.join(config.get("log_dir", "."), "original_graph.dot"))
+
     builder = create_compression_algorithm_builder(config, should_init)
 
     is_state_loadable = not is_legacy_model_state_dict and compression_state is not None
