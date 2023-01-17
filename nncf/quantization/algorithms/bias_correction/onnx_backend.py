@@ -28,7 +28,7 @@ from nncf.onnx.graph.metatypes.onnx_metatypes import ONNXDequantizeLinearMetatyp
 from nncf.onnx.graph.model_transformer import ONNXModelTransformer
 from nncf.onnx.graph.transformations.commands import ONNXBiasCorrectionCommand
 from nncf.onnx.graph.transformations.commands import ONNXModelExtractionCommand
-from nncf.onnx.graph.transformations.commands import ONNXNodeRemovingCommand
+from nncf.onnx.graph.transformations.commands import ONNXQDQNodeRemovingCommand
 from nncf.onnx.graph.transformations.commands import ONNXOutputInsertionCommand
 from nncf.onnx.graph.transformations.commands import ONNXTargetPoint
 from nncf.onnx.statistics.collectors import ONNXMeanStatisticCollector
@@ -85,8 +85,8 @@ class ONNXBiasCorrectionAlgoBackend(BiasCorrectionAlgoBackend):
         return ONNXOutputInsertionCommand(target_point)
 
     @staticmethod
-    def node_removing_command(target_point: ONNXTargetPoint) -> ONNXNodeRemovingCommand:
-        return ONNXNodeRemovingCommand(target_point=target_point)
+    def node_removing_command(target_point: ONNXTargetPoint) -> ONNXQDQNodeRemovingCommand:
+        return ONNXQDQNodeRemovingCommand(target_point=target_point)
 
     @staticmethod
     def mean_statistic_collector(reduction_shape: ReductionShape,
