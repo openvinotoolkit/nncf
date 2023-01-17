@@ -1,3 +1,4 @@
+
 """
  Copyright (c) 2023 Intel Corporation
  Licensed under the Apache License, Version 2.0 (the "License");
@@ -13,60 +14,61 @@
 
 import pytest
 import numpy as np
-import openvino.runtime as ov
-from openvino.runtime import opset9 as opset
+import torch
+from torch import nn
 
 from nncf import Dataset
 from nncf.common.graph.transformations.commands import TargetType
-from nncf.common.graph.transformations.commands import TargetPoint
-from nncf.experimental.openvino_native.statistics.aggregator import OVStatisticsAggregator
-from nncf.experimental.openvino_native.graph.transformations.commands import OVTargetPoint
-from nncf.experimental.openvino_native.quantization.algorithms.min_max.openvino_backend import\
-    OVMinMaxAlgoBackend
+from nncf.quantization.algorithms.min_max.torch_backend import PTMinMaxAlgoBackend
+from nncf.torch.statistics.aggregator import PTStatisticsAggregator
 
 from tests.common.test_statistics_aggregator import TemplateTestStatisticsAggregator
+from tests.torch.ptq.helpers import get_nncf_network
+from tests.torch.ptq.test_ptq_params import ToNNCFNetworkInterface
 
 
-INPUT_NAME = 'Input'
-CONV_NODE_NAME = 'Conv1'
+
+IDENTITY_NODE_NAME = 'PTIdentityConvModel/__add___0'
+CONV_NODE_NAME = 'PTIdentityConvModel/NNCFConv2d[conv]/conv2d_0'
 INPUT_SHAPE = [1, 3, 3, 3]
 
 
-def get_StatisticAgregatorTestModel(input_shape, kernel):
-    input_1 = opset.parameter(input_shape, name=INPUT_NAME)
-    strides = [1, 1]
-    pads = [0, 0]
-    dilations = [1, 1]
-    conv = opset.convolution(input_1, kernel.astype(np.float32),
-                             strides, pads, pads, dilations, name=CONV_NODE_NAME)
+class PTIdentityConvModel(nn.Module, ToNNCFNetworkInterface):
+    def __init__(self, kernel):
+        super().__init__()
+        self.conv = nn.Conv2d(3, 3, 3)
+        self.conv.weight.data = torch.tensor(kernel, dtype=torch.float32)
 
-    result = opset.result(conv, name="Result")
-    model = ov.Model([result], [input_1])
-    return model
+    def forward(self, x):
+        return self.conv(x + 0.)
+
+    def get_nncf_network(cls):
+        return get_nncf_network(cls, INPUT_SHAPE)
 
 
 class TestStatisticsAggregator(TemplateTestStatisticsAggregator):
-    def get_algo_backend_cls(self) -> OVMinMaxAlgoBackend:
-        return OVMinMaxAlgoBackend
+    def get_algo_backend_cls(self) -> PTMinMaxAlgoBackend:
+        return PTMinMaxAlgoBackend
 
     def get_backend_model(self, dataset_samples):
         sample = dataset_samples[0].reshape(INPUT_SHAPE[1:])
-        conv_w = self.dataset_samples_to_conv_w(sample)
-        return get_StatisticAgregatorTestModel(INPUT_SHAPE, conv_w)
+        conv_w = self.dataset_samples_to_conv_w(np.array(sample))
+        return PTIdentityConvModel(conv_w).get_nncf_network()
 
     def get_statistics_aggregator(self, dataset):
-        return OVStatisticsAggregator(dataset)
+        return PTStatisticsAggregator(dataset)
 
     def get_dataset(self, samples):
-        return Dataset(samples, lambda data: {INPUT_NAME: data})
+        def transform_fn(data_item):
+            return data_item
 
-    def get_target_point(self, target_type: TargetType) -> TargetPoint:
-        target_node_name = INPUT_NAME
-        port_id = 0
+        return Dataset(samples, transform_fn)
+
+    def get_target_point(self, target_type: TargetType):
+        target_node_name = IDENTITY_NODE_NAME
         if target_type == TargetType.OPERATION_WITH_WEIGHTS:
             target_node_name = CONV_NODE_NAME
-            port_id = 1
-        return OVTargetPoint(target_type, target_node_name, port_id)
+        return PTMinMaxAlgoBackend.target_point(target_type, target_node_name, 0)
 
     @pytest.fixture
     def dataset_samples(self, dataset_values):
@@ -76,7 +78,8 @@ class TestStatisticsAggregator(TemplateTestStatisticsAggregator):
         for i, value in enumerate(dataset_values):
             dataset_samples[0][0, i, 0, 0] = value['max']
             dataset_samples[0][0, i, 0, 1] = value['min']
-        return dataset_samples
+
+        return torch.tensor(dataset_samples, dtype=torch.float32)
 
     @pytest.fixture
     def is_stat_in_shape_of_scale(self) -> bool:

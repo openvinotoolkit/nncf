@@ -29,16 +29,16 @@ from nncf.common.tensor_statistics.collectors import TensorStatisticCollectorBas
 
 
 class TensorStatisticObservationPoint:
-    def __init__(self, insertion_point: PTTargetPoint,
+    def __init__(self, target_point: PTTargetPoint,
                  reduction_shapes: Set[ReductionShape] = None):
-        self.insertion_point = insertion_point
+        self.target_point = target_point
         self.reduction_shapes = reduction_shapes
 
     def __hash__(self):
-        return hash(self.insertion_point)
+        return hash(self.target_point)
 
     def __eq__(self, other: 'TensorStatisticObservationPoint'):
-        return self.insertion_point == other.insertion_point
+        return self.target_point == other.target_point
 
 
 class TensorStatisticsCollectionBuilder(PTCompressionAlgorithmBuilder):
@@ -56,14 +56,14 @@ class TensorStatisticsCollectionBuilder(PTCompressionAlgorithmBuilder):
         for op, rs_vs_collector in self._observation_points_vs_collectors.items():
             for collector in rs_vs_collector.values():
                 hook_obj = collector.register_input
-                command = PTInsertionCommand(op.insertion_point, hook_obj,
+                command = PTInsertionCommand(op.target_point, hook_obj,
                                              TransformationPriority.FP32_TENSOR_STATISTICS_OBSERVATION)
                 layout.register(command)
         return layout
 
     def _build_controller(self, model: NNCFNetwork) -> 'TensorStatisticsCollectionController':
         return TensorStatisticsCollectionController(model,
-                                                    {k.insertion_point: v
+                                                    {k.target_point: v
                                                      for k, v in self._observation_points_vs_collectors.items()})
 
     def _handle_frozen_layers(self, target_model: NNCFNetwork):

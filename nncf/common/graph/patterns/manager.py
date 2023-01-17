@@ -44,7 +44,11 @@ class PatternsManager:
         if backend == BackendType.TORCH:
             from nncf.torch.hardware.fused_patterns import \
                 PT_HW_FUSED_PATTERNS
+<<<<<<< HEAD
             return PT_HW_FUSED_PATTERNS.registry_dict
+=======
+            return PT_HW_FUSED_PATTERNS
+>>>>>>> Torch MinMax algo
         raise ValueError(f'Hardware-fused patterns not implemented for {backend} backend.')
 
     @staticmethod

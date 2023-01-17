@@ -214,7 +214,6 @@ class PTQuantizerSetup(QuantizerSetupBase):
         super().__init__()
         self.unified_scale_groups = unified_scale_groups
         self.shared_input_operation_set_groups = shared_input_operation_set_groups
-        self.quantization_points = {}  # type: Dict[QuantizationPointId, PTQuantizationPoint]
 
     @classmethod
     def from_state(cls, state: Dict) -> 'PTQuantizerSetup':

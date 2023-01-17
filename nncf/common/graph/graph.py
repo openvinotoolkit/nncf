@@ -58,6 +58,10 @@ class NNCFNode:
     def layer_name(self) -> LayerName:
         return self.data.get(NNCFGraph.LAYER_NAME_ATTR)
 
+    @layer_name.setter
+    def layer_name(self, data: Any) -> None:
+        self.data[NNCFGraph.LAYER_NAME_ATTR] = data
+
     @property
     def layer_attributes(self) -> BaseLayerAttributes:
         return self.data.get(NNCFGraph.LAYER_ATTRIBUTES)
