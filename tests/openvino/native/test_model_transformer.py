@@ -33,7 +33,7 @@ from tests.openvino.conftest import OPENVINO_NATIVE_TEST_ROOT
 REFERENCE_GRAPHS_DIR = OPENVINO_NATIVE_TEST_ROOT / 'data' / 'reference_graphs' / 'original_nncf_graph'
 
 REF_OUTPUT_SHAPES = {'Result_MatMul': (1, 3, 2, 5), 'Result_Add': (1, 3, 2, 4)}
-TARGET_LAYERS = [['Add'], ['MatMul'], ['Add', 'MatMul']]
+TARGET_INSERT_LAYERS = [['Add'], ['MatMul'], ['Add', 'MatMul']]
 TARGET_PRE_LAYERS_OUTPUT = [['Result_Reshape.0'], ['Result_Reshape.0'], ['Result_Reshape.0']]
 TARGET_POST_LAYERS_OUTPUT = [['Result_Add.0'], ['Result_MatMul.0'], ['Result_Add.0', 'Result_MatMul.0']]
 TARGET_PRE_LAYER_FQS = [['Add/fq_input_0'], ['MatMul/fq_input_0'], ['Add/fq_input_0', 'MatMul/fq_input_0']]
@@ -83,7 +83,7 @@ def get_fq_nodes(model):
     return fq_nodes
 
 
-@pytest.mark.parametrize('target_layers, target_layer_outputs', zip(TARGET_LAYERS, TARGET_PRE_LAYERS_OUTPUT))
+@pytest.mark.parametrize('target_layers, target_layer_outputs', zip(TARGET_INSERT_LAYERS, TARGET_PRE_LAYERS_OUTPUT))
 def test_output_insertion_pre_layer(target_layers, target_layer_outputs):
     model = LinearModel().ov_model
     transformed_model = create_transformed_model(
@@ -95,7 +95,7 @@ def test_output_insertion_pre_layer(target_layers, target_layer_outputs):
         assert out_name in target_layer_outputs
 
 
-@pytest.mark.parametrize('target_layers, target_layer_outputs', zip(TARGET_LAYERS, TARGET_POST_LAYERS_OUTPUT))
+@pytest.mark.parametrize('target_layers, target_layer_outputs', zip(TARGET_INSERT_LAYERS, TARGET_POST_LAYERS_OUTPUT))
 def test_output_insertion_post_layer(target_layers, target_layer_outputs):
     model = LinearModel().ov_model
     transformed_model = create_transformed_model(
@@ -128,8 +128,8 @@ def test_node_removing(target_layers):
     compare_nncf_graphs(transformed_model, REFERENCE_GRAPHS_DIR / ref_name)
 
 
-@pytest.mark.parametrize('target_layers, ref_fq_node_names', zip(TARGET_LAYERS, TARGET_PRE_LAYER_FQS))
-def test_fq_insertion_pre_layer(target_layers, ref_fq_node_names):
+@pytest.mark.parametrize('target_layers, ref_fq_names', zip(TARGET_INSERT_LAYERS, TARGET_PRE_LAYER_FQS))
+def test_fq_insertion_pre_layer(target_layers, ref_fq_names):
     model = LinearModel().ov_model
 
     min_values = np.zeros((1, 1, 1, 1)).astype(np.float32)
@@ -140,13 +140,13 @@ def test_fq_insertion_pre_layer(target_layers, ref_fq_node_names):
             OVQuantizerInsertionCommand, quantizer_parameters=quantizer_parameters)
     fq_nodes = get_fq_nodes(transformed_model)
 
-    assert len(fq_nodes) == len(ref_fq_node_names)
+    assert len(fq_nodes) == len(ref_fq_names)
     for fq_name in fq_nodes:
-        assert fq_name in ref_fq_node_names
+        assert fq_name in ref_fq_names
 
 
-@pytest.mark.parametrize('target_layers, ref_fq_node_names', zip(TARGET_LAYERS, TARGET_POST_LAYER_FQS))
-def test_fq_insertion_post_layer(target_layers, ref_fq_node_names):
+@pytest.mark.parametrize('target_layers, ref_fq_names', zip(TARGET_INSERT_LAYERS, TARGET_POST_LAYER_FQS))
+def test_fq_insertion_post_layer(target_layers, ref_fq_names):
     model = LinearModel().ov_model
 
     min_values = np.zeros((1, 1, 1, 1)).astype(np.float32)
@@ -156,13 +156,13 @@ def test_fq_insertion_post_layer(target_layers, ref_fq_node_names):
             OVQuantizerInsertionCommand, quantizer_parameters=quantizer_parameters)
     fq_nodes = get_fq_nodes(transformed_model)
 
-    assert len(fq_nodes) == len(ref_fq_node_names)
+    assert len(fq_nodes) == len(ref_fq_names)
     for fq_name in fq_nodes:
-        assert fq_name in ref_fq_node_names
+        assert fq_name in ref_fq_names
 
 
-@pytest.mark.parametrize('target_layers, ref_fq_node_names', zip(TARGET_LAYERS, TARGET_WEIGHTS_FQS))
-def test_fq_insertion_weights(target_layers, ref_fq_node_names):
+@pytest.mark.parametrize('target_layers, ref_fq_names', zip(TARGET_INSERT_LAYERS, TARGET_WEIGHTS_FQS))
+def test_fq_insertion_weights(target_layers, ref_fq_names):
     model = LinearModel().ov_model
 
     min_values = np.zeros((1, 1, 1, 1)).astype(np.float32)
@@ -172,6 +172,6 @@ def test_fq_insertion_weights(target_layers, ref_fq_node_names):
             OVQuantizerInsertionCommand, port_id=1, quantizer_parameters=quantizer_parameters)
     fq_nodes = get_fq_nodes(transformed_model)
 
-    assert len(fq_nodes) == len(ref_fq_node_names)
+    assert len(fq_nodes) == len(ref_fq_names)
     for fq_name in fq_nodes:
-        assert fq_name in ref_fq_node_names
+        assert fq_name in ref_fq_names
