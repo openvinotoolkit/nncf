@@ -315,6 +315,13 @@ class CompressionAlgorithmController(ABC):
         it to a dummy one that does not change the compression rate.
         """
 
+    @property
+    @abstractmethod
+    def maximal_compression_rate(self) -> float:
+        """
+        Returns the maximal model compression rate supported by the compression controller.
+        """
+
 
 class CompressionAlgorithmBuilder(ABC):
     """

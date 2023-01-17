@@ -194,7 +194,7 @@ class MagnitudeSparsityController(BaseSparsityController):
         if not all_weights:
             return 0.0
         all_weights_tensor = tf.sort(tf.concat(all_weights, 0))
-        index = int(tf.cast(tf.size(all_weights_tensor), all_weights_tensor.dtype) * sparsity_level)
+        index = int(tf.cast(tf.size(all_weights_tensor) - 1, all_weights_tensor.dtype) * sparsity_level)
         threshold = all_weights_tensor[index].numpy()
         return threshold
 

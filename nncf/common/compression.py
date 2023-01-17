@@ -178,6 +178,10 @@ class BaseCompressionAlgorithmController(CompressionAlgorithmController):
             self.CONTROLLER_STATE: self.get_state()
         }
 
+    @property
+    def maximal_compression_rate(self) -> float:
+        return 1.0
+
 
 class BaseCompressionAlgorithmBuilder(CompressionAlgorithmBuilder):
     """

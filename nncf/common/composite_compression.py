@@ -288,6 +288,10 @@ class CompositeCompressionAlgorithmController(CompressionAlgorithmController):
     def compression_rate(self, compression_rate: float) -> None:
         raise NotImplementedError
 
+    @property
+    def maximal_compression_rate(self) -> float:
+        return min(child_ctrl.maximal_compression_rate for child_ctrl in self.child_ctrls)
+
     def export_model(self,
                      save_path: str,
                      save_format: Optional[str] = None,
