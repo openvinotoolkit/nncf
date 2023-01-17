@@ -129,7 +129,7 @@ TF_SAMPLE_TYPE_TO_DESCRIPTOR = {
             SampleReadmeSubTableDescriptor(
                 anchor='<a name="filter_pruning"></a>',
                 model_names=[
-                    "resnet50",
+                    "resnet50_imagenet",
                     "resnet50_imagenet_pruning_geometric_median",
                     "resnet50_imagenet_pruning_geometric_median_int8"],
                 models_duplicated_from_main_table=["resnet50"]),
@@ -333,14 +333,20 @@ def update_target_metrics_and_thresholds(config_dict: Dict, model_name_to_metric
 
 
 def get_display_dataset_name(data_name: str) -> str:
-    if data_name == 'imagenet':
+    if data_name in ['imagenet', 'imagenet2012']:
         dataset_name = 'ImageNet'
     elif data_name == 'camvid':
         dataset_name = 'CamVid'
     elif data_name == 'VOCdevkit':
         dataset_name = 'VOC12+07 train, VOC07 eval'
-    else:
+    elif data_name == 'coco2017':
+        dataset_name = "COCO 2017"
+    elif data_name == 'mapillary_vistas':
         dataset_name = "Mapillary"
+    elif data_name == 'voc':
+        dataset_name = "VOC12+07 train, VOC07 eval"
+    else:
+        raise RuntimeError(f"Unknown data name: {data_name}")
     return dataset_name
 
 

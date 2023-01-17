@@ -408,7 +408,7 @@ to find instruction and links to exact configuration files and final checkpoints
 <a name="pytorch_classification"></a>
 #### Classification
 
-|PyTorch Model|Compression algorithm|Dataset|Accuracy (Drop) %|
+|Model|Compression algorithm|Dataset|Accuracy (_drop_) %|
 | :---: | :---: | :---: | :---: |
 |ResNet-50|INT8|ImageNet|76.15 (-0.31)|
 |ResNet-50|INT8 (per-tensor only)|ImageNet|76.15 (-0.24)|
@@ -436,19 +436,19 @@ to find instruction and links to exact configuration files and final checkpoints
 <a name="pytorch_object_detection"></a>
 #### Object detection
 
-|PyTorch Model|Compression algorithm|Dataset|mAP (drop) %|
+|Model|Compression algorithm|Dataset|mAP (_drop_) %|
 | :---: | :---: | :---: | :---: |
-|SSD300-MobileNet|INT8 + Sparsity 70% (Magnitude)|Mapillary|62.23 (-0.72)|
-|SSD300-VGG-BN|INT8|Mapillary|78.28 (0.47)|
-|SSD300-VGG-BN|INT8 + Sparsity 70% (Magnitude)|Mapillary|78.28 (0.62)|
-|SSD300-VGG-BN|Filter pruning, 40%, geometric median criterion|Mapillary|78.28 (-0.07)|
-|SSD512-VGG-BN|INT8|Mapillary|80.26 (0.22)|
-|SSD512-VGG-BN|INT8 + Sparsity 70% (Magnitude)|Mapillary|80.26 (0.58)|
+|SSD300-MobileNet|INT8 + Sparsity 70% (Magnitude)|VOC12+07 train, VOC07 eval|62.23 (-0.72)|
+|SSD300-VGG-BN|INT8|VOC12+07 train, VOC07 eval|78.28 (0.47)|
+|SSD300-VGG-BN|INT8 + Sparsity 70% (Magnitude)|VOC12+07 train, VOC07 eval|78.28 (0.62)|
+|SSD300-VGG-BN|Filter pruning, 40%, geometric median criterion|VOC12+07 train, VOC07 eval|78.28 (-0.07)|
+|SSD512-VGG-BN|INT8|VOC12+07 train, VOC07 eval|80.26 (0.22)|
+|SSD512-VGG-BN|INT8 + Sparsity 70% (Magnitude)|VOC12+07 train, VOC07 eval|80.26 (0.58)|
 
 <a name="pytorch_semantic_segmentation"></a>
 #### Semantic segmentation
 
-|PyTorch Model|Compression algorithm|Dataset|Accuracy (Drop) %|
+|Model|Compression algorithm|Dataset|mIoU (_drop_) %|
 | :---: | :---: | :---: | :---: |
 |UNet|INT8|CamVid|71.95 (0.06)|
 |UNet|INT8 + Sparsity 60% (Magnitude)|CamVid|71.95 (-0.51)|
@@ -477,44 +477,44 @@ to find instruction and links to exact configuration files and final checkpoints
 <a name="tensorflow_classification"></a>
 #### Classification
 
-|Tensorflow Model|Compression algorithm|Dataset|Accuracy (Drop) %|
+|Model|Compression algorithm|Dataset|Accuracy (_drop_) %|
 | :---: | :---: | :---: | :---: |
-|Inception V3|INT8 (per-tensor for weights)|ImageNet|78.36 (-0.44)|
-|Inception V3|Sparsity 54% (Magnitude)|ImageNet|77.87 (0.03)|
-|Inception V3|INT8 (per-tensor for weights) + Sparsity 61% (RB)|ImageNet|77.58 (0.32)|
-|MobileNet V2|INT8 (per-tensor for weights)|ImageNet|71.66 (0.19)|
-|MobileNet V2|Sparsity 50% (RB)|ImageNet|71.34 (0.51)|
-|MobileNet V2|INT8 (per-tensor for weights) + Sparsity 52% (RB)|ImageNet|71.0 (0.85)|
-|MobileNet V3 small|INT8 (per-channel, symmetric for weights; per-tensor, asymmetric for activations) |ImageNet|67.75 (0.63)|
-|MobileNet V3 small|INT8 (per-channel, symmetric for weights; per-tensor, asymmetric for activations) + Sparsity 42% (RB)|ImageNet|67.59 (0.79)|
-|MobileNet V3 large|INT8 (per-channel, symmetric for weights; per-tensor, asymmetric for activations) |ImageNet|75.04 (0.77)|
-|MobileNet V3 large|INT8 (per-channel, symmetric for weights; per-tensor, asymmetric for activations) + Sparsity 42% (RB)|ImageNet|75.29 (0.52)|
-|ResNet50|INT8 (per-tensor for weights)|ImageNet|75.0 (0.04)|
-|ResNet50|Sparsity 80% (RB)|ImageNet|74.36 (0.68)|
-|ResNet50|INT8 (per-tensor for weights) + Sparsity 65% (RB)|ImageNet|74.3 (0.74)|
-|ResNet50|Filter Pruning 40%, geometric_median criterion|ImageNet|74.98 (0.06)|
-|ResNet50|Filter Pruning 40%, geometric_median criterion + INT8 (per-tensor for weights)|ImageNet|75.08 (-0.04)|
-|TensorFlow Hub MobileNet V2|Sparsity 35% (Magnitude)|ImageNet|71.90 (-0.06)|
+|Inception V3|INT8 (per-tensor, symm. W, asymm. half-range A)|ImageNet|77.91 (-0.47)|
+|Inception V3|INT8 (per-tensor, symm. W, asymm. half-range A), Sparsity 61% (RB)|ImageNet|77.91 (0.00)|
+|Inception V3|Sparsity 54% (Magnitude)|ImageNet|77.91 (0.05)|
+|MobileNet V2|INT8 (per-tensor, symm. W, asymm. half-range A)|ImageNet|71.85 (0.22)|
+|MobileNet V2|INT8 (per-tensor, symm. W, half-range asymm. A), Sparsity 52% (RB)|ImageNet|71.85 (0.89)|
+|MobileNet V2| Sparsity 50% (RB)|ImageNet|71.85 (0.52)|
+|MobileNet V2 (TensorFlow Hub MobileNet V2)|Sparsity 35% (Magnitude)|ImageNet|71.85 (-0.02)|
+|MobileNet V3 (Small)|INT8 (per-channel symm. W, per-tensor half-range asymm. A)|ImageNet|68.38 (0.59)|
+|MobileNet V3 (Small)|INT8 (per-channel symm. W, per-tensor asymm. half-range A) + Sparsity 42% (Magnitude)|ImageNet|68.38 (0.94)|
+|MobileNet V3 (Large)|INT8 (per-channel symm. W, per-tensor asymm. half-range A)|ImageNet|75.80 (0.76)|
+|MobileNet V3 (Large)|INT8 (per-channel symm. W, per-tensor asymm. half-range A) + Sparsity 42% (RB)|ImageNet|75.80 (0.56)|
+|ResNet-50|INT8|ImageNet|75.05 (0.00)|
+|ResNet-50|INT8 (per-tensor, symm. W, half-range asymm. A) + Sparsity 65% (RB)|ImageNet|75.05 (0.73)|
+|ResNet-50|Sparsity 80% (RB)|ImageNet|75.05 (0.67)|
+|ResNet-50|Filter pruning, 40%, geometric median criterion|ImageNet|75.05 (0.08)|
+|ResNet-50|INT8 (symm. half-range W, asymm. A) + Filter pruning, 40%, geometric median criterion|ImageNet|75.05 (0.05)|
 
 <a name="tensorflow_object_detection"></a>
 #### Object detection
 
-|TensorFlow Model|Compression algorithm|Dataset|mAP (drop) %|
+|Model|Compression algorithm|Dataset|mAP (_drop_) %|
 | :---: | :---: | :---: | :---: |
-|RetinaNet|INT8 (per-tensor for weights)|COCO2017|33.18 (0.26)|
-|RetinaNet|Sparsity 50% (Magnitude)|COCO2017|33.13 (0.31)|
-|RetinaNet|Filter Pruning 40%, geometric_median criterion|COCO2017|32.7 (0.74)|
-|RetinaNet|Filter Pruning 40%, geometric_median criterion + INT8 (per-tensor for weights)|COCO2017|32.68 (0.76)|
-|YOLOv4|INT8 (per-channel, symmetric for weights; per-tensor, asymmetric for activations)|COCO2017|46.30 (0.74)|
-|YOLOv4|Sparsity 50% (Magnitude)|COCO2017|46.54 (0.50)|
+|RetinaNet|INT8 (per-tensor, symm. W, half-range asymm. A)|COCO 2017|33.43 (0.30)|
+|RetinaNet|Magnitude sparsity (50%)|COCO 2017|33.43 (0.33)|
+|RetinaNet|Filter pruning, 40%|COCO 2017|33.43 (0.71)|
+|RetinaNet|INT8 (per-tensor, symm. W, half-range asymm. A) + filter pruning 40%|COCO 2017|33.43 (0.75)|
+|YOLO v4|INT8 (per-channel symm. W, per-tensor asymm. half-range A)|COCO 2017|47.07 (0.86)|
+|YOLO v4|Magnitude sparsity, 50%|COCO 2017|47.07 (0.59)|
 
 <a name="tensorflow_instance_segmentation"></a>
 #### Instance segmentation
 
-|TensorFlow Model|<img width="110" height="1">Compression algorithm<img width="110" height="1">|Dataset|mAP (drop) %|
+|Model|Compression algorithm|Dataset|mAP (_drop_) %|
 | :---: | :---: | :---: | :---: |
-|MaskRCNN|INT8 (per-tensor for weights)|COCO2017|bbox: 37.27 (0.06)<br/>segm: 33.54 (0.02)|
-|MaskRCNN|Sparsity 50% (Magnitude)|COCO2017|bbox: 36.93 (0.40)<br/>segm: 33.23 (0.33)|
+|Mask-R-CNN|INT8 (per-tensor, symm. W, half-range asymm. A)|COCO 2017|37.33 (0.14)|
+|Mask-R-CNN|Magnitude sparsity, 50%|COCO 2017|37.33 (0.39)|
 
 ### ONNX models
 
