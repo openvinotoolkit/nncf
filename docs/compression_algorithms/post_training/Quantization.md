@@ -30,10 +30,9 @@ The basic workflow steps:
 
 #### ONNX
 
-[ONNXRuntime](https://onnxruntime.ai/) is used as the inference engine for ONNX backend.
-The input format of the data which is used by ONNXRuntime is following - Dict[str, np.ndarray], 
-where the keys of the dict are string names of the model inputs and the values are the tensors consumed by these inputs.
-So, the transformation function should return the data in this format. \
+[ONNXRuntime](https://onnxruntime.ai/) is used as the inference engine for ONNX backend. \
+The input format of the data which is used by ONNXRuntime is following - Dict[str, np.ndarray], where the keys of the dict are string names of the model inputs and the values are the tensors consumed by these inputs.
+So, the transformation function should return the data in this format.
 
 Let's take a look at the usage example.
 

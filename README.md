@@ -16,6 +16,7 @@ NNCF provides a suite of advanced algorithms for reducing inference time of Neur
 NNCF supports Compression-Aware training and Post-Training Optimization for the models from [PyTorch](https://pytorch.org/), [TensorFlow](https://www.tensorflow.org/), [ONNX](https://onnx.ai/) and [OpenVINO&trade;](https://github.com/openvinotoolkit/openvino).
 
 ## Compression-Aware Training Algorithms
+Compression-Aware Training Algorithms is a set of algorithms which takes the full training dataset to fine-tune the model after the optimization.
  
 |Compression algorithm|PyTorch|TensorFlow|
 | :--- | :---: | :---: |
@@ -25,10 +26,12 @@ NNCF supports Compression-Aware training and Post-Training Optimization for the 
 |[Sparsity](./docs/compression_algorithms/Sparsity.md) | Supported | Supported |
 |[Filter pruning](./docs/compression_algorithms/Pruning.md) | Supported | Supported |
 
-All of these algorithms can be executed through [Accuracy-Aware model training](./docs/Usage.md#accuracy-aware-model-training) pipelines: [Adaptive Compression Level Training](./docs/accuracy_aware_model_training/AdaptiveCompressionLevelTraining.md) and [Early Exit Training](./docs/accuracy_aware_model_training/EarlyExitTraining.md). 
+All of these algorithms can be executed through [Accuracy-Aware model training](./docs/Usage.md#accuracy-aware-model-training) pipelines. 
 They allow to achieve the maximum compression level or to reduce the fine-tuning time, while staying within the range of the user-defined maximum accuracy degradation.
 
 ## Post-Training Optimization Algorithms
+Post-Training Optimization Algorithms is a set of algorithms which takes the subset of validation dataset and utilizes it for calibration of optimization parameters. 
+
 
 | Compression algorithm                                                       |         ONNX          |TensorFlow|         PyTorch          |OpenVINO|
 |:----------------------------------------------------------------------------|:------------------------:| :---: |:------------------------:| :---: |
@@ -123,15 +126,16 @@ For FAQ, visit this [link](./docs/FAQ.md).
 NNCF provides [samples](#post-training-quantization) that demonstrate Post-Training Quantization usage for PyTorch, TensorFlow, ONNX, OpenVINO.
 
 To start the algorithm the user should provide:
-1) Validation part of the dataset.
-2) Data transformation function from original dataset format to the NNCF required format.
+1) Original model.
+2) Validation part of the dataset.
+3) Data transformation function from original dataset format to the NNCF required format.
 Every backend demands the own return value format of transformation function. 
 Please, take a look at the full [description](./docs/compression_algorithms/post_training/Quantization.md). 
-3) Original model.
+
 
 The basic workflow steps:
-1) Initialize the data transformation function.
-2) Initialize NNCF Dataset with the validation dataset.
+1) Create the data transformation function.
+2) Initialize NNCF Dataset with the validation dataset and the transformation function.
 3) Run the quantization pipeline.
 
 #### ONNX usage example
