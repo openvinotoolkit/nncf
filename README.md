@@ -28,13 +28,13 @@ learning frameworks.
 
 - Support of various compression algorithms, applied during a model fine-tuning process to achieve a better performance-accuracy trade-off:
   
-|Compression algorithm|PyTorch|TensorFlow|           ONNX            |
-| :--- | :---: | :---: |:-------------------------:|
+|Compression algorithm|PyTorch|TensorFlow|ONNX|
+| :--- | :---: | :---: | :---: |
 |[Quantization](./docs/compression_algorithms/Quantization.md) | Supported | Supported | Supported (Post-Training) |
-|[Mixed-Precision Quantization](./docs/compression_algorithms/Quantization.md#mixed_precision_quantization) | Supported | Not supported |       Not supported       |
-|[Binarization](./docs/compression_algorithms/Binarization.md) | Supported | Not supported |       Not supported       |
-|[Sparsity](./docs/compression_algorithms/Sparsity.md) | Supported | Supported |       Not supported       |
-|[Filter pruning](./docs/compression_algorithms/Pruning.md) | Supported | Supported |       Not supported       |
+|[Mixed-Precision Quantization](./docs/compression_algorithms/Quantization.md#mixed_precision_quantization) | Supported | Not supported | Not supported |
+|[Binarization](./docs/compression_algorithms/Binarization.md) | Supported | Not supported | Not supported |
+|[Sparsity](./docs/compression_algorithms/Sparsity.md) | Supported | Supported | Not supported |
+|[Filter pruning](./docs/compression_algorithms/Pruning.md) | Supported | Supported | Not supported |
 
 - Automatic, configurable model graph transformation to obtain the compressed model.
   > **NOTE**: Limited support for TensorFlow models. The models created using Sequential or Keras Functional API are only supported.
@@ -390,22 +390,22 @@ to find instruction and links to exact configuration files and final checkpoints
 
 #### Classification
 
-| ONNX Model |    Compression algorithm    | Dataset  | Accuracy (Drop) % |
-|:----------:|:---------------------------:|:--------:|:-----------------:|
-|resnet50| Post-Traininig Quantization | ImageNet |   74.63 (0.21)    | 
-|shufflenet|            Post-Traininig Quantization           |  ImageNet   |    47.25(0.18)    |
-|googlenet|            Post-Traininig Quantization           |   ImageNet  |    66.36(0.3)     |
-|squeezenet1.0|           Post-Traininig Quantization           |   ImageNet   |    54.3(0.54)     |
-|mobilenetv2|           Post-Traininig Quantization           |   ImageNet  |    71.38(0.49)    |
-|densenet|           Post-Traininig Quantization            |   ImageNet  |    60.16(0.8)     |
-|vgg16|           Post-Traininig Quantization         |   ImageNet  |    72.02(0.0)     |
+|   ONNX Model    |Compression algorithm|Dataset|Accuracy (Drop) %|
+| :---: | :---: | :---: | :---: |
+|ResNet-50|INT8|ImageNet|74.63 (0.21)|
+|ShuffleNet|INT8|ImageNet|47.25 (0.18)|
+|GoogleNet|INT8|ImageNet|66.36 (0.3)|
+|SqueezeNet V1.0|INT8|ImageNet|54.3 (0.54)|
+|MobileNet V2|INT8|ImageNet|71.38 (0.49)|
+|DenseNet-121|INT8|ImageNet|60.16 (0.8)|
+|VGG-16|INT8|ImageNet|72.02 (0.0)|
 
 #### Object Detection
 
-| ONNX Model |    Compression algorithm    | Dataset  | Accuracy (Drop) % |
-|:----------:|:---------------------------:|:--------:|:-----------------:|
-|ssd|            Post-Traininig Quantization           |    MSCOCO  |    20.17(0.17)    |
-|tinyyolov2|            Post-Traininig Quantization            |  VOC2012   |      29.03(0.23)      |
+|ONNX Model|Compression algorithm| Dataset |mAP (drop) %|
+| :---: | :---: | :---: | :---: |
+|SSD1200|INT8|COCO2017|20.17 (0.17)|
+|Tiny-YOLOv2|INT8|VOC12|29.03 (0.23)|
 
 ## Citing
 
