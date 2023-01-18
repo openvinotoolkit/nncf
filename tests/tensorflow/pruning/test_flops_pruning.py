@@ -1,5 +1,5 @@
 """
- Copyright (c) 2022 Intel Corporation
+ Copyright (c) 2023 Intel Corporation
  Licensed under the Apache License, Version 2.0 (the "License");
  you may not use this file except in compliance with the License.
  You may obtain a copy of the License at
@@ -11,6 +11,7 @@
  limitations under the License.
 """
 
+import numpy as np
 import pytest
 import tensorflow as tf
 
@@ -113,3 +114,27 @@ def test_flops_calulation_for_spec_layers(model_fn, all_weights, pruning_flops_t
             mask = layer.ops_weights[key]['mask']
             val = int(tf.reduce_sum(mask))
             assert val == ref_size[node.layer_name]
+
+
+def test_maximal_compression_rate():
+    """
+    Test that we can set flops pruning target less or equal to maximal_compression_rate
+    Test that we can't set flops pruning target higher than maximal_compression_rate
+    """
+    config = get_basic_pruning_config(8)
+    config['compression']['algorithm'] = 'filter_pruning'
+    config['compression']['params']['pruning_flops_target'] = 0.2
+    config['compression']['ignored_scopes'] = [
+        'conv2^0'
+    ]
+
+    model = get_test_model_shared_convs([1, 8, 8, 1])
+    model.compile()
+    _, compression_ctrl = create_compressed_model_and_algo_for_test(model, config)
+
+    maximal_compression_rate = compression_ctrl.maximal_compression_rate
+    for comp_rate in np.linspace(0, maximal_compression_rate, 10):
+        compression_ctrl.compression_rate = comp_rate
+    for comp_rate in np.linspace(maximal_compression_rate + 1e-5, 1, 10):
+        with pytest.raises(RuntimeError):
+            compression_ctrl.compression_rate = comp_rate

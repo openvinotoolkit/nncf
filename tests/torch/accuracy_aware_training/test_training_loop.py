@@ -1,5 +1,5 @@
 """
- Copyright (c) 2022 Intel Corporation
+ Copyright (c) 2023 Intel Corporation
  Licensed under the Apache License, Version 2.0 (the "License");
  you may not use this file except in compliance with the License.
  You may obtain a copy of the License at
@@ -293,6 +293,83 @@ def test_adaptive_compression_training_loop_failing(
     assert getattr(statistics, accuracy_degradation_key.replace('maximal_', '')) > \
            config['accuracy_aware_training']['params'][accuracy_degradation_key]
     assert statistics.compression_rate < pruning_target
+
+
+@pytest.mark.parametrize(
+    ('pruning_init', 'pruning_target',),
+    ((0.05, 0.1), (0.1, 0.2), (0.4, 0.6))
+)
+def test_adaptive_compression_training_loop_too_high_pruning_flops(
+        pruning_init,
+        pruning_target,
+        learning_rate=1e-3,
+        maximal_relative_accuracy_degradation=1,
+        initial_training_phase_epochs=1,
+        patience_epochs=1,
+        maximal_total_epochs=10,
+        pruning_steps=1,
+):
+    """
+    Test that ACTL reaches the maximal possible compression rate and doesn't break
+    """
+    def mock_validate_fn(model, epoch=0):
+        return 0.85
+
+    input_sample_size = [1, 1, LeNet.INPUT_SIZE[-1], LeNet.INPUT_SIZE[-1]]
+    config = get_pruning_baseline_config(input_sample_size=input_sample_size)
+
+    params = {
+        "initial_training_phase_epochs": initial_training_phase_epochs,
+        "patience_epochs": patience_epochs,
+        "maximal_total_epochs": maximal_total_epochs,
+        "maximal_relative_accuracy_degradation": maximal_relative_accuracy_degradation
+    }
+    accuracy_aware_config = {
+        "accuracy_aware_training": {
+            "mode": "adaptive_compression_level",
+            "params": params
+        }
+    }
+    pruning_config = {
+        "compression": {
+            "algorithm": "filter_pruning",
+            "pruning_init": pruning_init,
+            "params": {
+                "pruning_flops_target": pruning_target,
+                "pruning_steps": pruning_steps
+            },
+            "ignored_scopes": ["LeNet/NNCFLinear[fc1]/linear_0", "LeNet/NNCFLinear[fc2]/linear_0"]
+        }
+    }
+
+    config.update(accuracy_aware_config)
+    config.update(pruning_config)
+
+    train_loader = create_ones_mock_dataloader(config, num_samples=10)
+    model = LeNet()
+
+    config = register_default_init_args(config,
+                                        train_loader=train_loader,
+                                        model_eval_fn=mock_validate_fn)
+
+    model, compression_ctrl = create_compressed_model_and_algo_for_test(model, config)
+
+    def train_fn(compression_ctrl, model, optimizer,
+                 train_loader=train_loader, **kwargs):
+        pass
+
+    def configure_optimizers_fn():
+        optimizer = SGD(model.parameters(), lr=learning_rate)
+        return optimizer, None
+
+    acc_aware_training_loop = AdaptiveCompressionTrainingLoop(config, compression_ctrl)
+
+    model = acc_aware_training_loop.run(model,
+                                        train_epoch_fn=train_fn,
+                                        validate_fn=mock_validate_fn,
+                                        configure_optimizers_fn=configure_optimizers_fn)
+
+    assert acc_aware_training_loop.runner.compression_rate_target == compression_ctrl.maximal_compression_rate
 
 
 @pytest.mark.parametrize(

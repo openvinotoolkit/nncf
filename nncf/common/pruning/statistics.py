@@ -1,5 +1,5 @@
 """
- Copyright (c) 2022 Intel Corporation
+ Copyright (c) 2023 Intel Corporation
  Licensed under the Apache License, Version 2.0 (the "License");
  you may not use this file except in compliance with the License.
  You may obtain a copy of the License at
@@ -161,8 +161,8 @@ class PrunedModelTheoreticalBorderline(Statistics):
     def __init__(self,
                  num_pruned_layers: int,
                  num_prunable_layers: int,
-                 max_prunable_flops: float,
-                 max_prunable_params: float,
+                 min_possible_flops: float,
+                 min_possible_params: float,
                  total_flops: int,
                  total_params: int):
         """
@@ -170,8 +170,8 @@ class PrunedModelTheoreticalBorderline(Statistics):
 
         :param num_pruned_layers: Number of layers which was actually pruned.
         :param num_prunable_layers: Number of layers which have prunable type.
-        :param max_prunable_flops: Number of flops for pruned model with pruning level = 1.
-        :param max_prunable_params: Number of weights for pruned model with pruning level = 1.
+        :param min_possible_flops: Number of flops for pruned model with pruning level = 1.
+        :param min_possible_params: Number of weights for pruned model with pruning level = 1.
         :param total_flops: The total amount of FLOPS in the model.
         :param total_params: The total amount of weights in the model.
         """
@@ -179,8 +179,8 @@ class PrunedModelTheoreticalBorderline(Statistics):
         self._mega = 1e6
         self.pruned_layers_num = num_pruned_layers
         self.prunable_layers_num = num_prunable_layers
-        self.minimum_possible_flops = max_prunable_flops
-        self.minimum_possible_params = max_prunable_params
+        self.min_possible_flops = min_possible_flops
+        self.min_possible_params = min_possible_params
         self.total_flops = total_flops
         self.total_params = total_params
 
@@ -190,9 +190,9 @@ class PrunedModelTheoreticalBorderline(Statistics):
             rows=[
                 ['Pruned layers count / prunable layers count', f'{self.pruned_layers_num} /'
                                                                 f' {self.prunable_layers_num}'],
-                ['GFLOPs minimum possible after pruning / total', f'{self.minimum_possible_flops / self._giga:.3f} /'
+                ['GFLOPs minimum possible after pruning / total', f'{self.min_possible_flops / self._giga:.3f} /'
                                                                   f' {self.total_flops / self._giga:.3f}'],
-                ['MParams minimum possible after pruning / total', f'{self.minimum_possible_params / self._mega:.3f} /'
+                ['MParams minimum possible after pruning / total', f'{self.min_possible_params / self._mega:.3f} /'
                                                                    f' {self.total_params / self._mega:.3f}'],
             ]
         )

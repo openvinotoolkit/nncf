@@ -1,5 +1,5 @@
 """
- Copyright (c) 2022 Intel Corporation
+ Copyright (c) 2023 Intel Corporation
  Licensed under the Apache License, Version 2.0 (the "License");
  you may not use this file except in compliance with the License.
  You may obtain a copy of the License at
@@ -10,23 +10,21 @@
  See the License for the specific language governing permissions and
  limitations under the License.
 """
-
+import pytest
 from collections import Counter
 
-import pytest
-from nncf.experimental.onnx.graph.nncf_graph_builder import GraphConverter
-
+from nncf.onnx.graph.nncf_graph_builder import GraphConverter
 from nncf.common.graph.operator_metatypes import InputNoopMetatype
 from nncf.common.graph.operator_metatypes import OutputNoopMetatype
-from nncf.experimental.onnx.graph.metatypes.onnx_metatypes import ONNXConvolutionMetatype
-from nncf.experimental.onnx.graph.metatypes.onnx_metatypes import ONNXDepthwiseConvolutionMetatype
-from nncf.experimental.onnx.graph.metatypes.onnx_metatypes import ONNXBatchNormMetatype
-from nncf.experimental.onnx.graph.metatypes.onnx_metatypes import ONNXReluMetatype
-from nncf.experimental.onnx.graph.metatypes.onnx_metatypes import ONNXGlobalAveragePoolMetatype
-from nncf.experimental.onnx.graph.metatypes.onnx_metatypes import ONNXConcatLayerMetatype
-from nncf.experimental.onnx.graph.metatypes.onnx_metatypes import ONNXAddLayerMetatype
-from nncf.experimental.onnx.graph.metatypes.onnx_metatypes import ONNXConstantOfShapeMetatype
-from nncf.experimental.onnx.graph.metatypes.onnx_metatypes import ONNXShapeMetatype
+from nncf.onnx.graph.metatypes.onnx_metatypes import ONNXConvolutionMetatype
+from nncf.onnx.graph.metatypes.onnx_metatypes import ONNXDepthwiseConvolutionMetatype
+from nncf.onnx.graph.metatypes.onnx_metatypes import ONNXBatchNormMetatype
+from nncf.onnx.graph.metatypes.onnx_metatypes import ONNXReluMetatype
+from nncf.onnx.graph.metatypes.onnx_metatypes import ONNXGlobalAveragePoolMetatype
+from nncf.onnx.graph.metatypes.onnx_metatypes import ONNXConcatLayerMetatype
+from nncf.onnx.graph.metatypes.onnx_metatypes import ONNXAddLayerMetatype
+from nncf.onnx.graph.metatypes.onnx_metatypes import ONNXConstantOfShapeMetatype
+from nncf.onnx.graph.metatypes.onnx_metatypes import ONNXShapeMetatype
 
 from tests.onnx.models import LinearModel
 from tests.onnx.models import MultiInputOutputModel

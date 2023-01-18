@@ -1,5 +1,5 @@
 """
- Copyright (c) 2022 Intel Corporation
+ Copyright (c) 2023 Intel Corporation
  Licensed under the Apache License, Version 2.0 (the "License");
  you may not use this file except in compliance with the License.
  You may obtain a copy of the License at
@@ -14,6 +14,7 @@
 import os
 from typing import List, Optional
 import nncf
+from nncf.parameters import IgnoredScope
 
 import numpy as np
 import onnx
@@ -38,7 +39,7 @@ def process_fn(data_item, model_evaluator: ModelEvaluator, has_batch_dim: Option
 
     if len(filled_inputs) == 1:
         return {k: np.squeeze(v, axis=0)
-                if has_batch_dim else v for k, v in filled_inputs[0].items()}
+        if has_batch_dim else v for k, v in filled_inputs[0].items()}
 
     raise Exception("len(filled_inputs) should be one.")
 
@@ -48,27 +49,26 @@ def run(onnx_model_path: str, output_model_path: str, dataset: nncf.Dataset,
         ignored_scopes: Optional[List[str]] = None,
         disallowed_op_types: Optional[List[str]] = None,
         convert_model_opset: bool = True):
-
     print("Post-Training Quantization Parameters:")
     onnx.checker.check_model(onnx_model_path)
     original_model = onnx.load(onnx_model_path)
     print(f"The model is loaded from {onnx_model_path}")
+    print(f"  number of samples: {num_init_samples}")
+    # TODO(kshpv):: add support of types ignored_scopes
     if ignored_scopes is None:
         ignored_scopes = []
     if disallowed_op_types is not None:
         ignored_scopes += find_ignored_scopes(disallowed_op_types, original_model)
-    print(f"  number of samples: {num_init_samples}")
     print(f"  ignored_scopes: {ignored_scopes}")
 
     # Convert the model opset if needed.
     model = convert_opset_version(original_model) if convert_model_opset else original_model
     # Execute the pipeline.
-    quantized_model = nncf.quantize(model, dataset)
+    quantized_model = nncf.quantize(model, dataset, subset_size=num_init_samples,
+                                    ignored_scope=IgnoredScope(names=ignored_scopes))
     # Save the quantized model.
     onnx.save(quantized_model, output_model_path)
     print("The quantized model is saved to: {}".format(output_model_path))
-
-    onnx.checker.check_model(output_model_path)
 
 
 if __name__ == '__main__':

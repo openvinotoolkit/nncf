@@ -1,5 +1,5 @@
 """
- Copyright (c) 2022 Intel Corporation
+ Copyright (c) 2023 Intel Corporation
  Licensed under the Apache License, Version 2.0 (the "License");
  you may not use this file except in compliance with the License.
  You may obtain a copy of the License at
@@ -27,10 +27,10 @@ from tests.onnx.opset_converter import convert_opset_version
 from nncf.quantization.algorithms.min_max.algorithm import MinMaxQuantization
 from nncf.quantization.algorithms.post_training.algorithm import PostTrainingQuantization
 from nncf.quantization.algorithms.post_training.algorithm import PostTrainingQuantizationParameters
-from nncf.experimental.onnx.graph.nncf_graph_builder import GraphConverter
-from nncf.experimental.onnx.graph.onnx_graph import ONNXGraph
+from nncf.onnx.graph.nncf_graph_builder import GraphConverter
+from nncf.onnx.graph.onnx_graph import ONNXGraph
 from nncf.common.quantization.structs import QuantizationMode
-from nncf.experimental.onnx.quantization.quantizer_parameters import ONNXQuantizerLayerParameters
+from nncf.onnx.quantization.quantizer_parameters import ONNXQuantizerLayerParameters
 
 REFERENCE_GRAPHS_TEST_ROOT = 'data/reference_graphs/quantization'
 

@@ -1,5 +1,5 @@
 """
- Copyright (c) 2022 Intel Corporation
+ Copyright (c) 2023 Intel Corporation
  Licensed under the Apache License, Version 2.0 (the "License");
  you may not use this file except in compliance with the License.
  You may obtain a copy of the License at
@@ -177,6 +177,10 @@ class BaseCompressionAlgorithmController(CompressionAlgorithmController):
             self.BUILDER_STATE: self._builder_state,
             self.CONTROLLER_STATE: self.get_state()
         }
+
+    @property
+    def maximal_compression_rate(self) -> float:
+        return 1.0
 
 
 class BaseCompressionAlgorithmBuilder(CompressionAlgorithmBuilder):

@@ -1,5 +1,5 @@
 """
- Copyright (c) 2022 Intel Corporation
+ Copyright (c) 2023 Intel Corporation
  Licensed under the Apache License, Version 2.0 (the "License");
  you may not use this file except in compliance with the License.
  You may obtain a copy of the License at
@@ -19,6 +19,7 @@ from openvino.runtime import opset9 as opset
 class OVReferenceModel:
     def __init__(self, ov_model: ov.Model):
         self.ov_model = ov_model
+        self.ref_graph_name = f'{self.__class__.__name__}.dot'
 
 
 class LinearModel(OVReferenceModel):
@@ -59,6 +60,56 @@ class ConvModel(OVReferenceModel):
 
         cat = opset.concat([relu, transpose], axis=0)
         result = opset.result(cat, name="Result")
+        model = ov.Model([result], [input_1, input_2])
+
+        super().__init__(model)
+
+
+class QuantizedModel(OVReferenceModel):
+    def __init__(self):
+        input_1 = opset.parameter([1, 3, 14, 28], name="Input_1")
+        conv_1_fq_input = opset.fake_quantize(input_1, -1, 1, -1, 1, 256, name="Conv_1/fq_input_0")
+
+        mean = np.random.rand(1, 3, 1, 1).astype(np.float32)
+        scale = np.random.rand(1, 3, 1, 1).astype(np.float32) + 1e-4
+        kernel = np.random.rand(3, 3, 1, 1).astype(np.float32) / scale
+        strides = [1, 1]
+        pads = [0, 0]
+        dilations = [1, 1]
+        conv_1_fq_weights = opset.fake_quantize(kernel, -1, 1, -1, 1, 256, name="Conv_1/fq_weights_0")
+        conv_1 = opset.convolution(conv_1_fq_input, conv_1_fq_weights, strides, pads, pads, dilations, name="Conv_1")
+        relu_1 = opset.relu(conv_1, name="Relu_1")
+
+        input_2 = opset.parameter([1, 3, 28, 14], name="Input_2")
+        multiply = opset.multiply(input_2, 1 / scale, name="Mul")
+        add_1 = opset.add(multiply, (-1) * mean, name="Add_1")
+        transpose_fq_input = opset.fake_quantize(add_1, -1, 1, -1, 1, 256, name="Transpose/fq_input_0")
+        transpose = opset.transpose(transpose_fq_input, [0, 1, 3, 2], name="Transpose")
+
+        cat_fq_input = opset.fake_quantize(relu_1, -1, 1, -1, 1, 256, name="Concat_1/fq_input_0")
+        cat_1 = opset.concat([cat_fq_input, transpose], axis=1, name="Concat_1")
+
+        kernel = np.random.rand(12, 6, 1, 1).astype(np.float32)
+        conv_2_fq_weights = opset.fake_quantize(kernel, -1, 1, -1, 1, 256, name="Conv_2/fq_weights_0")
+        conv_2 = opset.convolution(cat_1, conv_2_fq_weights, strides, pads, pads, dilations, name="Conv_2")
+        relu_2 = opset.relu(conv_2, name="Relu_2")
+
+        kernel = np.random.rand(6, 12, 1, 1).astype(np.float32)
+        conv_3_fq_input = opset.fake_quantize(relu_2, -1, 1, -1, 1, 256, name="Conv_3/fq_input_0")
+        conv_3_fq_weights = opset.fake_quantize(kernel, -1, 1, -1, 1, 256, name="Conv_3/fq_weights_0")
+        conv_3 = opset.convolution(conv_3_fq_input, conv_3_fq_weights, strides, pads, pads, dilations, name="Conv_3")
+
+        mean = np.random.rand(1, 6, 1, 1).astype(np.float32)
+        add_2_const = opset.constant((-1) * mean)
+        add_2_fq_weights = opset.fake_quantize(add_2_const, -1, 1, -1, 1, 256, name="Add_2/fq_weights_0")
+        add_2 = opset.add(cat_1, add_2_fq_weights, name="Add_2")
+
+        cat_2 = opset.concat([conv_3, add_2], axis=1, name="Concat_2")
+
+        reshape = opset.reshape(cat_2, (-1, 2352), True)
+        matmul_constant = np.random.rand(100, 2352).astype(np.float32)
+        matmul = opset.matmul(reshape, matmul_constant, False, True)
+        result = opset.result(matmul, name="Result")
         model = ov.Model([result], [input_1, input_2])
 
         super().__init__(model)

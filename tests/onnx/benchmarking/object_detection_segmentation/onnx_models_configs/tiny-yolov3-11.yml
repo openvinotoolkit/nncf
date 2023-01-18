@@ -10,7 +10,19 @@ models:
         inputs:
           - name: image_shape
             type: ORIG_IMAGE_INFO
-        execution_providers: ["OpenVINOExecutionProvider"]
+        execution_providers: ['OpenVINOExecutionProvider']
+        tags: ['OpenVINOExecutionProvider']
+      - framework: onnx_runtime
+        adapter:
+          type: yolo_v3_onnx
+          boxes_out: yolonms_layer_1
+          scores_out: yolonms_layer_1:1
+          indices_out: yolonms_layer_1:2
+        inputs:
+          - name: image_shape
+            type: ORIG_IMAGE_INFO
+        execution_providers: ['CPUExecutionProvider']
+        tags: ['CPUExecutionProvider']
 
     datasets:
       - name: ms_coco_detection_80_class_without_background

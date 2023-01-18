@@ -1,5 +1,5 @@
 """
- Copyright (c) 2022 Intel Corporation
+ Copyright (c) 2023 Intel Corporation
  Licensed under the Apache License, Version 2.0 (the "License");
  you may not use this file except in compliance with the License.
  You may obtain a copy of the License at
@@ -123,32 +123,48 @@ INSTALL_REQUIRES = ["ninja>=1.10.0.post2, <1.11",
                     "openvino-telemetry"]
 
 
+
+TF_EXTRAS = [
+        "tensorflow~=2.8.4",
+    ]
+
+TORCH_EXTRAS = [
+        "torch>=1.8.2,<1.14",
+    ]
+
+ONNX_EXTRAS = [
+        "onnx==1.12.0",
+        "onnxruntime==1.13.1"
+    ]
+
+OPENVINO_EXTRAS = [
+        "openvino-dev"
+    ]
+
+
 EXTRAS_REQUIRE = {
     "dev": ["matplotlib>=3.3.4, <3.6"],
     "tests": ["pytest"],
     "docs": [],
-    "tf": [
-        "tensorflow~=2.8.4",
-    ],
-    "torch": [
-        "torch>=1.8.2,<1.14",
-    ],
-    "onnx": [
-        "onnx==1.12.0",
-        "onnxruntime-openvino==1.13.1"
-    ],
-    "openvino": [
-        "openvino-dev"
+
+    "tf": TF_EXTRAS,
+    "tensorflow": TF_EXTRAS,
+    "tensorflow2": TF_EXTRAS,
+
+    "torch": TORCH_EXTRAS,
+    "pytorch": TORCH_EXTRAS,
+
+    "onnx": ONNX_EXTRAS,
+
+    "openvino": OPENVINO_EXTRAS,
+
+    "all": [
+        TF_EXTRAS,
+        TORCH_EXTRAS,
+        ONNX_EXTRAS,
+        OPENVINO_EXTRAS,
     ]
 }
-
-EXTRAS_REQUIRE["all"] = [
-    EXTRAS_REQUIRE["tf"],
-    EXTRAS_REQUIRE["torch"],
-    EXTRAS_REQUIRE["onnx"],
-    EXTRAS_REQUIRE["openvino"],
-]
-
 
 with open("{}/README.md".format(here), "r", encoding="utf8") as fh:
     long_description = fh.read()

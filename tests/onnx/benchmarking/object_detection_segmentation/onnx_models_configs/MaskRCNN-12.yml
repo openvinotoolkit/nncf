@@ -3,6 +3,20 @@ models:
     launchers:
       - framework: onnx_runtime
         execution_providers: [ 'OpenVINOExecutionProvider' ]
+        tags: ['OpenVINOExecutionProvider']
+        adapter:
+          type: mask_rcnn
+          boxes_out: '6568'
+          classes_out: '6570'
+          scores_out: '6572'
+          raw_masks_out: '6887'
+        inputs:
+          - name: image
+            type: INPUT
+            layout: "CHW"
+      - framework: onnx_runtime
+        execution_providers: [ 'CPUExecutionProvider' ]
+        tags: ['CPUExecutionProvider']
         adapter:
           type: mask_rcnn
           boxes_out: '6568'
@@ -38,6 +52,20 @@ models:
     launchers:
       - framework: onnx_runtime
         execution_providers: [ 'OpenVINOExecutionProvider' ]
+        tags: ['OpenVINOExecutionProvider']
+        adapter:
+          type: mask_rcnn
+          boxes_out: '6568'
+          classes_out: '6570'
+          scores_out: '6572'
+          raw_masks_out: '6887'
+        inputs:
+          - name: image
+            type: INPUT
+            layout: "CHW"
+      - framework: onnx_runtime
+        execution_providers: [ 'CPUExecutionProvider' ]
+        tags: ['CPUExecutionProvider']
         adapter:
           type: mask_rcnn
           boxes_out: '6568'

@@ -3,6 +3,30 @@ models:
     launchers:
       - framework: onnx_runtime
         execution_providers: ['OpenVINOExecutionProvider']
+        tags: ['OpenVINOExecutionProvider']
+        adapter:
+          type: yolo_v3
+          anchors: 12,16,19,36,40,28,36,75,76,55,72,146,142,110,192,243,459,401
+          num: 3
+          coords: 4
+          classes: 80
+          threshold: 0.001
+          anchor_masks: [[0, 1, 2], [3, 4, 5], [6, 7, 8]]
+          raw_output: True
+          output_format: HWB
+          do_reshape: True
+          cells: [52, 26, 13]
+          outputs:
+            - Identity:0
+            - Identity_1:0
+            - Identity_2:0
+        inputs:
+        - name: input_1:0
+          type: INPUT
+          layout: "NHWC"
+      - framework: onnx_runtime
+        execution_providers: ['CPUExecutionProvider']
+        tags: ['CPUExecutionProvider']
         adapter:
           type: yolo_v3
           anchors: 12,16,19,36,40,28,36,75,76,55,72,146,142,110,192,243,459,401

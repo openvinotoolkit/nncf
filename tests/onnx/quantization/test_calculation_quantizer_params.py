@@ -1,5 +1,5 @@
 """
- Copyright (c) 2022 Intel Corporation
+ Copyright (c) 2023 Intel Corporation
  Licensed under the Apache License, Version 2.0 (the "License");
  you may not use this file except in compliance with the License.
  You may obtain a copy of the License at
@@ -16,12 +16,12 @@ import numpy as np
 from dataclasses import dataclass
 from nncf.common.quantization.structs import QuantizationMode
 from nncf.common.quantization.structs import QuantizerConfig
-from nncf.experimental.onnx.quantization.quantizer_parameters import calculate_scale_zero_point
-from nncf.experimental.onnx.quantization.quantizer_parameters import calculate_activation_quantizer_parameters
-from nncf.experimental.onnx.quantization.quantizer_parameters import calculate_weight_quantizer_parameters
-from nncf.experimental.onnx.quantization.quantizer_parameters import get_level_low_level_high
-from nncf.experimental.onnx.quantization.quantizer_parameters import ONNXQuantizerLayerParameters
-from nncf.experimental.onnx.statistics.statistics import ONNXMinMaxTensorStatistic
+from nncf.onnx.quantization.quantizer_parameters import calculate_scale_zero_point
+from nncf.onnx.quantization.quantizer_parameters import calculate_activation_quantizer_parameters
+from nncf.onnx.quantization.quantizer_parameters import calculate_weight_quantizer_parameters
+from nncf.onnx.quantization.quantizer_parameters import get_level_low_level_high
+from nncf.onnx.quantization.quantizer_parameters import ONNXQuantizerLayerParameters
+from nncf.onnx.statistics.statistics import ONNXMinMaxTensorStatistic
 
 
 @pytest.mark.parametrize(('max_val, min_val, level_low, level_high, mode, ref_scale, ref_zero_point'),

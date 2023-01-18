@@ -1,5 +1,5 @@
 """
- Copyright (c) 2022 Intel Corporation
+ Copyright (c) 2023 Intel Corporation
  Licensed under the Apache License, Version 2.0 (the "License");
  you may not use this file except in compliance with the License.
  You may obtain a copy of the License at
@@ -54,6 +54,22 @@ class OVInsertionCommand(TransformationCommand):
 
 
 class OVOutputInsertionCommand(OVInsertionCommand):
+    def union(self, other: 'TransformationCommand') -> 'TransformationCommand':
+        # Have a look at nncf/torch/graph/transformations/commands/PTInsertionCommand
+        raise NotImplementedError()
+
+
+class OVFQNodeRemovingCommand(TransformationCommand):
+    """
+    Removes FakeQuantize nodes from the model.
+    """
+
+    def __init__(self, target_point: OVTargetPoint):
+        """
+        :param target_point: The TargetPoint instance for the layer that contains information for removing.
+        """
+        super().__init__(TransformationType.REMOVE, target_point)
+
     def union(self, other: 'TransformationCommand') -> 'TransformationCommand':
         # Have a look at nncf/torch/graph/transformations/commands/PTInsertionCommand
         raise NotImplementedError()

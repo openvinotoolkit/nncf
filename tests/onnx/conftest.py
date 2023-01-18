@@ -1,5 +1,5 @@
 """
-Copyright (c) 2022 Intel Corporation
+Copyright (c) 2023 Intel Corporation
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -24,6 +24,11 @@ def pytest_addoption(parser):
         help="[e2e-test-onnx-model-zoo] Directory path to OMZ validation datasets"
     )
     parser.addoption(
+        "--model-names", type=str, default=None,
+        help="[e2e-test-onnx-model-zoo] String containing model names to test. "
+             "Please, provide the model names using ' ' as a separator."
+    )
+    parser.addoption(
         "--data-dir", type=str, default=None,
         help="[e2e-test-onnx-model-zoo] Directory path to OMZ validation datasets"
     )
@@ -34,12 +39,12 @@ def pytest_addoption(parser):
     parser.addoption(
         "--ckpt-dir", type=str, default=None,
         help="[e2e-test-onnx-model-zoo] (Optional) Directory path to save quantized models. "
-        "If it is not provided, tempfile.TemporaryDirectory will be used."
+             "If it is not provided, tempfile.TemporaryDirectory will be used."
     )
     parser.addoption(
         "--anno-dir", type=str, default=None,
         help="[e2e-test-onnx-model-zoo] (Optional) Directory path for dataset annotations "
-        "If it is not provided, tempfile.TemporaryDirectory will be used."
+             "If it is not provided, tempfile.TemporaryDirectory will be used."
     )
     parser.addoption(
         "--ptq-size", type=int, default=100,
@@ -48,7 +53,17 @@ def pytest_addoption(parser):
     parser.addoption(
         "--eval-size", type=int, default=None,
         help="[e2e-test-onnx-model-zoo] Dataset subsample size for evaluation. "
-        "If not provided, full dataset is used for evaluation."
+             "If not provided, full dataset is used for evaluation."
+    )
+    parser.addoption(
+        "--enable-ov-ep", action="store_true", default=False,
+        help="[e2e-test-onnx-model-zoo] If the parameter is set then the accuracy validation of the quantized models "
+             "will be enabled for OpenVINOExecutionProvider."
+    )
+    parser.addoption(
+        "--disable-cpu-ep", action="store_true", default=False,
+        help="[e2e-test-onnx-model-zoo] If the parameter is set then the accuracy validation of the quantized models "
+             "will be disabled for CPUExecutionProvider."
     )
     parser.addoption(
         "--regen-dot", action="store_true", default=False, help="If specified, the "

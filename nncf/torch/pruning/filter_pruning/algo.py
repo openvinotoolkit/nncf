@@ -1,5 +1,5 @@
 """
- Copyright (c) 2022 Intel Corporation
+ Copyright (c) 2023 Intel Corporation
  Licensed under the Apache License, Version 2.0 (the "License");
  you may not use this file except in compliance with the License.
  You may obtain a copy of the License at
@@ -154,7 +154,7 @@ class FilterPruningController(BasePruningAlgoController):
         self.current_filters_num = self.full_filters_num
         self._pruned_layers_num = len(self.pruned_module_groups_info.get_all_nodes())
         self._prunable_layers_num = len(self._model.get_graph().get_nodes_by_types(self._prunable_types))
-        self._max_prunable_flops, self._max_prunable_params =\
+        self._min_possible_flops, self._min_possible_params =\
             self._calculate_flops_and_weights_in_uniformly_pruned_model(1.)
 
         self.weights_normalizer = tensor_l2_normalizer  # for all weights in common case
@@ -226,8 +226,8 @@ class FilterPruningController(BasePruningAlgoController):
     def statistics(self, quickly_collected_only: bool = False) -> NNCFStatistics:
         if not quickly_collected_only and is_debug():
             stats = PrunedModelTheoreticalBorderline(
-                self._pruned_layers_num, self._prunable_layers_num, self._max_prunable_flops,
-                self._max_prunable_params, self.full_flops, self.full_params_num)
+                self._pruned_layers_num, self._prunable_layers_num, self._min_possible_flops,
+                self._min_possible_params, self.full_flops, self.full_params_num)
 
             nncf_logger.debug(stats.to_str())
 
@@ -321,7 +321,7 @@ class FilterPruningController(BasePruningAlgoController):
             else:
                 left = middle
         flops, params_num = self._calculate_flops_and_weights_in_uniformly_pruned_model(right)
-        if flops < target_flops:
+        if flops <= target_flops:
             self.current_flops = flops
             self.current_params_num = params_num
             return right
@@ -612,6 +612,12 @@ class FilterPruningController(BasePruningAlgoController):
     def disable_scheduler(self):
         self._scheduler = StubCompressionScheduler()
         self._scheduler.current_pruning_level = 0.0
+
+    @property
+    def maximal_compression_rate(self) -> float:
+        if self.prune_flops:
+            return 1 - self._min_possible_flops / max(self.full_flops, 1)
+        return 1.0
 
     def _calculate_num_of_sparse_elements_by_node(self) -> Dict[str, int]:
         num_of_sparse_elements_by_node = {}

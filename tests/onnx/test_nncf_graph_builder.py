@@ -1,5 +1,5 @@
 """
- Copyright (c) 2022 Intel Corporation
+ Copyright (c) 2023 Intel Corporation
  Licensed under the Apache License, Version 2.0 (the "License");
  you may not use this file except in compliance with the License.
  You may obtain a copy of the License at
@@ -18,7 +18,7 @@ import torch
 from torchvision import models
 import onnx
 
-from nncf.experimental.onnx.graph.nncf_graph_builder import GraphConverter
+from nncf.onnx.graph.nncf_graph_builder import GraphConverter
 from tests.common.graph.nx_graph import compare_nx_graph_with_reference
 from tests.onnx.conftest import ONNX_TEST_ROOT
 
