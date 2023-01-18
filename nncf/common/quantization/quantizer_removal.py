@@ -29,8 +29,8 @@ def find_quantizer_nodes_to_cut(
     """
     Finds quantizer nodes that should be removed in addition to `quantizer_node` to get
     the correct model for inference. Returns the list of quantizer nodes (`quantizer_node` + nodes
-    which were found) and the list of nodes that will be reverted to original precision when
-    quantizer nodes will have been removed.
+    which were found) and the list of nodes that will be reverted to original precision if
+    quantizer nodes are removed.
 
     :param graph: The NNCFGraph.
     :param quantizer_node: The quantizer node that we want to remove.
@@ -39,9 +39,9 @@ def find_quantizer_nodes_to_cut(
     :param quantizable_metatypes: List of quantizable metatypes.
     :param quantize_agnostic_metatypes: List of quantize agnostic metatypes.
     :return: A tuple (quantizer_nodes, ops) where
-        - `quantizer_nodes` is the list of quantize nodes
+        - `quantizer_nodes` is the list of quantizer nodes
         - `ops` is the list of nodes that will be reverted to original precision
-        when `quantizer_nodes` will have been removed.
+        if `quantizer_nodes` are removed.
     """
     def _parse_node_relatives(node: NNCFNode, is_parents: bool):
         if node.metatype in quantizable_metatypes:
