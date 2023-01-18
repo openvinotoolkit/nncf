@@ -23,6 +23,10 @@ import itertools as it
 import networkx as nx
 import networkx.algorithms.isomorphism as ism
 
+from nncf.parameters import TargetDevice
+from nncf.common.utils.registry import Registry
+from nncf.common.utils.backend import BackendType
+from nncf.common.utils.logger import logger as nncf_logger
 from nncf.common.utils.dot_file_rw import write_dot_graph
 
 
@@ -245,6 +249,129 @@ class GraphPattern:
 
     def dump_graph(self, path: str) -> None:
         write_dot_graph(self._graph, path)
+
+
+class PatternManager:
+
+    DEVICE_AGNOSTIC_PATTERNS = [
+        'swish_activation',
+        'se_block',
+        'se_block_swish_activation',
+        'operation_with_bias',
+        'scale_shift_add',
+        'add_scale_shift',
+        'mvn_scale_shift',
+        'normalize_l2',
+        'input_scale_shift',
+        'input_transpose_scale_shift',
+        'input_convert_transpose_scale_shift',
+        'input_add',
+        'input_subtract',
+        'input_transpose_add',
+        'input_convert_transpose_add',
+        'input_multiply',
+        'input_transpose_multiply',
+        'input_convert_transpose_multiply',
+        'input_reverse_input_channels_scale_shift',
+        'input_convert_transpose_reverse_input_channels_scale_shift',
+        'input_reverse_input_channels_add',
+        'input_transpose_reverse_input_channels_add',
+        'input_convert_transpose_reverse_input_channels_add',
+        'softmax',
+        'softmax_div',
+        'softmax_reshape_matmul',
+        'softmax_reshape_transpose_matmul',
+        'stable_diffusion',
+        'softmax_reshape_transpose_gather_matmul',
+        'hswish_activation_without_denominator',
+        'hswish_activation',
+        'hswish_activation_v2',
+        'fc_bn_hswish_activation',
+        'batch_index',
+        # 'experimental_detectron_detection_output_add',
+        # 'experimental_detectron_roi_feature_extractor_add',
+        'equal_logicalnot',
+        'linear_operations',
+        'batch_normalization_operations',
+        'atomic_activations_operations',
+        'arithmetic_operations',
+    ]
+
+    CPU_PATTERNS = [
+        'hswish_activation_clamp_multiply',
+        'linear_scale_shift',
+        'linear_biased_scale_shift',
+        'linear_activation_scale_shift',
+        'linear_biased_activation_scale_shift',
+        'linear_elementwise',
+        'linear_biased_elementwise',
+        'linear_activation_elementwise',
+        'linear_biased_activation_elementwise',
+    ]
+
+    GPU_PATTERNS = [
+        'hswish_activation_clamp_multiply',
+        'linear_scale_shift',
+        'linear_biased_scale_shift',
+        'linear_activation_scale_shift',
+        'linear_biased_activation_scale_shift',
+        'linear_elementwise',
+        'linear_biased_elementwise',
+        'linear_activation_elementwise',
+        'linear_biased_activation_elementwise',
+    ]
+
+    VPU_PATTERNS = [
+        'hswish_activation_clamp_multiply',
+    ]
+
+    PATTERNS_SET = DEVICE_AGNOSTIC_PATTERNS + CPU_PATTERNS
+
+    def __init__(self) -> None:
+        self._patterns_by_backend = {}
+        self._patterns_by_device = {
+            TargetDevice.ANY: self.CPU_PATTERNS,
+            TargetDevice.CPU: self.CPU_PATTERNS,
+            TargetDevice.GPU: self.GPU_PATTERNS,
+            TargetDevice.VPU: self.VPU_PATTERNS,
+        }
+        try:
+            from nncf.experimental.openvino_native.hardware.fused_patterns import OPENVINO_HW_FUSED_PATTERNS
+            self._patterns_by_backend[BackendType.OPENVINO] = OPENVINO_HW_FUSED_PATTERNS
+        except ImportError:
+            nncf_logger.warning(
+                f'Unable to import hardware fused patterns for {BackendType.OPENVINO.name} backend')
+
+        for backend, backend_registry in self._patterns_by_backend.items():
+            remaining_patterns_list = backend_registry.remaining_patterns_list()
+            if remaining_patterns_list:
+                raise ValueError(
+                    f'The list of the missed patterns in the {backend.name}: {remaining_patterns_list}')
+
+    def get_pattern(self, backend: BackendType, device: TargetDevice) -> HWFusedPatterns:
+        hw_fused_patterns = HWFusedPatterns()
+        backend_patterns = self._patterns_by_backend[backend]
+
+        for pattern_name in self.DEVICE_AGNOSTIC_PATTERNS + self._patterns_by_device[device]:
+            pattern = backend_patterns.get(pattern_name)()
+            hw_fused_patterns.register(pattern, pattern_name)
+
+        return hw_fused_patterns
+
+
+class HWPatternsRegistry(Registry):
+
+    def __init__(self, name, add_name_as_attr=False):
+        self._remaining_patterns_list = PatternManager.PATTERNS_SET
+        super().__init__(name, add_name_as_attr)
+
+    def register(self, name=None):
+        if name in self._remaining_patterns_list:
+            self._remaining_patterns_list.remove(name)
+        return super().register(name)
+
+    def remaining_patterns_list(self):
+        return self._remaining_patterns_list
 
 
 def merge_two_types_of_operations(first_op: Dict, second_op: Dict, label: str) -> Dict:

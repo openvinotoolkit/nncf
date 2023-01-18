@@ -1,5 +1,5 @@
 """
- Copyright (c) 2023 Intel Corporation
+ Copyright (c) 2022 Intel Corporation
  Licensed under the Apache License, Version 2.0 (the "License");
  you may not use this file except in compliance with the License.
  You may obtain a copy of the License at
@@ -21,7 +21,8 @@ from nncf.common.graph.transformations.commands import TargetType
 from nncf.common.graph.transformations.commands import TargetPoint
 from nncf.common.graph.transformations.layout import TransformationLayout
 from nncf.parameters import TargetDevice
-from nncf.common.hardware.config import get_hw_config_type
+from nncf.common.hardware.config import HWConfigType
+from nncf.common.hardware.config import HW_CONFIG_TYPE_TARGET_DEVICE_MAP
 from nncf.common.insertion_point_graph import InsertionPointGraph
 from nncf.common.quantization.quantizer_propagation.solver import QuantizerPropagationSolver
 from nncf.common.quantization.quantizer_setup import SingleConfigQuantizationPoint
@@ -37,6 +38,8 @@ from nncf.common.tensor_statistics.collectors import TensorStatisticCollectorBas
 from nncf.common.utils.backend import BackendType
 from nncf.common.utils.backend import get_backend
 from nncf.common.logging import nncf_logger
+from nncf.common.graph.patterns import PatternManager
+from nncf.common.graph.patterns import GraphPattern
 
 from nncf.quantization.algorithms.algorithm import Algorithm
 from nncf.quantization.algorithms.algorithm import AlgorithmParameters
@@ -99,6 +102,7 @@ class MinMaxQuantizationParameters(AlgorithmParameters):
         """
         self.number_samples = number_samples
         self.target_device = target_device
+        self.hw_config_type = HWConfigType(HW_CONFIG_TYPE_TARGET_DEVICE_MAP[target_device.value])
         self.range_type = range_type
         self.quantize_outputs = quantize_outputs
         self.ignored_scopes = [] if ignored_scopes is None else ignored_scopes
@@ -157,6 +161,7 @@ class MinMaxQuantization(Algorithm):
         self._quantization_target_points_to_qconfig = \
             collections.OrderedDict()  # type: OrderedDict[TargetPoint, QuantizerConfig]
         self._parameters = parameters
+        self._pattern_manager = PatternManager()
 
     @property
     def available_backends(self) -> Dict[str, BackendType]:
@@ -230,14 +235,19 @@ class MinMaxQuantization(Algorithm):
             qconfig = constraints.apply_constraints_to(qconfig)
         return qconfig
 
-    def _get_quantizer_setup(self, nncf_graph: NNCFGraph) -> SingleConfigQuantizerSetup:
+    def _get_patterns_setup(self, model: TModel) -> GraphPattern:
+        backend = get_backend(model)
+        device = self._parameters.target_device
+        return self._pattern_manager.get_pattern(backend, device).get_full_pattern_graph()
+
+    def _get_quantizer_setup(self, nncf_graph: NNCFGraph, pattern: GraphPattern) -> SingleConfigQuantizerSetup:
         """
         Returns SingleConfigQuantizerSetup instance based on the input NNCFGraph.
 
         :param nncf_graph: NNCFGraph instance.
         :return: SingleConfigQuantizerSetup for the current NNCFGraph entity.
         """
-        hw_config_type = get_hw_config_type(self._parameters.target_device.value)
+        hw_config_type = self._parameters.hw_config_type
         hw_config_path = self._backend_entity.hw_config.get_path_to_hw_config(hw_config_type)
         hw_config = self._backend_entity.hw_config.from_json(hw_config_path)
         weight_nodes = nncf_graph.get_nodes_by_metatypes(self._backend_entity.layers_with_weights_metatypes)
@@ -252,7 +262,6 @@ class MinMaxQuantization(Algorithm):
                                                                         hw_config=hw_config)
         quantizable_layer_nodes = [QuantizableWeightedLayerNode(node, qconf_list) for node, qconf_list
                                    in weighted_node_and_qconf_lists.items()]
-        pattern = self._backend_entity.hw_fused_patterns.get_full_pattern_graph()
         ip_graph = InsertionPointGraph(nncf_graph)
         ip_graph = ip_graph.get_ip_graph_with_merged_hw_optimized_operations(pattern, quantizable_layer_nodes)
         post_processing_types = self._backend_entity.post_processing_metatypes
@@ -339,7 +348,8 @@ class MinMaxQuantization(Algorithm):
 
         if self._quantization_target_points_to_qconfig:
             return self._quantization_target_points_to_qconfig
-        quantizer_setup = self._get_quantizer_setup(nncf_graph)
+        pattern = self._get_patterns_setup(model)
+        quantizer_setup = self._get_quantizer_setup(nncf_graph, pattern)
         for quantization_point in quantizer_setup.quantization_points.values():
             if quantization_point.is_weight_quantization_point():
                 self._add_weight_quantization_target_point(model, quantization_point, nncf_graph)
