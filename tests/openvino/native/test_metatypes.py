@@ -14,8 +14,6 @@
 import pytest
 from collections import Counter
 
-from nncf.common.graph.operator_metatypes import InputNoopMetatype
-from nncf.common.graph.operator_metatypes import OutputNoopMetatype
 from nncf.experimental.openvino_native.graph.metatypes.openvino_metatypes import OVAddMetatype
 from nncf.experimental.openvino_native.graph.metatypes.openvino_metatypes import OVConcatMetatype
 from nncf.experimental.openvino_native.graph.metatypes.openvino_metatypes import OVConstantMetatype
@@ -26,6 +24,8 @@ from nncf.experimental.openvino_native.graph.metatypes.openvino_metatypes import
 from nncf.experimental.openvino_native.graph.metatypes.openvino_metatypes import OVReshapeMetatype
 from nncf.experimental.openvino_native.graph.metatypes.openvino_metatypes import OVSubtractMetatype
 from nncf.experimental.openvino_native.graph.metatypes.openvino_metatypes import OVTransposeMetatype
+from nncf.experimental.openvino_native.graph.metatypes.openvino_metatypes import OVParameterMetatype
+from nncf.experimental.openvino_native.graph.metatypes.openvino_metatypes import OVResultMetatype
 from nncf.experimental.openvino_native.graph.nncf_graph_builder import GraphConverter
 
 from tests.openvino.native.models import ConvModel
@@ -34,13 +34,13 @@ from tests.openvino.native.models import WeightsModel
 
 TEST_MODELS = [LinearModel, ConvModel]
 REF_METATYPES_COUNTERS = [
-    [InputNoopMetatype, OVConstantMetatype, OVReshapeMetatype,
+    [OVParameterMetatype, OVConstantMetatype, OVReshapeMetatype,
      OVConstantMetatype, OVAddMetatype, OVConstantMetatype, OVMatMulMetatype,
-     OutputNoopMetatype, OutputNoopMetatype],
-    [InputNoopMetatype, InputNoopMetatype, OVConstantMetatype, OVMultiplyMetatype,
+     OVResultMetatype, OVResultMetatype],
+    [OVParameterMetatype, OVParameterMetatype, OVConstantMetatype, OVMultiplyMetatype,
      OVConstantMetatype, OVAddMetatype, OVConstantMetatype, OVSubtractMetatype,
      OVConstantMetatype, OVConvolutionMetatype, OVReluMetatype, OVConcatMetatype,
-     OVTransposeMetatype, OVConstantMetatype, OutputNoopMetatype]]
+     OVTransposeMetatype, OVConstantMetatype, OVResultMetatype]]
 
 
 @pytest.mark.parametrize(("model_creator_func, ref_metatypes"),

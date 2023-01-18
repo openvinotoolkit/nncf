@@ -15,7 +15,6 @@ from copy import deepcopy
 from typing import Dict, List, TypeVar, Optional, OrderedDict, Tuple
 import collections
 from nncf import Dataset
-from nncf.common.graph.definitions import NNCFGraphNodeType
 from nncf.common.graph.graph import NNCFGraph
 from nncf.common.graph.transformations.commands import TargetType
 from nncf.common.graph.transformations.commands import TargetPoint
@@ -306,21 +305,13 @@ class MinMaxQuantization(Algorithm):
         :param quantization_point: SingleConfigQuantizationPoint for the needed layer.
         """
         node_name = quantization_point.insertion_point.target_node_name
-        # If quantization of Model Input node
-        if NNCFGraphNodeType.INPUT_NODE in node_name:
-            # There is only onde node - input_node
-            output_port_id = 0
-            activation_quantization_target_point = self._backend_entity.target_point(TargetType.POST_LAYER_OPERATION,
-                                                                                     node_name,
-                                                                                     output_port_id)
-        # If not Model Input node
         # If Quantization of node's input
-        elif quantization_point.insertion_point.input_port_id is not None:
+        if quantization_point.insertion_point.input_port_id is not None:
             input_port_id = quantization_point.insertion_point.input_port_id
             activation_quantization_target_point = self._backend_entity.target_point(TargetType.PRE_LAYER_OPERATION,
                                                                                      node_name,
                                                                                      input_port_id)
-        # If quantization of node's output
+        # If quantization of node's output or Model Input node
         else:
             output_port_id = 0
             activation_quantization_target_point = self._backend_entity.target_point(TargetType.POST_LAYER_OPERATION,

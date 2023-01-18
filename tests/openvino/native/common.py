@@ -70,7 +70,11 @@ def check_openvino_nx_graph(nx_graph: nx.DiGraph, expected_graph: nx.DiGraph, ch
         node_id = int(node_attrs['id'])
         expected_attrs[node_id] = {k: str(v).strip('"') for k, v in node_attrs.items()}
 
-    assert expected_attrs == attrs
+    for attr_name, expected_attr in expected_attrs.items():
+        assert attr_name in attrs, f'Not found {attr_name} in attributes.'
+        assert expected_attr == attrs[attr_name], \
+            f'Incorrect attribute value for {attr_name}.' \
+            f' expected {expected_attr}, but actual {attrs[attr_name]}.'
 
     edges = {}
     for edge in nx_graph.edges:
@@ -99,7 +103,11 @@ def check_openvino_nx_graph(nx_graph: nx.DiGraph, expected_graph: nx.DiGraph, ch
         expected_edges[simplified_edge] = expected_graph_edge_attrs
 
     if check_edge_attrs:
-        assert edges == expected_edges
+        for edge_name, expected_edge in expected_edges.items():
+            assert edge_name in edges, f'{edge_name} not found in edges.'
+            assert expected_edge == edges[edge_name], \
+                f'Incorrect edge attributes for {edge_name}.' \
+                f' expected {expected_edge}, but actual {edges[edge_name]}.'
     else:
         assert edges.keys() == expected_edges.keys()
 

@@ -42,17 +42,9 @@ def _get_openvino_hw_fused_patterns() -> HWFusedPatterns:
     arithmetic_ops.add_node(**ARITHMETIC_OPERATIONS)
     hw_fused_patterns.register(arithmetic_ops, ARITHMETIC_OPERATIONS['label'], match=False)
 
-    batch_norm_activations_permutation = batch_norm + activations | \
-                                         activations + batch_norm | \
-                                         batch_norm | activations
-
-    hw_fused_patterns.register(linear_ops + batch_norm_activations_permutation,
-                               'LINEAR + BN_ACT_PERM', match=True)
     hw_fused_patterns.register(linear_ops + arithmetic_ops, 'LINEAR + ARITHMETIC', match=True)
     hw_fused_patterns.register(batch_norm + activations, 'BN + ACTIVATIONS', match=True)
     hw_fused_patterns.register(activations + batch_norm, 'ACTIVATIONS + BN', match=True)
-    hw_fused_patterns.register(arithmetic_ops + batch_norm_activations_permutation,
-                               'ARITHMETIC + BN_ACT_PERM', match=True)
 
     input_preprocessing_pattern = create_input_preprocessing_pattern()
     hw_fused_patterns.register(input_preprocessing_pattern,

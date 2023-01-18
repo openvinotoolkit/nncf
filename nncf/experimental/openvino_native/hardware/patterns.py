@@ -11,7 +11,6 @@
  limitations under the License.
 """
 
-from nncf.common.graph.definitions import NNCFGraphNodeType
 from nncf.common.graph.patterns import GraphPattern
 
 from nncf.experimental.openvino_native.graph.metatypes import openvino_metatypes as ov_metatypes
@@ -20,44 +19,44 @@ from nncf.experimental.openvino_native.graph.metatypes import openvino_metatypes
 def create_input_preprocessing_pattern() -> GraphPattern:
     pattern = GraphPattern()
 
-    model_input_node_1 = pattern.add_node(**{GraphPattern.LABEL_ATTR: 'MODEL_INPUT',
-                                             GraphPattern.METATYPE_ATTR: NNCFGraphNodeType.INPUT_NODE})
+    model_input_node_1 = pattern.add_node(**{GraphPattern.LABEL_ATTR: 'INPUT',
+                                             GraphPattern.METATYPE_ATTR: ov_metatypes.OVParameterMetatype})
     add_node_1 = pattern.add_node(**{GraphPattern.LABEL_ATTR: 'ADD',
                                      GraphPattern.METATYPE_ATTR: ov_metatypes.OVAddMetatype})
     mul_node_1 = pattern.add_node(**{GraphPattern.LABEL_ATTR: 'MUL',
-                                     GraphPattern.METATYPE_ATTR: ov_metatypes.OVMulMetatype})
+                                     GraphPattern.METATYPE_ATTR: ov_metatypes.OVMultiplyMetatype})
 
     pattern.add_edge(model_input_node_1, add_node_1)
     pattern.add_edge(add_node_1, mul_node_1)
 
-    model_input_node_2 = pattern.add_node(**{GraphPattern.LABEL_ATTR: 'MODEL_INPUT',
-                                             GraphPattern.METATYPE_ATTR: NNCFGraphNodeType.INPUT_NODE})
+    model_input_node_2 = pattern.add_node(**{GraphPattern.LABEL_ATTR: 'INPUT',
+                                             GraphPattern.METATYPE_ATTR: ov_metatypes.OVParameterMetatype})
     mul_node_2 = pattern.add_node(**{GraphPattern.LABEL_ATTR: 'MUL',
-                                     GraphPattern.METATYPE_ATTR: ov_metatypes.OVMulMetatype})
+                                     GraphPattern.METATYPE_ATTR: ov_metatypes.OVMultiplyMetatype})
     add_node_2 = pattern.add_node(**{GraphPattern.LABEL_ATTR: 'ADD',
                                      GraphPattern.METATYPE_ATTR: ov_metatypes.OVAddMetatype})
 
     pattern.add_edge(model_input_node_2, mul_node_2)
     pattern.add_edge(mul_node_2, add_node_2)
 
-    model_input_node_3 = pattern.add_node(**{GraphPattern.LABEL_ATTR: 'MODEL_INPUT',
-                                             GraphPattern.METATYPE_ATTR: NNCFGraphNodeType.INPUT_NODE})
+    model_input_node_3 = pattern.add_node(**{GraphPattern.LABEL_ATTR: 'INPUT',
+                                             GraphPattern.METATYPE_ATTR: ov_metatypes.OVParameterMetatype})
     add_node_3 = pattern.add_node(**{GraphPattern.LABEL_ATTR: 'ADD',
                                      GraphPattern.METATYPE_ATTR: ov_metatypes.OVAddMetatype})
 
     pattern.add_edge(model_input_node_3, add_node_3)
 
-    model_input_node_4 = pattern.add_node(**{GraphPattern.LABEL_ATTR: 'MODEL_INPUT',
-                                             GraphPattern.METATYPE_ATTR: NNCFGraphNodeType.INPUT_NODE})
+    model_input_node_4 = pattern.add_node(**{GraphPattern.LABEL_ATTR: 'INPUT',
+                                             GraphPattern.METATYPE_ATTR: ov_metatypes.OVParameterMetatype})
     mul_node_4 = pattern.add_node(**{GraphPattern.LABEL_ATTR: 'MUL',
-                                     GraphPattern.METATYPE_ATTR: ov_metatypes.OVMulMetatype})
+                                     GraphPattern.METATYPE_ATTR: ov_metatypes.OVMultiplyMetatype})
 
     pattern.add_edge(model_input_node_4, mul_node_4)
 
-    model_input_node_5 = pattern.add_node(**{GraphPattern.LABEL_ATTR: 'MODEL_INPUT',
-                                             GraphPattern.METATYPE_ATTR: NNCFGraphNodeType.INPUT_NODE})
+    model_input_node_5 = pattern.add_node(**{GraphPattern.LABEL_ATTR: 'INPUT',
+                                             GraphPattern.METATYPE_ATTR: ov_metatypes.OVParameterMetatype})
     mul_node_5 = pattern.add_node(**{GraphPattern.LABEL_ATTR: 'SUB',
-                                     GraphPattern.METATYPE_ATTR: ov_metatypes.OVMulMetatype})
+                                     GraphPattern.METATYPE_ATTR: ov_metatypes.OVSubtractMetatype})
 
     pattern.add_edge(model_input_node_5, mul_node_5)
 
@@ -67,30 +66,30 @@ def create_input_preprocessing_pattern() -> GraphPattern:
 def create_scale_shift() -> GraphPattern:
     pattern = GraphPattern()
 
-    model_input_node_1 = pattern.add_node(**{GraphPattern.LABEL_ATTR: '*INPUT_NODE*',
-                                             GraphPattern.METATYPE_ATTR: GraphPattern.NON_PATTERN_NODE_TYPE})
+    model_input_node_1 = pattern.add_node(**{GraphPattern.LABEL_ATTR: 'INPUT',
+                                             GraphPattern.METATYPE_ATTR: ov_metatypes.OVParameterMetatype})
     mul_node_1 = pattern.add_node(**{GraphPattern.LABEL_ATTR: 'MUL',
-                                     GraphPattern.METATYPE_ATTR: ov_metatypes.OVMulMetatype})
+                                     GraphPattern.METATYPE_ATTR: ov_metatypes.OVMultiplyMetatype})
     add_node_1 = pattern.add_node(**{GraphPattern.LABEL_ATTR: 'ADD',
                                      GraphPattern.METATYPE_ATTR: ov_metatypes.OVAddMetatype})
 
     pattern.add_edge(model_input_node_1, mul_node_1)
     pattern.add_edge(mul_node_1, add_node_1)
 
-    model_input_node_2 = pattern.add_node(**{GraphPattern.LABEL_ATTR: '*INPUT_NODE*',
-                                             GraphPattern.METATYPE_ATTR: GraphPattern.NON_PATTERN_NODE_TYPE})
+    model_input_node_2 = pattern.add_node(**{GraphPattern.LABEL_ATTR: 'INPUT',
+                                             GraphPattern.METATYPE_ATTR: ov_metatypes.OVParameterMetatype})
     mul_node_2 = pattern.add_node(**{GraphPattern.LABEL_ATTR: 'MUL',
-                                     GraphPattern.METATYPE_ATTR: ov_metatypes.OVMulMetatype})
+                                     GraphPattern.METATYPE_ATTR: ov_metatypes.OVMultiplyMetatype})
     add_node_2 = pattern.add_node(**{GraphPattern.LABEL_ATTR: 'SUB',
-                                     GraphPattern.METATYPE_ATTR: ov_metatypes.OVSubMetatype})
+                                     GraphPattern.METATYPE_ATTR: ov_metatypes.OVSubtractMetatype})
 
     pattern.add_edge(model_input_node_2, mul_node_2)
     pattern.add_edge(mul_node_2, add_node_2)
 
-    model_input_node_3 = pattern.add_node(**{GraphPattern.LABEL_ATTR: 'MODEL_INPUT',
-                                             GraphPattern.METATYPE_ATTR: NNCFGraphNodeType.INPUT_NODE})
+    model_input_node_3 = pattern.add_node(**{GraphPattern.LABEL_ATTR: 'INPUT',
+                                             GraphPattern.METATYPE_ATTR: ov_metatypes.OVParameterMetatype})
     sub_node_3 = pattern.add_node(**{GraphPattern.LABEL_ATTR: 'SUB',
-                                     GraphPattern.METATYPE_ATTR: ov_metatypes.OVSubMetatype})
+                                     GraphPattern.METATYPE_ATTR: ov_metatypes.OVSubtractMetatype})
 
     pattern.add_edge(model_input_node_3, sub_node_3)
 

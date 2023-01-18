@@ -123,22 +123,7 @@ class GraphConverter:
         """
         nncf_graph = NNCFGraph()
         visited = set()
-        inference_nodes = []
-
-        for param in model.get_parameters():
-            nncf_graph.add_nncf_node(node_name=param.get_friendly_name(),
-                                     node_type=NNCFGraphNodeType.INPUT_NODE,
-                                     node_metatype=InputNoopMetatype)
-            visited.add(param.get_friendly_name())
-            for inp in sorted(param.output(0).get_target_inputs(),
-                              key=lambda inp: inp.get_node().get_friendly_name()):
-                inference_nodes.append(inp.get_node())
-
-        for result in model.get_results():
-            nncf_graph.add_nncf_node(node_name=result.get_friendly_name(),
-                                     node_type=NNCFGraphNodeType.OUTPUT_NODE,
-                                     node_metatype=OutputNoopMetatype)
-            visited.add(result.get_friendly_name())
+        inference_nodes = model.get_parameters()
 
         while inference_nodes:
             node = inference_nodes[0]

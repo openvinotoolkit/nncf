@@ -32,9 +32,9 @@ ATOMIC_ACTIVATIONS_OPERATIONS = {GraphPattern.METATYPE_ATTR: [ov_metatypes.OVRel
                                    GraphPattern.LABEL_ATTR: 'ATOMIC_ACTIVATIONS'}
 
 ARITHMETIC_OPERATIONS = {GraphPattern.METATYPE_ATTR: [ov_metatypes.OVAddMetatype,
-                                                      ov_metatypes.OVSubMetatype,
-                                                      ov_metatypes.OVMulMetatype,
-                                                      ov_metatypes.OVDivMetatype,
+                                                      ov_metatypes.OVSubtractMetatype,
+                                                      ov_metatypes.OVMultiplyMetatype,
+                                                      ov_metatypes.OVDivideMetatype,
                                                       ],
                          GraphPattern.LABEL_ATTR: 'ARITHMETIC'}
 

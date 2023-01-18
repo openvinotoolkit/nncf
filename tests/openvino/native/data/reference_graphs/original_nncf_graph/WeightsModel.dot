@@ -1,6 +1,6 @@
 strict digraph  {
-"0 Input_1" [id=0, type=nncf_model_input];
-"1 Result" [id=1, type=nncf_model_output];
+"0 Input_1" [id=0, type=Parameter];
+"1 Result" [id=1, type=Result];
 "2 Conv" [id=2, type=Convolution];
 "3 Conv_backprop" [id=3, type=ConvolutionBackpropData];
 "4 MatMul_1" [id=4, type=MatMul];
