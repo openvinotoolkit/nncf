@@ -22,3 +22,27 @@ It's pretty simple. The example does not require additional preparation. It will
 ```
 python main.py
 ```
+
+
+# ONNX Results
+
+There are some results for the models from [ONNX Model Zoo](https://github.com/onnx/models)
+
+### Classification
+
+|     ONNX Model      |Compression algorithm|Dataset|Accuracy (Drop) %|
+|:-------------------:| :---: | :---: | :---: |
+|    [ResNet-50](https://github.com/onnx/models/blob/main/vision/classification/resnet/model/resnet50-v2-7.onnx)    |INT8|ImageNet|74.63 (0.21)|
+|   [ShuffleNet](https://github.com/onnx/models/blob/main/vision/classification/shufflenet/model/shufflenet-9.onnx)    |INT8|ImageNet|47.25 (0.18)|
+|    [GoogleNet](https://github.com/onnx/models/blob/main/vision/classification/inception_and_googlenet/googlenet/model/googlenet-12.onnx)    |INT8|ImageNet|66.36 (0.3)|
+| [SqueezeNet V1.0](https://github.com/onnx/models/blob/main/vision/classification/squeezenet/model/squeezenet1.0-12.onnx) |INT8|ImageNet|54.3 (0.54)|
+|  [MobileNet V2](https://github.com/onnx/models/blob/main/vision/classification/mobilenet/model/mobilenetv2-12.onnx)   |INT8|ImageNet|71.38 (0.49)|
+|  [DenseNet-121](https://github.com/onnx/models/blob/main/vision/classification/densenet-121/model/densenet-12.onnx)   |INT8|ImageNet|60.16 (0.8)|
+|     [VGG-16](https://github.com/onnx/models/blob/main/vision/classification/vgg/model/vgg16-12.onnx)      |INT8|ImageNet|72.02 (0.0)|
+
+### Object Detection
+
+|   ONNX Model    |Compression algorithm| Dataset |mAP (drop) %|
+|:---------------:| :---: | :---: | :---: |
+|   [SSD1200](https://github.com/onnx/models/blob/main/vision/object_detection_segmentation/ssd/model/ssd-12.onnx)   |INT8|COCO2017|20.17 (0.17)|
+| [Tiny-YOLOv2](https://github.com/onnx/models/blob/main/vision/object_detection_segmentation/tiny-yolov2/model/tinyyolov2-8.onnx) |INT8|VOC12|29.03 (0.23)|
