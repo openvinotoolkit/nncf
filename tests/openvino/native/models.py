@@ -21,12 +21,6 @@ from nncf.common.utils.registry import Registry
 SYNTHETIC_MODELS = Registry('OV_SYNTHETIC_MODELS')
 
 
-class OVReferenceModel:
-    def __init__(self, ov_model: ov.Model):
-        self.ov_model = ov_model
-        self.ref_graph_name = f'{self.__class__.__name__}.dot'
-
-
 class OVReferenceModel(ABC):
     def __init__(self):
         self._rng = np.random.default_rng(seed=0)
