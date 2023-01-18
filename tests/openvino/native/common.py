@@ -136,4 +136,4 @@ class NumpyEncoder(json.JSONEncoder):
 
 def dump_to_json(local_path, data):
     with open(local_path, 'w', encoding='utf8') as file:
-        json.dump(deepcopy(data), file, cls=NumpyEncoder)
+        json.dump(deepcopy(data), file, indent=4, cls=NumpyEncoder)
