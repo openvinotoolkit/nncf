@@ -18,7 +18,7 @@ import pytest
 
 from nncf.common.graph import NNCFGraph
 from nncf.common.graph.layer_attributes import Dtype
-from nncf.common.quantization.quantizer_removing import find_fq_nodes_to_cut
+from nncf.common.quantization.quantizer_removal import find_quantizer_nodes_to_cut
 from tests.common.quantization.metatypes import METATYPES_FOR_TEST
 from tests.common.quantization.metatypes import QUANTIZER_METATYPES
 from tests.common.quantization.metatypes import CONSTANT_METATYPES
@@ -169,9 +169,9 @@ def create_test_params():
 
 
 @pytest.mark.parametrize('nncf_graph,test_case', create_test_params())
-def test_find_fq_nodes_to_cut(nncf_graph: NNCFGraph, test_case: TestCase):
+def test_find_quantizer_nodes_to_cut(nncf_graph: NNCFGraph, test_case: TestCase):
     quantizer_node = nncf_graph.get_node_by_name(test_case.node_name)
-    nodes, ops = find_fq_nodes_to_cut(
+    nodes, ops = find_quantizer_nodes_to_cut(
         nncf_graph,
         quantizer_node,
         QUANTIZER_METATYPES,

@@ -19,17 +19,18 @@ from nncf.common.graph import NNCFNode
 from nncf.common.graph.operator_metatypes import OperatorMetatype
 
 
-def find_fq_nodes_to_cut(graph: NNCFGraph,
-                         quantizer_node: NNCFNode,
-                         quantizer_metatypes: List[OperatorMetatype],
-                         const_metatypes: List[OperatorMetatype],
-                         quantizable_metatypes: List[OperatorMetatype],
-                         quantize_agnostic_metatypes: List[OperatorMetatype]) -> Tuple[List[NNCFNode], List[NNCFNode]]:
+def find_quantizer_nodes_to_cut(
+        graph: NNCFGraph,
+        quantizer_node: NNCFNode,
+        quantizer_metatypes: List[OperatorMetatype],
+        const_metatypes: List[OperatorMetatype],
+        quantizable_metatypes: List[OperatorMetatype],
+        quantize_agnostic_metatypes: List[OperatorMetatype]) -> Tuple[List[NNCFNode], List[NNCFNode]]:
     """
-    Finds quantizer nodes that addition to `quantizer_node` should be removed to get
+    Finds quantizer nodes that should be removed in addition to `quantizer_node` to get
     the correct model for inference. Returns the list of quantizer nodes (`quantizer_node` + nodes
     which were found) and the list of nodes that will be reverted to original precision when
-    quantizer nodes will be removed.
+    quantizer nodes will have been removed.
 
     :param graph: The NNCFGraph.
     :param quantizer_node: The quantizer node that we want to remove.
@@ -37,8 +38,10 @@ def find_fq_nodes_to_cut(graph: NNCFGraph,
     :param const_metatypes: List of constant metatypes.
     :param quantizable_metatypes: List of quantizable metatypes.
     :param quantize_agnostic_metatypes: List of quantize agnostic metatypes.
-    :return: A tuple (quantizer_nodes, ops) where `quantizer_nodes` is the list of quantize nodes, ops are the list of
-        nodes that will be reverted to original precision when `quantizer_nodes` will be removed.
+    :return: A tuple (quantizer_nodes, ops) where
+        - `quantizer_nodes` is the list of quantize nodes
+        - `ops` is the list of nodes that will be reverted to original precision
+        when `quantizer_nodes` will have been removed.
     """
     def _parse_node_relatives(node: NNCFNode, is_parents: bool):
         if node.metatype in quantizable_metatypes:
