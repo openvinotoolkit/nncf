@@ -12,43 +12,31 @@
 """
 
 from nncf.common.graph.graph_matching import GraphPattern
-from nncf.experimental.openvino_native.graph.metatypes.openvino_metatypes import OVConvolutionMetatype
-from nncf.experimental.openvino_native.graph.metatypes.openvino_metatypes import OVConvolutionBackpropDataMetatype
-from nncf.experimental.openvino_native.graph.metatypes.openvino_metatypes import OVMatMulMetatype
-from nncf.experimental.openvino_native.graph.metatypes.openvino_metatypes import OVBatchNormMetatype
-from nncf.experimental.openvino_native.graph.metatypes.openvino_metatypes import OVReluMetatype
-from nncf.experimental.openvino_native.graph.metatypes.openvino_metatypes import OVEluMetatype
-from nncf.experimental.openvino_native.graph.metatypes.openvino_metatypes import OVPReluMetatype
-from nncf.experimental.openvino_native.graph.metatypes.openvino_metatypes import OVSigmoidMetatype
-from nncf.experimental.openvino_native.graph.metatypes.openvino_metatypes import OVHardSigmoidMetatype
-from nncf.experimental.openvino_native.graph.metatypes.openvino_metatypes import OVAddMetatype
-from nncf.experimental.openvino_native.graph.metatypes.openvino_metatypes import OVMulMetatype
-from nncf.experimental.openvino_native.graph.metatypes.openvino_metatypes import OVDivMetatype
-from nncf.experimental.openvino_native.graph.metatypes.openvino_metatypes import OVSubMetatype
+from nncf.experimental.openvino_native.graph.metatypes import openvino_metatypes as ov_metatypes
 
-LINEAR_OPERATIONS = {GraphPattern.METATYPE_ATTR: [OVConvolutionMetatype,
-                                                  OVConvolutionBackpropDataMetatype,
-                                                  OVMatMulMetatype
+LINEAR_OPERATIONS = {GraphPattern.METATYPE_ATTR: [ov_metatypes.OVConvolutionMetatype,
+                                                  ov_metatypes.OVConvolutionBackpropDataMetatype,
+                                                  ov_metatypes.OVMatMulMetatype
                                                   ],
                      GraphPattern.LABEL_ATTR: 'LINEAR'}
 
-BATCH_NORMALIZATION_OPERATIONS = {GraphPattern.METATYPE_ATTR: [OVBatchNormMetatype],
+BATCH_NORMALIZATION_OPERATIONS = {GraphPattern.METATYPE_ATTR: [ov_metatypes.OVBatchNormMetatype],
                                   GraphPattern.LABEL_ATTR: 'BATCH_NORMALIZATION'}
 
-ATOMIC_ACTIVATIONS_OPERATIONS = {GraphPattern.METATYPE_ATTR: [OVReluMetatype,
-                                                              OVEluMetatype,
-                                                              OVPReluMetatype,
-                                                              OVSigmoidMetatype,
-                                                              OVHardSigmoidMetatype,
+ATOMIC_ACTIVATIONS_OPERATIONS = {GraphPattern.METATYPE_ATTR: [ov_metatypes.OVReluMetatype,
+                                                              ov_metatypes.OVEluMetatype,
+                                                              ov_metatypes.OVPReluMetatype,
+                                                              ov_metatypes.OVSigmoidMetatype,
+                                                              ov_metatypes.OVHardSigmoidMetatype,
                                                               ],
                                    GraphPattern.LABEL_ATTR: 'ATOMIC_ACTIVATIONS'}
 
-ARITHMETIC_OPERATIONS = {GraphPattern.METATYPE_ATTR: [OVAddMetatype,
-                                                      OVSubMetatype,
-                                                      OVMulMetatype,
-                                                      OVDivMetatype,
+ARITHMETIC_OPERATIONS = {GraphPattern.METATYPE_ATTR: [ov_metatypes.OVAddMetatype,
+                                                      ov_metatypes.OVSubMetatype,
+                                                      ov_metatypes.OVMulMetatype,
+                                                      ov_metatypes.OVDivMetatype,
                                                       ],
                          GraphPattern.LABEL_ATTR: 'ARITHMETIC'}
 
-TRANSPOSED_OPERATIONS = {GraphPattern.METATYPE_ATTR: [OVConvolutionBackpropDataMetatype],
+TRANSPOSED_OPERATIONS = {GraphPattern.METATYPE_ATTR: [ov_metatypes.OVConvolutionBackpropDataMetatype],
                          GraphPattern.LABEL_ATTR: 'CONVOLUTION_BACKPROP_DATA'}

@@ -13,75 +13,46 @@
 
 from nncf.common.graph.operator_metatypes import UnknownMetatype
 from nncf.common.quantization.quantizer_propagation.structs import QuantizationTrait
-from nncf.experimental.openvino_native.graph.metatypes.openvino_metatypes import OVAddMetatype
-from nncf.experimental.openvino_native.graph.metatypes.openvino_metatypes import OVAndMetatype
-from nncf.experimental.openvino_native.graph.metatypes.openvino_metatypes import OVAveragePoolMetatype
-from nncf.experimental.openvino_native.graph.metatypes.openvino_metatypes import OVBatchNormMetatype
-from nncf.experimental.openvino_native.graph.metatypes.openvino_metatypes import OVConcatMetatype
-from nncf.experimental.openvino_native.graph.metatypes.openvino_metatypes import OVConvolutionMetatype
-from nncf.experimental.openvino_native.graph.metatypes.openvino_metatypes import OVConvolutionBackpropDataMetatype
-from nncf.experimental.openvino_native.graph.metatypes.openvino_metatypes import OVDivMetatype
-from nncf.experimental.openvino_native.graph.metatypes.openvino_metatypes import OVEqualMetatype
-from nncf.experimental.openvino_native.graph.metatypes.openvino_metatypes import OVExpMetatype
-from nncf.experimental.openvino_native.graph.metatypes.openvino_metatypes import OVFloorModMetatype
-from nncf.experimental.openvino_native.graph.metatypes.openvino_metatypes import OVGreaterMetatype
-from nncf.experimental.openvino_native.graph.metatypes.openvino_metatypes import OVGreaterEqualMetatype
-from nncf.experimental.openvino_native.graph.metatypes.openvino_metatypes import OVInterpolateMetatype
-from nncf.experimental.openvino_native.graph.metatypes.openvino_metatypes import OVLessMetatype
-from nncf.experimental.openvino_native.graph.metatypes.openvino_metatypes import OVLessEqualMetatype
-from nncf.experimental.openvino_native.graph.metatypes.openvino_metatypes import OVLogMetatype
-from nncf.experimental.openvino_native.graph.metatypes.openvino_metatypes import OVMVNMetatype
-from nncf.experimental.openvino_native.graph.metatypes.openvino_metatypes import OVMatMulMetatype
-from nncf.experimental.openvino_native.graph.metatypes.openvino_metatypes import OVMaximumMetatype
-from nncf.experimental.openvino_native.graph.metatypes.openvino_metatypes import OVMinimumMetatype
-from nncf.experimental.openvino_native.graph.metatypes.openvino_metatypes import OVMulMetatype
-from nncf.experimental.openvino_native.graph.metatypes.openvino_metatypes import OVNormalizeL2Metatype
-from nncf.experimental.openvino_native.graph.metatypes.openvino_metatypes import OVNotMetatype
-from nncf.experimental.openvino_native.graph.metatypes.openvino_metatypes import OVNotEqualMetatype
-from nncf.experimental.openvino_native.graph.metatypes.openvino_metatypes import OVOrMetatype
-from nncf.experimental.openvino_native.graph.metatypes.openvino_metatypes import OVPowerMetatype
-from nncf.experimental.openvino_native.graph.metatypes.openvino_metatypes import OVReduceMeanMetatype
-from nncf.experimental.openvino_native.graph.metatypes.openvino_metatypes import OVSigmoidMetatype
-from nncf.experimental.openvino_native.graph.metatypes.openvino_metatypes import OVSoftmaxMetatype
-from nncf.experimental.openvino_native.graph.metatypes.openvino_metatypes import OVSubMetatype
-from nncf.experimental.openvino_native.graph.metatypes.openvino_metatypes import OVXorMetatype
+from nncf.experimental.openvino_native.graph.metatypes import openvino_metatypes as ov_metatypes
 
 
 DEFAULT_OV_QUANT_TRAIT_TO_OP_DICT = {
     QuantizationTrait.INPUTS_QUANTIZABLE: [
-        OVConvolutionMetatype,
-        OVConvolutionBackpropDataMetatype,
-        OVMatMulMetatype,
-        OVBatchNormMetatype,
-        OVAddMetatype,
-        OVSubMetatype,
-        OVMulMetatype,
-        OVDivMetatype,
-        OVMaximumMetatype,
-        OVMinimumMetatype,
-        OVAveragePoolMetatype,
-        OVReduceMeanMetatype,
-        OVMVNMetatype,
-        OVNormalizeL2Metatype,
-        OVInterpolateMetatype,
-        OVPowerMetatype,
-        OVFloorModMetatype,
-        OVLessMetatype,
-        OVLessEqualMetatype,
-        OVGreaterMetatype,
-        OVGreaterEqualMetatype,
-        OVEqualMetatype,
-        OVNotEqualMetatype,
-        OVNotMetatype,
-        OVAndMetatype,
-        OVOrMetatype,
-        OVXorMetatype,
+        ov_metatypes.OVConvolutionMetatype,
+        ov_metatypes.OVConvolutionBackpropDataMetatype,
+        ov_metatypes.OVMatMulMetatype,
+        ov_metatypes.OVBatchNormMetatype,
+        ov_metatypes.OVAddMetatype,
+        ov_metatypes.OVSubMetatype,
+        ov_metatypes.OVMulMetatype,
+        ov_metatypes.OVDivMetatype,
+        ov_metatypes.OVMaximumMetatype,
+        ov_metatypes.OVMinimumMetatype,
+        ov_metatypes.OVAveragePoolMetatype,
+        ov_metatypes.OVReduceMeanMetatype,
+        ov_metatypes.OVMVNMetatype,
+        ov_metatypes.OVNormalizeL2Metatype,
+        ov_metatypes.OVInterpolateMetatype,
+        ov_metatypes.OVPowerMetatype,
+        ov_metatypes.OVFloorModMetatype,
+        ov_metatypes.OVLessMetatype,
+        ov_metatypes.OVLessEqualMetatype,
+        ov_metatypes.OVGreaterMetatype,
+        ov_metatypes.OVGreaterEqualMetatype,
+        ov_metatypes.OVEqualMetatype,
+        ov_metatypes.OVNotEqualMetatype,
+        ov_metatypes.OVNotMetatype,
+        ov_metatypes.OVAndMetatype,
+        ov_metatypes.OVOrMetatype,
+        ov_metatypes.OVXorMetatype,
     ],
-    QuantizationTrait.NON_QUANTIZABLE: [OVSigmoidMetatype,
-                                        OVSoftmaxMetatype,
-                                        OVExpMetatype,
-                                        OVLogMetatype,
-                                        UnknownMetatype],
-    QuantizationTrait.CONCAT: [OVConcatMetatype],
+    QuantizationTrait.NON_QUANTIZABLE: [
+        ov_metatypes.OVSigmoidMetatype,
+        ov_metatypes.OVSoftmaxMetatype,
+        ov_metatypes.OVExpMetatype,
+        ov_metatypes.OVLogMetatype,
+        UnknownMetatype
+    ],
+    QuantizationTrait.CONCAT: [ov_metatypes.OVConcatMetatype],
     QuantizationTrait.OUTPUT_QUANTIZATION_AS_WEIGHTS: []
 }
