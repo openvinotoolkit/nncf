@@ -162,9 +162,7 @@ class MultiElasticityHandler(ElasticityHandler):
 
         :param config: elasticity configuration
         """
-        active_handlers = {
-            dim: self._handlers[dim] for dim in self._handlers if self._is_handler_enabled_map[dim]
-        }
+        active_handlers = self._get_active_handlers()
         for handler_id, handler in self._handlers.items():
             if handler_id in config:
                 sub_config = config[handler_id]
@@ -214,12 +212,10 @@ class MultiElasticityHandler(ElasticityHandler):
 
         :return: search space
         """
-        active_handlers = {
-            dim: self._handlers[dim] for dim in self._handlers if self._is_handler_enabled_map[dim]
-        }
+        active_handlers = self._get_active_handlers()
         space = {}
         for handler_id, handler in active_handlers.items():
-            space[handler_id.value] = handler.get_search_space()
+            space[handler_id] = handler.get_search_space()
         return space
 
     def enable_all(self) -> None:
@@ -283,6 +279,9 @@ class MultiElasticityHandler(ElasticityHandler):
             result = self._handlers[dim]
         return result
 
+    def _get_active_handlers(self) -> Dict[ElasticityDim, SingleElasticityHandler]:
+        return {dim: self._handlers[dim] for dim in self._handlers if self._is_handler_enabled_map[dim]}
+
     def _collect_handler_data_by_method_name(self, method_name: str) -> OrderedDictType[ElasticityDim, Any]:
         result = OrderedDict()
         for elasticity_dim, handler in self._handlers.items():
@@ -297,9 +296,7 @@ class MultiElasticityHandler(ElasticityHandler):
         return inspect.stack()[1].function
 
     def get_design_vars_info(self) -> float:
-        active_handlers = {
-            dim: self._handlers[dim] for dim in self._handlers if self._is_handler_enabled_map[dim]
-        }
+        active_handlers = self._get_active_handlers()
         num_vars = 0
         vars_upper = []
         for handler_id, handler in active_handlers.items():
@@ -313,9 +310,7 @@ class MultiElasticityHandler(ElasticityHandler):
         return num_vars, vars_upper
 
     def get_config_from_pymoo(self, x : List) -> SubnetConfig:
-        active_handlers = {
-            dim: self._handlers[dim] for dim in self._handlers if self._is_handler_enabled_map[dim]
-        }
+        active_handlers = self._get_active_handlers()
         index_pos = 0
         sample = SubnetConfig()
         for handler_id, _ in active_handlers.items():

@@ -16,6 +16,7 @@ from typing import Dict
 from typing import List
 from typing import Tuple
 from typing import Any
+from typing import Optional
 
 from nncf.common.graph import NNCFGraph
 from nncf.common.graph import NNCFNode
@@ -31,6 +32,7 @@ from nncf.common.pruning.utils import get_rounded_pruned_element_number
 from nncf.common.pruning.utils import get_next_nodes_of_types
 from nncf.common.pruning.utils import get_output_channels
 from nncf.common.pruning.utils import get_input_masks
+from nncf.common.tensor import NNCFTensor
 
 
 class ShapePruningProcessor:
@@ -42,7 +44,8 @@ class ShapePruningProcessor:
 
     def __init__(self,
                  prunable_types: List[str],
-                 pruning_operations_metatype: List[str]):
+                 pruning_operations_metatype: List[str],
+                 get_input_masks_func: Callable[[NNCFNode, NNCFGraph], List[Optional[NNCFTensor]]] = get_input_masks):
         """
         Constructor.
 
@@ -51,6 +54,7 @@ class ShapePruningProcessor:
         """
         self._prunable_types = prunable_types
         self._pruning_operations_metatype = pruning_operations_metatype
+        self.get_input_masks_func = get_input_masks_func
 
     def calculate_in_out_channels_by_masks(
         self,
@@ -162,7 +166,7 @@ class ShapePruningProcessor:
     def _get_next_node_sparse_multiplier(self, graph: NNCFGraph, next_node: NNCFNode,
                                          cluster: Clusterization[PrunedLayerInfoBase]) -> int:
         cluster_nodes_idxs = {node.nncf_node_id for node in cluster.elements}
-        for input_mask in get_input_masks(next_node, graph):
+        for input_mask in self.get_input_masks_func(next_node, graph):
             if not input_mask:
                 continue
             for mask_producer in input_mask.mask_producers:

@@ -89,7 +89,7 @@ class TransformersVirtualEnvInstaller:
                        cwd=self.TRANSFORMERS_REPO_PATH)
         subprocess.run("cp {} .".format(self.PATH_TO_PATCH), check=True, shell=True,
                        cwd=self.TRANSFORMERS_REPO_PATH)
-        subprocess.run("git apply 0001-Modifications-for-NNCF-usage.patch",
+        subprocess.run("git apply {}".format(os.path.basename(self.PATH_TO_PATCH)),
                        check=True, shell=True, cwd=self.TRANSFORMERS_REPO_PATH)
         pip_runner.run_pip("install .", cwd=self.TRANSFORMERS_REPO_PATH)
         pip_runner.run_pip("install -e \".[testing]\"", cwd=self.TRANSFORMERS_REPO_PATH)
@@ -100,6 +100,7 @@ class TransformersVirtualEnvInstaller:
         # WA for deleted CONLL2003 in datasets==1.11.0 (https://github.com/huggingface/datasets/issues/3582)
         pip_runner.run_pip("install -U datasets", cwd=self.TRANSFORMERS_REPO_PATH)
         pip_runner.run_pip("install -e .", cwd=PROJECT_ROOT)
+        return pip_runner
 
 
 # pylint:disable=redefined-outer-name
