@@ -63,7 +63,7 @@ To export a model to OpenVINO IR and run it using Intel Deep Learning Deployment
 <a name="results"></a>
 ### Results
 
-|Model|Compression algorithm|Dataset|mAP (_drop_) %|NNCF config file|PyTorch checkpoint|
+|Model|Compression algorithm|Dataset|mAP (_drop_) %|NNCF config file|Checkpoint|
 | :---: | :---: | :---: | :---: | :---: | :---: |
 |SSD300-MobileNet|None|VOC12+07 train, VOC07 eval|62.23|[ssd300_mobilenet_voc.json](configs/ssd300_mobilenet_voc.json)|[Link](https://storage.openvinotoolkit.org/repositories/nncf/models/develop/ssd300_mobilenet_voc.pth)|
 |SSD300-MobileNet|INT8 + Sparsity 70% (Magnitude)|VOC12+07 train, VOC07 eval|62.23 (-0.72)|[ssd300_mobilenet_voc_magnitude_int8.json](configs/ssd300_mobilenet_voc_magnitude_int8.json)|[Link](https://storage.openvinotoolkit.org/repositories/nncf/models/develop/ssd300_mobilenet_voc_magnitude_sparsity_int8.pth)|
@@ -76,7 +76,7 @@ To export a model to OpenVINO IR and run it using Intel Deep Learning Deployment
 
 <a name="filter_pruning"></a>
 #### Results for filter pruning
-|Model|Compression algorithm|Dataset|mAP (_drop_) %|NNCF config file|PyTorch checkpoint|
+|Model|Compression algorithm|Dataset|mAP (_drop_) %|NNCF config file|Checkpoint|
 | :---: | :---: | :---: | :---: | :---: | :---: |
 |SSD300-VGG-BN|None|VOC12+07 train, VOC07 eval|78.28|[ssd300_vgg_voc.json](configs/ssd300_vgg_voc.json)|[Link](https://storage.openvinotoolkit.org/repositories/nncf/models/develop/ssd300_vgg_voc.pth)|
 |SSD300-VGG-BN|Filter pruning, 40%, geometric median criterion|VOC12+07 train, VOC07 eval|78.28 (-0.07)|[ssd300_vgg_voc_pruning_geometric_median.json](configs/ssd300_vgg_voc_pruning_geometric_median.json)|[Link](https://storage.openvinotoolkit.org/repositories/nncf/models/develop/ssd300_vgg_voc_pruning_geometric_median.pth)|

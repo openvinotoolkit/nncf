@@ -144,7 +144,7 @@ To export a model to the OpenVINO IR and run it using the Intel® Deep Learning 
 ## Results
 <a name="results"></a>
 
-|Model|Compression algorithm|Dataset|mAP (_drop_) %|NNCF config file|PyTorch checkpoint|
+|Model|Compression algorithm|Dataset|mAP (_drop_) %|NNCF config file|Checkpoint|
 | :---: | :---: | :---: | :---: | :---: | :---: |
 |Mask-R-CNN|None|COCO 2017|37.33|[mask_rcnn_coco.json](configs/mask_rcnn_coco.json)|-|
 |Mask-R-CNN|INT8 (per-tensor, symm. W, half-range asymm. A)|COCO 2017|37.33 (0.14)|[mask_rcnn_coco_int8.json](configs/quantization/mask_rcnn_coco_int8.json)|[Link](https://storage.openvinotoolkit.org/repositories/nncf/models/develop/mask_rcnn_coco_int8)|

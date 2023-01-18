@@ -160,7 +160,7 @@ To export a model to the OpenVINO IR and run it using the Intel® Deep Learning 
 ## Results
 <a name="results"></a>
 
-|Model|Compression algorithm|Dataset|mAP (_drop_) %|NNCF config file|PyTorch checkpoint|
+|Model|Compression algorithm|Dataset|mAP (_drop_) %|NNCF config file|Checkpoint|
 | :---: | :---: | :---: | :---: | :---: | :---: |
 |RetinaNet|INT8 (per-tensor, symm. W, half-range asymm. A)|COCO 2017|33.43 (0.30)|[retinanet_coco_int8.json](configs/quantization/retinanet_coco_int8.json)|[Link](https://storage.openvinotoolkit.org/repositories/nncf/models/develop/retinanet_coco_int8)|
 |RetinaNet|Magnitude sparsity (50%)|COCO 2017|33.43 (0.33)|[retinanet_coco_magnitude_sparsity.json](configs/sparsity/retinanet_coco_magnitude_sparsity.json)|[Link](https://storage.openvinotoolkit.org/repositories/nncf/models/develop/retinanet_sparsity_50)|
@@ -171,7 +171,7 @@ To export a model to the OpenVINO IR and run it using the Intel® Deep Learning 
 #### Results for filter pruning
 <a name="filter_pruning"></a>
 
-|Model|Compression algorithm|Dataset|mAP (_drop_) %|NNCF config file|PyTorch checkpoint|
+|Model|Compression algorithm|Dataset|mAP (_drop_) %|NNCF config file|Checkpoint|
 | :---: | :---: | :---: | :---: | :---: | :---: |
 |RetinaNet|None|COCO 2017|33.43|[retinanet_coco.json](configs/retinanet_coco.json)|-|
 |RetinaNet|Filter pruning, 40%|COCO 2017|33.43 (0.71)|[retinanet_coco_pruning.json](configs/pruning/retinanet_coco_pruning.json)|[Link](https://storage.openvinotoolkit.org/repositories/nncf/models/develop/retinanet_pruning_40)|

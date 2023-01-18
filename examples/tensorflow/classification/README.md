@@ -127,7 +127,7 @@ To export a model to the OpenVINO IR and run it using the Intel® Deep Learning 
 ### Results
 <a name="results"></a>
 
-|Model|Compression algorithm|Dataset|Accuracy (_drop_) %|NNCF config file|PyTorch checkpoint|
+|Model|Compression algorithm|Dataset|Accuracy (_drop_) %|NNCF config file|Checkpoint|
 | :---: | :---: | :---: | :---: | :---: | :---: |
 |Inception V3|None|ImageNet|77.91|[inception_v3_imagenet.json](configs/classification/inception_v3_imagenet.json)|-|
 |Inception V3|INT8 (per-tensor, symm. W, asymm. half-range A)|ImageNet|77.91 (-0.47)|[inception_v3_imagenet_int8.json](configs/quantization/inception_v3_imagenet_int8.json)|[Link](https://storage.openvinotoolkit.org/repositories/nncf/models/develop/inception_v3_imagenet_int8)|
@@ -151,7 +151,7 @@ To export a model to the OpenVINO IR and run it using the Intel® Deep Learning 
 #### Results for filter pruning
 <a name="filter_pruning"></a>
 
-|Model|Compression algorithm|Dataset|Accuracy (_drop_) %|NNCF config file|PyTorch checkpoint|
+|Model|Compression algorithm|Dataset|Accuracy (_drop_) %|NNCF config file|Checkpoint|
 | :---: | :---: | :---: | :---: | :---: | :---: |
 |ResNet-50|None|ImageNet|75.05|[resnet50_imagenet.json](configs/classification/resnet50_imagenet.json)|-|
 |ResNet-50|Filter pruning, 40%, geometric median criterion|ImageNet|75.05 (0.08)|[resnet50_imagenet_pruning_geometric_median.json](configs/pruning/resnet50_imagenet_pruning_geometric_median.json)|[Link](https://storage.openvinotoolkit.org/repositories/nncf/models/develop/resnet50_imagenet_pruning_geometric_median)|

@@ -181,7 +181,7 @@ def get_header_row(table_format: str, sample_type: str) -> List[str]:
 
     if table_format == 'per_sample':
         header.append("NNCF config file")
-        header.append("PyTorch checkpoint")
+        header.append("Checkpoint")
     return header
 
 

@@ -82,7 +82,7 @@ To export a model to the OpenVINO IR and run it using the Intel® Deep Learning 
 <a name="results"></a>
 ### Results for quantization
 
-|Model|Compression algorithm|Dataset|Accuracy (_drop_) %|NNCF config file|PyTorch checkpoint|
+|Model|Compression algorithm|Dataset|Accuracy (_drop_) %|NNCF config file|Checkpoint|
 | :---: | :---: | :---: | :---: | :---: | :---: |
 |ResNet-50|None|ImageNet|76.15|[resnet50_imagenet.json](configs/quantization/resnet50_imagenet.json)|-|
 |ResNet-50|INT8|ImageNet|76.15 (-0.31)|[resnet50_imagenet_int8.json](configs/quantization/resnet50_imagenet_int8.json)|[Link](https://storage.openvinotoolkit.org/repositories/nncf/models/develop/resnet50_imagenet_int8.pth)|
@@ -116,7 +116,7 @@ As an example of NNCF convolution binarization capabilities, you may use the con
 <a name="binarization"></a>
 ### Results for binarization
 
-|Model|Compression algorithm|Dataset|Accuracy (_drop_) %|NNCF config file|PyTorch checkpoint|
+|Model|Compression algorithm|Dataset|Accuracy (_drop_) %|NNCF config file|Checkpoint|
 | :---: | :---: | :---: | :---: | :---: | :---: |
 |ResNet-18|None|ImageNet|69.76|[resnet18_imagenet.json](configs/binarization/resnet18_imagenet.json)|-|
 |ResNet-18|XNOR (weights), scale/threshold (activations)|ImageNet|69.76 (8.09)|[resnet18_imagenet_binarization_xnor.json](configs/binarization/resnet18_imagenet_binarization_xnor.json)|[Link](https://storage.openvinotoolkit.org/repositories/nncf/models/develop/resnet18_imagenet_binarization_xnor.pth)|
@@ -124,7 +124,7 @@ As an example of NNCF convolution binarization capabilities, you may use the con
 
 <a name="filter_pruning"></a>
 ### Results for filter pruning
-|Model|Compression algorithm|Dataset|Accuracy (_drop_) %|NNCF config file|PyTorch checkpoint|
+|Model|Compression algorithm|Dataset|Accuracy (_drop_) %|NNCF config file|Checkpoint|
 | :---: | :---: | :---: | :---: | :---: | :---: |
 |ResNet-50|None|ImageNet|76.15|[resnet50_imagenet.json](configs/quantization/resnet50_imagenet.json)|-|
 |ResNet-50|Filter pruning, 40%, geometric median criterion|ImageNet|76.15 (0.58)|[resnet50_imagenet_pruning_geometric_median.json](configs/pruning/resnet50_imagenet_pruning_geometric_median.json)|[Link](https://storage.openvinotoolkit.org/repositories/nncf/models/develop/resnet50_imagenet_pruning_geometric_median.pth)|

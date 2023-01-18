@@ -68,7 +68,7 @@ To export a model to OpenVINO IR and run it using Intel Deep Learning Deployment
 <a name="results"></a>
 ### Results
 
-|Model|Compression algorithm|Dataset|mIoU (_drop_) %|NNCF config file|PyTorch checkpoint|
+|Model|Compression algorithm|Dataset|mIoU (_drop_) %|NNCF config file|Checkpoint|
 | :---: | :---: | :---: | :---: | :---: | :---: |
 |UNet|None|CamVid|71.95|[unet_camvid.json](configs/unet_camvid.json)|[Link](https://storage.openvinotoolkit.org/repositories/nncf/models/develop/unet_camvid.pth)|
 |UNet|INT8|CamVid|71.95 (0.06)|[unet_camvid_int8.json](configs/unet_camvid_int8.json)|[Link](https://storage.openvinotoolkit.org/repositories/nncf/models/develop/unet_camvid_int8.pth)|
@@ -83,7 +83,7 @@ To export a model to OpenVINO IR and run it using Intel Deep Learning Deployment
 
 <a name="filter_pruning"></a>
 #### Results for filter pruning
-|Model|Compression algorithm|Dataset|mIoU (_drop_) %|NNCF config file|PyTorch checkpoint|
+|Model|Compression algorithm|Dataset|mIoU (_drop_) %|NNCF config file|Checkpoint|
 | :---: | :---: | :---: | :---: | :---: | :---: |
 |UNet|None|Mapillary|56.24|[unet_mapillary.json](configs/unet_mapillary.json)|[Link](https://storage.openvinotoolkit.org/repositories/nncf/models/develop/unet_mapillary.pth)|
 |UNet|Filter pruning, 25%, geometric median criterion|Mapillary|56.24 (0.60)|[unet_mapillary_pruning_geometric_median.json](configs/unet_mapillary_pruning_geometric_median.json)|[Link](https://storage.openvinotoolkit.org/repositories/nncf/models/develop/unet_mapillary_pruning_geometric_median.pth)|
