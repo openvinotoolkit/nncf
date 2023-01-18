@@ -388,6 +388,7 @@ to find instruction and links to exact configuration files and final checkpoints
 
 ### ONNX models
 
+<a name="onnx_classification"></a>
 #### Classification
 
 |   ONNX Model    |Compression algorithm|Dataset|Accuracy (Drop) %|
@@ -400,6 +401,7 @@ to find instruction and links to exact configuration files and final checkpoints
 |DenseNet-121|INT8|ImageNet|60.16 (0.8)|
 |VGG-16|INT8|ImageNet|72.02 (0.0)|
 
+<a name="onnx_object_detection"></a>
 #### Object Detection
 
 |ONNX Model|Compression algorithm| Dataset |mAP (drop) %|
