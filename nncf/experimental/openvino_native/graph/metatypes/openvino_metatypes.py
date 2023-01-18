@@ -83,8 +83,8 @@ class OVHardSigmoidMetatype(OVOpMetatype):
 
 
 @OV_OPERATION_METATYPES.register()
-class OVAveragePoolMetatype(OVOpMetatype):
-    name = 'AveragePoolOp'
+class OVAvgPoolMetatype(OVOpMetatype):
+    name = 'AvgPoolOp'
     op_names = ['AvgPool']
     hw_config_names = [HWConfigOpName.AVGPOOL]
 
@@ -110,22 +110,22 @@ class OVAddMetatype(OVOpMetatype):
 
 
 @OV_OPERATION_METATYPES.register()
-class OVSubMetatype(OVOpMetatype):
-    name = 'SubOp'
+class OVSubtractMetatype(OVOpMetatype):
+    name = 'SubtractOp'
     op_names = ['Subtract']
     hw_config_names = [HWConfigOpName.SUBTRACT]
 
 
 @OV_OPERATION_METATYPES.register()
-class OVMulMetatype(OVOpMetatype):
-    name = 'MulOp'
+class OVMultiplyMetatype(OVOpMetatype):
+    name = 'MultiplyOp'
     op_names = ['Multiply']
     hw_config_names = [HWConfigOpName.MULTIPLY]
 
 
 @OV_OPERATION_METATYPES.register()
-class OVDivMetatype(OVOpMetatype):
-    name = 'DivOp'
+class OVDivideMetatype(OVOpMetatype):
+    name = 'DivideOp'
     op_names = ['Divide']
     hw_config_names = [HWConfigOpName.DIVIDE]
 
@@ -197,6 +197,54 @@ class OVSplitMetatype(OVOpMetatype):
 
 
 @OV_OPERATION_METATYPES.register()
+class OVVariadicSplitMetatype(OVOpMetatype):
+    name = 'VariadicSplitOp'
+    op_names = ['VariadicSplit']
+
+
+@OV_OPERATION_METATYPES.register()
+class OVShuffleChannelsMetatype(OVOpMetatype):
+    name = 'ShuffleChannelsOp'
+    op_names = ['ShuffleChannels']
+
+
+@OV_OPERATION_METATYPES.register()
+class OVBroadcastMetatype(OVOpMetatype):
+    name = 'BroadcastOp'
+    op_names = ['Broadcast']
+
+
+@OV_OPERATION_METATYPES.register()
+class OVConvertLikeMetatype(OVOpMetatype):
+    name = 'ConvertLikeOp'
+    op_names = ['ConvertLike']
+
+
+@OV_OPERATION_METATYPES.register()
+class OVDepthToSpaceMetatype(OVOpMetatype):
+    name = 'DepthToSpaceOp'
+    op_names = ['DepthToSpace']
+
+
+@OV_OPERATION_METATYPES.register()
+class OVLSTMSequenceMetatype(OVOpMetatype):
+    name = 'LSTMSequenceOp'
+    op_names = ['LSTMSequence']
+
+
+@OV_OPERATION_METATYPES.register()
+class OVGRUSequenceMetatype(OVOpMetatype):
+    name = 'GRUSequenceOp'
+    op_names = ['GRUSequence']
+
+
+@OV_OPERATION_METATYPES.register()
+class OVFakeQuantizeMetatype(OVOpMetatype):
+    name = 'FakeQuantizeOp'
+    op_names = ['FakeQuantize']
+
+
+@OV_OPERATION_METATYPES.register()
 class OVLessMetatype(OVOpMetatype):
     name = 'LessOp'
     op_names = ['Less']
@@ -239,29 +287,29 @@ class OVNotEqualMetatype(OVOpMetatype):
 
 
 @OV_OPERATION_METATYPES.register()
-class OVNotMetatype(OVOpMetatype):
-    name = 'NotOp'
+class OVLogicalNotMetatype(OVOpMetatype):
+    name = 'LogicalNotOp'
     op_names = ['LogicalNot']
     hw_config_names = [HWConfigOpName.LOGICALNOT]
 
 
 @OV_OPERATION_METATYPES.register()
-class OVAndMetatype(OVOpMetatype):
-    name = 'AndOp'
+class OVLogicalAndMetatype(OVOpMetatype):
+    name = 'LogicalAndOp'
     op_names = ['LogicalAnd']
     hw_config_names = [HWConfigOpName.LOGICALAND]
 
 
 @OV_OPERATION_METATYPES.register()
-class OVOrMetatype(OVOpMetatype):
-    name = 'OrOp'
+class OVLogicalOrMetatype(OVOpMetatype):
+    name = 'LogicalOrOp'
     op_names = ['LogicalOr']
     hw_config_names = [HWConfigOpName.LOGICALOR]
 
 
 @OV_OPERATION_METATYPES.register()
-class OVXorMetatype(OVOpMetatype):
-    name = 'XorOp'
+class OVLogicalXorMetatype(OVOpMetatype):
+    name = 'LogicalXorOp'
     op_names = ['LogicalXor']
     hw_config_names = [HWConfigOpName.LOGICALXOR]
 
@@ -391,8 +439,8 @@ class OVTopKMetatype(OVOpMetatype):
 
 
 @OV_OPERATION_METATYPES.register()
-class OVSliceMetatype(OVOpMetatype):
-    name = 'SliceOp'
+class OVStridedSliceMetatype(OVOpMetatype):
+    name = 'StridedSliceOp'
     op_names = ['StridedSlice']
     hw_config_names = [HWConfigOpName.STRIDEDSLICE]
 

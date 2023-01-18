@@ -22,10 +22,10 @@ from nncf.experimental.openvino_native.graph.metatypes.openvino_metatypes import
 from nncf.experimental.openvino_native.graph.metatypes.openvino_metatypes import OVConstantMetatype
 from nncf.experimental.openvino_native.graph.metatypes.openvino_metatypes import OVConvolutionMetatype
 from nncf.experimental.openvino_native.graph.metatypes.openvino_metatypes import OVMatMulMetatype
-from nncf.experimental.openvino_native.graph.metatypes.openvino_metatypes import OVMulMetatype
+from nncf.experimental.openvino_native.graph.metatypes.openvino_metatypes import OVMultiplyMetatype
 from nncf.experimental.openvino_native.graph.metatypes.openvino_metatypes import OVReluMetatype
 from nncf.experimental.openvino_native.graph.metatypes.openvino_metatypes import OVReshapeMetatype
-from nncf.experimental.openvino_native.graph.metatypes.openvino_metatypes import OVSubMetatype
+from nncf.experimental.openvino_native.graph.metatypes.openvino_metatypes import OVSubtractMetatype
 from nncf.experimental.openvino_native.graph.metatypes.openvino_metatypes import OVTransposeMetatype
 
 from nncf.experimental.openvino_native.graph.nncf_graph_builder import GraphConverter
@@ -38,8 +38,8 @@ REF_METATYPES_COUNTERS = [
     [InputNoopMetatype, OVConstantMetatype, OVReshapeMetatype,
      OVConstantMetatype, OVAddMetatype, OVConstantMetatype, OVMatMulMetatype,
      OutputNoopMetatype, OutputNoopMetatype],
-    [InputNoopMetatype, InputNoopMetatype, OVConstantMetatype, OVMulMetatype,
-     OVConstantMetatype, OVAddMetatype, OVConstantMetatype, OVSubMetatype,
+    [InputNoopMetatype, InputNoopMetatype, OVConstantMetatype, OVMultiplyMetatype,
+     OVConstantMetatype, OVAddMetatype, OVConstantMetatype, OVSubtractMetatype,
      OVConstantMetatype, OVConvolutionMetatype, OVReluMetatype, OVConcatMetatype,
      OVTransposeMetatype, OVConstantMetatype, OutputNoopMetatype]]
 
