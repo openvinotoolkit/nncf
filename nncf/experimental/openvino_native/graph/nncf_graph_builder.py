@@ -16,11 +16,8 @@ import openvino.runtime as ov
 
 from nncf.common.graph import BaseLayerAttributes
 from nncf.common.graph import NNCFGraph
-from nncf.common.graph.definitions import NNCFGraphNodeType
 from nncf.common.graph.layer_attributes import Dtype
-from nncf.common.graph.operator_metatypes import InputNoopMetatype
 from nncf.common.graph.operator_metatypes import OperatorMetatype
-from nncf.common.graph.operator_metatypes import OutputNoopMetatype
 
 from nncf.experimental.openvino_native.graph.metatypes.openvino_metatypes import OV_OPERATOR_METATYPES
 from nncf.experimental.openvino_native.graph.metatypes.openvino_metatypes import GENERAL_WEIGHT_LAYER_METATYPES
