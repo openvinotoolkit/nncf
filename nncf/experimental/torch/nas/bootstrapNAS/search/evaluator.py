@@ -11,6 +11,7 @@
  limitations under the License.
 """
 from abc import abstractmethod
+from pathlib import Path
 from typing import Any
 from typing import Callable
 from typing import Dict
@@ -21,6 +22,7 @@ from typing import TypeVar
 import csv
 
 from nncf.common.logging import nncf_logger
+from nncf.common.utils.os import safe_open
 
 DataLoaderType = TypeVar('DataLoaderType')
 TModel = TypeVar('TModel')
@@ -148,7 +150,7 @@ class BaseEvaluator:
         :param cache_file_path: Path to CSV file containing the cache information.
         :return:
         """
-        with open(f"{cache_file_path}", 'r', encoding='utf8') as cache_file:
+        with safe_open(Path(cache_file_path), 'r', encoding='utf8') as cache_file:
             reader = csv.reader(cache_file)
             for row in reader:
                 rep_tuple = tuple(map(int, row[0][1:len(row[0])-1].split(',')))
@@ -161,7 +163,7 @@ class BaseEvaluator:
         :param cache_file_path: Path to export a CSV file with the cache information.
         :return:
         """
-        with open(f'{cache_file_path}/cache_{self.name}.csv', 'w', encoding='utf8') as cache_dump:
+        with safe_open(Path(cache_file_path) / f'cache_{self.name}.csv', 'w', encoding='utf8') as cache_dump:
             writer = csv.writer(cache_dump)
             for key in self.cache:
                 row = [key, self.cache[key]]

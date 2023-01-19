@@ -38,6 +38,7 @@ from nncf import NNCFConfig
 from nncf.common.initialization.batchnorm_adaptation import BatchnormAdaptationAlgorithm
 from nncf.common.logging import nncf_logger
 from nncf.common.utils.decorators import skip_if_dependency_unavailable
+from nncf.common.utils.os import safe_open
 from nncf.config.extractors import get_bn_adapt_algo_kwargs
 from nncf.experimental.torch.nas.bootstrapNAS.elasticity.elasticity_controller import ElasticityController
 from nncf.experimental.torch.nas.bootstrapNAS.elasticity.multi_elasticity_handler import SubnetConfig
@@ -161,7 +162,7 @@ class BaseSearchAlgorithm:
         :param filename: path to save the CSV file.
         :return:
         """
-        with open(f'{self._log_dir}/{filename}', 'w', encoding='utf8') as progression:
+        with safe_open(Path(self._log_dir) / filename, 'w', encoding='utf8') as progression:
             writer = csv.writer(progression)
             for record in self.search_records:
                 writer.writerow(record)

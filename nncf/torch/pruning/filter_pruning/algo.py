@@ -12,6 +12,7 @@
 """
 
 import json
+from pathlib import Path
 from typing import Dict, List, Tuple, Union
 
 import numpy as np
@@ -41,6 +42,7 @@ from nncf.common.schedulers import StubCompressionScheduler
 from nncf.common.statistics import NNCFStatistics
 from nncf.common.utils.debug import is_debug
 from nncf.common.logging import nncf_logger
+from nncf.common.utils.os import safe_open
 from nncf.config.extractors import extract_bn_adaptation_init_params
 from nncf.torch.algo_selector import PT_COMPRESSION_ALGORITHMS
 from nncf.torch.compression_method_api import PTCompressionAlgorithmController
@@ -171,7 +173,7 @@ class FilterPruningController(BasePruningAlgoController):
                 coeffs_path = params.get('load_ranking_coeffs_path')
                 nncf_logger.info(f'Loading ranking coefficients from file {coeffs_path}')
                 try:
-                    with open(coeffs_path, 'r', encoding='utf8') as coeffs_file:
+                    with safe_open(Path(coeffs_path), 'r', encoding='utf8') as coeffs_file:
                         loaded_coeffs = json.load(coeffs_file)
                 except (ValueError, FileNotFoundError) as err:
                     raise Exception('Can\'t load json with ranking coefficients. Please, check format of json file '
@@ -201,7 +203,7 @@ class FilterPruningController(BasePruningAlgoController):
         # Saving ranking coefficients to the specified file
         if params.get('save_ranking_coeffs_path'):
             nncf_logger.info(f'Saving ranking coefficients to the file {params.get("save_ranking_coeffs_path")}')
-            with open(params.get('save_ranking_coeffs_path'), 'w', encoding='utf8') as f:
+            with safe_open(Path(params.get('save_ranking_coeffs_path')), 'w', encoding='utf8') as f:
                 json.dump(self.ranking_coeffs, f)
 
         self.set_pruning_level(self.pruning_init)
