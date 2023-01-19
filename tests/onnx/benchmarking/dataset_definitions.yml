@@ -1495,4 +1495,3 @@ datasets:
       annotation_file: object_detection/streams_1/high/annotations/instances_glb2bcls3.json
     annotation: mscoco_detection_high_3cls.pickle
     dataset_meta: mscoco_detection_high_3cls.json
-
