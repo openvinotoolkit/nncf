@@ -11,12 +11,9 @@
  limitations under the License.
 """
 
+import pytest
 from collections import Counter
 
-import pytest
-
-from nncf.common.graph.operator_metatypes import InputNoopMetatype
-from nncf.common.graph.operator_metatypes import OutputNoopMetatype
 from nncf.experimental.openvino_native.graph.metatypes.openvino_metatypes import OVAddMetatype
 from nncf.experimental.openvino_native.graph.metatypes.openvino_metatypes import OVConcatMetatype
 from nncf.experimental.openvino_native.graph.metatypes.openvino_metatypes import OVConstantMetatype
@@ -27,21 +24,23 @@ from nncf.experimental.openvino_native.graph.metatypes.openvino_metatypes import
 from nncf.experimental.openvino_native.graph.metatypes.openvino_metatypes import OVReshapeMetatype
 from nncf.experimental.openvino_native.graph.metatypes.openvino_metatypes import OVSubtractMetatype
 from nncf.experimental.openvino_native.graph.metatypes.openvino_metatypes import OVTransposeMetatype
-
+from nncf.experimental.openvino_native.graph.metatypes.openvino_metatypes import OVParameterMetatype
+from nncf.experimental.openvino_native.graph.metatypes.openvino_metatypes import OVResultMetatype
 from nncf.experimental.openvino_native.graph.nncf_graph_builder import GraphConverter
 
 from tests.openvino.native.models import ConvModel
 from tests.openvino.native.models import LinearModel
+from tests.openvino.native.models import WeightsModel
 
 TEST_MODELS = [LinearModel, ConvModel]
 REF_METATYPES_COUNTERS = [
-    [InputNoopMetatype, OVConstantMetatype, OVReshapeMetatype,
+    [OVParameterMetatype, OVConstantMetatype, OVReshapeMetatype,
      OVConstantMetatype, OVAddMetatype, OVConstantMetatype, OVMatMulMetatype,
-     OutputNoopMetatype, OutputNoopMetatype],
-    [InputNoopMetatype, InputNoopMetatype, OVConstantMetatype, OVMultiplyMetatype,
+     OVResultMetatype, OVResultMetatype],
+    [OVParameterMetatype, OVParameterMetatype, OVConstantMetatype, OVMultiplyMetatype,
      OVConstantMetatype, OVAddMetatype, OVConstantMetatype, OVSubtractMetatype,
      OVConstantMetatype, OVConvolutionMetatype, OVReluMetatype, OVConcatMetatype,
-     OVTransposeMetatype, OVConstantMetatype, OutputNoopMetatype]]
+     OVTransposeMetatype, OVConstantMetatype, OVResultMetatype]]
 
 
 @pytest.mark.parametrize(("model_creator_func, ref_metatypes"),
@@ -51,3 +50,22 @@ def test_mapping_openvino_metatypes(model_creator_func, ref_metatypes):
     nncf_graph = GraphConverter.create_nncf_graph(model)
     actual_metatypes = [node.metatype for node in nncf_graph.get_all_nodes()]
     assert Counter(ref_metatypes) == Counter(actual_metatypes)
+
+
+REF_WEIGHTS_PORT_IDS = {
+    'Conv': 1,
+    'Conv_backprop': 1,
+    'MatMul_1': 1,
+    'MatMul_0': 0,
+}
+
+
+def test_determining_weights_port():
+    model = WeightsModel().ov_model
+    nncf_graph = GraphConverter.create_nncf_graph(model)
+    counter = 0
+    for node in nncf_graph.get_all_nodes():
+        if node.layer_attributes is not None:
+            counter += 1
+            assert node.layer_attributes.weight_port_id == REF_WEIGHTS_PORT_IDS[node.node_name]
+    assert counter == len(REF_WEIGHTS_PORT_IDS)

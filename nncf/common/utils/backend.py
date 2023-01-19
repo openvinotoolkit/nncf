@@ -10,9 +10,13 @@
  See the License for the specific language governing permissions and
  limitations under the License.
 """
+from typing import TypeVar
 from enum import Enum
+from copy import deepcopy
 
 from nncf.api.compression import CompressionAlgorithmController
+
+TModel = TypeVar('TModel')
 
 
 class BackendType(Enum):
@@ -81,3 +85,17 @@ def infer_backend_from_compression_controller(compression_controller: Compressio
     :return: A BackendType representing the NNCF backend.
     """
     return get_backend(compression_controller.model)
+
+
+# TODO(l-bat): Remove after fixing ticket: 100919
+def copy_model(model: TModel) -> TModel:
+    """
+    Function to create copy of the backend-specific model.
+
+    :param model: the backend-specific model instance
+    :return: Copy of the backend-specific model instance
+    """
+    model_backend = get_backend(model)
+    if model_backend == BackendType.OPENVINO:
+        return model.clone()
+    return deepcopy(model)
