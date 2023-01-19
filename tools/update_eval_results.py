@@ -198,7 +198,7 @@ def build_per_model_row(table_format: str,
         row.append(f'{fp32_metric:.2f}')
     else:
         drop = fp32_metric - compressed_metric
-        row.append(f'{fp32_metric:.2f} ({drop:.2f})')
+        row.append(f'{compressed_metric:.2f} ({drop:.2f})')
     if table_format == 'per_sample':
         local_config_path = '/'.join(config_path.split('/')[3:])
         config_name = local_config_path.split('/')[-1]

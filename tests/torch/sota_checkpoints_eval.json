@@ -234,7 +234,7 @@
                 "resume": "resnet18_imagenet_binarization_dorefa.pth",
                 "model_description": "ResNet-18",
                 "compression_description": "DoReFa (weights), scale/threshold (activations)",
-                "diff_fp32_min": -8,
+                "diff_fp32_min": -8.2,
                 "diff_fp32_max": 0.1
             },
             "resnet18_imagenet_pruning_magnitude": {

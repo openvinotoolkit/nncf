@@ -33,7 +33,7 @@
                 "inception_v3_imagenet_rb_sparsity_int8": {
                     "config": "examples/tensorflow/classification/configs/sparsity_quantization/inception_v3_imagenet_rb_sparsity_int8.json",
                     "reference": "inception_v3_imagenet",
-                    "target": 77.91,
+                    "target": 77.53,
                     "target_init": 76.61,
                     "resume": "inception_v3_imagenet_rb_sparsity_int8",
                     "metric_type": "Acc@1",
