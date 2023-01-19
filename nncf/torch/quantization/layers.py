@@ -11,35 +11,46 @@
  limitations under the License.
 """
 from enum import Enum
-from typing import Dict, List, Tuple, Optional, Any
+from functools import partial
+from typing import Any
+from typing import Dict
+from typing import List
+from typing import Optional
+from typing import Tuple
 
 import numpy as np
 import torch
-from torch import nn
-from functools import partial
-
-from nncf.torch.dynamic_graph.context import no_nncf_trace
 from torch import distributed
+from torch import nn
 
-from nncf.torch.checkpoint_loading import OPTIONAL_PARAMETERS_REGISTRY
-from nncf.common.utils.debug import is_debug
-from nncf.torch.functions import clamp
 from nncf.common.graph import NNCFNodeName
 from nncf.common.logging import nncf_logger
-from nncf.common.quantization.structs import QuantizationMode, QuantizerConfig, QuantizerSpec
-from nncf.common.quantization.quantizers import calculate_symmetric_level_ranges
-from nncf.common.quantization.quantizers import calculate_asymmetric_level_ranges
-from nncf.common.quantization.quantizer_setup import QuantizerSetupBase
 from nncf.common.quantization.quantizer_setup import QuantizationPointId
-from nncf.torch.graph.transformations.commands import TargetType
-from nncf.torch.graph.transformations.commands import PTTargetPoint
-from nncf.torch.quantization.quantize_functions import ExportQuantizeToONNXQuantDequant
-from nncf.torch.quantization.quantize_functions import symmetric_quantize, asymmetric_quantize, \
-    ExportQuantizeToFakeQuantize, get_scale_zp_from_input_low_input_high, TuneRange
-from nncf.torch.layer_utils import COMPRESSION_MODULES, CompressionParameter
+from nncf.common.quantization.quantizer_setup import QuantizerSetupBase
+from nncf.common.quantization.quantizers import calculate_asymmetric_level_ranges
+from nncf.common.quantization.quantizers import calculate_symmetric_level_ranges
+from nncf.common.quantization.structs import QuantizationMode
+from nncf.common.quantization.structs import QuantizerConfig
+from nncf.common.quantization.structs import QuantizerSpec
+from nncf.common.utils.debug import is_debug
 from nncf.common.utils.registry import Registry
-from nncf.torch.utils import get_flat_tensor_contents_string, no_jit_trace, is_tracing_state
+from nncf.torch.checkpoint_loading import OPTIONAL_PARAMETERS_REGISTRY
+from nncf.torch.dynamic_graph.context import no_nncf_trace
+from nncf.torch.functions import clamp
+from nncf.torch.graph.transformations.commands import PTTargetPoint
+from nncf.torch.graph.transformations.commands import TargetType
+from nncf.torch.layer_utils import COMPRESSION_MODULES
+from nncf.torch.layer_utils import CompressionParameter
+from nncf.torch.quantization.quantize_functions import ExportQuantizeToFakeQuantize
+from nncf.torch.quantization.quantize_functions import ExportQuantizeToONNXQuantDequant
+from nncf.torch.quantization.quantize_functions import TuneRange
+from nncf.torch.quantization.quantize_functions import asymmetric_quantize
+from nncf.torch.quantization.quantize_functions import get_scale_zp_from_input_low_input_high
+from nncf.torch.quantization.quantize_functions import symmetric_quantize
+from nncf.torch.utils import get_flat_tensor_contents_string
 from nncf.torch.utils import get_model_device
+from nncf.torch.utils import is_tracing_state
+from nncf.torch.utils import no_jit_trace
 
 QUANTIZATION_MODULES = Registry('quantization_modules')
 INITIALIZABLE_MODULES = Registry('initializable_modules')
@@ -82,7 +93,7 @@ class PTQuantizerSpec(QuantizerSpec):
             activation quantizers.
         """
         super().__init__(num_bits, mode, signedness_to_force, narrow_range, half_range)
-        self.per_channel = scale_shape != [1]
+        self.per_channel = scale_shape != (1, )
         self.scale_shape = scale_shape
         self.logarithm_scale = logarithm_scale
         self.compression_lr_multiplier = compression_lr_multiplier
