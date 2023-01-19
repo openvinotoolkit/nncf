@@ -11,10 +11,10 @@ NNCF may now be used for post-training quantization (PTQ) on ONNX models.
 Added an example script demonstrating the ONNX post-training quantization on MobileNetV2.
 - Common post-training quantization API across the supported frameworks (PyTorch, TensorFlow and ONNX) via the `nncf.quantize(...)` function.
 The parameter set of the function is the same for all frameworks - actual framework-specific implementations are being dispatched based on the type of the model object argument.
-- (PyTorch) QuantizeLinear-DequantizeLinear export mode for quantization (`"export_to_onnx_standard_ops": true` option in quantization algo parameters of the NNCF .json config file) now supports per-channel quantization with the switch of the exported ONNX opset verion to 13.
+- (PyTorch) Joint Pruning, Quantization and Distillation for Transformers made possible via NNCF - 
 - (PyTorch, TensorFlow) Improved the adaptive compression training functionality to reduce effective training time.
 - (ONNX) Post-processing nodes are now automatically excluded from quantization.
-
+- (PyTorch - Experimental) Joint Pruning, Quantization and Distillation for Transformers enabled for certain models from HuggingFace `transformers` repo
 
 Bugfixes:
 - Fixed a division by zero if every operation is added to ignored scope
