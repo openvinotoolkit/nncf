@@ -12,10 +12,11 @@
 """
 import os
 import json
-import networkx as nx
-import numpy as np
 from copy import deepcopy
 from pathlib import Path
+
+import networkx as nx
+import numpy as np
 import openvino.runtime as ov
 
 from nncf import Dataset

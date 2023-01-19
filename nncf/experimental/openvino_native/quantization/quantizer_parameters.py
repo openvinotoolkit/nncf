@@ -13,6 +13,7 @@
 
 from typing import List, Tuple, Type
 from dataclasses import dataclass
+
 import numpy as np
 
 from nncf.common.graph.operator_metatypes import OperatorMetatype
