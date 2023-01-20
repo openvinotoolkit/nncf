@@ -11,13 +11,12 @@
  limitations under the License.
 """
 
-from typing import Dict, List, TypeVar, Union, Optional, Tuple
-
-import numpy as np
+from typing import Dict, List, TypeVar, Union, Optional
 from copy import deepcopy
 from collections import deque
 
-from functools import partial
+import numpy as np
+
 from nncf import Dataset
 from nncf import nncf_logger
 from nncf.common.graph import NNCFGraph
