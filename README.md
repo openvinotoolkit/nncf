@@ -40,9 +40,9 @@ learning frameworks.
 
 ### Post-Training Compression Algorithms
 
-| Compression algorithm                                                        |PyTorch|TensorFlow|   ONNX   |OpenVINO |
-|:-----------------------------------------------------------------------------| :---: | :---: |:--------:|:-------:|
-| [Quantization](./docs/compression_algorithms/post_traininig/Quantization.md) | Supported | Supported |Supported|Supported|
+| Compression algorithm                                                        |PyTorch|TensorFlow|   ONNX   |      OpenVINO       |
+|:-----------------------------------------------------------------------------| :---: | :---: |:--------:|:-------------------:|
+| [Quantization](./docs/compression_algorithms/post_traininig/Quantization.md) | Supported | Supported |Supported| Supported (preview) |
 
 - Automatic, configurable model graph transformation to obtain the compressed model.
   > **NOTE**: Limited support for TensorFlow models. The models created using Sequential or Keras Functional API are only supported.
