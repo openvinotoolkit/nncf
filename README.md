@@ -40,9 +40,11 @@ learning frameworks.
 
 ### Post-Training Compression Algorithms
 
-| Compression algorithm                                                        |PyTorch|TensorFlow|   ONNX   |      OpenVINO       |
-|:-----------------------------------------------------------------------------| :---: | :---: |:--------:|:-------------------:|
-| [Quantization](./docs/compression_algorithms/post_traininig/Quantization.md) | Supported | Supported |Supported| Supported (preview) |
+| Compression algorithm                                                        |PyTorch|TensorFlow|   ONNX   |       OpenVINO       |
+|:-----------------------------------------------------------------------------| :---: | :---: |:--------:|:--------------------:|
+| [Quantization](./docs/compression_algorithms/post_traininig/Quantization.md) | Supported | Supported |Supported| Supported (preview)* |
+
+*Preview means the work is in progress. NNCF does not guarantee the full functional support.
 
 - Automatic, configurable model graph transformation to obtain the compressed model.
   > **NOTE**: Limited support for TensorFlow models. The models created using Sequential or Keras Functional API are only supported.
@@ -138,7 +140,7 @@ NNCF provides [samples](#post-training-quantization) that demonstrate Post-Train
 To start the algorithm the user should provide:
 * Original model.
 * Validation part of the dataset.
-* [Data transformation function](./docs/compression_algorithms/post_training/Quantization.md). from original dataset format to the NNCF format. 
+* [Data transformation function](./docs/compression_algorithms/post_training/Quantization.md) from original dataset format to the NNCF format. 
 
 
 The basic workflow steps:
