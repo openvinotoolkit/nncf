@@ -189,7 +189,10 @@ class VOCDetection(data.Dataset):
         img_name = self.ids[index]
         anno = ET.parse(self._annopath % img_name).getroot()
         _, gt_res = self.target_transform(None,
-                                          datasets.VOCDetection.parse_voc_xml(node=anno),
+                                          # Instantiating an object is required here for backwards compatibility with
+                                          # pre-torchvision 0.13 versions, where `parse_voc_xml` was not yet a static
+                                          # method
+                                          datasets.VOCDetection(self.root).parse_voc_xml(node=anno),
                                           pull=True)
         return img_name[1], gt_res
 
