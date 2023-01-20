@@ -17,7 +17,6 @@ from typing import List, Tuple, TypeVar, Optional
 
 import numpy as np
 from nncf.common.graph.transformations.commands import TargetPoint
-from nncf.common.graph.transformations.commands import TransformationCommand
 from nncf.common.graph.transformations.commands import TargetType
 from nncf.common.tensor import NNCFTensor
 from nncf.common.graph import NNCFGraph
@@ -156,12 +155,12 @@ class BiasCorrectionAlgoBackend(ABC):
 
     @staticmethod
     @abstractmethod
-    def get_bias_value(model: TModel, node: NNCFNode) -> np.ndarray:
+    def get_bias_value(node: NNCFNode, model: TModel) -> np.ndarray:
         """
         Returns bias value in the NumPy format of provided node.
 
-        :param model: Backend-specific model for the initializer finding.
         :param node: Node of NNCFGraph with bias value.
+        :param model: Backend-specific model for the initializer finding.
         :return: Bias value in the NumPy format.
         """
 
