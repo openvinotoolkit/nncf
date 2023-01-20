@@ -28,7 +28,7 @@ from nncf.common.tensor_statistics.collectors import TensorStatisticCollectorBas
 from nncf.common.tensor_statistics.statistics import MinMaxTensorStatistic
 from nncf.common.utils.registry import Registry
 from nncf.common.quantization.structs import QuantizerConfig
-from nncf.common.graph.model_transformer import ModelTransformer
+
 
 TModel = TypeVar('TModel')
 ALGO_BACKENDS = Registry('algo_backends')
