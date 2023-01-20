@@ -87,15 +87,12 @@ class BiasCorrectionAlgoBackend(ABC):
 
     @staticmethod
     @abstractmethod
-    def bias_correction_command(target_point: TargetPoint,
-                                bias_value: np.ndarray,
-                                threshold: float) -> TransformationCommand:
+    def bias_correction_command(target_point: TargetPoint, bias_value: np.ndarray) -> TransformationCommand:
         """
         Returns backend-specific bias correction command.
 
         :param target_point: Target location for the correction.
         :param bias_value: New value for the bias.
-        :param threshold: Parametrized threshold for the shift magnitude comparison.
         :return: Backend-specific TransformationCommand for the bias correction.
         """
 
