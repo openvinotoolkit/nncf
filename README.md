@@ -138,12 +138,11 @@ NNCF provides [samples](#post-training-quantization) that demonstrate Post-Train
 To start the algorithm the user should provide:
 * Original model.
 * Validation part of the dataset.
-* Data transformation function from original dataset format to the NNCF format.
-Please, take a look at the full [description](./docs/compression_algorithms/post_training/Quantization.md). 
+* [Data transformation function](./docs/compression_algorithms/post_training/Quantization.md). from original dataset format to the NNCF format. 
 
 
 The basic workflow steps:
-1) Create the data [transformation function](./docs/compression_algorithms/post_training/Quantization.md).
+1) Create the [data transformation function](./docs/compression_algorithms/post_training/Quantization.md).
 2) Initialize NNCF Dataset with the validation dataset and the transformation function.
 3) Run the quantization pipeline.
 
