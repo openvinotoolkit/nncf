@@ -147,7 +147,60 @@ The basic workflow steps:
 2) Initialize NNCF Dataset with the validation dataset and the transformation function.
 3) Run the quantization pipeline.
 
-Below there are usage examples for every backend.  
+Below there are usage examples for every backend.
+
+<details><summary><b>PyTorch</b></summary>
+
+```python
+import nncf
+import torch
+from torchvision import datasets, models
+
+# Instantiate your uncompressed model
+model = models.mobilenet_v2() 
+# Provide validation part of the dataset for statistics collection for compression algorithm
+val_dataset = datasets.ImageFolder("/path")
+dataset_loader = torch.utils.data.DataLoader(val_dataset)
+
+# Step 1: Initialize transformation function
+def transform_fn(data_item):
+    images, _ = data_item
+    return images
+
+# Step 2: Initialize NNCF Dataset
+calibration_dataset = nncf.Dataset(dataset_loader, transform_fn)
+# Step 3: Run the quantization pipeline
+quantized_model = nncf.quantize(model, calibration_dataset)
+
+```
+
+</details>
+
+<details><summary><b>TensorFlow</b></summary>
+
+```python
+import nncf
+import tensorflow as tf
+import tensorflow_datasets as tfds
+
+# Instantiate your uncompressed model
+model = tf.keras.applications.MobileNetV2()
+# Provide validation part of the dataset for statistics collection for compression algorithm
+val_dataset = tfds.load('/path', split='validation', 
+                        shuffle_files=False, as_supervised=True)
+
+# Step 1: Initialize transformation function
+def transform_fn(data_item):
+    images, _ = data_item
+    return images
+
+# Step 2: Initialize NNCF Dataset
+calibration_dataset = nncf.Dataset(val_dataset, transform_fn)
+# Step 3: Run the quantization pipeline
+quantized_model = nncf.quantize(model, calibration_dataset)
+```
+
+</details>
 
 <details><summary><b>ONNX</b></summary>
 
@@ -174,6 +227,36 @@ calibration_dataset = nncf.Dataset(dataset_loader, transform_fn)
 # Step 3: Run the quantization pipeline
 quantized_model = nncf.quantize(onnx_model, calibration_dataset)
 ```
+
+</details>
+
+<details><summary><b>OpenVINO</b></summary>
+
+```python
+import nncf
+import openvino.runtime as ov
+import torch
+from torchvision import datasets
+
+# Instantiate your uncompressed model
+model = ov.Core().read_model('/model_path')
+# Provide validation part of the dataset for statistics collection for compression algorithm
+val_dataset = datasets.ImageFolder("/path")
+dataset_loader = torch.utils.data.DataLoader(val_dataset, batch_size=1)
+
+# Step 1: Initialize transformation function
+def transform_fn(data_item):
+    images, _ = data_item
+    return images
+
+# Step 2: Initialize NNCF Dataset
+calibration_dataset = nncf.Dataset(val_dataset, transform_fn)
+# Step 3: Run the quantization pipeline
+quantized_model = nncf.quantize(model, calibration_dataset)
+```
+
+</details>
+
 ## Model Compression Samples
 
 For a quicker start with NNCF-powered compression, you can also try the sample scripts, each of which provides a basic training pipeline for classification, semantic segmentation and object detection neural network training correspondingly.
