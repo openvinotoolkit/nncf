@@ -48,16 +48,19 @@ def _get_onnx_hw_fused_patterns() -> HWFusedPatterns:
     arithmetic_ops.add_node(**ARITHMETIC_OPERATIONS)
     hw_fused_patterns.register(arithmetic_ops, ARITHMETIC_OPERATIONS['label'], match=False)
 
+    scale_shift = create_scale_shift()
+    hw_fused_patterns.register(scale_shift, 'SCALE_SHIFT', match=True)
+
     batch_norm_activations_permutation = batch_norms + activations | \
                                          activations + batch_norms | \
                                          batch_norms | activations
 
-    batch_norm_arithmetic_arithmetic_act = batch_norms + arithmetic_ops + arithmetic_ops + activations
-    hw_fused_patterns.register(batch_norm_arithmetic_arithmetic_act, 'BN_ARITHMETHIC_ARITHMETHIC_ACT', match=True)
     hw_fused_patterns.register(linear_ops + batch_norm_activations_permutation, 'LINEAR + BN_ACT_PERM',
                                match=True)
-    hw_fused_patterns.register(linear_ops + batch_norm_arithmetic_arithmetic_act,
-                               'LINEAR + BN_ARITHMETHIC_ARITHMETHIC_ACT_', match=True)
+    hw_fused_patterns.register(linear_ops + batch_norm + scale_shift + activations,
+                               'LINEAR + BN + SCALE_SHIFT + ACTIVATIONS', match=True)
+    hw_fused_patterns.register(batch_norm + scale_shift + activations,
+                               'BN + SCALE_SHIFT + ACTIVATIONS', match=True)
     hw_fused_patterns.register(linear_ops + arithmetic_ops, 'LINEAR + ARITHMETIC', match=True)
     hw_fused_patterns.register(batch_norms + activations, 'BN + ACTIVATIONS', match=True)
     hw_fused_patterns.register(activations + batch_norms, 'ACTIVATIONS + BN', match=True)
@@ -67,9 +70,6 @@ def _get_onnx_hw_fused_patterns() -> HWFusedPatterns:
     input_preprocessing_pattern = create_input_preprocessing_pattern()
     hw_fused_patterns.register(input_preprocessing_pattern,
                                'INPUT_PREPROCESSING', match=True)
-
-    scale_shift = create_scale_shift()
-    hw_fused_patterns.register(scale_shift, 'SCALE_SHIFT', match=True)
 
     return hw_fused_patterns
 
