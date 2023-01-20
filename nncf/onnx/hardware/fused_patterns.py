@@ -52,20 +52,15 @@ def _get_onnx_hw_fused_patterns() -> HWFusedPatterns:
                                          activations + batch_norms | \
                                          batch_norms | activations
 
-    batch_norm_arithmetic_ops_activations_permutation = batch_norms + arithmetic_ops + activations | \
-                                                        batch_norms + arithmetic_ops + arithmetic_ops + activations | \
-                                                        activations + batch_norms + arithmetic_ops | \
-                                                        activations + batch_norms + arithmetic_ops + arithmetic_ops
+    batch_norm_arithmetic_arithmetic_act = batch_norms + arithmetic_ops + arithmetic_ops + activations
 
     hw_fused_patterns.register(linear_ops + batch_norm_activations_permutation, 'LINEAR + BN_ACT_PERM',
                                match=True)
-    hw_fused_patterns.register(linear_ops + batch_norm_arithmetic_ops_activations_permutation,
-                               'LINEAR + BN_ACT_ARITHMETHIC_PERM', match=True)
+    hw_fused_patterns.register(linear_ops + batch_norm_arithmetic_arithmetic_act,
+                               'LINEAR + BN_ARITHMETHIC_ARITHMETHIC_ACT_', match=True)
     hw_fused_patterns.register(linear_ops + arithmetic_ops, 'LINEAR + ARITHMETIC', match=True)
     hw_fused_patterns.register(batch_norms + activations, 'BN + ACTIVATIONS', match=True)
     hw_fused_patterns.register(activations + batch_norms, 'ACTIVATIONS + BN', match=True)
-    hw_fused_patterns.register(batch_norm_arithmetic_ops_activations_permutation,
-                               'BN_ACT_ARITHMETHIC_PERM', match=True)
     hw_fused_patterns.register(arithmetic_ops + batch_norm_activations_permutation,
                                'ARITHMETIC + BN_ACT_PERM', match=True)
 
