@@ -25,7 +25,7 @@ The basic workflow steps:
 2) Initialize NNCF Dataset with the validation dataset and the transformation function.
 3) Run the quantization pipeline.
 
-#### Data Transformation function
+### Data Transformation function
 
 Every user training pipeline consumes data in the unique format to feed the model.
 These data formats differ from pipeline to pipeline, thus NNCF introduces the data transformation function - to provide the interface to adapt the user dataset format to the NNCF format.
