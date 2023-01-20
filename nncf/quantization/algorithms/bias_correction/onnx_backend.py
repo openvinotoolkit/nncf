@@ -39,8 +39,8 @@ from nncf.onnx.tensor import ONNXNNCFTensor
 from nncf.quantization.algorithms.bias_correction.backend import ALGO_BACKENDS
 from nncf.quantization.algorithms.bias_correction.backend import BiasCorrectionAlgoBackend
 from nncf.onnx.graph.onnx_graph import ONNXGraph
-from nncf.onnx.functions import get_bias_value
-from nncf.onnx.functions import create_bias_correction_command
+from nncf.onnx.graph.node_utils import get_bias_value
+from nncf.onnx.graph.transformations.commands_creation import create_bias_correction_command
 
 
 #pylint:disable=too-many-public-methods

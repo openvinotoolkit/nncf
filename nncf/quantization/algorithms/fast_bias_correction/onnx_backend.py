@@ -30,9 +30,9 @@ from nncf.onnx.tensor import ONNXNNCFTensor
 from nncf.quantization.algorithms.fast_bias_correction.backend import ALGO_BACKENDS
 from nncf.quantization.algorithms.fast_bias_correction.backend import FBCAlgoBackend
 from nncf.onnx.graph.onnx_graph import ONNXGraph
-from nncf.onnx.functions import is_node_with_bias
-from nncf.onnx.functions import get_bias_value
-from nncf.onnx.functions import create_bias_correction_command
+from nncf.onnx.graph.node_utils import is_node_with_bias
+from nncf.onnx.graph.node_utils import get_bias_value
+from nncf.onnx.graph.transformations.commands_creation import create_bias_correction_command
 
 
 @ALGO_BACKENDS.register(BackendType.ONNX)
