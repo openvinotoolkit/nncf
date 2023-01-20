@@ -250,7 +250,7 @@ def transform_fn(data_item):
     return images
 
 # Step 2: Initialize NNCF Dataset
-calibration_dataset = nncf.Dataset(val_dataset, transform_fn)
+calibration_dataset = nncf.Dataset(dataset_loader, transform_fn)
 # Step 3: Run the quantization pipeline
 quantized_model = nncf.quantize(model, calibration_dataset)
 ```
