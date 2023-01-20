@@ -156,18 +156,13 @@ class BiasCorrection(Algorithm):
 
             bias_shift = self._compute_bias_shift(node, model_copy_subgraph, feed_dicts, statistic_points)
 
-            current_bias = self._backend_entity.get_bias_value(model, node)
+            current_bias = self._backend_entity.get_bias_value(node, model)
             updated_bias = current_bias + bias_shift
             magnitude = self._get_bias_shift_magnitude(current_bias, updated_bias)
 
             if magnitude < self.threshold:
                 nncf_logger.debug(f'{node_name} bias would be changed. Magnitude: {magnitude}')
-                bias_port_id = self._backend_entity.get_bias_port_id(model, node)
-                target_point = self._backend_entity.target_point(TargetType.LAYER,
-                                                                 node.node_name,
-                                                                 bias_port_id)
-                bias_correction_command = self._backend_entity.bias_correction_command(target_point,
-                                                                                       updated_bias)
+                bias_correction_command = self._backend_entity.create_bias_correction_command(node, updated_bias)
                 model_copy_subgraph = self._correct_bias(model_copy_subgraph, bias_correction_command)
                 model_copy = self._correct_bias(model_copy, bias_correction_command)
                 main_transformations_layout.register(bias_correction_command)

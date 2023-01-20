@@ -12,8 +12,10 @@
 """
 
 from typing import Dict, Tuple, List, Optional
+
 import onnx
 import numpy as np
+
 from nncf.common.graph.transformations.commands import TargetType
 from nncf.common.tensor_statistics.collectors import ReductionShape
 from nncf.common.utils.backend import BackendType
@@ -21,7 +23,6 @@ from nncf.common.graph import NNCFNode
 from nncf.common.graph import NNCFGraph
 from nncf.common.graph.transformations.layout import TransformationLayout
 from nncf.common.graph.operator_metatypes import OperatorMetatype
-
 from nncf.onnx.graph.metatypes.onnx_metatypes import LAYERS_WITH_BIAS_METATYPES
 from nncf.onnx.graph.metatypes.onnx_metatypes import ONNX_OPERATION_METATYPES
 from nncf.onnx.graph.metatypes.onnx_metatypes import ONNXDequantizeLinearMetatype
@@ -38,7 +39,8 @@ from nncf.onnx.tensor import ONNXNNCFTensor
 from nncf.quantization.algorithms.bias_correction.backend import ALGO_BACKENDS
 from nncf.quantization.algorithms.bias_correction.backend import BiasCorrectionAlgoBackend
 from nncf.onnx.graph.onnx_graph import ONNXGraph
-from nncf.onnx.graph.metatypes.onnx_metatypes import ONNXIdentityMetatype
+from nncf.onnx.functions import get_bias_value
+from nncf.onnx.functions import create_bias_correction_command
 
 
 #pylint:disable=too-many-public-methods
@@ -72,9 +74,8 @@ class ONNXBiasCorrectionAlgoBackend(BiasCorrectionAlgoBackend):
         return ONNXTargetPoint(target_type, target_node_name, port_id)
 
     @staticmethod
-    def bias_correction_command(target_point: ONNXTargetPoint,
-                                bias_value: np.ndarray) -> ONNXBiasCorrectionCommand:
-        return ONNXBiasCorrectionCommand(target_point, bias_value)
+    def create_bias_correction_command(node: NNCFNode, bias_value: np.ndarray) -> ONNXBiasCorrectionCommand:
+        return create_bias_correction_command(node, bias_value)
 
     @staticmethod
     def output_insertion_command(target_point: ONNXTargetPoint) -> ONNXOutputInsertionCommand:
@@ -119,18 +120,8 @@ class ONNXBiasCorrectionAlgoBackend(BiasCorrectionAlgoBackend):
         return 0, 0
 
     @staticmethod
-    def get_bias_value(model: onnx.ModelProto, node: NNCFNode) -> np.ndarray:
-        onnx_graph = ONNXGraph(model)
-        onnx_node = onnx_graph.get_node_by_name(node.node_name)
-        bias_port_id = onnx_graph.get_bias_tensor_port_id(onnx_node)
-        bias_input_name = onnx_node.input[bias_port_id]
-        if onnx_graph.has_initializer(bias_input_name):
-            return onnx_graph.get_initializers_value(bias_input_name)
-        node = onnx_graph.get_nodes_by_output(bias_input_name)[0]
-        metatype = ONNX_OPERATION_METATYPES.get_operator_metatype_by_op_name(node.op_type)
-        if metatype == ONNXIdentityMetatype:
-            return onnx_graph.get_initializers_value(node.input[0])
-        raise RuntimeError('Could not find the bias value of the node')
+    def get_bias_value(node: NNCFNode, model: onnx.ModelProto) -> np.ndarray:
+        get_bias_value(node, model)
 
     @staticmethod
     def get_bias_port_id(model: onnx.ModelProto, node: NNCFNode) -> int:
