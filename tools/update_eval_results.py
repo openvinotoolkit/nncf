@@ -144,8 +144,8 @@ TF_SAMPLE_TYPE_TO_DESCRIPTOR = {
             SampleReadmeSubTableDescriptor(
                 anchor='<a name="filter_pruning"></a>',
                 model_names=["retinanet_coco",
-                             "retinanet_coco_pruning",
-                             "retinanet_coco_pruning_int8"],
+                             "retinanet_coco_pruning_geometric_median",
+                             "retinanet_coco_pruning_geometric_median_int8"],
                 models_duplicated_from_main_table=["ssd300_vgg_voc"])
         ])
 }  # type: Dict[str, SampleDescriptor]

@@ -142,13 +142,13 @@ GLOBAL_CONFIG = {
                         'absolute_tolerance_test': 0.5,
                         'weights': 'retinanet/retinanet.h5',
                     },
-                    'pruning/retinanet_coco_pruning.json': {
+                    'pruning/retinanet_coco_pruning_geometric_median.json': {
                         'expected_accuracy': 32.70,
                         'absolute_tolerance_train': 0.5,
                         'absolute_tolerance_test': 0.5,
                         'weights': 'retinanet/retinanet.h5',
                     },
-                    'pruning_quantization/retinanet_coco_pruning_int8.json': {
+                    'pruning_quantization/retinanet_coco_pruning_geometric_median_int8.json': {
                         'expected_accuracy': 32.53,
                         'absolute_tolerance_train': 0.5,
                         'absolute_tolerance_test': 0.5,

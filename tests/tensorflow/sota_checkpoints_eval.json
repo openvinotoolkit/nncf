@@ -309,8 +309,8 @@
                     "scale_value": "[58.395,57.12,57.375]",
                     "reverse_input_channels": true
                 },
-                "retinanet_coco_pruning": {
-                    "config": "examples/tensorflow/object_detection/configs/pruning/retinanet_coco_pruning.json",
+                "retinanet_coco_pruning_geometric_median": {
+                    "config": "examples/tensorflow/object_detection/configs/pruning/retinanet_coco_pruning_geometric_median.json",
                     "reference": "retinanet_coco",
                     "target": 32.72,
                     "target_init": 29.17,
@@ -326,13 +326,13 @@
                     "diff_fp32_min": -1,
                     "diff_fp32_max": 0.4
                 },
-                "retinanet_coco_pruning_int8": {
-                    "config": "examples/tensorflow/object_detection/configs/pruning_quantization/retinanet_coco_pruning_int8.json",
+                "retinanet_coco_pruning_geometric_median_int8": {
+                    "config": "examples/tensorflow/object_detection/configs/pruning_quantization/retinanet_coco_pruning_geometric_median_int8.json",
                     "reference": "retinanet_coco",
                     "target": 32.68,
                     "target_init": 29.03,
                     "weights": "retinanet/retinanet.h5",
-                    "resume": "retinanet_coco_pruning_int8",
+                    "resume": "retinanet_coco_pruning_geometric_median_int8",
                     "metric_type": "mAP",
                     "model_description": "RetinaNet",
                     "compression_description": "INT8 (per-tensor, symm. W, half-range asymm. A) + filter pruning 40%",
