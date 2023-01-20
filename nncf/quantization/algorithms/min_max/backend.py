@@ -28,7 +28,7 @@ from nncf.common.tensor_statistics.collectors import TensorStatisticCollectorBas
 from nncf.common.tensor_statistics.statistics import MinMaxTensorStatistic
 from nncf.common.utils.registry import Registry
 from nncf.common.quantization.structs import QuantizerConfig
-from nncf.common.graph.model_transformer import ModelTransformer
+
 
 TModel = TypeVar('TModel')
 ALGO_BACKENDS = Registry('algo_backends')
@@ -69,16 +69,6 @@ class MinMaxAlgoBackend(ABC):
     def quant_trait_op_dict(self) -> Dict[int, OperatorMetatype]:
         """
         Property for the backend-specific dictionary that contains QuantizationTrait-specific metatypes.
-        """
-
-    @staticmethod
-    @abstractmethod
-    def model_transformer(model: TModel) -> ModelTransformer:
-        """
-        Returns backend-specific ModelTransformer instance.
-
-        :param model: Backend-specific model to create ModelTransformer.
-        :return: ModelTransformer instance.
         """
 
     @staticmethod

@@ -31,7 +31,6 @@ from nncf.experimental.openvino_native.graph.metatypes.openvino_metatypes import
 from nncf.experimental.openvino_native.graph.metatypes.openvino_metatypes import GENERAL_WEIGHT_LAYER_METATYPES
 from nncf.experimental.openvino_native.graph.transformations.commands import OVQuantizerInsertionCommand
 from nncf.experimental.openvino_native.graph.transformations.commands import OVTargetPoint
-from nncf.experimental.openvino_native.graph.model_transformer import OVModelTransformer
 from nncf.experimental.openvino_native.hardware.config import OVHWConfig
 from nncf.experimental.openvino_native.hardware.fused_patterns import OPENVINO_HW_FUSED_PATTERNS
 from nncf.experimental.openvino_native.quantization.default_quantization import DEFAULT_OV_QUANT_TRAIT_TO_OP_DICT
@@ -66,10 +65,6 @@ class OVMinMaxAlgoBackend(MinMaxAlgoBackend):
     @property
     def quant_trait_op_dict(self) -> Dict[int, OperatorMetatype]:
         return DEFAULT_OV_QUANT_TRAIT_TO_OP_DICT
-
-    @staticmethod
-    def model_transformer(model: ov.Model) -> OVModelTransformer:
-        return OVModelTransformer(model)
 
     @staticmethod
     def target_point(target_type: TargetType,

@@ -24,7 +24,6 @@ from nncf.onnx.graph.metatypes.onnx_metatypes import LAYERS_WITH_BIAS_METATYPES
 from nncf.onnx.graph.metatypes.onnx_metatypes import ONNX_OPERATION_METATYPES
 from nncf.onnx.graph.metatypes.onnx_metatypes import ONNXIdentityMetatype
 from nncf.onnx.graph.metatypes.onnx_metatypes import ONNXDequantizeLinearMetatype
-from nncf.onnx.graph.model_transformer import ONNXModelTransformer
 from nncf.onnx.graph.transformations.commands import ONNXBiasCorrectionCommand
 from nncf.onnx.graph.transformations.commands import ONNXModelExtractionCommand
 from nncf.onnx.graph.transformations.commands import ONNXTargetPoint
@@ -54,10 +53,6 @@ class ONNXFBCAlgoBackend(FBCAlgoBackend):
     @property
     def tensor_processor(self) -> ONNXNNCFCollectorTensorProcessor:
         return ONNXNNCFCollectorTensorProcessor()
-
-    @staticmethod
-    def model_transformer(model: onnx.ModelProto) -> ONNXModelTransformer:
-        return ONNXModelTransformer(model)
 
     @staticmethod
     def target_point(target_type: TargetType,
