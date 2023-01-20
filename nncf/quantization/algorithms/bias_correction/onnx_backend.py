@@ -23,7 +23,6 @@ from nncf.common.graph import NNCFNode
 from nncf.common.graph import NNCFGraph
 from nncf.common.graph.transformations.layout import TransformationLayout
 from nncf.common.graph.operator_metatypes import OperatorMetatype
-from nncf.onnx.graph.metatypes.onnx_metatypes import LAYERS_WITH_BIAS_METATYPES
 from nncf.onnx.graph.metatypes.onnx_metatypes import ONNX_OPERATION_METATYPES
 from nncf.onnx.graph.metatypes.onnx_metatypes import ONNXDequantizeLinearMetatype
 from nncf.onnx.graph.model_transformer import ONNXModelTransformer
@@ -40,19 +39,13 @@ from nncf.quantization.algorithms.bias_correction.backend import ALGO_BACKENDS
 from nncf.quantization.algorithms.bias_correction.backend import BiasCorrectionAlgoBackend
 from nncf.onnx.graph.onnx_graph import ONNXGraph
 from nncf.onnx.graph.node_utils import get_bias_value
+from nncf.onnx.graph.node_utils import is_node_with_bias
 from nncf.onnx.graph.transformations.commands_creation import create_bias_correction_command
 
 
 #pylint:disable=too-many-public-methods
 @ALGO_BACKENDS.register(BackendType.ONNX)
 class ONNXBiasCorrectionAlgoBackend(BiasCorrectionAlgoBackend):
-
-    @property
-    def layers_with_bias_metatypes(self) -> List[str]:
-        biased_op_types = []
-        for metatype in LAYERS_WITH_BIAS_METATYPES:
-            biased_op_types.extend(metatype.op_names)
-        return biased_op_types
 
     @property
     def channel_axis_by_types(self) -> Dict[str, int]:
@@ -177,5 +170,4 @@ class ONNXBiasCorrectionAlgoBackend(BiasCorrectionAlgoBackend):
 
     @staticmethod
     def is_node_with_bias(node: NNCFNode) -> bool:
-        input_tensor_names = node.layer_attributes.input_tensor_names
-        return len(input_tensor_names) > 2
+        return is_node_with_bias(node)

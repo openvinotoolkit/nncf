@@ -36,13 +36,6 @@ class BiasCorrectionAlgoBackend(ABC):
 
     @property
     @abstractmethod
-    def layers_with_bias_metatypes(self):
-        """
-        Property for the backend-specific metatypes with bias.
-        """
-
-    @property
-    @abstractmethod
     def channel_axis_by_types(self):
         """
         Property for the backend-specific info about channels placement in the layout.
