@@ -56,10 +56,6 @@ class ONNXFBCAlgoBackend(FBCAlgoBackend):
         return ONNXNNCFCollectorTensorProcessor()
 
     @staticmethod
-    def model_transformer(model: onnx.ModelProto) -> ONNXModelTransformer:
-        return ONNXModelTransformer(model)
-
-    @staticmethod
     def target_point(target_type: TargetType,
                      target_node_name: str,
                      port_id: int) -> ONNXTargetPoint:

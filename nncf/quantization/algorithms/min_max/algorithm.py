@@ -14,6 +14,7 @@
 from copy import deepcopy
 from typing import Dict, List, TypeVar, Optional, OrderedDict, Tuple
 import collections
+
 from nncf import Dataset
 from nncf.common.graph.graph import NNCFGraph
 from nncf.common.graph.transformations.commands import TargetType
@@ -36,7 +37,6 @@ from nncf.common.tensor_statistics.collectors import TensorStatisticCollectorBas
 from nncf.common.utils.backend import BackendType
 from nncf.common.utils.backend import get_backend
 from nncf.common.logging import nncf_logger
-
 from nncf.quantization.algorithms.algorithm import Algorithm
 from nncf.quantization.algorithms.algorithm import AlgorithmParameters
 from nncf.quantization.algorithms.min_max.backend import ALGO_BACKENDS
@@ -45,6 +45,8 @@ from nncf.quantization.algorithms.definitions import Granularity
 from nncf.common.factory import NNCFGraphFactory
 from nncf.common.tensor_statistics.statistic_point import StatisticPoint
 from nncf.common.tensor_statistics.statistic_point import StatisticPointsContainer
+from nncf.common.factory import ModelTransformerFactory
+
 
 TModel = TypeVar('TModel')
 
@@ -352,7 +354,7 @@ class MinMaxQuantization(Algorithm):
                dataset: Optional[Dataset] = None) -> TModel:
         transformation_layout, transformation_commands = TransformationLayout(), []
         nncf_graph = NNCFGraphFactory.create(model) if self.nncf_graph is None else self.nncf_graph
-        model_transformer = self._backend_entity.model_transformer(model)
+        model_transformer = ModelTransformerFactory.create(model)
 
         quantization_target_points = self._get_quantization_target_points(model)
         weight_tensor_names = set()

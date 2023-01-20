@@ -73,16 +73,6 @@ class MinMaxAlgoBackend(ABC):
 
     @staticmethod
     @abstractmethod
-    def model_transformer(model: TModel) -> ModelTransformer:
-        """
-        Returns backend-specific ModelTransformer instance.
-
-        :param model: Backend-specific model to create ModelTransformer.
-        :return: ModelTransformer instance.
-        """
-
-    @staticmethod
-    @abstractmethod
     def target_point(target_type: TargetType, target_node_name: str, port_id: int) -> TargetPoint:
         """
         Returns backend-specific target point.

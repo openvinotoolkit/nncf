@@ -68,10 +68,6 @@ class OVMinMaxAlgoBackend(MinMaxAlgoBackend):
         return DEFAULT_OV_QUANT_TRAIT_TO_OP_DICT
 
     @staticmethod
-    def model_transformer(model: ov.Model) -> OVModelTransformer:
-        return OVModelTransformer(model)
-
-    @staticmethod
     def target_point(target_type: TargetType,
                      target_node_name: str,
                      port_id: int) -> OVTargetPoint:
