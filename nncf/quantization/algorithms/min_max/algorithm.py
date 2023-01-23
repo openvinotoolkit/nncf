@@ -38,7 +38,7 @@ from nncf.common.tensor_statistics.collectors import TensorStatisticCollectorBas
 from nncf.common.utils.backend import BackendType
 from nncf.common.utils.backend import get_backend
 from nncf.common.logging import nncf_logger
-from nncf.common.graph.patterns import PatternManager
+from nncf.common.graph.patterns import PatternsManager
 from nncf.common.graph.patterns import GraphPattern
 
 from nncf.quantization.algorithms.algorithm import Algorithm
@@ -161,7 +161,6 @@ class MinMaxQuantization(Algorithm):
         self._quantization_target_points_to_qconfig = \
             collections.OrderedDict()  # type: OrderedDict[TargetPoint, QuantizerConfig]
         self._parameters = parameters
-        self._pattern_manager = PatternManager()
 
     @property
     def available_backends(self) -> Dict[str, BackendType]:
@@ -238,7 +237,7 @@ class MinMaxQuantization(Algorithm):
     def _get_patterns_setup(self, model: TModel) -> GraphPattern:
         backend = get_backend(model)
         device = self._parameters.target_device
-        return self._pattern_manager.get_patterns(backend, device).get_full_pattern_graph()
+        return PatternsManager.get_patterns(backend, device).get_full_pattern_graph()
 
     def _get_quantizer_setup(self, nncf_graph: NNCFGraph, pattern: GraphPattern) -> SingleConfigQuantizerSetup:
         """

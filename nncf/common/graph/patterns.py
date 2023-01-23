@@ -263,7 +263,7 @@ class Pattern:
     match: bool = True
 
 
-class PatternNames(Enum):
+class PatternsManager(Enum):
 
     # COMMON PATTERNS
     SWISH_ACTIVATION = Pattern('swish_activation')
@@ -303,6 +303,7 @@ class PatternNames(Enum):
     EXPERIMENTAL_DETECTRON_DETECTION_OUTPUT_ADD = Pattern('experimental_detectron_detection_output_add')
     EXPERIMENTAL_DETECTRON_ROI_FEATURE_EXTRACTOR_ADD = Pattern('experimental_detectron_roi_feature_extractor_add')
     EQUAL_LOGICALNOT = Pattern('equal_logicalnot')
+    MULTIPLY_SUBTRACT = Pattern('multiply_subtract', backends=[BackendType.ONNX])
     BATCH_NORM_ACTIVATIONS = Pattern('batch_norm_activations', backends=[BackendType.ONNX])
     ACTIVATIONS_BATCH_NORM = Pattern('activations_batch_norm', backends=[BackendType.ONNX])
     INPUT_ADD_MULTIPLY = Pattern('input_add_multiply', backends=[BackendType.ONNX])
@@ -335,56 +336,51 @@ class PatternNames(Enum):
     ATOMIC_ACTIVATIONS_OPERATIONS = Pattern('atomic_activations_operations', match=False)
     ARITHMETIC_OPERATIONS = Pattern('arithmetic_operations', match=False)
 
-
     @staticmethod
-    def get_pattern_names_by_backend(backend: BackendType) -> List['PatternNames']:
+    def _get_pattern_names_by_backend(backend: BackendType) -> List['PatternsManager']:
         output = []
-        for pattern in PatternNames:
+        for pattern in PatternsManager:
             pattern_backends = pattern.value.backends
             if pattern_backends is None or backend in pattern_backends:
                 output.append(pattern)
         return output
-    
+
     @staticmethod
-    def get_pattern_names(backend: BackendType, device: TargetDevice) -> List['PatternNames']:
+    def _check(registered_patterns: List['PatternsManager'], all_patterns: List['PatternsManager']):
+        diff = set(all_patterns) - set(registered_patterns)
+        if len(diff) != 0:
+            raise RuntimeError('Not all patterns was registred in the backend!')
+
+    @staticmethod
+    def _filter_pattern_names_by_device(pattern_names: List['PatternsManager'], device: TargetDevice) -> List['PatternsManager']:
         output = []
-        for backend_pattern in PatternNames.get_pattern_names_by_backend(backend):
+        for backend_pattern in pattern_names:
             pattern_devices = backend_pattern.value.devices
             if pattern_devices is None or device in pattern_devices:
                 output.append(backend_pattern)
         return output
 
-
-class PatternManager:
-
-    def __init__(self) -> None:
-
-        self.fused_patterns_by_backends = {
-            BackendType.OPENVINO: self._get_fused_patterns_by_backend(BackendType.OPENVINO),
-        }
-
-    def get_patterns(self, backend: BackendType, device: TargetDevice) -> HWFusedPatterns:
-        hw_fused_patterns = HWFusedPatterns()
-
-        if backend not in self.fused_patterns_by_backends:
-            return hw_fused_patterns
-
-        patterns = self.fused_patterns_by_backends[backend]
-
-        for pattern_info in PatternNames.get_pattern_names(backend, device):
-            pattern = patterns.get(pattern_info)()
-            hw_fused_patterns.register(pattern, pattern_info.value.name, pattern_info.value.match)
-        return hw_fused_patterns
-
     @staticmethod
-    def _check(registered_patterns: List[PatternNames], all_patterns: PatternNames):
-        diff = set(all_patterns) - set(registered_patterns)
-        if len(diff) != 0:
-            raise RuntimeError('Not all patterns was registred in the backend!')
-
-    def _get_fused_patterns_by_backend(self, backend: BackendType):
+    def _get_fused_patterns_by_backend(backend: BackendType):
         if backend == BackendType.OPENVINO:
             from nncf.experimental.openvino_native.hardware.fused_patterns import OPENVINO_HW_FUSED_PATTERNS as ov_registry
 
-            self._check(ov_registry.registry_dict.keys(), PatternNames.get_pattern_names_by_backend(backend))
-            return ov_registry
+            pattern_names = PatternsManager._get_pattern_names_by_backend(backend)
+            PatternsManager._check(ov_registry.registry_dict.keys(), pattern_names)
+            return ov_registry, pattern_names
+        elif backend == BackendType.ONNX:
+            from nncf.onnx.hardware.fused_patterns import ONNX_HW_FUSED_PATTERNS as onnx_registry
+
+            pattern_names = PatternsManager._get_pattern_names_by_backend(backend)
+            PatternsManager._check(onnx_registry.registry_dict.keys(), pattern_names)
+            return onnx_registry, pattern_names
+
+    @staticmethod
+    def get_patterns(backend: BackendType, device: TargetDevice) -> HWFusedPatterns:
+        hw_fused_patterns = HWFusedPatterns()
+        registry, pattern_names = PatternsManager._get_fused_patterns_by_backend(backend)
+
+        for pattern_info in PatternsManager._filter_pattern_names_by_device(pattern_names, device):
+            pattern = registry.get(pattern_info)()
+            hw_fused_patterns.register(pattern, pattern_info.value.name, pattern_info.value.match)
+        return hw_fused_patterns
