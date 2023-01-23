@@ -30,6 +30,7 @@ Bugfixes:
 - (PyTorch, TensorFlow) Various bugs and issues with compression training were fixed.
 - (TensorFlow) Fixed an error with `"num_bn_adaptation_samples": 0` in config leading to a `TypeError` during quantization algo initialization.
 - (ONNX) Temporary model file is no longer saved on disk.
+- (ONNX) Depthwise convolutions are now quantizable in per-channel mode.
 
 Breaking changes:
 - Fused patterns will be excluded from quantization via `ignored_scopes` only if the top-most node in data flow order matches against `ignored_scopes`
