@@ -23,7 +23,7 @@ from nncf.common.tensor_statistics.collectors import ReductionShape
 from nncf.common.utils.backend import BackendType
 from nncf.experimental.openvino_native.graph.metatypes.openvino_metatypes import OVOpMetatype
 from nncf.experimental.openvino_native.graph.metatypes.openvino_metatypes import LAYERS_WITH_BIAS_METATYPES
-from nncf.experimental.openvino_native.graph.metatypes.openvino_metatypes import OV_OPERATION_METATYPES
+from nncf.experimental.openvino_native.graph.metatypes.openvino_metatypes import OV_OPERATOR_METATYPES
 from nncf.experimental.openvino_native.graph.model_transformer import OVModelTransformer
 from nncf.experimental.openvino_native.graph.transformations.commands import OVBiasCorrectionCommand
 from nncf.experimental.openvino_native.graph.transformations.commands import OVModelExtractionCommand
@@ -47,9 +47,9 @@ class OVFastBiasCorrectionAlgoBackend(FastBiasCorrectionAlgoBackend):
     @property
     def channel_axis_by_types(self) -> Dict[OVOpMetatype, int]:
         return {
-            OV_OPERATION_METATYPES.get_operator_metatype_by_op_name('Convolution'): 1,
-            OV_OPERATION_METATYPES.get_operator_metatype_by_op_name('ConvolutionBackpropData'): 1,
-            OV_OPERATION_METATYPES.get_operator_metatype_by_op_name('MatMul'): -1
+            OV_OPERATOR_METATYPES.get_operator_metatype_by_op_name('Convolution'): 1,
+            OV_OPERATOR_METATYPES.get_operator_metatype_by_op_name('ConvolutionBackpropData'): 1,
+            OV_OPERATOR_METATYPES.get_operator_metatype_by_op_name('MatMul'): -1
         }
 
     @property
@@ -126,7 +126,7 @@ class OVFastBiasCorrectionAlgoBackend(FastBiasCorrectionAlgoBackend):
     def is_quantized_weights(biased_node: NNCFNode, nncf_graph: NNCFGraph) -> bool:
         weight_port_id = biased_node.layer_attributes.weight_port_id
         weight_node = nncf_graph.get_input_edges(biased_node)[weight_port_id].from_node
-        fq_type = OV_OPERATION_METATYPES.get_operator_metatype_by_op_name('FakeQuantize')
+        fq_type = OV_OPERATOR_METATYPES.get_operator_metatype_by_op_name('FakeQuantize')
         return weight_node.metatype == fq_type
 
     @staticmethod
@@ -143,8 +143,8 @@ class OVFastBiasCorrectionAlgoBackend(FastBiasCorrectionAlgoBackend):
         if bias_node is None:
             return False
 
-        needed_bias_type = OV_OPERATION_METATYPES.get_operator_metatype_by_op_name('Constant')
-        skip_metatypes = [OV_OPERATION_METATYPES.get_operator_metatype_by_op_name('Convert')]
+        needed_bias_type = OV_OPERATOR_METATYPES.get_operator_metatype_by_op_name('Constant')
+        skip_metatypes = [OV_OPERATOR_METATYPES.get_operator_metatype_by_op_name('Convert')]
 
         potential_bias_queue = deque(nncf_graph.get_previous_nodes(bias_node))
         while potential_bias_queue:
@@ -160,6 +160,6 @@ class OVFastBiasCorrectionAlgoBackend(FastBiasCorrectionAlgoBackend):
     @staticmethod
     def get_bias_node(biased_node: NNCFNode, nncf_graph: NNCFGraph) -> Optional[NNCFNode]:
         add_bias_node = nncf_graph.get_next_nodes(biased_node)[0]
-        if add_bias_node.metatype == OV_OPERATION_METATYPES.get_operator_metatype_by_op_name('Add'):
+        if add_bias_node.metatype == OV_OPERATOR_METATYPES.get_operator_metatype_by_op_name('Add'):
             return add_bias_node
         return None
