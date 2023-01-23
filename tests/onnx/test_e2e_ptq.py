@@ -70,6 +70,7 @@ XFAIL_QUANTIZED_MODELS = {
 DATASET_DEFINITIONS_PATH_ONNX = BENCHMARKING_DIR / 'dataset_definitions.yml'
 
 OV_EP_COL_NAME = "OpenVINOExecutionProvider"
+OV_COL_NAME = "OpenVINO"
 CPU_EP_COL_NAME = "CPUExecutionProvider"
 REPORT_NAME = 'report.html'
 
@@ -379,8 +380,7 @@ class TestBenchmark:
             "-m", str(model_dir / task_type / model_file_name),
             "-s", str(data_dir),
             "-a", str(anno_dir),
-            "--csv_result", str(output_dir / out_file_name),
-            "--target_tags", 'OpenVINO'
+            "--csv_result", str(output_dir / out_file_name)
         ]
         if eval_size is not None:
             com_line += ["-ss", str(eval_size)]
@@ -405,10 +405,11 @@ class TestBenchmark:
     def test_onnx_rt_quantized_model_accuracy(self, request, task_type, model_name, model_names_to_test, ckpt_dir,
                                               data_dir, anno_dir, output_dir, eval_size, is_ov_ep, is_cpu_ep):
         if not (is_ov_ep or is_cpu_ep):
-            pytest.skip('No Validation test on ONNXRuntime.')
+            pytest.skip('Skip accuracy validation on ONNXRuntime.')
         check_skip_model(model_name, model_names_to_test)
         # Run PTQ first
-        depends(request, ["TestPTQ::test_ptq_model" + request.node.name.lstrip("test_quantized_model_accuracy")])
+        depends(request,
+                ["TestPTQ::test_ptq_model" + request.node.name.lstrip("test_onnx_rt_quantized_model_accuracy")])
         check_xfail(model_name)
         check_quantized_xfail(model_name)
 
@@ -424,10 +425,10 @@ class TestBenchmark:
     def test_ov_quantized_model_accuracy(self, request, task_type, model_name, model_names_to_test, ckpt_dir, data_dir,
                                          anno_dir, output_dir, eval_size, is_ov):
         if not is_ov:
-            pytest.skip('No Validation test on OpenVINO.')
+            pytest.skip('Skip accuracy validation on OpenVINO.')
         check_skip_model(model_name, model_names_to_test)
         # Run PTQ first
-        depends(request, ["TestPTQ::test_ptq_model" + request.node.name.lstrip("test_quantized_model_accuracy")])
+        depends(request, ["TestPTQ::test_ptq_model" + request.node.name.lstrip("test_ov_quantized_model_accuracy")])
         check_xfail(model_name)
         check_quantized_xfail(model_name)
 
@@ -455,6 +456,10 @@ class TestBenchmarkResult:
         if CPU_EP_COL_NAME in df.columns:
             df = df.rename({"CPUExecutionProvider": "CPU-EP_INT8"}, axis=1)
             df["Diff CPU-EP FP32"] = df["CPU-EP_INT8"] - df["FP32"]
+        if OV_COL_NAME in df.columns:
+            df = df.rename({"OpenVINO": "OV_INT8"}, axis=1)
+            df["Diff OV FP32"] = df["OV_INT8"] - df["FP32"]
+            df["Diff OV Expected"] = df['target_int8'] * 100 - df["FP32"]
         df["Expected FP32"] = df["target_fp32"] * 100
         return df
 
@@ -488,9 +493,13 @@ class TestBenchmarkResult:
         df = df.fillna("-")
         is_cpu_ep = "CPU-EP_INT8" in df.columns
         is_ov_ep = "OV-EP_INT8" in df.columns
+        is_ov = "OV_INT8" in df.columns
 
         new_columns_order = ["Model", "Metrics type", "Expected FP32", "FP32"]
         column_names = ["Model", "Metrics type", "Expected FP32", "FP32"]
+        if is_ov:
+            new_columns_order.extend(["OV_INT8", "Diff OV FP32", "Diff OV Expected"])
+            column_names.extend(['INT8', 'Diff FP32', 'Diff Expected'])
         if is_cpu_ep:
             new_columns_order.extend(["CPU-EP_INT8", "Diff CPU-EP FP32"])
             column_names.extend(['INT8', 'Diff FP32'])
@@ -500,19 +509,32 @@ class TestBenchmarkResult:
         df = df[new_columns_order]
         df.columns = column_names
         if is_cpu_ep and is_ov_ep:
-            df.columns = pd.MultiIndex.from_tuples(
-                [("", col) for col in df.columns[:4]] + [(CPU_EP_COL_NAME, col) for col in df.columns[4:6]] + [
-                    (OV_EP_COL_NAME, col) for col in df.columns[6:]]
-            )
+            if is_ov:
+                df.columns = pd.MultiIndex.from_tuples(
+                    [("", col) for col in df.columns[:4]] + [(OV_COL_NAME, col) for col in df.columns[4:7]] + [
+                        (CPU_EP_COL_NAME, col) for col in df.columns[7:9]] + [
+                        (OV_EP_COL_NAME, col) for col in df.columns[6:]]
+                )
+            else:
+                df.columns = pd.MultiIndex.from_tuples(
+                    [("", col) for col in df.columns[:4]] + [(CPU_EP_COL_NAME, col) for col in df.columns[4:6]] + [
+                        (OV_EP_COL_NAME, col) for col in df.columns[6:]]
+                )
             return df
         provider_name = CPU_EP_COL_NAME if is_cpu_ep else OV_EP_COL_NAME
-        df.columns = pd.MultiIndex.from_tuples(
-            [("", col) for col in df.columns[:4]] + [(provider_name, col) for col in df.columns[4:]]
-        )
+        if is_ov:
+            df.columns = pd.MultiIndex.from_tuples(
+                [("", col) for col in df.columns[:4]] + [(OV_COL_NAME, col) for col in df.columns[4:7]] + [
+                    (provider_name, col) for col in df.columns[7:]]
+            )
+        else:
+            df.columns = pd.MultiIndex.from_tuples(
+                [("", col) for col in df.columns[:4]] + [(provider_name, col) for col in df.columns[4:]]
+            )
         return df
 
     def generate_html(self, df: pd.DataFrame, cpu_ep_row_colors: Dict[int, str], ov_ep_row_colors: Dict[int, str],
-                      output_fp: str) -> None:
+                      ov_row_colors: Dict[int, str], output_fp: str) -> None:
         doc, tag, text = Doc().tagtext()
         doc.asis('<!DOCTYPE html>')
         with tag('head'):
@@ -565,6 +587,8 @@ class TestBenchmarkResult:
                                     additional_attrs = {'bgcolor': f'{ov_ep_row_colors[idx]}'}
                                 elif up_col == CPU_EP_COL_NAME:
                                     additional_attrs = {'bgcolor': f'{cpu_ep_row_colors[idx]}'}
+                                elif up_col == OV_COL_NAME:
+                                    additional_attrs = {'bgcolor': f'{ov_row_colors[idx]}'}
                                 with tag('td', **additional_attrs):
                                     if isinstance(elem, float):
                                         elem = round(elem, 2)
@@ -603,10 +627,13 @@ class TestBenchmarkResult:
         cpu_ep_row_colors, ov_ep_row_colors = {}, {}
         is_ov_ep = OV_EP_COL_NAME in quantized_model_accuracy.columns
         is_cpu_ep = CPU_EP_COL_NAME in quantized_model_accuracy.columns
+        is_ov = OV_COL_NAME in quantized_model_accuracy.columns
         df = self.join_reference_and_quantized_frames(reference_model_accuracy, quantized_model_accuracy)
         if is_cpu_ep:
             cpu_ep_row_colors = self.get_row_colors(df, reference_model_accuracy, "CPU-EP_INT8")
         if is_ov_ep:
             ov_ep_row_colors = self.get_row_colors(df, reference_model_accuracy, "OV-EP_INT8")
+        if is_ov:
+            ov_row_colors = self.get_row_colors(df, reference_model_accuracy, "OV_INT8")
         df = self.generate_final_data_frame(df)
-        self.generate_html(df, cpu_ep_row_colors, ov_ep_row_colors, output_fp)
+        self.generate_html(df, cpu_ep_row_colors, ov_ep_row_colors, ov_row_colors, output_fp)
