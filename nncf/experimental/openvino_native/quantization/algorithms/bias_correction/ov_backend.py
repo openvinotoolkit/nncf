@@ -25,11 +25,11 @@ from nncf.common.graph.operator_metatypes import OperatorMetatype
 
 from nncf.experimental.openvino_native.graph.metatypes.openvino_metatypes import OVOpMetatype
 from nncf.experimental.openvino_native.graph.metatypes.openvino_metatypes import LAYERS_WITH_BIAS_METATYPES
-from nncf.experimental.openvino_native.graph.metatypes.openvino_metatypes import OV_OPERATION_METATYPES
+from nncf.experimental.openvino_native.graph.metatypes.openvino_metatypes import OV_OPERATOR_METATYPES
 from nncf.experimental.openvino_native.graph.model_transformer import OVModelTransformer
 from nncf.experimental.openvino_native.graph.transformations.commands import OVBiasCorrectionCommand
 from nncf.experimental.openvino_native.graph.transformations.commands import OVModelExtractionCommand
-from nncf.experimental.openvino_native.graph.transformations.commands import OVNodeRemovingCommand
+from nncf.experimental.openvino_native.graph.transformations.commands import OVFQNodeRemovingCommand
 from nncf.experimental.openvino_native.graph.transformations.commands import OVOutputInsertionCommand
 from nncf.experimental.openvino_native.graph.transformations.commands import OVTargetPoint
 # TODO (KodiaqQ): Remove this WA after merging #1444
@@ -53,11 +53,11 @@ class OVBiasCorrectionAlgoBackend(BiasCorrectionAlgoBackend):
     @property
     def channel_axis_by_types(self) -> Dict[OVOpMetatype, int]:
         return {
-            OV_OPERATION_METATYPES.get_operator_metatype_by_op_name('Convolution'): 1,
-            OV_OPERATION_METATYPES.get_operator_metatype_by_op_name('ConvolutionBackpropData'): 1,
-            OV_OPERATION_METATYPES.get_operator_metatype_by_op_name('GroupConvolution'): 1,
-            OV_OPERATION_METATYPES.get_operator_metatype_by_op_name('GroupConvolutionBackpropData'): 1,
-            OV_OPERATION_METATYPES.get_operator_metatype_by_op_name('MatMul'): -1
+            OV_OPERATOR_METATYPES.get_operator_metatype_by_op_name('Convolution'): 1,
+            OV_OPERATOR_METATYPES.get_operator_metatype_by_op_name('ConvolutionBackpropData'): 1,
+            OV_OPERATOR_METATYPES.get_operator_metatype_by_op_name('GroupConvolution'): 1,
+            OV_OPERATOR_METATYPES.get_operator_metatype_by_op_name('GroupConvolutionBackpropData'): 1,
+            OV_OPERATOR_METATYPES.get_operator_metatype_by_op_name('MatMul'): -1
         }
 
     @property
@@ -66,7 +66,7 @@ class OVBiasCorrectionAlgoBackend(BiasCorrectionAlgoBackend):
 
     @property
     def quantizer_types(self) -> List[OperatorMetatype]:
-        return [OV_OPERATION_METATYPES.get_operator_metatype_by_op_name('FakeQuantize')]
+        return [OV_OPERATOR_METATYPES.get_operator_metatype_by_op_name('FakeQuantize')]
 
     @staticmethod
     def model_transformer(model: ov.Model) -> OVModelTransformer:
@@ -88,8 +88,8 @@ class OVBiasCorrectionAlgoBackend(BiasCorrectionAlgoBackend):
         return OVOutputInsertionCommand(target_point)
 
     @staticmethod
-    def node_removing_command(target_point: OVTargetPoint) -> OVNodeRemovingCommand:
-        return OVNodeRemovingCommand(target_point=target_point)
+    def node_removing_command(target_point: OVTargetPoint) -> OVFQNodeRemovingCommand:
+        return OVFQNodeRemovingCommand(target_point=target_point)
 
     @staticmethod
     def mean_statistic_collector(reduction_shape: ReductionShape,
@@ -118,7 +118,7 @@ class OVBiasCorrectionAlgoBackend(BiasCorrectionAlgoBackend):
     @staticmethod
     def get_node_through_quantizer(biased_node: NNCFNode, nncf_graph: NNCFGraph) -> NNCFNode:
         activation_input_port = 0
-        fq_type = OV_OPERATION_METATYPES.get_operator_metatype_by_op_name('FakeQuantize')
+        fq_type = OV_OPERATOR_METATYPES.get_operator_metatype_by_op_name('FakeQuantize')
         previous_node = nncf_graph.get_previous_nodes(biased_node)[activation_input_port]
         while previous_node.node_type == fq_type:
             previous_node = nncf_graph.get_previous_nodes(previous_node)[activation_input_port]
@@ -175,7 +175,7 @@ class OVBiasCorrectionAlgoBackend(BiasCorrectionAlgoBackend):
     def is_quantized_weights(biased_node: NNCFNode, nncf_graph: NNCFGraph) -> bool:
         weight_port_id = biased_node.layer_attributes.weight_port_id
         weight_node = nncf_graph.get_input_edges(biased_node)[weight_port_id].from_node
-        fq_type = OV_OPERATION_METATYPES.get_operator_metatype_by_op_name('FakeQuantize')
+        fq_type = OV_OPERATOR_METATYPES.get_operator_metatype_by_op_name('FakeQuantize')
         return weight_node.metatype == fq_type
 
     @staticmethod
@@ -184,8 +184,8 @@ class OVBiasCorrectionAlgoBackend(BiasCorrectionAlgoBackend):
         if bias_node is None:
             return False
 
-        needed_bias_type = OV_OPERATION_METATYPES.get_operator_metatype_by_op_name('Constant')
-        skip_metatypes = [OV_OPERATION_METATYPES.get_operator_metatype_by_op_name('Convert')]
+        needed_bias_type = OV_OPERATOR_METATYPES.get_operator_metatype_by_op_name('Constant')
+        skip_metatypes = [OV_OPERATOR_METATYPES.get_operator_metatype_by_op_name('Convert')]
 
         potential_bias_queue = deque(nncf_graph.get_previous_nodes(bias_node))
         while potential_bias_queue:
@@ -201,6 +201,6 @@ class OVBiasCorrectionAlgoBackend(BiasCorrectionAlgoBackend):
     @staticmethod
     def get_bias_node(biased_node: NNCFNode, nncf_graph: NNCFGraph) -> Optional[NNCFNode]:
         add_bias_node = nncf_graph.get_next_nodes(biased_node)[0]
-        if add_bias_node.metatype == OV_OPERATION_METATYPES.get_operator_metatype_by_op_name('Add'):
+        if add_bias_node.metatype == OV_OPERATOR_METATYPES.get_operator_metatype_by_op_name('Add'):
             return add_bias_node
         return None

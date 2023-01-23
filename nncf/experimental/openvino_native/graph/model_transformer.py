@@ -24,6 +24,8 @@ from nncf.common.graph.transformations.commands import TargetType
 from nncf.experimental.openvino_native.graph.transformations.commands import OVQuantizerInsertionCommand
 from nncf.experimental.openvino_native.graph.transformations.commands import OVOutputInsertionCommand
 from nncf.experimental.openvino_native.graph.transformations.commands import OVFQNodeRemovingCommand
+from nncf.experimental.openvino_native.graph.transformations.commands import OVModelExtractionCommand
+from nncf.experimental.openvino_native.graph.transformations.commands import OVBiasCorrectionCommand
 
 
 class ModelPrecision(Enum):
@@ -70,6 +72,8 @@ class OVModelTransformer(ModelTransformer):
         output_insertion_transformations = []
         fq_nodes_removing_transformations = []
         quantizer_insertion_transformations = []
+        bias_correction_transformations = []
+        model_extraction_transformation = None
         transformations = transformation_layout.transformations
 
         for transformation in transformations:
@@ -82,6 +86,10 @@ class OVModelTransformer(ModelTransformer):
 
         if output_insertion_transformations:
             self._apply_output_insertion_transformations(output_insertion_transformations)
+        if bias_correction_transformations:
+            self._apply_bias_correction_transformations(bias_correction_transformations)
+        if model_extraction_transformation:
+            self._model = self._apply_model_extraction_transformation(model_extraction_transformation)
         if fq_nodes_removing_transformations:
             self._apply_fq_nodes_removing_transformation(fq_nodes_removing_transformations)
         if quantizer_insertion_transformations:
@@ -206,3 +214,50 @@ class OVModelTransformer(ModelTransformer):
                 inp_node.replace_source_output(fq.output(0))
         else:
             raise RuntimeError(f'Incorrect target point type {transform_type}')
+
+    def _apply_bias_correction_transformations(self, transformations: List[OVBiasCorrectionCommand]) -> None:
+        """
+        Applies bias correction transformations on the model.
+        :param transformations: List of the bias correction transformations.
+        """
+        for transformation in transformations:
+            node_name = transformation.target_point.target_node_name
+
+            biased_node = self.name_to_node_mapping[node_name]
+            bias_port_id = transformation.target_point.port_id
+            biased_port = biased_node.input(bias_port_id)
+            potential_bias = biased_node.input_value(bias_port_id).node
+
+            if potential_bias.get_type_name() == 'Convert':
+                biased_port = potential_bias.input(0)
+                potential_bias = potential_bias.input_value(0).node
+            assert potential_bias.get_type_name() == 'Constant'
+            new_bias = opset.constant(transformation.bias_value, dtype=potential_bias.get_element_type())
+            biased_port.replace_source_output(new_bias.output(0))
+
+    def _apply_model_extraction_transformation(self, transformation: OVModelExtractionCommand) -> ov.Model:
+        """
+        Extracts sub-model from the original based on the inputs and outputs names.
+        :param transformation: Model extraction transformation.
+        :return: Extracted sub-model.
+        """
+        params, results = [], []
+        for input_name in transformation.inputs:
+            input_node = self.name_to_node_mapping[input_name]
+            input_port = input_node.input(0)
+            input_node_output = input_port.get_source_output()
+            new_param = opset.parameter(shape=input_node_output.get_shape(),
+                                        dtype=input_node_output.get_element_type(),
+                                        name=input_name)
+            input_port.replace_source_output(new_param.output(0))
+            params.append(new_param)
+
+        for output_name in transformation.outputs:
+            output_node = self.name_to_node_mapping[output_name]
+            for node_out in output_node.outputs():
+                results.append(opset.result(node_out, name=output_name))
+
+        if not results:
+            results = [r.node for r in self._model.outputs]
+
+        return ov.Model(results, params)

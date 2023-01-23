@@ -21,9 +21,11 @@ from nncf.common.tensor_statistics.collectors import MinMaxStatisticCollector
 from nncf.common.tensor_statistics.collectors import NNCFCollectorTensorProcessor
 from nncf.common.tensor_statistics.collectors import MeanMinMaxStatisticCollector
 from nncf.common.tensor_statistics.collectors import MeanStatisticCollector
+from nncf.common.tensor_statistics.collectors import BatchStatisticCollector
 from nncf.experimental.openvino_native.tensor import OVNNCFTensor
 from nncf.experimental.openvino_native.statistics.statistics import OVMinMaxTensorStatistic
 from nncf.experimental.openvino_native.statistics.statistics import OVMeanTensorStatistic
+from nncf.experimental.openvino_native.statistics.statistics import OVBatchTensorStatistic
 
 
 class OVNNCFCollectorTensorProcessor(NNCFCollectorTensorProcessor):
@@ -62,6 +64,10 @@ class OVNNCFCollectorTensorProcessor(NNCFCollectorTensorProcessor):
         x = np.moveaxis(x.tensor, axis, 1)
         t = x.reshape(x.shape[0], x.shape[1], -1)
         return OVNNCFTensor(np.mean(t, axis=(0, 2)))
+
+    @staticmethod
+    def batch_mean(x: NNCFTensor) -> NNCFTensor:
+        return OVNNCFTensor(np.mean(x.tensor, axis=0, keepdims=True))
 
     @staticmethod
     def stack(x: Union[List[NNCFTensor], Deque[NNCFTensor]], axis: int = 0) -> NNCFTensor:
@@ -111,3 +117,15 @@ class OVMeanStatisticCollector(MeanStatisticCollector):
 
     def _get_statistics(self) -> OVMeanTensorStatistic:
         return OVMeanTensorStatistic(self._mean_aggregate().tensor, self._shape())
+
+
+class OVBatchStatisticCollector(BatchStatisticCollector):
+    @staticmethod
+    def _get_processor() -> NNCFCollectorTensorProcessor:
+        return OVNNCFCollectorTensorProcessor()
+
+    def _register_input(self, x: OVNNCFTensor):
+        self._register_input_common(x)
+
+    def _get_statistics(self) -> OVBatchTensorStatistic:
+        return OVBatchTensorStatistic(self._all_values)

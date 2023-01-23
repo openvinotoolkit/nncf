@@ -88,3 +88,38 @@ class OVQuantizerInsertionCommand(OVInsertionCommand):
     def union(self, other: 'TransformationCommand') -> 'TransformationCommand':
         # Have a look at nncf/torch/graph/transformations/commands/PTInsertionCommand
         raise NotImplementedError()
+
+
+class OVBiasCorrectionCommand(TransformationCommand):
+    """
+    Corrects bias value in the model based on the input value.
+    """
+    def __init__(self, target_point: OVTargetPoint, bias_value: np.ndarray):
+        """
+        :param target_point: The TargetPoint instance for the correction that contains layer's information.
+        :param bias_value: The bias shift value (numpy format) that will be added to the original bias value.
+        """
+        super().__init__(TransformationType.CHANGE, target_point)
+        self.bias_value = bias_value
+
+    def union(self, other: 'TransformationCommand') -> 'TransformationCommand':
+        # Have a look at nncf/torch/graph/transformations/commands/PTInsertionCommand
+        raise NotImplementedError()
+
+
+class OVModelExtractionCommand(Command):
+    """
+    Extracts sub-graph based on the sub-model input and output names.
+    """
+    def __init__(self, inputs: List[str], outputs: List[str]):
+        """
+        :param inputs: List of the input names that denote the sub-graph beggining.
+        :param outputs: List of the output names that denote the sub-graph ending.
+        """
+        super().__init__(TransformationType.EXTRACT)
+        self.inputs = inputs
+        self.outputs = outputs
+
+    def union(self, other: 'Command') -> 'Command':
+        # Have a look at nncf/torch/graph/transformations/commands/PTInsertionCommand
+        raise NotImplementedError()
