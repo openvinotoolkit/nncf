@@ -8,13 +8,13 @@ Target version updates:
 Features:
 - Official release of the ONNX framework support.
 NNCF may now be used for post-training quantization (PTQ) on ONNX models.
-Added an example script demonstrating the ONNX post-training quantization on MobileNetV2.
+Added an [example script](examples/post_training_quantization/onnx/mobilenet_v2) demonstrating the ONNX post-training quantization on MobileNetV2.
 - Common post-training quantization API across the supported framework model formats (PyTorch, TensorFlow, ONNX, OpenVINO IR) via the `nncf.quantize(...)` function.
 The parameter set of the function is the same for all frameworks - actual framework-specific implementations are being dispatched based on the type of the model object argument.
-- (PyTorch) Joint Pruning, Quantization and Distillation for Transformers made possible via NNCF - 
 - (PyTorch, TensorFlow) Improved the adaptive compression training functionality to reduce effective training time.
 - (ONNX) Post-processing nodes are now automatically excluded from quantization.
-- (PyTorch - Experimental) Joint Pruning, Quantization and Distillation for Transformers enabled for certain models from HuggingFace `transformers` repo
+- (PyTorch - Experimental) Joint Pruning, Quantization and Distillation for Transformers enabled for certain models from HuggingFace `transformers` repo.
+See [description](nncf/experimental/torch/sparsity/movement/MovementSparsity.md) of the movement pruning involved in the JPQD for details.
 
 Bugfixes:
 - Fixed a division by zero if every operation is added to ignored scope
@@ -27,6 +27,7 @@ Bugfixes:
 - (PyTorch) `transformers` integration patch now allows to export to ONNX during training, and not only at the end of it.
 - (PyTorch) `torch.nn.utils.weight_norm` weights are now detected correctly.
 - (PyTorch) Exporting a model with sparsity or pruning no longer leads to weights in the original model object in-memory to be hard-set to 0.
+- (PyTorch - Experimental) improved automatic search of blocks to skip within the NAS algorithm – overlapping blocks are correctly filtered.
 - (PyTorch, TensorFlow) Various bugs and issues with compression training were fixed.
 - (TensorFlow) Fixed an error with `"num_bn_adaptation_samples": 0` in config leading to a `TypeError` during quantization algo initialization.
 - (ONNX) Temporary model file is no longer saved on disk.
