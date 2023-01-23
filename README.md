@@ -40,9 +40,9 @@ learning frameworks.
 
 ### Post-Training Compression Algorithms
 
-| Compression algorithm                                                        |PyTorch|TensorFlow|   ONNX   |       OpenVINO       |
-|:-----------------------------------------------------------------------------| :---: | :---: |:--------:|:--------------------:|
-| [Quantization](./docs/compression_algorithms/post_traininig/Quantization.md) | Supported | Supported |Supported| Supported (Preview)* |
+| Compression algorithm                                                       |PyTorch|TensorFlow|   ONNX   |       OpenVINO       |
+|:----------------------------------------------------------------------------| :---: | :---: |:--------:|:--------------------:|
+| [Quantization](./docs/compression_algorithms/post_training/Quantization.md) | Supported | Supported |Supported| Supported (Preview)* |
 
 _*the work is in progress, NNCF does not guarantee the full functional support._
 
@@ -140,11 +140,11 @@ NNCF provides [samples](#post-training-quantization) that demonstrate Post-Train
 To start the algorithm the user should provide:
 * Original model.
 * Validation part of the dataset.
-* [Data transformation function](./docs/compression_algorithms/post_training/Quantization.md) from original dataset format to the NNCF format. 
+* [Data transformation function](./docs/compression_algorithms/post_training/Quantization.md#data-transformation-function) from original dataset format to the NNCF format. 
 
 
 The basic workflow steps:
-1) Create the [data transformation function](./docs/compression_algorithms/post_training/Quantization.md).
+1) Create the [data transformation function](./docs/compression_algorithms/post_training/Quantization.md#data-transformation-function).
 2) Initialize NNCF Dataset with the validation dataset and the transformation function.
 3) Run the quantization pipeline.
 
