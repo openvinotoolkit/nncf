@@ -3,6 +3,7 @@ models:
     launchers:
       - framework: openvino
         device: CPU
+        tags: ['OpenVINO']
         adapter:
           type: tf_object_detection
           scores_out: detection_scores

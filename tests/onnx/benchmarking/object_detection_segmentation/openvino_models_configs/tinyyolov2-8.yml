@@ -3,6 +3,7 @@ models:
     launchers:
       - framework: openvino
         device: CPU
+        tags: ['OpenVINO']
         adapter:
           type: yolo_v2
           anchors: tiny_yolo_v2

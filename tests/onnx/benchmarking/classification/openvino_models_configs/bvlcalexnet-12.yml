@@ -3,6 +3,7 @@ models:
   launchers:
   - framework: openvino
     device: CPU
+    tags: ['OpenVINO']
     adapter: classification
   datasets:
   - name: imagenet_1000_classes

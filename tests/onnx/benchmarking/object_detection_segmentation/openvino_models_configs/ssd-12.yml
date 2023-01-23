@@ -3,6 +3,7 @@ models:
     launchers:
       - framework: openvino
         device: CPU
+        tags: ['OpenVINO']
         adapter:
           type: ssd_onnx
           scores_out: '.*scores*'

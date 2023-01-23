@@ -4,6 +4,7 @@ models:
   - framework: openvino
     device: CPU
     adapter: classification
+    tags: ['OpenVINO']
     inputs:
       - name: images:0
         type: INPUT

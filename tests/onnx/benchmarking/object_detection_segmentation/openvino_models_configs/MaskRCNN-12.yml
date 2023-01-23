@@ -3,6 +3,7 @@ models:
     launchers:
       - framework: openvino
         device: CPU
+        tags: ['OpenVINO']
         adapter:
           type: mask_rcnn
           boxes_out: '6568'

@@ -3,6 +3,7 @@ models:
     launchers:
       - framework: openvino
         device: CPU
+        tags: ['OpenVINO']
         adapter:
           type: faster_rcnn_onnx
           boxes_out: '6379'

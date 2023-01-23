@@ -379,7 +379,8 @@ class TestBenchmark:
             "-m", str(model_dir / task_type / model_file_name),
             "-s", str(data_dir),
             "-a", str(anno_dir),
-            "--csv_result", str(output_dir / out_file_name)
+            "--csv_result", str(output_dir / out_file_name),
+            "--target_tags", 'OpenVINO'
         ]
         if eval_size is not None:
             com_line += ["-ss", str(eval_size)]

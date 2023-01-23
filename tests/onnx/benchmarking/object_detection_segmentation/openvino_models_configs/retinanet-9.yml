@@ -3,6 +3,7 @@ models:
     launchers:
       - framework: openvino
         device: CPU
+        tags: ['OpenVINO']
         adapter:
           type: retinanet_multihead
           boxes_outputs: [output6, output7, output8, output9, output10]

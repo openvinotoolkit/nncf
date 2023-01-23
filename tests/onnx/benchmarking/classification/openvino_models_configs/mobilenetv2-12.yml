@@ -4,6 +4,7 @@ models:
   - framework: openvino
     device: CPU
     adapter: classification
+    tags: ['OpenVINO']
   datasets:
   - name: imagenet_1000_classes
     # read in RGB format

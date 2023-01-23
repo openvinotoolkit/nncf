@@ -3,6 +3,7 @@ models:
     launchers:
       - framework: openvino
         device: CPU
+        tags: ['OpenVINO']
         adapter:
           type: yolo_v3_onnx
           boxes_out: yolonms_layer_1/ExpandDims_1:0

@@ -68,7 +68,7 @@ def pytest_addoption(parser):
     parser.addoption(
         "--disable-ov", action="store_true", default=False,
         help="[e2e-test-onnx-model-zoo] If the parameter is set then the accuracy validation of the quantized models "
-             "will be disablef for OpenVINO."
+             "will be disable for OpenVINO."
     )
     parser.addoption(
         "--regen-dot", action="store_true", default=False, help="If specified, the "

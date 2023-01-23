@@ -4,7 +4,8 @@ models:
       - framework: openvino
         device: CPU
         adapter: classification
-        datasets:
+        tags: ['OpenVINO']
+    datasets:
       - name: imagenet_1000_classes
         # read in RGB format
         reader: pillow_imread
