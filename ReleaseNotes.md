@@ -32,6 +32,7 @@ Bugfixes:
 - (TensorFlow) Fixed an error with `"num_bn_adaptation_samples": 0` in config leading to a `TypeError` during quantization algo initialization.
 - (ONNX) Temporary model file is no longer saved on disk.
 - (ONNX) Depthwise convolutions are now quantizable in per-channel mode.
+- (ONNX) Improved the working time of PTQ by optimizing the calls to ONNX shape inferencing.
 
 Breaking changes:
 - Fused patterns will be excluded from quantization via `ignored_scopes` only if the top-most node in data flow order matches against `ignored_scopes`
@@ -39,6 +40,7 @@ Breaking changes:
 - Calling `setup.py` directly to install NNCF is deprecated and no longer guaranteed to work.
 - Importing NNCF logger as `from nncf.common.utils.logger import logger as nncf_logger` is deprecated - use `from nncf import nncf_logger` instead.
 - `pruning_rate` is renamed to `pruning_level` in pruning compression controllers.
+- (ONNX) Removed CompressionBuilder. Excluded examples of NNCF for ONNX with CompressionBuilder API
 
 ## New in Release 2.3.0
 - (ONNX) PTQ API support for ONNX.
