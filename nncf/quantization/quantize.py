@@ -61,7 +61,7 @@ def quantize(model: TModel,
     """
     backend = get_backend(model)
     if backend == BackendType.OPENVINO:
-        from nncf.experimental.openvino_native.quantization.quantize import quantize_impl
+        from nncf.openvino.quantization.quantize import quantize_impl
         return quantize_impl(model, calibration_dataset, preset, target_device, subset_size,
                              fast_bias_correction, model_type, ignored_scope)
 
