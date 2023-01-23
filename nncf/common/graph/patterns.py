@@ -329,8 +329,6 @@ class PatternsManager(Enum):
                                                                    backends=[BackendType.OPENVINO])
     EQUAL_LOGICALNOT = PatternDesc('equal_logicalnot',
                                    backends=[BackendType.OPENVINO])
-    MULTIPLY_SUBTRACT = PatternDesc('multiply_subtract',
-                                    backends=[BackendType.ONNX])
     BATCH_NORM_ACTIVATIONS = PatternDesc('batch_norm_activations',
                                          backends=[BackendType.ONNX])
     ACTIVATIONS_BATCH_NORM = PatternDesc('activations_batch_norm',

@@ -188,7 +188,8 @@ def create_input_transpose_scaleshift_pattern():
 def create_input_convert_transpose_scaleshift_pattern():
     input_convert_transpose = create_input_convert_transpose()
     scale_shift = create_scale_shift_add_pattern()
-    return input_convert_transpose.join_patterns(scale_shift)
+    input_convert_transpose.join_patterns(scale_shift)
+    return input_convert_transpose
 
 
 @OPENVINO_HW_FUSED_PATTERNS.register(PatternsManager.INPUT_PROCESSING)
@@ -227,7 +228,8 @@ def create_input_convert_transpose_processing_pattern():
     pattern.add_node(**{GraphPattern.LABEL_ATTR: 'ADD, MULTIPLY',
                         GraphPattern.METATYPE_ATTR: [om.OVAddMetatype, om.OVMulMetatype]})
 
-    return input_convert_transpose.join_patterns(pattern)
+    input_convert_transpose.join_patterns(pattern)
+    return input_convert_transpose
 
 
 @OPENVINO_HW_FUSED_PATTERNS.register(PatternsManager.INPUT_REVERSE_INPUT_CHANNELS_SCALE_SHIFT)
@@ -327,7 +329,8 @@ def create_input_convert_transpose_reverse_input_channel_add_pattern():
 
     pattern.add_edge(split_node, concat_node)
     pattern.add_edge(concat_node, add_node)
-    return input_convert_transpose.join_patterns(pattern)
+    input_convert_transpose.join_patterns(pattern)
+    return input_convert_transpose
 
 
 @OPENVINO_HW_FUSED_PATTERNS.register(PatternsManager.SOFTMAX)
@@ -615,14 +618,16 @@ def create_clamp_mult_const_pattern():
 def create_linear_scale_shift():
     linear = linear_operations()
     scale_shift = create_add_scaleshift_pattern()
-    return linear.join_patterns(scale_shift)
+    linear.join_patterns(scale_shift)
+    return linear
 
 
 @OPENVINO_HW_FUSED_PATTERNS.register(PatternsManager.LINEAR_BIASED_SCALE_SHIFT)
 def create_linear_biased_scale_shift():
     linear_biased = create_biased_op_pattern()
     scale_shift = create_add_scaleshift_pattern()
-    return linear_biased.join_patterns(scale_shift)
+    linear_biased.join_patterns(scale_shift)
+    return linear_biased
 
 
 @OPENVINO_HW_FUSED_PATTERNS.register(PatternsManager.LINEAR_ACTIVATION_SCALE_SHIFT)
@@ -636,7 +641,8 @@ def create_linear_activation_scale_shift():
     scale_shift = create_add_scaleshift_pattern()
 
     pattern.add_edge(linear_node, activation_node)
-    return pattern.join_patterns(scale_shift)
+    pattern.join_patterns(scale_shift)
+    return pattern
 
 
 @OPENVINO_HW_FUSED_PATTERNS.register(PatternsManager.LINEAR_BIASED_ACTIVATION_SCALE_SHIFT)
@@ -655,21 +661,24 @@ def create_linear_biased_activation_scale_shift():
     pattern.add_edge(linear_node, add_node)
     pattern.add_edge(add_node, activation_node)
 
-    return pattern.join_patterns(scale_shift)
+    pattern.join_patterns(scale_shift)
+    return pattern
 
 
 @OPENVINO_HW_FUSED_PATTERNS.register(PatternsManager.LINEAR_ELEMENTWISE)
 def create_linear_elementwise():
     linear = linear_operations()
     elementwise = elementwise_operations()
-    return linear.join_patterns(elementwise)
+    linear.join_patterns(elementwise)
+    return linear
 
 
 @OPENVINO_HW_FUSED_PATTERNS.register(PatternsManager.LINEAR_BIASED_ELEMENTWISE)
 def create_linear_biased_elementwise():
     linear_biased = create_biased_op_pattern()
     elementwise = elementwise_operations()
-    return linear_biased.join_patterns(elementwise)
+    linear_biased.join_patterns(elementwise)
+    return linear_biased
 
 
 @OPENVINO_HW_FUSED_PATTERNS.register(PatternsManager.LINEAR_ACTIVATION_ELEMENTWISE)
@@ -683,7 +692,8 @@ def create_linear_activation_elementwise():
     elementwise = elementwise_operations()
 
     pattern.add_edge(linear_node, activation_node)
-    return pattern.join_patterns(elementwise)
+    pattern.join_patterns(elementwise)
+    return pattern
 
 
 @OPENVINO_HW_FUSED_PATTERNS.register(PatternsManager.LINEAR_BIASED_ACTIVATION_ELEMENTWISE)
@@ -702,7 +712,8 @@ def create_linear_biased_activation_elementwise():
     pattern.add_edge(linear_node, add_node)
     pattern.add_edge(add_node, activation_node)
 
-    return pattern.join_patterns(elementwise)
+    pattern.join_patterns(elementwise)
+    return pattern
 
 
 def elementwise_operations():
