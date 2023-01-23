@@ -185,12 +185,22 @@ def is_ov_ep(request):
 
 @pytest.fixture(scope="module")
 def is_cpu_ep(request):
-    disable_cpu_ep = request.config.getoption("--disable-cpu-ep")
-    if disable_cpu_ep:
-        nncf_logger.info("The accuracy validation of quantized models is disabled for CPUExecutionProvider.")
-    else:
+    enable_cpu_ep = request.config.getoption("--enable-cpu-ep")
+    if enable_cpu_ep:
         nncf_logger.info("The accuracy validation of quantized models is enabled for CPUExecutionProvider.")
-    return not disable_cpu_ep
+    else:
+        nncf_logger.info("The accuracy validation of quantized models is disabled for CPUExecutionProvider.")
+    return enable_cpu_ep
+
+
+@pytest.fixture(scope="module")
+def is_ov(request):
+    disable_ov = request.config.getoption("--disable-ov")
+    if disable_ov:
+        nncf_logger.info("The accuracy validation of quantized models is disabled for OpenVINO.")
+    else:
+        nncf_logger.info("The accuracy validation of quantized models is enabled for OpenVINO.")
+    return not disable_ov
 
 
 def _read_accuracy_checker_result(root_dir: Path, key: str) -> pd.DataFrame:
@@ -279,7 +289,7 @@ class TestPTQ:
             "-s", str(data_dir),
             "-a", str(anno_dir),
             "-ss", str(ptq_size),
-            "--target_tags", CPU_EP_COL_NAME
+            "--target_tags", CPU_EP_COL_NAME  # This need to not quantize twice, because two targets in AC config
         ]
 
         run_command(com_line)
@@ -288,10 +298,10 @@ class TestPTQ:
 @pytest.mark.run(order=2)
 class TestBenchmark:
     @staticmethod
-    def get_ac_command(task_type: str, model_name: str, model_dir: Path,
-                       data_dir: Path, anno_dir: Path, output_dir: Path,
-                       eval_size: int, program: str, is_quantized: bool,
-                       is_ov_ep: bool, is_cpu_ep: bool) -> List[str]:
+    def get_onnx_rt_ac_command(task_type: str, model_name: str, model_dir: Path,
+                               data_dir: Path, anno_dir: Path, output_dir: Path,
+                               eval_size: int, program: str, is_quantized: bool,
+                               is_ov_ep: bool, is_cpu_ep: bool) -> List[str]:
 
         program_path = BENCHMARKING_DIR / program
 
@@ -334,6 +344,48 @@ class TestBenchmark:
 
         return com_line
 
+    @staticmethod
+    def get_ov_ac_command(task_type: str, model_name: str, model_dir: Path,
+                          data_dir: Path, anno_dir: Path, output_dir: Path,
+                          eval_size: int, program: str, is_quantized: bool) -> List[str]:
+
+        program_path = BENCHMARKING_DIR / program
+
+        task_path = BENCHMARKING_DIR / task_type
+        config_path = task_path / "openvino_models_configs" / (model_name + ".yml")
+
+        output_dir = output_dir / task_type
+        if not output_dir.exists():
+            output_dir.mkdir(parents=True)
+
+        anno_dir = anno_dir / str(eval_size)
+        if not anno_dir.exists():
+            anno_dir.mkdir(parents=True)
+
+        out_file_name = os.path.splitext(program)[0]
+
+        if is_quantized:
+            out_file_name += "-quantized.csv"
+        else:
+            out_file_name += "-reference.csv"
+
+        model_file_name = model_name + "-quantized" if is_quantized else model_name
+        model_file_name += ".onnx"
+
+        com_line = [
+            sys.executable, str(program_path),
+            "-c", str(config_path),
+            "-d", str(DATASET_DEFINITIONS_PATH_ONNX),
+            "-m", str(model_dir / task_type / model_file_name),
+            "-s", str(data_dir),
+            "-a", str(anno_dir),
+            "--csv_result", str(output_dir / out_file_name)
+        ]
+        if eval_size is not None:
+            com_line += ["-ss", str(eval_size)]
+
+        return com_line
+
     @pytest.mark.e2e_eval_reference_model
     @pytest.mark.parametrize("task_type, model_name", E2E_MODELS)
     def test_reference_model_accuracy(self, task_type, model_name, model_names_to_test, model_dir,
@@ -341,15 +393,18 @@ class TestBenchmark:
         check_skip_model(model_name, model_names_to_test)
         check_xfail(model_name)
         # Reference accuracy validation is performed on CPUExecutionProvider
-        command = self.get_ac_command(task_type, model_name, model_dir, data_dir, anno_dir, output_dir, eval_size,
-                                      program="accuracy_checker.py", is_quantized=False, is_ov_ep=False, is_cpu_ep=True)
+        command = self.get_onnx_rt_ac_command(task_type, model_name, model_dir, data_dir, anno_dir, output_dir,
+                                              eval_size, program="accuracy_checker.py", is_quantized=False,
+                                              is_ov_ep=False, is_cpu_ep=True)
         run_command(command)
 
     @pytest.mark.e2e_ptq
     @pytest.mark.dependency()
     @pytest.mark.parametrize("task_type, model_name", E2E_MODELS)
-    def test_quantized_model_accuracy(self, request, task_type, model_name, model_names_to_test, ckpt_dir, data_dir,
-                                      anno_dir, output_dir, eval_size, is_ov_ep, is_cpu_ep):
+    def test_onnx_rt_quantized_model_accuracy(self, request, task_type, model_name, model_names_to_test, ckpt_dir,
+                                              data_dir, anno_dir, output_dir, eval_size, is_ov_ep, is_cpu_ep):
+        if not (is_ov_ep or is_cpu_ep):
+            pytest.skip('No Validation test on ONNXRuntime.')
         check_skip_model(model_name, model_names_to_test)
         # Run PTQ first
         depends(request, ["TestPTQ::test_ptq_model" + request.node.name.lstrip("test_quantized_model_accuracy")])
@@ -357,9 +412,27 @@ class TestBenchmark:
         check_quantized_xfail(model_name)
 
         model_dir = ckpt_dir
-        command = self.get_ac_command(task_type, model_name, model_dir, data_dir, anno_dir, output_dir, eval_size,
-                                      program="accuracy_checker.py", is_quantized=True, is_ov_ep=is_ov_ep,
-                                      is_cpu_ep=is_cpu_ep)
+        command = self.get_onnx_rt_ac_command(task_type, model_name, model_dir, data_dir, anno_dir, output_dir,
+                                              eval_size, program="accuracy_checker.py", is_quantized=True,
+                                              is_ov_ep=is_ov_ep, is_cpu_ep=is_cpu_ep)
+        run_command(command)
+
+    @pytest.mark.e2e_ptq
+    @pytest.mark.dependency()
+    @pytest.mark.parametrize("task_type, model_name", E2E_MODELS)
+    def test_ov_quantized_model_accuracy(self, request, task_type, model_name, model_names_to_test, ckpt_dir, data_dir,
+                                         anno_dir, output_dir, eval_size, is_ov):
+        if not is_ov:
+            pytest.skip('No Validation test on OpenVINO.')
+        check_skip_model(model_name, model_names_to_test)
+        # Run PTQ first
+        depends(request, ["TestPTQ::test_ptq_model" + request.node.name.lstrip("test_quantized_model_accuracy")])
+        check_xfail(model_name)
+        check_quantized_xfail(model_name)
+
+        model_dir = ckpt_dir
+        command = self.get_ov_ac_command(task_type, model_name, model_dir, data_dir, anno_dir, output_dir, eval_size,
+                                         program="accuracy_checker.py", is_quantized=True)
         run_command(command)
 
 

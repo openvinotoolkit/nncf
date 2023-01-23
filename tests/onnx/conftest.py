@@ -58,12 +58,17 @@ def pytest_addoption(parser):
     parser.addoption(
         "--enable-ov-ep", action="store_true", default=False,
         help="[e2e-test-onnx-model-zoo] If the parameter is set then the accuracy validation of the quantized models "
-             "will be enabled for OpenVINOExecutionProvider."
+             "will be enabled for ONNXRuntime-OpenVINOExecutionProvider."
     )
     parser.addoption(
-        "--disable-cpu-ep", action="store_true", default=False,
+        "--enable-cpu-ep", action="store_true", default=False,
         help="[e2e-test-onnx-model-zoo] If the parameter is set then the accuracy validation of the quantized models "
-             "will be disabled for CPUExecutionProvider."
+             "will be enabled for ONNXRuntime-CPUExecutionProvider."
+    )
+    parser.addoption(
+        "--disable-ov", action="store_true", default=False,
+        help="[e2e-test-onnx-model-zoo] If the parameter is set then the accuracy validation of the quantized models "
+             "will be disablef for OpenVINO."
     )
     parser.addoption(
         "--regen-dot", action="store_true", default=False, help="If specified, the "
