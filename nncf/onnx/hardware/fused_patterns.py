@@ -24,6 +24,7 @@ from nncf.onnx.hardware.pattern_operations import LINEAR_OPERATIONS
 
 ONNX_HW_FUSED_PATTERNS = Registry('onnx')
 
+
 @ONNX_HW_FUSED_PATTERNS.register(PatternsManager.LINEAR_OPERATIONS)
 def linear_operations():
     pattern = GraphPattern()
@@ -60,7 +61,7 @@ def create_activations_batch_norm():
 
 
 @ONNX_HW_FUSED_PATTERNS.register(PatternsManager.ACTIVATIONS_SCALE_SHIFT)
-def create_activations_batch_norm():
+def create_activations_scale_shift():
     activations = atomic_activations_operations()
     scale_shift = create_scale_shift_add()
     return activations.join_patterns(scale_shift)
@@ -97,12 +98,12 @@ def create_swish_hard_sigmoid_scale_shift():
 @ONNX_HW_FUSED_PATTERNS.register(PatternsManager.SWISH_WITH_SIGMOID)
 def create_swish_with_sigmoid():
     pattern = GraphPattern()
-    pattern_input_node = pattern.add_node({GraphPattern.LABEL_ATTR: '*INPUT_NODE*',
-                                           GraphPattern.METATYPE_ATTR: GraphPattern.NON_PATTERN_NODE_TYPE})
-    sigmoid_node = pattern.add_node({GraphPattern.LABEL_ATTR: 'SIGMOID',
-                                     GraphPattern.METATYPE_ATTR: om.ONNXSigmoidMetatype})
-    mul_node = pattern.add_node({GraphPattern.LABEL_ATTR: 'MULTIPLY',
-                                 GraphPattern.METATYPE_ATTR: om.ONNXMulLayerMetatype})
+    pattern_input_node = pattern.add_node(**{GraphPattern.LABEL_ATTR: '*INPUT_NODE*',
+                                             GraphPattern.METATYPE_ATTR: GraphPattern.NON_PATTERN_NODE_TYPE})
+    sigmoid_node = pattern.add_node(**{GraphPattern.LABEL_ATTR: 'SIGMOID',
+                                       GraphPattern.METATYPE_ATTR: om.ONNXSigmoidMetatype})
+    mul_node = pattern.add_node(**{GraphPattern.LABEL_ATTR: 'MULTIPLY',
+                                   GraphPattern.METATYPE_ATTR: om.ONNXMulLayerMetatype})
 
     pattern.add_edge(pattern_input_node, sigmoid_node)
     pattern.add_edge(sigmoid_node, mul_node)
@@ -113,12 +114,12 @@ def create_swish_with_sigmoid():
 @ONNX_HW_FUSED_PATTERNS.register(PatternsManager.SWISH_WITH_HARD_SIGMOID)
 def create_swish_with_hard_sigmoid():
     pattern = GraphPattern()
-    pattern_input_node = pattern.add_node({GraphPattern.LABEL_ATTR: '*INPUT_NODE*',
-                                           GraphPattern.METATYPE_ATTR: GraphPattern.NON_PATTERN_NODE_TYPE})
-    hard_sigmoid_node = pattern.add_node({GraphPattern.LABEL_ATTR: 'HARD_SIGMOID',
-                                          GraphPattern.METATYPE_ATTR: om.ONNXHardSigmoidMetatype})
-    mul_node = pattern.add_node({GraphPattern.LABEL_ATTR: 'MULTIPLY',
-                                 GraphPattern.METATYPE_ATTR: om.ONNXMulLayerMetatype})
+    pattern_input_node = pattern.add_node(**{GraphPattern.LABEL_ATTR: '*INPUT_NODE*',
+                                             GraphPattern.METATYPE_ATTR: GraphPattern.NON_PATTERN_NODE_TYPE})
+    hard_sigmoid_node = pattern.add_node(**{GraphPattern.LABEL_ATTR: 'HARD_SIGMOID',
+                                            GraphPattern.METATYPE_ATTR: om.ONNXHardSigmoidMetatype})
+    mul_node = pattern.add_node(**{GraphPattern.LABEL_ATTR: 'MULTIPLY',
+                                   GraphPattern.METATYPE_ATTR: om.ONNXMulLayerMetatype})
 
     pattern.add_edge(pattern_input_node, hard_sigmoid_node)
     pattern.add_edge(hard_sigmoid_node, mul_node)
@@ -197,7 +198,7 @@ def create_arithmetic_scale_shift_swish_sigmoid():
 
 
 @ONNX_HW_FUSED_PATTERNS.register(PatternsManager.ARITHMETIC_SCALE_SHIFT_SWISH_HARD_SIGMOID)
-def create_arithmetic_scale_shift_swish_sigmoid():
+def create_arithmetic_scale_shift_swish_hard_sigmoid():
     arithmetic_scale_shift = create_arithmetic_scale_shift()
     swish_hard_sigmoid = create_swish_with_hard_sigmoid()
     return arithmetic_scale_shift.join_patterns(swish_hard_sigmoid)
@@ -225,21 +226,21 @@ def create_arithmetic_swish_sigmoid_batch_norm():
 
 
 @ONNX_HW_FUSED_PATTERNS.register(PatternsManager.ARITHMETIC_HARD_SIGMOID_SCALE_SHIFT)
-def create_arithmetic_swish_sigmoid_batch_norm():
+def create_arithmetic_hard_sigmoid_scale_shift():
     arithmetic_swish_sigmoid = create_arithmetic_swish_sigmoid()
     scale_shift = create_scale_shift_add()
     return arithmetic_swish_sigmoid.join_patterns(scale_shift)
 
 
 @ONNX_HW_FUSED_PATTERNS.register(PatternsManager.ARITHMETIC_SWISH_HARD_SIGMOID_BATCH_NORM)
-def create_arithmetic_swish_sigmoid_batch_norm():
+def create_arithmetic_swish_hard_sigmoid_batch_norm():
     arithmetic_swish_hard_sigmoid = create_arithmetic_swish_hard_sigmoid()
     barch_norm = batch_normalization_operations()
     return arithmetic_swish_hard_sigmoid.join_patterns(barch_norm)
 
 
 @ONNX_HW_FUSED_PATTERNS.register(PatternsManager.ARITHMETIC_HARD_HARD_SIGMOID_SCALE_SHIFT)
-def create_arithmetic_swish_hard_sigmoid_batch_norm():
+def create_arithmetic_hard_hard_sigmoid_scale_shift():
     arithmetic_swish_hard_sigmoid = create_arithmetic_swish_hard_sigmoid()
     scale_shift = create_scale_shift_add()
     return arithmetic_swish_hard_sigmoid.join_patterns(scale_shift)
@@ -253,7 +254,7 @@ def create_batch_norm_activations():
 
 
 @ONNX_HW_FUSED_PATTERNS.register(PatternsManager.BATCH_NORM_SWISH_SIGMOID)
-def create_arithmetic_swish_sigmoid():
+def create_batch_norm_swish_sigmoid():
     batch_norm = batch_normalization_operations()
     swish_sigmoid = create_swish_with_sigmoid()
     return batch_norm.join_patterns(swish_sigmoid)
@@ -281,7 +282,7 @@ def create_scale_shift_swish_sigmoid():
 
 
 @ONNX_HW_FUSED_PATTERNS.register(PatternsManager.SCALE_SHIFT_SWISH_HARD_SIGMOID)
-def create_scale_shift_swish_sigmoid():
+def create_scale_shift_swish_hard_sigmoid():
     scale_shift = create_scale_shift_add()
     swish_hard_sigmoid = create_swish_with_hard_sigmoid()
     return scale_shift.join_patterns(swish_hard_sigmoid)
@@ -290,12 +291,12 @@ def create_scale_shift_swish_sigmoid():
 @ONNX_HW_FUSED_PATTERNS.register(PatternsManager.INPUT_ADD_MULTIPLY)
 def create_input_add_multiply():
     pattern = GraphPattern()
-    input_node = pattern.add_node({GraphPattern.LABEL_ATTR: 'INPUT',
-                                   GraphPattern.METATYPE_ATTR: NNCFGraphNodeType.INPUT_NODE})
-    add_node = pattern.add_node({GraphPattern.LABEL_ATTR: 'ADD',
-                                 GraphPattern.METATYPE_ATTR: om.ONNXAddLayerMetatype})
-    multiply_node = pattern.add_node({GraphPattern.LABEL_ATTR: 'MULTIPLY',
-                                      GraphPattern.METATYPE_ATTR: om.ONNXMulLayerMetatype})
+    input_node = pattern.add_node(**{GraphPattern.LABEL_ATTR: 'INPUT',
+                                     GraphPattern.METATYPE_ATTR: NNCFGraphNodeType.INPUT_NODE})
+    add_node = pattern.add_node(**{GraphPattern.LABEL_ATTR: 'ADD',
+                                   GraphPattern.METATYPE_ATTR: om.ONNXAddLayerMetatype})
+    multiply_node = pattern.add_node(**{GraphPattern.LABEL_ATTR: 'MULTIPLY',
+                                        GraphPattern.METATYPE_ATTR: om.ONNXMulLayerMetatype})
 
     pattern.add_edge(input_node, add_node)
     pattern.add_edge(add_node, multiply_node)
@@ -305,35 +306,23 @@ def create_input_add_multiply():
 @ONNX_HW_FUSED_PATTERNS.register(PatternsManager.INPUT_SCALE_SHIFT)
 def create_input_scale_shift():
     pattern = GraphPattern()
-    pattern.add_node({GraphPattern.LABEL_ATTR: 'INPUT',
-                      GraphPattern.METATYPE_ATTR: NNCFGraphNodeType.INPUT_NODE})
+    pattern.add_node(**{GraphPattern.LABEL_ATTR: 'INPUT',
+                        GraphPattern.METATYPE_ATTR: NNCFGraphNodeType.INPUT_NODE})
     scale_shift = create_scale_shift_add()
 
     pattern.join_patterns(scale_shift)
     return pattern
 
 
-@ONNX_HW_FUSED_PATTERNS.register(PatternsManager.INPUT_ADD)
+@ONNX_HW_FUSED_PATTERNS.register(PatternsManager.INPUT_PROCESSING)
 def create_input_add():
     pattern = GraphPattern()
-    input_node = pattern.add_node({GraphPattern.LABEL_ATTR: 'INPUT',
-                                   GraphPattern.METATYPE_ATTR: NNCFGraphNodeType.INPUT_NODE})
-    add_node = pattern.add_node({GraphPattern.LABEL_ATTR: 'ADD',
-                                 GraphPattern.METATYPE_ATTR: om.ONNXAddLayerMetatype})
+    input_node = pattern.add_node(**{GraphPattern.LABEL_ATTR: 'INPUT',
+                                     GraphPattern.METATYPE_ATTR: NNCFGraphNodeType.INPUT_NODE})
+    add_node = pattern.add_node(**{GraphPattern.LABEL_ATTR: 'ADD, MULTIPLY',
+                                   GraphPattern.METATYPE_ATTR: [om.ONNXAddLayerMetatype, om.ONNXMulLayerMetatype]})
 
     pattern.add_edge(input_node, add_node)
-    return pattern
-
-
-@ONNX_HW_FUSED_PATTERNS.register(PatternsManager.INPUT_MULTIPLY)
-def create_input_multiply():
-    pattern = GraphPattern()
-    input_node = pattern.add_node({GraphPattern.LABEL_ATTR: 'INPUT',
-                                   GraphPattern.METATYPE_ATTR: NNCFGraphNodeType.INPUT_NODE})
-    multiply_node = pattern.add_node({GraphPattern.LABEL_ATTR: 'MULTIPLY',
-                                      GraphPattern.METATYPE_ATTR: om.ONNXMulLayerMetatype})
-
-    pattern.add_edge(input_node, multiply_node)
     return pattern
 
 
@@ -443,7 +432,7 @@ def create_linear_swish_hard_sigmoid_batch_norm():
 
 
 @ONNX_HW_FUSED_PATTERNS.register(PatternsManager.LINEAR_ACTIVATIONS_SCALE_SHIFT)
-def create_linear_activations_batch_norm():
+def create_linear_activations_scale_shift():
     linear_activations = create_linear_activations()
     scale_shift = create_scale_shift_add()
     return linear_activations.join_patterns(scale_shift)
@@ -466,12 +455,12 @@ def create_linear_swish_hard_sigmoid_scale_shift():
 @ONNX_HW_FUSED_PATTERNS.register(PatternsManager.SCALE_SHIFT_ADD)
 def create_scale_shift_add():
     pattern = GraphPattern()
-    pattern_input_node = pattern.add_node({GraphPattern.LABEL_ATTR: '*INPUT_NODE*',
-                                           GraphPattern.METATYPE_ATTR: GraphPattern.NON_PATTERN_NODE_TYPE})
-    mul_node = pattern.add_node({GraphPattern.LABEL_ATTR: 'MULTIPLY',
-                                 GraphPattern.METATYPE_ATTR: om.ONNXMulLayerMetatype})
-    add_node = pattern.add_node({GraphPattern.LABEL_ATTR: 'ADD',
-                                 GraphPattern.METATYPE_ATTR: om.ONNXAddLayerMetatype})
+    pattern_input_node = pattern.add_node(**{GraphPattern.LABEL_ATTR: '*INPUT_NODE*',
+                                             GraphPattern.METATYPE_ATTR: GraphPattern.NON_PATTERN_NODE_TYPE})
+    mul_node = pattern.add_node(**{GraphPattern.LABEL_ATTR: 'MULTIPLY',
+                                   GraphPattern.METATYPE_ATTR: om.ONNXMulLayerMetatype})
+    add_node = pattern.add_node(**{GraphPattern.LABEL_ATTR: 'ADD',
+                                   GraphPattern.METATYPE_ATTR: om.ONNXAddLayerMetatype})
     pattern.add_edge(pattern_input_node, mul_node)
     pattern.add_edge(mul_node, add_node)
     return pattern
@@ -480,12 +469,12 @@ def create_scale_shift_add():
 @ONNX_HW_FUSED_PATTERNS.register(PatternsManager.INPUT_MULTIPLY_SUBTRACT)
 def create_input_multiply_subtract():
     pattern = GraphPattern()
-    input_node = pattern.add_node({GraphPattern.LABEL_ATTR: 'INPUT',
-                                   GraphPattern.METATYPE_ATTR: NNCFGraphNodeType.INPUT_NODE})
-    multiply_node = pattern.add_node({GraphPattern.LABEL_ATTR: 'MULTIPLY',
-                                      GraphPattern.METATYPE_ATTR: om.ONNXMulLayerMetatype})
-    subtract_node = pattern.add_node({GraphPattern.LABEL_ATTR: 'SUBTRACT',
-                                      GraphPattern.METATYPE_ATTR: om.ONNXSubMetatype})
+    input_node = pattern.add_node(**{GraphPattern.LABEL_ATTR: 'INPUT',
+                                     GraphPattern.METATYPE_ATTR: NNCFGraphNodeType.INPUT_NODE})
+    multiply_node = pattern.add_node(**{GraphPattern.LABEL_ATTR: 'MULTIPLY',
+                                        GraphPattern.METATYPE_ATTR: om.ONNXMulLayerMetatype})
+    subtract_node = pattern.add_node(**{GraphPattern.LABEL_ATTR: 'SUBTRACT',
+                                        GraphPattern.METATYPE_ATTR: om.ONNXSubMetatype})
 
     pattern.add_edge(input_node, multiply_node)
     pattern.add_edge(multiply_node, subtract_node)
