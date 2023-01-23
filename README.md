@@ -42,9 +42,9 @@ learning frameworks.
 
 | Compression algorithm                                                        |PyTorch|TensorFlow|   ONNX   |       OpenVINO       |
 |:-----------------------------------------------------------------------------| :---: | :---: |:--------:|:--------------------:|
-| [Quantization](./docs/compression_algorithms/post_traininig/Quantization.md) | Supported | Supported |Supported| Supported (preview)* |
+| [Quantization](./docs/compression_algorithms/post_traininig/Quantization.md) | Supported | Supported |Supported| Supported (Preview)* |
 
-*Preview means the work is in progress. NNCF does not guarantee the full functional support.
+_*the work is in progress, NNCF does not guarantee the full functional support._
 
 - Automatic, configurable model graph transformation to obtain the compressed model.
   > **NOTE**: Limited support for TensorFlow models. The models created using Sequential or Keras Functional API are only supported.

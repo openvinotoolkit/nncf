@@ -8,7 +8,7 @@ It utilizes a small subset of the initial dataset to calibrate quantization cons
 NNCF provides an advanced Post-Training Quantization algorithm, which consists of following techniques:
 
 1) MinMaxQuantization - Analyzes model and inserts extra quantization layers
-with parameters are calibrated using the small subset. 
+are calibrated using the small subset. 
 2) FastBiasCorrection or BiasCorrection - Reduces the bias errors between the quantized layers and the corresponding original layers.
 
 
@@ -27,15 +27,14 @@ The basic workflow steps:
 
 ### Data Transformation function
 
-Every user training pipeline consumes data in the unique format to feed the model.
-These data formats differ from pipeline to pipeline, thus NNCF introduces the data transformation function - to provide the interface to adapt the user dataset format to the NNCF format.
+Every training pipeline consumes data structure to feed the model, which is different from pipeline to pipeline. Thus NNCF introduces the data transformation function, providing the interface to adapt the user dataset format to the NNCF format.
 
-Every backend demands own return value format for transformation function, which is based on the input format of the backend inference framework.
-Below there are formats of transformation function for each suported backend.
+Every backend has own return value format for transformation function. It is based on the input data structure of the backend inference framework.
+Below there are formats of transformation function for each supported backend .
 
 <details><summary><b>PyTorch, TensorFlow, OpenVINO</b></summary>
-The return format of data transformation function is directly the input tensors, consumed by the model.
 
+The return format of data transformation function is directly the input tensors, consumed by the model.
 If you are not sure that your implementation of data transformation function is correct you can validate it by using the following code:
 ```python
 model = ... # Model
@@ -49,8 +48,8 @@ for data_item in val_loader:
 </details>
 <details><summary><b>ONNX</b></summary>
 
-[ONNXRuntime](https://onnxruntime.ai/) is used as the inference engine for ONNX. \
-The input format of the data which is used by ONNXRuntime is following - ```Dict[str, np.ndarray]```, where the keys of the dict are names of the model inputs and the values are the numpy tensors passed to these inputs.
+[ONNXRuntime](https://onnxruntime.ai/) is used as the inference engine for ONNX backend. \
+The input format of the data is following - ```Dict[str, np.ndarray]```, where the keys of the dict are names of the model inputs and the values are the numpy tensors passed to these inputs.
 
 If you are not sure that your implementation of data transformation function is correct you can validate it by using the following code:
 ```python
