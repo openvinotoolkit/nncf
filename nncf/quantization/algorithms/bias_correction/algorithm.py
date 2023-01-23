@@ -242,7 +242,6 @@ class BiasCorrection(Algorithm):
         for stat_node in stats_nodes:
             input_nodes.update(nncf_graph.traverse_graph(stat_node, traverse_to_input_layers, traverse_forward=False))
 
-        # TODO(andrey-churkin): Do we really need to store it as dict?
         subgraph_data = {
             'input_node_names': [input_node.node_name for input_node in input_nodes],
             'stat_node_names': [stat_node.node_name for stat_node in stats_nodes],
