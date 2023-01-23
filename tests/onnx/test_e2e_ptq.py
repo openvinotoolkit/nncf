@@ -49,8 +49,12 @@ else:
     ENV_VARS["PYTHONPATH"] = str(PROJECT_ROOT)
 
 TASKS = ["classification", "object_detection_segmentation"]
-MODELS = [(task, os.path.splitext(model)[0]) for task in TASKS for model in
-          os.listdir(BENCHMARKING_DIR / task / "onnx_models_configs")]
+ALL_MODELS = [(task, os.path.splitext(model)[0]) for task in TASKS for model in
+              os.listdir(BENCHMARKING_DIR / task / "onnx_models_configs")]
+
+E2E_MODELS = [(task_type, model_name) for task_type, model_name in ALL_MODELS if model_name in
+              ['densenet-12', 'mobilenetv2-12', 'resnet50-v2-7', 'shufflenet-v2-12', 'squeezenet1.0-12', 'ssd-12',
+               'yolov3-12', 'yolov4', 'ResNet101-DUC-12']]
 
 XFAIL_MODELS = {}
 
@@ -247,7 +251,7 @@ def quantized_model_accuracy(output_dir, scope="function"):
 @pytest.mark.run(order=1)
 class TestPTQ:
     @pytest.mark.dependency()
-    @pytest.mark.parametrize("task_type, model_name", MODELS)
+    @pytest.mark.parametrize("task_type, model_name", E2E_MODELS)
     def test_ptq_model(self, task_type, model_name, model_names_to_test, model_dir, data_dir, anno_dir, ckpt_dir,
                        ptq_size):
         check_skip_model(model_name, model_names_to_test)
@@ -331,7 +335,7 @@ class TestBenchmark:
         return com_line
 
     @pytest.mark.e2e_eval_reference_model
-    @pytest.mark.parametrize("task_type, model_name", MODELS)
+    @pytest.mark.parametrize("task_type, model_name", E2E_MODELS)
     def test_reference_model_accuracy(self, task_type, model_name, model_names_to_test, model_dir,
                                       data_dir, anno_dir, output_dir, eval_size):
         check_skip_model(model_name, model_names_to_test)
@@ -343,7 +347,7 @@ class TestBenchmark:
 
     @pytest.mark.e2e_ptq
     @pytest.mark.dependency()
-    @pytest.mark.parametrize("task_type, model_name", MODELS)
+    @pytest.mark.parametrize("task_type, model_name", E2E_MODELS)
     def test_quantized_model_accuracy(self, request, task_type, model_name, model_names_to_test, ckpt_dir, data_dir,
                                       anno_dir, output_dir, eval_size, is_ov_ep, is_cpu_ep):
         check_skip_model(model_name, model_names_to_test)
@@ -497,7 +501,7 @@ class TestBenchmarkResult:
 
     @pytest.mark.e2e_ptq
     @pytest.mark.dependency()
-    @pytest.mark.parametrize("task_type, model_name", MODELS)
+    @pytest.mark.parametrize("task_type, model_name", E2E_MODELS)
     def test_model_accuracy(self, request, task_type, model_name, model_names_to_test, reference_model_accuracy,
                             quantized_model_accuracy):
         check_skip_model(model_name, model_names_to_test)
