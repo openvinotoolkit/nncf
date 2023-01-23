@@ -13,9 +13,11 @@
 
 from functools import partial
 from typing import List
+from typing import Set
 
 from nncf.common.graph import NNCFGraph
 from nncf.common.graph import NNCFNode
+from nncf.common.graph.operator_metatypes import OperatorMetatype
 from nncf.common.logging import nncf_logger
 from nncf.common.pruning.utils import traverse_function
 
@@ -89,3 +91,31 @@ def get_split_axis(input_shapes: List[List[int]], output_shapes: List[List[int]]
         nncf_logger.debug('Identity split/concat node detected')
 
     return axis
+
+
+def get_number_of_quantized_ops(graph: NNCFGraph,
+                                quantizer_metatypes: List[OperatorMetatype],
+                                quantizable_metatypes: List[OperatorMetatype]) -> int:
+    """
+    Returns the number of quantized operations in the graph.
+
+    :param graph: NNCF graph which was built for the quantized model.
+    :param quantizer_metatypes: List of quantizer's metatypes. For example,
+        it may be metatype correspondent to FakeQuantize operation or
+        metatypes correspondent to Quantize/Dequantize operations.
+    :param quantizable_metatypes: List of metatypes for operations
+        that may be quantized.
+    :return: Number of quantized operations in the graph.
+    """
+    quantized_ops: Set[NNCFNode] = set()
+    nodes_to_see: List[NNCFNode] = []
+
+    for quantizer_node in graph.get_nodes_by_metatypes(quantizer_metatypes):
+        nodes_to_see.extend(graph.get_next_nodes(quantizer_node))
+        while nodes_to_see:
+            node = nodes_to_see.pop()
+            if node.metatype in quantizable_metatypes:
+                quantized_ops.add(node)
+            else:
+                nodes_to_see.extend(graph.get_next_nodes(node))
+    return len(quantized_ops)
