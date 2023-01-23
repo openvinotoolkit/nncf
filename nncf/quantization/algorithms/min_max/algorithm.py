@@ -179,7 +179,7 @@ class MinMaxQuantization(Algorithm):
                 OVMinMaxAlgoBackend
             self._backend_entity = OVMinMaxAlgoBackend()
         else:
-            raise RuntimeError('Cannot return backend-specific entity'
+            raise RuntimeError('Cannot return backend-specific entity '
                                'because {} is not supported!'.format(model_backend))
 
     def _get_default_statistics_collector(self, is_symmetric: bool,

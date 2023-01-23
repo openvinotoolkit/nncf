@@ -102,7 +102,7 @@ class FastBiasCorrection(Algorithm):
                 ONNXFBCAlgoBackend
             self._backend_entity = ONNXFBCAlgoBackend()
         else:
-            raise RuntimeError('Cannot return backend-specific entity'
+            raise RuntimeError('Cannot return backend-specific entity '
                                'because {} is not supported!'.format(model_backend))
 
     def _apply(self,

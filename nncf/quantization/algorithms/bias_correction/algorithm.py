@@ -121,7 +121,7 @@ class BiasCorrection(Algorithm):
                 ONNXBiasCorrectionAlgoBackend
             self._backend_entity = ONNXBiasCorrectionAlgoBackend()
         else:
-            raise RuntimeError('Cannot return backend-specific entity'
+            raise RuntimeError('Cannot return backend-specific entity '
                                'because {} is not supported!'.format(model_backend))
 
     def _apply(self,
