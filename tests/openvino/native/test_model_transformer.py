@@ -188,7 +188,7 @@ BIAS_REFERENCES = [[2.0]]
 def test_bias_correction(layers, values, refs):
     model = ConvModel().ov_model
     transformed_model = create_transformed_model(
-        model, layers, TargetType.LAYER, OVBiasCorrectionCommand, values, port_id=1)
+        model, layers, TargetType.LAYER, OVBiasCorrectionCommand, port_id=1, **{'bias_value': values})
     ops_dict = {op.get_friendly_name(): op for op in transformed_model.get_ops()}
 
     for conv_layer, bias_reference in zip(layers, refs):

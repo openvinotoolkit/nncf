@@ -26,6 +26,7 @@ from nncf.experimental.openvino_native.graph.metatypes.openvino_metatypes import
 from nncf.experimental.openvino_native.graph.metatypes.openvino_metatypes import OVTransposeMetatype
 from nncf.experimental.openvino_native.graph.metatypes.openvino_metatypes import OVParameterMetatype
 from nncf.experimental.openvino_native.graph.metatypes.openvino_metatypes import OVResultMetatype
+from nncf.experimental.openvino_native.graph.metatypes.openvino_metatypes import GENERAL_WEIGHT_LAYER_METATYPES
 from nncf.experimental.openvino_native.graph.nncf_graph_builder import GraphConverter
 
 from tests.openvino.native.models import ConvModel
@@ -66,6 +67,8 @@ def test_determining_weights_port():
     nncf_graph = GraphConverter.create_nncf_graph(model)
     counter = 0
     for node in nncf_graph.get_all_nodes():
+        if node.metatype not in GENERAL_WEIGHT_LAYER_METATYPES:
+            continue
         if node.layer_attributes is not None:
             counter += 1
             assert node.layer_attributes.weight_port_id == REF_WEIGHTS_PORT_IDS[node.node_name]
