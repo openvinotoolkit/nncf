@@ -1,5 +1,5 @@
 """
- Copyright (c) 2019-2022 Intel Corporation
+ Copyright (c) 2019-2023 Intel Corporation
  Licensed under the Apache License, Version 2.0 (the "License");
  you may not use this file except in compliance with the License.
  You may obtain a copy of the License at
@@ -27,7 +27,7 @@ class CallCountTracker:
 
     def register_call(self, key, counts=None):
         if key not in self.call_counts:
-            nncf_logger.debug("DEBUG: {} tracker: called an unregistered module: {}".format(self.name, key))
+            nncf_logger.debug(f"DEBUG: {self.name} tracker: called an unregistered module: {key}")
             return
         if counts is None:
             self.call_counts[key] += 1

@@ -1,5 +1,5 @@
 """
- Copyright (c) 2022 Intel Corporation
+ Copyright (c) 2023 Intel Corporation
  Licensed under the Apache License, Version 2.0 (the "License");
  you may not use this file except in compliance with the License.
  You may obtain a copy of the License at
@@ -16,6 +16,7 @@ import pytest
 from tests.shared.install_fixtures import tmp_venv_with_nncf
 from tests.shared.case_collection import COMMON_SCOPE_MARKS_VS_OPTIONS
 from tests.shared.case_collection import skip_marked_cases_if_options_not_specified
+from tests.shared.paths import TEST_ROOT
 
 
 def pytest_addoption(parser):
@@ -30,3 +31,8 @@ MARKS_VS_OPTIONS = {
 
 def pytest_collection_modifyitems(config, items):
     skip_marked_cases_if_options_not_specified(config, items, MARKS_VS_OPTIONS)
+
+
+OPENVINO_TEST_ROOT = TEST_ROOT / 'openvino'
+OPENVINO_POT_TEST_ROOT = OPENVINO_TEST_ROOT / 'pot'
+OPENVINO_NATIVE_TEST_ROOT = OPENVINO_TEST_ROOT / 'native'

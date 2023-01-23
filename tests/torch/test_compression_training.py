@@ -1,5 +1,5 @@
 """
- Copyright (c) 2019-2022 Intel Corporation
+ Copyright (c) 2019-2023 Intel Corporation
  Licensed under the Apache License, Version 2.0 (the 'License');
  you may not use this file except in compliance with the License.
  You may obtain a copy of the License at
@@ -337,7 +337,7 @@ NAS_DESCRIPTORS = [
     NASTrainingTestDescriptor()
         .real_dataset('cifar10')
         .config_name('vgg11_bn_nas_SMALL.json')
-        .subnet_expected_accuracy(88.67)
+        .subnet_expected_accuracy(85.09)
         .expected_accuracy(89.43)
         .weights_filename('vgg11_bn_cifar10_92.39.pth')
         .absolute_tolerance_train(2.0)

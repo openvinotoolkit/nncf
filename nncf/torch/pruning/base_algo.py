@@ -1,5 +1,5 @@
 """
- Copyright (c) 2022 Intel Corporation
+ Copyright (c) 2023 Intel Corporation
  Licensed under the Apache License, Version 2.0 (the "License");
  you may not use this file except in compliance with the License.
  You may obtain a copy of the License at
@@ -114,7 +114,7 @@ class BasePruningAlgoBuilder(PTCompressionAlgorithmBuilder):
                 # Check that we need to prune weights in this op
                 assert self._is_pruned_module(module)
 
-                nncf_logger.info(f"Will prune the weights for the operation: {node_name}")
+                nncf_logger.debug(f"Will prune the weights for the operation: {node_name}")
                 pruning_block = self.create_weight_pruning_operation(module, node_name)
                 # Hook for weights and bias
                 hook = UpdateWeightAndBias(pruning_block).to(device)

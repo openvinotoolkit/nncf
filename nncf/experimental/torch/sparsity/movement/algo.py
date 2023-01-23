@@ -1,5 +1,5 @@
 """
- Copyright (c) 2022 Intel Corporation
+ Copyright (c) 2023 Intel Corporation
  Licensed under the Apache License, Version 2.0 (the "License");
  you may not use this file except in compliance with the License.
  You may obtain a copy of the License at
@@ -87,10 +87,10 @@ class MovementSparsityBuilder(BaseSparsityAlgoBuilder):
             node_name = module_node.node_name
 
             if not self._should_consider_scope(node_name):
-                nncf_logger.info('Ignored adding Weight Sparsifier in scope: %s', node_name)
+                nncf_logger.info(f'Ignored adding weight sparsifier in scope: {node_name}')
                 continue
 
-            nncf_logger.debug('Adding Weight Sparsifier in scope: %s', node_name)
+            nncf_logger.debug('Adding weight sparsifier in scope: {node_name}')
             compression_lr_multiplier = self.config.get_redefinable_global_param_value_for_algo(
                 'compression_lr_multiplier', self.name
             )

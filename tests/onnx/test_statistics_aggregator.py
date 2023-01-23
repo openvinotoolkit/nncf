@@ -1,5 +1,5 @@
 """
- Copyright (c) 2022 Intel Corporation
+ Copyright (c) 2023 Intel Corporation
  Licensed under the Apache License, Version 2.0 (the "License");
  you may not use this file except in compliance with the License.
  You may obtain a copy of the License at
@@ -15,13 +15,13 @@ import pytest
 
 import numpy as np
 
-from nncf.experimental.onnx.statistics.aggregator import ONNXStatisticsAggregator
+from nncf.onnx.statistics.aggregator import ONNXStatisticsAggregator
 from nncf.quantization.algorithms.definitions import RangeType
-from nncf.experimental.onnx.statistics.collectors import ONNXMeanMinMaxStatisticCollector
-from nncf.experimental.onnx.statistics.collectors import ONNXMinMaxStatisticCollector
+from nncf.onnx.statistics.collectors import ONNXMeanMinMaxStatisticCollector
+from nncf.onnx.statistics.collectors import ONNXMinMaxStatisticCollector
 from nncf.common.tensor_statistics.statistic_point import StatisticPoint
 from nncf.common.tensor_statistics.statistic_point import StatisticPointsContainer
-from nncf.experimental.onnx.graph.transformations.commands import ONNXTargetPoint
+from nncf.onnx.graph.transformations.commands import ONNXTargetPoint
 from nncf.common.graph.transformations.commands import TargetType
 
 from tests.onnx.models import InputOutputModel

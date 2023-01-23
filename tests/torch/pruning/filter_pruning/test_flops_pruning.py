@@ -1,5 +1,5 @@
 """
- Copyright (c) 2022 Intel Corporation
+ Copyright (c) 2023 Intel Corporation
  Licensed under the Apache License, Version 2.0 (the "License");
  you may not use this file except in compliance with the License.
  You may obtain a copy of the License at
@@ -11,14 +11,16 @@
  limitations under the License.
 """
 
+import numpy as np
 import pytest
 from functools import partial
 
 from nncf.common.pruning.utils import get_prunable_layers_in_out_channels
 from tests.torch.helpers import create_compressed_model_and_algo_for_test
+from tests.torch.pruning.helpers import BigPruningTestModel
 from tests.torch.pruning.helpers import MobilenetV3BlockSEReshape
-from tests.torch.pruning.helpers import  PruningTestBatchedLinear
-from tests.torch.pruning.helpers import  PruningTestModelConcatWithLinear
+from tests.torch.pruning.helpers import PruningTestBatchedLinear
+from tests.torch.pruning.helpers import PruningTestModelConcatWithLinear
 from tests.torch.pruning.helpers import PruningTestModelDiffChInPruningCluster
 from tests.torch.pruning.helpers import PruningTestModelBroadcastedLinear
 from tests.torch.pruning.helpers import GroupedConvolutionModel
@@ -133,3 +135,25 @@ def test_flops_calulation_for_spec_layers(model, all_weights, pruning_flops_targ
             op = list(node.module.pre_ops.values())[0]
             mask = op.operand.binary_filter_pruning_mask
             assert int(sum(mask)) == ref_size
+
+
+def test_maximal_compression_rate():
+    """
+    Test that we can set flops pruning target less or equal to maximal_compression_rate
+    Test that we can't set flops pruning target higher than maximal_compression_rate
+    """
+    config = get_basic_pruning_config(input_sample_size=[1, 1, 8, 8])
+    config['compression']['algorithm'] = 'filter_pruning'
+    config['compression']['params']['pruning_flops_target'] = 0.2
+    config['compression']['ignored_scopes'] = [
+        'BigPruningTestModel/NNCFLinear[linear]/linear_0',
+        'BigPruningTestModel/NNCFConvTranspose2d[up]/conv_transpose2d_0']
+
+    _, pruning_algo = create_compressed_model_and_algo_for_test(BigPruningTestModel(), config)
+
+    maximal_compression_rate = pruning_algo.maximal_compression_rate
+    for comp_rate in np.linspace(0, maximal_compression_rate, 10):
+        pruning_algo.compression_rate = comp_rate
+    for comp_rate in np.linspace(maximal_compression_rate + 1e-5, 1, 10):
+        with pytest.raises(RuntimeError):
+            pruning_algo.compression_rate = comp_rate

@@ -87,6 +87,26 @@ class ReshapeTestMetatype(TestMetatype):
     name = 'reshape'
 
 
+@METATYPES_FOR_TEST.register()
+class QuantizerTestMetatype(TestMetatype):
+    name = 'quantizer'
+
+
+@METATYPES_FOR_TEST.register()
+class ConstantTestMetatype(TestMetatype):
+    name = 'constant'
+
+
+@METATYPES_FOR_TEST.register()
+class ReluTestMetatype(TestMetatype):
+    name = 'relu'
+
+
+@METATYPES_FOR_TEST.register()
+class AddTestMetatype(TestMetatype):
+    name = 'add'
+
+
 WEIGHT_LAYER_METATYPES = [LinearTestMetatype, Conv2dTestMetatype, MatMulTestMetatype]
 
 DEFAULT_TEST_QUANT_TRAIT_MAP = {
@@ -95,7 +115,8 @@ DEFAULT_TEST_QUANT_TRAIT_MAP = {
         Conv2dTestMetatype,
         MatMulTestMetatype,
         GeluTestMetatype,
-        LinearTestMetatype
+        LinearTestMetatype,
+        AddTestMetatype,
     ],
     QuantizationTrait.NON_QUANTIZABLE: [
         MaxPool2dTestMetatype,
@@ -108,3 +129,25 @@ DEFAULT_TEST_QUANT_TRAIT_MAP = {
         CatTestMetatype
     ],
 }
+
+
+QUANTIZER_METATYPES = [
+    QuantizerTestMetatype,
+]
+
+
+CONSTANT_METATYPES = [
+    ConstantTestMetatype,
+]
+
+
+QUANTIZABLE_METATYPES = [
+    Conv2dTestMetatype,
+    AddTestMetatype,
+]
+
+
+QUANTIZE_AGNOSTIC_METATYPES = [
+    MaxPool2dTestMetatype,
+    ReluTestMetatype,
+]

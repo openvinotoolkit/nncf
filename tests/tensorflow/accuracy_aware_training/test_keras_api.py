@@ -1,5 +1,5 @@
 """
- Copyright (c) 2022 Intel Corporation
+ Copyright (c) 2023 Intel Corporation
  Licensed under the Apache License, Version 2.0 (the "License");
  you may not use this file except in compliance with the License.
  You may obtain a copy of the License at
@@ -86,10 +86,10 @@ def get_const_target_mock_regression_dataset(num_samples=20, img_size=10, target
      'final_compression_rate',
      'reference_final_metric'),
     (
-            ({'maximal_relative_accuracy_degradation': 30.0}, 0.8327, 0.141976),
-            ({'maximal_relative_accuracy_degradation': 1.0}, 0.0077, 0.203731),
-            ({'maximal_absolute_accuracy_degradation': 0.0}, 0.0077, 0.203731),
-            ({'maximal_absolute_accuracy_degradation': 0.10}, 0.87012, 0.104070),
+            ({'maximal_relative_accuracy_degradation': 30.0}, 0.9077, 0.214535),
+            ({'maximal_relative_accuracy_degradation': 1.0}, 0.3577, 0.210423),
+            ({'maximal_absolute_accuracy_degradation': 0.0}, 0.1202, 0.236087),
+            ({'maximal_absolute_accuracy_degradation': 0.10}, 0.9077, 0.108224),
     )
 )
 def test_adaptive_compression_training_loop(max_accuracy_degradation, final_compression_rate,

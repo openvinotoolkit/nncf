@@ -1,5 +1,5 @@
 """
- Copyright (c) 2022 Intel Corporation
+ Copyright (c) 2023 Intel Corporation
  Licensed under the Apache License, Version 2.0 (the "License");
  you may not use this file except in compliance with the License.
  You may obtain a copy of the License at
@@ -159,6 +159,8 @@ def quantize_impl(model: torch.nn.Module,
         raise RuntimeError('Quantization algorithm from the PyTorch backend '
                             'does not support operation types in the ignored '
                             'scopes yet')
+    if target_device == TargetDevice.CPU_SPR:
+        raise RuntimeError('target_device == CPU_SPR is not supported')
 
     nncf_config = _create_nncf_config(preset, target_device, subset_size,
                                       model_type, ignored_scope)

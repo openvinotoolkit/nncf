@@ -6,6 +6,13 @@ models:
           type: yolo_v2
           anchors: tiny_yolo_v2
         execution_providers: ['OpenVINOExecutionProvider']
+        tags: ['OpenVINOExecutionProvider']
+      - framework: onnx_runtime
+        adapter:
+          type: yolo_v2
+          anchors: tiny_yolo_v2
+        execution_providers: ['CPUExecutionProvider']
+        tags: ['CPUExecutionProvider']
 
     datasets:
       - name: VOC2012_without_background

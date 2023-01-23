@@ -1,5 +1,5 @@
 """
- Copyright (c) 2022 Intel Corporation
+ Copyright (c) 2023 Intel Corporation
  Licensed under the Apache License, Version 2.0 (the "License");
  you may not use this file except in compliance with the License.
  You may obtain a copy of the License at
@@ -109,11 +109,11 @@ class BaseEarlyExitCompressionTrainingLoop(TrainingLoop, ABC):
             self._current_compression_rate = self.compression_controller.compression_rate
             self.runner.dump_statistics(model, self.compression_controller)
             if self._accuracy_criterion_satisfied():
-                nncf_logger.info('Reached the accuracy criteria after epoch {}.'.format(epoch))
+                nncf_logger.info(f'Reached the accuracy criteria after epoch {epoch}.')
                 self.log_accuracy_statistics()
                 break
 
-            nncf_logger.info('Epoch {} results:'.format(epoch))
+            nncf_logger.info(f'Epoch {epoch} results:')
             self.log_accuracy_statistics()
 
             if self.runner.stop_training(self.compression_controller):
@@ -211,6 +211,8 @@ class AdaptiveCompressionTrainingLoop(BaseEarlyExitCompressionTrainingLoop):
         if self.adaptive_controller is None:
             raise RuntimeError('No compression algorithm supported by the accuracy-aware training '
                                'runner was specified in the config')
+
+        maximal_compression_rate = min(maximal_compression_rate, self.adaptive_controller.maximal_compression_rate)
 
         accuracy_aware_training_params = extract_accuracy_aware_training_params(nncf_config)
         runner_factory = AdaptiveCompressionLevelTrainingRunnerCreator(accuracy_aware_training_params,

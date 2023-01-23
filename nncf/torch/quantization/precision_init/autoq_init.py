@@ -1,5 +1,5 @@
 """
- Copyright (c) 2022 Intel Corporation
+ Copyright (c) 2023 Intel Corporation
  Licensed under the Apache License, Version 2.0 (the "License");
  you may not use this file except in compliance with the License.
  You may obtain a copy of the License at
@@ -193,8 +193,8 @@ class AutoQPrecisionInitializer(BasePrecisionInitializer):
 
         str_bw = [str(element) for element in self.get_bitwidth_per_scope(final_quantizer_setup)]
         nncf_logger.info('\n'.join(['[AutoQ]\n\"bitwidth_per_scope\": [', ',\n'.join(str_bw), ']']))
-        nncf_logger.info('[AutoQ] best_reward: {}'.format(best_reward))
-        nncf_logger.info('[AutoQ] best_policy: {}'.format(best_policy))
+        nncf_logger.info(f'[AutoQ] best_reward: {best_reward}')
+        nncf_logger.info(f'[AutoQ] best_policy: {best_policy}')
         nncf_logger.info("[AutoQ] Search completed.")
         nncf_logger.info("[AutoQ] Elapsed time of AutoQ Precision Initialization (): {}".format(end_ts - start_ts))
         return final_quantizer_setup

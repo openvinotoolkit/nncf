@@ -37,6 +37,9 @@
                 },
                 "kernel": {
                     "max_num_kernels": 3
+                },
+                "depth": {
+                    "max_block_size": 8
                 }
             }
         },

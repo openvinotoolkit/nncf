@@ -1,5 +1,5 @@
 """
- Copyright (c) 2022 Intel Corporation
+ Copyright (c) 2023 Intel Corporation
  Licensed under the Apache License, Version 2.0 (the "License");
  you may not use this file except in compliance with the License.
  You may obtain a copy of the License at
@@ -273,7 +273,7 @@ class BaseAccuracyAwareTrainingRunner(TrainingRunner):
         else:
             checkpoint_path = self._make_checkpoint_path(is_best=False)
             self._save_checkpoint(model, compression_controller, checkpoint_path)
-        nncf_logger.info("Saved the checkpoint to {}".format(checkpoint_path))
+        nncf_logger.info(f"Saved the checkpoint to {checkpoint_path}")
 
         if is_best_checkpoint:
             self._save_best_checkpoint(model, compression_controller)
@@ -306,11 +306,11 @@ class BaseAccuracyAwareTrainingRunner(TrainingRunner):
         best_path = self._make_checkpoint_path(is_best=True)
         self._best_checkpoint = (best_path, compression_controller.compression_rate)
         self._save_checkpoint(model, compression_controller, best_path)
-        nncf_logger.info('Saved the best model to {}'.format(best_path))
+        nncf_logger.info(f'Saved the best model to {best_path}')
 
     def load_best_checkpoint(self, model):
         resuming_checkpoint_path, compression_rate = self._best_checkpoint
-        nncf_logger.info('Loading the best checkpoint found during training: {}'.format(resuming_checkpoint_path))
+        nncf_logger.info(f'Loading the best checkpoint found during training: {resuming_checkpoint_path}')
         self._load_checkpoint(model, resuming_checkpoint_path)
         return compression_rate
 
@@ -412,7 +412,7 @@ class BaseAdaptiveCompressionLevelTrainingRunner(BaseAccuracyAwareTrainingRunner
 
         self._best_checkpoints[self.compression_rate_target] = (best_path, accuracy_budget)
         self._save_checkpoint(model, compression_controller, best_path)
-        nncf_logger.info('Saved the best model to {}'.format(best_path))
+        nncf_logger.info(f'Saved the best model to {best_path}')
 
     def load_best_checkpoint(self, model):
         # load checkpoint with the highest compression rate and positive acc budget
@@ -434,7 +434,7 @@ class BaseAdaptiveCompressionLevelTrainingRunner(BaseAccuracyAwareTrainingRunner
             return self.compression_rate_target
 
         resuming_checkpoint_path = self._best_checkpoints[best_checkpoint_compression_rate][0]
-        nncf_logger.info('Loading the best checkpoint found during training: {}'.format(resuming_checkpoint_path))
+        nncf_logger.info(f'Loading the best checkpoint found during training: {resuming_checkpoint_path}')
         self._load_checkpoint(model, resuming_checkpoint_path)
         return best_checkpoint_compression_rate
 

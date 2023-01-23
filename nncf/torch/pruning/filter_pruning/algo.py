@@ -1,5 +1,5 @@
 """
- Copyright (c) 2022 Intel Corporation
+ Copyright (c) 2023 Intel Corporation
  Licensed under the Apache License, Version 2.0 (the "License");
  you may not use this file except in compliance with the License.
  You may obtain a copy of the License at
@@ -12,6 +12,7 @@
 """
 
 import json
+from pathlib import Path
 from typing import Dict, List, Tuple, Union
 
 import numpy as np
@@ -41,6 +42,7 @@ from nncf.common.schedulers import StubCompressionScheduler
 from nncf.common.statistics import NNCFStatistics
 from nncf.common.utils.debug import is_debug
 from nncf.common.logging import nncf_logger
+from nncf.common.utils.os import safe_open
 from nncf.config.extractors import extract_bn_adaptation_init_params
 from nncf.torch.algo_selector import PT_COMPRESSION_ALGORITHMS
 from nncf.torch.compression_method_api import PTCompressionAlgorithmController
@@ -154,7 +156,7 @@ class FilterPruningController(BasePruningAlgoController):
         self.current_filters_num = self.full_filters_num
         self._pruned_layers_num = len(self.pruned_module_groups_info.get_all_nodes())
         self._prunable_layers_num = len(self._model.get_graph().get_nodes_by_types(self._prunable_types))
-        self._max_prunable_flops, self._max_prunable_params =\
+        self._min_possible_flops, self._min_possible_params =\
             self._calculate_flops_and_weights_in_uniformly_pruned_model(1.)
 
         self.weights_normalizer = tensor_l2_normalizer  # for all weights in common case
@@ -171,7 +173,7 @@ class FilterPruningController(BasePruningAlgoController):
                 coeffs_path = params.get('load_ranking_coeffs_path')
                 nncf_logger.info(f'Loading ranking coefficients from file {coeffs_path}')
                 try:
-                    with open(coeffs_path, 'r', encoding='utf8') as coeffs_file:
+                    with safe_open(Path(coeffs_path), 'r', encoding='utf8') as coeffs_file:
                         loaded_coeffs = json.load(coeffs_file)
                 except (ValueError, FileNotFoundError) as err:
                     raise Exception('Can\'t load json with ranking coefficients. Please, check format of json file '
@@ -201,7 +203,7 @@ class FilterPruningController(BasePruningAlgoController):
         # Saving ranking coefficients to the specified file
         if params.get('save_ranking_coeffs_path'):
             nncf_logger.info(f'Saving ranking coefficients to the file {params.get("save_ranking_coeffs_path")}')
-            with open(params.get('save_ranking_coeffs_path'), 'w', encoding='utf8') as f:
+            with safe_open(Path(params.get('save_ranking_coeffs_path')), 'w', encoding='utf8') as f:
                 json.dump(self.ranking_coeffs, f)
 
         self.set_pruning_level(self.pruning_init)
@@ -226,8 +228,8 @@ class FilterPruningController(BasePruningAlgoController):
     def statistics(self, quickly_collected_only: bool = False) -> NNCFStatistics:
         if not quickly_collected_only and is_debug():
             stats = PrunedModelTheoreticalBorderline(
-                self._pruned_layers_num, self._prunable_layers_num, self._max_prunable_flops,
-                self._max_prunable_params, self.full_flops, self.full_params_num)
+                self._pruned_layers_num, self._prunable_layers_num, self._min_possible_flops,
+                self._min_possible_params, self.full_flops, self.full_params_num)
 
             nncf_logger.debug(stats.to_str())
 
@@ -321,7 +323,7 @@ class FilterPruningController(BasePruningAlgoController):
             else:
                 left = middle
         flops, params_num = self._calculate_flops_and_weights_in_uniformly_pruned_model(right)
-        if flops < target_flops:
+        if flops <= target_flops:
             self.current_flops = flops
             self.current_params_num = params_num
             return right
@@ -584,7 +586,7 @@ class FilterPruningController(BasePruningAlgoController):
         self._propagate_masks()
 
         pruned_layers_stats = self.get_stats_for_pruned_modules()
-        nncf_logger.info('Pruned layers statistics: \n%s', pruned_layers_stats.draw())
+        nncf_logger.info(f'Pruned layers statistics: \n{pruned_layers_stats.draw()}')
 
     def compression_stage(self) -> CompressionStage:
         target_pruning_level = self.scheduler.target_level
@@ -612,6 +614,12 @@ class FilterPruningController(BasePruningAlgoController):
     def disable_scheduler(self):
         self._scheduler = StubCompressionScheduler()
         self._scheduler.current_pruning_level = 0.0
+
+    @property
+    def maximal_compression_rate(self) -> float:
+        if self.prune_flops:
+            return 1 - self._min_possible_flops / max(self.full_flops, 1)
+        return 1.0
 
     def _calculate_num_of_sparse_elements_by_node(self) -> Dict[str, int]:
         num_of_sparse_elements_by_node = {}

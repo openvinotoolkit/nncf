@@ -1,5 +1,5 @@
 """
- Copyright (c) 2022 Intel Corporation
+ Copyright (c) 2023 Intel Corporation
  Licensed under the Apache License, Version 2.0 (the "License");
  you may not use this file except in compliance with the License.
  You may obtain a copy of the License at
@@ -19,6 +19,7 @@ from nncf.common.graph.transformations.commands import TargetType
 from nncf.common.graph.transformations.commands import Command
 from nncf.common.graph.transformations.commands import TransformationCommand
 from nncf.common.graph.transformations.commands import TransformationType
+from nncf.experimental.openvino_native.quantization.quantizer_parameters import OVQuantizerLayerParameters
 
 
 class OVTargetPoint(TargetPoint):
@@ -63,44 +64,9 @@ class OVOutputInsertionCommand(OVInsertionCommand):
         raise NotImplementedError()
 
 
-class OVBiasCorrectionCommand(TransformationCommand):
+class OVFQNodeRemovingCommand(TransformationCommand):
     """
-    Corrects bias value in the model based on the input value.
-    """
-    def __init__(self, target_point: OVTargetPoint, bias_value: np.ndarray):
-        """
-        :param target_point: The TargetPoint instance for the correction that contains layer's information.
-        :param bias_value: The bias shift value (numpy format) that will be added to the original bias value.
-        """
-        super().__init__(TransformationType.CHANGE, target_point)
-        self.bias_value = bias_value
-
-    def union(self, other: 'TransformationCommand') -> 'TransformationCommand':
-        # Have a look at nncf/torch/graph/transformations/commands/PTInsertionCommand
-        raise NotImplementedError()
-
-
-class OVModelExtractionCommand(Command):
-    """
-    Extracts sub-graph based on the sub-model input and output names.
-    """
-    def __init__(self, inputs: List[str], outputs: List[str]):
-        """
-        :param inputs: List of the input names that denote the sub-graph beggining.
-        :param outputs: List of the output names that denote the sub-graph ending.
-        """
-        super().__init__(TransformationType.EXTRACT)
-        self.inputs = inputs
-        self.outputs = outputs
-
-    def union(self, other: 'Command') -> 'Command':
-        # Have a look at nncf/torch/graph/transformations/commands/PTInsertionCommand
-        raise NotImplementedError()
-
-
-class OVNodeRemovingCommand(TransformationCommand):
-    """
-    Removes nodes from the model.
+    Removes FakeQuantize nodes from the model.
     """
 
     def __init__(self, target_point: OVTargetPoint):
@@ -108,6 +74,16 @@ class OVNodeRemovingCommand(TransformationCommand):
         :param target_point: The TargetPoint instance for the layer that contains information for removing.
         """
         super().__init__(TransformationType.REMOVE, target_point)
+
+    def union(self, other: 'TransformationCommand') -> 'TransformationCommand':
+        # Have a look at nncf/torch/graph/transformations/commands/PTInsertionCommand
+        raise NotImplementedError()
+
+
+class OVQuantizerInsertionCommand(OVInsertionCommand):
+    def __init__(self, target_point: OVTargetPoint, quantizer_parameters: OVQuantizerLayerParameters):
+        super().__init__(target_point)
+        self.quantizer_parameters = quantizer_parameters
 
     def union(self, other: 'TransformationCommand') -> 'TransformationCommand':
         # Have a look at nncf/torch/graph/transformations/commands/PTInsertionCommand

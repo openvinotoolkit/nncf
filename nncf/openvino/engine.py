@@ -1,5 +1,5 @@
 """
- Copyright (c) 2022 Intel Corporation
+ Copyright (c) 2023 Intel Corporation
  Licensed under the Apache License, Version 2.0 (the "License");
  you may not use this file except in compliance with the License.
  You may obtain a copy of the License at
@@ -23,6 +23,7 @@ import openvino.runtime as ov
 
 from nncf.api.compression import TModel
 from nncf.data import Dataset
+from nncf.data.dataset import DataProvider
 
 
 # TODO(andrey-churkin): This class should be removed after refactoring of the OVEngine class.
@@ -70,13 +71,28 @@ class DatasetWrapper:
         for idx, x in enumerate(self._iterable):
             yield (idx, x)
 
+    # pylint: disable=protected-access
     def __len__(self) -> int:
         if self._length is None:
-            self._length = DatasetWrapper._get_length(self._iterable)
+            data_source = None
+            if isinstance(self._iterable, DataProvider):
+                indices = self._iterable._indices
+                if indices:
+                    self._length = len(indices)
+                    return self._length
+                data_source = self._iterable._data_source
+            iterable = data_source if data_source else self._iterable
+            self._length = DatasetWrapper._get_length(iterable)
         return self._length
 
     @staticmethod
     def _get_length(iterable) -> int:
+        try:
+            length = len(iterable)
+            return length
+        except (TypeError, AttributeError):
+            length = None
+
         length = 0
         for _ in iterable:
             length = length + 1

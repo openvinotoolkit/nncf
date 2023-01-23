@@ -1,5 +1,5 @@
 """
- Copyright (c) 2022 Intel Corporation
+ Copyright (c) 2023 Intel Corporation
  Licensed under the Apache License, Version 2.0 (the "License");
  you may not use this file except in compliance with the License.
  You may obtain a copy of the License at
@@ -13,14 +13,13 @@
 
 from typing import Dict, List, Optional, TypeVar
 
-from copy import deepcopy
-
 from nncf import Dataset
 from nncf.parameters import TargetDevice
+from nncf.common.logging import nncf_logger
 from nncf.common.quantization.structs import QuantizationPreset
 from nncf.common.utils.backend import BackendType
 from nncf.common.utils.backend import get_backend
-from nncf.common.logging import nncf_logger
+from nncf.common.utils.backend import copy_model
 from nncf.quantization.algorithms.algorithm import Algorithm
 from nncf.quantization.algorithms.algorithm import AlgorithmParameters
 from nncf.quantization.algorithms.definitions import RangeType
@@ -170,23 +169,25 @@ class PostTrainingQuantization(Algorithm):
         :return: backnd-specific StatisticsAggregator
         """
         if backend == BackendType.ONNX:
-            from nncf.experimental.onnx.statistics.aggregator import \
+            from nncf.onnx.statistics.aggregator import \
                 ONNXStatisticsAggregator
             return ONNXStatisticsAggregator(dataset)
+        if backend == BackendType.OPENVINO:
+            from nncf.experimental.openvino_native.statistics.aggregator import \
+                OVStatisticsAggregator
+            return OVStatisticsAggregator(dataset)
         return None
 
     def _apply(self,
                model: TModel,
                statistic_points: Optional[StatisticPointsContainer] = None,
                dataset: Optional[Dataset] = None) -> TModel:
-
-        modified_model = deepcopy(model)
+        modified_model = copy_model(model)
         if statistic_points is None:
             backend = get_backend(modified_model)
-
-            # TODO (KodiaqQ): Remove after ONNX is removed from experimental
-            if backend == BackendType.ONNX:
-                nncf_logger.warning('You are using the experimental ONNX backend for post-training quantization.')
+            # TODO (l-bat): Remove after OpenVINO Native is removed from experimental
+            if backend == BackendType.OPENVINO:
+                nncf_logger.warning('You are using experimental OpenVINO backend for the Post-training quantization.')
 
             statistics_aggregator = self._create_statistics_aggregator(dataset, backend)
             for algorithm in self.algorithms:
