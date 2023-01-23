@@ -143,7 +143,7 @@ class BiasCorrection(Algorithm):
             self._get_subgraph_data_for_node(node, nncf_graph) for node in nodes_with_bias
         ]
 
-        for pos, (node, subgraph_data) in enumerate(zip(nodes_with_bias, subgraphs_data)):
+        for position, (node, subgraph_data) in enumerate(zip(nodes_with_bias, subgraphs_data)):
             node_name = node.node_name
             if not self._backend_entity.is_quantized_weights(node, model):
                 nncf_logger.debug(f'Skipping node {node_name} because weights was not quantized')
@@ -171,7 +171,7 @@ class BiasCorrection(Algorithm):
                 nncf_logger.debug(f'{node_name} bias skipped by threshold. Magnitude: {magnitude}')
 
             self._collect_new_stats(nncf_graph, model_copy_subgraph, feed_dicts, subgraph_data)
-            self._remove_unnecessary_stats(pos, subgraphs_data)
+            self._remove_unnecessary_stats(position, subgraphs_data)
         return main_model_transformer.transform(main_transformations_layout)
 
     def _remove_fq_from_inputs(self, model: TModel) -> TModel:
