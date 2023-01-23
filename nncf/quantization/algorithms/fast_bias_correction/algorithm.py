@@ -29,6 +29,8 @@ from nncf.common.factory import NNCFGraphFactory
 from nncf.common.factory import EngineFactory
 from nncf.common.tensor_statistics.statistic_point import StatisticPoint
 from nncf.common.tensor_statistics.statistic_point import StatisticPointsContainer
+from nncf.common.factory import ModelTransformerFactory
+
 
 TModel = TypeVar('TModel')
 
@@ -109,7 +111,7 @@ class FastBiasCorrection(Algorithm):
                dataset: Optional[Dataset] = None) -> TModel:
         self._set_backend_entity(model)
 
-        model_transformer = self._backend_entity.model_transformer(model)
+        model_transformer = ModelTransformerFactory.create(model)
         transformation_layout = TransformationLayout()
         nncf_graph = NNCFGraphFactory.create(model)
 
@@ -221,7 +223,7 @@ class FastBiasCorrection(Algorithm):
         :param output_names: list of the output names
         :return: backend-specific sub-model
         """
-        model_transformer = self._backend_entity.model_transformer(model)
+        model_transformer = ModelTransformerFactory.create(model)
         model_extraction_command = self._backend_entity.model_extraction_command(input_names,
                                                                                  output_names)
         me_transformation_layout = TransformationLayout()

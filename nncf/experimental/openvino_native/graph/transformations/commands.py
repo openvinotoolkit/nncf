@@ -15,6 +15,7 @@ from nncf.common.graph.transformations.commands import TargetPoint
 from nncf.common.graph.transformations.commands import TargetType
 from nncf.common.graph.transformations.commands import TransformationCommand
 from nncf.common.graph.transformations.commands import TransformationType
+from nncf.experimental.openvino_native.quantization.quantizer_parameters import OVQuantizerLayerParameters
 
 
 class OVTargetPoint(TargetPoint):
@@ -69,6 +70,16 @@ class OVFQNodeRemovingCommand(TransformationCommand):
         :param target_point: The TargetPoint instance for the layer that contains information for removing.
         """
         super().__init__(TransformationType.REMOVE, target_point)
+
+    def union(self, other: 'TransformationCommand') -> 'TransformationCommand':
+        # Have a look at nncf/torch/graph/transformations/commands/PTInsertionCommand
+        raise NotImplementedError()
+
+
+class OVQuantizerInsertionCommand(OVInsertionCommand):
+    def __init__(self, target_point: OVTargetPoint, quantizer_parameters: OVQuantizerLayerParameters):
+        super().__init__(target_point)
+        self.quantizer_parameters = quantizer_parameters
 
     def union(self, other: 'TransformationCommand') -> 'TransformationCommand':
         # Have a look at nncf/torch/graph/transformations/commands/PTInsertionCommand

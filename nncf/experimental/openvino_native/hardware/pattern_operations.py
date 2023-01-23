@@ -12,47 +12,50 @@
 """
 
 from nncf.common.graph.patterns import GraphPattern
-from nncf.experimental.openvino_native.graph.metatypes import openvino_metatypes as om
+from nncf.experimental.openvino_native.graph.metatypes import openvino_metatypes as ov_metatypes
 
-LINEAR_OPERATIONS = {GraphPattern.METATYPE_ATTR: [om.OVConvolutionMetatype,
-                                                  om.OVConvolutionBackpropDataMetatype,
-                                                  om.OVMatMulMetatype
+LINEAR_OPERATIONS = {GraphPattern.METATYPE_ATTR: [ov_metatypes.OVConvolutionMetatype,
+                                                  ov_metatypes.OVConvolutionBackpropDataMetatype,
+                                                  ov_metatypes.OVMatMulMetatype
                                                   ],
                      GraphPattern.LABEL_ATTR: 'LINEAR'}
 
-BATCH_NORMALIZATION_OPERATIONS = {GraphPattern.METATYPE_ATTR: [om.OVBatchNormMetatype],
+BATCH_NORMALIZATION_OPERATIONS = {GraphPattern.METATYPE_ATTR: [ov_metatypes.OVBatchNormMetatype],
                                   GraphPattern.LABEL_ATTR: 'BATCH_NORMALIZATION'}
 
-ATOMIC_ACTIVATIONS_OPERATIONS = {GraphPattern.METATYPE_ATTR: [om.OVReluMetatype,
-                                                              om.OVEluMetatype,
-                                                              om.OVPReluMetatype,
-                                                              om.OVSigmoidMetatype,
-                                                              om.OVHardSigmoidMetatype,
+ATOMIC_ACTIVATIONS_OPERATIONS = {GraphPattern.METATYPE_ATTR: [ov_metatypes.OVReluMetatype,
+                                                              ov_metatypes.OVEluMetatype,
+                                                              ov_metatypes.OVPReluMetatype,
+                                                              ov_metatypes.OVSigmoidMetatype,
+                                                              ov_metatypes.OVHardSigmoidMetatype,
                                                               ],
                                    GraphPattern.LABEL_ATTR: 'ATOMIC_ACTIVATIONS'}
 
-ARITHMETIC_OPERATIONS = {GraphPattern.METATYPE_ATTR: [om.OVAddMetatype,
-                                                      om.OVSubMetatype,
-                                                      om.OVMulMetatype,
-                                                      om.OVDivMetatype,
+ARITHMETIC_OPERATIONS = {GraphPattern.METATYPE_ATTR: [ov_metatypes.OVAddMetatype,
+                                                      ov_metatypes.OVSubtractMetatype,
+                                                      ov_metatypes.OVMultiplyMetatype,
+                                                      ov_metatypes.OVDivideMetatype,
                                                       ],
                          GraphPattern.LABEL_ATTR: 'ARITHMETIC'}
 
-ELEMENTWISE_OPERATIONS = {GraphPattern.METATYPE_ATTR: [om.OVAddMetatype,
-                                                       om.OVMulMetatype,
-                                                       om.OVSubMetatype,
-                                                       om.OVDivMetatype,
-                                                       om.OVLessMetatype,
-                                                       om.OVLessEqualMetatype,
-                                                       om.OVGreaterMetatype,
-                                                       om.OVGreaterEqualMetatype,
-                                                       om.OVEqualMetatype,
-                                                       om.OVNotEqualMetatype,
-                                                       om.OVFloorModMetatype,
-                                                       om.OVOrMetatype,
-                                                       om.OVXorMetatype,
-                                                       om.OVAndMetatype,
-                                                       om.OVMaximumMetatype,
-                                                       om.OVMinimumMetatype,
+ELEMENTWISE_OPERATIONS = {GraphPattern.METATYPE_ATTR: [ov_metatypes.OVAddMetatype,
+                                                       ov_metatypes.OVMultiplyMetatype,
+                                                       ov_metatypes.OVSubtractMetatype,
+                                                       ov_metatypes.OVDivideMetatype,
+                                                       ov_metatypes.OVLessMetatype,
+                                                       ov_metatypes.OVLessEqualMetatype,
+                                                       ov_metatypes.OVGreaterMetatype,
+                                                       ov_metatypes.OVGreaterEqualMetatype,
+                                                       ov_metatypes.OVEqualMetatype,
+                                                       ov_metatypes.OVNotEqualMetatype,
+                                                       ov_metatypes.OVFloorModMetatype,
+                                                       ov_metatypes.OVLogicalOrMetatype,
+                                                       ov_metatypes.OVLogicalXorMetatype,
+                                                       ov_metatypes.OVLogicalAndMetatype,
+                                                       ov_metatypes.OVMaximumMetatype,
+                                                       ov_metatypes.OVMinimumMetatype,
                                                        ],
                           GraphPattern.LABEL_ATTR: 'ELEMENTWISE'}
+
+TRANSPOSED_OPERATIONS = {GraphPattern.METATYPE_ATTR: [ov_metatypes.OVConvolutionBackpropDataMetatype],
+                         GraphPattern.LABEL_ATTR: 'CONVOLUTION_BACKPROP_DATA'}

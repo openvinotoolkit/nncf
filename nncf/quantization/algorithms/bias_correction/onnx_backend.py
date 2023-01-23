@@ -66,10 +66,6 @@ class ONNXBiasCorrectionAlgoBackend(BiasCorrectionAlgoBackend):
                 ONNX_OPERATION_METATYPES.get_operator_metatype_by_op_name('DequantizeLinear')]
 
     @staticmethod
-    def model_transformer(model: onnx.ModelProto) -> ONNXModelTransformer:
-        return ONNXModelTransformer(model)
-
-    @staticmethod
     def target_point(target_type: TargetType,
                      target_node_name: str = None,
                      port_id: str = None) -> ONNXTargetPoint:

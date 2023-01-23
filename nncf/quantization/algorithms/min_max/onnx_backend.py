@@ -30,7 +30,6 @@ from nncf.common.logging import nncf_logger
 from nncf.onnx.graph.metatypes.onnx_metatypes import WEIGHT_LAYER_METATYPES
 from nncf.onnx.graph.metatypes.onnx_metatypes import ONNXNonMaxSuppressionMetatype
 from nncf.onnx.graph.metatypes.onnx_metatypes import ONNXTopKMetatype
-from nncf.onnx.graph.model_transformer import ONNXModelTransformer
 from nncf.onnx.graph.transformations.commands import ONNXQuantizerInsertionCommand
 from nncf.onnx.graph.transformations.commands import ONNXTargetPoint
 from nncf.onnx.hardware.config import ONNXHWConfig
@@ -68,10 +67,6 @@ class ONNXMinMaxAlgoBackend(MinMaxAlgoBackend):
     @property
     def quant_trait_op_dict(self) -> Dict[int, OperatorMetatype]:
         return DEFAULT_ONNX_QUANT_TRAIT_TO_OP_DICT
-
-    @staticmethod
-    def model_transformer(model: onnx.ModelProto) -> ONNXModelTransformer:
-        return ONNXModelTransformer(model)
 
     @staticmethod
     def target_point(target_type: TargetType,

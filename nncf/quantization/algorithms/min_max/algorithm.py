@@ -14,8 +14,8 @@
 from copy import deepcopy
 from typing import Dict, List, TypeVar, Optional, OrderedDict, Tuple
 import collections
+
 from nncf import Dataset
-from nncf.common.graph.definitions import NNCFGraphNodeType
 from nncf.common.graph.graph import NNCFGraph
 from nncf.common.graph.transformations.commands import TargetType
 from nncf.common.graph.transformations.commands import TargetPoint
@@ -49,6 +49,8 @@ from nncf.quantization.algorithms.definitions import Granularity
 from nncf.common.factory import NNCFGraphFactory
 from nncf.common.tensor_statistics.statistic_point import StatisticPoint
 from nncf.common.tensor_statistics.statistic_point import StatisticPointsContainer
+from nncf.common.factory import ModelTransformerFactory
+
 
 TModel = TypeVar('TModel')
 
@@ -177,6 +179,10 @@ class MinMaxQuantization(Algorithm):
             from nncf.quantization.algorithms.min_max.onnx_backend import \
                 ONNXMinMaxAlgoBackend
             self._backend_entity = ONNXMinMaxAlgoBackend()
+        elif model_backend == BackendType.OPENVINO:
+            from nncf.experimental.openvino_native.quantization.algorithms.min_max.openvino_backend import \
+                OVMinMaxAlgoBackend
+            self._backend_entity = OVMinMaxAlgoBackend()
         else:
             raise RuntimeError('Cannot return backend-specific entity'
                                'because {} is not supported!'.format(model_backend))
@@ -310,21 +316,13 @@ class MinMaxQuantization(Algorithm):
         :param quantization_point: SingleConfigQuantizationPoint for the needed layer.
         """
         node_name = quantization_point.insertion_point.target_node_name
-        # If quantization of Model Input node
-        if NNCFGraphNodeType.INPUT_NODE in node_name:
-            # There is only onde node - input_node
-            output_port_id = 0
-            activation_quantization_target_point = self._backend_entity.target_point(TargetType.POST_LAYER_OPERATION,
-                                                                                     node_name,
-                                                                                     output_port_id)
-        # If not Model Input node
         # If Quantization of node's input
-        elif quantization_point.insertion_point.input_port_id is not None:
+        if quantization_point.insertion_point.input_port_id is not None:
             input_port_id = quantization_point.insertion_point.input_port_id
             activation_quantization_target_point = self._backend_entity.target_point(TargetType.PRE_LAYER_OPERATION,
                                                                                      node_name,
                                                                                      input_port_id)
-        # If quantization of node's output
+        # If quantization of node's output or Model Input node
         else:
             output_port_id = 0
             activation_quantization_target_point = self._backend_entity.target_point(TargetType.POST_LAYER_OPERATION,
@@ -366,7 +364,7 @@ class MinMaxQuantization(Algorithm):
                dataset: Optional[Dataset] = None) -> TModel:
         transformation_layout, transformation_commands = TransformationLayout(), []
         nncf_graph = NNCFGraphFactory.create(model) if self.nncf_graph is None else self.nncf_graph
-        model_transformer = self._backend_entity.model_transformer(model)
+        model_transformer = ModelTransformerFactory.create(model)
 
         quantization_target_points = self._get_quantization_target_points(model)
         weight_tensor_names = set()

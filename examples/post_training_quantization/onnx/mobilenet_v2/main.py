@@ -104,9 +104,9 @@ model = onnx.load(model_path)
 #
 # To validate the transform function use the following code:
 # >> sess = onnxruntime.InferenceSession(model_path)
-# >> outpu_names = [output.name for output in sess.get_outputs()]
+# >> output_names = [output.name for output in sess.get_outputs()]
 # >> for data_item in val_loader:
-# >>    sess.run(outpu_names, input_feed=model(transform_fn(data_item))
+# >>    sess.run(output_names, input_feed=transform_fn(data_item))
 input_name = model.graph.input[0].name
 def transform_fn(data_item):
     images, _ = data_item
