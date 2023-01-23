@@ -28,7 +28,14 @@ learning frameworks.
 
 - Support of various compression algorithms, applied during a model fine-tuning process to achieve a better performance-accuracy trade-off:
 
-### Compression-Aware Training Algorithms  
+### Post-Training Compression Algorithms
+
+| Compression algorithm                                                       |PyTorch|TensorFlow|   ONNX   |       OpenVINO       |
+|:----------------------------------------------------------------------------| :---: | :---: |:--------:|:--------------------:|
+| [Quantization](./docs/compression_algorithms/post_training/Quantization.md) | Supported | Supported |Supported| Supported (Preview)* |
+_*the work is in progress, NNCF does not guarantee the full functional support._
+
+### Training-time Compression Algorithms
 
 |Compression algorithm|PyTorch|TensorFlow|
 | :--- | :---: | :---: |
@@ -38,13 +45,8 @@ learning frameworks.
 |[Sparsity](./docs/compression_algorithms/Sparsity.md) | Supported | Supported | Not supported |
 |[Filter pruning](./docs/compression_algorithms/Pruning.md) | Supported | Supported | Not supported |
 
-### Post-Training Compression Algorithms
 
-| Compression algorithm                                                       |PyTorch|TensorFlow|   ONNX   |       OpenVINO       |
-|:----------------------------------------------------------------------------| :---: | :---: |:--------:|:--------------------:|
-| [Quantization](./docs/compression_algorithms/post_training/Quantization.md) | Supported | Supported |Supported| Supported (Preview)* |
 
-_*the work is in progress, NNCF does not guarantee the full functional support._
 
 - Automatic, configurable model graph transformation to obtain the compressed model.
   > **NOTE**: Limited support for TensorFlow models. The models created using Sequential or Keras Functional API are only supported.
