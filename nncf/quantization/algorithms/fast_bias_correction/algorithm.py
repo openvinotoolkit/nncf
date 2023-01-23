@@ -102,7 +102,7 @@ class FastBiasCorrection(Algorithm):
                 ONNXFastBiasCorrectionAlgoBackend
             self._backend_entity = ONNXFastBiasCorrectionAlgoBackend()
         elif model_backend == BackendType.OPENVINO:
-            from nncf.quantization.algorithms.fast_bias_correction.ov_backend import \
+            from nncf.experimental.openvino_native.quantization.algorithms.fast_bias_correction.ov_backend import \
                 OVFastBiasCorrectionAlgoBackend
             self._backend_entity = OVFastBiasCorrectionAlgoBackend()
         else:

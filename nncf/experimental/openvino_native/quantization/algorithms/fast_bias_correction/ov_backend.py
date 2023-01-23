@@ -112,7 +112,7 @@ class OVFastBiasCorrectionAlgoBackend(FastBiasCorrectionAlgoBackend):
                 # We goes thorough 0 port in assumption that bias graph without branching
                 potential_bias_queue.append(potential_bias.input_value(0).node)
             elif potential_bias.get_type_name() == needed_bias_type:
-                bias_value = potential_bias.get_data()
+                bias_value = potential_bias.get_vector()
                 return bias_value.flatten(), bias_value.shape
             continue
 
