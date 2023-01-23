@@ -1,5 +1,5 @@
 """
- Copyright (c) 2020-2022 Intel Corporation
+ Copyright (c) 2020-2023 Intel Corporation
  Licensed under the Apache License, Version 2.0 (the "License");
  you may not use this file except in compliance with the License.
  You may obtain a copy of the License at
@@ -99,6 +99,9 @@ def create_compressed_model(model: Module,
     should_init = compression_state is None
 
     nncf_network = create_nncf_network(model, config, dummy_forward_fn, wrap_inputs_fn, wrap_outputs_fn)
+
+    if dump_graphs and is_main_process():
+        nncf_network.get_graph().visualize_graph(osp.join(config.get("log_dir", "."), "original_graph.dot"))
 
     builder = create_compression_algorithm_builder(config, should_init)
 

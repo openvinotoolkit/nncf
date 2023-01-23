@@ -1,5 +1,5 @@
 """
- Copyright (c) 2022 Intel Corporation
+ Copyright (c) 2023 Intel Corporation
  Licensed under the Apache License, Version 2.0 (the "License");
  you may not use this file except in compliance with the License.
  You may obtain a copy of the License at
@@ -14,15 +14,14 @@
 from copy import deepcopy
 from typing import Dict, List, TypeVar, Optional, OrderedDict, Tuple
 import collections
+
 from nncf import Dataset
-from nncf.common.graph.definitions import NNCFGraphNodeType
 from nncf.common.graph.graph import NNCFGraph
 from nncf.common.graph.transformations.commands import TargetType
 from nncf.common.graph.transformations.commands import TargetPoint
 from nncf.common.graph.transformations.layout import TransformationLayout
 from nncf.parameters import TargetDevice
-from nncf.common.hardware.config import HWConfigType
-from nncf.common.hardware.config import HW_CONFIG_TYPE_TARGET_DEVICE_MAP
+from nncf.common.hardware.config import get_hw_config_type
 from nncf.common.insertion_point_graph import InsertionPointGraph
 from nncf.common.quantization.quantizer_propagation.solver import QuantizerPropagationSolver
 from nncf.common.quantization.quantizer_setup import SingleConfigQuantizationPoint
@@ -38,7 +37,6 @@ from nncf.common.tensor_statistics.collectors import TensorStatisticCollectorBas
 from nncf.common.utils.backend import BackendType
 from nncf.common.utils.backend import get_backend
 from nncf.common.logging import nncf_logger
-
 from nncf.quantization.algorithms.algorithm import Algorithm
 from nncf.quantization.algorithms.algorithm import AlgorithmParameters
 from nncf.quantization.algorithms.min_max.backend import ALGO_BACKENDS
@@ -47,6 +45,8 @@ from nncf.quantization.algorithms.definitions import Granularity
 from nncf.common.factory import NNCFGraphFactory
 from nncf.common.tensor_statistics.statistic_point import StatisticPoint
 from nncf.common.tensor_statistics.statistic_point import StatisticPointsContainer
+from nncf.common.factory import ModelTransformerFactory
+
 
 TModel = TypeVar('TModel')
 
@@ -99,7 +99,7 @@ class MinMaxQuantizationParameters(AlgorithmParameters):
         :param ignored_scopes: List of the layers which input must not be quantized.
         """
         self.number_samples = number_samples
-        self.target_device = HWConfigType(HW_CONFIG_TYPE_TARGET_DEVICE_MAP[target_device.value])
+        self.target_device = target_device
         self.range_type = range_type
         self.quantize_outputs = quantize_outputs
         self.ignored_scopes = [] if ignored_scopes is None else ignored_scopes
@@ -174,6 +174,10 @@ class MinMaxQuantization(Algorithm):
             from nncf.quantization.algorithms.min_max.onnx_backend import \
                 ONNXMinMaxAlgoBackend
             self._backend_entity = ONNXMinMaxAlgoBackend()
+        elif model_backend == BackendType.OPENVINO:
+            from nncf.experimental.openvino_native.quantization.algorithms.min_max.openvino_backend import \
+                OVMinMaxAlgoBackend
+            self._backend_entity = OVMinMaxAlgoBackend()
         else:
             raise RuntimeError('Cannot return backend-specific entity'
                                'because {} is not supported!'.format(model_backend))
@@ -238,7 +242,7 @@ class MinMaxQuantization(Algorithm):
         :param nncf_graph: NNCFGraph instance.
         :return: SingleConfigQuantizerSetup for the current NNCFGraph entity.
         """
-        hw_config_type = self._parameters.target_device
+        hw_config_type = get_hw_config_type(self._parameters.target_device.value)
         hw_config_path = self._backend_entity.hw_config.get_path_to_hw_config(hw_config_type)
         hw_config = self._backend_entity.hw_config.from_json(hw_config_path)
         weight_nodes = nncf_graph.get_nodes_by_metatypes(self._backend_entity.layers_with_weights_metatypes)
@@ -303,21 +307,13 @@ class MinMaxQuantization(Algorithm):
         :param quantization_point: SingleConfigQuantizationPoint for the needed layer.
         """
         node_name = quantization_point.insertion_point.target_node_name
-        # If quantization of Model Input node
-        if NNCFGraphNodeType.INPUT_NODE in node_name:
-            # There is only onde node - input_node
-            output_port_id = 0
-            activation_quantization_target_point = self._backend_entity.target_point(TargetType.POST_LAYER_OPERATION,
-                                                                                     node_name,
-                                                                                     output_port_id)
-        # If not Model Input node
         # If Quantization of node's input
-        elif quantization_point.insertion_point.input_port_id is not None:
+        if quantization_point.insertion_point.input_port_id is not None:
             input_port_id = quantization_point.insertion_point.input_port_id
             activation_quantization_target_point = self._backend_entity.target_point(TargetType.PRE_LAYER_OPERATION,
                                                                                      node_name,
                                                                                      input_port_id)
-        # If quantization of node's output
+        # If quantization of node's output or Model Input node
         else:
             output_port_id = 0
             activation_quantization_target_point = self._backend_entity.target_point(TargetType.POST_LAYER_OPERATION,
@@ -358,7 +354,7 @@ class MinMaxQuantization(Algorithm):
                dataset: Optional[Dataset] = None) -> TModel:
         transformation_layout, transformation_commands = TransformationLayout(), []
         nncf_graph = NNCFGraphFactory.create(model) if self.nncf_graph is None else self.nncf_graph
-        model_transformer = self._backend_entity.model_transformer(model)
+        model_transformer = ModelTransformerFactory.create(model)
 
         quantization_target_points = self._get_quantization_target_points(model)
         weight_tensor_names = set()

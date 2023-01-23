@@ -1,5 +1,5 @@
 """
- Copyright (c) 2022 Intel Corporation
+ Copyright (c) 2023 Intel Corporation
  Licensed under the Apache License, Version 2.0 (the "License");
  you may not use this file except in compliance with the License.
  You may obtain a copy of the License at
@@ -141,7 +141,7 @@ class BaseTensorListComparator(ABC):
 
 
 def telemetry_send_event_test_driver(mocker, use_nncf_fn: Callable):
-    from nncf.telemetry import NNCFTelemetry
-    telemetry_send_event_spy = mocker.spy(NNCFTelemetry, "send_event")
+    from nncf.telemetry import telemetry
+    telemetry_send_event_spy = mocker.spy(telemetry, "send_event")
     use_nncf_fn()
     telemetry_send_event_spy.assert_called()

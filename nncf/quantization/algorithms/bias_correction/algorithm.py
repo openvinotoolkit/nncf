@@ -1,5 +1,5 @@
 """
- Copyright (c) 2022 Intel Corporation
+ Copyright (c) 2023 Intel Corporation
  Licensed under the Apache License, Version 2.0 (the "License");
  you may not use this file except in compliance with the License.
  You may obtain a copy of the License at
@@ -34,6 +34,8 @@ from nncf.common.factory import NNCFGraphFactory
 from nncf.common.factory import EngineFactory
 from nncf.common.tensor_statistics.statistic_point import StatisticPoint
 from nncf.common.tensor_statistics.statistic_point import StatisticPointsContainer
+from nncf.common.factory import ModelTransformerFactory
+
 
 TModel = TypeVar('TModel')
 
@@ -129,7 +131,7 @@ class BiasCorrection(Algorithm):
 
         self._set_backend_entity(model)
         main_transformations_layout = TransformationLayout()
-        main_model_transformer = self._backend_entity.model_transformer(model)
+        main_model_transformer = ModelTransformerFactory.create(model)
 
         model_copy = deepcopy(model)
         model_copy = self._remove_fq_from_inputs(model_copy)
@@ -188,7 +190,7 @@ class BiasCorrection(Algorithm):
         skip_types = []
         nncf_graph = NNCFGraphFactory.create(model)
 
-        model_transformer = self._backend_entity.model_transformer(model)
+        model_transformer = ModelTransformerFactory.create(model)
         for skip_type in self._backend_entity.quantizer_types:
             skip_types.extend(skip_type.op_names)
 
@@ -277,7 +279,7 @@ class BiasCorrection(Algorithm):
         extracted_model = self._backend_entity.extract_model(model, input_node_names, statistic_node_names)
 
         transformation_layout = TransformationLayout()
-        model_transformer = self._backend_entity.model_transformer(extracted_model)
+        model_transformer = ModelTransformerFactory.create(extracted_model)
         _, output_port_id = self._backend_entity.get_activation_port_ids_for_bias_node(model, node)
         statistic_point = self._backend_entity.target_point(TargetType.POST_LAYER_OPERATION,
                                                             node.node_name,
@@ -357,7 +359,7 @@ class BiasCorrection(Algorithm):
         :param bias_correction_command: TransformationCommand instance for the bias correction.
         :return: Backend-specific model, but with the updated bias value.
         """
-        model_transformer = self._backend_entity.model_transformer(model)
+        model_transformer = ModelTransformerFactory.create(model)
         transformation_layout = TransformationLayout()
         transformation_layout.register(bias_correction_command)
         return model_transformer.transform(transformation_layout)
@@ -394,7 +396,7 @@ class BiasCorrection(Algorithm):
         node_inputs_name = subgraphs_data[node_name]['input_node_names']
         for node_input_name in node_inputs_name:
             if node_input_name not in needed_stats_list and node_input_name in self._fp_inputs:
-                nncf_logger.debug('Dropped %s', node_input_name)
+                nncf_logger.debug(f'Dropped {node_input_name}')
                 self._fp_inputs[node_input_name] = []
 
     def _get_current_stats_list(self, current_node_name: str, subgraphs_data: Dict[str, Dict]) -> List[str]:

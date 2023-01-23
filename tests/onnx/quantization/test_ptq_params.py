@@ -1,5 +1,5 @@
 """
- Copyright (c) 2022 Intel Corporation
+ Copyright (c) 2023 Intel Corporation
  Licensed under the Apache License, Version 2.0 (the "License");
  you may not use this file except in compliance with the License.
  You may obtain a copy of the License at
@@ -12,10 +12,9 @@
 """
 
 import pytest
-from nncf.common.hardware.config import HW_CONFIG_TYPE_TARGET_DEVICE_MAP
 from nncf.parameters import TargetDevice
-from nncf.experimental.onnx.statistics.collectors import ONNXMeanMinMaxStatisticCollector
-from nncf.experimental.onnx.statistics.collectors import ONNXMinMaxStatisticCollector
+from nncf.onnx.statistics.collectors import ONNXMeanMinMaxStatisticCollector
+from nncf.onnx.statistics.collectors import ONNXMinMaxStatisticCollector
 from nncf.quantization.algorithms.definitions import RangeType
 from nncf.quantization.algorithms.post_training.algorithm import PostTrainingQuantization
 from nncf.quantization.algorithms.post_training.algorithm import PostTrainingQuantizationParameters
@@ -29,13 +28,12 @@ from tests.onnx.quantization.test_quantizer_config import NNCFGraphToTest
 
 # pylint: disable=protected-access
 
-@pytest.mark.parametrize('target_device',
-                         [TargetDevice.ANY, TargetDevice.CPU, TargetDevice.GPU, TargetDevice.VPU])
+@pytest.mark.parametrize('target_device', TargetDevice)
 def test_target_device(target_device):
     algo = PostTrainingQuantization(PostTrainingQuantizationParameters(target_device=target_device))
     min_max_algo = algo.algorithms[0]
     min_max_algo._backend_entity = ONNXMinMaxAlgoBackend()
-    assert min_max_algo._parameters.target_device.value == HW_CONFIG_TYPE_TARGET_DEVICE_MAP[target_device.value]
+    assert min_max_algo._parameters.target_device == target_device
 
 
 @pytest.mark.parametrize('range_type', [RangeType.MINMAX, RangeType.MEAN_MINMAX, None])

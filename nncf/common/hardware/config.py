@@ -1,5 +1,5 @@
 """
- Copyright (c) 2022 Intel Corporation
+ Copyright (c) 2023 Intel Corporation
  Licensed under the Apache License, Version 2.0 (the "License");
  you may not use this file except in compliance with the License.
  You may obtain a copy of the License at
@@ -46,12 +46,26 @@ HW_CONFIG_TYPE_TARGET_DEVICE_MAP = {
     'ANY': HWConfigType.CPU.value,
     'CPU': HWConfigType.CPU.value,
     'VPU': HWConfigType.VPU.value,
-    'GPU': HWConfigType.GPU.value,
-    'TRIAL': None
+    'GPU': HWConfigType.GPU.value
 }
 
 
 HWConfigOpName = str
+
+
+def get_hw_config_type(target_device: str) -> Optional[HWConfigType]:
+    """
+    Returns hardware configuration type for target device
+
+    :param target_device: A target device
+    :raises ValueError: if target device is not supported yet
+    :return: hardware configuration type or None for the 'TRIAL' target device
+    """
+    if target_device == 'TRIAL':
+        return None
+    if target_device == 'CPU_SPR':
+        raise ValueError(f'{target_device} target device is not supported yet')
+    return HWConfigType(HW_CONFIG_TYPE_TARGET_DEVICE_MAP[target_device])
 
 
 class HWConfig(list, ABC):

@@ -3,6 +3,14 @@ models:
     launchers:
       - framework: onnx_runtime
         execution_providers: ['OpenVINOExecutionProvider']
+        tags: ['OpenVINOExecutionProvider']
+        adapter:
+          type: duc_segmentation
+          ds_rate: 8
+          cell_width: 2
+      - framework: onnx_runtime
+        execution_providers: [ 'CPUExecutionProvider' ]
+        tags: ['CPUExecutionProvider']
         adapter:
           type: duc_segmentation
           ds_rate: 8

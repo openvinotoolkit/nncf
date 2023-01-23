@@ -1,5 +1,5 @@
 """
- Copyright (c) 2022 Intel Corporation
+ Copyright (c) 2023 Intel Corporation
  Licensed under the Apache License, Version 2.0 (the "License");
  you may not use this file except in compliance with the License.
  You may obtain a copy of the License at
@@ -33,11 +33,9 @@ def convert_opset_version(model: onnx.ModelProto, opset_version: int = TARGET_OP
         modified_model = convert_version(model, opset_version)
         onnx.checker.check_model(modified_model)
         nncf_logger.info(
-            'The model was successfully converted  to the Opset Version = {}'.format(
-                modified_model.opset_import[0].version))
+            f'The model was successfully converted to the opset version = {modified_model.opset_import[0].version}')
         return modified_model
     except (RuntimeError, ConvertError):
         nncf_logger.error(
-            f"Couldn't convert target model to the Opset Version {opset_version}. "
-            f"Using the copy of the original model")
+            f"Couldn't convert target model to the opset version {opset_version}. Using the copy of the original model")
         return model

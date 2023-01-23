@@ -1,5 +1,5 @@
 """
- Copyright (c) 2022 Intel Corporation
+ Copyright (c) 2023 Intel Corporation
  Licensed under the Apache License, Version 2.0 (the "License");
  you may not use this file except in compliance with the License.
  You may obtain a copy of the License at
@@ -16,7 +16,7 @@ from copy import deepcopy
 import onnx
 from onnx import TensorProto
 from onnx.external_data_helper import uses_external_data
-from nncf.experimental.onnx.graph.onnx_graph import ONNXGraph
+from nncf.onnx.graph.onnx_graph import ONNXGraph
 import numpy as np
 import tempfile
 

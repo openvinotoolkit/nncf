@@ -1,5 +1,5 @@
 """
- Copyright (c) 2022 Intel Corporation
+ Copyright (c) 2023 Intel Corporation
  Licensed under the Apache License, Version 2.0 (the "License");
  you may not use this file except in compliance with the License.
  You may obtain a copy of the License at
@@ -781,7 +781,7 @@ class QuantizerPropagationSolver:
 
                 quant_det_id = node[QuantizerPropagationStateGraph.OPERATOR_METATYPE_NODE_ATTR]
                 if quant_det_id is None:
-                    nncf_logger.debug("Unknown metatype for operator node: {}".format(node_key))
+                    nncf_logger.debug(f"Unknown metatype for operator node: {node_key}")
                     trait = QuantizationTrait.QUANTIZATION_AGNOSTIC
                 elif quant_det_id is UnknownMetatype:
                     trait = QuantizationTrait.NON_QUANTIZABLE

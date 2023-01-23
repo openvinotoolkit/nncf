@@ -1,5 +1,5 @@
 """
- Copyright (c) 2022 Intel Corporation
+ Copyright (c) 2023 Intel Corporation
  Licensed under the Apache License, Version 2.0 (the "License");
  you may not use this file except in compliance with the License.
  You may obtain a copy of the License at
@@ -287,6 +287,10 @@ class CompositeCompressionAlgorithmController(CompressionAlgorithmController):
     @compression_rate.setter
     def compression_rate(self, compression_rate: float) -> None:
         raise NotImplementedError
+
+    @property
+    def maximal_compression_rate(self) -> float:
+        return min(child_ctrl.maximal_compression_rate for child_ctrl in self.child_ctrls)
 
     def export_model(self,
                      save_path: str,

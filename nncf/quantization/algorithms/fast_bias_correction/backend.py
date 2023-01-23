@@ -1,5 +1,5 @@
 """
- Copyright (c) 2022 Intel Corporation
+ Copyright (c) 2023 Intel Corporation
  Licensed under the Apache License, Version 2.0 (the "License");
  you may not use this file except in compliance with the License.
  You may obtain a copy of the License at
@@ -27,7 +27,7 @@ from nncf.common.tensor_statistics.collectors import TensorStatisticCollectorBas
 from nncf.common.tensor_statistics.collectors import ReductionShape
 from nncf.common.tensor_statistics.collectors import NNCFCollectorTensorProcessor
 from nncf.common.utils.registry import Registry
-from nncf.common.graph.model_transformer import ModelTransformer
+
 
 TModel = TypeVar('TModel')
 OutputType = TypeVar('OutputType')
@@ -62,16 +62,6 @@ class FastBiasCorrectionAlgoBackend(ABC):
 
     @staticmethod
     @abstractmethod
-    def model_transformer(model: TModel) -> ModelTransformer:
-        """
-        Returns backend-specific ModelTransformer instance.
-
-        :param model: Backend-specific model to create ModelTransformer.
-        :return: ModelTransformer instance.
-        """
-
-    @staticmethod
-    @abstractmethod
     def target_point(target_type: TargetType, target_node_name: str, port_id: int) -> TargetPoint:
         """
         Returns backend-specific target point.
@@ -84,15 +74,12 @@ class FastBiasCorrectionAlgoBackend(ABC):
 
     @staticmethod
     @abstractmethod
-    def bias_correction_command(target_point: TargetPoint,
-                                bias_value: np.ndarray,
-                                threshold: float) -> TransformationCommand:
+    def bias_correction_command(target_point: TargetPoint, bias_value: np.ndarray) -> TransformationCommand:
         """
         Returns backend-specific bias correction command.
 
         :param target_point: Target location for the correction.
         :param bias_value: New value for the bias.
-        :param threshold: Parametrized threshold for the shift magnitude comparison.
         :return: Backend-specific TransformationCommand for the bias correction.
         """
 

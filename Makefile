@@ -15,7 +15,7 @@ install-onnx-test:
 	pip install -r tests/onnx/benchmarking/requirements.txt
 	pip install -r examples/post_training_quantization/onnx/mobilenet_v2/requirements.txt
 
-install-onnx-dev: install-onnx-test 
+install-onnx-dev: install-onnx-test
 	pip install pylint==$(PYLINT_VERSION)
 
 test-onnx:
@@ -24,7 +24,7 @@ test-onnx:
 ONNX_PYFILES := $(shell find examples/post_training_quantization/onnx -type f -name "*.py")
 pylint-onnx:
 	pylint --rcfile .pylintrc               \
-		nncf/experimental/onnx              \
+		nncf/onnx              	            \
 		nncf/quantization                   \
 		tests/onnx                          \
 		$(ONNX_PYFILES)
@@ -53,6 +53,7 @@ test-openvino:
 pylint-openvino:
 	pylint --rcfile .pylintrc               \
 		nncf/openvino/                      \
+		nncf/experimental/openvino_native/  \
 		tests/openvino/                     \
 		examples/experimental/openvino/
 

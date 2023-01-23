@@ -1,5 +1,5 @@
 """
- Copyright (c) 2022 Intel Corporation
+ Copyright (c) 2023 Intel Corporation
  Licensed under the Apache License, Version 2.0 (the "License");
  you may not use this file except in compliance with the License.
  You may obtain a copy of the License at
@@ -77,7 +77,7 @@ SINGLE_INPUT_INFO_SCHEMA = {
 
 TARGET_DEVICE_SCHEMA = {
     "type": "string",
-    "enum": ["ANY", "CPU", "GPU", "VPU", "TRIAL"]
+    "enum": ["ANY", "CPU", "GPU", "VPU", "TRIAL", "CPU_SPR"]
 }
 
 
