@@ -2,7 +2,7 @@
 
 ## New in Release 2.4.0
 Target version updates:
-- Bump target framework versions to PyTorch 1.13.1, TensorFlow 2.8.x, ONNX opset 13
+- Bump target framework versions to PyTorch 1.13.1, TensorFlow 2.8.x, ONNX 1.12, ONNXRuntime 1.13.1
 - Increased target HuggingFace transformers version for the integration patch to 4.23.1
 
 Features:
