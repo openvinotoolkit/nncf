@@ -24,6 +24,14 @@ from nncf.onnx.hardware.pattern_operations import LINEAR_OPERATIONS
 from nncf.onnx.hardware.pattern_operations import ATOMIC_ACTIVATIONS_OPERATIONS
 
 
+def create_activations() -> GraphPattern:
+    swish = create_swish_activation()
+    activations = GraphPattern()
+    activations.add_node(**ATOMIC_ACTIVATIONS_OPERATIONS)
+    activations.add_pattern_alternative(swish)
+    return activations
+
+
 def create_swish_activation() -> GraphPattern:
     pattern = GraphPattern()
 
@@ -112,26 +120,15 @@ def create_decomposed_batch_norm() -> GraphPattern:
 def create_scale_shift() -> GraphPattern:
     pattern = GraphPattern()
 
-    model_input_node_1 = pattern.add_node(**{GraphPattern.LABEL_ATTR: '*INPUT_NODE*',
-                                             GraphPattern.METATYPE_ATTR: GraphPattern.NON_PATTERN_NODE_TYPE})
-    mul_node_1 = pattern.add_node(**{GraphPattern.LABEL_ATTR: 'MUL',
-                                     GraphPattern.METATYPE_ATTR: ONNXMulLayerMetatype})
-    add_node_1 = pattern.add_node(**{GraphPattern.LABEL_ATTR: 'ADD',
-                                     GraphPattern.METATYPE_ATTR: ONNXAddLayerMetatype})
+    model_input_node = pattern.add_node(**{GraphPattern.LABEL_ATTR: '*INPUT_NODE*',
+                                           GraphPattern.METATYPE_ATTR: GraphPattern.NON_PATTERN_NODE_TYPE})
+    mul_node = pattern.add_node(**{GraphPattern.LABEL_ATTR: 'MUL',
+                                   GraphPattern.METATYPE_ATTR: ONNXMulLayerMetatype})
+    add_node = pattern.add_node(**{GraphPattern.LABEL_ATTR: 'ADD',
+                                   GraphPattern.METATYPE_ATTR: [ONNXAddLayerMetatype, ONNXSubMetatype]})
 
-    pattern.add_edge(model_input_node_1, mul_node_1)
-    pattern.add_edge(mul_node_1, add_node_1)
-
-    model_input_node_2 = pattern.add_node(**{GraphPattern.LABEL_ATTR: '*INPUT_NODE*',
-                                             GraphPattern.METATYPE_ATTR: GraphPattern.NON_PATTERN_NODE_TYPE})
-    mul_node_2 = pattern.add_node(**{GraphPattern.LABEL_ATTR: 'MUL',
-                                     GraphPattern.METATYPE_ATTR: ONNXMulLayerMetatype})
-    add_node_2 = pattern.add_node(**{GraphPattern.LABEL_ATTR: 'SUB',
-                                     GraphPattern.METATYPE_ATTR: ONNXSubMetatype})
-
-    pattern.add_edge(model_input_node_2, mul_node_2)
-    pattern.add_edge(mul_node_2, add_node_2)
-
+    pattern.add_edge(model_input_node, mul_node)
+    pattern.add_edge(mul_node, add_node)
     return pattern
 
 
@@ -148,13 +145,10 @@ def create_linear_bn_scale_shift_activation() -> GraphPattern:
     bn_node = pattern.add_node(**{GraphPattern.LABEL_ATTR: 'BATCH_NORM',
                                   GraphPattern.METATYPE_ATTR: ONNXBatchNormMetatype})
     scale_shift = create_scale_shift()
-    swish = create_swish_activation()
-    activations = GraphPattern()
-    activations.add_node(**ATOMIC_ACTIVATIONS_OPERATIONS)
-    activations.add_pattern_alternative(swish)
-
+    activations = create_activations()
     pattern.add_edge(linear_node, bn_node)
-    pattern = pattern + scale_shift + activations
+    pattern.join_patterns(scale_shift)
+    pattern.join_patterns(activations)
     return pattern
 
 
@@ -166,12 +160,9 @@ def create_bn_scale_shift_activation() -> GraphPattern:
     #        Activation
     pattern = GraphPattern()
     _ = pattern.add_node(**{GraphPattern.LABEL_ATTR: 'BATCH_NORM',
-                                  GraphPattern.METATYPE_ATTR: ONNXBatchNormMetatype})
+                            GraphPattern.METATYPE_ATTR: ONNXBatchNormMetatype})
     scale_shift = create_scale_shift()
-    swish = create_swish_activation()
-    activations = GraphPattern()
-    activations.add_node(**ATOMIC_ACTIVATIONS_OPERATIONS)
-    activations.add_pattern_alternative(swish)
-
-    pattern = pattern + scale_shift + activations
+    activations = create_activations()
+    pattern.join_patterns(scale_shift)
+    pattern.join_patterns(activations)
     return pattern
