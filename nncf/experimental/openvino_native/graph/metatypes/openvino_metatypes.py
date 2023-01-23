@@ -509,19 +509,13 @@ class OVResultMetatype(OVOpMetatype):
     op_names = ['Result']
 
 
-@OV_OPERATION_METATYPES.register()
-class OVConvertMetatype(OVOpMetatype):
-    name = 'ConvertOp'
-    op_names = ['Convert']
-
-
-@OV_OPERATION_METATYPES.register()
+@OV_OPERATOR_METATYPES.register()
 class OVSwishMetatype(OVOpMetatype):
     name = 'SwishOp'
     op_names = ['Swish']
 
 
-@OV_OPERATION_METATYPES.register()
+@OV_OPERATOR_METATYPES.register()
 class OVClampMetatype(OVOpMetatype):
     name = 'ClampOp'
     op_names = ['Clamp']
