@@ -11,7 +11,7 @@
  limitations under the License.
 """
 
-from nncf.common.graph.graph_matching import GraphPattern
+from nncf.common.graph.patterns import GraphPattern
 from nncf.experimental.openvino_native.graph.metatypes import openvino_metatypes as om
 
 LINEAR_OPERATIONS = {GraphPattern.METATYPE_ATTR: [om.OVConvolutionMetatype,
