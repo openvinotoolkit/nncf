@@ -10,28 +10,20 @@
  See the License for the specific language governing permissions and
  limitations under the License.
 """
-from typing import Dict
-from typing import Optional
-from typing import List
-from typing import Tuple
-from typing import Hashable
-
-import os
 import copy
 import itertools as it
+import os
+from dataclasses import dataclass
+from enum import Enum
+from typing import Dict, Hashable, List, Optional, Tuple
 
 import networkx as nx
 import networkx.algorithms.isomorphism as ism
 
-from nncf.common.utils.dot_file_rw import write_dot_graph
-
-from typing import List
-
-from dataclasses import dataclass
-from enum import Enum
-
-from nncf.parameters import TargetDevice
 from nncf.common.utils.backend import BackendType
+from nncf.common.utils.dot_file_rw import write_dot_graph
+from nncf.parameters import TargetDevice
+
 
 class HWFusedPatterns:
     """
@@ -345,7 +337,7 @@ class PatternNames(Enum):
 
 
     @staticmethod
-    def get_patterns_by_backend(backend: BackendType) -> List['PatternNames']:
+    def get_pattern_names_by_backend(backend: BackendType) -> List['PatternNames']:
         output = []
         for pattern in PatternNames:
             pattern_backends = pattern.value.backends
@@ -354,9 +346,9 @@ class PatternNames(Enum):
         return output
     
     @staticmethod
-    def get_patterns(backend: BackendType, device: TargetDevice) -> List['PatternNames']:
+    def get_pattern_names(backend: BackendType, device: TargetDevice) -> List['PatternNames']:
         output = []
-        for backend_pattern in PatternNames.get_patterns_by_backend(backend):
+        for backend_pattern in PatternNames.get_pattern_names_by_backend(backend):
             pattern_devices = backend_pattern.value.devices
             if pattern_devices is None or device in pattern_devices:
                 output.append(backend_pattern)
@@ -366,29 +358,33 @@ class PatternNames(Enum):
 class PatternManager:
 
     def __init__(self) -> None:
-        from nncf.experimental.openvino_native.hardware.fused_patterns import OPENVINO_HW_FUSED_PATTERNS
 
         self.fused_patterns_by_backends = {
-            BackendType.OPENVINO: OPENVINO_HW_FUSED_PATTERNS,
+            BackendType.OPENVINO: self._get_fused_patterns_by_backend(BackendType.OPENVINO),
         }
-
-        for backend, backend_registry in self.fused_patterns_by_backends.items():
-            self.check(backend_registry.registry_dict.keys(),
-                       PatternNames.get_patterns_by_backend(backend))
 
     def get_patterns(self, backend: BackendType, device: TargetDevice) -> HWFusedPatterns:
         hw_fused_patterns = HWFusedPatterns()
+
+        if backend not in self.fused_patterns_by_backends:
+            return hw_fused_patterns
+
         patterns = self.fused_patterns_by_backends[backend]
 
-        for pattern_info in PatternNames.get_patterns(backend, device):
+        for pattern_info in PatternNames.get_pattern_names(backend, device):
             pattern = patterns.get(pattern_info)()
-            hw_fused_patterns.register(
-                pattern, pattern_info.value.name, pattern_info.value.match)
+            hw_fused_patterns.register(pattern, pattern_info.value.name, pattern_info.value.match)
         return hw_fused_patterns
 
     @staticmethod
-    def check(registered_patterns: List[PatternNames], all_patterns: PatternNames):
+    def _check(registered_patterns: List[PatternNames], all_patterns: PatternNames):
         diff = set(all_patterns) - set(registered_patterns)
         if len(diff) != 0:
-            raise RuntimeError(
-                'Not all patterns was registred in the backend!')
+            raise RuntimeError('Not all patterns was registred in the backend!')
+
+    def _get_fused_patterns_by_backend(self, backend: BackendType):
+        if backend == BackendType.OPENVINO:
+            from nncf.experimental.openvino_native.hardware.fused_patterns import OPENVINO_HW_FUSED_PATTERNS as ov_registry
+
+            self._check(ov_registry.registry_dict.keys(), PatternNames.get_pattern_names_by_backend(backend))
+            return ov_registry

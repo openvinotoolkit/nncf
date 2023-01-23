@@ -11,18 +11,15 @@
  limitations under the License.
 """
 
-from nncf.common.graph.patterns import GraphPattern
-
-from nncf.experimental.openvino_native.hardware.pattern_operations import LINEAR_OPERATIONS
-from nncf.experimental.openvino_native.hardware.pattern_operations import BATCH_NORMALIZATION_OPERATIONS
-from nncf.experimental.openvino_native.hardware.pattern_operations import ATOMIC_ACTIVATIONS_OPERATIONS
-from nncf.experimental.openvino_native.hardware.pattern_operations import ARITHMETIC_OPERATIONS
-from nncf.experimental.openvino_native.hardware.pattern_operations import ELEMENTWISE_OPERATIONS
-
-from nncf.common.utils.registry import Registry
 from nncf.common.graph.patterns import PatternNames
+from nncf.common.graph.patterns import GraphPattern
+from nncf.common.utils.registry import Registry
 from nncf.experimental.openvino_native.graph.metatypes import openvino_metatypes as om
-
+from nncf.experimental.openvino_native.hardware.pattern_operations import ARITHMETIC_OPERATIONS
+from nncf.experimental.openvino_native.hardware.pattern_operations import ATOMIC_ACTIVATIONS_OPERATIONS
+from nncf.experimental.openvino_native.hardware.pattern_operations import BATCH_NORMALIZATION_OPERATIONS
+from nncf.experimental.openvino_native.hardware.pattern_operations import ELEMENTWISE_OPERATIONS
+from nncf.experimental.openvino_native.hardware.pattern_operations import LINEAR_OPERATIONS
 
 OPENVINO_HW_FUSED_PATTERNS = Registry('openvino')
 
