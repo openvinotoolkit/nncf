@@ -19,6 +19,9 @@ from nncf.onnx.graph.metatypes.onnx_metatypes import ONNXHardSigmoidMetatype
 from nncf.onnx.graph.metatypes.onnx_metatypes import ONNXAddLayerMetatype
 from nncf.onnx.graph.metatypes.onnx_metatypes import ONNXSubMetatype
 from nncf.onnx.graph.metatypes.onnx_metatypes import ONNXMulLayerMetatype
+from nncf.onnx.graph.metatypes.onnx_metatypes import ONNXBatchNormMetatype
+from nncf.onnx.hardware.pattern_operations import LINEAR_OPERATIONS
+from nncf.onnx.hardware.pattern_operations import ATOMIC_ACTIVATIONS_OPERATIONS
 
 
 def create_swish_activation() -> GraphPattern:
@@ -129,4 +132,46 @@ def create_scale_shift() -> GraphPattern:
     pattern.add_edge(model_input_node_2, mul_node_2)
     pattern.add_edge(mul_node_2, add_node_2)
 
+    return pattern
+
+
+def create_linear_bn_scale_shift_activation() -> GraphPattern:
+    #          Linear
+    #            |
+    #        BatchNorm
+    #            |
+    #        Scale_Shift
+    #            |
+    #        Activation
+    pattern = GraphPattern()
+    linear_node = pattern.add_node(**LINEAR_OPERATIONS)
+    bn_node = pattern.add_node(**{GraphPattern.LABEL_ATTR: 'BATCH_NORM',
+                                  GraphPattern.METATYPE_ATTR: ONNXBatchNormMetatype})
+    scale_shift = create_scale_shift()
+    swish = create_swish_activation()
+    activations = GraphPattern()
+    activations.add_node(**ATOMIC_ACTIVATIONS_OPERATIONS)
+    activations.add_pattern_alternative(swish)
+
+    pattern.add_edge(linear_node, bn_node)
+    pattern = pattern + scale_shift + activations
+    return pattern
+
+
+def create_bn_scale_shift_activation() -> GraphPattern:
+    #        BatchNorm
+    #            |
+    #        Scale_Shift
+    #            |
+    #        Activation
+    pattern = GraphPattern()
+    _ = pattern.add_node(**{GraphPattern.LABEL_ATTR: 'BATCH_NORM',
+                                  GraphPattern.METATYPE_ATTR: ONNXBatchNormMetatype})
+    scale_shift = create_scale_shift()
+    swish = create_swish_activation()
+    activations = GraphPattern()
+    activations.add_node(**ATOMIC_ACTIVATIONS_OPERATIONS)
+    activations.add_pattern_alternative(swish)
+
+    pattern = pattern + scale_shift + activations
     return pattern
