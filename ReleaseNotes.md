@@ -9,6 +9,9 @@ Features:
 - Official release of the ONNX framework support.
 NNCF may now be used for post-training quantization (PTQ) on ONNX models.
 Added an [example script](examples/post_training_quantization/onnx/mobilenet_v2) demonstrating the ONNX post-training quantization on MobileNetV2.
+- Preview release of OpenVINO framework support. 
+NNCF may now be used for post-training quantization on OpenVINO models. Added an example script demonstrating the OpenVINO post-training quantization on MobileNetV2.
+`pip install nncf[openvino]` will install NNCF with the required OV framework dependencies.
 - Common post-training quantization API across the supported framework model formats (PyTorch, TensorFlow, ONNX, OpenVINO IR) via the `nncf.quantize(...)` function.
 The parameter set of the function is the same for all frameworks - actual framework-specific implementations are being dispatched based on the type of the model object argument.
 - (PyTorch, TensorFlow) Improved the adaptive compression training functionality to reduce effective training time.
