@@ -53,8 +53,8 @@ ALL_MODELS = [(task, os.path.splitext(model)[0]) for task in TASKS for model in
               os.listdir(BENCHMARKING_DIR / task / "onnx_models_configs")]
 
 E2E_MODELS = [(task_type, model_name) for task_type, model_name in ALL_MODELS if model_name in
-              ['densenet-12', 'mobilenetv2-12', 'resnet50-v2-7', 'shufflenet-v2-12', 'squeezenet1.0-12', 'ssd-12',
-               'yolov3-12', 'yolov4', 'ResNet101-DUC-12']]
+              ['densenet-12', 'mobilenetv2-12', 'resnet50-v2-7', 'shufflenet-v2-12', 'squeezenet1.0-12', 'efficientnet-lite4-11',
+               'ssd-12', 'yolov3-12', 'yolov4', 'ResNet101-DUC-12', 'FasterRCNN-12', 'retinanet-9']]
 
 XFAIL_MODELS = {}
 
