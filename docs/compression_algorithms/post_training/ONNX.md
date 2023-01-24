@@ -1,7 +1,7 @@
 ## Post-Training Quantization for ONNX
 
 NNCF supports [ONNX](https://onnx.ai/) backend for the Post-Training Quantization algorithm.
-This guide contains some notes that you have to consider before working with NNCF for ONNX.
+This guide contains some notes that you should consider before working with NNCF for ONNX.
 
 ### Model Preparation
 
