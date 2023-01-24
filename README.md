@@ -143,7 +143,7 @@ NNCF provides [samples](#post-training-quantization), which demonstrate Post-Tra
 To start the algorithm the following entities should be provided:
 * Original model.
 * Validation part of the dataset.
-* [Data transformation function](./docs/compression_algorithms/post_training/Quantization.md#data-transformation-function) from original dataset format to the NNCF format. 
+* [Data transformation function](./docs/compression_algorithms/post_training/Quantization.md#data-transformation-function) from the original dataset format to the NNCF format. 
 
 
 The basic workflow steps:
@@ -151,7 +151,7 @@ The basic workflow steps:
 2) Initialize NNCF Dataset with the validation dataset and the transformation function.
 3) Run the quantization pipeline.
 
-Below there are usage examples for every backend.
+Below are the usage examples for every backend.
 
 <details><summary><b>PyTorch</b></summary>
 
@@ -166,7 +166,7 @@ model = models.mobilenet_v2()
 val_dataset = datasets.ImageFolder("/path")
 dataset_loader = torch.utils.data.DataLoader(val_dataset)
 
-# Step 1: Initialize transformation function
+# Step 1: Initialize the transformation function
 def transform_fn(data_item):
     images, _ = data_item
     return images

@@ -3,17 +3,17 @@
 NNCF supports [ONNX](https://onnx.ai/) backend for the Post-Training Quantization algorithm.
 This guide contains some notes that you have to consider before working with NNCF for ONNX.
 
-### Model preparation
+### Model Preparation
 
-The most of the ONNX models are exported from different frameworks such as PyTorch or Tensorflow.
+The majority of the ONNX models are exported from different frameworks, such as PyTorch or TensorFlow.
 
-NNCF fully supports ONNX models with opset 13 or higher. \
-NNCF supports only per-tensor quantization for ONNX models having opset 10, 11, 12. \
-NNCF does not support ONNX models with opset lower than 10.
+NNCF fully supports ONNX models with the opset 13 or higher. \
+NNCF supports only per-tensor quantization for ONNX models with the opset 10, 11, and 12. \
+NNCF does not support ONNX models with the opset lower than 10.
 
-If you have the ONNX model with the opset lower than 13 we recommend you to update the model to the higher opset version. \
-If you obtain an ONNX model from other framework, you, probably, can update an export function by setting a higher target opset version. \
-If you do not have the access to export function you can use the converter function from ONNX package. See the example below.
+If you have an ONNX model with the opset lower than 13, we recommend to update the model to a higher opset version. \
+If you obtained an ONNX model from other frameworks, you can try to update an export function by setting a higher target opset version. \
+If you do not have access to the export function, you can use the converter function from the ONNX package. See the example below.
 
 ```python
 import onnx
