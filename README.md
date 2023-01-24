@@ -162,7 +162,7 @@ from torchvision import datasets, models
 
 # Instantiate your uncompressed model
 model = models.mobilenet_v2() 
-# Provide validation part of the dataset for statistics collection for compression algorithm
+# Provide validation part of the dataset to collect statistics needed for the compression algorithm
 val_dataset = datasets.ImageFolder("/path")
 dataset_loader = torch.utils.data.DataLoader(val_dataset)
 
