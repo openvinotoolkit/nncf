@@ -30,10 +30,10 @@ learning frameworks.
 
 ### Post-Training Compression Algorithms
 
-| Compression algorithm                                                       |PyTorch|TensorFlow|   ONNX   |       OpenVINO       |
-|:----------------------------------------------------------------------------| :---: | :---: |:--------:|:--------------------:|
-| [Quantization](./docs/compression_algorithms/post_training/Quantization.md) | Supported | Supported |Supported| Supported (Preview)* |
-_*the work is in progress, NNCF does not guarantee the full functional support._
+| Compression algorithm                                                       |PyTorch|TensorFlow|   ONNX   |       OpenVINO     |
+|:----------------------------------------------------------------------------| :---: | :---: |:--------:|:------------------:|
+| [Quantization](./docs/compression_algorithms/post_training/Quantization.md) | Supported | Supported |Supported| Preview |
+_Preview means that the work is in progress and NNCF does not guarantee the full functional support._
 
 ### Training-time Compression Algorithms
 
