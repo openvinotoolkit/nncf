@@ -39,7 +39,7 @@ calibration_dataset = nncf.Dataset(val_dataset, transform_fn)
 quantized_model = nncf.quantize(model, calibration_dataset)
 ```
 
-### Data Transformation function
+### Data Transformation Function
 
 Model input structure differs from one pipeline to another. Thus NNCF introduces the interface to adapt the user dataset format to the NNCF format. This interface is called data transformation function.
 
