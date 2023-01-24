@@ -111,19 +111,18 @@ class FastBiasCorrection(Algorithm):
                dataset: Optional[Dataset] = None) -> TModel:
         self._set_backend_entity(model)
 
-        model_transformer = ModelTransformerFactory.create(model)
-        transformation_layout = TransformationLayout()
         nncf_graph = NNCFGraphFactory.create(model)
+        node_and_bias_value = (
+            (node, self._backend_entity.get_bias_value(node, model)) \
+                for node in nncf_graph.get_all_nodes() if self._backend_entity.is_node_with_bias(node)
+        )
 
-        layers_with_bias_types = self._backend_entity.layers_with_bias_metatypes
-        biased_nodes = nncf_graph.get_nodes_by_metatypes(layers_with_bias_types)
-
-        for node in biased_nodes:
+        # Fill `node_and_new_bias_value` list. It is a correspondence between nodes
+        # for which we should update bias and new bias values.
+        node_and_new_bias_value = []
+        for node, bias_value in node_and_bias_value:
             node_name = node.node_name
 
-            if not self._backend_entity.is_node_with_bias(node):
-                nncf_logger.debug(f'Skipping node {node_name} because there is no bias')
-                continue
             if not self._backend_entity.is_quantized_weights(node, model):
                 nncf_logger.debug(f'Skipping node {node_name} because weights were not quantized')
                 continue
@@ -148,24 +147,23 @@ class FastBiasCorrection(Algorithm):
                 output_fp=output_fp,
                 output_name=output_name)
 
-            current_bias = self._backend_entity.get_bias_value(model, node)
-            updated_bias = current_bias + bias_shift
-            magnitude = self._get_bias_shift_magnitude(current_bias, updated_bias)
+            updated_bias = bias_value + bias_shift
+            magnitude = self._get_bias_shift_magnitude(bias_value, updated_bias)
 
             if magnitude < self.threshold:
                 nncf_logger.debug(f'{node_name} bias would be changed')
-                bias_port_id = self._backend_entity.get_bias_port_id(model, node)
-                target_point = self._backend_entity.target_point(TargetType.LAYER,
-                                                                 node.node_name,
-                                                                 bias_port_id)
-                bias_correction_command = self._backend_entity.bias_correction_command(target_point,
-                                                                                       updated_bias)
-                transformation_layout.register(bias_correction_command)
+                node_and_new_bias_value.append((node, updated_bias))
             else:
                 nncf_logger.debug(f'{node_name} bias skipped by threshold')
 
-        quantized_model = model_transformer.transform(transformation_layout)
-        return quantized_model
+        # Create commands of bias correction and apply them to the model.
+        model_transformer = ModelTransformerFactory.create(model)
+        transformation_layout = TransformationLayout()
+        for node, bias_value in node_and_new_bias_value:
+            transformation_layout.register(self._backend_entity.create_bias_correction_command(node, bias_value))
+        transformed_model = model_transformer.transform(transformation_layout)
+
+        return transformed_model
 
     def _get_fp_inputs(self, statistic_points: StatisticPointsContainer, node_name: str) -> Tuple[List, List]:
         """
@@ -302,14 +300,10 @@ class FastBiasCorrection(Algorithm):
     def get_statistic_points(self, model: TModel) -> StatisticPointsContainer:
         self._set_backend_entity(model)
         nncf_graph = NNCFGraphFactory.create(model) if self.nncf_graph is None else self.nncf_graph
-        layers_with_bias_types = self._backend_entity.layers_with_bias_metatypes
-        biased_nodes = nncf_graph.get_nodes_by_metatypes(layers_with_bias_types)
+        nodes_with_bias = filter(self._backend_entity.is_node_with_bias, nncf_graph.get_all_nodes())
 
         statistic_container = StatisticPointsContainer()
-
-        for node in biased_nodes:
-            if not self._backend_entity.is_node_with_bias(node):
-                continue
+        for node in nodes_with_bias:
             input_port_id, output_port_id = self._backend_entity.get_activation_port_ids_for_bias_node(model, node)
             pre_layer_statistic_point = self._backend_entity.target_point(TargetType.PRE_LAYER_OPERATION,
                                                                           node.node_name,

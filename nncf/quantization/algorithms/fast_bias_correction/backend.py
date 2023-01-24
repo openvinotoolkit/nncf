@@ -42,13 +42,6 @@ class FBCAlgoBackend(ABC):
 
     @property
     @abstractmethod
-    def layers_with_bias_metatypes(self):
-        """
-        Property for the backend-specific metatypes with bias.
-        """
-
-    @property
-    @abstractmethod
     def channel_axis_by_types(self):
         """
         Property for the backend-specific info about channels placement in the layout.
@@ -75,13 +68,13 @@ class FBCAlgoBackend(ABC):
 
     @staticmethod
     @abstractmethod
-    def bias_correction_command(target_point: TargetPoint, bias_value: np.ndarray) -> TransformationCommand:
+    def create_bias_correction_command(node: NNCFNode, bias_value: np.ndarray):
         """
-        Returns backend-specific bias correction command.
+        Creates backend-specific command to update bias value.
 
-        :param target_point: Target location for the correction.
+        :param node: The node for which bias should be updated.
         :param bias_value: New value for the bias.
-        :return: Backend-specific TransformationCommand for the bias correction.
+        :return: Backend-specific command to update bias value.
         """
 
     @staticmethod
@@ -132,24 +125,13 @@ class FBCAlgoBackend(ABC):
 
     @staticmethod
     @abstractmethod
-    def get_bias_value(model: TModel, node: NNCFNode) -> np.ndarray:
+    def get_bias_value(node: NNCFNode, model: TModel) -> np.ndarray:
         """
         Returns bias value in the NumPy format of provided node.
 
+        :param node: Node of NNCFGraph with bias value.
         :param model: Backend-specific model for the initializer finding.
-        :param node: Node of NNCFGraph with bias value.
         :return: Bias value in the NumPy format.
-        """
-
-    @staticmethod
-    @abstractmethod
-    def get_bias_port_id(model: TModel, node: NNCFNode) -> int:
-        """
-        Returns bias Port ID corresponding to the node.
-
-        :param model: Backend-specific model.
-        :param node: Node of NNCFGraph with bias value.
-        :return: Port ID corresponding to bias.
         """
 
     @staticmethod
