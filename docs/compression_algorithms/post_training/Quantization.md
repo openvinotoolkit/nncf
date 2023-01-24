@@ -27,7 +27,7 @@ def transform_fn(data_item):
     return images
 ```
 
-2) Initialize NNCF Dataset with the validation dataset and the transformation function.
+2) Initialize NNCF Dataset with a validation dataset and a transformation function.
 
 ```python
 calibration_dataset = nncf.Dataset(val_dataset, transform_fn)
