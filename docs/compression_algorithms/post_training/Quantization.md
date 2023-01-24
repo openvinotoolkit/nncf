@@ -41,9 +41,7 @@ quantized_model = nncf.quantize(model, calibration_dataset)
 
 ### Data Transformation function
 
-Every training pipeline consumes data structure to feed the model, which is different from pipeline to pipeline. Thus
-NNCF introduces the data transformation function, providing the interface to adapt the user dataset format to the NNCF
-format.
+Model input structure differs from one pipeline to another. Thus NNCF introduces the interface to adapt the user dataset format to the NNCF format. This interface is called data transformation function.
 
 Every backend has own return value format for transformation function. It is based on the input structure of
 backend inference framework.
