@@ -68,7 +68,7 @@ from tests.torch.test_models.synthetic import MultiOutputSameTensorModel
 from tests.torch.test_models.synthetic import PoolUnPool
 from tests.torch.test_models.synthetic import ReshapeModel
 from tests.torch.test_models.synthetic import TransposeModel
-from tests.common.graph.nx_graph import compare_nx_graph_with_reference
+from tests.shared.nx_graph import compare_nx_graph_with_reference
 from tests.shared.paths import TEST_ROOT
 
 

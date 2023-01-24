@@ -38,7 +38,7 @@ from tests.torch.nas.models.synthetic import ThreeConvModelMode
 # Helpers
 ###########################
 from tests.torch.test_compressed_graph import get_full_path_to_the_graph
-from tests.common.graph.nx_graph import compare_nx_graph_with_reference
+from tests.shared.nx_graph import compare_nx_graph_with_reference
 
 
 @pytest.fixture

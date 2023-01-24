@@ -134,9 +134,9 @@ def compare_nx_graph_with_reference(nx_graph: nx.DiGraph, path_to_dot: str,
     if os.getenv("NNCF_TEST_REGEN_DOT") is not None:
         if not os.path.exists(dot_dir):
             os.makedirs(dot_dir)
-        write_dot_graph(nx_graph, path_to_dot)
+        write_dot_graph(nx_graph, Path(path_to_dot))
         if sort_dot_graph:
             sort_dot(path_to_dot)
 
-    expected_graph = nx.DiGraph(read_dot_graph(path_to_dot))
+    expected_graph = nx.DiGraph(read_dot_graph(Path(path_to_dot)))
     check_nx_graph(nx_graph, expected_graph, check_edge_attrs)

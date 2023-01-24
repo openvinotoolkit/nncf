@@ -23,41 +23,15 @@ from nncf import Dataset
 from nncf.common.utils.dot_file_rw import read_dot_graph
 from nncf.common.utils.dot_file_rw import write_dot_graph
 from nncf.experimental.openvino_native.graph.nncf_graph_builder import GraphConverter
-from tests.common.graph.nx_graph import sort_dot
+from tests.shared.nx_graph import compare_nx_graph_with_reference
+from tests.shared.nx_graph import sort_dot
 
 
 def compare_nncf_graphs(model: ov.Model, path_ref_graph: str) -> None:
     nncf_graph = GraphConverter.create_nncf_graph(model)
     nx_graph = nncf_graph.get_graph_for_structure_analysis(extended=True)
 
-    compare_ov_nx_graph_with_reference(nx_graph, path_ref_graph, check_edge_attrs=True)
-
-
-def compare_ov_nx_graph_with_reference(nx_graph: nx.DiGraph, path_to_dot: str,
-                                       sort_dot_graph=True, check_edge_attrs: bool = False) -> None:
-    """
-    Checks whether the two nx.DiGraph are identical. The first one is 'nx_graph' argument
-    and the second graph is read from the absolute path - 'path_to_dot'.
-    Also, could dump the graph, based in the global variable NNCF_TEST_REGEN_DOT.
-    If 'sort_dot_graph' is True sorts the second graph before dumping.
-    If 'check_edge_attrs' is True checks edge attributes of the graphs.
-    :param nx_graph: The first nx.DiGraph.
-    :param path_to_dot: The absolute path to the second nx.DiGraph.
-    :param sort_dot_graph: whether to call sort_dot() function on the second graph.
-    :param check_edge_attrs: whether to check edge attributes of the graphs.
-    :return: None
-    """
-    dot_dir = Path(path_to_dot).parent
-    # validate .dot file manually!
-    if os.getenv("NNCF_TEST_REGEN_DOT") is not None:
-        if not os.path.exists(dot_dir):
-            os.makedirs(dot_dir)
-        write_dot_graph(nx_graph, path_to_dot)
-        if sort_dot_graph:
-            sort_dot(path_to_dot)
-
-    expected_graph = nx.DiGraph(read_dot_graph(path_to_dot))
-    check_openvino_nx_graph(nx_graph, expected_graph, check_edge_attrs)
+    compare_nx_graph_with_reference(nx_graph, path_ref_graph, check_edge_attrs=True)
 
 
 def check_openvino_nx_graph(nx_graph: nx.DiGraph, expected_graph: nx.DiGraph, check_edge_attrs: bool = False) -> None:
