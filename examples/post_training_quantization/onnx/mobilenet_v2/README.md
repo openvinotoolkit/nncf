@@ -26,7 +26,7 @@ python main.py
 
 # ONNX Results
 
-There are some results for the models from [ONNX Model Zoo](https://github.com/onnx/models)
+Below are some results for the models from [ONNX Model Zoo](https://github.com/onnx/models)
 
 ### Classification
 
