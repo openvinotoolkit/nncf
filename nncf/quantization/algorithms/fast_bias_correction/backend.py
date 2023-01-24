@@ -41,6 +41,7 @@ class FastBiasCorrectionAlgoBackend(ABC):
     def layers_with_bias_metatypes(self) -> List[OperatorMetatype]:
         """
         Property for the backend-specific metatypes with bias.
+
         :return: List of the OperatorMetatype with bias.
         """
 
@@ -49,6 +50,7 @@ class FastBiasCorrectionAlgoBackend(ABC):
     def channel_axis_by_types(self) -> Dict[OperatorMetatype, int]:
         """
         Property for the backend-specific info about channels placement in the layout.
+
         :return: Dict of the OperatorMetatypes as keys and channels placements as int values.
         """
 
@@ -57,6 +59,7 @@ class FastBiasCorrectionAlgoBackend(ABC):
     def tensor_processor(self) -> NNCFCollectorTensorProcessor:
         """
         Property for the backend-specific instance of the NNCFCollectorTensorProcessor.
+
         :return: NNCFCollectorTensorProcessor instance
         """
 
@@ -114,7 +117,7 @@ class FastBiasCorrectionAlgoBackend(ABC):
         """
         Returns tuple of the input & output names respectively.
 
-        :param biased_node: NNCFNode biased node.
+        :param biased_node: NNCFNode affected by bias.
         :return: Tuple of the input & output names.
         """
 
@@ -160,7 +163,7 @@ class FastBiasCorrectionAlgoBackend(ABC):
         Supports only nodes that could have bias value.
 
         :param model: Backend-specific model.
-        :param biased_node: Node of NNCFGraph with bias value.
+        :param biased_node: NNCFNode affected by bias.
         """
 
     @staticmethod
@@ -169,7 +172,7 @@ class FastBiasCorrectionAlgoBackend(ABC):
         """
         Checks whether the node is quantized or not, based on a backend-specific way.
 
-        :param biased_node: NNCFNode to check.
+        :param biased_node: NNCFNode affected by bias.
         :param nncf_graph: NNCFGraph instance.
         :return: boolean indicating whether the node has a quantized weights or not
         """
@@ -191,7 +194,7 @@ class FastBiasCorrectionAlgoBackend(ABC):
         """
         Checks whether the node has a bias or not.
 
-        :param biased_node: NNCFNode to check.
+        :param biased_node: NNCFNode affected by bias.
         :return: Boolean indicating whether the node has a bias or not.
         """
 
@@ -201,7 +204,7 @@ class FastBiasCorrectionAlgoBackend(ABC):
         """
         Returns node that contains bias, if it exists.
 
-        :param biased_node: NNCFNode with the attributes.
+        :param biased_node: NNCFNode affected by bias.
         :param nncf_graph: NNCFGraph instance.
         :return: Optional NNCFNode with potential bias.
         """

@@ -23,6 +23,8 @@ from nncf.common.graph import NNCFGraph
 from nncf.onnx.graph.metatypes.onnx_metatypes import LAYERS_WITH_BIAS_METATYPES
 from nncf.onnx.graph.metatypes.onnx_metatypes import ONNX_OPERATION_METATYPES
 from nncf.onnx.graph.metatypes.onnx_metatypes import ONNXOpMetatype
+from nncf.onnx.graph.metatypes.onnx_metatypes import ONNXConvolutionMetatype
+from nncf.onnx.graph.metatypes.onnx_metatypes import ONNXConvolutionTransposeMetatype
 from nncf.onnx.graph.metatypes.onnx_metatypes import ONNXDepthwiseConvolutionMetatype
 from nncf.onnx.graph.metatypes.onnx_metatypes import ONNXIdentityMetatype
 from nncf.onnx.graph.metatypes.onnx_metatypes import ONNXDequantizeLinearMetatype
@@ -47,8 +49,8 @@ class ONNXFastBiasCorrectionAlgoBackend(FastBiasCorrectionAlgoBackend):
     @property
     def channel_axis_by_types(self) -> Dict[ONNXOpMetatype, int]:
         return {
-            ONNX_OPERATION_METATYPES.get_operator_metatype_by_op_name('Conv'): 1,
-            ONNX_OPERATION_METATYPES.get_operator_metatype_by_op_name('ConvTranspose'): 1,
+            ONNXConvolutionMetatype: 1,
+            ONNXConvolutionTransposeMetatype: 1,
             ONNXDepthwiseConvolutionMetatype: 1
         }
 

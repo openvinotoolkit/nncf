@@ -157,6 +157,7 @@ class OVModelTransformer(ModelTransformer):
     def _apply_fq_nodes_removing_transformation(self, transformations: List[OVFQNodeRemovingCommand]) -> None:
         """
         Removes the layers from the model.
+
         :param transformations: lisf of the node removing transformations.
         """
         for transformation in transformations:
@@ -222,6 +223,7 @@ class OVModelTransformer(ModelTransformer):
     def _apply_bias_correction_transformations(self, transformations: List[OVBiasCorrectionCommand]) -> None:
         """
         Applies bias correction transformations on the model.
+
         :param transformations: List of the bias correction transformations.
         """
         for transformation in transformations:
@@ -242,6 +244,7 @@ class OVModelTransformer(ModelTransformer):
     def _apply_model_extraction_transformation(self, transformation: OVModelExtractionCommand) -> ov.Model:
         """
         Extracts sub-model from the original based on the inputs and outputs names.
+
         :param transformation: Model extraction transformation.
         :return: Extracted sub-model.
         """
