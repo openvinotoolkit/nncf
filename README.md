@@ -34,7 +34,7 @@ learning frameworks.
 |:----------------------------------------------------------------------------| :---: | :---: |:--------:|:------------------:|
 | [Quantization](./docs/compression_algorithms/post_training/Quantization.md) | Supported | Supported |Supported| Preview |
 
-_Preview means that the work is in progress and NNCF does not guarantee the full functional support._
+_Preview means that this is a work in progress and NNCF does not guarantee the full functional support._
 
 ### Training-time Compression Algorithms
 
