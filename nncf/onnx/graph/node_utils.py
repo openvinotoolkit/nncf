@@ -23,7 +23,7 @@ from nncf.onnx.graph.metatypes.onnx_metatypes import ONNXIdentityMetatype
 
 def is_node_with_bias(node: NNCFNode) -> bool:
     """
-    Checks if a bias is applied to the node's operation or not.
+    Checks if the node has a bias or not.
 
     :param node: The node to check.
     :return: Return `True` if `node` corresponds to the operation
@@ -36,7 +36,7 @@ def is_node_with_bias(node: NNCFNode) -> bool:
 
 def get_bias_value(node: NNCFNode, model: onnx.ModelProto) -> np.ndarray:
     """
-    Returns the bias value that is applied to the output tensor of the node's operation.
+    Returns the bias tensor for the biased node.
 
     :param node: The node that corresponds to the operation with bias.
     :param model: The model that contains this operation.
