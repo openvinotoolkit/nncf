@@ -5,8 +5,7 @@ It utilizes a small subset of the initial dataset to calibrate quantization cons
 
 NNCF provides an advanced Post-Training Quantization algorithm, which consists of following techniques:
 
-1) MinMaxQuantization - Analyzes model and inserts extra quantization layers
-   are calibrated using the small subset.
+1) MinMaxQuantization - Analyzes model and inserts extra quantization layers calibrated on a small subset.
 2) FastBiasCorrection or BiasCorrection - Reduces the bias errors between the quantized layers and the corresponding
    original layers.
 
