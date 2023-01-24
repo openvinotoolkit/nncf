@@ -15,11 +15,11 @@ To start the algorithm, provide the following entities:
 
 * Original model.
 * Validation part of the dataset.
-* [Data transformation function](#data-transfomation-function) from the original dataset format to the NNCF format.
+* [Data transformation function](#data-transformation-function) from the original dataset format to the NNCF format.
 
 The basic workflow steps:
 
-1) Create the [data transformation function](#data-transfomation-function).
+1) Create the [data transformation function](#data-transformation-function).
 
 ```python
 def transform_fn(data_item):

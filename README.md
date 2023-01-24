@@ -11,9 +11,9 @@
 
 _For the installation instructions, [click here](#installation)._
 
-NNCF provides a suite of advanced algorithms for Neural Networks inference optimization in [OpenVINO&trade;](https://github.com/openvinotoolkit/openvino) with minimal accuracy drop.
+NNCF provides a suite of advanced algorithms for Neural Networks inference optimization in [OpenVINO&trade;](https://docs.openvino.ai/latest/home.html) with minimal accuracy drop.
 
-NNCF is designed to work with models from [PyTorch](https://pytorch.org/), [TensorFlow](https://www.tensorflow.org/), [ONNX](https://onnx.ai/) and [OpenVINO&trade;](https://github.com/openvinotoolkit/openvino).
+NNCF is designed to work with models from [PyTorch](https://pytorch.org/), [TensorFlow](https://www.tensorflow.org/), [ONNX](https://onnx.ai/) and [OpenVINO&trade;](https://docs.openvino.ai/latest/home.html).
 
 NNCF provides samples that demonstrate the usage of compression algorithms for three different use cases on public PyTorch and 
 TensorFlow models and datasets: Image Classification, Object Detection and Semantic Segmentation. 
@@ -56,7 +56,7 @@ _Preview means that this is a work in progress and NNCF does not guarantee the f
 - Distributed training support.
 - Configuration file examples for each supported compression algorithm.
 - Git patches for prominent third-party repositories ([huggingface-transformers](https://github.com/huggingface/transformers)) demonstrating the process of integrating NNCF into custom training pipelines
-- Exporting PyTorch compressed models to ONNX\* checkpoints and TensorFlow compressed models to SavedModel or Frozen Graph format, ready to use with [OpenVINO&trade; toolkit](https://github.com/openvinotoolkit/).
+- Exporting PyTorch compressed models to ONNX\* checkpoints and TensorFlow compressed models to SavedModel or Frozen Graph format, ready to use with [OpenVINO&trade; toolkit](https://docs.openvino.ai/latest/home.html).
 - Support for [Accuracy-Aware model training](./docs/Usage.md#accuracy-aware-model-training) pipelines via the [Adaptive Compression Level Training](./docs/accuracy_aware_model_training/AdaptiveCompressionLevelTraining.md) and [Early Exit Training](./docs/accuracy_aware_model_training/EarlyExitTraining.md).
 
 ## Usage
@@ -133,12 +133,12 @@ compression_ctrl.export_model("compressed_model.pb", save_format='frozen_graph')
 ```
 
 For a more detailed description of NNCF usage in your training code, see [this tutorial](docs/Usage.md). 
-For in-depth examples of NNCF integration, browse the [sample scripts](#model-compression-samples) code, or the [example patches](#third-party-repository-integration) to third-party repositories.
+For in-depth examples of NNCF integration, browse the [sample scripts](#compression-aware-training-samples) code, or the [example patches](#third-party-repository-integration) to third-party repositories.
 For FAQ, visit this [link](./docs/FAQ.md).
 
 ### Usage examples of Post-Training Quantization
 
-NNCF provides [samples](#post-training-quantization), which demonstrate Post-Training Quantization usage for PyTorch, TensorFlow, ONNX, OpenVINO.
+NNCF provides [samples](#post-training-quantization-samples), which demonstrate Post-Training Quantization usage for PyTorch, TensorFlow, ONNX, OpenVINO.
 
 To start the algorithm the following entities should be provided:
 * Original model.
