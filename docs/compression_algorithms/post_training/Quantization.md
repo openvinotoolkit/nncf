@@ -6,7 +6,7 @@ It utilizes a small subset of the initial dataset to calibrate quantization cons
 NNCF provides an advanced Post-Training Quantization algorithm, which consists of following techniques:
 
 1) MinMaxQuantization - Analyzes model and inserts extra quantization layers calibrated on a small subset.
-2) FastBiasCorrection or BiasCorrection - Reduces the bias errors between the quantized layers and the corresponding
+2) FastBiasCorrection or BiasCorrection - Reduces the bias errors between quantized layers and the corresponding
    original layers.
 
 ### Usage
@@ -45,9 +45,9 @@ Every training pipeline consumes data structure to feed the model, which is diff
 NNCF introduces the data transformation function, providing the interface to adapt the user dataset format to the NNCF
 format.
 
-Every backend has own return value format for transformation function. It is based on the input data structure of the
+Every backend has own return value format for transformation function. It is based on the input structure of
 backend inference framework.
-There are formats of transformation function for each supported backend below.
+There are formats of data transformation function for each supported backend below.
 
 <details><summary><b>PyTorch, TensorFlow, OpenVINO</b></summary>
 
@@ -67,8 +67,7 @@ for data_item in val_loader:
 <details><summary><b>ONNX</b></summary>
 
 [ONNXRuntime](https://onnxruntime.ai/) is used as the inference engine for ONNX backend. \
-The input format of the data is following - ```Dict[str, np.ndarray]```, where the keys of the dict are names of the
-model inputs and the values are the numpy tensors passed to these inputs.
+Input format of the data is following - ```Dict[str, np.ndarray]```, where keys of the dictionary are the model input names and values are numpy tensors passed to these inputs.
 
 If you are not sure that your implementation of data transformation function is correct you can validate it by using the
 following code:
