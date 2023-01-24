@@ -47,7 +47,7 @@ format.
 
 Every backend has own return value format for transformation function. It is based on the input data structure of the
 backend inference framework.
-Below there are formats of transformation function for each supported backend .
+There are formats of transformation function for each supported backend below.
 
 <details><summary><b>PyTorch, TensorFlow, OpenVINO</b></summary>
 
