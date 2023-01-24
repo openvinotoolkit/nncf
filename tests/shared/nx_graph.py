@@ -15,7 +15,10 @@ import os
 import re
 from functools import total_ordering
 from pathlib import Path
+from typing import Dict
 from typing import Optional
+from typing import Tuple
+from typing import Union
 
 import networkx as nx
 
@@ -94,29 +97,59 @@ def sort_dot(path):
         f.write(end_line)
 
 
-def check_nx_graph(nx_graph: nx.DiGraph, expected_graph: nx.DiGraph, check_edge_attrs: bool = False) -> None:
+def _build_node_id_vs_attrs_dict(nx_graph: nx.DiGraph, id_from_attr: bool = False) -> Dict[Union[int, str],
+                                                                                           Dict[str, str]]:
+    retval = {}  # type: Dict[Union[int, str], Dict[str, str]]
     for node_name, node_attrs in nx_graph.nodes.items():
-        expected_attrs = {k: str(v).strip('"') for k, v in expected_graph.nodes[node_name].items()}
-        attrs = {k: str(v) for k, v in node_attrs.items()}
-        assert expected_attrs == attrs
+        if id_from_attr:
+            node_identifier = int(node_attrs['id'])
+        else:
+            node_identifier = node_name
+        retval[node_identifier] = {k: str(v) for k, v in node_attrs.items()}
+    return retval
 
-    assert expected_graph.edges == nx_graph.edges
+
+def _build_edge_vs_attrs_dict(nx_graph: nx.DiGraph, id_from_attr: bool = False) -> Dict[Tuple[Union[int, str],
+                                                                                              Union[int, str]],
+                                                                                           Dict[str, str]]:
+    retval = {}
+    for edge_tuple, edge_attrs in nx_graph.edges.items():
+        from_node_name, to_node_name = edge_tuple
+        if id_from_attr:
+            from_node, to_node = nx_graph.nodes[from_node_name], nx_graph.nodes[to_node_name]
+            from_node_identifier, to_node_identifier = int(from_node['id']), int(to_node['id'])
+        else:
+            from_node_identifier, to_node_identifier = from_node_name, to_node_name
+        retval[(from_node_identifier, to_node_identifier)] = {k: str(v) for k, v in edge_attrs.items()}
+    return retval
+
+
+def check_nx_graph(nx_graph: nx.DiGraph, expected_graph: nx.DiGraph,
+                   check_edge_attrs: bool = False,
+                   unstable_node_names: bool = False) -> None:
+    id_vs_attrs = _build_node_id_vs_attrs_dict(nx_graph, id_from_attr=unstable_node_names is True)
+    expected_id_vs_attrs = _build_node_id_vs_attrs_dict(expected_graph, id_from_attr=unstable_node_names is True)
+
+    for node_identifier, expected_attrs in expected_id_vs_attrs.items():
+        assert node_identifier in id_vs_attrs, f'Expected to find node {node_identifier}, but there is no such node.'
+        assert expected_attrs == id_vs_attrs[node_identifier], \
+            f'Incorrect attributes for node {node_identifier}.' \
+            f' expected {expected_attrs}, but actual {id_vs_attrs[node_identifier]}.'
+
+    edge_vs_attrs = _build_edge_vs_attrs_dict(nx_graph, id_from_attr=unstable_node_names is True)
+    expected_edge_vs_attrs = _build_edge_vs_attrs_dict(nx_graph, id_from_attr=unstable_node_names is True)
+    assert edge_vs_attrs.keys() == expected_edge_vs_attrs.keys()
 
     if check_edge_attrs:
-        for nx_graph_edge in nx_graph.edges:
-            nx_edge_attrs = nx_graph.edges[nx_graph_edge]
-            expected_graph_edge_attrs = expected_graph.edges[nx_graph_edge]
-            if isinstance(nx_edge_attrs, dict):
-                nx_edge_attrs['label'] = str(nx_edge_attrs['label'])
-                if not isinstance(expected_graph_edge_attrs['label'], list):
-                    expected_graph_edge_attrs['label'] = expected_graph_edge_attrs['label'].replace('"', '')
-                else:
-                    expected_graph_edge_attrs['label'] = str(expected_graph_edge_attrs['label'])
-            assert nx_edge_attrs == expected_graph_edge_attrs
+        for expected_edge_tuple, expected_attrs in expected_edge_vs_attrs.items():
+            edge_attrs = edge_vs_attrs[expected_edge_tuple]
+            assert edge_attrs == expected_attrs, f'Incorrect edge attributes for edge {expected_edge_tuple}.' \
+                                                 f' expected {expected_attrs}, but actual {edge_attrs}.'
 
 
 def compare_nx_graph_with_reference(nx_graph: nx.DiGraph, path_to_dot: str,
-                                    sort_dot_graph=True, check_edge_attrs: bool = False) -> None:
+                                    sort_dot_graph: bool = True, check_edge_attrs: bool = False,
+                                    unstable_node_names: bool = False) -> None:
     """
     Checks whether the two nx.DiGraph are identical. The first one is 'nx_graph' argument
     and the second graph is read from the absolute path - 'path_to_dot'.
@@ -139,4 +172,4 @@ def compare_nx_graph_with_reference(nx_graph: nx.DiGraph, path_to_dot: str,
             sort_dot(path_to_dot)
 
     expected_graph = nx.DiGraph(read_dot_graph(Path(path_to_dot)))
-    check_nx_graph(nx_graph, expected_graph, check_edge_attrs)
+    check_nx_graph(nx_graph, expected_graph, check_edge_attrs, unstable_node_names)

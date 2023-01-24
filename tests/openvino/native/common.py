@@ -31,60 +31,7 @@ def compare_nncf_graphs(model: ov.Model, path_ref_graph: str) -> None:
     nncf_graph = GraphConverter.create_nncf_graph(model)
     nx_graph = nncf_graph.get_graph_for_structure_analysis(extended=True)
 
-    compare_nx_graph_with_reference(nx_graph, path_ref_graph, check_edge_attrs=True)
-
-
-def check_openvino_nx_graph(nx_graph: nx.DiGraph, expected_graph: nx.DiGraph, check_edge_attrs: bool = False) -> None:
-    attrs = {}
-    expected_attrs = {}
-    for node_attrs in nx_graph.nodes.values():
-        node_id = int(node_attrs['id'])
-        attrs[node_id] = {k: str(v) for k, v in node_attrs.items()}
-
-    for node_attrs in expected_graph.nodes.values():
-        node_id = int(node_attrs['id'])
-        expected_attrs[node_id] = {k: str(v).strip('"') for k, v in node_attrs.items()}
-
-    for attr_name, expected_attr in expected_attrs.items():
-        assert attr_name in attrs, f'Not found {attr_name} in attributes.'
-        assert expected_attr == attrs[attr_name], \
-            f'Incorrect attribute value for {attr_name}.' \
-            f' expected {expected_attr}, but actual {attrs[attr_name]}.'
-
-    edges = {}
-    for edge in nx_graph.edges:
-        nx_edge_attrs = nx_graph.edges[edge]
-        if isinstance(nx_edge_attrs, dict):
-            nx_edge_attrs['label'] = str(nx_edge_attrs['label'])
-
-        src, dst = edge
-        src = src.split(" ")[0]
-        dst = dst.split(" ")[0]
-        simplified_edge = f'{src} -> {dst}'
-        edges[simplified_edge] = nx_edge_attrs
-
-    expected_edges = {}
-    for edge in expected_graph.edges:
-        expected_graph_edge_attrs = expected_graph.edges[edge]
-        if not isinstance(expected_graph_edge_attrs['label'], list):
-            expected_graph_edge_attrs['label'] = expected_graph_edge_attrs['label'].replace('"', '')
-        else:
-            expected_graph_edge_attrs['label'] = str(expected_graph_edge_attrs['label'])
-
-        src, dst = edge
-        src = src.split(" ")[0]
-        dst = dst.split(" ")[0]
-        simplified_edge = f'{src} -> {dst}'
-        expected_edges[simplified_edge] = expected_graph_edge_attrs
-
-    if check_edge_attrs:
-        for edge_name, expected_edge in expected_edges.items():
-            assert edge_name in edges, f'{edge_name} not found in edges.'
-            assert expected_edge == edges[edge_name], \
-                f'Incorrect edge attributes for {edge_name}.' \
-                f' expected {expected_edge}, but actual {edges[edge_name]}.'
-    else:
-        assert edges.keys() == expected_edges.keys()
+    compare_nx_graph_with_reference(nx_graph, path_ref_graph, check_edge_attrs=True, unstable_node_names=True)
 
 
 def get_dataset_for_test(model):
