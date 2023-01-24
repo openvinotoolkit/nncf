@@ -194,8 +194,8 @@ class GraphPattern:
         """
         Adds 'other' pattern to 'self' pattern and connect nodes from self to other specified by 'edges'.
 
-        If edges is None, connects all weekly connected components of self and other by adding edges between
-        last nodes of every weekly component of self and first nodes of every weekly component other.
+        If edges is None, connects all weakly connected components of self and other by adding edges between
+        last nodes of every weakly component of self and first nodes of every weakly component other.
         The first and last nodes are found by nx.lexicographical_topological_sort().
 
         # A: (a) (b)
