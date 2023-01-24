@@ -38,29 +38,23 @@ class FastBiasCorrectionAlgoBackend(ABC):
 
     @property
     @abstractmethod
-    def layers_with_bias_metatypes(self) -> List[OperatorMetatype]:
+    def operation_metatypes(self):
         """
-        Property for the backend-specific metatypes with bias.
-
-        :return: List of the OperatorMetatype with bias.
+        Property for the backend-specific metatypes.
         """
 
     @property
     @abstractmethod
-    def channel_axis_by_types(self) -> Dict[OperatorMetatype, int]:
+    def channel_axis_by_types(self):
         """
         Property for the backend-specific info about channels placement in the layout.
-
-        :return: Dict of the OperatorMetatypes as keys and channels placements as int values.
         """
 
     @property
     @abstractmethod
-    def tensor_processor(self) -> NNCFCollectorTensorProcessor:
+    def tensor_processor(self):
         """
-        Property for the backend-specific instance of the NNCFCollectorTensorProcessor.
-
-        :return: NNCFCollectorTensorProcessor instance
+        Returns backend-specific instance of the NNCFCollectorTensorProcessor.
         """
 
     @staticmethod
@@ -77,13 +71,13 @@ class FastBiasCorrectionAlgoBackend(ABC):
 
     @staticmethod
     @abstractmethod
-    def bias_correction_command(target_point: TargetPoint, bias_value: np.ndarray) -> TransformationCommand:
+    def create_bias_correction_command(bias_node: NNCFNode, bias_value: np.ndarray) -> TransformationCommand:
         """
-        Returns backend-specific bias correction command.
+        Creates backend-specific command to update bias value.
 
-        :param target_point: Target location for the correction.
+        :param bias_node: The node for which bias should be updated.
         :param bias_value: New value for the bias.
-        :return: Backend-specific TransformationCommand for the bias correction.
+        :return: Backend-specific command to update bias value.
         """
 
     @staticmethod
@@ -113,7 +107,7 @@ class FastBiasCorrectionAlgoBackend(ABC):
 
     @staticmethod
     @abstractmethod
-    def get_input_output_names(biased_node: NNCFNode) -> Tuple[str, str]:
+    def get_input_output_names(biased_node: NNCFNode) -> Tuple[List[str], List[str]]:
         """
         Returns tuple of the input & output names respectively.
 
@@ -134,24 +128,13 @@ class FastBiasCorrectionAlgoBackend(ABC):
 
     @staticmethod
     @abstractmethod
-    def get_bias_value(model: TModel, bias_node: NNCFNode) -> np.ndarray:
+    def get_bias_value(bias_node: NNCFNode, model: TModel) -> np.ndarray:
         """
         Returns bias value in the NumPy format of provided node.
 
+        :param bias_node: Node of NNCFGraph with bias value.
         :param model: Backend-specific model for the initializer finding.
-        :param bias_node: Node of NNCFGraph with bias value.
         :return: Bias value in the NumPy format.
-        """
-
-    @staticmethod
-    @abstractmethod
-    def get_bias_port_id(model: TModel, bias_node: NNCFNode) -> int:
-        """
-        Returns bias Port ID corresponding to the node.
-
-        :param model: Backend-specific model.
-        :param bias_node: Node of NNCFGraph with bias value.
-        :return: Port ID corresponding to bias.
         """
 
     @staticmethod
