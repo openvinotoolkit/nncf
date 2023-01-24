@@ -13,19 +13,18 @@
 
 from abc import ABC
 from abc import abstractmethod
-from typing import List, Tuple, TypeVar, Optional
+from typing import List, Optional, Tuple, TypeVar
+
 import numpy as np
 
+from nncf.common.graph import NNCFGraph, NNCFNode
 from nncf.common.graph.transformations.commands import TargetPoint
-from nncf.common.graph.transformations.commands import TransformationCommand
 from nncf.common.graph.transformations.commands import TargetType
+from nncf.common.graph.transformations.commands import TransformationCommand
 from nncf.common.tensor import NNCFTensor
-from nncf.common.graph import NNCFNode
-from nncf.common.graph import NNCFGraph
-from nncf.common.tensor_statistics.collectors import TensorStatisticCollectorBase
 from nncf.common.tensor_statistics.collectors import ReductionShape
+from nncf.common.tensor_statistics.collectors import TensorStatisticCollectorBase
 from nncf.common.utils.registry import Registry
-
 
 TModel = TypeVar('TModel')
 OutputType = TypeVar('OutputType')
@@ -155,7 +154,7 @@ class FastBiasCorrectionAlgoBackend(ABC):
 
         :param biased_node: NNCFNode affected by bias.
         :param nncf_graph: NNCFGraph instance.
-        :return: boolean indicating whether the node has a quantized weights or not
+        :return: boolean indicating whether the node has a quantized weights or not.
         """
 
     @staticmethod

@@ -32,7 +32,6 @@ from nncf.experimental.openvino_native.graph.metatypes.openvino_metatypes import
 from nncf.experimental.openvino_native.graph.metatypes.openvino_metatypes import OVConvertMetatype
 from nncf.experimental.openvino_native.graph.metatypes.openvino_metatypes import OVConstantMetatype
 from nncf.experimental.openvino_native.graph.metatypes.openvino_metatypes import OVAddMetatype
-from nncf.experimental.openvino_native.graph.model_transformer import OVModelTransformer
 from nncf.experimental.openvino_native.graph.transformations.commands import OVBiasCorrectionCommand
 from nncf.experimental.openvino_native.graph.transformations.commands import OVModelExtractionCommand
 from nncf.experimental.openvino_native.graph.transformations.commands import OVTargetPoint
@@ -61,10 +60,6 @@ class OVFastBiasCorrectionAlgoBackend(FastBiasCorrectionAlgoBackend):
     @property
     def tensor_processor(self) -> OVNNCFCollectorTensorProcessor:
         return OVNNCFCollectorTensorProcessor()
-
-    @staticmethod
-    def model_transformer(model: ov.Model) -> OVModelTransformer:
-        return OVModelTransformer(model)
 
     @staticmethod
     def target_point(target_type: TargetType, target_node_name: str, port_id: int) -> OVTargetPoint:

@@ -15,7 +15,7 @@ import onnx
 import numpy as np
 
 from nncf.common.graph.graph import NNCFNode
-from nncf.onnx.graph.metatypes.onnx_metatypes import LAYERS_WITH_BIAS_METATYPES
+from nncf.onnx.graph.metatypes.onnx_metatypes import OPERATIONS_WITH_BIAS_METATYPES
 from nncf.onnx.graph.onnx_graph import ONNXGraph
 from nncf.onnx.graph.metatypes.onnx_metatypes import ONNX_OPERATION_METATYPES
 from nncf.onnx.graph.metatypes.onnx_metatypes import ONNXIdentityMetatype
@@ -31,7 +31,7 @@ def is_node_with_bias(node: NNCFNode) -> bool:
         `False` otherwise.
     """
     input_tensor_names = node.layer_attributes.input_tensor_names
-    return node.metatype in LAYERS_WITH_BIAS_METATYPES and len(input_tensor_names) > 2
+    return node.metatype in OPERATIONS_WITH_BIAS_METATYPES and len(input_tensor_names) > 2
 
 
 def get_bias_value(node: NNCFNode, model: onnx.ModelProto) -> np.ndarray:
