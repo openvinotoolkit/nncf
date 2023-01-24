@@ -107,9 +107,9 @@ class GraphPattern:
                 # add merge all possible connections
                 # A: (a) (b)
                 # B: (c) (d)
-                #              (a_copy)  (a_copy)  (b_copy)    (b_copy)
-                # A + B ---->   |       |      |        |
-                #              (c_copy)     (d_copy)  (c_copy) (d_copy)
+                #              (a_copy)  (a_copy)  (b_copy) (b_copy)
+                # A + B ---->     |          |        |        |
+                #              (c_copy)  (d_copy)  (c_copy) (d_copy)
                 #
                 subgraph_copy = final_pattern._unite_with_copy_of_graph(self_subgraph)
                 other_subgraph_copy = final_pattern._unite_with_copy_of_graph(other_subgraph)
@@ -195,14 +195,14 @@ class GraphPattern:
         Adds 'other' pattern to 'self' pattern and connect nodes from self to other specified by 'edges'.
 
         If edges is None, connects all weekly connected components of self and other by adding edges between
-        last nodes of self's graph and first nodes of other's graph,
-        which are found by nx.lexicographical_topological_sort().
+        last nodes of every weekly component of self and first nodes of every weekly component other.
+        The first and last nodes are found by nx.lexicographical_topological_sort().
 
         # A: (a) (b)
         # B: (c) (d)
-        #              (a_copy)  (a_copy)  (b_copy)    (b_copy)
-        # A + B ---->   |       |      |        |
-        #              (c_copy)     (d_copy)  (c_copy) (d_copy)
+        #              (a_copy)  (a_copy)  (b_copy) (b_copy)
+        # A + B ---->     |          |        |        |
+        #              (c_copy)  (d_copy)  (c_copy) (d_copy)
         #
 
         If other starts from a node with ANY_PATTERN_NODE_TYPE or NON_PATTERN_NODE_TYPE types,
