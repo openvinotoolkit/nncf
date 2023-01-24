@@ -189,7 +189,7 @@ import tensorflow_datasets as tfds
 
 # Instantiate your uncompressed model
 model = tf.keras.applications.MobileNetV2()
-# Provide validation part of the dataset for statistics collection for compression algorithm
+# Provide validation part of the dataset to collect statistics needed for the compression algorithm
 val_dataset = tfds.load('/path', split='validation', 
                         shuffle_files=False, as_supervised=True)
 
