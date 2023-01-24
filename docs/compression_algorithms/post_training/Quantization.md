@@ -49,7 +49,7 @@ There are formats of data transformation function for each supported backend bel
 
 <details><summary><b>PyTorch, TensorFlow, OpenVINO</b></summary>
 
-The return format of data transformation function is directly the input tensors, consumed by the model.
+The data transformation function is intended to return data that is used as input tensor for the target model during model calibration step.
 If you are not sure that your implementation of data transformation function is correct you can validate it by using the
 following code:
 
