@@ -125,7 +125,7 @@ class FastBiasCorrection(Algorithm):
         # for which we should update bias and new bias values.
         node_and_new_bias_value = []
         for biased_node, bias_value in node_and_bias_value:
-            if not self._backend_entity.is_quantized_weights(node, model):
+            if not self._backend_entity.is_quantized_weights(biased_node, model):
                 nncf_logger.debug(f'Skipping node {biased_node.node_name} because weights were not quantized')
                 continue
 
@@ -154,7 +154,7 @@ class FastBiasCorrection(Algorithm):
 
             if magnitude < self.threshold:
                 nncf_logger.debug(f'{biased_node.node_name} bias would be changed')
-                node_and_new_bias_value.append((node, updated_bias))
+                node_and_new_bias_value.append((biased_node, updated_bias))
             else:
                 nncf_logger.debug(f'{biased_node.node_name} bias skipped by threshold. Magnitude: {magnitude}')
 

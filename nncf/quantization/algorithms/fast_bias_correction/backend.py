@@ -13,10 +13,9 @@
 
 from abc import ABC
 from abc import abstractmethod
-from typing import List, Tuple, TypeVar, Optional, Dict
+from typing import List, Tuple, TypeVar, Optional
 import numpy as np
 
-from nncf.common.graph.operator_metatypes import OperatorMetatype
 from nncf.common.graph.transformations.commands import TargetPoint
 from nncf.common.graph.transformations.commands import TransformationCommand
 from nncf.common.graph.transformations.commands import TargetType
@@ -25,7 +24,6 @@ from nncf.common.graph import NNCFNode
 from nncf.common.graph import NNCFGraph
 from nncf.common.tensor_statistics.collectors import TensorStatisticCollectorBase
 from nncf.common.tensor_statistics.collectors import ReductionShape
-from nncf.common.tensor_statistics.collectors import NNCFCollectorTensorProcessor
 from nncf.common.utils.registry import Registry
 
 

@@ -112,5 +112,9 @@ class ONNXFastBiasCorrectionAlgoBackend(FastBiasCorrectionAlgoBackend):
         return weight_node.metatype == ONNXDequantizeLinearMetatype
 
     @staticmethod
-    def is_node_with_bias(node: NNCFNode) -> bool:
-        return is_node_with_bias(node)
+    def is_node_with_bias(biased_node: NNCFNode) -> bool:
+        return is_node_with_bias(biased_node)
+
+    @staticmethod
+    def get_bias_node(biased_node: NNCFNode, nncf_graph: NNCFGraph) -> Optional[NNCFNode]:
+        return biased_node
