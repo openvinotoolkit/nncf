@@ -11,7 +11,7 @@ NNCF provides an advanced Post-Training Quantization algorithm, which consists o
 
 ### Usage
 
-To start the algorithm the user should provide:
+To start the algorithm following entities should be provided:
 
 * Original model.
 * Validation part of the dataset.
