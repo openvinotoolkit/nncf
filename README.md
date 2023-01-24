@@ -140,7 +140,7 @@ For FAQ, visit this [link](./docs/FAQ.md).
 
 NNCF provides [samples](#post-training-quantization-samples), which demonstrate Post-Training Quantization usage for PyTorch, TensorFlow, ONNX, OpenVINO.
 
-To start the algorithm the following entities should be provided:
+To start the algorithm, provide the following entities:
 * Original model.
 * Validation part of the dataset.
 * [Data transformation function](./docs/compression_algorithms/post_training/Quantization.md#data-transformation-function) from the original dataset format to the NNCF format. 

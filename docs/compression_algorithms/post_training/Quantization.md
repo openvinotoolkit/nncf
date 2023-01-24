@@ -43,13 +43,13 @@ quantized_model = nncf.quantize(model, calibration_dataset)
 
 Model input structure differs from one pipeline to another. Thus NNCF introduces the interface to adapt the user dataset format to the NNCF format. This interface is called the data transformation function.
 
-Every backend has its own return value format for transformation function. It is based on the input structure of
+Every backend has its own return value format for the data transformation function. It is based on the input structure of the
 backend inference framework.
 Below are the formats of data transformation function for each supported backend.
 
 <details><summary><b>PyTorch, TensorFlow, OpenVINO</b></summary>
 
-The data transformation function is intended to return data that is used as input tensor for the target model during model calibration step.
+The return format of the data transformation function is directly the input tensors consumed by the model.
 If you are not sure that your implementation of data transformation function is correct you can validate it by using the
 following code:
 
@@ -64,8 +64,8 @@ for data_item in val_loader:
 </details>
 <details><summary><b>ONNX</b></summary>
 
-[ONNXRuntime](https://onnxruntime.ai/) is used as the inference engine for ONNX backend. \
-Input format of the data is the following - ```Dict[str, np.ndarray]```, where keys of the dictionary are the model input names and values are numpy tensors passed to these inputs.
+[ONNX Runtime](https://onnxruntime.ai/) is used as the inference engine for the ONNX backend. \
+The Input format of the data is the following - ```Dict[str, np.ndarray]```, where keys of the dictionary are the model input names and values are numpy tensors passed to these inputs.
 
 If you are not sure that your implementation of data transformation function is correct, you can validate it by using the
 following code:
