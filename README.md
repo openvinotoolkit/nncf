@@ -216,7 +216,7 @@ from torchvision import datasets
 
 # Instantiate your uncompressed model
 onnx_model = onnx.load_model('/model_path')
-# Provide validation part of the dataset for statistics collection for compression algorithm
+# Provide validation part of the dataset to collect statistics needed for the compression algorithm
 val_dataset = datasets.ImageFolder("/path")
 dataset_loader = torch.utils.data.DataLoader(val_dataset, batch_size=1)
 
@@ -244,7 +244,7 @@ from torchvision import datasets
 
 # Instantiate your uncompressed model
 model = ov.Core().read_model('/model_path')
-# Provide validation part of the dataset for statistics collection for compression algorithm
+# Provide validation part of the dataset to collect statistics needed for the compression algorithm
 val_dataset = datasets.ImageFolder("/path")
 dataset_loader = torch.utils.data.DataLoader(val_dataset, batch_size=1)
 

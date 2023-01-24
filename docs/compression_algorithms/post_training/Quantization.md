@@ -1,6 +1,6 @@
 ## Post-Training Quantization
 
-Post-Training Quantization is the quantization algorithm which doesn't demand retraining of a quantized model.
+Post-Training Quantization is a quantization algorithm that doesn't demand retraining of a quantized model.
 It utilizes a small subset of the initial dataset to calibrate quantization constants.
 
 NNCF provides an advanced Post-Training Quantization algorithm, which consists of following techniques:
@@ -43,7 +43,7 @@ quantized_model = nncf.quantize(model, calibration_dataset)
 
 Model input structure differs from one pipeline to another. Thus NNCF introduces the interface to adapt the user dataset format to the NNCF format. This interface is called data transformation function.
 
-Every backend has own return value format for transformation function. It is based on the input structure of
+Every backend has its own return value format for transformation function. It is based on the input structure of
 backend inference framework.
 There are formats of data transformation function for each supported backend below.
 
@@ -65,7 +65,7 @@ for data_item in val_loader:
 <details><summary><b>ONNX</b></summary>
 
 [ONNXRuntime](https://onnxruntime.ai/) is used as the inference engine for ONNX backend. \
-Input format of the data is following - ```Dict[str, np.ndarray]```, where keys of the dictionary are the model input names and values are numpy tensors passed to these inputs.
+Input format of the data is the following - ```Dict[str, np.ndarray]```, where keys of the dictionary are the model input names and values are numpy tensors passed to these inputs.
 
 If you are not sure that your implementation of data transformation function is correct you can validate it by using the
 following code:
