@@ -138,7 +138,7 @@ For FAQ, visit this [link](./docs/FAQ.md).
 
 ### Usage examples of Post-Training Quantization
 
-NNCF provides [samples](#post-training-quantization) that demonstrate Post-Training Quantization usage for PyTorch, TensorFlow, ONNX, OpenVINO.
+NNCF provides [samples](#post-training-quantization), which demonstrate Post-Training Quantization usage for PyTorch, TensorFlow, ONNX, OpenVINO.
 
 To start the algorithm the following entities should be provided:
 * Original model.
