@@ -15,7 +15,7 @@ To start the algorithm, provide the following entities:
 
 * Original model.
 * Validation part of the dataset.
-* [Data transformation function](#data-transformation-function) from the original dataset format to the NNCF format.
+* [Data transformation function](#data-transformation-function) transforming data items from the original dataset to the model input data.
 
 The basic workflow steps:
 
@@ -27,7 +27,9 @@ def transform_fn(data_item):
     return images
 ```
 
-2) Initialize NNCF Dataset with a validation dataset and a transformation function.
+2) Create an instance of `nncf.Dataset` class by passing two parameters:
+* `data_source` - Iterable python object that contains data items for model calibration.
+* `transform_fn` - Data transformation function from the Step 1.
 
 ```python
 calibration_dataset = nncf.Dataset(val_dataset, transform_fn)
@@ -49,9 +51,9 @@ Below are the formats of data transformation function for each supported backend
 
 <details><summary><b>PyTorch, TensorFlow, OpenVINO</b></summary>
 
-The return format of the data transformation function is directly the input tensors consumed by the model.
-If you are not sure that your implementation of data transformation function is correct you can validate it by using the
-following code:
+The return format of the data transformation function is directly the input tensors consumed by the model. \
+_If you are not sure that your implementation of data transformation function is correct you can validate it by using the
+following code:_
 
 ```python
 model = ...  # Model
@@ -67,8 +69,8 @@ for data_item in val_loader:
 [ONNX Runtime](https://onnxruntime.ai/) is used as the inference engine for the ONNX backend. \
 The Input format of the data is the following - ```Dict[str, np.ndarray]```, where keys of the dictionary are the model input names and values are numpy tensors passed to these inputs.
 
-If you are not sure that your implementation of data transformation function is correct, you can validate it by using the
-following code:
+_If you are not sure that your implementation of data transformation function is correct, you can validate it by using the
+following code:_
 
 ```python
 import onnxruntime

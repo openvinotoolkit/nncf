@@ -514,23 +514,23 @@ to find instruction and links to exact configuration files and final checkpoints
 <a name="onnx_classification"></a>
 #### Classification
 
-|   ONNX Model    |Compression algorithm|Dataset|Accuracy (Drop) %|
-| :---: | :---: | :---: | :---: |
-|ResNet-50|INT8|ImageNet|74.63 (0.21)|
-|ShuffleNet|INT8|ImageNet|47.25 (0.18)|
-|GoogleNet|INT8|ImageNet|66.36 (0.3)|
-|SqueezeNet V1.0|INT8|ImageNet|54.3 (0.54)|
-|MobileNet V2|INT8|ImageNet|71.38 (0.49)|
-|DenseNet-121|INT8|ImageNet|60.16 (0.8)|
-|VGG-16|INT8|ImageNet|72.02 (0.0)|
+|   ONNX Model    | Compression algorithm |Dataset|Accuracy (Drop) %|
+| :---: |:---------------------:| :---: | :---: |
+|ResNet-50| INT8 (Post-Training)  |ImageNet|74.63 (0.21)|
+|ShuffleNet| INT8 (Post-Training)  |ImageNet|47.25 (0.18)|
+|GoogleNet| INT8 (Post-Training)  |ImageNet|66.36 (0.3)|
+|SqueezeNet V1.0| INT8 (Post-Training)  |ImageNet|54.3 (0.54)|
+|MobileNet V2| INT8 (Post-Training)  |ImageNet|71.38 (0.49)|
+|DenseNet-121| INT8 (Post-Training)  |ImageNet|60.16 (0.8)|
+|VGG-16| INT8 (Post-Training)  |ImageNet|72.02 (0.0)|
 
 <a name="onnx_object_detection"></a>
 #### Object Detection
 
-|ONNX Model|Compression algorithm| Dataset |mAP (drop) %|
-| :---: | :---: | :---: | :---: |
-|SSD1200|INT8|COCO2017|20.17 (0.17)|
-|Tiny-YOLOv2|INT8|VOC12|29.03 (0.23)|
+|ONNX Model| Compression algorithm | Dataset |mAP (drop) %|
+| :---: |:---------------------:| :---: | :---: |
+|SSD1200| INT8 (Post-Training)  |COCO2017|20.17 (0.17)|
+|Tiny-YOLOv2| INT8 (Post-Training)  |VOC12|29.03 (0.23)|
 
 ## Citing
 
