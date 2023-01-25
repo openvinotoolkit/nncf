@@ -63,7 +63,7 @@ class OVNativeEngine(Engine):
         Returns the dictionary of model outputs by node names.
 
         :param input_data: Inputs for the model.
-        :return output_data: Models outputs.
+        :return output_data: Model's output.
         """
         self._check_input_data_format(input_data, self.input_names)
         model_outputs = self.compiled_model(input_data)
