@@ -24,7 +24,7 @@ converted_model = convert_version(model, target_version=13)
 ```
 # ONNX Results
 
-Below are some results for the models from [ONNX Model Zoo](https://github.com/onnx/models)
+Below are some results obtained using [benchmarking section](../../../tests/onnx/benchmarking/README.md) for the models from [ONNX Model Zoo](https://github.com/onnx/models). 
 
 ### Classification
 
