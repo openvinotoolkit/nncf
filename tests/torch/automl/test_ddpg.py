@@ -53,13 +53,6 @@ def test_random_action():
     # check action value within bound
     assert sum((randomized_action >= ddpg.LBOUND) & (randomized_action <= ddpg.RBOUND)) == N_ACTION
 
-@pytest.fixture
-def _seed():
-    cudnn.deterministic = True
-    cudnn.benchmark = False
-    manual_seed(0)
-
-
 EPISODE_NOISY_ACTION_TUPLES = [
     (0, [0.71018179, 0.82288581]),
     (10, [0.72084132, 0.82954315]),

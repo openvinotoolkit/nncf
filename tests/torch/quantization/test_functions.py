@@ -42,11 +42,6 @@ def idfn(val):
     return None
 
 
-@pytest.fixture
-def _seed():
-    np.random.seed(42)
-
-
 RQ = ReferenceQuantize(backend_type=ReferenceBackendType.NUMPY)
 
 

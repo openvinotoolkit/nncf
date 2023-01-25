@@ -41,13 +41,6 @@ from tests.torch.test_compressed_graph import get_full_path_to_the_graph
 from tests.shared.nx_graph import compare_nx_graph_with_reference
 
 
-@pytest.fixture
-def _seed():
-    cudnn.deterministic = True
-    cudnn.benchmark = False
-    manual_seed(0)
-
-
 def check_subnet_visualization(multi_elasticity_handler, model, nas_model_name, stage):
     model.rebuild_graph()
     dot_file = f'{nas_model_name}_{stage}.dot'

@@ -40,13 +40,6 @@ from tests.torch.helpers import get_empty_config, get_grads, create_compressed_m
 from tests.torch.helpers import register_bn_adaptation_init_args
 
 
-@pytest.fixture
-def _seed():
-    manual_seed(0)
-    cudnn.deterministic = True
-    cudnn.benchmark = False
-
-
 def replace_lstm(model):
     def replace_fn(module_):
         if not isinstance(module_, nn.LSTM):

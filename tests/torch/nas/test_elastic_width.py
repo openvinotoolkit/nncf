@@ -40,13 +40,6 @@ from tests.torch.test_compressed_graph import get_full_path_to_the_graph
 from tests.shared.nx_graph import compare_nx_graph_with_reference
 
 
-@pytest.fixture
-def _seed():
-    cudnn.deterministic = True
-    cudnn.benchmark = False
-    manual_seed(0)
-
-
 @pytest.fixture(name='basic_model', params=(TwoSequentialFcLNTestModel, ConvTwoFcTestModel,
                                             TwoConvAddConvTestModel, TwoSequentialConvBNTestModel))
 def fixture_basic_model(request):
