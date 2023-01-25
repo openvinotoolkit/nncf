@@ -132,9 +132,11 @@ def check_nx_graph(nx_graph: nx.DiGraph, expected_graph: nx.DiGraph,
 
     for node_identifier, expected_attrs in expected_id_vs_attrs.items():
         assert node_identifier in id_vs_attrs, f'Expected to find node {node_identifier}, but there is no such node.'
-        assert expected_attrs == id_vs_attrs[node_identifier], \
+        expected_attrs = dict(sorted(expected_attrs.items()))
+        attrs = dict(sorted(id_vs_attrs[node_identifier].items()))
+        assert expected_attrs == attrs, \
             f'Incorrect attributes for node {node_identifier}.' \
-            f' expected {expected_attrs}, but actual {id_vs_attrs[node_identifier]}.'
+            f' expected {expected_attrs}, but actual {attrs}.'
 
     edge_vs_attrs = _build_edge_vs_attrs_dict(nx_graph, id_from_attr=unstable_node_names is True)
     expected_edge_vs_attrs = _build_edge_vs_attrs_dict(nx_graph, id_from_attr=unstable_node_names is True)
@@ -142,9 +144,10 @@ def check_nx_graph(nx_graph: nx.DiGraph, expected_graph: nx.DiGraph,
 
     if check_edge_attrs:
         for expected_edge_tuple, expected_attrs in expected_edge_vs_attrs.items():
-            edge_attrs = edge_vs_attrs[expected_edge_tuple]
-            assert edge_attrs == expected_attrs, f'Incorrect edge attributes for edge {expected_edge_tuple}.' \
-                                                 f' expected {expected_attrs}, but actual {edge_attrs}.'
+            expected_attrs = dict(sorted(expected_attrs.items()))
+            attrs = dict(sorted(edge_vs_attrs[expected_edge_tuple].items()))
+            assert attrs == expected_attrs, f'Incorrect edge attributes for edge {expected_edge_tuple}.' \
+                                                 f' expected {expected_attrs}, but actual {attrs}.'
 
 
 def compare_nx_graph_with_reference(nx_graph: nx.DiGraph, path_to_dot: str,
