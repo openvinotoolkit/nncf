@@ -113,6 +113,7 @@ class NNCFGraphEdge:
         output_port_id: int,
         tensor_shape: List[int],
         dtype: Dtype,
+        edge_multiplicity: int,
     ):
         """
         :param from_node: An NNCFNode that sources the directed edge.
@@ -128,6 +129,7 @@ class NNCFGraphEdge:
         self.output_port_id = output_port_id
         self.tensor_shape = tensor_shape
         self.dtype = dtype
+        self.edge_multiplicity = edge_multiplicity
 
     def __str__(self):
         return str(self.from_node) + " -> " + str(self.tensor_shape) + " -> " + str(self.to_node)
@@ -175,6 +177,7 @@ class NNCFGraph:
     IS_INTEGER_INPUT_NODE_ATTR = "is_integer_input"
     DTYPE_EDGE_ATTR = "dtype"
     IS_SHARED_ATTR = "is_shared"
+    EDGE_MULTIPLICITY_ATTR = "edge_multiplicity"
 
     def __init__(self):
         self._nx_graph = nx.DiGraph()
@@ -470,6 +473,7 @@ class NNCFGraph:
         input_port_id: int,
         output_port_id: int,
         dtype: Dtype,
+        edge_multiplicity: int = 1,
     ):
         """
         Adds a directed edge between two `NNCFNode`s that are already present in the graph.
@@ -482,6 +486,7 @@ class NNCFGraph:
         :param output_port_id: Specifies the index among the possible outputs of the `from_node_id` node' that this
             tensor should correspond to.
         :param dtype: The data type of the tensor.
+        :param edge_multiplicity: How many parallel edges in the original control flow graph this edge should represent.
         """
         from_node_key = self._node_id_to_key_dict[from_node_id]
         to_node_key = self._node_id_to_key_dict[to_node_id]
@@ -505,6 +510,7 @@ class NNCFGraph:
             NNCFGraph.INPUT_PORT_ID_EDGE_ATTR: input_port_id,
             NNCFGraph.OUTPUT_PORT_ID_EDGE_ATTR: output_port_id,
             NNCFGraph.DTYPE_EDGE_ATTR: dtype,
+            NNCFGraph.EDGE_MULTIPLICITY_ATTR: edge_multiplicity,
         }
         self._nx_graph.add_edge(from_node_key, to_node_key, **attrs)
 
@@ -649,6 +655,7 @@ class NNCFGraph:
                 output_port_id=data[NNCFGraph.OUTPUT_PORT_ID_EDGE_ATTR],
                 tensor_shape=data[NNCFGraph.ACTIVATION_SHAPE_EDGE_ATTR],
                 dtype=data[NNCFGraph.DTYPE_EDGE_ATTR],
+                edge_multiplicity=data[NNCFGraph.EDGE_MULTIPLICITY_ATTR],
             )
             if from_node_key in match:
                 output_nncf_edges.append(nncf_edge)
@@ -683,6 +690,7 @@ class NNCFGraph:
             data[NNCFGraph.OUTPUT_PORT_ID_EDGE_ATTR],
             data[NNCFGraph.ACTIVATION_SHAPE_EDGE_ATTR],
             data[NNCFGraph.DTYPE_EDGE_ATTR],
+            data[NNCFGraph.EDGE_MULTIPLICITY_ATTR],
         )
 
     def get_all_edges(self) -> Generator[NNCFGraphEdge, None, None]:

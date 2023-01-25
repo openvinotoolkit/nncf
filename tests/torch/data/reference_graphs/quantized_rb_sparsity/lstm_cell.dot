@@ -64,8 +64,8 @@ strict digraph  {
 "25 LSTMCellNNCF/LSTMCellForwardNNCF[cell]/__mul___1" -> "26 LSTMCellNNCF/LSTMCellForwardNNCF[cell]/SymmetricQuantizer/symmetric_quantize_6";
 "26 LSTMCellNNCF/LSTMCellForwardNNCF[cell]/SymmetricQuantizer/symmetric_quantize_6" -> "27 LSTMCellNNCF/LSTMCellForwardNNCF[cell]/__add___1";
 "27 LSTMCellNNCF/LSTMCellForwardNNCF[cell]/__add___1" -> "28 LSTMCellNNCF/LSTMCellForwardNNCF[cell]/SymmetricQuantizer/symmetric_quantize_7";
+"27 LSTMCellNNCF/LSTMCellForwardNNCF[cell]/__add___1" -> "33 /nncf_model_output_1";
 "28 LSTMCellNNCF/LSTMCellForwardNNCF[cell]/SymmetricQuantizer/symmetric_quantize_7" -> "29 LSTMCellNNCF/LSTMCellForwardNNCF[cell]/tanh_1";
-"28 LSTMCellNNCF/LSTMCellForwardNNCF[cell]/SymmetricQuantizer/symmetric_quantize_7" -> "33 /nncf_model_output_1";
 "29 LSTMCellNNCF/LSTMCellForwardNNCF[cell]/tanh_1" -> "30 LSTMCellNNCF/LSTMCellForwardNNCF[cell]/SymmetricQuantizer/symmetric_quantize_8";
 "30 LSTMCellNNCF/LSTMCellForwardNNCF[cell]/SymmetricQuantizer/symmetric_quantize_8" -> "31 LSTMCellNNCF/LSTMCellForwardNNCF[cell]/__mul___2";
 "31 LSTMCellNNCF/LSTMCellForwardNNCF[cell]/__mul___2" -> "32 /nncf_model_output_0";

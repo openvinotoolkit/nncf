@@ -1,13 +1,16 @@
 strict digraph  {
 "0 /nncf_model_input_0" [id=0, type=nncf_model_input];
-"1 SymmetricQuantizer/symmetric_quantize_0" [id=1, type=symmetric_quantize];
-"2 MultiOutputSameTensorModel/__mul___0" [id=2, type=__mul__];
-"3 /nncf_model_output_0" [id=3, type=nncf_model_output];
-"4 /nncf_model_output_1" [id=4, type=nncf_model_output];
-"5 /nncf_model_output_2" [id=5, type=nncf_model_output];
-"0 /nncf_model_input_0" -> "1 SymmetricQuantizer/symmetric_quantize_0";
-"1 SymmetricQuantizer/symmetric_quantize_0" -> "2 MultiOutputSameTensorModel/__mul___0";
-"1 SymmetricQuantizer/symmetric_quantize_0" -> "3 /nncf_model_output_0";
-"1 SymmetricQuantizer/symmetric_quantize_0" -> "5 /nncf_model_output_2";
-"2 MultiOutputSameTensorModel/__mul___0" -> "4 /nncf_model_output_1";
+"1 MultiOutputSameTensorModel/SymmetricQuantizer/symmetric_quantize_0" [id=1, type=symmetric_quantize];
+"2 MultiOutputSameTensorModel/SymmetricQuantizer/symmetric_quantize_1" [id=2, type=symmetric_quantize];
+"3 MultiOutputSameTensorModel/__mul___0" [id=3, type=__mul__];
+"4 /nncf_model_output_0" [id=4, type=nncf_model_output];
+"5 /nncf_model_output_1" [id=5, type=nncf_model_output];
+"6 /nncf_model_output_2" [id=6, type=nncf_model_output];
+"0 /nncf_model_input_0" -> "1 MultiOutputSameTensorModel/SymmetricQuantizer/symmetric_quantize_0";
+"0 /nncf_model_input_0" -> "2 MultiOutputSameTensorModel/SymmetricQuantizer/symmetric_quantize_1";
+"0 /nncf_model_input_0" -> "4 /nncf_model_output_0";
+"0 /nncf_model_input_0" -> "6 /nncf_model_output_2";
+"1 MultiOutputSameTensorModel/SymmetricQuantizer/symmetric_quantize_0" -> "3 MultiOutputSameTensorModel/__mul___0";
+"2 MultiOutputSameTensorModel/SymmetricQuantizer/symmetric_quantize_1" -> "3 MultiOutputSameTensorModel/__mul___0";
+"3 MultiOutputSameTensorModel/__mul___0" -> "5 /nncf_model_output_1";
 }

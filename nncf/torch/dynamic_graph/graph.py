@@ -15,9 +15,9 @@ import networkx as nx
 import networkx.algorithms.isomorphism as iso
 from torch import Tensor
 
+from nncf import nncf_logger
 from nncf.common.graph import Dtype
 from nncf.common.graph.layer_attributes import BaseLayerAttributes
-from nncf.common.logging import nncf_logger
 from nncf.torch.dynamic_graph.operation_address import OperationAddress
 from nncf.torch.dynamic_graph.scope import Scope
 from nncf.torch.dynamic_graph.trace_tensor import TensorMeta
@@ -227,13 +227,29 @@ class DynamicGraphEdge:
         input_port_id: int,
         output_port_id: int,
         dtype: Dtype,
+        edge_multiplicity: int,
     ):
+        """
+        :param from_node_id - A numeric identifier of the starting node of the edge
+        :param to_node_id - A numeric identifier of the node to which the edge is pointing
+        :param activation_shape - The shape of the tensor associated with this edge
+        :param input_port_id - Port of the operation consuming the tensor that this edge
+          represents.
+        :param output_port_id - Port of the operation that produced the tensor represented by this edge.
+        :param dtype - Data type of the tensor represented by this edge.
+        :param edge_multiplicity - Multiplicity of the edge. This is a workaround the the DiGraph's
+          requirement to have no more than 1 edge between any two nodes, while, for instance, an operation
+          of multiplying a tensor with itself, for instance, needs to somehow store in the graph
+          the information that the operation actually has two inputs, even though one and the same
+          tensor (i.e. edge) is used as both inputs; in this case `edge_multiplicity` must be set to 2.
+        """
         self.from_node_id = from_node_id
         self.to_node_id = to_node_id
         self.activation_shape = activation_shape
         self.input_port_id = input_port_id
         self.output_port_id = output_port_id
         self.dtype = dtype
+        self.edge_multiplicity = edge_multiplicity
 
     @classmethod
     def build_between_two_nx_nodes(
@@ -248,6 +264,7 @@ class DynamicGraphEdge:
             input_port_id=nx_edge[DynamicGraph.INPUT_PORT_ID_EDGE_ATTR],
             output_port_id=nx_edge[DynamicGraph.OUTPUT_PORT_ID_EDGE_ATTR],
             dtype=nx_edge[DynamicGraph.ACTIVATION_DTYPE_EDGE_ATTR],
+            edge_multiplicity=nx_edge[DynamicGraph.EDGE_MULTIPLICITY_ATTR],
         )
 
 
@@ -326,12 +343,16 @@ class DefaultScopeNodeMatcher:
             if info is None or info.creator_id is None:
                 continue
             parent = self._node_id_to_key_dict[info.creator_id]
+            edge_multiplicity = 1
+            if self._nx_graph.get_edge_data(parent, node_key) is not None:
+                edge_multiplicity = self._nx_graph.edges[parent, node_key][DynamicGraph.EDGE_MULTIPLICITY_ATTR] + 1
             self._nx_graph.add_edge(parent, node_key)
             has_traced_inputs = True
             self._nx_graph.edges[parent, node_key][DynamicGraph.ACTIVATION_SHAPE_EDGE_ATTR] = info.shape
             self._nx_graph.edges[parent, node_key][DynamicGraph.INPUT_PORT_ID_EDGE_ATTR] = i
             self._nx_graph.edges[parent, node_key][DynamicGraph.OUTPUT_PORT_ID_EDGE_ATTR] = info.index
             self._nx_graph.edges[parent, node_key][DynamicGraph.ACTIVATION_DTYPE_EDGE_ATTR] = info.dtype
+            self._nx_graph.edges[parent, node_key][DynamicGraph.EDGE_MULTIPLICITY_ATTR] = edge_multiplicity
 
         nx_node_dict = self._nx_graph.nodes[node_key]
         node = DynamicGraphNode.build_from_nx_node(nx_node_dict)
@@ -577,6 +598,7 @@ class DynamicGraph:
     IS_CALLED_INSIDE_NNCF_MODULE = "is_called_inside_nncf_module"
     IS_IN_ITERATION_SCOPE_NODE_ATTR = "is_in_iteration_scope"
     CALLING_MODULE_ID = "calling_module_id"
+    EDGE_MULTIPLICITY_ATTR = "edge_multiplicity"
 
     def __init__(self):
         self._nx_graph = nx.DiGraph()
