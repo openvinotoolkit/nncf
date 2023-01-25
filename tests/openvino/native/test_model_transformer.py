@@ -28,6 +28,7 @@ from nncf.experimental.openvino_native.graph.transformations.commands import OVB
 
 from tests.openvino.native.models import LinearModel
 from tests.openvino.native.models import ConvModel
+from tests.openvino.native.models import FPModel
 from tests.openvino.native.models import QuantizedModel
 from tests.openvino.native.common import compare_nncf_graphs
 from tests.openvino.conftest import OPENVINO_NATIVE_TEST_ROOT
@@ -179,23 +180,40 @@ def test_fq_insertion_weights(target_layers, ref_fq_names):
         assert fq_name in ref_fq_names
 
 
-CONV_LAYERS = [['Conv']]
-BIAS_VALUES = [[np.full((3,), 2)]]
-BIAS_REFERENCES = [[2.0]]
+MODELS_WITH_PARAMETERS = [
+    {
+        'model': ConvModel().ov_model,
+        'layers': ['Conv'],
+        'values': [np.full((3,), 2)],
+        'refs': [2.0],
+    },
+    {
+        'model': FPModel(precision='FP16').ov_model,
+        'layers': ['MatMul'],
+        'values': [np.full((3,), 2)],
+        'refs': [2.0],
+    }
+]
 
 
-@pytest.mark.parametrize('layers, values, refs', zip(CONV_LAYERS, BIAS_VALUES, BIAS_REFERENCES))
-def test_bias_correction(layers, values, refs):
-    model = ConvModel().ov_model
-    transformed_model = create_transformed_model(
-        model, layers, TargetType.LAYER, OVBiasCorrectionCommand, port_id=1, **{'bias_value': values})
+@pytest.mark.parametrize('model_with_parameters', MODELS_WITH_PARAMETERS)
+def test_bias_correction(model_with_parameters):
+    model = model_with_parameters['model']
+    layers = model_with_parameters['layers']
+    values = model_with_parameters['values']
+    refs = model_with_parameters['refs']
+
+    transformed_model = create_transformed_model(model, layers, TargetType.LAYER,
+                                                 OVBiasCorrectionCommand, port_id=1, **{'bias_value': values})
     ops_dict = {op.get_friendly_name(): op for op in transformed_model.get_ops()}
 
-    for conv_name, bias_reference in zip(layers, refs):
-        conv_node = ops_dict[conv_name]
-        node_inputs = [port.get_node() for port in conv_node.output(0).get_target_inputs()]
+    for node_name, bias_reference in zip(layers, refs):
+        node = ops_dict[node_name]
+        node_inputs = [port.get_node() for port in node.output(0).get_target_inputs()]
         node_with_bias = node_inputs[0]
 
         potential_bias = node_with_bias.input_value(1).node
+        if potential_bias.get_type_name() == 'Convert':
+            potential_bias = potential_bias.input_value(0).node
         assert potential_bias.get_type_name() == 'Constant'
-        assert np.mean(potential_bias.get_data()) == bias_reference
+        assert np.mean(potential_bias.get_vector()) == bias_reference
