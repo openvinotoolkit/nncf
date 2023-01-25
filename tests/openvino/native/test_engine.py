@@ -12,7 +12,6 @@
 """
 
 import pytest
-
 import numpy as np
 
 from nncf.experimental.openvino_native.engine import OVNativeEngine
