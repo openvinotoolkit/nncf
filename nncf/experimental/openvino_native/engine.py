@@ -50,7 +50,7 @@ class OVNativeEngine(Engine):
         """
         actual_num_inputs = 1 if isinstance(input_data, np.ndarray) else len(input_data)
         if actual_num_inputs != len(input_names):
-            raise RuntimeError(f'Model expects {len(input_names)} inputs, but {len(input_data)} are provided.')
+            raise RuntimeError(f'Model expects {len(input_names)} inputs, but {actual_num_inputs} are provided.')
         if isinstance(input_data, dict):
             for name in input_names:
                 if name not in input_data:
