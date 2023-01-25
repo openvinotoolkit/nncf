@@ -47,7 +47,7 @@ def test_infer_original_model_list(model_creator_func):
 @pytest.mark.parametrize("model_creator_func", [LinearModel, ConvModel])
 def test_infer_original_model_tuple(model_creator_func):
     model = model_creator_func().ov_model
-    input_data = tuple([np.random.rand(*inp.shape) for inp in model.get_parameters()])
+    input_data = tuple(np.random.rand(*inp.shape) for inp in model.get_parameters())
     check_engine_creation_and_inference(model, input_data)
 
 
