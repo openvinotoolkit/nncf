@@ -76,9 +76,15 @@ class ConvModel(OVReferenceModel):
 
 
 class QuantizedModel(OVReferenceModel):
+    @staticmethod
+    def _create_fq_node(parent_node, name):
+        # OV bug with FQ element types after fusing preprocessing
+        return opset.fake_quantize(parent_node,
+             np.float32(-1), np.float32(1), np.float32(-1), np.float32(1), 256, name=name)
+
     def _create_ov_model(self):
         input_1 = opset.parameter([1, 3, 14, 28], name="Input_1")
-        conv_1_fq_input = opset.fake_quantize(input_1, -1, 1, -1, 1, 256, name="Conv_1/fq_input_0")
+        conv_1_fq_input = self._create_fq_node(input_1, name="Conv_1/fq_input_0")
 
         mean = self._rng.random((1, 3, 1, 1)).astype(np.float32)
         scale = self._rng.random((1, 3, 1, 1)).astype(np.float32) + 1e-4
@@ -86,32 +92,32 @@ class QuantizedModel(OVReferenceModel):
         strides = [1, 1]
         pads = [0, 0]
         dilations = [1, 1]
-        conv_1_fq_weights = opset.fake_quantize(kernel, -1, 1, -1, 1, 256, name="Conv_1/fq_weights_0")
+        conv_1_fq_weights = self._create_fq_node(kernel, name="Conv_1/fq_weights_0")
         conv_1 = opset.convolution(conv_1_fq_input, conv_1_fq_weights, strides, pads, pads, dilations, name="Conv_1")
         relu_1 = opset.relu(conv_1, name="Relu_1")
 
         input_2 = opset.parameter([1, 3, 28, 14], name="Input_2")
         multiply = opset.multiply(input_2, 1 / scale, name="Mul")
         add_1 = opset.add(multiply, (-1) * mean, name="Add_1")
-        transpose_fq_input = opset.fake_quantize(add_1, -1, 1, -1, 1, 256, name="Transpose/fq_input_0")
+        transpose_fq_input = self._create_fq_node(add_1, name="Transpose/fq_input_0")
         transpose = opset.transpose(transpose_fq_input, [0, 1, 3, 2], name="Transpose")
 
-        cat_fq_input = opset.fake_quantize(relu_1, -1, 1, -1, 1, 256, name="Concat_1/fq_input_0")
+        cat_fq_input = self._create_fq_node(relu_1, name="Concat_1/fq_input_0")
         cat_1 = opset.concat([cat_fq_input, transpose], axis=1, name="Concat_1")
 
         kernel = self._rng.random((12, 6, 1, 1)).astype(np.float32)
-        conv_2_fq_weights = opset.fake_quantize(kernel, -1, 1, -1, 1, 256, name="Conv_2/fq_weights_0")
+        conv_2_fq_weights = self._create_fq_node(kernel, name="Conv_2/fq_weights_0")
         conv_2 = opset.convolution(cat_1, conv_2_fq_weights, strides, pads, pads, dilations, name="Conv_2")
         relu_2 = opset.relu(conv_2, name="Relu_2")
 
         kernel = self._rng.random((6, 12, 1, 1)).astype(np.float32)
-        conv_3_fq_input = opset.fake_quantize(relu_2, -1, 1, -1, 1, 256, name="Conv_3/fq_input_0")
-        conv_3_fq_weights = opset.fake_quantize(kernel, -1, 1, -1, 1, 256, name="Conv_3/fq_weights_0")
+        conv_3_fq_input = self._create_fq_node(relu_2, name="Conv_3/fq_input_0")
+        conv_3_fq_weights = self._create_fq_node(kernel, name="Conv_3/fq_weights_0")
         conv_3 = opset.convolution(conv_3_fq_input, conv_3_fq_weights, strides, pads, pads, dilations, name="Conv_3")
 
         mean = self._rng.random((1, 6, 1, 1)).astype(np.float32)
         add_2_const = opset.constant((-1) * mean)
-        add_2_fq_weights = opset.fake_quantize(add_2_const, -1, 1, -1, 1, 256, name="Add_2/fq_weights_0")
+        add_2_fq_weights = self._create_fq_node(add_2_const, name="Add_2/fq_weights_0")
         add_2 = opset.add(cat_1, add_2_fq_weights, name="Add_2")
 
         cat_2 = opset.concat([conv_3, add_2], axis=1, name="Concat_2")
