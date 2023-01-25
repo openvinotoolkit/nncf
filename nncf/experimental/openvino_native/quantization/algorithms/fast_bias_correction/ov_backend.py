@@ -36,7 +36,6 @@ from nncf.experimental.openvino_native.statistics.collectors import OVNNCFCollec
 from nncf.experimental.openvino_native.tensor import OVNNCFTensor
 from nncf.experimental.openvino_native.graph.node_utils import get_bias_value
 from nncf.experimental.openvino_native.graph.node_utils import is_node_with_bias
-from nncf.experimental.openvino_native.graph.node_utils import get_node_with_bias
 from nncf.experimental.openvino_native.graph.transformations.command_creation import create_bias_correction_command
 from nncf.quantization.algorithms.fast_bias_correction.backend import ALGO_BACKENDS
 from nncf.quantization.algorithms.fast_bias_correction.backend import FastBiasCorrectionAlgoBackend
@@ -83,13 +82,8 @@ class OVFastBiasCorrectionAlgoBackend(FastBiasCorrectionAlgoBackend):
 
     @staticmethod
     def get_input_output_names(node: NNCFNode, nncf_graph: NNCFGraph) -> Tuple[str, str]:
-        input_name = node.node_name
-        output_name = node.node_name
-
-        node = get_node_with_bias(node, nncf_graph)
-        if node is not None:
-            output_name = node.node_name
-        return input_name, output_name
+        node_with_bias = nncf_graph.get_next_nodes(node)[0]
+        return node.node_name, node_with_bias.node_name
 
     @staticmethod
     def create_blob(shape: Tuple[int], data: List[float]) -> np.ndarray:
