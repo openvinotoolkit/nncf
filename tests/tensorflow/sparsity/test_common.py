@@ -15,7 +15,6 @@ from typing import List
 from typing import Optional
 
 import pytest
-from addict import Dict
 
 from nncf.common.sparsity.schedulers import AdaptiveSparsityScheduler
 from nncf.common.sparsity.schedulers import ExponentialSparsityScheduler
@@ -37,7 +36,7 @@ from tests.tensorflow.helpers import get_mock_model
                          ))
 def test_can_choose_scheduler(algo, schedule_type, scheduler_class):
     config = get_empty_config()
-    config['compression'] = Dict({'algorithm': algo, 'params': {'schedule': schedule_type}})
+    config['compression'] = {'algorithm': algo, 'params': {'schedule': schedule_type}}
     _, compression_ctrl = create_compressed_model_and_algo_for_test(get_mock_model(), config)
     assert isinstance(compression_ctrl.scheduler, scheduler_class)
 
@@ -77,7 +76,7 @@ class TestSparseModules:
     def test_can_create_sparse_scheduler__with_defaults(self, algo):
         config = get_empty_config()
 
-        config['compression'] = Dict({'algorithm': algo, 'params': {'schedule': 'polynomial'}})
+        config['compression'] = {'algorithm': algo, 'params': {'schedule': 'polynomial'}}
         _, compression_ctrl = create_compressed_model_and_algo_for_test(get_mock_model(), config)
         scheduler = compression_ctrl.scheduler
         assert scheduler.initial_level == 0
@@ -92,8 +91,12 @@ class TestSparseModules:
     def test_scheduler_can_do_epoch_step(self, algo, schedule, get_params, ref_levels):
         model = get_basic_conv_test_model()
         config = get_empty_config()
-        config['compression'] = Dict(
-            {'algorithm': algo, 'sparsity_init': 0.2, "params": {**get_params(), "schedule": schedule}})
+        config['compression'] = {
+            'algorithm': algo,
+            'sparsity_init': 0.2,
+            "params": {**get_params(),
+                       "schedule": schedule}
+        }
 
         _, compression_ctrl = create_compressed_model_and_algo_for_test(model, config)
 
