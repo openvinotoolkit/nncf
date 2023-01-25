@@ -11,7 +11,7 @@
  limitations under the License.
 """
 
-from nncf.common.graph.operator_metatypes import INPUT_NOOP_METATYPES
+from nncf.common.graph.operator_metatypes import InputNoopMetatype
 from nncf.common.graph.patterns import GraphPattern
 
 from nncf.onnx.graph.metatypes.onnx_metatypes import ONNXSigmoidMetatype
@@ -54,7 +54,7 @@ def create_input_preprocessing_pattern() -> GraphPattern:
     pattern = GraphPattern()
 
     model_input_node_1 = pattern.add_node(**{GraphPattern.LABEL_ATTR: 'MODEL_INPUT',
-                                             GraphPattern.METATYPE_ATTR: INPUT_NOOP_METATYPES.values()})
+                                             GraphPattern.METATYPE_ATTR: InputNoopMetatype})
     add_node_1 = pattern.add_node(**{GraphPattern.LABEL_ATTR: 'ADD',
                                      GraphPattern.METATYPE_ATTR: ONNXAddLayerMetatype})
     mul_node_1 = pattern.add_node(**{GraphPattern.LABEL_ATTR: 'MUL',
@@ -64,7 +64,7 @@ def create_input_preprocessing_pattern() -> GraphPattern:
     pattern.add_edge(add_node_1, mul_node_1)
 
     model_input_node_2 = pattern.add_node(**{GraphPattern.LABEL_ATTR: 'MODEL_INPUT',
-                                             GraphPattern.METATYPE_ATTR: INPUT_NOOP_METATYPES.values()})
+                                             GraphPattern.METATYPE_ATTR: InputNoopMetatype})
     mul_node_2 = pattern.add_node(**{GraphPattern.LABEL_ATTR: 'MUL',
                                      GraphPattern.METATYPE_ATTR: ONNXMulLayerMetatype})
     add_node_2 = pattern.add_node(**{GraphPattern.LABEL_ATTR: 'ADD',
@@ -74,14 +74,14 @@ def create_input_preprocessing_pattern() -> GraphPattern:
     pattern.add_edge(mul_node_2, add_node_2)
 
     model_input_node_3 = pattern.add_node(**{GraphPattern.LABEL_ATTR: 'MODEL_INPUT',
-                                             GraphPattern.METATYPE_ATTR: INPUT_NOOP_METATYPES.values()})
+                                             GraphPattern.METATYPE_ATTR: InputNoopMetatype})
     add_node_3 = pattern.add_node(**{GraphPattern.LABEL_ATTR: 'ADD',
                                      GraphPattern.METATYPE_ATTR: ONNXAddLayerMetatype})
 
     pattern.add_edge(model_input_node_3, add_node_3)
 
     model_input_node_4 = pattern.add_node(**{GraphPattern.LABEL_ATTR: 'MODEL_INPUT',
-                                             GraphPattern.METATYPE_ATTR: INPUT_NOOP_METATYPES.values()})
+                                             GraphPattern.METATYPE_ATTR: InputNoopMetatype})
     mul_node_4 = pattern.add_node(**{GraphPattern.LABEL_ATTR: 'MUL',
                                      GraphPattern.METATYPE_ATTR: ONNXMulLayerMetatype})
 
