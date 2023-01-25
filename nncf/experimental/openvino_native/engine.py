@@ -48,7 +48,8 @@ class OVNativeEngine(Engine):
         :param input_data: Provided inputs to infer the model.
         :param input_names: Model input names.
         """
-        if isinstance(input_data, np.ndarray) and len(input_names) != 1 or len(input_names) != len(input_data):
+        actual_num_inputs = 1 if isinstance(input_data, np.ndarray) else len(input_data)
+        if actual_num_inputs != len(input_names):
             raise RuntimeError(f'Model expects {len(input_names)} inputs, but {len(input_data)} are provided.')
         if isinstance(input_data, dict):
             for name in input_names:
