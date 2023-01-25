@@ -13,25 +13,25 @@
 
 from abc import ABC
 from abc import abstractmethod
-from typing import List, Optional, Tuple, TypeVar
+from typing import List, Tuple, TypeVar, Optional
 
 import numpy as np
-
-from nncf.common.graph import NNCFGraph, NNCFNode
 from nncf.common.graph.transformations.commands import TargetPoint
-from nncf.common.graph.transformations.commands import TargetType
 from nncf.common.graph.transformations.commands import TransformationCommand
+from nncf.common.graph.transformations.commands import TargetType
 from nncf.common.tensor import NNCFTensor
-from nncf.common.tensor_statistics.collectors import ReductionShape
+from nncf.common.graph import NNCFNode
 from nncf.common.tensor_statistics.collectors import TensorStatisticCollectorBase
+from nncf.common.tensor_statistics.collectors import ReductionShape
 from nncf.common.utils.registry import Registry
+
 
 TModel = TypeVar('TModel')
 OutputType = TypeVar('OutputType')
 ALGO_BACKENDS = Registry('algo_backends')
 
 
-class FastBiasCorrectionAlgoBackend(ABC):
+class FBCAlgoBackend(ABC):
 
     @property
     @abstractmethod
@@ -59,7 +59,7 @@ class FastBiasCorrectionAlgoBackend(ABC):
     def target_point(target_type: TargetType, target_node_name: str, port_id: int) -> TargetPoint:
         """
         Returns backend-specific target point.
-
+    
         :param target_type: Type of the location that should be modified.
         :param target_node_name: Name of the located node.
         :param port_id: Port ID of the tensor for the statistics distribution.
@@ -68,11 +68,11 @@ class FastBiasCorrectionAlgoBackend(ABC):
 
     @staticmethod
     @abstractmethod
-    def create_bias_correction_command(bias_node: NNCFNode, bias_value: np.ndarray) -> TransformationCommand:
+    def create_bias_correction_command(node: NNCFNode, bias_value: np.ndarray):
         """
         Creates backend-specific command to update bias value.
 
-        :param bias_node: The node for which bias should be updated.
+        :param node: The node for which bias should be updated.
         :param bias_value: New value for the bias.
         :return: Backend-specific command to update bias value.
         """
@@ -104,12 +104,12 @@ class FastBiasCorrectionAlgoBackend(ABC):
 
     @staticmethod
     @abstractmethod
-    def get_input_output_names(biased_node: NNCFNode) -> Tuple[List[str], List[str]]:
+    def get_tensor_names(node: NNCFNode) -> Tuple[List[str], List[str]]:
         """
-        Returns tuple of the input & output names respectively.
+        Returns tuple of the lists with the input & output tensor names respectively.
 
-        :param biased_node: NNCFNode affected by bias.
-        :return: Tuple of the input & output names.
+        :param node: NNCFNode with the layer_attributes.
+        :return: Tuple of the lists with the names.
         """
 
     @staticmethod
@@ -125,36 +125,36 @@ class FastBiasCorrectionAlgoBackend(ABC):
 
     @staticmethod
     @abstractmethod
-    def get_bias_value(bias_node: NNCFNode, model: TModel) -> np.ndarray:
+    def get_bias_value(node: NNCFNode, model: TModel) -> np.ndarray:
         """
         Returns bias value in the NumPy format of provided node.
 
-        :param bias_node: Node of NNCFGraph with bias value.
+        :param node: Node of NNCFGraph with bias value.
         :param model: Backend-specific model for the initializer finding.
         :return: Bias value in the NumPy format.
         """
 
     @staticmethod
     @abstractmethod
-    def get_activation_port_ids_for_bias_node(model: TModel, biased_node: NNCFNode) -> Tuple[int, int]:
+    def get_activation_port_ids_for_bias_node(model: TModel, node: NNCFNode) -> Tuple[int, int]:
         """
         Returns Input Port ID and Output Port ID corresponding to activation input and output edges for
         the node.
         Supports only nodes that could have bias value.
 
         :param model: Backend-specific model.
-        :param biased_node: NNCFNode affected by bias.
+        :param node: Node of NNCFGraph with bias value.
         """
 
     @staticmethod
     @abstractmethod
-    def is_quantized_weights(biased_node: NNCFNode, nncf_graph: NNCFGraph) -> bool:
+    def is_quantized_weights(node: NNCFNode, model: TModel) -> bool:
         """
-        Checks whether the node is quantized or not, based on a backend-specific way.
+        Checks whether the node is quantized or not.
 
-        :param biased_node: NNCFNode affected by bias.
-        :param nncf_graph: NNCFGraph instance.
-        :return: boolean indicating whether the node has a quantized weights or not.
+        :param node: NNCFNode to check.
+        :param model: Backend-specific model.
+        :return: boolean indicating whether the node has a quantized weights or not
         """
 
     @staticmethod
@@ -170,21 +170,10 @@ class FastBiasCorrectionAlgoBackend(ABC):
 
     @staticmethod
     @abstractmethod
-    def is_node_with_bias(biased_node: NNCFNode) -> bool:
+    def is_node_with_bias(node: NNCFNode) -> bool:
         """
         Checks whether the node has a bias or not.
 
-        :param biased_node: NNCFNode affected by bias.
+        :param node: NNCFNode with the attributes.
         :return: Boolean indicating whether the node has a bias or not.
-        """
-
-    @staticmethod
-    @abstractmethod
-    def get_bias_node(biased_node: NNCFNode, nncf_graph: NNCFGraph) -> Optional[NNCFNode]:
-        """
-        Returns node that contains bias, if it exists.
-
-        :param biased_node: NNCFNode affected by bias.
-        :param nncf_graph: NNCFGraph instance.
-        :return: Optional NNCFNode with potential bias.
         """
