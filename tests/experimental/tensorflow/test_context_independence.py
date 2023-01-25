@@ -65,7 +65,7 @@ def test_context_independence():
     graph_dir = os.path.join('quantized', create_test_name(params))
     case = QuantizeTestCaseConfiguration(params, graph_dir)
     input_sample_sizes = ([1, 28, 28, 1], [1, 28, 28, 1])
-    config = get_basic_quantization_config(case.qconfig, input_sample_sizes)
+    config = get_basic_quantization_config(case, input_sample_sizes)
     config['compression']['algorithm'] = 'experimental_quantization'
     models = []
     for _ in range(2):

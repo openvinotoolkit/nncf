@@ -11,14 +11,13 @@
  limitations under the License.
 """
 
-from addict import Dict
 
 from nncf import NNCFConfig
 
 
 def get_basic_quantization_config(model_size=4):
     config = NNCFConfig()
-    config.update(Dict({
+    config.update({
         'model': 'basic_quant_conv',
         'input_info':
             {
@@ -28,7 +27,7 @@ def get_basic_quantization_config(model_size=4):
             {
                 'algorithm': 'quantization',
             }
-    }))
+    })
     return config
 
 

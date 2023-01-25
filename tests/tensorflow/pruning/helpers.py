@@ -10,7 +10,6 @@
  See the License for the specific language governing permissions and
  limitations under the License.
 """
-from addict import Dict
 
 from tensorflow.keras import layers
 import tensorflow as tf
@@ -20,7 +19,7 @@ from nncf import NNCFConfig
 
 def get_basic_pruning_config(model_size=8):
     config = NNCFConfig()
-    config.update(Dict({
+    config.update({
         "model": "basic",
         "input_info":
             {
@@ -34,7 +33,7 @@ def get_basic_pruning_config(model_size=8):
                     "prune_first_conv": True,
                 }
             }
-    }))
+    })
     return config
 
 

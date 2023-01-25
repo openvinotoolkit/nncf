@@ -1,3 +1,4 @@
+addict
 absl-py==0.10
 tensorflow_datasets==4.2.0
 tensorflow_hub

@@ -98,12 +98,10 @@ def find_version(*file_paths):
 
 
 INSTALL_REQUIRES = ["ninja>=1.10.0.post2, <1.11",
-                    "addict>=2.4.0",
                     "texttable>=1.6.3",
                     "scipy>=1.3.2, <=1.10.0",
                     "networkx>=2.6, <=2.8.2",  # see ticket 94048 or https://github.com/networkx/networkx/issues/5962
                     "numpy>=1.19.1, <1.24",
-                    "pillow>=9.0.0",
 
                     # The recent pyparsing major version update seems to break
                     # integration with networkx - the graphs parsed from current .dot
@@ -119,9 +117,7 @@ INSTALL_REQUIRES = ["ninja>=1.10.0.post2, <1.11",
                     "natsort>=7.1.0",
                     "pandas>=1.1.5,<=1.5.2",
                     "scikit-learn>=0.24.0",
-                    "wheel>=0.36.1",
                     "openvino-telemetry"]
-
 
 
 TF_EXTRAS = [
@@ -143,7 +139,8 @@ OPENVINO_EXTRAS = [
 
 
 EXTRAS_REQUIRE = {
-    "dev": ["matplotlib>=3.3.4, <3.6"],
+    "dev": ["matplotlib>=3.3.4, <3.6",
+            "pillow>=9.0.0"],
     "tests": ["pytest"],
     "docs": [],
 
