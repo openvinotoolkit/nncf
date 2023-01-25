@@ -105,9 +105,7 @@ def _build_node_id_vs_attrs_dict(nx_graph: nx.DiGraph, id_from_attr: bool = Fals
             node_identifier = int(node_attrs['id'])
         else:
             node_identifier = node_name
-        retval[node_identifier] = {k: str(v) for k, v in node_attrs.items()}
-        if 'label' in retval[node_identifier]:
-            retval[node_identifier]['label'] = retval[node_identifier]['label'].strip('"')
+        retval[node_identifier] = {k: str(v).strip('"') for k, v in node_attrs.items()}
     return retval
 
 
@@ -122,9 +120,7 @@ def _build_edge_vs_attrs_dict(nx_graph: nx.DiGraph, id_from_attr: bool = False) 
             edge_id = int(from_node['id']), int(to_node['id'])
         else:
             edge_id = from_node_name, to_node_name
-        retval[edge_id] = {k: str(v) for k, v in edge_attrs.items()}
-        if 'label' in retval[edge_id]:
-            retval[edge_id]['label'] = retval[edge_id]['label'].strip('"')
+        retval[edge_id] = {k: str(v).strip('"') for k, v in edge_attrs.items()}
     return retval
 
 

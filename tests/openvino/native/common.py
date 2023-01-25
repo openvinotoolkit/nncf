@@ -10,21 +10,15 @@
  See the License for the specific language governing permissions and
  limitations under the License.
 """
-import os
 import json
 from copy import deepcopy
-from pathlib import Path
 
-import networkx as nx
 import numpy as np
 import openvino.runtime as ov
 
 from nncf import Dataset
-from nncf.common.utils.dot_file_rw import read_dot_graph
-from nncf.common.utils.dot_file_rw import write_dot_graph
 from nncf.experimental.openvino_native.graph.nncf_graph_builder import GraphConverter
 from tests.shared.nx_graph import compare_nx_graph_with_reference
-from tests.shared.nx_graph import sort_dot
 
 
 def compare_nncf_graphs(model: ov.Model, path_ref_graph: str) -> None:
