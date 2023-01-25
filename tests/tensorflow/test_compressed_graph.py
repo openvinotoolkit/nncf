@@ -16,7 +16,6 @@ from typing import List
 from pkg_resources import parse_version
 
 import pytest
-from addict import Dict
 
 import tensorflow as tf
 import networkx as nx
@@ -32,16 +31,28 @@ from tests.tensorflow.sparsity.magnitude.test_helpers import get_basic_sparsity_
 from tests.common.graph.nx_graph import compare_nx_graph_with_reference
 
 
-def get_basic_quantization_config(qconfig, input_sample_sizes=None) -> NNCFConfig:
+class QuantizeTestCaseConfiguration:
+    def __init__(self, quant_params, graph_dir):
+        a_mode, a_per_channel = quant_params['activations']
+        w_mode, w_per_channel = quant_params['weights']
+        self.a_mode = a_mode
+        self.w_mode = w_mode
+        self.a_per_channel = (a_per_channel == 'per_channel')
+        self.w_per_channel = (w_per_channel == 'per_channel')
+        self.graph_dir = graph_dir
+
+
+def get_basic_quantization_config(quantization_case: QuantizeTestCaseConfiguration,
+                                  input_sample_sizes=None) -> NNCFConfig:
     config = get_empty_config(input_sample_sizes=input_sample_sizes)
     config['compression'] = {'algorithm': 'quantization',
                              'activations': {
-                                 'mode': qconfig.a_mode,
-                                 'per_channel': qconfig.a_per_channel
+                                 'mode': quantization_case.a_mode,
+                                 'per_channel': quantization_case.a_per_channel
                              },
                              'weights': {
-                                 'mode': qconfig.w_mode,
-                                 'per_channel': qconfig.w_per_channel
+                                 'mode': quantization_case.w_mode,
+                                 'per_channel': quantization_case.w_per_channel
                              }}
     return config
 
@@ -93,16 +104,6 @@ def check_graph_def(graph_def, graph_path: str):
     tf.test.assert_equal_graph_def(expected_graph, graph_def)
 
 
-class QuantizeTestCaseConfiguration:
-    def __init__(self, quant_params, graph_dir):
-        a_mode, a_per_channel = quant_params['activations']
-        w_mode, w_per_channel = quant_params['weights']
-        self.qconfig = Dict()
-        self.qconfig.a_mode = a_mode
-        self.qconfig.w_mode = w_mode
-        self.qconfig.a_per_channel = (a_per_channel == 'per_channel')
-        self.qconfig.w_per_channel = (w_per_channel == 'per_channel')
-        self.graph_dir = graph_dir
 
 
 QUANTIZERS = [
@@ -395,7 +396,7 @@ class TestModelsGraph:
         get_model_name(m) for m in get_test_models_desc('quantization')])
     def test_quantize_network(self, desc: ModelDesc, _quantization_case_config):
         model = desc.model_builder(input_shape=tuple(desc.input_sample_sizes[1:]))
-        config = get_basic_quantization_config(_quantization_case_config.qconfig,
+        config = get_basic_quantization_config(_quantization_case_config,
                                                input_sample_sizes=desc.input_sample_sizes)
         if desc.ignored_scopes is not None:
             if "activations" in config["compression"]:
@@ -452,7 +453,7 @@ QUANTIZE_OUTPUTS_MODELS = [
 @pytest.mark.parametrize('desc', QUANTIZE_OUTPUTS_MODELS, ids=[m.model_name for m in QUANTIZE_OUTPUTS_MODELS])
 def test_quantize_outputs(desc: ModelDesc, _quantization_case_config):
     model = desc.model_builder(input_shape=tuple(desc.input_sample_sizes[1:]))
-    config = get_basic_quantization_config(_quantization_case_config.qconfig,
+    config = get_basic_quantization_config(_quantization_case_config,
                                            input_sample_sizes=desc.input_sample_sizes)
     config['compression']['quantize_outputs'] = True
     compressed_model, _ = create_compressed_model_and_algo_for_test(model, config, force_no_init=True)
@@ -481,7 +482,7 @@ def test_compressed_graph_models_hw(desc: ModelDesc, hw_config_type):
     }
     _quantization_case_config = QuantizeTestCaseConfiguration(quant_params,
                                                               os.path.join('quantized', 'hw', hw_config_type.value))
-    config = get_basic_quantization_config(_quantization_case_config.qconfig,
+    config = get_basic_quantization_config(_quantization_case_config,
                                            input_sample_sizes=desc.input_sample_sizes)
     config["target_device"] = hw_config_type.value
 
