@@ -93,7 +93,9 @@ class QuantizedModel(OVReferenceModel):
         input_2 = opset.parameter([1, 3, 28, 14], name="Input_2")
         multiply = opset.multiply(input_2, 1 / scale, name="Mul")
         add_1 = opset.add(multiply, (-1) * mean, name="Add_1")
-        transpose_fq_input = opset.fake_quantize(add_1, -1, 1, -1, 1, 256, name="Transpose/fq_input_0")
+        # OV bug with element types after fusing preprocessing
+        transpose_fq_input = opset.fake_quantize(add_1,
+             np.float32(-1), np.float32(1), np.float32(-1), np.float32(1), 256, name="Transpose/fq_input_0")
         transpose = opset.transpose(transpose_fq_input, [0, 1, 3, 2], name="Transpose")
 
         cat_fq_input = opset.fake_quantize(relu_1, -1, 1, -1, 1, 256, name="Concat_1/fq_input_0")

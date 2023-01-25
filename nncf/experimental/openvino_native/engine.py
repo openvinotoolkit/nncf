@@ -11,7 +11,7 @@
  limitations under the License.
 """
 
-from typing import Dict
+from typing import Dict, List, Tuple, Union
 
 import numpy as np
 import openvino.runtime as ov
@@ -36,7 +36,8 @@ class OVNativeEngine(Engine):
         self.compiled_model = ie.compile_model(model, target_device.value)
         self.input_names = set(inp.get_friendly_name() for inp in model.get_parameters())
 
-    def infer(self, input_data: Dict[str, np.ndarray]) -> Dict[str, np.ndarray]:
+    def infer(self, input_data: Union[np.ndarray, List[np.ndarray], Tuple[np.ndarray], Dict[str, np.ndarray]]) \
+              -> Dict[str, np.ndarray]:
         """
         Runs model on the provided input via OpenVINO Runtime.
         Returns the dictionary of model outputs by node names.
@@ -44,11 +45,12 @@ class OVNativeEngine(Engine):
         :param input_data: inputs for the model.
         :return output_data: models outputs.
         """
-        model_inputs = {}
-        for name in self.input_names:
-            if name not in input_data:
-                raise RuntimeError(f'Missing a required input: {name} to run the model.')
-            model_inputs[name] = input_data[name]
+        if len(self.input_names) != len(input_data):
+            raise RuntimeError(f'Model expects {len(self.input_names)} inputs, but {len(input_data)} are provided.')
+        if isinstance(input_data, dict):
+            for name in self.input_names:
+                if name not in input_data:
+                    raise RuntimeError(f'Missing a required input: {name} to run the model.')
 
-        model_outputs = self.compiled_model(model_inputs)
+        model_outputs = self.compiled_model(input_data)
         return {out.get_node().get_friendly_name(): data for out, data in model_outputs.items()}
