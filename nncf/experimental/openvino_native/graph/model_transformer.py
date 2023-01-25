@@ -229,16 +229,23 @@ class OVModelTransformer(ModelTransformer):
         for transformation in transformations:
             node_name = transformation.target_point.target_node_name
 
-            biased_node = self.name_to_node_mapping[node_name]
+            node = self.name_to_node_mapping[node_name]
+            node_inputs = [port.get_node() for port in node.output(0).get_target_inputs()]
+            node_with_bias = node_inputs[0]
+            assert node_with_bias.get_type_name() == 'Add'
+
             bias_port_id = transformation.target_point.port_id
-            biased_port = biased_node.input(bias_port_id)
-            potential_bias = biased_node.input_value(bias_port_id).node
+            biased_port = node_with_bias.input(bias_port_id)
+            potential_bias = node_with_bias.input_value(bias_port_id).node
 
             if potential_bias.get_type_name() == 'Convert':
                 biased_port = potential_bias.input(0)
                 potential_bias = potential_bias.input_value(0).node
             assert potential_bias.get_type_name() == 'Constant'
-            new_bias = opset.constant(transformation.bias_value, dtype=potential_bias.get_element_type())
+
+            bias_shape = potential_bias.get_data().shape
+            new_bias_value = np.reshape(transformation.bias_value, bias_shape)
+            new_bias = opset.constant(new_bias_value, dtype=potential_bias.get_element_type())
             biased_port.replace_source_output(new_bias.output(0))
 
     def _apply_model_extraction_transformation(self, transformation: OVModelExtractionCommand) -> ov.Model:

@@ -179,7 +179,7 @@ def test_fq_insertion_weights(target_layers, ref_fq_names):
         assert fq_name in ref_fq_names
 
 
-CONV_LAYERS = [['Conv_Add']]
+CONV_LAYERS = [['Conv']]
 BIAS_VALUES = [[np.full((3,), 2)]]
 BIAS_REFERENCES = [[2.0]]
 
@@ -191,8 +191,11 @@ def test_bias_correction(layers, values, refs):
         model, layers, TargetType.LAYER, OVBiasCorrectionCommand, port_id=1, **{'bias_value': values})
     ops_dict = {op.get_friendly_name(): op for op in transformed_model.get_ops()}
 
-    for conv_layer, bias_reference in zip(layers, refs):
-        bias_node = ops_dict[conv_layer]
-        potential_bias = bias_node.input_value(1).node
+    for conv_name, bias_reference in zip(layers, refs):
+        conv_node = ops_dict[conv_name]
+        node_inputs = [port.get_node() for port in conv_node.output(0).get_target_inputs()]
+        node_with_bias = node_inputs[0]
+
+        potential_bias = node_with_bias.input_value(1).node
         assert potential_bias.get_type_name() == 'Constant'
         assert np.mean(potential_bias.get_data()) == bias_reference

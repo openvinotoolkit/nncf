@@ -11,7 +11,6 @@
  limitations under the License.
 """
 
-from collections import deque
 from typing import Dict, List, Tuple, Optional
 
 import numpy as np
@@ -29,15 +28,16 @@ from nncf.experimental.openvino_native.graph.metatypes.openvino_metatypes import
 from nncf.experimental.openvino_native.graph.metatypes.openvino_metatypes import OVConvolutionBackpropDataMetatype
 from nncf.experimental.openvino_native.graph.metatypes.openvino_metatypes import OVMatMulMetatype
 from nncf.experimental.openvino_native.graph.metatypes.openvino_metatypes import OVFakeQuantizeMetatype
-from nncf.experimental.openvino_native.graph.metatypes.openvino_metatypes import OVConvertMetatype
-from nncf.experimental.openvino_native.graph.metatypes.openvino_metatypes import OVConstantMetatype
-from nncf.experimental.openvino_native.graph.metatypes.openvino_metatypes import OVAddMetatype
 from nncf.experimental.openvino_native.graph.transformations.commands import OVBiasCorrectionCommand
 from nncf.experimental.openvino_native.graph.transformations.commands import OVModelExtractionCommand
 from nncf.experimental.openvino_native.graph.transformations.commands import OVTargetPoint
 from nncf.experimental.openvino_native.statistics.collectors import OVMeanStatisticCollector
 from nncf.experimental.openvino_native.statistics.collectors import OVNNCFCollectorTensorProcessor
 from nncf.experimental.openvino_native.tensor import OVNNCFTensor
+from nncf.experimental.openvino_native.graph.node_utils import get_bias_value
+from nncf.experimental.openvino_native.graph.node_utils import is_node_with_bias
+from nncf.experimental.openvino_native.graph.node_utils import get_node_with_bias
+from nncf.experimental.openvino_native.graph.transformations.command_creation import create_bias_correction_command
 from nncf.quantization.algorithms.fast_bias_correction.backend import ALGO_BACKENDS
 from nncf.quantization.algorithms.fast_bias_correction.backend import FastBiasCorrectionAlgoBackend
 
@@ -62,24 +62,23 @@ class OVFastBiasCorrectionAlgoBackend(FastBiasCorrectionAlgoBackend):
         return OVNNCFCollectorTensorProcessor()
 
     @staticmethod
-    def target_point(target_type: TargetType, target_node_name: str, port_id: int) -> OVTargetPoint:
+    def target_point(target_type: TargetType,
+                     target_node_name: str,
+                     port_id: int) -> OVTargetPoint:
         return OVTargetPoint(target_type, target_node_name, port_id)
 
     @staticmethod
-    def create_bias_correction_command(bias_node: NNCFNode, bias_value: np.ndarray) -> OVBiasCorrectionCommand:
-        bias_port_id = bias_node.layer_attributes.weight_port_id
-        target_point = OVTargetPoint(TargetType.LAYER, bias_node.node_name, bias_port_id)
-        return OVBiasCorrectionCommand(target_point, bias_value)
+    def create_bias_correction_command(node: NNCFNode, bias_value: np.ndarray) -> OVBiasCorrectionCommand:
+        return create_bias_correction_command(node, bias_value)
 
     @staticmethod
     def model_extraction_command(inputs: List[str], outputs: List[str]) -> OVModelExtractionCommand:
         return OVModelExtractionCommand(inputs, outputs)
 
     @staticmethod
-    def mean_statistic_collector(reduction_shape:
-                                 ReductionShape,
-                                 num_samples: int = None,
-                                 window_size: int = None) -> OVMeanStatisticCollector:
+    def mean_statistic_collector(reduction_shape: ReductionShape,
+                                 num_samples: Optional[int] = None,
+                                 window_size: Optional[int] = None) -> OVMeanStatisticCollector:
         return OVMeanStatisticCollector(reduction_shape, num_samples, window_size)
 
     @staticmethod
@@ -87,9 +86,9 @@ class OVFastBiasCorrectionAlgoBackend(FastBiasCorrectionAlgoBackend):
         input_name = node.node_name
         output_name = node.node_name
 
-        bias_node = OVFastBiasCorrectionAlgoBackend.get_bias_node(node, nncf_graph)
-        if bias_node is not None:
-            output_name = bias_node.node_name
+        node = get_node_with_bias(node, nncf_graph)
+        if node is not None:
+            output_name = node.node_name
         return input_name, output_name
 
     @staticmethod
@@ -101,34 +100,17 @@ class OVFastBiasCorrectionAlgoBackend(FastBiasCorrectionAlgoBackend):
         return blob
 
     @staticmethod
-    def get_bias_value(model: ov.Model, bias_node: NNCFNode) -> np.ndarray:
-        ops_dict = {op.get_friendly_name(): op for op in model.get_ops()}
-
-        bias_node = ops_dict[bias_node.node_name]
-        skip_metatypes = ['Convert']
-        needed_bias_type = 'Constant'
-
-        potential_bias_queue = deque([n.node for n in bias_node.input_values()])
-        while potential_bias_queue:
-            potential_bias = potential_bias_queue.popleft()
-            if potential_bias.get_type_name() in skip_metatypes:
-                # We goes thorough 0 port in assumption that bias graph without branching
-                potential_bias_queue.append(potential_bias.input_value(0).node)
-            elif potential_bias.get_type_name() == needed_bias_type:
-                bias_value = potential_bias.get_vector()
-                return bias_value.flatten(), bias_value.shape
-            continue
-
-        raise RuntimeError('Could not find the bias value of the node')
+    def get_bias_value(node: NNCFNode, nncf_graph: NNCFGraph, model: ov.Model) -> np.ndarray:
+        return get_bias_value(node, nncf_graph, model)
 
     @staticmethod
-    def get_activation_port_ids_for_bias_node(model: ov.Model, biased_node: NNCFNode) -> Tuple[int, int]:
+    def get_activation_port_ids_for_bias_node(node: NNCFNode) -> Tuple[int, int]:
         return 0, 0
 
     @staticmethod
-    def is_quantized_weights(biased_node: NNCFNode, nncf_graph: NNCFGraph) -> bool:
-        weight_port_id = biased_node.layer_attributes.weight_port_id
-        weight_node = nncf_graph.get_input_edges(biased_node)[weight_port_id].from_node
+    def is_quantized_weights(node: NNCFNode, nncf_graph: NNCFGraph) -> bool:
+        weight_port_id = node.layer_attributes.weight_port_id
+        weight_node = nncf_graph.get_input_edges(node)[weight_port_id].from_node
         return weight_node.metatype == OVFakeQuantizeMetatype
 
     @staticmethod
@@ -136,27 +118,5 @@ class OVFastBiasCorrectionAlgoBackend(FastBiasCorrectionAlgoBackend):
         return OVNNCFTensor(raw_data[output_name])
 
     @staticmethod
-    def is_node_with_bias(biased_node: NNCFNode, nncf_graph: NNCFGraph) -> bool:
-        bias_node = OVFastBiasCorrectionAlgoBackend.get_bias_node(biased_node, nncf_graph)
-        if bias_node is None:
-            return False
-
-        skip_metatypes = [OVConvertMetatype]
-
-        potential_bias_queue = deque(nncf_graph.get_previous_nodes(bias_node))
-        while potential_bias_queue:
-            potential_bias = potential_bias_queue.popleft()
-            if potential_bias.metatype in skip_metatypes:
-                # We goes thorough 0 port in assumption that bias graph without branching
-                potential_bias_queue.append(nncf_graph.get_previous_nodes(potential_bias)[0])
-            elif potential_bias.metatype == OVConstantMetatype:
-                return True
-            continue
-        return False
-
-    @staticmethod
-    def get_bias_node(biased_node: NNCFNode, nncf_graph: NNCFGraph) -> Optional[NNCFNode]:
-        add_bias_node = nncf_graph.get_next_nodes(biased_node)[0]
-        if add_bias_node.metatype == OVAddMetatype:
-            return add_bias_node
-        return None
+    def is_node_with_bias(node: NNCFNode, nncf_graph: NNCFGraph) -> bool:
+        return is_node_with_bias(node, nncf_graph)
