@@ -106,6 +106,8 @@ def _build_node_id_vs_attrs_dict(nx_graph: nx.DiGraph, id_from_attr: bool = Fals
         else:
             node_identifier = node_name
         retval[node_identifier] = {k: str(v) for k, v in node_attrs.items()}
+        if 'label' in retval[node_identifier]:
+            retval[node_identifier]['label'] = retval[node_identifier]['label'].strip('"')
     return retval
 
 
@@ -117,10 +119,12 @@ def _build_edge_vs_attrs_dict(nx_graph: nx.DiGraph, id_from_attr: bool = False) 
         from_node_name, to_node_name = edge_tuple
         if id_from_attr:
             from_node, to_node = nx_graph.nodes[from_node_name], nx_graph.nodes[to_node_name]
-            from_node_identifier, to_node_identifier = int(from_node['id']), int(to_node['id'])
+            edge_id = int(from_node['id']), int(to_node['id'])
         else:
-            from_node_identifier, to_node_identifier = from_node_name, to_node_name
-        retval[(from_node_identifier, to_node_identifier)] = {k: str(v) for k, v in edge_attrs.items()}
+            edge_id = from_node_name, to_node_name
+        retval[edge_id] = {k: str(v) for k, v in edge_attrs.items()}
+        if 'label' in retval[edge_id]:
+            retval[edge_id]['label'] = retval[edge_id]['label'].strip('"')
     return retval
 
 
@@ -147,7 +151,7 @@ def check_nx_graph(nx_graph: nx.DiGraph, expected_graph: nx.DiGraph,
             expected_attrs = dict(sorted(expected_attrs.items()))
             attrs = dict(sorted(edge_vs_attrs[expected_edge_tuple].items()))
             assert attrs == expected_attrs, f'Incorrect edge attributes for edge {expected_edge_tuple}.' \
-                                                 f' expected {expected_attrs}, but actual {attrs}.'
+                                            f' expected {expected_attrs}, but actual {attrs}.'
 
 
 def compare_nx_graph_with_reference(nx_graph: nx.DiGraph, path_to_dot: str,
