@@ -15,6 +15,8 @@ from nncf.torch.quantization.quantize_functions import symmetric_quantize
 from tests.torch.helpers import BasicConvTestModel
 from tests.torch.helpers import create_compressed_model_and_algo_for_test
 from tests.torch.helpers import register_bn_adaptation_init_args
+from tests.torch.pruning.helpers import BigPruningTestModel
+from tests.torch.pruning.helpers import get_pruning_baseline_config
 from tests.torch.quantization.quantization_helpers import get_quantization_config_without_range_init
 
 
@@ -23,6 +25,11 @@ def _gen_input_tensor(shape):
     res = torch.Tensor(range(n)) / torch.Tensor([n - 1]) * torch.Tensor([2]) - torch.Tensor([1.0])
     res[n // 2] = 0.0
     return res.reshape(shape)
+
+
+def _check_operators():
+    # TODO: check that exists only FakeQuantizers operators.
+    pass
 
 
 @pytest.mark.parametrize("mode", ("asymmetric", "symmetric"))
@@ -37,11 +44,33 @@ def test_prepare_for_inference_quantization(mode):
     input_tensor = _gen_input_tensor(model.INPUT_SIZE)
     x_nncf = compressed_model(input_tensor)
 
-    inference_model = prepare_for_inference(compressed_model, compression_ctrl)
-    x_torch = inference_model(input_tensor)
+    prepare_for_inference(compressed_model, compression_ctrl)
+    x_torch = compressed_model(input_tensor)
 
     # assert torch.equal(x_nncf, x_torch), f"{x_nncf=} != {x_torch}"
     assert torch.all(torch.isclose(x_nncf, x_torch)), f"{x_nncf.view(-1)} != {x_torch.view(-1)}"
+
+
+def test_prepare_for_inference_pruning():
+    model = BigPruningTestModel()
+    input_size = [1, 1, 8, 8]
+    config = get_pruning_baseline_config(input_size)
+    config["compression"]["algorithm"] = "filter_pruning"
+    config["compression"]["pruning_init"] = 0.5
+    compressed_model, compression_ctrl = create_compressed_model_and_algo_for_test(model, config)
+
+    input_tensor = _gen_input_tensor(input_size)
+    x_nncf = compressed_model(input_tensor)
+
+    prepare_for_inference(compressed_model, compression_ctrl)
+    x_torch = compressed_model(input_tensor)
+
+    assert torch.equal(x_nncf, x_torch), f"{x_nncf=} != {x_torch}"
+
+
+def test_prepare_for_inference_quantization_and_pruning():
+    # TODO:
+    pass
 
 
 @pytest.mark.parametrize(
@@ -89,6 +118,7 @@ def test_convert_to_fakequantizer(quantizer_mode, input_shape, scale_shape):
         ([0.0], [1.0], 255, 0, 256, 0),
         ([0.0], [0.5], 127, -128, 256, 1e-16),
         ([0.5], [0.6], 255, 0, 256, 1e-16),
+        ([0.0], [0.9], 255, 0, 256, 0.1),
         ([[[[0.0]]], [[[0.0]]]], [[[[1.0]]], [[[1.0]]]], 127, 0, 128, 1e-16),
         ([[[[0.0]]], [[[0.0]]]], [[[[1.0]]], [[[1.0]]]], 127, 0, 128, 0),
     ),
@@ -125,7 +155,6 @@ def test_convert_asymmetric_parameters(input_low, input_range, level_high, level
             quant_max,
         )
 
-    # assert torch.equal(x_torch, x_nncf), f"{x_torch.view(-1)} != {x_nncf.view(-1)}"
     assert torch.all(torch.isclose(x_torch, x_nncf)), f"{x_torch.view(-1)} != {x_nncf.view(-1)}"
 
 
@@ -138,6 +167,7 @@ def test_convert_asymmetric_parameters(input_low, input_range, level_high, level
         (127, -128, 256, [1.5], 1e-16),
         (255, 0, 256, [1.5], 0),
         (127, -128, 256, [1.5], 0),
+        (127, -128, 256, [1.5], 0.1),
     ),
 )
 def test_convert_symmetric_parameters(level_high, level_low, levels, scale, eps):
@@ -170,6 +200,3 @@ def test_convert_symmetric_parameters(level_high, level_low, levels, scale, eps)
 
     # assert torch.equal(x_torch, x_nncf), f"{x_torch.view(-1)} != {x_nncf.view(-1)}"
     assert torch.all(torch.isclose(x_torch, x_nncf)), f"{x_torch.view(-1)} != {x_nncf.view(-1)}"
-
-
-# TODO: tests with prunning

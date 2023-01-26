@@ -85,6 +85,7 @@ from nncf.torch.layers import NNCF_WRAPPED_USER_MODULES_DICT
 from nncf.torch.nncf_network import NNCFNetwork
 from nncf.torch.pruning.filter_pruning.layers import apply_filter_binary_mask
 from nncf.torch.pruning.tensor_processor import PTNNCFPruningTensorProcessor
+from nncf.torch.tensor import PTNNCFTensor
 
 PT_PRUNING_OPERATOR_METATYPES = PruningOperationsMetatypeRegistry("operator_metatypes")
 
@@ -96,9 +97,7 @@ class PrunType(Enum):
 
 class PTPruner:
     @classmethod
-    def input_prune(
-        cls, model: NNCFNetwork, node: NNCFNode, graph: NNCFGraph, prun_type: PrunType = PrunType.CUT_WEIGHTS
-    ) -> None:
+    def input_prune(cls, model: NNCFNetwork, node: NNCFNode, graph: NNCFGraph, prun_type: PrunType) -> None:
         """
         Prune node by input_masks (if masks is not none and operation support it).
 
@@ -120,9 +119,7 @@ class PTPruner:
         """
 
     @classmethod
-    def output_prune(
-        cls, model: NNCFNetwork, node: NNCFNode, graph: NNCFGraph, prun_type: PrunType = PrunType.CUT_WEIGHTS
-    ) -> None:
+    def output_prune(cls, model: NNCFNetwork, node: NNCFNode, graph: NNCFGraph, prun_type: PrunType) -> None:
         """
         Prune node by output_mask (if mask is not none and operation support it).
 
@@ -183,25 +180,25 @@ class PTConvolutionPruningOp(ConvolutionPruningOp, PTPruner):
     subtypes = [PTConv1dMetatype, PTConv2dMetatype, PTConv3dMetatype]
 
     @classmethod
-    def input_prune(
-        cls, model: NNCFNetwork, node: NNCFNode, graph: NNCFGraph, prun_type: PrunType = PrunType.CUT_WEIGHTS
-    ) -> None:
-        input_mask = node.data["input_masks"][0]
+    def input_prune(cls, model: NNCFNetwork, node: NNCFNode, graph: NNCFGraph, prun_type: PrunType) -> None:
+        input_mask = get_input_masks(node, graph)[0]
         if input_mask is None:
             return
-        bool_mask = torch.tensor(input_mask, dtype=torch.bool)
-        new_num_channels = int(torch.sum(input_mask))
+
+        if isinstance(input_mask, PTNNCFTensor):
+            input_mask = input_mask.tensor
 
         is_depthwise = is_prunable_depthwise_conv(node)
         node_module = model.get_containing_module(node.node_name)
-        old_num_channels = int(node_module.weight.size(1))
 
         if prun_type == PrunType.CUT_WEIGHTS:
+            bool_mask = torch.tensor(input_mask, dtype=torch.bool)
+            new_num_channels = int(torch.sum(input_mask))
+            old_num_channels = int(node_module.weight.size(0))
             if is_depthwise:
                 # In depthwise case prune output channels by input mask, here only fix for new number of input channels
                 node_module.groups = new_num_channels
                 node_module.in_channels = new_num_channels
-                old_num_channels = int(node_module.weight.size(0))
             else:
                 out_channels = node_module.weight.size(0)
                 broadcasted_mask = bool_mask.repeat(out_channels).view(out_channels, bool_mask.size(0))
@@ -216,19 +213,21 @@ class PTConvolutionPruningOp(ConvolutionPruningOp, PTPruner):
                 )
         else:
             if not is_depthwise:
-                node_module.weight = torch.nn.Parameter(apply_filter_binary_mask(bool_mask, node_module.weight, dim=1))
+                node_module.weight = torch.nn.Parameter(apply_filter_binary_mask(input_mask, node_module.weight, dim=1))
 
     @classmethod
-    def output_prune(cls, model: NNCFNetwork, node: NNCFNode, prun_type: PrunType = PrunType.CUT_WEIGHTS) -> None:
+    def output_prune(cls, model: NNCFNetwork, node: NNCFNode, graph: NNCFGraph, prun_type: PrunType) -> None:
         mask = node.data["output_mask"]
         if mask is None:
             return
 
-        bool_mask = torch.tensor(mask, dtype=torch.bool)
+        if isinstance(mask, PTNNCFTensor):
+            mask = mask.tensor
 
         node_module = model.get_containing_module(node.node_name)
         if prun_type == PrunType.CUT_WEIGHTS:
             old_num_clannels = int(node_module.weight.size(0))
+            bool_mask = torch.tensor(mask, dtype=torch.bool)
 
             node_module.out_channels = int(torch.sum(mask))
             node_module.weight = torch.nn.Parameter(node_module.weight[bool_mask])
@@ -241,9 +240,9 @@ class PTConvolutionPruningOp(ConvolutionPruningOp, PTPruner):
                 f"Old output filters number: {old_num_clannels}, new filters number: {node_module.out_channels}."
             )
         else:
-            node_module.weight = torch.nn.Parameter(apply_filter_binary_mask(bool_mask, node_module.weight))
+            node_module.weight = torch.nn.Parameter(apply_filter_binary_mask(mask, node_module.weight))
             if node_module.bias is not None:
-                node_module.bias = torch.nn.Parameter(apply_filter_binary_mask(bool_mask, node_module.bias))
+                node_module.bias = torch.nn.Parameter(apply_filter_binary_mask(mask, node_module.bias))
 
     @classmethod
     def input_reorder(cls, model: NNCFNetwork, node: NNCFNode, graph: NNCFGraph):
@@ -282,16 +281,17 @@ class PTTransposeConvolutionPruningOp(TransposeConvolutionPruningOp, PTPruner):
     subtypes = [PTConvTranspose1dMetatype, PTConvTranspose2dMetatype, PTConvTranspose3dMetatype]
 
     @classmethod
-    def input_prune(
-        cls, model: NNCFNetwork, node: NNCFNode, graph: NNCFGraph, prun_type: PrunType = PrunType.CUT_WEIGHTS
-    ) -> None:
-        input_mask = node.data["input_masks"][0]
+    def input_prune(cls, model: NNCFNetwork, node: NNCFNode, graph: NNCFGraph, prun_type: PrunType) -> None:
+        input_mask = get_input_masks(node, graph)[0]
         if input_mask is None:
             return
-        bool_mask = torch.tensor(input_mask, dtype=torch.bool)
+
+        if isinstance(input_mask, PTNNCFTensor):
+            input_mask = input_mask.tensor
 
         node_module = model.get_containing_module(node.node_name)
         if prun_type == PrunType.CUT_WEIGHTS:
+            bool_mask = torch.tensor(input_mask, dtype=torch.bool)
             old_num_channels = int(node_module.weight.size(0))
 
             node_module.in_channels = int(torch.sum(bool_mask))
@@ -302,21 +302,23 @@ class PTTransposeConvolutionPruningOp(TransposeConvolutionPruningOp, PTPruner):
                 f"Old input filters number: {old_num_channels}, new filters number: {node_module.in_channels}."
             )
         else:
-            node_module.weight = torch.nn.Parameter(apply_filter_binary_mask(bool_mask, node_module.weight))
+            node_module.weight = torch.nn.Parameter(apply_filter_binary_mask(input_mask, node_module.weight))
 
     @classmethod
-    def output_prune(
-        cls, model: NNCFNetwork, node: NNCFNode, graph: NNCFGraph, prun_type: PrunType = PrunType.CUT_WEIGHTS
-    ) -> None:
+    def output_prune(cls, model: NNCFNetwork, node: NNCFNode, graph: NNCFGraph, prun_type: PrunType) -> None:
         output_mask = node.data["output_mask"]
         if output_mask is None:
             return
 
-        bool_mask = torch.tensor(output_mask, dtype=torch.bool)
+        if isinstance(output_mask, PTNNCFTensor):
+            output_mask = output_mask.tensor
+
+        node_module = model.get_containing_module(node.node_name)
+
         if prun_type == PrunType.CUT_WEIGHTS:
+            bool_mask = torch.tensor(output_mask, dtype=torch.bool)
             new_num_channels = int(torch.sum(bool_mask))
 
-            node_module = model.get_containing_module(node.node_name)
             old_num_channels = int(node_module.weight.size(1))
 
             in_channels = node_module.weight.size(0)
@@ -335,14 +337,43 @@ class PTTransposeConvolutionPruningOp(TransposeConvolutionPruningOp, PTPruner):
                 f"Old output filters number: {old_num_channels}, new filters number: {node_module.out_channels}."
             )
         else:
-            node_module.weight = torch.nn.Parameter(apply_filter_binary_mask(bool_mask, node_module.weight, 1))
+            node_module.weight = torch.nn.Parameter(apply_filter_binary_mask(output_mask, node_module.weight, dim=1))
             if node_module.bias is not None:
-                node_module.bias = torch.nn.Parameter(apply_filter_binary_mask(bool_mask, node_module.bias))
+                node_module.bias = torch.nn.Parameter(apply_filter_binary_mask(output_mask, node_module.bias))
 
 
 @PT_PRUNING_OPERATOR_METATYPES.register("linear")
 class PTLinearPruningOp(LinearPruningOp, PTPruner):
     subtypes = [PTLinearMetatype, PTMatMulMetatype]
+
+    @classmethod
+    def input_prune(cls, model: NNCFNetwork, node: NNCFNode, graph: NNCFGraph, prun_type: PrunType) -> None:
+        input_mask = get_input_masks(node, graph)[0]
+        if input_mask is None:
+            return
+
+        if isinstance(input_mask, PTNNCFTensor):
+            input_mask = input_mask.tensor
+
+        node_module = model.get_containing_module(node.node_name)
+
+        if prun_type == PrunType.CUT_WEIGHTS:
+            bool_mask = torch.tensor(input_mask, dtype=torch.bool)
+            in_features = node_module.in_features
+            out_features = node_module.out_features
+            new_in_features = sum(bool_mask)
+            node_module.in_features = new_in_features
+            broadcasted_mask = bool_mask.repeat(out_features).view(out_features, bool_mask.size(0))
+            new_weight_shape = list(node_module.weight.shape)
+            new_weight_shape[1] = new_in_features
+
+            node_module.weight = torch.nn.Parameter(node_module.weight[broadcasted_mask].view(new_weight_shape))
+            nncf_logger.debug(
+                f'Pruned Linear {node.data["key"]} by pruning mask. '
+                f"Old input filters number: {in_features}, new filters number: {node_module.in_features}."
+            )
+        else:
+            node_module.weight = torch.nn.Parameter(apply_filter_binary_mask(input_mask, node_module.weight, dim=1))
 
     @classmethod
     def input_reorder(cls, model: NNCFNetwork, node: NNCFNode, graph: NNCFGraph):
@@ -356,6 +387,34 @@ class PTLinearPruningOp(LinearPruningOp, PTPruner):
         nncf_logger.debug(
             f"Reordered input channels (first 10 reorder indexes {reorder_indexes[:10]}) of Linear: {node.data['key']}"
         )
+
+    @classmethod
+    def output_prune(cls, model: NNCFNetwork, node: NNCFNode, graph: NNCFGraph, prun_type: PrunType) -> None:
+        output_mask = node.data["output_mask"]
+        if output_mask is None:
+            return
+
+        if isinstance(output_mask, PTNNCFTensor):
+            output_mask = output_mask.tensor
+
+        node_module = model.get_containing_module(node.node_name)
+
+        if prun_type == PrunType.CUT_WEIGHTS:
+            bool_mask = torch.tensor(output_mask, dtype=torch.bool)
+            out_features = node_module.out_features
+            new_out_features = sum(bool_mask)
+            node_module.out_features = new_out_features
+            node_module.weight = torch.nn.Parameter(node_module.weight[bool_mask])
+            nncf_logger.debug(
+                f'Pruned Linear {node.data["key"]} by pruning mask. '
+                f"Old output filters number: {out_features}, new filters number: {node_module.out_features}."
+            )
+            if node_module.bias is not None:
+                node_module.bias = torch.nn.Parameter(node_module.bias[bool_mask])
+        else:
+            node_module.weight = torch.nn.Parameter(apply_filter_binary_mask(output_mask, node_module.weight))
+            if node_module.bias is not None:
+                node_module.bias = torch.nn.Parameter(apply_filter_binary_mask(output_mask, node_module.bias))
 
     @classmethod
     def output_reorder(cls, model: NNCFNetwork, node: NNCFNode, graph: NNCFGraph):
@@ -377,17 +436,19 @@ class PTBatchNormPruningOp(BatchNormPruningOp, PTPruner):
     subtypes = [PTBatchNormMetatype]
 
     @classmethod
-    def input_prune(
-        cls, model: NNCFNetwork, node: NNCFNode, graph: NNCFGraph, prun_type: PrunType = PrunType.CUT_WEIGHTS
-    ) -> None:
-        input_mask = node.data["input_masks"][0]
+    def input_prune(cls, model: NNCFNetwork, node: NNCFNode, graph: NNCFGraph, prun_type: PrunType) -> None:
+        input_mask = get_input_masks(node, graph)[0]
         if input_mask is None:
             return
 
+        if isinstance(input_mask, PTNNCFTensor):
+            input_mask = input_mask.tensor
+
         node_module = model.get_containing_module(node.node_name)
 
-        bool_mask = torch.tensor(input_mask, dtype=torch.bool)
         if prun_type == PrunType.CUT_WEIGHTS:
+            bool_mask = torch.tensor(input_mask, dtype=torch.bool)
+
             old_num_clannels = int(node_module.weight.size(0))
             new_num_channels = int(torch.sum(input_mask))
 
@@ -402,13 +463,13 @@ class PTBatchNormPruningOp(BatchNormPruningOp, PTPruner):
                 f"Old num features: {old_num_clannels}, new num features: {new_num_channels}."
             )
         else:
-            node_module.weight = torch.nn.Parameter(apply_filter_binary_mask(bool_mask, node_module.weight))
-            node_module.bias = torch.nn.Parameter(apply_filter_binary_mask(bool_mask, node_module.bias))
+            node_module.weight = torch.nn.Parameter(apply_filter_binary_mask(input_mask, node_module.weight))
+            node_module.bias = torch.nn.Parameter(apply_filter_binary_mask(input_mask, node_module.bias))
             node_module.running_mean = torch.nn.Parameter(
-                apply_filter_binary_mask(bool_mask, node_module.running_mean), requires_grad=False
+                apply_filter_binary_mask(input_mask, node_module.running_mean), requires_grad=False
             )
             node_module.running_var = torch.nn.Parameter(
-                apply_filter_binary_mask(bool_mask, node_module.running_var), requires_grad=False
+                apply_filter_binary_mask(input_mask, node_module.running_var), requires_grad=False
             )
 
     @classmethod
@@ -437,17 +498,18 @@ class PTGroupNormPruningOp(GroupNormPruningOp, PTPruner):
     subtypes = [PTGroupNormMetatype]
 
     @classmethod
-    def input_prune(
-        cls, model: NNCFNetwork, node: NNCFNode, graph: NNCFGraph, prun_type: PrunType = PrunType.CUT_WEIGHTS
-    ) -> None:
-        input_mask = node.data["input_masks"][0]
+    def input_prune(cls, model: NNCFNetwork, node: NNCFNode, graph: NNCFGraph, prun_type: PrunType) -> None:
+        input_mask = get_input_masks(node, graph)[0]
         if input_mask is None:
             return
 
+        if isinstance(input_mask, PTNNCFTensor):
+            input_mask = input_mask.tensor
+
         node_module = model.get_containing_module(node.node_name)
-        bool_mask = torch.tensor(input_mask, dtype=torch.bool)
 
         if prun_type == PrunType.CUT_WEIGHTS:
+            bool_mask = torch.tensor(input_mask, dtype=torch.bool)
             old_num_clannels = int(node_module.weight.size(0))
             new_num_channels = int(torch.sum(input_mask))
 
@@ -458,12 +520,12 @@ class PTGroupNormPruningOp(GroupNormPruningOp, PTPruner):
             node_module.bias = torch.nn.Parameter(node_module.bias[bool_mask])
 
             nncf_logger.debug(
-                f'Pruned GroupNorm {node.data["key"]} by input mask. '
+                f"Pruned GroupNorm {node.data['key']} by input mask. "
                 f"Old num features: {old_num_clannels}, new num features: {new_num_channels}."
             )
         else:
-            node_module.weight = torch.nn.Parameter(apply_filter_binary_mask(bool_mask, node_module.weight))
-            node_module.bias = torch.nn.Parameter(apply_filter_binary_mask(bool_mask, node_module.bias))
+            node_module.weight = torch.nn.Parameter(apply_filter_binary_mask(input_mask, node_module.weight))
+            node_module.bias = torch.nn.Parameter(apply_filter_binary_mask(input_mask, node_module.bias))
 
 
 @PT_PRUNING_OPERATOR_METATYPES.register("layer_norm")
@@ -488,27 +550,58 @@ class PTLayerNormPruningOp(LayerNormPruningOp, PTPruner):
             )
         )
 
+    @classmethod
+    def input_prune(cls, model: NNCFNetwork, node: NNCFNode, graph: NNCFGraph, prun_type: PrunType) -> None:
+        input_mask = get_input_masks(node, graph)[0]
+        if input_mask is None:
+            return
+
+        if isinstance(input_mask, PTNNCFTensor):
+            input_mask = input_mask.tensor
+
+        node_module = model.get_containing_module(node.node_name)
+
+        if prun_type == PrunType.CUT_WEIGHTS:
+            bool_mask = torch.tensor(input_mask, dtype=torch.bool)
+            old_num_clannels = int(node_module.weight.size(0))
+            new_num_channels = int(torch.sum(input_mask))
+
+            node_module.normalized_shape = (new_num_channels,)
+
+            node_module.weight = torch.nn.Parameter(node_module.weight[bool_mask])
+            node_module.bias = torch.nn.Parameter(node_module.bias[bool_mask])
+
+            nncf_logger.debug(
+                f"Pruned LayerNorm {node.data['key']} by input mask. "
+                f"Old num features: {old_num_clannels}, new num features: {new_num_channels}."
+            )
+        else:
+            node_module.weight = torch.nn.Parameter(apply_filter_binary_mask(input_mask, node_module.weight))
+            node_module.bias = torch.nn.Parameter(apply_filter_binary_mask(input_mask, node_module.bias))
+
 
 @PT_PRUNING_OPERATOR_METATYPES.register("elementwise")
 class PTElementwisePruningOp(ElementwisePruningOp, PTPruner):
     subtypes = [PTAddMetatype, PTSubMetatype, PTDivMetatype, PTMulMetatype]
 
     @classmethod
-    def input_prune(
-        cls, model: NNCFNetwork, node: NNCFNode, graph: NNCFGraph, prun_type: PrunType = PrunType.CUT_WEIGHTS
-    ) -> None:
-        input_mask = node.data["input_masks"][0]
+    def input_prune(cls, model: NNCFNetwork, node: NNCFNode, graph: NNCFGraph, prun_type: PrunType) -> None:
+        input_mask = get_input_masks(node, graph)[0]
         if input_mask is None:
             return
 
-        bool_mask = torch.tensor(input_mask, dtype=torch.bool)
+        if isinstance(input_mask, PTNNCFTensor):
+            input_mask = input_mask.tensor
+
         node_module = model.get_containing_module(node.node_name)
 
         if isinstance(node_module, tuple(NNCF_WRAPPED_USER_MODULES_DICT)):
+
             assert (
                 node_module.target_weight_dim_for_compression == 0
             ), "Implemented only for target_weight_dim_for_compression == 0"
             if prun_type == PrunType.CUT_WEIGHTS:
+                bool_mask = torch.tensor(input_mask, dtype=torch.bool)
                 old_num_clannels = int(node_module.weight.size(0))
                 new_num_channels = int(torch.sum(input_mask))
                 node_module.weight = torch.nn.Parameter(node_module.weight[bool_mask])
@@ -519,7 +612,7 @@ class PTElementwisePruningOp(ElementwisePruningOp, PTPruner):
                     f"Old num features: {old_num_clannels}, new num features: {new_num_channels}."
                 )
             else:
-                node_module.weight = torch.nn.Parameter(apply_filter_binary_mask(bool_mask, node_module.weight))
+                node_module.weight = torch.nn.Parameter(apply_filter_binary_mask(input_mask, node_module.weight))
 
 
 @PT_PRUNING_OPERATOR_METATYPES.register("stop_propagation_ops")
@@ -548,7 +641,7 @@ class ModelPruner(MaskPropagationAlgorithm):
         model: NNCFNetwork,
         graph: NNCFGraph,
         pruning_operator_metatypes: PruningOperationsMetatypeRegistry,
-        prun_type: PrunType = PrunType.CUT_WEIGHTS,
+        prun_type: PrunType,
     ):
         super().__init__(graph, pruning_operator_metatypes, PTNNCFPruningTensorProcessor)
         self._model = model
@@ -568,6 +661,7 @@ class ModelPruner(MaskPropagationAlgorithm):
                 if node_module not in pruned_node_modules:
                     node_cls.input_prune(self._model, node, self._graph, self._prun_type)
                     node_cls.output_prune(self._model, node, self._graph, self._prun_type)
+                    # TODO: remove operators here?
                     pruned_node_modules.append(node_module)
             nncf_logger.info("Finished applying pruning masks.")
 
