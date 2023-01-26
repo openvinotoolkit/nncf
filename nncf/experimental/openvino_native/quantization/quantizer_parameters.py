@@ -207,8 +207,8 @@ def calculate_weight_quantizer_parameters(weight_tensor: np.ndarray, quantizer_c
             axes.append(i)
     axes = tuple(axes)
 
-    min_values = np.amin(weight_tensor, axis=axes, keepdims=True)
-    max_values = np.amax(weight_tensor, axis=axes, keepdims=True)
+    min_values = np.amin(np.abs(weight_tensor), axis=axes, keepdims=True)
+    max_values = np.amax(np.abs(weight_tensor), axis=axes, keepdims=True)
 
     levels = compute_levels(quantizer_config, is_weights=True)
     if quantizer_config.mode == QuantizationMode.SYMMETRIC:
