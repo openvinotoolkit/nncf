@@ -45,17 +45,17 @@ def is_node_with_bias(node: NNCFNode, nncf_graph: NNCFGraph) -> bool:
     return bias_constant is not None
 
 
-def get_bias_value(node: NNCFNode, nncf_graph: NNCFGraph, model: ov.Model) -> np.ndarray:
+def get_bias_value(node_with_bias: NNCFNode, nncf_graph: NNCFGraph, model: ov.Model) -> np.ndarray:
     """
     Returns the bias tensor for the biased node.
 
-    :param node: The node that corresponds to the operation with bias.
+    :param node_with_bias: The node that corresponds to the operation with bias.
     :param model: The model that contains this operation.
     :return: The bias value that is applied to the output tensor of the node's operation.
     """
     ops_dict = {op.get_friendly_name(): op for op in model.get_ops()}
 
-    add_node = nncf_graph.get_next_nodes(node)[0]
+    add_node = nncf_graph.get_next_nodes(node_with_bias)[0]
     bias_constant = get_node_with_bias_value(add_node , nncf_graph)
     ov_bias_constant = ops_dict[bias_constant.node_name]
     return ov_bias_constant.get_vector()

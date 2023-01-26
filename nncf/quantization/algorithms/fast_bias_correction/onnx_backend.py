@@ -66,7 +66,9 @@ class ONNXFastBiasCorrectionAlgoBackend(FastBiasCorrectionAlgoBackend):
         return ONNXTargetPoint(target_type, target_node_name, port_id)
 
     @staticmethod
-    def create_bias_correction_command(node: NNCFNode, bias_value: np.ndarray, nncf_graph: NNCFGraph) -> ONNXBiasCorrectionCommand:
+    def create_bias_correction_command(node: NNCFNode,
+                                       bias_value: np.ndarray,
+                                       nncf_graph: NNCFGraph) -> ONNXBiasCorrectionCommand:
         return create_bias_correction_command(node, bias_value)
 
     @staticmethod
