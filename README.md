@@ -25,9 +25,6 @@ architecture is unified to make it easy to add different compression algorithms 
 learning frameworks.
 
 ## Key Features
-
-- Support of various compression algorithms, applied during a model fine-tuning process to achieve a better performance-accuracy trade-off:
-
 ### Post-Training Compression Algorithms
 
 | Compression algorithm                                                       |PyTorch|TensorFlow|   ONNX   |       OpenVINO     |
@@ -337,9 +334,13 @@ For installation of NNCF along with TensorFlow, run:
 ```
 pip install .[tf]
 ```
-(Experimental) For installation of NNCF for ONNXRuntime-OpenVINO, run:
-```bash
+For installation of NNCF for ONNX, run:
+```
 pip install .[onnx]
+```
+(Preview) For installation of NNCF for OpenVINO, run:
+```
+pip install .[openvino]
 ```
 
 
@@ -359,9 +360,13 @@ For installation of NNCF along with TensorFlow, run:
 ```
 pip install nncf[tf]
 ```
-(Experimental) For installation of NNCF for ONNXRuntime-OpenVINO, run:
-```bash
+For installation of NNCF for ONNX, run:
+```
 pip install nncf[onnx]
+```
+(Preview) For installation of NNCF for OpenVINO, run:
+```
+pip install nncf[openvino]
 ```
 
 NNCF is also available via [conda](https://anaconda.org/conda-forge/nncf):
