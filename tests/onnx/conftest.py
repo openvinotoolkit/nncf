@@ -37,11 +37,6 @@ def pytest_addoption(parser):
         help="[e2e-test-onnx-model-zoo] Directory path to archieve outputs"
     )
     parser.addoption(
-        "--ckpt-dir", type=str, default=None,
-        help="[e2e-test-onnx-model-zoo] (Optional) Directory path to save quantized models. "
-             "If it is not provided, tempfile.TemporaryDirectory will be used."
-    )
-    parser.addoption(
         "--anno-dir", type=str, default=None,
         help="[e2e-test-onnx-model-zoo] (Optional) Directory path for dataset annotations "
              "If it is not provided, tempfile.TemporaryDirectory will be used."

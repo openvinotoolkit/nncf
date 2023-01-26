@@ -147,17 +147,6 @@ def dataset_definitions(request):
 
 
 @pytest.fixture(scope="module")
-def ckpt_dir(request):
-    option = request.config.getoption("--ckpt-dir")
-    if option is not None:
-        yield Path(option)
-    else:
-        with TemporaryDirectory() as tmp_dir:
-            print(f"Use ckpt_dir: {tmp_dir}")
-            yield Path(tmp_dir)
-
-
-@pytest.fixture(scope="module")
 def ptq_size(request):
     return request.config.getoption("--ptq-size")
 
@@ -376,7 +365,7 @@ class TestBenchmark:
     @pytest.mark.e2e_ptq
     @pytest.mark.dependency()
     @pytest.mark.parametrize("task_type, model_name", E2E_MODELS)
-    def test_onnx_rt_quantized_model_accuracy(self, request, task_type, model_name, model_names_to_test, ckpt_dir,
+    def test_onnx_rt_quantized_model_accuracy(self, request, task_type, model_name, model_names_to_test,
                                               data_dir, anno_dir, dataset_definitions, output_dir, eval_size,
                                               is_ov_ep, is_cpu_ep):
         if not (is_ov_ep or is_cpu_ep):
@@ -385,7 +374,8 @@ class TestBenchmark:
         depends(request,
                 ["TestPTQ::test_ptq_model" + request.node.name.lstrip("test_onnx_rt_quantized_model_accuracy")])
 
-        command = self.get_onnx_rt_ac_command(task_type, model_name, ckpt_dir, data_dir, anno_dir, dataset_definitions,
+        command = self.get_onnx_rt_ac_command(task_type, model_name, output_dir, data_dir, anno_dir,
+                                              dataset_definitions,
                                               output_dir, eval_size, program="accuracy_checker.py", is_quantized=True,
                                               is_ov_ep=is_ov_ep, is_cpu_ep=is_cpu_ep)
         run_command(command)
@@ -393,14 +383,14 @@ class TestBenchmark:
     @pytest.mark.e2e_ptq
     @pytest.mark.dependency()
     @pytest.mark.parametrize("task_type, model_name", E2E_MODELS)
-    def test_ov_quantized_model_accuracy(self, request, task_type, model_name, model_names_to_test, ckpt_dir, data_dir,
+    def test_ov_quantized_model_accuracy(self, request, task_type, model_name, model_names_to_test, data_dir,
                                          anno_dir, dataset_definitions, output_dir, eval_size, is_ov):
         if not is_ov:
             pytest.skip('Skip accuracy validation on OpenVINO.')
         # Run PTQ first
         depends(request, ["TestPTQ::test_ptq_model" + request.node.name.lstrip("test_ov_quantized_model_accuracy")])
 
-        command = self.get_ov_ac_command(task_type, model_name, ckpt_dir, data_dir, anno_dir, dataset_definitions,
+        command = self.get_ov_ac_command(task_type, model_name, output_dir, data_dir, anno_dir, dataset_definitions,
                                          output_dir, eval_size, program="accuracy_checker.py", is_quantized=True)
         run_command(command)
 
