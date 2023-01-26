@@ -12,12 +12,15 @@
 """
 
 import os.path
-import torch
-from torch.utils.cpp_extension import load
+import subprocess
 
-from nncf.common.logging.logger import extension_is_loading_info_log
+import torch
+
+from nncf import nncf_logger
 from nncf.torch.extensions import CudaNotAvailableStub, ExtensionsType, ExtensionLoader, EXTENSIONS
 from nncf.definitions import NNCF_PACKAGE_ROOT_DIR
+from nncf.torch.extensions import ExtensionNamespace
+from nncf.torch.quantization.reference import ReferenceQuantizedFunctions
 
 BASE_EXT_DIR = os.path.join(NNCF_PACKAGE_ROOT_DIR, "torch/extensions/src/quantization")
 
@@ -48,11 +51,19 @@ class QuantizedFunctionsCPULoader(ExtensionLoader):
 
     @classmethod
     def load(cls):
-        return load(cls.name(),
-                    CPU_EXT_SRC_LIST,
-                    extra_include_paths=EXT_INCLUDE_DIRS,
-                    build_directory=cls.get_build_dir(),
-                    verbose=False)
+        try:
+            retval = torch.utils.cpp_extension.load(cls.name(),
+                          CPU_EXT_SRC_LIST,
+                          extra_include_paths=EXT_INCLUDE_DIRS,
+                          build_directory=cls.get_build_dir(),
+                          verbose=False)
+        except Exception as e:  # pylint:disable=broad-except
+            nncf_logger.warning(f"Could not compile CPU quantization extensions. "
+                                f"Falling back on torch native operations - "
+                                f"CPU quantization fine-tuning may be slower than expected.\n"
+                                f"Reason: {str(e)}")
+            retval = ReferenceQuantizedFunctions
+        return retval
 
 
 @EXTENSIONS.register()
@@ -63,21 +74,28 @@ class QuantizedFunctionsCUDALoader(ExtensionLoader):
 
     @classmethod
     def load(cls):
-        return load(cls.name(),
-                    CUDA_EXT_SRC_LIST,
-                    extra_include_paths=EXT_INCLUDE_DIRS,
-                    build_directory=cls.get_build_dir(),
-                    verbose=False)
+        try:
+            return torch.utils.cpp_extension.load(cls.name(),
+                        CUDA_EXT_SRC_LIST,
+                        extra_include_paths=EXT_INCLUDE_DIRS,
+                        build_directory=cls.get_build_dir(),
+                        verbose=False)
+        except (subprocess.CalledProcessError, OSError, RuntimeError) as e:
+            assert torch.cuda.is_available()
+            raise RuntimeError("CUDA is available for PyTorch, but NNCF could not compile "
+                               "GPU quantization extensions. Make sure that you have installed CUDA development "
+                               "tools (see https://docs.nvidia.com/cuda/cuda-installation-guide-linux/index.html for "
+                               "guidance) and that 'nvcc' is available on your system's PATH variable.\n") from e
+
 
     @classmethod
     def name(cls) -> str:
         return 'quantized_functions_cuda'
 
 
-with extension_is_loading_info_log("quantization"):
-    QuantizedFunctionsCPU = QuantizedFunctionsCPULoader.load()
+QuantizedFunctionsCPU = ExtensionNamespace(QuantizedFunctionsCPULoader())
 
-    if torch.cuda.is_available():
-        QuantizedFunctionsCUDA = QuantizedFunctionsCUDALoader.load()
-    else:
-        QuantizedFunctionsCUDA = CudaNotAvailableStub
+if torch.cuda.is_available():
+    QuantizedFunctionsCUDA = ExtensionNamespace(QuantizedFunctionsCUDALoader())
+else:
+    QuantizedFunctionsCUDA = CudaNotAvailableStub()

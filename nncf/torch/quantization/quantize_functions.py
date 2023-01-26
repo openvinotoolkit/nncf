@@ -39,9 +39,9 @@ class QuantizeSymmetric(torch.autograd.Function):
             if input_.dtype == torch.float16:
                 input_low = input_low.type(torch.float16)
                 input_range = input_range.type(torch.float16)
-            output = QuantizedFunctionsCUDA.Quantize_forward(input_, input_low, input_range, levels)
+            output = QuantizedFunctionsCUDA.get("Quantize_forward")(input_, input_low, input_range, levels)
         else:
-            output = QuantizedFunctionsCPU.Quantize_forward(input_, input_low, input_range, levels)
+            output = QuantizedFunctionsCPU.get("Quantize_forward")(input_, input_low, input_range, levels)
 
         ctx.save_for_backward(input_, input_low, input_range)
         ctx.levels = levels
@@ -63,11 +63,11 @@ class QuantizeSymmetric(torch.autograd.Function):
                 nncf_logger.debug("grad_output is not contiguous!")
                 grad_output = grad_output.contiguous()
 
-            grad_input, _, grad_scale = QuantizedFunctionsCUDA.Quantize_backward(
+            grad_input, _, grad_scale = QuantizedFunctionsCUDA.get("Quantize_backward")(
                 grad_output, input_, input_low, input_range, levels, level_low, level_high
             )
         else:
-            grad_input, _, grad_scale = QuantizedFunctionsCPU.Quantize_backward(
+            grad_input, _, grad_scale = QuantizedFunctionsCPU.get("Quantize_backward")(
                 grad_output, input_, input_low, input_range, levels, level_low, level_high, False
             )
 
@@ -88,9 +88,9 @@ class QuantizeAsymmetric(torch.autograd.Function):
             if input_.dtype == torch.float16:
                 input_low = input_low.type(torch.float16)
                 input_range = input_range.type(torch.float16)
-            output = QuantizedFunctionsCUDA.Quantize_forward(input_, input_low, input_range, levels)
+            output = QuantizedFunctionsCUDA.get("Quantize_forward")(input_, input_low, input_range, levels)
         else:
-            output = QuantizedFunctionsCPU.Quantize_forward(input_, input_low, input_range, levels)
+            output = QuantizedFunctionsCPU.get("Quantize_forward")(input_, input_low, input_range, levels)
 
         ctx.save_for_backward(input_, input_low, input_range)
         ctx.levels = levels
@@ -112,11 +112,11 @@ class QuantizeAsymmetric(torch.autograd.Function):
                 nncf_logger.debug("grad_output is not contiguous!")
                 grad_output = grad_output.contiguous()
 
-            grad_input, grad_input_low, grad_input_range = QuantizedFunctionsCUDA.Quantize_backward(
+            grad_input, grad_input_low, grad_input_range = QuantizedFunctionsCUDA.get("Quantize_backward")(
                 grad_output, input_, input_low, input_range, levels, level_low, level_high
             )
         else:
-            grad_input, grad_input_low, grad_input_range = QuantizedFunctionsCPU.Quantize_backward(
+            grad_input, grad_input_low, grad_input_range = QuantizedFunctionsCPU.get("Quantize_backward")(
                 grad_output, input_, input_low, input_range, levels, level_low, level_high, True
             )
 
