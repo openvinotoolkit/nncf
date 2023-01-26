@@ -17,65 +17,15 @@ import torch
 from torch.autograd import Variable
 
 from nncf.torch.binarization.layers import xnor_binarize_op, dorefa_binarize_op, activation_bin_scale_threshold_op
+from nncf.torch.binarization.reference import ReferenceActivationBinarize
+from nncf.torch.binarization.reference import ReferenceBackendType
+from nncf.torch.binarization.reference import ReferenceDOREFABinarize
+from nncf.torch.binarization.reference import ReferenceXNORBinarize
 from tests.torch.helpers import get_grads
 from tests.torch.helpers import PTTensorListComparator
 
 
 # reference impl
-class ReferenceXNORBinarize:
-    @staticmethod
-    def forward(x):
-        norm = np.abs(x).mean((1, 2, 3), keepdims=True)
-        sign = ((x > 0).astype(x.dtype) * 2 - 1)
-        output = sign * norm
-        return output
-
-    @staticmethod
-    def backward(grad_output):
-        return grad_output
-
-
-class ReferenceDOREFABinarize:
-    @staticmethod
-    def forward(x):
-        norm = np.abs(x).mean()
-        sign = ((x > 0).astype(x.dtype) * 2 - 1)
-        return sign * norm
-
-    @staticmethod
-    def backward(grad_output):
-        return grad_output
-
-
-class ReferenceActivationBinarize:
-    @staticmethod
-    def forward(x, scale, threshold):
-        shape = [1 for s in x.shape]
-        shape[1] = x.shape[1]
-        t = threshold * scale
-        output = (x > t).astype(x.dtype) * scale
-        return output
-
-    @staticmethod
-    def backward(grad_output, x, scale, output):
-
-        # calc gradient for input
-        mask_lower = (x <= scale).astype(x.dtype)
-        grad_input = grad_output * (x >= 0).astype(x.dtype) * mask_lower
-
-        # calc gradient for scale
-        err = (output - x) / scale
-        grad_scale = grad_output * (mask_lower * err + (1 - mask_lower))
-        grad_scale = grad_scale.sum()
-
-        # calc gradient for threshold
-        grad_threshold = -grad_output * (x > 0).astype(x.dtype) * (x < scale).astype(x.dtype)
-
-        for idx, _ in enumerate(x.shape):
-            if idx != 1:  # activation channel dimension
-                grad_threshold = grad_threshold.sum(idx, keepdims=True)
-
-        return [grad_input, grad_scale, grad_threshold]
 
 
 def idfn(val):
@@ -111,6 +61,9 @@ def get_test_data(data_list, is_cuda=False, is_backward=False):
         results.append(result)
     return results
 
+RXNOR = ReferenceXNORBinarize(backend_type=ReferenceBackendType.NUMPY)
+RDOREFA = ReferenceDOREFABinarize(backend_type=ReferenceBackendType.NUMPY)
+RACT = ReferenceActivationBinarize(backend_type=ReferenceBackendType.NUMPY)
 
 @pytest.mark.parametrize('input_size',
                          [[1, 96, 112, 112],
@@ -133,10 +86,10 @@ class TestParametrized:
             test_input = get_test_data([ref_input], use_cuda)[0]
 
             if weight_bin_type == "xnor":
-                ref_value = ReferenceXNORBinarize.forward(ref_input)
+                ref_value = RXNOR.forward(ref_input)
                 test_value = xnor_binarize_op(test_input)
             elif weight_bin_type == "dorefa":
-                ref_value = ReferenceDOREFABinarize.forward(ref_input)
+                ref_value = RDOREFA.forward(ref_input)
                 test_value = dorefa_binarize_op(test_input)
 
             PTTensorListComparator.check_equal(test_value, ref_value, rtol=1e-3)
@@ -149,7 +102,7 @@ class TestParametrized:
 
         test_input, test_scale, test_threshold = get_test_data([ref_input, ref_scale, ref_threshold], use_cuda)
 
-        ref_value = ReferenceActivationBinarize.forward(ref_input, ref_scale, ref_threshold)
+        ref_value = RACT.forward(ref_input, ref_scale, ref_threshold)
         test_value = activation_bin_scale_threshold_op(test_input, test_scale, test_threshold)
 
         PTTensorListComparator.check_equal(test_value, ref_value, rtol=1e-3)
@@ -163,8 +116,8 @@ class TestParametrized:
         test_input, test_scale, test_threshold = get_test_data([ref_input, ref_scale, ref_threshold], use_cuda,
                                                                is_backward=True)
 
-        ref_value = ReferenceActivationBinarize.forward(ref_input, ref_scale, ref_threshold)
-        ref_grads = ReferenceActivationBinarize.backward(np.ones(input_size), ref_input, ref_scale, ref_value)
+        ref_value = RACT.forward(ref_input, ref_scale, ref_threshold)
+        ref_grads = RACT.backward(np.ones(input_size), ref_input, ref_scale, ref_value)
 
         test_value = activation_bin_scale_threshold_op(test_input, test_scale, test_threshold)
         test_value.sum().backward()
