@@ -50,9 +50,9 @@ if execution_type == "cpu":
     else:
         from nncf.torch.binarization.extensions import BinarizedFunctionsCPU
         from nncf.torch.quantization.extensions import QuantizedFunctionsCPU
-    output_tensor = QuantizedFunctionsCPU.Quantize_forward(input_tensor, input_low_tensor, input_high_tensor, levels)
-    output_tensor = BinarizedFunctionsCPU.ActivationBinarize_forward(output_tensor, scale_tensor, threshold_tensor)
-    output_tensor = BinarizedFunctionsCPU.WeightBinarize_forward(output_tensor, True)
+    output_tensor = QuantizedFunctionsCPU.get("Quantize_forward")(input_tensor, input_low_tensor, input_high_tensor, levels)
+    output_tensor = BinarizedFunctionsCPU.get("ActivationBinarize_forward")(output_tensor, scale_tensor, threshold_tensor)
+    output_tensor = BinarizedFunctionsCPU.get("WeightBinarize_forward")(output_tensor, True)
 elif execution_type == "gpu":
     input_tensor = input_tensor.cuda()
     input_low_tensor = input_low_tensor.cuda()
@@ -69,8 +69,8 @@ elif execution_type == "gpu":
     else:
         from nncf.torch.binarization.extensions import BinarizedFunctionsCUDA
         from nncf.torch.quantization.extensions import QuantizedFunctionsCUDA
-    output_tensor = QuantizedFunctionsCUDA.Quantize_forward(input_tensor, input_low_tensor, input_high_tensor, levels)
-    output_tensor = BinarizedFunctionsCUDA.ActivationBinarize_forward(output_tensor, scale_tensor, threshold_tensor)
-    output_tensor = BinarizedFunctionsCUDA.WeightBinarize_forward(output_tensor, True)
+    output_tensor = QuantizedFunctionsCUDA.get("Quantize_forward")(input_tensor, input_low_tensor, input_high_tensor, levels)
+    output_tensor = BinarizedFunctionsCUDA.get("ActivationBinarize_forward")(output_tensor, scale_tensor, threshold_tensor)
+    output_tensor = BinarizedFunctionsCUDA.get("WeightBinarize_forward")(output_tensor, True)
 else:
     raise RuntimeError("Invalid execution type!")

@@ -12,12 +12,15 @@
 """
 
 import os.path
-import torch
-from torch.utils.cpp_extension import load
+import subprocess
 
-from nncf.common.logging.logger import extension_is_loading_info_log
+import torch
+
+from nncf import nncf_logger
+from nncf.torch.binarization.reference import ReferenceBinarizedFunctions
 from nncf.torch.extensions import CudaNotAvailableStub, ExtensionsType, ExtensionLoader, EXTENSIONS
 from nncf.definitions import NNCF_PACKAGE_ROOT_DIR
+from nncf.torch.extensions import ExtensionNamespace
 
 BASE_EXT_DIR = os.path.join(NNCF_PACKAGE_ROOT_DIR, "torch/extensions/src/binarization")
 
@@ -48,11 +51,19 @@ class BinarizedFunctionsCPULoader(ExtensionLoader):
 
     @classmethod
     def load(cls):
-        return load(cls.name(),
-                    CPU_EXT_SRC_LIST,
-                    extra_include_paths=EXT_INCLUDE_DIRS,
-                    build_directory=cls.get_build_dir(),
-                    verbose=False)
+        try:
+            retval = torch.utils.cpp_extension.load(cls.name(),
+                          CPU_EXT_SRC_LIST,
+                          extra_include_paths=EXT_INCLUDE_DIRS,
+                          build_directory=cls.get_build_dir(),
+                          verbose=False)
+        except Exception as e:  # pylint:disable=broad-except
+            nncf_logger.warning(f"Could not compile CPU binarization extensions. "
+                                f"Falling back on torch native operations - "
+                                f"CPU binarization fine-tuning may be slower than expected.\n"
+                                f"Reason: {str(e)}")
+            retval = ReferenceBinarizedFunctions
+        return retval
 
 
 @EXTENSIONS.register()
@@ -67,17 +78,23 @@ class BinarizedFunctionsCUDALoader(ExtensionLoader):
 
     @classmethod
     def load(cls):
-        return load(cls.name(),
-                    CUDA_EXT_SRC_LIST,
-                    extra_include_paths=EXT_INCLUDE_DIRS,
-                    build_directory=cls.get_build_dir(),
-                    verbose=False)
+        try:
+            return torch.utils.cpp_extension.load(cls.name(),
+                        CUDA_EXT_SRC_LIST,
+                        extra_include_paths=EXT_INCLUDE_DIRS,
+                        build_directory=cls.get_build_dir(),
+                        verbose=False)
+        except (subprocess.CalledProcessError, OSError, RuntimeError) as e:
+            assert torch.cuda.is_available()
+            raise RuntimeError("CUDA is available for PyTorch, but NNCF could not compile "
+                               "GPU binarization extensions. Make sure that you have installed CUDA development "
+                               "tools (see https://docs.nvidia.com/cuda/cuda-installation-guide-linux/index.html for "
+                               "guidance) and that 'nvcc' is available on your system's PATH variable.\n") from e
 
 
-with extension_is_loading_info_log("binarization"):
-    BinarizedFunctionsCPU = BinarizedFunctionsCPULoader.load()
+BinarizedFunctionsCPU = ExtensionNamespace(BinarizedFunctionsCPULoader())
 
-    if torch.cuda.is_available():
-        BinarizedFunctionsCUDA = BinarizedFunctionsCUDALoader.load()
-    else:
-        BinarizedFunctionsCUDA = CudaNotAvailableStub
+if torch.cuda.is_available():
+    BinarizedFunctionsCUDA = ExtensionNamespace(BinarizedFunctionsCUDALoader())
+else:
+    BinarizedFunctionsCUDA = CudaNotAvailableStub()

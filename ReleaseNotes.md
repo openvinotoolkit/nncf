@@ -1,11 +1,49 @@
 # Release Notes
 
-## Introduction
-*Neural Network Compression Framework (NNCF)* is a toolset for Neural Networks model compression.
-The framework organized as a Python module that can be built and used as standalone or within
-samples distributed with the code.  The samples demonstrate the usage of compression methods on
-public models and datasets for three different use cases: Image Classification, Object Detection,
-and Semantic Segmentation.
+## New in Release 2.4.0
+Target version updates:
+- Bump target framework versions to PyTorch 1.13.1, TensorFlow 2.8.x, ONNX 1.12, ONNXRuntime 1.13.1
+- Increased target HuggingFace transformers version for the integration patch to 4.23.1
+
+Features:
+- Official release of the ONNX framework support.
+NNCF may now be used for post-training quantization (PTQ) on ONNX models.
+Added an [example script](examples/post_training_quantization/onnx/mobilenet_v2) demonstrating the ONNX post-training quantization on MobileNetV2.
+- Preview release of OpenVINO framework support. 
+NNCF may now be used for post-training quantization on OpenVINO models. Added an example script demonstrating the OpenVINO post-training quantization on MobileNetV2.
+`pip install nncf[openvino]` will install NNCF with the required OV framework dependencies.
+- Common post-training quantization API across the supported framework model formats (PyTorch, TensorFlow, ONNX, OpenVINO IR) via the `nncf.quantize(...)` function.
+The parameter set of the function is the same for all frameworks - actual framework-specific implementations are being dispatched based on the type of the model object argument.
+- (PyTorch, TensorFlow) Improved the adaptive compression training functionality to reduce effective training time.
+- (ONNX) Post-processing nodes are now automatically excluded from quantization.
+- (PyTorch - Experimental) Joint Pruning, Quantization and Distillation for Transformers enabled for certain models from HuggingFace `transformers` repo.
+See [description](nncf/experimental/torch/sparsity/movement/MovementSparsity.md) of the movement pruning involved in the JPQD for details.
+
+Bugfixes:
+- Fixed a division by zero if every operation is added to ignored scope
+- Improved logging output, cutting down on the number of messages being output to the standard `logging.INFO` log level.
+- Fixed FLOPS calculation for linear filters - this impacts existing models that were pruned with a FLOPS target.
+- "chunk" and "split" ops are correctly handled during pruning.
+- Linear layers may now be pruned by input and output independently.
+- Matmul-like operations and subsequent arithmetic operations are now treated as a fused pattern.
+- (PyTorch) Fixed a rare condition with accumulator overflow in CUDA quantization kernels, which led to CUDA runtime errors and NaN values appearing in quantized tensors and 
+- (PyTorch) `transformers` integration patch now allows to export to ONNX during training, and not only at the end of it.
+- (PyTorch) `torch.nn.utils.weight_norm` weights are now detected correctly.
+- (PyTorch) Exporting a model with sparsity or pruning no longer leads to weights in the original model object in-memory to be hard-set to 0.
+- (PyTorch - Experimental) improved automatic search of blocks to skip within the NAS algorithm – overlapping blocks are correctly filtered.
+- (PyTorch, TensorFlow) Various bugs and issues with compression training were fixed.
+- (TensorFlow) Fixed an error with `"num_bn_adaptation_samples": 0` in config leading to a `TypeError` during quantization algo initialization.
+- (ONNX) Temporary model file is no longer saved on disk.
+- (ONNX) Depthwise convolutions are now quantizable in per-channel mode.
+- (ONNX) Improved the working time of PTQ by optimizing the calls to ONNX shape inferencing.
+
+Breaking changes:
+- Fused patterns will be excluded from quantization via `ignored_scopes` only if the top-most node in data flow order matches against `ignored_scopes`
+- NNCF config's `"ignored_scopes"` and `"target_scopes"` are now strictly checked to be matching against at least one node in the model graph instead of silently ignoring the unmatched entries.
+- Calling `setup.py` directly to install NNCF is deprecated and no longer guaranteed to work.
+- Importing NNCF logger as `from nncf.common.utils.logger import logger as nncf_logger` is deprecated - use `from nncf import nncf_logger` instead.
+- `pruning_rate` is renamed to `pruning_level` in pruning compression controllers.
+- (ONNX) Removed CompressionBuilder. Excluded examples of NNCF for ONNX with CompressionBuilder API
 
 ## New in Release 2.3.0
 - (ONNX) PTQ API support for ONNX.

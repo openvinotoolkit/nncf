@@ -12,12 +12,10 @@
 """
 
 import pytest
-
 import numpy as np
 
 from nncf.common.graph.transformations.commands import TargetType
 from nncf.common.graph.transformations.layout import TransformationLayout
-from nncf.experimental.openvino_native.engine import OVNativeEngine
 from nncf.experimental.openvino_native.graph.model_transformer import OVModelTransformer
 from nncf.experimental.openvino_native.graph.transformations.commands import OVTargetPoint
 from nncf.experimental.openvino_native.graph.transformations.commands import OVOutputInsertionCommand
@@ -35,23 +33,12 @@ from tests.openvino.conftest import OPENVINO_NATIVE_TEST_ROOT
 
 REFERENCE_GRAPHS_DIR = OPENVINO_NATIVE_TEST_ROOT / 'data' / 'reference_graphs' / 'original_nncf_graph'
 
-REF_OUTPUT_SHAPES = {'Result_MatMul': (1, 3, 2, 5), 'Result_Add': (1, 3, 2, 4)}
 TARGET_INSERT_LAYERS = [['Add'], ['MatMul'], ['Add', 'MatMul']]
 TARGET_PRE_LAYERS_OUTPUT = [['Result_Reshape.0'], ['Result_Reshape.0'], ['Result_Reshape.0']]
 TARGET_POST_LAYERS_OUTPUT = [['Result_Add.0'], ['Result_MatMul.0'], ['Result_Add.0', 'Result_MatMul.0']]
 TARGET_PRE_LAYER_FQS = [['Add/fq_input_0'], ['MatMul/fq_input_0'], ['Add/fq_input_0', 'MatMul/fq_input_0']]
 TARGET_POST_LAYER_FQS = [['Add/fq_output_0'], ['MatMul/fq_output_0'], ['Add/fq_output_0', 'MatMul/fq_output_0']]
 TARGET_WEIGHTS_FQS = [['Add/fq_weights_1'], ['MatMul/fq_weights_1'], ['Add/fq_weights_1', 'MatMul/fq_weights_1']]
-
-
-def test_infer_original_model():
-    model = LinearModel().ov_model
-    input_data = {inp.get_friendly_name(): np.random.rand(*inp.shape) for inp in model.get_parameters()}
-
-    engine = OVNativeEngine(model)
-    outputs = engine.infer(input_data)
-    for out_name, out in outputs.items():
-        assert out.shape == REF_OUTPUT_SHAPES[out_name]
 
 
 def create_transformed_model(model, target_layers, target_type, command_type, port_id=0, **kwargs):
