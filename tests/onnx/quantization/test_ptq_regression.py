@@ -22,21 +22,21 @@ from tests.shared.paths import PROJECT_ROOT
 from tests.shared.paths import EXAMPLES_DIR
 
 
-def test_mobilenet_v2_regression(verbose: bool = False):
+def test_mobilenet_v2_regression():
     script_path = EXAMPLES_DIR / 'post_training_quantization' / 'onnx' / 'mobilenet_v2' / 'main.py'
     command = f'{sys.executable} {script_path}'
     print(f"Run command: {command}")
-    with subprocess.Popen(command,
+    with subprocess.Popen([sys.executable, script_path],
                           stdout=subprocess.PIPE,
                           stderr=subprocess.STDOUT,
                           cwd=PROJECT_ROOT) as result:
         command_output, _ = result.communicate()
         command_output = command_output.decode("utf-8")
-        accuracy_drop = command_output.splitlines()[-3].split(' ')[-1]
+        for line in command_output.splitlines():
+            if 'Accuracy drop:' in line:  # The output format of sample.
+                accuracy_drop = line.split(' ')[-1]
+        print(command_output)
         assert 100 * float(accuracy_drop) < 0.3
         if result.returncode != 0:
             print(command_output)
             pytest.fail()
-            return
-        if verbose:
-            print(command_output)

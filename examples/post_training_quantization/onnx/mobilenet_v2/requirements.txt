@@ -3,5 +3,5 @@ tqdm
 scikit-learn
 fastdownload
 onnx==1.12.0
-onnxruntime==1.13.1
+onnxruntime-openvino==1.13.1
 openvino-dev~=2022.3.0.dev
