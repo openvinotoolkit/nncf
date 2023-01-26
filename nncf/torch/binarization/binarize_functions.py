@@ -17,8 +17,8 @@ import torch
 
 from nncf.common.logging import nncf_logger
 from nncf.torch.utils import add_domain
+from nncf.torch.binarization.extensions import BinarizedFunctionsCUDA
 
-from .extensions import BinarizedFunctionsCUDA
 from torch import _C  # pylint:disable=protected-access
 
 
@@ -68,10 +68,9 @@ class XNORBinarizeFn(torch.autograd.Function):
     @staticmethod
     def forward(ctx, x):
         if x.is_cuda:
-            output = BinarizedFunctionsCUDA.WeightBinarize_forward(x, True)
+            output = BinarizedFunctionsCUDA.get("WeightBinarize_forward")(x, True)
         else:
             # Current CPU kernel implementations do not improve performance
-            # output = BinarizedFunctionsCPU.WeightBinarize_forward(x, True)
             norm = x.abs().mean([1, 2, 3], keepdim=True)
             sign = ((x > 0).type(x.dtype) * 2 - 1)
             output = sign * norm
@@ -100,10 +99,9 @@ class DOREFABinarizeFn(torch.autograd.Function):
     @staticmethod
     def forward(ctx, x):
         if x.is_cuda:
-            output = BinarizedFunctionsCUDA.WeightBinarize_forward(x, False)
+            output = BinarizedFunctionsCUDA.get("WeightBinarize_forward")(x, False)
         else:
             # Current CPU kernel implementations do not improve performance
-            # output = BinarizedFunctionsCPU.WeightBinarize_forward(x, False)
             norm = x.abs().mean()
             sign = ((x > 0).type(x.dtype) * 2 - 1)
             output_flat = sign * norm
@@ -129,10 +127,9 @@ class ActivationBinarizationScaleThresholdFn(torch.autograd.Function):
     @staticmethod
     def forward(ctx, input_, scale, threshold):
         if input_.is_cuda:
-            output = BinarizedFunctionsCUDA.ActivationBinarize_forward(input_, scale, threshold)
+            output = BinarizedFunctionsCUDA.get("ActivationBinarize_forward")(input_, scale, threshold)
         else:
             # Current CPU kernel implementations do not improve performance
-            # output = BinarizedFunctionsCPU.ActivationBinarize_forward(input_, scale, threshold)
             shape = [1 for s in input_.shape]
             shape[1] = input_.shape[1]
             t = (threshold * scale).view(shape)
@@ -152,9 +149,10 @@ class ActivationBinarizationScaleThresholdFn(torch.autograd.Function):
         input_, scale, output = ctx.saved_variables
 
         if input_.is_cuda:
-            grad_input, grad_scale, grad_threshold = BinarizedFunctionsCUDA.ActivationBinarize_backward(grad_output,
-                                                                                                        input_,
-                                                                                                        scale, output)
+            grad_input, grad_scale, grad_threshold = BinarizedFunctionsCUDA.get("ActivationBinarize_backward")(
+                grad_output,
+                input_,
+                scale, output)
         else:
             # Current CPU kernel implementations do not improve performance
             # grad_input, grad_scale, grad_threshold = BinarizedFunctionsCPU.ActivationBinarize_backward(grad_output,
