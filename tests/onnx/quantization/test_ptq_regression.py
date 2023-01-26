@@ -36,7 +36,7 @@ def test_mobilenet_v2_regression():
             if 'Accuracy drop:' in line:  # The output format of sample.
                 accuracy_drop = line.split(' ')[-1]
         print(command_output)
-        assert 100 * float(accuracy_drop) < 0.3
+        assert 0.0 < 100 * float(accuracy_drop) < 0.3
         if result.returncode != 0:
             print(command_output)
             pytest.fail()
