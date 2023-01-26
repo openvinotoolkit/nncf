@@ -12,12 +12,12 @@
 """
 
 from typing import Optional
+
 import numpy as np
 import openvino.runtime as ov
 
 from nncf.common.graph.graph import NNCFGraph
 from nncf.common.graph.graph import NNCFNode
-
 from nncf.experimental.openvino_native.graph.metatypes.openvino_metatypes import OVAddMetatype
 from nncf.experimental.openvino_native.graph.metatypes.openvino_metatypes import OVConvertMetatype
 from nncf.experimental.openvino_native.graph.metatypes.openvino_metatypes import OVConstantMetatype
@@ -29,7 +29,7 @@ def is_node_with_bias(node: NNCFNode, nncf_graph: NNCFGraph) -> bool:
     Checks if the node has a bias or not.
 
     :param node: The node to check.
-    :param nncf_graph: The node to check.
+    :param nncf_graph: NNCFGraph instance.
     :return: Return `True` if `node` corresponds to the operation
         with bias (bias is added to the output tensor of that operation),
         `False` otherwise.
@@ -37,11 +37,11 @@ def is_node_with_bias(node: NNCFNode, nncf_graph: NNCFGraph) -> bool:
     if node.metatype not in OPERATIONS_WITH_BIAS_METATYPES:
         return False
 
-    node_with_bias = nncf_graph.get_next_nodes(node)[0]
-    if node_with_bias.metatype != OVAddMetatype:
+    add_node = nncf_graph.get_next_nodes(node)[0]
+    if add_node.metatype != OVAddMetatype:
         return False
 
-    bias_constant = get_node_with_bias_value(node_with_bias, nncf_graph)
+    bias_constant = get_node_with_bias_value(add_node, nncf_graph)
     return bias_constant is not None
 
 
@@ -55,27 +55,24 @@ def get_bias_value(node: NNCFNode, nncf_graph: NNCFGraph, model: ov.Model) -> np
     """
     ops_dict = {op.get_friendly_name(): op for op in model.get_ops()}
 
-    node_with_bias = nncf_graph.get_next_nodes(node)[0]
-    if node_with_bias is not None:
-        bias_constant = get_node_with_bias_value(node_with_bias, nncf_graph)
-        if bias_constant is not None:
-            ov_bias_constant = ops_dict[bias_constant.node_name]
-            return ov_bias_constant.get_vector()
-    raise RuntimeError('Could not find the bias value of the node')
+    add_node = nncf_graph.get_next_nodes(node)[0]
+    bias_constant = get_node_with_bias_value(add_node , nncf_graph)
+    ov_bias_constant = ops_dict[bias_constant.node_name]
+    return ov_bias_constant.get_vector()
 
 
-def get_node_with_bias_value(node_with_bias: NNCFNode, nncf_graph: NNCFGraph) -> Optional[NNCFNode]:
+def get_node_with_bias_value(add_node: NNCFNode, nncf_graph: NNCFGraph) -> Optional[NNCFNode]:
     """
-    Returns node that contains bias value, if it exists.
+    Returns node that represents bias constant in the NNCF graph, if it exists.
 
-    :param node_with_bias: NNCFNode that provides bias.
+    :param add_node: NNCFNode that provides bias.
     :param nncf_graph: NNCFGraph instance.
     :return: Optional NNCFNode with bias value.
     """
-    bias_port_id = node_with_bias.layer_attributes.weight_port_id
-    bias_constant = nncf_graph.get_input_edges(node_with_bias)[bias_port_id].from_node
+    bias_port_id = add_node.layer_attributes.weight_port_id
+    bias_constant = nncf_graph.get_input_edges(add_node)[bias_port_id].from_node
 
     if bias_constant.metatype == OVConvertMetatype:
-        bias_constant = nncf_graph.get_input_edges(node_with_bias)[0].from_node
+        bias_constant = nncf_graph.get_input_edges(add_node)[0].from_node
 
     return bias_constant if bias_constant.metatype == OVConstantMetatype else None

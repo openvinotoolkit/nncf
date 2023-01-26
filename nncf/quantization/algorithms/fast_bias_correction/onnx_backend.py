@@ -66,7 +66,7 @@ class ONNXFastBiasCorrectionAlgoBackend(FastBiasCorrectionAlgoBackend):
         return ONNXTargetPoint(target_type, target_node_name, port_id)
 
     @staticmethod
-    def create_bias_correction_command(node: NNCFNode, bias_value: np.ndarray) -> ONNXBiasCorrectionCommand:
+    def create_bias_correction_command(node: NNCFNode, bias_value: np.ndarray, nncf_graph: NNCFGraph) -> ONNXBiasCorrectionCommand:
         return create_bias_correction_command(node, bias_value)
 
     @staticmethod
@@ -80,7 +80,7 @@ class ONNXFastBiasCorrectionAlgoBackend(FastBiasCorrectionAlgoBackend):
         return ONNXMeanStatisticCollector(reduction_shape, num_samples, window_size)
 
     @staticmethod
-    def get_input_output_names(node: NNCFNode, nncf_graph: NNCFGraph):
+    def get_input_output_names(node: NNCFNode, nncf_graph: NNCFGraph) -> Tuple[str, str]:
         return node.layer_attributes.input_tensor_names[0], \
                node.layer_attributes.output_tensor_names[0]
 

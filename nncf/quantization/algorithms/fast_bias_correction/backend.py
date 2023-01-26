@@ -69,12 +69,13 @@ class FastBiasCorrectionAlgoBackend(ABC):
 
     @staticmethod
     @abstractmethod
-    def create_bias_correction_command(node: NNCFNode, bias_value: np.ndarray):
+    def create_bias_correction_command(node: NNCFNode, bias_value: np.ndarray, nncf_graph: NNCFGraph):
         """
         Creates backend-specific command to update bias value.
 
         :param node: The node for which bias should be updated.
         :param bias_value: New value for the bias.
+        :param nncf_graph: NNCFGraph instance that contains the node.
         :return: Backend-specific command to update bias value.
         """
 
@@ -105,7 +106,7 @@ class FastBiasCorrectionAlgoBackend(ABC):
 
     @staticmethod
     @abstractmethod
-    def get_input_output_names(node: NNCFNode, nncf_graph: NNCFGraph) -> Tuple[List[str], List[str]]:
+    def get_input_output_names(node: NNCFNode, nncf_graph: NNCFGraph) -> Tuple[str, str]:
         """
         Returns tuple of the lists with the input & output tensor names respectively.
 

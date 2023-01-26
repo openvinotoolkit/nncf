@@ -14,19 +14,22 @@
 import numpy as np
 
 from nncf.common.graph.transformations.commands import TargetType
+from nncf.common.graph.graph import NNCFGraph
 from nncf.common.graph.graph import NNCFNode
 from nncf.experimental.openvino_native.graph.transformations.commands import OVTargetPoint
 from nncf.experimental.openvino_native.graph.transformations.commands import OVBiasCorrectionCommand
 
 
-def create_bias_correction_command(node: NNCFNode, bias_value: np.ndarray) -> OVBiasCorrectionCommand:
+def create_bias_correction_command(node: NNCFNode, bias_value: np.ndarray, nncf_graph: NNCFGraph) -> OVBiasCorrectionCommand:
     """
-     Creates bias correction command.
+    Creates bias correction command.
 
     :param node: The node in the NNCF graph that corresponds to operation with bias.
     :param bias_value: The new bias value that will be set.
+    :param nncf_graph: NNCFGraph instance that contains the node.
     :return: The `OVBiasCorrectionCommand` command to update bias.
     """
-    bias_port_id = node.layer_attributes.weight_port_id
+    add_node = nncf_graph.get_next_nodes(node)[0]
+    bias_port_id = add_node.layer_attributes.weight_port_id
     target_point = OVTargetPoint(TargetType.LAYER, node.node_name, bias_port_id)
     return OVBiasCorrectionCommand(target_point, bias_value)
