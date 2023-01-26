@@ -140,12 +140,14 @@ NNCF provides [samples](#post-training-quantization-samples), which demonstrate 
 To start the algorithm, provide the following entities:
 * Original model.
 * Validation part of the dataset.
-* [Data transformation function](./docs/compression_algorithms/post_training/Quantization.md#data-transformation-function) from the original dataset format to the NNCF format. 
+* [Data transformation function](./docs/compression_algorithms/post_training/Quantization.md#data-transformation-function) transforming data items from the original dataset to the model input data. 
 
 
 The basic workflow steps:
 1) Create the [data transformation function](./docs/compression_algorithms/post_training/Quantization.md#data-transformation-function).
-2) Initialize NNCF Dataset with the validation dataset and the transformation function.
+2) Create an instance of `nncf.Dataset` class by passing two parameters:
+* `data_source` - Iterable python object that contains data items for model calibration.
+* `transform_fn` - Data transformation function from the Step 1.
 3) Run the quantization pipeline.
 
 Below are the usage examples for every backend.
