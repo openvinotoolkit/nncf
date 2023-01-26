@@ -1,6 +1,6 @@
 models:
 
-  - name: mobilenet_v2_hub_imagenet_magnitude_sparsity.yml
+  - name: mobilenet_v2_hub_imagenet_magnitude_sparsity
     launchers:
       - framework: dlsdk
         device: CPU
