@@ -11,9 +11,9 @@
 
 _For the installation instructions, [click here](#installation)._
 
-NNCF provides a suite of advanced algorithms for Neural Networks inference optimization in [OpenVINO&trade;](https://github.com/openvinotoolkit/openvino) with minimal accuracy drop.
+NNCF provides a suite of advanced algorithms for Neural Networks inference optimization in [OpenVINO&trade;](https://docs.openvino.ai/latest/home.html) with minimal accuracy drop.
 
-NNCF is designed to work with models from [PyTorch](https://pytorch.org/) and [TensorFlow](https://www.tensorflow.org/).
+NNCF is designed to work with models from [PyTorch](https://pytorch.org/), [TensorFlow](https://www.tensorflow.org/), [ONNX](https://onnx.ai/) and [OpenVINO&trade;](https://docs.openvino.ai/latest/home.html).
 
 NNCF provides samples that demonstrate the usage of compression algorithms for three different use cases on public PyTorch and 
 TensorFlow models and datasets: Image Classification, Object Detection and Semantic Segmentation. 
@@ -25,16 +25,26 @@ architecture is unified to make it easy to add different compression algorithms 
 learning frameworks.
 
 ## Key Features
+### Post-Training Compression Algorithms
 
-- Support of various compression algorithms, applied during a model fine-tuning process to achieve a better performance-accuracy trade-off:
-  
+| Compression algorithm                                                       |PyTorch|TensorFlow|   ONNX   |       OpenVINO     |
+|:----------------------------------------------------------------------------| :---: | :---: |:--------:|:------------------:|
+| [Quantization](./docs/compression_algorithms/post_training/Quantization.md) | Supported | Supported |Supported| Preview |
+
+_Preview means that this is a work in progress and NNCF does not guarantee the full functional support._
+
+### Training-time Compression Algorithms
+
 |Compression algorithm|PyTorch|TensorFlow|
 | :--- | :---: | :---: |
 |[Quantization](./docs/compression_algorithms/Quantization.md) | Supported | Supported |
-|[Mixed-Precision Quantization](./docs/compression_algorithms/Quantization.md#mixed_precision_quantization) | Supported | Not supported |
-|[Binarization](./docs/compression_algorithms/Binarization.md) | Supported | Not supported |
-|[Sparsity](./docs/compression_algorithms/Sparsity.md) | Supported | Supported |
-|[Filter pruning](./docs/compression_algorithms/Pruning.md) | Supported | Supported |
+|[Mixed-Precision Quantization](./docs/compression_algorithms/Quantization.md#mixed_precision_quantization) | Supported | Not supported | Not supported |
+|[Binarization](./docs/compression_algorithms/Binarization.md) | Supported | Not supported | Not supported |
+|[Sparsity](./docs/compression_algorithms/Sparsity.md) | Supported | Supported | Not supported |
+|[Filter pruning](./docs/compression_algorithms/Pruning.md) | Supported | Supported | Not supported |
+
+
+
 
 - Automatic, configurable model graph transformation to obtain the compressed model.
   > **NOTE**: Limited support for TensorFlow models. The models created using Sequential or Keras Functional API are only supported.
@@ -43,7 +53,7 @@ learning frameworks.
 - Distributed training support.
 - Configuration file examples for each supported compression algorithm.
 - Git patches for prominent third-party repositories ([huggingface-transformers](https://github.com/huggingface/transformers)) demonstrating the process of integrating NNCF into custom training pipelines
-- Exporting PyTorch compressed models to ONNX\* checkpoints and TensorFlow compressed models to SavedModel or Frozen Graph format, ready to use with [OpenVINO&trade; toolkit](https://github.com/openvinotoolkit/).
+- Exporting PyTorch compressed models to ONNX\* checkpoints and TensorFlow compressed models to SavedModel or Frozen Graph format, ready to use with [OpenVINO&trade; toolkit](https://docs.openvino.ai/latest/home.html).
 - Support for [Accuracy-Aware model training](./docs/Usage.md#accuracy-aware-model-training) pipelines via the [Adaptive Compression Level Training](./docs/accuracy_aware_model_training/AdaptiveCompressionLevelTraining.md) and [Early Exit Training](./docs/accuracy_aware_model_training/EarlyExitTraining.md).
 
 ## Usage
@@ -120,9 +130,135 @@ compression_ctrl.export_model("compressed_model.pb", save_format='frozen_graph')
 ```
 
 For a more detailed description of NNCF usage in your training code, see [this tutorial](docs/Usage.md). 
-For in-depth examples of NNCF integration, browse the [sample scripts](#model-compression-samples) code, or the [example patches](#third-party-repository-integration) to third-party repositories.
+For in-depth examples of NNCF integration, browse the [sample scripts](#compression-aware-training-samples) code, or the [example patches](#third-party-repository-integration) to third-party repositories.
 For FAQ, visit this [link](./docs/FAQ.md).
 
+### Usage examples of Post-Training Quantization
+
+NNCF provides [samples](#post-training-quantization-samples), which demonstrate Post-Training Quantization usage for PyTorch, TensorFlow, ONNX, OpenVINO.
+
+To start the algorithm, provide the following entities:
+* Original model.
+* Validation part of the dataset.
+* [Data transformation function](./docs/compression_algorithms/post_training/Quantization.md#data-transformation-function) transforming data items from the original dataset to the model input data. 
+
+
+The basic workflow steps:
+1) Create the [data transformation function](./docs/compression_algorithms/post_training/Quantization.md#data-transformation-function).
+2) Create an instance of `nncf.Dataset` class by passing two parameters:
+* `data_source` - Iterable python object that contains data items for model calibration.
+* `transform_fn` - Data transformation function from the Step 1.
+3) Run the quantization pipeline.
+
+Below are the usage examples for every backend.
+
+<details><summary><b>PyTorch</b></summary>
+
+```python
+import nncf
+import torch
+from torchvision import datasets, models
+
+# Instantiate your uncompressed model
+model = models.mobilenet_v2() 
+# Provide validation part of the dataset to collect statistics needed for the compression algorithm
+val_dataset = datasets.ImageFolder("/path")
+dataset_loader = torch.utils.data.DataLoader(val_dataset)
+
+# Step 1: Initialize the transformation function
+def transform_fn(data_item):
+    images, _ = data_item
+    return images
+
+# Step 2: Initialize NNCF Dataset
+calibration_dataset = nncf.Dataset(dataset_loader, transform_fn)
+# Step 3: Run the quantization pipeline
+quantized_model = nncf.quantize(model, calibration_dataset)
+
+```
+
+</details>
+
+<details><summary><b>TensorFlow</b></summary>
+
+```python
+import nncf
+import tensorflow as tf
+import tensorflow_datasets as tfds
+
+# Instantiate your uncompressed model
+model = tf.keras.applications.MobileNetV2()
+# Provide validation part of the dataset to collect statistics needed for the compression algorithm
+val_dataset = tfds.load('/path', split='validation', 
+                        shuffle_files=False, as_supervised=True)
+
+# Step 1: Initialize transformation function
+def transform_fn(data_item):
+    images, _ = data_item
+    return images
+
+# Step 2: Initialize NNCF Dataset
+calibration_dataset = nncf.Dataset(val_dataset, transform_fn)
+# Step 3: Run the quantization pipeline
+quantized_model = nncf.quantize(model, calibration_dataset)
+```
+
+</details>
+
+<details><summary><b>ONNX</b></summary>
+
+```python
+import onnx
+import nncf
+import torch
+from torchvision import datasets
+
+# Instantiate your uncompressed model
+onnx_model = onnx.load_model('/model_path')
+# Provide validation part of the dataset to collect statistics needed for the compression algorithm
+val_dataset = datasets.ImageFolder("/path")
+dataset_loader = torch.utils.data.DataLoader(val_dataset, batch_size=1)
+
+# Step 1: Initialize transformation function
+input_name = onnx_model.graph.input[0].name
+def transform_fn(data_item):
+    images, _ = data_item
+    return {input_name: images.numpy()}
+
+# Step 2: Initialize NNCF Dataset
+calibration_dataset = nncf.Dataset(dataset_loader, transform_fn)
+# Step 3: Run the quantization pipeline
+quantized_model = nncf.quantize(onnx_model, calibration_dataset)
+```
+
+</details>
+
+<details><summary><b>OpenVINO</b></summary>
+
+```python
+import nncf
+import openvino.runtime as ov
+import torch
+from torchvision import datasets
+
+# Instantiate your uncompressed model
+model = ov.Core().read_model('/model_path')
+# Provide validation part of the dataset to collect statistics needed for the compression algorithm
+val_dataset = datasets.ImageFolder("/path")
+dataset_loader = torch.utils.data.DataLoader(val_dataset, batch_size=1)
+
+# Step 1: Initialize transformation function
+def transform_fn(data_item):
+    images, _ = data_item
+    return images
+
+# Step 2: Initialize NNCF Dataset
+calibration_dataset = nncf.Dataset(dataset_loader, transform_fn)
+# Step 3: Run the quantization pipeline
+quantized_model = nncf.quantize(model, calibration_dataset)
+```
+
+</details>
 
 ## Model Compression Samples
 
@@ -130,14 +266,22 @@ For a quicker start with NNCF-powered compression, you can also try the sample s
 
 To run the samples please refer to the corresponding tutorials:
 
+### Compression-Aware Training Samples
 - PyTorch samples:
   - [Image Classification sample](examples/torch/classification/README.md)
   - [Object Detection sample](examples/torch/object_detection/README.md)
   - [Semantic Segmentation sample](examples/torch/semantic_segmentation/README.md)
 - TensorFlow samples:
-  - [Image Classification sample](examples/tensorflow/classification/README.md)
-  - [Object Detection sample](examples/tensorflow/object_detection/README.md)
-  - [Instance Segmentation sample](examples/tensorflow/segmentation/README.md)
+    - [Image Classification sample](examples/tensorflow/classification/README.md)
+    - [Object Detection sample](examples/tensorflow/object_detection/README.md)
+    - [Instance Segmentation sample](examples/tensorflow/segmentation/README.md)
+
+### Post-Training Quantization Samples
+
+- [PyTorch Post-Training Quantization sample](examples/post_training_quantization/torch/mobilenet_v2/README.md)
+- [TensorFlow Post-Training Quantization sample](examples/post_training_quantization/tensorflow/mobilenet_v2/README.md)
+- [ONNX Post-Training Quantization sample](examples/post_training_quantization/onnx/mobilenet_v2/README.md)
+- [OpenVINO Post-Training Quantization sample](examples/post_training_quantization/openvino/mobilenet_v2/README.md)
 
 ## Model Compression Notebooks 
 
@@ -192,9 +336,13 @@ For installation of NNCF along with TensorFlow, run:
 ```
 pip install .[tf]
 ```
-(Experimental) For installation of NNCF for ONNXRuntime-OpenVINO, run:
-```bash
+For installation of NNCF for ONNX, run:
+```
 pip install .[onnx]
+```
+(Preview) For installation of NNCF for OpenVINO, run:
+```
+pip install .[openvino]
 ```
 
 
@@ -214,9 +362,13 @@ For installation of NNCF along with TensorFlow, run:
 ```
 pip install nncf[tf]
 ```
-(Experimental) For installation of NNCF for ONNXRuntime-OpenVINO, run:
-```bash
+For installation of NNCF for ONNX, run:
+```
 pip install nncf[onnx]
+```
+(Preview) For installation of NNCF for OpenVINO, run:
+```
+pip install nncf[openvino]
 ```
 
 NNCF is also available via [conda](https://anaconda.org/conda-forge/nncf):
@@ -363,6 +515,29 @@ to find instruction and links to exact configuration files and final checkpoints
 | :---: | :---: | :---: | :---: |
 |MaskRCNN|INT8 (per-tensor for weights)|COCO2017|bbox: 37.27 (0.06)<br/>segm: 33.54 (0.02)|
 |MaskRCNN|Sparsity 50% (Magnitude)|COCO2017|bbox: 36.93 (0.40)<br/>segm: 33.23 (0.33)|
+
+### ONNX models
+
+<a name="onnx_classification"></a>
+#### Classification
+
+|   ONNX Model    | Compression algorithm |Dataset|Accuracy (Drop) %|
+| :---: |:---------------------:| :---: | :---: |
+|ResNet-50| INT8 (Post-Training)  |ImageNet|74.63 (0.21)|
+|ShuffleNet| INT8 (Post-Training)  |ImageNet|47.25 (0.18)|
+|GoogleNet| INT8 (Post-Training)  |ImageNet|66.36 (0.3)|
+|SqueezeNet V1.0| INT8 (Post-Training)  |ImageNet|54.3 (0.54)|
+|MobileNet V2| INT8 (Post-Training)  |ImageNet|71.38 (0.49)|
+|DenseNet-121| INT8 (Post-Training)  |ImageNet|60.16 (0.8)|
+|VGG-16| INT8 (Post-Training)  |ImageNet|72.02 (0.0)|
+
+<a name="onnx_object_detection"></a>
+#### Object Detection
+
+|ONNX Model| Compression algorithm | Dataset |mAP (drop) %|
+| :---: |:---------------------:| :---: | :---: |
+|SSD1200| INT8 (Post-Training)  |COCO2017|20.17 (0.17)|
+|Tiny-YOLOv2| INT8 (Post-Training)  |VOC12|29.03 (0.23)|
 
 ## Citing
 
