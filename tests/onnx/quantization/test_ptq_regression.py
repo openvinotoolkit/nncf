@@ -30,12 +30,13 @@ def test_mobilenet_v2_regression(verbose: bool = False):
                           stdout=subprocess.PIPE,
                           stderr=subprocess.STDOUT,
                           cwd=PROJECT_ROOT) as result:
-        outs, _ = result.communicate()
-        accuracy_drop = outs.decode("utf-8").splitlines()[-3].split(' ')[-1]
+        command_output, _ = result.communicate()
+        command_output = command_output.decode("utf-8")
+        accuracy_drop = command_output.splitlines()[-3].split(' ')[-1]
         assert 100 * float(accuracy_drop) < 0.3
         if result.returncode != 0:
-            print(outs.decode('utf-8'))
+            print(command_output)
             pytest.fail()
             return
         if verbose:
-            print(outs.decode('utf-8'))
+            print(command_output)
