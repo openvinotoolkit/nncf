@@ -11,6 +11,9 @@
  limitations under the License.
 """
 
+from typing import Optional
+from typing import Tuple
+
 import torch
 from numpy import argmax
 from torch.quantization.fake_quantize import FakeQuantize
@@ -30,13 +33,17 @@ from nncf.torch.quantization.quantize_functions import TuneRange
 SUPPORTED_ALGORITHMS = ["quantization", "filter_pruning"]
 
 
-def prepare_for_inference(compressed_model: NNCFNetwork, compressed_ctrl: CompressionAlgorithmController) -> None:
-    """Prepare NNCFNetwork for inference.
-    Replace NNCF quantizers modules to torch.FakeQuantize and fill zeroes prunned masks.
+def prepare_for_inference(
+    compressed_model: NNCFNetwork,
+    compressed_ctrl: CompressionAlgorithmController,
+) -> None:
+    """
+    Prepare NNCFNetwork for inference:
+      - for quantisation algorithm replace Replace NNCF quantizers modules to torch.FakeQuantize.
+      - for pruning_filter algorithm prune module by fill zeros or cut weights.
 
-    Args:
-        compressed_model (NNCFNetwork): Compressed model.
-        compressed_ctrl (CompressionAlgorithmController): Compression controller.
+    :param compressed_model: Compressed model.
+    :param compressed_ctrl: Compression controller.
     """
     compressed_model.train(False)
 
@@ -57,19 +64,16 @@ def prepare_for_inference(compressed_model: NNCFNetwork, compressed_ctrl: Compre
     for controller in ctrls:
         if controller.name == "filter_pruning":
             graph = compressed_model.get_original_graph()
-            ModelPruner(
-                compressed_model, graph, PT_PRUNING_OPERATOR_METATYPES, prun_type=PrunType.FILL_ZEROS
-            ).prune_model()
-            remove_nncf_prunner_operators(compressed_model)
+            ModelPruner(compressed_model, graph, PT_PRUNING_OPERATOR_METATYPES, PrunType.FILL_ZEROS).prune_model()
         if controller.name == "quantization":
             replace_quantizer_to_native_module(compressed_model)
 
 
 def remove_nncf_prunner_operators(model: NNCFNetwork) -> None:
-    """Remove all FilterPruningMask operators from the model.
+    """
+    Remove all FilterPruningMask operators from the model.
 
-    Args:
-        model (NNCFNetwork): Compressed model.
+    :param model: Compressed model.
     """
     for node in model.get_original_graph().get_all_nodes():
         if node.node_type in ["nncf_model_input", "nncf_model_output"]:
@@ -77,25 +81,24 @@ def remove_nncf_prunner_operators(model: NNCFNetwork) -> None:
 
         nncf_module = model.get_containing_module(node.node_name)
 
-        # TODO: change condition to remove and raise error if exists not expected operations
         if hasattr(nncf_module, "pre_ops"):
-            for key in nncf_module.pre_ops.keys():
+            for key in list(nncf_module.pre_ops.keys()):
                 op = nncf_module.get_pre_op(key)
                 if isinstance(op.op, FilterPruningMask):
                     nncf_module.remove_pre_forward_operation(key)
 
         if hasattr(nncf_module, "post_ops"):
-            for key in nncf_module.post_ops.keys():
+            for key in list(nncf_module.post_ops.keys()):
                 op = nncf_module.get_pre_op(key)
                 if isinstance(op.op, FilterPruningMask):
                     nncf_module.remove_post_forward_operation(key)
 
 
 def replace_quantizer_to_native_module(model: NNCFNetwork) -> None:
-    """Replace NNCF quantizer modules to PyTorch FakeQuantizer module.
+    """
+    Replace NNCF quantizer modules to PyTorch FakeQuantizer module.
 
-    Args:
-        model (NNCFNetwork): Target model.
+    :param model: Target model.
     """
 
     for key in model.external_quantizers.keys():
@@ -121,13 +124,12 @@ def replace_quantizer_to_native_module(model: NNCFNetwork) -> None:
 
 
 def convert_to_fakequantizer(quantizer: BaseQuantizer) -> FakeQuantize:
-    """Convert BaseQuantizer module to FakeQuantize.
+    """
+    Convert BaseQuantizer module to FakeQuantize.
 
-    Args:
-        quantizer (BaseQuantizer): NNCF Quantizer module that will be converted.
+    :param quantizer: NNCF Quantizer module.
 
-    Returns:
-        FakeQuantize: Instance of FakeQuantize similar to the input quantizer.
+    :return: Instance of FakeQuantize similar to the input quantizer.
     """
     fakequantizer = None
 
@@ -178,7 +180,6 @@ def convert_to_fakequantizer(quantizer: BaseQuantizer) -> FakeQuantize:
 
     fakequantizer.scale = scale
     fakequantizer.ch_axis = ch_axis
-    fakequantizer.activation_post_process.ch_axis = ch_axis
     fakequantizer.zero_point = zero_point
 
     # Disable observer to save parameters
@@ -187,19 +188,24 @@ def convert_to_fakequantizer(quantizer: BaseQuantizer) -> FakeQuantize:
     return fakequantizer
 
 
-def convert_asymmetric_parameters(level_high, level_low, input_low, input_range, levels, eps):
-    """Convert parameters for asymmetric quantisation.
+def convert_asymmetric_parameters(
+    level_high: int, level_low: int, input_low: torch.Tensor, input_range: torch.Tensor, levels: int, eps: float
+) -> Tuple[int, int, torch.Tensor, torch.Tensor]:
+    """
+    Convert parameters for asymmetric quantisation.
 
-    Args:
-        level_high (_type_): _description_
-        level_low (_type_): _description_
-        input_low (_type_): _description_
-        input_range (_type_): _description_
-        levels (_type_): _description_
-        eps (_type_): _description_
+    :param level_high: fixed the low quant number
+    :param level_low: fixed the high quant number
+    :param input_low: minimum limit for input value.
+    :param input_range: range limit for input value.
+    :param levels: Number of quantization levels.
+    :param eps: Correction coefficient.
 
-    Returns:
-        _type_: _description_
+    :return: A Tuple
+        quant_max - Fixed the low quant number.
+        quant_min - Fixed the high quant number.
+        scale - Quantizer scale.
+        zero_point - Quantizer zero point.
     """
     quant_max = level_high
     quant_min = level_low
@@ -220,19 +226,23 @@ def convert_asymmetric_parameters(level_high, level_low, input_low, input_range,
     return quant_max, quant_min, scale, zero_point
 
 
-def convert_symmetric_parameters(level_high, level_low, scale, eps, zero_point=None):
-    """Convert parameters for symmetric quantisation.
+def convert_symmetric_parameters(
+    level_high: int, level_low: int, scale: torch.Tensor, eps: float, zero_point: Optional[torch.Tensor] = None
+) -> Tuple[int, int, torch.Tensor, torch.Tensor]:
+    """
+    Convert parameters for symmetric quantisation.
 
-    Args:
-        level_high (_type_): _description_
-        level_low (_type_): _description_
-        input_low (_type_): _description_
-        input_range (_type_): _description_
-        levels (_type_): _description_
-        eps (_type_): _description_
+    :param level_high: Fixed the low quant number.
+    :param level_low: Fixed the high quant number.
+    :param scale: Quantizer scale.
+    :param eps: Correction coefficient.
+    :param zero_point: Quantizer zero point.
 
-    Returns:
-        _type_: _description_
+    :return: A Tuple
+        quant_max - Fixed the low quant number.
+        quant_min - Fixed the high quant number.
+        scale - Quantizer scale.
+        zero_point - Quantizer zero point.
     """
     quant_max = level_high
     quant_min = level_low
@@ -240,9 +250,9 @@ def convert_symmetric_parameters(level_high, level_low, scale, eps, zero_point=N
     scale = torch.reshape(scale, (-1,)) + torch.tensor([eps])
     scale = abs(scale / quant_max)
 
-    if zero_point:
+    if zero_point is not None:
         zero_point = torch.reshape(zero_point, (-1,))
     else:
-        zero_point = torch.zeros_like(scale, dtype=torch.int32)  # TODO: gpu?
+        zero_point = torch.zeros_like(scale, dtype=torch.int32)
 
     return quant_max, quant_min, scale, zero_point

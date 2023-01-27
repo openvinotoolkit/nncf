@@ -83,6 +83,7 @@ from nncf.torch.graph.operator_metatypes import PTSumMetatype
 from nncf.torch.graph.operator_metatypes import PTTanhMetatype
 from nncf.torch.layers import NNCF_WRAPPED_USER_MODULES_DICT
 from nncf.torch.nncf_network import NNCFNetwork
+from nncf.torch.pruning.filter_pruning.layers import FilterPruningMask
 from nncf.torch.pruning.filter_pruning.layers import apply_filter_binary_mask
 from nncf.torch.pruning.tensor_processor import PTNNCFPruningTensorProcessor
 from nncf.torch.tensor import PTNNCFTensor
@@ -126,6 +127,7 @@ class PTPruner:
         :param model: NNCF network.
         :param node: Node from NNCF graph that will be prune.
         :param graph: Graph of model.
+        :param prun_type: Type of prunning.
         """
 
     @classmethod
@@ -635,6 +637,26 @@ class PTSplitPruningOp(SplitPruningOp, PTPruner):
     subtypes = [PTSplitMetatype]
 
 
+def remove_filter_pruning_operators(module: torch.nn.Module) -> None:
+    """Remove all FilterPruningMask operators from the model.
+
+    Args:
+        nncf_module (torch.nn.Module): Target module.
+    """
+
+    if hasattr(module, "pre_ops"):
+        for key in list(module.pre_ops.keys()):
+            op = module.get_pre_op(key)
+            if isinstance(op.op, FilterPruningMask):
+                module.remove_pre_forward_operation(key)
+
+    if hasattr(module, "post_ops"):
+        for key in list(module.post_ops.keys()):
+            op = module.get_pre_op(key)
+            if isinstance(op.op, FilterPruningMask):
+                module.remove_post_forward_operation(key)
+
+
 class ModelPruner(MaskPropagationAlgorithm):
     def __init__(
         self,
@@ -661,7 +683,7 @@ class ModelPruner(MaskPropagationAlgorithm):
                 if node_module not in pruned_node_modules:
                     node_cls.input_prune(self._model, node, self._graph, self._prun_type)
                     node_cls.output_prune(self._model, node, self._graph, self._prun_type)
-                    # TODO: remove operators here?
+                    remove_filter_pruning_operators(node_module)
                     pruned_node_modules.append(node_module)
             nncf_logger.info("Finished applying pruning masks.")
 
