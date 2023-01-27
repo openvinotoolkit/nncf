@@ -1,2 +1,2 @@
 pycocotools
-git+https://github.com/openvinotoolkit/open_model_zoo@2022.1.0#subdirectory=tools/accuracy_checker
+openvino-dev
