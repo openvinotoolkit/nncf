@@ -14,9 +14,7 @@
 import pytest
 import torch
 import numpy as np
-from torch.backends import cudnn
 
-from nncf.torch.utils import manual_seed
 from nncf.torch.automl.agent.ddpg.ddpg import DDPG
 
 STUB = 0
