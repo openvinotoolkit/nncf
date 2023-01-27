@@ -15,7 +15,6 @@ import random
 
 import pytest
 
-from nncf.torch.utils import manual_seed
 
 try:
     import torch
@@ -247,4 +246,3 @@ MARKS_VS_OPTIONS = {
 
 def pytest_collection_modifyitems(config, items):
     skip_marked_cases_if_options_not_specified(config, items, MARKS_VS_OPTIONS)
-
