@@ -63,7 +63,7 @@ E2E_MODELS = [(task_type, model_name) for task_type, model_name in ALL_MODELS if
                'efficientnet-lite4-11', 'inception-v1-12',
                'ssd-12', 'yolov3-12', 'yolov4', 'ResNet101-DUC-12', 'FasterRCNN-12', 'MaskRCNN-12', 'retinanet-9']]
 # Fail Model and Reason of Failure
-FAIL_MODELS = {
+XFAIL_MODELS = {
     # model name: reason of skipping
     'MaskRCNN-12': 'ticket 102051',
     'yolov4': 'ticket 99211',
@@ -74,8 +74,13 @@ FAIL_MODELS = {
 def check_skip_model(model_name: str, model_names_to_test: Optional[List[str]]):
     if model_names_to_test is not None and model_name not in model_names_to_test:
         pytest.skip(f'The model {model_name} is skipped, because it was not included in --model-names.')
-    if model_name in FAIL_MODELS:
-        pytest.skip(f'The model {model_name} is skipped, {FAIL_MODELS[model_name]}')
+    if model_name in XFAIL_MODELS:
+        pytest.xfail(f'The model {model_name} is skipped, {XFAIL_MODELS[model_name]}')
+
+
+def remove_prefix(line: str, prefix: str) -> str:
+    if line.startswith(prefix):
+        return line[len(prefix):]
 
 
 def run_command(command: List[str]):
@@ -136,14 +141,6 @@ def anno_dir(request):
         with TemporaryDirectory() as tmp_dir:
             print(f"Use anno_dir: {tmp_dir}")
             yield Path(tmp_dir)
-
-
-@pytest.fixture(scope="module")
-def dataset_definitions(request):
-    option = request.config.getoption("--dataset_definitions")
-    if option is not None:
-        return option
-    return DATASET_DEFINITIONS_PATH
 
 
 @pytest.fixture(scope="module")
@@ -274,7 +271,7 @@ class TestPTQ:
     @pytest.mark.dependency()
     @pytest.mark.parametrize("task_type, model_name", E2E_MODELS)
     def test_ptq_model(self, task_type: str, model_name: str, model_names_to_test: Optional[List[str]], model_dir: Path,
-                       data_dir: Path, anno_dir: Path, dataset_definitions: Path, output_dir: Path, ptq_size: int):
+                       data_dir: Path, anno_dir: Path, output_dir: Path, ptq_size: int):
         check_skip_model(model_name, model_names_to_test)
         program_path, config_path, model_path, output_dir, data_dir, anno_dir = \
             configure_paths(task_type, model_name, model_dir, data_dir,
@@ -282,7 +279,7 @@ class TestPTQ:
         com_line = [
             sys.executable, str(program_path),
             "-c", str(config_path),
-            "-d", str(dataset_definitions),
+            "-d", str(DATASET_DEFINITIONS_PATH),
             "-m", str(model_path),
             "-o", str(output_dir),
             "-s", str(data_dir),
@@ -306,12 +303,12 @@ class TestBenchmark:
         return output_dir / out_file_name
 
     @staticmethod
-    def _get_com_line(program_path: Path, config_path: Path, dataset_definitions: Path, model_path: Path,
+    def _get_com_line(program_path: Path, config_path: Path, model_path: Path,
                       data_dir: Path, anno_dir: Path, out_file_name: Path, eval_size: Optional[int]) -> List[str]:
         com_line = [
             sys.executable, str(program_path),
             "-c", str(config_path),
-            "-d", str(dataset_definitions),
+            "-d", str(DATASET_DEFINITIONS_PATH),
             "-m", str(model_path),
             "-s", str(data_dir),
             "-a", str(anno_dir),
@@ -323,7 +320,7 @@ class TestBenchmark:
 
     @staticmethod
     def get_onnx_rt_ac_command(task_type: str, model_name: str, model_dir: Path,
-                               data_dir: Path, anno_dir: Path, dataset_definitions: Path, output_dir: Path,
+                               data_dir: Path, anno_dir: Path, output_dir: Path,
                                eval_size: int, program: str, is_quantized: bool,
                                is_ov_ep: bool, is_cpu_ep: bool) -> List[str]:
         program_path, config_path, model_path, output_dir, data_dir, anno_dir = \
@@ -331,7 +328,7 @@ class TestBenchmark:
                             output_dir, eval_size, program, False, is_quantized)
 
         out_file_name = TestBenchmark._get_out_file_path(output_dir, program, is_quantized)
-        com_line = TestBenchmark._get_com_line(program_path, config_path, dataset_definitions, model_path,
+        com_line = TestBenchmark._get_com_line(program_path, config_path, model_path,
                                                data_dir, anno_dir, out_file_name, eval_size)
         if is_ov_ep and not is_cpu_ep:
             com_line += ["--target_tags", 'OpenVINOExecutionProvider']
@@ -341,23 +338,23 @@ class TestBenchmark:
 
     @staticmethod
     def get_ov_ac_command(task_type: str, model_name: str, model_dir: Path,
-                          data_dir: Path, anno_dir: Path, dataset_definitions: Path, output_dir: Path,
+                          data_dir: Path, anno_dir: Path, output_dir: Path,
                           eval_size: int, program: str, is_quantized: bool) -> List[str]:
         program_path, config_path, model_path, output_dir, data_dir, anno_dir = \
             configure_paths(task_type, model_name, model_dir, data_dir, anno_dir,
                             output_dir, eval_size, program, True, is_quantized)
 
         out_file_name = TestBenchmark._get_out_file_path(output_dir, program, is_quantized)
-        com_line = TestBenchmark._get_com_line(program_path, config_path, dataset_definitions, model_path,
+        com_line = TestBenchmark._get_com_line(program_path, config_path, model_path,
                                                data_dir, anno_dir, out_file_name, eval_size)
         return com_line
 
     @pytest.mark.e2e_eval_reference_model
     @pytest.mark.parametrize("task_type, model_name", E2E_MODELS)
     def test_reference_model_accuracy(self, task_type, model_name, model_names_to_test, model_dir,
-                                      data_dir, anno_dir, dataset_definitions, output_dir, eval_size):
+                                      data_dir, anno_dir, output_dir, eval_size):
         # Reference accuracy validation is performed on CPUExecutionProvider
-        command = self.get_onnx_rt_ac_command(task_type, model_name, model_dir, data_dir, anno_dir, dataset_definitions,
+        command = self.get_onnx_rt_ac_command(task_type, model_name, model_dir, data_dir, anno_dir,
                                               output_dir, eval_size, program="accuracy_checker.py", is_quantized=False,
                                               is_ov_ep=False, is_cpu_ep=True)
         run_command(command)
@@ -366,16 +363,16 @@ class TestBenchmark:
     @pytest.mark.dependency()
     @pytest.mark.parametrize("task_type, model_name", E2E_MODELS)
     def test_onnx_rt_quantized_model_accuracy(self, request, task_type, model_name, model_names_to_test,
-                                              data_dir, anno_dir, dataset_definitions, output_dir, eval_size,
+                                              data_dir, anno_dir, output_dir, eval_size,
                                               is_ov_ep, is_cpu_ep):
         if not (is_ov_ep or is_cpu_ep):
             pytest.skip('Skip accuracy validation on ONNXRuntime.')
         # Run PTQ first
+
         depends(request,
-                ["TestPTQ::test_ptq_model" + request.node.name.lstrip("test_onnx_rt_quantized_model_accuracy")])
+                ["TestPTQ::test_ptq_model" + remove_prefix(request.node.name, "test_onnx_rt_quantized_model_accuracy")])
 
         command = self.get_onnx_rt_ac_command(task_type, model_name, output_dir, data_dir, anno_dir,
-                                              dataset_definitions,
                                               output_dir, eval_size, program="accuracy_checker.py", is_quantized=True,
                                               is_ov_ep=is_ov_ep, is_cpu_ep=is_cpu_ep)
         run_command(command)
@@ -384,13 +381,14 @@ class TestBenchmark:
     @pytest.mark.dependency()
     @pytest.mark.parametrize("task_type, model_name", E2E_MODELS)
     def test_ov_quantized_model_accuracy(self, request, task_type, model_name, model_names_to_test, data_dir,
-                                         anno_dir, dataset_definitions, output_dir, eval_size, is_ov):
+                                         anno_dir, output_dir, eval_size, is_ov):
         if not is_ov:
             pytest.skip('Skip accuracy validation on OpenVINO.')
         # Run PTQ first
-        depends(request, ["TestPTQ::test_ptq_model" + request.node.name.lstrip("test_ov_quantized_model_accuracy")])
+        depends(request,
+                ["TestPTQ::test_ptq_model" + remove_prefix(request.node.name, "test_ov_quantized_model_accuracy")])
 
-        command = self.get_ov_ac_command(task_type, model_name, output_dir, data_dir, anno_dir, dataset_definitions,
+        command = self.get_ov_ac_command(task_type, model_name, output_dir, data_dir, anno_dir,
                                          output_dir, eval_size, program="accuracy_checker.py", is_quantized=True)
         run_command(command)
 

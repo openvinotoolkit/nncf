@@ -42,11 +42,6 @@ def pytest_addoption(parser):
              "If it is not provided, tempfile.TemporaryDirectory will be used."
     )
     parser.addoption(
-        "--dataset_definitions", type=str, default=None,
-        help="[e2e-test-onnx-model-zoo] (Optional) Path to a dataset definitions. "
-             "If it is not provided, the CI default path will be used."
-    )
-    parser.addoption(
         "--ptq-size", type=int, default=100,
         help="[e2e-test-onnx-model-zoo] Dataset subsample size for PTQ calibration"
     )
