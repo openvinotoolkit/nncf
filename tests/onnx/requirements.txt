@@ -4,5 +4,7 @@ pytest-ordering>=0.6
 torch~=1.13.0
 torchvision~=0.14.0
 yattag>=1.14.0
+openvino-dev[onnx]
+fastdownload
 # Pandas requires it for styling in e2e report generation
 Jinja2==3.1.1
