@@ -191,7 +191,8 @@ def build_per_model_row(table_format: str,
                         dataset_display_name: str,
                         fp32_metric: float,
                         compressed_metric: float,
-                        config_path: str,
+                        config_path: Path,
+                        containing_file_path: Path,
                         checkpoint_url: Optional[str]) -> List[str]:
     row = [model_display_name, compression_algo_display_name, dataset_display_name]
     if compression_algo_display_name == 'None':
@@ -200,11 +201,12 @@ def build_per_model_row(table_format: str,
         drop = fp32_metric - compressed_metric
         row.append(f'{compressed_metric:.2f} ({drop:.2f})')
     if table_format == 'per_sample':
-        local_config_path = '/'.join(config_path.split('/')[3:])
-        config_name = local_config_path.split('/')[-1]
-        row.append('[{}]({})'.format(config_name, local_config_path))
+        containing_file_folder = containing_file_path.parent
+        local_config_path = config_path.relative_to(containing_file_folder)
+        config_name = local_config_path.name
+        row.append(f'[{config_name}]({local_config_path.as_posix()})')
         if checkpoint_url is not None:
-            row.append('[Link]({})'.format(checkpoint_url))
+            row.append(f'[Link]({checkpoint_url})')
         else:
             row.append('-')
     return row
@@ -227,7 +229,13 @@ def get_results_table_rows(per_sample_config_dict: Dict,
         else:
             model_dicts = per_sample_config_dict[data_name_]["topologies"]
         for model_name in model_dicts:
-            conf_file = model_dicts[model_name].get('config', {})
+            conf_file = model_dicts[model_name].get('config')
+            if conf_file is not None:
+                conf_file_path = PROJECT_ROOT / conf_file
+                if not conf_file_path.exists():
+                    print(f"Warning: broken config file link {conf_file}")
+            else:
+                conf_file_path = None
             reference = None
             target = None
             if model_dicts[model_name].get('reference', {}):
@@ -247,19 +255,26 @@ def get_results_table_rows(per_sample_config_dict: Dict,
 
             checkpoint_link = (BASE_PYTORCH_CHECKPOINT_URL + resume) if resume is not None else None
 
+            if framework == 'tf' and checkpoint_link is not None:
+                checkpoint_link += '.tar.gz'
+
             fp32_ref_metric, compressed_metric = get_fp32_and_compressed_metrics(model_name_to_metric_dict,
                                                                                  model_name,
                                                                                  reference,
                                                                                  target)
             if table_format == 'overview' and compression == 'None':
                 continue  # The overview already has baseline results as a separate column
+
+            sample_desc = get_sample_desc(sample_type, framework)
+            readme_path = sample_desc.path_to_readme
             model_name_vs_row[model_name] = build_per_model_row(table_format,
                                                                 model_display_name,
                                                                 compression,
                                                                 dataset_name,
                                                                 fp32_ref_metric,
                                                                 compressed_metric,
-                                                                conf_file,
+                                                                conf_file_path,
+                                                                readme_path,
                                                                 checkpoint_link)
 
     sample_type_desc = get_sample_desc(sample_type, framework)
