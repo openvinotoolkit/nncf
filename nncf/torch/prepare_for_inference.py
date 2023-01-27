@@ -39,8 +39,8 @@ def prepare_for_inference(
 ) -> None:
     """
     Prepare NNCFNetwork for inference:
-      - for quantisation algorithm replace Replace NNCF quantizers modules to torch.FakeQuantize.
-      - for pruning_filter algorithm prune module by fill zeros or cut weights.
+      - for quantisation algorithm replace Replace NNCF quantizers modules to FakeQuantize.
+      - for pruning_filter algorithm prune module by filling weights and bias with zeros.
 
     :param compressed_model: Compressed model.
     :param compressed_ctrl: Compression controller.
@@ -57,16 +57,17 @@ def prepare_for_inference(
         if controller.name not in SUPPORTED_ALGORITHMS:
             raise RuntimeError(f"Function prepare_for_inference supprots only {SUPPORTED_ALGORITHMS} algorithms.")
 
-    # Strip model
+    # Strip the model
     for controller in ctrls:
         compressed_model = controller.strip_model(compressed_model)
 
+    # Prepare the model for inference
     for controller in ctrls:
+        if controller.name == "quantization":
+            replace_quantizer_to_native_module(compressed_model)
         if controller.name == "filter_pruning":
             graph = compressed_model.get_original_graph()
             ModelPruner(compressed_model, graph, PT_PRUNING_OPERATOR_METATYPES, PrunType.FILL_ZEROS).prune_model()
-        if controller.name == "quantization":
-            replace_quantizer_to_native_module(compressed_model)
 
 
 def remove_nncf_prunner_operators(model: NNCFNetwork) -> None:
