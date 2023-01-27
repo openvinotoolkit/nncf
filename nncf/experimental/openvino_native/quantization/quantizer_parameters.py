@@ -212,7 +212,7 @@ def calculate_weight_quantizer_parameters(weight_tensor: np.ndarray, quantizer_c
 
     if quantizer_config.mode == QuantizationMode.SYMMETRIC:
         _, _, levels = calculate_symmetric_level_ranges(quantizer_config.num_bits, signed=True, narrow_range=True)
-        level_low, level_high = symmetric_range(_, max_values, levels, quantizer_config, QuantizerGroup.WEIGHTS)
+        level_low, level_high = symmetric_range(None, max_values, levels, quantizer_config, QuantizerGroup.WEIGHTS)
     else:
         _, _, levels = calculate_asymmetric_level_ranges(quantizer_config.num_bits, narrow_range=False)
         min_values = np.amin(weight_tensor, axis=axes, keepdims=quantizer_config.per_channel)
@@ -236,7 +236,7 @@ def calculate_activation_quantizer_parameters(statistics: MinMaxTensorStatistic,
     max_values = np.array(statistics.max_values)
 
     if quantizer_config.mode == QuantizationMode.SYMMETRIC:
-        _, _, levels = calculate_symmetric_level_ranges(quantizer_config.num_bits, signed=True, narrow_range=True)
+        _, _, levels = calculate_symmetric_level_ranges(quantizer_config.num_bits, signed=True, narrow_range=False)
         level_low, level_high = symmetric_range(min_values, max_values, levels, quantizer_config, quant_group)
     else:
         _, _, levels = calculate_asymmetric_level_ranges(quantizer_config.num_bits, narrow_range=False)
