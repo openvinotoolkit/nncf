@@ -78,9 +78,10 @@ def check_skip_model(model_name: str, model_names_to_test: Optional[List[str]]):
         pytest.xfail(f'The model {model_name} is skipped, {XFAIL_MODELS[model_name]}')
 
 
-def remove_prefix(line: str, prefix: str) -> str:
+def remove_prefix_if_exist(line: str, prefix: str) -> str:
     if line.startswith(prefix):
         return line[len(prefix):]
+    return line
 
 
 def run_command(command: List[str]):
@@ -370,7 +371,8 @@ class TestBenchmark:
         # Run PTQ first
 
         depends(request,
-                ["TestPTQ::test_ptq_model" + remove_prefix(request.node.name, "test_onnx_rt_quantized_model_accuracy")])
+                ["TestPTQ::test_ptq_model" + remove_prefix_if_exist(request.node.name,
+                                                                    "test_onnx_rt_quantized_model_accuracy")])
 
         command = self.get_onnx_rt_ac_command(task_type, model_name, output_dir, data_dir, anno_dir,
                                               output_dir, eval_size, program="accuracy_checker.py", is_quantized=True,
@@ -386,7 +388,8 @@ class TestBenchmark:
             pytest.skip('Skip accuracy validation on OpenVINO.')
         # Run PTQ first
         depends(request,
-                ["TestPTQ::test_ptq_model" + remove_prefix(request.node.name, "test_ov_quantized_model_accuracy")])
+                ["TestPTQ::test_ptq_model" + remove_prefix_if_exist(request.node.name,
+                                                                    "test_ov_quantized_model_accuracy")])
 
         command = self.get_ov_ac_command(task_type, model_name, output_dir, data_dir, anno_dir,
                                          output_dir, eval_size, program="accuracy_checker.py", is_quantized=True)
