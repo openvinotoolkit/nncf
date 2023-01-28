@@ -69,13 +69,26 @@ def prepare_for_inference(
             graph = compressed_model.get_original_graph()
             ModelPruner(compressed_model, graph, PT_PRUNING_OPERATOR_METATYPES, PrunType.FILL_ZEROS).prune_model()
 
+    clean_operators(compressed_model)
 
-def remove_nncf_prunner_operators(model: NNCFNetwork) -> None:
+
+def clean_operators(model: NNCFNetwork) -> None:
     """
-    Remove all FilterPruningMask operators from the model.
+    Remove all unused operators from the model.
+    Conditions for removing operators:
+      - disabled quantization operator
+      - each filer_pruining opertartor
 
     :param model: Compressed model.
     """
+
+    if hasattr(model, "external_quantizers"):
+        for key in list(model.external_quantizers.keys()):
+            op = model.external_quantizers[key]
+            if isinstance(op, BaseQuantizer):
+                if not op.is_enabled_quantization():
+                    model.external_quantizers(key)
+
     for node in model.get_original_graph().get_all_nodes():
         if node.node_type in ["nncf_model_input", "nncf_model_output"]:
             continue
@@ -87,12 +100,18 @@ def remove_nncf_prunner_operators(model: NNCFNetwork) -> None:
                 op = nncf_module.get_pre_op(key)
                 if isinstance(op.op, FilterPruningMask):
                     nncf_module.remove_pre_forward_operation(key)
+                elif isinstance(op, BaseQuantizer):
+                    if not op.is_enabled_quantization():
+                        nncf_module.remove_pre_forward_operation(key)
 
         if hasattr(nncf_module, "post_ops"):
             for key in list(nncf_module.post_ops.keys()):
                 op = nncf_module.get_pre_op(key)
                 if isinstance(op.op, FilterPruningMask):
                     nncf_module.remove_post_forward_operation(key)
+                if isinstance(op, BaseQuantizer):
+                    if not op.is_enabled_quantization():
+                        nncf_module.remove_pre_forward_operation(key)
 
 
 def replace_quantizer_to_native_module(model: NNCFNetwork) -> None:
@@ -103,7 +122,8 @@ def replace_quantizer_to_native_module(model: NNCFNetwork) -> None:
     """
 
     for key in model.external_quantizers.keys():
-        model.external_quantizers[key] = convert_to_fakequantizer(model.external_quantizers[key])
+        if model.external_quantizers[key].is_enabled_quantization():
+            model.external_quantizers[key] = convert_to_fakequantizer(model.external_quantizers[key])
 
     for node in model.get_original_graph().get_all_nodes():
         if node.node_type in ["nncf_model_input", "nncf_model_output"]:
@@ -115,13 +135,15 @@ def replace_quantizer_to_native_module(model: NNCFNetwork) -> None:
             for key in nncf_module.pre_ops.keys():
                 op = nncf_module.get_pre_op(key)
                 if isinstance(op.op, BaseQuantizer):
-                    op.op = convert_to_fakequantizer(op.op)
+                    if op.op.is_enabled_quantization():
+                        op.op = convert_to_fakequantizer(op.op)
 
         if hasattr(nncf_module, "post_ops"):
             for key in nncf_module.post_ops.keys():
                 op = nncf_module.get_post_ops(key)
                 if isinstance(op.op, BaseQuantizer):
-                    op.op = convert_to_fakequantizer(op.op)
+                    if op.op.is_enabled_quantization():
+                        op.op = convert_to_fakequantizer(op.op)
 
 
 def convert_to_fakequantizer(quantizer: BaseQuantizer) -> FakeQuantize:

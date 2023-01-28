@@ -45,6 +45,10 @@ def _gen_input_tensor(shape):
 def _check_operators(model):
     """Check that model contains only FakeQuantize operators."""
 
+    if hasattr(model, "external_quantizers"):
+        for key in list(model.external_quantizers.keys()):
+            assert isinstance(model.external_quantizers[key], FakeQuantize)
+
     for node in model.get_original_graph().get_all_nodes():
         if node.node_type in ["nncf_model_input", "nncf_model_output"]:
             continue

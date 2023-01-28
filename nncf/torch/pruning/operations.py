@@ -637,26 +637,6 @@ class PTSplitPruningOp(SplitPruningOp, PTPruner):
     subtypes = [PTSplitMetatype]
 
 
-def remove_filter_pruning_operators(module: torch.nn.Module) -> None:
-    """Remove all FilterPruningMask operators from the model.
-
-    Args:
-        nncf_module (torch.nn.Module): Target module.
-    """
-
-    if hasattr(module, "pre_ops"):
-        for key in list(module.pre_ops.keys()):
-            op = module.get_pre_op(key)
-            if isinstance(op.op, FilterPruningMask):
-                module.remove_pre_forward_operation(key)
-
-    if hasattr(module, "post_ops"):
-        for key in list(module.post_ops.keys()):
-            op = module.get_pre_op(key)
-            if isinstance(op.op, FilterPruningMask):
-                module.remove_post_forward_operation(key)
-
-
 class ModelPruner(MaskPropagationAlgorithm):
     def __init__(
         self,
@@ -683,7 +663,6 @@ class ModelPruner(MaskPropagationAlgorithm):
                 if node_module not in pruned_node_modules:
                     node_cls.input_prune(self._model, node, self._graph, self._prun_type)
                     node_cls.output_prune(self._model, node, self._graph, self._prun_type)
-                    remove_filter_pruning_operators(node_module)
                     pruned_node_modules.append(node_module)
             nncf_logger.info("Finished applying pruning masks.")
 
