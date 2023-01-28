@@ -203,4 +203,4 @@ def test_bias_correction(model_with_parameters):
         if potential_bias.get_type_name() == 'Convert':
             potential_bias = potential_bias.input_value(0).node
         assert potential_bias.get_type_name() == 'Constant'
-        assert np.mean(potential_bias.get_vector()) == bias_reference
+        assert potential_bias.get_vector() == bias_reference

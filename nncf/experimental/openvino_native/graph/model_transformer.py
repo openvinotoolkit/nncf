@@ -262,13 +262,14 @@ class OVModelTransformer(ModelTransformer):
             input_node_output = input_port.get_source_output()
             new_param = opset.parameter(shape=input_node_output.get_shape(),
                                         dtype=input_node_output.get_element_type(),
-                                        name=input_name)
+                                        name=f'{input_name}_input')
             input_port.replace_source_output(new_param.output(0))
             params.append(new_param)
 
         for output_name in transformation.outputs:
             output_node = self.name_to_node_mapping[output_name]
             for node_out in output_node.outputs():
-                results.append(opset.result(node_out, name=output_name))
+                results.append(opset.result(node_out,
+                                            name=f'{output_name}_output'))
 
         return ov.Model(results, params)

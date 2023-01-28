@@ -57,7 +57,7 @@ class FastBiasCorrectionParameters(AlgorithmParameters):
 
 class FastBiasCorrection(Algorithm):
     """
-    Post-training FastBiasCorrection algorithm implementation
+    Post-training FastBiasCorrection algorithm implementation.
 
     The main purpose of this algorithm to reduce quantization error
     via correction the bias of the Convolutions, FullyConnected, etc. layers.
@@ -92,9 +92,9 @@ class FastBiasCorrection(Algorithm):
 
     def _set_backend_entity(self, model: TModel) -> None:
         """
-        Creates a helper class with a backed-specific logic of the algorithm
+        Creates a helper class with a backed-specific logic of the algorithm.
 
-        :param model: backend-specific input model
+        :param model: Backend-specific input model.
         """
         model_backend = get_backend(model)
         if model_backend == BackendType.ONNX:
@@ -134,20 +134,24 @@ class FastBiasCorrection(Algorithm):
             input_fp, input_shape = self._get_fp_inputs(statistic_points, node_name)
             output_fp = self._get_fp_outputs(statistic_points, node_name)
 
-            input_name, output_name = self._backend_entity.get_input_output_names(node, nncf_graph)
+            input_name, output_name = self._backend_entity.get_input_output_names(node)
 
-            extracted_model = self._extract_submodel(model, [input_name], [output_name])
+            extracted_model = self._extract_submodel(model,
+                                                     input_name,
+                                                     output_name)
+
+            sub_input_name, sub_output_name = self._backend_entity.get_sub_input_output_names(extracted_model)
 
             channel_axis = self._backend_entity.channel_axis_by_types[node.metatype]
             input_blob = self._create_input_data(input_shape,
                                                  input_fp,
-                                                 input_name)
+                                                 sub_input_name)
             bias_shift = self._get_bias_shift(
                 model=extracted_model,
                 input_blob=input_blob,
                 channel_axis=channel_axis,
                 output_fp=output_fp,
-                output_name=output_name)
+                output_name=sub_output_name)
 
             updated_bias = bias_value + bias_shift
             magnitude = self._get_bias_shift_magnitude(bias_value, updated_bias)
@@ -171,11 +175,11 @@ class FastBiasCorrection(Algorithm):
 
     def _get_fp_inputs(self, statistic_points: StatisticPointsContainer, node_name: str) -> Tuple[List, List]:
         """
-        Makes out per-layer needed data from the floating-point collected statistics
+        Makes out per-layer needed data from the floating-point collected statistics.
 
-        :param statistic_points: filled StatisticPointsContainer
-        :param node_name: name of the current layer
-        :return: collected mean tensor data and shape for the further bias calculation
+        :param statistic_points: Filled StatisticPointsContainer.
+        :param node_name: Name of the current layer.
+        :return: Collected mean tensor data and shape for the further bias calculation.
         """
 
         def input_filter_func(point):
@@ -194,11 +198,11 @@ class FastBiasCorrection(Algorithm):
 
     def _get_fp_outputs(self, statistic_points: StatisticPointsContainer, node_name: str) -> List[np.ndarray]:
         """
-        Makes out per-layer needed data from the floating-point collected statistics
+        Makes out per-layer needed data from the floating-point collected statistics.
 
-        :param statistic_points: filled StatisticPointsContainer
-        :param node_name: name of the current layer
-        :return: collected mean tensor data for the further bias calculation
+        :param statistic_points: Filled StatisticPointsContainer.
+        :param node_name: Name of the current layer.
+        :return: Collected mean tensor data for the further bias calculation.
         """
 
         def output_filter_func(point):
@@ -215,19 +219,19 @@ class FastBiasCorrection(Algorithm):
 
     def _extract_submodel(self,
                           model: TModel,
-                          input_names: List[str],
-                          output_names: List[str]) -> TModel:
+                          input_name: str,
+                          output_name: str) -> TModel:
         """
-        Extracts sub-model from the original based on the input & output tensor names
+        Extracts sub-model from the original based on the input & output tensor names.
 
-        :param model: backend-specific model
-        :param input_names: list of the input names
-        :param output_names: list of the output names
-        :return: backend-specific sub-model
+        :param model: Backend-specific model.
+        :param input_name: Name of the layer in the model that stands for subgraph input layer.
+        :param output_name: Name of the layer in the model that stands for subgraph output layer.
+        :return: Backend-specific sub-model.
         """
         model_transformer = ModelTransformerFactory.create(model)
-        model_extraction_command = self._backend_entity.model_extraction_command(input_names,
-                                                                                 output_names)
+        model_extraction_command = self._backend_entity.model_extraction_command([input_name],
+                                                                                 [output_name])
         me_transformation_layout = TransformationLayout()
         me_transformation_layout.register(model_extraction_command)
         extracted_model = model_transformer.transform(me_transformation_layout)
@@ -235,11 +239,11 @@ class FastBiasCorrection(Algorithm):
 
     def _add_statistic_point(self, container: StatisticPointsContainer, point: TargetPoint, axis: int) -> None:
         """
-        Adds specific statistic point
+        Adds specific statistic point.
 
-        :param container: StatisticPointsContainer
-        :param point: TargetPoint for statistic collection
-        :param axis: channel axis for the statistics calculation
+        :param container: StatisticPointsContainer instance.
+        :param point: TargetPoint for statistic collection.
+        :param axis: Channel axis for the statistics calculation.
         """
         stat_collector = self._backend_entity.mean_statistic_collector(reduction_shape=axis,
                                                                        num_samples=self.number_samples)
@@ -252,12 +256,12 @@ class FastBiasCorrection(Algorithm):
                            input_fp: List[np.ndarray],
                            input_name: str) -> Dict[str, NNCFTensor]:
         """
-        Creates input blob for the bias shift calculation
+        Creates input blob for the bias shift calculation.
 
-        :param input_shape: input shape for the blob
-        :param input_fp: input data for the blob
-        :param input_name: name for the output dict
-        :return: dictionary of the blob by input name
+        :param input_shape: Input shape for the blob.
+        :param input_fp: Input data for the blob.
+        :param input_name: Name for the output dictionary.
+        :return: The dictionary of the blob by input name.
         """
         input_blob = self._backend_entity.create_blob(input_shape, input_fp)
         input_data = {input_name: input_blob}
@@ -270,15 +274,15 @@ class FastBiasCorrection(Algorithm):
                         output_fp: List[np.ndarray],
                         output_name: str) -> np.ndarray:
         """
-        Calculates bias shift for the further corretion
+        Calculates updated bias.
 
-        :param engine: backend-specific engine instance for the model execution
-        :param model: backend-specific sub-model for the execution
-        :param input_blob: input data for the execution
-        :param channel_axis: channel axes for the raw data aggregation
-        :param output_fp: output data for the shift calculation
-        :param output_name: name of the output tensor for the data collection
-        :return: calculated bias shift
+        :param engine: Backend-specific engine instance for the model execution.
+        :param model: Backend-specific sub-model for the execution.
+        :param input_blob: Input data for the execution.
+        :param channel_axis: Channel axis for the raw data aggregation.
+        :param output_fp: Output data for the shift calculation.
+        :param output_name: Name of the output tensor for the data collection.
+        :return: Calculated bias shift.
         """
         engine = EngineFactory.create(model)
         raw_output = engine.infer(input_blob)
@@ -290,11 +294,11 @@ class FastBiasCorrection(Algorithm):
     @staticmethod
     def _get_bias_shift_magnitude(current_bias_value: np.ndarray, updated_bias_value: np.ndarray) -> float:
         """
-        Calculates bias shift magnitude based on the current and updated values
+        Calculates bias shift magnitude based on the current and updated values.
 
-        :param current_bias_value: the original bias value
-        :param updated_bias_value: the updated bias value
-        :return: magnitude between original and updated bias values
+        :param current_bias_value: The original bias value.
+        :param updated_bias_value: The updated bias value.
+        :return: Magnitude between original and updated bias values.
         """
         bias_shift_magnitude = np.inf
         if np.count_nonzero(current_bias_value == 0) == 0:

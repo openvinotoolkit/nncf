@@ -83,9 +83,12 @@ class OVFastBiasCorrectionAlgoBackend(FastBiasCorrectionAlgoBackend):
         return OVMeanStatisticCollector(reduction_shape, num_samples, window_size)
 
     @staticmethod
-    def get_input_output_names(node: NNCFNode, nncf_graph: NNCFGraph) -> Tuple[str, str]:
-        node_with_bias = nncf_graph.get_next_nodes(node)[0]
-        return node.node_name, node_with_bias.node_name
+    def get_input_output_names(node: NNCFNode) -> Tuple[str, str]:
+        return node.node_name, node.node_name
+
+    @staticmethod
+    def get_sub_input_output_names(subgraph: ov.Model) -> Tuple[str, str]:
+        return subgraph.inputs[0].node.friendly_name, subgraph.outputs[0].node.friendly_name
 
     @staticmethod
     def create_blob(shape: Tuple[int], data: List[float]) -> np.ndarray:

@@ -106,13 +106,22 @@ class FastBiasCorrectionAlgoBackend(ABC):
 
     @staticmethod
     @abstractmethod
-    def get_input_output_names(node: NNCFNode, nncf_graph: NNCFGraph) -> Tuple[str, str]:
+    def get_input_output_names(node: NNCFNode) -> Tuple[str, str]:
         """
-        Returns tuple of the lists with the input & output tensor names respectively.
+        Returns tuple of the input & output tensor names respectively.
 
-        :param node: NNCFNode with the layer_attributes.
-        :param nncf_graph: NNCFGraph instance.
-        :return: Tuple of the lists with the names.
+        :param node: NNCFNode instance.
+        :return: Tuple of the names.
+        """
+
+    @staticmethod
+    @abstractmethod
+    def get_sub_input_output_names(subgraph: TModel) -> Tuple[str, str]:
+        """
+        Returns tuple of the subgraph's the input & output tensor names respectively.
+
+        :param node: NNCFNode instance.
+        :return: Tuple of the names.
         """
 
     @staticmethod
