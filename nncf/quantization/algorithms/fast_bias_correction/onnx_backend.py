@@ -50,9 +50,9 @@ class ONNXFastBiasCorrectionAlgoBackend(FastBiasCorrectionAlgoBackend):
     @property
     def channel_axis_by_types(self) -> Dict[str, int]:
         return {
-            ONNXConvolutionMetatype: ONNXConvolutionMetatype.weight_definitions.weight_channel_axis,
-            ONNXConvolutionTransposeMetatype: ONNXConvolutionTransposeMetatype.weight_definitions.weight_channel_axis,
-            ONNXDepthwiseConvolutionMetatype: ONNXDepthwiseConvolutionMetatype.weight_definitions.weight_channel_axis
+            ONNXConvolutionMetatype: 1,
+            ONNXConvolutionTransposeMetatype: 1,
+            ONNXDepthwiseConvolutionMetatype: 1
         }
 
     @property
@@ -88,7 +88,7 @@ class ONNXFastBiasCorrectionAlgoBackend(FastBiasCorrectionAlgoBackend):
 
     @staticmethod
     def get_sub_input_output_names(subgraph: onnx.ModelProto) -> Tuple[str, str]:
-        return subgraph
+        return subgraph.graph.input[0].name, subgraph.graph.output[0].name
 
     @staticmethod
     def create_blob(shape: Tuple[int], data: List[float]) -> np.ndarray:
