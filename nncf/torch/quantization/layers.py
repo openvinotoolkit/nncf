@@ -393,6 +393,10 @@ class BaseQuantizer(nn.Module):
         return self._is_using_log_scale_storage
 
     @property
+    def is_half_range(self):
+        return self._half_range
+
+    @property
     def signed(self):
         raise NotImplementedError
 
@@ -683,6 +687,29 @@ class SymmetricQuantizer(BaseQuantizer):
                 x = self.quantize(x, execute_traced_op_as_identity=False)
         return x, level_high, level_low, input_low, input_high
 
+    def get_parameters_for_inference(self):
+        with torch.no_grad():
+            input_low, input_high = self._get_input_low_input_high(self.scale,
+                                                                   self.level_low,
+                                                                   self.level_high,
+                                                                   self.eps)
+            level_low = self.level_low
+            level_high = self.level_high
+            if self._half_range:
+                level_low = 2 * self.level_low
+                level_high = 2 * self.level_high + 1
+                input_low, input_high = self._get_input_low_input_high(level_high / self.level_high * self.scale,
+                                                                       level_low,
+                                                                       level_high,
+                                                                       self.eps)
+
+            scale, zero_point = get_scale_zp_from_input_low_input_high(level_low, level_high, input_low, input_high)
+
+            scale = scale.view(-1)
+            zero_point = zero_point.view(-1).to(dtype=torch.int32)
+
+        return level_low, level_high, scale, zero_point
+
     def get_quantizer_config(self) -> QuantizerConfig:
         return QuantizerConfig(num_bits=self.num_bits,
                                mode=QuantizationMode.SYMMETRIC,
@@ -820,6 +847,29 @@ class AsymmetricQuantizer(BaseQuantizer):
             if self._is_quantized_on_export:
                 x = self.quantize(x, execute_traced_op_as_identity=False)
         return x, level_high, level_low, input_low, input_high
+
+    def get_parameters_for_inference(self):
+        with torch.no_grad():
+            input_low, input_high = self._get_input_low_input_high(self.input_range,
+                                                                   self.input_low,
+                                                                   self.levels,
+                                                                   self.eps)
+            level_low = self.level_low
+            level_high = self.level_high
+            if self._half_range:
+                level_low = 2 * level_low
+                level_high = 2 * level_high + 1
+                input_low, input_high = self._get_input_low_input_high(level_high / self.level_high * self.input_range,
+                                                                       self.input_low,
+                                                                       self.levels,
+                                                                       self.eps)
+
+            scale, zero_point = get_scale_zp_from_input_low_input_high(level_low, level_high, input_low, input_high)
+
+            scale = scale.view(-1)
+            zero_point = zero_point.view(-1).to(dtype=torch.int32)
+
+        return level_low, level_high, scale, zero_point
 
     def get_quantizer_config(self) -> QuantizerConfig:
         return QuantizerConfig(num_bits=self.num_bits,

@@ -18,15 +18,11 @@ from torch.quantization.fake_quantize import FakeQuantize
 
 from nncf.common.quantization.structs import QuantizationMode
 from nncf.config import NNCFConfig
-from nncf.torch.prepare_for_inference import convert_asymmetric_parameters
-from nncf.torch.prepare_for_inference import convert_symmetric_parameters
 from nncf.torch.prepare_for_inference import convert_to_fakequantizer
 from nncf.torch.prepare_for_inference import prepare_for_inference
 from nncf.torch.quantization.layers import AsymmetricQuantizer
 from nncf.torch.quantization.layers import PTQuantizerSpec
 from nncf.torch.quantization.layers import SymmetricQuantizer
-from nncf.torch.quantization.quantize_functions import asymmetric_quantize
-from nncf.torch.quantization.quantize_functions import symmetric_quantize
 from tests.torch.helpers import BasicConvTestModel
 from tests.torch.helpers import create_compressed_model_and_algo_for_test
 from tests.torch.helpers import register_bn_adaptation_init_args
@@ -43,11 +39,13 @@ def _gen_input_tensor(shape):
 
 
 def _check_operators(model):
-    """Check that model contains only FakeQuantize operators."""
+    """Check that model contains only 8bit FakeQuantize operators."""
 
     if hasattr(model, "external_quantizers"):
         for key in list(model.external_quantizers.keys()):
+            op = model.external_quantizers[key]
             assert isinstance(model.external_quantizers[key], FakeQuantize)
+            assert op.quant_max - op.quant_min == 255
 
     for node in model.get_original_graph().get_all_nodes():
         if node.node_type in ["nncf_model_input", "nncf_model_output"]:
@@ -57,21 +55,25 @@ def _check_operators(model):
 
         if hasattr(nncf_module, "pre_ops"):
             for key in list(nncf_module.pre_ops.keys()):
-                op = nncf_module.get_pre_op(key)
-                assert isinstance(op.op, FakeQuantize)
+                op = nncf_module.get_pre_op(key).op
+                assert isinstance(op, FakeQuantize)
+                assert op.quant_max - op.quant_min == 255
 
         if hasattr(nncf_module, "post_ops"):
             for key in list(nncf_module.post_ops.keys()):
-                op = nncf_module.get_pre_op(key)
-                assert isinstance(op.op, FakeQuantize)
+                op = nncf_module.post_ops(key).op
+                assert isinstance(op, FakeQuantize)
+                assert op.quant_max - op.quant_min == 255
 
 
 @pytest.mark.parametrize("mode", ("asymmetric", "symmetric"))
-def test_prepare_for_inference_quantization(mode):
+@pytest.mark.parametrize("overflow_fix", ("disable", "enable"))
+def test_prepare_for_inference_quantization(mode, overflow_fix):
     model = BasicConvTestModel()
     config = get_quantization_config_without_range_init(model.INPUT_SIZE[-1])
     config["compression"]["weights"] = {"mode": mode}
     config["compression"]["activations"] = {"mode": mode}
+    config["compression"]["overflow_fix"] = overflow_fix
     register_bn_adaptation_init_args(config)
     compressed_model, compression_ctrl = create_compressed_model_and_algo_for_test(model, config)
 
@@ -119,7 +121,12 @@ def test_prepare_for_inference_quantization_and_pruning():
                     "params": {"schedule": "baseline", "num_init_steps": 1},
                     "pruning_init": 0.5,
                 },
-                {"algorithm": "quantization", "initializer": {"range": {"num_init_samples": 0}}, "preset": "mixed"},
+                {
+                    "algorithm": "quantization",
+                    "initializer": {"range": {"num_init_samples": 0}},
+                    "preset": "mixed",
+                    "overflow_fix": "disable",
+                },
             ],
         }
     )
@@ -173,99 +180,64 @@ def test_convert_to_fakequantizer(quantizer_mode, input_shape, scale_shape):
     assert torch.all(torch.isclose(x_nncf, x_torch)), f"{x_nncf.view(-1)} != {x_torch.view(-1)}"
 
 
-@pytest.mark.parametrize(
-    "input_low, input_range, level_high, level_low, levels, eps",
-    (
-        ([0.0], [1.0], 127, -128, 256, 1e-16),
-        ([0.0], [1.0], 255, 0, 256, 1e-16),
-        ([0.0], [1.0], 127, -128, 256, 0),
-        ([0.0], [1.0], 255, 0, 256, 0),
-        ([0.0], [0.5], 127, -128, 256, 1e-16),
-        ([0.5], [0.6], 255, 0, 256, 1e-16),
-        ([0.0], [0.9], 255, 0, 256, 0.1),
-        ([[[[0.0]]], [[[0.0]]]], [[[[1.0]]], [[[1.0]]]], 127, 0, 128, 1e-16),
-        ([[[[0.0]]], [[[0.0]]]], [[[[1.0]]], [[[1.0]]]], 127, 0, 128, 0),
-    ),
-)
-def test_convert_asymmetric_parameters(input_low, input_range, level_high, level_low, levels, eps):
-    input_tensor = _gen_input_tensor([2, 2, 2, 2])
 
-    input_low = torch.Tensor(input_low)
-    input_range = torch.Tensor(input_range)
-    scale_shape = input_low.shape
-    ch_axis = np.argmax(scale_shape)
+@pytest.mark.parametrize("signed", (True, False))
+@pytest.mark.parametrize("half_range", (True, False))
+@pytest.mark.parametrize("scale", ([1.0], [0.3], [[[[0.3]]], [[[1.]]]]))
+def test_converting_symetric(signed, half_range, scale):
+    input_tensor = _gen_input_tensor([2, 1, 2, 2])
+    scale = torch.Tensor(scale)
 
-    x_nncf = asymmetric_quantize(input_tensor, levels, level_low, level_high, input_low, input_range, eps, False)
-
-    quant_max, quant_min, scale, zero_point = convert_asymmetric_parameters(
-        level_high, level_low, input_low, input_range, levels, eps
+    qspec = PTQuantizerSpec(
+        num_bits=8,
+        mode=QuantizationMode.SYMMETRIC,
+        signedness_to_force=signed,
+        narrow_range=False,
+        scale_shape=scale.shape,
+        logarithm_scale=False,
+        half_range=half_range,
+        is_quantized_on_export=True,
     )
+    quantizer = SymmetricQuantizer(qspec)
+    quantizer.scale.data = scale
+    x_nncf = quantizer(input_tensor)
 
-    if len(scale_shape) == 1:
-        x_torch = torch.fake_quantize_per_tensor_affine(
-            input_tensor,
-            scale,
-            zero_point,
-            quant_min,
-            quant_max,
-        )
-    else:
-        x_torch = torch.fake_quantize_per_channel_affine(
-            input_tensor,
-            scale,
-            zero_point,
-            ch_axis,
-            quant_min,
-            quant_max,
-        )
+    fq = convert_to_fakequantizer(quantizer)
+    x_torch = fq(input_tensor)
 
     assert torch.all(torch.isclose(x_torch, x_nncf)), f"{x_torch.view(-1)} != {x_nncf.view(-1)}"
 
 
-@pytest.mark.parametrize(
-    "level_high, level_low, levels, scale, eps, zero_point",
-    (
-        (127, -128, 256, [[[[1.3, 1.0]]]], 1e-16, None),
-        (255, 0, 256, [[[[1.3, 1.0]]]], 1e-16, None),
-        (255, 0, 256, [[[[1.3, 1.0]]]], 1e-16, [[[[0.0, 0.0]]]]),
-        (255, 0, 256, [1.5], 1e-16, None),
-        (127, -128, 256, [1.5], 1e-16, None),
-        (127, -128, 256, [1.5], 1e-16, [0.0]),
-        (255, 0, 256, [1.5], 0, None),
-        (127, -128, 256, [1.5], 0, None),
-        (127, -128, 256, [1.5], 0.1, None),
-    ),
-)
-def test_convert_symmetric_parameters(level_high, level_low, levels, scale, eps, zero_point):
-    input_tensor = _gen_input_tensor([2, 1, 2, 2])
 
-    scale = torch.Tensor(scale)
-    if zero_point is not None:
-        zero_point = torch.Tensor(zero_point)
-    scale_shape = scale.shape
-    ch_axis = np.argmax(scale_shape)
-
-    x_nncf = symmetric_quantize(input_tensor, levels, level_low, level_high, scale, eps, skip=False)
-    quant_max, quant_min, scale, zero_point = convert_symmetric_parameters(
-        level_high, level_low, scale, eps, zero_point
+@pytest.mark.parametrize("signed", (True, False))
+@pytest.mark.parametrize("half_range", (True, False))
+@pytest.mark.parametrize("input_low, input_range", (
+    ([0.0], [1.0]),
+    ([-0.3], [0.9]),
+    ([[[[0.0]]], [[[0.0]]]],  [[[[0.3]]], [[[1.]]]])
     )
+)
+def test_converting_asymetric(signed, half_range, input_low, input_range):
+    input_tensor = _gen_input_tensor([2, 1, 2, 2])
+    input_low = torch.Tensor(input_low)
+    input_range = torch.Tensor(input_range)
 
-    if len(scale_shape) == 1:
-        x_torch = torch.fake_quantize_per_tensor_affine(
-            input_tensor,
-            scale,
-            zero_point,
-            quant_min,
-            quant_max,
-        )
-    else:
-        x_torch = torch.fake_quantize_per_channel_affine(
-            input_tensor,
-            scale,
-            zero_point,
-            ch_axis,
-            quant_min,
-            quant_max,
-        )
+    qspec = PTQuantizerSpec(
+        num_bits=8,
+        mode=QuantizationMode.ASYMMETRIC,
+        signedness_to_force=signed,
+        narrow_range=False,
+        scale_shape=input_low.shape,
+        logarithm_scale=False,
+        half_range=half_range,
+        is_quantized_on_export=True,
+    )
+    quantizer = AsymmetricQuantizer(qspec)
+    quantizer.input_low.data = input_low
+    quantizer.input_range.data = input_range
+    x_nncf = quantizer(input_tensor)
+
+    fq = convert_to_fakequantizer(quantizer)
+    x_torch = fq(input_tensor)
 
     assert torch.all(torch.isclose(x_torch, x_nncf)), f"{x_torch.view(-1)} != {x_nncf.view(-1)}"
