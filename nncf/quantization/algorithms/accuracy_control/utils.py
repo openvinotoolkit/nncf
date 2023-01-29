@@ -19,6 +19,7 @@ from typing import Callable
 from typing import Iterable
 
 from nncf.data.dataset import Dataset
+from nncf.common.utils.backend import BackendType
 from nncf.common.factory import ModelTransformerFactory
 from nncf.common.factory import EngineFactory
 from nncf.common.graph import NNCFNode
@@ -26,6 +27,7 @@ from nncf.common.graph import NNCFGraph
 from nncf.common.graph.operator_metatypes import OperatorMetatype
 from nncf.common.graph.transformations.layout import TransformationLayout
 from nncf.common.quantization.quantizer_removal import find_quantizer_nodes_to_cut
+from nncf.quantization.algorithms.accuracy_control.backend import AccuracyControlAlgoBackend
 
 
 TModel = TypeVar('TModel')
@@ -118,3 +120,21 @@ def get_logits_for_each_item(model: Any,
         engine.infer(data_item)[output_name] for data_item in dataset.get_inference_data()
     ]
     return outputs
+
+
+def get_algo_backend(backend: BackendType) -> AccuracyControlAlgoBackend:
+    """
+    Returns backend for accuracy control algorithm.
+
+    :param backend: Backend.
+    :return: The backend for accuracy control algorithm.
+    """
+    if backend == BackendType.OPENVINO:
+        from nncf.quantization.algorithms.accuracy_control.openvino_backend import OVAccuracyControlAlgoBackend
+        return OVAccuracyControlAlgoBackend()
+    if backend == BackendType.ONNX:
+        from nncf.quantization.algorithms.accuracy_control.onnx_backend import ONNXAccuracyControlAlgoBackend
+        return ONNXAccuracyControlAlgoBackend()
+
+    raise RuntimeError('Cannot create the backend for the accuracy control algorithm '
+                       f'because {backend} is not supported.')
