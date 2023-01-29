@@ -36,7 +36,7 @@ def find_quantizer_nodes_to_cut(
     :param quantizer_node: The quantizer node that we want to remove.
     :param quantizer_metatypes: List of quantizer metatypes.
     :param const_metatypes: List of constant metatypes.
-    :param quantizable_metatypes: List of meta types for operations
+    :param quantizable_metatypes: List of metatypes for operations
         that may be quantized.
     :param quantize_agnostic_metatypes: List of quantize agnostic metatypes.
     :return: A tuple (quantizer_nodes, ops) where
