@@ -14,8 +14,13 @@
 from typing import List
 from typing import TypeVar
 from typing import Tuple
+from typing import Any
+from typing import Callable
+from typing import Iterable
 
+from nncf.data.dataset import Dataset
 from nncf.common.factory import ModelTransformerFactory
+from nncf.common.factory import EngineFactory
 from nncf.common.graph import NNCFNode
 from nncf.common.graph import NNCFGraph
 from nncf.common.graph.operator_metatypes import OperatorMetatype
@@ -77,3 +82,39 @@ def remove_quantizer_from_model(quantized_model: TModel,
     transformed_model = model_transformer.transform(transformation_layout)
 
     return transformed_model, quantizer_nodes, nodes
+
+
+def get_metric_for_each_item(model: Any,
+                             dataset: Dataset,
+                             validation_fn: Callable[[Any, Iterable[Any]], float]) -> List[float]:
+    """
+    Calls `validation_fn` for each item from the `dataset` and returns collected metrics.
+
+    :param model: The model to be inferred.
+    :param dataset: The dataset.
+    :param validation_fn: A validation function that will be called for
+        each item from the `dataset`.
+    :return: A list that contains a metric for each item from the dataset.
+    """
+    metrics = [
+        validation_fn(model, [data_item]) for data_item in dataset.get_data()
+    ]
+    return metrics
+
+
+def get_logits_for_each_item(model: Any,
+                             dataset: Dataset,
+                             output_name: str) -> List[Any]:
+    """
+    Infers `model` for each item from the `dataset` and returns collected logits.
+
+    :param model: The model to be inferred.
+    :param dataset: The dataset.
+    :param output_name: Name of output.
+    :return: A list that contains logits for each item from the dataset.
+    """
+    engine = EngineFactory.create(model)
+    outputs = [
+        engine.infer(data_item)[output_name] for data_item in dataset.get_inference_data()
+    ]
+    return outputs
