@@ -125,7 +125,7 @@ def test_prepare_for_inference_quantization_and_pruning():
                     "algorithm": "quantization",
                     "initializer": {"range": {"num_init_samples": 0}},
                     "preset": "mixed",
-                    "overflow_fix": "disable",
+                    "overflow_fix": "disable",   # TODO: remove
                 },
             ],
         }
@@ -143,43 +143,6 @@ def test_prepare_for_inference_quantization_and_pruning():
     _check_operators(compressed_model)
 
     assert torch.all(torch.isclose(x_nncf, x_torch)), f"{x_nncf.view(-1)} != {x_torch.view(-1)}"
-
-
-@pytest.mark.parametrize(
-    "quantizer_mode, input_shape, scale_shape",
-    (
-        (QuantizationMode.ASYMMETRIC, (2, 1, 2, 2), (2, 1, 1, 1)),
-        (QuantizationMode.ASYMMETRIC, (1, 1, 4, 4), (1,)),
-        (QuantizationMode.SYMMETRIC, (2, 1, 2, 2), (2, 1, 1, 1)),
-        (QuantizationMode.SYMMETRIC, (1, 1, 4, 4), (1,)),
-    ),
-)
-def test_convert_to_fakequantizer(quantizer_mode, input_shape, scale_shape):
-    qspec = PTQuantizerSpec(
-        num_bits=8,
-        mode=quantizer_mode,
-        signedness_to_force=True,
-        narrow_range=False,
-        scale_shape=scale_shape,
-        logarithm_scale=False,
-        half_range=False,
-        is_quantized_on_export=True,
-    )
-
-    quantizer = (
-        SymmetricQuantizer(qspec) if quantizer_mode == QuantizationMode.SYMMETRIC else AsymmetricQuantizer(qspec)
-    )
-    quantizer.train(False)
-
-    input_tensor = _gen_input_tensor(input_shape)
-    x_nncf = quantizer(input_tensor).data
-
-    converted_fq = convert_to_fakequantizer(quantizer)
-    x_torch = converted_fq(input_tensor)
-
-    assert torch.all(torch.isclose(x_nncf, x_torch)), f"{x_nncf.view(-1)} != {x_torch.view(-1)}"
-
-
 
 @pytest.mark.parametrize("signed", (True, False))
 @pytest.mark.parametrize("half_range", (True, False))
@@ -213,6 +176,7 @@ def test_converting_symetric(signed, half_range, scale):
 @pytest.mark.parametrize("half_range", (True, False))
 @pytest.mark.parametrize("input_low, input_range", (
     ([0.0], [1.0]),
+    ([0.3], [0.5]),
     ([-0.3], [0.9]),
     ([[[[0.0]]], [[[0.0]]]],  [[[[0.3]]], [[[1.]]]])
     )

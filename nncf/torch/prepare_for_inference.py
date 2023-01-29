@@ -11,9 +11,6 @@
  limitations under the License.
 """
 
-from typing import Optional
-from typing import Tuple
-
 import torch
 from numpy import argmax
 from torch.quantization.fake_quantize import FakeQuantize
@@ -28,7 +25,6 @@ from nncf.torch.pruning.operations import PrunType
 from nncf.torch.quantization.layers import AsymmetricQuantizer
 from nncf.torch.quantization.layers import BaseQuantizer
 from nncf.torch.quantization.layers import SymmetricQuantizer
-from nncf.torch.quantization.quantize_functions import TuneRange
 
 SUPPORTED_ALGORITHMS = ["quantization", "filter_pruning"]
 
@@ -173,7 +169,12 @@ def convert_to_fakequantizer(nncf_quantizer: BaseQuantizer) -> FakeQuantize:
     quant_min, quant_max, scale, zero_point = nncf_quantizer.get_parameters_for_inference()
 
     fakequantizer = FakeQuantize(
-        observer=observer, quant_max=quant_max, quant_min=quant_min, dtype=dtype, qscheme=qscheme, eps=nncf_quantizer.eps
+        observer=observer,
+        quant_max=quant_max,
+        quant_min=quant_min,
+        dtype=dtype,
+        qscheme=qscheme,
+        eps=nncf_quantizer.eps,
     )
 
     fakequantizer.scale = scale

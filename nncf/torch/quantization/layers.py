@@ -393,10 +393,6 @@ class BaseQuantizer(nn.Module):
         return self._is_using_log_scale_storage
 
     @property
-    def is_half_range(self):
-        return self._half_range
-
-    @property
     def signed(self):
         raise NotImplementedError
 
@@ -490,6 +486,18 @@ class BaseQuantizer(nn.Module):
             numel *= el
         is_per_tensor = ((numel == 1) and (len(self.scale_shape) == 1))
         return not is_per_tensor
+
+    def get_parameters_for_inference(self) -> Tuple[int, int, torch.Tensor, torch.Tensor]:
+        """
+        Get parameters to use for inference by FakeQuantize.
+
+        :return: A Tuple
+            quant_max - Fixed the low quant number.
+            quant_min - Fixed the high quant number.
+            scale - Quantizer scale.
+            zero_point - Quantizer zero point.
+        """
+        raise NotImplementedError
 
 
 class QuantizersSwitcher:
@@ -687,7 +695,16 @@ class SymmetricQuantizer(BaseQuantizer):
                 x = self.quantize(x, execute_traced_op_as_identity=False)
         return x, level_high, level_low, input_low, input_high
 
-    def get_parameters_for_inference(self):
+    def get_parameters_for_inference(self) -> Tuple[int, int, torch.Tensor, torch.Tensor]:
+        """
+        Get parameters to use for inference by FakeQuantize.
+
+        :return: A Tuple
+            quant_max - Fixed the low quant number.
+            quant_min - Fixed the high quant number.
+            scale - Quantizer scale.
+            zero_point - Quantizer zero point.
+        """
         with torch.no_grad():
             input_low, input_high = self._get_input_low_input_high(self.scale,
                                                                    self.level_low,
@@ -848,7 +865,16 @@ class AsymmetricQuantizer(BaseQuantizer):
                 x = self.quantize(x, execute_traced_op_as_identity=False)
         return x, level_high, level_low, input_low, input_high
 
-    def get_parameters_for_inference(self):
+    def get_parameters_for_inference(self) -> Tuple[int, int, torch.Tensor, torch.Tensor]:
+        """
+        Get parameters to use for inference by FakeQuantize.
+
+        :return: A Tuple
+            quant_max - Fixed the low quant number.
+            quant_min - Fixed the high quant number.
+            scale - Quantizer scale.
+            zero_point - Quantizer zero point.
+        """
         with torch.no_grad():
             input_low, input_high = self._get_input_low_input_high(self.input_range,
                                                                    self.input_low,
