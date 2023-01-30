@@ -121,8 +121,10 @@ def rank_quantizers(quantized_model,
           if not removed_quantizers:
                continue
 
-          removed_names = [x.node_name for x in removed_quantizers]
-          nncf_logger.info(f'Removed a block of {len(removed_names)} quantizers: {", ".join(removed_names)}')
+          # TODO(andrey-churkin): Move to debug level.
+          removed_names = [f'\t{x.node_name}' for x in removed_quantizers]
+          message = '\n'.join(removed_names)
+          nncf_logger.info(f'Removed a block of {len(removed_names)} quantizers:\n{message}')
 
           processed_quantizers.extend(removed_quantizers)
 
