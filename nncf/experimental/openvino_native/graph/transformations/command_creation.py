@@ -18,6 +18,7 @@ from nncf.common.graph.graph import NNCFGraph
 from nncf.common.graph.graph import NNCFNode
 from nncf.experimental.openvino_native.graph.transformations.commands import OVTargetPoint
 from nncf.experimental.openvino_native.graph.transformations.commands import OVBiasCorrectionCommand
+from nncf.experimental.openvino_native.graph.transformations.commands import OVFQNodeRemovingCommand
 
 
 def create_bias_correction_command(node: NNCFNode,
@@ -35,3 +36,16 @@ def create_bias_correction_command(node: NNCFNode,
     bias_port_id = add_node.layer_attributes.const_port_id
     target_point = OVTargetPoint(TargetType.LAYER, node.node_name, bias_port_id)
     return OVBiasCorrectionCommand(target_point, bias_value)
+
+
+def create_command_to_remove_quantizer(quantizer_node: NNCFNode) -> OVFQNodeRemovingCommand:
+    """
+    Creates command to remove quantizer from the quantized model.
+
+    :param quantizer_node: The quantizer which should be removed.
+    :return: The command to remove quantizer from the quantized model.
+    """
+    target_point = OVTargetPoint(TargetType.LAYER,
+                                 quantizer_node.node_name,
+                                 port_id=None)
+    return OVFQNodeRemovingCommand(target_point)
