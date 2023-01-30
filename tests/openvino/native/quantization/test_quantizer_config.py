@@ -19,6 +19,7 @@ from nncf.common.quantization.structs import QuantizerConfig
 from nncf.common.quantization.structs import QuantizationMode
 from nncf.common.graph.operator_metatypes import OutputNoopMetatype
 from nncf.common.graph.operator_metatypes import InputNoopMetatype
+from nncf.common.graph.patterns import HWFusedPatterns
 from nncf.quantization.algorithms.definitions import RangeType
 from nncf.quantization.algorithms.post_training.algorithm import PostTrainingQuantization
 from nncf.quantization.algorithms.post_training.algorithm import PostTrainingQuantizationParameters
@@ -57,7 +58,7 @@ def test_default_quantizer_config(nncf_graph):
     algo = PostTrainingQuantization(PostTrainingQuantizationParameters())
     min_max_algo = algo.algorithms[0]
     min_max_algo._backend_entity = OVMinMaxAlgoBackend()
-    q_setup = min_max_algo._get_quantizer_setup(nncf_graph.nncf_graph)
+    q_setup = min_max_algo._get_quantizer_setup(nncf_graph.nncf_graph, HWFusedPatterns().get_full_pattern_graph())
 
     weight_default_config = QuantizerConfig(mode=QuantizationMode.SYMMETRIC,
                                             num_bits=8,
@@ -97,7 +98,7 @@ def test_quantizer_config_from_ptq_params(weight_granularity, activation_granula
                                            ))
     min_max_algo = algo.algorithms[0]
     min_max_algo._backend_entity = OVMinMaxAlgoBackend()
-    q_setup = min_max_algo._get_quantizer_setup(nncf_graph.nncf_graph)
+    q_setup = min_max_algo._get_quantizer_setup(nncf_graph.nncf_graph, HWFusedPatterns().get_full_pattern_graph())
     q_g_to_quantization_mode = {}
     for q_g in QuantizerGroup:
         q_g_to_quantization_mode[q_g] = preset.get_params_configured_by_preset(q_g)['mode']

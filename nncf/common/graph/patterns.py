@@ -341,8 +341,7 @@ class PatternsManager(Enum):
                                          backends=[BackendType.ONNX])
     ACTIVATIONS_SCALE_SHIFT = PatternDesc('activations_scale_shift',
                                           backends=[BackendType.ONNX])
-    INPUT_ADD_MULTIPLY = PatternDesc('input_add_multiply',
-                                     backends=[BackendType.ONNX])
+    INPUT_ADD_MULTIPLY = PatternDesc('input_add_multiply')
     SWISH_WITH_SIGMOID = PatternDesc('swish_with_sigmoid',
                                      backends=[BackendType.ONNX])
     SWISH_WITH_HARD_SIGMOID = PatternDesc('swish_with_hard_sigmoid',

@@ -65,7 +65,8 @@ def test_quantize_outputs(quantize_outputs):
     model = LinearModel().ov_model
     nncf_graph = GraphConverter.create_nncf_graph(model)
     assert min_max_algo._parameters.quantize_outputs == quantize_outputs
-    q_setup = min_max_algo._get_quantizer_setup(nncf_graph)
+    pattern = min_max_algo._get_patterns_setup(model)
+    q_setup = min_max_algo._get_quantizer_setup(nncf_graph, pattern)
     act_num_q, weight_num_q = 0, 0
     for quantization_point in q_setup.quantization_points.values():
         if quantization_point.is_activation_quantization_point():
@@ -91,7 +92,8 @@ def test_ignored_scopes(ignored_scopes):
 
     model = LinearModel().ov_model
     nncf_graph = GraphConverter.create_nncf_graph(model)
-    q_setup = min_max_algo._get_quantizer_setup(nncf_graph)
+    pattern = min_max_algo._get_patterns_setup(model)
+    q_setup = min_max_algo._get_quantizer_setup(nncf_graph, pattern)
     act_num_q, weight_num_q = 0, 0
     for quantization_point in q_setup.quantization_points.values():
         if quantization_point.is_activation_quantization_point():
