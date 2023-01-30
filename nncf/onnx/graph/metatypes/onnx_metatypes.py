@@ -471,9 +471,10 @@ WEIGHT_LAYER_METATYPES = [ONNXConvolutionMetatype,
                           ONNXConvolutionTransposeMetatype,
                           ONNXLinearMetatype]
 
-LAYERS_WITH_BIAS_METATYPES = [ONNXConvolutionMetatype,
-                              ONNXDepthwiseConvolutionMetatype,
-                              ONNXConvolutionTransposeMetatype]
+# Contains the operation metatypes for which bias can be applied.
+OPERATIONS_WITH_BIAS_METATYPES = [ONNXConvolutionMetatype,
+                                  ONNXDepthwiseConvolutionMetatype,
+                                  ONNXConvolutionTransposeMetatype]
 
 
 def get_operator_metatypes() -> List[Type[OperatorMetatype]]:

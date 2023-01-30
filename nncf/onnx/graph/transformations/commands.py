@@ -76,6 +76,7 @@ class ONNXBiasCorrectionCommand(TransformationCommand):
     """
     Corrects bias value in the model based on the input value.
     """
+
     def __init__(self, target_point: ONNXTargetPoint, bias_value: np.ndarray):
         """
         :param target_point: The TargetPoint instance for the correction that contains layer's information.
@@ -92,6 +93,7 @@ class ONNXModelExtractionCommand(Command):
     """
     Extracts sub-graph based on the sub-model input and output names.
     """
+
     def __init__(self, inputs: List[str], outputs: List[str]):
         """
         :param inputs: List of the input names that denote the sub-graph beggining.

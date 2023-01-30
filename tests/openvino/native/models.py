@@ -62,7 +62,9 @@ class ConvModel(OVReferenceModel):
         pads = [0, 0]
         dilations = [1, 1]
         conv = opset.convolution(subtract, kernel, strides, pads, pads, dilations, name="Conv")
-        relu = opset.relu(conv, name="Relu")
+        bias = opset.constant(np.zeros((1, 3, 1, 1)), dtype=np.float32, name="Bias")
+        conv_add = opset.add(conv, bias, name="Conv_Add")
+        relu = opset.relu(conv_add, name="Relu")
 
         input_2 = opset.parameter([1, 3, 2, 4], name="Input_2")
         add = opset.add(input_2, (-1) * mean, name="Add")
@@ -169,7 +171,7 @@ class MatMul2DModel(OVReferenceModel):
         return model
 
 
-class FP16Model(OVReferenceModel):
+class FPModel(OVReferenceModel):
     def __init__(self, precision='FP32'):
         self.precision = np.float32 if precision == 'FP32' else np.float16
         super().__init__()
@@ -181,11 +183,10 @@ class FP16Model(OVReferenceModel):
         if self.precision == np.float16:
             data = opset.convert(data, np.float32)
         matmul = opset.matmul(input_1, data, transpose_a=True, transpose_b=False, name="MatMul")
-        bias = self._rng.random((1, 3, 2, 5)).astype(self.precision)
+        bias = self._rng.random((1, 3, 1, 1)).astype(self.precision)
         if self.precision == np.float16:
             bias = opset.convert(bias, np.float32)
-        convert_2 = opset.convert(bias, np.float32)
-        add = opset.add(matmul, convert_2, name="Add")
+        add = opset.add(matmul, bias, name="Add")
         r1 = opset.result(add, name="Result_Add")
         model = ov.Model([r1], [input_1])
         return model

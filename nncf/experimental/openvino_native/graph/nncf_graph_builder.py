@@ -20,7 +20,7 @@ from nncf.common.graph.layer_attributes import Dtype
 from nncf.common.graph.operator_metatypes import OperatorMetatype
 
 from nncf.experimental.openvino_native.graph.metatypes.openvino_metatypes import OV_OPERATOR_METATYPES
-from nncf.experimental.openvino_native.graph.metatypes.openvino_metatypes import GENERAL_WEIGHT_LAYER_METATYPES
+from nncf.experimental.openvino_native.graph.metatypes.openvino_metatypes import METATYPES_WITH_WEIGHT_PORT_ID
 from nncf.experimental.openvino_native.graph.metatypes.openvino_metatypes import OVConvolutionBackpropDataMetatype
 
 
@@ -140,7 +140,7 @@ class GraphConverter:
             if node.get_friendly_name() not in visited:
                 GraphConverter._add_nncf_node(node, nncf_graph)
             # Set weight port id
-            elif metatype in GENERAL_WEIGHT_LAYER_METATYPES:
+            elif metatype in METATYPES_WITH_WEIGHT_PORT_ID:
                 for inp in GraphConverter._filter_weight_input_ports(node.inputs(), metatype):
                     inp_name = inp.get_source_output().get_node().get_friendly_name()
                     if inp_name not in visited:
