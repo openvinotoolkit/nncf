@@ -70,10 +70,11 @@ def fix_zero_filters_asymmetric(min_values: np.ndarray, max_values: np.ndarray,
         level_high - fixed the high quant number
     """
     ranges = max_values - min_values
-    ranges = ranges if isinstance(ranges, np.ndarray) else np.array([ranges])
+    ranges = ranges.flatten() if isinstance(ranges, np.ndarray) else np.array([ranges])
     min_correction = 8e-4
     corrections = [(np.maximum(eps * rng, rng) - rng) * 0.5 if rng > min_correction
                    else min_correction for rng in ranges]
+    corrections = np.array(corrections).reshape(max_values.shape)
     level_low = min_values - corrections
     level_high = max_values + corrections
     return level_low, level_high
@@ -202,21 +203,22 @@ def calculate_weight_quantizer_parameters(weight_tensor: np.ndarray, quantizer_c
     :param axis: In per-channel case - the axis for the quantization. In per-tensor - ignored.
     :return: Parameters of the FakeQuantize layer.
     """
+    quant_group = QuantizerGroup.WEIGHTS
     if quantizer_config.per_channel:
         bounds_shape = get_weight_stats_shape(weight_tensor.shape, metatype)
         axes = tuple(i for i, dim in enumerate(bounds_shape) if dim == 1)
     else:
-        axes = ()
+        axes = None
 
     max_values = np.amax(np.abs(weight_tensor), axis=axes, keepdims=quantizer_config.per_channel)
 
     if quantizer_config.mode == QuantizationMode.SYMMETRIC:
         _, _, levels = calculate_symmetric_level_ranges(quantizer_config.num_bits, signed=True, narrow_range=True)
-        level_low, level_high = symmetric_range(None, max_values, levels, quantizer_config, QuantizerGroup.WEIGHTS)
+        level_low, level_high = symmetric_range(None, max_values, levels, quantizer_config, quant_group)
     else:
         _, _, levels = calculate_asymmetric_level_ranges(quantizer_config.num_bits, narrow_range=False)
         min_values = np.amin(weight_tensor, axis=axes, keepdims=quantizer_config.per_channel)
-        level_low, level_high = asymmetric_range(min_values, max_values, quantizer_config)
+        level_low, level_high = asymmetric_range(min_values, max_values, quantizer_config, quant_group)
 
     output_low, output_high = level_low, level_high
     return OVQuantizerLayerParameters(level_low, level_high, output_low, output_high, levels)
