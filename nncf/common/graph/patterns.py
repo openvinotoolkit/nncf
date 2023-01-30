@@ -422,33 +422,35 @@ class PatternsManager(Enum):
     ARITHMETIC_OPERATIONS = PatternDesc('arithmetic_operations', match=False)
 
     @staticmethod
-    def _get_pattern_desc_by_backend(backend: BackendType) -> List[PatternDesc]:
+    def _get_pattern_desc_by_backend(backend: BackendType) -> List['PatternsManager']:
         output = []
         for pattern in PatternsManager:
-            pattern_backends = pattern.value.backends
-            if pattern_backends is None or backend in pattern_backends:
+            pattern_desc = pattern.value
+            if pattern_desc.backends is None or backend in pattern_desc.backends:
                 output.append(pattern)
         return output
 
     @staticmethod
-    def _check(registered_patterns: List[PatternDesc], all_patterns: List[PatternDesc]):
+    def _check(registered_patterns: List['PatternsManager'], all_patterns: List['PatternsManager']):
         diff = set(all_patterns) - set(registered_patterns)
         if len(diff) != 0:
             raise RuntimeError('Not all patterns was registred in the backend!')
 
     @staticmethod
-    def _filter_pattern_names_by_device(pattern_names: List[PatternDesc], device: TargetDevice) -> List[PatternDesc]:
+    def _filter_pattern_desc_by_device(pattern_names: List['PatternsManager'],
+                                       device: TargetDevice) -> List['PatternsManager']:
         output = []
         for backend_pattern in pattern_names:
-            pattern_devices = backend_pattern.value.devices
-            if pattern_devices is None or device in pattern_devices:
+            pattern_desc = backend_pattern.value
+            if pattern_desc.devices is None or device in pattern_desc.devices:
                 output.append(backend_pattern)
         return output
 
     @staticmethod
-    def _get_fused_patterns_by_backend(backend: BackendType) -> Tuple[Registry, List[PatternDesc]]:
+    def _get_fused_patterns_by_backend(backend: BackendType) -> Tuple[Registry, List['PatternsManager']]:
         if backend == BackendType.OPENVINO:
-            from nncf.experimental.openvino_native.hardware.fused_patterns import OPENVINO_HW_FUSED_PATTERNS as ov_reg
+            from nncf.experimental.openvino_native.hardware.fused_patterns import \
+                OPENVINO_HW_FUSED_PATTERNS as ov_reg
 
             pattern_names = PatternsManager._get_pattern_desc_by_backend(backend)
             PatternsManager._check(ov_reg.registry_dict.keys(), pattern_names)
