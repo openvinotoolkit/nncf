@@ -17,7 +17,8 @@ from dataclasses import dataclass
 
 from nncf.common.quantization.structs import QuantizationMode
 from nncf.common.quantization.structs import QuantizerConfig
-from nncf.experimental.openvino_native.quantization.quantizer_parameters import calculate_activation_quantizer_parameters
+from nncf.experimental.openvino_native.quantization.quantizer_parameters import \
+    calculate_activation_quantizer_parameters
 from nncf.experimental.openvino_native.quantization.quantizer_parameters import calculate_weight_quantizer_parameters
 from nncf.experimental.openvino_native.quantization.quantizer_parameters import OVQuantizerLayerParameters
 from nncf.experimental.openvino_native.statistics.statistics import OVMinMaxTensorStatistic
