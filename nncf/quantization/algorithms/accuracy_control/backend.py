@@ -110,3 +110,15 @@ class AccuracyControlAlgoBackend(ABC):
         :param model: The model that contains this operation.
         :return: The bias value that is applied to the output tensor of the node's operation.
         """
+
+    # Preparation of model
+
+    @staticmethod
+    @abstractmethod
+    def prepare_for_inference(model) -> Any:
+        """
+        Prepares model for inference.
+
+        :param model: A model that should be prepared.
+        :retunr: Prepared model for inference.
+        """

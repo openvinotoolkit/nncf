@@ -128,7 +128,8 @@ def rank_quantizers(quantized_model,
 
           # Get the ranking score for the `removed_quantizers` scope.
           if use_metric:
-               ranking_score = validation_fn(modified_model, ranking_dataset)
+               ranking_score = validation_fn(algo_backend.prepare_for_inference(modified_model),
+                                             ranking_dataset)
           else:
                output_name = [x.node_name for x in graph.get_output_nodes()][0]
                x_approx_subset_current = get_logits_for_each_item(modified_model, ranking_dataset, output_name)
