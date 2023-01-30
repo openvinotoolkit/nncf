@@ -10,8 +10,8 @@
  See the License for the specific language governing permissions and
  limitations under the License.
 """
-from pathlib import Path
 from typing import Dict, List
+import pytest
 
 import nncf
 import numpy as np
@@ -23,15 +23,15 @@ from fastdownload import FastDownload
 from sklearn.metrics import accuracy_score
 from torchvision import datasets, transforms
 from tqdm import tqdm
-
-import pytest
-import os
+from pathlib import Path
 
 MODELS = [
-    ('https://github.com/onnx/models/raw/main/vision/classification/mobilenet/model/mobilenetv2-12.onnx',
-     'mobilenetv2-12', 0.7880254777070064),
-    ('https://github.com/onnx/models/raw/main/vision/classification/resnet/model/resnet50-v1-7.onnx',
-     'resnet50-v1-7', 0.0),
+('https://github.com/onnx/models/raw/main/vision/classification/mobilenet/model/mobilenetv2-12.onnx',
+ 'mobilenetv2-12', 0.7877707006369427),
+('https://github.com/onnx/models/raw/main/vision/classification/resnet/model/resnet50-v1-7.onnx',
+ 'resnet50-v1-7', 0.8101910828025478),
+('https://github.com/onnx/models/raw/main/vision/classification/efficientnet-lite4/model/efficientnet-lite4-11.onnx',
+'efficientnet-lite4-11', 0.0)
 ]
 
 DATASET_URL = 'https://s3.amazonaws.com/fast-ai-imageclas/imagenette2-320.tgz'
@@ -88,15 +88,15 @@ def validate(quantized_model: onnx.ModelProto, data_loader: torch.utils.data.Dat
     return accuracy_score(predictions, references)
 
 
-@pytest.mark.parametrize('model_url, model_name, fp32_top1', MODELS, ids=[model[1] for model in MODELS])
-def test_compression(tmp_path, model_url, model_name, fp32_top1):
+@pytest.mark.parametrize('model_url, model_name, int8_ref_top1', MODELS, ids=[model[1] for model in MODELS])
+def test_compression(tmp_path, model_url, model_name, int8_ref_top1):
     original_model_path = download_model(model_url, tmp_path)
     dataset_path = download_dataset()
 
     normalize = transforms.Normalize(mean=[0.485, 0.456, 0.406],
                                      std=[0.229, 0.224, 0.225])
     val_dataset = datasets.ImageFolder(
-        root=os.path.join(dataset_path, 'val'),
+        root=str(Path(dataset_path) / 'val'),
         transform=transforms.Compose([
             transforms.Resize(256),
             transforms.CenterCrop(224),
@@ -108,13 +108,8 @@ def test_compression(tmp_path, model_url, model_name, fp32_top1):
         val_dataset, batch_size=1, shuffle=False)
 
     model = onnx.load_model(original_model_path)
+    # ALL models are not in target opset
     converted_model = version_converter.convert_version(model, 13)
-    if fp32_top1 is None:
-        fp32_top1 = validate(model, val_loader,
-                             providers=['OpenVINOExecutionProvider'],
-                             provider_options=[{'device_type': 'CPU_FP32'}])
-
-    print(f'FP32 TOP1={fp32_top1}')
     input_name = converted_model.graph.input[0].name
 
     def transform_fn(data_item):
@@ -126,5 +121,5 @@ def test_compression(tmp_path, model_url, model_name, fp32_top1):
     int8_top1 = validate(quantized_model, val_loader,
                          providers=['OpenVINOExecutionProvider'],
                          provider_options=[{'device_type': 'CPU_FP32'}])
-    print(f'INT8 TOP1={int8_top1}')
-    assert 0.0 < (fp32_top1 - int8_top1) * 100 < 0.3
+
+    assert abs(int8_top1 - int8_ref_top1) < 1e-6
