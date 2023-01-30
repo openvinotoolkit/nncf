@@ -26,12 +26,12 @@ from tqdm import tqdm
 from pathlib import Path
 
 MODELS = [
-('https://github.com/onnx/models/raw/main/vision/classification/mobilenet/model/mobilenetv2-12.onnx',
- 'mobilenetv2-12', 0.7877707006369427),
-('https://github.com/onnx/models/raw/main/vision/classification/resnet/model/resnet50-v1-7.onnx',
- 'resnet50-v1-7', 0.8101910828025478),
-('https://github.com/onnx/models/raw/main/vision/classification/efficientnet-lite4/model/efficientnet-lite4-11.onnx',
-'efficientnet-lite4-11', 0.0)
+    ('https://github.com/onnx/models/raw/main/vision/classification/mobilenet/model/mobilenetv2-12.onnx',
+     'mobilenetv2-12', 0.7877707006369427),
+    ('https://github.com/onnx/models/raw/main/vision/classification/resnet/model/resnet50-v1-7.onnx',
+     'resnet50-v1-7', 0.8101910828025478),
+    ('https://github.com/onnx/models/raw/main/vision/classification/shufflenet/model/shufflenet-v2-12.onnx',
+    'shufflenet-v2-12', 0.7806369426751593)
 ]
 
 DATASET_URL = 'https://s3.amazonaws.com/fast-ai-imageclas/imagenette2-320.tgz'
@@ -72,7 +72,7 @@ def validate(quantized_model: onnx.ModelProto, data_loader: torch.utils.data.Dat
         574: 8,  # golf ball
         701: 9  # parachute
     }
-
+    # TODO: (kshpv) add async
     for images, target in tqdm(data_loader):
         pred = sess.run(_output_names, {_input_name: images.numpy()})[0]
         pred_class = np.argmax(pred, axis=1)
