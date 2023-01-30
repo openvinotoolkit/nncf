@@ -50,6 +50,7 @@ def get_bias_value(node_with_bias: NNCFNode, nncf_graph: NNCFGraph, model: ov.Mo
     Returns the bias tensor for the biased node.
 
     :param node_with_bias: The node that corresponds to the operation with bias.
+    :param nncf_graph: NNCFGraph instance.
     :param model: The model that contains this operation.
     :return: The bias value that is applied to the output tensor of the node's operation.
     """
