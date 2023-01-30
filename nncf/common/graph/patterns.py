@@ -385,8 +385,11 @@ class PatternsManager(Enum):
 
     # DEVICE PATTERNS
     HSWISH_ACTIVATION_CLAMP_MULTIPLY = PatternDesc('hswish_activation_clamp_multiply',
-                                               backends=[BackendType.OPENVINO],
-                                               devices=[TargetDevice.ANY, TargetDevice.CPU, TargetDevice.GPU, TargetDevice.VPU])
+                                                   backends=[BackendType.OPENVINO],
+                                                   devices=[TargetDevice.ANY,
+                                                            TargetDevice.CPU,
+                                                            TargetDevice.GPU,
+                                                            TargetDevice.VPU])
     LINEAR_SCALE_SHIFT = PatternDesc('linear_scale_shift',
                                  backends=[BackendType.OPENVINO, BackendType.ONNX],
                                  devices=[TargetDevice.ANY, TargetDevice.CPU, TargetDevice.GPU])
