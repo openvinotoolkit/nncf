@@ -513,6 +513,13 @@ GENERAL_WEIGHT_LAYER_METATYPES = [OVConvolutionMetatype,
                                   OVConvolutionBackpropDataMetatype,
                                   OVMatMulMetatype]
 
+METATYPES_WITH_WEIGHT_PORT_ID = GENERAL_WEIGHT_LAYER_METATYPES + [OVAddMetatype]
+
+# Contains the operation metatypes for which bias can be applied.
+OPERATIONS_WITH_BIAS_METATYPES = [OVConvolutionMetatype,
+                                  OVConvolutionBackpropDataMetatype,
+                                  OVMatMulMetatype]
+
 
 def get_operator_metatypes() -> List[Type[OperatorMetatype]]:
     """

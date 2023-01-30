@@ -44,9 +44,9 @@ def quantize_impl(model: ov.Model,
         raise ValueError(f'model_type={model_type} is not supported')
 
     if ignored_scope is not None and ignored_scope.types is not None:
-            raise RuntimeError('Quantization algorithm from the OpenVINO backend '
-                            'does not support operation types in the ignored '
-                            'scopes yet')
+        raise RuntimeError('Quantization algorithm from the OpenVINO backend '
+                           'does not support operation types in the ignored '
+                           'scopes yet')
 
     quantization_parameters = PostTrainingQuantizationParameters(
         preset=preset,

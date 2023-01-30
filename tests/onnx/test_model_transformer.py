@@ -173,7 +173,7 @@ def test_bias_correction(layers, values, refs):
         bias_tensor_name = onnx_graph.get_node_by_name(conv_layer).input[2]
         bias_tensor = onnx_graph.get_initializer(bias_tensor_name)
         bias_value = onnx.numpy_helper.to_array(bias_tensor)
-        assert np.mean(bias_value) == bias_reference
+        assert np.all(bias_value == bias_reference)
 
 
 TARGET_LAYERS = [('DequantizeLinear_X_1',
