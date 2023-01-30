@@ -41,6 +41,9 @@ def prepare_for_inference(
     :param compressed_model: Compressed model.
     :param compressed_ctrl: Compression controller.
     """
+
+    if not isinstance(compressed_model, NNCFNetwork):
+        raise ValueError(f"Expected type of compressed_model is NNCFNetwork, but got {type(compressed_model)}.")
     compressed_model.train(False)
 
     if isinstance(compressed_ctrl, CompositeCompressionAlgorithmController):
@@ -83,7 +86,7 @@ def clean_operators(model: NNCFNetwork) -> None:
             op = model.external_quantizers[key]
             if isinstance(op, BaseQuantizer):
                 if not op.is_enabled_quantization():
-                    model.external_quantizers(key)
+                    model.external_quantizers.pop(key)
 
     for node in model.get_original_graph().get_all_nodes():
         if node.node_type in ["nncf_model_input", "nncf_model_output"]:
@@ -107,7 +110,7 @@ def clean_operators(model: NNCFNetwork) -> None:
                     nncf_module.remove_post_forward_operation(key)
                 if isinstance(op, BaseQuantizer):
                     if not op.is_enabled_quantization():
-                        nncf_module.remove_pre_forward_operation(key)
+                        nncf_module.remove_post_forward_operation(key)
 
 
 def replace_quantizer_to_native_module(model: NNCFNetwork) -> None:
