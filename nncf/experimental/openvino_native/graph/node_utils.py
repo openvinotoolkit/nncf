@@ -70,6 +70,9 @@ def get_node_with_bias_value(add_node: NNCFNode, nncf_graph: NNCFGraph) -> Optio
     :param nncf_graph: NNCFGraph instance.
     :return: Optional NNCFNode with bias value.
     """
+    if not hasattr(add_node.layer_attributes, 'weight_port_id'):
+        return None
+
     bias_port_id = add_node.layer_attributes.weight_port_id
     bias_constant = nncf_graph.get_input_edges(add_node)[bias_port_id].from_node
 
