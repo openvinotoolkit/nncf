@@ -31,8 +31,8 @@ from tqdm import tqdm
 
 import nncf
 from nncf.experimental.openvino_native.statistics.aggregator import OVStatisticsAggregator
-from nncf.quantization.algorithms.min_max.algorithm import MinMaxQuantization
-from nncf.quantization.algorithms.min_max.algorithm import MinMaxQuantizationParameters
+from nncf.quantization.algorithms.post_training.algorithm import PostTrainingQuantization
+from nncf.quantization.algorithms.post_training.algorithm import PostTrainingQuantizationParameters
 from tests.shared.command import Command
 
 NOT_AVAILABLE_MESSAGE = 'N/A'
@@ -229,18 +229,18 @@ def quantize_ov_native(model: ov.Model,
     if model_type is not None:
         RuntimeError('Model type is not supported')
     
-    min_max_algo = MinMaxQuantization(
-        MinMaxQuantizationParameters(
+    ptq_algo = PostTrainingQuantization(
+        PostTrainingQuantizationParameters(
             number_samples=subset_size, 
             preset=preset,
             target_device=target_device,
             ignored_scopes=ignored_scope))
     
     statistics_aggregator = OVStatisticsAggregator(calibration_dataset)
-    statistic_points = min_max_algo.get_statistic_points(model)
+    statistic_points = ptq_algo.get_statistic_points(model)
     statistics_aggregator.register_stastistic_points(statistic_points)
     statistics_aggregator.collect_statistics(model)
-    quantized_model = min_max_algo._apply(model, statistics_aggregator.statistic_points)
+    quantized_model = ptq_algo._apply(model, statistics_aggregator.statistic_points)
     return quantized_model
 
 
