@@ -349,26 +349,10 @@ class PatternsManager(Enum):
                                           backends=[BackendType.ONNX])
     INPUT_MULTIPLY_SUBTRACT = PatternDesc('input_multiply_subtract',
                                           backends=[BackendType.ONNX])
-    SWISH_SIGMOID_BATCH_NORM = PatternDesc('swish_sigmoid_batch_norm',
-                                           backends=[BackendType.ONNX])
-    SWISH_SIGMOID_SCALE_SHIFT = PatternDesc('swish_sigmoid_scale_shift',
-                                            backends=[BackendType.ONNX])
-    SWISH_HARD_SIGMOID_BATCH_NORM = PatternDesc('swish_hard_sigmoid_batch_norm',
-                                                backends=[BackendType.ONNX])
-    SWISH_HARD_SIGMOID_SCALE_SHIFT = PatternDesc('swish_hard_sigmoid_scale_shift',
-                                                 backends=[BackendType.ONNX])
     ARITHMETIC_BATCH_NORM_ACTIVATIONS = PatternDesc('arithmetic_batch_norm_activations',
                                                     backends=[BackendType.ONNX])
-    ARITHMETIC_BATCH_NORM_SWISH_SIGMOID = PatternDesc('arithmetic_batch_norm_swish_sigmoid',
-                                                      backends=[BackendType.ONNX])
-    ARITHMETIC_BATCH_NORM_SWISH_HARD_SIGMOID = PatternDesc('arithmetic_batch_norm_swish_hard_sigmoid',
-                                                           backends=[BackendType.ONNX])
     ARITHMETIC_SCALE_SHIFT_ACTIVATIONS = PatternDesc('arithmetic_scale_shift_activations',
                                                      backends=[BackendType.ONNX])
-    ARITHMETIC_SCALE_SHIFT_SWISH_SIGMOID = PatternDesc('arithmetic_scale_shift_swish_sigmoid',
-                                                       backends=[BackendType.ONNX])
-    ARITHMETIC_SCALE_SHIFT_SWISH_HARD_SIGMOID = PatternDesc('arithmetic_scale_shift_swish_hard_sigmoid',
-                                                            backends=[BackendType.ONNX])
     ARITHMETIC_ACTIVATIONS_BATCH_NORM = PatternDesc('arithmetic_activations_batch_norm',
                                                     backends=[BackendType.ONNX])
     ARITHMETIC_ACTIVATIONS_SCALE_SHIFT = PatternDesc('arithmetic_activations_scale_shift',
@@ -377,64 +361,28 @@ class PatternsManager(Enum):
                                         backends=[BackendType.ONNX])
     ARITHMETIC_ACTIVATIONS = PatternDesc('arithmetic_activations',
                                          backends=[BackendType.ONNX])
-    ARITHMETIC_SWISH_SIGMOID = PatternDesc('arithmetic_swish_sigmoid',
-                                           backends=[BackendType.ONNX])
-    ARITHMETIC_SWISH_HARD_SIGMOID = PatternDesc('arithmetic_swish_hard_sigmoid',
-                                                backends=[BackendType.ONNX])
     ARITHMETIC_SCALE_SHIFT = PatternDesc('arithmetic_scale_shift',
                                          backends=[BackendType.ONNX])
-    ARITHMETIC_SWISH_SIGMOID_BATCH_NORM = PatternDesc('arithmetic_swish_sigmoid_batch_norm',
-                                                      backends=[BackendType.ONNX])
-    ARITHMETIC_HARD_SIGMOID_SCALE_SHIFT = PatternDesc('arithmetic_hard_sigmoid_scale_shift',
-                                                      backends=[BackendType.ONNX])
-    ARITHMETIC_SWISH_HARD_SIGMOID_BATCH_NORM = PatternDesc('arithmetic_swish_hard_sigmoid_batch_norm',
-                                                           backends=[BackendType.ONNX])
-    ARITHMETIC_HARD_HARD_SIGMOID_SCALE_SHIFT = PatternDesc('arithmetic_hard_hard_sigmoid_scale_shift',
-                                                           backends=[BackendType.ONNX])
-    BATCH_NORM_SWISH_SIGMOID = PatternDesc('batch_norm_swish_sigmoid',
-                                           backends=[BackendType.ONNX])
-    BATCH_NORM_SWISH_HARD_SIGMOID = PatternDesc('batch_norm_swish_hard_sigmoid',
-                                                backends=[BackendType.ONNX])
     SCALE_SHIFT_ACTIVATIONS = PatternDesc('scale_shift_activations',
                                           backends=[BackendType.ONNX])
-    SCALE_SHIFT_SWISH_SIGMOID = PatternDesc('scale_shift_swish_sigmoid',
-                                            backends=[BackendType.ONNX])
-    SCALE_SHIFT_SWISH_HARD_SIGMOID = PatternDesc('scale_shift_swish_hard_sigmoid',
-                                                 backends=[BackendType.ONNX])
     LINEAR_ARITHMETIC = PatternDesc('linear_arithmetic',
                                     backends=[BackendType.ONNX])
     LINEAR_BATCH_NORM = PatternDesc('linear_batch_norm',
                                     backends=[BackendType.ONNX])
     LINEAR_ACTIVATIONS = PatternDesc('linear_activations',
                                      backends=[BackendType.ONNX])
-    LINEAR_SWISH_SIGMOID = PatternDesc('linear_swish_sigmoid',
-                                       backends=[BackendType.ONNX])
-    LINEAR_SWISH_HARD_SIGMOID = PatternDesc('linear_swish_hard_sigmoid',
-                                            backends=[BackendType.ONNX])
     LINEAR_BATCH_NORM_ACTIVATIONS = PatternDesc('linear_batch_norm_activations',
                                                 backends=[BackendType.ONNX])
-    LINEAR_BATCH_NORM_SWISH_SIGMOID = PatternDesc('linear_batch_norm_swish_sigmoid',
-                                                  backends=[BackendType.ONNX])
-    LINEAR_BATCH_NORM_SWISH_HARD_SIGMOID = PatternDesc('linear_batch_norm_swish_hard_sigmoid',
-                                                       backends=[BackendType.ONNX])
     LINEAR_SCALE_SHIFT_ACTIVATIONS = PatternDesc('linear_scale_shift_activations',
                                                  backends=[BackendType.ONNX])
-    LINEAR_SCALE_SHIFT_SWISH_SIGMOID = PatternDesc('linear_scale_shift_swish_sigmoid',
-                                                   backends=[BackendType.ONNX])
-    LINEAR_SCALE_SHIFT_SWISH_HARD_SIGMOID = PatternDesc('linear_scale_shift_swish_hard_sigmoid',
-                                                        backends=[BackendType.ONNX])
     LINEAR_ACTIVATIONS_BATCH_NORM = PatternDesc('linear_activations_batch_norm',
                                                 backends=[BackendType.ONNX])
-    LINEAR_SWISH_SIGMOID_BATCH_NORM = PatternDesc('linear_swish_sigmoid_batch_norm',
-                                                  backends=[BackendType.ONNX])
-    LINEAR_SWISH_HARD_SIGMOID_BATCH_NORM = PatternDesc('linear_swish_hard_sigmoid_batch_norm',
-                                                       backends=[BackendType.ONNX])
     LINEAR_ACTIVATIONS_SCALE_SHIFT = PatternDesc('linear_activations_scale_shift',
                                                  backends=[BackendType.ONNX])
-    LINEAR_SWISH_SIGMOID_SCALE_SHIFT = PatternDesc('linear_swish_sigmoid_scale_shift',
-                                                   backends=[BackendType.ONNX])
-    LINEAR_SWISH_HARD_SIGMOID_SCALE_SHIFT = PatternDesc('linear_swish_hard_sigmoid_scale_shift',
-                                                        backends=[BackendType.ONNX])
+    LINEAR_BATCH_NORM_SCALE_SHIFT_ACTIVATIONS = PatternDesc('linear_batch_norm_scale_shift_activations',
+                                                            backends=[BackendType.ONNX])
+    BATCH_NORM_SCALE_SHIFT_ACTIVATIONS = PatternDesc('batch_norm_scale_shift_activations',
+                                                     backends=[BackendType.ONNX])
 
     # DEVICE PATTERNS
     HSWISH_ACTIVATION_CLAMP_MULTIPLY = PatternDesc('hswish_activation_clamp_multiply',
@@ -520,5 +468,6 @@ class PatternsManager(Enum):
 
         for pattern_info in PatternsManager._filter_pattern_names_by_device(pattern_names, device):
             pattern = registry.get(pattern_info)()
-            hw_fused_patterns.register(pattern, pattern_info.value.name, pattern_info.value.match)
+            if pattern is not None:
+                hw_fused_patterns.register(pattern, pattern_info.value.name, pattern_info.value.match)
         return hw_fused_patterns

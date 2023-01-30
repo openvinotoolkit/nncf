@@ -43,6 +43,12 @@ def batch_normalization_operations():
 def atomic_activations_operations():
     pattern = GraphPattern()
     pattern.add_node(**ATOMIC_ACTIVATIONS_OPERATIONS)
+
+    swish_sigmoid = create_swish_with_sigmoid()
+    pattern.add_pattern_alternative(swish_sigmoid)
+
+    swish_hard_sigmoid = create_swish_with_hard_sigmoid()
+    pattern.add_pattern_alternative(swish_hard_sigmoid)
     return pattern
 
 
@@ -67,38 +73,6 @@ def create_activations_scale_shift():
     scale_shift = create_scale_shift_add()
     activations.join_patterns(scale_shift)
     return activations
-
-
-@ONNX_HW_FUSED_PATTERNS.register(PatternsManager.SWISH_SIGMOID_BATCH_NORM)
-def create_swish_sigmoid_batch_norm():
-    swish_sigmoid = create_swish_with_sigmoid()
-    batch_norm = batch_normalization_operations()
-    swish_sigmoid.join_patterns(batch_norm)
-    return swish_sigmoid
-
-
-@ONNX_HW_FUSED_PATTERNS.register(PatternsManager.SWISH_SIGMOID_SCALE_SHIFT)
-def create_swish_sigmoid_multiply_add():
-    swish_sigmoid = create_swish_with_sigmoid()
-    scale_shift = create_scale_shift_add()
-    swish_sigmoid.join_patterns(scale_shift)
-    return swish_sigmoid
-
-
-@ONNX_HW_FUSED_PATTERNS.register(PatternsManager.SWISH_HARD_SIGMOID_BATCH_NORM)
-def create_swish_hard_sigmoid_batch_norm():
-    swish_hard_sigmoid = create_swish_with_hard_sigmoid()
-    batch_norm = batch_normalization_operations()
-    swish_hard_sigmoid.join_patterns(batch_norm)
-    return swish_hard_sigmoid
-
-
-@ONNX_HW_FUSED_PATTERNS.register(PatternsManager.SWISH_HARD_SIGMOID_SCALE_SHIFT)
-def create_swish_hard_sigmoid_scale_shift():
-    swish_hard_sigmoid = create_swish_with_hard_sigmoid()
-    scale_shift = create_scale_shift_add()
-    swish_hard_sigmoid.join_patterns(scale_shift)
-    return swish_hard_sigmoid
 
 
 @ONNX_HW_FUSED_PATTERNS.register(PatternsManager.SWISH_WITH_SIGMOID)
@@ -149,22 +123,6 @@ def create_arithmetic_activations():
     return arithmetic
 
 
-@ONNX_HW_FUSED_PATTERNS.register(PatternsManager.ARITHMETIC_SWISH_SIGMOID)
-def create_arithmetic_swish_sigmoid():
-    arithmetic = arithmetic_operations()
-    swish_sigmoid = create_swish_with_sigmoid()
-    arithmetic.join_patterns(swish_sigmoid)
-    return arithmetic
-
-
-@ONNX_HW_FUSED_PATTERNS.register(PatternsManager.ARITHMETIC_SWISH_HARD_SIGMOID)
-def create_arithmetic_swish_hard_sigmoid():
-    arithmetic = arithmetic_operations()
-    swish_hard_sigmoid = create_swish_with_hard_sigmoid()
-    arithmetic.join_patterns(swish_hard_sigmoid)
-    return arithmetic
-
-
 @ONNX_HW_FUSED_PATTERNS.register(PatternsManager.ARITHMETIC_SCALE_SHIFT)
 def create_arithmetic_scale_shift():
     arithmetic = arithmetic_operations()
@@ -181,43 +139,11 @@ def create_arithmetic_batch_norm_activations():
     return arithmetic_batch_norm
 
 
-@ONNX_HW_FUSED_PATTERNS.register(PatternsManager.ARITHMETIC_BATCH_NORM_SWISH_SIGMOID)
-def create_arithmetic_batch_norm_swish_sigmoid():
-    arithmetic_batch_norm = create_arithmetic_batch_norm()
-    swish_sigmoid = create_swish_with_sigmoid()
-    arithmetic_batch_norm.join_patterns(swish_sigmoid)
-    return arithmetic_batch_norm
-
-
-@ONNX_HW_FUSED_PATTERNS.register(PatternsManager.ARITHMETIC_BATCH_NORM_SWISH_HARD_SIGMOID)
-def create_arithmetic_batch_norm_swish_hard_sigmoid():
-    arithmetic_batch_norm = create_arithmetic_batch_norm()
-    swish_hard_sigmoid = create_swish_with_hard_sigmoid()
-    arithmetic_batch_norm.join_patterns(swish_hard_sigmoid)
-    return arithmetic_batch_norm
-
-
 @ONNX_HW_FUSED_PATTERNS.register(PatternsManager.ARITHMETIC_SCALE_SHIFT_ACTIVATIONS)
 def create_arithmetic_scale_shift_activations():
     arithmetic_scale_shift = create_arithmetic_scale_shift()
     activations = atomic_activations_operations()
     arithmetic_scale_shift.join_patterns(activations)
-    return arithmetic_scale_shift
-
-
-@ONNX_HW_FUSED_PATTERNS.register(PatternsManager.ARITHMETIC_SCALE_SHIFT_SWISH_SIGMOID)
-def create_arithmetic_scale_shift_swish_sigmoid():
-    arithmetic_scale_shift = create_arithmetic_scale_shift()
-    swish_sigmoid = create_swish_with_sigmoid()
-    arithmetic_scale_shift.join_patterns(swish_sigmoid)
-    return arithmetic_scale_shift
-
-
-@ONNX_HW_FUSED_PATTERNS.register(PatternsManager.ARITHMETIC_SCALE_SHIFT_SWISH_HARD_SIGMOID)
-def create_arithmetic_scale_shift_swish_hard_sigmoid():
-    arithmetic_scale_shift = create_arithmetic_scale_shift()
-    swish_hard_sigmoid = create_swish_with_hard_sigmoid()
-    arithmetic_scale_shift.join_patterns(swish_hard_sigmoid)
     return arithmetic_scale_shift
 
 
@@ -237,38 +163,6 @@ def create_arithmetic_activations_scale_shift():
     return arithmetic_activations
 
 
-@ONNX_HW_FUSED_PATTERNS.register(PatternsManager.ARITHMETIC_SWISH_SIGMOID_BATCH_NORM)
-def create_arithmetic_swish_sigmoid_batch_norm():
-    arithmetic_swish_sigmoid = create_arithmetic_swish_sigmoid()
-    barch_norm = batch_normalization_operations()
-    arithmetic_swish_sigmoid.join_patterns(barch_norm)
-    return arithmetic_swish_sigmoid
-
-
-@ONNX_HW_FUSED_PATTERNS.register(PatternsManager.ARITHMETIC_HARD_SIGMOID_SCALE_SHIFT)
-def create_arithmetic_hard_sigmoid_scale_shift():
-    arithmetic_swish_sigmoid = create_arithmetic_swish_sigmoid()
-    scale_shift = create_scale_shift_add()
-    arithmetic_swish_sigmoid.join_patterns(scale_shift)
-    return arithmetic_swish_sigmoid
-
-
-@ONNX_HW_FUSED_PATTERNS.register(PatternsManager.ARITHMETIC_SWISH_HARD_SIGMOID_BATCH_NORM)
-def create_arithmetic_swish_hard_sigmoid_batch_norm():
-    arithmetic_swish_hard_sigmoid = create_arithmetic_swish_hard_sigmoid()
-    barch_norm = batch_normalization_operations()
-    arithmetic_swish_hard_sigmoid.join_patterns(barch_norm)
-    return arithmetic_swish_hard_sigmoid
-
-
-@ONNX_HW_FUSED_PATTERNS.register(PatternsManager.ARITHMETIC_HARD_HARD_SIGMOID_SCALE_SHIFT)
-def create_arithmetic_hard_hard_sigmoid_scale_shift():
-    arithmetic_swish_hard_sigmoid = create_arithmetic_swish_hard_sigmoid()
-    scale_shift = create_scale_shift_add()
-    arithmetic_swish_hard_sigmoid.join_patterns(scale_shift)
-    return arithmetic_swish_hard_sigmoid
-
-
 @ONNX_HW_FUSED_PATTERNS.register(PatternsManager.BATCH_NORM_ACTIVATIONS)
 def create_batch_norm_activations():
     batch_norm = batch_normalization_operations()
@@ -277,43 +171,11 @@ def create_batch_norm_activations():
     return batch_norm
 
 
-@ONNX_HW_FUSED_PATTERNS.register(PatternsManager.BATCH_NORM_SWISH_SIGMOID)
-def create_batch_norm_swish_sigmoid():
-    batch_norm = batch_normalization_operations()
-    swish_sigmoid = create_swish_with_sigmoid()
-    batch_norm.join_patterns(swish_sigmoid)
-    return batch_norm
-
-
-@ONNX_HW_FUSED_PATTERNS.register(PatternsManager.BATCH_NORM_SWISH_HARD_SIGMOID)
-def create_batch_norm_swish_hard_sigmoid():
-    batch_norm = batch_normalization_operations()
-    swish_hard_sigmoid = create_swish_with_hard_sigmoid()
-    batch_norm.join_patterns(swish_hard_sigmoid)
-    return batch_norm
-
-
 @ONNX_HW_FUSED_PATTERNS.register(PatternsManager.SCALE_SHIFT_ACTIVATIONS)
 def create_scale_shift_activations():
     scale_shift = create_scale_shift_add()
     activations = atomic_activations_operations()
     scale_shift.join_patterns(activations)
-    return scale_shift
-
-
-@ONNX_HW_FUSED_PATTERNS.register(PatternsManager.SCALE_SHIFT_SWISH_SIGMOID)
-def create_scale_shift_swish_sigmoid():
-    scale_shift = create_scale_shift_add()
-    swish_sigmoid = create_swish_with_sigmoid()
-    scale_shift.join_patterns(swish_sigmoid)
-    return scale_shift
-
-
-@ONNX_HW_FUSED_PATTERNS.register(PatternsManager.SCALE_SHIFT_SWISH_HARD_SIGMOID)
-def create_scale_shift_swish_hard_sigmoid():
-    scale_shift = create_scale_shift_add()
-    swish_hard_sigmoid = create_swish_with_hard_sigmoid()
-    scale_shift.join_patterns(swish_hard_sigmoid)
     return scale_shift
 
 
@@ -387,43 +249,11 @@ def create_linear_activations():
     return linear
 
 
-@ONNX_HW_FUSED_PATTERNS.register(PatternsManager.LINEAR_SWISH_SIGMOID)
-def create_linear_swish_sigmoid():
-    linear = linear_operations()
-    swish_sigmoid = create_swish_with_sigmoid()
-    linear.join_patterns(swish_sigmoid)
-    return linear
-
-
-@ONNX_HW_FUSED_PATTERNS.register(PatternsManager.LINEAR_SWISH_HARD_SIGMOID)
-def create_linear_swish_hard_sigmoid():
-    linear = linear_operations()
-    swish_hard_sigmoid = create_swish_with_hard_sigmoid()
-    linear.join_patterns(swish_hard_sigmoid)
-    return linear
-
-
 @ONNX_HW_FUSED_PATTERNS.register(PatternsManager.LINEAR_BATCH_NORM_ACTIVATIONS)
 def create_linear_batch_norm_activations():
     linear_batch_norm = create_linear_batch_norm()
     activations = atomic_activations_operations()
     linear_batch_norm.join_patterns(activations)
-    return linear_batch_norm
-
-
-@ONNX_HW_FUSED_PATTERNS.register(PatternsManager.LINEAR_BATCH_NORM_SWISH_SIGMOID)
-def create_linear_batch_norm_swish_sigmoid():
-    linear_batch_norm = create_linear_batch_norm()
-    swish_sigmoid = create_swish_with_sigmoid()
-    linear_batch_norm.join_patterns(swish_sigmoid)
-    return linear_batch_norm
-
-
-@ONNX_HW_FUSED_PATTERNS.register(PatternsManager.LINEAR_BATCH_NORM_SWISH_HARD_SIGMOID)
-def create_linear_batch_norm_swish_hard_sigmoid():
-    linear_batch_norm = create_linear_batch_norm()
-    swish_hard_sigmoid = create_swish_with_hard_sigmoid()
-    linear_batch_norm.join_patterns(swish_hard_sigmoid)
     return linear_batch_norm
 
 
@@ -435,22 +265,6 @@ def create_linear_scale_shift_activations():
     return linear_scale_shift
 
 
-@ONNX_HW_FUSED_PATTERNS.register(PatternsManager.LINEAR_SCALE_SHIFT_SWISH_SIGMOID)
-def create_linear_scale_shift_swish_sigmoid():
-    linear_scale_shift = create_linear_scale_shift()
-    swish_sigmoid = create_swish_with_sigmoid()
-    linear_scale_shift.join_patterns(swish_sigmoid)
-    return linear_scale_shift
-
-
-@ONNX_HW_FUSED_PATTERNS.register(PatternsManager.LINEAR_SCALE_SHIFT_SWISH_HARD_SIGMOID)
-def create_linear_scale_shift_swish_hard_sigmoid():
-    linear_scale_shift = create_linear_scale_shift()
-    swish_hard_sigmoid = create_swish_with_hard_sigmoid()
-    linear_scale_shift.join_patterns(swish_hard_sigmoid)
-    return linear_scale_shift
-
-
 @ONNX_HW_FUSED_PATTERNS.register(PatternsManager.LINEAR_ACTIVATIONS_BATCH_NORM)
 def create_linear_activations_batch_norm():
     linear_activations = create_linear_activations()
@@ -459,44 +273,12 @@ def create_linear_activations_batch_norm():
     return linear_activations
 
 
-@ONNX_HW_FUSED_PATTERNS.register(PatternsManager.LINEAR_SWISH_SIGMOID_BATCH_NORM)
-def create_linear_swish_sigmoid_batch_norm():
-    linear_swish_sigmoid = create_linear_swish_sigmoid()
-    batch_norm = batch_normalization_operations()
-    linear_swish_sigmoid.join_patterns(batch_norm)
-    return linear_swish_sigmoid
-
-
-@ONNX_HW_FUSED_PATTERNS.register(PatternsManager.LINEAR_SWISH_HARD_SIGMOID_BATCH_NORM)
-def create_linear_swish_hard_sigmoid_batch_norm():
-    linear_swish_hard_sigmoid = create_linear_swish_hard_sigmoid()
-    batch_norm = batch_normalization_operations()
-    linear_swish_hard_sigmoid.join_patterns(batch_norm)
-    return linear_swish_hard_sigmoid
-
-
 @ONNX_HW_FUSED_PATTERNS.register(PatternsManager.LINEAR_ACTIVATIONS_SCALE_SHIFT)
 def create_linear_activations_scale_shift():
     linear_activations = create_linear_activations()
     scale_shift = create_scale_shift_add()
     linear_activations.join_patterns(scale_shift)
     return linear_activations
-
-
-@ONNX_HW_FUSED_PATTERNS.register(PatternsManager.LINEAR_SWISH_SIGMOID_SCALE_SHIFT)
-def create_linear_swish_sigmoid_scale_shift():
-    linear_swish_sigmoid = create_linear_swish_sigmoid()
-    scale_shift = create_scale_shift_add()
-    linear_swish_sigmoid.join_patterns(scale_shift)
-    return linear_swish_sigmoid
-
-
-@ONNX_HW_FUSED_PATTERNS.register(PatternsManager.LINEAR_SWISH_HARD_SIGMOID_SCALE_SHIFT)
-def create_linear_swish_hard_sigmoid_scale_shift():
-    linear_swish_hard_sigmoid = create_linear_swish_hard_sigmoid()
-    scale_shift = create_scale_shift_add()
-    linear_swish_hard_sigmoid.join_patterns(scale_shift)
-    return linear_swish_hard_sigmoid
 
 
 @ONNX_HW_FUSED_PATTERNS.register(PatternsManager.SCALE_SHIFT_ADD)
@@ -526,3 +308,25 @@ def create_input_multiply_subtract():
     pattern.add_edge(input_node, multiply_node)
     pattern.add_edge(multiply_node, subtract_node)
     return pattern
+
+
+@ONNX_HW_FUSED_PATTERNS.register(PatternsManager.LINEAR_BATCH_NORM_SCALE_SHIFT_ACTIVATIONS)
+def create_linear_bn_scale_shift_activation() -> GraphPattern:
+    linear_batch_norm = create_linear_batch_norm()
+    scale_shift = create_scale_shift_add()
+    activations = atomic_activations_operations()
+
+    linear_batch_norm.join_patterns(scale_shift)
+    linear_batch_norm.join_patterns(activations)
+    return linear_batch_norm
+
+
+@ONNX_HW_FUSED_PATTERNS.register(PatternsManager.BATCH_NORM_SCALE_SHIFT_ACTIVATIONS)
+def create_bn_scale_shift_activation() -> GraphPattern:
+    batch_norm = batch_normalization_operations()
+    scale_shift = create_scale_shift_add()
+    activations = atomic_activations_operations()
+
+    batch_norm.join_patterns(scale_shift)
+    batch_norm.join_patterns(activations)
+    return batch_norm
