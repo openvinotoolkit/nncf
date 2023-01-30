@@ -387,31 +387,31 @@ class PatternsManager(Enum):
     # DEVICE PATTERNS
     HSWISH_ACTIVATION_CLAMP_MULTIPLY = PatternDesc('hswish_activation_clamp_multiply',
                                                backends=[BackendType.OPENVINO],
-                                               devices=[TargetDevice.CPU, TargetDevice.GPU, TargetDevice.VPU])
-    LINEAR_SCALE_SHIFT = PatternDesc('',
+                                               devices=[TargetDevice.ANY, TargetDevice.CPU, TargetDevice.GPU, TargetDevice.VPU])
+    LINEAR_SCALE_SHIFT = PatternDesc('linear_scale_shift',
                                  backends=[BackendType.OPENVINO, BackendType.ONNX],
-                                 devices=[TargetDevice.CPU, TargetDevice.GPU])
+                                 devices=[TargetDevice.ANY, TargetDevice.CPU, TargetDevice.GPU])
     LINEAR_BIASED_SCALE_SHIFT = PatternDesc('linear_biased_scale_shift',
                                         backends=[BackendType.OPENVINO],
-                                        devices=[TargetDevice.CPU, TargetDevice.GPU])
+                                        devices=[TargetDevice.ANY, TargetDevice.CPU, TargetDevice.GPU])
     LINEAR_ACTIVATION_SCALE_SHIFT = PatternDesc('linear_activation_scale_shift',
                                             backends=[BackendType.OPENVINO],
-                                            devices=[TargetDevice.CPU, TargetDevice.GPU])
+                                            devices=[TargetDevice.ANY, TargetDevice.CPU, TargetDevice.GPU])
     LINEAR_BIASED_ACTIVATION_SCALE_SHIFT = PatternDesc('linear_biased_activation_scale_shift',
                                                    backends=[BackendType.OPENVINO],
-                                                   devices=[TargetDevice.CPU, TargetDevice.GPU])
+                                                   devices=[TargetDevice.ANY, TargetDevice.CPU, TargetDevice.GPU])
     LINEAR_ELEMENTWISE = PatternDesc('linear_elementwise',
                                  backends=[BackendType.OPENVINO],
-                                 devices=[TargetDevice.CPU, TargetDevice.GPU])
+                                 devices=[TargetDevice.ANY, TargetDevice.CPU, TargetDevice.GPU])
     LINEAR_BIASED_ELEMENTWISE = PatternDesc('linear_biased_elementwise',
                                         backends=[BackendType.OPENVINO],
-                                        devices=[TargetDevice.CPU, TargetDevice.GPU])
+                                        devices=[TargetDevice.ANY, TargetDevice.CPU, TargetDevice.GPU])
     LINEAR_ACTIVATION_ELEMENTWISE = PatternDesc('linear_activation_elementwise',
                                             backends=[BackendType.OPENVINO],
-                                            devices=[TargetDevice.CPU, TargetDevice.GPU])
+                                            devices=[TargetDevice.ANY, TargetDevice.CPU, TargetDevice.GPU])
     LINEAR_BIASED_ACTIVATION_ELEMENTWISE = PatternDesc('linear_biased_activation_elementwise',
                                                    backends=[BackendType.OPENVINO],
-                                                   devices=[TargetDevice.CPU, TargetDevice.GPU])
+                                                   devices=[TargetDevice.ANY, TargetDevice.CPU, TargetDevice.GPU])
 
     # OPERATIONS
     LINEAR_OPERATIONS = PatternDesc('linear_operations', match=False)

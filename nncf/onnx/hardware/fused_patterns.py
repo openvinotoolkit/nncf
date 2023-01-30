@@ -11,7 +11,7 @@
  limitations under the License.
 """
 
-from nncf.common.graph.definitions import NNCFGraphNodeType
+from nncf.common.graph.operator_metatypes import InputNoopMetatype
 from nncf.common.graph.patterns import GraphPattern
 from nncf.common.graph.patterns import PatternsManager
 from nncf.common.utils.registry import Registry
@@ -182,8 +182,8 @@ def create_scale_shift_activations():
 @ONNX_HW_FUSED_PATTERNS.register(PatternsManager.INPUT_ADD_MULTIPLY)
 def create_input_add_multiply():
     pattern = GraphPattern()
-    input_node = pattern.add_node(**{GraphPattern.LABEL_ATTR: 'INPUT',
-                                     GraphPattern.METATYPE_ATTR: NNCFGraphNodeType.INPUT_NODE})
+    input_node = pattern.add_node(**{GraphPattern.LABEL_ATTR: 'MODEL_INPUT',
+                                     GraphPattern.METATYPE_ATTR: InputNoopMetatype})
     add_node = pattern.add_node(**{GraphPattern.LABEL_ATTR: 'ADD',
                                    GraphPattern.METATYPE_ATTR: om.ONNXAddLayerMetatype})
     multiply_node = pattern.add_node(**{GraphPattern.LABEL_ATTR: 'MULTIPLY',
@@ -197,8 +197,8 @@ def create_input_add_multiply():
 @ONNX_HW_FUSED_PATTERNS.register(PatternsManager.INPUT_SCALE_SHIFT)
 def create_input_scale_shift():
     pattern = GraphPattern()
-    pattern.add_node(**{GraphPattern.LABEL_ATTR: 'INPUT',
-                        GraphPattern.METATYPE_ATTR: NNCFGraphNodeType.INPUT_NODE})
+    pattern.add_node(**{GraphPattern.LABEL_ATTR: 'MODEL_INPUT',
+                        GraphPattern.METATYPE_ATTR: InputNoopMetatype})
     scale_shift = create_scale_shift_add()
 
     pattern.join_patterns(scale_shift)
@@ -208,8 +208,8 @@ def create_input_scale_shift():
 @ONNX_HW_FUSED_PATTERNS.register(PatternsManager.INPUT_PROCESSING)
 def create_input_add():
     pattern = GraphPattern()
-    input_node = pattern.add_node(**{GraphPattern.LABEL_ATTR: 'INPUT',
-                                     GraphPattern.METATYPE_ATTR: NNCFGraphNodeType.INPUT_NODE})
+    input_node = pattern.add_node(**{GraphPattern.LABEL_ATTR: 'MODEL_INPUT',
+                                     GraphPattern.METATYPE_ATTR: InputNoopMetatype})
     add_node = pattern.add_node(**{GraphPattern.LABEL_ATTR: 'ADD, MULTIPLY',
                                    GraphPattern.METATYPE_ATTR: [om.ONNXAddLayerMetatype, om.ONNXMulLayerMetatype]})
 
@@ -298,8 +298,8 @@ def create_scale_shift_add():
 @ONNX_HW_FUSED_PATTERNS.register(PatternsManager.INPUT_MULTIPLY_SUBTRACT)
 def create_input_multiply_subtract():
     pattern = GraphPattern()
-    input_node = pattern.add_node(**{GraphPattern.LABEL_ATTR: 'INPUT',
-                                     GraphPattern.METATYPE_ATTR: NNCFGraphNodeType.INPUT_NODE})
+    input_node = pattern.add_node(**{GraphPattern.LABEL_ATTR: 'MODEL_INPUT',
+                                     GraphPattern.METATYPE_ATTR: InputNoopMetatype})
     multiply_node = pattern.add_node(**{GraphPattern.LABEL_ATTR: 'MULTIPLY',
                                         GraphPattern.METATYPE_ATTR: om.ONNXMulLayerMetatype})
     subtract_node = pattern.add_node(**{GraphPattern.LABEL_ATTR: 'SUBTRACT',

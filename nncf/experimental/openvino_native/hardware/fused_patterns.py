@@ -127,7 +127,7 @@ def create_add_scaleshift_pattern():
                                    GraphPattern.METATYPE_ATTR: om.OVMultiplyMetatype})
     add_node_2 = pattern.add_node(**{GraphPattern.LABEL_ATTR: 'ADD',
                                      GraphPattern.METATYPE_ATTR: om.OVAddMetatype})
-    result_node = pattern.add_node(**{GraphPattern.LABEL_ATTR: 'RESULT',
+    result_node = pattern.add_node(**{GraphPattern.LABEL_ATTR: 'MODEL_OUTPUT',
                                    GraphPattern.METATYPE_ATTR: om.OVResultMetatype})
 
     pattern.add_edge(add_node_1, mul_node)
@@ -162,7 +162,7 @@ def create_normalize_pattern():
 @OPENVINO_HW_FUSED_PATTERNS.register(PatternsManager.INPUT_SCALE_SHIFT)
 def create_input_scaleshift_pattern():
     pattern = GraphPattern()
-    pattern.add_node(**{GraphPattern.LABEL_ATTR: 'INPUT',
+    pattern.add_node(**{GraphPattern.LABEL_ATTR: 'MODEL_INPUT',
                         GraphPattern.METATYPE_ATTR: om.OVParameterMetatype})
     scale_shift = create_scale_shift_add_pattern()
 
@@ -173,7 +173,7 @@ def create_input_scaleshift_pattern():
 @OPENVINO_HW_FUSED_PATTERNS.register(PatternsManager.INPUT_TRANSPOSE_SCALE_SHIFT)
 def create_input_transpose_scaleshift_pattern():
     pattern = GraphPattern()
-    input_node = pattern.add_node(**{GraphPattern.LABEL_ATTR: 'INPUT',
+    input_node = pattern.add_node(**{GraphPattern.LABEL_ATTR: 'MODEL_INPUT',
                                      GraphPattern.METATYPE_ATTR: om.OVParameterMetatype})
     transpose_node = pattern.add_node(**{GraphPattern.LABEL_ATTR: 'TRANSPOSE',
                                          GraphPattern.METATYPE_ATTR: om.OVTransposeMetatype})
@@ -195,7 +195,7 @@ def create_input_convert_transpose_scaleshift_pattern():
 @OPENVINO_HW_FUSED_PATTERNS.register(PatternsManager.INPUT_PROCESSING)
 def create_input_processing_pattern():
     pattern = GraphPattern()
-    input_node = pattern.add_node(**{GraphPattern.LABEL_ATTR: 'INPUT',
+    input_node = pattern.add_node(**{GraphPattern.LABEL_ATTR: 'MODEL_INPUT',
                                      GraphPattern.METATYPE_ATTR: om.OVParameterMetatype})
     processing_node = pattern.add_node(**{GraphPattern.LABEL_ATTR: 'SUBTRACT, MULTIPLY, ADD',
                                           GraphPattern.METATYPE_ATTR: [om.OVSubtractMetatype,
@@ -209,7 +209,7 @@ def create_input_processing_pattern():
 @OPENVINO_HW_FUSED_PATTERNS.register(PatternsManager.INPUT_TRANSPOSE_PROCESSING)
 def create_input_transpose_processing_pattern():
     pattern = GraphPattern()
-    input_node = pattern.add_node(**{GraphPattern.LABEL_ATTR: 'INPUT',
+    input_node = pattern.add_node(**{GraphPattern.LABEL_ATTR: 'MODEL_INPUT',
                                      GraphPattern.METATYPE_ATTR: om.OVParameterMetatype})
     transpose_node = pattern.add_node(**{GraphPattern.LABEL_ATTR: 'TRANSPOSE',
                                          GraphPattern.METATYPE_ATTR: om.OVTransposeMetatype})
@@ -235,7 +235,7 @@ def create_input_convert_transpose_processing_pattern():
 @OPENVINO_HW_FUSED_PATTERNS.register(PatternsManager.INPUT_REVERSE_INPUT_CHANNELS_SCALE_SHIFT)
 def create_input_reverse_input_channel_scaleshift_pattern():
     pattern = GraphPattern()
-    input_node = pattern.add_node(**{GraphPattern.LABEL_ATTR: 'INPUT',
+    input_node = pattern.add_node(**{GraphPattern.LABEL_ATTR: 'MODEL_INPUT',
                                      GraphPattern.METATYPE_ATTR: om.OVParameterMetatype})
     split_node = pattern.add_node(**{GraphPattern.LABEL_ATTR: 'SPLIT',
                                      GraphPattern.METATYPE_ATTR: om.OVSplitMetatype})
@@ -253,7 +253,7 @@ def create_input_reverse_input_channel_scaleshift_pattern():
 @OPENVINO_HW_FUSED_PATTERNS.register(PatternsManager.INPUT_CONVERT_TRANSPOSE_REVERSE_INPUT_CHANNELS_SCALE_SHIFT)
 def create_input_convert_transpose_reverse_input_channel_scaleshift_pattern():
     pattern = GraphPattern()
-    input_node = pattern.add_node(**{GraphPattern.LABEL_ATTR: 'INPUT',
+    input_node = pattern.add_node(**{GraphPattern.LABEL_ATTR: 'MODEL_INPUT',
                                      GraphPattern.METATYPE_ATTR: om.OVParameterMetatype})
     convert_node = pattern.add_node(**{GraphPattern.LABEL_ATTR: 'CONVERT',
                                        GraphPattern.METATYPE_ATTR: om.OVConvertMetatype})
@@ -277,7 +277,7 @@ def create_input_convert_transpose_reverse_input_channel_scaleshift_pattern():
 @OPENVINO_HW_FUSED_PATTERNS.register(PatternsManager.INPUT_REVERSE_INPUT_CHANNELS_ADD)
 def create_input_reverse_input_channel_add_pattern():
     pattern = GraphPattern()
-    input_node = pattern.add_node(**{GraphPattern.LABEL_ATTR: 'INPUT',
+    input_node = pattern.add_node(**{GraphPattern.LABEL_ATTR: 'MODEL_INPUT',
                                      GraphPattern.METATYPE_ATTR: om.OVParameterMetatype})
     split_node = pattern.add_node(**{GraphPattern.LABEL_ATTR: 'SPLIT',
                                      GraphPattern.METATYPE_ATTR: om.OVSplitMetatype})
@@ -296,7 +296,7 @@ def create_input_reverse_input_channel_add_pattern():
 @OPENVINO_HW_FUSED_PATTERNS.register(PatternsManager.INPUT_TRANSPOSE_REVERSE_INPUT_CHANNELS_ADD)
 def create_input_transpose_reverse_input_channel_add_pattern():
     pattern = GraphPattern()
-    input_node = pattern.add_node(**{GraphPattern.LABEL_ATTR: 'INPUT',
+    input_node = pattern.add_node(**{GraphPattern.LABEL_ATTR: 'MODEL_INPUT',
                                      GraphPattern.METATYPE_ATTR: om.OVParameterMetatype})
     transpose_node = pattern.add_node(**{GraphPattern.LABEL_ATTR: 'TRANSPOSE',
                                          GraphPattern.METATYPE_ATTR: om.OVTransposeMetatype})
@@ -724,7 +724,7 @@ def elementwise_operations():
 
 def create_input_convert_transpose():
     pattern = GraphPattern()
-    input_node = pattern.add_node(**{GraphPattern.LABEL_ATTR: 'INPUT',
+    input_node = pattern.add_node(**{GraphPattern.LABEL_ATTR: 'MODEL_INPUT',
                                      GraphPattern.METATYPE_ATTR: om.OVParameterMetatype})
     convert_node = pattern.add_node(**{GraphPattern.LABEL_ATTR: 'CONVERT',
                                        GraphPattern.METATYPE_ATTR: om.OVConvertMetatype})
