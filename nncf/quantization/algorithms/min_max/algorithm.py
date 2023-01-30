@@ -280,7 +280,7 @@ class MinMaxQuantization(Algorithm):
         final_setup = solver.get_final_quantizer_setup(finalized_proposal)
         return final_setup
 
-    def _add_weight_quantization_target_point(self, model: TModel, quantization_point: SingleConfigQuantizationPoint,
+    def _add_weight_quantization_target_point(self, quantization_point: SingleConfigQuantizationPoint,
                                               nncf_graph: NNCFGraph) -> None:
         """
         Adds weight quantization target point to the set of existing points.
@@ -295,8 +295,7 @@ class MinMaxQuantization(Algorithm):
         weight_quantization_target_point = self._backend_entity.target_point(TargetType.OPERATION_WITH_WEIGHTS,
                                                                              node_name,
                                                                              port_id)
-        weight_quantizer_config = self._backend_entity.get_weight_config(quantization_point.qconfig, model)
-        self._quantization_target_points_to_qconfig[weight_quantization_target_point] = weight_quantizer_config
+        self._quantization_target_points_to_qconfig[weight_quantization_target_point] = quantization_point.qconfig
 
     def _add_activation_quantization_target_point(self,
                                                   quantization_point: SingleConfigQuantizationPoint) -> None:
@@ -339,7 +338,7 @@ class MinMaxQuantization(Algorithm):
         quantizer_setup = self._get_quantizer_setup(nncf_graph)
         for quantization_point in quantizer_setup.quantization_points.values():
             if quantization_point.is_weight_quantization_point():
-                self._add_weight_quantization_target_point(model, quantization_point, nncf_graph)
+                self._add_weight_quantization_target_point(quantization_point, nncf_graph)
             elif quantization_point.is_activation_quantization_point():
                 self._add_activation_quantization_target_point(quantization_point)
             else:
