@@ -43,7 +43,7 @@ def preprocess_imagenette_data(dataset_path: str) -> None:
 
 def preprocess_imagenette_labels(dataset_path: str) -> None:
     labels_map = {
-        'n01440764': 0,    # tench
+        'n01440764': 0,  # tench
         'n02102040': 217,  # English springer
         'n02979186': 482,  # cassette player
         'n03000684': 491,  # chain saw
@@ -52,7 +52,7 @@ def preprocess_imagenette_labels(dataset_path: str) -> None:
         'n03417042': 569,  # garbage truck
         'n03425413': 571,  # gas pump
         'n03445777': 574,  # golf ball
-        'n03888257': 701   # parachute
+        'n03888257': 701  # parachute
     }
 
     response = requests.get(IMAGENETTE_ANNOTATION_URL, timeout=10)
@@ -72,18 +72,3 @@ def prepare_imagenette_for_test() -> Path:
     preprocess_imagenette_labels(dataset_path)
     preprocess_imagenette_data(dataset_path)
     return dataset_path
-
-
-def prepare_wider_for_test() -> Path:
-    dataset_path = download(WIDER_FACE_URL, DATASET_PATH)
-    _ = download(WIDER_FACE_ANNOTATION_URL, DATASET_PATH)
-    return dataset_path
-
-
-def get_dataset_for_test(dataset_name: str) -> Path:
-    if dataset_name == 'imagenette2-320':
-        return prepare_imagenette_for_test()
-    if dataset_name == 'wider':
-        return prepare_wider_for_test()
-
-    raise RuntimeError(f'Unknown dataset: {dataset_name}.')

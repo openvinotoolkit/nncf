@@ -10,71 +10,121 @@
  See the License for the specific language governing permissions and
  limitations under the License.
 """
+from pathlib import Path
+from typing import Dict, List
+
+import nncf
+import numpy as np
 import onnx
+from onnx import version_converter
+import onnxruntime
+import torch
+from fastdownload import FastDownload
+from sklearn.metrics import accuracy_score
+from torchvision import datasets, transforms
+from tqdm import tqdm
+
 import pytest
 import os
-import nncf
 
-from openvino.tools.accuracy_checker.config import ConfigReader
-from openvino.tools.accuracy_checker.argparser import build_arguments_parser
-from openvino.tools.accuracy_checker.evaluators import ModelEvaluator
-
-from tests.onnx.quantization.regression_test.omz_helpers import calculate_metrics
-from tests.onnx.quantization.regression_test.omz_helpers import download_model
-from tests.onnx.quantization.regression_test.dataset_helpers import get_dataset_for_test
-from tests.shared.paths import TEST_ROOT
-from tests.shared.paths import DATASET_DEFINITIONS_PATH
-
-OMZ_MODELS = [
-    ('resnet-18-pytorch', 'imagenette2-320', {'accuracy@top1': '0.778', 'accuracy@top5': '0.948'}),
-    ('mobilenet-v3-small-1.0-224-tf', 'imagenette2-320', {'accuracy@top1': '0.746', 'accuracy@top5': '0.92'}),
-    ('googlenet-v3-pytorch', 'imagenette2-320', {'accuracy@top1': '0.909', 'accuracy@top5': '0.994'}),
-    ('mobilefacedet-v1-mxnet', 'wider', {'map': '0.7750224587055485'}),
-    ('retinaface-resnet50-pytorch', 'wider', {'map': '0.9170155131056823'}),
+MODELS = [
+    ('https://github.com/onnx/models/raw/main/vision/classification/mobilenet/model/mobilenetv2-12.onnx',
+     'mobilenetv2-12', 0.7880254777070064),
+    ('https://github.com/onnx/models/raw/main/vision/classification/resnet/model/resnet50-v1-7.onnx',
+     'resnet50-v1-7', 0.0),
 ]
 
-AC_CONFIGS_DIR = TEST_ROOT / 'onnx' / 'quantization' / 'regression_test' / 'configs'
+DATASET_URL = 'https://s3.amazonaws.com/fast-ai-imageclas/imagenette2-320.tgz'
+DATASET_PATH = '~/.cache/nncf/datasets'
 
 
-# pylint: disable=protected-access
-def quantize_model(model_path, config_path, data_dir):
-    args = [
-        "-c", str(config_path),
-        "-m", str(model_path),
-        "-d", str(DATASET_DEFINITIONS_PATH),
-        "-s", str(data_dir),
-    ]
-    parser = build_arguments_parser()
-    args = parser.parse_args(args)
-    args.target_framework = 'onnx_runtime'
-    config, mode = ConfigReader.merge(args)
-    model_evaluator = ModelEvaluator.from_configs(config[mode][0])
+def download_dataset() -> Path:
+    downloader = FastDownload(base=DATASET_PATH,
+                              archive='downloaded',
+                              data='extracted')
+    return downloader.get(DATASET_URL)
+
+
+def download_model(model_url, tmp_path) -> Path:
+    downloader = FastDownload(base=tmp_path)
+    return downloader.download(model_url)
+
+
+def validate(quantized_model: onnx.ModelProto, data_loader: torch.utils.data.DataLoader,
+             providers: List[str], provider_options: Dict[str, str]) -> float:
+    sess = onnxruntime.InferenceSession(quantized_model.SerializeToString(), providers=providers,
+                                        provider_options=provider_options)
+    _input_name = sess.get_inputs()[0].name
+    _output_names = [sess.get_outputs()[0].name]
+
+    predictions = []
+    references = []
+
+    from_imagenet_to_imageneetee = {
+        0: 0,  # tench
+        217: 1,  # English springer
+        482: 2,  # cassette player
+        491: 3,  # chain saw
+        497: 4,  # church
+        566: 5,  # French horn
+        569: 6,  # garbage truck
+        571: 7,  # gas pump
+        574: 8,  # golf ball
+        701: 9  # parachute
+    }
+
+    for images, target in tqdm(data_loader):
+        pred = sess.run(_output_names, {_input_name: images.numpy()})[0]
+        pred_class = np.argmax(pred, axis=1)
+        if pred_class.item() in from_imagenet_to_imageneetee:
+            pred_class[0] = from_imagenet_to_imageneetee[pred_class.item()]
+        predictions.append(pred_class)
+        if target.item() in from_imagenet_to_imageneetee:
+            target[0] = from_imagenet_to_imageneetee[target.item()]
+        references.append(target)
+
+    predictions = np.concatenate(predictions, axis=0)
+    references = np.concatenate(references, axis=0)
+    return accuracy_score(predictions, references)
+
+
+@pytest.mark.parametrize('model_url, model_name, fp32_top1', MODELS, ids=[model[1] for model in MODELS])
+def test_compression(tmp_path, model_url, model_name, fp32_top1):
+    original_model_path = download_model(model_url, tmp_path)
+    dataset_path = download_dataset()
+
+    normalize = transforms.Normalize(mean=[0.485, 0.456, 0.406],
+                                     std=[0.229, 0.224, 0.225])
+    val_dataset = datasets.ImageFolder(
+        root=os.path.join(dataset_path, 'val'),
+        transform=transforms.Compose([
+            transforms.Resize(256),
+            transforms.CenterCrop(224),
+            transforms.ToTensor(),
+            normalize,
+        ])
+    )
+    val_loader = torch.utils.data.DataLoader(
+        val_dataset, batch_size=1, shuffle=False)
+
+    model = onnx.load_model(original_model_path)
+    converted_model = version_converter.convert_version(model, 13)
+    if fp32_top1 is None:
+        fp32_top1 = validate(model, val_loader,
+                             providers=['OpenVINOExecutionProvider'],
+                             provider_options=[{'device_type': 'CPU_FP32'}])
+
+    print(f'FP32 TOP1={fp32_top1}')
+    input_name = converted_model.graph.input[0].name
 
     def transform_fn(data_item):
-        _, batch_annotation, batch_input, _ = data_item
-        filled_inputs, _, _ = model_evaluator._get_batch_input(batch_annotation, batch_input)
-        return filled_inputs[0]
+        images, _ = data_item
+        return {input_name: images.numpy()}
 
-    calibration_dataset = nncf.Dataset(model_evaluator.dataset, transform_fn)
-    model = onnx.load_model(str(model_path))
-    quantized_model = nncf.quantize(model, calibration_dataset)
-    return quantized_model
-
-import yaml
-@pytest.mark.parametrize('model, dataset, ref_metrics',
-                         OMZ_MODELS, ids=[model[0] for model in OMZ_MODELS])
-def test_compression(tmp_path, model, dataset, ref_metrics):
-    data_dir = os.path.dirname(get_dataset_for_test(dataset))
-    config_path = AC_CONFIGS_DIR / f'{model}.yml'
-    with open(config_path) as content:
-        d = yaml.safe_load(content)
-
-    model_path = download_model(model, tmp_path)
-    int8_model_path = tmp_path / f'{model}.onnx'
-    quantized_model = quantize_model(model_path, config_path, data_dir)
-    onnx.save_model(int8_model_path, quantized_model)
-    report_path = tmp_path / f'{model}.csv'
-
-    metrics = calculate_metrics(int8_model_path, config_path, data_dir, report_path, eval_size=1000)
-    for metric_name, metric_val in ref_metrics.items():
-        assert metrics[metric_name] == pytest.approx(metric_val, abs=0.006)
+    calibration_dataset = nncf.Dataset(val_loader, transform_fn)
+    quantized_model = nncf.quantize(converted_model, calibration_dataset)
+    int8_top1 = validate(quantized_model, val_loader,
+                         providers=['OpenVINOExecutionProvider'],
+                         provider_options=[{'device_type': 'CPU_FP32'}])
+    print(f'INT8 TOP1={int8_top1}')
+    assert 0.0 < (fp32_top1 - int8_top1) * 100 < 0.3
