@@ -470,7 +470,7 @@ class PatternsManager(Enum):
         hw_fused_patterns = HWFusedPatterns()
         registry, pattern_names = PatternsManager._get_fused_patterns_by_backend(backend)
 
-        for pattern_info in PatternsManager._filter_pattern_names_by_device(pattern_names, device):
+        for pattern_info in PatternsManager._filter_pattern_desc_by_device(pattern_names, device):
             pattern = registry.get(pattern_info)()
             if pattern is not None:
                 hw_fused_patterns.register(pattern, pattern_info.value.name, pattern_info.value.match)
