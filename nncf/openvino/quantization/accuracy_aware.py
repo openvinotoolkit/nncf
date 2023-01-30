@@ -10,12 +10,10 @@
  See the License for the specific language governing permissions and
  limitations under the License.
 """
-
 from typing import List
 from functools import partial
 
 import numpy as np
-from addict import Dict
 
 from openvino.tools import pot
 
@@ -35,21 +33,28 @@ class NMSEBasedAccuracyAware(pot.AccuracyAwareCommon):
     def __init__(self, config, engine):
         super().__init__(config, engine)
         if not engine.use_original_metric:
-            self._metrics_config['original_metric'].persample = Dict(
-                name='nmse',
-                type='nmse',
-                is_special=True,
-                comparator=lambda a: -a,
-                sort_fn=partial(pot.algorithms.quantization.accuracy_aware_common.utils.sort_by_logit_distance,
-                                distance='nmse')
+            self._metrics_config['original_metric'].persample.clear()
+            self._metrics_config['original_metric'].persample.update(
+                {
+                    "name": 'nmse',
+                    "type": 'nmse',
+                    "is_special": True,
+                    "comparator": lambda a: -a,
+                    "sort_fn": partial(
+                        pot.algorithms.quantization.accuracy_aware_common.utils.sort_by_logit_distance,
+                        distance='nmse')
+                }
             )
-            self._metrics_config['original_metric'].ranking = Dict(
-                name='nmse',
-                type='nmse',
-                is_special=True,
-                comparator=lambda a: -a,
-                sort_fn=partial(pot.algorithms.quantization.accuracy_aware_common.utils.sort_by_logit_distance,
-                                distance='nmse')
+            self._metrics_config['original_metric'].ranking.clear()
+            self._metrics_config['original_metric'].ranking.update(
+                {
+                    "name": "nmse",
+                    "type": "nmse",
+                    "is_special": True,
+                    "comparator": lambda a: -a,
+                    "sort_fn": partial(pot.algorithms.quantization.accuracy_aware_common.utils.sort_by_logit_distance,
+                                       distance='nmse')
+                }
             )
 
     def _get_score(self, model, ranking_subset: List[int], metric_name: str) -> float:

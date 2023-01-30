@@ -20,6 +20,7 @@ from nncf.common.graph.transformations.commands import TargetPoint
 from nncf.common.graph.transformations.commands import TransformationCommand
 from nncf.common.graph.transformations.commands import TargetType
 from nncf.common.tensor import NNCFTensor
+from nncf.common.graph import NNCFGraph
 from nncf.common.graph import NNCFNode
 from nncf.common.tensor_statistics.collectors import TensorStatisticCollectorBase
 from nncf.common.tensor_statistics.collectors import ReductionShape
@@ -31,20 +32,13 @@ OutputType = TypeVar('OutputType')
 ALGO_BACKENDS = Registry('algo_backends')
 
 
-class FBCAlgoBackend(ABC):
+class FastBiasCorrectionAlgoBackend(ABC):
 
     @property
     @abstractmethod
     def operation_metatypes(self):
         """
         Property for the backend-specific metatypes.
-        """
-
-    @property
-    @abstractmethod
-    def layers_with_bias_metatypes(self):
-        """
-        Property for the backend-specific metatypes with bias.
         """
 
     @property
@@ -75,13 +69,14 @@ class FBCAlgoBackend(ABC):
 
     @staticmethod
     @abstractmethod
-    def bias_correction_command(target_point: TargetPoint, bias_value: np.ndarray) -> TransformationCommand:
+    def create_bias_correction_command(node: NNCFNode, bias_value: np.ndarray, nncf_graph: NNCFGraph):
         """
-        Returns backend-specific bias correction command.
+        Creates backend-specific command to update bias value.
 
-        :param target_point: Target location for the correction.
+        :param node: The node for which bias should be updated.
         :param bias_value: New value for the bias.
-        :return: Backend-specific TransformationCommand for the bias correction.
+        :param nncf_graph: NNCFGraph instance that contains the node.
+        :return: Backend-specific command to update bias value.
         """
 
     @staticmethod
@@ -111,12 +106,22 @@ class FBCAlgoBackend(ABC):
 
     @staticmethod
     @abstractmethod
-    def get_tensor_names(node: NNCFNode) -> Tuple[List[str], List[str]]:
+    def get_input_output_names(node: NNCFNode) -> Tuple[str, str]:
         """
-        Returns tuple of the lists with the input & output tensor names respectively.
+        Returns tuple of the input & output tensor names respectively.
 
-        :param node: NNCFNode with the layer_attributes.
-        :return: Tuple of the lists with the names.
+        :param node: NNCFNode instance.
+        :return: Tuple of the names.
+        """
+
+    @staticmethod
+    @abstractmethod
+    def get_sub_input_output_names(subgraph: TModel) -> Tuple[str, str]:
+        """
+        Returns tuple of the subgraph's the input & output tensor names respectively.
+
+        :param node: NNCFNode instance.
+        :return: Tuple of the names.
         """
 
     @staticmethod
@@ -132,46 +137,36 @@ class FBCAlgoBackend(ABC):
 
     @staticmethod
     @abstractmethod
-    def get_bias_value(model: TModel, node: NNCFNode) -> np.ndarray:
+    def get_bias_value(node: NNCFNode, nncf_graph: NNCFGraph, model: TModel) -> np.ndarray:
         """
         Returns bias value in the NumPy format of provided node.
 
-        :param model: Backend-specific model for the initializer finding.
         :param node: Node of NNCFGraph with bias value.
+        :param nncf_graph: NNCFGraph instance.
+        :param model: Backend-specific model for the initializer finding.
         :return: Bias value in the NumPy format.
         """
 
     @staticmethod
     @abstractmethod
-    def get_bias_port_id(model: TModel, node: NNCFNode) -> int:
-        """
-        Returns bias Port ID corresponding to the node.
-
-        :param model: Backend-specific model.
-        :param node: Node of NNCFGraph with bias value.
-        :return: Port ID corresponding to bias.
-        """
-
-    @staticmethod
-    @abstractmethod
-    def get_activation_port_ids_for_bias_node(model: TModel, node: NNCFNode) -> Tuple[int, int]:
+    def get_activation_port_ids_for_bias_node(node: NNCFNode) -> Tuple[int, int]:
         """
         Returns Input Port ID and Output Port ID corresponding to activation input and output edges for
         the node.
         Supports only nodes that could have bias value.
 
-        :param model: Backend-specific model.
         :param node: Node of NNCFGraph with bias value.
+        :param model: Backend-specific model.
         """
 
     @staticmethod
     @abstractmethod
-    def is_quantized_weights(node: NNCFNode, model: TModel) -> bool:
+    def is_quantized_weights(node: NNCFNode, nncf_graph: NNCFGraph) -> bool:
         """
         Checks whether the node is quantized or not.
 
         :param node: NNCFNode to check.
-        :param model: Backend-specific model.
+        :param nncf_graph: NNCFGraph instance.
         :return: boolean indicating whether the node has a quantized weights or not
         """
 
@@ -188,10 +183,11 @@ class FBCAlgoBackend(ABC):
 
     @staticmethod
     @abstractmethod
-    def is_node_with_bias(node: NNCFNode) -> bool:
+    def is_node_with_bias(node: NNCFNode, nncf_graph: NNCFGraph) -> bool:
         """
         Checks whether the node has a bias or not.
 
         :param node: NNCFNode with the attributes.
+        :param nncf_graph: NNCFGraph that contains node.
         :return: Boolean indicating whether the node has a bias or not.
         """

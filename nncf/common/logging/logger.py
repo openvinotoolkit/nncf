@@ -70,8 +70,9 @@ def warning_deprecated(msg):
 
 @contextmanager
 def extension_is_loading_info_log(extension_name: str):
-    nncf_logger.info(f"Compiling and loading extensions for {extension_name}...")
+    nncf_logger.info(f"Compiling and loading torch extension: {extension_name}...")
     yield
+    nncf_logger.info(f"Finished loading torch extension: {extension_name}")
 
 
 def warn_bkc_version_mismatch(backend: str, bkc_version: str, current_version: str):
