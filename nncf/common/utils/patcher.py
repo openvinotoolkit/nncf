@@ -166,3 +166,4 @@ class Patcher:
         return fn
 
 
+PATCHER = Patcher()
