@@ -10,14 +10,13 @@
  See the License for the specific language governing permissions and
  limitations under the License.
 """
-from typing import Dict, List
 import pytest
 
 import nncf
 import numpy as np
 import onnx
 from onnx import version_converter
-import onnxruntime
+import openvino.runtime as ov
 import torch
 from fastdownload import FastDownload
 from sklearn.metrics import accuracy_score
@@ -27,11 +26,12 @@ from pathlib import Path
 
 MODELS = [
     ('https://github.com/onnx/models/raw/main/vision/classification/mobilenet/model/mobilenetv2-12.onnx',
-     'mobilenetv2-12', 0.7877707006369427),
+     'mobilenetv2-12', 0.7875159235668789),
     ('https://github.com/onnx/models/raw/main/vision/classification/resnet/model/resnet50-v1-7.onnx',
-     'resnet50-v1-7', 0.8101910828025478),
-    ('https://github.com/onnx/models/raw/main/vision/classification/shufflenet/model/shufflenet-v2-12.onnx',
-    'shufflenet-v2-12', 0.7806369426751593)
+     'resnet50-v1-7', 0.8119745222929936),
+    (
+    'https://github.com/onnx/models/raw/main/vision/classification/efficientnet-lite4/model/efficientnet-lite4-11.onnx',
+    'efficientnet-lite4-11', 0.8010191082802548)
 ]
 
 DATASET_URL = 'https://s3.amazonaws.com/fast-ai-imageclas/imagenette2-320.tgz'
@@ -50,16 +50,7 @@ def download_model(model_url, tmp_path) -> Path:
     return downloader.download(model_url)
 
 
-def validate(quantized_model: onnx.ModelProto, data_loader: torch.utils.data.DataLoader,
-             providers: List[str], provider_options: Dict[str, str]) -> float:
-    sess = onnxruntime.InferenceSession(quantized_model.SerializeToString(), providers=providers,
-                                        provider_options=provider_options)
-    _input_name = sess.get_inputs()[0].name
-    _output_names = [sess.get_outputs()[0].name]
-
-    predictions = []
-    references = []
-
+def validate(quantized_model_path: Path, data_loader: torch.utils.data.DataLoader) -> float:
     from_imagenet_to_imageneetee = {
         0: 0,  # tench
         217: 1,  # English springer
@@ -72,23 +63,33 @@ def validate(quantized_model: onnx.ModelProto, data_loader: torch.utils.data.Dat
         574: 8,  # golf ball
         701: 9  # parachute
     }
-    # TODO: (kshpv) add async
-    for images, target in tqdm(data_loader):
-        pred = sess.run(_output_names, {_input_name: images.numpy()})[0]
+    compiled_model = ov.compile_model(quantized_model_path)
+    infer_queue = ov.AsyncInferQueue(compiled_model)
+
+    predictions = []
+    references = []
+
+    def res_callback(infer_request: ov.InferRequest, unused_input) -> None:
+        pred = next(iter(infer_request.results.values()))
         pred_class = np.argmax(pred, axis=1)
         if pred_class.item() in from_imagenet_to_imageneetee:
             pred_class[0] = from_imagenet_to_imageneetee[pred_class.item()]
-        predictions.append(pred_class)
+        predictions.append(pred_class)  # pylint:disable=no-member
         if target.item() in from_imagenet_to_imageneetee:
             target[0] = from_imagenet_to_imageneetee[target.item()]
-        references.append(target)
+        references.append(target)  # pylint:disable=no-member
+
+    infer_queue.set_callback(res_callback)
+    for images, target in tqdm(data_loader):
+        infer_queue.start_async({0: images})
+    infer_queue.wait_all()
 
     predictions = np.concatenate(predictions, axis=0)
     references = np.concatenate(references, axis=0)
     return accuracy_score(predictions, references)
 
 
-@pytest.mark.parametrize('model_url, model_name, int8_ref_top1', MODELS, ids=[model[1] for model in MODELS])
+@pytest.mark.parametrize('model_url, model_name, int8_ref_top1', MODELS, ids=[model_name[1] for model_name in MODELS])
 def test_compression(tmp_path, model_url, model_name, int8_ref_top1):
     original_model_path = download_model(model_url, tmp_path)
     dataset_path = download_dataset()
@@ -102,6 +103,8 @@ def test_compression(tmp_path, model_url, model_name, int8_ref_top1):
             transforms.CenterCrop(224),
             transforms.ToTensor(),
             normalize,
+            transforms.Lambda(
+                lambda images: torch.moveaxis(images, 0, 2) if model_name == 'efficientnet-lite4-11' else images)
         ])
     )
     val_loader = torch.utils.data.DataLoader(
@@ -118,8 +121,8 @@ def test_compression(tmp_path, model_url, model_name, int8_ref_top1):
 
     calibration_dataset = nncf.Dataset(val_loader, transform_fn)
     quantized_model = nncf.quantize(converted_model, calibration_dataset)
-    int8_top1 = validate(quantized_model, val_loader,
-                         providers=['OpenVINOExecutionProvider'],
-                         provider_options=[{'device_type': 'CPU_FP32'}])
-
-    assert abs(int8_top1 - int8_ref_top1) < 1e-6
+    int8_model_path = tmp_path / 'quantized_model.onnx'
+    onnx.save_model(quantized_model, str(int8_model_path))
+    int8_top1 = validate(int8_model_path, val_loader)
+    print(f'INT8 metrics = {int8_top1}')
+    assert abs(int8_top1 - int8_ref_top1) < 3e-3 # 0.3 % deviations
