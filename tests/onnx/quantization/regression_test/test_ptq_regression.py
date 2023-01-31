@@ -12,6 +12,8 @@
 """
 import pytest
 
+from pathlib import Path
+import time
 import nncf
 import numpy as np
 import onnx
@@ -22,16 +24,15 @@ from fastdownload import FastDownload
 from sklearn.metrics import accuracy_score
 from torchvision import datasets, transforms
 from tqdm import tqdm
-from pathlib import Path
 
 MODELS = [
     ('https://github.com/onnx/models/raw/main/vision/classification/mobilenet/model/mobilenetv2-12.onnx',
      'mobilenetv2-12', 0.7875159235668789),
     ('https://github.com/onnx/models/raw/main/vision/classification/resnet/model/resnet50-v1-7.onnx',
-     'resnet50-v1-7', 0.8119745222929936),
+     'resnet50-v1-7', 0.8096815286624204),
     (
     'https://github.com/onnx/models/raw/main/vision/classification/efficientnet-lite4/model/efficientnet-lite4-11.onnx',
-    'efficientnet-lite4-11', 0.8010191082802548)
+    'efficientnet-lite4-11', 0.7997452229299363)
 ]
 
 DATASET_URL = 'https://s3.amazonaws.com/fast-ai-imageclas/imagenette2-320.tgz'
@@ -125,4 +126,4 @@ def test_compression(tmp_path, model_url, model_name, int8_ref_top1):
     onnx.save_model(quantized_model, str(int8_model_path))
     int8_top1 = validate(int8_model_path, val_loader)
     print(f'INT8 metrics = {int8_top1}')
-    assert abs(int8_top1 - int8_ref_top1) < 3e-3 # 0.3 % deviations
+    assert abs(int8_top1 - int8_ref_top1) < 1e-4  # 0.01 deviations
