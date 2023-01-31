@@ -19,7 +19,6 @@ import numpy as np
 
 from nncf.common.graph.operator_metatypes import OperatorMetatype
 from nncf.common.graph.transformations.commands import TargetPoint
-from nncf.common.graph.transformations.commands import TransformationCommand
 from nncf.common.graph.transformations.commands import TargetType
 from nncf.common.tensor import NNCFTensor
 from nncf.common.graph import NNCFGraph
@@ -79,13 +78,13 @@ class BiasCorrectionAlgoBackend(ABC):
 
     @staticmethod
     @abstractmethod
-    def bias_correction_command(target_point: TargetPoint, bias_value: np.ndarray) -> TransformationCommand:
+    def create_bias_correction_command(node: NNCFNode, bias_value: np.ndarray):
         """
-        Returns backend-specific bias correction command.
+        Creates backend-specific command to update bias value.
 
-        :param target_point: Target location for the correction.
+        :param node: The node for which bias should be updated.
         :param bias_value: New value for the bias.
-        :return: Backend-specific TransformationCommand for the bias correction.
+        :return: Backend-specific command to update bias value.
         """
 
     @staticmethod

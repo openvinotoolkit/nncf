@@ -107,9 +107,9 @@ class GraphPattern:
                 # add merge all possible connections
                 # A: (a) (b)
                 # B: (c) (d)
-                #              (a)  (a_copy)  (b)    (b_copy)
-                # A + B ---->   |       |      |        |
-                #              (c)     (d)  (c_copy) (d_copy)
+                #              (a_copy)  (a_copy)  (b_copy) (b_copy)
+                # A + B ---->     |          |        |        |
+                #              (c_copy)  (d_copy)  (c_copy) (d_copy)
                 #
                 subgraph_copy = final_pattern._unite_with_copy_of_graph(self_subgraph)
                 other_subgraph_copy = final_pattern._unite_with_copy_of_graph(other_subgraph)
@@ -194,9 +194,16 @@ class GraphPattern:
         """
         Adds 'other' pattern to 'self' pattern and connect nodes from self to other specified by 'edges'.
 
-        If edges is None, adds an edge between
-        last node of self's graph and first node of other's graph,
-        which are found by nx.lexicographical_topological_sort().
+        If edges is None, connect all weakly connected components of self and other by adding edges between
+        the last nodes of every weakly component of self and the first nodes of every weakly component other.
+        The first and last nodes are found by nx.lexicographical_topological_sort().
+
+        # A: (a) (b)
+        # B: (c) (d)
+        #              (a_copy)  (a_copy)  (b_copy) (b_copy)
+        # A + B ---->     |          |        |        |
+        #              (c_copy)  (d_copy)  (c_copy) (d_copy)
+        #
 
         If other starts from a node with ANY_PATTERN_NODE_TYPE or NON_PATTERN_NODE_TYPE types,
         the input node of the other will be discarded from the final pattern.
@@ -205,21 +212,20 @@ class GraphPattern:
         :param edges: List of edges between self and other graphs.
             Edges must begin at self and finish at other.
         """
-        # Unite nodes
-        other_graph_copy = copy.deepcopy(other.graph)
-        node_mapping = {}
-        for node_key in other_graph_copy.nodes:
-            node_mapping[node_key] = self._node_counter
-            self._node_counter += 1
-        other_graph_copy = nx.relabel_nodes(other_graph_copy, node_mapping, copy=True)
-
-        saved_graph = copy.deepcopy(self._graph)
-        self._graph = nx.union(saved_graph, other_graph_copy)
-
-        # Add edge/edges
         if edges is None:
-            self._add_edge_connected_subgraphs(saved_graph, other_graph_copy)
+            self._graph = (self + other).graph
         else:
+            # Unite nodes
+            other_graph_copy = copy.deepcopy(other.graph)
+            node_mapping = {}
+            for node_key in other_graph_copy.nodes:
+                node_mapping[node_key] = self._node_counter
+                self._node_counter += 1
+            other_graph_copy = nx.relabel_nodes(other_graph_copy, node_mapping, copy=True)
+
+            saved_graph = copy.deepcopy(self._graph)
+            self._graph = nx.union(saved_graph, other_graph_copy)
+            # Add edge/edges
             remapped_edges = []
             for edge in edges:
                 new_edge = (edge[0], node_mapping[edge[1]])

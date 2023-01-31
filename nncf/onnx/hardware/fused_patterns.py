@@ -23,6 +23,8 @@ from nncf.onnx.hardware.patterns import create_swish_activation
 from nncf.onnx.hardware.patterns import create_input_preprocessing_pattern
 from nncf.onnx.hardware.patterns import create_decomposed_batch_norm
 from nncf.onnx.hardware.patterns import create_scale_shift
+from nncf.onnx.hardware.patterns import create_bn_scale_shift_activation
+from nncf.onnx.hardware.patterns import create_linear_bn_scale_shift_activation
 
 
 def _get_onnx_hw_fused_patterns() -> HWFusedPatterns:
@@ -54,6 +56,11 @@ def _get_onnx_hw_fused_patterns() -> HWFusedPatterns:
 
     hw_fused_patterns.register(linear_ops + batch_norm_activations_permutation, 'LINEAR + BN_ACT_PERM',
                                match=True)
+
+    hw_fused_patterns.register(create_linear_bn_scale_shift_activation(),
+                               'LINEAR + BN + SCALE_SHIFT + ACTIVATIONS', match=True)
+    hw_fused_patterns.register(create_bn_scale_shift_activation(),
+                               'BN + SCALE_SHIFT + ACTIVATIONS', match=True)
     hw_fused_patterns.register(linear_ops + arithmetic_ops, 'LINEAR + ARITHMETIC', match=True)
     hw_fused_patterns.register(batch_norms + activations, 'BN + ACTIVATIONS', match=True)
     hw_fused_patterns.register(activations + batch_norms, 'ACTIVATIONS + BN', match=True)

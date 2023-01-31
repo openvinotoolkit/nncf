@@ -11,13 +11,12 @@
  limitations under the License.
 """
 
-from typing import Dict, List, TypeVar, Union, Optional, Tuple
-
-import numpy as np
+from typing import Dict, List, TypeVar, Union, Optional
 from copy import deepcopy
 from collections import deque
 
-from functools import partial
+import numpy as np
+
 from nncf import Dataset
 from nncf import nncf_logger
 from nncf.common.graph import NNCFGraph
@@ -125,7 +124,7 @@ class BiasCorrection(Algorithm):
                 OVBiasCorrectionAlgoBackend
             self._backend_entity = OVBiasCorrectionAlgoBackend()
         else:
-            raise RuntimeError('Cannot return backend-specific entity'
+            raise RuntimeError('Cannot return backend-specific entity '
                                'because {} is not supported!'.format(model_backend))
 
     def _copy_model(self, model: TModel) -> TModel:
@@ -144,8 +143,8 @@ class BiasCorrection(Algorithm):
         model_copy = self._copy_model(model)
         model_copy = self._remove_fq_from_inputs(model_copy)
         nncf_graph = NNCFGraphFactory.create(model_copy)
-        subgraphs_data = self._fill_subgraphs_data(nncf_graph)
 
+<<<<<<< HEAD
         for biased_node_name, subgraph_data in subgraphs_data.items():
             biased_node = nncf_graph.get_node_by_name(biased_node_name)
 
@@ -154,6 +153,19 @@ class BiasCorrection(Algorithm):
                 continue
             if not self._backend_entity.is_quantized_weights(biased_node, nncf_graph):
                 nncf_logger.debug(f'Skipping node {biased_node_name} because weights was not quantized')
+=======
+        nodes_with_bias = [
+            node for node in nncf_graph.topological_sort() if self._backend_entity.is_node_with_bias(node)
+        ]
+        subgraphs_data = [
+            self._get_subgraph_data_for_node(node, nncf_graph) for node in nodes_with_bias
+        ]
+
+        for position, (node, subgraph_data) in enumerate(zip(nodes_with_bias, subgraphs_data)):
+            node_name = node.node_name
+            if not self._backend_entity.is_quantized_weights(node, model):
+                nncf_logger.debug(f'Skipping node {node_name} because weights was not quantized')
+>>>>>>> openvinotoolkit/develop
                 continue
 
             # We do not make an additional copy of the model because
@@ -168,12 +180,17 @@ class BiasCorrection(Algorithm):
                                                   feed_dicts,
                                                   statistic_points)
 
+<<<<<<< HEAD
             bias_node = self._backend_entity.get_bias_node(biased_node, nncf_graph)
             current_bias, current_bias_shape = self._backend_entity.get_bias_value(model, bias_node)
+=======
+            current_bias = self._backend_entity.get_bias_value(node, model)
+>>>>>>> openvinotoolkit/develop
             updated_bias = current_bias + bias_shift
             magnitude = self._get_bias_shift_magnitude(current_bias, updated_bias)
 
             if magnitude < self.threshold:
+<<<<<<< HEAD
                 nncf_logger.debug(f'{biased_node_name} bias would be changed. Magnitude: {magnitude}')
                 bias_port_id = self._backend_entity.get_bias_port_id(bias_node)
                 target_point = self._backend_entity.target_point(TargetType.LAYER,
@@ -182,6 +199,10 @@ class BiasCorrection(Algorithm):
                 updated_bias = np.reshape(updated_bias, current_bias_shape)
                 bias_correction_command = self._backend_entity.bias_correction_command(target_point,
                                                                                        updated_bias)
+=======
+                nncf_logger.debug(f'{node_name} bias would be changed. Magnitude: {magnitude}')
+                bias_correction_command = self._backend_entity.create_bias_correction_command(node, updated_bias)
+>>>>>>> openvinotoolkit/develop
                 model_copy_subgraph = self._correct_bias(model_copy_subgraph, bias_correction_command)
                 model_copy = self._correct_bias(model_copy, bias_correction_command)
                 main_transformations_layout.register(bias_correction_command)
@@ -189,7 +210,11 @@ class BiasCorrection(Algorithm):
                 nncf_logger.debug(f'{biased_node_name} bias skipped by threshold. Magnitude: {magnitude}')
 
             self._collect_new_stats(nncf_graph, model_copy_subgraph, feed_dicts, subgraph_data)
+<<<<<<< HEAD
             self._remove_unnecessary_stats(biased_node_name, subgraphs_data)
+=======
+            self._remove_unnecessary_stats(position, subgraphs_data)
+>>>>>>> openvinotoolkit/develop
         return main_model_transformer.transform(main_transformations_layout)
 
     def _remove_fq_from_inputs(self, model: TModel) -> TModel:
@@ -223,6 +248,7 @@ class BiasCorrection(Algorithm):
 
         return model_transformer.transform(transformation_layout)
 
+<<<<<<< HEAD
     def _fill_subgraphs_data(self, nncf_graph: NNCFGraph) -> Dict[str, Dict]:
         """
         This method collects necessary data for the further optimized subgraph inference
@@ -240,6 +266,9 @@ class BiasCorrection(Algorithm):
         return subgraphs_data
 
     def _get_subgraph_data_for_node(self, node: NNCFNode, nncf_graph: NNCFGraph) -> Tuple[set, set]:
+=======
+    def _get_subgraph_data_for_node(self, node: NNCFNode, nncf_graph: NNCFGraph) -> Dict[str, List[str]]:
+>>>>>>> openvinotoolkit/develop
         """
         This method collects necessary data for the specified node and its subgraph.
         This data contains the nodes (NNCFNode) for the subgraph building
@@ -247,13 +276,18 @@ class BiasCorrection(Algorithm):
 
         :param node: NNCFNode instance. This is the main node that with bias that would be corrected (or not).
         :param nncf_graph: NNCFGraph instance for graph analysis.
-        :return: A tuple with the set of the nodes for the subgraph input and statistics collection.
+        :return: A dict with the list of the nodes for the subgraph input and statistics collection.
         """
         input_nodes, output_nodes, statistic_nodes = [], [], []
 
         def traverse_to_layers_with_bias(node, output):
+<<<<<<< HEAD
             if node.metatype in self._backend_entity.layers_with_bias_metatypes:
                 statistic_nodes.append(node)
+=======
+            if self._backend_entity.is_node_with_bias(node):
+                output.append(node)
+>>>>>>> openvinotoolkit/develop
                 self._collected_stat_inputs.add(node.node_name)
 
                 parent_nodes = [n for n in nncf_graph.get_previous_nodes(node) if
@@ -280,12 +314,21 @@ class BiasCorrection(Algorithm):
         for statistic_node in statistic_nodes_list:
             nncf_graph.traverse_graph(statistic_node, traverse_to_input_layers, traverse_forward=False)
 
+<<<<<<< HEAD
         output_dict = {
             'input_node_names': [n.node_name for n in input_nodes],
             'output_node_names': [n.node_name for n in output_nodes],
             'statistic_node_names': [n.node_name for n in statistic_nodes]
         }
         return output_dict
+=======
+        subgraph_data = {
+            'input_node_names': [input_node.node_name for input_node in input_nodes],
+            'stat_node_names': [stat_node.node_name for stat_node in stats_nodes],
+        }
+
+        return subgraph_data
+>>>>>>> openvinotoolkit/develop
 
     def _prepare_subgraph(self, node: NNCFNode, nncf_graph: NNCFGraph, model: TModel, subgraph_data: Dict) -> TModel:
         """
@@ -409,40 +452,24 @@ class BiasCorrection(Algorithm):
                     self._fp_inputs[statistic_node_name] = []
                 self._fp_inputs[statistic_node_name].append(new_q_output[output_name])
 
-    def _remove_unnecessary_stats(self, node_name: str, subgraphs_data: Dict[str, Dict]) -> None:
+    def _remove_unnecessary_stats(self, position: int, subgraphs_data: Dict[str, Dict]) -> None:
         """
         Removes unnecessary statistics that were collected before to reduce the memory usage.
 
-        :param node_name: Current name of the node that was corrected.
+        :param position: Zero-based position of the current node that was corrected.
         :param subgraphs_data: A dictionary of the data (input & statistic node names) that
             uses for the sub-graphs creation.
         """
-        needed_stats_list = self._get_current_stats_list(node_name, subgraphs_data)
-        node_inputs_name = subgraphs_data[node_name]['input_node_names']
+        # Collects list of the statistics that needed for the future layers.
+        needed_stats_list = []
+        for i in range(position + 1, len(subgraphs_data)):
+            needed_stats_list.extend(subgraphs_data[i]['input_node_names'])
+
+        node_inputs_name = subgraphs_data[position]['input_node_names']
         for node_input_name in node_inputs_name:
             if node_input_name not in needed_stats_list and node_input_name in self._fp_inputs:
                 nncf_logger.debug(f'Dropped {node_input_name}')
                 self._fp_inputs[node_input_name] = []
-
-    def _get_current_stats_list(self, current_node_name: str, subgraphs_data: Dict[str, Dict]) -> List[str]:
-        """
-        Collects list of the statistics that needed for the future layers.
-
-        :param node_name: Current name of the node that was corrected.
-        :param subgraphs_data: A dictionary of the data (input & statistic node names) that
-            uses for the sub-graphs creation.
-        :return: The list of the layer names.
-        """
-        stat_nodes_list = []
-        trigger = False
-        for node_name in subgraphs_data:
-            if node_name == current_node_name:
-                trigger = True
-                continue
-            if trigger:
-                for stat_node_name in subgraphs_data[node_name]['input_node_names']:
-                    stat_nodes_list.append(stat_node_name)
-        return stat_nodes_list
 
     def _get_fp_inputs(self, statistic_points: StatisticPointsContainer, node_name: str) -> np.ndarray:
         """
@@ -492,11 +519,15 @@ class BiasCorrection(Algorithm):
         nncf_graph = NNCFGraphFactory.create(model) if self.nncf_graph is None else self.nncf_graph
         statistic_container = StatisticPointsContainer()
 
+<<<<<<< HEAD
         biased_nodes = []
         for node in nncf_graph.topological_sort():
             if node.metatype in self._backend_entity.layers_with_bias_metatypes:
                 biased_nodes.append(node)
 
+=======
+        biased_nodes = filter(self._backend_entity.is_node_with_bias, nncf_graph.topological_sort())
+>>>>>>> openvinotoolkit/develop
         model_inputs = nncf_graph.get_input_nodes()
         biased_after_input_nodes = self._get_biased_after_input_nodes(nncf_graph, model_inputs)
 
@@ -535,17 +566,21 @@ class BiasCorrection(Algorithm):
         :param model_inputs: List of the model inputs as NNCFNodes.
         :return: A dictionary with the names of the nodes with bias as keys and their input node names as values.
         """
+<<<<<<< HEAD
         def traverse_to_biased(node, output, biased_op_types):
             if node.metatype in biased_op_types:
+=======
+        def traverse_to_biased(node, output):
+            if self._backend_entity.is_node_with_bias(node):
+>>>>>>> openvinotoolkit/develop
                 output.append(node)
                 return True, output
             return False, output
 
         biased_after_param_nodes = {}
 
-        traverse_fn = partial(traverse_to_biased, biased_op_types=self._backend_entity.layers_with_bias_metatypes)
         for model_input in model_inputs:
-            biased_nodes = nncf_graph.traverse_graph(model_input, traverse_fn)
+            biased_nodes = nncf_graph.traverse_graph(model_input, traverse_to_biased)
             for biased_node in biased_nodes:
                 activation_input = self._backend_entity.get_node_through_quantizer(biased_node, nncf_graph)
                 biased_after_param_nodes[biased_node.node_name] = activation_input.node_name

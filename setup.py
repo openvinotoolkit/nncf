@@ -17,15 +17,16 @@
 # packages such as `protobuf`.
 # Refer to the table below for well-known and supported alternatives with
 # the same behaviour:
-# +-------------------------------------------------------------------------------+
-# |           Old command           |                New command                  |
-# +---------------------------------+---------------------------------------------+
-# | python setup.py install         |  pip install .                              |
-# | python setup.py develop         |  pip install -e .                           |
-# | python setup.py develop --*arg* |  pip install --install-option="*arg*" -e  . |
-# | python setup.py sdist           |  python -m build -s                         | <-- using the "build" package
-# | python setup.py bdist_wheel     |  python -m build -w                         | <-- https://pypi.org/project/build/
-# +---------------------------------+---------------------------------------------+
+# +-------------------------------------+---------------------------------------------+
+# |           Old command               |                New command                  |
+# +-------------------------------------+---------------------------------------------+
+# | python setup.py install             | pip install .                               |
+# | python setup.py develop             | pip install -e .                            |
+# | python setup.py develop --*arg*     | pip install --install-option="*arg*" -e  .  |
+# | python setup.py sdist               | python -m build -s                          | <-- using the "build" package
+# | python setup.py bdist_wheel         | python -m build -w                          | <-- pypi.org/project/build/
+# | python setup.py bdist_wheel --*arg* | python -m build -w -C--global-option=--*arg*|
+# +-------------------------------------+---------------------------------------------+
 #
 # PyPA in general recommends to move away from setup.py and use pyproject.toml
 # instead. This doesn't fit us as we currently want to do custom stuff during
@@ -98,12 +99,10 @@ def find_version(*file_paths):
 
 
 INSTALL_REQUIRES = ["ninja>=1.10.0.post2, <1.11",
-                    "addict>=2.4.0",
                     "texttable>=1.6.3",
                     "scipy>=1.3.2, <=1.10.0",
                     "networkx>=2.6, <=2.8.2",  # see ticket 94048 or https://github.com/networkx/networkx/issues/5962
                     "numpy>=1.19.1, <1.24",
-                    "pillow>=9.0.0",
 
                     # The recent pyparsing major version update seems to break
                     # integration with networkx - the graphs parsed from current .dot
@@ -119,9 +118,7 @@ INSTALL_REQUIRES = ["ninja>=1.10.0.post2, <1.11",
                     "natsort>=7.1.0",
                     "pandas>=1.1.5,<=1.5.2",
                     "scikit-learn>=0.24.0",
-                    "wheel>=0.36.1",
                     "openvino-telemetry"]
-
 
 
 TF_EXTRAS = [
@@ -143,7 +140,8 @@ OPENVINO_EXTRAS = [
 
 
 EXTRAS_REQUIRE = {
-    "dev": ["matplotlib>=3.3.4, <3.6"],
+    "dev": ["matplotlib>=3.3.4, <3.6",
+            "pillow>=9.0.0"],
     "tests": ["pytest"],
     "docs": [],
 
