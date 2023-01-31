@@ -17,15 +17,16 @@
 # packages such as `protobuf`.
 # Refer to the table below for well-known and supported alternatives with
 # the same behaviour:
-# +-------------------------------------------------------------------------------+
-# |           Old command           |                New command                  |
-# +---------------------------------+---------------------------------------------+
-# | python setup.py install         |  pip install .                              |
-# | python setup.py develop         |  pip install -e .                           |
-# | python setup.py develop --*arg* |  pip install --install-option="*arg*" -e  . |
-# | python setup.py sdist           |  python -m build -s                         | <-- using the "build" package
-# | python setup.py bdist_wheel     |  python -m build -w                         | <-- https://pypi.org/project/build/
-# +---------------------------------+---------------------------------------------+
+# +-------------------------------------+---------------------------------------------+
+# |           Old command               |                New command                  |
+# +-------------------------------------+---------------------------------------------+
+# | python setup.py install             | pip install .                               |
+# | python setup.py develop             | pip install -e .                            |
+# | python setup.py develop --*arg*     | pip install --install-option="*arg*" -e  .  |
+# | python setup.py sdist               | python -m build -s                          | <-- using the "build" package
+# | python setup.py bdist_wheel         | python -m build -w                          | <-- pypi.org/project/build/
+# | python setup.py bdist_wheel --*arg* | python -m build -w -C--global-option=--*arg*|
+# +-------------------------------------+---------------------------------------------+
 #
 # PyPA in general recommends to move away from setup.py and use pyproject.toml
 # instead. This doesn't fit us as we currently want to do custom stuff during
