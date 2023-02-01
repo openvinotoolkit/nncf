@@ -14,35 +14,25 @@
 import pytest
 from collections import Counter
 
-from nncf.experimental.openvino_native.graph.metatypes.openvino_metatypes import OVAddMetatype
-from nncf.experimental.openvino_native.graph.metatypes.openvino_metatypes import OVConcatMetatype
-from nncf.experimental.openvino_native.graph.metatypes.openvino_metatypes import OVConstantMetatype
-from nncf.experimental.openvino_native.graph.metatypes.openvino_metatypes import OVConvolutionMetatype
-from nncf.experimental.openvino_native.graph.metatypes.openvino_metatypes import OVMatMulMetatype
-from nncf.experimental.openvino_native.graph.metatypes.openvino_metatypes import OVMultiplyMetatype
-from nncf.experimental.openvino_native.graph.metatypes.openvino_metatypes import OVReluMetatype
-from nncf.experimental.openvino_native.graph.metatypes.openvino_metatypes import OVReshapeMetatype
-from nncf.experimental.openvino_native.graph.metatypes.openvino_metatypes import OVSubtractMetatype
-from nncf.experimental.openvino_native.graph.metatypes.openvino_metatypes import OVTransposeMetatype
-from nncf.experimental.openvino_native.graph.metatypes.openvino_metatypes import OVParameterMetatype
-from nncf.experimental.openvino_native.graph.metatypes.openvino_metatypes import OVResultMetatype
-from nncf.experimental.openvino_native.graph.metatypes.openvino_metatypes import GENERAL_WEIGHT_LAYER_METATYPES
+import nncf.experimental.openvino_native.graph.metatypes.openvino_metatypes as ovm
 from nncf.experimental.openvino_native.graph.nncf_graph_builder import GraphConverter
 
 from tests.openvino.native.models import ConvModel
 from tests.openvino.native.models import LinearModel
 from tests.openvino.native.models import WeightsModel
+from tests.openvino.native.models import DepthwiseConvModel
 
-TEST_MODELS = [LinearModel, ConvModel]
+TEST_MODELS = [LinearModel, ConvModel, DepthwiseConvModel]
 REF_METATYPES_COUNTERS = [
-    [OVParameterMetatype, OVConstantMetatype, OVReshapeMetatype,
-     OVConstantMetatype, OVAddMetatype, OVConstantMetatype, OVMatMulMetatype,
-     OVResultMetatype, OVResultMetatype],
-    [OVParameterMetatype, OVParameterMetatype, OVConstantMetatype, OVMultiplyMetatype,
-     OVConstantMetatype, OVAddMetatype, OVConstantMetatype, OVSubtractMetatype,
-     OVConstantMetatype, OVConvolutionMetatype, OVReluMetatype, OVConcatMetatype,
-     OVTransposeMetatype, OVConstantMetatype, OVResultMetatype,
-     OVConstantMetatype, OVAddMetatype]]
+    [ovm.OVParameterMetatype, ovm.OVConstantMetatype, ovm.OVReshapeMetatype,
+     ovm.OVConstantMetatype, ovm.OVAddMetatype, ovm.OVConstantMetatype, ovm.OVMatMulMetatype,
+     ovm.OVResultMetatype, ovm.OVResultMetatype],
+    [ovm.OVParameterMetatype, ovm.OVParameterMetatype, ovm.OVConstantMetatype, ovm.OVMultiplyMetatype,
+     ovm.OVConstantMetatype, ovm.OVAddMetatype, ovm.OVConstantMetatype, ovm.OVSubtractMetatype,
+     ovm.OVConstantMetatype, ovm.OVConvolutionMetatype, ovm.OVReluMetatype, ovm.OVConcatMetatype,
+     ovm.OVTransposeMetatype, ovm.OVConstantMetatype, ovm.OVResultMetatype],
+    [ovm.OVParameterMetatype, ovm.OVConstantMetatype, ovm.OVDepthwiseConvolutionMetatype,
+     ovm.OVConstantMetatype, ovm.OVAddMetatype, ovm.OVReluMetatype, ovm.OVResultMetatype]]
 
 
 @pytest.mark.parametrize(("model_creator_func, ref_metatypes"),
@@ -67,7 +57,7 @@ def test_determining_weights_port():
     nncf_graph = GraphConverter.create_nncf_graph(model)
     counter = 0
     for node in nncf_graph.get_all_nodes():
-        if node.metatype not in GENERAL_WEIGHT_LAYER_METATYPES:
+        if node.metatype not in ovm.GENERAL_WEIGHT_LAYER_METATYPES:
             continue
         if node.layer_attributes is not None:
             counter += 1

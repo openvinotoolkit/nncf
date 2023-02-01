@@ -77,6 +77,23 @@ class ConvModel(OVReferenceModel):
         return model
 
 
+class DepthwiseConvModel(OVReferenceModel):
+    def _create_ov_model(self):
+        input_1 = opset.parameter([1, 3, 5, 5], name="Input_1")
+        kernel = self._rng.random((3, 1, 1, 3, 3)).astype(np.float32)
+        strides = [1, 1]
+        pads = [0, 0]
+        dilations = [1, 1]
+        conv = opset.group_convolution(input_1, kernel, strides, pads, pads, dilations, name="Conv")
+        relu = opset.relu(conv, name="Relu")
+        bias = self._rng.random((1, 3, 1, 1)).astype(np.float32)
+        add = opset.add(relu, bias, name="Add")
+
+        result = opset.result(add, name="Result")
+        model = ov.Model([result], [input_1])
+        return model
+
+
 class QuantizedModel(OVReferenceModel):
     @staticmethod
     def _create_fq_node(parent_node, name):
