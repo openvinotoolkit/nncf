@@ -14,6 +14,7 @@
 from typing import Optional
 
 import openvino.runtime as ov
+from openvino._offline_transformations import compress_quantize_weights_transformation
 
 from nncf.data import Dataset
 from nncf.common.quantization.structs import QuantizationPreset
@@ -58,5 +59,6 @@ def quantize_impl(model: ov.Model,
 
     quantization_algorithm = PostTrainingQuantization(quantization_parameters)
     quantized_model = quantization_algorithm.apply(model, dataset=calibration_dataset)
+    compress_quantize_weights_transformation(quantized_model)
 
     return quantized_model
