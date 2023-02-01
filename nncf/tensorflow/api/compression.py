@@ -1,5 +1,5 @@
 """
- Copyright (c) 2020 Intel Corporation
+ Copyright (c) 2023 Intel Corporation
  Licensed under the Apache License, Version 2.0 (the "License");
  you may not use this file except in compliance with the License.
  You may obtain a copy of the License at
@@ -19,7 +19,7 @@ from nncf import NNCFConfig
 from nncf.common.compression import BaseCompressionAlgorithmBuilder
 from nncf.tensorflow.graph.model_transformer import TFModelTransformer
 
-ModelType = TypeVar('ModelType')
+TModel = TypeVar('TModel')
 
 
 class TFCompressionAlgorithmBuilder(BaseCompressionAlgorithmBuilder):
@@ -51,7 +51,8 @@ class TFCompressionAlgorithmBuilder(BaseCompressionAlgorithmBuilder):
 
         :param state_without_name: Output of `_get_state_without_name()` method.
         """
-    def apply_to(self, model: ModelType) -> ModelType:
+
+    def apply_to(self, model: TModel) -> TModel:
         """
         Applies algorithm-specific modifications to the model.
 

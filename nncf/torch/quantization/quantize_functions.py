@@ -1,5 +1,5 @@
 """
- Copyright (c) 2019 Intel Corporation
+ Copyright (c) 2023 Intel Corporation
  Licensed under the Apache License, Version 2.0 (the "License");
  you may not use this file except in compliance with the License.
  You may obtain a copy of the License at
@@ -10,16 +10,19 @@
  See the License for the specific language governing permissions and
  limitations under the License.
 """
+from typing import Any
+
 import torch
-import warnings
 
 from nncf.torch.utils import add_domain
+from nncf.common.logging import nncf_logger
 
-from .extensions import QuantizedFunctionsCPU, QuantizedFunctionsCUDA
-from ..dynamic_graph.patch_pytorch import register_operator
-from ..functions import STRound, clamp
+from nncf.torch.quantization.extensions import QuantizedFunctionsCPU, QuantizedFunctionsCUDA
+from nncf.torch.dynamic_graph.patch_pytorch import register_operator
+from nncf.torch.functions import STRound, clamp
 
 
+# pylint:disable=abstract-method
 class QuantizeSymmetric(torch.autograd.Function):
     @staticmethod
     def forward(ctx, input_, scale, level_low, level_high, levels):
@@ -28,11 +31,17 @@ class QuantizeSymmetric(torch.autograd.Function):
 
         if input_.is_cuda:
             if not input_.is_contiguous():
-                warnings.warn("input_ is not contiguous!", RuntimeWarning)
+                nncf_logger.debug("input_ is not contiguous!")
                 input_ = input_.contiguous()
-            output = QuantizedFunctionsCUDA.Quantize_forward(input_, input_low, input_range, levels)
+
+            # Required to support both torch.amp.autocast and models that perform explicit type casting
+            # inside their forward calls.
+            if input_.dtype == torch.float16:
+                input_low = input_low.type(torch.float16)
+                input_range = input_range.type(torch.float16)
+            output = QuantizedFunctionsCUDA.get("Quantize_forward")(input_, input_low, input_range, levels)
         else:
-            output = QuantizedFunctionsCPU.Quantize_forward(input_, input_low, input_range, levels)
+            output = QuantizedFunctionsCPU.get("Quantize_forward")(input_, input_low, input_range, levels)
 
         ctx.save_for_backward(input_, input_low, input_range)
         ctx.levels = levels
@@ -42,7 +51,8 @@ class QuantizeSymmetric(torch.autograd.Function):
         return output
 
     @staticmethod
-    def backward(ctx, grad_output):
+    def backward(ctx: Any, *grad_outputs: Any) -> Any:
+        grad_output = grad_outputs[0]
         input_, input_low, input_range = ctx.saved_tensors
         levels = ctx.levels
         level_low = ctx.level_low
@@ -50,30 +60,37 @@ class QuantizeSymmetric(torch.autograd.Function):
 
         if grad_output.is_cuda:
             if not grad_output.is_contiguous():
-                warnings.warn("grad_output is not contiguous!", RuntimeWarning)
+                nncf_logger.debug("grad_output is not contiguous!")
                 grad_output = grad_output.contiguous()
 
-            grad_input, _, grad_scale = QuantizedFunctionsCUDA.Quantize_backward(
+            grad_input, _, grad_scale = QuantizedFunctionsCUDA.get("Quantize_backward")(
                 grad_output, input_, input_low, input_range, levels, level_low, level_high
             )
         else:
-            grad_input, _, grad_scale = QuantizedFunctionsCPU.Quantize_backward(
+            grad_input, _, grad_scale = QuantizedFunctionsCPU.get("Quantize_backward")(
                 grad_output, input_, input_low, input_range, levels, level_low, level_high, False
             )
 
         return grad_input, grad_scale, None, None, None
 
 
+# pylint:disable=abstract-method
 class QuantizeAsymmetric(torch.autograd.Function):
     @staticmethod
     def forward(ctx, input_, input_low, input_range, level_low, level_high, levels):
         if input_.is_cuda:
             if not input_.is_contiguous():
-                warnings.warn("input_ is not contiguous!", RuntimeWarning)
+                nncf_logger.debug("input_ is not contiguous!")
                 input_ = input_.contiguous()
-            output = QuantizedFunctionsCUDA.Quantize_forward(input_, input_low, input_range, levels)
+
+            # Required to support both torch.amp.autocast and models that perform explicit type casting
+            # inside their forward calls.
+            if input_.dtype == torch.float16:
+                input_low = input_low.type(torch.float16)
+                input_range = input_range.type(torch.float16)
+            output = QuantizedFunctionsCUDA.get("Quantize_forward")(input_, input_low, input_range, levels)
         else:
-            output = QuantizedFunctionsCPU.Quantize_forward(input_, input_low, input_range, levels)
+            output = QuantizedFunctionsCPU.get("Quantize_forward")(input_, input_low, input_range, levels)
 
         ctx.save_for_backward(input_, input_low, input_range)
         ctx.levels = levels
@@ -83,7 +100,8 @@ class QuantizeAsymmetric(torch.autograd.Function):
         return output
 
     @staticmethod
-    def backward(ctx, grad_output):
+    def backward(ctx: Any, *grad_outputs: Any) -> Any:
+        grad_output = grad_outputs[0]
         input_, input_low, input_range = ctx.saved_tensors
         levels = ctx.levels
         level_low = ctx.level_low
@@ -91,14 +109,14 @@ class QuantizeAsymmetric(torch.autograd.Function):
 
         if grad_output.is_cuda:
             if not grad_output.is_contiguous():
-                warnings.warn("grad_output is not contiguous!", RuntimeWarning)
+                nncf_logger.debug("grad_output is not contiguous!")
                 grad_output = grad_output.contiguous()
 
-            grad_input, grad_input_low, grad_input_range = QuantizedFunctionsCUDA.Quantize_backward(
+            grad_input, grad_input_low, grad_input_range = QuantizedFunctionsCUDA.get("Quantize_backward")(
                 grad_output, input_, input_low, input_range, levels, level_low, level_high
             )
         else:
-            grad_input, grad_input_low, grad_input_range = QuantizedFunctionsCPU.Quantize_backward(
+            grad_input, grad_input_low, grad_input_range = QuantizedFunctionsCPU.get("Quantize_backward")(
                 grad_output, input_, input_low, input_range, levels, level_low, level_high, True
             )
 
@@ -116,36 +134,43 @@ def _quantize_autograd_to_range(input_, input_low, input_high, levels):
     return output
 
 
+# pylint:disable=abstract-method
 class ExportQuantizeToFakeQuantize(torch.autograd.Function):
     @staticmethod
     def symbolic(g, input_, levels, input_low, input_high, output_low, output_high):
-        return g.op(add_domain("FakeQuantize"), input_, input_low, input_high, output_low, output_high, levels_i=levels)
+        output = g.op(
+            add_domain("FakeQuantize"), input_, input_low, input_high, output_low, output_high, levels_i=levels
+        )
+        # setType is needed for proper shape inference of custom op on ONNX export. Should work for torch >= 1.14
+        output.setType(input_.type())
+        return output
 
     @staticmethod
     def forward(ctx, input_, levels, input_low, input_high, output_low, output_high):
-        return input_
+        return torch.clone(input_)
 
     @staticmethod
-    def backward(ctx, grad_output):
+    def backward(ctx: Any, *grad_outputs: Any) -> Any:
         # backward is not used during export
-        return grad_output
+        return grad_outputs[0]
 
 
+# pylint:disable=abstract-method
 class ExportQuantizeToONNXQuantDequant(torch.autograd.Function):
     @staticmethod
-    def symbolic(g, input_, y_scale, y_zero_point):
-        quantized = g.op("QuantizeLinear", input_, y_scale, y_zero_point)
-        dequantized = g.op("DequantizeLinear", quantized, y_scale, y_zero_point)
+    def symbolic(g, input_, y_scale, y_zero_point, axis):
+        quantized = g.op("QuantizeLinear", input_, y_scale, y_zero_point, axis_i=axis)
+        dequantized = g.op("DequantizeLinear", quantized, y_scale, y_zero_point, axis_i=axis)
         return dequantized
 
     @staticmethod
-    def forward(ctx, input_, y_scale, y_zero_point):
-        return input_
+    def forward(ctx, input_, y_scale, y_zero_point, axis):
+        return torch.clone(input_)
 
     @staticmethod
-    def backward(ctx, grad_output):
+    def backward(ctx: Any, *grad_outputs: Any) -> Any:
         # backward is not used during export
-        return grad_output
+        return grad_outputs[0]
 
 
 def get_scale_zp_from_input_low_input_high(level_low, level_high, input_low, input_high):
@@ -171,6 +196,7 @@ def get_scale_zp_from_input_low_input_high(level_low, level_high, input_low, inp
 def symmetric_quantize(input_, levels, level_low, level_high, scale, eps, skip: bool = False):
     if skip:
         return input_
+    scale = scale.to(dtype=input_.dtype)
     scale_safe = abs(scale) + eps
     return QuantizeSymmetric.apply(input_, scale_safe, level_low, level_high, levels)
 
@@ -184,6 +210,7 @@ def asymmetric_quantize(input_, levels, level_low, level_high, input_low, input_
     return QuantizeAsymmetric.apply(input_, input_low_tuned, input_range_tuned, level_low, level_high, levels)
 
 
+# pylint:disable=abstract-method
 class TuneRange(torch.autograd.Function):
     @staticmethod
     def forward(ctx, input_low, input_range, levels):
@@ -192,7 +219,8 @@ class TuneRange(torch.autograd.Function):
         input_low_copy[input_low_copy > 0] = 0
         input_high[input_high < 0] = 0
         n = levels - 1
-        scale = levels / (input_high - input_low_copy)
+        # Need a cast here because fp16 division yileds fp32 results sometimes
+        scale = (levels / (input_high - input_low_copy)).to(dtype=input_high.dtype)
         zp = torch.round(-input_low_copy * scale)
 
         new_input_low = torch.where(zp < n, zp / (zp - n) * input_high, input_low_copy)
@@ -210,5 +238,7 @@ class TuneRange(torch.autograd.Function):
         return new_input_low, new_input_range
 
     @staticmethod
-    def backward(ctx, grad_input_low, grad_input_range):
+    def backward(ctx: Any, *grad_outputs: Any) -> Any:
+        grad_input_low = grad_outputs[0]
+        grad_input_range = grad_outputs[1]
         return grad_input_low, grad_input_range, None

@@ -1,5 +1,5 @@
 """
- Copyright (c) 2021 Intel Corporation
+ Copyright (c) 2023 Intel Corporation
  Licensed under the Apache License, Version 2.0 (the "License");
  you may not use this file except in compliance with the License.
  You may obtain a copy of the License at
@@ -36,6 +36,7 @@ from nncf.common.insertion_point_graph import InsertionPointGraph
 from nncf.common.insertion_point_graph import InsertionPointGraphNodeType
 from nncf.common.insertion_point_graph import PostHookInsertionPoint
 from nncf.common.insertion_point_graph import PreHookInsertionPoint
+from nncf.common.logging import nncf_logger
 from nncf.common.quantization.quantizer_propagation.grouping import UnifiedScalePropagatingQuantizerGroupManager
 from nncf.common.quantization.quantizer_propagation.structs import PropagatingQuantizer
 from nncf.common.quantization.quantizer_propagation.structs import PropagationPath
@@ -51,8 +52,7 @@ from nncf.common.quantization.quantizer_setup import WeightQuantizationInsertion
 from nncf.common.quantization.structs import QuantizationMode
 from nncf.common.quantization.structs import QuantizerConfig
 from nncf.common.quantization.structs import UnifiedScaleType
-from nncf.common.utils.helpers import should_consider_scope
-from nncf.common.utils.logger import logger as nncf_logger
+from nncf.common.scopes import should_consider_scope
 
 
 class QuantizerPropagationStateGraph(nx.DiGraph):
@@ -128,9 +128,12 @@ class QuantizerPropagationStateGraph(nx.DiGraph):
                 self.op_node_keys_to_underlying_nodes_mapping[node_key] = underlying_nncf_nodes
 
                 ignored = False
-                for nncf_node in underlying_nncf_nodes:
-                    if not should_consider_scope(nncf_node.node_name, self._ignored_scopes, self._target_scopes):
-                        ignored = True
+                # For the fused-pattern nodes, will only ignore the entire pattern if the primary node in the
+                # merged pattern is in the ignored scopes. The primary node is the first one in the
+                # underlying_nncf_nodes list.
+                primary_node = underlying_nncf_nodes[0]
+                if not should_consider_scope(primary_node.node_name, self._ignored_scopes, self._target_scopes):
+                    ignored = True
 
                 if ignored:
                     qpg_node[self.IS_IN_IGNORED_SCOPES] = True
@@ -156,6 +159,19 @@ class QuantizerPropagationStateGraph(nx.DiGraph):
 
         for barred_node_key in self.ignored_node_keys + iteration_scope_node_keys:
             self._add_barrier_after_node(barred_node_key)
+
+    def get_node_keys_by_metatype(self, metatype: Type[OperatorMetatype]) -> List[str]:
+        """
+        Returns a list of node keys, whose metatype is corresponding to the 'metatype'.
+
+        :param metatype: The metatype to look for.
+        :return: List of node keys.
+        """
+        output = []
+        for node, node_metatype in self.nodes(self.OPERATOR_METATYPE_NODE_ATTR):
+            if node_metatype == metatype:
+                output.append(node)
+        return output
 
     def _insertion_point_to_quant_insertion_point(self,
                                                   ip: Union[PreHookInsertionPoint,
@@ -1103,8 +1119,8 @@ class QuantizerPropagationStateGraph(nx.DiGraph):
                 # input edges, since its input is not a regular network input, but a recurrent input
                 # from the previous execution step. TODO: extend recurrent operations handling so that NNCF graph
                 # has information on which operation accepts recurrent inputs.
-                nncf_logger.warning("Could not find an associated input activation quantizer for a weighted node with "
-                                    "quantizable weights: {}\n".format(weighted_node_name))
+                nncf_logger.debug("Could not find an associated input activation quantizer "
+                                  "for a weighted node with quantizable weights: {}\n".format(weighted_node_name))
             else:
                 associated_same_op_gid = qm_node_vs_same_op_gid[weighted_node_name]
                 setup.shared_input_operation_set_groups[associated_same_op_gid].add(next_wq_id)
@@ -1188,9 +1204,9 @@ class QuantizerPropagationStateGraph(nx.DiGraph):
 
             if not curr_intersection_of_qconfigs:
                 # Requantization is unavoidable
-                nncf_logger.warning("Attempted to use weight quantizer of {} to quantize input of {}, "
-                                    "but no compatible configs were found.".format(wao_op_node_key,
-                                                                                   pq.affected_operator_nodes))
+                nncf_logger.debug(f"Attempted to use weight quantizer of {wao_op_node_key} "
+                                  f"to quantize input of {pq.affected_operator_nodes}, "
+                                  f"but no compatible configs were found.")
                 continue
 
             setup.quantization_points[wao_qp_id].possible_qconfigs = curr_intersection_of_qconfigs
@@ -1201,8 +1217,8 @@ class QuantizerPropagationStateGraph(nx.DiGraph):
                 setup.register_existing_qp_id_in_unified_scale_group(wao_qp_id, unified_scale_gid)
                 unified_scale_qp_printable_str = ", ".join([str(setup.quantization_points[qp_id]) for qp_id in
                                                             all_qp_ids_in_unified_scale_group])
-                nncf_logger.info("Unifying weight quantizer ranges of {} with {}".format(
-                    wao_op_node_key, unified_scale_qp_printable_str))
+                nncf_logger.debug(f"Unifying weight quantizer ranges of {wao_op_node_key} "
+                                  f"with {unified_scale_qp_printable_str}")
 
             # The activation quantizer is now unnecessary since we could find a matching weight quantization
             # for the op. Should discard it, but first transfer the knowledge on the operators it quantizes downstream
@@ -1216,7 +1232,7 @@ class QuantizerPropagationStateGraph(nx.DiGraph):
         all_pqs = self.collect_all_propagating_quantizers()
 
         def traverse_fn(curr_node_key: str, unused) -> Tuple[bool, Any]:
-            nncf_logger.debug("Processing node: {}".format(curr_node_key))
+            nncf_logger.debug(f"Processing node: {curr_node_key}")
             node = self.nodes[curr_node_key]
             node_type = node[QuantizerPropagationStateGraph.NODE_TYPE_NODE_ATTR]
             if self.is_insertion_point(node_type):
@@ -1235,7 +1251,7 @@ class QuantizerPropagationStateGraph(nx.DiGraph):
                     assert curr_node_key in affecting_pq.affected_operator_nodes
 
             for out_edge_key in self.out_edges(curr_node_key):
-                nncf_logger.debug("Processing edge: {}".format(out_edge_key))
+                nncf_logger.debug(f"Processing edge: {out_edge_key}")
                 out_edge = self.edges[out_edge_key]
                 affecting_pqs = out_edge[QuantizerPropagationStateGraph.AFFECTING_PROPAGATING_QUANTIZERS_ATTR]
                 for pq in affecting_pqs:

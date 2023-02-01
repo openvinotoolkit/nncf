@@ -1,5 +1,5 @@
 """
- Copyright (c) 2020 Intel Corporation
+ Copyright (c) 2023 Intel Corporation
  Licensed under the Apache License, Version 2.0 (the "License");
  you may not use this file except in compliance with the License.
  You may obtain a copy of the License at
@@ -12,7 +12,6 @@
 """
 
 import random
-import contextlib
 
 import pytest
 import numpy as np
@@ -85,16 +84,16 @@ def get_const_target_mock_regression_dataset(num_samples=20, img_size=10, target
 @pytest.mark.parametrize(
     ('max_accuracy_degradation',
      'final_compression_rate',
-     'reference_final_metric',
-     'should_raise_runtime_error'),
+     'reference_final_metric'),
     (
-            ({'maximal_relative_accuracy_degradation': 30.0}, 0.846153, 0.141971, False),
-            ({'maximal_relative_accuracy_degradation': 1.0}, 0.0, 0.0, True),
-            ({'maximal_absolute_accuracy_degradation': 0.10}, 0.846153, 0.141971, False),
+            ({'maximal_relative_accuracy_degradation': 30.0}, 0.9077, 0.214535),
+            ({'maximal_relative_accuracy_degradation': 1.0}, 0.3577, 0.210423),
+            ({'maximal_absolute_accuracy_degradation': 0.0}, 0.1202, 0.236087),
+            ({'maximal_absolute_accuracy_degradation': 0.10}, 0.9077, 0.108224),
     )
 )
 def test_adaptive_compression_training_loop(max_accuracy_degradation, final_compression_rate,
-                                            reference_final_metric, should_raise_runtime_error,
+                                            reference_final_metric,
                                             initial_training_phase_epochs=5, patience_epochs=3,
                                             uncompressed_model_accuracy=0.2, steps_per_epoch=20,
                                             img_size=10):
@@ -107,6 +106,7 @@ def test_adaptive_compression_training_loop(max_accuracy_degradation, final_comp
     params = {
         "initial_training_phase_epochs": initial_training_phase_epochs,
         "patience_epochs": patience_epochs,
+        "lr_reduction_factor": 1,
     }
     params.update(max_accuracy_degradation)
     accuracy_aware_config = {
@@ -131,25 +131,17 @@ def test_adaptive_compression_training_loop(max_accuracy_degradation, final_comp
 
     result_dict_to_val_metric_fn = lambda results: results['inverse_loss']
 
-    exec_ctx = pytest.raises(RuntimeError) if should_raise_runtime_error \
-        else contextlib.suppress()
-    with exec_ctx as execinfo:
-        compress_model.accuracy_aware_fit(dataset,
-                                          compression_ctrl,
-                                          nncf_config=config,
-                                          callbacks=compression_callbacks,
-                                          initial_epoch=0,
-                                          steps_per_epoch=steps_per_epoch,
-                                          uncompressed_model_accuracy=uncompressed_model_accuracy,
-                                          result_dict_to_val_metric_fn=result_dict_to_val_metric_fn)
-        validation_metrics = compress_model.evaluate(dataset, return_dict=True)
-
-        assert result_dict_to_val_metric_fn(validation_metrics) == pytest.approx(reference_final_metric, 1e-4)
-        assert compression_ctrl.compression_rate == pytest.approx(final_compression_rate, 1e-3)
-
-    if should_raise_runtime_error:
-        assert str(execinfo.value) == 'Cannot produce a compressed model with a ' \
-                                      'specified minimal tolerable accuracy'
+    statistics = compress_model.accuracy_aware_fit(
+        dataset,
+        compression_ctrl,
+        nncf_config=config,
+        callbacks=compression_callbacks,
+        initial_epoch=0,
+        steps_per_epoch=steps_per_epoch,
+        uncompressed_model_accuracy=uncompressed_model_accuracy,
+        result_dict_to_val_metric_fn=result_dict_to_val_metric_fn)
+    assert statistics.compressed_accuracy == pytest.approx(reference_final_metric, 1e-4)
+    assert statistics.compression_rate == pytest.approx(final_compression_rate, 1e-3)
 
 
 @pytest.mark.parametrize(
@@ -193,16 +185,17 @@ def test_early_exit_compression_training_loop(max_accuracy_degradation,
 
     result_dict_to_val_metric_fn = lambda results: results['inverse_loss']
 
-    compress_model.accuracy_aware_fit(dataset,
-                                      compression_ctrl,
-                                      nncf_config=config,
-                                      callbacks=compression_callbacks,
-                                      initial_epoch=0,
-                                      steps_per_epoch=steps_per_epoch,
-                                      uncompressed_model_accuracy=uncompressed_model_accuracy,
-                                      result_dict_to_val_metric_fn=result_dict_to_val_metric_fn)
+    statistics = compress_model.accuracy_aware_fit(
+        dataset,
+        compression_ctrl,
+        nncf_config=config,
+        callbacks=compression_callbacks,
+        initial_epoch=0,
+        steps_per_epoch=steps_per_epoch,
+        uncompressed_model_accuracy=uncompressed_model_accuracy,
+        result_dict_to_val_metric_fn=result_dict_to_val_metric_fn)
     original_model_accuracy = compress_model.original_model_accuracy
-    compressed_model_accuracy = result_dict_to_val_metric_fn(compress_model.evaluate(dataset, return_dict=True))
+    compressed_model_accuracy = statistics.compressed_accuracy
 
     if "maximal_absolute_accuracy_degradation" in max_accuracy_degradation:
         assert (original_model_accuracy - compressed_model_accuracy) <= \

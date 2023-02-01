@@ -1,5 +1,5 @@
 """
- Copyright (c) 2021 Intel Corporation
+ Copyright (c) 2023 Intel Corporation
  Licensed under the Apache License, Version 2.0 (the "License");
  you may not use this file except in compliance with the License.
  You may obtain a copy of the License at
@@ -57,8 +57,8 @@ class PrunedModelStatistics(Statistics):
         """
         Initializes statistics of the pruned model.
 
-        :param full_flops: The total amount of FLOPS in the model.
-        :param current_flops: Current amount of FLOPS in the model.
+        :param full_flops: The total amount of FLOPs in the model.
+        :param current_flops: Current amount of FLOPs in the model.
         :param full_params_num: The total amount of weights in the model.
         :param current_params_num: Current amount of weights in the model.
         :param full_filters_num: The total amount of filters in the model.
@@ -83,7 +83,7 @@ class PrunedModelStatistics(Statistics):
         model_string = create_table(
             header=['#', 'Full', 'Current', 'Pruning level'],
             rows=[
-                ['GFLOPS', f'{self.full_flops / self._giga:.3f}',
+                ['GFLOPs', f'{self.full_flops / self._giga:.3f}',
                            f'{self.current_flops / self._giga:.3f}',
                            self.flops_pruning_level],
                 ['MParams', f'{self.full_params_num / self._mega:.3f}',
@@ -137,7 +137,7 @@ class FilterPruningStatistics(Statistics):
         self.prune_flops = prune_flops
 
     def to_str(self) -> str:
-        pruning_mode = 'FLOPS' if self.prune_flops else 'filter'
+        pruning_mode = 'FLOPs' if self.prune_flops else 'filter'
         algorithm_string = create_table(
             header=['Statistic\'s name', 'Value'],
             rows=[
@@ -161,21 +161,17 @@ class PrunedModelTheoreticalBorderline(Statistics):
     def __init__(self,
                  num_pruned_layers: int,
                  num_prunable_layers: int,
-                 max_prunable_flops: float,
-                 max_prunable_params: float,
+                 min_possible_flops: float,
+                 min_possible_params: float,
                  total_flops: int,
                  total_params: int):
         """
         Initializes statistics of the filter pruning theoretical borderline.
 
-        :param num_pruned_layers: Number of layers which was actually
-            pruned.
-        :param num_prunable_layers: Number of layers which have
-            prunable type.
-        :param max_prunable_flops: Number of flops for pruned
-            model with pruning rate = 1.
-        :param max_prunable_params: Number of weights for pruned
-            model with pruning rate = 1.
+        :param num_pruned_layers: Number of layers which was actually pruned.
+        :param num_prunable_layers: Number of layers which have prunable type.
+        :param min_possible_flops: Number of flops for pruned model with pruning level = 1.
+        :param min_possible_params: Number of weights for pruned model with pruning level = 1.
         :param total_flops: The total amount of FLOPS in the model.
         :param total_params: The total amount of weights in the model.
         """
@@ -183,8 +179,8 @@ class PrunedModelTheoreticalBorderline(Statistics):
         self._mega = 1e6
         self.pruned_layers_num = num_pruned_layers
         self.prunable_layers_num = num_prunable_layers
-        self.minimum_possible_flops = max_prunable_flops
-        self.minimum_possible_params = max_prunable_params
+        self.min_possible_flops = min_possible_flops
+        self.min_possible_params = min_possible_params
         self.total_flops = total_flops
         self.total_params = total_params
 
@@ -194,9 +190,9 @@ class PrunedModelTheoreticalBorderline(Statistics):
             rows=[
                 ['Pruned layers count / prunable layers count', f'{self.pruned_layers_num} /'
                                                                 f' {self.prunable_layers_num}'],
-                ['GFLOPS minimum possible after pruning / total', f'{self.minimum_possible_flops / self._giga:.3f} /'
+                ['GFLOPs minimum possible after pruning / total', f'{self.min_possible_flops / self._giga:.3f} /'
                                                                   f' {self.total_flops / self._giga:.3f}'],
-                ['MParams minimum possible after pruning / total', f'{self.minimum_possible_params / self._mega:.3f} /'
+                ['MParams minimum possible after pruning / total', f'{self.min_possible_params / self._mega:.3f} /'
                                                                    f' {self.total_params / self._mega:.3f}'],
             ]
         )

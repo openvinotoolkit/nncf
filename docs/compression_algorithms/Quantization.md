@@ -1,6 +1,6 @@
+>_Scroll down for the examples of the JSON configuration files that can be used to apply this algorithm_.
 
 ### Uniform Quantization with Fine-Tuning
-
 A uniform "fake" quantization method supports an arbitrary number of bits (>=2) which is used to represent weights and activations.
 The method performs differentiable sampling of the continuous signal (for example, activations or weights) during forward pass, simulating inference with integer arithmetic.
 
@@ -8,78 +8,91 @@ The method performs differentiable sampling of the continuous signal (for exampl
 
 Quantization is parametrized by clamping range and number of quantization levels. The sampling formula is the following:
 
-![output = \frac{\left\lfloor (clamp(input; input\_low, input\_high)-input\_low)  *s\right \rceil}{s} + input\_low\\](https://latex.codecogs.com/png.latex?output%20%3D%20%5Cfrac%7B%5Cleft%5Clfloor%20%28clamp%28input%3B%20input%5C_low%2C%20input%5C_high%29-input%5C_low%29%20*s%5Cright%20%5Crceil%7D%7Bs%7D%20&plus;%20input%5C_low%5C%5C)
+$ZP = \lfloor - input\\_low * s \rceil$
 
-![clamp(input; input\_low, input\_high) = min(max(input, input\_low), input\_high)))](https://latex.codecogs.com/png.latex?clamp%28input%3B%20input%5C_low%2C%20input%5C_high%29%20%3D%20min%28max%28input%2C%20input%5C_low%29%2C%20input%5C_high%29%29%29)
+$output = \frac{\left\lfloor (clamp(input; input\\_low, input\\_high)-input\\_low) * s- ZP \right\rceil} {s}$
 
-![s=\frac{levels-1}{input\_high - input\_low}](https://latex.codecogs.com/png.latex?s%3D%5Cfrac%7Blevels-1%7D%7Binput%5C_high%20-%20input%5C_low%7D)
+$clamp(input; input\\_low, input\\_high)$
 
-`input_low` and `input_high` represent the quantization range and ![\left\lfloor\cdot\right \rceil](https://latex.codecogs.com/png.latex?%5Cleft%5Clfloor%5Ccdot%5Cright%20%5Crceil) denotes rounding to the nearest integer.
+$s = \frac{levels - 1}{input\\_high - input\\_low}$
+
+
+$input\\_low$ and $input\\_high$ represent the quantization range and $\left\lfloor \cdot \right\rceil$ denotes rounding to the nearest integer.
+
 
 ####  Symmetric Quantization
 
 During the training, we optimize the **scale** parameter that represents the range `[input_low, input_range]` of the original signal using gradient descent:
 
-![input\_low=scale*\frac{level\_low}{level\_high}](https://latex.codecogs.com/png.latex?input%5C_low%3Dscale*%5Cfrac%7Blevel%5C_low%7D%7Blevel%5C_high%7D)
+$input\\_low=scale*\frac{level\\_low}{level\\_high}$
 
-![input\_high=scale](https://latex.codecogs.com/png.latex?input%5C_high%3Dscale)
+$input\\_high=scale$
 
-In the formula above, `level_low` and `level_high` represent the range of the discrete signal.
+
+In the formula above, $level_low$ and $level_high$ represent the range of the discrete signal.
  - For weights:
+    
+    $level\\_low=-2^{bits-1}+1$
+    
+    $level\\_high=2^{bits-1}-1$
 
-    ![level\_low=-2^{bits-1}+1](https://latex.codecogs.com/png.latex?%5Cinline%20%5Cdpi%7B120%7D%20level%5C_low%3D-2%5E%7Bbits-1%7D&plus;1),
-
-    ![level\_high=2^{bits-1}-1](https://latex.codecogs.com/png.latex?%5Cinline%20%5Cdpi%7B120%7D%20level%5C_high%3D2%5E%7Bbits-1%7D-1)
-
-    ![levels=255](https://latex.codecogs.com/png.latex?levels%3D255)
+    $levels=255$
 
  - For unsigned activations:
 
-    ![level\_low=0](https://latex.codecogs.com/png.latex?%5Cinline%20%5Cdpi%7B120%7D%20level%5C_low%3D0)
+    $level\\_low=0$
 
-    ![level\_high=2^{bits}-1](https://latex.codecogs.com/png.latex?%5Cinline%20%5Cdpi%7B120%7D%20level%5C_high%3D2%5E%7Bbits%7D-1)
+    $level\\_high=2^{bits}-1$
 
-    ![levels=256](https://latex.codecogs.com/png.latex?levels%3D256)
+    $levels=256$
 
  - For signed activations:
 
-    ![level\_low=-2^{bits-1}](https://latex.codecogs.com/png.latex?%5Cdpi%7B120%7D%20level%5C_low%3D-2%5E%7Bbits-1%7D)
+    $level\\_low=-2^{bits-1}$
 
-    ![level\_high=2^{bits-1}-1](https://latex.codecogs.com/png.latex?%5Cinline%20%5Cdpi%7B120%7D%20level%5C_high%3D2%5E%7Bbits-1%7D-1)
+    $level\\_high=2^{bits-1}-1$
 
-    ![levels=256](https://latex.codecogs.com/png.latex?levels%3D256)
+    $levels=256$
 
-For all the cases listed above, the common quantization formula is simplified after substitution of `input_low`, `input_high` and `levels`:
+For all the cases listed above, the common quantization formula is simplified after substitution of $input\\_low$, $input\\_high$ and $levels$:
 
-![output = \left\lfloor clamp(input * \frac{level\_high}{scale}, level\_low, level\_high)\right \rceil * \frac{scale}{level\_high}](https://latex.codecogs.com/png.latex?output%20%3D%20%5Cleft%5Clfloor%20clamp%28input%20*%20%5Cfrac%7Blevel%5C_high%7D%7Bscale%7D%2C%20level%5C_low%2C%20level%5C_high%29%5Cright%20%5Crceil%20*%20%5Cfrac%7Bscale%7D%7Blevel%5C_high%7D)
+$output = \left\lfloor clamp(input * \frac{level\\_high}{scale}, level\\_low, level\\_high)\right \rceil * \frac{scale}{level\\_high}$
 
 Use the `num_init_samples` parameter from the `initializer` group to initialize the values of `scale` and determine which activation should be signed or unsigned from the collected statistics using given number of samples.
 
 ####  Asymmetric Quantization
 
-During the training we optimize the **input_low** and **input_range** parameters using gradient descent:
+During the training we optimize the `input_low` and `input_range` parameters using gradient descent:
 
-![input\_high=input\_low + input\_range](https://latex.codecogs.com/png.latex?input%5C_high%3Dinput%5C_low%20&plus;%20input%5C_range)
+$input\\_high=input\\_low + input\\_range$
 
-![levels=256](https://latex.codecogs.com/png.latex?levels%3D256)
+$levels=256$
 
-![level\_low=0](https://latex.codecogs.com/png.latex?%5Cinline%20%5Cdpi%7B120%7D%20level%5C_low%3D0)
+$level\\_low=0$
 
-![level\_high=2^{bits}-1](https://latex.codecogs.com/png.latex?%5Cinline%20%5Cdpi%7B120%7D%20level%5C_high%3D2%5E%7Bbits%7D-1)
+$level\\_high=2^{bits}-1$
 
 For better accuracy, floating-point zero should be within quantization range and strictly mapped into quant (without rounding). Therefore, the following scheme is applied to ranges of weights and activations before quantization:
 
-![{input\_low}' = min(input\_low, 0)](https://latex.codecogs.com/png.latex?%7Binput%5C_low%7D%27%20%3D%20min%28input%5C_low%2C%200%29)
+${input\\_low}' = min(input\\_low, 0)$
 
-![{input\_high}' = max(input\_high, 0)](https://latex.codecogs.com/png.latex?%7Binput%5C_high%7D%27%20%3D%20max%28input%5C_high%2C%200%29)
+${input\\_high}' = max(input\\_high, 0)$
 
-![ZP= \left\lfloor \frac{-{input\_low}'*(levels-1)}{{input\_high}'-{input\_low}'} \right \rceil ](https://latex.codecogs.com/png.latex?ZP%3D%20%5Cleft%5Clfloor%20%5Cfrac%7B-%7Binput%5C_low%7D%27*%28levels-1%29%7D%7B%7Binput%5C_high%7D%27-%7Binput%5C_low%7D%27%7D%20%5Cright%20%5Crceil)
+$ZP= \left\lfloor \frac{-{input\\_low}'*(levels-1)}{{input\\_high}'-{input\\_low}'} \right \rceil$
 
-![{input\_high}''=\frac{ZP-levels+1}{ZP}*{input\_low}'](https://latex.codecogs.com/png.latex?%7Binput%5C_high%7D%27%27%3D%5Cfrac%7BZP-levels+1%7D%7BZP%7D*%7Binput%5C_low%7D%27)
+${input\\_high}''=\frac{ZP-levels+1}{ZP}*{input\\_low}'$
 
-![{input\_low}''=\frac{ZP}{ZP-levels+1}*{input\_high}'](https://latex.codecogs.com/png.latex?%7Binput%5C_low%7D%27%27%3D%5Cfrac%7BZP%7D%7BZP-levels+1%7D*%7Binput%5C_high%7D%27)
+${input\\_low}''=\frac{ZP}{ZP-levels+1}*{input\\_high}'$
 
-![{input\_low,input\_high} = \begin{cases} {input\_low}',{input\_high}', & ZP \in $\{0,levels-1\}$ \\ {input\_low}',{input\_high}'', & {input\_high}'' - {input\_low}' > {input\_high}' - {input\_low}'' \\ {input\_low}'',{input\_high}', & {input\_high}'' - {input\_low}' <= {input\_high}' - {input\_low}''\\ \end{cases}](https://latex.codecogs.com/png.latex?%7Binput%5C_low%2Cinput%5C_high%7D%20%3D%20%5Cbegin%7Bcases%7D%20%7Binput%5C_low%7D%27%2C%7Binput%5C_high%7D%27%2C%20%26%20ZP%20%5Cin%20%24%5C%7B0%2Clevels-1%5C%7D%24%20%5C%5C%20%7Binput%5C_low%7D%27%2C%7Binput%5C_high%7D%27%27%2C%20%26%20%7Binput%5C_high%7D%27%27%20-%20%7Binput%5C_low%7D%27%20%3E%20%7Binput%5C_high%7D%27%20-%20%7Binput%5C_low%7D%27%27%20%5C%5C%20%7Binput%5C_low%7D%27%27%2C%7Binput%5C_high%7D%27%2C%20%26%20%7Binput%5C_high%7D%27%27%20-%20%7Binput%5C_low%7D%27%20%3C%3D%20%7Binput%5C_high%7D%27%20-%20%7Binput%5C_low%7D%27%27%5C%5C%20%5Cend%7Bcases%7D)
+$$
+\begin{flalign} &
+{input\\_low,input\\_high} = \begin{cases} {input\\_low}',{input\\_high}', \& ZP \in {0,levels-1} \\
+{input\\_low}',{input\\_high}'', \& {input\\_high}'' - {input\\_low}' > {input\\_high}' - {input\\_low}'' \\
+{input\\_low}'',{input\\_high}', \& {input\\_high}'' - {input\\_low}' <= {input\\_high}' - {input\\_low}''
+\end{cases}
+&\end{flalign}
+$$
+
 
 You can use the `num_init_samples` parameter from the `initializer` group to initialize the values of `input_low` and `input_range` from the collected statistics using given number of samples.
 
@@ -114,15 +127,26 @@ For all target HW types, parts of the model graph can be marked as non-quantizab
 
 In our implementation, we use a slightly transformed formula. It is equivalent by order of floating-point operations to simplified symmetric formula and the assymetric one. The small difference is addition of small positive number `eps` to prevent division by zero and taking absolute value of range, since it might become negative on backward:
 
-![output = \frac{clamp(\left\lfloor(input-input\_low^{*})*s\right\rceil, level\_low, level\_high)} {s} + input\_low^{*}](https://latex.codecogs.com/png.latex?output%3D%5Cfrac%7Bclamp%28%5Cleft%5Clfloor%28input-input%5C_low%5E%7B%2A%7D%29%2As%5Cright%5Crceil%2Clevel%5C_low%2Clevel%5C_high%29%7D%7Bs%7D%2Binput%5C_low%5E%7B%2A%7D)
+$output = \frac{clamp(\left\lfloor (input-input\\_low^{*}) *s - ZP \right \rceil, level\\_low, level\\_high)}{s}$
 
-![s = \frac{level\_high}{|input\_range^{*}| + eps}](https://latex.codecogs.com/png.latex?s%20%3D%20%5Cfrac%7Blevel%5C_high%7D%7B%7Cinput%5C_range%5E%7B*%7D%7C%20&plus;%20eps%7D)
+$s = \frac{level\\_high}{|input\\_range^{*}| + eps}$
+
+$ZP = \lfloor-input\\_low * s\rceil$
 
 For asymmetric:
-![\\input\_low^{*} = input\_low \\ input\_range^{*} = input\_range ](https://latex.codecogs.com/png.latex?%5C%5Cinput%5C_low%5E%7B*%7D%20%3D%20input%5C_low%20%5C%5C%20input%5C_range%5E%7B*%7D%20%3D%20input%5C_range)
+
+$input\\_low^{*} = input\\_low$
+
+$input\\_range^{*} = input\\_range$
 
 For symmetric:
-![\\input\_low^{*} = 0 \\ input\_range^{*} = scale](https://latex.codecogs.com/png.latex?%5C%5Cinput%5C_low%5E%7B*%7D%20%3D%200%20%5C%5C%20input%5C_range%5E%7B*%7D%20%3D%20scale)
+
+$input\\_low^{*} = 0$
+
+$input\\_range^{*} = scale$
+
+The most common case of applying quantization is 8-bit uniform quantization. 
+NNCF example scripts provide a plethora of configuration files that implement this case ([PyTorch](../../examples/torch/classification/configs/quantization/inception_v3_imagenet_int8.json), [TensorFlow](../../examples/tensorflow/classification/configs/quantization/inception_v3_imagenet_int8.json))
 
 ---
 **NOTE**
@@ -135,6 +159,8 @@ To fix this issue inside NNCF, by default, all weight tensors are quantized in 8
 This regime is used when `"target_device": "CPU"` or `"target_device": "ANY"` set. This fix, potentially, requires longer fine-tuning.
 
 To control the application of overflow fix, `"overflow_fix"` config option is introduced. The default value is `"overflow_fix": "enable"`. To apply the overflow issue fix only to the first layer, use `"overflow_fix": "first_layer_only"`. To disable the overflow issue fix for all layers, use `"overflow_fix": "disable"`.
+
+
 
 ---
 
@@ -151,7 +177,7 @@ configuration by taking into account the sensitivity of each layer, i.e. how muc
 decreases the accuracy of model. The most sensitive layers are kept at higher precision. The sensitivity of the i-th layer is
 calculated by multiplying the average Hessian trace with the L2 norm of quantization perturbation:
 
-![\overline{Tr}(H_{i}) * \left \| Q(W_{i}) - W_{i} \right \|^2_2](https://latex.codecogs.com/png.latex?%5Coverline%7BTr%7D%28H_%7Bi%7D%29%20*%20%5Cleft%20%5C%7C%20Q%28W_%7Bi%7D%29%20-%20W_%7Bi%7D%20%5Cright%20%5C%7C%5E2_2)
+$\overline{Tr}(H_{i}) * \left \|\| Q(W_{i}) - W_{i} \right \|\|^2_2$
 
 The sum of the sensitivities for each layer forms a metric which serves as a proxy to the accuracy of the compressed
 model: the lower the metric, the more accurate should be the corresponding mixed precision model on the validation
@@ -166,7 +192,7 @@ among all configurations with a compression ratio below the specified threshold.
 
 By default, the compression ratio is 1.5. It should be enough to compress the model with no more than 1% accuracy drop.
 But if it doesn't happen, the lower ratio can be set by `compression_ratio` parameter in the `precision` section of
-configuration file.
+configuration file. E.g. uniformly int8 quantized model is 1 in compression ratio, 2 - for uniform int4 quantization, 0.25 - for uniform int32 quantization.
 
 To avoid the exponential search procedure, we apply the following restriction: layers with a small average Hessian
 trace value are quantized to lower bitwidth and vice versa.
@@ -174,22 +200,22 @@ trace value are quantized to lower bitwidth and vice versa.
 The Hessian trace is estimated with the randomized [Hutchinson algorithm](https://www.researchgate.net/publication/220432178_Randomized_Algorithms_for_Estimating_the_Trace_of_an_Implicit_Symmetric_Positive_Semi-Definite_Matrix).
 Given Rademacher distributed random vector v, the trace of symmetric matrix H is equal to the estimation of a quadratic form:
 
-![Tr(H) = \mathbb{E}[v^T H v]](https://latex.codecogs.com/png.latex?Tr%28H%29%20%3D%20%5Cmathbb%7BE%7D%5Bv%5ET%20H%20v%5D)
+$Tr(H) = \mathbb{E}[v^T H v]$
 
 The randomized algorithm solves the expectation by Monte Carlo using sampling of v from its distribution, evaluating
 the quadratic term, and averaging:
 
-![Tr(H) \approx \frac{1}{m}\sum_{i=1}^{m}[v_i^T H v_i]](https://latex.codecogs.com/png.latex?Tr%28H%29%20%5Capprox%20%5Cfrac%7B1%7D%7Bm%7D%5Csum_%7Bi%3D1%7D%5E%7Bm%7D%5Bv_i%5ET%20H%20v_i%5D)
+$Tr(H) \approx \frac{1}{m}\sum\limits_{i=1}^{m}[v_i^T H v_i]$
 
 Evaluation of the quadratic term happens by computing ![Hv](https://latex.codecogs.com/png.latex?Hv) - the result
 of multiplication of the Hessian matrix with a given random vector v, without the explicit formation of the Hessian operator.
 For gradient of the loss with respect to the i-th block ![g_i](https://latex.codecogs.com/png.latex?g_i) and for
 a random vector v, which is independent of ![W_i](https://latex.codecogs.com/png.latex?W_i), we have the equation:
 
-![\frac{\partial(g_i^T v)}{\partial  W_i} = H_i v](https://latex.codecogs.com/png.latex?%5Cfrac%7B%5Cpartial%28g_i%5ET%20v%29%7D%7B%5Cpartial%20W_i%7D%20%3D%20H_i%20v)
+$\frac{\partial(g_i^T v)}{\partial  W_i} = H_i v$
 
-where ![H_i](https://latex.codecogs.com/png.latex?H_i) is the Hessian matrix of loss with respect to
-![W_i](https://latex.codecogs.com/png.latex?W_i). Hence ![Hv](https://latex.codecogs.com/png.latex?Hv) can be
+where $H_i$ is the Hessian matrix of loss with respect to
+$W_i$. Hence $Hv$ can be
 computed by 2 backpropagation passes: first  - with respect to the loss and second - with respect to the product of the
 gradients and a random vector.
 
@@ -218,7 +244,7 @@ For automatic mixed-precision selection it's recommended to use the following te
             "precision": {
                 "type": "hawq",
                 "bits": [4,8]
-                "compression_ratio": 1.5,
+                "compression_ratio": 1.5
             }
         }
     }
@@ -226,8 +252,8 @@ For automatic mixed-precision selection it's recommended to use the following te
 
 Note, optimizer parameters are model specific, this template contains optimal ones for ResNet-like models.
 
-Here's an [example](../../examples/torch/classification/configs/mixed_precision/squeezenet1_1_imagenet_mixed_int_hawq.json) of
-using the template in the full configuration file.
+The [example](../../examples/torch/classification/configs/mixed_precision/squeezenet1_1_imagenet_mixed_int_hawq.json) of
+using the template in a full-fledged configuration file is provided with the [classification sample](../../examples/torch/classification) for PyTorch.
 
 This template uses `plateau` scheduler. Though it usually leads to a lot of epochs of tuning for achieving a good
 model's accuracy, this is the most reliable way. Staged quantization is an alternative approach and can be more than
@@ -252,21 +278,27 @@ When the agent enters a state/quantizer, it receives the state features and forw
 
 To evaluate the goodness of a policy, NNCF backend quantizes the workload accordingly and performs evaluation with the user-registered function. The evaluated score, together with the state embedding, predicted action are appended to an experience vault to serve for DDPG learning. The learning is carried out by sampling the data point from the experience vault for supervised training of the DDPG network. This process typically happens at a fixed interval. In the current implementation, it is performed after each episode evaluation. For bootstrapping, exploration and diversity of experience, noise is added to action output. As the episodic iterations progress, the noise magnitude is gradually reduced to zero, a deterministic mixed-precision policy is converged at the end of the episodes. NNCF currently keeps track of the best policy and uses it for fine tuning.
 
-```
-    "target_device": "VPU",
-    "compression": {
-        "algorithm": "quantization",
-        "initializer": {
-            "precision": {
-                "type": "autoq",
-                "bits": [2, 4, 8],
-                "iter_number": 300,
-                "compression_ratio": 0.15,
-                "eval_subset_ratio": 0.20,
-                "dump_init_precision_data": true
-            }
-        }
-    }
+```json5
+{
+   "target_device": "VPU",
+   "compression": {
+      "algorithm": "quantization",
+      "initializer": {
+         "precision": {
+            "type": "autoq",
+            "bits": [
+               2,
+               4,
+               8
+            ],
+            "iter_number": 300,
+            "compression_ratio": 0.15,
+            "eval_subset_ratio": 0.20,
+            "dump_init_precision_data": true
+         }
+      }
+   }
+}
 ```
 
 The snippet above demonstrates the specification of AutoQ in NNCF config. ```target_device``` determines the bitwidth choices available for a particular layer. ```bits``` also defines the precision space of quantizer but it is only active in the absence of target device.
@@ -293,114 +325,115 @@ Following is an example of wrapping ImageNet validation loop as a callback. Top5
             autoq_eval_fn, val_loader, config.device)
 ```
 
-#### Batch-norm statistics adaptation
+The complete config [example](../../examples/torch/classification/configs/mixed_precision/mobilenet_v2_imagenet_mixed_int_autoq_staged.json) that applies AutoQ to MobileNetV2 is provided within the [classification sample](../../examples/torch/classification) for PyTorch.
 
-After the compression-related changes in the model have been committed, the statistics of the batchnorm layers
-(per-channel rolling means and variances of activation tensors) can be updated by passing several batches of data
-through the model before the fine-tuning starts. This allows to correct the compression-induced bias in the model
-and reduce the corresponding accuracy drop even before model training. This option is common for quantization, magnitude
-sparsity and filter pruning algorithms. It can be enabled by setting a non-zero value of `num_bn_adaptation_samples` in the
-`batchnorm_adaptation` section of the `initializer` configuration (see example below).
+### Example configuration files:
 
+>_For the full list of the algorithm configuration parameters via config file, see the corresponding section in the [NNCF config schema](https://openvinotoolkit.github.io/nncf/)_.
 
-**Quantization configuration file parameters**:
-```
+- Quantize a model using default algorithm settings (8-bit, quantizers configuration chosen to be compatible with all Intel target HW types):
+```json5
 {
-    "algorithm": "quantization",
-    "preset": "performance", // The preset defines the quantization schema for weights and activations. The parameter takes values 'performance' or 'mixed'. The mode 'performance' defines symmetric weights and activations. The mode 'mixed' defines symmetric 'weights' and asymmetric 'activations'. Any preset parameters can be overridden by sections 'weights' and 'activations'. Preset "performance" set by default for all target devices except "TRIAL".
-    "initializer": {
-        "range": {
-            "num_init_samples": 256, // Number of samples from the training dataset to consume as sample model inputs for purposes of setting initial minimum and maximum quantization ranges
-            "type": "min_max" // Type of the initializer - determines which statistics gathered during initialization will be used to initialize the quantization ranges. "mean_min_max" is used by default
-        },
-        "precision": {
-            "type": "hawq", // Type of precision initialization - either "manual" or "hawq". With "manual", precisions are defined explicitly via "bitwidth_per_scope". With "hawq", these are determined automatically using the HAWQ algorithm.
-            "bits": [4, 8], // A list of bitwidth to choose from when performing precision initialization. Overrides bitwidth constraints specified in `weight` and `activation` sections",
-            "num_data_points": 100, // Number of data points to iteratively estimate Hessian trace, 100 by default.
-            "iter_number": 200, // Maximum number of iterations of Hutchinson algorithm to estimate Hessian trace, 200 by default
-            "tolerance": 1e-4, //  Minimum relative tolerance for stopping the Hutchinson algorithm. It's calculated between mean average trace from previous iteration and current one. 1e-4 by default
-            "compression_ratio": 1.5, // The desired ratio between bits complexity of fully INT8 model and mixed-precision lower-bit one.
-            "bitwidth_per_scope": [ // Manual settings for the quantizer bitwidths. Scopes are used to identify the weight quantizers. The same number of bits is assigned to adjacent activation quantizers. By default bitwidth is taken from global quantization parameters from `weights` and `activations` sections above
-                [
-                    4,
-                    "InsertionType.NNCF_MODULE_PRE_OP MobileNetV2/Sequential[features]/InvertedResidual[16]/Sequential[conv]/NNCFConv2d[2]"
-                ], // A tuple of a bitwidth and a scope
-                [
-                    4,
-                    "TargetType.OPERATOR_POST_HOOK MobileNetV2/Sequential[features]/ConvBNReLU[0]/ReLU6[2]/hardtanh_0",
-                ]
-            ]
-        }
-        "batchnorm_adaptation": {
-            "num_bn_adaptation_samples": 2048, // Number of samples from the training dataset to pass through the model at initialization in order to update batchnorm statistics of the original model. The actual number of samples will be a closest multiple of the batch size.
-        }
+    "input_info": { "sample_size": [1, 3, 224, 224] }, // the input shape of your model may vary
+    "compression": {
+       "algorithm": "quantization"
     }
-    "weights": { // Constraints to be applied to model weights quantization only.
-        "mode": "symmetric", // Mode of quantization
-        "bits": 8, // Bitwidth to quantize to. It is intended to manually specify bitwidth for all weights. Can be overridden by the `bits` parameter from the `precision` initializer section. An error happens if it doesn't match a bitwidth constraints for module weight specified in the hardware configuration.
-        "signed": true, // Whether to use signed or unsigned input/output values for quantization. If specified as unsigned and the input values during initialization have differing signs, will reset to performing signed quantization instead.
-        "per_channel": false, // Whether to quantize inputs per channel (i.e. per 0-th dimension for weight quantization,and per 1-st dimension for activation quantization)
-
-        // A list of model control flow graph node scopes to be ignored for this operation - functions as a 'denylist'. Optional.
-        "ignored_scopes": []
-
-        // A list of model control flow graph node scopes to be considered for this operation - functions as a 'allowlist'. Optional.
-        // "target_scopes": []
-    },
-    "activations": { // Constraints to be applied to model activations quantization only.
-        "mode": "symmetric", // Mode of quantization
-        "bits": 4, // Bitwidth to quantize to. It is intended to manually specify bitwidth for all activations. Can be overridden by the `bits` parameter from the `precision` initializer section. An error happens if it doesn't match a bitwidth constraints for module inputs specified in the hardware configuration.
-        "signed": true, // Whether to use signed or unsigned input/output values for quantization. If specified as unsigned and the input values during initialization have differing signs, will reset to performing signed quantization instead.
-        "per_channel": false, // Whether to quantize inputs per channel (i.e. per 0-th dimension for weight quantization,and per 1-st dimension for activation quantization)
-
-        // A list of model control flow graph node scopes to be ignored for this operation - functions as a 'denylist'. Optional.
-        "ignored_scopes": []
-
-        // A list of model control flow graph node scopes to be considered for this operation - functions as a 'allowlist'. Optional.
-        // "target_scopes": []
-
-        // Specifies points in the model which will share the same quantizer module for activations. This is helpful in case one and the same quantizer scale is required for inputs to the same operation. Each sub-array will define a group of activation quantizer insertion points that have to share a single actual quantization module, each entry in this subarray should correspond to exactly one node in the NNCF graph and the groups should not overlap. The finalquantizer for each sub-array will be associated with the first element of this sub-array.
-        "linked_quantizer_scopes": []
-    },
-    "quantize_inputs": true, // Whether the model inputs should be immediately quantized prior to any other model operations."
-    "scope_overrides": { // This option is used to specify overriding quantization constraints for specific scope, e.g. in case you need to quantize a single operation differently than the rest of the model.
-        "{re}.*InvertedResidual.*": {
-            "mode": "symmetric", // Mode of quantization
-            "bits": 4, // Bitwidth to quantize to.
-            "signed": true, // Whether to use signed or unsigned input/output values for quantization. If specified as unsigned and the input values during initialization have differing signs, will reset to performing signed quantization instead.
-            "per_channel": false // Whether to quantize inputs per channel (i.e. per 0-th dimension for weight quantization,and per 1-st dimension for activation quantization)
-        }
-    },
-
-    // A list of model control flow graph node scopes to be ignored for this operation - functions as a 'denylist'. Optional.
-    "ignored_scopes": [],
-
-    // A list of model control flow graph node scopes to be considered for this operation - functions as a 'allowlist'. Optional.
-    // "target_scopes": [],
-
-    // Determines how should the additional quantization operations be exported into the ONNX format. Set this to false for export to OpenVINO-supported FakeQuantize ONNX, or to true for export to ONNX standard QuantizeLinear-DequantizeLinear node pairs (8-bit quantization only in the latter case). Default: false
-    "export_to_onnx_standard_ops": false,
 }
 ```
 
-***Per layer ranges initializations parameters***:
-Per layer ranges initiaization can be enabled by specifying  in `"initializer"` section `"range"` as list of dictionaries in the following format:
-
-```
+- Quantize a model to 8-bit precision targeted for Intel CPUs, with additional constraints of symmetric weight quantization and asymmetric activation quantization:
+```json5
 {
-    "range": [
-        {
-            "type": "min_max", // Type of the initializer - determines which statistics gathered during initialization will be used to initialize the quantization ranges for all modules specified by `"target_scopes"` or `"ignored_scopes"`.
-
-            "num_init_samples": 256, // Number of samples from the training dataset to consume as sample model inputs for purposes of setting initial minimum and maximum quantization ranges
-
-            "target_scopes": [], // A list of model control flow graph node scopes to be considered for this operation - functions as a 'allowlist'. Optional.
-            "ignored_scopes": [], // A list of model control flow graph node scopes to be ignored for this operation - functions as a 'denylist'. Optional.
-            "target_quantizer_group": "weights" // Type of quantizer group to which this initialization of ranges will be applied. Optional. (By default this initialization of ranges will be applied to weights and activations quantizers)
-        },
-        ...
-    ]
+    "input_info": { "sample_size": [1, 3, 32, 32] }, // the input shape of your model may vary
+    "compression": {
+       "algorithm": "quantization",
+       "weights": {"mode": "symmetric"},
+       "activations": {"mode": "asymmetric"}
+    },
+   "target_device": "CPU"
 }
-
 ```
-Initialization of ranges defined in this way must specify an unambiguous initialization rule for each module.
+
+- Quantize a model with fully symmetric INT8 quantization and increased number of quantizer range initialization samples (make sure to supply a corresponding data loader in code via `nncf.config.structures.QuantizationRangeInitArgs` or the `register_default_init_args` helper function):
+```json5
+{
+    "input_info": { "sample_size": [1, 3, 224, 224] }, // the input shape of your model may vary
+    "compression": {
+       "algorithm": "quantization",
+       "mode": "symmetric",
+       "initializer": {
+         "range": { "num_init_samples": 5000 }
+       }
+    }
+}
+```
+
+- Quantize a model using 4-bit per-channel quantization for experimentation/trial purposes (end-to-end performance and/or compatibility with OpenVINO Inference Engine not guaranteed)
+```json5
+{
+    "input_info": { "sample_size": [1, 3, 32, 32] }, // the input shape of your model may vary
+    "compression": {
+       "algorithm": "quantization",
+       "bits": 4,
+       "per_channel": true
+    },
+    "target_device": "TRIAL"
+}
+```
+
+- Quantize a multi-input model to 8-bit precision targeted for Intel CPUs, with a range initialization performed using percentile statistics (empirically known to be better for NLP models, for example) and excluding some parts of the model from quantization:
+```json5
+{
+    "input_info": [
+       {
+            "keyword": "input_ids",
+            "sample_size": [1, 128],
+            "type": "long",
+            "filler": "ones"
+        },
+        {
+            "keyword": "attention_mask",
+            "sample_size": [1, 128],
+            "type": "long",
+            "filler": "ones"
+        }
+    ], // the input shape of your model may vary
+    "compression": {
+       "algorithm": "quantization",
+       "initializer": {
+          "range": {
+             "num_init_samples": 64,
+             "type": "percentile",
+             "params": {
+                "min_percentile": 0.01,
+                "max_percentile": 99.99
+             }
+          }
+       },
+       "ignored_scopes": ["{re}BertSelfAttention\\[self\\]/__add___0",
+            "RobertaForSequenceClassification/RobertaClassificationHead[classifier]/Linear[out_proj]",
+            "RobertaForSequenceClassification/RobertaClassificationHead[classifier]/Linear[dense]"
+        ]
+    },
+    "target_device": "TRIAL"
+}
+```
+- Quantize a model to variable bit width using 300 iterations of the AutoQ algorithm, with a target model size (w.r.t the effective parameter storage size) set to 15% of the FP32 model and possible quantizer bitwidths limited to INT2, INT4 or INT8.
+```json5
+{
+    "input_info": { "sample_size": [1, 3, 224, 224] }, // the input shape of your model may vary
+    "compression": {
+       "algorithm": "quantization",
+       "initializer": {
+           "precision": {
+               "type": "autoq", // or "type": "hawq"
+               "bits": [2, 4, 8],
+               "compression_ratio": 0.15,
+               "iter_number": 300
+           }
+       }
+    },
+    "target_device": "TRIAL"
+}
+```
+

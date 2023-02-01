@@ -12,9 +12,9 @@
         "weight_decay": 1e-4,
         "schedule_type": "multistep",
         "steps": [
-            20,
-            40,
-            60,
+            25,
+            45,
+            65,
             80
         ],
         "optimizer_params":
@@ -29,8 +29,8 @@
             "pruning_init": 0.1,
             "params": {
             "schedule": "exponential",
-                "pruning_target": 0.4,
-                "pruning_steps": 15,
+                "pruning_target": 0.5,
+                "pruning_steps": 20,
                 "filter_importance": "geometric_median"
             }
        },

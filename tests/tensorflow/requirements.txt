@@ -1,11 +1,13 @@
 PyYAML
-tensorflow_addons==0.12.1
+tensorflow_addons~=0.16.1
 pytest
 pytest-mock
 pytest-dependency
 yattag>=1.14.0
 prettytable>=2.0.0
 pydot
+tensorflow_hub
+virtualenv
 
 # Ticket 69520
 pyparsing<3.0

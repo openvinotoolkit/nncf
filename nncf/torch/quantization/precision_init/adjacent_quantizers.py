@@ -1,5 +1,5 @@
 """
- Copyright (c) 2020 Intel Corporation
+ Copyright (c) 2023 Intel Corporation
  Licensed under the Apache License, Version 2.0 (the "License");
  you may not use this file except in compliance with the License.
  You may obtain a copy of the License at
@@ -16,7 +16,7 @@ from typing import NamedTuple
 from typing import Tuple
 
 from nncf.common.graph import NNCFNodeName
-from nncf.common.utils.logger import logger as nncf_logger
+from nncf.common.logging import nncf_logger
 from nncf.torch.quantization.layers import BaseQuantizer
 from nncf.common.quantization.structs import QuantizerId
 from nncf.common.quantization.quantizer_setup import QuantizationPointId
@@ -80,7 +80,7 @@ class GroupsOfAdjacentQuantizers:
                 resulting_tuple = (quant_id, quantizer_module)
                 if qp.is_weight_quantization_point():
                     wt_quant_tuples.append(resulting_tuple)
-                    weight_quantized_module_node_name = qp.insertion_point.target_node_name
+                    weight_quantized_module_node_name = qp.target_point.target_node_name
                     module_scope_per_weight_qp_id[weight_quantized_module_node_name] = qp_id
                 elif qp.is_activation_quantization_point():
                     act_quant_tuples.append(resulting_tuple)
@@ -90,13 +90,13 @@ class GroupsOfAdjacentQuantizers:
 
             for weight_quantized_module_node_name, w_qp_id in module_scope_per_weight_qp_id.items():
                 if weight_quantized_module_node_name not in quantized_node_per_activation_qp_id:
-                    nncf_logger.warning('Module `%s` has quantized weights and no quantized inputs!',
-                                        weight_quantized_module_node_name)
+                    nncf_logger.debug(f'Module {weight_quantized_module_node_name} has quantized weights'
+                                        f' and no quantized inputs!')
                     continue
                 a_qp_id = quantized_node_per_activation_qp_id[weight_quantized_module_node_name]
                 if w_qp_id in self.weight_qp_id_per_activation_qp_id:
-                    nncf_logger.warning('Multiple weight quantizers per activation quantizer for `%s`',
-                                        weight_quantized_module_node_name)
+                    nncf_logger.debug(f'Multiple weight quantizers per activation quantizer '
+                                      f'for {weight_quantized_module_node_name}')
                     continue
                 self.weight_qp_id_per_activation_qp_id[w_qp_id] = a_qp_id
 

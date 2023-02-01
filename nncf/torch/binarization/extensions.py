@@ -1,5 +1,5 @@
 """
- Copyright (c) 2019 Intel Corporation
+ Copyright (c) 2023 Intel Corporation
  Licensed under the Apache License, Version 2.0 (the "License");
  you may not use this file except in compliance with the License.
  You may obtain a copy of the License at
@@ -12,11 +12,15 @@
 """
 
 import os.path
-import torch
-from torch.utils.cpp_extension import load
+import subprocess
 
+import torch
+
+from nncf import nncf_logger
+from nncf.torch.binarization.reference import ReferenceBinarizedFunctions
 from nncf.torch.extensions import CudaNotAvailableStub, ExtensionsType, ExtensionLoader, EXTENSIONS
 from nncf.definitions import NNCF_PACKAGE_ROOT_DIR
+from nncf.torch.extensions import ExtensionNamespace
 
 BASE_EXT_DIR = os.path.join(NNCF_PACKAGE_ROOT_DIR, "torch/extensions/src/binarization")
 
@@ -37,31 +41,60 @@ CUDA_EXT_SRC_LIST = [
 
 @EXTENSIONS.register()
 class BinarizedFunctionsCPULoader(ExtensionLoader):
-    @staticmethod
-    def extension_type():
+    @classmethod
+    def name(cls) -> str:
+        return 'binarized_functions_cpu'
+
+    @classmethod
+    def extension_type(cls):
         return ExtensionsType.CPU
 
-    @staticmethod
-    def load():
-        return load('binarized_functions_cpu', CPU_EXT_SRC_LIST, extra_include_paths=EXT_INCLUDE_DIRS,
-                    verbose=False)
+    @classmethod
+    def load(cls):
+        try:
+            retval = torch.utils.cpp_extension.load(cls.name(),
+                          CPU_EXT_SRC_LIST,
+                          extra_include_paths=EXT_INCLUDE_DIRS,
+                          build_directory=cls.get_build_dir(),
+                          verbose=False)
+        except Exception as e:  # pylint:disable=broad-except
+            nncf_logger.warning(f"Could not compile CPU binarization extensions. "
+                                f"Falling back on torch native operations - "
+                                f"CPU binarization fine-tuning may be slower than expected.\n"
+                                f"Reason: {str(e)}")
+            retval = ReferenceBinarizedFunctions
+        return retval
 
 
 @EXTENSIONS.register()
 class BinarizedFunctionsCUDALoader(ExtensionLoader):
-    @staticmethod
-    def extension_type():
+    @classmethod
+    def name(cls) -> str:
+        return 'binarized_functions_cuda'
+
+    @classmethod
+    def extension_type(cls):
         return ExtensionsType.CUDA
 
-    @staticmethod
-    def load():
-        return load('binarized_functions_cuda', CUDA_EXT_SRC_LIST, extra_include_paths=EXT_INCLUDE_DIRS,
-                    verbose=False)
+    @classmethod
+    def load(cls):
+        try:
+            return torch.utils.cpp_extension.load(cls.name(),
+                        CUDA_EXT_SRC_LIST,
+                        extra_include_paths=EXT_INCLUDE_DIRS,
+                        build_directory=cls.get_build_dir(),
+                        verbose=False)
+        except (subprocess.CalledProcessError, OSError, RuntimeError) as e:
+            assert torch.cuda.is_available()
+            raise RuntimeError("CUDA is available for PyTorch, but NNCF could not compile "
+                               "GPU binarization extensions. Make sure that you have installed CUDA development "
+                               "tools (see https://docs.nvidia.com/cuda/cuda-installation-guide-linux/index.html for "
+                               "guidance) and that 'nvcc' is available on your system's PATH variable.\n") from e
 
 
-BinarizedFunctionsCPU = BinarizedFunctionsCPULoader.load()
+BinarizedFunctionsCPU = ExtensionNamespace(BinarizedFunctionsCPULoader())
 
 if torch.cuda.is_available():
-    BinarizedFunctionsCUDA = BinarizedFunctionsCUDALoader.load()
+    BinarizedFunctionsCUDA = ExtensionNamespace(BinarizedFunctionsCUDALoader())
 else:
-    BinarizedFunctionsCUDA = CudaNotAvailableStub
+    BinarizedFunctionsCUDA = CudaNotAvailableStub()

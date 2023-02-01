@@ -1,5 +1,5 @@
 """
- Copyright (c) 2021 Intel Corporation
+ Copyright (c) 2023 Intel Corporation
  Licensed under the Apache License, Version 2.0 (the "License");
  you may not use this file except in compliance with the License.
  You may obtain a copy of the License at
@@ -11,36 +11,38 @@
  limitations under the License.
 """
 
-from typing import List
+import math
 from copy import deepcopy
 from itertools import islice
-import math
+from typing import List
 
 import numpy as np
 import tensorflow as tf
 
-from nncf.common.quantization.initialization.range import RangeInitParams
+from nncf.common.logging.progress_bar import ProgressBar
 from nncf.common.quantization.initialization.range import RangeInitCollectorParams
 from nncf.common.quantization.initialization.range import RangeInitConfig
+from nncf.common.quantization.initialization.range import RangeInitParams
 from nncf.common.quantization.structs import QuantizerGroup
+from nncf.common.scopes import should_consider_scope
 from nncf.common.tensor_statistics.collectors import ReductionShape
 from nncf.common.tensor_statistics.collectors import TensorStatisticCollectorBase
-from nncf.common.utils.progress_bar import ProgressBar
-from nncf.common.utils.helpers import should_consider_scope
+from nncf.config.schemata.defaults import MAX_PERCENTILE
+from nncf.config.schemata.defaults import MIN_PERCENTILE
 from nncf.tensorflow.layers.custom_objects import NNCF_QUANTIZATION_OPERATIONS
-from nncf.tensorflow.layers.wrapper import NNCFWrapper
 from nncf.tensorflow.layers.data_layout import get_channel_axis
 from nncf.tensorflow.layers.operation import InputType
-from nncf.tensorflow.tensor_statistics.statistics import tf_convert_stat_to_min_max_tensor_stat
+from nncf.tensorflow.layers.wrapper import NNCFWrapper
+from nncf.tensorflow.quantization.layers import FakeQuantize
+from nncf.tensorflow.tensor_statistics.collectors import TFMeanMinMaxStatisticCollector
+from nncf.tensorflow.tensor_statistics.collectors import TFMeanPercentileStatisticCollector
+from nncf.tensorflow.tensor_statistics.collectors import TFMedianMADStatisticCollector
+from nncf.tensorflow.tensor_statistics.collectors import TFMinMaxStatisticCollector
+from nncf.tensorflow.tensor_statistics.collectors import TFMixedMinMaxStatisticCollector
+from nncf.tensorflow.tensor_statistics.collectors import TFPercentileStatisticCollector
 from nncf.tensorflow.tensor_statistics.reduction import get_reduction_shape_activations
 from nncf.tensorflow.tensor_statistics.reduction import get_reduction_shape_weights
-from nncf.tensorflow.quantization.layers import FakeQuantize
-from nncf.tensorflow.tensor_statistics.collectors import TFMinMaxStatisticCollector
-from nncf.tensorflow.tensor_statistics.collectors import TFMedianMADStatisticCollector
-from nncf.tensorflow.tensor_statistics.collectors import TFPercentileStatisticCollector
-from nncf.tensorflow.tensor_statistics.collectors import TFMeanPercentileStatisticCollector
-from nncf.tensorflow.tensor_statistics.collectors import TFMixedMinMaxStatisticCollector
-from nncf.tensorflow.tensor_statistics.collectors import TFMeanMinMaxStatisticCollector
+from nncf.tensorflow.tensor_statistics.statistics import tf_convert_stat_to_min_max_tensor_stat
 
 
 class TFRangeInitParams(RangeInitParams):
@@ -119,14 +121,14 @@ class RangeInitializer:
             return TFMedianMADStatisticCollector(reduction_shape,
                                                  num_samples)
         if range_type == 'percentile':
-            min_percentile = init_config.init_type_specific_params.get('min_percentile', 0.1)
-            max_percentile = init_config.init_type_specific_params.get('max_percentile', 99.9)
+            min_percentile = init_config.init_type_specific_params.get('min_percentile', MIN_PERCENTILE)
+            max_percentile = init_config.init_type_specific_params.get('max_percentile', MAX_PERCENTILE)
             return TFPercentileStatisticCollector([min_percentile, max_percentile],
                                                   reduction_shape,
                                                   num_samples)
         if range_type == 'mean_percentile':
-            min_percentile = init_config.init_type_specific_params.get('min_percentile', 0.1)
-            max_percentile = init_config.init_type_specific_params.get('max_percentile', 99.9)
+            min_percentile = init_config.init_type_specific_params.get('min_percentile', MIN_PERCENTILE)
+            max_percentile = init_config.init_type_specific_params.get('max_percentile', MAX_PERCENTILE)
             return TFMeanPercentileStatisticCollector([min_percentile, max_percentile],
                                                       reduction_shape,
                                                       num_samples)

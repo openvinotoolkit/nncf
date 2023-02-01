@@ -1,0 +1,38 @@
+{
+    "input_info": {},
+    "bootstrapNAS": {
+        "training": {
+            "algorithm": "progressive_shrinking",
+            "progressivity_of_elasticity": ["kernel", "depth", "width"],
+            "batchnorm_adaptation": {
+                "num_bn_adaptation_samples": 1500
+            },
+            "schedule": {
+                "list_stage_descriptions": [
+                    {"train_dims": ["kernel"], "epochs": 40},
+                    {"train_dims": ["kernel", "depth"], "epochs": 40, "depth_indicator": 1},
+                    {"train_dims": ["kernel","depth"], "epochs": 40, "depth_indicator": 2},
+                    {"train_dims": ["kernel","depth", "width"], "epochs": 40, "reorg_weights": true, "width_indicator": 2, "bn_adapt": true}
+                ]
+            },
+            "elasticity": {
+                "available_elasticity_dims": ["width", "depth"],
+                "width": {
+                    "max_num_widths": 2,
+                    "min_width": 32,
+                    "width_step": 32,
+                    "width_multipliers": [1, 0.85]
+                },
+                "kernel": {
+                    "max_num_kernels": 3
+                },
+                "depth": {
+                    "skipped_blocks": [["start_1", "end_1"], ["start_2", "end_2"]],
+                    "max_block_size": 1,
+                    "min_block_size": 1,
+                    "hw_fused_ops": false
+                }
+            }
+        }
+    }
+}

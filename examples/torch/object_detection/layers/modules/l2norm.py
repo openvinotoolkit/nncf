@@ -1,5 +1,5 @@
 """
- Copyright (c) 2019 Intel Corporation
+ Copyright (c) 2023 Intel Corporation
  Licensed under the Apache License, Version 2.0 (the "License");
  you may not use this file except in compliance with the License.
  You may obtain a copy of the License at
@@ -10,12 +10,14 @@
  See the License for the specific language governing permissions and
  limitations under the License.
 """
+from typing import Any
 
 import torch
 from torch import nn
 from torch.nn import init
 
 from nncf.torch.utils import add_domain
+from nncf.torch.utils import no_jit_trace
 from nncf.torch import register_module
 
 
@@ -45,17 +47,24 @@ class L2Norm(nn.Module):
         return L2NormFunction.apply(x, self.weight, self)
 
 
+# pylint:disable=abstract-method
 class L2NormFunction(torch.autograd.Function):
     @staticmethod
     def forward(ctx, x, weight, l2NormParams):
-        norm = x.pow(2).sum(dim=1, keepdim=True).sqrt() + l2NormParams.eps
-        x = torch.div(x, norm)
-        out = weight.unsqueeze(0).unsqueeze(2).unsqueeze(3).expand_as(x) * x
-        return out
+        with no_jit_trace():
+            # torch >= 1.13 somehow will still execute the forward on a torch.autograd.Function
+            # when exporting even if the `symbolic` method is defined, trace whatever is executed
+            # and store the trace result in an intermediate ONNX export graph. torch will then fail on trying
+            # to remove the dead code from this forward. The solution is to put the forward code into
+            # no_jit_trace() to prevent the forward operations from ending up in the intermediate graph.
+            norm = x.pow(2).sum(dim=1, keepdim=True).sqrt() + l2NormParams.eps
+            x = torch.div(x, norm)
+            out = weight.unsqueeze(0).unsqueeze(2).unsqueeze(3).expand_as(x) * x
+            return out
 
     @staticmethod
-    def backward(ctx, grad_out):
-        return grad_out
+    def backward(ctx: Any, *grad_outputs: Any) -> Any:
+        return grad_outputs[0]
 
     @staticmethod
     def symbolic(g, x, weight, l2NormParams):

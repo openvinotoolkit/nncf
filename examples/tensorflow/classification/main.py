@@ -1,5 +1,5 @@
 """
- Copyright (c) 2020 Intel Corporation
+ Copyright (c) 2023 Intel Corporation
  Licensed under the Apache License, Version 2.0 (the "License");
  you may not use this file except in compliance with the License.
  You may obtain a copy of the License at
@@ -21,7 +21,7 @@ import tensorflow_addons as tfa
 from nncf.config.utils import is_accuracy_aware_training
 from nncf.tensorflow.helpers.model_creation import create_compressed_model
 from nncf.tensorflow import create_compression_callbacks
-from nncf.tensorflow.helpers.model_manager import TFOriginalModelManager
+from nncf.tensorflow.helpers.model_manager import TFModelManager
 from nncf.tensorflow.initialization import register_default_init_args
 from nncf.tensorflow.utils.state import TFCompressionState
 from nncf.tensorflow.utils.state import TFCompressionStateLoader
@@ -44,6 +44,8 @@ from examples.tensorflow.common.utils import serialize_config
 from examples.tensorflow.common.utils import serialize_cli_args
 from examples.tensorflow.common.utils import write_metrics
 from examples.tensorflow.common.utils import SummaryWriter
+from examples.tensorflow.common.utils import close_strategy_threadpool
+from examples.tensorflow.common.utils import set_seed
 
 
 def get_argument_parser():
@@ -92,7 +94,7 @@ def get_dataset_builders(config, num_devices, one_hot=True):
         one_hot=one_hot,
         is_train=False)
 
-    return [train_builder, val_builder]
+    return train_builder, val_builder
 
 
 def get_num_classes(dataset):
@@ -120,7 +122,8 @@ def load_checkpoint(checkpoint, ckpt_path):
 
     if not path_to_checkpoint:
         logger.info('No checkpoint detected.')
-        return 0
+        if ckpt_path:
+            raise RuntimeError(f'ckpt_path was given, but no checkpoint detected in path: {ckpt_path}')
 
     logger.info('Checkpoint file {} found and restoring from checkpoint'
                 .format(path_to_checkpoint))
@@ -128,13 +131,10 @@ def load_checkpoint(checkpoint, ckpt_path):
     status = checkpoint.restore(path_to_checkpoint)
     status.expect_partial()
     logger.info('Completed loading from checkpoint.')
-    return None
 
 
 def resume_from_checkpoint(checkpoint, ckpt_path, steps_per_epoch):
-    if load_checkpoint(checkpoint, ckpt_path) == 0:
-        return 0
-
+    load_checkpoint(checkpoint, ckpt_path)
     initial_step = checkpoint.model.optimizer.iterations.numpy()
     initial_epoch = initial_step // steps_per_epoch
 
@@ -148,10 +148,26 @@ def load_compression_state(ckpt_path: str):
     return checkpoint.compression_state.state
 
 
+def get_model_accuracy(model_fn, model_params, nncf_config,
+                       validation_dataset, validation_steps):
+    with TFModelManager(model_fn, nncf_config, **model_params) as model:
+        model.compile(metrics=[tf.keras.metrics.CategoricalAccuracy(name='acc@1')])
+        results = model.evaluate(
+            validation_dataset,
+            steps=validation_steps,
+            return_dict=True)
+        return 100 * results['acc@1']
+
+
 def run(config):
+    if config.disable_tensor_float_32_execution:
+        tf.config.experimental.enable_tensor_float_32_execution(False)
+
     strategy = get_distribution_strategy(config)
     if config.metrics_dump is not None:
         write_metrics(0, config.metrics_dump)
+
+    set_seed(config)
 
     model_fn, model_params = get_model(config.model,
                                        input_shape=config.get('input_info', {}).get('sample_size', None),
@@ -159,14 +175,10 @@ def run(config):
                                        pretrained=config.get('pretrained', False),
                                        weights=config.get('weights', None))
 
-    builders = get_dataset_builders(config, strategy.num_replicas_in_sync)
-    datasets = [builder.build() for builder in builders]
+    train_builder, validation_builder = get_dataset_builders(config, strategy.num_replicas_in_sync)
+    train_dataset, validation_dataset = train_builder.build(), validation_builder.build()
 
-    train_builder, validation_builder = builders
-    train_dataset, validation_dataset = datasets
-
-    nncf_config = config.nncf_config
-    nncf_config = register_default_init_args(nncf_config=nncf_config,
+    nncf_config = register_default_init_args(nncf_config=config.nncf_config,
                                              data_loader=train_dataset,
                                              batch_size=train_builder.global_batch_size)
 
@@ -177,19 +189,17 @@ def run(config):
     resume_training = config.ckpt_path is not None
 
     if is_accuracy_aware_training(config):
-        with TFOriginalModelManager(model_fn, **model_params) as model:
-            model.compile(metrics=[tf.keras.metrics.CategoricalAccuracy(name='acc@1')])
-            results = model.evaluate(
-                validation_dataset,
-                steps=validation_steps,
-                return_dict=True)
-            uncompressed_model_accuracy = 100 * results['acc@1']
+        uncompressed_model_accuracy = get_model_accuracy(model_fn,
+                                                         model_params,
+                                                         nncf_config,
+                                                         validation_dataset,
+                                                         validation_steps)
 
     compression_state = None
     if resume_training:
         compression_state = load_compression_state(config.ckpt_path)
 
-    with TFOriginalModelManager(model_fn, **model_params) as model:
+    with TFModelManager(model_fn, nncf_config, **model_params) as model:
         with strategy.scope():
             compression_ctrl, compress_model = create_compressed_model(model, nncf_config, compression_state)
             compression_callbacks = create_compression_callbacks(compression_ctrl, log_dir=config.log_dir)
@@ -251,18 +261,19 @@ def run(config):
         if is_accuracy_aware_training(config):
             logger.info('starting an accuracy-aware training loop...')
             result_dict_to_val_metric_fn = lambda results: 100 * results['acc@1']
-            compress_model.accuracy_aware_fit(train_dataset,
-                                              compression_ctrl,
-                                              nncf_config=config.nncf_config,
-                                              callbacks=callbacks,
-                                              initial_epoch=initial_epoch,
-                                              steps_per_epoch=train_steps,
-                                              tensorboard_writer=SummaryWriter(config.log_dir,
-                                                                               'accuracy_aware_training'),
-                                              log_dir=config.log_dir,
-                                              uncompressed_model_accuracy=uncompressed_model_accuracy,
-                                              result_dict_to_val_metric_fn=result_dict_to_val_metric_fn,
-                                              **validation_kwargs)
+            statistics = compress_model.accuracy_aware_fit(
+                train_dataset,
+                compression_ctrl,
+                nncf_config=config.nncf_config,
+                callbacks=callbacks,
+                initial_epoch=initial_epoch,
+                steps_per_epoch=train_steps,
+                tensorboard_writer=SummaryWriter(config.log_dir, 'accuracy_aware_training'),
+                log_dir=config.log_dir,
+                uncompressed_model_accuracy=uncompressed_model_accuracy,
+                result_dict_to_val_metric_fn=result_dict_to_val_metric_fn,
+                **validation_kwargs)
+            logger.info(f'Compressed model statistics:\n{statistics.to_str()}')
         else:
             logger.info('training...')
             compress_model.fit(
@@ -290,6 +301,8 @@ def run(config):
         save_path, save_format = get_saving_parameters(config)
         compression_ctrl.export_model(save_path, save_format)
         logger.info('Saved to {}'.format(save_path))
+
+    close_strategy_threadpool(strategy)
 
 
 def export(config):

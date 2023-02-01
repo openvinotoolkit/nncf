@@ -6,13 +6,15 @@ import jsonschema
 import pytest
 
 from nncf.config import NNCFConfig
-from tests.common.helpers import PROJECT_ROOT, TEST_ROOT
+from tests.shared.paths import PROJECT_ROOT
+from tests.shared.paths import TEST_ROOT
 
 GOOD_CONFIG_SOURCES = [
     PROJECT_ROOT / Path("examples/torch/classification/configs"),
     PROJECT_ROOT / Path("examples/torch/semantic_segmentation/configs"),
     PROJECT_ROOT / Path("examples/torch/object_detection/configs"),
-    TEST_ROOT / Path("torch/data/configs")
+    TEST_ROOT / Path("torch/data/configs"),
+    TEST_ROOT / Path("torch/data/schema_validation_good_configs")
 ]
 
 BAD_CONFIG_SOURCES = [

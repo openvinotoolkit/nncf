@@ -1,5 +1,5 @@
 """
- Copyright (c) 2021 Intel Corporation
+ Copyright (c) 2023 Intel Corporation
  Licensed under the Apache License, Version 2.0 (the "License");
  you may not use this file except in compliance with the License.
  You may obtain a copy of the License at
@@ -41,6 +41,23 @@ class MinMaxTensorStatistic(TensorStatistic):
                self.tensor_eq(self.max_values, other.max_values)
 
 
+class MeanTensorStatistic(TensorStatistic):
+    """
+    Base class for the statistics that collects as mean per-axis
+    """
+    def __init__(self, mean_values, shape):
+        """
+        :param mean_values: Сollected mean per-axis values.
+        :param shape: The shape of the collected statistics.
+        """
+        self.mean_values = mean_values
+        self.shape = shape
+
+    def __eq__(self, other: 'MeanTensorStatistic') -> bool:
+        return self.tensor_eq(self.mean_values, other.mean_values) and \
+            self.tensor_eq(self.shape, other.shape)
+
+
 class MedianMADTensorStatistic(TensorStatistic):
     def __init__(self, median_values, mad_values):
         self.median_values = median_values
@@ -63,3 +80,16 @@ class PercentileTensorStatistic(TensorStatistic):
                                         other.percentile_vs_values_dict[pct]):
                 return False
         return True
+
+class BatchTensorStatistic(TensorStatistic):
+    """
+    Base class for the statistics that collects as mean per-batch
+    """
+    def __init__(self, values):
+        """
+        :param values: Сollected per-batch values.
+        """
+        self.values = values
+
+    def __eq__(self, other: 'BatchTensorStatistic') -> bool:
+        return self.tensor_eq(self.values, other.values)

@@ -1,0 +1,43 @@
+models:
+  - name: fcn-resnet50-12
+    launchers:
+      - framework: onnx_runtime
+        execution_providers: ['OpenVINOExecutionProvider']
+        tags: ['OpenVINOExecutionProvider']
+        adapter:
+          type: segmentation
+      - framework: onnx_runtime
+        execution_providers: ['CPUExecutionProvider']
+        tags: ['CPUExecutionProvider']
+        adapter:
+          type: segmentation
+    datasets:
+      - name: mscoco_segmentation_to_voc
+        annotation_conversion:
+          converter: mscoco_segmentation_to_voc
+          annotation_file: annotations/instances_val2017.json
+          has_background: True
+          sort_annotations: True
+          semantic_only: True
+          convert_mask: False
+          # Do not change masks_dir path
+          masks_dir: mscoco_to_voc_seg_masks
+          # Only evaluate on VOC labels
+          convert_COCO_to_VOC_labels: True
+        annotation: mscoco_segmentation_to_voc.pickle
+        dataset_meta: mscoco_segmentation_to_voc.json
+        data_source: val2017
+        # Do not change segmentation_masks_source path
+        segmentation_masks_source: .
+
+        preprocessing:
+          - type: bgr_to_rgb
+          - type: normalization
+            std: 255
+          - type: normalization
+            mean: (0.485, 0.456, 0.406)
+            std: (0.229, 0.224, 0.225)
+        metrics:
+          - type: mean_iou
+            # Background label
+            ignore_label: 0

@@ -1,5 +1,5 @@
 """
- Copyright (c) 2019-2020 Intel Corporation
+ Copyright (c) 2019-2023 Intel Corporation
  Licensed under the Apache License, Version 2.0 (the "License");
  you may not use this file except in compliance with the License.
  You may obtain a copy of the License at
@@ -28,7 +28,7 @@ from nncf.torch.graph.transformations.layout import PTTransformationLayout
 from nncf.torch.nncf_network import NNCFNetwork
 from nncf.torch.nncf_network import PTModelTransformer
 
-ModelType = TypeVar('ModelType')
+TModel = TypeVar('TModel')
 
 
 class PTCompositeCompressionLoss(CompositeCompressionLoss, PTCompressionLoss):
@@ -67,7 +67,7 @@ class PTCompositeCompressionAlgorithmBuilder(
 
         return transformed_model
 
-    def _build_controller(self, model: ModelType) -> PTCompressionAlgorithmController:
+    def _build_controller(self, model: TModel) -> PTCompressionAlgorithmController:
         """
         Simple implementation of building controller without setting builder state and loading controller's one.
         Builds `PTCompositeCompressionAlgorithmController` to handle the additional
@@ -85,7 +85,7 @@ class PTCompositeCompressionAlgorithmBuilder(
             composite_ctrl.add(builder.build_controller(model))
         return composite_ctrl
 
-    def get_transformation_layout(self, model: ModelType) -> PTTransformationLayout:
+    def get_transformation_layout(self, model: TModel) -> PTTransformationLayout:
         """
         Computes necessary model transformations to enable algorithm-specific
         compression.
@@ -99,7 +99,7 @@ class PTCompositeCompressionAlgorithmBuilder(
             transformations.update(builder.get_transformation_layout(model))
         return transformations
 
-    def initialize(self, model: ModelType) -> None:
+    def initialize(self, model: TModel) -> None:
         for builder in self.child_builders:
             if builder.should_init:
                 builder.initialize(model)
@@ -110,7 +110,7 @@ class PTCompositeCompressionAlgorithmBuilder(
 
 class PTCompositeCompressionAlgorithmController(
     CompositeCompressionAlgorithmController, PTCompressionAlgorithmController):
-    def __init__(self, target_model: ModelType):
+    def __init__(self, target_model: TModel):
         super().__init__(target_model)
         self._loss = PTCompositeCompressionLoss()
 
@@ -121,3 +121,14 @@ class PTCompositeCompressionAlgorithmController(
     def prepare_for_export(self):
         for child_ctrl in self.child_ctrls:
             child_ctrl.prepare_for_export()
+
+    @property
+    def compression_rate(self) -> float:
+        sum_compression_rate = 0
+        not_none_compression_rate_cnt = 0
+        for child_ctrl in self.child_ctrls:
+            compression_rate = child_ctrl.compression_rate
+            if compression_rate is not None:
+                sum_compression_rate += sum_compression_rate
+                not_none_compression_rate_cnt += 1
+        return sum_compression_rate / max(not_none_compression_rate_cnt, 1)

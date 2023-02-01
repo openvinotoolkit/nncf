@@ -13,20 +13,20 @@ Knowledge is transferred from the teacher model to the student one by minimizing
 based on predictions of the models. At the moment, two types of loss functions are available. 
 One of them should be explicitly specified in the config.
  
- MSE distillation loss:
+MSE distillation loss:
  
- ![{L}_{MSE}(z^{s}, z^{t}) = || z^s - z^t ||_2^2](https://latex.codecogs.com/png.latex?{L}_{MSE}(z^{s},%20z^{t})%20=%20||%20z^s%20-%20z^t%20||_2^2)
+${L}_{MSE}(z^{s}, z^{t}) = || z^s - z^t ||_2^2$
  
- Cross-Entropy distillation loss:
+Cross-Entropy distillation loss:
  
- ![{p}_{i}=\frac{\exp({z}_{i})}{\sum_{j}(\exp({z}_{j}))}](https://latex.codecogs.com/png.latex?{p}_{i}=%20\frac{\exp({z}_{i})}{\sum_{j}(\exp({z}_{j}))})
+${p}_{i} = \frac{\exp({z}\_{i})}{\sum\_{j}(\exp({z}\_{j}))}$
  
- ![{L}_{CE}({p}^{s}, {p}^{t}) = -\sum_{i}{p}^{t}_{i}*\log({p}^{s}_{i})](https://latex.codecogs.com/png.latex?{L}_{CE}({p}^{s},%20{p}^{t})%20=%20-\sum_{i}{p}^{t}_{i}*\log({p}^{s}_{i}))
+${L}\_{CE}({p}^{s}, {p}^{t}) = -\sum_{i}{p}^{t}\_{i}*\log({p}^{s}\_{i})$
  
- The Knowledge Distillation loss function is combined with a regular loss function, so overall loss function will be
-  computed as:
+The Knowledge Distillation loss function is combined with a regular loss function, so overall loss function will be
+computed as:
   
- ![L = {L}_{reg}({z}^{s}, y) + {L}_{distill}({z}^{s}, {z}^{t})](https://latex.codecogs.com/png.latex?L%20=%20{L}_{reg}({z}^{s},%20y)%20+%20{L}_{distill}({z}^{s},%20{z}^{t}))
+ $L = {L}\_{reg}({z}^{s}, y) + {L}\_{distill}({z}^{s}, {z}^{t})$
   
  ![kd_pic](../pics/knowledge_distillation.png)
   
@@ -52,15 +52,14 @@ specify `knowledge_distillation` algorithm and its type in the config:
     ]
 }
 ```
-Example of a config: [example](../../examples/torch/classification/configs/pruning/resnet34_pruning_geometric_median_kd.json)
+See this [config file](../../examples/torch/classification/configs/pruning/resnet34_pruning_geometric_median_kd.json) for an example, and [NNCF config schema](https://openvinotoolkit.github.io/nncf/) for reference to the available configuration parameters for the algorithm.
 
 ##### Limitations
 
 - The algorithm is supported for PyTorch only.
-
 - Training the same configuration with Knowledge Distillation requires more time and GPU memory than without it. 
-  On average, memory (for all GPU execution modes) and time overhead is below 20% each.
-
+On average, memory (for all GPU execution modes) and time overhead is below 20% each.
 - Outputs of model that shouldn't be differentiated must have `requires_grad=False`.
-
 - Model should output predictions, not calculate the losses.
+
+

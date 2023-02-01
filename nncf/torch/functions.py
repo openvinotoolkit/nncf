@@ -1,5 +1,5 @@
 """
- Copyright (c) 2019 Intel Corporation
+ Copyright (c) 2023 Intel Corporation
  Licensed under the Apache License, Version 2.0 (the "License");
  you may not use this file except in compliance with the License.
  You may obtain a copy of the License at
@@ -10,6 +10,7 @@
  See the License for the specific language governing permissions and
  limitations under the License.
 """
+from typing import Any
 
 import torch
 
@@ -22,6 +23,7 @@ def logit(x):
     return torch.log(x / (1 - x))
 
 
+# pylint:disable=abstract-method
 class STRound(torch.autograd.Function):
     @staticmethod
     def symbolic(g, input_, inplace=False):
@@ -33,16 +35,17 @@ class STRound(torch.autograd.Function):
         return output
 
     @staticmethod
-    def backward(ctx, grad_output):
-        return grad_output
+    def backward(ctx: Any, *grad_outputs: Any) -> Any:
+        return grad_outputs[0]
 
 
+# pylint:disable=abstract-method
 class STThreshold(torch.autograd.Function):
     @staticmethod
-    def forward(ctx, input_):
-        output = (input_ > 0.5).type(input_.dtype)
+    def forward(ctx, input_, threshold: float = 0.5):
+        output = (input_ > threshold).type(input_.dtype)
         return output
 
     @staticmethod
-    def backward(ctx, grad_output):
-        return grad_output
+    def backward(ctx: Any, *grad_outputs: Any) -> Any:
+        return grad_outputs[0], None

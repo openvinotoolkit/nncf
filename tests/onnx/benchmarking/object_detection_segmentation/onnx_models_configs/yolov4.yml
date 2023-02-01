@@ -1,0 +1,82 @@
+models:
+  - name: yolov4
+    launchers:
+      - framework: onnx_runtime
+        execution_providers: ['OpenVINOExecutionProvider']
+        tags: ['OpenVINOExecutionProvider']
+        adapter:
+          type: yolo_v3
+          anchors: 12,16,19,36,40,28,36,75,76,55,72,146,142,110,192,243,459,401
+          num: 3
+          coords: 4
+          classes: 80
+          threshold: 0.001
+          anchor_masks: [[0, 1, 2], [3, 4, 5], [6, 7, 8]]
+          raw_output: True
+          output_format: HWB
+          do_reshape: True
+          cells: [52, 26, 13]
+          outputs:
+            - Identity:0
+            - Identity_1:0
+            - Identity_2:0
+        inputs:
+        - name: input_1:0
+          type: INPUT
+          layout: "NHWC"
+      - framework: onnx_runtime
+        execution_providers: ['CPUExecutionProvider']
+        tags: ['CPUExecutionProvider']
+        adapter:
+          type: yolo_v3
+          anchors: 12,16,19,36,40,28,36,75,76,55,72,146,142,110,192,243,459,401
+          num: 3
+          coords: 4
+          classes: 80
+          threshold: 0.001
+          anchor_masks: [[0, 1, 2], [3, 4, 5], [6, 7, 8]]
+          raw_output: True
+          output_format: HWB
+          do_reshape: True
+          cells: [52, 26, 13]
+          outputs:
+            - Identity:0
+            - Identity_1:0
+            - Identity_2:0
+        inputs:
+        - name: input_1:0
+          type: INPUT
+          layout: "NHWC"
+    datasets:
+      - name: ms_coco_detection_80_class_without_background
+        reader: pillow_imread
+        preprocessing:
+          - type: resize
+            size: 416
+            interpolation: BICUBIC
+            use_pillow: True
+            aspect_ratio_scale: fit_to_window
+          - type: padding
+            pad_value: 128, 128, 128
+            size: 416
+          - type: normalization
+            std: 255
+
+        postprocessing:
+          - type: resize_prediction_boxes
+          # - type: filter
+          #   apply_to: prediction
+          #   min_confidence: 0.001
+          #   remove_filtered: true
+          # - type: diou_nms
+          #   overlap: 0.5
+          # - type: clip_boxes
+          #   apply_to: prediction
+
+        metrics:
+          - type: coco_precision
+            threshold: .5:.05:.95
+
+    ignored_scopes: [
+      "{re}StatefulPartitionedCall/model/.+/add"
+    ]

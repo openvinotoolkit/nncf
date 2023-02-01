@@ -1,5 +1,5 @@
 """
- Copyright (c) 2020 Intel Corporation
+ Copyright (c) 2023 Intel Corporation
  Licensed under the Apache License, Version 2.0 (the "License");
  you may not use this file except in compliance with the License.
  You may obtain a copy of the License at
@@ -12,20 +12,20 @@
 """
 
 import json
+from pathlib import Path
 from typing import Dict, List, Tuple, Union
 
 import numpy as np
 import torch
+from math import isclose
 
 from nncf import NNCFConfig
 from nncf.api.compression import CompressionLoss
 from nncf.api.compression import CompressionStage
 from nncf.common.accuracy_aware_training.training_loop import ADAPTIVE_COMPRESSION_CONTROLLERS
 from nncf.common.initialization.batchnorm_adaptation import BatchnormAdaptationAlgorithm
-from nncf.common.graph import NNCFGraph
 from nncf.common.graph import NNCFNode
 from nncf.common.graph import NNCFNodeName
-from nncf.common.graph.layer_attributes import ConvolutionLayerAttributes
 from nncf.common.pruning.clusterization import Clusterization
 from nncf.common.pruning.mask_propagation import MaskPropagationAlgorithm
 from nncf.common.pruning.schedulers import PRUNING_SCHEDULERS
@@ -34,34 +34,28 @@ from nncf.common.pruning.statistics import FilterPruningStatistics
 from nncf.common.pruning.statistics import PrunedModelTheoreticalBorderline
 from nncf.common.pruning.statistics import PrunedLayerSummary
 from nncf.common.pruning.statistics import PrunedModelStatistics
-from nncf.common.pruning.utils import calculate_in_out_channels_in_uniformly_pruned_model
-from nncf.common.pruning.utils import calculate_in_out_channels_by_masks
-from nncf.common.pruning.utils import count_filters_num
-from nncf.common.pruning.utils import count_flops_and_weights
-from nncf.common.pruning.utils import count_flops_and_weights_per_node
-from nncf.common.pruning.utils import get_cluster_next_nodes
-from nncf.common.pruning.utils import get_conv_in_out_channels
+from nncf.common.pruning.shape_pruning_processor import ShapePruningProcessor
+from nncf.common.pruning.weights_flops_calculator import WeightsFlopsCalculator
 from nncf.common.pruning.utils import get_rounded_pruned_element_number
+from nncf.common.pruning.utils import get_prunable_layers_in_out_channels
 from nncf.common.schedulers import StubCompressionScheduler
 from nncf.common.statistics import NNCFStatistics
 from nncf.common.utils.debug import is_debug
-from nncf.common.utils.logger import logger as nncf_logger
+from nncf.common.logging import nncf_logger
+from nncf.common.utils.os import safe_open
 from nncf.config.extractors import extract_bn_adaptation_init_params
-from nncf.torch.tensor import PTNNCFTensor
 from nncf.torch.algo_selector import PT_COMPRESSION_ALGORITHMS
 from nncf.torch.compression_method_api import PTCompressionAlgorithmController
-from nncf.torch.tensor_statistics.collectors import PTNNCFCollectorTensorProcessor
-from nncf.torch.graph.operator_metatypes import PTConv1dMetatype
-from nncf.torch.graph.operator_metatypes import PTConv2dMetatype
-from nncf.torch.graph.operator_metatypes import PTConv3dMetatype
-from nncf.torch.graph.operator_metatypes import PTConvTranspose2dMetatype
-from nncf.torch.graph.operator_metatypes import PTConvTranspose3dMetatype
+from nncf.torch.graph.operator_metatypes import PTModuleConv1dMetatype
+from nncf.torch.graph.operator_metatypes import PTModuleConv2dMetatype
+from nncf.torch.graph.operator_metatypes import PTModuleConv3dMetatype
+from nncf.torch.graph.operator_metatypes import PTModuleConvTranspose1dMetatype
+from nncf.torch.graph.operator_metatypes import PTModuleConvTranspose2dMetatype
+from nncf.torch.graph.operator_metatypes import PTModuleConvTranspose3dMetatype
 from nncf.torch.graph.operator_metatypes import PTDepthwiseConv1dSubtype
 from nncf.torch.graph.operator_metatypes import PTDepthwiseConv2dSubtype
 from nncf.torch.graph.operator_metatypes import PTDepthwiseConv3dSubtype
-from nncf.torch.graph.operator_metatypes import PTLinearMetatype
-from nncf.torch.layers import NNCF_GENERAL_CONV_MODULES_DICT
-from nncf.torch.layers import NNCF_LINEAR_MODULES_DICT
+from nncf.torch.graph.operator_metatypes import PTModuleLinearMetatype
 from nncf.torch.layers import NNCF_PRUNING_MODULES_DICT
 from nncf.torch.nncf_network import NNCFNetwork
 from nncf.torch.pruning.base_algo import BasePruningAlgoBuilder
@@ -75,23 +69,25 @@ from nncf.torch.pruning.filter_pruning.functions import tensor_l2_normalizer
 from nncf.torch.pruning.filter_pruning.global_ranking.legr import LeGR
 from nncf.torch.pruning.filter_pruning.layers import FilterPruningMask
 from nncf.torch.pruning.structs import PrunedModuleInfo
+from nncf.torch.pruning.utils import collect_output_shapes
 from nncf.torch.pruning.utils import init_output_masks_in_graph
 from nncf.torch.structures import LeGRInitArgs, DistributedCallbacksArgs
 from nncf.torch.utils import get_filters_num
 
 
 GENERAL_CONV_LAYER_METATYPES = [
-    PTConv1dMetatype,
+    PTModuleConv1dMetatype,
     PTDepthwiseConv1dSubtype,
-    PTConv2dMetatype,
+    PTModuleConv2dMetatype,
     PTDepthwiseConv2dSubtype,
-    PTConv3dMetatype,
+    PTModuleConv3dMetatype,
     PTDepthwiseConv3dSubtype,
-    PTConvTranspose2dMetatype,
-    PTConvTranspose3dMetatype
+    PTModuleConvTranspose1dMetatype,
+    PTModuleConvTranspose2dMetatype,
+    PTModuleConvTranspose3dMetatype,
 ]
 LINEAR_LAYER_METATYPES = [
-    PTLinearMetatype
+    PTModuleLinearMetatype
 ]
 
 
@@ -137,22 +133,30 @@ class FilterPruningController(BasePruningAlgoController):
         self.pruning_quota = 0.9
         self.normalize_weights = True
 
-        self._init_module_channels_and_shapes()
+        self._graph = self._model.get_original_graph()
+        self._weights_flops_calc = WeightsFlopsCalculator(conv_op_metatypes=GENERAL_CONV_LAYER_METATYPES,
+                                                          linear_op_metatypes=LINEAR_LAYER_METATYPES)
+
+        self._shape_pruning_proc = ShapePruningProcessor(pruning_operations_metatype=PT_PRUNING_OPERATOR_METATYPES,
+                                                          prunable_types=prunable_types)
         self.pruning_quotas = {}
         self.nodes_flops = {}  # type: Dict[NNCFNodeName, int]
         self.nodes_params_num = {}  # type: Dict[NNCFNodeName, int]
-        self.next_nodes = {}  # type: Dict[int, List[NNCFNodeName]]
-        self._init_pruned_modules_params()
+        self._next_nodes = {}  # type: Dict[int, List[NNCFNodeName]]
+        self._output_shapes = {} # type: Dict[NNCFNodeName, int]
+        _, modules_out_channels = get_prunable_layers_in_out_channels(self._graph)
+        self._init_pruned_layers_params(modules_out_channels)
         self.flops_count_init()
+
         self.full_flops = sum(self.nodes_flops.values())
         self.current_flops = self.full_flops
         self.full_params_num = sum(self.nodes_params_num.values())
         self.current_params_num = self.full_params_num
-        self.full_filters_num = count_filters_num(self._model.get_original_graph(), GENERAL_CONV_LAYER_METATYPES)
+        self.full_filters_num = self._weights_flops_calc.count_filters_num(self._graph, modules_out_channels)
         self.current_filters_num = self.full_filters_num
         self._pruned_layers_num = len(self.pruned_module_groups_info.get_all_nodes())
         self._prunable_layers_num = len(self._model.get_graph().get_nodes_by_types(self._prunable_types))
-        self._max_prunable_flops, self._max_prunable_params =\
+        self._min_possible_flops, self._min_possible_params =\
             self._calculate_flops_and_weights_in_uniformly_pruned_model(1.)
 
         self.weights_normalizer = tensor_l2_normalizer  # for all weights in common case
@@ -167,15 +171,15 @@ class FilterPruningController(BasePruningAlgoController):
             self.normalize_weights = False
             if params.get('load_ranking_coeffs_path'):
                 coeffs_path = params.get('load_ranking_coeffs_path')
-                nncf_logger.info('Loading ranking coefficients from file {}'.format(coeffs_path))
+                nncf_logger.info(f'Loading ranking coefficients from file {coeffs_path}')
                 try:
-                    with open(coeffs_path, 'r', encoding='utf8') as coeffs_file:
+                    with safe_open(Path(coeffs_path), 'r', encoding='utf8') as coeffs_file:
                         loaded_coeffs = json.load(coeffs_file)
                 except (ValueError, FileNotFoundError) as err:
                     raise Exception('Can\'t load json with ranking coefficients. Please, check format of json file '
                                     'and path to the file.') from err
                 ranking_coeffs = {key: tuple(loaded_coeffs[key]) for key in loaded_coeffs}
-                nncf_logger.info('Loaded ranking coefficients = {}'.format(ranking_coeffs))
+                nncf_logger.debug(f'Loaded ranking coefficients = {ranking_coeffs}')
                 self.ranking_coeffs = ranking_coeffs
             else:
                 # Ranking can't be trained without registered init struct LeGRInitArgs
@@ -190,17 +194,16 @@ class FilterPruningController(BasePruningAlgoController):
                     legr_params['max_pruning'] = self._scheduler.target_level
                 self.legr = LeGR(self, target_model, legr_init_args, **legr_params)
                 self.ranking_coeffs = self.legr.train_global_ranking()
-                nncf_logger.info('Trained ranking coefficients = {}'.format(self.ranking_coeffs))
+                nncf_logger.debug(f'Trained ranking coefficients = {self.ranking_coeffs}')
                 # Unwrapping parallelized model
-                target_model = distributed_wrapping_init_args.unwrap_model(target_model)
+                _ = distributed_wrapping_init_args.unwrap_model(target_model)
         else:
             self.ranking_coeffs = {node.node_name: (1, 0) for node in self.pruned_module_groups_info.get_all_nodes()}
 
         # Saving ranking coefficients to the specified file
         if params.get('save_ranking_coeffs_path'):
-            nncf_logger.info(
-                'Saving ranking coefficients to the file {}'.format(params.get('save_ranking_coeffs_path')))
-            with open(params.get('save_ranking_coeffs_path'), 'w', encoding='utf8') as f:
+            nncf_logger.info(f'Saving ranking coefficients to the file {params.get("save_ranking_coeffs_path")}')
+            with safe_open(Path(params.get('save_ranking_coeffs_path')), 'w', encoding='utf8') as f:
                 json.dump(self.ranking_coeffs, f)
 
         self.set_pruning_level(self.pruning_init)
@@ -225,8 +228,8 @@ class FilterPruningController(BasePruningAlgoController):
     def statistics(self, quickly_collected_only: bool = False) -> NNCFStatistics:
         if not quickly_collected_only and is_debug():
             stats = PrunedModelTheoreticalBorderline(
-                self._pruned_layers_num, self._prunable_layers_num, self._max_prunable_flops,
-                self._max_prunable_params, self.full_flops, self.full_params_num)
+                self._pruned_layers_num, self._prunable_layers_num, self._min_possible_flops,
+                self._min_possible_params, self.full_flops, self.full_params_num)
 
             nncf_logger.debug(stats.to_str())
 
@@ -263,81 +266,21 @@ class FilterPruningController(BasePruningAlgoController):
     def freeze(self, freeze: bool = True):
         self.frozen = freeze
 
-    def _init_module_channels_and_shapes(self):
-        self._modules_in_channels = {}  # type: Dict[NNCFNodeName, int]
-        self._modules_out_channels = {}  # type: Dict[NNCFNodeName, int]
-        self._modules_in_shapes = {}  # type: Dict[NNCFNodeName, List[int]]
-        self._modules_out_shapes = {}  # type: Dict[NNCFNodeName, List[int]]
-
-    def _init_pruned_modules_params(self):
-        # 1. Init in/out channels for potentially prunable modules
-        graph = self._model.get_original_graph()
-        self._modules_in_channels, self._modules_out_channels = get_conv_in_out_channels(graph)
+    def _init_pruned_layers_params(self, full_out_channels):
+        # 1. Collect nodes output shapes
+        self._output_shapes = collect_output_shapes(self._graph)
 
         # 2. Init next_nodes for every pruning cluster
-        self.next_nodes = get_cluster_next_nodes(graph, self.pruned_module_groups_info, self._prunable_types)
+        self._next_nodes = self._shape_pruning_proc.get_next_nodes(self._graph, self.pruned_module_groups_info)
 
         # 3. Init pruning quotas
         for cluster in self.pruned_module_groups_info.get_all_clusters():
-            self.pruning_quotas[cluster.id] = np.floor(self._modules_out_channels[cluster.elements[0].node_name] \
+            self.pruning_quotas[cluster.id] = np.floor(full_out_channels[cluster.elements[0].node_name] \
                                                        * self.pruning_quota)
 
-    def _calculate_output_shape(self, graph: NNCFGraph, node: NNCFNode) -> Tuple[int, ...]:
-        """
-        Calculates output shape of convolution layer by input edge.
-
-        :param graph: the model graph
-        :param node: node from NNCF graph
-        :return: output shape
-        """
-        in_edge = graph.get_input_edges(node)[0]
-        shape = list(in_edge.tensor_shape)[2:]
-        attrs = node.layer_attributes
-
-        assert isinstance(attrs, ConvolutionLayerAttributes)
-
-        for i, _ in enumerate(shape):
-            if attrs.transpose:
-                shape[i] = (shape[i] - 1) * attrs.stride[i] - 2 * attrs.padding_values[i] + attrs.kernel_size[i]
-            else:
-                shape[i] = (shape[i] + 2 * attrs.padding_values[i] - attrs.kernel_size[i]) // attrs.stride[i] + 1
-        return tuple(shape)
-
     def flops_count_init(self) -> None:
-        graph = self._model.get_original_graph()
-        for node in graph.get_nodes_by_types([v.op_func_name for v in NNCF_GENERAL_CONV_MODULES_DICT]):
-            output_edges = graph.get_output_edges(node)
-            if output_edges:
-                out_edge = output_edges[0]
-                out_shape = out_edge.tensor_shape[2:]
-            else:
-                # For disconnected NNCFGraph when node have no output edge
-                out_shape = self._calculate_output_shape(graph, node)
-                nncf_logger.error("Node %s have no output edge in NNCFGraph", node.node_name)
-            self._modules_out_shapes[node.node_name] = out_shape
-
-        for node in graph.get_nodes_by_types([v.op_func_name for v in NNCF_LINEAR_MODULES_DICT]):
-            output_edges = graph.get_output_edges(node)
-            if output_edges:
-                out_edge = graph.get_output_edges(node)[0]
-                out_shape = out_edge.tensor_shape
-                self._modules_out_shapes[node.node_name] = out_shape[-1]
-            else:
-                # For disconnected NNCFGraph when node have no output edge
-                nncf_logger.error("Node %s have no output edge in NNCFGraph", node.node_name)
-                self._modules_out_shapes[node.node_name] = node.layer_attributes.out_features
-
-            in_edge = graph.get_input_edges(node)[0]
-            in_shape = in_edge.tensor_shape
-            if len(in_shape) == 1:
-                self._modules_in_shapes[node.node_name] = in_shape[0]
-            else:
-                self._modules_in_shapes[node.node_name] = in_shape[1:]
-
         self.nodes_flops, self.nodes_params_num = \
-            count_flops_and_weights_per_node(graph, self._modules_in_shapes, self._modules_out_shapes,
-                                             conv_op_metatypes=GENERAL_CONV_LAYER_METATYPES,
-                                             linear_op_metatypes=LINEAR_LAYER_METATYPES)
+            self._weights_flops_calc.count_flops_and_weights_per_node(self._graph, self._output_shapes)
 
     def _calculate_flops_and_weights_in_uniformly_pruned_model(self, pruning_level: float) -> Tuple[int, int]:
         """
@@ -348,20 +291,18 @@ class FilterPruningController(BasePruningAlgoController):
         :return: flops number in pruned model
         """
         tmp_in_channels, tmp_out_channels = \
-            calculate_in_out_channels_in_uniformly_pruned_model(
-                pruning_groups=self.pruned_module_groups_info.get_all_clusters(),
-                pruning_level=pruning_level,
-                full_input_channels=self._modules_in_channels,
-                full_output_channels=self._modules_out_channels,
-                pruning_groups_next_nodes=self.next_nodes)
+            self._shape_pruning_proc.calculate_in_out_channels_in_uniformly_pruned_model(
+                graph=self._graph,
+                pruning_groups=self.pruned_module_groups_info,
+                pruning_groups_next_nodes=self._next_nodes,
+                pruning_level=pruning_level)
 
-        return count_flops_and_weights(self._model.get_original_graph(),
-                                       self._modules_in_shapes,
-                                       self._modules_out_shapes,
-                                       input_channels=tmp_in_channels,
-                                       output_channels=tmp_out_channels,
-                                       conv_op_metatypes=GENERAL_CONV_LAYER_METATYPES,
-                                       linear_op_metatypes=LINEAR_LAYER_METATYPES)
+
+        return self._weights_flops_calc.count_flops_and_weights(
+                                             graph=self._graph,
+                                             output_shapes=self._output_shapes,
+                                             input_channels=tmp_in_channels,
+                                             output_channels=tmp_out_channels)
 
     def _find_uniform_pruning_level_for_target_flops(self, target_flops_pruning_level: float) -> float:
         """
@@ -382,7 +323,7 @@ class FilterPruningController(BasePruningAlgoController):
             else:
                 left = middle
         flops, params_num = self._calculate_flops_and_weights_in_uniformly_pruned_model(right)
-        if flops < target_flops:
+        if flops <= target_flops:
             self.current_flops = flops
             self.current_params_num = params_num
             return right
@@ -408,8 +349,7 @@ class FilterPruningController(BasePruningAlgoController):
             with torch.no_grad():
                 if self.all_weights:
                     if groupwise_pruning_levels_set:
-                        raise RuntimeError('Cannot set group-wise pruning levels with '
-                                           'all_weights=True')
+                        raise RuntimeError('Cannot set group-wise pruning levels with all_weights=True')
                     # Non-uniform (global) importance-score-based pruning according
                     # to the global pruning level
                     if self.prune_flops:
@@ -589,8 +529,7 @@ class FilterPruningController(BasePruningAlgoController):
         # until target flops pruning level is achieved
         sorted_importances = sorted(zip(importances, cluster_indexes, filter_indexes), key=lambda x: x[0])
         cur_num = 0
-        tmp_in_channels = self._modules_in_channels.copy()
-        tmp_out_channels = self._modules_out_channels.copy()
+        tmp_in_channels, tmp_out_channels = get_prunable_layers_in_out_channels(self._graph)
         tmp_pruning_quotas = self.pruning_quotas.copy()
 
         while cur_num < len(sorted_importances):
@@ -604,25 +543,19 @@ class FilterPruningController(BasePruningAlgoController):
                 continue
 
             cluster = self.pruned_module_groups_info.get_cluster_by_id(cluster_idx)
-            for node in cluster.elements:
-                tmp_out_channels[node.node_name] -= 1
-                if node.is_depthwise:
-                    tmp_in_channels[node.node_name] -= 1
+            self._shape_pruning_proc.prune_cluster_shapes(
+                cluster=cluster, pruned_elems=1,
+                pruning_groups_next_nodes=self._next_nodes,
+                input_channels=tmp_in_channels, output_channels=tmp_out_channels)
 
+            for node in cluster.elements:
                 node.operand.binary_filter_pruning_mask[filter_idx] = 0
 
-            # Prune in channels in all next nodes
-            next_nodes = self.next_nodes[cluster.id]
-            for node_id in next_nodes:
-                tmp_in_channels[node_id] -= 1
-
-            flops, params_num = count_flops_and_weights(self._model.get_original_graph(),
-                                                        self._modules_in_shapes,
-                                                        self._modules_out_shapes,
-                                                        input_channels=tmp_in_channels,
-                                                        output_channels=tmp_out_channels,
-                                                        conv_op_metatypes=GENERAL_CONV_LAYER_METATYPES,
-                                                        linear_op_metatypes=LINEAR_LAYER_METATYPES)
+            flops, params_num = self._weights_flops_calc.count_flops_and_weights(
+                graph=self._graph,
+                output_shapes=self._output_shapes,
+                input_channels=tmp_in_channels,
+                output_channels=tmp_out_channels)
             if flops < target_flops:
                 self.current_flops = flops
                 self.current_params_num = params_num
@@ -653,14 +586,15 @@ class FilterPruningController(BasePruningAlgoController):
         self._propagate_masks()
 
         pruned_layers_stats = self.get_stats_for_pruned_modules()
-        nncf_logger.debug('Pruned layers statistics: \n%s', pruned_layers_stats.draw())
+        nncf_logger.info(f'Pruned layers statistics: \n{pruned_layers_stats.draw()}')
 
     def compression_stage(self) -> CompressionStage:
         target_pruning_level = self.scheduler.target_level
         actual_pruning_level = self._pruning_level
         if actual_pruning_level == 0:
             return CompressionStage.UNCOMPRESSED
-        if actual_pruning_level >= target_pruning_level:
+        if isclose(actual_pruning_level, target_pruning_level, abs_tol=1e-5) or \
+                actual_pruning_level > target_pruning_level:
             return CompressionStage.FULLY_COMPRESSED
         return CompressionStage.PARTIALLY_COMPRESSED
 
@@ -671,44 +605,46 @@ class FilterPruningController(BasePruningAlgoController):
         return self.pruning_level
 
     @compression_rate.setter
-    def compression_rate(self, pruning_rate):
+    def compression_rate(self, compression_rate):
         is_pruning_controller_frozen = self.frozen
         self.freeze(False)
-        self.set_pruning_level(pruning_rate)
+        self.set_pruning_level(compression_rate)
         self.freeze(is_pruning_controller_frozen)
 
     def disable_scheduler(self):
         self._scheduler = StubCompressionScheduler()
         self._scheduler.current_pruning_level = 0.0
 
-    def _collect_pruning_masks(self) -> Dict[str, PTNNCFTensor]:
-        retval = {}
-        for group in self.pruned_module_groups_info.get_all_clusters():
-            for node in group.elements:
-                retval[node.node_name] = PTNNCFTensor(node.operand.binary_filter_pruning_mask)
-        return retval
+    @property
+    def maximal_compression_rate(self) -> float:
+        if self.prune_flops:
+            return 1 - self._min_possible_flops / max(self.full_flops, 1)
+        return 1.0
+
+    def _calculate_num_of_sparse_elements_by_node(self) -> Dict[str, int]:
+        num_of_sparse_elements_by_node = {}
+        for minfo in self.pruned_module_groups_info.get_all_nodes():
+            mask = self.get_mask(minfo)
+            num_of_sparse_elements_by_node[minfo.node_name] = mask.view(-1).size(0) - mask.nonzero().size(0)
+        return num_of_sparse_elements_by_node
 
     def _update_benchmark_statistics(self):
-        tmp_in_channels, tmp_out_channels = calculate_in_out_channels_by_masks(
-            pruning_groups=self.pruned_module_groups_info.get_all_clusters(),
-            masks=self._collect_pruning_masks(),
-            tensor_processor=PTNNCFCollectorTensorProcessor,
-            full_input_channels=self._modules_in_channels,
-            full_output_channels=self._modules_out_channels,
-            pruning_groups_next_nodes=self.next_nodes)
+        tmp_in_channels, tmp_out_channels = self._shape_pruning_proc.calculate_in_out_channels_by_masks(
+            graph=self._graph,
+            pruning_groups=self.pruned_module_groups_info,
+            pruning_groups_next_nodes=self._next_nodes,
+            num_of_sparse_elements_by_node=self._calculate_num_of_sparse_elements_by_node())
 
-        self.current_filters_num = count_filters_num(self._model.get_original_graph(),
-                                                     op_metatypes=GENERAL_CONV_LAYER_METATYPES,
-                                                     output_channels=tmp_out_channels)
+        self.current_filters_num = self._weights_flops_calc.count_filters_num(
+            graph=self._graph,
+            output_channels=tmp_out_channels)
 
         self.current_flops, self.current_params_num = \
-            count_flops_and_weights(self._model.get_original_graph(),
-                                    self._modules_in_shapes,
-                                    self._modules_out_shapes,
-                                    input_channels=tmp_in_channels,
-                                    output_channels=tmp_out_channels,
-                                    conv_op_metatypes=GENERAL_CONV_LAYER_METATYPES,
-                                    linear_op_metatypes=LINEAR_LAYER_METATYPES)
+            self._weights_flops_calc.count_flops_and_weights(
+                                          graph=self._graph,
+                                          output_shapes=self._output_shapes,
+                                          input_channels=tmp_in_channels,
+                                          output_channels=tmp_out_channels)
 
     def _run_batchnorm_adaptation(self):
         if self._bn_adaptation is None:

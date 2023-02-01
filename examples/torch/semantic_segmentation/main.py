@@ -1,5 +1,5 @@
 """
- Copyright (c) 2019 Intel Corporation
+ Copyright (c) 2023 Intel Corporation
  Licensed under the Apache License, Version 2.0 (the "License");
  you may not use this file except in compliance with the License.
  You may obtain a copy of the License at
@@ -233,9 +233,9 @@ def load_dataset(dataset, config):
 
     # Get a batch of samples to display
     if 'test' in config.mode and 'train' not in config.mode:
-        images, labels = iter(val_loader).next()
+        images, labels = next(iter(val_loader))
     else:
-        images, labels = iter(train_loader).next()
+        images, labels = next(iter(train_loader))
     logger.info("Image size: {}".format(images.size()))
     logger.info("Label size: {}".format(labels.size()))
     logger.info("Class-color encoding: {}".format(class_encoding))
@@ -479,7 +479,6 @@ def main_worker(current_gpu, config):
         print_args(config)
 
     set_seed(config)
-    logger.info(config)
 
     dataset = get_dataset(config.dataset)
     color_encoding = dataset.color_encoding
@@ -581,6 +580,7 @@ def main_worker(current_gpu, config):
                                             configure_optimizers_fn=configure_optimizers_fn,
                                             tensorboard_writer=config.tb,
                                             log_dir=config.log_dir)
+        logger.info(f'Compressed model statistics:\n{acc_aware_training_loop.statistics.to_str()}')
 
     elif 'train' in config.mode:
         train(model, model_without_dp, compression_ctrl, train_loader, val_loader, criterion, color_encoding, config,

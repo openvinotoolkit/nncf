@@ -1,5 +1,5 @@
 """
- Copyright (c) 2020 Intel Corporation
+ Copyright (c) 2023 Intel Corporation
  Licensed under the Apache License, Version 2.0 (the "License");
  you may not use this file except in compliance with the License.
  You may obtain a copy of the License at
@@ -19,7 +19,7 @@ from nncf.api.compression import CompressionAlgorithmController
 from nncf.common.compression import NO_COMPRESSION_ALGORITHM_NAME
 from nncf.common.graph.transformations.layout import TransformationLayout
 from nncf.common.schedulers import StubCompressionScheduler
-from nncf.common.utils.logger import logger
+from nncf.common.logging import nncf_logger
 from nncf.common.utils.registry import Registry
 from nncf.common.statistics import NNCFStatistics
 from nncf.common.compression import BaseCompressionAlgorithmController
@@ -63,5 +63,5 @@ class NoCompressionAlgorithmController(BaseCompressionAlgorithmController):
 
 
 def get_compression_algorithm_builder(algo_name: str) -> Type[TFCompressionAlgorithmBuilder]:
-    logger.info('Creating compression algorithm: {}'.format(algo_name))
+    nncf_logger.info(f'Creating compression algorithm: {algo_name}')
     return TF_COMPRESSION_ALGORITHMS.get(algo_name)

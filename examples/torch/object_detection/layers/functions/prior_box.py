@@ -1,5 +1,5 @@
 """
- Copyright (c) 2019 Intel Corporation
+ Copyright (c) 2023 Intel Corporation
  Licensed under the Apache License, Version 2.0 (the "License");
  you may not use this file except in compliance with the License.
  You may obtain a copy of the License at
@@ -15,6 +15,7 @@ from __future__ import division
 
 from itertools import product
 from math import sqrt
+from typing import Any
 
 import torch
 from torch import nn
@@ -43,6 +44,7 @@ class PriorBox(nn.Module):
         return PriorBoxFunction.apply(input_fm, img_tensor, self)
 
 
+# pylint:disable=abstract-method
 class PriorBoxFunction(torch.autograd.Function):
     """Compute priorbox coordinates in point form for each source
     feature map.
@@ -99,5 +101,5 @@ class PriorBoxFunction(torch.autograd.Function):
         return output
 
     @staticmethod
-    def backward(ctx, grad_output):
-        return grad_output
+    def backward(ctx: Any, *grad_outputs: Any) -> Any:
+        return grad_outputs[0]

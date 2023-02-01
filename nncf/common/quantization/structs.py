@@ -1,5 +1,5 @@
 """
- Copyright (c) 2021 Intel Corporation
+ Copyright (c) 2023 Intel Corporation
  Licensed under the Apache License, Version 2.0 (the "License");
  you may not use this file except in compliance with the License.
  You may obtain a copy of the License at
@@ -17,6 +17,8 @@ from typing import Dict, List, Optional, Any
 
 from nncf.common.graph import NNCFNode
 from nncf.common.graph import NNCFNodeName
+from nncf.config.schemata.defaults import QUANTIZATION_BITS
+from nncf.config.schemata.defaults import QUANTIZATION_PER_CHANNEL
 
 
 class QuantizationMode:
@@ -30,10 +32,10 @@ class QuantizerConfig:
     and determination of a quantizer setup scheme for a given model.
     """
 
-    def __init__(self, num_bits: int = 8,
+    def __init__(self, num_bits: int = QUANTIZATION_BITS,
                  mode: QuantizationMode = QuantizationMode.SYMMETRIC,
                  signedness_to_force: Optional[bool] = None,
-                 per_channel: bool = False):
+                 per_channel: bool = QUANTIZATION_PER_CHANNEL):
         """
         :param num_bits: Bitwidth of the quantization.
         :param mode: The mode of quantization (symmetric or asymmetric).
@@ -230,14 +232,6 @@ class QuantizerGroup(Enum):
     ACTIVATIONS = 'activations'
     WEIGHTS = 'weights'
 
-    @staticmethod
-    def from_str(str_: str) -> 'QuantizerGroup':
-        if str_ == QuantizerGroup.ACTIVATIONS.value:
-            return QuantizerGroup.ACTIVATIONS
-        if str_ == QuantizerGroup.WEIGHTS.value:
-            return QuantizerGroup.WEIGHTS
-        raise RuntimeError('Unknown quantizer group string')
-
 
 class QuantizableWeightedLayerNode:
     def __init__(self, node: NNCFNode, qconfig_list: List[QuantizerConfig]):
@@ -313,17 +307,10 @@ class UnifiedScaleType(Enum):
     UNIFY_ONLY_PER_TENSOR = 0
     UNIFY_ALWAYS = 1
 
+
 class QuantizationPreset(Enum):
     PERFORMANCE = 'performance'
     MIXED = 'mixed'
-
-    @staticmethod
-    def from_str(str_: str) -> 'QuantizationPreset':
-        if str_ == QuantizationPreset.PERFORMANCE.value:
-            return QuantizationPreset.PERFORMANCE
-        if str_ == QuantizationPreset.MIXED.value:
-            return QuantizationPreset.MIXED
-        raise RuntimeError('Unknown preset string.')
 
     def get_params_configured_by_preset(self, quant_group: QuantizerGroup) -> Dict:
         if quant_group == QuantizerGroup.ACTIVATIONS and self == QuantizationPreset.MIXED:

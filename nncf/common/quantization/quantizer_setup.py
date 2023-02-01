@@ -1,5 +1,5 @@
 """
- Copyright (c) 2021 Intel Corporation
+ Copyright (c) 2023 Intel Corporation
  Licensed under the Apache License, Version 2.0 (the "License");
  you may not use this file except in compliance with the License.
  You may obtain a copy of the License at
@@ -23,14 +23,19 @@ from typing import Set
 
 from nncf.common.graph import NNCFNodeName
 from nncf.common.quantization.structs import NonWeightQuantizerId
+from nncf.common.quantization.structs import QuantizationMode
 from nncf.common.quantization.structs import QuantizerConfig
 from nncf.common.quantization.structs import UnifiedScaleType
 from nncf.common.quantization.structs import WeightQuantizerId
 from nncf.common.stateful_classes_registry import CommonStatefulClassesRegistry
-from nncf.common.utils.logger import logger as nncf_logger
+from nncf.common.logging import nncf_logger
 
 QuantizationPointId = int
 
+DEFAULT_QUANTIZER_CONFIG = QuantizerConfig(num_bits=8,
+                                           mode=QuantizationMode.SYMMETRIC,
+                                           signedness_to_force=None,
+                                           per_channel=False)
 
 class QuantizationPointType(Enum):
     WEIGHT_QUANTIZATION = 0
@@ -310,12 +315,12 @@ class QuantizerSetupBase:
     def remove_unified_scale_from_point(self, qp_id: QuantizationPointId):
         gid = self.get_unified_scale_group_id(qp_id)
         if gid is None:
-            nncf_logger.debug("Attempted to remove QP id {} from associated unified scale group, but the QP"
-                              "is not in any unified scale group - ignoring.".format(qp_id))
+            nncf_logger.debug(f"Attempted to remove QP id {qp_id} from associated unified scale group, but the QP"
+                              f"is not in any unified scale group - ignoring.")
             return
         self.unified_scale_groups[gid].discard(qp_id)
         if not self.unified_scale_groups[gid]:
-            nncf_logger.debug("Removed last entry from a unified scale group {} - removing group itself".format(gid))
+            nncf_logger.debug(f"Removed last entry from a unified scale group {gid} - removing group itself")
             self.unified_scale_groups.pop(gid)
 
     def equivalent_to(self, other: 'QuantizerSetupBase') -> bool:

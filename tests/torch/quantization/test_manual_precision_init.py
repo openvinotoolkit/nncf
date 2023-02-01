@@ -1,5 +1,5 @@
 """
- Copyright (c) 2021 Intel Corporation
+ Copyright (c) 2023 Intel Corporation
  Licensed under the Apache License, Version 2.0 (the "License");
  you may not use this file except in compliance with the License.
  You may obtain a copy of the License at
@@ -12,6 +12,7 @@
 """
 import os
 from copy import deepcopy
+from pathlib import Path
 from typing import List
 
 import pytest
@@ -22,14 +23,14 @@ from nncf import NNCFConfig
 from nncf.torch import register_default_init_args
 from nncf.common.quantization.structs import NonWeightQuantizerId
 from nncf.common.quantization.structs import WeightQuantizerId
-from tests.common.helpers import EXAMPLES_DIR
-from tests.common.helpers import TEST_ROOT
+from tests.shared.paths import EXAMPLES_DIR
+from tests.shared.paths import TEST_ROOT
 from tests.torch.helpers import BasicConvTestModel
 from tests.torch.helpers import create_compressed_model_and_algo_for_test
 from tests.torch.helpers import create_ones_mock_dataloader
 from tests.torch.helpers import register_bn_adaptation_init_args
 from tests.torch.quantization.test_hawq_precision_init import check_bitwidth_graph
-from tests.torch.quantization.test_quantization_helpers import get_quantization_config_without_range_init
+from tests.torch.quantization.quantization_helpers import get_quantization_config_without_range_init
 from tests.torch.test_models.synthetic import AddTwoConv
 
 
@@ -56,8 +57,8 @@ class ManualSampleConfigTestParams(ManualConfigTestParamsBase):
 
 
 class ManualTestConfigTestParams(ManualConfigTestParamsBase):
-    def _get_config_path(self):
-        return TEST_ROOT.joinpath('torch', 'data', 'configs', 'hawq') / self.name
+    def _get_config_path(self) -> Path:
+        return TEST_ROOT / 'torch' / 'data' / 'configs' / 'hawq' / self.name
 
 
 class BitwidthDistributionStatistics:
@@ -181,7 +182,7 @@ def test_manual_single_conv(params):
         check_bitwidth_graph(ctrl, model, path_to_dot, graph_dir)
 
 
-class TestPrecisionInitDesc:
+class PrecisionInitTestDesc:
     def __init__(self):
         self.model_creator = AddTwoConv
         config = get_quantization_config_without_range_init()
@@ -251,7 +252,7 @@ class TestPrecisionInitDesc:
 
 
 def test_quantization_configs__with_precisions_list():
-    desc = TestPrecisionInitDesc()
+    desc = PrecisionInitTestDesc()
     model = desc.model_creator()
     config = desc.config
     register_bn_adaptation_init_args(config)

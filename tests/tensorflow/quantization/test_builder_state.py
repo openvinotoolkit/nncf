@@ -1,5 +1,5 @@
 """
- Copyright (c) 2021 Intel Corporation
+ Copyright (c) 2023 Intel Corporation
  Licensed under the Apache License, Version 2.0 (the "License");
  you may not use this file except in compliance with the License.
  You may obtain a copy of the License at
@@ -35,7 +35,7 @@ from nncf.tensorflow.quantization.algorithm import TFQuantizationPoint
 from nncf.tensorflow.quantization.algorithm import TFQuantizationSetup
 from nncf.tensorflow.quantization.quantizers import TFQuantizerSpec
 from nncf.tensorflow.utils.state import TFCompressionState
-from tests.common.serialization import check_serialization
+from tests.shared.serialization import check_serialization
 from tests.tensorflow.helpers import create_compressed_model_and_algo_for_test
 from tests.tensorflow.helpers import get_basic_conv_test_model
 from tests.tensorflow.quantization.test_algorithm_quantization import check_default_qspecs
@@ -110,6 +110,14 @@ def test_quantization_configs__disable_overflow_fix_and_resume_from_compression_
 def test_checkpoint_callback_make_checkpoints(mocker, tmp_path):
     save_freq = 2
     config = get_basic_quantization_config()
+    config['compression']['initializer'] = {
+        'range': {
+            'num_init_samples': 0
+        },
+        'batchnorm_adaptation': {
+            'num_bn_adaptation_samples': 0
+        }
+    }
     gen_setup_spy = mocker.spy(QuantizationBuilder, '_get_quantizer_setup')
 
     model, compression_ctrl = create_compressed_model_and_algo_for_test(get_basic_conv_test_model(),

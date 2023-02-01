@@ -1,5 +1,5 @@
 """
- Copyright (c) 2021 Intel Corporation
+ Copyright (c) 2023 Intel Corporation
  Licensed under the Apache License, Version 2.0 (the 'License');
  you may not use this file except in compliance with the License.
  You may obtain a copy of the License at
@@ -30,7 +30,7 @@ from tests.torch.helpers import get_empty_config
 from tests.torch.helpers import register_bn_adaptation_init_args
 from tests.torch.quantization.test_hawq_precision_init import check_bitwidth_graph
 from tests.torch.test_compressed_graph import GeneralModelDesc
-from tests.torch.test_helpers import load_exported_onnx_version
+from tests.torch.helpers import load_exported_onnx_version
 from tests.torch.test_models.synthetic import MultiBranchesModel
 
 
@@ -194,7 +194,8 @@ def test_onnx_export_to_fake_quantize_with_adjust_pad(tmp_path):
     register_bn_adaptation_init_args(nncf_config)
 
     onnx_model_proto = load_exported_onnx_version(nncf_config, model,
-                                                  path_to_storage_dir=tmp_path)
+                                                  path_to_storage_dir=tmp_path,
+                                                  save_format='onnx_10')
     num_fq = 0
     num_model_nodes = 0
     num_adjust_pad_nodes = 0

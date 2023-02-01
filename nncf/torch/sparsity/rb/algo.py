@@ -1,5 +1,5 @@
 """
- Copyright (c) 2019-2020 Intel Corporation
+ Copyright (c) 2019-2023 Intel Corporation
  Licensed under the Apache License, Version 2.0 (the "License");
  you may not use this file except in compliance with the License.
  You may obtain a copy of the License at
@@ -18,6 +18,8 @@ import torch.distributed as dist
 
 from nncf import NNCFConfig
 from nncf.config.extractors import extract_algo_specific_config
+from nncf.config.schemata.defaults import SPARSITY_INIT
+from nncf.config.schemata.defaults import SPARSITY_LEVEL_SETTING_MODE
 from nncf.torch.algo_selector import PT_COMPRESSION_ALGORITHMS
 from nncf.api.compression import CompressionStage
 from nncf.common.graph import NNCFNode
@@ -26,6 +28,7 @@ from nncf.torch.nncf_network import NNCFNetwork
 from nncf.torch.sparsity.base_algo import BaseSparsityAlgoBuilder, BaseSparsityAlgoController, SparseModuleInfo
 from nncf.torch.sparsity.rb.layers import RBSparsifyingWeight
 from nncf.torch.sparsity.rb.loss import SparseLoss, SparseLossForPerLayerSparsity
+from nncf.torch.utils import get_model_device
 from nncf.torch.utils import get_world_size
 from nncf.common.accuracy_aware_training.training_loop import ADAPTIVE_COMPRESSION_CONTROLLERS
 from nncf.torch.sparsity.collector import PTSparseModelStatisticsCollector
@@ -54,7 +57,7 @@ class RBSparsityController(BaseSparsityAlgoController):
         params = deepcopy(algo_config.get('params', {}))
 
         self._distributed = False
-        self._mode = params.get('sparsity_level_setting_mode', 'global')
+        self._mode = params.get('sparsity_level_setting_mode', SPARSITY_LEVEL_SETTING_MODE)
         self._check_sparsity_masks = params.get('check_sparsity_masks', False)
 
         sparsify_operations = [m.operand for m in self.sparsified_module_info]
@@ -64,7 +67,7 @@ class RBSparsityController(BaseSparsityAlgoController):
         else:
             self._loss = SparseLoss(sparsify_operations)
 
-            sparsity_init = algo_config.get('sparsity_init', 0)
+            sparsity_init = algo_config.get('sparsity_init', SPARSITY_INIT)
             params['sparsity_init'] = sparsity_init
             scheduler_cls = SPARSITY_SCHEDULERS.get(params.get('schedule', 'exponential'))
             self._scheduler = scheduler_cls(self, params)
@@ -96,7 +99,7 @@ class RBSparsityController(BaseSparsityAlgoController):
             raise KeyError('Could not set distributed mode for the compression algorithm '
                            'because the default process group has not been initialized.')
 
-        if next(self._model.parameters()).is_cuda:
+        if 'cuda' in get_model_device(self._model).type:
             state = torch.cuda.get_rng_state()
             if dist.get_backend() == dist.Backend.NCCL:
                 state = state.cuda()

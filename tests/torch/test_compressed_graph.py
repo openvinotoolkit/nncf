@@ -1,5 +1,5 @@
 """
- Copyright (c) 2019-2020 Intel Corporation
+ Copyright (c) 2019-2023 Intel Corporation
  Licensed under the Apache License, Version 2.0 (the "License");
  you may not use this file except in compliance with the License.
  You may obtain a copy of the License at
@@ -21,11 +21,16 @@ from typing import Callable, Dict, List, Tuple, Union
 import networkx as nx
 import pytest
 import torch
+
+from nncf.torch.utils import get_model_device
+from tests.torch.test_models.synthetic import ConvBNLeakyReLU
+from tests.torch.test_models.synthetic import ConvGeluGetItem
 from tests.torch.test_models.synthetic import ConvRelu6HSwishHSigmoid
+from tests.torch.test_models.synthetic import FC_ConstMul
+from tests.torch.test_models.synthetic import MMDivConv
 from tests.torch.test_models.synthetic import MatMulDivConv
 from torch import nn
 import torch.nn.functional as F
-import torchvision
 
 from nncf.common.hardware.config import HWConfigType
 from nncf.common.quantization.quantizer_setup import ActivationQuantizationInsertionPoint
@@ -63,6 +68,8 @@ from tests.torch.test_models.synthetic import MultiOutputSameTensorModel
 from tests.torch.test_models.synthetic import PoolUnPool
 from tests.torch.test_models.synthetic import ReshapeModel
 from tests.torch.test_models.synthetic import TransposeModel
+from tests.common.graph.nx_graph import compare_nx_graph_with_reference
+from tests.shared.paths import TEST_ROOT
 
 
 def get_basic_quantization_config(quantization_type='symmetric', input_sample_sizes=None, input_info: Dict = None):
@@ -85,64 +92,34 @@ def get_basic_quantization_config_with_hw_config_type(hw_config_type, input_samp
     return config
 
 
-def sort_dot(path):
-    with open(path, 'r', encoding='utf8') as f:
-        content = f.readlines()
-    start_line = 'strict digraph  {\n'
-    end_line = '}\n'
-    content.remove(start_line)
-    content.remove(end_line)
-
-    def graph_key(line, offset):
-        key = line.split(' ')[0].replace('"', '')
-        if '->' in line:
-            key += line.split(' ')[3].replace('"', '')
-            return int(key) + offset
-        return int(key)
-
-    sorted_content = sorted(content, key=partial(graph_key, offset=len(content)))
-    with open(path, 'w', encoding='utf8') as f:
-        f.write(start_line)
-        f.writelines(sorted_content)
-        f.write(end_line)
+def get_full_path_to_the_graph(path_to_dot: str, graph_dir: str) -> None:
+    """
+    Returns the absolute path to the .dot file of the graph.
+    :param path_to_dot: The filename of .dot file.
+    :param graph_dir: The parent directory of .dot file.
+    :return: The full path to the .dot file.
+    """
+    data_dir = TEST_ROOT / 'torch' / 'data' / 'reference_graphs'
+    dot_dir = data_dir / graph_dir
+    path_to_dot = dot_dir / path_to_dot
+    return path_to_dot
 
 
-def check_graph(graph: PTNNCFGraph, path_to_dot, graph_dir, sort_dot_graph=True):
+def check_graph(graph: PTNNCFGraph, path_to_dot: str, graph_dir: str, sort_dot_graph: bool = True) -> None:
+    """
+    Builds the nx.Digraph for the structural analysis from 'graph', gets the full path to the reference graph from
+    'path_to_dot' and 'graph_dir'. Then checks that the reference and the built graphs are identical.
+    If 'sort_dot_graph' is set to True, sorts the graph before saving it to the memory.
+    :param graph: The built graph is obtained from.
+    :param path_to_dot: The filename of the reference graph file.
+    :param graph_dir: The parent directory of .dot file.
+    :param sort_dot_graph: If True the dumped graph will be sorted, if False - otherwise.
+    :return: None
+    """
     # pylint:disable=protected-access
     nx_graph = graph.get_graph_for_structure_analysis()
-    check_nx_graph(nx_graph, path_to_dot, graph_dir, sort_dot_graph=sort_dot_graph)
-
-
-def check_nx_graph(nx_graph: nx.DiGraph, path_to_dot, graph_dir, sort_dot_graph=True):
-    data_dir = os.path.join(os.path.dirname(__file__), 'data/reference_graphs')
-    dot_dir = os.path.join(data_dir, graph_dir)
-    path_to_dot = os.path.abspath(os.path.join(dot_dir, path_to_dot))
-
-    for _, node in nx_graph.nodes(data=True):
-        if 'scope' in node:
-            node.pop('scope')
-
-    # validate .dot file manually!
-    if os.getenv("NNCF_TEST_REGEN_DOT") is not None:
-        if not os.path.exists(dot_dir):
-            os.makedirs(dot_dir)
-        nx.drawing.nx_pydot.write_dot(nx_graph, path_to_dot)
-        if sort_dot_graph:
-            sort_dot(path_to_dot)
-
-    load_graph = nx.drawing.nx_pydot.read_dot(path_to_dot)
-
-    # nx_graph is expected to have version-agnostic operator names already
-    for k, attrs in nx_graph.nodes.items():
-        attrs = {k: str(v) for k, v in attrs.items()}
-        load_attrs = {k: str(v).strip('"') for k, v in load_graph.nodes[k].items()}
-        if 'scope' in load_attrs:
-            load_attrs.pop('scope')  # TODO: remove
-        if attrs != load_attrs:
-            assert attrs == load_attrs
-
-    assert load_graph.nodes.keys() == nx_graph.nodes.keys()
-    assert nx.DiGraph(load_graph).edges == nx_graph.edges
+    path_to_dot = get_full_path_to_the_graph(path_to_dot, graph_dir)
+    compare_nx_graph_with_reference(nx_graph, path_to_dot, sort_dot_graph=sort_dot_graph)
 
 
 class QuantizeTestCaseConfiguration:
@@ -170,7 +147,7 @@ def gnmt_wrap_inputs_fn(model_args, model_kwargs):
 
 def gnmt_forward_fn(seq_len, batch_size, vocab_size):
     def forward_fn(model, seq_len_, batch_size_, vocab_size_, batch_first_):
-        device = next(model.parameters()).device
+        device = get_model_device(model)
 
         def gen_packed_sequence():
             seq_list = []
@@ -221,7 +198,7 @@ def sr_wrap_inputs_fn(model_args, model_kwargs):
 
 
 def sr_dummy_forward_fn(model_, input_sample_sizes: Tuple[List[int]]):
-    device = next(model_.parameters()).device
+    device = get_model_device(model_)
     config = {'input_info': [{"sample_size": sizes} for sizes in input_sample_sizes]}
     input_info_list = create_input_infos(config)
     tensor_list = [create_mock_tensor(info, device) for info in input_info_list]
@@ -246,8 +223,8 @@ TEST_MODELS_DESC = [
     ModelDesc("shuflenet_g2", test_models.ShuffleNetG2, [1, 3, 32, 32]),
     ModelDesc("ssd_vgg", test_models.ssd_vgg300, [2, 3, 300, 300]),
     ModelDesc("ssd_mobilenet", test_models.ssd_mobilenet, [2, 3, 300, 300]),
-    ModelDesc("mobilenet_v2", torchvision.models.MobileNetV2, [2, 3, 32, 32]),
-    ModelDesc("mobilenet_v3_small", torchvision.models.mobilenet_v3_small, [2, 3, 32, 32]),
+    ModelDesc("mobilenet_v2", test_models.mobilenet_v2, [2, 3, 32, 32]),
+    ModelDesc("mobilenet_v3_small", test_models.mobilenet_v3_small, [2, 3, 32, 32]),
     ModelDesc("resnext29_32x4d", test_models.ResNeXt29_32x4d, [1, 3, 32, 32]),
     ModelDesc("pnasnetb", test_models.PNASNetB, [1, 3, 32, 32]),
     ModelDesc("senet18", test_models.SENet18, [1, 3, 32, 32]),
@@ -298,7 +275,7 @@ class TestModelsGraph:
         sparsifiable_modules = []
         for module_cls in list(NNCF_MODULES_DICT) + list(NNCF_WRAPPED_USER_MODULES_DICT.values()):
             if algo_name not in module_cls.ignored_algorithms:
-                sparsifiable_modules  .append(module_cls.__name__)
+                sparsifiable_modules.append(module_cls.__name__)
         return sparsifiable_modules
 
     @pytest.mark.parametrize(
@@ -318,7 +295,6 @@ class TestModelsGraph:
         compressed_model, compression_ctrl = \
             create_compressed_model_and_algo_for_test(model, config, dummy_forward_fn=desc.dummy_forward_fn,
                                                       wrap_inputs_fn=desc.wrap_inputs_fn)
-
 
         sparsifiable_modules = self.get_sparsifiable_modules(algo)
         ref_num_sparsed = len(get_all_modules_by_type(model, sparsifiable_modules))
@@ -632,6 +608,8 @@ SYNTHETIC_MODEL_DESC_LIST = [
     TensorBinaryMethodsDesc(model_name='MatMul', tensor_method='matmul'),
 
     SingleLayerModelDesc(model_name='Mean', layer=torch.mean),
+    SingleLayerModelDesc(model_name='normalize', layer=partial(torch.nn.functional.normalize, p=2),
+                         input_sample_sizes=([1, 1, 1, 1], )),
 
     TensorUnaryMethodsDesc(tensor_method='round'),
 
@@ -684,7 +662,7 @@ SYNTHETIC_MODEL_DESC_LIST = [
     TensorUnaryMethodsDesc(tensor_method='expand', size=(1,)),
 
     TorchBinaryMethodDesc(model_name='embedding_function', torch_method=F.embedding,
-                          input_info=[{"sample_size": [1], "type": "long"}, {"sample_size": [2]}]),
+                          input_info=[{"sample_size": [1], "type": "long"}, {"sample_size": [2, 1]}]),
     SingleLayerModelDesc(model_name='embedding_bag', layer=F.embedding_bag,
                          wrap_inputs_fn=partial(n_inputs_fn, nargs=3),
                          input_info=[{"sample_size": [1], "type": "long", "filler": "zeros"},
@@ -722,7 +700,11 @@ SYNTHETIC_MODEL_DESC_LIST = [
                                                                   "filler": "zeros"}),
     GeneralModelDesc(model_builder=MultiOutputSameTensorModel),
     GeneralModelDesc(model_builder=MatMulDivConv, input_sample_sizes=([1, 1, 5, 5], [1, 1, 5, 5])),
-    GeneralModelDesc(model_builder=ConvRelu6HSwishHSigmoid, input_sample_sizes=([1, 1, 5, 5],))
+    GeneralModelDesc(model_builder=MMDivConv, input_sample_sizes=([5, 5], [5, 5])),
+    GeneralModelDesc(model_builder=ConvRelu6HSwishHSigmoid, input_sample_sizes=([1, 1, 5, 5],)),
+    GeneralModelDesc(model_builder=ConvBNLeakyReLU, input_sample_sizes=([1, 1, 5, 5],)),
+    GeneralModelDesc(model_builder=FC_ConstMul, input_sample_sizes=[1, 3, 6]),
+    GeneralModelDesc(model_builder=ConvGeluGetItem, input_sample_sizes=([1, 6, 6],))
 ]
 
 
@@ -758,7 +740,7 @@ TEST_HW_MODELS_DESC = [
     ModelDesc("resnet50", test_models.ResNet50, [1, 3, 32, 32]),
     ModelDesc("inception_v3", partial(test_models.Inception3, aux_logits=True, transform_input=True),
               [2, 3, 299, 299]),
-    ModelDesc("mobilenet_v2", torchvision.models.MobileNetV2, [2, 3, 32, 32])
+    ModelDesc("mobilenet_v2", test_models.MobileNetV2, [2, 3, 32, 32])
 ]
 
 TYPE_HW = [(HWConfigType.CPU), (HWConfigType.GPU), (HWConfigType.VPU)]
@@ -784,11 +766,12 @@ def test_compressed_graph_models_hw(desc, hw_config_type):
 
     # pylint:disable=protected-access
     quantization_builder = QuantizationBuilder(config, should_init=False)
-    single_config_quantizer_setup = quantization_builder._get_quantizer_setup(compressed_model)
+    single_config_quantizer_setup = quantization_builder._get_single_config_quantizer_setup(compressed_model)
     sketch_graph = compressed_model.get_original_graph()
 
     potential_quantizer_graph = prepare_potential_quantizer_graph(sketch_graph, single_config_quantizer_setup)
-    check_nx_graph(potential_quantizer_graph, desc.dot_filename, _case_dir(hw_config_type.value), sort_dot_graph=False)
+    path_to_dot = get_full_path_to_the_graph(desc.dot_filename, _case_dir(hw_config_type.value))
+    compare_nx_graph_with_reference(potential_quantizer_graph, path_to_dot, sort_dot_graph=False)
 
 
 def _case_dir(type_hw_config):

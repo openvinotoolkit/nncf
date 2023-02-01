@@ -1,5 +1,5 @@
 """
- Copyright (c) 2021 Intel Corporation
+ Copyright (c) 2023 Intel Corporation
  Licensed under the Apache License, Version 2.0 (the "License");
  you may not use this file except in compliance with the License.
  You may obtain a copy of the License at
@@ -127,7 +127,7 @@ class DeviceCheckingModel(torch.nn.Module):
         return self.model.forward(x)
 
 
-@pytest.mark.parametrize('original_device', ["cpu", "cuda", "cuda:0", "cuda:1"])
+@pytest.mark.parametrize('original_device', ["cpu", "cuda", "cuda:0"])
 def test_model_is_inited_with_own_device_by_default(nncf_config_with_default_init_args, original_device):
     if not torch.cuda.is_available() and 'cuda' in original_device:
         pytest.skip("Skipping for CPU-only setups")

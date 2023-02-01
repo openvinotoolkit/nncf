@@ -1,5 +1,5 @@
 """
- Copyright (c) 2021 Intel Corporation
+ Copyright (c) 2023 Intel Corporation
  Licensed under the Apache License, Version 2.0 (the "License");
  you may not use this file except in compliance with the License.
  You may obtain a copy of the License at
@@ -42,7 +42,7 @@ def create_initialized_lenet_model_and_dataloader(config: NNCFConfig) -> Tuple[n
 @pytest.mark.parametrize(
     ('num_steps', 'learning_rate', 'reference_metric'),
     (
-        (10, 1e-3, 0.78276),
+        (10, 5e-4, 0.78276),
     )
 )
 def test_runner(num_steps, learning_rate, reference_metric):
@@ -81,6 +81,7 @@ def test_runner(num_steps, learning_rate, reference_metric):
         return optimizer, None
 
     runner.initialize_training_loop_fns(train_fn, validate_fn, configure_optimizers_fn, None)
+    runner.initialize_logging()
     runner.reset_training()
     runner.train_epoch(model, compression_ctrl)
     metric_value = runner.validate(model)

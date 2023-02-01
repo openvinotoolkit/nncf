@@ -1,5 +1,5 @@
 """
- Copyright (c) 2020 Intel Corporation
+ Copyright (c) 2023 Intel Corporation
  Licensed under the Apache License, Version 2.0 (the "License");
  you may not use this file except in compliance with the License.
  You may obtain a copy of the License at
@@ -14,6 +14,8 @@ from functools import partial
 from typing import List, Union, Any, Callable
 
 import torch
+
+from nncf.torch.utils import get_model_device
 from nncf.torch.utils import is_tensor
 from nncf.torch.nested_objects_traversal import objwalk
 from torch import Tensor
@@ -23,7 +25,7 @@ from torch.nn.modules.loss import _Loss
 from torch.utils.data import DataLoader
 
 from nncf.torch.initialization import wrap_dataloader_for_init, PTInitializingDataLoader
-from nncf.common.utils.logger import logger as nncf_logger
+from nncf.common.logging import nncf_logger
 
 
 class ParameterHandler:
@@ -76,7 +78,7 @@ class GradientsCalculator:
         self.num_iter += 1
         dataloader_output = next(self.data_loader_iter)
 
-        device = next(self._model.parameters()).device
+        device = get_model_device(self._model)
         to_device_fn = partial(torch.Tensor.to, device=device)
         dataloader_output = objwalk(dataloader_output, is_tensor, to_device_fn)
         args, kwargs = self._data_loader.get_inputs(dataloader_output)
@@ -134,7 +136,7 @@ class HessianTraceEstimator:
             if diff_avg < tolerance:
                 return mean_avg_traces_per_param
             avg_total_trace = mean_avg_total_trace
-            nncf_logger.info('{}# difference_avg={} avg_trace={}'.format(i, diff_avg, avg_total_trace))
+            nncf_logger.debug(f'{i}# difference_avg={diff_avg} avg_trace={avg_total_trace}')
 
         return mean_avg_traces_per_param
 

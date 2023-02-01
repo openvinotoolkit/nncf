@@ -1,0 +1,46 @@
+models:
+  - name: retinanet-9
+    launchers:
+      - framework: onnx_runtime
+        execution_providers: ['OpenVINOExecutionProvider']
+        tags: ['OpenVINOExecutionProvider']
+        adapter:
+          type: retinanet_multihead
+          boxes_outputs: [output6, output7, output8, output9, output10]
+          class_outputs: [output1, output2, output3, output4, output5]
+        inputs:
+          - name: input
+            type: INPUT
+            layout: "NCHW"
+      - framework: onnx_runtime
+        execution_providers: ['CPUExecutionProvider']
+        tags: ['CPUExecutionProvider']
+        adapter:
+          type: retinanet_multihead
+          boxes_outputs: [output6, output7, output8, output9, output10]
+          class_outputs: [output1, output2, output3, output4, output5]
+        inputs:
+          - name: input
+            type: INPUT
+            layout: "NCHW"
+
+    datasets:
+      - name: ms_coco_detection_80_class_without_background
+        preprocessing:
+          - type: bgr_to_rgb
+          - type: resize
+            dst_width: 640
+            dst_height: 480
+          - type: normalization
+            std: 255
+          - type: normalization
+            mean: (0.485, 0.456, 0.406)
+            std: (0.229, 0.224, 0.225)
+
+        postprocessing:
+          - type: resize_prediction_boxes
+            rescale: True
+
+        metrics:
+          - type: coco_precision
+            threshold: .5:.05:.95

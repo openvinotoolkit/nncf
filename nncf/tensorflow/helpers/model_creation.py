@@ -1,5 +1,5 @@
 """
- Copyright (c) 2020 Intel Corporation
+ Copyright (c) 2023 Intel Corporation
  Licensed under the Apache License, Version 2.0 (the "License");
  you may not use this file except in compliance with the License.
  You may obtain a copy of the License at
@@ -20,7 +20,11 @@ from nncf import NNCFConfig
 from nncf.api.compression import CompressionAlgorithmController
 from nncf.common.compression import BaseCompressionAlgorithmController as BaseController
 from nncf.config.structures import ModelEvaluationArgs
+from nncf.config.telemetry_extractors import CompressionStartedFromConfig
 from nncf.config.utils import is_accuracy_aware_training
+from nncf.config.utils import is_experimental_quantization
+from nncf.telemetry import tracked_function
+from nncf.telemetry.events import NNCF_TF_CATEGORY
 from nncf.tensorflow.accuracy_aware_training.keras_model_utils import accuracy_aware_fit
 from nncf.tensorflow.api.compression import TFCompressionAlgorithmBuilder
 from nncf.config.extractors import extract_algorithm_names
@@ -28,6 +32,7 @@ from nncf.tensorflow.algorithm_selector import NoCompressionAlgorithmBuilder
 from nncf.tensorflow.algorithm_selector import get_compression_algorithm_builder
 from nncf.tensorflow.api.composite_compression import TFCompositeCompressionAlgorithmBuilder
 from nncf.tensorflow.helpers.utils import get_built_model
+from nncf.tensorflow.graph.utils import is_keras_layer_model
 
 
 def create_compression_algorithm_builder(config: NNCFConfig,
@@ -53,6 +58,7 @@ def create_compression_algorithm_builder(config: NNCFConfig,
     return TFCompositeCompressionAlgorithmBuilder(config, should_init)
 
 
+@tracked_function(NNCF_TF_CATEGORY, [CompressionStartedFromConfig(argname="config"), ])
 def create_compressed_model(model: tf.keras.Model,
                             config: NNCFConfig,
                             compression_state: Optional[Dict[str, Any]] = None) \
@@ -73,6 +79,16 @@ def create_compressed_model(model: tf.keras.Model,
         - compressed_model: The model with additional modifications
             necessary to enable algorithm-specific compression during fine-tuning.
     """
+    if is_experimental_quantization(config):
+        if is_keras_layer_model(model):
+            raise ValueError('Experimental quantization algorithm has not supported models with '
+                             '`tensorflow_hub.KerasLayer` layer yet.')
+
+        from nncf.experimental.tensorflow.nncf_network import NNCFNetwork #pylint: disable=cyclic-import
+        input_signature = get_input_signature(config)
+        model = NNCFNetwork(model, input_signature)
+        model.compute_output_signature(model.input_signature)
+
     model = get_built_model(model, config)
     original_model_accuracy = None
 
@@ -82,6 +98,7 @@ def create_compressed_model(model: tf.keras.Model,
             original_model_accuracy = evaluation_args.eval_fn(model)
 
     builder = create_compression_algorithm_builder(config, should_init=not compression_state)
+
     if compression_state:
         builder.load_state(compression_state[BaseController.BUILDER_STATE])
     compressed_model = builder.apply_to(model)
@@ -90,3 +107,25 @@ def create_compressed_model(model: tf.keras.Model,
     if isinstance(compressed_model, tf.keras.Model):
         compressed_model.accuracy_aware_fit = types.MethodType(accuracy_aware_fit, compressed_model)
     return compression_ctrl, compressed_model
+
+
+def get_input_signature(config: NNCFConfig):
+    input_info = config.get('input_info', {})
+    samples_sizes = []
+
+    if isinstance(input_info, dict):
+        sample_size = input_info['sample_size']
+        samples_sizes.append(sample_size)
+    elif isinstance(input_info, list):
+        for info in input_info:
+            sample_size = info['sample_size']
+            samples_sizes.append(sample_size)
+    else:
+        raise RuntimeError('sample_size must be provided in configuration file')
+
+    input_signature = []
+    for sample_size in samples_sizes:
+        shape = [None] + list(sample_size[1:])
+        input_signature.append(tf.TensorSpec(shape=shape, dtype=tf.float32))
+
+    return input_signature if len(input_signature) > 1 else input_signature[0]

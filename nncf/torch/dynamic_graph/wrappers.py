@@ -1,5 +1,5 @@
 """
- Copyright (c) 2021 Intel Corporation
+ Copyright (c) 2023 Intel Corporation
  Licensed under the Apache License, Version 2.0 (the "License");
  you may not use this file except in compliance with the License.
  You may obtain a copy of the License at
@@ -11,8 +11,10 @@
  limitations under the License.
 """
 
-import warnings
 from copy import deepcopy
+from typing import Callable
+from typing import List
+from typing import Tuple
 
 from torch.nn import Conv1d
 from torch.nn import Conv2d
@@ -20,16 +22,18 @@ from torch.nn import Conv3d
 from torch.nn import ConvTranspose1d
 from torch.nn import ConvTranspose2d
 from torch.nn import ConvTranspose3d
-from torch.nn import DataParallel, Module as TorchModule
+from torch.nn import DataParallel
 from torch.nn import Linear
+from torch.nn import Module as TorchModule
 
 from nncf.common.graph.layer_attributes import BaseLayerAttributes
 from nncf.common.graph.layer_attributes import ConvolutionLayerAttributes
 from nncf.common.graph.layer_attributes import GenericWeightedLayerAttributes
 from nncf.common.graph.layer_attributes import GroupNormLayerAttributes
 from nncf.common.graph.layer_attributes import LinearLayerAttributes
-from nncf.common.utils.logger import logger as nncf_logger
 from nncf.common.utils.debug import is_debug
+from nncf.common.logging import nncf_logger
+from nncf.torch.dynamic_graph.context import TracingContext
 from nncf.torch.dynamic_graph.context import get_current_context
 from nncf.torch.dynamic_graph.op_input_processing import OperatorInput
 from nncf.torch.dynamic_graph.trace_tensor import make_tensor_metas
@@ -45,8 +49,8 @@ def _warn_data_parallel():
     if getattr(_warn_data_parallel, 'warned_once', False):
         return
     _warn_data_parallel.warned_once = True
-    warnings.warn("You are using DataParallel, which may cause significant performance issues with dynamic graph "
-                  "building. Consider using distributed training (DistributedDataParallel) instead")
+    nncf_logger.warning("You are using DataParallel, which may cause significant performance issues with dynamic graph "
+                        "building. Consider using distributed training (DistributedDataParallel) instead.")
 
 
 def ignore_scope(cls):
@@ -55,7 +59,7 @@ def ignore_scope(cls):
     return cls
 
 
-OP_NAMES_REQUIRING_MODULE_ATTRS = [v.op_func_name for v in NNCF_MODULES_DICT] + ['group_norm']
+OP_NAMES_REQUIRING_MODULE_ATTRS = [v.op_func_name for v in NNCF_MODULES_DICT]
 
 
 def wrap_operator(operator, operator_info: 'PatchedOperatorInfo'):
@@ -75,7 +79,7 @@ def wrap_operator(operator, operator_info: 'PatchedOperatorInfo'):
     # do not wrap function twice
     _orig_op = getattr(operator, '_original_op', None)
     if _orig_op is not None:
-        nncf_logger.debug("Operator: {} is already wrapped".format(_orig_op.__name__))
+        nncf_logger.debug(f"Operator: {_orig_op.__name__} is already wrapped")
         return operator
 
     def wrapped(*args, **kwargs):
@@ -90,47 +94,26 @@ def wrap_operator(operator, operator_info: 'PatchedOperatorInfo'):
             if operator_info.skip_trace:
                 result = operator(*args, **kwargs)
             elif ctx.is_forwarding:
-                from nncf.torch.dynamic_graph.trace_functions import forward_trace_only
+                from nncf.torch.dynamic_graph.trace_functions import forward_trace_only #pylint: disable=cyclic-import
                 result = forward_trace_only(operator, *args, **kwargs)
             else:
-                node = None
                 op_name = operator_info.name
                 op_address = ctx.get_caller_context(op_name)
-
-                layer_attrs = None
-                ignored_algos = []
-                # Collect module attributes, if required
-                if ctx.trace_dynamic_graph:
-                    if op_name in OP_NAMES_REQUIRING_MODULE_ATTRS:
-                        curr_module = ctx.get_current_module()
-                        if curr_module is None:
-                            raise RuntimeError("Operation {} requires module attributes, "
-                                               "but it was executed outside any module".format(op_name))
-                        layer_attrs = _get_layer_attributes(curr_module, op_name)
-                        if isinstance(curr_module, _NNCFModuleMixin):
-                            ignored_algos = deepcopy(curr_module.ignored_algorithms)
-
                 ctx.register_operator_call(op_address.operator_name, op_address.scope_in_model)
-                op_input = OperatorInput(list(args), kwargs)
-                processed_input = ctx.execute_pre_hooks(op_address, op_input)
 
-                if ctx.trace_dynamic_graph:
-                    tensor_metas = make_tensor_metas(processed_input)
-                    node = ctx.find_operator_node(tensor_metas, op_address)
+                if ctx.elastic_depth and ctx.in_skipped_block:
+                    result = ctx.tensor_cache
+                else:
+                    result = _execute_op(op_address, operator_info, operator, ctx, *args, **kwargs)
 
-                args = tuple(processed_input.op_args)
-                kwargs = processed_input.op_kwargs
-                result = operator(*args, **kwargs)
-
-                if isinstance(result, type(NotImplemented)):
-                    nncf_logger.debug("Operation {} returned NotImplemented".format(op_name))
-                elif ctx.trace_dynamic_graph and node is None:
-                    node = ctx.maybe_add_node(processed_input, tensor_metas, op_address, layer_attrs, ignored_algos)
-
-                if is_debug() and ctx.trace_dynamic_graph and node is not None:
-                    ctx.register_node_call(node)
-                result = trace_tensors(result, node)
-                result = ctx.execute_post_hooks(op_address, result)
+                str_op_address = str(op_address)
+                if str_op_address in ctx.end_node_name_of_skipped_block:
+                    assert ctx.in_skipped_block is True
+                    ctx.in_skipped_block = False
+                if str_op_address in ctx.start_node_name_of_skipped_block:
+                    assert ctx.in_skipped_block is False, 'skipping of overlapping blocks'
+                    ctx.in_skipped_block = True
+                    ctx.tensor_cache = result
         except:
             # Looks like the __repr__ call made during IDE debug to display tensor contents does not exit properly,
             # but instead throws an exception. This try...except block handles such a situation.
@@ -148,6 +131,9 @@ def wrap_operator(operator, operator_info: 'PatchedOperatorInfo'):
 
 
 def wrap_module_call(module_call):
+    from nncf.torch.dynamic_graph.patch_pytorch import ORIGINAL_OPERATORS #pylint: disable=cyclic-import
+    NAMES_ORIGINAL_OPERATORS = [op.name for op in ORIGINAL_OPERATORS]
+
     def wrapped(self, *args, **kwargs):
         ctx = get_current_context()
         if not ctx or self.__class__ in _IGNORED_SCOPES:
@@ -155,13 +141,79 @@ def wrap_module_call(module_call):
                 _warn_data_parallel()
             return module_call(self, *args, **kwargs)
         ctx.push_scope(self)
-        retval = module_call(self, *args, **kwargs)
+        is_nncf_layer = isinstance(self, _NNCFModuleMixin)
+        if is_nncf_layer:
+            op_name = self.op_func_name
+        else:
+            op_name = self.__class__.__name__
+        is_layer_or_op = op_name in NAMES_ORIGINAL_OPERATORS or is_nncf_layer
+        op_address = ctx.get_caller_context(op_name)
+        str_op_address = str(op_address)
+        if ctx.elastic_depth and is_layer_or_op and ctx.in_skipped_block:
+            ctx.register_operator_call(op_address.operator_name, op_address.scope_in_model)
+            retval = ctx.tensor_cache
+            if str_op_address in ctx.end_node_name_of_skipped_block:
+                assert ctx.in_skipped_block is True
+                ctx.in_skipped_block = False
+            if str_op_address in ctx.start_node_name_of_skipped_block:
+                assert ctx.in_skipped_block is False, 'skipping of overlapping blocks'
+                ctx.in_skipped_block = True
+        else:
+            retval = module_call(self, *args, **kwargs)
+
         if type(self).__name__ in ITERATION_MODULES.registry_dict:
             ctx.reset_operator_call_count_in_scope(ctx.scope)
         ctx.pop_scope()
         return retval
 
     return wrapped
+
+
+def _execute_op(op_address: 'OperationAddress',
+                operator_info: 'PatchedOperatorInfo',
+                operator: Callable,
+                ctx: 'TracingContext',
+                *args,
+                **kwargs):
+    op_name = operator_info.name
+
+    op_input = OperatorInput(list(args), kwargs)
+    processed_input = ctx.execute_pre_hooks(op_address, op_input)
+    args = tuple(processed_input.op_args)
+    kwargs = processed_input.op_kwargs
+    result = operator(*args, **kwargs)
+    node = None
+    if isinstance(result, type(NotImplemented)):
+        nncf_logger.debug("Operation {} returned NotImplemented".format(op_name))
+    elif ctx.trace_dynamic_graph:
+        tensor_metas = make_tensor_metas(processed_input)
+        node = ctx.find_operator_node(tensor_metas, op_address)
+        if node is None:
+            layer_attrs, ignored_algos = _collect_module_attrs_and_ignored_algorithms(ctx, op_name)
+            is_called_inside_nncf_module = isinstance(ctx.get_current_module(), _NNCFModuleMixin)
+            node = ctx.maybe_add_node(processed_input, tensor_metas, op_address,
+                                      layer_attrs, ignored_algos, is_called_inside_nncf_module)
+        if is_debug() and node is not None:
+            ctx.register_node_call(node)
+
+    result = trace_tensors(result, node)
+    result = ctx.execute_post_hooks(op_address, result)
+    return result
+
+
+def _collect_module_attrs_and_ignored_algorithms(ctx: TracingContext,
+                                                 op_name: str) -> Tuple[BaseLayerAttributes, List[str]]:
+    layer_attrs = None
+    ignored_algos = []
+    if op_name in OP_NAMES_REQUIRING_MODULE_ATTRS:
+        curr_module = ctx.get_current_module()
+        if curr_module is None:
+            raise RuntimeError("Operation {} requires module attributes, "
+                               "but it was executed outside any module".format(op_name))
+        layer_attrs = _get_layer_attributes(curr_module, op_name)
+        if isinstance(curr_module, _NNCFModuleMixin):
+            ignored_algos = deepcopy(curr_module.ignored_algorithms)
+    return layer_attrs, ignored_algos
 
 
 def _get_layer_attributes(module: TorchModule, operator_name: str) -> BaseLayerAttributes:
@@ -171,8 +223,11 @@ def _get_layer_attributes(module: TorchModule, operator_name: str) -> BaseLayerA
             module.num_channels,
             module.num_groups
         )
+    # torch.nn.utils.weight_norm replaces weight with weight_g and weight_v
+    is_weight_norm_applied = hasattr(module, 'weight_g') and hasattr(module, 'weight_v')
+    weight_attr = 'weight_g' if is_weight_norm_applied else 'weight'
     if isinstance(module, (Conv1d, Conv2d, Conv3d)):
-        return ConvolutionLayerAttributes(weight_requires_grad=module.weight.requires_grad,
+        return ConvolutionLayerAttributes(weight_requires_grad=getattr(module, weight_attr).requires_grad,
                                           in_channels=module.in_channels,
                                           out_channels=module.out_channels,
                                           kernel_size=module.kernel_size,
@@ -181,7 +236,7 @@ def _get_layer_attributes(module: TorchModule, operator_name: str) -> BaseLayerA
                                           transpose=False,
                                           padding_values=module.padding)
     if isinstance(module, (ConvTranspose1d, ConvTranspose2d, ConvTranspose3d)):
-        return ConvolutionLayerAttributes(weight_requires_grad=module.weight.requires_grad,
+        return ConvolutionLayerAttributes(weight_requires_grad=getattr(module, weight_attr).requires_grad,
                                           in_channels=module.in_channels,
                                           out_channels=module.out_channels,
                                           kernel_size=module.kernel_size,
@@ -190,12 +245,12 @@ def _get_layer_attributes(module: TorchModule, operator_name: str) -> BaseLayerA
                                           transpose=True,
                                           padding_values=module.padding)
     if isinstance(module, Linear):
-        return LinearLayerAttributes(weight_requires_grad=module.weight.requires_grad,
+        return LinearLayerAttributes(weight_requires_grad=getattr(module, weight_attr).requires_grad,
                                      in_features=module.in_features,
-                                     out_features=module.out_features)
-
-    if hasattr(module, 'weight'):
-        return GenericWeightedLayerAttributes(weight_requires_grad=module.weight.requires_grad,
+                                     out_features=module.out_features,
+                                     bias=module.bias is not None)
+    if hasattr(module, 'weight') or is_weight_norm_applied:
+        return GenericWeightedLayerAttributes(weight_requires_grad=getattr(module, weight_attr).requires_grad,
                                               weight_shape=module.weight.shape)
 
     return GenericWeightedLayerAttributes(weight_requires_grad=False,

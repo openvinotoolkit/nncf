@@ -1,5 +1,5 @@
 """
- Copyright (c) 2019 Intel Corporation
+ Copyright (c) 2023 Intel Corporation
  Licensed under the Apache License, Version 2.0 (the "License");
  you may not use this file except in compliance with the License.
  You may obtain a copy of the License at
@@ -10,6 +10,7 @@
  See the License for the specific language governing permissions and
  limitations under the License.
 """
+from typing import Any
 
 import torch
 from torchvision.ops import nms as torch_nms
@@ -182,6 +183,7 @@ def log_sum_exp(x):
     return torch.log(torch.sum(torch.exp(x - x_max), 1, keepdim=True)) + x_max
 
 
+# pylint:disable=abstract-method
 class NMSFunction(torch.autograd.Function):
     @staticmethod
     def forward(ctx, boxes, scores, threshold, top_k=200):
@@ -196,7 +198,7 @@ class NMSFunction(torch.autograd.Function):
         return keep, torch.tensor(keep.size(0))
 
     @staticmethod
-    def backward(ctx, boxes):
+    def backward(ctx: Any, *grad_outputs: Any) -> Any:
         raise NotImplementedError
 
 

@@ -1,5 +1,5 @@
 """
- Copyright (c) 2019-2020 Intel Corporation
+ Copyright (c) 2019-2023 Intel Corporation
  Licensed under the Apache License, Version 2.0 (the "License");
  you may not use this file except in compliance with the License.
  You may obtain a copy of the License at
@@ -17,6 +17,7 @@ from copy import deepcopy
 import torch
 
 from nncf.torch.dynamic_graph.graph import DynamicGraph
+from nncf.torch.utils import get_model_device
 
 
 class ModelInputInfo:
@@ -55,16 +56,16 @@ class ModelInputInfo:
         return self.type == other.type and self.keyword == other.keyword
 
 
-def create_input_infos(config) -> List[ModelInputInfo]:
-    input_infos = config.get("input_info", [])
+def create_input_infos(config) -> Optional[List[ModelInputInfo]]:
+    input_infos = config.get("input_info")
+    if input_infos is None:
+        return input_infos
     if isinstance(input_infos, dict):
         return [ModelInputInfo(input_infos.get("sample_size"),
                                input_infos.get("type"),
                                input_infos.get("keyword"),
                                input_infos.get("filler")), ]
     if isinstance(input_infos, list):
-        if not input_infos:
-            return [ModelInputInfo([1, 3, 224, 224])]
         return [ModelInputInfo(info_dict.get("sample_size"),
                                info_dict.get("type"),
                                info_dict.get("keyword"),
@@ -91,14 +92,14 @@ class GraphTracer:
                     as_eval: bool = False) -> DynamicGraph:
         sd = deepcopy(model.state_dict())
 
-        from nncf.torch.dynamic_graph.context import TracingContext
+        from nncf.torch.dynamic_graph.context import TracingContext #pylint: disable=cyclic-import
         if context_to_use is None:
             context_to_use = TracingContext()
 
         context_to_use.enable_trace_dynamic_graph()
-        from nncf.torch.utils import training_mode_switcher
-        context_to_use.base_module_thread_local_replica = model
+        from nncf.torch.utils import training_mode_switcher #pylint: disable=cyclic-import
         with context_to_use as _ctx:
+            _ctx.base_module_thread_local_replica = model
             with torch.no_grad():
                 if as_eval:
                     with training_mode_switcher(model, is_training=False):
@@ -124,11 +125,11 @@ def create_dummy_forward_fn(input_infos: List[ModelInputInfo], with_input_tracin
                             with_output_tracing=False):
 
     def default_dummy_forward_fn(model):
-        from nncf.torch.dynamic_graph.io_handling import wrap_nncf_model_inputs_with_objwalk
-        from nncf.torch.dynamic_graph.io_handling import wrap_nncf_model_outputs_with_objwalk
-        from nncf.torch.dynamic_graph.io_handling import replicate_same_tensors
+        from nncf.torch.dynamic_graph.io_handling import wrap_nncf_model_inputs_with_objwalk #pylint: disable=cyclic-import
+        from nncf.torch.dynamic_graph.io_handling import wrap_nncf_model_outputs_with_objwalk #pylint: disable=cyclic-import
+        from nncf.torch.dynamic_graph.io_handling import replicate_same_tensors #pylint: disable=cyclic-import
 
-        device = next(model.parameters()).device
+        device = get_model_device(model)
         args_list = [create_mock_tensor(info, device) for info in input_infos if info.keyword is None]
         kwargs = OrderedDict()
         for info in input_infos:

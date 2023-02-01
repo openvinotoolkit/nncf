@@ -1,5 +1,5 @@
 """
- Copyright (c) 2021 Intel Corporation
+ Copyright (c) 2023 Intel Corporation
  Licensed under the Apache License, Version 2.0 (the "License");
  you may not use this file except in compliance with the License.
  You may obtain a copy of the License at
@@ -16,11 +16,10 @@ from typing import NamedTuple
 import os
 import pytest
 import torch
+from tests.torch.test_models.mobilenet import mobilenet_v2
 from torch import nn
 import torch.utils.data
 from random import random
-from torchvision.models import inception_v3
-from torchvision.models import mobilenet_v2
 from torchvision.models import resnet50
 
 from nncf.torch import register_default_init_args
@@ -34,10 +33,11 @@ from tests.torch.quantization.test_hawq_precision_init import create_test_datalo
 from tests.torch.quantization.test_hawq_precision_init import get_path_to_bitwidth_dump
 from tests.torch.quantization.test_hawq_precision_init import precision_init_dumping_worker
 from tests.torch.quantization.test_hawq_precision_init import ssd_vgg_512_test
-from tests.torch.quantization.test_quantization_helpers import compare_multi_gpu_dump
-from tests.torch.quantization.test_quantization_helpers import get_quantization_config_without_range_init
+from tests.torch.quantization.quantization_helpers import compare_multi_gpu_dump
+from tests.torch.quantization.quantization_helpers import get_quantization_config_without_range_init
 # pylint:disable=unused-import
 from tests.torch.modules.test_rnn import _seed
+from tests.torch.test_models import inception_v3
 from tests.torch.test_models import squeezenet1_1
 
 

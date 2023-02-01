@@ -1,5 +1,5 @@
 """
- Copyright (c) 2019 Intel Corporation
+ Copyright (c) 2023 Intel Corporation
  Licensed under the Apache License, Version 2.0 (the "License");
  you may not use this file except in compliance with the License.
  You may obtain a copy of the License at
@@ -11,11 +11,20 @@
  limitations under the License.
 """
 import pytest
-from tests.common.helpers import create_venv_with_nncf
+
+from tests.shared.case_collection import COMMON_SCOPE_MARKS_VS_OPTIONS
+from tests.shared.case_collection import skip_marked_cases_if_options_not_specified
+
 try:
     import tensorflow as tf
 except ImportError:
     tf = None
+
+
+@pytest.fixture(scope="session", autouse=True)
+def disable_tf32_precision():
+    if tf:
+        tf.config.experimental.enable_tensor_float_32_execution(False)
 
 
 @pytest.fixture(scope="function", autouse=True)
@@ -44,19 +53,16 @@ def pytest_addoption(parser):
                                                             "if param not specified"
     )
     parser.addoption(
-        "--ov-data-dir", type=str, default=None, help="Path to datasets directory for OpenVino accuracy test"
+        "--ov-data-dir", type=str, default=None, help="Path to datasets directory for OpenVINO accuracy test"
     )
     parser.addoption(
-        "--run-openvino-eval", action="store_true", default=False, help="To run eval models via OpenVino"
+        "--run-openvino-eval", action="store_true", default=False, help="To run eval models via OpenVINO"
     )
     parser.addoption(
         "--run-weekly-tests", action="store_true", default=False, help="To run weekly tests"
     )
     parser.addoption(
         "--models-dir", type=str, default=None, help="Path to checkpoints directory for weekly tests"
-    )
-    parser.addoption(
-        "--run-install-tests", action="store_true", default=False, help="To run installation tests"
     )
 
 
@@ -102,12 +108,14 @@ def models_dir(request):
 
 @pytest.fixture(scope="module")
 def install_tests(request):
-    return request.config.getoption("--run-install-tests")
+    return request.config.getoption("--run-install-tests", skip=True)
 
 
-@pytest.fixture(scope="function")
-def tmp_venv_with_nncf(tmp_path, package_type, venv_type, install_tests):  # pylint:disable=redefined-outer-name
-    if not install_tests:
-        pytest.skip('To test the installation, use --run-install-tests option.')
-    venv_path = create_venv_with_nncf(tmp_path, package_type, venv_type, extra_reqs='tf')
-    return venv_path
+# Custom markers specifying tests to be run only if a specific option
+# is present on the pytest command line must be registered here.
+MARKS_VS_OPTIONS = {
+    **COMMON_SCOPE_MARKS_VS_OPTIONS
+}
+
+def pytest_collection_modifyitems(config, items):
+    skip_marked_cases_if_options_not_specified(config, items, MARKS_VS_OPTIONS)

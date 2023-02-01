@@ -3,12 +3,12 @@
 
 #include <ATen/ATen.h>
 #include <ATen/DeviceGuard.h>
+#include <c10/cuda/CUDAStream.h>
 
 #include <cuda.h>
 #include <cuda_runtime.h>
 
 #include <vector>
-#include <THC/THC.h>
 
 const uint32_t CUDA_WARP_SIZE = 32;
 const uint32_t CUDA_TARGET_NUM_THREADS_PER_SM = 2048; // Will decide upon a number of threads per block and blocks per grid based on the workload to hit this target
@@ -20,6 +20,13 @@ const uint16_t CUDA_MAX_GRID_SIZE_Y = 65535;
 
 inline uint32_t GET_BLOCKS(const uint32_t total_required_threads) {
     return (total_required_threads + CUDA_MAX_NUM_THREADS_PER_BLOCK - 1) / CUDA_MAX_NUM_THREADS_PER_BLOCK;
+}
+
+inline c10::TensorOptions get_accum_options(const c10::TensorOptions options) {
+    if (options.dtype() == c10::ScalarType::Half) {
+        return options.dtype(c10::ScalarType::Float);
+    }
+    return options;
 }
 
 
@@ -66,5 +73,9 @@ inline dim3 get_2d_grid_size_for_per_channel(const uint32_t scale_count)
 #else
 #define PROFILE(CODE) CODE
 #endif
+
+#define ACCUM_TYPE_FOR(SOURCE_TYPE) \
+std::conditional_t<std::is_same<SOURCE_TYPE, at::Half>::value, float, SOURCE_TYPE>
+
 
 #endif // _COMMON_CUDA_DEFS_CUH_

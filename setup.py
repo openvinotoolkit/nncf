@@ -1,5 +1,5 @@
 """
- Copyright (c) 2019 Intel Corporation
+ Copyright (c) 2023 Intel Corporation
  Licensed under the Apache License, Version 2.0 (the "License");
  you may not use this file except in compliance with the License.
  You may obtain a copy of the License at
@@ -11,6 +11,29 @@
  limitations under the License.
 """
 
+# *WARNING*: Do not run this file directly by `python setup.py install`
+# or with any other parameter - this is an outdated and error-prone way
+# to install Python packages and causes particular problems with namespace
+# packages such as `protobuf`.
+# Refer to the table below for well-known and supported alternatives with
+# the same behaviour:
+# +-------------------------------------+---------------------------------------------+
+# |           Old command               |                New command                  |
+# +-------------------------------------+---------------------------------------------+
+# | python setup.py install             | pip install .                               |
+# | python setup.py develop             | pip install -e .                            |
+# | python setup.py develop --*arg*     | pip install --install-option="*arg*" -e  .  |
+# | python setup.py sdist               | python -m build -s                          | <-- using the "build" package
+# | python setup.py bdist_wheel         | python -m build -w                          | <-- pypi.org/project/build/
+# | python setup.py bdist_wheel --*arg* | python -m build -w -C--global-option=--*arg*|
+# +-------------------------------------+---------------------------------------------+
+#
+# PyPA in general recommends to move away from setup.py and use pyproject.toml
+# instead. This doesn't fit us as we currently want to do custom stuff during
+# installation such as setting version based on the commit SHA for repo-based
+# installs.
+
+
 import glob
 import stat
 import sys
@@ -19,24 +42,27 @@ import sysconfig
 import codecs
 import os
 import re
+import setuptools
 from setuptools import setup, find_packages
+from pkg_resources import parse_version
 
 here = os.path.abspath(os.path.dirname(__file__))
+BKC_SETUPTOOLS_VERSION = '59.5.0'
 
-with open("{}/README.md".format(here), "r", encoding="utf8") as fh:
-    long_description = fh.read()
+setuptools_version = parse_version(setuptools.__version__).base_version
+if setuptools_version < '43.0.0':
+    raise RuntimeError(
+        "To properly install NNCF, please install setuptools>=43.0.0, "
+        f"while current setuptools version is {setuptools.__version__}. "
+        f"Recommended version is {BKC_SETUPTOOLS_VERSION}."
+    )
 
-if "--tf" in sys.argv:
-    import setuptools
-    from pkg_resources import parse_version
-    setuptools_version = parse_version(setuptools.__version__).base_version
-    if setuptools_version < '43.0.0':
-        raise RuntimeError(
-            "To properly install NNCF, please install setuptools>=43.0.0, "
-            "while current setuptools version is {curr}".format(
-            curr=setuptools.__version__
-        ))
+python_version = sys.version_info
+if python_version < (3, 7, 0):
+    print("Only Python >= 3.7.0 is supported")
+    sys.exit(0)
 
+version_string = "{}{}".format(sys.version_info[0], sys.version_info[1])
 
 is_installing_editable = "develop" in sys.argv
 is_building_release = not is_installing_editable and "--release" in sys.argv
@@ -72,14 +98,11 @@ def find_version(*file_paths):
     return version_value
 
 
-INSTALL_REQUIRES = ["ninja>=1.10.0.post2",
-                    "addict>=2.4.0",
+INSTALL_REQUIRES = ["ninja>=1.10.0.post2, <1.11",
                     "texttable>=1.6.3",
-                    "scipy<=1.5.4, >=1.3.2; python_version<'3.7'",
-                    "scipy>=1.3.2, <1.8; python_version>='3.7'",
-                    "matplotlib~=3.3.4; python_version<'3.7'",
-                    "matplotlib>=3.3.4; python_version>='3.7'",
-                    "networkx>=2.5",
+                    "scipy>=1.3.2, <=1.10.0",
+                    "networkx>=2.6, <=2.8.2",  # see ticket 94048 or https://github.com/networkx/networkx/issues/5962
+                    "numpy>=1.19.1, <1.24",
 
                     # The recent pyparsing major version update seems to break
                     # integration with networkx - the graphs parsed from current .dot
@@ -87,58 +110,62 @@ INSTALL_REQUIRES = ["ninja>=1.10.0.post2",
                     # Using 2.x versions of pyparsing seems to fix the issue.
                     # Ticket: 69520
                     "pyparsing<3.0",
-
-                    "jsonschema==3.2.0",
+                    "pymoo==0.5.0",
+                    "jsonschema>=3.2.0",
                     "pydot>=1.4.1",
                     "jstyleson>=0.0.2",
-                    "numpy~=1.19.2",
                     "tqdm>=4.54.1",
                     "natsort>=7.1.0",
-                    "pandas~=1.1.5; python_version<'3.7'",
-                    "pandas>=1.1.5,<1.4.0rc0; python_version>='3.7'",
-                    "scikit-learn~=0.24.0; python_version<'3.7'",
-                    "scikit-learn>=0.24.0; python_version>='3.7'",
-                    "wheel>=0.36.1"]
+                    "pandas>=1.1.5,<=1.5.2",
+                    "scikit-learn>=0.24.0",
+                    "openvino-telemetry"]
 
 
-python_version = sys.version_info
-if python_version < (3, 6, 2):
-    print("Only Python >= 3.6.2 is supported")
-    sys.exit(0)
+TF_EXTRAS = [
+        "tensorflow~=2.8.4",
+    ]
 
-version_string = "{}{}".format(sys.version_info[0], sys.version_info[1])
+TORCH_EXTRAS = [
+        "torch>=1.8.2,<1.14",
+    ]
 
-_extra_deps = [
-    "tensorflow~=2.4.3",
-    "torch>=1.5.0, <=1.9.1, !=1.8.0",
-]
+ONNX_EXTRAS = [
+        "onnx==1.12.0",
+        "onnxruntime==1.13.1"
+    ]
 
-extra_deps = {b: a for a, b in (re.findall(r"^(([^~!=<>]+)(?:[~!=<>].*)?$)", x)[0] for x in _extra_deps)}
+OPENVINO_EXTRAS = [
+        "openvino-dev"
+    ]
+
 
 EXTRAS_REQUIRE = {
-    "tests": [
-        "pytest"],
+    "dev": ["matplotlib>=3.3.4, <3.6",
+            "pillow>=9.0.0"],
+    "tests": ["pytest"],
     "docs": [],
-    "tf": [
-        extra_deps["tensorflow"]],
-    "torch": [
-        extra_deps["torch"]],
+
+    "tf": TF_EXTRAS,
+    "tensorflow": TF_EXTRAS,
+    "tensorflow2": TF_EXTRAS,
+
+    "torch": TORCH_EXTRAS,
+    "pytorch": TORCH_EXTRAS,
+
+    "onnx": ONNX_EXTRAS,
+
+    "openvino": OPENVINO_EXTRAS,
+
     "all": [
-        extra_deps["tensorflow"],
-        extra_deps["torch"]],
+        TF_EXTRAS,
+        TORCH_EXTRAS,
+        ONNX_EXTRAS,
+        OPENVINO_EXTRAS,
+    ]
 }
 
-if "--torch" in sys.argv:
-    INSTALL_REQUIRES.extend(EXTRAS_REQUIRE["torch"])
-    sys.argv.remove("--torch")
-
-if "--tf" in sys.argv:
-    INSTALL_REQUIRES.extend(EXTRAS_REQUIRE["tf"])
-    sys.argv.remove("--tf")
-
-if "--all" in sys.argv:
-    INSTALL_REQUIRES.extend(EXTRAS_REQUIRE["all"])
-    sys.argv.remove("--all")
+with open("{}/README.md".format(here), "r", encoding="utf8") as fh:
+    long_description = fh.read()
 
 setup(
     name="nncf",
@@ -149,6 +176,7 @@ setup(
     long_description=long_description,
     long_description_content_type="text/markdown",
     url="https://github.com/openvinotoolkit/nncf",
+    license="Apache-2.0",
     packages=find_packages(exclude=["tests", "tests.*",
                                     "examples", "examples.*",
                                     "tools", "tools.*"]),
@@ -161,7 +189,7 @@ setup(
     extras_require=EXTRAS_REQUIRE,
     keywords=["compression", "quantization", "sparsity", "mixed-precision-training",
               "quantization-aware-training", "hawq", "classification",
-              "pruning", "object-detection", "semantic-segmentation", "nlp",
+              "pruning", "object-detection", "semantic-segmentation", "nas", "nlp",
               "bert", "transformers", "mmdetection"],
     include_package_data=True
 )

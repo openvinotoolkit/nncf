@@ -1,5 +1,5 @@
 """
- Copyright (c) 2019-2020 Intel Corporation
+ Copyright (c) 2019-2023 Intel Corporation
  Licensed under the Apache License, Version 2.0 (the "License");
  you may not use this file except in compliance with the License.
  You may obtain a copy of the License at
@@ -14,6 +14,7 @@
 import inspect
 from collections import OrderedDict
 from enum import Enum
+from enum import IntEnum
 from typing import Callable
 from typing import Dict
 from typing import List
@@ -36,8 +37,7 @@ from nncf.common.graph.transformations.commands import TransformationPriority
 from nncf.common.insertion_point_graph import InsertionPointGraph
 from nncf.common.insertion_point_graph import PostHookInsertionPoint
 from nncf.common.insertion_point_graph import PreHookInsertionPoint
-from nncf.common.utils.logger import logger as nncf_logger
-from nncf.common.utils.ordered_enum import OrderedEnum
+from nncf.common.logging import nncf_logger
 from nncf.torch.debug import CombinedDebugInterface
 from nncf.torch.debug import debuggable_forward
 from nncf.common.utils.debug import is_debug
@@ -59,17 +59,19 @@ from nncf.torch.dynamic_graph.transform_graph import replace_modules_by_nncf_mod
 from nncf.torch.graph.graph import PTNNCFGraph
 from nncf.torch.graph.graph_builder import GraphBuilder
 from nncf.torch.graph.graph_builder import GraphConverter
+from nncf.torch.graph.operator_metatypes import OPERATORS_WITH_WEIGHTS_METATYPES
 from nncf.torch.graph.operator_metatypes import PTSplitMetatype
-from nncf.torch.graph.transformations.commands import PTInsertionCommand
 from nncf.torch.graph.transformations.commands import PTTargetPoint
 from nncf.torch.graph.transformations.layout import PTTransformationLayout
 from nncf.torch.knowledge_distillation.knowledge_distillation_handler import KnowledgeDistillationLossHandler
+from nncf.torch.layer_utils import _NNCFModuleMixin
 from nncf.torch.layers import NNCF_MODULES
 from nncf.torch.layers import NNCF_WRAPPED_USER_MODULES_DICT
 from nncf.torch.module_operations import UpdateWeight
 from nncf.torch.quantization.layers import QUANTIZATION_MODULES
 from nncf.torch.utils import compute_FLOPs_hook
 from nncf.torch.utils import get_all_modules_by_type
+from nncf.torch.utils import get_model_device
 from nncf.torch.utils import get_state_dict_names_with_modules
 from nncf.torch.nested_objects_traversal import objwalk
 
@@ -93,13 +95,13 @@ class LoadStateListener:
         restores model state by calling this method.
     """
 
-    def __init__(self, model, all_quantizations):
+    def __init__(self, model: 'NNCFNetwork', all_quantizations: Dict[str, torch.nn.Module]):
         # pylint: disable=protected-access
         self.hook = model._register_load_state_dict_pre_hook(
-            functools.partial(self.hook_fn, quantize_modules=all_quantizations.values()))
+            functools.partial(self.hook_fn, quantize_modules=list(all_quantizations.values())))
 
     def hook_fn(self, state_dict, prefix, local_metadata, strict, missing_keys, unexpected_keys, error_msgs,
-                quantize_modules):
+                quantize_modules: List[torch.nn.Module]):
         for module in quantize_modules:
             module.initialized = False
 
@@ -107,7 +109,7 @@ class LoadStateListener:
         self.hook.remove()
 
 
-class PTInsertionType(OrderedEnum):
+class PTInsertionType(IntEnum):
     NNCF_MODULE_PRE_OP = 0
     NNCF_MODULE_POST_OP = 1
     OPERATOR_PRE_HOOK = 2
@@ -124,7 +126,8 @@ class PTInsertionPoint:
     }
 
     def _get_pt_insertion_type(self, target_type: TargetType) -> PTInsertionType:
-        if target_type not in PTInsertionPoint.TARGET_TYPE_VS_PT_INSERTION_TYPE_DICT:
+        if not isinstance(target_type, TargetType) or\
+            target_type not in PTInsertionPoint.TARGET_TYPE_VS_PT_INSERTION_TYPE_DICT:
             raise RuntimeError("Unsupported target type for PyTorch: {}".format(target_type))
         return PTInsertionPoint.TARGET_TYPE_VS_PT_INSERTION_TYPE_DICT[target_type]
 
@@ -171,11 +174,7 @@ class NNCFNetwork(nn.Module, PostGraphBuildActing):
         self._user_dummy_forward_fn = dummy_forward_fn
         self._kd_loss_handler = None
 
-        try:
-            device = next(module.parameters()).device
-        except StopIteration:
-            # Param-less model, assume CPU
-            device = 'cpu'
+        device = get_model_device(module)
 
         if wrap_inputs_fn is not None:
             self._wrap_inputs_fn = wrap_inputs_fn
@@ -281,7 +280,7 @@ class NNCFNetwork(nn.Module, PostGraphBuildActing):
         :param calculate_fn: function used to parse model outputs and calculate knowledge distillation loss
         :return: KnowledgeDistillationLossHandler instance
         """
-        device = next(self.get_nncf_wrapped_model().parameters()).device
+        device = get_model_device(self.get_nncf_wrapped_model())
         self._kd_loss_handler = KnowledgeDistillationLossHandler(self._compressed_context,
                                                                  kd_original_model,
                                                                  calculate_fn,
@@ -299,7 +298,7 @@ class NNCFNetwork(nn.Module, PostGraphBuildActing):
     def get_clean_shallow_copy(self) -> 'NNCFNetwork':
         # WARNING: Will reset pre- and post-ops of the underlying model. Use save_nncf_module_additions
         # and load_nncf_module_additions to preserve these, or temporary_clean_view().
-        from nncf.torch.utils import save_module_state, load_module_state
+        from nncf.torch.utils import save_module_state, load_module_state #pylint: disable=cyclic-import
         saved_state = save_module_state(self)
         model_copy = NNCFNetwork(self.get_nncf_wrapped_model(), self.input_infos,
                                  self._user_dummy_forward_fn, self._wrap_inputs_fn,
@@ -324,10 +323,19 @@ class NNCFNetwork(nn.Module, PostGraphBuildActing):
             self._compressed_context.register_post_hooks(fn_list, point.op_address)
         elif point.insertion_type in [PTInsertionType.NNCF_MODULE_PRE_OP,
                                       PTInsertionType.NNCF_MODULE_POST_OP]:
+            nncf_module = self.get_module_by_scope(point.module_scope)
+            if not isinstance(nncf_module, _NNCFModuleMixin):
+                raise RuntimeError(
+                    f'Failed to insert pre/post op for not registered custom module {point.module_scope}. NNCF only '
+                    f'supports native PyTorch modules with respect to trainable parameter (weight) compressed, such '
+                    f'as `torch.nn.Conv2d`. If your model contains a custom, non-PyTorch standard module with trainable'
+                    f' weights that should be compressed, you can register it using the '
+                    f'`@nncf.register_module` decorator. Please refer to `Compression of custom modules` section in '
+                    f'docs/Usage.md for more details.')
+
             norm_target_scope = self._normalize_variable_recurrent_scope(point.module_scope)
             norm_nncf_scopes = [self._normalize_variable_recurrent_scope(x) for x in self._nncf_module_scopes]
             assert norm_target_scope in norm_nncf_scopes  # Required for proper Recurrent/VariableRecurrent addressing
-            nncf_module = self.get_module_by_scope(point.module_scope)
             if point.insertion_type == PTInsertionType.NNCF_MODULE_PRE_OP:
                 for fn in fn_list:
                     nncf_module.register_pre_forward_operation(fn)
@@ -429,7 +437,7 @@ class NNCFNetwork(nn.Module, PostGraphBuildActing):
                     continue
             nodes_in_scope = self._original_graph.get_op_nodes_in_scope(nncf_module_scope)
             for node in nodes_in_scope:
-                if node.layer_attributes is not None:  # TODO(vshampor): implement more explicit filtering
+                if node.metatype in OPERATORS_WITH_WEIGHTS_METATYPES:
                     retval.append(node)
         return retval
 
@@ -589,9 +597,9 @@ class NNCFNetwork(nn.Module, PostGraphBuildActing):
             try:
                 scope = self._compressed_graph.get_scope_by_node_name(node_name)
             except RuntimeError:
-                nncf_logger.debug("Node {} not found in compressed graph when trying to determine containing module, "
-                                  "trying the original graph to see if the node was present there "
-                                  "during graph building")
+                nncf_logger.debug(f"Node {node_name} not found in compressed graph when trying to determine "
+                                  f"the containing module, trying the original graph to see if the node was "
+                                  f"present there during graph building")
                 scope = self._original_graph.get_scope_by_node_name(node_name)
         else:
             scope = self._original_graph.get_scope_by_node_name(node_name)

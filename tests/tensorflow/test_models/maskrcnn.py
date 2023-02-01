@@ -1,5 +1,5 @@
 """
- Copyright (c) 2021 Intel Corporation
+ Copyright (c) 2023 Intel Corporation
  Licensed under the Apache License, Version 2.0 (the "License");
  you may not use this file except in compliance with the License.
  You may obtain a copy of the License at
@@ -14,12 +14,11 @@
 from examples.tensorflow.common.sample_config import SampleConfig
 from examples.tensorflow.segmentation.models.model_selector import get_model_builder
 from examples.tensorflow.segmentation.models.model_selector import get_predefined_config
-from tests.common.helpers import TEST_ROOT
+from tests.shared.paths import PROJECT_ROOT
 
 
 def MaskRCNN(input_shape=None): # pylint: disable=W0613
-    NNCF_ROOT = TEST_ROOT.parent
-    path_to_config = NNCF_ROOT.joinpath('examples', 'tensorflow', 'segmentation', 'configs', 'mask_rcnn_coco.json')
+    path_to_config = PROJECT_ROOT / 'examples' / 'tensorflow' / 'segmentation' / 'configs' / 'mask_rcnn_coco.json'
 
     config_from_json = SampleConfig.from_json(path_to_config)
     predefined_config = get_predefined_config(config_from_json.model)

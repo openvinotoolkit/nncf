@@ -1,5 +1,5 @@
 """
- Copyright (c) 2021 Intel Corporation
+ Copyright (c) 2023 Intel Corporation
  Licensed under the Apache License, Version 2.0 (the "License");
  you may not use this file except in compliance with the License.
  You may obtain a copy of the License at
@@ -73,4 +73,15 @@ class NNCFPruningBaseTensorProcessor:
 
         :param input_masks: Given input masks.
         :return: Elementwise pruning operation output mask.
+        """
+
+    @classmethod
+    @abstractmethod
+    def split(cls, tensor: NNCFTensor, output_shapes: List[int]) -> List[NNCFTensor]:
+        """
+        Split/chunk NNCFTensor into chunks along an exsiting dimension.
+
+        :param tensor: Given NNCFTensor.
+        :param output_shapes: Given shapes of the output masks
+        :returns: The list of NNCFTensor which is split
         """

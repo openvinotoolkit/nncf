@@ -1,5 +1,5 @@
 """
- Copyright (c) 2021 Intel Corporation
+ Copyright (c) 2023 Intel Corporation
  Licensed under the Apache License, Version 2.0 (the "License");
  you may not use this file except in compliance with the License.
  You may obtain a copy of the License at
@@ -41,9 +41,9 @@ def get_keras_layer_metatype(
     y = layer(x)
 
     metatype = get_keras_layer_metatype(layer, determine_subtype = False)
-    assert metatype == TFDepthwiseConv2DSubLayerMetatype
-    metatype = get_keras_layer_metatype(layer, determine_subtype = True)
     assert metatype == TFConv2DLayerMetatype
+    metatype = get_keras_layer_metatype(layer, determine_subtype = True)
+    assert metatype == TFDepthwiseConv2DSubLayerMetatype
     ```
 
     :param layer: The Keras layer.

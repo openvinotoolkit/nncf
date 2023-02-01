@@ -1,5 +1,5 @@
 """
- Copyright (c) 2021 Intel Corporation
+ Copyright (c) 2023 Intel Corporation
  Licensed under the Apache License, Version 2.0 (the "License");
  you may not use this file except in compliance with the License.
  You may obtain a copy of the License at
@@ -15,7 +15,7 @@ from typing import TypeVar
 
 from nncf.common.graph.transformations.layout import TransformationLayout
 
-ModelType = TypeVar('ModelType')
+TModel = TypeVar('TModel')
 
 
 class ModelTransformer:
@@ -23,7 +23,7 @@ class ModelTransformer:
     Applies transformations to the model.
     """
 
-    def __init__(self, model: ModelType):
+    def __init__(self, model: TModel):
         """
         Initializes Model Transformer.
 
@@ -31,7 +31,7 @@ class ModelTransformer:
         """
         self._model = model
 
-    def transform(self, transformation_layout: TransformationLayout) -> ModelType:
+    def transform(self, transformation_layout: TransformationLayout) -> TModel:
         """
         Applies transformations to the model.
 

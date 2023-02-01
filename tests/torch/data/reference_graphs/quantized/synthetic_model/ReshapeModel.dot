@@ -20,9 +20,9 @@ strict digraph  {
 "3 ReshapeModel/flatten_0" -> "5 ReshapeModel/squeeze_1";
 "3 ReshapeModel/flatten_0" -> "6 ReshapeModel/flatten_1";
 "4 ReshapeModel/reshape_0" -> "9 /nncf_model_output_0";
+"5 ReshapeModel/squeeze_1" -> "10 /nncf_model_output_1";
 "6 ReshapeModel/flatten_1" -> "7 ReshapeModel/unsqueeze_1";
 "6 ReshapeModel/flatten_1" -> "8 ReshapeModel/view_0";
-"5 ReshapeModel/squeeze_1" -> "10 /nncf_model_output_1";
 "6 ReshapeModel/flatten_1" -> "11 /nncf_model_output_2";
 "7 ReshapeModel/unsqueeze_1" -> "12 /nncf_model_output_3";
 "8 ReshapeModel/view_0" -> "13 /nncf_model_output_4";

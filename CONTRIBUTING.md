@@ -12,6 +12,13 @@ The latter forms are accepted as pull requests from your own forks of the NNCF r
 
 Any contributions must not violate the repository's [LICENSE](./LICENSE) requirements.
 
+## Installation
+### (Experimental) ONNXRuntime-OpenVINO
+Install the package and its dependencies by running the following in the repository root directory:
+```bash
+make install-onnx-dev
+```
+
 ## Testing
 
 After your pull request is submitted, the maintainer will launch a scope of CI tests against it.
@@ -29,6 +36,13 @@ The test files themselves may be grouped in arbitrary directories according to t
 Any additional tests in the [tests](./tests) directory will be automatically added into the pre-commit CI scope. 
 If your testing code is more extensive than unit tests (in terms of test execution time), or would be more suited to be executed on a nightly/weekly basis instead of for each future commit, please inform the maintainers in your PR discussion thread so that our internal testing pipelines could be adjusted accordingly.
 
+### Preset command for testing
+You can launch appropriate tests against the framework by running the following command:
+
+- (Experimental) ONNXRuntime-OpenVINO
+```bash
+test-onnx
+```
 
 ## Code style
 Changes to NNCF Python code should conform to [Python Style Guide](./docs/styleguide/PyGuide.md)
@@ -36,6 +50,14 @@ Changes to NNCF Python code should conform to [Python Style Guide](./docs/styleg
 Pylint is used throughout the project to ensure code cleanliness and quality. 
 A Pylint run is also done as part of the pre-commit scope - the pre-commit `pytest` scope will not be run if your code fails the Pylint checks.
 The Pylint rules and exceptions for this repository are described in the standard [.pylintrc](./.pylintrc) format - make sure your local linter uses these.
+
+### Preset command for linting
+You can launch appropriate linting against the framework by running the following command:
+
+- (Experimental) ONNXRuntime-OpenVINO
+```bash
+pylint-onnx
+```
 
 ## Binary files
 Please refrain from adding huge binary files into the repository. If binary files have to be added, mark these to use Git LFS via the [.gitattributes](./.gitattributes) file. 

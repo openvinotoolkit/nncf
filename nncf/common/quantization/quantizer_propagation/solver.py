@@ -1,5 +1,5 @@
 """
- Copyright (c) 2021 Intel Corporation
+ Copyright (c) 2023 Intel Corporation
  Licensed under the Apache License, Version 2.0 (the "License");
  you may not use this file except in compliance with the License.
  You may obtain a copy of the License at
@@ -12,12 +12,12 @@
 """
 
 #pylint:disable=too-many-lines
-import warnings
 from collections import Counter
 from collections import OrderedDict
 from collections import deque
 from copy import deepcopy
 from enum import Enum
+from functools import partial
 from typing import Deque
 from typing import Dict
 from typing import List
@@ -28,18 +28,25 @@ from typing import Tuple
 import networkx as nx
 
 from nncf.common.graph import INPUT_NOOP_METATYPES
-from nncf.common.graph import NNCFNodeName
 from nncf.common.graph import OUTPUT_NOOP_METATYPES
+from nncf.common.graph import NNCFNodeName
 from nncf.common.graph import OperatorMetatype
+from nncf.common.graph.graph import NNCFGraph
+from nncf.common.graph.operator_metatypes import InputNoopMetatype
+from nncf.common.graph.operator_metatypes import OutputNoopMetatype
+from nncf.common.graph.operator_metatypes import UnknownMetatype
 from nncf.common.graph.transformations.commands import TargetPoint
 from nncf.common.hardware.config import HWConfig
+from nncf.common.insertion_point_graph import ConstantNodesFilter
 from nncf.common.insertion_point_graph import InsertionPointGraph
+from nncf.common.logging import nncf_logger
 from nncf.common.quantization.quantizer_propagation.graph import QuantizerPropagationStateGraph
 from nncf.common.quantization.quantizer_propagation.grouping import QuantizersWaitingForMergeManager
 from nncf.common.quantization.quantizer_propagation.structs import PropagatingQuantizer
 from nncf.common.quantization.quantizer_propagation.structs import PropagationPath
 from nncf.common.quantization.quantizer_propagation.structs import QuantizationTrait
 from nncf.common.quantization.quantizer_propagation.structs import QuantizerPropagationStateGraphNodeType
+from nncf.common.quantization.quantizer_setup import DEFAULT_QUANTIZER_CONFIG
 from nncf.common.quantization.quantizer_setup import MultiConfigQuantizerSetup
 from nncf.common.quantization.quantizer_setup import QuantizationPointId
 from nncf.common.quantization.quantizer_setup import SingleConfigQuantizerSetup
@@ -49,11 +56,10 @@ from nncf.common.quantization.structs import QuantizationMode
 from nncf.common.quantization.structs import QuantizerConfig
 from nncf.common.quantization.structs import QuantizerGroup
 from nncf.common.quantization.structs import UnifiedScaleType
+from nncf.common.scopes import matches_any
 from nncf.common.utils.debug import DEBUG_LOG_DIR
 from nncf.common.utils.debug import is_debug
-from nncf.common.utils.helpers import matches_any
-from nncf.common.utils.logger import logger as nncf_logger
-from nncf.common.graph.operator_metatypes import UnknownMetatype
+from nncf.common.utils.dot_file_rw import write_dot_graph
 
 
 class TransitionStatus(Enum):
@@ -193,6 +199,131 @@ class QuantizationProposal:
                                              self._quant_prop_graph)
 
 
+class PostprocessingNodeLocator:
+    """
+    Detects the nodes in the QuantizerPropagationStateGraph, which implement the post-processing logic in the model.
+    Based on the special post-processing marker metatypes the nodes are placed in the ignored.
+    """
+
+    def __init__(self, quant_prop_graph: QuantizerPropagationStateGraph,
+                 quantizable_layer_nodes: List[QuantizableWeightedLayerNode],
+                 post_processing_marker_metatypes: List[OperatorMetatype]):
+        self._quant_prop_graph = quant_prop_graph
+        self._post_processing_marker_metatypes = post_processing_marker_metatypes
+        self._quantizable_layer_node_keys = [q_nodes.node.data[NNCFGraph.KEY_NODE_ATTR] for q_nodes in
+                                             quantizable_layer_nodes]
+        self._post_processing_marker_encountered = False
+
+    def _is_node_has_underlying_weights(self, node_key: str) -> bool:
+        underlying_nncf_nodes = self._quant_prop_graph.op_node_keys_to_underlying_nodes_mapping[node_key]
+        for node in underlying_nncf_nodes:
+            if node.data[NNCFGraph.KEY_NODE_ATTR] in self._quantizable_layer_node_keys:
+                return True
+        return False
+
+    def _check_if_postprocessing(self, node_metatype: OperatorMetatype) -> None:
+        if node_metatype in self._post_processing_marker_metatypes:
+            self._post_processing_marker_encountered = True
+
+    def _get_node_metatype(self, node_key: str) -> OperatorMetatype:
+        node = self._quant_prop_graph.nodes[node_key]
+        return node.get(self._quant_prop_graph.OPERATOR_METATYPE_NODE_ATTR)
+
+    def _is_node_operator(self, node_key: str) -> bool:
+        node = self._quant_prop_graph.nodes[node_key]
+        return node.get(self._quant_prop_graph.NODE_TYPE_NODE_ATTR) == QuantizerPropagationStateGraphNodeType.OPERATOR
+
+    def _get_ignored_node_keys(self, node_keys: List[str]) -> List[str]:
+        output = []
+        for node_key, node_metatype in zip(node_keys, map(self._get_node_metatype, node_keys)):
+            if node_metatype not in self._post_processing_marker_metatypes:
+                output.append(node_key)
+        return output
+
+    def get_post_processing_node_keys(self) -> List[str]:
+        """
+        Finds out the nodes of the QuantizerPropagationStateGraph, which are in post-processing part of the model.
+        Starting from the output nodes all the nodes are added, until the quantizable nodes with weights are faced.
+        If the path with the nodes has the post-processing marker node,
+        all the nodes in this path will be added into ignored.
+        :return: The list of the node keys to be ignored.
+        """
+
+        visited_nodes = set()
+
+        def backward_traverse_function(node_key: str, output: List[str],
+                                       visited_nodes: Set[str]) -> Tuple[bool, List[str]]:
+            """
+            Realizes the search of the quantization ignored nodes in graph.
+            Only QuantizerPropagationStateGraphNodeType.OPERATOR nodes are processed during the traversing.
+            If the current node is in the list of the quantizable nodes with weights,
+             the traversing is being stopped.
+            The new forward traversing from the current node starts.
+            If the quantizable nodes with weights is faced in forward traversing faced,
+             the original backward traversing is being stopped.
+
+            :param node_key: node key to check, whether the traversing has to be stopped or not
+            and whether the node should be added to the traversed path.
+            :param output: Path contains the list of the visited nodes.
+            :param visited_nodes: Set stores whether the particular node was visited before or not.
+            :return: The first value shows whether the traversing finished,
+            the second one is traversing path containing the visited nodes.
+            """
+
+            def forward_traverse_function(node_key: str, output: List[str],
+                                          visited_nodes: Set[str]) -> Tuple[bool, List[bool]]:
+                # If the node is not operator
+                if not self._is_node_operator(node_key):
+                    return False, output
+                if node_key in visited_nodes:
+                    return True, output
+                output.append(node_key)
+                if self._is_node_has_underlying_weights(node_key):
+                    return True, output
+                return False, output
+
+            # If the node is not operator
+            if not self._is_node_operator(node_key):
+                return False, output
+            if node_key in visited_nodes:
+                return True, output
+
+            node_metatype = self._get_node_metatype(node_key)
+            # If the node weight quantizable
+            if self._is_node_has_underlying_weights(node_key):
+                visited_nodes.add(node_key)
+                return True, output
+            if node_metatype in [InputNoopMetatype, OutputNoopMetatype]:
+                visited_nodes.add(node_key)
+                return False, output
+            self._check_if_postprocessing(node_metatype)
+            partial_forward_traverse_function = partial(forward_traverse_function,
+                                                        visited_nodes=visited_nodes)
+            forward_visited_node_keys = self._quant_prop_graph.traverse_graph(node_key,
+                                                                           partial_forward_traverse_function,
+                                                                           output=[],
+                                                                           traverse_forward=True)
+            # If in the path there are nodes with weights should stop the main backward traversing
+            for forward_visited_node_key in forward_visited_node_keys:
+                if self._is_node_has_underlying_weights(forward_visited_node_key):
+                    visited_nodes.add(node_key)
+                    return True, output
+            output.append(node_key)
+            return False, output
+
+        partial_backward_traverse_function = partial(backward_traverse_function, visited_nodes=visited_nodes)
+        output = []
+        for start_node_key in self._quant_prop_graph.get_node_keys_by_metatype(OutputNoopMetatype):
+            self._post_processing_marker_encountered = False
+            node_keys = self._quant_prop_graph.traverse_graph(start_node_key, partial_backward_traverse_function,
+                                                              output=[], traverse_forward=False)
+            if self._post_processing_marker_encountered:
+                ignored_node_keys = self._get_ignored_node_keys(node_keys)
+                output.extend(ignored_node_keys)
+
+        return output
+
+
 class QuantizerPropagationSolver:
     """
     Analyzes a fresh QuantizerPropagationStateGraph object according to HW
@@ -222,7 +353,8 @@ class QuantizerPropagationSolver:
                  global_constraints: Dict[QuantizerGroup, QuantizationConstraints] = None,
                  additional_unified_scale_op_scopes: List[List[str]] = None,
                  run_consistency_checks: bool = False,
-                 quantize_outputs: bool = False):
+                 quantize_outputs: bool = False,
+                 post_processing_marker_metatypes: List[OperatorMetatype] = None):
         """
         Initializes the solver with parameters affecting the resulting quantizer setup.
 
@@ -256,6 +388,13 @@ class QuantizerPropagationSolver:
           trainable quantizer parameters.
         :param run_consistency_checks: Whether to run internal consistency checks at each propagataion step.
         :param quantize_outputs: Whether to insert additional quantizers right before each of the model outputs.
+        :param post_processing_marker_metatypes: The framework specific NNCF Metatypes, which are markers for
+        the model post-processing part. They are used for automatic ignoring post-processing nodes.
+        The seeking post-processing nodes algorithm uses traversing through the model graph from the output nodes.
+        During traversing all the visited nodes are added, until the quantizable nodes with weights are faced.
+        If the path with the nodes has the post-processing marker node,
+        all the nodes in this path will be added into ignored.
+         If None automatic ignoring will be skipped.
         """
         if default_trait_to_metatype_map is None:
             self._default_trait_to_metatype_map = {}
@@ -265,7 +404,8 @@ class QuantizerPropagationSolver:
         self._hw_config = hw_config  # type: HWConfig
         self._visualizer = None
         if is_debug():
-            from nncf.common.quantization.quantizer_propagation.visualizer import QuantizerPropagationVisualizer
+            from nncf.common.quantization.quantizer_propagation.visualizer import \
+                QuantizerPropagationVisualizer  # pylint: disable=cyclic-import
             self._visualizer = QuantizerPropagationVisualizer(DEBUG_LOG_DIR + "/quant_prop")
         self._propagation_strategy = propagation_strategy if propagation_strategy \
             else QuantizerPropagationSolver.DEFAULT_PROPAGATION_STRATEGY  # TODO (vshampor): determine from config
@@ -306,6 +446,8 @@ class QuantizerPropagationSolver:
 
         self._potential_quantizers = {}
         self._num_potential_quantized_activations = 0
+        self._quantizable_layer_nodes = quantizable_layer_nodes
+        self._post_processing_marker_metatypes = post_processing_marker_metatypes
 
     def run_on_ip_graph(self, ip_graph: InsertionPointGraph) -> QuantizationProposal:
         """
@@ -323,9 +465,19 @@ class QuantizerPropagationSolver:
         configurations.
         """
         self._num_potential_quantized_activations = 0
-        quant_prop_graph = QuantizerPropagationStateGraph(ip_graph,
+        quantizable_layer_node_keys = []
+        if self._quantizable_layer_nodes is not None:
+            quantizable_layer_node_keys = [node.node.data['key'] for node in self._quantizable_layer_nodes]
+        filtered_ip_graph = ConstantNodesFilter.filter(ip_graph, quantizable_layer_node_keys)
+        quant_prop_graph = QuantizerPropagationStateGraph(filtered_ip_graph,
                                                           self._ignored_scopes,
                                                           self._target_scopes)
+        if self._post_processing_marker_metatypes is not None:
+            post_processing_node_locator = PostprocessingNodeLocator(quant_prop_graph, self._quantizable_layer_nodes,
+                                                                     self._post_processing_marker_metatypes)
+            post_processing_node_keys = post_processing_node_locator.get_post_processing_node_keys()
+            for post_processing_node_key in post_processing_node_keys:
+                self._add_node_to_ignored(post_processing_node_key, quant_prop_graph)
         quant_prop_graph = self.set_allowed_quantization_types_for_operator_nodes(quant_prop_graph)
         quant_prop_graph = self.setup_initial_quantizers(quant_prop_graph)
 
@@ -357,6 +509,10 @@ class QuantizerPropagationSolver:
         return QuantizationProposal(quantizer_setup=quantizer_setup,
                                     quant_prop_graph=quant_prop_graph,
                                     quantization_point_id_vs_prop_quantizer=insertions_vs_associated_prop_quants)
+
+    def _add_node_to_ignored(self, node_key: str, quant_prop_graph: QuantizerPropagationStateGraph) -> None:
+        quant_prop_graph.ignored_node_keys.append(node_key)
+        quant_prop_graph.nodes[node_key][quant_prop_graph.IS_IN_IGNORED_SCOPES] = True
 
     def _map_quantization_points_to_prop_quantizers(self,
                                                     prop_quant_list: List[PropagatingQuantizer],
@@ -426,7 +582,7 @@ class QuantizerPropagationSolver:
         if not abort_merge:
             # All quantizers that are dominated by the current branching node are waiting
             # for the merge - should merge them now
-            nncf_logger.debug("Merging PQs: {}".format(",".join([str(pq.id) for pq in waiting_pqs_list])))
+            nncf_logger.debug(f"Merging PQs: {','.join([str(pq.id) for pq in waiting_pqs_list])}")
             qconfs_list = [pq.potential_quant_configs for pq in waiting_pqs_list]
             merged_qconf_list, branch_qconf_lists = \
                 self.get_merged_qconfigs_for_downward_branching_case(qconfs_list)
@@ -434,21 +590,20 @@ class QuantizerPropagationSolver:
             if merged_qconf_list is None and \
                     self._propagation_strategy == PropagationStrategy.MERGE_WITH_SINGLE_FQ_RESULT:
                 all_confs = '\n'.join(', '.join([f'[{str(qconf)}]' for qconf in qconfs]) for qconfs in qconfs_list)
-                nncf_logger.warning("Could not merge the quantizers at branching point {} - no common quantizer "
-                                    "configurations found among the following: \n{}".format(
-                    branching_node_key, all_confs))
+                nncf_logger.debug(f"Could not merge the quantizers at branching point {branching_node_key} - "
+                                  f"no common quantizer configurations found among the following: \n{all_confs}")
 
             merge_pqs = quant_prop_graph.merge_quantizers_for_branching_node(waiting_pqs_list,
-                                                                            merged_qconf_list,
-                                                                            branch_qconf_lists,
-                                                                            branching_node_key)
+                                                                             merged_qconf_list,
+                                                                             branch_qconf_lists,
+                                                                             branching_node_key)
             for idx, qconf_list in enumerate(branch_qconf_lists):
                 if qconf_list is None:
                     merged_pqs.append(waiting_pqs_list[idx])
                 else:
                     unmerged_pqs.append(waiting_pqs_list[idx])
         else:
-            nncf_logger.debug("Merge aborted for PQs {}".format(",".join([str(pq.id) for pq in waiting_pqs_list])))
+            nncf_logger.debug(f"Merge aborted for PQs {','.join([str(pq.id) for pq in waiting_pqs_list])}")
             merge_pqs = []
             unmerged_pqs = waiting_pqs_list
 
@@ -626,7 +781,7 @@ class QuantizerPropagationSolver:
 
                 quant_det_id = node[QuantizerPropagationStateGraph.OPERATOR_METATYPE_NODE_ATTR]
                 if quant_det_id is None:
-                    warnings.warn("Unknown metatype for operator node: {}".format(node_key))
+                    nncf_logger.debug(f"Unknown metatype for operator node: {node_key}")
                     trait = QuantizationTrait.QUANTIZATION_AGNOSTIC
                 elif quant_det_id is UnknownMetatype:
                     trait = QuantizationTrait.NON_QUANTIZABLE
@@ -677,9 +832,9 @@ class QuantizerPropagationSolver:
                     break
             else:
                 trait = QuantizationTrait.QUANTIZATION_AGNOSTIC
-                nncf_logger.debug("Operation metatype {} encountered, but it has no default "
-                                  "quantization trait and the HW config entry is not given for it - "
-                                  "assuming quantization-agnostic.".format(op_meta))
+                nncf_logger.debug(f"Operation metatype {op_meta} encountered, but it has no default "
+                                  f"quantization trait and the HW config entry is not given for it - "
+                                  f"assuming quantization-agnostic.")
         else:
             # There IS a valid HW config name for the metatype, but it is deliberately not specified
             # in the config, which means that it should execute in FP32
@@ -728,7 +883,7 @@ class QuantizerPropagationSolver:
                                                       finished_ids_str),
             "labelloc": "t"}
         pth = deepcopy(dump_path)
-        nx.drawing.nx_pydot.write_dot(out_graph, pth)
+        write_dot_graph(out_graph, pth)
 
     def setup_initial_quantizers(self,
                                  quant_prop_graph: QuantizerPropagationStateGraph) -> QuantizerPropagationStateGraph:
@@ -750,7 +905,7 @@ class QuantizerPropagationSolver:
                 num_input_activations = quant_prop_graph.get_num_input_activations(node_key)
                 self._num_potential_quantized_activations += num_input_activations
                 if node_key in quant_prop_graph.ignored_node_keys:
-                    nncf_logger.info("Ignored adding Activation input quantizer for: {}".format(node_key))
+                    nncf_logger.info(f"Not adding activation input quantizer for operation: {node_key}")
                     continue
                 self._setup_initial_quantizers_for_operator_node(node_key, quant_prop_graph)
 
@@ -870,7 +1025,7 @@ class QuantizerPropagationSolver:
 
     def _setup_initial_quantizers_for_operator_node(self, operator_node_key: str,
                                                     quant_prop_graph: QuantizerPropagationStateGraph):
-        #pylint:disable=too-many-branches
+        # pylint:disable=too-many-branches
         node = quant_prop_graph.nodes[operator_node_key]
 
         # preds are in sorted order for reproducibility
@@ -898,8 +1053,7 @@ class QuantizerPropagationSolver:
             nncf_node_ref = next(iter(quant_prop_graph.op_node_keys_to_underlying_nodes_mapping[operator_node_key]))
             qconf_list = self._filter_qconfigs_according_to_scope(qconf_list, nncf_node_ref.node_name)
         else:
-            from nncf.torch.quantization.algo import QuantizerSetupGeneratorBase
-            qconf_list = [deepcopy(QuantizerSetupGeneratorBase.DEFAULT_QUANTIZER_CONFIG)]
+            qconf_list = [deepcopy(DEFAULT_QUANTIZER_CONFIG)]
 
         is_unified_scale = quant_det_id in self._unified_scales_operation_set
         if is_unified_scale:
@@ -921,9 +1075,8 @@ class QuantizerPropagationSolver:
                         "Unified scales currently do not support per-channel configuration - dropping"
                         "per-channel configuration options for {} resulted in no valid quantization "
                         "configs!".format(op_meta_name))
-                nncf_logger.warning(
-                    "Unified scales currently do not support per-channel configuration - dropping"
-                    "per-channel configuration options for {}".format(op_meta_name))
+                nncf_logger.warning(f"Unified scales currently do not support per-channel configuration - dropping"
+                                    f"per-channel configuration options for {op_meta_name}")
                 qconf_list = per_tensor_qconf_list
 
         pred_ip_key_vs_qconf_dict = OrderedDict()
@@ -938,8 +1091,8 @@ class QuantizerPropagationSolver:
             if not edge[QuantizerPropagationStateGraph.IS_INTEGER_PATH_EDGE_ATTR]:
                 pred_ip_key_vs_qconf_dict[pred_ip_key] = qconf_list
             else:
-                nncf_logger.debug("Detected integer input {} - won't set up "
-                                  "a propagating quantizer for it".format(pred_ip_key))
+                nncf_logger.debug(f"Detected integer input {pred_ip_key} - won't set up "
+                                  f"a propagating quantizer for it")
 
         if not pred_ip_key_vs_qconf_dict:
             # All inputs to the operator were integer
@@ -1070,7 +1223,7 @@ class QuantizerPropagationSolver:
           cloned before transition, which impacts the logic of the function.
         :return: The status of the transition determining how it should proceed.
         """
-        #pylint:disable=too-many-branches
+        # pylint:disable=too-many-branches
         for from_node_key, to_node_key in path:
             from_node = quant_prop_graph.nodes[from_node_key]
 
@@ -1174,7 +1327,7 @@ class QuantizerPropagationSolver:
             qconfigs_union.update(set(branch_qconfig_list))
         merged_qconfig_list = []
 
-        nncf_logger.debug("Union of configs: {}".format(";".join([str(qc) for qc in qconfigs_union])))
+        nncf_logger.debug(f"Union of configs: {';'.join([str(qc) for qc in qconfigs_union])}")
 
         def compatible_with_requant(qconf: QuantizerConfig,
                                     other_qconf_list: List[QuantizerConfig]) -> bool:
@@ -1196,13 +1349,13 @@ class QuantizerPropagationSolver:
         elif self._propagation_strategy == PropagationStrategy.MERGE_WITH_SINGLE_FQ_RESULT:
             compatible_fn = compatible_wo_requant
         else:
-            raise RuntimeError("Unknown propagation strategy: {}".format(self._propagation_strategy))
+            raise RuntimeError(f"Unknown propagation strategy: {self._propagation_strategy}")
 
         for qconf in qconfigs_union:
             if all(compatible_fn(qconf, qconf_list) for qconf_list in potential_qconfigs_for_each_branch):
                 merged_qconfig_list.append(qconf)
 
-        nncf_logger.debug("Merged list before sorting: {}".format(";".join([str(qc) for qc in merged_qconfig_list])))
+        nncf_logger.debug(f"Merged list before sorting: {';'.join([str(qc) for qc in merged_qconfig_list])}")
 
         if not merged_qconfig_list:
             # Impossible to produce a merged configuration space of any kind, won't merge
@@ -1214,14 +1367,12 @@ class QuantizerPropagationSolver:
             potential_qconfigs_for_each_branch)
 
         qconfig_and_priority_list_sorted_by_priority = sorted(qconfig_and_priority_list, key=lambda x: x[1])
-        nncf_logger.debug(
-            "Priority-sorted merge qconfigs: {}".format(";".join(
-                [str(qc_tup[1]) + ':' + str(qc_tup[0]) for qc_tup in
-                 qconfig_and_priority_list_sorted_by_priority])))
+        config_list_to_print = ";".join([str(qc_tup[1]) + ':' + str(qc_tup[0]) for qc_tup in
+                                         qconfig_and_priority_list_sorted_by_priority])
+        nncf_logger.debug(f"Priority-sorted merge qconfigs: {config_list_to_print}")
 
         merged_qconfig_list = self.__disambiguate_config_list(qconfig_and_priority_list_sorted_by_priority)
-        nncf_logger.debug(
-            "Disambiguated merge qconfig list: {}".format(";".join([str(qc) for qc in merged_qconfig_list])))
+        nncf_logger.debug(f"Disambiguated merge qconfig list: {';'.join([str(qc) for qc in merged_qconfig_list])}")
 
         merged_qconfig_list_counter = Counter(merged_qconfig_list)
         resulting_branch_qconfig_lists = [None for _ in potential_qconfigs_for_each_branch]
@@ -1246,7 +1397,7 @@ class QuantizerPropagationSolver:
         qconfig_and_priority_list = []  # type: List[Tuple[QuantizerConfig, int]]
         for merged_qconfig in merged_qconfig_list:
             priority = 0
-            max_original_list_len = max([len(x) for x in potential_qconfigs_for_each_branch])
+            max_original_list_len = max(len(x) for x in potential_qconfigs_for_each_branch)
             for original_branch_qconfig_list in potential_qconfigs_for_each_branch:
                 try:
                     idx = original_branch_qconfig_list.index(merged_qconfig)

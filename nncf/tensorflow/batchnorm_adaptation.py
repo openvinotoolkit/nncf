@@ -1,5 +1,5 @@
 """
- Copyright (c) 2021 Intel Corporation
+ Copyright (c) 2023 Intel Corporation
  Licensed under the Apache License, Version 2.0 (the "License");
  you may not use this file except in compliance with the License.
  You may obtain a copy of the License at
@@ -16,7 +16,7 @@ from itertools import islice
 import tensorflow as tf
 
 from nncf.common.initialization.batchnorm_adaptation import BatchnormAdaptationAlgorithmImpl
-from nncf.common.utils.progress_bar import ProgressBar
+from nncf.common.logging.progress_bar import ProgressBar
 from nncf.tensorflow.graph.metatypes.keras_layers import TFBatchNormalizationLayerMetatype
 from nncf.tensorflow.graph.metatypes.matcher import get_keras_layer_metatype
 

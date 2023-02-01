@@ -1,0 +1,95 @@
+models:
+  - name: MaskRCNN-12-det
+    launchers:
+      - framework: onnx_runtime
+        execution_providers: [ 'OpenVINOExecutionProvider' ]
+        tags: ['OpenVINOExecutionProvider']
+        adapter:
+          type: mask_rcnn
+          boxes_out: '6568'
+          classes_out: '6570'
+          scores_out: '6572'
+          raw_masks_out: '6887'
+        inputs:
+          - name: image
+            type: INPUT
+            layout: "CHW"
+      - framework: onnx_runtime
+        execution_providers: [ 'CPUExecutionProvider' ]
+        tags: ['CPUExecutionProvider']
+        adapter:
+          type: mask_rcnn
+          boxes_out: '6568'
+          classes_out: '6570'
+          scores_out: '6572'
+          raw_masks_out: '6887'
+        inputs:
+          - name: image
+            type: INPUT
+            layout: "CHW"
+
+    datasets:
+      - name: ms_coco_detection_80_class_with_background
+        preprocessing:
+          - type: resize
+            size: 800
+            aspect_ratio_scale: mask_rcnn_benchmark_aspect_ratio
+            factor: 32
+            include_boundary: True
+            interpolation: LINEAR
+          - type: normalization
+            mean: (102.9801, 115.9465, 122.7717)
+
+        metrics:
+          - type: coco_precision
+            threshold: .5:.05:.95
+
+    has_batch_dim: False
+    disallowed_op_types: ["Resize", 'Div', "RoiAlign", 'ScatterElements']
+    convert_opset_version: False
+
+  - name: MaskRCNN-12-inst-seg
+    launchers:
+      - framework: onnx_runtime
+        execution_providers: [ 'OpenVINOExecutionProvider' ]
+        tags: ['OpenVINOExecutionProvider']
+        adapter:
+          type: mask_rcnn
+          boxes_out: '6568'
+          classes_out: '6570'
+          scores_out: '6572'
+          raw_masks_out: '6887'
+        inputs:
+          - name: image
+            type: INPUT
+            layout: "CHW"
+      - framework: onnx_runtime
+        execution_providers: [ 'CPUExecutionProvider' ]
+        tags: ['CPUExecutionProvider']
+        adapter:
+          type: mask_rcnn
+          boxes_out: '6568'
+          classes_out: '6570'
+          scores_out: '6572'
+          raw_masks_out: '6887'
+        inputs:
+          - name: image
+            type: INPUT
+            layout: "CHW"
+
+    datasets:
+      - name: ms_coco_mask_rcnn_short_80_classes
+        preprocessing:
+          - type: resize
+            size: 800
+            aspect_ratio_scale: mask_rcnn_benchmark_aspect_ratio
+            factor: 32
+            include_boundary: True
+            interpolation: LINEAR
+          - type: normalization
+            mean: (102.9801, 115.9465, 122.7717)
+
+        metrics:
+          - type: coco_orig_segm_precision
+
+    no_ptq: True

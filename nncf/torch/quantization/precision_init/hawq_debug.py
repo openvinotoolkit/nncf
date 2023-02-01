@@ -1,5 +1,5 @@
 """
- Copyright (c) 2020-2021 Intel Corporation
+ Copyright (c) 2020-2023 Intel Corporation
  Licensed under the Apache License, Version 2.0 (the "License");
  you may not use this file except in compliance with the License.
  You may obtain a copy of the License at
@@ -15,13 +15,13 @@ from collections import OrderedDict
 from pathlib import Path
 from typing import List
 
-import networkx as nx
 import torch
 from torch import Tensor
 
-from nncf.common.utils.logger import logger as nncf_logger
-from nncf.torch.nncf_network import ExtraCompressionModuleType
-from nncf.torch.nncf_network import NNCFNetwork
+from nncf.common.logging import nncf_logger
+from nncf.common.utils.decorators import skip_if_dependency_unavailable
+from nncf.common.utils.dot_file_rw import write_dot_graph
+from nncf.torch.nncf_network import ExtraCompressionModuleType, NNCFNetwork
 from nncf.torch.quantization.adjust_padding import add_adjust_padding_nodes
 from nncf.torch.quantization.layers import QUANTIZATION_MODULES
 from nncf.torch.quantization.precision_init.adjacent_quantizers import GroupsOfAdjacentQuantizers
@@ -42,7 +42,7 @@ class HAWQDebugger:
         self._num_weights = len(traces_per_layer.traces_order)
         self._perturbations = perturbations
 
-        from nncf.common.utils.debug import DEBUG_LOG_DIR
+        from nncf.common.utils.debug import DEBUG_LOG_DIR #pylint: disable=cyclic-import
         self._dump_dir = Path(DEBUG_LOG_DIR) / Path("hawq_dumps")
         self._dump_dir.mkdir(parents=True, exist_ok=True)
 
@@ -79,6 +79,7 @@ class HAWQDebugger:
         all_quantizations = OrderedDict(sorted(all_quantizations.items(), key=lambda x: str(x[0])))
         return all_quantizations
 
+    @skip_if_dependency_unavailable(dependencies=['matplotlib.pyplot'])
     def dump_avg_traces(self):
         import matplotlib.pyplot as plt
         dump_file = os.path.join(self._dump_dir, 'avg_traces_per_layer')
@@ -92,6 +93,7 @@ class HAWQDebugger:
         ax.plot(self._traces_per_layer.cpu().numpy())
         plt.savefig(dump_file)
 
+    @skip_if_dependency_unavailable(dependencies=['matplotlib.pyplot'])
     def dump_metric_MB(self, metric_per_qconfig_sequence: List[Tensor]):
         import matplotlib.pyplot as plt
         list_to_plot = [cm.item() for cm in metric_per_qconfig_sequence]
@@ -109,12 +111,15 @@ class HAWQDebugger:
         ax.scatter(ms_m, cm_m, s=30, facecolors='none', edgecolors='b', label='median from all metrics')
         ax.legend()
         plt.savefig(os.path.join(self._dump_dir, 'Pareto_Frontier'))
-        nncf_logger.info(
-            'Distribution of HAWQ metrics: min_value={:.3f}, max_value={:.3f}, median_value={:.3f}, '
-            'median_index={}, total_number={}'.format(cm.min().item(), cm.max().item(), cm_m,
-                                                      qconfig_index,
-                                                      len(metric_per_qconfig_sequence)))
+        nncf_logger.debug(
+            f'Distribution of HAWQ metrics: '
+            f'min_value={cm.min().item():.3f}, '
+            f'max_value={cm.max().item():.3f}, '
+            f'median_value={cm_m:.3f}, '
+            f'median_index={qconfig_index}, '
+            f'total_number={len(metric_per_qconfig_sequence)}')
 
+    @skip_if_dependency_unavailable(dependencies=['matplotlib.pyplot'])
     def dump_metric_flops(self, metric_per_qconfig_sequence: List[Tensor], flops_per_config: List[float],
                           choosen_qconfig_index: int):
         import matplotlib.pyplot as plt
@@ -138,6 +143,7 @@ class HAWQDebugger:
         ax.legend()
         plt.savefig(os.path.join(self._dump_dir, 'Pareto_Frontier_compress_ratio'))
 
+    @skip_if_dependency_unavailable(dependencies=['matplotlib.pyplot'])
     def dump_density_of_quantization_noise(self):
         noise_per_config = []  # type: List[Tensor]
         for qconfig_sequence in self._weight_qconfig_sequences_in_trace_order:
@@ -159,6 +165,7 @@ class HAWQDebugger:
         ax.legend()
         plt.savefig(os.path.join(self._dump_dir, 'Density_of_quantization_noise'))
 
+    @skip_if_dependency_unavailable(dependencies=['matplotlib.pyplot'])
     def dump_perturbations_ratio(self):
         import matplotlib.pyplot as plt
         fig = plt.figure()
@@ -186,7 +193,7 @@ class HAWQDebugger:
 
     def dump_bitwidth_graph(self, algo_ctrl: 'QuantizationController', model: NNCFNetwork,
                             groups_of_adjacent_quantizers: GroupsOfAdjacentQuantizers):
-        from nncf.torch.quantization.precision_init.bitwidth_graph import BitwidthGraph
+        from nncf.torch.quantization.precision_init.bitwidth_graph import BitwidthGraph #pylint: disable=cyclic-import
         bw_graph = BitwidthGraph(algo_ctrl, model, groups_of_adjacent_quantizers).get()
         nx_graph = add_adjust_padding_nodes(bw_graph, model)
-        nx.drawing.nx_pydot.write_dot(nx_graph, self._dump_dir / Path('bitwidth_graph.dot'))
+        write_dot_graph(nx_graph, self._dump_dir / Path('bitwidth_graph.dot'))

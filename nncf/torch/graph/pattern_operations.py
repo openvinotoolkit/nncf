@@ -1,5 +1,5 @@
 """
- Copyright (c) 2021 Intel Corporation
+ Copyright (c) 2023 Intel Corporation
  Licensed under the Apache License, Version 2.0 (the "License");
  you may not use this file except in compliance with the License.
  You may obtain a copy of the License at
@@ -19,7 +19,10 @@ LINEAR_OPERATIONS = {'type': ['linear',
                               'conv_transpose1d',
                               'conv_transpose2d',
                               'conv_transpose3d',
-                              'addmm'
+                              'addmm',
+                              'bmm',
+                              'matmul',
+                              'mm'
                               ],
                      'label': 'LINEAR'}
 
@@ -34,6 +37,9 @@ BATCH_NORMALIZATION_OPERATIONS = {'type': ['batch_norm',
 GROUP_NORMALIZATION_OPERATIONS = {'type': ['group_norm'],
                                   'label': 'GROUP_NORMALIZATION'}
 
+LAYER_NORMALIZATION_OPERATIONS = {'type': ['layer_norm'],
+                                  'label': 'LAYER_NORMALIZATION'}
+
 RELU_OPERATIONS = {'type': ['relu',
                             'relu_',
                             'hardtanh'
@@ -44,6 +50,7 @@ RELU_OPERATIONS = {'type': ['relu',
 NON_RELU_ACTIVATIONS_OPERATIONS = {'type': ['elu',
                                             'elu_',
                                             'prelu',
+                                            'leaky_relu',
                                             'sigmoid',
                                             'gelu',
                                             'silu',
@@ -69,8 +76,3 @@ POOLING_OPERATIONS = {'type': ['adaptive_avg_pool2d',
                                'avg_pool2d',
                                'avg_pool3d'],
                       'label': 'POOLING'}
-
-MATMUL_OPERATIONS = {'type': ['bmm',
-                              'matmul'
-                              ],
-                     'label': 'MATMUL'}

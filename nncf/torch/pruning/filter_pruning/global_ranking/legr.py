@@ -1,5 +1,5 @@
 """
- Copyright (c) 2020 Intel Corporation
+ Copyright (c) 2023 Intel Corporation
  Licensed under the Apache License, Version 2.0 (the "License");
  you may not use this file except in compliance with the License.
  You may obtain a copy of the License at
@@ -14,7 +14,11 @@ import time
 
 from torch import nn
 
-from nncf.common.utils.logger import logger as nncf_logger
+from nncf.common.logging import nncf_logger
+from nncf.config.schemata.defaults import PRUNING_LEGR_GENERATIONS
+from nncf.config.schemata.defaults import PRUNING_LEGR_MAX_PRUNING
+from nncf.config.schemata.defaults import PRUNING_LEGR_RANDOM_SEED
+from nncf.config.schemata.defaults import PRUNING_LEGR_TRAIN_STEPS
 from nncf.torch.pruning.filter_pruning.global_ranking.evolutionary_optimization import LeGRPruner, EvolutionOptimizer, \
     LeGREvolutionEnv
 from nncf.torch.structures import LeGRInitArgs
@@ -25,8 +29,13 @@ class LeGR:
     Class for training global ranking coefficients with Evolution optimization agent (but this agent can be easily
     replaced by any other RL agent with a similar interface) and LeGR-optimization environment.
     """
-    def __init__(self, pruning_ctrl: 'FilterPruningController', target_model: nn.Module, legr_init_args: LeGRInitArgs,
-                 train_steps: int = 200, generations: int = 400, max_pruning: float = 0.8, random_seed: int = 42):
+    def __init__(self, pruning_ctrl: 'FilterPruningController',
+                 target_model: nn.Module,
+                 legr_init_args: LeGRInitArgs,
+                 train_steps: int = PRUNING_LEGR_TRAIN_STEPS,
+                 generations: int = PRUNING_LEGR_GENERATIONS,
+                 max_pruning: float = PRUNING_LEGR_MAX_PRUNING,
+                 random_seed: int = PRUNING_LEGR_RANDOM_SEED):
         """
         Initializing all necessary structures for optimization- LeGREvolutionEnv environment and EvolutionOptimizer
          agent.
@@ -91,14 +100,12 @@ class LeGR:
             generation_time = time.time() - end
             end = time.time()
 
-            nncf_logger.info('Generation = {episode}, '
-                             'Reward = {reward:.3f}, '
-                             'Time = {time:.3f} \n'.format(episode=episode, reward=episode_reward[0],
-                                                           time=generation_time))
+            nncf_logger.info(
+                f'Generation = {episode}, Reward = {episode_reward[0]:.3f}, Time = {generation_time:.3f} \n')
             reward_list.append(episode_reward[0])
         self.env.reset()
         nncf_logger.info('Finished training LeGR ranking coefficients.')
-        nncf_logger.info('Evolution algorithm rewards history = {}'.format(reward_list))
+        nncf_logger.info(f'Evolution algorithm rewards history = {reward_list}')
 
         best_ranking = self.agent.get_best_action()
         return best_ranking

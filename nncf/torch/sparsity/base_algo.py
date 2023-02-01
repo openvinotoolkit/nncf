@@ -1,5 +1,5 @@
 """
- Copyright (c) 2019-2020 Intel Corporation
+ Copyright (c) 2019-2023 Intel Corporation
  Licensed under the Apache License, Version 2.0 (the "License");
  you may not use this file except in compliance with the License.
  You may obtain a copy of the License at
@@ -24,7 +24,7 @@ from nncf.common.graph.transformations.commands import TargetType
 from nncf.common.schedulers import BaseCompressionScheduler
 from nncf.common.schedulers import StubCompressionScheduler
 from nncf.common.sparsity.controller import SparsityController
-from nncf.common.utils.logger import logger as nncf_logger
+from nncf.common.logging import nncf_logger
 from nncf.torch.algo_selector import ZeroCompressionLoss
 from nncf.torch.compression_method_api import PTCompressionAlgorithmBuilder
 from nncf.torch.compression_method_api import PTCompressionAlgorithmController
@@ -33,6 +33,7 @@ from nncf.torch.graph.transformations.commands import PTTargetPoint
 from nncf.torch.graph.transformations.commands import TransformationPriority
 from nncf.torch.graph.transformations.layout import PTTransformationLayout
 from nncf.torch.nncf_network import NNCFNetwork
+from nncf.torch.utils import get_model_device
 
 
 class SparseModuleInfo:
@@ -56,7 +57,7 @@ class BaseSparsityAlgoBuilder(PTCompressionAlgorithmBuilder):
         return layout
 
     def _sparsify_weights(self, target_model: NNCFNetwork) -> List[PTInsertionCommand]:
-        device = next(target_model.parameters()).device
+        device = get_model_device(target_model)
         sparsified_module_nodes = target_model.get_weighted_original_graph_nodes(
             nncf_module_names=self.compressed_nncf_module_names)
         insertion_commands = []
@@ -64,10 +65,9 @@ class BaseSparsityAlgoBuilder(PTCompressionAlgorithmBuilder):
             node_name = module_node.node_name
 
             if not self._should_consider_scope(node_name):
-                nncf_logger.info("Ignored adding Weight Sparsifier in scope: {}".format(node_name))
+                nncf_logger.info(f"Ignored adding weight sparsifier for operation: {node_name}")
                 continue
 
-            nncf_logger.info("Adding Weight Sparsifier in scope: {}".format(node_name))
             compression_lr_multiplier = \
                 self.config.get_redefinable_global_param_value_for_algo('compression_lr_multiplier',
                                                                         self.name)
@@ -93,7 +93,7 @@ class BaseSparsityAlgoController(PTCompressionAlgorithmController, SparsityContr
     def __init__(self, target_model: NNCFNetwork,
                  sparsified_module_info: List[SparseModuleInfo]):
         super().__init__(target_model)
-        self._loss = ZeroCompressionLoss(next(target_model.parameters()).device)
+        self._loss = ZeroCompressionLoss(get_model_device(target_model))
         self._scheduler = BaseCompressionScheduler()
         self.sparsified_module_info = sparsified_module_info
 

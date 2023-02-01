@@ -1,5 +1,5 @@
 """
- Copyright (c) 2019 Intel Corporation
+ Copyright (c) 2023 Intel Corporation
  Licensed under the Apache License, Version 2.0 (the "License");
  you may not use this file except in compliance with the License.
  You may obtain a copy of the License at
@@ -13,16 +13,19 @@
 
 from copy import deepcopy
 from pathlib import Path
-from typing import List, Type, Optional
+from typing import List
+from typing import Optional
+from typing import Type
 
 import jsonschema
 import jstyleson as json
 
-from nncf.common.utils.logger import logger
+from nncf.common.logging import nncf_logger
 from nncf.common.utils.os import safe_open
-from nncf.config.schema import ROOT_NNCF_CONFIG_SCHEMA
+from nncf.config.definitions import SCHEMA_VISUALIZATION_URL
+from nncf.config.schema import REF_VS_ALGO_SCHEMA
+from nncf.config.schema import NNCF_CONFIG_SCHEMA
 from nncf.config.schema import validate_single_compression_algo_schema
-from nncf.config.schema import validate_accuracy_aware_training_schema
 from nncf.config.structures import NNCFExtraConfigStruct
 
 
@@ -80,7 +83,7 @@ class NNCFConfig(dict):
           the resolution of the redefinable parameter should occur.
         :return: The value of the parameter that should be applied for the algo specified by `algo_name`.
         """
-        from nncf.config.extractors import extract_algo_specific_config
+        from nncf.config.extractors import extract_algo_specific_config #pylint: disable=cyclic-import
         algo_config = extract_algo_specific_config(self, algo_name)
         param = self.get(param_name)
         algo_specific_param = algo_config.get(param_name)
@@ -89,36 +92,36 @@ class NNCFConfig(dict):
         return param
 
     @staticmethod
+    def schema():
+        return NNCF_CONFIG_SCHEMA
+
+    @staticmethod
+    def _is_path_to_algorithm_name(path_parts: List[str]) -> bool:
+        return (len(path_parts) == 2 and path_parts[0] == "compression" and path_parts[1] == "algorithm") or \
+               (len(path_parts) == 3 and path_parts[0] == "compression" and path_parts[1].isnumeric()
+                and path_parts[2] == "algorithm")
+
+    @staticmethod
     def validate(loaded_json):
         try:
-            jsonschema.validate(loaded_json, schema=ROOT_NNCF_CONFIG_SCHEMA)
+            jsonschema.validate(loaded_json, NNCFConfig.schema())
         except jsonschema.ValidationError as e:
-            logger.error('Invalid NNCF config supplied!')
+            nncf_logger.error('Invalid NNCF config supplied!')
+            absolute_path_parts = [str(x) for x in e.absolute_path]
+            if not NNCFConfig._is_path_to_algorithm_name(absolute_path_parts):
+                e.message += f"\nRefer to the NNCF config schema documentation at " \
+                             f"{SCHEMA_VISUALIZATION_URL}"
+                e.schema = "*schema too long for stdout display*"
+                raise e
 
-            # The default exception's __str__ result will contain the entire schema,
-            # which is too large to be readable.
-            import nncf.config.schema as config_schema
-            msg = e.message + '. See documentation or {} for an NNCF configuration file JSON schema definition'.format(
-                config_schema.__file__)
-            raise jsonschema.ValidationError(msg)
-
-        compression_section = loaded_json.get('compression')
-        accuracy_aware_section = loaded_json.get('accuracy_aware_training')
-        if accuracy_aware_section is not None:
-            validate_accuracy_aware_training_schema(accuracy_aware_section)
-        if compression_section is None:
-            # No compression specified
-            return
-
-        try:
+            # Need to make the error more algo-specific in case the config was so bad that no
+            # scheme could be matched
+            # If error is in the algo section, will revalidate the algo sections separately to
+            # make the error message more targeted instead of displaying the entire huge schema.
+            compression_section = loaded_json["compression"]
             if isinstance(compression_section, dict):
-                validate_single_compression_algo_schema(compression_section)
+                validate_single_compression_algo_schema(compression_section, REF_VS_ALGO_SCHEMA)
             else:
                 # Passed a list of dicts
                 for compression_algo_dict in compression_section:
-                    validate_single_compression_algo_schema(compression_algo_dict)
-        except jsonschema.ValidationError:
-            # No need to trim the exception output here since only the compression algo
-            # specific sub-schema will be shown, which is much shorter than the global schema
-            logger.error('Invalid NNCF config supplied!')
-            raise
+                    validate_single_compression_algo_schema(compression_algo_dict, REF_VS_ALGO_SCHEMA)

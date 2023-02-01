@@ -1,5 +1,5 @@
 """
- Copyright (c) 2020 Intel Corporation
+ Copyright (c) 2023 Intel Corporation
  Licensed under the Apache License, Version 2.0 (the "License");
  you may not use this file except in compliance with the License.
  You may obtain a copy of the License at
@@ -17,11 +17,14 @@ import torch
 from torch import nn
 
 from nncf.config import NNCFConfig
+from nncf.torch.dynamic_graph.context import no_nncf_trace
 from tests.torch.test_models.pnasnet import CellB
-from tests.torch.helpers import create_conv
+from tests.torch.helpers import create_bn, create_conv, fill_linear_weight
 from tests.torch.helpers import create_transpose_conv
 from tests.torch.helpers import create_depthwise_conv
 from tests.torch.helpers import create_grouped_conv
+
+#pylint: disable=too-many-lines
 
 
 class PruningTestModel(nn.Module):
@@ -43,7 +46,7 @@ class PruningTestModel(nn.Module):
         return x
 
 
-class TestModelDiffConvs(nn.Module):
+class DiffConvsModel(nn.Module):
     def __init__(self):
         super().__init__()
         # Usual conv
@@ -67,7 +70,7 @@ class TestModelDiffConvs(nn.Module):
         return x
 
 
-class TestModelBranching(nn.Module):
+class BranchingModel(nn.Module):
     def __init__(self):
         super().__init__()
         self.conv1 = create_conv(1, 3, 2, 1, -2)
@@ -84,9 +87,10 @@ class TestModelBranching(nn.Module):
         return x
 
 
-class TestModelResidualConnection(nn.Module):
-    def __init__(self):
+class ResidualConnectionModel(nn.Module):
+    def __init__(self, last_layer_accept_pruning=True):
         super().__init__()
+        self.last_layer_accept_pruning = last_layer_accept_pruning
         self.conv1 = create_conv(1, 8, 3, 1, -2, padding=1)
         self.conv2 = create_conv(8, 8, 3, 2, -2, padding=1)
         self.conv3 = create_conv(8, 8, 3, 3, -2, padding=1)
@@ -101,11 +105,14 @@ class TestModelResidualConnection(nn.Module):
         x = x + self.conv3(x)
         x = self.relu(x)
         x = self.conv4(x) + self.conv5(x)
-        x = self.linear(x.view(-1))
+        b, *_ = x.size()
+        view_const = (b, -1) if self.last_layer_accept_pruning else (-1)
+        x = x.view(view_const)
+        x = self.linear(x)
         return x
 
 
-class TestModelEltwiseCombination(nn.Module):
+class EltwiseCombinationModel(nn.Module):
     def __init__(self):
         super().__init__()
         self.conv1 = create_conv(1, 8, 3, 1, -2, padding=1)
@@ -148,6 +155,125 @@ class PruningTestModelConcat(nn.Module):
         x = self.relu(x)
         x = self.conv4(x)
         return x
+
+
+class PruningTestModelConcatWithLinear(nn.Module):
+    def __init__(self):
+        super().__init__()
+        self.conv1 = create_conv(1, 16, 2, 1, -2)
+        for i in range(16):
+            self.conv1.weight.data[i] += i
+        self.conv2 = create_conv(16, 32, 2, 2, -2)
+        for i in range(32):
+            self.conv2.weight.data[i] += i
+        self.conv3 = create_conv(16, 32, 2, 2, -2)
+        for i in range(32):
+            self.conv3.weight.data[i] += i
+        self.relu = nn.ReLU()
+        self.linear = nn.Linear(64 * 6 * 6, 1)
+        self.linear.weight.data[0] = 1
+
+    def forward(self, x):
+        x = self.conv1(x)
+        x = torch.cat([self.conv2(x), self.conv3(x)], dim=1)
+        x = self.relu(x.view(1, -1))
+        x = self.linear(x)
+        return x
+
+
+class PruningTestModelDiffChInPruningCluster(nn.Module):
+    def __init__(self):
+        super().__init__()
+        # input_shape=[1, 1, 8, 8]
+        self.first_conv = create_conv(1, 16, 2, 1, -2)
+        for i in range(16):
+            self.first_conv.weight.data[i] += i
+        self.conv1 = create_conv(16, 32, 2, 1, -2)
+        for i in range(32):
+            self.conv1.weight.data[i] += i
+        self.linear1 = nn.Linear(16 * 7 * 7, 32 * 6 * 6)
+        for i in range(32 * 6 * 6):
+            self.linear1.weight.data[i] += i
+        self.last_linear = nn.Linear(32 * 6 * 6, 1)
+        self.last_linear.weight.data[0] = 1
+
+    def forward(self, x):
+        x = self.first_conv(x)
+        y = self.conv1(x).view(1, -1)
+        z = self.linear1(x.view(1, -1))
+        return self.last_linear(y + z)
+
+
+class PruningTestBatchedLinear(nn.Module):
+    def __init__(self):
+        super().__init__()
+        # input_shape=[1, 1, 8, 8]
+        self.first_conv = create_conv(1, 32, 1)
+        for i in range(32):
+            self.first_conv.weight.data[i] += i
+        self.linear1 = nn.Linear(8, 16)
+        for i in range (16):
+            self.linear1.weight.data[i] = i
+        self.last_linear = nn.Linear(32 * 8 * 16, 1)
+        fill_linear_weight(self.last_linear, 1)
+
+    def forward(self, x):
+        x = self.first_conv(x)
+        x = self.linear1(x)
+        return self.last_linear(x.view(1, -1))
+
+
+class PruningTestModelBroadcastedLinear(nn.Module):
+    def __init__(self):
+        super().__init__()
+        # input_shape=[1, 1, 8, 8]
+        self.first_conv = create_conv(1, 32, 1)
+        for i in range(32):
+            self.first_conv.weight.data[i] += i
+        self.conv1 = create_conv(32, 16, 1)
+        for i in range(16):
+            self.conv1.weight.data[i] += i
+        self.linear1 = nn.Linear(32 * 8 * 8, 16)
+        for i in range (16):
+            self.linear1.weight.data[i] = i
+        self.last_linear = nn.Linear(16 * 8 * 8, 1)
+        fill_linear_weight(self.last_linear, 1)
+
+    def forward(self, x):
+        x = self.first_conv(x)
+        y = self.conv1(x)
+        z = self.linear1(x.view(1, -1))
+        x = y + z.view(1, -1, 1, 1)
+        return self.last_linear(x.view(1, -1))
+
+
+class PruningTestModelBroadcastedLinearWithConcat(nn.Module):
+    def __init__(self):
+        super().__init__()
+        # input_shape=[1, 1, 8, 8]
+        self.first_conv = create_conv(1, 32, 1)
+        for i in range(32):
+            self.first_conv.weight.data[i] += i
+        self.conv1 = create_conv(32, 16, 1)
+        for i in range(16):
+            self.conv1.weight.data[i] += i
+        self.linear1 = nn.Linear(32 * 8 * 8, 16)
+        for i in range (16):
+            self.linear1.weight.data[i] = i
+        self.conv2 = create_conv(32, 16, 1)
+        for i in range(16):
+            self.conv2.weight.data[i] += i
+        self.last_linear = nn.Linear(2 * 16 * 8 * 8, 1)
+        fill_linear_weight(self.last_linear, 1)
+
+    def forward(self, x):
+        x = self.first_conv(x)
+        y = self.conv1(x)
+        z = self.linear1(x.view(1, -1))
+        w = y + z.view(1, -1, 1, 1)
+        p = self.conv2(x)
+        x = torch.cat((w, p), dim=1)
+        return self.last_linear(x.view(1, -1))
 
 
 class PruningTestModelConcatBN(nn.Module):
@@ -216,24 +342,33 @@ class PruningTestModelEltwise(nn.Module):
 
 
 class BigPruningTestModel(nn.Module):
-    def __init__(self):
+    def __init__(self, dim=2):
         super().__init__()
-        self.conv1 = create_conv(1, 16, 2, 0, 1)
+        self.dim = dim
+        self.conv1 = create_conv(1, 16, 2, 0, 1, dim=self.dim)
         for i in range(16):
             self.conv1.weight.data[i] += i
-        self.bn1 = nn.BatchNorm2d(16)
+        self.bn1 = create_bn(16, dim=self.dim)
         self.relu = nn.ReLU()
-        self.conv_depthwise = create_depthwise_conv(16, 3, 0, 1)
+        self.conv_depthwise = create_depthwise_conv(16, 3, 0, 1, dim=self.dim)
         for i in range(16):
             self.conv_depthwise.weight.data[i] += i
-        self.conv2 = create_conv(16, 32, 3, 20, 0)
+        self.conv2 = create_conv(16, 32, 3, 20, 0, dim=self.dim)
         for i in range(32):
             self.conv2.weight.data[i] += i
-        self.bn2 = nn.BatchNorm2d(32)
-        self.up = create_transpose_conv(32, 64, 3, 3, 1, 2)
+        self.bn2 = create_bn(32, dim=self.dim)
+        self.up = create_transpose_conv(32, 64, 3, 3, 1, 2, dim=self.dim)
         for i in range(64):
             self.up.weight.data[0][i] += i
-        self.conv3 = create_conv(64, 1, 5, 5, 1)
+        self.linear = nn.Linear(448 * 7**(self.dim - 1), 128)
+        self.layernorm = nn.LayerNorm(128)
+        for i in range(128):
+            self.linear.weight.data[i] = i
+            self.layernorm.weight.data[i] = i
+        self.linear.bias.data.fill_(1)
+        self.layernorm.bias.data.fill_(1)
+        self.bn3 = create_bn(128, dim=self.dim)
+        self.conv3 = create_conv(128, 1, 1, 5, 1, dim=self.dim)
 
     def forward(self, x):
         x = self.conv1(x)
@@ -245,10 +380,13 @@ class BigPruningTestModel(nn.Module):
         x = self.relu(x)
         x = self.up(x)
         x = self.relu(x)
+        b, *_ = x.size()
+        x = self.linear(x.view(b, -1))
+        x = self.layernorm(x).view(b, -1, *[1]*self.dim)
+        x = self.bn3(x)
         x = self.conv3(x)
-        x = x.view(1, -1)
+        x = x.view(b, -1)
         return x
-
 
 class TestShuffleUnit(nn.Module):
     def __init__(self,
@@ -290,7 +428,7 @@ class TestShuffleUnit(nn.Module):
         return x
 
 
-class TestModelShuffleNetUnit(nn.Module):
+class ShuffleNetUnitModel(nn.Module):
     def __init__(self):
         super().__init__()
         self.conv = create_conv(1, 16, 1, 1, -2)
@@ -302,7 +440,7 @@ class TestModelShuffleNetUnit(nn.Module):
         return x
 
 
-class TestModelShuffleNetUnitDW(nn.Module):
+class ShuffleNetUnitModelDW(nn.Module):
     def __init__(self):
         super().__init__()
         self.conv = create_conv(1, 16, 1, 1, -2)
@@ -314,7 +452,7 @@ class TestModelShuffleNetUnitDW(nn.Module):
         return x
 
 
-class TestModelMultipleForward(nn.Module):
+class MultipleForwardModel(nn.Module):
     def __init__(self, repeat_seq_of_shared_convs=False, additional_last_shared_layers=False):
         super().__init__()
         self.num_iter_shared_convs = 2 if repeat_seq_of_shared_convs else 1
@@ -351,7 +489,7 @@ class TestModelMultipleForward(nn.Module):
         return x1, x2, x3
 
 
-class TestModelGroupNorm(nn.Module):
+class GroupNormModel(nn.Module):
     def __init__(self):
         super().__init__()
         self.conv1 = create_conv(1, 16, 1, 1, -2)
@@ -467,15 +605,17 @@ class PruningTestModelWrongDimsElementwise(nn.Module):
         return x
 
 
-class PruningTestModelStopOp(nn.Module):
+class PruningTestModelSimplePrunableLinear(nn.Module):
     def __init__(self):
         super().__init__()
-        self.conv = create_conv(1, 1, 1)
-        self.linear = nn.Linear(64, 1)
+        self.conv = create_conv(1, 4, 1)
+        self.linear = nn.Linear(256, 32)
+        self.last_linear = nn.Linear(32, 1)
 
     def forward(self, x):
         x = self.conv(x)
         x = self.linear(torch.flatten(x, start_dim=1))
+        x = self.last_linear(x)
         return x
 
 
@@ -494,14 +634,17 @@ class DisconectedGraphModel(nn.Module):
 
     def forward(self, x):
         x = self.conv1(x)
-        # Broke tracing graph by copy function
-        x = copy.copy(x)
+        # Broke tracing graph by no_nncf_trace
+        with no_nncf_trace():
+            x = self.relu(x)
         x = self.relu(x)
         x = self.conv2(x)
         x = self.conv3(x)
         x = x.view(-1, 64)
         x = self.fc(x)
-        # Broke tracing graph by copy function
+        # Broke tracing graph by no_nncf_trace
+        with no_nncf_trace():
+            x = self.relu(x)
         x = copy.copy(x)
         return x
 
@@ -583,6 +726,221 @@ class GroupedConvolutionModel(nn.Module):
         return self.fc(x)
 
 
+class SplitIdentityModel(nn.Module):
+    #         (input)
+    #            |
+    #         (conv1)
+    #            |
+    #         (chunk)
+    #            |
+    #         (conv2)
+    def __init__(self):
+        super().__init__()
+        self.conv1 = create_conv(1, 4, 1, 1)
+        self.conv2 = create_conv(4, 8, 1, 1)
+
+    def forward(self, x):
+        x = self.conv1(x)
+        y1 = torch.chunk(x, chunks=1, dim=1)
+        y1 = self.conv2(y1[0])
+        return y1
+
+
+class SplitMaskPropFailModel(nn.Module):
+    #         (input)
+    #            |
+    #         (conv1)
+    #            |
+    #         (chunk)
+    #        /      \
+    #    (conv2)  (conv3)
+    """
+    Weights have shape [N, C, C, W] and split dimension is not 1, but 2.
+    Mask propagation should fail because of inconsistency of number of channels (C)
+    and length of the resulting mask (C/2).
+    """
+    def __init__(self):
+        super().__init__()
+        self.conv1 = create_conv(1, 6, 3, 1)
+        self.conv2 = create_conv(6, 12, 1, 1)
+        self.conv3 = create_conv(6, 12, 1, 1)
+
+    def forward(self, x):
+        x = self.conv1(x)
+        y1, y2 = torch.chunk(x, chunks=2, dim=2)
+
+        y1 = self.conv2(y1)
+        y2 = self.conv3(y2)
+        return y1, y2
+
+
+class SplitPruningInvalidModel(nn.Module):
+    #         (input)
+    #            |
+    #         (conv1)
+    #            |
+    #         (chunk)
+    #        /      \
+    #    (conv2)  (conv3)
+    """
+    Weights have shape [N, C, 2C, W] and split dimension is not 1, but 2.
+    Mask propagation won't fail with the current code, but pruning will be invalid.
+    """
+    def __init__(self):
+        super().__init__()
+        self.conv1 = create_conv(1, 3, 3, 1)
+        self.conv2 = create_conv(3, 6, 1, 1)
+        self.conv3 = create_conv(3, 6, 1, 1)
+
+    def forward(self, x):
+        x = self.conv1(x)
+        y1, y2 = torch.chunk(x, chunks=2, dim=2)
+
+        y1 = self.conv2(y1)
+        y2 = self.conv3(y2)
+        return y1, y2
+
+
+class SplitConcatModel(nn.Module):
+    #         (input)
+    #            |
+    #         (conv1)
+    #            |
+    #         (chunk)
+    #        /      \
+    #    (conv2)  (conv3)
+    #         \    /
+    #        (concat)
+    #           |
+    #        (conv4)
+    def __init__(self):
+        super().__init__()
+        self.conv1 = create_conv(1, 16, 1, 1)
+        self.conv2 = create_conv(8, 16, 1, 1)
+        self.conv3 = create_conv(8, 16, 1, 1)
+        self.conv4 = create_conv(32, 64, 1, 1)
+
+    def forward(self, x):
+        x = self.conv1(x)
+        y1, y2 = torch.chunk(x, chunks=2, dim=1)
+
+        y1 = self.conv2(y1)
+        y2 = self.conv3(y2)
+
+        y = torch.cat([y1, y2], dim=1)
+        y = self.conv4(y)
+        return y
+
+
+class MultipleSplitConcatModel(nn.Module):
+    #              (input)
+    #                 |
+    #              (conv1)
+    #             /      \
+    #        (chunk)    (chunk)
+    #        /     \  /   \    \
+    #  (conv2) (concat) (conv3) (conv4)
+    #         \    /
+    #        (concat)
+    #           |
+    #        (conv5)
+    def __init__(self):
+        super().__init__()
+        self.conv1 = create_conv(1, 16, 1, 1)
+        self.conv2 = create_conv(8, 16, 1, 1)
+        self.conv3 = create_conv(6, 12, 1, 1)
+        self.conv4 = create_conv(4, 8, 1, 1)
+        self.conv5 = create_conv(14, 28, 1, 1)
+
+    def forward(self, x):
+        x = self.conv1(x)
+        y1, y2 = torch.chunk(x, chunks=2, dim=1)
+        y1 = self.conv2(y1)
+
+        y3, y4, y5 = torch.chunk(x, chunks=3, dim=1)
+        y = torch.cat([y2, y3], dim=1)
+
+        y4 = self.conv3(y4)
+        y5 = self.conv4(y5)
+        y = self.conv5(y)
+        return y
+
+
+class SplitReshapeModel(nn.Module):
+    #         (input)
+    #            |
+    #         (conv1)
+    #            |
+    #         (chunk)
+    #        /      \
+    #  (reshape1) (reshape2)
+    #      |          |
+    #   (conv2)    (conv3)
+    def __init__(self):
+        super().__init__()
+        self.conv1 = create_conv(1, 8, 1, 1)
+        self.conv2 = create_conv(4, 8, 1, 1)
+        self.conv3 = create_conv(4, 8, 1, 1)
+
+    def forward(self, x):
+        x = self.conv1(x)
+        y1, y2 = torch.chunk(x, chunks=2, dim=2)
+        y1 = torch.reshape(y1, [1, 4, 8, 8])
+        y2 = torch.reshape(y2, [1, 4, 8, 8])
+        y1 = self.conv2(y1)
+        y2 = self.conv3(y2)
+        return y1, y2
+
+
+class HRNetBlock(nn.Module):
+    # omit interpolate, min
+    #                    (input)
+    #                   /      \
+    #             (conv1)     (conv2)
+    #               /            |
+    #            (chunk1)      (chunk2)
+    #            /    \       /     \
+    #           /      \  (pool) (conv3)
+    #          /        \   /       /
+    #      (conv4)     (concat1)   /
+    #        \           /        /
+    #         \      (conv5)     /
+    #          \    /     \     /
+    #        (concat2)   (concat3)
+    #           |            |
+    #        (conv6)     (conv7)
+    def __init__(self):
+        super().__init__()
+        self.conv1 = create_conv(1, 16, 5, 5)
+        self.conv2 = create_conv(1, 16, 1, 1)
+        self.conv3 = create_conv(8, 16, 5, 5)
+        self.conv4 = create_conv(8, 16, 1, 1)
+        self.conv5 = create_conv(16, 32, 1, 1)
+        self.conv6 = create_conv(48, 48, 1, 1)
+        self.conv7 = create_conv(48, 48, 1, 1)
+        for conv in [getattr(self, f'conv{i}') for i in range(1, 8)]:
+            for i in range(conv.out_channels):
+                conv.weight.data[i] = i
+
+        self.avg_pool = nn.AdaptiveAvgPool2d(4)
+
+    def forward(self, x):
+        x1 = self.conv1(x)
+        x2 = self.conv2(x)
+        y1, x1 = torch.chunk(x1, chunks=2, dim=1) # chunk1
+        x2, y2 = torch.chunk(x2, chunks=2, dim=1) # chunk2
+        x2 = self.avg_pool(x2)
+        y2 = self.conv3(y2)
+        y1 = self.conv4(y1)
+        y = torch.cat([x1, x2], dim=1) # concat1
+        y = self.conv5(y)
+        out1 = torch.cat([y1, y], dim=1) # concat2
+        out2 = torch.cat([y, y2], dim=1) # concat3
+        out1 = self.conv6(out1)
+        out2 = self.conv7(out2)
+        return out1, out2
+
+
 def make_divisible(v, divisor, min_value=None):
     """
     This function is taken from the original tf repo.
@@ -605,8 +963,10 @@ class SELayerWithReshape(nn.Module):
         self.avg_pool = nn.AdaptiveAvgPool2d(1)
         self.fc = nn.Sequential(
             nn.Conv2d(channel, make_divisible(channel // reduction, 8), 1),
+            nn.BatchNorm2d(make_divisible(channel // reduction, 8)),
             nn.ReLU(inplace=True),
             nn.Conv2d(make_divisible(channel // reduction, 8), channel, 1),
+            nn.BatchNorm2d(channel),
             nn.ReLU(inplace=True)
         )
 
@@ -615,6 +975,43 @@ class SELayerWithReshape(nn.Module):
         y = self.avg_pool(x)
         y = y.view(b, c).view(b, c, 1, 1)
         y = self.fc(y)
+        return x * y
+
+
+class SELayerWithReshapeAndLinear(nn.Module):
+    def __init__(self, channel, reduction=4):
+        super().__init__()
+        self.avg_pool = nn.AdaptiveAvgPool2d(1)
+        self.fc = nn.Sequential(
+            nn.Linear(channel, make_divisible(channel // reduction, 8)),
+            nn.BatchNorm1d(make_divisible(channel // reduction, 8)),
+            nn.ReLU(inplace=True),
+            nn.Linear(make_divisible(channel // reduction, 8), channel),
+            nn.BatchNorm1d(channel),
+            nn.ReLU(inplace=True)
+        )
+
+    def forward(self, x):
+        b, c, _, _ = x.size()
+        y = self.avg_pool(x).view(b, c)
+        y = self.fc(y).view(b, c, 1, 1)
+        return x * y
+
+
+class SELayerWithReshapeAndLinearAndMean(nn.Module):
+    def __init__(self, channel, reduction=4):
+        super().__init__()
+        self.fc = nn.Sequential(
+            nn.Linear(channel, make_divisible(channel // reduction, 8)),
+            nn.ReLU(inplace=True),
+            nn.Linear(make_divisible(channel // reduction, 8), channel),
+            nn.ReLU(inplace=True)
+        )
+
+    def forward(self, x):
+        b, c, _, _ = x.size()
+        y = x.mean((2, 3))
+        y = self.fc(y).view(b, c, 1, 1)
         return x * y
 
 
@@ -645,10 +1042,17 @@ class InvertedResidual(nn.Module):
 
 
 class MobilenetV3BlockSEReshape(nn.Module):
-    def __init__(self):
+    def __init__(self, mode='default'):
         super().__init__()
+        se_block_map = {
+            'default': SELayerWithReshape,
+            'linear': SELayerWithReshapeAndLinear,
+            'linear_mean': SELayerWithReshapeAndLinearAndMean
+        }
+
+        se_block = se_block_map[mode]
         self.first_conv = nn.Conv2d(1, 6, 2)
-        self.inverted_residual = InvertedResidual(6, 6, 6, 5, 1, SELayerWithReshape)
+        self.inverted_residual = InvertedResidual(6, 6, 6, 5, 1, se_block)
         self.last_conv = nn.Conv2d(6, 1, 1)
 
     def forward(self, x):

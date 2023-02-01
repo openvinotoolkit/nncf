@@ -1,5 +1,5 @@
 """
- Copyright (c) 2021 Intel Corporation
+ Copyright (c) 2023 Intel Corporation
  Licensed under the Apache License, Version 2.0 (the "License");
  you may not use this file except in compliance with the License.
  You may obtain a copy of the License at
@@ -12,21 +12,25 @@
 """
 
 from abc import abstractmethod
-
+from typing import Any
 from typing import Dict
-from typing import Optional, List, Tuple, Any, TypeVar
+from typing import List
+from typing import Optional
+from typing import Tuple
+from typing import TypeVar
 
 from nncf import NNCFConfig
-from nncf.common.schedulers import StubCompressionScheduler
 from nncf.api.compression import CompressionAlgorithmBuilder
 from nncf.api.compression import CompressionAlgorithmController
-from nncf.common.utils.logger import logger as nncf_logger
-from nncf.common.utils.registry import Registry
+from nncf.common.logging import nncf_logger
+from nncf.common.schedulers import StubCompressionScheduler
 from nncf.common.utils.backend import BackendType
-from nncf.common.utils.backend import infer_backend_from_model
+from nncf.common.utils.backend import get_backend
+from nncf.common.utils.registry import Registry
 from nncf.config.extractors import extract_algo_specific_config
+from nncf.config.extractors import extract_bn_adaptation_init_params
 
-ModelType = TypeVar('ModelType')
+TModel = TypeVar('TModel')
 
 NO_COMPRESSION_ALGORITHM_NAME = 'NoCompressionAlgorithm'
 
@@ -45,8 +49,9 @@ class BaseCompressionAlgorithmController(CompressionAlgorithmController):
 
     BUILDER_STATE = 'builder_state'
     CONTROLLER_STATE = 'ctrl_state'
+    _state_names = BaseControllerStateNames
 
-    def __init__(self, target_model: ModelType):
+    def __init__(self, target_model: TModel):
         """
         Initializes the internal state of the compression algorithm controller.
 
@@ -57,7 +62,6 @@ class BaseCompressionAlgorithmController(CompressionAlgorithmController):
         super().__init__(target_model)
         self._name = None
         self._builder_state = None
-        self._state_names = BaseControllerStateNames()
 
     @property
     def name(self):
@@ -99,15 +103,18 @@ class BaseCompressionAlgorithmController(CompressionAlgorithmController):
                 - ({'x': None, 'y': y},) for keyword arguments only.
         """
         self.prepare_for_export()
-        backend = infer_backend_from_model(self.model)
+        backend = get_backend(self.model)
         if backend is BackendType.TENSORFLOW:
-            from nncf.tensorflow.exporter import TFExporter
+            from nncf.tensorflow.exporter import TFExporter  # pylint: disable=cyclic-import
             exporter = TFExporter(self.model, input_names, output_names, model_args)
         else:
             assert backend is BackendType.TORCH
-            from nncf.torch.exporter import PTExporter
+            from nncf.torch.exporter import PTExporter  # pylint: disable=cyclic-import
             exporter = PTExporter(self.model, input_names, output_names, model_args)
-        exporter.export_model(save_path, save_format)
+        if save_format is not None:
+            exporter.export_model(save_path, save_format)
+        else:
+            exporter.export_model(save_path)
 
     def disable_scheduler(self) -> None:
         self._scheduler = StubCompressionScheduler()
@@ -132,11 +139,11 @@ class BaseCompressionAlgorithmController(CompressionAlgorithmController):
         if self.name in state:
             algo_state = state[self.name]
             if self._state_names.COMPRESSION_STAGE in state:
-                if self.compression_stage() != state[self._state_names.COMPRESSION_STAGE]:
-                    nncf_logger.warning('Current CompressionStage ({}) of the compression controller does '
-                                        'not correspond to the value found in '
-                                        'the checkpoint ({})'.format(self.compression_stage(),
-                                                                     state[self._state_names.COMPRESSION_STAGE]))
+                compression_stage = state[self._state_names.COMPRESSION_STAGE]
+                if self.compression_stage() != compression_stage:
+                    nncf_logger.warning(
+                        f'Current CompressionStage ({self.compression_stage()}) of the compression controller '
+                        f'does not correspond to the value found in the checkpoint ({compression_stage})')
             self.loss.load_state(algo_state[self._state_names.LOSS])
             self.scheduler.load_state(algo_state[self._state_names.SCHEDULER])
 
@@ -170,6 +177,10 @@ class BaseCompressionAlgorithmController(CompressionAlgorithmController):
             self.BUILDER_STATE: self._builder_state,
             self.CONTROLLER_STATE: self.get_state()
         }
+
+    @property
+    def maximal_compression_rate(self) -> float:
+        return 1.0
 
 
 class BaseCompressionAlgorithmBuilder(CompressionAlgorithmBuilder):
@@ -233,7 +244,7 @@ class BaseCompressionAlgorithmBuilder(CompressionAlgorithmBuilder):
         return {self.name: self._get_state_without_name()}
 
     @abstractmethod
-    def _build_controller(self, model: ModelType) -> BaseCompressionAlgorithmController:
+    def _build_controller(self, model: TModel) -> BaseCompressionAlgorithmController:
         """
         Simple implementation of building controller without setting builder state and loading controller's one.
 
@@ -242,7 +253,7 @@ class BaseCompressionAlgorithmBuilder(CompressionAlgorithmBuilder):
         :return: The instance of the `BaseCompressionAlgorithmController`.
         """
 
-    def build_controller(self, model: ModelType) -> BaseCompressionAlgorithmController:
+    def build_controller(self, model: TModel) -> BaseCompressionAlgorithmController:
         """
         Builds `BaseCompressionAlgorithmController` to handle the additional modules,
         parameters, and hooks inserted into the model to enable algorithm-specific
@@ -272,3 +283,6 @@ class BaseCompressionAlgorithmBuilder(CompressionAlgorithmBuilder):
         :return: Returns a dictionary with Python data structures
             (dict, list, tuple, str, int, float, True, False, None) that represents state of the object.
         """
+
+    def _parse_bn_adapt_params(self) -> Optional[Dict]:
+        return extract_bn_adaptation_init_params(self.config, self.name)

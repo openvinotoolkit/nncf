@@ -7,14 +7,16 @@ from nncf.common.pruning.operations import (
     OutputPruningOp,
     IdentityMaskForwardPruningOp,
     ConvolutionPruningOp,
+    LinearPruningOp,
     TransposeConvolutionPruningOp,
     BatchNormPruningOp,
     GroupNormPruningOp,
     ConcatPruningOp,
+    SplitPruningOp,
     ElementwisePruningOp,
     ReshapePruningOp,
     FlattenPruningOp,
-    StopMaskForwardPruningOp,
+    StopMaskForwardPruningOp
 )
 
 
@@ -45,6 +47,8 @@ class DummyElementwiseMetatype(OperatorMetatype):
 class DummyConvMetatype(OperatorMetatype):
     name = 'conv'
 
+class DummyLinearMetatype(OperatorMetatype):
+    name = 'linear'
 
 class DummyTransposeConvolutionMetatype(OperatorMetatype):
     name = 'transpose_conv'
@@ -73,6 +77,9 @@ class DummyReshapeMetatye(OperatorMetatype):
 class DummyFlattenMetatype(OperatorMetatype):
     name = 'flatten'
 
+class DummySplitMetatype(OperatorMetatype):
+    name = 'chunk'
+
 
 DUMMY_PRUNING_OPERATOR_METATYPES = PruningOperationsMetatypeRegistry("operator_metatypes")
 
@@ -100,6 +107,11 @@ class DummyStopMaskForwardPruningOp(StopMaskForwardPruningOp):
 @DUMMY_PRUNING_OPERATOR_METATYPES.register(DummyConvMetatype.name)
 class DummyConvPruningOp(ConvolutionPruningOp):
     additional_types = [DummyConvMetatype.name]
+
+
+@DUMMY_PRUNING_OPERATOR_METATYPES.register(DummyLinearMetatype.name)
+class DummyLinearPruningOp(LinearPruningOp):
+    additional_types = [DummyLinearMetatype.name]
 
 
 @DUMMY_PRUNING_OPERATOR_METATYPES.register(DummyTransposeConvolutionMetatype.name)
@@ -138,3 +150,7 @@ class DummyReshapePruningOp(ReshapePruningOp):
 @DUMMY_PRUNING_OPERATOR_METATYPES.register(DummyFlattenMetatype.name)
 class DummyFlattenPruningOp(FlattenPruningOp):
     additional_types = [DummyFlattenMetatype.name]
+
+@DUMMY_PRUNING_OPERATOR_METATYPES.register(DummySplitMetatype.name)
+class DummySplitPruningOp(SplitPruningOp):
+    additional_types = [DummySplitMetatype.name]

@@ -1,5 +1,5 @@
 """
- Copyright (c) 2020 Intel Corporation
+ Copyright (c) 2023 Intel Corporation
  Licensed under the Apache License, Version 2.0 (the "License");
  you may not use this file except in compliance with the License.
  You may obtain a copy of the License at
@@ -216,6 +216,22 @@ def get_common_argument_parser(**flags):
             type=int,
             metavar='N',
             help='Print frequency (batch iterations). Default: 10)'))
+
+    parser.add_argument(
+        "--disable-compression",
+        help="Disable compression",
+        action="store_true"
+    )
+
+    parser.add_argument(
+        '--seed', default=None, type=int,
+        help='Specific seed for initializing pseudo-random number generators.')
+
+    parser.add_argument(
+        '--disable_tensor_float_32_execution',
+        help="Disable exection in TensorFloat-32",
+        action="store_true"
+    )
 
     return parser
 

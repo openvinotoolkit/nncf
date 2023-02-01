@@ -12,14 +12,15 @@ from torch.nn.modules.loss import _Loss
 from torch.utils.data import DataLoader
 
 from nncf.common.initialization.dataloader import NNCFDataLoader
-from nncf.common.utils.logger import logger as nncf_logger
-from nncf.common.utils.progress_bar import ProgressBar
+from nncf.common.logging import nncf_logger
+from nncf.common.logging.progress_bar import ProgressBar
 from nncf.config.structures import BNAdaptationInitArgs
 from nncf.config.structures import ModelEvaluationArgs
 from nncf.config.structures import QuantizationRangeInitArgs
 from nncf.torch.nested_objects_traversal import objwalk
 from nncf.torch.structures import AutoQPrecisionInitArgs, LeGRInitArgs, DistributedCallbacksArgs
 from nncf.torch.structures import QuantizationPrecisionInitArgs
+from nncf.torch.utils import get_model_device
 from nncf.torch.utils import is_tensor, default_distributed_wrapper, default_distributed_unwrapper
 
 
@@ -132,11 +133,11 @@ class DataLoaderBaseRunner:
 
     def run(self, data_loader, num_init_steps):
         if self.init_device is not None:
-            original_device = next(iter(self.model.parameters())).device
+            original_device = get_model_device(self.model)
             self.model.to(self.init_device)
 
         self._prepare_initialization()
-        device = next(self.model.parameters()).device
+        device = get_model_device(self.model)
         data_loader = wrap_dataloader_for_init(data_loader)
 
         with torch.no_grad():
@@ -270,9 +271,11 @@ def register_default_init_args(nncf_config: 'NNCFConfig',
         nncf_config.register_extra_structs([ModelEvaluationArgs(eval_fn=model_eval_fn)])
 
     if distributed_callbacks is None:
-        if execution_parameters is None:
-            nncf_logger.info('Please, provide execution parameters for optimal model initialization')
-        distributed_callbacks = (partial(default_distributed_wrapper, execution_parameters=execution_parameters),
+        distributed_callbacks = (partial(default_distributed_wrapper,
+                                         execution_parameters=execution_parameters),
                                  default_distributed_unwrapper)
+    else:
+        nncf_logger.info('Utilizing user-provided distributed training wrappers.')
+
     nncf_config.register_extra_structs([DistributedCallbacksArgs(*distributed_callbacks)])
     return nncf_config

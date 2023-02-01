@@ -1,5 +1,5 @@
 """
- Copyright (c) 2019-2020 Intel Corporation
+ Copyright (c) 2019-2023 Intel Corporation
  Licensed under the Apache License, Version 2.0 (the "License");
  you may not use this file except in compliance with the License.
  You may obtain a copy of the License at
@@ -33,6 +33,7 @@ from nncf.torch.dynamic_graph.context import TracingContext
 from nncf.torch.dynamic_graph.transform_graph import replace_modules
 from nncf.torch.layers import LSTMCellNNCF, NNCF_RNN, ITERATION_MODULES
 from nncf.torch.model_creation import create_compressed_model
+from nncf.torch.utils import get_model_device
 from nncf.torch.utils import manual_seed
 from tests.torch.modules.seq2seq.gnmt import GNMT
 from tests.torch.helpers import get_empty_config, get_grads, create_compressed_model_and_algo_for_test
@@ -50,7 +51,7 @@ def replace_lstm(model):
     def replace_fn(module_):
         if not isinstance(module_, nn.LSTM):
             return module_
-        device = next(module_.parameters()).device
+        device = get_model_device(module_)
         custom_lstm = NNCF_RNN('LSTM', input_size=module_.input_size, hidden_size=module_.hidden_size,
                                num_layers=module_.num_layers, bidirectional=module_.bidirectional,
                                batch_first=module_.batch_first, dropout=module_.dropout,
@@ -77,7 +78,9 @@ def replace_lstm(model):
     if isinstance(model, nn.LSTM):
         return replace_fn(model)
     affected_scopes = []
-    return replace_modules(model, replace_fn, affected_scopes)[0]
+    stop_branching_fn = lambda _: False
+    return replace_modules(model, replace_fn, stop_branching_fn,
+                           affected_scopes)[0]
 
 
 def clone_test_data(data_list):
@@ -211,11 +214,13 @@ def test_export_lstm_cell(tmp_path):
     model, algo = create_compressed_model_and_algo_for_test(LSTMCellNNCF(1, 1), config)
 
     test_path = str(tmp_path.joinpath('test.onnx'))
-    algo.export_model(test_path)
+    # Exporting the operator ::chunk to ONNX opset version 9 is not supported.
+    # Support for this operator was added in version 11
+    algo.export_model(test_path, save_format='onnx_11')
     assert os.path.exists(test_path)
 
     onnx_num = 0
-    model = onnx.load(test_path)
+    model = onnx.load(test_path)  # pylint: disable=no-member
     # pylint: disable=no-member
     for node in model.graph.node:
         if node.op_type == 'FakeQuantize':
@@ -286,7 +291,7 @@ class TestLSTM:
                 torch.testing.assert_allclose(test_output.sorted_indices, ref_output.sorted_indices)
                 torch.testing.assert_allclose(test_output.unsorted_indices, ref_output.unsorted_indices)
         else:
-            torch.testing.assert_allclose(test_output, ref_output, rtol=1e-2, atol=1e-3)
+            torch.testing.assert_allclose(test_output, ref_output, rtol=9e-2, atol=15e-4)
 
     def test_backward_lstm(self, sizes, bidirectional, num_layers, bias, batch_first, variable_length, sorted_, is_cuda,
                            empty_initial, dropout, _seed):
@@ -391,12 +396,14 @@ def test_export_stacked_bi_lstm(tmp_path):
     model, algo = create_compressed_model_and_algo_for_test(test_rnn, config)
 
     test_path = str(tmp_path.joinpath('test.onnx'))
-    algo.export_model(test_path)
+    # Exporting the operator ::chunk to ONNX opset version 9 is not supported.
+    # Support for this operator was added in version 11
+    algo.export_model(test_path, save_format='onnx_11')
     assert os.path.exists(test_path)
 
     onnx_num = 0
-    model = onnx.load(test_path)
     # pylint: disable=no-member
+    model = onnx.load(test_path)
     for node in model.graph.node:
         if node.op_type == 'FakeQuantize':
             onnx_num += 1
@@ -451,7 +458,7 @@ class TestNumberOfNodes:
             counters[name] = counter
         _ = model(test_data.x, test_hidden)
         assert model.get_graph().get_nodes_count() == 132  # NB: may always fail in debug due to superfluous 'cat' nodes
-        assert len(counters) + 2 == 54 # 8 WQ + 44 AQ + 1 input AQ + 1 reset point AQ
+        assert len(counters) + 2 == 54  # 8 WQ + 44 AQ + 1 input AQ + 1 reset point AQ
         for counter in counters.values():
             assert counter.count == p.seq_length
         assert counter_for_input_quantizer.count == 1

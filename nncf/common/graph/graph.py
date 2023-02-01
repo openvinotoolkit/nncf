@@ -1,5 +1,5 @@
 """
- Copyright (c) 2021 Intel Corporation
+ Copyright (c) 2023 Intel Corporation
  Licensed under the Apache License, Version 2.0 (the "License");
  you may not use this file except in compliance with the License.
  You may obtain a copy of the License at
@@ -10,7 +10,6 @@
  See the License for the specific language governing permissions and
  limitations under the License.
 """
-import os
 from collections import defaultdict
 from copy import deepcopy
 from typing import Any, Callable, Dict, KeysView, List, Tuple, Type, ValuesView
@@ -18,15 +17,13 @@ from typing import Generator
 
 import networkx as nx
 import networkx.algorithms.isomorphism as iso
-from networkx.drawing.nx_agraph import to_agraph
 
-from nncf.common.graph.graph_matching import get_edge_boundaries
 from nncf.common.graph.layer_attributes import BaseLayerAttributes
 from nncf.common.graph.layer_attributes import Dtype
 from nncf.common.graph.operator_metatypes import INPUT_NOOP_METATYPES
 from nncf.common.graph.operator_metatypes import OUTPUT_NOOP_METATYPES
 from nncf.common.graph.operator_metatypes import OperatorMetatype
-from nncf.common.utils.logger import logger as nncf_logger
+from nncf.common.utils.dot_file_rw import write_dot_graph
 
 NNCFNodeName = str
 LayerName = str
@@ -141,6 +138,7 @@ class NNCFGraphPatternIO:
     """
     Describes the inputs and outputs of a subgraph in NNCFGraph.
     """
+
     def __init__(self, input_edges: List[NNCFGraphEdge], output_edges: List[NNCFGraphEdge]):
         self.input_edges = input_edges
         self.output_edges = output_edges
@@ -185,7 +183,7 @@ class NNCFGraph:
         """
         return self.get_node_by_key(self.get_node_key_by_id(node_id))
 
-    def get_node_by_key(self, key: str):
+    def get_node_by_key(self, key: str) -> NNCFNode:
         """
         :param key: key (node_name) of the node.
         :return: NNCFNode in a graph with such key.
@@ -228,7 +226,6 @@ class NNCFGraph:
                 all_nodes_of_type.append(nncf_node)
         return all_nodes_of_type
 
-
     def get_all_node_ids(self) -> KeysView[int]:
         """
         Returns all graph nodes' node_ids.
@@ -252,11 +249,37 @@ class NNCFGraph:
             all_nodes.append(nncf_node)
         return all_nodes
 
+    def get_all_simple_paths(self,
+                             start_node_name: NNCFNodeName,
+                             end_node_name: NNCFNodeName) -> Generator[List[NNCFNodeName], None, None]:
+        """
+        Generates all simple paths in the NNCFGraph from start node to end node.
+        A simple path is a path with no repeated nodes.
+
+        :param start_node_name: a name of starting node for path
+        :param end_node_name: a name of node at which to end path
+        :return: A generator that produces lists of simple paths. If there are no paths between the start and end nodes
+        the generator produces no output.
+        """
+        start_node = self.get_node_by_name(start_node_name)
+        end_node = self.get_node_by_name(end_node_name)
+        start_node_key = self.get_node_key_by_id(start_node.node_id)
+        end_node_key = self.get_node_key_by_id(end_node.node_id)
+        return nx.all_simple_paths(self._nx_graph, start_node_key, end_node_key)
+
     @staticmethod
     def _nx_node_to_nncf_node(nx_node: dict) -> NNCFNode:
         return NNCFNode(node_id=nx_node[NNCFGraph.ID_NODE_ATTR],
                         node_name=nx_node[NNCFGraph.NODE_NAME_ATTR],
                         data=nx_node)
+
+    @staticmethod
+    def _get_edge_boundaries(match: List[str], graph: nx.DiGraph) -> Tuple[
+        List[Tuple[str, str]], List[Tuple[str, str]]]:
+        out_edge_boundary = list(nx.edge_boundary(graph, match, data=True))
+        complement = list(filter(lambda x: x not in match, graph.nodes.keys()))
+        in_edge_boundary = list(nx.edge_boundary(graph, complement, data=True))
+        return sorted(in_edge_boundary), sorted(out_edge_boundary)  # must be sorted for determinism
 
     def get_node_key_by_id(self, node_id: id) -> str:
         """
@@ -406,7 +429,7 @@ class NNCFGraph:
         attrs[NNCFGraph.IGNORED_ALGOS_ATTR] = ignored_algorithms
         self._nx_graph.add_node(node_key, **attrs)
 
-        node = NNCFNode(node_id, node_name, data=attrs)
+        node = NNCFNode(node_id, node_name, data=self._nx_graph.nodes[node_key])
 
         if node.metatype in INPUT_NOOP_METATYPES:
             self._input_nncf_nodes[node_id] = node
@@ -472,57 +495,54 @@ class NNCFGraph:
                                                     key=lambda x: self._nx_graph.nodes[x][NNCFGraph.ID_NODE_ATTR])]
 
     def dump_graph(self, path: str):
-        nx.drawing.nx_pydot.write_dot(self.get_graph_for_structure_analysis(), path)
+        write_dot_graph(self.get_graph_for_structure_analysis(), path)
 
     def visualize_graph(self, path: str):
         out_graph = self._get_graph_for_visualization()
-        nx.drawing.nx_pydot.write_dot(out_graph, path)
-        try:
-            A = to_agraph(out_graph)
-            A.layout('dot')
-            png_path = os.path.splitext(path)[0]+'.png'
-            A.draw(png_path)
-        except ImportError:
-            nncf_logger.warning('Graphviz is not installed - only the .dot model visualization format will be used. '
-                                'Install pygraphviz into your Python environment and graphviz system-wide to enable '
-                                'PNG rendering.')
-        except Exception: #pylint:disable=broad-except
-            nncf_logger.warning('Failed to render graph to PNG')
+        write_dot_graph(out_graph, path)
 
     def get_graph_for_structure_analysis(self, extended: bool = False) -> nx.DiGraph:
         """
-        The graph to dump has certain node attributes omitted, compared to the graph stored
-        inside NNCFGraph.
+        Returns the nx.Digraph, which is built based on self._nx_graph.
+        The new graph has certain node attributes omitted, compared to the graph stored inside NNCFGraph.
+        If the node name consists of a special reserved character, this character will be replaced.
 
-        :param extended - whether the graph should have additional node attributes for improved visualization
+        :param extended: whether the graph edges should have attributes: shape of the tensor and tensor primitive type.
         :return: An nx.DiGraph to be used for structure analysis
         """
+        # .dot format reserves ':' character in node names
+        __RESERVED_DOT_CHARACTER = ':'
+        __CHARACTER_REPLACE_TO = '^'
+
         out_graph = nx.DiGraph()
         for node_name, node in self._nx_graph.nodes.items():
+            visualization_node_name = node_name.replace(__RESERVED_DOT_CHARACTER, __CHARACTER_REPLACE_TO)
             attrs_node = {
                 'id': node[NNCFGraph.ID_NODE_ATTR],
                 'type': node[NNCFGraph.NODE_TYPE_ATTR]
             }
-            if 'color' in node:
-                attrs_node['color'] = node['color']
-            if 'label' in node:
-                attrs_node['label'] = node['label']
-            if 'style' in node:
-                attrs_node['style'] = node['style']
+            for attr in ['color', 'label', 'style']:
+                if attr in node:
+                    attrs_node[attr] = node[attr]
+            # If the node_name has reserved character, use visualization_node_name as node name.
+            # While use 'label' attribute with original node name for visualization.
+            if 'label' not in attrs_node and __RESERVED_DOT_CHARACTER in node_name:
+                attrs_node['label'] = node_name
 
-            out_graph.add_node(node_name, **attrs_node)
-        if extended:
-            for u, v in self._nx_graph.edges:
-                edge = self._nx_graph.edges[u, v]
+            out_graph.add_node(visualization_node_name, **attrs_node)
+
+        for u, v in self._nx_graph.edges:
+            edge = self._nx_graph.edges[u, v]
+            attrs_edge = {}
+            u = u.replace(__RESERVED_DOT_CHARACTER, __CHARACTER_REPLACE_TO)
+            v = v.replace(__RESERVED_DOT_CHARACTER, __CHARACTER_REPLACE_TO)
+            if extended:
                 if edge[NNCFGraph.DTYPE_EDGE_ATTR] is Dtype.INTEGER:
-                    style = 'dashed'
+                    attrs_edge['style'] = 'dashed'
                 else:
-                    style = 'solid'
-                out_graph.add_edge(u, v, label=edge[NNCFGraph.ACTIVATION_SHAPE_EDGE_ATTR], style=style)
-        else:
-            for u, v in self._nx_graph.edges:
-                out_graph.add_edge(u, v)
-
+                    attrs_edge['style'] = 'solid'
+                attrs_edge['label'] = edge[NNCFGraph.ACTIVATION_SHAPE_EDGE_ATTR]
+            out_graph.add_edge(u, v, **attrs_edge)
         return out_graph
 
     def _get_graph_for_visualization(self) -> nx.DiGraph:
@@ -543,7 +563,9 @@ class NNCFGraph:
                 style = 'dashed'
             else:
                 style = 'solid'
-            out_graph.add_edge(u, v, label=edge[NNCFGraph.ACTIVATION_SHAPE_EDGE_ATTR], style=style)
+            edge_label = f"{edge[NNCFGraph.ACTIVATION_SHAPE_EDGE_ATTR]} \\n" \
+                         f"{edge[NNCFGraph.OUTPUT_PORT_ID_EDGE_ATTR]} -> {edge[NNCFGraph.INPUT_PORT_ID_EDGE_ATTR]}"
+            out_graph.add_edge(u, v, label=edge_label, style=style)
 
         mapping = {k: v['label'] for k, v in out_graph.nodes.items()}
         out_graph = nx.relabel_nodes(out_graph, mapping)
@@ -584,7 +606,8 @@ class NNCFGraph:
         `match` list
         :return: NNCFGraphPatternIO object describing the inputs and outputs of the matched subgraph
         """
-        in_edge_boundary, out_edge_boundary = get_edge_boundaries(match, self._nx_graph)
+
+        in_edge_boundary, out_edge_boundary = NNCFGraph._get_edge_boundaries(match, self._nx_graph)
         boundary = in_edge_boundary + out_edge_boundary
         input_nncf_edges = []
         output_nncf_edges = []
@@ -633,6 +656,6 @@ class NNCFGraph:
                              data[NNCFGraph.DTYPE_EDGE_ATTR])
 
     def get_all_edges(self) -> Generator[NNCFGraphEdge, None, None]:
-        for nx_edge in self._nx_graph.edges:
+        for nx_edge in self._nx_graph.in_edges:
             yield self.get_edge(self.get_node_by_key(nx_edge[0]),
                                 self.get_node_by_key(nx_edge[1]))

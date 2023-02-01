@@ -1,5 +1,5 @@
 """
- Copyright (c) 2019 Intel Corporation
+ Copyright (c) 2023 Intel Corporation
  Licensed under the Apache License, Version 2.0 (the "License");
  you may not use this file except in compliance with the License.
  You may obtain a copy of the License at
@@ -10,7 +10,7 @@
  See the License for the specific language governing permissions and
  limitations under the License.
 """
-
+from typing import Any
 
 import torch
 from torch import nn
@@ -30,6 +30,7 @@ TEST_PARAMS_STRUCT = [("low batch", LOW_BATCH_INPUT_SIZE, GPU_RUNS_LOW_BATCH),
 
 
 # reference impl
+# pylint:disable=abstract-method
 class ReferenceXNORBinarize(torch.autograd.Function):
     @staticmethod
     def forward(ctx, x):
@@ -39,10 +40,11 @@ class ReferenceXNORBinarize(torch.autograd.Function):
         return output
 
     @staticmethod
-    def backward(ctx, grad_output):
-        return grad_output
+    def backward(ctx: Any, *grad_outputs: Any) -> Any:
+        return grad_outputs[0]
 
 
+# pylint:disable=abstract-method
 class ReferenceDOREFABinarize(torch.autograd.Function):
     @staticmethod
     def forward(ctx, x):
@@ -52,10 +54,11 @@ class ReferenceDOREFABinarize(torch.autograd.Function):
         return output_flat.view_as(x)
 
     @staticmethod
-    def backward(ctx, grad_output):
-        return grad_output
+    def backward(ctx: Any, *grad_outputs: Any) -> Any:
+        return grad_outputs[0]
 
 
+# pylint:disable=abstract-method
 class ReferenceActivationBinarize(torch.autograd.Function):
     @staticmethod
     def forward(ctx, input_, scale, threshold):
@@ -67,7 +70,8 @@ class ReferenceActivationBinarize(torch.autograd.Function):
         return output
 
     @staticmethod
-    def backward(ctx, grad_output):
+    def backward(ctx: Any, *grad_outputs: Any) -> Any:
+        grad_output = grad_outputs[0]
         input_, scale, output = ctx.saved_variables
 
         # calc gradient for input

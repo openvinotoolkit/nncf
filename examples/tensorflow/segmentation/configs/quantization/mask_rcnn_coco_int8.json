@@ -4,34 +4,56 @@
         "sample_size": [1, 1024, 1024, 3]
     },
 
-    "epochs": 2,
+    "epochs": 1,
     "batch_size": 16,
     "weight_decay": 0.0001,
 
     "dataset": "coco/2017",
+
+    "disable_tensor_float_32_execution": true,
 
      "optimizer": {
         "type": "Adam",
         "schedule_type": "piecewise_constant",
         "schedule_params": {
             "boundaries": [1],
-            "values": [1e-5, 1e-6]
+            "values": [1e-6, 1e-6]
         }
     },
 
   "compression": {
       "algorithm": "quantization",
       "ignored_scopes": [
-              "{re}.*multilevel_propose_rois.*",
-              "{re}.*sample_proposals.*",
-              "{re}.*multilevel_crop_and_resize.*",
-              "{re}.*generate_detections.*",
-              "{re}.*sample_and_crop_foreground_masks.*",
-              "{re}.*decode_boxes.*",
-              "{re}.*encode_boxes.*",
-              "gt_boxes",
-              "gt_masks",
-              "image_info"
+        "gt_boxes",
+        "gt_masks",
+        "image_info",
+        "{re}.*tf.math.subtract.*",
+        "{re}.*tf.math.multiply.*",
+        "tf.__operators__.add_19",
+        "{re}.*tf.__operators__.add_[2-9]\\d",
+        "{re}.*tf.__operators__.add_[1-9]\\d\\d",
+        "{re}.*tf.math.sqrt.*",
+        "{re}.*tf.math.floor.*",
+        "{re}.*tf.compat.v1.floor_div.*",
+        "{re}.*tf.math.truediv.*",
+        "{re}.*tf.math.divide.*",
+        "{re}.*tf.math.pow.*",
+        "{re}.*tf.math.greater.*",
+        "{re}.*tf.math.minimum.*",
+        "{re}.*tf.math.maximum.*",
+        "{re}.*tf.math.reduce_max.*",
+        "{re}.*tf.math.reduce_min.*",
+        "{re}.*tf.nn.avg_pool.*",
+        "mask_fcn_logits",
+        "conv5-mask",
+        "mask-conv-l3",
+        "mask-conv-l2",
+        "mask-conv-l1",
+        "mask-conv-l0",
+        "fc1",
+        "fc0",
+        "class-predict",
+        "box-predict"
       ]
   }
 }

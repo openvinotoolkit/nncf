@@ -1,5 +1,5 @@
 """
- Copyright (c) 2021 Intel Corporation
+ Copyright (c) 2023 Intel Corporation
  Licensed under the Apache License, Version 2.0 (the "License");
  you may not use this file except in compliance with the License.
  You may obtain a copy of the License at
@@ -13,7 +13,7 @@
 
 from nncf.tensorflow.loss import TFZeroCompressionLoss
 
-
+# pylint: disable=use-implicit-booleaness-not-comparison
 def test_tf_zero_loss_state():
     loss = TFZeroCompressionLoss()
     assert loss.get_state() == {}

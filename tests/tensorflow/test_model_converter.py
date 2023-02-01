@@ -1,5 +1,5 @@
 """
- Copyright (c) 2021 Intel Corporation
+ Copyright (c) 2023 Intel Corporation
  Licensed under the Apache License, Version 2.0 (the "License");
  you may not use this file except in compliance with the License.
  You may obtain a copy of the License at
@@ -14,22 +14,24 @@
 import pytest
 import tensorflow as tf
 from functools import partial
-from tensorflow.python.keras import backend
-from tensorflow.python.keras import layers
-from tensorflow.python.keras import models
+from tensorflow.keras import backend
+from tensorflow.keras import layers
+from tensorflow.keras import models
 
 
 from nncf.common.graph import INPUT_NOOP_METATYPES
 from nncf.common.graph import OUTPUT_NOOP_METATYPES
 from nncf.common.graph.layer_attributes import MultipleInputLayerAttributes
 from nncf.tensorflow.graph.metatypes.common import RESHAPE_METATYPES
-from nncf.tensorflow.graph.converter import TFModelConverter
+from nncf.tensorflow.graph.converter import BaseFunctionalSequentialConverter
 from nncf.tensorflow.graph.converter import convert_keras_model_to_nncf_graph
 from nncf.tensorflow.graph.metatypes.common import LAYER_METATYPES_AGNOSTIC_TO_DATA_PRECISION_WITH_MULTIPLE_INPUTS
+from nncf.tensorflow.graph.metatypes.common import LAYER_METATYPES_AGNOSTIC_TO_DATA_PRECISION_WITH_MULTIPLE_OUTPUTS
 from tests.tensorflow.helpers import get_basic_conv_test_model
 from tests.tensorflow.helpers import create_compressed_model_and_algo_for_test
 from tests.tensorflow.quantization.test_algorithm_quantization import get_basic_quantization_config
 from tests.tensorflow.pruning.helpers import get_concat_test_model
+from tests.tensorflow.pruning.helpers import get_split_test_model
 
 
 def test_struct_auxiliary_nodes_nncf_graph():
@@ -86,7 +88,7 @@ def ModelForCustomLayerTest():
 def test_get_custom_layers():
     model = ModelForCustomLayerTest()
     model.build([16, 16, 3])
-    custom_layers = TFModelConverter.get_custom_layers(model)
+    custom_layers = BaseFunctionalSequentialConverter.get_custom_layers(model)
     assert len(custom_layers) == 1
     assert CustomLayerForTest.CUSTOM_LAYER_NAME in custom_layers
     assert isinstance(custom_layers[CustomLayerForTest.CUSTOM_LAYER_NAME], CustomLayerForTest)
@@ -108,11 +110,11 @@ def get_model_with_reshapes_and_concats(batch_size=None):
 
 CONCAT_MODELS = [partial(get_concat_test_model, input_shape=[1, 8, 8, 1]),
                  get_model_with_reshapes_and_concats]
-REF_CONCAT_ATTRS = [{'tf_op_layer_tf_concat_1': {'axis': [-1, 3]},
-                     'tf_op_layer_tf_concat_2': {'axis': [-1, 3]}},
+REF_CONCAT_ATTRS = [{'tf.concat': {'axis': [-1, 3]},
+                     'tf.concat_1': {'axis': [-1, 3]}},
                     {'concatenate': {'axis': [-1, 2]},
-                     'tf_op_layer_concat': {'axis': [-1, 2]},
-                     'tf_op_layer_concat_1': {'axis': [-1, 2]}}]
+                     'tf.concat': {'axis': [-1, 2]},
+                     'tf.concat_1': {'axis': [-1, 2]}}]
 
 
 @pytest.mark.parametrize('model, ref_attrs', list(zip(CONCAT_MODELS, REF_CONCAT_ATTRS)))
@@ -130,7 +132,7 @@ def test_concat_attributes_saved_during_graph_building(model, ref_attrs):
 def test_reshape_attributes_saved_during_graph_building():
     model = get_model_with_reshapes_and_concats()
     graph = convert_keras_model_to_nncf_graph(model)
-    ref_reshape_nodes = {'tf_op_layer_Reshape': {'input_shape': (None, 64),
+    ref_reshape_nodes = {'tf.reshape': {'input_shape': (None, 64),
                                                  'output_shape': (32, None)},
                          'reshape': {'input_shape': (32, None),
                                      'output_shape': (32, 16, None)},
@@ -142,3 +144,17 @@ def test_reshape_attributes_saved_during_graph_building():
             assert node.layer_attributes is not None
             assert node.layer_attributes.input_shape == ref_reshape_nodes[node.node_name]['input_shape']
             assert node.layer_attributes.output_shape == ref_reshape_nodes[node.node_name]['output_shape']
+
+
+def test_split_attribute_saved_during_graph_building():
+    sample_size = [1, 8, 8, 1]
+    model = get_split_test_model(sample_size)
+    graph = convert_keras_model_to_nncf_graph(model)
+
+    ref_split_nodes = {'tf.split': {'chunks':2, 'axis': 3}}
+    for node in graph.get_all_nodes():
+        if node.metatype in LAYER_METATYPES_AGNOSTIC_TO_DATA_PRECISION_WITH_MULTIPLE_OUTPUTS:
+            assert node.node_name in ref_split_nodes
+            assert node.layer_attributes is not None
+            assert node.layer_attributes.chunks == ref_split_nodes[node.node_name]['chunks']
+            assert node.layer_attributes.axis == ref_split_nodes[node.node_name]['axis']

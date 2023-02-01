@@ -1,5 +1,5 @@
 """
- Copyright (c) 2020 Intel Corporation
+ Copyright (c) 2023 Intel Corporation
  Licensed under the Apache License, Version 2.0 (the "License");
  you may not use this file except in compliance with the License.
  You may obtain a copy of the License at
@@ -13,16 +13,20 @@
 
 import pytest
 import tensorflow as tf
-from tensorflow.python.keras import layers
+from tensorflow.keras import layers
 
+from nncf.common.initialization.batchnorm_adaptation import BatchnormAdaptationAlgorithm
 from nncf.tensorflow.graph.metatypes.matcher import get_keras_layer_metatype
 from nncf.tensorflow.layers.custom_objects import NNCF_QUANTIZATION_OPERATIONS
 from nncf.tensorflow.layers.operation import InputType
 from nncf.tensorflow.layers.wrapper import NNCFWrapper
+from nncf.tensorflow.layers.data_layout import get_channel_axis
 from nncf.tensorflow.quantization import FakeQuantize
+from nncf.tensorflow.quantization.algorithm import QuantizationBuilder
 from nncf.tensorflow.quantization.algorithm import QuantizationController
 from nncf.tensorflow.quantization.quantizers import Quantizer
 from nncf.tensorflow.quantization.quantizers import TFQuantizerSpec
+from nncf.tensorflow.tf_internals import Rescaling
 from tests.tensorflow.helpers import create_compressed_model_and_algo_for_test
 from tests.tensorflow.helpers import get_basic_conv_test_model
 from tests.tensorflow.helpers import get_basic_two_conv_test_model
@@ -30,6 +34,7 @@ from tests.tensorflow.quantization.utils import get_basic_quantization_config
 # TODO(nlyalyus): WA for the bug 58886, QuantizationMode should be imported after nncf.tensorflow.
 #  Otherwise test_quantize_inputs and test_quantize_outputs_removal will fail, because of invalid inputs quantization
 from nncf.common.quantization.structs import QuantizationMode
+
 
 def compare_qspecs(qspec: TFQuantizerSpec, quantizer):
     assert qspec.num_bits == quantizer.num_bits
@@ -248,7 +253,7 @@ def get_quantize_inputs_test_model(input_shapes):
     conv6 = layers.Conv2D(filters=3, kernel_size=2)
     dense = layers.Dense(8)
 
-    x_1 = layers.Rescaling(1. / 255.)(input_1)
+    x_1 = Rescaling(1. / 255.)(input_1)
     x_1 = conv1(x_1)
     x_1 = conv4(x_1)
     x_1 = layers.GlobalAveragePooling2D()(x_1)
@@ -626,8 +631,9 @@ def test_quantize_pre_post_processing(layer_name, input_type, data_type):
     assert len(layer_metatype.weight_definitions) == 1
     layer_name = layer_metatype.weight_definitions[0].weight_attr_name
     q = Quantizer(name='quantizer')
-    q.setup_input_transformation(layer_desk.shape, layer_desk.input_type,
-                                 layer_name, layer_desk.layer)
+
+    channel_axes = get_channel_axis(layer_desk.input_type, layer_name, layer_desk.layer)
+    q.setup_input_transformation(layer_desk.shape, channel_axes)
     # pylint: disable=protected-access
     preprocess = q._pre_processing_fn(layer_desk.inputs)
     postprocess = q._post_processing_fn(preprocess)
@@ -711,3 +717,20 @@ def test_quantization_preset_with_scope_overrides():
             assert wq.mode == 'asymmetric'
         else:
             assert wq.mode == 'symmetric'
+
+
+def test_quantization_with_bn_adaptation_disable(mocker):
+    model = get_basic_conv_test_model()
+    config = get_basic_quantization_config()
+    config['compression']['initializer'] = {
+        'batchnorm_adaptation': {
+            'num_bn_adaptation_samples': 0
+        }
+    }
+
+    init_spy = mocker.spy(QuantizationBuilder, 'initialize')
+    bn_adaptation_spy = mocker.spy(BatchnormAdaptationAlgorithm, 'run')
+    create_compressed_model_and_algo_for_test(model, config)
+
+    init_spy.assert_called()
+    bn_adaptation_spy.assert_not_called()

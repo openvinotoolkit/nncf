@@ -1,5 +1,5 @@
 """
- Copyright (c) 2021 Intel Corporation
+ Copyright (c) 2023 Intel Corporation
  Licensed under the Apache License, Version 2.0 (the "License");
  you may not use this file except in compliance with the License.
  You may obtain a copy of the License at
@@ -14,7 +14,7 @@
 from abc import ABC, abstractmethod
 from typing import Optional, List, Tuple, Any
 
-from nncf.api.compression import ModelType
+from nncf.api.compression import TModel
 
 
 class Exporter(ABC):
@@ -26,7 +26,7 @@ class Exporter(ABC):
     """
 
     def __init__(self,
-                 model: ModelType,
+                 model: TModel,
                  input_names: Optional[List[str]] = None,
                  output_names: Optional[List[str]] = None,
                  model_args: Optional[Tuple[Any, ...]] = None):

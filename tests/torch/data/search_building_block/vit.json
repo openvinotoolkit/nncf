@@ -1,0 +1,614 @@
+[
+    {
+        "basic_block": {
+            "end_node_name": "ViTForImageClassification/ViTModel[vit]/ViTEncoder[encoder]/ModuleList[layer]/ViTLayer[0]/ViTAttention[attention]/ViTSelfOutput[output]/NNCFLinear[dense]/linear_0",
+            "start_node_name": "ViTForImageClassification/ViTModel[vit]/ViTEncoder[encoder]/ModuleList[layer]/ViTLayer[0]/NNCFLayerNorm[layernorm_before]/layer_norm_0"
+        },
+        "block_type": "MHSA",
+        "op_addresses": [
+            "ViTForImageClassification/ViTModel[vit]/ViTEncoder[encoder]/ModuleList[layer]/ViTLayer[0]/ViTAttention[attention]/ViTSelfAttention[attention]/Dropout[dropout]/dropout_0",
+            "ViTForImageClassification/ViTModel[vit]/ViTEncoder[encoder]/ModuleList[layer]/ViTLayer[0]/ViTAttention[attention]/ViTSelfAttention[attention]/NNCFLinear[key]/linear_0",
+            "ViTForImageClassification/ViTModel[vit]/ViTEncoder[encoder]/ModuleList[layer]/ViTLayer[0]/ViTAttention[attention]/ViTSelfAttention[attention]/NNCFLinear[query]/linear_0",
+            "ViTForImageClassification/ViTModel[vit]/ViTEncoder[encoder]/ModuleList[layer]/ViTLayer[0]/ViTAttention[attention]/ViTSelfAttention[attention]/NNCFLinear[value]/linear_0",
+            "ViTForImageClassification/ViTModel[vit]/ViTEncoder[encoder]/ModuleList[layer]/ViTLayer[0]/ViTAttention[attention]/ViTSelfAttention[attention]/__truediv___0",
+            "ViTForImageClassification/ViTModel[vit]/ViTEncoder[encoder]/ModuleList[layer]/ViTLayer[0]/ViTAttention[attention]/ViTSelfAttention[attention]/contiguous_0",
+            "ViTForImageClassification/ViTModel[vit]/ViTEncoder[encoder]/ModuleList[layer]/ViTLayer[0]/ViTAttention[attention]/ViTSelfAttention[attention]/matmul_0",
+            "ViTForImageClassification/ViTModel[vit]/ViTEncoder[encoder]/ModuleList[layer]/ViTLayer[0]/ViTAttention[attention]/ViTSelfAttention[attention]/matmul_1",
+            "ViTForImageClassification/ViTModel[vit]/ViTEncoder[encoder]/ModuleList[layer]/ViTLayer[0]/ViTAttention[attention]/ViTSelfAttention[attention]/permute_0",
+            "ViTForImageClassification/ViTModel[vit]/ViTEncoder[encoder]/ModuleList[layer]/ViTLayer[0]/ViTAttention[attention]/ViTSelfAttention[attention]/permute_1",
+            "ViTForImageClassification/ViTModel[vit]/ViTEncoder[encoder]/ModuleList[layer]/ViTLayer[0]/ViTAttention[attention]/ViTSelfAttention[attention]/permute_2",
+            "ViTForImageClassification/ViTModel[vit]/ViTEncoder[encoder]/ModuleList[layer]/ViTLayer[0]/ViTAttention[attention]/ViTSelfAttention[attention]/permute_3",
+            "ViTForImageClassification/ViTModel[vit]/ViTEncoder[encoder]/ModuleList[layer]/ViTLayer[0]/ViTAttention[attention]/ViTSelfAttention[attention]/softmax_0",
+            "ViTForImageClassification/ViTModel[vit]/ViTEncoder[encoder]/ModuleList[layer]/ViTLayer[0]/ViTAttention[attention]/ViTSelfAttention[attention]/transpose_0",
+            "ViTForImageClassification/ViTModel[vit]/ViTEncoder[encoder]/ModuleList[layer]/ViTLayer[0]/ViTAttention[attention]/ViTSelfAttention[attention]/view_0",
+            "ViTForImageClassification/ViTModel[vit]/ViTEncoder[encoder]/ModuleList[layer]/ViTLayer[0]/ViTAttention[attention]/ViTSelfAttention[attention]/view_1",
+            "ViTForImageClassification/ViTModel[vit]/ViTEncoder[encoder]/ModuleList[layer]/ViTLayer[0]/ViTAttention[attention]/ViTSelfAttention[attention]/view_2",
+            "ViTForImageClassification/ViTModel[vit]/ViTEncoder[encoder]/ModuleList[layer]/ViTLayer[0]/ViTAttention[attention]/ViTSelfAttention[attention]/view_3",
+            "ViTForImageClassification/ViTModel[vit]/ViTEncoder[encoder]/ModuleList[layer]/ViTLayer[0]/ViTAttention[attention]/ViTSelfOutput[output]/NNCFLinear[dense]/linear_0"
+        ],
+        "ordinal_ids": [
+            7,
+            26
+        ]
+    },
+    {
+        "basic_block": {
+            "end_node_name": "ViTForImageClassification/ViTModel[vit]/ViTEncoder[encoder]/ModuleList[layer]/ViTLayer[0]/ViTOutput[output]/__add___0",
+            "start_node_name": "ViTForImageClassification/ViTModel[vit]/ViTEncoder[encoder]/ModuleList[layer]/ViTLayer[0]/__add___0"
+        },
+        "block_type": "FF",
+        "op_addresses": [
+            "ViTForImageClassification/ViTModel[vit]/ViTEncoder[encoder]/ModuleList[layer]/ViTLayer[0]/NNCFLayerNorm[layernorm_after]/layer_norm_0",
+            "ViTForImageClassification/ViTModel[vit]/ViTEncoder[encoder]/ModuleList[layer]/ViTLayer[0]/ViTIntermediate[intermediate]/GELUActivation[intermediate_act_fn]/gelu_0",
+            "ViTForImageClassification/ViTModel[vit]/ViTEncoder[encoder]/ModuleList[layer]/ViTLayer[0]/ViTIntermediate[intermediate]/NNCFLinear[dense]/linear_0",
+            "ViTForImageClassification/ViTModel[vit]/ViTEncoder[encoder]/ModuleList[layer]/ViTLayer[0]/ViTOutput[output]/Dropout[dropout]/dropout_0",
+            "ViTForImageClassification/ViTModel[vit]/ViTEncoder[encoder]/ModuleList[layer]/ViTLayer[0]/ViTOutput[output]/NNCFLinear[dense]/linear_0",
+            "ViTForImageClassification/ViTModel[vit]/ViTEncoder[encoder]/ModuleList[layer]/ViTLayer[0]/ViTOutput[output]/__add___0"
+        ],
+        "ordinal_ids": [
+            28,
+            34
+        ]
+    },
+    {
+        "basic_block": {
+            "end_node_name": "ViTForImageClassification/ViTModel[vit]/ViTEncoder[encoder]/ModuleList[layer]/ViTLayer[1]/ViTAttention[attention]/ViTSelfOutput[output]/NNCFLinear[dense]/linear_0",
+            "start_node_name": "ViTForImageClassification/ViTModel[vit]/ViTEncoder[encoder]/ModuleList[layer]/ViTLayer[1]/NNCFLayerNorm[layernorm_before]/layer_norm_0"
+        },
+        "block_type": "MHSA",
+        "op_addresses": [
+            "ViTForImageClassification/ViTModel[vit]/ViTEncoder[encoder]/ModuleList[layer]/ViTLayer[1]/ViTAttention[attention]/ViTSelfAttention[attention]/Dropout[dropout]/dropout_0",
+            "ViTForImageClassification/ViTModel[vit]/ViTEncoder[encoder]/ModuleList[layer]/ViTLayer[1]/ViTAttention[attention]/ViTSelfAttention[attention]/NNCFLinear[key]/linear_0",
+            "ViTForImageClassification/ViTModel[vit]/ViTEncoder[encoder]/ModuleList[layer]/ViTLayer[1]/ViTAttention[attention]/ViTSelfAttention[attention]/NNCFLinear[query]/linear_0",
+            "ViTForImageClassification/ViTModel[vit]/ViTEncoder[encoder]/ModuleList[layer]/ViTLayer[1]/ViTAttention[attention]/ViTSelfAttention[attention]/NNCFLinear[value]/linear_0",
+            "ViTForImageClassification/ViTModel[vit]/ViTEncoder[encoder]/ModuleList[layer]/ViTLayer[1]/ViTAttention[attention]/ViTSelfAttention[attention]/__truediv___0",
+            "ViTForImageClassification/ViTModel[vit]/ViTEncoder[encoder]/ModuleList[layer]/ViTLayer[1]/ViTAttention[attention]/ViTSelfAttention[attention]/contiguous_0",
+            "ViTForImageClassification/ViTModel[vit]/ViTEncoder[encoder]/ModuleList[layer]/ViTLayer[1]/ViTAttention[attention]/ViTSelfAttention[attention]/matmul_0",
+            "ViTForImageClassification/ViTModel[vit]/ViTEncoder[encoder]/ModuleList[layer]/ViTLayer[1]/ViTAttention[attention]/ViTSelfAttention[attention]/matmul_1",
+            "ViTForImageClassification/ViTModel[vit]/ViTEncoder[encoder]/ModuleList[layer]/ViTLayer[1]/ViTAttention[attention]/ViTSelfAttention[attention]/permute_0",
+            "ViTForImageClassification/ViTModel[vit]/ViTEncoder[encoder]/ModuleList[layer]/ViTLayer[1]/ViTAttention[attention]/ViTSelfAttention[attention]/permute_1",
+            "ViTForImageClassification/ViTModel[vit]/ViTEncoder[encoder]/ModuleList[layer]/ViTLayer[1]/ViTAttention[attention]/ViTSelfAttention[attention]/permute_2",
+            "ViTForImageClassification/ViTModel[vit]/ViTEncoder[encoder]/ModuleList[layer]/ViTLayer[1]/ViTAttention[attention]/ViTSelfAttention[attention]/permute_3",
+            "ViTForImageClassification/ViTModel[vit]/ViTEncoder[encoder]/ModuleList[layer]/ViTLayer[1]/ViTAttention[attention]/ViTSelfAttention[attention]/softmax_0",
+            "ViTForImageClassification/ViTModel[vit]/ViTEncoder[encoder]/ModuleList[layer]/ViTLayer[1]/ViTAttention[attention]/ViTSelfAttention[attention]/transpose_0",
+            "ViTForImageClassification/ViTModel[vit]/ViTEncoder[encoder]/ModuleList[layer]/ViTLayer[1]/ViTAttention[attention]/ViTSelfAttention[attention]/view_0",
+            "ViTForImageClassification/ViTModel[vit]/ViTEncoder[encoder]/ModuleList[layer]/ViTLayer[1]/ViTAttention[attention]/ViTSelfAttention[attention]/view_1",
+            "ViTForImageClassification/ViTModel[vit]/ViTEncoder[encoder]/ModuleList[layer]/ViTLayer[1]/ViTAttention[attention]/ViTSelfAttention[attention]/view_2",
+            "ViTForImageClassification/ViTModel[vit]/ViTEncoder[encoder]/ModuleList[layer]/ViTLayer[1]/ViTAttention[attention]/ViTSelfAttention[attention]/view_3",
+            "ViTForImageClassification/ViTModel[vit]/ViTEncoder[encoder]/ModuleList[layer]/ViTLayer[1]/ViTAttention[attention]/ViTSelfOutput[output]/NNCFLinear[dense]/linear_0"
+        ],
+        "ordinal_ids": [
+            35,
+            54
+        ]
+    },
+    {
+        "basic_block": {
+            "end_node_name": "ViTForImageClassification/ViTModel[vit]/ViTEncoder[encoder]/ModuleList[layer]/ViTLayer[1]/ViTOutput[output]/__add___0",
+            "start_node_name": "ViTForImageClassification/ViTModel[vit]/ViTEncoder[encoder]/ModuleList[layer]/ViTLayer[1]/__add___0"
+        },
+        "block_type": "FF",
+        "op_addresses": [
+            "ViTForImageClassification/ViTModel[vit]/ViTEncoder[encoder]/ModuleList[layer]/ViTLayer[1]/NNCFLayerNorm[layernorm_after]/layer_norm_0",
+            "ViTForImageClassification/ViTModel[vit]/ViTEncoder[encoder]/ModuleList[layer]/ViTLayer[1]/ViTIntermediate[intermediate]/GELUActivation[intermediate_act_fn]/gelu_0",
+            "ViTForImageClassification/ViTModel[vit]/ViTEncoder[encoder]/ModuleList[layer]/ViTLayer[1]/ViTIntermediate[intermediate]/NNCFLinear[dense]/linear_0",
+            "ViTForImageClassification/ViTModel[vit]/ViTEncoder[encoder]/ModuleList[layer]/ViTLayer[1]/ViTOutput[output]/Dropout[dropout]/dropout_0",
+            "ViTForImageClassification/ViTModel[vit]/ViTEncoder[encoder]/ModuleList[layer]/ViTLayer[1]/ViTOutput[output]/NNCFLinear[dense]/linear_0",
+            "ViTForImageClassification/ViTModel[vit]/ViTEncoder[encoder]/ModuleList[layer]/ViTLayer[1]/ViTOutput[output]/__add___0"
+        ],
+        "ordinal_ids": [
+            56,
+            62
+        ]
+    },
+    {
+        "basic_block": {
+            "end_node_name": "ViTForImageClassification/ViTModel[vit]/ViTEncoder[encoder]/ModuleList[layer]/ViTLayer[2]/ViTAttention[attention]/ViTSelfOutput[output]/NNCFLinear[dense]/linear_0",
+            "start_node_name": "ViTForImageClassification/ViTModel[vit]/ViTEncoder[encoder]/ModuleList[layer]/ViTLayer[2]/NNCFLayerNorm[layernorm_before]/layer_norm_0"
+        },
+        "block_type": "MHSA",
+        "op_addresses": [
+            "ViTForImageClassification/ViTModel[vit]/ViTEncoder[encoder]/ModuleList[layer]/ViTLayer[2]/ViTAttention[attention]/ViTSelfAttention[attention]/Dropout[dropout]/dropout_0",
+            "ViTForImageClassification/ViTModel[vit]/ViTEncoder[encoder]/ModuleList[layer]/ViTLayer[2]/ViTAttention[attention]/ViTSelfAttention[attention]/NNCFLinear[key]/linear_0",
+            "ViTForImageClassification/ViTModel[vit]/ViTEncoder[encoder]/ModuleList[layer]/ViTLayer[2]/ViTAttention[attention]/ViTSelfAttention[attention]/NNCFLinear[query]/linear_0",
+            "ViTForImageClassification/ViTModel[vit]/ViTEncoder[encoder]/ModuleList[layer]/ViTLayer[2]/ViTAttention[attention]/ViTSelfAttention[attention]/NNCFLinear[value]/linear_0",
+            "ViTForImageClassification/ViTModel[vit]/ViTEncoder[encoder]/ModuleList[layer]/ViTLayer[2]/ViTAttention[attention]/ViTSelfAttention[attention]/__truediv___0",
+            "ViTForImageClassification/ViTModel[vit]/ViTEncoder[encoder]/ModuleList[layer]/ViTLayer[2]/ViTAttention[attention]/ViTSelfAttention[attention]/contiguous_0",
+            "ViTForImageClassification/ViTModel[vit]/ViTEncoder[encoder]/ModuleList[layer]/ViTLayer[2]/ViTAttention[attention]/ViTSelfAttention[attention]/matmul_0",
+            "ViTForImageClassification/ViTModel[vit]/ViTEncoder[encoder]/ModuleList[layer]/ViTLayer[2]/ViTAttention[attention]/ViTSelfAttention[attention]/matmul_1",
+            "ViTForImageClassification/ViTModel[vit]/ViTEncoder[encoder]/ModuleList[layer]/ViTLayer[2]/ViTAttention[attention]/ViTSelfAttention[attention]/permute_0",
+            "ViTForImageClassification/ViTModel[vit]/ViTEncoder[encoder]/ModuleList[layer]/ViTLayer[2]/ViTAttention[attention]/ViTSelfAttention[attention]/permute_1",
+            "ViTForImageClassification/ViTModel[vit]/ViTEncoder[encoder]/ModuleList[layer]/ViTLayer[2]/ViTAttention[attention]/ViTSelfAttention[attention]/permute_2",
+            "ViTForImageClassification/ViTModel[vit]/ViTEncoder[encoder]/ModuleList[layer]/ViTLayer[2]/ViTAttention[attention]/ViTSelfAttention[attention]/permute_3",
+            "ViTForImageClassification/ViTModel[vit]/ViTEncoder[encoder]/ModuleList[layer]/ViTLayer[2]/ViTAttention[attention]/ViTSelfAttention[attention]/softmax_0",
+            "ViTForImageClassification/ViTModel[vit]/ViTEncoder[encoder]/ModuleList[layer]/ViTLayer[2]/ViTAttention[attention]/ViTSelfAttention[attention]/transpose_0",
+            "ViTForImageClassification/ViTModel[vit]/ViTEncoder[encoder]/ModuleList[layer]/ViTLayer[2]/ViTAttention[attention]/ViTSelfAttention[attention]/view_0",
+            "ViTForImageClassification/ViTModel[vit]/ViTEncoder[encoder]/ModuleList[layer]/ViTLayer[2]/ViTAttention[attention]/ViTSelfAttention[attention]/view_1",
+            "ViTForImageClassification/ViTModel[vit]/ViTEncoder[encoder]/ModuleList[layer]/ViTLayer[2]/ViTAttention[attention]/ViTSelfAttention[attention]/view_2",
+            "ViTForImageClassification/ViTModel[vit]/ViTEncoder[encoder]/ModuleList[layer]/ViTLayer[2]/ViTAttention[attention]/ViTSelfAttention[attention]/view_3",
+            "ViTForImageClassification/ViTModel[vit]/ViTEncoder[encoder]/ModuleList[layer]/ViTLayer[2]/ViTAttention[attention]/ViTSelfOutput[output]/NNCFLinear[dense]/linear_0"
+        ],
+        "ordinal_ids": [
+            63,
+            82
+        ]
+    },
+    {
+        "basic_block": {
+            "end_node_name": "ViTForImageClassification/ViTModel[vit]/ViTEncoder[encoder]/ModuleList[layer]/ViTLayer[2]/ViTOutput[output]/__add___0",
+            "start_node_name": "ViTForImageClassification/ViTModel[vit]/ViTEncoder[encoder]/ModuleList[layer]/ViTLayer[2]/__add___0"
+        },
+        "block_type": "FF",
+        "op_addresses": [
+            "ViTForImageClassification/ViTModel[vit]/ViTEncoder[encoder]/ModuleList[layer]/ViTLayer[2]/NNCFLayerNorm[layernorm_after]/layer_norm_0",
+            "ViTForImageClassification/ViTModel[vit]/ViTEncoder[encoder]/ModuleList[layer]/ViTLayer[2]/ViTIntermediate[intermediate]/GELUActivation[intermediate_act_fn]/gelu_0",
+            "ViTForImageClassification/ViTModel[vit]/ViTEncoder[encoder]/ModuleList[layer]/ViTLayer[2]/ViTIntermediate[intermediate]/NNCFLinear[dense]/linear_0",
+            "ViTForImageClassification/ViTModel[vit]/ViTEncoder[encoder]/ModuleList[layer]/ViTLayer[2]/ViTOutput[output]/Dropout[dropout]/dropout_0",
+            "ViTForImageClassification/ViTModel[vit]/ViTEncoder[encoder]/ModuleList[layer]/ViTLayer[2]/ViTOutput[output]/NNCFLinear[dense]/linear_0",
+            "ViTForImageClassification/ViTModel[vit]/ViTEncoder[encoder]/ModuleList[layer]/ViTLayer[2]/ViTOutput[output]/__add___0"
+        ],
+        "ordinal_ids": [
+            84,
+            90
+        ]
+    },
+    {
+        "basic_block": {
+            "end_node_name": "ViTForImageClassification/ViTModel[vit]/ViTEncoder[encoder]/ModuleList[layer]/ViTLayer[3]/ViTAttention[attention]/ViTSelfOutput[output]/NNCFLinear[dense]/linear_0",
+            "start_node_name": "ViTForImageClassification/ViTModel[vit]/ViTEncoder[encoder]/ModuleList[layer]/ViTLayer[3]/NNCFLayerNorm[layernorm_before]/layer_norm_0"
+        },
+        "block_type": "MHSA",
+        "op_addresses": [
+            "ViTForImageClassification/ViTModel[vit]/ViTEncoder[encoder]/ModuleList[layer]/ViTLayer[3]/ViTAttention[attention]/ViTSelfAttention[attention]/Dropout[dropout]/dropout_0",
+            "ViTForImageClassification/ViTModel[vit]/ViTEncoder[encoder]/ModuleList[layer]/ViTLayer[3]/ViTAttention[attention]/ViTSelfAttention[attention]/NNCFLinear[key]/linear_0",
+            "ViTForImageClassification/ViTModel[vit]/ViTEncoder[encoder]/ModuleList[layer]/ViTLayer[3]/ViTAttention[attention]/ViTSelfAttention[attention]/NNCFLinear[query]/linear_0",
+            "ViTForImageClassification/ViTModel[vit]/ViTEncoder[encoder]/ModuleList[layer]/ViTLayer[3]/ViTAttention[attention]/ViTSelfAttention[attention]/NNCFLinear[value]/linear_0",
+            "ViTForImageClassification/ViTModel[vit]/ViTEncoder[encoder]/ModuleList[layer]/ViTLayer[3]/ViTAttention[attention]/ViTSelfAttention[attention]/__truediv___0",
+            "ViTForImageClassification/ViTModel[vit]/ViTEncoder[encoder]/ModuleList[layer]/ViTLayer[3]/ViTAttention[attention]/ViTSelfAttention[attention]/contiguous_0",
+            "ViTForImageClassification/ViTModel[vit]/ViTEncoder[encoder]/ModuleList[layer]/ViTLayer[3]/ViTAttention[attention]/ViTSelfAttention[attention]/matmul_0",
+            "ViTForImageClassification/ViTModel[vit]/ViTEncoder[encoder]/ModuleList[layer]/ViTLayer[3]/ViTAttention[attention]/ViTSelfAttention[attention]/matmul_1",
+            "ViTForImageClassification/ViTModel[vit]/ViTEncoder[encoder]/ModuleList[layer]/ViTLayer[3]/ViTAttention[attention]/ViTSelfAttention[attention]/permute_0",
+            "ViTForImageClassification/ViTModel[vit]/ViTEncoder[encoder]/ModuleList[layer]/ViTLayer[3]/ViTAttention[attention]/ViTSelfAttention[attention]/permute_1",
+            "ViTForImageClassification/ViTModel[vit]/ViTEncoder[encoder]/ModuleList[layer]/ViTLayer[3]/ViTAttention[attention]/ViTSelfAttention[attention]/permute_2",
+            "ViTForImageClassification/ViTModel[vit]/ViTEncoder[encoder]/ModuleList[layer]/ViTLayer[3]/ViTAttention[attention]/ViTSelfAttention[attention]/permute_3",
+            "ViTForImageClassification/ViTModel[vit]/ViTEncoder[encoder]/ModuleList[layer]/ViTLayer[3]/ViTAttention[attention]/ViTSelfAttention[attention]/softmax_0",
+            "ViTForImageClassification/ViTModel[vit]/ViTEncoder[encoder]/ModuleList[layer]/ViTLayer[3]/ViTAttention[attention]/ViTSelfAttention[attention]/transpose_0",
+            "ViTForImageClassification/ViTModel[vit]/ViTEncoder[encoder]/ModuleList[layer]/ViTLayer[3]/ViTAttention[attention]/ViTSelfAttention[attention]/view_0",
+            "ViTForImageClassification/ViTModel[vit]/ViTEncoder[encoder]/ModuleList[layer]/ViTLayer[3]/ViTAttention[attention]/ViTSelfAttention[attention]/view_1",
+            "ViTForImageClassification/ViTModel[vit]/ViTEncoder[encoder]/ModuleList[layer]/ViTLayer[3]/ViTAttention[attention]/ViTSelfAttention[attention]/view_2",
+            "ViTForImageClassification/ViTModel[vit]/ViTEncoder[encoder]/ModuleList[layer]/ViTLayer[3]/ViTAttention[attention]/ViTSelfAttention[attention]/view_3",
+            "ViTForImageClassification/ViTModel[vit]/ViTEncoder[encoder]/ModuleList[layer]/ViTLayer[3]/ViTAttention[attention]/ViTSelfOutput[output]/NNCFLinear[dense]/linear_0"
+        ],
+        "ordinal_ids": [
+            91,
+            110
+        ]
+    },
+    {
+        "basic_block": {
+            "end_node_name": "ViTForImageClassification/ViTModel[vit]/ViTEncoder[encoder]/ModuleList[layer]/ViTLayer[3]/ViTOutput[output]/__add___0",
+            "start_node_name": "ViTForImageClassification/ViTModel[vit]/ViTEncoder[encoder]/ModuleList[layer]/ViTLayer[3]/__add___0"
+        },
+        "block_type": "FF",
+        "op_addresses": [
+            "ViTForImageClassification/ViTModel[vit]/ViTEncoder[encoder]/ModuleList[layer]/ViTLayer[3]/NNCFLayerNorm[layernorm_after]/layer_norm_0",
+            "ViTForImageClassification/ViTModel[vit]/ViTEncoder[encoder]/ModuleList[layer]/ViTLayer[3]/ViTIntermediate[intermediate]/GELUActivation[intermediate_act_fn]/gelu_0",
+            "ViTForImageClassification/ViTModel[vit]/ViTEncoder[encoder]/ModuleList[layer]/ViTLayer[3]/ViTIntermediate[intermediate]/NNCFLinear[dense]/linear_0",
+            "ViTForImageClassification/ViTModel[vit]/ViTEncoder[encoder]/ModuleList[layer]/ViTLayer[3]/ViTOutput[output]/Dropout[dropout]/dropout_0",
+            "ViTForImageClassification/ViTModel[vit]/ViTEncoder[encoder]/ModuleList[layer]/ViTLayer[3]/ViTOutput[output]/NNCFLinear[dense]/linear_0",
+            "ViTForImageClassification/ViTModel[vit]/ViTEncoder[encoder]/ModuleList[layer]/ViTLayer[3]/ViTOutput[output]/__add___0"
+        ],
+        "ordinal_ids": [
+            112,
+            118
+        ]
+    },
+    {
+        "basic_block": {
+            "end_node_name": "ViTForImageClassification/ViTModel[vit]/ViTEncoder[encoder]/ModuleList[layer]/ViTLayer[4]/ViTAttention[attention]/ViTSelfOutput[output]/NNCFLinear[dense]/linear_0",
+            "start_node_name": "ViTForImageClassification/ViTModel[vit]/ViTEncoder[encoder]/ModuleList[layer]/ViTLayer[4]/NNCFLayerNorm[layernorm_before]/layer_norm_0"
+        },
+        "block_type": "MHSA",
+        "op_addresses": [
+            "ViTForImageClassification/ViTModel[vit]/ViTEncoder[encoder]/ModuleList[layer]/ViTLayer[4]/ViTAttention[attention]/ViTSelfAttention[attention]/Dropout[dropout]/dropout_0",
+            "ViTForImageClassification/ViTModel[vit]/ViTEncoder[encoder]/ModuleList[layer]/ViTLayer[4]/ViTAttention[attention]/ViTSelfAttention[attention]/NNCFLinear[key]/linear_0",
+            "ViTForImageClassification/ViTModel[vit]/ViTEncoder[encoder]/ModuleList[layer]/ViTLayer[4]/ViTAttention[attention]/ViTSelfAttention[attention]/NNCFLinear[query]/linear_0",
+            "ViTForImageClassification/ViTModel[vit]/ViTEncoder[encoder]/ModuleList[layer]/ViTLayer[4]/ViTAttention[attention]/ViTSelfAttention[attention]/NNCFLinear[value]/linear_0",
+            "ViTForImageClassification/ViTModel[vit]/ViTEncoder[encoder]/ModuleList[layer]/ViTLayer[4]/ViTAttention[attention]/ViTSelfAttention[attention]/__truediv___0",
+            "ViTForImageClassification/ViTModel[vit]/ViTEncoder[encoder]/ModuleList[layer]/ViTLayer[4]/ViTAttention[attention]/ViTSelfAttention[attention]/contiguous_0",
+            "ViTForImageClassification/ViTModel[vit]/ViTEncoder[encoder]/ModuleList[layer]/ViTLayer[4]/ViTAttention[attention]/ViTSelfAttention[attention]/matmul_0",
+            "ViTForImageClassification/ViTModel[vit]/ViTEncoder[encoder]/ModuleList[layer]/ViTLayer[4]/ViTAttention[attention]/ViTSelfAttention[attention]/matmul_1",
+            "ViTForImageClassification/ViTModel[vit]/ViTEncoder[encoder]/ModuleList[layer]/ViTLayer[4]/ViTAttention[attention]/ViTSelfAttention[attention]/permute_0",
+            "ViTForImageClassification/ViTModel[vit]/ViTEncoder[encoder]/ModuleList[layer]/ViTLayer[4]/ViTAttention[attention]/ViTSelfAttention[attention]/permute_1",
+            "ViTForImageClassification/ViTModel[vit]/ViTEncoder[encoder]/ModuleList[layer]/ViTLayer[4]/ViTAttention[attention]/ViTSelfAttention[attention]/permute_2",
+            "ViTForImageClassification/ViTModel[vit]/ViTEncoder[encoder]/ModuleList[layer]/ViTLayer[4]/ViTAttention[attention]/ViTSelfAttention[attention]/permute_3",
+            "ViTForImageClassification/ViTModel[vit]/ViTEncoder[encoder]/ModuleList[layer]/ViTLayer[4]/ViTAttention[attention]/ViTSelfAttention[attention]/softmax_0",
+            "ViTForImageClassification/ViTModel[vit]/ViTEncoder[encoder]/ModuleList[layer]/ViTLayer[4]/ViTAttention[attention]/ViTSelfAttention[attention]/transpose_0",
+            "ViTForImageClassification/ViTModel[vit]/ViTEncoder[encoder]/ModuleList[layer]/ViTLayer[4]/ViTAttention[attention]/ViTSelfAttention[attention]/view_0",
+            "ViTForImageClassification/ViTModel[vit]/ViTEncoder[encoder]/ModuleList[layer]/ViTLayer[4]/ViTAttention[attention]/ViTSelfAttention[attention]/view_1",
+            "ViTForImageClassification/ViTModel[vit]/ViTEncoder[encoder]/ModuleList[layer]/ViTLayer[4]/ViTAttention[attention]/ViTSelfAttention[attention]/view_2",
+            "ViTForImageClassification/ViTModel[vit]/ViTEncoder[encoder]/ModuleList[layer]/ViTLayer[4]/ViTAttention[attention]/ViTSelfAttention[attention]/view_3",
+            "ViTForImageClassification/ViTModel[vit]/ViTEncoder[encoder]/ModuleList[layer]/ViTLayer[4]/ViTAttention[attention]/ViTSelfOutput[output]/NNCFLinear[dense]/linear_0"
+        ],
+        "ordinal_ids": [
+            119,
+            138
+        ]
+    },
+    {
+        "basic_block": {
+            "end_node_name": "ViTForImageClassification/ViTModel[vit]/ViTEncoder[encoder]/ModuleList[layer]/ViTLayer[4]/ViTOutput[output]/__add___0",
+            "start_node_name": "ViTForImageClassification/ViTModel[vit]/ViTEncoder[encoder]/ModuleList[layer]/ViTLayer[4]/__add___0"
+        },
+        "block_type": "FF",
+        "op_addresses": [
+            "ViTForImageClassification/ViTModel[vit]/ViTEncoder[encoder]/ModuleList[layer]/ViTLayer[4]/NNCFLayerNorm[layernorm_after]/layer_norm_0",
+            "ViTForImageClassification/ViTModel[vit]/ViTEncoder[encoder]/ModuleList[layer]/ViTLayer[4]/ViTIntermediate[intermediate]/GELUActivation[intermediate_act_fn]/gelu_0",
+            "ViTForImageClassification/ViTModel[vit]/ViTEncoder[encoder]/ModuleList[layer]/ViTLayer[4]/ViTIntermediate[intermediate]/NNCFLinear[dense]/linear_0",
+            "ViTForImageClassification/ViTModel[vit]/ViTEncoder[encoder]/ModuleList[layer]/ViTLayer[4]/ViTOutput[output]/Dropout[dropout]/dropout_0",
+            "ViTForImageClassification/ViTModel[vit]/ViTEncoder[encoder]/ModuleList[layer]/ViTLayer[4]/ViTOutput[output]/NNCFLinear[dense]/linear_0",
+            "ViTForImageClassification/ViTModel[vit]/ViTEncoder[encoder]/ModuleList[layer]/ViTLayer[4]/ViTOutput[output]/__add___0"
+        ],
+        "ordinal_ids": [
+            140,
+            146
+        ]
+    },
+    {
+        "basic_block": {
+            "end_node_name": "ViTForImageClassification/ViTModel[vit]/ViTEncoder[encoder]/ModuleList[layer]/ViTLayer[5]/ViTAttention[attention]/ViTSelfOutput[output]/NNCFLinear[dense]/linear_0",
+            "start_node_name": "ViTForImageClassification/ViTModel[vit]/ViTEncoder[encoder]/ModuleList[layer]/ViTLayer[5]/NNCFLayerNorm[layernorm_before]/layer_norm_0"
+        },
+        "block_type": "MHSA",
+        "op_addresses": [
+            "ViTForImageClassification/ViTModel[vit]/ViTEncoder[encoder]/ModuleList[layer]/ViTLayer[5]/ViTAttention[attention]/ViTSelfAttention[attention]/Dropout[dropout]/dropout_0",
+            "ViTForImageClassification/ViTModel[vit]/ViTEncoder[encoder]/ModuleList[layer]/ViTLayer[5]/ViTAttention[attention]/ViTSelfAttention[attention]/NNCFLinear[key]/linear_0",
+            "ViTForImageClassification/ViTModel[vit]/ViTEncoder[encoder]/ModuleList[layer]/ViTLayer[5]/ViTAttention[attention]/ViTSelfAttention[attention]/NNCFLinear[query]/linear_0",
+            "ViTForImageClassification/ViTModel[vit]/ViTEncoder[encoder]/ModuleList[layer]/ViTLayer[5]/ViTAttention[attention]/ViTSelfAttention[attention]/NNCFLinear[value]/linear_0",
+            "ViTForImageClassification/ViTModel[vit]/ViTEncoder[encoder]/ModuleList[layer]/ViTLayer[5]/ViTAttention[attention]/ViTSelfAttention[attention]/__truediv___0",
+            "ViTForImageClassification/ViTModel[vit]/ViTEncoder[encoder]/ModuleList[layer]/ViTLayer[5]/ViTAttention[attention]/ViTSelfAttention[attention]/contiguous_0",
+            "ViTForImageClassification/ViTModel[vit]/ViTEncoder[encoder]/ModuleList[layer]/ViTLayer[5]/ViTAttention[attention]/ViTSelfAttention[attention]/matmul_0",
+            "ViTForImageClassification/ViTModel[vit]/ViTEncoder[encoder]/ModuleList[layer]/ViTLayer[5]/ViTAttention[attention]/ViTSelfAttention[attention]/matmul_1",
+            "ViTForImageClassification/ViTModel[vit]/ViTEncoder[encoder]/ModuleList[layer]/ViTLayer[5]/ViTAttention[attention]/ViTSelfAttention[attention]/permute_0",
+            "ViTForImageClassification/ViTModel[vit]/ViTEncoder[encoder]/ModuleList[layer]/ViTLayer[5]/ViTAttention[attention]/ViTSelfAttention[attention]/permute_1",
+            "ViTForImageClassification/ViTModel[vit]/ViTEncoder[encoder]/ModuleList[layer]/ViTLayer[5]/ViTAttention[attention]/ViTSelfAttention[attention]/permute_2",
+            "ViTForImageClassification/ViTModel[vit]/ViTEncoder[encoder]/ModuleList[layer]/ViTLayer[5]/ViTAttention[attention]/ViTSelfAttention[attention]/permute_3",
+            "ViTForImageClassification/ViTModel[vit]/ViTEncoder[encoder]/ModuleList[layer]/ViTLayer[5]/ViTAttention[attention]/ViTSelfAttention[attention]/softmax_0",
+            "ViTForImageClassification/ViTModel[vit]/ViTEncoder[encoder]/ModuleList[layer]/ViTLayer[5]/ViTAttention[attention]/ViTSelfAttention[attention]/transpose_0",
+            "ViTForImageClassification/ViTModel[vit]/ViTEncoder[encoder]/ModuleList[layer]/ViTLayer[5]/ViTAttention[attention]/ViTSelfAttention[attention]/view_0",
+            "ViTForImageClassification/ViTModel[vit]/ViTEncoder[encoder]/ModuleList[layer]/ViTLayer[5]/ViTAttention[attention]/ViTSelfAttention[attention]/view_1",
+            "ViTForImageClassification/ViTModel[vit]/ViTEncoder[encoder]/ModuleList[layer]/ViTLayer[5]/ViTAttention[attention]/ViTSelfAttention[attention]/view_2",
+            "ViTForImageClassification/ViTModel[vit]/ViTEncoder[encoder]/ModuleList[layer]/ViTLayer[5]/ViTAttention[attention]/ViTSelfAttention[attention]/view_3",
+            "ViTForImageClassification/ViTModel[vit]/ViTEncoder[encoder]/ModuleList[layer]/ViTLayer[5]/ViTAttention[attention]/ViTSelfOutput[output]/NNCFLinear[dense]/linear_0"
+        ],
+        "ordinal_ids": [
+            147,
+            166
+        ]
+    },
+    {
+        "basic_block": {
+            "end_node_name": "ViTForImageClassification/ViTModel[vit]/ViTEncoder[encoder]/ModuleList[layer]/ViTLayer[5]/ViTOutput[output]/__add___0",
+            "start_node_name": "ViTForImageClassification/ViTModel[vit]/ViTEncoder[encoder]/ModuleList[layer]/ViTLayer[5]/__add___0"
+        },
+        "block_type": "FF",
+        "op_addresses": [
+            "ViTForImageClassification/ViTModel[vit]/ViTEncoder[encoder]/ModuleList[layer]/ViTLayer[5]/NNCFLayerNorm[layernorm_after]/layer_norm_0",
+            "ViTForImageClassification/ViTModel[vit]/ViTEncoder[encoder]/ModuleList[layer]/ViTLayer[5]/ViTIntermediate[intermediate]/GELUActivation[intermediate_act_fn]/gelu_0",
+            "ViTForImageClassification/ViTModel[vit]/ViTEncoder[encoder]/ModuleList[layer]/ViTLayer[5]/ViTIntermediate[intermediate]/NNCFLinear[dense]/linear_0",
+            "ViTForImageClassification/ViTModel[vit]/ViTEncoder[encoder]/ModuleList[layer]/ViTLayer[5]/ViTOutput[output]/Dropout[dropout]/dropout_0",
+            "ViTForImageClassification/ViTModel[vit]/ViTEncoder[encoder]/ModuleList[layer]/ViTLayer[5]/ViTOutput[output]/NNCFLinear[dense]/linear_0",
+            "ViTForImageClassification/ViTModel[vit]/ViTEncoder[encoder]/ModuleList[layer]/ViTLayer[5]/ViTOutput[output]/__add___0"
+        ],
+        "ordinal_ids": [
+            168,
+            174
+        ]
+    },
+    {
+        "basic_block": {
+            "end_node_name": "ViTForImageClassification/ViTModel[vit]/ViTEncoder[encoder]/ModuleList[layer]/ViTLayer[6]/ViTAttention[attention]/ViTSelfOutput[output]/NNCFLinear[dense]/linear_0",
+            "start_node_name": "ViTForImageClassification/ViTModel[vit]/ViTEncoder[encoder]/ModuleList[layer]/ViTLayer[6]/NNCFLayerNorm[layernorm_before]/layer_norm_0"
+        },
+        "block_type": "MHSA",
+        "op_addresses": [
+            "ViTForImageClassification/ViTModel[vit]/ViTEncoder[encoder]/ModuleList[layer]/ViTLayer[6]/ViTAttention[attention]/ViTSelfAttention[attention]/Dropout[dropout]/dropout_0",
+            "ViTForImageClassification/ViTModel[vit]/ViTEncoder[encoder]/ModuleList[layer]/ViTLayer[6]/ViTAttention[attention]/ViTSelfAttention[attention]/NNCFLinear[key]/linear_0",
+            "ViTForImageClassification/ViTModel[vit]/ViTEncoder[encoder]/ModuleList[layer]/ViTLayer[6]/ViTAttention[attention]/ViTSelfAttention[attention]/NNCFLinear[query]/linear_0",
+            "ViTForImageClassification/ViTModel[vit]/ViTEncoder[encoder]/ModuleList[layer]/ViTLayer[6]/ViTAttention[attention]/ViTSelfAttention[attention]/NNCFLinear[value]/linear_0",
+            "ViTForImageClassification/ViTModel[vit]/ViTEncoder[encoder]/ModuleList[layer]/ViTLayer[6]/ViTAttention[attention]/ViTSelfAttention[attention]/__truediv___0",
+            "ViTForImageClassification/ViTModel[vit]/ViTEncoder[encoder]/ModuleList[layer]/ViTLayer[6]/ViTAttention[attention]/ViTSelfAttention[attention]/contiguous_0",
+            "ViTForImageClassification/ViTModel[vit]/ViTEncoder[encoder]/ModuleList[layer]/ViTLayer[6]/ViTAttention[attention]/ViTSelfAttention[attention]/matmul_0",
+            "ViTForImageClassification/ViTModel[vit]/ViTEncoder[encoder]/ModuleList[layer]/ViTLayer[6]/ViTAttention[attention]/ViTSelfAttention[attention]/matmul_1",
+            "ViTForImageClassification/ViTModel[vit]/ViTEncoder[encoder]/ModuleList[layer]/ViTLayer[6]/ViTAttention[attention]/ViTSelfAttention[attention]/permute_0",
+            "ViTForImageClassification/ViTModel[vit]/ViTEncoder[encoder]/ModuleList[layer]/ViTLayer[6]/ViTAttention[attention]/ViTSelfAttention[attention]/permute_1",
+            "ViTForImageClassification/ViTModel[vit]/ViTEncoder[encoder]/ModuleList[layer]/ViTLayer[6]/ViTAttention[attention]/ViTSelfAttention[attention]/permute_2",
+            "ViTForImageClassification/ViTModel[vit]/ViTEncoder[encoder]/ModuleList[layer]/ViTLayer[6]/ViTAttention[attention]/ViTSelfAttention[attention]/permute_3",
+            "ViTForImageClassification/ViTModel[vit]/ViTEncoder[encoder]/ModuleList[layer]/ViTLayer[6]/ViTAttention[attention]/ViTSelfAttention[attention]/softmax_0",
+            "ViTForImageClassification/ViTModel[vit]/ViTEncoder[encoder]/ModuleList[layer]/ViTLayer[6]/ViTAttention[attention]/ViTSelfAttention[attention]/transpose_0",
+            "ViTForImageClassification/ViTModel[vit]/ViTEncoder[encoder]/ModuleList[layer]/ViTLayer[6]/ViTAttention[attention]/ViTSelfAttention[attention]/view_0",
+            "ViTForImageClassification/ViTModel[vit]/ViTEncoder[encoder]/ModuleList[layer]/ViTLayer[6]/ViTAttention[attention]/ViTSelfAttention[attention]/view_1",
+            "ViTForImageClassification/ViTModel[vit]/ViTEncoder[encoder]/ModuleList[layer]/ViTLayer[6]/ViTAttention[attention]/ViTSelfAttention[attention]/view_2",
+            "ViTForImageClassification/ViTModel[vit]/ViTEncoder[encoder]/ModuleList[layer]/ViTLayer[6]/ViTAttention[attention]/ViTSelfAttention[attention]/view_3",
+            "ViTForImageClassification/ViTModel[vit]/ViTEncoder[encoder]/ModuleList[layer]/ViTLayer[6]/ViTAttention[attention]/ViTSelfOutput[output]/NNCFLinear[dense]/linear_0"
+        ],
+        "ordinal_ids": [
+            175,
+            194
+        ]
+    },
+    {
+        "basic_block": {
+            "end_node_name": "ViTForImageClassification/ViTModel[vit]/ViTEncoder[encoder]/ModuleList[layer]/ViTLayer[6]/ViTOutput[output]/__add___0",
+            "start_node_name": "ViTForImageClassification/ViTModel[vit]/ViTEncoder[encoder]/ModuleList[layer]/ViTLayer[6]/__add___0"
+        },
+        "block_type": "FF",
+        "op_addresses": [
+            "ViTForImageClassification/ViTModel[vit]/ViTEncoder[encoder]/ModuleList[layer]/ViTLayer[6]/NNCFLayerNorm[layernorm_after]/layer_norm_0",
+            "ViTForImageClassification/ViTModel[vit]/ViTEncoder[encoder]/ModuleList[layer]/ViTLayer[6]/ViTIntermediate[intermediate]/GELUActivation[intermediate_act_fn]/gelu_0",
+            "ViTForImageClassification/ViTModel[vit]/ViTEncoder[encoder]/ModuleList[layer]/ViTLayer[6]/ViTIntermediate[intermediate]/NNCFLinear[dense]/linear_0",
+            "ViTForImageClassification/ViTModel[vit]/ViTEncoder[encoder]/ModuleList[layer]/ViTLayer[6]/ViTOutput[output]/Dropout[dropout]/dropout_0",
+            "ViTForImageClassification/ViTModel[vit]/ViTEncoder[encoder]/ModuleList[layer]/ViTLayer[6]/ViTOutput[output]/NNCFLinear[dense]/linear_0",
+            "ViTForImageClassification/ViTModel[vit]/ViTEncoder[encoder]/ModuleList[layer]/ViTLayer[6]/ViTOutput[output]/__add___0"
+        ],
+        "ordinal_ids": [
+            196,
+            202
+        ]
+    },
+    {
+        "basic_block": {
+            "end_node_name": "ViTForImageClassification/ViTModel[vit]/ViTEncoder[encoder]/ModuleList[layer]/ViTLayer[7]/ViTAttention[attention]/ViTSelfOutput[output]/NNCFLinear[dense]/linear_0",
+            "start_node_name": "ViTForImageClassification/ViTModel[vit]/ViTEncoder[encoder]/ModuleList[layer]/ViTLayer[7]/NNCFLayerNorm[layernorm_before]/layer_norm_0"
+        },
+        "block_type": "MHSA",
+        "op_addresses": [
+            "ViTForImageClassification/ViTModel[vit]/ViTEncoder[encoder]/ModuleList[layer]/ViTLayer[7]/ViTAttention[attention]/ViTSelfAttention[attention]/Dropout[dropout]/dropout_0",
+            "ViTForImageClassification/ViTModel[vit]/ViTEncoder[encoder]/ModuleList[layer]/ViTLayer[7]/ViTAttention[attention]/ViTSelfAttention[attention]/NNCFLinear[key]/linear_0",
+            "ViTForImageClassification/ViTModel[vit]/ViTEncoder[encoder]/ModuleList[layer]/ViTLayer[7]/ViTAttention[attention]/ViTSelfAttention[attention]/NNCFLinear[query]/linear_0",
+            "ViTForImageClassification/ViTModel[vit]/ViTEncoder[encoder]/ModuleList[layer]/ViTLayer[7]/ViTAttention[attention]/ViTSelfAttention[attention]/NNCFLinear[value]/linear_0",
+            "ViTForImageClassification/ViTModel[vit]/ViTEncoder[encoder]/ModuleList[layer]/ViTLayer[7]/ViTAttention[attention]/ViTSelfAttention[attention]/__truediv___0",
+            "ViTForImageClassification/ViTModel[vit]/ViTEncoder[encoder]/ModuleList[layer]/ViTLayer[7]/ViTAttention[attention]/ViTSelfAttention[attention]/contiguous_0",
+            "ViTForImageClassification/ViTModel[vit]/ViTEncoder[encoder]/ModuleList[layer]/ViTLayer[7]/ViTAttention[attention]/ViTSelfAttention[attention]/matmul_0",
+            "ViTForImageClassification/ViTModel[vit]/ViTEncoder[encoder]/ModuleList[layer]/ViTLayer[7]/ViTAttention[attention]/ViTSelfAttention[attention]/matmul_1",
+            "ViTForImageClassification/ViTModel[vit]/ViTEncoder[encoder]/ModuleList[layer]/ViTLayer[7]/ViTAttention[attention]/ViTSelfAttention[attention]/permute_0",
+            "ViTForImageClassification/ViTModel[vit]/ViTEncoder[encoder]/ModuleList[layer]/ViTLayer[7]/ViTAttention[attention]/ViTSelfAttention[attention]/permute_1",
+            "ViTForImageClassification/ViTModel[vit]/ViTEncoder[encoder]/ModuleList[layer]/ViTLayer[7]/ViTAttention[attention]/ViTSelfAttention[attention]/permute_2",
+            "ViTForImageClassification/ViTModel[vit]/ViTEncoder[encoder]/ModuleList[layer]/ViTLayer[7]/ViTAttention[attention]/ViTSelfAttention[attention]/permute_3",
+            "ViTForImageClassification/ViTModel[vit]/ViTEncoder[encoder]/ModuleList[layer]/ViTLayer[7]/ViTAttention[attention]/ViTSelfAttention[attention]/softmax_0",
+            "ViTForImageClassification/ViTModel[vit]/ViTEncoder[encoder]/ModuleList[layer]/ViTLayer[7]/ViTAttention[attention]/ViTSelfAttention[attention]/transpose_0",
+            "ViTForImageClassification/ViTModel[vit]/ViTEncoder[encoder]/ModuleList[layer]/ViTLayer[7]/ViTAttention[attention]/ViTSelfAttention[attention]/view_0",
+            "ViTForImageClassification/ViTModel[vit]/ViTEncoder[encoder]/ModuleList[layer]/ViTLayer[7]/ViTAttention[attention]/ViTSelfAttention[attention]/view_1",
+            "ViTForImageClassification/ViTModel[vit]/ViTEncoder[encoder]/ModuleList[layer]/ViTLayer[7]/ViTAttention[attention]/ViTSelfAttention[attention]/view_2",
+            "ViTForImageClassification/ViTModel[vit]/ViTEncoder[encoder]/ModuleList[layer]/ViTLayer[7]/ViTAttention[attention]/ViTSelfAttention[attention]/view_3",
+            "ViTForImageClassification/ViTModel[vit]/ViTEncoder[encoder]/ModuleList[layer]/ViTLayer[7]/ViTAttention[attention]/ViTSelfOutput[output]/NNCFLinear[dense]/linear_0"
+        ],
+        "ordinal_ids": [
+            203,
+            222
+        ]
+    },
+    {
+        "basic_block": {
+            "end_node_name": "ViTForImageClassification/ViTModel[vit]/ViTEncoder[encoder]/ModuleList[layer]/ViTLayer[7]/ViTOutput[output]/__add___0",
+            "start_node_name": "ViTForImageClassification/ViTModel[vit]/ViTEncoder[encoder]/ModuleList[layer]/ViTLayer[7]/__add___0"
+        },
+        "block_type": "FF",
+        "op_addresses": [
+            "ViTForImageClassification/ViTModel[vit]/ViTEncoder[encoder]/ModuleList[layer]/ViTLayer[7]/NNCFLayerNorm[layernorm_after]/layer_norm_0",
+            "ViTForImageClassification/ViTModel[vit]/ViTEncoder[encoder]/ModuleList[layer]/ViTLayer[7]/ViTIntermediate[intermediate]/GELUActivation[intermediate_act_fn]/gelu_0",
+            "ViTForImageClassification/ViTModel[vit]/ViTEncoder[encoder]/ModuleList[layer]/ViTLayer[7]/ViTIntermediate[intermediate]/NNCFLinear[dense]/linear_0",
+            "ViTForImageClassification/ViTModel[vit]/ViTEncoder[encoder]/ModuleList[layer]/ViTLayer[7]/ViTOutput[output]/Dropout[dropout]/dropout_0",
+            "ViTForImageClassification/ViTModel[vit]/ViTEncoder[encoder]/ModuleList[layer]/ViTLayer[7]/ViTOutput[output]/NNCFLinear[dense]/linear_0",
+            "ViTForImageClassification/ViTModel[vit]/ViTEncoder[encoder]/ModuleList[layer]/ViTLayer[7]/ViTOutput[output]/__add___0"
+        ],
+        "ordinal_ids": [
+            224,
+            230
+        ]
+    },
+    {
+        "basic_block": {
+            "end_node_name": "ViTForImageClassification/ViTModel[vit]/ViTEncoder[encoder]/ModuleList[layer]/ViTLayer[8]/ViTAttention[attention]/ViTSelfOutput[output]/NNCFLinear[dense]/linear_0",
+            "start_node_name": "ViTForImageClassification/ViTModel[vit]/ViTEncoder[encoder]/ModuleList[layer]/ViTLayer[8]/NNCFLayerNorm[layernorm_before]/layer_norm_0"
+        },
+        "block_type": "MHSA",
+        "op_addresses": [
+            "ViTForImageClassification/ViTModel[vit]/ViTEncoder[encoder]/ModuleList[layer]/ViTLayer[8]/ViTAttention[attention]/ViTSelfAttention[attention]/Dropout[dropout]/dropout_0",
+            "ViTForImageClassification/ViTModel[vit]/ViTEncoder[encoder]/ModuleList[layer]/ViTLayer[8]/ViTAttention[attention]/ViTSelfAttention[attention]/NNCFLinear[key]/linear_0",
+            "ViTForImageClassification/ViTModel[vit]/ViTEncoder[encoder]/ModuleList[layer]/ViTLayer[8]/ViTAttention[attention]/ViTSelfAttention[attention]/NNCFLinear[query]/linear_0",
+            "ViTForImageClassification/ViTModel[vit]/ViTEncoder[encoder]/ModuleList[layer]/ViTLayer[8]/ViTAttention[attention]/ViTSelfAttention[attention]/NNCFLinear[value]/linear_0",
+            "ViTForImageClassification/ViTModel[vit]/ViTEncoder[encoder]/ModuleList[layer]/ViTLayer[8]/ViTAttention[attention]/ViTSelfAttention[attention]/__truediv___0",
+            "ViTForImageClassification/ViTModel[vit]/ViTEncoder[encoder]/ModuleList[layer]/ViTLayer[8]/ViTAttention[attention]/ViTSelfAttention[attention]/contiguous_0",
+            "ViTForImageClassification/ViTModel[vit]/ViTEncoder[encoder]/ModuleList[layer]/ViTLayer[8]/ViTAttention[attention]/ViTSelfAttention[attention]/matmul_0",
+            "ViTForImageClassification/ViTModel[vit]/ViTEncoder[encoder]/ModuleList[layer]/ViTLayer[8]/ViTAttention[attention]/ViTSelfAttention[attention]/matmul_1",
+            "ViTForImageClassification/ViTModel[vit]/ViTEncoder[encoder]/ModuleList[layer]/ViTLayer[8]/ViTAttention[attention]/ViTSelfAttention[attention]/permute_0",
+            "ViTForImageClassification/ViTModel[vit]/ViTEncoder[encoder]/ModuleList[layer]/ViTLayer[8]/ViTAttention[attention]/ViTSelfAttention[attention]/permute_1",
+            "ViTForImageClassification/ViTModel[vit]/ViTEncoder[encoder]/ModuleList[layer]/ViTLayer[8]/ViTAttention[attention]/ViTSelfAttention[attention]/permute_2",
+            "ViTForImageClassification/ViTModel[vit]/ViTEncoder[encoder]/ModuleList[layer]/ViTLayer[8]/ViTAttention[attention]/ViTSelfAttention[attention]/permute_3",
+            "ViTForImageClassification/ViTModel[vit]/ViTEncoder[encoder]/ModuleList[layer]/ViTLayer[8]/ViTAttention[attention]/ViTSelfAttention[attention]/softmax_0",
+            "ViTForImageClassification/ViTModel[vit]/ViTEncoder[encoder]/ModuleList[layer]/ViTLayer[8]/ViTAttention[attention]/ViTSelfAttention[attention]/transpose_0",
+            "ViTForImageClassification/ViTModel[vit]/ViTEncoder[encoder]/ModuleList[layer]/ViTLayer[8]/ViTAttention[attention]/ViTSelfAttention[attention]/view_0",
+            "ViTForImageClassification/ViTModel[vit]/ViTEncoder[encoder]/ModuleList[layer]/ViTLayer[8]/ViTAttention[attention]/ViTSelfAttention[attention]/view_1",
+            "ViTForImageClassification/ViTModel[vit]/ViTEncoder[encoder]/ModuleList[layer]/ViTLayer[8]/ViTAttention[attention]/ViTSelfAttention[attention]/view_2",
+            "ViTForImageClassification/ViTModel[vit]/ViTEncoder[encoder]/ModuleList[layer]/ViTLayer[8]/ViTAttention[attention]/ViTSelfAttention[attention]/view_3",
+            "ViTForImageClassification/ViTModel[vit]/ViTEncoder[encoder]/ModuleList[layer]/ViTLayer[8]/ViTAttention[attention]/ViTSelfOutput[output]/NNCFLinear[dense]/linear_0"
+        ],
+        "ordinal_ids": [
+            231,
+            250
+        ]
+    },
+    {
+        "basic_block": {
+            "end_node_name": "ViTForImageClassification/ViTModel[vit]/ViTEncoder[encoder]/ModuleList[layer]/ViTLayer[8]/ViTOutput[output]/__add___0",
+            "start_node_name": "ViTForImageClassification/ViTModel[vit]/ViTEncoder[encoder]/ModuleList[layer]/ViTLayer[8]/__add___0"
+        },
+        "block_type": "FF",
+        "op_addresses": [
+            "ViTForImageClassification/ViTModel[vit]/ViTEncoder[encoder]/ModuleList[layer]/ViTLayer[8]/NNCFLayerNorm[layernorm_after]/layer_norm_0",
+            "ViTForImageClassification/ViTModel[vit]/ViTEncoder[encoder]/ModuleList[layer]/ViTLayer[8]/ViTIntermediate[intermediate]/GELUActivation[intermediate_act_fn]/gelu_0",
+            "ViTForImageClassification/ViTModel[vit]/ViTEncoder[encoder]/ModuleList[layer]/ViTLayer[8]/ViTIntermediate[intermediate]/NNCFLinear[dense]/linear_0",
+            "ViTForImageClassification/ViTModel[vit]/ViTEncoder[encoder]/ModuleList[layer]/ViTLayer[8]/ViTOutput[output]/Dropout[dropout]/dropout_0",
+            "ViTForImageClassification/ViTModel[vit]/ViTEncoder[encoder]/ModuleList[layer]/ViTLayer[8]/ViTOutput[output]/NNCFLinear[dense]/linear_0",
+            "ViTForImageClassification/ViTModel[vit]/ViTEncoder[encoder]/ModuleList[layer]/ViTLayer[8]/ViTOutput[output]/__add___0"
+        ],
+        "ordinal_ids": [
+            252,
+            258
+        ]
+    },
+    {
+        "basic_block": {
+            "end_node_name": "ViTForImageClassification/ViTModel[vit]/ViTEncoder[encoder]/ModuleList[layer]/ViTLayer[9]/ViTAttention[attention]/ViTSelfOutput[output]/NNCFLinear[dense]/linear_0",
+            "start_node_name": "ViTForImageClassification/ViTModel[vit]/ViTEncoder[encoder]/ModuleList[layer]/ViTLayer[9]/NNCFLayerNorm[layernorm_before]/layer_norm_0"
+        },
+        "block_type": "MHSA",
+        "op_addresses": [
+            "ViTForImageClassification/ViTModel[vit]/ViTEncoder[encoder]/ModuleList[layer]/ViTLayer[9]/ViTAttention[attention]/ViTSelfAttention[attention]/Dropout[dropout]/dropout_0",
+            "ViTForImageClassification/ViTModel[vit]/ViTEncoder[encoder]/ModuleList[layer]/ViTLayer[9]/ViTAttention[attention]/ViTSelfAttention[attention]/NNCFLinear[key]/linear_0",
+            "ViTForImageClassification/ViTModel[vit]/ViTEncoder[encoder]/ModuleList[layer]/ViTLayer[9]/ViTAttention[attention]/ViTSelfAttention[attention]/NNCFLinear[query]/linear_0",
+            "ViTForImageClassification/ViTModel[vit]/ViTEncoder[encoder]/ModuleList[layer]/ViTLayer[9]/ViTAttention[attention]/ViTSelfAttention[attention]/NNCFLinear[value]/linear_0",
+            "ViTForImageClassification/ViTModel[vit]/ViTEncoder[encoder]/ModuleList[layer]/ViTLayer[9]/ViTAttention[attention]/ViTSelfAttention[attention]/__truediv___0",
+            "ViTForImageClassification/ViTModel[vit]/ViTEncoder[encoder]/ModuleList[layer]/ViTLayer[9]/ViTAttention[attention]/ViTSelfAttention[attention]/contiguous_0",
+            "ViTForImageClassification/ViTModel[vit]/ViTEncoder[encoder]/ModuleList[layer]/ViTLayer[9]/ViTAttention[attention]/ViTSelfAttention[attention]/matmul_0",
+            "ViTForImageClassification/ViTModel[vit]/ViTEncoder[encoder]/ModuleList[layer]/ViTLayer[9]/ViTAttention[attention]/ViTSelfAttention[attention]/matmul_1",
+            "ViTForImageClassification/ViTModel[vit]/ViTEncoder[encoder]/ModuleList[layer]/ViTLayer[9]/ViTAttention[attention]/ViTSelfAttention[attention]/permute_0",
+            "ViTForImageClassification/ViTModel[vit]/ViTEncoder[encoder]/ModuleList[layer]/ViTLayer[9]/ViTAttention[attention]/ViTSelfAttention[attention]/permute_1",
+            "ViTForImageClassification/ViTModel[vit]/ViTEncoder[encoder]/ModuleList[layer]/ViTLayer[9]/ViTAttention[attention]/ViTSelfAttention[attention]/permute_2",
+            "ViTForImageClassification/ViTModel[vit]/ViTEncoder[encoder]/ModuleList[layer]/ViTLayer[9]/ViTAttention[attention]/ViTSelfAttention[attention]/permute_3",
+            "ViTForImageClassification/ViTModel[vit]/ViTEncoder[encoder]/ModuleList[layer]/ViTLayer[9]/ViTAttention[attention]/ViTSelfAttention[attention]/softmax_0",
+            "ViTForImageClassification/ViTModel[vit]/ViTEncoder[encoder]/ModuleList[layer]/ViTLayer[9]/ViTAttention[attention]/ViTSelfAttention[attention]/transpose_0",
+            "ViTForImageClassification/ViTModel[vit]/ViTEncoder[encoder]/ModuleList[layer]/ViTLayer[9]/ViTAttention[attention]/ViTSelfAttention[attention]/view_0",
+            "ViTForImageClassification/ViTModel[vit]/ViTEncoder[encoder]/ModuleList[layer]/ViTLayer[9]/ViTAttention[attention]/ViTSelfAttention[attention]/view_1",
+            "ViTForImageClassification/ViTModel[vit]/ViTEncoder[encoder]/ModuleList[layer]/ViTLayer[9]/ViTAttention[attention]/ViTSelfAttention[attention]/view_2",
+            "ViTForImageClassification/ViTModel[vit]/ViTEncoder[encoder]/ModuleList[layer]/ViTLayer[9]/ViTAttention[attention]/ViTSelfAttention[attention]/view_3",
+            "ViTForImageClassification/ViTModel[vit]/ViTEncoder[encoder]/ModuleList[layer]/ViTLayer[9]/ViTAttention[attention]/ViTSelfOutput[output]/NNCFLinear[dense]/linear_0"
+        ],
+        "ordinal_ids": [
+            259,
+            278
+        ]
+    },
+    {
+        "basic_block": {
+            "end_node_name": "ViTForImageClassification/ViTModel[vit]/ViTEncoder[encoder]/ModuleList[layer]/ViTLayer[9]/ViTOutput[output]/__add___0",
+            "start_node_name": "ViTForImageClassification/ViTModel[vit]/ViTEncoder[encoder]/ModuleList[layer]/ViTLayer[9]/__add___0"
+        },
+        "block_type": "FF",
+        "op_addresses": [
+            "ViTForImageClassification/ViTModel[vit]/ViTEncoder[encoder]/ModuleList[layer]/ViTLayer[9]/NNCFLayerNorm[layernorm_after]/layer_norm_0",
+            "ViTForImageClassification/ViTModel[vit]/ViTEncoder[encoder]/ModuleList[layer]/ViTLayer[9]/ViTIntermediate[intermediate]/GELUActivation[intermediate_act_fn]/gelu_0",
+            "ViTForImageClassification/ViTModel[vit]/ViTEncoder[encoder]/ModuleList[layer]/ViTLayer[9]/ViTIntermediate[intermediate]/NNCFLinear[dense]/linear_0",
+            "ViTForImageClassification/ViTModel[vit]/ViTEncoder[encoder]/ModuleList[layer]/ViTLayer[9]/ViTOutput[output]/Dropout[dropout]/dropout_0",
+            "ViTForImageClassification/ViTModel[vit]/ViTEncoder[encoder]/ModuleList[layer]/ViTLayer[9]/ViTOutput[output]/NNCFLinear[dense]/linear_0",
+            "ViTForImageClassification/ViTModel[vit]/ViTEncoder[encoder]/ModuleList[layer]/ViTLayer[9]/ViTOutput[output]/__add___0"
+        ],
+        "ordinal_ids": [
+            280,
+            286
+        ]
+    },
+    {
+        "basic_block": {
+            "end_node_name": "ViTForImageClassification/ViTModel[vit]/ViTEncoder[encoder]/ModuleList[layer]/ViTLayer[10]/ViTAttention[attention]/ViTSelfOutput[output]/NNCFLinear[dense]/linear_0",
+            "start_node_name": "ViTForImageClassification/ViTModel[vit]/ViTEncoder[encoder]/ModuleList[layer]/ViTLayer[10]/NNCFLayerNorm[layernorm_before]/layer_norm_0"
+        },
+        "block_type": "MHSA",
+        "op_addresses": [
+            "ViTForImageClassification/ViTModel[vit]/ViTEncoder[encoder]/ModuleList[layer]/ViTLayer[10]/ViTAttention[attention]/ViTSelfAttention[attention]/Dropout[dropout]/dropout_0",
+            "ViTForImageClassification/ViTModel[vit]/ViTEncoder[encoder]/ModuleList[layer]/ViTLayer[10]/ViTAttention[attention]/ViTSelfAttention[attention]/NNCFLinear[key]/linear_0",
+            "ViTForImageClassification/ViTModel[vit]/ViTEncoder[encoder]/ModuleList[layer]/ViTLayer[10]/ViTAttention[attention]/ViTSelfAttention[attention]/NNCFLinear[query]/linear_0",
+            "ViTForImageClassification/ViTModel[vit]/ViTEncoder[encoder]/ModuleList[layer]/ViTLayer[10]/ViTAttention[attention]/ViTSelfAttention[attention]/NNCFLinear[value]/linear_0",
+            "ViTForImageClassification/ViTModel[vit]/ViTEncoder[encoder]/ModuleList[layer]/ViTLayer[10]/ViTAttention[attention]/ViTSelfAttention[attention]/__truediv___0",
+            "ViTForImageClassification/ViTModel[vit]/ViTEncoder[encoder]/ModuleList[layer]/ViTLayer[10]/ViTAttention[attention]/ViTSelfAttention[attention]/contiguous_0",
+            "ViTForImageClassification/ViTModel[vit]/ViTEncoder[encoder]/ModuleList[layer]/ViTLayer[10]/ViTAttention[attention]/ViTSelfAttention[attention]/matmul_0",
+            "ViTForImageClassification/ViTModel[vit]/ViTEncoder[encoder]/ModuleList[layer]/ViTLayer[10]/ViTAttention[attention]/ViTSelfAttention[attention]/matmul_1",
+            "ViTForImageClassification/ViTModel[vit]/ViTEncoder[encoder]/ModuleList[layer]/ViTLayer[10]/ViTAttention[attention]/ViTSelfAttention[attention]/permute_0",
+            "ViTForImageClassification/ViTModel[vit]/ViTEncoder[encoder]/ModuleList[layer]/ViTLayer[10]/ViTAttention[attention]/ViTSelfAttention[attention]/permute_1",
+            "ViTForImageClassification/ViTModel[vit]/ViTEncoder[encoder]/ModuleList[layer]/ViTLayer[10]/ViTAttention[attention]/ViTSelfAttention[attention]/permute_2",
+            "ViTForImageClassification/ViTModel[vit]/ViTEncoder[encoder]/ModuleList[layer]/ViTLayer[10]/ViTAttention[attention]/ViTSelfAttention[attention]/permute_3",
+            "ViTForImageClassification/ViTModel[vit]/ViTEncoder[encoder]/ModuleList[layer]/ViTLayer[10]/ViTAttention[attention]/ViTSelfAttention[attention]/softmax_0",
+            "ViTForImageClassification/ViTModel[vit]/ViTEncoder[encoder]/ModuleList[layer]/ViTLayer[10]/ViTAttention[attention]/ViTSelfAttention[attention]/transpose_0",
+            "ViTForImageClassification/ViTModel[vit]/ViTEncoder[encoder]/ModuleList[layer]/ViTLayer[10]/ViTAttention[attention]/ViTSelfAttention[attention]/view_0",
+            "ViTForImageClassification/ViTModel[vit]/ViTEncoder[encoder]/ModuleList[layer]/ViTLayer[10]/ViTAttention[attention]/ViTSelfAttention[attention]/view_1",
+            "ViTForImageClassification/ViTModel[vit]/ViTEncoder[encoder]/ModuleList[layer]/ViTLayer[10]/ViTAttention[attention]/ViTSelfAttention[attention]/view_2",
+            "ViTForImageClassification/ViTModel[vit]/ViTEncoder[encoder]/ModuleList[layer]/ViTLayer[10]/ViTAttention[attention]/ViTSelfAttention[attention]/view_3",
+            "ViTForImageClassification/ViTModel[vit]/ViTEncoder[encoder]/ModuleList[layer]/ViTLayer[10]/ViTAttention[attention]/ViTSelfOutput[output]/NNCFLinear[dense]/linear_0"
+        ],
+        "ordinal_ids": [
+            287,
+            306
+        ]
+    },
+    {
+        "basic_block": {
+            "end_node_name": "ViTForImageClassification/ViTModel[vit]/ViTEncoder[encoder]/ModuleList[layer]/ViTLayer[10]/ViTOutput[output]/__add___0",
+            "start_node_name": "ViTForImageClassification/ViTModel[vit]/ViTEncoder[encoder]/ModuleList[layer]/ViTLayer[10]/__add___0"
+        },
+        "block_type": "FF",
+        "op_addresses": [
+            "ViTForImageClassification/ViTModel[vit]/ViTEncoder[encoder]/ModuleList[layer]/ViTLayer[10]/NNCFLayerNorm[layernorm_after]/layer_norm_0",
+            "ViTForImageClassification/ViTModel[vit]/ViTEncoder[encoder]/ModuleList[layer]/ViTLayer[10]/ViTIntermediate[intermediate]/GELUActivation[intermediate_act_fn]/gelu_0",
+            "ViTForImageClassification/ViTModel[vit]/ViTEncoder[encoder]/ModuleList[layer]/ViTLayer[10]/ViTIntermediate[intermediate]/NNCFLinear[dense]/linear_0",
+            "ViTForImageClassification/ViTModel[vit]/ViTEncoder[encoder]/ModuleList[layer]/ViTLayer[10]/ViTOutput[output]/Dropout[dropout]/dropout_0",
+            "ViTForImageClassification/ViTModel[vit]/ViTEncoder[encoder]/ModuleList[layer]/ViTLayer[10]/ViTOutput[output]/NNCFLinear[dense]/linear_0",
+            "ViTForImageClassification/ViTModel[vit]/ViTEncoder[encoder]/ModuleList[layer]/ViTLayer[10]/ViTOutput[output]/__add___0"
+        ],
+        "ordinal_ids": [
+            308,
+            314
+        ]
+    },
+    {
+        "basic_block": {
+            "end_node_name": "ViTForImageClassification/ViTModel[vit]/ViTEncoder[encoder]/ModuleList[layer]/ViTLayer[11]/ViTAttention[attention]/ViTSelfOutput[output]/NNCFLinear[dense]/linear_0",
+            "start_node_name": "ViTForImageClassification/ViTModel[vit]/ViTEncoder[encoder]/ModuleList[layer]/ViTLayer[11]/NNCFLayerNorm[layernorm_before]/layer_norm_0"
+        },
+        "block_type": "MHSA",
+        "op_addresses": [
+            "ViTForImageClassification/ViTModel[vit]/ViTEncoder[encoder]/ModuleList[layer]/ViTLayer[11]/ViTAttention[attention]/ViTSelfAttention[attention]/Dropout[dropout]/dropout_0",
+            "ViTForImageClassification/ViTModel[vit]/ViTEncoder[encoder]/ModuleList[layer]/ViTLayer[11]/ViTAttention[attention]/ViTSelfAttention[attention]/NNCFLinear[key]/linear_0",
+            "ViTForImageClassification/ViTModel[vit]/ViTEncoder[encoder]/ModuleList[layer]/ViTLayer[11]/ViTAttention[attention]/ViTSelfAttention[attention]/NNCFLinear[query]/linear_0",
+            "ViTForImageClassification/ViTModel[vit]/ViTEncoder[encoder]/ModuleList[layer]/ViTLayer[11]/ViTAttention[attention]/ViTSelfAttention[attention]/NNCFLinear[value]/linear_0",
+            "ViTForImageClassification/ViTModel[vit]/ViTEncoder[encoder]/ModuleList[layer]/ViTLayer[11]/ViTAttention[attention]/ViTSelfAttention[attention]/__truediv___0",
+            "ViTForImageClassification/ViTModel[vit]/ViTEncoder[encoder]/ModuleList[layer]/ViTLayer[11]/ViTAttention[attention]/ViTSelfAttention[attention]/contiguous_0",
+            "ViTForImageClassification/ViTModel[vit]/ViTEncoder[encoder]/ModuleList[layer]/ViTLayer[11]/ViTAttention[attention]/ViTSelfAttention[attention]/matmul_0",
+            "ViTForImageClassification/ViTModel[vit]/ViTEncoder[encoder]/ModuleList[layer]/ViTLayer[11]/ViTAttention[attention]/ViTSelfAttention[attention]/matmul_1",
+            "ViTForImageClassification/ViTModel[vit]/ViTEncoder[encoder]/ModuleList[layer]/ViTLayer[11]/ViTAttention[attention]/ViTSelfAttention[attention]/permute_0",
+            "ViTForImageClassification/ViTModel[vit]/ViTEncoder[encoder]/ModuleList[layer]/ViTLayer[11]/ViTAttention[attention]/ViTSelfAttention[attention]/permute_1",
+            "ViTForImageClassification/ViTModel[vit]/ViTEncoder[encoder]/ModuleList[layer]/ViTLayer[11]/ViTAttention[attention]/ViTSelfAttention[attention]/permute_2",
+            "ViTForImageClassification/ViTModel[vit]/ViTEncoder[encoder]/ModuleList[layer]/ViTLayer[11]/ViTAttention[attention]/ViTSelfAttention[attention]/permute_3",
+            "ViTForImageClassification/ViTModel[vit]/ViTEncoder[encoder]/ModuleList[layer]/ViTLayer[11]/ViTAttention[attention]/ViTSelfAttention[attention]/softmax_0",
+            "ViTForImageClassification/ViTModel[vit]/ViTEncoder[encoder]/ModuleList[layer]/ViTLayer[11]/ViTAttention[attention]/ViTSelfAttention[attention]/transpose_0",
+            "ViTForImageClassification/ViTModel[vit]/ViTEncoder[encoder]/ModuleList[layer]/ViTLayer[11]/ViTAttention[attention]/ViTSelfAttention[attention]/view_0",
+            "ViTForImageClassification/ViTModel[vit]/ViTEncoder[encoder]/ModuleList[layer]/ViTLayer[11]/ViTAttention[attention]/ViTSelfAttention[attention]/view_1",
+            "ViTForImageClassification/ViTModel[vit]/ViTEncoder[encoder]/ModuleList[layer]/ViTLayer[11]/ViTAttention[attention]/ViTSelfAttention[attention]/view_2",
+            "ViTForImageClassification/ViTModel[vit]/ViTEncoder[encoder]/ModuleList[layer]/ViTLayer[11]/ViTAttention[attention]/ViTSelfAttention[attention]/view_3",
+            "ViTForImageClassification/ViTModel[vit]/ViTEncoder[encoder]/ModuleList[layer]/ViTLayer[11]/ViTAttention[attention]/ViTSelfOutput[output]/NNCFLinear[dense]/linear_0"
+        ],
+        "ordinal_ids": [
+            315,
+            334
+        ]
+    },
+    {
+        "basic_block": {
+            "end_node_name": "ViTForImageClassification/ViTModel[vit]/ViTEncoder[encoder]/ModuleList[layer]/ViTLayer[11]/ViTOutput[output]/__add___0",
+            "start_node_name": "ViTForImageClassification/ViTModel[vit]/ViTEncoder[encoder]/ModuleList[layer]/ViTLayer[11]/__add___0"
+        },
+        "block_type": "FF",
+        "op_addresses": [
+            "ViTForImageClassification/ViTModel[vit]/ViTEncoder[encoder]/ModuleList[layer]/ViTLayer[11]/NNCFLayerNorm[layernorm_after]/layer_norm_0",
+            "ViTForImageClassification/ViTModel[vit]/ViTEncoder[encoder]/ModuleList[layer]/ViTLayer[11]/ViTIntermediate[intermediate]/GELUActivation[intermediate_act_fn]/gelu_0",
+            "ViTForImageClassification/ViTModel[vit]/ViTEncoder[encoder]/ModuleList[layer]/ViTLayer[11]/ViTIntermediate[intermediate]/NNCFLinear[dense]/linear_0",
+            "ViTForImageClassification/ViTModel[vit]/ViTEncoder[encoder]/ModuleList[layer]/ViTLayer[11]/ViTOutput[output]/Dropout[dropout]/dropout_0",
+            "ViTForImageClassification/ViTModel[vit]/ViTEncoder[encoder]/ModuleList[layer]/ViTLayer[11]/ViTOutput[output]/NNCFLinear[dense]/linear_0",
+            "ViTForImageClassification/ViTModel[vit]/ViTEncoder[encoder]/ModuleList[layer]/ViTLayer[11]/ViTOutput[output]/__add___0"
+        ],
+        "ordinal_ids": [
+            336,
+            342
+        ]
+    }
+]

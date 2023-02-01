@@ -1,5 +1,5 @@
 """
- Copyright (c) 2021 Intel Corporation
+ Copyright (c) 2023 Intel Corporation
  Licensed under the Apache License, Version 2.0 (the "License");
  you may not use this file except in compliance with the License.
  You may obtain a copy of the License at
@@ -13,13 +13,22 @@
 
 from typing import Optional, Dict, Any
 
-from nncf.common.utils.logger import logger
+from nncf.common.logging import nncf_logger
 from nncf.common.utils.registry import Registry
 from nncf.common.schedulers import PolynomialDecaySchedule
 from nncf.common.schedulers import ExponentialDecaySchedule
 from nncf.common.schedulers import MultiStepSchedule
 from nncf.common.sparsity.controller import SparsityController
 from nncf.common.schedulers import BaseCompressionScheduler
+from nncf.config.schemata.defaults import SPARSITY_FREEZE_EPOCH
+from nncf.config.schemata.defaults import SPARSITY_MULTISTEP_SPARSITY_LEVELS
+from nncf.config.schemata.defaults import SPARSITY_MULTISTEP_STEPS
+from nncf.config.schemata.defaults import SPARSITY_SCHEDULER_CONCAVE
+from nncf.config.schemata.defaults import SPARSITY_SCHEDULER_PATIENCE
+from nncf.config.schemata.defaults import SPARSITY_SCHEDULER_POWER
+from nncf.config.schemata.defaults import SPARSITY_SCHEDULER_UPDATE_PER_OPTIMIZER_STEP
+from nncf.config.schemata.defaults import SPARSITY_TARGET
+from nncf.config.schemata.defaults import SPARSITY_TARGET_EPOCH
 
 SPARSITY_SCHEDULERS = Registry('sparsity_schedulers')
 
@@ -53,10 +62,9 @@ class SparsityScheduler(BaseCompressionScheduler):
         super().__init__()
         self._controller = controller
         self.initial_level = params.get('sparsity_init')
-        self.target_level = params.get('sparsity_target', 0.5)
-        self.target_epoch = params.get('sparsity_target_epoch', 90)
-        self.freeze_epoch = params.get('sparsity_freeze_epoch', 100)
-        self._current_level = self.initial_level
+        self.target_level = params.get('sparsity_target', SPARSITY_TARGET)
+        self.target_epoch = params.get('sparsity_target_epoch', SPARSITY_TARGET_EPOCH)
+        self.freeze_epoch = params.get('sparsity_freeze_epoch', SPARSITY_FREEZE_EPOCH)
 
     def _calculate_sparsity_level(self) -> float:
         """
@@ -74,10 +82,9 @@ class SparsityScheduler(BaseCompressionScheduler):
         Calculates the current sparsity level and updates the internal
         state of the `controller`.
         """
-        self._current_level = self._calculate_sparsity_level()
         if self.current_epoch >= self.freeze_epoch:
             self._controller.freeze()
-        self._controller.set_sparsity_level(self._current_level)
+        self._controller.set_sparsity_level(self._calculate_sparsity_level())
 
     @property
     def current_sparsity_level(self) -> float:
@@ -87,7 +94,9 @@ class SparsityScheduler(BaseCompressionScheduler):
 
         :return: Current sparsity level.
         """
-        return self._current_level
+        if self._current_epoch == -1:
+            return self.initial_level
+        return self._calculate_sparsity_level()
 
 
 @SPARSITY_SCHEDULERS.register('polynomial')
@@ -116,9 +125,11 @@ class PolynomialSparsityScheduler(SparsityScheduler):
         """
         super().__init__(controller, params)
         self.schedule = PolynomialDecaySchedule(self.initial_level, self.target_level, self.target_epoch,
-                                                params.get('power', 0.9), params.get('concave', True))
+                                                params.get('power', SPARSITY_SCHEDULER_POWER),
+                                                params.get('concave', SPARSITY_SCHEDULER_CONCAVE))
         self._steps_in_current_epoch = 0
-        self._update_per_optimizer_step = params.get('update_per_optimizer_step', False)
+        self._update_per_optimizer_step = params.get('update_per_optimizer_step',
+                                                     SPARSITY_SCHEDULER_UPDATE_PER_OPTIMIZER_STEP)
         self._steps_per_epoch = params.get('steps_per_epoch', None)
         self._should_skip = False
 
@@ -175,10 +186,10 @@ class PolynomialSparsityScheduler(SparsityScheduler):
 
             if self._steps_per_epoch is None:
                 self._should_skip = True
-                logger.warning('Scheduler set to update sparsity level per optimizer step, '
-                               'but steps_per_epoch was not set in config. Will only start updating '
-                               'sparsity level after measuring the actual steps per epoch as signaled '
-                               'by a .epoch_step() call.')
+                nncf_logger.warning('Scheduler set to update sparsity level per optimizer step, '
+                                    'but steps_per_epoch was not set in config. Will only start updating '
+                                    'sparsity level after measuring the actual steps per epoch as signaled '
+                                    'by a .epoch_step() call.')
 
 
 @SPARSITY_SCHEDULERS.register('exponential')
@@ -230,8 +241,19 @@ class AdaptiveSparsityScheduler(SparsityScheduler):
         super().__init__(controller, params)
         self.decay_step = params.get('step', 0.05)
         self.eps = params.get('eps', 0.03)
-        self.patience = params.get('patience', 1)
+        self.patience = params.get('patience', SPARSITY_SCHEDULER_PATIENCE)
         self.num_bad_epochs = 0
+        self._current_level = self.initial_level
+
+    @property
+    def current_sparsity_level(self) -> float:
+        """
+        Returns sparsity level for the `current_epoch` or for step
+        in the `current_epoch`.
+
+        :return: Current sparsity level.
+        """
+        return self._current_level
 
     def epoch_step(self, next_epoch: Optional[int] = None) -> None:
         super().epoch_step(next_epoch)
@@ -246,7 +268,9 @@ class AdaptiveSparsityScheduler(SparsityScheduler):
             self.num_bad_epochs = 0
             current_level = current_level + self.decay_step
 
-        return min(current_level, self.target_level)
+        self._current_level = min(current_level, self.target_level)
+
+        return self._current_level
 
     def load_state(self, state: Dict[str, Any]) -> None:
         super().load_state(state)
@@ -275,9 +299,21 @@ class MultiStepSparsityScheduler(SparsityScheduler):
         """
         super().__init__(controller, params)
         self.schedule = MultiStepSchedule(
-            sorted(params.get('multistep_steps', [90])), params.get('multistep_sparsity_levels', [0.1, 0.5]))
+            sorted(params.get('multistep_steps', SPARSITY_MULTISTEP_STEPS)),
+            params.get('multistep_sparsity_levels', SPARSITY_MULTISTEP_SPARSITY_LEVELS))
         self.target_level = self.schedule.values[-1]
-        self._current_level = self.schedule.values[0]
+
+    @property
+    def current_sparsity_level(self) -> float:
+        """
+        Returns sparsity level for the `current_epoch` or for step
+        in the `current_epoch`.
+
+        :return: Current sparsity level.
+        """
+        if self._current_epoch == -1:
+            return self.schedule.values[0]
+        return self._calculate_sparsity_level()
 
     def epoch_step(self, next_epoch: Optional[int] = None) -> None:
         super().epoch_step(next_epoch)

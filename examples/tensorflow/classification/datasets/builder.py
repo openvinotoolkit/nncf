@@ -1,5 +1,5 @@
 """
- Copyright (c) 2020 Intel Corporation
+ Copyright (c) 2023 Intel Corporation
  Licensed under the Apache License, Version 2.0 (the "License");
  you may not use this file except in compliance with the License.
  You may obtain a copy of the License at
@@ -11,6 +11,7 @@
  limitations under the License.
 """
 
+from packaging import version
 import tensorflow as tf
 
 from examples.tensorflow.common.dataset_builder import BaseDatasetBuilder
@@ -50,6 +51,7 @@ class DatasetBuilder(BaseDatasetBuilder):
                                              DATASET_NUM_CLASSES.get(self._dataset_name))
         self._one_hot = one_hot
         self._cache = False
+        self._shuffle_train = config.get('seed') is None
         self._shuffle_buffer_size = 10000
         self._deterministic_train = False
         self._use_slack = True
@@ -109,7 +111,8 @@ class DatasetBuilder(BaseDatasetBuilder):
             dataset = dataset.cache()
 
         if self.is_train:
-            dataset = dataset.shuffle(self._shuffle_buffer_size)
+            if self._shuffle_train:
+                dataset = dataset.shuffle(self._shuffle_buffer_size)
             dataset = dataset.repeat()
 
         if self._dataset_type == 'tfrecords':
@@ -128,7 +131,8 @@ class DatasetBuilder(BaseDatasetBuilder):
             options.experimental_slack = self._use_slack
             options.experimental_optimization.parallel_batch = True
             options.experimental_optimization.map_fusion = True
-            options.experimental_optimization.map_vectorization.enabled = True
+            if version.parse(tf.__version__) < version.parse('2.7'):
+                options.experimental_optimization.map_vectorization.enabled = True
             options.experimental_optimization.map_parallelization = True
             dataset = dataset.with_options(options)
 

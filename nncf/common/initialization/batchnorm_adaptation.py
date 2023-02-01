@@ -1,5 +1,5 @@
 """
- Copyright (c) 2021 Intel Corporation
+ Copyright (c) 2023 Intel Corporation
  Licensed under the Apache License, Version 2.0 (the "License");
  you may not use this file except in compliance with the License.
  You may obtain a copy of the License at
@@ -17,10 +17,10 @@ from typing import Optional
 
 import math
 
-from nncf.api.compression import ModelType
+from nncf.api.compression import TModel
 from nncf.common.initialization.dataloader import NNCFDataLoader
 from nncf.common.utils.backend import BackendType
-from nncf.common.utils.backend import infer_backend_from_model
+from nncf.common.utils.backend import get_backend
 
 
 class BatchnormAdaptationAlgorithmImpl(ABC):
@@ -48,7 +48,7 @@ class BatchnormAdaptationAlgorithmImpl(ABC):
         self._device = device
 
     @abstractmethod
-    def run(self, model: ModelType) -> None:
+    def run(self, model: TModel) -> None:
         """
         Runs the batch-norm statistics adaptation algorithm. This method contains the implementation
         of the algorithm.
@@ -85,19 +85,19 @@ class BatchnormAdaptationAlgorithm:
         self._data_loader = data_loader
         self._num_bn_adaptation_steps = math.ceil(num_bn_adaptation_samples / data_loader.batch_size)
 
-    def run(self, model: ModelType) -> None:
+    def run(self, model: TModel) -> None:
         """
         Runs the batch-norm statistics adaptation algorithm.
 
         :param model: A model for which the algorithm will be applied.
         """
-        backend = infer_backend_from_model(model)
+        backend = get_backend(model)
         if backend is BackendType.TORCH:
-            from nncf.torch.batchnorm_adaptation import PTBatchnormAdaptationAlgorithmImpl
+            from nncf.torch.batchnorm_adaptation import PTBatchnormAdaptationAlgorithmImpl #pylint: disable=cyclic-import
             impl_cls = PTBatchnormAdaptationAlgorithmImpl
         else:
             assert backend is BackendType.TENSORFLOW
-            from nncf.tensorflow.batchnorm_adaptation import TFBatchnormAdaptationAlgorithmImpl
+            from nncf.tensorflow.batchnorm_adaptation import TFBatchnormAdaptationAlgorithmImpl #pylint: disable=cyclic-import
             impl_cls = TFBatchnormAdaptationAlgorithmImpl
         impl = impl_cls(self._data_loader,
                         self._num_bn_adaptation_steps,

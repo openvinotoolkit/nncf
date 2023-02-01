@@ -3,3 +3,35 @@
 dependencies:
   - 'requirements.txt'
   - '**/setup.py'
+
+NNCF PT:
+  - 'examples/torch/**/*'
+  - 'nncf/torch/**/*'
+  - 'tests/torch/**/*'
+
+NNCF TF:
+  - 'examples/tensorflow/**/*'
+  - 'nncf/tensorflow/**/*'
+  - 'tests/tensorflow/**/*'
+
+NNCF ONNX:
+  - 'examples/onnx/**/*'
+  - 'nncf/onxx/**/*'
+  - 'tests/onnx/**/*'
+
+NNCF OpenVINO:
+  - 'examples/openvino/**/*'
+  - 'nncf/openvino/**/*'
+  - 'tests/openvino/**/*'
+
+documentation:
+  - '**/README.md'
+  - 'docs/**/*'
+
+experimental:
+  - 'nncf/experimental/**/*'
+
+NNCF Common:
+  - 'examples/common/**/*'
+  - 'nncf/common/**/*'
+  - 'tests/common/**/*'

@@ -1,5 +1,5 @@
 """
- Copyright (c) 2019 Intel Corporation
+ Copyright (c) 2023 Intel Corporation
  Licensed under the Apache License, Version 2.0 (the "License");
  you may not use this file except in compliance with the License.
  You may obtain a copy of the License at
@@ -15,9 +15,9 @@ import random
 import math
 
 import numpy as np
-from PIL import Image
 import torch
 from torchvision import transforms as T
+from torchvision.transforms import InterpolationMode
 from torchvision.transforms import functional as F
 
 
@@ -52,7 +52,7 @@ class RandomResize:
     def __call__(self, image, target):
         size = random.randint(self.min_size, self.max_size)  # nosec
         image = F.resize(image, size)
-        target = F.resize(target, size, interpolation=Image.NEAREST)
+        target = F.resize(target, size, interpolation=InterpolationMode.NEAREST)
         return image, target
 
 
@@ -68,7 +68,7 @@ class RandomScaleAligned:
         w_aligned = math.ceil(w * scale / self.alignment) * self.alignment
         h_aligned = math.ceil(h * scale / self.alignment) * self.alignment
         image = F.resize(image, (w_aligned, h_aligned))
-        target = F.resize(target, (w_aligned, h_aligned), interpolation=Image.NEAREST)
+        target = F.resize(target, (w_aligned, h_aligned), interpolation=InterpolationMode.NEAREST)
         return image, target
 
 
@@ -78,7 +78,7 @@ class Resize:
 
     def __call__(self, image, target):
         image = F.resize(image, self.size)
-        target = F.resize(target, self.size, interpolation=Image.NEAREST)
+        target = F.resize(target, self.size, interpolation=InterpolationMode.NEAREST)
         return image, target
 
 

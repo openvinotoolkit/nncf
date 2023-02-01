@@ -1,5 +1,5 @@
 """
- Copyright (c) 2021 Intel Corporation
+ Copyright (c) 2023 Intel Corporation
  Licensed under the Apache License, Version 2.0 (the "License");
  you may not use this file except in compliance with the License.
  You may obtain a copy of the License at
@@ -18,6 +18,7 @@ from nncf.common.statistics import NNCFStatistics
 from nncf.common.pruning.statistics import FilterPruningStatistics
 from nncf.common.sparsity.statistics import MagnitudeSparsityStatistics
 from nncf.common.sparsity.statistics import RBSparsityStatistics
+from nncf.common.sparsity.statistics import MovementSparsityStatistics
 from nncf.common.sparsity.statistics import ConstSparsityStatistics
 
 
@@ -64,4 +65,15 @@ def _(stats, algorithm_name):
     if target_sparsity_level is not None:
         tensorboard_stats[f'{algorithm_name}/target_sparsity_level'] = target_sparsity_level
 
+    return tensorboard_stats
+
+
+@convert_to_dict.register(MovementSparsityStatistics)
+def _(stats, algorithm_name):
+    tensorboard_stats = {
+        f'{algorithm_name}/model_sparsity': stats.model_statistics.sparsity_level,
+        f'{algorithm_name}/linear_layer_sparsity': stats.model_statistics.sparsity_level_for_layers,
+        f'{algorithm_name}/importance_threshold': stats.importance_threshold,
+        f'{algorithm_name}/importance_regularization_factor': stats.importance_regularization_factor,
+    }
     return tensorboard_stats

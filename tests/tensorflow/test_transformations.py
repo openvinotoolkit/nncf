@@ -1,5 +1,5 @@
 """
- Copyright (c) 2021 Intel Corporation
+ Copyright (c) 2023 Intel Corporation
  Licensed under the Apache License, Version 2.0 (the "License");
  you may not use this file except in compliance with the License.
  You may obtain a copy of the License at
@@ -13,16 +13,17 @@
 
 import os
 import pytest
-import networkx as nx
+from pkg_resources import parse_version
 import tensorflow as tf
-from tensorflow.python.keras import layers
-from tensorflow.python.keras import models
+from tensorflow.keras import layers
+from tensorflow.keras import models
 
 from nncf.common.graph.transformations.commands import TargetType
 from nncf.common.graph.transformations.commands import TransformationPriority
 from nncf.common.graph.transformations.commands import TransformationType
 from nncf.common.quantization.structs import QuantizerConfig
 from nncf.common.quantization.structs import QuantizationMode
+from nncf.common.utils.dot_file_rw import write_dot_graph
 from nncf.tensorflow.graph.converter import TFModelConverterFactory
 from nncf.tensorflow.graph.model_transformer import TFModelTransformer
 from nncf.tensorflow.graph.transformations import commands
@@ -37,10 +38,11 @@ from nncf.tensorflow.layers.custom_objects import NNCF_CUSTOM_OBJECTS
 from nncf.tensorflow.layers.operation import NNCFOperation
 from nncf.tensorflow.quantization.layers import FakeQuantize
 from nncf.tensorflow.quantization.quantizers import TFQuantizerSpec
+from nncf.tensorflow import tf_internals
 from tests.tensorflow.test_compressed_graph import keras_model_to_tf_graph
-from tests.tensorflow.test_compressed_graph import check_nx_graph
 from tests.tensorflow.test_compressed_graph import get_nx_graph_from_tf_graph
-
+from tests.tensorflow.helpers import remove_node_by_name
+from tests.common.graph.nx_graph import compare_nx_graph_with_reference
 
 def test_insertion_commands_union_invalid_input():
     cmd_0 = commands.TFInsertionCommand(commands.TFBeforeLayer('layer_0'))
@@ -533,7 +535,8 @@ def apply_insert_before(model):
         else:
             instance_idx = 0
 
-        inputs = [layer.input] if isinstance(layer.input, tf.Tensor) else layer.input
+        is_keras_tensor = isinstance(layer.input, tf_internals.keras_engine.keras_tensor.KerasTensor)
+        inputs = [layer.input] if is_keras_tensor else layer.input
 
         for port, _ in enumerate(inputs):
             fake_quantize_name = f'FakeQuantize_{i}.{port}/{original_node_name}'
@@ -555,16 +558,22 @@ def apply_insert_before(model):
 
 
 def check_graphs(model, ref_graph_filename):
-    data_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'data', 'model_transormer')
+    tensorflow_version = parse_version(tf.__version__).base_version
+    data_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'data', 'model_transormer',
+                            tensorflow_version[:3])
     ref_graph_path = os.path.abspath(os.path.join(data_dir, ref_graph_filename))
 
     graph, graph_to_layer_var_names_map = keras_model_to_tf_graph(model)
+
+    if tensorflow_version.startswith('2.8'):
+        graph = remove_node_by_name('NoOp', graph)
+
     nx_graph = get_nx_graph_from_tf_graph(graph, graph_to_layer_var_names_map)
 
     if not os.path.exists(ref_graph_path) and os.getenv("NNCF_TEST_REGEN_DOT") is not None:
-        nx.drawing.nx_pydot.write_dot(nx_graph, ref_graph_path)
+        write_dot_graph(nx_graph, ref_graph_path)
 
-    check_nx_graph(nx_graph, ref_graph_path)
+    compare_nx_graph_with_reference(nx_graph, ref_graph_path)
 
 
 def test_functional_insert_after():

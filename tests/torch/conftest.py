@@ -1,5 +1,5 @@
 """
- Copyright (c) 2019 Intel Corporation
+ Copyright (c) 2023 Intel Corporation
  Licensed under the Apache License, Version 2.0 (the "License");
  you may not use this file except in compliance with the License.
  You may obtain a copy of the License at
@@ -11,12 +11,26 @@
  limitations under the License.
 """
 import os
-
-from tests.common.helpers import create_venv_with_nncf
-
 import pytest
+try:
+    import torch
+except: #pylint: disable=bare-except
+    torch = None
+
+from tests.shared.install_fixtures import tmp_venv_with_nncf #pylint:disable=unused-import
+from tests.shared.logging import nncf_caplog #pylint:disable=unused-import
+from tests.shared.case_collection import skip_marked_cases_if_options_not_specified
+from tests.shared.case_collection import COMMON_SCOPE_MARKS_VS_OPTIONS
+
 
 pytest.register_assert_rewrite('tests.torch.helpers')
+
+
+@pytest.fixture(scope="session", autouse=True)
+def disable_tf32_precision():
+    if torch:
+        torch.backends.cuda.matmul.allow_tf32 = False
+        torch.backends.cudnn.allow_tf32 = False
 
 
 def pytest_addoption(parser):
@@ -38,6 +52,10 @@ def pytest_addoption(parser):
         "--weekly-models", type=str, default=None, help="Path to models' weights for weekly tests"
     )
     parser.addoption(
+        "--mixed-precision", action="store_true", default=False, help="Enable mixed precision for the"
+                                                                                  " nncf weekly test"
+    )
+    parser.addoption(
         "--sota-checkpoints-dir", type=str, default=None, help="Path to checkpoints directory for sota accuracy test"
     )
     parser.addoption(
@@ -51,13 +69,10 @@ def pytest_addoption(parser):
                                                             "if param not specified"
     )
     parser.addoption(
-        "--ov-data-dir", type=str, default=None, help="Path to datasets directory for OpenVino accuracy test"
+        "--ov-data-dir", type=str, default=None, help="Path to datasets directory for OpenVINO accuracy test"
     )
     parser.addoption(
         "--imagenet", action="store_true", default=False, help="Enable tests with imagenet"
-    )
-    parser.addoption(
-        "--test-install-type", type=str, help="Type of installation, use CPU or GPU for appropriate install"
     )
     parser.addoption(
         "--backward-compat-models", type=str, default=None, help="Path to NNCF-traned model checkpoints that are tested"
@@ -67,13 +82,18 @@ def pytest_addoption(parser):
         "--third-party-sanity", action="store_true", default=False, help="To run third party sanity test cases"
     )
     parser.addoption(
-        "--run-openvino-eval", action="store_true", default=False, help="To run eval models via OpenVino"
+        "--torch-with-cuda11", action="store_true", default=False, help="To trigger installation of pytorch with "
+                                                                        "CUDA11. It's required for 3rd sanity tests "
+                                                                        "on RTX3090 cards"
+    )
+    parser.addoption(
+        "--run-openvino-eval", action="store_true", default=False, help="To run eval models via OpenVINO"
     )
     parser.addoption(
         "--onnx-dir", type=str, default=None, help="Path to converted onnx models"
     )
     parser.addoption(
-        "--ov-config-dir", type=str, default=None, help="Path to OpenVino configs"
+        "--ov-config-dir", type=str, default=None, help="Path to OpenVINO configs"
     )
     parser.addoption(
         "--pip-cache-dir", type=str, default=None,
@@ -107,6 +127,11 @@ def weekly_models_path(request):
 
 
 @pytest.fixture(scope="module")
+def mixed_precision(request):
+    return request.config.getoption("--mixed-precision")
+
+
+@pytest.fixture(scope="module")
 def sota_checkpoints_dir(request):
     return request.config.getoption("--sota-checkpoints-dir")
 
@@ -128,7 +153,7 @@ def ov_data_dir(request):
 
 @pytest.fixture(scope="module")
 def install_type(request):
-    return request.config.getoption("--test-install-type")
+    return request.config.getoption("--run-install-tests", skip=True)
 
 
 @pytest.fixture(scope="module")
@@ -146,6 +171,11 @@ def torch_home_dir(request, monkeypatch):
 @pytest.fixture(scope="session")
 def third_party(request):
     return request.config.getoption("--third-party-sanity")
+
+
+@pytest.fixture(scope="session")
+def torch_with_cuda11(request):
+    return request.config.getoption("--torch-with-cuda11")
 
 
 @pytest.fixture(scope="session")
@@ -167,13 +197,6 @@ def pip_cache_dir(request):
     return request.config.getoption("--pip-cache-dir")
 
 
-@pytest.fixture(scope="function")
-def tmp_venv_with_nncf(install_type, tmp_path, package_type, venv_type):  # pylint:disable=redefined-outer-name
-    if install_type is None:
-        pytest.skip("Please specify type of installation")
-    venv_path = create_venv_with_nncf(tmp_path, package_type, venv_type, extra_reqs='torch')
-    return venv_path
-
 
 @pytest.fixture
 def runs_subprocess_in_precommit():
@@ -184,6 +207,7 @@ def runs_subprocess_in_precommit():
     # memory which has not been cached (and thus remains reserved) in the owning pytest process by PyTorch,
     # and the tests below may fail with an OOM. To avoid this, need to call torch.cuda.empty_cache()
     # each time a GPU-powered subprocess is executed during a test.
+    #pylint: disable=W0702,W0621
     try:
         import torch
         if torch.cuda.is_available():
@@ -194,3 +218,12 @@ def runs_subprocess_in_precommit():
 @pytest.fixture(scope="module")
 def cuda_ip(request):
     return request.config.getoption("--cuda-ip")
+
+# Custom markers specifying tests to be run only if a specific option
+# is present on the pytest command line must be registered here.
+MARKS_VS_OPTIONS = {
+    **COMMON_SCOPE_MARKS_VS_OPTIONS
+}
+
+def pytest_collection_modifyitems(config, items):
+    skip_marked_cases_if_options_not_specified(config, items, MARKS_VS_OPTIONS)

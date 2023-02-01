@@ -1,5 +1,5 @@
 """
- Copyright (c) 2020 Intel Corporation
+ Copyright (c) 2023 Intel Corporation
  Licensed under the Apache License, Version 2.0 (the "License");
  you may not use this file except in compliance with the License.
  You may obtain a copy of the License at
@@ -22,7 +22,6 @@ from typing import Optional
 from typing import Set
 from typing import Type
 
-import addict as ad
 import jstyleson as json
 
 from nncf.common.graph.operator_metatypes import OperatorMetatype
@@ -33,34 +32,39 @@ from nncf.common.utils.helpers import product_dict
 from nncf.common.utils.os import safe_open
 from nncf.definitions import HW_CONFIG_RELATIVE_DIR
 from nncf.definitions import NNCF_PACKAGE_ROOT_DIR
-from nncf.common.utils.logger import logger as nncf_logger
+from nncf.common.logging import nncf_logger
+
 
 class HWConfigType(Enum):
     CPU = 'CPU'
     GPU = 'GPU'
     VPU = 'VPU'
 
-    @staticmethod
-    def from_str(config_value: str) -> 'HWConfigType':
-        if config_value == HWConfigType.CPU.value:
-            return HWConfigType.CPU
-        if config_value == HWConfigType.GPU.value:
-            return HWConfigType.GPU
-        if config_value == HWConfigType.VPU.value:
-            return HWConfigType.VPU
-        raise RuntimeError('Unknown HW config type string')
-
 
 HW_CONFIG_TYPE_TARGET_DEVICE_MAP = {
     'ANY': HWConfigType.CPU.value,
     'CPU': HWConfigType.CPU.value,
     'VPU': HWConfigType.VPU.value,
-    'GPU': HWConfigType.GPU.value,
-    'TRIAL': None
+    'GPU': HWConfigType.GPU.value
 }
 
 
 HWConfigOpName = str
+
+
+def get_hw_config_type(target_device: str) -> Optional[HWConfigType]:
+    """
+    Returns hardware configuration type for target device
+
+    :param target_device: A target device
+    :raises ValueError: if target device is not supported yet
+    :return: hardware configuration type or None for the 'TRIAL' target device
+    """
+    if target_device == 'TRIAL':
+        return None
+    if target_device == 'CPU_SPR':
+        raise ValueError(f'{target_device} target device is not supported yet')
+    return HWConfigType(HW_CONFIG_TYPE_TARGET_DEVICE_MAP[target_device])
 
 
 class HWConfig(list, ABC):
@@ -129,7 +133,7 @@ class HWConfig(list, ABC):
 
                 op_dict[algorithm_name] = tmp_config
 
-            hw_config.append(ad.Dict(op_dict))
+            hw_config.append(op_dict)
 
         return hw_config
 
@@ -200,7 +204,7 @@ class HWConfig(list, ABC):
         retval = {k: None for k in self._get_available_operator_metatypes_for_matching()}
         config_key = 'weights' if for_weights else 'activations'
         for op_dict in self:
-            hw_config_op_name = op_dict.type
+            hw_config_op_name = op_dict["type"]
 
             metatypes = self._get_metatypes_for_hw_config_op(hw_config_op_name)
             if not metatypes:
@@ -209,7 +213,7 @@ class HWConfig(list, ABC):
                     'metatype - will be ignored'.format(hw_config_op_name))
 
             if self.QUANTIZATION_ALGORITHM_NAME in op_dict:
-                allowed_qconfs = op_dict[self.QUANTIZATION_ALGORITHM_NAME][config_key]
+                allowed_qconfs = op_dict[self.QUANTIZATION_ALGORITHM_NAME].get(config_key, [])
             else:
                 allowed_qconfs = []
 
@@ -232,10 +236,10 @@ class HWConfig(list, ABC):
             if self.ATTRIBUTES_NAME not in op_dict:
                 continue
             for attr_name, attr_value in attribute_name_vs_required_value.items():
-                is_value_matched = op_dict[self.ATTRIBUTES_NAME][attr_name] == attr_value
+                is_value_matched = op_dict[self.ATTRIBUTES_NAME].get(attr_name) == attr_value
                 is_attr_set = attr_name in op_dict[self.ATTRIBUTES_NAME]
                 if is_value_matched and is_attr_set:
-                    hw_config_op_name = op_dict.type
+                    hw_config_op_name = op_dict["type"]
                     metatypes = self._get_metatypes_for_hw_config_op(hw_config_op_name)
                     if not metatypes:
                         nncf_logger.debug(

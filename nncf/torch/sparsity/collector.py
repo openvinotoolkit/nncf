@@ -1,5 +1,5 @@
 """
- Copyright (c) 2021 Intel Corporation
+ Copyright (c) 2023 Intel Corporation
  Licensed under the Apache License, Version 2.0 (the "License");
  you may not use this file except in compliance with the License.
  You may obtain a copy of the License at
@@ -25,7 +25,8 @@ class PTSparseModelStatisticsCollector(BaseSparseModelStatisticsCollector):
     Collects statistics for the sparse NNCFNetwork.
     """
 
-    def __init__(self, model: NNCFNetwork, sparse_modules_info: List[SparseModuleInfo]):
+    def __init__(self, model: NNCFNetwork, sparse_modules_info: List[SparseModuleInfo],
+                 supports_sparse_bias: bool = False):
         """
         Initializes statistics collector of the sparse tf.keras.Model.
 
@@ -34,6 +35,7 @@ class PTSparseModelStatisticsCollector(BaseSparseModelStatisticsCollector):
         """
         self._model = model
         self._sparse_modules_info = sparse_modules_info
+        self._supports_sparse_bias = supports_sparse_bias
 
     def _collect_weights_descriptions(self) -> List[WeightDescription]:
         weights_descriptions = []
@@ -54,9 +56,17 @@ class PTSparseModelStatisticsCollector(BaseSparseModelStatisticsCollector):
             if hasattr(minfo.module, 'bias') and minfo.module.bias is not None:
                 bias = minfo.module.bias
                 name = f'{minfo.module_node_name}/bias'
-                weights_descriptions.append(
-                    WeightDescription(name, list(bias.shape), bias.count_nonzero().item(), is_sparse=False)
-                )
+                if self._supports_sparse_bias:
+                    sparse_bias = minfo.operand.apply_binary_mask(bias, is_bias=True)  # TODO(yujie): breaking changes
+                    weights_descriptions.append(
+                        WeightDescription(name, list(sparse_bias.shape),
+                                          sparse_bias.count_nonzero().item(), is_sparse=True)
+                    )
+                else:
+                    weights_descriptions.append(
+                        WeightDescription(name, list(bias.shape),
+                                          bias.count_nonzero().item(), is_sparse=False)
+                    )
 
             processed_modules.append(minfo.module)
 

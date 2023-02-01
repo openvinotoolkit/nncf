@@ -1,5 +1,5 @@
 """
- Copyright (c) 2020 Intel Corporation
+ Copyright (c) 2023 Intel Corporation
  Licensed under the Apache License, Version 2.0 (the "License");
  you may not use this file except in compliance with the License.
  You may obtain a copy of the License at
@@ -14,3 +14,9 @@
 import os
 NNCF_PACKAGE_ROOT_DIR = os.path.dirname(os.path.abspath(__file__))
 HW_CONFIG_RELATIVE_DIR = "common/hardware/configs"
+
+# Environment variables below, if set, mark the execution environment
+# so that certain actions within NNCF proper, such as telemetry event collection or
+# debug dumps, are performed or not performed
+NNCF_CI_ENV_VAR_NAME = "NNCF_CI"  # Must be set in CI environments
+NNCF_DEV_ENV_VAR_NAME = "NNCF_DEV"  # Must be set in environments of the NNCF dev team machines

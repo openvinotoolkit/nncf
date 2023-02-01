@@ -1,5 +1,5 @@
 """
- Copyright (c) 2021 Intel Corporation
+ Copyright (c) 2023 Intel Corporation
  Licensed under the Apache License, Version 2.0 (the "License");
  you may not use this file except in compliance with the License.
  You may obtain a copy of the License at
@@ -13,7 +13,7 @@
 from abc import ABC
 from abc import abstractmethod
 from enum import Enum
-from typing import List, Tuple, Any
+from typing import List, Tuple, Any, Union
 
 
 class Dtype(Enum):
@@ -39,6 +39,23 @@ class MultipleInputLayerAttributes(BaseLayerAttributes):
 
     def __eq__(self, other: Any):
         return isinstance(other, MultipleInputLayerAttributes) \
+               and self.axis == other.axis
+
+
+class MultipleOutputLayerAttributes(BaseLayerAttributes):
+    """
+    Represents a layer with multiple outputs.
+    """
+
+    def __init__(self,
+                 chunks: Union[int, List],
+                 axis: int):
+        self.chunks = chunks
+        self.axis = axis
+
+    def __eq__(self, other: Any):
+        return isinstance(other, MultipleOutputLayerAttributes) \
+               and self.chunks == other.chunks \
                and self.axis == other.axis
 
 
@@ -91,13 +108,18 @@ class LinearLayerAttributes(WeightedLayerAttributes):
     def __init__(self,
                  weight_requires_grad: bool,
                  in_features: int,
-                 out_features: int):
+                 out_features: int,
+                 bias: bool = True):
         super().__init__(weight_requires_grad)
         self.in_features = in_features
         self.out_features = out_features
+        self.bias = bias
 
     def get_weight_shape(self) -> List[int]:
         return [self.out_features, self.in_features]
+
+    def get_bias_shape(self) -> int:
+        return self.out_features if self.bias is True else 0
 
     def get_target_dim_for_compression(self) -> int:
         return 0
@@ -117,7 +139,7 @@ class ConvolutionLayerAttributes(WeightedLayerAttributes):
                  stride: Tuple[int, ...],
                  groups: int,
                  transpose: bool,
-                 padding_values: List[int]):
+                 padding_values: Tuple[int, ...]):
         super().__init__(weight_requires_grad)
         self.in_channels = in_channels
         self.out_channels = out_channels

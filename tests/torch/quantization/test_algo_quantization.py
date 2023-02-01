@@ -1,5 +1,5 @@
 """
- Copyright (c) 2019-2020 Intel Corporation
+ Copyright (c) 2019-2023 Intel Corporation
  Licensed under the Apache License, Version 2.0 (the "License");
  you may not use this file except in compliance with the License.
  You may obtain a copy of the License at
@@ -10,26 +10,34 @@
  See the License for the specific language governing permissions and
  limitations under the License.
 """
+from collections import Counter
 from copy import deepcopy
-from typing import List, Tuple
+from typing import List
+from typing import Tuple
 
 import pytest
 import torch
-from torch import nn
 import torch.nn.functional as F
 import torch.utils.data
+from pkg_resources import parse_version
+from torch import nn
 from torchvision.models import resnet50
 from torchvision.models import squeezenet1_1
 
-from nncf.common.utils.debug import nncf_debug
+from nncf import NNCFConfig
 from nncf.api.compression import CompressionScheduler
-from nncf.torch.checkpoint_loading import load_state
+from nncf.common.hardware.config import HWConfigType
+from nncf.common.quantization.structs import NonWeightQuantizerId
 from nncf.common.quantization.structs import QuantizationMode
 from nncf.common.quantization.structs import QuantizerConfig
+from nncf.common.quantization.structs import WeightQuantizerId
+from nncf.common.utils.debug import nncf_debug
+from nncf.torch import create_compressed_model
+from nncf.torch import register_default_init_args
+from nncf.torch.checkpoint_loading import load_state
 from nncf.torch.compression_method_api import PTCompressionLoss
 from nncf.torch.dynamic_graph.scope import Scope
 from nncf.torch.dynamic_graph.scope import ScopeElement
-from nncf.common.hardware.config import HWConfigType
 from nncf.torch.layers import NNCFConv2d
 from nncf.torch.model_creation import create_compression_algorithm_builder
 from nncf.torch.module_operations import UpdateInputs
@@ -37,21 +45,23 @@ from nncf.torch.module_operations import UpdateWeight
 from nncf.torch.nncf_network import ExtraCompressionModuleType
 from nncf.torch.quantization.algo import QuantizationBuilder
 from nncf.torch.quantization.algo import QuantizationController
+from nncf.torch.quantization.layers import AsymmetricQuantizer
 from nncf.torch.quantization.layers import BaseQuantizer
 from nncf.torch.quantization.layers import PTQuantizerSpec
 from nncf.torch.quantization.layers import QUANTIZATION_MODULES
 from nncf.torch.quantization.layers import SymmetricQuantizer
-from nncf.torch.quantization.layers import AsymmetricQuantizer
-from nncf.common.quantization.structs import NonWeightQuantizerId
-from nncf.common.quantization.structs import WeightQuantizerId
 from nncf.torch.utils import get_all_modules_by_type
+from nncf.torch.utils import get_model_device
 from tests.torch.helpers import BasicConvTestModel
+from tests.torch.helpers import LeNet
 from tests.torch.helpers import TwoConvTestModel
 from tests.torch.helpers import create_compressed_model_and_algo_for_test
+from tests.torch.helpers import create_ones_mock_dataloader
+from tests.torch.helpers import create_random_mock_dataloader
 from tests.torch.helpers import get_empty_config
 from tests.torch.helpers import register_bn_adaptation_init_args
-from tests.torch.quantization.test_quantization_helpers import get_quantization_config_without_range_init
-from tests.torch.quantization.test_quantization_helpers import get_squeezenet_quantization_config
+from tests.torch.quantization.quantization_helpers import get_quantization_config_without_range_init
+from tests.torch.quantization.quantization_helpers import get_squeezenet_quantization_config
 
 
 def compare_qspecs(qspec: PTQuantizerSpec, quantizer: BaseQuantizer):
@@ -560,7 +570,7 @@ def test_debug_mode():
     with nncf_debug():
         model, _ = create_compressed_model_and_algo_for_test(model, config)
         model.forward(torch.zeros(BasicConvTestModel.INPUT_SIZE,
-                                  device=next(model.parameters()).device))
+                                  device=get_model_device(model)))
 
 
 class SharedLayersModel(torch.nn.Module):
@@ -661,3 +671,182 @@ def test_quantization_preset_with_scope_overrides():
 
     for aq_info in compression_ctrl.non_weight_quantizers.values():
         assert isinstance(aq_info.quantizer_module_ref, AsymmetricQuantizer)
+
+
+def test_quantization_can_be_run_with_no_data_loaders_if_zero_init_samples():
+    model = BasicConvTestModel()
+    # Should complete successfully even though no loaders have been registered into the config.
+    _, _ = create_compressed_model_and_algo_for_test(model, NNCFConfig.from_dict({
+        'input_info': {
+            'sample_size': [1, 1, 4, 4]
+        },
+        'compression': {
+            'algorithm': 'quantization',
+            'initializer': {
+                'range': {
+                    'num_init_samples': 0
+                },
+                'batchnorm_adaptation': {
+                    'num_bn_adaptation_samples': 0
+                }
+            }
+        }
+    }))
+
+if parse_version(torch.__version__).base_version <= parse_version("1.9.1").base_version:
+    from torch.cuda.amp import autocast
+else:
+    from torch import autocast
+
+
+class TestHalfPrecisionModels:
+    class RegularModel(torch.nn.Module):
+        def __init__(self):
+            super().__init__()
+            self.conv_first = torch.nn.Conv2d(1, 1, 1)
+            self.conv_second = torch.nn.Conv2d(1, 1, 1)
+
+        def forward(self, x):
+            y = self.conv_first(x)
+            y = self.conv_second(y)
+            return y
+
+    class ModelWithInternalAutocast(torch.nn.Module):
+        def __init__(self):
+            super().__init__()
+            self.model = TestHalfPrecisionModels.RegularModel()
+
+        def forward(self, x):
+            with autocast():
+                y = self.model(x)
+            return y
+
+    class ModelWithManualPartialHalfPrecision(torch.nn.Module):
+        def __init__(self):
+            super().__init__()
+            self.conv_first = torch.nn.Conv2d(1, 1, 1)
+            self.conv_second = torch.nn.Conv2d(1, 1, 1).half()
+            self.conv_third = torch.nn.Conv2d(1, 1, 1)
+
+        def forward(self, x):
+            y = self.conv_first(x)
+            y = y.half()
+            y = self.conv_second(y)
+            y = y.to(torch.float32)
+            y = self.conv_third(y)
+            return y
+
+    @pytest.fixture()
+    def initializing_config(self):
+        config = get_quantization_config_without_range_init(model_size=1)
+
+        # Make sure that both symmetric and asymmetric quantizers appear in the model
+        config['compression']['scope_overrides'] = {
+            "activations": {
+                "{re}.*conv_first.*": {"mode": "asymmetric"},
+                "{re}.*conv_second.*": {"mode": "symmetric"}
+            },
+            "weights": {
+                "{re}.*conv_first.*": {"mode": "asymmetric"},
+                "{re}.*conv_second.*": {"mode": "symmetric"}
+            },
+        }
+        config['compression']['initializer'] = {
+            'range': {
+                "num_init_samples": 2
+            },
+            "batchnorm_adaptation": {
+                "num_bn_adaptation_samples": 1
+            }
+        }
+        data_loader = create_ones_mock_dataloader(config)
+        config = register_default_init_args(config, data_loader)
+        return config
+
+    def test_internal_autocast_model(self, initializing_config: NNCFConfig):
+        model = TestHalfPrecisionModels.ModelWithInternalAutocast()
+        inputs = torch.ones([1, 1, 1, 1])
+        if torch.cuda.is_available():
+            inputs = inputs.cuda()
+            model = model.cuda()
+
+        compressed_model, _ = create_compressed_model_and_algo_for_test(model, initializing_config)
+
+        # Should complete successfully, including init.
+        compressed_model(inputs)
+
+    @pytest.mark.parametrize('device',
+        [pytest.param("cuda"), pytest.param("cpu", marks=pytest.mark.skip(reason="CVS-86697"))])
+    def test_manual_partial_half_precision_model(self, initializing_config: NNCFConfig, device: str):
+        model = TestHalfPrecisionModels.ModelWithManualPartialHalfPrecision()
+        inputs = torch.ones([1, 1, 1, 1])
+
+        if device == "cuda":
+            if torch.cuda.is_available():
+                inputs = inputs.cuda()
+                model = model.cuda()
+            else:
+                pytest.skip("CUDA is not available.")
+
+        compressed_model, _ = create_compressed_model_and_algo_for_test(model, initializing_config)
+
+        # Should complete successfully, including init.
+        compressed_model(inputs)
+
+    def test_external_autocast(self, initializing_config: NNCFConfig):
+        model = TestHalfPrecisionModels.RegularModel()
+        inputs = torch.ones([1, 1, 1, 1])
+        if torch.cuda.is_available():
+            inputs = inputs.cuda()
+            model = model.cuda()
+
+        compressed_model, _ = create_compressed_model_and_algo_for_test(model, initializing_config)
+
+        with autocast():
+            # Should complete successfully.
+            result = compressed_model(inputs)
+            if torch.is_autocast_enabled(): # For torch <= 1.9.1 and CPU the autocast context won't have effect
+                assert result.dtype == torch.float16
+
+
+@pytest.mark.parametrize('update_config_info, should_ignore_quantizers', [
+    (
+            {}, []
+    ),
+    (
+            {"ignored_scopes": ["LeNet/relu_1"]},
+            []  # ignoring second op in the pattern doesn't lead to exclusion of quantization first op
+    ),
+    (
+            {"activations": {"ignored_scopes": ["LeNet/relu_1"]}},
+            []  # ignoring second op in the pattern doesn't lead to exclusion of quantization first op
+    ),
+    (
+            {"ignored_scopes": ["LeNet/NNCFConv2d[conv2]/conv2d_0"]},
+            ["LeNet/relu_0", "LeNet/NNCFConv2d[conv2]/conv2d_0"]
+    ),
+    (
+            {"activations": {"ignored_scopes": ["LeNet/NNCFConv2d[conv2]/conv2d_0"]}},
+            ["LeNet/relu_0"]
+    )
+])
+def test_activation_ignored_scope(update_config_info, should_ignore_quantizers):
+    model = LeNet()
+    all_quantization_names = ["LeNet/NNCFConv2d[conv1]/conv2d_0",
+                              "LeNet/NNCFConv2d[conv2]/conv2d_0",
+                              "LeNet/NNCFLinear[fc1]/linear_0",
+                              "LeNet/NNCFLinear[fc2]/linear_0",
+                              "LeNet/NNCFLinear[fc3]/linear_0",
+                              "/nncf_model_input_0",
+                              "LeNet/relu_0",
+                              "LeNet/relu_1",
+                              "LeNet/relu_2",
+                              "LeNet/relu_3"]
+    ref_quantization_names = list(filter(lambda x: x not in should_ignore_quantizers, all_quantization_names))
+    config = get_quantization_config_without_range_init(LeNet.INPUT_SIZE[-1])
+    config["compression"].update(update_config_info)
+    train_loader = create_random_mock_dataloader(config, num_samples=10)
+    config = register_default_init_args(config, train_loader)
+    ctrl, _ = create_compressed_model(model, config)
+    assert Counter([item.target_node_name for item in ctrl.all_quantizations.keys()]) == \
+           Counter(ref_quantization_names)

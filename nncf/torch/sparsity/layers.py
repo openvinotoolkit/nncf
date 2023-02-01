@@ -1,5 +1,5 @@
 """
- Copyright (c) 2019 Intel Corporation
+ Copyright (c) 2023 Intel Corporation
  Licensed under the Apache License, Version 2.0 (the "License");
  you may not use this file except in compliance with the License.
  You may obtain a copy of the License at
@@ -17,7 +17,7 @@ from torch import nn
 
 from nncf.torch.layer_utils import COMPRESSION_MODULES
 from nncf.torch.sparsity.functions import apply_binary_mask as apply_binary_mask_impl
-from nncf.torch.utils import is_tracing_state, no_jit_trace
+from nncf.torch.utils import is_tracing_state
 
 
 @COMPRESSION_MODULES.register()
@@ -38,8 +38,7 @@ class BinaryMask(nn.Module):
 
     def forward(self, weight):
         if is_tracing_state():
-            with no_jit_trace():
-                return weight.mul_(self.binary_mask)
+            return weight.mul(self.binary_mask)
         tmp_tensor = self._calc_training_binary_mask(weight)
         return apply_binary_mask_impl(tmp_tensor, weight)
 

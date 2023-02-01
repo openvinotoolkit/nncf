@@ -494,7 +494,7 @@ long_name = 2  # comment that should not be aligned
 
 dictionary = {
     'foo': 1,
-    'long_name': 2,
+    'long_name': 2
 }
 ```
 
@@ -505,7 +505,7 @@ long_name = 2     # comment that should not be aligned
 
 dictionary = {
     'foo'      : 1,
-    'long_name': 2,
+    'long_name': 2
 }
 ```
 
@@ -526,7 +526,7 @@ Every file should contain a license boilerplate.
 
 ```python
 """
- Copyright (c) 2020 Intel Corporation
+ Copyright (c) 2023 Intel Corporation
  Licensed under the Apache License, Version 2.0 (the "License");
  you may not use this file except in compliance with the License.
  You may obtain a copy of the License at
@@ -592,10 +592,8 @@ class ModelTransformer:
     :param public_attribute: Public attribute description
     """
 
-    def __init__(self, model: ModelType, transformation_layout: TransformationLayout):
+    def __init__(self, model: TModel, transformation_layout: TransformationLayout):
         """
-        Initializes Model Transformer
-
         :param model: The model to be transformed
         :param transformation_layout: An instance of `TransformationLayout` that
             includes a list of transformations to be applied to the model.
@@ -604,13 +602,61 @@ class ModelTransformer:
         self._transformations = transformation_layout.transformations
         self.public_attribute = None
 
-    def transform(self) -> ModelType:
+    def transform(self) -> TModel:
         """
         Applies transformations to the model.
 
         :return: The transformed model
         """
         raise NotImplementedError()
+```
+
+The `__init__` function and other magic methods in non-API classes may be left without a textual description,
+if there is nothing special about this exact implementation of the magic method 
+(i.e. the function has no notable side effects, the implementation is done in a conventional way such as 
+hashing all fields as a tuple in `__hash__` or concatenating string-like objects in `__add__` etc.)
+
+For instance, this simple `__init__` method may omit the method description in the docstring (the parameter description is, however, still required):
+```python
+class Klass:
+    # ...
+    def __init__(self, param1: int, param2: float):
+        """
+        :param param1: Description of param1
+        :param param2: Description of param2
+        """
+        self.param1 = param1
+        self.param2 = param2
+```
+while this `__init__` requires a description of external dependencies and potential side effects of creating objects of the class:
+```python
+class ComplexKlass(BaseClass):
+    # ...
+   def __init__(self, param1: ParamType, param2: AnotherParamType):
+        """
+        *Add a brief explanation of what happens during this particular __init__, such as :*
+        The construction of this object is dependent on the value of GLOBAL_VARIABLE...
+        Each object of the class after __init__ is registered in ...
+        Each instantiation of an object of this class leads to a side effect in ... (explain side effect)
+        If *this* and *that*, the object creation will fail with a RuntimeError.
+        *... and other noteworthy stuff happening in this method.*
+        
+        :param param1: Description of param1
+        :param param2: Description of param2
+        
+        :raises RuntimeError if *this* and *that*
+        """
+        super().__init__(param1)
+        self.public_param = get_public_param_value_from_global_variable(param1, GLOBAL_VARIABLE)
+        result = perform_complex_calculations_with_param1_and_param2(param1, param2)
+        if result == CONSTANT_VALUE_1:
+            self.another_public_param = self._do_one_thing()
+        elif result == CONSTANT_VALUE_2:
+            self.another_public_param = self._do_other_thing()
+        else:
+            raise RuntimeError()
+        call_function_with_side_effects()  # such as registering this instance somewhere, or acquiring a resource, etc.
+        # ... potentially more code which is not understandable at a glance
 ```
 
 <a id="s3.5.4-block-and-inline-comments"></a>
@@ -673,20 +719,63 @@ long_string = textwrap.dedent('''\
 <a id="37-logging"></a>
 <a id="logging"></a>
 ### 3.7 Logging 
+Use the logger object built into NNCF for all purposes of logging within the NNCF package code.
+Do not use `print(...)` or other ways of output.
 
-For logging functions that expect a pattern-string (with %-placeholders) as
-their first argument: Always call them with a string literal (not an f-string!)
-as their first argument with pattern-parameters as subsequent arguments. Some
-logging implementations collect the unexpanded pattern-string as a queryable
-field. It also prevents spending time rendering a message that no logger is
-configured to output.
+Correct:
 
 ```python
-# Correct:
-import nncf
-from nncf.common.utils.logger import logger as nncf_logger
-nncf_logger.info('Test message: %s', nncf.__version__)
+from nncf.common.logging import nncf_logger
+
+nncf_logger.info("This is an info-level log message")
 ```
+
+Wrong:
+```python
+print("This is an info-level log message")
+```
+
+For logging functions that expect a pattern-string (with %-placeholders) as
+their first argument - consider calling them with a string literal (not an f-string!)
+as their first argument with pattern-parameters as subsequent arguments, if constructing the log message takes a long
+time or is otherwise hurtful to performance.
+
+```python
+import nncf
+from nncf.common.logging import nncf_logger
+
+# OK:
+nncf_logger.info('Test message: %s', nncf.__version__)
+
+# Also OK:
+nncf_logger.info(f'Test message: {nncf.__version__}')
+
+# Probably not OK:
+for i in range(1000000):
+    nncf_logger.info(f'Test message: {sum(range(10000000))}')
+```
+
+Use proper logging levels (https://docs.python.org/3/library/logging.html#logging-levels) when printing out a message to the logger.
+
+DEBUG - for NNCF internal information that can be utilized during debug sessions.
+
+INFO - for good-to-know information such as progress bar or activity indicators, short summaries or effects of non-default, user-defined configuration on execution (i.e. which parts of the model were ignored due to application of "ignored_scopes" arguments).
+It should be possible to safely ignore any of the INFO messages.
+This level is suitable for pretty-printing, displaying the messages that guide the user or displaying other data that could be valuable for the user, but not necessarily for the developer.
+
+WARNING - for unexpected events during execution that the user should know about, or for non-obvious effects of the current configuration.
+
+ERROR - for reporting failures that impair the functionality without causing a fatal exception.
+
+CRITICAL - for logging information relevant to NNCF total failures. Currently not used since this functionality is instead achieved with the text in the exceptions.
+
+The default logging level is INFO, meaning that the user will see INFO, WARNING, ERROR and CRITICAL messages.
+At these levels the logging should be as terse as possible, and the number of NNCF-created log lines should not scale with the increase in the number of operations in the model (i.e. avoid logging every simple quantizer operation being set up by NNCF - summarize the result instead)
+
+At all log levels the log lines should not be duplicated during execution, if possible.
+
+For deprecation warnings, use `nncf.common.logging.logger.warning_deprecated` instead of the regular `nncf_logger.warning`.
+This ensures that the deprecation warning is seen to the user at all NNCF log levels.
 
 <a id="s3.8-error-messages"></a>
 <a id="38-error-messages"></a>

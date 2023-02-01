@@ -1,5 +1,5 @@
 """
- Copyright (c) 2021 Intel Corporation
+ Copyright (c) 2023 Intel Corporation
  Licensed under the Apache License, Version 2.0 (the "License");
  you may not use this file except in compliance with the License.
  You may obtain a copy of the License at
@@ -26,13 +26,14 @@ from nncf.common.quantization.initialization.range import RangeInitParams
 from nncf.common.quantization.initialization.range import RangeInitCollectorParams
 from nncf.common.quantization.quantizer_setup import QuantizationPointBase
 from nncf.common.quantization.quantizer_setup import QuantizerSetupBase
+from nncf.config.schemata.algo.quantization import RANGE_INIT_TYPES_VS_DESCRIPTIONS
 from nncf.torch.quantization.layers import get_scale_shape
 from nncf.common.quantization.structs import NonWeightQuantizerId
 from nncf.common.quantization.structs import QuantizationMode
 from nncf.common.quantization.structs import QuantizerGroup
 from nncf.common.quantization.structs import QuantizerId
 from nncf.common.quantization.structs import WeightQuantizerId
-from nncf.common.utils.helpers import should_consider_scope
+from nncf.common.scopes import should_consider_scope
 from nncf.common.tensor_statistics.collectors import TensorStatisticCollectorBase
 from nncf.common.tensor_statistics.collectors import ReductionShape
 from nncf.torch.graph.graph import PTNNCFGraph
@@ -165,6 +166,8 @@ class StatCollectorGenerator:
         num_samples = init_config.num_init_samples
         if num_samples_to_collect_override is not None:
             num_samples = num_samples_to_collect_override
+        if init_config.init_type not in RANGE_INIT_TYPES_VS_DESCRIPTIONS:
+            raise RuntimeError("Unknown range init type: {}".format(init_config.init_type))
         if init_config.init_type == "min_max":
             reduction_shape_converted = collector_params.convert_reduction_shape(per_sample_stats=False)
             return PTMinMaxStatisticCollector(collector_params.use_abs_max, reduction_shape_converted,
@@ -192,7 +195,7 @@ class StatCollectorGenerator:
             min_percentile = init_config.init_type_specific_params.get("min_percentile", 0.1)
             max_percentile = init_config.init_type_specific_params.get("max_percentile", 99.9)
             return PTMeanPercentileStatisticCollector([min_percentile, max_percentile], reduction_shape, num_samples)
-        raise RuntimeError("Unknown range init type: {}".format(init_config.init_type))
+        raise ValueError("Range init type not handled!")
 
     @classmethod
     def get_all_scale_shapes_with_params(cls, qp: QuantizationPointBase,

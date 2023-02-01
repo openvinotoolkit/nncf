@@ -1,5 +1,5 @@
 """
- Copyright (c) 2021 Intel Corporation
+ Copyright (c) 2023 Intel Corporation
  Licensed under the Apache License, Version 2.0 (the "License");
  you may not use this file except in compliance with the License.
  You may obtain a copy of the License at
@@ -18,8 +18,12 @@ import os
 
 from nncf.common.utils.debug import is_debug
 from nncf.common.hardware.config import HWConfigType
-from nncf.common.utils.logger import logger
+from nncf.common.logging import nncf_logger
 from nncf.common.utils.os import safe_open
+from nncf.config.schemata.defaults import AUTOQ_EVAL_SUBSET_RATIO
+from nncf.config.schemata.defaults import AUTOQ_ITER_NUMBER
+from nncf.config.schemata.defaults import AUTOQ_WARMUP_ITER_NUMBER
+from nncf.config.schemata.defaults import PRECISION_INIT_BITWIDTHS
 from nncf.torch.quantization.precision_constraints import HardwareQuantizationConstraints
 from nncf.torch.quantization.precision_init.base_init import BasePrecisionInitializer, BasePrecisionInitParams
 from nncf.common.quantization.quantizer_setup import SingleConfigQuantizerSetup
@@ -40,6 +44,7 @@ class AutoQPrecisionInitParams(BasePrecisionInitParams):
     def __init__(self, user_init_args: AutoQPrecisionInitArgs,
                  dump_autoq_data: bool = False,
                  iter_number: int = 0,
+                 warmup_iter_number: int = None,
                  compression_ratio: float = None,
                  eval_subset_ratio: float = None,
                  ddpg_hparams_dict: Dict = None,
@@ -52,6 +57,7 @@ class AutoQPrecisionInitParams(BasePrecisionInitParams):
         self.iter_number = iter_number
         self.compression_ratio = compression_ratio
         self.eval_subset_ratio = eval_subset_ratio
+        self.warmup_iter_number = warmup_iter_number
         if ddpg_hparams_dict is None:
             self.ddpg_hparams_dict = {}
         else:
@@ -67,17 +73,19 @@ class AutoQPrecisionInitParams(BasePrecisionInitParams):
                     target_hw_config_type: Optional[HWConfigType]) -> 'AutoQPrecisionInitParams':
         dict_copy = autoq_init_config_dict.copy()
         dump_autoq_data = dict_copy.pop('dump_init_precision_data', False)
-        iter_number = dict_copy.pop('iter_number', 0)
+        iter_number = dict_copy.pop('iter_number', AUTOQ_ITER_NUMBER)
         compression_ratio = dict_copy.pop('compression_ratio', 0.15)
-        eval_subset_ratio = dict_copy.pop('eval_subset_ratio', 1.0)
+        eval_subset_ratio = dict_copy.pop('eval_subset_ratio', AUTOQ_EVAL_SUBSET_RATIO)
+        warmup_iter_number = dict_copy.pop('warmup_iter_number', AUTOQ_WARMUP_ITER_NUMBER)
         skip_constraint = dict_copy.pop('skip_constraint', False)
         finetune = dict_copy.pop('finetune', False)
-        bits = dict_copy.pop('bits',  [2, 4, 8])
+        bits = dict_copy.pop('bits', PRECISION_INIT_BITWIDTHS)
 
         return cls(
             user_init_args=user_init_args,
             dump_autoq_data=dump_autoq_data,
             iter_number=iter_number,
+            warmup_iter_number=warmup_iter_number,
             ddpg_hparams_dict=dict_copy,
             hw_cfg_type=target_hw_config_type,
             compression_ratio=compression_ratio,
@@ -98,13 +106,14 @@ class AutoQPrecisionInitializer(BasePrecisionInitializer):
         self._init_args = params.user_init_args
         self._dump_autoq_data = params.dump_autoq_data
         self._iter_number = params.iter_number
+        self._warmup_iter_number = params.warmup_iter_number
         self._ddpg_hparams_override = params.ddpg_hparams_dict
         self._hw_cfg_type = params.hw_cfg_type
 
     def apply_init(self) -> SingleConfigQuantizerSetup:
-        from nncf.torch.automl.environment.quantization_env import QuantizationEnv
-        from nncf.torch.automl.agent.ddpg.ddpg import DDPG
-        from nncf.common.utils.debug import DEBUG_LOG_DIR
+        from nncf.torch.automl.environment.quantization_env import QuantizationEnv #pylint: disable=cyclic-import
+        from nncf.torch.automl.agent.ddpg.ddpg import DDPG #pylint: disable=cyclic-import
+        from nncf.common.utils.debug import DEBUG_LOG_DIR #pylint: disable=cyclic-import
 
         if self._dump_autoq_data or is_debug():
             dump_dir = self._init_args.config.get('log_dir', None)
@@ -127,12 +136,12 @@ class AutoQPrecisionInitializer(BasePrecisionInitializer):
                                          json.dumps(self._init_args.config['compression'],
                                          indent=4, sort_keys=False).replace("\n", "\n\n"), 0)
             except ModuleNotFoundError:
-                logger.warning("Tensorboard installation not found! Install tensorboard Python package "
-                               "in order for AutoQ tensorboard statistics data to be dumped")
+                nncf_logger.warning("Tensorboard installation not found! Install tensorboard Python package "
+                                    "in order for AutoQ tensorboard statistics data to be dumped")
 
         start_ts = datetime.now()
 
-        from nncf.torch.automl.environment.quantization_env import QuantizationEnvParams
+        from nncf.torch.automl.environment.quantization_env import QuantizationEnvParams #pylint: disable=cyclic-import
         env_params = QuantizationEnvParams(compression_ratio=self._params.compression_ratio,
             eval_subset_ratio=self._params.eval_subset_ratio,
             skip_constraint=self._params.skip_constraint,
@@ -157,10 +166,9 @@ class AutoQPrecisionInitializer(BasePrecisionInitializer):
 
         # Control buffer length at run manager level
         if "warmup_iter_number" not in self._ddpg_hparams_override:
-            self._ddpg_hparams_override["warmup_iter_number"] = 10
-
+            self._ddpg_hparams_override["warmup_iter_number"] = self._warmup_iter_number
         self._ddpg_hparams_override["rmsize"] = \
-            self._ddpg_hparams_override["warmup_iter_number"] * (len(env.master_df)+1)
+            self._warmup_iter_number * (len(env.master_df)+1)
 
         # Instantiate Automation Agent
         agent = DDPG(nb_state, nb_action, self._iter_number, hparam_override=self._ddpg_hparams_override)
@@ -184,11 +192,11 @@ class AutoQPrecisionInitializer(BasePrecisionInitializer):
             final_quantizer_setup.quantization_points[qp_id].qconfig = qconf
 
         str_bw = [str(element) for element in self.get_bitwidth_per_scope(final_quantizer_setup)]
-        logger.info('\n'.join(['[AutoQ]\n\"bitwidth_per_scope\": [', ',\n'.join(str_bw), ']']))
-        logger.info('[AutoQ] best_reward: {}'.format(best_reward))
-        logger.info('[AutoQ] best_policy: {}'.format(best_policy))
-        logger.info("[AutoQ] Search Complete")
-        logger.info("[AutoQ] Elapsed time of AutoQ Precision Initialization (): {}".format(end_ts-start_ts))
+        nncf_logger.info('\n'.join(['[AutoQ]\n\"bitwidth_per_scope\": [', ',\n'.join(str_bw), ']']))
+        nncf_logger.info(f'[AutoQ] best_reward: {best_reward}')
+        nncf_logger.info(f'[AutoQ] best_policy: {best_policy}')
+        nncf_logger.info("[AutoQ] Search completed.")
+        nncf_logger.info("[AutoQ] Elapsed time of AutoQ Precision Initialization (): {}".format(end_ts - start_ts))
         return final_quantizer_setup
 
 
@@ -223,11 +231,13 @@ class AutoQPrecisionInitializer(BasePrecisionInitializer):
             observation = deepcopy(observation2)
 
             if done:  # end of episode
-                logger.info(
-                    '## Episode[{}], reward: {:.3f}, acc: {:.3f}, model_ratio: {:.3f}, '
-                    'model_size(MB): {:.2f}, BOP_ratio: {:.3f}\n' \
-                    .format(episode, episode_reward, info['accuracy'], info['model_ratio'],
-                    info['model_size']/8e6, info['bop_ratio']))
+                nncf_logger.info(
+                    f'## Episode[{episode}], '
+                    f'reward: {episode_reward:.3f}, '
+                    f'acc: {info["accuracy"]:.3f}, '
+                    f'model_ratio: {info["model_ratio"]:.3f}, '
+                    f'model_size(MB): {info["model_size"] / 8e6:.2f}, '
+                    f'BOP_ratio: {info["bop_ratio"]:.3f}\n')
 
                 # Replay Buffer Management
                 if agent.memory.nb_entries % (len(env.master_df)+1) > 0:
@@ -299,11 +309,13 @@ class AutoQPrecisionInitializer(BasePrecisionInitializer):
                     best_policy = deepcopy(env.master_df['action'])
                     info_tuple = (episode, best_reward, info['accuracy'], info['model_ratio'], info['bop_ratio'])
                     self._dump_best_episode(info_tuple, bit_stats_df, env)
-                    log_str = '## Episode[{}] New best policy: {}, reward: {:.3f}, \
-                    acc: {:.3f}, model_ratio: {:.3f}, BOP_ratio: {:.3f}'\
-                        .format(episode, best_policy.values.tolist(), best_reward,
-                                info['accuracy'], info['model_ratio'],  info['bop_ratio'])
-                    logger.info("\033[92m {}\033[00m" .format(log_str))
+                    log_str = f'## Episode[{episode}] ' \
+                              f'New best policy: {best_policy.values.tolist()}, ' \
+                              f'reward: {best_reward:.3f}, ' \
+                              f'acc: {info["accuracy"]:.3f}, ' \
+                              f'model_ratio: {info["model_ratio"]:.3f},' \
+                              f' BOP_ratio: {info["bop_ratio"]:.3f}'
+                    nncf_logger.info(f"\033[92m {log_str}\033[00m")
 
                 episodic_info_tuple = (episode, final_reward, best_reward,
                                        info['accuracy'], info['model_ratio'], info['bop_ratio'],
@@ -312,8 +324,8 @@ class AutoQPrecisionInitializer(BasePrecisionInitializer):
 
                 episode_elapsed = time.time() - episode_start_ts
 
-                logger.info('## Episode[{}] Policy: \n{}\n'.format(episode, env.master_df['action'].to_string()))
-                logger.info('## Episode[{}] Elapsed: {:.3f}\n'.format(episode, episode_elapsed))
+                nncf_logger.info(f'## Episode[{episode}] Policy: \n{env.master_df["action"].to_string()}\n')
+                nncf_logger.info(f'## Episode[{episode}] Elapsed: {episode_elapsed:.3f}\n')
 
                 episode += 1
 

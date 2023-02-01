@@ -21,9 +21,10 @@ The framework is designed so that the modifications to your original training co
  1. **Add** the imports required for NNCF:
     ```python
     import torch
-    import nncf  # Important - should be imported directly after torch
+    import nncf  # Important - must be imported before any other external package that depends on torch
     from nncf import NNCFConfig, create_compressed_model, load_state
     ```
+    **NOTE (PyTorch)**: Due to the way NNCF works within the PyTorch backend, `import nncf` must be done before any other import of `torch` in your package _or_ in third-party packages that your code utilizes, otherwise the compression may be applied incompletely.
  2. Load the NNCF JSON configuration file that you prepared during Step 1:
     ```python
     nncf_config = NNCFConfig.from_json("nncf_config.json")  # Specify a path to your own NNCF configuration file in place of "nncf_config.json"
@@ -270,34 +271,9 @@ from nncf.common.accuracy_aware_training import create_accuracy_aware_training_l
 training_loop = create_accuracy_aware_training_loop(nncf_config, compression_ctrl)
 ```
 
-In order to properly instantiate the accuracy-aware training loop, the user has to specify the 'accuracy_aware_training' section. This section fully depends on what Accuracy-Aware Training loop is being used. For more details about config of Adaptive Compression Level Training refer to [Adaptive Compression Level Training documentation](./accuracy_aware_model_training/AdaptiveCompressionTraining.md) and Early Exit Training refer to [Early Exit Training documentation](./accuracy_aware_model_training/EarlyExitTraining.md).
-
-```
-{
-    "accuracy_aware_training": {
-        "mode": "adaptive_compression_level",
-        "params": {
-            "maximal_relative_accuracy_degradation": 1.0,
-            "initial_training_phase_epochs": 100,
-            "patience_epochs": 30
-        }
-    },
-    "compression": [
-        {
-            "algorithm": "filter_pruning",
-    
-            "pruning_init": 0.05,
-            "params": {
-                "schedule": "exponential",
-                "pruning_target": 0.1,
-                "pruning_steps": 50,
-                "weight_importance": "geometric_median"
-            }
-        }
-    ]
-}
-
-```
+In order to properly instantiate the accuracy-aware training loop, the user has to specify the 'accuracy_aware_training' section. 
+This section fully depends on what Accuracy-Aware Training loop is being used. 
+For more details about config of Adaptive Compression Level Training refer to [Adaptive Compression Level Training documentation](./accuracy_aware_model_training/AdaptiveCompressionTraining.md) and Early Exit Training refer to [Early Exit Training documentation](./accuracy_aware_model_training/EarlyExitTraining.md).
 
 The training loop is launched by calling its `run` method. Before the start of the training loop, the user is expected to define several functions related to the training of the model and pass them as arguments to the `run` method of the training loop instance:
 

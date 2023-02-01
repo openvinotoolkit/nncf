@@ -1,5 +1,5 @@
 """
- Copyright (c) 2021 Intel Corporation
+ Copyright (c) 2023 Intel Corporation
  Licensed under the Apache License, Version 2.0 (the "License");
  you may not use this file except in compliance with the License.
  You may obtain a copy of the License at
@@ -15,10 +15,13 @@ from typing import Dict
 from typing import List
 from typing import Optional
 
+from typing import Any
+
 from nncf.common.quantization.initialization.range import PerLayerRangeInitConfig
 from nncf.common.quantization.initialization.range import RangeInitConfig
-from nncf.common.utils.logger import logger
+from nncf.common.logging import nncf_logger
 from nncf.config.config import NNCFConfig
+from nncf.config.schemata.defaults import NUM_BN_ADAPTATION_SAMPLES
 from nncf.config.structures import BNAdaptationInitArgs
 from nncf.config.structures import QuantizationRangeInitArgs
 
@@ -51,7 +54,7 @@ def extract_algo_specific_config(config: NNCFConfig, algo_name_to_match: str) ->
         assert isinstance(compression_section, dict)
         algo_list = [compression_section]
 
-    from nncf.common.compression import NO_COMPRESSION_ALGORITHM_NAME
+    from nncf.common.compression import NO_COMPRESSION_ALGORITHM_NAME #pylint: disable=cyclic-import
     if algo_name_to_match == NO_COMPRESSION_ALGORITHM_NAME:
         if len(algo_list) > 0:
             raise RuntimeError(f'No algorithm configuration should be specified '
@@ -73,15 +76,17 @@ def extract_algo_specific_config(config: NNCFConfig, algo_name_to_match: str) ->
     return next(iter(matches))
 
 
-def extract_range_init_params(config: NNCFConfig) -> Optional[Dict[str, object]]:
+def extract_range_init_params(config: NNCFConfig, algorithm_name: str = 'quantization') -> Optional[Dict[str, object]]:
     """
     Extracts parameters of the quantization range initialization algorithm from the
     compression algorithm NNCFconfig.
 
     :param config: An instance of the NNCFConfig.
+    :param algorithm_name: Name of the compression algorithm. Should be
+        one of the following: `quantization`, `experimental_quantization`.
     :return: Parameters of the quantization range initialization algorithm.
     """
-    algo_config = extract_algo_specific_config(config, 'quantization')
+    algo_config = extract_algo_specific_config(config, algorithm_name)
     init_range_config_dict_or_list = algo_config.get('initializer', {}).get('range', {})
 
     range_init_args = None
@@ -89,13 +94,13 @@ def extract_range_init_params(config: NNCFConfig) -> Optional[Dict[str, object]]
         range_init_args = config.get_extra_struct(QuantizationRangeInitArgs)
     except KeyError:
         if not init_range_config_dict_or_list:
-            logger.warning('Initializer section not specified for quantization algorithm in NNCF config and '
-                           'quantization init args not supplied - the necessary parameters are not specified '
-                           'to run the quantizer range initialization algorithm')
+            nncf_logger.warning('Initializer section not specified for quantization algorithm in NNCF config and '
+                                'quantization init args not supplied - the quantizer range initialization algorithm '
+                                'cannot proceed.')
             return None
 
     if not init_range_config_dict_or_list:
-        logger.warning('Enabling quantization range initialization with default parameters.')
+        nncf_logger.warning('Enabling quantization range initialization with default parameters.')
         init_range_config_dict_or_list = {'num_init_samples': 256}
 
     max_num_init_samples = 0
@@ -128,7 +133,7 @@ def extract_range_init_params(config: NNCFConfig) -> Optional[Dict[str, object]]
     return params
 
 
-def extract_bn_adaptation_init_params(config: NNCFConfig, algo_name: str) -> Dict[str, object]:
+def extract_bn_adaptation_init_params(config: NNCFConfig, algo_name: str) -> Optional[Dict[str, object]]:
     """
     Extracts parameters for initialization of an object of the class `BatchnormAdaptationAlgorithm`
     from the compression algorithm NNCFconfig.
@@ -136,26 +141,31 @@ def extract_bn_adaptation_init_params(config: NNCFConfig, algo_name: str) -> Dic
     :param config: An instance of the NNCFConfig.
     :param algo_name: The name of the algorithm for which the params have to be extracted.
     :return: Parameters for initialization of an object of the class `BatchnormAdaptationAlgorithm` specific
-      to the supplied algorithm.
+      to the supplied algorithm, or None if the config specified not to perform any batchnorm adaptation.
     """
     algo_config = extract_algo_specific_config(config, algo_name)
     params = algo_config.get('initializer', {}).get('batchnorm_adaptation', {})
-    num_bn_adaptation_samples = params.get('num_bn_adaptation_samples', 2000)
+    return get_bn_adapt_algo_kwargs(config, params)
+
+
+def get_bn_adapt_algo_kwargs(nncf_config: NNCFConfig, params: Dict[str, Any]) -> Dict[str, Any]:
+    num_bn_adaptation_samples = params.get('num_bn_adaptation_samples', NUM_BN_ADAPTATION_SAMPLES)
+
+    if num_bn_adaptation_samples == 0:
+        return None
 
     try:
-        args = config.get_extra_struct(BNAdaptationInitArgs)
+        args = nncf_config.get_extra_struct(BNAdaptationInitArgs)
     except KeyError:
         raise RuntimeError(
-            'There is no possibility to create the batch-norm statistics adaptation algorithm '
+            'Unable to create the batch-norm statistics adaptation algorithm '
             'because the data loader is not provided as an extra struct. Refer to the '
             '`NNCFConfig.register_extra_structs` method and the `BNAdaptationInitArgs` class.') from None
-
     params = {
         'num_bn_adaptation_samples': num_bn_adaptation_samples,
         'data_loader': args.data_loader,
         'device': args.device
     }
-
     return params
 
 
@@ -172,7 +182,7 @@ def extract_accuracy_aware_training_params(config: NNCFConfig) -> Dict[str, obje
         SPARSITY = ['rb_sparsity', 'magnitude_sparsity', 'const_sparsity']
 
     def validate_accuracy_aware_schema(config: NNCFConfig, params: Dict[str, object]):
-        from nncf.common.accuracy_aware_training import AccuracyAwareTrainingMode
+        from nncf.common.accuracy_aware_training import AccuracyAwareTrainingMode #pylint: disable=cyclic-import
         if params["mode"] == AccuracyAwareTrainingMode.EARLY_EXIT:
             return
         if params["mode"] == AccuracyAwareTrainingMode.ADAPTIVE_COMPRESSION_LEVEL:

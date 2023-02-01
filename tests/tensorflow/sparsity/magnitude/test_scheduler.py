@@ -1,5 +1,5 @@
 """
- Copyright (c) 2020 Intel Corporation
+ Copyright (c) 2023 Intel Corporation
  Licensed under the Apache License, Version 2.0 (the "License");
  you may not use this file except in compliance with the License.
  You may obtain a copy of the License at
@@ -12,7 +12,6 @@
 """
 
 import pytest
-from addict import Dict
 
 from tests.tensorflow.helpers import get_empty_config, create_compressed_model_and_algo_for_test
 from tests.tensorflow.sparsity.magnitude.test_helpers import get_magnitude_test_model
@@ -72,8 +71,8 @@ def test_magnitude_scheduler_can_do_epoch_step__with_last():
 
 def test_magnitude_scheduler_can_do_epoch_step__with_multistep():
     config = get_empty_config()
-    config["compression"] = Dict({"algorithm": "magnitude_sparsity",
-                                  "params": {"schedule": "multistep", 'multistep_steps': [1]}})
+    config["compression"] = {"algorithm": "magnitude_sparsity",
+                                  "params": {"schedule": "multistep", 'multistep_steps': [1]}}
     model = get_magnitude_test_model(config['input_info'][0]['sample_size'][1:])
     _, compression_ctrl = create_compressed_model_and_algo_for_test(model, config)
     scheduler = compression_ctrl.scheduler

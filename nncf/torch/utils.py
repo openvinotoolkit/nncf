@@ -1,5 +1,5 @@
 """
- Copyright (c) 2019-2020 Intel Corporation
+ Copyright (c) 2019-2023 Intel Corporation
  Licensed under the Apache License, Version 2.0 (the "License");
  you may not use this file except in compliance with the License.
  You may obtain a copy of the License at
@@ -10,23 +10,26 @@
  See the License for the specific language governing permissions and
  limitations under the License.
 """
-from collections import OrderedDict
-from typing import Dict, Any
-
-import warnings
-import numpy as np
 import random
-import torch
-from torch import distributed as dist, nn
-from torch.nn import Module, Parameter
+from collections import OrderedDict
+from contextlib import contextmanager
+from typing import Any
+from typing import Dict
+from typing import List
 
-from nncf.common.graph import NNCFNodeName
-from nncf.common.utils.helpers import matches_any
-from nncf.common.utils.logger import logger as nncf_logger
+import numpy as np
+import torch
+from torch import distributed as dist
+from torch import nn
+from torch.nn import Module
+
 from nncf.common.compression import BaseCompressionAlgorithmController as BaseController
+from nncf.common.graph import NNCFNodeName
+from nncf.common.logging import nncf_logger
+from nncf.common.logging.logger import warning_deprecated
+from nncf.common.scopes import matches_any
 from nncf.torch.dynamic_graph.trace_tensor import TracedTensor
 from nncf.torch.layer_utils import _NNCFModuleMixin
-from contextlib import contextmanager
 
 
 def get_node_name(module, module_name, prefix):
@@ -51,8 +54,8 @@ def get_all_modules_by_type(model, module_types=None, current_scope=None,
     if isinstance(module_types, str):
         module_types = [module_types]
     found = OrderedDict()
-    from nncf.torch.dynamic_graph.scope import Scope
-    from nncf.torch.dynamic_graph.scope import ScopeElement
+    from nncf.torch.dynamic_graph.scope import Scope  # pylint: disable=cyclic-import
+    from nncf.torch.dynamic_graph.scope import ScopeElement  # pylint: disable=cyclic-import
     if current_scope is None:
         current_scope = Scope()
         current_scope.push(ScopeElement(model.__class__.__name__))
@@ -76,7 +79,8 @@ def get_all_modules_by_type(model, module_types=None, current_scope=None,
     return found
 
 
-def get_state_dict_names_with_modules(model, str_types=None, prefix=''):
+def get_state_dict_names_with_modules(model: 'NNCFNetwork',
+                                      str_types: List[str] = None, prefix='') -> Dict[str, torch.nn.Module]:
     found = OrderedDict()
     for name, module in model.named_children():
         full_node_name = "{}{}".format(prefix, name)
@@ -102,7 +106,7 @@ def manual_seed(seed):
 
 def is_tracing_state():
     # pylint: disable=protected-access
-    return torch._C._get_tracing_state()
+    return torch._C._get_tracing_state() is not None
 
 
 class no_jit_trace:
@@ -115,7 +119,19 @@ class no_jit_trace:
         torch._C._set_tracing_state(self.state)
         self.state = None
 
+def fp32_accum_wrapper(func):
+    def wrapper(tensor_to_sum, ret_tensor):
+        half = tensor_to_sum.dtype == np.float16
+        if half:
+            tensor_to_sum = tensor_to_sum.astype(np.float)
+        retval = func(tensor_to_sum, ret_tensor)
+        if half:
+            retval = retval.astype(np.float16)
+        return retval
+    return wrapper
 
+
+@fp32_accum_wrapper
 def sum_like(tensor_to_sum, ref_tensor):
     """Warning: may modify tensor_to_sum"""
     if ref_tensor.size == 1:
@@ -186,22 +202,22 @@ def is_traced_tensor(obj):
 
 
 class _ModuleState:
-    def __init__(self, module: Module = None):
-        self._training_state = {}
-        self._requires_grad_state = {}
-        if module is not None:
-            for ch in module.modules():
-                self.training_state[ch] = ch.training
+    def __init__(self, base_module: Module = None):
+        self._training_state = {}  # type: Dict[str, bool]
+        self._requires_grad_state = {}  # type: Dict[str, bool]
+        if base_module is not None:
+            for module_name, module in base_module.named_modules():
+                self.training_state[module_name] = module.training
 
-            for p in module.parameters():
-                self.requires_grad_state[p] = p.requires_grad
+            for param_name, param in base_module.named_parameters():
+                self.requires_grad_state[param_name] = param.requires_grad
 
     @property
-    def training_state(self) -> Dict[Module, bool]:
+    def training_state(self) -> Dict[str, bool]:
         return self._training_state
 
     @property
-    def requires_grad_state(self) -> Dict[Parameter, bool]:
+    def requires_grad_state(self) -> Dict[str, bool]:
         return self._requires_grad_state
 
 
@@ -209,20 +225,20 @@ def save_module_state(module: Module) -> _ModuleState:
     return _ModuleState(module)
 
 
-def load_module_state(module: Module, state: _ModuleState, strict=False) -> None:
-    for ch in module.modules():
+def load_module_state(base_module: Module, state: _ModuleState, strict=False) -> None:
+    for name, module in base_module.named_modules():
         try:
-            ch.train(state.training_state[ch])
-        except KeyError as err:
+            module.train(state.training_state[name])
+        except KeyError as e:
             # KeyError could happen if the modules name were changed during forward
             # (e.g. LSTM block in NNCF examples)
-            nncf_logger.warning(err)
+            msg = f"Could not find a module to restore state: {name}"
+            nncf_logger.debug(msg)
             if strict:
-                nncf_logger.error(err)
-                return
+                raise RuntimeError(msg) from e
 
-    for p in module.parameters():
-        p.requires_grad = state.requires_grad_state[p]
+    for name, param in base_module.named_parameters():
+        param.requires_grad = state.requires_grad_state[name]
 
 
 @contextmanager
@@ -252,7 +268,7 @@ def compute_FLOPs_hook(module, input_, output, dict_to_save, module_node_name: N
 
 
 def add_domain(name_operator: str) -> str:
-    from nncf.torch.compression_method_api import DOMAIN_CUSTOM_OPS_NAME
+    from nncf.torch.compression_method_api import DOMAIN_CUSTOM_OPS_NAME  # pylint: disable=cyclic-import
     return DOMAIN_CUSTOM_OPS_NAME + "::" + name_operator
 
 
@@ -298,6 +314,28 @@ def default_distributed_unwrapper(model: nn.Module):
         return model.module
     return model
 
+def rename_legacy_names_in_state_dict(state_dict_to_load: Dict[str, Any],
+                                      legacy_names: List[str],
+                                      legacy_name: str,
+                                      new_name: str):
+
+    for name in legacy_names:
+        tensor = state_dict_to_load.pop(name)
+        new_key = name.replace(legacy_name, new_name) if not new_name in name else name
+        state_dict_to_load[new_key] = tensor
+
+    if legacy_names:
+        warning_deprecated('Legacy Batch Norm layer names was detected in checkpoint model state dict.'
+                           ' All occurrences of `{}` in nodes names was replaced by `{}`'.format(legacy_name, new_name))
+
+LEGACY_VS_NEW_BN_MAP = {
+    'BatchNorm1d': 'NNCFBatchNorm1d',
+    'BatchNorm2d': 'NNCFBatchNorm2d',
+    'BatchNorm3d': 'NNCFBatchNorm3d',
+    'NNCFBatchNorm': 'NNCFBatchNorm2d',
+    'ConvBNActivation': 'Conv2dNormActivation',
+}
+
 
 def maybe_convert_legacy_names_in_model_state(state_dict_to_load: Dict[str, Any]) -> None:
     """
@@ -305,16 +343,14 @@ def maybe_convert_legacy_names_in_model_state(state_dict_to_load: Dict[str, Any]
 
     :param state_dict_to_load: State dict to convert.
     """
-    legacy_bn_names = [name for name in state_dict_to_load if 'BatchNorm2d' in name]
-    for name in legacy_bn_names:
-        tensor = state_dict_to_load.pop(name)
-        new_name = name.replace('BatchNorm2d', 'NNCFBatchNorm')
-        state_dict_to_load[new_name] = tensor
-
-    if legacy_bn_names:
-        warnings.warn('Legacy Batch Norm layer names was detected in checkpoint model state dict.'
-                      ' All occurrences of `BatchNorm2d` in nodes names was replaced by `NNCFBatchNorm`',
-                      category=DeprecationWarning)
+    legacy_names = LEGACY_VS_NEW_BN_MAP.keys()
+    matched_legacy_names = {name: [] for name in legacy_names}
+    for name_in_state_dict in state_dict_to_load:
+        matched = filter(lambda x: x in name_in_state_dict, legacy_names)
+        for legacy_name in matched:
+            matched_legacy_names[legacy_name].append(name_in_state_dict)
+    for old_name, new_name in LEGACY_VS_NEW_BN_MAP.items():
+        rename_legacy_names_in_state_dict(state_dict_to_load, matched_legacy_names[old_name], old_name, new_name)
 
 
 def maybe_convert_legacy_names_in_compress_state(compression_state: Dict[str, Any]) -> None:
@@ -330,15 +366,46 @@ def maybe_convert_legacy_names_in_compress_state(compression_state: Dict[str, An
     if not controller_state or 'quantization' not in controller_state:
         return
 
-    qips = controller_state['quantization']['quantizer_setup']['quantization_points']
-    legacy_bn_names = False
-    for point in qips.values():
-        name = point['qip']['target_node_name']
-        if 'BatchNorm2d' in name:
-            legacy_bn_names = True
-            point['qip']['target_node_name'] = name.replace('BatchNorm2d', 'NNCFBatchNorm')
+    from nncf.torch.quantization.algo import QUANTIZER_BUILDER_STATE_VERSION_SAVE_NAME  # pylint: disable=cyclic-import
+    if not controller_state['quantization'].get(QUANTIZER_BUILDER_STATE_VERSION_SAVE_NAME):
+        qips = controller_state['quantization']['quantizer_setup']['quantization_points']
 
-    if legacy_bn_names:
-        warnings.warn('Legacy Batch Norm layer names was detected in quantization setup target point names.'
-                      ' All occurrences of `BatchNorm2d` in nodes names was replaced by `NNCFBatchNorm`',
-                      category=DeprecationWarning)
+        detected_legacy_names = {
+            'BatchNorm1d': False,
+            'BatchNorm2d': False,
+            'BatchNorm3d': False,
+            'NNCFBatchNorm': False,
+        }
+
+        for point in qips.values():
+            name = point['qip']['target_node_name']
+            for old_name, new_name in LEGACY_VS_NEW_BN_MAP.items():
+                if old_name in name and not new_name in name:
+                    detected_legacy_names[old_name] = True
+                    point['qip']['target_node_name'] = name.replace(old_name, new_name)
+                    break
+
+        for old_name, was_detected in detected_legacy_names.items():
+            if was_detected:
+                new_name = LEGACY_VS_NEW_BN_MAP[old_name]
+                warning_deprecated('Legacy Batch Norm layer names was detected in quantization setup target'
+                                   ' point names. All occurrences of `{}` in nodes names was replaced by'
+                                   ' `{}`'.format(old_name, new_name))
+
+
+def get_model_device(model: torch.nn.Module) -> torch.device:
+    try:
+        device = next(model.parameters()).device
+    except StopIteration:
+        # The model had no parameters at all, doesn't matter which device to choose
+        device = torch.device('cpu')
+    return device
+
+
+def get_model_dtype(model: torch.nn.Module) -> torch.dtype:
+    try:
+        dtype = next(model.parameters()).dtype
+    except StopIteration:
+        # The model had no parameters at all, assume FP32
+        dtype = torch.float32
+    return dtype

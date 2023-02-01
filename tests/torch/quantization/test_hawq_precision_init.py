@@ -1,5 +1,5 @@
 """
- Copyright (c) 2021 Intel Corporation
+ Copyright (c) 2023 Intel Corporation
  Licensed under the Apache License, Version 2.0 (the "License");
  you may not use this file except in compliance with the License.
  You may obtain a copy of the License at
@@ -26,9 +26,8 @@ from torch import nn
 import torch.utils.data
 from numpy.random import random_sample
 from torch.utils import model_zoo
-from torchvision.models import MobileNetV2
-from torchvision.models import inception_v3
-from torchvision.models import mobilenet_v2
+from tests.torch.test_models.mobilenet import MobileNetV2
+from tests.torch.test_models.mobilenet import mobilenet_v2
 from torchvision.models import resnet50
 from torchvision.transforms import transforms
 
@@ -41,6 +40,7 @@ from nncf.common.graph import NNCFNodeName
 from nncf.common.hardware.config import HWConfigType
 from nncf.common.quantization.structs import QuantizerGroup
 from nncf.common.utils.debug import set_debug_log_dir
+from nncf.torch.utils import get_model_device
 from nncf.torch.dynamic_graph.graph_tracer import create_input_infos
 from nncf.torch.initialization import default_criterion_fn
 from nncf.torch.quantization.adjust_padding import add_adjust_padding_nodes
@@ -62,20 +62,22 @@ from nncf.common.quantization.quantizer_setup import SingleConfigQuantizerSetup
 from nncf.torch.structures import QuantizationPrecisionInitArgs
 from nncf.torch.utils import get_all_modules_by_type
 from nncf.torch.utils import safe_thread_call
-from tests.common.helpers import TEST_ROOT
+from tests.shared.paths import TEST_ROOT
 from tests.torch.helpers import BasicConvTestModel
 from tests.torch.helpers import create_compressed_model_and_algo_for_test
 from tests.torch.helpers import create_conv
 from tests.torch.helpers import register_bn_adaptation_init_args
-from tests.torch.quantization.test_quantization_helpers import compare_multi_gpu_dump
-from tests.torch.quantization.test_quantization_helpers import create_rank_dataloader
-from tests.torch.quantization.test_quantization_helpers import distributed_init_test_default
-from tests.torch.quantization.test_quantization_helpers import get_quantization_config_without_range_init
-from tests.torch.quantization.test_quantization_helpers import get_squeezenet_quantization_config
-from tests.torch.quantization.test_quantization_helpers import post_compression_test_distr_init
+from tests.torch.quantization.quantization_helpers import compare_multi_gpu_dump
+from tests.torch.quantization.quantization_helpers import create_rank_dataloader
+from tests.torch.quantization.quantization_helpers import distributed_init_test_default
+from tests.torch.quantization.quantization_helpers import get_quantization_config_without_range_init
+from tests.torch.quantization.quantization_helpers import get_squeezenet_quantization_config
+from tests.torch.quantization.quantization_helpers import post_compression_test_distr_init
 # pylint:disable=unused-import
 from tests.torch.modules.test_rnn import _seed
-from tests.torch.test_compressed_graph import check_nx_graph
+from tests.torch.test_compressed_graph import get_full_path_to_the_graph
+from tests.common.graph.nx_graph import compare_nx_graph_with_reference
+from tests.torch.test_models import inception_v3
 from tests.torch.test_models import squeezenet1_1
 
 
@@ -280,7 +282,8 @@ def check_bitwidth_graph(algo_ctrl, model, path_to_dot, graph_dir, add_flops=Fal
     groups_of_adjacent_quantizers = algo_ctrl.groups_of_adjacent_quantizers
     graph = BitwidthGraph(algo_ctrl, model, groups_of_adjacent_quantizers, add_flops).get()
     nx_graph = add_adjust_padding_nodes(graph, model)
-    check_nx_graph(nx_graph, path_to_dot, graph_dir, sort_dot_graph=False)
+    path_to_dot = get_full_path_to_the_graph(path_to_dot, graph_dir)
+    compare_nx_graph_with_reference(nx_graph, path_to_dot)
 
 
 class HAWQTestStruct(NamedTuple):
@@ -461,7 +464,7 @@ def test_hawq_on_single_conv_without_quantizers(_seed, dataset_dir, tmp_path, pa
     if not dataset_dir:
         dataset_dir = str(tmp_path)
     data_loader, _ = create_test_dataloaders(config, dataset_dir)
-    device = next(model.parameters()).device
+    device = get_model_device(model)
 
     for _, param in model.named_parameters():
         param.requires_grad = False
@@ -526,7 +529,7 @@ def get_requires_grad_per_param(model):
 
 
 def get_skipped_quantized_weight_node_names() -> List[NNCFNodeName]:
-    scopes_list = ['MobileNetV2/Sequential[features]/ConvBNActivation[18]/NNCFConv2d[0]/conv2d_0',
+    scopes_list = ['MobileNetV2/Sequential[features]/Conv2dNormActivation[18]/NNCFConv2d[0]/conv2d_0',
                    'MobileNetV2/Sequential[features]/InvertedResidual[17]/Sequential[conv]/NNCFConv2d[2]/conv2d_0',
                    'MobileNetV2/Sequential[features]/InvertedResidual[16]/Sequential[conv]/NNCFConv2d[2]/conv2d_0']
     return scopes_list
@@ -534,8 +537,8 @@ def get_skipped_quantized_weight_node_names() -> List[NNCFNodeName]:
 
 def test_disable_quantizer_gradients():
     _, parameters_to_restore, model, *_ = disable_quantizer_gradients()
-    assert len(parameters_to_restore.originally_disabled_gradients) == 354
-    assert len(parameters_to_restore.skipped_gradients_to_enable) == 3
+    assert len(parameters_to_restore.originally_disabled_gradients) == 353
+    assert len(parameters_to_restore.skipped_gradients_to_enable) == 2
     actual_requires_grad_per_param = get_requires_grad_per_param(model)
     path_to_ref = str(TEST_ROOT / 'torch/data/hawq_reference/mobilenet_v2_requires_grad_per_param.json')
     compare_with_ref_if_exists(actual_requires_grad_per_param, path_to_ref)
@@ -779,10 +782,10 @@ def test_compression_ratio(desc, mocker):
     config = desc.create_config()
     register_bn_adaptation_init_args(config)
     from nncf.torch.quantization.algo import QuantizationBuilder
-    get_qsetyp_spy = mocker.spy(QuantizationBuilder, '_get_quantizer_setup')
+    get_single_config_quantizer_setup_spy = mocker.spy(QuantizationBuilder, '_get_single_config_quantizer_setup')
     model, ctrl = create_compressed_model_and_algo_for_test(ConvLinear(), config)
 
-    quantizer_setup = get_qsetyp_spy.spy_return
+    quantizer_setup = get_single_config_quantizer_setup_spy.spy_return
     weight_qp_id_per_activation_qp_id = ctrl.groups_of_adjacent_quantizers.weight_qp_id_per_activation_qp_id
     flops_per_module = model.get_flops_per_module()
     ratio_calculator = CompressionRatioCalculator(flops_per_module, quantizer_setup, weight_qp_id_per_activation_qp_id)

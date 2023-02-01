@@ -1,0 +1,30 @@
+{
+    "model": "resnet50_cifar10",
+    "input_info": {
+      "sample_size": [1, 3, 32, 32]
+    },
+    "multiprocessing_distributed": false,
+    "bootstrapNAS": {
+        "training": {
+            "algorithm": "progressive_shrinking",
+            "batchnorm_adaptation": {
+                "num_bn_adaptation_samples": 2
+            },
+            "schedule": {
+                "list_stage_descriptions": [
+                    {"train_dims": ["depth"], "epochs": 1},
+                    {"train_dims": ["depth"], "epochs": 1, "depth_indicator": 2},
+                    {"train_dims": ["depth", "width"], "epochs": 1, "depth_indicator": 2, "reorg_weights": true, "width_indicator": 2}
+                ]
+            },
+            "elasticity": {
+                "available_elasticity_dims": ["depth", "width"]
+            }
+        },
+        "search": {
+            "algorithm": "NSGA2",
+            "num_evals": 2,
+            "population": 1
+        }
+    }
+}

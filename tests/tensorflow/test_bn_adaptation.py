@@ -1,5 +1,5 @@
 """
- Copyright (c) 2021 Intel Corporation
+ Copyright (c) 2023 Intel Corporation
  Licensed under the Apache License, Version 2.0 (the "License");
  you may not use this file except in compliance with the License.
  You may obtain a copy of the License at
@@ -11,7 +11,6 @@
  limitations under the License.
 """
 
-from addict import Dict
 from copy import deepcopy
 
 import tensorflow as tf
@@ -21,6 +20,7 @@ from nncf.common.initialization.batchnorm_adaptation import BatchnormAdaptationA
 from nncf.config.extractors import extract_bn_adaptation_init_params
 from nncf.tensorflow.graph.metatypes.keras_layers import TFBatchNormalizationLayerMetatype
 from nncf.tensorflow.graph.metatypes.matcher import get_keras_layer_metatype
+from nncf.tensorflow.initialization import TFInitializingDataLoader
 from nncf.tensorflow.initialization import register_default_init_args
 
 
@@ -37,7 +37,7 @@ def get_dataset_for_test(batch_size=10, shape=None):
 
 def get_config_for_test(batch_size=10, num_bn_adaptation_samples=100):
     config = NNCFConfig()
-    config.update(Dict({
+    config.update({
         "compression":
             {
                 "algorithm": "quantization",
@@ -47,7 +47,7 @@ def get_config_for_test(batch_size=10, num_bn_adaptation_samples=100):
                     }
                 }
             }
-    }))
+    })
 
     dataset = get_dataset_for_test()
     config = register_default_init_args(config,
@@ -104,7 +104,7 @@ def test_parameter_update():
             compare_params(original_param_values[layer], layer.weights)
 
 
-def test_all_parameter_keep():
+def test_all_parameter_are_unchanged_for_zero_bn_adapt_samples():
     original_all_param_values = {}
 
     model = get_model_for_test()
@@ -112,10 +112,10 @@ def test_all_parameter_keep():
     for layer in model.layers:
         original_all_param_values[layer] = deepcopy(layer.weights)
 
-    config = get_config_for_test(num_bn_adaptation_samples=0)
-
-    bn_adaptation = BatchnormAdaptationAlgorithm(**extract_bn_adaptation_init_params(config,
-                                                                                     "quantization"))
+    bn_adaptation = BatchnormAdaptationAlgorithm(TFInitializingDataLoader(get_dataset_for_test(),
+                                                                          2),
+                                                 0,
+                                                 None)
     bn_adaptation.run(model)
 
     for layer in model.layers:

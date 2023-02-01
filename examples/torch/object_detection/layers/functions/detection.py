@@ -1,5 +1,5 @@
 """
- Copyright (c) 2019 Intel Corporation
+ Copyright (c) 2023 Intel Corporation
  Licensed under the Apache License, Version 2.0 (the "License");
  you may not use this file except in compliance with the License.
  You may obtain a copy of the License at
@@ -10,6 +10,7 @@
  See the License for the specific language governing permissions and
  limitations under the License.
 """
+from typing import Any
 
 import torch
 from torch import nn
@@ -43,6 +44,7 @@ class DetectionOutput(nn.Module):
         return grad_out
 
 
+# pylint:disable=abstract-method
 class DetectionOutputFunction(torch.autograd.Function):
     """At test time, Detect is the final layer of SSD.  Decode location preds,
     apply non-maximum suppression to location predictions based on conf
@@ -144,5 +146,5 @@ class DetectionOutputFunction(torch.autograd.Function):
         return output
 
     @staticmethod
-    def backward(ctx, grad_out):
-        return grad_out
+    def backward(ctx: Any, *grad_outputs: Any) -> Any:
+        return grad_outputs[0]

@@ -1,5 +1,5 @@
 """
- Copyright (c) 2020 Intel Corporation
+ Copyright (c) 2023 Intel Corporation
  Licensed under the Apache License, Version 2.0 (the "License");
  you may not use this file except in compliance with the License.
  You may obtain a copy of the License at
@@ -14,9 +14,9 @@
 import numpy as np
 import pytest
 import tensorflow as tf
-from addict import Dict
 from pytest import approx
 
+from nncf.api.compression import CompressionStage
 from nncf.tensorflow.layers.wrapper import NNCFWrapper
 from nncf.tensorflow.sparsity.magnitude.algorithm import MagnitudeSparsityController
 from nncf.tensorflow.sparsity.magnitude.functions import normed_magnitude
@@ -71,8 +71,7 @@ def test_compression_controller_state():
     _, compression_ctrl = create_compressed_model_and_algo_for_test(model, config)
 
     # Test get state
-    compression_ctrl.scheduler.current_step = 100
-    compression_ctrl.scheduler.current_epoch = 5
+    compression_ctrl.scheduler.load_state({'current_step': 100, 'current_epoch': 5})
     state_content = compression_ctrl.get_state()[algo_name]
     assert state_content[CtrlStateNames.SCHEDULER] == {'current_step': 100, 'current_epoch': 5}
 
@@ -81,7 +80,7 @@ def test_compression_controller_state():
         algo_name: {
             CtrlStateNames.SCHEDULER: {'current_step': 500, 'current_epoch': 10},
             CtrlStateNames.LOSS: {},
-            CtrlStateNames.COMPRESSION_STAGE: None,
+            CtrlStateNames.COMPRESSION_STAGE: CompressionStage.PARTIALLY_COMPRESSED,
         }
     }
     compression_ctrl.load_state(new_state)
@@ -139,7 +138,7 @@ def test_magnitude_algo_binary_masks_are_applied():
     input_shape = (1, 5, 5, 1)
     model = get_basic_conv_test_model(input_shape=input_shape[1:])
     config = get_empty_config(input_sample_sizes=input_shape)
-    config.update(Dict({'compression': {'algorithm': "magnitude_sparsity"}}))
+    config.update({'compression': {'algorithm': "magnitude_sparsity"}})
     compressed_model, _ = create_compressed_model_and_algo_for_test(model, config)
     conv = compressed_model.layers[1]
     op_name = list(conv.ops_weights.keys())[0]

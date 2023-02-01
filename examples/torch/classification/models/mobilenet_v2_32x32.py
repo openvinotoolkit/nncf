@@ -1,5 +1,5 @@
 """
- Copyright (c) 2021 Intel Corporation
+ Copyright (c) 2023 Intel Corporation
  Licensed under the Apache License, Version 2.0 (the "License");
  you may not use this file except in compliance with the License.
  You may obtain a copy of the License at
@@ -34,7 +34,7 @@ def _make_divisible(v: float, divisor: int, min_value: Optional[int] = None) -> 
     return new_v
 
 
-class ConvBNActivation(nn.Sequential):
+class Conv2dNormActivation(nn.Sequential):
     def __init__(
         self,
         in_planes: int,
@@ -61,7 +61,7 @@ class ConvBNActivation(nn.Sequential):
 
 
 # necessary for backwards compatibility
-ConvBNReLU = ConvBNActivation
+ConvBNReLU = Conv2dNormActivation
 
 
 class InvertedResidual(nn.Module):

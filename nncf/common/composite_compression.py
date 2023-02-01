@@ -1,5 +1,5 @@
 """
- Copyright (c) 2021 Intel Corporation
+ Copyright (c) 2023 Intel Corporation
  Licensed under the Apache License, Version 2.0 (the "License");
  you may not use this file except in compliance with the License.
  You may obtain a copy of the License at
@@ -23,10 +23,10 @@ from nncf.api.compression import CompressionAlgorithmController
 from nncf.api.compression import CompressionLoss
 from nncf.api.compression import CompressionScheduler
 from nncf.api.compression import CompressionStage
-from nncf.api.compression import ModelType
+from nncf.api.compression import TModel
 from nncf.common.statistics import NNCFStatistics
 from nncf.common.utils.backend import BackendType
-from nncf.common.utils.backend import infer_backend_from_model
+from nncf.common.utils.backend import get_backend
 
 
 class CompositeCompressionLoss(CompressionLoss):
@@ -166,7 +166,7 @@ class CompositeCompressionAlgorithmController(CompressionAlgorithmController):
     BUILDER_STATE = 'builder_state'
     CONTROLLER_STATE = 'ctrl_state'
 
-    def __init__(self, target_model: ModelType):
+    def __init__(self, target_model: TModel):
         """
         Initializes the internal state of the composite compression algorithm
         controller.
@@ -225,7 +225,7 @@ class CompositeCompressionAlgorithmController(CompressionAlgorithmController):
         result = None
         for ctrl in self.child_ctrls:
             current_level = ctrl.compression_stage()
-            if not result:
+            if result is None:
                 result = current_level
             else:
                 result += current_level
@@ -288,6 +288,10 @@ class CompositeCompressionAlgorithmController(CompressionAlgorithmController):
     def compression_rate(self, compression_rate: float) -> None:
         raise NotImplementedError
 
+    @property
+    def maximal_compression_rate(self) -> float:
+        return min(child_ctrl.maximal_compression_rate for child_ctrl in self.child_ctrls)
+
     def export_model(self,
                      save_path: str,
                      save_format: Optional[str] = None,
@@ -314,15 +318,18 @@ class CompositeCompressionAlgorithmController(CompressionAlgorithmController):
                 - ({'x': None, 'y': y},) for keyword arguments only.
         """
         self.prepare_for_export()
-        backend = infer_backend_from_model(self.model)
+        backend = get_backend(self.model)
         if backend is BackendType.TENSORFLOW:
-            from nncf.tensorflow.exporter import TFExporter
+            from nncf.tensorflow.exporter import TFExporter #pylint: disable=cyclic-import
             exporter = TFExporter(self.model, input_names, output_names, model_args)
         else:
             assert backend is BackendType.TORCH
-            from nncf.torch.exporter import PTExporter
+            from nncf.torch.exporter import PTExporter #pylint: disable=cyclic-import
             exporter = PTExporter(self.model, input_names, output_names, model_args)
-        exporter.export_model(save_path, save_format)
+        if save_format is not None:
+            exporter.export_model(save_path, save_format)
+        else:
+            exporter.export_model(save_path)
 
     def disable_scheduler(self) -> None:
         self._scheduler = CompositeCompressionScheduler()

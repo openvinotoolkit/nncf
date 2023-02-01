@@ -1,0 +1,62 @@
+{
+    "model": "resnet50_cifar10",
+    "num_classes": 10,
+    "dataset": "cifar10",
+    "input_info": {
+        "sample_size": [1, 3, 32, 32]
+    },
+    "batch_size": 64,
+    "batch_size_val": 2000,
+    "multiprocessing_distributed": false,
+    "optimizer": {
+        "type": "sgd",
+        "momentum": 0.9,
+        "nesterov": true,
+        "weight_decay": 3e-7,
+        "base_lr": 3.5e-3,
+        "label_smoothing": 0.1,
+        "no_decay_keys": "bn#bias"
+    },
+    "bootstrapNAS": {
+        "training": {
+            "algorithm": "progressive_shrinking",
+            "progressivity_of_elasticity": ["depth", "width"],
+            "batchnorm_adaptation": {
+                "num_bn_adaptation_samples": 1500
+            },
+            "schedule": {
+                "list_stage_descriptions": [
+                    {"train_dims": ["depth"], "epochs": 25, "depth_indicator": 1, "init_lr": 2.5e-6, "epochs_lr": 25},
+                    {"train_dims": ["depth"], "epochs": 40, "depth_indicator": 2, "init_lr": 2.5e-6, "epochs_lr": 40},
+                    {"train_dims": ["depth", "width"], "epochs": 50, "depth_indicator": 2, "reorg_weights": true, "width_indicator": 2, "bn_adapt": true, "init_lr": 2.5e-6, "epochs_lr": 50},
+                    {"train_dims": ["depth", "width"], "epochs": 50, "depth_indicator": 2, "reorg_weights": true, "width_indicator": 3, "bn_adapt": true, "init_lr": 2.5e-6, "epochs_lr": 50}
+                ]
+            },
+            "elasticity": {
+                "available_elasticity_dims": ["width", "depth"],
+                "width": {
+                    "max_num_widths": 3,
+                    "min_out_channels": 32,
+                    "width_step": 32,
+                    "width_multipliers": [1, 0.80, 0.60]
+                },
+                "depth": {
+                    "skipped_blocks": [
+                        ["ResNet/Sequential[layer1]/Bottleneck[1]/ReLU[relu]/relu__2", "ResNet/Sequential[layer1]/Bottleneck[2]/ReLU[relu]/relu__2"],
+                        ["ResNet/Sequential[layer2]/Bottleneck[1]/ReLU[relu]/relu__2", "ResNet/Sequential[layer2]/Bottleneck[2]/ReLU[relu]/relu__2"],
+                        ["ResNet/Sequential[layer2]/Bottleneck[2]/ReLU[relu]/relu__2", "ResNet/Sequential[layer2]/Bottleneck[3]/ReLU[relu]/relu__2"],
+                        ["ResNet/Sequential[layer3]/Bottleneck[3]/ReLU[relu]/relu__2", "ResNet/Sequential[layer3]/Bottleneck[4]/ReLU[relu]/relu__2"],
+                        ["ResNet/Sequential[layer3]/Bottleneck[4]/ReLU[relu]/relu__2", "ResNet/Sequential[layer3]/Bottleneck[5]/ReLU[relu]/relu__2"],
+                        ["ResNet/Sequential[layer4]/Bottleneck[1]/ReLU[relu]/relu__2", "ResNet/Sequential[layer4]/Bottleneck[2]/ReLU[relu]/relu__2"]
+                    ]
+                }
+            }
+        },
+        "search": {
+            "algorithm": "NSGA2",
+            "num_evals": 3000,
+            "population": 50,
+            "ref_acc": 93.65
+        }
+    }
+}

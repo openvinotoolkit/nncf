@@ -1,5 +1,5 @@
 """
- Copyright (c) 2020 Intel Corporation
+ Copyright (c) 2023 Intel Corporation
  Licensed under the Apache License, Version 2.0 (the "License");
  you may not use this file except in compliance with the License.
  You may obtain a copy of the License at
@@ -18,18 +18,22 @@ import tensorflow as tf
 from nncf import NNCFConfig
 from nncf.api.compression import CompressionLoss
 from nncf.api.compression import CompressionScheduler
-from nncf.common.graph import OUTPUT_NOOP_METATYPES
+from nncf.api.compression import CompressionStage
 from nncf.common.accuracy_aware_training.training_loop import ADAPTIVE_COMPRESSION_CONTROLLERS
+from nncf.common.graph import OUTPUT_NOOP_METATYPES
 from nncf.common.graph.transformations.commands import TransformationPriority
 from nncf.common.initialization.batchnorm_adaptation import BatchnormAdaptationAlgorithm
 from nncf.common.schedulers import StubCompressionScheduler
+from nncf.common.scopes import check_scopes_in_graph
+from nncf.common.scopes import should_consider_scope
 from nncf.common.sparsity.schedulers import SPARSITY_SCHEDULERS
 from nncf.common.sparsity.statistics import LayerThreshold
 from nncf.common.sparsity.statistics import MagnitudeSparsityStatistics
 from nncf.common.statistics import NNCFStatistics
-from nncf.common.utils.helpers import should_consider_scope
 from nncf.config.extractors import extract_algo_specific_config
 from nncf.config.extractors import extract_bn_adaptation_init_params
+from nncf.config.schemata.defaults import MAGNITUDE_SPARSITY_WEIGHT_IMPORTANCE
+from nncf.config.schemata.defaults import SPARSITY_INIT
 from nncf.tensorflow.algorithm_selector import TF_COMPRESSION_ALGORITHMS
 from nncf.tensorflow.api.compression import TFCompressionAlgorithmBuilder
 from nncf.tensorflow.graph.converter import TFModelConverterFactory
@@ -40,8 +44,8 @@ from nncf.tensorflow.graph.transformations.layout import TFTransformationLayout
 from nncf.tensorflow.graph.utils import collect_wrapped_layers
 from nncf.tensorflow.graph.utils import get_original_name_and_instance_idx
 from nncf.tensorflow.loss import TFZeroCompressionLoss
-from nncf.tensorflow.sparsity.base_algorithm import BaseSparsityController
 from nncf.tensorflow.sparsity.base_algorithm import SPARSITY_LAYER_METATYPES
+from nncf.tensorflow.sparsity.base_algorithm import BaseSparsityController
 from nncf.tensorflow.sparsity.collector import TFSparseModelStatisticsCollector
 from nncf.tensorflow.sparsity.magnitude.functions import WEIGHT_IMPORTANCE_FUNCTIONS
 from nncf.tensorflow.sparsity.magnitude.functions import calc_magnitude_binary_mask
@@ -59,6 +63,9 @@ class MagnitudeSparsityBuilder(TFCompressionAlgorithmBuilder):
     def get_transformation_layout(self, model: tf.keras.Model) -> TFTransformationLayout:
         converter = TFModelConverterFactory.create(model)
         nncf_graph = converter.convert()
+
+        check_scopes_in_graph(nncf_graph, self.ignored_scopes, self.target_scopes)
+
         transformations = TFTransformationLayout()
 
         processed_shared_layer_names = set()  # type: Set[str]
@@ -141,9 +148,10 @@ class MagnitudeSparsityController(BaseSparsityController):
         params = deepcopy(algo_config.get('params', {}))
         self._threshold = 0
         self._frozen = False
-        self._weight_importance_fn = WEIGHT_IMPORTANCE_FUNCTIONS[params.get('weight_importance', 'normed_abs')]
+        self._weight_importance_fn = WEIGHT_IMPORTANCE_FUNCTIONS[params.get('weight_importance',
+                                                                            MAGNITUDE_SPARSITY_WEIGHT_IMPORTANCE)]
 
-        sparsity_init = algo_config.get('sparsity_init', 0)
+        sparsity_init = algo_config.get('sparsity_init', SPARSITY_INIT)
         params['sparsity_init'] = sparsity_init
         scheduler_type = params.get('schedule', 'polynomial')
 
@@ -186,7 +194,7 @@ class MagnitudeSparsityController(BaseSparsityController):
         if not all_weights:
             return 0.0
         all_weights_tensor = tf.sort(tf.concat(all_weights, 0))
-        index = int(tf.cast(tf.size(all_weights_tensor), all_weights_tensor.dtype) * sparsity_level)
+        index = int(tf.cast(tf.size(all_weights_tensor) - 1, all_weights_tensor.dtype) * sparsity_level)
         threshold = all_weights_tensor[index].numpy()
         return threshold
 
@@ -226,6 +234,7 @@ class MagnitudeSparsityController(BaseSparsityController):
 
     def disable_scheduler(self):
         self._scheduler = StubCompressionScheduler()
+        self._scheduler.target_level = 0.0
         self._scheduler.current_sparsity_level = 0.0
 
     def statistics(self, quickly_collected_only: bool = False) -> NNCFStatistics:
@@ -244,6 +253,13 @@ class MagnitudeSparsityController(BaseSparsityController):
         nncf_stats = NNCFStatistics()
         nncf_stats.register('magnitude_sparsity', stats)
         return nncf_stats
+
+    def compression_stage(self) -> CompressionStage:
+        if self.scheduler.current_sparsity_level >= self.scheduler.target_level:
+            return CompressionStage.FULLY_COMPRESSED
+        if self.scheduler.current_sparsity_level == 0:
+            return CompressionStage.UNCOMPRESSED
+        return CompressionStage.PARTIALLY_COMPRESSED
 
     def _run_batchnorm_adaptation(self):
         if self._bn_adaptation is None:

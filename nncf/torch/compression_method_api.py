@@ -1,5 +1,5 @@
 #
-#  Copyright (c) 2019-2020 Intel Corporation
+#  Copyright (c) 2019-2023 Intel Corporation
 #  Licensed under the Apache License, Version 2.0 (the "License");
 #  you may not use this file except in compliance with the License.
 #  You may obtain a copy of the License at
@@ -30,8 +30,9 @@ from nncf.api.compression import CompressionLoss
 from nncf.common.compression import BaseCompressionAlgorithmBuilder
 from nncf.common.compression import BaseCompressionAlgorithmController
 from nncf.common.graph import NNCFNodeName
-from nncf.common.utils.helpers import should_consider_scope
-from nncf.common.utils.logger import logger as nncf_logger
+from nncf.common.logging import nncf_logger
+from nncf.common.scopes import check_scopes_in_graph
+from nncf.common.scopes import should_consider_scope
 from nncf.config import NNCFConfig
 from nncf.torch.graph.transformations.layout import PTTransformationLayout
 from nncf.torch.layers import NNCF_MODULES_DICT
@@ -39,7 +40,7 @@ from nncf.torch.layers import NNCF_WRAPPED_USER_MODULES_DICT
 from nncf.torch.nncf_network import NNCFNetwork
 from nncf.torch.nncf_network import PTModelTransformer
 
-ModelType = TypeVar('ModelType')
+TModel = TypeVar('TModel')
 
 DOMAIN_CUSTOM_OPS_NAME = "org.openvinotoolkit"
 
@@ -136,12 +137,14 @@ class PTCompressionAlgorithmBuilder(BaseCompressionAlgorithmBuilder):
         :param model: An instance of NNCFNetwork for the algorithm to be applied to.
         :return: NNCFNetwork with algorithm-specific modifications applied
         """
+        check_scopes_in_graph(model.get_original_graph(), self.ignored_scopes, self.target_scopes)
+
         layout = self._get_transformation_layout(model)
         self._handle_frozen_layers(model)
         return layout
 
     @abstractmethod
-    def _build_controller(self, model: ModelType) -> PTCompressionAlgorithmController:
+    def _build_controller(self, model: TModel) -> PTCompressionAlgorithmController:
         """
         Simple implementation of building controller without setting builder state and loading controller's one.
 
@@ -150,7 +153,7 @@ class PTCompressionAlgorithmBuilder(BaseCompressionAlgorithmBuilder):
         :return: The instance of the `BaseCompressionAlgorithmController`.
         """
 
-    def build_controller(self, model: ModelType) -> PTCompressionAlgorithmController:
+    def build_controller(self, model: TModel) -> PTCompressionAlgorithmController:
         """
         Builds `PTCompressionAlgorithmController` to handle the additional modules,
         parameters, and hooks inserted into the model to enable algorithm-specific
@@ -196,9 +199,10 @@ class PTCompressionAlgorithmBuilder(BaseCompressionAlgorithmBuilder):
         if len(scopes_of_frozen_layers) > 0:
             is_allowed, reason = self._are_frozen_layers_allowed()
             if is_allowed:
-                nncf_logger.warning('{}, compressing them without tuning weights.\n'
-                               'Frozen layers:\n'
-                               '{}'.format(reason, scopes_to_print))
+                nncf_logger.warning(
+                    f'{reason}, compressing them without tuning weights.\n'
+                    f'Frozen layers:\n'
+                    f'{scopes_to_print}')
             else:
                 raise RuntimeError(f'{reason}.\n'
                                    f'Please unfreeze them or put into the Ignored Scope.\n'

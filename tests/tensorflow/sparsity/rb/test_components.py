@@ -1,5 +1,5 @@
 """
- Copyright (c) 2021 Intel Corporation
+ Copyright (c) 2023 Intel Corporation
  Licensed under the Apache License, Version 2.0 (the "License");
  you may not use this file except in compliance with the License.
  You may obtain a copy of the License at
@@ -19,7 +19,6 @@ from unittest.mock import patch
 
 import pytest
 import tensorflow as tf
-from addict import Dict
 from nncf.common.compression import BaseCompressionAlgorithmController
 
 from nncf import NNCFConfig
@@ -276,8 +275,8 @@ class TestSparseModules:
                              ids=('default', 'min', 'middle', 'max', 'more_than_max', 'less_then_min'))
     def test_get_target_sparsity_rate(self, model_name, local_mode, target, expected_rate):
         config = get_empty_config()
-        config['compression'] = Dict({'algorithm': 'rb_sparsity',
-                                      'params': {'sparsity_init': 0}})
+        config['compression'] = {'algorithm': 'rb_sparsity',
+                                      'params': {'sparsity_init': 0}}
         _, algo, _ = get_basic_rb_sparse_model(model_name, local_mode, config=config)
         loss = algo.loss
         if target is not None:

@@ -21,7 +21,7 @@
                 "sparsity_init": 0.01,
                 "sparsity_target": 0.61,
                 "sparsity_target_epoch": 5,
-                "sparsity_freeze_epoch": 10,
+                "sparsity_freeze_epoch": 10
             }
         }
     ]

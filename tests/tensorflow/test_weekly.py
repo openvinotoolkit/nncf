@@ -1,5 +1,5 @@
 """
- Copyright (c) 2021 Intel Corporation
+ Copyright (c) 2023 Intel Corporation
  Licensed under the Apache License, Version 2.0 (the "License");
  you may not use this file except in compliance with the License.
  You may obtain a copy of the License at
@@ -18,7 +18,7 @@ import tempfile
 import pytest
 from pytest import approx
 
-from tests.common.helpers import PROJECT_ROOT
+from tests.shared.paths import PROJECT_ROOT
 from tests.tensorflow.test_sanity_sample import get_sample_fn
 
 
@@ -37,7 +37,7 @@ EXAMPLES_DIR = PROJECT_ROOT.joinpath('examples', 'tensorflow')
 # │   │     │       ├── weights
 GLOBAL_CONFIG = {
     'classification': {
-            'imagenet': {
+            'imagenet2012': {
                     'configs': {
                         'quantization/inception_v3_imagenet_int8.json': {
                             'expected_accuracy': 78.35,
@@ -99,6 +99,11 @@ GLOBAL_CONFIG = {
                             'absolute_tolerance_train': 0.5,
                             'absolute_tolerance_test': 0.5
                         },
+                        'quantization/resnet50_int8_accuracy_aware.json':{
+                            'expected_accuracy': 74.88,
+                            'absolute_tolerance_train': 0.5,
+                            'absolute_tolerance_test': 0.5
+                        },
                         'sparsity_quantization/resnet50_imagenet_rb_sparsity_int8.json': {
                             'expected_accuracy': 74.30,
                             'absolute_tolerance_train': 0.5,
@@ -111,6 +116,11 @@ GLOBAL_CONFIG = {
                         },
                         'pruning/resnet50_imagenet_pruning_geometric_median.json': {
                             'expected_accuracy': 74.98,
+                            'absolute_tolerance_train': 0.5,
+                            'absolute_tolerance_test': 0.5
+                        },
+                        'pruning_quantization/resnet50_imagenet_pruning_geometric_median_int8.json': {
+                            'expected_accuracy': 75.08,
                             'absolute_tolerance_train': 0.5,
                             'absolute_tolerance_test': 0.5
                         },
@@ -134,6 +144,12 @@ GLOBAL_CONFIG = {
                     },
                     'pruning/retinanet_coco_pruning.json': {
                         'expected_accuracy': 32.70,
+                        'absolute_tolerance_train': 0.5,
+                        'absolute_tolerance_test': 0.5,
+                        'weights': 'retinanet/retinanet.h5',
+                    },
+                    'pruning_quantization/retinanet_coco_pruning_int8.json': {
+                        'expected_accuracy': 32.53,
                         'absolute_tolerance_train': 0.5,
                         'absolute_tolerance_test': 0.5,
                         'weights': 'retinanet/retinanet.h5',
@@ -228,11 +244,6 @@ def _params(request, tmp_path_factory, dataset_dir, models_dir, weekly_tests):
     test_config, args, execution_arg, _ = request.param
     if dataset_dir:
         args['data'] =  os.path.join(dataset_dir, os.path.split(args['data'])[-1])
-    with open(args['config'], encoding='utf8') as config_file:
-        config = json.load(config_file)
-        if config.get('dataset') != 'imagenet2012' or config.get('dataset_type') != 'tfrecords':
-            args['data'] += '_{}'.format(config.get('dataset_type', 'tfrecords'))
-
     if args['weights']:
         if models_dir:
             args['weights'] = os.path.join(models_dir, args['weights'])
@@ -268,7 +279,8 @@ def run_sample(tc, args):
     if 'metrics-dump' in args:
         actual_acc = get_actual_acc(args['metrics-dump'])
         ref_acc = tc['expected_accuracy']
-        assert actual_acc == approx(ref_acc, abs=tc['absolute_tolerance_{}'.format(mode)])
+        assert actual_acc == approx(ref_acc, abs=tc['absolute_tolerance_{}'.format(mode)]), \
+            "Test accuracy doesn't meet the expected accuracy within threshold."
 
 
 def test_weekly_train_eval(_params, tmp_path):

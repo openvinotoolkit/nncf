@@ -1,5 +1,5 @@
 """
- Copyright (c) 2020 Intel Corporation
+ Copyright (c) 2023 Intel Corporation
  Licensed under the Apache License, Version 2.0 (the "License");
  you may not use this file except in compliance with the License.
  You may obtain a copy of the License at
@@ -57,7 +57,7 @@ class ManualPrecisionInitializer(BasePrecisionInitializer):
                         q_configs = self._hw_precision_constraints.get(q_id)
                         matched_q_configs = list(filter(lambda x: x.num_bits == bitwidth, q_configs))
                         if not matched_q_configs:
-                            raise ValueError(msg.format(bitwidth, scope_name, q_configs))
+                            raise ValueError(msg.format(bitwidth, scope_name, list(map(str, q_configs))))
                         qp.qconfig = matched_q_configs[0]
                     else:
                         qp.qconfig.num_bits = bitwidth

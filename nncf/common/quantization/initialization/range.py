@@ -1,5 +1,5 @@
 """
- Copyright (c) 2021 Intel Corporation
+ Copyright (c) 2023 Intel Corporation
  Licensed under the Apache License, Version 2.0 (the "License");
  you may not use this file except in compliance with the License.
  You may obtain a copy of the License at
@@ -16,6 +16,7 @@ from typing import List, Dict, Optional
 from nncf.common.initialization.dataloader import NNCFDataLoader
 from nncf.common.quantization.structs import QuantizerGroup
 from nncf.common.quantization.structs import QuantizationMode
+from nncf.config.schemata.defaults import NUM_INIT_SAMPLES
 
 
 class RangeInitConfig:
@@ -46,7 +47,7 @@ class RangeInitConfig:
 
     @classmethod
     def from_dict(cls, dct: Dict) -> 'RangeInitConfig':
-        num_init_samples = dct.get('num_init_samples', 256)
+        num_init_samples = dct.get('num_init_samples', NUM_INIT_SAMPLES)
         if num_init_samples < 0:
             raise ValueError('Number of initialization samples must be >= 0')
         return cls(dct.get('type', 'mixed_min_max'),
@@ -72,7 +73,7 @@ class PerLayerRangeInitConfig(RangeInitConfig):
         :param target_scopes: A list of model control flow graph node scopes
             to be considered for this operation - functions as a 'denylist'
         :param ignored_scopes: A list of model control flow graph node scopes
-            to be ignored for this operation - functions as a 'allowlist'
+            to be ignored for this operation - functions as an 'allowlist'
         :param target_quantizer_group: The target group of quantizers for which
             specified type of range initialization will be applied. It can be
             quantizers group for activations or weights.
@@ -105,7 +106,7 @@ class PerLayerRangeInitConfig(RangeInitConfig):
         target_group_str = dct.get('target_quantizer_group')
         target_group = None
         if target_group_str is not None:
-            target_group = QuantizerGroup.from_str(target_group_str)
+            target_group = QuantizerGroup(target_group_str)
 
         return cls(base_config, target_scopes, ignored_scopes, target_group)
 

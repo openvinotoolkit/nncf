@@ -1,0 +1,236 @@
+{
+  "classification": {
+    "imagenet_1000_classes": {
+      "bvlcalexnet-12": {
+        "config": "tests/onnx/benchmarking/classification/onnx_models_configs/bvlcalexnet-12.yml",
+        "metric_type": "accuracy@top1",
+        "target_fp32": 0.52024,
+        "target_int8": 0.51503,
+        "diff_target_min": -1.0,
+        "diff_target_max": 1.0
+      },
+      "caffenet-12": {
+        "config": "tests/onnx/benchmarking/classification/onnx_models_configs/caffenet-12.yml",
+        "metric_type": "accuracy@top1",
+        "target_fp32": 0.54256,
+        "target_int8": 0.53713,
+        "diff_target_min": -1.0,
+        "diff_target_max": 1.0
+      },
+      "densenet-12": {
+        "config": "tests/onnx/benchmarking/classification/onnx_models_configs/densenet-12.yml",
+        "metric_type": "accuracy@top1",
+        "target_fp32": 0.60964,
+        "target_int8": 0.60354,
+        "diff_target_min": -1.0,
+        "diff_target_max": 1.0
+      },
+      "efficientnet-lite4-11": {
+        "config": "tests/onnx/benchmarking/classification/onnx_models_configs/efficientnet-lite4-11.yml",
+        "metric_type": "accuracy@top1",
+        "target_fp32": 0.7758,
+        "target_int8": 0.76804,
+        "diff_target_min": -1.0,
+        "diff_target_max": 1.0
+      },
+      "googlenet-12": {
+        "config": "tests/onnx/benchmarking/classification/onnx_models_configs/googlenet-12.yml",
+        "metric_type": "accuracy@top1",
+        "target_fp32": 0.66666,
+        "target_int8": 0.65999,
+        "diff_target_min": -1.0,
+        "diff_target_max": 1.0
+      },
+      "inception-v1-12": {
+        "config": "tests/onnx/benchmarking/classification/onnx_models_configs/inception-v1-12.yml",
+        "metric_type": "accuracy@top1",
+        "target_fp32": 0.6521,
+        "target_int8": 0.64557,
+        "diff_target_min": -1.0,
+        "diff_target_max": 1.0
+      },
+      "mobilenetv2-12": {
+        "config": "tests/onnx/benchmarking/classification/onnx_models_configs/mobilenetv2-12.yml",
+        "metric_type": "accuracy@top1",
+        "target_fp32": 0.7187,
+        "target_int8": 0.71151,
+        "diff_target_min": -1.0,
+        "diff_target_max": 1.0
+      },
+      "resnet50-v1-12": {
+        "config": "tests/onnx/benchmarking/classification/onnx_models_configs/resnet50-v1-12.yml",
+        "metric_type": "accuracy@top1",
+        "target_fp32": 0.74114,
+        "target_int8": 0.73372,
+        "diff_target_min": -1.0,
+        "diff_target_max": 1.0
+      },
+      "resnet50-v2-7": {
+        "config": "tests/onnx/benchmarking/classification/onnx_models_configs/resnet50-v2-7.yml",
+        "metric_type": "accuracy@top1",
+        "target_fp32": 0.7484,
+        "target_int8": 0.74091,
+        "diff_target_min": -1.0,
+        "diff_target_max": 1.0
+      },
+      "shufflenet-9": {
+        "config": "tests/onnx/benchmarking/classification/onnx_models_configs/shufflenet-9.yml",
+        "metric_type": "accuracy@top1",
+        "target_fp32": 0.47432,
+        "target_int8": 0.46957,
+        "diff_target_min": -1.0,
+        "diff_target_max": 1.0
+      },
+      "shufflenet-v2-12": {
+        "config": "tests/onnx/benchmarking/classification/onnx_models_configs/shufflenet-v2-12.yml",
+        "metric_type": "accuracy@top1",
+        "target_fp32": 0.69356,
+        "target_int8": 0.68662,
+        "diff_target_min": -1.0,
+        "diff_target_max": 1.0
+      },
+      "squeezenet1.0-12": {
+        "config": "tests/onnx/benchmarking/classification/onnx_models_configs/squeezenet1.0-12.yml",
+        "metric_type": "accuracy@top1",
+        "target_fp32": 0.54836,
+        "target_int8": 0.54287,
+        "diff_target_min": -1.0,
+        "diff_target_max": 1.0
+      },
+      "vgg16-12": {
+        "config": "tests/onnx/benchmarking/classification/onnx_models_configs/vgg16-12.yml",
+        "metric_type": "accuracy@top1",
+        "target_fp32": 0.72022,
+        "target_int8": 0.71301,
+        "diff_target_min": -1.0,
+        "diff_target_max": 1.0
+      },
+      "zfnet512-12": {
+        "config": "tests/onnx/benchmarking/classification/onnx_models_configs/zfnet512-12.yml",
+        "metric_type": "accuracy@top1",
+        "target_fp32": 0.58568,
+        "target_int8": 0.57982,
+        "diff_target_min": -1.0,
+        "diff_target_max": 1.0
+      }
+    }
+  },
+  "object_detection_segmentation": {
+    "ms_coco_detection_80_class_with_background": {
+      "FasterRCNN-12": {
+        "config": "tests/onnx/benchmarking/object_detection_segmentation/onnx_models_configs/FasterRCNN-12.yml",
+        "metric_type": "coco_precision",
+        "target_fp32": 0.34930,
+        "target_int8": 0.34581,
+        "diff_target_min": -1.0,
+        "diff_target_max": 1.0
+      },
+      "MaskRCNN-12-det": {
+        "config": "tests/onnx/benchmarking/object_detection_segmentation/onnx_models_configs/MaskRCNN-12.yml",
+        "metric_type": "coco_precision",
+        "target_fp32": 0.34673,
+        "target_int8": 0.34327,
+        "diff_target_min": -1.0,
+        "diff_target_max": 1.0
+      },
+      "ssd-12": {
+        "config": "tests/onnx/benchmarking/object_detection_segmentation/onnx_models_configs/ssd-12.yml",
+        "metric_type": "coco_precision",
+        "target_fp32": 0.20336,
+        "target_int8": 0.20133,
+        "diff_target_min": -1.0,
+        "diff_target_max": 1.0
+      },
+      "ssd_mobilenet_v1_12": {
+        "config": "tests/onnx/benchmarking/object_detection_segmentation/onnx_models_configs/ssd_mobilenet_v1_12.yml",
+        "metric_type": "coco_precision",
+        "target_fp32": 0.2303,
+        "target_int8": 0.22799,
+        "diff_target_min": -1.0,
+        "diff_target_max": 1.0
+      }
+    },
+    "ms_coco_mask_rcnn_short_80_classes": {
+      "MaskRCNN-12-inst-seg": {
+        "config": "tests/onnx/benchmarking/object_detection_segmentation/onnx_models_configs/MaskRCNN-12.yml",
+        "metric_type": "coco_orig_segm_precision",
+        "target_fp32": 0.32603,
+        "target_int8": 0.32277,
+        "diff_target_min": -1.0,
+        "diff_target_max": 1.0
+      }
+    },
+    "cityscapes": {
+      "ResNet101-DUC-12": {
+        "config": "tests/onnx/benchmarking/object_detection_segmentation/onnx_models_configs/ResNet101-DUC-12.yml",
+        "metric_type": "mean_iou",
+        "target_fp32": 0.61906,
+        "target_int8": 0.61286,
+        "diff_target_min": -1.0,
+        "diff_target_max": 1.0
+      }
+    },
+    "mscoco_segmentation_to_voc": {
+      "fcn-resnet50-12": {
+        "config": "tests/onnx/benchmarking/object_detection_segmentation/onnx_models_configs/fcn-resnet50-12.yml",
+        "metric_type": "mean_iou",
+        "target_fp32": 0.37956,
+        "target_int8": 0.37576,
+        "diff_target_min": -1.0,
+        "diff_target_max": 1.0
+      }
+    },
+    "ms_coco_detection_80_class_without_background": {
+      "retinanet-9": {
+        "config": "tests/onnx/benchmarking/object_detection_segmentation/onnx_models_configs/retinanet-9.yml",
+        "metric_type": "coco_precision",
+        "target_fp32": 0.15034,
+        "target_int8": 0.14883,
+        "diff_target_min": -1.0,
+        "diff_target_max": 1.0
+      },
+      "tiny-yolov3-11": {
+        "config": "tests/onnx/benchmarking/object_detection_segmentation/onnx_models_configs/tiny-yolov3-11.yml",
+        "metric_type": "coco_precision",
+        "target_fp32": 0.07827,
+        "target_int8": 0.07748,
+        "diff_target_min": -1.0,
+        "diff_target_max": 1.0
+      },
+      "yolov2-coco-9": {
+        "config": "tests/onnx/benchmarking/object_detection_segmentation/onnx_models_configs/yolov2-coco-9.yml",
+        "metric_type": "coco_precision",
+        "target_fp32": 0.18237,
+        "target_int8": 0.18054,
+        "diff_target_min": -1.0,
+        "diff_target_max": 1.0
+      },
+      "yolov3-12": {
+        "config": "tests/onnx/benchmarking/object_detection_segmentation/onnx_models_configs/yolov3-12.yml",
+        "metric_type": "coco_precision",
+        "target_fp32": 0.29165,
+        "target_int8": 0.28873,
+        "diff_target_min": -1.0,
+        "diff_target_max": 1.0
+      },
+      "yolov4": {
+        "config": "tests/onnx/benchmarking/object_detection_segmentation/onnx_models_configs/yolov4.yml",
+        "metric_type": "coco_precision",
+        "target_fp32": 0.10003,
+        "target_int8": 0.09903,
+        "diff_target_min": -1.0,
+        "diff_target_max": 1.0
+      }
+    },
+    "VOC2012_without_background": {
+      "tinyyolov2-8": {
+        "config": "tests/onnx/benchmarking/object_detection_segmentation/onnx_models_configs/tinyyolov2-8.yml",
+        "metric_type": "map",
+        "target_fp32": 0.29266,
+        "target_int8": 0.28973,
+        "diff_target_min": -1.0,
+        "diff_target_max": 1.0
+      }
+    }
+  }
+}

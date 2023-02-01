@@ -1,0 +1,32 @@
+models:
+  - name: ResNet101-DUC-12
+    launchers:
+      - framework: onnx_runtime
+        execution_providers: ['OpenVINOExecutionProvider']
+        tags: ['OpenVINOExecutionProvider']
+        adapter:
+          type: duc_segmentation
+          ds_rate: 8
+          cell_width: 2
+      - framework: onnx_runtime
+        execution_providers: [ 'CPUExecutionProvider' ]
+        tags: ['CPUExecutionProvider']
+        adapter:
+          type: duc_segmentation
+          ds_rate: 8
+          cell_width: 2
+
+    datasets:
+      - name: cityscapes
+        preprocessing:
+          - type: bgr_to_rgb
+          - type: resize
+            size: 800
+          - type: normalization
+            mean: (122.675, 116.669, 104.008)
+        postprocessing:
+          - type: resize_segmentation_mask
+            apply_to: annotation
+            size: 800
+        metrics:
+          - type: mean_iou

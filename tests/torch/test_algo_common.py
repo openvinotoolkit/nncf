@@ -1,5 +1,5 @@
 """
- Copyright (c) 2019-2020 Intel Corporation
+ Copyright (c) 2019-2023 Intel Corporation
  Licensed under the Apache License, Version 2.0 (the "License");
  you may not use this file except in compliance with the License.
  You may obtain a copy of the License at
@@ -13,23 +13,29 @@
 import copy
 import os
 from functools import reduce
-from typing import Dict, List
+from typing import Dict
+from typing import List
 
 import onnx
 import pytest
+import torch
 from torch import cuda
 from torch import nn
 
 from nncf import NNCFConfig
 from nncf.api.compression import CompressionStage
+from nncf.torch.algo_selector import PT_COMPRESSION_ALGORITHMS
 from nncf.torch.compression_method_api import DOMAIN_CUSTOM_OPS_NAME
 from tests.torch.helpers import BasicConvTestModel
+from tests.torch.helpers import PTTensorListComparator
 from tests.torch.helpers import create_compressed_model_and_algo_for_test
 from tests.torch.helpers import get_empty_config
 from tests.torch.helpers import register_bn_adaptation_init_args
-from tests.torch.quantization.test_quantization_helpers import get_quantization_config_without_range_init
+from tests.torch.pruning.helpers import get_basic_pruning_config
+from tests.torch.quantization.quantization_helpers import get_quantization_config_without_range_init
 from tests.torch.sparsity.magnitude.test_helpers import get_basic_magnitude_sparsity_config
 from tests.torch.sparsity.rb.test_algo import get_basic_sparsity_config
+from tests.torch.test_models.synthetic import ConvRelu6HSwishHSigmoid
 
 
 class BasicLinearTestModel(nn.Module):
@@ -64,12 +70,21 @@ def get_basic_asym_quantization_config(model_size=4):
     return config
 
 
+def get_filter_pruning_config():
+    config = get_basic_pruning_config()
+    config['compression']['algorithm'] = 'filter_pruning'
+    config['compression']['params']['prune_first_conv'] = True
+    return config
+
 @pytest.mark.parametrize('config_provider',
                          (get_quantization_config_without_range_init, get_basic_asym_quantization_config,
-                          get_basic_sparsity_config,
-                          get_basic_magnitude_sparsity_config, get_const_sparsity_config),
-                         ids=('SymQuantization', 'AsymQuantization', 'Sparsity', 'MagnitudeSparsity', 'ConstSparsity'))
-@pytest.mark.parametrize('model_provider', (BasicConvTestModel, BasicLinearTestModel),
+                          get_basic_sparsity_config, get_basic_magnitude_sparsity_config,
+                          get_const_sparsity_config, get_filter_pruning_config),
+                         ids=('SymQuantization', 'AsymQuantization',
+                              'Sparsity', 'MagnitudeSparsity',
+                              'ConstSparsity', 'FilterPruning')
+                         )
+@pytest.mark.parametrize('model_provider', (ConvRelu6HSwishHSigmoid, BasicLinearTestModel),
                          ids=('Conv2d', 'Linear'))
 class TestCompressionAlgos:
     def test_can_export_compressed_model(self, tmp_path, config_provider, model_provider):
@@ -77,13 +92,40 @@ class TestCompressionAlgos:
         model = model_provider()
         config = config_provider()
         register_bn_adaptation_init_args(config)
-        _, compression_ctrl = create_compressed_model_and_algo_for_test(model, config)
+        compressed_model, compression_ctrl = create_compressed_model_and_algo_for_test(model, config)
 
+        state_before = copy.deepcopy(compressed_model.state_dict())
         compression_ctrl.export_model(test_path)
+        state_after = compressed_model.state_dict()
+
         assert os.path.exists(test_path)
+        PTTensorListComparator.check_equal(list(state_before.values()), list(state_after.values()))
+
+@pytest.mark.parametrize(('config_provider', 'mask_getter'),
+                         [
+                             (get_basic_sparsity_config, lambda x: x.mask),
+                             (get_filter_pruning_config, lambda x: x.binary_filter_pruning_mask)
+                         ],
+                         ids=('sparsity', 'filter_pruning'))
+def test_no_weight_override_on_pruning_export(tmp_path, config_provider, mask_getter):
+    test_path = str(tmp_path.joinpath('test.onnx'))
+    model = ConvRelu6HSwishHSigmoid()
+    config = config_provider()
+    register_bn_adaptation_init_args(config)
+    compressed_model, compression_ctrl = create_compressed_model_and_algo_for_test(model, config)
+
+    operand = compressed_model.conv1.get_pre_op('0').op
+    with torch.no_grad():
+        mask = mask_getter(operand)
+        mask[mask != 0] = 0  # intentionally corrupt mask to zero out weights
+    state_before = copy.deepcopy(compressed_model.state_dict())
+    compression_ctrl.export_model(test_path)
+    state_after = compressed_model.state_dict()
+
+    PTTensorListComparator.check_equal(list(state_before.values()), list(state_after.values()))
 
 
-class TestConfigCreator:
+class ConfigCreator:
     def __init__(self):
         self._config = get_empty_config()
         self._algorithm_sections = {}
@@ -106,7 +148,7 @@ class TestConfigCreator:
 
 
 class CompressionStageTestStruct:
-    def __init__(self, config_provider: 'TestConfigCreator', compression_stages: List[CompressionStage]):
+    def __init__(self, config_provider: 'ConfigCreator', compression_stages: List[CompressionStage]):
         self.config_provider = config_provider
         self.compression_stages = compression_stages
 
@@ -123,30 +165,30 @@ FFF_levels = [CompressionStage.FULLY_COMPRESSED] * 3
 NPF_levels = [CompressionStage.UNCOMPRESSED, CompressionStage.PARTIALLY_COMPRESSED, CompressionStage.FULLY_COMPRESSED]
 LIST_OF_TEST_PARAMS = [
     CompressionStageTestStruct(
-        config_provider=TestConfigCreator().add_algo('quantization'),
+        config_provider=ConfigCreator().add_algo('quantization'),
         compression_stages=FFF_levels
     ),
     CompressionStageTestStruct(
-        config_provider=TestConfigCreator().add_algo('quantization', staged_quantization_params),
+        config_provider=ConfigCreator().add_algo('quantization', staged_quantization_params),
         compression_stages=NPF_levels
     ),
     CompressionStageTestStruct(
-        config_provider=TestConfigCreator().add_algo('const_sparsity'),
+        config_provider=ConfigCreator().add_algo('const_sparsity'),
         compression_stages=FFF_levels
     ),
     CompressionStageTestStruct(
-        config_provider=TestConfigCreator().add_algo('magnitude_sparsity', magnitude_sparsity_params),
+        config_provider=ConfigCreator().add_algo('magnitude_sparsity', magnitude_sparsity_params),
         compression_stages=NPF_levels
     ),
     CompressionStageTestStruct(
-        config_provider=TestConfigCreator().add_algo('rb_sparsity', {
+        config_provider=ConfigCreator().add_algo('rb_sparsity', {
             'sparsity_target': 0.61,
             'sparsity_target_epoch': 2,
         }),
         compression_stages=NPF_levels
     ),
     CompressionStageTestStruct(
-        config_provider=TestConfigCreator().add_algo('filter_pruning', {
+        config_provider=ConfigCreator().add_algo('filter_pruning', {
             'num_init_steps': 1,
             'pruning_steps': 2,
             'schedule': 'baseline'
@@ -156,26 +198,26 @@ LIST_OF_TEST_PARAMS = [
                             CompressionStage.FULLY_COMPRESSED]
     ),
     CompressionStageTestStruct(
-        config_provider=TestConfigCreator().add_algo('filter_pruning', filter_pruning_params),
+        config_provider=ConfigCreator().add_algo('filter_pruning', filter_pruning_params),
         compression_stages=NPF_levels
     ),
     CompressionStageTestStruct(
-        config_provider=TestConfigCreator().add_algo('magnitude_sparsity', magnitude_sparsity_params).add_algo(
+        config_provider=ConfigCreator().add_algo('magnitude_sparsity', magnitude_sparsity_params).add_algo(
             'quantization'),
         compression_stages=[CompressionStage.PARTIALLY_COMPRESSED] * 2 + [CompressionStage.FULLY_COMPRESSED],
     ),
     CompressionStageTestStruct(
-        config_provider=TestConfigCreator().add_algo('magnitude_sparsity', magnitude_sparsity_params).add_algo(
+        config_provider=ConfigCreator().add_algo('magnitude_sparsity', magnitude_sparsity_params).add_algo(
             'quantization', staged_quantization_params),
         compression_stages=NPF_levels,
     ),
     CompressionStageTestStruct(
-        config_provider=TestConfigCreator().add_algo('quantization', staged_quantization_params).add_algo(
+        config_provider=ConfigCreator().add_algo('quantization', staged_quantization_params).add_algo(
             'filter_pruning', filter_pruning_params),
         compression_stages=NPF_levels,
     ),
     CompressionStageTestStruct(
-        config_provider=TestConfigCreator().add_algo('magnitude_sparsity', magnitude_sparsity_params).add_algo(
+        config_provider=ConfigCreator().add_algo('magnitude_sparsity', magnitude_sparsity_params).add_algo(
             'quantization', staged_quantization_params).add_algo('filter_pruning', filter_pruning_params),
         compression_stages=NPF_levels,
     ),
@@ -203,26 +245,26 @@ def test_can_get_compression_stage(test_struct: CompressionStageTestStruct):
 
 
 @pytest.mark.parametrize(('src', 'dst', 'ref'),
-                            (
-                             (CompressionStage.UNCOMPRESSED,
-                              CompressionStage.UNCOMPRESSED,
-                              CompressionStage.UNCOMPRESSED),
-                             (CompressionStage.PARTIALLY_COMPRESSED,
-                              CompressionStage.PARTIALLY_COMPRESSED,
-                              CompressionStage.PARTIALLY_COMPRESSED),
-                             (CompressionStage.FULLY_COMPRESSED,
-                              CompressionStage.FULLY_COMPRESSED,
-                              CompressionStage.FULLY_COMPRESSED),
-                             (CompressionStage.UNCOMPRESSED,
-                              CompressionStage.PARTIALLY_COMPRESSED,
-                              CompressionStage.PARTIALLY_COMPRESSED),
-                             (CompressionStage.UNCOMPRESSED,
-                              CompressionStage.FULLY_COMPRESSED,
-                              CompressionStage.PARTIALLY_COMPRESSED),
-                             (CompressionStage.PARTIALLY_COMPRESSED,
-                              CompressionStage.FULLY_COMPRESSED,
-                              CompressionStage.PARTIALLY_COMPRESSED)
-                              )
+                         (
+                                 (CompressionStage.UNCOMPRESSED,
+                                  CompressionStage.UNCOMPRESSED,
+                                  CompressionStage.UNCOMPRESSED),
+                                 (CompressionStage.PARTIALLY_COMPRESSED,
+                                  CompressionStage.PARTIALLY_COMPRESSED,
+                                  CompressionStage.PARTIALLY_COMPRESSED),
+                                 (CompressionStage.FULLY_COMPRESSED,
+                                  CompressionStage.FULLY_COMPRESSED,
+                                  CompressionStage.FULLY_COMPRESSED),
+                                 (CompressionStage.UNCOMPRESSED,
+                                  CompressionStage.PARTIALLY_COMPRESSED,
+                                  CompressionStage.PARTIALLY_COMPRESSED),
+                                 (CompressionStage.UNCOMPRESSED,
+                                  CompressionStage.FULLY_COMPRESSED,
+                                  CompressionStage.PARTIALLY_COMPRESSED),
+                                 (CompressionStage.PARTIALLY_COMPRESSED,
+                                  CompressionStage.FULLY_COMPRESSED,
+                                  CompressionStage.PARTIALLY_COMPRESSED)
+                         )
                          )
 def test_combo_of_compression_stages(src, dst, ref):
     assert src + dst == ref
@@ -253,7 +295,7 @@ def test_can_export_compressed_model_with_input_output_names(tmp_path):
 
     assert os.path.exists(test_path)
 
-    onnx_model = onnx.load(test_path)
+    onnx_model = onnx.load(test_path)  # pylint: disable=no-member
     # pylint: disable=no-member
     curr_input_names = [node.name for node in onnx_model.graph.input]
     curr_output_names = [node.name for node in onnx_model.graph.output]
@@ -277,7 +319,7 @@ def test_can_export_compressed_model_with_specified_domain_for_custom_ops(tmp_pa
 
     assert os.path.exists(test_path)
 
-    onnx_model = onnx.load(test_path)
+    onnx_model = onnx.load(test_path)  # pylint: disable=no-member
 
     count_custom_ops = 0
     # pylint: disable=no-member
@@ -342,3 +384,17 @@ def test_compression_loss_gpu_device_compatibility(config):
     register_bn_adaptation_init_args(config)
     _, compression_ctrl = create_compressed_model_and_algo_for_test(model, config)
     compression_ctrl.loss()
+
+
+NOT_SUPPORT_SCOPES_ALGO = ["knowledge_distillation", "NoCompressionAlgorithm"]
+@pytest.mark.parametrize("algo_name", PT_COMPRESSION_ALGORITHMS.registry_dict.keys() - NOT_SUPPORT_SCOPES_ALGO)
+def test_raise_runtimeerror_for_not_matched_scope_names(algo_name):
+    model = BasicLinearTestModel()
+    config = ConfigCreator().add_algo(algo_name).create()
+    config["compression"][0]["ignored_scopes"] = ["unknown"]
+    if algo_name == "quantization":
+        config["compression"][0]["initializer"] = {"batchnorm_adaptation": {"num_bn_adaptation_samples": 0}}
+
+    with pytest.raises(RuntimeError) as exc_info:
+        create_compressed_model_and_algo_for_test(model, config)
+    assert "No match has been found among the model" in str(exc_info.value)

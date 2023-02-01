@@ -202,6 +202,12 @@
             }
         },
         {
+            "type": "ReduceL2",
+            "quantization": {
+                "activations": "q8_a"
+            }
+        },
+        {
             "type": "ReduceMean",
             "quantization": {
                 "activations": "q8_a"

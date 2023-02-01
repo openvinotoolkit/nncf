@@ -1,5 +1,5 @@
 """
- Copyright (c) 2021 Intel Corporation
+ Copyright (c) 2023 Intel Corporation
  Licensed under the Apache License, Version 2.0 (the "License");
  you may not use this file except in compliance with the License.
  You may obtain a copy of the License at
@@ -21,17 +21,18 @@ import torch
 
 from nncf.common.graph import INPUT_NOOP_METATYPES
 from nncf.common.graph import LayerName
-from nncf.common.graph.layer_attributes import GenericWeightedLayerAttributes
 from nncf.common.graph.layer_attributes import MultipleInputLayerAttributes
 from nncf.common.graph.layer_attributes import ReshapeLayerAttributes
-from nncf.common.graph.operator_metatypes import UnknownMetatype
+from nncf.common.graph.layer_attributes import MultipleOutputLayerAttributes
 from nncf.common.graph.utils import get_concat_axis
+from nncf.common.graph.utils import get_split_axis
 from nncf.torch.dynamic_graph.graph import DynamicGraph
 from nncf.torch.dynamic_graph.graph_tracer import GraphTracer
 from nncf.torch.dynamic_graph.graph_tracer import ModelInputInfo
 from nncf.torch.graph.graph import PTNNCFGraph
 from nncf.torch.graph.operator_metatypes import PTCatMetatype
 from nncf.torch.graph.operator_metatypes import PTReshapeMetatype
+from nncf.torch.graph.operator_metatypes import PTSplitMetatype
 from nncf.torch.graph.operator_metatypes import PT_OPERATOR_METATYPES
 
 
@@ -66,9 +67,9 @@ class GraphConverter:
             layer_name = str(dynamic_graph_node.op_exec_context.op_address.scope_in_model)
 
             metatype = PT_OPERATOR_METATYPES.get_operator_metatype_by_op_name(op_address.operator_name)
-            if (metatype is not UnknownMetatype and
-                    not isinstance(dynamic_graph_node.layer_attributes, GenericWeightedLayerAttributes)):
-                subtype = metatype.determine_subtype(dynamic_graph_node.layer_attributes)
+            if metatype.get_subtypes():
+                subtype = metatype.determine_subtype(dynamic_graph_node.layer_attributes,
+                                                     functions_kwargs=dynamic_graph_node.__dict__)
             else:
                 subtype = None
             if subtype is not None:
@@ -126,4 +127,16 @@ class GraphConverter:
                     layer_attributes = ReshapeLayerAttributes(input_nodes[0].tensor_shape,
                                                               output_nodes[0].tensor_shape)
                     node.layer_attributes = layer_attributes
+
+            if node.metatype is PTSplitMetatype:
+                input_edges = nncf_graph.get_input_edges(node)
+                output_edges = nncf_graph.get_output_edges(node)
+                if input_edges and output_edges:
+                    input_shapes = [edge.tensor_shape for edge in input_edges]
+                    output_shapes = [edge.tensor_shape for edge in output_edges]
+                    axis = get_split_axis(input_shapes, output_shapes)
+                    chunks = len(output_edges)
+                    layer_attributes = MultipleOutputLayerAttributes(chunks, axis)
+                    node.layer_attributes = layer_attributes
+
         return nncf_graph

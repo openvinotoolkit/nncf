@@ -1,5 +1,5 @@
 """
- Copyright (c) 2020 Intel Corporation
+ Copyright (c) 2023 Intel Corporation
  Licensed under the Apache License, Version 2.0 (the "License");
  you may not use this file except in compliance with the License.
  You may obtain a copy of the License at
@@ -15,9 +15,10 @@ import sys
 
 import tensorflow as tf
 
+from examples.tensorflow.common.utils import close_strategy_threadpool
 from nncf.tensorflow import create_compressed_model
 from nncf.tensorflow import register_default_init_args
-from nncf.tensorflow.helpers.model_manager import TFOriginalModelManager
+from nncf.tensorflow.helpers.model_manager import TFModelManager
 from nncf.tensorflow.utils.state import TFCompressionState
 from nncf.tensorflow.utils.state import TFCompressionStateLoader
 
@@ -115,15 +116,14 @@ def load_checkpoint(checkpoint, ckpt_path):
         logger.info('Provided checkpoint: {}'.format(path_to_checkpoint))
 
     if not path_to_checkpoint:
-        logger.info('No checkpoint detected')
-        return 0
+        logger.info('No checkpoint detected.')
+        if ckpt_path:
+            raise RuntimeError(f'ckpt_path was given, but no checkpoint detected in path: {ckpt_path}')
 
     logger.info('Checkpoint file {} found and restoring from checkpoint'.format(path_to_checkpoint))
     status = checkpoint.restore(path_to_checkpoint)
     status.expect_partial()
     logger.info('Completed loading from checkpoint')
-
-    return None
 
 
 def load_compression_state(ckpt_path: str):
@@ -181,14 +181,15 @@ def create_test_step_fn(strategy, model, predict_post_process_fn):
     return test_step
 
 
-def restore_compressed_model(config, strategy, model_builder, ckpt_path = None):
+def restore_compressed_model(config, strategy, model_builder, ckpt_path=None):
     compression_state = None
     if ckpt_path:
         compression_state = load_compression_state(ckpt_path)
 
-    with TFOriginalModelManager(model_builder.build_model,
-                                weights=config.get('weights', None),
-                                is_training=False) as model:
+    with TFModelManager(model_builder.build_model,
+                        config.nncf_config,
+                        weights=config.get('weights', None),
+                        is_training=False) as model:
         with strategy.scope():
             compression_ctrl, compress_model = create_compressed_model(model,
                                                                        config.nncf_config,
@@ -206,6 +207,9 @@ def restore_compressed_model(config, strategy, model_builder, ckpt_path = None):
 
 def run_evaluation(config, eval_timeout=None):
     """Runs evaluation on checkpoint save directory"""
+    if config.disable_tensor_float_32_execution:
+        tf.config.experimental.enable_tensor_float_32_execution(False)
+
     strategy = get_distribution_strategy(config)
     if config.metrics_dump is not None:
         write_metrics(0, config.metrics_dump)
@@ -270,6 +274,8 @@ def run_evaluation(config, eval_timeout=None):
 
     if config.metrics_dump is not None:
         write_metrics(metric_result['AP'], config.metrics_dump)
+
+    close_strategy_threadpool(strategy)
 
 
 def export(config):

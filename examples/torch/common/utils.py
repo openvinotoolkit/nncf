@@ -1,5 +1,5 @@
 """
- Copyright (c) 2019 Intel Corporation
+ Copyright (c) 2023 Intel Corporation
  Licensed under the Apache License, Version 2.0 (the "License");
  you may not use this file except in compliance with the License.
  You may obtain a copy of the License at
@@ -35,6 +35,7 @@ import mlflow
 import torch
 
 from examples.torch.common.example_logger import logger as default_logger
+from nncf.config.schemata.defaults import QUANTIZATION_BITS
 from nncf.torch.utils import is_main_process
 
 # pylint: disable=import-error
@@ -61,9 +62,9 @@ def get_name(config):
                 retval += "_mixed_int"
             else:
                 activations = algo_dict.get('activations', {})
-                a_bits = activations.get('bits', 8)
+                a_bits = activations.get('bits', QUANTIZATION_BITS)
                 weights = algo_dict.get('weights', {})
-                w_bits = weights.get('bits', 8)
+                w_bits = weights.get('bits', QUANTIZATION_BITS)
                 if a_bits == w_bits:
                     retval += "_int{}".format(a_bits)
                 else:
@@ -160,7 +161,7 @@ def configure_logging(sample_logger, config):
 
     nncf_log_file_handler = logging.FileHandler(osp.join(config.log_dir, NNCF_LOG_FILE_NAME))
     nncf_log_file_handler.setFormatter(logging.Formatter("%(levelname)s:%(name)s:%(message)s"))
-    from nncf.common.utils.logger import logger as nncf_logger
+    from nncf.common.logging import nncf_logger
     nncf_logger.addHandler(nncf_log_file_handler)
 
 
@@ -188,8 +189,10 @@ def create_code_snapshot(root, dst_path, extensions=(".py", ".json", ".cpp", ".c
 
 
 def print_args(config, logger=default_logger):
+    logger.info("\nConfiguration parameters:")
     for arg in sorted(config):
         logger.info("{: <27s}: {}".format(arg, config.get(arg)))
+    logger.info("\n")
 
 
 def make_link(src, dst, exists_ok=True):
@@ -264,3 +267,18 @@ class MockDataset(data.Dataset):
                 img = self._transform(img)
             return img, 0
         raise ValueError
+
+
+class NullContextManager:
+    """
+    Dummy context manager that do nothing.
+    """
+
+    def __init__(self, *args, **kwargs):
+        pass
+
+    def __enter__(self, *args, **kwargs):
+        pass
+
+    def __exit__(self, *args, **kwargs):
+        pass

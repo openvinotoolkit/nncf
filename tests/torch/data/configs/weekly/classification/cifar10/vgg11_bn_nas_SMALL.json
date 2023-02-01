@@ -1,0 +1,50 @@
+{
+    "model": "vgg11_bn_cifar10",
+    "num_classes": 10,
+    "dataset": "CIFAR10",
+    "input_info": {
+        "sample_size": [1, 3, 32, 32]
+    },
+    "batch_size": 512,
+    "batch_size_val": 2000,
+    "multiprocessing_distributed": false,
+    "bootstrapNAS": {
+        "training": {
+            "algorithm": "progressive_shrinking",
+            "progressivity_of_elasticity": ["kernel", "depth", "width"],
+            "batchnorm_adaptation": {
+                "num_bn_adaptation_samples": 1
+            },
+            "lr_schedule": {
+                "params": {
+                    "base_lr": 1e-4
+                }
+            },
+            "schedule": {
+                "list_stage_descriptions": [
+                    {"train_dims": ["kernel"], "epochs": 1},
+                    {"train_dims": ["kernel", "depth"], "epochs": 1, "depth_indicator": 1},
+                    {"train_dims": ["kernel", "depth", "width"], "epochs": 1, "reorg_weights": true, "width_indicator": 2, "bn_adapt": true, "depth_indicator": 2}
+                ]
+            },
+            "elasticity": {
+                "available_elasticity_dims": ["width", "depth", "kernel"],
+                "width": {
+                    "max_num_widths": 2,
+                      "min_width": 32,
+                      "width_step": 32,
+                      "width_multipliers": [1, 0.85]
+                },
+                "kernel": {
+                    "max_num_kernels": 3
+                }
+            }
+        },
+        "search": {
+            "algorithm": "NSGA2",
+            "num_evals": 4,
+            "population": 1,
+            "acc_delta": 2
+        }
+    }
+}

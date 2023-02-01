@@ -1,5 +1,5 @@
 """
- Copyright (c) 2021 Intel Corporation
+ Copyright (c) 2023 Intel Corporation
  Licensed under the Apache License, Version 2.0 (the "License");
  you may not use this file except in compliance with the License.
  You may obtain a copy of the License at
@@ -20,7 +20,6 @@ import numpy as np
 from nncf.common.tensor import NNCFTensor
 from nncf.common.tensor import TensorType
 from nncf.common.tensor import TensorElementsType
-
 from nncf.common.tensor_statistics.reduction import get_per_channel_history
 
 ReductionShape = Tuple[int]
@@ -41,10 +40,15 @@ class TensorStatisticCollectorBase(ABC):
         self._collected_samples = 0
         self._num_samples = num_samples
 
+    @property
+    def num_samples(self) -> int:
+        return self._num_samples
+
     def register_input(self, x: TensorType) -> TensorType:
         """Registers input tensor"""
-        if not self._enabled or \
-                self._num_samples is not None and self._collected_samples >= self._num_samples:
+        if not self._enabled:
+            return x
+        if self._num_samples is not None and self._collected_samples >= self._num_samples:
             return x
         if self._reduction_shape is None:
             self._reduction_shape = tuple(range(len(x.shape)))
@@ -338,6 +342,79 @@ class MeanMinMaxStatisticCollector(MinMaxOfflineStatisticCollectorBase):
     def _max_aggregate(self):
         stacked_max = self._tensor_processor.stack(self._all_max_values)
         return self._tensor_processor.mean(stacked_max, axis=0)
+
+
+class MeanStatisticCollector(OfflineTensorStatisticCollector):
+    """
+    Collector that aggregates statistics as mean along a pre-assigned axis.
+    """
+
+    def __init__(self,
+                 reduction_shape: ReductionShape,
+                 num_samples: Optional[int] = None,
+                 window_size: Optional[int] = None) -> None:
+        """
+        :param reduction_shape: The shape for the reduction while statistics collection.
+            For the MeanStatisticCollector this parameter contains the main axis.
+        :param num_samples: Optional parameter for statistic collection that regulates
+            the number of samples that will be processed.
+        :param window_size: Optional maximum length for the statistic collection
+        """
+        super().__init__(reduction_shape, num_samples)
+        self._tensor_processor = self._get_processor()
+        self._all_values = deque(maxlen=window_size)
+        self._all_shapes = deque(maxlen=window_size)
+
+    @staticmethod
+    @abstractmethod
+    def _get_processor():
+        pass
+
+    def _register_input_common(self, x: NNCFTensor):
+        if self._reduction_shape == 0:
+            self._all_values.append(self._tensor_processor.batch_mean(x))
+        else:
+            self._all_values.append(self._tensor_processor.mean_per_channel(x, self._reduction_shape))
+        self._all_shapes.append(x.shape)
+
+    def _reset(self):
+        self._all_values.clear()
+        self._all_shapes.clear()
+
+    def _mean_aggregate(self):
+        all_values_stack = self._tensor_processor.stack(self._all_values)
+        return self._tensor_processor.mean(all_values_stack, 0)
+
+    def _shape(self):
+        return self._all_shapes[0]
+
+
+class BatchStatisticCollector(OfflineTensorStatisticCollector):
+    """
+    Collects tensor samples, where each tensor is averaged along the batch axis (and only that axis).
+    Each sample stays available for usage in further stages of the algorithm.
+    """
+
+    def __init__(self,
+                 num_samples: Optional[int] = None) -> None:
+        """
+        :param num_samples: Optional parameter for statistic collection that regulates
+            the number of samples that will be processed.
+        """
+        super().__init__(num_samples=num_samples)
+        self._tensor_processor = self._get_processor()
+        self._all_values = []
+
+    @staticmethod
+    @abstractmethod
+    def _get_processor():
+        pass
+
+    def _register_input_common(self, x: NNCFTensor):
+        self._all_values.append(self._tensor_processor.batch_mean(x).tensor)
+
+    def _reset(self):
+        self._all_values.clear()
 
 
 class MedianMADStatisticCollector(OfflineTensorStatisticCollector):

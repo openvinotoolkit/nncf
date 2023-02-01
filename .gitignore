@@ -103,9 +103,22 @@ ENV/
 
 # PyCharm
 .idea
+.run
 
 # snapshots
 *.tar
 
 # object detection eval results
 examples/torch/object_detection/eval/
+
+# VSCode
+.vscode/
+
+# NNCF debug
+nncf_debug/
+
+# NNCF examples
+examples/post_training_quantization/onnx/mobilenet_v2/mobilenet_v2_*
+examples/post_training_quantization/openvino/mobilenet_v2/mobilenet_v2_*
+examples/post_training_quantization/tensorflow/mobilenet_v2/mobilenet_v2_*
+examples/post_training_quantization/torch/mobilenet_v2/mobilenet_v2_*

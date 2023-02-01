@@ -30,17 +30,17 @@
                 "diff_fp32_max": 0.5
             },
             "resnet50_imagenet_int4_int8": {
-                "config": "examples/torch/classification/configs/mixed_precision/resnet50_imagenet_mixed_int_manual.json",
+                "config": "examples/torch/classification/configs/mixed_precision/resnet50_imagenet_mixed_int_hawq.json",
                 "reference": "resnet50_imagenet",
-                "target": 76.2,
+                "target": 75.8,
                 "metric_type": "Acc@1",
                 "resume": "resnet50_imagenet_int4_int8.pth",
                 "model_description": "ResNet-50",
-                "compression_description": "Mixed, 44.8% INT8 / 55.2% INT4",
-                "diff_fp32_min": -0.05,
+                "compression_description": "Mixed, 43.12% INT8 / 56.88% INT4",
+                "diff_fp32_min": -0.4,
                 "diff_fp32_max": 0.4,
-                "diff_target_min": -0.12,
-                "diff_target_max": 0.12
+                "diff_target_min": -0.2,
+                "diff_target_max": 0.2
             },
             "resnet50_imagenet_rb_sparsity_int8": {
                 "config": "examples/torch/classification/configs/sparsity_quantization/resnet50_imagenet_rb_sparsity_int8.json",
@@ -77,7 +77,8 @@
                 "config": "examples/torch/classification/configs/quantization/inception_v3_imagenet.json",
                 "target": 77.34,
                 "metric_type": "Acc@1",
-                "model_description": "Inception V3"
+                "model_description": "Inception V3",
+                "multiprocessing_distributed": true
             },
             "inception_v3_imagenet_int8": {
                 "config": "examples/torch/classification/configs/quantization/inception_v3_imagenet_int8.json",
@@ -88,7 +89,8 @@
                 "model_description": "Inception V3",
                 "compression_description": "INT8",
                 "diff_fp32_min": -1,
-                "diff_fp32_max": 1.0
+                "diff_fp32_max": 1.0,
+                "multiprocessing_distributed": true
             },
             "inception_v3_imagenet_rb_sparsity_int8": {
                 "config": "examples/torch/classification/configs/sparsity_quantization/inception_v3_imagenet_rb_sparsity_int8.json",
@@ -99,11 +101,12 @@
                 "model_description": "Inception V3",
                 "compression_description": "INT8 + Sparsity 61% (RB)",
                 "diff_fp32_min": -1,
-                "diff_fp32_max": 0.4
+                "diff_fp32_max": 0.4,
+                "multiprocessing_distributed": true
             },
             "mobilenet_v2_imagenet": {
                 "config": "examples/torch/classification/configs/quantization/mobilenet_v2_imagenet.json",
-                "target": 71.93,
+                "target": 71.87,
                 "metric_type": "Acc@1",
                 "model_description": "MobileNet V2"
             },
@@ -130,15 +133,15 @@
                 "diff_fp32_max": 0.15
             },
             "mobilenet_v2_imagenet_int4_int8": {
-                "config": "examples/torch/classification/configs/mixed_precision/mobilenet_v2_imagenet_mixed_int_manual.json",
+                "config": "examples/torch/classification/configs/mixed_precision/mobilenet_v2_imagenet_mixed_int_hawq.json",
                 "reference": "mobilenet_v2_imagenet",
-                "target": 70.92,
+                "target": 70.89,
                 "metric_type": "Acc@1",
                 "resume": "mobilenet_v2_imagenet_int4_int8.pth",
                 "model_description": "MobileNet V2",
-                "compression_description": "Mixed, 46.6% INT8 / 53.4% INT4",
-                "diff_fp32_min": -1.05,
-                "diff_fp32_max": 0.1
+                "compression_description": "Mixed, 58.88% INT8 / 41.12% INT4",
+                "diff_fp32_min": -1.2,
+                "diff_fp32_max": 0.4
             },
             "mobilenet_v2_imagenet_rb_sparsity_int8": {
                 "config": "examples/torch/classification/configs/sparsity_quantization/mobilenet_v2_imagenet_rb_sparsity_int8.json",
@@ -148,6 +151,23 @@
                 "resume": "mobilenet_v2_imagenet_rb_sparsity_int8.pth",
                 "model_description": "MobileNet V2",
                 "compression_description": "INT8 + Sparsity 52% (RB)",
+                "diff_fp32_min": -1,
+                "diff_fp32_max": 0.15
+            },
+            "mobilenet_v3_small_imagenet": {
+                "config": "examples/torch/classification/configs/quantization/mobilenet_v3_small_imagenet.json",
+                "target": 67.67,
+                "metric_type": "Acc@1",
+                "model_description": "MobileNet V3 small"
+            },
+            "mobilenet_v3_small_imagenet_int8": {
+                "config": "examples/torch/classification/configs/quantization/mobilenet_v3_small_imagenet_int8.json",
+                "reference": "mobilenet_v3_small_imagenet",
+                "target": 66.94,
+                "metric_type": "Acc@1",
+                "resume": "mobilenet_v3_small_imagenet_int8.pth",
+                "model_description": "MobileNet V3 small",
+                "compression_description": "INT8",
                 "diff_fp32_min": -1,
                 "diff_fp32_max": 0.15
             },
@@ -180,14 +200,14 @@
                 "diff_fp32_max": 0.15
             },
             "squeezenet1_1_imagenet_int4_int8": {
-                "config": "examples/torch/classification/configs/mixed_precision/squeezenet1_1_imagenet_mixed_int_manual.json",
+                "config": "examples/torch/classification/configs/mixed_precision/squeezenet1_1_imagenet_mixed_int_hawq_old_eval.json",
                 "reference": "squeezenet1_1_imagenet",
-                "target": 58.9,
+                "target": 57.61,
                 "metric_type": "Acc@1",
                 "resume": "squeezenet1_1_imagenet_int4_int8.pth",
                 "model_description": "SqueezeNet V1.1",
-                "compression_description": "Mixed, 54.7% INT8 / 45.3% INT4",
-                "diff_fp32_min": -0.55,
+                "compression_description": "Mixed, 52.83% INT8 / 47.17% INT4",
+                "diff_fp32_min": -0.7,
                 "diff_fp32_max": 0.7
             },
             "resnet18_imagenet": {
@@ -242,14 +262,14 @@
                 "metric_type": "Acc@1",
                 "model_description": "ResNet-34"
             },
-            "resnet34_imagenet_filter_pruning_geomean": {
-                "config": "examples/torch/classification/configs/pruning/resnet34_pruning_geometric_median.json",
+            "resnet34_imagenet_filter_pruning_geomean_kd": {
+                "config": "examples/torch/classification/configs/pruning/resnet34_pruning_geometric_median_kd.json",
                 "reference": "resnet34_imagenet",
-                "target": 72.73,
+                "target": 73.11,
                 "metric_type": "Acc@1",
-                "resume": "resnet34_imagenet_filter_pruning_geomean.pth",
+                "resume": "resnet34_imagenet_filter_pruning_geomean_kd.pth",
                 "model_description": "ResNet-34",
-                "compression_description": "Filter pruning, 40%, geometric median criterion"
+                "compression_description": "Filter pruning, 50%, geometric median criterion + KD"
             },
             "googlenet_imagenet": {
                 "config": "examples/torch/classification/configs/pruning/googlenet_imagenet.json",
@@ -269,7 +289,7 @@
         }
     },
     "object_detection": {
-        "VOCdevkit": {
+        "voc": {
             "ssd300_mobilenet_voc": {
                 "config": "examples/torch/object_detection/configs/ssd300_mobilenet_voc.json",
                 "target": 62.23,
@@ -377,7 +397,8 @@
                 "resume": "unet_camvid.pth",
                 "mean_value": "[99.603,103.329,105.6567]",
                 "scale_value": "[75.643,77.821,76.746]",
-                "model_description": "UNet"
+                "model_description": "UNet",
+                "multiprocessing_distributed": true
             },
             "unet_camvid_int8": {
                 "config": "examples/torch/semantic_segmentation/configs/unet_camvid_int8.json",
@@ -391,7 +412,8 @@
                 "scale_value": "[75.643,77.821,76.746]",
                 "diff_fp32_min": -1,
                 "diff_fp32_max": 0.1,
-                "diff_target_min": -0.2
+                "diff_target_min": -0.2,
+                "multiprocessing_distributed": true
             },
             "unet_camvid_magnitude_sparsity_int8": {
                 "config": "examples/torch/semantic_segmentation/configs/unet_camvid_magnitude_sparsity_int8.json",
@@ -404,7 +426,8 @@
                 "model_description": "UNet",
                 "compression_description": "INT8 + Sparsity 60% (Magnitude)",
                 "diff_fp32_min": -1,
-                "diff_fp32_max": 0.6
+                "diff_fp32_max": 0.6,
+                "multiprocessing_distributed": true
             },
             "icnet_camvid": {
                 "config": "examples/torch/semantic_segmentation/configs/icnet_camvid.json",
@@ -413,7 +436,8 @@
                 "resume": "icnet_camvid.pth",
                 "mean_value": "[99.603,103.329,105.6567]",
                 "scale_value": "[75.643,77.821,76.746]",
-                "model_description": "ICNet"
+                "model_description": "ICNet",
+                "multiprocessing_distributed": true
             },
             "icnet_camvid_int8": {
                 "config": "examples/torch/semantic_segmentation/configs/icnet_camvid_int8.json",
@@ -426,8 +450,8 @@
                 "model_description": "ICNet",
                 "compression_description": "INT8",
                 "diff_fp32_min": -1,
-                "diff_fp32_max": 0.1
-                
+                "diff_fp32_max": 0.1,
+                "multiprocessing_distributed": true
             },
             "icnet_camvid_magnitude_sparsity_int8": {
                 "config": "examples/torch/semantic_segmentation/configs/icnet_camvid_magnitude_sparsity_int8.json",
@@ -440,7 +464,8 @@
                 "model_description": "ICNet",
                 "compression_description": "INT8 + Sparsity 60% (Magnitude)",
                 "diff_fp32_min": -1,
-                "diff_fp32_max": 0.1
+                "diff_fp32_max": 0.1,
+                "multiprocessing_distributed": true
             }
         },
         "mapillary_vistas": {
@@ -449,7 +474,8 @@
                 "target": 56.23,
                 "metric_type": "Mean IoU",
                 "resume": "unet_mapillary.pth",
-                "model_description": "UNet"
+                "model_description": "UNet",
+                "multiprocessing_distributed": true
             },
             "unet_mapillary_int8": {
                 "config": "examples/torch/semantic_segmentation/configs/unet_mapillary_int8.json",
@@ -460,7 +486,8 @@
                 "model_description": "UNet",
                 "compression_description": "INT8",
                 "diff_fp32_min": -1,
-                "diff_fp32_max": 0.1
+                "diff_fp32_max": 0.1,
+                "multiprocessing_distributed": true
             },
             "unet_mapillary_magnitude_sparsity_int8": {
                 "config": "examples/torch/semantic_segmentation/configs/unet_mapillary_magnitude_sparsity_int8.json",
@@ -472,7 +499,8 @@
                 "compression_description": "INT8 + Sparsity 60% (Magnitude)",
                 "diff_fp32_min": -1,
                 "diff_fp32_max": 0.1,
-                "diff_target_max": 0.2
+                "diff_target_max": 0.2,
+                "multiprocessing_distributed": true
             },
             "unet_mapillary_pruning_geometric_median": {
                 "config": "examples/torch/semantic_segmentation/configs/unet_mapillary_pruning_geometric_median.json",
@@ -483,7 +511,8 @@
                 "model_description": "UNet",
                 "compression_description": "Filter pruning, 25%, geometric median criterion",
                 "diff_fp32_min": -1,
-                "diff_fp32_max": 0.1
+                "diff_fp32_max": 0.1,
+                "multiprocessing_distributed": true
             }
         }
     }

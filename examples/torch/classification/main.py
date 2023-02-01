@@ -1,5 +1,5 @@
 """
- Copyright (c) 2019-2020 Intel Corporation
+ Copyright (c) 2019-2023 Intel Corporation
  Licensed under the Apache License, Version 2.0 (the "License");
  you may not use this file except in compliance with the License.
  You may obtain a copy of the License at
@@ -22,6 +22,7 @@ from typing import Any
 
 import torch
 from torch.backends import cudnn
+from torch.cuda.amp.autocast_mode import autocast
 from torch import nn
 import torch.nn.parallel
 import torch.optim
@@ -54,6 +55,7 @@ from examples.torch.common.optimizer import make_optimizer
 from examples.torch.common.sample_config import SampleConfig
 from examples.torch.common.sample_config import create_sample_config
 from examples.torch.common.utils import MockDataset
+from examples.torch.common.utils import NullContextManager
 from examples.torch.common.utils import SafeMLFLow
 from examples.torch.common.utils import configure_device
 from examples.torch.common.utils import configure_logging
@@ -94,6 +96,11 @@ def get_argument_parser():
     )
     parser.add_argument('--test-every-n-epochs', default=1, type=int,
                         help='Enables running validation every given number of epochs')
+    parser.add_argument('--mixed-precision',
+                        dest='mixed_precision',
+                        help='Enables torch.cuda.amp autocasting during training and'
+                             ' validation steps',
+                        action='store_true')
     return parser
 
 
@@ -125,7 +132,7 @@ def main(argv):
     if not is_staged_quantization(config):
         start_worker(main_worker, config)
     else:
-        from examples.torch.classification.staged_quantization_worker import staged_quantization_main_worker
+        from examples.torch.classification.staged_quantization_worker import staged_quantization_main_worker #pylint: disable=cyclic-import
         start_worker(staged_quantization_main_worker, config)
 
 
@@ -276,6 +283,7 @@ def main_worker(current_gpu, config: SampleConfig):
                                                 configure_optimizers_fn=configure_optimizers_fn,
                                                 tensorboard_writer=config.tb,
                                                 log_dir=config.log_dir)
+            logger.info(f'Compressed model statistics:\n{acc_aware_training_loop.statistics.to_str()}')
         else:
             train(config, compression_ctrl, model, criterion, train_criterion_fn, lr_scheduler, model_name, optimizer,
                   train_loader, train_sampler, val_loader, best_acc1)
@@ -354,16 +362,17 @@ def get_dataset(dataset_config, config, transform, is_train):
         prefix = 'train' if is_train else 'val'
         return datasets.ImageFolder(osp.join(config.dataset_dir, prefix), transform)
     # For testing purposes
+    num_images = config.get('num_mock_images', 1000)
     if dataset_config == 'mock_32x32':
-        return MockDataset(img_size=(32, 32), transform=transform)
+        return MockDataset(img_size=(32, 32), transform=transform, num_images=num_images)
     if dataset_config == 'mock_299x299':
-        return MockDataset(img_size=(299, 299), transform=transform)
+        return MockDataset(img_size=(299, 299), transform=transform, num_images=num_images)
     return create_cifar(config, dataset_config, is_train, transform)
 
 
 def create_cifar(config, dataset_config, is_train, transform):
     create_cifar_fn = None
-    if dataset_config == 'cifar100':
+    if dataset_config in ['cifar100', 'cifar100_224x224']:
         create_cifar_fn = partial(CIFAR100, config.dataset_dir, train=is_train, transform=transform)
     if dataset_config == 'cifar10':
         create_cifar_fn = partial(CIFAR10, config.dataset_dir, train=is_train, transform=transform)
@@ -375,33 +384,43 @@ def create_cifar(config, dataset_config, is_train, transform):
 def create_datasets(config):
     dataset_config = config.dataset if config.dataset is not None else 'imagenet'
     dataset_config = dataset_config.lower()
-    assert dataset_config in ['imagenet', 'cifar100', 'cifar10', 'mock_32x32', 'mock_299x299'], \
+    assert dataset_config in ['imagenet', 'cifar100', 'cifar10', 'cifar100_224x224', 'mock_32x32', 'mock_299x299'], \
         "Unknown dataset option"
 
     if dataset_config == 'imagenet':
         normalize = transforms.Normalize(mean=(0.485, 0.456, 0.406),
                                          std=(0.229, 0.224, 0.225))
-    elif dataset_config == 'cifar100':
+    elif dataset_config in ['cifar100', 'cifar100_224x224']:
         normalize = transforms.Normalize(mean=(0.5071, 0.4865, 0.4409),
                                          std=(0.2673, 0.2564, 0.2761))
-    elif dataset_config in ['cifar10', 'mock_32x32', 'mock_299x299']:
+    elif dataset_config == 'cifar10':
+        normalize = transforms.Normalize(mean=(0.4914, 0.4822, 0.4465),
+                                         std=(0.2471, 0.2435, 0.2616))
+    elif dataset_config in ['mock_32x32', 'mock_299x299']:
         normalize = transforms.Normalize(mean=(0.5, 0.5, 0.5),
                                          std=(0.5, 0.5, 0.5))
 
     input_info_list = create_input_infos(config)
     image_size = input_info_list[0].shape[-1]
     size = int(image_size / 0.875)
-    if dataset_config in ['cifar10', 'cifar100']:
-        val_transform = transforms.Compose([
+    if dataset_config in ['cifar10', 'cifar100_224x224', 'cifar100']:
+        list_val_transforms = [
             transforms.ToTensor(),
-            normalize,
-        ])
-        train_transforms = transforms.Compose([
+            normalize
+        ]
+        if dataset_config == 'cifar100_224x224':
+            list_val_transforms.insert(0, transforms.Resize(image_size))
+        val_transform = transforms.Compose(list_val_transforms)
+
+        list_train_transforms = [
             transforms.RandomCrop(image_size, padding=4),
             transforms.RandomHorizontalFlip(),
             transforms.ToTensor(),
-            normalize,
-        ])
+            normalize
+        ]
+        if dataset_config == 'cifar100_224x224':
+            list_train_transforms.insert(0, transforms.Resize(image_size))
+        train_transforms = transforms.Compose(list_train_transforms)
     elif dataset_config in ['mock_32x32', 'mock_299x299']:
         val_transform = transforms.Compose([
             transforms.Resize(size),
@@ -443,14 +462,16 @@ def create_data_loaders(config, train_dataset, val_dataset):
     # ourselves based on the total number of GPUs we have
     batch_size = int(config.batch_size)
     workers = int(config.workers)
+    batch_size_val = int(config.batch_size_val) if config.batch_size_val is not None else int(config.batch_size)
     if config.execution_mode == ExecutionMode.MULTIPROCESSING_DISTRIBUTED:
         batch_size //= config.ngpus_per_node
+        batch_size_val //= config.ngpus_per_node
         workers //= config.ngpus_per_node
 
     val_sampler = torch.utils.data.SequentialSampler(val_dataset)
     val_loader = torch.utils.data.DataLoader(
         val_dataset,
-        batch_size=batch_size, shuffle=False,
+        batch_size=batch_size_val, shuffle=False,
         num_workers=workers, pin_memory=pin_memory,
         sampler=val_sampler, drop_last=False)
 
@@ -492,6 +513,7 @@ def train_epoch(train_loader, model, criterion, criterion_fn, optimizer, compres
         train_iters = len(train_loader)
 
     compression_scheduler = compression_ctrl.scheduler
+    casting = autocast if config.mixed_precision else NullContextManager
 
     # switch to train mode
     model.train()
@@ -507,12 +529,13 @@ def train_epoch(train_loader, model, criterion, criterion_fn, optimizer, compres
         target = target.to(config.device)
 
         # compute output
-        output = model(input_)
-        criterion_loss = criterion_fn(output, target, criterion)
+        with casting():
+            output = model(input_)
+            criterion_loss = criterion_fn(output, target, criterion)
 
-        # compute compression loss
-        compression_loss = compression_ctrl.loss()
-        loss = criterion_loss + compression_loss
+            # compute compression loss
+            compression_loss = compression_ctrl.loss()
+            loss = criterion_loss + compression_loss
 
         if isinstance(output, InceptionOutputs):
             output = output.logits
@@ -553,13 +576,13 @@ def train_epoch(train_loader, model, criterion, criterion_fn, optimizer, compres
                 ))
 
         if is_main_process() and log_training_info:
-            global_step = len(train_loader) * epoch
+            global_step = train_iters * epoch
             config.tb.add_scalar("train/learning_rate", get_lr(optimizer), i + global_step)
-            config.tb.add_scalar("train/criterion_loss", criterion_losses.avg, i + global_step)
-            config.tb.add_scalar("train/compression_loss", compression_losses.avg, i + global_step)
-            config.tb.add_scalar("train/loss", losses.avg, i + global_step)
-            config.tb.add_scalar("train/top1", top1.avg, i + global_step)
-            config.tb.add_scalar("train/top5", top5.avg, i + global_step)
+            config.tb.add_scalar("train/criterion_loss", criterion_losses.val, i + global_step)
+            config.tb.add_scalar("train/compression_loss", compression_losses.val, i + global_step)
+            config.tb.add_scalar("train/loss", losses.val, i + global_step)
+            config.tb.add_scalar("train/top1", top1.val, i + global_step)
+            config.tb.add_scalar("train/top5", top5.val, i + global_step)
 
             statistics = compression_ctrl.statistics(quickly_collected_only=True)
             for stat_name, stat_value in prepare_for_tensorboard(statistics).items():
@@ -578,6 +601,7 @@ def validate(val_loader, model, criterion, config, epoch=0, log_validation_info=
     # switch to evaluate mode
     model.eval()
 
+    casting = autocast if config.mixed_precision else NullContextManager
     with torch.no_grad():
         end = time.time()
         for i, (input_, target) in enumerate(val_loader):
@@ -585,8 +609,9 @@ def validate(val_loader, model, criterion, config, epoch=0, log_validation_info=
             target = target.to(config.device)
 
             # compute output
-            output = model(input_)
-            loss = default_criterion_fn(output, target, criterion)
+            with casting():
+                output = model(input_)
+                loss = default_criterion_fn(output, target, criterion)
 
             # measure accuracy and record loss
             acc1, acc5 = accuracy(output, target, topk=(1, 5))
