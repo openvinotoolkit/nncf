@@ -53,16 +53,20 @@ class TestParameters:
 
 @pytest.mark.parametrize('test_parameters',
                          ((TestParameters(RangeType.MEAN_MINMAX, False, None, 64.5, -63.5)),
-                          (TestParameters(RangeType.MEAN_MINMAX, False, (0, 2, 3), np.array((1, 0.55, 64.5)),
-                                          np.array((-4.5, 0, -63.5)))),
-                          (TestParameters(RangeType.MEAN_MINMAX, True, (0, 2, 3), np.array((5.5, 1, 64.5)),
-                                          np.array((-4.5, 0, -63.5)))),
+                          (TestParameters(RangeType.MEAN_MINMAX, False, (0, 2, 3),
+                                          np.array((1, 0.55, 64.5)).reshape((1, 3, 1, 1)),
+                                          np.array((-4.5, 0, -63.5)).reshape((1, 3, 1, 1)))),
+                          (TestParameters(RangeType.MEAN_MINMAX, True, (0, 2, 3),
+                                          np.array((5.5, 1, 64.5)).reshape((1, 3, 1, 1)),
+                                          np.array((-4.5, 0, -63.5)).reshape((1, 3, 1, 1)))),
                           (TestParameters(RangeType.MINMAX, False, None, 128, -128)),
                           (TestParameters(RangeType.MINMAX, True, None, 128, -128)),
-                          (TestParameters(RangeType.MINMAX, False, (0, 2, 3), np.array((1, 1, 128)),
-                                          np.array((-10, -1, -128)))),
-                          (TestParameters(RangeType.MINMAX, True, (0, 2, 3), np.array((10, 1, 128)),
-                                          np.array((-10, -1, -128)))),
+                          (TestParameters(RangeType.MINMAX, False, (0, 2, 3),
+                                          np.array((1, 1, 128)).reshape((1, 3, 1, 1)),
+                                          np.array((-10, -1, -128)).reshape((1, 3, 1, 1)))),
+                          (TestParameters(RangeType.MINMAX, True, (0, 2, 3),
+                                          np.array((10, 1, 128)).reshape((1, 3, 1, 1)),
+                                          np.array((-10, -1, -128)).reshape((1, 3, 1, 1)))),
                           )
                          )
 def test_statistics_aggregator(test_parameters):
