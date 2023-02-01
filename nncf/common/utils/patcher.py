@@ -21,20 +21,22 @@ from typing import Callable
 
 
 class Patcher:
-    """Simple monkey patch helper."""
+    """
+    Method patch helper. Implements monkey patching approach.
+    """
 
     def __init__(self):
         self._patched = OrderedDict()
 
-    def patch(  # noqa: C901
-        self,
-        obj_cls,
-        wrapper: Callable,
-        *,
-        force: bool = True,
-    ):
-        """Do monkey patch."""
-        obj_cls, fn_name = self.import_obj(obj_cls)
+    def patch(self, fn, wrapper: Callable, *, override: bool = True):
+        """
+        Apply patching
+        :param fn: Function to be overriden.
+        :param wrapper: Wrapper function to override with.
+        :param override: Whether to override previously applied patches or not.
+        """
+
+        obj_cls, fn_name = self._import_obj(fn)
 
         # wrap only if function does exist
         n_args = len(inspect.getfullargspec(obj_cls.__getattribute__)[0])
@@ -43,22 +45,23 @@ class Patcher:
                 fn = obj_cls.__getattribute__(fn_name)
             except AttributeError:
                 return
-            self._patch_module_fn(obj_cls, fn_name, fn, wrapper, force)
+            self._patch_module_fn(obj_cls, fn_name, fn, wrapper, override)
         else:
             if inspect.isclass(obj_cls):
                 try:
                     fn = obj_cls.__getattribute__(obj_cls, fn_name)  # type: ignore
                 except AttributeError:
                     return
-                self._patch_class_fn(obj_cls, fn_name, fn, wrapper, force)
+                self._patch_class_fn(obj_cls, fn_name, fn, wrapper, override)
             else:
                 try:
                     fn = obj_cls.__getattribute__(fn_name)
                 except AttributeError:
                     return
-                self._patch_instance_fn(obj_cls, fn_name, fn, wrapper, force)
+                self._patch_instance_fn(obj_cls, fn_name, fn, wrapper, override)
 
-    def import_obj(self, obj_cls):  # noqa: C901
+    @staticmethod
+    def _import_obj(obj_cls):  # noqa: C901
         """Object import helper."""
         if isinstance(obj_cls, str):
             fn_name = obj_cls.split(".")[-1]
@@ -73,17 +76,14 @@ class Patcher:
                 if inspect.ismodule(obj_cls.args[0]):
                     # patched function
                     obj_cls, fn = obj_cls.args
-                    fn_name = fn.__name__
                 else:
                     # patched method
-                    fn_name = obj_cls.args[0].__name__
                     obj_cls = obj_cls.args[0]
 
+            fn_name = obj_cls.__name__
             if inspect.ismethod(obj_cls):
-                fn_name = obj_cls.__name__
                 obj_cls = obj_cls.__self__
             else:
-                fn_name = obj_cls.__name__
                 obj_cls = ".".join([obj_cls.__module__] + obj_cls.__qualname__.split(".")[:-1])
 
         if isinstance(obj_cls, str):
@@ -95,20 +95,18 @@ class Patcher:
                 obj_cls = getattr(importlib.import_module(module), obj_cls)
         return obj_cls, fn_name
 
-    def _patch_module_fn(self, obj_cls, fn_name, fn, wrapper, force):
+    def _patch_module_fn(self, obj_cls, fn_name, fn, wrapper, override):
         assert len(inspect.getfullargspec(obj_cls.__getattribute__)[0]) == 1
         obj_cls_path = obj_cls.__name__
         key = (obj_cls_path, fn_name)
-        fn_ = self._initialize(key, force)
+        fn_ = self._initialize(key, override)
         if fn_ is not None:
             fn = fn_
         setattr(obj_cls, fn_name, partial(wrapper, obj_cls, fn))
         self._patched[key].append((fn, wrapper))
 
-    def _patch_class_fn(self, obj_cls, fn_name, fn, wrapper, force):
-
+    def _patch_class_fn(self, obj_cls, fn_name, fn, wrapper, override):
         if isinstance(fn, (staticmethod, classmethod)):
-
             def helper(*args, **kwargs):  # type: ignore
                 wrapper = kwargs.pop("__wrapper")
                 fn = kwargs.pop("__fn")
@@ -116,17 +114,13 @@ class Patcher:
                 if isinstance(args[0], obj_cls):
                     return wrapper(args[0], fn.__get__(args[0]), *args[1:], **kwargs)
                 return wrapper(obj_cls, fn.__get__(obj_cls), *args, **kwargs)
-
         elif isinstance(fn, type(all.__call__)):
-
             def helper(self, *args, **kwargs):  # type: ignore
                 kwargs.pop("__obj_cls")
                 wrapper = kwargs.pop("__wrapper")
                 fn = kwargs.pop("__fn")
                 return wrapper(self, fn, *args, **kwargs)
-
         else:
-
             def helper(self, *args, **kwargs):  # type: ignore
                 kwargs.pop("__obj_cls")
                 wrapper = kwargs.pop("__wrapper")
@@ -136,31 +130,27 @@ class Patcher:
         assert len(inspect.getfullargspec(obj_cls.__getattribute__)[0]) == 2
         obj_cls_path = obj_cls.__module__ + "." + obj_cls.__name__
         key = (obj_cls_path, fn_name)
-        fn_ = self._initialize(key, force)
+        fn_ = self._initialize(key, override)
         if fn_ is not None:
             fn = fn_
-        setattr(
-            obj_cls,
-            fn_name,
-            partialmethod(helper, __wrapper=wrapper, __fn=fn, __obj_cls=obj_cls),
-        )
+        setattr(obj_cls, fn_name, partialmethod(helper, __wrapper=wrapper, __fn=fn, __obj_cls=obj_cls),)
         self._patched[key].append((fn, wrapper))
 
-    def _patch_instance_fn(self, obj_cls, fn_name, fn, wrapper, force):
+    def _patch_instance_fn(self, obj_cls, fn_name, fn, wrapper, override):
         assert len(inspect.getfullargspec(obj_cls.__getattribute__)[0]) == 2
         obj_cls_path = id(obj_cls)
         key = (obj_cls_path, fn_name)
-        fn_ = self._initialize(key, force)
+        fn_ = self._initialize(key, override)
         if fn_ is not None:
             fn = fn_
         setattr(obj_cls, fn_name, partialmethod(wrapper, fn).__get__(obj_cls))
         self._patched[key].append((fn, wrapper))
 
-    def _initialize(self, key, force):
+    def _initialize(self, key, override):
         fn = None
         if key not in self._patched:
             self._patched[key] = []
-        if force:
+        if override:
             while self._patched[key]:
                 fn, *_ = self._patched[key].pop()
         return fn
