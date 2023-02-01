@@ -164,7 +164,7 @@ def skip_if_half_on_cpu(is_fp16, use_cuda):
 
 
 def check_quant_moved(test_input, test_val, ref_val, quant_len,
-                      input_low, input_range, rtol, atol=1e-10):
+                      input_low, input_range, is_fp16, rtol, atol=1e-10):
     """
     Checks values in `test_val` are inside of closest quant and
     values in `test_val` and `ref_val` elementwise eather equal with given rtol/atol or
@@ -184,7 +184,11 @@ def check_quant_moved(test_input, test_val, ref_val, quant_len,
 
     mask_in = (to_tensor(input_low) < test_input).logical_and(test_input < to_tensor(input_low + input_range))
     quant_len_broadcasted = torch.masked_select(to_tensor(quant_len), mask_in)
-    assert ((test_input[mask_in] - test_val[mask_in]).abs() < quant_len_broadcasted).all(), \
+    # Due to FP16 arithmetic difference could be equal to
+    # one quant. 0.05 is added as an eps diff between two fp16 values
+    inp_out_deviation_mult = 1.05 if is_fp16 else 0.51
+    inp_out_abs_diff = (test_input[mask_in] - test_val[mask_in]).abs()
+    assert (inp_out_abs_diff < inp_out_deviation_mult * quant_len_broadcasted).all(), \
         'quantized values are outside of closest quant'
 
     t_numpy = test_val.cpu().detach().numpy()
@@ -223,7 +227,7 @@ class TestParametrized:
     @pytest.mark.parametrize("is_signed", (True, False), ids=('signed', 'unsigned'))
     class TestSymmetric:
         @staticmethod
-        def generate_scale(input_size, scale_mode, is_weights, fixed=None):
+        def generate_scale(input_size, scale_mode, is_weights, is_fp16, fixed=None):
             assert scale_mode in ["single_scale", "per_channel_scale"]
 
             if fixed is not None:
@@ -231,7 +235,7 @@ class TestParametrized:
                     return fixed
             else:
                 def calc_scale():
-                    min_scale = 0.1
+                    min_scale = 1. if is_fp16 else 0.1
                     return min_scale + np.random.random_sample((1,)) * (1 - min_scale)
 
             if scale_mode == "single_scale":
@@ -279,7 +283,7 @@ class TestParametrized:
             else:
                 np_dtype = np.float32
 
-            ref_scale = self.generate_scale(input_size, scale_mode, is_weights).astype(np_dtype)
+            ref_scale = self.generate_scale(input_size, scale_mode, is_weights, is_fp16).astype(np_dtype)
             test_scale = get_test_data([ref_scale], use_cuda, is_fp16=is_fp16)
 
             ref_scale = abs(ref_scale) + EPS
@@ -303,7 +307,7 @@ class TestParametrized:
             if use_cuda:
                 quant_len = ref_input_range / (2 ** bits - 1)
                 check_quant_moved(test_input, test_value, ref_value, quant_len,
-                                  ref_input_low, ref_input_range, rtol=1e-2 if is_fp16 else 1e-3)
+                                  ref_input_low, ref_input_range, is_fp16, rtol=1e-2 if is_fp16 else 1e-3)
             else:
                 # Note: this will fail in case CPU reference quantization implementations had to be used instead of the
                 # compiled extensions, since they don't work well with middle-of-quanta values.
@@ -332,7 +336,8 @@ class TestParametrized:
                 # so input is small and scale is big, small FP16 input multiplies big fp16 scale,
                 # deviation is significant.
                 fixed = 2 ** (bits - 1) - 1
-            ref_scale = self.generate_scale(input_size, scale_mode, is_weights, fixed=fixed).astype(np_dtype)
+            ref_scale = self.generate_scale(input_size, scale_mode, is_weights,
+                                            is_fp16, fixed=fixed).astype(np_dtype)
             test_scale = get_test_data([ref_scale], use_cuda, is_backward=True, is_fp16=is_fp16)
             level_low, level_high, levels = self.get_range_level(is_signed, bits)
 
@@ -380,10 +385,10 @@ class TestParametrized:
         def generate_range(cls, input_size, scale_mode, is_weights, is_fp16, fixed=None):
             np_dtype = np.float16 if is_fp16 else np.float32
             return map(lambda x: x.astype(np_dtype),
-                       cls.generate_range_fp64(input_size, scale_mode, is_weights, fixed))
+                       cls.generate_range_fp64(input_size, scale_mode, is_weights, fixed, is_fp16))
 
         @staticmethod
-        def generate_range_fp64(input_size, scale_mode, is_weights, fixed):
+        def generate_range_fp64(input_size, scale_mode, is_weights, fixed, is_fp16):
             assert scale_mode in ["single_scale", "per_channel_scale"]
 
             if fixed is not None:
@@ -391,7 +396,7 @@ class TestParametrized:
                     return fixed['input_low'], fixed['input_range']
             else:
                 def calc_low_and_range():
-                    min_range = 0.1
+                    min_range = 1. if is_fp16 else 0.1
                     input_low = np.random.random_sample() * 3 - 1.5
                     input_range = min_range + np.random.random_sample() * 3
                     return input_low, input_range
@@ -436,12 +441,6 @@ class TestParametrized:
             if not torch.cuda.is_available() and use_cuda is True:
                 pytest.skip("Skipping CUDA test cases for CPU only setups")
 
-            ticket_102808_problematic_cases = ["fp16-activation-per_channel_scale-cuda-8bit-[1-288-14-14]",
-                                               "fp16-activation-per_channel_scale-cuda-8bit-[16-192-28-28]",
-                                               "fp16-activation-per_channel_scale-cuda-8bit-[16-576-14-14]"]
-            if request.node.callspec.id in ticket_102808_problematic_cases:
-                pytest.xfail("Ticket 102808")
-
             skip_if_half_on_cpu(is_fp16, use_cuda)
             if is_fp16:
                 np_dtype = np.float16
@@ -474,7 +473,7 @@ class TestParametrized:
             if use_cuda:
                 quant_len = ref_input_range / (2 ** bits - 1)
                 check_quant_moved(test_input, test_value, ref_value, quant_len,
-                                  ref_input_low, ref_input_range, rtol=1e-2 if is_fp16 else 1e-3)
+                                  ref_input_low, ref_input_range, is_fp16, rtol=1e-2 if is_fp16 else 1e-3)
             else:
                 # Note: this will fail in case CPU reference quantization implementations had to be used instead of the
                 # compiled extensions, since they don't work well with middle-of-quanta values.
