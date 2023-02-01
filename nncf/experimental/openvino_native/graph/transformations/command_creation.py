@@ -20,7 +20,9 @@ from nncf.experimental.openvino_native.graph.transformations.commands import OVT
 from nncf.experimental.openvino_native.graph.transformations.commands import OVBiasCorrectionCommand
 
 
-def create_bias_correction_command(node: NNCFNode, bias_value: np.ndarray, nncf_graph: NNCFGraph) -> OVBiasCorrectionCommand:
+def create_bias_correction_command(node: NNCFNode,
+                                   bias_value: np.ndarray,
+                                   nncf_graph: NNCFGraph) -> OVBiasCorrectionCommand:
     """
     Creates bias correction command.
 
