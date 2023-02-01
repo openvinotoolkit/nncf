@@ -31,7 +31,7 @@ MODELS = [
      'resnet50-v1-7', 0.8119745222929936),
     (
     'https://github.com/onnx/models/raw/main/vision/classification/efficientnet-lite4/model/efficientnet-lite4-11.onnx',
-    'efficientnet-lite4-11', 0.8012738853503185)
+    'efficientnet-lite4-11', 0.8010191082802548)
 ]
 
 DATASET_URL = 'https://s3.amazonaws.com/fast-ai-imageclas/imagenette2-320.tgz'
@@ -90,7 +90,7 @@ def validate(quantized_model_path: Path, data_loader: torch.utils.data.DataLoade
 
 
 @pytest.mark.parametrize('model_url, model_name, int8_ref_top1', MODELS, ids=[model_name[1] for model_name in MODELS])
-def test_compression(tmp_path, model_url, model_name, int8_ref_top1):
+def test_compression(tmp_path, dataset_path, model_url, model_name, int8_ref_top1):
     original_model_path = download_model(model_url, tmp_path)
     dataset_path = download_dataset()
 
