@@ -163,14 +163,3 @@ class MinMaxAlgoBackend(ABC):
         :param node: NNCFNode to find its weight input port ID.
         :return: The input port ID of the weight.
         """
-
-    @staticmethod
-    @abstractmethod
-    def get_weight_config(config: QuantizerConfig, model: TModel) -> QuantizerConfig:
-        """
-        Returns backend-specific configuration based on the input model attributes.
-
-        :param config: Base QuantizerConfig from the algo.
-        :param model: Backend-specific model instance.
-        :return: The updated QuantizerConfig.
-        """
