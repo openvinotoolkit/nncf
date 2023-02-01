@@ -66,22 +66,21 @@ def validate(quantized_model_path: Path, data_loader: torch.utils.data.DataLoade
     compiled_model = ov.compile_model(quantized_model_path)
     infer_queue = ov.AsyncInferQueue(compiled_model)
 
-    predictions = []
-    references = []
+    predictions = [0] * len(data_loader)
+    references = [-1] * len(data_loader)
 
-    def res_callback(infer_request: ov.InferRequest, target: np.ndarray) -> None:
-        pred = next(iter(infer_request.results.values()))
+    def res_callback(infer_request: ov.InferRequest, userdata) -> None:
+        pred = infer_request.get_output_tensor().data
         pred_class = np.argmax(pred, axis=1)
         if pred_class.item() in from_imagenet_to_imageneetee:
             pred_class[0] = from_imagenet_to_imageneetee[pred_class.item()]
-        predictions.append(pred_class)  # pylint:disable=no-member
-        if target.item() in from_imagenet_to_imageneetee:
-            target[0] = from_imagenet_to_imageneetee[target.item()]
-        references.append(target)  # pylint:disable=no-member
+        predictions[userdata] = [pred_class]
 
     infer_queue.set_callback(res_callback)
-    for images, target in tqdm(data_loader):
-        infer_queue.start_async({0: images}, target)
+
+    for i, (images, target) in tqdm(enumerate(data_loader)):
+        infer_queue.start_async(images, userdata=i)
+        references[i] = target
     infer_queue.wait_all()
 
     predictions = np.concatenate(predictions, axis=0)
