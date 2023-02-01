@@ -30,7 +30,8 @@ REF_METATYPES_COUNTERS = [
     [ovm.OVParameterMetatype, ovm.OVParameterMetatype, ovm.OVConstantMetatype, ovm.OVMultiplyMetatype,
      ovm.OVConstantMetatype, ovm.OVAddMetatype, ovm.OVConstantMetatype, ovm.OVSubtractMetatype,
      ovm.OVConstantMetatype, ovm.OVConvolutionMetatype, ovm.OVReluMetatype, ovm.OVConcatMetatype,
-     ovm.OVTransposeMetatype, ovm.OVConstantMetatype, ovm.OVResultMetatype],
+     ovm.OVTransposeMetatype, ovm.OVConstantMetatype, ovm.OVResultMetatype,
+     ovm.OVAddMetatype, ovm.OVConstantMetatype],
     [ovm.OVParameterMetatype, ovm.OVConstantMetatype, ovm.OVDepthwiseConvolutionMetatype,
      ovm.OVConstantMetatype, ovm.OVAddMetatype, ovm.OVReluMetatype, ovm.OVResultMetatype]]
 

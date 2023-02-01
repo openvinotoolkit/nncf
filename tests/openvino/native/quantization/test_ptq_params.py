@@ -64,7 +64,7 @@ def test_range_type_per_channel(range_type, original_model):
     algo = PostTrainingQuantization(PostTrainingQuantizationParameters(range_type=range_type))
     min_max_algo = algo.algorithms[0]
     min_max_algo._backend_entity = OVMinMaxAlgoBackend()
-    model = original_model.onnx_model
+    model = original_model.ov_model
     assert min_max_algo._parameters.range_type == range_type
     stat_points = min_max_algo.get_statistic_points(model)
 

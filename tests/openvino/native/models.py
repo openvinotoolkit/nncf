@@ -85,11 +85,11 @@ class DepthwiseConvModel(OVReferenceModel):
         pads = [0, 0]
         dilations = [1, 1]
         conv = opset.group_convolution(input_1, kernel, strides, pads, pads, dilations, name="Conv")
-        relu = opset.relu(conv, name="Relu")
         bias = self._rng.random((1, 3, 1, 1)).astype(np.float32)
-        add = opset.add(relu, bias, name="Add")
+        add = opset.add(conv, bias, name="Add")
+        relu = opset.relu(add, name="Relu")
 
-        result = opset.result(add, name="Result")
+        result = opset.result(relu, name="Result")
         model = ov.Model([result], [input_1])
         return model
 
