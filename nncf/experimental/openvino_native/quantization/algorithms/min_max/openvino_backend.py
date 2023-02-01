@@ -123,7 +123,3 @@ class OVMinMaxAlgoBackend(MinMaxAlgoBackend):
     @staticmethod
     def get_weight_tensor_port_id(node: NNCFNode) -> int:
         return node.layer_attributes.const_port_id
-
-    @staticmethod
-    def get_weight_config(config: QuantizerConfig, model: ov.Model) -> QuantizerConfig:
-        return config

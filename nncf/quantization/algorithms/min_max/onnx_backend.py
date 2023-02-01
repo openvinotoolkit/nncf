@@ -11,7 +11,6 @@
  limitations under the License.
 """
 
-from copy import deepcopy
 from typing import Dict, List, Tuple
 import numpy as np
 import onnx
@@ -25,7 +24,6 @@ from nncf.common.quantization.structs import QuantizerConfig
 from nncf.common.tensor_statistics.collectors import ReductionShape
 from nncf.common.tensor_statistics.statistics import MinMaxTensorStatistic
 from nncf.common.utils.backend import BackendType
-from nncf.common.logging import nncf_logger
 
 from nncf.onnx.graph.metatypes.onnx_metatypes import WEIGHT_LAYER_METATYPES
 from nncf.onnx.graph.metatypes.onnx_metatypes import ONNXNonMaxSuppressionMetatype
@@ -78,7 +76,7 @@ class ONNXMinMaxAlgoBackend(MinMaxAlgoBackend):
     def create_activation_quantizer_insertion_command(target_point: ONNXTargetPoint,
                                                       quantizer_config: QuantizerConfig,
                                                       statistics: MinMaxTensorStatistic) \
-                                                      -> ONNXQuantizerInsertionCommand:
+            -> ONNXQuantizerInsertionCommand:
         axis = 1 if quantizer_config.per_channel else None
         parameters = calculate_activation_quantizer_parameters(statistics, quantizer_config, axis)
         return ONNXQuantizerInsertionCommand(target_point, parameters)
@@ -119,13 +117,3 @@ class ONNXMinMaxAlgoBackend(MinMaxAlgoBackend):
     @staticmethod
     def get_weight_tensor_port_id(node: NNCFNode) -> int:
         return node.metatype.weight_definitions.weight_port_id
-
-    @staticmethod
-    def get_weight_config(config: QuantizerConfig, model: onnx.ModelProto) -> QuantizerConfig:
-        config = deepcopy(config)
-        if model.opset_import[0].version < 13:
-            config.per_channel = False
-            nncf_logger.warning(f"Model opset version is {model.opset_import[0].version} < 13 - "
-                                "will not use per-channel quantization because it is not supported in this opset.")
-
-        return config
