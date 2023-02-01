@@ -42,7 +42,7 @@ class TestModel(nn.Module):
         assert get_current_context().is_tracing == self.correct_is_tracing
 
         output = torch.zeros_like(x)
-        for idx in range(torch.greater(x, 0.5).sum()):
+        for _ in range(torch.greater(x, 0.5).sum()):
             output = output + x
         return output
 
@@ -56,9 +56,9 @@ def test_no_trace_model_patching():
 
     # Not patching anything: all output nodes are traced
     _, compressed_model = create_compressed_model(TestModel(True), config)
-    assert len(compressed_model._original_graph._output_nncf_nodes) == 2
+    assert len(compressed_model._original_graph._output_nncf_nodes) == 2    # pylint: disable=protected-access
 
     # Patching a function results with no_nncf_trace in method not producing an output node
     patch_method_with_no_nncf_trace(TestModel.ambiguous_op)
     _, compressed_model = create_compressed_model(TestModel(False), get_empty_config())
-    assert len(compressed_model._original_graph._output_nncf_nodes) == 1
+    assert len(compressed_model._original_graph._output_nncf_nodes) == 1    # pylint: disable=protected-access

@@ -11,8 +11,6 @@
  limitations under the License.
 """
 
-# pylint: disable=unnecessary-dunder-call,invalid-name
-
 import importlib
 import inspect
 from collections import OrderedDict
@@ -75,7 +73,7 @@ class Patcher:
                     obj_cls = obj_cls.args[0]
                 if inspect.ismodule(obj_cls.args[0]):
                     # patched function
-                    obj_cls, fn = obj_cls.args
+                    obj_cls, _ = obj_cls.args
                 else:
                     # patched method
                     obj_cls = obj_cls.args[0]
