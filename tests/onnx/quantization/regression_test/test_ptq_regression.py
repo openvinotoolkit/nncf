@@ -12,6 +12,7 @@
 """
 import pytest
 
+import copy
 from pathlib import Path
 import nncf
 import numpy as np
@@ -79,7 +80,9 @@ def validate(quantized_model_path: Path, data_loader: torch.utils.data.DataLoade
     infer_queue.set_callback(res_callback)
 
     for i, (images, target) in tqdm(enumerate(data_loader)):
-        infer_queue.start_async(images, userdata=i)
+        # W/A for memory leaks when using torch DataLoader and OpenVINO
+        image_copies = copy.deepcopy(images.numpy())
+        infer_queue.start_async(image_copies, userdata=i)
         references[i] = target
     infer_queue.wait_all()
 
