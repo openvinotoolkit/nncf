@@ -92,7 +92,7 @@ class FunctionsToPatchWithoutTracing:
 class MagicFunctionsToPatch:
     MAGIC_FUNCTIONS_TO_PATCH = {
         NamespaceTarget.TORCH_TENSOR: ["__add__", "__iadd__", "__radd__", "__sub__", "__isub__",
-                                       "__rsub__", "__mul__",
+                                       "__rsub__", "__mul__", "__matmul__", "__rmatmul__",
                                        "__imul__", "__rmul__", "__div__", "__idiv__",
                                        "__truediv__", "__floordiv__",
                                        "__ifloordiv__", "__rfloordiv__", "__getitem__",

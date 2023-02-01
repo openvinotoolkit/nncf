@@ -593,6 +593,8 @@ SYNTHETIC_MODEL_DESC_LIST = [
     TensorBinaryMethodsDesc('__mul__'),
     TensorBinaryMethodsDesc('__rmul__'),
     TensorBinaryMethodsDesc('__imul__'),
+    TensorBinaryMethodsDesc('__matmul__'),
+    TensorBinaryMethodsDesc('__rmatmul__'),
 
     TorchBinaryMethodDesc('Div', torch.div),
     TensorBinaryMethodsDesc('__div__'),
