@@ -6,7 +6,7 @@ dependencies:
 
 NNCF PT:
   - 'examples/torch/**/*'
-  - 'examples/post_training_quantization/torch/**/*'-
+  - 'examples/post_training_quantization/torch/**/*'
   - 'nncf/torch/**/*'
   - 'tests/torch/**/*'
 
