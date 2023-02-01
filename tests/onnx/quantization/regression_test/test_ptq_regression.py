@@ -13,7 +13,6 @@
 import pytest
 
 from pathlib import Path
-import time
 import nncf
 import numpy as np
 import onnx
@@ -27,12 +26,12 @@ from tqdm import tqdm
 
 MODELS = [
     ('https://github.com/onnx/models/raw/main/vision/classification/mobilenet/model/mobilenetv2-12.onnx',
-     'mobilenetv2-12', 0.7875159235668789),
+     'mobilenetv2-12', 0.7895541401273886),
     ('https://github.com/onnx/models/raw/main/vision/classification/resnet/model/resnet50-v1-7.onnx',
-     'resnet50-v1-7', 0.8096815286624204),
+     'resnet50-v1-7', 0.8119745222929936),
     (
     'https://github.com/onnx/models/raw/main/vision/classification/efficientnet-lite4/model/efficientnet-lite4-11.onnx',
-    'efficientnet-lite4-11', 0.7997452229299363)
+    'efficientnet-lite4-11', 0.8012738853503185)
 ]
 
 DATASET_URL = 'https://s3.amazonaws.com/fast-ai-imageclas/imagenette2-320.tgz'
