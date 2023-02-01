@@ -1,4 +1,4 @@
-From 2e8154812b1f30345be8a9d7348939942ac5f543 Mon Sep 17 00:00:00 2001
+From 82ce3063a27a11074529313df6255a69f6cf189f Mon Sep 17 00:00:00 2001
 From: Nikolay Lyalyushkin <nikolay.lyalyushkin@intel.com>
 Date: Tue, 18 Oct 2022 22:08:16 +0200
 Subject: [PATCH] Modifications for NNCF usage
@@ -13,17 +13,17 @@ Subject: [PATCH] Modifications for NNCF usage
  nncf_bert_config_mrpc.json                    |  42 +++++++
  nncf_bert_config_squad.json                   |  44 +++++++
  ...config_squad_magnitude_sparsity_cubic.json |  31 +++++
- nncf_bert_config_xnli.json                    |  39 ++++++
- nncf_distilbert_config_sst2.json              |  37 ++++++
- nncf_gpt2_config_wikitext_hw_config.json      |  61 ++++++++++
+ nncf_bert_config_xnli.json                    |  38 ++++++
+ nncf_distilbert_config_sst2.json              |  33 ++++++
+ nncf_gpt2_config_wikitext_hw_config.json      |  49 ++++++++
  nncf_mobilebert_config_squad_int8.json        |  49 ++++++++
- nncf_roberta_config_mnli.json                 |  39 ++++++
+ nncf_roberta_config_mnli.json                 |  35 ++++++
  src/transformers/modeling_utils.py            |  24 ++++
  src/transformers/pytorch_utils.py             |   3 +-
  src/transformers/trainer.py                   |  72 ++++++++++-
  src/transformers/training_args.py             |   6 +
  src/transformers/utils/__init__.py            |   1 +
- 19 files changed, 848 insertions(+), 73 deletions(-)
+ 19 files changed, 827 insertions(+), 73 deletions(-)
  create mode 100644 nncf_bert_config_conll.json
  create mode 100644 nncf_bert_config_mrpc.json
  create mode 100644 nncf_bert_config_squad.json
@@ -912,10 +912,10 @@ index 000000000..b4452e8d4
 +}
 diff --git a/nncf_bert_config_xnli.json b/nncf_bert_config_xnli.json
 new file mode 100644
-index 000000000..6105a14f4
+index 000000000..92b95db1c
 --- /dev/null
 +++ b/nncf_bert_config_xnli.json
-@@ -0,0 +1,39 @@
+@@ -0,0 +1,38 @@
 +{
 +    "input_info": [
 +        {
@@ -942,7 +942,6 @@ index 000000000..6105a14f4
 +            }
 +        },
 +        "ignored_scopes": ["{re}BertSelfAttention\\[self\\]/__add___0",
-+            "{re}BertIntermediate\\[intermediate\\]/__mul___0",
 +            "{re}BertIntermediate\\[intermediate\\]/NNCFLinear\\[dense\\]/linear_0"
 +        ],
 +        "activations":
@@ -957,10 +956,10 @@ index 000000000..6105a14f4
 +}
 diff --git a/nncf_distilbert_config_sst2.json b/nncf_distilbert_config_sst2.json
 new file mode 100644
-index 000000000..5ca410e67
+index 000000000..dc140ab39
 --- /dev/null
 +++ b/nncf_distilbert_config_sst2.json
-@@ -0,0 +1,37 @@
+@@ -0,0 +1,33 @@
 +{
 +    "input_info": [
 +        {
@@ -983,10 +982,6 @@ index 000000000..5ca410e67
 +                "num_bn_adaptation_samples": 0
 +            }
 +        },
-+        "ignored_scopes": [
-+            "{re}TransformerBlock\\[[0-9]*\\]/FFN\\[ffn\\]/__mul___0",
-+            "{re}TransformerBlock\\[[0-9]*\\]/FFN\\[ffn\\]/NNCFLinear\\[lin1\\]/linear_0"
-+        ],
 +        "activations":
 +        {
 +            "mode": "symmetric"
@@ -1000,10 +995,10 @@ index 000000000..5ca410e67
 +}
 diff --git a/nncf_gpt2_config_wikitext_hw_config.json b/nncf_gpt2_config_wikitext_hw_config.json
 new file mode 100644
-index 000000000..6a938813b
+index 000000000..55173b25b
 --- /dev/null
 +++ b/nncf_gpt2_config_wikitext_hw_config.json
-@@ -0,0 +1,61 @@
+@@ -0,0 +1,49 @@
 +{
 +    "input_info": [
 +        {
@@ -1029,17 +1024,8 @@ index 000000000..6a938813b
 +            }
 +        },
 +        "ignored_scopes": [
-+             //gelu_new with fusing into previous GEMM
-+            "{re}.*MLP\\[mlp\\]/__rmul___0",
-+            "{re}.*MLP\\[mlp\\]/__add___0",
-+            "{re}.*MLP\\[mlp\\]/__rmul___1",
-+            "{re}.*MLP\\[mlp\\]/tanh_0",
-+            "{re}.*MLP\\[mlp\\]/__radd___0",
-+            "{re}.*MLP\\[mlp\\]/__mul___0",
-+
 +            // Intermediate embedding sum results
 +            "GPT2LMHeadModel/GPT2Model[transformer]/__add___0",
-+            "GPT2LMHeadModel/GPT2Model[transformer]/__add___1",
 +
 +            // Scaling in attention
 +            "{re}.*Attention\\[attn\\]/__truediv___0",
@@ -1048,11 +1034,8 @@ index 000000000..6a938813b
 +            "{re}.*Block\\[[0-9]*\\]/__add___0",
 +            "{re}.*Block\\[[0-9]*\\]/__add___1",
 +
-+            // Final LayerNorm inputs
-+            "GPT2LMHeadModel/GPT2Model[transformer]/LayerNorm[ln_f]",
-+
 +            // LM head
-+            "GPT2LMHeadModel/NNCFLinear[lm_head]"
++            "GPT2LMHeadModel/NNCFLinear[lm_head]/linear_0"
 +        ],
 +        "activations":
 +        {
@@ -1122,10 +1105,10 @@ index 000000000..4d0e84edf
 +}
 diff --git a/nncf_roberta_config_mnli.json b/nncf_roberta_config_mnli.json
 new file mode 100644
-index 000000000..8d97c9dbd
+index 000000000..ff2d462f6
 --- /dev/null
 +++ b/nncf_roberta_config_mnli.json
-@@ -0,0 +1,39 @@
+@@ -0,0 +1,35 @@
 +{
 +    "input_info": [
 +        {
@@ -1151,10 +1134,6 @@ index 000000000..8d97c9dbd
 +                "num_bn_adaptation_samples": 0
 +            }
 +        },
-+        "ignored_scopes": ["{re}BertSelfAttention\\[self\\]/__add___0",
-+            "RobertaForSequenceClassification/RobertaClassificationHead[classifier]/Linear[out_proj]",
-+            "RobertaForSequenceClassification/RobertaClassificationHead[classifier]/Linear[dense]"
-+        ],
 +        "activations":
 +        {
 +            "mode": "asymmetric"
@@ -1457,5 +1436,5 @@ index 2269f2254..2f3082293 100644
  TF2_WEIGHTS_NAME = "tf_model.h5"
  TF2_WEIGHTS_INDEX_NAME = "tf_model.h5.index.json"
 -- 
-2.38.0.windows.1
+2.25.1
 

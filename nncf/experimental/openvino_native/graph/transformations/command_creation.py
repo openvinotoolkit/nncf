@@ -30,6 +30,6 @@ def create_bias_correction_command(node: NNCFNode, bias_value: np.ndarray, nncf_
     :return: The `OVBiasCorrectionCommand` command to update bias.
     """
     add_node = nncf_graph.get_next_nodes(node)[0]
-    bias_port_id = add_node.layer_attributes.weight_port_id
+    bias_port_id = add_node.layer_attributes.const_port_id
     target_point = OVTargetPoint(TargetType.LAYER, node.node_name, bias_port_id)
     return OVBiasCorrectionCommand(target_point, bias_value)

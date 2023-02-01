@@ -629,6 +629,57 @@ def create_clamp_mult_const_pattern():
     return pattern
 
 
+@OPENVINO_HW_FUSED_PATTERNS.register(PatternsManager.BATCH_NORM_ACTIVATIONS)
+def create_batch_norm_activations():
+    batch_norm = batch_normalization_operations()
+    activations = atomic_activations_operations()
+    batch_norm.join_patterns(activations)
+    return batch_norm
+
+
+@OPENVINO_HW_FUSED_PATTERNS.register(PatternsManager.ACTIVATIONS_BATCH_NORM)
+def create_activations_batch_norm():
+    activations = atomic_activations_operations()
+    batch_norm = batch_normalization_operations()
+    activations.join_patterns(batch_norm)
+    return activations
+
+
+@OPENVINO_HW_FUSED_PATTERNS.register(PatternsManager.ARITHMETIC_ACTIVATIONS)
+def create_arithmetic_activations():
+    arithmetic = arithmetic_operations()
+    activations = atomic_activations_operations()
+    arithmetic.join_patterns(activations)
+    return arithmetic
+
+
+@OPENVINO_HW_FUSED_PATTERNS.register(PatternsManager.LINEAR_ACTIVATIONS)
+def create_linear_activations():
+    linear = linear_operations()
+    activations = atomic_activations_operations()
+    linear.join_patterns(activations)
+    return linear
+
+
+@OPENVINO_HW_FUSED_PATTERNS.register(PatternsManager.LINEAR_ARITHMETIC)
+def create_linear_activations():
+    linear = linear_operations()
+    arithmetic = arithmetic_operations()
+    linear.join_patterns(arithmetic)
+    return linear
+
+
+@OPENVINO_HW_FUSED_PATTERNS.register(PatternsManager.LINEAR_ARITHMETIC_ACTIVATIONS)
+def create_linear_activations():
+    linear = linear_operations()
+    arithmetic = arithmetic_operations()
+    activations = atomic_activations_operations()
+
+    linear.join_patterns(arithmetic)
+    linear.join_patterns(activations)
+    return linear
+
+
 @OPENVINO_HW_FUSED_PATTERNS.register(PatternsManager.LINEAR_SCALE_SHIFT)
 def create_linear_scale_shift():
     linear = linear_operations()
@@ -647,17 +698,11 @@ def create_linear_biased_scale_shift():
 
 @OPENVINO_HW_FUSED_PATTERNS.register(PatternsManager.LINEAR_ACTIVATION_SCALE_SHIFT)
 def create_linear_activation_scale_shift():
-    pattern = GraphPattern()
-    linear_node = pattern.add_node(**LINEAR_OPERATIONS)
-    activation_node = pattern.add_node(**{GraphPattern.LABEL_ATTR: 'RELU, PRELU, SIGMOID',
-                                          GraphPattern.METATYPE_ATTR: [om.OVReluMetatype,
-                                                                       om.OVPReluMetatype,
-                                                                       om.OVSigmoidMetatype]})
+    linear_activations = create_linear_activations()
     scale_shift = create_add_scaleshift_pattern()
 
-    pattern.add_edge(linear_node, activation_node)
-    pattern.join_patterns(scale_shift)
-    return pattern
+    linear_activations.join_patterns(scale_shift)
+    return linear_activations
 
 
 @OPENVINO_HW_FUSED_PATTERNS.register(PatternsManager.LINEAR_BIASED_ACTIVATION_SCALE_SHIFT)
@@ -698,17 +743,11 @@ def create_linear_biased_elementwise():
 
 @OPENVINO_HW_FUSED_PATTERNS.register(PatternsManager.LINEAR_ACTIVATION_ELEMENTWISE)
 def create_linear_activation_elementwise():
-    pattern = GraphPattern()
-    linear_node = pattern.add_node(**LINEAR_OPERATIONS)
-    activation_node = pattern.add_node(**{GraphPattern.LABEL_ATTR: 'RELU, PRELU, SIGMOID',
-                                          GraphPattern.METATYPE_ATTR: [om.OVReluMetatype,
-                                                                       om.OVPReluMetatype,
-                                                                       om.OVSigmoidMetatype]})
+    linear_activations = create_linear_activations()
     elementwise = elementwise_operations()
 
-    pattern.add_edge(linear_node, activation_node)
-    pattern.join_patterns(elementwise)
-    return pattern
+    linear_activations.join_patterns(elementwise)
+    return linear_activations
 
 
 @OPENVINO_HW_FUSED_PATTERNS.register(PatternsManager.LINEAR_BIASED_ACTIVATION_ELEMENTWISE)

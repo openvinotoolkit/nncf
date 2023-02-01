@@ -38,7 +38,7 @@ class LinearModel(OVReferenceModel):
         input_shape = [1, 3, 4, 2]
         input_1 = opset.parameter(input_shape, name="Input")
         reshape = opset.reshape(input_1, (1, 3, 2, 4), special_zero=False, name='Reshape')
-        data = self._rng.random((1, 3, 4, 5)).astype(np.float32)
+        data = self._rng.random((1, 3, 4, 5)).astype(np.float32) - 0.5
         matmul = opset.matmul(reshape, data, transpose_a=False, transpose_b=False, name="MatMul")
         add = opset.add(reshape, self._rng.random((1, 3, 2, 4)).astype(np.float32), name="Add")
         r1 = opset.result(matmul, name="Result_MatMul")
@@ -57,7 +57,7 @@ class ConvModel(OVReferenceModel):
         mean = self._rng.random((1, 3, 1, 1)).astype(np.float32)
         scale = self._rng.random((1, 3, 1, 1)).astype(np.float32) + 1e-4
         subtract = opset.subtract(input_1, mean, name="Sub")
-        kernel = self._rng.random((3, 3, 1, 1)).astype(np.float32) / scale
+        kernel = self._rng.random((3, 3, 1, 1)).astype(np.float32) / scale - 0.5
         strides = [1, 1]
         pads = [0, 0]
         dilations = [1, 1]

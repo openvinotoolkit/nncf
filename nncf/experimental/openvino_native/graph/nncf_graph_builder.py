@@ -145,20 +145,20 @@ class GraphConverter:
                     inp_name = inp.get_source_output().get_node().get_friendly_name()
                     if inp_name not in visited:
                         nncf_node = nncf_graph.get_node_by_name(node.get_friendly_name())
-                        nncf_node.layer_attributes = OVWeightedLayerAttributes(weight_port_id=inp.get_index())
+                        nncf_node.layer_attributes = OVConstPortId(const_port_id=inp.get_index())
                         break
 
         GraphConverter._add_edges_to_nncf_graph(model, nncf_graph)
         return nncf_graph
 
 
-class OVWeightedLayerAttributes(BaseLayerAttributes):
+class OVConstPortId(BaseLayerAttributes):
     """
-    This class stores weight and bias port indices of layers for the algorithms.
+    This class stores const port index of layers for the algorithms.
     """
 
-    def __init__(self, weight_port_id: Optional[int] = None):
+    def __init__(self, const_port_id: Optional[int] = None):
         """
-        :param weight_port_id: Index of weight port. Should be None if layer without weights.
+        :param const_port_id: Index of const port. Should be None if layer without constant inputs.
         """
-        self.weight_port_id = weight_port_id
+        self.const_port_id = const_port_id
