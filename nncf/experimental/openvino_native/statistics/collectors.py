@@ -33,11 +33,11 @@ class OVNNCFCollectorTensorProcessor(NNCFCollectorTensorProcessor):
 
     @staticmethod
     def reduce_min(x: NNCFTensor, axis: Union[int, tuple]) -> NNCFTensor:
-        return OVNNCFTensor(np.amin(x.tensor, axis=axis))
+        return OVNNCFTensor(np.amin(x.tensor, axis=axis, keepdims=True))
 
     @staticmethod
     def reduce_max(x: NNCFTensor, axis: Union[int, tuple]) -> NNCFTensor:
-        return OVNNCFTensor(np.amax(x.tensor, axis=axis))
+        return OVNNCFTensor(np.amax(x.tensor, axis=axis, keepdims=True))
 
     @staticmethod
     def abs(x: NNCFTensor) -> NNCFTensor:

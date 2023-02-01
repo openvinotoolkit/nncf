@@ -18,7 +18,10 @@ import numpy as np
 
 from nncf.common.graph.operator_metatypes import OperatorMetatype
 from nncf.common.quantization.structs import QuantizationMode
+from nncf.common.quantization.quantizers import calculate_asymmetric_level_ranges
+from nncf.common.quantization.quantizers import calculate_symmetric_level_ranges
 from nncf.common.quantization.structs import QuantizerConfig
+from nncf.common.quantization.structs import QuantizerGroup
 from nncf.common.tensor_statistics.statistics import MinMaxTensorStatistic
 from nncf.experimental.openvino_native.hardware.pattern_operations import TRANSPOSED_OPERATIONS
 
@@ -39,24 +42,6 @@ class OVQuantizerLayerParameters:
     output_low: np.ndarray
     output_high: np.ndarray
     levels: int
-
-
-def compute_levels(quantizer_config: QuantizerConfig, is_weights: bool) -> int:
-    """
-    Calculates number of quantization levels.
-
-    :param quantizer_config: Config of the quantization configuration.
-    :param is_weights: `True` for weight quantizer and `False` otherwise.
-    :return: Number of quantization levels.
-    """
-    def_levels = 2 ** quantizer_config.num_bits
-
-    if is_weights and quantizer_config.mode == QuantizationMode.SYMMETRIC:
-        level_low = -def_levels / 2 + 1
-    else:
-        level_low = -def_levels / 2
-    level_high = def_levels / 2 - 1
-    return int(abs(level_high) + abs(level_low) + 1)
 
 
 def fix_zero_filters_symmetric(max_values: np.ndarray, eps: float = 0.01) -> np.ndarray:
@@ -85,30 +70,42 @@ def fix_zero_filters_asymmetric(min_values: np.ndarray, max_values: np.ndarray,
         level_high - fixed the high quant number
     """
     ranges = max_values - min_values
-    ranges = ranges if isinstance(ranges, np.ndarray) else np.array([ranges])
+    ranges = ranges.flatten() if isinstance(ranges, np.ndarray) else np.array([ranges])
     min_correction = 8e-4
     corrections = [(np.maximum(eps * rng, rng) - rng) * 0.5 if rng > min_correction
                    else min_correction for rng in ranges]
+    corrections = np.array(corrections).reshape(max_values.shape)
     level_low = min_values - corrections
     level_high = max_values + corrections
     return level_low, level_high
 
 
-def tune_range(left_border: np.ndarray, right_border: np.ndarray, num_bits: int) -> Tuple[np.ndarray, np.ndarray]:
+def tune_range(left_border: np.ndarray, right_border: np.ndarray, num_bits: int,
+               unify_zp: bool = False) -> Tuple[np.ndarray, np.ndarray]:
     """
-    Tunes asymmetric quantization range to set zero quant precisely to zero value.
+    Tunes asymmetric quantization range to unify the zero point of all channels if `unify_zp` is True,
+    or sets zero quant precisely to zero value otherwise.
     Function moves left or right borders to do this and doesn't make left border higher or
     right border lesser than its original values.
 
     :param left_border: Range left border.
     :param right_border: Range right border.
     :param num_bits: Number of bits to perform quantization.
+    :param unify_zp: Whether to unify the zero point of all channels.
+        If `True` calculates the average zero point of all channels and tune the max/min range.
     :return: Tuple with recomputed ranges.
     """
     level_high = 2 ** num_bits - 1
-    s = level_high / (right_border - left_border)
-    fval = -left_border * s
-    qval = np.round(fval)
+
+    if unify_zp:
+        scale = (right_border - left_border) / level_high
+        zero_point = -left_border / scale
+        avg_zpts = np.round(np.mean(zero_point))
+        qval = np.ones_like(left_border) * avg_zpts
+    else:
+        s = level_high / (right_border - left_border)
+        fval = -left_border * s
+        qval = np.round(fval)
 
     with np.errstate(invalid='ignore', divide='ignore'):
         ra = np.where(qval < level_high, qval / (qval - level_high) * right_border, left_border)
@@ -127,7 +124,7 @@ def tune_range(left_border: np.ndarray, right_border: np.ndarray, num_bits: int)
 
 
 def symmetric_range(min_values: np.ndarray, max_values: np.ndarray, levels: int,
-                    quantizer_config: QuantizerConfig, is_weights: bool) -> Tuple[np.ndarray, np.ndarray]:
+                    quantizer_config: QuantizerConfig, q_group: QuantizerGroup) -> Tuple[np.ndarray, np.ndarray]:
     """
     Calculates the numbers of the low and high quant for the symmetric quantization scheme.
 
@@ -140,7 +137,7 @@ def symmetric_range(min_values: np.ndarray, max_values: np.ndarray, levels: int,
         level_high - the high quant number
     """
     level_high = fix_zero_filters_symmetric(max_values)
-    if is_weights:
+    if q_group == QuantizerGroup.WEIGHTS:
         level_low = -level_high
     else:
         signed = quantizer_config.signedness_to_force
@@ -153,13 +150,16 @@ def symmetric_range(min_values: np.ndarray, max_values: np.ndarray, levels: int,
 
 
 def asymmetric_range(min_values: np.ndarray, max_values: np.ndarray,
-                     quantizer_config: QuantizerConfig) -> Tuple[np.ndarray, np.ndarray]:
+                     quantizer_config: QuantizerConfig, q_group: QuantizerGroup,
+                     unify_zp: bool = False) -> Tuple[np.ndarray, np.ndarray]:
     """
     Calculates the numbers of the low and high quant for the asymmetric quantization scheme.
 
     :param min_values: Collected min values for the quantized insertion.
     :param max_values: Collected max values for the quantized insertion.
     :param quantizer_config: Config of the quantization configuration.
+    :param unify_zp: Whether to unify the zero point.
+        It is `True` for the per-tensor zero point constrain on KMB (vpu2p0).
     :return: A Tuple
         level_low - the low quant number
         level_high - the high quant number
@@ -167,8 +167,11 @@ def asymmetric_range(min_values: np.ndarray, max_values: np.ndarray,
     level_low, level_high = fix_zero_filters_asymmetric(min_values, max_values)
     level_low = np.where(level_low < 0.0, level_low, 0.0)
     level_high = np.where(level_high > 0.0, level_high, 0.0)
-    level_low, level_high = tune_range(level_low, level_high, quantizer_config.num_bits)
 
+    if unify_zp and q_group == QuantizerGroup.ACTIVATIONS:
+        raise NotImplementedError('Unified zero point is not supported for activations.')
+
+    level_low, level_high = tune_range(level_low, level_high, quantizer_config.num_bits, unify_zp=unify_zp)
     level_low = level_low.astype(np.float32)
     level_high = level_high.astype(np.float32)
     return level_low, level_high
@@ -200,21 +203,22 @@ def calculate_weight_quantizer_parameters(weight_tensor: np.ndarray, quantizer_c
     :param axis: In per-channel case - the axis for the quantization. In per-tensor - ignored.
     :return: Parameters of the FakeQuantize layer.
     """
-    axes = []
-    bounds_shape = get_weight_stats_shape(weight_tensor.shape, metatype)
-    for i, dim in enumerate(bounds_shape):
-        if dim == 1:
-            axes.append(i)
-    axes = tuple(axes)
-
-    min_values = np.amin(weight_tensor, axis=axes, keepdims=True)
-    max_values = np.amax(weight_tensor, axis=axes, keepdims=True)
-
-    levels = compute_levels(quantizer_config, is_weights=True)
-    if quantizer_config.mode == QuantizationMode.SYMMETRIC:
-        level_low, level_high = symmetric_range(min_values, max_values, levels, quantizer_config, is_weights=True)
+    quant_group = QuantizerGroup.WEIGHTS
+    if quantizer_config.per_channel:
+        bounds_shape = get_weight_stats_shape(weight_tensor.shape, metatype)
+        axes = tuple(i for i, dim in enumerate(bounds_shape) if dim == 1)
     else:
-        level_low, level_high = asymmetric_range(min_values, max_values, quantizer_config)
+        axes = None
+
+    max_values = np.amax(np.abs(weight_tensor), axis=axes, keepdims=quantizer_config.per_channel)
+
+    if quantizer_config.mode == QuantizationMode.SYMMETRIC:
+        _, _, levels = calculate_symmetric_level_ranges(quantizer_config.num_bits, signed=True, narrow_range=True)
+        level_low, level_high = symmetric_range(None, max_values, levels, quantizer_config, quant_group)
+    else:
+        _, _, levels = calculate_asymmetric_level_ranges(quantizer_config.num_bits, narrow_range=False)
+        min_values = np.amin(weight_tensor, axis=axes, keepdims=quantizer_config.per_channel)
+        level_low, level_high = asymmetric_range(min_values, max_values, quantizer_config, quant_group)
 
     output_low, output_high = level_low, level_high
     return OVQuantizerLayerParameters(level_low, level_high, output_low, output_high, levels)
@@ -229,14 +233,20 @@ def calculate_activation_quantizer_parameters(statistics: MinMaxTensorStatistic,
     :param quantizer_config: Config of the quantization configuration.
     :return: Parameters of the FakeQuantize layer.
     """
-    levels = compute_levels(quantizer_config, is_weights=False)
+    quant_group = QuantizerGroup.ACTIVATIONS
     min_values = np.array(statistics.min_values)
     max_values = np.array(statistics.max_values)
 
     if quantizer_config.mode == QuantizationMode.SYMMETRIC:
-        level_low, level_high = symmetric_range(min_values, max_values, levels, quantizer_config, is_weights=False)
+        _, _, levels = calculate_symmetric_level_ranges(quantizer_config.num_bits, signed=True, narrow_range=False)
+        level_low, level_high = symmetric_range(min_values, max_values, levels, quantizer_config, quant_group)
     else:
-        level_low, level_high = asymmetric_range(min_values, max_values, quantizer_config)
+        _, _, levels = calculate_asymmetric_level_ranges(quantizer_config.num_bits, narrow_range=False)
+        level_low, level_high = asymmetric_range(min_values, max_values, quantizer_config, quant_group)
+
+    if not quantizer_config.per_channel:
+        level_low = np.squeeze(level_low)
+        level_high = np.squeeze(level_high)
 
     output_low, output_high = level_low, level_high
     return OVQuantizerLayerParameters(level_low, level_high, output_low, output_high, levels)

@@ -108,8 +108,8 @@ class OVFastBiasCorrectionAlgoBackend(FastBiasCorrectionAlgoBackend):
 
     @staticmethod
     def is_quantized_weights(node: NNCFNode, nncf_graph: NNCFGraph) -> bool:
-        weight_port_id = node.layer_attributes.weight_port_id
-        weight_node = nncf_graph.get_input_edges(node)[weight_port_id].from_node
+        const_port_id = node.layer_attributes.const_port_id
+        weight_node = nncf_graph.get_input_edges(node)[const_port_id].from_node
         return weight_node.metatype == OVFakeQuantizeMetatype
 
     @staticmethod
