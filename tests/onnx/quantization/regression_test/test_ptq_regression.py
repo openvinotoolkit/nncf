@@ -26,7 +26,7 @@ from tqdm import tqdm
 
 MODELS = [
     ('https://github.com/onnx/models/raw/main/vision/classification/mobilenet/model/mobilenetv2-12.onnx',
-     'mobilenetv2-12', 0.7895541401273886),
+     'mobilenetv2-12', 0.7875159235668789),
     ('https://github.com/onnx/models/raw/main/vision/classification/resnet/model/resnet50-v1-7.onnx',
      'resnet50-v1-7', 0.8119745222929936),
     (
@@ -69,7 +69,7 @@ def validate(quantized_model_path: Path, data_loader: torch.utils.data.DataLoade
     predictions = []
     references = []
 
-    def res_callback(infer_request: ov.InferRequest, unused_input) -> None:
+    def res_callback(infer_request: ov.InferRequest, target: np.ndarray) -> None:
         pred = next(iter(infer_request.results.values()))
         pred_class = np.argmax(pred, axis=1)
         if pred_class.item() in from_imagenet_to_imageneetee:
@@ -81,7 +81,7 @@ def validate(quantized_model_path: Path, data_loader: torch.utils.data.DataLoade
 
     infer_queue.set_callback(res_callback)
     for images, target in tqdm(data_loader):
-        infer_queue.start_async({0: images})
+        infer_queue.start_async({0: images}, target)
     infer_queue.wait_all()
 
     predictions = np.concatenate(predictions, axis=0)
@@ -125,4 +125,4 @@ def test_compression(tmp_path, model_url, model_name, int8_ref_top1):
     onnx.save_model(quantized_model, str(int8_model_path))
     int8_top1 = validate(int8_model_path, val_loader)
     print(f'INT8 metrics = {int8_top1}')
-    assert abs(int8_top1 - int8_ref_top1) < 1e-4  # 0.01 deviations
+    assert abs(int8_top1 - int8_ref_top1) < 1e-6  # 0.01 deviations
