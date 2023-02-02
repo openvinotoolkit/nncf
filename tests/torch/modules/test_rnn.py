@@ -29,9 +29,9 @@ from torch.nn.utils.rnn import PackedSequence
 from nncf.torch import nncf_model_input
 from nncf.torch.dynamic_graph.io_handling import wrap_nncf_model_outputs_with_objwalk
 from nncf.torch.dynamic_graph.context import TracingContext
-from nncf.torch.dynamic_graph.transform_graph import replace_modules
 from nncf.torch.layers import LSTMCellNNCF, NNCF_RNN, ITERATION_MODULES
 from nncf.torch.model_creation import create_compressed_model
+from nncf.torch.nncf_module_replacement import replace_modules_by_nncf_modules
 from nncf.torch.utils import get_model_device
 from tests.torch.modules.seq2seq.gnmt import GNMT
 from tests.torch.helpers import get_empty_config, get_grads, create_compressed_model_and_algo_for_test
@@ -68,10 +68,7 @@ def replace_lstm(model):
 
     if isinstance(model, nn.LSTM):
         return replace_fn(model)
-    affected_scopes = []
-    stop_branching_fn = lambda _: False
-    return replace_modules(model, replace_fn, stop_branching_fn,
-                           affected_scopes)[0]
+    return replace_modules_by_nncf_modules(model, custom_replacer=replace_fn)[0]
 
 
 def clone_test_data(data_list):

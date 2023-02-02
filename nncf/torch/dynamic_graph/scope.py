@@ -15,7 +15,6 @@ from copy import deepcopy
 from typing import List
 
 
-
 class ScopeElement:
     def __init__(self, calling_module_class_name: str, calling_field_name: str = None):
         self.calling_module_class_name = calling_module_class_name
@@ -56,13 +55,16 @@ class Scope:
     def __str__(self):
         return '/'.join([str(scope_el) for scope_el in self.scope_elements])
 
+    def __repr__(self):
+        return str(self)
+
     def __hash__(self):
         return hash(str(self))
 
     def __eq__(self, other: 'Scope'):
         return self.scope_elements == other.scope_elements
 
-    def __getitem__(self, key):
+    def __getitem__(self, key) -> ScopeElement:
         return self.scope_elements[key]
 
     def __contains__(self, item: 'Scope'):
@@ -74,11 +76,11 @@ class Scope:
                 return False
         return True
 
-    def __add__(self, rhs):
+    def __add__(self, rhs: 'Scope') -> 'Scope':
         init_list = self.scope_elements + rhs.scope_elements
         return Scope(init_list)
 
-    def copy(self):
+    def copy(self) -> 'Scope':
         return Scope(deepcopy(self.scope_elements))
 
     def push(self, scope_element: ScopeElement):
@@ -103,3 +105,16 @@ class Scope:
             if iter_scope in scope_name:
                 results.append(iter_scope)
         return results
+
+
+class ExecutionScope(Scope):
+    """
+    A nominal type to distinguish between general Scopes and "execution scopes".
+    Regular Scopes can be decoded to access a sub-module to which the scope is pointing via attribute access.
+    However, the association of a Scope to a module is not unique - one and the same submodule object can be accessed
+    in general via different attribute access steps on the original model. What is unique is the scope of the operation-
+    containing modules that is constructed during NNCFGraph tracing, since the model's forward code is usually fixed.
+    These scopes will be considered "execution scopes", and this type will help distinguish where in the code we handle
+    the unique execution scopes and where we handle general Scopes.
+    """
+    pass

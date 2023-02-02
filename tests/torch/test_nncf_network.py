@@ -127,8 +127,10 @@ def test_check_correct_modules_replacement():
     model = TwoConvTestModel()
     nncf_model = NNCFNetwork(TwoConvTestModel(), input_infos=[ModelInputInfo([1, 1, 4, 4])])  # type: NNCFNetwork
 
-    _, nncf_modules = check_correct_nncf_modules_replacement(model, nncf_model)
-    assert set(nncf_modules) == set(nncf_model.get_nncf_modules())
+    _, detected_nncf_modules = check_correct_nncf_modules_replacement(model, nncf_model)
+    replaced_modules_reported_by_nncf_network = \
+        {scope: module for module, scope in nncf_model.get_nncf_modules().items()}
+    assert set(detected_nncf_modules) == set(replaced_modules_reported_by_nncf_network)
 
 
 class WeightNormedConvModel(torch.nn.Module):
@@ -156,7 +158,7 @@ def test_weight_normed_modules_are_replaced_correctly():
     assert len(wrapped_conv._forward_pre_hooks) == 1
 
 
-class ModuleOfUser(torch.nn.Module):
+class UnregisteredUserModule(torch.nn.Module):
     def __init__(self):
         super().__init__()
         self.weight = torch.nn.Parameter(torch.ones([1]))
@@ -171,19 +173,19 @@ class ModuleOfUser(torch.nn.Module):
 
 
 @register_module()
-class RegisteredModuleOfUser(ModuleOfUser):
+class RegisteredUserModule(UnregisteredUserModule):
     pass
 
 
 class TwoConvTestModelWithUserModule(TwoConvTestModel):
     def __init__(self):
         super().__init__()
-        self.user_module = ModuleOfUser()
-        self.registered_user_module = RegisteredModuleOfUser()
+        self.unregistered_user_module = UnregisteredUserModule()
+        self.registered_user_module = RegisteredUserModule()
 
     def forward(self, x):
         x = super().forward(x)
-        x = self.user_module(x)
+        x = self.unregistered_user_module(x)
         x = self.registered_user_module(x)
         return x
 
@@ -193,14 +195,14 @@ def test_custom_module_registering():
     nncf_model = NNCFNetwork(model, input_infos=[ModelInputInfo([1, 1, 4, 4])])  # type: NNCFNetwork
 
     from nncf.torch.layers import UNWRAPPED_USER_MODULES
-    assert RegisteredModuleOfUser in UNWRAPPED_USER_MODULES.registry_dict.values()
-    assert ModuleOfUser not in UNWRAPPED_USER_MODULES.registry_dict.values()
+    assert RegisteredUserModule in UNWRAPPED_USER_MODULES.registry_dict.values()
+    assert UnregisteredUserModule not in UNWRAPPED_USER_MODULES.registry_dict.values()
 
     # pylint: disable=protected-access
     modules = [nncf_model.registered_user_module,
-               nncf_model.user_module.conv]
-    base_modules = [RegisteredModuleOfUser, torch.nn.Conv2d]
-    names = ["NNCFUserRegisteredModuleOfUser", "NNCFConv2d"]
+               nncf_model.unregistered_user_module.conv]
+    base_modules = [RegisteredUserModule, torch.nn.Conv2d]
+    names = ["NNCFUserRegisteredUserModule", "NNCFConv2d"]
     for module, base_module, name in zip(modules, base_modules, names):
         assert isinstance(module, base_module)
         assert isinstance(module, _NNCFModuleMixin)
@@ -213,16 +215,16 @@ def test_custom_module_registering():
     # Check user ops metatypes
     graph = nncf_model.get_original_graph()
     nodes_dict = {
-       'TwoConvTestModelWithUserModule/ModuleOfUser[user_module]/rand_like_0': UnknownMetatype,
-       'TwoConvTestModelWithUserModule/ModuleOfUser[user_module]/conv2d_0': PTConv2dMetatype,
-        'TwoConvTestModelWithUserModule/ModuleOfUser[user_module]/NNCFConv2d[conv]/conv2d_0':
+        'TwoConvTestModelWithUserModule/UnregisteredUserModule[unregistered_user_module]/rand_like_0': UnknownMetatype,
+        'TwoConvTestModelWithUserModule/UnregisteredUserModule[unregistered_user_module]/conv2d_0': PTConv2dMetatype,
+        'TwoConvTestModelWithUserModule/UnregisteredUserModule[unregistered_user_module]/NNCFConv2d[conv]/conv2d_0':
             PTModuleConv2dMetatype,
-       'TwoConvTestModelWithUserModule/NNCFUserRegisteredModuleOfUser[registered_user_module]/rand_like_0':
-           UnknownMetatype,
-       'TwoConvTestModelWithUserModule/NNCFUserRegisteredModuleOfUser[registered_user_module]/conv2d_0':
+        'TwoConvTestModelWithUserModule/NNCFUserRegisteredUserModule[registered_user_module]/rand_like_0':
+            UnknownMetatype,
+        'TwoConvTestModelWithUserModule/NNCFUserRegisteredUserModule[registered_user_module]/conv2d_0':
             PTModuleConv2dMetatype,
-        'TwoConvTestModelWithUserModule/NNCFUserRegisteredModuleOfUser[registered_user_module]/Conv2d[conv]/conv2d_0':
-           PTConv2dMetatype,
+        'TwoConvTestModelWithUserModule/NNCFUserRegisteredUserModule[registered_user_module]/Conv2d[conv]/conv2d_0':
+            PTConv2dMetatype,
     }
     for node_name, ref_metatype in nodes_dict.items():
         assert graph.get_node_by_name(node_name).metatype is ref_metatype
@@ -232,8 +234,16 @@ def test_get_weighted_original_graph_nodes():
     model = TwoConvTestModelWithUserModule()
     nncf_model = NNCFNetwork(model, input_infos=[ModelInputInfo([1, 1, 4, 4])])  # type: NNCFNetwork
     weighted_nodes = nncf_model.get_weighted_original_graph_nodes()
-    weighted_nodes_ref = [nncf_model.get_original_graph().get_node_by_id(id_) for id_ in [1, 2, 7, 11]]
-    assert set(weighted_nodes) == set(weighted_nodes_ref)
+    ref_node_names = [
+        "TwoConvTestModelWithUserModule/Sequential[features]/Sequential[0]/NNCFConv2d[0]/conv2d_0",
+        "TwoConvTestModelWithUserModule/Sequential[features]/Sequential[1]/NNCFConv2d[0]/conv2d_0",
+        "TwoConvTestModelWithUserModule/UnregisteredUserModule[unregistered_user_module]/NNCFConv2d[conv]/conv2d_0",
+        # The next one matched because it's a free op with metatypes corresponding to weighted ops
+        # and is within a registered user module
+        "TwoConvTestModelWithUserModule/NNCFUserRegisteredUserModule[registered_user_module]/conv2d_0"
+    ]
+    ref_weighted_nodes = [nncf_model.get_original_graph().get_node_by_name(name) for name in ref_node_names]
+    assert set(weighted_nodes) == set(ref_weighted_nodes)
 
 
 # pylint: disable=protected-access
@@ -245,7 +255,7 @@ def test_get_op_nodes_in_scope():
     # Valid scopes should be successfully found
     valid_nncf_modules = nncf_model.get_nncf_modules()
     nodes_list = list(nncf_graph.get_all_node_ids())
-    for module_scope, _ in valid_nncf_modules.items():
+    for module_scope in valid_nncf_modules.values():
         matching_nncf_nodes = nncf_graph.get_op_nodes_in_scope(module_scope)
         assert len(matching_nncf_nodes) == 1
         node = matching_nncf_nodes[0]
@@ -257,7 +267,7 @@ def test_get_op_nodes_in_scope():
 
     # Not valid scopes shouldn't be found
     fake_nncf_modules = fake_nncf_model.get_nncf_modules()
-    for module_scope, _ in fake_nncf_modules.items():
+    for module_scope in fake_nncf_modules.values():
         matching_nncf_nodes = nncf_graph.get_op_nodes_in_scope(module_scope)
         assert not matching_nncf_nodes
 
@@ -674,7 +684,7 @@ def test_get_clean_shallow_copy():
     sparse_quantized_model, _ = create_compressed_model_and_algo_for_test(model, config)
     external_quantizers = getattr(sparse_quantized_model, EXTERNAL_QUANTIZERS_STORAGE_NAME)
     assert external_quantizers
-    old_nncf_modules = sparse_quantized_model.get_nncf_modules().values()
+    old_nncf_modules = sparse_quantized_model.get_nncf_modules()
     old_nncf_module_pre_ops = [module.pre_ops for module in old_nncf_modules]
     assert any(old_nncf_module_pre_ops)
     assert sparse_quantized_model.get_graph().get_nodes_count() != \
@@ -683,7 +693,7 @@ def test_get_clean_shallow_copy():
     clean_copy = sparse_quantized_model.get_clean_shallow_copy()
     assert clean_copy is not sparse_quantized_model
     assert clean_copy.get_nncf_wrapped_model() is sparse_quantized_model.get_nncf_wrapped_model()
-    new_nncf_modules = clean_copy.get_nncf_modules().values()
+    new_nncf_modules = clean_copy.get_nncf_modules()
     new_nncf_module_pre_ops = [module.pre_ops for module in new_nncf_modules]
     assert not any(new_nncf_module_pre_ops)
     assert clean_copy.get_graph().get_nodes_count() == clean_copy.get_original_graph().get_nodes_count()
@@ -738,7 +748,7 @@ def test_temporary_clean_view():
     with sparse_quantized_model.temporary_clean_view() as intermediate_model:
         clean_sd = intermediate_model.state_dict()
         assert len(clean_sd) < len(old_sd)
-        new_nncf_modules = intermediate_model.get_nncf_modules().values()
+        new_nncf_modules = intermediate_model.get_nncf_modules()
         new_nncf_module_pre_ops = [module.pre_ops for module in new_nncf_modules]
         assert not any(new_nncf_module_pre_ops)
         assert intermediate_model.get_graph().get_nodes_count() == \
