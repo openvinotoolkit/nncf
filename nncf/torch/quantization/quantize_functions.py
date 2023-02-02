@@ -212,6 +212,12 @@ def asymmetric_quantize(input_, levels, level_low, level_high, input_low, input_
 
 # pylint:disable=abstract-method
 class TuneRange(torch.autograd.Function):
+    """
+    Makes sure that the zero-point quantum in the quantized domain points exactly to floating point zero,
+    e.g. that the input floating point zeroes to the fake quantization operation are translated to output
+    floating point zeroes even if we don't use rounding.
+    See [docs](../../../docs/compression_algorithms/Quantization.md#asymmetric-quantization) for details.
+    """
     @staticmethod
     def forward(ctx, input_low, input_range, levels):
         input_high = input_range + input_low
