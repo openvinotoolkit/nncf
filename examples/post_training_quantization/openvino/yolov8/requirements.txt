@@ -1,0 +1,4 @@
+ultralytics==8.0.5
+onnx
+openvino-dev
+nncf
