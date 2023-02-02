@@ -14,24 +14,21 @@
 import logging
 import tempfile
 from pathlib import Path
-from typing import Dict
-from typing import Optional
-from typing import Callable
-from typing import Iterable
-from typing import Any
+from typing import Any, Callable, Dict, Iterable, Optional
 
 import openvino.runtime as ov
+from openvino._offline_transformations import compress_quantize_weights_transformation
 from openvino.tools import pot
 
+from nncf.common.logging import nncf_logger
+from nncf.common.quantization.structs import QuantizationPreset
 from nncf.data import Dataset
-from nncf.quantization.telemetry_extractors import CompressionStartedWithQuantizeApi
+from nncf.openvino.engine import OVEngine
+from nncf.openvino.quantization.accuracy_aware import NMSEBasedAccuracyAware
 from nncf.parameters import IgnoredScope
 from nncf.parameters import ModelType
 from nncf.parameters import TargetDevice
-from nncf.common.quantization.structs import QuantizationPreset
-from nncf.common.logging import nncf_logger
-from nncf.openvino.engine import OVEngine
-from nncf.openvino.quantization.accuracy_aware import NMSEBasedAccuracyAware
+from nncf.quantization.telemetry_extractors import CompressionStartedWithQuantizeApi
 from nncf.telemetry import tracked_function
 from nncf.telemetry.events import NNCF_OV_CATEGORY
 
@@ -138,8 +135,8 @@ def quantize_impl(model: ov.Model,
     engine = OVEngine(engine_config, calibration_dataset, calibration_dataset)
     pipeline = pot.create_pipeline(algorithms, engine)
     compressed_model = pipeline.run(pot_model)
-    pot.compress_model_weights(compressed_model)
     quantized_model = _convert_compressed_model_to_openvino_model(compressed_model)
+    compress_quantize_weights_transformation(quantized_model)
     return quantized_model
 
 
@@ -200,8 +197,7 @@ def quantize_with_accuracy_control_impl(model: ov.Model,
     engine = OVEngine(engine_config, calibration_dataset, validation_dataset, validation_fn, use_original_metric)
     pipeline = pot.create_pipeline(algorithms, engine)
     compressed_model = pipeline.run(pot_model)
-    pot.compress_model_weights(compressed_model)
-
     quantized_model = _convert_compressed_model_to_openvino_model(compressed_model)
+    compress_quantize_weights_transformation(quantized_model)
 
     return quantized_model
