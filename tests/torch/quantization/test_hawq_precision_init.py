@@ -74,9 +74,8 @@ from tests.torch.quantization.quantization_helpers import get_quantization_confi
 from tests.torch.quantization.quantization_helpers import get_squeezenet_quantization_config
 from tests.torch.quantization.quantization_helpers import post_compression_test_distr_init
 # pylint:disable=unused-import
-from tests.torch.modules.test_rnn import _seed
 from tests.torch.test_compressed_graph import get_full_path_to_the_graph
-from tests.common.graph.nx_graph import compare_nx_graph_with_reference
+from tests.shared.nx_graph import compare_nx_graph_with_reference
 from tests.torch.test_models import inception_v3
 from tests.torch.test_models import squeezenet1_1
 

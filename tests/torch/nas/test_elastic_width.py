@@ -15,11 +15,9 @@ import copy
 import pytest
 import torch
 from torch import nn
-from torch.backends import cudnn
 
 from nncf.experimental.torch.nas.bootstrapNAS.elasticity.visualization import SubnetGraph
 from nncf.torch.utils import get_model_device
-from nncf.torch.utils import manual_seed
 from tests.torch.helpers import create_conv
 from tests.torch.helpers import get_empty_config
 from tests.torch.nas.creators import create_bootstrap_nas_training_algo
@@ -37,14 +35,7 @@ from tests.torch.nas.test_elastic_kernel import do_conv2d
 # Helpers
 ###########################
 from tests.torch.test_compressed_graph import get_full_path_to_the_graph
-from tests.common.graph.nx_graph import compare_nx_graph_with_reference
-
-
-@pytest.fixture
-def _seed():
-    cudnn.deterministic = True
-    cudnn.benchmark = False
-    manual_seed(0)
+from tests.shared.nx_graph import compare_nx_graph_with_reference
 
 
 @pytest.fixture(name='basic_model', params=(TwoSequentialFcLNTestModel, ConvTwoFcTestModel,

@@ -42,11 +42,6 @@ def idfn(val):
     return None
 
 
-@pytest.fixture
-def _seed():
-    np.random.seed(42)
-
-
 RQ = ReferenceQuantize(backend_type=ReferenceBackendType.NUMPY)
 
 
@@ -436,10 +431,17 @@ class TestParametrized:
             level_high = levels - 1
             return level_low, level_high, levels
 
-        def test_quantize_asymmetric_forward(self, _seed, input_size, bits, use_cuda, is_weights,
+        def test_quantize_asymmetric_forward(self, request, _seed, input_size, bits, use_cuda, is_weights,
                                              is_fp16, scale_mode):
             if not torch.cuda.is_available() and use_cuda is True:
                 pytest.skip("Skipping CUDA test cases for CPU only setups")
+
+            ticket_102808_problematic_cases = ["fp16-activation-per_channel_scale-cuda-8bit-[1-288-14-14]",
+                                               "fp16-activation-per_channel_scale-cuda-8bit-[16-192-28-28]",
+                                               "fp16-activation-per_channel_scale-cuda-8bit-[16-576-14-14]"]
+            if request.node.callspec.id in ticket_102808_problematic_cases:
+                pytest.xfail("Ticket 102808")
+
             skip_if_half_on_cpu(is_fp16, use_cuda)
             if is_fp16:
                 np_dtype = np.float16

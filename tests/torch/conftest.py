@@ -11,7 +11,11 @@
  limitations under the License.
 """
 import os
+import random
+
 import pytest
+
+
 try:
     import torch
 except: #pylint: disable=bare-except
@@ -218,6 +222,21 @@ def runs_subprocess_in_precommit():
 @pytest.fixture(scope="module")
 def cuda_ip(request):
     return request.config.getoption("--cuda-ip")
+
+
+@pytest.fixture
+def _seed():
+    if torch is not None:
+        from torch.backends import cudnn
+        cudnn.deterministic = True
+        cudnn.benchmark = False
+        torch.manual_seed(0)
+    try:
+        import numpy as np
+        np.random.seed(0)
+    except ImportError:
+        pass
+    random.seed(0)
 
 # Custom markers specifying tests to be run only if a specific option
 # is present on the pytest command line must be registered here.
