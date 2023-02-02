@@ -139,7 +139,7 @@ def main():
     # Prepare validation dataset and helper
     validator, data_loader = prepare_validation(model, args)
     
-    # COnvert to OpenVINO model
+    # Convert to OpenVINO model
     ov_model, ov_model_path = prepare_openvino_model(model, MODEL_NAME)
     
     # Quantize mode in OpenVINO representation
