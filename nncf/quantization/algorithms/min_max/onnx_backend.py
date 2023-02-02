@@ -12,6 +12,7 @@
 """
 
 from typing import Dict, List, Tuple, Optional
+import numpy as np
 
 from nncf.common.graph.graph import NNCFGraph
 from nncf.common.graph.graph import NNCFNode
@@ -40,6 +41,9 @@ from nncf.onnx.statistics.collectors import ONNXMinMaxStatisticCollector
 
 from nncf.quantization.algorithms.min_max.backend import MinMaxAlgoBackend
 from nncf.quantization.algorithms.min_max.backend import ALGO_BACKENDS
+from nncf.quantization.algorithms.min_max.quantizer_parameters import calculate_activation_quantizer_parameters
+from nncf.quantization.algorithms.min_max.quantizer_parameters import calculate_weight_quantizer_parameters
+from nncf.quantization.algorithms.min_max.quantizer_parameters import QuantizerLayerParameters
 
 
 @ALGO_BACKENDS.register(BackendType.ONNX)
@@ -81,8 +85,9 @@ class ONNXMinMaxAlgoBackend(MinMaxAlgoBackend):
         axis = ONNXMinMaxAlgoBackend._get_axis(nncf_graph,
                                                target_point,
                                                quantizer_config)
-        parameters = calculate_activation_quantizer_parameters(statistics, quantizer_config, axis)
-        return ONNXQuantizerInsertionCommand(target_point, nncf_input_node_next_nodes, parameters)
+        parameters = calculate_activation_quantizer_parameters(statistics, quantizer_config)
+        onnx_parameters = ONNXQuantizerLayerParameters(parameters, quantizer_config, axis)
+        return ONNXQuantizerInsertionCommand(target_point, nncf_input_node_next_nodes, onnx_parameters)
 
     @staticmethod
     def create_weight_quantizer_insertion_command(
@@ -94,8 +99,9 @@ class ONNXMinMaxAlgoBackend(MinMaxAlgoBackend):
         axis = ONNXMinMaxAlgoBackend._get_axis(nncf_graph,
                                                target_point,
                                                quantizer_config)
-        parameters = calculate_weight_quantizer_parameters(statistics, quantizer_config, axis)
-        return ONNXQuantizerInsertionCommand(target_point, nncf_input_node_next_nodes, parameters)
+        parameters = calculate_weight_quantizer_parameters(statistics, quantizer_config)
+        onnx_parameters = ONNXQuantizerLayerParameters(parameters, quantizer_config, axis)
+        return ONNXQuantizerInsertionCommand(target_point, nncf_input_node_next_nodes, onnx_parameters)
 
     @staticmethod
     def _get_input_edges_mapping(nncf_graph: NNCFGraph):
@@ -164,3 +170,44 @@ class ONNXMinMaxAlgoBackend(MinMaxAlgoBackend):
     @staticmethod
     def get_weight_tensor_port_id(node: NNCFNode) -> int:
         return node.metatype.weight_definitions.weight_port_id
+
+
+class ONNXQuantizerLayerParameters:
+    """
+    Class handles Quantizer layer attributes.
+
+    :param scale: Quantizer scale.
+    :param zero_point: Quantizer zero point.
+    :param axis: Axis for per-channel quantization. Should be none in case of per-tensor.
+    """
+    def __init__(self, params: QuantizerLayerParameters, quantizer_config: QuantizerConfig,
+                 axis: Optional[int] = None) -> None:
+        self.scale, self.zero_point = ONNXQuantizerLayerParameters.get_scale_zero_point(params, quantizer_config)
+        self.axis = axis
+
+    @staticmethod
+    def get_scale_zero_point(params: QuantizerLayerParameters,
+                             quantizer_config: QuantizerConfig) -> Tuple[np.ndarray, np.ndarray]:
+        if quantizer_config.signedness_to_force is not None:
+            tensor_type = np.int8 if quantizer_config.signedness_to_force else np.uint8
+        else:
+            tensor_type = np.uint8 if np.all(params.input_low >= 0) else np.int8
+
+        num_bits = quantizer_config.num_bits
+        input_low = params.input_low
+        input_high = params.input_high
+        if tensor_type == np.uint8:
+            level_low, level_high = 0, 2 ** num_bits - 1
+        else:
+            level_low, level_high = -(2 ** num_bits) // 2, (2 ** num_bits) // 2 - 1
+
+        scales = (input_high - input_low) / (level_high - level_low)
+        zero_point = (level_low * input_high - level_high * input_low) / (input_high - input_low)
+
+        level_low *= np.ones_like(zero_point).astype(tensor_type)
+        level_high *= np.ones_like(zero_point).astype(tensor_type)
+        zero_point = np.minimum(np.maximum(level_low, zero_point.astype(tensor_type)), level_high)
+
+        scales = np.squeeze(scales).astype(tensor_type)
+        zero_point = np.squeeze(zero_point).astype(tensor_type)
+        return scales, zero_point

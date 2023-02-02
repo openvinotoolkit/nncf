@@ -40,6 +40,8 @@ from nncf.experimental.openvino_native.quantization.quantizer_parameters import 
 
 from nncf.quantization.algorithms.min_max.backend import MinMaxAlgoBackend
 from nncf.quantization.algorithms.min_max.backend import ALGO_BACKENDS
+from nncf.quantization.algorithms.min_max.quantizer_parameters import calculate_activation_quantizer_parameters
+from nncf.quantization.algorithms.min_max.quantizer_parameters import calculate_weight_quantizer_parameters
 
 
 @ALGO_BACKENDS.register(BackendType.OPENVINO)
