@@ -12,12 +12,12 @@
 """
 import pytest
 
-import copy
 from pathlib import Path
 import nncf
 import numpy as np
 import onnx
 from onnx import version_converter
+from openvino.runtime import Core
 import openvino.runtime as ov
 import torch
 from fastdownload import FastDownload
@@ -32,7 +32,7 @@ MODELS = [
      'resnet50-v1-7', 0.8119745222929936),
     (
     'https://github.com/onnx/models/raw/main/vision/classification/efficientnet-lite4/model/efficientnet-lite4-11.onnx',
-    'efficientnet-lite4-11', 0.8010191082802548)
+    'efficientnet-lite4-11', 0.8015286624203821)
 ]
 
 DATASET_URL = 'https://s3.amazonaws.com/fast-ai-imageclas/imagenette2-320.tgz'
@@ -64,7 +64,8 @@ def validate(quantized_model_path: Path, data_loader: torch.utils.data.DataLoade
         574: 8,  # golf ball
         701: 9  # parachute
     }
-    compiled_model = ov.compile_model(quantized_model_path)
+    core = Core()
+    compiled_model = core.compile_model(quantized_model_path, "CPU")
     infer_queue = ov.AsyncInferQueue(compiled_model)
 
     predictions = [0] * len(data_loader)
@@ -80,9 +81,7 @@ def validate(quantized_model_path: Path, data_loader: torch.utils.data.DataLoade
     infer_queue.set_callback(res_callback)
 
     for i, (images, target) in tqdm(enumerate(data_loader)):
-        # W/A for memory leaks when using torch DataLoader and OpenVINO
-        image_copies = copy.deepcopy(images.numpy())
-        infer_queue.start_async(image_copies, userdata=i)
+        infer_queue.start_async(images, userdata=i)
         references[i] = target
     infer_queue.wait_all()
 
