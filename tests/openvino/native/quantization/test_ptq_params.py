@@ -25,6 +25,7 @@ from nncf.experimental.openvino_native.statistics.collectors import OVMeanMinMax
 from nncf.experimental.openvino_native.statistics.collectors import OVMinMaxStatisticCollector
 
 from tests.openvino.native.models import LinearModel
+from tests.openvino.native.models import DepthwiseConvModel
 
 
 # pylint: disable=protected-access
@@ -55,6 +56,23 @@ def test_range_type_per_tensor(range_type):
                     assert isinstance(tensor_collector, OVMinMaxStatisticCollector)
                 elif range_type == RangeType.MEAN_MINMAX:
                     assert isinstance(tensor_collector, OVMeanMinMaxStatisticCollector)
+
+
+@pytest.mark.parametrize('range_type', [RangeType.MINMAX, RangeType.MEAN_MINMAX, None])
+@pytest.mark.parametrize('original_model', [DepthwiseConvModel()])
+def test_range_type_per_channel(range_type, original_model):
+    algo = PostTrainingQuantization(PostTrainingQuantizationParameters(range_type=range_type))
+    min_max_algo = algo.algorithms[0]
+    min_max_algo._backend_entity = OVMinMaxAlgoBackend()
+    model = original_model.ov_model
+    assert min_max_algo._parameters.range_type == range_type
+    stat_points = min_max_algo.get_statistic_points(model)
+
+    for _, stat_point in stat_points.items():
+        for stat_point_ in stat_point:
+            for tensor_collector in stat_point_.algorithm_to_tensor_collectors[MinMaxQuantization]:
+                # Range_type does not affect per-channel tensor_collector
+                assert isinstance(tensor_collector, OVMinMaxStatisticCollector)
 
 
 @pytest.mark.parametrize('quantize_outputs', [False, True])
