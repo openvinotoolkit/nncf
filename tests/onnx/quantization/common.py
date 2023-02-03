@@ -29,23 +29,15 @@ from nncf.quantization.algorithms.post_training.algorithm import PostTrainingQua
 from nncf.quantization.algorithms.post_training.algorithm import PostTrainingQuantizationParameters
 from nncf.onnx.graph.nncf_graph_builder import GraphConverter
 from nncf.onnx.graph.onnx_graph import ONNXGraph
-from nncf.common.quantization.structs import QuantizationMode
-from nncf.onnx.quantization.quantizer_parameters import ONNXQuantizerLayerParameters
+from nncf.quantization.algorithms.min_max.quantizer_parameters import QuantizerLayerParameters
 
 REFERENCE_GRAPHS_TEST_ROOT = 'data/reference_graphs/quantization'
 
 
 def mock_collect_statistics(mocker):
-    default_nncf_q_layer_params = ONNXQuantizerLayerParameters(np.array(0), np.array(0),
-                                                               mode=QuantizationMode.SYMMETRIC,
-                                                               axis=None,
-                                                               tensor_type=np.uint8)
     _ = mocker.patch(
-        'nncf.quantization.algorithms.min_max.onnx_backend.calculate_activation_quantizer_parameters',
-        return_value=default_nncf_q_layer_params)
-    _ = mocker.patch(
-        'nncf.quantization.algorithms.min_max.onnx_backend.calculate_weight_quantizer_parameters',
-        return_value=default_nncf_q_layer_params)
+        'nncf.quantization.algorithms.min_max.quantizer_parameters.calculate_activation_quantizer_parameters',
+        return_value=QuantizerLayerParameters(np.array(0), np.array(0), np.array(0), np.array(0), 256))
     _ = mocker.patch(
         'nncf.common.tensor_statistics.aggregator.StatisticsAggregator.collect_statistics', return_value=None)
     _ = mocker.patch(
