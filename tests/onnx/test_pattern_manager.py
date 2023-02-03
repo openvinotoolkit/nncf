@@ -11,8 +11,8 @@
  limitations under the License.
 """
 from nncf.common.utils.backend import BackendType
-from nncf.common.graph.patterns import PatternsManager
 from nncf.common.graph.patterns import PatternNames
+from nncf.common.graph.patterns.manager import PatternsManager
 
 IGNORED_PATTERN_REASONS = {
      PatternNames.ADD_SCALE_SHIFT_OUTPUT: 'Not relevant for ONNX.',

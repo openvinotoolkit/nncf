@@ -37,8 +37,8 @@ from nncf.common.tensor_statistics.collectors import TensorStatisticCollectorBas
 from nncf.common.utils.backend import BackendType
 from nncf.common.utils.backend import get_backend
 from nncf.common.logging import nncf_logger
-from nncf.common.graph.patterns import PatternsManager
 from nncf.common.graph.patterns import GraphPattern
+from nncf.common.graph.patterns.manager import PatternsManager
 
 from nncf.quantization.algorithms.algorithm import Algorithm
 from nncf.quantization.algorithms.algorithm import AlgorithmParameters

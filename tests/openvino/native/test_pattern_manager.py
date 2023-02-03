@@ -11,8 +11,8 @@
  limitations under the License.
 """
 from nncf.common.utils.backend import BackendType
-from nncf.common.graph.patterns import PatternsManager
 from nncf.common.graph.patterns import PatternNames
+from nncf.common.graph.patterns.manager import PatternsManager
 
 IGNORED_PATTERN_REASONS = {
      PatternNames.SWISH_WITH_SIGMOID: 'Swish exists in the OpenVINO as layer.',
