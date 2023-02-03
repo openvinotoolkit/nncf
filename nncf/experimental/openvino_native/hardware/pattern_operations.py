@@ -28,6 +28,7 @@ ATOMIC_ACTIVATIONS_OPERATIONS = {GraphPattern.METATYPE_ATTR: [ov_metatypes.OVRel
                                                               ov_metatypes.OVPReluMetatype,
                                                               ov_metatypes.OVSigmoidMetatype,
                                                               ov_metatypes.OVHardSigmoidMetatype,
+                                                              ov_metatypes.OVSwishMetatype,
                                                               ],
                                    GraphPattern.LABEL_ATTR: 'ATOMIC_ACTIVATIONS'}
 

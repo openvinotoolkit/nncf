@@ -13,7 +13,7 @@
 
 from nncf.common.graph.operator_metatypes import InputNoopMetatype
 from nncf.common.graph.patterns import GraphPattern
-from nncf.common.graph.patterns import PatternsManager
+from nncf.common.graph.patterns import PatternNames
 from nncf.common.utils.registry import Registry
 from nncf.onnx.graph.metatypes import onnx_metatypes as om
 from nncf.onnx.hardware.pattern_operations import ARITHMETIC_OPERATIONS
@@ -24,58 +24,24 @@ from nncf.onnx.hardware.pattern_operations import LINEAR_OPERATIONS
 
 ONNX_HW_FUSED_PATTERNS = Registry('onnx')
 
+# BLOCK PATTERNS
 
-@ONNX_HW_FUSED_PATTERNS.register(PatternsManager.LINEAR_OPERATIONS)
-def linear_operations():
+
+@ONNX_HW_FUSED_PATTERNS.register(PatternNames.SCALE_SHIFT)
+def create_scale_shift():
     pattern = GraphPattern()
-    pattern.add_node(**LINEAR_OPERATIONS)
+    pattern_input_node = pattern.add_node(**{GraphPattern.LABEL_ATTR: '*INPUT_NODE*',
+                                             GraphPattern.METATYPE_ATTR: GraphPattern.NON_PATTERN_NODE_TYPE})
+    mul_node = pattern.add_node(**{GraphPattern.LABEL_ATTR: 'MULTIPLY',
+                                   GraphPattern.METATYPE_ATTR: om.ONNXMulLayerMetatype})
+    add_node = pattern.add_node(**{GraphPattern.LABEL_ATTR: 'ADD',
+                                   GraphPattern.METATYPE_ATTR: om.ONNXAddLayerMetatype})
+    pattern.add_edge(pattern_input_node, mul_node)
+    pattern.add_edge(mul_node, add_node)
     return pattern
 
 
-@ONNX_HW_FUSED_PATTERNS.register(PatternsManager.BATCH_NORMALIZATION_OPERATIONS)
-def batch_normalization_operations():
-    pattern = GraphPattern()
-    pattern.add_node(**BATCH_NORMALIZATION_OPERATIONS)
-    return pattern
-
-
-@ONNX_HW_FUSED_PATTERNS.register(PatternsManager.ATOMIC_ACTIVATIONS_OPERATIONS)
-def atomic_activations_operations():
-    pattern = GraphPattern()
-    pattern.add_node(**ATOMIC_ACTIVATIONS_OPERATIONS)
-
-    swish_sigmoid = create_swish_with_sigmoid()
-    pattern.add_pattern_alternative(swish_sigmoid)
-
-    swish_hard_sigmoid = create_swish_with_hard_sigmoid()
-    pattern.add_pattern_alternative(swish_hard_sigmoid)
-    return pattern
-
-
-@ONNX_HW_FUSED_PATTERNS.register(PatternsManager.ARITHMETIC_OPERATIONS)
-def arithmetic_operations():
-    pattern = GraphPattern()
-    pattern.add_node(**ARITHMETIC_OPERATIONS)
-    return pattern
-
-
-@ONNX_HW_FUSED_PATTERNS.register(PatternsManager.ACTIVATIONS_BATCH_NORM)
-def create_activations_batch_norm():
-    activations = atomic_activations_operations()
-    batch_norm = batch_normalization_operations()
-    activations.join_patterns(batch_norm)
-    return activations
-
-
-@ONNX_HW_FUSED_PATTERNS.register(PatternsManager.ACTIVATIONS_SCALE_SHIFT)
-def create_activations_scale_shift():
-    activations = atomic_activations_operations()
-    scale_shift = create_scale_shift_add()
-    activations.join_patterns(scale_shift)
-    return activations
-
-
-@ONNX_HW_FUSED_PATTERNS.register(PatternsManager.SWISH_WITH_SIGMOID)
+@ONNX_HW_FUSED_PATTERNS.register(PatternNames.SWISH_WITH_SIGMOID)
 def create_swish_with_sigmoid():
     pattern = GraphPattern()
     pattern_input_node = pattern.add_node(**{GraphPattern.LABEL_ATTR: '*INPUT_NODE*',
@@ -91,7 +57,7 @@ def create_swish_with_sigmoid():
     return pattern
 
 
-@ONNX_HW_FUSED_PATTERNS.register(PatternsManager.SWISH_WITH_HARD_SIGMOID)
+@ONNX_HW_FUSED_PATTERNS.register(PatternNames.SWISH_WITH_HARD_SIGMOID)
 def create_swish_with_hard_sigmoid():
     pattern = GraphPattern()
     pattern_input_node = pattern.add_node(**{GraphPattern.LABEL_ATTR: '*INPUT_NODE*',
@@ -106,81 +72,11 @@ def create_swish_with_hard_sigmoid():
     pattern.add_edge(pattern_input_node, mul_node)
     return pattern
 
-
-@ONNX_HW_FUSED_PATTERNS.register(PatternsManager.ARITHMETIC_BATCH_NORM)
-def create_arithmetic_batch_norm():
-    arithmetic = arithmetic_operations()
-    batch_norm = batch_normalization_operations()
-    arithmetic.join_patterns(batch_norm)
-    return arithmetic
+# INPUT PROCESSING
 
 
-@ONNX_HW_FUSED_PATTERNS.register(PatternsManager.ARITHMETIC_ACTIVATIONS)
-def create_arithmetic_activations():
-    arithmetic = arithmetic_operations()
-    activations = atomic_activations_operations()
-    arithmetic.join_patterns(activations)
-    return arithmetic
-
-
-@ONNX_HW_FUSED_PATTERNS.register(PatternsManager.ARITHMETIC_SCALE_SHIFT)
-def create_arithmetic_scale_shift():
-    arithmetic = arithmetic_operations()
-    scale_shift = create_scale_shift_add()
-    arithmetic.join_patterns(scale_shift)
-    return arithmetic
-
-
-@ONNX_HW_FUSED_PATTERNS.register(PatternsManager.ARITHMETIC_BATCH_NORM_ACTIVATIONS)
-def create_arithmetic_batch_norm_activations():
-    arithmetic_batch_norm = create_arithmetic_batch_norm()
-    activations = atomic_activations_operations()
-    arithmetic_batch_norm.join_patterns(activations)
-    return arithmetic_batch_norm
-
-
-@ONNX_HW_FUSED_PATTERNS.register(PatternsManager.ARITHMETIC_SCALE_SHIFT_ACTIVATIONS)
-def create_arithmetic_scale_shift_activations():
-    arithmetic_scale_shift = create_arithmetic_scale_shift()
-    activations = atomic_activations_operations()
-    arithmetic_scale_shift.join_patterns(activations)
-    return arithmetic_scale_shift
-
-
-@ONNX_HW_FUSED_PATTERNS.register(PatternsManager.ARITHMETIC_ACTIVATIONS_BATCH_NORM)
-def create_arithmetic_activations_batch_norm():
-    arithmetic_activations = create_arithmetic_activations()
-    batch_norm = batch_normalization_operations()
-    arithmetic_activations.join_patterns(batch_norm)
-    return arithmetic_activations
-
-
-@ONNX_HW_FUSED_PATTERNS.register(PatternsManager.ARITHMETIC_ACTIVATIONS_SCALE_SHIFT)
-def create_arithmetic_activations_scale_shift():
-    arithmetic_activations = create_arithmetic_activations()
-    scale_shift = create_scale_shift_add()
-    arithmetic_activations.join_patterns(scale_shift)
-    return arithmetic_activations
-
-
-@ONNX_HW_FUSED_PATTERNS.register(PatternsManager.BATCH_NORM_ACTIVATIONS)
-def create_batch_norm_activations():
-    batch_norm = batch_normalization_operations()
-    activations = atomic_activations_operations()
-    batch_norm.join_patterns(activations)
-    return batch_norm
-
-
-@ONNX_HW_FUSED_PATTERNS.register(PatternsManager.SCALE_SHIFT_ACTIVATIONS)
-def create_scale_shift_activations():
-    scale_shift = create_scale_shift_add()
-    activations = atomic_activations_operations()
-    scale_shift.join_patterns(activations)
-    return scale_shift
-
-
-@ONNX_HW_FUSED_PATTERNS.register(PatternsManager.INPUT_ADD_MULTIPLY)
-def create_input_add_multiply():
+@ONNX_HW_FUSED_PATTERNS.register(PatternNames.INPUT_SHIFT_SCALE)
+def create_input_shift_scale():
     pattern = GraphPattern()
     input_node = pattern.add_node(**{GraphPattern.LABEL_ATTR: 'MODEL_INPUT',
                                      GraphPattern.METATYPE_ATTR: InputNoopMetatype})
@@ -194,108 +90,7 @@ def create_input_add_multiply():
     return pattern
 
 
-@ONNX_HW_FUSED_PATTERNS.register(PatternsManager.INPUT_SCALE_SHIFT)
-def create_input_scale_shift():
-    pattern = GraphPattern()
-    pattern.add_node(**{GraphPattern.LABEL_ATTR: 'MODEL_INPUT',
-                        GraphPattern.METATYPE_ATTR: InputNoopMetatype})
-    scale_shift = create_scale_shift_add()
-
-    pattern.join_patterns(scale_shift)
-    return pattern
-
-
-@ONNX_HW_FUSED_PATTERNS.register(PatternsManager.INPUT_PROCESSING)
-def create_input_add():
-    pattern = GraphPattern()
-    input_node = pattern.add_node(**{GraphPattern.LABEL_ATTR: 'MODEL_INPUT',
-                                     GraphPattern.METATYPE_ATTR: InputNoopMetatype})
-    add_node = pattern.add_node(**{GraphPattern.LABEL_ATTR: 'ADD, MULTIPLY',
-                                   GraphPattern.METATYPE_ATTR: [om.ONNXAddLayerMetatype, om.ONNXMulLayerMetatype]})
-
-    pattern.add_edge(input_node, add_node)
-    return pattern
-
-
-@ONNX_HW_FUSED_PATTERNS.register(PatternsManager.LINEAR_ARITHMETIC)
-def create_linear_arithmetic():
-    linear = linear_operations()
-    arithmetic = arithmetic_operations()
-    linear.join_patterns(arithmetic)
-    return linear
-
-
-@ONNX_HW_FUSED_PATTERNS.register(PatternsManager.LINEAR_BATCH_NORM)
-def create_linear_batch_norm():
-    linear = linear_operations()
-    batch_norm = batch_normalization_operations()
-    linear.join_patterns(batch_norm)
-    return linear
-
-
-@ONNX_HW_FUSED_PATTERNS.register(PatternsManager.LINEAR_SCALE_SHIFT)
-def create_linear_scale_shift():
-    linear = linear_operations()
-    batch_norm = create_scale_shift_add()
-    linear.join_patterns(batch_norm)
-    return linear
-
-
-@ONNX_HW_FUSED_PATTERNS.register(PatternsManager.LINEAR_ACTIVATIONS)
-def create_linear_activations():
-    linear = linear_operations()
-    activations = atomic_activations_operations()
-    linear.join_patterns(activations)
-    return linear
-
-
-@ONNX_HW_FUSED_PATTERNS.register(PatternsManager.LINEAR_BATCH_NORM_ACTIVATIONS)
-def create_linear_batch_norm_activations():
-    linear_batch_norm = create_linear_batch_norm()
-    activations = atomic_activations_operations()
-    linear_batch_norm.join_patterns(activations)
-    return linear_batch_norm
-
-
-@ONNX_HW_FUSED_PATTERNS.register(PatternsManager.LINEAR_SCALE_SHIFT_ACTIVATIONS)
-def create_linear_scale_shift_activations():
-    linear_scale_shift = create_linear_scale_shift()
-    activations = atomic_activations_operations()
-    linear_scale_shift.join_patterns(activations)
-    return linear_scale_shift
-
-
-@ONNX_HW_FUSED_PATTERNS.register(PatternsManager.LINEAR_ACTIVATIONS_BATCH_NORM)
-def create_linear_activations_batch_norm():
-    linear_activations = create_linear_activations()
-    batch_norm = batch_normalization_operations()
-    linear_activations.join_patterns(batch_norm)
-    return linear_activations
-
-
-@ONNX_HW_FUSED_PATTERNS.register(PatternsManager.LINEAR_ACTIVATIONS_SCALE_SHIFT)
-def create_linear_activations_scale_shift():
-    linear_activations = create_linear_activations()
-    scale_shift = create_scale_shift_add()
-    linear_activations.join_patterns(scale_shift)
-    return linear_activations
-
-
-@ONNX_HW_FUSED_PATTERNS.register(PatternsManager.SCALE_SHIFT_ADD)
-def create_scale_shift_add():
-    pattern = GraphPattern()
-    pattern_input_node = pattern.add_node(**{GraphPattern.LABEL_ATTR: '*INPUT_NODE*',
-                                             GraphPattern.METATYPE_ATTR: GraphPattern.NON_PATTERN_NODE_TYPE})
-    mul_node = pattern.add_node(**{GraphPattern.LABEL_ATTR: 'MULTIPLY',
-                                   GraphPattern.METATYPE_ATTR: om.ONNXMulLayerMetatype})
-    add_node = pattern.add_node(**{GraphPattern.LABEL_ATTR: 'ADD',
-                                   GraphPattern.METATYPE_ATTR: om.ONNXAddLayerMetatype})
-    pattern.add_edge(pattern_input_node, mul_node)
-    pattern.add_edge(mul_node, add_node)
-    return pattern
-
-
-@ONNX_HW_FUSED_PATTERNS.register(PatternsManager.INPUT_MULTIPLY_SUBTRACT)
+@ONNX_HW_FUSED_PATTERNS.register(PatternNames.INPUT_MULTIPLY_SUBTRACT)
 def create_input_multiply_subtract():
     pattern = GraphPattern()
     input_node = pattern.add_node(**{GraphPattern.LABEL_ATTR: 'MODEL_INPUT',
@@ -310,10 +105,179 @@ def create_input_multiply_subtract():
     return pattern
 
 
-@ONNX_HW_FUSED_PATTERNS.register(PatternsManager.LINEAR_BATCH_NORM_SCALE_SHIFT_ACTIVATIONS)
+@ONNX_HW_FUSED_PATTERNS.register(PatternNames.INPUT_PROCESSING)
+def create_input_add():
+    pattern = GraphPattern()
+    input_node = pattern.add_node(**{GraphPattern.LABEL_ATTR: 'MODEL_INPUT',
+                                     GraphPattern.METATYPE_ATTR: InputNoopMetatype})
+    add_node = pattern.add_node(**{GraphPattern.LABEL_ATTR: 'ADD, MULTIPLY',
+                                   GraphPattern.METATYPE_ATTR: [om.ONNXAddLayerMetatype, om.ONNXMulLayerMetatype]})
+
+    pattern.add_edge(input_node, add_node)
+    return pattern
+
+
+@ONNX_HW_FUSED_PATTERNS.register(PatternNames.INPUT_SCALE_SHIFT)
+def create_input_scale_shift():
+    pattern = GraphPattern()
+    pattern.add_node(**{GraphPattern.LABEL_ATTR: 'MODEL_INPUT',
+                        GraphPattern.METATYPE_ATTR: InputNoopMetatype})
+    scale_shift = create_scale_shift()
+
+    pattern.join_patterns(scale_shift)
+    return pattern
+
+
+# COMBINATIONS
+
+@ONNX_HW_FUSED_PATTERNS.register(PatternNames.ACTIVATIONS_BATCH_NORM)
+def create_activations_batch_norm():
+    activations = atomic_activations_operations()
+    batch_norm = batch_normalization_operations()
+    activations.join_patterns(batch_norm)
+    return activations
+
+
+@ONNX_HW_FUSED_PATTERNS.register(PatternNames.ACTIVATIONS_SCALE_SHIFT)
+def create_activations_scale_shift():
+    activations = atomic_activations_operations()
+    scale_shift = create_scale_shift()
+    activations.join_patterns(scale_shift)
+    return activations
+
+
+@ONNX_HW_FUSED_PATTERNS.register(PatternNames.ARITHMETIC_BATCH_NORM)
+def create_arithmetic_batch_norm():
+    arithmetic = arithmetic_operations()
+    batch_norm = batch_normalization_operations()
+    arithmetic.join_patterns(batch_norm)
+    return arithmetic
+
+
+@ONNX_HW_FUSED_PATTERNS.register(PatternNames.ARITHMETIC_ACTIVATIONS)
+def create_arithmetic_activations():
+    arithmetic = arithmetic_operations()
+    activations = atomic_activations_operations()
+    arithmetic.join_patterns(activations)
+    return arithmetic
+
+
+@ONNX_HW_FUSED_PATTERNS.register(PatternNames.ARITHMETIC_SCALE_SHIFT)
+def create_arithmetic_scale_shift():
+    arithmetic = arithmetic_operations()
+    scale_shift = create_scale_shift()
+    arithmetic.join_patterns(scale_shift)
+    return arithmetic
+
+
+@ONNX_HW_FUSED_PATTERNS.register(PatternNames.ARITHMETIC_BATCH_NORM_ACTIVATIONS)
+def create_arithmetic_batch_norm_activations():
+    arithmetic_batch_norm = create_arithmetic_batch_norm()
+    activations = atomic_activations_operations()
+    arithmetic_batch_norm.join_patterns(activations)
+    return arithmetic_batch_norm
+
+
+@ONNX_HW_FUSED_PATTERNS.register(PatternNames.ARITHMETIC_SCALE_SHIFT_ACTIVATIONS)
+def create_arithmetic_scale_shift_activations():
+    arithmetic_scale_shift = create_arithmetic_scale_shift()
+    activations = atomic_activations_operations()
+    arithmetic_scale_shift.join_patterns(activations)
+    return arithmetic_scale_shift
+
+
+@ONNX_HW_FUSED_PATTERNS.register(PatternNames.ARITHMETIC_ACTIVATIONS_BATCH_NORM)
+def create_arithmetic_activations_batch_norm():
+    arithmetic_activations = create_arithmetic_activations()
+    batch_norm = batch_normalization_operations()
+    arithmetic_activations.join_patterns(batch_norm)
+    return arithmetic_activations
+
+
+@ONNX_HW_FUSED_PATTERNS.register(PatternNames.ARITHMETIC_ACTIVATIONS_SCALE_SHIFT)
+def create_arithmetic_activations_scale_shift():
+    arithmetic_activations = create_arithmetic_activations()
+    scale_shift = create_scale_shift()
+    arithmetic_activations.join_patterns(scale_shift)
+    return arithmetic_activations
+
+
+@ONNX_HW_FUSED_PATTERNS.register(PatternNames.BATCH_NORM_ACTIVATIONS)
+def create_batch_norm_activations():
+    batch_norm = batch_normalization_operations()
+    activations = atomic_activations_operations()
+    batch_norm.join_patterns(activations)
+    return batch_norm
+
+
+@ONNX_HW_FUSED_PATTERNS.register(PatternNames.SCALE_SHIFT_ACTIVATIONS)
+def create_scale_shift_activations():
+    scale_shift = create_scale_shift()
+    activations = atomic_activations_operations()
+    scale_shift.join_patterns(activations)
+    return scale_shift
+
+
+@ONNX_HW_FUSED_PATTERNS.register(PatternNames.LINEAR_ARITHMETIC)
+def create_linear_arithmetic():
+    linear = linear_operations()
+    arithmetic = arithmetic_operations()
+    linear.join_patterns(arithmetic)
+    return linear
+
+
+@ONNX_HW_FUSED_PATTERNS.register(PatternNames.LINEAR_BATCH_NORM)
+def create_linear_batch_norm():
+    linear = linear_operations()
+    batch_norm = batch_normalization_operations()
+    linear.join_patterns(batch_norm)
+    return linear
+
+
+@ONNX_HW_FUSED_PATTERNS.register(PatternNames.LINEAR_ACTIVATIONS)
+def create_linear_activations():
+    linear = linear_operations()
+    activations = atomic_activations_operations()
+    linear.join_patterns(activations)
+    return linear
+
+
+@ONNX_HW_FUSED_PATTERNS.register(PatternNames.LINEAR_BATCH_NORM_ACTIVATIONS)
+def create_linear_batch_norm_activations():
+    linear_batch_norm = create_linear_batch_norm()
+    activations = atomic_activations_operations()
+    linear_batch_norm.join_patterns(activations)
+    return linear_batch_norm
+
+
+@ONNX_HW_FUSED_PATTERNS.register(PatternNames.LINEAR_SCALE_SHIFT_ACTIVATIONS)
+def create_linear_scale_shift_activations():
+    linear_scale_shift = create_linear_scale_shift()
+    activations = atomic_activations_operations()
+    linear_scale_shift.join_patterns(activations)
+    return linear_scale_shift
+
+
+@ONNX_HW_FUSED_PATTERNS.register(PatternNames.LINEAR_ACTIVATIONS_BATCH_NORM)
+def create_linear_activations_batch_norm():
+    linear_activations = create_linear_activations()
+    batch_norm = batch_normalization_operations()
+    linear_activations.join_patterns(batch_norm)
+    return linear_activations
+
+
+@ONNX_HW_FUSED_PATTERNS.register(PatternNames.LINEAR_ACTIVATIONS_SCALE_SHIFT)
+def create_linear_activations_scale_shift():
+    linear_activations = create_linear_activations()
+    scale_shift = create_scale_shift()
+    linear_activations.join_patterns(scale_shift)
+    return linear_activations
+
+
+@ONNX_HW_FUSED_PATTERNS.register(PatternNames.LINEAR_BATCH_NORM_SCALE_SHIFT_ACTIVATIONS)
 def create_linear_bn_scale_shift_activation() -> GraphPattern:
     linear_batch_norm = create_linear_batch_norm()
-    scale_shift = create_scale_shift_add()
+    scale_shift = create_scale_shift()
     activations = atomic_activations_operations()
 
     linear_batch_norm.join_patterns(scale_shift)
@@ -321,12 +285,52 @@ def create_linear_bn_scale_shift_activation() -> GraphPattern:
     return linear_batch_norm
 
 
-@ONNX_HW_FUSED_PATTERNS.register(PatternsManager.BATCH_NORM_SCALE_SHIFT_ACTIVATIONS)
+@ONNX_HW_FUSED_PATTERNS.register(PatternNames.BATCH_NORM_SCALE_SHIFT_ACTIVATIONS)
 def create_bn_scale_shift_activation() -> GraphPattern:
     batch_norm = batch_normalization_operations()
-    scale_shift = create_scale_shift_add()
+    scale_shift = create_scale_shift()
     activations = atomic_activations_operations()
 
     batch_norm.join_patterns(scale_shift)
     batch_norm.join_patterns(activations)
     return batch_norm
+
+# DEVICE PATTERNS
+
+
+@ONNX_HW_FUSED_PATTERNS.register(PatternNames.LINEAR_SCALE_SHIFT)
+def create_linear_scale_shift():
+    linear = linear_operations()
+    batch_norm = create_scale_shift()
+    linear.join_patterns(batch_norm)
+    return linear
+
+
+def linear_operations():
+    pattern = GraphPattern()
+    pattern.add_node(**LINEAR_OPERATIONS)
+    return pattern
+
+
+def batch_normalization_operations():
+    pattern = GraphPattern()
+    pattern.add_node(**BATCH_NORMALIZATION_OPERATIONS)
+    return pattern
+
+
+def atomic_activations_operations():
+    pattern = GraphPattern()
+    pattern.add_node(**ATOMIC_ACTIVATIONS_OPERATIONS)
+
+    swish_sigmoid = create_swish_with_sigmoid()
+    pattern.add_pattern_alternative(swish_sigmoid)
+
+    swish_hard_sigmoid = create_swish_with_hard_sigmoid()
+    pattern.add_pattern_alternative(swish_hard_sigmoid)
+    return pattern
+
+
+def arithmetic_operations():
+    pattern = GraphPattern()
+    pattern.add_node(**ARITHMETIC_OPERATIONS)
+    return pattern

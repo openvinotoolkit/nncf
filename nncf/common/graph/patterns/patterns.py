@@ -20,8 +20,6 @@ from typing import Dict, Hashable, List, Optional, Tuple
 import networkx as nx
 import networkx.algorithms.isomorphism as ism
 
-from nncf.common.utils.backend import BackendType
-from nncf.common.utils.registry import Registry
 from nncf.common.utils.dot_file_rw import write_dot_graph
 from nncf.parameters import TargetDevice
 
@@ -266,209 +264,107 @@ def merge_two_types_of_operations(first_op: Dict, second_op: Dict, label: str) -
 class PatternDesc:
     name: str
     devices: List[TargetDevice] = None
-    backends: List[BackendType] = None
-    match: bool = True
 
 
-class PatternsManager(Enum):
+class PatternNames(Enum):
 
-    # COMMON PATTERNS
-    SWISH_ACTIVATION = PatternDesc('swish_activation',
-                                   backends=[BackendType.OPENVINO])
-    SE_BLOCK = PatternDesc('se_block',
-                           backends=[BackendType.OPENVINO])
-    OPERATION_WITH_BIAS = PatternDesc('operation_with_bias',
-                                      backends=[BackendType.OPENVINO])
-    SCALE_SHIFT_ADD = PatternDesc('scale_shift_add')
-    ADD_SCALE_SHIFT = PatternDesc('add_scale_shift',
-                                  backends=[BackendType.OPENVINO])
-    MVN_SCALE_SHIFT = PatternDesc('mvn_scale_shift',
-                                  backends=[BackendType.OPENVINO])
-    NORMALIZE_L2 = PatternDesc('normalize_l2',
-                               backends=[BackendType.OPENVINO])
+    # BLOCK PATTERNS
+    ADD_SCALE_SHIFT_OUTPUT = PatternDesc('add_scale_shift_output')
+    BATCH_INDEX = PatternDesc('batch_index')
+    EQUAL_LOGICALNOT = PatternDesc('equal_logicalnot')
+    FC_BN_HSWISH_ACTIVATION = PatternDesc('fc_bn_hswish_activation')
+    LINEAR_WITH_BIAS = PatternDesc('linear_with_bias')
+    MVN_SCALE_SHIFT = PatternDesc('mvn_scale_shift')
+    NORMALIZE_L2_MULTIPLY = PatternDesc('normalize_l2_multiply')
+    SCALE_SHIFT = PatternDesc('scale_shift')
+    SE_BLOCK = PatternDesc('se_block')
+    SOFTMAX_DIV = PatternDesc('softmax_div')
+    SOFTMAX_RESHAPE_MATMUL = PatternDesc('softmax_reshape_matmul')
+    SOFTMAX_RESHAPE_TRANSPOSE_GATHER_MATMUL = PatternDesc('softmax_reshape_transpose_gather_matmul')
+    SOFTMAX_RESHAPE_TRANSPOSE_MATMUL = PatternDesc('softmax_reshape_transpose_matmul')
+    STABLE_DIFFUSION = PatternDesc('stable_diffusion')
+
+    # ACTIVATIONS
+    HSWISH_ACTIVATION = PatternDesc('hswish_activation')
+    HSWISH_ACTIVATION_V2 = PatternDesc('hswish_activation_v2')
+    HSWISH_ACTIVATION_WITHOUT_DENOMINATOR = PatternDesc('hswish_activation_without_denominator')
+    SOFTMAX = PatternDesc('softmax')
+    SWISH_WITH_HARD_SIGMOID = PatternDesc('swish_with_hard_sigmoid')
+    SWISH_WITH_SIGMOID = PatternDesc('swish_with_sigmoid')
+
+    # INPUT PROCESSING
+    INPUT_CONVERT_TRANSPOSE_PROCESSING = PatternDesc('input_convert_transpose_processing')
+    INPUT_CONVERT_TRANSPOSE_REVERSE_ADD = PatternDesc('input_convert_transpose_reverse_add')
+    INPUT_CONVERT_TRANSPOSE_REVERSE_SCALE_SHIFT = PatternDesc('input_convert_transpose_reverse_scale_shift')
+    INPUT_CONVERT_TRANSPOSE_SCALE_SHIFT = PatternDesc('input_convert_transpose_scale_shift')
+    INPUT_MULTIPLY_SUBTRACT = PatternDesc('input_multiply_subtract')
+    INPUT_PROCESSING = PatternDesc('input_processing')
+    INPUT_REVERSE_ADD = PatternDesc('input_reverse_add')
+    INPUT_REVERSE_SCALE_SHIFT = PatternDesc('input_reverse_scale_shift')
     INPUT_SCALE_SHIFT = PatternDesc('input_scale_shift')
-    INPUT_TRANSPOSE_SCALE_SHIFT = PatternDesc('input_transpose_scale_shift',
-                                              backends=[BackendType.OPENVINO])
-    INPUT_CONVERT_TRANSPOSE_SCALE_SHIFT = PatternDesc('input_convert_transpose_scale_shift',
-                                                      backends=[BackendType.OPENVINO])
-    INPUT_PROCESSING = PatternDesc('input_processing',
-                                   backends=[BackendType.OPENVINO, BackendType.ONNX])
-    INPUT_TRANSPOSE_PROCESSING = PatternDesc('input_transpose_processing',
-                                             backends=[BackendType.OPENVINO])
-    INPUT_CONVERT_TRANSPOSE_PROCESSING = PatternDesc('input_convert_transpose_processing',
-                                                     backends=[BackendType.OPENVINO])
-    INPUT_REVERSE_INPUT_CHANNELS_SCALE_SHIFT = PatternDesc('input_reverse_input_channels_scale_shift',
-                                                           backends=[BackendType.OPENVINO])
-    INPUT_CONVERT_TRANSPOSE_REVERSE_INPUT_CHANNELS_SCALE_SHIFT = PatternDesc(
-        'input_convert_transpose_reverse_input_channels_scale_shift', backends=[BackendType.OPENVINO])
-    INPUT_REVERSE_INPUT_CHANNELS_ADD = PatternDesc('input_reverse_input_channels_add',
-                                                   backends=[BackendType.OPENVINO])
-    INPUT_TRANSPOSE_REVERSE_INPUT_CHANNELS_ADD = PatternDesc('input_transpose_reverse_input_channels_add',
-                                                             backends=[BackendType.OPENVINO])
-    INPUT_CONVERT_TRANSPOSE_REVERSE_INPUT_CHANNELS_ADD = PatternDesc(
-        'input_convert_transpose_reverse_input_channels_add', backends=[BackendType.OPENVINO])
-    SOFTMAX = PatternDesc('softmax',
-                          backends=[BackendType.OPENVINO])
-    SOFTMAX_DIV = PatternDesc('softmax_div',
-                              backends=[BackendType.OPENVINO])
-    SOFTMAX_RESHAPE_MATMUL = PatternDesc('softmax_reshape_matmul',
-                                         backends=[BackendType.OPENVINO])
-    SOFTMAX_RESHAPE_TRANSPOSE_MATMUL = PatternDesc('softmax_reshape_transpose_matmul',
-                                                   backends=[BackendType.OPENVINO])
-    STABLE_DIFFUSION = PatternDesc('stable_diffusion',
-                                   backends=[BackendType.OPENVINO])
-    SOFTMAX_RESHAPE_TRANSPOSE_GATHER_MATMUL = PatternDesc('softmax_reshape_transpose_gather_matmul',
-                                                          backends=[BackendType.OPENVINO])
-    HSWISH_ACTIVATION_WITHOUT_DENOMINATOR = PatternDesc('hswish_activation_without_denominator',
-                                                        backends=[BackendType.OPENVINO])
-    HSWISH_ACTIVATION = PatternDesc('hswish_activation',
-                                    backends=[BackendType.OPENVINO])
-    HSWISH_ACTIVATION_V2 = PatternDesc('hswish_activation_v2',
-                                       backends=[BackendType.OPENVINO])
-    FC_BN_HSWISH_ACTIVATION = PatternDesc('fc_bn_hswish_activation',
-                                          backends=[BackendType.OPENVINO])
-    BATCH_INDEX = PatternDesc('batch_index',
-                              backends=[BackendType.OPENVINO])
-    EXPERIMENTAL_DETECTRON_DETECTION_OUTPUT_ADD = PatternDesc('experimental_detectron_detection_output_add',
-                                                              backends=[BackendType.OPENVINO])
-    EXPERIMENTAL_DETECTRON_ROI_FEATURE_EXTRACTOR_ADD = PatternDesc('experimental_detectron_roi_feature_extractor_add',
-                                                                   backends=[BackendType.OPENVINO])
-    EQUAL_LOGICALNOT = PatternDesc('equal_logicalnot',
-                                   backends=[BackendType.OPENVINO])
-    BATCH_NORM_ACTIVATIONS = PatternDesc('batch_norm_activations')
+    INPUT_SHIFT_SCALE = PatternDesc('input_shift_scale')
+    INPUT_TRANSPOSE_PROCESSING = PatternDesc('input_transpose_processing')
+    INPUT_TRANSPOSE_REVERSE_ADD = PatternDesc('input_transpose_reverse_add')
+    INPUT_TRANSPOSE_SCALE_SHIFT = PatternDesc('input_transpose_scale_shift')
+
+    # COMBINATIONS
     ACTIVATIONS_BATCH_NORM = PatternDesc('activations_batch_norm')
-    ACTIVATIONS_SCALE_SHIFT = PatternDesc('activations_scale_shift',
-                                          backends=[BackendType.ONNX])
-    INPUT_ADD_MULTIPLY = PatternDesc('input_add_multiply')
-    SWISH_WITH_SIGMOID = PatternDesc('swish_with_sigmoid',
-                                     backends=[BackendType.ONNX])
-    SWISH_WITH_HARD_SIGMOID = PatternDesc('swish_with_hard_sigmoid',
-                                          backends=[BackendType.ONNX])
-    INPUT_MULTIPLY_SUBTRACT = PatternDesc('input_multiply_subtract',
-                                          backends=[BackendType.ONNX])
-    ARITHMETIC_BATCH_NORM_ACTIVATIONS = PatternDesc('arithmetic_batch_norm_activations',
-                                                    backends=[BackendType.ONNX])
-    ARITHMETIC_SCALE_SHIFT_ACTIVATIONS = PatternDesc('arithmetic_scale_shift_activations',
-                                                     backends=[BackendType.ONNX])
-    ARITHMETIC_ACTIVATIONS_BATCH_NORM = PatternDesc('arithmetic_activations_batch_norm',
-                                                    backends=[BackendType.ONNX])
-    ARITHMETIC_ACTIVATIONS_SCALE_SHIFT = PatternDesc('arithmetic_activations_scale_shift',
-                                                     backends=[BackendType.ONNX])
-    ARITHMETIC_BATCH_NORM = PatternDesc('arithmetic_batch_norm',
-                                        backends=[BackendType.ONNX])
+    ACTIVATIONS_SCALE_SHIFT = PatternDesc('activations_scale_shift')
     ARITHMETIC_ACTIVATIONS = PatternDesc('arithmetic_activations')
-    ARITHMETIC_SCALE_SHIFT = PatternDesc('arithmetic_scale_shift',
-                                         backends=[BackendType.ONNX])
-    SCALE_SHIFT_ACTIVATIONS = PatternDesc('scale_shift_activations',
-                                          backends=[BackendType.ONNX])
-    LINEAR_ARITHMETIC = PatternDesc('linear_arithmetic')
-    LINEAR_BATCH_NORM = PatternDesc('linear_batch_norm',
-                                    backends=[BackendType.ONNX])
+    ARITHMETIC_ACTIVATIONS_BATCH_NORM = PatternDesc('arithmetic_activations_batch_norm')
+    ARITHMETIC_ACTIVATIONS_SCALE_SHIFT = PatternDesc('arithmetic_activations_scale_shift')
+    ARITHMETIC_BATCH_NORM = PatternDesc('arithmetic_batch_norm')
+    ARITHMETIC_BATCH_NORM_ACTIVATIONS = PatternDesc('arithmetic_batch_norm_activations')
+    ARITHMETIC_SCALE_SHIFT = PatternDesc('arithmetic_scale_shift')
+    ARITHMETIC_SCALE_SHIFT_ACTIVATIONS = PatternDesc('arithmetic_scale_shift_activations')
+    BATCH_NORM_ACTIVATIONS = PatternDesc('batch_norm_activations')
+    BATCH_NORM_SCALE_SHIFT_ACTIVATIONS = PatternDesc('batch_norm_scale_shift_activations')
     LINEAR_ACTIVATIONS = PatternDesc('linear_activations')
-    LINEAR_ARITHMETIC_ACTIVATIONS = PatternDesc('linear_arithmetic_activations',
-                                                backends=[BackendType.OPENVINO])
-    LINEAR_BATCH_NORM_ACTIVATIONS = PatternDesc('linear_batch_norm_activations',
-                                                backends=[BackendType.ONNX])
-    LINEAR_SCALE_SHIFT_ACTIVATIONS = PatternDesc('linear_scale_shift_activations',
-                                                 backends=[BackendType.ONNX])
-    LINEAR_ACTIVATIONS_BATCH_NORM = PatternDesc('linear_activations_batch_norm',
-                                                backends=[BackendType.ONNX])
-    LINEAR_ACTIVATIONS_SCALE_SHIFT = PatternDesc('linear_activations_scale_shift',
-                                                 backends=[BackendType.ONNX])
-    LINEAR_BATCH_NORM_SCALE_SHIFT_ACTIVATIONS = PatternDesc('linear_batch_norm_scale_shift_activations',
-                                                            backends=[BackendType.ONNX])
-    BATCH_NORM_SCALE_SHIFT_ACTIVATIONS = PatternDesc('batch_norm_scale_shift_activations',
-                                                     backends=[BackendType.ONNX])
+    LINEAR_ACTIVATIONS_BATCH_NORM = PatternDesc('linear_activations_batch_norm')
+    LINEAR_ACTIVATIONS_SCALE_SHIFT = PatternDesc('linear_activations_scale_shift')
+    LINEAR_ARITHMETIC = PatternDesc('linear_arithmetic')
+    LINEAR_ARITHMETIC_ACTIVATIONS = PatternDesc('linear_arithmetic_activations')
+    LINEAR_BATCH_NORM = PatternDesc('linear_batch_norm')
+    LINEAR_BATCH_NORM_ACTIVATIONS = PatternDesc('linear_batch_norm_activations')
+    LINEAR_BATCH_NORM_SCALE_SHIFT_ACTIVATIONS = PatternDesc('linear_batch_norm_scale_shift_activations')
+    LINEAR_SCALE_SHIFT_ACTIVATIONS = PatternDesc('linear_scale_shift_activations')
+    SCALE_SHIFT_ACTIVATIONS = PatternDesc('scale_shift_activations')
 
     # DEVICE PATTERNS
     HSWISH_ACTIVATION_CLAMP_MULTIPLY = PatternDesc('hswish_activation_clamp_multiply',
-                                                   backends=[BackendType.OPENVINO],
                                                    devices=[TargetDevice.ANY,
                                                             TargetDevice.CPU,
                                                             TargetDevice.GPU,
                                                             TargetDevice.VPU])
     LINEAR_SCALE_SHIFT = PatternDesc('linear_scale_shift',
-                                 backends=[BackendType.OPENVINO, BackendType.ONNX],
-                                 devices=[TargetDevice.ANY, TargetDevice.CPU, TargetDevice.GPU])
+                                     devices=[TargetDevice.ANY,
+                                              TargetDevice.CPU,
+                                              TargetDevice.GPU])
     LINEAR_BIASED_SCALE_SHIFT = PatternDesc('linear_biased_scale_shift',
-                                        backends=[BackendType.OPENVINO],
-                                        devices=[TargetDevice.ANY, TargetDevice.CPU, TargetDevice.GPU])
+                                            devices=[TargetDevice.ANY,
+                                                     TargetDevice.CPU,
+                                                     TargetDevice.GPU])
     LINEAR_ACTIVATION_SCALE_SHIFT = PatternDesc('linear_activation_scale_shift',
-                                            backends=[BackendType.OPENVINO],
-                                            devices=[TargetDevice.ANY, TargetDevice.CPU, TargetDevice.GPU])
+                                                devices=[TargetDevice.ANY,
+                                                         TargetDevice.CPU,
+                                                         TargetDevice.GPU])
     LINEAR_BIASED_ACTIVATION_SCALE_SHIFT = PatternDesc('linear_biased_activation_scale_shift',
-                                                   backends=[BackendType.OPENVINO],
-                                                   devices=[TargetDevice.ANY, TargetDevice.CPU, TargetDevice.GPU])
+                                                       devices=[TargetDevice.ANY,
+                                                                TargetDevice.CPU,
+                                                                TargetDevice.GPU])
     LINEAR_ELEMENTWISE = PatternDesc('linear_elementwise',
-                                 backends=[BackendType.OPENVINO],
-                                 devices=[TargetDevice.ANY, TargetDevice.CPU, TargetDevice.GPU])
+                                     devices=[TargetDevice.ANY,
+                                              TargetDevice.CPU,
+                                              TargetDevice.GPU])
     LINEAR_BIASED_ELEMENTWISE = PatternDesc('linear_biased_elementwise',
-                                        backends=[BackendType.OPENVINO],
-                                        devices=[TargetDevice.ANY, TargetDevice.CPU, TargetDevice.GPU])
+                                            devices=[TargetDevice.ANY,
+                                                     TargetDevice.CPU,
+                                                     TargetDevice.GPU])
     LINEAR_ACTIVATION_ELEMENTWISE = PatternDesc('linear_activation_elementwise',
-                                            backends=[BackendType.OPENVINO],
-                                            devices=[TargetDevice.ANY, TargetDevice.CPU, TargetDevice.GPU])
+                                                devices=[TargetDevice.ANY,
+                                                         TargetDevice.CPU,
+                                                         TargetDevice.GPU])
     LINEAR_BIASED_ACTIVATION_ELEMENTWISE = PatternDesc('linear_biased_activation_elementwise',
-                                                   backends=[BackendType.OPENVINO],
-                                                   devices=[TargetDevice.ANY, TargetDevice.CPU, TargetDevice.GPU])
-
-    # OPERATIONS
-    LINEAR_OPERATIONS = PatternDesc('linear_operations', match=False)
-    BATCH_NORMALIZATION_OPERATIONS = PatternDesc('batch_normalization_operations', match=False)
-    ATOMIC_ACTIVATIONS_OPERATIONS = PatternDesc('atomic_activations_operations', match=False)
-    ARITHMETIC_OPERATIONS = PatternDesc('arithmetic_operations', match=False)
-
-    @staticmethod
-    def _get_pattern_desc_by_backend(backend: BackendType) -> List['PatternsManager']:
-        output = []
-        for pattern in PatternsManager:
-            pattern_desc = pattern.value
-            if pattern_desc.backends is None or backend in pattern_desc.backends:
-                output.append(pattern)
-        return output
-
-    @staticmethod
-    def _check(registered_patterns: List['PatternsManager'], all_patterns: List['PatternsManager']):
-        diff = set(all_patterns) - set(registered_patterns)
-        if len(diff) != 0:
-            raise RuntimeError('Not all patterns was registred in the backend!')
-
-    @staticmethod
-    def _filter_pattern_desc_by_device(pattern_names: List['PatternsManager'],
-                                       device: TargetDevice) -> List['PatternsManager']:
-        output = []
-        for backend_pattern in pattern_names:
-            pattern_desc = backend_pattern.value
-            if pattern_desc.devices is None or device in pattern_desc.devices:
-                output.append(backend_pattern)
-        return output
-
-    @staticmethod
-    def _get_fused_patterns_by_backend(backend: BackendType) -> Tuple[Registry, List['PatternsManager']]:
-        if backend == BackendType.OPENVINO:
-            from nncf.experimental.openvino_native.hardware.fused_patterns import \
-                OPENVINO_HW_FUSED_PATTERNS as ov_reg
-
-            pattern_names = PatternsManager._get_pattern_desc_by_backend(backend)
-            PatternsManager._check(ov_reg.registry_dict.keys(), pattern_names)
-            return ov_reg, pattern_names
-
-        if backend == BackendType.ONNX:
-            from nncf.onnx.hardware.fused_patterns import ONNX_HW_FUSED_PATTERNS as onnx_reg
-
-            pattern_names = PatternsManager._get_pattern_desc_by_backend(backend)
-            PatternsManager._check(onnx_reg.registry_dict.keys(), pattern_names)
-            return onnx_reg, pattern_names
-
-        raise RuntimeError(f'Backend {backend} has no patterns!')
-
-    @staticmethod
-    def get_patterns(backend: BackendType, device: TargetDevice) -> HWFusedPatterns:
-        hw_fused_patterns = HWFusedPatterns()
-        registry, pattern_names = PatternsManager._get_fused_patterns_by_backend(backend)
-
-        for pattern_info in PatternsManager._filter_pattern_desc_by_device(pattern_names, device):
-            pattern = registry.get(pattern_info)()
-            if pattern is not None:
-                hw_fused_patterns.register(pattern, pattern_info.value.name, pattern_info.value.match)
-        return hw_fused_patterns
+                                                       devices=[TargetDevice.ANY,
+                                                                TargetDevice.CPU,
+                                                                TargetDevice.GPU])

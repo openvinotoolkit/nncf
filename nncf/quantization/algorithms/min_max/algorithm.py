@@ -241,7 +241,8 @@ class MinMaxQuantization(Algorithm):
     def _get_patterns_setup(self, model: TModel) -> GraphPattern:
         backend = get_backend(model)
         device = self._parameters.target_device
-        return PatternsManager.get_patterns(backend, device).get_full_pattern_graph()
+        patterns_manager = PatternsManager()
+        return patterns_manager.get_patterns(backend, device).get_full_pattern_graph()
 
     def _get_quantizer_setup(self, nncf_graph: NNCFGraph, pattern: GraphPattern) -> SingleConfigQuantizerSetup:
         """
