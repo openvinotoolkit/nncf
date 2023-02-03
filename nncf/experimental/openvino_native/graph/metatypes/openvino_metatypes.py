@@ -600,6 +600,7 @@ def _is_depthwise_conv(node: ov.Node) -> bool:
     groups == in_channels and inp_channels > 1.
     Weight tensor layout is [groups, output channels / groups, input channels / groups, Z, Y, X],
     where Z, Y, X - spatial axes.
+
     :param node: GroupConvolution node to check whether it is depthwise.
     :return: True if the convolution is depthwise, False - otherwise.
     """
