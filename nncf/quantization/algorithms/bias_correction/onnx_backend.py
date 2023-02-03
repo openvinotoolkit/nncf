@@ -25,11 +25,6 @@ from nncf.common.graph.transformations.layout import TransformationLayout
 from nncf.common.graph.operator_metatypes import OperatorMetatype
 from nncf.onnx.graph.metatypes.onnx_metatypes import ONNX_OPERATION_METATYPES
 from nncf.onnx.graph.metatypes.onnx_metatypes import ONNXDequantizeLinearMetatype
-from nncf.onnx.graph.metatypes.onnx_metatypes import ONNXConvolutionMetatype
-from nncf.onnx.graph.metatypes.onnx_metatypes import ONNXConvolutionTransposeMetatype
-from nncf.onnx.graph.metatypes.onnx_metatypes import ONNXDepthwiseConvolutionMetatype
-from nncf.onnx.graph.metatypes.onnx_metatypes import ONNXMatMulMetatype
-from nncf.onnx.graph.metatypes.onnx_metatypes import ONNXQuantizeLinearMetatype
 from nncf.onnx.graph.model_transformer import ONNXModelTransformer
 from nncf.onnx.graph.transformations.commands import ONNXBiasCorrectionCommand
 from nncf.onnx.graph.transformations.commands import ONNXModelExtractionCommand
@@ -52,15 +47,9 @@ from nncf.onnx.graph.transformations.command_creation import create_bias_correct
 @ALGO_BACKENDS.register(BackendType.ONNX)
 class ONNXBiasCorrectionAlgoBackend(BiasCorrectionAlgoBackend):
 
-
     @property
     def channel_axis_by_types(self) -> Dict[str, int]:
-        return {
-            ONNXConvolutionMetatype: 1,
-            ONNXMatMulMetatype: -1,
-            ONNXConvolutionTransposeMetatype: 1,
-            ONNXDepthwiseConvolutionMetatype: 1
-        }
+        return {'Conv': 1, 'Gemm': -1, 'ConvTranspose': 1}
 
     @property
     def tensor_processor(self) -> ONNXNNCFCollectorTensorProcessor:
@@ -68,7 +57,8 @@ class ONNXBiasCorrectionAlgoBackend(BiasCorrectionAlgoBackend):
 
     @property
     def quantizer_types(self) -> List[OperatorMetatype]:
-        return [ONNXQuantizeLinearMetatype, ONNXDequantizeLinearMetatype]
+        return [ONNX_OPERATION_METATYPES.get_operator_metatype_by_op_name('QuantizeLinear'),
+                ONNX_OPERATION_METATYPES.get_operator_metatype_by_op_name('DequantizeLinear')]
 
     @staticmethod
     def target_point(target_type: TargetType,
@@ -77,11 +67,8 @@ class ONNXBiasCorrectionAlgoBackend(BiasCorrectionAlgoBackend):
         return ONNXTargetPoint(target_type, target_node_name, port_id)
 
     @staticmethod
-    def create_bias_correction_command(node: NNCFNode,
-                                       bias_value: np.ndarray,
-                                       nncf_graph: NNCFGraph) -> ONNXBiasCorrectionCommand:
+    def create_bias_correction_command(node: NNCFNode, bias_value: np.ndarray) -> ONNXBiasCorrectionCommand:
         return create_bias_correction_command(node, bias_value)
-
 
     @staticmethod
     def output_insertion_command(target_point: ONNXTargetPoint) -> ONNXOutputInsertionCommand:
@@ -89,7 +76,7 @@ class ONNXBiasCorrectionAlgoBackend(BiasCorrectionAlgoBackend):
 
     @staticmethod
     def node_removing_command(target_point: ONNXTargetPoint) -> ONNXQDQNodeRemovingCommand:
-        return ONNXQDQNodeRemovingCommand(target_point)
+        return ONNXQDQNodeRemovingCommand(target_point=target_point)
 
     @staticmethod
     def mean_statistic_collector(reduction_shape: ReductionShape,
@@ -102,20 +89,32 @@ class ONNXBiasCorrectionAlgoBackend(BiasCorrectionAlgoBackend):
         return ONNXBatchStatisticCollector(num_samples)
 
     @staticmethod
-    def get_input_name(node: NNCFNode) -> str:
-        return node.layer_attributes.input_tensor_names[0]
+    def get_tensor_names(node: NNCFNode):
+        return node.layer_attributes.input_tensor_names, \
+            node.layer_attributes.output_tensor_names
 
     @staticmethod
     def process_model_output(raw_data: Dict, output_name: str) -> ONNXNNCFTensor:
         return ONNXNNCFTensor(raw_data[output_name])
 
     @staticmethod
-    def get_activation_port_ids_for_bias_node(node: NNCFNode) -> Tuple[int, int]:
+    def get_node_through_quantizer(node: NNCFNode, nncf_graph: NNCFGraph) -> NNCFNode:
+        activation_input_port = 0
+        quantizer_type = ONNX_OPERATION_METATYPES.get_operator_metatype_by_op_name('QuantizeLinear')
+        dequantizer_type = ONNX_OPERATION_METATYPES.get_operator_metatype_by_op_name('DequantizeLinear')
+        skip_types = dequantizer_type.op_names + quantizer_type.op_names
+        previous_node = nncf_graph.get_previous_nodes(node)[activation_input_port]
+        while previous_node.node_type in skip_types:
+            previous_node = nncf_graph.get_previous_nodes(previous_node)[activation_input_port]
+        return previous_node
+
+    @staticmethod
+    def get_activation_port_ids_for_bias_node(model: onnx.ModelProto, node: NNCFNode) -> Tuple[int, int]:
         return 0, 0
 
     @staticmethod
-    def get_bias_value(node: NNCFNode, nncf_graph: NNCFGraph, model: onnx.ModelProto) -> np.ndarray:
-        return get_bias_value(node, model)
+    def get_bias_value(node: NNCFNode, model: onnx.ModelProto) -> np.ndarray:
+        get_bias_value(node, model)
 
     @staticmethod
     def get_bias_port_id(model: onnx.ModelProto, node: NNCFNode) -> int:
@@ -124,10 +123,10 @@ class ONNXBiasCorrectionAlgoBackend(BiasCorrectionAlgoBackend):
         return onnx_graph.get_bias_tensor_port_id(onnx_node)
 
     @staticmethod
-    def get_subgraph_output_name(model: onnx.ModelProto, node_name: str) -> str:
+    def get_output_names(model: onnx.ModelProto, node_name: str) -> List[str]:
         onnx_graph = ONNXGraph(model)
         node = onnx_graph.get_node_by_name(node_name)
-        return node.output[0]
+        return node.output
 
     @staticmethod
     def extract_model(model: onnx.ModelProto,
@@ -150,23 +149,25 @@ class ONNXBiasCorrectionAlgoBackend(BiasCorrectionAlgoBackend):
 
         transformation_layout = TransformationLayout()
         model_transformer = ONNXModelTransformer(model)
-        inputs = (input_tensor_names, input_tensor_names)
-        outputs = (output_tensor_names, output_tensor_names)
-        transformation_layout.register(ONNXModelExtractionCommand(inputs, outputs))
+        transformation_layout.register(ONNXModelExtractionCommand(set(input_tensor_names), set(output_tensor_names)))
         return model_transformer.transform(transformation_layout)
 
     @staticmethod
-    def is_quantized_weights(node: NNCFNode, nncf_graph: NNCFGraph) -> bool:
-        input_nodes = nncf_graph.get_previous_nodes(node)
-        weight_port_id = node.metatype.weight_definitions.weight_port_id
-        weight_node = input_nodes[weight_port_id]
-        return weight_node.metatype == ONNXDequantizeLinearMetatype
+    def is_quantized_weights(node: NNCFNode, model: onnx.ModelProto) -> bool:
+        onnx_graph = ONNXGraph(model)
+        onnx_node = onnx_graph.get_node_by_name(node.node_name)
+        # We assume that the weight is on the first-index
+        weight_port_id = onnx_graph.get_weight_port_id(onnx_node)
+        input_edge_names = onnx_graph.get_node_edge_names(node.node_name)['input']
+        nodes_after_weight = onnx_graph.get_nodes_by_output(input_edge_names[weight_port_id])
+        if not nodes_after_weight:
+            return False
+        # We assume that there is only one node after weight
+        assert len(nodes_after_weight) == 1
+        weight_dequantizer = nodes_after_weight[0]
+        metatype = ONNX_OPERATION_METATYPES.get_operator_metatype_by_op_name(weight_dequantizer.op_type)
+        return metatype == ONNXDequantizeLinearMetatype
 
     @staticmethod
-    def is_node_with_bias(node: NNCFNode, nncf_graph: NNCFGraph) -> bool:
+    def is_node_with_bias(node: NNCFNode) -> bool:
         return is_node_with_bias(node)
-
-    @staticmethod
-    def get_sub_input_output_names(subgraph: onnx.ModelProto) -> Tuple[str, str]:
-        return [sub_input.name for sub_input in subgraph.graph.input], \
-            [sub_output.name for sub_output in subgraph.graph.output]

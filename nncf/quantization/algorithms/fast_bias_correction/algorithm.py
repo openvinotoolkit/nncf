@@ -140,7 +140,7 @@ class FastBiasCorrection(Algorithm):
                                                      input_name,
                                                      output_name)
 
-            sub_input_name, sub_output_name = self._backend_entity.get_sub_input_output_names(input_name, output_name)
+            sub_input_name, sub_output_name = self._backend_entity.get_sub_input_output_names(extracted_model)
 
             channel_axis = self._backend_entity.channel_axis_by_types[node.metatype]
             input_blob = self._create_input_data(input_shape,
@@ -230,8 +230,8 @@ class FastBiasCorrection(Algorithm):
         :return: Backend-specific sub-model.
         """
         model_transformer = ModelTransformerFactory.create(model)
-        model_extraction_command = self._backend_entity.model_extraction_command(input_name,
-                                                                                 output_name)
+        model_extraction_command = self._backend_entity.model_extraction_command([input_name],
+                                                                                 [output_name])
         me_transformation_layout = TransformationLayout()
         me_transformation_layout.register(model_extraction_command)
         extracted_model = model_transformer.transform(me_transformation_layout)

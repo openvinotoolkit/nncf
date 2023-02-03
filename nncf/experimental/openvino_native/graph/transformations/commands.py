@@ -11,7 +11,8 @@
  limitations under the License.
 """
 
-from typing import List, Tuple
+from typing import List
+
 import numpy as np
 
 from nncf.common.graph.transformations.commands import TargetPoint
@@ -113,12 +114,10 @@ class OVModelExtractionCommand(Command):
     Extracts sub-graph based on the sub-model input and output names.
     """
 
-    def __init__(self, inputs: List[Tuple[str, str]], outputs: List[Tuple[str, str]]):
+    def __init__(self, inputs: List[str], outputs: List[str]):
         """
-        :param inputs: List of the tuples with input & correcponding tensor names
-            that denote the sub-graph beggining.
-        :param outputs: List of the tuples with output & correcponding tensor names
-            that denote the sub-graph ending.
+        :param inputs: List of the input names that denote the sub-graph beggining.
+        :param outputs: List of the output names that denote the sub-graph ending.
         """
         super().__init__(TransformationType.EXTRACT)
         self.inputs = inputs

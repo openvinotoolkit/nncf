@@ -73,11 +73,7 @@ class OVFastBiasCorrectionAlgoBackend(FastBiasCorrectionAlgoBackend):
         return create_bias_correction_command(node, bias_value, nncf_graph)
 
     @staticmethod
-    def model_extraction_command(input_name: List[str], output_name: List[str]) -> OVModelExtractionCommand:
-        sub_input_name, sub_output_name = OVFastBiasCorrectionAlgoBackend.get_sub_input_output_names(input_name,
-                                                                                                     output_name)
-        inputs = ([input_name], [sub_input_name])
-        outputs = ([output_name], [sub_output_name])
+    def model_extraction_command(inputs: List[str], outputs: List[str]) -> OVModelExtractionCommand:
         return OVModelExtractionCommand(inputs, outputs)
 
     @staticmethod
@@ -91,8 +87,8 @@ class OVFastBiasCorrectionAlgoBackend(FastBiasCorrectionAlgoBackend):
         return node.node_name, node.node_name
 
     @staticmethod
-    def get_sub_input_output_names(input_name: str, output_name: str) -> Tuple[str, str]:
-        return f'{input_name}_input', f'{output_name}_output'
+    def get_sub_input_output_names(subgraph: ov.Model) -> Tuple[str, str]:
+        return subgraph.inputs[0].node.friendly_name, subgraph.outputs[0].node.friendly_name
 
     @staticmethod
     def create_blob(shape: Tuple[int], data: List[float]) -> np.ndarray:
@@ -123,5 +119,3 @@ class OVFastBiasCorrectionAlgoBackend(FastBiasCorrectionAlgoBackend):
     @staticmethod
     def is_node_with_bias(node: NNCFNode, nncf_graph: NNCFGraph) -> bool:
         return is_node_with_bias(node, nncf_graph)
-
-

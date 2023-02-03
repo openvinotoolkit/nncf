@@ -69,13 +69,12 @@ class BiasCorrectionAlgoBackend(ABC):
 
     @staticmethod
     @abstractmethod
-    def create_bias_correction_command(node: NNCFNode, bias_value: np.ndarray, nncf_graph: NNCFGraph):
+    def create_bias_correction_command(node: NNCFNode, bias_value: np.ndarray):
         """
         Creates backend-specific command to update bias value.
 
         :param node: The node for which bias should be updated.
         :param bias_value: New value for the bias.
-        :param nncf_graph: NNCFGraph instance that contains the node.
         :return: Backend-specific command to update bias value.
         """
 
@@ -105,12 +104,12 @@ class BiasCorrectionAlgoBackend(ABC):
 
     @staticmethod
     @abstractmethod
-    def get_input_name(node: NNCFNode) -> str:
+    def get_tensor_names(node: NNCFNode) -> Tuple[List[str], List[str]]:
         """
-        Returns node input tensor name.
+        Returns tuple of the lists with the input & output tensor names respectively.
 
-        :param node: NNCFNode biased node.
-        :return: Node input tensor name.
+        :param node: NNCFNode with the layer_attributes.
+        :return: Tuple of the lists with the names.
         """
 
     @staticmethod
@@ -126,27 +125,37 @@ class BiasCorrectionAlgoBackend(ABC):
 
     @staticmethod
     @abstractmethod
-    def get_activation_port_ids_for_bias_node(node: NNCFNode) -> Tuple[int, int]:
+    def get_node_through_quantizer(node: NNCFNode, nncf_graph: NNCFGraph) -> NNCFNode:
+        """
+        Returns activation node, but not quanitzers.
+
+        :param node: NNCFNode instance.
+        :param nncf_graph: NNCFGraph instance.
+        :return: NNCFNode activation node.
+        """
+
+    @staticmethod
+    @abstractmethod
+    def get_activation_port_ids_for_bias_node(model: TModel, node: NNCFNode) -> Tuple[int, int]:
         """
         Returns Input Port ID and Output Port ID corresponding to activation input and output edges for
         the node.
         Supports only nodes that could have bias value.
 
+        :param model: Backend-specific model.
         :param node: Node of NNCFGraph with bias value.
         """
 
     @staticmethod
     @abstractmethod
-    def get_bias_value(node: NNCFNode, nncf_graph: NNCFGraph, model: TModel) -> np.ndarray:
+    def get_bias_value(node: NNCFNode, model: TModel) -> np.ndarray:
         """
         Returns bias value in the NumPy format of provided node.
 
         :param node: Node of NNCFGraph with bias value.
-        :param nncf_graph: NNCFGraph instance.
         :param model: Backend-specific model for the initializer finding.
         :return: Bias value in the NumPy format.
         """
-
 
     @staticmethod
     @abstractmethod
@@ -161,13 +170,13 @@ class BiasCorrectionAlgoBackend(ABC):
 
     @staticmethod
     @abstractmethod
-    def get_subgraph_output_name(model: TModel, node_name: str) -> str:
+    def get_output_names(model: TModel, node_name: str) -> List[str]:
         """
         Returns list of backend-specific port names.
 
         :param model: Backend-specific model.
         :param node_name: Name of the backend-specific node.
-        :return: Node output tensor name.
+        :return: List of the tensor names.
         """
 
     @staticmethod
@@ -184,32 +193,21 @@ class BiasCorrectionAlgoBackend(ABC):
 
     @staticmethod
     @abstractmethod
-    def is_quantized_weights(node: NNCFNode, nncf_graph: NNCFGraph) -> bool:
+    def is_quantized_weights(node: NNCFNode, model: TModel) -> bool:
         """
         Checks whether the node is quantized or not.
 
         :param node: NNCFNode to check.
-        :param nncf_graph: NNCFGraph instance.
-        :return: boolean indicating whether the node has a quantized weights or not
+        :param model: Backend-specific model.
+        :return: boolean indicating whether the node has a quantized weights or not.
         """
 
     @staticmethod
     @abstractmethod
-    def is_node_with_bias(node: NNCFNode, nncf_graph: NNCFGraph) -> bool:
+    def is_node_with_bias(node: NNCFNode) -> bool:
         """
         Checks whether the node has a bias or not.
 
         :param node: NNCFNode with the attributes.
-        :param nncf_graph: NNCFGraph that contains node.
         :return: Boolean indicating whether the node has a bias or not.
-        """
-
-    @staticmethod
-    @abstractmethod
-    def get_sub_input_output_names(input_names: List[str], output_names: List[str]) -> Tuple[List[str], List[str]]:
-        """
-        Returns tuple of the subgraph's the input & output tensor names respectively.
-
-        :param node: NNCFNode instance.
-        :return: Tuple of the names.
         """
