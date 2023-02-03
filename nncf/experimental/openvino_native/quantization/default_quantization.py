@@ -19,7 +19,10 @@ from nncf.experimental.openvino_native.graph.metatypes import openvino_metatypes
 DEFAULT_OV_QUANT_TRAIT_TO_OP_DICT = {
     QuantizationTrait.INPUTS_QUANTIZABLE: [
         ov_metatypes.OVConvolutionMetatype,
+        ov_metatypes.OVGroupConvolutionMetatype,
+        ov_metatypes.OVDepthwiseConvolutionMetatype,
         ov_metatypes.OVConvolutionBackpropDataMetatype,
+        ov_metatypes.OVGroupConvolutionBackpropDataMetatype,
         ov_metatypes.OVMatMulMetatype,
         ov_metatypes.OVBatchNormMetatype,
         ov_metatypes.OVAddMetatype,
