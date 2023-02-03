@@ -9,6 +9,11 @@ The example includes the following steps:
 
 # Install requirements
 To run the example you should install the corresponding Python dependencies:
+- Install NNCF from source:
+```
+pip install ../../../../
+```
+- Install 3rd party dependencies:
 ```
 pip install -r requirements.txt
 ```
