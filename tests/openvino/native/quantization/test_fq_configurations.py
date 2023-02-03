@@ -19,7 +19,7 @@ from nncf.common.quantization.structs import QuantizationMode
 from nncf.common.quantization.structs import QuantizerConfig
 from nncf.common.quantization.structs import QuantizerGroup
 from nncf.experimental.openvino_native.quantization.quantizer_parameters import calculate_quantizer_parameters
-from nncf.experimental.openvino_native.quantization.quantizer_parameters import OVQuantizerLayerParameters
+from nncf.experimental.openvino_native.quantization.quantizer_parameters import QuantizerLayerParameters
 from nncf.experimental.openvino_native.quantization.quantizer_parameters import get_weight_stats_shape
 from nncf.experimental.openvino_native.statistics.statistics import OVMinMaxTensorStatistic
 from tests.openvino.conftest import OPENVINO_NATIVE_TEST_ROOT
@@ -77,7 +77,7 @@ def parse_test_data(stat_type, mode, sign, per_ch):
     out_l = np.array(fq_params[key]['output_low']).astype(np.float32)
     out_h = np.array(fq_params[key]['output_high']).astype(np.float32)
     levels = fq_params[key]['levels']
-    ref_quantize_params = OVQuantizerLayerParameters(inp_l, inp_h, out_l, out_h, levels)
+    ref_quantize_params = QuantizerLayerParameters(inp_l, inp_h, out_l, out_h, levels)
     return input_data, ref_quantize_params
 
 
@@ -91,7 +91,10 @@ def test_calculate_activation_quantizer_parameters(case_to_test):
 
     axes = (0, 2, 3) if case_to_test.per_channel else None
     min_values = np.amin(data, axes, keepdims=True)
-    max_values = np.amax(np.abs(data), axes, keepdims=True)
+    if mode == QuantizationMode.SYMMETRIC:
+        max_values = np.amax(np.abs(data), axes, keepdims=True)
+    else:
+        max_values = np.amax(data, axes, keepdims=True)
 
     statistics = OVMinMaxTensorStatistic(min_values, max_values)
     qconfig = QuantizerConfig(num_bits=8, mode=mode, signedness_to_force=sign, per_channel=per_ch)

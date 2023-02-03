@@ -11,19 +11,17 @@
  limitations under the License.
 """
 
-from typing import List, Tuple, Type
+from typing import Tuple, Optional
 from dataclasses import dataclass
 
 import numpy as np
 
-from nncf.common.graph.operator_metatypes import OperatorMetatype
 from nncf.common.quantization.structs import QuantizationMode
 from nncf.common.quantization.quantizers import calculate_asymmetric_level_ranges
 from nncf.common.quantization.quantizers import calculate_symmetric_level_ranges
 from nncf.common.quantization.structs import QuantizerConfig
 from nncf.common.quantization.structs import QuantizerGroup
 from nncf.common.tensor_statistics.statistics import MinMaxTensorStatistic
-from nncf.experimental.openvino_native.hardware.pattern_operations import TRANSPOSED_OPERATIONS
 
 
 @dataclass
@@ -177,24 +175,8 @@ def asymmetric_range(min_values: np.ndarray, max_values: np.ndarray,
     return level_low, level_high
 
 
-def get_weight_stats_shape(const_shape: List[int], metatype: Type[OperatorMetatype]) -> List[int]:
-    """
-    Calculates shapes for FakeQuantize statistics.
-
-    :param const_shape: Shape of the weight tensor.
-    :param metatype: NNCF meta type which corresponds to operation.
-    :return: Shapes for FakeQuantize statistics.
-    """
-    bounds_shape = np.ones(len(const_shape), dtype=np.int32)
-    if metatype in TRANSPOSED_OPERATIONS:
-        bounds_shape[1] = const_shape[1]
-    else:
-        bounds_shape[0] = const_shape[0]
-    return bounds_shape
-
-
 def calculate_weight_quantizer_parameters(weight_tensor: np.ndarray, quantizer_config: QuantizerConfig,
-                                          metatype: Type[OperatorMetatype] = None) -> QuantizerLayerParameters:
+                                          channel_axis: Optional[int] = None) -> QuantizerLayerParameters:
     """
     Calculates FakeQuantize layer attributes for weight quantizer.
 
@@ -205,8 +187,8 @@ def calculate_weight_quantizer_parameters(weight_tensor: np.ndarray, quantizer_c
     """
     quant_group = QuantizerGroup.WEIGHTS
     if quantizer_config.per_channel:
-        bounds_shape = get_weight_stats_shape(weight_tensor.shape, metatype)
-        axes = tuple(i for i, dim in enumerate(bounds_shape) if dim == 1)
+        assert channel_axis is not None
+        axes = tuple(i for i, _ in enumerate(weight_tensor.shape) if channel_axis != i)
     else:
         axes = None
 
