@@ -30,9 +30,7 @@ from torchvision.transforms import InterpolationMode
 from tqdm import tqdm
 
 import nncf
-from nncf.experimental.openvino_native.statistics.aggregator import OVStatisticsAggregator
-from nncf.quantization.algorithms.min_max.algorithm import MinMaxQuantization
-from nncf.quantization.algorithms.min_max.algorithm import MinMaxQuantizationParameters
+from nncf.experimental.openvino_native.quantization.quantize import quantize_impl as ov_quantize_impl
 from tests.shared.command import Command
 
 NOT_AVAILABLE_MESSAGE = 'N/A'
@@ -228,19 +226,14 @@ def quantize_ov_native(model: ov.Model,
                        ignored_scope: Optional[nncf.IgnoredScope] = None) -> ov.Model:
     if model_type is not None:
         RuntimeError('Model type is not supported')
-    
-    min_max_algo = MinMaxQuantization(
-        MinMaxQuantizationParameters(
-            number_samples=subset_size, 
-            preset=preset,
-            target_device=target_device,
-            ignored_scopes=ignored_scope))
-    
-    statistics_aggregator = OVStatisticsAggregator(calibration_dataset)
-    statistic_points = min_max_algo.get_statistic_points(model)
-    statistics_aggregator.register_stastistic_points(statistic_points)
-    statistics_aggregator.collect_statistics(model)
-    quantized_model = min_max_algo._apply(model, statistics_aggregator.statistic_points)
+
+    quantized_model = ov_quantize_impl(model,
+                                       calibration_dataset,
+                                       preset=preset,
+                                       target_device=target_device,
+                                       subset_size=subset_size,
+                                       fast_bias_correction=fast_bias_correction,
+                                       ignored_scope=ignored_scope)
     return quantized_model
 
 
