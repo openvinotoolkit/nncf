@@ -239,6 +239,12 @@ class MinMaxQuantization(Algorithm):
         return qconfig
 
     def _get_patterns_setup(self, model: TModel) -> GraphPattern:
+        """
+        Returns patterns setup for the current model.
+
+        :param model: Backend-specific model instance.
+        :return: GraphPattern instance based on the model.
+        """
         backend = get_backend(model)
         device = self._parameters.target_device
         patterns_manager = PatternsManager()

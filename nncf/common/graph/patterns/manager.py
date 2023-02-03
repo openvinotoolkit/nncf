@@ -10,15 +10,22 @@
  See the License for the specific language governing permissions and
  limitations under the License.
 """
-
+from typing import Dict
 from nncf.common.utils.backend import BackendType
 from nncf.parameters import TargetDevice
 from nncf.common.graph.patterns.patterns import HWFusedPatterns
+from nncf.common.graph.patterns.patterns import PatternNames
 
 
 class PatternsManager:
 
-    def get_backend_patterns_map(self, backend: BackendType):
+    def get_backend_patterns_map(self, backend: BackendType) -> Dict[PatternNames, callable]:
+        """
+        Returns the backend-specific map from the Refgistry.
+
+        :param backend: BackendType instance.
+        :return: Dictionary with the PatternNames instance as keys and callable as value.
+        """
         if backend == BackendType.ONNX:
             from nncf.onnx.hardware.fused_patterns import ONNX_HW_FUSED_PATTERNS
             return ONNX_HW_FUSED_PATTERNS.registry_dict
@@ -28,6 +35,13 @@ class PatternsManager:
         raise ValueError(f'Hardware-fused patterns not implemented for {backend} backend.')
 
     def get_patterns(self, backend: BackendType, device: TargetDevice) -> HWFusedPatterns:
+        """
+        Returns the backend- & device-specific HWFusedPatterns instance.
+
+        :param backend: BackendType instance.
+        :param device: TargetDevice instance.
+        :return: Completed HWFusedPatterns value based on the backend & device.
+        """
         backend_registry_map = self.get_backend_patterns_map(backend)
         hw_fused_patterns = HWFusedPatterns()
 
