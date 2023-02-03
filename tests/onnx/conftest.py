@@ -30,7 +30,7 @@ def pytest_addoption(parser):
     )
     parser.addoption(
         "--data-dir", type=str, default=None,
-        help="[e2e-test-onnx-model-zoo] Directory path to OMZ validation datasets"
+        help="Directory path to validation datasets"
     )
     parser.addoption(
         "--output-dir", type=str, default=None,
