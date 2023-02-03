@@ -37,7 +37,7 @@ IGNORED_PATTERN_REASONS = {
 
 def test_pattern_manager():
      manager = PatternsManager()
-     backend_patterns = manager.get_backend_patterns(BackendType.OPENVINO)
+     backend_patterns = manager.get_backend_patterns_map(BackendType.OPENVINO)
      
      all_base_apatterns = PatternNames
      for base_pattern in all_base_apatterns:

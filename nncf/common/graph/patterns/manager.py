@@ -14,25 +14,24 @@
 from nncf.common.utils.backend import BackendType
 from nncf.parameters import TargetDevice
 from nncf.common.graph.patterns.patterns import HWFusedPatterns
-from nncf.experimental.openvino_native.hardware.fused_patterns import OPENVINO_HW_FUSED_PATTERNS
-from nncf.onnx.hardware.fused_patterns import ONNX_HW_FUSED_PATTERNS
 
 
 class PatternsManager:
 
-    BACKEND_TO_PATTERNS_MAP = {
-        BackendType.ONNX: ONNX_HW_FUSED_PATTERNS,
-        BackendType.OPENVINO: OPENVINO_HW_FUSED_PATTERNS
-    }
-
-    def get_backend_patterns(self, backend: BackendType):
-        return self.BACKEND_TO_PATTERNS_MAP[backend].registry_dict
+    def get_backend_patterns_map(self, backend: BackendType):
+        if backend == BackendType.ONNX:
+            from nncf.onnx.hardware.fused_patterns import ONNX_HW_FUSED_PATTERNS
+            return ONNX_HW_FUSED_PATTERNS.registry_dict
+        if backend == BackendType.OPENVINO:
+            from nncf.experimental.openvino_native.hardware.fused_patterns import OPENVINO_HW_FUSED_PATTERNS
+            return OPENVINO_HW_FUSED_PATTERNS.registry_dict
+        raise ValueError(f'Hardware-fused patterns not implemented for {backend} backend.')
 
     def get_patterns(self, backend: BackendType, device: TargetDevice) -> HWFusedPatterns:
-        backend_registry = self.BACKEND_TO_PATTERNS_MAP[backend]
+        backend_registry_map = self.get_backend_patterns_map(backend)
         hw_fused_patterns = HWFusedPatterns()
 
-        for pattern_desc, pattern in backend_registry.registry_dict.items():
+        for pattern_desc, pattern in backend_registry_map.items():
             pattern_desc_devices = pattern_desc.value.devices
             if pattern() is None:
                 continue
