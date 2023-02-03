@@ -24,7 +24,6 @@ import torch.nn.functional as F
 from functools import partial
 from torch import nn
 from torch.autograd import Variable
-from torch.backends import cudnn
 from torch.nn.utils.rnn import PackedSequence
 
 from nncf.torch import nncf_model_input
@@ -34,17 +33,9 @@ from nncf.torch.dynamic_graph.transform_graph import replace_modules
 from nncf.torch.layers import LSTMCellNNCF, NNCF_RNN, ITERATION_MODULES
 from nncf.torch.model_creation import create_compressed_model
 from nncf.torch.utils import get_model_device
-from nncf.torch.utils import manual_seed
 from tests.torch.modules.seq2seq.gnmt import GNMT
 from tests.torch.helpers import get_empty_config, get_grads, create_compressed_model_and_algo_for_test
 from tests.torch.helpers import register_bn_adaptation_init_args
-
-
-@pytest.fixture
-def _seed():
-    manual_seed(0)
-    cudnn.deterministic = True
-    cudnn.benchmark = False
 
 
 def replace_lstm(model):

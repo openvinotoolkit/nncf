@@ -35,11 +35,6 @@ def idfn(val):
     return None
 
 
-@pytest.fixture
-def _seed():
-    np.random.seed(0)
-
-
 def generate_input(input_size):
     return (2 * np.random.random_sample(input_size) - 1) * np.random.rand() + np.random.rand()
 

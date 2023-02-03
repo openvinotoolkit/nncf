@@ -72,7 +72,7 @@ $level\\_low=0$
 
 $level\\_high=2^{bits}-1$
 
-For better accuracy, floating-point zero should be within quantization range and strictly mapped into quant (without rounding). Therefore, the following scheme is applied to ranges of weights and activations before quantization:
+For better accuracy, floating-point zero should be within quantization range and strictly mapped into quant (without rounding). Therefore, the following scheme is applied to ranges of weight and activation quantizers before applying actual quantization:
 
 ${input\\_low}' = min(input\\_low, 0)$
 

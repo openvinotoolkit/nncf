@@ -15,7 +15,10 @@ from nncf.common.graph.patterns import GraphPattern
 from nncf.experimental.openvino_native.graph.metatypes import openvino_metatypes as ov_metatypes
 
 LINEAR_OPERATIONS = {GraphPattern.METATYPE_ATTR: [ov_metatypes.OVConvolutionMetatype,
+                                                  ov_metatypes.OVGroupConvolutionMetatype,
+                                                  ov_metatypes.OVDepthwiseConvolutionMetatype,
                                                   ov_metatypes.OVConvolutionBackpropDataMetatype,
+                                                  ov_metatypes.OVGroupConvolutionBackpropDataMetatype,
                                                   ov_metatypes.OVMatMulMetatype
                                                   ],
                      GraphPattern.LABEL_ATTR: 'LINEAR'}

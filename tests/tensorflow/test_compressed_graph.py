@@ -28,7 +28,7 @@ from tests.tensorflow.helpers import operational_node
 from tests.tensorflow.helpers import remove_node_by_name
 from tests.tensorflow.sparsity.magnitude.test_helpers import get_basic_filter_pruning_config
 from tests.tensorflow.sparsity.magnitude.test_helpers import get_basic_sparsity_config
-from tests.common.graph.nx_graph import compare_nx_graph_with_reference
+from tests.shared.nx_graph import compare_nx_graph_with_reference
 
 
 class QuantizeTestCaseConfiguration:
