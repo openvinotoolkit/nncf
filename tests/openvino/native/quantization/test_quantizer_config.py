@@ -140,7 +140,7 @@ def test_depthwise_conv_default_quantizer_config(nncf_graph):
     algo = PostTrainingQuantization(PostTrainingQuantizationParameters())
     min_max_algo = algo.algorithms[0]
     min_max_algo._backend_entity = OVMinMaxAlgoBackend()
-    q_setup = min_max_algo._get_quantizer_setup(nncf_graph.nncf_graph)
+    q_setup = min_max_algo._get_quantizer_setup(nncf_graph.nncf_graph, HWFusedPatterns().get_full_pattern_graph())
 
     weight_default_config = QuantizerConfig(mode=QuantizationMode.SYMMETRIC,
                                             num_bits=8,
