@@ -8,9 +8,7 @@ The example includes the following steps:
 - Measure accuracy and performance of the floating-point and quantized models.
 
 # Install requirements
-At this point it is assumed that you have already installed NNCF. You can find information on installation NNCF [here](https://github.com/openvinotoolkit/nncf#user-content-installation).
-
-To work with the example you should install the corresponding Python package dependencies:
+To run the example you should install the corresponding Python dependencies:
 ```
 pip install -r requirements.txt
 ```

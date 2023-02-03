@@ -13,7 +13,7 @@
 import subprocess
 from tqdm import tqdm
 from pathlib import Path
-from typing import Dict
+from typing import Dict, Tuple, Any
 import re
 
 import numpy as np
@@ -27,9 +27,11 @@ from ultralytics.yolo.utils import DEFAULT_CONFIG
 from ultralytics.yolo.configs import get_config
 from ultralytics.yolo.utils import ops
 from ultralytics.yolo.data.utils import check_dataset_yaml
+from ultralytics.yolo.engine.validator import BaseValidator as Validator
 
 
-def validate(model:ov.Model, data_loader:torch.utils.data.DataLoader, validator, num_samples:int = None, ):
+def validate(model:ov.Model, data_loader:torch.utils.data.DataLoader, 
+             validator: Validator, num_samples:int = None) -> Tuple[Dict, int, int]:
     validator.seen = 0
     validator.jdict = []
     validator.stats = []
@@ -48,15 +50,16 @@ def validate(model:ov.Model, data_loader:torch.utils.data.DataLoader, validator,
     return stats, validator.seen, validator.nt_per_class.sum()
 
 
-def print_statistics(stats:np.ndarray, total_images:int, total_objects:int):
-    mp, mr, map50, mean_ap = stats["metrics/precision(B)"], stats["metrics/recall(B)"], stats["metrics/mAP50(B)"], stats["metrics/mAP50-95(B)"]
+def print_statistics(stats:np.ndarray, total_images:int, total_objects:int) -> None:
+    mp, mr, map50, mean_ap = stats["metrics/precision(B)"], stats["metrics/recall(B)"], \
+                            stats["metrics/mAP50(B)"], stats["metrics/mAP50-95(B)"]
     s = ("%20s" + "%12s" * 6) % ("Class", "Images", "Labels", "Precision", "Recall", "mAP@.5", "mAP@.5:.95")
     print(s)
     pf = "%20s" + "%12i" * 2 + "%12.3g" * 4  # print format
     print(pf % ("all", total_images, total_objects, mp, mr, map50, mean_ap))
     
     
-def prepare_validation(model:YOLO, args):
+def prepare_validation(model:YOLO, args: Any) -> Tuple[Validator, torch.utils.data.DataLoader]:
     data = check_dataset_yaml(args.data)
     dataset = data["val"]
     print(f"{dataset}")
@@ -84,7 +87,7 @@ def benchmark_performance(model_path, config) -> float:
     return float(match.group(1))
 
 
-def prepare_openvino_model(model:YOLO, model_name:str):
+def prepare_openvino_model(model:YOLO, model_name:str) -> Tuple[ov.Model, Path]:
     model_path = Path(f"{model_name}_openvino_model/{model_name}.xml")
     if not model_path.exists():
         model.export(format="openvino", dynamic=True, half=False)
@@ -93,10 +96,11 @@ def prepare_openvino_model(model:YOLO, model_name:str):
     return model, model_path
 
     
-def quantize(model:ov.Model, data_loader:torch.utils.data.DataLoader, validator):
+def quantize(model:ov.Model, data_loader:torch.utils.data.DataLoader, validator: Validator) -> ov.Model:
     def transform_fn(data_item:Dict):
         """
-        Quantization transform function. Extracts and preprocess input data from dataloader item for quantization.
+        Quantization transform function. Extracts and preprocess input data from dataloader 
+        item for quantization.
         Parameters:
         data_item: Dict with data item produced by DataLoader during iteration
         Returns:
