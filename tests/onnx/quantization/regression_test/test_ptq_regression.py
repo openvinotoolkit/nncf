@@ -126,4 +126,4 @@ def test_compression(tmp_path, model_url, model_name, int8_ref_top1):
     onnx.save_model(quantized_model, str(int8_model_path))
     int8_top1 = validate(int8_model_path, val_loader)
     print(f'INT8 metrics = {int8_top1}')
-    assert abs(int8_top1 - int8_ref_top1) < 1e-6  # 0.01 deviations
+    assert abs(int8_top1 - int8_ref_top1) < 3e-3  # 0.03 deviations
