@@ -17,8 +17,7 @@ from nncf.common.graph.patterns import PatternNames
 from nncf.common.graph.patterns.manager import PatternsManager
 
 def check_patterns(backend: BackendType, reasons: Dict[PatternNames, str]):
-    manager = PatternsManager()
-    backend_patterns = manager.get_backend_patterns_map(backend)
+    backend_patterns = PatternsManager().get_backend_patterns_map(backend)
 
     all_base_apatterns = PatternNames
     for base_pattern in all_base_apatterns:

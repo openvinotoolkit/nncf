@@ -262,11 +262,24 @@ def merge_two_types_of_operations(first_op: Dict, second_op: Dict, label: str) -
 
 @dataclass
 class PatternDesc:
+    """
+    Contains needed fields for the description of the pattern.
+
+    :param name: Specific pattern name.
+    :param devices: A field containing the list of devices
+    for which this pattern should be taken into account when quantizing.
+    None value means that this pattern is applicable to all devices.
+    """
+
     name: str
-    devices: List[TargetDevice] = None
+    devices: Optional[List[TargetDevice]] = None
 
 
 class PatternNames(Enum):
+    """
+    Describes the patterns that will be fused during integer execution
+    and would not be quantized in compression pipeline.
+    """
 
     # BLOCK PATTERNS
     ADD_SCALE_SHIFT_OUTPUT = PatternDesc('add_scale_shift_output')

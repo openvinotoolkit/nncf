@@ -238,18 +238,6 @@ class MinMaxQuantization(Algorithm):
             qconfig = constraints.apply_constraints_to(qconfig)
         return qconfig
 
-    def _get_patterns_setup(self, model: TModel) -> GraphPattern:
-        """
-        Returns patterns setup for the current model.
-
-        :param model: Backend-specific model instance.
-        :return: GraphPattern instance based on the model.
-        """
-        backend = get_backend(model)
-        device = self._parameters.target_device
-        patterns_manager = PatternsManager()
-        return patterns_manager.get_patterns(backend, device).get_full_pattern_graph()
-
     def _get_quantizer_setup(self, nncf_graph: NNCFGraph, pattern: GraphPattern) -> SingleConfigQuantizerSetup:
         """
         Returns SingleConfigQuantizerSetup instance based on the input NNCFGraph.
@@ -349,7 +337,9 @@ class MinMaxQuantization(Algorithm):
 
         if self._quantization_target_points_to_qconfig:
             return self._quantization_target_points_to_qconfig
-        pattern = self._get_patterns_setup(model)
+        backend = get_backend(model)
+        device = self._parameters.target_device
+        pattern = PatternsManager().get_patterns(backend, device).get_full_pattern_graph()
         quantizer_setup = self._get_quantizer_setup(nncf_graph, pattern)
         for quantization_point in quantizer_setup.quantization_points.values():
             if quantization_point.is_weight_quantization_point():

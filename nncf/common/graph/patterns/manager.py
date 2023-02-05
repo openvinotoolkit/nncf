@@ -10,31 +10,39 @@
  See the License for the specific language governing permissions and
  limitations under the License.
 """
-from typing import Dict
+from typing import Callable, Dict
+
+from nncf.common.graph.patterns.patterns import HWFusedPatterns, PatternNames
 from nncf.common.utils.backend import BackendType
 from nncf.parameters import TargetDevice
-from nncf.common.graph.patterns.patterns import HWFusedPatterns
-from nncf.common.graph.patterns.patterns import PatternNames
 
 
 class PatternsManager:
+    """
+    The main purpose of the class is to return the backend- & device-specific
+    HWFusedPatterns instance that contains all needed fused patterns.
+    """
 
-    def get_backend_patterns_map(self, backend: BackendType) -> Dict[PatternNames, callable]:
+    @staticmethod
+    def get_backend_patterns_map(backend: BackendType) -> Dict[PatternNames, Callable]:
         """
-        Returns the backend-specific map from the Refgistry.
+        Returns the backend-specific map from the Registry.
 
         :param backend: BackendType instance.
         :return: Dictionary with the PatternNames instance as keys and callable as value.
         """
         if backend == BackendType.ONNX:
-            from nncf.onnx.hardware.fused_patterns import ONNX_HW_FUSED_PATTERNS
+            from nncf.onnx.hardware.fused_patterns import \
+                ONNX_HW_FUSED_PATTERNS
             return ONNX_HW_FUSED_PATTERNS.registry_dict
         if backend == BackendType.OPENVINO:
-            from nncf.experimental.openvino_native.hardware.fused_patterns import OPENVINO_HW_FUSED_PATTERNS
+            from nncf.experimental.openvino_native.hardware.fused_patterns import \
+                OPENVINO_HW_FUSED_PATTERNS
             return OPENVINO_HW_FUSED_PATTERNS.registry_dict
         raise ValueError(f'Hardware-fused patterns not implemented for {backend} backend.')
 
-    def get_patterns(self, backend: BackendType, device: TargetDevice) -> HWFusedPatterns:
+    @staticmethod
+    def get_patterns(backend: BackendType, device: TargetDevice) -> HWFusedPatterns:
         """
         Returns the backend- & device-specific HWFusedPatterns instance.
 
@@ -42,13 +50,11 @@ class PatternsManager:
         :param device: TargetDevice instance.
         :return: Completed HWFusedPatterns value based on the backend & device.
         """
-        backend_registry_map = self.get_backend_patterns_map(backend)
+        backend_registry_map = PatternsManager.get_backend_patterns_map(backend)
         hw_fused_patterns = HWFusedPatterns()
 
         for pattern_desc, pattern in backend_registry_map.items():
             pattern_desc_devices = pattern_desc.value.devices
-            if pattern() is None:
-                continue
             if pattern_desc_devices is None or device in pattern_desc_devices:
                 hw_fused_patterns.register(pattern(), pattern_desc.value.name)
         return hw_fused_patterns

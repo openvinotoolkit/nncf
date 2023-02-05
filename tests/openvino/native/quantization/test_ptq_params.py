@@ -13,6 +13,9 @@
 
 import pytest
 
+from nncf.common.utils.backend import get_backend
+from nncf.common.graph.patterns.manager import PatternsManager
+from nncf.common.graph.patterns import GraphPattern
 from nncf.common.hardware.config import HW_CONFIG_TYPE_TARGET_DEVICE_MAP
 from nncf.parameters import TargetDevice
 from nncf.quantization.algorithms.definitions import RangeType
@@ -24,9 +27,15 @@ from nncf.experimental.openvino_native.quantization.algorithms.min_max.openvino_
 from nncf.experimental.openvino_native.statistics.collectors import OVMeanMinMaxStatisticCollector
 from nncf.experimental.openvino_native.statistics.collectors import OVMinMaxStatisticCollector
 
+from tests.openvino.native.models import OVReferenceModel
 from tests.openvino.native.models import LinearModel
 from tests.openvino.native.models import DepthwiseConvModel
 
+
+def get_patterns_setup(model: OVReferenceModel, device: TargetDevice) -> GraphPattern:
+    backend = get_backend(model)
+    patterns_manager = PatternsManager()
+    return patterns_manager.get_patterns(backend, device).get_full_pattern_graph()
 
 # pylint: disable=protected-access
 @pytest.mark.parametrize('target_device', [TargetDevice.CPU, TargetDevice.GPU, TargetDevice.VPU])
@@ -83,7 +92,7 @@ def test_quantize_outputs(quantize_outputs):
     model = LinearModel().ov_model
     nncf_graph = GraphConverter.create_nncf_graph(model)
     assert min_max_algo._parameters.quantize_outputs == quantize_outputs
-    pattern = min_max_algo._get_patterns_setup(model)
+    pattern = get_patterns_setup(model, min_max_algo._parameters.target_device)
     q_setup = min_max_algo._get_quantizer_setup(nncf_graph, pattern)
     act_num_q, weight_num_q = 0, 0
     for quantization_point in q_setup.quantization_points.values():
@@ -110,7 +119,7 @@ def test_ignored_scopes(ignored_scopes):
 
     model = LinearModel().ov_model
     nncf_graph = GraphConverter.create_nncf_graph(model)
-    pattern = min_max_algo._get_patterns_setup(model)
+    pattern = get_patterns_setup(model, min_max_algo._parameters.target_device)
     q_setup = min_max_algo._get_quantizer_setup(nncf_graph, pattern)
     act_num_q, weight_num_q = 0, 0
     for quantization_point in q_setup.quantization_points.values():
