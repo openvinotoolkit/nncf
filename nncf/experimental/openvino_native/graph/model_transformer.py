@@ -26,8 +26,6 @@ from nncf.experimental.openvino_native.graph.transformations.commands import OVO
 from nncf.experimental.openvino_native.graph.transformations.commands import OVModelExtractionCommand
 from nncf.experimental.openvino_native.graph.transformations.commands import OVBiasCorrectionCommand
 from nncf.experimental.openvino_native.graph.transformations.commands import OVFQNodeRemovingCommand
-from nncf.experimental.openvino_native.graph.transformations.commands import OVModelExtractionCommand
-from nncf.experimental.openvino_native.graph.transformations.commands import OVBiasCorrectionCommand
 
 
 class ModelPrecision(Enum):
@@ -92,10 +90,6 @@ class OVModelTransformer(ModelTransformer):
 
         if output_insertion_transformations:
             self._apply_output_insertion_transformations(output_insertion_transformations)
-        if bias_correction_transformations:
-            self._apply_bias_correction_transformations(bias_correction_transformations)
-        if model_extraction_transformation:
-            self._model = self._apply_model_extraction_transformation(model_extraction_transformation)
         if fq_nodes_removing_transformations:
             self._apply_fq_nodes_removing_transformation(fq_nodes_removing_transformations)
         if quantizer_insertion_transformations:
@@ -237,11 +231,8 @@ class OVModelTransformer(ModelTransformer):
 
             node = self.name_to_node_mapping[node_name]
             node_inputs = [port.get_node() for port in node.output(0).get_target_inputs()]
-            assert any([node.get_type_name() == 'Add' for node in node_inputs])
-            
-            for node_input in node_inputs:
-                if node_input.get_type_name() == 'Add':
-                    node_with_bias = node_input
+            node_with_bias = node_inputs[0]
+            assert node_with_bias.get_type_name() == 'Add'
 
             bias_port_id = transformation.target_point.port_id
             biased_port = node_with_bias.input(bias_port_id)
@@ -265,22 +256,20 @@ class OVModelTransformer(ModelTransformer):
         :return: Extracted sub-model.
         """
         params, results = [], []
-        for (input_name, input_tensor_name) in zip(*transformation.inputs):
+        for input_name in transformation.inputs:
             input_node = self.name_to_node_mapping[input_name]
             input_port = input_node.input(0)
             input_node_output = input_port.get_source_output()
             new_param = opset.parameter(shape=input_node_output.get_shape(),
                                         dtype=input_node_output.get_element_type(),
-                                        name=input_tensor_name)
+                                        name=f'{input_name}_input')
             input_port.replace_source_output(new_param.output(0))
             params.append(new_param)
 
-        for (output_name, output_tensor_name) in zip(*transformation.outputs):
+        for output_name in transformation.outputs:
             output_node = self.name_to_node_mapping[output_name]
             for node_out in output_node.outputs():
                 results.append(opset.result(node_out,
-                                            name=output_tensor_name))
-        if not results:
-            results = [r.node for r in self._model.outputs]
+                                            name=f'{output_name}_output'))
 
         return ov.Model(results, params)

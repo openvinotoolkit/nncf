@@ -30,6 +30,7 @@ from nncf.experimental.openvino_native.hardware.pattern_operations import TRANSP
 class OVQuantizerLayerParameters:
     """
     Class handles FakeQuantize layer attributes.
+
     :param input_low: Tensor with minimum limit for input value.
     :param input_high: Tensor with maximum limit for input value.
     :param output_low: Tensor with minimum quantized value.
@@ -46,6 +47,7 @@ class OVQuantizerLayerParameters:
 def fix_zero_filters_symmetric(max_values: np.ndarray, eps: float = 0.01) -> np.ndarray:
     """
     Fixes zero filters for symmetric quantizer.
+
     :param max_values: Collected max values for the quantized insertion.
     :param eps: Correction coefficient.
     :return: Fixed the high quant number.
@@ -59,6 +61,7 @@ def fix_zero_filters_asymmetric(min_values: np.ndarray, max_values: np.ndarray,
                                 eps: float = 1e-8) -> Tuple[np.ndarray, np.ndarray]:
     """
     Fixes zero filters for asymmetric quantizer.
+
     :param min_values: Collected min values for the quantized insertion.
     :param max_values: Collected max values for the quantized insertion.
     :param eps: Correction coefficient.
@@ -84,6 +87,7 @@ def tune_range(left_border: np.ndarray, right_border: np.ndarray, num_bits: int,
     or sets zero quant precisely to zero value otherwise.
     Function moves left or right borders to do this and doesn't make left border higher or
     right border lesser than its original values.
+
     :param left_border: Range left border.
     :param right_border: Range right border.
     :param num_bits: Number of bits to perform quantization.
@@ -123,6 +127,7 @@ def symmetric_range(min_values: np.ndarray, max_values: np.ndarray, levels: int,
                     quantizer_config: QuantizerConfig, q_group: QuantizerGroup) -> Tuple[np.ndarray, np.ndarray]:
     """
     Calculates the numbers of the low and high quant for the symmetric quantization scheme.
+
     :param min_values: Collected min values for the quantized insertion.
     :param max_values: Collected max values for the quantized insertion.
     :param levels: Number of quantization levels.
@@ -149,6 +154,7 @@ def asymmetric_range(min_values: np.ndarray, max_values: np.ndarray,
                      unify_zp: bool = False) -> Tuple[np.ndarray, np.ndarray]:
     """
     Calculates the numbers of the low and high quant for the asymmetric quantization scheme.
+
     :param min_values: Collected min values for the quantized insertion.
     :param max_values: Collected max values for the quantized insertion.
     :param quantizer_config: Config of the quantization configuration.
@@ -174,6 +180,7 @@ def asymmetric_range(min_values: np.ndarray, max_values: np.ndarray,
 def get_weight_stats_shape(const_shape: List[int], metatype: Type[OperatorMetatype]) -> List[int]:
     """
     Calculates shapes for FakeQuantize statistics.
+
     :param const_shape: Shape of the weight tensor.
     :param metatype: NNCF meta type which corresponds to operation.
     :return: Shapes for FakeQuantize statistics.
@@ -190,6 +197,7 @@ def calculate_weight_quantizer_parameters(weight_tensor: np.ndarray, quantizer_c
                                           metatype: Type[OperatorMetatype]) -> OVQuantizerLayerParameters:
     """
     Calculates FakeQuantize layer attributes for weight quantizer.
+
     :param weight_tensor: Weight tensor to calculate quantizer attributes.
     :param quantizer_config: Config of FakeQuantize.
     :param axis: In per-channel case - the axis for the quantization. In per-tensor - ignored.
@@ -220,6 +228,7 @@ def calculate_activation_quantizer_parameters(statistics: MinMaxTensorStatistic,
                                               quantizer_config: QuantizerConfig) -> OVQuantizerLayerParameters:
     """
     Calculates FakeQuantize layer attributes for activation quantizer.
+
     :param statistics: Collected statistics for the quantized insertion.
     :param quantizer_config: Config of the quantization configuration.
     :return: Parameters of the FakeQuantize layer.

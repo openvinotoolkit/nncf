@@ -61,7 +61,7 @@ def quantize(model: TModel,
     """
     backend = get_backend(model)
     if backend == BackendType.OPENVINO:
-        from nncf.experimental.openvino_native.quantization.quantize import quantize_impl
+        from nncf.openvino.quantization.quantize import quantize_impl
         return quantize_impl(model, calibration_dataset, preset, target_device, subset_size,
                              fast_bias_correction, model_type, ignored_scope)
 
@@ -83,7 +83,7 @@ def quantize(model: TModel,
     raise RuntimeError(f'Unsupported type of backend: {backend}')
 
 
-def quantize_with_accuracy_control(model: ModelType,
+def quantize_with_accuracy_control(model: TModel,
                                    calibration_dataset: Dataset,
                                    validation_dataset: Dataset,
                                    validation_fn: Callable[[Any, Iterable[Any]], float],
@@ -93,7 +93,7 @@ def quantize_with_accuracy_control(model: ModelType,
                                    subset_size: int = 300,
                                    fast_bias_correction: bool = True,
                                    model_type: Optional[ModelType] = None,
-                                   ignored_scope: Optional[IgnoredScope] = None) -> ModelType:
+                                   ignored_scope: Optional[IgnoredScope] = None) -> TModel:
     """
     Applies post-training quantization algorithm with accuracy control to provided model.
 
