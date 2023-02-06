@@ -42,7 +42,7 @@ class PatternsManager:
         raise ValueError(f'Hardware-fused patterns not implemented for {backend} backend.')
 
     @staticmethod
-    def get_patterns(backend: BackendType, device: TargetDevice) -> HWFusedPatterns:
+    def get_full_pattern_graph(backend: BackendType, device: TargetDevice) -> HWFusedPatterns:
         """
         Returns the backend- & device-specific HWFusedPatterns instance.
 
@@ -57,4 +57,4 @@ class PatternsManager:
             pattern_desc_devices = pattern_desc.value.devices
             if pattern_desc_devices is None or device in pattern_desc_devices:
                 hw_fused_patterns.register(pattern(), pattern_desc.value.name)
-        return hw_fused_patterns
+        return hw_fused_patterns.get_full_pattern_graph()

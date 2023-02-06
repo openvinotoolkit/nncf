@@ -35,7 +35,7 @@ from tests.openvino.native.models import DepthwiseConvModel
 def get_patterns_setup(model: OVReferenceModel, device: TargetDevice) -> GraphPattern:
     backend = get_backend(model)
     patterns_manager = PatternsManager()
-    return patterns_manager.get_patterns(backend, device).get_full_pattern_graph()
+    return patterns_manager.get_full_pattern_graph(backend, device)
 
 # pylint: disable=protected-access
 @pytest.mark.parametrize('target_device', [TargetDevice.CPU, TargetDevice.GPU, TargetDevice.VPU])
