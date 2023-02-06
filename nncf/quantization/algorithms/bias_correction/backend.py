@@ -125,24 +125,12 @@ class BiasCorrectionAlgoBackend(ABC):
 
     @staticmethod
     @abstractmethod
-    def get_node_through_quantizer(node: NNCFNode, nncf_graph: NNCFGraph) -> NNCFNode:
-        """
-        Returns activation node, but not quanitzers.
-
-        :param node: NNCFNode instance.
-        :param nncf_graph: NNCFGraph instance.
-        :return: NNCFNode activation node.
-        """
-
-    @staticmethod
-    @abstractmethod
-    def get_activation_port_ids_for_bias_node(model: TModel, node: NNCFNode) -> Tuple[int, int]:
+    def get_activation_port_ids_for_bias_node(node: NNCFNode) -> Tuple[int, int]:
         """
         Returns Input Port ID and Output Port ID corresponding to activation input and output edges for
         the node.
         Supports only nodes that could have bias value.
 
-        :param model: Backend-specific model.
         :param node: Node of NNCFGraph with bias value.
         """
 
@@ -193,12 +181,12 @@ class BiasCorrectionAlgoBackend(ABC):
 
     @staticmethod
     @abstractmethod
-    def is_quantized_weights(node: NNCFNode, model: TModel) -> bool:
+    def is_quantized_weights(node: NNCFNode, nncf_graph: NNCFGraph) -> bool:
         """
         Checks whether the node is quantized or not.
 
         :param node: NNCFNode to check.
-        :param model: Backend-specific model.
+        :param nncf_graph: NNCFGraph instance with the node.
         :return: boolean indicating whether the node has a quantized weights or not.
         """
 

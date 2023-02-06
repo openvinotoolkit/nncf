@@ -145,7 +145,7 @@ class BiasCorrection(Algorithm):
 
         for position, (node, subgraph_data) in enumerate(zip(nodes_with_bias, subgraphs_data)):
             node_name = node.node_name
-            if not self._backend_entity.is_quantized_weights(node, model):
+            if not self._backend_entity.is_quantized_weights(node, nncf_graph):
                 nncf_logger.debug(f'Skipping node {node_name} because weights was not quantized')
                 continue
 
@@ -200,7 +200,7 @@ class BiasCorrection(Algorithm):
                 continue
 
             seen_nodes.append(current_node_name)
-            if current_node.node_type in skip_types:
+            if current_node.metatype in skip_types:
                 target_point = self._backend_entity.target_point(
                     TargetType.LAYER, current_node_name, 0)
                 command = self._backend_entity.node_removing_command(target_point)
@@ -263,7 +263,7 @@ class BiasCorrection(Algorithm):
 
         transformation_layout = TransformationLayout()
         model_transformer = ModelTransformerFactory.create(extracted_model)
-        _, output_port_id = self._backend_entity.get_activation_port_ids_for_bias_node(model, node)
+        _, output_port_id = self._backend_entity.get_activation_port_ids_for_bias_node(node)
         statistic_point = self._backend_entity.target_point(TargetType.POST_LAYER_OPERATION,
                                                             node.node_name,
                                                             output_port_id)
@@ -311,7 +311,7 @@ class BiasCorrection(Algorithm):
         output_fp = self._get_fp_outputs(statistic_points, node.node_name)
         output_tensor_names = self._backend_entity.get_output_names(model, node.node_name)
         engine = EngineFactory.create(model)
-        channel_axis = self._backend_entity.channel_axis_by_types[node.node_type]
+        channel_axis = self._backend_entity.channel_axis_by_types[node.metatype]
         q_outputs = []
         for feed_dict in feed_dicts:
             q_output = engine.infer(feed_dict)
@@ -434,26 +434,25 @@ class BiasCorrection(Algorithm):
         nncf_graph = NNCFGraphFactory.create(model) if self.nncf_graph is None else self.nncf_graph
         statistic_container = StatisticPointsContainer()
 
-        biased_nodes = filter(self._backend_entity.is_node_with_bias, nncf_graph.topological_sort())
+        nodes_with_bias = filter(self._backend_entity.is_node_with_bias, nncf_graph.topological_sort())
         model_inputs = nncf_graph.get_input_nodes()
         biased_after_input_nodes = self._get_biased_after_input_nodes(nncf_graph, model_inputs)
 
-        for biased_node in biased_nodes:
-            biased_node_name = biased_node.node_name
-            channel_axis = self._backend_entity.channel_axis_by_types[biased_node.node_type]
-            input_port_id, output_port_id = self._backend_entity.get_activation_port_ids_for_bias_node(model,
-                                                                                                       biased_node)
-            if biased_node_name in biased_after_input_nodes:
-                self._collected_stat_inputs.add(biased_node_name)
+        for node in nodes_with_bias:
+            node_name = node.node_name
+            channel_axis = self._backend_entity.channel_axis_by_types[node.metatype]
+            input_port_id, output_port_id = self._backend_entity.get_activation_port_ids_for_bias_node(node)
+            if node_name in biased_after_input_nodes:
+                self._collected_stat_inputs.add(node_name)
                 statistic_point = self._backend_entity.target_point(TargetType.PRE_LAYER_OPERATION,
-                                                                    biased_node_name,
+                                                                    node_name,
                                                                     input_port_id)
                 stat_collector = self._backend_entity.batch_statistic_collector(num_samples=self.number_samples)
                 statistic_container.add_statistic_point(StatisticPoint(target_point=statistic_point,
                                                                        tensor_collector=stat_collector,
                                                                        algorithm=BiasCorrection))
             statistic_point = self._backend_entity.target_point(TargetType.POST_LAYER_OPERATION,
-                                                                biased_node_name,
+                                                                node_name,
                                                                 output_port_id)
             stat_collector = self._backend_entity.mean_statistic_collector(reduction_shape=channel_axis,
                                                                            num_samples=self.number_samples)
@@ -480,8 +479,21 @@ class BiasCorrection(Algorithm):
         biased_after_param_nodes = {}
 
         for model_input in model_inputs:
-            biased_nodes = nncf_graph.traverse_graph(model_input, traverse_to_biased)
-            for biased_node in biased_nodes:
-                activation_input = self._backend_entity.get_node_through_quantizer(biased_node, nncf_graph)
-                biased_after_param_nodes[biased_node.node_name] = activation_input.node_name
+            nodes_with_bias = nncf_graph.traverse_graph(model_input, traverse_to_biased)
+            for node in nodes_with_bias:
+                activation_input = self._get_node_through_quantizer(node, nncf_graph)
+                biased_after_param_nodes[node.node_name] = activation_input.node_name
         return biased_after_param_nodes
+
+    def _get_node_through_quantizer(self, node: NNCFNode, nncf_graph: NNCFGraph) -> NNCFNode:
+        """
+        Returns activation node, but not quanitzers.
+        :param node: NNCFNode instance.
+        :param nncf_graph: NNCFGraph instance.
+        :return: NNCFNode activation node.
+        """
+        activation_input_port = 0
+        previous_node = nncf_graph.get_previous_nodes(node)[activation_input_port]
+        while previous_node.metatype in self._backend_entity.quantizer_types:
+            previous_node = nncf_graph.get_previous_nodes(previous_node)[activation_input_port]
+        return previous_node
