@@ -31,7 +31,6 @@ from nncf.torch.dynamic_graph.io_handling import wrap_nncf_model_outputs_with_ob
 from nncf.torch.dynamic_graph.context import TracingContext
 from nncf.torch.layers import LSTMCellNNCF, NNCF_RNN, ITERATION_MODULES
 from nncf.torch.model_creation import create_compressed_model
-from nncf.torch.nncf_module_replacement import replace_modules_by_nncf_modules
 from nncf.torch.nncf_module_replacement import collect_modules_and_scopes_by_predicate
 from nncf.torch.utils import get_model_device
 from tests.torch.modules.seq2seq.gnmt import GNMT

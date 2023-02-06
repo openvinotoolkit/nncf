@@ -12,7 +12,6 @@
 """
 
 from copy import deepcopy
-from functools import partial
 from typing import Callable
 from typing import Dict
 from typing import Set
@@ -22,7 +21,7 @@ from typing import List
 from typing import Optional
 from typing import Type
 
-import torch.nn
+import torch
 from torch import nn
 
 from nncf.common.logging import nncf_logger
@@ -59,7 +58,8 @@ def collect_all_scopes_for_extendable_and_extended_modules(module: nn.Module) ->
     predicate = lambda x: _can_extend(x) or is_nncf_module(x)
     return _collect_modules_and_scopes_recursive_helper(module, Scope(), predicate, retval)
 
-def collect_modules_and_scopes_by_predicate(module: nn.Module, predicate: Callable[[torch.nn.Module], bool]) -> Dict[nn.Module, Set[Scope]]:
+def collect_modules_and_scopes_by_predicate(module: nn.Module,
+        predicate: Callable[[torch.nn.Module], bool]) -> Dict[nn.Module, Set[Scope]]:
     retval = {}
     return _collect_modules_and_scopes_recursive_helper(module, Scope(), predicate, retval)
 
@@ -88,7 +88,8 @@ def _collect_modules_and_scopes_recursive_helper(current_module: nn.Module,
                 retval[child_module] = {child_scope}
             else:
                 retval[child_module].add(child_scope)
-        _ = _collect_modules_and_scopes_recursive_helper(child_module, child_scope, collect_predicate, retval, visited_scopes)
+        _ = _collect_modules_and_scopes_recursive_helper(child_module,
+                child_scope, collect_predicate, retval, visited_scopes)
 
     return retval
 
@@ -119,6 +120,7 @@ def nncf_module_from(module: nn.Module) -> nn.Module:
             nncf_module = deepcopy(module)
             nncf_module = add_nncf_functionality_to_user_module(nncf_module)
             return nncf_module
+    raise RuntimeError(f"Could not extend module {module} with NNCF functionality!")
 
 
 def replace_modules_by_nncf_modules(
@@ -150,8 +152,8 @@ def replace_modules_by_nncf_modules(
     :param custom_replacer: The function to be used instead of the regular approach to replace a module with NNCF-
       extended counterpart.
     :return: The model with the modules replaced and the dictionary of all extended modules vs the set of scopes through
-    which the module is accessible. The dictionary will also include the extended modules that have already been present in
-    the model.
+    which the module is accessible.
+    The dictionary will also include the extended modules that have already been present in the model.
     """
     modules_vs_scopes_dict = collect_all_scopes_for_extendable_and_extended_modules(model)
     inter_dict = {}  # type: Dict[nn.Module, Set[Scope]]

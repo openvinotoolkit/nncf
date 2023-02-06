@@ -55,7 +55,6 @@ from nncf.torch.dynamic_graph.io_handling import wrap_nncf_model_outputs_with_ob
 from nncf.torch.dynamic_graph.operation_address import OperationAddress
 from nncf.torch.dynamic_graph.patch_pytorch import ignore_scope
 from nncf.torch.dynamic_graph.scope import Scope
-from nncf.torch.dynamic_graph.scope import ScopeElement
 from nncf.torch.dynamic_graph.trace_tensor import TracedTensor
 from nncf.torch.nncf_module_replacement import replace_modules_by_nncf_modules
 from nncf.torch.graph.graph import PTNNCFGraph
@@ -67,8 +66,6 @@ from nncf.torch.graph.transformations.commands import PTTargetPoint
 from nncf.torch.graph.transformations.layout import PTTransformationLayout
 from nncf.torch.knowledge_distillation.knowledge_distillation_handler import KnowledgeDistillationLossHandler
 from nncf.torch.layer_utils import _NNCFModuleMixin
-from nncf.torch.layers import NNCF_MODULES
-from nncf.torch.layers import NNCF_WRAPPED_USER_MODULES_DICT
 from nncf.torch.module_operations import UpdateWeight
 from nncf.torch.nested_objects_traversal import objwalk
 from nncf.torch.quantization.layers import QUANTIZATION_MODULES
