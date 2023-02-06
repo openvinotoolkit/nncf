@@ -56,11 +56,16 @@ def is_nncf_module(module: nn.Module) -> bool:
 
 def collect_all_scopes_for_extendable_and_extended_modules(module: nn.Module) -> Dict[nn.Module, Set[Scope]]:
     retval = {}
-    return _collect_scopes_recursive_helper(module, Scope(), retval)
+    predicate = lambda x: _can_extend(x) or is_nncf_module(x)
+    return _collect_modules_and_scopes_recursive_helper(module, Scope(), predicate, retval)
 
+def collect_modules_and_scopes_by_predicate(module: nn.Module, predicate: Callable[[torch.nn.Module], bool]) -> Dict[nn.Module, Set[Scope]]:
+    retval = {}
+    return _collect_modules_and_scopes_recursive_helper(module, Scope(), predicate, retval)
 
-def _collect_scopes_recursive_helper(current_module: nn.Module,
+def _collect_modules_and_scopes_recursive_helper(current_module: nn.Module,
                                      current_scope: Scope,
+                                     collect_predicate: Callable[[torch.nn.Module], bool],
                                      retval: Dict[nn.Module, Set[Scope]],
                                      visited_scopes: Set[Scope] = None) -> Dict[nn.Module, Set[Scope]]:
     if visited_scopes is None:
@@ -78,12 +83,12 @@ def _collect_scopes_recursive_helper(current_module: nn.Module,
         child_scope = current_scope.copy()
         child_scope.push(child_scope_element)
 
-        if _can_extend(child_module) or is_nncf_module(child_module):
+        if collect_predicate(child_module):
             if child_module not in retval:
                 retval[child_module] = {child_scope}
             else:
                 retval[child_module].add(child_scope)
-        _ = _collect_scopes_recursive_helper(child_module, child_scope, retval, visited_scopes)
+        _ = _collect_modules_and_scopes_recursive_helper(child_module, child_scope, collect_predicate, retval, visited_scopes)
 
     return retval
 

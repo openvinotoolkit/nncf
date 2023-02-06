@@ -32,6 +32,7 @@ from nncf.torch.dynamic_graph.context import TracingContext
 from nncf.torch.layers import LSTMCellNNCF, NNCF_RNN, ITERATION_MODULES
 from nncf.torch.model_creation import create_compressed_model
 from nncf.torch.nncf_module_replacement import replace_modules_by_nncf_modules
+from nncf.torch.nncf_module_replacement import collect_modules_and_scopes_by_predicate
 from nncf.torch.utils import get_model_device
 from tests.torch.modules.seq2seq.gnmt import GNMT
 from tests.torch.helpers import get_empty_config, get_grads, create_compressed_model_and_algo_for_test
@@ -66,9 +67,15 @@ def replace_lstm(model):
         custom_lstm.to(device)
         return custom_lstm
 
+    lstm_modules = collect_modules_and_scopes_by_predicate(model, lambda x: isinstance(x, nn.LSTM))
     if isinstance(model, nn.LSTM):
         return replace_fn(model)
-    return replace_modules_by_nncf_modules(model, custom_replacer=replace_fn)[0]
+    from nncf.torch.nncf_module_replacement import _replace_module_by_scope
+    for module, scope_set in lstm_modules.items():
+        replaced_module = replace_fn(module)
+        for scope in scope_set:
+            _replace_module_by_scope(model, scope, replaced_module)
+    return model
 
 
 def clone_test_data(data_list):
@@ -528,6 +535,7 @@ class TestNumberOfNodes:
             quantizer.register_forward_pre_hook(partial(hook, counter=counter))
         dummy_forward_fn(model)
 
+        model.get_graph().dump_graph("test.dot")
         assert model.get_graph().get_nodes_count() == 373  # NB: may always fail in debug due to superfluous 'cat' nodes
         assert len(counters) == 143
 
