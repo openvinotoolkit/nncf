@@ -10,35 +10,34 @@
  See the License for the specific language governing permissions and
  limitations under the License.
 """
+from abc import abstractmethod
+from collections import Counter
 from typing import Dict
 
 import pytest
-from abc import abstractmethod
-from collections import Counter
 
-from nncf.parameters import ModelType
-from nncf.quantization.algorithms.definitions import OverflowFix
-from nncf.common.quantization.structs import QuantizationPreset
-from nncf.common.quantization.structs import QuantizationMode
-from nncf.common.quantization.structs import QuantizerConfig
-from nncf.common.graph.transformations.commands import TargetType
-from nncf.common.graph.operator_metatypes import OutputNoopMetatype
 from nncf.common.graph.operator_metatypes import InputNoopMetatype
 from nncf.common.graph.operator_metatypes import OperatorMetatype
-from nncf.quantization.algorithms.definitions import RangeType
-from nncf.quantization.algorithms.post_training.algorithm import PostTrainingQuantization
-from nncf.quantization.algorithms.post_training.algorithm import PostTrainingQuantizationParameters
+from nncf.common.graph.operator_metatypes import OutputNoopMetatype
+from nncf.common.graph.transformations.commands import TargetType
+from nncf.common.quantization.structs import QuantizationMode
+from nncf.common.quantization.structs import QuantizationPreset
+from nncf.common.quantization.structs import QuantizerConfig
+from nncf.common.quantization.structs import QuantizerGroup
+from nncf.parameters import ModelType
+from nncf.quantization.advanved_parameters import AdvancedQuantizationParameters
+from nncf.quantization.advanved_parameters import OverflowFix
 from nncf.quantization.algorithms.min_max.algorithm import MinMaxQuantization
-from nncf.quantization.algorithms.min_max.algorithm import MinMaxQuantizationParameters
-
-from tests.common.quantization.metatypes import TestMetatype
+from nncf.quantization.algorithms.post_training.algorithm import PostTrainingQuantization
+from nncf.quantization.range_estimator import RangeEstimatorParametersSet
 from tests.common.quantization.metatypes import Conv2dTestMetatype
 from tests.common.quantization.metatypes import IdentityTestMetatype
 from tests.common.quantization.metatypes import LinearTestMetatype
 from tests.common.quantization.metatypes import SoftmaxTestMetatype
-from tests.common.quantization.mock_graphs import NodeWithType
+from tests.common.quantization.metatypes import TestMetatype
 from tests.common.quantization.mock_graphs import create_mock_graph
 from tests.common.quantization.mock_graphs import get_nncf_graph_from_mock_nx_graph
+from tests.common.quantization.mock_graphs import NodeWithType
 
 
 class ModelToTestOverflowFix:
@@ -117,14 +116,20 @@ class TemplateTestPTQParams:
     def metatypes_mapping(self):
         pass
 
-    @pytest.mark.parametrize('range_type', [RangeType.MINMAX, RangeType.MEAN_MINMAX, None])
-    def test_range_type_per_tensor(self, test_params, range_type):
-        algo = PostTrainingQuantization(PostTrainingQuantizationParameters(range_type=range_type))
+    @pytest.mark.parametrize('range_estimator_params',
+                             [RangeEstimatorParametersSet.MINMAX,
+                              RangeEstimatorParametersSet.MEAN_MINMAX, None])
+    def test_range_estimator_per_tensor(self, test_params, range_estimator_params):
+        algo = PostTrainingQuantization(
+            advanced_parameters=AdvancedQuantizationParameters(
+                activations_range_estimator_params=range_estimator_params
+            )
+        )
         min_max_algo = algo.algorithms[0]
         min_max_algo._backend_entity = self.get_algo_backend()
-        assert min_max_algo._parameters.range_type == range_type
+        assert min_max_algo._range_estimator_params[QuantizerGroup.ACTIVATIONS] == range_estimator_params
 
-        params = test_params['test_range_type_per_tensor']
+        params = test_params['test_range_estimator_per_tensor']
         stat_points = min_max_algo.get_statistic_points(params['model'])
         assert len(stat_points) == params['stat_points_num']
 
@@ -135,41 +140,28 @@ class TemplateTestPTQParams:
                         # default tensor_collector for weights
                         self.check_is_min_max_statistic_collector(tensor_collector)
                         continue
-                    if range_type is None:
+                    if range_estimator_params is None:
                         # default tensor_collector for per-tensor
                         self.check_is_mean_min_max_statistic_collector(tensor_collector)
-                    if range_type == RangeType.MINMAX:
+                    if range_estimator_params == RangeEstimatorParametersSet.MINMAX:
                         self.check_is_min_max_statistic_collector(tensor_collector)
-                    elif range_type == RangeType.MEAN_MINMAX:
+                    elif range_estimator_params == RangeEstimatorParametersSet.MEAN_MINMAX:
                         self.check_is_mean_min_max_statistic_collector(tensor_collector)
-
-    @pytest.mark.parametrize('range_type', [RangeType.MINMAX, RangeType.MEAN_MINMAX, None])
-    def test_range_type_per_channel(self, test_params, range_type):
-        algo = PostTrainingQuantization(PostTrainingQuantizationParameters(range_type=range_type))
-        min_max_algo = algo.algorithms[0]
-        min_max_algo._backend_entity = self.get_algo_backend()
-        assert min_max_algo._parameters.range_type == range_type
-
-        params = test_params['test_range_type_per_channel']
-        stat_points = min_max_algo.get_statistic_points(params['model'])
-        assert len(stat_points) == params['stat_points_num']
-
-        for _, stat_point in stat_points.items():
-            for stat_point_ in stat_point:
-                for tensor_collector in stat_point_.algorithm_to_tensor_collectors[MinMaxQuantization]:
-                    # Range_type does not affect per-channel tensor_collector
-                    self.check_is_min_max_statistic_collector(tensor_collector)
 
     @pytest.mark.parametrize('quantize_outputs', [False, True])
     def test_quantize_outputs(self, test_params, quantize_outputs):
-        algo = PostTrainingQuantization(PostTrainingQuantizationParameters(quantize_outputs=quantize_outputs))
+        algo = PostTrainingQuantization(
+            advanced_parameters = AdvancedQuantizationParameters(
+                quantize_outputs=quantize_outputs
+            )
+        )
         min_max_algo = algo.algorithms[0]
         min_max_algo._backend_entity = self.get_algo_backend()
 
         nncf_graph = test_params['test_quantize_outputs']['nncf_graph']
         pattern = test_params['test_quantize_outputs']['pattern']
 
-        assert min_max_algo._parameters.quantize_outputs == quantize_outputs
+        assert min_max_algo._quantize_outputs == quantize_outputs
         q_setup = min_max_algo._get_quantizer_setup(nncf_graph, pattern)
         act_num_q, weight_num_q = 0, 0
         for quantization_point in q_setup.quantization_points.values():
@@ -182,11 +174,11 @@ class TemplateTestPTQParams:
                                            act_num_q, weight_num_q)
 
     def test_ignored_scopes(self, test_params, ignored_scopes_data):
-        ignored_scopes, act_num_ref, weight_num_ref = ignored_scopes_data
-        algo = PostTrainingQuantization(PostTrainingQuantizationParameters(ignored_scopes=ignored_scopes))
+        ignored_scope, act_num_ref, weight_num_ref = ignored_scopes_data
+        algo = PostTrainingQuantization(ignored_scope=ignored_scope)
         min_max_algo = algo.algorithms[0]
         min_max_algo._backend_entity = self.get_algo_backend()
-        assert min_max_algo._parameters.ignored_scopes == ignored_scopes
+        assert min_max_algo._ignored_scope == ignored_scope
 
         nncf_graph = test_params['test_ignored_scopes']['nncf_graph']
         pattern = test_params['test_ignored_scopes']['pattern']
@@ -204,8 +196,8 @@ class TemplateTestPTQParams:
 
     @pytest.mark.parametrize('model_type', [ModelType.TRANSFORMER])
     def test_model_type_pass(self, test_params, model_type):
-        algo = PostTrainingQuantization(PostTrainingQuantizationParameters(preset=QuantizationPreset.MIXED,
-                                                                           model_type=model_type))
+        algo = PostTrainingQuantization(
+            preset=QuantizationPreset.MIXED, model_type=model_type)
         min_max_algo = algo.algorithms[0]
         min_max_algo._backend_entity = self.get_algo_backend()
 
@@ -253,7 +245,7 @@ class TemplateTestPTQParams:
             if t_p.target_node_name not in ignored_ops:
                 filtered_weight_target_points[t_p] = weight_target_points[t_p]
 
-        algo = MinMaxQuantization(MinMaxQuantizationParameters())
+        algo = MinMaxQuantization()
         algo._backend_entity = self.get_algo_backend()
         target_points_overflow_fix = algo._get_quantization_points_overflow_fix(overflow_fix, filtered_weight_target_points, nncf_graph)
         assert Counter([t_p.target_node_name for t_p in target_points_overflow_fix]) == Counter(affected_target_points)

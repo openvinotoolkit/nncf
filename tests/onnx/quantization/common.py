@@ -19,9 +19,8 @@ import numpy as np
 import onnx
 
 from nncf import Dataset
-from nncf.quantization.algorithms.min_max.algorithm import MinMaxQuantization
+from nncf.quantization.advanved_parameters import AdvancedQuantizationParameters
 from nncf.quantization.algorithms.post_training.algorithm import PostTrainingQuantization
-from nncf.quantization.algorithms.post_training.algorithm import PostTrainingQuantizationParameters
 from nncf.onnx.graph.nncf_graph_builder import GraphConverter
 from nncf.onnx.graph.onnx_graph import ONNXGraph
 from nncf.onnx.statistics.statistics import ONNXMinMaxTensorStatistic
@@ -98,14 +97,15 @@ def min_max_quantize_model(original_model: onnx.ModelProto, convert_model_opset:
         original_model = convert_opset_version(original_model)
     dataset = get_random_dataset_for_test(original_model, dataset_has_batch_size)
     quantization_params = {} if quantization_params is None else quantization_params
+
+    advanced_parameters = quantization_params.get(
+        'advanced_parameters', AdvancedQuantizationParameters())
+    advanced_parameters.disable_bias_correction = True
+    quantization_params['advanced_parameters'] = advanced_parameters
+
     post_training_quantization = PostTrainingQuantization(
-        PostTrainingQuantizationParameters(number_samples=1, **quantization_params))
-    # Using PTQ, but apply only MinMax
-    updated_algorithms = []
-    for algo in post_training_quantization.algorithms:
-        if isinstance(algo, MinMaxQuantization):
-            updated_algorithms.append(algo)
-    post_training_quantization.algorithms = updated_algorithms
+        subset_size=1, **quantization_params)
+
     quantized_model = post_training_quantization.apply(original_model, dataset=dataset)
     return quantized_model
 
@@ -118,7 +118,7 @@ def ptq_quantize_model(original_model: onnx.ModelProto, convert_model_opset: boo
     dataset = get_random_dataset_for_test(original_model, dataset_has_batch_size)
     quantization_params = {} if quantization_params is None else quantization_params
     post_training_quantization = PostTrainingQuantization(
-        PostTrainingQuantizationParameters(number_samples=1, **quantization_params))
+        subset_size=1, **quantization_params)
     quantized_model = post_training_quantization.apply(original_model, dataset=dataset)
     return quantized_model
 

@@ -11,29 +11,28 @@
  limitations under the License.
 """
 
-import pytest
 from pathlib import Path
+
 import numpy as np
 import openvino.runtime as ov
+import pytest
 
 from nncf.common.quantization.structs import QuantizationPreset
 from nncf.experimental.openvino_native.statistics.aggregator import OVStatisticsAggregator
+from nncf.quantization.advanved_parameters import OverflowFix
 from nncf.quantization.algorithms.min_max.algorithm import MinMaxQuantization
-from nncf.quantization.algorithms.min_max.algorithm import MinMaxQuantizationParameters
-from nncf.quantization.algorithms.definitions import OverflowFix
-
 from tests.openvino.conftest import OPENVINO_NATIVE_TEST_ROOT
+from tests.openvino.native.common import get_dataset_for_test
+from tests.openvino.native.models import ConvModel
+from tests.openvino.native.models import FPModel
+from tests.openvino.native.models import LinearModel
+from tests.openvino.native.models import MatMul2DModel
+from tests.openvino.native.models import SYNTHETIC_MODELS
+from tests.openvino.native.models import WeightsModel
 from tests.openvino.omz_helpers import convert_model
 from tests.openvino.omz_helpers import download_model
-from tests.openvino.native.common import get_dataset_for_test
-from tests.shared.helpers import load_json
 from tests.shared.helpers import compare_stats
-from tests.openvino.native.models import SYNTHETIC_MODELS
-from tests.openvino.native.models import LinearModel
-from tests.openvino.native.models import ConvModel
-from tests.openvino.native.models import MatMul2DModel
-from tests.openvino.native.models import FPModel
-from tests.openvino.native.models import WeightsModel
+from tests.shared.helpers import load_json
 
 REFERENCE_SCALES_DIR = OPENVINO_NATIVE_TEST_ROOT / 'data' / 'reference_scales'
 
@@ -60,7 +59,7 @@ def get_fq_nodes_stats_algo(model):
 def quantize_model(ov_model, q_params):
     dataset = get_dataset_for_test(ov_model)
 
-    min_max_algo = MinMaxQuantization(MinMaxQuantizationParameters(number_samples=1, **q_params))
+    min_max_algo = MinMaxQuantization(subset_size=1, **q_params)
     statistics_aggregator = OVStatisticsAggregator(dataset)
     statistic_points = min_max_algo.get_statistic_points(ov_model)
     statistics_aggregator.register_stastistic_points(statistic_points)

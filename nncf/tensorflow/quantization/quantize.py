@@ -11,7 +11,7 @@
  limitations under the License.
 """
 
-from typing import Optional
+from typing import Any, Dict, Optional
 
 import tensorflow as tf
 
@@ -22,12 +22,14 @@ from nncf.config.structures import BNAdaptationInitArgs
 from nncf.config.structures import QuantizationRangeInitArgs
 from nncf.data import Dataset
 from nncf.data.dataset import DataProvider
+from nncf.quantization.advanved_parameters import AdvancedQuantizationParameters, convert_advanced_parameters_to_dict
 from nncf.scopes import convert_ignored_scope_to_list
 from nncf.scopes import IgnoredScope
 from nncf.parameters import ModelType
 from nncf.parameters import TargetDevice
 from nncf.tensorflow.helpers.model_creation import create_compressed_model
 
+DEFAULT_RANGE_TYPE = 'mean_min_max'
 
 # TODO(alexsu52): It is a workaround and should be removed.
 class CalibrarionDataLoader(NNCFDataLoader):
@@ -62,6 +64,58 @@ class CalibrarionDataLoader(NNCFDataLoader):
         return iter(DataProvider(self._dataset.get_inference_data(), transform_fn))
 
 
+def _get_default_quantization_config(preset: QuantizationPreset,
+                                     subset_size: int) -> Dict[str, Any]:
+    """
+    :return: The default quantization config.
+    """
+    return {
+        'algorithm': 'quantization',
+        'preset': preset.value,
+        'initializer': {
+            'range': {'num_init_samples': subset_size, 'type': DEFAULT_RANGE_TYPE},
+            'batchnorm_adaptation': {'num_bn_adaptation_samples': subset_size}
+        },
+        'overflow_fix': 'first_layer_only'
+    }
+
+
+def _create_nncf_config(
+        preset: QuantizationPreset,
+        target_device: TargetDevice,
+        subset_size: int,
+        ignored_scope: Optional[IgnoredScope],
+        advanced_parameters: Optional[AdvancedQuantizationParameters]) -> NNCFConfig:
+    """
+    :return: The NNCFConfig for quantization method.
+    """
+    compression_config = _get_default_quantization_config(preset, subset_size)
+
+    if ignored_scope is not None:
+        _ignored_scope = convert_ignored_scope_to_list(ignored_scope)
+        if 'ignored_scopes' in compression_config:
+            compression_config['ignored_scopes'].extend(_ignored_scope)
+        else:
+            compression_config['ignored_scopes'] = _ignored_scope
+
+    if advanced_parameters is not None:
+        advanced_config = convert_advanced_parameters_to_dict(advanced_parameters)
+
+        ranges = advanced_config.get('initializer', {}).get('range')
+        if ranges is not None:
+            for rconfig in ranges:
+                rconfig['num_init_samples'] = subset_size
+                if 'type' not in rconfig:
+                    rconfig['type'] = DEFAULT_RANGE_TYPE
+
+        compression_config.update(advanced_config)
+
+    return NNCFConfig({
+        'target_device': target_device.value,
+        'compression': compression_config
+    })
+
+
 def quantize_impl(model: tf.Module,
                   calibration_dataset: Dataset,
                   preset: QuantizationPreset,
@@ -69,7 +123,8 @@ def quantize_impl(model: tf.Module,
                   subset_size: int,
                   fast_bias_correction: bool,
                   model_type: Optional[ModelType] = None,
-                  ignored_scope: Optional[IgnoredScope] = None) -> tf.Module:
+                  ignored_scope: Optional[IgnoredScope] = None,
+                  advanced_parameters: Optional[AdvancedQuantizationParameters] = None) -> tf.Module:
     """
     Implementation of the `quantize()` method for the TensorFlow backend.
     """
@@ -85,25 +140,8 @@ def quantize_impl(model: tf.Module,
     if target_device == TargetDevice.CPU_SPR:
         raise RuntimeError('target_device == CPU_SPR is not supported.')
 
-    nncf_config = NNCFConfig(
-        {
-            'target_device': target_device.value,
-            'compression': {
-                'algorithm': 'quantization',
-                'preset': preset.value,
-                'initializer': {
-                    'range': {
-                        'num_init_samples': subset_size
-                    },
-                    'batchnorm_adaptation': {
-                        'num_bn_adaptation_samples': subset_size
-                    }
-                },
-                'overflow_fix': 'first_layer_only',
-                'ignored_scopes': convert_ignored_scope_to_list(ignored_scope)
-            }
-        }
-    )
+    nncf_config = _create_nncf_config(
+        preset, target_device, subset_size, ignored_scope, advanced_parameters)
 
     calibration_data_loader = CalibrarionDataLoader(calibration_dataset)
     nncf_config.register_extra_structs(

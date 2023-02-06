@@ -16,20 +16,21 @@ from typing import Any, Dict
 import numpy as np
 import pytest
 import torch
-from tests.shared.helpers import compare_stats, load_json
-from tests.shared.paths import TEST_ROOT
-from tests.torch.helpers import TwoConvTestModel, create_random_mock_dataloader
 
 import nncf
-from nncf.quantization.algorithms.definitions import OverflowFix
+from nncf.quantization.advanved_parameters import AdvancedQuantizationParameters
+from nncf.quantization.advanved_parameters import OverflowFix
 from nncf.quantization.algorithms.min_max.algorithm import MinMaxQuantization
 from nncf.quantization.algorithms.post_training.algorithm import PostTrainingQuantization
-from nncf.quantization.algorithms.post_training.algorithm import PostTrainingQuantizationParameters
-
 from nncf.torch.model_creation import create_nncf_network
 from nncf.torch.nncf_network import NNCFNetwork
 from nncf.torch.quantization.layers import QUANTIZATION_MODULES
 from nncf.torch.utils import get_all_modules_by_type
+from tests.shared.helpers import compare_stats
+from tests.shared.helpers import load_json
+from tests.shared.paths import TEST_ROOT
+from tests.torch.helpers import create_random_mock_dataloader
+from tests.torch.helpers import TwoConvTestModel
 
 REFERENCE_SCALES_DIR = TEST_ROOT / 'torch' / 'data' / 'reference_scales'
 
@@ -48,7 +49,7 @@ def min_max_quantize_model(
     dataset = nncf.Dataset(dataloader, transform_func=transform_fn)
 
     post_training_quantization = PostTrainingQuantization(
-        PostTrainingQuantizationParameters(number_samples=1, **quantization_params)
+        subset_size=1, **quantization_params
     )
     # Using PTQ, but apply only MinMax
     updated_algorithms = []
@@ -88,7 +89,8 @@ def get_fq_nodes_params(model: NNCFNetwork) -> Dict[str, np.ndarray]:
 )
 def test_overflow_fix_scales(_seed, overflow_fix):
     model = TwoConvTestModel()
-    quantized_model = min_max_quantize_model(model, quantization_params={'overflow_fix': overflow_fix})
+    quantized_model = min_max_quantize_model(model, quantization_params={
+        'advanced_parameters': AdvancedQuantizationParameters(overflow_fix=overflow_fix)})
     fq_nodes_params = get_fq_nodes_params(quantized_model)
 
     ref_stats_name = 'TwoConvTestModel' + f'_overflow_fix_{overflow_fix.value}.json'

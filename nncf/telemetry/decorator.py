@@ -64,9 +64,9 @@ class tracked_function:
                         telemetry.start_session(self._category)
                     for event in events:
                         telemetry.send_event(event_category=category,
-                                                 event_action=event.name,
-                                                 event_label=event.data,
-                                                 event_value=event.int_data)
+                                             event_action=event.name,
+                                             event_label=event.data,
+                                             event_value=event.int_data)
 
                 retval = fn(*args, **kwargs)
 

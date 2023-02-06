@@ -17,13 +17,6 @@ from nncf.telemetry.extractors import CollectedEvent
 from nncf.telemetry.extractors import TelemetryExtractor
 
 
-class CompressionStartedWithQuantizeApi(TelemetryExtractor):
+class POTImplementation(TelemetryExtractor):
     def extract(self, _: Any) -> CollectedEvent:
-        return CollectedEvent(name="compression_started",
-                              data="quantize_api")
-
-
-class CompressionStartedWithQuantizeWithAccuracyControlApi(TelemetryExtractor):
-    def extract(self, _: Any) -> CollectedEvent:
-        return CollectedEvent(name="compression_started",
-                              data="quantize_with_accuracy_control_api")
+        return CollectedEvent(name="pot implementation")

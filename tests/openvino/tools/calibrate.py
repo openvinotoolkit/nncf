@@ -14,6 +14,7 @@
 from argparse import ArgumentParser
 from collections import OrderedDict
 from dataclasses import asdict
+from enum import Enum
 import json
 import multiprocessing
 import os
@@ -27,24 +28,27 @@ from openvino.tools.pot.configs.config import Config
 
 import nncf
 from nncf.common.logging.logger import set_log_file
+from nncf.common.quantization.structs import QuantizationMode
 from nncf.common.quantization.structs import QuantizationPreset
-from nncf.data.dataset import Dataset
 from nncf.experimental.openvino.quantization.quantize import \
     quantize_with_accuracy_control as pot_quantize_with_native_accuracy_control
-from nncf.experimental.openvino_native.quantization.quantize import quantize_impl
-from nncf.experimental.openvino_native.quantization.quantize import \
-    quantize_with_accuracy_control as native_quantize_with_native_accuracy_control
 from nncf.parameters import ModelType
 from nncf.parameters import TargetDevice
+from nncf.quantization.advanved_parameters import AdvancedAccuracyRestorerParameters
+from nncf.quantization.advanved_parameters import AdvancedQuantizationParameters
+from nncf.quantization.advanved_parameters import AggregatorType
+from nncf.quantization.advanved_parameters import OverflowFix
+from nncf.quantization.advanved_parameters import StatisticsType
 from nncf.scopes import IgnoredScope
 
 TModel = TypeVar('TModel')
-
 
 MAP_POT_NNCF_ALGORITHMS = {
     'DefaultQuantization': 'quantize',
     'AccuracyAwareQuantization': 'quantize_with_accuracy_control',
 }
+
+_default_context = None
 
 
 def parse_args():
@@ -79,10 +83,11 @@ def parse_args():
 
 class CustomJSONEncoder(json.JSONEncoder):
     def default(self, o):
-        if isinstance(o, (nncf.TargetDevice, nncf.ModelType,
-                          nncf.QuantizationPreset)):
+        if isinstance(o, (TargetDevice, ModelType, QuantizationPreset, OverflowFix,
+                          StatisticsType, AggregatorType)):
             return o.value
-        if isinstance(o, (nncf.IgnoredScope)):
+        if isinstance(o, (IgnoredScope, AdvancedQuantizationParameters,
+                          AdvancedAccuracyRestorerParameters)):
             return asdict(o)
         raise TypeError(f'Object of type {o.__class__.__name__} '
                         f'is not JSON serializable')
@@ -171,6 +176,45 @@ def dump_to_json(path, value, keys):
         json.dump(dump_value, f, cls=CustomJSONEncoder)
 
 
+class BlockedGroups(Enum):
+    activations_min_range = 'activations_min_range'
+    activations_max_range = 'activations_max_range'
+    weights_min_range = 'weights_min_range'
+    weights_max_range = 'weights_max_range'
+
+
+class ParameterNames(Enum):
+    advanced_parameters = 'advanced_parameters'
+
+
+class AlgorithmParametersContext:
+    def __init__(self, param_name_map):
+        self.params = {}
+        self.blocked_params = {}
+        for group in BlockedGroups:
+            self.blocked_params[group] = []
+        self.param_name_map = param_name_map
+        self._save_context = None
+
+    def __enter__(self):
+        self._save_context = get_algorithm_parameters_context()
+        set_algorithm_parameters_context(self)
+        return self
+
+    def __exit__(self, *args):
+        set_algorithm_parameters_context(self._save_context)
+        self._save_context = None
+
+
+def get_algorithm_parameters_context():
+    return _default_context
+
+
+def set_algorithm_parameters_context(ctx):
+    global _default_context
+    _default_context = ctx
+
+
 def map_target_device(target_device):
     target_device = target_device.upper()
     if target_device not in [t.value for t in nncf.TargetDevice]:
@@ -179,9 +223,6 @@ def map_target_device(target_device):
 
 
 def map_model_type(model_type):
-    if model_type is None:
-        return None
-
     model_type = model_type.lower()
     if model_type not in [m.value for m in nncf.ModelType]:
         raise ValueError(f'{model_type} model type is not supported')
@@ -189,9 +230,6 @@ def map_model_type(model_type):
 
 
 def map_ignored_scope(ignored):
-    if ignored is None:
-        return None
-
     if ignored.get('skip_model') is not None:
         raise ValueError('skip_model attribute in the ignored tag is not '
                          'supported')
@@ -201,7 +239,7 @@ def map_ignored_scope(ignored):
     if operations is not None:
         for op in operations:
             if op.get('attributes') is not None:
-                raise ValueError('Attributes in the ignored operations '
+                raise ValueError('"attributes" in the ignored operations '
                                  'are not supported')
             ignored_operations.append(op['type'])
     return {'ignored_scope': nncf.IgnoredScope(names=ignored.get('scope'),
@@ -215,40 +253,269 @@ def map_preset(preset):
     return {'preset': nncf.QuantizationPreset(preset)}
 
 
-def create_parameters_for_algorithm(pot_parameters, supported_parameters, default_parameters, ignored_parameters):
-    result = {}
-    for name in pot_parameters:
-        if (name in ignored_parameters or
-            (name in default_parameters and
-             pot_parameters[name] == default_parameters[name])):
+def map_inplace_statistics(inplace_statistics):
+    ctx = get_algorithm_parameters_context()
+    advanced_parameter_name = ctx.param_name_map[ParameterNames.advanced_parameters]
+    advanced_parameters = ctx.params.get(
+        advanced_parameter_name, AdvancedQuantizationParameters())
+    advanced_parameters.inplace_statistics = inplace_statistics
+    return {advanced_parameter_name: advanced_parameters}
+
+
+def update_statistics_collector_parameters(stat_collector_params, blocked_params,
+                                           pot_config, is_global_range_estimator):
+    granularity = pot_config.get('granularity')
+    if granularity is not None:
+        raise ValueError(
+            '"granularity" parameter in the range estimator is not supported')
+
+    stat_collector_names = [
+        'statistics_type',
+        'aggregator_type',
+        'clipping_value',
+        'quantile_outlier_prob'
+    ]
+    stat_collector_types = [StatisticsType, AggregatorType, float, float]
+    pot_names = ['type', 'aggregator', 'clipping_value', 'outlier_prob']
+
+
+    for stat_collector_name, pot_name, stat_collector_type in \
+        zip(stat_collector_names, pot_names, stat_collector_types):
+        if stat_collector_name in blocked_params and is_global_range_estimator:
             continue
-        if name in supported_parameters:
-            kwarg = supported_parameters[name](pot_parameters[name])
-            if kwarg is not None:
-                result.update(kwarg)
+
+        pot_value = pot_config.get(pot_name)
+        if pot_value is not None:
+            if not is_global_range_estimator:
+                blocked_params.append(stat_collector_name)
+            setattr(stat_collector_params,
+                    stat_collector_name, stat_collector_type(pot_value))
+
+
+def update_range_estimator_parameters(range_estimator_params, pot_config,
+                                      min_blocked_params,max_blocked_params,
+                                      is_global_range_estimator):
+    preset = pot_config.get('preset')
+    if preset is not None:
+        raise ValueError('"preset" parameter in the range estimator is not supported')
+
+    min_config = pot_config.get('min')
+    max_config = pot_config.get('max')
+    if min_config is None and max_config is None:
+        return
+
+    if min_config is not None:
+        update_statistics_collector_parameters(
+            range_estimator_params.min, min_blocked_params, min_config,
+            is_global_range_estimator)
+    if max_config is not None:
+        update_statistics_collector_parameters(
+            range_estimator_params.max, max_blocked_params, max_config,
+            is_global_range_estimator)
+
+
+def map_range_estmator(range_estimator):
+    ctx = get_algorithm_parameters_context()
+    advanced_parameter_name = ctx.param_name_map[ParameterNames.advanced_parameters]
+    advanced_parameters = ctx.params.get(
+        advanced_parameter_name, AdvancedQuantizationParameters())
+
+    update_range_estimator_parameters(
+        advanced_parameters.activations_range_estimator_params,
+        range_estimator,
+        ctx.blocked_params[BlockedGroups.activations_min_range],
+        ctx.blocked_params[BlockedGroups.activations_max_range],
+        True
+    )
+    update_range_estimator_parameters(
+        advanced_parameters.weights_range_estimator_params,
+        range_estimator,
+        ctx.blocked_params[BlockedGroups.weights_min_range],
+        ctx.blocked_params[BlockedGroups.weights_max_range],
+        True
+    )
+    return {advanced_parameter_name: advanced_parameters}
+
+
+def update_qunatization_parameters(quantization_params, pot_config):
+    level_low = pot_config.get('level_low')
+    if level_low is not None:
+        raise ValueError('"level_low" parameter is not supported')
+    level_high = pot_config.get('level_high')
+    if level_high is not None:
+        raise ValueError('"level_high" parameter is not supported')
+    num_bits = pot_config.get('bits')
+    if num_bits is not None:
+        quantization_params.num_bits = num_bits
+    mode = pot_config.get('mode')
+    if mode is not None:
+        if mode == 'symmetric':
+            quantization_params.mode = QuantizationMode.SYMMETRIC
+        elif mode == 'asymmetric':
+            quantization_params.mode = QuantizationMode.ASYMMETRIC
         else:
-            raise ValueError(f'{name} parameter is not supported')
+            raise ValueError(f'mode = {mode} is not supported')
+    granularity = pot_config.get('granularity')
+    if granularity is not None:
+        if granularity == 'perchannel':
+            quantization_params.per_channel = True
+        elif mode == 'pertensor':
+            quantization_params.per_channel = False
+        else:
+            raise ValueError(f'granularity = {granularity} is not supported')
 
-    return result
+
+def map_weights(weights):
+    ctx = get_algorithm_parameters_context()
+    advanced_parameter_name = ctx.param_name_map[ParameterNames.advanced_parameters]
+    advanced_parameters = ctx.params.get(
+        advanced_parameter_name, AdvancedQuantizationParameters())
+
+    update_qunatization_parameters(
+        advanced_parameters.weights_quantization_params, weights)
+
+    range_estimator = weights.get('range_estimator')
+    if range_estimator is not None:
+        update_range_estimator_parameters(
+            advanced_parameters.weights_range_estimator_params,
+            range_estimator,
+            ctx.blocked_params[BlockedGroups.weights_min_range],
+            ctx.blocked_params[BlockedGroups.weights_max_range],
+            False
+        )
+    return {advanced_parameter_name: advanced_parameters}
 
 
-def map_quantization_parameters(pot_parameters):
+def map_activations(activations):
+    ctx = get_algorithm_parameters_context()
+    advanced_parameter_name = ctx.param_name_map[ParameterNames.advanced_parameters]
+    advanced_parameters = ctx.params.get(
+        advanced_parameter_name, AdvancedQuantizationParameters())
+
+    update_qunatization_parameters(
+        advanced_parameters.weights_quantization_params, activations)
+
+    range_estimator = activations.get('range_estimator')
+    if range_estimator is not None:
+        update_range_estimator_parameters(
+            advanced_parameters.activations_range_estimator_params,
+            range_estimator,
+            ctx.blocked_params[BlockedGroups.activations_min_range],
+            ctx.blocked_params[BlockedGroups.activations_max_range],
+            False
+        )
+    return {advanced_parameter_name: advanced_parameters}
+
+
+def map_saturation_fix(saturation_fix):
+    ctx = get_algorithm_parameters_context()
+    advanced_parameter_name = ctx.param_name_map[ParameterNames.advanced_parameters]
+    advanced_parameters = ctx.params.get(
+        advanced_parameter_name, AdvancedQuantizationParameters())
+    if saturation_fix == 'no':
+        advanced_parameters.overflow_fix = OverflowFix.DISABLE
+    elif saturation_fix == 'first_layer':
+        advanced_parameters.overflow_fix = OverflowFix.FIRST_LAYER
+    elif saturation_fix == 'all':
+        advanced_parameters.overflow_fix = OverflowFix.ENABLE
+    else:
+        ValueError(f'saturation_fix = {saturation_fix} is not supported')
+    return {advanced_parameter_name: advanced_parameters}
+
+
+def map_apply_for_all_nodes(apply_for_all_nodes):
+    ctx = get_algorithm_parameters_context()
+    advanced_parameter_name = ctx.param_name_map[ParameterNames.advanced_parameters]
+    advanced_parameters = ctx.params.get(
+        advanced_parameter_name, AdvancedQuantizationParameters())
+    advanced_parameters.bias_correction_params.apply_for_all_nodes = apply_for_all_nodes
+    return {advanced_parameter_name: advanced_parameters}
+
+
+def map_threshold(threshold):
+    ctx = get_algorithm_parameters_context()
+    advanced_parameter_name = ctx.param_name_map[ParameterNames.advanced_parameters]
+    advanced_parameters = ctx.params.get(
+        advanced_parameter_name, AdvancedQuantizationParameters())
+    advanced_parameters.bias_correction_params.threshold = threshold
+    return {advanced_parameter_name: advanced_parameters}
+
+
+def map_max_iter_num(max_iter_num):
+    ctx = get_algorithm_parameters_context()
+    advanced_parameters = ctx.params.get(
+        'advanced_accuracy_restorer_parameters', AdvancedAccuracyRestorerParameters())
+    advanced_parameters.max_num_iterations = max_iter_num
+    return {'advanced_accuracy_restorer_parameters': advanced_parameters}
+
+
+def map_ranking_subset_size(ranking_subset_size):
+    ctx = get_algorithm_parameters_context()
+    advanced_parameters = ctx.params.get(
+        'advanced_accuracy_restorer_parameters', AdvancedAccuracyRestorerParameters())
+    advanced_parameters.ranking_subset_size = ranking_subset_size
+    return {'advanced_accuracy_restorer_parameters': advanced_parameters}
+
+
+def map_tune_hyperparams(tune_hyperparams):
+    ctx = get_algorithm_parameters_context()
+    advanced_parameters = ctx.params.get(
+        'advanced_accuracy_restorer_parameters', AdvancedAccuracyRestorerParameters())
+    advanced_parameters.tune_hyperparams = tune_hyperparams
+    return {'advanced_accuracy_restorer_parameters': advanced_parameters}
+
+
+def map_convert_to_mixed_preset(convert_to_mixed_preset):
+    ctx = get_algorithm_parameters_context()
+    advanced_parameters = ctx.params.get(
+        'advanced_accuracy_restorer_parameters', AdvancedAccuracyRestorerParameters())
+    advanced_parameters.convert_to_mixed_preset = convert_to_mixed_preset
+    return {'advanced_accuracy_restorer_parameters': advanced_parameters}
+
+
+def create_parameters_for_algorithm(pot_parameters, supported_parameters,
+                                    default_parameters, ignored_parameters,
+                                    param_name_map):
+    with AlgorithmParametersContext(param_name_map) as ctx:
+        for name in pot_parameters:
+            if (pot_parameters[name] is None or
+                name in ignored_parameters or
+                (name in default_parameters and
+                pot_parameters[name] == default_parameters[name])):
+                continue
+            if name in supported_parameters:
+                kwarg = supported_parameters[name](pot_parameters[name])
+                if kwarg is not None:
+                    ctx.params.update(kwarg)
+            else:
+                raise ValueError(f'{name} parameter is not supported')
+
+        return ctx.params
+
+
+def get_pot_quantization_parameters_mapping():
     supported_parameters = {
         'target_device': map_target_device,
         'model_type': map_model_type,
         'ignored': map_ignored_scope,
         'preset': map_preset,
         'stat_subset_size': lambda x: {'subset_size': x},
-        'use_fast_bias': lambda x: {'fast_bias_correction': x}
+        'use_fast_bias': lambda x: {'fast_bias_correction': x},
+        'inplace_statistics': map_inplace_statistics,
+        'range_estimator': map_range_estmator,
+        'weights': map_weights,
+        'activations': map_activations,
+        'saturation_fix': map_saturation_fix,
+        'apply_for_all_nodes': map_apply_for_all_nodes,
+        'threshold': map_threshold,
     }
 
     default_parameters = {
-      'use_layerwise_tuning': False
+        'use_layerwise_tuning': False
     }
 
     ignored_parameters = [
         'dump_intermediate_model',
-        'inplace_statistics',
         'num_samples_for_tuning',
         'batch_size',
         'optimizer',
@@ -258,50 +525,59 @@ def map_quantization_parameters(pot_parameters):
         'use_ranking_subset',
         'calibration_indices_pool',
         'calculate_grads_on_loss_increase_only',
-        'weight_decay'
+        'weight_decay',
+        'seed',
     ]
 
+    return supported_parameters, default_parameters, ignored_parameters
+
+
+def map_quantization_parameters(pot_parameters):
+    supported_parameters, default_parameters, ignored_parameters = \
+        get_pot_quantization_parameters_mapping()
+
+    param_name_map = {
+        ParameterNames.advanced_parameters: 'advanced_parameters'
+    }
+
     result = create_parameters_for_algorithm(pot_parameters, supported_parameters,
-                                             default_parameters, ignored_parameters)
+                                             default_parameters, ignored_parameters,
+                                             param_name_map)
 
     return result
 
 
 def map_quantize_with_accuracy_control_parameters(pot_parameters):
-    supported_parameters = {
-        'target_device': map_target_device,
-        'model_type': map_model_type,
-        'ignored': map_ignored_scope,
-        'preset': map_preset,
-        'stat_subset_size': lambda x: {'subset_size': x},
-        'use_fast_bias': lambda x: {'fast_bias_correction': x},
-        # Accuracy control parameters
-        'maximal_drop': lambda x: {'max_drop': x},
-        'max_iter_num': lambda x: {'max_num_iterations': x},
+    supported_parameters, default_parameters, ignored_parameters = \
+        get_pot_quantization_parameters_mapping()
+
+    supported_parameters.update({
+        'maximal_drop': lambda x, _: {'max_drop': x},
+        'max_iter_num': map_max_iter_num,
+        'ranking_subset_size': map_ranking_subset_size,
+        'tune_hyperparams': map_tune_hyperparams,
+        'convert_to_mixed_preset': map_convert_to_mixed_preset
+    })
+
+    default_parameters.update({
+        'use_prev_if_drop_increase': True,
+        'drop_type': 'absolute',
+        'base_algorithm': 'DefaultQuantization',
+        'annotation_free': False,
+    })
+
+    ignored_parameters.extend([
+        'annotation_conf_threshold',
+        'metric_subset_ratio',
+    ])
+
+    param_name_map = {
+        ParameterNames.advanced_parameters: 'advanced_quantization_parameters'
     }
 
-    default_parameters = {}
-
-    ignored_parameters = [
-        'dump_intermediate_model',
-        'inplace_statistics',
-        'activations',
-        'weights',
-        # Accuracy control parameters
-        'ranking_subset_size',
-        'drop_type',
-        'use_prev_if_drop_increase',
-        'base_algorithm',
-        'annotation_free',
-        'annotation_conf_threshold',
-        'convert_to_mixed_preset',
-        'metrics',
-        'metric_subset_ratio',
-        'tune_hyperparams',
-    ]
-
     result = create_parameters_for_algorithm(pot_parameters, supported_parameters,
-                                             default_parameters, ignored_parameters)
+                                             default_parameters, ignored_parameters,
+                                             param_name_map)
 
     return result
 
@@ -344,19 +620,6 @@ def get_nncf_algorithms_config(compression_config):
     return nncf_algorithms
 
 
-def quantize_native(model: TModel,
-                    calibration_dataset: Dataset,
-                    preset: QuantizationPreset = QuantizationPreset.PERFORMANCE,
-                    target_device: TargetDevice = TargetDevice.ANY,
-                    subset_size: int = 300,
-                    fast_bias_correction: bool = True,
-                    model_type: Optional[ModelType] = None,
-                    ignored_scope: Optional[IgnoredScope] = None) -> TModel:
-    return quantize_impl(model, calibration_dataset, preset, target_device,
-                         subset_size, fast_bias_correction, model_type,
-                         ignored_scope)
-
-
 # pylint: disable=protected-access
 def quantize_model(xml_path, bin_path, accuracy_checcker_config,
                    quantization_impl, quantization_parameters):
@@ -364,6 +627,17 @@ def quantize_model(xml_path, bin_path, accuracy_checcker_config,
     model_evaluator = create_model_evaluator(accuracy_checcker_config)
     model_evaluator.load_network([{'model': ov_model}])
     model_evaluator.select_dataset('')
+
+    advanced_parameters = quantization_parameters.get(
+        'advanced_parameters', AdvancedQuantizationParameters())
+    if quantization_impl == 'pot':
+        advanced_parameters.backend_params['use_pot'] = True
+    elif quantization_impl == 'native':
+        advanced_parameters.backend_params['use_pot'] = False
+    else:
+        raise NotImplementedError()
+    quantization_parameters['advanced_parameters'] = advanced_parameters
+
 
     def transform_fn(data_item):
         _, batch_annotation, batch_input, _ = data_item
@@ -375,14 +649,8 @@ def quantize_model(xml_path, bin_path, accuracy_checcker_config,
         return input_data
 
     calibration_dataset = nncf.Dataset(model_evaluator.dataset, transform_fn)
-    if quantization_impl == 'pot':
-        quantized_model = nncf.quantize(ov_model, calibration_dataset,
-                                        **quantization_parameters)
-    elif quantization_impl == 'native':
-        quantized_model = quantize_native(ov_model, calibration_dataset,
-                                          **quantization_parameters)
-    else:
-        raise NotImplementedError()
+    quantized_model = nncf.quantize(ov_model, calibration_dataset,
+                                    **quantization_parameters)
     return quantized_model
 
 
@@ -413,8 +681,14 @@ def quantize_model_with_accuracy_control(xml_path: str,
 
     name_to_quantization_impl_map = {
         'pot': pot_quantize_with_native_accuracy_control,
-        'native': native_quantize_with_native_accuracy_control,
+        'native': nncf.quantize_with_accuracy_control,
     }
+
+    advanced_parameters = quantization_parameters.get(
+        'advanced_qunatization_parameters', AdvancedQuantizationParameters())
+    if quantization_impl == 'native':
+        advanced_parameters.backend_params['use_pot'] = False
+    quantization_parameters['advanced_qunatization_parameters'] = advanced_parameters
 
     quantization_impl_fn = name_to_quantization_impl_map.get(quantization_impl)
     if quantization_impl:
@@ -452,7 +726,7 @@ def main():
                 'bin_path': bin_path,
                 'accuracy_checcker_config': accuracy_checcker_config,
                 'quantization_impl': args.impl,
-                    'quantization_parameters': algo_config['parameters']
+                'quantization_parameters': algo_config['parameters']
             }
 
             output_model = algo_fn(**quantize_model_arguments)
