@@ -2,7 +2,7 @@
 
 The anomaly detection domain is one of the domains in which models are used in scenarios where the cost of model error is high and accuracy cannot be sacrificed for better model performance. For such cases, it is necessary to use quantization methods with accuracy control where the maximum accuracy drop can be specified as an argument of the method.
 
-This example demonstrates how to quantize [Student-Teacher Feature Pyramid Matching (SFTPM)](https://huggingface.co/alexsu52/stfpm_mvtec_capsule) OpenVINO model from [Anomalib](https://github.com/openvinotoolkit/anomalib) using Post-Training Quantization with accuracy control API from Neural Network Compression Framework (NNCF). 
+This example demonstrates how to quantize [Student-Teacher Feature Pyramid Matching (STFPM)](https://huggingface.co/alexsu52/stfpm_mvtec_capsule) OpenVINO model from [Anomalib](https://github.com/openvinotoolkit/anomalib) using Post-Training Quantization with accuracy control API from Neural Network Compression Framework (NNCF). 
 
 The `nncf.quantize_with_accuracy_control()` method quantizes a model with a specified accuracy drop and the `max_drop` parameter is passed to specify the maximum absolute difference between the quantized and pre-trained model.
 

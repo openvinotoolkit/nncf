@@ -126,9 +126,9 @@ datamodule.setup()
 test_loader = datamodule.test_dataloader()
 
 download_and_extract(MODEL_PATH, MODEL_INFO)
-model = ov.Core().read_model(MODEL_PATH / 'sftpm_capsule.xml')
+model = ov.Core().read_model(MODEL_PATH / 'stfpm_capsule.xml')
 
-with open(MODEL_PATH / 'meta_data_sftpm_capsule.json', 'r') as f:
+with open(MODEL_PATH / 'meta_data_stfpm_capsule.json', 'r') as f:
     validation_params = json.load(f)
 
 ###############################################################################
@@ -161,12 +161,12 @@ quantized_model = nncf.quantize_with_accuracy_control(
 ###############################################################################
 # Benchmark performance, calculate compression rate and validate accuracy
 
-fp32_ir_path = f'{ROOT}/sftpm_fp32.xml'
+fp32_ir_path = f'{ROOT}/stfpm_fp32.xml'
 ov.serialize(model, fp32_ir_path)
 print(f'[1/7] Save FP32 model: {fp32_ir_path}')
 fp32_size = get_model_size(fp32_ir_path, verbose=True)
 
-int8_ir_path = f'{ROOT}/sftpm_int8.xml'
+int8_ir_path = f'{ROOT}/stfpm_int8.xml'
 ov.serialize(quantized_model, int8_ir_path)
 print(f'[2/7] Save INT8 model: {int8_ir_path}')
 int8_size = get_model_size(int8_ir_path, verbose=True)
