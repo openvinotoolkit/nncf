@@ -19,17 +19,17 @@ import numpy as np
 from nncf.common.graph import NNCFNode
 from nncf.common.graph import NNCFGraph
 from nncf.quantization.algorithms.accuracy_control.backend import AccuracyControlAlgoBackend
-from nncf.experimental.openvino_native.graph.metatypes.openvino_metatypes import OVOpMetatype
-from nncf.experimental.openvino_native.graph.metatypes.common import QUANTIZE_AGNOSTIC_OPERATIONS
-from nncf.experimental.openvino_native.graph.metatypes.common import QUANTIZABLE_OPERATIONS
-from nncf.experimental.openvino_native.graph.metatypes.common import FAKE_QUANTIZE_OPERATIONS
-from nncf.experimental.openvino_native.graph.metatypes.common import CONSTANT_OPERATIONS
-from nncf.experimental.openvino_native.graph.metatypes.common import SHAPEOF_OPERATIONS
-from nncf.experimental.openvino_native.graph.metatypes.openvino_metatypes import GENERAL_WEIGHT_LAYER_METATYPES
-from nncf.experimental.openvino_native.graph.nncf_graph_builder import OVConstantLayerAttributes
-from nncf.experimental.openvino_native.graph.node_utils import is_node_with_bias
-from nncf.experimental.openvino_native.graph.node_utils import get_bias_value
-from nncf.experimental.openvino_native.graph.node_utils import get_weight_value
+from nncf.openvino.graph.metatypes.openvino_metatypes import OVOpMetatype
+from nncf.openvino.graph.metatypes.common import QUANTIZE_AGNOSTIC_OPERATIONS
+from nncf.openvino.graph.metatypes.common import QUANTIZABLE_OPERATIONS
+from nncf.openvino.graph.metatypes.common import FAKE_QUANTIZE_OPERATIONS
+from nncf.openvino.graph.metatypes.common import CONSTANT_OPERATIONS
+from nncf.openvino.graph.metatypes.common import SHAPEOF_OPERATIONS
+from nncf.openvino.graph.metatypes.openvino_metatypes import GENERAL_WEIGHT_LAYER_METATYPES
+from nncf.openvino.graph.nncf_graph_builder import OVConstantLayerAttributes
+from nncf.openvino.graph.node_utils import is_node_with_bias
+from nncf.openvino.graph.node_utils import get_bias_value
+from nncf.openvino.graph.node_utils import get_weight_value
 
 
 class OVAccuracyControlAlgoBackend(AccuracyControlAlgoBackend):

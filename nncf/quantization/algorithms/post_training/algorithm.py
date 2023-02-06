@@ -159,7 +159,7 @@ class PostTrainingQuantization(Algorithm):
             from nncf.onnx.statistics.aggregator import ONNXStatisticsAggregator
             return ONNXStatisticsAggregator(dataset)
         if backend == BackendType.OPENVINO:
-            from nncf.experimental.openvino_native.statistics.aggregator import OVStatisticsAggregator
+            from nncf.openvino.statistics.aggregator import OVStatisticsAggregator
             return OVStatisticsAggregator(dataset)
         if backend == BackendType.TORCH:
             from nncf.torch.statistics.aggregator import PTStatisticsAggregator

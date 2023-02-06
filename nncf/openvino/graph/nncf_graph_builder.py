@@ -11,8 +11,8 @@
  limitations under the License.
 """
 
-from typing import Dict, List, Type
 from collections import deque
+from typing import Dict, List, Type
 
 import openvino.runtime as ov
 
@@ -21,14 +21,13 @@ from nncf.common.graph import NNCFGraph
 from nncf.common.graph.layer_attributes import Dtype
 from nncf.common.graph.operator_metatypes import OperatorMetatype
 from nncf.common.graph.operator_metatypes import UnknownMetatype
-
-from nncf.experimental.openvino_native.graph.metatypes.openvino_metatypes import OVConstantMetatype
-from nncf.experimental.openvino_native.graph.metatypes.openvino_metatypes import OV_OPERATOR_METATYPES
-from nncf.experimental.openvino_native.graph.metatypes.openvino_metatypes import METATYPES_WITH_CONST_PORT_ID
-from nncf.experimental.openvino_native.graph.metatypes.openvino_metatypes import OVConvolutionBackpropDataMetatype
-from nncf.experimental.openvino_native.graph.metatypes.openvino_metatypes import OVGroupConvolutionBackpropDataMetatype
-from nncf.experimental.openvino_native.graph.metatypes.openvino_metatypes import OVGRUSequenceMetatype
-from nncf.experimental.openvino_native.graph.metatypes.openvino_metatypes import OVLSTMSequenceMetatype
+from nncf.openvino.graph.metatypes.openvino_metatypes import METATYPES_WITH_CONST_PORT_ID
+from nncf.openvino.graph.metatypes.openvino_metatypes import OV_OPERATOR_METATYPES
+from nncf.openvino.graph.metatypes.openvino_metatypes import OVConstantMetatype
+from nncf.openvino.graph.metatypes.openvino_metatypes import OVConvolutionBackpropDataMetatype
+from nncf.openvino.graph.metatypes.openvino_metatypes import OVGroupConvolutionBackpropDataMetatype
+from nncf.openvino.graph.metatypes.openvino_metatypes import OVGRUSequenceMetatype
+from nncf.openvino.graph.metatypes.openvino_metatypes import OVLSTMSequenceMetatype
 
 
 class GraphConverter:

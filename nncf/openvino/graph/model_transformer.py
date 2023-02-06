@@ -11,28 +11,28 @@
  limitations under the License.
 """
 
-from typing import List, Tuple, Dict, Callable
-from collections import deque
 from collections import defaultdict
+from collections import deque
+from typing import Callable, Dict, List, Tuple
 
 import numpy as np
-import openvino.runtime as ov
+from openvino._pyopenvino import DescriptorTensor  # pylint: disable=no-name-in-module
 from openvino.runtime import opset9 as opset
-from openvino._pyopenvino import DescriptorTensor # pylint: disable=no-name-in-module
+import openvino.runtime as ov
 
 from nncf.common.graph.model_transformer import ModelTransformer
 from nncf.common.graph.model_transformer import TModel
-from nncf.common.graph.transformations.layout import TransformationLayout
 from nncf.common.graph.transformations.commands import TargetType
+from nncf.common.graph.transformations.layout import TransformationLayout
+from nncf.openvino.graph.node_utils import get_result_node_name
+from nncf.openvino.graph.transformations.commands import OVBiasCorrectionCommand
+from nncf.openvino.graph.transformations.commands import OVFQNodeRemovingCommand
+from nncf.openvino.graph.transformations.commands import OVInplaceFnInsertionCommand
+from nncf.openvino.graph.transformations.commands import OVModelExtractionCommand
+from nncf.openvino.graph.transformations.commands import OVOutputInsertionCommand
+from nncf.openvino.graph.transformations.commands import OVQuantizerInsertionCommand
+from nncf.openvino.graph.transformations.commands import OVWeightUpdateCommand
 from nncf.quantization.fake_quantize import FakeQuantizeParameters
-from nncf.experimental.openvino_native.graph.transformations.commands import OVQuantizerInsertionCommand
-from nncf.experimental.openvino_native.graph.transformations.commands import OVOutputInsertionCommand
-from nncf.experimental.openvino_native.graph.transformations.commands import OVInplaceFnInsertionCommand
-from nncf.experimental.openvino_native.graph.transformations.commands import OVModelExtractionCommand
-from nncf.experimental.openvino_native.graph.transformations.commands import OVBiasCorrectionCommand
-from nncf.experimental.openvino_native.graph.transformations.commands import OVFQNodeRemovingCommand
-from nncf.experimental.openvino_native.graph.transformations.commands import OVWeightUpdateCommand
-from nncf.experimental.openvino_native.graph.node_utils import get_result_node_name
 
 
 class OVModelTransformer(ModelTransformer):

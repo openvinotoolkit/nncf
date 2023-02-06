@@ -11,13 +11,14 @@
  limitations under the License.
 """
 
-import pytest
 import os
-import openvino.runtime as ov
 
-from nncf.parameters import TargetDevice
+import openvino.runtime as ov
+import pytest
+
+import nncf
 from nncf.common.quantization.structs import QuantizationPreset
-from nncf.experimental.openvino_native.quantization.quantize import quantize_impl
+from nncf.parameters import TargetDevice
 from tests.openvino.conftest import AC_CONFIGS_DIR
 from tests.openvino.datasets_helpers import get_dataset_for_test
 from tests.openvino.datasets_helpers import get_nncf_dataset_from_ac_config
@@ -50,7 +51,7 @@ def test_compression(data_dir, tmp_path, model, dataset, ref_metrics):
     calibration_dataset = get_nncf_dataset_from_ac_config(model_path, config_path, extracted_data_dir)
 
     ov_model = ov.Core().read_model(str(model_path))
-    quantized_model = quantize_impl(ov_model, calibration_dataset, QuantizationPreset.PERFORMANCE,
+    quantized_model = nncf.quantize(ov_model, calibration_dataset, QuantizationPreset.PERFORMANCE,
                                     TargetDevice.ANY, subset_size=300, fast_bias_correction=True)
     ov.serialize(quantized_model, int8_ir_path)
 

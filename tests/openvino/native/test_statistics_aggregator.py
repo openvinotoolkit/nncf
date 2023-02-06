@@ -11,28 +11,24 @@
  limitations under the License.
 """
 
-import pytest
-import numpy as np
-import openvino.runtime as ov
-from openvino.runtime import opset9 as opset
 from typing import Type
 
+import numpy as np
+from openvino.runtime import opset9 as opset
+import openvino.runtime as ov
+import pytest
+
 from nncf import Dataset
-from nncf.common.graph.transformations.commands import TargetType
 from nncf.common.graph.transformations.commands import TargetPoint
-from nncf.experimental.openvino_native.statistics.aggregator import OVStatisticsAggregator
-from nncf.experimental.openvino_native.graph.transformations.commands import OVTargetPoint
-from nncf.experimental.openvino_native.quantization.algorithms.min_max.openvino_backend import\
-    OVMinMaxAlgoBackend
-from nncf.experimental.openvino_native.quantization.algorithms.bias_correction.openvino_backend import\
-    OVBiasCorrectionAlgoBackend
-from nncf.experimental.openvino_native.quantization.algorithms.fast_bias_correction.openvino_backend import\
-    OVFastBiasCorrectionAlgoBackend
-
+from nncf.common.graph.transformations.commands import TargetType
+from nncf.openvino.graph.transformations.commands import OVTargetPoint
+from nncf.openvino.quantization.algorithms.bias_correction.openvino_backend import OVBiasCorrectionAlgoBackend
+from nncf.openvino.quantization.algorithms.fast_bias_correction.openvino_backend import OVFastBiasCorrectionAlgoBackend
+from nncf.openvino.quantization.algorithms.min_max.openvino_backend import OVMinMaxAlgoBackend
+from nncf.openvino.statistics.aggregator import OVStatisticsAggregator
 from tests.common.test_statistics_aggregator import TemplateTestStatisticsAggregator
-from tests.openvino.native.models import SplitConcatModel
 from tests.openvino.native.models import SharedConvModel
-
+from tests.openvino.native.models import SplitConcatModel
 
 INPUT_NAME = 'Input'
 CONV_NODE_NAME = 'Conv1'

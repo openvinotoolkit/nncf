@@ -14,8 +14,8 @@
 import pytest
 from collections import Counter
 
-import nncf.experimental.openvino_native.graph.metatypes.openvino_metatypes as ovm
-from nncf.experimental.openvino_native.graph.nncf_graph_builder import GraphConverter
+import nncf.openvino.graph.metatypes.openvino_metatypes as ovm
+from nncf.openvino.graph.nncf_graph_builder import GraphConverter
 
 from tests.openvino.native.models import ConvModel
 from tests.openvino.native.models import LinearModel

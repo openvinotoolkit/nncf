@@ -14,7 +14,7 @@
 import pytest
 import numpy as np
 
-from nncf.experimental.openvino_native.engine import OVNativeEngine
+from nncf.openvino.engine import OVNativeEngine
 
 from tests.openvino.native.models import ConvModel
 from tests.openvino.native.models import LinearModel

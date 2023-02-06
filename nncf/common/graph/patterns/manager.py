@@ -38,7 +38,7 @@ class PatternsManager:
                 ONNX_HW_FUSED_PATTERNS
             return ONNX_HW_FUSED_PATTERNS.registry_dict
         if backend == BackendType.OPENVINO:
-            from nncf.experimental.openvino_native.hardware.fused_patterns import \
+            from nncf.openvino.hardware.fused_patterns import \
                 OPENVINO_HW_FUSED_PATTERNS
             return OPENVINO_HW_FUSED_PATTERNS.registry_dict
         if backend == BackendType.TORCH:

@@ -38,7 +38,7 @@ class NNCFGraphFactory:
             from nncf.onnx.graph.nncf_graph_builder import GraphConverter
             return GraphConverter.create_nncf_graph(model)
         if model_backend == BackendType.OPENVINO:
-            from nncf.experimental.openvino_native.graph.nncf_graph_builder import GraphConverter
+            from nncf.openvino.graph.nncf_graph_builder import GraphConverter
             return GraphConverter.create_nncf_graph(model)
         if model_backend == BackendType.TORCH:
             return model.nncf.get_original_graph()
@@ -59,7 +59,7 @@ class ModelTransformerFactory:
             from nncf.onnx.graph.model_transformer import ONNXModelTransformer
             return ONNXModelTransformer(model)
         if model_backend == BackendType.OPENVINO:
-            from nncf.experimental.openvino_native.graph.model_transformer import OVModelTransformer
+            from nncf.openvino.graph.model_transformer import OVModelTransformer
             return OVModelTransformer(model)
         if model_backend == BackendType.TORCH:
             from nncf.torch.nncf_network import PTModelTransformer
@@ -81,7 +81,7 @@ class EngineFactory:
             from nncf.onnx.engine import ONNXEngine
             return ONNXEngine(model)
         if model_backend == BackendType.OPENVINO:
-            from nncf.experimental.openvino_native.engine import OVNativeEngine
+            from nncf.openvino.engine import OVNativeEngine
             return OVNativeEngine(model)
         if model_backend == BackendType.TORCH:
             from nncf.torch.engine import PTEngine
@@ -101,7 +101,7 @@ class CommandCreatorFactory:
         """
         model_backend = get_backend(model)
         if model_backend == BackendType.OPENVINO:
-            from nncf.experimental.openvino_native.graph.transformations.command_creation import OVCommandCreator
+            from nncf.openvino.graph.transformations.command_creation import OVCommandCreator
             return OVCommandCreator()
         raise RuntimeError('Cannot create backend-specific command creator'
                            'because {} is not supported!'.format(model_backend))

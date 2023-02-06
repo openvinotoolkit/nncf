@@ -217,7 +217,7 @@ class MinMaxQuantization(Algorithm):
             from nncf.quantization.algorithms.min_max.onnx_backend import ONNXMinMaxAlgoBackend
             self._backend_entity = ONNXMinMaxAlgoBackend()
         elif model_backend == BackendType.OPENVINO:
-            from nncf.experimental.openvino_native.quantization.algorithms.min_max.openvino_backend import \
+            from nncf.openvino.quantization.algorithms.min_max.openvino_backend import \
                 OVMinMaxAlgoBackend
             self._backend_entity = OVMinMaxAlgoBackend()
         elif model_backend == BackendType.TORCH:
