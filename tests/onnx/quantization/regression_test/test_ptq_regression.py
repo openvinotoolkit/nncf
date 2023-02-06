@@ -98,9 +98,9 @@ def validate(quantized_model_path: Path, data_loader: torch.utils.data.DataLoade
 
 
 @pytest.mark.parametrize('model_url, model_name, int8_ref_top1', MODELS, ids=[model_name[1] for model_name in MODELS])
-def test_compression(tmp_path, data, model_url, model_name, int8_ref_top1):
+def test_compression(tmp_path, data_dir, model_url, model_name, int8_ref_top1):
     original_model_path = download_model(model_url, tmp_path)
-    dataset_path = download_dataset(data)
+    dataset_path = download_dataset(data_dir)
 
     normalize = transforms.Normalize(mean=[0.485, 0.456, 0.406],
                                      std=[0.229, 0.224, 0.225])
