@@ -71,12 +71,14 @@ class ONNXBiasCorrectionAlgoBackend(BiasCorrectionAlgoBackend):
 
     @staticmethod
     def target_point(target_type: TargetType,
-                     target_node_name: str = None,
-                     port_id: str = None) -> ONNXTargetPoint:
+                     target_node_name: str,
+                     port_id: int) -> ONNXTargetPoint:
         return ONNXTargetPoint(target_type, target_node_name, port_id)
 
     @staticmethod
-    def create_bias_correction_command(node: NNCFNode, bias_value: np.ndarray) -> ONNXBiasCorrectionCommand:
+    def create_bias_correction_command(node: NNCFNode,
+                                       bias_value: np.ndarray,
+                                       nncf_graph: NNCFGraph) -> ONNXBiasCorrectionCommand:
         return create_bias_correction_command(node, bias_value)
 
     @staticmethod
@@ -98,11 +100,6 @@ class ONNXBiasCorrectionAlgoBackend(BiasCorrectionAlgoBackend):
         return ONNXBatchStatisticCollector(num_samples)
 
     @staticmethod
-    def get_tensor_names(node: NNCFNode):
-        return node.layer_attributes.input_tensor_names, \
-            node.layer_attributes.output_tensor_names
-
-    @staticmethod
     def process_model_output(raw_data: Dict, output_name: str) -> ONNXNNCFTensor:
         return ONNXNNCFTensor(raw_data[output_name])
 
@@ -111,20 +108,26 @@ class ONNXBiasCorrectionAlgoBackend(BiasCorrectionAlgoBackend):
         return 0, 0
 
     @staticmethod
-    def get_bias_value(node: NNCFNode, model: onnx.ModelProto) -> np.ndarray:
+    def get_bias_value(node: NNCFNode, model: onnx.ModelProto, nncf_graph: NNCFGraph) -> np.ndarray:
         return get_bias_value(node, model)
 
     @staticmethod
-    def get_bias_port_id(model: onnx.ModelProto, node: NNCFNode) -> int:
+    def get_bias_port_id(node: NNCFNode, model: onnx.ModelProto) -> int:
         onnx_graph = ONNXGraph(model)
         onnx_node = onnx_graph.get_node_by_name(node.node_name)
         return onnx_graph.get_bias_tensor_port_id(onnx_node)
 
     @staticmethod
-    def get_output_names(model: onnx.ModelProto, node_name: str) -> List[str]:
+    def get_input_name(model: onnx.ModelProto, node_name: str) -> str:
         onnx_graph = ONNXGraph(model)
         node = onnx_graph.get_node_by_name(node_name)
-        return node.output
+        return node.input[0]
+
+    @staticmethod
+    def get_output_name(model: onnx.ModelProto, node_name: str) -> List[str]:
+        onnx_graph = ONNXGraph(model)
+        node = onnx_graph.get_node_by_name(node_name)
+        return node.output[0]
 
     @staticmethod
     def extract_model(model: onnx.ModelProto,
@@ -140,7 +143,7 @@ class ONNXBiasCorrectionAlgoBackend(BiasCorrectionAlgoBackend):
         output_tensor_names = []
         for output_node_name in output_node_names:
             output_onnx_node = onnx_graph.get_node_by_name(output_node_name)
-            output_tensor_names.append(output_onnx_node.input[0])
+            output_tensor_names.append(output_onnx_node.output[0])
 
         if not output_node_names:
             output_tensor_names = [n.name for n in onnx_graph.get_model_outputs()]
@@ -158,5 +161,5 @@ class ONNXBiasCorrectionAlgoBackend(BiasCorrectionAlgoBackend):
         return weight_node.metatype == ONNXDequantizeLinearMetatype
 
     @staticmethod
-    def is_node_with_bias(node: NNCFNode) -> bool:
+    def is_node_with_bias(node: NNCFNode, nncf_graph: NNCFGraph) -> bool:
         return is_node_with_bias(node)
