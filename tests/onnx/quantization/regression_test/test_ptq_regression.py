@@ -11,7 +11,7 @@
  limitations under the License.
 """
 import pytest
-
+# pylint: disable=redefined-outer-name
 from pathlib import Path
 import nncf
 import numpy as np
@@ -39,7 +39,7 @@ DATASET_URL = 'https://s3.amazonaws.com/fast-ai-imageclas/imagenette2-320.tgz'
 
 
 @pytest.fixture(scope="module")
-def data(request):
+def data_dir(request):
     option = request.config.getoption("--data")
     if option is None:
         return Path('~/.cache/nncf/datasets')
