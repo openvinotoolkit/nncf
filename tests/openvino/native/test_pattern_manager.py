@@ -17,7 +17,6 @@ from tests.shared.patterns import check_patterns
 IGNORED_PATTERN_REASONS = {
     PatternNames.SWISH_WITH_SIGMOID: 'Swish exists in the OpenVINO as layer.',
     PatternNames.SWISH_WITH_HARD_SIGMOID: 'Swish exists in the OpenVINO as layer.',
-    PatternNames.INPUT_MULTIPLY_SUBTRACT: 'Not relevant for OpenVINO.',
     PatternNames.ACTIVATIONS_SCALE_SHIFT: 'Not relevant for OpenVINO.',
     PatternNames.ARITHMETIC_ACTIVATIONS_BATCH_NORM: 'Not relevant for OpenVINO.',
     PatternNames.ARITHMETIC_ACTIVATIONS_SCALE_SHIFT: 'Not relevant for OpenVINO.',

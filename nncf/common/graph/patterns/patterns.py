@@ -310,7 +310,6 @@ class PatternNames(Enum):
     INPUT_CONVERT_TRANSPOSE_REVERSE_ADD = PatternDesc('input_convert_transpose_reverse_add')
     INPUT_CONVERT_TRANSPOSE_REVERSE_SCALE_SHIFT = PatternDesc('input_convert_transpose_reverse_scale_shift')
     INPUT_CONVERT_TRANSPOSE_SCALE_SHIFT = PatternDesc('input_convert_transpose_scale_shift')
-    INPUT_MULTIPLY_SUBTRACT = PatternDesc('input_multiply_subtract')
     INPUT_PROCESSING = PatternDesc('input_processing')
     INPUT_REVERSE_ADD = PatternDesc('input_reverse_add')
     INPUT_REVERSE_SCALE_SHIFT = PatternDesc('input_reverse_scale_shift')

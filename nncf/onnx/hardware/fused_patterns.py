@@ -34,8 +34,8 @@ def create_scale_shift():
                                              GraphPattern.METATYPE_ATTR: GraphPattern.NON_PATTERN_NODE_TYPE})
     mul_node = pattern.add_node(**{GraphPattern.LABEL_ATTR: 'MULTIPLY',
                                    GraphPattern.METATYPE_ATTR: om.ONNXMulLayerMetatype})
-    add_node = pattern.add_node(**{GraphPattern.LABEL_ATTR: 'ADD',
-                                   GraphPattern.METATYPE_ATTR: om.ONNXAddLayerMetatype})
+    add_node = pattern.add_node(**{GraphPattern.LABEL_ATTR: 'ADD, SUBTRACT',
+                                   GraphPattern.METATYPE_ATTR: [om.ONNXAddLayerMetatype, om.ONNXSubMetatype]})
     pattern.add_edge(pattern_input_node, mul_node)
     pattern.add_edge(mul_node, add_node)
     return pattern
@@ -80,28 +80,13 @@ def create_input_shift_scale():
     pattern = GraphPattern()
     input_node = pattern.add_node(**{GraphPattern.LABEL_ATTR: 'MODEL_INPUT',
                                      GraphPattern.METATYPE_ATTR: InputNoopMetatype})
-    add_node = pattern.add_node(**{GraphPattern.LABEL_ATTR: 'ADD',
-                                   GraphPattern.METATYPE_ATTR: om.ONNXAddLayerMetatype})
+    add_node = pattern.add_node(**{GraphPattern.LABEL_ATTR: 'ADD, SUBTRACT',
+                                   GraphPattern.METATYPE_ATTR: [om.ONNXAddLayerMetatype, om.ONNXSubMetatype]})
     multiply_node = pattern.add_node(**{GraphPattern.LABEL_ATTR: 'MULTIPLY',
                                         GraphPattern.METATYPE_ATTR: om.ONNXMulLayerMetatype})
 
     pattern.add_edge(input_node, add_node)
     pattern.add_edge(add_node, multiply_node)
-    return pattern
-
-
-@ONNX_HW_FUSED_PATTERNS.register(PatternNames.INPUT_MULTIPLY_SUBTRACT)
-def create_input_multiply_subtract():
-    pattern = GraphPattern()
-    input_node = pattern.add_node(**{GraphPattern.LABEL_ATTR: 'MODEL_INPUT',
-                                     GraphPattern.METATYPE_ATTR: InputNoopMetatype})
-    multiply_node = pattern.add_node(**{GraphPattern.LABEL_ATTR: 'MULTIPLY',
-                                        GraphPattern.METATYPE_ATTR: om.ONNXMulLayerMetatype})
-    subtract_node = pattern.add_node(**{GraphPattern.LABEL_ATTR: 'SUBTRACT',
-                                        GraphPattern.METATYPE_ATTR: om.ONNXSubMetatype})
-
-    pattern.add_edge(input_node, multiply_node)
-    pattern.add_edge(multiply_node, subtract_node)
     return pattern
 
 
