@@ -428,40 +428,10 @@ class NNCFNetwork(nn.Module, PostGraphBuildActing):
         return wrapped_user_dummy_forward_fn
 
     def _replace_modules_by_nncf_modules(self, device: torch.device, eval_op_scopes: List[Scope] = None):
-        eval_module_storage_scopes = self._disambiguate_op_scopes_to_storage_scopes(eval_op_scopes)
         module, self._nncf_replaced_modules = replace_modules_by_nncf_modules(
             self.get_nncf_wrapped_model(), ignored_scopes=self.ignored_scopes,
-            target_scopes=self.target_scopes, eval_op_scopes=eval_module_storage_scopes)
+            target_scopes=self.target_scopes, eval_op_scopes=eval_op_scopes)
         self._set_nncf_wrapped_model(module.to(device))
-
-    def _disambiguate_op_scopes_to_storage_scopes(self, eval_op_scopes: List[Scope]) -> List[Scope]:
-        module_id_to_storage_scope_map = {}  # type: Dict[int, Scope]
-
-        def populate_module_id_map(module: torch.nn.Module, current_scope: Scope):
-            for name, child_module in module.named_children():
-                if child_module is None or id(child_module) in module_id_to_storage_scope_map:
-                    continue
-                child_scope_element = ScopeElement(child_module.__class__.__name__, name)
-                child_scope = current_scope.copy()
-                child_scope.push(child_scope_element)
-                module_id_to_storage_scope_map[id(child_module)] = child_scope
-                populate_module_id_map(child_module, child_scope)
-
-        model = self.get_nncf_wrapped_model()
-        root_scope = Scope.from_str(model.__class__.__name__)
-        populate_module_id_map(model, root_scope)
-        retval = []
-
-        for op_scope in eval_op_scopes:
-            module = self.get_module_by_scope(op_scope)
-            try:
-                storage_scope = module_id_to_storage_scope_map[id(module)]
-                retval.append(storage_scope)
-            except KeyError:
-                nncf_logger.warning(f"Could not associate ops executed in {str(op_scope)} scope with any module stored "
-                                    f"in the original module! The NNCF execution will continue, but the affected "
-                                    f"modules may have their weights left uncompressed.")
-        return retval
 
     def get_nncf_module_scopes(self) -> List[Scope]:
         retval = []
