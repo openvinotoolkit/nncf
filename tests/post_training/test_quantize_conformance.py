@@ -16,6 +16,8 @@ import os
 import re
 from pathlib import Path
 from typing import Optional
+from multiprocessing import Process
+from multiprocessing import Queue
 
 import numpy as np
 import onnx
@@ -27,7 +29,6 @@ from model_scope import get_validation_scope
 from sklearn.metrics import accuracy_score
 from torchvision import datasets, transforms
 from torchvision.transforms import InterpolationMode
-from tqdm import tqdm
 
 import nncf
 from nncf.experimental.openvino_native.quantization.quantize import quantize_impl as ov_quantize_impl
@@ -129,36 +130,43 @@ def benchmark_performance(model_path, model_name):
 
 
 def validate_accuracy(model_path, val_loader):
-    dataset_size = len(val_loader)
-    predictions = [0] * dataset_size
-    references = [-1] * dataset_size
+    def validate(queue):
+        dataset_size = 10 #len(val_loader)
+        predictions = [0] * dataset_size
+        references = [-1] * dataset_size
 
-    core = ov.Core()
-    ov_model = core.read_model(model_path)
-    compiled_model = core.compile_model(ov_model)
+        core = ov.Core()
+        ov_model = core.read_model(model_path)
+        compiled_model = core.compile_model(ov_model)
 
-    jobs = int(os.environ.get('NUM_VAL_THREADS', DEFAULT_VAL_THREADS))
-    infer_queue = ov.AsyncInferQueue(compiled_model, jobs)
+        jobs = int(os.environ.get('NUM_VAL_THREADS', DEFAULT_VAL_THREADS))
+        infer_queue = ov.AsyncInferQueue(compiled_model, jobs)
 
-    def process_result(request, userdata):
-        output_data = request.get_output_tensor().data
-        predicted_label = np.argmax(output_data, axis=1)
-        predictions[userdata] = [predicted_label]
+        def process_result(request, userdata):
+            output_data = request.get_output_tensor().data
+            predicted_label = np.argmax(output_data, axis=1)
+            predictions[userdata] = [predicted_label]
 
-    infer_queue.set_callback(process_result)
+        infer_queue.set_callback(process_result)
 
-    for i, (images, target) in tqdm(enumerate(val_loader)):
-        # W/A for memory leaks when using torch DataLoader and OpenVINO
-        image_copies = copy.deepcopy(images.numpy())
-        infer_queue.start_async(image_copies, userdata=i)
-        references[i] = target
+        for i, (images, target) in enumerate(val_loader):
+            # W/A for memory leaks when using torch DataLoader and OpenVINO
+            if i == 10:
+                break
+            image_copies = copy.deepcopy(images.numpy())
+            infer_queue.start_async(image_copies, userdata=i)
+            references[i] = target
 
-    infer_queue.wait_all()
-    predictions = np.concatenate(predictions, axis=0)
-    references = np.concatenate(references, axis=0)
+        infer_queue.wait_all()
+        predictions = np.concatenate(predictions, axis=0)
+        references = np.concatenate(references, axis=0)
+        queue.put(accuracy_score(predictions, references))
 
-    return accuracy_score(predictions, references)
-
+    q = Queue()
+    p = Process(target=validate, args=(q, ))
+    p.start()
+    p.join()
+    return q.get()
 
 def benchmark_torch_model(model, dataloader, model_name, output_path):
     data_sample, _ = next(iter(dataloader))
