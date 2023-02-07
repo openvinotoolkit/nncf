@@ -136,6 +136,7 @@ class FastBiasCorrection(Algorithm):
             output_fp = self._get_fp_outputs(statistic_points, node_name)
 
             input_name, output_name = self._backend_entity.get_input_output_names(node)
+
             extracted_model = self._extract_submodel(model_transformer,
                                                      input_name,
                                                      output_name)

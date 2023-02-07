@@ -30,7 +30,7 @@ def pytest_addoption(parser):
     )
     parser.addoption(
         "--data-dir", type=str, default=None,
-        help="[e2e-test-onnx-model-zoo] Directory path to OMZ validation datasets (Only for E2E)"
+        help="[e2e-test-onnx-model-zoo] Directory path to OMZ validation datasets"
     )
     parser.addoption(
         "--output-dir", type=str, default=None,
@@ -70,10 +70,6 @@ def pytest_addoption(parser):
                                                                 "reference .dot files will be regenerated "
                                                                 "using the current state of the repository."
 
-    )
-    parser.addoption(
-        "--data", type=str, default=None,
-        help="Directory path to validation datasets."
     )
 
 def pytest_configure(config):
