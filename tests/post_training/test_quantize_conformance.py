@@ -131,7 +131,7 @@ def benchmark_performance(model_path, model_name):
 
 def validate_accuracy(model_path, val_loader):
     def validate(queue):
-        dataset_size = 10 #len(val_loader)
+        dataset_size = len(val_loader)
         predictions = [0] * dataset_size
         references = [-1] * dataset_size
 
@@ -151,8 +151,6 @@ def validate_accuracy(model_path, val_loader):
 
         for i, (images, target) in enumerate(val_loader):
             # W/A for memory leaks when using torch DataLoader and OpenVINO
-            if i == 10:
-                break
             image_copies = copy.deepcopy(images.numpy())
             infer_queue.start_async(image_copies, userdata=i)
             references[i] = target
