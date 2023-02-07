@@ -21,7 +21,7 @@ The framework is designed so that the modifications to your original training co
  1. **Add** the imports required for NNCF:
     ```python
     import torch
-    import nncf  # Important - must be imported before any other external package that depends on torch
+    import nncf.torch  # Important - must be imported before any other external package that depends on torch
     from nncf import NNCFConfig, create_compressed_model, load_state
     ```
     **NOTE (PyTorch)**: Due to the way NNCF works within the PyTorch backend, `import nncf` must be done before any other import of `torch` in your package _or_ in third-party packages that your code utilizes, otherwise the compression may be applied incompletely.
