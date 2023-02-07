@@ -193,7 +193,7 @@ class NNCFNetwork(nn.Module, PostGraphBuildActing):
         else:
             self._wrap_outputs_fn = wrap_nncf_model_outputs_with_objwalk
 
-        self._nncf_replaced_modules = {}  # type: Dict[torch.nn.Module, Set[Scope]]
+        self._nncf_replaced_modules = {}  # type: Dict[torch.nn.Module, List[Scope]]
         self.scopes_without_shape_matching = scopes_without_shape_matching
         self.debug_interface = CombinedDebugInterface() if is_debug() else None
         self._extra_module_types = []  # type: List[ExtraCompressionModuleType]
@@ -302,8 +302,11 @@ class NNCFNetwork(nn.Module, PostGraphBuildActing):
         setattr(self, MODEL_WRAPPED_BY_NNCF_ATTR_NAME, value)
 
     def _reset_nncf_modules(self):
-        for scope in self.get_nncf_module_scopes():
-            module = self.get_module_by_scope(scope)
+        for scope_list in self.get_nncf_module_scopes():
+            # Can pick any access scope since they all should
+            # point to the same object
+            some_scope = scope_list[0]
+            module = self.get_module_by_scope(some_scope)
             module.reset()
 
     def get_clean_shallow_copy(self) -> 'NNCFNetwork':
@@ -345,7 +348,9 @@ class NNCFNetwork(nn.Module, PostGraphBuildActing):
                     f'docs/Usage.md for more details.')
 
             norm_target_scope = self._normalize_variable_recurrent_scope(point.module_scope)
-            norm_nncf_scopes = [self._normalize_variable_recurrent_scope(x) for x in self.get_nncf_module_scopes()]
+            norm_nncf_scopes = []
+            for scope_list_for_module in self.get_nncf_module_scopes():
+                norm_nncf_scopes.extend([self._normalize_variable_recurrent_scope(x) for x in scope_list_for_module])
             assert norm_target_scope in norm_nncf_scopes  # Required for proper Recurrent/VariableRecurrent addressing
             if point.insertion_type == PTInsertionType.NNCF_MODULE_PRE_OP:
                 for fn in fn_list:
@@ -430,11 +435,8 @@ class NNCFNetwork(nn.Module, PostGraphBuildActing):
             target_scopes=self.target_scopes, eval_op_scopes=eval_op_scopes)
         self._set_nncf_wrapped_model(module.to(device))
 
-    def get_nncf_module_scopes(self) -> List[Scope]:
-        retval = []
-        for scope_set in self._nncf_replaced_modules.values():
-            retval.extend(scope_set)
-        return retval
+    def get_nncf_module_scopes(self) -> List[List[Scope]]:
+        return list(self._nncf_replaced_modules.values())
 
     def get_nncf_modules(self) -> Dict[torch.nn.Module, Scope]:
         retval = {}
@@ -445,15 +447,16 @@ class NNCFNetwork(nn.Module, PostGraphBuildActing):
 
     def get_weighted_original_graph_nodes(self, nncf_module_names: List[str] = None) -> List[NNCFNode]:
         retval = set()
-        for nncf_module_scope in self.get_nncf_module_scopes():
-            if nncf_module_names is not None:
-                module_name = nncf_module_scope[-1].calling_module_class_name
-                if module_name not in nncf_module_names:
-                    continue
-            nodes_in_scope = self._original_graph.get_op_nodes_in_scope(nncf_module_scope)
-            for node in nodes_in_scope:
-                if node.metatype in OPERATORS_WITH_WEIGHTS_METATYPES:
-                    retval.add(node)
+        for scope_list in self.get_nncf_module_scopes():
+            for nncf_module_scope in scope_list:
+                if nncf_module_names is not None:
+                    module_name = nncf_module_scope[-1].calling_module_class_name
+                    if module_name not in nncf_module_names:
+                        continue
+                nodes_in_scope = self._original_graph.get_op_nodes_in_scope(nncf_module_scope)
+                for node in nodes_in_scope:
+                    if node.metatype in OPERATORS_WITH_WEIGHTS_METATYPES:
+                        retval.add(node)
         return list(retval)
 
     def get_nncf_modules_by_module_names(self, nncf_module_names_list: List[str]) -> Dict["Scope", torch.nn.Module]:
@@ -477,7 +480,9 @@ class NNCFNetwork(nn.Module, PostGraphBuildActing):
 
     def is_scope_in_nncf_module_scope(self, scope: Scope):
         # TODO: optimize
-        norm_nncf_scopes = [self._normalize_variable_recurrent_scope(x) for x in self.get_nncf_module_scopes()]
+        norm_nncf_scopes = []
+        for scope_list_for_module in self.get_nncf_module_scopes():
+            norm_nncf_scopes.extend([self._normalize_variable_recurrent_scope(x) for x in scope_list_for_module])
         norm_op_scope = self._normalize_variable_recurrent_scope(scope)
         for nncf_scope in norm_nncf_scopes:
             if norm_op_scope in nncf_scope:

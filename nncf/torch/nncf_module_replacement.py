@@ -58,10 +58,12 @@ def collect_all_scopes_for_extendable_and_extended_modules(module: nn.Module) ->
     predicate = lambda x: _can_extend(x) or is_nncf_module(x)
     return _collect_modules_and_scopes_recursive_helper(module, Scope(), predicate, retval)
 
+
 def collect_modules_and_scopes_by_predicate(module: nn.Module,
         predicate: Callable[[torch.nn.Module], bool]) -> Dict[nn.Module, Set[Scope]]:
     retval = {}
     return _collect_modules_and_scopes_recursive_helper(module, Scope(), predicate, retval)
+
 
 def _collect_modules_and_scopes_recursive_helper(current_module: nn.Module,
                                      current_scope: Scope,
@@ -128,7 +130,7 @@ def replace_modules_by_nncf_modules(
         ignored_scopes: Optional[List[str]] = None,
         target_scopes: Optional[List[str]] = None,
         eval_op_scopes: Optional[List[Scope]] = None,
-        custom_replacer: Callable[[nn.Module], None] = None) -> Tuple[nn.Module, Dict[torch.nn.Module, Set[Scope]]]:
+        custom_replacer: Callable[[nn.Module], None] = None) -> Tuple[nn.Module, Dict[torch.nn.Module, List[Scope]]]:
     """
     Replaces certain modules in the model hierarchy with NNCF-wrapped versions of the same modules.
     The modules to be replaced are statically defined in `nncf.torch.layers.NNCF_MODULES_DICT` and dynamically
@@ -151,17 +153,18 @@ def replace_modules_by_nncf_modules(
     that end up having a scope not in this list will be considered train-only and will not be replaced).
     :param custom_replacer: The function to be used instead of the regular approach to replace a module with NNCF-
       extended counterpart.
-    :return: The model with the modules replaced and the dictionary of all extended modules vs the set of scopes through
-    which the module is accessible.
+    :return: The model with the modules replaced and the dictionary of all extended modules vs list of scopes through
+    which the module is accessible. The list of scope shall be sorted lexicographically w.r.t. the string representation
+    of the Scope objects.
     The dictionary will also include the extended modules that have already been present in the model.
     """
     modules_vs_scopes_dict = collect_all_scopes_for_extendable_and_extended_modules(model)
     inter_dict = {}  # type: Dict[nn.Module, Set[Scope]]
-    ret_dict = {}  # type: Dict[nn.Module, Set[Scope]]
+    ret_dict = {}  # type: Dict[nn.Module, List[Scope]]
     for module, scope_set in modules_vs_scopes_dict.items():
         if is_nncf_module(module):
             # The module has already been extended, track it in the return value
-            ret_dict[module] = scope_set
+            ret_dict[module] = list(sorted(scope_set, key=str))
             continue
         should_process = _is_scopes_allow_replacement(scope_set, ignored_scopes, target_scopes, eval_op_scopes) and \
                 not _is_module_only_in_user_module(scope_set)
@@ -179,7 +182,7 @@ def replace_modules_by_nncf_modules(
                 new_scope = scope.copy()
                 new_scope[-1].calling_module_class_name = replaced_module.__class__.__name__
                 new_scope_set.add(new_scope)
-                ret_dict[replaced_module] = new_scope_set
+                ret_dict[replaced_module] = list(sorted(new_scope_set, key=str))
 
     for replaced_module, old_scope_set in inter_dict.items():
         for old_scope in old_scope_set:
