@@ -128,40 +128,39 @@ def benchmark_performance(model_path, model_name):
 
     return model_perf
 
+def validate_with_queue(model_path, val_loader, queue):
+    dataset_size = len(val_loader)
+    predictions = [0] * dataset_size
+    references = [-1] * dataset_size
+
+    core = ov.Core()
+    ov_model = core.read_model(model_path)
+    compiled_model = core.compile_model(ov_model)
+
+    jobs = int(os.environ.get('NUM_VAL_THREADS', DEFAULT_VAL_THREADS))
+    infer_queue = ov.AsyncInferQueue(compiled_model, jobs)
+
+    def process_result(request, userdata):
+        output_data = request.get_output_tensor().data
+        predicted_label = np.argmax(output_data, axis=1)
+        predictions[userdata] = [predicted_label]
+
+    infer_queue.set_callback(process_result)
+
+    for i, (images, target) in enumerate(val_loader):
+        # W/A for memory leaks when using torch DataLoader and OpenVINO
+        image_copies = copy.deepcopy(images.numpy())
+        infer_queue.start_async(image_copies, userdata=i)
+        references[i] = target
+
+    infer_queue.wait_all()
+    predictions = np.concatenate(predictions, axis=0)
+    references = np.concatenate(references, axis=0)
+    queue.put(accuracy_score(predictions, references))
 
 def validate_accuracy(model_path, val_loader):
-    def validate(queue):
-        dataset_size = len(val_loader)
-        predictions = [0] * dataset_size
-        references = [-1] * dataset_size
-
-        core = ov.Core()
-        ov_model = core.read_model(model_path)
-        compiled_model = core.compile_model(ov_model)
-
-        jobs = int(os.environ.get('NUM_VAL_THREADS', DEFAULT_VAL_THREADS))
-        infer_queue = ov.AsyncInferQueue(compiled_model, jobs)
-
-        def process_result(request, userdata):
-            output_data = request.get_output_tensor().data
-            predicted_label = np.argmax(output_data, axis=1)
-            predictions[userdata] = [predicted_label]
-
-        infer_queue.set_callback(process_result)
-
-        for i, (images, target) in enumerate(val_loader):
-            # W/A for memory leaks when using torch DataLoader and OpenVINO
-            image_copies = copy.deepcopy(images.numpy())
-            infer_queue.start_async(image_copies, userdata=i)
-            references[i] = target
-
-        infer_queue.wait_all()
-        predictions = np.concatenate(predictions, axis=0)
-        references = np.concatenate(references, axis=0)
-        queue.put(accuracy_score(predictions, references))
-
     q = Queue()
-    p = Process(target=validate, args=(q, ))
+    p = Process(target=validate_with_queue, args=(model_path, val_loader, q, ))
     p.start()
     p.join()
     return q.get()
