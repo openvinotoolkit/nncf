@@ -105,16 +105,3 @@ class Scope:
             if iter_scope in scope_name:
                 results.append(iter_scope)
         return results
-
-
-class ExecutionScope(Scope):
-    """
-    A nominal type to distinguish between general Scopes and "execution scopes".
-    Regular Scopes can be decoded to access a sub-module to which the scope is pointing via attribute access.
-    However, the association of a Scope to a module is not unique - one and the same submodule object can be accessed
-    in general via different attribute access steps on the original model. What is unique is the scope of the operation-
-    containing modules that is constructed during NNCFGraph tracing, since the model's forward code is usually fixed.
-    These scopes will be considered "execution scopes", and this type will help distinguish where in the code we handle
-    the unique execution scopes and where we handle general Scopes.
-    """
-    pass
