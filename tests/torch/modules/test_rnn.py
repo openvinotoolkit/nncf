@@ -534,7 +534,6 @@ class TestNumberOfNodes:
             quantizer.register_forward_pre_hook(partial(hook, counter=counter))
         dummy_forward_fn(model)
 
-        model.get_graph().dump_graph("test.dot")
         assert model.get_graph().get_nodes_count() == 373  # NB: may always fail in debug due to superfluous 'cat' nodes
         assert len(counters) == 143
 
