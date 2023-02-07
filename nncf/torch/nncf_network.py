@@ -55,6 +55,7 @@ from nncf.torch.dynamic_graph.io_handling import wrap_nncf_model_outputs_with_ob
 from nncf.torch.dynamic_graph.operation_address import OperationAddress
 from nncf.torch.dynamic_graph.patch_pytorch import ignore_scope
 from nncf.torch.dynamic_graph.scope import Scope
+from nncf.torch.dynamic_graph.scope_access import get_module_by_scope
 from nncf.torch.dynamic_graph.trace_tensor import TracedTensor
 from nncf.torch.nncf_module_replacement import replace_modules_by_nncf_modules
 from nncf.torch.graph.graph import PTNNCFGraph
@@ -597,20 +598,7 @@ class NNCFNetwork(nn.Module, PostGraphBuildActing):
 
     def get_module_by_scope(self, scope: Scope) -> Optional[torch.nn.Module]:
         curr_module = self.get_nncf_wrapped_model()
-        for scope_element in scope[1:]:  # omit first scope element which corresponds to base module
-            if scope_element.calling_field_name is None:
-                # The module used is being created in-place every time and never stored in the model,
-                # happens for nn.Softmax in BERT implementations.
-                return None
-            # pylint: disable=protected-access
-            next_module = curr_module._modules.get(scope_element.calling_field_name)
-            if next_module is None:
-                raise RuntimeError("Could not find a {} module member in {} module of scope {} during node search"
-                                   .format(scope_element.calling_field_name,
-                                           scope_element.calling_module_class_name,
-                                           str(scope)))
-            curr_module = next_module
-        return curr_module
+        return get_module_by_scope(curr_module, scope)
 
     def get_containing_module(self, node_name: NNCFNodeName) -> torch.nn.Module:
         if self._compressed_graph is not None:
