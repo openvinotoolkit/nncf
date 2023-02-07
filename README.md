@@ -65,7 +65,7 @@ This function returns a model with additional modifications necessary to enable 
 
 ```python
 import torch
-import nncf  # Important - must be imported before any other external package that depends on torch
+import nncf.torch  # Important - must be imported before any other external package that depends on torch
 
 from nncf import NNCFConfig
 from nncf.torch import create_compressed_model, register_default_init_args
