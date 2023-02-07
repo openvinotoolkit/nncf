@@ -12,7 +12,9 @@
 """
 from typing import Callable, Dict
 
-from nncf.common.graph.patterns.patterns import HWFusedPatterns, PatternNames
+from nncf.common.graph.patterns.patterns import GraphPattern
+from nncf.common.graph.patterns.patterns import HWFusedPatterns
+from nncf.common.graph.patterns.patterns import PatternNames
 from nncf.common.utils.backend import BackendType
 from nncf.parameters import TargetDevice
 
@@ -42,13 +44,13 @@ class PatternsManager:
         raise ValueError(f'Hardware-fused patterns not implemented for {backend} backend.')
 
     @staticmethod
-    def get_full_pattern_graph(backend: BackendType, device: TargetDevice) -> HWFusedPatterns:
+    def get_full_pattern_graph(backend: BackendType, device: TargetDevice) -> GraphPattern:
         """
         Returns the backend- & device-specific HWFusedPatterns instance.
 
         :param backend: BackendType instance.
         :param device: TargetDevice instance.
-        :return: Completed HWFusedPatterns value based on the backend & device.
+        :return: Completed GraphPattern value based on the backend & device.
         """
         backend_registry_map = PatternsManager.get_backend_patterns_map(backend)
         hw_fused_patterns = HWFusedPatterns()
