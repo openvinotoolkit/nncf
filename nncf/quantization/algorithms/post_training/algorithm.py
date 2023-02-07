@@ -54,6 +54,7 @@ class PostTrainingQuantizationParameters(AlgorithmParameters):
                  range_type: RangeType = RangeType.MEAN_MINMAX,
                  quantize_outputs: bool = False,
                  ignored_scopes: Optional[List[str]] = None,
+                 overflow_fix: str = 'first_layer_only',
                  fast_bias_correction: bool = True,
                  ):
         """
@@ -91,7 +92,8 @@ class PostTrainingQuantizationParameters(AlgorithmParameters):
             number_samples=number_samples,
             target_device=target_device,
             quantize_outputs=quantize_outputs,
-            ignored_scopes=ignored_scopes
+            ignored_scopes=ignored_scopes,
+            overflow_fix=overflow_fix
         )}
 
         bias_correction_algo = {BiasCorrection: BiasCorrectionParameters(

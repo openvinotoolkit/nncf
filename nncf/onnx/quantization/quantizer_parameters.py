@@ -86,7 +86,7 @@ def calculate_scale_zero_point(max_val: np.ndarray, min_val: np.ndarray, level_l
 
 
 def calculate_weight_quantizer_parameters(weight_tensor: np.ndarray, quantizer_config: QuantizerConfig,
-                                          axis: Optional[int]) -> ONNXQuantizerLayerParameters:
+                                          axis: Optional[int], _is_half_range: bool) -> ONNXQuantizerLayerParameters:
     """
     Calculates Quantizer/Dequantizer layer attributes for weight quantizer such as scale, zero_points and
     quantization mode: symmetric, asymmetric.
@@ -110,7 +110,10 @@ def calculate_weight_quantizer_parameters(weight_tensor: np.ndarray, quantizer_c
                          'while the quantizer configuration for weights contains signedness_to_force=False.')
     input_high = np.amax(weight_tensor, axis=axes)
     input_low = np.amin(weight_tensor, axis=axes)
-    level_low, level_high = get_level_low_level_high(tensor_type, quantizer_config.num_bits)
+    if _is_half_range:
+        level_low, level_high = get_level_low_level_high(tensor_type, quantizer_config.num_bits - 1)
+    else:
+        level_low, level_high = get_level_low_level_high(tensor_type, quantizer_config.num_bits)
     scales, zero_points = calculate_scale_zero_point(input_high, input_low, level_low, level_high,
                                                      quantizer_config.mode, tensor_type)
     return ONNXQuantizerLayerParameters(scales, zero_points, quantizer_config.mode, axis, tensor_type)

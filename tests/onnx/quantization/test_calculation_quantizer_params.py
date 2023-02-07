@@ -130,22 +130,116 @@ def test_calculate_activation_quantizer_parameters(case_to_test):
                                                        axis=case_to_test.axis,
                                                        tensor_type=case_to_test.ref_tensor_type)
     quantize_params = calculate_activation_quantizer_parameters(statistics, qconfig, case_to_test.axis)
+    assert ref_quantize_params.scale == quantize_params.scale
     assert ref_quantize_params.mode == quantize_params.mode
     assert ref_quantize_params.axis == quantize_params.axis
     assert ref_quantize_params.tensor_type == quantize_params.tensor_type
+
+
+@dataclass
+class CaseToTestParams:
+    num_bits: int
+    mode: QuantizationMode
+    signedness_to_force: bool
+    per_channel: bool
+    axis: int
+    weight_tensor: np.ndarray
+    is_half_range: bool
+    ref_scale: np.ndarray
+    ref_zero_point: np.ndarray
+    ref_tensor_type: np.ndarray
+
+
+CASES_FOR_TEST = [
+    CaseToTestParams(num_bits=8,
+                     mode=QuantizationMode.SYMMETRIC,
+                     signedness_to_force=None,
+                     per_channel=False,
+                     axis=None,
+                     weight_tensor=np.array([[0, 1, 2], [-1, 0, 0]]),
+                     is_half_range=False,
+                     ref_scale=np.array((0.01568627450980392)),
+                     ref_zero_point=np.array((0)),
+                     ref_tensor_type=np.int8,
+                     ),
+    CaseToTestParams(num_bits=8,
+                     mode=QuantizationMode.SYMMETRIC,
+                     signedness_to_force=None,
+                     per_channel=False,
+                     axis=None,
+                     weight_tensor=np.array([[0, 1, 2], [-1, 0, 0]]),
+                     is_half_range=True,
+                     ref_scale=np.array((0.031496062992125984)),
+                     ref_zero_point=np.array((0)),
+                     ref_tensor_type=np.int8,
+                     ),
+    CaseToTestParams(num_bits=8,
+                     mode=QuantizationMode.ASYMMETRIC,
+                     signedness_to_force=None,
+                     per_channel=False,
+                     axis=None,
+                     weight_tensor=np.array([[0, 1, 2], [-1, 0, 0]]),
+                     is_half_range=False,
+                     ref_scale=np.array((0.011764705882352941)),
+                     ref_zero_point=np.array((-43)),
+                     ref_tensor_type=np.int8,
+                     ),
+    CaseToTestParams(num_bits=8,
+                     mode=QuantizationMode.ASYMMETRIC,
+                     signedness_to_force=None,
+                     per_channel=False,
+                     axis=None,
+                     weight_tensor=np.array([[0, 1, 2], [-1, 0, 0]]),
+                     is_half_range=True,
+                     ref_scale=np.array((0.023622047244094488)),
+                     ref_zero_point=np.array((-22)),
+                     ref_tensor_type=np.int8,
+                     ),
+    CaseToTestParams(num_bits=8,
+                     mode=QuantizationMode.SYMMETRIC,
+                     signedness_to_force=None,
+                     per_channel=True,
+                     axis=1,
+                     weight_tensor=np.array([[0, 1, 2], [0, 1, 3]]),
+                     is_half_range=True,
+                     ref_scale=np.array((0, 0.015748031496062992, 0.047244094488188976)),
+                     ref_zero_point=np.array((0, 0, 0)),
+                     ref_tensor_type=np.int8,
+                     ),
+    CaseToTestParams(num_bits=8,
+                     mode=QuantizationMode.SYMMETRIC,
+                     signedness_to_force=False,
+                     per_channel=True,
+                     axis=1,
+                     weight_tensor=np.array([[0, 1, 2], [0, 1, 3]]),
+                     is_half_range=True,
+                     ref_scale=np.array((0, 0.015748031496062992, 0.047244094488188976)),
+                     ref_zero_point=np.array((0, 0, 0)),
+                     ref_tensor_type=np.int8,
+                     ),
+]
 
 
 @pytest.mark.parametrize('case_to_test', (CASES_FOR_TEST))
 def test_calculate_weight_quantizer_parameters(case_to_test):
     qconfig = QuantizerConfig(num_bits=case_to_test.num_bits,
                               mode=case_to_test.mode,
-                              signedness_to_force=case_to_test.activations_signed,
+                              signedness_to_force=case_to_test.signedness_to_force,
                               per_channel=case_to_test.per_channel)
-    ref_quantize_params = ONNXQuantizerLayerParameters(-1 * np.ones((3, 10, 10)), np.ones((3, 10, 10)),
+    ref_quantize_params = ONNXQuantizerLayerParameters(scale=case_to_test.ref_scale,
+                                                       zero_point=case_to_test.ref_zero_point,
                                                        mode=case_to_test.mode,
                                                        axis=case_to_test.axis,
                                                        tensor_type=case_to_test.ref_tensor_type)
-    quantize_params = calculate_weight_quantizer_parameters(np.ones((3, 10, 10)), qconfig, case_to_test.axis)
+    if case_to_test.signedness_to_force is not None and not case_to_test.signedness_to_force:
+        with pytest.raises(Exception):
+            calculate_weight_quantizer_parameters(case_to_test.weight_tensor, qconfig, case_to_test.axis,
+                                                  case_to_test.is_half_range)
+
+    quantize_params = calculate_weight_quantizer_parameters(case_to_test.weight_tensor, qconfig, case_to_test.axis,
+                                                            case_to_test.is_half_range)
+    assert np.array_equal(ref_quantize_params.scale, quantize_params.scale)
+    assert np.array_equal(ref_quantize_params.zero_point, quantize_params.zero_point)
     assert ref_quantize_params.mode == quantize_params.mode
     assert ref_quantize_params.axis == quantize_params.axis
     assert ref_quantize_params.tensor_type == quantize_params.tensor_type

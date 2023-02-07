@@ -74,6 +74,7 @@ class MinMaxQuantizationParameters(AlgorithmParameters):
                  range_type: Optional[RangeType] = None,
                  quantize_outputs: bool = False,
                  ignored_scopes: Optional[List[str]] = None,
+                 overflow_fix: str = 'first_layer_only'
                  ):
         """
         :param number_samples: Number of samples for the statistics collection.
@@ -97,6 +98,7 @@ class MinMaxQuantizationParameters(AlgorithmParameters):
         :param range_type: Type of statistics range calculation.
         :param quantize_outputs: Boolean value that says whether quantize outputs or not.
         :param ignored_scopes: List of the layers which input must not be quantized.
+        :param overflow_fix: ...
         """
         self.number_samples = number_samples
         self.target_device = target_device
@@ -115,6 +117,7 @@ class MinMaxQuantizationParameters(AlgorithmParameters):
                                                                    signed_activations)
         self.global_quantizer_constraints[QuantizerGroup.WEIGHTS] = q_weight_constraints
         self.global_quantizer_constraints[QuantizerGroup.ACTIVATIONS] = q_activation_constraints
+        self.overflow_fix = overflow_fix
 
     def _get_quantizer_constraints(self, group: QuantizerGroup, preset: QuantizationPreset, num_bits: Optional[int],
                                    per_channel: Optional[bool],
@@ -367,10 +370,15 @@ class MinMaxQuantization(Algorithm):
                 # If the nodes share one weight tensor, we should have only one quantizer on that
                 if weight_tensor_name in weight_tensor_names:
                     continue
-                weight_tensor_names.add(weight_tensor_name)
+                _is_half_range = False
+                if (self._parameters.overflow_fix == 'first_layer_only' and not weight_tensor_names) or \
+                        self._parameters.overflow_fix == 'enable':
+                    _is_half_range = True
                 command = self._backend_entity.create_weight_quantizer_insertion_command(quantization_target_point,
-                                                                                         qconfig, weight_tensor, node)
+                                                                                         qconfig, _is_half_range,
+                                                                                         weight_tensor, node)
                 transformation_commands.append(command)
+                weight_tensor_names.add(weight_tensor_name)
             elif quantization_target_point.type in [TargetType.PRE_LAYER_OPERATION, TargetType.POST_LAYER_OPERATION]:
                 def filter_func(point):
                     return MinMaxQuantization in point.algorithm_to_tensor_collectors and \

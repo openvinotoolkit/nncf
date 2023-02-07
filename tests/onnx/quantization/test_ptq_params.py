@@ -122,3 +122,12 @@ def test_ignored_scopes(ignored_scopes):
     else:
         assert act_num_q == 1
     assert weight_num_q == 1
+
+
+@pytest.mark.parametrize('overflow_fix', ['enable', 'disable', 'first_layer_only'])
+def test_overflow_fix(overflow_fix):
+    algo = PostTrainingQuantization(PostTrainingQuantizationParameters(overflow_fix=overflow_fix))
+    min_max_algo = algo.algorithms[0]
+    min_max_algo._backend_entity = ONNXMinMaxAlgoBackend()
+    nncf_graph = NNCFGraphToTest().nncf_graph
+    assert min_max_algo._parameters.overflow_fix == overflow_fix
