@@ -20,7 +20,6 @@ from typing import Optional
 import torch
 
 from nncf.common.graph import INPUT_NOOP_METATYPES
-from nncf.common.graph import LayerName
 from nncf.common.graph.layer_attributes import MultipleInputLayerAttributes
 from nncf.common.graph.layer_attributes import ReshapeLayerAttributes
 from nncf.common.graph.layer_attributes import MultipleOutputLayerAttributes
