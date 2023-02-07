@@ -51,13 +51,13 @@ class GraphConverter:
     @staticmethod
     def convert(dynamic_graph: DynamicGraph, input_infos: List[ModelInputInfo] = None) -> PTNNCFGraph:
         # pylint:disable=too-many-branches
-
-        module_id_vs_known_scopes_map = defaultdict(set)  # type: Dict[int, Set[Scope]]
+        module_id_vs_known_op_addrs_map = defaultdict(set)  # type: Dict[int, Set[Scope]]
         for dynamic_graph_node in dynamic_graph.get_all_nodes():
-            module_id_vs_known_scopes_map[dynamic_graph_node.calling_module_id].add(
-                dynamic_graph_node.op_exec_context.scope_in_model)
+            module_id_vs_known_op_addrs_map[dynamic_graph_node.calling_module_id].add(
+                dynamic_graph_node.op_exec_context.op_address)
 
-        module_id_vs_sorted_scopes_map = {k: list(sorted(v, key=str)) for k, v in module_id_vs_known_scopes_map.items()}
+        module_id_vs_sorted_scopes_map = {k: list(sorted([s.scope_in_model for s in v], key=str))
+            for k, v in module_id_vs_known_op_addrs_map.items()}
 
         nncf_graph = PTNNCFGraph()
         for dynamic_graph_node in dynamic_graph.get_all_nodes():
