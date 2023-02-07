@@ -40,8 +40,7 @@ class ONNXModelTransformer(ModelTransformer):
 
     def __init__(self, model: onnx.ModelProto):
         super().__init__(model)
-        self._model = deepcopy(model)
-        self._nncf_graph = NNCFGraphFactory.create(self._model)
+        self._model = model
 
     def transform(self, transformation_layout: TransformationLayout) -> onnx.ModelProto:
         """
@@ -68,37 +67,37 @@ class ONNXModelTransformer(ModelTransformer):
                 model_extraction_transformation = transformation
             elif isinstance(transformation, ONNXQDQNodeRemovingCommand):
                 qdq_node_removing_transformations.append(transformation)
-
+        model = deepcopy(self._model)
         if quantizer_insert_transformations:
-            self._apply_quantizer_insertion_transformations(quantizer_insert_transformations)
+            model = self._apply_quantizer_insertion_transformations(model, quantizer_insert_transformations)
         if output_insert_transformations:
-            self._apply_output_insertion_transformations(output_insert_transformations)
+            model = self._apply_output_insertion_transformations(model, output_insert_transformations)
         if bias_correction_transformations:
-            self._apply_bias_correction_transformations(bias_correction_transformations)
+            model = self._apply_bias_correction_transformations(model, bias_correction_transformations)
         if model_extraction_transformation:
-            self._model = self._apply_model_extraction_transformation(model_extraction_transformation)
+            model = self._apply_model_extraction_transformation(model, model_extraction_transformation)
         if qdq_node_removing_transformations:
-            self._apply_qdq_node_removing_transformation(qdq_node_removing_transformations)
+            model = self._apply_qdq_node_removing_transformation(model, qdq_node_removing_transformations)
 
-        return self._model
+        return model
 
-    def _apply_output_insertion_transformations(self, transformations: List[ONNXOutputInsertionCommand]) -> None:
+    def _apply_output_insertion_transformations(self, model: onnx.ModelProto,
+                                                transformations: List[ONNXOutputInsertionCommand]) -> onnx.ModelProto:
         """
         Applies incoming transformations to the model
 
         :param transformations: list of the ONNXOutputInsertionCommand transformations
         """
-        onnx_graph = ONNXGraph(self._model)
-        nncf_graph = NNCFGraphFactory.create(self._model)
+        onnx_graph = ONNXGraph(model)
+        nncf_graph = NNCFGraphFactory.create(model)
         model_outputs = [output.name for output in onnx_graph.get_model_outputs()]
         extra_model_outputs = self._get_extra_model_outputs(nncf_graph,
                                                             onnx_graph,
                                                             transformations)
 
-        model_with_intermediate_outputs = self._insert_outputs(self._model,
-                                                               outputs=[*extra_model_outputs,
-                                                                        *model_outputs])
-        self._model = model_with_intermediate_outputs
+        return self._insert_outputs(self._model,
+                                    outputs=[*extra_model_outputs,
+                                             *model_outputs])
 
     def _get_extra_model_outputs(self,
                                  nncf_graph: NNCFGraph,
@@ -186,20 +185,21 @@ class ONNXModelTransformer(ModelTransformer):
         return onnx_model
 
     def _apply_quantizer_insertion_transformations(
-            self,
-            transformations: List[ONNXQuantizerInsertionCommand]) -> None:
+            self, model: onnx.ModelProto,
+            transformations: List[ONNXQuantizerInsertionCommand]) -> onnx.ModelProto:
         """
         Applies transformations on the model
 
         :param transformations: lisf of the TransformationCommand transformations
         """
         self._added_target_edges = Counter()
-        onnx_graph = ONNXGraph(self._model)
+        nncf_graph = NNCFGraphFactory.create(model)
         for transformation in transformations:
-            self._insert_quantizer_dequantizer(transformation, onnx_graph)
+            model = self._insert_quantizer_dequantizer(model, transformation, nncf_graph)
+        return model
 
-    def _get_target_edge_name(self, transformation: ONNXQuantizerInsertionCommand, onnx_graph: ONNXGraph) -> \
-            Optional[str]:
+    def _get_target_edge_name(self, transformation: ONNXQuantizerInsertionCommand, onnx_graph: ONNXGraph,
+                              nncf_graph: NNCFGraph) -> Optional[str]:
         target_edge_name = None
         if transformation.target_point.type == TargetType.OPERATION_WITH_WEIGHTS:
             target_edge_name = onnx_graph.get_node_edge_names(transformation.target_point.target_node_name)['input'][
@@ -209,9 +209,9 @@ class ONNXModelTransformer(ModelTransformer):
                 transformation.target_point.port_id]
         elif transformation.target_point.type == TargetType.POST_LAYER_OPERATION:
             if NNCFGraphNodeType.INPUT_NODE in transformation.target_point.target_node_name:  # ADD INPUT NODE CASE
-                nncf_node_name = self._nncf_graph.get_node_by_name(transformation.target_point.target_node_name)
+                nncf_node_name = nncf_graph.get_node_by_name(transformation.target_point.target_node_name)
                 onnx_nodes_after_input_node = [edge.to_node for edge in
-                                               self._nncf_graph.get_output_edges(nncf_node_name)]
+                                               nncf_graph.get_output_edges(nncf_node_name)]
                 for onnx_node_name in onnx_nodes_after_input_node:
                     target_edge_name = onnx_graph.get_node_edge_names(onnx_node_name.node_name)['input'][
                         transformation.target_point.port_id]
@@ -281,9 +281,10 @@ class ONNXModelTransformer(ModelTransformer):
                                                          onnx_zero_point)
         return onnx_scale_tensor, onnx_zero_point_tensor
 
-    def _insert_quantizer_dequantizer(self, transformation: ONNXQuantizerInsertionCommand,
-                                      onnx_graph: ONNXGraph) -> None:
-        target_edge_name = self._get_target_edge_name(transformation, onnx_graph)
+    def _insert_quantizer_dequantizer(self, model: onnx.ModelProto, transformation: ONNXQuantizerInsertionCommand,
+                                      nncf_graph: NNCFGraph) -> onnx.ModelProto:
+        onnx_graph = ONNXGraph(model)
+        target_edge_name = self._get_target_edge_name(transformation, onnx_graph, nncf_graph)
         quantizer, dequantizer = self._get_quantize_dequantize_nodes(transformation, target_edge_name)
         onnx_scale_tensor, onnx_zero_point_tensor = self._get_scale_zero_point_tensors(transformation, quantizer,
                                                                                        dequantizer)
@@ -312,19 +313,21 @@ class ONNXModelTransformer(ModelTransformer):
         onnx_zero_point_info = onnx.helper.make_tensor_value_info(onnx_zero_point_tensor.name,
                                                                   onnx_zero_point_tensor.data_type,
                                                                   onnx_zero_point_tensor.dims)
-        self._model.graph.initializer.extend([onnx_scale_tensor, onnx_zero_point_tensor])
-        self._model.graph.value_info.extend([onnx_scale_value_info, onnx_zero_point_info])
+        model.graph.initializer.extend([onnx_scale_tensor, onnx_zero_point_tensor])
+        model.graph.value_info.extend([onnx_scale_value_info, onnx_zero_point_info])
         insert_index = onnx_graph.get_node_index(input_nodes[0].name)
-        self._model.graph.node.insert(insert_index, quantizer)
-        self._model.graph.node.insert(insert_index + 1, dequantizer)
+        model.graph.node.insert(insert_index, quantizer)
+        model.graph.node.insert(insert_index + 1, dequantizer)
+        return model
 
-    def _apply_bias_correction_transformations(self, transformations: List[ONNXBiasCorrectionCommand]) -> None:
+    def _apply_bias_correction_transformations(self, model: onnx.ModelProto,
+                                               transformations: List[ONNXBiasCorrectionCommand]) -> onnx.ModelProto:
         """
         Applies bias correction transformations on the model
 
         :param transformations: lisf of the bias correction transformations
         """
-        onnx_graph = ONNXGraph(self._model)
+        onnx_graph = ONNXGraph(model)
         for transformation in transformations:
             bias_tensor_position = transformation.target_point.port_id
             node_name = transformation.target_point.target_node_name
@@ -335,23 +338,27 @@ class ONNXModelTransformer(ModelTransformer):
             new_bias_tensor = onnx.numpy_helper.from_array(transformation.bias_value,
                                                            bias_initializer_name)
             bias_initializer.CopyFrom(new_bias_tensor)
+        return model
 
-    def _apply_model_extraction_transformation(self, transformation: ONNXModelExtractionCommand) -> onnx.ModelProto:
+    def _apply_model_extraction_transformation(self, model: onnx.ModelProto,
+                                               transformation: ONNXModelExtractionCommand) -> onnx.ModelProto:
         """
         Extracts sub-model from the original based on the inputs and outputs names
 
         :param transformation: model extraction transformation
         """
-        onnx_model_exctactor = onnx.utils.Extractor(self._model)
-        return onnx_model_exctactor.extract_model(transformation.inputs, transformation.outputs)
+        # TODO (kshpv): Create only one Extractor for all transformations
+        onnx_model_extractor = onnx.utils.Extractor(model)
+        return onnx_model_extractor.extract_model(transformation.inputs, transformation.outputs)
 
-    def _apply_qdq_node_removing_transformation(self, transformations: List[ONNXQDQNodeRemovingCommand]) -> None:
+    def _apply_qdq_node_removing_transformation(self, model: onnx.ModelProto,
+                                                transformations: List[ONNXQDQNodeRemovingCommand]) -> onnx.ModelProto:
         """
         Removes the layers from the model.
 
         :param transformations: lisf of the node removing transformations.
         """
-        onnx_graph = ONNXGraph(self._model)
+        onnx_graph = ONNXGraph(model)
         for transformation in transformations:
             node = onnx_graph.get_node_by_name(transformation.target_point.target_node_name)
 
@@ -361,12 +368,13 @@ class ONNXModelTransformer(ModelTransformer):
                     if input_obj == node.output[0]:
                         node_child.input[input_id] = node.input[0]
 
-            initializers = {i.name: i for i in self._model.graph.initializer}
-            value_infos = {i.name: i for i in self._model.graph.value_info}
+            initializers = {i.name: i for i in model.graph.initializer}
+            value_infos = {i.name: i for i in model.graph.value_info}
             for initializer_name in node.input:
                 if initializer_name in initializers:
-                    self._model.graph.initializer.remove(initializers[initializer_name])
+                    model.graph.initializer.remove(initializers[initializer_name])
                 if initializer_name in value_infos:
-                    self._model.graph.value_info.remove(value_infos[initializer_name])
+                    model.graph.value_info.remove(value_infos[initializer_name])
 
-            self._model.graph.node.remove(node)
+            model.graph.node.remove(node)
+        return model
