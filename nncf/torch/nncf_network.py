@@ -13,6 +13,7 @@
 
 import inspect
 from collections import OrderedDict
+from contextlib import contextmanager
 from enum import Enum
 from enum import IntEnum
 from typing import Callable
@@ -150,89 +151,129 @@ class PTInsertionPoint:
     def __hash__(self):
         return hash(str(self))
 
+
+class InternalDictAccessor:
+    class NotFound:
+        pass
+
+    @staticmethod
+    def get_nncf_network_attr(nncf_network: 'NNCFNetwork', name: str):
+        if name in nncf_network.__dict__:
+            return nncf_network.__dict__[name]
+        return InternalDictAccessor.NotFound
+
+    @staticmethod
+    def get_wrapped_model_attr(nncf_network: 'NNCFNetwork', name: str):
+        if not MODEL_WRAPPED_BY_NNCF_ATTR_NAME in nncf_network.__dict__['_modules']:
+            # NNCFNetwork not fully initialized yet, original model reference not set
+            return InternalDictAccessor.NotFound
+        if hasattr(nncf_network.__dict__['_modules'][MODEL_WRAPPED_BY_NNCF_ATTR_NAME], name):
+            attr = getattr(nncf_network.__dict__['_modules'][MODEL_WRAPPED_BY_NNCF_ATTR_NAME], name)
+            if hasattr(attr, '__self__'):  # If it is a bound function
+                from functools import partial
+                attr = partial(attr.__func__, nncf_network)
+                return attr
+            # If it is not a bound function
+            return attr
+        return InternalDictAccessor.NotFound
+
+    @staticmethod
+    def get_nn_module_attr(nncf_network: 'NNCFNetwork', name: str):
+        return super(nncf_network.__class__, nncf_network).__getattr__(name)
+
+
 # pylint: disable=too-many-public-methods
-
-
 @ignore_scope
 class NNCFNetwork(nn.Module, PostGraphBuildActing):
     MODEL_STATE_VERSION_ATTR = '_nncf_model_state_version'
     MODEL_STATE_VERSION = 1
+    SETTING_OWN_FIELDS_MARKER = "__setting_own_fields"
 
-    def __init__(self, module, input_infos: List[ModelInputInfo],
+    @contextmanager
+    def _setting_own_fields(self):
+        if NNCFNetwork.SETTING_OWN_FIELDS_MARKER not in self.__dict__:
+            self.__dict__[NNCFNetwork.SETTING_OWN_FIELDS_MARKER] = False
+        old_state = self.__dict__[NNCFNetwork.SETTING_OWN_FIELDS_MARKER]
+        self.__dict__[NNCFNetwork.SETTING_OWN_FIELDS_MARKER] = True
+        yield
+        self.__dict__[NNCFNetwork.SETTING_OWN_FIELDS_MARKER] = old_state
+
+    def __init__(self, module: torch.nn.Module, input_infos: List[ModelInputInfo],
                  dummy_forward_fn=None, wrap_inputs_fn=None, scopes_without_shape_matching=None,
                  ignored_scopes=None, target_scopes=None, reset: bool = False, wrap_outputs_fn=None,
                  original_model_accuracy=None):
         super().__init__()
-        self._set_nncf_wrapped_model(module)
-        self._forward_signature = inspect.signature(module.forward)
-        self.input_infos = input_infos
+        with self._setting_own_fields():
+            self._set_nncf_wrapped_model(module)
+            self._forward_signature = inspect.signature(module.forward)
+            self._input_infos = input_infos
 
-        self._original_model_accuracy = original_model_accuracy
+            self._original_model_accuracy = original_model_accuracy
 
-        self.ignored_scopes = ignored_scopes
-        self.target_scopes = target_scopes
-        self._user_dummy_forward_fn = dummy_forward_fn
-        self._kd_loss_handler = None
+            self._ignored_scopes = ignored_scopes
+            self._target_scopes = target_scopes
+            self._user_dummy_forward_fn = dummy_forward_fn
+            self._kd_loss_handler = None
 
-        device = get_model_device(module)
+            device = get_model_device(module)
 
-        if wrap_inputs_fn is not None:
-            self._wrap_inputs_fn = wrap_inputs_fn
-        else:
-            self.__input_infos_based_input_wrapper = InputInfoWrapManager(self.input_infos,
-                                                                          self._forward_signature,
-                                                                          module_ref_for_device=self)
-            self._wrap_inputs_fn = self.__input_infos_based_input_wrapper.wrap_inputs
+            if wrap_inputs_fn is not None:
+                self._wrap_inputs_fn = wrap_inputs_fn
+            else:
+                self.__input_infos_based_input_wrapper = InputInfoWrapManager(self._input_infos,
+                                                                              self._forward_signature,
+                                                                              module_ref_for_device=self)
+                self._wrap_inputs_fn = self.__input_infos_based_input_wrapper.wrap_inputs
 
-        if wrap_outputs_fn is not None:
-            self._wrap_outputs_fn = wrap_outputs_fn
-        else:
-            self._wrap_outputs_fn = wrap_nncf_model_outputs_with_objwalk
+            if wrap_outputs_fn is not None:
+                self._wrap_outputs_fn = wrap_outputs_fn
+            else:
+                self._wrap_outputs_fn = wrap_nncf_model_outputs_with_objwalk
 
-        self._nncf_module_scopes = []  # type: List[Scope]
-        self.scopes_without_shape_matching = scopes_without_shape_matching
-        self.debug_interface = CombinedDebugInterface() if is_debug() else None
-        self._extra_module_types = []  # type: List[ExtraCompressionModuleType]
-        # pylint:disable=line-too-long
-        self._insertions_into_original_graph = {}  # type: Dict[PTTargetPoint, List[Tuple[Callable, TransformationPriority]]]
+            self._nncf_module_scopes = []  # type: List[Scope]
+            self._scopes_without_shape_matching = scopes_without_shape_matching
+            self.debug_interface = CombinedDebugInterface() if is_debug() else None
+            self._extra_module_types = []  # type: List[ExtraCompressionModuleType]
+            # pylint:disable=line-too-long
+            self._insertions_into_original_graph = {}  # type: Dict[PTTargetPoint, List[Tuple[Callable, TransformationPriority]]]
 
-        _orig_graph_build_forward_fn = self._get_dummy_forward_fn_for_graph_building(with_input_tracing=True,
-                                                                                     with_output_tracing=True)
+            _orig_graph_build_forward_fn = self._get_dummy_forward_fn_for_graph_building(with_input_tracing=True,
+                                                                                         with_output_tracing=True)
 
-        nncf_wrapped_model = self.get_nncf_wrapped_model()
-        eval_only_op_scopes = self._collect_eval_only_op_scopes(nncf_wrapped_model,
-                                                                _orig_graph_build_forward_fn)
+            nncf_wrapped_model = self.get_nncf_wrapped_model()
+            eval_only_op_scopes = self._collect_eval_only_op_scopes(nncf_wrapped_model,
+                                                                    _orig_graph_build_forward_fn)
 
-        # all modules called in eval mode should be replaced prior to graph building
-        self._replace_modules_by_nncf_modules(device, eval_only_op_scopes, reset)
+            # all modules called in eval mode should be replaced prior to graph building
+            self._replace_modules_by_nncf_modules(device, eval_only_op_scopes, reset)
 
-        _orig_context = TracingContext()
+            _orig_context = TracingContext()
 
-        _orig_context.add_node_comparators([MODEL_INPUT_OP_NAME], ShapeIgnoringTensorMetaComparator())
-        _orig_context.add_node_comparators([MODEL_OUTPUT_OP_NAME], ShapeIgnoringTensorMetaComparator())
-        if self.scopes_without_shape_matching:
-            _orig_context.add_node_comparators(scopes_without_shape_matching,
-                                               ShapeIgnoringTensorMetaComparator())
+            _orig_context.add_node_comparators([MODEL_INPUT_OP_NAME], ShapeIgnoringTensorMetaComparator())
+            _orig_context.add_node_comparators([MODEL_OUTPUT_OP_NAME], ShapeIgnoringTensorMetaComparator())
+            if self._scopes_without_shape_matching:
+                _orig_context.add_node_comparators(scopes_without_shape_matching,
+                                                   ShapeIgnoringTensorMetaComparator())
 
-        self._original_dynamic_graph = GraphTracer(_orig_graph_build_forward_fn).trace_graph(nncf_wrapped_model,
-                                                                                             _orig_context,
-                                                                                             as_eval=True)
-        self._original_graph = GraphConverter.convert(self._original_dynamic_graph,
-                                                      input_infos=self.input_infos)
-        self._compressed_graph = None  # type: PTNNCFGraph
+            self._original_dynamic_graph = GraphTracer(_orig_graph_build_forward_fn).trace_graph(nncf_wrapped_model,
+                                                                                                 _orig_context,
+                                                                                                 as_eval=True)
+            self._original_graph = GraphConverter.convert(self._original_dynamic_graph,
+                                                          input_infos=self._input_infos)
+            self._compressed_graph = None  # type: PTNNCFGraph
 
-        self._compressed_context = TracingContext()
+            self._compressed_context = TracingContext()
 
-        self._dummy_forward_fn = self._get_dummy_forward_fn_for_graph_building(with_input_tracing=False,
-                                                                               with_output_tracing=False)
-        self._in_user_dummy_forward = False
+            self._dummy_forward_fn = self._get_dummy_forward_fn_for_graph_building(with_input_tracing=False,
+                                                                                   with_output_tracing=False)
+            self._in_user_dummy_forward = False
 
-        self._compressed_context.add_node_comparators([MODEL_INPUT_OP_NAME], ShapeIgnoringTensorMetaComparator())
-        self._compressed_context.add_node_comparators([MODEL_OUTPUT_OP_NAME], ShapeIgnoringTensorMetaComparator())
-        if self.scopes_without_shape_matching:
-            self._compressed_context.add_node_comparators(scopes_without_shape_matching,
-                                                          ShapeIgnoringTensorMetaComparator())
-        self._load_listener = None
+            self._compressed_context.add_node_comparators([MODEL_INPUT_OP_NAME], ShapeIgnoringTensorMetaComparator())
+            self._compressed_context.add_node_comparators([MODEL_OUTPUT_OP_NAME], ShapeIgnoringTensorMetaComparator())
+            if self._scopes_without_shape_matching:
+                self._compressed_context.add_node_comparators(scopes_without_shape_matching,
+                                                              ShapeIgnoringTensorMetaComparator())
+            self._load_listener = None
 
     @debuggable_forward
     def forward(self, *args, **kwargs):
@@ -281,10 +322,11 @@ class NNCFNetwork(nn.Module, PostGraphBuildActing):
         :return: KnowledgeDistillationLossHandler instance
         """
         device = get_model_device(self.get_nncf_wrapped_model())
-        self._kd_loss_handler = KnowledgeDistillationLossHandler(self._compressed_context,
-                                                                 kd_original_model,
-                                                                 calculate_fn,
-                                                                 device)
+        with self._setting_own_fields():
+            self._kd_loss_handler = KnowledgeDistillationLossHandler(self._compressed_context,
+                                                                     kd_original_model,
+                                                                     calculate_fn,
+                                                                     device)
         return self._kd_loss_handler
 
     # Cannnot use property syntax here, otherwise the wrapped module will end up
@@ -300,9 +342,9 @@ class NNCFNetwork(nn.Module, PostGraphBuildActing):
         # and load_nncf_module_additions to preserve these, or temporary_clean_view().
         from nncf.torch.utils import save_module_state, load_module_state #pylint: disable=cyclic-import
         saved_state = save_module_state(self)
-        model_copy = NNCFNetwork(self.get_nncf_wrapped_model(), self.input_infos,
+        model_copy = NNCFNetwork(self.get_nncf_wrapped_model(), self._input_infos,
                                  self._user_dummy_forward_fn, self._wrap_inputs_fn,
-                                 self.scopes_without_shape_matching, self.ignored_scopes, self.target_scopes,
+                                 self._scopes_without_shape_matching, self._ignored_scopes, self._target_scopes,
                                  reset=True)
         load_module_state(model_copy, saved_state)
         return model_copy
@@ -346,36 +388,21 @@ class NNCFNetwork(nn.Module, PostGraphBuildActing):
             raise RuntimeError("Unsupported insertion type: {}".format(point.insertion_type))
 
     def __getattr__(self, name):
-        class NotFound:
-            pass
-
-        def get_nncf_network_attr(self, name):
-            if name in self.__dict__:
-                return self.__dict__[name]
-            return NotFound
-
-        def get_nncf_module_attr(self, name):
-            if hasattr(self.__dict__['_modules'][MODEL_WRAPPED_BY_NNCF_ATTR_NAME], name):
-                attr = getattr(self.__dict__['_modules'][MODEL_WRAPPED_BY_NNCF_ATTR_NAME], name)
-                if hasattr(attr, '__self__'):  # If it is a bound function
-                    from functools import partial
-                    attr = partial(attr.__func__, self)
-                    return attr
-                # If it is not a bound function
-                return attr
-            return NotFound
-
-        def get_nn_module_attr(self, name):
-            return super().__getattr__(name)
-
-        attr = get_nncf_network_attr(self, name)
-        if attr != NotFound:
+        attr = InternalDictAccessor.get_nncf_network_attr(self, name)
+        if attr != InternalDictAccessor.NotFound:
             return attr
-        attr = get_nncf_module_attr(self, name)
-        if attr != NotFound:
+        attr = InternalDictAccessor.get_wrapped_model_attr(self, name)
+        if attr != InternalDictAccessor.NotFound:
             return attr
-        return get_nn_module_attr(self, name)
+        return InternalDictAccessor.get_nn_module_attr(self, name)
 
+    def __setattr__(self, key, value):
+        # Set NNCFNetwork attr if in NNCFNetwork's init, otherwise set the attr on the original model.
+        if self.__dict__[NNCFNetwork.SETTING_OWN_FIELDS_MARKER]:
+            super().__setattr__(key, value)
+        else:
+            original_model = self.get_nncf_wrapped_model()
+            setattr(original_model, key, value)
 
     def get_graph(self) -> PTNNCFGraph:
         if self._compressed_context.graph.get_nodes_count() == 0 or self._compressed_graph is None:
@@ -399,16 +426,18 @@ class NNCFNetwork(nn.Module, PostGraphBuildActing):
 
     def _get_dummy_forward_fn_for_graph_building(self, with_input_tracing, with_output_tracing):
         if self._user_dummy_forward_fn is None:
-            return create_dummy_forward_fn(self.input_infos,
+            return create_dummy_forward_fn(self._input_infos,
                                            with_input_tracing=with_input_tracing,
                                            wrap_inputs_fn=self._wrap_inputs_fn,
                                            wrap_outputs_fn=self._wrap_outputs_fn,
                                            with_output_tracing=with_output_tracing)
 
         def wrapped_user_dummy_forward_fn(*args, **kwargs):
-            self._in_user_dummy_forward = True
+            with self._setting_own_fields():
+                self._in_user_dummy_forward = True
             retval = self._user_dummy_forward_fn(*args, **kwargs)
-            self._in_user_dummy_forward = False
+            with self._setting_own_fields():
+                self._in_user_dummy_forward = False
             return retval
 
         return wrapped_user_dummy_forward_fn
@@ -416,8 +445,8 @@ class NNCFNetwork(nn.Module, PostGraphBuildActing):
     def _replace_modules_by_nncf_modules(self, device, eval_only_op_scopes: List[Scope] = None,
                                          reset: bool = False):
         module, self._nncf_module_scopes = replace_modules_by_nncf_modules(
-            self.get_nncf_wrapped_model(), ignored_scopes=self.ignored_scopes,
-            target_scopes=self.target_scopes, eval_op_scopes=eval_only_op_scopes,
+            self.get_nncf_wrapped_model(), ignored_scopes=self._ignored_scopes,
+            target_scopes=self._target_scopes, eval_op_scopes=eval_only_op_scopes,
             reset=reset)
         self._set_nncf_wrapped_model(module.to(device))
 
@@ -449,8 +478,10 @@ class NNCFNetwork(nn.Module, PostGraphBuildActing):
         dummy_forward_fn = self._get_dummy_forward_fn_for_graph_building(with_input_tracing=False,
                                                                          with_output_tracing=False)
         builder = GraphBuilder(dummy_forward_fn)
-        self._compressed_graph = builder.build_graph(self, self._compressed_context,
-                                                     input_infos=self.input_infos)
+
+        with self._setting_own_fields():
+            self._compressed_graph = builder.build_graph(self, self._compressed_context,
+                                                         input_infos=self._input_infos)
 
     def post_build_graph_actions(self):
         # Reset initialization flags (`initialized`) for all quantization modules
@@ -473,7 +504,9 @@ class NNCFNetwork(nn.Module, PostGraphBuildActing):
         attr_name = self._compression_module_type_to_attr_name(compression_module_type)
         if compression_module_type in self._extra_module_types:
             raise RuntimeError("Module type {} is already registered".format(compression_module_type))
-        self.__setattr__(attr_name, nn.ModuleDict())
+
+        with self._setting_own_fields():
+            self.__setattr__(attr_name, nn.ModuleDict())
         self._extra_module_types.append(compression_module_type)
 
     def add_compression_module(self, module_key: str, module: nn.Module,
@@ -509,7 +542,8 @@ class NNCFNetwork(nn.Module, PostGraphBuildActing):
         module_dict = self.__getattr__(attr_name)
         # pylint: disable=protected-access
         module_dict._modules = OrderedDict(sorted(module_dict._modules.items()))
-        self.__setattr__(attr_name, module_dict)
+        with self._setting_own_fields():
+            self.__setattr__(attr_name, module_dict)
 
     @staticmethod
     def _normalize_variable_recurrent_scope(scope: Scope):
@@ -644,7 +678,7 @@ class NNCFNetwork(nn.Module, PostGraphBuildActing):
         return total_MACs_count
 
     def get_input_infos(self) -> List[ModelInputInfo]:
-        return deepcopy(self.input_infos)
+        return deepcopy(self._input_infos)
 
     def save_nncf_module_additions(self) -> Dict[Scope, Tuple[torch.nn.ModuleDict, torch.nn.ModuleDict]]:
         retval = {}
