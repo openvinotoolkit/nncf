@@ -101,6 +101,8 @@ def _build_node_id_vs_attrs_dict(nx_graph: nx.DiGraph, id_from_attr: bool = Fals
                                                                                            Dict[str, str]]:
     retval = {}  # type: Dict[Union[int, str], Dict[str, str]]
     for node_name, node_attrs in nx_graph.nodes.items():
+        if node_name == '\\n':
+            continue
         if id_from_attr:
             node_identifier = int(node_attrs['id'])
         else:
