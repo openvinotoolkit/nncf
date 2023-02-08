@@ -17,7 +17,6 @@ from collections import Counter
 import onnx
 import numpy as np
 
-from nncf.common.graph.graph import NNCFGraph
 from nncf.common.graph.transformations.commands import TargetType
 from nncf.common.graph.transformations.layout import TransformationLayout
 from nncf.common.graph.definitions import NNCFGraphNodeType
@@ -40,8 +39,10 @@ class ONNXModelTransformer(ModelTransformer):
 
     def __init__(self, model: onnx.ModelProto):
         super().__init__(model)
-        self._model = model
-        self._nncf_input_nodes_input_edges = None
+        self._model = deepcopy(model)
+        nncf_graph = NNCFGraphFactory.create(model)
+        for node in nncf_graph.get_input_nodes():
+            self._nncf_input_nodes_input_edges = {node.node_name: nncf_graph.get_output_edges(node)}
 
     def transform(self, transformation_layout: TransformationLayout) -> onnx.ModelProto:
         """
@@ -68,11 +69,7 @@ class ONNXModelTransformer(ModelTransformer):
                 model_extraction_transformation = transformation
             elif isinstance(transformation, ONNXQDQNodeRemovingCommand):
                 qdq_node_removing_transformations.append(transformation)
-        model = deepcopy(self._model)
-        nncf_graph = NNCFGraphFactory.create(model)
-        for node in nncf_graph.get_input_nodes():
-            self._nncf_input_nodes_input_edges = {node.node_name: nncf_graph.get_output_edges(node)}
-
+        model = self._model
         if quantizer_insert_transformations:
             model = self._apply_quantizer_insertion_transformations(model, quantizer_insert_transformations)
         if output_insert_transformations:
