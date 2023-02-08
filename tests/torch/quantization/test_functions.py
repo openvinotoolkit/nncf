@@ -367,8 +367,7 @@ class TestParametrized:
 
             mock_prev_output_grads = np.ones(input_size, dtype=np.float16 if is_fp16 else np.float32)
             ref_grads = RQ.backward(mock_prev_output_grads, ref_input, ref_input_low,
-                                    ref_input_range, ref_output, level_low, level_high,
-                                    1)
+                                    ref_input_range, ref_output, level_low, level_high)
             del ref_grads[1]
             test_value = symmetric_quantize(test_input, levels, level_low, level_high, test_scale, EPS)
             test_value.sum().backward()
@@ -508,7 +507,6 @@ class TestParametrized:
             test_input_low, test_input_range = get_test_data(
                 [ref_input_low, ref_input_range], use_cuda, is_backward=True, is_fp16=is_fp16)
 
-            range_sign = np.sign(ref_input_range)
             ref_input_range = abs(ref_input_range) + EPS
             ref_input_low, ref_input_range = RQ.tune_range(
                 ref_input_low, ref_input_range, levels)
@@ -539,7 +537,7 @@ class TestParametrized:
             mock_prev_output_grads = np.ones(input_size, dtype=np.float16 if is_fp16 else np.float32)
             ref_grads = RQ.backward(
                 mock_prev_output_grads, ref_input, ref_input_low, ref_input_range, ref_output, level_low,
-                level_high, range_sign)
+                level_high)
 
             test_value = asymmetric_quantize(test_input, levels, level_low, level_high, test_input_low,
                                              test_input_range, eps=EPS)

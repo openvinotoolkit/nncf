@@ -70,9 +70,6 @@ def test_get_all_modules_by_type__for_standard_type():
         'ModelForNameTest/BatchNorm2d[bn2]': model.bn2,
         'ModelForNameTest/BatchNorm2d[norm10]': model.norm10,
         'ModelForNameTest/BatchNorm2d[norm20]': model.norm20,
-        'ModelForNameTest/Sequential[layer1]/BatchNorm2d[norm01]': model.norm10,
-        'ModelForNameTest/Sequential[layer2]/BatchNorm2d[norm02]': model.norm20,
-        'ModelForNameTest/Sequential[layer2]/Sequential[layer1]/BatchNorm2d[norm01]': model.norm10,
     }
     assert act_bn == ref_bn
 
@@ -84,7 +81,6 @@ def test_get_all_modules_by_type__for_multiple_type():
     ref_bn = [
         'ModelForNameTest/AvgPool2d[avgpool]',
         'ModelForNameTest/Sequential[layer1]/ReLU[relu01]',
-        'ModelForNameTest/Sequential[layer2]/Sequential[layer1]/ReLU[relu01]',
         'ModelForNameTest/Sequential[layer2]/ReLU[relu02]']
     assert list(act_bn.keys()) == ref_bn
     assert isinstance(act_bn, OrderedDict)

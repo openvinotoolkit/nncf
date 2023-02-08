@@ -58,7 +58,7 @@ class BaseSparsityAlgoBuilder(PTCompressionAlgorithmBuilder):
 
     def _sparsify_weights(self, target_model: NNCFNetwork) -> List[PTInsertionCommand]:
         device = get_model_device(target_model)
-        sparsified_module_nodes = target_model.get_weighted_original_graph_nodes(
+        sparsified_module_nodes = target_model.nncf.get_weighted_original_graph_nodes(
             nncf_module_names=self.compressed_nncf_module_names
         )
         insertion_commands = []
@@ -81,7 +81,7 @@ class BaseSparsityAlgoBuilder(PTCompressionAlgorithmBuilder):
                     TransformationPriority.SPARSIFICATION_PRIORITY,
                 )
             )
-            sparsified_module = target_model.get_containing_module(node_name)
+            sparsified_module = target_model.nncf.get_containing_module(node_name)
             self._sparsified_module_info.append(SparseModuleInfo(node_name, sparsified_module, hook))
 
         return insertion_commands
@@ -120,10 +120,10 @@ class BaseSparsityAlgoController(PTCompressionAlgorithmController, SparsityContr
         if do_copy:
             model = copy_model(model)
 
-        for node in model.get_original_graph().get_all_nodes():
+        for node in model.nncf.get_original_graph().get_all_nodes():
             if node.node_type in ["nncf_model_input", "nncf_model_output"]:
                 continue
-            nncf_module = model.get_containing_module(node.node_name)
+            nncf_module = model.nncf.get_containing_module(node.node_name)
             if hasattr(nncf_module, "pre_ops"):
                 for key in list(nncf_module.pre_ops.keys()):
                     op = nncf_module.get_pre_op(key)

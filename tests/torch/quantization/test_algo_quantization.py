@@ -186,7 +186,7 @@ def test_can_load_quant_algo__with_defaults():
     quant_model, _ = create_compressed_model_and_algo_for_test(deepcopy(model), config)
 
     model_conv = get_all_modules_by_type(model, 'Conv2d')
-    quant_model_conv = get_all_modules_by_type(quant_model.get_nncf_wrapped_model(), 'NNCFConv2d')
+    quant_model_conv = get_all_modules_by_type(quant_model, 'NNCFConv2d')
     assert len(model_conv) == len(quant_model_conv)
 
     for module_scope, _ in model_conv.items():
@@ -290,7 +290,8 @@ def test_quantizers_have_proper_narrow_range_set():
             for op in module.pre_ops.values():
                 assert isinstance(op, (UpdateWeight, UpdateInputs))
                 assert op.operand.narrow_range == isinstance(op, UpdateWeight)
-    for _, aq in quant_model.get_compression_modules_by_type(ExtraCompressionModuleType.EXTERNAL_QUANTIZER).items():
+    for _, aq in quant_model.nncf.get_compression_modules_by_type(
+            ExtraCompressionModuleType.EXTERNAL_QUANTIZER).items():
         assert aq.narrow_range is False
 
 
@@ -919,3 +920,14 @@ def test_can_quantize_user_module_with_addmm():
 
     # Should complete successfully without exceptions:
     create_compressed_model_and_algo_for_test(ModelWithUserModule(), nncf_config)
+
+def test_works_when_wrapped_with_dataparallel():
+    if not torch.cuda.is_available():
+        pytest.xfail("The executing host must have > 1 CUDA GPU in order for this test to be relevant.")
+
+    model = SharedLayersModel()
+    config = get_quantization_config_without_range_init(model_size=1)
+    register_bn_adaptation_init_args(config)
+    model, _ = create_compressed_model_and_algo_for_test(model, config)
+    model = torch.nn.DataParallel(model.cuda())
+    model(torch.ones([10, 1, 1, 1], device='cuda'))

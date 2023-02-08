@@ -69,7 +69,7 @@ class BinarizationBuilder(PTCompressionAlgorithmBuilder):
     def _binarize_weights_and_module_inputs(self, target_model: NNCFNetwork) -> List[PTInsertionCommand]:
         device = get_model_device(target_model)
 
-        module_nodes = target_model.get_weighted_original_graph_nodes(
+        module_nodes = target_model.nncf.get_weighted_original_graph_nodes(
             nncf_module_names=self.compressed_nncf_module_names)
 
         insertion_commands = []
@@ -183,7 +183,7 @@ class BinarizationController(QuantizationControllerBase):
 
         hook_list = [m.register_forward_hook(get_hook(n)) for n, m in net.named_modules()]
 
-        net.do_dummy_forward(force_eval=True)
+        net.nncf.do_dummy_forward(force_eval=True)
 
         for h in hook_list:
             h.remove()

@@ -196,7 +196,7 @@ class QuantizerSetupGeneratorBase:
         self._precision_init_type = precision_init_type
         self._precision_init_params = precision_init_params
         self._range_init_params = range_init_params
-        self._num_potential_quantized_weights = len(self._target_model.get_nncf_modules())
+        self._num_potential_quantized_weights = len(self._target_model.nncf.get_nncf_modules())
 
     def generate_setup(self) -> SingleConfigQuantizerSetup:
         raise NotImplementedError
@@ -265,7 +265,8 @@ class QuantizerSetupGeneratorBase:
         raise NotImplementedError
 
     def get_quantizable_module_nodes(self) -> List[QuantizableWeightedLayerNode]:
-        weighted_nodes = self._target_model.get_original_graph().get_nodes_by_metatypes(QUANTIZATION_LAYER_METATYPES)
+        weighted_nodes = self._target_model.nncf.get_original_graph().get_nodes_by_metatypes(
+            QUANTIZATION_LAYER_METATYPES)
         quantized_modules_with_potential_qconfig = []
 
         weighted_nodes = self._filter_by_ignored_algo(weighted_nodes)
@@ -313,7 +314,7 @@ class DefaultQuantizerSetupDisambiguator(IQuantizerSetupDisambiguator):
 
     def select_final_quantizer_setup(self, multi_config_setup: MultiConfigQuantizerSetup) -> SingleConfigQuantizerSetup:
         if self._precision_init_type is not None:
-            with self._target_model.temporary_clean_view() as intermediate_model:
+            with self._target_model.nncf.temporary_clean_view() as intermediate_model:
                 stats = QuantizationBuilder.get_statistics_for_quantizer_setup(intermediate_model,
                                                                                multi_config_setup,
                                                                                self._range_init_params)
@@ -368,7 +369,7 @@ class PropagationBasedQuantizerSetupGenerator(QuantizerSetupGeneratorBase):
     def generate_setup(self) -> SingleConfigQuantizerSetup:
         quantizable_module_nodes = self.get_quantizable_module_nodes()
 
-        insertion_point_graph = self._target_model.get_insertion_point_graph()
+        insertion_point_graph = self._target_model.nncf.get_insertion_point_graph()
         if self._debug_interface:
             self._debug_interface.visualize_insertion_point_graph(insertion_point_graph)
         from nncf.common.quantization.quantizer_propagation.solver import \
@@ -431,7 +432,7 @@ class PropagationBasedQuantizerSetupGenerator(QuantizerSetupGeneratorBase):
                                                self.hw_config)
 
     def _handle_quantize_inputs_option(self, quantizer_setup: SingleConfigQuantizerSetup) -> SingleConfigQuantizerSetup:
-        nncf_graph = self._target_model.get_original_graph()
+        nncf_graph = self._target_model.nncf.get_original_graph()
         qp_ids_to_discard = []
         for qp_id, qp in quantizer_setup.quantization_points.items():
             if qp.is_activation_quantization_point():
@@ -633,7 +634,7 @@ class QuantizationBuilder(PTCompressionAlgorithmBuilder):
         # to move these to model-specific device upon actual application, but would this impact
         # the time required to create a compressed model?
         self._device_for_callable_obj_creation = get_model_device(target_model)
-        target_model.register_compression_module_type(ExtraCompressionModuleType.EXTERNAL_QUANTIZER)
+        target_model.nncf.register_compression_module_type(ExtraCompressionModuleType.EXTERNAL_QUANTIZER)
         if self._pt_quantizer_setup is None:
             self._pt_quantizer_setup = self._get_quantizer_setup(target_model)
 
@@ -660,14 +661,14 @@ class QuantizationBuilder(PTCompressionAlgorithmBuilder):
         # NOTE: Order of activations must be the same to correctly broadcast parameters (e.g. scales) in distributed
         # mode (see call of `_dist_broadcast_coalesced` in torch/nn/parallel/distributed.py for more details)
         # pylint: disable=protected-access
-        target_model.sort_compression_modules(ExtraCompressionModuleType.EXTERNAL_QUANTIZER)
+        target_model.nncf.sort_compression_modules(ExtraCompressionModuleType.EXTERNAL_QUANTIZER)
 
         if self._debug_interface is not None:
-            target_model.debug_interface.add_interface(self._debug_interface)
+            target_model.nncf.debug_interface.add_interface(self._debug_interface)
 
         quantization_types = [class_type.__name__ for class_type in QUANTIZATION_MODULES.registry_dict.values()]
         all_quantizations = get_state_dict_names_with_modules(target_model, quantization_types)
-        target_model._load_listener = LoadStateListener(target_model, all_quantizations)
+        target_model.nncf._load_listener = LoadStateListener(target_model, all_quantizations)
 
         return transformation_layout
 
@@ -679,11 +680,11 @@ class QuantizationBuilder(PTCompressionAlgorithmBuilder):
         if range_init_params is None:
             return {}
         observation_points_vs_collectors_dict = StatCollectorGenerator. \
-            generate_collectors_for_range_init_statistics_collection(target_model.get_original_graph(),
+            generate_collectors_for_range_init_statistics_collection(target_model.nncf.get_original_graph(),
                                                                      quantizer_setup,
                                                                      range_init_params)
 
-        with target_model.temporary_clean_view() as intermediate_model:
+        with target_model.nncf.temporary_clean_view() as intermediate_model:
             stat_builder = TensorStatisticsCollectionBuilder(NNCFConfig(),
                                                              observation_points_vs_collectors_dict)
             stat_builder.apply_to(intermediate_model)
@@ -725,7 +726,7 @@ class QuantizationBuilder(PTCompressionAlgorithmBuilder):
         else:
             single_config_quantizer_setup = self._legacy_single_config_quantizer_setup_from_comp_state
 
-        target_model_graph = target_model.get_original_graph()
+        target_model_graph = target_model.nncf.get_original_graph()
 
         if is_main_process() and self.should_init:
             stats_for_range_init = self._get_statistics_for_final_range_init(target_model,
@@ -876,7 +877,7 @@ class QuantizationBuilder(PTCompressionAlgorithmBuilder):
             if self.debug_interface is not None:
                 self.debug_interface.register_activation_quantize_call(str(self.quantizer_storage_key))
             replica = self.compressed_context.base_module_thread_local_replica
-            storage = getattr(replica, EXTERNAL_QUANTIZERS_STORAGE_NAME)
+            storage = getattr(replica.nncf, EXTERNAL_QUANTIZERS_STORAGE_NAME)
             return storage[self.quantizer_storage_key](*args, **kwargs)
 
     @staticmethod
@@ -904,7 +905,7 @@ class QuantizationBuilder(PTCompressionAlgorithmBuilder):
             Tuple[List[PTInsertionCommand], Dict[QuantizationPointId, QuantizerId]]:
         insertion_commands = []
         qp_id_vs_quant_module_id_dict = {}  # type: Dict[QuantizationPointId, QuantizerId]
-        target_model_graph = target_model.get_original_graph()
+        target_model_graph = target_model.nncf.get_original_graph()
         non_unified_scales_quantization_point_ids = set(quantizer_setup.quantization_points.keys())
         already_weight_quantized_shared_layers = {}  # type: Dict[str, QuantizerId]
 
@@ -1128,7 +1129,7 @@ class QuantizationBuilder(PTCompressionAlgorithmBuilder):
         #pylint:disable=too-many-branches
         #pylint:disable=too-many-statements
 
-        target_model_graph = target_model.get_original_graph()
+        target_model_graph = target_model.nncf.get_original_graph()
         if not insertion_points:
             raise RuntimeError("No insertion points to put quantizers into!")
 
@@ -1166,7 +1167,7 @@ class QuantizationBuilder(PTCompressionAlgorithmBuilder):
         if is_weights(primary_ip):
             primary_qid = WeightQuantizerId(primary_ip.target_node_name)
             self._weight_quantizers[primary_qid] = WeightQuantizerInfo(quantizer,
-                                                                       target_model.get_containing_module(
+                                                                       target_model.nncf.get_containing_module(
                                                                            primary_ip.target_node_name
                                                                        ),
                                                                        insertion_points)
@@ -1182,10 +1183,10 @@ class QuantizationBuilder(PTCompressionAlgorithmBuilder):
             self._quantizers_input_shapes[primary_qid] = input_shape
 
         if not (is_weights(primary_ip) and len(insertion_points) == 1):
-            assert external_quantizer_storage_key not in target_model.get_compression_modules_by_type(
+            assert external_quantizer_storage_key not in target_model.nncf.get_compression_modules_by_type(
                 ExtraCompressionModuleType.EXTERNAL_QUANTIZER)
 
-            target_model.add_compression_module(external_quantizer_storage_key, quantizer,
+            target_model.nncf.add_compression_module(external_quantizer_storage_key, quantizer,
                                                 ExtraCompressionModuleType.EXTERNAL_QUANTIZER)
 
         insertion_commands = []
@@ -1206,13 +1207,13 @@ class QuantizationBuilder(PTCompressionAlgorithmBuilder):
                     # share the single module and this would be impossible for multiple weight quantizer sharing if
                     # the corresponding UpdateWeights operations contained real modules (these would simply get copied
                     # by PyTorch internals)
-                    callable_obj = self.ExternalQuantizerCallHook(target_model.get_tracing_context(),
+                    callable_obj = self.ExternalQuantizerCallHook(target_model.nncf.get_tracing_context(),
                                                                   external_quantizer_storage_key,
                                                                   self._debug_interface)
             else:
                 # Hooks will be identical for each affected op_address in the linked scenario
                 # - will call one and the same quantizer
-                callable_obj = self.ExternalQuantizerCallHook(target_model.get_tracing_context(),
+                callable_obj = self.ExternalQuantizerCallHook(target_model.nncf.get_tracing_context(),
                                                               external_quantizer_storage_key,
                                                               self._debug_interface)
 
@@ -1382,7 +1383,7 @@ class QuantizationController(QuantizationControllerBase):
                    range_init_params.get_max_num_init_steps())
         quantizers_switcher.enable_quantizers()
 
-        self._model.rebuild_graph()
+        self._model.nncf.rebuild_graph()
 
     def compression_stage(self) -> CompressionStage:
         if self.is_staged_scheduler:
@@ -1492,11 +1493,11 @@ class QuantizationDebugInterface(DebugInterface):
 
     def init_actual(self, owner_model: NNCFNetwork):
         quantization_types = [class_type.__name__ for class_type in QUANTIZATION_MODULES.registry_dict.values()]
-        quantizers_in_nncf_modules = owner_model.get_modules_in_nncf_modules_by_type(quantization_types)
+        quantizers_in_nncf_modules = owner_model.nncf.get_modules_in_nncf_modules_by_type(quantization_types)
         nncf_module_quantizations_id_list = [str(scope) for scope in
                                              quantizers_in_nncf_modules.keys()]  # type: List[str]
 
-        activation_quantizer_id_list = owner_model.get_compression_modules_by_type(
+        activation_quantizer_id_list = owner_model.nncf.get_compression_modules_by_type(
             ExtraCompressionModuleType.EXTERNAL_QUANTIZER).keys()  # type: List[str]
         self.call_trackers[self.QUANTIZERS_IN_NNCF_MODULES_TRACKER_NAME].init_with_key_list(
             nncf_module_quantizations_id_list)
@@ -1510,11 +1511,11 @@ class QuantizationDebugInterface(DebugInterface):
     def post_forward_actions(self, module: 'NNCFNetwork'):
         self.register_forward_call()
         # pylint:disable=protected-access
-        ctx = module.get_tracing_context()
+        ctx = module.nncf.get_tracing_context()
         self.set_graph_size(ctx.graph.get_nodes_count())
 
         quantization_types = [class_type.__name__ for class_type in QUANTIZATION_MODULES.registry_dict.values()]
-        nncf_module_quantizations = module.get_modules_in_nncf_modules_by_type(
+        nncf_module_quantizations = module.nncf.get_modules_in_nncf_modules_by_type(
             quantization_types)  # type: Dict['Scope', nn.Module]
 
         for qm_scope, qm_module in nncf_module_quantizations.items():
@@ -1750,7 +1751,7 @@ class ExperimentalQuantizationController(QuantizationController):
                 quant_module = self.all_quantizations[quant_module_id]
                 quant_module.num_bits = qp.qconfig.num_bits
             return self, self._target_model_ref
-        new_model = self._target_model_ref.get_clean_shallow_copy()
+        new_model = self._target_model_ref.nncf.get_clean_shallow_copy()
         new_builder = ExperimentalQuantizationBuilder(self._quantizer_setup,
                                                       initial_quantizer_setup=quantizer_setup,
                                                       tensor_stats_for_all_setup_variations=self._tensor_stats,

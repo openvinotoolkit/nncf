@@ -240,7 +240,7 @@ class HAWQPrecisionInitializer(BasePrecisionInitializer):
         if self._init_device is None:
             self._init_device = get_model_device(self._model)
         current_quantizer_setup = self._algo.get_quantizer_setup_for_current_state()
-        flops_per_module = self._model.get_flops_per_module()
+        flops_per_module = self._model.nncf.get_flops_per_module()
         self._compression_ratio_calculator = CompressionRatioCalculator(
             flops_per_module, current_quantizer_setup,
             self._groups_of_adjacent_quantizers.weight_qp_id_per_activation_qp_id)
@@ -555,7 +555,7 @@ class HAWQPrecisionInitializer(BasePrecisionInitializer):
                     hook_handles.append(wq_module.register_forward_hook(observer.calc_perturbation))
                     observers.append(observer)
 
-            model.do_dummy_forward(force_eval=True)
+            model.nncf.do_dummy_forward(force_eval=True)
 
             for i, observer in enumerate(observers):
                 perturbations.add(layer_id=traces_order.get_execution_index_by_traces_index(i),

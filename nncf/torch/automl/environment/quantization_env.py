@@ -71,7 +71,7 @@ class ModelSizeCalculator:
         for qid, qconfig_space in per_quantizer_config_space.items():
             if isinstance(qid, WeightQuantizerId):
                 self._bw_space_map[qid] = [qconf.num_bits for qconf in qconfig_space]
-                m = qmodel.get_containing_module(qid.target_node_name)
+                m = qmodel.nncf.get_containing_module(qid.target_node_name)
                 self._nparam_map[qid] = np.prod(m.weight.size())
 
         self.min_model_size, self.max_model_size = \
@@ -145,7 +145,7 @@ class QuantizationEnv:
         self._hw_precision_constraints = hw_precision_constraints
         self._bn_adaptation = None
 
-        self.model_name = self.qmodel.nncf_module.__class__.__name__
+        self.model_name = self.qmodel.__class__.__name__
 
         # Check and only proceed if target device is supported by Q.Env
         self.hw_cfg_type = hw_config_type
@@ -239,7 +239,7 @@ class QuantizationEnv:
 
         # Compression Ratio Calculation (BOP relative to 8-bit)
         self.compression_ratio_calculator = CompressionRatioCalculator(
-            self.qmodel.get_flops_per_module(),
+            self.qmodel.nncf.get_flops_per_module(),
             self.qctrl.get_quantizer_setup_for_current_state(),
             self.qctrl.groups_of_adjacent_quantizers.weight_qp_id_per_activation_qp_id)
 
@@ -300,7 +300,7 @@ class QuantizationEnv:
                     get_hook(qid, quantizers_in_exec_order)
                 )
             )
-        self.qmodel.do_dummy_forward(force_eval=True)
+        self.qmodel.nncf.do_dummy_forward(force_eval=True)
         for h in hooklist:
             h.remove()
 
@@ -321,7 +321,7 @@ class QuantizationEnv:
         df['qid_obj'] = df['qid'].apply(lambda x: find_qid_by_str(self.qctrl, x))
         df['qmodule'] = df['qid_obj'].apply(lambda x: self.qctrl.all_quantizations[x])
         df['is_wt_quantizer'] = df['qid_obj'].apply(lambda x: x in self.qctrl.weight_quantizers)
-        df['state_module'] = df['state_scope'].apply(self.qmodel.get_containing_module)
+        df['state_module'] = df['state_scope'].apply(self.qmodel.nncf.get_containing_module)
 
         return df
 
@@ -337,7 +337,7 @@ class QuantizationEnv:
                     module.output_shape_ = output.shape
 
             hook_list = [m.register_forward_hook(annotate_io_shape) for n, m in model.named_modules()]
-            model.do_dummy_forward(force_eval=True)
+            model.nncf.do_dummy_forward(force_eval=True)
             for h in hook_list:
                 h.remove()
 
@@ -359,7 +359,7 @@ class QuantizationEnv:
         master_df.loc[master_df.index[-1], 'prev_action'] = min(self.model_bitwidth_space)
 
         # add GEMM Ops to weight quantizer
-        master_df['n_op'] = master_df['state_scope'].map(self.qmodel.get_flops_per_module())
+        master_df['n_op'] = master_df['state_scope'].map(self.qmodel.nncf.get_flops_per_module())
         master_df['n_op'] = master_df['n_op'].fillna(0)
 
         return master_df, state_list
@@ -462,7 +462,7 @@ class QuantizationEnv:
 
         self.qctrl.enable_weight_quantization()
         self.qctrl.enable_activation_quantization()
-        self.qmodel.rebuild_graph()
+        self.qmodel.nncf.rebuild_graph()
 
     def _run_batchnorm_adaptation(self):
         if self._bn_adaptation is None:
@@ -644,7 +644,7 @@ class QuantizationEnv:
 
 
     def _dump_quantized_graph(self):
-        self.qmodel.get_graph().visualize_graph(osp.join(self.dump_dir, "qenv_graph.dot"))
+        self.qmodel.nncf.get_graph().visualize_graph(osp.join(self.dump_dir, "qenv_graph.dot"))
 
 
     def _dump_groups_of_adjacent_quantizers(self):

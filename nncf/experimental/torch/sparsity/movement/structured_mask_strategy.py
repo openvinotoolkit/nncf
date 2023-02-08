@@ -32,7 +32,7 @@ def detect_supported_model_family(model: NNCFNetwork) -> Optional[str]:
     :return: The string name of the model family that `model` belongs to. If `model` is not supported,
         then returns None.
     """
-    model_pymodules = inspect.getmodule(model.get_nncf_wrapped_model()).__name__.split('.')
+    model_pymodules = inspect.getmodule(model).__name__.split('.')
     if len(model_pymodules) >= 3 and model_pymodules[:2] == ['transformers', 'models']:
         # the case of input model defined by HuggingFace's transformers
         model_family = f'huggingface_{model_pymodules[2]}'
@@ -162,8 +162,8 @@ class HuggingFaceTransformerStructuredMaskStrategy(BaseTransformerStructuredMask
 
     @classmethod
     def from_compressed_model(cls, compressed_model: NNCFNetwork):
-        hidden_dim = compressed_model.nncf_module.bert.config.hidden_size
-        num_heads = compressed_model.nncf_module.bert.config.num_attention_heads
+        hidden_dim = compressed_model.bert.config.hidden_size
+        num_heads = compressed_model.bert.config.num_attention_heads
         return cls(dim_per_head=hidden_dim // num_heads)
 
 
@@ -178,8 +178,8 @@ class HuggingFaceWav2Vec2StructuredMaskStrategy(BaseTransformerStructuredMaskStr
 
     @classmethod
     def from_compressed_model(cls, compressed_model: NNCFNetwork):
-        hidden_dim = compressed_model.nncf_module.wav2vec2.config.hidden_size
-        num_heads = compressed_model.nncf_module.wav2vec2.config.num_attention_heads
+        hidden_dim = compressed_model.wav2vec2.config.hidden_size
+        num_heads = compressed_model.wav2vec2.config.num_attention_heads
         return cls(dim_per_head=hidden_dim // num_heads)
 
 
@@ -194,7 +194,7 @@ class HuggingFaceSwinStructuredMaskStrategy(BaseTransformerStructuredMaskStrateg
 
     @classmethod
     def from_compressed_model(cls, compressed_model: NNCFNetwork):
-        model_config = compressed_model.nncf_module.swin.config
+        model_config = compressed_model.swin.config
         dim_per_head_list = []
         for i, num_head in enumerate(model_config.num_heads):
             hidden_size = model_config.embed_dim * int(2 ** i)

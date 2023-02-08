@@ -79,7 +79,7 @@ class MovementSparsityBuilder(BaseSparsityAlgoBuilder):
 
     def _sparsify_weights(self, target_model: NNCFNetwork) -> List[PTInsertionCommand]:
         device = get_model_device(target_model)
-        sparsified_module_nodes = target_model.get_weighted_original_graph_nodes(
+        sparsified_module_nodes = target_model.nncf.get_weighted_original_graph_nodes(
             nncf_module_names=[m.__name__ for m in SUPPORTED_NNCF_MODULES]
         )
         insertion_commands = []
@@ -103,7 +103,7 @@ class MovementSparsityBuilder(BaseSparsityAlgoBuilder):
                     TransformationPriority.SPARSIFICATION_PRIORITY
                 )
             )
-            sparsified_module = target_model.get_containing_module(node_name)
+            sparsified_module = target_model.nncf.get_containing_module(node_name)
             self._sparsified_module_info.append(
                 SparseModuleInfo(node_name, sparsified_module, sparsifying_operation)
             )

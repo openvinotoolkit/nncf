@@ -141,7 +141,7 @@ class PTCompressionAlgorithmBuilder(BaseCompressionAlgorithmBuilder):
         :param model: An instance of NNCFNetwork for the algorithm to be applied to.
         :return: NNCFNetwork with algorithm-specific modifications applied
         """
-        check_scopes_in_graph(model.get_original_graph(), self.ignored_scopes, self.target_scopes)
+        check_scopes_in_graph(model.nncf.get_original_graph(), self.ignored_scopes, self.target_scopes)
 
         layout = self._get_transformation_layout(model)
         self._handle_frozen_layers(model)
@@ -195,7 +195,7 @@ class PTCompressionAlgorithmBuilder(BaseCompressionAlgorithmBuilder):
 
     def _handle_frozen_layers(self, target_model: NNCFNetwork):
         scopes_of_frozen_layers = []
-        for weighted_node in target_model.get_weighted_original_graph_nodes():
+        for weighted_node in target_model.nncf.get_weighted_original_graph_nodes():
             if not weighted_node.layer_attributes.weight_requires_grad:
                 if self._should_consider_scope(weighted_node.node_name):
                     scopes_of_frozen_layers.append(weighted_node.node_name)

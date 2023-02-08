@@ -61,17 +61,17 @@ def _idfn(val):
 def check_quantizer_operators(model, levels=255, overflow_fix=True):
     """Check that model contains only 8bit FakeQuantize operators."""
 
-    if hasattr(model, "external_quantizers"):
-        for key in list(model.external_quantizers.keys()):
-            op = model.external_quantizers[key]
-            assert isinstance(model.external_quantizers[key], FakeQuantize)
+    if hasattr(model.nncf, "external_quantizers"):
+        for key in list(model.nncf.external_quantizers.keys()):
+            op = model.nncf.external_quantizers[key]
+            assert isinstance(model.nncf.external_quantizers[key], FakeQuantize)
             assert op.quant_max - op.quant_min == levels
 
-    for node in model.get_original_graph().get_all_nodes():
+    for node in model.nncf.get_original_graph().get_all_nodes():
         if node.node_type in ["nncf_model_input", "nncf_model_output"]:
             continue
 
-        nncf_module = model.get_containing_module(node.node_name)
+        nncf_module = model.nncf.get_containing_module(node.node_name)
 
         if hasattr(nncf_module, "pre_ops"):
             for key in list(nncf_module.pre_ops.keys()):

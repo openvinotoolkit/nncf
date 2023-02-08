@@ -255,7 +255,7 @@ class Wav2Vec2RunRecipe(BaseMockRunRecipe):
     def get_nncf_modules_in_transformer_block_order(
             compressed_model: NNCFNetwork) -> List[DictInTransformerBlockOrder]:
         modules = []
-        for block in compressed_model.nncf_module.wav2vec2.encoder.layers:
+        for block in compressed_model.wav2vec2.encoder.layers:
             modules.append(DictInTransformerBlockOrder(
                 block.attention.q_proj,
                 block.attention.k_proj,
@@ -318,7 +318,7 @@ class BertRunRecipe(BaseMockRunRecipe):
     def get_nncf_modules_in_transformer_block_order(
             compressed_model: NNCFNetwork) -> List[DictInTransformerBlockOrder]:
         modules = []
-        for block in compressed_model.nncf_module.bert.encoder.layer:
+        for block in compressed_model.bert.encoder.layer:
             modules.append(DictInTransformerBlockOrder(
                 block.attention.self.query,
                 block.attention.self.key,
@@ -396,7 +396,7 @@ class SwinRunRecipe(BaseMockRunRecipe):
     def get_nncf_modules_in_transformer_block_order(
             compressed_model: NNCFNetwork) -> List[DictInTransformerBlockOrder]:
         modules = []
-        for layer in compressed_model.nncf_module.swin.encoder.layers:
+        for layer in compressed_model.swin.encoder.layers:
             for block in layer.blocks:
                 modules.append(DictInTransformerBlockOrder(
                     block.attention.self.query,

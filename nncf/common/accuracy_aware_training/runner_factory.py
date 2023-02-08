@@ -40,12 +40,14 @@ class EarlyExitTrainingRunnerCreator(TrainingRunnerCreator):
 
     def __init__(self, accuracy_aware_training_params: Dict[str, object],
                  compression_controller: CompressionAlgorithmController,
+                 original_model_accuracy: float,
                  verbose: bool, dump_checkpoints: bool, lr_updates_needed: bool):
         self.accuracy_aware_training_params = accuracy_aware_training_params
         self.compression_controller = compression_controller
         self.lr_updates_needed = lr_updates_needed
         self.verbose = verbose
         self.dump_checkpoints = dump_checkpoints
+        self.original_model_accuracy = original_model_accuracy
 
     def create_training_loop(self) -> BaseAccuracyAwareTrainingRunner:
         """
@@ -56,11 +58,15 @@ class EarlyExitTrainingRunnerCreator(TrainingRunnerCreator):
         nncf_backend = get_backend(self.compression_controller.model)
         if nncf_backend is BackendType.TORCH:
             from nncf.torch.accuracy_aware_training.runner import PTAccuracyAwareTrainingRunner
-            return PTAccuracyAwareTrainingRunner(self.accuracy_aware_training_params, self.verbose,
+            return PTAccuracyAwareTrainingRunner(self.accuracy_aware_training_params,
+                                                 self.original_model_accuracy,
+                                                 self.verbose,
                                                  self.dump_checkpoints, self.lr_updates_needed)
         if nncf_backend == BackendType.TENSORFLOW:
             from nncf.tensorflow.accuracy_aware_training.runner import TFAccuracyAwareTrainingRunner
-            return TFAccuracyAwareTrainingRunner(self.accuracy_aware_training_params, self.verbose,
+            return TFAccuracyAwareTrainingRunner(self.accuracy_aware_training_params,
+                                                 self.original_model_accuracy,
+                                                 self.verbose,
                                                  self.dump_checkpoints, self.lr_updates_needed)
         raise RuntimeError('Got an unsupported value of nncf_backend')
 
@@ -72,10 +78,12 @@ class AdaptiveCompressionLevelTrainingRunnerCreator(TrainingRunnerCreator):
 
     def __init__(self, accuracy_aware_training_params: Dict[str, object],
                  compression_controller: CompressionAlgorithmController,
+                 original_model_accuracy: float,
                  verbose: bool, dump_checkpoints: bool, lr_updates_needed: bool,
                  minimal_compression_rate: float, maximal_compression_rate: float):
         self.accuracy_aware_training_params = accuracy_aware_training_params
         self.compression_controller = compression_controller
+        self.original_model_accuracy = original_model_accuracy
         self.lr_updates_needed = lr_updates_needed
         self.verbose = verbose
         self.minimal_compression_rate = minimal_compression_rate
@@ -93,6 +101,7 @@ class AdaptiveCompressionLevelTrainingRunnerCreator(TrainingRunnerCreator):
         if nncf_backend is BackendType.TORCH:
             from nncf.torch.accuracy_aware_training.runner import PTAdaptiveCompressionLevelTrainingRunner
             return PTAdaptiveCompressionLevelTrainingRunner(self.accuracy_aware_training_params,
+                                                            self.original_model_accuracy,
                                                             self.verbose, self.dump_checkpoints,
                                                             self.lr_updates_needed,
                                                             self.minimal_compression_rate,
@@ -100,6 +109,7 @@ class AdaptiveCompressionLevelTrainingRunnerCreator(TrainingRunnerCreator):
         if nncf_backend == BackendType.TENSORFLOW:
             from nncf.tensorflow.accuracy_aware_training.runner import TFAdaptiveCompressionLevelTrainingRunner
             return TFAdaptiveCompressionLevelTrainingRunner(self.accuracy_aware_training_params,
+                                                            self.original_model_accuracy,
                                                             self.verbose, self.dump_checkpoints,
                                                             self.lr_updates_needed,
                                                             self.minimal_compression_rate,

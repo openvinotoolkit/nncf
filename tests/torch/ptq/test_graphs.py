@@ -12,13 +12,13 @@
  limitations under the License.
 """
 
-import os
+from pathlib import Path
+
 import pytest
 from functools import partial
 
 from nncf.torch.layers import LSTMCellNNCF
 from nncf.torch.layers import NNCF_RNN
-from nncf.torch.nncf_network import ExtraCompressionModuleType
 
 from tests.torch import test_models
 from tests.torch.test_compressed_graph import ModelDesc
@@ -36,7 +36,7 @@ SKIP_MARK = pytest.mark.skip('Model is not supported yet')
 @pytest.fixture(scope='function', params=ALGOS)
 def graph_dir(request):
     quantization_type = request.param
-    graph_dir = os.path.join('quantized', quantization_type)
+    graph_dir = Path('quantized') / 'ptq' / quantization_type
     return graph_dir
 
 
@@ -84,16 +84,9 @@ def test_min_max_classification_quantized_graphs(desc: ModelDesc, graph_dir, moc
     model = desc.model_builder()
 
     nncf_network = get_nncf_network(model, desc.input_sample_sizes)
-    nncf_network.register_compression_module_type(ExtraCompressionModuleType.EXTERNAL_QUANTIZER)
     quantization_algorithm = get_min_max_algo_for_test()
 
     quantized_model = quantization_algorithm.apply(nncf_network, dataset=None)
 
-    quantized_model.rebuild_graph()
-    quantized_model.do_dummy_forward()
-    # internal wrapped model is still in eval mode, switch to the train mode to make sure training graph is ok
-    quantized_model.train()
-    quantized_model.rebuild_graph()
-    quantized_model.do_dummy_forward()
-    check_graph(quantized_model.get_graph(), desc.dot_filename, graph_dir)
+    check_graph(quantized_model.nncf.get_graph(), desc.dot_filename, graph_dir)
     return quantized_model

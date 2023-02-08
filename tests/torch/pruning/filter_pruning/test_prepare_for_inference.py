@@ -49,7 +49,7 @@ def _get_config_for_algo(input_size, quantization=False):
 @pytest.mark.parametrize("enable_quantization", (True, False), ids=("with_quantization", "no_quantization"))
 def test_prepare_for_inference_pruning(enable_quantization):
     input_size = [1, 1, 8, 8]
-    model = BigPruningTestModel()
+    model = BigPruningTestModel().eval()
     config = _get_config_for_algo(input_size, enable_quantization)
     compressed_model, compression_ctrl = create_compressed_model_and_algo_for_test(model, config)
 
@@ -61,8 +61,8 @@ def test_prepare_for_inference_pruning(enable_quantization):
 
     check_quantizer_operators(inference_model)
 
-    conv2_wight = inference_model.nncf_module.conv2.weight.data
-    assert torch.count_nonzero(conv2_wight) * 2 == torch.numel(conv2_wight), "Model was not pruned"
+    conv2_weight = inference_model.conv2.weight.data
+    assert torch.count_nonzero(conv2_weight) * 2 == torch.numel(conv2_weight), "Model was not pruned"
 
     assert torch.equal(x_nncf, x_torch), f"{x_nncf=} != {x_torch}"
 

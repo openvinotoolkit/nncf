@@ -514,7 +514,7 @@ class ElasticWidthHandler(SingleElasticityHandler):
         self._weights_normalizer_fn = weights_normalizer_fn
         self._add_dynamic_inputs = add_dynamic_inputs
 
-        graph = self._target_model.get_original_graph()
+        graph = self._target_model.nncf.get_original_graph()
         prunable_types = [NNCFConv2d.op_func_name, NNCFLinear.op_func_name]
         self._shape_pruning_processor = ShapePruningProcessor(
             prunable_types=prunable_types,
@@ -696,7 +696,7 @@ class ElasticWidthHandler(SingleElasticityHandler):
             Dictionary with the number of output channels from convolution and linear layers:
             {node_name: output_channels_num}
         """
-        graph = self._target_model.get_graph()
+        graph = self._target_model.nncf.get_graph()
         in_channels, out_channels = get_prunable_layers_in_out_channels(graph)
 
         for group in self._pruned_module_groups_info.get_all_clusters():
@@ -919,7 +919,7 @@ class ElasticWidthBuilder(SingleElasticityBuilder):
         filter_importance_str = self._params.filter_importance
         filter_importance = FILTER_IMPORTANCE_FUNCTIONS.get(filter_importance_str)
 
-        graph = target_model.get_original_graph()
+        graph = target_model.nncf.get_original_graph()
         device = next(target_model.parameters()).device
 
         if not self._grouped_node_names_to_prune:
@@ -978,7 +978,7 @@ class ElasticWidthBuilder(SingleElasticityBuilder):
                         TransformationPriority.PRUNING_PRIORITY
                     )
                 )
-                pruned_module = target_model.get_containing_module(node_name)
+                pruned_module = target_model.nncf.get_containing_module(node_name)
                 assert isinstance(pruned_module, (nn.Conv2d, nn.Linear)), \
                     'currently prune only 2D Convolutions and Linear layers'
 

@@ -145,7 +145,7 @@ def tests_weights_after_onnx_export(tmp_path):
 
     weights_sparse_prepare = []
     for node in graph_prepare.initializer:
-        if node.name in ["nncf_module.conv1.weight", "nncf_module.conv2.weight"]:
+        if node.name in ["conv1.weight", "conv2.weight"]:
             data = onnx.numpy_helper.to_array(node)
             weights_sparse_prepare.append(data)
 
