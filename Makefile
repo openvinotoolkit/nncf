@@ -19,7 +19,7 @@ install-onnx-dev: install-onnx-test
 	pip install pylint==$(PYLINT_VERSION)
 
 test-onnx:
-	pytest tests/onnx $(DATA_ARG) --junitxml ${JUNITXML_PATH}
+	pytest tests/onnx --junitxml ${JUNITXML_PATH}
 
 ONNX_PYFILES := $(shell find examples/post_training_quantization/onnx -type f -name "*.py")
 pylint-onnx:
