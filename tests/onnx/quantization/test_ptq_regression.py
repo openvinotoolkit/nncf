@@ -45,6 +45,14 @@ def data(request):
     return Path(option)
 
 
+@pytest.fixture(name="model_dir")
+def models(request, tmp_path):
+    option = request.config.getoption("--model-dir")
+    if option is None:
+        return Path(tmp_path)
+    return Path(option)
+
+
 def download_dataset(dataset_path: Path) -> Path:
     downloader = FastDownload(base=dataset_path,
                               archive='downloaded',
@@ -97,8 +105,8 @@ def validate(quantized_model_path: Path, data_loader: torch.utils.data.DataLoade
 
 
 @pytest.mark.parametrize('model_url, model_name, int8_ref_top1', MODELS, ids=[model_name[1] for model_name in MODELS])
-def test_compression(tmp_path, data_dir, model_url, model_name, int8_ref_top1):
-    original_model_path = download_model(model_url, tmp_path)
+def test_compression(tmp_path, model_dir, data_dir, model_url, model_name, int8_ref_top1):
+    original_model_path = download_model(model_url, model_dir)
     dataset_path = download_dataset(data_dir)
 
     normalize = transforms.Normalize(mean=[0.485, 0.456, 0.406],

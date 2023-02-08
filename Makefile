@@ -4,6 +4,9 @@ JUNITXML_PATH ?= nncf-tests.xml
 ifdef DATA
 	DATA_ARG := --data $(DATA)
 endif
+ifdef MODEL_DIR
+	MODEL_DIR_ARG := --model-dir $(MODEL_DIR)
+endif
 
 ###############################################################################
 # ONNX backend
@@ -19,7 +22,7 @@ install-onnx-dev: install-onnx-test
 	pip install pylint==$(PYLINT_VERSION)
 
 test-onnx:
-	pytest tests/onnx $(DATA_ARG) --junitxml ${JUNITXML_PATH}
+	pytest tests/onnx $(DATA_ARG) ${MODEL_DIR_ARG}--junitxml ${JUNITXML_PATH}
 
 ONNX_PYFILES := $(shell find examples/post_training_quantization/onnx -type f -name "*.py")
 pylint-onnx:
