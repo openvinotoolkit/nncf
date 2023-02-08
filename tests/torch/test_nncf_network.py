@@ -210,16 +210,16 @@ def test_custom_module_registering():
     # Check user ops metatypes
     graph = nncf_model.get_original_graph()
     nodes_dict = {
-       'TwoConvTestModelWithUserModule/ModuleOfUser[user_module]/rand_like_0': UnknownMetatype,
-       'TwoConvTestModelWithUserModule/ModuleOfUser[user_module]/conv2d_0': PTConv2dMetatype,
+        'TwoConvTestModelWithUserModule/ModuleOfUser[user_module]/rand_like_0': UnknownMetatype,
+        'TwoConvTestModelWithUserModule/ModuleOfUser[user_module]/conv2d_0': PTConv2dMetatype,
         'TwoConvTestModelWithUserModule/ModuleOfUser[user_module]/NNCFConv2d[conv]/conv2d_0':
             PTModuleConv2dMetatype,
-       'TwoConvTestModelWithUserModule/NNCFUserRegisteredModuleOfUser[registered_user_module]/rand_like_0':
-           UnknownMetatype,
-       'TwoConvTestModelWithUserModule/NNCFUserRegisteredModuleOfUser[registered_user_module]/conv2d_0':
+        'TwoConvTestModelWithUserModule/NNCFUserRegisteredModuleOfUser[registered_user_module]/rand_like_0':
+            UnknownMetatype,
+        'TwoConvTestModelWithUserModule/NNCFUserRegisteredModuleOfUser[registered_user_module]/conv2d_0':
             PTModuleConv2dMetatype,
         'TwoConvTestModelWithUserModule/NNCFUserRegisteredModuleOfUser[registered_user_module]/Conv2d[conv]/conv2d_0':
-           PTConv2dMetatype,
+            PTConv2dMetatype,
     }
     for node_name, ref_metatype in nodes_dict.items():
         assert graph.get_node_by_name(node_name).metatype is ref_metatype
@@ -700,29 +700,57 @@ class TwoConvTestModelWithUniqueFunction(TwoConvTestModel):
 
 
 def test_get_attr():
+    model = TwoConvTestModelWithUniqueFunction()
+    nncf_network = NNCFNetwork(model, [ModelInputInfo([1, 1, 4, 4])])
+
+    assert hasattr(nncf_network, 'unique_attr')
+    assert hasattr(nncf_network, 'non_unique_attr')
+    assert isinstance(nncf_network.train_step, partial)
+    assert isinstance(nncf_network.train_step.args[0], NNCFNetwork)
+    assert not isinstance(nncf_network.static_func, partial)
+
+
+class ModelWithAttr(torch.nn.Module):
+    CLASS_ATTR = 0
+
+    def __init__(self):
+        super().__init__()
+        self.instance_attr = 0
+        self._input_infos = 0  # deliberately set to coincide with an attr in NNCFNetwork
+
+    def forward(self, x):
+        return x
+
+
+def test_setting_attrs():
+    model = ModelWithAttr()
+    assert model.CLASS_ATTR == 0
+    assert model.instance_attr == 0
+    assert model._input_infos == 0
+    nncf_network = NNCFNetwork(model, input_infos=[ModelInputInfo([1])])
+    #pylint:disable=protected-access
+    assert nncf_network.get_nncf_wrapped_model()._input_infos == 0
+
+    nncf_network.instance_attr = 1
+    assert nncf_network.get_nncf_wrapped_model().instance_attr == 1
+
+    nncf_network.non_original_model_attr = 1
+    assert nncf_network.non_original_model_attr == 1
+    assert hasattr(nncf_network.get_nncf_wrapped_model(), "non_original_model_attr")
+    assert nncf_network.get_nncf_wrapped_model().non_original_model_attr == 1
+
+def test_replacing_forward():
+    model = ModelWithAttr()
+    nncf_network = NNCFNetwork(model, input_infos=[ModelInputInfo([1])])
     is_called_mock_forward = False
 
     def mock_forward(*args, **kwargs):
         nonlocal is_called_mock_forward
         is_called_mock_forward = True
 
-    model = TwoConvTestModelWithUniqueFunction()
-    config = get_basic_sparsity_plus_quantization_config()
-    register_bn_adaptation_init_args(config)
-    sparse_quantized_model, _ = create_compressed_model_and_algo_for_test(model, config)
-
-    sparse_quantized_model.non_unique_attr = 'NNCFNetwork_non_unique_attr'
-    sparse_quantized_model.forward = mock_forward
-    sparse_quantized_model.forward()
+    nncf_network.forward = mock_forward
+    nncf_network.forward(None)
     assert is_called_mock_forward
-
-    assert hasattr(sparse_quantized_model, 'unique_attr')
-    assert hasattr(sparse_quantized_model, 'non_unique_attr')
-    assert sparse_quantized_model.non_unique_attr == 'NNCFNetwork_non_unique_attr'
-    assert isinstance(sparse_quantized_model.train_step, partial)
-    assert isinstance(sparse_quantized_model.train_step.args[0], NNCFNetwork)
-    assert not isinstance(sparse_quantized_model.static_func, partial)
-
 
 def test_temporary_clean_view():
     model = TwoConvTestModelWithUserModule()
