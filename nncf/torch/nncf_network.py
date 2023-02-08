@@ -275,6 +275,10 @@ class NNCFNetwork(nn.Module, PostGraphBuildActing):
                                                               ShapeIgnoringTensorMetaComparator())
             self._load_listener = None
 
+    @property
+    def input_infos(self) -> List[ModelInputInfo]:
+        return deepcopy(self._input_infos)
+
     @debuggable_forward
     def forward(self, *args, **kwargs):
         with self._compressed_context as ctx:  # type: TracingContext
