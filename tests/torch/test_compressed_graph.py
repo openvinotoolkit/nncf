@@ -29,6 +29,7 @@ from tests.torch.test_models.synthetic import ConvRelu6HSwishHSigmoid
 from tests.torch.test_models.synthetic import FC_ConstMul
 from tests.torch.test_models.synthetic import MMDivConv
 from tests.torch.test_models.synthetic import MatMulDivConv
+from tests.torch.test_models.synthetic import InplaceThenQuantizableOpModel
 from torch import nn
 import torch.nn.functional as F
 
@@ -706,7 +707,8 @@ SYNTHETIC_MODEL_DESC_LIST = [
     GeneralModelDesc(model_builder=ConvRelu6HSwishHSigmoid, input_sample_sizes=([1, 1, 5, 5],)),
     GeneralModelDesc(model_builder=ConvBNLeakyReLU, input_sample_sizes=([1, 1, 5, 5],)),
     GeneralModelDesc(model_builder=FC_ConstMul, input_sample_sizes=[1, 3, 6]),
-    GeneralModelDesc(model_builder=ConvGeluGetItem, input_sample_sizes=([1, 6, 6],))
+    GeneralModelDesc(model_builder=ConvGeluGetItem, input_sample_sizes=([1, 6, 6],)),
+    GeneralModelDesc(model_builder=InplaceThenQuantizableOpModel, input_sample_sizes=[1, 8, 8])
 ]
 
 

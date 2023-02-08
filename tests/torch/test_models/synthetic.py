@@ -316,3 +316,14 @@ class FC_ConstMul(torch.nn.Module):
         x1 = self.fc1(x)
         x1 = x1 * 2
         return x + x1
+
+class InplaceThenQuantizableOpModel(nn.Module):
+    def __init__(self):
+        super().__init__()
+        self.conv = create_conv(1, 2, 2, 2)
+
+    def forward(self, x: torch.Tensor):
+        y = x * 1.0
+        y.unsqueeze_(0)
+        z = self.conv(y)
+        return z
