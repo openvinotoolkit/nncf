@@ -134,10 +134,10 @@ class PTExporter(Exporter):
             single_batch_info.shape = input_shape
             input_tensor_list.append(create_mock_tensor(single_batch_info, 'cpu'))
 
-        original_forward = model.forward
+        original_forward = model.get_nncf_wrapped_model().forward
         args = self._model_args[:-1]
         kwargs = self._model_args[-1]
-        model.forward = partial(model.forward, *args, **kwargs)
+        model.forward = partial(original_forward, *args, **kwargs)
 
         if self._input_names is not None:
             input_names = self._input_names
