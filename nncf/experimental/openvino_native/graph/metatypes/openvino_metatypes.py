@@ -558,6 +558,18 @@ class OVResultMetatype(OVOpMetatype):
     op_names = ['Result']
 
 
+@OV_OPERATOR_METATYPES.register()
+class OVSwishMetatype(OVOpMetatype):
+    name = 'SwishOp'
+    op_names = ['Swish']
+
+
+@OV_OPERATOR_METATYPES.register()
+class OVClampMetatype(OVOpMetatype):
+    name = 'ClampOp'
+    op_names = ['Clamp']
+
+
 GENERAL_WEIGHT_LAYER_METATYPES = [OVConvolutionMetatype,
                                   OVGroupConvolutionMetatype,
                                   OVDepthwiseConvolutionMetatype,

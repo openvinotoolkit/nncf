@@ -12,7 +12,7 @@
 """
 
 from nncf.common.graph.patterns import merge_two_types_of_operations
-from nncf.common.graph.graph_matching import GraphPattern
+from nncf.common.graph.patterns import GraphPattern
 from nncf.onnx.graph.metatypes.onnx_metatypes import ONNXConvolutionMetatype
 from nncf.onnx.graph.metatypes.onnx_metatypes import ONNXDepthwiseConvolutionMetatype
 from nncf.onnx.graph.metatypes.onnx_metatypes import ONNXConvolutionTransposeMetatype
