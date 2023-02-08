@@ -25,7 +25,6 @@ from nncf.common.graph.transformations.commands import TargetType
 from nncf.onnx.graph.transformations.commands import ONNXQuantizerInsertionCommand
 from nncf.onnx.graph.transformations.commands import ONNXOutputInsertionCommand
 from nncf.onnx.graph.transformations.commands import ONNXQDQNodeRemovingCommand
-from nncf.common.quantization.structs import QuantizationMode
 from nncf.onnx.graph.model_transformer import ONNXModelTransformer
 from nncf.onnx.graph.onnx_graph import ONNXGraph
 from nncf.onnx.graph.nncf_graph_builder import GraphConverter
@@ -129,7 +128,8 @@ def test_inserted_quantizer_parameters(test_parameters):
             for attr in node.attribute:
                 assert test_parameters.onnx_attributes[attr.name] == onnx.helper.get_attribute_value(attr)
             assert np.allclose(onnx_graph.get_initializers_value(node.input[1]), test_parameters.scale.astype(dtype))
-            assert np.allclose(onnx_graph.get_initializers_value(node.input[2]), test_parameters.zero_point.astype(dtype))
+            assert np.allclose(onnx_graph.get_initializers_value(node.input[2]),
+                               test_parameters.zero_point.astype(dtype))
             assert onnx_graph.get_initializers_value(node.input[2]).dtype == test_parameters.onnx_dtype
 
 

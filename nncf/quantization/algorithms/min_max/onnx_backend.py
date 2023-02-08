@@ -11,7 +11,7 @@
  limitations under the License.
 """
 
-from typing import Dict, List, Tuple, Optional
+from typing import Dict, List, Tuple
 import numpy as np
 
 from nncf.common.graph.graph import NNCFGraph
