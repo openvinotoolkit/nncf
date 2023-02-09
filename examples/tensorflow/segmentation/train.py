@@ -33,7 +33,7 @@ from examples.tensorflow.common.object_detection.checkpoint_utils import get_var
 from examples.tensorflow.common.object_detection.datasets.builder import COCODatasetBuilder
 from examples.tensorflow.common.optimizer import build_optimizer
 from examples.tensorflow.common.sample_config import create_sample_config
-from examples.tensorflow.common.sample_config import SampleConfig
+from examples.common.sample_config import SampleConfig
 from examples.tensorflow.common.scheduler import build_scheduler
 from examples.tensorflow.common.utils import configure_paths
 from examples.tensorflow.common.utils import create_code_snapshot

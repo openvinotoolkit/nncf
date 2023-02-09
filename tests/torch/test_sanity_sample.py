@@ -26,7 +26,7 @@ from pytest_dependency import depends
 
 from examples.torch.common.model_loader import COMPRESSION_STATE_ATTR
 from examples.torch.common.optimizer import get_default_weight_decay
-from examples.torch.common.sample_config import SampleConfig
+from examples.common.sample_config import SampleConfig
 from examples.torch.common.utils import get_name
 from examples.torch.common.utils import is_staged_quantization
 from nncf.api.compression import CompressionStage

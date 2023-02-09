@@ -4,7 +4,6 @@
     "input_info": {
         "sample_size": [1, 299, 299, 3]
     },
-
     "batch_size": 256,
     "epochs": 10,
 

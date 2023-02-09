@@ -28,7 +28,7 @@ from examples.tensorflow.common.logger import logger
 from examples.tensorflow.common.object_detection.datasets.builder import COCODatasetBuilder
 from examples.tensorflow.common.object_detection.checkpoint_utils import get_variables
 from examples.tensorflow.common.sample_config import create_sample_config
-from examples.tensorflow.common.sample_config import SampleConfig
+from examples.common.sample_config import SampleConfig
 from examples.tensorflow.common.utils import configure_paths
 from examples.tensorflow.common.utils import get_saving_parameters
 from examples.tensorflow.common.utils import print_args

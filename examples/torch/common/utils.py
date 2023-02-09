@@ -29,7 +29,7 @@ from torch.utils import data
 
 from examples.torch.common.distributed import configure_distributed
 from examples.torch.common.execution import ExecutionMode, get_device
-from examples.torch.common.sample_config import SampleConfig
+from examples.common.sample_config import SampleConfig
 from torch.utils.tensorboard import SummaryWriter
 import mlflow
 import torch
