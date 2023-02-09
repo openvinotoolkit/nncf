@@ -83,6 +83,9 @@ class ONNXModelTransformer(ModelTransformer):
             model = self._apply_output_insertion_transformations(output_insert_transformations)
         if model_extraction_transformation:
             model = self._apply_model_extraction_transformation(model_extraction_transformation)
+        # No transformation applied
+        if model is None:
+            return deepcopy(self._model)
         return model
 
     def _apply_output_insertion_transformations(self,
