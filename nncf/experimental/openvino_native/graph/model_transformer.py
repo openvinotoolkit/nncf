@@ -11,7 +11,7 @@
  limitations under the License.
 """
 
-from typing import List
+from typing import List, Dict
 from enum import Enum
 
 import openvino.runtime as ov
@@ -86,11 +86,11 @@ class OVModelTransformer(ModelTransformer):
             model = self._apply_quantizer_insertion_transformations(quantizer_insertion_transformations)
         if bias_correction_transformations:
             model = self._apply_bias_correction_transformations(bias_correction_transformations)
+        if model_extraction_transformation:
+            model = self._apply_model_extraction_transformation(model_extraction_transformation)
         # Creating New model transformations
         if output_insertion_transformations:
             model = self._apply_output_insertion_transformations(output_insertion_transformations)
-        if model_extraction_transformation:
-            model = self._apply_model_extraction_transformation(model_extraction_transformation)
         # No transformation applied
         if model is None:
             return self._model.clone()
@@ -192,7 +192,7 @@ class OVModelTransformer(ModelTransformer):
         return model
 
     def _insert_fake_quantize_op(self, transformation: OVQuantizerInsertionCommand,
-                                 name_to_node_mapping, model_precision) -> ov.Model:
+                                 name_to_node_mapping: Dict[str, ov.Node], model_precision: ModelPrecision) -> None:
         fq_params = transformation.quantizer_parameters
         input_low = fq_params.input_low
         input_high = fq_params.input_high
@@ -270,7 +270,7 @@ class OVModelTransformer(ModelTransformer):
         :param transformation: Model extraction transformation.
         :return: Extracted sub-model.
         """
-        model = self._model
+        model = self._model.clone()
         name_to_node_mapping = {op.get_friendly_name(): op for op in model.get_ops()}
         params, results = [], []
         for input_name in transformation.inputs:
