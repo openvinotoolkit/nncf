@@ -163,9 +163,11 @@ class ONNXModelTransformer(ModelTransformer):
         if model.metadata_props:
             values = {p.key: p.value for p in model.metadata_props}
             onnx.helper.set_model_props(new_model, values)
-        if model.opset_import:
-            values = {p.key: p.value for p in model.opset_import}
-            onnx.helper.set_model_props(new_model, values)
+        del new_model.opset_import[:]
+        for oimp in model.opset_import:
+            op_set = new_model.opset_import.add()
+            op_set.domain = oimp.domain
+            op_set.version = oimp.version
         return new_model
 
     def _apply_quantizer_insertion_transformations(self, transformations: List[ONNXQuantizerInsertionCommand]) \
