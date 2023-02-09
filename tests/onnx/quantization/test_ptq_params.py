@@ -16,6 +16,7 @@ from nncf.parameters import TargetDevice
 from nncf.onnx.statistics.collectors import ONNXMeanMinMaxStatisticCollector
 from nncf.onnx.statistics.collectors import ONNXMinMaxStatisticCollector
 from nncf.quantization.algorithms.definitions import RangeType
+from nncf.quantization.algorithms.definitions import OverflowFix
 from nncf.quantization.algorithms.post_training.algorithm import PostTrainingQuantization
 from nncf.quantization.algorithms.post_training.algorithm import PostTrainingQuantizationParameters
 from nncf.quantization.algorithms.min_max.algorithm import MinMaxQuantization
@@ -124,10 +125,9 @@ def test_ignored_scopes(ignored_scopes):
     assert weight_num_q == 1
 
 
-@pytest.mark.parametrize('overflow_fix', ['enable', 'disable', 'first_layer_only'])
+@pytest.mark.parametrize('overflow_fix', OverflowFix)
 def test_overflow_fix(overflow_fix):
     algo = PostTrainingQuantization(PostTrainingQuantizationParameters(overflow_fix=overflow_fix))
     min_max_algo = algo.algorithms[0]
     min_max_algo._backend_entity = ONNXMinMaxAlgoBackend()
-    nncf_graph = NNCFGraphToTest().nncf_graph
     assert min_max_algo._parameters.overflow_fix == overflow_fix
