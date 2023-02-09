@@ -21,6 +21,7 @@ from openvino.runtime import opset9 as opset
 from nncf.common.graph.model_transformer import ModelTransformer
 from nncf.common.graph.transformations.layout import TransformationLayout
 from nncf.common.graph.transformations.commands import TargetType
+from nncf.common.utils.logger import logger
 from nncf.experimental.openvino_native.graph.transformations.commands import OVQuantizerInsertionCommand
 from nncf.experimental.openvino_native.graph.transformations.commands import OVOutputInsertionCommand
 from nncf.experimental.openvino_native.graph.transformations.commands import OVModelExtractionCommand
@@ -93,6 +94,7 @@ class OVModelTransformer(ModelTransformer):
             model = self._apply_output_insertion_transformations(output_insertion_transformations)
         # No transformation applied
         if model is None:
+            logger.warning('No transformations were applied to the model. The copy of the model is returned.')
             return self._model.clone()
         return model
 
