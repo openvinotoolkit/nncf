@@ -24,6 +24,7 @@ from nncf.quantization.algorithms.algorithm import Algorithm
 from nncf.quantization.algorithms.algorithm import AlgorithmParameters
 from nncf.quantization.algorithms.definitions import RangeType
 from nncf.quantization.algorithms.definitions import Granularity
+from nncf.quantization.algorithms.definitions import OverflowFix
 from nncf.quantization.algorithms.fast_bias_correction.algorithm import FastBiasCorrection
 from nncf.quantization.algorithms.fast_bias_correction.algorithm import FastBiasCorrectionParameters
 from nncf.quantization.algorithms.bias_correction.algorithm import BiasCorrection
@@ -54,7 +55,7 @@ class PostTrainingQuantizationParameters(AlgorithmParameters):
                  range_type: RangeType = RangeType.MEAN_MINMAX,
                  quantize_outputs: bool = False,
                  ignored_scopes: Optional[List[str]] = None,
-                 overflow_fix: str = 'first_layer_only',
+                 overflow_fix: OverflowFix = OverflowFix.FIRST_LAYER,
                  fast_bias_correction: bool = True,
                  ):
         """

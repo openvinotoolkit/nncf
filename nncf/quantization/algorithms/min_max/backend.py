@@ -101,6 +101,7 @@ class MinMaxAlgoBackend(ABC):
     @abstractmethod
     def create_weight_quantizer_insertion_command(target_point: TargetPoint,
                                                   quantizer_config: QuantizerConfig,
+                                                  half_range: bool,
                                                   weight_tensor: np.ndarray,
                                                   node: NNCFNode) -> TransformationCommand:
         """
@@ -108,6 +109,8 @@ class MinMaxAlgoBackend(ABC):
 
         :param target_point: Target location for the correction.
         :param quantizer_config: QuantizerConfig instance for the current layer.
+        :param half_range: If ``True`` effectively only a half of an quantizer range are used.
+        False - the full range are used.
         :param weight_tensor: weight tensor to calculate weight quantization parameters.
         :param node: NNCFNode with the attributes.
         :return: Backend-specific TransformationCommand for the quantizer insertion operation.

@@ -22,3 +22,9 @@ class Granularity(Enum):
 class RangeType(Enum):
     MINMAX = 'min_max'
     MEAN_MINMAX = 'mean_min_max'
+
+
+class OverflowFix(Enum):
+    ENABLE = 'enable'
+    FIRST_LAYER = 'first_layer_only'
+    DISABLE = 'disable'

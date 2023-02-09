@@ -42,6 +42,7 @@ from nncf.quantization.algorithms.algorithm import AlgorithmParameters
 from nncf.quantization.algorithms.min_max.backend import ALGO_BACKENDS
 from nncf.quantization.algorithms.definitions import RangeType
 from nncf.quantization.algorithms.definitions import Granularity
+from nncf.quantization.algorithms.definitions import OverflowFix
 from nncf.common.factory import NNCFGraphFactory
 from nncf.common.tensor_statistics.statistic_point import StatisticPoint
 from nncf.common.tensor_statistics.statistic_point import StatisticPointsContainer
@@ -74,7 +75,7 @@ class MinMaxQuantizationParameters(AlgorithmParameters):
                  range_type: Optional[RangeType] = None,
                  quantize_outputs: bool = False,
                  ignored_scopes: Optional[List[str]] = None,
-                 overflow_fix: str = 'first_layer_only'
+                 overflow_fix: OverflowFix = OverflowFix.FIRST_LAYER
                  ):
         """
         :param number_samples: Number of samples for the statistics collection.
@@ -371,7 +372,7 @@ class MinMaxQuantization(Algorithm):
                 if weight_tensor_name in weight_tensor_names:
                     continue
                 _is_half_range = False
-                if (self._parameters.overflow_fix == 'first_layer_only' and not weight_tensor_names) or \
+                if (self._parameters.overflow_fix == OverflowFix.FIRST_LAYER and not weight_tensor_names) or \
                         self._parameters.overflow_fix == 'enable':
                     _is_half_range = True
                 command = self._backend_entity.create_weight_quantizer_insertion_command(quantization_target_point,

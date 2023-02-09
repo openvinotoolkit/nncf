@@ -85,8 +85,10 @@ class OVMinMaxAlgoBackend(MinMaxAlgoBackend):
     @staticmethod
     def create_weight_quantizer_insertion_command(target_point: OVTargetPoint,
                                                   quantizer_config: QuantizerConfig,
+                                                  half_range: bool,
                                                   weight_tensor: np.ndarray,
                                                   node: NNCFNode) -> OVQuantizerInsertionCommand:
+        #TODO (kshpv): add support of half_range
         parameters = calculate_weight_quantizer_parameters(weight_tensor, quantizer_config, node.metatype)
         return OVQuantizerInsertionCommand(target_point, parameters)
 

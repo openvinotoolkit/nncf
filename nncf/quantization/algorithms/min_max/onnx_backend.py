@@ -84,11 +84,11 @@ class ONNXMinMaxAlgoBackend(MinMaxAlgoBackend):
     @staticmethod
     def create_weight_quantizer_insertion_command(target_point: ONNXTargetPoint,
                                                   quantizer_config: QuantizerConfig,
-                                                  _is_half_range: bool,
+                                                  half_range: bool,
                                                   weight_tensor: np.ndarray,
                                                   node: NNCFNode) -> ONNXQuantizerInsertionCommand:
         axis = node.metatype.weight_definitions.weight_channel_axis if quantizer_config.per_channel else None
-        parameters = calculate_weight_quantizer_parameters(weight_tensor, quantizer_config, axis, _is_half_range)
+        parameters = calculate_weight_quantizer_parameters(weight_tensor, quantizer_config, axis, half_range)
         return ONNXQuantizerInsertionCommand(target_point, parameters)
 
     @staticmethod
