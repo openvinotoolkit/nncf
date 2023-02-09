@@ -1085,7 +1085,8 @@ class QuantizerPropagationSolver:
             pred_node = quant_prop_graph.nodes[pred_ip_key]
             pred_node_type = pred_node[QuantizerPropagationStateGraph.NODE_TYPE_NODE_ATTR]
             assert QuantizerPropagationStateGraph.is_insertion_point(pred_node_type), \
-                "Invalid insertion point graph supplied for quantizer propagation!"
+                f"Invalid insertion point graph supplied for quantizer propagation - no pre-hook insertion points " \
+                f"available for the input-quantizable op: {nncf_node_ref.node_name}!"
 
             edge = quant_prop_graph.edges[pred_ip_key, operator_node_key]
             if not edge[QuantizerPropagationStateGraph.IS_INTEGER_PATH_EDGE_ATTR]:

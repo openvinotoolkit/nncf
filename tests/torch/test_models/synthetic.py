@@ -325,5 +325,6 @@ class InplaceThenQuantizableOpModel(nn.Module):
     def forward(self, x: torch.Tensor):
         y = x * 1.0
         y.unsqueeze_(0)
+        y.squeeze_(0).unsqueeze_(0)
         z = self.conv(y)
         return z

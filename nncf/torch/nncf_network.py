@@ -546,6 +546,25 @@ class NNCFNetwork(nn.Module, PostGraphBuildActing):
         pre_hooks = []  # type: List[PreHookInsertionPoint]
         post_hooks = []  # type: List[PostHookInsertionPoint]
         for node in nncf_graph.get_all_nodes():
+            def _is_inplace_op(node: NNCFNode):
+                # Relies on the fact that for PT the `node.node_type` is set to the name of the corresponding PT
+                # operation, and on the convention of in-place ops ending with an underscore.
+                # Might want to use better detection of in-place ops than by name only if this fails;
+                # to reliably tell by also detecting that:
+                # 1) the op is a method of `torch.Tensor`, i.e. first argument is `self`
+                # 2) the output tensor `id` is the same as `self`
+                # This info is accessible at DynamicGraph level, and so should be passed to NNCFNetwork level,
+                # probably as a result of original/compressed graph building.
+                op_name = node.node_type
+                return op_name.endswith('_') and not op_name[:-1].endswith('_')
+
+            if _is_inplace_op(node):
+                # In-place ops should not allow post-hooking, since we won't be actually affecting the reference to
+                # the tensor involved in the op (and it is this reference that will probably be used further in model
+                # code), but instead we will be returning the new tensor.
+                continue
+
+
             # Pre-hook insertion point nodes
             # Will insert a pre-hook IP for each input edge. The input edge must be marked with
             # a port ID attribute.
@@ -556,6 +575,7 @@ class NNCFNetwork(nn.Module, PostGraphBuildActing):
                                                     input_port_id=port_id)
                 pre_hooks.append(pre_hook_ip)
 
+            # Post-hook insertion point nodes
             if issubclass(node.metatype, PTSplitMetatype):
                 # chunk returns a tuple of tensors, which can only be handled in NNCF
                 # once post-hook ports are enabled. Work around it for now by disallowing post-hook
@@ -563,7 +583,7 @@ class NNCFNetwork(nn.Module, PostGraphBuildActing):
                 # TODO: enable post-hook ports and remove this
                 continue
 
-            # Post-hook insertion point nodes
+
             post_hook_ip = PostHookInsertionPoint(node.node_name)
             post_hooks.append(post_hook_ip)
 

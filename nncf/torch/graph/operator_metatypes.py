@@ -862,7 +862,7 @@ class PTLogicalAndMetatype(PTOperatorMetatype):
 class PTLogicalNotMetatype(PTOperatorMetatype):
     name = "LogicalNotOp"
     module_to_function_names = {
-        NamespaceTarget.TORCH_TENSOR: ["logical_not_"]
+        NamespaceTarget.TORCH_TENSOR: ["logical_not"]
     }
     hw_config_names = [HWConfigOpName.LOGICALNOT]
 
