@@ -389,6 +389,10 @@ class BaseQuantizer(nn.Module):
         raise NotImplementedError
 
     @property
+    def is_half_range(self):
+        return self._half_range
+
+    @property
     def is_using_log_scale_storage(self):
         return self._is_using_log_scale_storage
 
@@ -435,6 +439,9 @@ class BaseQuantizer(nn.Module):
     def _prepare_qdq_export_quantization(self, x: torch.Tensor) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor, int]:
         x, level_high, level_low, input_low, input_high = self._prepare_export_quantization(x)
         with no_jit_trace():
+            levels = level_high - level_low + 1
+            assert levels in [255, 256], "Can only export to INT8 256-level ONNX Quantize/Dequantize pairs"
+
             y_scale, y_zero_point = get_scale_zp_from_input_low_input_high(level_low,
                                                                            level_high,
                                                                            input_low,
@@ -487,9 +494,9 @@ class BaseQuantizer(nn.Module):
         is_per_tensor = ((numel == 1) and (len(self.scale_shape) == 1))
         return not is_per_tensor
 
-    def get_parameters_for_inference(self) -> Tuple[int, int, torch.Tensor, torch.Tensor]:
+    def get_parameters_for_torch_fq(self) -> Tuple[int, int, torch.Tensor, torch.Tensor]:
         """
-        Get parameters to use for inference by FakeQuantize.
+        Get parameters for conversion to native FakeQuantize.
 
         :return: A Tuple
             quant_max - Fixed the low quant number.
@@ -669,6 +676,9 @@ class SymmetricQuantizer(BaseQuantizer):
         distributed.broadcast(self._scale_param_storage, src=src)
         distributed.broadcast(self.signed_tensor, src=src)
 
+    def get_input_low_input_high(self):
+        return self._get_input_low_input_high(self.scale, self.level_low, self.level_high, self.eps)
+
     def _get_input_low_input_high(self, scale, level_low, level_high, eps):
         input_range = abs(scale) + eps
         input_low = input_range * level_low / level_high
@@ -695,9 +705,9 @@ class SymmetricQuantizer(BaseQuantizer):
                 x = self.quantize(x, execute_traced_op_as_identity=False)
         return x, level_high, level_low, input_low, input_high
 
-    def get_parameters_for_inference(self) -> Tuple[int, int, torch.Tensor, torch.Tensor]:
+    def get_parameters_for_torch_fq(self) -> Tuple[int, int, torch.Tensor, torch.Tensor]:
         """
-        Get parameters to use for inference by FakeQuantize.
+        Get parameters for conversion to native FakeQuantize.
 
         :return: A Tuple
             quant_max - Fixed the low quant number.
@@ -712,15 +722,12 @@ class SymmetricQuantizer(BaseQuantizer):
                                                                    self.eps)
             level_low = self.level_low
             level_high = self.level_high
+
+            scale, zero_point = get_scale_zp_from_input_low_input_high(level_low, level_high, input_low, input_high)
+
             if self._half_range:
                 level_low = 2 * self.level_low
                 level_high = 2 * self.level_high + 1
-                input_low, input_high = self._get_input_low_input_high(level_high / self.level_high * self.scale,
-                                                                       level_low,
-                                                                       level_high,
-                                                                       self.eps)
-
-            scale, zero_point = get_scale_zp_from_input_low_input_high(level_low, level_high, input_low, input_high)
 
             scale = scale.view(-1)
             zero_point = zero_point.view(-1).to(dtype=torch.int32)
@@ -839,6 +846,9 @@ class AsymmetricQuantizer(BaseQuantizer):
         distributed.broadcast(self.input_low, src)
         distributed.broadcast(self._input_range_param_storage, src)
 
+    def get_input_low_input_high(self):
+        return self._get_input_low_input_high(self.input_range, self.input_low, self.levels, self.eps)
+
     def _get_input_low_input_high(self, input_range, input_low, levels, eps):
         input_range_safe = abs(input_range) + eps
         input_low, input_range_tuned = TuneRange.apply(input_low, input_range_safe, levels)
@@ -865,9 +875,9 @@ class AsymmetricQuantizer(BaseQuantizer):
                 x = self.quantize(x, execute_traced_op_as_identity=False)
         return x, level_high, level_low, input_low, input_high
 
-    def get_parameters_for_inference(self) -> Tuple[int, int, torch.Tensor, torch.Tensor]:
+    def get_parameters_for_torch_fq(self) -> Tuple[int, int, torch.Tensor, torch.Tensor]:
         """
-        Get parameters to use for inference by FakeQuantize.
+        Get parameters for conversion to native FakeQuantize.
 
         :return: A Tuple
             quant_max - Fixed the low quant number.
@@ -882,15 +892,12 @@ class AsymmetricQuantizer(BaseQuantizer):
                                                                    self.eps)
             level_low = self.level_low
             level_high = self.level_high
+
+            scale, zero_point = get_scale_zp_from_input_low_input_high(level_low, level_high, input_low, input_high)
+
             if self._half_range:
                 level_low = 2 * level_low
                 level_high = 2 * level_high + 1
-                input_low, input_high = self._get_input_low_input_high(level_high / self.level_high * self.input_range,
-                                                                       self.input_low,
-                                                                       self.levels,
-                                                                       self.eps)
-
-            scale, zero_point = get_scale_zp_from_input_low_input_high(level_low, level_high, input_low, input_high)
 
             scale = scale.view(-1)
             zero_point = zero_point.view(-1).to(dtype=torch.int32)
