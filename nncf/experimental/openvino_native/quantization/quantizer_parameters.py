@@ -194,6 +194,7 @@ def get_weight_stats_shape(const_shape: List[int], metatype: Type[OperatorMetaty
 
 
 def calculate_weight_quantizer_parameters(weight_tensor: np.ndarray, quantizer_config: QuantizerConfig,
+                                          half_range: bool,
                                           metatype: Type[OperatorMetatype]) -> OVQuantizerLayerParameters:
     """
     Calculates FakeQuantize layer attributes for weight quantizer.
@@ -211,9 +212,11 @@ def calculate_weight_quantizer_parameters(weight_tensor: np.ndarray, quantizer_c
         axes = None
 
     max_values = np.amax(np.abs(weight_tensor), axis=axes, keepdims=quantizer_config.per_channel)
-
+    num_bits = quantizer_config.num_bits
+    if half_range:
+        num_bits -= 1
     if quantizer_config.mode == QuantizationMode.SYMMETRIC:
-        _, _, levels = calculate_symmetric_level_ranges(quantizer_config.num_bits, signed=True, narrow_range=True)
+        _, _, levels = calculate_symmetric_level_ranges(num_bits, signed=True, narrow_range=True)
         level_low, level_high = symmetric_range(None, max_values, levels, quantizer_config, quant_group)
     else:
         _, _, levels = calculate_asymmetric_level_ranges(quantizer_config.num_bits, narrow_range=False)
