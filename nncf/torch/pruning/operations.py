@@ -83,7 +83,6 @@ from nncf.torch.graph.operator_metatypes import PTSumMetatype
 from nncf.torch.graph.operator_metatypes import PTTanhMetatype
 from nncf.torch.layers import NNCF_WRAPPED_USER_MODULES_DICT
 from nncf.torch.nncf_network import NNCFNetwork
-from nncf.torch.pruning.filter_pruning.layers import FilterPruningMask
 from nncf.torch.pruning.filter_pruning.layers import apply_filter_binary_mask
 from nncf.torch.pruning.tensor_processor import PTNNCFPruningTensorProcessor
 from nncf.torch.tensor import PTNNCFTensor
