@@ -10,7 +10,7 @@
  See the License for the specific language governing permissions and
  limitations under the License.
 """
-from typing import List, Optional, Tuple, Set
+from typing import List, Optional, Tuple
 
 from copy import deepcopy
 from collections import Counter
@@ -19,7 +19,6 @@ import numpy as np
 
 from nncf.common.graph.transformations.commands import TargetType
 from nncf.common.graph.transformations.layout import TransformationLayout
-from nncf.common.graph.definitions import NNCFGraphNodeType
 from nncf.onnx.graph.onnx_graph import ONNXGraph
 from nncf.onnx.graph.transformations.commands import ONNXBiasCorrectionCommand
 from nncf.onnx.graph.transformations.commands import ONNXModelExtractionCommand
@@ -30,8 +29,11 @@ from nncf.common.factory import NNCFGraphFactory
 from nncf.common.graph.model_transformer import ModelTransformer
 
 
-# pylint: disable=no-member
 class ONNXModelTransformer(ModelTransformer):
+    """
+    Applies transformations upon ONNX model.
+    ModelTransformer should be created once and be used to apply transformations to the provided model.
+    """
     QUANTIZER_NAME_PREFIX = 'QuantizeLinear_'
     DEQUANTIZER_NAME_PREFIX = 'DequantizeLinear_'
     SCALE_TENSOR_NAME_PREFIX = 'scale_'
@@ -42,14 +44,40 @@ class ONNXModelTransformer(ModelTransformer):
         self._model = model
         nncf_graph = NNCFGraphFactory.create(self._model)
         self.onnx_model_extractor = onnx.utils.Extractor(self._model)
-        for node in nncf_graph.get_input_nodes():
-            self._nncf_input_nodes_input_edges = {node.node_name: nncf_graph.get_output_edges(node)}
+        for input_node in nncf_graph.get_input_nodes():
+            self._nncf_input_node_next_nodes = {input_node.node_name: nncf_graph.get_next_nodes(input_node)}
+
+    def _get_pre_post_layer_target_edge(self, port_id: int, node_name: str, transform_type: TargetType,
+                                        onnx_graph: ONNXGraph) -> str:
+        """
+        Returns edge name corresponding to node with name equals to node_name, port_id and transforma_type.
+
+        :param port_id: Edge number of port.
+        :param node_name: Node name.
+        :param transform_type: Type of transformation.
+        :param onnx_graph: ONNXGraph
+        :return: Target edge name.
+        """
+        target_edge_name = None
+        if transform_type == TargetType.PRE_LAYER_OPERATION:
+            target_edge_name = onnx_graph.get_node_edge_names(node_name)['input'][port_id]
+        elif transform_type == TargetType.POST_LAYER_OPERATION:
+            if node_name in self._nncf_input_node_next_nodes:  # ADD INPUT NODE CASE
+                nncf_nodes = self._nncf_input_node_next_nodes[node_name]
+                node_names = map(lambda node: node.node_name, nncf_nodes)
+                input_edges = set(onnx_graph.get_node_edge_names(name)['input'][port_id] for name in node_names)
+                assert len(input_edges) == 1
+                target_edge_name = input_edges.pop()
+            else:
+                target_edge_name = onnx_graph.get_node_edge_names(node_name)['output'][port_id]
+        return target_edge_name
 
     def transform(self, transformation_layout: TransformationLayout) -> onnx.ModelProto:
         """
-        Applies transformations by type-callback on the model
+        Creates lists of transformations and applies them in the correct order.
+        If there are no transformations returns a deepcopy of the model.
 
-        :param transformations: lisf of the TransformationCommand transformations
+        :param transformation_layout: Transformation commands.
         """
         quantizer_insert_transformations = []
         output_insert_transformations = []
@@ -71,14 +99,14 @@ class ONNXModelTransformer(ModelTransformer):
             elif isinstance(transformation, ONNXQDQNodeRemovingCommand):
                 qdq_node_removing_transformations.append(transformation)
         model = None
-        # Inplace transformations; Using deepcopy of model
+        # Inplace transformations, using deepcopy of model
         if quantizer_insert_transformations:
             model = self._apply_quantizer_insertion_transformations(quantizer_insert_transformations)
         if bias_correction_transformations:
             model = self._apply_bias_correction_transformations(bias_correction_transformations)
         if qdq_node_removing_transformations:
-            model = self._apply_qdq_node_removing_transformation(qdq_node_removing_transformations)
-        # Creating New model transformations
+            model = self._apply_qdq_node_removing_transformations(qdq_node_removing_transformations)
+        # Transformations that create new model
         if output_insert_transformations:
             model = self._apply_output_insertion_transformations(output_insert_transformations)
         if model_extraction_transformation:
@@ -91,108 +119,60 @@ class ONNXModelTransformer(ModelTransformer):
     def _apply_output_insertion_transformations(self,
                                                 transformations: List[ONNXOutputInsertionCommand]) -> onnx.ModelProto:
         """
-        Applies incoming transformations to the model
+        Returns a new model with extra outputs provided by transformations.
 
-        :param transformations: list of the ONNXOutputInsertionCommand transformations
+        :param transformations: ONNXOutputInsertionCommand transformations
         """
         onnx_graph = ONNXGraph(self._model)
         model_outputs = [output.name for output in onnx_graph.get_model_outputs()]
-        extra_model_outputs = self._get_extra_model_outputs(onnx_graph,
-                                                            transformations)
-
-        return self._insert_outputs(self._model,
-                                    outputs=[*extra_model_outputs,
-                                             *model_outputs])
-
-    def _get_extra_model_outputs(self,
-                                 onnx_graph: ONNXGraph,
-                                 transformations: List[ONNXOutputInsertionCommand]) -> Set[str]:
-        """
-        Collects extra model outputs based on transformations
-
-        :param onnx_graph: ONNXGraph
-        :param transformations: lisf of the ONNXOutputInsertionCommand
-        :return: list of the output names
-        """
-        extra_model_outputs = set()
-        input_edge_names = []
-
+        extra_model_outputs = []
         for transformation in transformations:
+            port_id = transformation.target_point.port_id
             node_name = transformation.target_point.target_node_name
-            if NNCFGraphNodeType.INPUT_NODE in node_name:
-                input_edges = self._nncf_input_nodes_input_edges[node_name]
-                onnx_nodes_after_input_node = [input_edge.to_node for input_edge in input_edges]
-                for onnx_node_name in onnx_nodes_after_input_node:
-                    input_edge_names.append(onnx_graph.get_node_edge_names(onnx_node_name.node_name)['input'][0])
-                extra_model_outputs.update(input_edge_names)
-                input_edge_names = []
-            else:
-                if transformation.target_point.type == TargetType.POST_LAYER_OPERATION:
-                    edge_name = onnx_graph.get_node_edge_names(node_name)['output'][
-                        transformation.target_point.port_id]
-                elif transformation.target_point.type == TargetType.PRE_LAYER_OPERATION:
-                    edge_name = onnx_graph.get_node_edge_names(node_name)['input'][
-                        transformation.target_point.port_id]
-                else:
-                    raise RuntimeError
-                extra_model_outputs.add(edge_name)
-            extra_model_outputs.update(input_edge_names)
-        return extra_model_outputs
+            transform_type = transformation.target_point.type
+            target_edge_name = self._get_pre_post_layer_target_edge(port_id, node_name, transform_type, onnx_graph)
+            if target_edge_name is None:
+                raise RuntimeError('Could not find the edge corresponding to node {}'.format(node_name))
+            extra_model_outputs.append(target_edge_name)
+        return ONNXModelTransformer._insert_outputs(self._model, outputs=[*extra_model_outputs, *model_outputs])
 
-    def _insert_outputs(self, model: onnx.ModelProto, outputs: List[str] = None) -> onnx.ModelProto:
+    @staticmethod
+    def _insert_outputs(model: onnx.ModelProto, outputs: List[str]) -> onnx.ModelProto:
         """
-        Takes a model and adds outputs based on the list of edge names to collect data from
+        Creates a new model as a copy of provided model with additional outputs.
 
-        :param model: *ONNX* model
-        :param outputs: edge names to collect data from
-        :return: modified model
+        :param model: Model of which copy will be created.
+        :param outputs: Edge names which are outputs.
+        :return: New model with provided outputs.
         """
-        if outputs is None:
-            raise RuntimeError("Parameter outputs cannot be None.")
         onnx_graph = ONNXGraph(model)
-        var_out = []
-        for out in outputs:
+        model_outputs = []
+        for output in outputs:
             # shape should be None; if you place not None, some models will have inference problems (e.g. Mask RCNN)
-            type_proto = onnx.helper.make_tensor_type_proto(onnx_graph.get_edge_dtype(out),
-                                                            shape=None)
-            value_info = onnx.helper.make_value_info(
-                name=out, type_proto=type_proto)
-            var_out.append(value_info)
+            type_proto = onnx.helper.make_tensor_type_proto(onnx_graph.get_edge_dtype(output), shape=None)
+            model_outputs.append(onnx.helper.make_value_info(name=output, type_proto=type_proto))
 
-        graph = onnx.helper.make_graph(nodes=model.graph.node,
-                                       name=model.graph.name,
-                                       inputs=model.graph.input,
-                                       outputs=var_out,
-                                       initializer=model.graph.initializer,
-                                       value_info=model.graph.value_info)
-        onnx_model = onnx.helper.make_model(graph,
-                                            ir_version=model.ir_version,
-                                            producer_name=model.producer_name,
-                                            producer_version=model.producer_version,
-                                            domain=model.domain,
-                                            model_version=model.model_version,
-                                            doc_string=model.doc_string)
-        if len(model.metadata_props) > 0:
+        graph = onnx.helper.make_graph(nodes=model.graph.node, name=model.graph.name,
+                                       inputs=model.graph.input, outputs=model_outputs,
+                                       initializer=model.graph.initializer, value_info=model.graph.value_info)
+        new_model = onnx.helper.make_model(graph, ir_version=model.ir_version, producer_name=model.producer_name,
+                                            producer_version=model.producer_version, domain=model.domain,
+                                            model_version=model.model_version, doc_string=model.doc_string)
+        if model.metadata_props:
             values = {p.key: p.value for p in model.metadata_props}
-            onnx.helper.set_model_props(onnx_model, values)
-
-        if len(onnx_model.graph.input) != len(model.graph.input):
-            raise RuntimeError("Input mismatch {} != {}".format(
-                len(onnx_model.input), len(model.input)))
-        # fix opset import
-        del onnx_model.opset_import[:]
-        for oimp in model.opset_import:
-            op_set = onnx_model.opset_import.add()
-            op_set.domain = oimp.domain
-            op_set.version = oimp.version
-        return onnx_model
+            onnx.helper.set_model_props(new_model, values)
+        if model.opset_import:
+            values = {p.key: p.value for p in model.opset_import}
+            onnx.helper.set_model_props(new_model, values)
+        return new_model
 
     def _apply_quantizer_insertion_transformations(self, transformations: List[ONNXQuantizerInsertionCommand]) \
             -> onnx.ModelProto:
         """
-        Applies transformations on the model
+        Creates a new model as a copy of provided model and inserts QuantizeLinear-DequantizeLinear nodes pair.
 
-        :param transformations: lisf of the TransformationCommand transformations
+        :param transformations: QuantizeLinear-DequantizeLinear nodes pair transformation commands.
+        :return: New model with inserted QuantizeLinear-DequantizeLinear nodes pairs.
         """
         model = deepcopy(self._model)
         self._added_target_edges = Counter()
@@ -200,35 +180,16 @@ class ONNXModelTransformer(ModelTransformer):
             model = self._insert_quantizer_dequantizer(model, transformation)
         return model
 
-    def _get_target_edge_name(self, transformation: ONNXQuantizerInsertionCommand,
-                              onnx_graph: ONNXGraph) -> Optional[str]:
-        target_edge_name = None
-        if transformation.target_point.type == TargetType.OPERATION_WITH_WEIGHTS:
-            target_edge_name = onnx_graph.get_node_edge_names(transformation.target_point.target_node_name)['input'][
-                transformation.target_point.port_id]
-        elif transformation.target_point.type == TargetType.PRE_LAYER_OPERATION:
-            target_edge_name = onnx_graph.get_node_edge_names(transformation.target_point.target_node_name)['input'][
-                transformation.target_point.port_id]
-        elif transformation.target_point.type == TargetType.POST_LAYER_OPERATION:
-            if NNCFGraphNodeType.INPUT_NODE in transformation.target_point.target_node_name:  # ADD INPUT NODE CASE
-                input_edges = self._nncf_input_nodes_input_edges[transformation.target_point.target_node_name]
-                onnx_nodes_after_input_node = [input_edge.to_node for input_edge in input_edges]
-                for onnx_node_name in onnx_nodes_after_input_node:
-                    target_edge_name = onnx_graph.get_node_edge_names(onnx_node_name.node_name)['input'][
-                        transformation.target_point.port_id]
-                    break
-            else:
-                target_edge_name = onnx_graph.get_node_edge_names(transformation.target_point.target_node_name)[
-                    'output'][transformation.target_point.port_id]
-        else:
-            raise RuntimeError(
-                'Could not find the edge corresponding to node {}'.format(
-                    transformation.target_point.target_node_name))
-        self._added_target_edges[target_edge_name] += 1
-        return target_edge_name
+    def _get_quantize_dequantize_nodes(self, transformation: ONNXQuantizerInsertionCommand,
+                                       target_edge_name: str) -> Tuple[onnx.NodeProto, onnx.NodeProto]:
+        """
+        Returns QuantizeLinear-DequantizeLinear nodes pair.
 
-    def _get_quantize_dequantize_nodes(self, transformation: ONNXQuantizerInsertionCommand, target_edge_name: str) -> \
-            Tuple[onnx.NodeProto, onnx.NodeProto]:
+        :param transformation: QuantizeLinear-DequantizeLinear insertion transformation,
+        from which quantization axis is obtained.
+        :param target_edge_name: Edge name on which QuantizeLinear-DequantizeLinear nodes pair should be placed.
+        :return: QuantizeLinear-DequantizeLinear nodes pair
+        """
         axis = transformation.quantizer_parameters.axis
 
         cnt = self._added_target_edges[target_edge_name]
@@ -258,8 +219,18 @@ class ONNXModelTransformer(ModelTransformer):
 
         return quantizer, dequantizer
 
-    def _get_scale_zero_point_tensors(self, transformation: ONNXQuantizerInsertionCommand, quantizer: onnx.NodeProto,
+    @staticmethod
+    def _get_scale_zero_point_tensors(transformation: ONNXQuantizerInsertionCommand, quantizer: onnx.NodeProto,
                                       dequantizer: onnx.NodeProto) -> Tuple[onnx.TensorProto, onnx.TensorProto]:
+        """
+        Returns scale and zero point of QuantizeLinear-DequantizeLinear nodes pair.
+
+        :param transformation: QuantizeLinear-DequantizeLinear insertion transformation,
+        from which scale and zero point values are obtained.
+        :param quantizer: QuantizeLinear node.
+        :param dequantizer: DequantizeLinear node.
+        :return: Scale and zero point tensors.
+        """
         scale = transformation.quantizer_parameters.scale
         zero_point = transformation.quantizer_parameters.zero_point
         tensor_type = transformation.quantizer_parameters.tensor_type
@@ -282,13 +253,42 @@ class ONNXModelTransformer(ModelTransformer):
                                                          onnx_zero_point)
         return onnx_scale_tensor, onnx_zero_point_tensor
 
+    def _get_quantizer_dequantizer_edge_name(self, transformation: ONNXQuantizerInsertionCommand,
+                                             onnx_graph: ONNXGraph) -> Optional[str]:
+        """
+        Returns edge name on which inserts QuantizeLinear-DequantizeLinear nodes pair.
+
+        :param transformation: QuantizeLinear-DequantizeLinear insertion transformation.
+        :param onnx_graph: ONNXGraph.
+        :return: Target Edge name.
+        """
+        port_id = transformation.target_point.port_id
+        node_name = transformation.target_point.target_node_name
+        transform_type = transformation.target_point.type
+        target_edge_name = self._get_pre_post_layer_target_edge(port_id, node_name, transform_type, onnx_graph)
+        if target_edge_name is None:
+            if transform_type == TargetType.OPERATION_WITH_WEIGHTS:
+                target_edge_name = onnx_graph.get_node_edge_names(node_name)['input'][port_id]
+            else:
+                raise RuntimeError('Could not find the edge corresponding to node {}'.format(node_name))
+        self._added_target_edges[target_edge_name] += 1
+        return target_edge_name
+
     def _insert_quantizer_dequantizer(self, model: onnx.ModelProto,
-                                      transformation: ONNXQuantizerInsertionCommand, ) -> onnx.ModelProto:
+                                      transformation: ONNXQuantizerInsertionCommand) -> onnx.ModelProto:
+        """
+        Inserts QuantizeLinear-DequantizeLinear nodes pair.
+
+        :param model: Model to insert new nodes.
+        :param transformation: QuantizeLinear-DequantizeLinear insertion transformation.
+        :return: Updated model.
+        """
         onnx_graph = ONNXGraph(model)
-        target_edge_name = self._get_target_edge_name(transformation, onnx_graph, )
+        target_edge_name = self._get_quantizer_dequantizer_edge_name(transformation, onnx_graph)
         quantizer, dequantizer = self._get_quantize_dequantize_nodes(transformation, target_edge_name)
-        onnx_scale_tensor, onnx_zero_point_tensor = self._get_scale_zero_point_tensors(transformation, quantizer,
-                                                                                       dequantizer)
+        onnx_scale_tensor, onnx_zero_point_tensor = ONNXModelTransformer._get_scale_zero_point_tensors(transformation,
+                                                                                                       quantizer,
+                                                                                                       dequantizer)
 
         # If several nodes on one edge
         input_nodes = []
@@ -324,9 +324,9 @@ class ONNXModelTransformer(ModelTransformer):
     def _apply_bias_correction_transformations(self,
                                                transformations: List[ONNXBiasCorrectionCommand]) -> onnx.ModelProto:
         """
-        Applies bias correction transformations on the model
+        Applies bias correction transformations on the model.
 
-        :param transformations: lisf of the bias correction transformations
+        :param transformations: Bias correction transformations.
         """
         model = deepcopy(self._model)
         onnx_graph = ONNXGraph(model)
@@ -344,18 +344,18 @@ class ONNXModelTransformer(ModelTransformer):
 
     def _apply_model_extraction_transformation(self, transformation: ONNXModelExtractionCommand) -> onnx.ModelProto:
         """
-        Extracts sub-model from the original based on the inputs and outputs names
+        Returns a new model that is a sub-model from the original between provided inputs and outputs.
 
-        :param transformation: model extraction transformation
+        :param transformation: Model extraction transformation.
         """
         return self.onnx_model_extractor.extract_model(transformation.inputs, transformation.outputs)
 
-    def _apply_qdq_node_removing_transformation(self,
-                                                transformations: List[ONNXQDQNodeRemovingCommand]) -> onnx.ModelProto:
+    def _apply_qdq_node_removing_transformations(self,
+                                                 transformations: List[ONNXQDQNodeRemovingCommand]) -> onnx.ModelProto:
         """
-        Removes the layers from the model.
+        Removes the nodes from the model.
 
-        :param transformations: lisf of the node removing transformations.
+        :param transformations: Nodes removing transformations.
         """
         model = deepcopy(self._model)
         onnx_graph = ONNXGraph(model)
