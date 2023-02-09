@@ -27,6 +27,7 @@ from nncf.onnx.graph.transformations.commands import ONNXQuantizerInsertionComma
 from nncf.onnx.graph.transformations.commands import ONNXQDQNodeRemovingCommand
 from nncf.common.factory import NNCFGraphFactory
 from nncf.common.graph.model_transformer import ModelTransformer
+from nncf.common.utils.logger import logger
 
 
 class ONNXModelTransformer(ModelTransformer):
@@ -113,6 +114,7 @@ class ONNXModelTransformer(ModelTransformer):
             model = self._apply_model_extraction_transformation(model_extraction_transformation)
         # No transformation applied
         if model is None:
+            logger.warning('No transformations were applied to the model. The copy of the model is returned.')
             return deepcopy(self._model)
         return model
 
