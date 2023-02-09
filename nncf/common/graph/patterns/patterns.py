@@ -281,6 +281,9 @@ class PatternNames(Enum):
     and would not be quantized in compression pipeline.
     """
 
+    # ATOMIC OPERATIONS
+    L2_NORM = PatternDesc('l2_norm')
+
     # BLOCK PATTERNS
     ADD_SCALE_SHIFT_OUTPUT = PatternDesc('add_scale_shift_output')
     BATCH_INDEX = PatternDesc('batch_index')
@@ -327,12 +330,15 @@ class PatternNames(Enum):
     ARITHMETIC_ACTIVATIONS_SCALE_SHIFT = PatternDesc('arithmetic_activations_scale_shift')
     ARITHMETIC_BATCH_NORM = PatternDesc('arithmetic_batch_norm')
     ARITHMETIC_BATCH_NORM_ACTIVATIONS = PatternDesc('arithmetic_batch_norm_activations')
+    ARITHMETIC_BATCH_NORM_ACTIVATIONS_PERMUTATIONS = PatternDesc('arithmetic_batch_norm_activations_permutations')
     ARITHMETIC_SCALE_SHIFT = PatternDesc('arithmetic_scale_shift')
     ARITHMETIC_SCALE_SHIFT_ACTIVATIONS = PatternDesc('arithmetic_scale_shift_activations')
     BATCH_NORM_ACTIVATIONS = PatternDesc('batch_norm_activations')
     BATCH_NORM_SCALE_SHIFT_ACTIVATIONS = PatternDesc('batch_norm_scale_shift_activations')
+    GROUP_NORM_RELU = PatternDesc('group_norm_relu')
     LINEAR_ACTIVATIONS = PatternDesc('linear_activations')
     LINEAR_ACTIVATIONS_BATCH_NORM = PatternDesc('linear_activations_batch_norm')
+    LINEAR_ACTIVATIONS_BATCH_NORM_PERMUTATIONS = PatternDesc('linear_activations_batch_norm_permutations')
     LINEAR_ACTIVATIONS_SCALE_SHIFT = PatternDesc('linear_activations_scale_shift')
     LINEAR_ARITHMETIC = PatternDesc('linear_arithmetic')
     LINEAR_ARITHMETIC_ACTIVATIONS = PatternDesc('linear_arithmetic_activations')
@@ -340,6 +346,7 @@ class PatternNames(Enum):
     LINEAR_BATCH_NORM_ACTIVATIONS = PatternDesc('linear_batch_norm_activations')
     LINEAR_BATCH_NORM_SCALE_SHIFT_ACTIVATIONS = PatternDesc('linear_batch_norm_scale_shift_activations')
     LINEAR_SCALE_SHIFT_ACTIVATIONS = PatternDesc('linear_scale_shift_activations')
+    LINEAR_CONST_MULTIPLY = PatternDesc('linear_const_multiply')
     SCALE_SHIFT_ACTIVATIONS = PatternDesc('scale_shift_activations')
 
     # DEVICE PATTERNS

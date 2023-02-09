@@ -22,7 +22,7 @@ from copy import deepcopy
 
 from nncf.common.graph import NNCFGraph
 from nncf.common.utils.debug import is_debug
-from nncf.torch.hardware.fused_patterns import PT_HW_FUSED_PATTERNS
+from nncf.torch.hardware.fused_patterns import get_torch_hw_patterns
 from nncf.torch.quantization.default_quantization import DEFAULT_PT_QUANT_TRAIT_TO_OP_DICT
 from nncf.torch.quantization.layers import BaseQuantizer
 from nncf.torch.quantization.layers import SymmetricQuantizer
@@ -329,7 +329,7 @@ class ShareEdgesQuantizedDataPathStatisticsCollector(StatisticsCollector):
                 self.stats.quantized_edges_in_cfg += 1
 
     def get_merged_original_graph_with_patterns(self, original_graph: PTNNCFGraph):
-        pattern = PT_HW_FUSED_PATTERNS.get_full_pattern_graph()
+        pattern = get_torch_hw_patterns()
         # pylint: disable=protected-access
         matches = find_subgraphs_matching_pattern(original_graph._nx_graph, pattern)
         merged_graph = deepcopy(original_graph._nx_graph)

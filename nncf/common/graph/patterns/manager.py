@@ -41,6 +41,10 @@ class PatternsManager:
             from nncf.experimental.openvino_native.hardware.fused_patterns import \
                 OPENVINO_HW_FUSED_PATTERNS
             return OPENVINO_HW_FUSED_PATTERNS.registry_dict
+        if backend == BackendType.TORCH:
+            from nncf.torch.hardware.fused_patterns import \
+                PT_HW_FUSED_PATTERNS
+            return PT_HW_FUSED_PATTERNS.registry_dict
         raise ValueError(f'Hardware-fused patterns not implemented for {backend} backend.')
 
     @staticmethod

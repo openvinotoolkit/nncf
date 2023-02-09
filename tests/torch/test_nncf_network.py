@@ -53,7 +53,7 @@ from nncf.torch.graph.operator_metatypes import PTModuleConv2dMetatype
 from nncf.torch.graph.transformations.commands import PTInsertionCommand
 from nncf.torch.graph.transformations.commands import PTTargetPoint
 from nncf.torch.graph.transformations.layout import PTTransformationLayout
-from nncf.torch.hardware.fused_patterns import PT_HW_FUSED_PATTERNS
+from nncf.torch.hardware.fused_patterns import get_torch_hw_patterns
 from nncf.torch.layer_utils import _NNCFModuleMixin
 from nncf.torch.module_operations import BaseOp
 from nncf.torch.nncf_network import EXTERNAL_QUANTIZERS_STORAGE_NAME
@@ -622,7 +622,7 @@ class TestInsertionPointGraph:
     def test_get_ip_graph_with_merged_operations(self, mock_graph_factory, dot_file_name):
         mock_graph = mock_graph_factory()
         ip_graph = get_ip_graph_for_test(mock_graph)
-        pattern = PT_HW_FUSED_PATTERNS.get_full_pattern_graph()
+        pattern = get_torch_hw_patterns()
         merged_ip_graph = ip_graph.get_ip_graph_with_merged_hw_optimized_operations(pattern)
 
         data_dir = TEST_ROOT / 'torch/data/reference_graphs/pattern_merging'  # type: Path
