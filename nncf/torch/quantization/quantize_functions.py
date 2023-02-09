@@ -14,12 +14,13 @@ from typing import Any
 
 import torch
 
-from nncf.torch.utils import add_domain
 from nncf.common.logging import nncf_logger
-
-from nncf.torch.quantization.extensions import QuantizedFunctionsCPU, QuantizedFunctionsCUDA
 from nncf.torch.dynamic_graph.patch_pytorch import register_operator
-from nncf.torch.functions import STRound, clamp
+from nncf.torch.functions import STRound
+from nncf.torch.functions import clamp
+from nncf.torch.quantization.extensions import QuantizedFunctionsCPU
+from nncf.torch.quantization.extensions import QuantizedFunctionsCUDA
+from nncf.torch.utils import add_domain
 
 
 # pylint:disable=abstract-method
@@ -125,7 +126,7 @@ class QuantizeAsymmetric(torch.autograd.Function):
 
 def _quantize_autograd_to_range(input_, input_low, input_high, levels):
     input_ = input_ - input_low
-    input_range = (input_high - input_low)
+    input_range = input_high - input_low
     scale = (levels - 1) / input_range
     output = clamp(input_, low=torch.zeros_like(input_), high=input_range)
     output = output * scale
@@ -174,9 +175,6 @@ class ExportQuantizeToONNXQuantDequant(torch.autograd.Function):
 
 
 def get_scale_zp_from_input_low_input_high(level_low, level_high, input_low, input_high):
-    levels = level_high - level_low + 1
-    assert levels in [255, 256], "Can only export to INT8 256-level ONNX Quantize/Dequantize pairs"
-
     y_scale = (input_high - input_low) / (level_high - level_low)
     y_zero_point = (level_low * input_high - level_high * input_low) / (input_high - input_low)
 
@@ -185,7 +183,7 @@ def get_scale_zp_from_input_low_input_high(level_low, level_high, input_low, inp
     level_high *= torch.ones_like(y_zero_point).to(type_)
     level_low = level_low.to(y_zero_point.device)
     level_high = level_high.to(y_zero_point.device)
-    y_zero_point = torch.min(torch.max(level_low, y_zero_point.to(type_)), level_high)
+    y_zero_point = torch.min(torch.max(level_low, torch.round(y_zero_point).to(type_)), level_high)
 
     y_scale = torch.squeeze(y_scale)
     y_zero_point = torch.squeeze(y_zero_point)

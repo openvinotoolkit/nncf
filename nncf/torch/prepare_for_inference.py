@@ -10,9 +10,10 @@
  See the License for the specific language governing permissions and
  limitations under the License.
 """
+import copy
 
+import numpy as np
 import torch
-from numpy import argmax
 from torch.quantization.fake_quantize import FakeQuantize
 
 from nncf.api.compression import CompressionAlgorithmController
@@ -30,20 +31,26 @@ SUPPORTED_ALGORITHMS = ["quantization", "filter_pruning"]
 
 
 def prepare_for_inference(
-    compressed_model: NNCFNetwork,
-    compressed_ctrl: CompressionAlgorithmController,
-) -> None:
+    compressed_model: NNCFNetwork, compressed_ctrl: CompressionAlgorithmController, save_original_model: bool = False
+) -> NNCFNetwork:
     """
-    Prepare NNCFNetwork for inference:
-      - for quantisation algorithm replace Replace NNCF quantizers modules to FakeQuantize.
+    Prepare NNCFNetwork for inference
+      - for quantization algorithm replace Replace NNCF quantizers modules to FakeQuantize.
       - for pruning_filter algorithm prune module by filling weights and bias with zeros.
 
     :param compressed_model: Compressed model.
     :param compressed_ctrl: Compression controller.
+    :param save_original_model: `True` means that a copy of the model will be modified.
+
+    :return NNCFNetwork: Converted model.
     """
 
     if not isinstance(compressed_model, NNCFNetwork):
         raise ValueError(f"Expected type of compressed_model is NNCFNetwork, but got {type(compressed_model)}.")
+
+    if save_original_model:
+        compressed_model = copy.deepcopy(compressed_model)
+
     compressed_model.train(False)
 
     if isinstance(compressed_ctrl, CompositeCompressionAlgorithmController):
@@ -54,7 +61,7 @@ def prepare_for_inference(
     # Check supported algorithms
     for controller in ctrls:
         if controller.name not in SUPPORTED_ALGORITHMS:
-            raise RuntimeError(f"Function prepare_for_inference supprots only {SUPPORTED_ALGORITHMS} algorithms.")
+            raise RuntimeError(f"Function prepare_for_inference supports only {SUPPORTED_ALGORITHMS} algorithms.")
 
     # Strip the model
     for controller in ctrls:
@@ -70,13 +77,15 @@ def prepare_for_inference(
 
     clean_operators(compressed_model)
 
+    return compressed_model
+
 
 def clean_operators(model: NNCFNetwork) -> None:
     """
     Remove all unused operators from the model.
     Conditions for removing operators:
-      - disabled quantization operator
-      - each filer_pruining opertartor
+      - disabled quantization operator;
+      - all filer_pruning operators.
 
     :param model: Compressed model.
     """
@@ -84,9 +93,8 @@ def clean_operators(model: NNCFNetwork) -> None:
     if hasattr(model, "external_quantizers"):
         for key in list(model.external_quantizers.keys()):
             op = model.external_quantizers[key]
-            if isinstance(op, BaseQuantizer):
-                if not op.is_enabled_quantization():
-                    model.external_quantizers.pop(key)
+            if isinstance(op, BaseQuantizer) and not op.is_enabled_quantization():
+                model.external_quantizers.pop(key)
 
     for node in model.get_original_graph().get_all_nodes():
         if node.node_type in ["nncf_model_input", "nncf_model_output"]:
@@ -99,18 +107,16 @@ def clean_operators(model: NNCFNetwork) -> None:
                 op = nncf_module.get_pre_op(key)
                 if isinstance(op.op, FilterPruningMask):
                     nncf_module.remove_pre_forward_operation(key)
-                elif isinstance(op, BaseQuantizer):
-                    if not op.is_enabled_quantization():
-                        nncf_module.remove_pre_forward_operation(key)
+                elif isinstance(op, BaseQuantizer) and not op.is_enabled_quantization():
+                    nncf_module.remove_pre_forward_operation(key)
 
         if hasattr(nncf_module, "post_ops"):
             for key in list(nncf_module.post_ops.keys()):
                 op = nncf_module.post_ops(key)
                 if isinstance(op.op, FilterPruningMask):
                     nncf_module.remove_post_forward_operation(key)
-                if isinstance(op, BaseQuantizer):
-                    if not op.is_enabled_quantization():
-                        nncf_module.remove_post_forward_operation(key)
+                if isinstance(op, BaseQuantizer) and not op.is_enabled_quantization():
+                    nncf_module.remove_post_forward_operation(key)
 
 
 def replace_quantizer_to_native_module(model: NNCFNetwork) -> None:
@@ -133,9 +139,13 @@ def replace_quantizer_to_native_module(model: NNCFNetwork) -> None:
         if hasattr(nncf_module, "pre_ops"):
             for key in nncf_module.pre_ops.keys():
                 op = nncf_module.get_pre_op(key)
-                if isinstance(op.op, BaseQuantizer):
-                    if op.op.is_enabled_quantization():
-                        op.op = convert_to_fakequantizer(op.op)
+                if isinstance(op.op, BaseQuantizer) and op.op.is_enabled_quantization():
+                    if op.op.is_half_range:
+                        # Half range require to clamp weights of module
+                        # Note: Half range used only for weight.
+                        input_low, input_high = op.op.get_input_low_input_high()
+                        nncf_module.weight.data = torch.min(torch.max(nncf_module.weight.data, input_low), input_high)
+                    op.op = convert_to_fakequantizer(op.op)
 
         if hasattr(nncf_module, "post_ops"):
             for key in nncf_module.post_ops.keys():
@@ -153,10 +163,11 @@ def convert_to_fakequantizer(nncf_quantizer: BaseQuantizer) -> FakeQuantize:
 
     :return: Instance of FakeQuantize similar to the input quantizer.
     """
-    assert nncf_quantizer.num_bits == 8, "Support only 8bit quantisation."
+    assert nncf_quantizer.num_bits == 8, "Support only 8bit quantization."
 
     per_channel = nncf_quantizer.per_channel
-    ch_axis = argmax(nncf_quantizer.scale_shape)
+    scale_shape = nncf_quantizer.scale_shape
+    ch_axis = np.argmax(scale_shape)
     dtype = torch.qint8 if nncf_quantizer.level_low < 0 else torch.quint8
 
     if per_channel:
@@ -169,7 +180,7 @@ def convert_to_fakequantizer(nncf_quantizer: BaseQuantizer) -> FakeQuantize:
     elif isinstance(nncf_quantizer, AsymmetricQuantizer):
         qscheme = torch.per_channel_affine if per_channel else torch.per_tensor_affine
 
-    quant_min, quant_max, scale, zero_point = nncf_quantizer.get_parameters_for_inference()
+    quant_min, quant_max, scale, zero_point = nncf_quantizer.get_parameters_for_torch_fq()
 
     fakequantizer = FakeQuantize(
         observer=observer,

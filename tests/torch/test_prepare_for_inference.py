@@ -23,12 +23,18 @@ from nncf.torch.prepare_for_inference import prepare_for_inference
 from nncf.torch.quantization.layers import AsymmetricQuantizer
 from nncf.torch.quantization.layers import PTQuantizerSpec
 from nncf.torch.quantization.layers import SymmetricQuantizer
+from tests.common.quantization.data_generators import check_outputs
+from tests.common.quantization.data_generators import generate_random_low_and_range_by_input_size
+from tests.common.quantization.data_generators import generate_scale_by_input_size
+from tests.common.quantization.data_generators import generate_test_input
+from tests.common.quantization.data_generators import get_symmetric_range_level
 from tests.torch.helpers import BasicConvTestModel
 from tests.torch.helpers import create_compressed_model_and_algo_for_test
 from tests.torch.helpers import register_bn_adaptation_init_args
 from tests.torch.pruning.helpers import BigPruningTestModel
 from tests.torch.pruning.helpers import get_pruning_baseline_config
 from tests.torch.quantization.quantization_helpers import get_quantization_config_without_range_init
+from tests.torch.quantization.test_functions import get_test_data
 
 
 def _gen_input_tensor(shape):
@@ -66,8 +72,147 @@ def _check_operators(model):
                 assert op.quant_max - op.quant_min == 255
 
 
+def _idfn(val):
+    if isinstance(val, tuple):
+        return "{}".format("-".join([str(v) for v in val]))
+    return None
+
+
+INPUT_TEST_SCALES = (
+    (1, 16, 24, 24),
+    (16, 8, 12, 12),
+)
+
+
+@pytest.mark.parametrize("use_cuda", (True, False), ids=("cuda", "cpu"))
+@pytest.mark.parametrize("half_range", [False, True], ids=["full_range", "half_range"])
+@pytest.mark.parametrize("is_weights", (True, False), ids=("weights", "activation"))
+@pytest.mark.parametrize("is_signed", (True, False), ids=("signed", "unsigned"))
+@pytest.mark.parametrize("input_size", INPUT_TEST_SCALES, ids=_idfn)
+@pytest.mark.parametrize("is_per_channel", (True, False), ids=("per_channel", "per_tensor"))
+def test_converting_symmetric_quantizer(input_size, is_per_channel, is_weights, half_range, is_signed, use_cuda):
+    if not torch.cuda.is_available() and use_cuda is True:
+        pytest.skip("Skipping CUDA test cases for CPU only setups")
+
+    if is_per_channel and input_size[0 if is_weights else 1] == 1:
+        pytest.skip("Same case as for per_tensor case")
+
+    # np.random.seed(42)
+    bits = 7 if half_range else 8
+    np_scale = generate_scale_by_input_size(input_size, is_per_channel, is_weights)
+    tensor_scale = get_test_data([np_scale], use_cuda)
+
+    level_low, level_high, _ = get_symmetric_range_level(is_signed, bits)
+
+    input_low = np_scale * (level_low / level_high)
+    input_range = np_scale - input_low
+
+    input_low = np.squeeze(input_low)
+    input_range = np.squeeze(input_range)
+
+    np_input, np_is_near_mid_point, quant_lens = generate_test_input(
+        input_size, input_low, input_range, bits, is_per_channel, is_weights
+    )
+    test_input = get_test_data([np_input], use_cuda)
+
+    qspec = PTQuantizerSpec(
+        num_bits=8,
+        mode=QuantizationMode.SYMMETRIC,
+        signedness_to_force=is_signed,
+        narrow_range=False,
+        scale_shape=tuple(tensor_scale.shape),
+        logarithm_scale=False,
+        half_range=half_range,
+        is_quantized_on_export=True,
+    )
+    quantizer = SymmetricQuantizer(qspec)
+    quantizer.scale.data = tensor_scale
+
+    x_nncf = quantizer(test_input)
+
+    fq = convert_to_fakequantizer(quantizer)
+
+    fq_levels = fq.quant_max - fq.quant_min
+    assert fq_levels == 255, "Levels in converted FQ should be 255"
+
+    fq_test_input = test_input
+    if half_range:
+        # Required clamp of input for half range
+        fq_input_low, fq_input_high = quantizer.get_input_low_input_high()
+        fq_test_input = torch.min(torch.max(fq_test_input, fq_input_low), fq_input_high)
+    x_torch = fq(fq_test_input)
+
+    if use_cuda:
+        test_input = test_input.cpu()
+        x_nncf = x_nncf.cpu()
+        x_torch = x_torch.cpu()
+
+    check_outputs(x_nncf.detach().numpy(), x_torch.detach().numpy(), np_is_near_mid_point, quant_lens)
+
+
+@pytest.mark.parametrize("use_cuda", (True, False), ids=("cuda", "cpu"))
+@pytest.mark.parametrize("half_range", [False, True], ids=["full_range", "half_range"])
+@pytest.mark.parametrize("is_weights", (True, False), ids=("weights", "activation"))
+@pytest.mark.parametrize("input_size", INPUT_TEST_SCALES, ids=_idfn)
+@pytest.mark.parametrize("is_per_channel", (True, False), ids=("per_channel", "per_tensor"))
+def test_converting_asymmetric_quantizer(input_size, is_per_channel, is_weights, half_range, use_cuda):
+    if not torch.cuda.is_available() and use_cuda is True:
+        pytest.skip("Skipping CUDA test cases for CPU only setups")
+
+    if is_per_channel and input_size[0 if is_weights else 1] == 1:
+        pytest.skip("Same case as for per_tensor case")
+
+    np.random.seed(42)
+    bits = 7 if half_range else 8
+
+    input_low, input_range = generate_random_low_and_range_by_input_size(input_size, is_per_channel, is_weights)
+    tensor_input_low, tensor_input_range = get_test_data([input_low, input_range], use_cuda)
+
+    input_low = np.squeeze(input_low)
+    input_range = np.squeeze(input_range)
+
+    np_input, np_is_near_mid_point, quant_lens = generate_test_input(
+        input_size, input_low, input_range, bits, is_per_channel, is_weights
+    )
+    test_input = get_test_data([np_input], use_cuda)
+
+    qspec = PTQuantizerSpec(
+        num_bits=8,
+        mode=QuantizationMode.ASYMMETRIC,
+        signedness_to_force=False,
+        narrow_range=False,
+        scale_shape=tensor_input_low.shape,
+        logarithm_scale=False,
+        half_range=half_range,
+        is_quantized_on_export=True,
+    )
+    quantizer = AsymmetricQuantizer(qspec)
+    quantizer.input_low.data = tensor_input_low
+    quantizer.input_range.data = tensor_input_range
+    x_nncf = quantizer(test_input)
+
+    fq = convert_to_fakequantizer(quantizer)
+
+    fq_levels = fq.quant_max - fq.quant_min
+    assert fq_levels == 255, "Levels in converted FQ should be 255"
+
+    fq_test_input = test_input
+    if half_range:
+        # Required clamp of input for half range
+        input_low, input_high = quantizer.get_input_low_input_high()
+        fq_test_input = torch.min(torch.max(fq_test_input, input_low), input_high)
+
+    x_torch = fq(fq_test_input)
+
+    if use_cuda:
+        test_input = test_input.cpu()
+        x_nncf = x_nncf.cpu()
+        x_torch = x_torch.cpu()
+
+    check_outputs(x_nncf.detach().numpy(), x_torch.detach().numpy(), np_is_near_mid_point, quant_lens)
+
 @pytest.mark.parametrize("mode", ("asymmetric", "symmetric"))
-@pytest.mark.parametrize("overflow_fix", ("disable", "enable"))
+@pytest.mark.parametrize("overflow_fix", ("disable", "enable"), ids=("overflow_fix_enable", "overflow_fix_disable"))
 def test_prepare_for_inference_quantization(mode, overflow_fix):
     model = BasicConvTestModel()
     config = get_quantization_config_without_range_init(model.INPUT_SIZE[-1])
@@ -88,6 +233,20 @@ def test_prepare_for_inference_quantization(mode, overflow_fix):
     assert torch.all(torch.isclose(x_nncf, x_torch)), f"{x_nncf.view(-1)} != {x_torch.view(-1)}"
 
 
+@pytest.mark.parametrize("save_original_model", (True, False))
+def test_save_original_model(save_original_model):
+    model = BasicConvTestModel()
+    config = get_quantization_config_without_range_init(model.INPUT_SIZE[-1])
+    register_bn_adaptation_init_args(config)
+    compressed_model, compression_ctrl = create_compressed_model_and_algo_for_test(model, config)
+
+    modified_model = prepare_for_inference(compressed_model, compression_ctrl, save_original_model)
+
+    if save_original_model:
+        assert id(modified_model) != id(compressed_model)
+    else:
+        assert id(modified_model) == id(compressed_model)
+
 def test_prepare_for_inference_pruning():
     input_size = [1, 1, 8, 8]
     model = BigPruningTestModel()
@@ -104,10 +263,15 @@ def test_prepare_for_inference_pruning():
 
     _check_operators(compressed_model)
 
+    conv2_wight = compressed_model.nncf_module.conv2.weight.data
+    assert torch.count_nonzero(conv2_wight) * 2 == torch.numel(conv2_wight), "Model was not pruned"
+
     assert torch.equal(x_nncf, x_torch), f"{x_nncf=} != {x_torch}"
 
 
-def test_prepare_for_inference_quantization_and_pruning():
+@pytest.mark.parametrize("mode", ("asymmetric", "symmetric"))
+@pytest.mark.parametrize("overflow_fix", ("disable", "enable"), ids=("overflow_fix_disable", "overflow_fix_enable"))
+def test_prepare_for_inference_quantization_and_pruning(mode, overflow_fix):
     input_size = [1, 1, 8, 8]
     model = BigPruningTestModel()
     config = NNCFConfig()
@@ -124,8 +288,9 @@ def test_prepare_for_inference_quantization_and_pruning():
                 {
                     "algorithm": "quantization",
                     "initializer": {"range": {"num_init_samples": 0}},
-                    "preset": "mixed",
-                    "overflow_fix": "disable",   # TODO: remove
+                    "weights": {"mode": mode},
+                    "activations": {"mode": mode},
+                    "overflow_fix": overflow_fix,
                 },
             ],
         }
@@ -142,66 +307,7 @@ def test_prepare_for_inference_quantization_and_pruning():
 
     _check_operators(compressed_model)
 
+    conv2_wight = compressed_model.nncf_module.conv2.weight.data
+    assert torch.count_nonzero(conv2_wight) * 2 == torch.numel(conv2_wight), "Model was not pruned"
+
     assert torch.all(torch.isclose(x_nncf, x_torch)), f"{x_nncf.view(-1)} != {x_torch.view(-1)}"
-
-@pytest.mark.parametrize("signed", (True, False))
-@pytest.mark.parametrize("half_range", (True, False))
-@pytest.mark.parametrize("scale", ([1.0], [0.3], [[[[0.3]]], [[[1.]]]]))
-def test_converting_symetric(signed, half_range, scale):
-    input_tensor = _gen_input_tensor([2, 1, 2, 2])
-    scale = torch.Tensor(scale)
-
-    qspec = PTQuantizerSpec(
-        num_bits=8,
-        mode=QuantizationMode.SYMMETRIC,
-        signedness_to_force=signed,
-        narrow_range=False,
-        scale_shape=scale.shape,
-        logarithm_scale=False,
-        half_range=half_range,
-        is_quantized_on_export=True,
-    )
-    quantizer = SymmetricQuantizer(qspec)
-    quantizer.scale.data = scale
-    x_nncf = quantizer(input_tensor)
-
-    fq = convert_to_fakequantizer(quantizer)
-    x_torch = fq(input_tensor)
-
-    assert torch.all(torch.isclose(x_torch, x_nncf)), f"{x_torch.view(-1)} != {x_nncf.view(-1)}"
-
-
-
-@pytest.mark.parametrize("signed", (True, False))
-@pytest.mark.parametrize("half_range", (True, False))
-@pytest.mark.parametrize("input_low, input_range", (
-    ([0.0], [1.0]),
-    ([0.3], [0.5]),
-    ([-0.3], [0.9]),
-    ([[[[0.0]]], [[[0.0]]]],  [[[[0.3]]], [[[1.]]]])
-    )
-)
-def test_converting_asymetric(signed, half_range, input_low, input_range):
-    input_tensor = _gen_input_tensor([2, 1, 2, 2])
-    input_low = torch.Tensor(input_low)
-    input_range = torch.Tensor(input_range)
-
-    qspec = PTQuantizerSpec(
-        num_bits=8,
-        mode=QuantizationMode.ASYMMETRIC,
-        signedness_to_force=signed,
-        narrow_range=False,
-        scale_shape=input_low.shape,
-        logarithm_scale=False,
-        half_range=half_range,
-        is_quantized_on_export=True,
-    )
-    quantizer = AsymmetricQuantizer(qspec)
-    quantizer.input_low.data = input_low
-    quantizer.input_range.data = input_range
-    x_nncf = quantizer(input_tensor)
-
-    fq = convert_to_fakequantizer(quantizer)
-    x_torch = fq(input_tensor)
-
-    assert torch.all(torch.isclose(x_torch, x_nncf)), f"{x_torch.view(-1)} != {x_nncf.view(-1)}"
