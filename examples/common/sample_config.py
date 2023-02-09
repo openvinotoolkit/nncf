@@ -17,6 +17,7 @@ from pathlib import Path
 import jstyleson as json
 from addict import Dict
 
+from nncf import NNCFConfig
 from nncf.common.utils.os import safe_open
 
 _DEFAULT_KEY_TO_ENV = {
@@ -95,3 +96,39 @@ class SampleConfig(Dict):
         for k, v in key_to_env_dict:
             if v in os.environ:
                 self[k] = int(os.environ[v])
+
+
+EVAL_ONLY_ERROR_TEXT = 'The config file you are using is only presented for purposes of running the model ' \
+                       'in evaluation mode.\n If you wish to run training for this model, remove the ' \
+                       '`"eval_only": true` line from the .json configuration file and provide training ' \
+                       'hyperparameters (e.g. number of training epochs, optimizer etc.) in the same config.'
+
+def _parse_sample_config(args, parser) -> SampleConfig:
+    sample_config = SampleConfig.from_json(args.config)
+    sample_config.update_from_args(args, parser)
+    return sample_config
+
+def _embed_nncf_config(args, sample_config: SampleConfig) -> SampleConfig:
+    nncf_config = NNCFConfig.from_json(args.config)
+    if args.disable_compression and 'compression' in nncf_config:
+        del nncf_config['compression']
+
+    sample_config.nncf_config = nncf_config
+    return sample_config
+
+def _fail_if_training_with_eval_only_config(sample_config: SampleConfig):
+    if sample_config.eval_only and 'train' in sample_config.mode:
+        raise RuntimeError(EVAL_ONLY_ERROR_TEXT)
+
+def create_sample_config(args, parser) -> SampleConfig:
+    sample_config = _parse_sample_config(args, parser)
+    _fail_if_training_with_eval_only_config(sample_config)
+    sample_config = _embed_nncf_config(args, sample_config)
+
+    return sample_config
+
+
+def create_sample_config_for_separate_train_eval_scripts(args, parser) -> SampleConfig:
+    sample_config = _parse_sample_config(args, parser)
+    sample_config = _embed_nncf_config(args, sample_config)
+    return sample_config

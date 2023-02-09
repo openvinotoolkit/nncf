@@ -19,7 +19,7 @@ from nncf.tensorflow.helpers.model_creation import create_compressed_model
 from nncf.tensorflow.utils.state import TFCompressionState
 from nncf.tensorflow.utils.state import TFCompressionStateLoader
 from examples.tensorflow.common.logger import logger
-from examples.tensorflow.common.sample_config import create_sample_config
+from examples.common.sample_config import create_sample_config
 from examples.tensorflow.common.argparser import get_common_argument_parser
 from examples.tensorflow.object_detection.models.model_selector import get_predefined_config as\
                                                                        get_predefined_od_config
