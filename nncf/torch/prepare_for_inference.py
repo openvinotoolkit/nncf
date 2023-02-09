@@ -144,7 +144,12 @@ def replace_quantizer_to_native_module(model: NNCFNetwork) -> None:
                         # Half range require to clamp weights of module
                         # Note: Half range used only for weight.
                         input_low, input_high = op.op.get_input_low_input_high()
-                        nncf_module.weight.data = torch.min(torch.max(nncf_module.weight.data, input_low), input_high)
+
+                        data = nncf_module.weight.data
+                        data = torch.min(torch.max(data, input_low), input_high)
+                        data = op.op.quantize(data, execute_traced_op_as_identity=False)
+                        nncf_module.weight.data = data
+
                     op.op = convert_to_fakequantizer(op.op)
 
         if hasattr(nncf_module, "post_ops"):
@@ -190,6 +195,10 @@ def convert_to_fakequantizer(nncf_quantizer: BaseQuantizer) -> FakeQuantize:
         qscheme=qscheme,
         eps=nncf_quantizer.eps,
     )
+
+    if not per_channel:
+        scale = scale.squeeze()
+        zero_point = zero_point.squeeze()
 
     fakequantizer.scale = scale
     fakequantizer.ch_axis = ch_axis
