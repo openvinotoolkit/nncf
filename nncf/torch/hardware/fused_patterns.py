@@ -1,5 +1,22 @@
+"""
+ Copyright (c) 2023 Intel Corporation
+ Licensed under the Apache License, Version 2.0 (the "License");
+ you may not use this file except in compliance with the License.
+ You may obtain a copy of the License at
+      http://www.apache.org/licenses/LICENSE-2.0
+ Unless required by applicable law or agreed to in writing, software
+ distributed under the License is distributed on an "AS IS" BASIS,
+ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ See the License for the specific language governing permissions and
+ limitations under the License.
+"""
+
+from nncf.common.utils.backend import BackendType
+from nncf.common.utils.registry import Registry
 from nncf.common.graph.patterns import GraphPattern
-from nncf.common.graph.patterns import HWFusedPatterns
+from nncf.common.graph.patterns import PatternNames
+from nncf.common.graph.patterns.manager import PatternsManager
+from nncf.common.graph.patterns.manager import TargetDevice
 from nncf.torch.graph.pattern_operations import ARITHMETIC_OPERATIONS
 from nncf.torch.graph.pattern_operations import ATOMIC_ACTIVATIONS_OPERATIONS
 from nncf.torch.graph.pattern_operations import BATCH_NORMALIZATION_OPERATIONS
@@ -13,49 +30,124 @@ from nncf.torch.graph.patterns import create_swish_act
 from nncf.torch.graph.patterns import create_l2_norm
 
 
-def _get_torch_hw_fused_patterns() -> HWFusedPatterns:
-    retval = HWFusedPatterns()
-    linear_ops = GraphPattern()
-    linear_ops.add_node(**LINEAR_OPERATIONS)
-    retval.register(linear_ops, LINEAR_OPERATIONS['label'], match=False)
+PT_HW_FUSED_PATTERNS = Registry('torch')
 
-    batch_norm = GraphPattern()
-    batch_norm.add_node(**BATCH_NORMALIZATION_OPERATIONS)
-    retval.register(batch_norm, BATCH_NORMALIZATION_OPERATIONS['label'], match=False)
+# ATOMIC OPERATIONS
 
+
+@PT_HW_FUSED_PATTERNS.register(PatternNames.L2_NORM)
+def create_l2_norm_operations():
+    return create_l2_norm()
+
+# COMBINTATIONS
+
+
+@PT_HW_FUSED_PATTERNS.register(PatternNames.LINEAR_ARITHMETIC)
+def create_linear_arithmetic_operations():
+    linear = linear_operations()
+    arithmetic = arithmetic_operations()
+    linear.join_patterns(arithmetic)
+    return linear
+
+
+@PT_HW_FUSED_PATTERNS.register(PatternNames.BATCH_NORM_ACTIVATIONS)
+def create_batch_norm_activations_operations():
+    batch_norm = batch_norm_operations()
+    activations = activation_operations()
+    batch_norm.join_patterns(activations)
+    return batch_norm
+
+
+@PT_HW_FUSED_PATTERNS.register(PatternNames.ACTIVATIONS_BATCH_NORM)
+def create_activations_batch_norm_operations():
+    batch_norm = batch_norm_operations()
+    activations = activation_operations()
+    activations.join_patterns(batch_norm)
+    return activations
+
+
+@PT_HW_FUSED_PATTERNS.register(PatternNames.LINEAR_ACTIVATIONS_BATCH_NORM_PERMUTATIONS)
+def create_linear_activation_batch_norm_permutation():
+    linear = linear_operations()
+    bn_activations_permutations = batch_norm_activations_permutations()
+    linear.join_patterns(bn_activations_permutations)
+    return linear
+
+
+@PT_HW_FUSED_PATTERNS.register(PatternNames.ARITHMETIC_BATCH_NORM_ACTIVATIONS_PERMUTATIONS)
+def create_arithmetic_batch_norm_activations_permutations():
+    arithmetic = arithmetic_operations()
+    bn_act_perm = batch_norm_activations_permutations()
+    arithmetic.join_patterns(bn_act_perm)
+    return arithmetic
+
+
+@PT_HW_FUSED_PATTERNS.register(PatternNames.GROUP_NORM_RELU)
+def create_group_norm_relu_operations():
+    group_norm = GraphPattern()
+    group_norm.add_node(**GROUP_NORMALIZATION_OPERATIONS)
+    relu = GraphPattern()
+    relu.add_node(**RELU_OPERATIONS)
+    group_norm.join_patterns(relu)
+    return group_norm
+
+
+@PT_HW_FUSED_PATTERNS.register(PatternNames.LINEAR_CONST_MULTIPLY)
+def create_linear_const_multiply():
+    return create_fc_conv_mul()
+
+
+def linear_operations():
+    pattern = GraphPattern()
+    pattern.add_node(**LINEAR_OPERATIONS)
+    return pattern
+
+def arithmetic_operations():
+    pattern = GraphPattern()
+    pattern.add_node(**ARITHMETIC_OPERATIONS)
+    return pattern
+
+
+def batch_norm_operations():
+    pattern = GraphPattern()
+    pattern.add_node(**BATCH_NORMALIZATION_OPERATIONS)
+    return pattern
+
+
+def activation_operations():
     atomic_activations = GraphPattern()
     atomic_activations.add_node(**ATOMIC_ACTIVATIONS_OPERATIONS)
     swish = create_swish_act()
     h_sigmoid = create_h_sigmoid_act()
     h_swish = create_h_swish_act()
-    activations = atomic_activations | swish | h_swish | h_sigmoid
-    retval.register(activations, 'ACTIVATIONS', match=False)
 
-    arithmetic_ops = GraphPattern()
-    arithmetic_ops.add_node(**ARITHMETIC_OPERATIONS)
-    retval.register(arithmetic_ops, ARITHMETIC_OPERATIONS['label'], match=False)
-
-    batch_norm_activations_permutation = batch_norm + activations | activations + batch_norm | batch_norm | activations
-
-    retval.register(linear_ops + arithmetic_ops, 'LINEAR + ARITHMETIC', match=True)
-    retval.register(linear_ops + batch_norm_activations_permutation, 'LINEAR + BN_ACT_PERM',
-                    match=True)
-    retval.register(batch_norm + activations, 'BN + ACTIVATIONS', match=True)
-    retval.register(activations + batch_norm, 'ACTIVATIONS + BN', match=True)
-    retval.register(arithmetic_ops + batch_norm_activations_permutation,
-                    'ARITHMETIC + BN_ACT_PERM', match=True)
-
-    group_norm = GraphPattern()
-    group_norm.add_node(**GROUP_NORMALIZATION_OPERATIONS)
-    relu = GraphPattern()
-    relu.add_node(**RELU_OPERATIONS)
-    retval.register(group_norm + relu, 'GROUP_NORM + RELU', match=True)
-
-    l2_norm = create_l2_norm()
-    retval.register(l2_norm, 'L2_NORM', match=True)
-    fc_mul = create_fc_conv_mul()
-    retval.register(fc_mul, 'FC_MUL_CONST', match=True)
-    return retval
+    pattern = GraphPattern()
+    pattern.add_pattern_alternative(atomic_activations)
+    pattern.add_pattern_alternative(swish)
+    pattern.add_pattern_alternative(h_swish)
+    pattern.add_pattern_alternative(h_sigmoid)
+    return pattern
 
 
-PT_HW_FUSED_PATTERNS = _get_torch_hw_fused_patterns()
+def batch_norm_activations_permutations():
+    batch_norm = batch_norm_operations()
+    activations = activation_operations()
+
+    bn_act = GraphPattern()
+    bn_act.join_patterns(batch_norm)
+    bn_act.join_patterns(activations)
+
+    act_bn = GraphPattern()
+    act_bn.join_patterns(activations)
+    act_bn.join_patterns(batch_norm)
+
+    pattern = GraphPattern()
+    pattern.add_pattern_alternative(batch_norm)
+    pattern.add_pattern_alternative(activations)
+    pattern.add_pattern_alternative(bn_act)
+    pattern.add_pattern_alternative(act_bn)
+    return pattern
+
+
+def get_torch_hw_patterns():
+    return PatternsManager().get_full_pattern_graph(BackendType.TORCH, TargetDevice.ANY)

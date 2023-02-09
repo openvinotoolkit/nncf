@@ -25,7 +25,7 @@ from nncf.common.graph.graph_matching import find_subgraphs_matching_pattern
 from nncf.common.utils.dot_file_rw import write_dot_graph
 from nncf.torch.graph.graph import PTNNCFGraph
 from nncf.torch.graph.operator_metatypes import PTRELUMetatype
-from nncf.torch.hardware.fused_patterns import PT_HW_FUSED_PATTERNS
+from nncf.torch.hardware.fused_patterns import get_torch_hw_patterns
 
 
 class SearchGraphNode:
@@ -261,7 +261,7 @@ def get_merged_original_graph_with_pattern(orig_graph: nx.DiGraph, hw_fused_ops:
     if not hw_fused_ops:
         return merged_graph
     # pylint: disable=protected-access
-    pattern_fusing_graph = PT_HW_FUSED_PATTERNS.get_full_pattern_graph()
+    pattern_fusing_graph = get_torch_hw_patterns()
     matches = find_subgraphs_matching_pattern(orig_graph, pattern_fusing_graph)
     nx.set_node_attributes(merged_graph, False, SearchGraph.IS_DUMMY_NODE_ATTR)
     nx.set_node_attributes(merged_graph, False, SearchGraph.IS_MERGED_NODE_ATTR)

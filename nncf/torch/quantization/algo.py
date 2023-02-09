@@ -96,7 +96,7 @@ from nncf.torch.graph.transformations.commands import PTTargetPoint
 from nncf.torch.graph.transformations.commands import TransformationPriority
 from nncf.torch.graph.transformations.layout import PTTransformationLayout
 from nncf.torch.hardware.config import PTHWConfig
-from nncf.torch.hardware.fused_patterns import PT_HW_FUSED_PATTERNS
+from nncf.torch.hardware.fused_patterns import get_torch_hw_patterns
 from nncf.torch.initialization import SimpleDataLoaderRunner
 from nncf.torch.module_operations import UpdatePaddingValue
 from nncf.torch.nncf_network import EXTERNAL_QUANTIZERS_STORAGE_NAME
@@ -347,7 +347,7 @@ class PropagationBasedQuantizerSetupGenerator(QuantizerSetupGeneratorBase):
                          precision_init_params, range_init_params,
                          hw_config)
 
-        self._pattern_fusing_graph = PT_HW_FUSED_PATTERNS.get_full_pattern_graph()
+        self._pattern_fusing_graph = get_torch_hw_patterns()
 
 
         self._hw_precision_constraints = HardwareQuantizationConstraints()
