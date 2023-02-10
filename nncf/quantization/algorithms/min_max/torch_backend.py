@@ -1,5 +1,5 @@
 """
- Copyright (c) 2022 Intel Corporation
+ Copyright (c) 2023 Intel Corporation
  Licensed under the Apache License, Version 2.0 (the "License");
  you may not use this file except in compliance with the License.
  You may obtain a copy of the License at
@@ -11,27 +11,29 @@
  limitations under the License.
 """
 
-from copy import deepcopy
 from typing import Dict, List, Tuple
-import torch
 
+from nncf.common.hardware.config import HWConfig
 from nncf.common.graph.graph import NNCFGraph
 from nncf.common.graph.definitions import NNCFGraphNodeType
 from nncf.common.graph.graph import NNCFNode
 from nncf.common.graph.operator_metatypes import OperatorMetatype
-from nncf.common.graph.patterns import HWFusedPatterns
 from nncf.common.graph.model_transformer import ModelTransformer
 from nncf.common.graph.transformations.commands import TargetType
-from nncf.common.hardware.config import HWConfig
+from nncf.common.graph.layer_attributes import WeightedLayerAttributes
 from nncf.common.quantization.structs import QuantizerConfig
+from nncf.common.quantization.initialization.range import RangeInitConfig
 from nncf.common.tensor_statistics.statistics import MinMaxTensorStatistic
 from nncf.common.utils.backend import BackendType
 from nncf.common.graph.transformations.commands import TransformationPriority
-from nncf.common.graph.layer_attributes import WeightedLayerAttributes
 
-from nncf.torch.quantization.default_quantization import DEFAULT_PT_QUANT_TRAIT_TO_OP_DICT
-from nncf.torch.hardware.fused_patterns import PT_HW_FUSED_PATTERNS
 from nncf.torch.hardware.config import PTHWConfig
+from nncf.torch.quantization.default_quantization import DEFAULT_PT_QUANT_TRAIT_TO_OP_DICT
+from nncf.torch.quantization.layers import QUANTIZATION_MODULES
+from nncf.torch.quantization.layers import PTQuantizerSpec
+from nncf.torch.quantization.layers import get_scale_shape
+from nncf.torch.quantization.init_range import PTRangeInitCollectorParams
+from nncf.torch.quantization.init_range import StatCollectorGenerator
 from nncf.torch.nncf_network import PTModelTransformer
 from nncf.torch.nncf_network import NNCFNetwork
 from nncf.torch.graph.graph import PTTargetPoint
@@ -39,12 +41,6 @@ from nncf.torch.graph.transformations.commands import PTInsertionCommand
 from nncf.torch.tensor_statistics.collectors import PTMinMaxStatisticCollector
 from nncf.torch.tensor_statistics.statistics import PTMinMaxTensorStatistic
 from nncf.torch.tensor_statistics.collectors import PTMeanMinMaxStatisticCollector
-from nncf.torch.quantization.layers import QUANTIZATION_MODULES
-from nncf.torch.quantization.layers import PTQuantizerSpec
-from nncf.torch.quantization.layers import get_scale_shape
-from nncf.torch.quantization.init_range import PTRangeInitCollectorParams
-from nncf.torch.quantization.init_range import StatCollectorGenerator
-from nncf.common.quantization.initialization.range import RangeInitConfig
 
 from nncf.quantization.algorithms.min_max.backend import MinMaxAlgoBackend
 from nncf.quantization.algorithms.min_max.backend import ALGO_BACKENDS
@@ -74,10 +70,6 @@ class PTMinMaxAlgoBackend(MinMaxAlgoBackend):
     @property
     def post_processing_metatypes(self) -> List[OperatorMetatype]:
         return None
-
-    @property
-    def hw_fused_patterns(self) -> HWFusedPatterns:
-        return PT_HW_FUSED_PATTERNS
 
     @property
     def hw_config(self) -> HWConfig:
@@ -129,7 +121,7 @@ class PTMinMaxAlgoBackend(MinMaxAlgoBackend):
     @staticmethod
     def minmax_statistic_collector(nncf_graph: NNCFGraph,
                                    target_point: PTTargetPoint,
-                                   quantizer_config,
+                                   quantizer_config: QuantizerConfig,
                                    num_samples: int = None) -> PTMinMaxStatisticCollector:
         return PTMinMaxAlgoBackend._statistic_collector_builder("min_max",
                                                                 nncf_graph,
@@ -150,19 +142,12 @@ class PTMinMaxAlgoBackend(MinMaxAlgoBackend):
                                                                 num_samples)
 
     @staticmethod
-    def get_weight_tensor(model: NNCFNetwork, target_point: PTTargetPoint) -> Tuple[str, torch.Tensor]:
-        node_to_op_address_maping = model.get_node_to_op_address_mapping()
-        op_address = node_to_op_address_maping[target_point.target_node_name]
-        w = model.get_module_by_scope(op_address.scope_in_model).weight
-        return target_point.target_node_name, w
-
-    @staticmethod
     def get_weight_tensor_port_id(node: NNCFNode) -> int:
         return None
 
     @staticmethod
     def get_weight_config(config: QuantizerConfig, model: NNCFNetwork) -> QuantizerConfig:
-        return deepcopy(config)
+        return config
 
     @staticmethod
     def _get_input_scale_shape(nncf_graph: NNCFGraph,

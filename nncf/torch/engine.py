@@ -1,6 +1,5 @@
-
 """
- Copyright (c) 2022 Intel Corporation
+ Copyright (c) 2023 Intel Corporation
  Licensed under the Apache License, Version 2.0 (the "License");
  you may not use this file except in compliance with the License.
  You may obtain a copy of the License at
@@ -12,7 +11,8 @@
  limitations under the License.
 """
 
-from typing import Any, Dict
+import torch
+from typing import Union, Any, Dict
 from torch import nn
 
 from nncf.common.engine import Engine
@@ -27,11 +27,12 @@ class PTEngine(Engine):
         self._model = model
         model.eval()
 
-    def infer(self, input_data) -> Dict[str, Any]:
+    def infer(self, input_data: Union[torch.Tensor, Dict[str, torch.Tensor]]) ->\
+        Union[torch.Tensor, Dict[str, Any]]:
         """
         Runs Torch model on the provided input.
 
         :param input_data: inputs for the model
-        :return output_data: models outputs
+        :return output_data: model outputs
         """
         return self._model(input_data)

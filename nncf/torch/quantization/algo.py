@@ -94,7 +94,6 @@ from nncf.torch.dynamic_graph.context import TracingContext
 from nncf.torch.graph.graph import PTNNCFGraph
 from nncf.torch.graph.operator_metatypes import PTModuleConv2dMetatype
 from nncf.torch.graph.operator_metatypes import PTDepthwiseConv2dSubtype
-from nncf.torch.graph.operator_metatypes import PTModuleConv2dMetatype
 from nncf.torch.graph.transformations.commands import PTInsertionCommand
 from nncf.torch.graph.transformations.commands import PTTargetPoint
 from nncf.torch.graph.transformations.commands import TransformationPriority
@@ -150,8 +149,7 @@ from nncf.torch.utils import get_model_device
 from nncf.torch.utils import get_model_dtype
 from nncf.torch.utils import get_state_dict_names_with_modules
 from nncf.torch.utils import is_main_process
-from nncf.torch.utils import get_model_dtype
-from torch import nn
+
 
 QUANTIZER_BUILDER_STATE_VERSION_SAVE_NAME = 'version'
 

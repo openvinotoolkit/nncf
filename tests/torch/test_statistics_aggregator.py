@@ -42,8 +42,8 @@ class PTIdentityConvModel(nn.Module, ToNNCFNetworkInterface):
     def forward(self, x):
         return self.conv(x + 0.)
 
-    def get_nncf_network(cls):
-        return get_nncf_network(cls, INPUT_SHAPE)
+    def get_nncf_network(self):
+        return get_nncf_network(self, INPUT_SHAPE)
 
 
 class TestStatisticsAggregator(TemplateTestStatisticsAggregator):

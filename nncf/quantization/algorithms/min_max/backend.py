@@ -13,9 +13,8 @@
 
 from abc import ABC
 from abc import abstractmethod
-from typing import Dict, TypeVar, Tuple, List
+from typing import Dict, TypeVar, List
 
-import numpy as np
 from nncf.common.graph.graph import NNCFGraph
 from nncf.common.graph.graph import NNCFNode
 from nncf.common.graph.operator_metatypes import OperatorMetatype
@@ -24,7 +23,6 @@ from nncf.common.graph.transformations.commands import TargetPoint
 from nncf.common.graph.transformations.commands import TargetType
 from nncf.common.graph.transformations.commands import TransformationCommand
 from nncf.common.hardware.config import HWConfig
-from nncf.common.tensor_statistics.collectors import ReductionShape
 from nncf.common.tensor_statistics.collectors import TensorStatisticCollectorBase
 from nncf.common.tensor_statistics.statistics import MinMaxTensorStatistic
 from nncf.common.utils.registry import Registry
@@ -49,13 +47,6 @@ class MinMaxAlgoBackend(ABC):
     def post_processing_metatypes(self) -> List[OperatorMetatype]:
         """
         Property for the backend-specific post-processing metatypes (NonMaximumSupression, TopK, etc.).
-        """
-
-    @property
-    @abstractmethod
-    def hw_fused_patterns(self) -> HWFusedPatterns:
-        """
-        Property for the hardware & backend-specific layers patterns.
         """
 
     @property
@@ -93,6 +84,7 @@ class MinMaxAlgoBackend(ABC):
         """
         Returns backend-specific quantizer insertion command.
 
+        :param nncf_graph: NNCFGraph to get input/output shapes for the target point.
         :param target_point: Target location for the correction.
         :param quantizer_config: QuantizerConfig instance for the current layer.
         :param statistics: MinMaxTensorStatistic to calculate activation quantization parameters.
@@ -108,10 +100,10 @@ class MinMaxAlgoBackend(ABC):
         """
         Returns backend-specific quantizer insertion command.
 
+        :param nncf_graph: NNCFGraph to get input/output shapes for the target point.
         :param target_point: Target location for the correction.
         :param quantizer_config: QuantizerConfig instance for the current layer.
-        :param weight_tensor: weight tensor to calculate weight quantization parameters.
-        :param node: NNCFNode with the attributes.
+        :param statistics: MinMaxTensorStatistic to calculate activation quantization parameters.
         :return: Backend-specific TransformationCommand for the quantizer insertion operation.
         """
 
@@ -124,8 +116,9 @@ class MinMaxAlgoBackend(ABC):
         """
         Returns backend-specific min max statistic collector.
 
-        :param use_abs_max: Whether to use absolute maximum value or not.
-        :param reduction_shape: Channel axes for the statistics aggregation.
+        :param nncf_graph: NNCFGraph to get input/output shapes for the target point.
+        :param target_point: Target location for the correction.
+        :param quantizer_config: QuantizerConfig instance for the current layer.
         :param num_samples: Maximum number of samples to collect.
         :return: Backend-specific TensorStatisticCollectorBase for the statistics calculation.
         """
@@ -140,10 +133,11 @@ class MinMaxAlgoBackend(ABC):
         """
         Returns backend-specific min max statistic collector.
 
+        :param nncf_graph: NNCFGraph to get input/output shapes for the target point.
+        :param target_point: Target location for the correction.
+        :param quantizer_config: QuantizerConfig instance for the current layer.
         :param use_abs_max: Whether to use absolute maximum value or not.
-        :param reduction_shape: Channel axes for the statistics aggregation.
         :param num_samples: Maximum number of samples to collect.
-        :param window_size: The maximum size of the samples queue.
         :return: Backend-specific TensorStatisticCollectorBase for the statistics calculation.
         """
 
@@ -152,6 +146,7 @@ class MinMaxAlgoBackend(ABC):
         """
         Returns node's weight tensor input port ID.
 
+        :param model: Backend model to get structural information.
         :param node: NNCFNode to find its weight input port ID.
         :return: The input port ID of the weight.
         """
