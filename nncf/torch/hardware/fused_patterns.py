@@ -39,7 +39,7 @@ PT_HW_FUSED_PATTERNS = Registry('torch')
 def create_l2_norm_operations():
     return create_l2_norm()
 
-# COMBINTATIONS
+# COMBINATIONS
 
 
 @PT_HW_FUSED_PATTERNS.register(PatternNames.LINEAR_ARITHMETIC)
@@ -134,18 +134,18 @@ def batch_norm_activations_permutations():
     activations = activation_operations()
 
     bn_act = GraphPattern()
-    bn_act.join_patterns(batch_norm)
+    bn_act.add_pattern_alternative(batch_norm)
     bn_act.join_patterns(activations)
 
     act_bn = GraphPattern()
-    act_bn.join_patterns(activations)
+    act_bn.add_pattern_alternative(activations)
     act_bn.join_patterns(batch_norm)
 
     pattern = GraphPattern()
-    pattern.add_pattern_alternative(batch_norm)
-    pattern.add_pattern_alternative(activations)
     pattern.add_pattern_alternative(bn_act)
     pattern.add_pattern_alternative(act_bn)
+    pattern.add_pattern_alternative(batch_norm)
+    pattern.add_pattern_alternative(activations)
     return pattern
 
 
