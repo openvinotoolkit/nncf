@@ -11,7 +11,7 @@
  limitations under the License.
 """
 
-from typing import Tuple, Optional
+from typing import Tuple, Optional, Union
 from dataclasses import dataclass
 
 import numpy as np
@@ -21,7 +21,6 @@ from nncf.common.quantization.quantizers import calculate_asymmetric_level_range
 from nncf.common.quantization.quantizers import calculate_symmetric_level_ranges
 from nncf.common.quantization.structs import QuantizerConfig
 from nncf.common.quantization.structs import QuantizerGroup
-from nncf.common.tensor_statistics.statistics import MinMaxTensorStatistic
 
 
 @dataclass
@@ -206,18 +205,20 @@ def calculate_weight_quantizer_parameters(weight_tensor: np.ndarray, quantizer_c
     return QuantizerLayerParameters(level_low, level_high, output_low, output_high, levels)
 
 
-def calculate_activation_quantizer_parameters(statistics: MinMaxTensorStatistic,
+def calculate_activation_quantizer_parameters(min_values: Union[float, np.ndarray],
+                                              max_values: Union[float, np.ndarray],
                                               quantizer_config: QuantizerConfig) -> QuantizerLayerParameters:
     """
     Calculates FakeQuantize layer attributes for activation quantizer.
 
-    :param statistics: Collected statistics for the quantized insertion.
+    :param min_values: Collected min_values for the quantized insertion.
+    :param max_values: Collected max_values for the quantized insertion.
     :param quantizer_config: Config of the quantization configuration.
     :return: Parameters of the FakeQuantize layer.
     """
     quant_group = QuantizerGroup.ACTIVATIONS
-    min_values = np.array(statistics.min_values)
-    max_values = np.array(statistics.max_values)
+    min_values = np.array(min_values)
+    max_values = np.array(max_values)
 
     if quantizer_config.mode == QuantizationMode.SYMMETRIC:
         _, _, levels = calculate_symmetric_level_ranges(quantizer_config.num_bits, signed=True, narrow_range=False)

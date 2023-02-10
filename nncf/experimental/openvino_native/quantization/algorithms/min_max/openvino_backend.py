@@ -79,8 +79,9 @@ class OVMinMaxAlgoBackend(MinMaxAlgoBackend):
             target_point: OVTargetPoint,
             quantizer_config: QuantizerConfig,
             statistics: MinMaxTensorStatistic) -> OVQuantizerInsertionCommand:
-        parameters = calculate_quantizer_parameters(statistics, quantizer_config,
-                                                    QuantizerGroup.ACTIVATIONS)
+        min_values, max_values = statistics.min_values, statistics.max_values
+        parameters = calculate_quantizer_parameters(
+            min_values, max_values, quantizer_config, QuantizerGroup.ACTIVATIONS)
         return OVQuantizerInsertionCommand(target_point, parameters)
 
     @staticmethod

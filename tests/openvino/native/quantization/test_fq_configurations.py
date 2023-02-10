@@ -89,14 +89,13 @@ def test_calculate_activation_quantizer_parameters(case_to_test):
     per_ch = case_to_test.per_channel
     data, ref_quantize_params = parse_test_data(stat_type, mode, sign, per_ch)
 
-    axes = (0, 2, 3) if case_to_test.per_channel else None
+    axes = (0, 2, 3) if per_ch else None
     min_values = np.amin(data, axes, keepdims=True)
     if mode == QuantizationMode.SYMMETRIC:
         max_values = np.amax(np.abs(data), axes, keepdims=True)
     else:
         max_values = np.amax(data, axes, keepdims=True)
 
-    statistics = OVMinMaxTensorStatistic(min_values, max_values)
     qconfig = QuantizerConfig(num_bits=8, mode=mode, signedness_to_force=sign, per_channel=per_ch)
     quantize_params = calculate_quantizer_parameters(statistics, qconfig, QuantizerGroup.ACTIVATIONS)
 
