@@ -101,6 +101,10 @@ def _build_node_id_vs_attrs_dict(nx_graph: nx.DiGraph, id_from_attr: bool = Fals
                                                                                            Dict[str, str]]:
     retval = {}  # type: Dict[Union[int, str], Dict[str, str]]
     for node_name, node_attrs in nx_graph.nodes.items():
+        # When read a dot graph dumped by pydot the extra '\n' symbol appears as a graph node.
+        # https://github.com/networkx/networkx/issues/5686
+        if node_name == '\\n': # bug - networkx/networkx#5686
+            continue
         if id_from_attr:
             node_identifier = int(node_attrs['id'])
         else:
