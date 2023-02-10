@@ -37,9 +37,6 @@ from nncf.torch.quantization.layers import BaseQuantizer
 from nncf.torch.quantization.layers import SymmetricQuantizer
 from nncf.torch.nncf_network import NNCFNetwork, PTNNCFGraph
 from nncf.torch.nncf_module_replacement import is_nncf_module
-from nncf.common.quantization.quantizer_propagation.structs import QuantizationTrait
-from nncf.common.quantization.structs import WeightQuantizerId
-from nncf.common.quantization.structs import NonWeightQuantizerId
 from nncf.torch.quantization.structs import WeightQuantizerInfo
 from nncf.torch.quantization.structs import NonWeightQuantizerInfo
 from nncf.torch.quantization.statistics import MemoryConsumptionStatistics

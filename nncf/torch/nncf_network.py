@@ -457,7 +457,8 @@ class NNCFNetwork(nn.Module, PostGraphBuildActing):
                 for node in nodes_in_scope:
                     if node.metatype in OPERATORS_WITH_WEIGHTS_METATYPES:
                         retval.add(node)
-        return list(retval)
+
+        return list(sorted(retval, key=str))
 
     def get_nncf_modules_by_module_names(self, nncf_module_names_list: List[str]) -> Dict["Scope", torch.nn.Module]:
         return get_all_modules_by_type(self.get_nncf_wrapped_model(), nncf_module_names_list)
