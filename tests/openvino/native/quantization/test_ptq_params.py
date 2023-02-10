@@ -108,10 +108,11 @@ def test_quantize_outputs(quantize_outputs):
     assert weight_num_q == 1
 
 
-@pytest.mark.parametrize('ignored_scopes',
-                         [[], ['MatMul'], ['Add'], ['MatMul', 'Add']],
+@pytest.mark.parametrize('ignored_scopes_data',
+                         [([], 1, 1), (['MatMul'], 1, 0), (['Add'], 1, 1), (['MatMul', 'Add'], 0, 0)],
                          ids=['empty', 'MatMul', 'Add', 'MatMul,Add'])
-def test_ignored_scopes(ignored_scopes):
+def test_ignored_scopes(ignored_scopes_data):
+    ignored_scopes, act_num_ref, weight_num_ref = ignored_scopes_data
     algo = PostTrainingQuantization(PostTrainingQuantizationParameters(ignored_scopes=ignored_scopes))
     min_max_algo = algo.algorithms[0]
     assert min_max_algo._parameters.ignored_scopes == ignored_scopes
@@ -128,8 +129,5 @@ def test_ignored_scopes(ignored_scopes):
         if quantization_point.is_weight_quantization_point():
             weight_num_q += 1
 
-    if ignored_scopes == ['MatMul', 'Add']:
-        assert act_num_q == 0
-    else:
-        assert act_num_q == 1
-    assert weight_num_q == 1
+    assert act_num_q == act_num_ref
+    assert weight_num_q == weight_num_ref
