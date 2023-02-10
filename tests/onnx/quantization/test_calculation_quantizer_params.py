@@ -22,6 +22,7 @@ from nncf.onnx.quantization.quantizer_parameters import calculate_weight_quantiz
 from nncf.onnx.quantization.quantizer_parameters import get_level_low_level_high
 from nncf.onnx.quantization.quantizer_parameters import ONNXQuantizerLayerParameters
 from nncf.onnx.statistics.statistics import ONNXMinMaxTensorStatistic
+from nncf.common.tensor_statistics.statistics import TensorStatistic
 
 
 @pytest.mark.parametrize(('max_val, min_val, level_low, level_high, mode, ref_scale, ref_zero_point'),
@@ -85,52 +86,69 @@ def test_calculate_levels(num_bits, tensor_type, ref_levels):
 class CaseToTestActivationQParams:
     num_bits: int
     mode: QuantizationMode
-    activations_signed: bool
+    signedness_to_force: bool
     per_channel: bool
     axis: int
+    statistics: TensorStatistic
+    ref_scale: np.ndarray
+    ref_zero_point: np.ndarray
     ref_tensor_type: np.ndarray
 
 
 CASES_FOR_TEST = (CaseToTestActivationQParams(num_bits=8,
                                               mode=QuantizationMode.SYMMETRIC,
-                                              activations_signed=None,
+                                              signedness_to_force=None,
                                               per_channel=False,
                                               axis=None,
+                                              statistics=ONNXMinMaxTensorStatistic(-1, 10),
+                                              ref_scale=np.array((0.0784313725490196)),
+                                              ref_zero_point=np.array((0.0)),
                                               ref_tensor_type=np.int8),
                   CaseToTestActivationQParams(num_bits=8,
                                               mode=QuantizationMode.ASYMMETRIC,
-                                              activations_signed=None,
+                                              signedness_to_force=None,
                                               per_channel=False,
                                               axis=None,
+                                              statistics=ONNXMinMaxTensorStatistic(-1, 10),
+                                              ref_scale=np.array((0.043137254901960784)),
+                                              ref_zero_point=np.array((-105)),
                                               ref_tensor_type=np.int8),
                   CaseToTestActivationQParams(num_bits=8,
                                               mode=QuantizationMode.SYMMETRIC,
-                                              activations_signed=None,
+                                              signedness_to_force=None,
                                               per_channel=True,
                                               axis=1,
+                                              statistics=ONNXMinMaxTensorStatistic(-1, 10),
+                                              ref_scale=np.array((0.0784313725490196)),
+                                              ref_zero_point=np.array((0.0)),
                                               ref_tensor_type=np.int8),
                   CaseToTestActivationQParams(num_bits=8,
                                               mode=QuantizationMode.SYMMETRIC,
-                                              activations_signed=None,
+                                              signedness_to_force=None,
                                               per_channel=True,
                                               axis=1,
-                                              ref_tensor_type=np.int8),
+                                              statistics=ONNXMinMaxTensorStatistic(-1 * np.ones((3, 3)),
+                                                                                   10 * np.ones((3, 3))),
+                                              ref_scale=0.0784313725490196 * np.ones((3, 3)),
+                                              ref_zero_point=np.zeros((3, 3)),
+                                              ref_tensor_type=np.int8)
                   )
 
 
 @pytest.mark.parametrize('case_to_test', (CASES_FOR_TEST))
 def test_calculate_activation_quantizer_parameters(case_to_test):
-    statistics = ONNXMinMaxTensorStatistic(-1 * np.ones((3, 10, 10)), np.ones((3, 10, 10)))
     qconfig = QuantizerConfig(num_bits=case_to_test.num_bits,
                               mode=case_to_test.mode,
-                              signedness_to_force=case_to_test.activations_signed,
+                              signedness_to_force=case_to_test.signedness_to_force,
                               per_channel=case_to_test.per_channel)
-    ref_quantize_params = ONNXQuantizerLayerParameters(-1 * np.ones((3, 10, 10)), np.ones((3, 10, 10)),
+    ref_quantize_params = ONNXQuantizerLayerParameters(scale=case_to_test.ref_scale,
+                                                       zero_point=case_to_test.ref_zero_point,
                                                        mode=case_to_test.mode,
                                                        axis=case_to_test.axis,
                                                        tensor_type=case_to_test.ref_tensor_type)
-    quantize_params = calculate_activation_quantizer_parameters(statistics, qconfig, case_to_test.axis)
-    assert ref_quantize_params.scale == quantize_params.scale
+    quantize_params = calculate_activation_quantizer_parameters(case_to_test.statistics, qconfig, case_to_test.axis)
+    assert np.array_equal(ref_quantize_params.scale, quantize_params.scale)
+    assert np.array_equal(ref_quantize_params.zero_point, quantize_params.zero_point)
     assert ref_quantize_params.mode == quantize_params.mode
     assert ref_quantize_params.axis == quantize_params.axis
     assert ref_quantize_params.tensor_type == quantize_params.tensor_type
@@ -235,6 +253,7 @@ def test_calculate_weight_quantizer_parameters(case_to_test):
         with pytest.raises(Exception):
             calculate_weight_quantizer_parameters(case_to_test.weight_tensor, qconfig, case_to_test.axis,
                                                   case_to_test.is_half_range)
+        return
 
     quantize_params = calculate_weight_quantizer_parameters(case_to_test.weight_tensor, qconfig, case_to_test.axis,
                                                             case_to_test.is_half_range)
