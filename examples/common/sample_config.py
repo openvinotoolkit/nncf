@@ -109,7 +109,15 @@ def _parse_sample_config(args, parser) -> SampleConfig:
     return sample_config
 
 def _embed_nncf_config(args, sample_config: SampleConfig) -> SampleConfig:
-    nncf_config = NNCFConfig.from_json(args.config)
+    file_path = Path(args.config).resolve()
+    with safe_open(file_path) as f:
+        loaded_json = json.load(f)
+
+    if sample_config.get("target_device") is not None:
+        target_device = sample_config.pop("target_device")
+        loaded_json["target_device"] = target_device
+    nncf_config = NNCFConfig.from_dict(loaded_json)
+
     if args.disable_compression and 'compression' in nncf_config:
         del nncf_config['compression']
 
