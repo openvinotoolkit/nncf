@@ -116,7 +116,7 @@ class OVModelTransformer(ModelTransformer):
         Collects extra model outputs based on transformations.
 
         :param transformations: lisf of the OVOutputInsertionCommand.
-        :return: list of tuples with ov.Output & port_ids.
+        :return: list of tuples with ov.Output & port_id.
         """
         extra_model_outputs = []
         for transformation in transformations:
@@ -140,7 +140,7 @@ class OVModelTransformer(ModelTransformer):
         Takes a model and adds outputs based on the list of ov.Output.
 
         :param model: OpenVINO model.
-        :param outputs: list of tuples with ov.Output & port_ids.
+        :param outputs: list of tuples with ov.Output & port_id.
         :return: modified model.
         """
         model_outputs = model.get_results()
@@ -148,6 +148,7 @@ class OVModelTransformer(ModelTransformer):
         extra_model_outputs = []
         for (output, port_id) in outputs:
             output_name = output.get_node().get_friendly_name()
+            # TODO: (KodiaqQ) check out the models with the Split
             result = opset.result(output, name=f'Result_{output_name}.{port_id}')
             extra_model_outputs.append(result)
 
