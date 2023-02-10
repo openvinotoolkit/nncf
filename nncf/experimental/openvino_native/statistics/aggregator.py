@@ -22,9 +22,9 @@ from nncf.common.tensor_statistics.statistic_point import StatisticPoint
 from nncf.common.tensor_statistics.aggregator import StatisticPointsContainer
 from nncf.common.tensor_statistics.aggregator import StatisticsAggregator
 
-from nncf.experimental.openvino_native.graph.metatypes.openvino_metatypes import OV_OPERATOR_METATYPES
-from nncf.experimental.openvino_native.graph.metatypes.openvino_metatypes import OVConvertMetatype
+from nncf.experimental.openvino_native.graph.transformations.commands import OVTargetPoint
 from nncf.experimental.openvino_native.graph.transformations.commands import OVOutputInsertionCommand
+from nncf.experimental.openvino_native.graph.nncf_graph_builder import get_operation_const_op
 from nncf.experimental.openvino_native.tensor import OVNNCFTensor
 
 
@@ -37,7 +37,9 @@ class OVStatisticsAggregator(StatisticsAggregator):
         super().collect_statistics(model)
 
     def _register_activation_statistic(self, statistic_point: StatisticPointsContainer,
-                                       target_point, node_name, outputs):
+                                       target_point: OVTargetPoint,
+                                       node_name: str,
+                                       outputs: Dict[str, OVNNCFTensor]) -> None:
         port_id = target_point.port_id
         if target_point.type == TargetType.POST_LAYER_OPERATION:
             stat_node_name = node_name
@@ -48,13 +50,11 @@ class OVStatisticsAggregator(StatisticsAggregator):
         statistic_point.register_tensor(outputs[output_name])
 
     def _register_weight_statistic(self, statistic_point: StatisticPointsContainer,
-                                   target_point):
+                                   target_point: OVTargetPoint) -> None:
         op = self._name_to_node_mapping[target_point.target_node_name]
-        node = op.input_value(target_point.port_id).get_node()
-        metatype = OV_OPERATOR_METATYPES.get_operator_metatype_by_op_name(node.get_type_name())
-        if metatype == OVConvertMetatype:
-            node = node.input_value(0).get_node()
-        weight_tensor = node.get_vector().reshape(node.get_output_shape(0))
+        weight_node = get_operation_const_op(op, target_point.port_id)
+        # TODO(l-bat): Add Result for weight nodes.
+        weight_tensor = weight_node.get_vector().reshape(weight_node.get_output_shape(0))
         statistic_point.register_tensor(OVNNCFTensor(weight_tensor))
 
 

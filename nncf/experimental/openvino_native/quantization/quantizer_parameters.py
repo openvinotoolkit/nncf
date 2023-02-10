@@ -228,8 +228,10 @@ def calculate_quantizer_parameters(statistics: MinMaxTensorStatistic,
     if quantizer_config.mode == QuantizationMode.SYMMETRIC:
         narrow_range = quant_group == QuantizerGroup.WEIGHTS
         min_values = None if quant_group == QuantizerGroup.WEIGHTS else min_values
-        _, _, levels = calculate_symmetric_level_ranges(quantizer_config.num_bits, signed=True, narrow_range=narrow_range)
-        level_low, level_high = symmetric_range(min_values, max_values, levels, quantizer_config, quant_group)
+        _, _, levels = calculate_symmetric_level_ranges(quantizer_config.num_bits,
+                                                        signed=True, narrow_range=narrow_range)
+        level_low, level_high = symmetric_range(min_values, max_values,
+                                                levels, quantizer_config, quant_group)
     else:
         _, _, levels = calculate_asymmetric_level_ranges(quantizer_config.num_bits, narrow_range=False)
         level_low, level_high = asymmetric_range(min_values, max_values, quantizer_config, quant_group)

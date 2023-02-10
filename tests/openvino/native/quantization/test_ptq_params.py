@@ -25,7 +25,6 @@ from nncf.experimental.openvino_native.quantization.algorithms.min_max.openvino_
 from nncf.experimental.openvino_native.statistics.collectors import OVMeanMinMaxStatisticCollector
 from nncf.experimental.openvino_native.statistics.collectors import OVMinMaxStatisticCollector
 
-from tests.openvino.native.models import OVReferenceModel
 from tests.openvino.native.models import LinearModel
 from tests.openvino.native.models import DepthwiseConvModel
 from tests.post_training.test_ptq_params import TemplateTestPTQParams

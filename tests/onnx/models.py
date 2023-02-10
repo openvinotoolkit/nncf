@@ -742,12 +742,15 @@ class InputOutputModel(ONNXReferenceModel):
 
 class IdentityConvolutionalModel(ONNXReferenceModel):
     def __init__(self,
-                 input_shape=[1, 3, 10, 10],
+                 input_shape=None,
                  inp_ch=3,
                  out_ch=32,
                  kernel_size=1,
                  conv_w=None,
                  conv_b=None):
+        if input_shape is None:
+            input_shape = [1, 3, 10, 10]
+
         model_input_name = "X"
         X = onnx.helper.make_tensor_value_info(model_input_name,
                                                onnx.TensorProto.FLOAT,

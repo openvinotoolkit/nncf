@@ -59,7 +59,7 @@ class ModelTransformerFactory:
         if model_backend == BackendType.OPENVINO:
             from nncf.experimental.openvino_native.graph.model_transformer import OVModelTransformer
             return OVModelTransformer(model)
-        elif model_backend == BackendType.TORCH:
+        if model_backend == BackendType.TORCH:
             from nncf.torch.nncf_network import PTModelTransformer
             return PTModelTransformer(model)
         raise RuntimeError('Cannot create backend-specific model transformer'
@@ -81,7 +81,7 @@ class EngineFactory:
         if model_backend == BackendType.OPENVINO:
             from nncf.experimental.openvino_native.engine import OVNativeEngine
             return OVNativeEngine(model)
-        elif model_backend == BackendType.TORCH:
+        if model_backend == BackendType.TORCH:
             from nncf.torch.engine import PTEngine
             return PTEngine(model)
         raise RuntimeError('Cannot create backend-specific engine'

@@ -18,9 +18,8 @@ from nncf.experimental.openvino_native.graph.transformations.commands import OVT
 from nncf.experimental.openvino_native.graph.metatypes.openvino_metatypes import OVConvolutionMetatype
 from nncf.experimental.openvino_native.graph.nncf_graph_builder import OVWeightedLayerAttributes
 from nncf.experimental.openvino_native.statistics.collectors import OVMeanMinMaxStatisticCollector
-from nncf.experimental.openvino_native.quantization.algorithms.min_max.openvino_backend import OVMinMaxAlgoBackend
 from nncf.experimental.openvino_native.statistics.collectors import OVMinMaxStatisticCollector
-from nncf.experimental.openvino_native.graph.metatypes.openvino_metatypes import OVConvolutionMetatype
+from nncf.experimental.openvino_native.quantization.algorithms.min_max.openvino_backend import OVMinMaxAlgoBackend
 from nncf.experimental.openvino_native.graph.metatypes.openvino_metatypes import OVDepthwiseConvolutionMetatype
 
 from tests.post_training.test_quantizer_config import TemplateTestQuantizerConfig

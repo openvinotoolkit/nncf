@@ -34,7 +34,7 @@ class TemplateTestStatisticsAggregator:
         pass
 
     @abstractmethod
-    def get_backend_model(self):
+    def get_backend_model(self, dataset_samples):
         pass
 
     @abstractmethod
@@ -86,26 +86,32 @@ class TemplateTestStatisticsAggregator:
                               (TestParameters(RangeType.MEAN_MINMAX, TargetType.POST_LAYER_OPERATION,
                                            QuantizationMode.ASYMMETRIC, False, 64.5, -63.5)),
                               (TestParameters(RangeType.MEAN_MINMAX, TargetType.POST_LAYER_OPERATION,
-                                              QuantizationMode.ASYMMETRIC, True, np.array((1, 0.55, 64.5)), np.array((-4.5, 0, -63.5)))),
+                                              QuantizationMode.ASYMMETRIC, True,
+                                              np.array((1, 0.55, 64.5)), np.array((-4.5, 0, -63.5)))),
                               (TestParameters(RangeType.MEAN_MINMAX, TargetType.POST_LAYER_OPERATION,
-                                              QuantizationMode.SYMMETRIC, True, np.array((5.5, 1, 64.5)), np.array((-4.5, 0, -63.5)))),
+                                              QuantizationMode.SYMMETRIC, True,
+                                              np.array((5.5, 1, 64.5)), np.array((-4.5, 0, -63.5)))),
                               (TestParameters(RangeType.MINMAX, TargetType.POST_LAYER_OPERATION,
                                               QuantizationMode.ASYMMETRIC, False, 128, -128)),
                               (TestParameters(RangeType.MINMAX, TargetType.POST_LAYER_OPERATION,
                                               QuantizationMode.SYMMETRIC, False, 128, -128)),
                               (TestParameters(RangeType.MINMAX, TargetType.POST_LAYER_OPERATION,
-                                              QuantizationMode.ASYMMETRIC, True, np.array((1, 1, 128)), np.array((-10, -1, -128)))),
+                                              QuantizationMode.ASYMMETRIC, True,
+                                              np.array((1, 1, 128)), np.array((-10, -1, -128)))),
                               (TestParameters(RangeType.MINMAX, TargetType.POST_LAYER_OPERATION,
-                                              QuantizationMode.SYMMETRIC, True, np.array((10, 1, 128)), np.array((-10, -1, -128)))),
+                                              QuantizationMode.SYMMETRIC, True,
+                                              np.array((10, 1, 128)), np.array((-10, -1, -128)))),
                               # Weight collectors
                               ((TestParameters(RangeType.MINMAX, TargetType.OPERATION_WITH_WEIGHTS,
                                               QuantizationMode.SYMMETRIC, False, 128, -128))),
                               (TestParameters(RangeType.MINMAX, TargetType.OPERATION_WITH_WEIGHTS,
                                               QuantizationMode.ASYMMETRIC, False, 128, -128)),
                               (TestParameters(RangeType.MINMAX, TargetType.OPERATION_WITH_WEIGHTS,
-                                              QuantizationMode.SYMMETRIC, True, np.array((10, 1, 128)), np.array((-10, -1, -128)))),
+                                              QuantizationMode.SYMMETRIC, True,
+                                              np.array((10, 1, 128)), np.array((-10, -1, -128)))),
                               (TestParameters(RangeType.MINMAX, TargetType.OPERATION_WITH_WEIGHTS,
-                                              QuantizationMode.ASYMMETRIC, True, np.array((1, 0.1, 128)), np.array((-10, -1, -128)))),
+                                              QuantizationMode.ASYMMETRIC, True,
+                                              np.array((1, 0.1, 128)), np.array((-10, -1, -128)))),
                              ))
     def test_statistics_aggregator(self, test_parameters: TestParameters, dataset_samples, is_stat_in_shape_of_scale):
         algo_backend = self.get_algo_backend_cls()

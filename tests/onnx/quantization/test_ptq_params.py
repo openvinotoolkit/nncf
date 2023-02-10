@@ -15,15 +15,13 @@ import pytest
 
 from nncf.parameters import TargetDevice
 from nncf.common.graph.patterns import GraphPattern
-from nncf.onnx.statistics.collectors import ONNXMeanMinMaxStatisticCollector
-from nncf.onnx.statistics.collectors import ONNXMinMaxStatisticCollector
 from nncf.quantization.algorithms.post_training.algorithm import PostTrainingQuantization
 from nncf.quantization.algorithms.post_training.algorithm import PostTrainingQuantizationParameters
+from nncf.quantization.algorithms.min_max.onnx_backend import \
+    ONNXMinMaxAlgoBackend
 from nncf.onnx.statistics.collectors import ONNXMeanMinMaxStatisticCollector
 from nncf.onnx.statistics.collectors import ONNXMinMaxStatisticCollector
 from nncf.onnx.graph.metatypes.onnx_metatypes import ONNXConvolutionMetatype
-from nncf.quantization.algorithms.min_max.onnx_backend import \
-    ONNXMinMaxAlgoBackend
 
 from tests.onnx.models import LinearModel
 from tests.onnx.models import OneDepthwiseConvolutionalModel

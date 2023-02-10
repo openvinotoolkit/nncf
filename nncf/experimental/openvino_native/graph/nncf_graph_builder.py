@@ -166,11 +166,7 @@ class GraphConverter:
                         continue
 
                     const_port_id = inp.get_index()
-                    const_node = node.input_value(const_port_id).get_node()
-                    metatype = OV_OPERATOR_METATYPES.get_operator_metatype_by_op_name(const_node.get_type_name())
-                    if metatype == OVConvertMetatype:
-                        const_node = const_node.input_value(0).get_node()
-
+                    const_node = get_operation_const_op(node, const_port_id)
                     nncf_node = nncf_graph.get_node_by_name(node.get_friendly_name())
                     nncf_node.layer_attributes =\
                         OVWeightedLayerAttributes(const_port_id=const_port_id,
@@ -196,3 +192,17 @@ class OVWeightedLayerAttributes(BaseLayerAttributes):
         self.const_port_id = const_port_id
         self.const_shape = const_shape
 
+
+def get_operation_const_op(operation: ov.Node, const_port_id: int) -> ov.Node:
+    """
+    Returns weight node of given operation placed on given const port id.
+
+    :param operation: Given operation.
+    :param const_port_id: Given constant port id.
+    :returns: Weight node of given operation placed on given const port id.
+    """
+    const_node = operation.input_value(const_port_id).get_node()
+    metatype = OV_OPERATOR_METATYPES.get_operator_metatype_by_op_name(const_node.get_type_name())
+    if metatype == OVConvertMetatype:
+        const_node = const_node.input_value(0).get_node()
+    return const_node

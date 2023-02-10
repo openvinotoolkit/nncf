@@ -10,7 +10,7 @@
  See the License for the specific language governing permissions and
  limitations under the License.
 """
-from typing import Union, List
+from typing import Union, List, Tuple
 
 from collections import Counter
 import onnx
@@ -23,7 +23,6 @@ from nncf.common.graph.definitions import MODEL_INPUT_OP_NAME
 from nncf.common.graph.definitions import MODEL_OUTPUT_OP_NAME
 from nncf.common.graph.operator_metatypes import InputNoopMetatype
 from nncf.common.graph.operator_metatypes import OutputNoopMetatype
-from nncf.common.graph.operator_metatypes import UnknownMetatype
 from nncf.common.logging import nncf_logger
 
 from nncf.onnx.graph.onnx_graph import ONNXGraph
@@ -254,17 +253,26 @@ class ONNXExtendedLayerAttributes(BaseLayerAttributes):
                  input_tensor_names: List[str],
                  output_tensor_names: List[str]):
         """
-        :param input_tensor_names: List of the input tensor/edge names of the module/layer
-        :param output_tensor_names: List of the output tensor/edge names of the module/layer
+        :param input_tensor_names: List of the input tensor/edge names of the module/layer.
+        :param output_tensor_names: List of the output tensor/edge names of the module/layer.
         """
         self.input_tensor_names = input_tensor_names
         self.output_tensor_names = output_tensor_names
 
 
 class ONNXWeightedNodesLayerAttributes(ONNXExtendedLayerAttributes):
+    """
+    This class stores weighted nodes attributes of modules/layers for the algorithms.
+    """
+
     def __init__(self,
                  input_tensor_names: List[str],
                  output_tensor_names: List[str],
-                 weight_shape):
+                 weight_shape: Tuple[int]):
+        """
+        :param input_tensor_names: List of the input tensor/edge names of the module/layer.
+        :param output_tensor_names: List of the output tensor/edge names of the module/layer.
+        :param weight_shape: Shape of a weight shape of the module/layer.
+        """
         super().__init__(input_tensor_names, output_tensor_names)
         self.weight_shape = weight_shape

@@ -11,7 +11,6 @@
  limitations under the License.
 """
 
-from copy import deepcopy
 from typing import Dict, List, Tuple, Optional
 import numpy as np
 import onnx
@@ -19,7 +18,6 @@ import onnx
 from nncf.common.graph.graph import NNCFGraph
 from nncf.common.graph.graph import NNCFNode
 from nncf.common.graph.operator_metatypes import OperatorMetatype
-from nncf.common.graph.patterns import HWFusedPatterns
 from nncf.common.graph.transformations.commands import TargetType
 from nncf.common.hardware.config import HWConfig
 from nncf.common.quantization.structs import QuantizerConfig
@@ -27,17 +25,9 @@ from nncf.common.quantization.structs import QuantizationMode
 from nncf.common.tensor_statistics.statistics import MinMaxTensorStatistic
 from nncf.common.utils.backend import BackendType
 
-from nncf.onnx.graph.metatypes.onnx_metatypes import WEIGHT_LAYER_METATYPES
-from nncf.onnx.graph.metatypes.onnx_metatypes import ONNXNonMaxSuppressionMetatype
-from nncf.onnx.graph.metatypes.onnx_metatypes import ONNXTopKMetatype
-from nncf.onnx.graph.transformations.commands import ONNXQuantizerInsertionCommand
-from nncf.onnx.graph.transformations.commands import ONNXTargetPoint
 from nncf.onnx.hardware.config import ONNXHWConfig
-from nncf.onnx.hardware.fused_patterns import ONNX_HW_FUSED_PATTERNS
 from nncf.onnx.quantization.default_quantization import DEFAULT_ONNX_QUANT_TRAIT_TO_OP_DICT
 from nncf.onnx.quantization.quantizer_parameters import calculate_activation_quantizer_parameters
-from nncf.onnx.statistics.collectors import ONNXMeanMinMaxStatisticCollector
-from nncf.onnx.statistics.collectors import ONNXMinMaxStatisticCollector
 from nncf.onnx.graph.onnx_graph import ONNXGraph
 from nncf.onnx.graph.nncf_graph_builder import ONNXWeightedNodesLayerAttributes
 from nncf.onnx.graph.metatypes.onnx_metatypes import WEIGHT_LAYER_METATYPES
@@ -45,13 +35,8 @@ from nncf.onnx.graph.metatypes.onnx_metatypes import ONNXNonMaxSuppressionMetaty
 from nncf.onnx.graph.metatypes.onnx_metatypes import ONNXTopKMetatype
 from nncf.onnx.graph.transformations.commands import ONNXQuantizerInsertionCommand
 from nncf.onnx.graph.transformations.commands import ONNXTargetPoint
-from nncf.onnx.hardware.config import ONNXHWConfig
-from nncf.onnx.hardware.fused_patterns import ONNX_HW_FUSED_PATTERNS
-from nncf.onnx.quantization.default_quantization import DEFAULT_ONNX_QUANT_TRAIT_TO_OP_DICT
-from nncf.onnx.quantization.quantizer_parameters import calculate_activation_quantizer_parameters
 from nncf.onnx.statistics.collectors import ONNXMeanMinMaxStatisticCollector
 from nncf.onnx.statistics.collectors import ONNXMinMaxStatisticCollector
-from nncf.onnx.graph.onnx_graph import ONNXGraph
 
 from nncf.quantization.algorithms.min_max.backend import MinMaxAlgoBackend
 from nncf.quantization.algorithms.min_max.backend import ALGO_BACKENDS
@@ -67,10 +52,6 @@ class ONNXMinMaxAlgoBackend(MinMaxAlgoBackend):
     @property
     def post_processing_metatypes(self) -> List[OperatorMetatype]:
         return [ONNXTopKMetatype, ONNXNonMaxSuppressionMetatype]
-
-    @property
-    def hw_fused_patterns(self) -> HWFusedPatterns:
-        return ONNX_HW_FUSED_PATTERNS
 
     @property
     def hw_config(self) -> HWConfig:

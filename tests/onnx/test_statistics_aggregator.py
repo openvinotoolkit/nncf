@@ -69,8 +69,6 @@ class TestStatisticsAggregator(TemplateTestStatisticsAggregator):
 
         return dataset_samples
 
-
-    TestParameters = TemplateTestStatisticsAggregator.TestParameters
-    def reshape_refs(self,
-                     params: TestParameters) -> None:
-        pass
+    @pytest.fixture
+    def is_stat_in_shape_of_scale(self) -> bool:
+        return False
