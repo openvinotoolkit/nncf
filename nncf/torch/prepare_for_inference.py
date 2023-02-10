@@ -170,6 +170,9 @@ def convert_to_fakequantizer(nncf_quantizer: BaseQuantizer) -> FakeQuantize:
     """
     assert nncf_quantizer.num_bits == 8, "Support only 8bit quantization."
 
+    # TODO: levels can be not corrected when change sign? It's not visible because set_level_ranges called in forward.
+    nncf_quantizer.set_level_ranges()
+
     per_channel = nncf_quantizer.per_channel
     scale_shape = nncf_quantizer.scale_shape
     ch_axis = np.argmax(scale_shape)
