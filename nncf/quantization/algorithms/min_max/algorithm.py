@@ -37,6 +37,9 @@ from nncf.common.tensor_statistics.collectors import TensorStatisticCollectorBas
 from nncf.common.utils.backend import BackendType
 from nncf.common.utils.backend import get_backend
 from nncf.common.logging import nncf_logger
+from nncf.common.graph.patterns import GraphPattern
+from nncf.common.graph.patterns.manager import PatternsManager
+
 from nncf.quantization.algorithms.algorithm import Algorithm
 from nncf.quantization.algorithms.algorithm import AlgorithmParameters
 from nncf.quantization.algorithms.min_max.backend import ALGO_BACKENDS
@@ -179,7 +182,7 @@ class MinMaxQuantization(Algorithm):
                 OVMinMaxAlgoBackend
             self._backend_entity = OVMinMaxAlgoBackend()
         else:
-            raise RuntimeError('Cannot return backend-specific entity'
+            raise RuntimeError('Cannot return backend-specific entity '
                                'because {} is not supported!'.format(model_backend))
 
     def _get_default_statistics_collector(self, is_symmetric: bool,
@@ -235,7 +238,7 @@ class MinMaxQuantization(Algorithm):
             qconfig = constraints.apply_constraints_to(qconfig)
         return qconfig
 
-    def _get_quantizer_setup(self, nncf_graph: NNCFGraph) -> SingleConfigQuantizerSetup:
+    def _get_quantizer_setup(self, nncf_graph: NNCFGraph, pattern: GraphPattern) -> SingleConfigQuantizerSetup:
         """
         Returns SingleConfigQuantizerSetup instance based on the input NNCFGraph.
 
@@ -257,7 +260,6 @@ class MinMaxQuantization(Algorithm):
                                                                         hw_config=hw_config)
         quantizable_layer_nodes = [QuantizableWeightedLayerNode(node, qconf_list) for node, qconf_list
                                    in weighted_node_and_qconf_lists.items()]
-        pattern = self._backend_entity.hw_fused_patterns.get_full_pattern_graph()
         ip_graph = InsertionPointGraph(nncf_graph)
         ip_graph = ip_graph.get_ip_graph_with_merged_hw_optimized_operations(pattern, quantizable_layer_nodes)
         post_processing_types = self._backend_entity.post_processing_metatypes
@@ -280,7 +282,7 @@ class MinMaxQuantization(Algorithm):
         final_setup = solver.get_final_quantizer_setup(finalized_proposal)
         return final_setup
 
-    def _add_weight_quantization_target_point(self, model: TModel, quantization_point: SingleConfigQuantizationPoint,
+    def _add_weight_quantization_target_point(self, quantization_point: SingleConfigQuantizationPoint,
                                               nncf_graph: NNCFGraph) -> None:
         """
         Adds weight quantization target point to the set of existing points.
@@ -295,8 +297,7 @@ class MinMaxQuantization(Algorithm):
         weight_quantization_target_point = self._backend_entity.target_point(TargetType.OPERATION_WITH_WEIGHTS,
                                                                              node_name,
                                                                              port_id)
-        weight_quantizer_config = self._backend_entity.get_weight_config(quantization_point.qconfig, model)
-        self._quantization_target_points_to_qconfig[weight_quantization_target_point] = weight_quantizer_config
+        self._quantization_target_points_to_qconfig[weight_quantization_target_point] = quantization_point.qconfig
 
     def _add_activation_quantization_target_point(self,
                                                   quantization_point: SingleConfigQuantizationPoint) -> None:
@@ -336,10 +337,13 @@ class MinMaxQuantization(Algorithm):
 
         if self._quantization_target_points_to_qconfig:
             return self._quantization_target_points_to_qconfig
-        quantizer_setup = self._get_quantizer_setup(nncf_graph)
+        backend = get_backend(model)
+        device = self._parameters.target_device
+        pattern = PatternsManager().get_full_pattern_graph(backend, device)
+        quantizer_setup = self._get_quantizer_setup(nncf_graph, pattern)
         for quantization_point in quantizer_setup.quantization_points.values():
             if quantization_point.is_weight_quantization_point():
-                self._add_weight_quantization_target_point(model, quantization_point, nncf_graph)
+                self._add_weight_quantization_target_point(quantization_point, nncf_graph)
             elif quantization_point.is_activation_quantization_point():
                 self._add_activation_quantization_target_point(quantization_point)
             else:

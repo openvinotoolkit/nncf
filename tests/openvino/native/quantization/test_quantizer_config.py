@@ -19,6 +19,7 @@ from nncf.common.quantization.structs import QuantizerConfig
 from nncf.common.quantization.structs import QuantizationMode
 from nncf.common.graph.operator_metatypes import OutputNoopMetatype
 from nncf.common.graph.operator_metatypes import InputNoopMetatype
+from nncf.common.graph.patterns import GraphPattern
 from nncf.quantization.algorithms.definitions import RangeType
 from nncf.quantization.algorithms.post_training.algorithm import PostTrainingQuantization
 from nncf.quantization.algorithms.post_training.algorithm import PostTrainingQuantizationParameters
@@ -27,6 +28,7 @@ from nncf.experimental.openvino_native.statistics.collectors import OVMeanMinMax
 from nncf.experimental.openvino_native.quantization.algorithms.min_max.openvino_backend import OVMinMaxAlgoBackend
 from nncf.experimental.openvino_native.statistics.collectors import OVMinMaxStatisticCollector
 from nncf.experimental.openvino_native.graph.metatypes.openvino_metatypes import OVConvolutionMetatype
+from nncf.experimental.openvino_native.graph.metatypes.openvino_metatypes import OVDepthwiseConvolutionMetatype
 
 from tests.common.quantization.test_filter_constant_nodes import create_mock_graph
 from tests.common.quantization.test_filter_constant_nodes import get_nncf_graph_from_mock_nx_graph
@@ -52,12 +54,29 @@ class NNCFGraphToTest:
         self.nncf_graph = get_nncf_graph_from_mock_nx_graph(original_mock_graph)
 
 
+class NNCFGraphToTestDepthwiseConv:
+    def __init__(self):
+        #       Original graph
+        #          Input_1
+        #             |
+        #        DepthwiseConv_1
+        #             |
+        #           Output_1
+        nodes = [NodeWithType('Input_1', InputNoopMetatype),
+                 NodeWithType('Conv_1', OVDepthwiseConvolutionMetatype),
+                 NodeWithType('Output_1', OutputNoopMetatype),
+                 ]
+        node_edges = [('Input_1', 'Conv_1'), ('Conv_1', 'Output_1')]
+        original_mock_graph = create_mock_graph(nodes, node_edges)
+        self.nncf_graph = get_nncf_graph_from_mock_nx_graph(original_mock_graph)
+
+
 @pytest.mark.parametrize('nncf_graph', [NNCFGraphToTest()])
 def test_default_quantizer_config(nncf_graph):
     algo = PostTrainingQuantization(PostTrainingQuantizationParameters())
     min_max_algo = algo.algorithms[0]
     min_max_algo._backend_entity = OVMinMaxAlgoBackend()
-    q_setup = min_max_algo._get_quantizer_setup(nncf_graph.nncf_graph)
+    q_setup = min_max_algo._get_quantizer_setup(nncf_graph.nncf_graph, GraphPattern())
 
     weight_default_config = QuantizerConfig(mode=QuantizationMode.SYMMETRIC,
                                             num_bits=8,
@@ -97,7 +116,7 @@ def test_quantizer_config_from_ptq_params(weight_granularity, activation_granula
                                            ))
     min_max_algo = algo.algorithms[0]
     min_max_algo._backend_entity = OVMinMaxAlgoBackend()
-    q_setup = min_max_algo._get_quantizer_setup(nncf_graph.nncf_graph)
+    q_setup = min_max_algo._get_quantizer_setup(nncf_graph.nncf_graph, GraphPattern())
     q_g_to_quantization_mode = {}
     for q_g in QuantizerGroup:
         q_g_to_quantization_mode[q_g] = preset.get_params_configured_by_preset(q_g)['mode']
@@ -114,6 +133,29 @@ def test_quantizer_config_from_ptq_params(weight_granularity, activation_granula
             assert quantization_point.qconfig.mode == q_g_to_quantization_mode[QuantizerGroup.ACTIVATIONS]
             if signed_activations is not None:
                 assert quantization_point.qconfig.signedness_to_force == signed_activations
+
+
+@pytest.mark.parametrize('nncf_graph', [NNCFGraphToTestDepthwiseConv()])
+def test_depthwise_conv_default_quantizer_config(nncf_graph):
+    algo = PostTrainingQuantization(PostTrainingQuantizationParameters())
+    min_max_algo = algo.algorithms[0]
+    min_max_algo._backend_entity = OVMinMaxAlgoBackend()
+    q_setup = min_max_algo._get_quantizer_setup(nncf_graph.nncf_graph, GraphPattern())
+
+    weight_default_config = QuantizerConfig(mode=QuantizationMode.SYMMETRIC,
+                                            num_bits=8,
+                                            signedness_to_force=True,
+                                            per_channel=True)
+    activation_default_config = QuantizerConfig(mode=QuantizationMode.SYMMETRIC,
+                                                num_bits=8,
+                                                signedness_to_force=None,
+                                                per_channel=True)
+
+    for quantization_point in q_setup.quantization_points.values():
+        if quantization_point.is_weight_quantization_point():
+            assert quantization_point.qconfig == weight_default_config
+        if quantization_point.is_activation_quantization_point():
+            assert quantization_point.qconfig == activation_default_config
 
 
 @pytest.mark.parametrize('range_type', [RangeType.MINMAX, RangeType.MEAN_MINMAX])

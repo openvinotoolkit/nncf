@@ -18,10 +18,12 @@ from nncf.common.graph import BaseLayerAttributes
 from nncf.common.graph import NNCFGraph
 from nncf.common.graph.layer_attributes import Dtype
 from nncf.common.graph.operator_metatypes import OperatorMetatype
+from nncf.common.graph.operator_metatypes import UnknownMetatype
 
 from nncf.experimental.openvino_native.graph.metatypes.openvino_metatypes import OV_OPERATOR_METATYPES
-from nncf.experimental.openvino_native.graph.metatypes.openvino_metatypes import GENERAL_WEIGHT_LAYER_METATYPES
+from nncf.experimental.openvino_native.graph.metatypes.openvino_metatypes import METATYPES_WITH_CONST_PORT_ID
 from nncf.experimental.openvino_native.graph.metatypes.openvino_metatypes import OVConvolutionBackpropDataMetatype
+from nncf.experimental.openvino_native.graph.metatypes.openvino_metatypes import OVGroupConvolutionBackpropDataMetatype
 
 
 class GraphConverter:
@@ -64,9 +66,26 @@ class GraphConverter:
         :param metatype: NNCF meta type which corresponds to operation.
         :return: OpenVINO node inputs that may contain weights.
         """
-        if metatype == OVConvolutionBackpropDataMetatype:
+        if metatype in [OVConvolutionBackpropDataMetatype, OVGroupConvolutionBackpropDataMetatype]:
             return inputs[:2]
         return inputs
+
+    @staticmethod
+    def _get_node_metatype(node: ov.Node) -> Type[OperatorMetatype]:
+        """
+        Determine NNCF meta type for OpenVINO node.
+
+        :param node: OpenVINO node.
+        :return: NNCF meta type which corresponds to OpenVINO node.
+        """
+        node_type = node.get_type_name()
+        metatype = OV_OPERATOR_METATYPES.get_operator_metatype_by_op_name(node_type)
+        if metatype is not UnknownMetatype:
+            if metatype.get_subtypes():
+                subtype = metatype.determine_subtype(node)
+                if subtype is not None:
+                    metatype = subtype
+        return metatype
 
     @staticmethod
     def _add_edges_to_nncf_graph(model: ov.Model, graph: NNCFGraph) -> None:
@@ -103,7 +122,7 @@ class GraphConverter:
         :param graph: NNCFGraph.
         """
         node_type = node.get_type_name()
-        metatype = OV_OPERATOR_METATYPES.get_operator_metatype_by_op_name(node_type)
+        metatype = GraphConverter._get_node_metatype(node)
         graph.add_nncf_node(node_name=node.get_friendly_name(),
                             node_type=node_type,
                             node_metatype=metatype)
@@ -134,31 +153,30 @@ class GraphConverter:
                         inference_nodes.append(inp.get_node())
 
         for node in model.get_ops():
-            node_type = node.get_type_name()
-            metatype = OV_OPERATOR_METATYPES.get_operator_metatype_by_op_name(node_type)
+            metatype = GraphConverter._get_node_metatype(node)
             # Add nodes from constant subgraphs
             if node.get_friendly_name() not in visited:
                 GraphConverter._add_nncf_node(node, nncf_graph)
-            # Set weight port id
-            elif metatype in GENERAL_WEIGHT_LAYER_METATYPES:
+            # Set const port id
+            elif metatype in METATYPES_WITH_CONST_PORT_ID:
                 for inp in GraphConverter._filter_weight_input_ports(node.inputs(), metatype):
                     inp_name = inp.get_source_output().get_node().get_friendly_name()
                     if inp_name not in visited:
                         nncf_node = nncf_graph.get_node_by_name(node.get_friendly_name())
-                        nncf_node.layer_attributes = OVWeightedLayerAttributes(weight_port_id=inp.get_index())
+                        nncf_node.layer_attributes = OVConstPortId(const_port_id=inp.get_index())
                         break
 
         GraphConverter._add_edges_to_nncf_graph(model, nncf_graph)
         return nncf_graph
 
 
-class OVWeightedLayerAttributes(BaseLayerAttributes):
+class OVConstPortId(BaseLayerAttributes):
     """
-    This class stores weight and bias port indices of layers for the algorithms.
+    This class stores const port index of layers for the algorithms.
     """
 
-    def __init__(self, weight_port_id: Optional[int] = None):
+    def __init__(self, const_port_id: Optional[int] = None):
         """
-        :param weight_port_id: Index of weight port. Should be None if layer without weights.
+        :param const_port_id: Index of const port. Should be None if layer without constant inputs.
         """
-        self.weight_port_id = weight_port_id
+        self.const_port_id = const_port_id

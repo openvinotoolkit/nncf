@@ -68,7 +68,7 @@ from tests.torch.test_models.synthetic import MultiOutputSameTensorModel
 from tests.torch.test_models.synthetic import PoolUnPool
 from tests.torch.test_models.synthetic import ReshapeModel
 from tests.torch.test_models.synthetic import TransposeModel
-from tests.common.graph.nx_graph import compare_nx_graph_with_reference
+from tests.shared.nx_graph import compare_nx_graph_with_reference
 from tests.shared.paths import TEST_ROOT
 
 
@@ -593,6 +593,8 @@ SYNTHETIC_MODEL_DESC_LIST = [
     TensorBinaryMethodsDesc('__mul__'),
     TensorBinaryMethodsDesc('__rmul__'),
     TensorBinaryMethodsDesc('__imul__'),
+    TensorBinaryMethodsDesc('__matmul__'),
+    TensorBinaryMethodsDesc('__rmatmul__'),
 
     TorchBinaryMethodDesc('Div', torch.div),
     TensorBinaryMethodsDesc('__div__'),

@@ -14,9 +14,7 @@
 import pytest
 import torch
 import numpy as np
-from torch.backends import cudnn
 
-from nncf.torch.utils import manual_seed
 from nncf.torch.automl.agent.ddpg.ddpg import DDPG
 
 STUB = 0
@@ -52,13 +50,6 @@ def test_random_action():
     assert randomized_action.shape[0] == N_ACTION
     # check action value within bound
     assert sum((randomized_action >= ddpg.LBOUND) & (randomized_action <= ddpg.RBOUND)) == N_ACTION
-
-@pytest.fixture
-def _seed():
-    cudnn.deterministic = True
-    cudnn.benchmark = False
-    manual_seed(0)
-
 
 EPISODE_NOISY_ACTION_TUPLES = [
     (0, [0.71018179, 0.82288581]),

@@ -19,7 +19,7 @@ from torchvision import models
 import onnx
 
 from nncf.onnx.graph.nncf_graph_builder import GraphConverter
-from tests.common.graph.nx_graph import compare_nx_graph_with_reference
+from tests.shared.nx_graph import compare_nx_graph_with_reference
 from tests.onnx.conftest import ONNX_TEST_ROOT
 
 from tests.onnx.models import ALL_SYNTHETIC_MODELS

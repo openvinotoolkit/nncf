@@ -6,21 +6,25 @@ dependencies:
 
 NNCF PT:
   - 'examples/torch/**/*'
+  - 'examples/post_training_quantization/torch/**/*'
   - 'nncf/torch/**/*'
   - 'tests/torch/**/*'
 
 NNCF TF:
   - 'examples/tensorflow/**/*'
+  - 'examples/post_training_quantization/tensorflow/**/*'
   - 'nncf/tensorflow/**/*'
   - 'tests/tensorflow/**/*'
 
 NNCF ONNX:
   - 'examples/onnx/**/*'
-  - 'nncf/onxx/**/*'
+  - 'examples/post_training_quantization/onnx/**/*'
+  - 'nncf/onnx/**/*'
   - 'tests/onnx/**/*'
 
 NNCF OpenVINO:
   - 'examples/openvino/**/*'
+  - 'examples/post_training_quantization/openvino/**/*'
   - 'nncf/openvino/**/*'
   - 'tests/openvino/**/*'
 

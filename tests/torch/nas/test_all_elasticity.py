@@ -13,7 +13,6 @@
 
 import pytest
 import torch
-from torch.backends import cudnn
 
 from examples.torch.common.models.classification.resnet_cifar10 import resnet50_cifar10
 from nncf import NNCFConfig
@@ -23,7 +22,6 @@ from nncf.experimental.torch.nas.bootstrapNAS.elasticity.visualization import Su
 from nncf.experimental.torch.nas.bootstrapNAS.training.model_creator_helpers import resume_compression_from_state
 from nncf.torch.exporter import PTExporter
 from nncf.torch.model_creation import create_nncf_network
-from nncf.torch.utils import manual_seed
 from tests.torch.helpers import register_bn_adaptation_init_args
 from tests.torch.nas.creators import create_bnas_model_and_ctrl_by_test_desc
 from tests.torch.nas.creators import create_bootstrap_nas_training_algo
@@ -38,14 +36,7 @@ from tests.torch.nas.models.synthetic import ThreeConvModelMode
 # Helpers
 ###########################
 from tests.torch.test_compressed_graph import get_full_path_to_the_graph
-from tests.common.graph.nx_graph import compare_nx_graph_with_reference
-
-
-@pytest.fixture
-def _seed():
-    cudnn.deterministic = True
-    cudnn.benchmark = False
-    manual_seed(0)
+from tests.shared.nx_graph import compare_nx_graph_with_reference
 
 
 def check_subnet_visualization(multi_elasticity_handler, model, nas_model_name, stage):

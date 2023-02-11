@@ -13,6 +13,9 @@
 
 import pytest
 
+from nncf.common.utils.backend import get_backend
+from nncf.common.graph.patterns.manager import PatternsManager
+from nncf.common.graph.patterns import GraphPattern
 from nncf.common.hardware.config import HW_CONFIG_TYPE_TARGET_DEVICE_MAP
 from nncf.parameters import TargetDevice
 from nncf.quantization.algorithms.definitions import RangeType
@@ -24,8 +27,15 @@ from nncf.experimental.openvino_native.quantization.algorithms.min_max.openvino_
 from nncf.experimental.openvino_native.statistics.collectors import OVMeanMinMaxStatisticCollector
 from nncf.experimental.openvino_native.statistics.collectors import OVMinMaxStatisticCollector
 
+from tests.openvino.native.models import OVReferenceModel
 from tests.openvino.native.models import LinearModel
+from tests.openvino.native.models import DepthwiseConvModel
 
+
+def get_patterns_setup(model: OVReferenceModel, device: TargetDevice) -> GraphPattern:
+    backend = get_backend(model)
+    patterns_manager = PatternsManager()
+    return patterns_manager.get_full_pattern_graph(backend, device)
 
 # pylint: disable=protected-access
 @pytest.mark.parametrize('target_device', [TargetDevice.CPU, TargetDevice.GPU, TargetDevice.VPU])
@@ -57,6 +67,23 @@ def test_range_type_per_tensor(range_type):
                     assert isinstance(tensor_collector, OVMeanMinMaxStatisticCollector)
 
 
+@pytest.mark.parametrize('range_type', [RangeType.MINMAX, RangeType.MEAN_MINMAX, None])
+@pytest.mark.parametrize('original_model', [DepthwiseConvModel()])
+def test_range_type_per_channel(range_type, original_model):
+    algo = PostTrainingQuantization(PostTrainingQuantizationParameters(range_type=range_type))
+    min_max_algo = algo.algorithms[0]
+    min_max_algo._backend_entity = OVMinMaxAlgoBackend()
+    model = original_model.ov_model
+    assert min_max_algo._parameters.range_type == range_type
+    stat_points = min_max_algo.get_statistic_points(model)
+
+    for _, stat_point in stat_points.items():
+        for stat_point_ in stat_point:
+            for tensor_collector in stat_point_.algorithm_to_tensor_collectors[MinMaxQuantization]:
+                # Range_type does not affect per-channel tensor_collector
+                assert isinstance(tensor_collector, OVMinMaxStatisticCollector)
+
+
 @pytest.mark.parametrize('quantize_outputs', [False, True])
 def test_quantize_outputs(quantize_outputs):
     algo = PostTrainingQuantization(PostTrainingQuantizationParameters(quantize_outputs=quantize_outputs))
@@ -65,7 +92,8 @@ def test_quantize_outputs(quantize_outputs):
     model = LinearModel().ov_model
     nncf_graph = GraphConverter.create_nncf_graph(model)
     assert min_max_algo._parameters.quantize_outputs == quantize_outputs
-    q_setup = min_max_algo._get_quantizer_setup(nncf_graph)
+    pattern = get_patterns_setup(model, min_max_algo._parameters.target_device)
+    q_setup = min_max_algo._get_quantizer_setup(nncf_graph, pattern)
     act_num_q, weight_num_q = 0, 0
     for quantization_point in q_setup.quantization_points.values():
         if quantization_point.is_activation_quantization_point():
@@ -91,7 +119,8 @@ def test_ignored_scopes(ignored_scopes):
 
     model = LinearModel().ov_model
     nncf_graph = GraphConverter.create_nncf_graph(model)
-    q_setup = min_max_algo._get_quantizer_setup(nncf_graph)
+    pattern = get_patterns_setup(model, min_max_algo._parameters.target_device)
+    q_setup = min_max_algo._get_quantizer_setup(nncf_graph, pattern)
     act_num_q, weight_num_q = 0, 0
     for quantization_point in q_setup.quantization_points.values():
         if quantization_point.is_activation_quantization_point():

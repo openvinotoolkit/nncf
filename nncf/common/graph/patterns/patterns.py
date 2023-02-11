@@ -10,20 +10,18 @@
  See the License for the specific language governing permissions and
  limitations under the License.
 """
-from typing import Dict
-from typing import Optional
-from typing import List
-from typing import Tuple
-from typing import Hashable
-
-import os
 import copy
 import itertools as it
+import os
+from dataclasses import dataclass
+from enum import Enum
+from typing import Dict, Hashable, List, Optional, Tuple
 
 import networkx as nx
 import networkx.algorithms.isomorphism as ism
 
 from nncf.common.utils.dot_file_rw import write_dot_graph
+from nncf.parameters import TargetDevice
 
 
 class HWFusedPatterns:
@@ -107,9 +105,9 @@ class GraphPattern:
                 # add merge all possible connections
                 # A: (a) (b)
                 # B: (c) (d)
-                #              (a)  (a_copy)  (b)    (b_copy)
-                # A + B ---->   |       |      |        |
-                #              (c)     (d)  (c_copy) (d_copy)
+                #              (a_copy)  (a_copy)  (b_copy) (b_copy)
+                # A + B ---->     |          |        |        |
+                #              (c_copy)  (d_copy)  (c_copy) (d_copy)
                 #
                 subgraph_copy = final_pattern._unite_with_copy_of_graph(self_subgraph)
                 other_subgraph_copy = final_pattern._unite_with_copy_of_graph(other_subgraph)
@@ -194,9 +192,16 @@ class GraphPattern:
         """
         Adds 'other' pattern to 'self' pattern and connect nodes from self to other specified by 'edges'.
 
-        If edges is None, adds an edge between
-        last node of self's graph and first node of other's graph,
-        which are found by nx.lexicographical_topological_sort().
+        If edges is None, connect all weakly connected components of self and other by adding edges between
+        the last nodes of every weakly component of self and the first nodes of every weakly component other.
+        The first and last nodes are found by nx.lexicographical_topological_sort().
+
+        # A: (a) (b)
+        # B: (c) (d)
+        #              (a_copy)  (a_copy)  (b_copy) (b_copy)
+        # A + B ---->     |          |        |        |
+        #              (c_copy)  (d_copy)  (c_copy) (d_copy)
+        #
 
         If other starts from a node with ANY_PATTERN_NODE_TYPE or NON_PATTERN_NODE_TYPE types,
         the input node of the other will be discarded from the final pattern.
@@ -205,21 +210,20 @@ class GraphPattern:
         :param edges: List of edges between self and other graphs.
             Edges must begin at self and finish at other.
         """
-        # Unite nodes
-        other_graph_copy = copy.deepcopy(other.graph)
-        node_mapping = {}
-        for node_key in other_graph_copy.nodes:
-            node_mapping[node_key] = self._node_counter
-            self._node_counter += 1
-        other_graph_copy = nx.relabel_nodes(other_graph_copy, node_mapping, copy=True)
-
-        saved_graph = copy.deepcopy(self._graph)
-        self._graph = nx.union(saved_graph, other_graph_copy)
-
-        # Add edge/edges
         if edges is None:
-            self._add_edge_connected_subgraphs(saved_graph, other_graph_copy)
+            self._graph = (self + other).graph
         else:
+            # Unite nodes
+            other_graph_copy = copy.deepcopy(other.graph)
+            node_mapping = {}
+            for node_key in other_graph_copy.nodes:
+                node_mapping[node_key] = self._node_counter
+                self._node_counter += 1
+            other_graph_copy = nx.relabel_nodes(other_graph_copy, node_mapping, copy=True)
+
+            saved_graph = copy.deepcopy(self._graph)
+            self._graph = nx.union(saved_graph, other_graph_copy)
+            # Add edge/edges
             remapped_edges = []
             for edge in edges:
                 new_edge = (edge[0], node_mapping[edge[1]])
@@ -254,3 +258,125 @@ def merge_two_types_of_operations(first_op: Dict, second_op: Dict, label: str) -
         res[GraphPattern.LABEL_ATTR] = label
         return res
     raise RuntimeError('Incorrect dicts of operations')
+
+
+@dataclass
+class PatternDesc:
+    """
+    Contains needed fields for the description of the pattern.
+
+    :param name: Specific pattern name.
+    :param devices: A field containing the list of devices
+    for which this pattern should be taken into account when quantizing.
+    None value means that this pattern is applicable to all devices.
+    """
+
+    name: str
+    devices: Optional[List[TargetDevice]] = None
+
+
+class PatternNames(Enum):
+    """
+    Describes the patterns that will be fused during integer execution
+    and would not be quantized in compression pipeline.
+    """
+
+    # BLOCK PATTERNS
+    ADD_SCALE_SHIFT_OUTPUT = PatternDesc('add_scale_shift_output')
+    BATCH_INDEX = PatternDesc('batch_index')
+    EQUAL_LOGICALNOT = PatternDesc('equal_logicalnot')
+    FC_BN_HSWISH_ACTIVATION = PatternDesc('fc_bn_hswish_activation')
+    LINEAR_WITH_BIAS = PatternDesc('linear_with_bias')
+    MVN_SCALE_SHIFT = PatternDesc('mvn_scale_shift')
+    NORMALIZE_L2_MULTIPLY = PatternDesc('normalize_l2_multiply')
+    SCALE_SHIFT = PatternDesc('scale_shift')
+    SE_BLOCK = PatternDesc('se_block')
+    SOFTMAX_DIV = PatternDesc('softmax_div')
+    SOFTMAX_RESHAPE_MATMUL = PatternDesc('softmax_reshape_matmul')
+    SOFTMAX_RESHAPE_TRANSPOSE_GATHER_MATMUL = PatternDesc('softmax_reshape_transpose_gather_matmul')
+    SOFTMAX_RESHAPE_TRANSPOSE_MATMUL = PatternDesc('softmax_reshape_transpose_matmul')
+    STABLE_DIFFUSION = PatternDesc('stable_diffusion')
+
+    # ACTIVATIONS
+    HSWISH_ACTIVATION = PatternDesc('hswish_activation')
+    HSWISH_ACTIVATION_V2 = PatternDesc('hswish_activation_v2')
+    HSWISH_ACTIVATION_WITHOUT_DENOMINATOR = PatternDesc('hswish_activation_without_denominator')
+    SOFTMAX = PatternDesc('softmax')
+    SWISH_WITH_HARD_SIGMOID = PatternDesc('swish_with_hard_sigmoid')
+    SWISH_WITH_SIGMOID = PatternDesc('swish_with_sigmoid')
+
+    # INPUT PROCESSING
+    INPUT_CONVERT_TRANSPOSE_PROCESSING = PatternDesc('input_convert_transpose_processing')
+    INPUT_CONVERT_TRANSPOSE_REVERSE_ADD = PatternDesc('input_convert_transpose_reverse_add')
+    INPUT_CONVERT_TRANSPOSE_REVERSE_SCALE_SHIFT = PatternDesc('input_convert_transpose_reverse_scale_shift')
+    INPUT_CONVERT_TRANSPOSE_SCALE_SHIFT = PatternDesc('input_convert_transpose_scale_shift')
+    INPUT_PROCESSING = PatternDesc('input_processing')
+    INPUT_REVERSE_ADD = PatternDesc('input_reverse_add')
+    INPUT_REVERSE_SCALE_SHIFT = PatternDesc('input_reverse_scale_shift')
+    INPUT_SCALE_SHIFT = PatternDesc('input_scale_shift')
+    INPUT_SHIFT_SCALE = PatternDesc('input_shift_scale')
+    INPUT_TRANSPOSE_PROCESSING = PatternDesc('input_transpose_processing')
+    INPUT_TRANSPOSE_REVERSE_ADD = PatternDesc('input_transpose_reverse_add')
+    INPUT_TRANSPOSE_SCALE_SHIFT = PatternDesc('input_transpose_scale_shift')
+
+    # COMBINATIONS
+    ACTIVATIONS_BATCH_NORM = PatternDesc('activations_batch_norm')
+    ACTIVATIONS_SCALE_SHIFT = PatternDesc('activations_scale_shift')
+    ARITHMETIC_ACTIVATIONS = PatternDesc('arithmetic_activations')
+    ARITHMETIC_ACTIVATIONS_BATCH_NORM = PatternDesc('arithmetic_activations_batch_norm')
+    ARITHMETIC_ACTIVATIONS_SCALE_SHIFT = PatternDesc('arithmetic_activations_scale_shift')
+    ARITHMETIC_BATCH_NORM = PatternDesc('arithmetic_batch_norm')
+    ARITHMETIC_BATCH_NORM_ACTIVATIONS = PatternDesc('arithmetic_batch_norm_activations')
+    ARITHMETIC_SCALE_SHIFT = PatternDesc('arithmetic_scale_shift')
+    ARITHMETIC_SCALE_SHIFT_ACTIVATIONS = PatternDesc('arithmetic_scale_shift_activations')
+    BATCH_NORM_ACTIVATIONS = PatternDesc('batch_norm_activations')
+    BATCH_NORM_SCALE_SHIFT_ACTIVATIONS = PatternDesc('batch_norm_scale_shift_activations')
+    LINEAR_ACTIVATIONS = PatternDesc('linear_activations')
+    LINEAR_ACTIVATIONS_BATCH_NORM = PatternDesc('linear_activations_batch_norm')
+    LINEAR_ACTIVATIONS_SCALE_SHIFT = PatternDesc('linear_activations_scale_shift')
+    LINEAR_ARITHMETIC = PatternDesc('linear_arithmetic')
+    LINEAR_ARITHMETIC_ACTIVATIONS = PatternDesc('linear_arithmetic_activations')
+    LINEAR_BATCH_NORM = PatternDesc('linear_batch_norm')
+    LINEAR_BATCH_NORM_ACTIVATIONS = PatternDesc('linear_batch_norm_activations')
+    LINEAR_BATCH_NORM_SCALE_SHIFT_ACTIVATIONS = PatternDesc('linear_batch_norm_scale_shift_activations')
+    LINEAR_SCALE_SHIFT_ACTIVATIONS = PatternDesc('linear_scale_shift_activations')
+    SCALE_SHIFT_ACTIVATIONS = PatternDesc('scale_shift_activations')
+
+    # DEVICE PATTERNS
+    HSWISH_ACTIVATION_CLAMP_MULTIPLY = PatternDesc('hswish_activation_clamp_multiply',
+                                                   devices=[TargetDevice.ANY,
+                                                            TargetDevice.CPU,
+                                                            TargetDevice.GPU,
+                                                            TargetDevice.VPU])
+    LINEAR_SCALE_SHIFT = PatternDesc('linear_scale_shift',
+                                     devices=[TargetDevice.ANY,
+                                              TargetDevice.CPU,
+                                              TargetDevice.GPU])
+    LINEAR_BIASED_SCALE_SHIFT = PatternDesc('linear_biased_scale_shift',
+                                            devices=[TargetDevice.ANY,
+                                                     TargetDevice.CPU,
+                                                     TargetDevice.GPU])
+    LINEAR_ACTIVATION_SCALE_SHIFT = PatternDesc('linear_activation_scale_shift',
+                                                devices=[TargetDevice.ANY,
+                                                         TargetDevice.CPU,
+                                                         TargetDevice.GPU])
+    LINEAR_BIASED_ACTIVATION_SCALE_SHIFT = PatternDesc('linear_biased_activation_scale_shift',
+                                                       devices=[TargetDevice.ANY,
+                                                                TargetDevice.CPU,
+                                                                TargetDevice.GPU])
+    LINEAR_ELEMENTWISE = PatternDesc('linear_elementwise',
+                                     devices=[TargetDevice.ANY,
+                                              TargetDevice.CPU,
+                                              TargetDevice.GPU])
+    LINEAR_BIASED_ELEMENTWISE = PatternDesc('linear_biased_elementwise',
+                                            devices=[TargetDevice.ANY,
+                                                     TargetDevice.CPU,
+                                                     TargetDevice.GPU])
+    LINEAR_ACTIVATION_ELEMENTWISE = PatternDesc('linear_activation_elementwise',
+                                                devices=[TargetDevice.ANY,
+                                                         TargetDevice.CPU,
+                                                         TargetDevice.GPU])
+    LINEAR_BIASED_ACTIVATION_ELEMENTWISE = PatternDesc('linear_biased_activation_elementwise',
+                                                       devices=[TargetDevice.ANY,
+                                                                TargetDevice.CPU,
+                                                                TargetDevice.GPU])

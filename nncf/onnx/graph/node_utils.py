@@ -15,7 +15,7 @@ import onnx
 import numpy as np
 
 from nncf.common.graph.graph import NNCFNode
-from nncf.onnx.graph.metatypes.onnx_metatypes import LAYERS_WITH_BIAS_METATYPES
+from nncf.onnx.graph.metatypes.onnx_metatypes import OPERATIONS_WITH_BIAS_METATYPES
 from nncf.onnx.graph.onnx_graph import ONNXGraph
 from nncf.onnx.graph.metatypes.onnx_metatypes import ONNX_OPERATION_METATYPES
 from nncf.onnx.graph.metatypes.onnx_metatypes import ONNXIdentityMetatype
@@ -31,25 +31,25 @@ def is_node_with_bias(node: NNCFNode) -> bool:
         `False` otherwise.
     """
     input_tensor_names = node.layer_attributes.input_tensor_names
-    return node.metatype in LAYERS_WITH_BIAS_METATYPES and len(input_tensor_names) > 2
+    return node.metatype in OPERATIONS_WITH_BIAS_METATYPES and len(input_tensor_names) > 2
 
 
-def get_bias_value(node: NNCFNode, model: onnx.ModelProto) -> np.ndarray:
+def get_bias_value(node_with_bias : NNCFNode, model: onnx.ModelProto) -> np.ndarray:
     """
     Returns the bias tensor for the biased node.
 
-    :param node: The node that corresponds to the operation with bias.
+    :param node_with_bias : The node that corresponds to the operation with bias.
     :param model: The model that contains this operation.
     :return: The bias value that is applied to the output tensor of the node's operation.
     """
     onnx_graph = ONNXGraph(model)
-    onnx_node = onnx_graph.get_node_by_name(node.node_name)
+    onnx_node = onnx_graph.get_node_by_name(node_with_bias.node_name)
     bias_port_id = onnx_graph.get_bias_tensor_port_id(onnx_node)
     bias_input_name = onnx_node.input[bias_port_id]
     if onnx_graph.has_initializer(bias_input_name):
         return onnx_graph.get_initializers_value(bias_input_name)
     node = onnx_graph.get_nodes_by_output(bias_input_name)[0]
-    metatype = ONNX_OPERATION_METATYPES.get_operator_metatype_by_op_name(node.op_type)
+    metatype = ONNX_OPERATION_METATYPES.get_operator_metatype_by_op_name(node_with_bias.op_type)
     if metatype == ONNXIdentityMetatype:
         return onnx_graph.get_initializers_value(node.input[0])
     raise RuntimeError('Could not find the bias value of the node')

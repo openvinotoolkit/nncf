@@ -11,7 +11,8 @@
  limitations under the License.
 """
 
-from typing import List, Type
+from typing import List, Optional, Type
+import openvino.runtime as ov
 
 from nncf.common.graph.operator_metatypes import INPUT_NOOP_METATYPES
 from nncf.common.graph.operator_metatypes import OUTPUT_NOOP_METATYPES
@@ -24,10 +25,32 @@ OV_OPERATOR_METATYPES = OperatorMetatypeRegistry('openvino_operator_metatypes')
 
 class OVOpMetatype(OperatorMetatype):
     op_names = []  # type: List[str]
+    subtypes = []  # type: List[Type[OperatorMetatype]]
 
     @classmethod
     def get_all_aliases(cls) -> List[str]:
         return cls.op_names
+
+    @classmethod
+    def get_subtypes(cls) -> List[Type[OperatorMetatype]]:
+        return cls.subtypes
+
+    @classmethod
+    def matches(cls, node: ov.Node) -> Optional[bool]:
+        return node.op_type in cls.op_names
+
+    @classmethod
+    def determine_subtype(cls, node: ov.Node) -> Optional[Type[OperatorMetatype]]:
+        matches = []
+        for subtype in cls.get_subtypes():
+            if subtype.matches(node):
+                matches.append(subtype)
+        if len(matches) > 1:
+            raise RuntimeError('Multiple subtypes match operator call - '
+                               'can not determine single subtype.')
+        if not matches:
+            return None
+        return matches[0]
 
 
 @OV_OPERATOR_METATYPES.register()
@@ -41,6 +64,32 @@ class OVConvolutionMetatype(OVOpMetatype):
 class OVConvolutionBackpropDataMetatype(OVOpMetatype):
     name = 'ConvBackpropDataOp'
     op_names = ['ConvolutionBackpropData']
+    hw_config_names = [HWConfigOpName.CONVOLUTION]
+
+
+@OV_OPERATOR_METATYPES.register()
+class OVDepthwiseConvolutionMetatype(OVOpMetatype):
+    name = 'DepthwiseConvolutionOp'
+    op_names = ['GroupConvolution']
+    hw_config_names = [HWConfigOpName.DEPTHWISECONVOLUTION]
+
+    @classmethod
+    def matches(cls, node: ov.Node) -> bool:
+        return _is_depthwise_conv(node)
+
+
+@OV_OPERATOR_METATYPES.register()
+class OVGroupConvolutionMetatype(OVOpMetatype):
+    name = 'GroupConvolutionOp'
+    op_names = ['GroupConvolution']
+    hw_config_names = [HWConfigOpName.CONVOLUTION]
+    subtypes = [OVDepthwiseConvolutionMetatype]
+
+
+@OV_OPERATOR_METATYPES.register()
+class OVGroupConvolutionBackpropDataMetatype(OVOpMetatype):
+    name = 'GroupConvolutionBackpropDataOp'
+    op_names = ['GroupConvolutionBackpropData']
     hw_config_names = [HWConfigOpName.CONVOLUTION]
 
 
@@ -509,7 +558,29 @@ class OVResultMetatype(OVOpMetatype):
     op_names = ['Result']
 
 
+@OV_OPERATOR_METATYPES.register()
+class OVSwishMetatype(OVOpMetatype):
+    name = 'SwishOp'
+    op_names = ['Swish']
+
+
+@OV_OPERATOR_METATYPES.register()
+class OVClampMetatype(OVOpMetatype):
+    name = 'ClampOp'
+    op_names = ['Clamp']
+
+
 GENERAL_WEIGHT_LAYER_METATYPES = [OVConvolutionMetatype,
+                                  OVGroupConvolutionMetatype,
+                                  OVDepthwiseConvolutionMetatype,
+                                  OVConvolutionBackpropDataMetatype,
+                                  OVGroupConvolutionBackpropDataMetatype,
+                                  OVMatMulMetatype]
+
+METATYPES_WITH_CONST_PORT_ID = GENERAL_WEIGHT_LAYER_METATYPES + [OVAddMetatype]
+
+# Contains the operation metatypes for which bias can be applied.
+OPERATIONS_WITH_BIAS_METATYPES = [OVConvolutionMetatype,
                                   OVConvolutionBackpropDataMetatype,
                                   OVMatMulMetatype]
 
@@ -520,3 +591,19 @@ def get_operator_metatypes() -> List[Type[OperatorMetatype]]:
     :return: List of operator metatypes .
     """
     return list(OV_OPERATOR_METATYPES.registry_dict.values())
+
+
+def _is_depthwise_conv(node: ov.Node) -> bool:
+    """
+    Returns True if the group convolution is depthwise, False - otherwise.
+    Depthwise convolution is a convolution satisfies the following rule:
+    groups == in_channels and inp_channels > 1.
+    Weight tensor layout is [groups, output channels / groups, input channels / groups, Z, Y, X],
+    where Z, Y, X - spatial axes.
+
+    :param node: GroupConvolution node to check whether it is depthwise.
+    :return: True if the convolution is depthwise, False - otherwise.
+    """
+    inp_channels = node.input_value(0).get_shape()[1]
+    groups = node.input_value(1).get_shape()[0]
+    return groups == inp_channels and inp_channels > 1

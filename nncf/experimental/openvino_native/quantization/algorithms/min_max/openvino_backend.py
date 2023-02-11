@@ -34,8 +34,10 @@ from nncf.experimental.openvino_native.graph.transformations.commands import OVT
 from nncf.experimental.openvino_native.hardware.config import OVHWConfig
 from nncf.experimental.openvino_native.hardware.fused_patterns import OPENVINO_HW_FUSED_PATTERNS
 from nncf.experimental.openvino_native.quantization.default_quantization import DEFAULT_OV_QUANT_TRAIT_TO_OP_DICT
-from nncf.experimental.openvino_native.quantization.quantizer_parameters import calculate_activation_quantizer_parameters
-from nncf.experimental.openvino_native.quantization.quantizer_parameters import calculate_weight_quantizer_parameters
+from nncf.experimental.openvino_native.quantization.quantizer_parameters import (
+    calculate_activation_quantizer_parameters,
+    calculate_weight_quantizer_parameters
+)
 from nncf.experimental.openvino_native.statistics.collectors import OVMeanMinMaxStatisticCollector
 from nncf.experimental.openvino_native.statistics.collectors import OVMinMaxStatisticCollector
 
@@ -122,8 +124,4 @@ class OVMinMaxAlgoBackend(MinMaxAlgoBackend):
 
     @staticmethod
     def get_weight_tensor_port_id(node: NNCFNode) -> int:
-        return node.layer_attributes.weight_port_id
-
-    @staticmethod
-    def get_weight_config(config: QuantizerConfig, model: ov.Model) -> QuantizerConfig:
-        return config
+        return node.layer_attributes.const_port_id

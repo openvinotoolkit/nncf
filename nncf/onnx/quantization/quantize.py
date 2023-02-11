@@ -23,9 +23,11 @@ from nncf.parameters import ModelType
 from nncf.parameters import TargetDevice
 from nncf.common.quantization.structs import QuantizationPreset
 from nncf.quantization.algorithms.post_training.algorithm import PostTrainingQuantization
-from nncf.quantization.algorithms.post_training.algorithm  import PostTrainingQuantizationParameters
+from nncf.quantization.algorithms.post_training.algorithm import PostTrainingQuantizationParameters
+from nncf.quantization.algorithms.definitions import Granularity
 from nncf.telemetry import tracked_function
 from nncf.telemetry.events import NNCF_ONNX_CATEGORY
+from nncf.common.logging.logger import nncf_logger
 
 
 @tracked_function(NNCF_ONNX_CATEGORY, [CompressionStartedWithQuantizeApi(), "target_device", "preset"])
@@ -40,6 +42,7 @@ def quantize_impl(model: onnx.ModelProto,
     """
     Implementation of the `quantize()` method for the ONNX backend.
     """
+    additional_params = {}
     if model_type is not None:
         raise ValueError(f'model_type={model_type} is not supported')
     if ignored_scope is not None and ignored_scope.types is not None:
@@ -48,13 +51,21 @@ def quantize_impl(model: onnx.ModelProto,
                            'scopes yet')
     if target_device == TargetDevice.CPU_SPR:
         raise RuntimeError('target_device == CPU_SPR is not supported.')
+    if model.opset_import[0].version < 10:
+        raise RuntimeError('ONNX models with opset version < 10 do not support quantization.')
+    if model.opset_import[0].version < 13:
+        nncf_logger.warning('ONNX models with 10 < opset version < 13 do not support per-channel quantization.'
+                            ' Per-tensor quantization will be applied.')
+        additional_params = {'weight_granularity': Granularity.PERTENSOR,
+                             'activation_granularity': Granularity.PERTENSOR}
 
     quantization_parameters = PostTrainingQuantizationParameters(
         preset=preset,
         target_device=target_device,
         number_samples=subset_size,
         ignored_scopes=convert_ignored_scope_to_list(ignored_scope),
-        fast_bias_correction=fast_bias_correction
+        fast_bias_correction=fast_bias_correction,
+        **additional_params
     )
 
     quantization_algorithm = PostTrainingQuantization(quantization_parameters)

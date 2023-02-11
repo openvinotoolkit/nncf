@@ -13,6 +13,7 @@
 
 import pytest
 from nncf.parameters import TargetDevice
+from nncf.common.graph.patterns import GraphPattern
 from nncf.onnx.statistics.collectors import ONNXMeanMinMaxStatisticCollector
 from nncf.onnx.statistics.collectors import ONNXMinMaxStatisticCollector
 from nncf.quantization.algorithms.definitions import RangeType
@@ -87,7 +88,7 @@ def test_quantize_outputs(quantize_outputs):
     min_max_algo._backend_entity = ONNXMinMaxAlgoBackend()
     nncf_graph = NNCFGraphToTest().nncf_graph
     assert min_max_algo._parameters.quantize_outputs == quantize_outputs
-    q_setup = min_max_algo._get_quantizer_setup(nncf_graph)
+    q_setup = min_max_algo._get_quantizer_setup(nncf_graph, GraphPattern())
     act_num_q, weight_num_q = 0, 0
     for quantization_point in q_setup.quantization_points.values():
         if quantization_point.is_activation_quantization_point():
@@ -109,7 +110,7 @@ def test_ignored_scopes(ignored_scopes):
     min_max_algo._backend_entity = ONNXMinMaxAlgoBackend()
     nncf_graph = NNCFGraphToTest().nncf_graph
     assert min_max_algo._parameters.ignored_scopes == ignored_scopes
-    q_setup = min_max_algo._get_quantizer_setup(nncf_graph)
+    q_setup = min_max_algo._get_quantizer_setup(nncf_graph, GraphPattern())
     act_num_q, weight_num_q = 0, 0
     for quantization_point in q_setup.quantization_points.values():
         if quantization_point.is_activation_quantization_point():
