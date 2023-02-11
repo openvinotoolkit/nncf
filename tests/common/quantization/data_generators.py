@@ -242,6 +242,7 @@ def generate_one_channel_input(
 
     quant_points = get_quant_points(min_val, quant_len, bits)
     quant_mid_points = get_mid_quant_points(min_val, quant_len, bits)
+
     out_of_range_points = [
         min_val - quant_len,
         min_val - quant_len / 2,
@@ -328,17 +329,17 @@ def generate_test_input(
     return inputs, is_near_mid_point, quant_lens
 
 
-def check_outputs(arr_a, arr_b, is_near_mid_point, quant_lens, atol=1e5):
+def check_outputs(arr_a: np.array, arr_b: np.array, is_near_mid_point: np.array, quant_lens: np.array, atol=0.000001):
     """
     Comparing values in arr_a and arr_b, with tolerant mismatch for points in the middle between quants.
 
     :param arr_a: Data array.
     :param arr_b: Data array.
     :param is_near_mid_point: Array of that point is in the middle between quants
-    :param quant_lens: Array of quant length.
-    :param atol: _description_, defaults to 1e5.
+    :param quant_lens: Array of quant length that used as tolerance parameter for points in the middle between quants.
+    :param atol: The absolute tolerance parameter, defaults to 0.000001.
 
-    :raises ValueError: _description_
+    :raises ValueError: If the arrays arr_a and arr_b do not match.
     """
     assert arr_a.shape == arr_b.shape
     assert arr_a.shape == is_near_mid_point.shape
