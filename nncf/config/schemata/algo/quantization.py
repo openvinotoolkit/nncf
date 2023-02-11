@@ -495,7 +495,8 @@ QUANTIZATION_SCHEMA = {
             "additionalProperties": False,
         },
         "export_to_onnx_standard_ops": with_attributes(BOOLEAN,
-                                                       description="Determines how should the additional quantization "
+                                                       description="[Deprecated] "
+                                                                   "Determines how should the additional quantization "
                                                                    "operations be exported into the ONNX format. Set "
                                                                    "this to true to export to ONNX "
                                                                    "standard QuantizeLinear-DequantizeLinear "

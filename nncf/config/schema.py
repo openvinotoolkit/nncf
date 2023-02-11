@@ -17,31 +17,32 @@ from typing import Dict
 import jsonschema
 
 from nncf.config.definitions import ALGO_NAME_VS_README_URL
+from nncf.config.definitions import BINARIZATION_ALGO_NAME_IN_CONFIG
+from nncf.config.definitions import CONST_SPARSITY_ALGO_NAME_IN_CONFIG
+from nncf.config.definitions import FILTER_PRUNING_ALGO_NAME_IN_CONFIG
+from nncf.config.definitions import KNOWLEDGE_DISTILLATION_ALGO_NAME_IN_CONFIG
+from nncf.config.definitions import MAGNITUDE_SPARSITY_ALGO_NAME_IN_CONFIG
+from nncf.config.definitions import QUANTIZATION_ALGO_NAME_IN_CONFIG
+from nncf.config.definitions import RB_SPARSITY_ALGO_NAME_IN_CONFIG
 from nncf.config.definitions import SCHEMA_VISUALIZATION_URL
-from nncf.config.schemata.defaults import TARGET_DEVICE
-from nncf.config.schemata.experimental_schema import EXPERIMENTAL_REF_VS_ALGO_SCHEMA
 from nncf.config.schemata.accuracy_aware import ACCURACY_AWARE_MODES_VS_SCHEMA
 from nncf.config.schemata.accuracy_aware import ACCURACY_AWARE_TRAINING_SCHEMA
-from nncf.config.definitions import BINARIZATION_ALGO_NAME_IN_CONFIG
 from nncf.config.schemata.algo.binarization import BINARIZATION_SCHEMA
-from nncf.config.definitions import CONST_SPARSITY_ALGO_NAME_IN_CONFIG
 from nncf.config.schemata.algo.const_sparsity import CONST_SPARSITY_SCHEMA
-from nncf.config.definitions import FILTER_PRUNING_ALGO_NAME_IN_CONFIG
 from nncf.config.schemata.algo.filter_pruning import FILTER_PRUNING_SCHEMA
-from nncf.config.definitions import KNOWLEDGE_DISTILLATION_ALGO_NAME_IN_CONFIG
 from nncf.config.schemata.algo.knowledge_distillation import KNOWLEDGE_DISTILLATION_SCHEMA
-from nncf.config.definitions import MAGNITUDE_SPARSITY_ALGO_NAME_IN_CONFIG
 from nncf.config.schemata.algo.magnitude_sparsity import MAGNITUDE_SPARSITY_SCHEMA
-from nncf.config.definitions import QUANTIZATION_ALGO_NAME_IN_CONFIG
 from nncf.config.schemata.algo.quantization import QUANTIZATION_SCHEMA
-from nncf.config.definitions import RB_SPARSITY_ALGO_NAME_IN_CONFIG
 from nncf.config.schemata.algo.rb_sparsity import RB_SPARSITY_SCHEMA
 from nncf.config.schemata.basic import ARRAY_OF_NUMBERS
 from nncf.config.schemata.basic import BOOLEAN
 from nncf.config.schemata.basic import STRING
+from nncf.config.schemata.basic import annotated_enum
 from nncf.config.schemata.basic import make_object_or_array_of_objects_schema
 from nncf.config.schemata.basic import with_attributes
 from nncf.config.schemata.common.compression import COMPRESSION_LR_MULTIPLIER_PROPERTY
+from nncf.config.schemata.defaults import TARGET_DEVICE
+from nncf.config.schemata.experimental_schema import EXPERIMENTAL_REF_VS_ALGO_SCHEMA
 
 logger = logging.getLogger('nncf')
 
@@ -80,6 +81,14 @@ TARGET_DEVICE_SCHEMA = {
     "enum": ["ANY", "CPU", "GPU", "VPU", "TRIAL", "CPU_SPR"]
 }
 
+TYPE_OF_EXPORT_TO_ONNX = {
+    "openvino": "Using a custom operation when exporting to ONNX formats that are supported by OpenVINO. "
+                "This format supports all NNCF algorithms without restrictions.",
+    "qdq": "Using ONNX standard QuantizeLinear-DequantizeLinear "
+           "node pairs (support only 8-bit for quantization algorithm).",
+    "native": "The model is converted to native torch format, then exported to ONNX format. "
+                    "Supports only 8-bit quantization and filter pruning algorithms.",
+}
 
 NNCF_CONFIG_SCHEMA = {
     "$schema": "http://json-schema.org/draft-07/schema",
@@ -147,6 +156,16 @@ NNCF_CONFIG_SCHEMA = {
                         "otherwise the compression will most likely fail."),
         "log_dir": with_attributes(STRING,
                                    description="Log directory for NNCF-specific logging outputs."),
+        "type_of_export_to_onnx": with_attributes(
+            annotated_enum(TYPE_OF_EXPORT_TO_ONNX),
+            description="Determines how should the additional quantization "
+                        "operations be exported into the ONNX format. Set "
+                        "this to 'openvino' to export to OpenVINO-supported FakeQuantize ONNX "
+                        "(all quantization settings supported), 'qdq' "
+                        "to export to ONNX standard QuantizeLinear-DequantizeLinear "
+                        "node pairs (8-bit quantization only) or "
+                        " `native` to export to ONNX by converting your model to native torch format.",
+            default="openvino"),
     },
     "required": ["input_info"],
     "$defs": REF_VS_ALGO_SCHEMA,

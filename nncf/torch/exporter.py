@@ -10,13 +10,15 @@
  See the License for the specific language governing permissions and
  limitations under the License.
 """
+from copy import copy
+from functools import partial
 from typing import Any
 from typing import Tuple
-from functools import partial
-from copy import copy
+
 import torch
 from torch.onnx import OperatorExportTypes
 
+from nncf.api.compression import CompressionAlgorithmController
 from nncf.common.exporter import Exporter
 from nncf.common.logging import nncf_logger
 from nncf.telemetry import tracked_function
@@ -24,7 +26,9 @@ from nncf.telemetry.events import NNCF_PT_CATEGORY
 from nncf.torch.dynamic_graph.graph_tracer import create_dummy_forward_fn
 from nncf.torch.dynamic_graph.graph_tracer import create_mock_tensor
 from nncf.torch.nested_objects_traversal import objwalk
-from nncf.torch.utils import is_tensor, get_model_device
+from nncf.torch.prepare_for_inference import prepare_for_inference
+from nncf.torch.utils import get_model_device
+from nncf.torch.utils import is_tensor
 
 
 def generate_input_names_list(num_inputs: int):
@@ -49,6 +53,11 @@ def count_tensors(model_retval: Any) -> int:
 class PTExportFormat:
     ONNX = 'onnx'
 
+class PTTypeONNXExport:
+    OPENVINO = 'openvino'
+    QDQ = 'qdq'
+    NATIVE = 'native'
+
 
 class PTExporter(Exporter):
     """
@@ -57,6 +66,13 @@ class PTExporter(Exporter):
 
     _ONNX_DEFAULT_OPSET = 13
 
+    def __init__(
+        self,
+        compressed_ctrl: CompressionAlgorithmController,
+        **kwargs):
+        super().__init__(**kwargs)
+        self.type_of_onnx_export = compressed_ctrl.config.get("type_of_onnx_export", PTTypeONNXExport.OPENVINO)
+        self.compressed_ctrl = compressed_ctrl
 
     @staticmethod
     def parse_format(save_format: str) -> Tuple[str, dict]:
@@ -119,12 +135,16 @@ class PTExporter(Exporter):
 
         export_fn(**fn_args)
 
+
     def _export_to_onnx(self, save_path: str, opset_version: int) -> None:
         """
         Exports the compressed model to the ONNX format.
 
         :param save_path: The path where the model will be saved.
+        :param opset_version: Version of ONNX opset.
         """
+
+
         original_device = get_model_device(self._model)
         model = self._model.eval().cpu()
         input_tensor_list = []
@@ -133,6 +153,9 @@ class PTExporter(Exporter):
             input_shape = tuple([1] + list(info.shape)[1:])
             single_batch_info.shape = input_shape
             input_tensor_list.append(create_mock_tensor(single_batch_info, 'cpu'))
+
+        if self.type_of_onnx_export == PTTypeONNXExport.NATIVE:
+            model = prepare_for_inference(model, self.compressed_ctrl, save_original_model=True)
 
         original_forward = model.forward
         args = self._model_args[:-1]
