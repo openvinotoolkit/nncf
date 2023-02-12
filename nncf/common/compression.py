@@ -110,14 +110,7 @@ class BaseCompressionAlgorithmController(CompressionAlgorithmController):
         else:
             assert backend is BackendType.TORCH
             from nncf.torch.exporter import PTExporter  # pylint: disable=cyclic-import
-            exporter = PTExporter(
-                model=self.model,
-                input_names=input_names,
-                output_names=output_names,
-                model_args=model_args,
-                compressed_ctrl=self
-            )
-
+            exporter = PTExporter(self.model, input_names, output_names, model_args)
         if save_format is not None:
             exporter.export_model(save_path, save_format)
         else:

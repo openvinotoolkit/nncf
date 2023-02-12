@@ -10,41 +10,33 @@
  See the License for the specific language governing permissions and
  limitations under the License.
 """
-from collections import Counter
 from itertools import product
-from typing import Dict
-from typing import List
-from typing import Optional
-from typing import Tuple
+from typing import Tuple, Dict, List
 
-import numpy as np
 import onnx
 import pytest
 import torch
 from torch import nn
+import numpy as np
 
 from nncf import NNCFConfig
-from nncf.torch.exporter import PTTypeONNXExport
-from nncf.torch.quantization.layers import QUANTIZATION_MODULES
-from nncf.torch.quantization.layers import AsymmetricQuantizer
-from nncf.torch.quantization.layers import BaseQuantizer
 from nncf.torch.quantization.layers import PTQuantizerSpec
+from nncf.torch.quantization.layers import BaseQuantizer
+from nncf.torch.quantization.layers import SymmetricQuantizer
+from nncf.torch.quantization.layers import AsymmetricQuantizer
+from nncf.torch.quantization.layers import QUANTIZATION_MODULES
 from nncf.torch.quantization.layers import QuantizationMode
 from nncf.torch.quantization.layers import QuantizerExportMode
-from nncf.torch.quantization.layers import SymmetricQuantizer
-from tests.torch.helpers import TwoConvTestModel
-from tests.torch.helpers import create_compressed_model_and_algo_for_test
-from tests.torch.helpers import get_all_inputs_for_graph_node
 from tests.torch.helpers import get_nodes_by_type
-from tests.torch.helpers import load_exported_onnx_version
+from tests.torch.helpers import get_all_inputs_for_graph_node
 from tests.torch.helpers import register_bn_adaptation_init_args
 from tests.torch.helpers import resolve_constant_node_inputs_to_values
+from tests.torch.helpers import TwoConvTestModel
+from tests.torch.helpers import load_exported_onnx_version
+from tests.torch.helpers import create_compressed_model_and_algo_for_test
 
 
-def get_config_for_export_mode(
-    should_be_onnx_standard: Optional[bool] = None,
-    type_of_onnx_export: Optional[str] = None
-) -> NNCFConfig:
+def get_config_for_export_mode(should_be_onnx_standard: bool) -> NNCFConfig:
     nncf_config = NNCFConfig()
     nncf_config.update({
         "input_info": {
@@ -55,13 +47,6 @@ def get_config_for_export_mode(
             "export_to_onnx_standard_ops": should_be_onnx_standard
         }
     })
-
-    if should_be_onnx_standard is not None:
-        nncf_config["compression"]["export_to_onnx_standard_ops"] = should_be_onnx_standard
-
-    if type_of_onnx_export is not None:
-        nncf_config["type_of_onnx_export"] = type_of_onnx_export
-
     register_bn_adaptation_init_args(nncf_config)
     return nncf_config
 
@@ -389,30 +374,3 @@ def test_torch_onnx_export(tmp_path):
             num_other_nodes += 1
     assert num_fq == 4
     assert num_other_nodes == 0
-
-
-@pytest.mark.parametrize(
-    "type_of_onnx_export, refs",
-    (
-
-        (PTTypeONNXExport.NATIVE, {'QuantizeLinear': 4, 'DequantizeLinear': 4, 'Identity': 2, 'Conv': 2}),
-        (PTTypeONNXExport.OPENVINO, {'Constant': 8, 'FakeQuantize': 4, 'Conv': 2}),
-        (PTTypeONNXExport.QDQ, {'Constant': 8, 'QuantizeLinear': 4, 'DequantizeLinear': 4, 'Conv': 2}),
-    )
-)
-def test_types_of_onnx_export(tmp_path, type_of_onnx_export, refs):
-    model = TwoConvTestModel()
-    nncf_config = get_config_for_export_mode(should_be_onnx_standard=False, type_of_onnx_export=type_of_onnx_export)
-
-    _, compression_ctrl = create_compressed_model_and_algo_for_test(model, nncf_config)
-
-    onnx_checkpoint_path = tmp_path / 'model.onnx'
-    compression_ctrl.prepare_for_export()
-
-    compression_ctrl.export_model(onnx_checkpoint_path)
-
-    onnx_model_proto = onnx.load_model(onnx_checkpoint_path)
-
-    node_counter = dict(Counter([node.op_type for node in onnx_model_proto.graph.node]))
-
-    assert node_counter == refs, f"{node_counter=} != {refs=}"

@@ -43,9 +43,9 @@ from nncf.common.graph.layer_attributes import WeightedLayerAttributes
 from nncf.common.graph.transformations.commands import TargetPoint
 from nncf.common.graph.transformations.commands import TargetType
 from nncf.common.graph.utils import get_first_nodes_of_type
+from nncf.common.hardware.config import get_hw_config_type
 from nncf.common.hardware.config import HWConfig
 from nncf.common.hardware.config import HWConfigType
-from nncf.common.hardware.config import get_hw_config_type
 from nncf.common.initialization.batchnorm_adaptation import BatchnormAdaptationAlgorithm
 from nncf.common.insertion_point_graph import InsertionPointGraph
 from nncf.common.insertion_point_graph import InsertionPointGraphNodeType
@@ -88,7 +88,6 @@ from nncf.torch.compression_method_api import PTCompressionAlgorithmController
 from nncf.torch.debug import CallCountTracker
 from nncf.torch.debug import DebugInterface
 from nncf.torch.dynamic_graph.context import TracingContext
-from nncf.torch.exporter import PTTypeONNXExport
 from nncf.torch.graph.graph import PTNNCFGraph
 from nncf.torch.graph.operator_metatypes import PTDepthwiseConv2dSubtype
 from nncf.torch.graph.operator_metatypes import PTModuleConv2dMetatype
@@ -1295,7 +1294,15 @@ class QuantizationController(QuantizationControllerBase):
         self._bn_adaptation = None
         self._build_time_metric_info = build_time_metric_info
 
-        self.set_quantizer_export_mode()
+        should_export_to_onnx_qdq = algo_config.get('export_to_onnx_standard_ops',
+                                                    QUANTIZATION_EXPORT_TO_ONNX_STANDARD_OPS)
+        if should_export_to_onnx_qdq:
+            export_mode = QuantizerExportMode.ONNX_QUANTIZE_DEQUANTIZE_PAIRS
+        else:
+            export_mode = QuantizerExportMode.FAKE_QUANTIZE
+
+        for quantizer in self.all_quantizations.values():  # type: BaseQuantizer
+            quantizer.set_export_mode(export_mode)
 
         params = algo_config.get('params', None)
         self.is_staged_scheduler = bool(params)
@@ -1304,27 +1311,6 @@ class QuantizationController(QuantizationControllerBase):
         if self.is_staged_scheduler:
             scheduler_cls = QUANTIZATION_SCHEDULERS.get("staged")
             self._scheduler = scheduler_cls(self, params)
-
-    def set_quantizer_export_mode(self):
-        type_of_onnx_export = self.config.get('type_of_onnx_export')
-        export_to_onnx_standard_ops = self._get_algo_config().get('export_to_onnx_standard_ops')
-        if export_to_onnx_standard_ops is not None:
-            nncf_logger.warning("Parameter `export_to_onnx_standard_ops` is deprecated. "
-                                f"Use `type_of_onnx_export = {PTTypeONNXExport.QDQ}` instead.")
-
-        if type_of_onnx_export is not None:
-            if type_of_onnx_export == PTTypeONNXExport.QDQ:
-                export_mode = QuantizerExportMode.ONNX_QUANTIZE_DEQUANTIZE_PAIRS
-            else:
-                export_mode = QuantizerExportMode.FAKE_QUANTIZE
-        else:
-            if export_to_onnx_standard_ops:
-                export_mode = QuantizerExportMode.ONNX_QUANTIZE_DEQUANTIZE_PAIRS
-            else:
-                export_mode = QuantizerExportMode.FAKE_QUANTIZE
-
-        for quantizer in self.all_quantizations.values():  # type: BaseQuantizer
-            quantizer.set_export_mode(export_mode)
 
     @property
     def scheduler(self) -> CompressionScheduler:
