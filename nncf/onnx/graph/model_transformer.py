@@ -51,7 +51,7 @@ class ONNXModelTransformer(ModelTransformer):
     def _get_pre_post_target_edge(self, port_id: int, node_name: str, transform_type: TargetType,
                                         onnx_graph: ONNXGraph) -> str:
         """
-        Returns edge name corresponding to node with name equals to node_name, port_id and transform_type.
+        Returns edge name corresponding to the node with a name equal to node_name, port_id, and transform_type.
 
         :param port_id: Edge number of port.
         :param node_name: Node name.
