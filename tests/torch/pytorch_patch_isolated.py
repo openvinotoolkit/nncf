@@ -14,7 +14,6 @@
 import inspect
 import os
 import pytest
-import re
 
 import torch
 
