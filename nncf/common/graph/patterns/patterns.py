@@ -267,8 +267,8 @@ class PatternDesc:
 
     :param name: Specific pattern name.
     :param devices: A field containing the list of devices
-    for which this pattern should be taken into account when quantizing.
-    None value means that this pattern is applicable to all devices.
+        for which this pattern should be taken into account when quantizing.
+        None value means that this pattern is applicable to all devices.
     """
 
     name: str
