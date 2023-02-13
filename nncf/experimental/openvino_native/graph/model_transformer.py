@@ -65,7 +65,6 @@ class OVModelTransformer(ModelTransformer):
         """
         return {op.get_friendly_name(): op for op in model.get_ops()}
 
-
     def transform(self, transformation_layout: TransformationLayout) -> ov.Model:
         """
         Applies transformations by type-callback on the model.
