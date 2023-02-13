@@ -100,7 +100,6 @@ class OVModelTransformer(ModelTransformer):
             model = self._apply_bias_correction_transformations(bias_correction_transformations)
         if model_extraction_transformation:
             model = self._apply_model_extraction_transformation(model_extraction_transformation)
-        # Creating New model transformations
         if output_insertion_transformations:
             model = self._apply_output_insertion_transformations(output_insertion_transformations)
         # No transformation applied
@@ -116,7 +115,7 @@ class OVModelTransformer(ModelTransformer):
 
         :param transformations: list of the OVOutputInsertionCommand transformations.
         """
-        model = self._model
+        model = self._model.clone()
         extra_model_outputs = self._get_extra_model_outputs(model, transformations)
         return self._insert_outputs(model, outputs=extra_model_outputs)
 
