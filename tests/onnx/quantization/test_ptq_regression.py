@@ -47,7 +47,7 @@ def data(request):
 
 @pytest.fixture(name="model_dir")
 def models(request, tmp_path):
-    option = request.config.getoption("--model-dir")
+    option = request.config.getoption("--data")
     if option is None:
         return Path(tmp_path)
     return Path(option)

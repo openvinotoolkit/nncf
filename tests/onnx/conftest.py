@@ -73,7 +73,7 @@ def pytest_addoption(parser):
     )
     parser.addoption(
         "--data", type=str, default=None,
-        help="Directory path to validation datasets."
+        help="Directory path to cached data."
     )
 
 def pytest_configure(config):
