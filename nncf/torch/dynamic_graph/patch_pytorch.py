@@ -11,14 +11,12 @@
  limitations under the License.
 """
 
-import functools
 from enum import Enum
 
 from typing import List
 
 import torch
 import torch.utils.cpp_extension
-from torch.jit import is_tracing
 from torch.nn import DataParallel
 from torch.nn.parallel import DistributedDataParallel
 
