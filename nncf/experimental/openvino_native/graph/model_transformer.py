@@ -55,6 +55,17 @@ class OVModelTransformer(ModelTransformer):
         super().__init__(model)
         self._model = model
 
+    @staticmethod
+    def _get_name_to_node_mapping(model: ov.Model) -> Dict[str, ov.Node]:
+        """
+        Returns name to node mapping
+
+        :param model: Model to get mapping.
+        :return:
+        """
+        return {op.get_friendly_name(): op for op in model.get_ops()}
+
+
     def transform(self, transformation_layout: TransformationLayout) -> ov.Model:
         """
         Applies transformations by type-callback on the model.
@@ -117,7 +128,7 @@ class OVModelTransformer(ModelTransformer):
         :param transformations: lisf of the OVOutputInsertionCommand.
         :return: list of the output names.
         """
-        name_to_node_mapping = {op.get_friendly_name(): op for op in model.get_ops()}
+        name_to_node_mapping = OVModelTransformer._get_name_to_node_mapping(model)
         extra_model_outputs = []
         for transformation in transformations:
             node_name = transformation.target_point.target_node_name
@@ -161,7 +172,7 @@ class OVModelTransformer(ModelTransformer):
         :param transformations: lisf of the node removing transformations.
         """
         model = self._model.clone()
-        name_to_node_mapping = {op.get_friendly_name(): op for op in model.get_ops()}
+        name_to_node_mapping = OVModelTransformer._get_name_to_node_mapping(model)
         for transformation in transformations:
             node = name_to_node_mapping[transformation.target_point.target_node_name]
 
@@ -188,7 +199,7 @@ class OVModelTransformer(ModelTransformer):
                     if op.get_element_type() == ov.Type(np.float16):
                         model_precision = ModelPrecision.FP16
                         break
-        name_to_node_mapping = {op.get_friendly_name(): op for op in model.get_ops()}
+        name_to_node_mapping = OVModelTransformer._get_name_to_node_mapping(model)
         for transformation in transformations:
             self._insert_fake_quantize_op(transformation, name_to_node_mapping, model_precision)
         return model
@@ -242,7 +253,7 @@ class OVModelTransformer(ModelTransformer):
         :param transformations: List of the bias correction transformations.
         """
         model = self._model.clone()
-        name_to_node_mapping = {op.get_friendly_name(): op for op in model.get_ops()}
+        name_to_node_mapping = OVModelTransformer._get_name_to_node_mapping(model)
         for transformation in transformations:
             node_name = transformation.target_point.target_node_name
 
@@ -274,7 +285,7 @@ class OVModelTransformer(ModelTransformer):
         :return: Extracted sub-model.
         """
         model = self._model.clone()
-        name_to_node_mapping = {op.get_friendly_name(): op for op in model.get_ops()}
+        name_to_node_mapping = OVModelTransformer._get_name_to_node_mapping(model)
         params, results = [], []
         for input_name in transformation.inputs:
             input_node = name_to_node_mapping[input_name]
