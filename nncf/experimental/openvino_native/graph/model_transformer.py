@@ -58,10 +58,10 @@ class OVModelTransformer(ModelTransformer):
     @staticmethod
     def _get_name_to_node_mapping(model: ov.Model) -> Dict[str, ov.Node]:
         """
-        Returns name to node mapping
+        Returns name to node mapping.
 
         :param model: Model to get mapping.
-        :return:
+        :return: Mapping from node name to node.
         """
         return {op.get_friendly_name(): op for op in model.get_ops()}
 
@@ -69,7 +69,8 @@ class OVModelTransformer(ModelTransformer):
         """
         Applies transformations by type-callback on the model.
 
-        :param transformations: lisf of the TransformationCommand transformations.
+        :param transformations: TransformationCommand transformations.
+        :return: Transformed model.
         """
         output_insertion_transformations = []
         fq_nodes_removing_transformations = []
@@ -112,7 +113,8 @@ class OVModelTransformer(ModelTransformer):
         """
         Applies incoming transformations to the model.
 
-        :param transformations: list of the OVOutputInsertionCommand transformations.
+        :param transformations: OVOutputInsertionCommand transformations.
+        :return: Model with inserted outputs.
         """
         model = self._model.clone()
         extra_model_outputs = self._get_extra_model_outputs(model, transformations)
@@ -150,7 +152,7 @@ class OVModelTransformer(ModelTransformer):
 
         :param model: OpenVINO model.
         :param outputs: list of ov.Output.
-        :return: modified model.
+        :return: Model with new outputs.
         """
         model_outputs = model.get_results()
         params = model.get_parameters()
@@ -167,7 +169,8 @@ class OVModelTransformer(ModelTransformer):
         """
         Removes the layers from the model.
 
-        :param transformations: lisf of the node removing transformations.
+        :param transformations: Node removing transformations.
+        :return: Model with removed Quantizer.
         """
         model = self._model.clone()
         name_to_node_mapping = OVModelTransformer._get_name_to_node_mapping(model)
@@ -188,6 +191,7 @@ class OVModelTransformer(ModelTransformer):
         Applies transformations on the model.
 
         :param transformations: List of the OVQuantizerInsertionCommand transformations.
+        :return: Model with inserted Quantizer.
         """
         model = self._model.clone()
         model_precision = ModelPrecision.FP32
@@ -249,6 +253,7 @@ class OVModelTransformer(ModelTransformer):
         Applies bias correction transformations on the model.
 
         :param transformations: List of the bias correction transformations.
+        :return: Model with corrected bias.
         """
         model = self._model.clone()
         name_to_node_mapping = OVModelTransformer._get_name_to_node_mapping(model)

@@ -54,12 +54,12 @@ class ONNXModelTransformer(ModelTransformer):
     def _get_pre_post_target_edge(self, port_id: int, node_name: str, transform_type: TargetType,
                                         onnx_graph: ONNXGraph) -> str:
         """
-        Returns edge name corresponding to the node with a name equal to node_name, port_id, and transform_type.
+        Returns edge name corresponding to the node with a name equal to node_name, port_id and transform_type.
 
         :param port_id: Edge number of port.
         :param node_name: Node name.
         :param transform_type: Type of transformation.
-        :param onnx_graph: ONNXGraph
+        :param onnx_graph: ONNXGraph.
         :return: Target edge name.
         """
         target_edge_name = None
@@ -82,6 +82,7 @@ class ONNXModelTransformer(ModelTransformer):
         If there are no transformations returns a deepcopy of the model.
 
         :param transformation_layout: Transformation commands.
+        :return: The transformed model.
         """
         quantizer_insert_transformations = []
         output_insert_transformations = []
@@ -194,7 +195,7 @@ class ONNXModelTransformer(ModelTransformer):
         :param transformation: QuantizeLinear-DequantizeLinear insertion transformation,
         from which quantization axis is obtained.
         :param target_edge_name: Edge name on which QuantizeLinear-DequantizeLinear nodes pair should be placed.
-        :return: QuantizeLinear-DequantizeLinear nodes pair
+        :return: QuantizeLinear-DequantizeLinear nodes pair.
         """
         axis = transformation.quantizer_parameters.axis
 
