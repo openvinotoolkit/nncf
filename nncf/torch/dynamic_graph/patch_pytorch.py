@@ -167,9 +167,8 @@ def patch_torch_jit_script():
     _ORIG_JIT_SCRIPT = orig
     setattr(torch.jit, "script", torch_jit_script_wrapper)
 
-    # Patch torch.jit._script_if_tracing because during torch import inside it
-    # references an original unpatched torch.jit.script and the patching above
-    # does not affect it
+    # Patch torch.jit._script_if_tracing because it references an original
+    # unpatched torch.jit.script and the patching above does not affect it
     setattr(torch.jit, "_script_if_tracing", torch_jit_script_if_tracing)
 
 
