@@ -48,10 +48,10 @@ class ONNXModelTransformer(ModelTransformer):
         for input_node in nncf_graph.get_input_nodes():
             self._nncf_input_node_next_nodes = {input_node.node_name: nncf_graph.get_next_nodes(input_node)}
 
-    def _get_pre_post_layer_target_edge(self, port_id: int, node_name: str, transform_type: TargetType,
+    def _get_pre_post_target_edge(self, port_id: int, node_name: str, transform_type: TargetType,
                                         onnx_graph: ONNXGraph) -> str:
         """
-        Returns edge name corresponding to node with name equals to node_name, port_id and transforma_type.
+        Returns edge name corresponding to node with name equals to node_name, port_id and transform_type.
 
         :param port_id: Edge number of port.
         :param node_name: Node name.
@@ -132,9 +132,8 @@ class ONNXModelTransformer(ModelTransformer):
             port_id = transformation.target_point.port_id
             node_name = transformation.target_point.target_node_name
             transform_type = transformation.target_point.type
-            target_edge_name = self._get_pre_post_layer_target_edge(port_id, node_name, transform_type, onnx_graph)
-            if target_edge_name is None:
-                raise RuntimeError('Could not find the edge corresponding to node {}'.format(node_name))
+            assert transform_type in [TargetType.PRE_LAYER_OPERATION, TargetType.POST_LAYER_OPERATION]
+            target_edge_name = self._get_pre_post_target_edge(port_id, node_name, transform_type, onnx_graph)
             extra_model_outputs.append(target_edge_name)
         return ONNXModelTransformer._insert_outputs(self._model, outputs=[*extra_model_outputs, *model_outputs])
 
@@ -269,12 +268,12 @@ class ONNXModelTransformer(ModelTransformer):
         port_id = transformation.target_point.port_id
         node_name = transformation.target_point.target_node_name
         transform_type = transformation.target_point.type
-        target_edge_name = self._get_pre_post_layer_target_edge(port_id, node_name, transform_type, onnx_graph)
+        target_edge_name = self._get_pre_post_target_edge(port_id, node_name, transform_type, onnx_graph)
         if target_edge_name is None:
             if transform_type == TargetType.OPERATION_WITH_WEIGHTS:
                 target_edge_name = onnx_graph.get_node_edge_names(node_name)['input'][port_id]
             else:
-                raise RuntimeError('Could not find the edge corresponding to node {}'.format(node_name))
+                raise RuntimeError('Incorrect operation type. Should be PRE, POST or OPERATION_WITH_WEIGHTS')
         self._added_target_edges[target_edge_name] += 1
         return target_edge_name
 

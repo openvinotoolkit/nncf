@@ -194,7 +194,8 @@ class OVModelTransformer(ModelTransformer):
         return model
 
     def _insert_fake_quantize_op(self, transformation: OVQuantizerInsertionCommand,
-                                 name_to_node_mapping: Dict[str, ov.Node], model_precision: ModelPrecision) -> None:
+                                 name_to_node_mapping: Dict[str, ov.Node],
+                                 model_precision: ModelPrecision) -> None:
         fq_params = transformation.quantizer_parameters
         input_low = fq_params.input_low
         input_high = fq_params.input_high
