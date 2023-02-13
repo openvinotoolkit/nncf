@@ -339,7 +339,7 @@ class MinMaxQuantization(Algorithm):
             return self._quantization_target_points_to_qconfig
         backend = get_backend(model)
         device = self._parameters.target_device
-        pattern = PatternsManager().get_full_pattern_graph(backend, device)
+        pattern = PatternsManager.get_full_pattern_graph(backend, device)
         quantizer_setup = self._get_quantizer_setup(nncf_graph, pattern)
         for quantization_point in quantizer_setup.quantization_points.values():
             if quantization_point.is_weight_quantization_point():
