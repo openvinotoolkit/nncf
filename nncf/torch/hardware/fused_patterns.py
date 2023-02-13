@@ -11,12 +11,9 @@
  limitations under the License.
 """
 
-from nncf.common.utils.backend import BackendType
 from nncf.common.utils.registry import Registry
 from nncf.common.graph.patterns import GraphPattern
 from nncf.common.graph.patterns import PatternNames
-from nncf.common.graph.patterns.manager import PatternsManager
-from nncf.common.graph.patterns.manager import TargetDevice
 from nncf.torch.graph.pattern_operations import ARITHMETIC_OPERATIONS
 from nncf.torch.graph.pattern_operations import ATOMIC_ACTIVATIONS_OPERATIONS
 from nncf.torch.graph.pattern_operations import BATCH_NORMALIZATION_OPERATIONS
@@ -66,20 +63,68 @@ def create_activations_batch_norm_operations():
     return activations
 
 
-@PT_HW_FUSED_PATTERNS.register(PatternNames.LINEAR_ACTIVATIONS_BATCH_NORM_PERMUTATIONS)
-def create_linear_activation_batch_norm_permutation():
+@PT_HW_FUSED_PATTERNS.register(PatternNames.LINEAR_BATCH_NORM)
+def create_linear_batch_norm_operations():
     linear = linear_operations()
-    bn_activations_permutations = batch_norm_activations_permutations()
-    linear.join_patterns(bn_activations_permutations)
+    batch_norm = batch_norm_operations()
+    linear.join_patterns(batch_norm)
     return linear
 
 
-@PT_HW_FUSED_PATTERNS.register(PatternNames.ARITHMETIC_BATCH_NORM_ACTIVATIONS_PERMUTATIONS)
-def create_arithmetic_batch_norm_activations_permutations():
+@PT_HW_FUSED_PATTERNS.register(PatternNames.LINEAR_ACTIVATIONS)
+def create_linear_activation_operations():
+    linear = linear_operations()
+    activation = activation_operations()
+    linear.join_patterns(activation)
+    return linear
+
+
+@PT_HW_FUSED_PATTERNS.register(PatternNames.LINEAR_BATCH_NORM_ACTIVATIONS)
+def create_linear_batch_norm_activation_operations():
+    linear_bn = create_linear_batch_norm_operations()
+    activations = activation_operations()
+    linear_bn.join_patterns(activations)
+    return linear_bn
+
+
+@PT_HW_FUSED_PATTERNS.register(PatternNames.LINEAR_ACTIVATIONS_BATCH_NORM)
+def create_linear_activation_batch_norm_activations():
+    linear_act = create_linear_activation_operations()
+    batch_norm = batch_norm_operations()
+    linear_act.join_patterns(batch_norm)
+    return linear_act
+
+
+@PT_HW_FUSED_PATTERNS.register(PatternNames.ARITHMETIC_BATCH_NORM)
+def create_arithmetic_batch_norm_operations():
     arithmetic = arithmetic_operations()
-    bn_act_perm = batch_norm_activations_permutations()
-    arithmetic.join_patterns(bn_act_perm)
+    batch_norm = batch_norm_operations()
+    arithmetic.join_patterns(batch_norm)
     return arithmetic
+
+
+@PT_HW_FUSED_PATTERNS.register(PatternNames.ARITHMETIC_ACTIVATIONS)
+def create_arithmetic_activations_operations():
+    arithmetic = arithmetic_operations()
+    activation = activation_operations()
+    arithmetic.join_patterns(activation)
+    return arithmetic
+
+
+@PT_HW_FUSED_PATTERNS.register(PatternNames.ARITHMETIC_BATCH_NORM_ACTIVATIONS)
+def create_arithmetic_batch_norm_activations_operations():
+    arithmetic_bn = create_arithmetic_batch_norm_operations()
+    activation = activation_operations()
+    arithmetic_bn.join_patterns(activation)
+    return arithmetic_bn
+
+
+@PT_HW_FUSED_PATTERNS.register(PatternNames.ARITHMETIC_ACTIVATIONS_BATCH_NORM)
+def create_arithmetic_activations_batch_norm_operations():
+    arithmetic_act = create_arithmetic_activations_operations()
+    batch_norm = batch_norm_operations()
+    arithmetic_act.join_patterns(batch_norm)
+    return arithmetic_act
 
 
 @PT_HW_FUSED_PATTERNS.register(PatternNames.GROUP_NORM_RELU)
@@ -127,27 +172,3 @@ def activation_operations():
     pattern.add_pattern_alternative(h_swish)
     pattern.add_pattern_alternative(h_sigmoid)
     return pattern
-
-
-def batch_norm_activations_permutations():
-    batch_norm = batch_norm_operations()
-    activations = activation_operations()
-
-    bn_act = GraphPattern()
-    bn_act.add_pattern_alternative(batch_norm)
-    bn_act.join_patterns(activations)
-
-    act_bn = GraphPattern()
-    act_bn.add_pattern_alternative(activations)
-    act_bn.join_patterns(batch_norm)
-
-    pattern = GraphPattern()
-    pattern.add_pattern_alternative(bn_act)
-    pattern.add_pattern_alternative(act_bn)
-    pattern.add_pattern_alternative(batch_norm)
-    pattern.add_pattern_alternative(activations)
-    return pattern
-
-
-def get_torch_hw_patterns():
-    return PatternsManager().get_full_pattern_graph(BackendType.TORCH, TargetDevice.ANY)

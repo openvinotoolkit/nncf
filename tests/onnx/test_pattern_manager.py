@@ -16,8 +16,6 @@ from tests.shared.patterns import check_patterns
 
 IGNORED_PATTERN_REASONS = {
     PatternNames.L2_NORM:'Not relevant for ONNX.',
-    PatternNames.ARITHMETIC_BATCH_NORM_ACTIVATIONS_PERMUTATIONS:'Not relevant for ONNX.',
-    PatternNames.LINEAR_ACTIVATIONS_BATCH_NORM_PERMUTATIONS:'Not relevant for ONNX.',
     PatternNames.GROUP_NORM_RELU:'Not relevant for ONNX.',
     PatternNames.LINEAR_CONST_MULTIPLY:'Not relevant for ONNX.',
     PatternNames.ADD_SCALE_SHIFT_OUTPUT: 'Not relevant for ONNX.',

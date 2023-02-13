@@ -42,6 +42,8 @@ from nncf.common.graph.layer_attributes import ConvolutionLayerAttributes
 from nncf.common.graph.layer_attributes import WeightedLayerAttributes
 from nncf.common.graph.transformations.commands import TargetPoint
 from nncf.common.graph.transformations.commands import TargetType
+from nncf.common.graph.patterns.manager import PatternsManager
+from nncf.common.graph.patterns.manager import TargetDevice
 from nncf.common.graph.utils import get_first_nodes_of_type
 from nncf.common.hardware.config import get_hw_config_type
 from nncf.common.hardware.config import HWConfig
@@ -70,6 +72,7 @@ from nncf.common.statistics import NNCFStatistics
 from nncf.common.utils.debug import is_debug
 from nncf.common.utils.dot_file_rw import write_dot_graph
 from nncf.common.utils.os import safe_open
+from nncf.common.utils.backend import BackendType
 from nncf.config import NNCFConfig
 from nncf.config.extractors import extract_algo_specific_config
 from nncf.config.extractors import extract_bn_adaptation_init_params
@@ -96,7 +99,6 @@ from nncf.torch.graph.transformations.commands import PTTargetPoint
 from nncf.torch.graph.transformations.commands import TransformationPriority
 from nncf.torch.graph.transformations.layout import PTTransformationLayout
 from nncf.torch.hardware.config import PTHWConfig
-from nncf.torch.hardware.fused_patterns import get_torch_hw_patterns
 from nncf.torch.initialization import SimpleDataLoaderRunner
 from nncf.torch.module_operations import UpdatePaddingValue
 from nncf.torch.nncf_network import EXTERNAL_QUANTIZERS_STORAGE_NAME
@@ -347,7 +349,8 @@ class PropagationBasedQuantizerSetupGenerator(QuantizerSetupGeneratorBase):
                          precision_init_params, range_init_params,
                          hw_config)
 
-        self._pattern_fusing_graph = get_torch_hw_patterns()
+        self._pattern_fusing_graph =\
+            PatternsManager().get_full_pattern_graph(BackendType.TORCH, TargetDevice.ANY)
 
 
         self._hw_precision_constraints = HardwareQuantizationConstraints()
