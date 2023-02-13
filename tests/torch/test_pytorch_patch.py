@@ -66,4 +66,4 @@ def test_jit_if_tracing_script_patching(tmp_path):
 
 def test_jit_if_tracing_script_source():
     # Run test case in a separate process to track patching of torch by NNCF
-    _, stdout, _ = run_pytest_case_function_in_separate_process(test_jit_if_tracing_script_source_equals)
+    run_pytest_case_function_in_separate_process(test_jit_if_tracing_script_source_equals)

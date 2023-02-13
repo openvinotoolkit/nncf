@@ -128,17 +128,17 @@ def torch_jit_script_wrapper(*args, **kwargs):
 
 
 def torch_jit_script_if_tracing(fn):
+    # pylint: disable=protected-access
     @functools.wraps(fn)
     def wrapper(*args, **kwargs):
         if not is_tracing():
-            # Not tracing, don't do anything
             return fn(*args, **kwargs)
 
-        compiled_fn = torch.jit.script(wrapper.__original_fn)  # type: ignore[attr-defined]
+        compiled_fn = torch.jit.script(wrapper.__original_fn)
         return compiled_fn(*args, **kwargs)
 
-    wrapper.__original_fn = fn  # type: ignore[attr-defined]
-    wrapper.__script_if_tracing_wrapper = True  # type: ignore[attr-defined]
+    wrapper.__original_fn = fn
+    wrapper.__script_if_tracing_wrapper = True
 
     return wrapper
 
