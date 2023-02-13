@@ -46,6 +46,9 @@ class ONNXModelTransformer(ModelTransformer):
         nncf_graph = NNCFGraphFactory.create(self._model)
         self.onnx_model_extractor = onnx.utils.Extractor(self._model)
         for input_node in nncf_graph.get_input_nodes():
+            # Quantizers could be applied to ONNX input edges.
+            # If it is the case qunaitzers will be tied with NNCF input nodes.
+            # To get the ONNX edge need to keep the mapping NNCF input nodes to ONNX nodes.
             self._nncf_input_node_next_nodes = {input_node.node_name: nncf_graph.get_next_nodes(input_node)}
 
     def _get_pre_post_target_edge(self, port_id: int, node_name: str, transform_type: TargetType,
