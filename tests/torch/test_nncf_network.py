@@ -625,7 +625,7 @@ class TestInsertionPointGraph:
         mock_graph = mock_graph_factory()
         ip_graph = get_ip_graph_for_test(mock_graph)
         pattern =\
-            PatternsManager().get_full_pattern_graph(BackendType.TORCH, TargetDevice.ANY)
+            PatternsManager.get_full_pattern_graph(BackendType.TORCH, TargetDevice.ANY)
         merged_ip_graph = ip_graph.get_ip_graph_with_merged_hw_optimized_operations(pattern)
 
         data_dir = TEST_ROOT / 'torch/data/reference_graphs/pattern_merging'  # type: Path

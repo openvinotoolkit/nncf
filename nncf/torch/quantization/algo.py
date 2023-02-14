@@ -350,7 +350,7 @@ class PropagationBasedQuantizerSetupGenerator(QuantizerSetupGeneratorBase):
                          hw_config)
 
         self._pattern_fusing_graph =\
-            PatternsManager().get_full_pattern_graph(BackendType.TORCH, TargetDevice.ANY)
+            PatternsManager.get_full_pattern_graph(BackendType.TORCH, TargetDevice.ANY)
 
 
         self._hw_precision_constraints = HardwareQuantizationConstraints()
