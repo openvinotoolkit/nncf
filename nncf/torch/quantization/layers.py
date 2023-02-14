@@ -22,6 +22,7 @@ import numpy as np
 import torch
 from torch import distributed
 from torch import nn
+from torch.quantization.fake_quantize import FakeQuantize
 
 from nncf.common.graph import NNCFNodeName
 from nncf.common.logging import nncf_logger
@@ -938,3 +939,56 @@ def get_scale_shape(input_shape: List[int], is_weights: bool, per_channel: bool,
     if not per_channel:
         return [1]
     return get_per_channel_scale_shape(input_shape, is_weights, channel_idx)
+
+
+def convert_to_fakequantizer(nncf_quantizer: BaseQuantizer) -> FakeQuantize:
+    """
+    Convert BaseQuantizer module to FakeQuantize.
+
+    :param quantizer: NNCF Quantizer module.
+
+    :return: Instance of FakeQuantize similar to the input quantizer.
+    """
+    assert nncf_quantizer.num_bits == 8, "Support only 8bit quantization."
+
+    # Call set_level_ranges to set actual values
+    nncf_quantizer.set_level_ranges()
+
+    per_channel = nncf_quantizer.per_channel
+    scale_shape = nncf_quantizer.scale_shape
+    ch_axis = np.argmax(scale_shape)
+    dtype = torch.qint8 if nncf_quantizer.level_low < 0 else torch.quint8
+
+    if per_channel:
+        observer = torch.ao.quantization.observer.PerChannelMinMaxObserver
+    else:
+        observer = torch.ao.quantization.observer.MinMaxObserver
+
+    if isinstance(nncf_quantizer, SymmetricQuantizer):
+        qscheme = torch.per_channel_symmetric if per_channel else torch.per_tensor_symmetric
+    elif isinstance(nncf_quantizer, AsymmetricQuantizer):
+        qscheme = torch.per_channel_affine if per_channel else torch.per_tensor_affine
+
+    quant_min, quant_max, scale, zero_point = nncf_quantizer.get_parameters_for_torch_fq()
+
+    fakequantizer = FakeQuantize(
+        observer=observer,
+        quant_max=quant_max,
+        quant_min=quant_min,
+        dtype=dtype,
+        qscheme=qscheme,
+        eps=nncf_quantizer.eps,
+    )
+
+    if not per_channel:
+        scale = scale.squeeze()
+        zero_point = zero_point.squeeze()
+
+    fakequantizer.scale = scale
+    fakequantizer.ch_axis = ch_axis
+    fakequantizer.zero_point = zero_point
+
+    # Disable observer to save parameters
+    fakequantizer.disable_observer()
+
+    return fakequantizer

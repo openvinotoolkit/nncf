@@ -83,6 +83,7 @@ from nncf.torch.graph.operator_metatypes import PTSumMetatype
 from nncf.torch.graph.operator_metatypes import PTTanhMetatype
 from nncf.torch.layers import NNCF_WRAPPED_USER_MODULES_DICT
 from nncf.torch.nncf_network import NNCFNetwork
+from nncf.torch.pruning.filter_pruning.layers import FilterPruningMask
 from nncf.torch.pruning.filter_pruning.layers import apply_filter_binary_mask
 from nncf.torch.pruning.tensor_processor import PTNNCFPruningTensorProcessor
 from nncf.torch.tensor import PTNNCFTensor
@@ -642,7 +643,7 @@ class ModelPruner(MaskPropagationAlgorithm):
         model: NNCFNetwork,
         graph: NNCFGraph,
         pruning_operator_metatypes: PruningOperationsMetatypeRegistry,
-        prun_type: PrunType,
+        prun_type: PrunType = PrunType.FILL_ZEROS,
     ):
         super().__init__(graph, pruning_operator_metatypes, PTNNCFPruningTensorProcessor)
         self._model = model
@@ -665,13 +666,39 @@ class ModelPruner(MaskPropagationAlgorithm):
                     pruned_node_modules.append(node_module)
             nncf_logger.info("Finished applying pruning masks.")
 
+    def remove_filter_pruning_operations(self) -> None:
+        """
+        Remove all filter pruning operation in the model.
+
+        :param model: Target model.
+        """
+        for node in self._model.get_original_graph().get_all_nodes():
+            if node.node_type in ["nncf_model_input", "nncf_model_output"]:
+                continue
+
+            nncf_module = self._model.get_containing_module(node.node_name)
+
+            if hasattr(nncf_module, "pre_ops"):
+                for key in list(nncf_module.pre_ops.keys()):
+                    op = nncf_module.get_pre_op(key)
+                    if isinstance(op.op, FilterPruningMask):
+                        nncf_module.remove_pre_forward_operation(key)
+
+            if hasattr(nncf_module, "post_ops"):
+                for key in list(nncf_module.post_ops.keys()):
+                    op = nncf_module.post_ops(key)
+                    if isinstance(op.op, FilterPruningMask):
+                        nncf_module.remove_post_forward_operation(key)
+
     def prune_model(self):
         """
         Model pruner work in two stages:
         1. Mask propagation: propagate pruning masks through the graph.
-        2. Applying calculated masks
+        2. Applying calculated masks.
+        3. Remove filter pruning operations.
         """
         nncf_logger.info("Start pruning model")
         self.mask_propagation()
         self.apply_mask()
+        self.remove_filter_pruning_operations()
         nncf_logger.info("Finished pruning model")

@@ -101,6 +101,16 @@ class PTCompressionAlgorithmController(BaseCompressionAlgorithmController):
         should be made inside this function.
         """
 
+    def prepare_for_inference(self, save_original_model: bool = False) -> NNCFNetwork:
+        """
+        Prepare NNCFNetwork for inference by converting NNCF modules to torch native format.
+
+        :param save_original_model: `True` means that a copy of the model will be modified.
+
+        :return NNCFNetwork: Converted model.
+        """
+        raise NotImplementedError(f"Method `prepare_for_inference` not implemented for {type(self)} controller.")
+
 
 class PTCompressionAlgorithmBuilder(BaseCompressionAlgorithmBuilder):
     """
