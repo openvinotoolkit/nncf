@@ -24,7 +24,6 @@ from nncf.parameters import ModelType
 from nncf.parameters import TargetDevice
 from nncf.common.utils.backend import get_backend
 from nncf.common.graph.utils import get_number_of_quantized_ops
-from nncf.common.graph import NNCFGraph
 from nncf.common.graph import NNCFNode
 from nncf.common.factory import NNCFGraphFactory
 from nncf.common.logging import nncf_logger
@@ -104,6 +103,7 @@ def restore_accuracy(model: TModel,
     # DEBUG
     # if True:
     #     from nncf.experimental.netron import save_for_netron
+    #     from nncf.common.graph import NNCFGraph
     #     graph = NNCFGraphFactory.create(model)
     #     save_for_netron(nncf_graph, 'resnet18_int8_nncf_graph.xml')
     #     save_for_netron(graph, 'resnet18_nncf_graph.xml')
