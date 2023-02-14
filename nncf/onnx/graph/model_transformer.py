@@ -17,6 +17,7 @@ from collections import Counter
 import onnx
 import numpy as np
 
+from nncf import nncf_logger
 from nncf.common.graph.transformations.commands import TargetType
 from nncf.common.graph.transformations.layout import TransformationLayout
 from nncf.onnx.graph.onnx_graph import ONNXGraph
@@ -27,7 +28,6 @@ from nncf.onnx.graph.transformations.commands import ONNXQuantizerInsertionComma
 from nncf.onnx.graph.transformations.commands import ONNXQDQNodeRemovingCommand
 from nncf.common.factory import NNCFGraphFactory
 from nncf.common.graph.model_transformer import ModelTransformer
-from nncf.common.utils.logger import logger
 
 
 class ONNXModelTransformer(ModelTransformer):
@@ -36,6 +36,7 @@ class ONNXModelTransformer(ModelTransformer):
     ModelTransformer should be created once for a particular model,
     and be used to apply transformations to the provided model.
     """
+
     QUANTIZER_NAME_PREFIX = 'QuantizeLinear_'
     DEQUANTIZER_NAME_PREFIX = 'DequantizeLinear_'
     SCALE_TENSOR_NAME_PREFIX = 'scale_'
@@ -43,7 +44,6 @@ class ONNXModelTransformer(ModelTransformer):
 
     def __init__(self, model: onnx.ModelProto):
         super().__init__(model)
-        self._model = model
         nncf_graph = NNCFGraphFactory.create(self._model)
         self.onnx_model_extractor = onnx.utils.Extractor(self._model)
         for input_node in nncf_graph.get_input_nodes():
@@ -121,7 +121,7 @@ class ONNXModelTransformer(ModelTransformer):
             model = self._apply_model_extraction_transformation(model_extraction_transformation)
         # No transformation applied
         if model is None:
-            logger.warning('No transformations were applied to the model. The copy of the model is returned.')
+            nncf_logger.warning('No transformations were applied to the model. The copy of the model is returned.')
             return deepcopy(self._model)
         return model
 

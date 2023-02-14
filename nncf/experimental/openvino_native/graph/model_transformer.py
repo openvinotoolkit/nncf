@@ -21,7 +21,7 @@ from openvino.runtime import opset9 as opset
 from nncf.common.graph.model_transformer import ModelTransformer
 from nncf.common.graph.transformations.layout import TransformationLayout
 from nncf.common.graph.transformations.commands import TargetType
-from nncf.common.utils.logger import logger
+from nncf import nncf_logger
 from nncf.experimental.openvino_native.graph.transformations.commands import OVQuantizerInsertionCommand
 from nncf.experimental.openvino_native.graph.transformations.commands import OVOutputInsertionCommand
 from nncf.experimental.openvino_native.graph.transformations.commands import OVModelExtractionCommand
@@ -45,15 +45,6 @@ class OVModelTransformer(ModelTransformer):
     """
     Applies transformations to an OpenVINO model.
     """
-
-    def __init__(self, model: ov.Model):
-        """
-        Initializes Model Transformer.
-
-        :param model: OpenVINO model to be transformed.
-        """
-        super().__init__(model)
-        self._model = model
 
     @staticmethod
     def _get_name_to_node_mapping(model: ov.Model) -> Dict[str, ov.Node]:
@@ -104,7 +95,7 @@ class OVModelTransformer(ModelTransformer):
             model = self._apply_output_insertion_transformations(output_insertion_transformations)
         # No transformation applied
         if model is None:
-            logger.warning('No transformations were applied to the model. The copy of the model is returned.')
+            nncf_logger.warning('No transformations were applied to the model. The copy of the model is returned.')
             return self._model.clone()
         return model
 
@@ -120,7 +111,8 @@ class OVModelTransformer(ModelTransformer):
         extra_model_outputs = self._get_extra_model_outputs(model, transformations)
         return self._insert_outputs(model, outputs=extra_model_outputs)
 
-    def _get_extra_model_outputs(self, model: ov.Model,
+    @staticmethod
+    def _get_extra_model_outputs(model: ov.Model,
                                  transformations: List[OVOutputInsertionCommand]) -> List[ov.Output]:
         """
         Collects extra model outputs based on transformations.
