@@ -12,78 +12,12 @@
 """
 
 from typing import List
-from typing import TypeVar
-from typing import Tuple
 from typing import Any
 from typing import Callable
 from typing import Iterable
 
 from nncf.data.dataset import Dataset
-from nncf.common.utils.backend import BackendType
-from nncf.common.factory import ModelTransformerFactory
 from nncf.common.factory import EngineFactory
-from nncf.common.graph import NNCFNode
-from nncf.common.graph import NNCFGraph
-from nncf.common.graph.operator_metatypes import OperatorMetatype
-from nncf.common.graph.transformations.layout import TransformationLayout
-from nncf.common.quantization.quantizer_removal import find_quantizer_nodes_to_cut
-from nncf.quantization.algorithms.accuracy_control.backend import AccuracyControlAlgoBackend
-
-
-TModel = TypeVar('TModel')
-
-
-# TODO(andrey-churkin): We need to introduce common metatypes and
-# commands to simplify the method's signature.
-
-def remove_quantizer_from_model(quantized_model: TModel,
-                                quantizer_node: NNCFNode,
-                                graph: NNCFGraph,
-                                quantizer_metatypes: List[OperatorMetatype],
-                                const_metatypes: List[OperatorMetatype],
-                                quantizable_metatypes: List[OperatorMetatype],
-                                quantize_agnostic_metatypes: List[OperatorMetatype],
-                                create_command_to_remove_quantizer,
-                                create_command_to_update_bias) -> Tuple[TModel, List[NNCFNode], List[NNCFNode]]:
-    """
-    Finds quantizer nodes that should be removed in addition to `quantizer_node` to get
-    the correct model for inference. Removes these quantizers from the `quantized_model`.
-
-    :param quantized_model:
-    :param quantizer_node: The quantizer which should be removed.
-    :param graph: The graph which was built for `quantized_model`.
-    :param quantizer_metatypes: List of quantizer metatypes.
-    :param const_metatypes: List of constant metatypes.
-    :param quantizable_metatypes: List of metatypes for operations that may be quantized.
-    :param quantize_agnostic_metatypes: List of quantize agnostic metatypes.
-    :param create_command_to_remove_quantizer: Function to create command to remove quantizer.
-    :param create_command_to_update_bias: Function to create command to update bias value.
-    :return: A tuple (transformed_model, quantizer_nodes, nodes) where
-        - `transformed_model` is the quantized model from which quantizers were removed.
-        - `quantizer_nodes` are the quantizers that were removed.
-        - `nodes` are the list of nodes that were reverted to their original precision.
-    """
-    quantizer_nodes, nodes = find_quantizer_nodes_to_cut(graph, quantizer_node,
-                                                         quantizer_metatypes, const_metatypes,
-                                                         quantizable_metatypes, quantize_agnostic_metatypes)
-    transformation_layout = TransformationLayout()
-
-    for node in quantizer_nodes:
-        transformation_layout.register(
-            create_command_to_remove_quantizer(node)
-        )
-
-    for node in nodes:
-        original_bias = node.data.get('original_bias', None)
-        if original_bias is not None:
-            transformation_layout.register(
-                create_command_to_update_bias(node, original_bias, graph)
-            )
-
-    model_transformer = ModelTransformerFactory.create(quantized_model)
-    transformed_model = model_transformer.transform(transformation_layout)
-
-    return transformed_model, quantizer_nodes, nodes
 
 
 def get_metric_for_each_item(model: Any,
@@ -120,21 +54,3 @@ def get_logits_for_each_item(model: Any,
         engine.infer(data_item)[output_name] for data_item in dataset.get_inference_data()
     ]
     return outputs
-
-
-def get_algo_backend(backend: BackendType) -> AccuracyControlAlgoBackend:
-    """
-    Returns backend for accuracy control algorithm.
-
-    :param backend: Backend.
-    :return: The backend for accuracy control algorithm.
-    """
-    if backend == BackendType.OPENVINO:
-        from nncf.quantization.algorithms.accuracy_control.openvino_backend import OVAccuracyControlAlgoBackend
-        return OVAccuracyControlAlgoBackend()
-    if backend == BackendType.ONNX:
-        from nncf.quantization.algorithms.accuracy_control.onnx_backend import ONNXAccuracyControlAlgoBackend
-        return ONNXAccuracyControlAlgoBackend()
-
-    raise RuntimeError('Cannot create the backend for the accuracy control algorithm '
-                       f'because {backend} is not supported.')

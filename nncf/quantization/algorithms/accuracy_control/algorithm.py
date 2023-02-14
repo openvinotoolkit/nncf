@@ -23,17 +23,36 @@ from nncf.parameters import IgnoredScope
 from nncf.parameters import ModelType
 from nncf.parameters import TargetDevice
 from nncf.common.utils.backend import get_backend
+from nncf.common.utils.backend import BackendType
 from nncf.common.graph.utils import get_number_of_quantized_ops
 from nncf.common.graph import NNCFNode
 from nncf.common.factory import NNCFGraphFactory
 from nncf.common.logging import nncf_logger
 from nncf.common.quantization.structs import QuantizationPreset
 from nncf.quantization.quantize import quantize
-from nncf.quantization.algorithms.accuracy_control.utils import get_algo_backend
+from nncf.quantization.algorithms.accuracy_control.backend import AccuracyControlAlgoBackend
 from nncf.quantization.algorithms.accuracy_control.utils import get_metric_for_each_item
 from nncf.quantization.algorithms.accuracy_control.utils import get_logits_for_each_item
-from nncf.quantization.algorithms.accuracy_control.utils import remove_quantizer_from_model
+from nncf.common.quantization.quantizer_removal import remove_quantizer_from_model
 from nncf.quantization.algorithms.accuracy_control.ranking import rank_quantizers
+
+
+def get_algo_backend(backend: BackendType) -> AccuracyControlAlgoBackend:
+    """
+    Returns backend for accuracy control algorithm.
+
+    :param backend: Backend.
+    :return: The backend for accuracy control algorithm.
+    """
+    if backend == BackendType.OPENVINO:
+        from nncf.quantization.algorithms.accuracy_control.openvino_backend import OVAccuracyControlAlgoBackend
+        return OVAccuracyControlAlgoBackend()
+    if backend == BackendType.ONNX:
+        from nncf.quantization.algorithms.accuracy_control.onnx_backend import ONNXAccuracyControlAlgoBackend
+        return ONNXAccuracyControlAlgoBackend()
+
+    raise RuntimeError('Cannot create the backend for the accuracy control algorithm '
+                       f'because {backend} is not supported.')
 
 
 def native_quantize_with_accuracy_control(model: TModel,

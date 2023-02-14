@@ -27,7 +27,7 @@ from nncf.common.graph import NNCFNode
 from nncf.common.factory import NNCFGraphFactory
 from nncf.common.logging import nncf_logger
 from nncf.quantization.algorithms.accuracy_control.backend import AccuracyControlAlgoBackend
-from nncf.quantization.algorithms.accuracy_control.utils import remove_quantizer_from_model
+from nncf.common.quantization.quantizer_removal import remove_quantizer_from_model
 from nncf.quantization.algorithms.accuracy_control.utils import get_logits_for_each_item
 
 
