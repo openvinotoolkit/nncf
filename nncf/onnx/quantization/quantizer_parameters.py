@@ -33,8 +33,8 @@ class ONNXQuantizerLayerParameters:
     scale: np.ndarray
     zero_point: np.ndarray
     mode: QuantizationMode
+    tensor_type: np.dtype
     axis: Optional[int] = None
-    tensor_type: Optional[np.dtype] = None
 
 
 def get_level_low_level_high(tensor_type: np.dtype, num_bits: int) -> Tuple[int, int]:
@@ -51,35 +51,38 @@ def get_level_low_level_high(tensor_type: np.dtype, num_bits: int) -> Tuple[int,
     return - (2 ** num_bits) // 2, (2 ** num_bits) // 2 - 1
 
 
-def calculate_scale_zero_point(params: QuantizerLayerParameters,
-                               quantizer_config: QuantizerConfig) -> Tuple[np.ndarray, np.ndarray]:
+def calculate_scale_zero_point(input_low: np.ndarray, input_high: np.ndarray, level_low: int, level_high: int,
+                               mode: QuantizationMode, tensor_type: np.dtype,
+                               eps: float = 1e-6) -> Tuple[np.ndarray, np.ndarray]:
     """
     Calculates Quantizer/Dequantizer layer scale level.
     Returns scale and zero_point values for the quantizer.
 
-    :param params: Common representation of quantization parameters.
-    :param quantizer_config: Config of the quantization configuration.
+    :param input_low: Minimum limit for input value.
+    :param input_high: Maximum limit for input value.
+    :param level_low: The minimum level of quantizer quants.
+    :param level_high: The maximum level of quantizer quants.
+    :param mode: Symmetric or Asymmetric mode.
+    :param tensor_type: Value type of the tensor. Could be INT8 or UINT8.
+    :param eps: The correction value is added to the input range to avoid division by zero.
     :return: Scale and Zero point values.
     """
-    if quantizer_config.signedness_to_force is not None:
-        tensor_type = np.int8 if quantizer_config.signedness_to_force else np.uint8
+    input_range_safe = abs(level_high - level_low) + eps
+    if mode == QuantizationMode.SYMMETRIC:
+        input_low = np.zeros_like(input_high) if tensor_type == np.uint8 else -input_high
+        scales = np.array((input_high - input_low) / (level_high - level_low))
+        zero_point = np.zeros_like(scales, dtype=np.int32)
     else:
-        tensor_type = np.uint8 if np.all(params.input_low >= 0) else np.int8
+        scales = np.array((input_high - input_low) / input_range_safe)
+        zero_point = np.round(level_low - input_low / scales).astype(np.int32)
 
-    num_bits = quantizer_config.num_bits
-    input_low = params.input_low
-    input_high = params.input_high
-    level_low, level_high = get_level_low_level_high(tensor_type, num_bits)
+        level_low *= np.ones_like(zero_point, dtype=np.int32)
+        level_high *= np.ones_like(zero_point, dtype=np.int32)
 
-    scales = (input_high - input_low) / (level_high - level_low)
-    zero_point = (level_low * input_high - level_high * input_low) / (input_high - input_low)
+        zero_point = np.maximum(zero_point, level_low)
+        zero_point = np.minimum(zero_point, level_high)
 
-    level_low *= np.ones_like(zero_point, dtype=np.int32)
-    level_high *= np.ones_like(zero_point, dtype=np.int32)
+    scales = np.squeeze(scales).astype(np.float32)
+    zero_point = np.squeeze(zero_point).astype(np.int32)
 
-    zero_point = np.maximum(zero_point, level_low)
-    zero_point = np.minimum(zero_point, level_high)
-
-    scales = np.squeeze(scales).astype(tensor_type)
-    zero_point = np.squeeze(zero_point).astype(tensor_type)
     return scales, zero_point

@@ -138,7 +138,7 @@ def symmetric_range(min_values: np.ndarray, max_values: np.ndarray, levels: int,
         level_low = -level_high
     else:
         signed = quantizer_config.signedness_to_force is True
-        level_low = np.zeros(level_high.shape) if np.all(min_values >= 0) and not signed else \
+        level_low = np.zeros_like(level_high) if np.all(min_values >= 0) and not signed else \
             -level_high * levels / (levels - 2)
 
     level_low = level_low.astype(np.float32)
