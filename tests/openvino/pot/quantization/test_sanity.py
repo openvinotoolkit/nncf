@@ -1,5 +1,5 @@
 """
- Copyright (c) 2022 Intel Corporation
+ Copyright (c) 2023 Intel Corporation
  Licensed under the Apache License, Version 2.0 (the "License");
  you may not use this file except in compliance with the License.
  You may obtain a copy of the License at
@@ -20,18 +20,18 @@ from openvino.tools.accuracy_checker.argparser import build_arguments_parser
 from openvino.tools.accuracy_checker.evaluators import ModelEvaluator
 
 from tests.openvino.conftest import AC_CONFIGS_DIR
+from tests.openvino.datasets_helpers import get_dataset_for_test
 from tests.openvino.omz_helpers import OPENVINO_DATASET_DEFINITIONS_PATH
 from tests.openvino.omz_helpers import calculate_metrics
 from tests.openvino.omz_helpers import convert_model
 from tests.openvino.omz_helpers import download_model
-from tests.openvino.datasets_helpers import get_dataset_for_test
 
 OMZ_MODELS = [
-    ('resnet-18-pytorch', 'imagenette2-320', {'accuracy@top1': '0.778', 'accuracy@top5': '0.948'}),
-    ('mobilenet-v3-small-1.0-224-tf', 'imagenette2-320', {'accuracy@top1': '0.746', 'accuracy@top5': '0.92'}),
-    ('googlenet-v3-pytorch', 'imagenette2-320', {'accuracy@top1': '0.909', 'accuracy@top5': '0.994'}),
-    ('mobilefacedet-v1-mxnet', 'wider', {'map': '0.7750224587055485'}),
-    ('retinaface-resnet50-pytorch', 'wider', {'map': '0.9170155131056823'}),
+    ('resnet-18-pytorch', 'imagenette2-320', {'accuracy@top1': '0.777', 'accuracy@top5': '0.949'}),
+    ('mobilenet-v3-small-1.0-224-tf', 'imagenette2-320', {'accuracy@top1': '0.737', 'accuracy@top5': '0.923'}),
+    ('googlenet-v3-pytorch', 'imagenette2-320', {'accuracy@top1': '0.91', 'accuracy@top5': '0.994'}),
+    ('mobilefacedet-v1-mxnet', 'wider', {'map': '0.7750216770678978'}),
+    ('retinaface-resnet50-pytorch', 'wider', {'map': '0.91875950512032'}),
 ]
 
 

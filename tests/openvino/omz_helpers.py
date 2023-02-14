@@ -79,7 +79,7 @@ def calculate_metrics(model_path, config_path, data_dir, report_path,
 
 def get_metrics(ac_report):
     metrics = {}
-    with open(ac_report, 'r', encoding="utf8") as csvfile:
+    with open(ac_report, 'r', encoding='utf8') as csvfile:
         reader = csv.DictReader(csvfile)
         for row in reader:
             metric_name = row['metric_name']
