@@ -16,7 +16,6 @@ from typing import Callable
 from typing import Any
 from typing import Iterable
 from typing import Optional
-from typing import Iterable
 
 from nncf.api.compression import TModel
 from nncf.data.dataset import Dataset
@@ -76,7 +75,7 @@ def native_quantize_with_accuracy_control(model: TModel,
 
 
 def _create_message(nodes: Iterable[NNCFNode]) -> str:
-    names = ['f\t{x.node_name}' for x in nodes]
+    names = [f'\t{x.node_name}' for x in nodes]
     return '\n'.join(names)
 
 
@@ -96,7 +95,6 @@ def restore_accuracy(model: TModel,
     precision_change_to = 'floating-point'
     exclude_bad_nodes = False
 
-
     # Backends
     backend = get_backend(model)
     algo_backend = get_algo_backend(backend)
@@ -104,23 +102,23 @@ def restore_accuracy(model: TModel,
     nncf_graph = NNCFGraphFactory.create(quantized_model)
 
     # DEBUG
-    if True:
-        from nncf.experimental.netron import save_for_netron
-        graph = NNCFGraphFactory.create(model)
-        save_for_netron(nncf_graph, 'resnet18_int8_nncf_graph.xml')
-        save_for_netron(graph, 'resnet18_nncf_graph.xml')
-        xs = graph.get_nodes_by_metatypes(algo_backend.get_const_metatypes())
-        ys = nncf_graph.get_nodes_by_metatypes(algo_backend.get_const_metatypes())
-        m = {}
-        for x in xs:
-            cnt = 0
-            for y in ys:
-                if y.node_name.startswith(x.node_name):
-                    assert y.node_type == x.node_type
-                    m[y.node_name] = x.node_name
-                    y.data[NNCFGraph.NODE_NAME_ATTR] = x.node_name
-                    cnt += 1
-            assert cnt == 1
+    # if True:
+    #     from nncf.experimental.netron import save_for_netron
+    #     graph = NNCFGraphFactory.create(model)
+    #     save_for_netron(nncf_graph, 'resnet18_int8_nncf_graph.xml')
+    #     save_for_netron(graph, 'resnet18_nncf_graph.xml')
+    #     xs = graph.get_nodes_by_metatypes(algo_backend.get_const_metatypes())
+    #     ys = nncf_graph.get_nodes_by_metatypes(algo_backend.get_const_metatypes())
+    #     m = {}
+    #     for x in xs:
+    #         cnt = 0
+    #         for y in ys:
+    #             if y.node_name.startswith(x.node_name):
+    #                 assert y.node_type == x.node_type
+    #                 m[y.node_name] = x.node_name
+    #                 y.data[NNCFGraph.NODE_NAME_ATTR] = x.node_name
+    #                 cnt += 1
+    #         assert cnt == 1
     # DEBUG
 
     # We need to collect original bias values for biased nodes.
@@ -139,6 +137,7 @@ def restore_accuracy(model: TModel,
     nncf_logger.info(f'The total number of quantized operations in the model: {num_of_quantized_ops}')
 
     # Check whether it is possible to calculate the metric for one data item.
+    # pylint: disable=W0703
     USE_METRIC = True
     try:
         _ = validation_fn(algo_backend.prepare_for_inference(model),
@@ -180,7 +179,6 @@ def restore_accuracy(model: TModel,
     all_removed_nodes = []
     all_reverted_ops = set()
 
-
     for iteration in range(MAX_NUM_ITERATIONS):
         if current_model is not None:
             previous_model = current_model
@@ -194,15 +192,17 @@ def restore_accuracy(model: TModel,
 
         # greedy removal of the FQ node with the highest importance score
         quantizer_to_remove = ranked_quantizers.pop()
-        current_model, removed_quantizers, reverted_ops = remove_quantizer_from_model(previous_model,
-                                                                                      quantizer_to_remove,
-                                                                                      nncf_graph,
-                                                                                      algo_backend.get_quantizer_metatypes(),
-                                                                                      algo_backend.get_const_metatypes(),
-                                                                                      algo_backend.get_quantizable_metatypes(),
-                                                                                      algo_backend.get_quantize_agnostic_metatypes(),
-                                                                                      algo_backend.create_command_to_remove_quantizer,
-                                                                                      algo_backend.create_command_to_update_bias)
+        current_model, removed_quantizers, reverted_ops = remove_quantizer_from_model(
+            previous_model,
+            quantizer_to_remove,
+            nncf_graph,
+            algo_backend.get_quantizer_metatypes(),
+            algo_backend.get_const_metatypes(),
+            algo_backend.get_quantizable_metatypes(),
+            algo_backend.get_quantize_agnostic_metatypes(),
+            algo_backend.create_command_to_remove_quantizer,
+            algo_backend.create_command_to_update_bias
+        )
         current_num_quantizers = current_num_quantizers - len(removed_quantizers)
 
         # TODO(andrey-churkin): Move to debug level.
