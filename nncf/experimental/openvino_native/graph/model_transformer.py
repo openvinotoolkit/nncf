@@ -81,22 +81,21 @@ class OVModelTransformer(ModelTransformer):
                 model_extraction_transformation = transformation
             elif isinstance(transformation, OVBiasCorrectionCommand):
                 bias_correction_transformations.append(transformation)
-        model = None
         # Inplace transformations; Using deepcopy of model
         if fq_nodes_removing_transformations:
             model = self._apply_fq_nodes_removing_transformation(fq_nodes_removing_transformations)
-        if quantizer_insertion_transformations:
+        elif quantizer_insertion_transformations:
             model = self._apply_quantizer_insertion_transformations(quantizer_insertion_transformations)
-        if bias_correction_transformations:
+        elif bias_correction_transformations:
             model = self._apply_bias_correction_transformations(bias_correction_transformations)
-        if model_extraction_transformation:
+        elif model_extraction_transformation:
             model = self._apply_model_extraction_transformation(model_extraction_transformation)
-        if output_insertion_transformations:
+        elif output_insertion_transformations:
             model = self._apply_output_insertion_transformations(output_insertion_transformations)
         # No transformation applied
-        if model is None:
+        else:
             nncf_logger.warning('No transformations were applied to the model. The copy of the model is returned.')
-            return self._model.clone()
+            model = self._model.clone()
         return model
 
     def _apply_output_insertion_transformations(self,
@@ -108,7 +107,7 @@ class OVModelTransformer(ModelTransformer):
         :return: Model with inserted outputs.
         """
         model = self._model.clone()
-        extra_model_outputs = self._get_extra_model_outputs(model, transformations)
+        extra_model_outputs = OVModelTransformer._get_extra_model_outputs(model, transformations)
         return self._insert_outputs(model, outputs=extra_model_outputs)
 
     @staticmethod

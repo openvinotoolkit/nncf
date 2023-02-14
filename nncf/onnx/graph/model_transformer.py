@@ -106,21 +106,20 @@ class ONNXModelTransformer(ModelTransformer):
                 model_extraction_transformation = transformation
             elif isinstance(transformation, ONNXQDQNodeRemovingCommand):
                 qdq_node_removing_transformations.append(transformation)
-        model = None
         # Inplace transformations, using deepcopy of model
         if quantizer_insert_transformations:
             model = self._apply_quantizer_insertion_transformations(quantizer_insert_transformations)
-        if bias_correction_transformations:
+        elif bias_correction_transformations:
             model = self._apply_bias_correction_transformations(bias_correction_transformations)
-        if qdq_node_removing_transformations:
+        elif qdq_node_removing_transformations:
             model = self._apply_qdq_node_removing_transformations(qdq_node_removing_transformations)
         # Transformations that create new model
-        if output_insert_transformations:
+        elif output_insert_transformations:
             model = self._apply_output_insertion_transformations(output_insert_transformations)
-        if model_extraction_transformation:
+        elif model_extraction_transformation:
             model = self._apply_model_extraction_transformation(model_extraction_transformation)
         # No transformation applied
-        if model is None:
+        else:
             nncf_logger.warning('No transformations were applied to the model. The copy of the model is returned.')
             return deepcopy(self._model)
         return model
