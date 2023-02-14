@@ -33,7 +33,8 @@ from nncf.common.utils.logger import logger
 class ONNXModelTransformer(ModelTransformer):
     """
     Applies transformations upon ONNX model.
-    ModelTransformer should be created once and be used to apply transformations to the provided model.
+    ModelTransformer should be created once for a particular model,
+    and be used to apply transformations to the provided model.
     """
     QUANTIZER_NAME_PREFIX = 'QuantizeLinear_'
     DEQUANTIZER_NAME_PREFIX = 'DequantizeLinear_'
@@ -46,13 +47,13 @@ class ONNXModelTransformer(ModelTransformer):
         nncf_graph = NNCFGraphFactory.create(self._model)
         self.onnx_model_extractor = onnx.utils.Extractor(self._model)
         for input_node in nncf_graph.get_input_nodes():
-            # Quantizers could be applied to ONNX input edges.
-            # If it is the case qunaitzers will be tied with NNCF input nodes.
-            # To get the ONNX edge need to keep the mapping NNCF input nodes to ONNX nodes.
+            # Quantizers could be applied to ONNX input edges - quantizers will be tied with NNCF input nodes.
+            # To get the ONNX edge to insert quantizer
+            # need to keep the mapping NNCF input nodes to following ONNX nodes.
             self._nncf_input_node_next_nodes = {input_node.node_name: nncf_graph.get_next_nodes(input_node)}
 
     def _get_pre_post_target_edge(self, port_id: int, node_name: str, transform_type: TargetType,
-                                        onnx_graph: ONNXGraph) -> str:
+                                  onnx_graph: ONNXGraph) -> str:
         """
         Returns edge name corresponding to the node with a name equal to node_name, port_id and transform_type.
 
@@ -79,10 +80,12 @@ class ONNXModelTransformer(ModelTransformer):
     def transform(self, transformation_layout: TransformationLayout) -> onnx.ModelProto:
         """
         Creates lists of transformations and applies them in the correct order.
-        If there are no transformations returns a deepcopy of the model.
+        The transformations are applied in a way that original model is not affected.
+        A new model with applied transformations will be returned.
+        If there are no transformations returns a new instance of the original model.
 
         :param transformation_layout: Transformation commands.
-        :return: The transformed model.
+        :return: The new instance of a model with applied transformations.
         """
         quantizer_insert_transformations = []
         output_insert_transformations = []
@@ -127,7 +130,8 @@ class ONNXModelTransformer(ModelTransformer):
         """
         Returns a new model with extra outputs provided by transformations.
 
-        :param transformations: ONNXOutputInsertionCommand transformations
+        :param transformations: ONNXOutputInsertionCommand transformations.
+        :return: New model with inserted outputs.
         """
         onnx_graph = ONNXGraph(self._model)
         model_outputs = [output.name for output in onnx_graph.get_model_outputs()]
@@ -147,8 +151,8 @@ class ONNXModelTransformer(ModelTransformer):
         Creates a new model as a copy of provided model with additional outputs.
 
         :param model: Model of which copy will be created.
-        :param outputs: Edge names which are outputs.
-        :return: New model with provided outputs.
+        :param outputs: Edge names to use as outputs.
+        :return: New model with inserted outputs.
         """
         onnx_graph = ONNXGraph(model)
         model_outputs = []
@@ -161,8 +165,8 @@ class ONNXModelTransformer(ModelTransformer):
                                        inputs=model.graph.input, outputs=model_outputs,
                                        initializer=model.graph.initializer, value_info=model.graph.value_info)
         new_model = onnx.helper.make_model(graph, ir_version=model.ir_version, producer_name=model.producer_name,
-                                            producer_version=model.producer_version, domain=model.domain,
-                                            model_version=model.model_version, doc_string=model.doc_string)
+                                           producer_version=model.producer_version, domain=model.domain,
+                                           model_version=model.model_version, doc_string=model.doc_string)
         if model.metadata_props:
             values = {p.key: p.value for p in model.metadata_props}
             onnx.helper.set_model_props(new_model, values)
@@ -176,9 +180,9 @@ class ONNXModelTransformer(ModelTransformer):
     def _apply_quantizer_insertion_transformations(self, transformations: List[ONNXQuantizerInsertionCommand]) \
             -> onnx.ModelProto:
         """
-        Creates a new model as a copy of provided model and inserts QuantizeLinear-DequantizeLinear nodes pair.
+        Creates a new model as a deepcopy of provided model and inserts QuantizeLinear-DequantizeLinear nodes pair.
 
-        :param transformations: QuantizeLinear-DequantizeLinear nodes pair transformation commands.
+        :param transformations: QuantizeLinear-DequantizeLinear nodes pair insertion transformation commands.
         :return: New model with inserted QuantizeLinear-DequantizeLinear nodes pairs.
         """
         model = deepcopy(self._model)
@@ -190,7 +194,8 @@ class ONNXModelTransformer(ModelTransformer):
     def _get_quantize_dequantize_nodes(self, transformation: ONNXQuantizerInsertionCommand,
                                        target_edge_name: str) -> Tuple[onnx.NodeProto, onnx.NodeProto]:
         """
-        Returns QuantizeLinear-DequantizeLinear nodes pair.
+        Returns QuantizeLinear-DequantizeLinear nodes pair, based on the transformation parameters and
+        inserted onto edge with name target_edge_name.
 
         :param transformation: QuantizeLinear-DequantizeLinear insertion transformation,
         from which quantization axis is obtained.
@@ -263,11 +268,11 @@ class ONNXModelTransformer(ModelTransformer):
     def _get_quantizer_dequantizer_edge_name(self, transformation: ONNXQuantizerInsertionCommand,
                                              onnx_graph: ONNXGraph) -> Optional[str]:
         """
-        Returns edge name on which inserts QuantizeLinear-DequantizeLinear nodes pair.
+        Returns an edge name on which QuantizeLinear-DequantizeLinear nodes pair has to be inserted.
 
         :param transformation: QuantizeLinear-DequantizeLinear insertion transformation.
         :param onnx_graph: ONNXGraph.
-        :return: Target Edge name.
+        :return: Edge name to insert QuantizeLinear-DequantizeLinear nodes pair.
         """
         port_id = transformation.target_point.port_id
         node_name = transformation.target_point.target_node_name
@@ -288,7 +293,7 @@ class ONNXModelTransformer(ModelTransformer):
 
         :param model: Model to insert new nodes.
         :param transformation: QuantizeLinear-DequantizeLinear insertion transformation.
-        :return: Updated model.
+        :return: Updated model with inserted QuantizeLinear-DequantizeLinear pair.
         """
         onnx_graph = ONNXGraph(model)
         target_edge_name = self._get_quantizer_dequantizer_edge_name(transformation, onnx_graph)
@@ -331,9 +336,10 @@ class ONNXModelTransformer(ModelTransformer):
     def _apply_bias_correction_transformations(self,
                                                transformations: List[ONNXBiasCorrectionCommand]) -> onnx.ModelProto:
         """
-        Applies bias correction transformations on the model.
+        Creates a copy of original model and applies bias correction transformations on the model.
 
         :param transformations: Bias correction transformations.
+        :return: Copy of original model with updated biases.
         """
         model = deepcopy(self._model)
         onnx_graph = ONNXGraph(model)
@@ -354,15 +360,17 @@ class ONNXModelTransformer(ModelTransformer):
         Returns a new model that is a sub-model from the original between provided inputs and outputs.
 
         :param transformation: Model extraction transformation.
+        :return: Extracted sub-model.
         """
         return self.onnx_model_extractor.extract_model(transformation.inputs, transformation.outputs)
 
     def _apply_qdq_node_removing_transformations(self,
                                                  transformations: List[ONNXQDQNodeRemovingCommand]) -> onnx.ModelProto:
         """
-        Removes the nodes from the model.
+        Returns a copy of original model with removed nodes.
 
         :param transformations: Nodes removing transformations.
+        :return: Model with removed nodes.
         """
         model = deepcopy(self._model)
         onnx_graph = ONNXGraph(model)

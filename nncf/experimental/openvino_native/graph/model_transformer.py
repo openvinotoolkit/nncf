@@ -170,7 +170,7 @@ class OVModelTransformer(ModelTransformer):
         Removes the layers from the model.
 
         :param transformations: Node removing transformations.
-        :return: Model with removed Quantizer.
+        :return: Model with removed FakeQuantize nodes.
         """
         model = self._model.clone()
         name_to_node_mapping = OVModelTransformer._get_name_to_node_mapping(model)
@@ -191,7 +191,7 @@ class OVModelTransformer(ModelTransformer):
         Applies transformations on the model.
 
         :param transformations: List of the OVQuantizerInsertionCommand transformations.
-        :return: Model with inserted Quantizer.
+        :return: Model with inserted FakeQuantize nodes.
         """
         model = self._model.clone()
         model_precision = ModelPrecision.FP32
