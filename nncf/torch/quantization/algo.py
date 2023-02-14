@@ -341,6 +341,7 @@ class DefaultQuantizerSetupDisambiguator(IQuantizerSetupDisambiguator):
 class PropagationBasedQuantizerSetupGenerator(QuantizerSetupGeneratorBase):
     def __init__(self, quant_config: Dict, target_model: NNCFNetwork,
                  hw_config: HWConfig = None,
+                 device: TargetDevice = None,
                  precision_init_type: str = None,
                  precision_init_params: BasePrecisionInitParams = None,
                  range_init_params: PTRangeInitParams = None,
@@ -350,7 +351,7 @@ class PropagationBasedQuantizerSetupGenerator(QuantizerSetupGeneratorBase):
                          hw_config)
 
         self._pattern_fusing_graph =\
-            PatternsManager.get_full_pattern_graph(BackendType.TORCH, TargetDevice.ANY)
+            PatternsManager.get_full_pattern_graph(BackendType.TORCH, device)
 
 
         self._hw_precision_constraints = HardwareQuantizationConstraints()
@@ -472,14 +473,14 @@ class QuantizationBuilder(PTCompressionAlgorithmBuilder):
         # noise on model evaluation (e.g. in AutoQ)
         self._should_setup_adjust_pad_ops = True
         hw_config_type = None
-        target_device = self.config.get('target_device', 'ANY')
-        hw_config_type = get_hw_config_type(target_device)
+        self._target_device = self.config.get('target_device', 'ANY')
+        hw_config_type = get_hw_config_type(self._target_device)
         if hw_config_type is not None:
             hw_config_path = PTHWConfig.get_path_to_hw_config(hw_config_type)
             self.hw_config = PTHWConfig.from_json(hw_config_path)
 
         algo_config = self._get_algo_specific_config_section()
-        if target_device == 'VPU' and 'preset' in algo_config:
+        if self._target_device == 'VPU' and 'preset' in algo_config:
             raise RuntimeError("The VPU target device does not support presets.")
 
         self._range_init_params = None
@@ -704,6 +705,7 @@ class QuantizationBuilder(PTCompressionAlgorithmBuilder):
         setup_generator = PropagationBasedQuantizerSetupGenerator(self._algo_config,
                                                                   target_model,
                                                                   self.hw_config,
+                                                                  self._target_device,
                                                                   self._precision_init_type,
                                                                   self._precision_init_params,
                                                                   self._range_init_params,
@@ -1296,6 +1298,7 @@ class QuantizationController(QuantizationControllerBase):
         self._groups_of_adjacent_quantizers = groups_of_adjacent_quantizers
         self._bn_adaptation = None
         self._build_time_metric_info = build_time_metric_info
+        self._target_device = self.config.get('target_device', 'ANY')
 
         should_export_to_onnx_qdq = algo_config.get('export_to_onnx_standard_ops',
                                                     QUANTIZATION_EXPORT_TO_ONNX_STANDARD_OPS)
@@ -1439,7 +1442,8 @@ class QuantizationController(QuantizationControllerBase):
                                                          self.non_weight_quantizers).collect()
             nncf_logger.debug(stats.to_str())
 
-            stats = ShareEdgesQuantizedDataPathStatisticsCollector(self.model, self).collect()
+            stats = ShareEdgesQuantizedDataPathStatisticsCollector(self.model, self,
+                                                                   self._target_device).collect()
             nncf_logger.debug(stats.to_str())
 
         collector = PTQuantizationStatisticsCollector(self.weight_quantizers,

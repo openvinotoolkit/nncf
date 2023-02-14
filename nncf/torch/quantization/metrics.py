@@ -235,10 +235,12 @@ class ShareEdgesQuantizedDataPathStatisticsCollector(StatisticsCollector):
     NODES_GRAPH_ATTR = 'nodes'
     IS_MERGED_GRAPH_ATTR = 'is_merged'
 
-    def __init__(self, compressed_model: NNCFNetwork, qctrl: 'QuantizationController'):
+    def __init__(self, compressed_model: NNCFNetwork, qctrl: 'QuantizationController',
+                 target_device: TargetDevice):
         self._compressed_model = compressed_model
         self._qctrl = qctrl  # type: QuantizationController
         self.stats = QuantizationConfigurationStatistics(0, 0)
+        self._target_device = target_device
 
     def collect(self) -> QuantizationConfigurationStatistics:
         # pylint: disable=too-many-branches
@@ -332,7 +334,7 @@ class ShareEdgesQuantizedDataPathStatisticsCollector(StatisticsCollector):
 
     def get_merged_original_graph_with_patterns(self, original_graph: PTNNCFGraph):
         pattern =\
-            PatternsManager.get_full_pattern_graph(BackendType.TORCH, TargetDevice.ANY)
+            PatternsManager.get_full_pattern_graph(BackendType.TORCH, self._target_device)
         # pylint: disable=protected-access
         matches = find_subgraphs_matching_pattern(original_graph._nx_graph, pattern)
         merged_graph = deepcopy(original_graph._nx_graph)
