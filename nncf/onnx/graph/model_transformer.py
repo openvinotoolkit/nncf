@@ -342,8 +342,23 @@ class ONNXModelTransformer(ModelTransformer):
 
         :param transformation: model extraction transformation
         """
+        onnx_graph = ONNXGraph(self._model)
+
+        input_tensor_names = []
+        for input_node_name in transformation.inputs:
+            input_onnx_node = onnx_graph.get_node_by_name(input_node_name)
+            input_tensor_names.append(input_onnx_node.input[0])
+
+        output_tensor_names = []
+        for output_node_name in transformation.outputs:
+            output_onnx_node = onnx_graph.get_node_by_name(output_node_name)
+            output_tensor_names.append(output_onnx_node.output[0])
+
+        if not output_tensor_names:
+            output_tensor_names = [n.name for n in onnx_graph.get_model_outputs()]
+
         onnx_model_exctactor = onnx.utils.Extractor(self._model)
-        return onnx_model_exctactor.extract_model(transformation.inputs, transformation.outputs)
+        return onnx_model_exctactor.extract_model(input_tensor_names, output_tensor_names)
 
     def _apply_qdq_node_removing_transformation(self, transformations: List[ONNXQDQNodeRemovingCommand]) -> None:
         """

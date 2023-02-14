@@ -21,7 +21,6 @@ from nncf.common.tensor_statistics.collectors import ReductionShape
 from nncf.common.utils.backend import BackendType
 from nncf.common.graph import NNCFNode
 from nncf.common.graph import NNCFGraph
-from nncf.common.graph.transformations.layout import TransformationLayout
 from nncf.common.graph.operator_metatypes import OperatorMetatype
 from nncf.onnx.graph.metatypes.onnx_metatypes import ONNXConvolutionMetatype
 from nncf.onnx.graph.metatypes.onnx_metatypes import ONNXConvolutionTransposeMetatype
@@ -30,7 +29,6 @@ from nncf.onnx.graph.metatypes.onnx_metatypes import ONNXMatMulMetatype
 from nncf.onnx.graph.metatypes.onnx_metatypes import ONNXDequantizeLinearMetatype
 from nncf.onnx.graph.metatypes.onnx_metatypes import ONNXQuantizeLinearMetatype
 from nncf.onnx.graph.metatypes.onnx_metatypes import ONNXOpMetatype
-from nncf.onnx.graph.model_transformer import ONNXModelTransformer
 from nncf.onnx.graph.transformations.commands import ONNXBiasCorrectionCommand
 from nncf.onnx.graph.transformations.commands import ONNXModelExtractionCommand
 from nncf.onnx.graph.transformations.commands import ONNXQDQNodeRemovingCommand
@@ -82,6 +80,10 @@ class ONNXBiasCorrectionAlgoBackend(BiasCorrectionAlgoBackend):
         return create_bias_correction_command(node, bias_value)
 
     @staticmethod
+    def model_extraction_command(inputs: List[str], outputs: List[str]) -> ONNXModelExtractionCommand:
+        return ONNXModelExtractionCommand(inputs, outputs)
+
+    @staticmethod
     def output_insertion_command(target_point: ONNXTargetPoint) -> ONNXOutputInsertionCommand:
         return ONNXOutputInsertionCommand(target_point)
 
@@ -128,30 +130,6 @@ class ONNXBiasCorrectionAlgoBackend(BiasCorrectionAlgoBackend):
         onnx_graph = ONNXGraph(model)
         node = onnx_graph.get_node_by_name(node_name)
         return node.output[0]
-
-    @staticmethod
-    def extract_model(model: onnx.ModelProto,
-                      input_node_names: List[str],
-                      output_node_names: List[str]) -> onnx.ModelProto:
-        onnx_graph = ONNXGraph(model)
-
-        input_tensor_names = []
-        for input_node_name in input_node_names:
-            input_onnx_node = onnx_graph.get_node_by_name(input_node_name)
-            input_tensor_names.append(input_onnx_node.input[0])
-
-        output_tensor_names = []
-        for output_node_name in output_node_names:
-            output_onnx_node = onnx_graph.get_node_by_name(output_node_name)
-            output_tensor_names.append(output_onnx_node.output[0])
-
-        if not output_node_names:
-            output_tensor_names = [n.name for n in onnx_graph.get_model_outputs()]
-
-        transformation_layout = TransformationLayout()
-        model_transformer = ONNXModelTransformer(model)
-        transformation_layout.register(ONNXModelExtractionCommand(set(input_tensor_names), set(output_tensor_names)))
-        return model_transformer.transform(transformation_layout)
 
     @staticmethod
     def is_quantized_weights(node: NNCFNode, nncf_graph: NNCFGraph) -> bool:

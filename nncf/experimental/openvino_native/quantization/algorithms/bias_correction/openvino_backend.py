@@ -21,7 +21,6 @@ from nncf.common.graph import NNCFNode
 from nncf.common.graph.transformations.commands import TargetType
 from nncf.common.tensor_statistics.collectors import ReductionShape
 from nncf.common.utils.backend import BackendType
-from nncf.common.graph.transformations.layout import TransformationLayout
 from nncf.experimental.openvino_native.graph.metatypes.openvino_metatypes import OVConvolutionBackpropDataMetatype
 from nncf.experimental.openvino_native.graph.metatypes.openvino_metatypes import OVConvolutionMetatype
 from nncf.experimental.openvino_native.graph.metatypes.openvino_metatypes import OVFakeQuantizeMetatype
@@ -35,7 +34,6 @@ from nncf.experimental.openvino_native.graph.transformations.commands import OVM
 from nncf.experimental.openvino_native.graph.transformations.commands import OVOutputInsertionCommand
 from nncf.experimental.openvino_native.graph.transformations.commands import OVFQNodeRemovingCommand
 from nncf.experimental.openvino_native.graph.transformations.commands import OVTargetPoint
-from nncf.experimental.openvino_native.graph.model_transformer import OVModelTransformer
 from nncf.experimental.openvino_native.statistics.collectors import OVNNCFCollectorTensorProcessor
 from nncf.experimental.openvino_native.statistics.collectors import OVBatchStatisticCollector
 from nncf.experimental.openvino_native.statistics.collectors import OVMeanStatisticCollector
@@ -77,6 +75,10 @@ class OVBiasCorrectionAlgoBackend(BiasCorrectionAlgoBackend):
         return create_bias_correction_command(node, bias_value, nncf_graph)
 
     @staticmethod
+    def model_extraction_command(inputs: List[str], outputs: List[str]) -> OVModelExtractionCommand:
+        return OVModelExtractionCommand(inputs, outputs)
+
+    @staticmethod
     def output_insertion_command(target_point: OVTargetPoint) -> OVOutputInsertionCommand:
         return OVOutputInsertionCommand(target_point)
 
@@ -114,6 +116,9 @@ class OVBiasCorrectionAlgoBackend(BiasCorrectionAlgoBackend):
     def get_input_name(model: ov.Model, node_name: str) -> str:
         ops_dict = {op.get_friendly_name(): op for op in model.get_ops()}
 
+        if node_name in [tensor.node.get_friendly_name() for tensor in model.inputs]:
+            return node_name
+
         for input_port in ops_dict[node_name].inputs():
             input_node = input_port.get_source_output().get_node()
             if input_node.get_type_name() == 'Parameter':
@@ -130,13 +135,6 @@ class OVBiasCorrectionAlgoBackend(BiasCorrectionAlgoBackend):
                 if output_node.get_type_name() == 'Result':
                     return output_node.get_friendly_name()
         raise RuntimeError(f'Output layer not found for {node_name}')
-
-    @staticmethod
-    def extract_model(model: ov.Model, input_node_names: List[str], output_node_names: List[str]) -> ov.Model:
-        transformation_layout = TransformationLayout()
-        model_transformer = OVModelTransformer(model)
-        transformation_layout.register(OVModelExtractionCommand(set(input_node_names), set(output_node_names)))
-        return model_transformer.transform(transformation_layout)
 
     @staticmethod
     def is_quantized_weights(node: NNCFNode, nncf_graph: NNCFGraph) -> bool:

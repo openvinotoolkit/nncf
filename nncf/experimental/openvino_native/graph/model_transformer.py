@@ -231,11 +231,8 @@ class OVModelTransformer(ModelTransformer):
 
             node = self.name_to_node_mapping[node_name]
             node_inputs = [port.get_node() for port in node.output(0).get_target_inputs()]
-            assert any(node.get_type_name() == 'Add' for node in node_inputs)
-
-            for node_input in node_inputs:
-                if node_input.get_type_name() == 'Add':
-                    node_with_bias = node_input
+            node_with_bias = node_inputs[0]
+            assert node_with_bias.get_type_name() == 'Add'
 
             bias_port_id = transformation.target_point.port_id
             biased_port = node_with_bias.input(bias_port_id)
@@ -261,6 +258,9 @@ class OVModelTransformer(ModelTransformer):
         params, results = [], []
         for input_name in transformation.inputs:
             input_node = self.name_to_node_mapping[input_name]
+            if input_name in [tensor.node.get_friendly_name() for tensor in self._model.inputs]:
+                params.append(input_node)
+                continue
             input_port = input_node.input(0)
             input_node_output = input_port.get_source_output()
             new_param = opset.parameter(shape=input_node_output.get_shape(),

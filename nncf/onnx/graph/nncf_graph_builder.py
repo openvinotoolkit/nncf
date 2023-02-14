@@ -18,7 +18,7 @@ from onnx import ModelProto
 
 from nncf.common.graph import NNCFGraph
 from nncf.common.graph.definitions import NNCFGraphNodeType
-from nncf.common.graph.layer_attributes import BaseLayerAttributes, Dtype
+from nncf.common.graph.layer_attributes import Dtype
 from nncf.common.graph.definitions import MODEL_INPUT_OP_NAME
 from nncf.common.graph.definitions import MODEL_OUTPUT_OP_NAME
 from nncf.common.graph.operator_metatypes import InputNoopMetatype
@@ -95,11 +95,9 @@ class GraphConverter:
         """
         for i, _input in enumerate(onnx_graph.get_model_inputs()):
             input_name = _input.name
-            layer_attributes = ONNXExtendedLayerAttributes([input_name], [input_name])
             input_node = nncf_graph.add_nncf_node(node_name=MODEL_INPUT_OP_NAME + '_' + str(i),
                                                   node_type=NNCFGraphNodeType.INPUT_NODE,
-                                                  node_metatype=InputNoopMetatype,
-                                                  layer_attributes=layer_attributes)
+                                                  node_metatype=InputNoopMetatype)
             to_nodes = onnx_graph.get_nodes_by_input(input_name)
 
             input_node_node_id = input_node.node_id
@@ -131,11 +129,9 @@ class GraphConverter:
         """
         for i, _output in enumerate(onnx_graph.get_model_outputs()):
             output_name = _output.name
-            layer_attributes = ONNXExtendedLayerAttributes([output_name], [output_name])
             output_node = nncf_graph.add_nncf_node(node_name=MODEL_OUTPUT_OP_NAME + '_' + str(i),
                                                    node_type=NNCFGraphNodeType.OUTPUT_NODE,
-                                                   node_metatype=OutputNoopMetatype,
-                                                   layer_attributes=layer_attributes)
+                                                   node_metatype=OutputNoopMetatype)
             from_nodes = onnx_graph.get_nodes_by_output(output_name)
 
             output_node_node_id = output_node.node_id
@@ -191,7 +187,6 @@ class GraphConverter:
                     subtype = metatype.determine_subtype(onnx_model, node)
                     if subtype is not None:
                         metatype = subtype
-            layer_attributes = ONNXExtendedLayerAttributes(node.input, node.output)
             is_shared, layer_name = None, None
             if metatype in WEIGHT_LAYER_METATYPES:
                 is_shared = onnx_graph.is_node_shared(node)
@@ -199,7 +194,6 @@ class GraphConverter:
             nncf_graph.add_nncf_node(node_name=node.name,
                                      node_type=node.op_type,
                                      node_metatype=metatype,
-                                     layer_attributes=layer_attributes,
                                      layer_name=layer_name,
                                      is_shared=is_shared)
         for output_node in onnx_graph.get_all_nodes():
@@ -238,17 +232,3 @@ class GraphConverter:
         GraphConverter._add_nncf_input_nodes(onnx_graph, nncf_graph)
         GraphConverter._add_nncf_output_nodes(onnx_graph, nncf_graph)
         return nncf_graph
-
-
-class ONNXExtendedLayerAttributes(BaseLayerAttributes):
-    """
-    This class stores extended attributes of modules/layers for the algorithms.
-    """
-
-    def __init__(self, input_tensor_names, output_tensor_names):
-        """
-        :param input_tensor_names: List of the input tensor/edge names of the module/layer
-        :param output_tensor_names: List of the output tensor/edge names of the module/layer
-        """
-        self.input_tensor_names = input_tensor_names
-        self.output_tensor_names = output_tensor_names

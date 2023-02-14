@@ -60,7 +60,7 @@ class BiasCorrectionAlgoBackend(ABC):
     @abstractmethod
     def target_point(target_type: TargetType,
                      target_node_name: str,
-                     port_id: str) -> TargetPoint:
+                     port_id: int) -> TargetPoint:
         """
         Returns backend-specific target point.
 
@@ -72,13 +72,24 @@ class BiasCorrectionAlgoBackend(ABC):
 
     @staticmethod
     @abstractmethod
-    def create_bias_correction_command(node: NNCFNode, bias_value: np.ndarray):
+    def create_bias_correction_command(node: NNCFNode, bias_value: np.ndarray) -> TransformationCommand:
         """
         Creates backend-specific command to update bias value.
 
         :param node: The node for which bias should be updated.
         :param bias_value: New value for the bias.
         :return: Backend-specific command to update bias value.
+        """
+
+    @staticmethod
+    @abstractmethod
+    def model_extraction_command(inputs: List[str], outputs: List[str]) -> TransformationCommand:
+        """
+        Returns backend-specific command to extract sub-model based on input & output names.
+
+        :param inputs: List of the input names for sub-model beggining.
+        :param outputs: List of the output names for sub-model end.
+        :return: Backend-specific TransformationCommand for the model extraction.
         """
 
     @staticmethod
@@ -190,20 +201,6 @@ class BiasCorrectionAlgoBackend(ABC):
         :param model: Backend-specific model.
         :param node_name: Name of the backend-specific node.
         :return: Output tensor name.
-        """
-
-    @staticmethod
-    @abstractmethod
-    def extract_model(model: TModel,
-                      input_node_names: List[str],
-                      output_node_names: List[str]) -> TModel:
-        """
-        Returns the backend-specific model that bounded by the specified input & output layers.
-
-        :param model: Backend-specific model.
-        :param input_node_names: List with the input node names.
-        :param output_node_names: List with the output node names.
-        :return: Extracted backend-specific model.
         """
 
     @staticmethod

@@ -224,6 +224,8 @@ class BiasCorrection(Algorithm):
         stats_nodes, input_nodes, output_nodes = [], [], []
 
         def traverse_to_layers_with_bias(node, output):
+            if node in output:
+                return True, output
             if self._backend_entity.is_node_with_bias(node, nncf_graph):
                 output.append(node)
                 self._collected_stat_inputs.add(node.node_name)
@@ -234,6 +236,8 @@ class BiasCorrection(Algorithm):
             return False, output
 
         def traverse_to_input_layers(node, output):
+            if node in output + input_nodes:
+                return True, output
             if node.node_name in self._collected_stat_inputs and node not in stats_nodes:
                 output.append(node)
                 return True, output
@@ -264,7 +268,7 @@ class BiasCorrection(Algorithm):
         :return: Backend-specific subgraph extracted from the model.
         """
         input_node_names, output_node_names = subgraph_data['input_node_names'], subgraph_data['output_node_names']
-        extracted_model = self._backend_entity.extract_model(model, input_node_names, output_node_names)
+        extracted_model = self.extract_model(model, input_node_names, output_node_names)
 
         transformation_layout = TransformationLayout()
         model_transformer = ModelTransformerFactory.create(extracted_model)
@@ -437,7 +441,8 @@ class BiasCorrection(Algorithm):
 
     def get_statistic_points(self, model: TModel) -> StatisticPointsContainer:
         self._set_backend_entity(model)
-        nncf_graph = NNCFGraphFactory.create(model) if self.nncf_graph is None else self.nncf_graph
+        model_copy = self._remove_fq_from_inputs(deepcopy(model))
+        nncf_graph = NNCFGraphFactory.create(model_copy) if self.nncf_graph is None else self.nncf_graph
         statistic_container = StatisticPointsContainer()
 
         nodes_with_bias = [node for node in nncf_graph.topological_sort() if
@@ -467,6 +472,17 @@ class BiasCorrection(Algorithm):
                                                                    tensor_collector=stat_collector,
                                                                    algorithm=BiasCorrection))
 
+        for input_node in model_inputs:
+            for next_input_node in nncf_graph.get_next_nodes(input_node):
+                self._collected_stat_inputs.add(next_input_node.node_name)
+                statistic_point = self._backend_entity.target_point(TargetType.PRE_LAYER_OPERATION,
+                                                                    next_input_node.node_name,
+                                                                    port_id=0)
+                stat_collector = self._backend_entity.batch_statistic_collector(num_samples=self.number_samples)
+                statistic_container.add_statistic_point(StatisticPoint(target_point=statistic_point,
+                                                                       tensor_collector=stat_collector,
+                                                                       algorithm=BiasCorrection))
+
         return statistic_container
 
     def _get_biased_after_input_nodes(self, nncf_graph: NNCFGraph, model_inputs: List[NNCFNode]) -> Dict[str, str]:
@@ -478,6 +494,8 @@ class BiasCorrection(Algorithm):
         :return: A dictionary with the names of the nodes with bias as keys and their input node names as values.
         """
         def traverse_to_biased(node, output):
+            if node in output:
+                return True, output
             if self._backend_entity.is_node_with_bias(node, nncf_graph):
                 output.append(node)
                 return True, output
@@ -494,13 +512,31 @@ class BiasCorrection(Algorithm):
 
     def _get_previous_activation_node(self, node: NNCFNode, nncf_graph: NNCFGraph) -> NNCFNode:
         """
-        Returns activation node, but not quanitzers.
+        Returns 0- activation node, but not quanitzers.
+
         :param node: NNCFNode instance.
         :param nncf_graph: NNCFGraph instance.
         :return: NNCFNode activation node.
         """
         activation_input_port = 0
         previous_node = nncf_graph.get_input_edges(node)[activation_input_port].from_node
-        while previous_node.metatype in self._backend_entity.quantizer_types:
-            previous_node = nncf_graph.get_input_edges(previous_node)[activation_input_port].from_node
         return previous_node
+
+    def extract_model(self,
+                      model: TModel,
+                      input_node_names: List[str],
+                      output_node_names: List[str]) -> TModel:
+        """
+        Returns the backend-specific model that bounded by the specified input & output layers.
+
+        :param model: Backend-specific model.
+        :param input_node_names: List with the input node names.
+        :param output_node_names: List with the output node names.
+        :return: Extracted backend-specific model.
+        """
+        transformation_layout = TransformationLayout()
+        model_transformer = ModelTransformerFactory.create(model)
+        model_extraction_command = self._backend_entity.model_extraction_command(set(input_node_names),
+                                                                                 set(output_node_names))
+        transformation_layout.register(model_extraction_command)
+        return model_transformer.transform(transformation_layout)
