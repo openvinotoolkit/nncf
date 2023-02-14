@@ -99,7 +99,9 @@ class MinMaxQuantizationParameters(AlgorithmParameters):
         :param range_type: Type of statistics range calculation.
         :param quantize_outputs: Boolean value that says whether quantize outputs or not.
         :param ignored_scopes: List of the layers which input must not be quantized.
-        :param overflow_fix: ...
+        :param overflow_fix: This option controls whether to apply the overflow issue fix.
+            If set to `disable`, the fix will not be applied. If set to `enable` or `first_layer_only`,
+            the fix will be applied to all layers or to the first convolutional layer respectively.
         """
         self.number_samples = number_samples
         self.target_device = target_device
@@ -371,12 +373,12 @@ class MinMaxQuantization(Algorithm):
                 # If the nodes share one weight tensor, we should have only one quantizer on that
                 if weight_tensor_name in weight_tensor_names:
                     continue
-                _is_half_range = False
+                half_range = False
                 if (self._parameters.overflow_fix == OverflowFix.FIRST_LAYER and not weight_tensor_names) or \
                         self._parameters.overflow_fix == 'enable':
-                    _is_half_range = True
+                    half_range = True
                 command = self._backend_entity.create_weight_quantizer_insertion_command(quantization_target_point,
-                                                                                         qconfig, _is_half_range,
+                                                                                         qconfig, half_range,
                                                                                          weight_tensor, node)
                 transformation_commands.append(command)
                 weight_tensor_names.add(weight_tensor_name)
