@@ -89,7 +89,7 @@ class OVMinMaxAlgoBackend(MinMaxAlgoBackend):
                                                   weight_tensor: np.ndarray,
                                                   node: NNCFNode) -> OVQuantizerInsertionCommand:
         parameters = calculate_weight_quantizer_parameters(weight_tensor, quantizer_config, half_range, node.metatype)
-        return OVQuantizerInsertionCommand(target_point, parameters)
+        return OVQuantizerInsertionCommand(target_point, parameters, half_range)
 
     @staticmethod
     def minmax_statistic_collector(use_abs_max: bool,

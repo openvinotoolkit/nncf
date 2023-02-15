@@ -82,9 +82,11 @@ class OVFQNodeRemovingCommand(TransformationCommand):
 
 
 class OVQuantizerInsertionCommand(OVInsertionCommand):
-    def __init__(self, target_point: OVTargetPoint, quantizer_parameters: OVQuantizerLayerParameters):
+    def __init__(self, target_point: OVTargetPoint, quantizer_parameters: OVQuantizerLayerParameters,
+                 half_range: bool = False):
         super().__init__(target_point)
         self.quantizer_parameters = quantizer_parameters
+        self.half_range = half_range
 
     def union(self, other: 'TransformationCommand') -> 'TransformationCommand':
         # Have a look at nncf/torch/graph/transformations/commands/PTInsertionCommand
