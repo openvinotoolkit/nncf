@@ -412,7 +412,7 @@ def get_current_context() -> TracingContext:
     return _CURRENT_CONTEXT
 
 
-def patch_method_with_no_nncf_trace(method):
+def patch_with_no_nncf_trace(method):
     """
     Patches a method so that it will be executed within no_nncf_trace context
     :param method: A method to patch.
