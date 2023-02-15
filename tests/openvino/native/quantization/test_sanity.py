@@ -13,9 +13,11 @@
 
 import pytest
 import os
-import nncf
 import openvino.runtime as ov
 
+from nncf.parameters import TargetDevice
+from nncf.common.quantization.structs import QuantizationPreset
+from nncf.experimental.openvino_native.quantization.quantize import quantize_impl
 from tests.openvino.conftest import AC_CONFIGS_DIR
 from tests.openvino.datasets_helpers import get_dataset_for_test
 from tests.openvino.datasets_helpers import get_nncf_dataset_from_ac_config
@@ -24,11 +26,11 @@ from tests.openvino.omz_helpers import convert_model
 from tests.openvino.omz_helpers import download_model
 
 OMZ_MODELS = [
-    ('resnet-18-pytorch', 'imagenette2-320', {'accuracy@top1': '0.777', 'accuracy@top5': '0.949'}),
-    ('mobilenet-v3-small-1.0-224-tf', 'imagenette2-320', {'accuracy@top1': '0.737', 'accuracy@top5': '0.923'}),
-    ('googlenet-v3-pytorch', 'imagenette2-320', {'accuracy@top1': '0.91', 'accuracy@top5': '0.994'}),
-    ('mobilefacedet-v1-mxnet', 'wider', {'map': '0.7750216770678978'}),
-    ('retinaface-resnet50-pytorch', 'wider', {'map': '0.91875950512032'}),
+    ('resnet-18-pytorch', 'imagenette2-320', {'accuracy@top1': '0.784', 'accuracy@top5': '0.946'}),
+    ('mobilenet-v3-small-1.0-224-tf', 'imagenette2-320', {'accuracy@top1': '0.733', 'accuracy@top5': '0.913'}),
+    ('googlenet-v3-pytorch', 'imagenette2-320', {'accuracy@top1': '0.915', 'accuracy@top5': '0.994'}),
+    ('mobilefacedet-v1-mxnet', 'wider', {'map': '0.7769245134847838'}),
+    ('retinaface-resnet50-pytorch', 'wider', {'map': '0.9197509809976385'}),
 ]
 
 
@@ -47,7 +49,8 @@ def test_compression(tmp_path, model, dataset, ref_metrics):
     calibration_dataset = get_nncf_dataset_from_ac_config(model_path, config_path, data_dir)
 
     ov_model = ov.Core().read_model(str(model_path))
-    quantized_model = nncf.quantize(ov_model, calibration_dataset)
+    quantized_model = quantize_impl(ov_model, calibration_dataset, QuantizationPreset.PERFORMANCE,
+                                    TargetDevice.ANY, subset_size=300, fast_bias_correction=True)
     ov.serialize(quantized_model, int8_ir_path)
 
     report_path = tmp_path / f'{model}.csv'

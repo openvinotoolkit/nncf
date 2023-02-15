@@ -17,6 +17,12 @@ import shutil
 from fastdownload import FastDownload
 from pathlib import Path
 
+from nncf import Dataset
+from openvino.tools.accuracy_checker.config import ConfigReader
+from openvino.tools.accuracy_checker.argparser import build_arguments_parser
+from openvino.tools.accuracy_checker.evaluators import ModelEvaluator
+from tests.openvino.omz_helpers import OPENVINO_DATASET_DEFINITIONS_PATH
+
 IMAGENETTE_URL = 'https://s3.amazonaws.com/fast-ai-imageclas/imagenette2-320.tgz'
 IMAGENETTE_ANNOTATION_URL =  \
         'https://huggingface.co/datasets/frgfm/imagenette/resolve/main/metadata/imagenette2-320/val.txt'
@@ -87,3 +93,28 @@ def get_dataset_for_test(dataset_name: str) -> Path:
         return prepare_wider_for_test()
 
     raise RuntimeError(f'Unknown dataset: {dataset_name}.')
+
+
+# pylint: disable=protected-access
+def get_nncf_dataset_from_ac_config(model_path, config_path, data_dir, framework='openvino', device='CPU'):
+    args = [
+        "-c", str(config_path),
+        "-m", str(model_path),
+        "-d", str(OPENVINO_DATASET_DEFINITIONS_PATH),
+        "-s", str(data_dir),
+        "-tf", framework,
+        "-td", device,
+    ]
+    parser = build_arguments_parser()
+    args = parser.parse_args(args)
+
+    config, mode = ConfigReader.merge(args)
+    model_evaluator = ModelEvaluator.from_configs(config[mode][0])
+
+    def transform_fn(data_item):
+        _, batch_annotation, batch_input, _ = data_item
+        filled_inputs, _, _ = model_evaluator._get_batch_input(batch_annotation, batch_input)
+        return filled_inputs[0]
+
+    calibration_dataset = Dataset(model_evaluator.dataset, transform_fn)
+    return calibration_dataset
