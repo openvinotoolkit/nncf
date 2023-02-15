@@ -11,68 +11,69 @@
  limitations under the License.
 """
 from nncf.common.graph.patterns import merge_two_types_of_operations
+from nncf.common.graph.patterns import GraphPattern
 
-LINEAR_OPERATIONS = {'type': ['linear',
-                              'conv1d',
-                              'conv2d',
-                              'conv3d',
-                              'conv_transpose1d',
-                              'conv_transpose2d',
-                              'conv_transpose3d',
-                              'addmm',
-                              'bmm',
-                              'matmul',
-                              'mm'
-                              ],
-                     'label': 'LINEAR'}
+LINEAR_OPERATIONS = {GraphPattern.METATYPE_ATTR: ['linear',
+                                                  'conv1d',
+                                                  'conv2d',
+                                                  'conv3d',
+                                                  'conv_transpose1d',
+                                                  'conv_transpose2d',
+                                                  'conv_transpose3d',
+                                                  'addmm',
+                                                  'bmm',
+                                                  'matmul',
+                                                  'mm'
+                                                  ],
+                     GraphPattern.LABEL_ATTR: 'LINEAR'}
 
-BATCH_NORMALIZATION_OPERATIONS = {'type': ['batch_norm',
-                                           'batch_norm1d',
-                                           'batch_norm2d',
-                                           'batch_norm3d'
-                                           ],
-                                  'label': 'BATCH_NORMALIZATION'
+BATCH_NORMALIZATION_OPERATIONS = {GraphPattern.METATYPE_ATTR: ['batch_norm',
+                                                               'batch_norm1d',
+                                                               'batch_norm2d',
+                                                               'batch_norm3d'
+                                                               ],
+                                  GraphPattern.LABEL_ATTR: 'BATCH_NORMALIZATION'
                                   }
 
-GROUP_NORMALIZATION_OPERATIONS = {'type': ['group_norm'],
-                                  'label': 'GROUP_NORMALIZATION'}
+GROUP_NORMALIZATION_OPERATIONS = {GraphPattern.METATYPE_ATTR: ['group_norm'],
+                                  GraphPattern.LABEL_ATTR: 'GROUP_NORMALIZATION'}
 
-LAYER_NORMALIZATION_OPERATIONS = {'type': ['layer_norm'],
-                                  'label': 'LAYER_NORMALIZATION'}
+LAYER_NORMALIZATION_OPERATIONS = {GraphPattern.METATYPE_ATTR: ['layer_norm'],
+                                  GraphPattern.LABEL_ATTR: 'LAYER_NORMALIZATION'}
 
-RELU_OPERATIONS = {'type': ['relu',
-                            'relu_',
-                            'hardtanh'
-                            ],
-                   'label': 'RELU'
+RELU_OPERATIONS = {GraphPattern.METATYPE_ATTR: ['relu',
+                                                'relu_',
+                                                'hardtanh'
+                                               ],
+                   GraphPattern.LABEL_ATTR: 'RELU'
                    }
 
-NON_RELU_ACTIVATIONS_OPERATIONS = {'type': ['elu',
-                                            'elu_',
-                                            'prelu',
-                                            'leaky_relu',
-                                            'sigmoid',
-                                            'gelu',
-                                            'silu',
-                                            'hardsigmoid',
-                                            'hardswish'],
-                                   'label': 'NON_RELU_ACTIVATIONS'}
+NON_RELU_ACTIVATIONS_OPERATIONS = {GraphPattern.METATYPE_ATTR: ['elu',
+                                                                'elu_',
+                                                                'prelu',
+                                                                'leaky_relu',
+                                                                'sigmoid',
+                                                                'gelu',
+                                                                'silu',
+                                                                'hardsigmoid',
+                                                                'hardswish'],
+                                   GraphPattern.LABEL_ATTR: 'NON_RELU_ACTIVATIONS'}
 
 ATOMIC_ACTIVATIONS_OPERATIONS = merge_two_types_of_operations(RELU_OPERATIONS,
                                                               NON_RELU_ACTIVATIONS_OPERATIONS,
                                                               'ATOMIC_ACTIVATIONS')
 
-ARITHMETIC_OPERATIONS = {'type': ['__iadd__',
-                                  '__add__',
-                                  '__mul__',
-                                  '__rmul__',
-                                  '__truediv__'],
-                         'label': 'ARITHMETIC'}
+ARITHMETIC_OPERATIONS = {GraphPattern.METATYPE_ATTR: ['__iadd__',
+                                                      '__add__',
+                                                      '__mul__',
+                                                      '__rmul__',
+                                                      '__truediv__'],
+                         GraphPattern.LABEL_ATTR: 'ARITHMETIC'}
 
 # This type may be useful in the future
 # pylint: disable=unused-variable
-POOLING_OPERATIONS = {'type': ['adaptive_avg_pool2d',
-                               'adaptive_avg_pool3d',
-                               'avg_pool2d',
-                               'avg_pool3d'],
-                      'label': 'POOLING'}
+POOLING_OPERATIONS = {GraphPattern.METATYPE_ATTR: ['adaptive_avg_pool2d',
+                                                   'adaptive_avg_pool3d',
+                                                   'avg_pool2d',
+                                                   'avg_pool3d'],
+                      GraphPattern.LABEL_ATTR: 'POOLING'}
