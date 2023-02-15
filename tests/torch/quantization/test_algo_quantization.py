@@ -866,14 +866,14 @@ def test_sync_of_level_ranges_and_signed_parameter():
 
     sq = SymmetricQuantizer(qspec)
     # Check if the default values are different from the values to be loaded.
-    assert sq.signed == False
+    assert sq.signed is False
     assert sq.level_low == 0
 
     sq.signed = True
-    assert sq.signed == True
+    assert sq.signed is True
     assert sq.level_low == -8
 
     loaded_sq = SymmetricQuantizer(qspec)
     loaded_sq.load_state_dict(sq.state_dict())
-    assert loaded_sq.signed == True
+    assert loaded_sq.signed is True
     assert loaded_sq.level_low == -8
