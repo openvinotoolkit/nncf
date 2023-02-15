@@ -120,6 +120,7 @@ class ONNXMinMaxAlgoBackend(MinMaxAlgoBackend):
             return None, use_abs_max
 
         if target_point.is_activation_target_point():
+            # TODO: support reduction shapes for 3D-5D conv cases
             return (0, 2, 3), use_abs_max
 
         node = nncf_graph.get_node_by_name(target_point.target_node_name)
@@ -158,12 +159,6 @@ class ONNXMinMaxAlgoBackend(MinMaxAlgoBackend):
                                                 reduction_shape,
                                                 num_samples,
                                                 window_size=None)
-
-    @staticmethod
-    def get_weight_tensor(model: onnx.ModelProto, target_point: ONNXTargetPoint) -> Tuple[str, np.ndarray]:
-        onnx_graph = ONNXGraph(model)
-        node = onnx_graph.get_node_by_name(target_point.target_node_name)
-        return onnx_graph.get_weight_tensor(node)
 
     @staticmethod
     def get_weight_tensor_port_id(node: NNCFNode) -> int:

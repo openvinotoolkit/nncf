@@ -20,10 +20,16 @@ from nncf.common.engine import Engine
 
 class PTEngine(Engine):
     """
-    Engine for Torch backend.
+    Engine for the Pytorch backend.
     """
 
     def __init__(self, model: nn.Module):
+        """
+        Constructor.
+
+        :param model: Pytorch module to infer.
+        """
+
         self._model = model
         model.eval()
 
@@ -35,4 +41,5 @@ class PTEngine(Engine):
         :param input_data: inputs for the model
         :return output_data: model outputs
         """
+
         return self._model(input_data)

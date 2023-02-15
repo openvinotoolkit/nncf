@@ -69,7 +69,7 @@ class PTMinMaxAlgoBackend(MinMaxAlgoBackend):
 
     @property
     def post_processing_metatypes(self) -> List[OperatorMetatype]:
-        return None
+        return []
 
     @property
     def hw_config(self) -> HWConfig:

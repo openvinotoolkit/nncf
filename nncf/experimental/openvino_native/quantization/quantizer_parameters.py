@@ -193,35 +193,16 @@ def get_weight_stats_shape(const_shape: List[int], metatype: Type[OperatorMetaty
     return bounds_shape
 
 
-def calculate_weight_quantizer_parameters(statistics: MinMaxTensorStatistic,
-                                          quantizer_config: QuantizerConfig) -> OVQuantizerLayerParameters:
+def calculate_quantizer_parameters(statistics: MinMaxTensorStatistic,
+                                   quantizer_config: QuantizerConfig, quant_group: QuantizerGroup):
     """
-    Calculates FakeQuantize layer attributes for weight quantizer.
-
-    :param weight_tensor: Weight tensor to calculate quantizer attributes.
-    :param quantizer_config: Config of FakeQuantize.
-    :param axis: In per-channel case - the axis for the quantization. In per-tensor - ignored.
-    :return: Parameters of the FakeQuantize layer.
-    """
-    quant_group = QuantizerGroup.WEIGHTS
-    return calculate_quantizer_parameters(statistics, quantizer_config, quant_group)
-
-
-def calculate_activation_quantizer_parameters(statistics: MinMaxTensorStatistic,
-                                              quantizer_config: QuantizerConfig) -> OVQuantizerLayerParameters:
-    """
-    Calculates FakeQuantize layer attributes for activation quantizer.
+    Calculates FakeQuantize layer attributes for weight/activation quantizer.
 
     :param statistics: Collected statistics for the quantized insertion.
     :param quantizer_config: Config of the quantization configuration.
+    :param quantizer_group: Group of the quantizer.
     :return: Parameters of the FakeQuantize layer.
     """
-    quant_group = QuantizerGroup.ACTIVATIONS
-    return calculate_quantizer_parameters(statistics, quantizer_config, quant_group)
-
-
-def calculate_quantizer_parameters(statistics: MinMaxTensorStatistic,
-                                   quantizer_config: QuantizerConfig, quant_group: QuantizerGroup):
     min_values = np.array(statistics.min_values)
     max_values = np.array(statistics.max_values)
 

@@ -12,7 +12,7 @@
 """
 
 from copy import deepcopy
-from typing import Dict, List, TypeVar, Optional, OrderedDict, Tuple
+from typing import Dict, List, TypeVar, Optional, OrderedDict
 import collections
 
 from nncf import Dataset

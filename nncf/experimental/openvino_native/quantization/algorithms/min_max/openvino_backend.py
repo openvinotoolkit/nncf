@@ -18,6 +18,7 @@ from nncf.common.graph.graph import NNCFNode
 from nncf.common.graph.operator_metatypes import OperatorMetatype
 from nncf.common.graph.transformations.commands import TargetType
 from nncf.common.hardware.config import HWConfig
+from nncf.common.quantization.structs import QuantizerGroup
 from nncf.common.quantization.structs import QuantizerConfig
 from nncf.common.quantization.structs import QuantizationMode
 from nncf.common.tensor_statistics.collectors import ReductionShape
@@ -32,10 +33,8 @@ from nncf.experimental.openvino_native.hardware.config import OVHWConfig
 from nncf.experimental.openvino_native.quantization.default_quantization import DEFAULT_OV_QUANT_TRAIT_TO_OP_DICT
 from nncf.experimental.openvino_native.statistics.collectors import OVMeanMinMaxStatisticCollector
 from nncf.experimental.openvino_native.statistics.collectors import OVMinMaxStatisticCollector
-from nncf.experimental.openvino_native.quantization.quantizer_parameters import (
-    get_weight_stats_shape,
-    calculate_activation_quantizer_parameters,
-    calculate_weight_quantizer_parameters)
+from nncf.experimental.openvino_native.quantization.quantizer_parameters import get_weight_stats_shape
+from nncf.experimental.openvino_native.quantization.quantizer_parameters import calculate_quantizer_parameters
 
 from nncf.quantization.algorithms.min_max.backend import MinMaxAlgoBackend
 from nncf.quantization.algorithms.min_max.backend import ALGO_BACKENDS
@@ -72,7 +71,8 @@ class OVMinMaxAlgoBackend(MinMaxAlgoBackend):
                                                       quantizer_config: QuantizerConfig,
                                                       statistics: MinMaxTensorStatistic) \
                                                       -> OVQuantizerInsertionCommand:
-        parameters = calculate_activation_quantizer_parameters(statistics, quantizer_config)
+        parameters = calculate_quantizer_parameters(statistics, quantizer_config,
+                                                    QuantizerGroup.ACTIVATIONS)
         return OVQuantizerInsertionCommand(target_point, parameters)
 
     @staticmethod
@@ -80,7 +80,8 @@ class OVMinMaxAlgoBackend(MinMaxAlgoBackend):
                                                   target_point: OVTargetPoint,
                                                   quantizer_config: QuantizerConfig,
                                                   statistics: MinMaxTensorStatistic) -> OVQuantizerInsertionCommand:
-        parameters = calculate_weight_quantizer_parameters(statistics, quantizer_config)
+        parameters = calculate_quantizer_parameters(statistics, quantizer_config,
+                                                    QuantizerGroup.WEIGHTS)
         return OVQuantizerInsertionCommand(target_point, parameters)
 
     @staticmethod
@@ -94,6 +95,7 @@ class OVMinMaxAlgoBackend(MinMaxAlgoBackend):
             return None, use_abs_max
 
         if target_point.is_activation_target_point():
+            # TODO: support reduction shapes for 3D-5D conv cases
             return (0, 2, 3), use_abs_max
 
         node = nncf_graph.get_node_by_name(target_point.target_node_name)

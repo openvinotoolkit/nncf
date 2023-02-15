@@ -30,14 +30,9 @@ from nncf.torch.dynamic_graph.io_handling import wrap_nncf_model_inputs_with_obj
 from nncf.torch.dynamic_graph.io_handling import wrap_nncf_model_outputs_with_objwalk
 from nncf.torch.initialization import PTInitializingDataLoader
 from nncf.torch.model_creation import create_compressed_model
-from nncf.torch.model_creation import create_nncf_network
 from nncf.torch.nested_objects_traversal import objwalk
 from nncf.torch.utils import get_model_device
 from nncf.torch.utils import is_tensor
-
-from nncf.quantization.algorithms.min_max.algorithm import MinMaxQuantization
-from nncf.quantization.algorithms.post_training.algorithm import PostTrainingQuantization
-from nncf.quantization.algorithms.post_training.algorithm  import PostTrainingQuantizationParameters
 
 
 # TODO(alexsu52): It is a workaround and should be removed.
@@ -207,37 +202,14 @@ def quantize_impl(model: torch.nn.Module,
                                                get_model_device(model))
 
     clone_model = deepcopy(model)
-    import os
-    original = os.environ.get('ORIGINAL_QUANTIZE', False)
-    if original:
-        compression_ctrl, compressed_model = create_compressed_model(
-            model=clone_model,
-            config=nncf_config,
-            dummy_forward_fn=dummy_forward_fn,
-            wrap_inputs_fn=wrap_inputs,
-            wrap_outputs_fn=wrap_outputs
-        )
-        compression_ctrl.prepare_for_export()
-        compressed_model.disable_dynamic_graph_building()
-        return compressed_model
-    # Keep only MinMaxQuantization
-
-    #params = PostTrainingQuantizationParameters(number_samples=1)
-    params = PostTrainingQuantizationParameters(number_samples=subset_size,
-                                                preset=preset,
-                                                target_device=target_device,
-                                                ignored_scopes=ignored_scope)
-    min_max_params = params.algorithms[MinMaxQuantization]
-    params.algorithms = {MinMaxQuantization: min_max_params}
-    nncf_network = create_nncf_network(
+    compression_ctrl, compressed_model = create_compressed_model(
         model=clone_model,
         config=nncf_config,
         dummy_forward_fn=dummy_forward_fn,
         wrap_inputs_fn=wrap_inputs,
         wrap_outputs_fn=wrap_outputs
     )
-    quantization_algorithm = PostTrainingQuantization(params)
+    compression_ctrl.prepare_for_export()
+    compressed_model.disable_dynamic_graph_building()
 
-    quantized_model = quantization_algorithm.apply(nncf_network, dataset=calibration_dataset)
-    #quantized_model.disable_dynamic_graph_building()
-    return quantized_model
+    return compressed_model

@@ -1,6 +1,5 @@
-
 """
- Copyright (c) 2022 Intel Corporation
+ Copyright (c) 2023 Intel Corporation
  Licensed under the Apache License, Version 2.0 (the "License");
  you may not use this file except in compliance with the License.
  You may obtain a copy of the License at
@@ -26,9 +25,7 @@ from nncf.torch.nncf_network import NNCFNetwork
 from nncf.torch.graph.transformations.commands import PTInsertionCommand
 
 
-
 class PTStatisticsAggregator(StatisticsAggregator):
-
     def collect_statistics(self, model: NNCFNetwork) -> None:
         with torch.no_grad():
             with model.temporary_clean_view() as intermediate_model:

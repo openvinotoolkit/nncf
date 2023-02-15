@@ -35,8 +35,8 @@ from tests.torch.ptq.helpers import get_nncf_network
 
 
 class ToNNCFNetworkInterface:
-    def get_nncf_network(cls):
-        return get_nncf_network(cls)
+    def get_nncf_network(self):
+        return get_nncf_network(self)
 
 
 class LinearTestModel(nn.Module, ToNNCFNetworkInterface):
@@ -57,27 +57,6 @@ class LinearTestModel(nn.Module, ToNNCFNetworkInterface):
         x = self.relu(self.conv2(x))
         x = self.bn2(x)
         return x
-
-
-class OVLikeLinearModel(nn.Module, ToNNCFNetworkInterface):
-    def __init__(self):
-        super().__init__()
-        self.add_const = nn.Parameter(torch.ones((1, 3, 2, 4)))
-        self.matmul_const = nn.Parameter(torch.ones(1, 3, 4, 5))
-        self.linear = nn.Linear(4, 5, bias=False)
-
-    def forward(self, x):
-        # input_shape = [1, 3, 4, 2]
-        (_, ch, a, b) = x.shape
-        x = x.view((1, ch, b, a))
-        out_a = x + self.add_const
-        out_b = torch.matmul(x, self.matmul_const)
-        out_c = self.linear(x)
-        return out_a, out_b, out_c
-
-    @classmethod
-    def get_nncf_network(cls):
-        return get_nncf_network(cls, [1, 3, 4, 2])
 
 
 class OneDepthwiseConvModel(nn.Module, ToNNCFNetworkInterface):
