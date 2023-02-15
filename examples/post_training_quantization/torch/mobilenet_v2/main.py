@@ -31,7 +31,7 @@ from tqdm import tqdm
 ROOT = Path(__file__).parent.resolve()
 CHECKPOINT_URL = 'https://huggingface.co/alexsu52/mobilenet_v2_imagenette/resolve/main/pytorch_model.bin'
 DATASET_URL = 'https://s3.amazonaws.com/fast-ai-imageclas/imagenette2-320.tgz'
-mDATASET_CLASSES = 10
+DATASET_CLASSES = 10
 
 
 def download_dataset() -> Path:
