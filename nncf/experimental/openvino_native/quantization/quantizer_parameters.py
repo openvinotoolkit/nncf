@@ -208,22 +208,18 @@ def calculate_weight_quantizer_parameters(weight_tensor: np.ndarray, quantizer_c
         axes = None
 
     max_values = np.amax(np.abs(weight_tensor), axis=axes, keepdims=quantizer_config.per_channel)
-    num_bits = quantizer_config.num_bits
-    if half_range:
-        num_bits -= 1
     if quantizer_config.mode == QuantizationMode.SYMMETRIC:
-        _, _, levels = calculate_symmetric_level_ranges(num_bits, signed=True, narrow_range=True)
+        _, _, levels = calculate_symmetric_level_ranges(quantizer_config.num_bits, signed=True, narrow_range=True)
         level_low, level_high = symmetric_range(None, max_values, levels, quantizer_config, quant_group)
-        if half_range:
-            _, _, levels = calculate_symmetric_level_ranges(quantizer_config.num_bits, signed=True, narrow_range=True)
     else:
-        _, _, levels = calculate_asymmetric_level_ranges(num_bits, narrow_range=False)
+        _, _, levels = calculate_asymmetric_level_ranges(quantizer_config.num_bits, narrow_range=False)
         min_values = np.amin(weight_tensor, axis=axes, keepdims=quantizer_config.per_channel)
         level_low, level_high = asymmetric_range(min_values, max_values, levels, quantizer_config, quant_group)
-        if half_range:
-            _, _, levels = calculate_asymmetric_level_ranges(quantizer_config.num_bits, narrow_range=False)
 
     output_low, output_high = level_low, level_high
+    if half_range:
+        output_low *= 0.5
+        output_high *= 0.5
     return OVQuantizerLayerParameters(level_low, level_high, output_low, output_high, levels)
 
 
