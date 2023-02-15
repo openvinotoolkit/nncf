@@ -84,7 +84,7 @@ class DepthwiseConv3DModel(OVReferenceModel):
         strides = [1]
         pads = [0]
         dilations = [1]
-        conv = opset.group_convolution(input_1, kernel, strides, pads, pads, dilations, name="Conv3D")
+        conv = opset.group_convolution(input_1, kernel, strides, pads, pads, dilations, name="DepthwiseConv3D")
         bias = self._rng.random((1, 3, 1)).astype(np.float32)
         add = opset.add(conv, bias, name="Add")
 
@@ -100,7 +100,7 @@ class DepthwiseConv4DModel(OVReferenceModel):
         strides = [1, 1]
         pads = [0, 0]
         dilations = [1, 1]
-        conv = opset.group_convolution(input_1, kernel, strides, pads, pads, dilations, name="Conv4D")
+        conv = opset.group_convolution(input_1, kernel, strides, pads, pads, dilations, name="DepthwiseConv4D")
         bias = self._rng.random((1, 3, 1, 1)).astype(np.float32)
         add = opset.add(conv, bias, name="Add")
         relu = opset.relu(add, name="Relu")
@@ -117,7 +117,7 @@ class DepthwiseConv5DModel(OVReferenceModel):
         strides = [1, 1, 1]
         pads = [0, 0, 0]
         dilations = [1, 1, 1]
-        conv = opset.group_convolution(input_1, kernel, strides, pads, pads, dilations, name="Conv5D")
+        conv = opset.group_convolution(input_1, kernel, strides, pads, pads, dilations, name="DepthwiseConv5D")
         bias = self._rng.random((1, 3, 1, 1, 1)).astype(np.float32)
         add = opset.add(conv, bias, name="Add")
 
