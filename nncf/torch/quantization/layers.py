@@ -404,6 +404,7 @@ class BaseQuantizer(nn.Module):
     @num_bits.setter
     def num_bits(self, num_bits: int):
         self._num_bits.fill_(num_bits)
+        self.set_level_ranges()
 
     @property
     def narrow_range(self) -> bool:
