@@ -120,7 +120,6 @@ class ONNXModelTransformer(ModelTransformer):
             model = self._apply_model_extraction_transformation(model_extraction_transformation)
         # No transformation applied
         else:
-            nncf_logger.warning('No transformations were applied to the model. The copy of the model is returned.')
             return deepcopy(self._model)
         return model
 

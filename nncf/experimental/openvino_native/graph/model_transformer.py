@@ -58,10 +58,13 @@ class OVModelTransformer(ModelTransformer):
 
     def transform(self, transformation_layout: TransformationLayout) -> ov.Model:
         """
-        Applies transformations by type-callback on the model.
+        Creates lists of transformations and applies them in the correct order.
+        The transformations are applied in a way that original model is not affected.
+        A new model with applied transformations will be returned.
+        If there are no transformations returns a new instance of the original model.
 
-        :param transformations: TransformationCommand transformations.
-        :return: Transformed model.
+        :param transformation_layout: Transformation commands.
+        :return: The new instance of a model with applied transformations.
         """
         output_insertion_transformations = []
         fq_nodes_removing_transformations = []
@@ -94,7 +97,6 @@ class OVModelTransformer(ModelTransformer):
             model = self._apply_output_insertion_transformations(output_insertion_transformations)
         # No transformation applied
         else:
-            nncf_logger.warning('No transformations were applied to the model. The copy of the model is returned.')
             model = self._model.clone()
         return model
 
