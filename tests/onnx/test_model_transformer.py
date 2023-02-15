@@ -54,7 +54,7 @@ def test_quantizer_insertion(target_layers, should_raise, quantizer_number):
         command = ONNXQuantizerInsertionCommand(
             target_point,
             nncf_input_node_next_onnx_nodes,
-            ONNXQuantizerLayerParameters(np.array(1), np.array(0), None, np.uint8))
+            ONNXQuantizerLayerParameters(np.array(1), np.array(0), np.uint8))
         transformation_layout.register(command)
 
     model_transformer = ONNXModelTransformer(model)
@@ -100,8 +100,8 @@ class QuantizerParameters:
 def test_inserted_quantizer_parameters(test_parameters):
     model = LinearModel().onnx_model
     transformation_layout = TransformationLayout()
-    quantizer_parameters = ONNXQuantizerLayerParameters(
-        test_parameters.scale, test_parameters.zero_point, None, test_parameters.onnx_dtype)
+    quantizer_parameters = ONNXQuantizerLayerParameters(test_parameters.scale, test_parameters.zero_point,
+                                                        None, tensor_type=test_parameters.onnx_dtype)
     target_point = ONNXTargetPoint(TargetType.POST_LAYER_OPERATION, test_parameters.target_layer, 0)
 
     nncf_graph = GraphConverter.create_nncf_graph(model)
@@ -126,9 +126,8 @@ def test_inserted_quantizer_parameters(test_parameters):
         if op_type == 'QuantizeLinear':
             for attr in node.attribute:
                 assert test_parameters.onnx_attributes[attr.name] == onnx.helper.get_attribute_value(attr)
-            assert np.allclose(onnx_graph.get_initializers_value(node.input[1]), test_parameters.scale)
-            assert np.allclose(onnx_graph.get_initializers_value(node.input[2]),
-                               test_parameters.zero_point)
+            assert np.allclose(onnx_graph.get_initializers_value(node.input[1]), np.array(test_parameters.scale))
+            assert np.allclose(onnx_graph.get_initializers_value(node.input[2]), np.array(test_parameters.zero_point))
             assert onnx_graph.get_initializers_value(node.input[2]).dtype == test_parameters.onnx_dtype
 
 

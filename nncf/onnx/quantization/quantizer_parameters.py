@@ -68,13 +68,14 @@ def calculate_scale_zero_point(input_low: np.ndarray, input_high: np.ndarray, le
     :return: Scale and Zero point values.
     """
     input_range_safe = abs(level_high - level_low) + eps
+    scale, zero_point = None, None
     if mode == QuantizationMode.SYMMETRIC:
         input_low = np.zeros_like(input_high) if tensor_type == np.uint8 else -input_high
-        scales = np.array((input_high - input_low) / (level_high - level_low))
-        zero_point = np.zeros_like(scales, dtype=np.int32)
-    else:
-        scales = np.array((input_high - input_low) / input_range_safe)
-        zero_point = np.round(level_low - input_low / scales).astype(np.int32)
+        scale = np.array((input_high - input_low) / (level_high - level_low))
+        zero_point = np.zeros_like(scale, dtype=np.int32)
+    elif mode == QuantizationMode.ASYMMETRIC:
+        scale = np.array((input_high - input_low) / input_range_safe)
+        zero_point = np.round(level_low - input_low / scale).astype(np.int32)
 
         level_low *= np.ones_like(zero_point, dtype=np.int32)
         level_high *= np.ones_like(zero_point, dtype=np.int32)
@@ -82,7 +83,7 @@ def calculate_scale_zero_point(input_low: np.ndarray, input_high: np.ndarray, le
         zero_point = np.maximum(zero_point, level_low)
         zero_point = np.minimum(zero_point, level_high)
 
-    scales = np.squeeze(scales).astype(np.float32)
+    scale = np.squeeze(scale).astype(np.float32)
     zero_point = np.squeeze(zero_point).astype(np.int32)
 
-    return scales, zero_point
+    return scale, zero_point

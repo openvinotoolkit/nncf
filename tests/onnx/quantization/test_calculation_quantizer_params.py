@@ -13,7 +13,6 @@
 
 import pytest
 import numpy as np
-
 from nncf.common.quantization.structs import QuantizationMode
 from nncf.onnx.quantization.quantizer_parameters import calculate_scale_zero_point
 from nncf.onnx.quantization.quantizer_parameters import get_level_low_level_high
@@ -61,8 +60,8 @@ def test_calculate_scale_zero_point(max_val, min_val, level_low, level_high, mod
         ref_scale_ /= 2
 
     scale, zero_point = calculate_scale_zero_point(min_val, max_val, level_low, level_high, mode, tensor_type)
-    assert np.allclose(ref_scale_, scale, atol=10e-5)
-    assert np.allclose(ref_zero_point, zero_point, atol=10e-5)
+    assert np.allclose(ref_scale_, scale)
+    assert np.allclose(ref_zero_point, zero_point)
 
 
 @pytest.mark.parametrize('num_bits, tensor_type, ref_levels', ((0, np.int8, (-1, -1)),
