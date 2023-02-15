@@ -43,7 +43,7 @@ from tests.shared.paths import TEST_ROOT
 from tests.shared.metric_thresholds import DIFF_FP32_MAX_GLOBAL
 from tests.shared.metric_thresholds import DIFF_FP32_MIN_GLOBAL
 
-BASE_PYTORCH_CHECKPOINT_URL = 'https://storage.openvinotoolkit.org/repositories/nncf/models/develop/'
+BASE_CHECKPOINT_URL = 'https://storage.openvinotoolkit.org/repositories/nncf/models/develop/'
 
 @dataclass
 class SampleReadmeSubTableDescriptor:
@@ -132,7 +132,7 @@ TF_SAMPLE_TYPE_TO_DESCRIPTOR = {
                     "resnet50_imagenet",
                     "resnet50_imagenet_pruning_geometric_median",
                     "resnet50_imagenet_pruning_geometric_median_int8"],
-                models_duplicated_from_main_table=["resnet50"]),
+                models_duplicated_from_main_table=["resnet50_imagenet"]),
         ]),
     'segmentation': SampleDescriptor(
         path_to_readme=TF_EXAMPLES_PATH / 'segmentation' / 'README.md',
@@ -146,7 +146,7 @@ TF_SAMPLE_TYPE_TO_DESCRIPTOR = {
                 model_names=["retinanet_coco",
                              "retinanet_coco_pruning_geometric_median",
                              "retinanet_coco_pruning_geometric_median_int8"],
-                models_duplicated_from_main_table=["ssd300_vgg_voc"])
+                models_duplicated_from_main_table=["retinanet_coco"])
         ])
 }  # type: Dict[str, SampleDescriptor]
 
@@ -242,10 +242,8 @@ def get_results_table_rows(per_sample_config_dict: Dict,
                 reference = model_dicts[model_name].get('reference', {})
             if model_dicts[model_name].get('target', {}):
                 target = model_dicts[model_name]['target']
-            if model_dicts[model_name].get('resume', {}):
-                resume = model_dicts[model_name].get('resume', {})
-            else:
-                resume = None
+            resume = model_dicts[model_name].get('resume')
+            weights = model_dicts[model_name].get('weights')  # valid for certain TF models
             model_display_name = model_dicts[model_name].get('model_description')
 
             if model_dicts[model_name].get('compression_description') is not None:
@@ -253,7 +251,10 @@ def get_results_table_rows(per_sample_config_dict: Dict,
             else:
                 compression = 'None'
 
-            checkpoint_link = (BASE_PYTORCH_CHECKPOINT_URL + resume) if resume is not None else None
+            checkpoint_link = None
+            ckpt_url = BASE_CHECKPOINT_URL + ('tensorflow/' if framework == 'tf' else 'torch/')
+            if resume is not None or weights is not None:
+                checkpoint_link = ckpt_url + model_name
 
             if framework == 'tf' and checkpoint_link is not None:
                 checkpoint_link += '.tar.gz'
