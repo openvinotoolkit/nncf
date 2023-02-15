@@ -27,13 +27,15 @@ from nncf.definitions import CACHE_DATASET_PATH
 from nncf.definitions import CACHE_MODELS_PATH
 
 MODELS = [
-    ('https://github.com/onnx/models/raw/main/vision/classification/mobilenet/model/mobilenetv2-12.onnx',
+    ('https://github.com/onnx/models/raw/8e893eb39b131f6d3970be6ebd525327d3df34ea/vision/'
+     'classification/mobilenet/model/mobilenetv2-12.onnx',
      'mobilenetv2-12', 0.7875),
-    ('https://github.com/onnx/models/raw/main/vision/classification/resnet/model/resnet50-v1-7.onnx',
+    ('https://github.com/onnx/models/raw/8e893eb39b131f6d3970be6ebd525327d3df34ea/vision/'
+     'classification/resnet/model/resnet50-v1-7.onnx',
      'resnet50-v1-7', 0.8119),
-    (
-    'https://github.com/onnx/models/raw/main/vision/classification/efficientnet-lite4/model/efficientnet-lite4-11.onnx',
-    'efficientnet-lite4-11', 0.8015)
+    ('https://github.com/onnx/models/raw/8e893eb39b131f6d3970be6ebd525327d3df34ea/vision/'
+     'classification/efficientnet-lite4/model/efficientnet-lite4-11.onnx',
+     'efficientnet-lite4-11', 0.8015)
 ]
 
 DATASET_URL = 'https://s3.amazonaws.com/fast-ai-imageclas/imagenette2-320.tgz'
