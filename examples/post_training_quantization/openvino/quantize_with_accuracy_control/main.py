@@ -21,6 +21,8 @@ from pathlib import Path
 from typing import Any, Dict, Iterable, List, Optional
 
 import nncf
+from nncf.definitions import CACHE_MODELS_PATH
+from nncf.definitions import CACHE_DATASET_PATH
 import numpy as np
 import openvino.runtime as ov
 import torch
@@ -36,13 +38,11 @@ MODEL_INFO = download.DownloadInfo(
     name="stfpm_mvtec_capsule",
     url='https://huggingface.co/alexsu52/stfpm_mvtec_capsule/resolve/main/openvino_model.tar',
     hash='0d15817bc56af80793de38c8a0b3fd9e')
-MODEL_PATH = HOME_PATH / '.cache/nncf/models/stfpm_mvtec_capsule'
 
 DATASET_INFO = download.DownloadInfo(
     name="mvtec_capsule",
     url='https://www.mydrive.ch/shares/38536/3830184030e49fe74747669442f0f282/download/420937454-1629951595/capsule.tar.xz',
     hash='380afc46701c99cb7b9a928edbe16eb5')
-DATASET_PATH = HOME_PATH / '.cache/nncf/datasets/mvtec_capsule'
 
 max_accuracy_drop = 0.005 if len(sys.argv) < 2 else sys.argv[1]
 
@@ -114,9 +114,9 @@ def get_model_size(ir_path: str, m_type: str = 'Mb',
 ###############################################################################
 # Create an OpenVINO model and dataset
 
-download_and_extract(DATASET_PATH, DATASET_INFO)
+download_and_extract(CACHE_DATASET_PATH, DATASET_INFO)
 
-datamodule = MVTec(root=DATASET_PATH,
+datamodule = MVTec(root=CACHE_DATASET_PATH,
                    category="capsule",
                    image_size=(256, 256),
                    train_batch_size=1,
@@ -125,10 +125,10 @@ datamodule = MVTec(root=DATASET_PATH,
 datamodule.setup()
 test_loader = datamodule.test_dataloader()
 
-download_and_extract(MODEL_PATH, MODEL_INFO)
-model = ov.Core().read_model(MODEL_PATH / 'stfpm_capsule.xml')
+download_and_extract(CACHE_MODELS_PATH, MODEL_INFO)
+model = ov.Core().read_model(CACHE_MODELS_PATH / 'stfpm_capsule.xml')
 
-with open(MODEL_PATH / 'meta_data_stfpm_capsule.json', 'r') as f:
+with open(CACHE_MODELS_PATH / 'meta_data_stfpm_capsule.json', 'r') as f:
     validation_params = json.load(f)
 
 ###############################################################################

@@ -23,15 +23,17 @@ from fastdownload import FastDownload
 from sklearn.metrics import accuracy_score
 from torchvision import datasets, transforms
 from tqdm import tqdm
+from nncf.definitions import CACHE_DATASET_PATH
+from nncf.definitions import CACHE_MODELS_PATH
 
 MODELS = [
     ('https://github.com/onnx/models/raw/main/vision/classification/mobilenet/model/mobilenetv2-12.onnx',
-     'mobilenetv2-12', 0.7875159235668789),
+     'mobilenetv2-12', 0.7875),
     ('https://github.com/onnx/models/raw/main/vision/classification/resnet/model/resnet50-v1-7.onnx',
-     'resnet50-v1-7', 0.8119745222929936),
+     'resnet50-v1-7', 0.8119),
     (
     'https://github.com/onnx/models/raw/main/vision/classification/efficientnet-lite4/model/efficientnet-lite4-11.onnx',
-    'efficientnet-lite4-11', 0.8015286624203821)
+    'efficientnet-lite4-11', 0.8015)
 ]
 
 DATASET_URL = 'https://s3.amazonaws.com/fast-ai-imageclas/imagenette2-320.tgz'
@@ -41,7 +43,7 @@ DATASET_URL = 'https://s3.amazonaws.com/fast-ai-imageclas/imagenette2-320.tgz'
 def data(request):
     option = request.config.getoption("--data")
     if option is None:
-        return Path('~/.cache/nncf/datasets')
+        return CACHE_DATASET_PATH
     return Path(option)
 
 
@@ -49,14 +51,14 @@ def data(request):
 def models(request, tmp_path):
     option = request.config.getoption("--data")
     if option is None:
-        return Path(tmp_path)
+        return CACHE_MODELS_PATH
     return Path(option)
 
 
 def download_dataset(dataset_path: Path) -> Path:
     downloader = FastDownload(base=dataset_path,
                               archive='downloaded',
-                              data='extracted')
+                              data='imagenette2-320')
     return downloader.get(DATASET_URL)
 
 

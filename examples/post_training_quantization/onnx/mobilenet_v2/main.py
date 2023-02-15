@@ -25,24 +25,24 @@ from fastdownload import FastDownload, download_url
 from sklearn.metrics import accuracy_score
 from torchvision import datasets, transforms
 from tqdm import tqdm
+from nncf.definitions import CACHE_DATASET_PATH
+from nncf.definitions import CACHE_MODELS_PATH
 
 ROOT = Path(__file__).parent.resolve()
 MODEL_URL = 'https://huggingface.co/alexsu52/mobilenet_v2_imagenette/resolve/main/mobilenet_v2_imagenette.onnx'
 DATASET_URL = 'https://s3.amazonaws.com/fast-ai-imageclas/imagenette2-320.tgz'
-DATASET_PATH = '~/.cache/nncf/datasets'
-MODEL_PATH = '~/.cache/nncf/models'
 DATASET_CLASSES = 10
 
 
 def download_dataset() -> Path:
-    downloader = FastDownload(base=DATASET_PATH,
+    downloader = FastDownload(base=CACHE_DATASET_PATH,
                               archive='downloaded',
-                              data='extracted')
+                              data='imagenette2-320')
     return downloader.get(DATASET_URL)
 
 
 def download_model() -> Path:
-    return download_url(MODEL_URL, Path(MODEL_PATH).resolve())
+    return download_url(MODEL_URL, Path(CACHE_MODELS_PATH).resolve())
 
 
 def validate(path_to_model: str, data_loader: torch.utils.data.DataLoader,
@@ -75,6 +75,7 @@ def run_benchmark(path_to_model: str, shape: Optional[List[int]] = None,
     match = re.search(r"Throughput\: (.+?) FPS", str(cmd_output))
     return float(match.group(1))
 
+
 ###############################################################################
 # Create an ONNX model and dataset
 
@@ -84,7 +85,7 @@ normalize = transforms.Normalize(mean=[0.485, 0.456, 0.406],
                                  std=[0.229, 0.224, 0.225])
 val_dataset = datasets.ImageFolder(
     root=f'{dataset_path}/val',
-    transform = transforms.Compose([
+    transform=transforms.Compose([
         transforms.Resize(256),
         transforms.CenterCrop(224),
         transforms.ToTensor(),
@@ -108,9 +109,12 @@ model = onnx.load(model_path)
 # >> for data_item in val_loader:
 # >>    sess.run(output_names, input_feed=transform_fn(data_item))
 input_name = model.graph.input[0].name
+
+
 def transform_fn(data_item):
     images, _ = data_item
     return {input_name: images.numpy()}
+
 
 # The calibration dataset is a small, no label, representative dataset
 # (~100-500 samples) that is used to estimate the range, i.e. (min, max) of all
@@ -136,20 +140,20 @@ onnx.save(quantized_model, int8_model_path)
 print(f'[2/7] Save INT8 model: {int8_model_path}')
 
 print('[3/7] Benchmark FP32 model:')
-fp32_fps = run_benchmark(fp32_model_path, shape=[1,3,224,224], verbose=True)
+fp32_fps = run_benchmark(fp32_model_path, shape=[1, 3, 224, 224], verbose=True)
 print('[4/7] Benchmark INT8 model:')
-int8_fps = run_benchmark(int8_model_path, shape=[1,3,224,224], verbose=True)
+int8_fps = run_benchmark(int8_model_path, shape=[1, 3, 224, 224], verbose=True)
 
 print('[5/7] Validate OpenVINO FP32 model:')
 fp32_top1 = validate(fp32_model_path, val_loader,
-                     providers = ['OpenVINOExecutionProvider'],
-                     provider_options = [{'device_type' : 'CPU_FP32'}])
+                     providers=['OpenVINOExecutionProvider'],
+                     provider_options=[{'device_type': 'CPU_FP32'}])
 print(f'Accuracy @ top1: {fp32_top1:.3f}')
 
 print('[6/7] Validate OpenVINO INT8 model:')
 int8_top1 = validate(int8_model_path, val_loader,
-                     providers = ['OpenVINOExecutionProvider'],
-                     provider_options = [{'device_type' : 'CPU_FP32'}])
+                     providers=['OpenVINOExecutionProvider'],
+                     provider_options=[{'device_type': 'CPU_FP32'}])
 print(f'Accuracy @ top1: {int8_top1:.3f}')
 
 print('[7/7] Report:')

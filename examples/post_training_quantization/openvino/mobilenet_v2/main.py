@@ -18,6 +18,8 @@ from pathlib import Path
 from typing import List, Optional
 
 import nncf
+from nncf.definitions import CACHE_DATASET_PATH
+from nncf.definitions import CACHE_MODELS_PATH
 import numpy as np
 import openvino.runtime as ov
 import torch
@@ -28,16 +30,14 @@ from tqdm import tqdm
 
 ROOT = Path(__file__).parent.resolve()
 MODEL_URL = 'https://huggingface.co/alexsu52/mobilenet_v2_imagenette/resolve/main/openvino_model.tgz'
-MODEL_PATH = '~/.cache/nncf/models'
 DATASET_URL = 'https://s3.amazonaws.com/fast-ai-imageclas/imagenette2-320.tgz'
-DATASET_PATH = '~/.cache/nncf/datasets'
 DATASET_CLASSES = 10
 
 
 def download(url: str, path: str) -> Path:
     downloader = FastDownload(base=path, 
                               archive='downloaded', 
-                              data='extracted')
+                              data='imagenette2-320')
     return downloader.get(url)
 
 
@@ -90,7 +90,7 @@ def get_model_size(ir_path: str, m_type: str = 'Mb',
 ###############################################################################
 # Create an OpenVINO model and dataset
 
-dataset_path = download(DATASET_URL, DATASET_PATH)
+dataset_path = download(DATASET_URL, CACHE_DATASET_PATH)
 
 normalize = transforms.Normalize(mean=[0.485, 0.456, 0.406],
                                  std=[0.229, 0.224, 0.225])
@@ -106,7 +106,7 @@ val_dataset = datasets.ImageFolder(
 val_loader = torch.utils.data.DataLoader(
     val_dataset, batch_size=1, shuffle=False)
 
-model_path = download(MODEL_URL, MODEL_PATH)
+model_path = download(MODEL_URL, CACHE_MODELS_PATH)
 model = ov.Core().read_model(model_path / 'mobilenet_v2_fp32.xml')
 
 ###############################################################################

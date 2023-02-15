@@ -18,6 +18,7 @@ from pathlib import Path
 from typing import List, Optional
 
 import nncf
+from nncf.definitions import CACHE_DATASET_PATH
 import numpy as np
 import openvino.runtime as ov
 import torch
@@ -30,14 +31,13 @@ from tqdm import tqdm
 ROOT = Path(__file__).parent.resolve()
 CHECKPOINT_URL = 'https://huggingface.co/alexsu52/mobilenet_v2_imagenette/resolve/main/pytorch_model.bin'
 DATASET_URL = 'https://s3.amazonaws.com/fast-ai-imageclas/imagenette2-320.tgz'
-DATASET_PATH = '~/.cache/nncf/datasets'
-DATASET_CLASSES = 10
+mDATASET_CLASSES = 10
 
 
 def download_dataset() -> Path:
-    downloader = FastDownload(base=DATASET_PATH, 
+    downloader = FastDownload(base=CACHE_DATASET_PATH,
                               archive='downloaded', 
-                              data='extracted')
+                              data='imagenette2-320')
     return downloader.get(DATASET_URL)
 
 
