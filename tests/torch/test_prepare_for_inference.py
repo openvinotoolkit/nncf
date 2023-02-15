@@ -21,7 +21,7 @@ from nncf.config import NNCFConfig
 from nncf.torch.quantization.layers import AsymmetricQuantizer
 from nncf.torch.quantization.layers import PTQuantizerSpec
 from nncf.torch.quantization.layers import SymmetricQuantizer
-from nncf.torch.quantization.layers import convert_to_fakequantizer
+from nncf.torch.quantization.prepare_for_inference import convert_to_fakequantizer
 from tests.common.quantization.data_generators import check_outputs
 from tests.common.quantization.data_generators import generate_random_low_and_range_by_input_size
 from tests.common.quantization.data_generators import generate_scale_by_input_size
@@ -335,7 +335,7 @@ def test_save_original_model(algo, save_original_model):
             assert id(compressed_model) == id(ctrl.model)
 
 
-def test_noimplemented_prepare_for_inference():
+def test_notimplemented_prepare_for_inference():
     model = BasicConvTestModel()
     config = NNCFConfig()
     config.update({"model": "model", "input_info": {"sample_size": model.INPUT_SIZE}, "compression": []})

@@ -10,9 +10,10 @@
  See the License for the specific language governing permissions and
  limitations under the License.
 """
+# pylint:disable=too-many-lines
+
 import copy
 import shutil
-# pylint:disable=too-many-lines
 from collections import Counter
 from collections import OrderedDict
 from copy import deepcopy
@@ -121,7 +122,6 @@ from nncf.torch.quantization.layers import QuantizerConfig
 from nncf.torch.quantization.layers import QuantizerExportMode
 from nncf.torch.quantization.layers import QuantizersSwitcher
 from nncf.torch.quantization.layers import SymmetricQuantizer
-from nncf.torch.quantization.layers import convert_to_fakequantizer
 from nncf.torch.quantization.layers import get_scale_shape
 from nncf.torch.quantization.metrics import MemoryConsumptionStatisticsCollector
 from nncf.torch.quantization.metrics import PTQuantizationStatisticsCollector
@@ -134,6 +134,8 @@ from nncf.torch.quantization.precision_init.base_init import BasePrecisionInitia
 from nncf.torch.quantization.precision_init.base_init import BasePrecisionInitParams
 from nncf.torch.quantization.precision_init.hawq_init import HAWQPrecisionInitParams
 from nncf.torch.quantization.precision_init.manual_init import ManualPrecisionInitParams
+from nncf.torch.quantization.prepare_for_inference import remove_disabled_quantizers
+from nncf.torch.quantization.prepare_for_inference import replace_quantizer_to_torch_native_module
 from nncf.torch.quantization.schedulers import QUANTIZATION_SCHEDULERS
 from nncf.torch.quantization.structs import NonWeightQuantizerInfo
 from nncf.torch.quantization.structs import WeightQuantizerInfo
@@ -1462,55 +1464,10 @@ class QuantizationController(QuantizationControllerBase):
         if save_original_model:
             model = copy.deepcopy(self.model)
 
-        self.replace_quantizer_to_native_module(model)
+        replace_quantizer_to_torch_native_module(model)
+        remove_disabled_quantizers(model)
 
         return model
-
-    @staticmethod
-    def replace_quantizer_to_native_module(model: NNCFNetwork) -> None:
-        """
-        Replace NNCF quantizer modules to PyTorch FakeQuantizer module and remove unused quantizer operators.
-
-        :param model: Target model.
-        """
-
-        for key in model.external_quantizers.keys():
-            if model.external_quantizers[key].is_enabled_quantization():
-                model.external_quantizers[key] = convert_to_fakequantizer(model.external_quantizers[key])
-            else:
-                model.external_quantizers.pop(key)
-
-        for node in model.get_original_graph().get_all_nodes():
-            if node.node_type in ["nncf_model_input", "nncf_model_output"]:
-                continue
-
-            nncf_module = model.get_containing_module(node.node_name)
-
-            if hasattr(nncf_module, "pre_ops"):
-                for key in list(nncf_module.pre_ops.keys()):
-                    op = nncf_module.get_pre_op(key)
-                    if isinstance(op.op, BaseQuantizer) and op.op.is_enabled_quantization():
-                        if op.op.is_half_range:
-                            # Half range require to clamp weights of module
-                            # Note: Half range used only for weight.
-                            input_low, input_high = op.op.get_input_low_input_high()
-
-                            data = nncf_module.weight.data
-                            data = torch.min(torch.max(data, input_low), input_high)
-                            data = op.op.quantize(data, execute_traced_op_as_identity=False)
-                            nncf_module.weight.data = data
-
-                        op.op = convert_to_fakequantizer(op.op)
-                    else:
-                        nncf_module.remove_pre_forward_operation(key)
-
-            if hasattr(nncf_module, "post_ops"):
-                for key in list(nncf_module.post_ops.keys()):
-                    op = nncf_module.get_post_ops(key)
-                    if isinstance(op.op, BaseQuantizer) and op.op.is_enabled_quantization():
-                        op.op = convert_to_fakequantizer(op.op)
-                    else:
-                        nncf_module.remove_pre_forward_operation(key)
 
 
 class QuantizationDebugInterface(DebugInterface):
