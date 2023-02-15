@@ -74,11 +74,12 @@ def native_quantize_with_accuracy_control(model: TModel,
                                fast_bias_correction, model_type, ignored_scope)
 
     baseline_metric = validation_fn(algo_backend.prepare_for_inference(model),
-                                    validation_dataset)
+                                    validation_dataset.get_data())
     nncf_logger.info(f'Baseline metric: {baseline_metric}')
 
 
-    quantized_metric = validation_fn(algo_backend.prepare_for_inference(quantized_model))
+    quantized_metric = validation_fn(algo_backend.prepare_for_inference(quantized_model),
+                                     validation_dataset.get_data())
     nncf_logger.info(f'Quantized metric: {quantized_metric}')
 
     accuracy_drop = baseline_metric - quantized_metric
@@ -234,7 +235,8 @@ def restore_accuracy(model: TModel,
         all_reverted_ops.update(reverted_ops)
 
         # Calculate drop for new quantization scope
-        current_metric = validation_fn(current_model, validation_dataset.get_data())
+        current_metric = validation_fn(algo_backend.prepare_for_inference(current_model),
+                                       validation_dataset.get_data())
         current_accuracy_drop = baseline_metric - current_metric
         nncf_logger.info('Accuracy drop with the new quantization scope is %s', current_accuracy_drop)
 
