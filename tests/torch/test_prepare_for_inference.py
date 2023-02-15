@@ -34,9 +34,7 @@ from tests.torch.pruning.helpers import BigPruningTestModel
 from tests.torch.quantization.test_functions import get_test_data
 
 
-def _get_config_for_algo(
-    algo_names=['quantization'], input_size=[1, 1, 8, 8], quant_mode='symmetric', overflow_fix="enable"
-):
+def _get_config_for_algo(algo_names, input_size, quant_mode='symmetric', overflow_fix="enable"):
     config = NNCFConfig()
     config.update({"model": "model", "input_info": {"sample_size": input_size}, "compression": []})
 
@@ -341,7 +339,7 @@ def test_noimplemented_prepare_for_inference():
     model = BasicConvTestModel()
     config = NNCFConfig()
     config.update({"model": "model", "input_info": {"sample_size": model.INPUT_SIZE}, "compression": []})
-    compressed_model, compression_ctrl = create_compressed_model_and_algo_for_test(model, config)
+    _, compression_ctrl = create_compressed_model_and_algo_for_test(model, config)
 
     with pytest.raises(NotImplementedError):
         compression_ctrl.prepare_for_inference()
