@@ -11,7 +11,7 @@
  limitations under the License.
 """
 
-from typing import List, Dict
+from typing import List, Tuple, Dict
 from enum import Enum
 
 import openvino.runtime as ov
@@ -21,7 +21,6 @@ from openvino.runtime import opset9 as opset
 from nncf.common.graph.model_transformer import ModelTransformer
 from nncf.common.graph.transformations.layout import TransformationLayout
 from nncf.common.graph.transformations.commands import TargetType
-from nncf import nncf_logger
 from nncf.experimental.openvino_native.graph.transformations.commands import OVQuantizerInsertionCommand
 from nncf.experimental.openvino_native.graph.transformations.commands import OVOutputInsertionCommand
 from nncf.experimental.openvino_native.graph.transformations.commands import OVModelExtractionCommand
@@ -114,12 +113,12 @@ class OVModelTransformer(ModelTransformer):
 
     @staticmethod
     def _get_extra_model_outputs(model: ov.Model,
-                                 transformations: List[OVOutputInsertionCommand]) -> List[ov.Output]:
+                                 transformations: List[OVOutputInsertionCommand]) -> List[Tuple[ov.Output, int]]:
         """
         Collects extra model outputs based on transformations.
 
         :param transformations: lisf of the OVOutputInsertionCommand.
-        :return: list of the output names.
+        :return: list of tuples with ov.Output & port_id.
         """
         name_to_node_mapping = OVModelTransformer._get_name_to_node_mapping(model)
         extra_model_outputs = []
@@ -129,30 +128,30 @@ class OVModelTransformer(ModelTransformer):
             port_id = transformation.target_point.port_id
             if transformation.target_point.type == TargetType.POST_LAYER_OPERATION:
                 output = node.output(port_id)
-                extra_model_outputs.append(output)
+                extra_model_outputs.append((output, port_id))
             elif transformation.target_point.type == TargetType.PRE_LAYER_OPERATION:
                 output = node.input_value(port_id)
-                extra_model_outputs.append(output)
+                extra_model_outputs.append((output, port_id))
             else:
                 raise NotImplementedError(f'Unsupported target point type {transformation.target_point.type}')
 
         return extra_model_outputs
 
     @staticmethod
-    def _insert_outputs(model: ov.Model, outputs: List[ov.Output]) -> ov.Model:
+    def _insert_outputs(model: ov.Model, outputs: List[Tuple[ov.Output, int]]) -> ov.Model:
         """
         Takes a model and adds outputs based on the list of ov.Output.
 
         :param model: OpenVINO model.
-        :param outputs: list of ov.Output.
+        :param outputs: list of tuples with ov.Output & port_id.
         :return: Model with new outputs.
         """
         model_outputs = model.get_results()
         params = model.get_parameters()
         extra_model_outputs = []
-        for output in outputs:
+        for (output, port_id) in outputs:
             output_name = output.get_node().get_friendly_name()
-            port_id = output.get_index()
+            # TODO: (KodiaqQ) check out the models with the Split
             result = opset.result(output, name=f'Result_{output_name}.{port_id}')
             extra_model_outputs.append(result)
 

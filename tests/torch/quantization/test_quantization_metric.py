@@ -17,6 +17,7 @@ import pytest
 
 from nncf import NNCFConfig
 from nncf.torch import create_compressed_model
+from nncf.common.graph.patterns.manager import TargetDevice
 from nncf.torch.quantization.metrics import MemoryConsumptionStatisticsCollector
 from nncf.torch.quantization.metrics import ShareEdgesQuantizedDataPathStatisticsCollector
 from tests.torch import test_models
@@ -266,7 +267,8 @@ def test_quantization_configuration_stats(data):
     config['input_info']['sample_size'] = [2, 3, 299, 299]
 
     ctrl, _ = create_compressed_model(test_models.Inception3(aux_logits=True, transform_input=True), config)
-    stats = ShareEdgesQuantizedDataPathStatisticsCollector(ctrl.model, ctrl).collect()
+    stats = ShareEdgesQuantizedDataPathStatisticsCollector(ctrl.model, ctrl,
+                                                           TargetDevice.ANY).collect()
 
     for attr_name, expected_value in data.expected.items():
         actual_value = as_dict(getattr(stats, attr_name))

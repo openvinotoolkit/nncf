@@ -35,7 +35,7 @@ HOME_PATH = Path.home()
 MODEL_INFO = download.DownloadInfo(
     name="stfpm_mvtec_capsule",
     url='https://huggingface.co/alexsu52/stfpm_mvtec_capsule/resolve/main/openvino_model.tar',
-    hash='b75ce461aa17b1b33673ebcea0f6b846')
+    hash='0d15817bc56af80793de38c8a0b3fd9e')
 MODEL_PATH = HOME_PATH / '.cache/nncf/models/stfpm_mvtec_capsule'
 
 DATASET_INFO = download.DownloadInfo(

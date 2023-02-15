@@ -249,6 +249,7 @@ class MinMaxQuantization(Algorithm):
         hw_config_path = self._backend_entity.hw_config.get_path_to_hw_config(hw_config_type)
         hw_config = self._backend_entity.hw_config.from_json(hw_config_path)
         weight_nodes = nncf_graph.get_nodes_by_metatypes(self._backend_entity.layers_with_weights_metatypes)
+        weight_nodes = [node for node in weight_nodes if node.node_name not in self._parameters.ignored_scopes]
         default_weight_qconfig = self._get_default_qconfig(
             self._parameters.global_quantizer_constraints[QuantizerGroup.WEIGHTS])
         weighted_node_and_qconf_lists = assign_qconfig_lists_to_modules(nodes_with_weights=weight_nodes,
@@ -339,7 +340,7 @@ class MinMaxQuantization(Algorithm):
             return self._quantization_target_points_to_qconfig
         backend = get_backend(model)
         device = self._parameters.target_device
-        pattern = PatternsManager().get_full_pattern_graph(backend, device)
+        pattern = PatternsManager.get_full_pattern_graph(backend, device)
         quantizer_setup = self._get_quantizer_setup(nncf_graph, pattern)
         for quantization_point in quantizer_setup.quantization_points.values():
             if quantization_point.is_weight_quantization_point():

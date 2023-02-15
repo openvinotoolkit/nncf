@@ -34,7 +34,10 @@ from nncf.common.graph.transformations.commands import TransformationPriority
 from nncf.common.insertion_point_graph import InsertionPointGraph
 from nncf.common.insertion_point_graph import InsertionPointGraphNodeType
 from nncf.common.insertion_point_graph import PostHookInsertionPoint
+from nncf.common.graph.patterns.manager import PatternsManager
+from nncf.common.graph.patterns.manager import TargetDevice
 from nncf.common.insertion_point_graph import PreHookInsertionPoint
+from nncf.common.utils.backend import BackendType
 from nncf.common.utils.dot_file_rw import get_graph_without_data
 from nncf.common.utils.dot_file_rw import read_dot_graph
 from nncf.common.utils.dot_file_rw import write_dot_graph
@@ -53,7 +56,6 @@ from nncf.torch.graph.operator_metatypes import PTModuleConv2dMetatype
 from nncf.torch.graph.transformations.commands import PTInsertionCommand
 from nncf.torch.graph.transformations.commands import PTTargetPoint
 from nncf.torch.graph.transformations.layout import PTTransformationLayout
-from nncf.torch.hardware.fused_patterns import PT_HW_FUSED_PATTERNS
 from nncf.torch.layer_utils import _NNCFModuleMixin
 from nncf.torch.module_operations import BaseOp
 from nncf.torch.nncf_network import EXTERNAL_QUANTIZERS_STORAGE_NAME
@@ -622,7 +624,8 @@ class TestInsertionPointGraph:
     def test_get_ip_graph_with_merged_operations(self, mock_graph_factory, dot_file_name):
         mock_graph = mock_graph_factory()
         ip_graph = get_ip_graph_for_test(mock_graph)
-        pattern = PT_HW_FUSED_PATTERNS.get_full_pattern_graph()
+        pattern =\
+            PatternsManager.get_full_pattern_graph(BackendType.TORCH, TargetDevice.ANY)
         merged_ip_graph = ip_graph.get_ip_graph_with_merged_hw_optimized_operations(pattern)
 
         data_dir = TEST_ROOT / 'torch/data/reference_graphs/pattern_merging'  # type: Path

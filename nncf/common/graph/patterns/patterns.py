@@ -267,8 +267,8 @@ class PatternDesc:
 
     :param name: Specific pattern name.
     :param devices: A field containing the list of devices
-    for which this pattern should be taken into account when quantizing.
-    None value means that this pattern is applicable to all devices.
+        for which this pattern should be taken into account when quantizing.
+        None value means that this pattern is applicable to all devices.
     """
 
     name: str
@@ -280,6 +280,9 @@ class PatternNames(Enum):
     Describes the patterns that will be fused during integer execution
     and would not be quantized in compression pipeline.
     """
+
+    # ATOMIC OPERATIONS
+    L2_NORM = PatternDesc('l2_norm')
 
     # BLOCK PATTERNS
     ADD_SCALE_SHIFT_OUTPUT = PatternDesc('add_scale_shift_output')
@@ -331,6 +334,7 @@ class PatternNames(Enum):
     ARITHMETIC_SCALE_SHIFT_ACTIVATIONS = PatternDesc('arithmetic_scale_shift_activations')
     BATCH_NORM_ACTIVATIONS = PatternDesc('batch_norm_activations')
     BATCH_NORM_SCALE_SHIFT_ACTIVATIONS = PatternDesc('batch_norm_scale_shift_activations')
+    GROUP_NORM_RELU = PatternDesc('group_norm_relu')
     LINEAR_ACTIVATIONS = PatternDesc('linear_activations')
     LINEAR_ACTIVATIONS_BATCH_NORM = PatternDesc('linear_activations_batch_norm')
     LINEAR_ACTIVATIONS_SCALE_SHIFT = PatternDesc('linear_activations_scale_shift')
@@ -340,6 +344,7 @@ class PatternNames(Enum):
     LINEAR_BATCH_NORM_ACTIVATIONS = PatternDesc('linear_batch_norm_activations')
     LINEAR_BATCH_NORM_SCALE_SHIFT_ACTIVATIONS = PatternDesc('linear_batch_norm_scale_shift_activations')
     LINEAR_SCALE_SHIFT_ACTIVATIONS = PatternDesc('linear_scale_shift_activations')
+    LINEAR_CONST_MULTIPLY = PatternDesc('linear_const_multiply')
     SCALE_SHIFT_ACTIVATIONS = PatternDesc('scale_shift_activations')
 
     # DEVICE PATTERNS
