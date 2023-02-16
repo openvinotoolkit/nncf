@@ -114,7 +114,7 @@ def generate_random_scale(min_scale: float = 0.1, max_scale: float = 1.0) -> flo
     return min_scale + np.random.random() * (max_scale - min_scale)
 
 
-def generate_scale_by_input_size(input_size: Tuple, is_per_channel: bool, is_weights: bool) -> np.array:
+def generate_random_scale_by_input_size(input_size: Tuple, is_per_channel: bool, is_weights: bool) -> np.array:
     """
     Generate random scales for each channels.
 
@@ -220,7 +220,7 @@ def get_points_near_of_mid_points(input_data: np.array, mid_points: np.array, at
     return is_near_mid_point
 
 
-def generate_one_channel_input(
+def generate_sweep_for_one_channel(
     input_low, input_range, input_size, bits, rtol_for_mid_point
 ) -> Tuple[np.array, np.array, np.array]:
     """
@@ -279,7 +279,7 @@ def generate_one_channel_input(
     return input_data, is_near_mid_point, quant_lens
 
 
-def generate_test_input(
+def generate_sweep_data(
     input_size: Tuple,
     input_low: np.array,
     input_range: np.array,
@@ -289,7 +289,7 @@ def generate_test_input(
     rtol_for_mid_point: float = 0.00005,
 ) -> np.array:
     """
-    Generate test input data.
+    Generate sweep data by parameters.
 
     :param input_size: Size of input tensor.
     :param input_low: Array with low values.
@@ -302,7 +302,7 @@ def generate_test_input(
     :return np.array: inputs, is_near_mid_point, quant_lens
     """
     if not is_per_channel:
-        return generate_one_channel_input(input_low, input_range, input_size, bits, rtol_for_mid_point)
+        return generate_sweep_for_one_channel(input_low, input_range, input_size, bits, rtol_for_mid_point)
 
     inputs = None
     is_near_mid_point = None
@@ -314,7 +314,7 @@ def generate_test_input(
             is_near_mid_point = np.zeros(input_size).astype(np.bool)
             quant_lens = np.empty(input_size)
             for idx in range(0, channel_count):
-                ch_input, ch_is_near_mid_point, ch_quant_lens = generate_one_channel_input(
+                ch_input, ch_is_near_mid_point, ch_quant_lens = generate_sweep_for_one_channel(
                     input_low[idx], input_range[idx], input_size[1:], bits, rtol_for_mid_point
                 )
                 inputs[idx] = ch_input
@@ -326,7 +326,7 @@ def generate_test_input(
             is_near_mid_point = np.zeros(input_size).astype(np.bool)
             quant_lens = np.empty(input_size)
             for idx in range(0, channel_count):
-                ch_input, ch_is_near_mid_point, ch_quant_lens = generate_one_channel_input(
+                ch_input, ch_is_near_mid_point, ch_quant_lens = generate_sweep_for_one_channel(
                     input_low[idx], input_range[idx], input_size[0:1] + input_size[2:], bits, rtol_for_mid_point
                 )
                 inputs[:, idx] = ch_input

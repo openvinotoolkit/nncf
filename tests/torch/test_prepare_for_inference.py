@@ -24,8 +24,8 @@ from nncf.torch.quantization.layers import SymmetricQuantizer
 from nncf.torch.quantization.prepare_for_inference import convert_to_torch_fakequantizer
 from tests.common.quantization.data_generators import check_outputs
 from tests.common.quantization.data_generators import generate_random_low_and_range_by_input_size
-from tests.common.quantization.data_generators import generate_scale_by_input_size
-from tests.common.quantization.data_generators import generate_test_input
+from tests.common.quantization.data_generators import generate_random_scale_by_input_size
+from tests.common.quantization.data_generators import generate_sweep_data
 from tests.common.quantization.data_generators import get_symmetric_range_level
 from tests.torch.helpers import BasicConvTestModel
 from tests.torch.helpers import create_compressed_model_and_algo_for_test
@@ -122,7 +122,7 @@ def test_converting_symmetric_quantizer(input_size, is_per_channel, is_weights, 
 
     np.random.seed(42)
     bits = 7 if half_range else 8
-    np_scale = generate_scale_by_input_size(input_size, is_per_channel, is_weights)
+    np_scale = generate_random_scale_by_input_size(input_size, is_per_channel, is_weights)
     tensor_scale = get_test_data([np_scale], use_cuda)
 
     level_low, level_high, _ = get_symmetric_range_level(is_signed, bits)
@@ -154,7 +154,7 @@ def test_converting_symmetric_quantizer(input_size, is_per_channel, is_weights, 
     tuned_input_high = tuned_input_high.detach().numpy().squeeze()
     tuned_input_range = tuned_input_high - tuned_input_low
 
-    np_input, np_is_near_mid_point, quant_lens = generate_test_input(
+    np_input, np_is_near_mid_point, quant_lens = generate_sweep_data(
         input_size, tuned_input_low, tuned_input_range, bits, is_per_channel, is_weights
     )
     test_input = get_test_data([np_input], use_cuda)
@@ -224,7 +224,7 @@ def test_converting_asymmetric_quantizer(input_size, is_per_channel, is_weights,
     tuned_input_high = tuned_input_high.detach().numpy().squeeze()
     tuned_input_range = tuned_input_high - tuned_input_low
 
-    np_input, np_is_near_mid_point, quant_lens = generate_test_input(
+    np_input, np_is_near_mid_point, quant_lens = generate_sweep_data(
         input_size, tuned_input_low, tuned_input_range, bits, is_per_channel, is_weights
     )
     test_input = get_test_data([np_input], use_cuda)
