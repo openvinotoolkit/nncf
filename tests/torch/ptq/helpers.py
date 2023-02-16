@@ -16,17 +16,18 @@ import torch
 
 from nncf import NNCFConfig
 from nncf.common.graph.layer_attributes import ConvolutionLayerAttributes
-from nncf.common.quantization.structs import QuantizationMode
 from nncf.quantization.algorithms.min_max.algorithm import MinMaxQuantization
 from nncf.quantization.algorithms.post_training.algorithm import PostTrainingQuantization
 from nncf.quantization.algorithms.post_training.algorithm  import PostTrainingQuantizationParameters
 from nncf.torch.graph.graph import PTNNCFGraph
 from nncf.torch.model_creation import create_nncf_network
+from nncf.torch.graph.operator_metatypes import PTSumMetatype
 from nncf.torch.graph.operator_metatypes import PTModuleConv2dMetatype
 from nncf.torch.graph.operator_metatypes import PTDepthwiseConv2dSubtype
 from nncf.torch.tensor_statistics.statistics import PTMinMaxTensorStatistic
 from tests.post_training.models import NNCFGraphToTest
 from tests.post_training.models import NNCFGraphToTestDepthwiseConv
+from tests.post_training.models import NNCFGraphToTestSumAggregation
 
 
 def get_single_conv_nncf_graph() -> NNCFGraphToTest:
@@ -40,6 +41,18 @@ def get_single_conv_nncf_graph() -> NNCFGraphToTest:
 
 def get_depthwise_conv_nncf_graph() -> NNCFGraphToTestDepthwiseConv:
     return NNCFGraphToTestDepthwiseConv(PTDepthwiseConv2dSubtype)
+
+
+def get_sum_aggregation_nncf_graph() -> NNCFGraphToTestSumAggregation:
+    conv_layer_attrs = ConvolutionLayerAttributes(
+                            weight_requires_grad=True,
+                            in_channels=4, out_channels=4, kernel_size=(4, 4),
+                            stride=1, groups=1, transpose=False,
+                            padding_values=[])
+    return NNCFGraphToTestSumAggregation(PTModuleConv2dMetatype,
+                                         PTSumMetatype,
+                                         conv_layer_attrs,
+                                         PTNNCFGraph)
 
 
 def get_nncf_network(model: torch.nn.Module,

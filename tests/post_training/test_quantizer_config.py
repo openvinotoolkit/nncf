@@ -13,11 +13,16 @@
 
 import pytest
 from abc import abstractmethod
+from dataclasses import dataclass
+from typing import List
 
 from nncf.common.graph.patterns import GraphPattern
 from nncf.common.quantization.structs import QuantizationPreset
 from nncf.common.quantization.structs import QuantizerGroup
 from nncf.common.quantization.structs import QuantizerConfig
+from nncf.common.quantization.quantizer_setup import SingleConfigQuantizationPoint
+from nncf.common.quantization.quantizer_setup import WeightQuantizationInsertionPoint
+from nncf.common.quantization.quantizer_setup import ActivationQuantizationInsertionPoint
 from nncf.common.graph.transformations.commands import TargetType
 from nncf.common.quantization.structs import QuantizationMode
 from nncf.quantization.algorithms.definitions import RangeType
@@ -27,6 +32,7 @@ from nncf.quantization.algorithms.definitions import Granularity
 
 from tests.post_training.models import NNCFGraphToTest
 from tests.post_training.models import NNCFGraphToTestDepthwiseConv
+from tests.post_training.models import NNCFGraphToTestSumAggregation
 
 
 class TemplateTestQuantizerConfig:
@@ -57,9 +63,23 @@ class TemplateTestQuantizerConfig:
     def depthwise_conv_nncf_graph(self) -> NNCFGraphToTestDepthwiseConv:
         pass
 
+    @abstractmethod
     @pytest.fixture
-    def target_node_name(self):
-        return '/Conv_1_0'
+    def conv_sum_aggregation_nncf_graph(self) -> NNCFGraphToTestSumAggregation:
+        pass
+
+    @dataclass
+    class TestGetStatisticsCollectorParameters:
+        target_type: TargetType
+        target_node_name: str
+        ref_per_ch_reduction_shape: List[int]
+        ref_per_tensor_reduction_shape: List[int]
+
+    @abstractmethod
+    @pytest.fixture
+    def statistic_collector_parameters(self, request) ->\
+        TestGetStatisticsCollectorParameters:
+        pass
 
     def test_default_quantizer_config(self, single_conv_nncf_graph):
         algo = PostTrainingQuantization(PostTrainingQuantizationParameters())
@@ -154,9 +174,10 @@ class TemplateTestQuantizerConfig:
     @pytest.mark.parametrize('range_type', [RangeType.MINMAX, RangeType.MEAN_MINMAX])
     @pytest.mark.parametrize('q_config_mode', [QuantizationMode.SYMMETRIC, QuantizationMode.ASYMMETRIC])
     @pytest.mark.parametrize('q_config_per_channel', [True, False])
-    @pytest.mark.parametrize('target_type',[TargetType.POST_LAYER_OPERATION, TargetType.OPERATION_WITH_WEIGHTS])
-    def test_get_stat_collector(self, target_type, target_node_name, range_type,
-                                q_config_mode, q_config_per_channel, single_conv_nncf_graph):
+    def test_get_stat_collector(self, range_type, q_config_mode, q_config_per_channel,
+                                conv_sum_aggregation_nncf_graph,
+                                statistic_collector_parameters: TestGetStatisticsCollectorParameters):
+        params = statistic_collector_parameters
         algo = PostTrainingQuantization(PostTrainingQuantizationParameters(range_type=range_type))
         min_max_algo = algo.algorithms[0]
         min_max_algo._backend_entity = self.get_algo_backend()
@@ -164,8 +185,19 @@ class TemplateTestQuantizerConfig:
                                    mode=q_config_mode,
                                    per_channel=q_config_per_channel)
 
-        target_point = self.get_target_point(target_type, target_node_name)
-        tensor_collector = min_max_algo._get_stat_collector(single_conv_nncf_graph.nncf_graph,
+        if params.target_type in [TargetType.PRE_LAYER_OPERATION, TargetType.POST_LAYER_OPERATION]:
+            port_id = None if TargetType.POST_LAYER_OPERATION else 0
+            ip = ActivationQuantizationInsertionPoint(params.target_node_name, port_id)
+            qp = SingleConfigQuantizationPoint(ip, q_config, [params.target_node_name])
+            min_max_algo._add_activation_quantization_target_point(qp)
+        else:
+            ip = WeightQuantizationInsertionPoint(params.target_node_name)
+            qp = SingleConfigQuantizationPoint(ip, q_config, [params.target_node_name])
+            min_max_algo._add_weight_quantization_target_point(qp,
+                                                               conv_sum_aggregation_nncf_graph.nncf_graph)
+
+        target_point = list(min_max_algo._quantization_target_points_to_qconfig.keys())[0]
+        tensor_collector = min_max_algo._get_stat_collector(conv_sum_aggregation_nncf_graph.nncf_graph,
                                                             target_point, q_config)
 
         is_weight_tp = target_point.is_weight_target_point()
@@ -180,13 +212,9 @@ class TemplateTestQuantizerConfig:
 
         # reduction_shape check
         if q_config_per_channel:
-            ref_reduction_shape = (1, 2, 3) if is_weight_tp else (0, 2, 3)
-            assert tensor_collector._reduction_shape == ref_reduction_shape
+            assert tensor_collector._reduction_shape == params.ref_per_ch_reduction_shape
         else:
-            # Torch backend doesn't use None as reduction shape.
-            # It enumerates all dims instead
-            assert tensor_collector._reduction_shape is None or\
-                tensor_collector._reduction_shape == (0, 1, 2, 3)
+            assert tensor_collector._reduction_shape == params.ref_per_tensor_reduction_shape
 
         # use_abs_max check
         if q_config_mode == QuantizationMode.SYMMETRIC:

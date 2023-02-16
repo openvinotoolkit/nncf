@@ -92,7 +92,8 @@ class PTMinMaxAlgoBackend(MinMaxAlgoBackend):
     def target_point(target_type: TargetType,
                      target_node_name: str,
                      port_id: int) -> PTTargetPoint:
-        if NNCFGraphNodeType.INPUT_NODE in target_node_name:
+        if NNCFGraphNodeType.INPUT_NODE in target_node_name or\
+            target_type == TargetType.POST_LAYER_OPERATION:
             port_id = None
         if target_type in PTMinMaxAlgoBackend.TARGET_TYPE_TO_PT_INS_TYPE_MAP:
             target_type = PTMinMaxAlgoBackend.TARGET_TYPE_TO_PT_INS_TYPE_MAP[target_type]

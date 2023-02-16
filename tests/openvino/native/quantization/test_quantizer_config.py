@@ -14,19 +14,21 @@
 import pytest
 
 from nncf.common.graph.transformations.commands import TargetType
-from nncf.experimental.openvino_native.graph.transformations.commands import OVTargetPoint
-from nncf.experimental.openvino_native.graph.metatypes.openvino_metatypes import OVConvolutionMetatype
 from nncf.experimental.openvino_native.graph.nncf_graph_builder import OVWeightedLayerAttributes
 from nncf.experimental.openvino_native.statistics.collectors import OVMeanMinMaxStatisticCollector
 from nncf.experimental.openvino_native.statistics.collectors import OVMinMaxStatisticCollector
 from nncf.experimental.openvino_native.quantization.algorithms.min_max.openvino_backend import OVMinMaxAlgoBackend
+from nncf.experimental.openvino_native.graph.metatypes.openvino_metatypes import OVConvolutionMetatype
 from nncf.experimental.openvino_native.graph.metatypes.openvino_metatypes import OVDepthwiseConvolutionMetatype
+from nncf.experimental.openvino_native.graph.metatypes.openvino_metatypes import OVSumMetatype
 
 from tests.post_training.test_quantizer_config import TemplateTestQuantizerConfig
 from tests.post_training.models import NNCFGraphToTest
 from tests.post_training.models import NNCFGraphToTestDepthwiseConv
+from tests.post_training.models import NNCFGraphToTestSumAggregation
 
 
+ParamsCls = TemplateTestQuantizerConfig.TestGetStatisticsCollectorParameters
 class TestQuantizerConfig(TemplateTestQuantizerConfig):
     def get_algo_backend(self):
         return OVMinMaxAlgoBackend()
@@ -37,8 +39,11 @@ class TestQuantizerConfig(TemplateTestQuantizerConfig):
     def get_mean_max_statistic_collector_cls(self):
         return OVMeanMinMaxStatisticCollector
 
-    def get_target_point(self, target_type: TargetType, target_node_name) -> OVTargetPoint:
-        return OVTargetPoint(target_type, target_node_name, port_id=0)
+    # TODO: Add test on TargetType.PRE_LAYER_OPERATION
+    @pytest.fixture(params=[(TargetType.POST_LAYER_OPERATION, '/Conv_1_0', (0, 2, 3), None),
+                            (TargetType.OPERATION_WITH_WEIGHTS,  '/Conv_1_0', (1, 2, 3), None)])
+    def statistic_collector_parameters(self, request) -> ParamsCls:
+        return ParamsCls(*request.param)
 
     @pytest.fixture
     def single_conv_nncf_graph(self) -> NNCFGraphToTest:
@@ -48,3 +53,10 @@ class TestQuantizerConfig(TemplateTestQuantizerConfig):
     @pytest.fixture
     def depthwise_conv_nncf_graph(self):
         return NNCFGraphToTestDepthwiseConv(OVDepthwiseConvolutionMetatype)
+
+    @pytest.fixture
+    def conv_sum_aggregation_nncf_graph(self) ->\
+        NNCFGraphToTestSumAggregation:
+        conv_layer_attrs = OVWeightedLayerAttributes(0, (4, 4, 4, 4))
+        return NNCFGraphToTestSumAggregation(OVConvolutionMetatype, OVSumMetatype,
+                                             conv_layer_attrs)
