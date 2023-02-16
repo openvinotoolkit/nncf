@@ -16,7 +16,8 @@ import numpy as np
 
 
 def get_quant_len_by_range(input_range: np.array, bits: int) -> np.array:
-    """Returns quant length for N-bit quantization by input range.
+    """
+    Returns quant length for N-bit quantization by input range.
 
     :param input_range: Input range of quantizer.
     :param bits: Number of bits of quantization.
@@ -27,7 +28,8 @@ def get_quant_len_by_range(input_range: np.array, bits: int) -> np.array:
 
 
 def get_quant_len(value_low: np.array, value_high: np.array, bits: int) -> np.array:
-    """Returns quant length for N-bit quantization by min and max values.
+    """
+    Returns quant length for N-bit quantization by min and max values.
 
     :param value_low: Low input value of quantizer.
     :param value_high: High input value of quantizer.
@@ -40,7 +42,9 @@ def get_quant_len(value_low: np.array, value_high: np.array, bits: int) -> np.ar
 
 
 def get_quant_points(value_low: np.array, quant_len: np.array, bits: int) -> np.array:
-    """Returns array of quant point for quantization.
+    """
+    Returns array of quant points for quantization parameters. Quant points are floating-point levels to which
+    the corresponding input floating point values will be brought to after application of fake quantization.
 
     :param value_low: Low input value of quantizer.
     :param quant_len: Length of quant.
@@ -52,7 +56,8 @@ def get_quant_points(value_low: np.array, quant_len: np.array, bits: int) -> np.
 
 
 def get_mid_quant_points(value_low: np.array, quant_len: np.array, bits: int) -> np.array:
-    """Returns an array of dots in the middle between quants.
+    """
+    Returns an array of dots in the middle between quant points.
 
     :param value_low: Low input value of quantizer.
     :param quant_len: Length of quant.
@@ -65,7 +70,8 @@ def get_mid_quant_points(value_low: np.array, quant_len: np.array, bits: int) ->
 
 
 def get_symmetric_range_level(is_signed, bits) -> Tuple[int, int, int]:
-    """Returns level_low, level_high and levels parameters for symmetric quantizer.
+    """
+    Returns level_low, level_high and levels parameters for symmetric quantizer.
 
     :param is_signed: True if used signed data type.
     :param bits: Number of bits of quantization.
@@ -83,7 +89,8 @@ def get_symmetric_range_level(is_signed, bits) -> Tuple[int, int, int]:
 
 
 def get_asymmetric_range_level(bits) -> Tuple[int, int, int]:
-    """Returns level_low, level_high and levels parameters for asymmetric quantizer.
+    """
+    Returns level_low, level_high and levels parameters for asymmetric quantizer.
 
     :param bits: Number of bits of quantization.
 
@@ -191,13 +198,13 @@ def generate_random_low_and_range_by_input_size(
 
 def get_points_near_of_mid_points(input_data: np.array, mid_points: np.array, atol: float = 0.00005) -> np.array:
     """
-    Get array of where 'True' means that point is in the middle between quants.
+    Get array of where 'True' means that point is in the middle between quant points.
 
     :param input_data: Input data.
-    :param mid_points: An array of midpoints between quants.
+    :param mid_points: An array of midpoints between quant points.
     :param atol: The absolute tolerance parameter for mid points, defaults to 0.00005.
 
-    :return np.array: Array of flags to indicate points is in the middle between quants.
+    :return np.array: Array of flags to indicate points is in the middle between quant points.
     """
     num_elements = np.prod(input_data.shape)
     is_near_mid_point = np.zeros(num_elements).astype(np.bool)
@@ -229,7 +236,7 @@ def generate_one_channel_input(
     :param input_range: Array with range values.
     :param input_size: Size of input tensor.
     :param bits: Number of bits of quantization.
-    :param rtol_for_mid_point: Relative tolerant value for points is in the middle between quants.
+    :param rtol_for_mid_point: Relative tolerant value for points is in the middle between quant points.
 
     :return Tuple[np.array, np.array, np.array]: input_data, is_near_mid_point, quant_lens
     """
@@ -290,7 +297,7 @@ def generate_test_input(
     :param bits: Number of bits of quantization.
     :param is_per_channel: `True` for per-channel quantization, `False` for per-tensor.
     :param is_weights: Boolean that defines tensor type. True for Weights, False for Activations.
-    :param rtol_for_mid_point: Relative tolerant value for points is in the middle between quants, defaults to 0.00005.
+    :param rtol_for_mid_point: Relative tolerant value for points is in the middle between quant points, defaults to 0.00005.
 
     :return np.array: inputs, is_near_mid_point, quant_lens
     """
@@ -331,12 +338,12 @@ def generate_test_input(
 
 def check_outputs(arr_a: np.array, arr_b: np.array, is_near_mid_point: np.array, quant_lens: np.array, atol=0.000001):
     """
-    Comparing values in arr_a and arr_b, with tolerant mismatch for points in the middle between quants.
+    Comparing values in arr_a and arr_b, with tolerant mismatch for points in the middle between quant points.
 
     :param arr_a: Data array.
     :param arr_b: Data array.
-    :param is_near_mid_point: Array of that point is in the middle between quants
-    :param quant_lens: Array of quant length that used as tolerance parameter for points in the middle between quants.
+    :param is_near_mid_point: Array of that point is in the middle between quant points.
+    :param quant_lens: Array of quant length that used as tolerance parameter for points in the middle between quant points.
     :param atol: The absolute tolerance parameter, defaults to 0.000001.
 
     :raises ValueError: If the arrays arr_a and arr_b do not match.
