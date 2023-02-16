@@ -13,6 +13,7 @@
 
 import pytest
 from nncf.parameters import TargetDevice
+from nncf.common.graph.patterns import GraphPattern
 from nncf.onnx.statistics.collectors import ONNXMeanMinMaxStatisticCollector
 from nncf.onnx.statistics.collectors import ONNXMinMaxStatisticCollector
 from nncf.quantization.algorithms.definitions import RangeType
@@ -88,7 +89,7 @@ def test_quantize_outputs(quantize_outputs):
     min_max_algo._backend_entity = ONNXMinMaxAlgoBackend()
     nncf_graph = NNCFGraphToTest().nncf_graph
     assert min_max_algo._parameters.quantize_outputs == quantize_outputs
-    q_setup = min_max_algo._get_quantizer_setup(nncf_graph)
+    q_setup = min_max_algo._get_quantizer_setup(nncf_graph, GraphPattern())
     act_num_q, weight_num_q = 0, 0
     for quantization_point in q_setup.quantization_points.values():
         if quantization_point.is_activation_quantization_point():
@@ -103,14 +104,15 @@ def test_quantize_outputs(quantize_outputs):
     assert weight_num_q == 1
 
 
-@pytest.mark.parametrize('ignored_scopes', [[], ['/Conv_1_0']])
-def test_ignored_scopes(ignored_scopes):
+@pytest.mark.parametrize('ignored_scopes_data', [([], 1, 1), (['/Conv_1_0'], 0, 0)])
+def test_ignored_scopes(ignored_scopes_data):
+    ignored_scopes, act_num_ref, weight_num_ref = ignored_scopes_data
     algo = PostTrainingQuantization(PostTrainingQuantizationParameters(ignored_scopes=ignored_scopes))
     min_max_algo = algo.algorithms[0]
     min_max_algo._backend_entity = ONNXMinMaxAlgoBackend()
     nncf_graph = NNCFGraphToTest().nncf_graph
     assert min_max_algo._parameters.ignored_scopes == ignored_scopes
-    q_setup = min_max_algo._get_quantizer_setup(nncf_graph)
+    q_setup = min_max_algo._get_quantizer_setup(nncf_graph, GraphPattern())
     act_num_q, weight_num_q = 0, 0
     for quantization_point in q_setup.quantization_points.values():
         if quantization_point.is_activation_quantization_point():
@@ -118,11 +120,8 @@ def test_ignored_scopes(ignored_scopes):
         if quantization_point.is_weight_quantization_point():
             weight_num_q += 1
 
-    if ignored_scopes:
-        assert act_num_q == 0
-    else:
-        assert act_num_q == 1
-    assert weight_num_q == 1
+    assert act_num_q == act_num_ref
+    assert weight_num_q == weight_num_ref
 
 
 @pytest.mark.parametrize('overflow_fix', OverflowFix)

@@ -13,6 +13,9 @@
 
 import pytest
 
+from nncf.common.utils.backend import get_backend
+from nncf.common.graph.patterns.manager import PatternsManager
+from nncf.common.graph.patterns import GraphPattern
 from nncf.common.hardware.config import HW_CONFIG_TYPE_TARGET_DEVICE_MAP
 from nncf.parameters import TargetDevice
 from nncf.quantization.algorithms.definitions import RangeType
@@ -24,8 +27,14 @@ from nncf.experimental.openvino_native.quantization.algorithms.min_max.openvino_
 from nncf.experimental.openvino_native.statistics.collectors import OVMeanMinMaxStatisticCollector
 from nncf.experimental.openvino_native.statistics.collectors import OVMinMaxStatisticCollector
 
+from tests.openvino.native.models import OVReferenceModel
 from tests.openvino.native.models import LinearModel
 from tests.openvino.native.models import DepthwiseConvModel
+
+
+def get_patterns_setup(model: OVReferenceModel, device: TargetDevice) -> GraphPattern:
+    backend = get_backend(model)
+    return PatternsManager.get_full_pattern_graph(backend, device)
 
 
 # pylint: disable=protected-access
@@ -83,7 +92,8 @@ def test_quantize_outputs(quantize_outputs):
     model = LinearModel().ov_model
     nncf_graph = GraphConverter.create_nncf_graph(model)
     assert min_max_algo._parameters.quantize_outputs == quantize_outputs
-    q_setup = min_max_algo._get_quantizer_setup(nncf_graph)
+    pattern = get_patterns_setup(model, min_max_algo._parameters.target_device)
+    q_setup = min_max_algo._get_quantizer_setup(nncf_graph, pattern)
     act_num_q, weight_num_q = 0, 0
     for quantization_point in q_setup.quantization_points.values():
         if quantization_point.is_activation_quantization_point():
@@ -98,10 +108,11 @@ def test_quantize_outputs(quantize_outputs):
     assert weight_num_q == 1
 
 
-@pytest.mark.parametrize('ignored_scopes',
-                         [[], ['MatMul'], ['Add'], ['MatMul', 'Add']],
+@pytest.mark.parametrize('ignored_scopes_data',
+                         [([], 1, 1), (['MatMul'], 1, 0), (['Add'], 1, 1), (['MatMul', 'Add'], 0, 0)],
                          ids=['empty', 'MatMul', 'Add', 'MatMul,Add'])
-def test_ignored_scopes(ignored_scopes):
+def test_ignored_scopes(ignored_scopes_data):
+    ignored_scopes, act_num_ref, weight_num_ref = ignored_scopes_data
     algo = PostTrainingQuantization(PostTrainingQuantizationParameters(ignored_scopes=ignored_scopes))
     min_max_algo = algo.algorithms[0]
     assert min_max_algo._parameters.ignored_scopes == ignored_scopes
@@ -109,7 +120,8 @@ def test_ignored_scopes(ignored_scopes):
 
     model = LinearModel().ov_model
     nncf_graph = GraphConverter.create_nncf_graph(model)
-    q_setup = min_max_algo._get_quantizer_setup(nncf_graph)
+    pattern = get_patterns_setup(model, min_max_algo._parameters.target_device)
+    q_setup = min_max_algo._get_quantizer_setup(nncf_graph, pattern)
     act_num_q, weight_num_q = 0, 0
     for quantization_point in q_setup.quantization_points.values():
         if quantization_point.is_activation_quantization_point():
@@ -117,8 +129,5 @@ def test_ignored_scopes(ignored_scopes):
         if quantization_point.is_weight_quantization_point():
             weight_num_q += 1
 
-    if ignored_scopes == ['MatMul', 'Add']:
-        assert act_num_q == 0
-    else:
-        assert act_num_q == 1
-    assert weight_num_q == 1
+    assert act_num_q == act_num_ref
+    assert weight_num_q == weight_num_ref

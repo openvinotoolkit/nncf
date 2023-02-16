@@ -21,24 +21,26 @@ from collections import deque
 from copy import deepcopy
 
 from nncf.common.graph import NNCFGraph
+from nncf.common.graph.patterns.manager import PatternsManager
+from nncf.common.graph.patterns.manager import TargetDevice
 from nncf.common.utils.debug import is_debug
-from nncf.torch.hardware.fused_patterns import PT_HW_FUSED_PATTERNS
+from nncf.common.utils.backend import BackendType
+from nncf.common.quantization.quantizer_propagation.structs import QuantizationTrait
+from nncf.common.quantization.structs import WeightQuantizerId
+from nncf.common.quantization.structs import NonWeightQuantizerId
+from nncf.common.collector import StatisticsCollector
+from nncf.common.quantization.collectors import QuantizerDescription
+from nncf.common.quantization.collectors import QuantizationStatisticsCollector
+from nncf.common.graph.graph_matching import find_subgraphs_matching_pattern
 from nncf.torch.quantization.default_quantization import DEFAULT_PT_QUANT_TRAIT_TO_OP_DICT
 from nncf.torch.quantization.layers import BaseQuantizer
 from nncf.torch.quantization.layers import SymmetricQuantizer
 from nncf.torch.nncf_network import NNCFNetwork, PTNNCFGraph
-from nncf.torch.dynamic_graph.transform_graph import is_nncf_module
-from nncf.common.quantization.quantizer_propagation.structs import QuantizationTrait
-from nncf.common.quantization.structs import WeightQuantizerId
-from nncf.common.quantization.structs import NonWeightQuantizerId
+from nncf.torch.nncf_module_replacement import is_nncf_module
 from nncf.torch.quantization.structs import WeightQuantizerInfo
 from nncf.torch.quantization.structs import NonWeightQuantizerInfo
-from nncf.common.collector import StatisticsCollector
 from nncf.torch.quantization.statistics import MemoryConsumptionStatistics
 from nncf.torch.quantization.statistics import QuantizationConfigurationStatistics
-from nncf.common.quantization.collectors import QuantizerDescription
-from nncf.common.quantization.collectors import QuantizationStatisticsCollector
-from nncf.common.graph.graph_matching import find_subgraphs_matching_pattern
 
 
 class QuantizationShareBuildTimeInfo:
@@ -151,7 +153,7 @@ class MemoryConsumptionStatisticsCollector(StatisticsCollector):
 
         fp_num_bits = 32
         nncf_modules = self._compressed_model.get_nncf_modules()
-        for nncf_module in nncf_modules.values():
+        for nncf_module in nncf_modules:
             count_el = np.prod(nncf_module.weight.shape)
             stats.fp32_weight_size += count_el * fp_num_bits
             quantizer = self._get_weight_quantizer_for_module(nncf_module)
@@ -233,10 +235,12 @@ class ShareEdgesQuantizedDataPathStatisticsCollector(StatisticsCollector):
     NODES_GRAPH_ATTR = 'nodes'
     IS_MERGED_GRAPH_ATTR = 'is_merged'
 
-    def __init__(self, compressed_model: NNCFNetwork, qctrl: 'QuantizationController'):
+    def __init__(self, compressed_model: NNCFNetwork, qctrl: 'QuantizationController',
+                 target_device: TargetDevice):
         self._compressed_model = compressed_model
         self._qctrl = qctrl  # type: QuantizationController
         self.stats = QuantizationConfigurationStatistics(0, 0)
+        self._target_device = target_device
 
     def collect(self) -> QuantizationConfigurationStatistics:
         # pylint: disable=too-many-branches
@@ -329,7 +333,8 @@ class ShareEdgesQuantizedDataPathStatisticsCollector(StatisticsCollector):
                 self.stats.quantized_edges_in_cfg += 1
 
     def get_merged_original_graph_with_patterns(self, original_graph: PTNNCFGraph):
-        pattern = PT_HW_FUSED_PATTERNS.get_full_pattern_graph()
+        pattern =\
+            PatternsManager.get_full_pattern_graph(BackendType.TORCH, self._target_device)
         # pylint: disable=protected-access
         matches = find_subgraphs_matching_pattern(original_graph._nx_graph, pattern)
         merged_graph = deepcopy(original_graph._nx_graph)

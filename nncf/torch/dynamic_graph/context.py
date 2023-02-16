@@ -141,9 +141,13 @@ class TracingContext:
             # so we need to check again if a node is already added.
             node = self.graph.find_node(op_address, tensor_metas, self._input_comparators_per_scope)
             if node is None:
+                mid = id(self.get_current_module())
                 node = self.graph.add_node(
                     op_address, tensor_metas, self._input_comparators_per_scope, inputs,
-                    DynamicGraphNodeParameters(module_attrs, ignored_algorithms, is_called_inside_nncf_module))
+                    DynamicGraphNodeParameters(module_attrs,
+                                               ignored_algorithms,
+                                               is_called_inside_nncf_module,
+                                               calling_module_id=mid))
         return node
 
     def get_caller_context(self, operator_name: str) -> OperationAddress:

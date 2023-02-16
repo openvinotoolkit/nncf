@@ -10,6 +10,7 @@
  See the License for the specific language governing permissions and
  limitations under the License.
 """
+import functools
 import os
 import sys
 from abc import ABC
@@ -38,7 +39,6 @@ class ITelemetry(ABC):
         :param category: the application code
         :return: None
         """
-        pass
 
     @abstractmethod
     def send_event(self, event_category: str, event_action: str, event_label: str, event_value: int = 1,
@@ -54,7 +54,6 @@ class ITelemetry(ABC):
         :param kwargs: additional parameters
         :return: None
         """
-        pass
 
     @abstractmethod
     def end_session(self, category: str, **kwargs):
@@ -65,7 +64,6 @@ class ITelemetry(ABC):
         :param category: the application code
         :return: None
         """
-        pass
 
 
 def skip_if_raised(func: Callable[..., None]) -> Callable[..., None]:
@@ -73,9 +71,11 @@ def skip_if_raised(func: Callable[..., None]) -> Callable[..., None]:
     For the calls on the decorated function the execution will continue from the statement after the function
     even if an exception was triggered inside the function. The function to be wrapped must return nothing or None.
     """
+    @functools.wraps(func)
     def wrapped(*args, **kwargs):
         try:
             func()
+        #pylint:disable=broad-except
         except Exception as e:
             nncf_logger.debug(f"Skipped calling {func.__name__} - internally triggered exception {e}")
     return wrapped
@@ -87,6 +87,7 @@ class NNCFTelemetry(ITelemetry):
     def __init__(self):
         try:
             self._impl = Telemetry(app_name='nncf', app_version=__version__, tid=self.MEASUREMENT_ID)
+        #pylint:disable=broad-except
         except Exception as e:
             nncf_logger.debug(f"Failed to instantiate telemetry object: exception {e}")
 
