@@ -166,10 +166,11 @@ class WeightsModel(OVReferenceModel):
         matmul_1 = opset.matmul(conv_tr, weights_1, transpose_a=False, transpose_b=False, name="MatMul_1")
         weights_0 = self._rng.random((1, 3, 1, 1)).astype(np.float32)
         matmul_0 = opset.matmul(weights_0, matmul_1, transpose_a=False, transpose_b=False, name="MatMul_0")
-        matmul = opset.matmul(matmul_0, matmul_1, transpose_a=False, transpose_b=True, name="MatMul")
+        # TODO (l-bat): Unkomment after quantization support MatMul with 2 acivations
+        # matmul = opset.matmul(matmul_0, matmul_1, transpose_a=False, transpose_b=True, name="MatMul")
         matmul_const = opset.matmul(weights_1, weights_0, transpose_a=True, transpose_b=False, name="MatMul_const")
 
-        add = opset.add(matmul_const, matmul)
+        add = opset.add(matmul_const, matmul_0)
         result = opset.result(add, name="Result")
         model = ov.Model([result], [input_1])
         return model
