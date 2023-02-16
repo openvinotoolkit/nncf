@@ -17,7 +17,6 @@ from collections import Counter
 import onnx
 import numpy as np
 
-from nncf import nncf_logger
 from nncf.common.graph.transformations.commands import TargetType
 from nncf.common.graph.transformations.layout import TransformationLayout
 from nncf.onnx.graph.onnx_graph import ONNXGraph
