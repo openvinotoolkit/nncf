@@ -58,10 +58,12 @@ def calculate_scale_zero_point(input_low: np.ndarray, input_high: np.ndarray, le
     Calculates Quantizer/Dequantizer layer scale level.
     Returns scale and zero_point values for the quantizer.
 
-    :param input_low: Minimum limit for input value.
-    :param input_high: Maximum limit for input value.
-    :param level_low: The minimum level of quantizer quants.
-    :param level_high: The maximum level of quantizer quants.
+    :param input_low: The minimum limit for an input value based on collected statistics.
+    :param input_high: The maximum limit for an input value based on collected statistics.
+    :param level_low: The minimum level in the integer range to quantize.
+        The default is "0" for an unsigned range, and "-2^(bit-1)" for a signed one .
+    :param level_high: The maximum level in the integer range to quantize.
+        The default is "2^bits-1" for an unsigned range, and "2^(bit-1)-1" for a signed one.
     :param mode: Symmetric or Asymmetric mode.
     :param tensor_type: Value type of the tensor. Could be INT8 or UINT8.
     :param eps: The correction value is added to the input range to avoid division by zero.
@@ -71,7 +73,7 @@ def calculate_scale_zero_point(input_low: np.ndarray, input_high: np.ndarray, le
     scale, zero_point = None, None
     if mode == QuantizationMode.SYMMETRIC:
         input_low = np.zeros_like(input_high) if tensor_type == np.uint8 else -input_high
-        scale = np.array((input_high - input_low) / (level_high - level_low))
+        scale = np.array((input_high - input_low) / input_range_safe)
         zero_point = np.zeros_like(scale, dtype=np.int32)
     elif mode == QuantizationMode.ASYMMETRIC:
         scale = np.array((input_high - input_low) / input_range_safe)
