@@ -658,16 +658,16 @@ class FilterPruningController(BasePruningAlgoController):
                                                                                                    'filter_pruning'))
         self._bn_adaptation.run(self.model)
 
-    def prepare_for_inference(self, save_original_model: bool = False) -> NNCFNetwork:
+    def prepare_for_inference(self, make_model_copy: bool = False) -> NNCFNetwork:
         """
         Prepare NNCFNetwork for inference by converting NNCF modules to torch native format.
 
-        :param save_original_model: `True` means that a copy of the model will be modified.
+        :param make_model_copy: `True` means that a copy of the model will be modified.
 
         :return NNCFNetwork: Converted model.
         """
         model = self.model
-        if save_original_model:
+        if make_model_copy:
             model = copy.deepcopy(self.model)
 
         graph = model.get_original_graph()

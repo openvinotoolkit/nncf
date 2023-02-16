@@ -21,7 +21,7 @@ from nncf.config import NNCFConfig
 from nncf.torch.quantization.layers import AsymmetricQuantizer
 from nncf.torch.quantization.layers import PTQuantizerSpec
 from nncf.torch.quantization.layers import SymmetricQuantizer
-from nncf.torch.quantization.prepare_for_inference import convert_to_fakequantizer
+from nncf.torch.quantization.prepare_for_inference import convert_to_torch_fakequantizer
 from tests.common.quantization.data_generators import check_outputs
 from tests.common.quantization.data_generators import generate_random_low_and_range_by_input_size
 from tests.common.quantization.data_generators import generate_scale_by_input_size
@@ -161,7 +161,7 @@ def test_converting_symmetric_quantizer(input_size, is_per_channel, is_weights, 
 
     x_nncf = quantizer(test_input)
 
-    fq = convert_to_fakequantizer(quantizer)
+    fq = convert_to_torch_fakequantizer(quantizer)
 
     fq_levels = fq.quant_max - fq.quant_min
     assert fq_levels == 255, "Levels in converted FQ should be 255"
@@ -231,7 +231,7 @@ def test_converting_asymmetric_quantizer(input_size, is_per_channel, is_weights,
 
     x_nncf = quantizer(test_input)
 
-    fq = convert_to_fakequantizer(quantizer)
+    fq = convert_to_torch_fakequantizer(quantizer)
 
     fq_levels = fq.quant_max - fq.quant_min
     assert fq_levels == 255, "Levels in converted FQ should be 255"
@@ -314,17 +314,17 @@ def test_prepare_for_inference_quantization_and_pruning():
     assert torch.all(torch.isclose(x_nncf, x_torch)), f"{x_nncf.view(-1)} != {x_torch.view(-1)}"
 
 
-@pytest.mark.parametrize("save_original_model", (True, False))
+@pytest.mark.parametrize("make_model_copy", (True, False))
 @pytest.mark.parametrize("algo", (["quantization"], ["filter_pruning"], ["filter_pruning", "quantization"]))
-def test_save_original_model(algo, save_original_model):
+def test_make_model_copy(algo, make_model_copy):
     model = BasicConvTestModel()
     config = _get_config_for_algo(algo, model.INPUT_SIZE)
     register_bn_adaptation_init_args(config)
     compressed_model, compression_ctrl = create_compressed_model_and_algo_for_test(model, config)
 
-    inference_model = compression_ctrl.prepare_for_inference(save_original_model=save_original_model)
+    inference_model = compression_ctrl.prepare_for_inference(make_model_copy=make_model_copy)
 
-    if save_original_model:
+    if make_model_copy:
         assert id(inference_model) != id(compressed_model)
     else:
         assert id(inference_model) == id(compressed_model)

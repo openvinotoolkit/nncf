@@ -1452,20 +1452,20 @@ class QuantizationController(QuantizationControllerBase):
         nncf_stats.register('quantization', stats)
         return nncf_stats
 
-    def prepare_for_inference(self, save_original_model: bool = False) -> NNCFNetwork:
+    def prepare_for_inference(self, make_model_copy: bool = False) -> NNCFNetwork:
         """
         Prepare NNCFNetwork for inference by converting NNCF modules to torch native format.
 
-        :param save_original_model: `True` means that a copy of the model will be modified.
+        :param make_model_copy: `True` means that a copy of the model will be modified.
 
         :return NNCFNetwork: Converted model.
         """
         model = self.model
-        if save_original_model:
+        if make_model_copy:
             model = copy.deepcopy(self.model)
 
-        replace_quantizer_to_torch_native_module(model)
-        remove_disabled_quantizers(model)
+        model = replace_quantizer_to_torch_native_module(model)
+        model = remove_disabled_quantizers(model)
 
         return model
 

@@ -22,16 +22,18 @@ from nncf.torch.quantization.layers import BaseQuantizer
 from nncf.torch.quantization.layers import SymmetricQuantizer
 
 
-def replace_quantizer_to_torch_native_module(model: NNCFNetwork) -> None:
+def replace_quantizer_to_torch_native_module(model: NNCFNetwork) -> NNCFNetwork:
     """
     Replace NNCF quantizer modules to PyTorch FakeQuantizer module and remove unused quantizer operators.
 
     :param model: Target model.
+
+    :return: The modified NNCF network.
     """
 
     for key in model.external_quantizers.keys():
         if model.external_quantizers[key].is_enabled_quantization():
-            model.external_quantizers[key] = convert_to_fakequantizer(model.external_quantizers[key])
+            model.external_quantizers[key] = convert_to_torch_fakequantizer(model.external_quantizers[key])
 
     for node in model.get_original_graph().get_all_nodes():
         if node.node_type in ["nncf_model_input", "nncf_model_output"]:
@@ -52,16 +54,18 @@ def replace_quantizer_to_torch_native_module(model: NNCFNetwork) -> None:
                         data = torch.min(torch.max(data, input_low), input_high)
                         data = op.op.quantize(data, execute_traced_op_as_identity=False)
                         nncf_module.weight.data = data
-                    op.op = convert_to_fakequantizer(op.op)
+                    op.op = convert_to_torch_fakequantizer(op.op)
 
         if hasattr(nncf_module, "post_ops"):
             for key in list(nncf_module.post_ops.keys()):
                 op = nncf_module.get_post_ops(key)
                 if isinstance(op.op, BaseQuantizer) and op.op.is_enabled_quantization():
-                    op.op = convert_to_fakequantizer(op.op)
+                    op.op = convert_to_torch_fakequantizer(op.op)
+
+    return model
 
 
-def convert_to_fakequantizer(nncf_quantizer: BaseQuantizer) -> FakeQuantize:
+def convert_to_torch_fakequantizer(nncf_quantizer: BaseQuantizer) -> FakeQuantize:
     """
     Convert BaseQuantizer module to FakeQuantize.
 
@@ -114,11 +118,13 @@ def convert_to_fakequantizer(nncf_quantizer: BaseQuantizer) -> FakeQuantize:
     return fakequantizer
 
 
-def remove_disabled_quantizers(model: NNCFNetwork) -> None:
+def remove_disabled_quantizers(model: NNCFNetwork) -> NNCFNetwork:
     """
     Remove all unused quantizer operators from the model.
 
     :param model: Compressed model.
+
+    :return: The modified NNCF network.
     """
 
     if hasattr(model, "external_quantizers"):
@@ -144,3 +150,5 @@ def remove_disabled_quantizers(model: NNCFNetwork) -> None:
                 op = nncf_module.post_ops(key)
                 if isinstance(op, BaseQuantizer) and not op.is_enabled_quantization():
                     nncf_module.remove_post_forward_operation(key)
+
+    return model
