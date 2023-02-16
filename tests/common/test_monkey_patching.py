@@ -28,24 +28,28 @@ def wrapper2(self, fn, *args, **kwargs):  # pylint: disable=unused-argument
 
 
 def assert_wrapper_stack(wrapper_stack=None):
-    assert wrapper_stack == CORRECT_WRAPPER_STACK
+    assert wrapper_stack == CORRECT_WRAPPER_STACK, f"{wrapper_stack} != {CORRECT_WRAPPER_STACK}"
 
 
 class TestOverrideClass:
     def assert_wrapper_stack_method(self, wrapper_stack=None):
-        assert wrapper_stack == CORRECT_WRAPPER_STACK
+        assert wrapper_stack == CORRECT_WRAPPER_STACK, f"{wrapper_stack} != {CORRECT_WRAPPER_STACK}"
 
     @staticmethod
     def assert_wrapper_stack_static(wrapper_stack=None):
-        assert wrapper_stack == CORRECT_WRAPPER_STACK
+        assert wrapper_stack == CORRECT_WRAPPER_STACK, f"{wrapper_stack} != {CORRECT_WRAPPER_STACK}"
 
     @classmethod
     def assert_wrapper_stack_class(cls, wrapper_stack=None):
-        assert wrapper_stack == CORRECT_WRAPPER_STACK
+        assert wrapper_stack == CORRECT_WRAPPER_STACK, f"{wrapper_stack} != {CORRECT_WRAPPER_STACK}"
 
 
 def test_patcher():
     global CORRECT_WRAPPER_STACK
+
+    def wrapper3(self, fn, *args, **kwargs):  # pylint: disable=unused-argument
+        kwargs["wrapper_stack"] += "_wrapper3"
+        return fn(*args, **kwargs)
 
     test_obj = TestOverrideClass()
 
@@ -63,26 +67,48 @@ def test_patcher():
     # Test single patch static method
     PATCHER.patch(TestOverrideClass.assert_wrapper_stack_static, wrapper1)
     CORRECT_WRAPPER_STACK = "base_wrapper1"
-    test_obj.assert_wrapper_stack_static(wrapper_stack="base")  # doesn't work if called from class
+    test_obj.assert_wrapper_stack_static(wrapper_stack="base")  # doesn't work if called from class level
 
     # Test single patch class method
     PATCHER.patch(TestOverrideClass.assert_wrapper_stack_class, wrapper1)
     CORRECT_WRAPPER_STACK = "base_wrapper1"
-    test_obj.assert_wrapper_stack_class(wrapper_stack="base")  # doesn't work if called from class
+    test_obj.assert_wrapper_stack_class(wrapper_stack="base")  # doesn't work if called from class level
 
     # Test single patch object method
     PATCHER.patch(TestOverrideClass.assert_wrapper_stack_method, wrapper1)
     CORRECT_WRAPPER_STACK = "base_wrapper1"
     test_obj.assert_wrapper_stack_method(wrapper_stack="base")
-    once_wrapped_ref = TestOverrideClass.assert_wrapper_stack_method
 
     # Test applying two nested patches
-    PATCHER.patch(TestOverrideClass.assert_wrapper_stack_method, wrapper2, override=False)
+    PATCHER.patch(TestOverrideClass.assert_wrapper_stack_method, wrapper2, force=False)
     CORRECT_WRAPPER_STACK = "base_wrapper2_wrapper1"
-    test_obj.assert_wrapper_stack_method(wrapper_stack="base")  # doesn't work if patched thrice
+    test_obj.assert_wrapper_stack_method(wrapper_stack="base")
+
+    # Test applying three nested patches
+    PATCHER.patch(TestOverrideClass.assert_wrapper_stack_method, wrapper3, force=False)
+    CORRECT_WRAPPER_STACK = "base_wrapper3_wrapper2_wrapper1"
+    test_obj.assert_wrapper_stack_method(wrapper_stack="base")
+
+    # Test unpatching with depth = 0
+    PATCHER.unpatch(TestOverrideClass.assert_wrapper_stack_method, depth=0)
+    CORRECT_WRAPPER_STACK = "base"
+    test_obj.assert_wrapper_stack_method(wrapper_stack="base")
+
+    # Test unpatching with depth = 1
+    PATCHER.patch(TestOverrideClass.assert_wrapper_stack_method, wrapper1, force=False)
+    PATCHER.patch(TestOverrideClass.assert_wrapper_stack_method, wrapper2, force=False)
+    PATCHER.unpatch(TestOverrideClass.assert_wrapper_stack_method, depth=1)
+    CORRECT_WRAPPER_STACK = "base_wrapper1"
+    test_obj.assert_wrapper_stack_method(wrapper_stack="base")
+
+    # Test unpatching with depth = 2
+    PATCHER.patch(TestOverrideClass.assert_wrapper_stack_method, wrapper2, force=False)
+    PATCHER.unpatch(TestOverrideClass.assert_wrapper_stack_method, depth=2)
+    CORRECT_WRAPPER_STACK = "base"
+    test_obj.assert_wrapper_stack_method(wrapper_stack="base")
 
     # Test overriding patch
-    TestOverrideClass.assert_wrapper_stack_method = once_wrapped_ref   # revert the last patching
-    PATCHER.patch(TestOverrideClass.assert_wrapper_stack_method, wrapper1, override=True)
+    PATCHER.patch(TestOverrideClass.assert_wrapper_stack_method, wrapper2, force=False)
+    PATCHER.patch(TestOverrideClass.assert_wrapper_stack_method, wrapper1, force=True)
     CORRECT_WRAPPER_STACK = "base_wrapper1"
     test_obj.assert_wrapper_stack_method(wrapper_stack="base")
