@@ -26,7 +26,11 @@ from nncf.common.quantization.structs import QuantizationPreset
 from nncf.data.dataset import Dataset
 from nncf.experimental.openvino_native.quantization.quantize import \
     quantize_impl
-from nncf.parameters import IgnoredScope, ModelType, TargetDevice
+from nncf.parameters import (
+    IgnoredScope,
+    ModelType,
+    TargetDevice
+)
 
 TModel = TypeVar('TModel')
 
@@ -126,26 +130,7 @@ def map_preset(preset):
 
 
 def map_quantization_parameters(pot_parameters):
-    def _map_parameters(parameters, supported_parameters,
-                        default_parameters, ignored_parameters):
-        result = {}
-        for name in parameters:
-            if (name in ignored_parameters or
-                (name in default_parameters and
-                 parameters[name] == default_parameters[name])):
-                continue
-
-            if name in supported_parameters:
-                kwarg = parameters_mapping[name](parameters[name])
-                if kwarg is not None:
-                    result.update(kwarg)
-            elif isinstance(parameters[name], (list, dict, tuple)):
-                _map_parameters(parameters[name], {}, {}, [])
-            else:
-                raise ValueError(f'{name} parameter is not supported')
-        return result
-
-    parameters_mapping = {
+    supported_parameters = {
         'target_device': map_target_device,
         'model_type': map_model_type,
         'ignored': map_ignored_scope,
@@ -173,8 +158,20 @@ def map_quantization_parameters(pot_parameters):
         'weight_decay'
     ]
 
-    return _map_parameters(pot_parameters, parameters_mapping,
-                           default_parameters, ignored_parameters)
+    result = {}
+    for name in pot_parameters:
+        if (name in ignored_parameters or
+            (name in default_parameters and
+             pot_parameters[name] == default_parameters[name])):
+            continue
+        if name in supported_parameters:
+            kwarg = supported_parameters[name](pot_parameters[name])
+            if kwarg is not None:
+                result.update(kwarg)
+        else:
+            raise ValueError(f'{name} parameter is not supported')
+
+    return result
 
 
 def map_paramaters(pot_algo_name, nncf_algo_name, pot_parameters):
