@@ -297,7 +297,8 @@ def generate_sweep_data(
     :param bits: Number of bits of quantization.
     :param is_per_channel: `True` for per-channel quantization, `False` for per-tensor.
     :param is_weights: Boolean that defines tensor type. True for Weights, False for Activations.
-    :param rtol_for_mid_point: Relative tolerant value for points is in the middle between quant points, defaults to 0.00005.
+    :param rtol_for_mid_point: Relative tolerant value for points is in the middle between quant points,
+        defaults to 0.00005.
 
     :return np.array: inputs, is_near_mid_point, quant_lens
     """
@@ -343,7 +344,8 @@ def check_outputs(arr_a: np.array, arr_b: np.array, is_near_mid_point: np.array,
     :param arr_a: Data array.
     :param arr_b: Data array.
     :param is_near_mid_point: Array of that point is in the middle between quant points.
-    :param quant_lens: Array of quant length that used as tolerance parameter for points in the middle between quant points.
+    :param quant_lens: Array of quant length that used as tolerance parameter for points in the middle
+        between quant points.
     :param atol: The absolute tolerance parameter, defaults to 0.000001.
 
     :raises ValueError: If the arrays arr_a and arr_b do not match.
