@@ -358,6 +358,7 @@ class MinMaxQuantization(Algorithm):
                statistic_points: Optional[StatisticPointsContainer] = None,
                dataset: Optional[Dataset] = None) -> TModel:
         transformation_layout, transformation_commands = TransformationLayout(), []
+        weight_transformation_commands = []
         nncf_graph = NNCFGraphFactory.create(model) if self.nncf_graph is None else self.nncf_graph
         model_transformer = ModelTransformerFactory.create(model)
 
@@ -377,6 +378,11 @@ class MinMaxQuantization(Algorithm):
                 if (self._parameters.overflow_fix == OverflowFix.FIRST_LAYER and not weight_tensor_names) or \
                         self._parameters.overflow_fix == 'enable':
                     half_range = True
+                    weight_tensor = weight_tensor / 2
+                    command = self._backend_entity.create_weight_update_command(quantization_target_point,
+                                                                                weight_tensor, node)
+                    if command:
+                        weight_transformation_commands.append(command)
                 command = self._backend_entity.create_weight_quantizer_insertion_command(quantization_target_point,
                                                                                          qconfig, half_range,
                                                                                          weight_tensor, node)
@@ -396,6 +402,9 @@ class MinMaxQuantization(Algorithm):
                 raise RuntimeError('Inccorrect type of Quantization Target Point!')
 
         for transformation_command in transformation_commands:
+            transformation_layout.register(transformation_command)
+
+        for transformation_command in weight_transformation_commands:
             transformation_layout.register(transformation_command)
 
         quantized_model = model_transformer.transform(transformation_layout)

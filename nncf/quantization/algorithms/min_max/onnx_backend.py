@@ -92,6 +92,14 @@ class ONNXMinMaxAlgoBackend(MinMaxAlgoBackend):
         return ONNXQuantizerInsertionCommand(target_point, parameters)
 
     @staticmethod
+    def create_weight_update_command(target_point: ONNXTargetPoint,
+                                     quantizer_config: QuantizerConfig,
+                                     half_range: bool,
+                                     weight_tensor: np.ndarray,
+                                     node: NNCFNode) -> ONNXQuantizerInsertionCommand:
+        return None
+
+    @staticmethod
     def minmax_statistic_collector(use_abs_max: bool,
                                    reduction_shape: ReductionShape,
                                    num_samples: int = None) -> ONNXMinMaxStatisticCollector:
