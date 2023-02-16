@@ -38,6 +38,7 @@ from nncf.torch.initialization import PTInitializingDataLoader
 from nncf.torch.initialization import register_default_init_args
 from nncf.torch.layers import NNCF_MODULES_MAP
 from nncf.torch.model_creation import create_compressed_model
+from nncf.torch.nncf_module_replacement import get_original_module_scope_from_nncf_module_scope
 from nncf.torch.nncf_network import NNCFNetwork
 from nncf.torch.utils import get_all_modules_by_type
 from tests.shared.command import Command as BaseCommand
@@ -321,27 +322,22 @@ class MockModel(nn.Module):
         return None
 
 
-def check_correct_nncf_modules_replacement(model: NNCFNetwork, compressed_model: NNCFNetwork) \
+def check_correct_nncf_modules_replacement(model: torch.nn.Module, compressed_model: NNCFNetwork) \
         -> Tuple[Dict[Scope, Module], Dict[Scope, Module]]:
     """
-    Check that all convolutions in model was replaced by NNCF convolution.
+    Checks that all extendable modules in model were replaced by NNCF-extended counterparts.
     :param model: original model
     :param compressed_model: compressed model
-    :return: list of all convolutions in  original model and list of all NNCF convolutions from compressed model
+    :return: list of all extendable modules in `model` and list of all NNCF-extended modules
+     in `compressed_model`
     """
-    NNCF_MODULES_REVERSED_MAP = {value: key for key, value in NNCF_MODULES_MAP.items()}
     original_modules = get_all_modules_by_type(model, list(NNCF_MODULES_MAP.values()))
     nncf_modules = get_all_modules_by_type(compressed_model.get_nncf_wrapped_model(),
                                            list(NNCF_MODULES_MAP.keys()))
     assert len(original_modules) == len(nncf_modules)
-    print(original_modules, nncf_modules)
-    for scope in original_modules.keys():
-        sparse_scope = deepcopy(scope)
-        elt = sparse_scope.pop()  # type: ScopeElement
-        elt.calling_module_class_name = NNCF_MODULES_REVERSED_MAP[elt.calling_module_class_name]
-        sparse_scope.push(elt)
-        print(sparse_scope, nncf_modules)
-        assert sparse_scope in nncf_modules
+    for nncf_scope in nncf_modules.keys():
+        original_scope = get_original_module_scope_from_nncf_module_scope(nncf_scope)
+        assert original_scope in original_modules
     return original_modules, nncf_modules
 
 

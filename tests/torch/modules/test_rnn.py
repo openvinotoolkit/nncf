@@ -29,9 +29,9 @@ from torch.nn.utils.rnn import PackedSequence
 from nncf.torch import nncf_model_input
 from nncf.torch.dynamic_graph.io_handling import wrap_nncf_model_outputs_with_objwalk
 from nncf.torch.dynamic_graph.context import TracingContext
-from nncf.torch.dynamic_graph.transform_graph import replace_modules
 from nncf.torch.layers import LSTMCellNNCF, NNCF_RNN, ITERATION_MODULES
 from nncf.torch.model_creation import create_compressed_model
+from nncf.torch.nncf_module_replacement import collect_modules_and_scopes_by_predicate
 from nncf.torch.utils import get_model_device
 from tests.torch.modules.seq2seq.gnmt import GNMT
 from tests.torch.helpers import get_empty_config, get_grads, create_compressed_model_and_algo_for_test
@@ -66,12 +66,15 @@ def replace_lstm(model):
         custom_lstm.to(device)
         return custom_lstm
 
+    lstm_modules = collect_modules_and_scopes_by_predicate(model, lambda x: isinstance(x, nn.LSTM))
     if isinstance(model, nn.LSTM):
         return replace_fn(model)
-    affected_scopes = []
-    stop_branching_fn = lambda _: False
-    return replace_modules(model, replace_fn, stop_branching_fn,
-                           affected_scopes)[0]
+    from nncf.torch.nncf_module_replacement import _replace_module_by_scope
+    for module, scope_set in lstm_modules.items():
+        replaced_module = replace_fn(module)
+        for scope in scope_set:
+            _replace_module_by_scope(model, scope, replaced_module)
+    return model
 
 
 def clone_test_data(data_list):
@@ -532,20 +535,28 @@ class TestNumberOfNodes:
         dummy_forward_fn(model)
 
         assert model.get_graph().get_nodes_count() == 373  # NB: may always fail in debug due to superfluous 'cat' nodes
-        assert len(counters) == 143
+        assert len(counters) == 142
 
         for name, counter in counters.items():
             if 'cell' in name or "LSTMCellForwardNNCF" in name:
                 assert counter.count == sequence_size, name
+            elif 'embedding' in name:
+                # embedding module is shared between the decoder and
+                # encoder, associated weight quantizer will be called
+                # twice
+                assert counter.count == 2, name
             else:
                 assert counter.count == 1, name
         new_seq_len = int(sequence_size / 2)
         dummy_forward_fn(model, new_seq_len)
         assert model.get_graph().get_nodes_count() == 373  # NB: may always fail in debug due to superfluous 'cat' nodes
-        assert len(counters) == 143
+        assert len(counters) == 142
         for name, counter in counters.items():
             if 'cell' in name or "LSTMCellForwardNNCF" in name:
                 assert counter.count == sequence_size + new_seq_len, name
+            elif 'embedding' in name:
+                # same as above
+                assert counter.count == 4, name
             else:
                 assert counter.count == 2, name
 
