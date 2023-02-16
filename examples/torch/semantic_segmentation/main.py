@@ -23,14 +23,12 @@ from os import path as osp
 import numpy as np
 import torch
 import torchvision.transforms as T
-
-from examples.torch.common.argparser import parse_args
 from torch.optim.lr_scheduler import ReduceLROnPlateau
 
 import examples.torch.semantic_segmentation.utils.data as data_utils
-from examples.torch.semantic_segmentation.utils import loss_funcs
 import examples.torch.semantic_segmentation.utils.transforms as JT
 from examples.torch.common.argparser import get_common_argument_parser
+from examples.torch.common.argparser import parse_args
 from examples.torch.common.example_logger import logger
 from examples.torch.common.execution import get_execution_mode
 from examples.torch.common.execution import prepare_model_for_execution
@@ -53,11 +51,12 @@ from examples.torch.common.utils import write_metrics
 from examples.torch.semantic_segmentation.metric import IoU
 from examples.torch.semantic_segmentation.test import Test
 from examples.torch.semantic_segmentation.train import Train
+from examples.torch.semantic_segmentation.utils import loss_funcs
 from examples.torch.semantic_segmentation.utils.checkpoint import save_checkpoint
 from nncf.api.compression import CompressionStage
+from nncf.common.accuracy_aware_training import create_accuracy_aware_training_loop
 from nncf.common.utils.tensorboard import prepare_for_tensorboard
 from nncf.config.utils import is_accuracy_aware_training
-from nncf.common.accuracy_aware_training import create_accuracy_aware_training_loop
 from nncf.torch import create_compressed_model
 from nncf.torch import load_state
 from nncf.torch.initialization import register_default_init_args
@@ -143,6 +142,7 @@ def get_dataset(dataset_name: str) -> torch.utils.data.Dataset:
     # Import the requested dataset
     if dataset_name.lower() == 'camvid':
         from examples.torch.semantic_segmentation.datasets import CamVid as dataset
+
         # Remove the road_marking class from the CamVid dataset as it's merged
         # with the road class
         if 'road_marking' in dataset.color_encoding:
@@ -444,7 +444,8 @@ def test(model, test_loader, criterion, class_encoding, config):
         images, gt_labels = iter(test_loader).next()
         color_predictions = predict(model, images, class_encoding, config)
 
-        from examples.torch.common.models.segmentation.unet import UNet, center_crop
+        from examples.torch.common.models.segmentation.unet import UNet
+        from examples.torch.common.models.segmentation.unet import center_crop
         if isinstance(model, UNet):
             # UNet predicts center image crops
             outputs_size_hw = (color_predictions.size()[2], color_predictions.size()[3])
@@ -539,6 +540,8 @@ def main_worker(current_gpu, config):
     log_common_mlflow_params(config)
 
     if is_export_only:
+        if config.prepare_for_inference:
+            compression_ctrl.prepare_for_inference()
         compression_ctrl.export_model(config.to_onnx)
         logger.info("Saved to {}".format(config.to_onnx))
         return
@@ -588,13 +591,18 @@ def main_worker(current_gpu, config):
 
     if 'test' in config.mode:
         logger.info(model)
-        model_parameters = filter(lambda p: p.requires_grad, model.parameters())
-        params = sum([np.prod(p.size()) for p in model_parameters])
+        val_model = model
+        if config.prepare_for_inference:
+            val_model = compression_ctrl.prepare_for_inference(make_model_copy=True)
+        model_parameters = filter(lambda p: p.requires_grad, val_model.parameters())
+        params = sum(np.prod(p.size()) for p in model_parameters)
         logger.info("Trainable argument count:{params}".format(params=params))
-        model = model.to(config.device)
-        test(model, val_loader, criterion, color_encoding, config)
+        val_model = val_model.to(config.device)
+        test(val_model, val_loader, criterion, color_encoding, config)
 
     if 'export' in config.mode:
+        if config.prepare_for_inference:
+            compression_ctrl.prepare_for_inference()
         compression_ctrl.export_model(config.to_onnx)
         logger.info("Saved to {}".format(config.to_onnx))
 
