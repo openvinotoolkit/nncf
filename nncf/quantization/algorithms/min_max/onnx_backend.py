@@ -93,10 +93,7 @@ class ONNXMinMaxAlgoBackend(MinMaxAlgoBackend):
 
     @staticmethod
     def create_weight_update_command(target_point: ONNXTargetPoint,
-                                     quantizer_config: QuantizerConfig,
-                                     half_range: bool,
-                                     weight_tensor: np.ndarray,
-                                     node: NNCFNode) -> ONNXQuantizerInsertionCommand:
+                                     weight_tensor: np.ndarray) -> ONNXQuantizerInsertionCommand:
         return None
 
     @staticmethod

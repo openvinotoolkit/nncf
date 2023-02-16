@@ -30,6 +30,7 @@ from nncf.experimental.openvino_native.graph.metatypes.openvino_metatypes import
 from nncf.experimental.openvino_native.graph.metatypes.openvino_metatypes import OVConvertMetatype
 from nncf.experimental.openvino_native.graph.metatypes.openvino_metatypes import GENERAL_WEIGHT_LAYER_METATYPES
 from nncf.experimental.openvino_native.graph.transformations.commands import OVQuantizerInsertionCommand
+from nncf.experimental.openvino_native.graph.transformations.commands import OVWeightUpdateCommand
 from nncf.experimental.openvino_native.graph.transformations.commands import OVTargetPoint
 from nncf.experimental.openvino_native.hardware.config import OVHWConfig
 from nncf.experimental.openvino_native.hardware.fused_patterns import OPENVINO_HW_FUSED_PATTERNS
@@ -90,6 +91,13 @@ class OVMinMaxAlgoBackend(MinMaxAlgoBackend):
                                                   node: NNCFNode) -> OVQuantizerInsertionCommand:
         parameters = calculate_weight_quantizer_parameters(weight_tensor, quantizer_config, half_range, node.metatype)
         return OVQuantizerInsertionCommand(target_point, parameters, half_range)
+
+    @staticmethod
+    def create_weight_update_command(quantization_target_point: OVTargetPoint, weight_tensor: np.ndarray):
+        weight_tensor /= 2
+        weight_update_target_point = OVTargetPoint(TargetType.LAYER, quantization_target_point.target_node_name,
+                                                   quantization_target_point.port_id)
+        return OVWeightUpdateCommand(weight_update_target_point, weight_tensor)
 
     @staticmethod
     def minmax_statistic_collector(use_abs_max: bool,
