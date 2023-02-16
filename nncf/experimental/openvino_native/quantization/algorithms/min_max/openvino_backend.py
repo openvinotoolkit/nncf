@@ -89,7 +89,7 @@ class OVMinMaxAlgoBackend(MinMaxAlgoBackend):
                                                   weight_tensor: np.ndarray,
                                                   node: NNCFNode) -> OVQuantizerInsertionCommand:
         parameters = calculate_weight_quantizer_parameters(weight_tensor, quantizer_config, half_range, node.metatype)
-        return OVQuantizerInsertionCommand(target_point, parameters, half_range)
+        return OVQuantizerInsertionCommand(target_point, parameters)
 
     @staticmethod
     def create_weight_update_command(quantization_target_point: OVTargetPoint, weight_tensor: np.ndarray):
@@ -118,7 +118,7 @@ class OVMinMaxAlgoBackend(MinMaxAlgoBackend):
 
     @staticmethod
     def get_weight_tensor(model: ov.Model, target_point: TargetPoint) -> Tuple[str, np.ndarray]:
-        return get_weight_tensor(target_point.target_node_name, target_point.target_port_id, model)
+        return get_weight_tensor(target_point.target_node_name, target_point.port_id, model)
 
     @staticmethod
     def get_weight_tensor_port_id(node: NNCFNode) -> int:
