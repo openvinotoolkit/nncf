@@ -26,6 +26,8 @@ from nncf.experimental.openvino_native.graph.transformations.commands import OVO
 from nncf.experimental.openvino_native.graph.transformations.commands import OVModelExtractionCommand
 from nncf.experimental.openvino_native.graph.transformations.commands import OVBiasCorrectionCommand
 from nncf.experimental.openvino_native.graph.transformations.commands import OVFQNodeRemovingCommand
+from nncf.experimental.openvino_native.graph.transformations.commands import OVWeightUpdateCommand
+from nncf.experimental.openvino_native.graph.node_utils import get_weight_tensor
 
 
 class ModelPrecision(Enum):
@@ -73,6 +75,7 @@ class OVModelTransformer(ModelTransformer):
         fq_nodes_removing_transformations = []
         quantizer_insertion_transformations = []
         bias_correction_transformations = []
+        weight_update_transformations = []
         model_extraction_transformation = None
         transformations = transformation_layout.transformations
 
@@ -87,6 +90,8 @@ class OVModelTransformer(ModelTransformer):
                 model_extraction_transformation = transformation
             elif isinstance(transformation, OVBiasCorrectionCommand):
                 bias_correction_transformations.append(transformation)
+            elif isinstance(transformation, OVWeightUpdateCommand):
+                weight_update_transformations.append(transformation)
 
         if output_insertion_transformations:
             self._apply_output_insertion_transformations(output_insertion_transformations)
@@ -98,6 +103,8 @@ class OVModelTransformer(ModelTransformer):
             self._apply_bias_correction_transformations(bias_correction_transformations)
         if model_extraction_transformation:
             self._model = self._apply_model_extraction_transformation(model_extraction_transformation)
+        if weight_update_transformations:
+            self._apply_update_weights_transformations(weight_update_transformations)
 
         return self._model
 
@@ -179,6 +186,22 @@ class OVModelTransformer(ModelTransformer):
         """
         for transformation in transformations:
             self._insert_fake_quantize_op(transformation)
+
+    def _apply_update_weights_transformations(self, transformations: List[OVWeightUpdateCommand]) -> None:
+        for transformation in transformations:
+            self._update_weight(transformation)
+
+    def _update_weight(self, transformation: OVWeightUpdateCommand):
+        weight_node_name, _ = get_weight_tensor(transformation.target_point.target_node_name,
+                                                transformation.target_point.port_id, self._model)
+        for op in self._model.get_ops():
+            if op.get_friendly_name() == weight_node_name:
+                weight_node = op
+            if op.get_friendly_name() == transformation.target_point.target_node_name:
+                consumed_weight_node = op
+        new_weight_constant = opset.constant(transformation.weight_value, dtype=weight_node.get_element_type())
+        weight_port_id = consumed_weight_node.input(transformation.target_point.port_id)
+        weight_port_id.replace_source_output(new_weight_constant.output(0))
 
     def _insert_fake_quantize_op(self, transformation: OVQuantizerInsertionCommand) -> None:
         fq_params = transformation.quantizer_parameters
