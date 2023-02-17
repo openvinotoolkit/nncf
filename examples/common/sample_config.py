@@ -128,15 +128,9 @@ def _fail_if_training_with_eval_only_config(sample_config: SampleConfig):
     if sample_config.eval_only and 'train' in sample_config.mode:
         raise RuntimeError(EVAL_ONLY_ERROR_TEXT)
 
-def create_sample_config(args, parser) -> SampleConfig:
+def create_sample_config(args, parser, **kwargs) -> SampleConfig:
     sample_config = _parse_sample_config(args, parser)
+    sample_config.update(**kwargs)
     _fail_if_training_with_eval_only_config(sample_config)
-    sample_config = _embed_nncf_config(args, sample_config)
-
-    return sample_config
-
-
-def create_sample_config_for_separate_train_eval_scripts(args, parser) -> SampleConfig:
-    sample_config = _parse_sample_config(args, parser)
     sample_config = _embed_nncf_config(args, sample_config)
     return sample_config

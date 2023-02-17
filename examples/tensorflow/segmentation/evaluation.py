@@ -15,6 +15,7 @@ import sys
 
 import tensorflow as tf
 
+from examples.common.sample_config import create_sample_config
 from examples.tensorflow.common.experimental_patcher import patch_if_experimental_quantization
 from examples.tensorflow.common.utils import close_strategy_threadpool
 from nncf.tensorflow import create_compressed_model
@@ -28,7 +29,6 @@ from examples.tensorflow.common.distributed import get_distribution_strategy
 from examples.tensorflow.common.logger import logger
 from examples.tensorflow.common.object_detection.datasets.builder import COCODatasetBuilder
 from examples.tensorflow.common.object_detection.checkpoint_utils import get_variables
-from examples.common.sample_config import create_sample_config_for_separate_train_eval_scripts
 from examples.common.sample_config import SampleConfig
 from examples.tensorflow.common.utils import configure_paths
 from examples.tensorflow.common.utils import get_saving_parameters
@@ -85,7 +85,7 @@ def get_config_from_argv(argv, parser):
         {'dataset_type': 'tfrecords'}
     )
 
-    config_from_json = create_sample_config_for_separate_train_eval_scripts(args, parser)
+    config_from_json = create_sample_config(args, parser, mode='test')
     predefined_config = get_predefined_config(config_from_json.model)
 
     sample_config.update(predefined_config)

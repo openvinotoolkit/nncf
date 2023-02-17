@@ -18,6 +18,7 @@ from pathlib import Path
 import numpy as np
 import tensorflow as tf
 
+from examples.common.sample_config import create_sample_config
 from examples.tensorflow.common.experimental_patcher import patch_if_experimental_quantization
 from examples.tensorflow.common.utils import close_strategy_threadpool
 from nncf.tensorflow import create_compressed_model
@@ -33,7 +34,6 @@ from examples.tensorflow.common.logger import logger
 from examples.tensorflow.common.object_detection.checkpoint_utils import get_variables
 from examples.tensorflow.common.object_detection.datasets.builder import COCODatasetBuilder
 from examples.tensorflow.common.optimizer import build_optimizer
-from examples.common.sample_config import create_sample_config_for_separate_train_eval_scripts
 from examples.common.sample_config import EVAL_ONLY_ERROR_TEXT
 from examples.common.sample_config import SampleConfig
 from examples.tensorflow.common.scheduler import build_scheduler
@@ -79,7 +79,7 @@ def get_config_from_argv(argv, parser):
         {'dataset_type': 'tfrecords'}
     )
 
-    config_from_json = create_sample_config_for_separate_train_eval_scripts(args, parser)
+    config_from_json = create_sample_config(args, parser, mode='train')
     if config_from_json.eval_only:
         raise RuntimeError(EVAL_ONLY_ERROR_TEXT)
 
