@@ -33,6 +33,10 @@ REF_FQ_NODES = [
 
 @pytest.mark.parametrize('model_creator_func, ref_nodes', zip([LinearModel, ConvModel, MatMul2DModel], REF_FQ_NODES))
 def test_compress_weights(model_creator_func, ref_nodes):
+
+    # TODO(andrey-churkin): Revert after Ref: fixes.
+    pytest.skip('Ref: 103920')
+
     (quntized_op_name, inp_port), ref_fqs_names = ref_nodes
     model = model_creator_func().ov_model
     dataset = get_dataset_for_test(model)
