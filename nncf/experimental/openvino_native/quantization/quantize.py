@@ -14,7 +14,6 @@
 from typing import Optional
 
 import openvino.runtime as ov
-from openvino._offline_transformations import compress_quantize_weights_transformation
 
 from nncf.data import Dataset
 from nncf.common.quantization.structs import QuantizationPreset
