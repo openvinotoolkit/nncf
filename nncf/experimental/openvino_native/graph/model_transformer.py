@@ -57,10 +57,10 @@ class OVModelTransformer(ModelTransformer):
 
     def transform(self, transformation_layout: TransformationLayout) -> ov.Model:
         """
-        Creates lists of transformations and applies them in the correct order.
-        The transformations are applied in a way that original model is not affected.
-        A new model with applied transformations will be returned.
-        If there are no transformations returns a new instance of the original model.
+        Applies transformations to the model using an out-of-place approach.
+        The transformations do not affect the original model, and a new model
+        is returned with the transformations applied. If there are no transformations,
+        returns a new instance of the original model.
 
         :param transformation_layout: Transformation commands.
         :return: The new instance of a model with applied transformations.
@@ -83,31 +83,29 @@ class OVModelTransformer(ModelTransformer):
                 model_extraction_transformation = transformation
             elif isinstance(transformation, OVBiasCorrectionCommand):
                 bias_correction_transformations.append(transformation)
+        model = self._model.clone()
         # Inplace transformations; Using deepcopy of model
         if fq_nodes_removing_transformations:
-            model = self._apply_fq_nodes_removing_transformation(fq_nodes_removing_transformations)
-        elif quantizer_insertion_transformations:
-            model = self._apply_quantizer_insertion_transformations(quantizer_insertion_transformations)
-        elif bias_correction_transformations:
-            model = self._apply_bias_correction_transformations(bias_correction_transformations)
-        elif model_extraction_transformation:
-            model = self._apply_model_extraction_transformation(model_extraction_transformation)
-        elif output_insertion_transformations:
-            model = self._apply_output_insertion_transformations(output_insertion_transformations)
-        # No transformation applied
-        else:
-            model = self._model.clone()
+            model = self._apply_fq_nodes_removing_transformation(model, fq_nodes_removing_transformations)
+        if quantizer_insertion_transformations:
+            model = self._apply_quantizer_insertion_transformations(model, quantizer_insertion_transformations)
+        if bias_correction_transformations:
+            model = self._apply_bias_correction_transformations(model, bias_correction_transformations)
+        if model_extraction_transformation:
+            model = self._apply_model_extraction_transformation(model, model_extraction_transformation)
+        if output_insertion_transformations:
+            model = self._apply_output_insertion_transformations(model, output_insertion_transformations)
         return model
 
-    def _apply_output_insertion_transformations(self,
+    def _apply_output_insertion_transformations(self, model: ov.Model,
                                                 transformations: List[OVOutputInsertionCommand]) -> ov.Model:
         """
         Applies incoming transformations to the model.
 
+        :param model: Model to apply transformations.
         :param transformations: OVOutputInsertionCommand transformations.
         :return: Model with inserted outputs.
         """
-        model = self._model.clone()
         extra_model_outputs = OVModelTransformer._get_extra_model_outputs(model, transformations)
         return self._insert_outputs(model, outputs=extra_model_outputs)
 
@@ -157,14 +155,15 @@ class OVModelTransformer(ModelTransformer):
 
         return ov.Model(model_outputs + extra_model_outputs, params)
 
-    def _apply_fq_nodes_removing_transformation(self, transformations: List[OVFQNodeRemovingCommand]) -> ov.Model:
+    def _apply_fq_nodes_removing_transformation(self, model: ov.Model,
+                                                transformations: List[OVFQNodeRemovingCommand]) -> ov.Model:
         """
         Removes the layers from the model.
 
+        :param model: Model to apply transformations.
         :param transformations: Node removing transformations.
         :return: Model with removed FakeQuantize nodes.
         """
-        model = self._model.clone()
         name_to_node_mapping = OVModelTransformer._get_name_to_node_mapping(model)
         for transformation in transformations:
             node = name_to_node_mapping[transformation.target_point.target_node_name]
@@ -176,16 +175,15 @@ class OVModelTransformer(ModelTransformer):
             del name_to_node_mapping[transformation.target_point.target_node_name]
         return model
 
-    def _apply_quantizer_insertion_transformations(
-            self,
-            transformations: List[OVQuantizerInsertionCommand]) -> ov.Model:
+    def _apply_quantizer_insertion_transformations(self, model: ov.Model,
+                                                   transformations: List[OVQuantizerInsertionCommand]) -> ov.Model:
         """
         Applies transformations on the model.
 
+        :param model: Model to apply transformations.
         :param transformations: List of the OVQuantizerInsertionCommand transformations.
         :return: Model with inserted FakeQuantize nodes.
         """
-        model = self._model.clone()
         model_precision = ModelPrecision.FP32
         for op in model.get_ops():
             if op.get_type_name() == 'Constant':
@@ -240,14 +238,14 @@ class OVModelTransformer(ModelTransformer):
         else:
             raise RuntimeError(f'Incorrect target point type {transform_type}')
 
-    def _apply_bias_correction_transformations(self, transformations: List[OVBiasCorrectionCommand]) -> ov.Model:
+    def _apply_bias_correction_transformations(self, model, transformations: List[OVBiasCorrectionCommand]) -> ov.Model:
         """
         Applies bias correction transformations on the model.
 
+        :param model: Model to apply transformations.
         :param transformations: List of the bias correction transformations.
         :return: Model with corrected bias.
         """
-        model = self._model.clone()
         name_to_node_mapping = OVModelTransformer._get_name_to_node_mapping(model)
         for transformation in transformations:
             node_name = transformation.target_point.target_node_name
@@ -272,14 +270,15 @@ class OVModelTransformer(ModelTransformer):
             biased_port.replace_source_output(new_bias.output(0))
         return model
 
-    def _apply_model_extraction_transformation(self, transformation: OVModelExtractionCommand) -> ov.Model:
+    def _apply_model_extraction_transformation(self, model: ov.Model,
+                                               transformation: OVModelExtractionCommand) -> ov.Model:
         """
         Extracts sub-model from the original based on the inputs and outputs names.
 
+        :param model: Model to apply transformations.
         :param transformation: Model extraction transformation.
         :return: Extracted sub-model.
         """
-        model = self._model.clone()
         name_to_node_mapping = OVModelTransformer._get_name_to_node_mapping(model)
         params, results = [], []
         for input_name in transformation.inputs:

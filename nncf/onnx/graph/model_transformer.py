@@ -78,10 +78,10 @@ class ONNXModelTransformer(ModelTransformer):
 
     def transform(self, transformation_layout: TransformationLayout) -> onnx.ModelProto:
         """
-        Creates lists of transformations and applies them in the correct order.
-        The transformations are applied in a way that original model is not affected.
-        A new model with applied transformations will be returned.
-        If there are no transformations returns a new instance of the original model.
+        Applies transformations to the model using an out-of-place approach.
+        The transformations do not affect the original model, and a new model
+        is returned with the transformations applied. If there are no transformations,
+        returns a new instance of the original model.
 
         :param transformation_layout: Transformation commands.
         :return: The new instance of a model with applied transformations.
@@ -91,9 +91,10 @@ class ONNXModelTransformer(ModelTransformer):
         bias_correction_transformations = []
         qdq_node_removing_transformations = []
         model_extraction_transformation = None
-
         transformations = transformation_layout.transformations
-
+        # No transformation applied
+        if not transformations:
+            return deepcopy(self._model)
         for transformation in transformations:
             if isinstance(transformation, ONNXQuantizerInsertionCommand):
                 quantizer_insert_transformations.append(transformation)
@@ -105,21 +106,19 @@ class ONNXModelTransformer(ModelTransformer):
                 model_extraction_transformation = transformation
             elif isinstance(transformation, ONNXQDQNodeRemovingCommand):
                 qdq_node_removing_transformations.append(transformation)
+        model = self._model
         # Inplace transformations, using deepcopy of model
         if quantizer_insert_transformations:
-            model = self._apply_quantizer_insertion_transformations(quantizer_insert_transformations)
-        elif bias_correction_transformations:
-            model = self._apply_bias_correction_transformations(bias_correction_transformations)
-        elif qdq_node_removing_transformations:
-            model = self._apply_qdq_node_removing_transformations(qdq_node_removing_transformations)
+            model = self._apply_quantizer_insertion_transformations(model, quantizer_insert_transformations)
+        if bias_correction_transformations:
+            model = self._apply_bias_correction_transformations(model, bias_correction_transformations)
+        if qdq_node_removing_transformations:
+            model = self._apply_qdq_node_removing_transformations(model, qdq_node_removing_transformations)
         # Transformations that create new model
-        elif output_insert_transformations:
+        if output_insert_transformations:
             model = self._apply_output_insertion_transformations(output_insert_transformations)
-        elif model_extraction_transformation:
+        if model_extraction_transformation:
             model = self._apply_model_extraction_transformation(model_extraction_transformation)
-        # No transformation applied
-        else:
-            return deepcopy(self._model)
         return model
 
     def _apply_output_insertion_transformations(self,
@@ -174,15 +173,17 @@ class ONNXModelTransformer(ModelTransformer):
             op_set.version = oimp.version
         return new_model
 
-    def _apply_quantizer_insertion_transformations(self, transformations: List[ONNXQuantizerInsertionCommand]) \
+    def _apply_quantizer_insertion_transformations(self, model: onnx.ModelProto,
+                                                   transformations: List[ONNXQuantizerInsertionCommand]) \
             -> onnx.ModelProto:
         """
         Creates a new model as a deepcopy of provided model and inserts QuantizeLinear-DequantizeLinear nodes pair.
 
+        :param model: Model to apply transformations.
         :param transformations: QuantizeLinear-DequantizeLinear nodes pair insertion transformation commands.
         :return: New model with inserted QuantizeLinear-DequantizeLinear nodes pairs.
         """
-        model = deepcopy(self._model)
+        model = deepcopy(model)
         self._added_target_edges = Counter()
         for transformation in transformations:
             model = self._insert_quantizer_dequantizer(model, transformation)
@@ -331,14 +332,16 @@ class ONNXModelTransformer(ModelTransformer):
         return model
 
     def _apply_bias_correction_transformations(self,
+                                               model: onnx.ModelProto,
                                                transformations: List[ONNXBiasCorrectionCommand]) -> onnx.ModelProto:
         """
         Creates a copy of original model and applies bias correction transformations on the model.
 
+        :param model: Model to apply transformations.
         :param transformations: Bias correction transformations.
         :return: Copy of original model with updated biases.
         """
-        model = deepcopy(self._model)
+        model = deepcopy(model)
         onnx_graph = ONNXGraph(model)
         for transformation in transformations:
             bias_tensor_position = transformation.target_point.port_id
@@ -362,14 +365,16 @@ class ONNXModelTransformer(ModelTransformer):
         return self.onnx_model_extractor.extract_model(transformation.inputs, transformation.outputs)
 
     def _apply_qdq_node_removing_transformations(self,
+                                                 model: onnx.ModelProto,
                                                  transformations: List[ONNXQDQNodeRemovingCommand]) -> onnx.ModelProto:
         """
         Returns a copy of original model with removed nodes.
 
+        :param model: Model to apply transformations.
         :param transformations: Nodes removing transformations.
         :return: Model with removed nodes.
         """
-        model = deepcopy(self._model)
+        model = deepcopy(model)
         onnx_graph = ONNXGraph(model)
         for transformation in transformations:
             node = onnx_graph.get_node_by_name(transformation.target_point.target_node_name)
