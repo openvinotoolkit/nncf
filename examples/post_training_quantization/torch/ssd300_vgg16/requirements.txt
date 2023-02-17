@@ -1,5 +1,5 @@
 fastdownload
-openvino-dev~=2022.3.0.dev
+openvino-dev
 torchmetrics
 torchvision>=0.14.1
 tqdm
