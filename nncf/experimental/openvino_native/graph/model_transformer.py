@@ -235,11 +235,11 @@ class OVModelTransformer(ModelTransformer):
 
             for node_input in node_inputs:
                 if node_input.get_type_name() == 'Add':
-                    node_with_bias = node_input
+                    add_node = node_input
 
             bias_port_id = transformation.target_point.port_id
-            biased_port = node_with_bias.input(bias_port_id)
-            potential_bias = node_with_bias.input_value(bias_port_id).node
+            biased_port = add_node.input(bias_port_id)
+            potential_bias = add_node.input_value(bias_port_id).node
 
             if potential_bias.get_type_name() == 'Convert':
                 biased_port = potential_bias.input(0)

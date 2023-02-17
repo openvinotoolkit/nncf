@@ -12,7 +12,6 @@
 """
 
 from typing import Dict, List, TypeVar, Union, Optional
-from copy import deepcopy
 from collections import deque
 
 import numpy as np
@@ -24,6 +23,7 @@ from nncf.common.graph import NNCFNode
 from nncf.common.graph.transformations.commands import TransformationCommand
 from nncf.common.graph.transformations.commands import TargetType
 from nncf.common.graph.transformations.layout import TransformationLayout
+from nncf.common.utils.backend import copy_model
 from nncf.common.utils.backend import BackendType
 from nncf.common.utils.backend import get_backend
 from nncf.quantization.algorithms.algorithm import AlgorithmParameters
@@ -136,7 +136,7 @@ class BiasCorrection(Algorithm):
         main_transformations_layout = TransformationLayout()
         main_model_transformer = ModelTransformerFactory.create(model)
 
-        model_copy = deepcopy(model)
+        model_copy = copy_model(model)
         model_copy = self._remove_fq_from_inputs(model_copy)
         nncf_graph = NNCFGraphFactory.create(model_copy)
 
@@ -229,7 +229,7 @@ class BiasCorrection(Algorithm):
             if self._backend_entity.is_node_with_bias(node, nncf_graph):
                 output.append(node)
                 self._collected_stat_inputs.add(node.node_name)
-                activation_input = self._get_previous_activation_node(node, nncf_graph)
+                activation_input = nncf_graph.get_input_edges(node)[0].from_node
 
                 output_nodes.append(activation_input)
                 return True, output
@@ -441,7 +441,7 @@ class BiasCorrection(Algorithm):
 
     def get_statistic_points(self, model: TModel) -> StatisticPointsContainer:
         self._set_backend_entity(model)
-        model_copy = self._remove_fq_from_inputs(deepcopy(model))
+        model_copy = self._remove_fq_from_inputs(copy_model(model))
         nncf_graph = NNCFGraphFactory.create(model_copy) if self.nncf_graph is None else self.nncf_graph
         statistic_container = StatisticPointsContainer()
 
@@ -506,21 +506,9 @@ class BiasCorrection(Algorithm):
         for model_input in model_inputs:
             nodes_with_bias = nncf_graph.traverse_graph(model_input, traverse_to_biased)
             for node in nodes_with_bias:
-                activation_input = self._get_previous_activation_node(node, nncf_graph)
+                activation_input = nncf_graph.get_input_edges(node)[0].from_node
                 biased_after_param_nodes[node.node_name] = activation_input.node_name
         return biased_after_param_nodes
-
-    def _get_previous_activation_node(self, node: NNCFNode, nncf_graph: NNCFGraph) -> NNCFNode:
-        """
-        Returns 0- activation node, but not quanitzers.
-
-        :param node: NNCFNode instance.
-        :param nncf_graph: NNCFGraph instance.
-        :return: NNCFNode activation node.
-        """
-        activation_input_port = 0
-        previous_node = nncf_graph.get_input_edges(node)[activation_input_port].from_node
-        return previous_node
 
     def extract_model(self,
                       model: TModel,

@@ -23,9 +23,9 @@ from nncf.common.tensor_statistics.collectors import ReductionShape
 from nncf.common.utils.backend import BackendType
 from nncf.experimental.openvino_native.graph.metatypes.openvino_metatypes import OVConvolutionBackpropDataMetatype
 from nncf.experimental.openvino_native.graph.metatypes.openvino_metatypes import OVConvolutionMetatype
-from nncf.experimental.openvino_native.graph.metatypes.openvino_metatypes import OVFakeQuantizeMetatype
 from nncf.experimental.openvino_native.graph.metatypes.openvino_metatypes import OVMatMulMetatype
 from nncf.experimental.openvino_native.graph.metatypes.openvino_metatypes import OVOpMetatype
+from nncf.experimental.openvino_native.graph.metatypes.common import FAKE_QUANTIZE_OPERATION
 from nncf.experimental.openvino_native.graph.node_utils import get_bias_value
 from nncf.experimental.openvino_native.graph.node_utils import is_node_with_bias
 from nncf.experimental.openvino_native.graph.transformations.command_creation import create_bias_correction_command
@@ -60,7 +60,7 @@ class OVBiasCorrectionAlgoBackend(BiasCorrectionAlgoBackend):
 
     @property
     def quantizer_types(self) -> List[OVOpMetatype]:
-        return [OVFakeQuantizeMetatype]
+        return FAKE_QUANTIZE_OPERATIONS
 
     @staticmethod
     def target_point(target_type: TargetType,
@@ -109,10 +109,6 @@ class OVBiasCorrectionAlgoBackend(BiasCorrectionAlgoBackend):
         return get_bias_value(node, nncf_graph, model)
 
     @staticmethod
-    def get_bias_port_id(node: NNCFNode, model: ov.Model) -> int:
-        return node.layer_attributes.weight_port_id
-
-    @staticmethod
     def get_input_name(model: ov.Model, node_name: str) -> str:
         ops_dict = {op.get_friendly_name(): op for op in model.get_ops()}
 
@@ -140,7 +136,7 @@ class OVBiasCorrectionAlgoBackend(BiasCorrectionAlgoBackend):
     def is_quantized_weights(node: NNCFNode, nncf_graph: NNCFGraph) -> bool:
         const_port_id = node.layer_attributes.const_port_id
         weight_node = nncf_graph.get_input_edges(node)[const_port_id].from_node
-        return weight_node.metatype == OVFakeQuantizeMetatype
+        return weight_node.metatype in FAKE_QUANTIZE_OPERATIONS
 
     @staticmethod
     def is_node_with_bias(node: NNCFNode, nncf_graph: NNCFGraph) -> bool:

@@ -172,17 +172,6 @@ class BiasCorrectionAlgoBackend(ABC):
 
     @staticmethod
     @abstractmethod
-    def get_bias_port_id(node: NNCFNode, model: TModel) -> int:
-        """
-        Returns bias Port ID corresponding to the node.
-
-        :param node: Node of NNCFGraph with bias value.
-        :param model: Backend-specific model.
-        :return: Port ID corresponding to bias.
-        """
-
-    @staticmethod
-    @abstractmethod
     def get_input_name(model: TModel, node_name: str) -> str:
         """
         Returns input tensor name for the specific node.
