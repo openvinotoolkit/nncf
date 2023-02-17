@@ -33,34 +33,50 @@ class CaseFQParams:
     mode: QuantizationMode
     signedness_to_force: bool
     per_channel: bool
+
+
+@dataclass
+class WeightCaseFqParams(CaseFQParams):
     half_range: bool
 
 
-CASES_FOR_TEST = (CaseFQParams(mode=QuantizationMode.SYMMETRIC,
-                               signedness_to_force=False,
-                               per_channel=False,
-                               half_range=True),
-                  CaseFQParams(mode=QuantizationMode.SYMMETRIC,
-                               signedness_to_force=False,
-                               per_channel=True,
-                               half_range=False),
-                  CaseFQParams(mode=QuantizationMode.ASYMMETRIC,
-                               signedness_to_force=False,
-                               per_channel=False,
-                               half_range=False),
-                  CaseFQParams(mode=QuantizationMode.ASYMMETRIC,
-                               signedness_to_force=False,
-                               per_channel=True,
-                               half_range=True),
-                  CaseFQParams(mode=QuantizationMode.SYMMETRIC,
-                               signedness_to_force=True,
-                               per_channel=False,
-                               half_range=False),
-                  CaseFQParams(mode=QuantizationMode.SYMMETRIC,
-                               signedness_to_force=True,
-                               per_channel=True,
-                               half_range=False),
-                  )
+ACTIVATION_CASES_FOR_TEST = (CaseFQParams(mode=QuantizationMode.SYMMETRIC,
+                                          signedness_to_force=False,
+                                          per_channel=False),
+                             CaseFQParams(mode=QuantizationMode.SYMMETRIC,
+                                          signedness_to_force=False,
+                                          per_channel=True),
+                             CaseFQParams(mode=QuantizationMode.ASYMMETRIC,
+                                          signedness_to_force=False,
+                                          per_channel=False),
+                             CaseFQParams(mode=QuantizationMode.ASYMMETRIC,
+                                          signedness_to_force=False,
+                                          per_channel=True),
+                             CaseFQParams(mode=QuantizationMode.SYMMETRIC,
+                                          signedness_to_force=True,
+                                          per_channel=False),
+                             CaseFQParams(mode=QuantizationMode.SYMMETRIC,
+                                          signedness_to_force=True,
+                                          per_channel=True),
+                             )
+
+WEIGHT_CASES_FOR_TEST = (WeightCaseFqParams(mode=QuantizationMode.SYMMETRIC,
+                                            signedness_to_force=False,
+                                            per_channel=False,
+                                            half_range=True),
+                         WeightCaseFqParams(mode=QuantizationMode.SYMMETRIC,
+                                            signedness_to_force=False,
+                                            per_channel=True,
+                                            half_range=False),
+                         WeightCaseFqParams(mode=QuantizationMode.ASYMMETRIC,
+                                            signedness_to_force=False,
+                                            per_channel=False,
+                                            half_range=False),
+                         WeightCaseFqParams(mode=QuantizationMode.ASYMMETRIC,
+                                            signedness_to_force=False,
+                                            per_channel=True,
+                                            half_range=True)
+                         )
 
 
 def compare_fq_parameters(ref_params, params):
@@ -75,10 +91,11 @@ def compare_fq_parameters(ref_params, params):
     assert np.allclose(ref_params.output_high, params.output_high)
 
 
-def parse_test_data(stat_type, mode, sign, per_ch):
+def parse_test_data(stat_type, mode, sign, per_ch, hf_range):
     fq_params = load_json(FQ_CALCULATED_PARAMETERS_PATH)
     input_data = np.array(fq_params['data']).astype(np.float32)
-    key = f'{stat_type}_{mode}_sign_{sign}_per_ch_{per_ch}'
+    hf_range_param = f'_hf_range_{hf_range}' if hf_range is not None else ''
+    key = f'{stat_type}_{mode}_sign_{sign}_per_ch_{per_ch}' + hf_range_param
     inp_l = np.array(fq_params[key]['input_low']).astype(np.float32)
     inp_h = np.array(fq_params[key]['input_high']).astype(np.float32)
     out_l = np.array(fq_params[key]['output_low']).astype(np.float32)
@@ -88,13 +105,13 @@ def parse_test_data(stat_type, mode, sign, per_ch):
     return input_data, ref_quantize_params
 
 
-@pytest.mark.parametrize('case_to_test', CASES_FOR_TEST)
+@pytest.mark.parametrize('case_to_test', ACTIVATION_CASES_FOR_TEST)
 def test_calculate_activation_quantizer_parameters(case_to_test):
     stat_type = 'activation'
     mode = case_to_test.mode
     sign = case_to_test.signedness_to_force
     per_ch = case_to_test.per_channel
-    data, ref_quantize_params = parse_test_data(stat_type, mode, sign, per_ch)
+    data, ref_quantize_params = parse_test_data(stat_type, mode, sign, per_ch, None)
 
     axes = (0, 2, 3) if case_to_test.per_channel else None
     min_values = np.amin(data, axes, keepdims=True)
@@ -107,14 +124,14 @@ def test_calculate_activation_quantizer_parameters(case_to_test):
     compare_fq_parameters(ref_quantize_params, quantize_params)
 
 
-@pytest.mark.parametrize('case_to_test', CASES_FOR_TEST[:4])
+@pytest.mark.parametrize('case_to_test', WEIGHT_CASES_FOR_TEST)
 def test_calculate_weight_quantizer_parameters(case_to_test):
     stat_type = 'weights'
     mode = case_to_test.mode
     sign = case_to_test.signedness_to_force
     per_ch = case_to_test.per_channel
     half_range = case_to_test.half_range
-    data, ref_quantize_params = parse_test_data(stat_type, mode, sign, per_ch)
+    data, ref_quantize_params = parse_test_data(stat_type, mode, sign, per_ch, half_range)
 
     qconfig = QuantizerConfig(num_bits=8, mode=mode, signedness_to_force=sign, per_channel=per_ch)
     quantize_params = calculate_weight_quantizer_parameters(data, qconfig, half_range, None)
