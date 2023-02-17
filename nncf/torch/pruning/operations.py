@@ -564,19 +564,7 @@ class PTLayerNormPruningOp(LayerNormPruningOp, PTPruner):
         node_module = model.get_containing_module(node.node_name)
 
         if prun_type == PrunType.CUT_WEIGHTS:
-            bool_mask = torch.tensor(input_mask, dtype=torch.bool)
-            old_num_channels = int(node_module.weight.size(0))
-            new_num_channels = int(torch.sum(input_mask))
-
-            node_module.normalized_shape = (new_num_channels,)
-
-            node_module.weight = torch.nn.Parameter(node_module.weight[bool_mask])
-            node_module.bias = torch.nn.Parameter(node_module.bias[bool_mask])
-
-            nncf_logger.debug(
-                f"Pruned LayerNorm {node.data['key']} by input mask. "
-                f"Old num features: {old_num_channels}, new num features: {new_num_channels}."
-            )
+            raise RuntimeError(f"LayerNorm does not support pruning by cutting channels")
         else:
             node_module.weight = torch.nn.Parameter(apply_filter_binary_mask(input_mask, node_module.weight))
             node_module.bias = torch.nn.Parameter(apply_filter_binary_mask(input_mask, node_module.bias))
