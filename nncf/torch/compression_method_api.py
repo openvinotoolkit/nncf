@@ -101,11 +101,13 @@ class PTCompressionAlgorithmController(BaseCompressionAlgorithmController):
         should be made inside this function.
         """
 
-    def prepare_for_inference(self, make_model_copy: bool = False) -> NNCFNetwork:
+    def prepare_for_inference(self, make_model_copy: bool = True) -> NNCFNetwork:
         """
         Prepare NNCFNetwork for inference by converting NNCF modules to torch native format.
 
         :param make_model_copy: `True` means that a copy of the model will be modified.
+            `False` means that the original model in the controller will be changed and
+            no further compression actions will be available. Defaults to True.
 
         :return NNCFNetwork: Converted model.
         """

@@ -210,7 +210,7 @@ def main_worker(current_gpu, config):
 
     if is_export_only:
         if config.prepare_for_inference:
-            compression_ctrl.prepare_for_inference()
+            compression_ctrl.prepare_for_inference(make_model_copy=False)
         compression_ctrl.export_model(config.to_onnx)
         logger.info("Saved to {}".format(config.to_onnx))
         return
@@ -273,7 +273,7 @@ def main_worker(current_gpu, config):
 
     if 'export' in config.mode:
         if config.prepare_for_inference:
-            compression_ctrl.prepare_for_inference()
+            compression_ctrl.prepare_for_inference(make_model_copy=False)
         compression_ctrl.export_model(config.to_onnx)
         logger.info("Saved to {}".format(config.to_onnx))
 
