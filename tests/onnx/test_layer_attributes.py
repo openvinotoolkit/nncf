@@ -16,7 +16,6 @@ import numpy as np
 import onnx
 
 from nncf.onnx.graph.nncf_graph_builder import ONNXExtendedLayerAttributes
-from nncf.onnx.graph.nncf_graph_builder import ONNXWeightedNodesLayerAttributes
 from nncf.onnx.graph.nncf_graph_builder import GraphConverter
 from tests.onnx.models import OPSET_VERSION
 from tests.onnx.models import create_initializer_tensor
@@ -110,8 +109,8 @@ def get_one_layer_model(op_name: str, node_creator: ONNXNodeCreator, input_shape
 
 @pytest.mark.parametrize('node_creator, ref_layer_attrs',
                          [(ONNXIdentityCreator, ONNXExtendedLayerAttributes(['X'], ['Y'])),
-                          (ONNXConvCreator, ONNXWeightedNodesLayerAttributes(['X', 'Conv1_W', 'Conv1_B'],
-                                                                             ['Y'], (3, 3, 1, 1)))])
+                          (ONNXConvCreator, ONNXExtendedLayerAttributes(['X', 'Conv1_W', 'Conv1_B'],
+                                                                        ['Y'], (3, 3, 1, 1)))])
 def test_layer_attributes(node_creator, ref_layer_attrs):
     input_shape = [3, 3, 3]
     op_name = 'test_node'

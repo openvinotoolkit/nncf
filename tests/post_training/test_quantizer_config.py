@@ -49,11 +49,6 @@ class TemplateTestQuantizerConfig:
         pass
 
     @abstractmethod
-    def get_target_point(self, target_type: TargetType,
-                         target_node_name):
-        pass
-
-    @abstractmethod
     @pytest.fixture
     def single_conv_nncf_graph(self) -> NNCFGraphToTest:
         pass

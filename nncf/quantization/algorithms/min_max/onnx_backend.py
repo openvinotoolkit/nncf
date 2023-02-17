@@ -11,9 +11,7 @@
  limitations under the License.
 """
 
-from typing import Dict, List, Tuple, Optional, Callable
-import numpy as np
-import onnx
+from typing import Dict, List, Tuple, Optional
 
 from nncf.common.graph.graph import NNCFGraph
 from nncf.common.graph.graph import NNCFNode
@@ -29,8 +27,7 @@ from nncf.onnx.hardware.config import ONNXHWConfig
 from nncf.onnx.quantization.default_quantization import DEFAULT_ONNX_QUANT_TRAIT_TO_OP_DICT
 from nncf.onnx.quantization.quantizer_parameters import calculate_activation_quantizer_parameters
 from nncf.onnx.quantization.quantizer_parameters import calculate_weight_quantizer_parameters
-from nncf.onnx.graph.onnx_graph import ONNXGraph
-from nncf.onnx.graph.nncf_graph_builder import ONNXWeightedNodesLayerAttributes
+from nncf.onnx.graph.nncf_graph_builder import ONNXExtendedLayerAttributes
 from nncf.onnx.graph.metatypes.onnx_metatypes import WEIGHT_LAYER_METATYPES
 from nncf.onnx.graph.metatypes.onnx_metatypes import ONNXNonMaxSuppressionMetatype
 from nncf.onnx.graph.metatypes.onnx_metatypes import ONNXTopKMetatype
@@ -73,7 +70,7 @@ class ONNXMinMaxAlgoBackend(MinMaxAlgoBackend):
                                                       target_point: ONNXTargetPoint,
                                                       quantizer_config: QuantizerConfig,
                                                       statistics: MinMaxTensorStatistic) ->\
-                                                    ONNXQuantizerInsertionCommand:
+        ONNXQuantizerInsertionCommand:
         axis = ONNXMinMaxAlgoBackend._get_axis(nncf_graph,
                                                target_point,
                                                quantizer_config)
@@ -85,7 +82,7 @@ class ONNXMinMaxAlgoBackend(MinMaxAlgoBackend):
                                                   target_point: ONNXTargetPoint,
                                                   quantizer_config: QuantizerConfig,
                                                   statistics: MinMaxTensorStatistic) ->\
-                                                      ONNXQuantizerInsertionCommand:
+        ONNXQuantizerInsertionCommand:
         axis = ONNXMinMaxAlgoBackend._get_axis(nncf_graph,
                                                target_point,
                                                quantizer_config)
@@ -99,7 +96,7 @@ class ONNXMinMaxAlgoBackend(MinMaxAlgoBackend):
                   quantizer_config: QuantizerConfig) -> Optional[int]:
         if not quantizer_config.per_channel:
             return None
-        if target_point.is_activation_target_point():
+        if not target_point.is_weight_target_point():
             return 1
         node = nncf_graph.get_node_by_name(target_point.target_node_name)
         return node.metatype.weight_definitions.weight_channel_axis
@@ -108,19 +105,19 @@ class ONNXMinMaxAlgoBackend(MinMaxAlgoBackend):
     def _get_reduction_shape_and_use_abs_max(nncf_graph: NNCFGraph,
                                              target_point: ONNXTargetPoint,
                                              quantizer_config: QuantizerConfig) ->\
-    Tuple[Optional[Tuple[int, ...]], bool]:
+        Tuple[Optional[Tuple[int, ...]], bool]:
 
         use_abs_max = quantizer_config.mode == QuantizationMode.SYMMETRIC
         if not quantizer_config.per_channel:
             return None, use_abs_max
 
-        if target_point.is_activation_target_point():
+        if not target_point.is_weight_target_point():
             # TODO: support reduction shapes for 3D-5D conv cases
             return (0, 2, 3), use_abs_max
 
         # Calculate reduction shape for weight statistic collector
         node = nncf_graph.get_node_by_name(target_point.target_node_name)
-        assert isinstance(node.layer_attributes, ONNXWeightedNodesLayerAttributes)
+        assert isinstance(node.layer_attributes, ONNXExtendedLayerAttributes)
         weight_shape = node.layer_attributes.weight_shape
         reduction_shape = list(range(len(weight_shape)))
 

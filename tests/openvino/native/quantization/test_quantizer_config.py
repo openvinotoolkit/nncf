@@ -14,7 +14,7 @@
 import pytest
 
 from nncf.common.graph.transformations.commands import TargetType
-from nncf.experimental.openvino_native.graph.nncf_graph_builder import OVWeightedLayerAttributes
+from nncf.experimental.openvino_native.graph.nncf_graph_builder import OVConstantLayerAttributes
 from nncf.experimental.openvino_native.statistics.collectors import OVMeanMinMaxStatisticCollector
 from nncf.experimental.openvino_native.statistics.collectors import OVMinMaxStatisticCollector
 from nncf.experimental.openvino_native.quantization.algorithms.min_max.openvino_backend import OVMinMaxAlgoBackend
@@ -47,7 +47,7 @@ class TestQuantizerConfig(TemplateTestQuantizerConfig):
 
     @pytest.fixture
     def single_conv_nncf_graph(self) -> NNCFGraphToTest:
-        conv_layer_attrs = OVWeightedLayerAttributes(0, (4, 4, 4, 4))
+        conv_layer_attrs = OVConstantLayerAttributes(0, (4, 4, 4, 4))
         return NNCFGraphToTest(OVConvolutionMetatype, conv_layer_attrs)
 
     @pytest.fixture
@@ -57,6 +57,6 @@ class TestQuantizerConfig(TemplateTestQuantizerConfig):
     @pytest.fixture
     def conv_sum_aggregation_nncf_graph(self) ->\
         NNCFGraphToTestSumAggregation:
-        conv_layer_attrs = OVWeightedLayerAttributes(0, (4, 4, 4, 4))
+        conv_layer_attrs = OVConstantLayerAttributes(0, (4, 4, 4, 4))
         return NNCFGraphToTestSumAggregation(OVConvolutionMetatype, OVSumMetatype,
                                              conv_layer_attrs)

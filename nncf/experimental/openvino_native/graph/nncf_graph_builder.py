@@ -169,7 +169,7 @@ class GraphConverter:
                     const_node = get_operation_const_op(node, const_port_id)
                     nncf_node = nncf_graph.get_node_by_name(node.get_friendly_name())
                     nncf_node.layer_attributes =\
-                        OVWeightedLayerAttributes(const_port_id=const_port_id,
+                        OVConstantLayerAttributes(const_port_id=const_port_id,
                                                   const_shape=tuple(const_node.get_output_shape(0)))
                     nncf_node.layer_name = const_node.get_friendly_name()
                     break
@@ -178,7 +178,7 @@ class GraphConverter:
         return nncf_graph
 
 
-class OVWeightedLayerAttributes(BaseLayerAttributes):
+class OVConstantLayerAttributes(BaseLayerAttributes):
     """
     This class stores const port index of layers for the algorithms.
     """

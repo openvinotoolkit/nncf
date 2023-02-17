@@ -31,7 +31,7 @@ class PTEngine(Engine):
         """
 
         self._model = model
-        model.eval()
+        self._model.eval()
 
     def infer(self, input_data: Union[torch.Tensor, Dict[str, torch.Tensor]]) ->\
         Union[torch.Tensor, Dict[str, Any]]:

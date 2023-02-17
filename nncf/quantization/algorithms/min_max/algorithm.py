@@ -198,11 +198,21 @@ class MinMaxQuantization(Algorithm):
         :param quantizer_config: QuantizerConfig instance for the current layer.
         :return: One of the TensorStatisticCollectorBase instances
         """
+        def is_default_parameters(range_type: RangeType,
+                                  quantizer_config: QuantizerConfig) -> bool:
+            return range_type is None or quantizer_config.per_channel
+
         range_type = self._parameters.range_type
+        if is_default_parameters(range_type, quantizer_config):
+            if quantizer_config.per_channel:
+                range_type = RangeType.MINMAX
+            else:
+                range_type = RangeType.MEAN_MINMAX
+
+        # TODO: allow to use different range type estimators
+        # for weight quantizers
         if target_point.is_weight_target_point():
             range_type = RangeType.MINMAX
-        elif range_type is None or quantizer_config.per_channel:
-            range_type = RangeType.MINMAX if quantizer_config.per_channel else RangeType.MEAN_MINMAX
 
         if range_type == RangeType.MINMAX:
             return self._backend_entity.minmax_statistic_collector(nncf_graph, target_point, quantizer_config,
@@ -350,7 +360,7 @@ class MinMaxQuantization(Algorithm):
 
         quantization_target_points = self._get_quantization_target_points(model)
         weight_layer_names = set()
-        def filter_func(point):
+        def filter_func(point: StatisticPoint) -> bool:
             return MinMaxQuantization in point.algorithm_to_tensor_collectors and \
                    point.target_point.type == quantization_target_point.type
 
@@ -367,20 +377,14 @@ class MinMaxQuantization(Algorithm):
                         continue
                     weight_layer_names.add(layer_name)
                     command = self._backend_entity.create_weight_quantizer_insertion_command(
-                        nncf_graph,
-                        quantization_target_point,
-                        qconfig,
-                        tensor_collector.get_statistics())
-                    transformation_commands.append(command)
-                elif quantization_target_point.is_activation_target_point():
-                    command = self._backend_entity.create_activation_quantizer_insertion_command(
-                                    nncf_graph,
-                                    quantization_target_point,
-                                    qconfig,
-                                    tensor_collector.get_statistics())
-                    transformation_commands.append(command)
+                        nncf_graph, quantization_target_point,
+                        qconfig, tensor_collector.get_statistics())
                 else:
-                    raise RuntimeError('Inccorrect type of Quantization Target Point!')
+                    command = self._backend_entity.create_activation_quantizer_insertion_command(
+                        nncf_graph, quantization_target_point,
+                        qconfig, tensor_collector.get_statistics())
+
+                transformation_commands.append(command)
 
         for transformation_command in transformation_commands:
             transformation_layout.register(transformation_command)

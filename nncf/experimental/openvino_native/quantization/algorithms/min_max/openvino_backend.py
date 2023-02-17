@@ -25,7 +25,7 @@ from nncf.common.tensor_statistics.collectors import ReductionShape
 from nncf.common.tensor_statistics.statistics import MinMaxTensorStatistic
 from nncf.common.utils.backend import BackendType
 
-from nncf.experimental.openvino_native.graph.nncf_graph_builder import OVWeightedLayerAttributes
+from nncf.experimental.openvino_native.graph.nncf_graph_builder import OVConstantLayerAttributes
 from nncf.experimental.openvino_native.graph.metatypes.openvino_metatypes import GENERAL_WEIGHT_LAYER_METATYPES
 from nncf.experimental.openvino_native.graph.transformations.commands import OVQuantizerInsertionCommand
 from nncf.experimental.openvino_native.graph.transformations.commands import OVTargetPoint
@@ -69,8 +69,8 @@ class OVMinMaxAlgoBackend(MinMaxAlgoBackend):
     def create_activation_quantizer_insertion_command(nncf_graph: NNCFGraph,
                                                       target_point: OVTargetPoint,
                                                       quantizer_config: QuantizerConfig,
-                                                      statistics: MinMaxTensorStatistic) \
-                                                      -> OVQuantizerInsertionCommand:
+                                                      statistics: MinMaxTensorStatistic) ->\
+        OVQuantizerInsertionCommand:
         parameters = calculate_quantizer_parameters(statistics, quantizer_config,
                                                     QuantizerGroup.ACTIVATIONS)
         return OVQuantizerInsertionCommand(target_point, parameters)
@@ -79,7 +79,8 @@ class OVMinMaxAlgoBackend(MinMaxAlgoBackend):
     def create_weight_quantizer_insertion_command(nncf_graph: NNCFGraph,
                                                   target_point: OVTargetPoint,
                                                   quantizer_config: QuantizerConfig,
-                                                  statistics: MinMaxTensorStatistic) -> OVQuantizerInsertionCommand:
+                                                  statistics: MinMaxTensorStatistic) ->\
+        OVQuantizerInsertionCommand:
         parameters = calculate_quantizer_parameters(statistics, quantizer_config,
                                                     QuantizerGroup.WEIGHTS)
         return OVQuantizerInsertionCommand(target_point, parameters)
@@ -94,12 +95,12 @@ class OVMinMaxAlgoBackend(MinMaxAlgoBackend):
         if not quantizer_config.per_channel:
             return None, use_abs_max
 
-        if target_point.is_activation_target_point():
+        if not target_point.is_weight_target_point():
             # TODO: support reduction shapes for 3D-5D conv cases
             return (0, 2, 3), use_abs_max
 
         node = nncf_graph.get_node_by_name(target_point.target_node_name)
-        assert isinstance(node.layer_attributes, OVWeightedLayerAttributes)
+        assert isinstance(node.layer_attributes, OVConstantLayerAttributes)
         const_shape = node.layer_attributes.const_shape
 
         bounds_shape = get_weight_stats_shape(const_shape, node.metatype)

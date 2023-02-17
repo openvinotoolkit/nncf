@@ -39,7 +39,7 @@ class ONNXStatisticsAggregator(StatisticsAggregator):
     def _register_activation_statistic(self, statistic_point: StatisticPointsContainer,
                                       target_point: ONNXTargetPoint,
                                       node_name: str,
-                                      outputs: Dict[str, np.ndarray]):
+                                      outputs: Dict[str, np.ndarray]) -> None:
         port_id = target_point.port_id
         if NNCFGraphNodeType.INPUT_NODE in target_point.target_node_name:
             nncf_node_name = self._nncf_graph.get_node_by_name(target_point.target_node_name)
@@ -56,7 +56,7 @@ class ONNXStatisticsAggregator(StatisticsAggregator):
             statistic_point.register_tensor(outputs[edge_name])
 
     def _register_weight_statistic(self, statistic_point: StatisticPointsContainer,
-                                   target_point: ONNXTargetPoint):
+                                   target_point: ONNXTargetPoint) -> None:
         node = self._onnx_graph.get_node_by_name(target_point.target_node_name)
         weight_tensor = self._onnx_graph.get_weight_tensor(node)
         statistic_point.register_tensor(ONNXNNCFTensor(weight_tensor[1]))

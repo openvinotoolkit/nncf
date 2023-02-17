@@ -33,8 +33,7 @@ from tests.post_training.test_ptq_params import TemplateTestPTQParams
 def get_patterns_setup() -> GraphPattern:
     backend = BackendType.OPENVINO
     device = TargetDevice.ANY
-    patterns_manager = PatternsManager()
-    return patterns_manager.get_full_pattern_graph(backend, device)
+    return PatternsManager.get_full_pattern_graph(backend, device)
 
 
 # pylint: disable=protected-access

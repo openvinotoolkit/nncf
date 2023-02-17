@@ -54,9 +54,11 @@ class TestStatisticsAggregator(TemplateTestStatisticsAggregator):
 
     def get_target_point(self, target_type: TargetType):
         target_node_name = IDENTITY_NODE_NAME
+        port_id = 0
         if target_type == TargetType.OPERATION_WITH_WEIGHTS:
             target_node_name = CONV_NODE_NAME
-        return ONNXTargetPoint(target_type, target_node_name, 0)
+            port_id = None
+        return ONNXTargetPoint(target_type, target_node_name, port_id)
 
     @pytest.fixture
     def dataset_samples(self, dataset_values):

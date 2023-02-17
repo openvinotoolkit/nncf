@@ -17,7 +17,7 @@ import openvino.runtime as ov
 from openvino.runtime import opset9 as opset
 
 from nncf.experimental.openvino_native.graph.nncf_graph_builder import GraphConverter
-from nncf.experimental.openvino_native.graph.nncf_graph_builder import OVWeightedLayerAttributes
+from nncf.experimental.openvino_native.graph.nncf_graph_builder import OVConstantLayerAttributes
 
 
 def get_conv(input_1, node_name, input_shape, kernel=None):
@@ -46,8 +46,8 @@ def get_one_layer_model(op_name: str, node_creator, input_shape):
 
 
 @pytest.mark.parametrize('node_creator, ref_layer_attrs',
-                         [(get_conv, OVWeightedLayerAttributes(1, (3, 3, 1, 1))),
-                          (get_convert_conv, OVWeightedLayerAttributes(1, (3, 3, 1, 1)))])
+                         [(get_conv, OVConstantLayerAttributes(1, (3, 3, 1, 1))),
+                          (get_convert_conv, OVConstantLayerAttributes(1, (3, 3, 1, 1)))])
 def test_layer_attributes(node_creator, ref_layer_attrs):
     input_shape = [1, 3, 3, 3]
     op_name = 'test_node'
