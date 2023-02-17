@@ -93,7 +93,6 @@ class OVMinMaxAlgoBackend(MinMaxAlgoBackend):
 
     @staticmethod
     def create_weight_update_command(quantization_target_point: OVTargetPoint, weight_tensor: np.ndarray):
-        weight_tensor /= 2
         weight_update_target_point = OVTargetPoint(TargetType.LAYER, quantization_target_point.target_node_name,
                                                    quantization_target_point.port_id)
         return OVWeightUpdateCommand(weight_update_target_point, weight_tensor)

@@ -383,8 +383,9 @@ class MinMaxQuantization(Algorithm):
                 if (self._parameters.overflow_fix == OverflowFix.FIRST_LAYER and not weight_tensor_names) or \
                         self._parameters.overflow_fix == 'enable':
                     half_range = True
+                    scaled_weight_tensor = weight_tensor / 2
                     weight_insertion_command = self._backend_entity.create_weight_update_command(
-                        quantization_target_point, weight_tensor)
+                        quantization_target_point, scaled_weight_tensor)
                     if weight_insertion_command:
                         weight_transformation_commands.append(weight_insertion_command)
                 command = self._backend_entity.create_weight_quantizer_insertion_command(quantization_target_point,
