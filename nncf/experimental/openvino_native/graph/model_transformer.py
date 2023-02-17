@@ -197,11 +197,10 @@ class OVModelTransformer(ModelTransformer):
         for op in self._model.get_ops():
             if op.get_friendly_name() == weight_node_name:
                 weight_node = op
-            if op.get_friendly_name() == transformation.target_point.target_node_name:
-                consumed_weight_node = op
+
         new_weight_constant = opset.constant(transformation.weight_value, dtype=weight_node.get_element_type())
-        weight_port_id = consumed_weight_node.input(transformation.target_point.port_id)
-        weight_port_id.replace_source_output(new_weight_constant.output(0))
+        for input_consumed_node in weight_node.output(0).get_target_inputs():
+            input_consumed_node.replace_source_output(new_weight_constant.output(0))
 
     def _insert_fake_quantize_op(self, transformation: OVQuantizerInsertionCommand) -> None:
         fq_params = transformation.quantizer_parameters
