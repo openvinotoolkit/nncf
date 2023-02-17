@@ -333,7 +333,6 @@ class BaseQuantizer(nn.Module):
         # TODO: refactor to get rid of extra if's and calls on each forward
         if not self.is_enabled_quantization():
             return x
-        self.set_level_ranges()
         is_exporting = is_tracing_state()
         if is_exporting:
             with no_nncf_trace():
@@ -404,6 +403,7 @@ class BaseQuantizer(nn.Module):
     @num_bits.setter
     def num_bits(self, num_bits: int):
         self._num_bits.fill_(num_bits)
+        self.set_level_ranges()
 
     @property
     def narrow_range(self) -> bool:
@@ -567,7 +567,7 @@ class SymmetricQuantizer(BaseQuantizer):
         else:
             self.eps = 1e-16
         if qspec.signedness_to_force is not None:
-            self.signed = int(qspec.signedness_to_force)
+            self.signed = bool(qspec.signedness_to_force)
         self.set_level_ranges()
 
         self._register_load_state_dict_pre_hook(StorageRedirectingLoadStateDictHook(
@@ -581,6 +581,9 @@ class SymmetricQuantizer(BaseQuantizer):
             name_in_state_dict=self.SCALE_PARAM_NAME,
             use_log_storage_in_module=self._is_using_log_scale_storage
         ))
+
+        # Values of level_low, level_high must be recalculated for load new signed parameter.
+        self.register_load_state_dict_post_hook(lambda module, _: module.set_level_ranges())
 
     @property
     def scale(self):
@@ -625,7 +628,8 @@ class SymmetricQuantizer(BaseQuantizer):
 
     @signed.setter
     def signed(self, signed: bool):
-        self.signed_tensor.fill_(signed)
+        self.signed_tensor.fill_(int(signed))
+        self.set_level_ranges()
 
     def quantize(self, x, execute_traced_op_as_identity: bool = False):
         return symmetric_quantize(x, self.levels, self.level_low, self.level_high, self.scale, self.eps,
@@ -639,7 +643,7 @@ class SymmetricQuantizer(BaseQuantizer):
         if self._signedness_to_force is not None and sign != self._signedness_to_force:
             nncf_logger.debug(f"Forcing signed to {self._signedness_to_force} for module {log_module_name}")
             sign = self._signedness_to_force
-        self.signed = int(sign)
+        self.signed = sign
 
         abs_max = torch.max(torch.abs(max_values), torch.abs(min_values))
         SCALE_LOWER_THRESHOLD = 0.1
