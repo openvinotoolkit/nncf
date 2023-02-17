@@ -17,7 +17,6 @@ from pathlib import Path
 from typing import Any, Callable, Dict, Iterable, Optional
 
 import openvino.runtime as ov
-from openvino._offline_transformations import compress_quantize_weights_transformation
 from openvino.tools import pot
 
 from nncf.common.logging import nncf_logger
@@ -135,8 +134,9 @@ def quantize_impl(model: ov.Model,
     engine = OVEngine(engine_config, calibration_dataset, calibration_dataset)
     pipeline = pot.create_pipeline(algorithms, engine)
     compressed_model = pipeline.run(pot_model)
+    # TODO(andrey-churkin): Ref: 103920. Should be changed after the fix.
+    pot.compress_model_weights(compressed_model)
     quantized_model = _convert_compressed_model_to_openvino_model(compressed_model)
-    compress_quantize_weights_transformation(quantized_model)
     return quantized_model
 
 
@@ -197,7 +197,8 @@ def quantize_with_accuracy_control_impl(model: ov.Model,
     engine = OVEngine(engine_config, calibration_dataset, validation_dataset, validation_fn, use_original_metric)
     pipeline = pot.create_pipeline(algorithms, engine)
     compressed_model = pipeline.run(pot_model)
+    # TODO(andrey-churkin): Ref: 103920. Should be changed after the fix.
+    pot.compress_model_weights(compressed_model)
     quantized_model = _convert_compressed_model_to_openvino_model(compressed_model)
-    compress_quantize_weights_transformation(quantized_model)
 
     return quantized_model

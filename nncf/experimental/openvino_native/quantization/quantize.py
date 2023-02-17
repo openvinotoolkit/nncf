@@ -59,6 +59,8 @@ def quantize_impl(model: ov.Model,
 
     quantization_algorithm = PostTrainingQuantization(quantization_parameters)
     quantized_model = quantization_algorithm.apply(model, dataset=calibration_dataset)
-    compress_quantize_weights_transformation(quantized_model)
+
+    # TODO(andrey-churkin): The `compress_quantize_weights_transformation()` method should
+    # be applied here. We are waiting for Ref: 103920 fixes.
 
     return quantized_model
