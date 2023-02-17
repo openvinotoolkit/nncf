@@ -114,12 +114,6 @@ class ONNXBiasCorrectionAlgoBackend(BiasCorrectionAlgoBackend):
         return get_bias_value(node, model)
 
     @staticmethod
-    def get_bias_port_id(node: NNCFNode, model: onnx.ModelProto) -> int:
-        onnx_graph = ONNXGraph(model)
-        onnx_node = onnx_graph.get_node_by_name(node.node_name)
-        return onnx_graph.get_bias_tensor_port_id(onnx_node)
-
-    @staticmethod
     def get_input_name(model: onnx.ModelProto, node_name: str) -> str:
         onnx_graph = ONNXGraph(model)
         node = onnx_graph.get_node_by_name(node_name)
