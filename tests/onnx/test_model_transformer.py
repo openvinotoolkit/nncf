@@ -14,7 +14,7 @@
 import pytest
 
 import onnx
-# pylint: disable=no-member
+import onnxruntime as rt
 import numpy as np
 from nncf.common.graph.transformations.layout import TransformationLayout
 
@@ -199,3 +199,22 @@ def test_node_removing(target_layers):
 
     transformed_model = model_transformer.transform(transformation_layout)
     compare_nncf_graph(transformed_model, 'synthetic/' + 'removed_nodes_in_' + model_to_test.path_ref_graph)
+
+
+def test_no_transformations():
+    def infer_model_with_ones(model, shape):
+        model = model.SerializeToString()
+        sess = rt.InferenceSession(model, providers=['OpenVINOExecutionProvider'])
+        _input = np.ones(shape)
+        input_name = sess.get_inputs()[0].name
+        return sess.run([], {input_name: _input.astype(np.float32)})
+
+    onnx_model = LinearModel().onnx_model
+    input_shape = [1, 3, 32, 32]
+    model_transformer = ONNXModelTransformer(onnx_model)
+    transformed_model = model_transformer.transform(TransformationLayout())
+
+    ret_val_1 = infer_model_with_ones(onnx_model, input_shape)
+    ret_val_2 = infer_model_with_ones(transformed_model, input_shape)
+    assert np.allclose(ret_val_1, ret_val_2)
+    assert id(transformed_model) != id(onnx_model)
