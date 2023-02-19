@@ -564,10 +564,10 @@ class PTLayerNormPruningOp(LayerNormPruningOp, PTPruner):
         node_module = model.get_containing_module(node.node_name)
 
         if prun_type == PrunType.CUT_WEIGHTS:
-            raise RuntimeError(f"LayerNorm does not support pruning by cutting channels")
-        else:
-            node_module.weight = torch.nn.Parameter(apply_filter_binary_mask(input_mask, node_module.weight))
-            node_module.bias = torch.nn.Parameter(apply_filter_binary_mask(input_mask, node_module.bias))
+            raise RuntimeError("LayerNorm does not support pruning by cutting channels")
+
+        node_module.weight = torch.nn.Parameter(apply_filter_binary_mask(input_mask, node_module.weight))
+        node_module.bias = torch.nn.Parameter(apply_filter_binary_mask(input_mask, node_module.bias))
 
 
 @PT_PRUNING_OPERATOR_METATYPES.register("elementwise")
@@ -586,7 +586,6 @@ class PTElementwisePruningOp(ElementwisePruningOp, PTPruner):
         node_module = model.get_containing_module(node.node_name)
 
         if isinstance(node_module, tuple(NNCF_WRAPPED_USER_MODULES_DICT)):
-
             assert (
                 node_module.target_weight_dim_for_compression == 0
             ), "Implemented only for target_weight_dim_for_compression == 0"
@@ -597,7 +596,7 @@ class PTElementwisePruningOp(ElementwisePruningOp, PTPruner):
                 node_module.weight = torch.nn.Parameter(node_module.weight[bool_mask])
                 node_module.n_channels = new_num_channels
 
-                nncf_logger.debig(
+                nncf_logger.debug(
                     f'Pruned Elementwise {node.data["key"]} by input mask. '
                     f"Old num features: {old_num_channels}, new num features: {new_num_channels}."
                 )
