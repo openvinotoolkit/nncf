@@ -103,6 +103,8 @@ class BaseCompressionAlgorithmController(CompressionAlgorithmController):
                 - ({'x': None, 'y': y},) for keyword arguments only.
         """
         self.prepare_for_export()
+        print("prepare_for_inference")
+        self.prepare_for_inference()
         backend = get_backend(self.model)
         if backend is BackendType.TENSORFLOW:
             from nncf.tensorflow.exporter import TFExporter  # pylint: disable=cyclic-import
