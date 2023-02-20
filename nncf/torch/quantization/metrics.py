@@ -36,7 +36,7 @@ from nncf.torch.quantization.default_quantization import DEFAULT_PT_QUANT_TRAIT_
 from nncf.torch.quantization.layers import BaseQuantizer
 from nncf.torch.quantization.layers import SymmetricQuantizer
 from nncf.torch.nncf_network import NNCFNetwork, PTNNCFGraph
-from nncf.torch.dynamic_graph.transform_graph import is_nncf_module
+from nncf.torch.nncf_module_replacement import is_nncf_module
 from nncf.torch.quantization.structs import WeightQuantizerInfo
 from nncf.torch.quantization.structs import NonWeightQuantizerInfo
 from nncf.torch.quantization.statistics import MemoryConsumptionStatistics
@@ -153,7 +153,7 @@ class MemoryConsumptionStatisticsCollector(StatisticsCollector):
 
         fp_num_bits = 32
         nncf_modules = self._compressed_model.get_nncf_modules()
-        for nncf_module in nncf_modules.values():
+        for nncf_module in nncf_modules:
             count_el = np.prod(nncf_module.weight.shape)
             stats.fp32_weight_size += count_el * fp_num_bits
             quantizer = self._get_weight_quantizer_for_module(nncf_module)

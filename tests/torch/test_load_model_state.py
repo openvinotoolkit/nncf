@@ -25,7 +25,7 @@ from nncf.torch.checkpoint_loading import OPTIONAL_PARAMETERS_REGISTRY
 from nncf.torch.checkpoint_loading import ProcessedKeyStatus
 from nncf.torch.checkpoint_loading import ProcessedKeys
 from nncf.torch.checkpoint_loading import load_state
-from nncf.torch.dynamic_graph.transform_graph import replace_modules_by_nncf_modules
+from nncf.torch.nncf_module_replacement import replace_modules_by_nncf_modules
 from nncf.torch.layers import NNCF_PADDING_VALUE_ATTR_NAME
 from nncf.torch.nncf_network import EXTERNAL_QUANTIZERS_STORAGE_NAME
 from nncf.torch.nncf_network import LEGACY_ACT_STORAGE_NAME

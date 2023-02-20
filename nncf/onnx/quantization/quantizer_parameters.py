@@ -57,8 +57,8 @@ def calculate_scale_zero_point(max_val: np.ndarray, min_val: np.ndarray, level_l
     Calculates Quantizer/Dequantizer layer scale level.
     Returns scale and zero_point values foe the quantizer.
 
-    :param max_val: The maximum value of the input tensor.
-    :param min_val: The minimum value of the input tensor.
+    :param max_val: The maximum values of the input tensor.
+    :param min_val: The minimum values of the input tensor.
     :param level_low: The minimum level of quantizer quants.
     :param level_high: The maximum level of quantizer quants.
     :param mode: Symmetric or Asymmetric mode.
@@ -85,39 +85,28 @@ def calculate_scale_zero_point(max_val: np.ndarray, min_val: np.ndarray, level_l
     return scale, zero_point
 
 
-def calculate_weight_quantizer_parameters(weight_tensor: np.ndarray, quantizer_config: QuantizerConfig,
+def calculate_weight_quantizer_parameters(statistics: MinMaxTensorStatistic, quantizer_config: QuantizerConfig,
                                           axis: Optional[int]) -> ONNXQuantizerLayerParameters:
     """
     Calculates Quantizer/Dequantizer layer attributes for weight quantizer such as scale, zero_points and
     quantization mode: symmetric, asymmetric.
 
-    :param weight_tensor: Weight tensor to calculate quantizer attributes.
+    :param statistics: Collected statistics for the quantized insertion.
     :param quantizer_config: Config of Quantizer.
     :param axis: In per-channel case - the axis for the quantization. In per-tensor - ignored.
     :return: Parameters of Quantizer.
     """
-    if quantizer_config.per_channel:
-        assert axis is not None
-        axes = list(range(len(weight_tensor.shape)))
-        axes.pop(axis)
-        axes = tuple(axes)
-    else:
-        axes = None
     # The weight is restricted to have only signed range.
     tensor_type = np.int8
     if quantizer_config.signedness_to_force is not None and not quantizer_config.signedness_to_force:
         raise ValueError('The HW expects to have signed quantization of weights, '
                          'while the quantizer configuration for weights contains signedness_to_force=False.')
-    input_high = np.amax(weight_tensor, axis=axes)
-    input_low = np.amin(weight_tensor, axis=axes)
-    level_low, level_high = get_level_low_level_high(tensor_type, quantizer_config.num_bits)
-    scales, zero_points = calculate_scale_zero_point(input_high, input_low, level_low, level_high,
-                                                     quantizer_config.mode, tensor_type)
-    return ONNXQuantizerLayerParameters(scales, zero_points, quantizer_config.mode, axis, tensor_type)
+    input_low = np.array(statistics.min_values)
+    input_high = np.array(statistics.max_values)
+    return calculate_quantizer_parameters(input_low, input_high, tensor_type, quantizer_config, axis)
 
 
-def calculate_activation_quantizer_parameters(statistics: MinMaxTensorStatistic,
-                                              quantizer_config: QuantizerConfig,
+def calculate_activation_quantizer_parameters(statistics: MinMaxTensorStatistic, quantizer_config: QuantizerConfig,
                                               axis: Optional[int] = None) -> ONNXQuantizerLayerParameters:
     """
     Calculates Quantizer/Dequantizer layer attributes for activation quantizer such as scale, zero_points and
@@ -126,13 +115,31 @@ def calculate_activation_quantizer_parameters(statistics: MinMaxTensorStatistic,
     :param statistics: Collected statistics for the quantized insertion.
     :param quantizer_config: Config of the quantization configuration.
     :param axis: Axis of the quantization. None in a per-tensor quantization case.
-    :return: Parameters of the quantizer/dequantizer layers.
+    :return: Parameters of Quantizer.
     """
     input_low = np.array(statistics.min_values)
     input_high = np.array(statistics.max_values)
     tensor_type = np.uint8 if np.all(input_low >= 0) else np.int8
     if quantizer_config.signedness_to_force is not None:
         tensor_type = np.int8 if quantizer_config.signedness_to_force else np.uint8
+
+    return calculate_quantizer_parameters(input_low, input_high, tensor_type, quantizer_config, axis)
+
+
+def calculate_quantizer_parameters(input_low: np.ndarray, input_high: np.ndarray,
+                                   tensor_type: np.dtype, quantizer_config: QuantizerConfig,
+                                   axis: Optional[int] = None) -> ONNXQuantizerLayerParameters:
+    """
+    Calculates Quantizer/Dequantizer layer attributes for activation/weight quantizer such as
+    scale, zero_points and quantization mode: symmetric, asymmetric.
+
+    :param max_val: The maximum values of the input tensor.
+    :param min_val: The minimum values of the input tensor.
+    :param tensor_type: Value type of the tensor. Could be INT8 or UINT8.
+    :param quantizer_config: Config of the quantization configuration.
+    :param axis: Axis of the quantization. None in a per-tensor quantization case.
+    :return: Parameters of Quantizer.
+    """
     level_low, level_high = get_level_low_level_high(tensor_type, quantizer_config.num_bits)
     scales, zero_points = calculate_scale_zero_point(input_high, input_low, level_low, level_high,
                                                      quantizer_config.mode, tensor_type)

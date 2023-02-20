@@ -35,13 +35,13 @@ DATASET_CLASSES = 10
 
 
 def download(url: str, path: str) -> Path:
-    downloader = FastDownload(base=path, 
-                              archive='downloaded', 
+    downloader = FastDownload(base=path,
+                              archive='downloaded',
                               data='extracted')
     return downloader.get(url)
 
 
-def validate(model: ov.Model, 
+def validate(model: ov.Model,
              val_loader: torch.utils.data.DataLoader) -> float:
     predictions = []
     references = []
@@ -55,11 +55,11 @@ def validate(model: ov.Model,
         references.append(target)
 
     predictions = np.concatenate(predictions, axis=0)
-    references = np.concatenate(references, axis=0)  
+    references = np.concatenate(references, axis=0)
     return accuracy_score(predictions, references)
 
 
-def run_benchmark(model_path: str, shape: Optional[List[int]] = None, 
+def run_benchmark(model_path: str, shape: Optional[List[int]] = None,
                   verbose: bool = True) -> float:
     command = f'benchmark_app -m {model_path} -d CPU -api async -t 15'
     if shape is not None:
@@ -71,7 +71,7 @@ def run_benchmark(model_path: str, shape: Optional[List[int]] = None,
     return float(match.group(1))
 
 
-def get_model_size(ir_path: str, m_type: str = 'Mb', 
+def get_model_size(ir_path: str, m_type: str = 'Mb',
                    verbose: bool = True) -> float:
     xml_size = os.path.getsize(ir_path)
     bin_size = os.path.getsize(os.path.splitext(ir_path)[0] + '.bin')
@@ -80,11 +80,11 @@ def get_model_size(ir_path: str, m_type: str = 'Mb',
             break
         xml_size /= 1024
         bin_size /= 1024
-    model_size = xml_size + bin_size 
+    model_size = xml_size + bin_size
     if verbose:
         print(f'Model graph (xml):   {xml_size:.3f} Mb')
         print(f'Model weights (bin): {bin_size:.3f} Mb')
-        print(f'Model size:          {model_size:.3f} Mb')      
+        print(f'Model size:          {model_size:.3f} Mb')
     return model_size
 
 ###############################################################################

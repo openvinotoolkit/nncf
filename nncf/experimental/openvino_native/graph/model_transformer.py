@@ -252,12 +252,15 @@ class OVModelTransformer(ModelTransformer):
 
             node = name_to_node_mapping[node_name]
             node_inputs = [port.get_node() for port in node.output(0).get_target_inputs()]
-            node_with_bias = node_inputs[0]
-            assert node_with_bias.get_type_name() == 'Add'
+            assert any(node.get_type_name() == 'Add' for node in node_inputs)
+
+            for node_input in node_inputs:
+                if node_input.get_type_name() == 'Add':
+                    add_node = node_input
 
             bias_port_id = transformation.target_point.port_id
-            biased_port = node_with_bias.input(bias_port_id)
-            potential_bias = node_with_bias.input_value(bias_port_id).node
+            biased_port = add_node.input(bias_port_id)
+            potential_bias = add_node.input_value(bias_port_id).node
 
             if potential_bias.get_type_name() == 'Convert':
                 biased_port = potential_bias.input(0)
@@ -283,6 +286,9 @@ class OVModelTransformer(ModelTransformer):
         params, results = [], []
         for input_name in transformation.inputs:
             input_node = name_to_node_mapping[input_name]
+            if input_name in [tensor.node.get_friendly_name() for tensor in self._model.inputs]:
+                params.append(input_node)
+                continue
             input_port = input_node.input(0)
             input_node_output = input_port.get_source_output()
             new_param = opset.parameter(shape=input_node_output.get_shape(),
@@ -294,7 +300,10 @@ class OVModelTransformer(ModelTransformer):
         for output_name in transformation.outputs:
             output_node = name_to_node_mapping[output_name]
             for node_out in output_node.outputs():
-                results.append(opset.result(node_out,
-                                            name=f'{output_name}_output'))
+                new_result = opset.result(node_out, name=f'{output_name}_output')
+                results.append(new_result)
+
+        if not results:
+            results = [r.node for r in self._model.outputs]
 
         return ov.Model(results, params)

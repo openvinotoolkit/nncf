@@ -13,93 +13,71 @@
 
 import pytest
 import numpy as np
-from typing import Optional, Tuple, Union
-from dataclasses import dataclass
+import openvino.runtime as ov
+from openvino.runtime import opset9 as opset
 
 from nncf import Dataset
 from nncf.common.graph.transformations.commands import TargetType
-from nncf.common.tensor_statistics.statistic_point import StatisticPoint
-from nncf.common.tensor_statistics.statistic_point import StatisticPointsContainer
-from nncf.quantization.algorithms.definitions import RangeType
+from nncf.common.graph.transformations.commands import TargetPoint
 from nncf.experimental.openvino_native.statistics.aggregator import OVStatisticsAggregator
-from nncf.experimental.openvino_native.statistics.collectors import OVMeanMinMaxStatisticCollector
-from nncf.experimental.openvino_native.statistics.collectors import OVMinMaxStatisticCollector
 from nncf.experimental.openvino_native.graph.transformations.commands import OVTargetPoint
+from nncf.experimental.openvino_native.quantization.algorithms.min_max.openvino_backend import\
+    OVMinMaxAlgoBackend
 
-from tests.openvino.native.models import LinearModel
-
-INPUT_SHAPE = [1, 3, 4, 2]
-
-DATASET_SAMPLES = [np.zeros(INPUT_SHAPE), np.ones(INPUT_SHAPE)]
-
-DATASET_SAMPLES[0][0, 0, 0, 0] = 1  # max
-DATASET_SAMPLES[0][0, 0, 0, 1] = -10  # min
-
-DATASET_SAMPLES[0][0, 1, 0, 0] = 0.1  # max
-DATASET_SAMPLES[0][0, 1, 0, 1] = -1  # min
-
-DATASET_SAMPLES[0][0, 2, 0, 0] = 128  # max
-DATASET_SAMPLES[0][0, 2, 0, 1] = -128  # min
+from tests.common.test_statistics_aggregator import TemplateTestStatisticsAggregator
 
 
-@dataclass
-class TestParameters:
-    range_type: RangeType
-    use_abs_max: bool
-    reduction_shape: Optional[Tuple[int]]
-    ref_max_val: Union[np.ndarray, float]
-    ref_min_val: Union[np.ndarray, float]
+INPUT_NAME = 'Input'
+CONV_NODE_NAME = 'Conv1'
+INPUT_SHAPE = [1, 3, 3, 3]
 
 
-@pytest.mark.parametrize('test_parameters',
-                         ((TestParameters(RangeType.MEAN_MINMAX, False, None, 64.5, -63.5)),
-                          (TestParameters(RangeType.MEAN_MINMAX, False, (0, 2, 3),
-                                          np.array((1, 0.55, 64.5)).reshape((1, 3, 1, 1)),
-                                          np.array((-4.5, 0, -63.5)).reshape((1, 3, 1, 1)))),
-                          (TestParameters(RangeType.MEAN_MINMAX, True, (0, 2, 3),
-                                          np.array((5.5, 1, 64.5)).reshape((1, 3, 1, 1)),
-                                          np.array((-4.5, 0, -63.5)).reshape((1, 3, 1, 1)))),
-                          (TestParameters(RangeType.MINMAX, False, None, 128, -128)),
-                          (TestParameters(RangeType.MINMAX, True, None, 128, -128)),
-                          (TestParameters(RangeType.MINMAX, False, (0, 2, 3),
-                                          np.array((1, 1, 128)).reshape((1, 3, 1, 1)),
-                                          np.array((-10, -1, -128)).reshape((1, 3, 1, 1)))),
-                          (TestParameters(RangeType.MINMAX, True, (0, 2, 3),
-                                          np.array((10, 1, 128)).reshape((1, 3, 1, 1)),
-                                          np.array((-10, -1, -128)).reshape((1, 3, 1, 1)))),
-                          )
-                         )
-def test_statistics_aggregator(test_parameters):
-    target_node_name = 'Input'
-    model = LinearModel().ov_model
-    dataset = Dataset(DATASET_SAMPLES, transform_func=lambda data: {target_node_name: data})
+def get_StatisticAgregatorTestModel(input_shape, kernel):
+    input_1 = opset.parameter(input_shape, name=INPUT_NAME)
+    strides = [1, 1]
+    pads = [0, 0]
+    dilations = [1, 1]
+    conv = opset.convolution(input_1, kernel.astype(np.float32),
+                             strides, pads, pads, dilations, name=CONV_NODE_NAME)
 
-    statistics_aggregator = OVStatisticsAggregator(dataset)
-    statistics_points = StatisticPointsContainer()
-    if test_parameters.range_type == RangeType.MINMAX:
-        tensor_collector = OVMinMaxStatisticCollector(test_parameters.use_abs_max, test_parameters.reduction_shape,
-                                                        num_samples=len(DATASET_SAMPLES))
-    if test_parameters.range_type == RangeType.MEAN_MINMAX:
-        tensor_collector = OVMeanMinMaxStatisticCollector(False, test_parameters.use_abs_max,
-                                                            test_parameters.reduction_shape,
-                                                            num_samples=len(DATASET_SAMPLES))
-    algorithm_name = 'TestAlgo'
-    statistic_point_type = TargetType.POST_LAYER_OPERATION
-    target_point = OVTargetPoint(statistic_point_type, target_node_name, 0)
-    statistics_points.add_statistic_point(StatisticPoint(target_point=target_point,
-                                                         tensor_collector=tensor_collector,
-                                                         algorithm=algorithm_name))
-    statistics_aggregator.register_stastistic_points(statistics_points)
-    statistics_aggregator.collect_statistics(model)
+    result = opset.result(conv, name="Result")
+    model = ov.Model([result], [input_1])
+    return model
 
-    def filter_func(point):
-        return algorithm_name in point.algorithm_to_tensor_collectors and \
-               point.target_point.type == statistic_point_type
 
-    for tensor_collector in statistics_points.get_algo_statistics_for_node(
-            target_node_name,
-            filter_func,
-            algorithm_name):
-        stat = tensor_collector.get_statistics()
-        assert np.allclose(stat.max_values, test_parameters.ref_max_val)
-        assert np.allclose(stat.min_values, test_parameters.ref_min_val)
+class TestStatisticsAggregator(TemplateTestStatisticsAggregator):
+    def get_algo_backend_cls(self) -> OVMinMaxAlgoBackend:
+        return OVMinMaxAlgoBackend
+
+    def get_backend_model(self, dataset_samples):
+        sample = dataset_samples[0].reshape(INPUT_SHAPE[1:])
+        conv_w = self.dataset_samples_to_conv_w(sample)
+        return get_StatisticAgregatorTestModel(INPUT_SHAPE, conv_w)
+
+    def get_statistics_aggregator(self, dataset):
+        return OVStatisticsAggregator(dataset)
+
+    def get_dataset(self, samples):
+        return Dataset(samples, lambda data: {INPUT_NAME: data})
+
+    def get_target_point(self, target_type: TargetType) -> TargetPoint:
+        target_node_name = INPUT_NAME
+        port_id = 0
+        if target_type == TargetType.OPERATION_WITH_WEIGHTS:
+            target_node_name = CONV_NODE_NAME
+            port_id = 1
+        return OVTargetPoint(target_type, target_node_name, port_id)
+
+    @pytest.fixture
+    def dataset_samples(self, dataset_values):
+        input_shape = INPUT_SHAPE
+        dataset_samples = [np.zeros(input_shape), np.ones(input_shape)]
+
+        for i, value in enumerate(dataset_values):
+            dataset_samples[0][0, i, 0, 0] = value['max']
+            dataset_samples[0][0, i, 0, 1] = value['min']
+        return dataset_samples
+
+    @pytest.fixture
+    def is_stat_in_shape_of_scale(self) -> bool:
+        return True

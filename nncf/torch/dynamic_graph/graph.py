@@ -166,20 +166,24 @@ class OperationExecutionContext:
 class DynamicGraphNodeParameters:
     def __init__(self, layer_attributes: BaseLayerAttributes,
                  ignored_algorithms: List[str],
-                 is_called_inside_nncf_module: bool):
+                 is_called_inside_nncf_module: bool,
+                 calling_module_id: int):
         self.layer_attributes = layer_attributes
         self.ignored_algorithms = ignored_algorithms
         self.is_called_inside_nncf_module = is_called_inside_nncf_module
+        self.calling_module_id = calling_module_id
 
 
 class DynamicGraphNode:
     def __init__(self, node_id: int, node_key: str, layer_attributes: BaseLayerAttributes,
-                 op_exec_context: OperationExecutionContext, ignored_algorithms: List[str],
+                 op_exec_context: OperationExecutionContext, calling_module_id: int,
+                 ignored_algorithms: List[str],
                  is_called_inside_nncf_module: bool, is_in_iteration_scope: bool):
         self.node_id = node_id
         self.node_key = node_key
         self.layer_attributes = layer_attributes
         self.op_exec_context = op_exec_context
+        self.calling_module_id = calling_module_id
         self.ignored_algorithms = ignored_algorithms
         self.is_called_inside_nncf_module = is_called_inside_nncf_module
         self.is_in_iteration_scope = is_in_iteration_scope
@@ -192,7 +196,8 @@ class DynamicGraphNode:
                    op_exec_context=nx_node[DynamicGraph.OP_EXEC_CONTEXT_NODE_ATTR],
                    ignored_algorithms=nx_node[DynamicGraph.IGNORED_ALGOS_NODE_ATTR],
                    is_called_inside_nncf_module=nx_node[DynamicGraph.IS_CALLED_INSIDE_NNCF_MODULE],
-                   is_in_iteration_scope=nx_node[DynamicGraph.IS_IN_ITERATION_SCOPE_NODE_ATTR])
+                   is_in_iteration_scope=nx_node[DynamicGraph.IS_IN_ITERATION_SCOPE_NODE_ATTR],
+                   calling_module_id=nx_node[DynamicGraph.CALLING_MODULE_ID])
 
     def __eq__(self, other: 'DynamicGraphNode') -> bool:
         return self.__dict__ == other.__dict__
@@ -279,7 +284,8 @@ class DefaultScopeNodeMatcher:
             DynamicGraph.ID_NODE_ATTR: node_id,
             DynamicGraph.KEY_NODE_ATTR: node_key,
             DynamicGraph.OP_EXEC_CONTEXT_NODE_ATTR: op_exec_context,
-            DynamicGraph.IS_IN_ITERATION_SCOPE_NODE_ATTR: is_in_iteration_scope
+            DynamicGraph.IS_IN_ITERATION_SCOPE_NODE_ATTR: is_in_iteration_scope,
+            DynamicGraph.CALLING_MODULE_ID: node_parameters.calling_module_id
         }
         if node_parameters.layer_attributes is not None:
             attrs[DynamicGraph.LAYER_ATTRIBUTES] = node_parameters.layer_attributes
@@ -526,6 +532,7 @@ class DynamicGraph:
     IGNORED_ALGOS_NODE_ATTR = 'ignored_algos'
     IS_CALLED_INSIDE_NNCF_MODULE = 'is_called_inside_nncf_module'
     IS_IN_ITERATION_SCOPE_NODE_ATTR = 'is_in_iteration_scope'
+    CALLING_MODULE_ID = 'calling_module_id'
 
     def __init__(self):
         self._nx_graph = nx.DiGraph()
@@ -538,7 +545,8 @@ class DynamicGraph:
         nm = iso.categorical_node_match([DynamicGraph.ID_NODE_ATTR,
                                          DynamicGraph.KEY_NODE_ATTR,
                                          DynamicGraph.OP_EXEC_CONTEXT_NODE_ATTR,
-                                         DynamicGraph.LAYER_ATTRIBUTES], [None, None, None])
+                                         DynamicGraph.LAYER_ATTRIBUTES,
+                                         DynamicGraph.CALLING_MODULE_ID], [None, None, None, None, None])
         em = iso.categorical_edge_match([DynamicGraph.ACTIVATION_SHAPE_EDGE_ATTR,
                                          DynamicGraph.INPUT_PORT_ID_EDGE_ATTR], [None, None])
         return nx.is_isomorphic(self._nx_graph, other._nx_graph, node_match=nm, edge_match=em)

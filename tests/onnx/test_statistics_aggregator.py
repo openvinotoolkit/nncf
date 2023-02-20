@@ -12,90 +12,65 @@
 """
 
 import pytest
-
 import numpy as np
 
-from nncf.onnx.statistics.aggregator import ONNXStatisticsAggregator
-from nncf.quantization.algorithms.definitions import RangeType
-from nncf.onnx.statistics.collectors import ONNXMeanMinMaxStatisticCollector
-from nncf.onnx.statistics.collectors import ONNXMinMaxStatisticCollector
-from nncf.common.tensor_statistics.statistic_point import StatisticPoint
-from nncf.common.tensor_statistics.statistic_point import StatisticPointsContainer
+from nncf import Dataset
+from nncf.quantization.algorithms.min_max.onnx_backend import ONNXMinMaxAlgoBackend
 from nncf.onnx.graph.transformations.commands import ONNXTargetPoint
+from nncf.onnx.statistics.aggregator import ONNXStatisticsAggregator
 from nncf.common.graph.transformations.commands import TargetType
 
-from tests.onnx.models import InputOutputModel
-from tests.onnx.quantization.common import get_dataset_for_test
+from tests.onnx.models import IdentityConvolutionalModel
+from tests.common.test_statistics_aggregator import TemplateTestStatisticsAggregator
 
+
+INPUT_NAME = 'X'
+IDENTITY_NODE_NAME = 'Identity'
+CONV_NODE_NAME = 'Conv1'
 INPUT_SHAPE = [3, 3, 3]
 
-DATASET_SAMPLES = [np.zeros(INPUT_SHAPE), np.ones(INPUT_SHAPE)]
 
-DATASET_SAMPLES[0][0, 0, 0] = 1  # max
-DATASET_SAMPLES[0][0, 0, 1] = -10  # min
+class TestStatisticsAggregator(TemplateTestStatisticsAggregator):
+    def get_algo_backend_cls(self) -> ONNXMinMaxAlgoBackend:
+        return ONNXMinMaxAlgoBackend
 
-DATASET_SAMPLES[0][1, 0, 0] = 0.1  # max
-DATASET_SAMPLES[0][1, 0, 1] = -1  # min
+    def get_backend_model(self, dataset_samples):
+        conv_w = self.dataset_samples_to_conv_w(dataset_samples[0])
+        return IdentityConvolutionalModel(input_shape=[1] + INPUT_SHAPE,
+                                          inp_ch=3,
+                                          out_ch=3,
+                                          kernel_size= 3,
+                                          conv_w=conv_w).onnx_model
 
-DATASET_SAMPLES[0][2, 0, 0] = 128  # max
-DATASET_SAMPLES[0][2, 0, 1] = -128  # min
+    def get_statistics_aggregator(self, dataset):
+        return ONNXStatisticsAggregator(dataset)
 
+    def get_dataset(self, samples):
+        def transform_fn(data_item):
+            inputs = data_item
+            return {INPUT_NAME: [inputs]}
 
-class TestParameters:
-    def __init__(self, range_type, use_abs_max, reduction_shape, ref_max_val, ref_min_val):
-        self.range_type = range_type
-        self.use_abs_max = use_abs_max
-        self.reduction_shape = reduction_shape
-        self.ref_max_val = ref_max_val
-        self.ref_min_val = ref_min_val
+        return Dataset(samples, transform_fn)
 
+    def get_target_point(self, target_type: TargetType):
+        target_node_name = IDENTITY_NODE_NAME
+        port_id = 0
+        if target_type == TargetType.OPERATION_WITH_WEIGHTS:
+            target_node_name = CONV_NODE_NAME
+            port_id = None
+        return ONNXTargetPoint(target_type, target_node_name, port_id)
 
-@pytest.mark.parametrize('test_parameters, ',
-                         ((TestParameters(RangeType.MEAN_MINMAX, False, None, 64.5, -63.5)),
-                          (TestParameters(RangeType.MEAN_MINMAX, False, (0, 2, 3), np.array((1, 0.55, 64.5)),
-                                          np.array((-4.5, 0, -63.5)))),
-                          (TestParameters(RangeType.MEAN_MINMAX, True, (0, 2, 3), np.array((5.5, 1, 64.5)),
-                                          np.array((-4.5, 0, -63.5)))),
-                          (TestParameters(RangeType.MINMAX, False, None, 128, -128)),
-                          (TestParameters(RangeType.MINMAX, True, None, 128, -128)),
-                          (TestParameters(RangeType.MINMAX, False, (0, 2, 3), np.array((1, 1, 128)),
-                                          np.array((-10, -1, -128)))),
-                          (TestParameters(RangeType.MINMAX, True, (0, 2, 3), np.array((10, 1, 128)),
-                                          np.array((-10, -1, -128)))),
-                          )
-                         )
-def test_statistics_aggregator(test_parameters):
-    model = InputOutputModel().onnx_model
+    @pytest.fixture
+    def dataset_samples(self, dataset_values):
+        input_shape = INPUT_SHAPE
+        dataset_samples = [np.zeros(input_shape), np.ones(input_shape)]
 
-    dataset = get_dataset_for_test(DATASET_SAMPLES, "X")
+        for i, value in enumerate(dataset_values):
+            dataset_samples[0][i, 0, 0] = value['max']
+            dataset_samples[0][i, 0, 1] = value['min']
 
-    statistics_aggregator = ONNXStatisticsAggregator(dataset)
-    statistics_points = StatisticPointsContainer()
-    if test_parameters.range_type == RangeType.MINMAX:
-        tensor_collector = ONNXMinMaxStatisticCollector(test_parameters.use_abs_max, test_parameters.reduction_shape,
-                                                        num_samples=len(DATASET_SAMPLES))
-    if test_parameters.range_type == RangeType.MEAN_MINMAX:
-        tensor_collector = ONNXMeanMinMaxStatisticCollector(False, test_parameters.use_abs_max,
-                                                            test_parameters.reduction_shape,
-                                                            num_samples=len(DATASET_SAMPLES))
-    target_node_name = 'Identity'
-    algorithm_name = 'TestAlgo'
-    statistic_point_type = TargetType.POST_LAYER_OPERATION
-    target_point = ONNXTargetPoint(statistic_point_type, target_node_name, 0)
-    statistics_points.add_statistic_point(StatisticPoint(target_point=target_point,
-                                                         tensor_collector=tensor_collector,
-                                                         algorithm=algorithm_name))
-    statistics_aggregator.register_stastistic_points(statistics_points)
-    statistics_aggregator.collect_statistics(model)
+        return dataset_samples
 
-    def filter_func(point):
-        return algorithm_name in point.algorithm_to_tensor_collectors and \
-               point.target_point.type == statistic_point_type
-
-    for tensor_collector in statistics_points.get_algo_statistics_for_node(
-            target_node_name,
-            filter_func,
-            algorithm_name):
-        stat = tensor_collector.get_statistics()
-        assert np.allclose(stat.max_values, test_parameters.ref_max_val)
-        assert np.allclose(stat.min_values, test_parameters.ref_min_val)
+    @pytest.fixture
+    def is_stat_in_shape_of_scale(self) -> bool:
+        return False
