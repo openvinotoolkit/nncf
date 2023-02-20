@@ -51,3 +51,28 @@ def test_compress_weights(model_creator_func, ref_nodes):
                 node = node.input_value(0).get_node()
             assert node.get_element_type() == ov.Type(np.int8)
             break
+
+
+@pytest.mark.parametrize('model_creator_func, ref_nodes', zip([LinearModel, ConvModel, MatMul2DModel], REF_FQ_NODES))
+def test_overflow_fix_applied(model_creator_func, ref_nodes):
+    (quntized_op_name, inp_port), ref_fqs_names = ref_nodes
+    model = model_creator_func().ov_model
+    dataset = get_dataset_for_test(model)
+    quantized_model = quantize_impl(model, dataset, preset=QuantizationPreset.PERFORMANCE,
+                                    target_device=TargetDevice.CPU, subset_size=1, fast_bias_correction=True)
+
+    fq_nodes = get_fq_nodes(quantized_model)
+    assert len(fq_nodes) == len(ref_fqs_names)
+    for fq_name in fq_nodes:
+        assert fq_name in ref_fqs_names
+
+    for op in quantized_model.get_ops():
+        if op.get_friendly_name() == quntized_op_name:
+            node = op.input_value(inp_port).get_node()
+            while node.get_type_name() != 'Constant':
+                node = node.input_value(0).get_node()
+            assert node.get_element_type() == ov.Type(np.int8)
+            vector = node.get_vector()
+            assert np.min(vector) >= -64
+            assert np.max(vector) <= 63
+            break
