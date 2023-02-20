@@ -319,7 +319,7 @@ class CompositeCompressionAlgorithmController(CompressionAlgorithmController):
         """
         self.prepare_for_export()
         print("prepare_for_inference")
-        self.prepare_for_inference()
+        self.prepare_for_inference(make_model_copy=False)
         backend = get_backend(self.model)
         if backend is BackendType.TENSORFLOW:
             from nncf.tensorflow.exporter import TFExporter  # pylint: disable=cyclic-import
