@@ -76,14 +76,14 @@ class OVStatisticsAggregator(StatisticsAggregator):
 
     @staticmethod
     def _get_transformation_layout_extra_outputs(statistic_points: StatisticPointsContainer) -> TransformationLayout:
-        def filter_fn(statistic_point: StatisticPoint) -> bool:
-            return statistic_point.target_point.is_weight_target_point()
+        def is_activation_point(statistic_point: StatisticPoint) -> bool:
+            return not statistic_point.target_point.is_weight_target_point()
 
         transformation_layout = TransformationLayout()
         transformation_commands = []
         for _statistic_points in statistic_points.values():
             for _statistic_point in _statistic_points:
-                if not filter_fn(_statistic_point):
+                if is_activation_point(_statistic_point):
                     transformation_commands.append(OVOutputInsertionCommand(_statistic_point.target_point))
 
         for transformation_command in transformation_commands:

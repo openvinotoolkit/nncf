@@ -23,7 +23,7 @@ from nncf.onnx.quantization.quantizer_parameters import ONNXQuantizerLayerParame
 
 class ONNXTargetPoint(TargetPoint):
     def __init__(self, target_type: TargetType, target_node_name: str,
-                 port_id: Optional[int]):
+                 port_id: Optional[int] = None):
         """
         Constructor.
 

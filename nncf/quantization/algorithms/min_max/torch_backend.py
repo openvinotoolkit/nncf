@@ -156,7 +156,7 @@ class PTMinMaxAlgoBackend(MinMaxAlgoBackend):
     def _get_input_scale_shape(nncf_graph: NNCFGraph,
                                target_point: PTTargetPoint,
                                quantization_config: QuantizerConfig) ->\
-    Tuple[Tuple[int, ...], Tuple[int, ...], int]:
+        Tuple[Tuple[int, ...], Tuple[int, ...], int]:
         is_weights = target_point.is_weight_target_point()
         if is_weights:
             module_node = nncf_graph.get_node_by_name(target_point.target_node_name)

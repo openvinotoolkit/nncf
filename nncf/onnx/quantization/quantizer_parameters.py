@@ -57,8 +57,8 @@ def calculate_scale_zero_point(max_val: np.ndarray, min_val: np.ndarray, level_l
     Calculates Quantizer/Dequantizer layer scale level.
     Returns scale and zero_point values foe the quantizer.
 
-    :param max_val: The maximum value of the input tensor.
-    :param min_val: The minimum value of the input tensor.
+    :param max_val: The maximum values of the input tensor.
+    :param min_val: The minimum values of the input tensor.
     :param level_low: The minimum level of quantizer quants.
     :param level_high: The maximum level of quantizer quants.
     :param mode: Symmetric or Asymmetric mode.
@@ -133,7 +133,9 @@ def calculate_quantizer_parameters(input_low: np.ndarray, input_high: np.ndarray
     Calculates Quantizer/Dequantizer layer attributes for activation/weight quantizer such as
     scale, zero_points and quantization mode: symmetric, asymmetric.
 
-    :param statistics: Collected statistics for the quantized insertion.
+    :param max_val: The maximum values of the input tensor.
+    :param min_val: The minimum values of the input tensor.
+    :param tensor_type: Value type of the tensor. Could be INT8 or UINT8.
     :param quantizer_config: Config of the quantization configuration.
     :param axis: Axis of the quantization. None in a per-tensor quantization case.
     :return: Parameters of Quantizer.

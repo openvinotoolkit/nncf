@@ -187,7 +187,7 @@ class OVConstantLayerAttributes(BaseLayerAttributes):
                  const_shape: Optional[List[int]] = None):
         """
         :param const_port_id: Index of const port. Should be None if layer without constant inputs.
-        :param const_shape: Weight shape. Should be None if layer without constant inputs.
+        :param const_shape: Constant shape. Should be None if layer without constant inputs.
         """
         self.const_port_id = const_port_id
         self.const_shape = const_shape
@@ -195,11 +195,11 @@ class OVConstantLayerAttributes(BaseLayerAttributes):
 
 def get_operation_const_op(operation: ov.Node, const_port_id: int) -> ov.Node:
     """
-    Returns weight node of given operation placed on given const port id.
+    Returns constant node of given operation placed on given const port id.
 
     :param operation: Given operation.
     :param const_port_id: Given constant port id.
-    :returns: Weight node of given operation placed on given const port id.
+    :returns: Constant node of given operation placed on given const port id.
     """
     const_node = operation.input_value(const_port_id).get_node()
     metatype = OV_OPERATOR_METATYPES.get_operator_metatype_by_op_name(const_node.get_type_name())

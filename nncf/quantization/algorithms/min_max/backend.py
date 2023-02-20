@@ -145,7 +145,7 @@ class MinMaxAlgoBackend(ABC):
         """
         Returns node's weight tensor input port ID.
 
-        :param model: Backend model to get structural information.
+        :param model: Backend-specific model to get structural information.
         :param node: NNCFNode to find its weight input port ID.
         :return: The input port ID of the weight.
         """
