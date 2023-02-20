@@ -78,7 +78,7 @@ class OVMinMaxAlgoBackend(MinMaxAlgoBackend):
     def create_activation_quantizer_insertion_command(target_point: OVTargetPoint,
                                                       quantizer_config: QuantizerConfig,
                                                       statistics: MinMaxTensorStatistic) \
-                                                      -> OVQuantizerInsertionCommand:
+            -> OVQuantizerInsertionCommand:
         parameters = calculate_activation_quantizer_parameters(statistics, quantizer_config)
         return OVQuantizerInsertionCommand(target_point, parameters)
 
@@ -92,9 +92,9 @@ class OVMinMaxAlgoBackend(MinMaxAlgoBackend):
         return OVQuantizerInsertionCommand(target_point, parameters)
 
     @staticmethod
-    def create_weight_update_command(quantization_target_point: OVTargetPoint, weight_tensor: np.ndarray):
-        weight_update_target_point = OVTargetPoint(TargetType.LAYER, quantization_target_point.target_node_name,
-                                                   quantization_target_point.port_id)
+    def create_weight_update_command(target_point: OVTargetPoint, weight_tensor: np.ndarray) -> OVWeightUpdateCommand:
+        weight_update_target_point = OVTargetPoint(TargetType.LAYER, target_point.target_node_name,
+                                                   target_point.port_id)
         return OVWeightUpdateCommand(weight_update_target_point, weight_tensor)
 
     @staticmethod
