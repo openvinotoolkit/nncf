@@ -204,7 +204,7 @@ def test_node_removing(target_layers):
 def test_no_transformations():
     def infer_model_with_ones(model, shape):
         model = model.SerializeToString()
-        sess = rt.InferenceSession(model, providers=['OpenVINOExecutionProvider'])
+        sess = rt.InferenceSession(model, providers=['CPUExecutionProvider'])
         _input = np.ones(shape)
         input_name = sess.get_inputs()[0].name
         return sess.run([], {input_name: _input.astype(np.float32)})
