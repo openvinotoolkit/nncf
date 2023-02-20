@@ -44,7 +44,7 @@ DATASET_INFO = download.DownloadInfo(
     hash='380afc46701c99cb7b9a928edbe16eb5')
 DATASET_PATH = HOME_PATH / '.cache/nncf/datasets/mvtec_capsule'
 
-max_accuracy_drop = 0.005 if len(sys.argv) < 2 else sys.argv[1]
+max_accuracy_drop = 0.005 if len(sys.argv) < 2 else float(sys.argv[1])
 
 
 def download_and_extract(root: Path, info: download.DownloadInfo) -> None:

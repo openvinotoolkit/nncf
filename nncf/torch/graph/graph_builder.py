@@ -10,7 +10,7 @@
  See the License for the specific language governing permissions and
  limitations under the License.
 """
-
+from collections import defaultdict
 from typing import Any
 from typing import Callable
 from typing import Dict
@@ -20,7 +20,6 @@ from typing import Optional
 import torch
 
 from nncf.common.graph import INPUT_NOOP_METATYPES
-from nncf.common.graph import LayerName
 from nncf.common.graph.layer_attributes import MultipleInputLayerAttributes
 from nncf.common.graph.layer_attributes import ReshapeLayerAttributes
 from nncf.common.graph.layer_attributes import MultipleOutputLayerAttributes
@@ -52,19 +51,17 @@ class GraphConverter:
     @staticmethod
     def convert(dynamic_graph: DynamicGraph, input_infos: List[ModelInputInfo] = None) -> PTNNCFGraph:
         # pylint:disable=too-many-branches
-        layer_name_vs_node_counts = {}  # type: Dict[LayerName, int]
-
+        module_id_vs_known_op_addrs_map = defaultdict(set)  # type: Dict[int, Set[Scope]]
         for dynamic_graph_node in dynamic_graph.get_all_nodes():
-            layer_name = str(dynamic_graph_node.op_exec_context.op_address.scope_in_model)
-            if layer_name not in layer_name_vs_node_counts:
-                layer_name_vs_node_counts[layer_name] = 1
-            else:
-                layer_name_vs_node_counts[layer_name] += 1
+            module_id_vs_known_op_addrs_map[dynamic_graph_node.calling_module_id].add(
+                dynamic_graph_node.op_exec_context.op_address)
+
+        module_id_vs_sorted_scopes_map = {k: list(sorted([s.scope_in_model for s in v], key=str))
+            for k, v in module_id_vs_known_op_addrs_map.items()}
 
         nncf_graph = PTNNCFGraph()
         for dynamic_graph_node in dynamic_graph.get_all_nodes():
             op_address = dynamic_graph_node.op_exec_context.op_address
-            layer_name = str(dynamic_graph_node.op_exec_context.op_address.scope_in_model)
 
             metatype = PT_OPERATOR_METATYPES.get_operator_metatype_by_op_name(op_address.operator_name)
             if metatype.get_subtypes():
@@ -81,14 +78,15 @@ class GraphConverter:
                 if input_infos[input_id].is_integer_input():
                     is_integer_input = True
 
-            is_shared = layer_name in layer_name_vs_node_counts and layer_name_vs_node_counts[layer_name] > 1
+            is_shared = len(module_id_vs_sorted_scopes_map[dynamic_graph_node.calling_module_id]) > 1
+            canonical_scope = module_id_vs_sorted_scopes_map[dynamic_graph_node.calling_module_id][0]
 
             nncf_graph.add_nncf_node(node_name=str(op_address),
                                      node_type=op_address.operator_name,
                                      node_metatype=metatype,
                                      layer_attributes=dynamic_graph_node.layer_attributes,
                                      node_id_override=dynamic_graph_node.node_id,
-                                     layer_name=str(op_address.scope_in_model),
+                                     layer_name=str(canonical_scope),
                                      ignored_algorithms=dynamic_graph_node.ignored_algorithms,
                                      is_in_iteration_scope=dynamic_graph_node.is_in_iteration_scope,
                                      is_integer_input=is_integer_input,

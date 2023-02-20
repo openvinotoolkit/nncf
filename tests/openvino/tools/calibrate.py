@@ -14,6 +14,7 @@
 import json
 import os
 from argparse import ArgumentParser
+from typing import Optional, TypeVar
 
 import openvino.runtime as ov
 from openvino.tools.accuracy_checker.evaluators.quantization_model_evaluator import \
@@ -21,6 +22,17 @@ from openvino.tools.accuracy_checker.evaluators.quantization_model_evaluator imp
 from openvino.tools.pot.configs.config import Config
 
 import nncf
+from nncf.common.quantization.structs import QuantizationPreset
+from nncf.data.dataset import Dataset
+from nncf.experimental.openvino_native.quantization.quantize import \
+    quantize_impl
+from nncf.parameters import (
+    IgnoredScope,
+    ModelType,
+    TargetDevice
+)
+
+TModel = TypeVar('TModel')
 
 MAP_POT_NNCF_ALGORITHMS = {'DefaultQuantization': 'quantize'}
 
@@ -118,26 +130,7 @@ def map_preset(preset):
 
 
 def map_quantization_parameters(pot_parameters):
-    def _map_parameters(parameters, supported_parameters,
-                        default_parameters, ignored_parameters):
-        result = {}
-        for name in parameters:
-            if (name in ignored_parameters or
-                (name in default_parameters and
-                 parameters[name] == default_parameters[name])):
-                continue
-
-            if name in supported_parameters:
-                kwarg = parameters_mapping[name](parameters[name])
-                if kwarg is not None:
-                    result.update(kwarg)
-            elif parameters[name] is not None:
-                _map_parameters(parameters[name], {}, {}, [])
-            else:
-                raise ValueError(f'{name} parameter is not supported')
-        return result
-
-    parameters_mapping = {
+    supported_parameters = {
         'target_device': map_target_device,
         'model_type': map_model_type,
         'ignored': map_ignored_scope,
@@ -165,8 +158,20 @@ def map_quantization_parameters(pot_parameters):
         'weight_decay'
     ]
 
-    return _map_parameters(pot_parameters, parameters_mapping,
-                           default_parameters, ignored_parameters)
+    result = {}
+    for name in pot_parameters:
+        if (name in ignored_parameters or
+            (name in default_parameters and
+             pot_parameters[name] == default_parameters[name])):
+            continue
+        if name in supported_parameters:
+            kwarg = supported_parameters[name](pot_parameters[name])
+            if kwarg is not None:
+                result.update(kwarg)
+        else:
+            raise ValueError(f'{name} parameter is not supported')
+
+    return result
 
 
 def map_paramaters(pot_algo_name, nncf_algo_name, pot_parameters):
@@ -205,6 +210,19 @@ def get_nncf_algorithms_config(compression_config):
     return nncf_algorithms
 
 
+def quantize_native(model: TModel,
+                    calibration_dataset: Dataset,
+                    preset: QuantizationPreset = QuantizationPreset.PERFORMANCE,
+                    target_device: TargetDevice = TargetDevice.ANY,
+                    subset_size: int = 300,
+                    fast_bias_correction: bool = True,
+                    model_type: Optional[ModelType] = None,
+                    ignored_scope: Optional[IgnoredScope] = None) -> TModel:
+    return quantize_impl(model, calibration_dataset, preset, target_device,
+                         subset_size, fast_bias_correction, model_type,
+                         ignored_scope)
+
+
 # pylint: disable=protected-access
 def quantize_model(xml_path, bin_path, accuracy_checcker_config,
                    quantization_impl, quantization_parameters):
@@ -223,6 +241,9 @@ def quantize_model(xml_path, bin_path, accuracy_checcker_config,
     if quantization_impl == 'pot':
         quantized_model = nncf.quantize(ov_model, calibration_dataset,
                                         **quantization_parameters)
+    elif quantization_impl == 'native':
+        quantized_model = quantize_native(ov_model, calibration_dataset,
+                                          **quantization_parameters)
     else:
         raise NotImplementedError()
     return quantized_model
