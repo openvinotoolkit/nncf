@@ -16,8 +16,8 @@ from torch import nn
 from torch.nn import functional as F
 
 from nncf.torch import create_compressed_model
+from nncf.torch import disable_tracing
 from nncf.torch.dynamic_graph.context import get_current_context
-from nncf.torch.dynamic_graph.context import patch_with_no_nncf_trace
 from tests.torch.helpers import create_conv
 from tests.torch.helpers import get_empty_config
 
@@ -59,6 +59,6 @@ def test_no_trace_model_patching():
     assert len(compressed_model._original_graph._output_nncf_nodes) == 2    # pylint: disable=protected-access
 
     # Patching a function results with no_nncf_trace in method not producing an output node
-    patch_with_no_nncf_trace(TestModel.ambiguous_op)
+    disable_tracing(TestModel.ambiguous_op)
     _, compressed_model = create_compressed_model(TestModel(False), get_empty_config())
     assert len(compressed_model._original_graph._output_nncf_nodes) == 1    # pylint: disable=protected-access

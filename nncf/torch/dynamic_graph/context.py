@@ -412,9 +412,9 @@ def get_current_context() -> TracingContext:
     return _CURRENT_CONTEXT
 
 
-def patch_with_no_nncf_trace(method):
+def disable_tracing(method):
     """
-    Patches a method so that it will be executed within no_nncf_trace context
+    Patch a method so that it will be executed within no_nncf_trace context
     :param method: A method to patch.
     """
     def no_nncf_trace_wrapper(self, fn, *args, **kwargs):  # pylint: disable=unused-argument

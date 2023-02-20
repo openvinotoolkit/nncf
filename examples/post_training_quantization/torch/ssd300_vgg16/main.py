@@ -18,13 +18,12 @@ from pathlib import Path
 from tqdm import tqdm
 
 import torch
-import nncf.torch
+from nncf.torch import disable_tracing
 
 import nncf
 import openvino.runtime as ov
 import torchvision
 from fastdownload import FastDownload
-from nncf.torch.dynamic_graph.context import patch_with_no_nncf_trace
 from openvino.tools import mo
 from PIL import Image
 from torchmetrics.detection.mean_ap import MeanAveragePrecision
@@ -143,9 +142,9 @@ def main():
     model.to(device)
     model.eval()
 
-    # Patch some methods with no_nncf_trace context in order for the model to be properly traced by NNCF
-    patch_with_no_nncf_trace(GeneralizedRCNNTransform.normalize)
-    patch_with_no_nncf_trace(SSD.postprocess_detections)
+    # Disable NNCF tracing for some methods in order for the model to be properly traced by NNCF
+    disable_tracing(GeneralizedRCNNTransform.normalize)
+    disable_tracing(SSD.postprocess_detections)
 
     # Quantize model
     calibration_dataset = nncf.Dataset(dataset, transform_fn)
