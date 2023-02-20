@@ -84,6 +84,14 @@ def get_node_with_bias_value(add_node: NNCFNode, nncf_graph: NNCFGraph) -> Optio
 
 
 def get_weight_tensor(node_name: str, port_id: int, model: ov.Model) -> Tuple[str, np.ndarray]:
+    """
+    Returns name and weight tensor value taken from 'model'.
+
+    :param node_name: Name of the node to seek the weight.
+    :param port_id: Id of the port to seek the weight.
+    :param model: Model to seek the node.
+    :return: Name and value of the weight tensor.
+    """
     for op in model.get_ops():
         if op.get_friendly_name() == node_name:
             node = op.input_value(port_id).get_node()

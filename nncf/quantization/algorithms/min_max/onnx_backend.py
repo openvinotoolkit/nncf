@@ -19,6 +19,7 @@ from nncf.common.graph.graph import NNCFNode
 from nncf.common.graph.operator_metatypes import OperatorMetatype
 from nncf.common.graph.patterns import HWFusedPatterns
 from nncf.common.graph.transformations.commands import TargetType
+from nncf.common.graph.transformations.commands import TransformationCommand
 from nncf.common.hardware.config import HWConfig
 from nncf.common.quantization.structs import QuantizerConfig
 from nncf.common.tensor_statistics.collectors import ReductionShape
@@ -93,7 +94,7 @@ class ONNXMinMaxAlgoBackend(MinMaxAlgoBackend):
 
     @staticmethod
     def create_weight_update_command(target_point: ONNXTargetPoint,
-                                     weight_tensor: np.ndarray) -> ONNXQuantizerInsertionCommand:
+                                     weight_tensor: np.ndarray) -> TransformationCommand:
         return None
 
     @staticmethod

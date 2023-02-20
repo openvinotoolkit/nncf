@@ -118,6 +118,19 @@ class MinMaxAlgoBackend(ABC):
 
     @staticmethod
     @abstractmethod
+    def create_weight_update_command(target_point: TargetPoint,
+                                     weight_tensor: np.ndarray) -> TransformationCommand:
+        """
+        Returns backend-specific weight update command.
+
+        :param target_point: Target location for the weight update.
+        :param weight_tensor: New weight value.
+        :return: Backend-specific TransformationCommand for the weight update operation.
+        """
+
+
+    @staticmethod
+    @abstractmethod
     def minmax_statistic_collector(use_abs_max: bool,
                                    reduction_shape: ReductionShape,
                                    num_samples: int = None) -> TensorStatisticCollectorBase:

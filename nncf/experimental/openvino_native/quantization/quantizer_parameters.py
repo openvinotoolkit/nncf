@@ -44,12 +44,6 @@ class OVQuantizerLayerParameters:
     levels: int
 
 
-def scale_output_range(output_low: np.ndarray, output_high: np.ndarray, scale: float) -> Tuple[np.ndarray, np.ndarray]:
-    output_low = output_low * scale
-    output_high = output_high * scale
-    return output_low, output_high
-
-
 def fix_zero_filters_symmetric(max_values: np.ndarray, eps: float = 0.01) -> np.ndarray:
     """
     Fixes zero filters for symmetric quantizer.
@@ -229,7 +223,7 @@ def calculate_weight_quantizer_parameters(weight_tensor: np.ndarray, quantizer_c
 
     output_low, output_high = level_low, level_high
     if half_range:
-        output_low, output_high = scale_output_range(output_low, output_high, 0.5)
+        output_low, output_high = output_low * 0.5, output_high * 0.5
     return OVQuantizerLayerParameters(level_low, level_high, output_low, output_high, levels)
 
 

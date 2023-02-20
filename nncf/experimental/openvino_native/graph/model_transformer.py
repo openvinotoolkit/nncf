@@ -188,6 +188,12 @@ class OVModelTransformer(ModelTransformer):
             self._insert_fake_quantize_op(transformation)
 
     def _apply_update_weights_transformations(self, transformations: List[OVWeightUpdateCommand]) -> None:
+        """
+        Updates weight tensor.
+
+        :param transformations: Transformation with a new tensor value.
+        :return: None
+        """
         for transformation in transformations:
             self._update_weight(transformation)
 
