@@ -11,7 +11,7 @@
  limitations under the License.
 """
 
-from typing import List
+from typing import List, Optional
 import numpy as np
 
 from nncf.common.graph.transformations.commands import Command, TransformationCommand
@@ -22,7 +22,16 @@ from nncf.onnx.quantization.quantizer_parameters import ONNXQuantizerLayerParame
 
 
 class ONNXTargetPoint(TargetPoint):
-    def __init__(self, target_type: TargetType, target_node_name: str, port_id: int):
+    def __init__(self, target_type: TargetType, target_node_name: str,
+                 port_id: Optional[int] = None):
+        """
+        Constructor.
+
+        :param target_type: Target type of the target point.
+        :param target_node_name: ONNX node name.
+        :param port_id: Number of port id in case target_type is
+            TargetType.PRE_LAYER_OPERATION or TargetType.POST_LAYER_OPERATION.
+        """
         super().__init__(target_type)
         self.target_node_name = target_node_name
         self.port_id = port_id

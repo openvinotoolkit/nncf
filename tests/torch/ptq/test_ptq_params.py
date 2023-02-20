@@ -1,3 +1,4 @@
+
 """
  Copyright (c) 2023 Intel Corporation
  Licensed under the Apache License, Version 2.0 (the "License");
@@ -13,41 +14,76 @@
 
 import pytest
 
+from torch import nn
+
 from nncf.parameters import TargetDevice
 from nncf.common.graph.patterns import GraphPattern
 from nncf.quantization.algorithms.post_training.algorithm import PostTrainingQuantization
 from nncf.quantization.algorithms.post_training.algorithm import PostTrainingQuantizationParameters
-from nncf.quantization.algorithms.min_max.onnx_backend import \
-    ONNXMinMaxAlgoBackend
-from nncf.onnx.statistics.collectors import ONNXMeanMinMaxStatisticCollector
-from nncf.onnx.statistics.collectors import ONNXMinMaxStatisticCollector
-from nncf.onnx.graph.metatypes.onnx_metatypes import ONNXConvolutionMetatype
-
-from tests.onnx.models import LinearModel
-from tests.onnx.models import OneDepthwiseConvolutionalModel
+from nncf.quantization.algorithms.min_max.torch_backend import PTMinMaxAlgoBackend
 from tests.post_training.test_ptq_params import TemplateTestPTQParams
-from tests.post_training.models import NNCFGraphToTest
+from nncf.torch.tensor_statistics.collectors import PTMinMaxStatisticCollector
+from nncf.torch.tensor_statistics.collectors import PTMeanMinMaxStatisticCollector
 
+from tests.torch.helpers import create_bn, create_conv, create_depthwise_conv
+from tests.torch.ptq.helpers import get_single_conv_nncf_graph
+from tests.torch.ptq.helpers import get_nncf_network
 
 # pylint: disable=protected-access
+
+
+class ToNNCFNetworkInterface:
+    def get_nncf_network(self):
+        return get_nncf_network(self)
+
+
+class LinearTestModel(nn.Module, ToNNCFNetworkInterface):
+    def __init__(self):
+        super().__init__()
+        self.conv1 = create_conv(3, 3, 1)
+        self.bn1 = create_bn(3)
+        self.relu = nn.ReLU()
+        self.avg_pool = nn.AdaptiveAvgPool2d(1)
+        self.conv2 = create_conv(3, 1, 1)
+        self.bn2 = create_bn(1)
+
+    def forward(self, x):
+        # input_shape = [1, 3, 32, 32]
+        x = self.relu(self.conv1(x))
+        x = self.bn1(x)
+        x = self.avg_pool(x)
+        x = self.relu(self.conv2(x))
+        x = self.bn2(x)
+        return x
+
+
+class OneDepthwiseConvModel(nn.Module, ToNNCFNetworkInterface):
+    def __init__(self) -> None:
+        super().__init__()
+        self.depthwise_conv = create_depthwise_conv(3, 1, 1, 1)
+
+    def forward(self, x):
+        # input_shape = [1, 3, 32, 32]
+        return self.depthwise_conv(x)
+
 
 @pytest.mark.parametrize('target_device', TargetDevice)
 def test_target_device(target_device):
     algo = PostTrainingQuantization(PostTrainingQuantizationParameters(target_device=target_device))
     min_max_algo = algo.algorithms[0]
-    min_max_algo._backend_entity = ONNXMinMaxAlgoBackend()
+    min_max_algo._backend_entity = PTMinMaxAlgoBackend()
     assert min_max_algo._parameters.target_device == target_device
 
 
 class TestPTQParams(TemplateTestPTQParams):
     def get_algo_backend(self):
-        return ONNXMinMaxAlgoBackend()
+        return PTMinMaxAlgoBackend()
 
     def get_min_max_statistic_collector_cls(self):
-        return ONNXMinMaxStatisticCollector
+        return PTMinMaxStatisticCollector
 
     def get_mean_max_statistic_collector_cls(self):
-        return ONNXMeanMinMaxStatisticCollector
+        return PTMeanMinMaxStatisticCollector
 
     def check_quantize_outputs_fq_num(self, quantize_outputs,
                                       act_num_q, weight_num_q):
@@ -61,16 +97,16 @@ class TestPTQParams(TemplateTestPTQParams):
     def test_params(self):
         return {
         'test_range_type_per_tensor':
-            {'model': LinearModel().onnx_model,
+            {'model': LinearTestModel().get_nncf_network(),
              'stat_points_num': 5},
         'test_range_type_per_channel':
-            {'model': OneDepthwiseConvolutionalModel().onnx_model,
+            {'model': OneDepthwiseConvModel().get_nncf_network(),
              'stat_points_num': 2},
         'test_quantize_outputs':
-            {'nncf_graph': NNCFGraphToTest(ONNXConvolutionMetatype).nncf_graph,
+            {'nncf_graph': get_single_conv_nncf_graph().nncf_graph,
              'pattern': GraphPattern()},
         'test_ignored_scopes':
-            {'nncf_graph': NNCFGraphToTest(ONNXConvolutionMetatype).nncf_graph,
+            {'nncf_graph': get_single_conv_nncf_graph().nncf_graph,
              'pattern': GraphPattern()},
         }
 

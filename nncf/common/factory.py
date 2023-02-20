@@ -34,11 +34,12 @@ class NNCFGraphFactory:
         model_backend = get_backend(model)
         if model_backend == BackendType.ONNX:
             from nncf.onnx.graph.nncf_graph_builder import GraphConverter
-
             return GraphConverter.create_nncf_graph(model)
         if model_backend == BackendType.OPENVINO:
             from nncf.experimental.openvino_native.graph.nncf_graph_builder import GraphConverter
             return GraphConverter.create_nncf_graph(model)
+        if model_backend == BackendType.TORCH:
+            return model.get_original_graph()
         raise RuntimeError('Cannot create backend-specific graph'
                            'because {} is not supported!'.format(model_backend))
 
@@ -58,6 +59,9 @@ class ModelTransformerFactory:
         if model_backend == BackendType.OPENVINO:
             from nncf.experimental.openvino_native.graph.model_transformer import OVModelTransformer
             return OVModelTransformer(model)
+        if model_backend == BackendType.TORCH:
+            from nncf.torch.nncf_network import PTModelTransformer
+            return PTModelTransformer(model)
         raise RuntimeError('Cannot create backend-specific model transformer'
                            'because {} is not supported!'.format(model_backend))
 
@@ -77,5 +81,8 @@ class EngineFactory:
         if model_backend == BackendType.OPENVINO:
             from nncf.experimental.openvino_native.engine import OVNativeEngine
             return OVNativeEngine(model)
+        if model_backend == BackendType.TORCH:
+            from nncf.torch.engine import PTEngine
+            return PTEngine(model)
         raise RuntimeError('Cannot create backend-specific engine'
                            'because {} is not supported!'.format(model_backend))
