@@ -229,7 +229,7 @@ def main():
     args.data = "coco128-seg.yaml"
 
     global max_accuracy_drop
-    max_accuracy_drop = 0.02 if len(sys.argv) < 2 else sys.argv[1]
+    max_accuracy_drop = 0.005 if len(sys.argv) < 2 else float(sys.argv[1])
 
     # Prepare validation dataset and helper
     validator, data_loader = prepare_validation(model, args)

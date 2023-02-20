@@ -19,10 +19,10 @@ pip install -r requirements.txt
 # Run Example
 
 The example is fully automated. Just run the following comman in the prepared Python environment:
-Here set the max_accuracy_drop = 0.02
+Here set the max_accuracy_drop = 0.005
 
 ```
-python main.py 0.02
+python main.py 0.005
 ```
 
 ## See also
