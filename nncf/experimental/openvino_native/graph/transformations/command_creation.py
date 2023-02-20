@@ -19,6 +19,7 @@ from nncf.common.graph.graph import NNCFNode
 from nncf.experimental.openvino_native.graph.transformations.commands import OVTargetPoint
 from nncf.experimental.openvino_native.graph.transformations.commands import OVBiasCorrectionCommand
 from nncf.experimental.openvino_native.graph.transformations.commands import OVFQNodeRemovingCommand
+from nncf.experimental.openvino_native.graph.transformations.commands import OVWeightUpdateCommand
 
 
 def create_bias_correction_command(node: NNCFNode,
@@ -49,3 +50,9 @@ def create_command_to_remove_quantizer(quantizer_node: NNCFNode) -> OVFQNodeRemo
                                  quantizer_node.node_name,
                                  port_id=None)
     return OVFQNodeRemovingCommand(target_point)
+
+
+def create_command_to_update_weight(node_with_weight: NNCFNode, weight_value: np.ndarray):
+    weight_port_id = node_with_weight.layer_attributes.const_port_id
+    target_point = OVTargetPoint(TargetType.LAYER, node_with_weight.node_name, weight_port_id)
+    return OVWeightUpdateCommand(target_point, weight_value)
