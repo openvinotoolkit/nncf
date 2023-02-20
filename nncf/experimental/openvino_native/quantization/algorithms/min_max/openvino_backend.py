@@ -66,31 +66,30 @@ class OVMinMaxAlgoBackend(MinMaxAlgoBackend):
         return OVTargetPoint(target_type, target_node_name, port_id)
 
     @staticmethod
-    def create_activation_quantizer_insertion_command(nncf_graph: NNCFGraph,
-                                                      target_point: OVTargetPoint,
-                                                      quantizer_config: QuantizerConfig,
-                                                      statistics: MinMaxTensorStatistic) ->\
-        OVQuantizerInsertionCommand:
+    def create_activation_quantizer_insertion_command(
+            nncf_graph: NNCFGraph,
+            target_point: OVTargetPoint,
+            quantizer_config: QuantizerConfig,
+            statistics: MinMaxTensorStatistic) -> OVQuantizerInsertionCommand:
         parameters = calculate_quantizer_parameters(statistics, quantizer_config,
                                                     QuantizerGroup.ACTIVATIONS)
         return OVQuantizerInsertionCommand(target_point, parameters)
 
     @staticmethod
-    def create_weight_quantizer_insertion_command(nncf_graph: NNCFGraph,
-                                                  target_point: OVTargetPoint,
-                                                  quantizer_config: QuantizerConfig,
-                                                  statistics: MinMaxTensorStatistic) ->\
-        OVQuantizerInsertionCommand:
+    def create_weight_quantizer_insertion_command(
+            nncf_graph: NNCFGraph,
+            target_point: OVTargetPoint,
+            quantizer_config: QuantizerConfig,
+            statistics: MinMaxTensorStatistic) -> OVQuantizerInsertionCommand:
         parameters = calculate_quantizer_parameters(statistics, quantizer_config,
                                                     QuantizerGroup.WEIGHTS)
         return OVQuantizerInsertionCommand(target_point, parameters)
 
     @staticmethod
-    def _get_reduction_shape_and_use_abs_max(nncf_graph: NNCFGraph,
-                                             target_point: OVTargetPoint,
-                                             quantizer_config: QuantizerConfig) ->\
-        Tuple[ReductionShape, bool]:
-
+    def _get_reduction_shape_and_use_abs_max(
+            nncf_graph: NNCFGraph,
+            target_point: OVTargetPoint,
+            quantizer_config: QuantizerConfig) -> Tuple[ReductionShape, bool]:
         use_abs_max = quantizer_config.mode == QuantizationMode.SYMMETRIC
         if not quantizer_config.per_channel:
             return None, use_abs_max

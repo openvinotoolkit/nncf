@@ -101,21 +101,21 @@ class PTMinMaxAlgoBackend(MinMaxAlgoBackend):
         return PTTargetPoint(target_type, target_node_name, input_port_id=port_id)
 
     @staticmethod
-    def create_activation_quantizer_insertion_command(nncf_graph: NNCFGraph,
-                                                      target_point: PTTargetPoint,
-                                                      quantizer_config: QuantizerConfig,
-                                                      statistics: PTMinMaxTensorStatistic) ->\
-        PTInsertionCommand:
+    def create_activation_quantizer_insertion_command(
+            nncf_graph: NNCFGraph,
+            target_point: PTTargetPoint,
+            quantizer_config: QuantizerConfig,
+            statistics: PTMinMaxTensorStatistic) -> PTInsertionCommand:
         return PTMinMaxAlgoBackend._create_quantizer_insertion_command(nncf_graph,
                                                                        target_point,
                                                                        quantizer_config,
                                                                        statistics)
     @staticmethod
-    def create_weight_quantizer_insertion_command(nncf_graph: NNCFGraph,
-                                                  target_point: PTTargetPoint,
-                                                  quantizer_config: QuantizerConfig,
-                                                  statistics: MinMaxTensorStatistic) ->\
-        PTInsertionCommand:
+    def create_weight_quantizer_insertion_command(
+            nncf_graph: NNCFGraph,
+            target_point: PTTargetPoint,
+            quantizer_config: QuantizerConfig,
+            statistics: MinMaxTensorStatistic) -> PTInsertionCommand:
         return PTMinMaxAlgoBackend._create_quantizer_insertion_command(nncf_graph,
                                                                        target_point,
                                                                        quantizer_config,
@@ -153,10 +153,10 @@ class PTMinMaxAlgoBackend(MinMaxAlgoBackend):
         return config
 
     @staticmethod
-    def _get_input_scale_shape(nncf_graph: NNCFGraph,
-                               target_point: PTTargetPoint,
-                               quantization_config: QuantizerConfig) ->\
-        Tuple[Tuple[int, ...], Tuple[int, ...], int]:
+    def _get_input_scale_shape(
+            nncf_graph: NNCFGraph,
+            target_point: PTTargetPoint,
+            quantization_config: QuantizerConfig) -> Tuple[Tuple[int, ...], Tuple[int, ...], int]:
         is_weights = target_point.is_weight_target_point()
         if is_weights:
             module_node = nncf_graph.get_node_by_name(target_point.target_node_name)
@@ -177,10 +177,10 @@ class PTMinMaxAlgoBackend(MinMaxAlgoBackend):
         return input_shape, scale_shape, channel_idx
 
     @staticmethod
-    def _default_collector_params_and_scale_shape(nncf_graph: NNCFGraph,
-                                                  target_point: PTTargetPoint,
-                                                  quantizer_config: QuantizerConfig) ->\
-        Tuple[PTRangeInitCollectorParams, Tuple[int, ...]]:
+    def _default_collector_params_and_scale_shape(
+            nncf_graph: NNCFGraph,
+            target_point: PTTargetPoint,
+            quantizer_config: QuantizerConfig) -> Tuple[PTRangeInitCollectorParams, Tuple[int, ...]]:
         input_shape, scale_shape, channel_idx =\
             PTMinMaxAlgoBackend._get_input_scale_shape(nncf_graph, target_point, quantizer_config)
         return PTRangeInitCollectorParams(is_weights=target_point.is_weight_target_point(),

@@ -194,7 +194,8 @@ def get_weight_stats_shape(const_shape: List[int], metatype: Type[OperatorMetaty
 
 
 def calculate_quantizer_parameters(statistics: MinMaxTensorStatistic,
-                                   quantizer_config: QuantizerConfig, quant_group: QuantizerGroup):
+                                   quantizer_config: QuantizerConfig,
+                                   quant_group: QuantizerGroup) -> OVQuantizerLayerParameters:
     """
     Calculates FakeQuantize layer attributes for weight/activation quantizer.
 

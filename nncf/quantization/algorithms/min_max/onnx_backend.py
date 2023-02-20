@@ -66,11 +66,11 @@ class ONNXMinMaxAlgoBackend(MinMaxAlgoBackend):
         return ONNXTargetPoint(target_type, target_node_name, port_id)
 
     @staticmethod
-    def create_activation_quantizer_insertion_command(nncf_graph: NNCFGraph,
-                                                      target_point: ONNXTargetPoint,
-                                                      quantizer_config: QuantizerConfig,
-                                                      statistics: MinMaxTensorStatistic) ->\
-        ONNXQuantizerInsertionCommand:
+    def create_activation_quantizer_insertion_command(
+            nncf_graph: NNCFGraph,
+            target_point: ONNXTargetPoint,
+            quantizer_config: QuantizerConfig,
+            statistics: MinMaxTensorStatistic) -> ONNXQuantizerInsertionCommand:
         axis = ONNXMinMaxAlgoBackend._get_axis(nncf_graph,
                                                target_point,
                                                quantizer_config)
@@ -78,11 +78,11 @@ class ONNXMinMaxAlgoBackend(MinMaxAlgoBackend):
         return ONNXQuantizerInsertionCommand(target_point, parameters)
 
     @staticmethod
-    def create_weight_quantizer_insertion_command(nncf_graph: NNCFGraph,
-                                                  target_point: ONNXTargetPoint,
-                                                  quantizer_config: QuantizerConfig,
-                                                  statistics: MinMaxTensorStatistic) ->\
-        ONNXQuantizerInsertionCommand:
+    def create_weight_quantizer_insertion_command(
+            nncf_graph: NNCFGraph,
+            target_point: ONNXTargetPoint,
+            quantizer_config: QuantizerConfig,
+            statistics: MinMaxTensorStatistic) -> ONNXQuantizerInsertionCommand:
         axis = ONNXMinMaxAlgoBackend._get_axis(nncf_graph,
                                                target_point,
                                                quantizer_config)
@@ -102,10 +102,10 @@ class ONNXMinMaxAlgoBackend(MinMaxAlgoBackend):
         return node.metatype.weight_definitions.weight_channel_axis
 
     @staticmethod
-    def _get_reduction_shape_and_use_abs_max(nncf_graph: NNCFGraph,
-                                             target_point: ONNXTargetPoint,
-                                             quantizer_config: QuantizerConfig) ->\
-        Tuple[Optional[Tuple[int, ...]], bool]:
+    def _get_reduction_shape_and_use_abs_max(
+            nncf_graph: NNCFGraph,
+            target_point: ONNXTargetPoint,
+            quantizer_config: QuantizerConfig) -> Tuple[Optional[Tuple[int, ...]], bool]:
 
         use_abs_max = quantizer_config.mode == QuantizationMode.SYMMETRIC
         if not quantizer_config.per_channel:
