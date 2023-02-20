@@ -45,10 +45,10 @@ from nncf.torch.module_operations import UpdateWeight
 from nncf.torch.nncf_network import ExtraCompressionModuleType
 from nncf.torch.quantization.algo import QuantizationBuilder
 from nncf.torch.quantization.algo import QuantizationController
+from nncf.torch.quantization.layers import QUANTIZATION_MODULES
 from nncf.torch.quantization.layers import AsymmetricQuantizer
 from nncf.torch.quantization.layers import BaseQuantizer
 from nncf.torch.quantization.layers import PTQuantizerSpec
-from nncf.torch.quantization.layers import QUANTIZATION_MODULES
 from nncf.torch.quantization.layers import SymmetricQuantizer
 from nncf.torch.utils import get_all_modules_by_type
 from nncf.torch.utils import get_model_device
@@ -850,3 +850,30 @@ def test_activation_ignored_scope(update_config_info, should_ignore_quantizers):
     ctrl, _ = create_compressed_model(model, config)
     assert Counter([item.target_node_name for item in ctrl.all_quantizations.keys()]) == \
            Counter(ref_quantization_names)
+
+
+def test_sync_of_level_ranges_and_signed_parameter():
+    qspec = PTQuantizerSpec(
+        num_bits=4,
+        mode=QuantizationMode.SYMMETRIC,
+        signedness_to_force=None,
+        scale_shape=(1, ),
+        narrow_range=False,
+        half_range=False,
+        logarithm_scale=False
+    )
+
+
+    sq = SymmetricQuantizer(qspec)
+    # Check if the default values are different from the values to be loaded.
+    assert sq.signed is False
+    assert sq.level_low == 0
+
+    sq.signed = True
+    assert sq.signed is True
+    assert sq.level_low == -8
+
+    loaded_sq = SymmetricQuantizer(qspec)
+    loaded_sq.load_state_dict(sq.state_dict())
+    assert loaded_sq.signed is True
+    assert loaded_sq.level_low == -8

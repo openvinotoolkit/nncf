@@ -15,7 +15,6 @@ from copy import deepcopy
 from typing import List
 
 
-
 class ScopeElement:
     def __init__(self, calling_module_class_name: str, calling_field_name: str = None):
         self.calling_module_class_name = calling_module_class_name
@@ -56,13 +55,16 @@ class Scope:
     def __str__(self):
         return '/'.join([str(scope_el) for scope_el in self.scope_elements])
 
+    def __repr__(self):
+        return str(self)
+
     def __hash__(self):
         return hash(str(self))
 
     def __eq__(self, other: 'Scope'):
         return self.scope_elements == other.scope_elements
 
-    def __getitem__(self, key):
+    def __getitem__(self, key) -> ScopeElement:
         return self.scope_elements[key]
 
     def __contains__(self, item: 'Scope'):
@@ -74,11 +76,11 @@ class Scope:
                 return False
         return True
 
-    def __add__(self, rhs):
+    def __add__(self, rhs: 'Scope') -> 'Scope':
         init_list = self.scope_elements + rhs.scope_elements
         return Scope(init_list)
 
-    def copy(self):
+    def copy(self) -> 'Scope':
         return Scope(deepcopy(self.scope_elements))
 
     def push(self, scope_element: ScopeElement):
