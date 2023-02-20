@@ -20,7 +20,7 @@ from nncf.common.graph.transformations.commands import TargetType
 from nncf.common.graph.transformations.commands import Command
 from nncf.common.graph.transformations.commands import TransformationCommand
 from nncf.common.graph.transformations.commands import TransformationType
-from nncf.quantization.algorithms.min_max.quantizer_parameters import QuantizerLayerParameters
+from nncf.quantization.fake_quantize import FakeQuantizeParameters
 
 
 class OVTargetPoint(TargetPoint):
@@ -82,7 +82,7 @@ class OVFQNodeRemovingCommand(TransformationCommand):
 
 
 class OVQuantizerInsertionCommand(OVInsertionCommand):
-    def __init__(self, target_point: OVTargetPoint, quantizer_parameters: QuantizerLayerParameters):
+    def __init__(self, target_point: OVTargetPoint, quantizer_parameters: FakeQuantizeParameters):
         super().__init__(target_point)
         self.quantizer_parameters = quantizer_parameters
 

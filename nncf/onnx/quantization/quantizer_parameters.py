@@ -15,8 +15,7 @@ from typing import Optional, Tuple
 from dataclasses import dataclass
 import numpy as np
 from nncf.common.quantization.structs import QuantizationMode
-from nncf.common.quantization.structs import QuantizerConfig
-from nncf.common.tensor_statistics.statistics import MinMaxTensorStatistic
+from nncf.quantization.fake_quantize import FakeQuantizeParameters
 
 
 @dataclass
@@ -26,15 +25,44 @@ class ONNXQuantizerLayerParameters:
 
     :param scale: Quantizer scale.
     :param zero_point: Quantizer zero point.
-    :param mode: Quantizer mode. Could be Symmetric or Asymmetric.
-    :param axis: Axis for per-channel quantization. Should be none in case of per-tensor.
     :param tensor_type: Signed or Unsigned tensor type.
+    :param axis: Axis for per-channel quantization. Should be none in case of per-tensor.
     """
     scale: np.ndarray
     zero_point: np.ndarray
-    mode: QuantizationMode
     tensor_type: np.dtype
     axis: Optional[int] = None
+
+
+def convert_fq_params_to_onnx_params(parameters: FakeQuantizeParameters,
+                                     num_bits: int,
+                                     mode: QuantizationMode,
+                                     tensor_type: np.dtype,
+                                     axis: Optional[int] = None) -> ONNXQuantizerLayerParameters:
+    """
+    Converts common FakeQuantizeParameters to ONNXQuantizerLayerParameters.
+
+    :param parameters: FakeQuantizeParameters representation.
+    :param num_bits: Number of quantizer bits.
+    :param mode: Symmetric or Asymmetric mode.
+    :param tensor_type: Value type of the tensor. Could be INT8 or UINT8.
+    :param axis: Axis for per-channel quantization. Should be none in case of per-tensor.
+    :return: Quantizer layer attributes.
+    """
+    input_low, input_high = parameters.input_low, parameters.input_high,
+    output_low, output_high = parameters.output_low, parameters.output_high,
+    level_low, level_high = get_level_low_level_high(tensor_type, num_bits)
+
+    levels = level_high - level_low + 1
+    if levels not in [255, 256]:
+        raise ValueError('Can only export to INT8/UIN8 256-level ONNX Quantize/Dequantize pairs.')
+
+    if not np.allclose(input_high, output_high) or not np.allclose(input_low, output_low):
+        raise ValueError('ONNX Quantize/Dequantize pairs only support'
+                         ' input_high == output_high and input_low == output_low.')
+
+    scale, zero_point = calculate_scale_zero_point(input_low, input_high, level_low, level_high, mode)
+    return ONNXQuantizerLayerParameters(scale, zero_point, axis, tensor_type)
 
 
 def get_level_low_level_high(tensor_type: np.dtype, num_bits: int) -> Tuple[int, int]:
@@ -52,8 +80,7 @@ def get_level_low_level_high(tensor_type: np.dtype, num_bits: int) -> Tuple[int,
 
 
 def calculate_scale_zero_point(input_low: np.ndarray, input_high: np.ndarray, level_low: int, level_high: int,
-                               mode: QuantizationMode, tensor_type: np.dtype,
-                               eps: float = 1e-6) -> Tuple[np.ndarray, np.ndarray]:
+                               mode: QuantizationMode, eps: float = 1e-6) -> Tuple[np.ndarray, np.ndarray]:
     """
     Calculates Quantizer/Dequantizer layer scale level.
     Returns scale and zero_point values for the quantizer.
@@ -65,19 +92,16 @@ def calculate_scale_zero_point(input_low: np.ndarray, input_high: np.ndarray, le
     :param level_high: The maximum level in the integer range to quantize.
         The default is "2^bits-1" for an unsigned range, and "2^(bit-1)-1" for a signed one.
     :param mode: Symmetric or Asymmetric mode.
-    :param tensor_type: Value type of the tensor. Could be INT8 or UINT8.
-    :param eps: The correction value is added to the input range to avoid division by zero.
+    :param eps: The correction value for scale to avoid division by zero.
     :return: Scale and Zero point values.
     """
-    input_range_safe = abs(level_high - level_low) + eps
     scale, zero_point = None, None
     if mode == QuantizationMode.SYMMETRIC:
-        input_low = np.zeros_like(input_high) if tensor_type == np.uint8 else -input_high
-        scale = np.array((input_high - input_low) / input_range_safe)
+        scale = np.array((input_high - input_low) / (level_high - level_low))
         zero_point = np.zeros_like(scale, dtype=np.int32)
     elif mode == QuantizationMode.ASYMMETRIC:
-        scale = np.array((input_high - input_low) / input_range_safe)
-        zero_point = np.round(level_low - input_low / scale).astype(np.int32)
+        scale = np.array((input_high - input_low) / (level_high - level_low))
+        zero_point = np.round(level_low - input_low / np.maximum(scale, eps)).astype(np.int32)
 
         level_low *= np.ones_like(zero_point, dtype=np.int32)
         level_high *= np.ones_like(zero_point, dtype=np.int32)

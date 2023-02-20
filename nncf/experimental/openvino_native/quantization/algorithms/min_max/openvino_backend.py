@@ -22,7 +22,6 @@ from nncf.common.quantization.structs import QuantizerGroup
 from nncf.common.quantization.structs import QuantizerConfig
 from nncf.common.quantization.structs import QuantizationMode
 from nncf.common.tensor_statistics.collectors import ReductionShape
-from nncf.common.tensor_statistics.statistics import MinMaxTensorStatistic
 from nncf.common.utils.backend import BackendType
 
 from nncf.experimental.openvino_native.graph.nncf_graph_builder import OVConstantLayerAttributes
@@ -40,8 +39,8 @@ from nncf.experimental.openvino_native.quantization.quantizer_parameters import 
 
 from nncf.quantization.algorithms.min_max.backend import MinMaxAlgoBackend
 from nncf.quantization.algorithms.min_max.backend import ALGO_BACKENDS
-from nncf.quantization.algorithms.min_max.quantizer_parameters import calculate_activation_quantizer_parameters
-from nncf.quantization.algorithms.min_max.quantizer_parameters import calculate_weight_quantizer_parameters
+from nncf.quantization.fake_quantize import FakeQuantizeParameters
+from nncf.quantization.fake_quantize import calculate_weight_quantizer_parameters
 
 
 @ALGO_BACKENDS.register(BackendType.OPENVINO)
@@ -78,10 +77,7 @@ class OVMinMaxAlgoBackend(MinMaxAlgoBackend):
             nncf_graph: NNCFGraph,
             target_point: OVTargetPoint,
             quantizer_config: QuantizerConfig,
-            statistics: MinMaxTensorStatistic) -> OVQuantizerInsertionCommand:
-        min_values, max_values = statistics.min_values, statistics.max_values
-        parameters = calculate_quantizer_parameters(
-            min_values, max_values, quantizer_config, QuantizerGroup.ACTIVATIONS)
+            parameters: FakeQuantizeParameters) -> OVQuantizerInsertionCommand:
         return OVQuantizerInsertionCommand(target_point, parameters)
 
     @staticmethod

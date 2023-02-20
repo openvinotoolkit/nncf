@@ -24,7 +24,7 @@ from nncf.common.quantization.structs import QuantizerGroup
 
 
 @dataclass
-class QuantizerLayerParameters:
+class FakeQuantizeParameters:
     """
     Class handles FakeQuantize layer attributes.
 
@@ -175,7 +175,7 @@ def asymmetric_range(min_values: np.ndarray, max_values: np.ndarray,
 
 
 def calculate_weight_quantizer_parameters(weight_tensor: np.ndarray, quantizer_config: QuantizerConfig,
-                                          channel_axis: Optional[int] = None) -> QuantizerLayerParameters:
+                                          channel_axis: Optional[int] = None) -> FakeQuantizeParameters:
     """
     Calculates FakeQuantize layer attributes for weight quantizer.
 
@@ -202,12 +202,12 @@ def calculate_weight_quantizer_parameters(weight_tensor: np.ndarray, quantizer_c
         level_low, level_high = asymmetric_range(min_values, max_values, quantizer_config, quant_group)
 
     output_low, output_high = level_low, level_high
-    return QuantizerLayerParameters(level_low, level_high, output_low, output_high, levels)
+    return FakeQuantizeParameters(level_low, level_high, output_low, output_high, levels)
 
 
 def calculate_activation_quantizer_parameters(min_values: Union[float, np.ndarray],
                                               max_values: Union[float, np.ndarray],
-                                              quantizer_config: QuantizerConfig) -> QuantizerLayerParameters:
+                                              quantizer_config: QuantizerConfig) -> FakeQuantizeParameters:
     """
     Calculates FakeQuantize layer attributes for activation quantizer.
 
@@ -232,4 +232,4 @@ def calculate_activation_quantizer_parameters(min_values: Union[float, np.ndarra
         level_high = np.squeeze(level_high)
 
     output_low, output_high = level_low, level_high
-    return QuantizerLayerParameters(level_low, level_high, output_low, output_high, levels)
+    return FakeQuantizeParameters(level_low, level_high, output_low, output_high, levels)

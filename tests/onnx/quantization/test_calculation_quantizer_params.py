@@ -28,7 +28,7 @@ from nncf.onnx.quantization.quantizer_parameters import get_level_low_level_high
                            -128 * np.ones((10, 10), dtype=np.int32)),
 
                           (np.ones((10, 10)), np.zeros((10, 10)), 10, 999, QuantizationMode.SYMMETRIC,
-                           0.00202224 * np.ones((10, 10)),
+                           0.00101112 * np.ones((10, 10)),
                            np.zeros((10, 10), dtype=np.int32)),
 
                           (np.ones((10, 10)), np.zeros((10, 10)), 10, 999, QuantizationMode.ASYMMETRIC,
@@ -36,7 +36,7 @@ from nncf.onnx.quantization.quantizer_parameters import get_level_low_level_high
                            10 * np.ones((10, 10), dtype=np.int32)),
 
                           (10 * np.ones((10, 10)), -np.ones((10, 10)), 0, 1000, QuantizationMode.SYMMETRIC,
-                           0.02 * np.ones((10, 10)),
+                           0.011 * np.ones((10, 10)),
                            np.zeros((10, 10), dtype=np.int32)),
 
                           (10 * np.ones((10, 10)), -np.ones((10, 10)), 0, 1000, QuantizationMode.ASYMMETRIC,
@@ -44,7 +44,7 @@ from nncf.onnx.quantization.quantizer_parameters import get_level_low_level_high
                            91 * np.ones((10, 10), dtype=np.int32)),
 
                           (10 * np.ones((10, 10)), -np.ones((10, 10)), -10, -1, QuantizationMode.SYMMETRIC,
-                           2.2222222 * np.ones((10, 10)),
+                           1.2222222 * np.ones((10, 10)),
                            np.zeros((10, 10), dtype=np.int32)),
 
                           (10 * np.ones((10, 10)), -np.ones((10, 10)), -10, -1, QuantizationMode.ASYMMETRIC,
@@ -52,15 +52,9 @@ from nncf.onnx.quantization.quantizer_parameters import get_level_low_level_high
                            -9 * np.ones((10, 10), dtype=np.int32))
                           )
                          )
-@pytest.mark.parametrize('tensor_type', [np.int8, np.uint8])
-def test_calculate_scale_zero_point(max_val, min_val, level_low, level_high, mode, ref_scale, ref_zero_point,
-                                    tensor_type):
-    ref_scale_ = ref_scale.copy()
-    if tensor_type == np.uint8 and mode == QuantizationMode.SYMMETRIC:
-        ref_scale_ /= 2
-
-    scale, zero_point = calculate_scale_zero_point(min_val, max_val, level_low, level_high, mode, tensor_type)
-    assert np.allclose(ref_scale_, scale)
+def test_calculate_scale_zero_point(max_val, min_val, level_low, level_high, mode, ref_scale, ref_zero_point):
+    scale, zero_point = calculate_scale_zero_point(min_val, max_val, level_low, level_high, mode)
+    assert np.allclose(ref_scale, scale)
     assert np.allclose(ref_zero_point, zero_point)
 
 

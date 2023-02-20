@@ -30,15 +30,15 @@ from nncf.quantization.algorithms.post_training.algorithm import PostTrainingQua
 from nncf.onnx.graph.nncf_graph_builder import GraphConverter
 from nncf.onnx.graph.onnx_graph import ONNXGraph
 from nncf.onnx.statistics.statistics import ONNXMinMaxTensorStatistic
-from nncf.quantization.algorithms.min_max.quantizer_parameters import QuantizerLayerParameters
+from nncf.quantization.fake_quantize import FakeQuantizeParameters
 
 REFERENCE_GRAPHS_TEST_ROOT = 'data/reference_graphs/quantization'
 
 
 def mock_collect_statistics(mocker):
     _ = mocker.patch(
-        'nncf.quantization.algorithms.min_max.quantizer_parameters.calculate_activation_quantizer_parameters',
-        return_value=QuantizerLayerParameters(np.array(0), np.array(0), np.array(0), np.array(0), 256))
+        'nncf.quantization.fake_quantize.calculate_activation_quantizer_parameters',
+        return_value=FakeQuantizeParameters(np.array(0), np.array(0), np.array(0), np.array(0), 256))
     _ = mocker.patch(
         'nncf.common.tensor_statistics.aggregator.StatisticsAggregator.collect_statistics', return_value=None)
     _ = mocker.patch(
