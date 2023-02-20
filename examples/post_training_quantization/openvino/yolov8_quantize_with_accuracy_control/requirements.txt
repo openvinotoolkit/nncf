@@ -1,0 +1,4 @@
+ultralytics==8.0.5
+onnx
+openvino-dev==2022.3.0
+nncf==2.4.0

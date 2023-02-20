@@ -15,11 +15,13 @@ from tqdm import tqdm
 from pathlib import Path
 from typing import Dict, Tuple, Any
 import re
-
+from functools import partial
 import numpy as np
 import openvino.runtime as ov
 import nncf
 import torch
+import sys
+
 
 from ultralytics import YOLO
 from ultralytics.yolo.utils.metrics import ConfusionMatrix
@@ -35,15 +37,21 @@ def validate(model:ov.Model, data_loader:torch.utils.data.DataLoader,
     validator.seen = 0
     validator.jdict = []
     validator.stats = []
+    # seg
+    validator.batch_i = 1
     validator.confusion_matrix = ConfusionMatrix(nc=validator.nc)
     model.reshape({0: [1, 3, -1, -1]})
     compiled_model = ov.compile_model(model)
-    output_layer = compiled_model.output(0)
+    num_outputs = len(model.outputs)
     for batch_i, batch in enumerate(data_loader):
         if num_samples is not None and batch_i == num_samples:
             break
         batch = validator.preprocess(batch)
-        preds = torch.from_numpy(compiled_model(batch["img"])[output_layer])
+        results = compiled_model(batch["img"])
+        if num_outputs == 1: # det
+            preds = torch.from_numpy(results[compiled_model.output(0)])
+        else: # seg
+            preds = [torch.from_numpy(results[compiled_model.output(0)]), [torch.from_numpy(results[compiled_model.output(1)])]]
         preds = validator.postprocess(preds)
         validator.update_metrics(preds, batch)
     stats = validator.get_stats()
@@ -51,12 +59,23 @@ def validate(model:ov.Model, data_loader:torch.utils.data.DataLoader,
 
 
 def print_statistics(stats:np.ndarray, total_images:int, total_objects:int) -> None:
+    print('Metrics(Box):')
     mp, mr, map50, mean_ap = stats["metrics/precision(B)"], stats["metrics/recall(B)"], \
                             stats["metrics/mAP50(B)"], stats["metrics/mAP50-95(B)"]
     s = ("%20s" + "%12s" * 6) % ("Class", "Images", "Labels", "Precision", "Recall", "mAP@.5", "mAP@.5:.95")
     print(s)
     pf = "%20s" + "%12i" * 2 + "%12.3g" * 4  # print format
     print(pf % ("all", total_images, total_objects, mp, mr, map50, mean_ap))
+    
+    # print the mask metrics for segmentation
+    if 'metrics/precision(M)' in stats:
+        print('Metrics(Mask):')
+        s_mp, s_mr, s_map50, s_mean_ap = stats['metrics/precision(M)'], stats['metrics/recall(M)'], stats['metrics/mAP50(M)'], stats['metrics/mAP50-95(M)']
+        # Print results
+        s = ('%20s' + '%12s' * 6) % ('Class', 'Images', 'Labels', 'Precision', 'Recall', 'mAP@.5', 'mAP@.5:.95')
+        print(s)
+        pf = '%20s' + '%12i' * 2 + '%12.3g' * 4  # print format
+        print(pf % ('all', total_images, total_objects, s_mp, s_mr, s_map50, s_mean_ap))
     
     
 def prepare_validation(model:YOLO, args: Any) -> Tuple[Validator, torch.utils.data.DataLoader]:
@@ -65,7 +84,8 @@ def prepare_validation(model:YOLO, args: Any) -> Tuple[Validator, torch.utils.da
     print(f"{dataset}")
     
     validator = model.ValidatorClass(args)
-    data_loader = validator.get_dataloader("../datasets/coco128", 1)
+    # data_loader = validator.get_dataloader("../datasets/coco128", 1)
+    data_loader = validator.get_dataloader("../datasets/coco128-seg", 1)
     
     validator = model.ValidatorClass(args)
     
@@ -74,6 +94,10 @@ def prepare_validation(model:YOLO, args: Any) -> Tuple[Validator, torch.utils.da
     validator.names = model.model.names
     validator.metrics.names = validator.names
     validator.nc = model.model.model[-1].nc
+    # seg_validator
+    validator.nm = 32
+    validator.process = ops.process_mask
+    validator.plot_masks = []
     
     return validator, data_loader
 
@@ -133,12 +157,79 @@ def quantize(model:ov.Model, data_loader:torch.utils.data.DataLoader, validator:
     return quantized_model
 
     
+def quantize_ac(model:ov.Model, data_loader:torch.utils.data.DataLoader, validator_ac: Validator) -> ov.Model:
+    def transform_fn(data_item:Dict):
+        input_tensor = validator_ac.preprocess(data_item)["img"].numpy()
+        return input_tensor
+    
+    def validation_ac(compiled_model:ov.CompiledModel, validation_loader:torch.utils.data.DataLoader, validator: Validator, num_samples:int = None) -> float:
+        validator.seen = 0
+        validator.jdict = []
+        validator.stats = []
+        validator.batch_i = 1
+        validator.confusion_matrix = ConfusionMatrix(nc=validator.nc)
+        num_outputs = len(compiled_model.outputs)
+
+        for batch_i, batch in enumerate(validation_loader):
+            if num_samples is not None and batch_i == num_samples:
+                break
+            batch = validator.preprocess(batch)
+            results = compiled_model(batch["img"])
+            if num_outputs == 1:
+                preds = torch.from_numpy(results[compiled_model.output(0)])
+            else:
+                preds = [torch.from_numpy(results[compiled_model.output(0)]), [torch.from_numpy(results[compiled_model.output(1)])]]
+            preds = validator.postprocess(preds)
+            validator.update_metrics(preds, batch)
+        stats = validator.get_stats()
+        if num_outputs == 1:
+            stats_metrics = stats['metrics/mAP50-95(B)']
+        else:
+            stats_metrics = stats['metrics/mAP50-95(M)']
+        return stats_metrics
+
+    quantization_dataset = nncf.Dataset(data_loader, transform_fn)
+
+    validation_fn = partial(validation_ac, validator=validator_ac)
+
+    quantized_model_ac = nncf.quantize_with_accuracy_control(
+                            model, 
+                            quantization_dataset,
+                            quantization_dataset,
+                            validation_fn=validation_fn,
+                            max_drop = max_accuracy_drop,
+                            preset=nncf.QuantizationPreset.MIXED,
+                            ignored_scope=nncf.IgnoredScope(
+                                types=["Multiply", "Subtract", "Sigmoid"],  # ignore operations
+                                names=[
+                                    "/model.22/dfl/conv/Conv",           # in the post-processing subgraph
+                                    "/model.22/Add",
+                                    "/model.22/Add_1",
+                                    "/model.22/Add_2",
+                                    "/model.22/Add_3",
+                                    "/model.22/Add_4",   
+                                    "/model.22/Add_5",
+                                    "/model.22/Add_6",
+                                    "/model.22/Add_7",
+                                    "/model.22/Add_8",
+                                    "/model.22/Add_9",
+                                    "/model.22/Add_10"
+                                    ]
+                                ))
+    return quantized_model_ac
+
+    
 def main():
-    MODEL_NAME = "yolov8n"
+    # MODEL_NAME = "yolov8n"
+    MODEL_NAME = "yolov8n-seg"
     
     model = YOLO(f"{MODEL_NAME}.pt")
     args = get_config(config=DEFAULT_CONFIG)
-    args.data = "coco128.yaml"
+    # args.data = "coco128.yaml"
+    args.data = "coco128-seg.yaml"
+
+    global max_accuracy_drop
+    max_accuracy_drop = 0.02 if len(sys.argv) < 2 else sys.argv[1]
 
     # Prepare validation dataset and helper
     validator, data_loader = prepare_validation(model, args)
@@ -147,7 +238,9 @@ def main():
     ov_model, ov_model_path = prepare_openvino_model(model, MODEL_NAME)
     
     # Quantize mode in OpenVINO representation
-    quantized_model = quantize(ov_model, data_loader, validator)
+    # quantized_model = quantize(ov_model, data_loader, validator)
+    quantized_model = quantize_ac(ov_model, data_loader, validator)
+
     quantized_model_path = Path(f"{MODEL_NAME}_openvino_model/{MODEL_NAME}_quantized.xml")
     ov.serialize(quantized_model, str(quantized_model_path))
     
@@ -175,3 +268,4 @@ def main():
 if __name__ == "__main__":
     main()
     
+
