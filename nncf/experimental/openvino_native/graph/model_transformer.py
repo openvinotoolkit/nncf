@@ -14,7 +14,7 @@
 from typing import List, Tuple, Dict
 import openvino.runtime as ov
 import numpy as np
-from openvino.runtime import opset10 as opset
+from openvino.runtime import opset9 as opset
 
 from nncf.common.graph.model_transformer import ModelTransformer
 from nncf.common.graph.transformations.layout import TransformationLayout
@@ -267,6 +267,7 @@ class OVModelTransformer(ModelTransformer):
             node = name_to_node_mapping[transformation.target_point.target_node_name]
             node_inputs = [port.get_node() for port in node.output(0).get_target_inputs()]
             assert any(node.get_type_name() == 'Add' for node in node_inputs)
+
             for node_input in node_inputs:
                 if node_input.get_type_name() == 'Add':
                     add_node = node_input
@@ -274,21 +275,6 @@ class OVModelTransformer(ModelTransformer):
             OVModelTransformer._set_const_value(add_node,
                                                 transformation.target_point.port_id,
                                                 transformation.bias_value)
-        return model
-
-    @staticmethod
-    def _apply_weight_update_transformations(model, transformations: List[OVWeightUpdateCommand]) -> ov.Model:
-        """
-        Applies weight update transformation to the model.
-
-        :param transformations: List of the weight update transformations.
-        """
-        name_to_node_mapping = OVModelTransformer._get_name_to_node_mapping(model)
-        for transformation in transformations:
-            node_with_weight = name_to_node_mapping[transformation.target_point.target_node_name]
-            OVModelTransformer._set_const_value(node_with_weight,
-                                                transformation.target_point.port_id,  # Weight port id
-                                                transformation.weight_value)
         return model
 
     @staticmethod
@@ -308,6 +294,20 @@ class OVModelTransformer(ModelTransformer):
         new_const_node = opset.constant(const_value, dtype=const_node.get_element_type())
         new_const_node.set_friendly_name(const_node.get_friendly_name())
         const_port.replace_source_output(new_const_node.output(0))
+
+    @staticmethod
+    def _apply_weight_update_transformations(model, transformations: List[OVWeightUpdateCommand]) -> ov.Model:
+        """
+        Applies weight update transformation to the model.
+
+        :param transformations: List of the weight update transformations.
+        """
+        name_to_node_mapping = OVModelTransformer._get_name_to_node_mapping(model)
+        for transformation in transformations:
+            node_with_weight = name_to_node_mapping[transformation.target_point.target_node_name]
+            OVModelTransformer._set_const_value(node_with_weight,
+                                                transformation.target_point.port_id,  # Weight port id
+                                                transformation.weight_value)
 
     @staticmethod
     def _apply_model_extraction_transformation(model: ov.Model,

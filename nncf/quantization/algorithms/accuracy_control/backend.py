@@ -65,6 +65,9 @@ class AccuracyControlAlgoBackend(ABC):
     @abstractmethod
     def get_shape_of_metatypes() -> List[OperatorMetatype]:
         """
+        Returns a list of shape of metatypes.
+
+        :return: The list of shape of metatypes.
         """
 
     # Creation of commands
@@ -95,9 +98,14 @@ class AccuracyControlAlgoBackend(ABC):
     @abstractmethod
     def create_command_to_update_weight(node_with_weight: NNCFNode, weight_value: Any):
         """
+        Create command to update weight value.
+
+        :param node_with_weight: The node that corresponds to the operation with weight.
+        :param weight_value: New weight value.
+        :return: The command to update weight value.
         """
 
-    # Manipulations with bias value
+    # Manipulations with bias value and weights
 
     @staticmethod
     @abstractmethod
@@ -112,8 +120,14 @@ class AccuracyControlAlgoBackend(ABC):
         """
 
     @staticmethod
+    @abstractmethod
     def is_node_with_weight(node: NNCFNode) -> bool:
         """
+        Checks if the node has a weight or not.
+
+        :param node: The node to check.
+        :param nncf_graph: The NNCF graph.
+        :return: True` if `node` corresponds to the operation with weights, `False` otherwise.
         """
 
     @staticmethod

@@ -46,6 +46,10 @@ class ONNXAccuracyControlAlgoBackend(AccuracyControlAlgoBackend):
     def get_quantize_agnostic_metatypes() -> List[ONNXOpMetatype]:
         raise NotImplementedError
 
+    @staticmethod
+    def get_shape_of_metatypes() -> List[ONNXOpMetatype]:
+        raise NotImplementedError
+
     # Creation of commands
 
     @staticmethod
@@ -56,15 +60,27 @@ class ONNXAccuracyControlAlgoBackend(AccuracyControlAlgoBackend):
     def create_command_to_update_bias(node_with_bias: NNCFNode, bias_value: Any, nncf_graph: NNCFGraph):
         return create_bias_correction_command(node_with_bias, bias_value)
 
-    # Manipulations with bias value
+    @staticmethod
+    def create_command_to_update_weight(node_with_weight: NNCFNode, weight_value: Any):
+        raise NotImplementedError
+
+    # Manipulations with bias value and weights
 
     @staticmethod
     def is_node_with_bias(node: NNCFNode, nncf_graph: NNCFGraph) -> bool:
         return is_node_with_bias(node)
 
     @staticmethod
+    def is_node_with_weight(node: NNCFNode) -> bool:
+        raise NotImplementedError
+
+    @staticmethod
     def get_bias_value(node_with_bias: NNCFNode, nncf_graph: NNCFGraph, model) -> Any:
         return get_bias_value(node_with_bias, model)
+
+    @staticmethod
+    def get_weight_value(node_with_weight: NNCFNode, nncf_graph: NNCFGraph, model) -> Any:
+        raise NotImplementedError
 
     # Preparation of model
 

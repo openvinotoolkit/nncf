@@ -77,7 +77,7 @@ class OVAccuracyControlAlgoBackend(AccuracyControlAlgoBackend):
     def create_command_to_update_weight(node_with_weight: NNCFNode, weight_value: Any):
         return create_command_to_update_weight(node_with_weight, weight_value)
 
-    # Manipulations with bias value
+    # Manipulations with bias value and weights
 
     @staticmethod
     def is_node_with_bias(node: NNCFNode, nncf_graph: NNCFGraph) -> bool:
@@ -94,7 +94,6 @@ class OVAccuracyControlAlgoBackend(AccuracyControlAlgoBackend):
     @staticmethod
     def get_weight_value(node_with_weight: NNCFNode, nncf_graph: NNCFGraph, model) -> np.ndarray:
         return get_weight_value(node_with_weight, nncf_graph, model)
-
 
     # Preparation of model
 
