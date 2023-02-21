@@ -34,6 +34,7 @@ class ONNXStatisticsAggregator(StatisticsAggregator):
     def collect_statistics(self, model: onnx.ModelProto) -> None:
         self._nncf_graph = NNCFGraphFactory.create(model)
         self._onnx_graph = ONNXGraph(model)
+        self._registered_weights = set()
         super().collect_statistics(model)
 
     def _register_activation_statistic(self, statistic_point: StatisticPointsContainer,
@@ -72,7 +73,11 @@ class ONNXStatisticsAggregator(StatisticsAggregator):
                     self._register_activation_statistic(statistic_point,
                                                         target_point, node_name, outputs)
                 elif target_point.type == TargetType.OPERATION_WITH_WEIGHTS:
-                    self._register_weight_statistic(statistic_point, target_point)
+                    # Register constant only once because it does not change
+                    # during inference
+                    if target_point.target_node_name not in self._registered_weights:
+                        self._register_weight_statistic(statistic_point, target_point)
+                        self._registered_weights.add(target_point.target_node_name)
                 else:
                     RuntimeError('The statistics should be collected only from the input of output edges of the node')
 
