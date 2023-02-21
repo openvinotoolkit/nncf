@@ -27,7 +27,7 @@ from nncf.experimental.openvino_native.graph.metatypes.common import FAKE_QUANTI
 from nncf.experimental.openvino_native.graph.metatypes.common import CONSTANT_OPERATIONS
 from nncf.experimental.openvino_native.graph.metatypes.common import SHAPE_OF_OPERATIONS
 from nncf.experimental.openvino_native.graph.metatypes.openvino_metatypes import GENERAL_WEIGHT_LAYER_METATYPES
-from nncf.experimental.openvino_native.graph.nncf_graph_builder import OVConstPortId
+from nncf.experimental.openvino_native.graph.nncf_graph_builder import OVConstantLayerAttributes
 from nncf.experimental.openvino_native.graph.transformations.command_creation import create_command_to_remove_quantizer
 from nncf.experimental.openvino_native.graph.transformations.command_creation import create_bias_correction_command
 from nncf.experimental.openvino_native.graph.transformations.command_creation import create_command_to_update_weight
@@ -85,7 +85,7 @@ class OVAccuracyControlAlgoBackend(AccuracyControlAlgoBackend):
 
     @staticmethod
     def is_node_with_weight(node: NNCFNode) -> bool:
-        return node.metatype in GENERAL_WEIGHT_LAYER_METATYPES and isinstance(node.layer_attributes, OVConstPortId)
+        return node.metatype in GENERAL_WEIGHT_LAYER_METATYPES and isinstance(node.layer_attributes, OVConstantLayerAttributes)
 
     @staticmethod
     def get_bias_value(node_with_bias: NNCFNode, nncf_graph: NNCFGraph, model) -> np.ndarray:

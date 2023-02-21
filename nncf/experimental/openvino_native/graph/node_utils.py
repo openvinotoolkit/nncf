@@ -22,7 +22,7 @@ from nncf.experimental.openvino_native.graph.metatypes.openvino_metatypes import
 from nncf.experimental.openvino_native.graph.metatypes.openvino_metatypes import OVConvertMetatype
 from nncf.experimental.openvino_native.graph.metatypes.openvino_metatypes import OVConstantMetatype
 from nncf.experimental.openvino_native.graph.metatypes.openvino_metatypes import OPERATIONS_WITH_BIAS_METATYPES
-from nncf.experimental.openvino_native.graph.nncf_graph_builder import OVConstPortId
+from nncf.experimental.openvino_native.graph.nncf_graph_builder import OVConstantLayerAttributes
 
 
 def is_node_with_bias(node: NNCFNode, nncf_graph: NNCFGraph) -> bool:
@@ -72,7 +72,7 @@ def get_weight_value(node_with_weight: NNCFNode, nncf_graph: NNCFGraph, model: o
     :param model: The model that contains this operation.
     :return: The weight value.
     """
-    attrs: OVConstPortId = node_with_weight.layer_attributes
+    attrs: OVConstantLayerAttributes = node_with_weight.layer_attributes
     node = nncf_graph.get_input_edges(node_with_weight)[attrs.const_port_id].from_node
     if node.metatype == OVConvertMetatype:
         node = nncf_graph.get_input_edges()[0].from_node
