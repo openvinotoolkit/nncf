@@ -85,7 +85,8 @@ class OVAccuracyControlAlgoBackend(AccuracyControlAlgoBackend):
 
     @staticmethod
     def is_node_with_weight(node: NNCFNode) -> bool:
-        return node.metatype in GENERAL_WEIGHT_LAYER_METATYPES and isinstance(node.layer_attributes, OVConstantLayerAttributes)
+        return node.metatype in GENERAL_WEIGHT_LAYER_METATYPES and \
+            isinstance(node.layer_attributes, OVConstantLayerAttributes)
 
     @staticmethod
     def get_bias_value(node_with_bias: NNCFNode, nncf_graph: NNCFGraph, model) -> np.ndarray:

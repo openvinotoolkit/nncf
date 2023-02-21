@@ -96,7 +96,8 @@ def _create_message(nodes: Iterable[NNCFNode]) -> str:
     names = [f'\t{x.node_name}' for x in nodes]
     return '\n'.join(names)
 
-
+# pylint: disable=R0912
+# pylint: disable=R0915
 def restore_accuracy(initial_model: TModel,
                      initial_metric: float,
                      quantized_model: TModel,
@@ -254,8 +255,8 @@ def restore_accuracy(initial_model: TModel,
         # TODO(andrey-churkin): Move to debug level.
         nncf_logger.info(f'Removed a block of {len(group_to_remove.quantizers)} quantizers:'
                          f'\n{_create_message(group_to_remove.quantizers)}')
-        nncf_logger.info(f'Reverted {len(group_to_remove.operations)} operations to the {precision_change_to} precision:'
-                         f'\n{_create_message(group_to_remove.operations)}')
+        nncf_logger.info(f'Reverted {len(group_to_remove.operations)} operations to the {precision_change_to} '
+                         f'precision: \n{_create_message(group_to_remove.operations)}')
 
         current_num_quantizers = current_num_quantizers - len(group_to_remove.quantizers)
         all_removed_nodes.extend(group_to_remove.quantizers)
@@ -290,7 +291,8 @@ def restore_accuracy(initial_model: TModel,
             all_reverted_ops.difference_update(group_to_remove.operations)
             if exclude_bad_nodes:
                 excluded_nodes.extend(group_to_remove.quantizers)
-                nncf_logger.debug(f'Quantizers were added to the excluded list: {_create_message(group_to_remove.quantizers)}')
+                nncf_logger.debug('Quantizers were added to the excluded list: '
+                                  f'{_create_message(group_to_remove.quantizers)}')
             is_step_back = True
 
         previous_accuracy_drop = current_accuracy_drop
@@ -304,8 +306,9 @@ def restore_accuracy(initial_model: TModel,
             output_name = [x.node_name for x in nncf_graph.get_output_nodes()][0]
             current_x_approx = get_logits_for_each_item(current_model, validation_dataset, output_name)
 
-        ranked_groups = rank_quantizers(ranked_groups, current_model, validation_dataset, validation_fn, x_ref, current_x_approx,
-                                        USE_METRIC, RANKING_SUBSET_SIZE, algo_backend, nncf_graph)
+        ranked_groups = rank_quantizers(ranked_groups, current_model, validation_dataset, validation_fn,
+                                        x_ref, current_x_approx, USE_METRIC, RANKING_SUBSET_SIZE,
+                                        algo_backend, nncf_graph)
 
     # Show results that were achieved.
     if removed_all or not reached_required_drop:
