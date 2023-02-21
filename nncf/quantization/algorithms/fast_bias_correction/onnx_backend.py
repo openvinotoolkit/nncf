@@ -82,11 +82,6 @@ class ONNXFastBiasCorrectionAlgoBackend(FastBiasCorrectionAlgoBackend):
         return ONNXMeanStatisticCollector(reduction_shape, num_samples, window_size)
 
     @staticmethod
-    def get_input_output_names(node: NNCFNode) -> Tuple[str, str]:
-        return node.layer_attributes.input_tensor_names[0], \
-               node.layer_attributes.output_tensor_names[0]
-
-    @staticmethod
     def get_sub_input_output_names(subgraph: onnx.ModelProto) -> Tuple[str, str]:
         return subgraph.graph.input[0].name, subgraph.graph.output[0].name
 

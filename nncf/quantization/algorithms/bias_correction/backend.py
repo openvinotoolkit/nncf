@@ -18,6 +18,7 @@ from typing import List, Tuple, TypeVar, Optional
 import numpy as np
 from nncf.common.graph.transformations.commands import TargetPoint
 from nncf.common.graph.transformations.commands import TargetType
+from nncf.common.graph.transformations.commands import TransformationCommand
 from nncf.common.tensor import NNCFTensor
 from nncf.common.graph import NNCFGraph
 from nncf.common.graph import NNCFNode
@@ -57,7 +58,9 @@ class BiasCorrectionAlgoBackend(ABC):
 
     @staticmethod
     @abstractmethod
-    def target_point(target_type: TargetType, target_node_name: str, port_id: str = None) -> TargetPoint:
+    def target_point(target_type: TargetType,
+                     target_node_name: str,
+                     port_id: int) -> TargetPoint:
         """
         Returns backend-specific target point.
 
@@ -69,13 +72,44 @@ class BiasCorrectionAlgoBackend(ABC):
 
     @staticmethod
     @abstractmethod
-    def create_bias_correction_command(node: NNCFNode, bias_value: np.ndarray):
+    def create_bias_correction_command(node: NNCFNode, bias_value: np.ndarray) -> TransformationCommand:
         """
         Creates backend-specific command to update bias value.
 
         :param node: The node for which bias should be updated.
         :param bias_value: New value for the bias.
         :return: Backend-specific command to update bias value.
+        """
+
+    @staticmethod
+    @abstractmethod
+    def model_extraction_command(inputs: List[str], outputs: List[str]) -> TransformationCommand:
+        """
+        Returns backend-specific command to extract sub-model based on input & output names.
+
+        :param inputs: List of the input names for sub-model beggining.
+        :param outputs: List of the output names for sub-model end.
+        :return: Backend-specific TransformationCommand for the model extraction.
+        """
+
+    @staticmethod
+    @abstractmethod
+    def output_insertion_command(target_point: TargetPoint) -> TransformationCommand:
+        """
+        Returns backend-specific command that inserts output.
+
+        :param target_point: TargetPoint instance.
+        :return: Backend-specific command that inserts output.
+        """
+
+    @staticmethod
+    @abstractmethod
+    def node_removing_command(target_point: TargetPoint) -> TransformationCommand:
+        """
+        Returns backend-specific command that removes node.
+
+        :param target_point: TargetPoint instance.
+        :return: Backend-specific command that remove node.
         """
 
     @staticmethod
@@ -104,16 +138,6 @@ class BiasCorrectionAlgoBackend(ABC):
 
     @staticmethod
     @abstractmethod
-    def get_tensor_names(node: NNCFNode) -> Tuple[List[str], List[str]]:
-        """
-        Returns tuple of the lists with the input & output tensor names respectively.
-
-        :param node: NNCFNode with the layer_attributes.
-        :return: Tuple of the lists with the names.
-        """
-
-    @staticmethod
-    @abstractmethod
     def process_model_output(raw_data: OutputType, output_name: str) -> NNCFTensor:
         """
         Returns backend-specific processed output from the model.
@@ -125,89 +149,67 @@ class BiasCorrectionAlgoBackend(ABC):
 
     @staticmethod
     @abstractmethod
-    def get_node_through_quantizer(node: NNCFNode, nncf_graph: NNCFGraph) -> NNCFNode:
-        """
-        Returns activation node, but not quanitzers.
-
-        :param node: NNCFNode instance.
-        :param nncf_graph: NNCFGraph instance.
-        :return: NNCFNode activation node.
-        """
-
-    @staticmethod
-    @abstractmethod
-    def get_activation_port_ids_for_bias_node(model: TModel, node: NNCFNode) -> Tuple[int, int]:
+    def get_activation_port_ids_for_bias_node(node: NNCFNode) -> Tuple[int, int]:
         """
         Returns Input Port ID and Output Port ID corresponding to activation input and output edges for
         the node.
         Supports only nodes that could have bias value.
 
-        :param model: Backend-specific model.
         :param node: Node of NNCFGraph with bias value.
         """
 
     @staticmethod
     @abstractmethod
-    def get_bias_value(node: NNCFNode, model: TModel) -> np.ndarray:
+    def get_bias_value(node: NNCFNode, model: TModel, nncf_graph: NNCFGraph) -> np.ndarray:
         """
         Returns bias value in the NumPy format of provided node.
 
         :param node: Node of NNCFGraph with bias value.
         :param model: Backend-specific model for the initializer finding.
+        :param nncf_graph: NNCFGraph instance with the node.
         :return: Bias value in the NumPy format.
         """
 
     @staticmethod
     @abstractmethod
-    def get_bias_port_id(model: TModel, node: NNCFNode) -> int:
+    def get_input_name(model: TModel, node_name: str) -> str:
         """
-        Returns bias Port ID corresponding to the node.
+        Returns input tensor name for the specific node.
 
-        :param model: Backend-specific model.
-        :param node: Node of NNCFGraph with bias value.
-        :return: Port ID corresponding to bias.
+        :param model: Backend-specific model for the initializer finding.
+        :param node_name: Name of the backend-specific node.
+        :return: Input tensor name.
         """
 
     @staticmethod
     @abstractmethod
-    def get_output_names(model: TModel, node_name: str) -> List[str]:
+    def get_output_name(model: TModel, node_name: str) -> str:
         """
-        Returns list of backend-specific port names.
+        Returns output tensor name for the specific node.
 
         :param model: Backend-specific model.
         :param node_name: Name of the backend-specific node.
-        :return: List of the tensor names.
+        :return: Output tensor name.
         """
 
     @staticmethod
     @abstractmethod
-    def extract_model(model: TModel, input_node_names: List[str], output_node_names: List[str]) -> TModel:
-        """
-        Returns the backend-specific model that bounded by the specified input & output layers.
-
-        :param model: Backend-specific model.
-        :param input_node_names: List with the input node names.
-        :param output_node_names: List with the output node names.
-        :return: Extracted backend-specific model.
-        """
-
-    @staticmethod
-    @abstractmethod
-    def is_quantized_weights(node: NNCFNode, model: TModel) -> bool:
+    def is_quantized_weights(node: NNCFNode, nncf_graph: NNCFGraph) -> bool:
         """
         Checks whether the node is quantized or not.
 
         :param node: NNCFNode to check.
-        :param model: Backend-specific model.
+        :param nncf_graph: NNCFGraph instance with the node.
         :return: boolean indicating whether the node has a quantized weights or not.
         """
 
     @staticmethod
     @abstractmethod
-    def is_node_with_bias(node: NNCFNode) -> bool:
+    def is_node_with_bias(node: NNCFNode, nncf_graph: NNCFGraph) -> bool:
         """
         Checks whether the node has a bias or not.
 
         :param node: NNCFNode with the attributes.
+        :param nncf_graph: NNCFGraph instance with the node.
         :return: Boolean indicating whether the node has a bias or not.
         """

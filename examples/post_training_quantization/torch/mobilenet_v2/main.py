@@ -35,22 +35,22 @@ DATASET_CLASSES = 10
 
 
 def download_dataset() -> Path:
-    downloader = FastDownload(base=DATASET_PATH, 
-                              archive='downloaded', 
+    downloader = FastDownload(base=DATASET_PATH,
+                              archive='downloaded',
                               data='extracted')
     return downloader.get(DATASET_URL)
 
 
-def load_checkpoint(model: torch.nn.Module) -> torch.nn.Module:  
+def load_checkpoint(model: torch.nn.Module) -> torch.nn.Module:
     checkpoint = torch.hub.load_state_dict_from_url(
-        CHECKPOINT_URL, 
-        map_location=torch.device('cpu'), 
+        CHECKPOINT_URL,
+        map_location=torch.device('cpu'),
         progress=False)
     model.load_state_dict(checkpoint['state_dict'])
     return model
 
 
-def validate(model: ov.Model, 
+def validate(model: ov.Model,
              val_loader: torch.utils.data.DataLoader) -> float:
     predictions = []
     references = []
@@ -64,11 +64,11 @@ def validate(model: ov.Model,
         references.append(target)
 
     predictions = np.concatenate(predictions, axis=0)
-    references = np.concatenate(references, axis=0)  
+    references = np.concatenate(references, axis=0)
     return accuracy_score(predictions, references)
 
 
-def run_benchmark(model_path: str, shape: Optional[List[int]] = None, 
+def run_benchmark(model_path: str, shape: Optional[List[int]] = None,
                   verbose: bool = True) -> float:
     command = f'benchmark_app -m {model_path} -d CPU -api async -t 15'
     if shape is not None:
@@ -80,7 +80,7 @@ def run_benchmark(model_path: str, shape: Optional[List[int]] = None,
     return float(match.group(1))
 
 
-def get_model_size(ir_path: str, m_type: str = 'Mb', 
+def get_model_size(ir_path: str, m_type: str = 'Mb',
                    verbose: bool = True) -> float:
     xml_size = os.path.getsize(ir_path)
     bin_size = os.path.getsize(os.path.splitext(ir_path)[0] + '.bin')
@@ -89,11 +89,11 @@ def get_model_size(ir_path: str, m_type: str = 'Mb',
             break
         xml_size /= 1024
         bin_size /= 1024
-    model_size = xml_size + bin_size 
+    model_size = xml_size + bin_size
     if verbose:
         print(f'Model graph (xml):   {xml_size:.3f} Mb')
         print(f'Model weights (bin): {bin_size:.3f} Mb')
-        print(f'Model size:          {model_size:.3f} Mb')      
+        print(f'Model size:          {model_size:.3f} Mb')
     return model_size
 
 ###############################################################################
@@ -115,7 +115,7 @@ val_dataset = datasets.ImageFolder(
 val_loader = torch.utils.data.DataLoader(
         val_dataset, batch_size=128, num_workers=4, shuffle=False)
 
-model = models.mobilenet_v2(num_classes=DATASET_CLASSES) 
+model = models.mobilenet_v2(num_classes=DATASET_CLASSES)
 model.eval()
 model = load_checkpoint(model)
 

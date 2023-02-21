@@ -134,11 +134,8 @@ class FastBiasCorrection(Algorithm):
             input_fp, input_shape = self._get_fp_inputs(statistic_points, node_name)
             output_fp = self._get_fp_outputs(statistic_points, node_name)
 
-            input_name, output_name = self._backend_entity.get_input_output_names(node)
-
             extracted_model = self._extract_submodel(model,
-                                                     input_name,
-                                                     output_name)
+                                                     node_name)
 
             sub_input_name, sub_output_name = self._backend_entity.get_sub_input_output_names(extracted_model)
 
@@ -219,19 +216,17 @@ class FastBiasCorrection(Algorithm):
 
     def _extract_submodel(self,
                           model: TModel,
-                          input_name: str,
-                          output_name: str) -> TModel:
+                          node_name: str) -> TModel:
         """
         Extracts sub-model from the original based on the input & output tensor names.
 
         :param model: Backend-specific model.
-        :param input_name: Name of the layer in the model that stands for subgraph input layer.
-        :param output_name: Name of the layer in the model that stands for subgraph output layer.
+        :param node_name: Name of the node that should be a center of the sub-model.
         :return: Backend-specific sub-model.
         """
         model_transformer = ModelTransformerFactory.create(model)
-        model_extraction_command = self._backend_entity.model_extraction_command([input_name],
-                                                                                 [output_name])
+        model_extraction_command = self._backend_entity.model_extraction_command([node_name],
+                                                                                 [node_name])
         me_transformation_layout = TransformationLayout()
         me_transformation_layout.register(model_extraction_command)
         extracted_model = model_transformer.transform(me_transformation_layout)

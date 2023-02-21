@@ -4,7 +4,7 @@ This example demonstrates how to use Post-Training Quantization API from Neural 
 
 The example includes the following steps:
 
-- Download and prepare COCO-128 or COCO-128-seg dataset.
+- Download and prepare COCO-128-seg dataset.
 - Quantize the model with "AccuracyAwareQuantization" algorithm instead of "DefaultQuantization".
 - Measure accuracy and performance of the floating-point and quantized models.
 
@@ -19,10 +19,9 @@ pip install -r requirements.txt
 # Run Example
 
 The example is fully automated. Just run the following comman in the prepared Python environment:
-Here set the max_accuracy_drop = 0.005
 
 ```
-python main.py 0.005
+python main.py
 ```
 
 ## See also

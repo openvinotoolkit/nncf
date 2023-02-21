@@ -166,6 +166,9 @@ class TargetPoint:
         """
         return {self._state_names.TARGET_TYPE: self._target_type.get_state()}
 
+    def is_weight_target_point(self):
+        return self._target_type == TargetType.OPERATION_WITH_WEIGHTS
+
     @classmethod
     def from_state(cls, state: Dict[str, Any]) -> 'TargetPoint':
         """
