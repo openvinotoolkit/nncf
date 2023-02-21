@@ -106,9 +106,35 @@ class ReluTestMetatype(TestMetatype):
 class AddTestMetatype(TestMetatype):
     name = 'add'
 
+
 @METATYPES_FOR_TEST.register()
 class ShapeOfTestMetatype(TestMetatype):
     name = 'shape_of'
+
+
+@METATYPES_FOR_TEST.register()
+class PowerTestMetatype(TestMetatype):
+    name = 'power'
+
+
+@METATYPES_FOR_TEST.register()
+class MultiplyTestMetatype(TestMetatype):
+    name = 'multiply'
+
+
+@METATYPES_FOR_TEST.register()
+class InterpolateTestMetatype(TestMetatype):
+    name = 'interpolate'
+
+
+@METATYPES_FOR_TEST.register()
+class StridedSliceTestMetatype(TestMetatype):
+    name = 'strided_slice'
+
+
+@METATYPES_FOR_TEST.register()
+class DivideTestMetatype(TestMetatype):
+    name = 'divide'
 
 
 WEIGHT_LAYER_METATYPES = [LinearTestMetatype, Conv2dTestMetatype, MatMulTestMetatype]
@@ -149,12 +175,17 @@ CONSTANT_METATYPES = [
 QUANTIZABLE_METATYPES = [
     Conv2dTestMetatype,
     AddTestMetatype,
+    MultiplyTestMetatype,
+    PowerTestMetatype,
+    InterpolateTestMetatype,
+    DivideTestMetatype,
 ]
 
 
 QUANTIZE_AGNOSTIC_METATYPES = [
     MaxPool2dTestMetatype,
     ReluTestMetatype,
+    StridedSliceTestMetatype,
 ]
 
 
