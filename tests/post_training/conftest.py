@@ -10,16 +10,44 @@
  See the License for the specific language governing permissions and
  limitations under the License.
 """
+
 import pytest
 import numpy as np
 from pathlib import Path
+from enum import Enum
+from dataclasses import dataclass, fields
+
 
 def pytest_addoption(parser):
     parser.addoption("--data", action="store")
     parser.addoption("--output", action="store", default="./tmp/")
+    parser.addoption("--backends", action="store", default="TORCH,TORCH_PTQ,ONNX,OV_NATIVE,OV")
+
 
 def pytest_configure(config):
-    config.test_results = []
+    config.test_results = {}
+
+
+class QuantizationBackend(Enum):
+    FP32 = 'FP32'
+    TORCH = 'Torch INT8'
+    TORCH_PTQ = 'Torch PTQ INT8'
+    ONNX = 'ONNX INT8'
+    OV_NATIVE = 'OV Native INT8'
+    OV = 'Openvino INT8'
+
+
+@dataclass
+class RunInfo:
+    top_1: float
+    FPS: float
+    status: str
+
+
+@pytest.fixture
+def backends_list(request):
+    return request.config.getoption('--backends')
+
 
 @pytest.hookimpl(tryfirst=True, hookwrapper=True)
 def pytest_runtest_makereport(item, call):
@@ -27,9 +55,23 @@ def pytest_runtest_makereport(item, call):
     result = outcome.get_result()
 
     if result.when == 'call':
-        table = item.config.test_results
-        header = ["Model name", "FP32 top-1", "Torch INT8 top-1", "ONNX INT8 top-1", "OV Native INT8 top-1", "OV INT8 top-1",
-            "FP32 FPS", "Torch INT8 FPS", "ONNX INT8 FPS", "OV Native FPS", "OV INT8 FPS"]
+        test_results = item.config.test_results
+        header = ["Model name"]
+        for info in fields(RunInfo):
+            for backend in QuantizationBackend:
+                header.append(" ".join((backend.value, info.name)))
+
+        table = []
+        for model_name, run_infos in test_results.items():
+            row = [model_name]
+            for info in fields(RunInfo):
+                for backend in QuantizationBackend:
+                    data = '-'
+                    if backend in run_infos:
+                        data = getattr(run_infos[backend], info.name)
+                    row.append(data)
+            table.append(row)
+
         output_folder = Path(item.config.getoption("--output"))
         output_folder.mkdir(parents=True, exist_ok=True)
         np.savetxt(output_folder / "results.csv", table, delimiter=",", fmt='%s', header=','.join(header))

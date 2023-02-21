@@ -11,10 +11,14 @@
  limitations under the License.
 """
 
+import torch
+
 from copy import deepcopy
 from typing import Any, Dict, Optional, Tuple
 
-import torch
+from nncf.quantization.algorithms.post_training.algorithm import PostTrainingQuantizationParameters
+from nncf.quantization.algorithms.post_training.algorithm import PostTrainingQuantization
+from nncf.quantization.algorithms.min_max.algorithm import MinMaxQuantization
 from nncf.common.quantization.structs import QuantizationPreset
 from nncf.config import NNCFConfig
 from nncf.config.structures import BNAdaptationInitArgs
@@ -30,6 +34,7 @@ from nncf.torch.dynamic_graph.io_handling import wrap_nncf_model_inputs_with_obj
 from nncf.torch.dynamic_graph.io_handling import wrap_nncf_model_outputs_with_objwalk
 from nncf.torch.initialization import PTInitializingDataLoader
 from nncf.torch.model_creation import create_compressed_model
+from nncf.torch.model_creation import create_nncf_network
 from nncf.torch.nested_objects_traversal import objwalk
 from nncf.torch.utils import get_model_device
 from nncf.torch.utils import is_tensor
@@ -213,3 +218,45 @@ def quantize_impl(model: torch.nn.Module,
     compressed_model.disable_dynamic_graph_building()
 
     return compressed_model
+
+
+def quantize_impl_experimental(
+        model: torch.nn.Module,
+        calibration_dataset: Dataset,
+        preset: QuantizationPreset,
+        target_device: TargetDevice,
+        subset_size: int,
+        fast_bias_correction: bool,
+        model_type: Optional[ModelType] = None,
+        ignored_scope: Optional[IgnoredScope] = None) -> torch.nn.Module:
+    """
+    Experimental implementation of the `quantize()` method for the PyTorch backend.
+    """
+    if fast_bias_correction is False:
+        raise ValueError(f'fast_bias_correction={fast_bias_correction} is not '
+                          'supported')
+
+    if model_type == ModelType.TRANSFORMER:
+        raise ValueError(f'Model type {model_type} is not ' 'supported')
+
+    dataset_iter = iter(calibration_dataset.get_inference_data())
+    input_shape = tuple(next(dataset_iter).shape)
+    nncf_config = NNCFConfig({
+        'input_info': {
+            'sample_size': input_shape
+        }
+    })
+    model.eval()
+    nncf_network = create_nncf_network(model, nncf_config)
+    params = PostTrainingQuantizationParameters(number_samples=subset_size,
+                                                preset=preset,
+                                                target_device=target_device,
+                                                ignored_scopes=ignored_scope)
+
+    params = PostTrainingQuantizationParameters()
+    min_max_params = params.algorithms[MinMaxQuantization]
+    params.algorithms = {MinMaxQuantization: min_max_params}
+    quantization_algorithm = PostTrainingQuantization(params)
+
+    quantized_model = quantization_algorithm.apply(nncf_network, dataset=calibration_dataset)
+    return quantized_model
