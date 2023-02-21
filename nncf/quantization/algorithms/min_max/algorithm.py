@@ -383,18 +383,12 @@ class MinMaxQuantization(Algorithm):
                         continue
                     weight_layer_names.add(layer_name)
                     half_range = False
-                    if (self._parameters.overflow_fix == OverflowFix.FIRST_LAYER and not weight_tensor_names) or \
+                    if (self._parameters.overflow_fix == OverflowFix.FIRST_LAYER and not weight_layer_names) or \
                             self._parameters.overflow_fix == 'enable':
                         half_range = True
-                        weight_tensor = self._backend_entity.get_weight_tensor(model, quantization_target_point)
-                        scaled_weight_tensor = weight_tensor / 2
-                        weight_insertion_command = self._backend_entity.create_weight_update_command(
-                            quantization_target_point, scaled_weight_tensor)
-                        if weight_insertion_command:
-                            weight_transformation_commands.append(weight_insertion_command)
                     command = self._backend_entity.create_weight_quantizer_insertion_command(
                         nncf_graph, quantization_target_point,
-                        qconfig, tensor_collector.get_statistics())
+                        qconfig, half_range, tensor_collector.get_statistics())
                 else:
                     command = self._backend_entity.create_activation_quantizer_insertion_command(
                         nncf_graph, quantization_target_point,

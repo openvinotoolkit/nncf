@@ -132,19 +132,24 @@ CASES_FOR_TEST = (CaseToTestActivationQParams(num_bits=8,
                                               ref_scale=0.0784313725490196 * np.ones((3, 3)),
                                               ref_zero_point=np.zeros((3, 3)),
                                               ref_tensor_type=np.int8),
-                                              # Check activation_signed work
-                                              CaseToTestActivationQParams(num_bits=8,
-                                                                          mode=QuantizationMode.SYMMETRIC,
-                                                                          activations_signed=False,
-                                                                          per_channel=False,
-                                                                          axis=None,
-                                                                          ref_tensor_type=np.uint8),
-                                              CaseToTestActivationQParams(num_bits=8,
-                                                                          mode=QuantizationMode.SYMMETRIC,
-                                                                          activations_signed=True,
-                                                                          per_channel=False,
-                                                                          axis=None,
-                                                                          ref_tensor_type=np.int8),
+                  CaseToTestActivationQParams(num_bits=8,
+                                              mode=QuantizationMode.SYMMETRIC,
+                                              signedness_to_force=False,
+                                              per_channel=False,
+                                              axis=None,
+                                              statistics=ONNXMinMaxTensorStatistic(-1, 10),
+                                              ref_scale=np.array((0.0392156862745098)),
+                                              ref_zero_point=np.array((0.0)),
+                                              ref_tensor_type=np.uint8),
+                  CaseToTestActivationQParams(num_bits=8,
+                                              mode=QuantizationMode.SYMMETRIC,
+                                              signedness_to_force=True,
+                                              per_channel=False,
+                                              axis=None,
+                                              statistics=ONNXMinMaxTensorStatistic(-1, 10),
+                                              ref_scale=np.array((0.0784313725490196)),
+                                              ref_zero_point=np.array((0.0)),
+                                              ref_tensor_type=np.int8),
                   )
 
 
@@ -187,7 +192,7 @@ CASES_FOR_TEST = [
                      signedness_to_force=None,
                      per_channel=False,
                      axis=None,
-                     weight_tensor=np.array([[0, 1, 2], [-1, 0, 0]]),
+                     weight_tensor=ONNXMinMaxTensorStatistic(min_values=-1, max_values=2),
                      is_half_range=False,
                      ref_scale=np.array((0.01568627450980392)),
                      ref_zero_point=np.array((0)),
@@ -198,7 +203,7 @@ CASES_FOR_TEST = [
                      signedness_to_force=None,
                      per_channel=False,
                      axis=None,
-                     weight_tensor=np.array([[0, 1, 2], [-1, 0, 0]]),
+                     weight_tensor=ONNXMinMaxTensorStatistic(min_values=-1, max_values=2),
                      is_half_range=True,
                      ref_scale=np.array((0.031496062992125984)),
                      ref_zero_point=np.array((0)),
@@ -209,7 +214,7 @@ CASES_FOR_TEST = [
                      signedness_to_force=None,
                      per_channel=False,
                      axis=None,
-                     weight_tensor=np.array([[0, 1, 2], [-1, 0, 0]]),
+                     weight_tensor=ONNXMinMaxTensorStatistic(min_values=-1, max_values=2),
                      is_half_range=False,
                      ref_scale=np.array((0.011764705882352941)),
                      ref_zero_point=np.array((-43)),
@@ -220,7 +225,7 @@ CASES_FOR_TEST = [
                      signedness_to_force=None,
                      per_channel=False,
                      axis=None,
-                     weight_tensor=np.array([[0, 1, 2], [-1, 0, 0]]),
+                     weight_tensor=ONNXMinMaxTensorStatistic(min_values=-1, max_values=2),
                      is_half_range=True,
                      ref_scale=np.array((0.023622047244094488)),
                      ref_zero_point=np.array((-22)),
@@ -231,7 +236,7 @@ CASES_FOR_TEST = [
                      signedness_to_force=None,
                      per_channel=True,
                      axis=1,
-                     weight_tensor=np.array([[0, 1, 2], [0, 1, 3]]),
+                     weight_tensor=ONNXMinMaxTensorStatistic(min_values=np.array((0, 1, 2)), max_values=np.array((0, 1, 3))),
                      is_half_range=True,
                      ref_scale=np.array((0, 0.015748031496062992, 0.047244094488188976)),
                      ref_zero_point=np.array((0, 0, 0)),
@@ -242,7 +247,7 @@ CASES_FOR_TEST = [
                      signedness_to_force=False,
                      per_channel=True,
                      axis=1,
-                     weight_tensor=np.array([[0, 1, 2], [0, 1, 3]]),
+                     weight_tensor=ONNXMinMaxTensorStatistic(min_values=np.array((0, 1, 2)), max_values=np.array((0, 1, 3))),
                      is_half_range=True,
                      ref_scale=np.array((0, 0.015748031496062992, 0.047244094488188976)),
                      ref_zero_point=np.array((0, 0, 0)),
@@ -253,7 +258,6 @@ CASES_FOR_TEST = [
 
 @pytest.mark.parametrize('case_to_test', (CASES_FOR_TEST))
 def test_calculate_weight_quantizer_parameters(case_to_test: CaseToTestActivationQParams):
-    statistics = ONNXMinMaxTensorStatistic(-1 * np.ones((3, 10, 10)), np.ones((3, 10, 10)))
     qconfig = QuantizerConfig(num_bits=case_to_test.num_bits,
                               mode=case_to_test.mode,
                               signedness_to_force=case_to_test.signedness_to_force,
@@ -265,12 +269,12 @@ def test_calculate_weight_quantizer_parameters(case_to_test: CaseToTestActivatio
                                                        tensor_type=case_to_test.ref_tensor_type)
     if case_to_test.signedness_to_force is not None and not case_to_test.signedness_to_force:
         with pytest.raises(Exception):
-            calculate_weight_quantizer_parameters(case_to_test.weight_tensor, qconfig, case_to_test.axis,
-                                                  case_to_test.is_half_range)
+            calculate_weight_quantizer_parameters(case_to_test.weight_tensor, qconfig,
+                                                  case_to_test.is_half_range, case_to_test.axis)
         return
 
-    quantize_params = calculate_weight_quantizer_parameters(case_to_test.weight_tensor, qconfig, case_to_test.axis,
-                                                            case_to_test.is_half_range)
+    quantize_params = calculate_weight_quantizer_parameters(case_to_test.weight_tensor, qconfig,
+                                                            case_to_test.is_half_range, case_to_test.axis)
     assert np.array_equal(ref_quantize_params.scale, quantize_params.scale)
     assert np.array_equal(ref_quantize_params.zero_point, quantize_params.zero_point)
     assert ref_quantize_params.mode == quantize_params.mode

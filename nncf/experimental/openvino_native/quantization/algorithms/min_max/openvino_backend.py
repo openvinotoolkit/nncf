@@ -13,6 +13,8 @@
 
 from typing import Dict, List, Tuple
 
+import numpy as np
+
 from nncf.common.graph.graph import NNCFGraph
 from nncf.common.graph.graph import NNCFNode
 from nncf.common.graph.operator_metatypes import OperatorMetatype
@@ -72,7 +74,7 @@ class OVMinMaxAlgoBackend(MinMaxAlgoBackend):
             target_point: OVTargetPoint,
             quantizer_config: QuantizerConfig,
             statistics: MinMaxTensorStatistic) -> OVQuantizerInsertionCommand:
-        parameters = calculate_quantizer_parameters(statistics, quantizer_config,
+        parameters = calculate_quantizer_parameters(statistics, quantizer_config, False,
                                                     QuantizerGroup.ACTIVATIONS)
         return OVQuantizerInsertionCommand(target_point, parameters)
 

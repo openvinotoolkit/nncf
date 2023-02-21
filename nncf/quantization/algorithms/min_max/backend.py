@@ -15,6 +15,8 @@ from abc import ABC
 from abc import abstractmethod
 from typing import Dict, TypeVar, List
 
+import numpy as np
+
 from nncf.common.graph.graph import NNCFGraph
 from nncf.common.graph.graph import NNCFNode
 from nncf.common.graph.operator_metatypes import OperatorMetatype

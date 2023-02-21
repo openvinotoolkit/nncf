@@ -202,7 +202,8 @@ def calculate_quantizer_parameters(statistics: MinMaxTensorStatistic,
 
     :param statistics: Collected statistics for the quantized insertion.
     :param quantizer_config: Config of the quantization configuration.
-    :param half_range: TODO
+    :param half_range: If ``True`` effectively only a half of a quantizer range are used.
+        False - the full range are used.
     :param quantizer_group: Group of the quantizer.
     :return: Parameters of the FakeQuantize layer.
     """
@@ -227,5 +228,6 @@ def calculate_quantizer_parameters(statistics: MinMaxTensorStatistic,
 
     output_low, output_high = level_low, level_high
     if half_range:
-        output_low, output_high = output_low * 0.5, output_high * 0.5
+        output_low, output_high = output_low * 2, output_high * 2
+        level_low, level_high = level_low * 2, level_high * 2
     return OVQuantizerLayerParameters(level_low, level_high, output_low, output_high, levels)

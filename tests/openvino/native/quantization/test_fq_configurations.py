@@ -119,7 +119,7 @@ def test_calculate_activation_quantizer_parameters(case_to_test):
 
     statistics = OVMinMaxTensorStatistic(min_values, max_values)
     qconfig = QuantizerConfig(num_bits=8, mode=mode, signedness_to_force=sign, per_channel=per_ch)
-    quantize_params = calculate_quantizer_parameters(statistics, qconfig, QuantizerGroup.ACTIVATIONS)
+    quantize_params = calculate_quantizer_parameters(statistics, qconfig, False, QuantizerGroup.ACTIVATIONS)
 
     compare_fq_parameters(ref_quantize_params, quantize_params)
 
@@ -136,12 +136,12 @@ def test_calculate_weight_quantizer_parameters(case_to_test):
     qconfig = QuantizerConfig(num_bits=8, mode=mode, signedness_to_force=sign, per_channel=per_ch)
     axes = None
     if qconfig.per_channel:
-        bounds_shape = get_weight_stats_shape(data.shape, half_range, None)
+        bounds_shape = get_weight_stats_shape(data.shape, None)
         axes = tuple(i for i, dim in enumerate(bounds_shape) if dim == 1)
 
     min_values = np.amin(data, axis=axes, keepdims=qconfig.per_channel)
     max_values = np.amax(np.abs(data), axis=axes, keepdims=qconfig.per_channel)
     statistics = OVMinMaxTensorStatistic(min_values, max_values)
-    quantize_params = calculate_quantizer_parameters(statistics, qconfig, QuantizerGroup.WEIGHTS)
+    quantize_params = calculate_quantizer_parameters(statistics, qconfig, half_range, QuantizerGroup.WEIGHTS)
 
     compare_fq_parameters(ref_quantize_params, quantize_params)
