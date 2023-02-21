@@ -140,7 +140,7 @@ class BaseSparsityAlgoController(PTCompressionAlgorithmController, SparsityContr
                 for key in list(nncf_module.pre_ops.keys()):
                     op = nncf_module.get_pre_op(key)
                     if isinstance(op.operand, BinaryMask):
-                        nncf_module.weight.data = op.operand(nncf_module.weight.data)
+                        nncf_module.weight.data = op.operand.apply_binary_mask(nncf_module.weight.data)
                         nncf_module.remove_pre_forward_operation(key)
 
         return model
