@@ -279,9 +279,8 @@ class OVModelTransformer(ModelTransformer):
 
     @staticmethod
     def _set_const_value(node_with_const: ov.Node,
-                        const_port_id: int,
-                        const_value: np.ndarray) -> None:
-
+                         const_port_id: int,
+                         const_value: np.ndarray) -> None:
         const_port = node_with_const.input(const_port_id)
         const_node = node_with_const.input_value(const_port_id).get_node()
         if const_node.get_type_name() == 'Convert':

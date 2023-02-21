@@ -174,9 +174,21 @@ def rank_quantizers(groups_to_rank: List[GroupToRank],
                     nncf_graph: NNCFGraph,
                     excluded_groups: Optional[GroupToRank] = None) -> List[GroupToRank]:
     """
-    Ranks quantizers by their contribution to accuracy drop. Returns list of
-    ranked quantizers where ranked_quantizers[-1] quantizer has maximal
-    rank i.e. its contribution is the greatest.
+    Ranks groups of quantizers by their contribution to accuracy drop. Returns list of
+    ranked groups where the `ranked_groups[-1]` group of quantizers has maximal ranking score
+    i.e. its contribution to accuracy drop is the greatest.
+
+    :param groups_to_rank:
+    :param quantized_model:
+    :param dataset:
+    :param validation_fn:
+    :param x_ref:
+    :param x_approx:
+    :param use_metric:
+    :param ranking_subset_size:
+    :param algo_backend:
+    :param nncf_graph:
+    :param excluded_groups:
     """
     # Step 1: Create a subset of data items that will be used to rank groups of quantizers.
     error_fn = operator.sub if use_metric else normalized_mse

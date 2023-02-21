@@ -98,7 +98,7 @@ class AccuracyControlAlgoBackend(ABC):
     @abstractmethod
     def create_command_to_update_weight(node_with_weight: NNCFNode, weight_value: Any):
         """
-        Create command to update weight value.
+        Creates command to update weight value.
 
         :param node_with_weight: The node that corresponds to the operation with weight.
         :param weight_value: New weight value.

@@ -52,7 +52,14 @@ def create_command_to_remove_quantizer(quantizer_node: NNCFNode) -> OVFQNodeRemo
     return OVFQNodeRemovingCommand(target_point)
 
 
-def create_command_to_update_weight(node_with_weight: NNCFNode, weight_value: np.ndarray):
+def create_command_to_update_weight(node_with_weight: NNCFNode, weight_value: np.ndarray) -> OVWeightUpdateCommand:
+    """
+    Creates command to update weight value.
+
+    :param node_with_weight: The node that corresponds to the operation with weight.
+    :param weight_value: New weight value.
+    :return: The command to update weight value.
+    """
     weight_port_id = node_with_weight.layer_attributes.const_port_id
     target_point = OVTargetPoint(TargetType.LAYER, node_with_weight.node_name, weight_port_id)
     return OVWeightUpdateCommand(target_point, weight_value)

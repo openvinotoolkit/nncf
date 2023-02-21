@@ -66,6 +66,11 @@ def get_bias_value(node_with_bias: NNCFNode, nncf_graph: NNCFGraph, model: ov.Mo
 def get_weight_value(node_with_weight: NNCFNode, nncf_graph: NNCFGraph, model: ov.Model) -> np.ndarray:
     """
     Returns a weight value for the node with weight.
+
+    :param node_with_weight: Node with weight.
+    :param nncf_graph: NNCF graph.
+    :param model: The model that contains this operation.
+    :return: The weight value.
     """
     attrs: OVConstPortId = node_with_weight.layer_attributes
     node = nncf_graph.get_input_edges(node_with_weight)[attrs.const_port_id].from_node

@@ -57,7 +57,7 @@ def get_algo_backend(backend: BackendType) -> AccuracyControlAlgoBackend:
                        f'because {backend} is not supported.')
 
 
-def native_quantize_with_accuracy_control(model: TModel,
+def common_quantize_with_accuracy_control(model: TModel,
                                           calibration_dataset: Dataset,
                                           validation_dataset: Dataset,
                                           validation_fn: Callable[[Any, Iterable[Any]], float],
@@ -68,6 +68,9 @@ def native_quantize_with_accuracy_control(model: TModel,
                                           fast_bias_correction: bool = True,
                                           model_type: Optional[ModelType] = None,
                                           ignored_scope: Optional[IgnoredScope] = None) -> TModel:
+    """
+    Common implementation of the `nncf.quantize_with_accuracy_control()` method.
+    """
     # Step 0: Quantize provided model.
     quantized_model = quantize(model, calibration_dataset, preset, target_device, subset_size,
                                fast_bias_correction, model_type, ignored_scope)
@@ -101,7 +104,27 @@ def restore_accuracy(initial_model: TModel,
                      validation_dataset: Dataset,
                      validation_fn: Callable[[Any, Iterable[Any]], float],
                      max_drop: float = 0.01) -> TModel:
+    """
+    Restores the accuracy of the quantized model by removing the groups of quantizers
+    that contribute the most to the drop in accuracy.
 
+    :param initial_model: Initial model (not quantized).
+    :param initial_metric: Metric value for initial model.
+    :param quantized_model: Quantized model.
+    :param quantized_metric: Metric value for quantized model.
+    :param validation_dataset: A dataset for the validation process.
+    :param validation_fn: A validation function to validate the model. It should take
+        two argumets:
+        - `model`: model to be validate.
+        - `validation_dataset`: dataset that provides data items to
+              validate the provided model.
+        The function should return the value of the metric with the following meaning:
+        A higher value corresponds to better performance of the model.
+    :param max_drop: The maximum absolute accuracy drop that should be achieved.
+    :return: The quantized model whose metric `final_metric` is satisfied the following condition
+
+        initial_metric - final_metric <= max_drop.
+    """
     accuracy_drop = initial_metric - quantized_metric
     nncf_logger.info(f'Accuracy drop:             {accuracy_drop}')
 
