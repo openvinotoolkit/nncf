@@ -75,3 +75,8 @@ FAKE_QUANTIZE_OPERATIONS = [
 CONSTANT_OPERATIONS = [
     ov_metatypes.OVConstantMetatype,
 ]
+
+
+SHAPE_OF_OPERATIONS = [
+    ov_metatypes.OVShapeOfMetatype,
+]

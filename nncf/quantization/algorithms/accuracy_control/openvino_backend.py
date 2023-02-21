@@ -15,6 +15,7 @@ from typing import List
 from typing import Any
 
 import openvino.runtime as ov
+import numpy as np
 
 from nncf.common.graph import NNCFNode
 from nncf.common.graph import NNCFGraph
@@ -24,10 +25,15 @@ from nncf.experimental.openvino_native.graph.metatypes.common import QUANTIZE_AG
 from nncf.experimental.openvino_native.graph.metatypes.common import QUANTIZABLE_OPERATIONS
 from nncf.experimental.openvino_native.graph.metatypes.common import FAKE_QUANTIZE_OPERATIONS
 from nncf.experimental.openvino_native.graph.metatypes.common import CONSTANT_OPERATIONS
+from nncf.experimental.openvino_native.graph.metatypes.common import SHAPE_OF_OPERATIONS
+from nncf.experimental.openvino_native.graph.metatypes.openvino_metatypes import GENERAL_WEIGHT_LAYER_METATYPES
+from nncf.experimental.openvino_native.graph.nncf_graph_builder import OVConstPortId
 from nncf.experimental.openvino_native.graph.transformations.command_creation import create_command_to_remove_quantizer
 from nncf.experimental.openvino_native.graph.transformations.command_creation import create_bias_correction_command
+from nncf.experimental.openvino_native.graph.transformations.command_creation import create_command_to_update_weight
 from nncf.experimental.openvino_native.graph.node_utils import is_node_with_bias
 from nncf.experimental.openvino_native.graph.node_utils import get_bias_value
+from nncf.experimental.openvino_native.graph.node_utils import get_weight_value
 
 
 class OVAccuracyControlAlgoBackend(AccuracyControlAlgoBackend):
@@ -53,6 +59,10 @@ class OVAccuracyControlAlgoBackend(AccuracyControlAlgoBackend):
     def get_quantize_agnostic_metatypes() -> List[OVOpMetatype]:
         return QUANTIZE_AGNOSTIC_OPERATIONS
 
+    @staticmethod
+    def get_shape_of_metatypes() -> List[OVOpMetatype]:
+        return SHAPE_OF_OPERATIONS
+
     # Creation of commands
 
     @staticmethod
@@ -63,6 +73,10 @@ class OVAccuracyControlAlgoBackend(AccuracyControlAlgoBackend):
     def create_command_to_update_bias(node_with_bias: NNCFNode, bias_value: Any, nncf_graph: NNCFGraph):
         return create_bias_correction_command(node_with_bias, bias_value, nncf_graph)
 
+    @staticmethod
+    def create_command_to_update_weight(node_with_weight: NNCFNode, weight_value: Any):
+        return create_command_to_update_weight(node_with_weight, weight_value)
+
     # Manipulations with bias value
 
     @staticmethod
@@ -70,8 +84,17 @@ class OVAccuracyControlAlgoBackend(AccuracyControlAlgoBackend):
         return is_node_with_bias(node, nncf_graph)
 
     @staticmethod
-    def get_bias_value(node_with_bias: NNCFNode, nncf_graph: NNCFGraph, model) -> Any:
+    def is_node_with_weight(node: NNCFNode) -> bool:
+        return node.metatype in GENERAL_WEIGHT_LAYER_METATYPES and isinstance(node.layer_attributes, OVConstPortId)
+
+    @staticmethod
+    def get_bias_value(node_with_bias: NNCFNode, nncf_graph: NNCFGraph, model) -> np.ndarray:
         return get_bias_value(node_with_bias, nncf_graph, model)
+
+    @staticmethod
+    def get_weight_value(node_with_weight: NNCFNode, nncf_graph: NNCFGraph, model) -> np.ndarray:
+        return get_weight_value(node_with_weight, nncf_graph, model)
+
 
     # Preparation of model
 

@@ -61,6 +61,12 @@ class AccuracyControlAlgoBackend(ABC):
         :return: The list of quantize agnostic metatypes.
         """
 
+    @staticmethod
+    @abstractmethod
+    def get_shape_of_metatypes() -> List[OperatorMetatype]:
+        """
+        """
+
     # Creation of commands
 
     @staticmethod
@@ -85,6 +91,12 @@ class AccuracyControlAlgoBackend(ABC):
         :return: The command to update bias value.
         """
 
+    @staticmethod
+    @abstractmethod
+    def create_command_to_update_weight(node_with_weight: NNCFNode, weight_value: Any):
+        """
+        """
+
     # Manipulations with bias value
 
     @staticmethod
@@ -100,6 +112,11 @@ class AccuracyControlAlgoBackend(ABC):
         """
 
     @staticmethod
+    def is_node_with_weight(node: NNCFNode) -> bool:
+        """
+        """
+
+    @staticmethod
     @abstractmethod
     def get_bias_value(node_with_bias: NNCFNode, nncf_graph: NNCFGraph, model) -> Any:
         """
@@ -109,6 +126,18 @@ class AccuracyControlAlgoBackend(ABC):
         :param nncf_graph: The NNCF graph.
         :param model: The model that contains this operation.
         :return: The bias value that is applied to the output tensor of the node's operation.
+        """
+
+    @staticmethod
+    @abstractmethod
+    def get_weight_value(node_with_weight: NNCFNode, nncf_graph: NNCFGraph, model) -> Any:
+        """
+        Returns the weight value for the node with weight.
+
+        :param node_with_weight: The node with weight.
+        :param nncf_graph: The NNCF graph.
+        :param model: The model that contains this operation.
+        :return: The weight value.
         """
 
     # Preparation of model

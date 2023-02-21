@@ -18,17 +18,39 @@ from typing import Iterable
 from typing import Any
 from typing import Union
 from typing import Optional
-from typing import Tuple
+from typing import TypeVar
+from dataclasses import dataclass
 
 import numpy as np
 
 from nncf.data.dataset import Dataset
+from nncf.common.factory import ModelTransformerFactory
 from nncf.common.graph import NNCFNode
-from nncf.common.factory import NNCFGraphFactory
-from nncf.common.logging import nncf_logger
+from nncf.common.graph import NNCFGraph
+from nncf.common.graph.transformations.layout import TransformationLayout
+from nncf.common.graph.operator_metatypes import OperatorMetatype
+from nncf.common.quantization.quantizer_removal import find_quantizer_nodes_to_cut
 from nncf.quantization.algorithms.accuracy_control.backend import AccuracyControlAlgoBackend
-from nncf.common.quantization.quantizer_removal import remove_quantizer_from_model
 from nncf.quantization.algorithms.accuracy_control.utils import get_logits_for_each_item
+
+
+TModel = TypeVar('TModel')
+
+
+@dataclass
+class GroupToRank:
+    """
+    Describes a group of quantizers to rank.
+
+    :param quantizers: List of quantizer nodes.
+    :param operations: List of nodes that will be reverted to original precision
+        if `GroupToRank.quantizers` are removed.
+    """
+
+    quantizers: List[NNCFNode]
+    operations: List[NNCFNode]
+
+    # TODO(andrey-churkin): Add hash
 
 
 def normalized_mse(x_ref: np.ndarray, x_approx: np.ndarray) -> float:
@@ -64,10 +86,84 @@ def get_ranking_subset_indices(errors: List[float], subset_size: int) -> List[in
     return sorted(ordered_indices[:end_index])
 
 
+def find_groups_of_quantizers_to_rank(
+        nncf_graph: NNCFGraph,
+        quantizer_metatypes: List[OperatorMetatype],
+        const_metatypes: List[OperatorMetatype],
+        quantizable_metatypes: List[OperatorMetatype],
+        quantize_agnostic_metatypes: List[OperatorMetatype],
+        shape_of_metatypes: List[OperatorMetatype]) -> List[GroupToRank]:
+    """
+    Finds groups of quantizers to rank.
+
+    :param nncf_graph: NNCF graph.
+    :param quantizer_metatypes: List of quantizer metatypes.
+    :param const_metatypes: List of constant metatypes.
+    :param quantizable_metatypes: List of metatypes for operations that may be quantized.
+    :param quantize_agnostic_metatypes: List of quantize agnostic metatypes.
+    :param shape_of_metatypes: List of shape of metatypes.
+    :return: List of groups of quantizers to rank.
+    """
+    groups_to_rank = []
+    processed = {}
+    # TODO(andrey-churkin): Set order of quantizers here.
+    for quantizer_node in nncf_graph.get_nodes_by_metatypes(quantizer_metatypes):
+        if processed.get(quantizer_node.node_name, False):
+            continue
+        quantizers, operations = find_quantizer_nodes_to_cut(nncf_graph,
+                                                             quantizer_node,
+                                                             quantizer_metatypes,
+                                                             const_metatypes,
+                                                             quantizable_metatypes,
+                                                             quantize_agnostic_metatypes,
+                                                             shape_of_metatypes)
+        for x in quantizers:
+            processed[x.node_name] = True
+
+        groups_to_rank.append(GroupToRank(quantizers, operations))
+
+    return groups_to_rank
+
+
+# TODO(andrey-churkin): To remove the `algo_backend` parameter we need to introduce
+# the `CommandCreator` and `CommandCreatorFactory` classes.
+def remove_group_of_quantizers_from_model(group_to_remove: GroupToRank,
+                                          quantized_model: TModel,
+                                          nncf_graph: NNCFGraph,
+                                          algo_backend: AccuracyControlAlgoBackend) -> TModel:
+    """
+    Removes group of quantizers from the model.
+
+    :param group_to_remove: Group of quantizers to remove.
+    :param quantized_model: Quantized model from which quantizers should be removed.
+    :param nncf_graph: The graph which was built for `quantized_model`.
+    :param algo_backend: Backend for algorithm.
+    :return: The model from which `group_to_remove.quantizers` were removed.
+    """
+    transformation_layout = TransformationLayout()
+
+    for node in group_to_remove.quantizers:
+        transformation_layout.register(algo_backend.create_command_to_remove_quantizer(node))
+
+    for node in group_to_remove.operations:
+        original_bias = node.data.get('original_bias', None)
+        if original_bias is not None:
+            transformation_layout.register(algo_backend.create_command_to_update_bias(node, original_bias, nncf_graph))
+
+        original_weight = node.data.get('original_weight', None)
+        if original_weight is not None:
+            transformation_layout.register(algo_backend.create_command_to_update_weight(node, original_weight))
+
+    model_transformer = ModelTransformerFactory.create(quantized_model)
+    transformed_model = model_transformer.transform(transformation_layout)
+
+    return transformed_model
+
+
 # TODO(andrey-churkin): We need to introduce common metatypes to
 # remove `algo_backend` from the signature of this method.
-
-def rank_quantizers(quantized_model,
+def rank_quantizers(groups_to_rank: List[GroupToRank],
+                    quantized_model,
                     dataset: Dataset,
                     validation_fn: Callable[[Any, Iterable[Any]], float],
                     x_ref: Union[List[float], List[np.ndarray]],
@@ -75,13 +171,14 @@ def rank_quantizers(quantized_model,
                     use_metric: bool,
                     ranking_subset_size: int,
                     algo_backend: AccuracyControlAlgoBackend,
-                    excluded_nodes: Optional[List[NNCFNode]] = None) -> List[NNCFNode]:
+                    nncf_graph: NNCFGraph,
+                    excluded_groups: Optional[GroupToRank] = None) -> List[GroupToRank]:
     """
     Ranks quantizers by their contribution to accuracy drop. Returns list of
     ranked quantizers where ranked_quantizers[-1] quantizer has maximal
     rank i.e. its contribution is the greatest.
     """
-    # Create a subset of data items that will be used to rank quantizers.
+    # Step 1: Create a subset of data items that will be used to rank groups of quantizers.
     error_fn = operator.sub if use_metric else normalized_mse
     errors = [error_fn(a, b) for a, b in zip(x_ref, x_approx)]
     ranking_subset_indices = get_ranking_subset_indices(errors, ranking_subset_size)
@@ -91,51 +188,23 @@ def rank_quantizers(quantized_model,
     else:
         ranking_dataset = dataset.get_inference_data(ranking_subset_indices)
 
-    # Calculate ranking score for quantizers.
-    quantizer_and_ranking_score: List[Tuple[NNCFNode, float]] = []
-    processed_quantizers = []
-    graph = NNCFGraphFactory.create(quantized_model)
+    # Step 2: Calculate ranking score for groups of quantizers.
 
-    # TODO(andrey-churkin): Check the order of quantizer nodes.
-    quantizer_nodes = (
-        node for node in graph.topological_sort() if node.metatype in algo_backend.get_quantizer_metatypes()
-    )
-    for quantizer_node in quantizer_nodes:
+    # `ranking_scores[i]` value is the ranking score for `groups_to_rank[i]`.
+    ranking_scores = []
+
+    for current_group in groups_to_rank:
         # TODO(andrey-churkin): Add a description for why this `if` statement is needed.
-        if excluded_nodes and quantizer_node in excluded_nodes:
+        if excluded_groups and current_group in excluded_groups:
             continue
 
-        # TODO(andrey-churkin): Add a description for why this `if` statement is needed.
-        if quantizer_node in processed_quantizers:
-            continue
+        modified_model = remove_group_of_quantizers_from_model(current_group, quantized_model, nncf_graph, algo_backend)
 
-        modified_model, removed_quantizers, _ = remove_quantizer_from_model(
-            quantized_model,
-            quantizer_node,
-            graph,
-            algo_backend.get_quantizer_metatypes(),
-            algo_backend.get_const_metatypes(),
-            algo_backend.get_quantizable_metatypes(),
-            algo_backend.get_quantize_agnostic_metatypes(),
-            algo_backend.create_command_to_remove_quantizer,
-            algo_backend.create_command_to_update_bias
-        )
-
-        if not removed_quantizers:
-            continue
-
-        # TODO(andrey-churkin): Move to debug level.
-        removed_names = [f'\t{x.node_name}' for x in removed_quantizers]
-        message = '\n'.join(removed_names)
-        nncf_logger.info(f'Removed a block of {len(removed_names)} quantizers:\n{message}')
-
-        processed_quantizers.extend(removed_quantizers)
-
-        # Get the ranking score for the `removed_quantizers` scope.
+        # Get the ranking score for the current group of quantizers.
         if use_metric:
             ranking_score = validation_fn(algo_backend.prepare_for_inference(modified_model), ranking_dataset)
         else:
-            output_name = [x.node_name for x in graph.get_output_nodes()][0]
+            output_name = [x.node_name for x in nncf_graph.get_output_nodes()][0]
             x_approx_subset_current = get_logits_for_each_item(modified_model, ranking_dataset, output_name)
             x_ref_subset = (x_ref[i] for i in ranking_subset_indices)
             errors_current = [
@@ -143,11 +212,10 @@ def rank_quantizers(quantized_model,
             ]
             ranking_score = sum(errors_current) / len(errors_current)
 
-        quantizer_and_ranking_score.append((quantizer_node, ranking_score))
+        # TODO(andrey-churkin): Why does casting require here?
+        ranking_scores.append(float(ranking_score))
 
-    # TODO(andrey-churkin): Check order
-    ranked_quantizers = [
-        quantizer for quantizer, _ in sorted(quantizer_and_ranking_score, key=operator.itemgetter(1))
-    ]
+    # Step 3: Rank groups.
+    ranked_groups = [group for _, group in sorted(zip(ranking_scores, groups_to_rank), key=operator.itemgetter(0))]
 
-    return ranked_quantizers
+    return ranked_groups
