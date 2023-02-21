@@ -16,6 +16,7 @@ from typing import Dict
 from typing import List
 from typing import Set
 from typing import Tuple
+from typing import Optional
 from unittest.mock import MagicMock
 
 import networkx as nx
@@ -48,15 +49,18 @@ OP_NAMES_IN_TEST_WITH_MODULE_ATTRIBUTES = [
 
 
 class NodeWithType:
-    def __init__(self, name: str, op_type: TestMetatype):
+    def __init__(self, name: str, op_type: TestMetatype,
+                 layer_attributes: Optional[BaseLayerAttributes] = None):
         self.node_name = name
         self.node_op_type = op_type
+        self.layer_attributes = layer_attributes
 
 
 def create_mock_graph(nodes: List[NodeWithType], node_edges: List[Tuple[str, str]]) -> nx.DiGraph:
     mock_graph = nx.DiGraph()
     for node in nodes:
-        mock_node_attrs = get_mock_nncf_node_attrs(op_name=node.node_name, metatype=node.node_op_type)
+        mock_node_attrs = get_mock_nncf_node_attrs(op_name=node.node_name, metatype=node.node_op_type,
+                                                   layer_attributes=node.layer_attributes)
         mock_graph.add_node(node.node_name, **mock_node_attrs)
     mock_graph.add_edges_from(node_edges)
     mark_input_ports_lexicographically_based_on_input_node_key(mock_graph)
@@ -71,9 +75,9 @@ def mark_input_ports_lexicographically_based_on_input_node_key(graph: nx.DiGraph
             graph.edges[edge][NNCFGraph.INPUT_PORT_ID_EDGE_ATTR] = idx
 
 
-def get_nncf_graph_from_mock_nx_graph(nx_graph: nx.DiGraph) -> NNCFGraph:
+def get_nncf_graph_from_mock_nx_graph(nx_graph: nx.DiGraph, nncf_graph_cls = NNCFGraph) -> NNCFGraph:
     # pylint:disable=too-many-branches
-    mock_graph = NNCFGraph()
+    mock_graph = nncf_graph_cls()
     key_vs_id = {}
     edge_vs_output_idx_and_creator_id = {}  # type: Dict[Tuple[str, str], Tuple[int, int]]
     from networkx.algorithms.dag import lexicographical_topological_sort
@@ -161,17 +165,20 @@ def get_two_branch_mock_model_graph() -> NNCFGraph:
 MOCK_OPERATOR_NAME = "conv_transpose2d"
 
 
-def get_mock_nncf_node_attrs(op_name=None, scope_str=None, metatype=None):
+def get_mock_nncf_node_attrs(op_name=None, scope_str=None, metatype=None,
+                             layer_attributes=None):
     op_name_to_set = op_name if op_name is not None else MOCK_OPERATOR_NAME
     if scope_str is None:
         scope_str = ''
     output = {
         NNCFGraph.NODE_NAME_ATTR: f'{scope_str}/{op_name_to_set}_0',
         NNCFGraph.NODE_TYPE_ATTR: op_name_to_set,
-        NNCFGraph.METATYPE_ATTR: metatype
     }
-    if metatype is None:
-        del output[NNCFGraph.METATYPE_ATTR]
+    for attr_name, attr_val in [(NNCFGraph.METATYPE_ATTR, metatype),
+                                (NNCFGraph.LAYER_ATTRIBUTES, layer_attributes)]:
+        if attr_val is not None:
+            output[attr_name] = attr_val
+
     return output
 
 

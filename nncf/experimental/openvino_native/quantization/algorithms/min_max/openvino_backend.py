@@ -12,34 +12,30 @@
 """
 
 from typing import Dict, List, Tuple
-import numpy as np
-import openvino.runtime as ov
 
+from nncf.common.graph.graph import NNCFGraph
 from nncf.common.graph.graph import NNCFNode
 from nncf.common.graph.operator_metatypes import OperatorMetatype
-from nncf.common.graph.patterns import HWFusedPatterns
-from nncf.common.graph.transformations.commands import TargetPoint
 from nncf.common.graph.transformations.commands import TargetType
 from nncf.common.hardware.config import HWConfig
+from nncf.common.quantization.structs import QuantizerGroup
 from nncf.common.quantization.structs import QuantizerConfig
+from nncf.common.quantization.structs import QuantizationMode
 from nncf.common.tensor_statistics.collectors import ReductionShape
 from nncf.common.tensor_statistics.statistics import MinMaxTensorStatistic
 from nncf.common.utils.backend import BackendType
 
+from nncf.experimental.openvino_native.graph.nncf_graph_builder import OVConstantLayerAttributes
 from nncf.experimental.openvino_native.graph.metatypes.openvino_metatypes import GENERAL_WEIGHT_LAYER_METATYPES
 from nncf.experimental.openvino_native.graph.transformations.commands import OVQuantizerInsertionCommand
 from nncf.experimental.openvino_native.graph.transformations.commands import OVWeightUpdateCommand
 from nncf.experimental.openvino_native.graph.transformations.commands import OVTargetPoint
-from nncf.experimental.openvino_native.graph.node_utils import get_weight_tensor
 from nncf.experimental.openvino_native.hardware.config import OVHWConfig
-from nncf.experimental.openvino_native.hardware.fused_patterns import OPENVINO_HW_FUSED_PATTERNS
 from nncf.experimental.openvino_native.quantization.default_quantization import DEFAULT_OV_QUANT_TRAIT_TO_OP_DICT
-from nncf.experimental.openvino_native.quantization.quantizer_parameters import (
-    calculate_activation_quantizer_parameters,
-    calculate_weight_quantizer_parameters
-)
 from nncf.experimental.openvino_native.statistics.collectors import OVMeanMinMaxStatisticCollector
 from nncf.experimental.openvino_native.statistics.collectors import OVMinMaxStatisticCollector
+from nncf.experimental.openvino_native.quantization.quantizer_parameters import get_weight_stats_shape
+from nncf.experimental.openvino_native.quantization.quantizer_parameters import calculate_quantizer_parameters
 
 from nncf.quantization.algorithms.min_max.backend import MinMaxAlgoBackend
 from nncf.quantization.algorithms.min_max.backend import ALGO_BACKENDS
@@ -57,10 +53,6 @@ class OVMinMaxAlgoBackend(MinMaxAlgoBackend):
         return []
 
     @property
-    def hw_fused_patterns(self) -> HWFusedPatterns:
-        return OPENVINO_HW_FUSED_PATTERNS
-
-    @property
     def hw_config(self) -> HWConfig:
         return OVHWConfig
 
@@ -75,20 +67,24 @@ class OVMinMaxAlgoBackend(MinMaxAlgoBackend):
         return OVTargetPoint(target_type, target_node_name, port_id)
 
     @staticmethod
-    def create_activation_quantizer_insertion_command(target_point: OVTargetPoint,
-                                                      quantizer_config: QuantizerConfig,
-                                                      statistics: MinMaxTensorStatistic) \
-            -> OVQuantizerInsertionCommand:
-        parameters = calculate_activation_quantizer_parameters(statistics, quantizer_config)
+    def create_activation_quantizer_insertion_command(
+            nncf_graph: NNCFGraph,
+            target_point: OVTargetPoint,
+            quantizer_config: QuantizerConfig,
+            statistics: MinMaxTensorStatistic) -> OVQuantizerInsertionCommand:
+        parameters = calculate_quantizer_parameters(statistics, quantizer_config,
+                                                    QuantizerGroup.ACTIVATIONS)
         return OVQuantizerInsertionCommand(target_point, parameters)
 
     @staticmethod
-    def create_weight_quantizer_insertion_command(target_point: OVTargetPoint,
-                                                  quantizer_config: QuantizerConfig,
-                                                  half_range: bool,
-                                                  weight_tensor: np.ndarray,
-                                                  node: NNCFNode) -> OVQuantizerInsertionCommand:
-        parameters = calculate_weight_quantizer_parameters(weight_tensor, quantizer_config, half_range, node.metatype)
+    def create_weight_quantizer_insertion_command(
+            nncf_graph: NNCFGraph,
+            target_point: OVTargetPoint,
+            quantizer_config: QuantizerConfig,
+            half_range: bool,
+            statistics: MinMaxTensorStatistic) -> OVQuantizerInsertionCommand:
+        parameters = calculate_quantizer_parameters(statistics, quantizer_config, half_range,
+                                                    QuantizerGroup.WEIGHTS)
         return OVQuantizerInsertionCommand(target_point, parameters)
 
     @staticmethod
@@ -98,26 +94,49 @@ class OVMinMaxAlgoBackend(MinMaxAlgoBackend):
         return OVWeightUpdateCommand(weight_update_target_point, weight_tensor)
 
     @staticmethod
-    def minmax_statistic_collector(use_abs_max: bool,
-                                   reduction_shape: ReductionShape,
+    def _get_reduction_shape_and_use_abs_max(
+            nncf_graph: NNCFGraph,
+            target_point: OVTargetPoint,
+            quantizer_config: QuantizerConfig) -> Tuple[ReductionShape, bool]:
+        use_abs_max = quantizer_config.mode == QuantizationMode.SYMMETRIC
+        if not quantizer_config.per_channel:
+            return None, use_abs_max
+
+        if not target_point.is_weight_target_point():
+            # TODO: support reduction shapes for 3D-5D conv cases
+            return (0, 2, 3), use_abs_max
+
+        node = nncf_graph.get_node_by_name(target_point.target_node_name)
+        assert isinstance(node.layer_attributes, OVConstantLayerAttributes)
+        const_shape = node.layer_attributes.const_shape
+
+        bounds_shape = get_weight_stats_shape(const_shape, node.metatype)
+        axes = tuple(i for i, dim in enumerate(bounds_shape) if dim == 1)
+        return axes, use_abs_max
+
+    @staticmethod
+    def minmax_statistic_collector(nncf_graph: NNCFGraph,
+                                   target_point: OVTargetPoint,
+                                   quantizer_config: QuantizerConfig,
                                    num_samples: int = None) -> OVMinMaxStatisticCollector:
+        reduction_shape, use_abs_max =\
+            OVMinMaxAlgoBackend._get_reduction_shape_and_use_abs_max(nncf_graph, target_point,
+                                                                     quantizer_config)
         return OVMinMaxStatisticCollector(use_abs_max, reduction_shape, num_samples)
 
     @staticmethod
-    def mean_minmax_statistic_collector(use_per_sample_stats: bool,
-                                        use_abs_max: bool,
-                                        reduction_shape: ReductionShape,
-                                        num_samples: int = None,
-                                        window_size: int = None) -> OVMeanMinMaxStatisticCollector:
+    def mean_minmax_statistic_collector(nncf_graph: NNCFGraph,
+                                        target_point: OVTargetPoint,
+                                        quantizer_config: QuantizerConfig,
+                                        use_per_sample_stats: bool,
+                                        num_samples: int = None) -> OVMeanMinMaxStatisticCollector:
+        reduction_shape, use_abs_max =\
+            OVMinMaxAlgoBackend._get_reduction_shape_and_use_abs_max(nncf_graph, target_point,
+                                                                     quantizer_config)
         return OVMeanMinMaxStatisticCollector(use_per_sample_stats,
                                               use_abs_max,
                                               reduction_shape,
-                                              num_samples,
-                                              window_size)
-
-    @staticmethod
-    def get_weight_tensor(model: ov.Model, target_point: TargetPoint) -> Tuple[str, np.ndarray]:
-        return get_weight_tensor(target_point.target_node_name, target_point.port_id, model)
+                                              num_samples)
 
     @staticmethod
     def get_weight_tensor_port_id(node: NNCFNode) -> int:

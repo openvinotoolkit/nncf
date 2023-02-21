@@ -1,3 +1,4 @@
+
 """
  Copyright (c) 2023 Intel Corporation
  Licensed under the Apache License, Version 2.0 (the "License");
@@ -13,42 +14,53 @@
 
 import pytest
 import numpy as np
+import torch
+from torch import nn
 
 from nncf import Dataset
-from nncf.quantization.algorithms.min_max.onnx_backend import ONNXMinMaxAlgoBackend
-from nncf.onnx.graph.transformations.commands import ONNXTargetPoint
-from nncf.onnx.statistics.aggregator import ONNXStatisticsAggregator
 from nncf.common.graph.transformations.commands import TargetType
+from nncf.quantization.algorithms.min_max.torch_backend import PTMinMaxAlgoBackend
+from nncf.torch.statistics.aggregator import PTStatisticsAggregator
 
-from tests.onnx.models import IdentityConvolutionalModel
 from tests.common.test_statistics_aggregator import TemplateTestStatisticsAggregator
+from tests.torch.ptq.helpers import get_nncf_network
+from tests.torch.ptq.test_ptq_params import ToNNCFNetworkInterface
 
 
-INPUT_NAME = 'X'
-IDENTITY_NODE_NAME = 'Identity'
-CONV_NODE_NAME = 'Conv1'
-INPUT_SHAPE = [3, 3, 3]
+
+IDENTITY_NODE_NAME = 'PTIdentityConvModel/__add___0'
+CONV_NODE_NAME = 'PTIdentityConvModel/NNCFConv2d[conv]/conv2d_0'
+INPUT_SHAPE = [1, 3, 3, 3]
+
+
+class PTIdentityConvModel(nn.Module, ToNNCFNetworkInterface):
+    def __init__(self, kernel):
+        super().__init__()
+        self.conv = nn.Conv2d(3, 3, 3)
+        self.conv.weight.data = torch.tensor(kernel, dtype=torch.float32)
+
+    def forward(self, x):
+        return self.conv(x + 0.)
+
+    def get_nncf_network(self):
+        return get_nncf_network(self, INPUT_SHAPE)
 
 
 class TestStatisticsAggregator(TemplateTestStatisticsAggregator):
-    def get_algo_backend_cls(self) -> ONNXMinMaxAlgoBackend:
-        return ONNXMinMaxAlgoBackend
+    def get_algo_backend_cls(self) -> PTMinMaxAlgoBackend:
+        return PTMinMaxAlgoBackend
 
     def get_backend_model(self, dataset_samples):
-        conv_w = self.dataset_samples_to_conv_w(dataset_samples[0])
-        return IdentityConvolutionalModel(input_shape=[1] + INPUT_SHAPE,
-                                          inp_ch=3,
-                                          out_ch=3,
-                                          kernel_size= 3,
-                                          conv_w=conv_w).onnx_model
+        sample = dataset_samples[0].reshape(INPUT_SHAPE[1:])
+        conv_w = self.dataset_samples_to_conv_w(np.array(sample))
+        return PTIdentityConvModel(conv_w).get_nncf_network()
 
     def get_statistics_aggregator(self, dataset):
-        return ONNXStatisticsAggregator(dataset)
+        return PTStatisticsAggregator(dataset)
 
     def get_dataset(self, samples):
         def transform_fn(data_item):
-            inputs = data_item
-            return {INPUT_NAME: [inputs]}
+            return data_item
 
         return Dataset(samples, transform_fn)
 
@@ -58,7 +70,7 @@ class TestStatisticsAggregator(TemplateTestStatisticsAggregator):
         if target_type == TargetType.OPERATION_WITH_WEIGHTS:
             target_node_name = CONV_NODE_NAME
             port_id = None
-        return ONNXTargetPoint(target_type, target_node_name, port_id)
+        return PTMinMaxAlgoBackend.target_point(target_type, target_node_name, port_id)
 
     @pytest.fixture
     def dataset_samples(self, dataset_values):
@@ -66,11 +78,11 @@ class TestStatisticsAggregator(TemplateTestStatisticsAggregator):
         dataset_samples = [np.zeros(input_shape), np.ones(input_shape)]
 
         for i, value in enumerate(dataset_values):
-            dataset_samples[0][i, 0, 0] = value['max']
-            dataset_samples[0][i, 0, 1] = value['min']
+            dataset_samples[0][0, i, 0, 0] = value['max']
+            dataset_samples[0][0, i, 0, 1] = value['min']
 
-        return dataset_samples
+        return torch.tensor(dataset_samples, dtype=torch.float32)
 
     @pytest.fixture
     def is_stat_in_shape_of_scale(self) -> bool:
-        return False
+        return True

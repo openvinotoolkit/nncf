@@ -131,12 +131,25 @@ CASES_FOR_TEST = (CaseToTestActivationQParams(num_bits=8,
                                                                                    10 * np.ones((3, 3))),
                                               ref_scale=0.0784313725490196 * np.ones((3, 3)),
                                               ref_zero_point=np.zeros((3, 3)),
-                                              ref_tensor_type=np.int8)
+                                              ref_tensor_type=np.int8),
+                                              # Check activation_signed work
+                                              CaseToTestActivationQParams(num_bits=8,
+                                                                          mode=QuantizationMode.SYMMETRIC,
+                                                                          activations_signed=False,
+                                                                          per_channel=False,
+                                                                          axis=None,
+                                                                          ref_tensor_type=np.uint8),
+                                              CaseToTestActivationQParams(num_bits=8,
+                                                                          mode=QuantizationMode.SYMMETRIC,
+                                                                          activations_signed=True,
+                                                                          per_channel=False,
+                                                                          axis=None,
+                                                                          ref_tensor_type=np.int8),
                   )
 
 
 @pytest.mark.parametrize('case_to_test', (CASES_FOR_TEST))
-def test_calculate_activation_quantizer_parameters(case_to_test):
+def test_calculate_activation_quantizer_parameters(case_to_test: CaseToTestActivationQParams):
     qconfig = QuantizerConfig(num_bits=case_to_test.num_bits,
                               mode=case_to_test.mode,
                               signedness_to_force=case_to_test.signedness_to_force,
@@ -239,7 +252,8 @@ CASES_FOR_TEST = [
 
 
 @pytest.mark.parametrize('case_to_test', (CASES_FOR_TEST))
-def test_calculate_weight_quantizer_parameters(case_to_test):
+def test_calculate_weight_quantizer_parameters(case_to_test: CaseToTestActivationQParams):
+    statistics = ONNXMinMaxTensorStatistic(-1 * np.ones((3, 10, 10)), np.ones((3, 10, 10)))
     qconfig = QuantizerConfig(num_bits=case_to_test.num_bits,
                               mode=case_to_test.mode,
                               signedness_to_force=case_to_test.signedness_to_force,

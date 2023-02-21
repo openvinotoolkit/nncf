@@ -13,17 +13,15 @@
 
 from abc import ABC
 from abc import abstractmethod
-from typing import Dict, TypeVar, Tuple, List
+from typing import Dict, TypeVar, List
 
-import numpy as np
+from nncf.common.graph.graph import NNCFGraph
 from nncf.common.graph.graph import NNCFNode
 from nncf.common.graph.operator_metatypes import OperatorMetatype
-from nncf.common.graph.patterns import HWFusedPatterns
 from nncf.common.graph.transformations.commands import TargetPoint
 from nncf.common.graph.transformations.commands import TargetType
 from nncf.common.graph.transformations.commands import TransformationCommand
 from nncf.common.hardware.config import HWConfig
-from nncf.common.tensor_statistics.collectors import ReductionShape
 from nncf.common.tensor_statistics.collectors import TensorStatisticCollectorBase
 from nncf.common.tensor_statistics.statistics import MinMaxTensorStatistic
 from nncf.common.utils.registry import Registry
@@ -48,13 +46,6 @@ class MinMaxAlgoBackend(ABC):
     def post_processing_metatypes(self) -> List[OperatorMetatype]:
         """
         Property for the backend-specific post-processing metatypes (NonMaximumSupression, TopK, etc.).
-        """
-
-    @property
-    @abstractmethod
-    def hw_fused_patterns(self) -> HWFusedPatterns:
-        """
-        Property for the hardware & backend-specific layers patterns.
         """
 
     @property
@@ -85,12 +76,14 @@ class MinMaxAlgoBackend(ABC):
 
     @staticmethod
     @abstractmethod
-    def create_activation_quantizer_insertion_command(target_point: TargetPoint,
+    def create_activation_quantizer_insertion_command(nncf_graph: NNCFGraph,
+                                                      target_point: TargetPoint,
                                                       quantizer_config: QuantizerConfig,
                                                       statistics: MinMaxTensorStatistic) -> TransformationCommand:
         """
         Returns backend-specific quantizer insertion command.
 
+        :param nncf_graph: NNCFGraph to get input/output shapes for the target point.
         :param target_point: Target location for the correction.
         :param quantizer_config: QuantizerConfig instance for the current layer.
         :param statistics: MinMaxTensorStatistic to calculate activation quantization parameters.
@@ -99,20 +92,20 @@ class MinMaxAlgoBackend(ABC):
 
     @staticmethod
     @abstractmethod
-    def create_weight_quantizer_insertion_command(target_point: TargetPoint,
+    def create_weight_quantizer_insertion_command(nncf_graph: NNCFGraph,
+                                                  target_point: TargetPoint,
                                                   quantizer_config: QuantizerConfig,
                                                   half_range: bool,
-                                                  weight_tensor: np.ndarray,
-                                                  node: NNCFNode) -> TransformationCommand:
+                                                  statistics: MinMaxTensorStatistic) -> TransformationCommand:
         """
         Returns backend-specific quantizer insertion command.
 
+        :param nncf_graph: NNCFGraph to get input/output shapes for the target point.
         :param target_point: Target location for the correction.
         :param quantizer_config: QuantizerConfig instance for the current layer.
         :param half_range: If ``True`` effectively only a half of an quantizer range are used.
-        False - the full range are used.
-        :param weight_tensor: weight tensor to calculate weight quantization parameters.
-        :param node: NNCFNode with the attributes.
+            False - the full range are used.
+        :param statistics: MinMaxTensorStatistic to calculate activation quantization parameters.
         :return: Backend-specific TransformationCommand for the quantizer insertion operation.
         """
 
@@ -131,44 +124,36 @@ class MinMaxAlgoBackend(ABC):
 
     @staticmethod
     @abstractmethod
-    def minmax_statistic_collector(use_abs_max: bool,
-                                   reduction_shape: ReductionShape,
+    def minmax_statistic_collector(nncf_graph: NNCFGraph,
+                                   target_point: TargetPoint,
+                                   quantizer_config: QuantizerConfig,
                                    num_samples: int = None) -> TensorStatisticCollectorBase:
         """
         Returns backend-specific min max statistic collector.
 
-        :param use_abs_max: Whether to use absolute maximum value or not.
-        :param reduction_shape: Channel axes for the statistics aggregation.
+        :param nncf_graph: NNCFGraph to get input/output shapes for the target point.
+        :param target_point: Target location for the correction.
+        :param quantizer_config: QuantizerConfig instance for the current layer.
         :param num_samples: Maximum number of samples to collect.
         :return: Backend-specific TensorStatisticCollectorBase for the statistics calculation.
         """
 
     @staticmethod
     @abstractmethod
-    def mean_minmax_statistic_collector(use_per_sample_stats: bool,
-                                        use_abs_max: bool,
-                                        reduction_shape: ReductionShape,
-                                        num_samples: int = None,
-                                        window_size: int = None) -> TensorStatisticCollectorBase:
+    def mean_minmax_statistic_collector(nncf_graph: NNCFGraph,
+                                        target_point: TargetPoint,
+                                        quantizer_config: QuantizerConfig,
+                                        use_per_sample_stats: bool,
+                                        num_samples: int = None) -> TensorStatisticCollectorBase:
         """
         Returns backend-specific min max statistic collector.
 
-        :param use_abs_max: Whether to use absolute maximum value or not.
-        :param reduction_shape: Channel axes for the statistics aggregation.
+        :param nncf_graph: NNCFGraph to get input/output shapes for the target point.
+        :param target_point: Target location for the correction.
+        :param quantizer_config: QuantizerConfig instance for the current layer.
+        :param use_per_sample_stats: Whether to collect statistics in per sample mode or not.
         :param num_samples: Maximum number of samples to collect.
-        :param window_size: The maximum size of the samples queue.
         :return: Backend-specific TensorStatisticCollectorBase for the statistics calculation.
-        """
-
-    @staticmethod
-    @abstractmethod
-    def get_weight_tensor(model: TModel, target_point: TargetPoint) -> Tuple[str, np.ndarray]:
-        """
-        Returns node's weight tensor name and its value.
-
-        :param model: Backend-specific model for the initializer finding.
-        :param target_point: Backend-specific TargetPoint to find its weight.
-        :return: Weight tensor name and its value.
         """
 
     @staticmethod
@@ -176,6 +161,7 @@ class MinMaxAlgoBackend(ABC):
         """
         Returns node's weight tensor input port ID.
 
+        :param model: Backend-specific model to get structural information.
         :param node: NNCFNode to find its weight input port ID.
         :return: The input port ID of the weight.
         """

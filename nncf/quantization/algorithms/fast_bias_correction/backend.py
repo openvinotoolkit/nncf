@@ -83,7 +83,7 @@ class FastBiasCorrectionAlgoBackend(ABC):
     @abstractmethod
     def model_extraction_command(inputs: List[str], outputs: List[str]) -> TransformationCommand:
         """
-        Returns backend-specific bias correction.
+        Returns backend-specific command to extract sub-model based on input & output names.
 
         :param inputs: List of the input names for sub-model beggining.
         :param outputs: List of the output names for sub-model end.
@@ -102,16 +102,6 @@ class FastBiasCorrectionAlgoBackend(ABC):
         :param num_samples: Maximum number of samples to collect.
         :param window_size: The maximum size of the samples queue.
         :return: Backend-specific TensorStatisticCollectorBase for the statistics calculation.
-        """
-
-    @staticmethod
-    @abstractmethod
-    def get_input_output_names(node: NNCFNode) -> Tuple[str, str]:
-        """
-        Returns tuple of the input & output tensor names respectively.
-
-        :param node: NNCFNode instance.
-        :return: Tuple of the names.
         """
 
     @staticmethod
