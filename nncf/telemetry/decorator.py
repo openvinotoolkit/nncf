@@ -10,7 +10,7 @@
  See the License for the specific language governing permissions and
  limitations under the License.
 """
-
+import functools
 import inspect
 from typing import Callable
 from typing import List, Union
@@ -46,6 +46,7 @@ class tracked_function:
     def __call__(self, fn: Callable) -> Callable:
         fn_signature = inspect.signature(fn)
 
+        @functools.wraps(fn)
         def wrapped(*args, **kwargs):
             bound_args = fn_signature.bind(*args, **kwargs)
             bound_args.apply_defaults()
@@ -74,4 +75,3 @@ class tracked_function:
             return retval
 
         return wrapped
-

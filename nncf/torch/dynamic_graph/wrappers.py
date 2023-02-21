@@ -10,7 +10,7 @@
  See the License for the specific language governing permissions and
  limitations under the License.
 """
-
+import functools
 from copy import deepcopy
 from typing import Callable
 from typing import List
@@ -82,6 +82,7 @@ def wrap_operator(operator, operator_info: 'PatchedOperatorInfo'):
         nncf_logger.debug(f"Operator: {_orig_op.__name__} is already wrapped")
         return operator
 
+    @functools.wraps(operator)
     def wrapped(*args, **kwargs):
         ctx = get_current_context()
         if not ctx or getattr(ctx, 'in_operator', False) or not ctx.is_tracing:
@@ -134,6 +135,7 @@ def wrap_module_call(module_call):
     from nncf.torch.dynamic_graph.patch_pytorch import ORIGINAL_OPERATORS #pylint: disable=cyclic-import
     NAMES_ORIGINAL_OPERATORS = [op.name for op in ORIGINAL_OPERATORS]
 
+    @functools.wraps(module_call)
     def wrapped(self, *args, **kwargs):
         ctx = get_current_context()
         if not ctx or self.__class__ in _IGNORED_SCOPES:

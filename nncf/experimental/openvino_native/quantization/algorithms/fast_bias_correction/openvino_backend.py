@@ -83,10 +83,6 @@ class OVFastBiasCorrectionAlgoBackend(FastBiasCorrectionAlgoBackend):
         return OVMeanStatisticCollector(reduction_shape, num_samples, window_size)
 
     @staticmethod
-    def get_input_output_names(node: NNCFNode) -> Tuple[str, str]:
-        return node.node_name, node.node_name
-
-    @staticmethod
     def get_sub_input_output_names(subgraph: ov.Model) -> Tuple[str, str]:
         return subgraph.inputs[0].node.friendly_name, subgraph.outputs[0].node.friendly_name
 

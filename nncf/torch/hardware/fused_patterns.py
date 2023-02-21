@@ -1,61 +1,306 @@
+"""
+ Copyright (c) 2023 Intel Corporation
+ Licensed under the Apache License, Version 2.0 (the "License");
+ you may not use this file except in compliance with the License.
+ You may obtain a copy of the License at
+      http://www.apache.org/licenses/LICENSE-2.0
+ Unless required by applicable law or agreed to in writing, software
+ distributed under the License is distributed on an "AS IS" BASIS,
+ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ See the License for the specific language governing permissions and
+ limitations under the License.
+"""
+
+from nncf.common.utils.registry import Registry
 from nncf.common.graph.patterns import GraphPattern
-from nncf.common.graph.patterns import HWFusedPatterns
+from nncf.common.graph.patterns import PatternNames
 from nncf.torch.graph.pattern_operations import ARITHMETIC_OPERATIONS
 from nncf.torch.graph.pattern_operations import ATOMIC_ACTIVATIONS_OPERATIONS
 from nncf.torch.graph.pattern_operations import BATCH_NORMALIZATION_OPERATIONS
 from nncf.torch.graph.pattern_operations import GROUP_NORMALIZATION_OPERATIONS
 from nncf.torch.graph.pattern_operations import LINEAR_OPERATIONS
 from nncf.torch.graph.pattern_operations import RELU_OPERATIONS
-from nncf.torch.graph.patterns import create_fc_conv_mul
-from nncf.torch.graph.patterns import create_h_sigmoid_act
-from nncf.torch.graph.patterns import create_h_swish_act
-from nncf.torch.graph.patterns import create_swish_act
-from nncf.torch.graph.patterns import create_l2_norm
 
 
-def _get_torch_hw_fused_patterns() -> HWFusedPatterns:
-    retval = HWFusedPatterns()
-    linear_ops = GraphPattern()
-    linear_ops.add_node(**LINEAR_OPERATIONS)
-    retval.register(linear_ops, LINEAR_OPERATIONS['label'], match=False)
+PT_HW_FUSED_PATTERNS = Registry('torch')
 
-    batch_norm = GraphPattern()
-    batch_norm.add_node(**BATCH_NORMALIZATION_OPERATIONS)
-    retval.register(batch_norm, BATCH_NORMALIZATION_OPERATIONS['label'], match=False)
+# ATOMIC OPERATIONS
 
+
+@PT_HW_FUSED_PATTERNS.register(PatternNames.L2_NORM)
+def create_l2_norm_operations():
+    pattern = GraphPattern()
+
+    outside_pattern_node = pattern.add_node(label='*OUTSIDE_PATTERN_NODE*',
+                                            type=GraphPattern.NON_PATTERN_NODE_TYPE)
+    pow_node = pattern.add_node(label='POW', type='pow')
+    sum_node = pattern.add_node(label='SUM', type='sum')
+    sqrt_node = pattern.add_node(label='SQRT', type='sqrt')
+    add_node = pattern.add_node(label='ADD', type='__add__')
+    div_node = pattern.add_node(label='DIV', type='div')
+    mul_node = pattern.add_node(label='MUL', type='__rmul__')
+
+    pattern.add_edge(outside_pattern_node, pow_node)
+    pattern.add_edge(pow_node, sum_node)
+    pattern.add_edge(sum_node, sqrt_node)
+    pattern.add_edge(sqrt_node, add_node)
+    pattern.add_edge(add_node, div_node)
+    pattern.add_edge(div_node, mul_node)
+    pattern.add_edge(outside_pattern_node, div_node)
+    return pattern
+
+
+# COMBINATIONS
+
+
+@PT_HW_FUSED_PATTERNS.register(PatternNames.LINEAR_ARITHMETIC)
+def create_linear_arithmetic_operations():
+    linear = linear_operations()
+    arithmetic = arithmetic_operations()
+    linear.join_patterns(arithmetic)
+    return linear
+
+
+@PT_HW_FUSED_PATTERNS.register(PatternNames.BATCH_NORM_ACTIVATIONS)
+def create_batch_norm_activations_operations():
+    batch_norm = batch_norm_operations()
+    activations = activation_operations()
+    batch_norm.join_patterns(activations)
+    return batch_norm
+
+
+@PT_HW_FUSED_PATTERNS.register(PatternNames.ACTIVATIONS_BATCH_NORM)
+def create_activations_batch_norm_operations():
+    batch_norm = batch_norm_operations()
+    activations = activation_operations()
+    activations.join_patterns(batch_norm)
+    return activations
+
+
+@PT_HW_FUSED_PATTERNS.register(PatternNames.LINEAR_BATCH_NORM)
+def create_linear_batch_norm_operations():
+    linear = linear_operations()
+    batch_norm = batch_norm_operations()
+    linear.join_patterns(batch_norm)
+    return linear
+
+
+@PT_HW_FUSED_PATTERNS.register(PatternNames.LINEAR_ACTIVATIONS)
+def create_linear_activation_operations():
+    linear = linear_operations()
+    activation = activation_operations()
+    linear.join_patterns(activation)
+    return linear
+
+
+@PT_HW_FUSED_PATTERNS.register(PatternNames.LINEAR_BATCH_NORM_ACTIVATIONS)
+def create_linear_batch_norm_activation_operations():
+    linear_bn = create_linear_batch_norm_operations()
+    activations = activation_operations()
+    linear_bn.join_patterns(activations)
+    return linear_bn
+
+
+@PT_HW_FUSED_PATTERNS.register(PatternNames.LINEAR_ACTIVATIONS_BATCH_NORM)
+def create_linear_activation_batch_norm_activations():
+    linear_act = create_linear_activation_operations()
+    batch_norm = batch_norm_operations()
+    linear_act.join_patterns(batch_norm)
+    return linear_act
+
+
+@PT_HW_FUSED_PATTERNS.register(PatternNames.ARITHMETIC_BATCH_NORM)
+def create_arithmetic_batch_norm_operations():
+    arithmetic = arithmetic_operations()
+    batch_norm = batch_norm_operations()
+    arithmetic.join_patterns(batch_norm)
+    return arithmetic
+
+
+@PT_HW_FUSED_PATTERNS.register(PatternNames.ARITHMETIC_ACTIVATIONS)
+def create_arithmetic_activations_operations():
+    arithmetic = arithmetic_operations()
+    activation = activation_operations()
+    arithmetic.join_patterns(activation)
+    return arithmetic
+
+
+@PT_HW_FUSED_PATTERNS.register(PatternNames.ARITHMETIC_BATCH_NORM_ACTIVATIONS)
+def create_arithmetic_batch_norm_activations_operations():
+    arithmetic_bn = create_arithmetic_batch_norm_operations()
+    activation = activation_operations()
+    arithmetic_bn.join_patterns(activation)
+    return arithmetic_bn
+
+
+@PT_HW_FUSED_PATTERNS.register(PatternNames.ARITHMETIC_ACTIVATIONS_BATCH_NORM)
+def create_arithmetic_activations_batch_norm_operations():
+    arithmetic_act = create_arithmetic_activations_operations()
+    batch_norm = batch_norm_operations()
+    arithmetic_act.join_patterns(batch_norm)
+    return arithmetic_act
+
+
+@PT_HW_FUSED_PATTERNS.register(PatternNames.GROUP_NORM_RELU)
+def create_group_norm_relu_operations():
+    group_norm = GraphPattern()
+    group_norm.add_node(**GROUP_NORMALIZATION_OPERATIONS)
+    relu = GraphPattern()
+    relu.add_node(**RELU_OPERATIONS)
+    group_norm.join_patterns(relu)
+    return group_norm
+
+
+@PT_HW_FUSED_PATTERNS.register(PatternNames.LINEAR_CONST_MULTIPLY)
+def create_linear_const_multiply():
+    pattern = GraphPattern()
+    linear_node = pattern.add_node(label='linear', type='linear')
+    mul_node = pattern.add_node(label='MUL', type='__mul__')
+    pattern.add_edge(linear_node, mul_node)
+
+    return pattern
+
+
+def linear_operations():
+    pattern = GraphPattern()
+    pattern.add_node(**LINEAR_OPERATIONS)
+    return pattern
+
+def arithmetic_operations():
+    pattern = GraphPattern()
+    pattern.add_node(**ARITHMETIC_OPERATIONS)
+    return pattern
+
+
+def batch_norm_operations():
+    pattern = GraphPattern()
+    pattern.add_node(**BATCH_NORMALIZATION_OPERATIONS)
+    return pattern
+
+
+def activation_operations():
     atomic_activations = GraphPattern()
     atomic_activations.add_node(**ATOMIC_ACTIVATIONS_OPERATIONS)
     swish = create_swish_act()
     h_sigmoid = create_h_sigmoid_act()
     h_swish = create_h_swish_act()
-    activations = atomic_activations | swish | h_swish | h_sigmoid
-    retval.register(activations, 'ACTIVATIONS', match=False)
 
-    arithmetic_ops = GraphPattern()
-    arithmetic_ops.add_node(**ARITHMETIC_OPERATIONS)
-    retval.register(arithmetic_ops, ARITHMETIC_OPERATIONS['label'], match=False)
-
-    batch_norm_activations_permutation = batch_norm + activations | activations + batch_norm | batch_norm | activations
-
-    retval.register(linear_ops + arithmetic_ops, 'LINEAR + ARITHMETIC', match=True)
-    retval.register(linear_ops + batch_norm_activations_permutation, 'LINEAR + BN_ACT_PERM',
-                    match=True)
-    retval.register(batch_norm + activations, 'BN + ACTIVATIONS', match=True)
-    retval.register(activations + batch_norm, 'ACTIVATIONS + BN', match=True)
-    retval.register(arithmetic_ops + batch_norm_activations_permutation,
-                    'ARITHMETIC + BN_ACT_PERM', match=True)
-
-    group_norm = GraphPattern()
-    group_norm.add_node(**GROUP_NORMALIZATION_OPERATIONS)
-    relu = GraphPattern()
-    relu.add_node(**RELU_OPERATIONS)
-    retval.register(group_norm + relu, 'GROUP_NORM + RELU', match=True)
-
-    l2_norm = create_l2_norm()
-    retval.register(l2_norm, 'L2_NORM', match=True)
-    fc_mul = create_fc_conv_mul()
-    retval.register(fc_mul, 'FC_MUL_CONST', match=True)
-    return retval
+    pattern = GraphPattern()
+    pattern.add_pattern_alternative(atomic_activations)
+    pattern.add_pattern_alternative(swish)
+    pattern.add_pattern_alternative(h_swish)
+    pattern.add_pattern_alternative(h_sigmoid)
+    return pattern
 
 
-PT_HW_FUSED_PATTERNS = _get_torch_hw_fused_patterns()
+def create_swish_act() -> GraphPattern:
+    pattern = GraphPattern()
+    input_pattern_node = pattern.add_node(label='*INPUT_NODE*', type=GraphPattern.NON_PATTERN_NODE_TYPE)
+    sigmoid_node = pattern.add_node(label='SIGMOID', type='sigmoid')
+    mul_node = pattern.add_node(label='MUL', type='__mul__')
+
+    pattern.add_edge(input_pattern_node, sigmoid_node)
+    pattern.add_edge(sigmoid_node, mul_node)
+    pattern.add_edge(input_pattern_node, mul_node)
+    return pattern
+
+
+def create_h_swish_act() -> GraphPattern:
+    main_pattern = GraphPattern()
+
+    # Mul -> Div version
+    pattern = GraphPattern()
+    input_pattern_node = pattern.add_node(label='*INPUT_NODE*', type=GraphPattern.NON_PATTERN_NODE_TYPE)
+    add_node = pattern.add_node(label='ADD', type='__add__')
+    hardtanh_node = pattern.add_node(label='HARDTANH', type='hardtanh')
+    truediv_node = pattern.add_node(label='DIV', type='__truediv__')
+    mul_node = pattern.add_node(label='MUL', type='__mul__')
+
+    pattern.add_edge(input_pattern_node, add_node)
+    pattern.add_edge(input_pattern_node, mul_node)
+    pattern.add_edge(add_node, hardtanh_node)
+    pattern.add_edge(hardtanh_node, truediv_node)
+    pattern.add_edge(truediv_node, mul_node)
+    main_pattern.add_pattern_alternative(pattern)
+
+    # Div -> Mul version
+    pattern = GraphPattern()
+    input_pattern_node = pattern.add_node(label='*INPUT_NODE*', type=GraphPattern.NON_PATTERN_NODE_TYPE)
+    add_node = pattern.add_node(label='ADD', type='__add__')
+    hardtanh_node = pattern.add_node(label='HARDTANH', type='hardtanh')
+    mul_node = pattern.add_node(label='MUL', type='__mul__')
+    truediv_node = pattern.add_node(label='DIV', type='__truediv__')
+
+    pattern.add_edge(input_pattern_node, add_node)
+    pattern.add_edge(input_pattern_node, mul_node)
+    pattern.add_edge(add_node, hardtanh_node)
+    pattern.add_edge(hardtanh_node, mul_node)
+    pattern.add_edge(mul_node, truediv_node)
+    main_pattern.add_pattern_alternative(pattern)
+
+    # ReLU6 version - Mul -> Div
+    pattern = GraphPattern()
+    input_pattern_node = pattern.add_node(label='*INPUT_NODE*', type=GraphPattern.NON_PATTERN_NODE_TYPE)
+    add_node = pattern.add_node(label='ADD', type='__add__')
+    relu6_node = pattern.add_node(label='RELU6', type='relu6')
+    mul_node = pattern.add_node(label='MUL', type='__mul__')
+    truediv_node = pattern.add_node(label='DIV', type='__truediv__')
+
+    pattern.add_edge(input_pattern_node, add_node)
+    pattern.add_edge(input_pattern_node, mul_node)
+    pattern.add_edge(add_node, relu6_node)
+    pattern.add_edge(hardtanh_node, mul_node)
+    pattern.add_edge(mul_node, truediv_node)
+    main_pattern.add_pattern_alternative(pattern)
+
+    # ReLU6 version - Div -> Mul
+    pattern = GraphPattern()
+    input_pattern_node = pattern.add_node(label='*INPUT_NODE*', type=GraphPattern.NON_PATTERN_NODE_TYPE)
+    add_node = pattern.add_node(label='ADD', type='__add__')
+    relu6_node = pattern.add_node(label='RELU6', type='relu6')
+    truediv_node = pattern.add_node(label='DIV', type='__truediv__')
+    mul_node = pattern.add_node(label='MUL', type='__mul__')
+
+    pattern.add_edge(input_pattern_node, add_node)
+    pattern.add_edge(input_pattern_node, mul_node)
+    pattern.add_edge(add_node, relu6_node)
+    pattern.add_edge(relu6_node, truediv_node)
+    pattern.add_edge(truediv_node, mul_node)
+
+    main_pattern.add_pattern_alternative(pattern)
+
+    return main_pattern
+
+
+def create_h_sigmoid_act() -> GraphPattern:
+    main_pattern = GraphPattern()
+
+    # ReLU version:
+    pattern = GraphPattern()
+
+    input_pattern_node = pattern.add_node(label='*INPUT_NODE*', type=GraphPattern.NON_PATTERN_NODE_TYPE)
+    add_node = pattern.add_node(label='ADD', type='__add__')
+    hardtanh_node = pattern.add_node(label='HARDTANH', type='hardtanh')
+    truediv_node = pattern.add_node(label='DIV', type='__truediv__')
+
+    pattern.add_edge(input_pattern_node, add_node)
+    pattern.add_edge(add_node, hardtanh_node)
+    pattern.add_edge(hardtanh_node, truediv_node)
+
+    main_pattern.add_pattern_alternative(pattern)
+
+    # ReLU6 version
+    pattern = GraphPattern()
+
+    input_pattern_node = pattern.add_node(label='*INPUT_NODE*', type=GraphPattern.NON_PATTERN_NODE_TYPE)
+    add_node = pattern.add_node(label='ADD', type='__add__')
+    relu6_node = pattern.add_node(label='RELU6', type='relu6')
+    truediv_node = pattern.add_node(label='DIV', type='__truediv__')
+
+    pattern.add_edge(input_pattern_node, add_node)
+    pattern.add_edge(add_node, relu6_node)
+    pattern.add_edge(hardtanh_node, truediv_node)
+
+    main_pattern.add_pattern_alternative(pattern)
+
+    return main_pattern

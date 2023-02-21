@@ -14,8 +14,12 @@ import copy
 import logging
 import os
 import re
+import traceback
 from pathlib import Path
+from pathlib import PosixPath
 from typing import Optional
+from multiprocessing import Process
+from multiprocessing import Pipe
 
 import numpy as np
 import onnx
@@ -27,7 +31,6 @@ from model_scope import get_validation_scope
 from sklearn.metrics import accuracy_score
 from torchvision import datasets, transforms
 from torchvision.transforms import InterpolationMode
-from tqdm import tqdm
 
 import nncf
 from nncf.experimental.openvino_native.quantization.quantize import quantize_impl as ov_quantize_impl
@@ -46,9 +49,15 @@ def create_timm_model(name):
 
 def get_model_transform(model):
     config = model.default_cfg
+    transformations_list = []
     normalize = transforms.Normalize(mean=config['mean'], std=config['std'])
     input_size = config['input_size']
-    resize_size = tuple(int(x / config['crop_pct']) for x in input_size[-2:])
+    if 'fixed_input_size' in config and not config['fixed_input_size']:
+        resize_size = tuple(int(x / config['crop_pct']) for x in input_size[-2:])
+        resize = transforms.Resize(resize_size,
+                                   interpolation=RESIZE_MODE_MAP[config['interpolation']])
+        transformations_list.append(resize)
+    transformations_list.extend([transforms.CenterCrop(input_size[-2:]), transforms.ToTensor(), normalize])
 
     RESIZE_MODE_MAP = {
         'bilinear': InterpolationMode.BILINEAR,
@@ -56,16 +65,7 @@ def get_model_transform(model):
         'nearest': InterpolationMode.NEAREST,
     }
 
-    transform = transforms.Compose(
-        [
-            transforms.Resize(
-                resize_size, interpolation=RESIZE_MODE_MAP[config['interpolation']]
-            ),
-            transforms.CenterCrop(input_size[-2:]),
-            transforms.ToTensor(),
-            normalize,
-        ]
-    )
+    transform = transforms.Compose(transformations_list)
 
     return transform
 
@@ -123,10 +123,9 @@ def benchmark_performance(model_path, model_name):
             )
             model_perf = NOT_AVAILABLE_MESSAGE
     except BaseException as error:
-        logging.error(f'Error when becnhmarking the model: model_name Details: {error}')
+        logging.error(f'Error when becnhmarking the model: {model_name} Details: {error}')
 
     return model_perf
-
 
 def validate_accuracy(model_path, val_loader):
     dataset_size = len(val_loader)
@@ -147,7 +146,7 @@ def validate_accuracy(model_path, val_loader):
 
     infer_queue.set_callback(process_result)
 
-    for i, (images, target) in tqdm(enumerate(val_loader)):
+    for i, (images, target) in enumerate(val_loader):
         # W/A for memory leaks when using torch DataLoader and OpenVINO
         image_copies = copy.deepcopy(images.numpy())
         infer_queue.start_async(image_copies, userdata=i)
@@ -156,9 +155,7 @@ def validate_accuracy(model_path, val_loader):
     infer_queue.wait_all()
     predictions = np.concatenate(predictions, axis=0)
     references = np.concatenate(references, axis=0)
-
     return accuracy_score(predictions, references)
-
 
 def benchmark_torch_model(model, dataloader, model_name, output_path):
     data_sample, _ = next(iter(dataloader))
@@ -237,14 +234,11 @@ def quantize_ov_native(model: ov.Model,
     return quantized_model
 
 
-@pytest.mark.parametrize('model_args', get_validation_scope())
-def test_ptq_timm(data, output, result, model_args): # pylint: disable=W0703
+def run_ptq_timm(data, output, model_name, model_quantization_params, process_connection): # pylint: disable=W0703
     torch.multiprocessing.set_sharing_strategy(
         'file_system'
     )  # W/A to avoid RuntimeError
 
-    model_name = model_args['name']
-    model_quantization_params = model_args['quantization_params']
     try:
         output_folder = Path(output)
         output_folder.mkdir(parents=True, exist_ok=True)
@@ -283,7 +277,9 @@ def test_ptq_timm(data, output, result, model_args): # pylint: disable=W0703
                 torch_output_path,
             )
         except Exception as error:
-            q_torch_perf = re.escape(str(error))
+            traceback_path = Path.joinpath(output_folder, 'torch', model_name + '_error_log.txt')
+            create_error_log(traceback_path)
+            q_torch_perf = get_error_msg(traceback_path, model_name)
             q_torch_acc = '-'
 
         # quantize ONNX model
@@ -314,7 +310,9 @@ def test_ptq_timm(data, output, result, model_args): # pylint: disable=W0703
                 onnx_output_path,
             )
         except Exception as error:
-            q_onnx_perf = re.escape(str(error))
+            traceback_path = Path.joinpath(output_folder, 'onnx', model_name + '_error_log.txt')
+            create_error_log(traceback_path)
+            q_onnx_perf = get_error_msg(traceback_path, model_name)
             q_onnx_acc = '-'
 
         # quantize OpenVINO model using Native implementation
@@ -326,7 +324,7 @@ def test_ptq_timm(data, output, result, model_args): # pylint: disable=W0703
             input_names = set(inp.get_friendly_name() for inp in ov_native_model.get_parameters())
             if len(input_names) != 1:
                 RuntimeError('Number of inputs != 1')
-            
+
             def ov_native_transform_fn(data_item):
                 images, _ = data_item
                 return {next(iter(input_names)): images.numpy()}
@@ -337,7 +335,7 @@ def test_ptq_timm(data, output, result, model_args): # pylint: disable=W0703
                 ov_native_model, ov_native_calibration_dataset, **model_quantization_params
             )
 
-            ov_native_output_path = output_folder / 'openvino_native'
+            ov_native_output_path = output_folder / 'ov_native'
             ov_native_output_path.mkdir(parents=True, exist_ok=True)
             q_ov_native_model_name = model_name + '_ov_native_int8'
             q_ov_native_perf, q_ov_native_acc = benchmark_ov_model(
@@ -347,7 +345,9 @@ def test_ptq_timm(data, output, result, model_args): # pylint: disable=W0703
                 ov_native_output_path,
             )
         except Exception as error:
-            q_ov_native_perf = re.escape(str(error))
+            traceback_path = Path.joinpath(output_folder, 'ov_native', model_name + '_error_log.txt')
+            create_error_log(traceback_path)
+            q_ov_native_perf = get_error_msg(traceback_path, model_name)
             q_ov_native_acc = '-'
 
         # quantize OpenVINO model using POT implementation
@@ -375,27 +375,52 @@ def test_ptq_timm(data, output, result, model_args): # pylint: disable=W0703
                 ov_output_path,
             )
         except Exception as error:
-            q_ov_perf = re.escape(str(error))
+            traceback_path = Path.joinpath(output_folder, 'openvino', model_name + '_error_log.txt')
+            create_error_log(traceback_path)
+            q_ov_perf = get_error_msg(traceback_path, model_name)
             q_ov_acc = '-'
 
-        result.append(
-            [
-                model_name,
-                orig_acc,
-                q_torch_acc,
-                q_onnx_acc,
-                q_ov_native_acc,
-                q_ov_acc,
-                orig_perf,
-                q_torch_perf,
-                q_onnx_perf,
-                q_ov_native_perf,
-                q_ov_perf,
-            ]
-        )
+        process_connection.send([model_name,
+                                 orig_acc,
+                                 q_torch_acc,
+                                 q_onnx_acc,
+                                 q_ov_native_acc,
+                                 q_ov_acc,
+                                 orig_perf,
+                                 q_torch_perf,
+                                 q_onnx_perf,
+                                 q_ov_native_perf,
+                                 q_ov_perf])
     except Exception as error:
-        result.append([model_name, error, '-', '-', '-', '-', '-', '-', '-', '-', '-'])
-        logging.error(
-            f'Error when running test for model: {model_name}. Error: {error}'
-        )
+        traceback_path = Path.joinpath(output_folder, model_name + '_error_log.txt')
+        create_error_log(traceback_path)
+        error_message = f'An error occurred while running {model_name}. Traceback: {traceback_path}'
+        result = [model_name, error_message, '-', '-', '-', '-', '-', '-', '-', '-', '-']
+        process_connection.send(result)
+        raise error
+
+
+def create_error_log(traceback_path: PosixPath) -> None:
+    traceback_path.parents[0].mkdir(parents=True, exist_ok=True)
+    with open(traceback_path, 'w') as file:
+        traceback.print_exc(file=file)
+    file.close()
+    logging.error(traceback.format_exc())
+
+
+def get_error_msg(traceback_path: PosixPath, model_name: str) -> str:
+    return f'An error occurred while benchmarking {model_name}. Traceback: {traceback_path}'
+
+
+@pytest.mark.parametrize('model_args', get_validation_scope())
+def test_ptq_timm(data, output, result, model_args):  # pylint: disable=W0703
+    model_name = model_args['name']
+    quantization_params = model_args['quantization_params']
+    main_connection, process_connection = Pipe()
+    process = Process(target=run_ptq_timm,
+                      args=(data, output, model_name, quantization_params, process_connection,))
+    process.start()
+    process.join()
+    result.append(main_connection.recv())
+    if process.exitcode:
         assert False

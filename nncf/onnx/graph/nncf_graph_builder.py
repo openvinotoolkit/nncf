@@ -10,7 +10,7 @@
  See the License for the specific language governing permissions and
  limitations under the License.
 """
-from typing import Union, List
+from typing import Union, List, Tuple, Optional
 
 from collections import Counter
 import onnx
@@ -23,7 +23,6 @@ from nncf.common.graph.definitions import MODEL_INPUT_OP_NAME
 from nncf.common.graph.definitions import MODEL_OUTPUT_OP_NAME
 from nncf.common.graph.operator_metatypes import InputNoopMetatype
 from nncf.common.graph.operator_metatypes import OutputNoopMetatype
-from nncf.common.graph.operator_metatypes import UnknownMetatype
 from nncf.common.logging import nncf_logger
 
 from nncf.onnx.graph.onnx_graph import ONNXGraph
@@ -186,16 +185,19 @@ class GraphConverter:
         onnx_graph = ONNXGraph(onnx_model)
         for node in onnx_graph.get_all_nodes():
             metatype = ONNX_OPERATION_METATYPES.get_operator_metatype_by_op_name(node.op_type)
-            if metatype is not UnknownMetatype:
-                if metatype.get_subtypes():
-                    subtype = metatype.determine_subtype(onnx_model, node)
-                    if subtype is not None:
-                        metatype = subtype
-            layer_attributes = ONNXExtendedLayerAttributes(node.input, node.output)
-            is_shared, layer_name = None, None
+            if metatype.get_subtypes():
+                subtype = metatype.determine_subtype(onnx_model, node)
+                if subtype is not None:
+                    metatype = subtype
+
             if metatype in WEIGHT_LAYER_METATYPES:
                 is_shared = onnx_graph.is_node_shared(node)
                 layer_name = onnx_graph.get_node_layer_name(node)
+                weight_shape = onnx_graph.get_weight_tensor(node)[1].shape
+            else:
+                is_shared, layer_name, weight_shape = None, None, None
+            layer_attributes = ONNXExtendedLayerAttributes(node.input, node.output, weight_shape)
+
             nncf_graph.add_nncf_node(node_name=node.name,
                                      node_type=node.op_type,
                                      node_metatype=metatype,
@@ -245,10 +247,15 @@ class ONNXExtendedLayerAttributes(BaseLayerAttributes):
     This class stores extended attributes of modules/layers for the algorithms.
     """
 
-    def __init__(self, input_tensor_names, output_tensor_names):
+    def __init__(self,
+                 input_tensor_names: List[str],
+                 output_tensor_names: List[str],
+                 weight_shape: Optional[Tuple[int]] = None):
         """
-        :param input_tensor_names: List of the input tensor/edge names of the module/layer
-        :param output_tensor_names: List of the output tensor/edge names of the module/layer
+        :param input_tensor_names: List of the input tensor/edge names of the module/layer.
+        :param output_tensor_names: List of the output tensor/edge names of the module/layer.
+        :param weight_shape: Shape of a weight shape of the module/layer.
         """
         self.input_tensor_names = input_tensor_names
         self.output_tensor_names = output_tensor_names
+        self.weight_shape = weight_shape

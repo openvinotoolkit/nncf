@@ -11,12 +11,14 @@
  limitations under the License.
 """
 
+import functools
 from enum import Enum
 
 from typing import List
 
 import torch
 import torch.utils.cpp_extension
+from torch.jit import is_tracing
 from torch.nn import DataParallel
 from torch.nn.parallel import DistributedDataParallel
 
@@ -125,6 +127,22 @@ def torch_jit_script_wrapper(*args, **kwargs):
     return retval
 
 
+def torch_jit_script_if_tracing(fn):
+    # pylint: disable=protected-access
+    @functools.wraps(fn)
+    def wrapper(*args, **kwargs):
+        if not is_tracing():
+            return fn(*args, **kwargs)
+
+        compiled_fn = torch.jit.script(wrapper.__original_fn)
+        return compiled_fn(*args, **kwargs)
+
+    wrapper.__original_fn = fn
+    wrapper.__script_if_tracing_wrapper = True
+
+    return wrapper
+
+
 class OriginalOpInfo:
     def __init__(self, name: str, namespace, op):
         self.name = name
@@ -148,6 +166,10 @@ def patch_torch_jit_script():
     global _ORIG_JIT_SCRIPT
     _ORIG_JIT_SCRIPT = orig
     setattr(torch.jit, "script", torch_jit_script_wrapper)
+
+    # Patch torch.jit._script_if_tracing because it references an original
+    # unpatched torch.jit.script and the patching above does not affect it
+    setattr(torch.jit, "_script_if_tracing", torch_jit_script_if_tracing)
 
 
 def patch_namespace_opname(namespace, op_info: PatchedOperatorInfo):

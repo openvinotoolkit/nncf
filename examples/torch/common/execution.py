@@ -15,7 +15,7 @@ import torch
 import torch.multiprocessing as mp
 from torch.backends import cudnn
 
-from examples.torch.common.sample_config import SampleConfig
+from examples.common.sample_config import SampleConfig
 from nncf.torch.utils import manual_seed
 
 

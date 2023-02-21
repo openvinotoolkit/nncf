@@ -38,7 +38,7 @@ from examples.torch.common.model_loader import extract_model_and_compression_sta
 from examples.torch.common.model_loader import load_model
 from examples.torch.common.model_loader import load_resuming_checkpoint
 from examples.torch.common.optimizer import make_optimizer
-from examples.torch.common.sample_config import create_sample_config
+from examples.common.sample_config import create_sample_config
 from examples.torch.common.utils import SafeMLFLow
 from examples.torch.common.utils import configure_device
 from examples.torch.common.utils import configure_logging

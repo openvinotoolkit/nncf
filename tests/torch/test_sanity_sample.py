@@ -24,9 +24,10 @@ import torchvision
 from pkg_resources import parse_version
 from pytest_dependency import depends
 
+from examples.common.sample_config import EVAL_ONLY_ERROR_TEXT
 from examples.torch.common.model_loader import COMPRESSION_STATE_ATTR
 from examples.torch.common.optimizer import get_default_weight_decay
-from examples.torch.common.sample_config import SampleConfig
+from examples.common.sample_config import SampleConfig
 from examples.torch.common.utils import get_name
 from examples.torch.common.utils import is_staged_quantization
 from nncf.api.compression import CompressionStage
@@ -55,8 +56,8 @@ CONFIGS = {
                        TEST_ROOT / "torch" / "data" / "configs" / "inception_v3_mock_dataset.json",
                        TEST_ROOT / "torch" / "data" / "configs" / "resnet18_cifar100_bin_xnor.json",
                        TEST_ROOT / "torch" / "data" / "configs" / "resnet18_cifar10_staged_quant.json",
-                       TEST_ROOT / "torch" / "data" / "configs" / "resnet18_pruning_magnitude.json",
-                       TEST_ROOT / "torch" / "data" / "configs" / "resnet18_pruning_learned_ranking.json",
+                       TEST_ROOT / "torch" / "data" / "configs" / "resnet18_imagenet_pruning_magnitude.json",
+                       TEST_ROOT / "torch" / "data" / "configs" / "resnet18_imagenet_pruning_learned_ranking.json",
                        TEST_ROOT / "torch" / "data" / "configs" / "resnet18_pruning_accuracy_aware.json",
                        TEST_ROOT / "torch" / "data" / "configs" / "resnet18_int8_accuracy_aware.json"],
     "semantic_segmentation": [TEST_ROOT / "torch" / "data" / "configs" / "unet_camvid_int8.json",
@@ -152,7 +153,7 @@ def fixture_config(request, dataset_dir):
 
     return {
         "sample_type": sample_type,
-        'nncf_config': jconfig,
+        "sample_config": jconfig,
         "model_name": jconfig["model"],
         "dataset_path": dataset_path,
         "batch_size": batch_size,
@@ -176,7 +177,7 @@ def test_pretrained_model_eval(config, tmp_path, multiprocessing_distributed, ca
         pytest.skip(f'Test calls sample that uses `datasets.VOCDetection.parse_voc_xml` function from latest '
                     f'torchvision.\nThe signature of the function is not compatible with the corresponding signature '
                     f'from the current torchvision version : {torchvision.__version__}')
-    config_factory = ConfigFactory(config['nncf_config'], tmp_path / 'config.json')
+    config_factory = ConfigFactory(config["sample_config"], tmp_path / 'config.json')
     config_factory.config = update_compression_algo_dict_with_legr_save_load_params(config_factory.config,
                                                                                     case_common_dirs[
                                                                                         'save_coeffs_path'])
@@ -206,7 +207,7 @@ def test_pretrained_model_eval(config, tmp_path, multiprocessing_distributed, ca
 def test_pretrained_model_train(config, tmp_path, multiprocessing_distributed, case_common_dirs):
     checkpoint_save_dir = os.path.join(case_common_dirs["checkpoint_save_dir"],
                                        "distributed" if multiprocessing_distributed else "data_parallel")
-    config_factory = ConfigFactory(config['nncf_config'], tmp_path / 'config.json')
+    config_factory = ConfigFactory(config["sample_config"], tmp_path / 'config.json')
     config_factory.config = update_compression_algo_dict_with_legr_save_load_params(config_factory.config,
                                                                                     case_common_dirs[
                                                                                         'save_coeffs_path'])
@@ -227,7 +228,7 @@ def test_pretrained_model_train(config, tmp_path, multiprocessing_distributed, c
         args["--cpu-only"] = True
     elif multiprocessing_distributed:
         args["--multiprocessing-distributed"] = True
-    elif config['nncf_config']["model"] == "inception_v3":
+    elif config["sample_config"]["model"] == "inception_v3":
         pytest.skip("InceptionV3 may not be trained in DataParallel "
                     "because it outputs namedtuple, which DP seems to be unable "
                     "to support even still.")
@@ -236,7 +237,7 @@ def test_pretrained_model_train(config, tmp_path, multiprocessing_distributed, c
     runner.run()
     last_checkpoint_path = os.path.join(checkpoint_save_dir, get_name(config_factory.config) + "_last.pth")
     assert os.path.exists(last_checkpoint_path)
-    if 'compression' in config['nncf_config']:
+    if 'compression' in config["sample_config"]:
         allowed_compression_stages = (CompressionStage.FULLY_COMPRESSED, CompressionStage.PARTIALLY_COMPRESSED)
     else:
         allowed_compression_stages = (CompressionStage.UNCOMPRESSED,)
@@ -260,7 +261,7 @@ def test_trained_model_eval(request, config, tmp_path, multiprocessing_distribut
                     f'torchvision.\nThe signature of the function is not compatible with the corresponding signature '
                     f'from the current torchvision version : {torchvision.__version__}')
     depends_on_pretrained_train(request, config["test_case_id"], multiprocessing_distributed)
-    config_factory = ConfigFactory(config['nncf_config'], tmp_path / 'config.json')
+    config_factory = ConfigFactory(config["sample_config"], tmp_path / 'config.json')
     config_factory.config = update_compression_algo_dict_with_legr_save_load_params(config_factory.config,
                                                                                     case_common_dirs[
                                                                                         'save_coeffs_path'])
@@ -301,7 +302,7 @@ def get_resuming_checkpoint_path(config_factory, multiprocessing_distributed, ch
 def test_resume(request, config, tmp_path, multiprocessing_distributed, case_common_dirs):
     depends_on_pretrained_train(request, config["test_case_id"], multiprocessing_distributed)
     checkpoint_save_dir = os.path.join(str(tmp_path), "models")
-    config_factory = ConfigFactory(config['nncf_config'], tmp_path / 'config.json')
+    config_factory = ConfigFactory(config["sample_config"], tmp_path / 'config.json')
     config_factory.config = update_compression_algo_dict_with_legr_save_load_params(config_factory.config,
                                                                                     case_common_dirs[
                                                                                         'save_coeffs_path'], False)
@@ -332,7 +333,7 @@ def test_resume(request, config, tmp_path, multiprocessing_distributed, case_com
     runner.run()
     last_checkpoint_path = os.path.join(checkpoint_save_dir, get_name(config_factory.config) + "_last.pth")
     assert os.path.exists(last_checkpoint_path)
-    if 'compression' in config['nncf_config']:
+    if 'compression' in config["sample_config"]:
         allowed_compression_stages = (CompressionStage.FULLY_COMPRESSED, CompressionStage.PARTIALLY_COMPRESSED)
     else:
         allowed_compression_stages = (CompressionStage.UNCOMPRESSED,)
@@ -353,7 +354,7 @@ def extract_compression_stage_from_checkpoint(last_checkpoint_path):
     ids=['distributed', 'dataparallel'])
 def test_export_with_resume(request, config, tmp_path, multiprocessing_distributed, case_common_dirs):
     depends_on_pretrained_train(request, config["test_case_id"], multiprocessing_distributed)
-    config_factory = ConfigFactory(config['nncf_config'], tmp_path / 'config.json')
+    config_factory = ConfigFactory(config["sample_config"], tmp_path / 'config.json')
     config_factory.config = update_compression_algo_dict_with_legr_save_load_params(config_factory.config,
                                                                                     case_common_dirs[
                                                                                         'save_coeffs_path'], False)
@@ -428,7 +429,7 @@ def set_num_threads_locally(n=1):
 
 
 def test_cpu_only_mode_produces_cpu_only_model(config, tmp_path, mocker):
-    config_factory = ConfigFactory(config['nncf_config'], tmp_path / 'config.json')
+    config_factory = ConfigFactory(config["sample_config"], tmp_path / 'config.json')
     args = {
         "--data": config["dataset_path"],
         "--config": config_factory.serialize(),
@@ -446,7 +447,7 @@ def test_cpu_only_mode_produces_cpu_only_model(config, tmp_path, mocker):
     command_line = " ".join(arg_list)
     if config["sample_type"] == "classification":
         import examples.torch.classification.main as sample
-        if is_staged_quantization(config['nncf_config']):
+        if is_staged_quantization(config["sample_config"]):
             mocker.patch("examples.torch.classification.staged_quantization_worker.train_epoch_staged")
             mocker.patch("examples.torch.classification.staged_quantization_worker.validate")
             import examples.torch.classification.staged_quantization_worker as staged_worker
@@ -471,7 +472,7 @@ def test_cpu_only_mode_produces_cpu_only_model(config, tmp_path, mocker):
 
     # pylint: disable=no-member
     if config["sample_type"] == "classification":
-        if is_staged_quantization(config['nncf_config']):
+        if is_staged_quantization(config["sample_config"]):
             import examples.torch.classification.staged_quantization_worker as staged_worker
             model_to_be_trained = staged_worker.train_epoch_staged.call_args[0][2]  # model
         else:
@@ -533,7 +534,7 @@ def fixture_accuracy_aware_config(request):
 
     return {
         "sample_type": sample_type,
-        'nncf_config': jconfig,
+        "sample_config": jconfig,
         "model_name": jconfig["model"],
         "dataset_path": dataset_path,
         "batch_size": 12,
@@ -545,7 +546,7 @@ def fixture_accuracy_aware_config(request):
     "multiprocessing_distributed", [True, False],
     ids=['distributed', 'dataparallel'])
 def test_accuracy_aware_training_pipeline(accuracy_aware_config, tmp_path, multiprocessing_distributed):
-    config_factory = ConfigFactory(accuracy_aware_config['nncf_config'], tmp_path / 'config.json')
+    config_factory = ConfigFactory(accuracy_aware_config["sample_config"], tmp_path / 'config.json')
     log_dir = tmp_path / 'accuracy_aware'
     log_dir = log_dir / 'distributed' if multiprocessing_distributed else log_dir / 'dataparallel'
 
@@ -577,9 +578,25 @@ def test_accuracy_aware_training_pipeline(accuracy_aware_config, tmp_path, multi
                                         time_dir_2, 'acc_aware_checkpoint_last.pth')
 
     assert os.path.exists(last_checkpoint_path)
-    if 'compression' in accuracy_aware_config['nncf_config']:
+    if 'compression' in accuracy_aware_config["sample_config"]:
         allowed_compression_stages = (CompressionStage.FULLY_COMPRESSED, CompressionStage.PARTIALLY_COMPRESSED)
     else:
         allowed_compression_stages = (CompressionStage.UNCOMPRESSED,)
     compression_stage = extract_compression_stage_from_checkpoint(last_checkpoint_path)
     assert compression_stage in allowed_compression_stages
+
+
+@pytest.mark.parametrize("sample_type", SAMPLE_TYPES)
+def test_eval_only_config_fails_to_train(tmp_path, sample_type):
+    config_factory = ConfigFactory({"model": "mock",
+                                    "input_infos": {"sample_size": [1, 1, 1, 1]},
+                                    "eval_only": True}, tmp_path / 'config.json')
+    args = {
+        "--mode": "train",
+        "--config": config_factory.serialize(),
+    }
+
+    runner = Command(create_command_line(args, sample_type))
+    return_code = runner.run(assert_returncode_zero=False)
+    assert return_code != 0
+    assert EVAL_ONLY_ERROR_TEXT in "".join(runner.output)

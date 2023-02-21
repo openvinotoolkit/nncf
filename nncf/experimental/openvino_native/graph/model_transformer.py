@@ -11,7 +11,7 @@
  limitations under the License.
 """
 
-from typing import List
+from typing import List, Tuple
 from enum import Enum
 
 import openvino.runtime as ov
@@ -111,12 +111,12 @@ class OVModelTransformer(ModelTransformer):
         self._model = self._insert_outputs(self._model, outputs=extra_model_outputs)
 
     def _get_extra_model_outputs(self,
-                                 transformations: List[OVOutputInsertionCommand]) -> List[ov.Output]:
+                                 transformations: List[OVOutputInsertionCommand]) -> List[Tuple[ov.Output, int]]:
         """
         Collects extra model outputs based on transformations.
 
         :param transformations: lisf of the OVOutputInsertionCommand.
-        :return: list of the output names.
+        :return: list of tuples with ov.Output & port_id.
         """
         extra_model_outputs = []
         for transformation in transformations:
@@ -125,30 +125,30 @@ class OVModelTransformer(ModelTransformer):
             port_id = transformation.target_point.port_id
             if transformation.target_point.type == TargetType.POST_LAYER_OPERATION:
                 output = node.output(port_id)
-                extra_model_outputs.append(output)
+                extra_model_outputs.append((output, port_id))
             elif transformation.target_point.type == TargetType.PRE_LAYER_OPERATION:
                 output = node.input_value(port_id)
-                extra_model_outputs.append(output)
+                extra_model_outputs.append((output, port_id))
             else:
                 raise NotImplementedError(f'Unsupported target point type {transformation.target_point.type}')
 
         return extra_model_outputs
 
     @staticmethod
-    def _insert_outputs(model: ov.Model, outputs: List[ov.Output]) -> ov.Model:
+    def _insert_outputs(model: ov.Model, outputs: List[Tuple[ov.Output, int]]) -> ov.Model:
         """
         Takes a model and adds outputs based on the list of ov.Output.
 
         :param model: OpenVINO model.
-        :param outputs: list of ov.Output.
+        :param outputs: list of tuples with ov.Output & port_id.
         :return: modified model.
         """
         model_outputs = model.get_results()
         params = model.get_parameters()
         extra_model_outputs = []
-        for output in outputs:
+        for (output, port_id) in outputs:
             output_name = output.get_node().get_friendly_name()
-            port_id = output.get_index()
+            # TODO: (KodiaqQ) check out the models with the Split
             result = opset.result(output, name=f'Result_{output_name}.{port_id}')
             extra_model_outputs.append(result)
 
@@ -231,12 +231,15 @@ class OVModelTransformer(ModelTransformer):
 
             node = self.name_to_node_mapping[node_name]
             node_inputs = [port.get_node() for port in node.output(0).get_target_inputs()]
-            node_with_bias = node_inputs[0]
-            assert node_with_bias.get_type_name() == 'Add'
+            assert any(node.get_type_name() == 'Add' for node in node_inputs)
+
+            for node_input in node_inputs:
+                if node_input.get_type_name() == 'Add':
+                    add_node = node_input
 
             bias_port_id = transformation.target_point.port_id
-            biased_port = node_with_bias.input(bias_port_id)
-            potential_bias = node_with_bias.input_value(bias_port_id).node
+            biased_port = add_node.input(bias_port_id)
+            potential_bias = add_node.input_value(bias_port_id).node
 
             if potential_bias.get_type_name() == 'Convert':
                 biased_port = potential_bias.input(0)
@@ -258,6 +261,9 @@ class OVModelTransformer(ModelTransformer):
         params, results = [], []
         for input_name in transformation.inputs:
             input_node = self.name_to_node_mapping[input_name]
+            if input_name in [tensor.node.get_friendly_name() for tensor in self._model.inputs]:
+                params.append(input_node)
+                continue
             input_port = input_node.input(0)
             input_node_output = input_port.get_source_output()
             new_param = opset.parameter(shape=input_node_output.get_shape(),
@@ -269,7 +275,10 @@ class OVModelTransformer(ModelTransformer):
         for output_name in transformation.outputs:
             output_node = self.name_to_node_mapping[output_name]
             for node_out in output_node.outputs():
-                results.append(opset.result(node_out,
-                                            name=f'{output_name}_output'))
+                new_result = opset.result(node_out, name=f'{output_name}_output')
+                results.append(new_result)
+
+        if not results:
+            results = [r.node for r in self._model.outputs]
 
         return ov.Model(results, params)
