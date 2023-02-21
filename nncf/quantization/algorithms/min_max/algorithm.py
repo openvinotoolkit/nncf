@@ -381,7 +381,6 @@ class MinMaxQuantization(Algorithm):
                     layer_name = nncf_graph.get_node_by_name(target_node_name).layer_name
                     if layer_name in weight_layer_names:
                         continue
-                    weight_layer_names.add(layer_name)
                     half_range = False
                     if (self._parameters.overflow_fix == OverflowFix.FIRST_LAYER and not weight_layer_names) or \
                             self._parameters.overflow_fix == 'enable':
@@ -389,6 +388,7 @@ class MinMaxQuantization(Algorithm):
                     command = self._backend_entity.create_weight_quantizer_insertion_command(
                         nncf_graph, quantization_target_point,
                         qconfig, half_range, tensor_collector.get_statistics())
+                    weight_layer_names.add(layer_name)
                 else:
                     command = self._backend_entity.create_activation_quantizer_insertion_command(
                         nncf_graph, quantization_target_point,
