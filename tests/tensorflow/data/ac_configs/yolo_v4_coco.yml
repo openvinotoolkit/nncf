@@ -1,5 +1,5 @@
 models:
-  - name: yolo_v4
+  - name: yolo_v4_coco
     launchers:
       - framework: dlsdk
         device: CPU

@@ -11,7 +11,7 @@
  limitations under the License.
 """
 
-from examples.torch.common.sample_config import CustomArgumentParser
+from examples.common.sample_config import CustomArgumentParser
 from nncf.common.hardware.config import HWConfigType
 
 

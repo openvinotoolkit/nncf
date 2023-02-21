@@ -17,6 +17,10 @@ from prettytable import PrettyTable
 from yattag import Doc
 
 from nncf.config import NNCFConfig
+from tests.shared.metric_thresholds import DIFF_FP32_MAX_GLOBAL
+from tests.shared.metric_thresholds import DIFF_FP32_MIN_GLOBAL
+from tests.shared.metric_thresholds import DIFF_TARGET_MAX_GLOBAL
+from tests.shared.metric_thresholds import DIFF_TARGET_MIN_GLOBAL
 from tests.shared.paths import DATASET_DEFINITIONS_PATH
 from tests.shared.paths import PROJECT_ROOT
 from tests.shared.paths import TEST_ROOT
@@ -24,11 +28,6 @@ from tests.shared.paths import TEST_ROOT
 BG_COLOR_GREEN_HEX = 'ccffcc'
 BG_COLOR_YELLOW_HEX = 'ffffcc'
 BG_COLOR_RED_HEX = 'ffcccc'
-
-DIFF_TARGET_MIN_GLOBAL = -0.1
-DIFF_TARGET_MAX_GLOBAL = 0.1
-DIFF_FP32_MIN_GLOBAL = -1.0
-DIFF_FP32_MAX_GLOBAL = 0.1
 
 
 class EvalRunParamsStruct:

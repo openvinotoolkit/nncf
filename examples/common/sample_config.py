@@ -10,20 +10,15 @@
  See the License for the specific language governing permissions and
  limitations under the License.
 """
-
-from addict import Dict
-
 import argparse
 import os
+from pathlib import Path
+
+import jstyleson as json
+from addict import Dict
 
 from nncf import NNCFConfig
-from nncf.config.utils import is_experimental_quantization
-
-try:
-    import jstyleson as json
-except ImportError:
-    import json
-
+from nncf.common.utils.os import safe_open
 
 _DEFAULT_KEY_TO_ENV = {
     "world_size": "WORLD_SIZE",
@@ -46,13 +41,13 @@ class ActionWrapper(argparse.Action):
         return self._action(parser, namespace, values, option_string)
 
 
-# pylint: disable=protected-access
+#pylint:disable=protected-access
 class CustomArgumentGroup(argparse._ArgumentGroup):
     def _add_action(self, action):
         super()._add_action(ActionWrapper(action))
 
 
-# pylint: disable=protected-access
+#pylint:disable=protected-access
 class CustomActionContainer(argparse._ActionsContainer):
     def add_argument_group(self, *args, **kwargs):
         group = CustomArgumentGroup(self, *args, **kwargs)
@@ -75,7 +70,8 @@ class CustomArgumentParser(CustomActionContainer, argparse.ArgumentParser):
 class SampleConfig(Dict):
     @classmethod
     def from_json(cls, path) -> 'SampleConfig':
-        with open(path, encoding='utf8') as f:
+        file_path = Path(path).resolve()
+        with safe_open(file_path) as f:
             loaded_json = json.load(f)
         return cls(loaded_json)
 
@@ -102,18 +98,39 @@ class SampleConfig(Dict):
                 self[k] = int(os.environ[v])
 
 
-def create_sample_config(args, parser) -> SampleConfig:
-    nncf_config = NNCFConfig.from_json(args.config)
+EVAL_ONLY_ERROR_TEXT = 'The config file you are using is only presented for purposes of running the model ' \
+                       'in evaluation mode.\n If you wish to run training for this model, remove the ' \
+                       '`"eval_only": true` line from the .json configuration file and provide training ' \
+                       'hyperparameters (e.g. number of training epochs, optimizer etc.) in the same config.'
+
+def _parse_sample_config(args, parser) -> SampleConfig:
+    sample_config = SampleConfig.from_json(args.config)
+    sample_config.update_from_args(args, parser)
+    return sample_config
+
+def _embed_nncf_config(args, sample_config: SampleConfig) -> SampleConfig:
+    file_path = Path(args.config).resolve()
+    with safe_open(file_path) as f:
+        loaded_json = json.load(f)
+
+    if sample_config.get("target_device") is not None:
+        target_device = sample_config.pop("target_device")
+        loaded_json["target_device"] = target_device
+    nncf_config = NNCFConfig.from_dict(loaded_json)
 
     if args.disable_compression and 'compression' in nncf_config:
         del nncf_config['compression']
 
-    if 'compression' in nncf_config and is_experimental_quantization(nncf_config):
-        from nncf.experimental.tensorflow.patch_tf import patch_tf_operations
-        patch_tf_operations()
-
-    sample_config = SampleConfig.from_json(args.config)
-    sample_config.update_from_args(args, parser)
     sample_config.nncf_config = nncf_config
+    return sample_config
 
+def _fail_if_training_with_eval_only_config(sample_config: SampleConfig):
+    if sample_config.eval_only and 'train' in sample_config.mode:
+        raise RuntimeError(EVAL_ONLY_ERROR_TEXT)
+
+def create_sample_config(args, parser, **kwargs) -> SampleConfig:
+    sample_config = _parse_sample_config(args, parser)
+    sample_config.update(**kwargs)
+    _fail_if_training_with_eval_only_config(sample_config)
+    sample_config = _embed_nncf_config(args, sample_config)
     return sample_config

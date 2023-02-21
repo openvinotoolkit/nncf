@@ -1,6 +1,7 @@
 {
     "model": "googlenet",
     "pretrained": true,
+    "eval_only": true,
     "batch_size": 512,
     "input_info": {
         "sample_size": [
@@ -10,6 +11,5 @@
             224
         ]
     },
-    "num_classes": 1000,
-    "epochs": 100
+    "num_classes": 1000
 }

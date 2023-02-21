@@ -30,6 +30,7 @@ from examples.tensorflow.segmentation import train as seg_train
 from examples.tensorflow.segmentation import evaluation as seg_eval
 from examples.tensorflow.common.model_loader import AVAILABLE_MODELS
 from examples.tensorflow.common.prepare_checkpoint import main as prepare_checkpoint_main
+from examples.common.sample_config import EVAL_ONLY_ERROR_TEXT
 
 AVAILABLE_MODELS.update({
     'SequentialModel': SequentialModel,
@@ -456,3 +457,18 @@ def test_model_accuracy_aware_train(_accuracy_aware_config, tmp_path):
                               'accuracy_aware_training')
     time_dir_2 = os.path.join(time_dir_1, glob(os.path.join(time_dir_1, '*/'))[0].split('/')[-2])
     assert tf.train.latest_checkpoint(time_dir_2)
+
+
+@pytest.mark.parametrize("sample_type", SAMPLE_TYPES)
+def test_eval_only_config_fails_to_train(tmp_path, sample_type):
+    config_factory = ConfigFactory({"model": "mock",
+                                    "input_info": {"sample_size": [1, 1, 1, 1]},
+                                    "eval_only": True}, tmp_path / 'config.json')
+    args = {
+        "--config": config_factory.serialize(),
+    }
+
+    main = get_sample_fn(sample_type, modes=['train'])
+    with pytest.raises(RuntimeError) as e_info:
+        main(convert_to_argv(args))
+    assert EVAL_ONLY_ERROR_TEXT in e_info.value.args[0]

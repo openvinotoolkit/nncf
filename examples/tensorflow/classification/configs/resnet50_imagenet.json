@@ -1,0 +1,11 @@
+{
+    "model": "ResNet50",
+    "pretrained": true,
+    "eval_only": true,
+    "input_info": {
+        "sample_size": [1, 224, 224, 3]
+    },
+    "batch_size": 128,
+    "dataset": "imagenet2012",
+    "dataset_type": "tfds"
+}

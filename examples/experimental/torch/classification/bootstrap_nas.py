@@ -33,8 +33,8 @@ from examples.torch.common.execution import start_worker
 from examples.torch.common.model_loader import load_model
 from examples.torch.common.optimizer import get_parameter_groups
 from examples.torch.common.optimizer import make_optimizer
-from examples.torch.common.sample_config import SampleConfig
-from examples.torch.common.sample_config import create_sample_config
+from examples.common.sample_config import SampleConfig
+from examples.common.sample_config import create_sample_config
 from examples.torch.common.utils import SafeMLFLow
 from examples.torch.common.utils import configure_device
 from examples.torch.common.utils import configure_logging

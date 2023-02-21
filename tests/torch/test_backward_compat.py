@@ -21,7 +21,7 @@ from examples.torch.common.execution import ExecutionMode
 from examples.torch.common.execution import get_device
 from examples.torch.common.execution import prepare_model_for_execution
 from examples.torch.common.model_loader import load_model
-from examples.torch.common.sample_config import SampleConfig
+from examples.common.sample_config import SampleConfig
 from nncf.api.compression import CompressionStage
 from nncf.common.logging.logger import NNCFDeprecationWarning
 from nncf.torch import register_default_init_args

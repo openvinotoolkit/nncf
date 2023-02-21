@@ -1,5 +1,5 @@
 models:
-- name: mobilenet_v2
+- name: mobilenet_v2_imagenet
   launchers:
   - framework: dlsdk
     device: CPU

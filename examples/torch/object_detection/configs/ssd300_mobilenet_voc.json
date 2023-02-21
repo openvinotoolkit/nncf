@@ -4,7 +4,6 @@
   "input_info": {
     "sample_size": [2, 3, 300, 300]
   },
-  "pretrained": true,
   "num_classes": 21,
   "dataset": "voc",
   "preprocessing": {

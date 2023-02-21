@@ -11,7 +11,7 @@
  limitations under the License.
 """
 
-from examples.tensorflow.common.sample_config import SampleConfig
+from examples.common.sample_config import SampleConfig
 
 
 MASKRCNN_CONFIG = SampleConfig({
