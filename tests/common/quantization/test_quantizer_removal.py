@@ -24,6 +24,7 @@ from tests.common.quantization.metatypes import QUANTIZER_METATYPES
 from tests.common.quantization.metatypes import CONSTANT_METATYPES
 from tests.common.quantization.metatypes import QUANTIZABLE_METATYPES
 from tests.common.quantization.metatypes import QUANTIZE_AGNOSTIC_METATYPES
+from tests.common.quantization.metatypes import SHAPE_OF_METATYPES
 
 
 @dataclass
@@ -177,7 +178,8 @@ def test_find_quantizer_nodes_to_cut(nncf_graph: NNCFGraph, test_case: TestCase)
         QUANTIZER_METATYPES,
         CONSTANT_METATYPES,
         QUANTIZABLE_METATYPES,
-        QUANTIZE_AGNOSTIC_METATYPES
+        QUANTIZE_AGNOSTIC_METATYPES,
+        SHAPE_OF_METATYPES
     )
 
     actual_fq_nodes = sorted([x.node_name for x in nodes])

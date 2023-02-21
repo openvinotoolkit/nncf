@@ -106,8 +106,13 @@ class ReluTestMetatype(TestMetatype):
 class AddTestMetatype(TestMetatype):
     name = 'add'
 
+@METATYPES_FOR_TEST.register()
+class ShapeOfTestMetatype(TestMetatype):
+    name = 'shape_of'
+
 
 WEIGHT_LAYER_METATYPES = [LinearTestMetatype, Conv2dTestMetatype, MatMulTestMetatype]
+
 
 DEFAULT_TEST_QUANT_TRAIT_MAP = {
     QuantizationTrait.INPUTS_QUANTIZABLE: [
@@ -150,4 +155,9 @@ QUANTIZABLE_METATYPES = [
 QUANTIZE_AGNOSTIC_METATYPES = [
     MaxPool2dTestMetatype,
     ReluTestMetatype,
+]
+
+
+SHAPE_OF_METATYPES = [
+    ShapeOfTestMetatype,
 ]

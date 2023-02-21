@@ -13,18 +13,11 @@
 
 from typing import Tuple
 from typing import List
-from typing import TypeVar
 from collections import deque
 
-from nncf import nncf_logger
-from nncf.common.factory import ModelTransformerFactory
 from nncf.common.graph import NNCFGraph
 from nncf.common.graph import NNCFNode
 from nncf.common.graph.operator_metatypes import OperatorMetatype
-from nncf.common.graph.transformations.layout import TransformationLayout
-
-
-TModel = TypeVar('TModel')
 
 
 def find_quantizer_nodes_to_cut(
@@ -65,8 +58,8 @@ def find_quantizer_nodes_to_cut(
         successors = (e.to_node for e in graph.get_output_edges(v))
         for u in successors:
             if not visited.get(u.node_name, False) and u.metatype not in shape_of_metatypes:
-                    queue.append(u)
-                    visited[u.node_name] = True
+                queue.append(u)
+                visited[u.node_name] = True
 
     def _parse_node_relatives(node: NNCFNode, is_parents: bool):
         if node.metatype in quantizable_metatypes:
