@@ -48,6 +48,7 @@ from nncf.quantization.algorithms.min_max.backend import ALGO_BACKENDS
 from nncf.quantization.algorithms.definitions import RangeType
 from nncf.quantization.algorithms.definitions import Granularity
 from nncf.quantization.passes import transform_to_inference_graph
+from nncf.quantization.fake_quantize import calculate_quantizer_parameters
 from nncf.common.factory import NNCFGraphFactory
 from nncf.common.tensor_statistics.statistic_point import StatisticPoint
 from nncf.common.tensor_statistics.statistic_point import StatisticPointsContainer
@@ -372,7 +373,6 @@ class MinMaxQuantization(Algorithm):
 
         for quantization_target_point, qconfig in quantization_target_points.items():
             target_node_name = quantization_target_point.target_node_name
-<<<<<<< HEAD
             for tensor_collector in statistic_points.get_algo_statistics_for_node(
                     target_node_name,
                     filter_func,
@@ -383,43 +383,17 @@ class MinMaxQuantization(Algorithm):
                     if layer_name in weight_layer_names:
                         continue
                     weight_layer_names.add(layer_name)
-                    command = self._backend_entity.create_weight_quantizer_insertion_command(
-                        nncf_graph, quantization_target_point,
-                        qconfig, tensor_collector.get_statistics())
-                else:
-                    command = self._backend_entity.create_activation_quantizer_insertion_command(
-                        nncf_graph, quantization_target_point,
-                        qconfig, tensor_collector.get_statistics())
-
-                transformation_commands.append(command)
-=======
-            node = nncf_graph.get_node_by_name(target_node_name)
-            if quantization_target_point.type == TargetType.OPERATION_WITH_WEIGHTS:
-                weight_tensor_name, weight_tensor = self._backend_entity.get_weight_tensor(model,
-                                                                                           quantization_target_point)
-                # If the nodes share one weight tensor, we should have only one quantizer on that
-                if weight_tensor_name in weight_tensor_names:
-                    continue
-                weight_tensor_names.add(weight_tensor_name)
-                command = self._backend_entity.create_weight_quantizer_insertion_command(quantization_target_point,
-                                                                                         qconfig, weight_tensor, node)
-                transformation_commands.append(command)
-            elif quantization_target_point.type in [TargetType.PRE_LAYER_OPERATION, TargetType.POST_LAYER_OPERATION]:
-                def filter_func(point):
-                    return MinMaxQuantization in point.algorithm_to_tensor_collectors and \
-                           point.target_point.type == quantization_target_point.type
-
-                for tensor_collector in statistic_points.get_algo_statistics_for_node(target_node_name, filter_func,
-                                                                                      MinMaxQuantization):
                     statistics = tensor_collector.get_statistics()
-                    min_values, max_values = statistics.min_values, statistics.max_values
-                    parameters = calculate_activation_quantizer_parameters(min_values, max_values, qconfig)
+                    parameters = calculate_quantizer_parameters(statistics, qconfig, QuantizerGroup.WEIGHTS)
+                    command = self._backend_entity.create_weight_quantizer_insertion_command(
+                        nncf_graph, quantization_target_point, qconfig, parameters)
+                else:
+                    statistics = tensor_collector.get_statistics()
+                    parameters = calculate_quantizer_parameters(statistics, qconfig, QuantizerGroup.ACTIVATIONS)
                     command = self._backend_entity.create_activation_quantizer_insertion_command(
-                        quantization_target_point, qconfig, parameters)
-                    transformation_commands.append(command)
-            else:
-                raise RuntimeError('Inccorrect type of Quantization Target Point!')
->>>>>>> 67465fa9... apply comments
+                        nncf_graph, quantization_target_point, qconfig, parameters)
+
+                transformation_commands.append(command)
 
         for transformation_command in transformation_commands:
             transformation_layout.register(transformation_command)

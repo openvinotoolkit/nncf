@@ -11,7 +11,7 @@
  limitations under the License.
 """
 
-from typing import Tuple, Optional, Union
+from typing import Tuple
 from dataclasses import dataclass
 
 import numpy as np
@@ -21,6 +21,7 @@ from nncf.common.quantization.quantizers import calculate_asymmetric_level_range
 from nncf.common.quantization.quantizers import calculate_symmetric_level_ranges
 from nncf.common.quantization.structs import QuantizerConfig
 from nncf.common.quantization.structs import QuantizerGroup
+from nncf.common.tensor_statistics.statistics import MinMaxTensorStatistic
 
 
 @dataclass
@@ -174,60 +175,32 @@ def asymmetric_range(min_values: np.ndarray, max_values: np.ndarray,
     return level_low, level_high
 
 
-def calculate_weight_quantizer_parameters(weight_tensor: np.ndarray, quantizer_config: QuantizerConfig,
-                                          channel_axis: Optional[int] = None) -> FakeQuantizeParameters:
+def calculate_quantizer_parameters(statistics: MinMaxTensorStatistic,
+                                   quantizer_config: QuantizerConfig,
+                                   quant_group: QuantizerGroup) -> FakeQuantizeParameters:
     """
-    Calculates FakeQuantize layer attributes for weight quantizer.
+    Calculates FakeQuantize layer attributes for weight/activation quantizer.
 
-    :param weight_tensor: Weight tensor to calculate quantizer attributes.
-    :param quantizer_config: Config of FakeQuantize.
-    :param axis: In per-channel case - the axis for the quantization. In per-tensor - ignored.
-    :return: Parameters of the FakeQuantize layer.
-    """
-    quant_group = QuantizerGroup.WEIGHTS
-    if quantizer_config.per_channel:
-        assert channel_axis is not None
-        axes = tuple(i for i, _ in enumerate(weight_tensor.shape) if channel_axis != i)
-    else:
-        axes = None
-
-    if quantizer_config.mode == QuantizationMode.SYMMETRIC:
-        max_values = np.amax(np.abs(weight_tensor), axis=axes, keepdims=quantizer_config.per_channel)
-        _, _, levels = calculate_symmetric_level_ranges(quantizer_config.num_bits, signed=True, narrow_range=True)
-        level_low, level_high = symmetric_range(None, max_values, levels, quantizer_config, quant_group)
-    else:
-        max_values = np.amax(weight_tensor, axis=axes, keepdims=quantizer_config.per_channel)
-        _, _, levels = calculate_asymmetric_level_ranges(quantizer_config.num_bits, narrow_range=False)
-        min_values = np.amin(weight_tensor, axis=axes, keepdims=quantizer_config.per_channel)
-        level_low, level_high = asymmetric_range(min_values, max_values, quantizer_config, quant_group)
-
-    output_low, output_high = level_low, level_high
-    return FakeQuantizeParameters(level_low, level_high, output_low, output_high, levels)
-
-
-def calculate_activation_quantizer_parameters(min_values: Union[float, np.ndarray],
-                                              max_values: Union[float, np.ndarray],
-                                              quantizer_config: QuantizerConfig) -> FakeQuantizeParameters:
-    """
-    Calculates FakeQuantize layer attributes for activation quantizer.
-
-    :param min_values: Collected min_values for the quantized insertion.
-    :param max_values: Collected max_values for the quantized insertion.
+    :param statistics: Collected statistics for the quantized insertion.
     :param quantizer_config: Config of the quantization configuration.
+    :param quantizer_group: Group of the quantizer.
     :return: Parameters of the FakeQuantize layer.
     """
-    quant_group = QuantizerGroup.ACTIVATIONS
-    min_values = np.array(min_values)
-    max_values = np.array(max_values)
+    min_values = np.array(statistics.min_values)
+    max_values = np.array(statistics.max_values)
 
     if quantizer_config.mode == QuantizationMode.SYMMETRIC:
-        _, _, levels = calculate_symmetric_level_ranges(quantizer_config.num_bits, signed=True, narrow_range=False)
-        level_low, level_high = symmetric_range(min_values, max_values, levels, quantizer_config, quant_group)
+        narrow_range = quant_group == QuantizerGroup.WEIGHTS
+        _, _, levels = calculate_symmetric_level_ranges(quantizer_config.num_bits,
+                                                        signed=True, narrow_range=narrow_range)
+        level_low, level_high = symmetric_range(min_values, max_values,
+                                                levels, quantizer_config, quant_group)
     else:
         _, _, levels = calculate_asymmetric_level_ranges(quantizer_config.num_bits, narrow_range=False)
         level_low, level_high = asymmetric_range(min_values, max_values, quantizer_config, quant_group)
 
     if not quantizer_config.per_channel:
+    # if quant_group == QuantizerGroup.ACTIVATIONS and not quantizer_config.per_channel:
         level_low = np.squeeze(level_low)
         level_high = np.squeeze(level_high)
 

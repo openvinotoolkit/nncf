@@ -51,18 +51,17 @@ def convert_fq_params_to_onnx_params(parameters: FakeQuantizeParameters,
     """
     input_low, input_high = parameters.input_low, parameters.input_high,
     output_low, output_high = parameters.output_low, parameters.output_high,
-    level_low, level_high = get_level_low_level_high(tensor_type, num_bits)
-
-    levels = level_high - level_low + 1
-    if levels not in [255, 256]:
-        raise ValueError('Can only export to INT8/UIN8 256-level ONNX Quantize/Dequantize pairs.')
-
     if not np.allclose(input_high, output_high) or not np.allclose(input_low, output_low):
         raise ValueError('ONNX Quantize/Dequantize pairs only support'
                          ' input_high == output_high and input_low == output_low.')
 
+    level_low, level_high = get_level_low_level_high(tensor_type, num_bits)
+    levels = level_high - level_low + 1
+    if levels not in [255, 256]:
+        raise ValueError('Can only export to INT8/UIN8 256-level ONNX Quantize/Dequantize pairs.')
+
     scale, zero_point = calculate_scale_zero_point(input_low, input_high, level_low, level_high, mode)
-    return ONNXQuantizerLayerParameters(scale, zero_point, axis, tensor_type)
+    return ONNXQuantizerLayerParameters(scale, zero_point, tensor_type, axis)
 
 
 def get_level_low_level_high(tensor_type: np.dtype, num_bits: int) -> Tuple[int, int]:

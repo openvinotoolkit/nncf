@@ -37,7 +37,7 @@ REFERENCE_GRAPHS_TEST_ROOT = 'data/reference_graphs/quantization'
 
 def mock_collect_statistics(mocker):
     _ = mocker.patch(
-        'nncf.quantization.fake_quantize.calculate_activation_quantizer_parameters',
+        'nncf.quantization.fake_quantize.calculate_quantizer_parameters',
         return_value=FakeQuantizeParameters(np.array(0), np.array(0), np.array(0), np.array(0), 256))
     _ = mocker.patch(
         'nncf.common.tensor_statistics.aggregator.StatisticsAggregator.collect_statistics', return_value=None)
