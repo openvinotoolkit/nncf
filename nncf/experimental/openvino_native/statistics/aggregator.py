@@ -74,8 +74,8 @@ class OVStatisticsAggregator(StatisticsAggregator):
                     RuntimeError(f'Unsupported target point type for statistic aggregator:'
                                  f' {target_point.type}')
 
-    @staticmethod
-    def _get_transformation_layout_extra_outputs(statistic_points: StatisticPointsContainer) -> TransformationLayout:
+    def _get_transformation_layout_extra_outputs(self,
+                                                 statistic_points: StatisticPointsContainer) -> TransformationLayout:
         def is_activation_point(statistic_point: StatisticPoint) -> bool:
             return not statistic_point.target_point.is_weight_target_point()
 

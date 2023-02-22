@@ -33,6 +33,10 @@ class ONNXStatisticsAggregator(StatisticsAggregator):
 
     def collect_statistics(self, model: onnx.ModelProto) -> None:
         self._nncf_graph = NNCFGraphFactory.create(model)
+        self.nncf_input_node_next_onnx_nodes = {}
+        for input_node in self._nncf_graph.get_input_nodes():
+            next_nodes = self._nncf_graph.get_next_nodes(input_node)
+            self.nncf_input_node_next_onnx_nodes[input_node.node_name] = [node.node_name for node in next_nodes]
         self._onnx_graph = ONNXGraph(model)
         super().collect_statistics(model)
 
@@ -76,8 +80,8 @@ class ONNXStatisticsAggregator(StatisticsAggregator):
                 else:
                     RuntimeError('The statistics should be collected only from the input of output edges of the node')
 
-    @staticmethod
-    def _get_transformation_layout_extra_outputs(statistic_points: StatisticPointsContainer) -> TransformationLayout:
+    def _get_transformation_layout_extra_outputs(self,
+                                                 statistic_points: StatisticPointsContainer) -> TransformationLayout:
         def is_activation_point(statistic_point: StatisticPoint) -> bool:
             return not statistic_point.target_point.is_weight_target_point()
 
@@ -86,7 +90,8 @@ class ONNXStatisticsAggregator(StatisticsAggregator):
         for _statistic_points in statistic_points.values():
             for _statistic_point in _statistic_points:
                 if is_activation_point(_statistic_point):
-                    transformation_commands.append(ONNXOutputInsertionCommand(_statistic_point.target_point))
+                    transformation_commands.append(ONNXOutputInsertionCommand(_statistic_point.target_point,
+                                                                              self.nncf_input_node_next_onnx_nodes))
 
         for transformation_command in transformation_commands:
             transformation_layout.register(transformation_command)

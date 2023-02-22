@@ -27,6 +27,7 @@ from nncf.onnx.graph.transformations.commands import ONNXQDQNodeRemovingCommand
 from nncf.common.quantization.structs import QuantizationMode
 from nncf.onnx.graph.model_transformer import ONNXModelTransformer
 from nncf.onnx.graph.onnx_graph import ONNXGraph
+from nncf.onnx.graph.nncf_graph_builder import GraphConverter
 from nncf.onnx.quantization.quantizer_parameters import ONNXQuantizerLayerParameters
 
 from tests.onnx.models import LinearModel
@@ -43,11 +44,16 @@ QUANTIZER_NUMBER = [None, 1, 3]
 def test_quantizer_insertion(target_layers, should_raise, quantizer_number):
     model = LinearModel().onnx_model
     transformation_layout = TransformationLayout()
-
+    nncf_graph = GraphConverter.create_nncf_graph(model)
+    nncf_input_node_next_onnx_nodes = {}
+    for input_node in nncf_graph.get_input_nodes():
+        next_nodes = nncf_graph.get_next_nodes(input_node)
+        nncf_input_node_next_onnx_nodes[input_node.node_name] = [node.node_name for node in next_nodes]
     for target_layer in target_layers:
         target_point = ONNXTargetPoint(TargetType.POST_LAYER_OPERATION, target_layer, 0)
         command = ONNXQuantizerInsertionCommand(
             target_point,
+            nncf_input_node_next_onnx_nodes,
             ONNXQuantizerLayerParameters(np.array(1.0), np.array(0),
                                          QuantizationMode.SYMMETRIC, None,
                                          tensor_type=np.int8))
@@ -102,7 +108,14 @@ def test_inserted_quantizer_parameters(test_parameters):
                                                         test_parameters.mode, None,
                                                         tensor_type=test_parameters.onnx_dtype)
     target_point = ONNXTargetPoint(TargetType.POST_LAYER_OPERATION, test_parameters.target_layer, 0)
-    command = ONNXQuantizerInsertionCommand(target_point, quantizer_parameters)
+
+    nncf_graph = GraphConverter.create_nncf_graph(model)
+    nncf_input_node_next_onnx_nodes = {}
+    for input_node in nncf_graph.get_input_nodes():
+        next_nodes = nncf_graph.get_next_nodes(input_node)
+        nncf_input_node_next_onnx_nodes[input_node.node_name] = [node.node_name for node in next_nodes]
+
+    command = ONNXQuantizerInsertionCommand(target_point, nncf_input_node_next_onnx_nodes, quantizer_parameters)
     transformation_layout.register(command)
 
     model_transformer = ONNXModelTransformer(model)
@@ -130,10 +143,16 @@ TARGET_LAYERS_OUTPUT = [['ReLU1_Y'], ['Conv1_Y', 'BN1_Y'], ['Conv1_Y', 'BN1_Y', 
 @pytest.mark.parametrize('target_layers, target_layer_outputs', zip(TARGET_LAYERS, TARGET_LAYERS_OUTPUT))
 def test_output_insertion(target_layers, target_layer_outputs):
     model = LinearModel().onnx_model
+    nncf_graph = GraphConverter.create_nncf_graph(model)
+    nncf_input_node_next_onnx_nodes = {}
+    for input_node in nncf_graph.get_input_nodes():
+        next_nodes = nncf_graph.get_next_nodes(input_node)
+        nncf_input_node_next_onnx_nodes[input_node.node_name] = [node.node_name for node in next_nodes]
+
     transformation_layout = TransformationLayout()
     for target_layer in target_layers:
         target_point = ONNXTargetPoint(TargetType.POST_LAYER_OPERATION, target_layer, 0)
-        command = ONNXOutputInsertionCommand(target_point)
+        command = ONNXOutputInsertionCommand(target_point, nncf_input_node_next_onnx_nodes)
         transformation_layout.register(command)
 
     model_transformer = ONNXModelTransformer(model)
@@ -189,6 +208,12 @@ def test_node_removing(target_layers):
     quantized_model = min_max_quantize_model(model_to_test.input_shape[0], onnx_model)
 
     transformation_layout = TransformationLayout()
+
+    nncf_graph = GraphConverter.create_nncf_graph(onnx_model)
+    nncf_input_node_next_onnx_nodes = {}
+    for input_node in nncf_graph.get_input_nodes():
+        next_nodes = nncf_graph.get_next_nodes(input_node)
+        nncf_input_node_next_onnx_nodes[input_node.node_name] = [node.node_name for node in next_nodes]
 
     for target_layer in target_layers:
         target_point = ONNXTargetPoint(TargetType.LAYER, target_layer, 0)
