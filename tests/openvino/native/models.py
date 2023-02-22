@@ -208,3 +208,20 @@ class FPModel(OVReferenceModel):
         r1 = opset.result(add, name="Result_Add")
         model = ov.Model([r1], [input_1])
         return model
+
+
+@SYNTHETIC_MODELS.register()
+class ComparisonBinaryModel(OVReferenceModel):
+    def _create_ov_model(self):
+        input_shape = [1, 3, 4, 2]
+        input_1 = opset.parameter(input_shape, name="Input")
+        data = self._rng.random(input_shape).astype(np.float32)
+
+        mask = opset.greater_equal(input_1, data, name="GreaterEqual")
+        indices = opset.convert(mask, np.int64, name="Convert")
+        gather = opset.gather(input_1, indices, axis=0, batch_dims=0)
+
+        add = opset.add(input_1, gather, name="Add")
+        r1 = opset.result(add, name="Result_Add")
+        model = ov.Model([r1], [input_1])
+        return model
