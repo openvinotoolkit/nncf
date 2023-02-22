@@ -1,0 +1,29 @@
+strict digraph  {
+"0 Input" [id=0, type=Parameter];
+"1 Input/fq_output_0" [id=1, type=FakeQuantize];
+"2 Add" [id=2, type=Add];
+"3 Gather_6" [id=3, type=Gather];
+"4 GreaterEqual_3" [id=4, type=GreaterEqual];
+"5 Result_Add" [id=5, type=Result];
+"6 Convert_4" [id=6, type=Convert];
+"7 Constant_5" [id=7, type=Constant];
+"8 Constant_2" [id=8, type=Constant];
+"9 Constant_2140" [id=9, type=Constant];
+"10 Constant_2139" [id=10, type=Constant];
+"11 Constant_2138" [id=11, type=Constant];
+"12 Constant_2137" [id=12, type=Constant];
+"0 Input" -> "1 Input/fq_output_0"  [label="[1, 3, 4, 2]", style=solid];
+"1 Input/fq_output_0" -> "2 Add"  [label="[1, 3, 4, 2]", style=solid];
+"1 Input/fq_output_0" -> "3 Gather_6"  [label="[1, 3, 4, 2]", style=solid];
+"1 Input/fq_output_0" -> "4 GreaterEqual_3"  [label="[1, 3, 4, 2]", style=solid];
+"2 Add" -> "5 Result_Add"  [label="[1, 3, 4, 2, 3, 4, 2]", style=solid];
+"3 Gather_6" -> "2 Add"  [label="[1, 3, 4, 2, 3, 4, 2]", style=solid];
+"4 GreaterEqual_3" -> "6 Convert_4"  [label="[1, 3, 4, 2]", style=dashed];
+"6 Convert_4" -> "3 Gather_6"  [label="[1, 3, 4, 2]", style=dashed];
+"7 Constant_5" -> "3 Gather_6"  [label="[]", style=dashed];
+"8 Constant_2" -> "4 GreaterEqual_3"  [label="[1, 3, 4, 2]", style=solid];
+"9 Constant_2140" -> "1 Input/fq_output_0"  [label="[]", style=solid];
+"10 Constant_2139" -> "1 Input/fq_output_0"  [label="[]", style=solid];
+"11 Constant_2138" -> "1 Input/fq_output_0"  [label="[]", style=solid];
+"12 Constant_2137" -> "1 Input/fq_output_0"  [label="[]", style=solid];
+}
