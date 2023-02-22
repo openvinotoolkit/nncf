@@ -37,7 +37,7 @@ from nncf.experimental.openvino_native.quantization.quantize import quantize_imp
 from nncf.torch.quantization.quantize import quantize_impl_experimental as pt_impl_experimental
 from nncf.torch.nncf_network import NNCFNetwork
 from tests.shared.command import Command
-from conftest import QuantizationBackend
+from conftest import PipelineType
 from conftest import RunInfo
 
 NOT_AVAILABLE_MESSAGE = 'N/A'
@@ -391,11 +391,11 @@ def ov_runner(model, calibration_dataset,
 
 
 RUNNERS = {
-    QuantizationBackend.TORCH: torch_runner,
-    QuantizationBackend.TORCH_PTQ: torch_ptq_runner,
-    QuantizationBackend.ONNX: onnx_runner,
-    QuantizationBackend.OV_NATIVE: ov_native_runner,
-    QuantizationBackend.OV: ov_runner,
+    PipelineType.TORCH: torch_runner,
+    PipelineType.TORCH_PTQ: torch_ptq_runner,
+    PipelineType.ONNX: onnx_runner,
+    PipelineType.OV_NATIVE: ov_native_runner,
+    PipelineType.OV: ov_runner,
 }
 
 
@@ -419,7 +419,7 @@ def run_ptq_timm(data, output, model_name, backends,
         orig_perf, orig_acc = benchmark_torch_model(
             model, batch_one_dataloader, model_name, output_folder
         )
-        runinfos[QuantizationBackend.FP32] = RunInfo(orig_acc, orig_perf, 'OK')
+        runinfos[PipelineType.FP32] = RunInfo(orig_acc, orig_perf, 'OK')
 
         val_dataloader = get_torch_dataloader(data, transform, batch_size=128)
 
@@ -446,7 +446,7 @@ def run_ptq_timm(data, output, model_name, backends,
         traceback_path = Path.joinpath(output_folder, model_name + '_error_log.txt')
         create_error_log(traceback_path)
         status = f'An error occurred while running {model_name}. Traceback: {traceback_path}'
-        runinfos[QuantizationBackend.FP32] = RunInfo(-1, -1, status)
+        runinfos[PipelineType.FP32] = RunInfo(-1, -1, status)
         process_connection.send(runinfos)
         raise error
 
@@ -466,7 +466,7 @@ def get_error_msg(traceback_path: PosixPath, model_name: str) -> str:
 @pytest.mark.parametrize('model_args', VALIDATION_SCOPE,
                          ids=[desk['name'] for desk in VALIDATION_SCOPE])
 def test_ptq_timm(data, output, result, model_args, backends_list):  # pylint: disable=W0703
-    backends = [QuantizationBackend[backend] for backend in backends_list.split(',')]
+    backends = [PipelineType[backend] for backend in backends_list.split(',')]
     model_name = model_args['name']
     quantization_params = model_args['quantization_params']
     main_connection, process_connection = Pipe()

@@ -15,7 +15,8 @@ import pytest
 import numpy as np
 from pathlib import Path
 from enum import Enum
-from dataclasses import dataclass, fields
+from dataclasses import dataclass
+from dataclasses import fields
 
 
 def pytest_addoption(parser):
@@ -28,7 +29,7 @@ def pytest_configure(config):
     config.test_results = {}
 
 
-class QuantizationBackend(Enum):
+class PipelineType(Enum):
     FP32 = 'FP32'
     TORCH = 'Torch INT8'
     TORCH_PTQ = 'Torch PTQ INT8'
@@ -58,17 +59,17 @@ def pytest_runtest_makereport(item, call):
         test_results = item.config.test_results
         header = ["Model name"]
         for info in fields(RunInfo):
-            for backend in QuantizationBackend:
-                header.append(" ".join((backend.value, info.name)))
+            for pipeline_type in PipelineType:
+                header.append(" ".join((pipeline_type.value, info.name)))
 
         table = []
         for model_name, run_infos in test_results.items():
             row = [model_name]
             for info in fields(RunInfo):
-                for backend in QuantizationBackend:
+                for pipeline_type in PipelineType:
                     data = '-'
-                    if backend in run_infos:
-                        data = getattr(run_infos[backend], info.name)
+                    if pipeline_type in run_infos:
+                        data = getattr(run_infos[pipeline_type], info.name)
                     row.append(data)
             table.append(row)
 

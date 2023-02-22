@@ -191,6 +191,8 @@ class PostTrainingQuantization(Algorithm):
             # TODO (l-bat): Remove after OpenVINO Native is removed from experimental
             if backend == BackendType.OPENVINO:
                 nncf_logger.warning('You are using experimental OpenVINO backend for the Post-training quantization.')
+            if backend == BackendType.TORCH:
+                nncf_logger.warning('You are using experimental Torch backend for the Post-training quantization.')
 
             statistics_aggregator = self._create_statistics_aggregator(dataset, backend)
             for algorithm in self.algorithms:

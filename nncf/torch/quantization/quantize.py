@@ -16,6 +16,7 @@ import torch
 from copy import deepcopy
 from typing import Any, Dict, Optional, Tuple
 
+from nncf.common.logging import nncf_logger
 from nncf.quantization.algorithms.post_training.algorithm import PostTrainingQuantizationParameters
 from nncf.quantization.algorithms.post_training.algorithm import PostTrainingQuantization
 from nncf.quantization.algorithms.min_max.algorithm import MinMaxQuantization
@@ -160,6 +161,8 @@ def quantize_impl(model: torch.nn.Module,
     if fast_bias_correction is False:
         raise ValueError(f'fast_bias_correction={fast_bias_correction} is not '
                           'supported')
+    nncf_logger.warning('Bias correction and fast bias correction algorithms'
+                        ' are not supported by Torch backend by now.')
     if ignored_scope is not None and ignored_scope.types is not None:
         raise RuntimeError('Quantization algorithm from the PyTorch backend '
                             'does not support operation types in the ignored '
@@ -235,7 +238,8 @@ def quantize_impl_experimental(
     if fast_bias_correction is False:
         raise ValueError(f'fast_bias_correction={fast_bias_correction} is not '
                           'supported')
-
+    nncf_logger.warning('Bias correction and fast bias correction algorithms'
+                        ' are not supported by Torch backend by now.')
     if model_type == ModelType.TRANSFORMER:
         raise ValueError(f'Model type {model_type} is not ' 'supported')
 
