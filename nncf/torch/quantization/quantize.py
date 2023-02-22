@@ -29,6 +29,7 @@ from nncf.parameters import convert_ignored_scope_to_list
 from nncf.parameters import IgnoredScope
 from nncf.parameters import ModelType
 from nncf.parameters import TargetDevice
+from nncf.torch.nncf_network import NNCFNetwork
 from nncf.torch.dynamic_graph.context import no_nncf_trace
 from nncf.torch.dynamic_graph.io_handling import replicate_same_tensors
 from nncf.torch.dynamic_graph.io_handling import wrap_nncf_model_inputs_with_objwalk
@@ -154,7 +155,7 @@ def quantize_impl(model: torch.nn.Module,
                   subset_size: int,
                   fast_bias_correction: bool,
                   model_type: Optional[ModelType] = None,
-                  ignored_scope: Optional[IgnoredScope] = None) -> torch.nn.Module:
+                  ignored_scope: Optional[IgnoredScope] = None) -> NNCFNetwork:
     """
     Implementation of the `quantize()` method for the PyTorch backend.
     """
@@ -231,7 +232,7 @@ def quantize_impl_experimental(
         subset_size: int,
         fast_bias_correction: bool,
         model_type: Optional[ModelType] = None,
-        ignored_scope: Optional[IgnoredScope] = None) -> torch.nn.Module:
+        ignored_scope: Optional[IgnoredScope] = None) -> NNCFNetwork:
     """
     Experimental implementation of the `quantize()` method for the PyTorch backend.
     """
