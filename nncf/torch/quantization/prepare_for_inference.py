@@ -30,7 +30,6 @@ def replace_quantizer_to_torch_native_module(model: NNCFNetwork) -> NNCFNetwork:
 
     :return: The modified NNCF network.
     """
-
     for key in model.external_quantizers.keys():
         if model.external_quantizers[key].is_enabled_quantization():
             model.external_quantizers[key] = convert_to_torch_fakequantizer(model.external_quantizers[key])
@@ -126,7 +125,6 @@ def remove_disabled_quantizers(model: NNCFNetwork) -> NNCFNetwork:
 
     :return: The modified NNCF network.
     """
-
     if hasattr(model, "external_quantizers"):
         for key in list(model.external_quantizers.keys()):
             op = model.external_quantizers[key]

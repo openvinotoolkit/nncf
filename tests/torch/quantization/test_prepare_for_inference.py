@@ -23,6 +23,7 @@ from nncf.torch.quantization.layers import PTQuantizerSpec
 from nncf.torch.quantization.layers import SymmetricQuantizer
 from nncf.torch.quantization.prepare_for_inference import convert_to_torch_fakequantizer
 from tests.common.quantization.data_generators import check_outputs
+from tests.common.quantization.data_generators import generate_lazy_sweep_data
 from tests.common.quantization.data_generators import generate_random_low_and_range_by_input_size
 from tests.common.quantization.data_generators import generate_random_scale_by_input_size
 from tests.common.quantization.data_generators import generate_sweep_data
@@ -30,50 +31,33 @@ from tests.common.quantization.data_generators import get_symmetric_range_level
 from tests.torch.helpers import BasicConvTestModel
 from tests.torch.helpers import create_compressed_model_and_algo_for_test
 from tests.torch.helpers import register_bn_adaptation_init_args
-from tests.torch.pruning.helpers import BigPruningTestModel
 from tests.torch.quantization.test_functions import get_test_data
 
 
-def _get_config_for_algo(algo_names, input_size, quant_mode="symmetric", overflow_fix="enable"):
+def _get_config_for_algo(input_size, quant_mode="symmetric", overflow_fix="enable"):
     config = NNCFConfig()
     config.update({"model": "model", "input_info": {"sample_size": input_size}, "compression": []})
 
-    if "quantization" in algo_names:
-        config["compression"].append(
-            {
-                "algorithm": "quantization",
-                "initializer": {"range": {"num_init_samples": 0}},
-                "weights": {"mode": quant_mode},
-                "activations": {"mode": quant_mode},
-                "overflow_fix": overflow_fix,
-            }
-        )
-    if "filter_pruning" in algo_names:
-        config["compression"].append(
-            {
-                "algorithm": "filter_pruning",
-                "params": {"schedule": "baseline", "num_init_steps": 1},
-                "pruning_init": 0.5,
-            }
-        )
-    if "const_sparsity" in algo_names:
-        config["compression"].append(
-            {
-                "algorithm": "const_sparsity",
-            }
-        )
+    config["compression"].append(
+        {
+            "algorithm": "quantization",
+            "initializer": {"range": {"num_init_samples": 0}},
+            "weights": {"mode": quant_mode},
+            "activations": {"mode": quant_mode},
+            "overflow_fix": overflow_fix,
+        }
+    )
 
     return config
 
 
-def _gen_input_tensor(shape):
-    n = np.prod(list(shape))
-    res = torch.Tensor(range(n)) / torch.Tensor([n - 1]) * torch.Tensor([2]) - torch.Tensor([1.0])
-    res[n // 2] = 0.0
-    return res.reshape(shape)
+def _idfn(val):
+    if isinstance(val, tuple):
+        return "{}".format("-".join([str(v) for v in val]))
+    return None
 
 
-def _check_operators(model):
+def check_quantizer_operators(model):
     """Check that model contains only 8bit FakeQuantize operators."""
 
     if hasattr(model, "external_quantizers"):
@@ -99,12 +83,6 @@ def _check_operators(model):
                 op = nncf_module.post_ops(key).op
                 assert isinstance(op, FakeQuantize)
                 assert op.quant_max - op.quant_min == 255
-
-
-def _idfn(val):
-    if isinstance(val, tuple):
-        return "{}".format("-".join([str(v) for v in val]))
-    return None
 
 
 INPUT_TEST_SCALES = (
@@ -263,122 +241,25 @@ def test_converting_asymmetric_quantizer(input_size, is_per_channel, is_weights,
 def test_prepare_for_inference_quantization(mode, overflow_fix):
     model = BasicConvTestModel()
 
-    config = _get_config_for_algo("quantization", model.INPUT_SIZE, mode, overflow_fix)
+    config = _get_config_for_algo(model.INPUT_SIZE, mode, overflow_fix)
     register_bn_adaptation_init_args(config)
     compressed_model, compression_ctrl = create_compressed_model_and_algo_for_test(model, config)
 
-    input_tensor = _gen_input_tensor(model.INPUT_SIZE)
+    input_tensor = generate_lazy_sweep_data(model.INPUT_SIZE)
     x_nncf = compressed_model(input_tensor)
 
     inference_model = compression_ctrl.prepare_for_inference()
     x_torch = inference_model(input_tensor)
 
-    _check_operators(inference_model)
-
-    assert torch.all(torch.isclose(x_nncf, x_torch)), f"{x_nncf.view(-1)} != {x_torch.view(-1)}"
-
-
-def test_prepare_for_inference_pruning():
-    input_size = [1, 1, 8, 8]
-    model = BigPruningTestModel()
-    config = _get_config_for_algo("filter_pruning", input_size)
-    compressed_model, compression_ctrl = create_compressed_model_and_algo_for_test(model, config)
-
-    input_tensor = _gen_input_tensor(input_size)
-    x_nncf = compressed_model(input_tensor)
-
-    inference_model = compression_ctrl.prepare_for_inference()
-    x_torch = inference_model(input_tensor)
-
-    _check_operators(inference_model)
-
-    conv2_wight = inference_model.nncf_module.conv2.weight.data
-    assert torch.count_nonzero(conv2_wight) * 2 == torch.numel(conv2_wight), "Model was not pruned"
-
-    assert torch.equal(x_nncf, x_torch), f"{x_nncf=} != {x_torch}"
-
-
-def test_prepare_for_inference_sparsity():
-    input_size = [1, 1, 8, 8]
-    model = BasicConvTestModel()
-    config = _get_config_for_algo(["const_sparsity"], input_size)
-    compressed_model, compression_ctrl = create_compressed_model_and_algo_for_test(model, config)
-
-    compressed_model.conv.weight.data = torch.ones_like(compressed_model.conv.weight.data)
-    assert compression_ctrl.sparsified_module_info[0].operand.binary_mask.shape[0] == 2
-    compression_ctrl.sparsified_module_info[0].operand.binary_mask[0] = 0
-
-    input_tensor = _gen_input_tensor(input_size)
-    x_nncf = compressed_model(input_tensor)
-
-    inference_model = compression_ctrl.prepare_for_inference()
-    x_torch = inference_model(input_tensor)
-
-    _check_operators(inference_model)
-
-    nonzero_inference_model = torch.count_nonzero(inference_model.conv.weight.data)
-    nonzero_binary_mask = torch.count_nonzero(compressed_model.conv.pre_ops["0"].operand.binary_mask)
-    assert nonzero_inference_model == 4
-    assert nonzero_inference_model == nonzero_binary_mask
-
-    assert torch.all(torch.isclose(x_nncf, x_torch)), f"{x_nncf.view(-1)} != {x_torch.view(-1)}"
-
-
-def test_prepare_for_inference_quantization_and_sparsity():
-    input_size = [1, 1, 8, 8]
-    model = BasicConvTestModel()
-    config = _get_config_for_algo(["const_sparsity", "quantization"], input_size)
-    register_bn_adaptation_init_args(config)
-
-    compressed_model, compression_ctrl = create_compressed_model_and_algo_for_test(model, config)
-
-    compressed_model.conv.weight.data = torch.ones_like(compressed_model.conv.weight.data)
-    assert compression_ctrl.child_ctrls[1].sparsified_module_info[0].operand.binary_mask.shape[0] == 2
-    compression_ctrl.child_ctrls[1].sparsified_module_info[0].operand.binary_mask[0] = 0
-
-    input_tensor = _gen_input_tensor(input_size)
-    x_nncf = compressed_model(input_tensor)
-
-    inference_model = compression_ctrl.prepare_for_inference()
-    x_torch = inference_model(input_tensor)
-
-    _check_operators(inference_model)
-
-    nonzero_inference_model = torch.count_nonzero(inference_model.conv.weight.data)
-    nonzero_binary_mask = torch.count_nonzero(compressed_model.conv.pre_ops["0"].operand.binary_mask)
-    assert nonzero_inference_model == 4
-    assert nonzero_inference_model == nonzero_binary_mask
-
-    assert torch.all(torch.isclose(x_nncf, x_torch)), f"{x_nncf.view(-1)} != {x_torch.view(-1)}"
-
-
-def test_prepare_for_inference_quantization_and_pruning():
-    input_size = [1, 1, 8, 8]
-    model = BigPruningTestModel()
-    config = _get_config_for_algo(["filter_pruning", "quantization"], input_size)
-    register_bn_adaptation_init_args(config)
-
-    compressed_model, compression_ctrl = create_compressed_model_and_algo_for_test(model, config)
-
-    input_tensor = _gen_input_tensor(input_size)
-    x_nncf = compressed_model(input_tensor)
-
-    inference_model = compression_ctrl.prepare_for_inference()
-    x_torch = inference_model(input_tensor)
-
-    _check_operators(inference_model)
-
-    conv2_wight = inference_model.nncf_module.conv2.weight.data
-    assert torch.count_nonzero(conv2_wight) * 2 == torch.numel(conv2_wight), "Model was not pruned"
+    check_quantizer_operators(inference_model)
 
     assert torch.all(torch.isclose(x_nncf, x_torch)), f"{x_nncf.view(-1)} != {x_torch.view(-1)}"
 
 
 @pytest.mark.parametrize("make_model_copy", (True, False))
-@pytest.mark.parametrize("algo", (["quantization"], ["filter_pruning"], ["filter_pruning", "quantization"]))
-def test_make_model_copy(algo, make_model_copy):
+def test_make_model_copy(make_model_copy):
     model = BasicConvTestModel()
-    config = _get_config_for_algo(algo, model.INPUT_SIZE)
+    config = _get_config_for_algo(model.INPUT_SIZE)
     register_bn_adaptation_init_args(config)
     compressed_model, compression_ctrl = create_compressed_model_and_algo_for_test(model, config)
 
@@ -390,16 +271,3 @@ def test_make_model_copy(algo, make_model_copy):
         assert id(inference_model) == id(compressed_model)
 
     assert id(compressed_model) == id(compression_ctrl.model)
-    if len(algo) > 1:
-        for ctrl in compression_ctrl.child_ctrls:
-            assert id(compressed_model) == id(ctrl.model)
-
-
-def test_notimplemented_prepare_for_inference():
-    model = BasicConvTestModel()
-    config = NNCFConfig()
-    config.update({"model": "model", "input_info": {"sample_size": model.INPUT_SIZE}, "compression": []})
-    _, compression_ctrl = create_compressed_model_and_algo_for_test(model, config)
-
-    with pytest.raises(NotImplementedError):
-        compression_ctrl.prepare_for_inference()
