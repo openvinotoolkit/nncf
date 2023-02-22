@@ -63,17 +63,16 @@ class ONNXModelTransformer(ModelTransformer):
         :return: Target edge name.
         """
         if transform_type == TargetType.PRE_LAYER_OPERATION:
-            target_edge_name = onnx_graph.get_node_edge_names(node_name)['input'][port_id]
-        elif transform_type == TargetType.POST_LAYER_OPERATION:
+            return onnx_graph.get_node_edge_names(node_name)['input'][port_id]
+        if transform_type == TargetType.POST_LAYER_OPERATION:
             if node_name in self._nncf_input_node_next_nodes:  # ADD INPUT NODE CASE
                 nncf_nodes = self._nncf_input_node_next_nodes[node_name]
                 node_names = map(lambda node: node.node_name, nncf_nodes)
                 input_edges = set(onnx_graph.get_node_edge_names(name)['input'][port_id] for name in node_names)
                 assert len(input_edges) == 1
-                target_edge_name = input_edges.pop()
+                return input_edges.pop()
             else:
-                target_edge_name = onnx_graph.get_node_edge_names(node_name)['output'][port_id]
-        return target_edge_name
+                return onnx_graph.get_node_edge_names(node_name)['output'][port_id]
 
     def transform(self, transformation_layout: TransformationLayout) -> onnx.ModelProto:
         """
