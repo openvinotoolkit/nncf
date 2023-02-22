@@ -54,7 +54,7 @@ def test_quantizer_insertion(target_layers, should_raise, quantizer_number):
         command = ONNXQuantizerInsertionCommand(
             target_point,
             nncf_input_node_next_onnx_nodes,
-            ONNXQuantizerLayerParameters(np.array(1), np.array(0), np.uint8))
+            ONNXQuantizerLayerParameters(np.array(1), np.array(0), tensor_type=np.uint8))
         transformation_layout.register(command)
 
     model_transformer = ONNXModelTransformer(model)
@@ -101,7 +101,7 @@ def test_inserted_quantizer_parameters(test_parameters):
     model = LinearModel().onnx_model
     transformation_layout = TransformationLayout()
     quantizer_parameters = ONNXQuantizerLayerParameters(test_parameters.scale, test_parameters.zero_point,
-                                                        None, tensor_type=test_parameters.onnx_dtype)
+                                                        tensor_type=test_parameters.onnx_dtype)
     target_point = ONNXTargetPoint(TargetType.POST_LAYER_OPERATION, test_parameters.target_layer, 0)
 
     nncf_graph = GraphConverter.create_nncf_graph(model)

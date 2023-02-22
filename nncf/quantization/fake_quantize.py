@@ -193,16 +193,17 @@ def calculate_quantizer_parameters(statistics: MinMaxTensorStatistic,
         narrow_range = quant_group == QuantizerGroup.WEIGHTS
         _, _, levels = calculate_symmetric_level_ranges(quantizer_config.num_bits,
                                                         signed=True, narrow_range=narrow_range)
-        level_low, level_high = symmetric_range(min_values, max_values,
+        input_low, input_high = symmetric_range(min_values, max_values,
                                                 levels, quantizer_config, quant_group)
     else:
         _, _, levels = calculate_asymmetric_level_ranges(quantizer_config.num_bits, narrow_range=False)
-        level_low, level_high = asymmetric_range(min_values, max_values, quantizer_config, quant_group)
+        input_low, input_high = asymmetric_range(min_values, max_values, quantizer_config, quant_group)
 
     if not quantizer_config.per_channel:
     # if quant_group == QuantizerGroup.ACTIVATIONS and not quantizer_config.per_channel:
-        level_low = np.squeeze(level_low)
-        level_high = np.squeeze(level_high)
+        input_low = np.squeeze(input_low)
+        input_high = np.squeeze(input_high)
 
-    output_low, output_high = level_low, level_high
-    return FakeQuantizeParameters(level_low, level_high, output_low, output_high, levels)
+    input_low, input_high = np.array(input_low), np.array(input_high)
+    output_low, output_high = input_low, input_high
+    return FakeQuantizeParameters(input_low, input_high, output_low, output_high, levels)
