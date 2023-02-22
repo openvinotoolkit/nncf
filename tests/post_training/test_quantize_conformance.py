@@ -34,7 +34,7 @@ from torchvision.transforms import InterpolationMode
 
 import nncf
 from nncf.experimental.openvino_native.quantization.quantize import quantize_impl as ov_quantize_impl
-from nncf.torch.quantization.quantize import quantize_impl_experimental as pt_impl_experimental
+from nncf.experimental.torch.quantization.quantize import quantize_impl as pt_impl_experimental
 from nncf.torch.nncf_network import NNCFNetwork
 from tests.shared.command import Command
 from conftest import PipelineType
