@@ -62,7 +62,6 @@ class ONNXModelTransformer(ModelTransformer):
         :param onnx_graph: ONNXGraph.
         :return: Target edge name.
         """
-        target_edge_name = None
         if transform_type == TargetType.PRE_LAYER_OPERATION:
             target_edge_name = onnx_graph.get_node_edge_names(node_name)['input'][port_id]
         elif transform_type == TargetType.POST_LAYER_OPERATION:
@@ -106,14 +105,15 @@ class ONNXModelTransformer(ModelTransformer):
                 model_extraction_transformation = transformation
             elif isinstance(transformation, ONNXQDQNodeRemovingCommand):
                 qdq_node_removing_transformations.append(transformation)
-        model = self._model
         # Inplace transformations, using deepcopy of model
-        if quantizer_insert_transformations:
-            model = self._apply_quantizer_insertion_transformations(model, quantizer_insert_transformations)
-        if bias_correction_transformations:
-            model = self._apply_bias_correction_transformations(model, bias_correction_transformations)
-        if qdq_node_removing_transformations:
-            model = self._apply_qdq_node_removing_transformations(model, qdq_node_removing_transformations)
+        if quantizer_insert_transformations or bias_correction_transformations or qdq_node_removing_transformations:
+            model = deepcopy(self._model)
+            if quantizer_insert_transformations:
+                model = self._apply_quantizer_insertion_transformations(model, quantizer_insert_transformations)
+            if bias_correction_transformations:
+                model = self._apply_bias_correction_transformations(model, bias_correction_transformations)
+            if qdq_node_removing_transformations:
+                model = self._apply_qdq_node_removing_transformations(model, qdq_node_removing_transformations)
         # Transformations that create new model
         if output_insert_transformations:
             model = self._apply_output_insertion_transformations(output_insert_transformations)
@@ -157,12 +157,18 @@ class ONNXModelTransformer(ModelTransformer):
             type_proto = onnx.helper.make_tensor_type_proto(onnx_graph.get_edge_dtype(output), shape=None)
             model_outputs.append(onnx.helper.make_value_info(name=output, type_proto=type_proto))
 
-        graph = onnx.helper.make_graph(nodes=model.graph.node, name=model.graph.name,
-                                       inputs=model.graph.input, outputs=model_outputs,
-                                       initializer=model.graph.initializer, value_info=model.graph.value_info)
-        new_model = onnx.helper.make_model(graph, ir_version=model.ir_version, producer_name=model.producer_name,
-                                           producer_version=model.producer_version, domain=model.domain,
-                                           model_version=model.model_version, doc_string=model.doc_string)
+        graph = onnx.helper.make_graph(nodes=model.graph.node,
+                                       name=model.graph.name,
+                                       inputs=model.graph.input,
+                                       outputs=model_outputs,
+                                       initializer=model.graph.initializer,
+                                       value_info=model.graph.value_info)
+        new_model = onnx.helper.make_model(graph, ir_version=model.ir_version,
+                                           producer_name=model.producer_name,
+                                           producer_version=model.producer_version,
+                                           domain=model.domain,
+                                           model_version=model.model_version,
+                                           doc_string=model.doc_string)
         if model.metadata_props:
             values = {p.key: p.value for p in model.metadata_props}
             onnx.helper.set_model_props(new_model, values)
@@ -183,7 +189,6 @@ class ONNXModelTransformer(ModelTransformer):
         :param transformations: QuantizeLinear-DequantizeLinear nodes pair insertion transformation commands.
         :return: New model with inserted QuantizeLinear-DequantizeLinear nodes pairs.
         """
-        model = deepcopy(model)
         self._added_target_edges = Counter()
         for transformation in transformations:
             model = self._insert_quantizer_dequantizer(model, transformation)
@@ -264,7 +269,7 @@ class ONNXModelTransformer(ModelTransformer):
         return onnx_scale_tensor, onnx_zero_point_tensor
 
     def _get_quantizer_dequantizer_edge_name(self, transformation: ONNXQuantizerInsertionCommand,
-                                             onnx_graph: ONNXGraph) -> Optional[str]:
+                                             onnx_graph: ONNXGraph) -> str:
         """
         Returns an edge name on which QuantizeLinear-DequantizeLinear nodes pair has to be inserted.
 
@@ -341,7 +346,6 @@ class ONNXModelTransformer(ModelTransformer):
         :param transformations: Bias correction transformations.
         :return: Copy of original model with updated biases.
         """
-        model = deepcopy(model)
         onnx_graph = ONNXGraph(model)
         for transformation in transformations:
             bias_tensor_position = transformation.target_point.port_id
@@ -389,7 +393,6 @@ class ONNXModelTransformer(ModelTransformer):
         :param transformations: Nodes removing transformations.
         :return: Model with removed nodes.
         """
-        model = deepcopy(model)
         onnx_graph = ONNXGraph(model)
         for transformation in transformations:
             node = onnx_graph.get_node_by_name(transformation.target_point.target_node_name)

@@ -97,7 +97,8 @@ class OVModelTransformer(ModelTransformer):
             model = self._apply_output_insertion_transformations(model, output_insertion_transformations)
         return model
 
-    def _apply_output_insertion_transformations(self, model: ov.Model,
+    @staticmethod
+    def _apply_output_insertion_transformations(model: ov.Model,
                                                 transformations: List[OVOutputInsertionCommand]) -> ov.Model:
         """
         Applies incoming transformations to the model.
@@ -107,7 +108,7 @@ class OVModelTransformer(ModelTransformer):
         :return: Model with inserted outputs.
         """
         extra_model_outputs = OVModelTransformer._get_extra_model_outputs(model, transformations)
-        return self._insert_outputs(model, outputs=extra_model_outputs)
+        return OVModelTransformer._insert_outputs(model, outputs=extra_model_outputs)
 
     @staticmethod
     def _get_extra_model_outputs(model: ov.Model,
@@ -155,7 +156,8 @@ class OVModelTransformer(ModelTransformer):
 
         return ov.Model(model_outputs + extra_model_outputs, params)
 
-    def _apply_fq_nodes_removing_transformation(self, model: ov.Model,
+    @staticmethod
+    def _apply_fq_nodes_removing_transformation(model: ov.Model,
                                                 transformations: List[OVFQNodeRemovingCommand]) -> ov.Model:
         """
         Removes the layers from the model.
@@ -175,7 +177,8 @@ class OVModelTransformer(ModelTransformer):
             del name_to_node_mapping[transformation.target_point.target_node_name]
         return model
 
-    def _apply_quantizer_insertion_transformations(self, model: ov.Model,
+    @staticmethod
+    def _apply_quantizer_insertion_transformations(model: ov.Model,
                                                    transformations: List[OVQuantizerInsertionCommand]) -> ov.Model:
         """
         Applies transformations on the model.
@@ -193,12 +196,21 @@ class OVModelTransformer(ModelTransformer):
                         break
         name_to_node_mapping = OVModelTransformer._get_name_to_node_mapping(model)
         for transformation in transformations:
-            self._insert_fake_quantize_op(transformation, name_to_node_mapping, model_precision)
+            OVModelTransformer._insert_fake_quantize_op(transformation, name_to_node_mapping, model_precision)
         return model
 
-    def _insert_fake_quantize_op(self, transformation: OVQuantizerInsertionCommand,
+    @staticmethod
+    def _insert_fake_quantize_op(transformation: OVQuantizerInsertionCommand,
                                  name_to_node_mapping: Dict[str, ov.Node],
                                  model_precision: ModelPrecision) -> None:
+        """
+        Inserts FakeQuantize Operation to a model which name_to_node_mapping is passed.
+
+        :param transformation: FakeQuantize insertion command.
+        :param name_to_node_mapping: Mapping from node name to node instance.
+        :param model_precision: Precision of the Model.
+        :return: None
+        """
         fq_params = transformation.quantizer_parameters
         input_low = fq_params.input_low
         input_high = fq_params.input_high
@@ -238,7 +250,8 @@ class OVModelTransformer(ModelTransformer):
         else:
             raise RuntimeError(f'Incorrect target point type {transform_type}')
 
-    def _apply_bias_correction_transformations(self, model, transformations: List[OVBiasCorrectionCommand]) -> ov.Model:
+    @staticmethod
+    def _apply_bias_correction_transformations(model, transformations: List[OVBiasCorrectionCommand]) -> ov.Model:
         """
         Applies bias correction transformations on the model.
 
@@ -273,7 +286,8 @@ class OVModelTransformer(ModelTransformer):
             biased_port.replace_source_output(new_bias.output(0))
         return model
 
-    def _apply_model_extraction_transformation(self, model: ov.Model,
+    @staticmethod
+    def _apply_model_extraction_transformation(model: ov.Model,
                                                transformation: OVModelExtractionCommand) -> ov.Model:
         """
         Extracts sub-model from the original based on the inputs and outputs names.
@@ -286,7 +300,7 @@ class OVModelTransformer(ModelTransformer):
         params, results = [], []
         for input_name in transformation.inputs:
             input_node = name_to_node_mapping[input_name]
-            if input_name in [tensor.node.get_friendly_name() for tensor in self._model.inputs]:
+            if input_name in [tensor.node.get_friendly_name() for tensor in model.inputs]:
                 params.append(input_node)
                 continue
             input_port = input_node.input(0)
@@ -304,6 +318,6 @@ class OVModelTransformer(ModelTransformer):
                 results.append(new_result)
 
         if not results:
-            results = [r.node for r in self._model.outputs]
+            results = [r.node for r in model.outputs]
 
         return ov.Model(results, params)

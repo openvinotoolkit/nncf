@@ -219,9 +219,9 @@ class FastBiasCorrection(Algorithm):
                           model_transformer: ModelTransformer,
                           node_name: str) -> TModel:
         """
-        Extracts sub-model from the original based on the input & output tensor names.
+        Extracts sub-model using backend-specific ModelTransformer.
 
-        :param model: Backend-specific model.
+        :param model_transformer: Backend-specific ModelTransformer.
         :param node_name: Name of the node that should be a center of the sub-model.
         :return: Backend-specific sub-model.
         """
