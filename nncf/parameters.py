@@ -11,9 +11,12 @@
  limitations under the License.
 """
 
+import re
 from enum import Enum
 from typing import List, Optional
 
+from nncf.common.logging import nncf_logger
+from nncf.common.graph.graph import NNCFGraph
 
 class TargetDevice(Enum):
     """
@@ -117,4 +120,44 @@ def convert_ignored_scope_to_list(ignored_scope: Optional[IgnoredScope]) -> List
     if ignored_scope.types is not None:
         raise RuntimeError('Legacy ignored scope format does not support '
                            'operation types')
+    return results
+
+
+def get_ignored_node_names_from_ignored_scope(ignored_scope: IgnoredScope,
+                                              nncf_graph: NNCFGraph) -> List[str]:
+    """
+    Returns list of ignored names according to ignored scope and NNCFGraph.
+
+    :param ignored_scope: Given ignored scope instance.
+    :param nncf_grpah: Given NNCFGrpah.
+    :returns: List of NNCF node names from given NNCFGraph specified in given ignored scope.
+    """
+    node_names = [node.node_name for node in nncf_graph.get_all_nodes()]
+    matched_by_names = []
+    if ignored_scope.names:
+        for ignored_node_name in ignored_scope.names:
+            if ignored_node_name in node_names:
+                matched_by_names.append(ignored_node_name)
+        nncf_logger.info(f'{len(matched_by_names)} out of {len(ignored_scope.names)}'
+                          ' ignored nodes was found by name in the NNCFGraph')
+
+    matched_by_patterns = []
+    if ignored_scope.patterns:
+        for str_pattern in ignored_scope.patterns:
+            pattern = re.compile(str_pattern)
+            matches = list(filter(pattern.match, node_names))
+            matched_by_patterns.extend(matches)
+        nncf_logger.info(f'{matched_by_patterns}'
+                          ' ignored nodes was found by patterns in the NNCFGraph')
+
+    matched_by_types = []
+    if ignored_scope.types:
+        for node in nncf_graph.get_all_nodes():
+            if node.node_type in ignored_scope.types:
+                matched_by_types.append(node.node_name)
+        nncf_logger.info(f'{matched_by_types}'
+                          ' ignored nodes was found by types in the NNCFGraph')
+
+    results = list(set(matched_by_names + matched_by_types + matched_by_patterns))
+    nncf_logger.info(f'{len(results)} ignored nodes was found in total')
     return results

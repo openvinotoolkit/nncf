@@ -16,6 +16,8 @@ from typing import Dict, List, TypeVar, Optional, OrderedDict
 import collections
 
 from nncf import Dataset
+from nncf.parameters import IgnoredScope
+from nncf.parameters import get_ignored_node_names_from_ignored_scope
 from nncf.common.graph.graph import NNCFGraph
 from nncf.common.graph.transformations.commands import TargetType
 from nncf.common.graph.transformations.commands import TargetPoint
@@ -76,7 +78,7 @@ class MinMaxQuantizationParameters(AlgorithmParameters):
                  target_device: TargetDevice = TargetDevice.ANY,
                  range_type: Optional[RangeType] = None,
                  quantize_outputs: bool = False,
-                 ignored_scopes: Optional[List[str]] = None,
+                 ignored_scopes: Optional[IgnoredScope] = None,
                  ):
         """
         :param number_samples: Number of samples for the statistics collection.
@@ -99,13 +101,13 @@ class MinMaxQuantizationParameters(AlgorithmParameters):
         :param target_device: Target device for the settings of the quantization pipeline.
         :param range_type: Type of statistics range calculation.
         :param quantize_outputs: Boolean value that says whether quantize outputs or not.
-        :param ignored_scopes: List of the layers which input must not be quantized.
+        :param ignored_scopes: Desrciptor of the layers which input must not be quantized.
         """
         self.number_samples = number_samples
         self.target_device = target_device
         self.range_type = range_type
         self.quantize_outputs = quantize_outputs
-        self.ignored_scopes = [] if ignored_scopes is None else ignored_scopes
+        self.ignored_scopes = IgnoredScope() if ignored_scopes is None else ignored_scopes
         self.global_quantizer_constraints = {}
         if weight_granularity is not None:
             weight_granularity = weight_granularity == Granularity.PERCHANNEL
@@ -246,7 +248,8 @@ class MinMaxQuantization(Algorithm):
         hw_config_path = self._backend_entity.hw_config.get_path_to_hw_config(hw_config_type)
         hw_config = self._backend_entity.hw_config.from_json(hw_config_path)
         weight_nodes = nncf_graph.get_nodes_by_metatypes(self._backend_entity.layers_with_weights_metatypes)
-        weight_nodes = [node for node in weight_nodes if node.node_name not in self._parameters.ignored_scopes]
+        ignored_names = get_ignored_node_names_from_ignored_scope(self._parameters.ignored_scopes, nncf_graph)
+        weight_nodes = [node for node in weight_nodes if node.node_name not in ignored_names]
         default_weight_qconfig = self._get_default_qconfig(
             self._parameters.global_quantizer_constraints[QuantizerGroup.WEIGHTS])
         weighted_node_and_qconf_lists = assign_qconfig_lists_to_modules(nodes_with_weights=weight_nodes,
@@ -261,7 +264,7 @@ class MinMaxQuantization(Algorithm):
         ip_graph = InsertionPointGraph(nncf_graph)
         ip_graph = ip_graph.get_ip_graph_with_merged_hw_optimized_operations(pattern, quantizable_layer_nodes)
         post_processing_types = self._backend_entity.post_processing_metatypes
-        solver = QuantizerPropagationSolver(ignored_scopes=self._parameters.ignored_scopes,
+        solver = QuantizerPropagationSolver(ignored_scopes=ignored_names,
                                             target_scopes=None,
                                             hw_config=hw_config,
                                             default_trait_to_metatype_map=self._backend_entity.quant_trait_op_dict,
