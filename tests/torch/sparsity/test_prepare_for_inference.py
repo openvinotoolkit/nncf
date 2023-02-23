@@ -11,6 +11,8 @@
  limitations under the License.
 """
 
+import numpy as np
+import onnx
 import pytest
 import torch
 
@@ -113,3 +115,35 @@ def test_corruption_binary_masks():
 
     assert torch.equal(ref_mask_1, after_mask_1)
     assert torch.equal(ref_mask_2, after_mask_2)
+
+def tests_weights_after_onnx_export(tmp_path):
+    config = get_basic_magnitude_sparsity_config()
+    _, compression_ctrl = create_compressed_model_and_algo_for_test(MagnitudeTestModel(), config)
+
+    onnx_sparse_model_path = f"{tmp_path}/sparse_model.onnx"
+    compression_ctrl.export_model(onnx_sparse_model_path, "onnx")
+
+    onnx_model = onnx.load(onnx_sparse_model_path)
+    graph = onnx_model.graph
+
+    weights_sparse = list()
+    for node in graph.initializer:
+        if node.name in ["onnx::Conv_13", "onnx::Conv_14"]:
+            data = onnx.numpy_helper.to_array(node)
+            weights_sparse.append(data)
+
+    onnx_sparse_model_prepare_path = f"{tmp_path}/sparse_model_prepare.onnx"
+    compression_ctrl.prepare_for_inference(make_model_copy=False)
+    compression_ctrl.export_model(onnx_sparse_model_prepare_path, "onnx")
+
+    onnx_prepare_model = onnx.load(onnx_sparse_model_prepare_path)
+    graph_prepare = onnx_prepare_model.graph
+
+    weights_sparse_prepare = list()
+    for node in graph_prepare.initializer:
+        if node.name in ["nncf_module.conv1.weight", "nncf_module.conv2.weight"]:
+            data = onnx.numpy_helper.to_array(node)
+            weights_sparse_prepare.append(data)
+
+    for i in range(2):
+        assert np.all(np.equal(weights_sparse[i], weights_sparse_prepare[i]))
