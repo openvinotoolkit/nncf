@@ -241,23 +241,24 @@ class BasePruningAlgoController(PTCompressionAlgorithmController):
         """
         raise NotImplementedError
 
-    @staticmethod
-    def pruning_level_for_weight(minfo: PrunedModuleInfo):
+    def pruning_level_for_weight(self, minfo: PrunedModuleInfo):
         """
         Calculates sparsity level for all weight nodes.
         """
         weight = minfo.module.weight
-        pruning_level = 1 - weight.nonzero().size(0) / weight.view(-1).size(0)
+        mask = self.get_mask(minfo)
+        expanded_mask = mask[(...,) + (None,) * (len(weight.shape) - 1)]
+        pruning_level = 1 - (weight * expanded_mask).nonzero().size(0) / weight.view(-1).size(0)
         return pruning_level
 
-    @staticmethod
-    def pruning_level_for_filters(minfo: PrunedModuleInfo):
+    def pruning_level_for_filters(self, minfo: PrunedModuleInfo):
         """
         Calculates sparsity level for weight filter-wise.
         """
         dim = minfo.module.target_weight_dim_for_compression
+        mask = self.get_mask(minfo)
         weight = minfo.module.weight.transpose(0, dim).contiguous()
-        filters_sum = weight.view(weight.size(0), -1).sum(axis=1)
+        filters_sum = (weight.view(weight.size(0), -1) * mask[..., None]).sum(axis=1)
         pruning_level = 1 - len(filters_sum.nonzero()) / filters_sum.size(0)
         return pruning_level
 
