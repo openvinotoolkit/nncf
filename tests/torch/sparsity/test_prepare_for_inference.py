@@ -120,13 +120,17 @@ def tests_weights_after_onnx_export(tmp_path):
     config = get_basic_magnitude_sparsity_config()
     _, compression_ctrl = create_compressed_model_and_algo_for_test(MagnitudeTestModel(), config)
 
+    ref_weights_torch = []
+    for m_info in compression_ctrl.sparsified_module_info:
+        ref_weights_torch.append(torch.mul(m_info.module.weight.data, m_info.operand.binary_mask).numpy())
+
     onnx_sparse_model_path = f"{tmp_path}/sparse_model.onnx"
     compression_ctrl.export_model(onnx_sparse_model_path, "onnx")
 
     onnx_model = onnx.load(onnx_sparse_model_path)
     graph = onnx_model.graph
 
-    weights_sparse = list()
+    weights_sparse = []
     for node in graph.initializer:
         if node.name in ["onnx::Conv_13", "onnx::Conv_14"]:
             data = onnx.numpy_helper.to_array(node)
@@ -139,11 +143,12 @@ def tests_weights_after_onnx_export(tmp_path):
     onnx_prepare_model = onnx.load(onnx_sparse_model_prepare_path)
     graph_prepare = onnx_prepare_model.graph
 
-    weights_sparse_prepare = list()
+    weights_sparse_prepare = []
     for node in graph_prepare.initializer:
         if node.name in ["nncf_module.conv1.weight", "nncf_module.conv2.weight"]:
             data = onnx.numpy_helper.to_array(node)
             weights_sparse_prepare.append(data)
 
     for i in range(2):
-        assert np.all(np.equal(weights_sparse[i], weights_sparse_prepare[i]))
+        assert np.all(np.equal(ref_weights_torch[i], weights_sparse[i]))
+        assert np.all(np.equal(ref_weights_torch[i], weights_sparse_prepare[i]))
