@@ -94,10 +94,11 @@ class BiasCorrectionAlgoBackend(ABC):
 
     @staticmethod
     @abstractmethod
-    def output_insertion_command(target_point: TargetPoint) -> TransformationCommand:
+    def output_insertion_command(nncf_graph: NNCFGraph, target_point: TargetPoint) -> TransformationCommand:
         """
         Returns backend-specific command that inserts output.
 
+        :param nncf_graph: NNCFGraph instance.
         :param target_point: TargetPoint instance.
         :return: Backend-specific command that inserts output.
         """
