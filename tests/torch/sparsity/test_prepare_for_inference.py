@@ -21,6 +21,8 @@ from tests.torch.helpers import BasicConvTestModel
 from tests.torch.helpers import create_compressed_model_and_algo_for_test
 from tests.torch.helpers import register_bn_adaptation_init_args
 from tests.torch.quantization.test_prepare_for_inference import check_quantizer_operators
+from tests.torch.sparsity.magnitude.test_helpers import MagnitudeTestModel
+from tests.torch.sparsity.magnitude.test_helpers import get_basic_magnitude_sparsity_config
 
 
 def _get_config_for_algo(input_size, quantization=False):
@@ -95,3 +97,19 @@ def test_make_model_copy(make_model_copy, enable_quantization):
     if enable_quantization:
         for ctrl in compression_ctrl.child_ctrls:
             assert id(compressed_model) == id(ctrl.model)
+
+
+def test_corruption_binary_masks():
+    config = get_basic_magnitude_sparsity_config()
+    _, compression_ctrl = create_compressed_model_and_algo_for_test(MagnitudeTestModel(), config)
+
+    ref_mask_1 = torch.clone(compression_ctrl.sparsified_module_info[0].operand.binary_mask)
+    ref_mask_2 = torch.clone(compression_ctrl.sparsified_module_info[1].operand.binary_mask)
+
+    compression_ctrl.prepare_for_inference(make_model_copy=False)
+
+    after_mask_1 = compression_ctrl.sparsified_module_info[0].operand.binary_mask
+    after_mask_2 = compression_ctrl.sparsified_module_info[1].operand.binary_mask
+
+    assert torch.equal(ref_mask_1, after_mask_1)
+    assert torch.equal(ref_mask_2, after_mask_2)
