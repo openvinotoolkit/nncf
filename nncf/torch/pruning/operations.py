@@ -21,6 +21,7 @@ from nncf.common.pruning.utils import get_input_masks
 from nncf.torch.graph.operator_metatypes import (
     PTAddMetatype,
     PTAvgPool2dMetatype,
+    PTAvgPool3dMetatype,
     PTBatchNormMetatype,
     PTCatMetatype,
     PTConv1dMetatype,
@@ -45,6 +46,7 @@ from nncf.torch.graph.operator_metatypes import (
     PTMatMulMetatype,
     PTMaxMetatype,
     PTMaxPool2dMetatype,
+    PTMaxPool3dMetatype,
     PTMeanMetatype,
     PTMinMetatype,
     PTMulMetatype,
@@ -147,7 +149,8 @@ class PTOutputPruningOp(OutputPruningOp, PTPruner):
 class PTIdentityMaskForwardPruningOp(IdentityMaskForwardPruningOp, PTPruner):
     subtypes = [PTHardTanhMetatype, PTTanhMetatype, PTRELUMetatype, PTRELU6Metatype, PTLeakyRELUMetatype,
                 PTPRELUMetatype, PTELUMetatype, PTGELUMetatype, PTSigmoidMetatype, PTSoftmaxMetatype,
-                PTAvgPool2dMetatype, PTMaxPool2dMetatype, PTDropoutMetatype, PTSILUMetatype, PTPowerMetatype,
+                PTAvgPool2dMetatype, PTMaxPool2dMetatype, PTAvgPool3dMetatype, PTMaxPool3dMetatype,
+                PTDropoutMetatype, PTSILUMetatype, PTPowerMetatype,
                 PTHardSwishMetatype, PTHardSigmoidMetatype, PTNoopMetatype, PTInterpolateMetatype]
     additional_types = ['h_sigmoid', 'h_swish', 'RELU']
 
