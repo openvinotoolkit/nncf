@@ -245,10 +245,10 @@ class BasePruningAlgoController(PTCompressionAlgorithmController):
         """
         Calculates sparsity level for all weight nodes.
         """
-        weight = minfo.module.weight
-        mask = self.get_mask(minfo)
-        expanded_mask = mask[(...,) + (None,) * (len(weight.shape) - 1)]
-        pruning_level = 1 - (weight * expanded_mask).nonzero().size(0) / weight.view(-1).size(0)
+        dim = minfo.module.target_weight_dim_for_compression
+        weight = minfo.module.weight.transpose(0, dim).contiguous()
+        mask = self.get_mask(minfo)[(...,) + (None,) * (len(weight.shape) - 1)]
+        pruning_level = 1 - (weight * mask).nonzero().size(0) / weight.view(-1).size(0)
         return pruning_level
 
     def pruning_level_for_filters(self, minfo: PrunedModuleInfo):
