@@ -49,8 +49,8 @@ def convert_fq_params_to_onnx_params(parameters: FakeQuantizeParameters,
     :param axis: Axis for per-channel quantization. Should be none in case of per-tensor.
     :return: Quantizer layer attributes.
     """
-    input_low, input_high = parameters.input_low, parameters.input_high,
-    output_low, output_high = parameters.output_low, parameters.output_high,
+    input_low, input_high = parameters.input_low, parameters.input_high
+    output_low, output_high = parameters.output_low, parameters.output_high
     if not np.allclose(input_high, output_high) or not np.allclose(input_low, output_low):
         raise ValueError('ONNX Quantize/Dequantize pairs only support'
                          ' input_high == output_high and input_low == output_low.')

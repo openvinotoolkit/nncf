@@ -18,7 +18,7 @@ from nncf.onnx.quantization.quantizer_parameters import calculate_scale_zero_poi
 from nncf.onnx.quantization.quantizer_parameters import get_level_low_level_high
 
 
-@pytest.mark.parametrize(('max_val, min_val, level_low, level_high, mode, ref_scale, ref_zero_point'),
+@pytest.mark.parametrize(('inp_high, inp_low, level_low, level_high, mode, ref_scale, ref_zero_point'),
                          ((np.zeros((10, 10)), np.zeros((10, 10)), -128, 127, QuantizationMode.SYMMETRIC,
                            np.zeros((10, 10)),
                            np.zeros((10, 10), dtype=np.int32)),
@@ -52,8 +52,8 @@ from nncf.onnx.quantization.quantizer_parameters import get_level_low_level_high
                            -9 * np.ones((10, 10), dtype=np.int32))
                           )
                          )
-def test_calculate_scale_zero_point(max_val, min_val, level_low, level_high, mode, ref_scale, ref_zero_point):
-    scale, zero_point = calculate_scale_zero_point(min_val, max_val, level_low, level_high, mode)
+def test_calculate_scale_zero_point(inp_high, inp_low, level_low, level_high, mode, ref_scale, ref_zero_point):
+    scale, zero_point = calculate_scale_zero_point(inp_low, inp_high, level_low, level_high, mode)
     assert np.allclose(ref_scale, scale)
     assert np.allclose(ref_zero_point, zero_point)
 

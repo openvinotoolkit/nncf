@@ -586,6 +586,7 @@ class SymmetricQuantizer(BaseQuantizer):
             self.eps = 1e-16
         if qspec.signedness_to_force is not None:
             self.signed = bool(qspec.signedness_to_force)
+        self._narrow_range = qspec.narrow_range
         self.set_level_ranges()
 
         self._register_load_state_dict_pre_hook(StorageRedirectingLoadStateDictHook(
@@ -633,11 +634,11 @@ class SymmetricQuantizer(BaseQuantizer):
     def set_level_ranges(self):
         scaled_num_bits = 1 if self._half_range else 0
         self.level_low, self.level_high, self.levels = self.calculate_level_ranges(self.num_bits - scaled_num_bits,
-                                                                                   self.signed)
+                                                                                   self.signed, self._narrow_range)
 
     @staticmethod
-    def calculate_level_ranges(num_bits, signed):
-        return calculate_symmetric_level_ranges(num_bits, signed)
+    def calculate_level_ranges(num_bits, signed, narrow_range):
+        return calculate_symmetric_level_ranges(num_bits, signed, narrow_range)
 
     @property
     def signed(self):
