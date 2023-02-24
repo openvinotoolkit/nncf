@@ -18,6 +18,7 @@ from nncf.common.graph.operator_metatypes import INPUT_NOOP_METATYPES
 from nncf.common.graph.operator_metatypes import OUTPUT_NOOP_METATYPES
 from nncf.common.graph.operator_metatypes import OperatorMetatype
 from nncf.common.graph.operator_metatypes import OperatorMetatypeRegistry
+from nncf.common.graph.operator_metatypes import ShapeOfNoopMetatype
 from nncf.common.hardware.opset import HWConfigOpName
 
 OV_OPERATOR_METATYPES = OperatorMetatypeRegistry('openvino_operator_metatypes')
@@ -233,8 +234,8 @@ class OVReshapeMetatype(OVOpMetatype):
 
 
 @OV_OPERATOR_METATYPES.register()
-class OVShapeMetatype(OVOpMetatype):
-    name = 'ShapeOp'
+class OVShapeOfMetatype(ShapeOfNoopMetatype):
+    name = 'ShapeOfOp'
     op_names = ['ShapeOf']
 
 
