@@ -33,7 +33,7 @@ d) the IDs of the nodes that produced each current operator's input as their out
 
 
 This information is stored as an `OperationExecutionContext` of the operator. If an operator call does not match to the nodes already present in the internal graph representation based on its `OperationExecutionContext`, a new node is added to the graph.
-This process occurs dynamically during each `forward` call of an `NNCFNetwork`. If the control flow is data-dependent, a whole new subgraph of the model will be built for each branching in the model definition. The graph building mechanism can cope with some branching, but it is advisable to disable NNCF tracing for the parts of the model that exhibit branching (such as the "detection output" layers of object detection networks) by using a `no_nncf_trace()` context.
+This process occurs dynamically during each `forward` call of an `NNCFNetwork`. If the control flow is data-dependent, a whole new subgraph of the model will be built for each branching in the model definition. The graph building mechanism can cope with some branching, but it is advisable to disable NNCF tracing for the parts of the model that exhibit branching (such as the "detection output" layers of object detection networks) by using a `no_nncf_trace()` context. It is possible to wrap third party functionality with `no_nncf_trace()` context so that this source code does not need to be changed. This can be done by patching, please refer to this [example](../examples/post_training_quantization/torch/ssd300_vgg16/README.md).
 
 
 ### Operation scope and addressing

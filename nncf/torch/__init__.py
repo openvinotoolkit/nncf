@@ -42,6 +42,7 @@ from nncf.torch.layers import register_module
 from nncf.torch.dynamic_graph.patch_pytorch import register_operator
 from nncf.torch.dynamic_graph.io_handling import nncf_model_input
 from nncf.torch.dynamic_graph.io_handling import nncf_model_output
+from nncf.torch.dynamic_graph.context import disable_tracing
 from nncf.torch.dynamic_graph.context import no_nncf_trace
 from nncf.torch.dynamic_graph.context import forward_nncf_trace
 

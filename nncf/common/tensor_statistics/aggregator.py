@@ -86,9 +86,9 @@ class StatisticsAggregator(ABC):
         :param statistic_points: StatisticPointsContainer instance with the statistic points
         """
 
-    @staticmethod
     @abstractmethod
-    def _get_transformation_layout_extra_outputs(statistic_points: StatisticPointsContainer) -> TransformationLayout:
+    def _get_transformation_layout_extra_outputs(self,
+                                                 statistic_points: StatisticPointsContainer) -> TransformationLayout:
         """
         Create backend-specific transformation layout for the further statistics collection
 

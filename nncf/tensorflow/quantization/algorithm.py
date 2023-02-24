@@ -451,7 +451,7 @@ class QuantizationBuilder(TFCompressionAlgorithmBuilder):
         qp_id_to_index = {}  # type: Dict[QuantizationPointId, int]
         tf_setup_qp_index = 0
         applied_overflow_fix = False
-        first_conv_nodes = get_first_nodes_of_type(nncf_graph, ['Conv2D'])
+        first_conv_nodes = get_first_nodes_of_type(nncf_graph, ['Conv2D', 'Conv3D'])
         for qp_id, qp in quantizer_setup.quantization_points.items():
             if qp.is_weight_quantization_point():
                 target_node = nncf_graph.get_node_by_name(qp.insertion_point.target_node_name)

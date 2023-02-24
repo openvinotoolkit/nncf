@@ -61,9 +61,15 @@ class TFIdentityMaskForwardPruningOp(IdentityMaskForwardPruningOp):
                        + layer_metatypes.TFGlobalAveragePooling2DLayerMetatype.get_all_aliases() \
                        + layer_metatypes.TFMaxPooling2DLayerMetatype.get_all_aliases() \
                        + layer_metatypes.TFGlobalMaxPooling2DLayerMetatype.get_all_aliases() \
-                       + layer_metatypes.TFDropoutLayerMetatype.get_all_aliases() \
                        + layer_metatypes.TFZeroPadding2DLayerMetatype.get_all_aliases() \
                        + layer_metatypes.TFUpSampling2DLayerMetatype.get_all_aliases() \
+                       + layer_metatypes.TFAveragePooling3DLayerMetatype.get_all_aliases() \
+                       + layer_metatypes.TFGlobalAveragePooling3DLayerMetatype.get_all_aliases() \
+                       + layer_metatypes.TFMaxPooling3DLayerMetatype.get_all_aliases() \
+                       + layer_metatypes.TFGlobalMaxPooling3DLayerMetatype.get_all_aliases() \
+                       + layer_metatypes.TFZeroPadding3DLayerMetatype.get_all_aliases() \
+                       + layer_metatypes.TFUpSampling3DLayerMetatype.get_all_aliases() \
+                       + layer_metatypes.TFDropoutLayerMetatype.get_all_aliases() \
                        + op_metatypes.TFIdentityOpMetatype.get_all_aliases() \
                        + op_metatypes.TFPadOpMetatype.get_all_aliases()
 

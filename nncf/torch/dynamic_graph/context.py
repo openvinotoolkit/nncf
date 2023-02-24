@@ -31,6 +31,7 @@ from nncf.torch.dynamic_graph.operation_address import OperationAddress
 from nncf.torch.dynamic_graph.scope import Scope
 from nncf.torch.dynamic_graph.scope import ScopeElement
 from nncf.torch.dynamic_graph.trace_tensor import TensorMeta
+from nncf.common.utils.patcher import PATCHER
 
 _CURRENT_CONTEXT = None
 
@@ -413,3 +414,15 @@ def forward_nncf_trace():
 
 def get_current_context() -> TracingContext:
     return _CURRENT_CONTEXT
+
+
+def disable_tracing(method):
+    """
+    Patch a method so that it will be executed within no_nncf_trace context
+    :param method: A method to patch.
+    """
+    def no_nncf_trace_wrapper(self, fn, *args, **kwargs):  # pylint: disable=unused-argument
+        with no_nncf_trace():
+            return fn(*args, **kwargs)
+
+    PATCHER.patch(method, no_nncf_trace_wrapper)

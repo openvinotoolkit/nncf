@@ -87,6 +87,9 @@ class DepthBasicConvTestModel(nn.Module):
             skipped_layers = []
         self._skipped_layers = skipped_layers
 
+    def get_skipped_layers(self):
+        return self._skipped_layers
+
 
 BASIC_ELASTIC_DEPTH_PARAMS = {
     'skipped_blocks': [['DepthBasicConvTestModel/Sequential[branch_with_blocks]/NNCFConv2d[conv0]/conv2d_0',

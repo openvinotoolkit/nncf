@@ -767,7 +767,7 @@ class QuantizationBuilder(PTCompressionAlgorithmBuilder):
                         half_range = True
                         quantizers_with_overflow_fix_str = 'all weight quantizers'
                     elif self._overflow_fix == 'first_layer_only':
-                        if target_node in get_first_nodes_of_type(target_model_graph, ['conv2d']):
+                        if target_node in get_first_nodes_of_type(target_model_graph, ['conv2d', 'conv3d']):
                             half_range = True
                             quantizers_with_overflow_fix_str = 'first convolution weight quantizers'
                     elif self._overflow_fix != 'disable':
