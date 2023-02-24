@@ -12,8 +12,6 @@
 """
 
 from typing import List, Tuple, Dict
-from enum import Enum
-
 import openvino.runtime as ov
 import numpy as np
 from openvino.runtime import opset9 as opset
@@ -176,18 +174,12 @@ class OVModelTransformer(ModelTransformer):
         :param transformations: List of the OVQuantizerInsertionCommand transformations.
         :return: Model with inserted FakeQuantize nodes.
         """
-        model_precision = ModelPrecision.FP32
-        for op in model.get_ops():
-            if op.get_type_name() == 'Constant':
-                if op.get_element_type().is_real():
-                    if op.get_element_type() == ov.Type(np.float16):
-                        model_precision = ModelPrecision.FP16
-                        break
         name_to_node_mapping = OVModelTransformer._get_name_to_node_mapping(model)
         for transformation in transformations:
-            OVModelTransformer._insert_fake_quantize_op(transformation, name_to_node_mapping, model_precision)
+            OVModelTransformer._insert_fake_quantize_op(transformation, name_to_node_mapping)
         return model
 
+    @staticmethod
     def convert_params_to_fp16(fq_params: OVQuantizerLayerParameters) -> \
                                Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
         """
