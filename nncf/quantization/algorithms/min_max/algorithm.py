@@ -360,7 +360,6 @@ class MinMaxQuantization(Algorithm):
                statistic_points: Optional[StatisticPointsContainer] = None,
                dataset: Optional[Dataset] = None) -> TModel:
         transformation_layout, transformation_commands = TransformationLayout(), []
-        weight_transformation_commands = []
         nncf_graph = NNCFGraphFactory.create(model) if self.nncf_graph is None else self.nncf_graph
         model_transformer = ModelTransformerFactory.create(model)
 
@@ -396,13 +395,6 @@ class MinMaxQuantization(Algorithm):
 
                 transformation_commands.append(command)
 
-
-        for transformation_command in weight_transformation_commands:
-            transformation_layout.register(transformation_command)
-        model = model_transformer.transform(transformation_layout)
-
-        transformation_layout = TransformationLayout()
-        model_transformer = ModelTransformerFactory.create(model)
         for transformation_command in transformation_commands:
             transformation_layout.register(transformation_command)
 
