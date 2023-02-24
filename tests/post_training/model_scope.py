@@ -59,3 +59,6 @@ def get_validation_scope() -> List[dict]:
     model_scope.append({"name": "dla34", "quantization_params": {"preset":QuantizationPreset.MIXED}})
 
     return model_scope
+
+
+VALIDATION_SCOPE = get_validation_scope()

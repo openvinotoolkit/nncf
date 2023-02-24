@@ -10,8 +10,10 @@
  See the License for the specific language governing permissions and
  limitations under the License.
 """
-import shutil
 # pylint:disable=too-many-lines
+
+import copy
+import shutil
 from collections import Counter
 from collections import OrderedDict
 from copy import deepcopy
@@ -45,9 +47,9 @@ from nncf.common.graph.transformations.commands import TargetType
 from nncf.common.graph.patterns.manager import PatternsManager
 from nncf.common.graph.patterns.manager import TargetDevice
 from nncf.common.graph.utils import get_first_nodes_of_type
-from nncf.common.hardware.config import get_hw_config_type
 from nncf.common.hardware.config import HWConfig
 from nncf.common.hardware.config import HWConfigType
+from nncf.common.hardware.config import get_hw_config_type
 from nncf.common.initialization.batchnorm_adaptation import BatchnormAdaptationAlgorithm
 from nncf.common.insertion_point_graph import InsertionPointGraph
 from nncf.common.insertion_point_graph import InsertionPointGraphNodeType
@@ -134,6 +136,8 @@ from nncf.torch.quantization.precision_init.base_init import BasePrecisionInitia
 from nncf.torch.quantization.precision_init.base_init import BasePrecisionInitParams
 from nncf.torch.quantization.precision_init.hawq_init import HAWQPrecisionInitParams
 from nncf.torch.quantization.precision_init.manual_init import ManualPrecisionInitParams
+from nncf.torch.quantization.prepare_for_inference import remove_disabled_quantizers
+from nncf.torch.quantization.prepare_for_inference import replace_quantizer_to_torch_native_module
 from nncf.torch.quantization.schedulers import QUANTIZATION_SCHEDULERS
 from nncf.torch.quantization.structs import NonWeightQuantizerInfo
 from nncf.torch.quantization.structs import WeightQuantizerInfo
@@ -1454,6 +1458,25 @@ class QuantizationController(QuantizationControllerBase):
         nncf_stats = NNCFStatistics()
         nncf_stats.register('quantization', stats)
         return nncf_stats
+
+    def prepare_for_inference(self, make_model_copy: bool = True) -> NNCFNetwork:
+        """
+        Prepare NNCFNetwork for inference by converting NNCF modules to torch native format.
+
+        :param make_model_copy: `True` means that a copy of the model will be modified.
+            `False` means that the original model in the controller will be changed and
+            no further compression actions will be available. Defaults to True.
+
+        :return NNCFNetwork: Converted model.
+        """
+        model = self.model
+        if make_model_copy:
+            model = copy.deepcopy(self.model)
+
+        model = replace_quantizer_to_torch_native_module(model)
+        model = remove_disabled_quantizers(model)
+
+        return model
 
 
 class QuantizationDebugInterface(DebugInterface):

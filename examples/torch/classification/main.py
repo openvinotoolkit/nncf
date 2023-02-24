@@ -21,24 +21,24 @@ from shutil import copyfile
 from typing import Any
 
 import torch
-from torch.backends import cudnn
-from torch.cuda.amp.autocast_mode import autocast
-from torch import nn
 import torch.nn.parallel
 import torch.optim
 import torch.utils.data
 import torch.utils.data.distributed
+from torch import nn
+from torch.backends import cudnn
+from torch.cuda.amp.autocast_mode import autocast
+from torch.nn.modules.loss import _Loss
+from torch.optim.lr_scheduler import ReduceLROnPlateau
 from torchvision import datasets
 from torchvision import models
 from torchvision import transforms
-from torch.nn.modules.loss import _Loss
-from torch.optim.lr_scheduler import ReduceLROnPlateau
 from torchvision.datasets import CIFAR10
 from torchvision.datasets import CIFAR100
 from torchvision.models import InceptionOutputs
 
-from examples.torch.common.argparser import parse_args
 from examples.torch.common.argparser import get_common_argument_parser
+from examples.torch.common.argparser import parse_args
 from examples.torch.common.example_logger import logger
 from examples.torch.common.execution import ExecutionMode
 from examples.torch.common.execution import get_execution_mode
@@ -69,9 +69,9 @@ from examples.torch.common.utils import make_additional_checkpoints
 from examples.torch.common.utils import print_args
 from examples.torch.common.utils import write_metrics
 from nncf.api.compression import CompressionStage
+from nncf.common.accuracy_aware_training import create_accuracy_aware_training_loop
 from nncf.common.utils.tensorboard import prepare_for_tensorboard
 from nncf.config.utils import is_accuracy_aware_training
-from nncf.common.accuracy_aware_training import create_accuracy_aware_training_loop
 from nncf.torch import create_compressed_model
 from nncf.torch.checkpoint_loading import load_state
 from nncf.torch.dynamic_graph.graph_tracer import create_input_infos
@@ -132,7 +132,8 @@ def main(argv):
     if not is_staged_quantization(config):
         start_worker(main_worker, config)
     else:
-        from examples.torch.classification.staged_quantization_worker import staged_quantization_main_worker #pylint: disable=cyclic-import
+        from examples.torch.classification.staged_quantization_worker import \
+            staged_quantization_main_worker  # pylint: disable=cyclic-import
         start_worker(staged_quantization_main_worker, config)
 
 
@@ -222,6 +223,8 @@ def main_worker(current_gpu, config: SampleConfig):
         load_state(model, model_state_dict, is_resume=True)
 
     if is_export_only:
+        if config.prepare_for_inference:
+            compression_ctrl.prepare_for_inference(make_model_copy=False)
         compression_ctrl.export_model(config.to_onnx)
         logger.info("Saved to {}".format(config.to_onnx))
         return
@@ -289,11 +292,16 @@ def main_worker(current_gpu, config: SampleConfig):
                   train_loader, train_sampler, val_loader, best_acc1)
 
     if 'test' in config.mode:
-        validate(val_loader, model, criterion, config)
+        val_model = model
+        if config.prepare_for_inference:
+            val_model = compression_ctrl.prepare_for_inference(make_model_copy=True)
+        validate(val_loader, val_model, criterion, config)
 
     config.mlflow.end_run()
 
     if 'export' in config.mode:
+        if config.prepare_for_inference:
+            compression_ctrl.prepare_for_inference(make_model_copy=False)
         compression_ctrl.export_model(config.to_onnx)
         logger.info("Saved to {}".format(config.to_onnx))
 

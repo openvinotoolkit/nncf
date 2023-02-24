@@ -20,12 +20,13 @@ import torch
 from torch.autograd import Variable
 from torch.distributions.uniform import Uniform
 
+from nncf.torch.quantization.quantize_functions import asymmetric_quantize
+from nncf.torch.quantization.quantize_functions import get_scale_zp_from_input_low_input_high
+from nncf.torch.quantization.quantize_functions import symmetric_quantize
 from nncf.torch.quantization.reference import ReferenceBackendType
-
-from nncf.torch.quantization.quantize_functions import asymmetric_quantize, symmetric_quantize
 from nncf.torch.quantization.reference import ReferenceQuantize
-from tests.torch.helpers import get_grads
 from tests.torch.helpers import PTTensorListComparator
+from tests.torch.helpers import get_grads
 
 EPS = 1e-6
 
@@ -587,3 +588,27 @@ def test_mapping_to_zero(quantization_mode, device):
             input_range = uniform_dist_input_range.sample().to(torch.device(device))
             test_output = asymmetric_quantize(x_zero, levels, level_low, level_high, input_low, input_range, eps)
             assert torch.isclose(test_output, torch.zeros_like(test_output))
+
+
+@pytest.mark.parametrize(
+    "level_low, level_high, input_low, input_high, ref_zero_point, ref_scale",
+    [
+        [0, 255, 0.0548190139, 0.1554157883, 117, 0.0003944972],
+        [0, 127, -0.0771205574, 0.0591347590, 72, 0.0010728766],
+        [-128, 127, -0.1203568727, 0.0571926013, 45, 0.0006962725],
+        [-64, 63, -0.0872629806, 0.2672979534, -33, 0.0027918185],
+        [0, 255, 0.0, 1.0, 0, 0.0039215689],
+        [0, 127, 0.0, 1.0, 0, 0.0078740157],
+        [-128, 127, 0.0, 1.0, -128, 0.0039215689],
+        [-64, 63, 0.0, 1.0, -64, 0.0078740157],
+    ],
+    ids=lambda v: str(v) if isinstance(v, int) else f"{v:.2f}",
+)
+def test_get_scale_zp_from_input_low_input_high(
+    level_low, level_high, input_low, input_high, ref_zero_point, ref_scale
+):
+    scale, zero_point = get_scale_zp_from_input_low_input_high(
+        torch.Tensor([level_low]), torch.Tensor([level_high]), torch.Tensor([input_low]), torch.Tensor([input_high])
+    )
+    assert zero_point == ref_zero_point, f"{zero_point} != {ref_zero_point}"
+    assert np.isclose(scale, ref_scale), f"{scale:.10f} != {ref_scale}"

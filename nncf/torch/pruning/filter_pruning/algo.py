@@ -11,69 +11,75 @@
  limitations under the License.
 """
 
+import copy
 import json
+from math import isclose
 from pathlib import Path
-from typing import Dict, List, Tuple, Union
+from typing import Dict
+from typing import List
+from typing import Tuple
+from typing import Union
 
 import numpy as np
 import torch
-from math import isclose
 
 from nncf import NNCFConfig
 from nncf.api.compression import CompressionLoss
 from nncf.api.compression import CompressionStage
 from nncf.common.accuracy_aware_training.training_loop import ADAPTIVE_COMPRESSION_CONTROLLERS
-from nncf.common.initialization.batchnorm_adaptation import BatchnormAdaptationAlgorithm
 from nncf.common.graph import NNCFNode
 from nncf.common.graph import NNCFNodeName
+from nncf.common.initialization.batchnorm_adaptation import BatchnormAdaptationAlgorithm
+from nncf.common.logging import nncf_logger
 from nncf.common.pruning.clusterization import Clusterization
 from nncf.common.pruning.mask_propagation import MaskPropagationAlgorithm
 from nncf.common.pruning.schedulers import PRUNING_SCHEDULERS
 from nncf.common.pruning.schedulers import PruningScheduler
+from nncf.common.pruning.shape_pruning_processor import ShapePruningProcessor
 from nncf.common.pruning.statistics import FilterPruningStatistics
-from nncf.common.pruning.statistics import PrunedModelTheoreticalBorderline
 from nncf.common.pruning.statistics import PrunedLayerSummary
 from nncf.common.pruning.statistics import PrunedModelStatistics
-from nncf.common.pruning.shape_pruning_processor import ShapePruningProcessor
-from nncf.common.pruning.weights_flops_calculator import WeightsFlopsCalculator
-from nncf.common.pruning.utils import get_rounded_pruned_element_number
+from nncf.common.pruning.statistics import PrunedModelTheoreticalBorderline
 from nncf.common.pruning.utils import get_prunable_layers_in_out_channels
+from nncf.common.pruning.utils import get_rounded_pruned_element_number
+from nncf.common.pruning.weights_flops_calculator import WeightsFlopsCalculator
 from nncf.common.schedulers import StubCompressionScheduler
 from nncf.common.statistics import NNCFStatistics
 from nncf.common.utils.debug import is_debug
-from nncf.common.logging import nncf_logger
 from nncf.common.utils.os import safe_open
 from nncf.config.extractors import extract_bn_adaptation_init_params
 from nncf.torch.algo_selector import PT_COMPRESSION_ALGORITHMS
 from nncf.torch.compression_method_api import PTCompressionAlgorithmController
+from nncf.torch.graph.operator_metatypes import PTDepthwiseConv1dSubtype
+from nncf.torch.graph.operator_metatypes import PTDepthwiseConv2dSubtype
+from nncf.torch.graph.operator_metatypes import PTDepthwiseConv3dSubtype
 from nncf.torch.graph.operator_metatypes import PTModuleConv1dMetatype
 from nncf.torch.graph.operator_metatypes import PTModuleConv2dMetatype
 from nncf.torch.graph.operator_metatypes import PTModuleConv3dMetatype
 from nncf.torch.graph.operator_metatypes import PTModuleConvTranspose1dMetatype
 from nncf.torch.graph.operator_metatypes import PTModuleConvTranspose2dMetatype
 from nncf.torch.graph.operator_metatypes import PTModuleConvTranspose3dMetatype
-from nncf.torch.graph.operator_metatypes import PTDepthwiseConv1dSubtype
-from nncf.torch.graph.operator_metatypes import PTDepthwiseConv2dSubtype
-from nncf.torch.graph.operator_metatypes import PTDepthwiseConv3dSubtype
 from nncf.torch.graph.operator_metatypes import PTModuleLinearMetatype
 from nncf.torch.layers import NNCF_PRUNING_MODULES_DICT
 from nncf.torch.nncf_network import NNCFNetwork
 from nncf.torch.pruning.base_algo import BasePruningAlgoBuilder
 from nncf.torch.pruning.base_algo import BasePruningAlgoController
-from nncf.torch.pruning.operations import PTElementwisePruningOp
-from nncf.torch.pruning.operations import PT_PRUNING_OPERATOR_METATYPES
-from nncf.torch.pruning.tensor_processor import PTNNCFPruningTensorProcessor
 from nncf.torch.pruning.filter_pruning.functions import FILTER_IMPORTANCE_FUNCTIONS
 from nncf.torch.pruning.filter_pruning.functions import calculate_binary_mask
 from nncf.torch.pruning.filter_pruning.functions import tensor_l2_normalizer
 from nncf.torch.pruning.filter_pruning.global_ranking.legr import LeGR
 from nncf.torch.pruning.filter_pruning.layers import FilterPruningMask
+from nncf.torch.pruning.operations import PT_PRUNING_OPERATOR_METATYPES
+from nncf.torch.pruning.operations import ModelPruner
+from nncf.torch.pruning.operations import PrunType
+from nncf.torch.pruning.operations import PTElementwisePruningOp
 from nncf.torch.pruning.structs import PrunedModuleInfo
+from nncf.torch.pruning.tensor_processor import PTNNCFPruningTensorProcessor
 from nncf.torch.pruning.utils import collect_output_shapes
 from nncf.torch.pruning.utils import init_output_masks_in_graph
-from nncf.torch.structures import LeGRInitArgs, DistributedCallbacksArgs
+from nncf.torch.structures import DistributedCallbacksArgs
+from nncf.torch.structures import LeGRInitArgs
 from nncf.torch.utils import get_filters_num
-
 
 GENERAL_CONV_LAYER_METATYPES = [
     PTModuleConv1dMetatype,
@@ -651,3 +657,22 @@ class FilterPruningController(BasePruningAlgoController):
             self._bn_adaptation = BatchnormAdaptationAlgorithm(**extract_bn_adaptation_init_params(self.config,
                                                                                                    'filter_pruning'))
         self._bn_adaptation.run(self.model)
+
+    def prepare_for_inference(self, make_model_copy: bool = True) -> NNCFNetwork:
+        """
+        Prepare NNCFNetwork for inference by converting NNCF modules to torch native format.
+
+        :param make_model_copy: `True` means that a copy of the model will be modified.
+            `False` means that the original model in the controller will be changed and
+            no further compression actions will be available. Defaults to True.
+
+        :return NNCFNetwork: Converted model.
+        """
+        model = self.model
+        if make_model_copy:
+            model = copy.deepcopy(self.model)
+
+        graph = model.get_original_graph()
+        ModelPruner(model, graph, PT_PRUNING_OPERATOR_METATYPES, PrunType.FILL_ZEROS).prune_model()
+
+        return model
