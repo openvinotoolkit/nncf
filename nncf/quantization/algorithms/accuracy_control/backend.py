@@ -13,8 +13,7 @@
 
 from abc import ABC
 from abc import abstractmethod
-from typing import List
-from typing import Any
+from typing import List, Any
 
 from nncf.common.graph.graph import NNCFGraph
 from nncf.common.graph.graph import NNCFNode

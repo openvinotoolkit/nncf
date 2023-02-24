@@ -11,10 +11,7 @@
  limitations under the License.
 """
 
-from typing import List
-from typing import Any
-from typing import Callable
-from typing import Iterable
+from typing import List, Any, Callable, Iterable
 
 from nncf.data.dataset import Dataset
 from nncf.common.factory import EngineFactory

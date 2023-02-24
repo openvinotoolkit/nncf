@@ -52,14 +52,14 @@ def find_quantizer_nodes_to_cut(
     visited = {x.node_name: True for x in start_nodes}
 
     while len(queue) != 0:
-        v = queue.popleft()
-        # A successor of node `v` is a node `u` such that exists
-        # a directed edge (v, u) from `v` to `u`.
-        successors = (e.to_node for e in graph.get_output_edges(v))
-        for u in successors:
-            if not visited.get(u.node_name, False) and u.metatype not in shape_of_metatypes:
-                queue.append(u)
-                visited[u.node_name] = True
+        current_node = queue.popleft()
+        # A successor of node `current_node` is a node `successor` such that exists
+        # a directed edge (current_node, successor) from `current_node` to `successor`.
+        successors = (e.to_node for e in graph.get_output_edges(current_node))
+        for successor in successors:
+            if not visited.get(successor.node_name, False) and successor.metatype not in shape_of_metatypes:
+                queue.append(successor)
+                visited[successor.node_name] = True
 
     def _parse_node_relatives(node: NNCFNode, is_parents: bool):
         if node.metatype in quantizable_metatypes:

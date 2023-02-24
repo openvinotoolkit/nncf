@@ -12,10 +12,7 @@
 """
 
 import sys
-from typing import Callable
-from typing import Any
-from typing import Iterable
-from typing import Optional
+from typing import Callable, Any, Iterable, Optional, List
 
 from nncf.api.compression import TModel
 from nncf.data.dataset import Dataset
@@ -25,6 +22,7 @@ from nncf.parameters import TargetDevice
 from nncf.common.utils.backend import get_backend
 from nncf.common.utils.backend import BackendType
 from nncf.common.graph.utils import get_number_of_quantized_ops
+from nncf.common.graph.operator_metatypes import OperatorMetatype
 from nncf.common.graph import NNCFNode
 from nncf.common.graph import NNCFGraph
 from nncf.common.factory import NNCFGraphFactory
@@ -49,9 +47,6 @@ def get_algo_backend(backend: BackendType) -> AccuracyControlAlgoBackend:
     if backend == BackendType.OPENVINO:
         from nncf.quantization.algorithms.accuracy_control.openvino_backend import OVAccuracyControlAlgoBackend
         return OVAccuracyControlAlgoBackend()
-    if backend == BackendType.ONNX:
-        from nncf.quantization.algorithms.accuracy_control.onnx_backend import ONNXAccuracyControlAlgoBackend
-        return ONNXAccuracyControlAlgoBackend()
 
     raise RuntimeError('Cannot create the backend for the accuracy control algorithm '
                        f'because {backend} is not supported.')
@@ -96,6 +91,23 @@ def _create_message(nodes: Iterable[NNCFNode]) -> str:
     names = [f'\t{x.node_name}' for x in nodes]
     return '\n'.join(names)
 
+
+# TODO(andrey-churkin): Should be removed when native implementation will become the main one.
+def _match_const_nodes_names(initial_nncf_graph: NNCFGraph,
+                             quantized_nncf_graph: NNCFGraph,
+                             const_metatypes: List[OperatorMetatype]):
+    initial_graph_const_nodes = initial_nncf_graph.get_nodes_by_metatypes(const_metatypes)
+    quantized_graph_const_nodes = quantized_nncf_graph.get_nodes_by_metatypes(const_metatypes)
+    for initial_graph_const_node in initial_graph_const_nodes:
+        num_matches = 0
+        for quantized_graph_const_node in quantized_graph_const_nodes:
+            if quantized_graph_const_node.node_name.startswith(initial_graph_const_node.node_name):
+                assert quantized_graph_const_node.node_type == initial_graph_const_node.node_type
+                quantized_graph_const_node.data[NNCFGraph.NODE_NAME_ATTR] = initial_graph_const_node.node_name
+                num_matches += 1
+        assert num_matches == 1
+
+
 # pylint: disable=R0912
 # pylint: disable=R0915
 def restore_accuracy(initial_model: TModel,
@@ -139,7 +151,8 @@ def restore_accuracy(initial_model: TModel,
     MAX_NUM_ITERATIONS = sys.maxsize
     USE_PREVIOUS_IF_DROP_INCREASE = True
 
-    IS_NATIVE = False  # Only for debug
+    # TODO(andrey-churkin): Should be removed when native implementation will become the main one.
+    IS_NATIVE = False
 
     precision_change_to = 'floating-point'
     exclude_bad_nodes = False
@@ -148,40 +161,31 @@ def restore_accuracy(initial_model: TModel,
     backend = get_backend(initial_model)
     algo_backend = get_algo_backend(backend)
 
-    nncf_graph = NNCFGraphFactory.create(quantized_model)
-    graph = NNCFGraphFactory.create(initial_model)
+    quantized_nncf_graph = NNCFGraphFactory.create(quantized_model)
+    initial_nncf_graph = NNCFGraphFactory.create(initial_model)
 
     if not IS_NATIVE:
-        # We need to match the names of constants for POT quantized model.
-        xs = graph.get_nodes_by_metatypes(algo_backend.get_const_metatypes())
-        ys = nncf_graph.get_nodes_by_metatypes(algo_backend.get_const_metatypes())
-        for x in xs:
-            num_matches = 0
-            for y in ys:
-                if y.node_name.startswith(x.node_name):
-                    assert y.node_type == x.node_type
-                    y.data[NNCFGraph.NODE_NAME_ATTR] = x.node_name
-                    num_matches += 1
-            assert num_matches == 1
+        _match_const_nodes_names(initial_nncf_graph, quantized_nncf_graph, algo_backend.get_const_metatypes())
 
     # We need to collect original bias values for biased nodes.
     # It will be stored inside the `bised_node.data` dictionary.
     # The original bias will be used to undo bias correction for
     # the node if it is reverted to the original precision during
     # the quantizer removing process.
-    nodes_with_bias = (node for node in nncf_graph.get_all_nodes() \
-                       if algo_backend.is_node_with_bias(node, nncf_graph))
+    nodes_with_bias = (node for node in quantized_nncf_graph.get_all_nodes() \
+                       if algo_backend.is_node_with_bias(node, quantized_nncf_graph))
     for biased_node in nodes_with_bias:
-        biased_node.data['original_bias'] = algo_backend.get_bias_value(biased_node, nncf_graph, initial_model)
+        biased_node.data['original_bias'] = algo_backend.get_bias_value(biased_node,
+                                                                        quantized_nncf_graph, initial_model)
 
-    nodes_with_weight = (node for node in graph.get_all_nodes() \
+    nodes_with_weight = (node for node in initial_nncf_graph.get_all_nodes() \
                          if algo_backend.is_node_with_weight(node))
     for node_with_weight in nodes_with_weight:
-        node = nncf_graph.get_node_by_name(node_with_weight.node_name)
-        node.data['original_weight'] = algo_backend.get_weight_value(node_with_weight, graph, initial_model)
+        node = quantized_nncf_graph.get_node_by_name(node_with_weight.node_name)
+        node.data['original_weight'] = algo_backend.get_weight_value(node_with_weight, initial_nncf_graph, initial_model)
 
     # Show the number of quantized operations.
-    num_of_quantized_ops = get_number_of_quantized_ops(nncf_graph,
+    num_of_quantized_ops = get_number_of_quantized_ops(quantized_nncf_graph,
                                                        algo_backend.get_quantizer_metatypes(),
                                                        algo_backend.get_quantizable_metatypes())
     nncf_logger.info(f'The total number of quantized operations in the model: {num_of_quantized_ops}')
@@ -206,11 +210,11 @@ def restore_accuracy(initial_model: TModel,
                                             validation_dataset,
                                             validation_fn)
     else:
-        output_name = [x.node_name for x in nncf_graph.get_output_nodes()][0]
+        output_name = [x.node_name for x in quantized_nncf_graph.get_output_nodes()][0]
         x_ref = get_logits_for_each_item(initial_model, validation_dataset, output_name)
         x_approx = get_logits_for_each_item(quantized_model, validation_dataset, output_name)
 
-    groups_to_rank = find_groups_of_quantizers_to_rank(nncf_graph,
+    groups_to_rank = find_groups_of_quantizers_to_rank(quantized_nncf_graph,
                                                        algo_backend.get_quantizer_metatypes(),
                                                        algo_backend.get_const_metatypes(),
                                                        algo_backend.get_quantizable_metatypes(),
@@ -218,11 +222,11 @@ def restore_accuracy(initial_model: TModel,
                                                        algo_backend.get_shape_of_metatypes())
 
     nncf_logger.info('== Ranking groups of quantizers were started ==')
-    ranked_groups = rank_quantizers(groups_to_rank, quantized_model, validation_dataset, validation_fn, x_ref, x_approx,
-                                    USE_METRIC, RANKING_SUBSET_SIZE, algo_backend, nncf_graph)
+    ranked_groups = rank_quantizers(groups_to_rank, quantized_model, validation_dataset, validation_fn, x_ref,
+                                    x_approx, USE_METRIC, RANKING_SUBSET_SIZE, algo_backend, quantized_nncf_graph)
 
     current_num_quantizers = len(
-        nncf_graph.get_nodes_by_metatypes(algo_backend.get_quantizer_metatypes())
+        quantized_nncf_graph.get_nodes_by_metatypes(algo_backend.get_quantizer_metatypes())
     )
 
     previous_model = quantized_model
@@ -249,18 +253,18 @@ def restore_accuracy(initial_model: TModel,
             break
 
         # greedy removal of the FQ node with the highest importance score
-        group_to_remove = ranked_groups.pop()
-        current_model = remove_group_of_quantizers_from_model(group_to_remove, previous_model, nncf_graph, algo_backend)
+        current_group = ranked_groups.pop()
+        current_model = remove_group_of_quantizers_from_model(current_group, previous_model,
+                                                              quantized_nncf_graph, algo_backend)
 
-        # TODO(andrey-churkin): Move to debug level.
-        nncf_logger.info(f'Removed a block of {len(group_to_remove.quantizers)} quantizers:'
-                         f'\n{_create_message(group_to_remove.quantizers)}')
-        nncf_logger.info(f'Reverted {len(group_to_remove.operations)} operations to the {precision_change_to} '
-                         f'precision: \n{_create_message(group_to_remove.operations)}')
+        nncf_logger.debug(f'Removed a block of {len(current_group.quantizers)} quantizers:'
+                         f'\n{_create_message(current_group.quantizers)}')
+        nncf_logger.info(f'Reverted {len(current_group.operations)} operations to the {precision_change_to} '
+                         f'precision: \n{_create_message(current_group.operations)}')
 
-        current_num_quantizers = current_num_quantizers - len(group_to_remove.quantizers)
-        all_removed_nodes.extend(group_to_remove.quantizers)
-        all_reverted_ops.update(group_to_remove.operations)
+        current_num_quantizers = current_num_quantizers - len(current_group.quantizers)
+        all_removed_nodes.extend(current_group.quantizers)
+        all_reverted_ops.update(current_group.operations)
 
         # Calculate drop for new quantization scope.
         current_metric = validation_fn(algo_backend.prepare_for_inference(current_model),
@@ -287,12 +291,12 @@ def restore_accuracy(initial_model: TModel,
 
         if current_accuracy_drop > previous_accuracy_drop and USE_PREVIOUS_IF_DROP_INCREASE:
             current_model = previous_model
-            all_removed_nodes = all_removed_nodes[:len(all_removed_nodes)-len(group_to_remove.quantizers)]
-            all_reverted_ops.difference_update(group_to_remove.operations)
+            all_removed_nodes = all_removed_nodes[:len(all_removed_nodes)-len(current_group.quantizers)]
+            all_reverted_ops.difference_update(current_group.operations)
             if exclude_bad_nodes:
-                excluded_nodes.extend(group_to_remove.quantizers)
+                excluded_nodes.extend(current_group.quantizers)
                 nncf_logger.debug('Quantizers were added to the excluded list: '
-                                  f'{_create_message(group_to_remove.quantizers)}')
+                                  f'{_create_message(current_group.quantizers)}')
             is_step_back = True
 
         previous_accuracy_drop = current_accuracy_drop
@@ -303,12 +307,12 @@ def restore_accuracy(initial_model: TModel,
                                                         validation_dataset,
                                                         validation_fn)
         else:
-            output_name = [x.node_name for x in nncf_graph.get_output_nodes()][0]
+            output_name = [x.node_name for x in quantized_nncf_graph.get_output_nodes()][0]
             current_x_approx = get_logits_for_each_item(current_model, validation_dataset, output_name)
 
         ranked_groups = rank_quantizers(ranked_groups, current_model, validation_dataset, validation_fn,
                                         x_ref, current_x_approx, USE_METRIC, RANKING_SUBSET_SIZE,
-                                        algo_backend, nncf_graph)
+                                        algo_backend, quantized_nncf_graph)
 
     # Show results that were achieved.
     if removed_all or not reached_required_drop:

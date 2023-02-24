@@ -12,13 +12,7 @@
 """
 
 import operator
-from typing import List
-from typing import Callable
-from typing import Iterable
-from typing import Any
-from typing import Union
-from typing import Optional
-from typing import TypeVar
+from typing import List, Callable, Iterable, Any, Union, Optional, TypeVar
 from dataclasses import dataclass
 
 import numpy as np
@@ -127,25 +121,25 @@ def find_groups_of_quantizers_to_rank(
 
 # TODO(andrey-churkin): To remove the `algo_backend` parameter we need to introduce
 # the `CommandCreator` and `CommandCreatorFactory` classes.
-def remove_group_of_quantizers_from_model(group_to_remove: GroupToRank,
+def remove_group_of_quantizers_from_model(group: GroupToRank,
                                           quantized_model: TModel,
                                           nncf_graph: NNCFGraph,
                                           algo_backend: AccuracyControlAlgoBackend) -> TModel:
     """
     Removes group of quantizers from the model.
 
-    :param group_to_remove: Group of quantizers to remove.
+    :param group: Group of quantizers to remove.
     :param quantized_model: Quantized model from which quantizers should be removed.
     :param nncf_graph: The graph which was built for `quantized_model`.
     :param algo_backend: Backend for algorithm.
-    :return: The model from which `group_to_remove.quantizers` were removed.
+    :return: The model from which `group.quantizers` were removed.
     """
     transformation_layout = TransformationLayout()
 
-    for node in group_to_remove.quantizers:
+    for node in group.quantizers:
         transformation_layout.register(algo_backend.create_command_to_remove_quantizer(node))
 
-    for node in group_to_remove.operations:
+    for node in group.operations:
         original_bias = node.data.get('original_bias', None)
         if original_bias is not None:
             transformation_layout.register(algo_backend.create_command_to_update_bias(node, original_bias, nncf_graph))

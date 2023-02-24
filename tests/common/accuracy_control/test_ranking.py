@@ -18,7 +18,6 @@ import numpy as np
 
 from nncf.quantization.algorithms.accuracy_control.ranking import normalized_mse
 from nncf.quantization.algorithms.accuracy_control.ranking import get_ranking_subset_indices
-from tests.common.accuracy_control.common import f32_tensor_1d
 
 
 @pytest.mark.parametrize(
@@ -26,20 +25,20 @@ from tests.common.accuracy_control.common import f32_tensor_1d
     [
         # zero_nmse_when_equal
         [
-            f32_tensor_1d(1.6784564, 0.415631),
-            f32_tensor_1d(1.6784564, 0.415631),
+            np.array([1.6784564, 0.415631], dtype=np.float32),
+            np.array([1.6784564, 0.415631], dtype=np.float32),
             0.0
         ],
         # trivial
         [
-            f32_tensor_1d(2, 1, -1),
-            f32_tensor_1d(-2, 4, 1),
+            np.array([2, 1, -1], dtype=np.float32),
+            np.array([-2, 4, 1], dtype=np.float32),
             4.833333
         ],
         # not_symmetric
         [
-            f32_tensor_1d(-2, 4, 1),
-            f32_tensor_1d(2, 1, -1),
+            np.array([-2, 4, 1], dtype=np.float32),
+            np.array([2, 1, -1], dtype=np.float32),
             1.380952
         ],
     ],
