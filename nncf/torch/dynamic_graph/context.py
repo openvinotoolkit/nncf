@@ -145,6 +145,13 @@ class TracingContext:
         self.global_buffer_store[name] = buffer
 
     def register_traced_tensor(self, tt: 'TracedTensor'):
+        """
+        Registers a weak reference to a traced tensor in the context so that in case
+        the block under context retains a reference to an intermediate tensor somewhere,
+        the context can mark this traced tensor reference as "expired" tracing-wise upon context
+        exit.
+        :param tt: A TracedTensor to be registered.
+        """
         wr = weakref.ref(tt)
         self._threading.thread_local.traced_tensor_weakrefs.append(wr)
 

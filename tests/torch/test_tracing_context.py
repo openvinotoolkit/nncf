@@ -26,7 +26,6 @@ def test_torch_tensor_getitem_behavior(mocker):
     x = torch.ones((10, 4, 4, 4))
     indexes = torch.LongTensor([0, 1, 2])
     mock_tensor_meta = mocker.stub
-    from nncf.torch.dynamic_graph.trace_tensor import TracedTensor
     traced_x = TracedTensor.from_torch_tensor(torch.ones((10, 4, 4, 4)), mock_tensor_meta)
     traced_indexes = TracedTensor.from_torch_tensor(torch.LongTensor([0, 1, 2]), mock_tensor_meta)
     SHAPE_1 = [3, 4, 4, 4]

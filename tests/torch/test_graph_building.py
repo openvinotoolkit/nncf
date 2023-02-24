@@ -582,5 +582,3 @@ def test_integer_path_marking():
     # cat -> __floordiv__,  __floordiv__ -> __getitem__0 (to get single_idx),
     # __getitem__0 -> __getitem__1 (first indexing by tensor), __getitem__0 -> __getitem__2 (second indexing by tensor)
     assert num_integer_edges == 4
-
-
