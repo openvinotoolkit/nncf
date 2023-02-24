@@ -699,6 +699,8 @@ class SymmetricQuantizer(BaseQuantizer):
             if self._half_range:
                 x = torch.min(torch.max(x, input_low), input_high)
                 level_low = 2 * self.level_low
+                if self._narrow_range:
+                    level_low -= 1
                 level_high = 2 * self.level_high + 1
                 input_low, input_high = self._get_input_low_input_high(level_high / self.level_high * self.scale,
                                                                        level_low,
