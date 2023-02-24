@@ -85,11 +85,12 @@ class ModuleForTest(torch.nn.Module):
         self.cached_tensor = None
 
     def forward(self, x):
-        if not self.training:
-            x = x + self.cached_tensor
+        if self.cached_tensor is not None:
+            # self.cached_tensor is produced from a later
+            # stage in control flow graph, but on previous forward
+            self.cached_tensor.unsqueeze(0)
         x = self.conv2d(x)
-        if self.training:
-            self.cached_tensor = x
+        self.cached_tensor = x
         return self.conv2d(x)
 
 
@@ -109,8 +110,12 @@ def test_no_cross_forward_run_dependency():
     module = ModuleForTest()
     module.train()
     tensor = torch.ones([1, 1, 1, 1])
-    with TracingContext():
+    with TracingContext() as ctx:
+        ctx.enable_trace_dynamic_graph()
         _ = module(tensor)
+        ctx.disable_trace_dynamic_graph()
     module.eval()
-    with TracingContext():
+    with TracingContext() as ctx:
+        ctx.enable_trace_dynamic_graph()
         _ = module(tensor)
+        ctx.disable_trace_dynamic_graph()
