@@ -61,6 +61,6 @@ IGNORED_SCOPES_TEST_DATA = [
 
 @pytest.mark.parametrize('ignored_scope,ref_ignored_names', IGNORED_SCOPES_TEST_DATA)
 def test_ignored_scopes(ignored_scope, ref_ignored_names):
-     nncf_graph = NNCFGraphToTestIgnoredScope(CONV_TYPE, LINEAR_TYPE).nncf_graph
-     ignored_names = get_ignored_node_names_from_ignored_scope(ignored_scope, nncf_graph)
-     assert sorted(ignored_names) == ref_ignored_names
+    nncf_graph = NNCFGraphToTestIgnoredScope(CONV_TYPE, LINEAR_TYPE).nncf_graph
+    ignored_names = get_ignored_node_names_from_ignored_scope(ignored_scope, nncf_graph)
+    assert sorted(ignored_names) == ref_ignored_names
