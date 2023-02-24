@@ -26,7 +26,7 @@ from nncf.common.quantization.initialization.range import RangeInitParams
 from nncf.common.quantization.structs import QuantizerGroup
 from nncf.common.scopes import should_consider_scope
 from nncf.common.tensor_statistics.collectors import ReductionShape
-from nncf.common.tensor_statistics.collectors import TensorStatisticCollectorBase
+from nncf.common.tensor_statistics.collectors import TensorReducerBase
 from nncf.config.schemata.defaults import MAX_PERCENTILE
 from nncf.config.schemata.defaults import MIN_PERCENTILE
 from nncf.tensorflow.layers.custom_objects import NNCF_QUANTIZATION_OPERATIONS
@@ -98,7 +98,7 @@ class RangeInitializer:
     def generate_stat_collector(reduction_shape: ReductionShape,
                                 collector_params: RangeInitCollectorParams,
                                 init_config: RangeInitConfig,
-                                num_samples_to_collect_override: int = None) -> TensorStatisticCollectorBase:
+                                num_samples_to_collect_override: int = None) -> TensorReducerBase:
         range_type = init_config.init_type
         num_samples = init_config.num_init_samples
         if num_samples_to_collect_override is not None:

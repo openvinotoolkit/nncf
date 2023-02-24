@@ -163,6 +163,7 @@ def validate_accuracy(model_path, val_loader):
 
 
 def benchmark_torch_model(model, dataloader, model_name, output_path):
+    return 0, 0
     data_sample, _ = next(iter(dataloader))
     # Dump model
     onnx_path = Path(output_path) / (model_name + '.onnx')

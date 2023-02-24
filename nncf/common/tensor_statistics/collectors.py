@@ -14,7 +14,8 @@
 from abc import ABC
 from abc import abstractmethod
 from collections import deque
-from typing import Tuple, Optional, List, Union
+from dataclasses import dataclass
+from typing import Tuple, Optional, List, Union, Callable, Dict, Any
 
 import numpy as np
 from nncf.common.tensor import NNCFTensor
@@ -23,90 +24,6 @@ from nncf.common.tensor import TensorElementsType
 from nncf.common.tensor_statistics.reduction import get_per_channel_history
 
 ReductionShape = Tuple[int]
-
-
-class TensorStatisticCollectorBase(ABC):
-    """Collector estimate statistics at the quantization point based on the provided reduction shape."""
-
-    def __init__(self, reduction_shape: Optional[ReductionShape] = None, num_samples: Optional[int] = None):
-        """
-        Initializes Tensor Statistic Collector
-
-        :param reduction_shape: Shape that defines tensor dimensions to reduce.
-        :param num_samples: Maximum number of samples to collect.
-        """
-        self._reduction_shape = reduction_shape
-        self._enabled = True
-        self._collected_samples = 0
-        self._num_samples = num_samples
-
-    @property
-    def num_samples(self) -> int:
-        return self._num_samples
-
-    def register_input(self, x: TensorType) -> TensorType:
-        """Registers input tensor"""
-        if not self._enabled:
-            return x
-        if self._num_samples is not None and self._collected_samples >= self._num_samples:
-            return x
-        if self._reduction_shape is None:
-            self._reduction_shape = tuple(range(len(x.shape)))
-        self._register_input(x)
-        self._collected_samples += 1
-        return x
-
-    @abstractmethod
-    def _register_input(self, x: TensorType):
-        pass
-
-    def get_statistics(self):
-        """Returns collected statistics, if present."""
-        if self._collected_samples == 0:
-            raise StatisticsNotCollectedError()
-        return self._get_statistics()
-
-    @abstractmethod
-    def _get_statistics(self):
-        pass
-
-    def enable(self):
-        self._enabled = True
-
-    def disable(self):
-        self._enabled = False
-
-    def reset(self):
-        """Resets all the statistics in the collector."""
-        self._collected_samples = 0
-        self._reset()
-
-    @abstractmethod
-    def _reset(self):
-        pass
-
-    def collected_samples(self) -> int:
-        return self._collected_samples
-
-
-class StatisticsNotCollectedError(Exception):
-    """Raised when the statistics are not collected but requested."""
-
-
-class OnlineTensorStatisticCollector(TensorStatisticCollectorBase):
-    """Base class for collectors that collects statistics in online regime, without storing the data."""
-
-
-class OfflineTensorStatisticCollector(TensorStatisticCollectorBase):
-    """Collects statistics in offline regime by storing the data and aggregating it afterwards."""
-
-    def __init__(self, reduction_shape: Optional[ReductionShape] = None,
-                 num_samples: int = None, window_size: int = None):
-        super().__init__(reduction_shape, num_samples)
-        self._samples = deque(maxlen=window_size)
-
-    def _reset(self):
-        self._samples.clear()
 
 
 class NNCFCollectorTensorProcessor(ABC):
@@ -212,28 +129,308 @@ class NNCFCollectorTensorProcessor(ABC):
         """
 
 
-class MinMaxStatisticCollector(OnlineTensorStatisticCollector):
-    """Collector estimates min of minimum values and max of maximum values."""
+class TensorReducerBase(ABC):
+    """Collector estimate statistics at the quantization point based on the provided reduction shape."""
 
-    def __init__(self, use_abs_max: bool, reduction_shape: ReductionShape, num_samples: int = None):
-        super().__init__(reduction_shape, num_samples)
-        self._use_abs_max = use_abs_max
+    def __init__(self,
+                 reduction_shape: Optional[ReductionShape] = None,
+                 inplace: bool = False):
+        """
+        Initializes Tensor Statistic Collector
+
+        :param reduction_shape: Shape that defines tensor dimensions to reduce.
+        :param num_samples: Maximum number of samples to collect.
+        """
+        self._reduction_shape = reduction_shape
         self._tensor_processor = self._get_processor()
+        self._inplace = inplace
 
-        self._min_values = None
-        self._max_values = None
+    @property
+    def inplace(self):
+        return self._inplace
+
+    @classmethod
+    def name(cls):
+        return cls.__name__
 
     @staticmethod
     @abstractmethod
     def _get_processor():
         pass
 
-    def _register_input_common(self, x: NNCFTensor):
+    def reduce_input(self, x: TensorType):
+        if self.inplace:
+            return x
+
+        if self._reduction_shape is None:
+            self._reduction_shape = tuple(range(len(x.shape)))
+        return self._reduce_out_of_place(x)
+
+    @abstractmethod
+    def _reduce_out_of_place(self, x: TensorType):
+        pass
+
+    @abstractmethod
+    def get_output_name(self, target_node_name: str,
+                        port_id: int) -> str:
+        pass
+
+    @abstractmethod
+    def get_inplace_fn(self):
+        pass
+
+    def __hash__(self) -> int:
+        return hash(self.name())
+
+class TensorAggregatorBase:
+    def __init__(self, reduction_shape, tensor_processor):
+        """
+        Initializes Tensor Statistic Collector
+
+        :param reduction_shape: Shape that defines tensor dimensions to reduce.
+        :param num_samples: Maximum number of samples to collect.
+        """
+
+        self._reduction_shape = reduction_shape
+        self._tensor_processor = tensor_processor
+        self._container = []
+
+    @classmethod
+    def name(cls):
+        return cls.__name__
+
+    @abstractmethod
+    def register_reduced_input(self, x: TensorType):
+        pass
+
+    @abstractmethod
+    def aggregate(self):
+        pass
+
+    def reset(self):
+        self._container = []
+
+    def __hash__(self) -> int:
+        return hash(self.name())
+
+
+class TensorCollector:
+    def __init__(self,
+                 num_samples: int,
+                 statistic_container: Optional['StatisticContainer'] = None
+                 ) -> None:
+        self._reducers: List[TensorReducerBase] = []
+        self._aggregators: List[Tuple[TensorAggregatorBase, str]] = []
+        self._aggregated_values = None
+        self._stat_container_kwargs_map: List[Tuple[str, Tuple[str, str]]] = []
+        self._stat_container = statistic_container
+        self._num_samples = num_samples
+        self._collected_samples = 0
+        self._enabled = True
+
+    @property
+    def num_samples(self) -> int:
+        return self._num_samples
+
+    @property
+    def collected_samples(self) -> int:
+        return self._collected_samples
+
+    def enable(self):
+        self._enabled = True
+
+    def disable(self):
+        self._enabled = False
+
+    def add_branch(self, container_key: str,
+                   reducer: TensorReducerBase, aggregator: TensorAggregatorBase) -> None:
+        self._reducers.append(reducer)
+        self._aggregators.append((aggregator, reducer.name()))
+        self._stat_container_kwargs_map.append((container_key, (reducer.name(), aggregator.name())))
+
+    def register_input(self, target_node_name: str, port_id,
+                        inputs: Dict[str, TensorType]):
+        if not self._enabled:
+            return
+        if self._num_samples is not None and\
+            self._collected_samples >= self._num_samples:
+            return
+
+        reduced_inputs = {}
+        for reducer in self._reducers:
+            input_name = reducer.get_output_name(target_node_name, port_id)
+            reduced_input = reducer.reduce_input(inputs[input_name])
+            reduced_inputs[reducer.name()] = reduced_input
+
+        for aggregator, reducer_name in self._aggregators:
+            aggregator.register_reduced_input(reduced_inputs[reducer_name])
+
+        self._collected_samples += 1
+
+    def _calc_aggregated_values(self) -> None:
+        result = {}
+        for aggregator, reducer_name in self._aggregators:
+            val = aggregator.aggregate()
+            result[(reducer_name, aggregator.name())] = val
+        self.set_aggregated_values(result)
+
+    def set_aggregated_values(self, values: Dict[Tuple[str, str], Any]):
+        self._aggregated_values = values
+
+    def get_statistics(self):
+        if self._aggregated_values is None:
+            self._calc_aggregated_values()
+
+        kwargs = {}
+        for container_key, branch_key in self._stat_container_kwargs_map:
+            kwargs[container_key] = self._aggregated_values[branch_key]
+
+        if not self._stat_container:
+            return kwargs
+        return self._stat_container(**kwargs)
+
+    def reset(self):
+        for aggregator in self._aggregators:
+            aggregator.reset()
+
+
+class MergedTensorCollector(TensorCollector):
+    def __init__(self, tensor_collectors: List[TensorCollector]) -> None:
+        num_samples = max(collector.num_samples for collector in tensor_collectors)
+        super().__init__(num_samples)
+        reducers = set()
+        aggregators = set()
+        for tensor_collector in tensor_collectors:
+            reducers.update(tensor_collector._reducers)
+            aggregators.update(tensor_collector._aggregators)
+
+        self._reducers = list(reducers)
+        self._aggregators = list(aggregators)
+        self._tensor_collectors = tensor_collectors
+
+    def aggregate(self):
+        self._calc_aggregated_values()
+        for tensor_collector in self._tensor_collectors:
+            tensor_collector.set_aggregated_values(self._aggregated_values)
+
+    def get_inplace_fn(self):
+        retval = []
+        for reducer in self._reducers:
+            if reducer.inplace:
+                retval.append(reducer.get_inplace_fn())
+        return retval
+
+    def any_stat_out_of_place(self) -> bool:
+        return any(not reducer.inplace for reducer in self._reducers)
+
+class MinReducer(TensorReducerBase):
+    def _reduce_out_of_place(self, x: TensorType):
+        return self._tensor_processor.reduce_min(x, self._reduction_shape)
+
+
+class MaxReducer(TensorReducerBase):
+    def _reduce_out_of_place(self, x: TensorType):
+        return self._tensor_processor.reduce_max(x, self._reduction_shape)
+
+
+class AbsMaxReducer(TensorReducerBase):
+    def _reduce_out_of_place(self, x: TensorType):
+        x = self._tensor_processor.abs(x)
+        return self._tensor_processor.reduce_max(x, self._reduction_shape)
+
+
+class OnlineMinAggregator(TensorAggregatorBase):
+    def register_reduced_input(self, x: TensorType):
+        if not self._container:
+            self._container = x
+        else:
+            self._container = self._tensor_processor.min(x, self._container)
+
+    def aggregate(self):
+        return self._container.tensor
+
+
+class OnlineMaxAggregator(TensorAggregatorBase):
+    def register_reduced_input(self, x: TensorType):
+        if not self._container:
+            self._container = x
+        else:
+            self._container = self._tensor_processor.max(x, self._container)
+
+    def aggregate(self):
+        return self._container.tensor
+
+
+class OfflineMinMaxAggregatorBase(TensorAggregatorBase):
+    def __init__(self, reduction_shape, tensor_processor,
+                 use_per_sample_stats: bool, window_size=None):
+        super().__init__(reduction_shape, tensor_processor)
+        self._window_size = window_size
+        self._container = deque(maxlen=window_size)
+        self._use_per_sample_stats = use_per_sample_stats
+
+    def register_reduced_input(self, x: TensorType):
+        if self._use_per_sample_stats:
+            self._container.extend(self._tensor_processor.unstack(x))
+        else:
+            self._container.append(x)
+
+
+class OfflineMinAggregator(OfflineMinMaxAggregatorBase):
+    def aggregate(self):
+        stacked_val = self._tensor_processor.stack(self._container)
+        return self._tensor_processor.reduce_min(stacked_val, axis=0).tensor
+
+
+class OfflineMaxAggregator(OfflineMinMaxAggregatorBase):
+    def aggregate(self):
+        stacked_val = self._tensor_processor.stack(self._container)
+        return self._tensor_processor.reduce_max(stacked_val, axis=0).tensor
+
+
+class OfflineMeanAggregator(OfflineMinMaxAggregatorBase):
+    def aggregate(self):
+        stacked_val = self._tensor_processor.stack(self._container)
+        return self._tensor_processor.mean(stacked_val, axis=0).tensor
+
+
+class StatisticsNotCollectedError(Exception):
+    """Raised when the statistics are not collected but requested."""
+
+
+class OnlineTensorStatisticCollector(TensorReducerBase):
+    """Base class for collectors that collects statistics in online regime, without storing the data."""
+
+
+class OfflineTensorStatisticCollector(TensorReducerBase):
+    """Collects statistics in offline regime by storing the data and aggregating it afterwards."""
+
+    def __init__(self, reduction_shape: Optional[ReductionShape] = None, window_size: Optional[int] = None):
+        super().__init__(reduction_shape)
+        self._samples = deque(maxlen=window_size)
+
+    def reset(self):
+        self._samples.clear()
+
+
+class MinMaxStatisticCollector(OnlineTensorStatisticCollector):
+    """Collector estimates min of minimum values and max of maximum values."""
+
+    def __init__(self, reduction_shape: ReductionShape, use_abs_max: bool):
+        super().__init__(reduction_shape)
+        self._use_abs_max = use_abs_max
+
+        self._min_values = None
+        self._max_values = None
+
+    def reduce_input(self, x: NNCFTensor):
         min_reduced = self._tensor_processor.reduce_min(x, self._reduction_shape)
         if self._use_abs_max:
             x = self._tensor_processor.abs(x)
         max_reduced = self._tensor_processor.reduce_max(x, self._reduction_shape)
+        return min_reduced, max_reduced
 
+    def register_reduced_input(self, min_reduced: NNCFTensor, max_reduced: NNCFTensor):
         if self._min_values is None:
             self._min_values = min_reduced
         else:
@@ -244,10 +441,19 @@ class MinMaxStatisticCollector(OnlineTensorStatisticCollector):
         else:
             self._max_values = self._tensor_processor.max(max_reduced, self._max_values)
 
-    def _reset(self):
+    def reset(self):
         self._min_values = None
         self._max_values = None
 
+
+@dataclass
+class MinMaxOfflineStatisticCollectorSpec:
+    use_per_sample_stats: bool
+    use_abs_max: bool
+    reduction_shape: ReductionShape
+    num_samples: int = None
+    window_size: int = None
+    inplace: bool = False
 
 class MinMaxOfflineStatisticCollectorBase(OfflineTensorStatisticCollector):
     """
@@ -256,30 +462,24 @@ class MinMaxOfflineStatisticCollectorBase(OfflineTensorStatisticCollector):
     """
 
     def __init__(self,
-                 use_per_sample_stats: bool,
-                 use_abs_max: bool,
-                 reduction_shape: ReductionShape,
-                 num_samples: int = None,
-                 window_size: int = None):
-        super().__init__(reduction_shape, num_samples)
+                 use_per_sample_stats: bool, use_abs_max: bool,
+                 reduction_shape: Optional[ReductionShape] = None,
+                 window_size: Optional[int] = None):
+        super().__init__(reduction_shape, window_size)
         self._use_per_sample_stats = use_per_sample_stats
         self._use_abs_max = use_abs_max
-        self._tensor_processor = self._get_processor()
 
         self._all_min_values = deque(maxlen=window_size)
         self._all_max_values = deque(maxlen=window_size)
 
-    @staticmethod
-    @abstractmethod
-    def _get_processor():
-        pass
-
-    def _register_input_common(self, x: NNCFTensor):
+    def reduce_input(self, x: NNCFTensor):
         min_reduced = self._tensor_processor.reduce_min(x, self._reduction_shape)
         if self._use_abs_max:
             x = self._tensor_processor.abs(x)
         max_reduced = self._tensor_processor.reduce_max(x, self._reduction_shape)
+        return min_reduced, max_reduced
 
+    def register_reduced_input(self, min_reduced: NNCFTensor, max_reduced: NNCFTensor):
         if self._use_per_sample_stats:
             self._all_min_values.extend(self._tensor_processor.unstack(min_reduced))
             self._all_max_values.extend(self._tensor_processor.unstack(max_reduced))
@@ -295,7 +495,7 @@ class MinMaxOfflineStatisticCollectorBase(OfflineTensorStatisticCollector):
     def _max_aggregate(self):
         pass
 
-    def _reset(self):
+    def reset(self):
         self._all_min_values.clear()
         self._all_max_values.clear()
 
@@ -313,7 +513,8 @@ class MixedMinMaxStatisticCollector(MinMaxOfflineStatisticCollectorBase):
                  reduction_shape: ReductionShape,
                  num_samples: int = None,
                  window_size: int = None):
-        super().__init__(use_per_sample_stats, use_abs_max, reduction_shape, num_samples, window_size)
+        super().__init__(use_per_sample_stats, use_abs_max,
+                         reduction_shape, num_samples, window_size)
         self._use_means_of_mins = use_means_of_mins
         self._use_means_of_maxs = use_means_of_maxs
 
@@ -350,6 +551,7 @@ class MeanStatisticCollector(OfflineTensorStatisticCollector):
     """
 
     def __init__(self,
+                 tensor_processor: NNCFCollectorTensorProcessor,
                  reduction_shape: ReductionShape,
                  num_samples: Optional[int] = None,
                  window_size: Optional[int] = None) -> None:
@@ -360,24 +562,21 @@ class MeanStatisticCollector(OfflineTensorStatisticCollector):
             the number of samples that will be processed.
         :param window_size: Optional maximum length for the statistic collection
         """
-        super().__init__(reduction_shape, num_samples)
-        self._tensor_processor = self._get_processor()
+        super().__init__(tensor_processor, reduction_shape, num_samples)
         self._all_values = deque(maxlen=window_size)
         self._all_shapes = deque(maxlen=window_size)
 
-    @staticmethod
-    @abstractmethod
-    def _get_processor():
-        pass
-
-    def _register_input_common(self, x: NNCFTensor):
+    def reduce_input(self, x: NNCFTensor):
         if self._reduction_shape == 0:
-            self._all_values.append(self._tensor_processor.batch_mean(x))
+            return (self._tensor_processor.batch_mean(x),)
         else:
-            self._all_values.append(self._tensor_processor.mean_per_channel(x, self._reduction_shape))
-        self._all_shapes.append(x.shape)
+            return (self._tensor_processor.mean_per_channel(x, self._reduction_shape),)
 
-    def _reset(self):
+    def register_reduced_input(self, reduced_input: NNCFTensor):
+        self._all_values.append(reduced_input)
+        self._all_shapes.append(reduced_input.shape)
+
+    def reset(self):
         self._all_values.clear()
         self._all_shapes.clear()
 
@@ -395,23 +594,19 @@ class BatchStatisticCollector(OfflineTensorStatisticCollector):
     Each sample stays available for usage in further stages of the algorithm.
     """
 
-    def __init__(self,
-                 num_samples: Optional[int] = None) -> None:
+    def __init__(self, tensor_processor: NNCFCollectorTensorProcessor) -> None:
         """
         :param num_samples: Optional parameter for statistic collection that regulates
             the number of samples that will be processed.
         """
-        super().__init__(num_samples=num_samples)
-        self._tensor_processor = self._get_processor()
+        super().__init__(tensor_processor)
         self._all_values = []
 
-    @staticmethod
-    @abstractmethod
-    def _get_processor():
-        pass
+    def _reduce_input(self, x: NNCFTensor):
+        return (self._tensor_processor.batch_mean(x),)
 
-    def _register_input_common(self, x: NNCFTensor):
-        self._all_values.append(self._tensor_processor.batch_mean(x).tensor)
+    def _register_reduced_input(self, reduced_input: NNCFTensor):
+        self._all_values.append(reduced_input.tensor)
 
     def _reset(self):
         self._all_values.clear()

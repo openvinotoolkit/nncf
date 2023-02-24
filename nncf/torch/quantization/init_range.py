@@ -34,7 +34,7 @@ from nncf.common.quantization.structs import QuantizerGroup
 from nncf.common.quantization.structs import QuantizerId
 from nncf.common.quantization.structs import WeightQuantizerId
 from nncf.common.scopes import should_consider_scope
-from nncf.common.tensor_statistics.collectors import TensorStatisticCollectorBase
+from nncf.common.tensor_statistics.collectors import TensorReducerBase
 from nncf.common.tensor_statistics.collectors import ReductionShape
 from nncf.torch.graph.graph import PTNNCFGraph
 from nncf.torch.initialization import DataLoaderBaseRunner
@@ -127,7 +127,7 @@ class StatCollectorGenerator:
     def generate_collectors_for_range_init_statistics_collection(target_model_graph: PTNNCFGraph,
                                                                  quantizer_setup: QuantizerSetupBase,
                                                                  range_init_params: PTRangeInitParams) -> \
-            Dict[TensorStatisticObservationPoint, Dict[ReductionShape, TensorStatisticCollectorBase]]:
+            Dict[TensorStatisticObservationPoint, Dict[ReductionShape, TensorReducerBase]]:
         retval = {}
         for qp in quantizer_setup.quantization_points.values():
             init_config = range_init_params.get_init_config_for_quantization_point(qp)
@@ -162,7 +162,7 @@ class StatCollectorGenerator:
             init_config: RangeInitConfig,
             reduction_shape: ReductionShape = None,
             collector_params = None,
-            num_samples_to_collect_override: int = None) -> TensorStatisticCollectorBase:
+            num_samples_to_collect_override: int = None) -> TensorReducerBase:
         num_samples = init_config.num_init_samples
         if num_samples_to_collect_override is not None:
             num_samples = num_samples_to_collect_override
@@ -242,11 +242,11 @@ class DataLoaderRangeInitializeRunner(DataLoaderBaseRunner):
         self.progressbar_description = 'Range parameters initialization'
 
         #pylint:disable=line-too-long
-        self.collectors_and_modules_to_init = OrderedDict()  # type: Dict[str, Tuple[TensorStatisticCollectorBase, BaseQuantizer]]
+        self.collectors_and_modules_to_init = OrderedDict()  # type: Dict[str, Tuple[TensorReducerBase, BaseQuantizer]]
         self.hook_handles = []
         self.batch_size = batch_size
 
-    def _get_fwd_hook(self, collector: TensorStatisticCollectorBase) -> Callable:
+    def _get_fwd_hook(self, collector: TensorReducerBase) -> Callable:
         def fwd_hook(module, input_, output):
             collector.register_input(input_[0])
         return fwd_hook

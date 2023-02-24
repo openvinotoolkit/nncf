@@ -18,7 +18,7 @@ import pytest
 import torch
 
 from nncf.common.tensor_statistics.statistics import TensorStatistic
-from nncf.common.tensor_statistics.collectors import TensorStatisticCollectorBase, ReductionShape, \
+from nncf.common.tensor_statistics.collectors import TensorReducerBase, ReductionShape, \
     StatisticsNotCollectedError, OfflineTensorStatisticCollector
 from nncf.torch.tensor_statistics.collectors import PTMinMaxStatisticCollector, PTMixedMinMaxStatisticCollector, \
     PTMeanMinMaxStatisticCollector, PTMedianMADStatisticCollector, PTPercentileStatisticCollector, \
@@ -101,7 +101,7 @@ class TestCollectedStatistics:
                                          }
                                  )
                              ])
-    def test_collected_statistics_with_shape_convert(self, collector: Type[TensorStatisticCollectorBase],
+    def test_collected_statistics_with_shape_convert(self, collector: Type[TensorReducerBase],
                                                      reduction_shapes_vs_ref_statistic:
                                                      Dict[Tuple[ReductionShape, ReductionShape], TensorStatistic]):
         for shapes in reduction_shapes_vs_ref_statistic.keys():
@@ -185,7 +185,7 @@ class TestCollectedStatistics:
                                          }
                                  ),
                              ])
-    def test_collected_statistics(self, collector: Type[TensorStatisticCollectorBase],
+    def test_collected_statistics(self, collector: Type[TensorReducerBase],
                                   reduction_shapes_vs_ref_statistic: Dict[ReductionShape, TensorStatistic]):
         for shapes in reduction_shapes_vs_ref_statistic.keys():
             reduction_shape = shapes
@@ -218,12 +218,12 @@ class TestCollectedStatistics:
         collector_type = request.param
         return collector_type(reduction_shape=(1,))
 
-    def test_collected_samples(self, collector_for_interface_test: TensorStatisticCollectorBase):
+    def test_collected_samples(self, collector_for_interface_test: TensorReducerBase):
         for input_ in TestCollectedStatistics.REF_INPUTS:
             collector_for_interface_test.register_input(input_)
         assert collector_for_interface_test.collected_samples() == len(TestCollectedStatistics.REF_INPUTS)
 
-    def test_reset(self, collector_for_interface_test: TensorStatisticCollectorBase):
+    def test_reset(self, collector_for_interface_test: TensorReducerBase):
         for input_ in TestCollectedStatistics.REF_INPUTS:
             collector_for_interface_test.register_input(input_)
         collector_for_interface_test.reset()
@@ -231,7 +231,7 @@ class TestCollectedStatistics:
         with pytest.raises(StatisticsNotCollectedError):
             collector_for_interface_test.get_statistics()
 
-    def test_enable_disable(self, collector_for_interface_test: TensorStatisticCollectorBase):
+    def test_enable_disable(self, collector_for_interface_test: TensorReducerBase):
         for input_ in TestCollectedStatistics.REF_INPUTS:
             collector_for_interface_test.register_input(input_)
 

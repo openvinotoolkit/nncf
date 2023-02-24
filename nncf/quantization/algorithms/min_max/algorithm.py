@@ -36,7 +36,7 @@ from nncf.common.quantization.structs import QuantizationPreset
 from nncf.common.quantization.structs import QuantizerGroup
 from nncf.common.quantization.structs import QuantizationConstraints
 from nncf.common.quantization.config_assignment import assign_qconfig_lists_to_modules
-from nncf.common.tensor_statistics.collectors import TensorStatisticCollectorBase
+from nncf.common.tensor_statistics.collectors import TensorReducerBase
 from nncf.common.utils.backend import BackendType
 from nncf.common.utils.backend import get_backend
 from nncf.common.logging import nncf_logger
@@ -197,7 +197,7 @@ class MinMaxQuantization(Algorithm):
 
     def _get_stat_collector(self, nncf_graph: NNCFGraph,
                             target_point: TargetPoint,
-                            quantizer_config: QuantizerConfig) -> TensorStatisticCollectorBase:
+                            quantizer_config: QuantizerConfig) -> TensorReducerBase:
         """
         Creates and returns statistic collector instance based on the quantizer's configuration.
 

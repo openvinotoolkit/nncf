@@ -22,7 +22,7 @@ from nncf.common.graph.transformations.commands import TargetType
 from nncf.common.tensor import NNCFTensor
 from nncf.common.graph import NNCFGraph
 from nncf.common.graph import NNCFNode
-from nncf.common.tensor_statistics.collectors import TensorStatisticCollectorBase
+from nncf.common.tensor_statistics.collectors import TensorReducerBase
 from nncf.common.tensor_statistics.collectors import ReductionShape
 from nncf.common.utils.registry import Registry
 
@@ -87,7 +87,7 @@ class FastBiasCorrectionAlgoBackend(ABC):
     @abstractmethod
     def mean_statistic_collector(reduction_shape: ReductionShape,
                                  num_samples: Optional[int] = None,
-                                 window_size: Optional[int] = None) -> TensorStatisticCollectorBase:
+                                 window_size: Optional[int] = None) -> TensorReducerBase:
         """
         Returns backend-specific mean statistic collector.
 

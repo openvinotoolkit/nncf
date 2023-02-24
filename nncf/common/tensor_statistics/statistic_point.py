@@ -11,11 +11,11 @@
  limitations under the License.
 """
 
-from typing import Callable, Generator
+from typing import Callable, Generator, Optional
 
 from collections import UserDict
 
-from nncf.common.tensor_statistics.collectors import TensorStatisticCollectorBase
+from nncf.common.tensor_statistics.collectors import TensorReducerBase
 from nncf.common.tensor import TensorType
 from nncf.common.graph.transformations.commands import TargetPoint
 
@@ -28,7 +28,7 @@ class StatisticPoint:
     algorithm implies on what algorithm nedeed this statistics.
     """
 
-    def __init__(self, target_point: TargetPoint, tensor_collector: TensorStatisticCollectorBase,
+    def __init__(self, target_point: TargetPoint, tensor_collector: TensorReducerBase,
                  algorithm: 'Algorithm'):
         self.target_point = target_point
         self.algorithm_to_tensor_collectors = {algorithm: [tensor_collector]}
@@ -75,11 +75,27 @@ class StatisticPointsContainer(UserDict):
             if statistic_point_condition_func(_statistic_point):
                 yield _statistic_point
 
+    def get_tensor_collectors(
+            self,
+            statistic_point_condition_func: Optional[Callable[[StatisticPoint], bool]] = None):
+        if statistic_point_condition_func is None:
+            def default_filter(stat_point: StatisticPoint):
+                return True
+            statistic_point_condition_func = default_filter
+
+        for target_node_name in self.data:
+            for statistic_point in\
+                self.iter_through_statistic_points_in_target_node(target_node_name,
+                                                                  statistic_point_condition_func):
+                for algorithm, tensor_collectors in statistic_point.algorithm_to_tensor_collectors.items():
+                    for tensor_collector in tensor_collectors:
+                        yield algorithm, statistic_point, tensor_collector
+
     def get_algo_statistics_for_node(
             self,
             target_node_name: str,
             statistic_point_condition_func: Callable[[StatisticPoint], bool],
-            algorithm: 'Algorithm') -> Generator[TensorStatisticCollectorBase, None, None]:
+            algorithm: 'Algorithm') -> Generator[TensorReducerBase, None, None]:
 
         for _statistic_point in self.iter_through_statistic_points_in_target_node(target_node_name,
                                                                                   statistic_point_condition_func):

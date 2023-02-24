@@ -55,7 +55,13 @@ def quantize_impl(model: ov.Model,
         model_type=model_type
     )
 
-    quantization_algorithm = PostTrainingQuantization(quantization_parameters)
+    from nncf.quantization.algorithms.min_max.algorithm import MinMaxQuantization
+    params = PostTrainingQuantizationParameters()
+    min_max_params = params.algorithms[MinMaxQuantization]
+    params.algorithms = {MinMaxQuantization: min_max_params}
+    quantization_algorithm = PostTrainingQuantization(params)
+
+    #quantization_algorithm = PostTrainingQuantization(quantization_parameters)
     quantized_model = quantization_algorithm.apply(model, dataset=calibration_dataset)
     if compress_weights:
         compress_quantize_weights_transformation(quantized_model)

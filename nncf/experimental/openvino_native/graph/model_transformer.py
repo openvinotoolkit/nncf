@@ -12,6 +12,18 @@
 """
 
 from typing import List, Tuple, Dict
+from typing import List, Tuple, Dict, Callable
+from enum import Enum
+from openvino.tools.mo.ops.op import Op
+from openvino.tools.mo.ops.result import Result
+from openvino.tools.mo.front.tf.graph_utils import create_op_node_with_second_input
+from openvino.tools.mo.front.common.partial_infer.utils import int64_array
+
+try:
+    from openvino.tools.mo.back.add_outputs_recursive import AddOutputRecursive
+except ImportError:
+    pass  # we try to import AddOutputRecursive for subgraphs quantization
+
 import openvino.runtime as ov
 import numpy as np
 from openvino.runtime import opset9 as opset
@@ -22,11 +34,24 @@ from nncf.common.graph.transformations.commands import TargetType
 from nncf.quantization.fake_quantize import FakeQuantizeParameters
 from nncf.experimental.openvino_native.graph.transformations.commands import OVQuantizerInsertionCommand
 from nncf.experimental.openvino_native.graph.transformations.commands import OVOutputInsertionCommand
+from nncf.experimental.openvino_native.graph.transformations.commands import OVInplaceStatisticInsertionCommand
 from nncf.experimental.openvino_native.graph.transformations.commands import OVModelExtractionCommand
 from nncf.experimental.openvino_native.graph.transformations.commands import OVBiasCorrectionCommand
 from nncf.experimental.openvino_native.graph.transformations.commands import OVFQNodeRemovingCommand
 from nncf.experimental.openvino_native.graph.node_utils import get_result_node_name
 from nncf.experimental.openvino_native.graph.transformations.commands import OVWeightUpdateCommand
+
+
+class ModelPrecision(Enum):
+    """
+    Describes the model precision based on the precision of floating point constants.
+
+    :param FP32:
+    :param FP16:
+    """
+
+    FP32 = 'FP32'
+    FP16 = 'FP16'
 
 
 class OVModelTransformer(ModelTransformer):
@@ -59,12 +84,15 @@ class OVModelTransformer(ModelTransformer):
         quantizer_insertion_transformations = []
         bias_correction_transformations = []
         weight_update_transformations = []
+        inplace_stat_transformations = []
         model_extraction_transformation = None
         transformations = transformation_layout.transformations
 
         for transformation in transformations:
             if isinstance(transformation, OVOutputInsertionCommand):
                 output_insertion_transformations.append(transformation)
+            if isinstance(transformation, OVInplaceStatisticInsertionCommand):
+                inplace_stat_transformations.append(transformation)
             elif isinstance(transformation, OVFQNodeRemovingCommand):
                 fq_nodes_removing_transformations.append(transformation)
             elif isinstance(transformation, OVQuantizerInsertionCommand):
@@ -90,6 +118,8 @@ class OVModelTransformer(ModelTransformer):
             model = self._apply_model_extraction_transformation(model, model_extraction_transformation)
         if output_insertion_transformations:
             model = self._apply_output_insertion_transformations(model, output_insertion_transformations)
+        if inplace_stat_transformations:
+            model = self._apply_inplace_operation_insertion(model, inplace_stat_transformations)
         return model
 
     @staticmethod
@@ -133,7 +163,8 @@ class OVModelTransformer(ModelTransformer):
         return extra_model_outputs
 
     @staticmethod
-    def _insert_outputs(model: ov.Model, outputs: List[Tuple[ov.Output, int]]) -> ov.Model:
+    def _insert_outputs(model: ov.Model,
+                        outputs: List[Tuple[ov.Output, int, Callable[[str, int], str]]]) -> ov.Model:
         """
         Takes a model and adds outputs based on the list of ov.Output.
 
@@ -179,6 +210,18 @@ class OVModelTransformer(ModelTransformer):
         return model
 
     @staticmethod
+    def _get_model_precision(model: ov.Model):
+        model_precision = ModelPrecision.FP32
+        for op in model.get_ops():
+            if op.get_type_name() == 'Constant':
+                if op.get_element_type().is_real():
+                    if op.get_element_type() == ov.Type(np.float16):
+                        model_precision = ModelPrecision.FP16
+                        break
+        return model_precision
+
+
+    @staticmethod
     def _apply_quantizer_insertion_transformations(model: ov.Model,
                                                    transformations: List[OVQuantizerInsertionCommand]) -> ov.Model:
         """
@@ -188,6 +231,7 @@ class OVModelTransformer(ModelTransformer):
         :param transformations: List of the OVQuantizerInsertionCommand transformations.
         :return: Model with inserted FakeQuantize nodes.
         """
+        model_precision = OVModelTransformer._get_model_precision(model)
         name_to_node_mapping = OVModelTransformer._get_name_to_node_mapping(model)
         for transformation in transformations:
             OVModelTransformer._insert_fake_quantize_op(transformation, name_to_node_mapping)
@@ -349,3 +393,33 @@ class OVModelTransformer(ModelTransformer):
             results = model.get_results()
 
         return ov.Model(results, params)
+
+    @staticmethod
+    def _apply_inplace_operation_insertion(model: ov.Model,
+                                           transformations: OVInplaceStatisticInsertionCommand):
+        name_to_node_mapping = OVModelTransformer._get_name_to_node_mapping(model)
+        outputs = []
+        for transformation in transformations:
+            outputs.append(
+                OVModelTransformer._insert_inplace_operation(transformation, name_to_node_mapping))
+        return OVModelTransformer._insert_outputs(model, outputs)
+
+    @staticmethod
+    def _insert_inplace_operation(transformation: OVInplaceStatisticInsertionCommand,
+                                   name_to_node_mapping: Dict[str, ov.Node]) -> None:
+        transform_type = transformation.target_point.type
+
+        node_name = transformation.target_point.target_node_name
+        target_node = name_to_node_mapping[node_name]
+        port_id = transformation.target_point.port_id
+        if transform_type == TargetType.POST_LAYER_OPERATION:
+            new_node = transformation.inplace_op_fn(target_node)
+            return (new_node.output(0), port_id)
+        elif transform_type in [TargetType.PRE_LAYER_OPERATION,
+                                TargetType.OPERATION_WITH_WEIGHTS]:
+            inp_node = target_node.input(port_id)
+            input_node = inp_node.get_source_output().get_node()
+            new_node = transformation.inplace_op_fn(input_node)
+            return (new_node.output(0), port_id)
+        else:
+            raise RuntimeError(f'Transform type {transform_type} is not supported')

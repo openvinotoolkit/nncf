@@ -11,7 +11,7 @@
  limitations under the License.
 """
 
-from typing import List
+from typing import List, Dict, Callable
 
 import numpy as np
 
@@ -21,6 +21,9 @@ from nncf.common.graph.transformations.commands import Command
 from nncf.common.graph.transformations.commands import TransformationCommand
 from nncf.common.graph.transformations.commands import TransformationType
 from nncf.quantization.fake_quantize import FakeQuantizeParameters
+from nncf.quantization.algorithms.algorithm import Algorithm
+from nncf.common.tensor_statistics.collectors import TensorReducerBase
+from nncf.experimental.openvino_native.quantization.quantizer_parameters import OVQuantizerLayerParameters
 
 
 class OVTargetPoint(TargetPoint):
@@ -60,6 +63,20 @@ class OVInsertionCommand(TransformationCommand):
 
 
 class OVOutputInsertionCommand(OVInsertionCommand):
+    def __init__(self, target_point: OVTargetPoint):
+        super().__init__(target_point)
+
+    def union(self, other: 'TransformationCommand') -> 'TransformationCommand':
+        # Have a look at nncf/torch/graph/transformations/commands/PTInsertionCommand
+        raise NotImplementedError()
+
+
+class OVInplaceStatisticInsertionCommand(OVInsertionCommand):
+    def __init__(self, target_point: OVTargetPoint,
+                 inplace_op_fn: 'TensorCollectorSpecBase'):
+        super().__init__(target_point)
+        self.inplace_op_fn = inplace_op_fn
+
     def union(self, other: 'TransformationCommand') -> 'TransformationCommand':
         # Have a look at nncf/torch/graph/transformations/commands/PTInsertionCommand
         raise NotImplementedError()
