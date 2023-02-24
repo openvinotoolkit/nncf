@@ -122,10 +122,11 @@ class TracingContext:
         return self
 
     def __exit__(self, *args):
-        for traced_tensor_weakref in self._threading.thread_local.traced_tensor_weakrefs:
-            tt = traced_tensor_weakref()
-            if tt is not None:
-                tt.nncf_expire()
+        if self._save_context is not self:  # NNCFNetwork.rebuild_graph() uses the compressed context nested in self
+            for traced_tensor_weakref in self._threading.thread_local.traced_tensor_weakrefs:
+                tt = traced_tensor_weakref()
+                if tt is not None:
+                    tt.nncf_expire()
 
         self._reset_thread_local()
 
