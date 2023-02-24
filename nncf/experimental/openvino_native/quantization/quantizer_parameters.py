@@ -213,12 +213,12 @@ def calculate_quantizer_parameters(statistics: MinMaxTensorStatistic,
     if quantizer_config.mode == QuantizationMode.SYMMETRIC:
         narrow_range = quant_group == QuantizerGroup.WEIGHTS
         min_values = None if quant_group == QuantizerGroup.WEIGHTS else min_values
-        _, _, levels = calculate_symmetric_level_ranges(quantizer_config.num_bits,
-                                                        signed=True, narrow_range=narrow_range)
+        q_low, q_high, levels = calculate_symmetric_level_ranges(quantizer_config.num_bits,
+                                                                 signed=True, narrow_range=narrow_range)
         level_low, level_high = symmetric_range(min_values, max_values,
                                                 levels, quantizer_config, quant_group)
     else:
-        _, _, levels = calculate_asymmetric_level_ranges(quantizer_config.num_bits, narrow_range=False)
+        q_low, q_high, levels = calculate_asymmetric_level_ranges(quantizer_config.num_bits, narrow_range=False)
         level_low, level_high = asymmetric_range(min_values, max_values, quantizer_config, quant_group)
 
     if quant_group == QuantizerGroup.ACTIVATIONS and\
@@ -228,6 +228,13 @@ def calculate_quantizer_parameters(statistics: MinMaxTensorStatistic,
 
     output_low, output_high = level_low, level_high
     if half_range:
-        output_low, output_high = output_low * 2, output_high * 2
-        level_low, level_high = level_low * 2, level_high * 2
+        if quantizer_config.mode == QuantizationMode.SYMMETRIC:
+            q_low_half_range, q_high_half_range, _ = calculate_symmetric_level_ranges(
+                quantizer_config.num_bits - 1, signed=True, narrow_range=narrow_range)
+        else:
+            q_low_half_range, q_high_half_range, _ = calculate_asymmetric_level_ranges(
+                quantizer_config.num_bits - 1, narrow_range=narrow_range)
+        k_low, k_high = q_low / q_low_half_range, q_high / q_high_half_range
+        output_low, output_high = output_low * k_low, output_high * k_high
+        level_low, level_high = level_low * k_low, level_high * k_high
     return OVQuantizerLayerParameters(level_low, level_high, output_low, output_high, levels)
