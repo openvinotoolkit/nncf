@@ -119,8 +119,6 @@ def find_groups_of_quantizers_to_rank(
     return groups_to_rank
 
 
-# TODO(andrey-churkin): To remove the `algo_backend` parameter we need to introduce
-# the `CommandCreator` and `CommandCreatorFactory` classes.
 def remove_group_of_quantizers_from_model(group: GroupToRank,
                                           quantized_model: TModel,
                                           nncf_graph: NNCFGraph,
@@ -154,8 +152,6 @@ def remove_group_of_quantizers_from_model(group: GroupToRank,
     return transformed_model
 
 
-# TODO(andrey-churkin): We need to introduce common metatypes to
-# remove `algo_backend` from the signature of this method.
 def rank_quantizers(groups_to_rank: List[GroupToRank],
                     quantized_model,
                     dataset: Dataset,
@@ -165,24 +161,41 @@ def rank_quantizers(groups_to_rank: List[GroupToRank],
                     use_metric: bool,
                     ranking_subset_size: int,
                     algo_backend: AccuracyControlAlgoBackend,
-                    nncf_graph: NNCFGraph,
+                    quantized_nncf_graph: NNCFGraph,
                     excluded_groups: Optional[GroupToRank] = None) -> List[GroupToRank]:
     """
     Ranks groups of quantizers by their contribution to accuracy drop. Returns list of
     ranked groups where the `ranked_groups[-1]` group of quantizers has maximal ranking score
     i.e. its contribution to accuracy drop is the greatest.
 
-    :param groups_to_rank:
-    :param quantized_model:
-    :param dataset:
-    :param validation_fn:
-    :param x_ref:
-    :param x_approx:
-    :param use_metric:
-    :param ranking_subset_size:
-    :param algo_backend:
-    :param nncf_graph:
-    :param excluded_groups:
+    :param groups_to_rank: Groups of quantizers that should be ranked.
+    :param quantized_model: Quantized model.
+    :param dataset: Dataset for the ranking process.
+    :param validation_fn: A validation function to validate the model. It should take
+        two argumets:
+        - `model`: model to be validate.
+        - `validation_dataset`: dataset that provides data items to
+              validate the provided model.
+        The function should return the value of the metric with the following meaning:
+        A higher value corresponds to better performance of the model.
+    :param x_ref: These are reference values collected from the initial model.
+        If `use_metric` is `True` then `x_ref[i]` value is a metric value for i-th
+        data item. If `use_metric` is `False` then `x_ref[i]` value is the
+        logits for i-th data item.
+    :param x_approx: These are approximate values collected from the quantized model.
+        If `use_metric` is `True` then `x_approx[i]` value is a metric value for i-th
+        data item. If `use_metric` is `False` then `x_approx[i]` value is the
+        logits for i-th data item.
+    :param use_metric: A boolean flag. If it is `True` then the original metric will be
+        used to rank quantizers. If it is `False` then NMSE metric will be used.
+    :param ranking_subset_size: The number of data items that will be selected from the
+        dataset to rank groups of quantizers. The `len(dataset)` data items will be
+        selected if `ranking_subset_size` parameter is greater than the number of
+        elements in the dataset.
+    :param algo_backend: The `AccuracyControlAlgoBackend` algo backend.
+    :param quantized_nncf_graph: NNCF graph for quantized model.
+    :param excluded_groups: Groups that should be excluded from ranking.
+    :retunr: List of ranked groups of quantizers.
     """
     # Step 1: Create a subset of data items that will be used to rank groups of quantizers.
     error_fn = operator.sub if use_metric else normalized_mse
@@ -200,17 +213,17 @@ def rank_quantizers(groups_to_rank: List[GroupToRank],
     ranking_scores = []
 
     for current_group in groups_to_rank:
-        # TODO(andrey-churkin): Add a description for why this `if` statement is needed.
         if excluded_groups and current_group in excluded_groups:
             continue
 
-        modified_model = remove_group_of_quantizers_from_model(current_group, quantized_model, nncf_graph, algo_backend)
+        modified_model = remove_group_of_quantizers_from_model(current_group, quantized_model,
+                                                               quantized_nncf_graph, algo_backend)
 
         # Get the ranking score for the current group of quantizers.
         if use_metric:
             ranking_score = validation_fn(algo_backend.prepare_for_inference(modified_model), ranking_dataset)
         else:
-            output_name = [x.node_name for x in nncf_graph.get_output_nodes()][0]
+            output_name = [x.node_name for x in quantized_nncf_graph.get_output_nodes()][0]
             x_approx_subset_current = get_logits_for_each_item(modified_model, ranking_dataset, output_name)
             x_ref_subset = (x_ref[i] for i in ranking_subset_indices)
             errors_current = [
