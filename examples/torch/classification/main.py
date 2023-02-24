@@ -52,8 +52,8 @@ from examples.torch.common.model_loader import load_model
 from examples.torch.common.model_loader import load_resuming_checkpoint
 from examples.torch.common.optimizer import get_parameter_groups
 from examples.torch.common.optimizer import make_optimizer
-from examples.torch.common.sample_config import SampleConfig
-from examples.torch.common.sample_config import create_sample_config
+from examples.common.sample_config import SampleConfig
+from examples.common.sample_config import create_sample_config
 from examples.torch.common.utils import MockDataset
 from examples.torch.common.utils import NullContextManager
 from examples.torch.common.utils import SafeMLFLow

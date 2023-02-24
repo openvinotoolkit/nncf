@@ -11,7 +11,7 @@
  limitations under the License.
 """
 
-from typing import List, Tuple
+from typing import List, Tuple, Dict
 from enum import Enum
 
 import openvino.runtime as ov
@@ -47,29 +47,25 @@ class OVModelTransformer(ModelTransformer):
     Applies transformations to an OpenVINO model.
     """
 
-    def __init__(self, model: ov.Model):
+    @staticmethod
+    def _get_name_to_node_mapping(model: ov.Model) -> Dict[str, ov.Node]:
         """
-        Initializes Model Transformer.
+        Returns name to node mapping.
 
-        :param model: OpenVINO model to be transformed.
+        :param model: Model to get mapping.
+        :return: Mapping from node name to node.
         """
-        super().__init__(model)
-        self._model = model.clone()
-        self.name_to_node_mapping = {op.get_friendly_name(): op for op in self._model.get_ops()}
-        self._model_precision = ModelPrecision.FP32
-        for op in self._model.get_ops():
-            if op.get_type_name() == 'Constant':
-                if op.get_element_type().is_real():
-                    if op.get_element_type() == ov.Type(np.float16):
-                        self._model_precision = ModelPrecision.FP16
-                        break
-
+        return {op.get_friendly_name(): op for op in model.get_ops()}
 
     def transform(self, transformation_layout: TransformationLayout) -> ov.Model:
         """
-        Applies transformations by type-callback on the model.
+        Applies transformations to the model using an out-of-place approach.
+        The transformations do not affect the original model, and a new model
+        is returned with the transformations applied. If there are no transformations,
+        returns a new instance of the original model.
 
-        :param transformations: lisf of the TransformationCommand transformations.
+        :param transformation_layout: Transformation commands.
+        :return: The new instance of a model with applied transformations.
         """
         output_insertion_transformations = []
         fq_nodes_removing_transformations = []
@@ -92,32 +88,37 @@ class OVModelTransformer(ModelTransformer):
                 bias_correction_transformations.append(transformation)
             elif isinstance(transformation, OVWeightUpdateCommand):
                 weight_update_transformations.append(transformation)
-
-        if output_insertion_transformations:
-            self._apply_output_insertion_transformations(output_insertion_transformations)
+        model = self._model.clone()
+        # Inplace transformations; Using deepcopy of model
         if fq_nodes_removing_transformations:
-            self._apply_fq_nodes_removing_transformation(fq_nodes_removing_transformations)
+            model = self._apply_fq_nodes_removing_transformation(model, fq_nodes_removing_transformations)
         if quantizer_insertion_transformations:
-            self._apply_quantizer_insertion_transformations(quantizer_insertion_transformations)
-        if bias_correction_transformations:
-            self._apply_bias_correction_transformations(bias_correction_transformations)
-        if model_extraction_transformation:
-            self._model = self._apply_model_extraction_transformation(model_extraction_transformation)
+            model = self._apply_quantizer_insertion_transformations(model, quantizer_insertion_transformations)
         if weight_update_transformations:
-            self._apply_update_weights_transformations(weight_update_transformations)
+            model = self._apply_update_weights_transformations(model, weight_update_transformations)
+        if bias_correction_transformations:
+            model = self._apply_bias_correction_transformations(model, bias_correction_transformations)
+        if model_extraction_transformation:
+            model = self._apply_model_extraction_transformation(model, model_extraction_transformation)
+        if output_insertion_transformations:
+            model = self._apply_output_insertion_transformations(model, output_insertion_transformations)
+        return model
 
-        return self._model
-
-    def _apply_output_insertion_transformations(self, transformations: List[OVOutputInsertionCommand]) -> None:
+    @staticmethod
+    def _apply_output_insertion_transformations(model: ov.Model,
+                                                transformations: List[OVOutputInsertionCommand]) -> ov.Model:
         """
         Applies incoming transformations to the model.
 
-        :param transformations: list of the OVOutputInsertionCommand transformations.
+        :param model: Model to apply transformations.
+        :param transformations: OVOutputInsertionCommand transformations.
+        :return: Model with inserted outputs.
         """
-        extra_model_outputs = self._get_extra_model_outputs(transformations)
-        self._model = self._insert_outputs(self._model, outputs=extra_model_outputs)
+        extra_model_outputs = OVModelTransformer._get_extra_model_outputs(model, transformations)
+        return OVModelTransformer._insert_outputs(model, outputs=extra_model_outputs)
 
-    def _get_extra_model_outputs(self,
+    @staticmethod
+    def _get_extra_model_outputs(model: ov.Model,
                                  transformations: List[OVOutputInsertionCommand]) -> List[Tuple[ov.Output, int]]:
         """
         Collects extra model outputs based on transformations.
@@ -125,10 +126,11 @@ class OVModelTransformer(ModelTransformer):
         :param transformations: lisf of the OVOutputInsertionCommand.
         :return: list of tuples with ov.Output & port_id.
         """
+        name_to_node_mapping = OVModelTransformer._get_name_to_node_mapping(model)
         extra_model_outputs = []
         for transformation in transformations:
             node_name = transformation.target_point.target_node_name
-            node = self.name_to_node_mapping[node_name]
+            node = name_to_node_mapping[node_name]
             port_id = transformation.target_point.port_id
             if transformation.target_point.type == TargetType.POST_LAYER_OPERATION:
                 output = node.output(port_id)
@@ -148,7 +150,7 @@ class OVModelTransformer(ModelTransformer):
 
         :param model: OpenVINO model.
         :param outputs: list of tuples with ov.Output & port_id.
-        :return: modified model.
+        :return: Model with new outputs.
         """
         model_outputs = model.get_results()
         params = model.get_parameters()
@@ -161,54 +163,61 @@ class OVModelTransformer(ModelTransformer):
 
         return ov.Model(model_outputs + extra_model_outputs, params)
 
-    def _apply_fq_nodes_removing_transformation(self, transformations: List[OVFQNodeRemovingCommand]) -> None:
+    @staticmethod
+    def _apply_fq_nodes_removing_transformation(model: ov.Model,
+                                                transformations: List[OVFQNodeRemovingCommand]) -> ov.Model:
         """
         Removes the layers from the model.
 
-        :param transformations: lisf of the node removing transformations.
+        :param model: Model to apply transformations.
+        :param transformations: Node removing transformations.
+        :return: Model with removed FakeQuantize nodes.
         """
+        name_to_node_mapping = OVModelTransformer._get_name_to_node_mapping(model)
         for transformation in transformations:
-            node = self.name_to_node_mapping[transformation.target_point.target_node_name]
+            node = name_to_node_mapping[transformation.target_point.target_node_name]
 
             node_input = node.input_value(0)
             for node_output in node.outputs():
                 for target_in in node_output.get_target_inputs():
                     target_in.replace_source_output(node_input)
-            del self.name_to_node_mapping[transformation.target_point.target_node_name]
+            del name_to_node_mapping[transformation.target_point.target_node_name]
+        return model
 
-    def _apply_quantizer_insertion_transformations(
-            self,
-            transformations: List[OVQuantizerInsertionCommand]) -> None:
+    @staticmethod
+    def _apply_quantizer_insertion_transformations(model: ov.Model,
+                                                   transformations: List[OVQuantizerInsertionCommand]) -> ov.Model:
         """
         Applies transformations on the model.
 
+        :param model: Model to apply transformations.
         :param transformations: List of the OVQuantizerInsertionCommand transformations.
+        :return: Model with inserted FakeQuantize nodes.
         """
+        model_precision = ModelPrecision.FP32
+        for op in model.get_ops():
+            if op.get_type_name() == 'Constant':
+                if op.get_element_type().is_real():
+                    if op.get_element_type() == ov.Type(np.float16):
+                        model_precision = ModelPrecision.FP16
+                        break
+        name_to_node_mapping = OVModelTransformer._get_name_to_node_mapping(model)
         for transformation in transformations:
-            self._insert_fake_quantize_op(transformation)
+            OVModelTransformer._insert_fake_quantize_op(transformation, name_to_node_mapping, model_precision)
+        return model
 
-    def _apply_update_weights_transformations(self, transformations: List[OVWeightUpdateCommand]) -> None:
+    @staticmethod
+    def _insert_fake_quantize_op(transformation: OVQuantizerInsertionCommand,
+                                 name_to_node_mapping: Dict[str, ov.Node],
+                                 model_precision: ModelPrecision) -> None:
         """
-        Updates weight tensor.
+        Inserts FakeQuantize Operation to a model which name_to_node_mapping is passed.
 
-        :param transformations: Transformation with a new tensor value.
+        :param transformation: FakeQuantize insertion command.
+        :param name_to_node_mapping: Mapping from node name to node instance.
+        :param model_precision: Precision of the Model.
         :return: None
         """
-        for transformation in transformations:
-            self._update_weight(transformation)
-
-    def _update_weight(self, transformation: OVWeightUpdateCommand):
-        weight_node_name, _ = get_weight_tensor(transformation.target_point.target_node_name,
-                                                transformation.target_point.port_id, self._model)
-        for op in self._model.get_ops():
-            if op.get_friendly_name() == weight_node_name:
-                weight_node = op
-
-        new_weight_constant = opset.constant(transformation.weight_value, dtype=weight_node.get_element_type())
-        for input_consumed_node in weight_node.output(0).get_target_inputs():
-            input_consumed_node.replace_source_output(new_weight_constant.output(0))
-
-    def _insert_fake_quantize_op(self, transformation: OVQuantizerInsertionCommand) -> None:
         fq_params = transformation.quantizer_parameters
         input_low = fq_params.input_low
         input_high = fq_params.input_high
@@ -219,14 +228,14 @@ class OVModelTransformer(ModelTransformer):
         def _convert_to_fp16(data):
             return opset.convert(data.astype(np.float16), np.float32)
 
-        if self._model_precision == ModelPrecision.FP16:
+        if model_precision == ModelPrecision.FP16:
             input_low = _convert_to_fp16(input_low)
             input_high = _convert_to_fp16(input_high)
             output_low = _convert_to_fp16(output_low)
             output_high = _convert_to_fp16(output_high)
 
         node_name = transformation.target_point.target_node_name
-        target_node = self.name_to_node_mapping[node_name]
+        target_node = name_to_node_mapping[node_name]
         port_id = transformation.target_point.port_id
         transform_type = transformation.target_point.type
         if transform_type in [TargetType.PRE_LAYER_OPERATION, TargetType.OPERATION_WITH_WEIGHTS]:
@@ -248,16 +257,20 @@ class OVModelTransformer(ModelTransformer):
         else:
             raise RuntimeError(f'Incorrect target point type {transform_type}')
 
-    def _apply_bias_correction_transformations(self, transformations: List[OVBiasCorrectionCommand]) -> None:
+    @staticmethod
+    def _apply_bias_correction_transformations(model, transformations: List[OVBiasCorrectionCommand]) -> ov.Model:
         """
         Applies bias correction transformations on the model.
 
+        :param model: Model to apply transformations.
         :param transformations: List of the bias correction transformations.
+        :return: Model with corrected bias.
         """
+        name_to_node_mapping = OVModelTransformer._get_name_to_node_mapping(model)
         for transformation in transformations:
             node_name = transformation.target_point.target_node_name
 
-            node = self.name_to_node_mapping[node_name]
+            node = name_to_node_mapping[node_name]
             node_inputs = [port.get_node() for port in node.output(0).get_target_inputs()]
             assert any(node.get_type_name() == 'Add' for node in node_inputs)
 
@@ -278,18 +291,23 @@ class OVModelTransformer(ModelTransformer):
             new_bias_value = np.reshape(transformation.bias_value, bias_shape)
             new_bias = opset.constant(new_bias_value, dtype=potential_bias.get_element_type())
             biased_port.replace_source_output(new_bias.output(0))
+        return model
 
-    def _apply_model_extraction_transformation(self, transformation: OVModelExtractionCommand) -> ov.Model:
+    @staticmethod
+    def _apply_model_extraction_transformation(model: ov.Model,
+                                               transformation: OVModelExtractionCommand) -> ov.Model:
         """
         Extracts sub-model from the original based on the inputs and outputs names.
 
+        :param model: Model to apply transformations.
         :param transformation: Model extraction transformation.
         :return: Extracted sub-model.
         """
+        name_to_node_mapping = OVModelTransformer._get_name_to_node_mapping(model)
         params, results = [], []
         for input_name in transformation.inputs:
-            input_node = self.name_to_node_mapping[input_name]
-            if input_name in [tensor.node.get_friendly_name() for tensor in self._model.inputs]:
+            input_node = name_to_node_mapping[input_name]
+            if input_name in [tensor.node.get_friendly_name() for tensor in model.inputs]:
                 params.append(input_node)
                 continue
             input_port = input_node.input(0)
@@ -301,12 +319,33 @@ class OVModelTransformer(ModelTransformer):
             params.append(new_param)
 
         for output_name in transformation.outputs:
-            output_node = self.name_to_node_mapping[output_name]
+            output_node = name_to_node_mapping[output_name]
             for node_out in output_node.outputs():
                 new_result = opset.result(node_out, name=f'{output_name}_output')
                 results.append(new_result)
 
         if not results:
-            results = [r.node for r in self._model.outputs]
+            results = [r.node for r in model.outputs]
 
         return ov.Model(results, params)
+
+    def _apply_update_weights_transformations(self, transformations: List[OVWeightUpdateCommand]) -> None:
+        """
+        Updates weight tensor.
+
+        :param transformations: Transformation with a new tensor value.
+        :return: None
+        """
+        for transformation in transformations:
+            self._update_weight(transformation)
+
+    def _update_weight(self, transformation: OVWeightUpdateCommand):
+        weight_node_name, _ = get_weight_tensor(transformation.target_point.target_node_name,
+                                                transformation.target_point.port_id, self._model)
+        for op in self._model.get_ops():
+            if op.get_friendly_name() == weight_node_name:
+                weight_node = op
+
+        new_weight_constant = opset.constant(transformation.weight_value, dtype=weight_node.get_element_type())
+        for input_consumed_node in weight_node.output(0).get_target_inputs():
+            input_consumed_node.replace_source_output(new_weight_constant.output(0))

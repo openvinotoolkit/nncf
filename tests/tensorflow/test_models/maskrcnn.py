@@ -11,7 +11,7 @@
  limitations under the License.
 """
 
-from examples.tensorflow.common.sample_config import SampleConfig
+from examples.common.sample_config import SampleConfig
 from examples.tensorflow.segmentation.models.model_selector import get_model_builder
 from examples.tensorflow.segmentation.models.model_selector import get_predefined_config
 from tests.shared.paths import PROJECT_ROOT

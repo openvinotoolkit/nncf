@@ -120,9 +120,12 @@ COMMON_DEPTH_SUPERNET_DESC = ElasticityDesc(
 )
 
 
-def ref_depth_output_fn(model, x):
+def ref_depth_output_fn(model: DepthBasicConvTestModel, x):
+    skipped_layers_before = model.get_skipped_layers()
     model.set_skipped_layers(['conv1'])
-    return model(x)
+    result = model(x)
+    model.set_skipped_layers(skipped_layers_before)
+    return result
 
 
 COMMON_DEPTH_BASIC_DESC = ElasticityDesc(
@@ -218,9 +221,9 @@ LIST_LOAD_STATE_DESCS = [
 
 @pytest.mark.parametrize('desc', LIST_LOAD_STATE_DESCS, ids=map(str, LIST_LOAD_STATE_DESCS))
 def test_can_load_handler_state(desc: ElasticityDesc):
-    model = desc.model_cls()
-    move_model_to_cuda_if_available(model)
-    model_copy = deepcopy(model)
+    original_model = desc.model_cls()
+    move_model_to_cuda_if_available(original_model)
+    model = deepcopy(original_model)
     device = next(iter(model.parameters())).device
     dummy_input = torch.ones(model.INPUT_SIZE).to(device)
 
@@ -234,10 +237,10 @@ def test_can_load_handler_state(desc: ElasticityDesc):
     elastic_model = build_elastic_model_from_handler(old_nncf_network, old_handler)
     old_handler.activate_minimum_subnet()
     old_output = elastic_model(dummy_input)
-    ref_output = desc.ref_output_fn(model, dummy_input)
+    ref_output = desc.ref_output_fn(original_model, dummy_input)
     assert torch.allclose(old_output, ref_output)
 
-    new_nncf_network = create_nncf_network(model_copy, config)
+    new_nncf_network = create_nncf_network(deepcopy(original_model), config)
     builder_state = old_builder.get_state()
     # no need in config to restore builder state
     new_builder = desc.create_builder_with_config({})

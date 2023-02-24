@@ -140,12 +140,12 @@ To export a model to the OpenVINO IR and run it using the Intel® Deep Learning 
     --data=<path_to_dataset> \
     --log-dir=../../results/quantization/maskrcnn_coco_baseline
 
-<a name='results'></a>
 
 ## Results
+<a name="results"></a>
 
-|**Model**|**Compression algorithm**|**Dataset**|**mAP (drop) %**|**NNCF config file**|**TensorFlow checkpoint**|
-| :---: | :---: | :---: | :---: | :---: | :---: |
-|MaskRCNN|None|COCO2017|bbox: 37.33<br/>segm: 33.56|[Link](configs/mask_rcnn_coco.json)|[Link](https://storage.openvinotoolkit.org/repositories/nncf/models/develop/tensorflow/mask_rcnn_baseline.tar.gz)|
-|MaskRCNN|INT8 (per-tensor, symmetric for weights; per-tensor, symmetric for activations)|COCO2017|bbox: 37.27 (0.06)<br/>segm: 33.54 (0.02)|[Link](configs/quantization/mask_rcnn_coco_int8.json)|[Link](https://storage.openvinotoolkit.org/repositories/nncf/models/develop/tensorflow/mask_rcnn_int8_w_sym_t_half_a_sym_t.tar.gz)|
-|MaskRCNN|Sparsity 50% (Magnitude)|COCO2017|bbox: 36.93 (0.40)<br/>segm: 33.23 (0.33)|[Link](configs/sparsity/mask_rcnn_coco_magnitude_sparsity.json)|[Link](https://storage.openvinotoolkit.org/repositories/nncf/models/develop/tensorflow/mask_rcnn_sparsity_50.tar.gz)|
+|Model|Compression algorithm|Dataset|            mAP (_drop_) %             |NNCF config file|Checkpoint|
+| :---: | :---: | :---: |:-------------------------------------:| :---: | :---: |
+|Mask-R-CNN|None|COCO 2017|        bbox: 37.33 segm: 33.56        |[mask_rcnn_coco.json](configs/mask_rcnn_coco.json)|[Link](https://storage.openvinotoolkit.org/repositories/nncf/models/develop/tensorflow/mask_rcnn_coco.tar.gz)|
+|Mask-R-CNN|INT8 (per-tensor symmetric for weights, per-tensor asymmetric half-range for activations)|COCO 2017| bbox: 37.19 (0.14) segm: 33.54 (0.02) |[mask_rcnn_coco_int8.json](configs/quantization/mask_rcnn_coco_int8.json)|[Link](https://storage.openvinotoolkit.org/repositories/nncf/models/develop/tensorflow/mask_rcnn_coco_int8.tar.gz)|
+|Mask-R-CNN|Magnitude sparsity, 50%|COCO 2017| bbox: 36.94 (0.39) segm: 33.23 (0.33) |[mask_rcnn_coco_magnitude_sparsity.json](configs/sparsity/mask_rcnn_coco_magnitude_sparsity.json)|[Link](https://storage.openvinotoolkit.org/repositories/nncf/models/develop/tensorflow/mask_rcnn_coco_magnitude_sparsity.tar.gz)|

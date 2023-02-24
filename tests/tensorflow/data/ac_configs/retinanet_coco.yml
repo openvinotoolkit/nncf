@@ -1,5 +1,5 @@
 models:
-  - name: retinanet
+  - name: retinanet_coco
     launchers:
       - framework: dlsdk
         device: CPU

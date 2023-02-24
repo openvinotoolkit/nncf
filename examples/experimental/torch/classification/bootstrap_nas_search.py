@@ -29,8 +29,8 @@ from examples.torch.common.execution import get_execution_mode
 from examples.torch.common.execution import set_seed
 from examples.torch.common.execution import start_worker
 from examples.torch.common.model_loader import load_model
-from examples.torch.common.sample_config import SampleConfig
-from examples.torch.common.sample_config import create_sample_config
+from examples.common.sample_config import SampleConfig
+from examples.common.sample_config import create_sample_config
 from examples.torch.common.utils import SafeMLFLow
 from examples.torch.common.utils import configure_device
 from examples.torch.common.utils import configure_logging

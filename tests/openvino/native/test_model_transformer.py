@@ -13,6 +13,7 @@
 
 import pytest
 import numpy as np
+import openvino.runtime as ov
 
 from nncf.common.graph.transformations.commands import TargetType
 from nncf.common.graph.transformations.layout import TransformationLayout
@@ -205,6 +206,27 @@ def test_bias_correction(model_with_parameters):
             potential_bias = potential_bias.input_value(0).node
         assert potential_bias.get_type_name() == 'Constant'
         assert np.all(potential_bias.get_vector() == bias_reference)
+
+
+def test_no_transformations():
+    def infer_model_with_ones(model, shape):
+        ie = ov.Core()
+        compiled_model = ie.compile_model(model)
+        _input = np.ones(shape)
+        model_outputs = compiled_model(_input)
+        return {out.get_node().get_friendly_name(): data for out, data in model_outputs.items()}
+
+    model = LinearModel().ov_model
+    input_shape = [1, 3, 4, 2]
+    model_transformer = OVModelTransformer(model)
+    transformed_model = model_transformer.transform(TransformationLayout())
+
+    ret_val_1 = infer_model_with_ones(model, input_shape)
+    ret_val_2 = infer_model_with_ones(transformed_model, input_shape)
+    assert ret_val_1.keys() == ret_val_2.keys()
+    for output in ret_val_1.keys():
+        assert np.allclose(ret_val_1[output], ret_val_2[output])
+    assert id(transformed_model) != id(model)
 
 
 MODELS_WITH_PARAMETERS = [

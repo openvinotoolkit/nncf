@@ -1,5 +1,5 @@
 models:
-  - name: yolo_v4_int8_w_sym_ch_a_asym_t
+  - name: yolo_v4_coco_int8
     launchers:
       - framework: dlsdk
         device: CPU

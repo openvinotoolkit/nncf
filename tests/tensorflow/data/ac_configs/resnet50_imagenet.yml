@@ -1,5 +1,5 @@
 models:
-  - name: resnet50
+  - name: resnet50_imagenet
     launchers:
       - framework: dlsdk
         device: CPU

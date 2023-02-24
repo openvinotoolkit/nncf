@@ -28,7 +28,7 @@ import tensorflow as tf
 from tensorflow.python.distribute.mirrored_strategy import MirroredStrategy
 
 from examples.tensorflow.common.logger import logger as default_logger
-from examples.tensorflow.common.sample_config import CustomArgumentParser
+from examples.common.sample_config import CustomArgumentParser
 from nncf.config.schemata.defaults import QUANTIZATION_BITS
 
 GENERAL_LOG_FILE_NAME = "output.log"

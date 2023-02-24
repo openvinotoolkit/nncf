@@ -84,8 +84,12 @@ class ONNXBiasCorrectionAlgoBackend(BiasCorrectionAlgoBackend):
         return ONNXModelExtractionCommand(inputs, outputs)
 
     @staticmethod
-    def output_insertion_command(target_point: ONNXTargetPoint) -> ONNXOutputInsertionCommand:
-        return ONNXOutputInsertionCommand(target_point)
+    def output_insertion_command(nncf_graph: NNCFGraph, target_point: ONNXTargetPoint) -> ONNXOutputInsertionCommand:
+        nncf_input_node_next_nodes = {}
+        for input_node in nncf_graph.get_input_nodes():
+            next_nodes = nncf_graph.get_next_nodes(input_node)
+            nncf_input_node_next_nodes[input_node.node_name] = [node.node_name for node in next_nodes]
+        return ONNXOutputInsertionCommand(target_point, nncf_input_node_next_nodes)
 
     @staticmethod
     def node_removing_command(target_point: ONNXTargetPoint) -> ONNXQDQNodeRemovingCommand:

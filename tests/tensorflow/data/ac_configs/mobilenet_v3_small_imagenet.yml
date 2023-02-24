@@ -1,5 +1,5 @@
 models:
-- name: inception_v3
+- name: mobilenet_v3_small_imagenet
   launchers:
   - framework: dlsdk
     device: CPU
@@ -8,7 +8,7 @@ models:
   - name: imagenet_1000_classes
     preprocessing:
     - type: crop_image_with_padding
-      size: 299
+      size: 224
       crop_padding: 32
     metrics:
     - name: accuracy@top1

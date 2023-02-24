@@ -1,6 +1,6 @@
 models:
 
-  - name: tf1_mobilenet_v2_1.0_224_sparsity_35
+  - name: mobilenet_v2_hub_imagenet_magnitude_sparsity
     launchers:
       - framework: dlsdk
         device: CPU

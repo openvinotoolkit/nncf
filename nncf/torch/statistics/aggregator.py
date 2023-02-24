@@ -36,8 +36,8 @@ class PTStatisticsAggregator(StatisticsAggregator):
                              statistic_points: StatisticPointsContainer) -> None:
         return
 
-    @staticmethod
-    def _get_transformation_layout_extra_outputs(statistic_points: StatisticPointsContainer) -> TransformationLayout:
+    def _get_transformation_layout_extra_outputs(self,
+                                                 statistic_points: StatisticPointsContainer) -> TransformationLayout:
         transformation_layout = TransformationLayout()
         transformation_commands = []
         for _statistic_points in statistic_points.values():

@@ -18,6 +18,7 @@ from pathlib import Path
 import tensorflow as tf
 import tensorflow_addons as tfa
 
+from examples.tensorflow.common.experimental_patcher import patch_if_experimental_quantization
 from nncf.config.utils import is_accuracy_aware_training
 from nncf.tensorflow.helpers.model_creation import create_compressed_model
 from nncf.tensorflow import create_compression_callbacks
@@ -34,7 +35,7 @@ from examples.tensorflow.common.distributed import get_distribution_strategy
 from examples.tensorflow.common.logger import logger
 from examples.tensorflow.common.model_loader import get_model
 from examples.tensorflow.common.optimizer import build_optimizer
-from examples.tensorflow.common.sample_config import create_sample_config
+from examples.common.sample_config import create_sample_config
 from examples.tensorflow.common.scheduler import build_scheduler
 from examples.tensorflow.common.utils import configure_paths
 from examples.tensorflow.common.utils import create_code_snapshot
@@ -345,6 +346,7 @@ def main(argv):
     parser = get_argument_parser()
     config = get_config_from_argv(argv, parser)
     print_args(config)
+    patch_if_experimental_quantization(config.nncf_config)
 
     serialize_config(config.nncf_config, config.log_dir)
     serialize_cli_args(parser, argv, config.log_dir)

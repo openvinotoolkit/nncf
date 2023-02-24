@@ -11,7 +11,7 @@
  limitations under the License.
 """
 
-from examples.tensorflow.common.sample_config import CustomArgumentParser
+from examples.common.sample_config import CustomArgumentParser
 
 
 def get_common_argument_parser(**flags):
