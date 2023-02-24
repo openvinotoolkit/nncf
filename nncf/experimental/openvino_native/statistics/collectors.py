@@ -11,21 +11,39 @@
  limitations under the License.
 """
 
-from typing import Union, List, Deque
+from typing import Union, List, Deque, Tuple, Callable
+from abc import abstractmethod
+import openvino.runtime.opset9 as opset
 
 import numpy as np
 
 from nncf.common.tensor import NNCFTensor
 from nncf.common.tensor import TensorElementsType
+from nncf.common.tensor_statistics.collectors import TensorReducerBase
 from nncf.common.tensor_statistics.collectors import MinMaxStatisticCollector
 from nncf.common.tensor_statistics.collectors import NNCFCollectorTensorProcessor
 from nncf.common.tensor_statistics.collectors import MeanMinMaxStatisticCollector
+from nncf.common.tensor_statistics.collectors import MinMaxOfflineStatisticCollectorSpec
+from nncf.common.tensor_statistics.collectors import TensorCollector
+from nncf.common.tensor_statistics.collectors import MinReducer
+from nncf.common.tensor_statistics.collectors import MaxReducer
+from nncf.common.tensor_statistics.collectors import AbsMaxReducer
+from nncf.common.tensor_statistics.collectors import OnlineMinAggregator
+from nncf.common.tensor_statistics.collectors import OnlineMaxAggregator
+from nncf.common.tensor_statistics.collectors import OfflineMinAggregator
+from nncf.common.tensor_statistics.collectors import OfflineMaxAggregator
+from nncf.common.tensor_statistics.collectors import OfflineMeanAggregator
+from nncf.common.tensor_statistics.collectors import TensorAggregatorBase
 from nncf.common.tensor_statistics.collectors import MeanStatisticCollector
 from nncf.common.tensor_statistics.collectors import BatchStatisticCollector
 from nncf.experimental.openvino_native.tensor import OVNNCFTensor
 from nncf.experimental.openvino_native.statistics.statistics import OVMinMaxTensorStatistic
 from nncf.experimental.openvino_native.statistics.statistics import OVMeanTensorStatistic
 from nncf.experimental.openvino_native.statistics.statistics import OVBatchTensorStatistic
+from nncf.experimental.openvino_native.graph.node_utils import get_reduce_node_name
+from nncf.experimental.openvino_native.graph.node_utils import get_result_node_name
+from nncf.experimental.openvino_native.graph.node_utils import get_inplace_reduce_op
+from nncf.common.tensor import TensorType
 
 
 class OVNNCFCollectorTensorProcessor(NNCFCollectorTensorProcessor):
@@ -88,10 +106,7 @@ class OVMinMaxStatisticCollector(MinMaxStatisticCollector):
     def _get_processor() -> NNCFCollectorTensorProcessor:
         return OVNNCFCollectorTensorProcessor()
 
-    def _register_input(self, x: OVNNCFTensor):
-        self._register_input_common(x)
-
-    def _get_statistics(self) -> OVMinMaxTensorStatistic:
+    def get_statistics(self) -> OVMinMaxTensorStatistic:
         return OVMinMaxTensorStatistic(self._min_values.tensor, self._max_values.tensor)
 
 
@@ -100,10 +115,7 @@ class OVMeanMinMaxStatisticCollector(MeanMinMaxStatisticCollector):
     def _get_processor() -> NNCFCollectorTensorProcessor:
         return OVNNCFCollectorTensorProcessor()
 
-    def _register_input(self, x: OVNNCFTensor):
-        self._register_input_common(x)
-
-    def _get_statistics(self) -> OVMinMaxTensorStatistic:
+    def get_statistics(self) -> OVMinMaxTensorStatistic:
         return OVMinMaxTensorStatistic(self._min_aggregate().tensor, self._max_aggregate().tensor)
 
 
@@ -112,10 +124,7 @@ class OVMeanStatisticCollector(MeanStatisticCollector):
     def _get_processor() -> NNCFCollectorTensorProcessor:
         return OVNNCFCollectorTensorProcessor()
 
-    def _register_input(self, x: OVNNCFTensor):
-        self._register_input_common(x)
-
-    def _get_statistics(self) -> OVMeanTensorStatistic:
+    def get_statistics(self) -> OVMeanTensorStatistic:
         return OVMeanTensorStatistic(self._mean_aggregate().tensor, self._shape())
 
 
@@ -124,8 +133,102 @@ class OVBatchStatisticCollector(BatchStatisticCollector):
     def _get_processor() -> NNCFCollectorTensorProcessor:
         return OVNNCFCollectorTensorProcessor()
 
-    def _register_input(self, x: OVNNCFTensor):
-        self._register_input_common(x)
-
-    def _get_statistics(self) -> OVBatchTensorStatistic:
+    def get_statistics(self) -> OVBatchTensorStatistic:
         return OVBatchTensorStatistic(self._all_values)
+
+
+class OVMinReducer(MinReducer):
+    NAME = 'min'
+    def _get_processor(self):
+        return OVNNCFCollectorTensorProcessor
+
+    def get_inplace_fn(self):
+        return get_inplace_reduce_op(opset.reduce_min, self.NAME,
+                                     self._reduction_shape, False)
+
+    def get_output_name(self, target_node_name: str, port_id: int) -> str:
+        if self.inplace:
+            target_node_name = get_reduce_node_name(target_node_name, self.NAME)
+        return get_result_node_name(target_node_name, port_id)
+
+
+class OVMaxReducer(MaxReducer):
+    NAME = 'max'
+    def _get_processor(self):
+        return OVNNCFCollectorTensorProcessor
+
+    def get_inplace_fn(self):
+        return get_inplace_reduce_op(opset.reduce_max, self.NAME,
+                                     self._reduction_shape, False)
+
+    def get_output_name(self, target_node_name: str, port_id: int) -> str:
+        if self.inplace:
+            target_node_name = get_reduce_node_name(target_node_name, self.NAME)
+        return get_result_node_name(target_node_name, port_id)
+
+
+class OVAbsMaxReducer(AbsMaxReducer):
+    NAME = 'max'
+    def _get_processor(self):
+        return OVNNCFCollectorTensorProcessor
+
+    def get_inplace_fn(self):
+        return get_inplace_reduce_op(opset.reduce_max, self.NAME,
+                                     self._reduction_shape, True)
+
+    def get_output_name(self, target_node_name: str, port_id: int) -> str:
+        if self.inplace:
+            target_node_name = get_reduce_node_name(target_node_name, self.NAME)
+        return get_result_node_name(target_node_name, port_id)
+
+
+from dataclasses import dataclass
+class OvMinMaxStatsContainer:
+    MIN_STAT = 'min_stat'
+    MAX_STAT = 'max_stat'
+    def __init__(self, min_stat, max_stat) -> None:
+        self.min_values = min_stat
+        self.max_values = max_stat
+
+
+def get_min_max_stat_collector(num_samples, reduction_shape, use_abs_max, inplace):
+    reduce_min = OVMinReducer(reduction_shape, inplace)
+    if use_abs_max:
+        reduce_max = OVAbsMaxReducer(reduction_shape, inplace)
+    else:
+        reduce_max = OVMaxReducer(reduction_shape, inplace)
+
+    kwargs = {
+        'reduction_shape': reduction_shape,
+        'tensor_processor': OVNNCFCollectorTensorProcessor
+    }
+    aggregate_min = OnlineMinAggregator(**kwargs)
+    aggregate_max = OnlineMaxAggregator(**kwargs)
+
+    collector = TensorCollector(num_samples, OvMinMaxStatsContainer)
+    collector.add_branch(OvMinMaxStatsContainer.MIN_STAT, reduce_min, aggregate_min)
+    collector.add_branch(OvMinMaxStatsContainer.MAX_STAT, reduce_max, aggregate_max)
+    return collector
+
+
+def get_mean_min_max_stat_collector(num_samples, reduction_shape, use_abs_max,
+                                    use_per_sample_stats, inplace, window_size=None):
+    reduce_min = OVMinReducer(reduction_shape, inplace)
+    if use_abs_max:
+        reduce_max = OVAbsMaxReducer(reduction_shape, inplace)
+    else:
+        reduce_max = OVMaxReducer(reduction_shape, inplace)
+
+    kwargs = {
+        'reduction_shape': reduction_shape,
+        'tensor_processor': OVNNCFCollectorTensorProcessor,
+        'use_per_sample_stats': use_per_sample_stats,
+        'window_size': window_size
+    }
+    aggregate_min = OfflineMeanAggregator(**kwargs)
+    aggregate_max = OfflineMeanAggregator(**kwargs)
+
+    collector = TensorCollector(num_samples, OvMinMaxStatsContainer)
+    collector.add_branch(OvMinMaxStatsContainer.MIN_STAT, reduce_min, aggregate_min)
+    collector.add_branch(OvMinMaxStatsContainer.MAX_STAT, reduce_max, aggregate_max)
+    return collector

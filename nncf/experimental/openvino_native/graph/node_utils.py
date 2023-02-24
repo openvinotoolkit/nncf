@@ -15,6 +15,7 @@ from typing import Optional
 
 import numpy as np
 import openvino.runtime as ov
+import openvino.runtime.opset9 as opset
 
 from nncf.common.graph.graph import NNCFGraph
 from nncf.common.graph.graph import NNCFNode
@@ -113,3 +114,32 @@ def get_result_node_name(output_name: str, port_id: int) -> str:
     """
 
     return f'Result_{output_name}.{port_id}'
+
+
+def get_reduce_node_name(output_name: str, node_type: str) -> str:
+    return f'{output_name}_{node_type}'
+
+
+def get_inplace_reduce_op(op, node_type, reduction_axes, use_abs):
+    def get_reduce_op(node):
+        output_name = node.get_friendly_name()
+        if use_abs:
+            op_input = opset.abs(node, name=get_reduce_node_name(output_name, 'abs'))
+        else:
+            op_input = node
+
+        reduction_axes_ = reduction_axes
+        if reduction_axes_ is None:
+            reduction_axes_ = np.array(range(len(node.shape)))
+
+        return op(op_input, reduction_axes=reduction_axes_,
+                  keep_dims=True, name=get_reduce_node_name(output_name, node_type))
+    return get_reduce_op
+
+
+def get_inplace_min_op(reduction_shape):
+    return get_inplace_reduce_op(opset.reduce_min, 'min', reduction_shape, False)
+
+
+def get_inplace_max_op(reduction_shape, use_abs_max):
+    return get_inplace_reduce_op(opset.reduce_max, 'max', reduction_shape, use_abs_max)

@@ -22,7 +22,7 @@ from nncf.common.graph.transformations.commands import TargetPoint
 from nncf.common.graph.transformations.commands import TargetType
 from nncf.common.graph.transformations.commands import TransformationCommand
 from nncf.common.hardware.config import HWConfig
-from nncf.common.tensor_statistics.collectors import TensorStatisticCollectorBase
+from nncf.common.tensor_statistics.collectors import TensorReducerBase
 from nncf.common.tensor_statistics.statistics import MinMaxTensorStatistic
 from nncf.common.utils.registry import Registry
 from nncf.common.quantization.structs import QuantizerConfig
@@ -118,7 +118,7 @@ class MinMaxAlgoBackend(ABC):
     def minmax_statistic_collector(nncf_graph: NNCFGraph,
                                    target_point: TargetPoint,
                                    quantizer_config: QuantizerConfig,
-                                   num_samples: int = None) -> TensorStatisticCollectorBase:
+                                   num_samples: int = None) -> TensorReducerBase:
         """
         Returns backend-specific min max statistic collector.
 
@@ -135,7 +135,7 @@ class MinMaxAlgoBackend(ABC):
                                         target_point: TargetPoint,
                                         quantizer_config: QuantizerConfig,
                                         use_per_sample_stats: bool,
-                                        num_samples: int = None) -> TensorStatisticCollectorBase:
+                                        num_samples: int = None) -> TensorReducerBase:
         """
         Returns backend-specific min max statistic collector.
 

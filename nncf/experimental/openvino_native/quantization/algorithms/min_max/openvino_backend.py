@@ -36,11 +36,15 @@ from nncf.experimental.openvino_native.hardware.config import OVHWConfig
 from nncf.experimental.openvino_native.quantization.default_quantization import DEFAULT_OV_QUANT_TRAIT_TO_OP_DICT
 from nncf.experimental.openvino_native.statistics.collectors import OVMeanMinMaxStatisticCollector
 from nncf.experimental.openvino_native.statistics.collectors import OVMinMaxStatisticCollector
+from nncf.experimental.openvino_native.statistics.collectors import get_min_max_stat_collector
+from nncf.experimental.openvino_native.statistics.collectors import get_mean_min_max_stat_collector
+from nncf.experimental.openvino_native.quantization.quantizer_parameters import get_weight_stats_shape
 from nncf.experimental.openvino_native.quantization.quantizer_parameters import calculate_quantizer_parameters
 
 from nncf.quantization.algorithms.min_max.backend import MinMaxAlgoBackend
 from nncf.quantization.algorithms.min_max.backend import ALGO_BACKENDS
 
+INPLACE = True
 
 @ALGO_BACKENDS.register(BackendType.OPENVINO)
 class OVMinMaxAlgoBackend(MinMaxAlgoBackend):
@@ -127,6 +131,12 @@ class OVMinMaxAlgoBackend(MinMaxAlgoBackend):
         return axes, use_abs_max
 
     @staticmethod
+    def _get_num_samples(num_samples, target_point: OVTargetPoint):
+        if target_point.is_weight_target_point():
+            return 1
+        return num_samples
+
+    @staticmethod
     def minmax_statistic_collector(nncf_graph: NNCFGraph,
                                    target_point: OVTargetPoint,
                                    quantizer_config: QuantizerConfig,
@@ -134,7 +144,13 @@ class OVMinMaxAlgoBackend(MinMaxAlgoBackend):
         reduction_shape, use_abs_max =\
             OVMinMaxAlgoBackend._get_reduction_shape_and_use_abs_max(nncf_graph, target_point,
                                                                      quantizer_config)
-        return OVMinMaxStatisticCollector(use_abs_max, reduction_shape, num_samples)
+        #spec = MinMaxStatisticCollectorSpec(use_abs_max, reduction_shape, num_samples,
+        #                                    inplace=INPLACE)
+
+        #stat_collector = OVMinMaxStatisticCollector(reduction_shape, use_abs_max)
+        _num_samples = OVMinMaxAlgoBackend._get_num_samples(num_samples, target_point)
+        return get_min_max_stat_collector(_num_samples, reduction_shape, use_abs_max, INPLACE)
+        #return OVMinMaxTensorCollectorRegistrator(_num_samples, stat_collector, INPLACE)
 
     @staticmethod
     def mean_minmax_statistic_collector(nncf_graph: NNCFGraph,
@@ -145,10 +161,14 @@ class OVMinMaxAlgoBackend(MinMaxAlgoBackend):
         reduction_shape, use_abs_max =\
             OVMinMaxAlgoBackend._get_reduction_shape_and_use_abs_max(nncf_graph, target_point,
                                                                      quantizer_config)
-        return OVMeanMinMaxStatisticCollector(use_per_sample_stats,
-                                              use_abs_max,
-                                              reduction_shape,
-                                              num_samples)
+        #spec = MinMaxOfflineStatisticCollectorSpec(use_per_sample_stats, use_abs_max,
+        #                                             reduction_shape, num_samples, inplace=INPLACE)
+
+        #stat_collector = OVMeanMinMaxStatisticCollector(use_per_sample_stats, use_abs_max, reduction_shape)
+        _num_samples = OVMinMaxAlgoBackend._get_num_samples(num_samples, target_point)
+        return get_mean_min_max_stat_collector(_num_samples, reduction_shape,
+                                               use_abs_max, use_per_sample_stats, INPLACE)
+        #return OVMinMaxTensorCollectorRegistrator(_num_samples, stat_collector, INPLACE)
 
     @staticmethod
     def get_weight_tensor_port_id(node: NNCFNode) -> int:
