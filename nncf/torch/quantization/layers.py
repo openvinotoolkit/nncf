@@ -732,6 +732,8 @@ class SymmetricQuantizer(BaseQuantizer):
 
             if self._half_range:
                 level_low = 2 * self.level_low
+                if self._narrow_range:
+                    level_low -= 1
                 level_high = 2 * self.level_high + 1
 
             scale = scale.view(-1)

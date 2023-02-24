@@ -65,7 +65,7 @@ def check_quantizer_operators(model, levels=255):
         for key in list(model.external_quantizers.keys()):
             op = model.external_quantizers[key]
             assert isinstance(model.external_quantizers[key], FakeQuantize)
-            assert op.quant_max - op.quant_min == levels
+            assert op.quant_max - op.quant_min + 1 == 256
 
     for node in model.get_original_graph().get_all_nodes():
         if node.node_type in ["nncf_model_input", "nncf_model_output"]:
@@ -77,13 +77,14 @@ def check_quantizer_operators(model, levels=255):
             for key in list(nncf_module.pre_ops.keys()):
                 op = nncf_module.get_pre_op(key).op
                 assert isinstance(op, FakeQuantize)
-                assert op.quant_max - op.quant_min == levels
+                ref_levels = 255 if op.qscheme == torch.per_channel_symmetric else 256
+                assert op.quant_max - op.quant_min + 1 == ref_levels
 
         if hasattr(nncf_module, "post_ops"):
             for key in list(nncf_module.post_ops.keys()):
                 op = nncf_module.post_ops(key).op
                 assert isinstance(op, FakeQuantize)
-                assert op.quant_max - op.quant_min == levels
+                assert op.quant_max - op.quant_min + 1 == 256
 
 
 INPUT_TEST_SCALES = (
