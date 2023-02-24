@@ -586,7 +586,6 @@ class SymmetricQuantizer(BaseQuantizer):
             self.eps = 1e-16
         if qspec.signedness_to_force is not None:
             self.signed = bool(qspec.signedness_to_force)
-        self._narrow_range = qspec.narrow_range
         self.set_level_ranges()
 
         self._register_load_state_dict_pre_hook(StorageRedirectingLoadStateDictHook(

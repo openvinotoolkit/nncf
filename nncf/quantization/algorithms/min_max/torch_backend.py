@@ -33,7 +33,7 @@ from nncf.common.graph.transformations.commands import TransformationPriority
 from nncf.torch.hardware.config import PTHWConfig
 from nncf.torch.quantization.default_quantization import DEFAULT_PT_QUANT_TRAIT_TO_OP_DICT
 from nncf.torch.quantization.layers import QUANTIZATION_MODULES
-from nncf.torch.quantization.layers import AsymmetricQuantizer, SymmetricQuantizer
+from nncf.torch.quantization.layers import AsymmetricQuantizer
 from nncf.torch.quantization.layers import BaseQuantizer
 from nncf.torch.quantization.layers import PTQuantizerSpec
 from nncf.torch.quantization.layers import get_scale_shape
@@ -238,7 +238,8 @@ class PTMinMaxAlgoBackend(MinMaxAlgoBackend):
     def _fill_quantizer_parameters(quantizer: BaseQuantizer, parameters: FakeQuantizeParameters) -> None:
         if isinstance(quantizer, AsymmetricQuantizer):
             quantizer.input_low = torch.nn.Parameter(torch.from_numpy(parameters.input_low))
-            quantizer.input_range = torch.nn.Parameter(torch.from_numpy(np.array(parameters.input_high - parameters.input_low)))
+            quantizer.input_range = \
+                torch.nn.Parameter(torch.from_numpy(np.array(parameters.input_high - parameters.input_low)))
         else:
             quantizer.scale = torch.nn.Parameter(torch.from_numpy(parameters.input_high))
 

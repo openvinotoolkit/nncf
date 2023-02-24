@@ -26,7 +26,7 @@ from tqdm import tqdm
 
 MODELS = [
     ('https://github.com/onnx/models/raw/main/vision/classification/mobilenet/model/mobilenetv2-12.onnx',
-     'mobilenetv2-12', 0.7875159235668789),
+     'mobilenetv2-12', 0.7921019108280255),
     ('https://github.com/onnx/models/raw/main/vision/classification/resnet/model/resnet50-v1-7.onnx',
      'resnet50-v1-7', 0.8119745222929936),
     (
