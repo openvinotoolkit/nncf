@@ -136,10 +136,10 @@ class Top1DiffColumn(TableColumn):
         return info[PipelineType.FP32].top_1 - info[target_pipeline_type].top_1
 
 
-class FPSDiffColumn(TableColumn):
+class FPSSpeedupColumn(TableColumn):
     @classmethod
     def name(cls):
-        return 'FPS diff'
+        return 'FPS speedup'
 
     @classmethod
     def accept_pipeline_type(cls, pipeline_type: PipelineType) -> bool:
@@ -149,7 +149,9 @@ class FPSDiffColumn(TableColumn):
     @TableColumn.assign_default_value
     def get_value(cls, info: Dict[PipelineType, RunInfo],
                   target_pipeline_type: PipelineType) -> str:
-        return info[PipelineType.FP32].FPS - info[target_pipeline_type].FPS
+        if info[PipelineType.FP32].FPS > 1e-5:
+            return info[target_pipeline_type].FPS / info[PipelineType.FP32].FPS
+        return 'inf'
 
 
 class StatusColumn(TableColumn):
@@ -186,7 +188,7 @@ def pytest_runtest_makereport(item, call):
 
     if result.when == 'call':
         test_results = item.config.test_results
-        per_model_columns = [Top1Column, FPSColumn, Top1DiffColumn, FPSDiffColumn]
+        per_model_columns = [Top1Column, FPSColumn, Top1DiffColumn, FPSSpeedupColumn]
         grouped_columns = [StatusColumn]
         header = ["Model name"]
         for column in per_model_columns:
