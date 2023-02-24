@@ -54,16 +54,25 @@ class TensorMeta:
 
 
 class TracedTensor(torch.Tensor):
-    # pylint: disable=abstract-method
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        self.tensor_meta = None
-
     @staticmethod
     def from_torch_tensor(tensor, tensor_meta: TensorMeta):
         tensor.tensor_meta = tensor_meta
+        tensor._nncf_expired = False
         tensor.__class__ = TracedTensor
         return tensor
+
+    @staticmethod
+    def from_traced_tensor(tensor: 'TracedTensor', tensor_meta: TensorMeta):
+        tensor.tensor_meta = tensor_meta
+        tensor._nncf_expired = False
+        return tensor
+
+    def nncf_expire(self):
+        self._nncf_expired = True
+
+    @property
+    def nncf_expired(self) -> bool:
+        return self._nncf_expired
 
     def as_subclass(self, cls: 'TracedTensor') -> 'TracedTensor':
         """
@@ -106,20 +115,26 @@ def get_dtype(x: torch.Tensor) -> Dtype:
     return Dtype.INTEGER
 
 
-def trace_tensors(operator_output, node: 'DynamicGraphNode'):
+def trace_tensors(operator_output, node: 'DynamicGraphNode', ctx: 'TracingContext' = None):
     if isinstance(operator_output, (list, tuple)):
         output_ = []
         for i, x in enumerate(operator_output):
             meta = None
             if node is not None:
                 meta = TensorMeta(node.node_id, i, x.shape, get_dtype(x))
-            output_.append(TracedTensor.from_torch_tensor(x, meta))
+            tt = TracedTensor.from_torch_tensor(x, meta)
+            if ctx is not None:
+                ctx.register_traced_tensor(tt)
+            output_.append(tt)
         return operator_output.__class__(output_)
     if isinstance(operator_output, torch.Tensor):
         meta = None
         if node is not None:
             meta = TensorMeta(node.node_id, 0, operator_output.shape, get_dtype(operator_output))
-        return TracedTensor.from_torch_tensor(operator_output, meta)
+        tt = TracedTensor.from_torch_tensor(operator_output, meta)
+        if ctx is not None:
+            ctx.register_traced_tensor(tt)
+        return tt
     raise ValueError("Unknown return type. Can not trace function call")
 
 
@@ -128,7 +143,11 @@ def make_tensor_metas(inputs: 'OperatorInput') -> List[Optional[TensorMeta]]:
     for i, node_input_index_entry in enumerate(inputs):
         node_input = node_input_index_entry.getter()
         if isinstance(node_input, TracedTensor):
-            tensor_metas.append(node_input.tensor_meta)
+            if not node_input.nncf_expired:
+                tensor_metas.append(node_input.tensor_meta)
+            else:
+                meta = TensorMeta(None, i, node_input.shape)
+                tensor_metas.append(meta)
         elif isinstance(node_input, torch.Tensor) and not isinstance(node_input, TracedTensor):
             meta = TensorMeta(None, i, node_input.shape)
             tensor_metas.append(meta)

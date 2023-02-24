@@ -198,7 +198,7 @@ def _execute_op(op_address: 'OperationAddress',
         if is_debug() and node is not None:
             ctx.register_node_call(node)
 
-    result = trace_tensors(result, node)
+    result = trace_tensors(result, node, ctx)
     result = ctx.execute_post_hooks(op_address, result)
     return result
 

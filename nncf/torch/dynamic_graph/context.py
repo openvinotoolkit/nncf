@@ -12,6 +12,7 @@
 """
 
 import threading
+import weakref
 from collections import deque
 from contextlib import contextmanager
 from typing import Callable
@@ -51,12 +52,24 @@ class PreHookId:
     def __hash__(self):
         return hash(str(self))
 
+
+class TracingThreadLocals(threading.local):
+    def __init__(self):
+        self.scopes = []
+        self.module_call_stack = []
+        self.in_operator = False
+        self.num_nested_hooks = 0
+        self.base_module_replica = None
+        self.operator_counters = {}
+        self.node_call_tracker = {}
+        self.traced_tensor_weakrefs = list()
+
 class CopySafeThreadingVars:
     """ A class holding variables that are related to threading and
     thus impossible to deepcopy. The deepcopy will simply return a
     new object without copying, but won't fail."""
     def __init__(self):
-        self.thread_local = threading.local()
+        self.thread_local = TracingThreadLocals()
         self.cond = threading.Condition()
 
     def __deepcopy__(self, memo):
@@ -105,6 +118,11 @@ class TracingContext:
         return self
 
     def __exit__(self, *args):
+        for traced_tensor_weakref in self._threading.thread_local.traced_tensor_weakrefs:
+            tt = traced_tensor_weakref()
+            if tt is not None:
+                tt.nncf_expire()
+
         self._reset_thread_local()
 
         global _CURRENT_CONTEXT
@@ -125,6 +143,10 @@ class TracingContext:
 
     def register_global_buffer(self, name: str, buffer):
         self.global_buffer_store[name] = buffer
+
+    def register_traced_tensor(self, tt: 'TracedTensor'):
+        wr = weakref.ref(tt)
+        self._threading.thread_local.traced_tensor_weakrefs.append(wr)
 
     def maybe_add_node(self,
                        inputs: OperatorInput,
@@ -320,14 +342,7 @@ class TracingContext:
         self._trace_dynamic_graph = True
 
     def _reset_thread_local(self):
-        tl = self._threading.thread_local
-        tl.scopes = []
-        tl.module_call_stack = []
-        tl.in_operator = False
-        tl.num_nested_hooks = 0
-        tl.base_module_replica = None
-        tl.operator_counters = {}
-        tl.node_call_tracker = {}
+        self._threading.thread_local = TracingThreadLocals()
 
 
     def register_node_call(self, node: DynamicGraphNode):
