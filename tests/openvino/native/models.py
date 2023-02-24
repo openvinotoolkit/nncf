@@ -196,7 +196,7 @@ class FPModel(OVReferenceModel):
 
     def _create_ov_model(self):
         input_shape = [1, 3, 4, 2]
-        input_1 = opset.parameter(input_shape, name="Input")
+        input_1 = opset.parameter(input_shape, name="Input", dtype=np.float32)
         data = self._rng.random((1, 3, 4, 5)).astype(self.precision)
         if self.precision == np.float16:
             data = opset.convert(data, np.float32)
@@ -204,6 +204,19 @@ class FPModel(OVReferenceModel):
         bias = self._rng.random((1, 3, 1, 1)).astype(self.precision)
         if self.precision == np.float16:
             bias = opset.convert(bias, np.float32)
+        add = opset.add(matmul, bias, name="Add")
+        r1 = opset.result(add, name="Result_Add")
+        model = ov.Model([r1], [input_1])
+        return model
+
+
+class FP16InputModel(OVReferenceModel):
+    def _create_ov_model(self):
+        input_shape = [1, 3, 4, 2]
+        input_1 = opset.parameter(input_shape, name="Input", dtype=np.float16)
+        data = self._rng.random((1, 3, 4, 5)).astype(np.float16)
+        matmul = opset.matmul(input_1, data, transpose_a=True, transpose_b=False, name="MatMul")
+        bias = self._rng.random((1, 3, 1, 1)).astype(np.float16)
         add = opset.add(matmul, bias, name="Add")
         r1 = opset.result(add, name="Result_Add")
         model = ov.Model([r1], [input_1])

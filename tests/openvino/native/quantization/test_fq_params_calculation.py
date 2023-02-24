@@ -33,6 +33,7 @@ from tests.openvino.native.models import LinearModel
 from tests.openvino.native.models import ConvModel
 from tests.openvino.native.models import MatMul2DModel
 from tests.openvino.native.models import FPModel
+from tests.openvino.native.models import FP16InputModel
 
 REFERENCE_SCALES_DIR = OPENVINO_NATIVE_TEST_ROOT / 'data' / 'reference_scales'
 
@@ -148,11 +149,26 @@ def test_syntetic_models_fq_shapes(model_creator_func, ref_shapes):
 
 
 @pytest.mark.parametrize('precision', ['FP16', 'FP32'])
-def test_syntetic_models_fq_precision(precision):
+def test_fq_precision_orig_fp32model(precision):
     model = FPModel(precision)
     quantized_model = quantize_model(model.ov_model, QuantizationPreset.PERFORMANCE)
-    dtype = ov.Type(np.float32) if precision == 'FP32' else ov.Type(np.float16)
+    for op in quantized_model.get_ops():
+        if op.get_type_name() == 'FakeQuantize':
+            inp_node = op.input(0)
+            fq_input_node = inp_node.get_source_output().get_node()
+            if fq_input_node.get_element_type() == 'Constant':
+                assert op.get_element_type() == ov.Type(np.float32)
+        elif op.get_type_name() == 'Convert':
+            inp_node = op.input(0)
+            fq_input_node = inp_node.get_source_output().get_node()
+            if fq_input_node.get_element_type() == 'Constant':
+                assert op.get_element_type() == ov.Type(np.float32 if precision == 'FP32' else np.float16)
+
+
+def test_fq_precision_orig_fp16model():
+    model = FP16InputModel()
+    quantized_model = quantize_model(model.ov_model, QuantizationPreset.PERFORMANCE)
     for op in quantized_model.get_ops():
         if op.get_type_name() == 'Constant':
             if op.get_element_type().is_real():
-                assert op.get_element_type() == dtype
+                assert op.get_element_type() == ov.Type(np.float16)
