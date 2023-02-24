@@ -55,6 +55,7 @@ class PreHookId:
 
 class TracingThreadLocals(threading.local):
     def __init__(self):
+        super().__init__()
         self.reset()
 
     def reset(self):
@@ -65,7 +66,7 @@ class TracingThreadLocals(threading.local):
         self.base_module_replica = None
         self.operator_counters = {}
         self.node_call_tracker = {}
-        self.traced_tensor_weakrefs = list()
+        self.traced_tensor_weakrefs = []
 
 
 class CopySafeThreadingVars:
@@ -230,7 +231,7 @@ class TracingContext:
 
     def reset_operator_call_count_in_scope(self, scope):
         scoped_op_name = str(scope)
-        for key in self._threading.thread_local.operator_counters.keys():
+        for key in self._threading.thread_local.operator_counters:
             if scoped_op_name in key:
                 self._threading.thread_local.operator_counters[key] = 0
 
