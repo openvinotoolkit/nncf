@@ -13,10 +13,11 @@
 
 import pytest
 import numpy as np
+from typing import Dict
+from abc import abstractclassmethod
 from pathlib import Path
 from enum import Enum
 from dataclasses import dataclass
-from dataclasses import fields
 
 
 def pytest_addoption(parser):
@@ -42,7 +43,135 @@ class PipelineType(Enum):
 class RunInfo:
     top_1: float
     FPS: float
-    status: str
+    status: str = None
+
+
+class TableColumn:
+    @classmethod
+    @abstractclassmethod
+    def name(cls) -> str:
+        """
+        Name of the column.
+
+        :returns: Name of the column.
+        """
+
+    @classmethod
+    @abstractclassmethod
+    def accept_pipeline_type(cls, pipeline_type: PipelineType) -> bool:
+        """
+        Is statistic applicable for given pipeline type.
+
+        :param pipeline_type: Given pipeline type.
+        :returns: Eather given pipeline type applicable or not.
+        """
+
+    @classmethod
+    @abstractclassmethod
+    def get_value(cls, info: Dict[PipelineType, RunInfo],
+                  target_pipeline_type: PipelineType) -> str:
+        """
+        Metod describes how to retrieve column info out of RunInfo.
+
+        :param info: Runinfo to retrive column info.
+        :param target_pipeline_type: Target type of the pipeline.
+        :returns: Column info.
+        """
+
+    @staticmethod
+    def assign_default_value(func):
+        def wrapped_get_value(cls, info: Dict[PipelineType, RunInfo],
+                              target_pipeline_type: PipelineType):
+            if target_pipeline_type not in info:
+                return '-'
+            return func(cls, info, target_pipeline_type)
+        return wrapped_get_value
+
+
+class Top1Column(TableColumn):
+    @classmethod
+    def name(cls):
+        return 'top 1'
+
+    @classmethod
+    def accept_pipeline_type(cls, pipeline_type: PipelineType) -> bool:
+        return True
+
+    @classmethod
+    @TableColumn.assign_default_value
+    def get_value(cls, info: Dict[PipelineType, RunInfo],
+                  target_pipeline_type: PipelineType) -> str:
+        return info[target_pipeline_type].top_1
+
+
+class FPSColumn(TableColumn):
+    @classmethod
+    def name(cls):
+        return 'FPS'
+
+    @classmethod
+    def accept_pipeline_type(cls, pipeline_type: PipelineType) -> bool:
+        return True
+
+    @classmethod
+    @TableColumn.assign_default_value
+    def get_value(cls, info: Dict[PipelineType, RunInfo],
+                  target_pipeline_type: PipelineType) -> str:
+        return info[target_pipeline_type].FPS
+
+
+class Top1DiffColumn(TableColumn):
+    @classmethod
+    def name(cls):
+        return 'top 1 diff'
+
+    @classmethod
+    def accept_pipeline_type(cls, pipeline_type: PipelineType) -> bool:
+        return pipeline_type != PipelineType.FP32
+
+    @classmethod
+    @TableColumn.assign_default_value
+    def get_value(cls, info: Dict[PipelineType, RunInfo],
+                  target_pipeline_type: PipelineType) -> str:
+        return info[PipelineType.FP32].top_1 - info[target_pipeline_type].top_1
+
+
+class FPSDiffColumn(TableColumn):
+    @classmethod
+    def name(cls):
+        return 'FPS diff'
+
+    @classmethod
+    def accept_pipeline_type(cls, pipeline_type: PipelineType) -> bool:
+        return pipeline_type != PipelineType.FP32
+
+    @classmethod
+    @TableColumn.assign_default_value
+    def get_value(cls, info: Dict[PipelineType, RunInfo],
+                  target_pipeline_type: PipelineType) -> str:
+        return info[PipelineType.FP32].FPS - info[target_pipeline_type].FPS
+
+
+class StatusColumn(TableColumn):
+    @classmethod
+    def name(cls):
+        return 'Status'
+
+    @classmethod
+    def accept_pipeline_type(cls, pipeline_type: PipelineType) -> bool:
+        return True
+
+    @classmethod
+    def get_value(cls, info: Dict[PipelineType, RunInfo],
+                  target_pipeline_type: PipelineType) -> str:
+        status = []
+        for pipeline_type in PipelineType:
+            if pipeline_type in info:
+                stat = info[pipeline_type].status
+                if stat is not None:
+                    status.append(stat)
+
+        return ','.join(status)
 
 
 @pytest.fixture
@@ -57,21 +186,26 @@ def pytest_runtest_makereport(item, call):
 
     if result.when == 'call':
         test_results = item.config.test_results
+        per_model_columns = [Top1Column, FPSColumn, Top1DiffColumn, FPSDiffColumn]
+        grouped_columns = [StatusColumn]
         header = ["Model name"]
-        for info in fields(RunInfo):
+        for column in per_model_columns:
             for pipeline_type in PipelineType:
-                header.append(" ".join((pipeline_type.value, info.name)))
+                if column.accept_pipeline_type(pipeline_type):
+                    header.append(" ".join((pipeline_type.value, column.name())))
+        for column in grouped_columns:
+            header.append(column.name())
 
         table = []
         for model_name, run_infos in test_results.items():
             row = [model_name]
-            for info in fields(RunInfo):
+            for column in per_model_columns:
                 for pipeline_type in PipelineType:
-                    data = '-'
-                    if pipeline_type in run_infos:
-                        data = getattr(run_infos[pipeline_type], info.name)
-                    row.append(data)
+                    if column.accept_pipeline_type(pipeline_type):
+                        row.append(column.get_value(run_infos, pipeline_type))
             table.append(row)
+            for column in grouped_columns:
+                row.append(column.get_value(run_infos, None))
 
         output_folder = Path(item.config.getoption("--output"))
         output_folder.mkdir(parents=True, exist_ok=True)

@@ -11,12 +11,10 @@
  limitations under the License.
 """
 
-import torch
-
 from copy import deepcopy
 from typing import Any, Dict, Optional, Tuple
 
-from nncf.common.logging import nncf_logger
+import torch
 from nncf.common.quantization.structs import QuantizationPreset
 from nncf.config import NNCFConfig
 from nncf.config.structures import BNAdaptationInitArgs
@@ -26,7 +24,6 @@ from nncf.parameters import convert_ignored_scope_to_list
 from nncf.parameters import IgnoredScope
 from nncf.parameters import ModelType
 from nncf.parameters import TargetDevice
-from nncf.torch.nncf_network import NNCFNetwork
 from nncf.torch.dynamic_graph.context import no_nncf_trace
 from nncf.torch.dynamic_graph.io_handling import replicate_same_tensors
 from nncf.torch.dynamic_graph.io_handling import wrap_nncf_model_inputs_with_objwalk
@@ -151,15 +148,13 @@ def quantize_impl(model: torch.nn.Module,
                   subset_size: int,
                   fast_bias_correction: bool,
                   model_type: Optional[ModelType] = None,
-                  ignored_scope: Optional[IgnoredScope] = None) -> NNCFNetwork:
+                  ignored_scope: Optional[IgnoredScope] = None) -> torch.nn.Module:
     """
     Implementation of the `quantize()` method for the PyTorch backend.
     """
     if fast_bias_correction is False:
         raise ValueError(f'fast_bias_correction={fast_bias_correction} is not '
                           'supported')
-    nncf_logger.warning('Bias correction and fast bias correction algorithms'
-                        ' are not supported by Torch backend by now.')
     if ignored_scope is not None and ignored_scope.types is not None:
         raise RuntimeError('Quantization algorithm from the PyTorch backend '
                             'does not support operation types in the ignored '

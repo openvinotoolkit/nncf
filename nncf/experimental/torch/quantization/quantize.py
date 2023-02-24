@@ -24,7 +24,6 @@ from nncf.common.quantization.structs import QuantizationPreset
 from nncf.quantization.algorithms.post_training.algorithm import PostTrainingQuantizationParameters
 from nncf.quantization.algorithms.post_training.algorithm import PostTrainingQuantization
 from nncf.quantization.algorithms.min_max.algorithm import MinMaxQuantization
-from nncf.torch.nncf_network import NNCFNetwork
 from nncf.torch.model_creation import create_nncf_network
 
 
@@ -36,7 +35,7 @@ def quantize_impl(
         subset_size: int,
         fast_bias_correction: bool,
         model_type: Optional[ModelType] = None,
-        ignored_scope: Optional[IgnoredScope] = None) -> NNCFNetwork:
+        ignored_scope: Optional[IgnoredScope] = None) -> torch.nn.Module:
     """
     Experimental implementation of the `quantize()` method for the PyTorch backend.
     """

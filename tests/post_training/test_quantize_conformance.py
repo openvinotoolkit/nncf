@@ -160,6 +160,7 @@ def validate_accuracy(model_path, val_loader):
     references = np.concatenate(references, axis=0)
     return accuracy_score(predictions, references)
 
+
 def benchmark_torch_model(model, dataloader, model_name, output_path):
     data_sample, _ = next(iter(dataloader))
     # Dump model
@@ -269,7 +270,7 @@ def torch_runner(model, calibration_dataset,
         q_torch_model_name,
         torch_output_path,
     )
-    return RunInfo(q_torch_acc, q_torch_perf, 'OK')
+    return RunInfo(q_torch_acc, q_torch_perf)
 
 
 def torch_ptq_runner(model, calibration_dataset,
@@ -295,7 +296,7 @@ def torch_ptq_runner(model, calibration_dataset,
         torch_output_path,
     )
 
-    return RunInfo(q_torch_ptq_acc, q_torch_ptq_perf, 'OK')
+    return RunInfo(q_torch_ptq_acc, q_torch_ptq_perf)
 
 
 def onnx_runner(model, calibration_dataset,
@@ -326,7 +327,7 @@ def onnx_runner(model, calibration_dataset,
         q_onnx_model_name,
         onnx_output_path,
     )
-    return RunInfo(q_onnx_acc, q_onnx_perf, 'OK')
+    return RunInfo(q_onnx_acc, q_onnx_perf)
 
 
 def ov_native_runner(model, calibration_dataset,
@@ -359,7 +360,7 @@ def ov_native_runner(model, calibration_dataset,
         q_ov_native_model_name,
         ov_native_output_path,
     )
-    return RunInfo(q_ov_native_acc, q_ov_native_perf, 'OK')
+    return RunInfo(q_ov_native_acc, q_ov_native_perf)
 
 
 def ov_runner(model, calibration_dataset,
@@ -387,7 +388,7 @@ def ov_runner(model, calibration_dataset,
         q_ov_model_name,
         ov_output_path,
     )
-    return RunInfo(q_ov_acc, q_ov_perf, 'OK')
+    return RunInfo(q_ov_acc, q_ov_perf)
 
 
 RUNNERS = {
@@ -419,7 +420,7 @@ def run_ptq_timm(data, output, model_name, backends,
         orig_perf, orig_acc = benchmark_torch_model(
             model, batch_one_dataloader, model_name, output_folder
         )
-        runinfos[PipelineType.FP32] = RunInfo(orig_acc, orig_perf, 'OK')
+        runinfos[PipelineType.FP32] = RunInfo(orig_acc, orig_perf)
 
         val_dataloader = get_torch_dataloader(data, transform, batch_size=128)
 
@@ -437,7 +438,7 @@ def run_ptq_timm(data, output, model_name, backends,
             except Exception as error:
                 traceback_path = Path.joinpath(output_folder, backend.value, model_name + '_error_log.txt')
                 create_error_log(traceback_path)
-                status = get_error_msg(traceback_path, model_name)
+                status = get_error_msg(traceback_path, backend.value)
                 runinfo = RunInfo(-1, -1, status)
             runinfos[backend] = runinfo
 
@@ -445,7 +446,7 @@ def run_ptq_timm(data, output, model_name, backends,
     except Exception as error:
         traceback_path = Path.joinpath(output_folder, model_name + '_error_log.txt')
         create_error_log(traceback_path)
-        status = f'An error occurred while running {model_name}. Traceback: {traceback_path}'
+        status = f'{model_name} traceback: {traceback_path}'
         runinfos[PipelineType.FP32] = RunInfo(-1, -1, status)
         process_connection.send(runinfos)
         raise error
@@ -459,8 +460,8 @@ def create_error_log(traceback_path: PosixPath) -> None:
     logging.error(traceback.format_exc())
 
 
-def get_error_msg(traceback_path: PosixPath, model_name: str) -> str:
-    return f'An error occurred while benchmarking {model_name}. Traceback: {traceback_path}'
+def get_error_msg(traceback_path: PosixPath, backend_name: str) -> str:
+    return f'{backend_name} traceback: {traceback_path}'
 
 
 @pytest.mark.parametrize('model_args', VALIDATION_SCOPE,
