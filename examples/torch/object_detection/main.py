@@ -17,13 +17,12 @@ from copy import deepcopy
 from pathlib import Path
 
 import torch
-from torch.utils import data
-
-from examples.torch.common.argparser import parse_args
 from torch.optim.lr_scheduler import ReduceLROnPlateau
+from torch.utils import data
 
 from examples.torch.common import restricted_pickle_module
 from examples.torch.common.argparser import get_common_argument_parser
+from examples.torch.common.argparser import parse_args
 from examples.torch.common.distributed import DistributedSampler
 from examples.torch.common.example_logger import logger
 from examples.torch.common.execution import get_execution_mode
@@ -57,8 +56,8 @@ from examples.torch.object_detection.eval import test_net
 from examples.torch.object_detection.layers.modules import MultiBoxLoss
 from examples.torch.object_detection.model import build_ssd
 from nncf.api.compression import CompressionStage
-from nncf.config.utils import is_accuracy_aware_training
 from nncf.common.accuracy_aware_training import create_accuracy_aware_training_loop
+from nncf.config.utils import is_accuracy_aware_training
 from nncf.torch import create_compressed_model
 from nncf.torch import load_state
 from nncf.torch.dynamic_graph.graph_tracer import create_input_infos
@@ -210,6 +209,8 @@ def main_worker(current_gpu, config):
     log_common_mlflow_params(config)
 
     if is_export_only:
+        if config.prepare_for_inference:
+            compression_ctrl.prepare_for_inference(make_model_copy=False)
         compression_ctrl.export_model(config.to_onnx)
         logger.info("Saved to {}".format(config.to_onnx))
         return
@@ -257,17 +258,22 @@ def main_worker(current_gpu, config):
 
     if 'test' in config.mode:
         with torch.no_grad():
+            val_net = net
+            if config.prepare_for_inference:
+                val_net = compression_ctrl.prepare_for_inference(make_model_copy=True)
             net.eval()
             if config['ssd_params'].get('loss_inference', False):
-                model_loss = test_net(net, config.device, test_data_loader, distributed=config.distributed,
+                model_loss = test_net(val_net, config.device, test_data_loader, distributed=config.distributed,
                                       loss_inference=True, criterion=criterion)
                 logger.info("Final model loss: {:.3f}".format(model_loss))
             else:
-                mAp = test_net(net, config.device, test_data_loader, distributed=config.distributed)
+                mAp = test_net(val_net, config.device, test_data_loader, distributed=config.distributed)
                 if config.metrics_dump is not None:
                     write_metrics(mAp, config.metrics_dump)
 
     if 'export' in config.mode:
+        if config.prepare_for_inference:
+            compression_ctrl.prepare_for_inference(make_model_copy=False)
         compression_ctrl.export_model(config.to_onnx)
         logger.info("Saved to {}".format(config.to_onnx))
 
