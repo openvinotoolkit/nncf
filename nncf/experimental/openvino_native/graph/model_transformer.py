@@ -329,7 +329,9 @@ class OVModelTransformer(ModelTransformer):
 
         return ov.Model(results, params)
 
-    def _apply_update_weights_transformations(self, transformations: List[OVWeightUpdateCommand]) -> None:
+    @staticmethod
+    def _apply_update_weights_transformations(model: ov.Model,
+                                              transformations: List[OVWeightUpdateCommand]) -> ov.Model:
         """
         Updates weight tensor.
 
@@ -337,12 +339,14 @@ class OVModelTransformer(ModelTransformer):
         :return: None
         """
         for transformation in transformations:
-            self._update_weight(transformation)
+            OVModelTransformer._update_weight(model, transformation)
+        return model
 
-    def _update_weight(self, transformation: OVWeightUpdateCommand):
+    @staticmethod
+    def _update_weight(model: ov.Model, transformation: OVWeightUpdateCommand):
         weight_node_name, _ = get_weight_tensor(transformation.target_point.target_node_name,
-                                                transformation.target_point.port_id, self._model)
-        for op in self._model.get_ops():
+                                                transformation.target_point.port_id, model)
+        for op in model.get_ops():
             if op.get_friendly_name() == weight_node_name:
                 weight_node = op
 
