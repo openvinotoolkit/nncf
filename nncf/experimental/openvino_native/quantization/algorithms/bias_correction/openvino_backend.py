@@ -81,7 +81,7 @@ class OVBiasCorrectionAlgoBackend(BiasCorrectionAlgoBackend):
         return OVModelExtractionCommand(inputs, outputs)
 
     @staticmethod
-    def output_insertion_command(target_point: OVTargetPoint) -> OVOutputInsertionCommand:
+    def output_insertion_command(nncf_graph: NNCFGraph, target_point: OVTargetPoint) -> OVOutputInsertionCommand:
         return OVOutputInsertionCommand(target_point)
 
     @staticmethod

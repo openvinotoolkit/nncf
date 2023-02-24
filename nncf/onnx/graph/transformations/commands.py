@@ -11,7 +11,7 @@
  limitations under the License.
 """
 
-from typing import List, Optional
+from typing import Dict, List, Optional
 import numpy as np
 
 from nncf.common.graph.transformations.commands import Command, TransformationCommand
@@ -58,8 +58,14 @@ class ONNXTargetPoint(TargetPoint):
 
 
 class ONNXInsertionCommand(TransformationCommand):
-    def __init__(self, target_point: ONNXTargetPoint):
+    def __init__(self, target_point: ONNXTargetPoint, nncf_input_node_next_onnx_nodes: Dict[str, List[str]]):
         super().__init__(TransformationType.INSERT, target_point)
+        # Insertion command could be applied to NNCF input nodes, e.g.
+        # quantizers will be tied with POST OP of NNCF input nodes.
+        # To get the ONNX edge to apply a command,
+        # need to keep the mapping NNCF input nodes to the following ONNX nodes.
+        self.nncf_input_node_next_onnx_nodes = nncf_input_node_next_onnx_nodes
+
 
     def union(self, other: 'TransformationCommand') -> 'TransformationCommand':
         # Have a look at nncf/torch/graph/transformations/commands/PTInsertionCommand
@@ -67,8 +73,9 @@ class ONNXInsertionCommand(TransformationCommand):
 
 
 class ONNXQuantizerInsertionCommand(ONNXInsertionCommand):
-    def __init__(self, target_point: ONNXTargetPoint, quantizer_parameters: ONNXQuantizerLayerParameters):
-        super().__init__(target_point)
+    def __init__(self, target_point: ONNXTargetPoint, nncf_input_node_next_onnx_nodes: Dict[str, List[str]],
+                 quantizer_parameters: ONNXQuantizerLayerParameters):
+        super().__init__(target_point, nncf_input_node_next_onnx_nodes)
         self.quantizer_parameters = quantizer_parameters
 
     def union(self, other: 'TransformationCommand') -> 'TransformationCommand':

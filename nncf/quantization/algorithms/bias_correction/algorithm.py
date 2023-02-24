@@ -154,7 +154,7 @@ class BiasCorrection(Algorithm):
 
             # We do not make an additional copy of the model because
             # the model transformer (that uses during sub-graph extraction) already does this internally when creating.
-            model_copy_subgraph = self._prepare_subgraph(node, model_copy, subgraph_data)
+            model_copy_subgraph = self._prepare_subgraph(node, model_copy, nncf_graph, subgraph_data)
 
             feed_dicts = self._create_feed_dicts(nncf_graph, model_copy_subgraph, subgraph_data, statistic_points)
 
@@ -258,12 +258,13 @@ class BiasCorrection(Algorithm):
 
         return subgraph_data
 
-    def _prepare_subgraph(self, node: NNCFNode, model: TModel, subgraph_data: Dict) -> TModel:
+    def _prepare_subgraph(self, node: NNCFNode, model: TModel, nncf_graph: NNCFGraph, subgraph_data: Dict) -> TModel:
         """
         This method prepares the subgraph from the model for the further inference.
 
         :param node: NNCFNode instance for the current layer.
         :param model: Backend-specifig model instance.
+        :param nncf_graph: Instance of NNCFGraph.
         :param subgraph_data: A dictionary with the layers for the graph building.
         :return: Backend-specific subgraph extracted from the model.
         """
@@ -276,7 +277,7 @@ class BiasCorrection(Algorithm):
         statistic_point = self._backend_entity.target_point(TargetType.POST_LAYER_OPERATION,
                                                             node.node_name,
                                                             output_port_id)
-        output_insertion_command = self._backend_entity.output_insertion_command(statistic_point)
+        output_insertion_command = self._backend_entity.output_insertion_command(nncf_graph, statistic_point)
         transformation_layout.register(output_insertion_command)
         return model_transformer.transform(transformation_layout)
 

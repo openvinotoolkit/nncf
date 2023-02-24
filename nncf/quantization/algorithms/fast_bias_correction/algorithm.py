@@ -30,6 +30,7 @@ from nncf.common.factory import EngineFactory
 from nncf.common.tensor_statistics.statistic_point import StatisticPoint
 from nncf.common.tensor_statistics.statistic_point import StatisticPointsContainer
 from nncf.common.factory import ModelTransformerFactory
+from nncf.common.graph.model_transformer import ModelTransformer
 
 
 TModel = TypeVar('TModel')
@@ -120,7 +121,7 @@ class FastBiasCorrection(Algorithm):
             (node, self._backend_entity.get_bias_value(node, nncf_graph, model)) \
                 for node in nncf_graph.get_all_nodes() if self._backend_entity.is_node_with_bias(node, nncf_graph)
         )
-
+        model_transformer = ModelTransformerFactory.create(model)
         # Fill `node_and_new_bias_value` list. It is a correspondence between nodes
         # for which we should update bias and new bias values.
         node_and_new_bias_value = []
@@ -134,7 +135,8 @@ class FastBiasCorrection(Algorithm):
             input_fp, input_shape = self._get_fp_inputs(statistic_points, node_name)
             output_fp = self._get_fp_outputs(statistic_points, node_name)
 
-            extracted_model = self._extract_submodel(model,
+
+            extracted_model = self._extract_submodel(model_transformer,
                                                      node_name)
 
             sub_input_name, sub_output_name = self._backend_entity.get_sub_input_output_names(extracted_model)
@@ -160,7 +162,6 @@ class FastBiasCorrection(Algorithm):
                 nncf_logger.debug(f'{node_name} bias skipped by threshold. Magnitude: {magnitude}')
 
         # Create commands of bias correction and apply them to the model.
-        model_transformer = ModelTransformerFactory.create(model)
         transformation_layout = TransformationLayout()
         for node, bias_value in node_and_new_bias_value:
             transformation_layout.register(self._backend_entity.create_bias_correction_command(node,
@@ -215,16 +216,15 @@ class FastBiasCorrection(Algorithm):
         return output_fp
 
     def _extract_submodel(self,
-                          model: TModel,
+                          model_transformer: ModelTransformer,
                           node_name: str) -> TModel:
         """
-        Extracts sub-model from the original based on the input & output tensor names.
+        Extracts sub-model using backend-specific ModelTransformer.
 
-        :param model: Backend-specific model.
+        :param model_transformer: Backend-specific ModelTransformer.
         :param node_name: Name of the node that should be a center of the sub-model.
         :return: Backend-specific sub-model.
         """
-        model_transformer = ModelTransformerFactory.create(model)
         model_extraction_command = self._backend_entity.model_extraction_command([node_name],
                                                                                  [node_name])
         me_transformation_layout = TransformationLayout()
