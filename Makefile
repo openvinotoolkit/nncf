@@ -50,7 +50,7 @@ install-openvino-dev: install-openvino-test
 	pip install pylint==$(PYLINT_VERSION)
 
 test-openvino:
-	pytest tests/openvino --junitxml ${JUNITXML_PATH}
+	pytest tests/openvino $(DATA_ARG) --junitxml ${JUNITXML_PATH}
 
 pylint-openvino:
 	pylint --rcfile .pylintrc               \

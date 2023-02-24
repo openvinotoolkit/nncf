@@ -28,7 +28,6 @@ IMAGENETTE_ANNOTATION_URL =  \
         'https://huggingface.co/datasets/frgfm/imagenette/resolve/main/metadata/imagenette2-320/val.txt'
 WIDER_FACE_URL = 'https://huggingface.co/datasets/wider_face/resolve/main/data/WIDER_val.zip'
 WIDER_FACE_ANNOTATION_URL = 'https://huggingface.co/datasets/wider_face/resolve/main/data/wider_face_split.zip'
-DATASET_PATH = '~/.cache/nncf/datasets'
 
 
 def download(url: str, path: str) -> Path:
@@ -73,24 +72,24 @@ def preprocess_imagenette_labels(dataset_path: str) -> None:
             output_file.write(img_path_with_labels)
 
 
-def prepare_imagenette_for_test() -> Path:
-    dataset_path = download(IMAGENETTE_URL, DATASET_PATH)
+def prepare_imagenette_for_test(data_dir: Path) -> Path:
+    dataset_path = download(IMAGENETTE_URL, data_dir)
     preprocess_imagenette_labels(dataset_path)
     preprocess_imagenette_data(dataset_path)
     return dataset_path
 
 
-def prepare_wider_for_test() -> Path:
-    dataset_path = download(WIDER_FACE_URL, DATASET_PATH)
-    _ = download(WIDER_FACE_ANNOTATION_URL, DATASET_PATH)
+def prepare_wider_for_test(data_dir: Path) -> Path:
+    dataset_path = download(WIDER_FACE_URL, data_dir)
+    _ = download(WIDER_FACE_ANNOTATION_URL, data_dir)
     return dataset_path
 
 
-def get_dataset_for_test(dataset_name: str) -> Path:
+def get_dataset_for_test(dataset_name: str, data_dir: Path) -> Path:
     if dataset_name == 'imagenette2-320':
-        return prepare_imagenette_for_test()
+        return prepare_imagenette_for_test(data_dir)
     if dataset_name == 'wider':
-        return prepare_wider_for_test()
+        return prepare_wider_for_test(data_dir)
 
     raise RuntimeError(f'Unknown dataset: {dataset_name}.')
 
