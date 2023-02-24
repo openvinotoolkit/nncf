@@ -55,6 +55,9 @@ class PreHookId:
 
 class TracingThreadLocals(threading.local):
     def __init__(self):
+        self.reset()
+
+    def reset(self):
         self.scopes = []
         self.module_call_stack = []
         self.in_operator = False
@@ -63,6 +66,7 @@ class TracingThreadLocals(threading.local):
         self.operator_counters = {}
         self.node_call_tracker = {}
         self.traced_tensor_weakrefs = list()
+
 
 class CopySafeThreadingVars:
     """ A class holding variables that are related to threading and
@@ -349,7 +353,7 @@ class TracingContext:
         self._trace_dynamic_graph = True
 
     def _reset_thread_local(self):
-        self._threading.thread_local = TracingThreadLocals()
+        self._threading.thread_local.reset()
 
 
     def register_node_call(self, node: DynamicGraphNode):
