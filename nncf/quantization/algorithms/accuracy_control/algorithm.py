@@ -182,7 +182,8 @@ def restore_accuracy(initial_model: TModel,
                          if algo_backend.is_node_with_weight(node))
     for node_with_weight in nodes_with_weight:
         node = quantized_nncf_graph.get_node_by_name(node_with_weight.node_name)
-        node.data['original_weight'] = algo_backend.get_weight_value(node_with_weight, initial_nncf_graph, initial_model)
+        node.data['original_weight'] = algo_backend.get_weight_value(node_with_weight,
+                                                                     initial_nncf_graph, initial_model)
 
     # Show the number of quantized operations.
     num_of_quantized_ops = get_number_of_quantized_ops(quantized_nncf_graph,
