@@ -63,13 +63,8 @@ class TracedTensor(torch.Tensor):
     @staticmethod
     def from_torch_tensor(tensor, tensor_meta: TensorMeta):
         tensor.tensor_meta = tensor_meta
-        tensor._nncf_expired = False
         tensor.__class__ = TracedTensor
-        return tensor
-
-    @staticmethod
-    def from_traced_tensor(tensor: 'TracedTensor', tensor_meta: TensorMeta):
-        tensor.tensor_meta = tensor_meta
+        #pylint:disable=protected-access
         tensor._nncf_expired = False
         return tensor
 
