@@ -34,7 +34,7 @@ from nncf.quantization.algorithms.accuracy_control.utils import get_metric_for_e
 from nncf.quantization.algorithms.accuracy_control.utils import get_logits_for_each_item
 from nncf.quantization.algorithms.accuracy_control.ranking import rank_quantizers
 from nncf.quantization.algorithms.accuracy_control.ranking import find_groups_of_quantizers_to_rank
-from nncf.quantization.algorithms.accuracy_control.ranking import remove_group_of_quantizers_from_model
+from nncf.quantization.algorithms.accuracy_control.ranking import revert_operations_to_floating_point_precision
 
 
 def get_algo_backend(backend: BackendType) -> AccuracyControlAlgoBackend:
@@ -76,7 +76,7 @@ def common_quantize_with_accuracy_control(model: TModel,
 
     initial_metric = validation_fn(algo_backend.prepare_for_inference(model),
                                    validation_dataset.get_data())
-    nncf_logger.info(f'Metric of initial model:   {initial_metric}')
+    nncf_logger.info(f'Metric of initial model: {initial_metric}')
 
     quantized_metric = validation_fn(algo_backend.prepare_for_inference(quantized_model),
                                      validation_dataset.get_data())
@@ -139,7 +139,7 @@ def restore_accuracy(initial_model: TModel,
         initial_metric - final_metric <= max_drop.
     """
     accuracy_drop = initial_metric - quantized_metric
-    nncf_logger.info(f'Accuracy drop:             {accuracy_drop}')
+    nncf_logger.info(f'Accuracy drop: {accuracy_drop}')
 
     if accuracy_drop <= max_drop:
         return quantized_model
@@ -255,8 +255,11 @@ def restore_accuracy(initial_model: TModel,
 
         # greedy removal of the FQ node with the highest importance score
         current_group = ranked_groups.pop()
-        current_model = remove_group_of_quantizers_from_model(current_group, previous_model,
-                                                              quantized_nncf_graph, algo_backend)
+        current_model = revert_operations_to_floating_point_precision(current_group.operations,
+                                                                      current_group.quantizers,
+                                                                      previous_model,
+                                                                      quantized_nncf_graph,
+                                                                      algo_backend)
 
         nncf_logger.debug(f'Removed a block of {len(current_group.quantizers)} quantizers:'
                          f'\n{_create_message(current_group.quantizers)}')

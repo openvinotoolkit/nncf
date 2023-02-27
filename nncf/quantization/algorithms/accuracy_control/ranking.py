@@ -119,25 +119,31 @@ def find_groups_of_quantizers_to_rank(
     return groups_to_rank
 
 
-def remove_group_of_quantizers_from_model(group: GroupToRank,
-                                          quantized_model: TModel,
-                                          nncf_graph: NNCFGraph,
-                                          algo_backend: AccuracyControlAlgoBackend) -> TModel:
+def revert_operations_to_floating_point_precision(operations: List[NNCFNode],
+                                                  quantizers: List[NNCFNode],
+                                                  quantized_model: TModel,
+                                                  nncf_graph: NNCFGraph,
+                                                  algo_backend: AccuracyControlAlgoBackend) -> TModel:
     """
-    Removes group of quantizers from the model.
+    Reverts provided operations to floating-point precision by removing
+    quantizers. Restores original bias for operations with bias.
+    Restores original weights for operations with weights.
 
-    :param group: Group of quantizers to remove.
-    :param quantized_model: Quantized model from which quantizers should be removed.
+    :param operations: List of operations to revert in floating-point precision.
+    :param quantizers: List of quantizers that should be removed to revert
+        operations to floating-point precision.
+    :param quantized_model: Quantized model in which provided operations
+        should be reverted to floating-point precision.
     :param nncf_graph: The graph which was built for `quantized_model`.
     :param algo_backend: Backend for algorithm.
-    :return: The model from which `group.quantizers` were removed.
+    :return: The model where `operations` were reverted to floating-point precision.
     """
     transformation_layout = TransformationLayout()
 
-    for node in group.quantizers:
+    for node in quantizers:
         transformation_layout.register(algo_backend.create_command_to_remove_quantizer(node))
 
-    for node in group.operations:
+    for node in operations:
         original_bias = node.data.get('original_bias', None)
         if original_bias is not None:
             transformation_layout.register(algo_backend.create_command_to_update_bias(node, original_bias, nncf_graph))
@@ -216,8 +222,8 @@ def rank_quantizers(groups_to_rank: List[GroupToRank],
         if excluded_groups and current_group in excluded_groups:
             continue
 
-        modified_model = remove_group_of_quantizers_from_model(current_group, quantized_model,
-                                                               quantized_nncf_graph, algo_backend)
+        modified_model = revert_operations_to_floating_point_precision(current_group, quantized_model,
+                                                                       quantized_nncf_graph, algo_backend)
 
         # Get the ranking score for the current group of quantizers.
         if use_metric:
