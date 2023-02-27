@@ -222,8 +222,11 @@ def rank_quantizers(groups_to_rank: List[GroupToRank],
         if excluded_groups and current_group in excluded_groups:
             continue
 
-        modified_model = revert_operations_to_floating_point_precision(current_group, quantized_model,
-                                                                       quantized_nncf_graph, algo_backend)
+        modified_model = revert_operations_to_floating_point_precision(current_group.operations,
+                                                                       current_group.quantizers,
+                                                                       quantized_model,
+                                                                       quantized_nncf_graph,
+                                                                       algo_backend)
 
         # Get the ranking score for the current group of quantizers.
         if use_metric:

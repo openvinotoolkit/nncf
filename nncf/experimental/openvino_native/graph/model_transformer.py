@@ -74,7 +74,7 @@ class OVModelTransformer(ModelTransformer):
             elif isinstance(transformation, OVBiasCorrectionCommand):
                 bias_correction_transformations.append(transformation)
             elif isinstance(transformation, OVWeightUpdateCommand):
-                 weight_update_transformations.append(transformation)
+                weight_update_transformations.append(transformation)
 
         model = self._model.clone()
         # Inplace transformations; Using deepcopy of model
