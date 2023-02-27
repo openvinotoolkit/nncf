@@ -12,6 +12,7 @@
 """
 
 import threading
+import weakref
 from collections import deque
 from contextlib import contextmanager
 from typing import Callable
@@ -51,12 +52,29 @@ class PreHookId:
     def __hash__(self):
         return hash(str(self))
 
+
+class TracingThreadLocals(threading.local):
+    def __init__(self):
+        super().__init__()
+        self.reset()
+
+    def reset(self):
+        self.scopes = []
+        self.module_call_stack = []
+        self.in_operator = False
+        self.num_nested_hooks = 0
+        self.base_module_replica = None
+        self.operator_counters = {}
+        self.node_call_tracker = {}
+        self.traced_tensor_weakrefs = []
+
+
 class CopySafeThreadingVars:
     """ A class holding variables that are related to threading and
     thus impossible to deepcopy. The deepcopy will simply return a
     new object without copying, but won't fail."""
     def __init__(self):
-        self.thread_local = threading.local()
+        self.thread_local = TracingThreadLocals()
         self.cond = threading.Condition()
 
     def __deepcopy__(self, memo):
@@ -105,6 +123,12 @@ class TracingContext:
         return self
 
     def __exit__(self, *args):
+        if self._save_context is not self:  # NNCFNetwork.rebuild_graph() uses the compressed context nested in self
+            for traced_tensor_weakref in self._threading.thread_local.traced_tensor_weakrefs:
+                tt = traced_tensor_weakref()
+                if tt is not None:
+                    tt.nncf_expire()
+
         self._reset_thread_local()
 
         global _CURRENT_CONTEXT
@@ -125,6 +149,17 @@ class TracingContext:
 
     def register_global_buffer(self, name: str, buffer):
         self.global_buffer_store[name] = buffer
+
+    def register_traced_tensor(self, tt: 'TracedTensor'):
+        """
+        Registers a weak reference to a traced tensor in the context so that in case
+        the block under context retains a reference to an intermediate tensor somewhere,
+        the context can mark this traced tensor reference as "expired" tracing-wise upon context
+        exit.
+        :param tt: A TracedTensor to be registered.
+        """
+        wr = weakref.ref(tt)
+        self._threading.thread_local.traced_tensor_weakrefs.append(wr)
 
     def maybe_add_node(self,
                        inputs: OperatorInput,
@@ -196,7 +231,7 @@ class TracingContext:
 
     def reset_operator_call_count_in_scope(self, scope):
         scoped_op_name = str(scope)
-        for key in self._threading.thread_local.operator_counters.keys():
+        for key in self._threading.thread_local.operator_counters:
             if scoped_op_name in key:
                 self._threading.thread_local.operator_counters[key] = 0
 
@@ -320,14 +355,7 @@ class TracingContext:
         self._trace_dynamic_graph = True
 
     def _reset_thread_local(self):
-        tl = self._threading.thread_local
-        tl.scopes = []
-        tl.module_call_stack = []
-        tl.in_operator = False
-        tl.num_nested_hooks = 0
-        tl.base_module_replica = None
-        tl.operator_counters = {}
-        tl.node_call_tracker = {}
+        self._threading.thread_local.reset()
 
 
     def register_node_call(self, node: DynamicGraphNode):
