@@ -50,6 +50,16 @@ def create_timm_model(name):
     )
     return model
 
+def print_stat_end(fn_name: str):
+    def decorator(fn):
+        def wrapper(*args, **kwargs):
+            print(f'Start {fn_name}')
+            result = fn(*args, **kwargs)
+            print(f'Stop {fn_name}')
+            return result
+        return wrapper
+    return decorator
+
 
 def get_model_transform(model):
     config = model.default_cfg
@@ -74,6 +84,7 @@ def get_model_transform(model):
     return transform
 
 
+@print_stat_end('get_torch_dataloader')
 def get_torch_dataloader(folder, transform, batch_size=1):
     val_dataset = datasets.ImageFolder(root=folder, transform=transform)
     val_loader = torch.utils.data.DataLoader(
@@ -111,6 +122,7 @@ def run_benchmark(model_path):
     return None, cmd_output
 
 
+@print_stat_end('Benchmark performace')
 def benchmark_performance(model_path, model_name):
     """
     Receives the OpenVINO IR model and runs benchmark tool for it
@@ -130,6 +142,8 @@ def benchmark_performance(model_path, model_name):
 
     return model_perf
 
+
+@print_stat_end('Validate accuracy')
 def validate_accuracy(model_path, val_loader):
     dataset_size = len(val_loader)
     predictions = [0] * dataset_size
@@ -433,6 +447,7 @@ def run_ptq_timm(data, output, model_name, backends,
         for backend in backends:
             runner = RUNNERS[backend]
             try:
+                runner = print_stat_end(f'Runner {backend}')(runner)
                 runinfo = runner(model, calibration_dataset, model_quantization_params,
                                  output_folder, model_name, batch_one_dataloader)
             except Exception as error:
