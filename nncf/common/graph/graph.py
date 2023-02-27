@@ -668,6 +668,7 @@ class NNCFGraph:
         """
         Removes nodes from the current NNCFGraph instance.
         We use the remove_node method here because remove_nodes_from uses a silent fail instead of an exception.
+
         :param nodes: List of NNCFNodes to remove.
         """
         for node in nodes:

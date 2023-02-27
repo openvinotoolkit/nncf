@@ -20,6 +20,7 @@ from nncf.common.graph.operator_metatypes import ShapeOfNoopMetatype
 def transform_to_inference_graph(nncf_graph: NNCFGraph) -> NNCFGraph:
     """
     This method contains pipeline of the passes that uses to provide inference graph without constant flows.
+
     :param nncf_graph: NNCFGraph instance for the transformation.
     :return: NNCFGraph in the inference style.
     """
@@ -30,6 +31,7 @@ def transform_to_inference_graph(nncf_graph: NNCFGraph) -> NNCFGraph:
 def remove_shape_of_subgraphs(nncf_graph: NNCFGraph) -> NNCFGraph:
     """
     Removes the ShapeOf subgraphs from the provided NNCFGraph instance.
+
     :param nncf_graph: NNCFGraph instance for the transformation.
     :return: NNCFGraph without ShapeOf subgraphs.
     """
