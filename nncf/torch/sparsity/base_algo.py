@@ -10,7 +10,7 @@
  See the License for the specific language governing permissions and
  limitations under the License.
 """
-
+import copy
 from typing import List
 
 import torch
@@ -21,10 +21,10 @@ from nncf.api.compression import CompressionStage
 from nncf.common.graph import NNCFNode
 from nncf.common.graph import NNCFNodeName
 from nncf.common.graph.transformations.commands import TargetType
+from nncf.common.logging import nncf_logger
 from nncf.common.schedulers import BaseCompressionScheduler
 from nncf.common.schedulers import StubCompressionScheduler
 from nncf.common.sparsity.controller import SparsityController
-from nncf.common.logging import nncf_logger
 from nncf.torch.algo_selector import ZeroCompressionLoss
 from nncf.torch.compression_method_api import PTCompressionAlgorithmBuilder
 from nncf.torch.compression_method_api import PTCompressionAlgorithmController
@@ -33,12 +33,12 @@ from nncf.torch.graph.transformations.commands import PTTargetPoint
 from nncf.torch.graph.transformations.commands import TransformationPriority
 from nncf.torch.graph.transformations.layout import PTTransformationLayout
 from nncf.torch.nncf_network import NNCFNetwork
+from nncf.torch.sparsity.layers import BinaryMask
 from nncf.torch.utils import get_model_device
 
 
 class SparseModuleInfo:
-    def __init__(self, module_node_name: NNCFNodeName, module: torch.nn.Module,
-                 operand):
+    def __init__(self, module_node_name: NNCFNodeName, module: torch.nn.Module, operand):
         self.module_node_name = module_node_name
         self.module = module
         self.operand = operand
@@ -59,7 +59,8 @@ class BaseSparsityAlgoBuilder(PTCompressionAlgorithmBuilder):
     def _sparsify_weights(self, target_model: NNCFNetwork) -> List[PTInsertionCommand]:
         device = get_model_device(target_model)
         sparsified_module_nodes = target_model.get_weighted_original_graph_nodes(
-            nncf_module_names=self.compressed_nncf_module_names)
+            nncf_module_names=self.compressed_nncf_module_names
+        )
         insertion_commands = []
         for module_node in sparsified_module_nodes:
             node_name = module_node.node_name
@@ -68,17 +69,20 @@ class BaseSparsityAlgoBuilder(PTCompressionAlgorithmBuilder):
                 nncf_logger.info(f"Ignored adding weight sparsifier for operation: {node_name}")
                 continue
 
-            compression_lr_multiplier = \
-                self.config.get_redefinable_global_param_value_for_algo('compression_lr_multiplier',
-                                                                        self.name)
+            compression_lr_multiplier = self.config.get_redefinable_global_param_value_for_algo(
+                "compression_lr_multiplier", self.name
+            )
             operation = self.create_weight_sparsifying_operation(module_node, compression_lr_multiplier)
             hook = operation.to(device)
-            insertion_commands.append(PTInsertionCommand(PTTargetPoint(TargetType.OPERATION_WITH_WEIGHTS,
-                                                                       target_node_name=node_name),
-                                                         hook, TransformationPriority.SPARSIFICATION_PRIORITY))
+            insertion_commands.append(
+                PTInsertionCommand(
+                    PTTargetPoint(TargetType.OPERATION_WITH_WEIGHTS, target_node_name=node_name),
+                    hook,
+                    TransformationPriority.SPARSIFICATION_PRIORITY,
+                )
+            )
             sparsified_module = target_model.get_containing_module(node_name)
-            self._sparsified_module_info.append(
-                SparseModuleInfo(node_name, sparsified_module, hook))
+            self._sparsified_module_info.append(SparseModuleInfo(node_name, sparsified_module, hook))
 
         return insertion_commands
 
@@ -90,8 +94,7 @@ class BaseSparsityAlgoBuilder(PTCompressionAlgorithmBuilder):
 
 
 class BaseSparsityAlgoController(PTCompressionAlgorithmController, SparsityController):
-    def __init__(self, target_model: NNCFNetwork,
-                 sparsified_module_info: List[SparseModuleInfo]):
+    def __init__(self, target_model: NNCFNetwork, sparsified_module_info: List[SparseModuleInfo]):
         super().__init__(target_model)
         self._loss = ZeroCompressionLoss(get_model_device(target_model))
         self._scheduler = BaseCompressionScheduler()
@@ -112,3 +115,32 @@ class BaseSparsityAlgoController(PTCompressionAlgorithmController, SparsityContr
 
     def compression_stage(self) -> CompressionStage:
         return CompressionStage.FULLY_COMPRESSED
+
+    def prepare_for_inference(self, make_model_copy: bool = True) -> NNCFNetwork:
+        """
+        Prepare NNCFNetwork for inference by converting NNCF modules to torch native format.
+
+        :param make_model_copy: `True` means that a copy of the model will be modified.
+            `False` means that the original model in the controller will be changed and
+            no further compression actions will be available. Defaults to True.
+
+        :return NNCFNetwork: Converted model.
+        """
+        model = self.model
+        if make_model_copy:
+            model = copy.deepcopy(self.model)
+
+        for node in model.get_original_graph().get_all_nodes():
+            if node.node_type in ["nncf_model_input", "nncf_model_output"]:
+                continue
+
+            nncf_module = model.get_containing_module(node.node_name)
+
+            if hasattr(nncf_module, "pre_ops"):
+                for key in list(nncf_module.pre_ops.keys()):
+                    op = nncf_module.get_pre_op(key)
+                    if isinstance(op.operand, BinaryMask):
+                        nncf_module.weight.data = op.operand.apply_binary_mask(nncf_module.weight.data)
+                        nncf_module.remove_pre_forward_operation(key)
+
+        return model

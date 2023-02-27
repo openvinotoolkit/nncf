@@ -241,26 +241,6 @@ class BasePruningAlgoController(PTCompressionAlgorithmController):
         """
         raise NotImplementedError
 
-    @staticmethod
-    def pruning_level_for_weight(minfo: PrunedModuleInfo):
-        """
-        Calculates sparsity level for all weight nodes.
-        """
-        weight = minfo.module.weight
-        pruning_level = 1 - weight.nonzero().size(0) / weight.view(-1).size(0)
-        return pruning_level
-
-    @staticmethod
-    def pruning_level_for_filters(minfo: PrunedModuleInfo):
-        """
-        Calculates sparsity level for weight filter-wise.
-        """
-        dim = minfo.module.target_weight_dim_for_compression
-        weight = minfo.module.weight.transpose(0, dim).contiguous()
-        filters_sum = weight.view(weight.size(0), -1).sum(axis=1)
-        pruning_level = 1 - len(filters_sum.nonzero()) / filters_sum.size(0)
-        return pruning_level
-
     def pruning_level_for_mask(self, minfo: PrunedModuleInfo):
         mask = self.get_mask(minfo)
         pruning_level = 1 - mask.nonzero().size(0) / max(mask.view(-1).size(0), 1)
@@ -283,7 +263,7 @@ class BasePruningAlgoController(PTCompressionAlgorithmController):
             drow["Name"] = str(minfo.module_scope)
             drow["Weight's shape"] = list(minfo.module.weight.size())
             drow["Bias shape"] = list(minfo.module.bias.size()) if minfo.module.bias is not None else []
-            drow["Layer PR"] = self.pruning_level_for_filters(minfo)
+            drow["Layer PR"] = self.pruning_level_for_mask(minfo)
             row = [drow[h] for h in header]
             data.append(row)
         table.add_rows(data)

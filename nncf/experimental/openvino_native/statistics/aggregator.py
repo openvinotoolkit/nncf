@@ -34,6 +34,7 @@ class OVStatisticsAggregator(StatisticsAggregator):
         self._name_to_node_mapping = {
             op.get_friendly_name(): op for op in model.get_ops()
         }
+        self._registered_weights = set()
         super().collect_statistics(model)
 
     def _register_activation_statistic(self, statistic_point: StatisticPointsContainer,
@@ -69,13 +70,17 @@ class OVStatisticsAggregator(StatisticsAggregator):
                     self._register_activation_statistic(statistic_point,
                                                         target_point, node_name, outputs)
                 elif target_point.type == TargetType.OPERATION_WITH_WEIGHTS:
-                    self._register_weight_statistic(statistic_point, target_point)
+                    # Register constant only once because it does not change
+                    # during inference
+                    if target_point.target_node_name not in self._registered_weights:
+                        self._register_weight_statistic(statistic_point, target_point)
+                        self._registered_weights.add(target_point.target_node_name)
                 else:
                     RuntimeError(f'Unsupported target point type for statistic aggregator:'
                                  f' {target_point.type}')
 
-    @staticmethod
-    def _get_transformation_layout_extra_outputs(statistic_points: StatisticPointsContainer) -> TransformationLayout:
+    def _get_transformation_layout_extra_outputs(self,
+                                                 statistic_points: StatisticPointsContainer) -> TransformationLayout:
         def is_activation_point(statistic_point: StatisticPoint) -> bool:
             return not statistic_point.target_point.is_weight_target_point()
 
