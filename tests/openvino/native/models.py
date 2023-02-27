@@ -230,13 +230,13 @@ class ComparisonBinaryModel(OVReferenceModel):
 @SYNTHETIC_MODELS.register()
 class ShapeOfModel(OVReferenceModel):
     def _create_ov_model(self):
-        input = opset.parameter([1, 3, 4, 2], name="Input")
+        input_1 = opset.parameter([1, 3, 4, 2], name="Input")
         scale = self._rng.random((1, 3, 1, 1)).astype(np.float32) + 1e-4
         kernel = self._rng.random((3, 3, 1, 1)).astype(np.float32) / scale - 0.5
         strides = [1, 1]
         pads = [0, 0]
         dilations = [1, 1]
-        conv = opset.convolution(input, kernel, strides, pads, pads, dilations, name="Conv")
+        conv = opset.convolution(input_1, kernel, strides, pads, pads, dilations, name="Conv")
         bias = opset.constant(np.zeros((1, 3, 1, 1)), dtype=np.float32, name="Bias")
         conv_add = opset.add(conv, bias, name="Conv_Add")
 
@@ -248,5 +248,5 @@ class ShapeOfModel(OVReferenceModel):
         transpose = opset.transpose(reshape, input_order=np.int64([0, 1, 3, 2]), name="Transpose")
 
         result = opset.result(transpose, name="Result")
-        model = ov.Model([result], [input])
+        model = ov.Model([result], [input_1])
         return model
