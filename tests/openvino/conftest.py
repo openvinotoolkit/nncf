@@ -13,6 +13,8 @@
 
 #pylint:disable=unused-import
 import pytest
+from pathlib import Path
+
 from tests.shared.install_fixtures import tmp_venv_with_nncf
 from tests.shared.case_collection import COMMON_SCOPE_MARKS_VS_OPTIONS
 from tests.shared.case_collection import skip_marked_cases_if_options_not_specified
@@ -20,7 +22,18 @@ from tests.shared.paths import TEST_ROOT
 
 
 def pytest_addoption(parser):
-    pass
+    parser.addoption(
+        "--data", type=str, default=None,
+        help="Directory path to cached data."
+    )
+
+
+@pytest.fixture(name="data_dir")
+def data(request):
+    option = request.config.getoption("--data")
+    if option is None:
+        return Path(DATASET_PATH)
+    return Path(option)
 
 
 # Custom markers specifying tests to be run only if a specific option
@@ -36,3 +49,6 @@ def pytest_collection_modifyitems(config, items):
 OPENVINO_TEST_ROOT = TEST_ROOT / 'openvino'
 OPENVINO_POT_TEST_ROOT = OPENVINO_TEST_ROOT / 'pot'
 OPENVINO_NATIVE_TEST_ROOT = OPENVINO_TEST_ROOT / 'native'
+AC_CONFIGS_DIR = OPENVINO_TEST_ROOT / 'data' / 'ac_configs'
+OPENVINO_DATASET_DEFINITIONS_PATH = OPENVINO_TEST_ROOT / 'data' / 'ov_dataset_definitions.yml'
+DATASET_PATH = '~/.cache/nncf/datasets'
