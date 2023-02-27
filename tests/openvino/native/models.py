@@ -236,17 +236,21 @@ class ShapeOfModel(OVReferenceModel):
         strides = [1, 1]
         pads = [0, 0]
         dilations = [1, 1]
-        conv = opset.convolution(input_1, kernel, strides, pads, pads, dilations, name="Conv")
-        bias = opset.constant(np.zeros((1, 3, 1, 1)), dtype=np.float32, name="Bias")
-        conv_add = opset.add(conv, bias, name="Conv_Add")
+        conv_1 = opset.convolution(input_1, kernel, strides, pads, pads, dilations, name="Conv_1")
+        bias_1 = opset.constant(np.zeros((1, 3, 1, 1)), dtype=np.float32, name="Bias_1")
+        conv_add_1 = opset.add(conv_1, bias_1, name="Conv_Add_1")
 
         # ShapeOf subgraph
-        shape_of = opset.shape_of(conv_add, name="ShapeOf")
+        shape_of = opset.shape_of(conv_add_1, name="ShapeOf")
         gather = opset.gather(shape_of, indices=np.int64([2, 3]), axis=np.int64(0))
         cat = opset.concat([np.int64([0]), np.int64([0]), gather], axis=0)
-        reshape = opset.reshape(conv_add, output_shape=cat, special_zero=True, name="Reshape")
+        reshape = opset.reshape(conv_add_1, output_shape=cat, special_zero=True, name="Reshape")
         transpose = opset.transpose(reshape, input_order=np.int64([0, 1, 3, 2]), name="Transpose")
 
-        result = opset.result(transpose, name="Result")
+        conv_2 = opset.convolution(transpose, kernel, strides, pads, pads, dilations, name="Conv_2")
+        bias_2 = opset.constant(np.zeros((1, 3, 1, 1)), dtype=np.float32, name="Bias_2")
+        conv_add_2 = opset.add(conv_2, bias_2, name="Conv_Add_2")
+
+        result = opset.result(conv_add_2, name="Result")
         model = ov.Model([result], [input_1])
         return model
