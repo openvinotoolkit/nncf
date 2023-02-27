@@ -207,3 +207,28 @@ class FPModel(OVReferenceModel):
         r1 = opset.result(add, name="Result_Add")
         model = ov.Model([r1], [input_1])
         return model
+
+
+@SYNTHETIC_MODELS.register()
+class ShapeOfModel(OVReferenceModel):
+    def _create_ov_model(self):
+        input = opset.parameter([1, 3, 4, 2], name="Input")
+        scale = self._rng.random((1, 3, 1, 1)).astype(np.float32) + 1e-4
+        kernel = self._rng.random((3, 3, 1, 1)).astype(np.float32) / scale - 0.5
+        strides = [1, 1]
+        pads = [0, 0]
+        dilations = [1, 1]
+        conv = opset.convolution(input, kernel, strides, pads, pads, dilations, name="Conv")
+        bias = opset.constant(np.zeros((1, 3, 1, 1)), dtype=np.float32, name="Bias")
+        conv_add = opset.add(conv, bias, name="Conv_Add")
+
+        # ShapeOf subgraph
+        shape_of = opset.shape_of(conv_add, name="ShapeOf")
+        gather = opset.gather(shape_of, indices=np.int64([2, 3]), axis=np.int64(0))
+        cat = opset.concat([np.int64([0]), np.int64([0]), gather], axis=0)
+        reshape = opset.reshape(conv_add, output_shape=cat, special_zero=True, name="Reshape")
+        transpose = opset.transpose(reshape, input_order=np.int64([0, 1, 3, 2]), name="Transpose")
+
+        result = opset.result(transpose, name="Result")
+        model = ov.Model([result], [input])
+        return model
