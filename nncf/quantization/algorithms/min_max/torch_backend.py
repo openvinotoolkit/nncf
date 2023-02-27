@@ -13,6 +13,8 @@
 
 from typing import Dict, List, Tuple
 
+import numpy as np
+
 from nncf.common.hardware.config import HWConfig
 from nncf.common.graph.graph import NNCFGraph
 from nncf.common.graph.definitions import NNCFGraphNodeType
@@ -26,6 +28,7 @@ from nncf.common.quantization.initialization.range import RangeInitConfig
 from nncf.common.tensor_statistics.statistics import MinMaxTensorStatistic
 from nncf.common.utils.backend import BackendType
 from nncf.common.graph.transformations.commands import TransformationPriority
+from nncf.common.graph.transformations.commands import TransformationCommand
 
 from nncf.torch.hardware.config import PTHWConfig
 from nncf.torch.quantization.default_quantization import DEFAULT_PT_QUANT_TRAIT_TO_OP_DICT
@@ -239,3 +242,8 @@ class PTMinMaxAlgoBackend(MinMaxAlgoBackend):
         quantizer = PTMinMaxAlgoBackend._create_quantizer(quantizer_config,
                                                           scale_shape, half_range, statistics)
         return PTInsertionCommand(target_point, quantizer, TransformationPriority.QUANTIZATION_PRIORITY)
+
+    @staticmethod
+    def create_weight_update_command(target_point: PTTargetPoint,
+                                     weight_tensor: np.ndarray) -> TransformationCommand:
+        return None
