@@ -200,7 +200,6 @@ def calculate_quantizer_parameters(statistics: MinMaxTensorStatistic,
         input_low, input_high = asymmetric_range(min_values, max_values, quantizer_config, quant_group)
 
     if not quantizer_config.per_channel:
-    # if quant_group == QuantizerGroup.ACTIVATIONS and not quantizer_config.per_channel:
         input_low = np.squeeze(input_low)
         input_high = np.squeeze(input_high)
 
