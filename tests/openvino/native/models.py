@@ -225,3 +225,34 @@ class ComparisonBinaryModel(OVReferenceModel):
         r1 = opset.result(add, name="Result_Add")
         model = ov.Model([r1], [input_1])
         return model
+
+
+@SYNTHETIC_MODELS.register()
+class DynamicModel(OVReferenceModel):
+    def _create_ov_model(self):
+        dynamic_axis = ov.Dimension(1, 99)
+        input_1_shape = ov.PartialShape([dynamic_axis, 3, 4, 2])
+        input_2_shape = ov.PartialShape([dynamic_axis, 3, 2, 4])
+
+        input_1 = opset.parameter(input_1_shape, name="Input_1")
+        mean = self._rng.random((1, 3, 1, 1)).astype(np.float32)
+        scale = self._rng.random((1, 3, 1, 1)).astype(np.float32) + 1e-4
+        subtract = opset.subtract(input_1, mean, name="Sub")
+        kernel = self._rng.random((3, 3, 1, 1)).astype(np.float32) / scale - 0.5
+        strides = [1, 1]
+        pads = [0, 0]
+        dilations = [1, 1]
+        conv = opset.convolution(subtract, kernel, strides, pads, pads, dilations, name="Conv")
+        bias = opset.constant(np.zeros((1, 3, 1, 1)), dtype=np.float32, name="Bias")
+        conv_add = opset.add(conv, bias, name="Conv_Add")
+        relu = opset.relu(conv_add, name="Relu")
+
+        input_2 = opset.parameter(input_2_shape, name="Input_2")
+        add = opset.add(input_2, (-1) * mean, name="Add")
+        multiply = opset.multiply(add, 1 / scale, name="Mul")
+        transpose = opset.transpose(multiply, [0, 1, 3, 2], name="Transpose")
+
+        cat = opset.concat([relu, transpose], axis=0)
+        result = opset.result(cat, name="Result")
+        model = ov.Model([result], [input_1, input_2])
+        return model
