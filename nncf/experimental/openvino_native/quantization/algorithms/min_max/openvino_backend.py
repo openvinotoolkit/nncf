@@ -35,7 +35,6 @@ from nncf.experimental.openvino_native.hardware.config import OVHWConfig
 from nncf.experimental.openvino_native.quantization.default_quantization import DEFAULT_OV_QUANT_TRAIT_TO_OP_DICT
 from nncf.experimental.openvino_native.statistics.collectors import OVMeanMinMaxStatisticCollector
 from nncf.experimental.openvino_native.statistics.collectors import OVMinMaxStatisticCollector
-from nncf.experimental.openvino_native.quantization.quantizer_parameters import get_weight_stats_shape
 from nncf.experimental.openvino_native.quantization.quantizer_parameters import calculate_quantizer_parameters
 
 from nncf.quantization.algorithms.min_max.backend import MinMaxAlgoBackend
@@ -98,12 +97,12 @@ class OVMinMaxAlgoBackend(MinMaxAlgoBackend):
 
         node = nncf_graph.get_node_by_name(target_point.target_node_name)
         if not target_point.is_weight_target_point():
-            if target_point._target_type == TargetType.PRE_LAYER_OPERATION:
+            if target_point.type == TargetType.PRE_LAYER_OPERATION:
                 shape = nncf_graph.get_input_edges(node)[target_point.port_id].tensor_shape
-            elif target_point._target_type == TargetType.POST_LAYER_OPERATION:
+            elif target_point.type == TargetType.POST_LAYER_OPERATION:
                 shape = nncf_graph.get_output_edges(node)[target_point.port_id].tensor_shape
             else:
-                raise NotImplementedError(f'Unsupported target point type {target_point._target_type}.')
+                raise NotImplementedError(f'Unsupported target point type {target_point.type}.')
 
             channel_axis = 1
             axes = tuple(i for i, _ in enumerate(shape) if i != channel_axis)
