@@ -15,7 +15,7 @@ from typing import Dict, List, Optional, TypeVar
 
 from nncf import Dataset
 from nncf.parameters import TargetDevice
-from nncf.parameters import IgnoredScope
+from nncf.scopes import IgnoredScope
 from nncf.common.logging import nncf_logger
 from nncf.common.quantization.structs import QuantizationPreset
 from nncf.common.utils.backend import BackendType

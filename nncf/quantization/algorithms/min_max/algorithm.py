@@ -16,8 +16,8 @@ from typing import Dict, List, TypeVar, Optional, OrderedDict
 import collections
 
 from nncf import Dataset
-from nncf.parameters import IgnoredScope
-from nncf.parameters import get_ignored_node_names_from_ignored_scope
+from nncf.scopes import IgnoredScope
+from nncf.scopes import get_ignored_node_names_from_ignored_scope
 from nncf.common.graph.graph import NNCFGraph
 from nncf.common.graph.transformations.commands import TargetType
 from nncf.common.graph.transformations.commands import TargetPoint

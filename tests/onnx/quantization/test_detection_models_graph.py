@@ -13,7 +13,7 @@
 
 import pytest
 
-from nncf.parameters import IgnoredScope
+from nncf.scopes import IgnoredScope
 
 from tests.onnx.conftest import ONNX_MODEL_DIR
 from tests.onnx.quantization.common import ModelToTest

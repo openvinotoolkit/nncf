@@ -13,8 +13,8 @@
 
 import pytest
 
-from nncf.parameters import IgnoredScope
-from nncf.parameters import get_ignored_node_names_from_ignored_scope
+from nncf.scopes import IgnoredScope
+from nncf.scopes import get_ignored_node_names_from_ignored_scope
 from nncf.common.graph.operator_metatypes import OutputNoopMetatype
 from nncf.common.graph.operator_metatypes import InputNoopMetatype
 from tests.common.quantization.mock_graphs import NodeWithType

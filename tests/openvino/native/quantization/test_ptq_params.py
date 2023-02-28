@@ -13,7 +13,7 @@
 
 import pytest
 
-from nncf.parameters import IgnoredScope
+from nncf.scopes import IgnoredScope
 from nncf.common.utils.backend import BackendType
 from nncf.common.graph.patterns.manager import PatternsManager
 from nncf.common.graph.patterns import GraphPattern

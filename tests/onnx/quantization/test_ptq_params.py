@@ -13,7 +13,7 @@
 
 import pytest
 
-from nncf.parameters import IgnoredScope
+from nncf.scopes import IgnoredScope
 from nncf.parameters import TargetDevice
 from nncf.common.graph.patterns import GraphPattern
 from nncf.quantization.algorithms.post_training.algorithm import PostTrainingQuantization

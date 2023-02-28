@@ -18,7 +18,7 @@ from openvino._offline_transformations import compress_quantize_weights_transfor
 
 from nncf.data import Dataset
 from nncf.common.quantization.structs import QuantizationPreset
-from nncf.parameters import IgnoredScope
+from nncf.scopes import IgnoredScope
 from nncf.parameters import ModelType
 from nncf.parameters import TargetDevice
 from nncf.quantization.algorithms.post_training.algorithm import PostTrainingQuantization

@@ -14,7 +14,7 @@
 import torch
 from typing import Optional
 
-from nncf.parameters import IgnoredScope
+from nncf.scopes import IgnoredScope
 from nncf.parameters import ModelType
 from nncf.parameters import TargetDevice
 from nncf.config import NNCFConfig

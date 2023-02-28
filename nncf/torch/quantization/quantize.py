@@ -20,8 +20,8 @@ from nncf.config import NNCFConfig
 from nncf.config.structures import BNAdaptationInitArgs
 from nncf.config.structures import QuantizationRangeInitArgs
 from nncf.data import Dataset
-from nncf.parameters import convert_ignored_scope_to_list
-from nncf.parameters import IgnoredScope
+from nncf.scopes import convert_ignored_scope_to_list
+from nncf.scopes import IgnoredScope
 from nncf.parameters import ModelType
 from nncf.parameters import TargetDevice
 from nncf.torch.dynamic_graph.context import no_nncf_trace

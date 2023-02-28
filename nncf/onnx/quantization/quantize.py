@@ -17,7 +17,7 @@ import onnx
 
 from nncf.data import Dataset
 from nncf.quantization.telemetry_extractors import CompressionStartedWithQuantizeApi
-from nncf.parameters import IgnoredScope
+from nncf.scopes import IgnoredScope
 from nncf.parameters import ModelType
 from nncf.parameters import TargetDevice
 from nncf.common.quantization.structs import QuantizationPreset
