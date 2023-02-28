@@ -1,0 +1,31 @@
+datasets:
+  - name: wider
+    data_source: WIDER_val/images
+    annotation_conversion:
+      converter: wider
+      annotation_file: wider_face_split/wider_face_val_bbx_gt.txt
+    annotation: wider.pickle
+    dataset_meta: wider.json
+
+  - name: wider_without_bkgr
+    data_source: WIDER_val/images
+    annotation_conversion:
+      converter: wider
+      annotation_file: wider_face_split/wider_face_val_bbx_gt.txt
+      label_start: 0
+    annotation: wider_0.pickle
+    dataset_meta: wider_0.json
+
+  - name: imagenette2-320
+    annotation_conversion:
+      converter: imagenet
+      annotation_file: imagenette2-320/imagenette2-320_val.txt
+    annotation: imagenette2-320.pickle
+    data_source: imagenette2-320/val/
+    metrics:
+      - name: accuracy@top1
+        type: accuracy
+        top_k: 1
+      - name: accuracy@top5
+        type: accuracy
+        top_k: 5

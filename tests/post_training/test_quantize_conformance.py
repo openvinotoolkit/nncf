@@ -56,18 +56,19 @@ def get_model_transform(model):
     transformations_list = []
     normalize = transforms.Normalize(mean=config['mean'], std=config['std'])
     input_size = config['input_size']
-    if 'fixed_input_size' in config and not config['fixed_input_size']:
-        resize_size = tuple(int(x / config['crop_pct']) for x in input_size[-2:])
-        resize = transforms.Resize(resize_size,
-                                   interpolation=RESIZE_MODE_MAP[config['interpolation']])
-        transformations_list.append(resize)
-    transformations_list.extend([transforms.CenterCrop(input_size[-2:]), transforms.ToTensor(), normalize])
 
     RESIZE_MODE_MAP = {
         'bilinear': InterpolationMode.BILINEAR,
         'bicubic': InterpolationMode.BICUBIC,
         'nearest': InterpolationMode.NEAREST,
     }
+
+    if 'fixed_input_size' in config and not config['fixed_input_size']:
+        resize_size = tuple(int(x / config['crop_pct']) for x in input_size[-2:])
+        resize = transforms.Resize(resize_size,
+                                   interpolation=RESIZE_MODE_MAP[config['interpolation']])
+        transformations_list.append(resize)
+    transformations_list.extend([transforms.CenterCrop(input_size[-2:]), transforms.ToTensor(), normalize])
 
     transform = transforms.Compose(transformations_list)
 
