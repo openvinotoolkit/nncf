@@ -61,7 +61,6 @@ def quantize_impl(
                                                 target_device=target_device,
                                                 ignored_scopes=ignored_scope)
 
-    params = PostTrainingQuantizationParameters()
     min_max_params = params.algorithms[MinMaxQuantization]
     params.algorithms = {MinMaxQuantization: min_max_params}
     quantization_algorithm = PostTrainingQuantization(params)
