@@ -822,3 +822,157 @@ class IdentityConvolutionalModel(ONNXReferenceModel):
         model = onnx.helper.make_model(graph_def, opset_imports=[op])
         onnx.checker.check_model(model)
         super().__init__(model, [input_shape], 'one_convolutional_model.dot')
+
+
+@ALL_SYNTHETIC_MODELS.register()
+class ShapeOfModel(ONNXReferenceModel):
+    INPUT_NAME = "X"
+
+    def __init__(self):
+        input_shape = [1, 3, 32, 32]
+        model_input_name = self.INPUT_NAME
+        X = onnx.helper.make_tensor_value_info(model_input_name,
+                                               onnx.TensorProto.FLOAT,
+                                               input_shape)
+        model_output_name = "Y"
+        model_output_channels = 10
+        Y = onnx.helper.make_tensor_value_info(model_output_name,
+                                               onnx.TensorProto.FLOAT,
+                                               [1, model_output_channels, 1, 1])
+
+        conv1_output_node_name = "Conv1_Y"
+        conv1_in_channels, conv1_out_channels, conv1_kernel_shape = 3, 32, (3, 3)
+        conv1_W = np.ones(shape=(
+            conv1_out_channels, conv1_in_channels, *conv1_kernel_shape)).astype(np.float32)
+        conv1_B = np.ones(shape=conv1_out_channels).astype(np.float32)
+
+        conv1_W_initializer_tensor_name = "Conv1_W"
+        conv1_W_initializer_tensor = create_initializer_tensor(
+            name=conv1_W_initializer_tensor_name,
+            tensor_array=conv1_W,
+            data_type=onnx.TensorProto.FLOAT)
+        conv1_B_initializer_tensor_name = "Conv1_B"
+        conv1_B_initializer_tensor = create_initializer_tensor(
+            name=conv1_B_initializer_tensor_name,
+            tensor_array=conv1_B,
+            data_type=onnx.TensorProto.FLOAT)
+
+        conv1_node = onnx.helper.make_node(
+            name="Conv1",
+            op_type="Conv",
+            inputs=[
+                model_input_name, conv1_W_initializer_tensor_name,
+                conv1_B_initializer_tensor_name
+            ],
+            outputs=[conv1_output_node_name],
+            kernel_shape=conv1_kernel_shape,
+        )
+
+        relu1_output_node_name = "ReLU1_Y"
+        relu1_node = onnx.helper.make_node(
+            name="ReLU1",
+            op_type="Relu",
+            inputs=[conv1_output_node_name],
+            outputs=[relu1_output_node_name],
+        )
+
+        # Shape subgraph
+        shape_output_node_name = "Shape_Y"
+        shape_node = onnx.helper.make_node(
+            name="Shape",
+            op_type="Shape",
+            inputs=[relu1_output_node_name],
+            outputs=[shape_output_node_name],
+        )
+        gather_output_node_name = "Gather_Y"
+        gather_indices_tensor_name = "Gather_I"
+        gather_indices_initializer_tensor = create_initializer_tensor(
+            name=gather_indices_tensor_name,
+            tensor_array=np.int64(2),
+            data_type=onnx.TensorProto.INT64)
+        gather_node = onnx.helper.make_node(
+            name="Gather",
+            op_type="Gather",
+            axis=0,
+            inputs=[shape_output_node_name, gather_indices_tensor_name],
+            outputs=[gather_output_node_name],
+        )
+        cast_1_output_node_name = "Cast1_Y"
+        cast_1_node = onnx.helper.make_node(
+            name="Cast1",
+            op_type="Cast",
+            to=onnx.TensorProto.INT64,
+            inputs=[gather_output_node_name],
+            outputs=[cast_1_output_node_name],
+        )
+        cast_2_output_node_name = "Cast2_Y"
+        cast_2_node = onnx.helper.make_node(
+            name="Cast2",
+            op_type="Cast",
+            to=onnx.TensorProto.FLOAT,
+            inputs=[cast_1_output_node_name],
+            outputs=[cast_2_output_node_name],
+        )
+        sqrt_output_node_name = "Sqrt_Y"
+        sqrt_node = onnx.helper.make_node(
+            name="Sqrt",
+            op_type="Sqrt",
+            inputs=[cast_2_output_node_name],
+            outputs=[sqrt_output_node_name],
+        )
+        reshape_output_node_name = "Reshape_Y"
+        reshape_node = onnx.helper.make_node(
+            name="Reshape",
+            op_type="Reshape",
+            inputs=[relu1_output_node_name, sqrt_output_node_name],
+            outputs=[reshape_output_node_name],
+        )
+
+        conv2_in_channels, conv2_out_channels, conv2_kernel_shape = conv1_out_channels, model_output_channels, (1, 1)
+        conv2_W = np.ones(shape=(conv2_out_channels, conv2_in_channels,
+                                 *conv2_kernel_shape)).astype(np.float32)
+        conv2_B = np.ones(shape=conv2_out_channels).astype(np.float32)
+
+        conv2_W_initializer_tensor_name = "Conv2_W"
+        conv2_W_initializer_tensor = create_initializer_tensor(
+            name=conv2_W_initializer_tensor_name,
+            tensor_array=conv2_W,
+            data_type=onnx.TensorProto.FLOAT)
+        conv2_B_initializer_tensor_name = "Conv2_B"
+        conv2_B_initializer_tensor = create_initializer_tensor(
+            name=conv2_B_initializer_tensor_name,
+            tensor_array=conv2_B,
+            data_type=onnx.TensorProto.FLOAT)
+
+        conv2_node = onnx.helper.make_node(
+            name="Conv2",
+            op_type="Conv",
+            inputs=[
+                reshape_output_node_name, conv2_W_initializer_tensor_name,
+                conv2_B_initializer_tensor_name
+            ],
+            outputs=[model_output_name],
+            kernel_shape=conv2_kernel_shape
+        )
+
+        graph_def = onnx.helper.make_graph(
+            nodes=[conv1_node, relu1_node,
+                   shape_node, gather_node,
+                   cast_1_node, cast_2_node,
+                   sqrt_node, reshape_node, conv2_node],
+            name="ConvNet",
+            inputs=[X],
+            outputs=[Y],
+            initializer=[
+                conv1_W_initializer_tensor,
+                conv1_B_initializer_tensor,
+                gather_indices_initializer_tensor,
+                conv2_W_initializer_tensor,
+                conv2_B_initializer_tensor
+            ],
+        )
+        op = onnx.OperatorSetIdProto()
+        op.version = OPSET_VERSION
+        model = onnx.helper.make_model(graph_def, opset_imports=[op])
+        onnx.checker.check_model(model)
+        super().__init__(model, [input_shape], 'shape_of_model.dot')
