@@ -205,16 +205,12 @@ def run(config):
             compression_ctrl, compress_model = create_compressed_model(model, nncf_config, compression_state)
             compression_callbacks = create_compression_callbacks(compression_ctrl, log_dir=config.log_dir)
 
-            train_kwargs = {}
-
-            if 'train' in config.mode:
-                scheduler = build_scheduler(
-                    config=config,
-                    steps_per_epoch=train_steps)
-                optimizer = build_optimizer(
-                    config=config,
-                    scheduler=scheduler)
-                train_kwargs["optimizer"] = optimizer
+            scheduler = build_scheduler(
+                config=config,
+                steps_per_epoch=train_steps)
+            optimizer = build_optimizer(
+                config=config,
+                scheduler=scheduler)
 
             loss_obj = tf.keras.losses.CategoricalCrossentropy(label_smoothing=0.1)
 
@@ -227,7 +223,7 @@ def run(config):
                 tfa.metrics.MeanMetricWrapper(compression_ctrl.loss, name='cr_loss')
             ]
 
-            compress_model.compile(**train_kwargs,
+            compress_model.compile(optimizer=optimizer,
                                    loss=loss_obj,
                                    metrics=metrics,
                                    run_eagerly=config.get('eager_mode', False))
