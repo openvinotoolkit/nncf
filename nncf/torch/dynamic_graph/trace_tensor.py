@@ -15,6 +15,7 @@ from typing import Iterable
 from typing import List
 from typing import Optional
 from typing import Tuple
+from typing import TypeVar
 from typing import Union
 
 import numpy as np
@@ -54,16 +55,29 @@ class TensorMeta:
 
 
 class TracedTensor(torch.Tensor):
-    # pylint: disable=abstract-method
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        self.tensor_meta = None
-
+    """
+    When tracing a torch model, intermediate tensors will be dynamically turned into
+    instances of this class to be able to store additional data required for establishing
+    relation between tensor producer and consumer operations.
+    """
     @staticmethod
     def from_torch_tensor(tensor, tensor_meta: TensorMeta):
         tensor.tensor_meta = tensor_meta
         tensor.__class__ = TracedTensor
+        #pylint:disable=protected-access
+        tensor._nncf_expired = False
         return tensor
+
+    def nncf_expire(self):
+        """
+        Mark the traced tensor as "expired". The tensor's metainformation should
+        then be considered outdated/invalid.
+        """
+        self._nncf_expired = True
+
+    @property
+    def nncf_expired(self) -> bool:
+        return self._nncf_expired
 
     def as_subclass(self, cls: 'TracedTensor') -> 'TracedTensor':
         """
@@ -106,29 +120,59 @@ def get_dtype(x: torch.Tensor) -> Dtype:
     return Dtype.INTEGER
 
 
-def trace_tensors(operator_output, node: 'DynamicGraphNode'):
+TensorOrTupleOrList = TypeVar('TensorOrTupleOrList', List[torch.Tensor], Tuple[torch.Tensor], torch.Tensor)
+
+
+def trace_tensors(operator_output: TensorOrTupleOrList,
+                  node: 'DynamicGraphNode', ctx: 'TracingContext' = None) -> TensorOrTupleOrList:
+    """
+    Dynamically turn torch.Tensor instances in `operator_output` into TracedTensor instances. `operator_output` is
+    presumed to be the output of a model operation (function call) associated with `node`.
+    :param operator_output: The output of an NNCF-wrapped function executed in a model object.
+    :param node: A node in DynamicGraph associated with the function that produced `operator_output`
+    :param ctx: If supplied, the resulting tensors will be registered within this TracingContext instance
+    to be marked as expired on context exit, which is required to correctly process situations when a traced model
+    retains intermediate tensor values.
+    :return: Same structure as `operator_output`, but with torch.Tensor entries turned into TracedTensors.
+    """
     if isinstance(operator_output, (list, tuple)):
         output_ = []
         for i, x in enumerate(operator_output):
             meta = None
             if node is not None:
                 meta = TensorMeta(node.node_id, i, x.shape, get_dtype(x))
-            output_.append(TracedTensor.from_torch_tensor(x, meta))
+            tt = TracedTensor.from_torch_tensor(x, meta)
+            if ctx is not None:
+                ctx.register_traced_tensor(tt)
+            output_.append(tt)
         return operator_output.__class__(output_)
     if isinstance(operator_output, torch.Tensor):
         meta = None
         if node is not None:
             meta = TensorMeta(node.node_id, 0, operator_output.shape, get_dtype(operator_output))
-        return TracedTensor.from_torch_tensor(operator_output, meta)
+        tt = TracedTensor.from_torch_tensor(operator_output, meta)
+        if ctx is not None:
+            ctx.register_traced_tensor(tt)
+        return tt
     raise ValueError("Unknown return type. Can not trace function call")
 
 
 def make_tensor_metas(inputs: 'OperatorInput') -> List[Optional[TensorMeta]]:
+    """
+    Produces TensorMeta data for each torch.Tensor or TracedTensor in `inputs`.
+    :param inputs: An OperatorInput representation of input arguments to an operation in the traced model.
+    :return: A list of TensorMeta objects, one for every torch.Tensor or TracedTensor object in `inputs` in the
+    order of item enumeration in `inputs`.
+    """
     tensor_metas = []
     for i, node_input_index_entry in enumerate(inputs):
         node_input = node_input_index_entry.getter()
         if isinstance(node_input, TracedTensor):
-            tensor_metas.append(node_input.tensor_meta)
+            if not node_input.nncf_expired:
+                tensor_metas.append(node_input.tensor_meta)
+            else:
+                meta = TensorMeta(None, i, node_input.shape)
+                tensor_metas.append(meta)
         elif isinstance(node_input, torch.Tensor) and not isinstance(node_input, TracedTensor):
             meta = TensorMeta(None, i, node_input.shape)
             tensor_metas.append(meta)
