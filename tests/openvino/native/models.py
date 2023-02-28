@@ -241,16 +241,27 @@ class ShapeOfModel(OVReferenceModel):
         conv_add_1 = opset.add(conv_1, bias_1, name="Conv_Add_1")
 
         # ShapeOf subgraph
-        shape_of = opset.shape_of(conv_add_1, name="ShapeOf")
-        gather = opset.gather(shape_of, indices=np.int64([2, 3]), axis=np.int64(0))
+        shape_of_1 = opset.shape_of(conv_add_1, name="ShapeOf_1")
+        gather = opset.gather(shape_of_1, indices=np.int64([2, 3]), axis=np.int64(0))
         cat = opset.concat([np.int64([0]), np.int64([0]), gather], axis=0)
-        reshape = opset.reshape(conv_add_1, output_shape=cat, special_zero=True, name="Reshape")
-        transpose = opset.transpose(reshape, input_order=np.int64([0, 1, 3, 2]), name="Transpose")
+        reshape_1 = opset.reshape(conv_add_1, output_shape=cat, special_zero=True, name="Reshape_1")
+        transpose = opset.transpose(reshape_1, input_order=np.int64([0, 1, 3, 2]), name="Transpose")
 
         conv_2 = opset.convolution(transpose, kernel, strides, pads, pads, dilations, name="Conv_2")
         bias_2 = opset.constant(np.zeros((1, 3, 1, 1)), dtype=np.float32, name="Bias_2")
         conv_add_2 = opset.add(conv_2, bias_2, name="Conv_Add_2")
 
-        result = opset.result(conv_add_2, name="Result")
+        # ShapeOf subgraph
+        shape_of_2 = opset.shape_of(conv_add_2, name="ShapeOf_2")
+        convert_1 = opset.convert(shape_of_2, destination_type="f32", name="Convert_1")
+        multiply = opset.multiply(convert_1, np.float32([1, 1, 1, 1]), name="Multiply")
+        convert_2 = opset.convert(multiply, destination_type="i64", name="Convert_2")
+        reshape_2 = opset.reshape(conv_add_2, output_shape=convert_2, special_zero=True, name="Reshape_2")
+
+        conv_3 = opset.convolution(reshape_2, kernel, strides, pads, pads, dilations, name="Conv_3")
+        bias_3 = opset.constant(np.zeros((1, 3, 1, 1)), dtype=np.float32, name="Bias_3")
+        conv_add_3 = opset.add(conv_3, bias_3, name="Conv_Add_3")
+
+        result = opset.result(conv_add_3, name="Result")
         model = ov.Model([result], [input_1])
         return model
