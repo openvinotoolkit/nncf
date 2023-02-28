@@ -307,6 +307,7 @@ class OVModelTransformer(ModelTransformer):
             OVModelTransformer._set_const_value(node_with_weight,
                                                 transformation.target_point.port_id,  # Weight port id
                                                 transformation.weight_value)
+        return model
 
     @staticmethod
     def _apply_model_extraction_transformation(model: ov.Model,

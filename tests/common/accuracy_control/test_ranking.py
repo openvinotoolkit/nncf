@@ -16,8 +16,8 @@ from typing import List
 import pytest
 import numpy as np
 
-from nncf.quantization.algorithms.accuracy_control.ranking import normalized_mse
-from nncf.quantization.algorithms.accuracy_control.ranking import get_ranking_subset_indices
+from nncf.quantization.algorithms.accuracy_control.rank_functions import normalized_mse_flattened
+from nncf.quantization.algorithms.accuracy_control.ranker import get_ranking_subset_indices
 
 
 @pytest.mark.parametrize(
@@ -49,7 +49,7 @@ from nncf.quantization.algorithms.accuracy_control.ranking import get_ranking_su
     ]
 )
 def test_normalized_mse(x_ref: np.ndarray, x_approx: np.ndarray, expected_nmse: float):
-    actual_nmse = normalized_mse(x_ref, x_approx)
+    actual_nmse = normalized_mse_flattened(x_ref, x_approx)
     assert np.allclose(expected_nmse, actual_nmse)
 
 
