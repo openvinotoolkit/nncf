@@ -17,6 +17,7 @@ from dataclasses import dataclass
 import onnx
 from nncf.common.graph.operator_metatypes import OperatorMetatype
 from nncf.common.graph.operator_metatypes import OperatorMetatypeRegistry
+from nncf.common.graph.operator_metatypes import ShapeOfNoopMetatype
 from nncf.common.hardware.opset import HWConfigOpName
 
 ONNX_OPERATION_METATYPES = OperatorMetatypeRegistry('onnx_operator_metatypes')
@@ -253,7 +254,7 @@ class ONNXConstantOfShapeMetatype(ONNXOpMetatype):
 
 
 @ONNX_OPERATION_METATYPES.register()
-class ONNXShapeMetatype(ONNXOpMetatype):
+class ONNXShapeMetatype(ShapeOfNoopMetatype):
     name = 'ShapeOp'
     op_names = ['Shape']
 
