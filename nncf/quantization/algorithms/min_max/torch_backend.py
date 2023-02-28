@@ -236,6 +236,7 @@ class PTMinMaxAlgoBackend(MinMaxAlgoBackend):
 
     @staticmethod
     def _fill_quantizer_parameters(quantizer: BaseQuantizer, parameters: FakeQuantizeParameters) -> None:
+        quantizer.eps = 0
         if isinstance(quantizer, AsymmetricQuantizer):
             quantizer.input_low = torch.nn.Parameter(torch.from_numpy(parameters.input_low))
             quantizer.input_range = \
