@@ -26,7 +26,7 @@ from nncf.experimental.openvino_native.statistics.collectors import OVMeanMinMax
 from nncf.experimental.openvino_native.statistics.collectors import OVMinMaxStatisticCollector
 
 from tests.openvino.native.models import LinearModel
-from tests.openvino.native.models import DepthwiseConvModel
+from tests.openvino.native.models import DepthwiseConv4DModel
 from tests.post_training.test_ptq_params import TemplateTestPTQParams
 
 
@@ -70,7 +70,7 @@ class TestPTQParams(TemplateTestPTQParams):
             {'model': LinearModel().ov_model,
              'stat_points_num': 2},
         'test_range_type_per_channel':
-            {'model': DepthwiseConvModel().ov_model,
+            {'model': DepthwiseConv4DModel().ov_model,
              'stat_points_num': 2},
         'test_quantize_outputs':
             {'nncf_graph': GraphConverter.create_nncf_graph(LinearModel().ov_model),

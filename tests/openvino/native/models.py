@@ -77,19 +77,51 @@ class ConvModel(OVReferenceModel):
         return model
 
 
-class DepthwiseConvModel(OVReferenceModel):
+class DepthwiseConv3DModel(OVReferenceModel):
+    def _create_ov_model(self):
+        input_1 = opset.parameter([1, 3, 7], name="Input_1")
+        kernel = self._rng.random((3, 1, 1, 5)).astype(np.float32)
+        strides = [1]
+        pads = [0]
+        dilations = [1]
+        conv = opset.group_convolution(input_1, kernel, strides, pads, pads, dilations, name="Conv3D")
+        bias = self._rng.random((1, 3, 1)).astype(np.float32)
+        add = opset.add(conv, bias, name="Add")
+
+        result = opset.result(add, name="Result")
+        model = ov.Model([result], [input_1])
+        return model
+
+
+class DepthwiseConv4DModel(OVReferenceModel):
     def _create_ov_model(self):
         input_1 = opset.parameter([1, 3, 5, 5], name="Input_1")
         kernel = self._rng.random((3, 1, 1, 3, 3)).astype(np.float32)
         strides = [1, 1]
         pads = [0, 0]
         dilations = [1, 1]
-        conv = opset.group_convolution(input_1, kernel, strides, pads, pads, dilations, name="Conv")
+        conv = opset.group_convolution(input_1, kernel, strides, pads, pads, dilations, name="Conv4D")
         bias = self._rng.random((1, 3, 1, 1)).astype(np.float32)
         add = opset.add(conv, bias, name="Add")
         relu = opset.relu(add, name="Relu")
 
         result = opset.result(relu, name="Result")
+        model = ov.Model([result], [input_1])
+        return model
+
+
+class DepthwiseConv5DModel(OVReferenceModel):
+    def _create_ov_model(self):
+        input_1 = opset.parameter([1, 3, 7, 6, 5], name="Input_1")
+        kernel = self._rng.random((3, 1, 1, 5, 4, 3)).astype(np.float32)
+        strides = [1, 1, 1]
+        pads = [0, 0, 0]
+        dilations = [1, 1, 1]
+        conv = opset.group_convolution(input_1, kernel, strides, pads, pads, dilations, name="Conv5D")
+        bias = self._rng.random((1, 3, 1, 1, 1)).astype(np.float32)
+        add = opset.add(conv, bias, name="Add")
+
+        result = opset.result(add, name="Result")
         model = ov.Model([result], [input_1])
         return model
 

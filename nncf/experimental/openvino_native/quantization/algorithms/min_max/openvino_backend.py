@@ -96,16 +96,25 @@ class OVMinMaxAlgoBackend(MinMaxAlgoBackend):
         if not quantizer_config.per_channel:
             return None, use_abs_max
 
-        if not target_point.is_weight_target_point():
-            # TODO: support reduction shapes for 3D-5D conv cases
-            return (0, 2, 3), use_abs_max
-
         node = nncf_graph.get_node_by_name(target_point.target_node_name)
+        if not target_point.is_weight_target_point():
+            if target_point._target_type == TargetType.PRE_LAYER_OPERATION:
+                shape = nncf_graph.get_input_edges(node)[target_point.port_id].tensor_shape
+            elif target_point._target_type == TargetType.POST_LAYER_OPERATION:
+                shape = nncf_graph.get_output_edges(node)[target_point.port_id].tensor_shape
+            else:
+                raise NotImplementedError(f'Unsupported target point type {target_point._target_type}.')
+
+            channel_axis = 1
+            axes = tuple(i for i, _ in enumerate(shape) if i != channel_axis)
+            return axes, use_abs_max
+
         assert isinstance(node.layer_attributes, OVConstantLayerAttributes)
         const_shape = node.layer_attributes.const_shape
 
-        bounds_shape = get_weight_stats_shape(const_shape, node.metatype)
-        axes = tuple(i for i, dim in enumerate(bounds_shape) if dim == 1)
+        channel_axis = node.metatype.const_channel_axis
+        axes = tuple(i for i, _ in enumerate(const_shape) if channel_axis != i)
+
         return axes, use_abs_max
 
     @staticmethod

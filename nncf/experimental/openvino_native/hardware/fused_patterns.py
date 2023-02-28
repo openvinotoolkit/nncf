@@ -402,8 +402,10 @@ def create_input_shift_scale():
 def create_input_convert_transpose_processing():
     input_convert_transpose = create_input_convert_transpose()
     pattern = GraphPattern()
-    pattern.add_node(**{GraphPattern.LABEL_ATTR: 'ADD, MULTIPLY',
-                        GraphPattern.METATYPE_ATTR: [om.OVAddMetatype, om.OVMultiplyMetatype]})
+    pattern.add_node(**{GraphPattern.LABEL_ATTR: 'ADD, MULTIPLY, SUBTRACT',
+                        GraphPattern.METATYPE_ATTR: [om.OVAddMetatype,
+                                                     om.OVMultiplyMetatype,
+                                                     om.OVSubtractMetatype]})
 
     input_convert_transpose.join_patterns(pattern)
     return input_convert_transpose
@@ -528,8 +530,10 @@ def create_input_transpose_processing():
                                       GraphPattern.METATYPE_ATTR: om.OVParameterMetatype})
     transpose_node = pattern.add_node(**{GraphPattern.LABEL_ATTR: 'TRANSPOSE',
                                          GraphPattern.METATYPE_ATTR: om.OVTransposeMetatype})
-    processing_node = pattern.add_node(**{GraphPattern.LABEL_ATTR: 'ADD, MULTIPLY',
-                                          GraphPattern.METATYPE_ATTR: [om.OVAddMetatype, om.OVMultiplyMetatype]})
+    processing_node = pattern.add_node(**{GraphPattern.LABEL_ATTR: 'ADD, MULTIPLY, SUBTRACT',
+                                          GraphPattern.METATYPE_ATTR: [om.OVAddMetatype,
+                                                                       om.OVMultiplyMetatype,
+                                                                       om.OVSubtractMetatype]})
 
     pattern.add_edge(model_input, transpose_node)
     pattern.add_edge(transpose_node, processing_node)
