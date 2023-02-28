@@ -35,7 +35,7 @@ def remove_shape_of_subgraphs(nncf_graph: NNCFGraph) -> NNCFGraph:
     :param nncf_graph: NNCFGraph instance for the transformation.
     :return: NNCFGraph without ShapeOf subgraphs.
     """
-    nodes_to_drop = []
+    nodes_to_drop = set()
     shape_of_nodes = []
     infer_nodes = []
 
@@ -52,15 +52,15 @@ def remove_shape_of_subgraphs(nncf_graph: NNCFGraph) -> NNCFGraph:
         nodes_queue.extend(nncf_graph.get_next_nodes(node))
 
     for shape_of_node in shape_of_nodes:
-        nodes_to_drop.append(shape_of_node)
+        nodes_to_drop.add(shape_of_node)
 
         shape_of_queue = collections.deque()
         shape_of_queue.extend(nncf_graph.get_next_nodes(shape_of_node))
         while shape_of_queue:
             node = shape_of_queue.pop()
-            if node in nodes_to_drop + infer_nodes:
+            if node in nodes_to_drop or node in infer_nodes:
                 continue
-            nodes_to_drop.append(node)
+            nodes_to_drop.add(node)
             # traverse forward and backward to exclude full shape of subgraph
             # recursion excluded due to infer_nodes list around subgraph shape
             shape_of_queue.extend(nncf_graph.get_next_nodes(node) + nncf_graph.get_previous_nodes(node))
