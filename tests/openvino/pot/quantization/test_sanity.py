@@ -24,11 +24,11 @@ from tests.openvino.omz_helpers import convert_model
 from tests.openvino.omz_helpers import download_model
 
 OMZ_MODELS = [
-    ('resnet-18-pytorch', 'imagenette2-320', {'accuracy@top1': '0.777', 'accuracy@top5': '0.949'}),
-    ('mobilenet-v3-small-1.0-224-tf', 'imagenette2-320', {'accuracy@top1': '0.737', 'accuracy@top5': '0.923'}),
-    ('googlenet-v3-pytorch', 'imagenette2-320', {'accuracy@top1': '0.91', 'accuracy@top5': '0.994'}),
-    ('mobilefacedet-v1-mxnet', 'wider', {'map': '0.7750216770678978'}),
-    ('retinaface-resnet50-pytorch', 'wider', {'map': '0.91875950512032'}),
+    ('resnet-18-pytorch', 'imagenette2-320', {'accuracy@top1': 0.777, 'accuracy@top5': 0.949}),
+    ('mobilenet-v3-small-1.0-224-tf', 'imagenette2-320', {'accuracy@top1': 0.737, 'accuracy@top5': 0.923}),
+    ('googlenet-v3-pytorch', 'imagenette2-320', {'accuracy@top1': 0.91, 'accuracy@top5': 0.994}),
+    ('mobilefacedet-v1-mxnet', 'wider', {'map': 0.7750216770678978}),
+    ('retinaface-resnet50-pytorch', 'wider', {'map': 0.91875950512032}),
 ]
 
 

@@ -14,6 +14,7 @@
 from typing import List
 import csv
 import re
+import numpy as np
 
 from tests.shared.command import Command
 from tests.openvino.conftest import OPENVINO_DATASET_DEFINITIONS_PATH
@@ -84,5 +85,5 @@ def get_metrics(ac_report):
         for row in reader:
             metric_name = row['metric_name']
             metric_value = row['metric_value']
-            metrics[metric_name] = metric_value
+            metrics[metric_name] = np.float(metric_value)
     return metrics
