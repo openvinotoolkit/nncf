@@ -13,6 +13,7 @@
 
 from typing import Dict, List, Tuple
 
+import torch
 import numpy as np
 
 from nncf.common.hardware.config import HWConfig
@@ -244,6 +245,6 @@ class PTMinMaxAlgoBackend(MinMaxAlgoBackend):
         return PTInsertionCommand(target_point, quantizer, TransformationPriority.QUANTIZATION_PRIORITY)
 
     @staticmethod
-    def create_weight_update_command(target_point: PTTargetPoint,
-                                     weight_tensor: np.ndarray) -> TransformationCommand:
+    def create_clamp_weight_update_command(model: torch.nn.Module, target_point: PTTargetPoint,
+                                           low: np.ndarray, high: np.ndarray) -> None:
         return None

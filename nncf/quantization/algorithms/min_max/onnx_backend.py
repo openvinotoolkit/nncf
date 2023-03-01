@@ -13,6 +13,7 @@
 
 from typing import Dict, List, Tuple, Optional
 
+import onnx
 import numpy as np
 
 from nncf.common.graph.graph import NNCFGraph
@@ -35,9 +36,11 @@ from nncf.onnx.graph.metatypes.onnx_metatypes import WEIGHT_LAYER_METATYPES
 from nncf.onnx.graph.metatypes.onnx_metatypes import ONNXNonMaxSuppressionMetatype
 from nncf.onnx.graph.metatypes.onnx_metatypes import ONNXTopKMetatype
 from nncf.onnx.graph.transformations.commands import ONNXQuantizerInsertionCommand
+from nncf.onnx.graph.transformations.commands import ONNXWeightUpdateCommand
 from nncf.onnx.graph.transformations.commands import ONNXTargetPoint
 from nncf.onnx.statistics.collectors import ONNXMeanMinMaxStatisticCollector
 from nncf.onnx.statistics.collectors import ONNXMinMaxStatisticCollector
+from nncf.onnx.graph.onnx_graph import ONNXGraph
 
 from nncf.quantization.algorithms.min_max.backend import MinMaxAlgoBackend
 from nncf.quantization.algorithms.min_max.backend import ALGO_BACKENDS
@@ -104,9 +107,14 @@ class ONNXMinMaxAlgoBackend(MinMaxAlgoBackend):
         return output
 
     @staticmethod
-    def create_weight_update_command(target_point: ONNXTargetPoint,
-                                     weight_tensor: np.ndarray) -> TransformationCommand:
-        return None
+    def create_clamp_weight_update_command(model: onnx.ModelProto, target_point: ONNXTargetPoint,
+                                           low: np.ndarray, high: np.ndarray) -> ONNXWeightUpdateCommand:
+        onnx_graph = ONNXGraph(model)
+        target_node_name = target_point.target_node_name
+        weight_tensor = onnx_graph.get_weight_tensor(target_node_name)
+        clamped_weight_tensor = np.clip(weight_tensor, low, high)
+        weight_update_target_point = ONNXTargetPoint(TargetType.LAYER, target_node_name, target_point.port_id)
+        return ONNXWeightUpdateCommand(weight_update_target_point, clamped_weight_tensor)
 
     @staticmethod
     def _get_axis(nncf_graph: NNCFGraph,

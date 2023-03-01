@@ -12,8 +12,10 @@
 """
 
 from copy import deepcopy
-from typing import Dict, List, TypeVar, Optional, OrderedDict
+from typing import Dict, List, TypeVar, Optional, OrderedDict, Set
 import collections
+
+import numpy as np
 
 from nncf import Dataset
 from nncf.common.graph.graph import NNCFGraph
@@ -52,6 +54,15 @@ from nncf.common.tensor_statistics.statistic_point import StatisticPointsContain
 from nncf.common.factory import ModelTransformerFactory
 
 TModel = TypeVar('TModel')
+
+
+def is_half_range(overflow_fix: OverflowFix, qconfig: QuantizerConfig, weight_tensor_names: Set[str]) -> bool:
+    if qconfig.mode == QuantizationMode.SYMMETRIC:
+        if overflow_fix == 'enable':
+            return True
+        if overflow_fix == OverflowFix.FIRST_LAYER and not weight_tensor_names:
+            return True
+    return False
 
 
 class MinMaxQuantizationParameters(AlgorithmParameters):
@@ -380,20 +391,25 @@ class MinMaxQuantization(Algorithm):
                     layer_name = nncf_graph.get_node_by_name(target_node_name).layer_name
                     if layer_name in weight_layer_names:
                         continue
-                    half_range = False
-                    if (self._parameters.overflow_fix == OverflowFix.FIRST_LAYER and not weight_layer_names) or \
-                            self._parameters.overflow_fix == 'enable':
-                        half_range = True
-                    command = self._backend_entity.create_weight_quantizer_insertion_command(
+                    half_range = is_half_range(self._parameters.overflow_fix, qconfig, weight_layer_names)
+                    quantizer_insertion_command = self._backend_entity.create_weight_quantizer_insertion_command(
                         nncf_graph, quantization_target_point,
                         qconfig, half_range, tensor_collector.get_statistics())
+                    if half_range:
+                        low = quantizer_insertion_command.quantizer_parameters.input_low
+                        high = quantizer_insertion_command.quantizer_parameters.input_low
+                        weight_update_command = self._backend_entity.create_clamp_weight_update_command(model,
+                                                                                                        quantization_target_point,
+                                                                                                        low,
+                                                                                                        high)
+                        transformation_commands.append(weight_update_command)
                     weight_layer_names.add(layer_name)
                 else:
-                    command = self._backend_entity.create_activation_quantizer_insertion_command(
+                    quantizer_insertion_command = self._backend_entity.create_activation_quantizer_insertion_command(
                         nncf_graph, quantization_target_point,
                         qconfig, tensor_collector.get_statistics())
 
-                transformation_commands.append(command)
+                transformation_commands.append(quantizer_insertion_command)
 
         for transformation_command in transformation_commands:
             transformation_layout.register(transformation_command)

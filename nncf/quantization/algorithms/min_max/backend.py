@@ -13,7 +13,7 @@
 
 from abc import ABC
 from abc import abstractmethod
-from typing import Dict, TypeVar, List
+from typing import Dict, TypeVar, List, Optional
 
 import numpy as np
 
@@ -113,14 +113,17 @@ class MinMaxAlgoBackend(ABC):
 
     @staticmethod
     @abstractmethod
-    def create_weight_update_command(target_point: TargetPoint,
-                                     weight_tensor: np.ndarray) -> TransformationCommand:
+    def create_clamp_weight_update_command(model: TModel, target_point: TargetPoint,
+                                           low: np.ndarray, high: np.ndarray) -> Optional[TransformationCommand]:
         """
-        Returns backend-specific weight update command.
+        Returns backend-specific weight update command, which applies clamp() fucntion to the weights.
+        Returns None if the transformation is not applicable for backend.
 
-        :param target_point: Target location for the weight update.
-        :param weight_tensor: New weight value.
-        :return: Backend-specific TransformationCommand for the weight update operation.
+        :param model: Backend-specific model to get the weight value.
+        :param target_point: Target location for the correction.
+        :param low: Minimum values for clamp.
+        :param high: Maximum values for clamp.
+        :return: Backend-specific TransformationCommand for the weight clamp operation or None.
         """
 
 
