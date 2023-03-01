@@ -111,8 +111,12 @@ class OVMinMaxAlgoBackend(MinMaxAlgoBackend):
         assert isinstance(node.layer_attributes, OVConstantLayerAttributes)
         const_shape = node.layer_attributes.const_shape
 
-        channel_axis = node.metatype.const_channel_axis
-        axes = tuple(i for i, _ in enumerate(const_shape) if i not in channel_axis)
+        if quantizer_config.per_channel:
+            assert node.metatype in GENERAL_WEIGHT_LAYER_METATYPES
+            channel_axis = node.metatype.const_channel_axis
+            axes = tuple(i for i, _ in enumerate(const_shape) if i not in channel_axis)
+        else:
+            axes = tuple(range(len(const_shape)))
 
         return axes, use_abs_max
 

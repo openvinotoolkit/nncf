@@ -106,7 +106,7 @@ OMZ_MODELS = [
     'yolo-v4-tiny-tf',
 ]
 
-@pytest.mark.skip(reason='Ticket 100948')
+
 @pytest.mark.parametrize('preset', [QuantizationPreset.PERFORMANCE, QuantizationPreset.MIXED],
                          ids=[QuantizationPreset.PERFORMANCE.value, QuantizationPreset.MIXED.value])
 @pytest.mark.parametrize('model_name', OMZ_MODELS)
@@ -119,8 +119,6 @@ def test_omz_models_fq_scales(model_name, preset, tmp_path):
 
     ref_stats_name = str(Path(model_path).name).rsplit('.', maxsplit=1)[0] + f'_{preset.value}.json'
     ref_stats_path = REFERENCE_SCALES_DIR / ref_stats_name
-    if not os.path.exists(ref_stats_path):
-        dump_to_json(ref_stats_path, nodes)
     ref_nodes = load_json(ref_stats_path)
 
     compare_stats(ref_nodes, nodes)
