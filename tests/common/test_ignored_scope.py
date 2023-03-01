@@ -51,7 +51,7 @@ class NNCFGraphToTestIgnoredScope:
 
 IGNORED_SCOPES_TEST_DATA = [
      (IgnoredScope(), []),
-     (IgnoredScope(['/Conv_0_0', '/Conv_1_0', '/Linear_1_0']), ['/Conv_1_0', '/Linear_1_0']),
+     (IgnoredScope(['/Conv_1_0', '/Linear_1_0']), ['/Conv_1_0', '/Linear_1_0']),
      (IgnoredScope(['/Conv_1_0', '/Linear_1_0'], ['.*Marked.*']),
           ['/Conv_1_0', '/Linear_1_0', '/Marked_Conv_3_0']),
      (IgnoredScope(['/Conv_1_0', '/Linear_1_0'], ['.*Marked.*'], [LINEAR_TYPE]),
@@ -64,3 +64,17 @@ def test_ignored_scopes(ignored_scope, ref_ignored_names):
     nncf_graph = NNCFGraphToTestIgnoredScope(CONV_TYPE, LINEAR_TYPE).nncf_graph
     ignored_names = get_ignored_node_names_from_ignored_scope(ignored_scope, nncf_graph)
     assert sorted(ignored_names) == ref_ignored_names
+
+
+WRONG_IGNORED_SCOPES_TEST_DATA = [
+     IgnoredScope(['/Conv_0_0', '/Conv_1_0', '/Linear_1_0']),
+     IgnoredScope(patterns=['.*Maarked.*']),
+     IgnoredScope(types=['wrong_type']),
+]
+
+
+@pytest.mark.parametrize('ignored_scope', WRONG_IGNORED_SCOPES_TEST_DATA)
+def test_wrong_ignored_scopes(ignored_scope):
+    nncf_graph = NNCFGraphToTestIgnoredScope(CONV_TYPE, LINEAR_TYPE).nncf_graph
+    with pytest.raises(RuntimeError):
+        get_ignored_node_names_from_ignored_scope(ignored_scope, nncf_graph)
