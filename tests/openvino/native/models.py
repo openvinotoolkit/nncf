@@ -190,20 +190,21 @@ class MatMul2DModel(OVReferenceModel):
 
 
 class FPModel(OVReferenceModel):
-    def __init__(self, precision='FP32'):
-        self.precision = np.float32 if precision == 'FP32' else np.float16
+    def __init__(self, const_dtype='FP32', input_dtype='FP32'):
+        self.const_dtype = np.float32 if const_dtype == 'FP32' else np.float16
+        self.input_dtype = np.float32 if input_dtype == 'FP32' else np.float16
         super().__init__()
 
     def _create_ov_model(self):
         input_shape = [1, 3, 4, 2]
-        input_1 = opset.parameter(input_shape, name="Input")
-        data = self._rng.random((1, 3, 4, 5)).astype(self.precision)
-        if self.precision == np.float16:
-            data = opset.convert(data, np.float32)
+        input_1 = opset.parameter(input_shape, name="Input", dtype=self.input_dtype)
+        data = self._rng.random((1, 3, 4, 5)).astype(self.const_dtype)
+        if self.const_dtype != self.input_dtype:
+            data = opset.convert(data, self.input_dtype)
         matmul = opset.matmul(input_1, data, transpose_a=True, transpose_b=False, name="MatMul")
-        bias = self._rng.random((1, 3, 1, 1)).astype(self.precision)
-        if self.precision == np.float16:
-            bias = opset.convert(bias, np.float32)
+        bias = self._rng.random((1, 3, 1, 1)).astype(self.const_dtype)
+        if self.const_dtype != self.input_dtype:
+            bias = opset.convert(bias, self.input_dtype)
         add = opset.add(matmul, bias, name="Add")
         r1 = opset.result(add, name="Result_Add")
         model = ov.Model([r1], [input_1])

@@ -12,8 +12,6 @@
 """
 
 from typing import List, Tuple, Dict
-from enum import Enum
-
 import openvino.runtime as ov
 import numpy as np
 from openvino.runtime import opset9 as opset
@@ -21,23 +19,12 @@ from openvino.runtime import opset9 as opset
 from nncf.common.graph.model_transformer import ModelTransformer
 from nncf.common.graph.transformations.layout import TransformationLayout
 from nncf.common.graph.transformations.commands import TargetType
+from nncf.experimental.openvino_native.quantization.quantizer_parameters import OVQuantizerLayerParameters
 from nncf.experimental.openvino_native.graph.transformations.commands import OVQuantizerInsertionCommand
 from nncf.experimental.openvino_native.graph.transformations.commands import OVOutputInsertionCommand
 from nncf.experimental.openvino_native.graph.transformations.commands import OVModelExtractionCommand
 from nncf.experimental.openvino_native.graph.transformations.commands import OVBiasCorrectionCommand
 from nncf.experimental.openvino_native.graph.transformations.commands import OVFQNodeRemovingCommand
-
-
-class ModelPrecision(Enum):
-    """
-    Describes the model precision based on the precision of floating point constants.
-
-    :param FP32:
-    :param FP16:
-    """
-
-    FP32 = 'FP32'
-    FP16 = 'FP16'
 
 
 class OVModelTransformer(ModelTransformer):
@@ -187,28 +174,38 @@ class OVModelTransformer(ModelTransformer):
         :param transformations: List of the OVQuantizerInsertionCommand transformations.
         :return: Model with inserted FakeQuantize nodes.
         """
-        model_precision = ModelPrecision.FP32
-        for op in model.get_ops():
-            if op.get_type_name() == 'Constant':
-                if op.get_element_type().is_real():
-                    if op.get_element_type() == ov.Type(np.float16):
-                        model_precision = ModelPrecision.FP16
-                        break
         name_to_node_mapping = OVModelTransformer._get_name_to_node_mapping(model)
         for transformation in transformations:
-            OVModelTransformer._insert_fake_quantize_op(transformation, name_to_node_mapping, model_precision)
+            OVModelTransformer._insert_fake_quantize_op(transformation, name_to_node_mapping)
         return model
 
     @staticmethod
+    def convert_params_to_fp16(fq_params: OVQuantizerLayerParameters) -> \
+                               Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
+        """
+        Converts FakeQuantize parameters to FP16 precision.
+
+        :param fq_params: FakeQuantize node attributes.
+        :return: FakeQuantize parameters in FP16 precision.
+        """
+        def _convert_to_fp16(data):
+            clip_data = np.clip(data, np.finfo(np.float16).min, np.finfo(np.float16).max)
+            return clip_data.astype(np.float16)
+
+        input_low = _convert_to_fp16(fq_params.input_low)
+        input_high = _convert_to_fp16(fq_params.input_high)
+        output_low = _convert_to_fp16(fq_params.output_low)
+        output_high = _convert_to_fp16(fq_params.output_high)
+        return input_low, input_high, output_low, output_high
+
+    @staticmethod
     def _insert_fake_quantize_op(transformation: OVQuantizerInsertionCommand,
-                                 name_to_node_mapping: Dict[str, ov.Node],
-                                 model_precision: ModelPrecision) -> None:
+                                 name_to_node_mapping: Dict[str, ov.Node]) -> None:
         """
         Inserts FakeQuantize Operation to a model which name_to_node_mapping is passed.
 
         :param transformation: FakeQuantize insertion command.
         :param name_to_node_mapping: Mapping from node name to node instance.
-        :param model_precision: Precision of the Model.
         :return: None
         """
         fq_params = transformation.quantizer_parameters
@@ -218,15 +215,6 @@ class OVModelTransformer(ModelTransformer):
         output_high = fq_params.output_high
         levels = fq_params.levels
 
-        def _convert_to_fp16(data):
-            return opset.convert(data.astype(np.float16), np.float32)
-
-        if model_precision == ModelPrecision.FP16:
-            input_low = _convert_to_fp16(input_low)
-            input_high = _convert_to_fp16(input_high)
-            output_low = _convert_to_fp16(output_low)
-            output_high = _convert_to_fp16(output_high)
-
         node_name = transformation.target_point.target_node_name
         target_node = name_to_node_mapping[node_name]
         port_id = transformation.target_point.port_id
@@ -234,6 +222,9 @@ class OVModelTransformer(ModelTransformer):
         if transform_type in [TargetType.PRE_LAYER_OPERATION, TargetType.OPERATION_WITH_WEIGHTS]:
             inp_node = target_node.input(port_id)
             input_node_output = inp_node.get_source_output()
+            data_type = inp_node.get_element_type()
+            if data_type == ov.Type(np.float16):
+                input_low, input_high, output_low, output_high = OVModelTransformer.convert_params_to_fp16(fq_params)
             name = 'fq_weights' if transform_type == TargetType.OPERATION_WITH_WEIGHTS else 'fq_input'
             fq_name = f'{node_name}/{name}_{port_id}'
             fq = opset.fake_quantize(input_node_output, input_low, input_high,
@@ -241,6 +232,9 @@ class OVModelTransformer(ModelTransformer):
             inp_node.replace_source_output(fq.output(0))
         elif transform_type == TargetType.POST_LAYER_OPERATION:
             output = target_node.output(port_id)
+            data_type = output.get_element_type()
+            if data_type == ov.Type(np.float16):
+                input_low, input_high, output_low, output_high = OVModelTransformer.convert_params_to_fp16(fq_params)
             target_inputs = output.get_target_inputs()
             fq_name = f'{node_name}/fq_output_{port_id}'
             fq = opset.fake_quantize(output, input_low, input_high,

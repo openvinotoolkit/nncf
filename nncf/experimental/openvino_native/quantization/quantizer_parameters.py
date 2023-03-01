@@ -204,8 +204,8 @@ def calculate_quantizer_parameters(statistics: MinMaxTensorStatistic,
     :param quantizer_group: Group of the quantizer.
     :return: Parameters of the FakeQuantize layer.
     """
-    min_values = np.array(statistics.min_values)
-    max_values = np.array(statistics.max_values)
+    min_values = np.array(statistics.min_values).astype(np.float32)
+    max_values = np.array(statistics.max_values).astype(np.float32)
 
     if quantizer_config.mode == QuantizationMode.SYMMETRIC:
         narrow_range = quant_group == QuantizerGroup.WEIGHTS
