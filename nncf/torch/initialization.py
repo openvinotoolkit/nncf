@@ -75,12 +75,16 @@ def wrap_dataloader_for_init(data_loader) -> PTInitializingDataLoader:
         loaded_item = next(iter(data_loader))
         if isinstance(loaded_item, (tuple, list)) and len(loaded_item) == 2:
             return DefaultInitializingDataLoader(data_loader)
-        raise NotImplementedError("By default it is assumed that the data loader used for initialize "
-                                  "produces a tuple/list of (*model_input*, *ground_truth*) and that no special "
-                                  "forward arguments have to be set during init. If this is not the case, then instead "
-                                  "of your regular data loader you need to pass a specialized version of "
-                                  "PTInitializingDataLoader that returns a general (args, kwargs) tuple for your "
-                                  "model to be called with at each __next__ call.")
+        raise NotImplementedError(
+            "Could not deduce the forward arguments from the initializing dataloader output.\n"
+            "By default it is assumed that the data loader used for initialize "
+            "produces a tuple/list of (*model_input*, *ground_truth*) and that no special "
+            "forward arguments have to be set during init. If this is not the case, then instead "
+            "of your regular data loader you need to pass a specialized version of "
+            "PTInitializingDataLoader that returns a general (args, kwargs) tuple for your "
+            "model to be called with at each __next__ call.\n"
+            "See https://github.com/openvinotoolkit/nncf/blob/develop/docs/FAQ.md#pt_init_dataloader for "
+            "an example of how to do this this in your code.")
     return data_loader
 
 
