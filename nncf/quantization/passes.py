@@ -12,9 +12,10 @@
 """
 
 import collections
+from copy import deepcopy
 
 from nncf.common.graph.graph import NNCFGraph
-from nncf.common.graph.operator_metatypes import ShapeOfNoopMetatype
+from nncf.common.graph.operator_metatypes import ShapeOfMetatype
 
 
 def transform_to_inference_graph(nncf_graph: NNCFGraph) -> NNCFGraph:
@@ -24,8 +25,9 @@ def transform_to_inference_graph(nncf_graph: NNCFGraph) -> NNCFGraph:
     :param nncf_graph: NNCFGraph instance for the transformation.
     :return: NNCFGraph in the inference style.
     """
-    nncf_graph = remove_shape_of_subgraphs(nncf_graph)
-    return nncf_graph
+    nncf_graph_copy = deepcopy(nncf_graph)
+    inference_nncf_graph = remove_shape_of_subgraphs(nncf_graph_copy)
+    return inference_nncf_graph
 
 
 def remove_shape_of_subgraphs(nncf_graph: NNCFGraph) -> NNCFGraph:
@@ -43,7 +45,7 @@ def remove_shape_of_subgraphs(nncf_graph: NNCFGraph) -> NNCFGraph:
     nodes_queue.extend(nncf_graph.get_input_nodes())
     while nodes_queue:
         node = nodes_queue.pop()
-        if issubclass(node.metatype, ShapeOfNoopMetatype):
+        if issubclass(node.metatype, ShapeOfMetatype):
             shape_of_nodes.append(node)
             continue
         if node in infer_nodes:

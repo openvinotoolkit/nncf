@@ -174,8 +174,8 @@ class OutputNoopMetatype(OperatorMetatype):
 
 #pylint:disable=no-member
 @NOOP_METATYPES.register()
-class ShapeOfNoopMetatype(OperatorMetatype):
-    name = "shape_of_noop"
+class ShapeOfMetatype(OperatorMetatype):
+    name = "shape_of"
 
     @classmethod
     def get_all_aliases(cls) -> List[str]:
