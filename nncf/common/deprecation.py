@@ -17,6 +17,8 @@ from typing import Callable
 from typing import Type
 from typing import TypeVar
 
+from pkg_resources import parse_version
+
 
 def warning_deprecated(msg):
     # Note: must use FutureWarning in order not to get suppressed by default
@@ -32,11 +34,13 @@ class deprecated:
     instantiation of an object of the marked class will trigger a `FutureWarning`. If a class is marked as
     @deprecated, only the instantiations will trigger a warning, but static attribute accesses or method calls will not.
     """
-    def __init__(self, msg: str = None):
+    def __init__(self, msg: str = None, start_version: str = None, end_version: str = None):
         """
         :param msg: Custom message to be added after the boilerplate deprecation text.
         """
         self.msg = msg
+        self.start_version = parse_version(start_version) if start_version is not None else None
+        self.end_version = parse_version(end_version) if end_version is not None else None
 
     def __call__(self, fn_or_class: ClassOrFn) -> ClassOrFn:
         name = fn_or_class.__module__ + '.' + fn_or_class.__name__
@@ -48,7 +52,14 @@ class deprecated:
     def _get_wrapper(self, fn_to_wrap: Callable, name: str) -> Callable:
         @functools.wraps(fn_to_wrap)
         def wrapped(*args, **kwargs):
-            msg = f"Usage of {name} is deprecated and will be removed in a future NNCF version."
+            msg = f"Usage of {name} is deprecated "
+            if self.start_version is not None:
+                msg += f"starting from NNCF v{str(self.start_version)}"
+            msg += "and will be removed in "
+            if self.end_version is not None:
+                msg += f"NNCF v{str(self.end_version)}."
+            else:
+                msg += "a future NNCF version."
             if self.msg is not None:
                 msg += self.msg
             warning_deprecated(msg)
