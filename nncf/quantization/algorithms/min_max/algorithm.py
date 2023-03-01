@@ -259,8 +259,8 @@ class MinMaxQuantization(Algorithm):
                                                                         hw_config=hw_config)
         quantizable_layer_nodes = [QuantizableWeightedLayerNode(node, qconf_list) for node, qconf_list
                                    in weighted_node_and_qconf_lists.items()]
-        nncf_graph = transform_to_inference_graph(nncf_graph)
-        ip_graph = InsertionPointGraph(nncf_graph)
+        inference_nncf_graph = transform_to_inference_graph(deepcopy(nncf_graph))
+        ip_graph = InsertionPointGraph(inference_nncf_graph)
         ip_graph = ip_graph.get_ip_graph_with_merged_hw_optimized_operations(pattern, quantizable_layer_nodes)
         post_processing_types = self._backend_entity.post_processing_metatypes
         solver = QuantizerPropagationSolver(ignored_scopes=self._parameters.ignored_scopes,
