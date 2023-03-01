@@ -60,10 +60,10 @@ class IgnoredScope:
                  patterns: Optional[List[str]] = None,
                  types: Optional[List[str]] = None):
         """
-        :param names: List of ignored node names
+        :param names: List of ignored node names.
         :param patterns: List of regular expressions that define patterns for
-            names of ignored nodes
-        :param types: List of ignored operation types
+            names of ignored nodes.
+        :param types: List of ignored operation types.
         """
         self.names = names
         self.patterns = patterns
@@ -75,8 +75,8 @@ def convert_ignored_scope_to_list(ignored_scope: Optional[IgnoredScope]) -> List
     Convert the contents of the `IgnoredScope` class to the legacy ignored
     scope format.
 
-    :param ignored_scope: The ignored scope
-    :return: An ignored scope in the legacy format as list
+    :param ignored_scope: The ignored scope.
+    :return: An ignored scope in the legacy format as list.
     """
     results = []
     if ignored_scope is None:
@@ -96,6 +96,8 @@ def get_ignored_node_names_from_ignored_scope(ignored_scope: IgnoredScope,
                                               nncf_graph: NNCFGraph) -> List[str]:
     """
     Returns list of ignored names according to ignored scope and NNCFGraph.
+    Raise RuntimeError if any ignored name is not found in the NNCFGraph or
+    any ignored pattern or any ignored type match 0 nodes in the NNCFGraph.
 
     :param ignored_scope: Given ignored scope instance.
     :param nncf_grpah: Given NNCFGrpah.
