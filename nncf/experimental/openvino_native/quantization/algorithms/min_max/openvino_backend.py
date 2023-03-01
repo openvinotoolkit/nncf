@@ -112,7 +112,7 @@ class OVMinMaxAlgoBackend(MinMaxAlgoBackend):
         const_shape = node.layer_attributes.const_shape
 
         channel_axis = node.metatype.const_channel_axis
-        axes = tuple(i for i, _ in enumerate(const_shape) if channel_axis != i)
+        axes = tuple(i for i, _ in enumerate(const_shape) if i not in channel_axis)
 
         return axes, use_abs_max
 

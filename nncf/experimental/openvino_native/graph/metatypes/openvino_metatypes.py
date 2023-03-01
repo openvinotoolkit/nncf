@@ -58,7 +58,7 @@ class OVConvolutionMetatype(OVOpMetatype):
     name = 'ConvOp'
     op_names = ['Convolution']
     hw_config_names = [HWConfigOpName.CONVOLUTION]
-    const_channel_axis = 0
+    const_channel_axis = [0]  # const layout: [C_OUT, C_IN, Z, Y, X]
 
 
 @OV_OPERATOR_METATYPES.register()
@@ -66,7 +66,7 @@ class OVConvolutionBackpropDataMetatype(OVOpMetatype):
     name = 'ConvBackpropDataOp'
     op_names = ['ConvolutionBackpropData']
     hw_config_names = [HWConfigOpName.CONVOLUTION]
-    const_channel_axis = 1
+    const_channel_axis = [1]  # const layout: [C_IN, C_OUT, Z, Y, X]
 
 
 @OV_OPERATOR_METATYPES.register()
@@ -74,7 +74,7 @@ class OVDepthwiseConvolutionMetatype(OVOpMetatype):
     name = 'DepthwiseConvolutionOp'
     op_names = ['GroupConvolution']
     hw_config_names = [HWConfigOpName.DEPTHWISECONVOLUTION]
-    const_channel_axis = 1
+    const_channel_axis = [0, 1]  # const layout: [GROUPS, C_OUT / GROUPS, C_IN / GROUPS, Z, Y, X]
 
     @classmethod
     def matches(cls, node: ov.Node) -> bool:
@@ -87,7 +87,7 @@ class OVGroupConvolutionMetatype(OVOpMetatype):
     op_names = ['GroupConvolution']
     hw_config_names = [HWConfigOpName.CONVOLUTION]
     subtypes = [OVDepthwiseConvolutionMetatype]
-    const_channel_axis = 1
+    const_channel_axis = [0, 1]  # const layout: [GROUPS, C_OUT / GROUPS, C_IN / GROUPS, Z, Y, X]
 
 
 @OV_OPERATOR_METATYPES.register()
@@ -95,7 +95,7 @@ class OVGroupConvolutionBackpropDataMetatype(OVOpMetatype):
     name = 'GroupConvolutionBackpropDataOp'
     op_names = ['GroupConvolutionBackpropData']
     hw_config_names = [HWConfigOpName.CONVOLUTION]
-    const_channel_axis = 2
+    const_channel_axis = [0, 2]  # const layout: [GROUPS, C_IN / GROUPS,  C_OUT / GROUPS, Z, Y, X]
 
 
 @OV_OPERATOR_METATYPES.register()
@@ -103,7 +103,7 @@ class OVMatMulMetatype(OVOpMetatype):
     name = 'MatMulOp'
     op_names = ['MatMul']
     hw_config_names = [HWConfigOpName.MATMUL]
-    const_channel_axis = 0
+    const_channel_axis = [0]  # const layout: [BATCH, Z, Y, X]
 
 
 @OV_OPERATOR_METATYPES.register()
