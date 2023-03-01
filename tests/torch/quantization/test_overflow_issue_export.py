@@ -47,11 +47,9 @@ def helper_to_test_if_overflow_fix_was_applied(nncf_config, target_device):
     _, compression_ctrl = create_compressed_model_and_algo_for_test(model, nncf_config)
 
     for quantizer in compression_ctrl.weight_quantizers.values():
-        levels = 127 if quantizer.quantizer_module_ref.narrow_range else 128
-        level_low = -63 if quantizer.quantizer_module_ref.narrow_range else -64
         assert quantizer.quantizer_module_ref._half_range  # pylint: disable=protected-access
-        assert quantizer.quantizer_module_ref.levels == levels
-        assert quantizer.quantizer_module_ref.level_low == level_low
+        assert quantizer.quantizer_module_ref.levels == 128
+        assert quantizer.quantizer_module_ref.level_low == -64
         assert quantizer.quantizer_module_ref.level_high == 63
 
     for quantizer in compression_ctrl.non_weight_quantizers.values():
@@ -174,12 +172,12 @@ class DepthWiseConvTestModel(nn.Module):
 
 def are_symmetric_fq_nodes_are_exported_correct_with_overflow_fix(tmp_path, compression_ctrl):
     level_high = 63
+    level_low = -64
+    levels = 128
     # Update scale tensors in the model
     quantizers = compression_ctrl.weight_quantizers.values()
     with torch.no_grad():
         for quantizer in quantizers:
-            level_low = -63 if quantizer.quantizer_module_ref.narrow_range else -64
-            levels = 127 if quantizer.quantizer_module_ref.narrow_range else 128
             assert quantizer.quantizer_module_ref.levels == levels
             assert quantizer.quantizer_module_ref._half_range  # pylint: disable=protected-access
             assert quantizer.quantizer_module_ref.level_low == level_low
@@ -199,21 +197,18 @@ def are_symmetric_fq_nodes_are_exported_correct_with_overflow_fix(tmp_path, comp
     inputs = [get_all_inputs_for_graph_node(fq_node, onnx_model.graph) for fq_node in fq_nodes]
 
     level_high_ratio = (2 * level_high + 1) / level_high
+    level_positive_negative_ratio = abs(level_low / level_high)
 
     for quantizer, fq_parametres in zip(quantizers, inputs[1::2]):
-        level_low = -63 if quantizer.quantizer_module_ref.narrow_range else -64
-        level_positive_negative_ratio = abs(level_low / level_high)
         tensor_weight, input_output_low, input_output_high = list(fq_parametres.values())
         quantizer_scale = quantizer.quantizer_module_ref.scale
 
         # Quantize weights as they are exported quantized
         quantized_weights = quantizer.quantizer_module_ref(quantizer.quantized_module.weight).detach()
-        k_low = 2 * level_low - 1 if quantizer.quantizer_module_ref.narrow_range else 2 * level_low
-        k_low /= level_low
 
         assert np.allclose(tensor_weight, np.array(quantized_weights))
         assert np.allclose(level_high_ratio * quantizer_scale.detach().numpy(), input_output_high)
-        assert np.allclose(-k_low * level_positive_negative_ratio * quantizer_scale.detach().numpy(),
+        assert np.allclose(-2.0 * level_positive_negative_ratio * quantizer_scale.detach().numpy(),
                            input_output_low)
 
 
@@ -331,10 +326,8 @@ def test_are_qdq_exported_per_tensor_weights_tensors_clipped(tmp_path):
     second_quantizer.quantizer_module_ref.scale = torch.nn.Parameter(second_scale_tensor)
 
     for quantizer in [first_quantizer, second_quantizer]:
-        levels = 127 if quantizer.quantizer_module_ref.narrow_range else 128
-        level_low = -63 if quantizer.quantizer_module_ref.narrow_range else -64
-        assert quantizer.quantizer_module_ref.levels == levels
-        assert quantizer.quantizer_module_ref.level_low == level_low
+        assert quantizer.quantizer_module_ref.levels == 128
+        assert quantizer.quantizer_module_ref.level_low == -64
         assert quantizer.quantizer_module_ref.level_high == 63
         assert quantizer.quantizer_module_ref._half_range  # pylint: disable=protected-access
 
