@@ -14,12 +14,16 @@
 from abc import ABC
 from abc import abstractmethod
 from collections import deque
-from typing import Tuple, Optional, List, Union
+from typing import List
+from typing import Optional
+from typing import Tuple
+from typing import Union
 
 import numpy as np
+
 from nncf.common.tensor import NNCFTensor
-from nncf.common.tensor import TensorType
 from nncf.common.tensor import TensorElementsType
+from nncf.common.tensor import TensorType
 from nncf.common.tensor_statistics.reduction import get_per_channel_history
 
 ReductionShape = Tuple[int]
@@ -206,6 +210,16 @@ class NNCFCollectorTensorProcessor(ABC):
     def sum(tensor: NNCFTensor) -> TensorElementsType:
         """
         Returns a sum of each elements in a given NNCFTensor.
+
+        :param tensor: Given NNCFTensor.
+        :returns: Sum of each elements of the given NNCFTensor.
+        """
+
+    @staticmethod
+    @abstractmethod
+    def percentage_of_zeros(tensor: NNCFTensor) -> float:
+        """
+        Returns a percentage of zeros of a NNCFTensor.
 
         :param tensor: Given NNCFTensor.
         :returns: Sum of each elements of the given NNCFTensor.
@@ -475,3 +489,27 @@ class MeanPercentileStatisticCollector(OfflineTensorStatisticCollector):
     def _reset(self):
         for _, val in self._all_pct_values.items():
             val.clear()
+
+
+class PercentageOfZerosStatisticCollector(OfflineTensorStatisticCollector):
+    """
+    Collects tensor samples, where each tensor is percentage of zeros in tensors.
+    """
+    def __init__(self, num_samples: int = None):
+        super().__init__(num_samples=num_samples)
+        self._tensor_processor = self._get_processor()
+        self._all_values = []
+
+    @staticmethod
+    @abstractmethod
+    def _get_processor():
+        pass
+
+    def _register_input_common(self, x: NNCFTensor):
+        self._all_values.append(self._tensor_processor.percentage_of_zeros(x))
+
+    def _reset(self):
+        self._all_values.clear()
+
+    def _mean_percentage_of_zeros(self):
+        return np.mean(self._all_values)

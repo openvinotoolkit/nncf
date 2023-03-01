@@ -11,27 +11,29 @@
  limitations under the License.
 """
 
-from typing import Union, List, Deque
+from typing import Deque
+from typing import List
+from typing import Union
 
 import torch
 
 from nncf.common.tensor import NNCFTensor
 from nncf.common.tensor import TensorElementsType
-from nncf.common.tensor_statistics.collectors import MinMaxStatisticCollector
-from nncf.common.tensor_statistics.collectors import NNCFCollectorTensorProcessor
-from nncf.common.tensor_statistics.collectors import MedianMADStatisticCollector
-from nncf.common.tensor_statistics.collectors import PercentileStatisticCollector
-from nncf.common.tensor_statistics.collectors import MeanPercentileStatisticCollector
-from nncf.common.tensor_statistics.collectors import MixedMinMaxStatisticCollector
 from nncf.common.tensor_statistics.collectors import MeanMinMaxStatisticCollector
+from nncf.common.tensor_statistics.collectors import MeanPercentileStatisticCollector
+from nncf.common.tensor_statistics.collectors import MedianMADStatisticCollector
+from nncf.common.tensor_statistics.collectors import MinMaxStatisticCollector
+from nncf.common.tensor_statistics.collectors import MixedMinMaxStatisticCollector
+from nncf.common.tensor_statistics.collectors import NNCFCollectorTensorProcessor
+from nncf.common.tensor_statistics.collectors import PercentileStatisticCollector
 from nncf.common.tensor_statistics.collectors import ReductionShape
 from nncf.common.tensor_statistics.reduction import np_percentile_reduce_like
-from nncf.torch.tensor_statistics.reduction import  expand_like
-from nncf.torch.tensor_statistics.statistics import PTMinMaxTensorStatistic
-from nncf.torch.tensor_statistics.statistics import PTMedianMADTensorStatistic
-from nncf.torch.tensor_statistics.statistics import PTPercentileTensorStatistic
 from nncf.torch.dynamic_graph.context import no_nncf_trace
 from nncf.torch.tensor import PTNNCFTensor
+from nncf.torch.tensor_statistics.reduction import expand_like
+from nncf.torch.tensor_statistics.statistics import PTMedianMADTensorStatistic
+from nncf.torch.tensor_statistics.statistics import PTMinMaxTensorStatistic
+from nncf.torch.tensor_statistics.statistics import PTPercentileTensorStatistic
 
 
 class PTNNCFCollectorTensorProcessor(NNCFCollectorTensorProcessor):
@@ -79,6 +81,10 @@ class PTNNCFCollectorTensorProcessor(NNCFCollectorTensorProcessor):
     @staticmethod
     def sum(tensor: NNCFTensor) -> TensorElementsType:
         return torch.sum(tensor.tensor).item()
+
+    @staticmethod
+    def percentage_of_zeros(tensor: NNCFTensor) -> float:
+        return 1.0 - torch.count_nonzero(tensor.tensor) / torch.numel(tensor.tensor)
 
 
 class PTMinMaxStatisticCollector(MinMaxStatisticCollector):

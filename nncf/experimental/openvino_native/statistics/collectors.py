@@ -11,21 +11,25 @@
  limitations under the License.
 """
 
-from typing import Union, List, Deque
+from typing import Deque
+from typing import List
+from typing import Union
 
 import numpy as np
 
 from nncf.common.tensor import NNCFTensor
 from nncf.common.tensor import TensorElementsType
-from nncf.common.tensor_statistics.collectors import MinMaxStatisticCollector
-from nncf.common.tensor_statistics.collectors import NNCFCollectorTensorProcessor
+from nncf.common.tensor_statistics.collectors import BatchStatisticCollector
 from nncf.common.tensor_statistics.collectors import MeanMinMaxStatisticCollector
 from nncf.common.tensor_statistics.collectors import MeanStatisticCollector
-from nncf.common.tensor_statistics.collectors import BatchStatisticCollector
-from nncf.experimental.openvino_native.tensor import OVNNCFTensor
-from nncf.experimental.openvino_native.statistics.statistics import OVMinMaxTensorStatistic
-from nncf.experimental.openvino_native.statistics.statistics import OVMeanTensorStatistic
+from nncf.common.tensor_statistics.collectors import MinMaxStatisticCollector
+from nncf.common.tensor_statistics.collectors import NNCFCollectorTensorProcessor
+from nncf.common.tensor_statistics.collectors import PercentageOfZerosStatisticCollector
 from nncf.experimental.openvino_native.statistics.statistics import OVBatchTensorStatistic
+from nncf.experimental.openvino_native.statistics.statistics import OVMeanTensorStatistic
+from nncf.experimental.openvino_native.statistics.statistics import OVMinMaxTensorStatistic
+from nncf.experimental.openvino_native.statistics.statistics import OVPercentageOfZerosStatistic
+from nncf.experimental.openvino_native.tensor import OVNNCFTensor
 
 
 class OVNNCFCollectorTensorProcessor(NNCFCollectorTensorProcessor):
@@ -82,6 +86,10 @@ class OVNNCFCollectorTensorProcessor(NNCFCollectorTensorProcessor):
     def sum(tensor: NNCFTensor) -> TensorElementsType:
         return np.sum(tensor.tensor)
 
+    @staticmethod
+    def percentage_of_zeros(tensor: NNCFTensor) -> float:
+        return 1.0 - np.count_nonzero(tensor.tensor) / tensor.tensor.size
+
 
 class OVMinMaxStatisticCollector(MinMaxStatisticCollector):
     @staticmethod
@@ -129,3 +137,15 @@ class OVBatchStatisticCollector(BatchStatisticCollector):
 
     def _get_statistics(self) -> OVBatchTensorStatistic:
         return OVBatchTensorStatistic(self._all_values)
+
+
+class OVPercentageOfZerosStatisticCollector(PercentageOfZerosStatisticCollector):
+    @staticmethod
+    def _get_processor() -> NNCFCollectorTensorProcessor:
+        return OVNNCFCollectorTensorProcessor()
+
+    def _register_input(self, x: OVNNCFTensor):
+        self._register_input_common(x)
+
+    def _get_statistics(self):
+        return OVPercentageOfZerosStatistic(self._mean_percentage_of_zeros())

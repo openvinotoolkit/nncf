@@ -11,26 +11,28 @@
  limitations under the License.
 """
 
-from typing import Union, Deque, List
+from typing import Deque
+from typing import List
+from typing import Union
 
 import numpy as np
 import tensorflow as tf
 
 from nncf.common.tensor import NNCFTensor
 from nncf.common.tensor import TensorElementsType
+from nncf.common.tensor_statistics.collectors import MeanMinMaxStatisticCollector
+from nncf.common.tensor_statistics.collectors import MeanPercentileStatisticCollector
 from nncf.common.tensor_statistics.collectors import MedianMADStatisticCollector
+from nncf.common.tensor_statistics.collectors import MinMaxStatisticCollector
+from nncf.common.tensor_statistics.collectors import MixedMinMaxStatisticCollector
 from nncf.common.tensor_statistics.collectors import NNCFCollectorTensorProcessor
 from nncf.common.tensor_statistics.collectors import PercentileStatisticCollector
-from nncf.common.tensor_statistics.collectors import MeanPercentileStatisticCollector
-from nncf.common.tensor_statistics.collectors import MixedMinMaxStatisticCollector
-from nncf.common.tensor_statistics.collectors import MeanMinMaxStatisticCollector
-from nncf.common.tensor_statistics.collectors import MinMaxStatisticCollector
 from nncf.common.tensor_statistics.reduction import np_percentile_reduce_like
+from nncf.tensorflow.tensor import TFNNCFTensor
+from nncf.tensorflow.tensor_statistics.reduction import convert_rs_to_pt_type
+from nncf.tensorflow.tensor_statistics.statistics import TFMedianMADTensorStatistic
 from nncf.tensorflow.tensor_statistics.statistics import TFMinMaxTensorStatistic
 from nncf.tensorflow.tensor_statistics.statistics import TFPercentileTensorStatistic
-from nncf.tensorflow.tensor_statistics.statistics import TFMedianMADTensorStatistic
-from nncf.tensorflow.tensor_statistics.reduction import convert_rs_to_pt_type
-from nncf.tensorflow.tensor import TFNNCFTensor
 
 
 class TFNNCFCollectorTensorProcessor(NNCFCollectorTensorProcessor):
@@ -78,6 +80,10 @@ class TFNNCFCollectorTensorProcessor(NNCFCollectorTensorProcessor):
     @staticmethod
     def sum(tensor: NNCFTensor) -> TensorElementsType:
         return tf.reduce_sum(tensor.tensor).numpy()
+
+    @staticmethod
+    def percentage_of_zeros(tensor: NNCFTensor) -> float:
+        return 1.0 - tf.math.count_nonzero(tensor.tensor) / tf.size(tensor.tensor)
 
 
 class TFMinMaxStatisticCollector(MinMaxStatisticCollector):

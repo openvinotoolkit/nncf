@@ -11,21 +11,23 @@
  limitations under the License.
 """
 
-from typing import Union, List, Deque
+from typing import Deque
+from typing import List
+from typing import Union
 
 import numpy as np
 
 from nncf.common.tensor import NNCFTensor
 from nncf.common.tensor import TensorElementsType
 from nncf.common.tensor_statistics.collectors import BatchStatisticCollector
-from nncf.common.tensor_statistics.collectors import MinMaxStatisticCollector
-from nncf.common.tensor_statistics.collectors import NNCFCollectorTensorProcessor
 from nncf.common.tensor_statistics.collectors import MeanMinMaxStatisticCollector
 from nncf.common.tensor_statistics.collectors import MeanStatisticCollector
-from nncf.onnx.tensor import ONNXNNCFTensor
-from nncf.onnx.statistics.statistics import ONNXMinMaxTensorStatistic
-from nncf.onnx.statistics.statistics import ONNXMeanTensorStatistic
+from nncf.common.tensor_statistics.collectors import MinMaxStatisticCollector
+from nncf.common.tensor_statistics.collectors import NNCFCollectorTensorProcessor
 from nncf.onnx.statistics.statistics import ONNXBatchTensorStatistic
+from nncf.onnx.statistics.statistics import ONNXMeanTensorStatistic
+from nncf.onnx.statistics.statistics import ONNXMinMaxTensorStatistic
+from nncf.onnx.tensor import ONNXNNCFTensor
 
 
 class ONNXNNCFCollectorTensorProcessor(NNCFCollectorTensorProcessor):
@@ -81,6 +83,10 @@ class ONNXNNCFCollectorTensorProcessor(NNCFCollectorTensorProcessor):
     @staticmethod
     def sum(tensor: NNCFTensor) -> TensorElementsType:
         return np.sum(tensor.tensor)
+
+    @staticmethod
+    def percentage_of_zeros(tensor: NNCFTensor) -> float:
+        return 1.0 - np.count_nonzero(tensor.tensor) / tensor.tensor.size
 
 
 class ONNXMinMaxStatisticCollector(MinMaxStatisticCollector):
