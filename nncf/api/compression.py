@@ -14,7 +14,12 @@
 from abc import ABC
 from abc import abstractmethod
 from enum import IntEnum
-from typing import Any, Dict, List, Optional, Tuple, TypeVar
+from typing import Any
+from typing import Dict
+from typing import List
+from typing import Optional
+from typing import Tuple
+from typing import TypeVar
 
 from nncf.api.statistics import Statistics
 from nncf.common.graph.transformations.layout import TransformationLayout
@@ -249,6 +254,18 @@ class CompressionAlgorithmController(ABC):
         Prepare the compressed model for deployment.
         """
         self._model = self.strip_model(self._model)
+
+    def prepare_for_inference(self, make_model_copy: bool = True) -> TModel:
+        """
+        Prepare NNCFNetwork for inference by converting NNCF modules to torch native format.
+
+        :param make_model_copy: `True` means that a copy of the model will be modified.
+            `False` means that the original model in the controller will be changed and
+            no further compression actions will be available. Defaults to True.
+
+        :return: Modified model.
+        """
+        raise NotImplementedError(f"Method `prepare_for_inference` not implemented for {type(self)}.")
 
     @abstractmethod
     def export_model(self,

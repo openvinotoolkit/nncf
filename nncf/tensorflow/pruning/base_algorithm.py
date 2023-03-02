@@ -11,6 +11,7 @@
  limitations under the License.
 """
 
+import copy
 from typing import Dict
 from typing import List
 from typing import Tuple
@@ -356,3 +357,10 @@ class BasePruningAlgoController(BaseCompressionAlgorithmController):
 
     def strip_model(self, model: tf.keras.Model) -> tf.keras.Model:
         return strip_model_from_masks(model, self._op_names)
+
+    def prepare_for_inference(self, make_model_copy: bool = True) -> tf.keras.Model:
+        model = self.model
+        if make_model_copy:
+            model = copy.deepcopy(self.model)
+        model = self.strip_model(model)
+        return model

@@ -11,6 +11,7 @@
  limitations under the License.
 """
 
+import copy
 from typing import Any
 from typing import Dict
 from typing import List
@@ -280,6 +281,32 @@ class CompositeCompressionAlgorithmController(CompressionAlgorithmController):
             stripped_model = ctrl.strip_model(stripped_model)
         self._model = stripped_model
 
+    def prepare_for_inference(self, make_model_copy: bool = True) -> TModel:
+        """
+        Prepare compressed model for inference by converting NNCF modules to native format.
+
+        :param make_model_copy: `True` means that a copy of the model will be modified.
+            `False` means that the original model in the controller will be changed and
+            no further compression actions will be available. Defaults to True.
+
+        :return: Modified model.
+        """
+        model = self.model
+        if make_model_copy:
+            model = copy.deepcopy(self.model)
+
+        for ctrl in self.child_ctrls:
+            if make_model_copy:
+                # pylint: disable=protected-access
+                saved_model = ctrl.model
+                ctrl._model = model
+                model = ctrl.prepare_for_inference(make_model_copy=False)
+                ctrl._model = saved_model
+            else:
+                model = ctrl.prepare_for_inference(make_model_copy=False)
+
+        return model
+
     @property
     def compression_rate(self) -> float:
         raise NotImplementedError
@@ -320,11 +347,11 @@ class CompositeCompressionAlgorithmController(CompressionAlgorithmController):
         self.prepare_for_export()
         backend = get_backend(self.model)
         if backend is BackendType.TENSORFLOW:
-            from nncf.tensorflow.exporter import TFExporter #pylint: disable=cyclic-import
+            from nncf.tensorflow.exporter import TFExporter  # pylint: disable=cyclic-import
             exporter = TFExporter(self.model, input_names, output_names, model_args)
         else:
             assert backend is BackendType.TORCH
-            from nncf.torch.exporter import PTExporter #pylint: disable=cyclic-import
+            from nncf.torch.exporter import PTExporter  # pylint: disable=cyclic-import
             exporter = PTExporter(self.model, input_names, output_names, model_args)
         if save_format is not None:
             exporter.export_model(save_path, save_format)

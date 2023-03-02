@@ -10,6 +10,7 @@
  See the License for the specific language governing permissions and
  limitations under the License.
 """
+import copy
 from copy import deepcopy
 from typing import Any
 from typing import Dict
@@ -712,3 +713,10 @@ class QuantizationController(BaseCompressionAlgorithmController):
 
     def compression_stage(self) -> CompressionStage:
         return CompressionStage.FULLY_COMPRESSED
+
+    def prepare_for_inference(self, make_model_copy: bool = True) -> tf.keras.Model:
+        model = self.model
+        if make_model_copy:
+            model = copy.deepcopy(self.model)
+        model = self.strip_model(model)
+        return model
