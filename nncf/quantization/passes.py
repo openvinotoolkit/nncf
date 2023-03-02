@@ -39,8 +39,7 @@ def remove_shape_of_subgraphs(nncf_graph: NNCFGraph) -> NNCFGraph:
     shape_of_nodes = []
     infer_nodes = []
 
-    nodes_queue = collections.deque()
-    nodes_queue.extend(nncf_graph.get_input_nodes())
+    nodes_queue = collections.deque(nncf_graph.get_input_nodes())
     while nodes_queue:
         node = nodes_queue.pop()
         if issubclass(node.metatype, ShapeOfMetatype):
