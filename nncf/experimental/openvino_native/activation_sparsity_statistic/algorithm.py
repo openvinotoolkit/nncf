@@ -34,6 +34,7 @@ from nncf.quantization.algorithms.fast_bias_correction.backend import ALGO_BACKE
 
 TModel = TypeVar("TModel")
 
+ACTIVATION_SPARSITY_STATISTIC = "activation_sparsity_statistic"
 
 class ActivationSparsityStatisticParameters(AlgorithmParameters):
     """
@@ -55,6 +56,14 @@ class ActivationSparsityStatistic(Algorithm):
     Collect activation sparsity statistic algorithm implementation.
 
     The main purpose of this algorithm to collect of percentage of zero in activation tensors.
+    The statistics will be written to the rt_info of the model:
+        <rt_info>
+            <activation_sparsity_statistic>
+                <Conv>
+                    <port_id_0 value="0" />
+                </Conv>
+            </activation_sparsity_statistic>
+        </rt_info>
 
     :param number_samples: The number of the samples for the statistics collection.
     :param nncf_graph: NNCFGraph class for the algorithm.
@@ -151,10 +160,10 @@ class ActivationSparsityStatistic(Algorithm):
                 statistic = tensor_collector.get_statistics()
                 percentage_of_zeros = statistic.percentage_of_zeros
                 port_id = node_static_point.target_point.port_id
-                # TODO: how to save data, it do nothing
-                print(f"{node_name=} {port_id=} {percentage_of_zeros=}")
-                node_op.set_attribute("percentage_of_zeros_statistic", percentage_of_zeros)
-
+                # TODO: port_id?
+                modified_model.set_rt_info(
+                    percentage_of_zeros, [ACTIVATION_SPARSITY_STATISTIC, node_name, f"port_id_{port_id}"]
+                )
         return modified_model
 
     def _add_statistic_point(self, container: StatisticPointsContainer, point: TargetPoint) -> None:

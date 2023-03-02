@@ -17,6 +17,7 @@ import nncf
 from nncf.common.tensor import NNCFTensor
 from nncf.experimental.openvino_native.activation_sparsity_statistic.activation_sparsity_statistic import \
     activation_sparsity_statistic_impl
+from nncf.experimental.openvino_native.activation_sparsity_statistic.algorithm import ACTIVATION_SPARSITY_STATISTIC
 from nncf.experimental.openvino_native.activation_sparsity_statistic.algorithm import ActivationSparsityStatistic
 from nncf.experimental.openvino_native.activation_sparsity_statistic.algorithm import \
     ActivationSparsityStatisticParameters
@@ -26,9 +27,13 @@ from tests.shared.datasets import MockDataset
 
 
 def test_algo():
-    model_to_test = SYNTHETIC_MODELS.get("ConvModel")().ov_model
-    dataset = nncf.Dataset(MockDataset([1, 3, 4, 2]), transform_func=lambda x: {"Input_1": x, "Input_2": x})
-    activation_sparsity_statistic_impl(model_to_test, dataset, 1)
+    model = SYNTHETIC_MODELS.get("ConvModel")().ov_model
+    dataset = nncf.Dataset(
+        MockDataset([1, 3, 4, 2]), transform_func=lambda x: {"Input_1": x, "Input_2": x.reshape(1, 3, 2, 4)}
+    )
+    model = activation_sparsity_statistic_impl(model, dataset, 1)
+
+    assert model.has_rt_info(ACTIVATION_SPARSITY_STATISTIC)
 
 
 REF_STATIC_POINTS = {
@@ -57,8 +62,3 @@ def test_get_static_points(model_cls_to_test):
 def test_percentage_of_zeros_tensor_processor(tensor, ref):
     result = OVNNCFCollectorTensorProcessor.percentage_of_zeros(NNCFTensor(np.array(tensor)))
     assert result == ref
-
-
-def test_final_statistic_data():
-    # TODO: test IR
-    pass
