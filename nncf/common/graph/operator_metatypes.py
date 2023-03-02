@@ -173,7 +173,6 @@ class OutputNoopMetatype(OperatorMetatype):
 
 
 #pylint:disable=no-member
-@NOOP_METATYPES.register()
 class ShapeOfMetatype(OperatorMetatype):
     name = "shape_of"
 
