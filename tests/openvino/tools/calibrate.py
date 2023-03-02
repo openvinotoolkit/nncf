@@ -26,8 +26,9 @@ from nncf.common.quantization.structs import QuantizationPreset
 from nncf.data.dataset import Dataset
 from nncf.experimental.openvino_native.quantization.quantize import \
     quantize_impl
+from nncf.scopes import IgnoredScope
+from nncf.scopes import convert_ignored_scope_to_list
 from nncf.parameters import (
-    IgnoredScope,
     ModelType,
     TargetDevice
 )
@@ -73,7 +74,7 @@ class CustomJSONEncoder(json.JSONEncoder):
                           nncf.QuantizationPreset)):
             return o.value
         if isinstance(o, (nncf.IgnoredScope)):
-            return ','.join(nncf.parameters.convert_ignored_scope_to_list(o))
+            return ','.join(convert_ignored_scope_to_list(o))
         raise TypeError(f'Object of type {o.__class__.__name__} '
                         f'is not JSON serializable')
 
