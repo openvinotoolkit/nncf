@@ -32,7 +32,7 @@ def get_dataset_for_test(model):
     rng = np.random.default_rng(seed=0)
     input_data = {}
     for param in model.get_parameters():
-        input_shape = param.get_output_shape(0)
+        input_shape = param.partial_shape.get_max_shape()
         input_data[param.get_friendly_name()] = rng.uniform(0, 1, input_shape)
 
     dataset = Dataset([input_data])

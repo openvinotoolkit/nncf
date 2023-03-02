@@ -27,6 +27,8 @@ from nncf.common.utils.backend import BackendType
 
 from nncf.experimental.openvino_native.graph.nncf_graph_builder import OVConstantLayerAttributes
 from nncf.experimental.openvino_native.graph.metatypes.openvino_metatypes import GENERAL_WEIGHT_LAYER_METATYPES
+from nncf.experimental.openvino_native.graph.metatypes.openvino_metatypes import OVTopKMetatype
+from nncf.experimental.openvino_native.graph.metatypes.openvino_metatypes import OVNonMaxSuppressionMetatype
 from nncf.experimental.openvino_native.graph.transformations.commands import OVQuantizerInsertionCommand
 from nncf.experimental.openvino_native.graph.transformations.commands import OVTargetPoint
 from nncf.experimental.openvino_native.hardware.config import OVHWConfig
@@ -49,7 +51,7 @@ class OVMinMaxAlgoBackend(MinMaxAlgoBackend):
 
     @property
     def post_processing_metatypes(self) -> List[OperatorMetatype]:
-        return []
+        return [OVTopKMetatype, OVNonMaxSuppressionMetatype]
 
     @property
     def hw_config(self) -> HWConfig:

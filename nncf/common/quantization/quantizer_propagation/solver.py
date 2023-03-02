@@ -32,8 +32,6 @@ from nncf.common.graph import OUTPUT_NOOP_METATYPES
 from nncf.common.graph import NNCFNodeName
 from nncf.common.graph import OperatorMetatype
 from nncf.common.graph.graph import NNCFGraph
-from nncf.common.graph.operator_metatypes import InputNoopMetatype
-from nncf.common.graph.operator_metatypes import OutputNoopMetatype
 from nncf.common.graph.operator_metatypes import UnknownMetatype
 from nncf.common.graph.transformations.commands import TargetPoint
 from nncf.common.hardware.config import HWConfig
@@ -293,7 +291,7 @@ class PostprocessingNodeLocator:
             if self._is_node_has_underlying_weights(node_key):
                 visited_nodes.add(node_key)
                 return True, output
-            if node_metatype in [InputNoopMetatype, OutputNoopMetatype]:
+            if node_metatype in list(OUTPUT_NOOP_METATYPES.values()) + list(INPUT_NOOP_METATYPES.values()):
                 visited_nodes.add(node_key)
                 return False, output
             self._check_if_postprocessing(node_metatype)
@@ -313,7 +311,12 @@ class PostprocessingNodeLocator:
 
         partial_backward_traverse_function = partial(backward_traverse_function, visited_nodes=visited_nodes)
         output = []
-        for start_node_key in self._quant_prop_graph.get_node_keys_by_metatype(OutputNoopMetatype):
+
+        output_nodes = []
+        for output_metatype in OUTPUT_NOOP_METATYPES.values():
+            output_nodes.extend(self._quant_prop_graph.get_node_keys_by_metatype(output_metatype))
+
+        for start_node_key in output_nodes:
             self._post_processing_marker_encountered = False
             node_keys = self._quant_prop_graph.traverse_graph(start_node_key, partial_backward_traverse_function,
                                                               output=[], traverse_forward=False)

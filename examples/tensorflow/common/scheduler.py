@@ -89,7 +89,7 @@ def build_scheduler(config, steps_per_epoch):
     schedule_type = optimizer_config.get('schedule_type', 'step').lower()
     schedule_params = optimizer_config.get('schedule_params', {})
     gamma = schedule_params.get('gamma', optimizer_config.get('gamma', 0.1))
-    base_lr = schedule_params.get('base_lr', optimizer_config.get('base_lr', None))
+    base_lr = schedule_params.get('base_lr', optimizer_config.get('base_lr', 0.001))
 
     schedule_base_lr_check(schedule_type, base_lr)
 
