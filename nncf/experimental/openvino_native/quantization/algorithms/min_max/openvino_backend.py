@@ -104,8 +104,9 @@ class OVMinMaxAlgoBackend(MinMaxAlgoBackend):
             else:
                 raise NotImplementedError(f'Unsupported target point type {target_point.type}.')
 
-            channel_axis = 1
-            axes = tuple(i for i, _ in enumerate(shape) if i != channel_axis)
+            # TODO (l-bat): Disable quantizer propogation through layout changing operations
+            channel_axis = 1  # OpenVINO activations have channel first layout: [N, C, Z, Y, X]
+            axes = tuple(i for i in range(len(shape)) if i != channel_axis)
             return axes, use_abs_max
 
         assert isinstance(node.layer_attributes, OVConstantLayerAttributes)
@@ -114,7 +115,7 @@ class OVMinMaxAlgoBackend(MinMaxAlgoBackend):
         if quantizer_config.per_channel:
             assert node.metatype in GENERAL_WEIGHT_LAYER_METATYPES
             channel_axis = node.metatype.const_channel_axis
-            axes = tuple(i for i, _ in enumerate(const_shape) if i not in channel_axis)
+            axes = tuple(i for i in range(len(const_shape)) if i not in channel_axis)
         else:
             axes = tuple(range(len(const_shape)))
 
