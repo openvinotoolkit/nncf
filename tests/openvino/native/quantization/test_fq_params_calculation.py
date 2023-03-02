@@ -12,7 +12,6 @@
 """
 
 import pytest
-import os
 from pathlib import Path
 import numpy as np
 import openvino.runtime as ov
@@ -27,7 +26,6 @@ from tests.openvino.omz_helpers import convert_model
 from tests.openvino.omz_helpers import download_model
 from tests.openvino.native.common import get_dataset_for_test
 from tests.openvino.native.common import load_json
-from tests.openvino.native.common import dump_to_json
 from tests.openvino.native.models import SYNTHETIC_MODELS
 from tests.openvino.native.models import LinearModel
 from tests.openvino.native.models import ConvModel
