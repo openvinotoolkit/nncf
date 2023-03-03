@@ -44,8 +44,8 @@ class ONNXModelTransformer(ModelTransformer):
         super().__init__(model)
         self.onnx_model_extractor = onnx.utils.Extractor(self._model)
 
-    def _get_pre_post_target_edge(self, port_id: int, node_name: str, transform_type: TargetType,
-                                  onnx_graph: ONNXGraph, nncf_input_node_next_nodes: Dict[str, str]) -> str:
+    def _get_target_edge(self, port_id: int, node_name: str, transform_type: TargetType, onnx_graph: ONNXGraph,
+                         nncf_input_node_next_nodes: Dict[str, str]) -> str:
         """
         Returns edge name corresponding to the node with a name equal to node_name, port_id and transform_type.
 
@@ -56,7 +56,7 @@ class ONNXModelTransformer(ModelTransformer):
         :param nncf_input_node_next_nodes: Map between NNCF Input nodes and the following ONNX nodes.
         :return: Target edge name.
         """
-        if transform_type == TargetType.PRE_LAYER_OPERATION:
+        if transform_type in [TargetType.PRE_LAYER_OPERATION, TargetType.OPERATION_WITH_WEIGHTS]:
             return onnx_graph.get_node_edge_names(node_name)['input'][port_id]
         if node_name in nncf_input_node_next_nodes:  # ADD INPUT NODE CASE
             node_names = nncf_input_node_next_nodes[node_name]
@@ -126,16 +126,11 @@ class ONNXModelTransformer(ModelTransformer):
             node_name = transformation.target_point.target_node_name
             transform_type = transformation.target_point.type
             nncf_input_node_next_onnx_nodes = transformation.nncf_input_node_next_onnx_nodes
-            if transform_type in [TargetType.PRE_LAYER_OPERATION, TargetType.POST_LAYER_OPERATION]:
-                target_edge_name = self._get_pre_post_target_edge(port_id, node_name, transform_type, onnx_graph,
-                                                                  nncf_input_node_next_onnx_nodes)
-            else:
-                target_edge_name = self._get_pre_post_target_edge(port_id, node_name, TargetType.PRE_LAYER_OPERATION,
-                                                                  onnx_graph, nncf_input_node_next_onnx_nodes)
+            target_edge_name = self._get_target_edge(port_id, node_name, transform_type, onnx_graph,
+                                                     nncf_input_node_next_onnx_nodes)
             model_outputs.add(target_edge_name)
 
         return ONNXModelTransformer._insert_outputs(self._model, outputs=model_outputs)
-
 
     @staticmethod
     def _insert_outputs(model: onnx.ModelProto, outputs: Union[List[str], Set[str]]) -> onnx.ModelProto:
@@ -277,11 +272,8 @@ class ONNXModelTransformer(ModelTransformer):
         node_name = transformation.target_point.target_node_name
         transform_type = transformation.target_point.type
         nncf_input_node_next_onnx_nodes = transformation.nncf_input_node_next_onnx_nodes
-        if transform_type == TargetType.OPERATION_WITH_WEIGHTS:
-            target_edge_name = onnx_graph.get_node_edge_names(node_name)['input'][port_id]
-        else:
-            target_edge_name = self._get_pre_post_target_edge(port_id, node_name, transform_type, onnx_graph,
-                                                              nncf_input_node_next_onnx_nodes)
+        target_edge_name = self._get_target_edge(port_id, node_name, transform_type, onnx_graph,
+                                                 nncf_input_node_next_onnx_nodes)
         self._added_target_edges[target_edge_name] += 1
         return target_edge_name
 
