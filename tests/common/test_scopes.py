@@ -14,7 +14,7 @@ import pytest
 
 from nncf.common.graph import NNCFNode
 from nncf.common.scopes import get_not_matched_scopes
-from nncf.parameters import IgnoredScope
+from nncf.scopes import IgnoredScope
 
 
 @pytest.mark.parametrize("scope, ref", [

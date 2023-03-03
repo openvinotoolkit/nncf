@@ -13,8 +13,8 @@
 
 import pytest
 
-from nncf.parameters import convert_ignored_scope_to_list
-from nncf.parameters import IgnoredScope
+from nncf.scopes import convert_ignored_scope_to_list
+from nncf.scopes import IgnoredScope
 
 
 def test_convert_ignored_scope_to_list():

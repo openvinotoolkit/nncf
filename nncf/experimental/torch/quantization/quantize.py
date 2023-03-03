@@ -14,7 +14,7 @@
 import torch
 from typing import Optional
 
-from nncf.parameters import IgnoredScope
+from nncf.scopes import IgnoredScope
 from nncf.parameters import ModelType
 from nncf.parameters import TargetDevice
 from nncf.config import NNCFConfig
@@ -61,7 +61,6 @@ def quantize_impl(
                                                 target_device=target_device,
                                                 ignored_scopes=ignored_scope)
 
-    params = PostTrainingQuantizationParameters()
     min_max_params = params.algorithms[MinMaxQuantization]
     params.algorithms = {MinMaxQuantization: min_max_params}
     quantization_algorithm = PostTrainingQuantization(params)

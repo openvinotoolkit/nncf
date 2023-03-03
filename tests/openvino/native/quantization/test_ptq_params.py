@@ -13,6 +13,7 @@
 
 import pytest
 
+from nncf.scopes import IgnoredScope
 from nncf.common.utils.backend import BackendType
 from nncf.common.graph.patterns.manager import PatternsManager
 from nncf.common.graph.patterns import GraphPattern
@@ -80,7 +81,8 @@ class TestPTQParams(TemplateTestPTQParams):
              'pattern': get_patterns_setup()},
         }
 
-    @pytest.fixture(params=[([], 1, 1), (['MatMul'], 1, 0),
-                            (['Add'], 1, 1), (['MatMul', 'Add'], 0, 0)])
+    @pytest.fixture(params=[(IgnoredScope(), 1, 1), (IgnoredScope(['MatMul']), 1, 0),
+                            (IgnoredScope(['Add']), 1, 1),
+                            (IgnoredScope(['MatMul', 'Add']), 0, 0)])
     def ignored_scopes_data(self, request):
         return request.param

@@ -15,6 +15,7 @@ from typing import Dict, List, Optional, TypeVar
 
 from nncf import Dataset
 from nncf.parameters import TargetDevice
+from nncf.scopes import IgnoredScope
 from nncf.common.logging import nncf_logger
 from nncf.common.quantization.structs import QuantizationPreset
 from nncf.common.utils.backend import BackendType
@@ -53,7 +54,7 @@ class PostTrainingQuantizationParameters(AlgorithmParameters):
                  target_device: TargetDevice = TargetDevice.ANY,
                  range_type: RangeType = RangeType.MEAN_MINMAX,
                  quantize_outputs: bool = False,
-                 ignored_scopes: Optional[List[str]] = None,
+                 ignored_scopes: Optional[IgnoredScope] = None,
                  fast_bias_correction: bool = True,
                  ):
         """
@@ -77,7 +78,7 @@ class PostTrainingQuantizationParameters(AlgorithmParameters):
         :param target_device: Target device for the settings of the quantization pipeline.
         :param range_type: Type of statistics range calculation.
         :param quantize_outputs: Boolean value that says whether quantize outputs or not.
-        :param ignored_scopes: List of the layers which input must not be quantized.
+        :param ignored_scopes: Descriptor of the layers which input must not be quantized.
         """
         self.algorithms = {MinMaxQuantization: MinMaxQuantizationParameters(
             preset=preset,

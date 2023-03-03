@@ -14,7 +14,7 @@
 import os
 from typing import List, Optional
 import nncf
-from nncf.parameters import IgnoredScope
+from nncf.scopes import IgnoredScope
 
 import numpy as np
 import onnx

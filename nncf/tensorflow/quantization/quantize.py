@@ -22,8 +22,8 @@ from nncf.config.structures import BNAdaptationInitArgs
 from nncf.config.structures import QuantizationRangeInitArgs
 from nncf.data import Dataset
 from nncf.data.dataset import DataProvider
-from nncf.parameters import convert_ignored_scope_to_list
-from nncf.parameters import IgnoredScope
+from nncf.scopes import convert_ignored_scope_to_list
+from nncf.scopes import IgnoredScope
 from nncf.parameters import ModelType
 from nncf.parameters import TargetDevice
 from nncf.tensorflow.helpers.model_creation import create_compressed_model
