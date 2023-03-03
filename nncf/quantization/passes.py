@@ -12,27 +12,30 @@
 """
 
 import collections
+from typing import List
 
 from nncf.common.graph.graph import NNCFGraph
-from nncf.common.graph.operator_metatypes import ShapeOfMetatype
+from nncf.common.graph.operator_metatypes import OperatorMetatype
 
 
-def transform_to_inference_graph(nncf_graph: NNCFGraph) -> NNCFGraph:
+def transform_to_inference_graph(nncf_graph: NNCFGraph, shape_of_metatypes: List[OperatorMetatype]) -> NNCFGraph:
     """
     This method contains pipeline of the passes that uses to provide inference graph without constant flows.
 
     :param nncf_graph: NNCFGraph instance for the transformation.
+    :param shape_of_metatypes: List of backend-specific ShapeOf metatypes.
     :return: NNCFGraph in the inference style.
     """
-    inference_nncf_graph = remove_shape_of_subgraphs(nncf_graph)
+    inference_nncf_graph = remove_shape_of_subgraphs(nncf_graph, shape_of_metatypes)
     return inference_nncf_graph
 
 
-def remove_shape_of_subgraphs(nncf_graph: NNCFGraph) -> NNCFGraph:
+def remove_shape_of_subgraphs(nncf_graph: NNCFGraph, shape_of_metatypes: List[OperatorMetatype]) -> NNCFGraph:
     """
     Removes the ShapeOf subgraphs from the provided NNCFGraph instance.
 
     :param nncf_graph: NNCFGraph instance for the transformation.
+    :param shape_of_metatypes: List of backend-specific ShapeOf metatypes.
     :return: NNCFGraph without ShapeOf subgraphs.
     """
     nodes_to_drop = set()
@@ -43,7 +46,7 @@ def remove_shape_of_subgraphs(nncf_graph: NNCFGraph) -> NNCFGraph:
     nodes_queue.extend(nncf_graph.get_input_nodes())
     while nodes_queue:
         node = nodes_queue.pop()
-        if issubclass(node.metatype, ShapeOfMetatype):
+        if node.metatype in shape_of_metatypes:
             shape_of_nodes.append(node)
             continue
         if node in infer_nodes:

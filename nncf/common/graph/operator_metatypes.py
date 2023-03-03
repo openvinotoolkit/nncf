@@ -169,14 +169,3 @@ class OutputNoopMetatype(OperatorMetatype):
     @classmethod
     def get_all_aliases(cls) -> List[str]:
         return [NNCFGraphNodeType.OUTPUT_NODE]
-
-
-
-#pylint:disable=no-member
-@NOOP_METATYPES.register()
-class ShapeOfMetatype(OperatorMetatype):
-    name = "shape_of"
-
-    @classmethod
-    def get_all_aliases(cls) -> List[str]:
-        return cls.op_names
