@@ -22,6 +22,9 @@ from tests.openvino.omz_helpers import download_model
 from tests.openvino.native.common import compare_nncf_graphs
 from tests.openvino.native.models import SYNTHETIC_MODELS
 from tests.openvino.native.models import WeightsModel
+from tests.openvino.native.models import DepthwiseConv4DModel
+from tests.openvino.native.models import DepthwiseConv3DModel
+from tests.openvino.native.models import DepthwiseConv5DModel
 from tests.openvino.native.quantization.test_fq_params_calculation import quantize_model
 
 QUANTIZED_REF_GRAPHS_DIR = OPENVINO_NATIVE_TEST_ROOT / 'data' / 'reference_graphs' / 'quantized'
@@ -38,6 +41,16 @@ def test_syntetic_models_fq_placement(model_creator_func):
     compare_nncf_graphs(quantized_model, path_ref_graph)
 
 
+
+@pytest.mark.parametrize('model_creator_func', [DepthwiseConv3DModel, DepthwiseConv4DModel, DepthwiseConv5DModel])
+def test_depthwise_models_fq_placement(model_creator_func):
+    model = model_creator_func()
+    quantized_model = quantize_model(model.ov_model, QuantizationPreset.PERFORMANCE)
+
+    path_ref_graph = QUANTIZED_REF_GRAPHS_DIR / model.ref_graph_name
+    compare_nncf_graphs(quantized_model, path_ref_graph)
+
+
 OMZ_MODELS = [
     'mobilenet-v2-pytorch',
     'mobilenet-v3-small-1.0-224-tf',
@@ -46,7 +59,6 @@ OMZ_MODELS = [
 ]
 
 
-@pytest.mark.skip(reason='Ticket 100948')
 @pytest.mark.parametrize('model_name', OMZ_MODELS)
 def test_omz_models_fq_placement(model_name, tmp_path):
     _ = download_model(model_name, tmp_path)
