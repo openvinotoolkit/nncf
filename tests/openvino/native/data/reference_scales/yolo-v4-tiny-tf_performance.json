@@ -54889,17 +54889,11 @@
         "output_low": -3.59743070602417,
         "output_high": 3.5693256855010986
     },
-    "up_sampling2d/resize/ResizeNearestNeighbor/Div/fq_output_0": {
-        "input_low": 0.0,
-        "input_high": 2.0,
-        "output_low": 0.0,
-        "output_high": 2.0
-    },
-    "306/fq_output_0": {
-        "input_low": 0.0,
-        "input_high": 13.0,
-        "output_low": 0.0,
-        "output_high": 13.0
+    "leaky_re_lu_17/LeakyRelu/fq_output_0": {
+        "input_low": -3.59743070602417,
+        "input_high": 3.5693256855010986,
+        "output_low": -3.59743070602417,
+        "output_high": 3.5693256855010986
     },
     "conv2d_18/Conv2D/fq_weights_1": {
         "input_low": [
@@ -80030,18 +80024,6 @@
                 ]
             ]
         ]
-    },
-    "307/fq_output_0": {
-        "input_low": 0.0,
-        "input_high": 26.0,
-        "output_low": 0.0,
-        "output_high": 26.0
-    },
-    "up_sampling2d/resize/ResizeNearestNeighbor/fq_input_0": {
-        "input_low": -3.59743070602417,
-        "input_high": 3.5693256855010986,
-        "output_low": -3.59743070602417,
-        "output_high": 3.5693256855010986
     },
     "conv2d_17/Conv2D/fq_weights_1": {
         "input_low": [

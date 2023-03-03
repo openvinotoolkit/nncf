@@ -663,3 +663,17 @@ class NNCFGraph:
         for nx_edge in self._nx_graph.in_edges:
             yield self.get_edge(self.get_node_by_key(nx_edge[0]),
                                 self.get_node_by_key(nx_edge[1]))
+
+    def remove_nodes_from(self, nodes: List[NNCFNode]) -> None:
+        """
+        Removes nodes from the current NNCFGraph instance.
+        We use the remove_node method here because remove_nodes_from uses a silent fail instead of an exception.
+
+        :param nodes: List of NNCFNodes to remove.
+        """
+        for node in nodes:
+            self._nx_graph.remove_node(node.data['key'])
+
+        self._node_id_to_key_dict = {}
+        for node_key, node in self._nx_graph.nodes.items():
+            self._node_id_to_key_dict[node['id']] = node_key
