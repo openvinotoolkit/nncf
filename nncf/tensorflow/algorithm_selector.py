@@ -10,6 +10,7 @@
  See the License for the specific language governing permissions and
  limitations under the License.
 """
+import copy
 from typing import Dict
 from typing import Type
 
@@ -17,12 +18,12 @@ import tensorflow as tf
 
 from nncf.api.compression import CompressionAlgorithmController
 from nncf.common.compression import NO_COMPRESSION_ALGORITHM_NAME
-from nncf.common.graph.transformations.layout import TransformationLayout
-from nncf.common.schedulers import StubCompressionScheduler
-from nncf.common.logging import nncf_logger
-from nncf.common.utils.registry import Registry
-from nncf.common.statistics import NNCFStatistics
 from nncf.common.compression import BaseCompressionAlgorithmController
+from nncf.common.graph.transformations.layout import TransformationLayout
+from nncf.common.logging import nncf_logger
+from nncf.common.schedulers import StubCompressionScheduler
+from nncf.common.statistics import NNCFStatistics
+from nncf.common.utils.registry import Registry
 from nncf.tensorflow.api.compression import TFCompressionAlgorithmBuilder
 from nncf.tensorflow.loss import TFZeroCompressionLoss
 
@@ -60,6 +61,12 @@ class NoCompressionAlgorithmController(BaseCompressionAlgorithmController):
 
     def statistics(self, quickly_collected_only: bool = False) -> NNCFStatistics:
         return NNCFStatistics()
+
+    def prepare_for_inference(self, make_model_copy: bool = True) -> tf.keras.Model:
+        model = self.model
+        if make_model_copy:
+            model = copy.deepcopy(self.model)
+        return model
 
 
 def get_compression_algorithm_builder(algo_name: str) -> Type[TFCompressionAlgorithmBuilder]:
