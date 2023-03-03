@@ -36,7 +36,6 @@ from nncf.experimental.openvino_native.hardware.config import OVHWConfig
 from nncf.experimental.openvino_native.quantization.default_quantization import DEFAULT_OV_QUANT_TRAIT_TO_OP_DICT
 from nncf.experimental.openvino_native.statistics.collectors import OVMeanMinMaxStatisticCollector
 from nncf.experimental.openvino_native.statistics.collectors import OVMinMaxStatisticCollector
-from nncf.experimental.openvino_native.quantization.quantizer_parameters import get_weight_stats_shape
 from nncf.experimental.openvino_native.quantization.quantizer_parameters import calculate_quantizer_parameters
 
 from nncf.quantization.algorithms.min_max.backend import MinMaxAlgoBackend
@@ -101,16 +100,30 @@ class OVMinMaxAlgoBackend(MinMaxAlgoBackend):
         if not quantizer_config.per_channel:
             return None, use_abs_max
 
-        if not target_point.is_weight_target_point():
-            # TODO: support reduction shapes for 3D-5D conv cases
-            return (0, 2, 3), use_abs_max
-
         node = nncf_graph.get_node_by_name(target_point.target_node_name)
+        if not target_point.is_weight_target_point():
+            if target_point.type == TargetType.PRE_LAYER_OPERATION:
+                shape = nncf_graph.get_input_edges(node)[target_point.port_id].tensor_shape
+            elif target_point.type == TargetType.POST_LAYER_OPERATION:
+                shape = nncf_graph.get_output_edges(node)[target_point.port_id].tensor_shape
+            else:
+                raise NotImplementedError(f'Unsupported target point type {target_point.type}.')
+
+            # TODO (l-bat): Disable quantizer propogation through layout changing operations
+            channel_axis = 1  # OpenVINO activations have channel first layout: [N, C, Z, Y, X]
+            axes = tuple(i for i in range(len(shape)) if i != channel_axis)
+            return axes, use_abs_max
+
         assert isinstance(node.layer_attributes, OVConstantLayerAttributes)
         const_shape = node.layer_attributes.const_shape
 
-        bounds_shape = get_weight_stats_shape(const_shape, node.metatype)
-        axes = tuple(i for i, dim in enumerate(bounds_shape) if dim == 1)
+        if quantizer_config.per_channel:
+            assert node.metatype in GENERAL_WEIGHT_LAYER_METATYPES
+            channel_axis = node.metatype.const_channel_axis
+            axes = tuple(i for i in range(len(const_shape)) if i not in channel_axis)
+        else:
+            axes = tuple(range(len(const_shape)))
+
         return axes, use_abs_max
 
     @staticmethod

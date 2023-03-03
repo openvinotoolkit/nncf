@@ -40,7 +40,6 @@ OMZ_MODELS = [
 ]
 
 
-@pytest.mark.skip(reason='Ticket 100948')
 @pytest.mark.parametrize('model_name', OMZ_MODELS)
 def test_compare_nncf_graph_omz_models(tmp_path, model_name):
     _ = download_model(model_name, tmp_path)

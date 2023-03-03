@@ -20,9 +20,9 @@ from nncf.experimental.openvino_native.graph.nncf_graph_builder import GraphConv
 from tests.openvino.native.models import ConvModel
 from tests.openvino.native.models import LinearModel
 from tests.openvino.native.models import WeightsModel
-from tests.openvino.native.models import DepthwiseConvModel
+from tests.openvino.native.models import DepthwiseConv4DModel
 
-TEST_MODELS = [LinearModel, ConvModel, DepthwiseConvModel]
+TEST_MODELS = [LinearModel, ConvModel, DepthwiseConv4DModel]
 REF_METATYPES_COUNTERS = [
     [ovm.OVParameterMetatype, ovm.OVConstantMetatype, ovm.OVReshapeMetatype,
      ovm.OVConstantMetatype, ovm.OVAddMetatype, ovm.OVConstantMetatype, ovm.OVMatMulMetatype,
