@@ -15,27 +15,23 @@ from typing import Dict
 
 import numpy as np
 
-def normalized_mse_flattened(x_ref: np.ndarray, x_approx: np.ndarray) -> float:
+
+def normalized_mse(x_ref: Dict[str, np.ndarray], x_approx: Dict[str, np.ndarray]) -> float:
     """
     Calculates normalized mean square error between `x_ref` and `x_approx`.
     The normalized mean square error is defined as
 
     NMSE(x_ref, x_approx) = MSE(x_ref, x_approx) / MSE(x_ref, 0)
 
-    :param x_ref: A 1-D array of (N,) shape. Represents the reference values.
-    :param x_approx: A 1-D array of (N,) shape. Represents the measured values.
+    :param x_ref: Dictionary of arrays. Represents the reference values.
+    :param x_approx: Dictionary of arrays. Represents the measured values.
     :return: The normalized mean square error between `x_ref` and `x_approx`.
     """
-    error_flattened = (x_ref - x_approx).flatten()
-    x_ref_flattened = x_ref.flatten()
-    nmse = np.dot(error_flattened, error_flattened) / np.dot(x_ref_flattened, x_ref_flattened)
-    return nmse
-
-
-def normalized_mse(x_ref: Dict[str, np.ndarray], x_approx: Dict[str, np.ndarray]) -> float:
     metrics = []
     for output_name in x_ref:
-        nmse = normalized_mse_flattened(x_ref[output_name], x_approx[output_name])
+        error_flattened = (x_ref[output_name] - x_approx[output_name]).flatten()
+        x_ref_flattened = x_ref[output_name].flatten()
+        nmse = np.dot(error_flattened, error_flattened) / np.dot(x_ref_flattened, x_ref_flattened)
         metrics.append(nmse)
     nmse = sum(metrics) / len(metrics)
     return nmse

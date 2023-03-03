@@ -13,11 +13,15 @@
 
 from abc import ABC
 from abc import abstractmethod
-from typing import List, Any
+from typing import List, Any, TypeVar
 
 from nncf.common.graph.graph import NNCFGraph
 from nncf.common.graph.graph import NNCFNode
 from nncf.common.graph.operator_metatypes import OperatorMetatype
+from nncf.common.graph.transformations.commands import TransformationCommand
+
+
+TModel = TypeVar('TModel')
 
 
 class AccuracyControlAlgoBackend(ABC):
@@ -73,7 +77,7 @@ class AccuracyControlAlgoBackend(ABC):
 
     @staticmethod
     @abstractmethod
-    def create_command_to_remove_quantizer(quantizer_node: NNCFNode):
+    def create_command_to_remove_quantizer(quantizer_node: NNCFNode) -> TransformationCommand:
         """
         Creates command to remove quantizer from the quantized model.
 
@@ -83,7 +87,9 @@ class AccuracyControlAlgoBackend(ABC):
 
     @staticmethod
     @abstractmethod
-    def create_command_to_update_bias(node_with_bias: NNCFNode, bias_value: Any, nncf_graph: NNCFGraph):
+    def create_command_to_update_bias(node_with_bias: NNCFNode,
+                                      bias_value: Any,
+                                      nncf_graph: NNCFGraph) -> TransformationCommand:
         """
         Creates command to update bias value.
 
@@ -95,7 +101,7 @@ class AccuracyControlAlgoBackend(ABC):
 
     @staticmethod
     @abstractmethod
-    def create_command_to_update_weight(node_with_weight: NNCFNode, weight_value: Any):
+    def create_command_to_update_weight(node_with_weight: NNCFNode, weight_value: Any) -> TransformationCommand:
         """
         Creates command to update weight value.
 
@@ -131,7 +137,7 @@ class AccuracyControlAlgoBackend(ABC):
 
     @staticmethod
     @abstractmethod
-    def get_bias_value(node_with_bias: NNCFNode, nncf_graph: NNCFGraph, model) -> Any:
+    def get_bias_value(node_with_bias: NNCFNode, nncf_graph: NNCFGraph, model: TModel) -> Any:
         """
         Returns the bias value for the biased node.
 
@@ -143,7 +149,7 @@ class AccuracyControlAlgoBackend(ABC):
 
     @staticmethod
     @abstractmethod
-    def get_weight_value(node_with_weight: NNCFNode, nncf_graph: NNCFGraph, model) -> Any:
+    def get_weight_value(node_with_weight: NNCFNode, nncf_graph: NNCFGraph, model: TModel) -> Any:
         """
         Returns the weight value for the node with weight.
 
@@ -157,7 +163,7 @@ class AccuracyControlAlgoBackend(ABC):
 
     @staticmethod
     @abstractmethod
-    def prepare_for_inference(model) -> Any:
+    def prepare_for_inference(model: TModel) -> Any:
         """
         Prepares model for inference.
 

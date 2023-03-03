@@ -14,7 +14,7 @@
 import operator
 from abc import ABC
 from abc import abstractmethod
-from typing import Callable, Any, List, Iterable, Optional, Iterable
+from typing import Callable, Any, List, Iterable, Optional, Iterable, TypeVar
 from dataclasses import dataclass
 
 from nncf.data.dataset import Dataset
@@ -24,6 +24,9 @@ from nncf.common.graph import NNCFNode
 from nncf.common.quantization.quantizer_removal import find_quantizer_nodes_to_cut
 from nncf.common.quantization.quantizer_removal import revert_operations_to_floating_point_precision
 from nncf.quantization.algorithms.accuracy_control.backend import AccuracyControlAlgoBackend
+
+
+TModel = TypeVar('TModel')
 
 
 def get_ranking_subset_indices(errors: List[float], ranking_subset_size: int) -> List[int]:
@@ -87,25 +90,21 @@ class Ranker(ABC):
         # them to improve execution time.
         self._ref_values = None
 
-    def find_groups_of_quantizers_to_rank(self, nncf_graph: NNCFGraph) -> List[GroupToRank]:
+    def find_groups_of_quantizers_to_rank(self, quantized_model_graph: NNCFGraph) -> List[GroupToRank]:
         """
         Finds groups of quantizers to rank.
 
-        :param nncf_graph: NNCF graph.
-        :param quantizer_metatypes: List of quantizer metatypes.
-        :param const_metatypes: List of constant metatypes.
-        :param quantizable_metatypes: List of metatypes for operations that may be quantized.
-        :param quantize_agnostic_metatypes: List of quantize agnostic metatypes.
-        :param shape_of_metatypes: List of shape of metatypes.
+        :param quantized_model_graph: Graph for quantized model.
         :return: List of groups of quantizers to rank.
         """
         groups_to_rank = []
         processed = {}
         # TODO(andrey-churkin): Set order of quantizers here.
-        for quantizer_node in nncf_graph.get_nodes_by_metatypes(self._algo_backend.get_quantizer_metatypes()):
+        quantizers = quantized_model_graph.get_nodes_by_metatypes(self._algo_backend.get_quantizer_metatypes())
+        for quantizer_node in quantizers:
             if processed.get(quantizer_node.node_name, False):
                 continue
-            quantizers, operations = find_quantizer_nodes_to_cut(nncf_graph,
+            quantizers, operations = find_quantizer_nodes_to_cut(quantized_model_graph,
                                                                  quantizer_node,
                                                                  self._algo_backend.get_quantizer_metatypes(),
                                                                  self._algo_backend.get_const_metatypes(),
@@ -121,8 +120,8 @@ class Ranker(ABC):
 
     def rank_groups_of_quantizers(self,
                                   groups_to_rank: List[GroupToRank],
-                                  initial_model,
-                                  quantized_model,
+                                  initial_model: TModel,
+                                  quantized_model: TModel,
                                   quantized_model_graph: NNCFGraph,
                                   excluded_groups: Optional[GroupToRank] = None) -> List[GroupToRank]:
         """
@@ -172,7 +171,6 @@ class Ranker(ABC):
             # Calculate the ranking score for the current group of quantizers.
             ranking_score = self._calculate_ranking_score(modified_model, ranking_data_items, ranking_subset_indices)
 
-            # TODO:
             ranking_scores.append(float(ranking_score))
 
         # Rank groups.
@@ -185,26 +183,36 @@ class Ranker(ABC):
     @abstractmethod
     def _get_data_items(self, indices: Optional[List[int]] = None) -> Iterable[Any]:
         """
-        :param indices:
-        :return:
+        Returns the data items used to validate the model and select the ranking dataset.
+
+        :param indices: The zero-based indices of data items that should be selected from
+            the data source.
+        :return: Data items.
         """
 
     @abstractmethod
-    def _collect_values_for_each_item(self, model, data_items: Iterable[Any]) -> List[Any]:
+    def _collect_values_for_each_item(self, model: TModel, data_items: Iterable[Any]) -> List[Any]:
         """
-        :param model:
-        :param dataset:
-        :return:
+        Collects value for each item from `data_items`. A `value` is calculated using
+        model and data item.
+
+        :param model: Model.
+        :param data_items: Data items.
+        :return: Collected values.
         """
 
     @abstractmethod
-    def _calculate_ranking_score(self, modified_model, ranking_data_items: Iterable[Any],
+    def _calculate_ranking_score(self,
+                                 modified_model: TModel,
+                                 ranking_data_items: Iterable[Any],
                                  ranking_subset_indices: List[int]) -> float:
         """
-        :param modified_model:
-        :param ranking_data_items:
-        :param ranking_subset_indices:
-        :return:
+        Calculates the ranking score for the current group of quantizers.
+
+        :param modified_model: Model from which the current group of quantizers was removed.
+        :param ranking_data_items: Data items for ranking score calculation.
+        :param ranking_subset_indices: Indices of the `ranking_data_items` in the whole dataset.
+        :return: The ranking score for the current group of quantizers.
         """
 
 
@@ -214,9 +222,12 @@ class LogitsBasedRanker(Ranker):
     """
 
     def _get_data_items(self, indices: Optional[List[int]] = None) -> Iterable[Any]:
+        """
+        Returns data items from which ranking dat
+        """
         return self._dataset.get_inference_data(indices)
 
-    def _collect_values_for_each_item(self, model, data_items: Iterable[Any]) -> List[Any]:
+    def _collect_values_for_each_item(self, model: TModel, data_items: Iterable[Any]) -> List[Any]:
         """
         Infers `model` for each item from the `dataset` and returns collected logits.
 
@@ -231,7 +242,7 @@ class LogitsBasedRanker(Ranker):
         return outputs
 
     def _calculate_ranking_score(self,
-                                 modified_model,
+                                 modified_model: TModel,
                                  ranking_data_items: Iterable[Any],
                                  ranking_subset_indices: List[int]) -> float:
         approx_values_subset = self._collect_values_for_each_item(modified_model, ranking_data_items)
@@ -276,7 +287,7 @@ class MetricBasedRanker(Ranker):
     def _get_data_items(self, indices: Optional[List[int]] = None) -> Iterable[Any]:
         return self._dataset.get_data(indices)
 
-    def _collect_values_for_each_item(self, model, data_items: Iterable[Any]) -> List[Any]:
+    def _collect_values_for_each_item(self, model: TModel, data_items: Iterable[Any]) -> List[Any]:
         """
         Calls `validation_fn` for each item from the `dataset` and returns collected metrics.
 
@@ -291,7 +302,7 @@ class MetricBasedRanker(Ranker):
         return metrics
 
     def _calculate_ranking_score(self,
-                                 modified_model,
+                                 modified_model: TModel,
                                  ranking_data_items: Iterable[Any],
                                  ranking_subset_indices: List[int]) -> float:
         ranking_score = self._validation_fn(

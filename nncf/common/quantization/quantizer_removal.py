@@ -22,6 +22,9 @@ from nncf.common.graph.transformations.layout import TransformationLayout
 from nncf.common.graph.transformations.layout import TransformationCommand
 
 
+TModel = TypeVar('TModel')
+
+
 def find_quantizer_nodes_to_cut(
         graph: NNCFGraph,
         quantizer_node: NNCFNode,
@@ -99,9 +102,6 @@ def find_quantizer_nodes_to_cut(
             _parse_node_relatives(to_see_parents.pop(), is_parents=True)
 
     return to_cut, list(ops_to_return_in_orig_prec)
-
-
-TModel = TypeVar('TModel')
 
 
 def revert_operations_to_floating_point_precision(

@@ -16,8 +16,14 @@ from typing import List
 import pytest
 import numpy as np
 
-from nncf.quantization.algorithms.accuracy_control.rank_functions import normalized_mse_flattened
+from nncf.quantization.algorithms.accuracy_control.rank_functions import normalized_mse
 from nncf.quantization.algorithms.accuracy_control.ranker import get_ranking_subset_indices
+
+
+def create_fp32_tensor_1d(items):
+    return {
+        'output': np.array(items, dtype=np.float32)
+    }
 
 
 @pytest.mark.parametrize(
@@ -25,20 +31,20 @@ from nncf.quantization.algorithms.accuracy_control.ranker import get_ranking_sub
     [
         # zero_nmse_when_equal
         [
-            np.array([1.6784564, 0.415631], dtype=np.float32),
-            np.array([1.6784564, 0.415631], dtype=np.float32),
+            create_fp32_tensor_1d([1.6784564, 0.415631]),
+            create_fp32_tensor_1d([1.6784564, 0.415631]),
             0.0
         ],
         # trivial
         [
-            np.array([2, 1, -1], dtype=np.float32),
-            np.array([-2, 4, 1], dtype=np.float32),
+            create_fp32_tensor_1d([2, 1, -1]),
+            create_fp32_tensor_1d([-2, 4, 1]),
             4.833333
         ],
         # not_symmetric
         [
-            np.array([-2, 4, 1], dtype=np.float32),
-            np.array([2, 1, -1], dtype=np.float32),
+            create_fp32_tensor_1d([-2, 4, 1]),
+            create_fp32_tensor_1d([2, 1, -1]),
             1.380952
         ],
     ],
@@ -49,7 +55,7 @@ from nncf.quantization.algorithms.accuracy_control.ranker import get_ranking_sub
     ]
 )
 def test_normalized_mse(x_ref: np.ndarray, x_approx: np.ndarray, expected_nmse: float):
-    actual_nmse = normalized_mse_flattened(x_ref, x_approx)
+    actual_nmse = normalized_mse(x_ref, x_approx)
     assert np.allclose(expected_nmse, actual_nmse)
 
 
