@@ -25,6 +25,7 @@ from nncf.experimental.openvino_native.graph.transformations.commands import OVO
 from nncf.experimental.openvino_native.graph.transformations.commands import OVModelExtractionCommand
 from nncf.experimental.openvino_native.graph.transformations.commands import OVBiasCorrectionCommand
 from nncf.experimental.openvino_native.graph.transformations.commands import OVFQNodeRemovingCommand
+from nncf.experimental.openvino_native.graph.node_utils import get_result_node_name
 
 
 class OVModelTransformer(ModelTransformer):
@@ -115,7 +116,8 @@ class OVModelTransformer(ModelTransformer):
             if transformation.target_point.type == TargetType.POST_LAYER_OPERATION:
                 output = node.output(port_id)
                 extra_model_outputs.append((output, port_id))
-            elif transformation.target_point.type == TargetType.PRE_LAYER_OPERATION:
+            elif transformation.target_point.type in [TargetType.PRE_LAYER_OPERATION,
+                                                      TargetType.OPERATION_WITH_WEIGHTS]:
                 output = node.input_value(port_id)
                 extra_model_outputs.append((output, port_id))
             else:
@@ -138,7 +140,7 @@ class OVModelTransformer(ModelTransformer):
         for (output, port_id) in outputs:
             output_name = output.get_node().get_friendly_name()
             # TODO: (KodiaqQ) check out the models with the Split
-            result = opset.result(output, name=f'Result_{output_name}.{port_id}')
+            result = opset.result(output, name=get_result_node_name(output_name, port_id))
             extra_model_outputs.append(result)
 
         return ov.Model(model_outputs + extra_model_outputs, params)

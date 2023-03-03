@@ -11,7 +11,6 @@
  limitations under the License.
 """
 
-# pylint: disable=no-member, redefined-outer-name, no-name-in-module
 import pytest
 from tests.onnx.quantization.common import min_max_quantize_model
 from tests.onnx.quantization.common import compare_nncf_graph

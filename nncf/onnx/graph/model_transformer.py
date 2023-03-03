@@ -10,7 +10,7 @@
  See the License for the specific language governing permissions and
  limitations under the License.
 """
-from typing import Dict, List, Tuple
+from typing import Dict, List, Tuple, Union, Set
 
 from copy import deepcopy
 from collections import Counter
@@ -120,21 +120,25 @@ class ONNXModelTransformer(ModelTransformer):
         :return: New model with inserted outputs.
         """
         onnx_graph = ONNXGraph(self._model)
-        model_outputs = [output.name for output in onnx_graph.get_model_outputs()]
-        extra_model_outputs = []
+        model_outputs = set(output.name for output in onnx_graph.get_model_outputs())
         for transformation in transformations:
             port_id = transformation.target_point.port_id
             node_name = transformation.target_point.target_node_name
             transform_type = transformation.target_point.type
             nncf_input_node_next_onnx_nodes = transformation.nncf_input_node_next_onnx_nodes
-            assert transform_type in [TargetType.PRE_LAYER_OPERATION, TargetType.POST_LAYER_OPERATION]
-            target_edge_name = self._get_pre_post_target_edge(port_id, node_name, transform_type, onnx_graph,
-                                                              nncf_input_node_next_onnx_nodes)
-            extra_model_outputs.append(target_edge_name)
-        return ONNXModelTransformer._insert_outputs(self._model, outputs=[*extra_model_outputs, *model_outputs])
+            if transform_type in [TargetType.PRE_LAYER_OPERATION, TargetType.POST_LAYER_OPERATION]:
+                target_edge_name = self._get_pre_post_target_edge(port_id, node_name, transform_type, onnx_graph,
+                                                                  nncf_input_node_next_onnx_nodes)
+            else:
+                target_edge_name = self._get_pre_post_target_edge(port_id, node_name, TargetType.PRE_LAYER_OPERATION,
+                                                                  onnx_graph, nncf_input_node_next_onnx_nodes)
+            model_outputs.add(target_edge_name)
+
+        return ONNXModelTransformer._insert_outputs(self._model, outputs=model_outputs)
+
 
     @staticmethod
-    def _insert_outputs(model: onnx.ModelProto, outputs: List[str]) -> onnx.ModelProto:
+    def _insert_outputs(model: onnx.ModelProto, outputs: Union[List[str], Set[str]]) -> onnx.ModelProto:
         """
         Creates a new model as a copy of provided model with additional outputs.
 
@@ -244,8 +248,8 @@ class ONNXModelTransformer(ModelTransformer):
 
         per_channel = scale.ndim > 0
         dims = scale.shape if per_channel else []
-        onnx_scale = [scale.tolist()] if not per_channel else scale.tolist()
-        onnx_zero_point = [zero_point.tolist()] if not per_channel else zero_point.tolist()
+        onnx_scale = [scale.tolist()] if not per_channel else scale
+        onnx_zero_point = [zero_point.tolist()] if not per_channel else zero_point
         if tensor_type == np.uint8:
             onnx_tensor_type = onnx.TensorProto.UINT8
         elif tensor_type == np.int8:

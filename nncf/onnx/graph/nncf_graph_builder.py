@@ -61,7 +61,7 @@ class GraphConverter:
         return model
 
     @staticmethod
-    def _get_tensor_shape(onnx_graph: onnx.GraphProto, tensor: Union[str, onnx.ValueInfoProto]) -> List[int]:
+    def _get_tensor_shape(onnx_graph: onnx.GraphProto, tensor: Union[str, onnx.ValueInfoProto]) -> Tuple[int]:
         """
         Returns the shape of the 'tensor'.
         :param onnx_graph: Graph, in which 'tensor' is been seeking.
@@ -69,10 +69,7 @@ class GraphConverter:
         :return: the 'tensor' shape.
         """
         try:
-            if isinstance(tensor, str):
-                tensor_shape = onnx_graph.get_edge_shape(tensor)
-            elif isinstance(tensor, onnx.ValueInfoProto):
-                tensor_shape = ONNXGraph.get_tensor_shape(tensor)
+            tensor_shape = onnx_graph.get_edge_shape(tensor)
         except RuntimeError as err:
             # This exception raised because ONNX format allows to not have shape field.
             # Model example - effecienet-v2, mobilenet_v2.
@@ -193,7 +190,7 @@ class GraphConverter:
             if metatype in WEIGHT_LAYER_METATYPES:
                 is_shared = onnx_graph.is_node_shared(node)
                 layer_name = onnx_graph.get_node_layer_name(node)
-                weight_shape = onnx_graph.get_weight_tensor(node)[1].shape
+                weight_shape = GraphConverter._get_tensor_shape(onnx_graph, layer_name)
             else:
                 is_shared, layer_name, weight_shape = None, None, None
             layer_attributes = ONNXExtendedLayerAttributes(node.input, node.output, weight_shape)
