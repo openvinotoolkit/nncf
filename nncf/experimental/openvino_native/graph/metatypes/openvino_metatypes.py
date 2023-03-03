@@ -233,8 +233,8 @@ class OVReshapeMetatype(OVOpMetatype):
 
 
 @OV_OPERATOR_METATYPES.register()
-class OVShapeOfMetatype(OVOpMetatype):
-    name = 'ShapeOfOp'
+class OVShapeMetatype(OVOpMetatype):
+    name = 'ShapeOp'
     op_names = ['ShapeOf']
 
 
