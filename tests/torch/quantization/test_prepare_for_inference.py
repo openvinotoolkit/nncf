@@ -38,7 +38,7 @@ from tests.torch.quantization.test_functions import get_test_data
 def _get_config_for_algo(input_size, quant_mode="symmetric", overflow_fix="enable", bits=8):
     config = NNCFConfig()
     config.update({"model": "model", "input_info": {"sample_size": input_size}, "compression": []})
-    config['target_device'] = 'TRIAL'
+    config["target_device"] = "TRIAL"
     config["compression"].append(
         {
             "algorithm": "quantization",
@@ -99,7 +99,9 @@ INPUT_TEST_SCALES = (
 @pytest.mark.parametrize("input_size", INPUT_TEST_SCALES, ids=_idfn)
 @pytest.mark.parametrize("is_per_channel", (True, False), ids=("per_channel", "per_tensor"))
 @pytest.mark.parametrize("num_bits", (4, 8), ids=("4-bits", "8-bits"))
-def test_converting_symmetric_quantizer(input_size, num_bits, is_per_channel, is_weights, half_range, is_signed, use_cuda):
+def test_converting_symmetric_quantizer(
+    input_size, num_bits, is_per_channel, is_weights, half_range, is_signed, use_cuda
+):
     if not torch.cuda.is_available() and use_cuda is True:
         pytest.skip("Skipping CUDA test cases for CPU only setups")
 
@@ -150,7 +152,7 @@ def test_converting_symmetric_quantizer(input_size, num_bits, is_per_channel, is
     fq = convert_to_torch_fakequantizer(quantizer)
 
     fq_levels = fq.quant_max - fq.quant_min
-    assert fq_levels == 2**num_bits-1, "Levels in converted FQ should be 2**num_bits-1"
+    assert fq_levels == 2**num_bits - 1, "Levels in converted FQ should be 2**num_bits-1"
 
     fq_test_input = test_input
     if half_range:
@@ -188,7 +190,7 @@ def test_converting_asymmetric_quantizer(input_size, num_bits, is_per_channel, i
     ######################################################################
     # TODO: Workaround for CVS-105241 (remove after fix)
     get_quant_len = get_quant_len_by_range(input_range, real_num_bits)
-    input_low[(input_low>-get_quant_len/2)&(input_low<0)] = 0
+    input_low[(input_low > -get_quant_len / 2) & (input_low < 0)] = 0
     ######################################################################
 
     tensor_input_low, tensor_input_range = get_test_data([input_low, input_range], use_cuda)
@@ -228,7 +230,7 @@ def test_converting_asymmetric_quantizer(input_size, num_bits, is_per_channel, i
     fq = convert_to_torch_fakequantizer(quantizer)
 
     fq_levels = fq.quant_max - fq.quant_min
-    assert fq_levels == 2**num_bits-1, "Levels in converted FQ should be 2**num_bits-1"
+    assert fq_levels == 2**num_bits - 1, "Levels in converted FQ should be 2**num_bits-1"
 
     fq_test_input = test_input
     if half_range:
@@ -262,7 +264,7 @@ def test_prepare_for_inference_quantization(mode, overflow_fix, num_bits):
     inference_model = compression_ctrl.prepare_for_inference()
     x_torch = inference_model(input_tensor)
 
-    check_quantizer_operators(inference_model, 2**num_bits-1)
+    check_quantizer_operators(inference_model, 2**num_bits - 1)
 
     assert torch.all(torch.isclose(x_nncf, x_torch)), f"{x_nncf.view(-1)} != {x_torch.view(-1)}"
 
