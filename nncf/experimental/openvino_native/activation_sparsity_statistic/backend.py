@@ -15,10 +15,14 @@ from abc import ABC
 from abc import abstractmethod
 from typing import List
 from typing import Optional
+from typing import TypeVar
 
 from nncf.common.graph.transformations.commands import TargetPoint
 from nncf.common.tensor_statistics.collectors import PercentageOfZerosStatisticCollector
+from nncf.common.tensor_statistics.statistic_point import StatisticPointsContainer
 from nncf.common.utils.registry import Registry
+
+TModel = TypeVar('TModel')
 
 ALGO_BACKENDS = Registry('algo_backends')
 
@@ -66,4 +70,13 @@ class ActivationSparsityStatisticAlgoBackend(ABC):
         Return the list of node types that will be ignored as input node.
 
         :return: list of node types.
+        """
+
+    @staticmethod
+    @abstractmethod
+    def write_statistic_to_model(model: TModel, statistic_points: StatisticPointsContainer) -> TModel:
+        """
+        Writing statistics into the target model.
+
+        :return: modified model.
         """

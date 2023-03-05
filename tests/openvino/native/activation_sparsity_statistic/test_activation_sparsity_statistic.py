@@ -17,10 +17,10 @@ import nncf
 from nncf.common.tensor import NNCFTensor
 from nncf.experimental.openvino_native.activation_sparsity_statistic.activation_sparsity_statistic import \
     activation_sparsity_statistic_impl
-from nncf.experimental.openvino_native.activation_sparsity_statistic.algorithm import ACTIVATION_SPARSITY_STATISTIC
 from nncf.experimental.openvino_native.activation_sparsity_statistic.algorithm import ActivationSparsityStatistic
 from nncf.experimental.openvino_native.activation_sparsity_statistic.algorithm import \
     ActivationSparsityStatisticParameters
+from nncf.experimental.openvino_native.activation_sparsity_statistic.ov_backend import ACTIVATION_SPARSITY_STATISTIC
 from nncf.experimental.openvino_native.statistics.collectors import OVNNCFCollectorTensorProcessor
 from tests.openvino.native.models import SYNTHETIC_MODELS
 from tests.shared.datasets import MockDataset

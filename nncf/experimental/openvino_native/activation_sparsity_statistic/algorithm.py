@@ -34,7 +34,6 @@ from nncf.quantization.algorithms.fast_bias_correction.backend import ALGO_BACKE
 
 TModel = TypeVar("TModel")
 
-ACTIVATION_SPARSITY_STATISTIC = "activation_sparsity_statistic"
 
 class ActivationSparsityStatisticParameters(AlgorithmParameters):
     """
@@ -149,21 +148,8 @@ class ActivationSparsityStatistic(Algorithm):
             statistics_aggregator.collect_statistics(modified_model)
             statistic_points = statistics_aggregator.statistic_points
 
-        for node_op in modified_model.get_ops():
-            node_name = node_op.get_friendly_name()
-            node_static_points = statistic_points.get(node_name, [])
+        self._backend_entity.write_statistic_to_model(modified_model, statistic_points)
 
-            for node_static_point in node_static_points:
-                # TODO: how to correctly get statistics
-                tensor_collector = node_static_point.algorithm_to_tensor_collectors[ActivationSparsityStatistic][0]
-
-                statistic = tensor_collector.get_statistics()
-                percentage_of_zeros = statistic.percentage_of_zeros
-                port_id = node_static_point.target_point.port_id
-                # TODO: port_id?
-                modified_model.set_rt_info(
-                    percentage_of_zeros, [ACTIVATION_SPARSITY_STATISTIC, node_name, f"port_id_{port_id}"]
-                )
         return modified_model
 
     def _add_statistic_point(self, container: StatisticPointsContainer, point: TargetPoint) -> None:
