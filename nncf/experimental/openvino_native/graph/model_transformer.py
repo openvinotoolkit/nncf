@@ -132,8 +132,11 @@ class OVModelTransformer(ModelTransformer):
         :param outputs: list of tuples with ov.Output & port_id.
         :return: Model with new outputs.
         """
-        model_outputs = model.get_results()
+        results = model.get_results()
         params = model.get_parameters()
+
+        assign_ops = [op for op in model.get_ops() if op.get_type_name() == 'Assign']
+
         extra_model_outputs = []
         for (output, port_id) in outputs:
             output_name = output.get_node().get_friendly_name()
@@ -141,7 +144,7 @@ class OVModelTransformer(ModelTransformer):
             result = opset.result(output, name=f'Result_{output_name}.{port_id}')
             extra_model_outputs.append(result)
 
-        return ov.Model(model_outputs + extra_model_outputs, params)
+        return ov.Model(results=results + extra_model_outputs, sinks=assign_ops, parameters=params, name=model.friendly_name)
 
     @staticmethod
     def _apply_fq_nodes_removing_transformation(model: ov.Model,
@@ -312,6 +315,6 @@ class OVModelTransformer(ModelTransformer):
                 results.append(new_result)
 
         if not results:
-            results = [r.node for r in model.outputs]
+            results = model.get_results()
 
         return ov.Model(results, params)
