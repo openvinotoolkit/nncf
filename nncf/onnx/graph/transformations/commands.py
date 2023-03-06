@@ -104,25 +104,9 @@ class ONNXBiasCorrectionCommand(TransformationCommand):
     def union(self, other: 'TransformationCommand') -> 'TransformationCommand':
         # Have a look at nncf/torch/graph/transformations/commands/PTInsertionCommand
         raise NotImplementedError()
-    
-class ONNXWeightUpdateCommand(TransformationCommand):
-    """
-    Update weight value in the model.
-    """
 
-    def __init__(self, target_point: ONNXTargetPoint, weight_value: np.ndarray):
-        """
-        :param target_point: The TargetPoint instance for the correction that contains layer's information.
-        :param weight_value: The weight value (numpy format) on that will be replaced in the original model.
-        """
-        super().__init__(TransformationType.CHANGE, target_point)
-        self.weight_value = weight_value
 
-    def union(self, other: 'TransformationCommand') -> 'TransformationCommand':
-        # Have a look at nncf/torch/graph/transformations/commands/PTInsertionCommand
-        raise NotImplementedError()
-
-class ONNXModelExtractionCommand(TransformationCommand):
+class ONNXModelExtractionCommand(Command):
     """
     Extracts sub-graph based on the sub-model input and output names.
     """
@@ -136,7 +120,7 @@ class ONNXModelExtractionCommand(TransformationCommand):
         self.inputs = inputs
         self.outputs = outputs
 
-    def union(self, other: 'TransformationCommand') -> 'TransformationCommand':
+    def union(self, other: 'Command') -> 'Command':
         # Have a look at nncf/torch/graph/transformations/commands/PTInsertionCommand
         raise NotImplementedError()
 

@@ -234,10 +234,11 @@ def calculate_quantizer_parameters(statistics: MinMaxTensorStatistic,
         level_low = np.squeeze(level_low)
         level_high = np.squeeze(level_high)
     if half_range:
-        _, saved_q_high, levels = calculate_symmetric_level_ranges(quantizer_config.num_bits,
-                                                                   signed=True, narrow_range=False)
-        level_high = level_high * saved_q_high / q_high
+        _, saved_q_high, saved_levels = calculate_symmetric_level_ranges(quantizer_config.num_bits,
+                                                                         signed=True, narrow_range=False)
+        level_high = level_high * saved_levels / levels
         level_low = -level_high
+        levels = saved_levels
 
     output_low, output_high = level_low, level_high
     return OVQuantizerLayerParameters(level_low, level_high, output_low, output_high, levels)
