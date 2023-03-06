@@ -10,12 +10,10 @@
  See the License for the specific language governing permissions and
  limitations under the License.
 """
-from contextlib import contextmanager
-from typing import List
-from typing import Optional
 
-from nncf.api.compression import CompressionAlgorithmBuilder
-from nncf.common.composite_compression import CompositeCompressionAlgorithmBuilder
+from typing import Optional
+from contextlib import contextmanager
+
 
 NNCF_TF_CATEGORY = 'nncf_tf'
 NNCF_PT_CATEGORY = 'nncf_pt'

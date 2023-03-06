@@ -17,8 +17,7 @@ import onnx
 
 from nncf.data import Dataset
 from nncf.quantization.telemetry_extractors import CompressionStartedWithQuantizeApi
-from nncf.parameters import convert_ignored_scope_to_list
-from nncf.parameters import IgnoredScope
+from nncf.scopes import IgnoredScope
 from nncf.parameters import ModelType
 from nncf.parameters import TargetDevice
 from nncf.common.quantization.structs import QuantizationPreset
@@ -45,10 +44,6 @@ def quantize_impl(model: onnx.ModelProto,
     additional_params = {}
     if model_type is not None:
         raise ValueError(f'model_type={model_type} is not supported')
-    if ignored_scope is not None and ignored_scope.types is not None:
-        raise RuntimeError('Quantization algorithm from the ONNX backend '
-                           'does not support operation types in the ignored '
-                           'scopes yet')
     if target_device == TargetDevice.CPU_SPR:
         raise RuntimeError('target_device == CPU_SPR is not supported.')
     if model.opset_import[0].version < 10:
@@ -63,7 +58,7 @@ def quantize_impl(model: onnx.ModelProto,
         preset=preset,
         target_device=target_device,
         number_samples=subset_size,
-        ignored_scopes=convert_ignored_scope_to_list(ignored_scope),
+        ignored_scopes=ignored_scope,
         fast_bias_correction=fast_bias_correction,
         **additional_params
     )

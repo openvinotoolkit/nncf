@@ -20,8 +20,8 @@ from nncf.common.graph import NNCFGraph
 from nncf.common.graph import NNCFNode
 from nncf.common.graph import NNCFNodeName
 from nncf.common.quantization.structs import QuantizerId
-from nncf.parameters import IgnoredScope
-from nncf.parameters import convert_ignored_scope_to_list
+from nncf.scopes import IgnoredScope
+from nncf.scopes import convert_ignored_scope_to_list
 
 
 def matches_any(tested_str: str, str_or_list_to_match_to: Union[List[str], str]) -> bool:

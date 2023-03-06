@@ -49,9 +49,10 @@ OP_NAMES_IN_TEST_WITH_MODULE_ATTRIBUTES = [
 
 
 class NodeWithType:
-    def __init__(self, name: str, op_type: TestMetatype,
+    def __init__(self, name: str, op_metatype: TestMetatype, op_type: str = None,
                  layer_attributes: Optional[BaseLayerAttributes] = None):
         self.node_name = name
+        self.node_op_metatype = op_metatype
         self.node_op_type = op_type
         self.layer_attributes = layer_attributes
 
@@ -59,8 +60,8 @@ class NodeWithType:
 def create_mock_graph(nodes: List[NodeWithType], node_edges: List[Tuple[str, str]]) -> nx.DiGraph:
     mock_graph = nx.DiGraph()
     for node in nodes:
-        mock_node_attrs = get_mock_nncf_node_attrs(op_name=node.node_name, metatype=node.node_op_type,
-                                                   layer_attributes=node.layer_attributes)
+        mock_node_attrs = get_mock_nncf_node_attrs(op_name=node.node_name, metatype=node.node_op_metatype,
+                                                   type_=node.node_op_type, layer_attributes=node.layer_attributes)
         mock_graph.add_node(node.node_name, **mock_node_attrs)
     mock_graph.add_edges_from(node_edges)
     mark_input_ports_lexicographically_based_on_input_node_key(mock_graph)
@@ -166,13 +167,15 @@ MOCK_OPERATOR_NAME = "conv_transpose2d"
 
 
 def get_mock_nncf_node_attrs(op_name=None, scope_str=None, metatype=None,
-                             layer_attributes=None):
+                             type_=None, layer_attributes=None):
     op_name_to_set = op_name if op_name is not None else MOCK_OPERATOR_NAME
+    if type_ is None:
+        type_ = op_name_to_set
     if scope_str is None:
         scope_str = ''
     output = {
         NNCFGraph.NODE_NAME_ATTR: f'{scope_str}/{op_name_to_set}_0',
-        NNCFGraph.NODE_TYPE_ATTR: op_name_to_set,
+        NNCFGraph.NODE_TYPE_ATTR: type_,
     }
     for attr_name, attr_val in [(NNCFGraph.METATYPE_ATTR, metatype),
                                 (NNCFGraph.LAYER_ATTRIBUTES, layer_attributes)]:

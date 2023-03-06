@@ -14,8 +14,10 @@
 from typing import List
 import csv
 import re
+import numpy as np
 
 from tests.shared.command import Command
+from tests.openvino.conftest import OPENVINO_DATASET_DEFINITIONS_PATH
 
 
 def run_command(command: List[str]):
@@ -56,6 +58,26 @@ def convert_model(name, path, model_precision='FP32'):
     return model_path
 
 
+def calculate_metrics(model_path, config_path, data_dir, report_path,
+                      eval_size=None, framework='openvino', device='CPU'):
+    com_line = [
+        'accuracy_check',
+        "-c", str(config_path),
+        "-m", str(model_path),
+        "-d", str(OPENVINO_DATASET_DEFINITIONS_PATH),
+        "-s", str(data_dir),
+        "-tf", framework,
+        "-td", device,
+        "--csv_result", str(report_path)
+    ]
+    if eval_size is not None:
+        com_line += ["-ss", str(eval_size)]
+
+    run_command(com_line)
+    metrics = get_metrics(report_path)
+    return metrics
+
+
 def get_metrics(ac_report):
     metrics = {}
     with open(ac_report, 'r', encoding='utf8') as csvfile:
@@ -63,5 +85,5 @@ def get_metrics(ac_report):
         for row in reader:
             metric_name = row['metric_name']
             metric_value = row['metric_value']
-            metrics[metric_name] = metric_value
+            metrics[metric_name] = np.float(metric_value)
     return metrics

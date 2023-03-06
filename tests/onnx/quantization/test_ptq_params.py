@@ -13,6 +13,7 @@
 
 import pytest
 
+from nncf.scopes import IgnoredScope
 from nncf.parameters import TargetDevice
 from nncf.common.graph.patterns import GraphPattern
 from nncf.onnx.statistics.collectors import ONNXMeanMinMaxStatisticCollector
@@ -78,7 +79,8 @@ class TestPTQParams(TemplateTestPTQParams):
              'pattern': GraphPattern()},
         }
 
-    @pytest.fixture(params=[([], 1, 1), (['/Conv_1_0'], 0, 0)])
+    @pytest.fixture(params=[(IgnoredScope([]), 1, 1),
+                            (IgnoredScope(['/Conv_1_0']), 0, 0)])
     def ignored_scopes_data(self, request):
         return request.param
 

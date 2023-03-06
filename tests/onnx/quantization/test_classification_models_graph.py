@@ -43,7 +43,7 @@ TORCHVISION_TEST_DATA = [(ModelToTest('resnet18', [1, 3, 224, 224]), models.resn
                          ids=[model_to_test[0].model_name for model_to_test in TORCHVISION_TEST_DATA])
 def test_min_max_quantization_graph_torchvision_models(tmp_path, mocker, model_to_test, model):
     mock_collect_statistics(mocker)
-    onnx_model_path = tmp_path / model_to_test.model_name
+    onnx_model_path = tmp_path / (model_to_test.model_name + '.onnx')
     x = torch.randn(model_to_test.input_shape, requires_grad=False)
     torch.onnx.export(model, x, onnx_model_path, opset_version=13)
 

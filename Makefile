@@ -39,6 +39,8 @@ test-install-onnx:
 install-openvino-test:
 	pip install -U pip
 	pip install -e .[openvino]
+	git clone https://github.com/openvinotoolkit/open_model_zoo.git
+	pip install open_model_zoo/tools/model_tools
 	pip install -r tests/openvino/requirements.txt
 	pip install -r tests/cross_fw/install/requirements.txt
 	pip install -r examples/experimental/openvino/bert/requirements.txt
@@ -48,7 +50,7 @@ install-openvino-dev: install-openvino-test
 	pip install pylint==$(PYLINT_VERSION)
 
 test-openvino:
-	pytest tests/openvino --junitxml ${JUNITXML_PATH}
+	pytest tests/openvino $(DATA_ARG) --junitxml ${JUNITXML_PATH}
 
 pylint-openvino:
 	pylint --rcfile .pylintrc               \

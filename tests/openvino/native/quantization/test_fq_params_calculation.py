@@ -12,7 +12,6 @@
 """
 
 import pytest
-import os
 from pathlib import Path
 import numpy as np
 import openvino.runtime as ov
@@ -27,7 +26,6 @@ from tests.openvino.omz_helpers import convert_model
 from tests.openvino.omz_helpers import download_model
 from tests.openvino.native.common import get_dataset_for_test
 from tests.openvino.native.common import load_json
-from tests.openvino.native.common import dump_to_json
 from tests.openvino.native.models import SYNTHETIC_MODELS
 from tests.openvino.native.models import LinearModel
 from tests.openvino.native.models import ConvModel
@@ -95,8 +93,6 @@ def test_syntetic_models_fq_scales(model_creator_func, preset):
 
     ref_stats_name = model.ref_graph_name.split(".")[0] + f'_{preset.value}.json'
     ref_stats_path = REFERENCE_SCALES_DIR / ref_stats_name
-    if not os.path.exists(ref_stats_path):
-        dump_to_json(ref_stats_path, nodes)
     ref_nodes = load_json(ref_stats_path)
 
     compare_stats(ref_nodes, nodes)
@@ -108,7 +104,7 @@ OMZ_MODELS = [
     'yolo-v4-tiny-tf',
 ]
 
-@pytest.mark.skip(reason='Ticket 100948')
+
 @pytest.mark.parametrize('preset', [QuantizationPreset.PERFORMANCE, QuantizationPreset.MIXED],
                          ids=[QuantizationPreset.PERFORMANCE.value, QuantizationPreset.MIXED.value])
 @pytest.mark.parametrize('model_name', OMZ_MODELS)
@@ -121,8 +117,6 @@ def test_omz_models_fq_scales(model_name, preset, tmp_path):
 
     ref_stats_name = str(Path(model_path).name).rsplit('.', maxsplit=1)[0] + f'_{preset.value}.json'
     ref_stats_path = REFERENCE_SCALES_DIR / ref_stats_name
-    if not os.path.exists(ref_stats_path):
-        dump_to_json(ref_stats_path, nodes)
     ref_nodes = load_json(ref_stats_path)
 
     compare_stats(ref_nodes, nodes)
@@ -147,12 +141,19 @@ def test_syntetic_models_fq_shapes(model_creator_func, ref_shapes):
         assert node['output_high'].shape == ref_shapes[node_name]
 
 
-@pytest.mark.parametrize('precision', ['FP16', 'FP32'])
-def test_syntetic_models_fq_precision(precision):
-    model = FPModel(precision)
+@pytest.mark.parametrize('const_dtype', ['FP16', 'FP32'])
+@pytest.mark.parametrize('input_dtype', ['FP16', 'FP32'])
+def test_fq_precision_orig_fp32model(const_dtype, input_dtype):
+    model = FPModel(const_dtype, input_dtype)
     quantized_model = quantize_model(model.ov_model, QuantizationPreset.PERFORMANCE)
-    dtype = ov.Type(np.float32) if precision == 'FP32' else ov.Type(np.float16)
     for op in quantized_model.get_ops():
-        if op.get_type_name() == 'Constant':
-            if op.get_element_type().is_real():
-                assert op.get_element_type() == dtype
+        if op.get_type_name() == 'FakeQuantize':
+            inp_node = op.input(0)
+            fq_input_node = inp_node.get_source_output().get_node()
+            if fq_input_node.get_element_type() == 'Constant':
+                assert op.get_element_type() == ov.Type(np.float32 if input_dtype == 'FP32' else np.float16)
+        elif op.get_type_name() == 'Convert':
+            inp_node = op.input(0)
+            fq_input_node = inp_node.get_source_output().get_node()
+            if fq_input_node.get_element_type() == 'Constant':
+                assert op.get_element_type() == ov.Type(np.float32 if const_dtype == 'FP32' else np.float16)

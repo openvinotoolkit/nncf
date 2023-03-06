@@ -77,19 +77,51 @@ class ConvModel(OVReferenceModel):
         return model
 
 
-class DepthwiseConvModel(OVReferenceModel):
+class DepthwiseConv3DModel(OVReferenceModel):
+    def _create_ov_model(self):
+        input_1 = opset.parameter([1, 3, 7], name="Input_1")
+        kernel = self._rng.random((3, 1, 1, 5)).astype(np.float32)
+        strides = [1]
+        pads = [0]
+        dilations = [1]
+        conv = opset.group_convolution(input_1, kernel, strides, pads, pads, dilations, name="Conv3D")
+        bias = self._rng.random((1, 3, 1)).astype(np.float32)
+        add = opset.add(conv, bias, name="Add")
+
+        result = opset.result(add, name="Result")
+        model = ov.Model([result], [input_1])
+        return model
+
+
+class DepthwiseConv4DModel(OVReferenceModel):
     def _create_ov_model(self):
         input_1 = opset.parameter([1, 3, 5, 5], name="Input_1")
         kernel = self._rng.random((3, 1, 1, 3, 3)).astype(np.float32)
         strides = [1, 1]
         pads = [0, 0]
         dilations = [1, 1]
-        conv = opset.group_convolution(input_1, kernel, strides, pads, pads, dilations, name="Conv")
+        conv = opset.group_convolution(input_1, kernel, strides, pads, pads, dilations, name="Conv4D")
         bias = self._rng.random((1, 3, 1, 1)).astype(np.float32)
         add = opset.add(conv, bias, name="Add")
         relu = opset.relu(add, name="Relu")
 
         result = opset.result(relu, name="Result")
+        model = ov.Model([result], [input_1])
+        return model
+
+
+class DepthwiseConv5DModel(OVReferenceModel):
+    def _create_ov_model(self):
+        input_1 = opset.parameter([1, 3, 7, 6, 5], name="Input_1")
+        kernel = self._rng.random((3, 1, 1, 5, 4, 3)).astype(np.float32)
+        strides = [1, 1, 1]
+        pads = [0, 0, 0]
+        dilations = [1, 1, 1]
+        conv = opset.group_convolution(input_1, kernel, strides, pads, pads, dilations, name="Conv5D")
+        bias = self._rng.random((1, 3, 1, 1, 1)).astype(np.float32)
+        add = opset.add(conv, bias, name="Add")
+
+        result = opset.result(add, name="Result")
         model = ov.Model([result], [input_1])
         return model
 
@@ -190,20 +222,21 @@ class MatMul2DModel(OVReferenceModel):
 
 
 class FPModel(OVReferenceModel):
-    def __init__(self, precision='FP32'):
-        self.precision = np.float32 if precision == 'FP32' else np.float16
+    def __init__(self, const_dtype='FP32', input_dtype='FP32'):
+        self.const_dtype = np.float32 if const_dtype == 'FP32' else np.float16
+        self.input_dtype = np.float32 if input_dtype == 'FP32' else np.float16
         super().__init__()
 
     def _create_ov_model(self):
         input_shape = [1, 3, 4, 2]
-        input_1 = opset.parameter(input_shape, name="Input")
-        data = self._rng.random((1, 3, 4, 5)).astype(self.precision)
-        if self.precision == np.float16:
-            data = opset.convert(data, np.float32)
+        input_1 = opset.parameter(input_shape, name="Input", dtype=self.input_dtype)
+        data = self._rng.random((1, 3, 4, 5)).astype(self.const_dtype)
+        if self.const_dtype != self.input_dtype:
+            data = opset.convert(data, self.input_dtype)
         matmul = opset.matmul(input_1, data, transpose_a=True, transpose_b=False, name="MatMul")
-        bias = self._rng.random((1, 3, 1, 1)).astype(self.precision)
-        if self.precision == np.float16:
-            bias = opset.convert(bias, np.float32)
+        bias = self._rng.random((1, 3, 1, 1)).astype(self.const_dtype)
+        if self.const_dtype != self.input_dtype:
+            bias = opset.convert(bias, self.input_dtype)
         add = opset.add(matmul, bias, name="Add")
         r1 = opset.result(add, name="Result_Add")
         model = ov.Model([r1], [input_1])
@@ -224,4 +257,75 @@ class ComparisonBinaryModel(OVReferenceModel):
         add = opset.add(input_1, gather, name="Add")
         r1 = opset.result(add, name="Result_Add")
         model = ov.Model([r1], [input_1])
+        return model
+
+
+@SYNTHETIC_MODELS.register()
+class DynamicModel(OVReferenceModel):
+    def _create_ov_model(self):
+        dynamic_axis = ov.Dimension(1, 99)
+        input_1_shape = ov.PartialShape([dynamic_axis, 3, 4, 2])
+        input_2_shape = ov.PartialShape([dynamic_axis, 3, 2, 4])
+
+        input_1 = opset.parameter(input_1_shape, name="Input_1")
+        mean = self._rng.random((1, 3, 1, 1)).astype(np.float32)
+        scale = self._rng.random((1, 3, 1, 1)).astype(np.float32) + 1e-4
+        subtract = opset.subtract(input_1, mean, name="Sub")
+        kernel = self._rng.random((3, 3, 1, 1)).astype(np.float32) / scale - 0.5
+        strides = [1, 1]
+        pads = [0, 0]
+        dilations = [1, 1]
+        conv = opset.convolution(subtract, kernel, strides, pads, pads, dilations, name="Conv")
+        bias = opset.constant(np.zeros((1, 3, 1, 1)), dtype=np.float32, name="Bias")
+        conv_add = opset.add(conv, bias, name="Conv_Add")
+        relu = opset.relu(conv_add, name="Relu")
+
+        input_2 = opset.parameter(input_2_shape, name="Input_2")
+        add = opset.add(input_2, (-1) * mean, name="Add")
+        multiply = opset.multiply(add, 1 / scale, name="Mul")
+        transpose = opset.transpose(multiply, [0, 1, 3, 2], name="Transpose")
+
+        cat = opset.concat([relu, transpose], axis=0)
+        result = opset.result(cat, name="Result")
+        model = ov.Model([result], [input_1, input_2])
+        return model
+
+
+@SYNTHETIC_MODELS.register()
+class ShapeOfModel(OVReferenceModel):
+    def _create_ov_model(self):
+        input_1 = opset.parameter([1, 3, 4, 2], name="Input")
+        scale = self._rng.random((1, 3, 1, 1)).astype(np.float32) + 1e-4
+        kernel = self._rng.random((3, 3, 1, 1)).astype(np.float32) / scale - 0.5
+        strides = [1, 1]
+        pads = [0, 0]
+        dilations = [1, 1]
+        conv_1 = opset.convolution(input_1, kernel, strides, pads, pads, dilations, name="Conv_1")
+        bias_1 = opset.constant(np.zeros((1, 3, 1, 1)), dtype=np.float32, name="Bias_1")
+        conv_add_1 = opset.add(conv_1, bias_1, name="Conv_Add_1")
+
+        # ShapeOf subgraph
+        shape_of_1 = opset.shape_of(conv_add_1, name="ShapeOf_1")
+        gather = opset.gather(shape_of_1, indices=np.int64([2, 3]), axis=np.int64(0))
+        cat = opset.concat([np.int64([0]), np.int64([0]), gather], axis=0)
+        reshape_1 = opset.reshape(conv_add_1, output_shape=cat, special_zero=True, name="Reshape_1")
+        transpose = opset.transpose(reshape_1, input_order=np.int64([0, 1, 3, 2]), name="Transpose")
+
+        conv_2 = opset.convolution(transpose, kernel, strides, pads, pads, dilations, name="Conv_2")
+        bias_2 = opset.constant(np.zeros((1, 3, 1, 1)), dtype=np.float32, name="Bias_2")
+        conv_add_2 = opset.add(conv_2, bias_2, name="Conv_Add_2")
+
+        # ShapeOf subgraph
+        shape_of_2 = opset.shape_of(conv_add_2, name="ShapeOf_2")
+        convert_1 = opset.convert(shape_of_2, destination_type="f32", name="Convert_1")
+        multiply = opset.multiply(convert_1, np.float32([1, 1, 1, 1]), name="Multiply")
+        convert_2 = opset.convert(multiply, destination_type="i64", name="Convert_2")
+        reshape_2 = opset.reshape(conv_add_2, output_shape=convert_2, special_zero=True, name="Reshape_2")
+
+        conv_3 = opset.convolution(reshape_2, kernel, strides, pads, pads, dilations, name="Conv_3")
+        bias_3 = opset.constant(np.zeros((1, 3, 1, 1)), dtype=np.float32, name="Bias_3")
+        conv_add_3 = opset.add(conv_3, bias_3, name="Conv_Add_3")
+
+        result = opset.result(conv_add_3, name="Result")
+        model = ov.Model([result], [input_1])
         return model

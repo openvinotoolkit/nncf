@@ -256,8 +256,11 @@ def get_results_table_rows(per_sample_config_dict: Dict,
             if resume is not None or weights is not None:
                 checkpoint_link = ckpt_url + model_name
 
-            if framework == 'tf' and checkpoint_link is not None:
-                checkpoint_link += '.tar.gz'
+            if checkpoint_link is not None:
+                if framework == 'tf':
+                    checkpoint_link += '.tar.gz'
+                else:
+                    checkpoint_link += '.pth'
 
             fp32_ref_metric, compressed_metric = get_fp32_and_compressed_metrics(model_name_to_metric_dict,
                                                                                  model_name,

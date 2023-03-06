@@ -27,6 +27,7 @@ BATCH_NORMALIZATION_OPERATIONS = {GraphPattern.METATYPE_ATTR: [ov_metatypes.OVBa
                                   GraphPattern.LABEL_ATTR: 'BATCH_NORMALIZATION'}
 
 ATOMIC_ACTIVATIONS_OPERATIONS = {GraphPattern.METATYPE_ATTR: [ov_metatypes.OVReluMetatype,
+                                                              ov_metatypes.OVClampMetatype,
                                                               ov_metatypes.OVEluMetatype,
                                                               ov_metatypes.OVPReluMetatype,
                                                               ov_metatypes.OVSigmoidMetatype,

@@ -18,8 +18,7 @@ from openvino._offline_transformations import compress_quantize_weights_transfor
 
 from nncf.data import Dataset
 from nncf.common.quantization.structs import QuantizationPreset
-from nncf.parameters import convert_ignored_scope_to_list
-from nncf.parameters import IgnoredScope
+from nncf.scopes import IgnoredScope
 from nncf.parameters import ModelType
 from nncf.parameters import TargetDevice
 from nncf.quantization.algorithms.post_training.algorithm import PostTrainingQuantization
@@ -44,16 +43,11 @@ def quantize_impl(model: ov.Model,
     if model_type is not None:
         raise ValueError(f'model_type={model_type} is not supported')
 
-    if ignored_scope is not None and ignored_scope.types is not None:
-        raise RuntimeError('Quantization algorithm from the OpenVINO backend '
-                           'does not support operation types in the ignored '
-                           'scopes yet')
-
     quantization_parameters = PostTrainingQuantizationParameters(
         preset=preset,
         target_device=target_device,
         number_samples=subset_size,
-        ignored_scopes=convert_ignored_scope_to_list(ignored_scope),
+        ignored_scopes=ignored_scope,
         fast_bias_correction=fast_bias_correction
     )
 

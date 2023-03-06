@@ -13,9 +13,9 @@
 """
 
 import pytest
-
 from torch import nn
 
+from nncf.scopes import IgnoredScope
 from nncf.parameters import TargetDevice
 from nncf.common.graph.patterns import GraphPattern
 from nncf.quantization.algorithms.post_training.algorithm import PostTrainingQuantization
@@ -110,6 +110,7 @@ class TestPTQParams(TemplateTestPTQParams):
              'pattern': GraphPattern()},
         }
 
-    @pytest.fixture(params=[([], 1, 1), (['/Conv_1_0'], 0, 0)])
+    @pytest.fixture(params=[(IgnoredScope([]), 1, 1),
+                            (IgnoredScope(['/Conv_1_0']), 0, 0)])
     def ignored_scopes_data(self, request):
         return request.param

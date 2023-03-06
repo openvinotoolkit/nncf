@@ -18,6 +18,8 @@ import collections
 import numpy as np
 
 from nncf import Dataset
+from nncf.scopes import IgnoredScope
+from nncf.scopes import get_ignored_node_names_from_ignored_scope
 from nncf.common.graph.graph import NNCFGraph
 from nncf.common.graph.transformations.commands import TargetType
 from nncf.common.graph.transformations.commands import TargetPoint
@@ -48,6 +50,7 @@ from nncf.quantization.algorithms.min_max.backend import ALGO_BACKENDS
 from nncf.quantization.algorithms.definitions import RangeType
 from nncf.quantization.algorithms.definitions import Granularity
 from nncf.quantization.algorithms.definitions import OverflowFix
+from nncf.quantization.passes import transform_to_inference_graph
 from nncf.common.factory import NNCFGraphFactory
 from nncf.common.tensor_statistics.statistic_point import StatisticPoint
 from nncf.common.tensor_statistics.statistic_point import StatisticPointsContainer
@@ -87,7 +90,7 @@ class MinMaxQuantizationParameters(AlgorithmParameters):
                  target_device: TargetDevice = TargetDevice.ANY,
                  range_type: Optional[RangeType] = None,
                  quantize_outputs: bool = False,
-                 ignored_scopes: Optional[List[str]] = None,
+                 ignored_scopes: Optional[IgnoredScope] = None,
                  overflow_fix: OverflowFix = OverflowFix.FIRST_LAYER
                  ):
         """
@@ -111,7 +114,7 @@ class MinMaxQuantizationParameters(AlgorithmParameters):
         :param target_device: Target device for the settings of the quantization pipeline.
         :param range_type: Type of statistics range calculation.
         :param quantize_outputs: Boolean value that says whether quantize outputs or not.
-        :param ignored_scopes: List of the layers which input must not be quantized.
+        :param ignored_scopes: Desrciptor of the layers which input must not be quantized.
         :param overflow_fix: This option controls whether to apply the overflow issue fix.
             If set to `disable`, the fix will not be applied. If set to `enable` or `first_layer_only`,
             the fix will be applied to all layers or to the first convolutional layer respectively.
@@ -120,7 +123,7 @@ class MinMaxQuantizationParameters(AlgorithmParameters):
         self.target_device = target_device
         self.range_type = range_type
         self.quantize_outputs = quantize_outputs
-        self.ignored_scopes = [] if ignored_scopes is None else ignored_scopes
+        self.ignored_scopes = IgnoredScope() if ignored_scopes is None else ignored_scopes
         self.global_quantizer_constraints = {}
         if weight_granularity is not None:
             weight_granularity = weight_granularity == Granularity.PERCHANNEL
@@ -262,7 +265,8 @@ class MinMaxQuantization(Algorithm):
         hw_config_path = self._backend_entity.hw_config.get_path_to_hw_config(hw_config_type)
         hw_config = self._backend_entity.hw_config.from_json(hw_config_path)
         weight_nodes = nncf_graph.get_nodes_by_metatypes(self._backend_entity.layers_with_weights_metatypes)
-        weight_nodes = [node for node in weight_nodes if node.node_name not in self._parameters.ignored_scopes]
+        ignored_names = get_ignored_node_names_from_ignored_scope(self._parameters.ignored_scopes, nncf_graph)
+        weight_nodes = [node for node in weight_nodes if node.node_name not in ignored_names]
         default_weight_qconfig = self._get_default_qconfig(
             self._parameters.global_quantizer_constraints[QuantizerGroup.WEIGHTS])
         weighted_node_and_qconf_lists = assign_qconfig_lists_to_modules(nodes_with_weights=weight_nodes,
@@ -274,10 +278,12 @@ class MinMaxQuantization(Algorithm):
                                                                         hw_config=hw_config)
         quantizable_layer_nodes = [QuantizableWeightedLayerNode(node, qconf_list) for node, qconf_list
                                    in weighted_node_and_qconf_lists.items()]
-        ip_graph = InsertionPointGraph(nncf_graph)
+        inference_nncf_graph = transform_to_inference_graph(deepcopy(nncf_graph),
+                                                            shape_of_metatypes=self._backend_entity.shape_of_metatypes)
+        ip_graph = InsertionPointGraph(inference_nncf_graph)
         ip_graph = ip_graph.get_ip_graph_with_merged_hw_optimized_operations(pattern, quantizable_layer_nodes)
         post_processing_types = self._backend_entity.post_processing_metatypes
-        solver = QuantizerPropagationSolver(ignored_scopes=self._parameters.ignored_scopes,
+        solver = QuantizerPropagationSolver(ignored_scopes=ignored_names,
                                             target_scopes=None,
                                             hw_config=hw_config,
                                             default_trait_to_metatype_map=self._backend_entity.quant_trait_op_dict,
