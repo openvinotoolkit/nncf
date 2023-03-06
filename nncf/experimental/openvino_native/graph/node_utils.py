@@ -87,7 +87,7 @@ def get_result_node_name(output_name: str, port_id: int) -> str:
     Returns name of Result based on node name and its port.
 
     :param output_name: Node name.
-    :param port_id: Node's output port.
+    :param port_id: Node port.
     :return: Name of result.
     """
 
