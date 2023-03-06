@@ -211,11 +211,7 @@ def calculate_quantizer_parameters(statistics: MinMaxTensorStatistic,
     max_values = np.array(statistics.max_values).astype(np.float32)
 
     num_bits = quantizer_config.num_bits
-    if quantizer_config.mode == QuantizationMode.SYMMETRIC and \
-            quant_group == QuantizerGroup.WEIGHTS:
-        narrow_range = True
-    else:
-        narrow_range = False
+    narrow_range = quantizer_config.mode == QuantizationMode.SYMMETRIC and quant_group == QuantizerGroup.WEIGHTS
 
     if half_range:
         assert quantizer_config.mode == QuantizationMode.SYMMETRIC

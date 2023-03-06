@@ -12,10 +12,8 @@
 """
 
 from copy import deepcopy
-from typing import Dict, List, TypeVar, Optional, OrderedDict, Set
+from typing import Dict, TypeVar, Optional, OrderedDict, Set
 import collections
-
-import numpy as np
 
 from nncf import Dataset
 from nncf.scopes import IgnoredScope
