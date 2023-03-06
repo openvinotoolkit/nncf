@@ -39,7 +39,7 @@ def activation_sparsity_statistic_impl(
         If None or empty, statistics will be collected for all nodes.
     :param threshold: Threshold of minimum value of statistic that will be save to the model, defaults is 0.05.
 
-    :return ov.Model: _description_
+    :return ov.Model: Modified model.
     """
 
     parameters = ActivationSparsityStatisticParameters(
