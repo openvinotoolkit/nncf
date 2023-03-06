@@ -74,9 +74,13 @@ class ActivationSparsityStatisticAlgoBackend(ABC):
 
     @staticmethod
     @abstractmethod
-    def write_statistic_to_model(model: TModel, statistic_points: StatisticPointsContainer) -> TModel:
+    def write_statistic_to_model(model: TModel, statistic_points: StatisticPointsContainer, threshold: float) -> TModel:
         """
         Writing statistics into the target model.
 
-        :return: modified model.
+        :param model: Target model.
+        :param statistic_points: StatisticPointsContainer instance with the statistic points.
+        :param threshold: Threshold of minimum value of statistic that will be save to the model.
+
+        :return: Modified model.
         """

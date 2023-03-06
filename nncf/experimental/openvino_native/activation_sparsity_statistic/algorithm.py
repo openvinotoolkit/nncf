@@ -40,14 +40,18 @@ class ActivationSparsityStatisticParameters(AlgorithmParameters):
     Parameters of ActivationSparsityStatistic algorithm
     """
 
-    def __init__(self, number_samples: int = 100, target_node_types: Optional[list] = None) -> None:
+    def __init__(
+        self, number_samples: int = 100, target_node_types: Optional[list] = None, threshold: float = 0.05
+    ) -> None:
         """
         :param number_samples: The number of the samples for the statistics collection.
         :param target_node_types: List of node types for which statistics will be collected.
             If None or empty, statistics will be collected for all nodes.
+        :param threshold: Threshold of minimum value of statistic that will be save to the model, defaults is 0.05.
         """
         self.number_samples = number_samples
         self.target_node_types = target_node_types
+        self.threshold = threshold
 
 
 class ActivationSparsityStatistic(Algorithm):
@@ -55,14 +59,6 @@ class ActivationSparsityStatistic(Algorithm):
     Collect activation sparsity statistic algorithm implementation.
 
     The main purpose of this algorithm to collect of percentage of zero in activation tensors.
-    The statistics will be written to the rt_info of the model:
-        <rt_info>
-            <activation_sparsity_statistic>
-                <Conv>
-                    <port_id_0 value="0" />
-                </Conv>
-            </activation_sparsity_statistic>
-        </rt_info>
 
     :param number_samples: The number of the samples for the statistics collection.
     :param nncf_graph: NNCFGraph class for the algorithm.
@@ -75,6 +71,7 @@ class ActivationSparsityStatistic(Algorithm):
         super().__init__()
         self.number_samples = parameters.number_samples
         self.target_node_types = parameters.target_node_types
+        self.threshold = parameters.threshold
         self.nncf_graph = None
         self._backend_entity = None
 
@@ -148,7 +145,7 @@ class ActivationSparsityStatistic(Algorithm):
             statistics_aggregator.collect_statistics(modified_model)
             statistic_points = statistics_aggregator.statistic_points
 
-        self._backend_entity.write_statistic_to_model(modified_model, statistic_points)
+        self._backend_entity.write_statistic_to_model(modified_model, statistic_points, self.threshold)
 
         return modified_model
 

@@ -32,7 +32,6 @@ ACTIVATION_SPARSITY_STATISTIC = "activation_sparsity_statistic"
 
 @ALGO_BACKENDS.register(BackendType.OPENVINO)
 class OVActivationSparsityStatisticAlgoBackend(ActivationSparsityStatisticAlgoBackend):
-
     @staticmethod
     def percentage_of_zeros_statistic_collector(
         num_samples: Optional[int] = None,
@@ -45,18 +44,8 @@ class OVActivationSparsityStatisticAlgoBackend(ActivationSparsityStatisticAlgoBa
 
     @staticmethod
     def default_target_node_types() -> List[str]:
-        meta_types = [
-            ovm.OVConvolutionMetatype,
-            ovm.OVGroupConvolutionMetatype,
-            ovm.OVTransposeMetatype,
-            ovm.OVMatMulMetatype,
-            ovm.OVMultiplyMetatype,
-            ovm.OVAddMetatype,
-            ovm.OVSqrtMetatype,
-        ]
-
         node_types = []
-        for mt in meta_types:
+        for mt in ovm.OV_OPERATOR_METATYPES.values():
             node_types.extend(mt.op_names)
 
         return node_types
@@ -66,9 +55,33 @@ class OVActivationSparsityStatisticAlgoBackend(ActivationSparsityStatisticAlgoBa
         return ovm.OVParameterMetatype.op_names + ["Constant"]
 
     @staticmethod
-    def write_statistic_to_model(model: ov.Model, statistic_points: StatisticPointsContainer) -> ov.Model:
+    def write_statistic_to_model(
+        model: ov.Model, statistic_points: StatisticPointsContainer, threshold: float
+    ) -> ov.Model:
+        """
+        Write statistics values to rt_info of the target model.
+        In the serialised model file, the statistics will be saved as:
+            <rt_info>
+                <item_0>
+                    <node_name value="/nncf_module/maxpool/MaxPool" />
+                    <port_id value="0" />
+                    <statistic value="0.192276" />
+                </item_0>
+                <item_1>
+                    <node_name value="/nncf_module/layer1/layer1.0/conv1/Conv/WithoutBiases" />
+                    <port_id value="0" />
+                    <statistic value="0.11276" />
+                </item_1>
+            </rt_info>
+
+        :param model: Target model.
+        :param statistic_points: StatisticPointsContainer instance with the statistic points.
+        :param threshold: Threshold of minimum value of statistic that will be save to the model.
+
+        :return: Modified model.
+        """
         count_items = 0
-        for node_op in model.get_ops():
+        for node_op in model.get_ordered_ops():
             node_name = node_op.get_friendly_name()
             node_static_points = statistic_points.get(node_name, [])
 
@@ -78,16 +91,13 @@ class OVActivationSparsityStatisticAlgoBackend(ActivationSparsityStatisticAlgoBa
 
                 statistic = tensor_collector.get_statistics()
                 percentage_of_zeros = statistic.percentage_of_zeros
-                port_id = node_static_point.target_point.port_id
-                model.set_rt_info(
-                    percentage_of_zeros, [ACTIVATION_SPARSITY_STATISTIC, f"item_{count_items}", "statistic"]
-                )
-                model.set_rt_info(
-                    port_id, [ACTIVATION_SPARSITY_STATISTIC, f"item_{count_items}", "port_id"]
-                )
-                model.set_rt_info(
-                    node_name, [ACTIVATION_SPARSITY_STATISTIC, f"item_{count_items}", "node_name"]
-                )
-                count_items += 1
+                if percentage_of_zeros >= threshold:
+                    port_id = node_static_point.target_point.port_id
+                    model.set_rt_info(
+                        percentage_of_zeros, [ACTIVATION_SPARSITY_STATISTIC, f"item_{count_items}", "statistic"]
+                    )
+                    model.set_rt_info(port_id, [ACTIVATION_SPARSITY_STATISTIC, f"item_{count_items}", "port_id"])
+                    model.set_rt_info(node_name, [ACTIVATION_SPARSITY_STATISTIC, f"item_{count_items}", "node_name"])
+                    count_items += 1
 
         return model

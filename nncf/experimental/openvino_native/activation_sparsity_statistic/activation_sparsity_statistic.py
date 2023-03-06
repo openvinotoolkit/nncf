@@ -12,6 +12,9 @@
 """
 
 
+from typing import List
+from typing import Optional
+
 import openvino.runtime as ov
 
 from nncf.data import Dataset
@@ -20,12 +23,24 @@ from nncf.experimental.openvino_native.activation_sparsity_statistic.algorithm i
     ActivationSparsityStatisticParameters
 
 
-def activation_sparsity_statistic_impl(model: ov.Model, dataset: Dataset, subset_size: int) -> ov.Model:
+def activation_sparsity_statistic_impl(
+    model: ov.Model, dataset: Dataset, subset_size: int, target_node_types: Optional[List] = None, threshold: float = 0.05
+) -> ov.Model:
     """
     Implementation of the `activation_sparsity_statistic` method for the OpenVINO backend via the OpenVINO Runtime API.
+
+    :param model: Target model.
+    :param dataset: Instance of Dataset.
+    :param target_node_types: List of node types for which statistics will be collected.
+        If None or empty, statistics will be collected for all nodes.
+    :param threshold: Threshold of minimum value of statistic that will be save to the model, defaults is 0.05.
+
+    :return ov.Model: _description_
     """
 
-    parameters = ActivationSparsityStatisticParameters(number_samples=subset_size)
+    parameters = ActivationSparsityStatisticParameters(
+        number_samples=subset_size, target_node_types=target_node_types, threshold=threshold
+    )
     activation_sparsity_statistic_algorithm = ActivationSparsityStatistic(parameters)
 
     modified_model = activation_sparsity_statistic_algorithm.apply(model, dataset=dataset)
