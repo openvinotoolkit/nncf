@@ -24,7 +24,11 @@ from nncf.experimental.openvino_native.activation_sparsity_statistic.algorithm i
 
 
 def activation_sparsity_statistic_impl(
-    model: ov.Model, dataset: Dataset, subset_size: int, target_node_types: Optional[List] = None, threshold: float = 0.05
+    model: ov.Model,
+    dataset: Dataset,
+    subset_size: int,
+    target_node_types: Optional[List] = None,
+    threshold: float = 0.05,
 ) -> ov.Model:
     """
     Implementation of the `activation_sparsity_statistic` method for the OpenVINO backend via the OpenVINO Runtime API.

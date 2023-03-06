@@ -10,6 +10,8 @@
  See the License for the specific language governing permissions and
  limitations under the License.
 """
+import re
+
 import numpy as np
 import pytest
 
@@ -31,19 +33,25 @@ def test_algo():
     dataset = nncf.Dataset(
         MockDataset([1, 3, 4, 2]), transform_func=lambda x: {"Input_1": x, "Input_2": x.reshape(1, 3, 2, 4)}
     )
-    model = activation_sparsity_statistic_impl(model, dataset, 1)
+    model = activation_sparsity_statistic_impl(model, dataset, 1, threshold=0)
 
     assert model.has_rt_info(ACTIVATION_SPARSITY_STATISTIC)
 
+    count_stat_items = 0
+    while model.has_rt_info([ACTIVATION_SPARSITY_STATISTIC, f"item_{count_stat_items}"]):
+        assert model.has_rt_info([ACTIVATION_SPARSITY_STATISTIC, f"item_{count_stat_items}", "node_name"])
+        assert model.has_rt_info([ACTIVATION_SPARSITY_STATISTIC, f"item_{count_stat_items}", "port_id"])
+        assert model.has_rt_info([ACTIVATION_SPARSITY_STATISTIC, f"item_{count_stat_items}", "statistic"])
+        count_stat_items += 1
+    assert count_stat_items == 8
+
 
 REF_STATIC_POINTS = {
-    "ComparisonBinaryModel": {"Add": 1},
-    "ConvModel": {"Conv": 1, "Mul": 1, "Conv_Add": 1, "Transpose": 1},
-    "LinearModel": {"Add": 1, "MatMul": 1},
-    "MatMul2DModel": {"Add": 1},
+    "ComparisonBinaryModel": {'Add': 1, 'Gather': 1, 'Result_Add': 1, 'Convert': 1},
+    "ConvModel": {'Conv': 1, 'Mul': 1, 'Conv_Add': 1, 'Transpose': 1, 'Relu': 1, 'Concat': 2, 'Result': 1},
+    "LinearModel": {'Add': 1, 'MatMul': 1, 'Result_Add': 1, 'Result_MatMul': 1},
+    "MatMul2DModel": {'Add': 1, 'Result': 1},
 }
-
-
 @pytest.mark.parametrize("model_cls_to_test", SYNTHETIC_MODELS.values())
 def test_get_static_points(model_cls_to_test):
     model_to_test = model_cls_to_test().ov_model
@@ -51,8 +59,11 @@ def test_get_static_points(model_cls_to_test):
     algo = ActivationSparsityStatistic(ActivationSparsityStatisticParameters(number_samples=1))
     statistic_points = algo.get_statistic_points(model_to_test)
 
-    points_info = dict()
+    points_info = {}
     for node_name, points in statistic_points.items():
+        if node_name.split('_')[0] in ["Gather", "Concat"]:
+            # Node have not constant name if run pytest in parallel mode
+            node_name = node_name.split('_')[0]
         points_info[node_name] = len(points)
 
     assert points_info == REF_STATIC_POINTS[model_cls_to_test.__name__]
