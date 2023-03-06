@@ -243,8 +243,3 @@ class PTMinMaxAlgoBackend(MinMaxAlgoBackend):
         quantizer = PTMinMaxAlgoBackend._create_quantizer(quantizer_config,
                                                           scale_shape, half_range, statistics)
         return PTInsertionCommand(target_point, quantizer, TransformationPriority.QUANTIZATION_PRIORITY)
-
-    @staticmethod
-    def create_clamp_weight_update_command(model: torch.nn.Module, target_point: PTTargetPoint,
-                                           low: np.ndarray, high: np.ndarray) -> None:
-        return None

@@ -38,6 +38,7 @@ class CaseFQParams:
 @dataclass
 class WeightCaseFqParams(CaseFQParams):
     half_range: bool
+    fail: bool
 
 
 ACTIVATION_CASES_FOR_TEST = (CaseFQParams(mode=QuantizationMode.SYMMETRIC,
@@ -63,19 +64,23 @@ ACTIVATION_CASES_FOR_TEST = (CaseFQParams(mode=QuantizationMode.SYMMETRIC,
 WEIGHT_CASES_FOR_TEST = (WeightCaseFqParams(mode=QuantizationMode.SYMMETRIC,
                                             signedness_to_force=False,
                                             per_channel=False,
-                                            half_range=True),
+                                            half_range=True,
+                                            fail=False),
                          WeightCaseFqParams(mode=QuantizationMode.SYMMETRIC,
                                             signedness_to_force=False,
                                             per_channel=True,
-                                            half_range=False),
+                                            half_range=False,
+                                            fail=False),
                          WeightCaseFqParams(mode=QuantizationMode.ASYMMETRIC,
                                             signedness_to_force=False,
                                             per_channel=False,
-                                            half_range=False),
+                                            half_range=False,
+                                            fail=False),
                          WeightCaseFqParams(mode=QuantizationMode.ASYMMETRIC,
                                             signedness_to_force=False,
                                             per_channel=True,
-                                            half_range=True)
+                                            half_range=True,
+                                            fail=True)
                          )
 
 
@@ -91,9 +96,13 @@ def compare_fq_parameters(ref_params, params):
     assert np.allclose(ref_params.output_high, params.output_high)
 
 
+def parse_input_data():
+    fq_params = load_json(FQ_CALCULATED_PARAMETERS_PATH)
+    return np.array(fq_params['data']).astype(np.float32)
+
+
 def parse_test_data(stat_type, mode, sign, per_ch, hf_range):
     fq_params = load_json(FQ_CALCULATED_PARAMETERS_PATH)
-    input_data = np.array(fq_params['data']).astype(np.float32)
     hf_range_param = f'_hf_range_{hf_range}' if hf_range is not None else ''
     key = f'{stat_type}_{mode}_sign_{sign}_per_ch_{per_ch}' + hf_range_param
     inp_l = np.array(fq_params[key]['input_low']).astype(np.float32)
@@ -102,7 +111,7 @@ def parse_test_data(stat_type, mode, sign, per_ch, hf_range):
     out_h = np.array(fq_params[key]['output_high']).astype(np.float32)
     levels = fq_params[key]['levels']
     ref_quantize_params = OVQuantizerLayerParameters(inp_l, inp_h, out_l, out_h, levels)
-    return input_data, ref_quantize_params
+    return ref_quantize_params
 
 
 @pytest.mark.parametrize('case_to_test', ACTIVATION_CASES_FOR_TEST)
@@ -111,7 +120,8 @@ def test_calculate_activation_quantizer_parameters(case_to_test):
     mode = case_to_test.mode
     sign = case_to_test.signedness_to_force
     per_ch = case_to_test.per_channel
-    data, ref_quantize_params = parse_test_data(stat_type, mode, sign, per_ch, None)
+    data = parse_input_data()
+    ref_quantize_params = parse_test_data(stat_type, mode, sign, per_ch, None)
 
     axes = (0, 2, 3) if case_to_test.per_channel else None
     min_values = np.amin(data, axes, keepdims=True)
@@ -131,7 +141,11 @@ def test_calculate_weight_quantizer_parameters(case_to_test):
     sign = case_to_test.signedness_to_force
     per_ch = case_to_test.per_channel
     half_range = case_to_test.half_range
-    data, ref_quantize_params = parse_test_data(stat_type, mode, sign, per_ch, half_range)
+    fail = case_to_test.fail
+
+    data = parse_input_data()
+    if not fail:
+        ref_quantize_params = parse_test_data(stat_type, mode, sign, per_ch, half_range)
 
     qconfig = QuantizerConfig(num_bits=8, mode=mode, signedness_to_force=sign, per_channel=per_ch)
     axes = None
@@ -142,6 +156,9 @@ def test_calculate_weight_quantizer_parameters(case_to_test):
     min_values = np.amin(data, axis=axes, keepdims=qconfig.per_channel)
     max_values = np.amax(np.abs(data), axis=axes, keepdims=qconfig.per_channel)
     statistics = OVMinMaxTensorStatistic(min_values, max_values)
-    quantize_params = calculate_quantizer_parameters(statistics, qconfig, half_range, QuantizerGroup.WEIGHTS)
-
-    compare_fq_parameters(ref_quantize_params, quantize_params)
+    if not fail:
+        quantize_params = calculate_quantizer_parameters(statistics, qconfig, half_range, QuantizerGroup.WEIGHTS)
+        compare_fq_parameters(ref_quantize_params, quantize_params)
+    else:
+        with pytest.raises(AssertionError):
+            calculate_quantizer_parameters(statistics, qconfig, half_range, QuantizerGroup.WEIGHTS)

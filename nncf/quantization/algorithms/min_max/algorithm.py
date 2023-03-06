@@ -395,14 +395,6 @@ class MinMaxQuantization(Algorithm):
                     quantizer_insertion_command = self._backend_entity.create_weight_quantizer_insertion_command(
                         nncf_graph, quantization_target_point,
                         qconfig, half_range, tensor_collector.get_statistics())
-                    if half_range:
-                        low = quantizer_insertion_command.quantizer_parameters.input_low
-                        high = quantizer_insertion_command.quantizer_parameters.input_low
-                        weight_update_command = self._backend_entity.create_clamp_weight_update_command(model,
-                                                                                                        quantization_target_point,
-                                                                                                        low,
-                                                                                                        high)
-                        transformation_commands.append(weight_update_command)
                     weight_layer_names.add(layer_name)
                 else:
                     quantizer_insertion_command = self._backend_entity.create_activation_quantizer_insertion_command(

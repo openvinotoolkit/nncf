@@ -107,16 +107,6 @@ class ONNXMinMaxAlgoBackend(MinMaxAlgoBackend):
         return output
 
     @staticmethod
-    def create_clamp_weight_update_command(model: onnx.ModelProto, target_point: ONNXTargetPoint,
-                                           low: np.ndarray, high: np.ndarray) -> ONNXWeightUpdateCommand:
-        onnx_graph = ONNXGraph(model)
-        target_node_name = target_point.target_node_name
-        weight_tensor = onnx_graph.get_weight_tensor(target_node_name)
-        clamped_weight_tensor = np.clip(weight_tensor, low, high)
-        weight_update_target_point = ONNXTargetPoint(TargetType.LAYER, target_node_name, target_point.port_id)
-        return ONNXWeightUpdateCommand(weight_update_target_point, clamped_weight_tensor)
-
-    @staticmethod
     def _get_axis(nncf_graph: NNCFGraph,
                   target_point: ONNXTargetPoint,
                   quantizer_config: QuantizerConfig) -> Optional[int]:

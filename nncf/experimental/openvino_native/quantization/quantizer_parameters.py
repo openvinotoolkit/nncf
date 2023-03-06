@@ -216,9 +216,9 @@ def calculate_quantizer_parameters(statistics: MinMaxTensorStatistic,
         narrow_range = False
 
     if half_range:
+        assert quantizer_config.mode == QuantizationMode.SYMMETRIC
         num_bits = quantizer_config.num_bits - 1
         narrow_range = False
-
 
     if quantizer_config.mode == QuantizationMode.SYMMETRIC:
         min_values = None if quant_group == QuantizerGroup.WEIGHTS else min_values
@@ -230,16 +230,14 @@ def calculate_quantizer_parameters(statistics: MinMaxTensorStatistic,
         q_low, q_high, levels = calculate_asymmetric_level_ranges(num_bits, narrow_range=narrow_range)
         level_low, level_high = asymmetric_range(min_values, max_values, quantizer_config, quant_group)
 
-    if quant_group == QuantizerGroup.ACTIVATIONS and\
-        not quantizer_config.per_channel:
+    if quant_group == QuantizerGroup.ACTIVATIONS and not quantizer_config.per_channel:
         level_low = np.squeeze(level_low)
         level_high = np.squeeze(level_high)
     if half_range:
-        if quantizer_config.mode == QuantizationMode.SYMMETRIC:
-            saved_q_low, saved_q_high, _ = calculate_symmetric_level_ranges(quantizer_config.num_bits, signed=True, narrow_range=False)
-        else:
-            saved_q_low, saved_q_high, _ = calculate_asymmetric_level_ranges(num_bits, narrow_range=False)
-        level_low, level_high = level_low * saved_q_low / q_low, level_high * saved_q_high / q_high
+        _, saved_q_high, levels = calculate_symmetric_level_ranges(quantizer_config.num_bits,
+                                                                   signed=True, narrow_range=False)
+        level_high = level_high * saved_q_high / q_high
+        level_low = -level_high
 
     output_low, output_high = level_low, level_high
     return OVQuantizerLayerParameters(level_low, level_high, output_low, output_high, levels)

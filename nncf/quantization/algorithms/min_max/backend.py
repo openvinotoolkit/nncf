@@ -113,22 +113,6 @@ class MinMaxAlgoBackend(ABC):
 
     @staticmethod
     @abstractmethod
-    def create_clamp_weight_update_command(model: TModel, target_point: TargetPoint,
-                                           low: np.ndarray, high: np.ndarray) -> Optional[TransformationCommand]:
-        """
-        Returns backend-specific weight update command, which applies clamp() fucntion to the weights.
-        Returns None if the transformation is not applicable for backend.
-
-        :param model: Backend-specific model to get the weight value.
-        :param target_point: Target location for the correction.
-        :param low: Minimum values for clamp.
-        :param high: Maximum values for clamp.
-        :return: Backend-specific TransformationCommand for the weight clamp operation or None.
-        """
-
-
-    @staticmethod
-    @abstractmethod
     def minmax_statistic_collector(nncf_graph: NNCFGraph,
                                    target_point: TargetPoint,
                                    quantizer_config: QuantizerConfig,

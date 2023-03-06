@@ -92,16 +92,6 @@ class OVMinMaxAlgoBackend(MinMaxAlgoBackend):
         return OVQuantizerInsertionCommand(target_point, parameters)
 
     @staticmethod
-    def create_clamp_weight_update_command(model: ov.Model, target_point: OVTargetPoint,
-                                           low: np.ndarray, high: np.ndarray) -> OVWeightUpdateCommand:
-        target_node_name = target_point.target_node_name
-        port_id = target_point.port_id
-        weight_tensor = get_weight_tensor(target_node_name, port_id, model)
-        clamped_weight_tensor = np.clip(weight_tensor, low, high)
-        weight_update_target_point = OVTargetPoint(TargetType.LAYER, target_node_name, port_id)
-        return OVWeightUpdateCommand(weight_update_target_point, clamped_weight_tensor)
-
-    @staticmethod
     def _get_reduction_shape_and_use_abs_max(
             nncf_graph: NNCFGraph,
             target_point: OVTargetPoint,
