@@ -37,18 +37,6 @@ class OVTargetPoint(TargetPoint):
     def __hash__(self) -> int:
         return hash((self.target_node_name, self.port_id, self._target_type))
 
-    def __lt__(self, other: 'OVTargetPoint') -> bool:
-        # The OVTargetPoint should have the way to compare.
-        # NNCF has to be able returning the Quantization Target Points in the deterministic way.
-        # MinMaxQuantizationAlgorithm returns the sorted Set of such OVTargetPoints.
-        params = ['_target_type']
-        for param in params:
-            if self.__getattribute__(param) < other.__getattribute__(param):
-                return True
-            if self.__getattribute__(param) > other.__getattribute__(param):
-                return False
-        return False
-
 
 class OVInsertionCommand(TransformationCommand):
     def __init__(self, target_point: OVTargetPoint):
