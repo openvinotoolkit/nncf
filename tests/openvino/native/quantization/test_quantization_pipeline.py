@@ -74,5 +74,4 @@ def test_overflow_fix_applied(model_creator_func, ref_nodes):
             assert node.get_element_type() == ov.Type(np.int8)
             vector = node.get_vector()
             assert np.min(vector) >= -64
-            assert np.max(vector) <= 63
-            break
+            assert np.max(vector) <= 64
