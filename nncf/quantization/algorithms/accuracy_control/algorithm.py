@@ -55,7 +55,50 @@ def _create_message(nodes: Iterable[NNCFNode]) -> str:
     return '\n'.join(names)
 
 
+class AccuracyAwareLoopReport:
+    """
+    Contains execution information about accuracy-aware algorithm.
+
+    :param removed_groups: All groups of quantizers which were removed.
+    :param removed_all: True if all quantizers were removed, False otherwise.
+    :param reached_required_drop: True if the required accuracy drop was reached, False otherwise.
+    :param num_quantized_operations: Number of quantized operations in the model.
+    :param num_iterations: Number of iterations performed.
+    """
+
+    def __init__(self):
+        self.removed_groups = []
+        self.removed_all = False
+        self.reached_required_drop = False
+        self.num_quantized_operations = None
+        self.num_iterations = None
+
+    @property
+    def removed_quantizers(self) -> List[NNCFNode]:
+        """
+        Returns all removed quantizers during accuracy-aware algorithm.
+        """
+        quantizers = []
+        for group in self.removed_groups:
+            quantizers.extend(group.quantizers)
+        return quantizers
+
+    @property
+    def reverted_operations(self) -> List[NNCFNode]:
+        """
+        Returns all operations which were reverted to original precision
+        during accuracy-aware algorithm.
+        """
+        operations = []
+        for group in self.removed_groups:
+            operations.extend(group.operations)
+        return operations
+
+
 class AccuracyAwareLoop:
+    """
+    Implementation of the accuracy-aware loop.
+    """
 
     def __init__(self,
                  algo_backend: AccuracyControlAlgoBackend,
@@ -64,19 +107,19 @@ class AccuracyAwareLoop:
                  max_drop: float = 0.01,
                  is_native: bool = True):
         """
-        :param algo_backend:
-        :param ranking_subset_size:
-        :param max_num_iterations:
+        :param algo_backend: The `AccuracyControlAlgoBackend` algo backend.
+        :param ranking_subset_size: The number of data items that will be selected from
+            the dataset to rank groups of quantizers.
+        :param max_num_iterations: A maximal number of iterations.
         :param max_drop: The maximum absolute accuracy drop that should be achieved.
-        :param is_native:
         """
         self.algo_backend = algo_backend
         self.ranking_subset_size = ranking_subset_size
         self.max_num_iterations = max_num_iterations
+        self.max_drop = max_drop
         # TODO(andrey-churkin): Should be removed when native implementation
         # will become the main one.
         self.is_native = is_native
-        self.max_drop = max_drop
 
     def restore_accuracy(self,
                          initial_model: TModel,
@@ -136,10 +179,11 @@ class AccuracyAwareLoop:
                                                                initial_model, self.algo_backend)
 
         # Show the number of quantized operations in the model.
-        num_of_quantized_ops = get_number_of_quantized_ops(quantized_model_graph,
-                                                           self.algo_backend.get_quantizer_metatypes(),
-                                                           self.algo_backend.get_quantizable_metatypes())
-        nncf_logger.info(f'Total number of quantized operations in the model: {num_of_quantized_ops}')
+        report = AccuracyAwareLoopReport()
+        report.num_quantized_operations = get_number_of_quantized_ops(quantized_model_graph,
+                                                                      self.algo_backend.get_quantizer_metatypes(),
+                                                                      self.algo_backend.get_quantizable_metatypes())
+        nncf_logger.info(f'Total number of quantized operations in the model: {report.num_quantized_operations}')
 
         nncf_logger.info('== Ranking groups of quantizers were started ==')
         ranker = AccuracyAwareLoop._create_ranker(initial_model, validation_fn, validation_dataset,
@@ -148,31 +192,15 @@ class AccuracyAwareLoop:
         ranked_groups = ranker.rank_groups_of_quantizers(groups_to_rank, initial_model, quantized_model,
                                                          quantized_model_graph)
 
-        current_num_quantizers = len(
-            quantized_model_graph.get_nodes_by_metatypes(self.algo_backend.get_quantizer_metatypes())
-        )
-
         previous_model = quantized_model
         previous_accuracy_drop = accuracy_drop
         current_model = None
         current_accuracy_drop = None
-
-        reached_required_drop = False
         is_step_back = True
-        removed_all = False
-        all_removed_nodes = []
-        all_reverted_ops = set()
 
         for iteration in range(self.max_num_iterations):
             if current_model is not None:
                 previous_model = current_model
-
-            if not ranked_groups:
-                nncf_logger.info(
-                        'All layers have been checked and the AccuracyAwareQuantization '
-                        'will not be able to achieve the required accuracy drop')
-                removed_all = True
-                break
 
             # greedy removal of the FQ node with the highest importance score
             current_group = ranked_groups.pop()
@@ -185,14 +213,12 @@ class AccuracyAwareLoop:
                 self.algo_backend.create_command_to_update_bias,
                 self.algo_backend.create_command_to_update_weight)
 
+            report.removed_groups.append(current_group)
+
             nncf_logger.debug(f'Removed a block of {len(current_group.quantizers)} quantizers:'
                               f'\n{_create_message(current_group.quantizers)}')
             nncf_logger.info(f'Reverted {len(current_group.operations)} operations to the floating-point '
                              f'precision: \n{_create_message(current_group.operations)}')
-
-            current_num_quantizers = current_num_quantizers - len(current_group.quantizers)
-            all_removed_nodes.extend(current_group.quantizers)
-            all_reverted_ops.update(current_group.operations)
 
             # Calculate drop for new quantization scope.
             current_metric = validation_fn(self.algo_backend.prepare_for_inference(current_model),
@@ -200,14 +226,16 @@ class AccuracyAwareLoop:
             current_accuracy_drop = initial_metric - current_metric
             nncf_logger.info('Accuracy drop with the new quantization scope is %s', float(current_accuracy_drop))
 
-            if current_num_quantizers == 0:
-                nncf_logger.info('All quantizers were removed from the model.')
-                removed_all = True
+            if not ranked_groups:
+                nncf_logger.info(
+                        'All layers have been checked and the AccuracyAwareQuantization '
+                        'will not be able to achieve the required accuracy drop')
+                report.removed_all = True
                 break
 
             # Accuracy was restored to the acceptable drop.
             if current_accuracy_drop <= self.max_drop:
-                reached_required_drop = True
+                report.reached_required_drop = True
                 break
 
             # Continue greedy quantizer remove
@@ -219,27 +247,18 @@ class AccuracyAwareLoop:
 
             if current_accuracy_drop > previous_accuracy_drop:
                 current_model = previous_model
-                all_removed_nodes = all_removed_nodes[:len(all_removed_nodes)-len(current_group.quantizers)]
-                all_reverted_ops.difference_update(current_group.operations)
+                report.removed_groups.pop()
+                ranked_groups.append(current_group)
                 is_step_back = True
 
             previous_accuracy_drop = current_accuracy_drop
 
             nncf_logger.info('Re-calculating ranking scores for remaining groups')
-            ranker.rank_groups_of_quantizers(ranked_groups, initial_model, current_model, quantized_model_graph)
+            ranked_groups = ranker.rank_groups_of_quantizers(ranked_groups, initial_model, current_model,
+                                                             quantized_model_graph)
 
-        # Show results that were achieved.
-        if removed_all or not reached_required_drop:
-            nncf_logger.info('The algorithm could not achieve the required accuracy drop.', force=True)
-
-        if iteration + 1 >= self.max_num_iterations:
-            nncf_logger.info('Maximum number of iteration was reached.')
-
-        if not removed_all:
-            nncf_logger.debug(f'Quantizers that were removed:\n{_create_message(all_removed_nodes)}')
-            nncf_logger.info(f'{len(all_reverted_ops)} out of {num_of_quantized_ops} '
-                             'were reverted back to the floating-point precision:'
-                             f'\n{_create_message(all_reverted_ops)}')
+        report.num_iterations = iteration
+        AccuracyAwareLoop._print_report(report, self.max_num_iterations)
 
         return current_model
 
@@ -322,3 +341,23 @@ class AccuracyAwareLoop:
         nncf_logger.info(f'The {"original" if isinstance(ranker, MetricBasedRanker) else "NMSE"} '
                          'metric will be used to rank quantizers')
         return ranker
+
+    @staticmethod
+    def _print_report(report: AccuracyAwareLoopReport, max_num_iterations: int) -> None:
+        """
+        Shows report.
+
+        :param report: Report.
+        :param max_num_iterations: A maximal number of iterations.
+        """
+        if report.removed_all or not report.reached_required_drop:
+            nncf_logger.info('The algorithm could not achieve the required accuracy drop.', force=True)
+
+        if report.num_iterations + 1 >= max_num_iterations:
+            nncf_logger.info('Maximum number of iteration was reached.')
+
+        if not report.removed_all:
+            nncf_logger.debug(f'Quantizers that were removed:\n{_create_message(report.removed_quantizers)}')
+            nncf_logger.info(f'{len(report.reverted_operations)} out of {report.num_quantized_operations} '
+                             'were reverted back to the floating-point precision:'
+                             f'\n{_create_message(report.reverted_operations)}')
