@@ -22,6 +22,7 @@ from openvino.tools import pot
 
 from nncf.common.logging import nncf_logger
 from nncf.common.quantization.structs import QuantizationPreset
+from nncf.common.utils.backend import get_backend
 from nncf.data import Dataset
 from nncf.openvino.engine import OVEngine
 from nncf.openvino.quantization.accuracy_aware import NMSEBasedAccuracyAware
@@ -31,6 +32,8 @@ from nncf.parameters import TargetDevice
 from nncf.quantization.telemetry_extractors import CompressionStartedWithQuantizeApi
 from nncf.telemetry import tracked_function
 from nncf.telemetry.events import NNCF_OV_CATEGORY
+from nncf.quantization.algorithms.accuracy_control.algorithm import get_algo_backend
+from nncf.quantization.algorithms.accuracy_control.algorithm import AccuracyAwareLoop
 
 
 def _convert_openvino_model_to_compressed_model(model: ov.Model,
@@ -102,7 +105,8 @@ def quantize_impl(model: ov.Model,
                   subset_size: int,
                   fast_bias_correction: bool,
                   model_type: Optional[ModelType] = None,
-                  ignored_scope: Optional[IgnoredScope] = None) -> ov.Model:
+                  ignored_scope: Optional[IgnoredScope] = None,
+                  compress_weights: bool = True) -> ov.Model:
     """
     Implementation of the `quantize()` method for the OpenVINO backend.
     """
@@ -136,7 +140,8 @@ def quantize_impl(model: ov.Model,
     pipeline = pot.create_pipeline(algorithms, engine)
     compressed_model = pipeline.run(pot_model)
     quantized_model = _convert_compressed_model_to_openvino_model(compressed_model)
-    compress_quantize_weights_transformation(quantized_model)
+    if compress_weights:
+        compress_quantize_weights_transformation(quantized_model)
     return quantized_model
 
 
@@ -198,6 +203,43 @@ def quantize_with_accuracy_control_impl(model: ov.Model,
     pipeline = pot.create_pipeline(algorithms, engine)
     compressed_model = pipeline.run(pot_model)
     quantized_model = _convert_compressed_model_to_openvino_model(compressed_model)
+    compress_quantize_weights_transformation(quantized_model)
+
+    return quantized_model
+
+
+def quantize_with_accuracy_control(model: ov.Model,
+                                   calibration_dataset: Dataset,
+                                   validation_dataset: Dataset,
+                                   validation_fn: Callable[[Any, Iterable[Any]], float],
+                                   max_drop: float = 0.01,
+                                   preset: QuantizationPreset = QuantizationPreset.PERFORMANCE,
+                                   target_device: TargetDevice = TargetDevice.ANY,
+                                   subset_size: int = 300,
+                                   fast_bias_correction: bool = True,
+                                   model_type: Optional[ModelType] = None,
+                                   ignored_scope: Optional[IgnoredScope] = None) -> ov.Model:
+    """
+    Implementation of the `quantize_with_accuracy_control()` method for the OpenVINO backend via POT.
+    """
+    quantized_model = quantize_impl(model, calibration_dataset, preset, target_device, subset_size,
+                                    fast_bias_correction, model_type, ignored_scope, compress_weights=False)
+
+    backend = get_backend(model)
+    algo_backend = get_algo_backend(backend)
+
+    initial_metric = validation_fn(algo_backend.prepare_for_inference(model),
+                                   validation_dataset.get_data())
+    nncf_logger.info(f'Metric of initial model: {initial_metric}')
+
+    quantized_metric = validation_fn(algo_backend.prepare_for_inference(quantized_model),
+                                     validation_dataset.get_data())
+    nncf_logger.info(f'Metric of quantized model: {quantized_metric}')
+
+    accuracy_aware_loop = AccuracyAwareLoop(algo_backend, max_drop=max_drop, is_native=False)
+    quantized_model = accuracy_aware_loop.restore_accuracy(model, initial_metric,
+                                                           quantized_model, quantized_metric,
+                                                           validation_dataset, validation_fn)
     compress_quantize_weights_transformation(quantized_model)
 
     return quantized_model

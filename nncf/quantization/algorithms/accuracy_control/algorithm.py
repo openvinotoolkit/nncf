@@ -13,12 +13,9 @@
 
 import sys
 import operator
-from typing import Callable, Any, Iterable, Optional, List, TypeVar
+from typing import Callable, Any, Iterable, List, TypeVar
 
 from nncf.data.dataset import Dataset
-from nncf.parameters import IgnoredScope
-from nncf.parameters import ModelType
-from nncf.parameters import TargetDevice
 from nncf.common.utils.backend import get_backend
 from nncf.common.utils.backend import BackendType
 from nncf.common.graph.utils import get_number_of_quantized_ops
@@ -27,9 +24,7 @@ from nncf.common.graph import NNCFNode
 from nncf.common.graph import NNCFGraph
 from nncf.common.factory import NNCFGraphFactory
 from nncf.common.logging import nncf_logger
-from nncf.common.quantization.structs import QuantizationPreset
 from nncf.common.quantization.quantizer_removal import revert_operations_to_floating_point_precision
-from nncf.quantization.quantize import quantize
 from nncf.quantization.algorithms.accuracy_control.backend import AccuracyControlAlgoBackend
 from nncf.quantization.algorithms.accuracy_control.ranker import Ranker
 from nncf.quantization.algorithms.accuracy_control.ranker import MetricBasedRanker
@@ -53,42 +48,6 @@ def get_algo_backend(backend: BackendType) -> AccuracyControlAlgoBackend:
 
     raise RuntimeError('Cannot create the backend for the accuracy control algorithm '
                        f'because {backend} is not supported.')
-
-
-def quantize_with_accuracy_control(model: TModel,
-                                   calibration_dataset: Dataset,
-                                   validation_dataset: Dataset,
-                                   validation_fn: Callable[[Any, Iterable[Any]], float],
-                                   max_drop: float = 0.01,
-                                   preset: QuantizationPreset = QuantizationPreset.PERFORMANCE,
-                                   target_device: TargetDevice = TargetDevice.ANY,
-                                   subset_size: int = 300,
-                                   fast_bias_correction: bool = True,
-                                   model_type: Optional[ModelType] = None,
-                                   ignored_scope: Optional[IgnoredScope] = None) -> TModel:
-    """
-    Common implementation of the `nncf.quantize_with_accuracy_control()` method.
-    """
-    # Step 0: Quantize provided model.
-    quantized_model = quantize(model, calibration_dataset, preset, target_device, subset_size,
-                               fast_bias_correction, model_type, ignored_scope)
-
-    # Backends
-    backend = get_backend(model)
-    algo_backend = get_algo_backend(backend)
-
-    initial_metric = validation_fn(algo_backend.prepare_for_inference(model),
-                                   validation_dataset.get_data())
-    nncf_logger.info(f'Metric of initial model: {initial_metric}')
-
-    quantized_metric = validation_fn(algo_backend.prepare_for_inference(quantized_model),
-                                     validation_dataset.get_data())
-    nncf_logger.info(f'Metric of quantized model: {quantized_metric}')
-
-    accuracy_aware_loop = AccuracyAwareLoop(algo_backend, max_drop=max_drop, is_native=False)
-    return accuracy_aware_loop.restore_accuracy(model, initial_metric,
-                                                quantized_model, quantized_metric,
-                                                validation_dataset, validation_fn)
 
 
 def _create_message(nodes: Iterable[NNCFNode]) -> str:
