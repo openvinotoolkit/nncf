@@ -11,7 +11,7 @@
  limitations under the License.
 """
 
-from typing import Optional, Tuple
+from typing import Optional
 
 import numpy as np
 import openvino.runtime as ov
@@ -22,7 +22,6 @@ from nncf.experimental.openvino_native.graph.metatypes.openvino_metatypes import
 from nncf.experimental.openvino_native.graph.metatypes.openvino_metatypes import OVConvertMetatype
 from nncf.experimental.openvino_native.graph.metatypes.openvino_metatypes import OVConstantMetatype
 from nncf.experimental.openvino_native.graph.metatypes.openvino_metatypes import OPERATIONS_WITH_BIAS_METATYPES
-from nncf.experimental.openvino_native.graph.metatypes.openvino_metatypes import OV_OPERATOR_METATYPES
 
 
 def is_node_with_bias(node: NNCFNode, nncf_graph: NNCFGraph) -> bool:
@@ -81,24 +80,3 @@ def get_node_with_bias_value(add_node: NNCFNode, nncf_graph: NNCFGraph) -> Optio
         bias_constant = nncf_graph.get_input_edges(add_node)[0].from_node
 
     return bias_constant if bias_constant.metatype == OVConstantMetatype else None
-
-
-def get_weight_tensor(node_name: str, port_id: int, model: ov.Model) -> Tuple[str, np.ndarray]:
-    """
-    Returns name and weight tensor value taken from 'model'.
-
-    :param node_name: Name of the node to seek the weight.
-    :param port_id: Id of the port to seek the weight.
-    :param model: Model to seek the node.
-    :return: Name and value of the weight tensor.
-    """
-    for op in model.get_ops():
-        if op.get_friendly_name() == node_name:
-            node = op.input_value(port_id).get_node()
-            # TODO(l-bat): Unify weights and activaions statistic collections. Add Result for weight nodes.
-            metatype = OV_OPERATOR_METATYPES.get_operator_metatype_by_op_name(node.get_type_name())
-            if metatype == OVConvertMetatype:
-                node = node.input_value(0).get_node()
-            weight_tensor = node.get_vector().reshape(node.get_output_shape(0))
-            return node.get_friendly_name(), weight_tensor
-    raise RuntimeError(f'Could not find node: {node_name} in model.')

@@ -25,8 +25,6 @@ from nncf.experimental.openvino_native.graph.transformations.commands import OVO
 from nncf.experimental.openvino_native.graph.transformations.commands import OVModelExtractionCommand
 from nncf.experimental.openvino_native.graph.transformations.commands import OVBiasCorrectionCommand
 from nncf.experimental.openvino_native.graph.transformations.commands import OVFQNodeRemovingCommand
-from nncf.experimental.openvino_native.graph.transformations.commands import OVWeightUpdateCommand
-from nncf.experimental.openvino_native.graph.node_utils import get_weight_tensor
 
 
 class OVModelTransformer(ModelTransformer):
@@ -58,7 +56,6 @@ class OVModelTransformer(ModelTransformer):
         fq_nodes_removing_transformations = []
         quantizer_insertion_transformations = []
         bias_correction_transformations = []
-        weight_update_transformations = []
         model_extraction_transformation = None
         transformations = transformation_layout.transformations
 
@@ -73,16 +70,12 @@ class OVModelTransformer(ModelTransformer):
                 model_extraction_transformation = transformation
             elif isinstance(transformation, OVBiasCorrectionCommand):
                 bias_correction_transformations.append(transformation)
-            elif isinstance(transformation, OVWeightUpdateCommand):
-                weight_update_transformations.append(transformation)
         model = self._model.clone()
         # Inplace transformations; Using deepcopy of model
         if fq_nodes_removing_transformations:
             model = self._apply_fq_nodes_removing_transformation(model, fq_nodes_removing_transformations)
         if quantizer_insertion_transformations:
             model = self._apply_quantizer_insertion_transformations(model, quantizer_insertion_transformations)
-        if weight_update_transformations:
-            model = self._apply_update_weights_transformations(model, weight_update_transformations)
         if bias_correction_transformations:
             model = self._apply_bias_correction_transformations(model, bias_correction_transformations)
         if model_extraction_transformation:
@@ -322,28 +315,3 @@ class OVModelTransformer(ModelTransformer):
             results = [r.node for r in model.outputs]
 
         return ov.Model(results, params)
-
-    @staticmethod
-    def _apply_update_weights_transformations(model: ov.Model,
-                                              transformations: List[OVWeightUpdateCommand]) -> ov.Model:
-        """
-        Updates weight tensor.
-
-        :param transformations: Transformation with a new tensor value.
-        :return: None
-        """
-        for transformation in transformations:
-            OVModelTransformer._update_weight(model, transformation)
-        return model
-
-    @staticmethod
-    def _update_weight(model: ov.Model, transformation: OVWeightUpdateCommand):
-        weight_node_name, _ = get_weight_tensor(transformation.target_point.target_node_name,
-                                                transformation.target_point.port_id, model)
-        for op in model.get_ops():
-            if op.get_friendly_name() == weight_node_name:
-                weight_node = op
-
-        new_weight_constant = opset.constant(transformation.weight_value, dtype=weight_node.get_element_type())
-        for input_consumed_node in weight_node.output(0).get_target_inputs():
-            input_consumed_node.replace_source_output(new_weight_constant.output(0))

@@ -192,6 +192,7 @@ def get_weight_stats_shape(const_shape: List[int], metatype: Type[OperatorMetaty
         bounds_shape[0] = const_shape[0]
     return bounds_shape
 
+
 def calculate_quantizer_parameters(statistics: MinMaxTensorStatistic,
                                    quantizer_config: QuantizerConfig,
                                    half_range: bool,

@@ -24,7 +24,6 @@ from nncf.experimental.openvino_native.graph.transformations.commands import OVF
 from nncf.experimental.openvino_native.graph.transformations.commands import OVQuantizerInsertionCommand
 from nncf.experimental.openvino_native.quantization.quantizer_parameters import OVQuantizerLayerParameters
 from nncf.experimental.openvino_native.graph.transformations.commands import OVBiasCorrectionCommand
-from nncf.experimental.openvino_native.graph.transformations.commands import OVWeightUpdateCommand
 
 from tests.openvino.native.models import LinearModel
 from tests.openvino.native.models import ConvModel
@@ -227,31 +226,3 @@ def test_no_transformations():
     for output in ret_val_1.keys():
         assert np.allclose(ret_val_1[output], ret_val_2[output])
     assert id(transformed_model) != id(model)
-
-
-MODELS_WITH_PARAMETERS = [
-    {
-        'model': ConvModel().ov_model,
-        'layers': ['Conv'],
-        'values': [np.full((3,), 2)],
-        'refs': [2.0],
-    }
-]
-
-
-@pytest.mark.parametrize('model_with_parameters', MODELS_WITH_PARAMETERS)
-def test_weight_update_transformation(model_with_parameters):
-    model = model_with_parameters['model']
-    layers = model_with_parameters['layers']
-    values = model_with_parameters['values']
-    refs = model_with_parameters['refs']
-
-    transformed_model = create_transformed_model(model, layers, TargetType.OPERATION_WITH_WEIGHTS,
-                                                 OVWeightUpdateCommand, port_id=1, **{'weight_value': values})
-    ops_dict = {op.get_friendly_name(): op for op in transformed_model.get_ops()}
-
-    for node_name, weight_reference in zip(layers, refs):
-        node = ops_dict[node_name]
-        weight_node = node.input_value(1).node
-        assert weight_node.get_type_name() == 'Constant'
-        assert np.all(weight_node.get_vector() == weight_reference)

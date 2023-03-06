@@ -105,7 +105,6 @@ class ONNXBiasCorrectionCommand(TransformationCommand):
         # Have a look at nncf/torch/graph/transformations/commands/PTInsertionCommand
         raise NotImplementedError()
 
-
 class ONNXModelExtractionCommand(Command):
     """
     Extracts sub-graph based on the sub-model input and output names.

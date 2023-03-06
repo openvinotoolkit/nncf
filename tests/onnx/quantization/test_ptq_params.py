@@ -16,9 +16,6 @@ import pytest
 from nncf.scopes import IgnoredScope
 from nncf.parameters import TargetDevice
 from nncf.common.graph.patterns import GraphPattern
-from nncf.onnx.statistics.collectors import ONNXMeanMinMaxStatisticCollector
-from nncf.onnx.statistics.collectors import ONNXMinMaxStatisticCollector
-from nncf.quantization.algorithms.definitions import RangeType
 from nncf.quantization.algorithms.definitions import OverflowFix
 from nncf.quantization.algorithms.post_training.algorithm import PostTrainingQuantization
 from nncf.quantization.algorithms.post_training.algorithm import PostTrainingQuantizationParameters
