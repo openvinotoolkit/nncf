@@ -14,7 +14,7 @@
 import operator
 from abc import ABC
 from abc import abstractmethod
-from typing import Callable, Any, List, Iterable, Optional, Iterable, TypeVar
+from typing import Callable, Any, List, Iterable, Optional, TypeVar
 from dataclasses import dataclass
 
 from nncf.data.dataset import Dataset

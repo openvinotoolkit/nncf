@@ -85,10 +85,10 @@ def quantize_with_accuracy_control(model: TModel,
                                      validation_dataset.get_data())
     nncf_logger.info(f'Metric of quantized model: {quantized_metric}')
 
-    accuracy_aware_loop = AccuracyAwareLoop(algo_backend, is_native=False)
+    accuracy_aware_loop = AccuracyAwareLoop(algo_backend, max_drop=max_drop, is_native=False)
     return accuracy_aware_loop.restore_accuracy(model, initial_metric,
                                                 quantized_model, quantized_metric,
-                                                validation_dataset, validation_fn, max_drop)
+                                                validation_dataset, validation_fn)
 
 
 def _create_message(nodes: Iterable[NNCFNode]) -> str:
@@ -102,14 +102,14 @@ class AccuracyAwareLoop:
                  algo_backend: AccuracyControlAlgoBackend,
                  ranking_subset_size: int = 300,
                  max_num_iterations: int = sys.maxsize,
-                 is_native: bool = True,
-                 max_drop: float = 0.01):
+                 max_drop: float = 0.01,
+                 is_native: bool = True):
         """
         :param algo_backend:
         :param ranking_subset_size:
         :param max_num_iterations:
-        :param is_native:
         :param max_drop: The maximum absolute accuracy drop that should be achieved.
+        :param is_native:
         """
         self.algo_backend = algo_backend
         self.ranking_subset_size = ranking_subset_size
