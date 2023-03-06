@@ -41,7 +41,7 @@ class OVTargetPoint(TargetPoint):
         # The OVTargetPoint should have the way to compare.
         # NNCF has to be able returning the Quantization Target Points in the deterministic way.
         # MinMaxQuantizationAlgorithm returns the sorted Set of such OVTargetPoints.
-        params = ['_target_type', 'target_node_name', 'port_id']
+        params = ['_target_type']
         for param in params:
             if self.__getattribute__(param) < other.__getattribute__(param):
                 return True

@@ -60,8 +60,18 @@ TModel = TypeVar('TModel')
 
 
 def is_half_range(overflow_fix: OverflowFix, qconfig: QuantizerConfig, weight_tensor_names: Set[str]) -> bool:
+    """
+    Returns True if half_range parameter should be True to the following operation.
+
+    :param overflow_fix: This option controls whether to apply the overflow issue fix.
+            If set to `disable`, the fix will not be applied. If set to `enable` or `first_layer_only`,
+            the fix will be applied to all layers or to the first convolutional layer respectively.
+    :param qconfig: Quantization config.
+    :param weight_tensor_names: Names of registered weight tensors.
+    :return: True if half_range parameter is applied, otherwise - False.
+    """
     if qconfig.mode == QuantizationMode.SYMMETRIC:
-        if overflow_fix == 'enable':
+        if overflow_fix == OverflowFix.ENABLE:
             return True
         if overflow_fix == OverflowFix.FIRST_LAYER and not weight_tensor_names:
             return True

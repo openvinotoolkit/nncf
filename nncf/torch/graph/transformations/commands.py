@@ -44,7 +44,7 @@ class PTTargetPoint(TargetPoint):
         # The PTTargetPoint should have the way to compare.
         # NNCF has to be able returning the Quantization Target Points in the deterministic way.
         # MinMaxQuantizationAlgorithm returns the sorted Set of such PTTargetPoint.
-        params = ['target_type', 'target_node_name', 'input_port_id']
+        params = ['target_type']
         for param in params:
             if self.__getattribute__(param) < other.__getattribute__(param):
                 return True
