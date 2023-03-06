@@ -223,23 +223,23 @@ def calculate_quantizer_parameters(statistics: MinMaxTensorStatistic,
 
     if quantizer_config.mode == QuantizationMode.SYMMETRIC:
         min_values = None if quant_group == QuantizerGroup.WEIGHTS else min_values
-        q_low, q_high, levels = calculate_symmetric_level_ranges(num_bits,
-                                                                 signed=True, narrow_range=narrow_range)
+        _, _, levels = calculate_symmetric_level_ranges(num_bits,
+                                                        signed=True, narrow_range=narrow_range)
         level_low, level_high = symmetric_range(min_values, max_values,
                                                 levels, quantizer_config, quant_group)
+        if half_range:
+            _, _, saved_levels = calculate_symmetric_level_ranges(quantizer_config.num_bits,
+                                                                  signed=True, narrow_range=True)
+            level_high = level_high * saved_levels / levels
+            level_low = -level_high
+            levels = saved_levels
     else:
-        q_low, q_high, levels = calculate_asymmetric_level_ranges(num_bits, narrow_range=narrow_range)
+        _, _, levels = calculate_asymmetric_level_ranges(num_bits, narrow_range=narrow_range)
         level_low, level_high = asymmetric_range(min_values, max_values, quantizer_config, quant_group)
 
     if quant_group == QuantizerGroup.ACTIVATIONS and not quantizer_config.per_channel:
         level_low = np.squeeze(level_low)
         level_high = np.squeeze(level_high)
-    if half_range:
-        _, saved_q_high, saved_levels = calculate_symmetric_level_ranges(quantizer_config.num_bits,
-                                                                         signed=True, narrow_range=False)
-        level_high = level_high * saved_levels / levels
-        level_low = -level_high
-        levels = saved_levels
 
     output_low, output_high = level_low, level_high
     return OVQuantizerLayerParameters(level_low, level_high, output_low, output_high, levels)
