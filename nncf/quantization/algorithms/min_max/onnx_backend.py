@@ -13,14 +13,10 @@
 
 from typing import Dict, List, Tuple, Optional
 
-import onnx
-import numpy as np
-
 from nncf.common.graph.graph import NNCFGraph
 from nncf.common.graph.graph import NNCFNode
 from nncf.common.graph.operator_metatypes import OperatorMetatype
 from nncf.common.graph.transformations.commands import TargetType
-from nncf.common.graph.transformations.commands import TransformationCommand
 from nncf.common.hardware.config import HWConfig
 from nncf.common.quantization.structs import QuantizerConfig
 from nncf.common.quantization.structs import QuantizationMode
@@ -150,7 +146,7 @@ class ONNXMinMaxAlgoBackend(MinMaxAlgoBackend):
                                    target_point: ONNXTargetPoint,
                                    quantizer_config: QuantizerConfig,
                                    num_samples: int = None) -> ONNXMinMaxStatisticCollector:
-        reduction_shape, use_abs_max = \
+        reduction_shape, use_abs_max =\
             ONNXMinMaxAlgoBackend._get_reduction_shape_and_use_abs_max(nncf_graph,
                                                                        target_point,
                                                                        quantizer_config)
@@ -162,7 +158,7 @@ class ONNXMinMaxAlgoBackend(MinMaxAlgoBackend):
                                         quantizer_config: QuantizerConfig,
                                         use_per_sample_stats: bool,
                                         num_samples: int = None) -> ONNXMeanMinMaxStatisticCollector:
-        reduction_shape, use_abs_max = \
+        reduction_shape, use_abs_max =\
             ONNXMinMaxAlgoBackend._get_reduction_shape_and_use_abs_max(nncf_graph, target_point,
                                                                        quantizer_config)
         return ONNXMeanMinMaxStatisticCollector(use_per_sample_stats,
