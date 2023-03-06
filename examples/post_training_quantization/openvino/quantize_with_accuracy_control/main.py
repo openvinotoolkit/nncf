@@ -177,12 +177,12 @@ print('[4/7] Benchmark INT8 model:')
 int8_fps = run_benchmark(int8_ir_path, shape=[1,3,256,256], verbose=True)
 
 print('[5/7] Validate OpenVINO FP32 model:')
-compiled_model = ov.compile_model(model)
+compiled_model = ov.compile_model(model, 'TEMPLATE')
 fp32_top1 = validate(compiled_model, test_loader, validation_params)
 print(f'Accuracy @ top1: {fp32_top1:.3f}')
 
 print('[6/7] Validate OpenVINO INT8 model:')
-quantized_compiled_model = ov.compile_model(quantized_model)
+quantized_compiled_model = ov.compile_model(quantized_model, 'TEMPLATE')
 int8_top1 = validate(quantized_compiled_model, test_loader, validation_params)
 print(f'Accuracy @ top1: {int8_top1:.3f}')
 
