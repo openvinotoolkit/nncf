@@ -17,7 +17,6 @@ from nncf.onnx.graph.metatypes.onnx_metatypes import ONNXConvolutionMetatype
 from nncf.onnx.graph.metatypes.onnx_metatypes import ONNXDepthwiseConvolutionMetatype
 from nncf.onnx.graph.metatypes.onnx_metatypes import ONNXConvolutionTransposeMetatype
 from nncf.onnx.graph.metatypes.onnx_metatypes import ONNXLinearMetatype
-from nncf.onnx.graph.metatypes.onnx_metatypes import ONNXMatMulMetatype
 from nncf.onnx.graph.metatypes.onnx_metatypes import ONNXBatchNormMetatype
 from nncf.onnx.graph.metatypes.onnx_metatypes import ONNXReluMetatype
 from nncf.onnx.graph.metatypes.onnx_metatypes import ONNXLeakyReluMetatype
@@ -35,8 +34,7 @@ from nncf.onnx.graph.metatypes.onnx_metatypes import ONNXSubMetatype
 LINEAR_OPERATIONS = {GraphPattern.METATYPE_ATTR: [ONNXConvolutionMetatype,
                                                   ONNXDepthwiseConvolutionMetatype,
                                                   ONNXConvolutionTransposeMetatype,
-                                                  ONNXLinearMetatype,
-                                                  ONNXMatMulMetatype
+                                                  ONNXLinearMetatype
                                                   ],
                      GraphPattern.LABEL_ATTR: 'LINEAR'}
 

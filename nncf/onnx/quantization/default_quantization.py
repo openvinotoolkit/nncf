@@ -16,7 +16,6 @@ from nncf.onnx.graph.metatypes.onnx_metatypes import ONNXConvolutionMetatype
 from nncf.onnx.graph.metatypes.onnx_metatypes import ONNXDepthwiseConvolutionMetatype
 from nncf.onnx.graph.metatypes.onnx_metatypes import ONNXConvolutionTransposeMetatype
 from nncf.onnx.graph.metatypes.onnx_metatypes import ONNXLinearMetatype
-from nncf.onnx.graph.metatypes.onnx_metatypes import ONNXMatMulMetatype
 from nncf.onnx.graph.metatypes.onnx_metatypes import ONNXSigmoidMetatype
 from nncf.onnx.graph.metatypes.onnx_metatypes import ONNXHardSigmoidMetatype
 from nncf.onnx.graph.metatypes.onnx_metatypes import ONNXAveragePoolMetatype
@@ -40,7 +39,6 @@ DEFAULT_ONNX_QUANT_TRAIT_TO_OP_DICT = {
         ONNXDepthwiseConvolutionMetatype,
         ONNXConvolutionTransposeMetatype,
         ONNXLinearMetatype,
-        ONNXMatMulMetatype,
         ONNXAveragePoolMetatype,
         ONNXGlobalAveragePoolMetatype,
         ONNXAddLayerMetatype,
