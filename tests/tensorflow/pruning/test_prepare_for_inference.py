@@ -15,7 +15,6 @@ import pytest
 
 from tests.tensorflow.helpers import create_compressed_model_and_algo_for_test
 from tests.tensorflow.helpers import get_empty_config
-from tests.tensorflow.pruning.helpers import get_basic_pruning_config
 from tests.tensorflow.pruning.helpers import get_concat_test_model
 
 
