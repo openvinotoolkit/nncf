@@ -54,7 +54,8 @@ class TestQuantizerConfig(TemplateTestQuantizerConfig):
 
     @pytest.fixture
     def depthwise_conv_nncf_graph(self):
-        return NNCFGraphToTestDepthwiseConv(OVDepthwiseConvolutionMetatype)
+        return NNCFGraphToTestDepthwiseConv(OVDepthwiseConvolutionMetatype,
+                                            conv_layer_attrs=OVConstantLayerAttributes())
 
     @pytest.fixture
     def conv_sum_aggregation_nncf_graph(self) ->\

@@ -168,6 +168,7 @@ class OVMinMaxAlgoBackend(MinMaxAlgoBackend):
     def get_weight_nodes(nncf_graph: NNCFGraph) -> List[NNCFNode]:
         output = []
         for node in nncf_graph.get_all_nodes():
-            if isinstance(node.layer_attributes, OVConstantLayerAttributes):
+            if isinstance(node.layer_attributes, OVConstantLayerAttributes) and \
+                    node.metatype in GENERAL_WEIGHT_LAYER_METATYPES:
                 output.append(node)
         return output

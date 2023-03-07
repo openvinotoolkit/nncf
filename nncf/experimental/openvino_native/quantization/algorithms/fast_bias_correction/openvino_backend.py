@@ -89,7 +89,9 @@ class OVFastBiasCorrectionAlgoBackend(FastBiasCorrectionAlgoBackend):
     @staticmethod
     def create_blob(shape: Tuple[int], data: List[float], channel_axis: int) -> np.ndarray:
         blob = np.zeros(shape, dtype=np.float32)
-        blob[channel_axis] = np.array(data, dtype=np.float32)
+        for j, idx in enumerate(np.ndindex(blob.shape[channel_axis])):
+            index = tuple(slice(None) if i != channel_axis else idx for i in range(blob.ndim))
+            blob[index] = data[j]
         return blob
 
     @staticmethod

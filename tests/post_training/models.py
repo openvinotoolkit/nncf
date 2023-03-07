@@ -42,7 +42,7 @@ class NNCFGraphToTest:
 
 
 class NNCFGraphToTestDepthwiseConv:
-    def __init__(self, depthwise_conv_metatype):
+    def __init__(self, depthwise_conv_metatype, conv_layer_attrs = None):
         #       Original graph
         #          Input_1
         #             |
@@ -50,7 +50,7 @@ class NNCFGraphToTestDepthwiseConv:
         #             |
         #           Output_1
         nodes = [NodeWithType('Input_1', InputNoopMetatype),
-                 NodeWithType('Conv_1', depthwise_conv_metatype),
+                 NodeWithType('Conv_1', depthwise_conv_metatype, layer_attributes=conv_layer_attrs),
                  NodeWithType('Output_1', OutputNoopMetatype),
                  ]
         node_edges = [('Input_1', 'Conv_1'), ('Conv_1', 'Output_1')]
