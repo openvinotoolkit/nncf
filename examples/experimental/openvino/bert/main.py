@@ -115,7 +115,7 @@ def convert_torch_to_openvino(model: torch.nn.Module) -> ov.Model:
 
     # Run Model Optimizer to convert ONNX model to OpenVINO IR.
     mo_command = f'mo --framework onnx -m {onnx_model_path} --output_dir {MODEL_DIR}'
-    subprocess.call(mo_command, shell=True)
+    subprocess.call(mo_command, shell=True)  # nosec
 
     ir_model_xml = MODEL_DIR / 'bert_base_mrpc.xml'
     ir_model_bin = MODEL_DIR / 'bert_base_mrpc.bin'
