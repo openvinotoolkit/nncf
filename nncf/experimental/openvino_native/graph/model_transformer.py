@@ -144,7 +144,9 @@ class OVModelTransformer(ModelTransformer):
             result = opset.result(output, name=f'Result_{output_name}.{port_id}')
             extra_model_outputs.append(result)
 
-        return ov.Model(results=results + extra_model_outputs, sinks=assign_ops, parameters=params, name=model.friendly_name)
+        return ov.Model(results=results + extra_model_outputs,
+                        sinks=assign_ops, parameters=params,
+                        name=model.friendly_name)
 
     @staticmethod
     def _apply_fq_nodes_removing_transformation(model: ov.Model,
