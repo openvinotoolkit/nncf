@@ -77,7 +77,8 @@ class Ranker(ABC):
             the dataset to rank groups of quantizers. The `len(dataset)` data items will
             be selected if `ranking_subset_size` parameter is greater than the number of
             elements in the dataset.
-        :param ranking_fn:
+        :param ranking_fn: A function that compares values returned by
+            `_collect_values_for_each_item()` for initial and quantized models.
         :param dataset: Dataset for the ranking process.
         :param algo_backend: The `AccuracyControlAlgoBackend` algo backend.
         """
@@ -270,7 +271,8 @@ class MetricBasedRanker(Ranker):
             the dataset to rank groups of quantizers. The `len(dataset)` data items will
             be selected if `ranking_subset_size` parameter is greater than the number of
             elements in the dataset.
-        :param ranking_fn:
+        :param ranking_fn: A function that compares values returned by
+            `_collect_values_for_each_item()` for initial and quantized models.
         :param dataset: Dataset for the ranking process.
         :param algo_backend: The `AccuracyControlAlgoBackend` algo backend.
         :param validation_fn: A validation function to validate the model.

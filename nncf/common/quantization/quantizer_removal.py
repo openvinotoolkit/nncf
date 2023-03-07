@@ -12,7 +12,7 @@
 """
 
 from typing import Tuple, List, TypeVar, Callable, Any
-from collections import deque
+from copy import deepcopy
 
 from nncf.common.factory import ModelTransformerFactory
 from nncf.common.graph import NNCFGraph
@@ -20,6 +20,7 @@ from nncf.common.graph import NNCFNode
 from nncf.common.graph.operator_metatypes import OperatorMetatype
 from nncf.common.graph.transformations.layout import TransformationLayout
 from nncf.common.graph.transformations.layout import TransformationCommand
+from nncf.quantization.passes import transform_to_inference_graph
 
 
 TModel = TypeVar('TModel')
@@ -52,19 +53,7 @@ def find_quantizer_nodes_to_cut(
         - `ops` is the list of nodes that will be reverted to original precision
         if `quantizer_nodes` are removed.
     """
-    start_nodes = [*graph.get_input_nodes(), *graph.get_nodes_by_metatypes(quantizer_metatypes)]
-    queue = deque(start_nodes)
-    visited = {x.node_name: True for x in start_nodes}
-
-    while len(queue) != 0:
-        current_node = queue.popleft()
-        # A successor of node `current_node` is a node `successor` such that exists
-        # a directed edge (current_node, successor) from `current_node` to `successor`.
-        successors = (e.to_node for e in graph.get_output_edges(current_node))
-        for successor in successors:
-            if not visited.get(successor.node_name, False) and successor.metatype not in shape_of_metatypes:
-                queue.append(successor)
-                visited[successor.node_name] = True
+    graph = transform_to_inference_graph(deepcopy(graph), shape_of_metatypes)
 
     def _parse_node_relatives(node: NNCFNode, is_parents: bool):
         if node.metatype in quantizable_metatypes:
@@ -81,7 +70,7 @@ def find_quantizer_nodes_to_cut(
                     to_see_children.append(relative)
                 else:
                     seen_children.append(relative)
-            elif relative.metatype not in const_metatypes and visited.get(relative.node_name, False):
+            elif relative.metatype not in const_metatypes:
                 if relative not in seen_parents:
                     to_see_parents.append(relative)
                 if relative not in seen_children and relative.metatype in quantize_agnostic_metatypes:
