@@ -44,7 +44,7 @@ from nncf.experimental.openvino_native.quantization.quantizer_parameters import 
 from nncf.quantization.algorithms.min_max.backend import MinMaxAlgoBackend
 from nncf.quantization.algorithms.min_max.backend import ALGO_BACKENDS
 
-INPLACE = True
+INPLACE = False
 
 @ALGO_BACKENDS.register(BackendType.OPENVINO)
 class OVMinMaxAlgoBackend(MinMaxAlgoBackend):

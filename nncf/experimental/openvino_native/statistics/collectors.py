@@ -200,12 +200,13 @@ def get_min_max_stat_collector(num_samples, reduction_shape, use_abs_max, inplac
 
     kwargs = {
         'reduction_shape': reduction_shape,
+        'num_samples': num_samples,
         'tensor_processor': OVNNCFCollectorTensorProcessor
     }
     aggregate_min = OnlineMinAggregator(**kwargs)
     aggregate_max = OnlineMaxAggregator(**kwargs)
 
-    collector = TensorCollector(num_samples, OvMinMaxStatsContainer)
+    collector = TensorCollector(OvMinMaxStatsContainer)
     collector.add_branch(OvMinMaxStatsContainer.MIN_STAT, reduce_min, aggregate_min)
     collector.add_branch(OvMinMaxStatsContainer.MAX_STAT, reduce_max, aggregate_max)
     return collector
@@ -223,12 +224,13 @@ def get_mean_min_max_stat_collector(num_samples, reduction_shape, use_abs_max,
         'reduction_shape': reduction_shape,
         'tensor_processor': OVNNCFCollectorTensorProcessor,
         'use_per_sample_stats': use_per_sample_stats,
+        'num_samples': num_samples,
         'window_size': window_size
     }
     aggregate_min = OfflineMeanAggregator(**kwargs)
     aggregate_max = OfflineMeanAggregator(**kwargs)
 
-    collector = TensorCollector(num_samples, OvMinMaxStatsContainer)
+    collector = TensorCollector(OvMinMaxStatsContainer)
     collector.add_branch(OvMinMaxStatsContainer.MIN_STAT, reduce_min, aggregate_min)
     collector.add_branch(OvMinMaxStatsContainer.MAX_STAT, reduce_max, aggregate_max)
     return collector
