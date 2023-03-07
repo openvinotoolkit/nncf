@@ -55,8 +55,8 @@ class BaseSparsityController(BaseCompressionAlgorithmController, SparsityControl
         return strip_model_from_masks(model, self._op_names)
 
     def prepare_for_inference(self, make_model_copy: bool = True) -> tf.keras.Model:
-        model = self.model
-        if make_model_copy:
-            model = copy.deepcopy(self.model)
-        model = self.strip_model(model)
+        # Sparsity transformer create new copy of the model.
+        model = strip_model_from_masks(self.model, self._op_names)
+        if not make_model_copy:
+            self._model = model
         return model

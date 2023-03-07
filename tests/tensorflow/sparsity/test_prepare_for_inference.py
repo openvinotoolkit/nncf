@@ -13,17 +13,22 @@
 
 import pytest
 
+from nncf.config.config import NNCFConfig
 from tests.tensorflow.helpers import create_compressed_model_and_algo_for_test
 from tests.tensorflow.helpers import get_basic_conv_test_model
 from tests.tensorflow.helpers import get_empty_config
 
 
 @pytest.mark.parametrize("make_model_copy", (True, False))
-def test_make_model_copy(make_model_copy):
+@pytest.mark.parametrize("enable_quantization", (True, False), ids=("with_quantization", "no_quantization"))
+def test_make_model_copy(make_model_copy, enable_quantization):
     input_shape = (1, 5, 5, 1)
     model = get_basic_conv_test_model(input_shape=input_shape[1:])
+
     config = get_empty_config(input_sample_sizes=input_shape)
-    config.update({'compression': {'algorithm': "magnitude_sparsity"}})
+    config.update({"compression": [{"algorithm": "magnitude_sparsity"}]})
+    if enable_quantization:
+        config["compression"].append({"algorithm": "quantization", "preset": "mixed"})
 
     compression_model, compression_ctrl = create_compressed_model_and_algo_for_test(model, config, force_no_init=True)
     inference_model = compression_ctrl.prepare_for_inference(make_model_copy=make_model_copy)
@@ -31,6 +36,8 @@ def test_make_model_copy(make_model_copy):
     if make_model_copy:
         assert id(inference_model) != id(compression_model)
     else:
-        assert id(inference_model) == id(compression_model)
+        assert id(inference_model) == id(compression_ctrl.model)
 
-    assert id(compression_model) == id(compression_ctrl.model)
+    if enable_quantization:
+        for ctrl in compression_ctrl.child_ctrls:
+            assert id(compression_ctrl.model) == id(ctrl.model)

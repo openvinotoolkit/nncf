@@ -718,5 +718,5 @@ class QuantizationController(BaseCompressionAlgorithmController):
         model = self.model
         if make_model_copy:
             model = copy.deepcopy(self.model)
-        model = self.strip_model(model)
+        apply_overflow_fix(model, self._op_names)
         return model
