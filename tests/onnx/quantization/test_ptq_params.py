@@ -32,6 +32,8 @@ from tests.post_training.models import NNCFGraphToTest
 from tests.post_training.models import NNCFGraphToTestMatMul
 
 
+# pylint: disable=protected-access
+
 @pytest.mark.parametrize('target_device', TargetDevice)
 def test_target_device(target_device):
     algo = PostTrainingQuantization(PostTrainingQuantizationParameters(target_device=target_device))
