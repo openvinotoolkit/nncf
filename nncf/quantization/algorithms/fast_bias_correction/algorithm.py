@@ -144,7 +144,8 @@ class FastBiasCorrection(Algorithm):
             channel_axis = self._backend_entity.channel_axis_by_types[node.metatype]
             input_blob = self._create_input_data(input_shape,
                                                  input_fp,
-                                                 sub_input_name)
+                                                 sub_input_name,
+                                                 channel_axis)
             bias_shift = self._get_bias_shift(
                 model=extracted_model,
                 input_blob=input_blob,
@@ -249,16 +250,18 @@ class FastBiasCorrection(Algorithm):
     def _create_input_data(self,
                            input_shape: Tuple[int],
                            input_fp: List[np.ndarray],
-                           input_name: str) -> Dict[str, NNCFTensor]:
+                           input_name: str,
+                           channel_axis: int) -> Dict[str, NNCFTensor]:
         """
         Creates input blob for the bias shift calculation.
 
         :param input_shape: Input shape for the blob.
         :param input_fp: Input data for the blob.
         :param input_name: Name for the output dictionary.
+        :param channel_axis: Axis to fill the blob with provided data.
         :return: The dictionary of the blob by input name.
         """
-        input_blob = self._backend_entity.create_blob(input_shape, input_fp)
+        input_blob = self._backend_entity.create_blob(input_shape, input_fp, channel_axis)
         input_data = {input_name: input_blob}
         return input_data
 
