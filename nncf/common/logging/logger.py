@@ -61,8 +61,6 @@ class DuplicateFilter:
 NNCFDeprecationWarning = FutureWarning
 
 
-    # Note: must use FutureWarning in order not to get suppressed by default
-    warnings.warn(msg, NNCFDeprecationWarning, stacklevel=2)
 @contextmanager
 def extension_is_loading_info_log(extension_name: str):
     nncf_logger.info(f"Compiling and loading torch extension: {extension_name}...")
