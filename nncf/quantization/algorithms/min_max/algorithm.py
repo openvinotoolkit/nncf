@@ -12,7 +12,7 @@
 """
 
 from copy import deepcopy
-from typing import Dict, List, TypeVar, Optional, OrderedDict
+from typing import Dict, TypeVar, Optional, OrderedDict
 import collections
 
 from nncf import Dataset
@@ -23,6 +23,7 @@ from nncf.common.graph.transformations.commands import TargetType
 from nncf.common.graph.transformations.commands import TargetPoint
 from nncf.common.graph.transformations.layout import TransformationLayout
 from nncf.parameters import TargetDevice
+from nncf.parameters import ModelType
 from nncf.common.hardware.config import get_hw_config_type
 from nncf.common.insertion_point_graph import InsertionPointGraph
 from nncf.common.quantization.quantizer_propagation.solver import QuantizerPropagationSolver
@@ -80,6 +81,7 @@ class MinMaxQuantizationParameters(AlgorithmParameters):
                  range_type: Optional[RangeType] = None,
                  quantize_outputs: bool = False,
                  ignored_scopes: Optional[IgnoredScope] = None,
+                 model_type: Optional[ModelType] = None
                  ):
         """
         :param number_samples: Number of samples for the statistics collection.
@@ -121,6 +123,7 @@ class MinMaxQuantizationParameters(AlgorithmParameters):
                                                                    signed_activations)
         self.global_quantizer_constraints[QuantizerGroup.WEIGHTS] = q_weight_constraints
         self.global_quantizer_constraints[QuantizerGroup.ACTIVATIONS] = q_activation_constraints
+        self.model_type = model_type
 
     def _get_quantizer_constraints(self, group: QuantizerGroup, preset: QuantizationPreset, num_bits: Optional[int],
                                    per_channel: Optional[bool],
@@ -248,9 +251,17 @@ class MinMaxQuantization(Algorithm):
         hw_config_type = get_hw_config_type(self._parameters.target_device.value)
         hw_config_path = self._backend_entity.hw_config.get_path_to_hw_config(hw_config_type)
         hw_config = self._backend_entity.hw_config.from_json(hw_config_path)
-        weight_nodes = nncf_graph.get_nodes_by_metatypes(self._backend_entity.layers_with_weights_metatypes)
-        ignored_names = get_ignored_node_names_from_ignored_scope(self._parameters.ignored_scopes, nncf_graph)
+        model_type = self._parameters.model_type
+        ignored_scopes = self._parameters.ignored_scopes
+
+        ignored_names = get_ignored_node_names_from_ignored_scope(ignored_scopes, nncf_graph)
+        model_type_ignore_scope = self._backend_entity.get_model_type_ignore_scope(model_type, nncf_graph)
+        ignored_names = set(ignored_names + get_ignored_node_names_from_ignored_scope(model_type_ignore_scope,
+                                                                                      nncf_graph, strict=False))
+
+        weight_nodes = self._backend_entity.get_weight_nodes(nncf_graph)
         weight_nodes = [node for node in weight_nodes if node.node_name not in ignored_names]
+
         default_weight_qconfig = self._get_default_qconfig(
             self._parameters.global_quantizer_constraints[QuantizerGroup.WEIGHTS])
         weighted_node_and_qconf_lists = assign_qconfig_lists_to_modules(nodes_with_weights=weight_nodes,
@@ -343,8 +354,11 @@ class MinMaxQuantization(Algorithm):
             return self._quantization_target_points_to_qconfig
         backend = get_backend(model)
         device = self._parameters.target_device
+        model_type = self._parameters.model_type
         pattern = PatternsManager.get_full_pattern_graph(backend, device)
         quantizer_setup = self._get_quantizer_setup(nncf_graph, pattern)
+        if model_type is not None:
+            self._apply_model_type_pass(model_type, quantizer_setup, nncf_graph, device)
         for quantization_point in quantizer_setup.quantization_points.values():
             if quantization_point.is_weight_quantization_point():
                 self._add_weight_quantization_target_point(quantization_point, nncf_graph)
@@ -412,3 +426,21 @@ class MinMaxQuantization(Algorithm):
                                                       tensor_collector=stat_collector,
                                                       algorithm=MinMaxQuantization))
         return output
+
+    def _apply_model_type_pass(self, model_type, quantizer_setup, nncf_graph, device) -> None:
+        if model_type == ModelType.TRANSFORMER and device in [TargetDevice.ANY, TargetDevice.CPU, TargetDevice.GPU]:
+            self._change_configurations_by_model_type_transformer(quantizer_setup, nncf_graph)
+
+    def _change_configurations_by_model_type_transformer(self, quantizer_setup: SingleConfigQuantizerSetup,
+                                                         nncf_graph: NNCFGraph) -> None:
+        for quantization_point in quantizer_setup.quantization_points.values():
+            if quantization_point.is_activation_quantization_point():
+                node_names = quantization_point.directly_quantized_operator_node_names
+                for node_name in node_names:
+                    metatype = nncf_graph.get_node_by_name(node_name).metatype
+                    mat_mul_metatype = self._backend_entity.mat_mul_metatype
+                    if metatype == mat_mul_metatype:
+                        if quantization_point.qconfig.mode != QuantizationMode.SYMMETRIC:
+                            quantization_point.qconfig.mode = QuantizationMode.SYMMETRIC
+                            nncf_logger.debug(f'Update quantization mode for the node {node_name}'
+                                              f' to the symmetric due to ModelType parameter.')

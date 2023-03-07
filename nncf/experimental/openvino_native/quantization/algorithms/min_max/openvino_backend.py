@@ -13,6 +13,8 @@
 
 from typing import Dict, List, Tuple
 
+from nncf.parameters import ModelType
+from nncf.scopes import IgnoredScope
 from nncf.common.graph.graph import NNCFGraph
 from nncf.common.graph.graph import NNCFNode
 from nncf.common.graph.operator_metatypes import OperatorMetatype
@@ -30,6 +32,7 @@ from nncf.experimental.openvino_native.graph.metatypes.openvino_metatypes import
 from nncf.experimental.openvino_native.graph.metatypes.openvino_metatypes import OVTopKMetatype
 from nncf.experimental.openvino_native.graph.metatypes.openvino_metatypes import OVNonMaxSuppressionMetatype
 from nncf.experimental.openvino_native.graph.metatypes.openvino_metatypes import OVShapeMetatype
+from nncf.experimental.openvino_native.graph.metatypes.openvino_metatypes import OVMatMulMetatype
 from nncf.experimental.openvino_native.graph.transformations.commands import OVQuantizerInsertionCommand
 from nncf.experimental.openvino_native.graph.transformations.commands import OVTargetPoint
 from nncf.experimental.openvino_native.hardware.config import OVHWConfig
@@ -46,8 +49,8 @@ from nncf.quantization.algorithms.min_max.backend import ALGO_BACKENDS
 class OVMinMaxAlgoBackend(MinMaxAlgoBackend):
 
     @property
-    def layers_with_weights_metatypes(self) -> List[OperatorMetatype]:
-        return GENERAL_WEIGHT_LAYER_METATYPES
+    def mat_mul_metatype(self) -> OperatorMetatype:
+        return OVMatMulMetatype
 
     @property
     def post_processing_metatypes(self) -> List[OperatorMetatype]:
@@ -153,3 +156,18 @@ class OVMinMaxAlgoBackend(MinMaxAlgoBackend):
     @staticmethod
     def get_weight_tensor_port_id(node: NNCFNode) -> int:
         return node.layer_attributes.const_port_id
+
+    @staticmethod
+    def get_model_type_ignore_scope(model_type: ModelType, nncf_graph: NNCFGraph) -> IgnoredScope:
+        if model_type == ModelType.TRANSFORMER:
+            return IgnoredScope(types=["Add", "Power", "Squeeze", "Multiply",
+                                       "Subtract", "ReduceMean", "SquaredDifference", "MVN"])
+        return IgnoredScope()
+
+    @staticmethod
+    def get_weight_nodes(nncf_graph: NNCFGraph) -> List[NNCFNode]:
+        output = []
+        for node in nncf_graph.get_all_nodes():
+            if isinstance(node.layer_attributes, OVConstantLayerAttributes):
+                output.append(node)
+        return output

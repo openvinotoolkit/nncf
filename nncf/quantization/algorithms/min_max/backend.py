@@ -15,6 +15,8 @@ from abc import ABC
 from abc import abstractmethod
 from typing import Dict, TypeVar, List
 
+from nncf.parameters import ModelType
+from nncf.scopes import IgnoredScope
 from nncf.common.graph.graph import NNCFGraph
 from nncf.common.graph.graph import NNCFNode
 from nncf.common.graph.operator_metatypes import OperatorMetatype
@@ -27,18 +29,18 @@ from nncf.common.tensor_statistics.statistics import MinMaxTensorStatistic
 from nncf.common.utils.registry import Registry
 from nncf.common.quantization.structs import QuantizerConfig
 
-
 TModel = TypeVar('TModel')
 ALGO_BACKENDS = Registry('algo_backends')
 
 
 class MinMaxAlgoBackend(ABC):
 
+
     @property
     @abstractmethod
-    def layers_with_weights_metatypes(self) -> List[OperatorMetatype]:
+    def mat_mul_metatype(self) -> OperatorMetatype:
         """
-        Property for the backend-specific metatypes with weights.
+        Property for the backend-specific MatMul metatype.
         """
 
     @property
@@ -148,6 +150,7 @@ class MinMaxAlgoBackend(ABC):
         """
 
     @staticmethod
+    @abstractmethod
     def get_weight_tensor_port_id(model: TModel, node: NNCFNode) -> int:
         """
         Returns node's weight tensor input port ID.
@@ -155,4 +158,24 @@ class MinMaxAlgoBackend(ABC):
         :param model: Backend-specific model to get structural information.
         :param node: NNCFNode to find its weight input port ID.
         :return: The input port ID of the weight.
+        """
+
+    @staticmethod
+    @abstractmethod
+    def get_model_type_ignore_scope(model_type: ModelType, nncf_graph: NNCFGraph) -> IgnoredScope:
+        """
+        Returns ignores scope based on a model type parameter.
+
+        :param model_type: Model type parameter.
+        :param nncf_graph: NNCFGraph instance of model.
+        :return: Instance of ignored scope.
+        """
+
+    @staticmethod
+    @abstractmethod
+    def get_weight_nodes(nncf_graph: NNCFGraph) -> List[NNCFNode]:
+        """
+
+        :param weight_nodes:
+        :return:
         """

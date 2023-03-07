@@ -13,6 +13,8 @@
 
 from typing import Dict, List, Tuple
 
+from nncf.parameters import ModelType
+from nncf.scopes import IgnoredScope
 from nncf.common.hardware.config import HWConfig
 from nncf.common.graph.graph import NNCFGraph
 from nncf.common.graph.definitions import NNCFGraphNodeType
@@ -51,22 +53,10 @@ import nncf.torch.graph.operator_metatypes as om
 @ALGO_BACKENDS.register(BackendType.TORCH)
 class PTMinMaxAlgoBackend(MinMaxAlgoBackend):
 
+
     @property
-    def layers_with_weights_metatypes(self) -> List[OperatorMetatype]:
-        return [
-            om.PTModuleConv1dMetatype,
-            om.PTModuleConv2dMetatype,
-            om.PTModuleConv3dMetatype,
-            om.PTDepthwiseConv1dSubtype,
-            om.PTDepthwiseConv2dSubtype,
-            om.PTDepthwiseConv3dSubtype,
-            om.PTModuleLinearMetatype,
-            om.PTModuleConvTranspose1dMetatype,
-            om.PTModuleConvTranspose2dMetatype,
-            om.PTModuleConvTranspose3dMetatype,
-            om.PTModuleEmbeddingMetatype,
-            om.PTModuleEmbeddingBagMetatype,
-        ]
+    def mat_mul_metatype(self) -> OperatorMetatype:
+        return om.PTModuleLinearMetatype
 
     @property
     def post_processing_metatypes(self) -> List[OperatorMetatype]:
@@ -238,3 +228,28 @@ class PTMinMaxAlgoBackend(MinMaxAlgoBackend):
         quantizer = PTMinMaxAlgoBackend._create_quantizer(quantizer_config,
                                                           scale_shape, statistics)
         return PTInsertionCommand(target_point, quantizer, TransformationPriority.QUANTIZATION_PRIORITY)
+
+    @staticmethod
+    def get_model_type_ignore_scope(model_type: ModelType):
+        if model_type == ModelType.TRANSFORMER:
+            # TODO: change types to torch specific
+            return IgnoredScope(types=["Add", "Power", "Squeeze", "Multiply",
+                                       "Subtract", "ReduceMean", "SquaredDifference", "MVN"])
+        return IgnoredScope()
+
+    @staticmethod
+    def get_weight_nodes(nncf_graph: NNCFGraph) -> List[NNCFNode]:
+        return nncf_graph.get_nodes_by_metatypes([
+            om.PTModuleConv1dMetatype,
+            om.PTModuleConv2dMetatype,
+            om.PTModuleConv3dMetatype,
+            om.PTDepthwiseConv1dSubtype,
+            om.PTDepthwiseConv2dSubtype,
+            om.PTDepthwiseConv3dSubtype,
+            om.PTModuleLinearMetatype,
+            om.PTModuleConvTranspose1dMetatype,
+            om.PTModuleConvTranspose2dMetatype,
+            om.PTModuleConvTranspose3dMetatype,
+            om.PTModuleEmbeddingMetatype,
+            om.PTModuleEmbeddingBagMetatype,
+        ])

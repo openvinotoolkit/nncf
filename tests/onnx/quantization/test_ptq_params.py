@@ -23,11 +23,13 @@ from nncf.quantization.algorithms.min_max.onnx_backend import \
 from nncf.onnx.statistics.collectors import ONNXMeanMinMaxStatisticCollector
 from nncf.onnx.statistics.collectors import ONNXMinMaxStatisticCollector
 from nncf.onnx.graph.metatypes.onnx_metatypes import ONNXConvolutionMetatype
+from nncf.onnx.graph.metatypes.onnx_metatypes import ONNXLinearMetatype
 
 from tests.onnx.models import LinearModel
 from tests.onnx.models import OneDepthwiseConvolutionalModel
 from tests.post_training.test_ptq_params import TemplateTestPTQParams
 from tests.post_training.models import NNCFGraphToTest
+from tests.post_training.models import NNCFGraphToTestMatMul
 
 
 # pylint: disable=protected-access
@@ -72,6 +74,9 @@ class TestPTQParams(TemplateTestPTQParams):
              'pattern': GraphPattern()},
         'test_ignored_scopes':
             {'nncf_graph': NNCFGraphToTest(ONNXConvolutionMetatype).nncf_graph,
+             'pattern': GraphPattern()},
+        'test_model_type_pass':
+            {'nncf_graph': NNCFGraphToTestMatMul(ONNXLinearMetatype).nncf_graph,
              'pattern': GraphPattern()},
         }
 

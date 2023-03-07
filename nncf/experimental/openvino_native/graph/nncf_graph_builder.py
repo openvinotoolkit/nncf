@@ -23,7 +23,6 @@ from nncf.common.graph.operator_metatypes import UnknownMetatype
 from nncf.experimental.openvino_native.graph.metatypes.openvino_metatypes import OVConvertMetatype
 from nncf.experimental.openvino_native.graph.metatypes.openvino_metatypes import OV_OPERATOR_METATYPES
 from nncf.experimental.openvino_native.graph.metatypes.openvino_metatypes import METATYPES_WITH_CONST_PORT_ID
-from nncf.experimental.openvino_native.graph.metatypes.openvino_metatypes import GENERAL_WEIGHT_LAYER_METATYPES
 from nncf.experimental.openvino_native.graph.metatypes.openvino_metatypes import OVConvolutionBackpropDataMetatype
 from nncf.experimental.openvino_native.graph.metatypes.openvino_metatypes import OVGroupConvolutionBackpropDataMetatype
 
@@ -163,7 +162,6 @@ class GraphConverter:
                 GraphConverter._add_nncf_node(node, nncf_graph)
             # Set const port id
             elif metatype in METATYPES_WITH_CONST_PORT_ID:
-                nncf_node = nncf_graph.get_node_by_name(node_name)
                 for inp in GraphConverter._filter_weight_input_ports(node.inputs(), metatype):
                     inp_name = inp.get_source_output().get_node().get_friendly_name()
                     if inp_name in visited:
@@ -177,10 +175,6 @@ class GraphConverter:
                                                   const_shape=tuple(const_node.get_output_shape(0)))
                     nncf_node.layer_name = const_node.get_friendly_name()
                     break
-
-                if nncf_node.layer_attributes is None and metatype in GENERAL_WEIGHT_LAYER_METATYPES:
-                    raise NotImplementedError(f'Node {node_name} of {node.get_type_name()} type'
-                                               ' is not supported without constant weights!')
 
         GraphConverter._add_edges_to_nncf_graph(model, nncf_graph)
         return nncf_graph

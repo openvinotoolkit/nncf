@@ -13,6 +13,8 @@
 
 from typing import Dict, List, Tuple, Optional
 
+from nncf.parameters import ModelType
+from nncf.scopes import IgnoredScope
 from nncf.common.graph.graph import NNCFGraph
 from nncf.common.graph.graph import NNCFNode
 from nncf.common.graph.operator_metatypes import OperatorMetatype
@@ -28,7 +30,7 @@ from nncf.onnx.quantization.default_quantization import DEFAULT_ONNX_QUANT_TRAIT
 from nncf.onnx.quantization.quantizer_parameters import calculate_activation_quantizer_parameters
 from nncf.onnx.quantization.quantizer_parameters import calculate_weight_quantizer_parameters
 from nncf.onnx.graph.nncf_graph_builder import ONNXExtendedLayerAttributes
-from nncf.onnx.graph.metatypes.onnx_metatypes import WEIGHT_LAYER_METATYPES
+from nncf.onnx.graph.metatypes.onnx_metatypes import ONNXMatMulMetatype
 from nncf.onnx.graph.metatypes.onnx_metatypes import ONNXNonMaxSuppressionMetatype
 from nncf.onnx.graph.metatypes.onnx_metatypes import ONNXTopKMetatype
 from nncf.onnx.graph.metatypes.onnx_metatypes import ONNXShapeMetatype
@@ -45,8 +47,8 @@ from nncf.quantization.algorithms.min_max.backend import ALGO_BACKENDS
 class ONNXMinMaxAlgoBackend(MinMaxAlgoBackend):
 
     @property
-    def layers_with_weights_metatypes(self) -> List[OperatorMetatype]:
-        return WEIGHT_LAYER_METATYPES
+    def mat_mul_metatype(self) -> OperatorMetatype:
+        return ONNXMatMulMetatype
 
     @property
     def post_processing_metatypes(self) -> List[OperatorMetatype]:
@@ -167,3 +169,17 @@ class ONNXMinMaxAlgoBackend(MinMaxAlgoBackend):
     @staticmethod
     def get_weight_tensor_port_id(node: NNCFNode) -> int:
         return node.metatype.weight_definitions.weight_port_id
+
+    @staticmethod
+    def get_model_type_ignore_scope(model_type: ModelType, nncf_graph: NNCFGraph) -> IgnoredScope:
+        if model_type == ModelType.TRANSFORMER:
+            return IgnoredScope(types=["Add", "Pow", "Squeeze", "Mul", "Div", "Sub", "ReduceMean"])
+        return IgnoredScope()
+
+    @staticmethod
+    def get_weight_nodes(nncf_graph: NNCFGraph) -> List[NNCFNode]:
+        output = []
+        for node in nncf_graph.get_all_nodes():
+            if isinstance(node.layer_attributes, ONNXExtendedLayerAttributes):
+                output.append(node)
+        return output

@@ -91,11 +91,9 @@ class GraphConverter:
         """
         for i, _input in enumerate(onnx_graph.get_model_inputs()):
             input_name = _input.name
-            layer_attributes = ONNXExtendedLayerAttributes([input_name], [input_name])
             input_node = nncf_graph.add_nncf_node(node_name=MODEL_INPUT_OP_NAME + '_' + str(i),
                                                   node_type=NNCFGraphNodeType.INPUT_NODE,
-                                                  node_metatype=InputNoopMetatype,
-                                                  layer_attributes=layer_attributes)
+                                                  node_metatype=InputNoopMetatype)
             to_nodes = onnx_graph.get_nodes_by_input(input_name)
 
             input_node_node_id = input_node.node_id
@@ -127,11 +125,9 @@ class GraphConverter:
         """
         for i, _output in enumerate(onnx_graph.get_model_outputs()):
             output_name = _output.name
-            layer_attributes = ONNXExtendedLayerAttributes([output_name], [output_name])
             output_node = nncf_graph.add_nncf_node(node_name=MODEL_OUTPUT_OP_NAME + '_' + str(i),
                                                    node_type=NNCFGraphNodeType.OUTPUT_NODE,
-                                                   node_metatype=OutputNoopMetatype,
-                                                   layer_attributes=layer_attributes)
+                                                   node_metatype=OutputNoopMetatype)
             from_nodes = onnx_graph.get_nodes_by_output(output_name)
 
             output_node_node_id = output_node.node_id
@@ -191,10 +187,9 @@ class GraphConverter:
                 is_shared = onnx_graph.is_node_shared(node)
                 layer_name = onnx_graph.get_node_layer_name(node)
                 weight_shape = GraphConverter._get_tensor_shape(onnx_graph, layer_name)
+                layer_attributes = ONNXExtendedLayerAttributes(node.input, node.output, weight_shape)
             else:
-                is_shared, layer_name, weight_shape = None, None, None
-            layer_attributes = ONNXExtendedLayerAttributes(node.input, node.output, weight_shape)
-
+                is_shared, layer_name, layer_attributes = None, None, None
             nncf_graph.add_nncf_node(node_name=node.name,
                                      node_type=node.op_type,
                                      node_metatype=metatype,
