@@ -86,11 +86,9 @@ class ONNXFastBiasCorrectionAlgoBackend(FastBiasCorrectionAlgoBackend):
         return subgraph.graph.input[0].name, subgraph.graph.output[0].name
 
     @staticmethod
-    def create_blob(shape: Tuple[int], data: List[float]) -> np.ndarray:
-        blob = np.zeros(shape)
-        for i, value in enumerate(data):
-            blob[:, i] = value
-        blob = blob.astype(np.float32)
+    def create_blob(shape: Tuple[int], data: List[float], channel_axis: int) -> np.ndarray:
+        blob = np.zeros(shape, dtype=np.float32)
+        blob[channel_axis] = np.array(data, dtype=np.float32)
         return blob
 
     @staticmethod
