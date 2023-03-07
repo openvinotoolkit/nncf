@@ -18,14 +18,12 @@ import openvino.runtime as ov
 
 from nncf.common.graph.transformations.commands import TargetType
 from nncf.common.graph.transformations.layout import TransformationLayout
-from nncf.common.tensor_statistics.statistic_point import StatisticPoint
 from nncf.common.tensor_statistics.aggregator import StatisticPointsContainer
 from nncf.common.tensor_statistics.aggregator import StatisticsAggregator
 
-from nncf.experimental.openvino_native.graph.transformations.commands import OVTargetPoint
 from nncf.experimental.openvino_native.graph.transformations.commands import OVOutputInsertionCommand
-from nncf.experimental.openvino_native.graph.nncf_graph_builder import get_operation_const_op
 from nncf.experimental.openvino_native.tensor import OVNNCFTensor
+from nncf.experimental.openvino_native.graph.node_utils import get_result_node_name
 
 
 class OVStatisticsAggregator(StatisticsAggregator):
@@ -34,30 +32,7 @@ class OVStatisticsAggregator(StatisticsAggregator):
         self._name_to_node_mapping = {
             op.get_friendly_name(): op for op in model.get_ops()
         }
-        self._registered_weights = set()
         super().collect_statistics(model)
-
-    def _register_activation_statistic(self, statistic_point: StatisticPointsContainer,
-                                       target_point: OVTargetPoint,
-                                       node_name: str,
-                                       outputs: Dict[str, OVNNCFTensor]) -> None:
-        port_id = target_point.port_id
-        if target_point.type == TargetType.POST_LAYER_OPERATION:
-            stat_node_name = node_name
-        elif target_point.type == TargetType.PRE_LAYER_OPERATION:
-            node = self._name_to_node_mapping[node_name]
-            stat_node_name = node.input_value(port_id).get_node().get_friendly_name()
-        output_name = f'Result_{stat_node_name}.{port_id}'
-        statistic_point.register_tensor(outputs[output_name])
-
-    def _register_weight_statistic(self, statistic_point: StatisticPointsContainer,
-                                   target_point: OVTargetPoint) -> None:
-        op = self._name_to_node_mapping[target_point.target_node_name]
-        weight_node = get_operation_const_op(op, target_point.port_id)
-        # TODO(l-bat): Add Result for weight nodes.
-        weight_tensor = weight_node.get_vector().reshape(weight_node.get_output_shape(0))
-        statistic_point.register_tensor(OVNNCFTensor(weight_tensor))
-
 
     def _register_statistics(self,
                              outputs: Dict[str, OVNNCFTensor],
@@ -65,31 +40,27 @@ class OVStatisticsAggregator(StatisticsAggregator):
         for node_name, _statistic_points in statistic_points.items():
             for statistic_point in _statistic_points:
                 target_point = statistic_point.target_point
-                if target_point.type in [TargetType.PRE_LAYER_OPERATION,
-                                         TargetType.POST_LAYER_OPERATION]:
-                    self._register_activation_statistic(statistic_point,
-                                                        target_point, node_name, outputs)
-                elif target_point.type == TargetType.OPERATION_WITH_WEIGHTS:
-                    # Register constant only once because it does not change
-                    # during inference
-                    if target_point.target_node_name not in self._registered_weights:
-                        self._register_weight_statistic(statistic_point, target_point)
-                        self._registered_weights.add(target_point.target_node_name)
+                node_name = target_point.target_node_name
+                port_id = target_point.port_id
+                if target_point.type == TargetType.POST_LAYER_OPERATION:
+                    stat_node_name = node_name
+                elif target_point.type in [TargetType.PRE_LAYER_OPERATION,
+                                           TargetType.OPERATION_WITH_WEIGHTS]:
+                    node = self._name_to_node_mapping[node_name]
+                    stat_node_name = node.input_value(port_id).get_node().get_friendly_name()
                 else:
                     RuntimeError(f'Unsupported target point type for statistic aggregator:'
                                  f' {target_point.type}')
+                output_name = get_result_node_name(stat_node_name, port_id)
+                statistic_point.register_tensor(outputs[output_name])
 
     def _get_transformation_layout_extra_outputs(self,
                                                  statistic_points: StatisticPointsContainer) -> TransformationLayout:
-        def is_activation_point(statistic_point: StatisticPoint) -> bool:
-            return not statistic_point.target_point.is_weight_target_point()
-
         transformation_layout = TransformationLayout()
         transformation_commands = []
         for _statistic_points in statistic_points.values():
             for _statistic_point in _statistic_points:
-                if is_activation_point(_statistic_point):
-                    transformation_commands.append(OVOutputInsertionCommand(_statistic_point.target_point))
+                transformation_commands.append(OVOutputInsertionCommand(_statistic_point.target_point))
 
         for transformation_command in transformation_commands:
             transformation_layout.register(transformation_command)

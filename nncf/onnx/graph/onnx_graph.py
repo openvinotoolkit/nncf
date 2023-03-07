@@ -11,24 +11,18 @@
  limitations under the License.
 """
 
-from typing import Callable, Dict, List, Optional, Tuple
+from typing import Callable, Dict, List, Optional, Tuple, Union
 
-from collections import deque
 import onnx
-from onnx import numpy_helper  # pylint: disable=no-name-in-module
+from onnx import numpy_helper
 import numpy as np
 
 from nncf.onnx.graph.metatypes.onnx_metatypes import ONNX_OPERATION_METATYPES
 from nncf.onnx.graph.metatypes.onnx_metatypes import OpWeightDef
-from nncf.onnx.graph.metatypes.onnx_metatypes import ONNXIdentityMetatype
-from nncf.onnx.graph.metatypes.onnx_metatypes import ONNXReshapeMetatype
-from nncf.onnx.graph.metatypes.onnx_metatypes import ONNXQuantizeLinearMetatype
 from nncf.onnx.graph.metatypes.onnx_metatypes import WEIGHT_LAYER_METATYPES
 
 
-# pylint: disable=no-member
 # pylint: disable=too-many-public-methods
-
 class ONNXGraph:
     """
     The class provides the interface to get the necessary information from ONNX model.
@@ -46,8 +40,10 @@ class ONNXGraph:
                                                        self.onnx_model.graph.value_info}
         model_inputs_name_to_value_info = {tensor.name: tensor for tensor in self.onnx_model.graph.input}
         model_outputs_name_to_value_info = {tensor.name: tensor for tensor in self.onnx_model.graph.output}
+        initializers = {tensor.name: tensor for tensor in self.onnx_model.graph.initializer}
         self._activations_tensor_name_to_value_info.update(model_inputs_name_to_value_info)
         self._activations_tensor_name_to_value_info.update(model_outputs_name_to_value_info)
+        self._activations_tensor_name_to_value_info.update(initializers)
 
     def _update_node_names(self) -> None:
         self._node_name_to_node = {n.name: n for n in self.onnx_model.graph.node}
@@ -198,37 +194,6 @@ class ONNXGraph:
                 output.append(node)
         return output
 
-    def get_weight_tensor(self, node: onnx.NodeProto) -> Tuple[str, np.ndarray]:
-        # TODO(kshpv): ticket: 101211
-        """
-        Returns node's weight tensor name and its value.
-
-        :param node: Node, in which the weight tensor finally applied.
-        :return: Weight tensor name and its value.
-        """
-        weight_port_id = self.get_weight_port_id(node)
-        weight_input = self.get_node_edge_names(node.name)['input'][weight_port_id]
-        if self.has_initializer(weight_input):
-            return self.get_initializer(weight_input).name, self.get_initializers_value(weight_input)
-        parent_node_on_weight_port = self.get_nodes_by_output(weight_input)[0]
-        nodes = deque([parent_node_on_weight_port])
-        while nodes:
-            current_node = nodes.popleft()
-            node_parents = self.get_parents(current_node)
-            nodes.extendleft(node_parents)
-            metatype = ONNX_OPERATION_METATYPES.get_operator_metatype_by_op_name(current_node.op_type)
-            if metatype in [ONNXIdentityMetatype, ONNXQuantizeLinearMetatype]:
-                if self.has_initializer(current_node.input[0]):
-                    return self._get_tensor_from_zero_input(current_node)
-                continue
-            if metatype == ONNXReshapeMetatype:
-                return self._get_weight_tensor_with_reshape(current_node)
-            if metatype in WEIGHT_LAYER_METATYPES:
-                weight_port_id = self.get_weight_port_id(current_node)
-                weight_input = self.get_node_edge_names(current_node.name)['input'][weight_port_id]
-                return self.get_initializer(weight_input).name, self.get_initializers_value(weight_input)
-        raise RuntimeError('Could not find the weight tensor of the node')
-
     @staticmethod
     def _get_weight_definitions(node: onnx.NodeProto) -> OpWeightDef:
         """
@@ -352,13 +317,15 @@ class ONNXGraph:
         raise RuntimeError('There is no initializer with the name {}'.format(initializer_name))
 
     @staticmethod
-    def get_tensor_shape(tensor: onnx.ValueInfoProto) -> List[int]:
+    def get_tensor_shape(tensor: Union[onnx.ValueInfoProto, onnx.TensorProto]) -> Tuple[int]:
         """
         Returns 'tensor' shape.
 
         :param tensor: The tensor.
         :return: Shape of the Tensor.
         """
+        if isinstance(tensor, onnx.TensorProto):
+            return tuple(tensor.dims)
         tensor_type = tensor.type.tensor_type
         shape = []
         if tensor_type.HasField("shape"):
@@ -377,9 +344,9 @@ class ONNXGraph:
                     raise RuntimeError(f'The tensor {tensor.name} does not have dim_value field.')
         else:
             raise RuntimeError(f'The tensor {tensor.name} does not have shape field')
-        return shape
+        return tuple(shape)
 
-    def get_edge_shape(self, edge_name: str) -> List[int]:
+    def get_edge_shape(self, edge_name: str) -> Tuple[int]:
         """
         Returns a shape of the edge with the name 'edge_name'.
         If the activations tensors were not filled in self._activations_tensor_name_to_value_info, it updates them.
@@ -411,10 +378,14 @@ class ONNXGraph:
         if self._activations_tensor_name_to_value_info is None:
             self._update_activation_tensors()
         if edge_name in self._activations_tensor_name_to_value_info:
-            return self._activations_tensor_name_to_value_info[edge_name].type.tensor_type.elem_type
+            if isinstance(self._activations_tensor_name_to_value_info[edge_name], onnx.ValueInfoProto):
+                return self._activations_tensor_name_to_value_info[edge_name].type.tensor_type.elem_type
+            return self._activations_tensor_name_to_value_info[edge_name].data_type
         self._update_activation_tensors(do_shape_inference=True)
         if edge_name in self._activations_tensor_name_to_value_info:
-            return self._activations_tensor_name_to_value_info[edge_name].type.tensor_type.elem_type
+            if isinstance(self._activations_tensor_name_to_value_info[edge_name], onnx.ValueInfoProto):
+                return self._activations_tensor_name_to_value_info[edge_name].type.tensor_type.elem_type
+            return self._activations_tensor_name_to_value_info[edge_name].data_type
         raise RuntimeError('There is no edge with the name {}'.format(edge_name))
 
     def get_edge_dtype_name(self, edge_name: str) -> str:
@@ -451,6 +422,17 @@ class ONNXGraph:
             output.extend(self.get_nodes_by_input(node_edge))
         return output
 
+    def get_weight_tensor_edge(self, node: onnx.NodeProto) -> str:
+        """
+        Returns weight edge name.
+
+        :param node: Node with weight tensor.
+        :return: Weight edge name.
+        """
+        weight_port_id = self.get_weight_port_id(node)
+        weight_tensor_edge = self.get_node_edge_names(node.name)['input'][weight_port_id]
+        return weight_tensor_edge
+
     def is_node_shared(self, node: onnx.NodeProto) -> bool:
         """
         Returns whether the node share a weight.
@@ -458,8 +440,8 @@ class ONNXGraph:
         :param node: Node.
         :return: True whether node shares a weight - otherwise False.
         """
-        weight_tensor_name, _ = self.get_weight_tensor(node)
-        nodes = self.get_nodes_by_input(weight_tensor_name)
+        weight_tensor_edge = self.get_weight_tensor_edge(node)
+        nodes = self.get_nodes_by_input(weight_tensor_edge)
         return len(nodes) > 1
 
     def get_node_layer_name(self, node: onnx.NodeProto) -> Optional[str]:
@@ -469,5 +451,4 @@ class ONNXGraph:
         :param node: Node.
         :return: Name of a weight tensor or None if the node does not have a weight.
         """
-        weight_tensor_name, _ = self.get_weight_tensor(node)
-        return weight_tensor_name
+        return self.get_weight_tensor_edge(node)

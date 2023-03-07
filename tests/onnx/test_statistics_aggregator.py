@@ -57,7 +57,7 @@ class TestStatisticsAggregator(TemplateTestStatisticsAggregator):
         port_id = 0
         if target_type == TargetType.OPERATION_WITH_WEIGHTS:
             target_node_name = CONV_NODE_NAME
-            port_id = None
+            port_id = 1
         return ONNXTargetPoint(target_type, target_node_name, port_id)
 
     @pytest.fixture

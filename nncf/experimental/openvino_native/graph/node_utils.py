@@ -80,3 +80,15 @@ def get_node_with_bias_value(add_node: NNCFNode, nncf_graph: NNCFGraph) -> Optio
         bias_constant = nncf_graph.get_input_edges(add_node)[0].from_node
 
     return bias_constant if bias_constant.metatype == OVConstantMetatype else None
+
+
+def get_result_node_name(output_name: str, port_id: int) -> str:
+    """
+    Returns name of Result based on node name and its port.
+
+    :param output_name: Node name.
+    :param port_id: Node port.
+    :return: Name of result.
+    """
+
+    return f'Result_{output_name}.{port_id}'
