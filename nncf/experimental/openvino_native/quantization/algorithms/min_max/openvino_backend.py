@@ -158,7 +158,7 @@ class OVMinMaxAlgoBackend(MinMaxAlgoBackend):
         return node.layer_attributes.const_port_id
 
     @staticmethod
-    def get_model_type_ignore_scope(model_type: ModelType, nncf_graph: NNCFGraph) -> IgnoredScope:
+    def get_model_type_ignore_scope(model_type: ModelType) -> IgnoredScope:
         if model_type == ModelType.TRANSFORMER:
             return IgnoredScope(types=["Add", "Power", "Squeeze", "Multiply",
                                        "Subtract", "ReduceMean", "SquaredDifference", "MVN"])

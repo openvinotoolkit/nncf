@@ -162,12 +162,11 @@ class MinMaxAlgoBackend(ABC):
 
     @staticmethod
     @abstractmethod
-    def get_model_type_ignore_scope(model_type: ModelType, nncf_graph: NNCFGraph) -> IgnoredScope:
+    def get_model_type_ignore_scope(model_type: ModelType) -> IgnoredScope:
         """
         Returns ignores scope based on a model type parameter.
 
         :param model_type: Model type parameter.
-        :param nncf_graph: NNCFGraph instance of model.
         :return: Instance of ignored scope.
         """
 

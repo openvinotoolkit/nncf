@@ -44,8 +44,6 @@ def quantize_impl(
                           'supported')
     nncf_logger.warning('Bias correction and fast bias correction algorithms'
                         ' are not supported by Torch backend by now.')
-    if model_type == ModelType.TRANSFORMER:
-        raise ValueError(f'Model type {model_type} is not ' 'supported')
 
     dataset_iter = iter(calibration_dataset.get_inference_data())
     input_shape = tuple(next(dataset_iter).shape)
@@ -59,7 +57,8 @@ def quantize_impl(
     params = PostTrainingQuantizationParameters(number_samples=subset_size,
                                                 preset=preset,
                                                 target_device=target_device,
-                                                ignored_scopes=ignored_scope)
+                                                ignored_scopes=ignored_scope,
+                                                model_type=model_type)
 
     min_max_params = params.algorithms[MinMaxQuantization]
     params.algorithms = {MinMaxQuantization: min_max_params}
