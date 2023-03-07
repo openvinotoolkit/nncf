@@ -188,7 +188,7 @@ def test_converting_asymmetric_quantizer(input_size, num_bits, is_per_channel, i
     input_low, input_range = generate_random_low_and_range_by_input_size(input_size, is_per_channel, is_weights)
 
     ######################################################################
-    # TODO: Workaround for CVS-105241 (remove after fix)
+    # TODO: Workaround for issue 105241 (remove after fix)
     get_quant_len = get_quant_len_by_range(input_range, real_num_bits)
     input_low[(input_low > -get_quant_len / 2) & (input_low < 0)] = 0
     ######################################################################
