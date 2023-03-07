@@ -82,3 +82,9 @@ class NMSEBasedAccuracyAware(pot.AccuracyAwareCommon):
     def _calculate_per_sample_metrics(self, model, subset_indices):
         self._engine.set_model(model)
         return self._engine.calculate_per_sample_metrics(subset_indices)
+
+    def _quantize_model(self, model):
+        self._engine.statistics_collection = True
+        quantized_model = super()._quantize_model(model)
+        self._engine.statistics_collection = False
+        return quantized_model
