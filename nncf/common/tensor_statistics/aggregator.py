@@ -57,7 +57,6 @@ class StatisticsAggregator(ABC):
             outputs = engine.infer(input_data)
             processed_outputs = self._process_outputs(outputs)
             self._register_statistics(processed_outputs, self.merged_statistic_points)
-        self._aggregate_statistics(self.merged_statistic_points)
 
     def register_stastistic_points(self, statistic_points: StatisticPointsContainer) -> None:
         """
@@ -87,10 +86,6 @@ class StatisticsAggregator(ABC):
         :param outputs: prepared raw model outputs
         :param statistic_points: StatisticPointsContainer instance with the statistic points
         """
-
-    def _aggregate_statistics(self, statistic_points: StatisticPointsContainer):
-        for _, _, tensor_collector in statistic_points.get_tensor_collectors():
-            tensor_collector.aggregate()
 
     @abstractmethod
     def _get_transformation_layout_extra_outputs(self,
