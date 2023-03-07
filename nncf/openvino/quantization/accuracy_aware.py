@@ -56,6 +56,7 @@ class NMSEBasedAccuracyAware(pot.AccuracyAwareCommon):
                                        distance='nmse')
                 }
             )
+        self._need_intermediate_model = False
 
     def _get_score(self, model, ranking_subset: List[int], metric_name: str) -> float:
         if self._engine.use_original_metric:
@@ -88,3 +89,7 @@ class NMSEBasedAccuracyAware(pot.AccuracyAwareCommon):
         quantized_model = super()._quantize_model(model)
         self._engine.statistics_collection = False
         return quantized_model
+
+    def _save_intermediate_model(self, model):
+        if self._need_intermediate_model:
+            super()._save_intermediate_model(model)
