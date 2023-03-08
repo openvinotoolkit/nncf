@@ -81,10 +81,16 @@ def test_prepare_for_inference_sparsity(enable_quantization):
     assert torch.all(torch.isclose(x_nncf, x_torch)), f"{x_nncf.view(-1)} != {x_torch.view(-1)}"
 
 
+@pytest.mark.parametrize("use_cuda", (True, False), ids=("cuda", "cpu"))
 @pytest.mark.parametrize("make_model_copy", (True, False))
 @pytest.mark.parametrize("enable_quantization", (True, False), ids=("with_quantization", "no_quantization"))
-def test_make_model_copy(make_model_copy, enable_quantization):
+def test_make_model_copy(make_model_copy, use_cuda, enable_quantization):
     model = BasicConvTestModel()
+    if use_cuda:
+        if torch.cuda.is_available():
+            model = model.cuda()
+        else:
+            pytest.skip("CUDA is not available.")
     config = _get_config_for_algo(model.INPUT_SIZE, enable_quantization)
     compressed_model, compression_ctrl = create_compressed_model_and_algo_for_test(model, config)
 
