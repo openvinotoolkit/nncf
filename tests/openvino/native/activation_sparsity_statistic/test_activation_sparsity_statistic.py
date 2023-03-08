@@ -50,9 +50,9 @@ REF_STATIC_POINTS = {
     "LinearModel": {'Add': 1, 'MatMul': 1, 'Result_Add': 1, 'Result_MatMul': 1},
     "MatMul2DModel": {'Add': 1, 'Result': 1},
 }
-@pytest.mark.parametrize("model_cls_to_test", SYNTHETIC_MODELS.values())
-def test_get_static_points(model_cls_to_test):
-    model_to_test = model_cls_to_test().ov_model
+@pytest.mark.parametrize("model_cls_name", REF_STATIC_POINTS.keys())
+def test_get_static_points(model_cls_name):
+    model_to_test = SYNTHETIC_MODELS.get(model_cls_name)().ov_model
 
     algo = ActivationSparsityStatistic(ActivationSparsityStatisticParameters(number_samples=1))
     statistic_points = algo.get_statistic_points(model_to_test)
@@ -64,7 +64,7 @@ def test_get_static_points(model_cls_to_test):
             node_name = node_name.split('_')[0]
         points_info[node_name] = len(points)
 
-    assert points_info == REF_STATIC_POINTS[model_cls_to_test.__name__]
+    assert points_info == REF_STATIC_POINTS[model_cls_name]
 
 
 @pytest.mark.parametrize("tensor, ref", (([1, 1], 0.0), ([1, 0], 0.5), ([[0, 0], [1, 0]], 0.75), ([0, 0], 1.0)))
