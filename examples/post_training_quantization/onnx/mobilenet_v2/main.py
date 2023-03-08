@@ -45,7 +45,7 @@ def download_model() -> Path:
     return download_url(MODEL_URL, Path(MODEL_PATH).resolve())
 
 
-def validate(model: ov.Model,
+def validate(model: onnx.ModelProto,
              val_loader: torch.utils.data.DataLoader) -> float:
     predictions = []
     references = []
