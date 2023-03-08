@@ -54,7 +54,6 @@ from nncf.common.tensor_statistics.statistic_point import StatisticPoint
 from nncf.common.tensor_statistics.statistic_point import StatisticPointsContainer
 from nncf.common.factory import ModelTransformerFactory
 
-
 TModel = TypeVar('TModel')
 
 
@@ -204,6 +203,7 @@ class MinMaxQuantization(Algorithm):
         :param quantizer_config: QuantizerConfig instance for the current layer.
         :return: One of the TensorStatisticCollectorBase instances
         """
+
         def is_default_parameters(range_type: RangeType,
                                   quantizer_config: QuantizerConfig) -> bool:
             return range_type is None or quantizer_config.per_channel
@@ -354,11 +354,9 @@ class MinMaxQuantization(Algorithm):
             return self._quantization_target_points_to_qconfig
         backend = get_backend(model)
         device = self._parameters.target_device
-        model_type = self._parameters.model_type
         pattern = PatternsManager.get_full_pattern_graph(backend, device)
         quantizer_setup = self._get_quantizer_setup(nncf_graph, pattern)
-        if model_type is not None:
-            self._apply_model_type_pass(model_type, quantizer_setup, nncf_graph, device)
+        self._apply_model_type_pass(self._parameters.model_type, quantizer_setup, nncf_graph, device)
         for quantization_point in quantizer_setup.quantization_points.values():
             if quantization_point.is_weight_quantization_point():
                 self._add_weight_quantization_target_point(quantization_point, nncf_graph)
@@ -380,6 +378,7 @@ class MinMaxQuantization(Algorithm):
 
         quantization_target_points = self._get_quantization_target_points(model)
         weight_layer_names = set()
+
         def filter_func(point: StatisticPoint) -> bool:
             return MinMaxQuantization in point.algorithm_to_tensor_collectors and \
                    point.target_point.type == quantization_target_point.type
@@ -427,20 +426,25 @@ class MinMaxQuantization(Algorithm):
                                                       algorithm=MinMaxQuantization))
         return output
 
-    def _apply_model_type_pass(self, model_type, quantizer_setup, nncf_graph, device) -> None:
-        if model_type == ModelType.TRANSFORMER and device in [TargetDevice.ANY, TargetDevice.CPU, TargetDevice.GPU]:
-            self._change_configurations_by_model_type_transformer(quantizer_setup, nncf_graph)
+    def _apply_model_type_pass(self, model_type: Optional[ModelType], quantizer_setup: SingleConfigQuantizerSetup,
+                               nncf_graph: NNCFGraph, device: TargetDevice) -> None:
+        """
+        Applies changes in-place into quantizer setup based on model_type and device parameters.
 
-    def _change_configurations_by_model_type_transformer(self, quantizer_setup: SingleConfigQuantizerSetup,
-                                                         nncf_graph: NNCFGraph) -> None:
-        for quantization_point in quantizer_setup.quantization_points.values():
-            if quantization_point.is_activation_quantization_point():
-                node_names = quantization_point.directly_quantized_operator_node_names
-                for node_name in node_names:
-                    metatype = nncf_graph.get_node_by_name(node_name).metatype
-                    mat_mul_metatype = self._backend_entity.mat_mul_metatype
-                    if metatype == mat_mul_metatype:
-                        if quantization_point.qconfig.mode != QuantizationMode.SYMMETRIC:
+        :param model_type: Model type parameter.
+        :param quantizer_setup: Quantizer setup which considered to update.
+        :param nncf_graph: Instance of NNCFGraph.
+        :param device: Target device.
+        :return: None
+        """
+        if model_type == ModelType.TRANSFORMER and device in [TargetDevice.ANY, TargetDevice.CPU, TargetDevice.GPU]:
+            for quantization_point in quantizer_setup.quantization_points.values():
+                if quantization_point.is_activation_quantization_point():
+                    for node_name in quantization_point.directly_quantized_operator_node_names:
+                        metatype = nncf_graph.get_node_by_name(node_name).metatype
+                        mat_mul_metatype = self._backend_entity.mat_mul_metatype
+                        if metatype == mat_mul_metatype and \
+                                quantization_point.qconfig.mode != QuantizationMode.SYMMETRIC:
                             quantization_point.qconfig.mode = QuantizationMode.SYMMETRIC
                             nncf_logger.debug(f'Update quantization mode for the node {node_name}'
                                               f' to the symmetric due to ModelType parameter.')
