@@ -14,12 +14,12 @@
 import re
 import subprocess
 from pathlib import Path
-from typing import Dict, List, Optional
+from typing import List, Optional
 
 import nncf
 import numpy as np
 import onnx
-import onnxruntime
+import openvino.runtime as ov
 import torch
 from fastdownload import FastDownload, download_url
 from sklearn.metrics import accuracy_score
@@ -45,17 +45,16 @@ def download_model() -> Path:
     return download_url(MODEL_URL, Path(MODEL_PATH).resolve())
 
 
-def validate(path_to_model: str, data_loader: torch.utils.data.DataLoader,
-             providers: List[str], provider_options: Dict[str, str]) -> float:
-    sess = onnxruntime.InferenceSession(path_to_model, providers=providers,
-                                        provider_options=provider_options)
-    _input_name = sess.get_inputs()[0].name
-    _output_names = [sess.get_outputs()[0].name]
-
+def validate(model: ov.Model,
+             val_loader: torch.utils.data.DataLoader) -> float:
     predictions = []
     references = []
-    for images, target in tqdm(data_loader):
-        pred = sess.run(_output_names, {_input_name: images.numpy()})[0]
+
+    compiled_model = ov.compile_model(model)
+    output = compiled_model.outputs[0]
+
+    for images, target in tqdm(val_loader):
+        pred = compiled_model(images)[output]
         predictions.append(np.argmax(pred, axis=1))
         references.append(target)
 
@@ -141,15 +140,11 @@ print('[4/7] Benchmark INT8 model:')
 int8_fps = run_benchmark(int8_model_path, shape=[1,3,224,224], verbose=True)
 
 print('[5/7] Validate OpenVINO FP32 model:')
-fp32_top1 = validate(fp32_model_path, val_loader,
-                     providers = ['OpenVINOExecutionProvider'],
-                     provider_options = [{'device_type' : 'CPU_FP32'}])
+fp32_top1 = validate(fp32_model_path, val_loader)
 print(f'Accuracy @ top1: {fp32_top1:.3f}')
 
 print('[6/7] Validate OpenVINO INT8 model:')
-int8_top1 = validate(int8_model_path, val_loader,
-                     providers = ['OpenVINOExecutionProvider'],
-                     provider_options = [{'device_type' : 'CPU_FP32'}])
+int8_top1 = validate(int8_model_path, val_loader)
 print(f'Accuracy @ top1: {int8_top1:.3f}')
 
 print('[7/7] Report:')
