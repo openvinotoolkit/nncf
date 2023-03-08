@@ -25,14 +25,19 @@ from nncf.common.tensor_statistics.collectors import NNCFCollectorTensorProcesso
 from nncf.common.tensor_statistics.collectors import MeanMinMaxStatisticCollector
 from nncf.common.tensor_statistics.collectors import MinMaxOfflineStatisticCollectorSpec
 from nncf.common.tensor_statistics.collectors import TensorCollector
+from nncf.common.tensor_statistics.collectors import NoopReducer
 from nncf.common.tensor_statistics.collectors import MinReducer
 from nncf.common.tensor_statistics.collectors import MaxReducer
 from nncf.common.tensor_statistics.collectors import AbsMaxReducer
+from nncf.common.tensor_statistics.collectors import BatchMeanReducer
+from nncf.common.tensor_statistics.collectors import MeanPerChReducer
 from nncf.common.tensor_statistics.collectors import OnlineMinAggregator
 from nncf.common.tensor_statistics.collectors import OnlineMaxAggregator
 from nncf.common.tensor_statistics.collectors import OfflineMinAggregator
 from nncf.common.tensor_statistics.collectors import OfflineMaxAggregator
 from nncf.common.tensor_statistics.collectors import OfflineMeanAggregator
+from nncf.common.tensor_statistics.collectors import ShapeAggregator
+from nncf.common.tensor_statistics.collectors import NoopAggregator
 from nncf.common.tensor_statistics.collectors import TensorAggregatorBase
 from nncf.common.tensor_statistics.collectors import MeanStatisticCollector
 from nncf.common.tensor_statistics.collectors import BatchStatisticCollector
@@ -137,6 +142,11 @@ class OVBatchStatisticCollector(BatchStatisticCollector):
         return OVBatchTensorStatistic(self._all_values)
 
 
+class OVNoopReducer(NoopReducer):
+    def get_output_name(self, target_node_name: str, port_id: int) -> str:
+        return get_result_node_name(target_node_name, port_id)
+
+
 class OVMinReducer(MinReducer):
     NAME = 'min'
     def _get_processor(self):
@@ -182,13 +192,33 @@ class OVAbsMaxReducer(AbsMaxReducer):
         return get_result_node_name(target_node_name, port_id)
 
 
-from dataclasses import dataclass
-class OvMinMaxStatsContainer:
-    MIN_STAT = 'min_stat'
-    MAX_STAT = 'max_stat'
-    def __init__(self, min_stat, max_stat) -> None:
-        self.min_values = min_stat
-        self.max_values = max_stat
+class OVBatchMeanReducer(BatchMeanReducer):
+    NAME = 'batch_mean'
+    def _get_processor(self):
+        return OVNNCFCollectorTensorProcessor
+
+    def get_inplace_fn(self):
+        return get_inplace_reduce_op(opset.reduce_mean, self.NAME,
+                                     0, False)
+
+    def get_output_name(self, target_node_name: str, port_id: int) -> str:
+        if self.inplace:
+            target_node_name = get_reduce_node_name(target_node_name, self.NAME)
+        return get_result_node_name(target_node_name, port_id)
+
+
+class OVMeanPerChanelReducer(MeanPerChReducer):
+    NAME = 'mean_per_ch'
+    def _get_processor(self):
+        return OVNNCFCollectorTensorProcessor
+
+    def get_inplace_fn(self):
+        raise NotImplementedError()
+
+    def get_output_name(self, target_node_name: str, port_id: int) -> str:
+        #if self.inplace:
+        #    target_node_name = get_reduce_node_name(target_node_name, self.NAME)
+        return get_result_node_name(target_node_name, port_id)
 
 
 def get_min_max_stat_collector(num_samples, reduction_shape, use_abs_max, inplace):
@@ -199,16 +229,15 @@ def get_min_max_stat_collector(num_samples, reduction_shape, use_abs_max, inplac
         reduce_max = OVMaxReducer(reduction_shape, inplace)
 
     kwargs = {
-        'reduction_shape': reduction_shape,
         'num_samples': num_samples,
         'tensor_processor': OVNNCFCollectorTensorProcessor
     }
     aggregate_min = OnlineMinAggregator(**kwargs)
     aggregate_max = OnlineMaxAggregator(**kwargs)
 
-    collector = TensorCollector(OvMinMaxStatsContainer)
-    collector.add_branch(OvMinMaxStatsContainer.MIN_STAT, reduce_min, aggregate_min)
-    collector.add_branch(OvMinMaxStatsContainer.MAX_STAT, reduce_max, aggregate_max)
+    collector = TensorCollector(OVMinMaxTensorStatistic)
+    collector.add_branch(OVMinMaxTensorStatistic.MIN_STAT, reduce_min, aggregate_min)
+    collector.add_branch(OVMinMaxTensorStatistic.MAX_STAT, reduce_max, aggregate_max)
     return collector
 
 
@@ -221,7 +250,6 @@ def get_mean_min_max_stat_collector(num_samples, reduction_shape, use_abs_max,
         reduce_max = OVMaxReducer(reduction_shape, inplace)
 
     kwargs = {
-        'reduction_shape': reduction_shape,
         'tensor_processor': OVNNCFCollectorTensorProcessor,
         'use_per_sample_stats': use_per_sample_stats,
         'num_samples': num_samples,
@@ -230,7 +258,36 @@ def get_mean_min_max_stat_collector(num_samples, reduction_shape, use_abs_max,
     aggregate_min = OfflineMeanAggregator(**kwargs)
     aggregate_max = OfflineMeanAggregator(**kwargs)
 
-    collector = TensorCollector(OvMinMaxStatsContainer)
-    collector.add_branch(OvMinMaxStatsContainer.MIN_STAT, reduce_min, aggregate_min)
-    collector.add_branch(OvMinMaxStatsContainer.MAX_STAT, reduce_max, aggregate_max)
+    collector = TensorCollector(OVMinMaxTensorStatistic)
+    collector.add_branch(OVMinMaxTensorStatistic.MIN_STAT, reduce_min, aggregate_min)
+    collector.add_branch(OVMinMaxTensorStatistic.MAX_STAT, reduce_max, aggregate_max)
+    return collector
+
+
+def get_mean_stat_collector(num_samples, reduction_shape, window_size=None, inplace=False):
+    reducer_cls = OVBatchMeanReducer if reduction_shape == 0 else OVMeanPerChanelReducer
+    reducer = reducer_cls(reduction_shape, inplace)
+    noop_reducer = OVNoopReducer()
+
+    kwargs = {
+        'tensor_processor': OVNNCFCollectorTensorProcessor,
+        'use_per_sample_stats': False,
+        'num_samples': num_samples,
+        'window_size': window_size
+    }
+    aggregate_mean = OfflineMeanAggregator(**kwargs)
+    aggregate_shape = ShapeAggregator()
+
+    collector = TensorCollector(OVMeanTensorStatistic)
+    collector.add_branch(OVMeanTensorStatistic.MEAN_STAT, reducer, aggregate_mean)
+    collector.add_branch(OVMeanTensorStatistic.SHAPE_STAT, noop_reducer, aggregate_shape)
+    return collector
+
+
+def get_mean_batch_stat_collector(num_samples, inplace=True):
+    reducer = OVBatchMeanReducer(inplace=inplace)
+    aggregator = NoopAggregator(num_samples)
+
+    collector = TensorCollector(OVBatchTensorStatistic)
+    collector.add_branch(OVBatchTensorStatistic.VALUES_STATS, reducer, aggregator)
     return collector

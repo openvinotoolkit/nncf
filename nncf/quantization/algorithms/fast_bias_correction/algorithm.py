@@ -198,8 +198,9 @@ class FastBiasCorrection(Algorithm):
                 node_name,
                 input_filter_func,
                 FastBiasCorrection):
-            input_fp.extend(tensor_collector.get_statistics().mean_values)
-            input_shape.extend(tensor_collector.get_statistics().shape)
+            statistics = tensor_collector.get_statistics()
+            input_fp.extend(statistics.mean_values)
+            input_shape.extend(statistics.shape)
         return input_fp, input_shape
 
     def _get_fp_outputs(self, statistic_points: StatisticPointsContainer, node_name: str) -> List[np.ndarray]:

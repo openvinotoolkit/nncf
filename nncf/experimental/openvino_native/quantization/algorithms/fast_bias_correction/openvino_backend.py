@@ -28,6 +28,7 @@ from nncf.experimental.openvino_native.graph.transformations.commands import OVB
 from nncf.experimental.openvino_native.graph.transformations.commands import OVModelExtractionCommand
 from nncf.experimental.openvino_native.graph.transformations.commands import OVTargetPoint
 from nncf.experimental.openvino_native.statistics.collectors import OVMeanStatisticCollector
+from nncf.experimental.openvino_native.statistics.collectors import get_mean_stat_collector
 from nncf.experimental.openvino_native.statistics.collectors import OVNNCFCollectorTensorProcessor
 from nncf.experimental.openvino_native.tensor import OVNNCFTensor
 from nncf.experimental.openvino_native.graph.node_utils import get_bias_value
@@ -46,7 +47,7 @@ class OVFastBiasCorrectionAlgoBackend(FastBiasCorrectionAlgoBackend):
 
     @property
     def tensor_processor(self) -> OVNNCFCollectorTensorProcessor:
-        return OVNNCFCollectorTensorProcessor()
+        return OVNNCFCollectorTensorProcessor
 
     @staticmethod
     def target_point(target_type: TargetType,
@@ -68,6 +69,7 @@ class OVFastBiasCorrectionAlgoBackend(FastBiasCorrectionAlgoBackend):
     def mean_statistic_collector(reduction_shape: ReductionShape,
                                  num_samples: Optional[int] = None,
                                  window_size: Optional[int] = None) -> OVMeanStatisticCollector:
+        return get_mean_stat_collector(num_samples, reduction_shape, window_size)
         return OVMeanStatisticCollector(reduction_shape, num_samples, window_size)
 
     @staticmethod
