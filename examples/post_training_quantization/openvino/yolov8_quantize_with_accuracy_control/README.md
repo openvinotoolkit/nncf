@@ -12,6 +12,14 @@ The example includes the following steps:
 
 To run the example you should install the corresponding Python dependencies:
 
+To run the example you should install the corresponding Python dependencies:
+- Install NNCF from source:
+```
+git clone https://github.com/openvinotoolkit/nncf.git
+cd nncf
+pip install .
+```
+- Install 3rd party dependencies of this example:
 ```
 pip install -r requirements.txt
 ```

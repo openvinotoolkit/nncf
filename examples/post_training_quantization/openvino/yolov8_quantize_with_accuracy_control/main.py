@@ -132,7 +132,8 @@ def quantize_ac(model: ov.Model, data_loader: torch.utils.data.DataLoader, valid
         validator.batch_i = 1
         validator.confusion_matrix = ConfusionMatrix(nc=validator.nc)
         num_outputs = len(compiled_model.outputs)
-
+        
+        counter = 0
         for batch_i, batch in enumerate(validation_loader):
             if num_samples is not None and batch_i == num_samples:
                 break
@@ -141,15 +142,20 @@ def quantize_ac(model: ov.Model, data_loader: torch.utils.data.DataLoader, valid
             if num_outputs == 1:
                 preds = torch.from_numpy(results[compiled_model.output(0)])
             else:
-                preds = [torch.from_numpy(results[compiled_model.output(0)]), [
-                    torch.from_numpy(results[compiled_model.output(1)])]]
+                preds = [
+                    torch.from_numpy(results[compiled_model.output(0)]), 
+                    [torch.from_numpy(results[compiled_model.output(1)])]
+                ]
             preds = validator.postprocess(preds)
             validator.update_metrics(preds, batch)
+            counter+=1
         stats = validator.get_stats()
         if num_outputs == 1:
             stats_metrics = stats['metrics/mAP50-95(B)']
         else:
             stats_metrics = stats['metrics/mAP50-95(M)']
+        print(f'Validate: dataset lenght = {counter}, '
+          f'metric value = {stats_metrics:.3f}')
         return stats_metrics
 
     quantization_dataset = nncf.Dataset(data_loader, transform_fn)
