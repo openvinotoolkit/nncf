@@ -263,8 +263,8 @@ def main():
     os.makedirs(output_dir, exist_ok=True)
 
     for algo_config in nncf_algorithms_config:
-        if config.model.name:
-            add_ignored_scope_by_model_name(algo_config, config.model.name, xml_path, bin_path)
+        if config.nncf_model_id:
+            add_ignored_scope_by_model_name(algo_config, config.nncf_model_id, xml_path, bin_path)
         algo_name = algo_config['name']
         if algo_name == 'quantize':
             quantize_model_arguments = {
@@ -318,6 +318,7 @@ def mobilenet_v3_large_tf_torch_is(ov_model: ov.Model) -> Optional[List[str]]:
     for node in ov_model.get_ordered_ops():
         if node.type_info.name == 'GroupConvolution':
             return [node.get_friendly_name()]
+    return
 
 
 def get_prev_node(node, input_port):
@@ -340,6 +341,7 @@ def mobilenet_v3_large_tf2_is(ov_model: ov.Model) -> Optional[List[str]]:
                 retval.append(node.get_friendly_name())
                 assert len(retval) == 2
                 return retval
+    return
 
 
 def ssd_resnet34_1200_caffe_is(ov_model: ov.Model) -> Optional[List[str]]:
@@ -347,6 +349,7 @@ def ssd_resnet34_1200_caffe_is(ov_model: ov.Model) -> Optional[List[str]]:
         prev_node = get_prev_node(result, 0)
         if prev_node.type_info.name == 'Add':
             return [prev_node.get_friendly_name()]
+    return
 
 
 def east_resnet_v1_50_tf_is(ov_model: ov.Model) -> Optional[List[str]]:
@@ -361,6 +364,7 @@ def east_resnet_v1_50_tf_is(ov_model: ov.Model) -> Optional[List[str]]:
             next_node = next_nodes[0]
             assert next_node.type_info.name == 'Convolution'
             return [next_node.get_friendly_name()]
+    return
 
 
 IS_TO_BUILDER_MAP = {
