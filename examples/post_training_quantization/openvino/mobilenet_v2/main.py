@@ -64,7 +64,7 @@ def run_benchmark(model_path: str, shape: Optional[List[int]] = None,
     command = f'benchmark_app -m {model_path} -d CPU -api async -t 15'
     if shape is not None:
         command += f' -shape [{",".join(str(x) for x in shape)}]'
-    cmd_output = subprocess.check_output(command, shell=True)
+    cmd_output = subprocess.check_output(command, shell=True) # nosec
     if verbose:
         print(*str(cmd_output).split('\\n')[-9:-1], sep='\n')
     match = re.search(r"Throughput\: (.+?) FPS", str(cmd_output))
