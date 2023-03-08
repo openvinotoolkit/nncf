@@ -104,7 +104,7 @@ class ONNXConvolutionTransposeMetatype(ONNXOpWithWeightsMetatype):
 @ONNX_OPERATION_METATYPES.register()
 class ONNXLinearMetatype(ONNXOpWithWeightsMetatype):
     name = 'LinearOp'
-    op_names = ['Gemm', 'MatMul']
+    op_names = ['Gemm']
     hw_config_names = [HWConfigOpName.MATMUL]
     # TODO(kshpv): ticket:95156
     weight_definitions = OpWeightDef(weight_channel_axis=0, weight_port_id=1, bias_port_id=2)
@@ -352,6 +352,13 @@ class ONNXRoiAlignMetatype(ONNXOpMetatype):
 
 
 @ONNX_OPERATION_METATYPES.register()
+class ONNXMatMulMetatype(ONNXOpMetatype):
+    name = 'MatMulOp'
+    op_names = ['MatMul']
+    hw_config_names = [HWConfigOpName.MATMUL]
+
+
+@ONNX_OPERATION_METATYPES.register()
 class ONNXGatherMetatype(ONNXOpMetatype):
     name = 'GatherOp'
     op_names = ['Gather']
@@ -467,8 +474,7 @@ WEIGHT_LAYER_METATYPES = [ONNXConvolutionMetatype,
 # Contains the operation metatypes for which bias can be applied.
 OPERATIONS_WITH_BIAS_METATYPES = [ONNXConvolutionMetatype,
                                   ONNXDepthwiseConvolutionMetatype,
-                                  ONNXConvolutionTransposeMetatype,
-                                  ONNXLinearMetatype]
+                                  ONNXConvolutionTransposeMetatype]
 
 
 def get_operator_metatypes() -> List[Type[OperatorMetatype]]:
@@ -507,7 +513,7 @@ def _is_depthwise_conv(model: onnx.ModelProto, node: onnx.NodeProto) -> bool:
         return False
     conv_out_channels = weight_tensor_value.shape[0]
     conv_in_channels = weight_tensor_value.shape[1] * conv_group
-    if conv_out_channels % conv_in_channels == 0 and conv_out_channels // conv_in_channels > 0 and \
+    if conv_out_channels % conv_in_channels == 0 and conv_out_channels // conv_in_channels > 0 and\
             conv_group == conv_in_channels:
         return True
     return False
