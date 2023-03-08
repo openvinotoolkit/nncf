@@ -3,4 +3,5 @@ tqdm
 scikit-learn
 fastdownload
 onnx
+onnxruntime
 openvino-dev
