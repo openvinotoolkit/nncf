@@ -20,6 +20,8 @@ import torch
 from torch.optim.lr_scheduler import ReduceLROnPlateau
 from torch.utils import data
 
+from examples.common.sample_config import SampleConfig
+from examples.common.sample_config import create_sample_config
 from examples.torch.common import restricted_pickle_module
 from examples.torch.common.argparser import get_common_argument_parser
 from examples.torch.common.argparser import parse_args
@@ -35,8 +37,6 @@ from examples.torch.common.model_loader import extract_model_and_compression_sta
 from examples.torch.common.model_loader import load_resuming_checkpoint
 from examples.torch.common.optimizer import get_parameter_groups
 from examples.torch.common.optimizer import make_optimizer
-from examples.common.sample_config import SampleConfig
-from examples.common.sample_config import create_sample_config
 from examples.torch.common.utils import SafeMLFLow
 from examples.torch.common.utils import configure_device
 from examples.torch.common.utils import configure_logging
@@ -60,6 +60,7 @@ from nncf.common.accuracy_aware_training import create_accuracy_aware_training_l
 from nncf.config.utils import is_accuracy_aware_training
 from nncf.torch import create_compressed_model
 from nncf.torch import load_state
+from nncf.torch.compression_method_api import PTCompressionAlgorithmController
 from nncf.torch.dynamic_graph.graph_tracer import create_input_infos
 from nncf.torch.initialization import register_default_init_args
 from nncf.torch.utils import is_main_process
@@ -209,10 +210,7 @@ def main_worker(current_gpu, config):
     log_common_mlflow_params(config)
 
     if is_export_only:
-        if config.prepare_for_inference:
-            compression_ctrl.prepare_for_inference(make_model_copy=False)
-        compression_ctrl.export_model(config.to_onnx)
-        logger.info("Saved to {}".format(config.to_onnx))
+        export_model(compression_ctrl, config)
         return
 
     if is_main_process():
@@ -272,10 +270,7 @@ def main_worker(current_gpu, config):
                     write_metrics(mAp, config.metrics_dump)
 
     if 'export' in config.mode:
-        if config.prepare_for_inference:
-            compression_ctrl.prepare_for_inference(make_model_copy=False)
-        compression_ctrl.export_model(config.to_onnx)
-        logger.info("Saved to {}".format(config.to_onnx))
+        export_model(compression_ctrl, config)
 
 
 def create_dataloaders(config):
@@ -477,6 +472,16 @@ def train_epoch(compression_ctrl, net, config, train_data_loader, criterion, opt
                 config.rank, iteration, epoch, model_loss.item(), t_elapsed, optimizer.param_groups[0]['lr'],
                 loss_comp.item() if isinstance(loss_comp, torch.Tensor) else loss_comp
             ))
+
+def export_model(compression_ctrl: PTCompressionAlgorithmController, config: SampleConfig) -> None:
+    if config.prepare_for_inference:
+        inference_model = compression_ctrl.prepare_for_inference()
+        inference_model = inference_model.eval().cpu()
+        input_size = config.get('input_info').get('sample_size')
+        torch.onnx.export(inference_model, torch.randn(input_size), config.to_onnx, input_names=['input.0'])
+    else:
+        compression_ctrl.export_model(config.to_onnx)
+    logger.info(f'Saved to {config.to_onnx}')
 
 
 if __name__ == '__main__':
