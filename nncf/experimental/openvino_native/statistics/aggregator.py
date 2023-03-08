@@ -39,7 +39,6 @@ class OVStatisticsAggregator(StatisticsAggregator):
 
     def __init__(self, dataset: Dataset):
         super().__init__(dataset)
-        self._spec_points: StatisticPointsContainer = None
 
     def collect_statistics(self, model: ov.Model) -> None:
         self._name_to_node_mapping = {
@@ -64,21 +63,8 @@ class OVStatisticsAggregator(StatisticsAggregator):
                 RuntimeError(f'Unsupported target point type for statistic aggregator:'
                              f' {target_point.type}')
 
-            tensor_collector.register_input(stat_node_name, port_id, outputs)
-
-    def register_stastistic_points(self, statistic_points: StatisticPointsContainer) -> None:
-        for target_node_name in statistic_points.data:
-            for statistic_point in\
-                statistic_points.iter_through_statistic_points_in_target_node(target_node_name,
-                                                                              lambda x: True):
-                tensor_collectors_for_all_algos = []
-                for algorithm, tensor_collectors in statistic_point.algorithm_to_tensor_collectors.items():
-                    tensor_collectors_for_all_algos.extend(tensor_collectors)
-
-                merged_collector = MergedTensorCollector(tensor_collectors_for_all_algos)
-                stat_point = StatisticPoint(statistic_point.target_point, merged_collector, 'Merged')
-                self.merged_statistic_points.add_statistic_point(stat_point)
-        super().register_stastistic_points(statistic_points)
+            input_names = tensor_collector.get_output_names(stat_node_name, port_id)
+            tensor_collector.register_inputs([outputs[name] for name in input_names])
 
     def _get_transformation_layout_extra_outputs(self,
                                                  statistic_points: StatisticPointsContainer) -> TransformationLayout:

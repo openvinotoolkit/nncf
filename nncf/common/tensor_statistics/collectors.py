@@ -129,6 +129,20 @@ class NNCFCollectorTensorProcessor(ABC):
         :returns: Sum of each elements of the given NNCFTensor.
         """
 
+    @staticmethod
+    @abstractmethod
+    def to_numpy(tensor: NNCFTensor) -> np.ndarray:
+        """
+        desc
+        """
+
+    @staticmethod
+    @abstractmethod
+    def expand_like(tensor: NNCFTensor, reduction_shape: ReductionShape):
+        """
+        desc
+        """
+
 
 class TensorReducerBase(ABC):
 
@@ -136,7 +150,7 @@ class TensorReducerBase(ABC):
                  reduction_shape: Optional[ReductionShape] = None,
                  inplace: bool = False):
         self._reduction_shape = reduction_shape
-        self._tensor_processor = self._get_processor()
+        self._tensor_processor: NNCFCollectorTensorProcessor = self._get_processor()
         self._inplace = inplace
 
     @property
@@ -149,7 +163,7 @@ class TensorReducerBase(ABC):
 
     @staticmethod
     @abstractmethod
-    def _get_processor():
+    def _get_processor() -> NNCFCollectorTensorProcessor:
         pass
 
     def reduce_input(self, x: TensorType):
@@ -173,15 +187,19 @@ class TensorReducerBase(ABC):
     def get_inplace_fn(self):
         pass
 
+    def __eq__(self, __o: object) -> bool:
+        return isinstance(__o, self.__class__) and\
+            self._reduction_shape == __o._reduction_shape and\
+            self._inplace == __o.inplace
+
     def __hash__(self) -> int:
-        return hash(self.name())
+        return hash((self.name(), self._inplace))
 
 
 class TensorAggregatorBase:
-    def __init__(self, reduction_shape, tensor_processor,
+    def __init__(self, tensor_processor,
                  num_samples: Optional[int]):
 
-        self._reduction_shape = reduction_shape
         self._tensor_processor = tensor_processor
         self._num_samples = num_samples
         self._collected_samples = 0
@@ -213,8 +231,12 @@ class TensorAggregatorBase:
     def reset(self):
         self._container = []
 
+    def __eq__(self, __o: object) -> bool:
+        return isinstance(__o, self.__class__) and\
+            self._num_samples == __o.num_samples
+
     def __hash__(self) -> int:
-        return hash((self.name(), self._num_samples))
+        return hash((self.name()))
 
 
 class TensorCollector:
@@ -261,15 +283,19 @@ class TensorCollector:
                                f' container key {container_key} are encountered')
         self._stat_container_kwargs_map[container_key] = key
 
-    def register_input(self, target_node_name: str, port_id,
-                        inputs: Dict[str, TensorType]):
+    def get_output_names(self, target_node_name: str, port_id: int) -> List[str]:
+        retval = []
+        for reducer in self._reducers:
+            retval.append(reducer.get_output_name(target_node_name, port_id))
+        return retval
+
+    def register_inputs(self, inputs: List[TensorType]):
         if not self._enabled:
             return
 
         reduced_inputs = {}
-        for reducer in self._reducers:
-            input_name = reducer.get_output_name(target_node_name, port_id)
-            reduced_input = reducer.reduce_input(inputs[input_name])
+        for input_, reducer in zip(inputs, self._reducers):
+            reduced_input = reducer.reduce_input(input_)
             reduced_inputs[hash(reducer)] = reduced_input
 
         for (reducer_hash, _), aggregator, in self._aggregators.items():
@@ -331,6 +357,24 @@ class MergedTensorCollector(TensorCollector):
             self._aggregators[key] = unique_aggregator
 
 
+##################################################Reducers##################################################
+
+
+class NoopReducer(TensorReducerBase):
+    def __init__(self):
+        super().__init__(inplace=False)
+
+    @staticmethod
+    def _get_processor() -> NNCFCollectorTensorProcessor:
+        return None
+
+    def get_inplace_fn(self):
+        return []
+
+    def _reduce_out_of_place(self, x: TensorType):
+        return x
+
+
 class MinReducer(TensorReducerBase):
     def _reduce_out_of_place(self, x: TensorType):
         return self._tensor_processor.reduce_min(x, self._reduction_shape)
@@ -345,6 +389,37 @@ class AbsMaxReducer(TensorReducerBase):
     def _reduce_out_of_place(self, x: TensorType):
         x = self._tensor_processor.abs(x)
         return self._tensor_processor.reduce_max(x, self._reduction_shape)
+
+class BatchMeanReducer(TensorReducerBase):
+    def _reduce_out_of_place(self, x: TensorType):
+        return self._tensor_processor.batch_mean(x)
+
+
+class MeanPerChReducer(TensorReducerBase):
+    def _reduce_out_of_place(self, x: TensorType):
+        return self._tensor_processor.mean_per_channel(x, self._reduction_shape)
+
+
+class NumpyConverter(TensorReducerBase):
+    def __init__(self):
+        super().__init__(None, False)
+
+    def _reduce_out_of_place(self, x: TensorType):
+        return self._tensor_processor.to_numpy(x)
+
+
+##################################################Aggregators##################################################
+
+
+class NoopAggregator(TensorAggregatorBase):
+    def __init__(self, num_samples: Optional[int]):
+        super().__init__(None, num_samples)
+
+    def _register_reduced_input_impl(self, x: TensorType):
+        self._container.append(x.tensor)
+
+    def aggregate(self):
+        return self._container
 
 
 class OnlineMinAggregator(TensorAggregatorBase):
@@ -369,10 +444,21 @@ class OnlineMaxAggregator(TensorAggregatorBase):
         return self._container.tensor
 
 
+class ShapeAggregator(TensorAggregatorBase):
+    def __init__(self):
+        super().__init__(None, 1)
+
+    def _register_reduced_input_impl(self, x: TensorType):
+        self._container = x
+
+    def aggregate(self):
+        return self._container.tensor.shape
+
+
 class OfflineMinMaxAggregatorBase(TensorAggregatorBase):
-    def __init__(self, reduction_shape, tensor_processor, use_per_sample_stats: bool,
+    def __init__(self, tensor_processor, use_per_sample_stats: bool,
                  num_samples: Optional[int], window_size=None):
-        super().__init__(reduction_shape, tensor_processor, num_samples)
+        super().__init__(tensor_processor, num_samples)
         self._window_size = window_size
         self._container = deque(maxlen=window_size)
         self._use_per_sample_stats = use_per_sample_stats
@@ -402,6 +488,24 @@ class OfflineMeanAggregator(OfflineMinMaxAggregatorBase):
         return self._tensor_processor.mean(stacked_val, axis=0).tensor
 
 
+class OfflineMedianMADAggregator(OfflineMinMaxAggregatorBase):
+    def __init__(self, tensor_processor, use_per_sample_stats: bool, num_samples: Optional[int],
+                 reduction_shape: ReductionShape, window_size=None):
+        super().__init__(tensor_processor, use_per_sample_stats, num_samples, window_size)
+        self._reduction_shape = reduction_shape
+
+    def aggregate(self):
+        per_channel_history = get_per_channel_history(self._container, list(self._reduction_shape),
+                                                      discard_zeros=True)
+        per_channel_median = [np.median(channel_hist) for channel_hist in per_channel_history]
+        per_channel_mad = []
+        for idx, median in enumerate(per_channel_median):
+            per_channel_mad.append(np.median(abs(per_channel_history[idx] - median)))
+        numpy_median = np.asarray(per_channel_median)
+        numpy_mad = np.asarray(per_channel_mad)
+        return numpy_median, numpy_mad
+
+
 class StatisticsNotCollectedError(Exception):
     """Raised when the statistics are not collected but requested."""
 
@@ -419,6 +523,37 @@ class OfflineTensorStatisticCollector(TensorReducerBase):
 
     def reset(self):
         self._samples.clear()
+
+
+def get_min_max_reducers(reduction_shape, use_abs_max, inplace, min_reducer_cls,
+                         abs_max_reducer_cls, max_reducer_cls):
+    reduce_min = min_reducer_cls(reduction_shape, inplace)
+    if use_abs_max:
+        reduce_max = abs_max_reducer_cls(reduction_shape, inplace)
+    else:
+        reduce_max = max_reducer_cls(reduction_shape, inplace)
+    return reduce_min, reduce_max
+
+
+def get_min_max_stat_collector(num_samples, reduction_shape, use_abs_max, inplace,
+                               min_reducer_cls, abs_max_reducer_cls, max_reducer_cls,
+                               tensor_processor, min_max_stat_container):
+
+    reduce_min, reduce_max = get_min_max_reducers(reduction_shape, use_abs_max, inplace,
+                                                  min_reducer_cls, abs_max_reducer_cls, max_reducer_cls)
+
+    kwargs = {
+        'num_samples': num_samples,
+        'tensor_processor': tensor_processor
+    }
+    aggregate_min = OnlineMinAggregator(**kwargs)
+    aggregate_max = OnlineMaxAggregator(**kwargs)
+
+    collector = TensorCollector(min_max_stat_container)
+    collector.add_branch(min_max_stat_container.MIN_STAT, reduce_min, aggregate_min)
+    collector.add_branch(min_max_stat_container.MAX_STAT, reduce_max, aggregate_max)
+    return collector
+
 
 
 class MinMaxStatisticCollector(OnlineTensorStatisticCollector):
@@ -539,6 +674,29 @@ class MixedMinMaxStatisticCollector(MinMaxOfflineStatisticCollectorBase):
         return self._tensor_processor.reduce_max(stacked_max, axis=0)
 
 
+def get_mean_min_max_stat_collector(num_samples, reduction_shape, use_abs_max,
+                                    use_per_sample_stats, inplace,
+                                    min_reducer_cls, abs_max_reducer_cls, max_reducer_cls,
+                                    tensor_processor, min_max_stat_container, window_size=None,):
+
+    reduce_min, reduce_max = get_min_max_reducers(reduction_shape, use_abs_max, inplace,
+                                                  min_reducer_cls, abs_max_reducer_cls, max_reducer_cls)
+
+    kwargs = {
+        'tensor_processor': tensor_processor,
+        'use_per_sample_stats': use_per_sample_stats,
+        'num_samples': num_samples,
+        'window_size': window_size
+    }
+    aggregate_min = OfflineMeanAggregator(**kwargs)
+    aggregate_max = OfflineMeanAggregator(**kwargs)
+
+    collector = TensorCollector(min_max_stat_container)
+    collector.add_branch(min_max_stat_container.MIN_STAT, reduce_min, aggregate_min)
+    collector.add_branch(min_max_stat_container.MAX_STAT, reduce_max, aggregate_max)
+    return collector
+
+
 class MeanMinMaxStatisticCollector(MinMaxOfflineStatisticCollectorBase):
     """
     Collector aggregates mean of minimum values and mean of maximum values.
@@ -551,6 +709,28 @@ class MeanMinMaxStatisticCollector(MinMaxOfflineStatisticCollectorBase):
     def _max_aggregate(self):
         stacked_max = self._tensor_processor.stack(self._all_max_values)
         return self._tensor_processor.mean(stacked_max, axis=0)
+
+
+def get_mean_stat_collector(num_samples, reduction_shape,
+                            inplace, batch_mean_reducer_cls, mean_per_ch_cls,
+                            tensor_processor, mean_stat_collector, window_size=None):
+
+    reducer_cls = batch_mean_reducer_cls if reduction_shape == 0 else mean_per_ch_cls
+    reducer = reducer_cls(reduction_shape, inplace)
+
+    kwargs = {
+        'tensor_processor': tensor_processor,
+        'use_per_sample_stats': False,
+        'num_samples': num_samples,
+        'window_size': window_size
+    }
+    aggregate_mean = OfflineMeanAggregator(**kwargs)
+    aggregate_shape = ShapeAggregator()
+
+    collector = TensorCollector(mean_stat_collector)
+    collector.add_branch(mean_stat_collector.MEAN_STAT, reducer, aggregate_mean)
+    collector.add_branch(mean_stat_collector.SHAPE_STAT, reducer, aggregate_shape)
+    return collector
 
 
 class MeanStatisticCollector(OfflineTensorStatisticCollector):
@@ -589,11 +769,24 @@ class MeanStatisticCollector(OfflineTensorStatisticCollector):
         self._all_shapes.clear()
 
     def _mean_aggregate(self):
+        #OfflineMeanAggregator
         all_values_stack = self._tensor_processor.stack(self._all_values)
         return self._tensor_processor.mean(all_values_stack, 0)
 
     def _shape(self):
         return self._all_shapes[0]
+
+
+def get_batch_stat_collector(num_samples, reduction_shape,
+                             inplace, batch_mean_reducer_cls: BatchMeanReducer,
+                             batch_stat_container):
+
+    reducer = batch_mean_reducer_cls(reduction_shape, inplace)
+    aggregator = NoopAggregator(num_samples)
+
+    collector = TensorCollector(batch_stat_container)
+    collector.add_branch(batch_stat_container.VALUE, reducer, aggregator)
+    return collector
 
 
 class BatchStatisticCollector(OfflineTensorStatisticCollector):
@@ -619,6 +812,23 @@ class BatchStatisticCollector(OfflineTensorStatisticCollector):
     def _reset(self):
         self._all_values.clear()
 
+def get_median_MAD_stat_collector(num_samples, reduction_shape, use_per_sample_stats,
+                                  tensor_processor, median_mad_stat_container, window_size=None,):
+
+    reducer = NumpyConverter()
+    kwargs = {
+        'tensor_processor': tensor_processor,
+        'use_per_sample_stats': use_per_sample_stats,
+        'num_samples': num_samples,
+        'window_size': window_size,
+        'reduction_shape': reduction_shape,
+    }
+    aggregator = OfflineMedianMADAggregator(**kwargs)
+
+    collector = TensorCollector(median_mad_stat_container)
+    collector.add_branch(median_mad_stat_container.VALUE, reducer, aggregator)
+    return collector
+
 
 class MedianMADStatisticCollector(OfflineTensorStatisticCollector):
     """
@@ -635,6 +845,24 @@ class MedianMADStatisticCollector(OfflineTensorStatisticCollector):
         numpy_median = np.asarray(per_channel_median)
         numpy_mad = np.asarray(per_channel_mad)
         return numpy_median, numpy_mad
+
+
+def get_median_MAD_stat_collector(num_samples, reduction_shape, use_per_sample_stats,
+                                  tensor_processor, median_mad_stat_container, window_size=None,):
+
+    reducer = NumpyConverter()
+    kwargs = {
+        'tensor_processor': tensor_processor,
+        'use_per_sample_stats': use_per_sample_stats,
+        'num_samples': num_samples,
+        'window_size': window_size,
+        'reduction_shape': reduction_shape,
+    }
+    aggregator = OfflineMedianMADAggregator(**kwargs)
+
+    collector = TensorCollector(median_mad_stat_container)
+    collector.add_branch(median_mad_stat_container.VALUE, reducer, aggregator)
+    return collector
 
 
 class PercentileStatisticCollector(OfflineTensorStatisticCollector):
