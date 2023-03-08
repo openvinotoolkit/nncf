@@ -27,6 +27,8 @@ from torch.optim.lr_scheduler import ReduceLROnPlateau
 
 import examples.torch.semantic_segmentation.utils.data as data_utils
 import examples.torch.semantic_segmentation.utils.transforms as JT
+from examples.common.sample_config import SampleConfig
+from examples.common.sample_config import create_sample_config
 from examples.torch.common.argparser import get_common_argument_parser
 from examples.torch.common.argparser import parse_args
 from examples.torch.common.example_logger import logger
@@ -38,7 +40,6 @@ from examples.torch.common.model_loader import extract_model_and_compression_sta
 from examples.torch.common.model_loader import load_model
 from examples.torch.common.model_loader import load_resuming_checkpoint
 from examples.torch.common.optimizer import make_optimizer
-from examples.common.sample_config import create_sample_config
 from examples.torch.common.utils import SafeMLFLow
 from examples.torch.common.utils import configure_device
 from examples.torch.common.utils import configure_logging
@@ -59,6 +60,7 @@ from nncf.common.utils.tensorboard import prepare_for_tensorboard
 from nncf.config.utils import is_accuracy_aware_training
 from nncf.torch import create_compressed_model
 from nncf.torch import load_state
+from nncf.torch.compression_method_api import PTCompressionAlgorithmController
 from nncf.torch.initialization import register_default_init_args
 from nncf.torch.utils import is_main_process
 
@@ -471,7 +473,6 @@ def predict(model, images, class_encoding, config):
     color_predictions = data_utils.label_to_color(predictions, class_encoding)
     return color_predictions
 
-
 def main_worker(current_gpu, config):
     configure_device(current_gpu, config)
     config.mlflow = SafeMLFLow(config)
@@ -540,10 +541,7 @@ def main_worker(current_gpu, config):
     log_common_mlflow_params(config)
 
     if is_export_only:
-        if config.prepare_for_inference:
-            compression_ctrl.prepare_for_inference(make_model_copy=False)
-        compression_ctrl.export_model(config.to_onnx)
-        logger.info("Saved to {}".format(config.to_onnx))
+        export_model(compression_ctrl, config)
         return
 
     if is_main_process():
@@ -601,10 +599,17 @@ def main_worker(current_gpu, config):
         test(val_model, val_loader, criterion, color_encoding, config)
 
     if 'export' in config.mode:
-        if config.prepare_for_inference:
-            compression_ctrl.prepare_for_inference(make_model_copy=False)
+        export_model(compression_ctrl, config)
+
+def export_model(compression_ctrl: PTCompressionAlgorithmController, config: SampleConfig) -> None:
+    if config.prepare_for_inference:
+        inference_model = compression_ctrl.prepare_for_inference()
+        inference_model = inference_model.eval().cpu()
+        input_size = config.get('input_info').get('sample_size')
+        torch.onnx.export(inference_model, torch.randn(input_size), config.to_onnx, input_names=['input.0'])
+    else:
         compression_ctrl.export_model(config.to_onnx)
-        logger.info("Saved to {}".format(config.to_onnx))
+    logger.info(f'Saved to {config.to_onnx}')
 
 
 def main(argv):
