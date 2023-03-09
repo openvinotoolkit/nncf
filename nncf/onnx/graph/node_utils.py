@@ -11,6 +11,8 @@
  limitations under the License.
 """
 
+from typing import Dict, Tuple
+
 import onnx
 import numpy as np
 
@@ -56,7 +58,13 @@ def get_bias_value(node_with_bias : NNCFNode, model: onnx.ModelProto) -> np.ndar
     raise RuntimeError('Could not find the bias value of the node')
 
 
-def get_nncf_input_node_next_onnx_nodes(nncf_graph: NNCFGraph):
+def get_nncf_input_node_next_onnx_nodes(nncf_graph: NNCFGraph) -> Dict[str, Tuple[str, int]]:
+    """
+    Returns mapping between NNNCFGraph input nodes and following by ONNX nodes with corresponding input port ids.
+
+    :param nncf_graph: instance of NNCFGraph
+    :return: A mapping of NNNCF input node names and a tuple with the consumed node names and their input port ids.
+    """
     nncf_input_node_next_onnx_nodes = {}
     for input_node in nncf_graph.get_input_nodes():
         nncf_input_node_next_onnx_nodes[input_node.node_name] = []
