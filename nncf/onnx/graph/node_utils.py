@@ -14,6 +14,7 @@
 import onnx
 import numpy as np
 
+from nncf.common.graph.graph import NNCFGraph
 from nncf.common.graph.graph import NNCFNode
 from nncf.onnx.graph.metatypes.onnx_metatypes import OPERATIONS_WITH_BIAS_METATYPES
 from nncf.onnx.graph.onnx_graph import ONNXGraph
@@ -53,3 +54,15 @@ def get_bias_value(node_with_bias : NNCFNode, model: onnx.ModelProto) -> np.ndar
     if metatype == ONNXIdentityMetatype:
         return onnx_graph.get_initializers_value(node.input[0])
     raise RuntimeError('Could not find the bias value of the node')
+
+
+def get_nncf_input_node_next_onnx_nodes(nncf_graph: NNCFGraph):
+    nncf_input_node_next_onnx_nodes = {}
+    for input_node in nncf_graph.get_input_nodes():
+        nncf_input_node_next_onnx_nodes[input_node.node_name] = []
+        for next_node in nncf_graph.get_next_nodes(input_node):
+            for edge in nncf_graph.get_input_edges(next_node):
+                if edge.from_node == input_node:
+                    nncf_input_node_next_onnx_nodes[input_node.node_name].append((next_node.node_name,
+                                                                                  edge.input_port_id))
+    return nncf_input_node_next_onnx_nodes

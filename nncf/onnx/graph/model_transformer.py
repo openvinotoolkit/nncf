@@ -58,9 +58,12 @@ class ONNXModelTransformer(ModelTransformer):
         """
         if transform_type in [TargetType.PRE_LAYER_OPERATION, TargetType.OPERATION_WITH_WEIGHTS]:
             return onnx_graph.get_node_edge_names(node_name)['input'][port_id]
+        input_edges = set()
         if node_name in nncf_input_node_next_nodes:  # ADD INPUT NODE CASE
-            node_names = nncf_input_node_next_nodes[node_name]
-            input_edges = set(onnx_graph.get_node_edge_names(name)['input'][port_id] for name in node_names)
+            next_nodes = nncf_input_node_next_nodes[node_name]
+            for next_node in next_nodes:
+                name, port_id = next_node[0], next_node[1]
+                input_edges.add(onnx_graph.get_node_edge_names(name)['input'][port_id])
             assert len(input_edges) == 1
             return input_edges.pop()
         return onnx_graph.get_node_edge_names(node_name)['output'][port_id]

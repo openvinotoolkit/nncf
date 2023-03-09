@@ -22,6 +22,7 @@ from nncf.common.graph.transformations.commands import TargetType
 from nncf.common.graph.transformations.layout import TransformationLayout
 from nncf.common.tensor_statistics.statistic_point import StatisticPointsContainer
 from nncf.common.tensor_statistics.aggregator import StatisticsAggregator
+from nncf.onnx.graph.node_utils import get_nncf_input_node_next_onnx_nodes
 from nncf.onnx.graph.onnx_graph import ONNXGraph
 from nncf.onnx.graph.transformations.commands import ONNXOutputInsertionCommand
 from nncf.onnx.tensor import ONNXNNCFTensor
@@ -31,10 +32,7 @@ class ONNXStatisticsAggregator(StatisticsAggregator):
 
     def collect_statistics(self, model: onnx.ModelProto) -> None:
         self._nncf_graph = NNCFGraphFactory.create(model)
-        self.nncf_input_node_next_onnx_nodes = {}
-        for input_node in self._nncf_graph.get_input_nodes():
-            next_nodes = self._nncf_graph.get_next_nodes(input_node)
-            self.nncf_input_node_next_onnx_nodes[input_node.node_name] = [node.node_name for node in next_nodes]
+        self.nncf_input_node_next_onnx_nodes = get_nncf_input_node_next_onnx_nodes(self._nncf_graph)
         self._onnx_graph = ONNXGraph(model)
         self._registered_weights = set()
         super().collect_statistics(model)
