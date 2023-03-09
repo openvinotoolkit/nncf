@@ -54,14 +54,14 @@ class deprecated:
         def wrapped(*args, **kwargs):
             msg = f"Usage of {name} is deprecated "
             if self.start_version is not None:
-                msg += f"starting from NNCF v{str(self.start_version)}"
+                msg += f"starting from NNCF v{str(self.start_version)} "
             msg += "and will be removed in "
             if self.end_version is not None:
                 msg += f"NNCF v{str(self.end_version)}."
             else:
                 msg += "a future NNCF version."
             if self.msg is not None:
-                msg += self.msg
+                msg += '\n' + self.msg
             warning_deprecated(msg)
             return fn_to_wrap(*args, **kwargs)
         return wrapped
