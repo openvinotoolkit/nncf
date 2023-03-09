@@ -111,7 +111,7 @@ class Ranker(ABC):
                                                                  self._algo_backend.get_const_metatypes(),
                                                                  self._algo_backend.get_quantizable_metatypes(),
                                                                  self._algo_backend.get_quantize_agnostic_metatypes(),
-                                                                 self._algo_backend.get_shape_of_metatypes())
+                                                                 self._algo_backend.get_shapeof_metatypes())
             for x in quantizers:
                 processed[x.node_name] = True
 

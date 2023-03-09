@@ -50,7 +50,7 @@ class MinMaxAlgoBackend(ABC):
 
     @property
     @abstractmethod
-    def shape_of_metatypes(self) -> List[OperatorMetatype]:
+    def shapeof_metatypes(self) -> List[OperatorMetatype]:
         """
         Property for the backend-specific ShapeOf metatypes.
         """

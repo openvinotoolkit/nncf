@@ -65,7 +65,7 @@ class AccuracyControlAlgoBackend(ABC):
 
     @staticmethod
     @abstractmethod
-    def get_shape_of_metatypes() -> List[OperatorMetatype]:
+    def get_shapeof_metatypes() -> List[OperatorMetatype]:
         """
         Returns a list of shape of metatypes.
 

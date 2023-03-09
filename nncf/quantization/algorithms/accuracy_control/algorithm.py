@@ -55,7 +55,7 @@ def _create_message(nodes: Iterable[NNCFNode]) -> str:
     return '\n'.join(names)
 
 
-class AccuracyAwareLoopReport:
+class QuantizationAccuracyRestorerReport:
     """
     Contains execution information about accuracy-aware algorithm.
 
@@ -95,7 +95,7 @@ class AccuracyAwareLoopReport:
         return operations
 
 
-class AccuracyAwareLoop:
+class QuantizationAccuracyRestorer:
     """
     Implementation of the accuracy-aware loop.
     """
@@ -167,27 +167,27 @@ class AccuracyAwareLoop:
         # the error otherwise. This code should be removed when native
         # implementation will become the main one.
         if not self.is_native and get_backend(initial_model) == BackendType.OPENVINO:
-            AccuracyAwareLoop._match_const_nodes_names(initial_model_graph,
-                                                       quantized_model_graph,
-                                                       self.algo_backend.get_const_metatypes())
+            QuantizationAccuracyRestorer._match_const_nodes_names(initial_model_graph,
+                                                                  quantized_model_graph,
+                                                                  self.algo_backend.get_const_metatypes())
 
         # Collect original biases and weights because these values are
         # required to undo bias correction and weight correction.
         # Store this data inside the `node.data` dictionary.
         # This data will be used in the `revert_operations_to_floating_point_precision()` method.
-        AccuracyAwareLoop._collect_original_biases_and_weights(initial_model_graph, quantized_model_graph,
-                                                               initial_model, self.algo_backend)
+        QuantizationAccuracyRestorer._collect_original_biases_and_weights(initial_model_graph, quantized_model_graph,
+                                                                          initial_model, self.algo_backend)
 
         # Show the number of quantized operations in the model.
-        report = AccuracyAwareLoopReport()
+        report = QuantizationAccuracyRestorerReport()
         report.num_quantized_operations = get_number_of_quantized_ops(quantized_model_graph,
                                                                       self.algo_backend.get_quantizer_metatypes(),
                                                                       self.algo_backend.get_quantizable_metatypes())
         nncf_logger.info(f'Total number of quantized operations in the model: {report.num_quantized_operations}')
 
         nncf_logger.info('== Ranking groups of quantizers were started ==')
-        ranker = AccuracyAwareLoop._create_ranker(initial_model, validation_fn, validation_dataset,
-                                                  self.ranking_subset_size, self.algo_backend)
+        ranker = QuantizationAccuracyRestorer._create_ranker(initial_model, validation_fn, validation_dataset,
+                                                             self.ranking_subset_size, self.algo_backend)
         groups_to_rank = ranker.find_groups_of_quantizers_to_rank(quantized_model_graph)
         ranked_groups = ranker.rank_groups_of_quantizers(groups_to_rank, initial_model, quantized_model,
                                                          quantized_model_graph)
@@ -253,7 +253,7 @@ class AccuracyAwareLoop:
                                                              quantized_model_graph)
 
         report.num_iterations = iteration
-        AccuracyAwareLoop._print_report(report, self.max_num_iterations)
+        QuantizationAccuracyRestorer._print_report(report, self.max_num_iterations)
 
         return current_model
 
@@ -338,7 +338,7 @@ class AccuracyAwareLoop:
         return ranker
 
     @staticmethod
-    def _print_report(report: AccuracyAwareLoopReport, max_num_iterations: int) -> None:
+    def _print_report(report: QuantizationAccuracyRestorerReport, max_num_iterations: int) -> None:
         """
         Shows report.
 

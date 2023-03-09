@@ -54,7 +54,7 @@ class OVMinMaxAlgoBackend(MinMaxAlgoBackend):
         return [OVTopKMetatype, OVNonMaxSuppressionMetatype]
 
     @property
-    def shape_of_metatypes(self) -> List[OperatorMetatype]:
+    def shapeof_metatypes(self) -> List[OperatorMetatype]:
         return [OVShapeOfMetatype]
 
     @property

@@ -24,7 +24,7 @@ from nncf.experimental.openvino_native.graph.metatypes.common import QUANTIZE_AG
 from nncf.experimental.openvino_native.graph.metatypes.common import QUANTIZABLE_OPERATIONS
 from nncf.experimental.openvino_native.graph.metatypes.common import FAKE_QUANTIZE_OPERATIONS
 from nncf.experimental.openvino_native.graph.metatypes.common import CONSTANT_OPERATIONS
-from nncf.experimental.openvino_native.graph.metatypes.common import SHAPE_OF_OPERATIONS
+from nncf.experimental.openvino_native.graph.metatypes.common import SHAPEOF_OPERATIONS
 from nncf.experimental.openvino_native.graph.metatypes.openvino_metatypes import GENERAL_WEIGHT_LAYER_METATYPES
 from nncf.experimental.openvino_native.graph.nncf_graph_builder import OVConstantLayerAttributes
 from nncf.experimental.openvino_native.graph.node_utils import is_node_with_bias
@@ -56,8 +56,8 @@ class OVAccuracyControlAlgoBackend(AccuracyControlAlgoBackend):
         return QUANTIZE_AGNOSTIC_OPERATIONS
 
     @staticmethod
-    def get_shape_of_metatypes() -> List[OVOpMetatype]:
-        return SHAPE_OF_OPERATIONS
+    def get_shapeof_metatypes() -> List[OVOpMetatype]:
+        return SHAPEOF_OPERATIONS
 
     # Manipulations with bias value and weights
 

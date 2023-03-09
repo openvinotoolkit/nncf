@@ -77,6 +77,6 @@ CONSTANT_OPERATIONS = [
 ]
 
 
-SHAPE_OF_OPERATIONS = [
+SHAPEOF_OPERATIONS = [
     ov_metatypes.OVShapeOfMetatype,
 ]

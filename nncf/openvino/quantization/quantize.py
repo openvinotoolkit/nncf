@@ -33,7 +33,7 @@ from nncf.quantization.telemetry_extractors import CompressionStartedWithQuantiz
 from nncf.telemetry import tracked_function
 from nncf.telemetry.events import NNCF_OV_CATEGORY
 from nncf.quantization.algorithms.accuracy_control.algorithm import get_algo_backend
-from nncf.quantization.algorithms.accuracy_control.algorithm import AccuracyAwareLoop
+from nncf.quantization.algorithms.accuracy_control.algorithm import QuantizationAccuracyRestorer
 
 
 def _convert_openvino_model_to_compressed_model(model: ov.Model,
@@ -236,7 +236,7 @@ def quantize_with_accuracy_control(model: ov.Model,
                                      validation_dataset.get_data())
     nncf_logger.info(f'Metric of quantized model: {quantized_metric}')
 
-    accuracy_aware_loop = AccuracyAwareLoop(algo_backend, max_drop=max_drop, is_native=False)
+    accuracy_aware_loop = QuantizationAccuracyRestorer(algo_backend, max_drop=max_drop, is_native=False)
     quantized_model = accuracy_aware_loop.restore_accuracy(model, initial_metric,
                                                            quantized_model, quantized_metric,
                                                            validation_dataset, validation_fn)

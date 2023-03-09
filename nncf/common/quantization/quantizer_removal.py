@@ -33,7 +33,7 @@ def find_quantizer_nodes_to_cut(
         const_metatypes: List[OperatorMetatype],
         quantizable_metatypes: List[OperatorMetatype],
         quantize_agnostic_metatypes: List[OperatorMetatype],
-        shape_of_metatypes: List[OperatorMetatype]) -> Tuple[List[NNCFNode], List[NNCFNode]]:
+        shapeof_metatypes: List[OperatorMetatype]) -> Tuple[List[NNCFNode], List[NNCFNode]]:
     """
     Finds quantizer nodes that should be removed in addition to `quantizer_node` to get
     the correct model for inference. Returns the list of quantizer nodes (`quantizer_node` + nodes
@@ -47,13 +47,13 @@ def find_quantizer_nodes_to_cut(
     :param quantizable_metatypes: List of metatypes for operations
         that may be quantized.
     :param quantize_agnostic_metatypes: List of quantize agnostic metatypes.
-    :param shape_of_metatypes: List of shape of metatypes.
+    :param shapeof_metatypes: List of shapeof metatypes.
     :return: A tuple (quantizer_nodes, ops) where
         - `quantizer_nodes` is the list of quantizer nodes
         - `ops` is the list of nodes that will be reverted to original precision
         if `quantizer_nodes` are removed.
     """
-    graph = transform_to_inference_graph(deepcopy(graph), shape_of_metatypes)
+    graph = transform_to_inference_graph(deepcopy(graph), shapeof_metatypes)
 
     def _parse_node_relatives(node: NNCFNode, is_parents: bool):
         if node.metatype in quantizable_metatypes:
