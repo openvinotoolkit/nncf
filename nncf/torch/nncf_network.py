@@ -27,6 +27,7 @@ from typing import TypeVar
 import torch
 from torch import nn
 
+from nncf import nncf_logger
 from nncf.common.graph import NNCFNode
 from nncf.common.graph import NNCFNodeName
 from nncf.common.graph.definitions import MODEL_INPUT_OP_NAME
@@ -38,7 +39,6 @@ from nncf.common.insertion_point_graph import InsertionPointGraph
 from nncf.common.insertion_point_graph import PostHookInsertionPoint
 from nncf.common.insertion_point_graph import PreHookInsertionPoint
 from nncf.common.utils.debug import is_debug
-from nncf import nncf_logger
 from nncf.torch.debug import CombinedDebugInterface
 from nncf.torch.debug import debuggable_forward
 from nncf.torch.dynamic_graph.context import TracingContext
@@ -56,7 +56,6 @@ from nncf.torch.dynamic_graph.patch_pytorch import ignore_scope
 from nncf.torch.dynamic_graph.scope import Scope
 from nncf.torch.dynamic_graph.scope_access import get_module_by_scope
 from nncf.torch.dynamic_graph.trace_tensor import TracedTensor
-from nncf.torch.nncf_module_replacement import replace_modules_by_nncf_modules
 from nncf.torch.graph.graph import PTNNCFGraph
 from nncf.torch.graph.graph_builder import GraphBuilder
 from nncf.torch.graph.graph_builder import GraphConverter
@@ -68,6 +67,7 @@ from nncf.torch.knowledge_distillation.knowledge_distillation_handler import Kno
 from nncf.torch.layer_utils import _NNCFModuleMixin
 from nncf.torch.module_operations import UpdateWeight
 from nncf.torch.nested_objects_traversal import objwalk
+from nncf.torch.nncf_module_replacement import replace_modules_by_nncf_modules
 from nncf.torch.quantization.layers import QUANTIZATION_MODULES
 from nncf.torch.utils import compute_FLOPs_hook
 from nncf.torch.utils import get_all_modules_by_type
@@ -312,7 +312,8 @@ class NNCFNetwork(nn.Module, PostGraphBuildActing):
     def get_clean_shallow_copy(self) -> 'NNCFNetwork':
         # WARNING: Will reset pre- and post-ops of the underlying model. Use save_nncf_module_additions
         # and load_nncf_module_additions to preserve these, or temporary_clean_view().
-        from nncf.torch.utils import save_module_state, load_module_state #pylint: disable=cyclic-import
+        from nncf.torch.utils import load_module_state  # pylint: disable=cyclic-import
+        from nncf.torch.utils import save_module_state  # pylint: disable=cyclic-import
         saved_state = save_module_state(self)
         model_copy = NNCFNetwork(self.get_nncf_wrapped_model(), self.input_infos,
                                  self._user_dummy_forward_fn, self._wrap_inputs_fn,
