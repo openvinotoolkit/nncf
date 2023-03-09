@@ -123,8 +123,7 @@ class Ranker(ABC):
                                   groups_to_rank: List[GroupToRank],
                                   initial_model: TModel,
                                   quantized_model: TModel,
-                                  quantized_model_graph: NNCFGraph,
-                                  excluded_groups: Optional[GroupToRank] = None) -> List[GroupToRank]:
+                                  quantized_model_graph: NNCFGraph) -> List[GroupToRank]:
         """
         Ranks groups of quantizers by their contribution to accuracy drop. Returns a list of
         ranked groups where `ranked_groups[-1]` group of quantizers has maximal ranking
@@ -134,7 +133,6 @@ class Ranker(ABC):
         :param initial_model: Initial not quantized model.
         :param quantized_model: Quantized model.
         :param quantized_model_graph: NNCF graph for quantized model.
-        :param excluded_groups: Groups that should be excluded from ranking.
         :return: List of ranked groups of quantizers.
         """
         # See `Ranker.__init__()` to understand why we should do this.
@@ -157,9 +155,6 @@ class Ranker(ABC):
         # Calculate ranking score for groups of quantizers.
         ranking_scores = []  # ranking_scores[i] is the ranking score for groups_to_rank[i]
         for current_group in groups_to_rank:
-            if excluded_groups and current_group in excluded_groups:
-                continue
-
             modified_model = revert_operations_to_floating_point_precision(current_group.operations,
                                                                            current_group.quantizers,
                                                                            quantized_model,
