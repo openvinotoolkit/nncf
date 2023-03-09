@@ -103,15 +103,15 @@ class PTCompressionAlgorithmController(BaseCompressionAlgorithmController):
 
     def prepare_for_inference(self, make_model_copy: bool = True) -> NNCFNetwork:
         """
-        Prepare NNCFNetwork for inference by converting NNCF modules to torch native format.
+        Prepare NNCFNetwork for inference by converting NNCF modules to torch native format and remove auxiliary modules
+        that were used for the model compression, as it's only needed for training.
 
-        :param make_model_copy: `True` means that a copy of the model will be modified.
-            `False` means that the original model in the controller will be changed and
-            no further compression actions will be available. Defaults to True.
+        :param make_model_copy: `True' means that the copy of the model made will be modified, retaining the condition
+            of the original model. `False` means that self.model instance will be modified. Defaults to True.
 
-        :return NNCFNetwork: Converted model.
+        :return NNCFNetwork: Modified model.
         """
-        raise NotImplementedError(f"Method `prepare_for_inference` not implemented for {type(self)}.")
+        raise NotImplementedError(f'Method `prepare_for_inference` not implemented for {type(self)}.')
 
 
 class PTCompressionAlgorithmBuilder(BaseCompressionAlgorithmBuilder):
