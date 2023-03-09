@@ -112,8 +112,7 @@ def get_ignored_node_names_from_ignored_scope(ignored_scope: IgnoredScope,
         for ignored_node_name in ignored_scope.names:
             if ignored_node_name in node_names:
                 matched_by_names.append(ignored_node_name)
-        if strict:
-            if len(ignored_scope.names) != len(matched_by_names):
+        if strict and len(ignored_scope.names) != len(matched_by_names):
                 skipped_names = set(ignored_scope.names) - set(matched_by_names)
                 raise RuntimeError(f'Ignored nodes with name {list(skipped_names)}'
                                     ' were not found in the NNCFGraph. ' + error_msg)

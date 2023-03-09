@@ -232,9 +232,15 @@ class PTMinMaxAlgoBackend(MinMaxAlgoBackend):
     @staticmethod
     def get_model_type_ignore_scope(model_type: ModelType):
         if model_type == ModelType.TRANSFORMER:
-            # TODO: change types to torch specific
-            return IgnoredScope(types=["Add", "Power", "Squeeze", "Multiply",
-                                       "Subtract", "ReduceMean", "SquaredDifference", "MVN"])
+            types = []
+            metatypes_to_add = [om.PTAddMetatype, om.PTPowerMetatype, om.PTPowerMetatype,
+                                om.PTMulMetatype, om.PTSubMetatype, om.PTMeanMetatype]
+            type_name_to_add = ["squeeze"]
+            for metatype in metatypes_to_add:
+                for f_names in metatype.module_to_function_names.values():
+                    types.extend(f_names)
+            types.extend(type_name_to_add)
+            return IgnoredScope(types=types)
         return IgnoredScope()
 
     @staticmethod
