@@ -36,7 +36,6 @@ class ONNXQuantizerLayerParameters:
 
 def convert_fq_params_to_onnx_params(parameters: FakeQuantizeParameters,
                                      num_bits: int,
-                                     mode: QuantizationMode,
                                      tensor_type: np.dtype,
                                      axis: Optional[int] = None) -> ONNXQuantizerLayerParameters:
     """
@@ -44,11 +43,14 @@ def convert_fq_params_to_onnx_params(parameters: FakeQuantizeParameters,
 
     :param parameters: FakeQuantizeParameters representation.
     :param num_bits: Number of quantizer bits.
-    :param mode: Symmetric or Asymmetric mode.
     :param tensor_type: Value type of the tensor. Could be INT8 or UINT8.
     :param axis: Axis for per-channel quantization. Should be none in case of per-tensor.
     :return: Quantizer layer attributes.
     """
+    levels = parameters.levels
+    if levels not in [255, 256]:
+        raise ValueError('Can only export to INT8/UIN8 256-level ONNX Quantize/Dequantize pairs.')
+
     input_low, input_high = parameters.input_low, parameters.input_high
     output_low, output_high = parameters.output_low, parameters.output_high
     if not np.allclose(input_high, output_high) or not np.allclose(input_low, output_low):
@@ -56,11 +58,7 @@ def convert_fq_params_to_onnx_params(parameters: FakeQuantizeParameters,
                          ' input_high == output_high and input_low == output_low.')
 
     level_low, level_high = get_level_low_level_high(tensor_type, num_bits)
-    levels = level_high - level_low + 1
-    if levels not in [255, 256]:
-        raise ValueError('Can only export to INT8/UIN8 256-level ONNX Quantize/Dequantize pairs.')
-
-    scale, zero_point = calculate_scale_zero_point(input_low, input_high, level_low, level_high, mode)
+    scale, zero_point = calculate_scale_zero_point(input_low, input_high, level_low, level_high, levels)
     return ONNXQuantizerLayerParameters(scale, zero_point, tensor_type, axis)
 
 
@@ -78,8 +76,8 @@ def get_level_low_level_high(tensor_type: np.dtype, num_bits: int) -> Tuple[int,
     return - (2 ** num_bits) // 2, (2 ** num_bits) // 2 - 1
 
 
-def calculate_scale_zero_point(input_low: np.ndarray, input_high: np.ndarray, level_low: int, level_high: int,
-                               mode: QuantizationMode, eps: float = 1e-6) -> Tuple[np.ndarray, np.ndarray]:
+def calculate_scale_zero_point(input_low: np.ndarray, input_high: np.ndarray,
+                               level_low: int, level_high: int, levels: int) -> Tuple[np.ndarray, np.ndarray]:
     """
     Calculates Quantizer/Dequantizer layer scale level.
     Returns scale and zero_point values for the quantizer.
@@ -90,25 +88,14 @@ def calculate_scale_zero_point(input_low: np.ndarray, input_high: np.ndarray, le
         The default is "0" for an unsigned range, and "-2^(bit-1)" for a signed one .
     :param level_high: The maximum level in the integer range to quantize.
         The default is "2^bits-1" for an unsigned range, and "2^(bit-1)-1" for a signed one.
-    :param mode: Symmetric or Asymmetric mode.
-    :param eps: The correction value for scale to avoid division by zero.
+    :param levels: Number of quantization levels.
     :return: Scale and Zero point values.
     """
-    scale, zero_point = None, None
-    if mode == QuantizationMode.SYMMETRIC:
-        scale = np.array((input_high - input_low) / (level_high - level_low))
-        zero_point = np.zeros_like(scale, dtype=np.int32)
-    elif mode == QuantizationMode.ASYMMETRIC:
-        scale = np.array((input_high - input_low) / (level_high - level_low))
-        zero_point = np.round(level_low - input_low / np.maximum(scale, eps)).astype(np.int32)
-
-        level_low *= np.ones_like(zero_point, dtype=np.int32)
-        level_high *= np.ones_like(zero_point, dtype=np.int32)
-
-        zero_point = np.maximum(zero_point, level_low)
-        zero_point = np.minimum(zero_point, level_high)
-
+    scale = np.array((input_high - input_low) / (levels - 1))
+    exact_level_low = -levels / 2 if level_low < 0 else 0
+    zero_point = np.round((exact_level_low - input_low / scale).astype(np.float32))
+    zero_point = np.minimum(np.maximum(zero_point.astype(np.int32), level_low), level_high)
     scale = np.squeeze(scale).astype(np.float32)
-    zero_point = np.squeeze(zero_point).astype(np.int32)
+    zero_point = np.squeeze(zero_point)
 
     return scale, zero_point
