@@ -18,7 +18,6 @@ from typing import List, Any, TypeVar
 from nncf.common.graph.graph import NNCFGraph
 from nncf.common.graph.graph import NNCFNode
 from nncf.common.graph.operator_metatypes import OperatorMetatype
-from nncf.common.graph.transformations.commands import TransformationCommand
 
 
 TModel = TypeVar('TModel')
@@ -71,43 +70,6 @@ class AccuracyControlAlgoBackend(ABC):
         Returns a list of shape of metatypes.
 
         :return: The list of shape of metatypes.
-        """
-
-    # Creation of commands
-
-    @staticmethod
-    @abstractmethod
-    def create_command_to_remove_quantizer(quantizer_node: NNCFNode) -> TransformationCommand:
-        """
-        Creates command to remove quantizer from the quantized model.
-
-        :param quantizer_node: The quantizer which should be removed.
-        :return: The command to remove quantizer from the quantized model.
-        """
-
-    @staticmethod
-    @abstractmethod
-    def create_command_to_update_bias(node_with_bias: NNCFNode,
-                                      bias_value: Any,
-                                      nncf_graph: NNCFGraph) -> TransformationCommand:
-        """
-        Creates command to update bias value.
-
-        :param node_with_bias: The node that corresponds to the operation with bias.
-        :param bias_value: New bias value.
-        :param nncf_graph: The NNCF graph.
-        :return: The command to update bias value.
-        """
-
-    @staticmethod
-    @abstractmethod
-    def create_command_to_update_weight(node_with_weight: NNCFNode, weight_value: Any) -> TransformationCommand:
-        """
-        Creates command to update weight value.
-
-        :param node_with_weight: The node that corresponds to the operation with weight.
-        :param weight_value: New weight value.
-        :return: The command to update weight value.
         """
 
     # Manipulations with bias value and weights

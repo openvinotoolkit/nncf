@@ -11,15 +11,15 @@
  limitations under the License.
 """
 
-from typing import Tuple, List, TypeVar, Callable, Any
+from typing import Tuple, List, TypeVar
 from copy import deepcopy
 
 from nncf.common.factory import ModelTransformerFactory
+from nncf.common.factory import CommandCreatorFactory
 from nncf.common.graph import NNCFGraph
 from nncf.common.graph import NNCFNode
 from nncf.common.graph.operator_metatypes import OperatorMetatype
 from nncf.common.graph.transformations.layout import TransformationLayout
-from nncf.common.graph.transformations.layout import TransformationCommand
 from nncf.quantization.passes import transform_to_inference_graph
 
 
@@ -93,14 +93,10 @@ def find_quantizer_nodes_to_cut(
     return to_cut, list(ops_to_return_in_orig_prec)
 
 
-def revert_operations_to_floating_point_precision(
-        operations: List[NNCFNode],
-        quantizers: List[NNCFNode],
-        quantized_model: TModel,
-        quantized_model_graph: NNCFGraph,
-        create_command_to_remove_quantizer_fn: Callable[[NNCFNode], TransformationCommand],
-        create_command_to_update_bias_fn: Callable[[NNCFNode, Any, NNCFGraph], TransformationCommand],
-        create_command_to_update_weight_fn: Callable[[NNCFNode, Any], TransformationCommand]) -> TModel:
+def revert_operations_to_floating_point_precision(operations: List[NNCFNode],
+                                                  quantizers: List[NNCFNode],
+                                                  quantized_model: TModel,
+                                                  quantized_model_graph: NNCFGraph) -> TModel:
     """
     Reverts provided operations to floating-point precision by removing
     quantizers. Restores original bias for operations with bias.
@@ -112,29 +108,28 @@ def revert_operations_to_floating_point_precision(
     :param quantized_model: Quantized model in which provided operations
         should be reverted to floating-point precision.
     :param quantized_model_graph: The graph which was built for `quantized_model`.
-    :param create_command_to_remove_quantizer_fn: Function that creates command to remove quantizer.
-    :param create_command_to_update_bias_fn: Function that creates command to update bias.
-    :param create_command_to_update_weight_fn: Functions that creates command to update weight.
     :return: The model where `operations` were reverted to floating-point precision.
     """
     transformation_layout = TransformationLayout()
 
+    command_creator = CommandCreatorFactory.create(quantized_model)
+
     for node in quantizers:
         transformation_layout.register(
-            create_command_to_remove_quantizer_fn(node)
+            command_creator.create_command_to_remove_quantizer(node)
         )
 
     for node in operations:
         original_bias = node.data.get('original_bias', None)
         if original_bias is not None:
             transformation_layout.register(
-                create_command_to_update_bias_fn(node, original_bias, quantized_model_graph)
+                command_creator.create_command_to_update_bias(node, original_bias, quantized_model_graph)
             )
 
         original_weight = node.data.get('original_weight', None)
         if original_weight is not None:
             transformation_layout.register(
-                create_command_to_update_weight_fn(node, original_weight)
+                command_creator.create_command_to_update_weight(node, original_weight)
             )
 
     model_transformer = ModelTransformerFactory.create(quantized_model)

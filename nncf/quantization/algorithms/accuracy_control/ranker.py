@@ -160,15 +160,10 @@ class Ranker(ABC):
             if excluded_groups and current_group in excluded_groups:
                 continue
 
-            modified_model = revert_operations_to_floating_point_precision(
-                current_group.operations,
-                current_group.quantizers,
-                quantized_model,
-                quantized_model_graph,
-                self._algo_backend.create_command_to_remove_quantizer,
-                self._algo_backend.create_command_to_update_bias,
-                self._algo_backend.create_command_to_update_weight)
-
+            modified_model = revert_operations_to_floating_point_precision(current_group.operations,
+                                                                           current_group.quantizers,
+                                                                           quantized_model,
+                                                                           quantized_model_graph)
             # Calculate the ranking score for the current group of quantizers.
             ranking_score = self._calculate_ranking_score(modified_model, ranking_data_items, ranking_subset_indices)
 

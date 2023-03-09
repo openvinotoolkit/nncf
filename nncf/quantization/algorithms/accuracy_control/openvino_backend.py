@@ -27,15 +27,9 @@ from nncf.experimental.openvino_native.graph.metatypes.common import CONSTANT_OP
 from nncf.experimental.openvino_native.graph.metatypes.common import SHAPE_OF_OPERATIONS
 from nncf.experimental.openvino_native.graph.metatypes.openvino_metatypes import GENERAL_WEIGHT_LAYER_METATYPES
 from nncf.experimental.openvino_native.graph.nncf_graph_builder import OVConstantLayerAttributes
-from nncf.experimental.openvino_native.graph.transformations.command_creation import create_command_to_remove_quantizer
-from nncf.experimental.openvino_native.graph.transformations.command_creation import create_bias_correction_command
-from nncf.experimental.openvino_native.graph.transformations.command_creation import create_command_to_update_weight
 from nncf.experimental.openvino_native.graph.node_utils import is_node_with_bias
 from nncf.experimental.openvino_native.graph.node_utils import get_bias_value
 from nncf.experimental.openvino_native.graph.node_utils import get_weight_value
-from nncf.experimental.openvino_native.graph.transformations.commands import OVBiasCorrectionCommand
-from nncf.experimental.openvino_native.graph.transformations.commands import OVFQNodeRemovingCommand
-from nncf.experimental.openvino_native.graph.transformations.commands import OVWeightUpdateCommand
 
 
 class OVAccuracyControlAlgoBackend(AccuracyControlAlgoBackend):
@@ -64,21 +58,6 @@ class OVAccuracyControlAlgoBackend(AccuracyControlAlgoBackend):
     @staticmethod
     def get_shape_of_metatypes() -> List[OVOpMetatype]:
         return SHAPE_OF_OPERATIONS
-
-    # Creation of commands
-
-    @staticmethod
-    def create_command_to_remove_quantizer(quantizer_node: NNCFNode) -> OVFQNodeRemovingCommand:
-        return create_command_to_remove_quantizer(quantizer_node)
-
-    @staticmethod
-    def create_command_to_update_bias(node_with_bias: NNCFNode,
-                                      bias_value: Any, nncf_graph: NNCFGraph) -> OVBiasCorrectionCommand:
-        return create_bias_correction_command(node_with_bias, bias_value, nncf_graph)
-
-    @staticmethod
-    def create_command_to_update_weight(node_with_weight: NNCFNode, weight_value: Any) -> OVWeightUpdateCommand:
-        return create_command_to_update_weight(node_with_weight, weight_value)
 
     # Manipulations with bias value and weights
 

@@ -204,15 +204,10 @@ class AccuracyAwareLoop:
 
             # greedy removal of the FQ node with the highest importance score
             current_group = ranked_groups.pop()
-            current_model = revert_operations_to_floating_point_precision(
-                current_group.operations,
-                current_group.quantizers,
-                previous_model,
-                quantized_model_graph,
-                self.algo_backend.create_command_to_remove_quantizer,
-                self.algo_backend.create_command_to_update_bias,
-                self.algo_backend.create_command_to_update_weight)
-
+            current_model = revert_operations_to_floating_point_precision(current_group.operations,
+                                                                          current_group.quantizers,
+                                                                          previous_model,
+                                                                          quantized_model_graph)
             report.removed_groups.append(current_group)
 
             nncf_logger.debug(f'Removed a block of {len(current_group.quantizers)} quantizers:'
