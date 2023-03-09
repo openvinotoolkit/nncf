@@ -329,3 +329,24 @@ class ShapeOfModel(OVReferenceModel):
         result = opset.result(conv_add_3, name="Result")
         model = ov.Model([result], [input_1])
         return model
+
+
+@SYNTHETIC_MODELS.register()
+class ConvNotBiasModel(OVReferenceModel):
+    def _create_ov_model(self):
+        input_1 = opset.parameter([1, 3, 4, 2], name="Input_1")
+        mean = self._rng.random((1, 3, 1, 1)).astype(np.float32)
+        scale = self._rng.random((1, 3, 1, 1)).astype(np.float32) + 1e-4
+        subtract = opset.subtract(input_1, mean, name="Sub")
+        kernel = self._rng.random((3, 3, 1, 1)).astype(np.float32) / scale - 0.5
+        strides = [1, 1]
+        pads = [0, 0]
+        dilations = [1, 1]
+        conv = opset.convolution(subtract, kernel, strides, pads, pads, dilations, name="Conv")
+        not_bias = opset.constant(np.zeros((1, 3, 4, 2)), dtype=np.float32, name="NotBias")
+        conv_add = opset.add(conv, not_bias, name="Conv_Add")
+        relu = opset.relu(conv_add, name="Relu")
+        
+        result = opset.result(relu, name="Result")
+        model = ov.Model([result], [input_1])
+        return model
