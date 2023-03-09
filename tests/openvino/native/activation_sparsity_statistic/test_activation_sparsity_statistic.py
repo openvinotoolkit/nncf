@@ -31,7 +31,7 @@ def test_algo():
     dataset = nncf.Dataset(
         MockDataset([1, 3, 4, 2]), transform_func=lambda x: {"Input_1": x, "Input_2": x.reshape(1, 3, 2, 4)}
     )
-    model = activation_sparsity_statistic_impl(model, dataset, 1, threshold=0)
+    model = activation_sparsity_statistic_impl(model, dataset, 1, threshold=0, target_node_types=["Convolution", "Add"])
 
     assert model.has_rt_info(ACTIVATION_SPARSITY_STATISTIC)
 
@@ -41,30 +41,40 @@ def test_algo():
         assert model.has_rt_info([ACTIVATION_SPARSITY_STATISTIC, f"item_{count_stat_items}", "port_id"])
         assert model.has_rt_info([ACTIVATION_SPARSITY_STATISTIC, f"item_{count_stat_items}", "statistic"])
         count_stat_items += 1
-    assert count_stat_items == 8
+    assert count_stat_items == 2
 
 
 REF_STATIC_POINTS = {
-    "ComparisonBinaryModel": {'Add': 1, 'Gather': 1, 'Result_Add': 1, 'Convert': 1},
-    "ConvModel": {'Conv': 1, 'Mul': 1, 'Conv_Add': 1, 'Transpose': 1, 'Relu': 1, 'Concat': 2, 'Result': 1},
-    "LinearModel": {'Add': 1, 'MatMul': 1, 'Result_Add': 1, 'Result_MatMul': 1},
-    "MatMul2DModel": {'Add': 1, 'Result': 1},
+    "ConvModel": {"Conv": 1},
+    "LinearModel": {"MatMul": 1},
 }
+REF_STATIC_POINTS_ADD = {
+    "ConvModel": {"Conv_Add": 1},
+    "LinearModel": {"Add": 1},
+}
+
+
 @pytest.mark.parametrize("model_cls_name", REF_STATIC_POINTS.keys())
-def test_get_static_points(model_cls_name):
+@pytest.mark.parametrize("list_node_types", (None, [], ["Add"]))
+def test_get_static_points(model_cls_name, list_node_types):
     model_to_test = SYNTHETIC_MODELS.get(model_cls_name)().ov_model
 
-    algo = ActivationSparsityStatistic(ActivationSparsityStatisticParameters(number_samples=1))
+    algo = ActivationSparsityStatistic(
+        ActivationSparsityStatisticParameters(number_samples=1, target_node_types=list_node_types, threshold=0.0)
+    )
     statistic_points = algo.get_statistic_points(model_to_test)
 
     points_info = {}
     for node_name, points in statistic_points.items():
-        if node_name.split('_')[0] in ["Gather", "Concat"]:
+        if node_name.split("_")[0] in ["Gather", "Concat"]:
             # Node have not constant name if run pytest in parallel mode
-            node_name = node_name.split('_')[0]
+            node_name = node_name.split("_")[0]
         points_info[node_name] = len(points)
 
-    assert points_info == REF_STATIC_POINTS[model_cls_name]
+    if not list_node_types:
+        assert points_info == REF_STATIC_POINTS[model_cls_name]
+    else:
+        assert points_info == REF_STATIC_POINTS_ADD[model_cls_name]
 
 
 @pytest.mark.parametrize("tensor, ref", (([1, 1], 0.0), ([1, 0], 0.5), ([[0, 0], [1, 0]], 0.75), ([0, 0], 1.0)))

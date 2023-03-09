@@ -41,13 +41,13 @@ class ActivationSparsityStatisticParameters(AlgorithmParameters):
     """
 
     def __init__(
-        self, number_samples: int = 100, target_node_types: Optional[list] = None, threshold: float = 0.05
+        self, number_samples: int = 100, target_node_types: Optional[list] = None, threshold: float = 0.2
     ) -> None:
         """
         :param number_samples: The number of the samples for the statistics collection.
         :param target_node_types: List of node types for which statistics will be collected.
             If None or empty, statistics will be collected for all nodes.
-        :param threshold: Threshold of minimum value of statistic that will be save to the model, defaults is 0.05.
+        :param threshold: Threshold of minimum value of statistic that will be save to the model, defaults is 0.2.
         """
         self.number_samples = number_samples
         self.target_node_types = target_node_types
@@ -120,7 +120,7 @@ class ActivationSparsityStatistic(Algorithm):
 
         :return List[NNCFNode]: list of target nodes.
         """
-        if self.target_node_types is not None and not self.target_node_types:
+        if self.target_node_types is not None and self.target_node_types:
             return nncf_graph.get_nodes_by_types(self.target_node_types)
         return nncf_graph.get_nodes_by_types(self._backend_entity.default_target_node_types())
 
@@ -131,7 +131,7 @@ class ActivationSparsityStatistic(Algorithm):
         dataset: Optional[Dataset] = None,
     ) -> TModel:
         modified_model = copy_model(model)
-        if statistic_points is None:  # TODO: need ???
+        if statistic_points is None:
             backend = get_backend(modified_model)
             # TODO: Remove after OpenVINO Native is removed from experimental
             if backend == BackendType.OPENVINO:

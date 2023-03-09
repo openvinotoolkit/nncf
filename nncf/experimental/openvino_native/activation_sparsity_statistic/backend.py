@@ -58,7 +58,7 @@ class ActivationSparsityStatisticAlgoBackend(ABC):
     @abstractmethod
     def default_target_node_types() -> List[str]:
         """
-        Returns the list of node types for which statistics will be collected.
+        Returns the list of node types for which statistics will be collected with default parameters.
 
         :return: list of node types.
         """

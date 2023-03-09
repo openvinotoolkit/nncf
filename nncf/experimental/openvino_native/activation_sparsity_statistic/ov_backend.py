@@ -28,6 +28,14 @@ from nncf.experimental.openvino_native.graph.transformations.commands import OVT
 from nncf.experimental.openvino_native.statistics.collectors import OVPercentageOfZerosStatisticCollector
 
 ACTIVATION_SPARSITY_STATISTIC = "activation_sparsity_statistic"
+DEFAULT_TARGET_NODE_TYPES = [
+    ovm.OVConvolutionBackpropDataMetatype,
+    ovm.OVConvolutionMetatype,
+    ovm.OVDepthwiseConvolutionMetatype,
+    ovm.OVGroupConvolutionBackpropDataMetatype,
+    ovm.OVGroupConvolutionMetatype,
+    ovm.OVMatMulMetatype,
+]
 
 
 @ALGO_BACKENDS.register(BackendType.OPENVINO)
@@ -45,7 +53,7 @@ class OVActivationSparsityStatisticAlgoBackend(ActivationSparsityStatisticAlgoBa
     @staticmethod
     def default_target_node_types() -> List[str]:
         node_types = []
-        for mt in ovm.OV_OPERATOR_METATYPES.values():
+        for mt in DEFAULT_TARGET_NODE_TYPES:
             node_types.extend(mt.op_names)
 
         return node_types
@@ -60,7 +68,7 @@ class OVActivationSparsityStatisticAlgoBackend(ActivationSparsityStatisticAlgoBa
     ) -> ov.Model:
         """
         Write statistics values to rt_info of the target model.
-        In the serialised model file, the statistics will be saved as:
+        In the serialized model file, the statistics will be saved as:
             <rt_info>
                 <item_0>
                     <node_name value="/nncf_module/maxpool/MaxPool" />
@@ -86,7 +94,7 @@ class OVActivationSparsityStatisticAlgoBackend(ActivationSparsityStatisticAlgoBa
             node_static_points = statistic_points.get(node_name, [])
 
             for node_static_point in node_static_points:
-                # TODO: how to correctly get statistics
+                assert len(node_static_point.algorithm_to_tensor_collectors[ActivationSparsityStatistic]) == 1
                 tensor_collector = node_static_point.algorithm_to_tensor_collectors[ActivationSparsityStatistic][0]
 
                 statistic = tensor_collector.get_statistics()

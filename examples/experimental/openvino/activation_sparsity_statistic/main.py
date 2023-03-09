@@ -28,23 +28,22 @@ def parse_args():
         prog="Activation sparsity statistic for ResNet models.",
         description="Collect activation sparsity statistic and write statistic to the model.",
     )
-    parser.add_argument("-m", "--model_path", help="Target OpenVINO model (.xml).")
-    parser.add_argument("-d", "--data_path", help="Path to folder with images.")
+    parser.add_argument("-m", "--model_path", help="Target OpenVINO model (.xml).", required=True)
+    parser.add_argument("-d", "--data_path", help="Path to folder with images.", required=True)
     return parser.parse_args()
 
 
-def run_example(model_path, data_path):
+def run_example(model_path: str, data_path: str):
     # Step 1: Initialize OpenVINO model.
     ir_model_xml = Path(model_path)
-    ir_model_bin = ir_model_xml.with_suffix(".bin")
-    ov_model = ov.Core().read_model(ir_model_xml, ir_model_bin)
+    ov_model = ov.Core().read_model(ir_model_xml)
 
     # Step 2: Create dataset.
     dataset = create_dataset(data_path)
 
     # Step 3: Collect activation sparsity statistics.
     modified_model = activation_sparsity_statistic_impl(
-        model=ov_model, dataset=dataset, subset_size=100, target_node_types=None, threshold=0.05
+        model=ov_model, dataset=dataset, subset_size=100, target_node_types=None, threshold=0.2
     )
 
     # Step 4: Save modified model.
@@ -53,7 +52,7 @@ def run_example(model_path, data_path):
     print(f"Model saved: {new_model_path.as_posix()}")
 
 
-def create_dataset(data_path) -> torch.utils.data.DataLoader:
+def create_dataset(data_path: str) -> torch.utils.data.DataLoader:
     normalize = transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
     dataset = datasets.ImageFolder(
         root=f"{data_path}",

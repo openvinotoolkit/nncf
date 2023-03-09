@@ -28,7 +28,7 @@ def activation_sparsity_statistic_impl(
     dataset: Dataset,
     subset_size: int,
     target_node_types: Optional[List] = None,
-    threshold: float = 0.05,
+    threshold: float = 0.2,
 ) -> ov.Model:
     """
     Implementation of the `activation_sparsity_statistic` method for the OpenVINO backend via the OpenVINO Runtime API.
@@ -36,8 +36,8 @@ def activation_sparsity_statistic_impl(
     :param model: Target model.
     :param dataset: Instance of Dataset.
     :param target_node_types: List of node types for which statistics will be collected.
-        If None or empty, statistics will be collected for all nodes.
-    :param threshold: Threshold of minimum value of statistic that will be save to the model, defaults is 0.05.
+        If None or empty, statistics will be collected for Conv and MatMul nodes.
+    :param threshold: Threshold of minimum value of statistic that will be save to the model, defaults is 0.2.
 
     :return ov.Model: Modified model.
     """
