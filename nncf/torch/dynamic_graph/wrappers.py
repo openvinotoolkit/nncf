@@ -128,8 +128,6 @@ def wrap_operator(operator, operator_info: 'PatchedOperatorInfo'):
     # pylint: disable=protected-access
     wrapped._original_op = operator
     wrapped._operator_namespace = operator_info.operator_namespace
-    import numpy as np
-    wrapped._rnd = np.random.randint(1 << 30)
     return wrapped
 
 

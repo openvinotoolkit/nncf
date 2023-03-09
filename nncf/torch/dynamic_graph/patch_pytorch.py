@@ -118,9 +118,6 @@ def register_operator(name=None):
     # TODO: Use same wrapper for model.forward() calls
 
 
-PATCHED = False
-
-
 def torch_jit_script_wrapper(*args, **kwargs):
     # Torch JIT cannot work with NNCF-modified operators,
     # so at each import of a @torch.jit.script-decorated
@@ -192,7 +189,6 @@ def torch_jit_script_wrapper(*args, **kwargs):
         retval = _ORIG_JIT_SCRIPT(*args, **kwargs)
         if patch_unpatch:
             patch_torch_operators()
-        print()
 
     return retval
 
@@ -209,17 +205,16 @@ def torch_jit_script_if_tracing(fn):
 
     wrapper.__original_fn = fn
     wrapper.__script_if_tracing_wrapper = True
-    wrapper.__decorated_by_nncf_wrapper = True
+    # wrapper.__decorated_by_nncf_wrapper = True
 
     return wrapper
 
 
 class OriginalOpInfo:
-    def __init__(self, name: str, namespace, op, rnd=0):
+    def __init__(self, name: str, namespace, op):
         self.name = name
         self.namespace = namespace
         self.op = op
-        self.rnd = rnd
 
 
 ORIGINAL_OPERATORS = []  # type: List[OriginalOpInfo]
@@ -248,9 +243,8 @@ def patch_namespace_opname(namespace, op_info: PatchedOperatorInfo):
     op_name = op_info.name
     if hasattr(namespace, op_name):
         orig = getattr(namespace, op_name)
-        wrapped_operator = wrap_operator(orig, op_info)
-        setattr(namespace, op_name, wrapped_operator)
-        ORIGINAL_OPERATORS.append(OriginalOpInfo(op_name, namespace, orig, wrapped_operator._rnd))
+        ORIGINAL_OPERATORS.append(OriginalOpInfo(op_name, namespace, orig))
+        setattr(namespace, op_name, wrap_operator(orig, op_info))
     else:
         nncf_logger.debug(f"Not patching {op_name} since it is missing in this version of PyTorch")
 
@@ -287,7 +281,6 @@ def get_all_functions_from_namespace(namespace: NamespaceTarget, do_filter: bool
 
 
 def patch_torch_operators():
-    # return
     # Only patch torch.jit.script during first patch_torch_operators call
     global _JIT_ALREADY_WRAPPED
     if not _JIT_ALREADY_WRAPPED:
@@ -359,9 +352,6 @@ def patch_torch_operators():
     ignore_scope(DataParallel)
     ignore_scope(DistributedDataParallel)
 
-    global PATCHED
-    PATCHED = True
-
 
 def unpatch_torch_operators():
     global _OPERATORS_ALREADY_WRAPPED
@@ -371,6 +361,3 @@ def unpatch_torch_operators():
 
     for orig_op_info in ORIGINAL_OPERATORS:
         setattr(orig_op_info.namespace, orig_op_info.name, orig_op_info.op)
-
-    global PATCHED
-    PATCHED = False
