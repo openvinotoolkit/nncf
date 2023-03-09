@@ -36,7 +36,7 @@ def activation_sparsity_statistic_impl(
     :param model: Target model.
     :param dataset: Instance of Dataset.
     :param target_node_types: List of node types for which statistics will be collected.
-        If None or empty, statistics will be collected for Conv and MatMul nodes.
+        If None or empty, statistics will be collected for Convolution and MatMul nodes.
     :param threshold: Threshold of minimum value of statistic that will be save to the model, defaults is 0.2.
 
     :return ov.Model: Modified model.

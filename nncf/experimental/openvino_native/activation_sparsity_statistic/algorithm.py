@@ -46,7 +46,7 @@ class ActivationSparsityStatisticParameters(AlgorithmParameters):
         """
         :param number_samples: The number of the samples for the statistics collection.
         :param target_node_types: List of node types for which statistics will be collected.
-            If None or empty, statistics will be collected for all nodes.
+            If None or empty, statistics will be collected for Convolution and MatMul nodes.
         :param threshold: Threshold of minimum value of statistic that will be save to the model, defaults is 0.2.
         """
         self.number_samples = number_samples
