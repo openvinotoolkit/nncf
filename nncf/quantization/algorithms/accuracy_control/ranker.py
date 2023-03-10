@@ -16,8 +16,10 @@ from abc import ABC
 from abc import abstractmethod
 from typing import Callable, Any, List, Iterable, Optional, TypeVar
 from dataclasses import dataclass
+from copy import deepcopy
 
 from nncf.data.dataset import Dataset
+from nncf.quantization.passes import remove_shapeof_subgraphs
 from nncf.common.factory import EngineFactory
 from nncf.common.graph import NNCFGraph
 from nncf.common.graph import NNCFNode
@@ -102,16 +104,20 @@ class Ranker(ABC):
         processed = {}
         # TODO(andrey-churkin): Set order of quantizers here.
         quantizers = quantized_model_graph.get_nodes_by_metatypes(self._algo_backend.get_quantizer_metatypes())
+        quantized_model_graph_without_shapeof = remove_shapeof_subgraphs(
+            deepcopy(quantized_model_graph),
+            self._algo_backend.get_shapeof_metatypes()
+        )
+
         for quantizer_node in quantizers:
             if processed.get(quantizer_node.node_name, False):
                 continue
-            quantizers, operations = find_quantizer_nodes_to_cut(quantized_model_graph,
+            quantizers, operations = find_quantizer_nodes_to_cut(quantized_model_graph_without_shapeof,
                                                                  quantizer_node,
                                                                  self._algo_backend.get_quantizer_metatypes(),
                                                                  self._algo_backend.get_const_metatypes(),
                                                                  self._algo_backend.get_quantizable_metatypes(),
-                                                                 self._algo_backend.get_quantize_agnostic_metatypes(),
-                                                                 self._algo_backend.get_shapeof_metatypes())
+                                                                 self._algo_backend.get_quantize_agnostic_metatypes())
             for x in quantizers:
                 processed[x.node_name] = True
 

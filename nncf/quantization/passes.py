@@ -26,11 +26,11 @@ def transform_to_inference_graph(nncf_graph: NNCFGraph, shapeof_metatypes: List[
     :param shapeof_metatypes: List of backend-specific ShapeOf metatypes.
     :return: NNCFGraph in the inference style.
     """
-    inference_nncf_graph = remove_shape_of_subgraphs(nncf_graph, shapeof_metatypes)
+    inference_nncf_graph = remove_shapeof_subgraphs(nncf_graph, shapeof_metatypes)
     return inference_nncf_graph
 
 
-def remove_shape_of_subgraphs(nncf_graph: NNCFGraph, shapeof_metatypes: List[OperatorMetatype]) -> NNCFGraph:
+def remove_shapeof_subgraphs(nncf_graph: NNCFGraph, shapeof_metatypes: List[OperatorMetatype]) -> NNCFGraph:
     """
     Removes the ShapeOf subgraphs from the provided NNCFGraph instance.
 

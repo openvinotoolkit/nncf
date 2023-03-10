@@ -4,6 +4,7 @@ from nncf.common.graph import OperatorMetatype
 from nncf.common.graph.operator_metatypes import OperatorMetatypeRegistry
 from nncf.common.graph.operator_metatypes import UnknownMetatype
 from nncf.common.quantization.quantizer_propagation.structs import QuantizationTrait
+from nncf.common.graph.operator_metatypes import INPUT_NOOP_METATYPES
 
 METATYPES_FOR_TEST = OperatorMetatypeRegistry('TEST_METATYPES')
 
@@ -109,7 +110,7 @@ class AddTestMetatype(TestMetatype):
 
 @METATYPES_FOR_TEST.register()
 class ShapeOfTestMetatype(TestMetatype):
-    name = 'shape_of'
+    name = 'shapeof'
 
 
 @METATYPES_FOR_TEST.register()
@@ -135,6 +136,12 @@ class StridedSliceTestMetatype(TestMetatype):
 @METATYPES_FOR_TEST.register()
 class DivideTestMetatype(TestMetatype):
     name = 'divide'
+
+
+@METATYPES_FOR_TEST.register()
+@INPUT_NOOP_METATYPES.register()
+class ParameterTestMetatype(TestMetatype):
+    name = 'parameter'
 
 
 WEIGHT_LAYER_METATYPES = [LinearTestMetatype, Conv2dTestMetatype, MatMulTestMetatype]
@@ -189,6 +196,6 @@ QUANTIZE_AGNOSTIC_METATYPES = [
 ]
 
 
-SHAPE_OF_METATYPES = [
+SHAPEOF_METATYPES = [
     ShapeOfTestMetatype,
 ]

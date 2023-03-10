@@ -12,7 +12,6 @@
 """
 
 from typing import Tuple, List, TypeVar
-from copy import deepcopy
 
 from nncf.common.factory import ModelTransformerFactory
 from nncf.common.factory import CommandCreatorFactory
@@ -20,7 +19,6 @@ from nncf.common.graph import NNCFGraph
 from nncf.common.graph import NNCFNode
 from nncf.common.graph.operator_metatypes import OperatorMetatype
 from nncf.common.graph.transformations.layout import TransformationLayout
-from nncf.quantization.passes import transform_to_inference_graph
 
 
 TModel = TypeVar('TModel')
@@ -32,29 +30,25 @@ def find_quantizer_nodes_to_cut(
         quantizer_metatypes: List[OperatorMetatype],
         const_metatypes: List[OperatorMetatype],
         quantizable_metatypes: List[OperatorMetatype],
-        quantize_agnostic_metatypes: List[OperatorMetatype],
-        shapeof_metatypes: List[OperatorMetatype]) -> Tuple[List[NNCFNode], List[NNCFNode]]:
+        quantize_agnostic_metatypes: List[OperatorMetatype]) -> Tuple[List[NNCFNode], List[NNCFNode]]:
     """
     Finds quantizer nodes that should be removed in addition to `quantizer_node` to get
     the correct model for inference. Returns the list of quantizer nodes (`quantizer_node` + nodes
     which were found) and the list of nodes that will be reverted to original precision if
     quantizer nodes are removed.
 
-    :param graph: The NNCFGraph.
+    :param graph: The NNCFGraph without shapeof subgraphs.
     :param quantizer_node: The quantizer node that we want to remove.
     :param quantizer_metatypes: List of quantizer metatypes.
     :param const_metatypes: List of constant metatypes.
     :param quantizable_metatypes: List of metatypes for operations
         that may be quantized.
     :param quantize_agnostic_metatypes: List of quantize agnostic metatypes.
-    :param shapeof_metatypes: List of shapeof metatypes.
     :return: A tuple (quantizer_nodes, ops) where
         - `quantizer_nodes` is the list of quantizer nodes
         - `ops` is the list of nodes that will be reverted to original precision
         if `quantizer_nodes` are removed.
     """
-    graph = transform_to_inference_graph(deepcopy(graph), shapeof_metatypes)
-
     def _parse_node_relatives(node: NNCFNode, is_parents: bool):
         if node.metatype in quantizable_metatypes:
             ops_to_return_in_orig_prec.add(node)
