@@ -16,10 +16,8 @@ import operator
 from typing import Callable, Any, Iterable, List, TypeVar
 
 from nncf.data.dataset import Dataset
-from nncf.common.utils.backend import get_backend
 from nncf.common.utils.backend import BackendType
 from nncf.common.graph.utils import get_number_of_quantized_ops
-from nncf.common.graph.operator_metatypes import OperatorMetatype
 from nncf.common.graph import NNCFNode
 from nncf.common.graph import NNCFGraph
 from nncf.common.factory import NNCFGraphFactory
