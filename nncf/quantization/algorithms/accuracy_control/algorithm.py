@@ -196,7 +196,7 @@ class QuantizationAccuracyRestorer:
         current_accuracy_drop = None
         is_step_back = True
 
-        nncf_logger.info('Changing the scope of quantizer nodes was started.')
+        nncf_logger.info('Changing the scope of quantizer nodes was started')
         for iteration in range(self.max_num_iterations):
             if current_model is not None:
                 previous_model = current_model
