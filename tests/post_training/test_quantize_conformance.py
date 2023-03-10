@@ -27,7 +27,6 @@ import openvino.runtime as ov
 import pytest
 import timm
 import torch
-from model_scope import VALIDATION_SCOPE
 from sklearn.metrics import accuracy_score
 from torchvision import datasets, transforms
 from torchvision.transforms import InterpolationMode
@@ -37,8 +36,9 @@ from nncf.experimental.openvino_native.quantization.quantize import quantize_imp
 from nncf.experimental.torch.quantization.quantize import quantize_impl as pt_impl_experimental
 from nncf.torch.nncf_network import NNCFNetwork
 from tests.shared.command import Command
-from conftest import PipelineType
-from conftest import RunInfo
+from tests.post_training.conftest import PipelineType
+from tests.post_training.conftest import RunInfo
+from tests.post_training.model_scope import VALIDATION_SCOPE
 
 NOT_AVAILABLE_MESSAGE = 'N/A'
 DEFAULT_VAL_THREADS = 4
@@ -437,9 +437,10 @@ def run_ptq_timm(data, output, model_name, backends,
                 runinfo = runner(model, calibration_dataset, model_quantization_params,
                                  output_folder, model_name, batch_one_dataloader)
             except Exception as error:
-                traceback_path = Path.joinpath(output_folder, backend.value, model_name + '_error_log.txt')
+                backend_dir = backend.value.replace(' ', '_')
+                traceback_path = Path.joinpath(output_folder, backend_dir, model_name + '_error_log.txt')
                 create_error_log(traceback_path)
-                status = get_error_msg(traceback_path, backend.value)
+                status = get_error_msg(traceback_path, backend_dir)
                 runinfo = RunInfo(-1, -1, status)
             runinfos[backend] = runinfo
 
