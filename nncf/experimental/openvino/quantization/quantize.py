@@ -28,6 +28,30 @@ from nncf.quantization.algorithms.accuracy_control.algorithm import Quantization
 from nncf.openvino.quantization.quantize import quantize_impl
 
 
+def _match_const_nodes_names(initial_model: ov.Model, quantized_model: ov.Model) -> None:
+    """
+    Replaces the name of the constant node in the `quantized_model`
+    with the name of the corresponding constant node in the `initial_model`.
+
+    :param initial_model: Initial model.
+    :param quantized_model_graph: Quantized model.
+    """
+    initial_name_to_const_map = {
+        op.get_friendly_name(): op for op in initial_model.get_ops() if op.get_type_name() == 'Constant'
+    }
+    modified_name_to_const_map = {
+        op.get_friendly_name(): op for op in quantized_model.get_ops() if op.get_type_name() == 'Constant'
+    }
+
+    for initial_name in initial_name_to_const_map:
+        num_matches = 0
+        for modified_name, const_op in modified_name_to_const_map.items():
+            if modified_name.startswith(initial_name):
+                num_matches += 1
+                const_op.set_friendly_name(initial_name)
+        assert num_matches == 1
+
+
 def quantize_with_accuracy_control(model: ov.Model,
                                    calibration_dataset: Dataset,
                                    validation_dataset: Dataset,
@@ -44,6 +68,14 @@ def quantize_with_accuracy_control(model: ov.Model,
     """
     quantized_model = quantize_impl(model, calibration_dataset, preset, target_device, subset_size,
                                     fast_bias_correction, model_type, ignored_scope, compress_weights=False)
+
+    # We need to match constant names when the
+    # quantized model was got using POT. For example, we have the
+    # `Constant_63974886249` constant name in the quantized model,
+    # but `Constant_6397` in the initial model.
+    # The `_collect_original_biases_and_weights()`` method throws
+    # the error otherwise.
+    _match_const_nodes_names(model, quantized_model)
 
     backend = get_backend(model)
     algo_backend = get_algo_backend(backend)

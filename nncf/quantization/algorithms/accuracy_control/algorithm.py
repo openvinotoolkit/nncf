@@ -157,18 +157,6 @@ class QuantizationAccuracyRestorer:
         initial_model_graph = NNCFGraphFactory.create(initial_model)
         quantized_model_graph = NNCFGraphFactory.create(quantized_model)
 
-        # TODO(andrey-churkin): We need to match constant names when the
-        # quantized model was got using POT. For example, we have the
-        # `Constant_63974886249` constant name in the quantized model,
-        # but `Constant_6397` in the initial model.
-        # The `_collect_original_biases_and_weights()`` method throws
-        # the error otherwise. This code should be removed when native
-        # implementation will become the main one.
-        if not self.is_native and get_backend(initial_model) == BackendType.OPENVINO:
-            QuantizationAccuracyRestorer._match_const_nodes_names(initial_model_graph,
-                                                                  quantized_model_graph,
-                                                                  self.algo_backend.get_const_metatypes())
-
         # Collect original biases and weights because these values are
         # required to undo bias correction and weight correction.
         # Store this data inside the `node.data` dictionary.
@@ -255,29 +243,6 @@ class QuantizationAccuracyRestorer:
         QuantizationAccuracyRestorer._print_report(report, self.max_num_iterations)
 
         return current_model
-
-    # TODO(andrey-churkin): Should be removed when native implementation will become the main one.
-    @staticmethod
-    def _match_const_nodes_names(initial_model_graph: NNCFGraph,
-                                 quantized_model_graph: NNCFGraph,
-                                 const_metatypes: List[OperatorMetatype]) -> None:
-        """
-        Replaces the name of the constant node in the `quantized_model_graph`
-        with the name of the corresponding constant node in the `initial_model_graph`.
-
-        :param initial_model_graph: Graph for initial model.
-        :param quantized_model_graph: Graph for quantized model.
-        :param const_metatypes: List of metatypes for constant.
-        """
-        initial_graph_const_nodes = initial_model_graph.get_nodes_by_metatypes(const_metatypes)
-        quantized_graph_const_nodes = quantized_model_graph.get_nodes_by_metatypes(const_metatypes)
-        for initial_graph_const_node in initial_graph_const_nodes:
-            num_matches = 0
-            for quantized_graph_const_node in quantized_graph_const_nodes:
-                if quantized_graph_const_node.node_name.startswith(initial_graph_const_node.node_name):
-                    quantized_graph_const_node.data[NNCFGraph.NODE_NAME_ATTR] = initial_graph_const_node.node_name
-                    num_matches += 1
-            assert num_matches == 1
 
     @staticmethod
     def _collect_original_biases_and_weights(initial_model_graph: NNCFGraph,
