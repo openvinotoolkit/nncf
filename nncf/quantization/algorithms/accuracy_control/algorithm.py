@@ -154,8 +154,6 @@ class QuantizationAccuracyRestorer:
         if accuracy_drop <= self.max_drop:
             return quantized_model
 
-        nncf_logger.info('Changing the scope of quantizer nodes.')
-
         initial_model_graph = NNCFGraphFactory.create(initial_model)
         quantized_model_graph = NNCFGraphFactory.create(quantized_model)
 
@@ -185,7 +183,7 @@ class QuantizationAccuracyRestorer:
                                                                       self.algo_backend.get_quantizable_metatypes())
         nncf_logger.info(f'Total number of quantized operations in the model: {report.num_quantized_operations}')
 
-        nncf_logger.info('== Ranking groups of quantizers were started ==')
+        nncf_logger.info('Ranking groups of quantizers was started')
         ranker = QuantizationAccuracyRestorer._create_ranker(initial_model, validation_fn, validation_dataset,
                                                              self.ranking_subset_size, self.algo_backend)
         groups_to_rank = ranker.find_groups_of_quantizers_to_rank(quantized_model_graph)
@@ -198,6 +196,7 @@ class QuantizationAccuracyRestorer:
         current_accuracy_drop = None
         is_step_back = True
 
+        nncf_logger.info('Changing the scope of quantizer nodes was started.')
         for iteration in range(self.max_num_iterations):
             if current_model is not None:
                 previous_model = current_model
