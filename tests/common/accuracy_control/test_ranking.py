@@ -148,6 +148,7 @@ class DummyAccuracyControlAlgoBackend:
 def test_create_logits_ranker():
     algo_backend = DummyAccuracyControlAlgoBackend()
     dataset = Dataset([0, 1, 2])
+    # pylint:disable=protected-access
     ranker = QuantizationAccuracyRestorer._create_ranker(None, _validation_fn_with_error, dataset, 300, algo_backend)
     assert isinstance(ranker, LogitsBasedRanker)
 
@@ -155,5 +156,6 @@ def test_create_logits_ranker():
 def test_create_metric_ranker():
     algo_backend = DummyAccuracyControlAlgoBackend()
     dataset = Dataset([0, 1, 2])
+    # pylint:disable=protected-access
     ranker = QuantizationAccuracyRestorer._create_ranker(None, _validation_fn, dataset, 300, algo_backend)
     assert isinstance(ranker, MetricBasedRanker)
