@@ -16,8 +16,12 @@ from typing import List
 import pytest
 import numpy as np
 
+from nncf.data.dataset import Dataset
 from nncf.quantization.algorithms.accuracy_control.rank_functions import normalized_mse
 from nncf.quantization.algorithms.accuracy_control.ranker import get_ranking_subset_indices
+from nncf.quantization.algorithms.accuracy_control.ranker import MetricBasedRanker
+from nncf.quantization.algorithms.accuracy_control.ranker import LogitsBasedRanker
+from nncf.quantization.algorithms.accuracy_control.algorithm import QuantizationAccuracyRestorer
 
 
 def create_fp32_tensor_1d(items):
@@ -125,3 +129,31 @@ def test_normalized_mse(x_ref: np.ndarray, x_approx: np.ndarray, expected_nmse: 
 def test_get_ranking_subset_indices(errors: List[float], subset_size: int, expected_indices: List[int]):
     actual_indices = get_ranking_subset_indices(errors, subset_size)
     assert expected_indices == actual_indices
+
+
+def _validation_fn_with_error(model, val_dataset) -> float:
+    raise RuntimeError
+
+
+def _validation_fn(model, val_dataset) -> float:
+    return 0.1
+
+
+class DummyAccuracyControlAlgoBackend:
+    @staticmethod
+    def prepare_for_inference(model):
+        return model
+
+
+def test_create_logits_ranker():
+    algo_backend = DummyAccuracyControlAlgoBackend()
+    dataset = Dataset([0, 1, 2])
+    ranker = QuantizationAccuracyRestorer._create_ranker(None, _validation_fn_with_error, dataset, 300, algo_backend)
+    assert isinstance(ranker, LogitsBasedRanker)
+
+
+def test_create_metric_ranker():
+    algo_backend = DummyAccuracyControlAlgoBackend()
+    dataset = Dataset([0, 1, 2])
+    ranker = QuantizationAccuracyRestorer._create_ranker(None, _validation_fn, dataset, 300, algo_backend)
+    assert isinstance(ranker, MetricBasedRanker)
