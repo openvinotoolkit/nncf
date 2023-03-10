@@ -25,8 +25,8 @@ from torch.nn import Module
 
 from nncf.common.compression import BaseCompressionAlgorithmController as BaseController
 from nncf.common.graph import NNCFNodeName
+from nncf.common.deprecation import warning_deprecated
 from nncf.common.logging import nncf_logger
-from nncf.common.logging.logger import warning_deprecated
 from nncf.common.scopes import matches_any
 from nncf.torch.dynamic_graph.trace_tensor import TracedTensor
 from nncf.torch.layer_utils import _NNCFModuleMixin
