@@ -359,6 +359,7 @@ def train(config, compression_ctrl, model, criterion, criterion_fn, lr_scheduler
                 config.mlflow.safe_call('log_metric', 'compression/statistics/{0}'.format(key), value, epoch)
                 config.tb.add_scalar("compression/statistics/{0}".format(key), value, len(train_loader) * epoch)
 
+
 def export_model(compression_ctrl: PTCompressionAlgorithmController, config: SampleConfig) -> None:
     if config.prepare_for_inference:
         inference_model = compression_ctrl.prepare_for_inference()
@@ -603,15 +604,6 @@ def train_epoch(train_loader, model, criterion, criterion_fn, optimizer, compres
         if i >= train_iters:
             break
 
-def export_model(compression_ctrl: PTCompressionAlgorithmController, config: SampleConfig) -> None:
-    if config.prepare_for_inference:
-        inference_model = compression_ctrl.prepare_for_inference()
-        inference_model = inference_model.eval().cpu()
-        input_size = config.get('input_info').get('sample_size')
-        torch.onnx.export(inference_model, torch.randn(input_size), config.to_onnx, input_names=['input.0'])
-    else:
-        compression_ctrl.export_model(config.to_onnx)
-    logger.info(f'Saved to {config.to_onnx}')
 
 def validate(val_loader, model, criterion, config, epoch=0, log_validation_info=True):
     batch_time = AverageMeter()
