@@ -881,32 +881,30 @@ def test_sync_of_level_ranges_and_signed_parameter():
 
 
 @register_module()
-class UserModule(torch.nn.Module):
+class UserModuleWithAddmm(torch.nn.Module):
     def __init__(self):
         super().__init__()
-        self.weight = torch.nn.Parameter(torch.ones([1, 1, 1, 1]))
+        self.weight = torch.nn.Parameter(torch.ones([1, 1]))
+        self.bias = torch.nn.Parameter(torch.ones([1, 1]))
 
     def forward(self, x):
-        return x * self.weight
+        return torch.addmm(self.bias, x, self.weight)
 
 
 class ModelWithUserModule(torch.nn.Module):
     def __init__(self):
         super().__init__()
-        self.conv2d = torch.nn.Conv2d(1, 1, 1)
-        self.user_module = UserModule()
+        self.user_module = UserModuleWithAddmm()
 
     def forward(self, x):
-        x = self.conv2d(x)
         x = self.user_module(x)
-        x = self.conv2d(x)
         return x
 
 
-def test_can_quantize_user_module():
+def test_can_quantize_user_module_with_addmm():
     nncf_config = NNCFConfig.from_dict({
         "input_info": {
-            "sample_size": [1, 1, 1, 1]
+            "sample_size": [1, 1]
         },
         "compression":
             {
