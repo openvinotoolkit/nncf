@@ -29,7 +29,7 @@ $input\\_low=scale*\frac{level\\_low}{level\\_high}$
 $input\\_high=scale$
 
 
-In the formula above, $level_low$ and $level_high$ represent the range of the discrete signal.
+In the formula above, $level\\_low$ and $level\\_high$ represent the range of the discrete signal.
  - For weights:
     
     $level\\_low=-2^{bits-1}+1$
