@@ -11,6 +11,7 @@
  limitations under the License.
 """
 import argparse
+import json
 from pathlib import Path
 
 import openvino.runtime as ov
@@ -20,13 +21,13 @@ from torchvision import transforms
 
 import nncf
 from nncf.experimental.openvino_native.activation_sparsity_statistic.activation_sparsity_statistic import \
-    activation_sparsity_statistic_impl
+    estimate_activation_sparsity
 
 
 def parse_args():
     parser = argparse.ArgumentParser(
         prog="Activation sparsity statistic for ResNet models.",
-        description="Collect activation sparsity statistic and write statistic to the model.",
+        description="Collect activation sparsity statistic.",
     )
     parser.add_argument("-m", "--model_path", help="Target OpenVINO model (.xml).", required=True)
     parser.add_argument("-d", "--data_path", help="Path to folder with images.", required=True)
@@ -42,14 +43,15 @@ def run_example(model_path: str, data_path: str):
     dataset = create_dataset(data_path)
 
     # Step 3: Collect activation sparsity statistics.
-    modified_model = activation_sparsity_statistic_impl(
+    activation_sparsity_dict = estimate_activation_sparsity(
         model=ov_model, dataset=dataset, subset_size=100, target_node_types=None, threshold=0.2
     )
 
     # Step 4: Save modified model.
-    new_model_path = ir_model_xml.with_name(f"modified_{ir_model_xml.name}")
-    ov.serialize(modified_model, new_model_path.as_posix())
-    print(f"Model saved: {new_model_path.as_posix()}")
+    json_path = ir_model_xml.parent / 'activation_sparsity_statistics.json'
+    with json_path.open("w", encoding="UTF-8") as target:
+        json.dump(activation_sparsity_dict, target)
+    print(f"Activation sparsity statistics saved to {json_path.as_posix()}")
 
 
 def create_dataset(data_path: str) -> torch.utils.data.DataLoader:

@@ -23,7 +23,7 @@ from nncf.experimental.openvino_native.activation_sparsity_statistic.algorithm i
     ActivationSparsityStatisticParameters
 
 
-def activation_sparsity_statistic_impl(
+def estimate_activation_sparsity(
     model: ov.Model,
     dataset: Dataset,
     subset_size: int,

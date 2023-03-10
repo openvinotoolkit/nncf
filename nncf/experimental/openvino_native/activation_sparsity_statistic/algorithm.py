@@ -145,9 +145,9 @@ class ActivationSparsityStatistic(Algorithm):
             statistics_aggregator.collect_statistics(modified_model)
             statistic_points = statistics_aggregator.statistic_points
 
-        self._backend_entity.write_statistic_to_model(modified_model, statistic_points, self.threshold)
+        statistics_dict = self._statistic_points_to_dict(statistic_points)
 
-        return modified_model
+        return statistics_dict
 
     def _add_statistic_point(self, container: StatisticPointsContainer, point: TargetPoint) -> None:
         """
@@ -160,6 +160,32 @@ class ActivationSparsityStatistic(Algorithm):
         container.add_statistic_point(
             StatisticPoint(target_point=point, tensor_collector=stat_collector, algorithm=ActivationSparsityStatistic)
         )
+
+    def _statistic_points_to_dict(self, statistic_points: StatisticPointsContainer) -> Dict:
+        """
+        Save activation sparsity statistic from StatisticPointsContainer as dict.
+        Example of output:
+        {
+            "conv1": [{"port_id": 0, "sparsity_level": 0.41130510602678577}],
+            "conv2": [{"port_id": 0, "sparsity_level": 0.40485699089205995}]
+        }
+
+        :param statistic_points: StatisticPointsContainer instance.
+
+        :return Dict: Dict with activation sparsity statistic by nodes.
+        """
+        result_dict = dict()
+        for node_name, tensor_statistics in statistic_points.items():
+            stat_list = []
+            for tensor_stat in tensor_statistics:
+                sparsity_stat_collector = tensor_stat.algorithm_to_tensor_collectors[ActivationSparsityStatistic][0]
+                percentage_of_zeros = sparsity_stat_collector.get_statistics().percentage_of_zeros
+                port_id = tensor_stat.target_point.port_id
+                if percentage_of_zeros >= self.threshold:
+                    stat_list.append({'port_id': port_id, 'sparsity_level': percentage_of_zeros})
+            if stat_list:
+                result_dict[node_name] = stat_list
+        return result_dict
 
     def get_statistic_points(self, model: TModel) -> StatisticPointsContainer:
         self._set_backend_entity(model)

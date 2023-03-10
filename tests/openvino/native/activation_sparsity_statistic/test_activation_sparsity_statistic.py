@@ -16,7 +16,7 @@ import pytest
 import nncf
 from nncf.common.tensor import NNCFTensor
 from nncf.experimental.openvino_native.activation_sparsity_statistic.activation_sparsity_statistic import \
-    activation_sparsity_statistic_impl
+    estimate_activation_sparsity
 from nncf.experimental.openvino_native.activation_sparsity_statistic.algorithm import ActivationSparsityStatistic
 from nncf.experimental.openvino_native.activation_sparsity_statistic.algorithm import \
     ActivationSparsityStatisticParameters
@@ -31,18 +31,14 @@ def test_algo():
     dataset = nncf.Dataset(
         MockDataset([1, 3, 4, 2]), transform_func=lambda x: {"Input_1": x, "Input_2": x.reshape(1, 3, 2, 4)}
     )
-    model = activation_sparsity_statistic_impl(model, dataset, 1, threshold=0, target_node_types=["Convolution", "Add"])
+    activation_sparsity_stats = estimate_activation_sparsity(
+        model, dataset, 1, threshold=0, target_node_types=["Convolution", "Add"]
+    )
 
-    assert model.has_rt_info(ACTIVATION_SPARSITY_STATISTIC)
-
-    count_stat_items = 0
-    while model.has_rt_info([ACTIVATION_SPARSITY_STATISTIC, f"item_{count_stat_items}"]):
-        assert model.has_rt_info([ACTIVATION_SPARSITY_STATISTIC, f"item_{count_stat_items}", "node_name"])
-        assert model.has_rt_info([ACTIVATION_SPARSITY_STATISTIC, f"item_{count_stat_items}", "port_id"])
-        assert model.has_rt_info([ACTIVATION_SPARSITY_STATISTIC, f"item_{count_stat_items}", "statistic"])
-        count_stat_items += 1
-    assert count_stat_items == 2
-
+    assert activation_sparsity_stats == {
+        "Conv": [{"port_id": 0, "sparsity_level": 0.0}],
+        "Conv_Add": [{"port_id": 0, "sparsity_level": 0.0}],
+    }
 
 REF_STATIC_POINTS = {
     "ConvModel": {"Conv": 1},
@@ -52,9 +48,7 @@ REF_STATIC_POINTS_ADD = {
     "ConvModel": {"Conv_Add": 1},
     "LinearModel": {"Add": 1},
 }
-
-
-@pytest.mark.parametrize("model_cls_name", REF_STATIC_POINTS.keys())
+@pytest.mark.parametrize("model_cls_name", ("ConvModel", "LinearModel"))
 @pytest.mark.parametrize("list_node_types", (None, [], ["Add"]))
 def test_get_static_points(model_cls_name, list_node_types):
     model_to_test = SYNTHETIC_MODELS.get(model_cls_name)().ov_model
