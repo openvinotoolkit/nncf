@@ -92,10 +92,10 @@ def calculate_scale_zero_point(input_low: np.ndarray, input_high: np.ndarray,
     :return: Scale and Zero point values.
     """
     scale = np.array((input_high - input_low) / (levels - 1))
-    exact_level_low = -levels / 2 if level_low < 0 else 0
-    zero_point = np.round((exact_level_low - input_low / scale).astype(np.float32))
+    expected_level_low = level_low + 1 if levels != (level_high - level_low + 1) else level_low
+    zero_point = expected_level_low - np.round(input_low / scale)
     zero_point = np.minimum(np.maximum(zero_point.astype(np.int32), level_low), level_high)
-    scale = np.squeeze(scale).astype(np.float32)
-    zero_point = np.squeeze(zero_point)
+    scale = np.array(np.squeeze(scale).astype(np.float32))
+    zero_point = np.array(np.squeeze(zero_point))
 
     return scale, zero_point
