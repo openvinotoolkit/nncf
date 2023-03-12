@@ -47,6 +47,9 @@ def convert_fq_params_to_onnx_params(parameters: FakeQuantizeParameters,
     :param axis: Axis for per-channel quantization. Should be none in case of per-tensor.
     :return: Quantizer layer attributes.
     """
+    if num_bits != 8:
+        raise ValueError('Can only export to INT8/UIN8 8 bits ONNX Quantize/Dequantize pairs.')
+
     levels = parameters.levels
     if levels not in [255, 256]:
         raise ValueError('Can only export to INT8/UIN8 256-level ONNX Quantize/Dequantize pairs.')
@@ -58,7 +61,8 @@ def convert_fq_params_to_onnx_params(parameters: FakeQuantizeParameters,
                          ' input_high == output_high and input_low == output_low.')
 
     level_low, level_high = get_level_low_level_high(tensor_type, num_bits)
-    scale, zero_point = calculate_scale_zero_point(input_low, input_high, level_low, level_high, levels)
+    narrow_range = levels == 2 ** num_bits - 1
+    scale, zero_point = calculate_scale_zero_point(input_low, input_high, level_low, level_high, narrow_range)
     return ONNXQuantizerLayerParameters(scale, zero_point, tensor_type, axis)
 
 
@@ -77,7 +81,7 @@ def get_level_low_level_high(tensor_type: np.dtype, num_bits: int) -> Tuple[int,
 
 
 def calculate_scale_zero_point(input_low: np.ndarray, input_high: np.ndarray,
-                               level_low: int, level_high: int, levels: int) -> Tuple[np.ndarray, np.ndarray]:
+                               level_low: int, level_high: int, narrow_range: bool) -> Tuple[np.ndarray, np.ndarray]:
     """
     Calculates Quantizer/Dequantizer layer scale level.
     Returns scale and zero_point values for the quantizer.
@@ -88,11 +92,13 @@ def calculate_scale_zero_point(input_low: np.ndarray, input_high: np.ndarray,
         The default is "0" for an unsigned range, and "-2^(bit-1)" for a signed one .
     :param level_high: The maximum level in the integer range to quantize.
         The default is "2^bits-1" for an unsigned range, and "2^(bit-1)-1" for a signed one.
-    :param levels: Number of quantization levels.
+    :param narrow_range: True if the range of quantized values is narrowed as compared to the
+        naive case, False otherwise.
     :return: Scale and Zero point values.
     """
+    levels = level_high - level_low if narrow_range else level_high - level_low + 1
     scale = np.array((input_high - input_low) / (levels - 1))
-    expected_level_low = level_low + 1 if levels != (level_high - level_low + 1) else level_low
+    expected_level_low = level_low + 1 if narrow_range else level_low
     zero_point = expected_level_low - np.round(input_low / scale)
     zero_point = np.minimum(np.maximum(zero_point.astype(np.int32), level_low), level_high)
     scale = np.array(np.squeeze(scale).astype(np.float32))

@@ -17,22 +17,21 @@ from nncf.onnx.quantization.quantizer_parameters import calculate_scale_zero_poi
 from nncf.onnx.quantization.quantizer_parameters import get_level_low_level_high
 
 
-@pytest.mark.parametrize(('inp_low, inp_high, level_low, level_high, levels, ref_scale, ref_zero_point'),
-                         ((-8e-05, 8e-05, -128, 127, 255, 6.3e-7, 0),
-                          (-0.0008062992, 0.0008, 0, 255, 256, 6.3e-6, 128),
-                          (0, 1, 10, 999, 1024, 0.00097752, 10),
-                          (-10.019569, 10, 0, 1023, 1024, 0.01956947, 512),
-                          (0, 1, 0, 255, 256, 0.00392157, 0),
-                          (-1, 10, 0, 1023, 1024, 0.01075269, 93),
-                          (-11.428572, 10, 0, 15, 16, 1.4285715, 8),
-                          (-10, 10, -512, 511, 1024, 0.01955034, 0),
-                          (-10, 10, -128, 127, 255, 0.07874016, 0),
-                          (0, 25, 0, 15, 16, 1.6666666, 0),
+@pytest.mark.parametrize(('inp_low, inp_high, level_low, level_high, narrow_range, ref_scale, ref_zero_point'),
+                         ((-8e-05, 8e-05, -128, 127, True, 6.3e-7, 0),
+                          (-0.0008062992, 0.0008, 0, 255, False, 6.3e-6, 128),
+                          (-10.019569, 10, 0, 1023, False, 0.01956947, 512),
+                          (0, 1, 0, 255, False, 0.00392157, 0),
+                          (-1, 10, 0, 1023, False, 0.01075269, 93),
+                          (-11.428572, 10, 0, 15, False, 1.4285715, 8),
+                          (-10, 10, -512, 511, False, 0.01955034, 0),
+                          (-10, 10, -128, 127, True, 0.07874016, 0),
+                          (0, 25, 0, 15, False, 1.6666666, 0),
                           )
                          )
-def test_calculate_scale_zero_point(inp_low, inp_high, level_low, level_high, levels, ref_scale, ref_zero_point):
+def test_calculate_scale_zero_point(inp_low, inp_high, level_low, level_high, narrow_range, ref_scale, ref_zero_point):
     inp_low, inp_high = np.array(inp_low), np.array(inp_high)
-    scale, zero_point = calculate_scale_zero_point(inp_low, inp_high, level_low, level_high, levels)
+    scale, zero_point = calculate_scale_zero_point(inp_low, inp_high, level_low, level_high, narrow_range)
     ref_zero_point = np.array(ref_zero_point, dtype=np.int32)
     assert np.allclose(ref_scale, scale)
     assert np.allclose(ref_zero_point, zero_point)
