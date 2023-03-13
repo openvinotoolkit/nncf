@@ -174,7 +174,7 @@ class ActivationSparsityStatistic(Algorithm):
 
         :return Dict: Dict with activation sparsity statistic by nodes.
         """
-        result_dict = dict()
+        result_dict = {}
         for node_name, tensor_statistics in statistic_points.items():
             stat_list = []
             for tensor_stat in tensor_statistics:

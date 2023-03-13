@@ -19,7 +19,6 @@ from typing import TypeVar
 
 from nncf.common.graph.transformations.commands import TargetPoint
 from nncf.common.tensor_statistics.collectors import PercentageOfZerosStatisticCollector
-from nncf.common.tensor_statistics.statistic_point import StatisticPointsContainer
 from nncf.common.utils.registry import Registry
 
 TModel = TypeVar('TModel')

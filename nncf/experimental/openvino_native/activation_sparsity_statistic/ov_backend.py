@@ -14,13 +14,9 @@
 from typing import List
 from typing import Optional
 
-import openvino.runtime as ov
-
 import nncf.experimental.openvino_native.graph.metatypes.openvino_metatypes as ovm
 from nncf.common.graph.transformations.commands import TargetType
-from nncf.common.tensor_statistics.statistic_point import StatisticPointsContainer
 from nncf.common.utils.backend import BackendType
-from nncf.experimental.openvino_native.activation_sparsity_statistic.algorithm import ActivationSparsityStatistic
 from nncf.experimental.openvino_native.activation_sparsity_statistic.backend import ALGO_BACKENDS
 from nncf.experimental.openvino_native.activation_sparsity_statistic.backend import \
     ActivationSparsityStatisticAlgoBackend
