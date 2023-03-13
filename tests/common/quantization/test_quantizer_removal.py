@@ -13,17 +13,20 @@
 
 from typing import List
 from dataclasses import dataclass
+from copy import deepcopy
 
 import pytest
 
 from nncf.common.graph import NNCFGraph
 from nncf.common.graph.layer_attributes import Dtype
 from nncf.common.quantization.quantizer_removal import find_quantizer_nodes_to_cut
+from nncf.quantization.passes import remove_shapeof_subgraphs
 from tests.common.quantization.metatypes import METATYPES_FOR_TEST
 from tests.common.quantization.metatypes import QUANTIZER_METATYPES
 from tests.common.quantization.metatypes import CONSTANT_METATYPES
 from tests.common.quantization.metatypes import QUANTIZABLE_METATYPES
 from tests.common.quantization.metatypes import QUANTIZE_AGNOSTIC_METATYPES
+from tests.common.quantization.metatypes import SHAPEOF_METATYPES
 
 
 @dataclass
@@ -67,6 +70,24 @@ GRAPHS = {
             Edge(153, 0, 146, 0), Edge(152, 0, 147, 0), Edge(158, 0, 153, 0), Edge(159, 0, 158, 0),
             Edge(160, 0, 159, 1), Edge(161, 0, 159, 0), Edge(118, 0, 161, 0), Edge(162, 0, 161, 1),
             Edge(167, 0, 162, 0),
+        ]
+    ),
+    'graph_with_shapeof': Graph(
+        [
+            Node(0, 'parameter'), Node(82, 'quantizer'), Node(720, 'constant'), Node(87, 'power'),
+            Node(93, 'quantizer'), Node(99, 'multiply'), Node(710, 'quantizer'), Node(715, 'constant'),
+            Node(106, 'shapeof'), Node(105, 'quantizer'), Node(115, 'interpolate'), Node(117, 'strided_slice'),
+            Node(746, 'constant'), Node(745, 'constant'), Node(744, 'constant'), Node(130, 'concat'),
+            Node(647, 'constant'), Node(116, 'convert'), Node(142, 'convert'), Node(129, 'divide'),
+            Node(709, 'constant'), Node(141, 'add'),
+        ],
+        [
+            Edge(82, 0, 87, 0),   Edge(720, 0, 87, 1), Edge(87, 0, 93, 0), Edge(93, 0, 99, 0),
+            Edge(99, 0, 105, 0),  Edge(99, 0, 106, 0), Edge(710, 0, 99, 1), Edge(715, 0, 710, 0),
+            Edge(106, 0, 117, 0), Edge(106, 0, 116, 0), Edge(105, 0, 115, 0), Edge(117, 0, 130, 0),
+            Edge(746, 0, 117, 1), Edge(745, 0, 117, 2), Edge(744, 0, 117, 3), Edge(130, 0, 142, 0),
+            Edge(130, 0, 115, 1), Edge(647, 0, 130, 1), Edge(116, 0, 129, 1), Edge(142, 0, 129, 0),
+            Edge(129, 0, 141, 0), Edge(709, 0, 141, 1), Edge(141, 0, 115, 2), Edge(0, 0, 82, 0)
         ]
     ),
 }
@@ -126,6 +147,13 @@ TEST_CASES = {
             ['quantizer_139', 'quantizer_162', 'quantizer_119'],
             ['add_117', 'conv2d_161']
         ),
+    ],
+    'graph_with_shapeof': [
+        TestCase(
+            'quantizer_105',
+            ['quantizer_105'],
+            ['interpolate_115']
+        )
     ]
 }
 
@@ -171,8 +199,12 @@ def create_test_params():
 @pytest.mark.parametrize('nncf_graph,test_case', create_test_params())
 def test_find_quantizer_nodes_to_cut(nncf_graph: NNCFGraph, test_case: TestCase):
     quantizer_node = nncf_graph.get_node_by_name(test_case.node_name)
+    nncf_graph_without_shapeof = remove_shapeof_subgraphs(
+        deepcopy(nncf_graph),
+        SHAPEOF_METATYPES
+    )
     nodes, ops = find_quantizer_nodes_to_cut(
-        nncf_graph,
+        nncf_graph_without_shapeof,
         quantizer_node,
         QUANTIZER_METATYPES,
         CONSTANT_METATYPES,

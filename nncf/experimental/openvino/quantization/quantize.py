@@ -11,57 +11,45 @@
  limitations under the License.
 """
 
-from typing import Optional, Callable, Any, Iterable
+from typing import Callable, Any, Iterable, Optional
 
 import openvino.runtime as ov
 from openvino._offline_transformations import compress_quantize_weights_transformation
 
+from nncf.data.dataset import Dataset
 from nncf.common.logging import nncf_logger
-from nncf.data import Dataset
-from nncf.common.quantization.structs import QuantizationPreset
 from nncf.common.utils.backend import get_backend
+from nncf.common.quantization.structs import QuantizationPreset
 from nncf.scopes import IgnoredScope
 from nncf.parameters import ModelType
 from nncf.parameters import TargetDevice
-from nncf.quantization.algorithms.post_training.algorithm import PostTrainingQuantization
-from nncf.quantization.algorithms.post_training.algorithm  import PostTrainingQuantizationParameters
-from nncf.quantization.telemetry_extractors import CompressionStartedWithQuantizeApi
-from nncf.telemetry import tracked_function
-from nncf.telemetry.events import NNCF_OV_CATEGORY
 from nncf.quantization.algorithms.accuracy_control.algorithm import get_algo_backend
 from nncf.quantization.algorithms.accuracy_control.algorithm import QuantizationAccuracyRestorer
+from nncf.openvino.quantization.quantize import quantize_impl
 
 
-@tracked_function(NNCF_OV_CATEGORY, [CompressionStartedWithQuantizeApi(), "target_device", "preset"])
-def quantize_impl(model: ov.Model,
-                  calibration_dataset: Dataset,
-                  preset: QuantizationPreset,
-                  target_device: TargetDevice,
-                  subset_size: int,
-                  fast_bias_correction: bool,
-                  model_type: Optional[ModelType] = None,
-                  ignored_scope: Optional[IgnoredScope] = None,
-                  compress_weights: bool = True) -> ov.Model:
+def _match_const_nodes_names(initial_model: ov.Model, quantized_model: ov.Model) -> None:
     """
-    Implementation of the `quantize()` method for the OpenVINO backend via the OpenVINO Runtime API.
+    Replaces the name of the constant node in the `quantized_model`
+    with the name of the corresponding constant node in the `initial_model`.
+
+    :param initial_model: Initial model.
+    :param quantized_model_graph: Quantized model.
     """
-    if model_type is not None:
-        raise ValueError(f'model_type={model_type} is not supported')
+    initial_name_to_const_map = {
+        op.get_friendly_name(): op for op in initial_model.get_ops() if op.get_type_name() == 'Constant'
+    }
+    modified_name_to_const_map = {
+        op.get_friendly_name(): op for op in quantized_model.get_ops() if op.get_type_name() == 'Constant'
+    }
 
-    quantization_parameters = PostTrainingQuantizationParameters(
-        preset=preset,
-        target_device=target_device,
-        number_samples=subset_size,
-        ignored_scopes=ignored_scope,
-        fast_bias_correction=fast_bias_correction
-    )
-
-    quantization_algorithm = PostTrainingQuantization(quantization_parameters)
-    quantized_model = quantization_algorithm.apply(model, dataset=calibration_dataset)
-    if compress_weights:
-        compress_quantize_weights_transformation(quantized_model)
-
-    return quantized_model
+    for initial_name in initial_name_to_const_map:
+        num_matches = 0
+        for modified_name, const_op in modified_name_to_const_map.items():
+            if modified_name.startswith(initial_name):
+                num_matches += 1
+                const_op.set_friendly_name(initial_name)
+        assert num_matches == 1
 
 
 def quantize_with_accuracy_control(model: ov.Model,
@@ -76,13 +64,19 @@ def quantize_with_accuracy_control(model: ov.Model,
                                    model_type: Optional[ModelType] = None,
                                    ignored_scope: Optional[IgnoredScope] = None) -> ov.Model:
     """
-    Implementation of the `quantize_with_accuracy_control()` method for the OpenVINO backend via the
-    OpenVINO Runtime API.
+    Implementation of the `quantize_with_accuracy_control()` method for the OpenVINO backend via POT.
     """
     quantized_model = quantize_impl(model, calibration_dataset, preset, target_device, subset_size,
                                     fast_bias_correction, model_type, ignored_scope, compress_weights=False)
 
-    # Backends
+    # We need to match constant names when the
+    # quantized model was got using POT. For example, we have the
+    # `Constant_63974886249` constant name in the quantized model,
+    # but `Constant_6397` in the initial model.
+    # The `_collect_original_biases_and_weights()`` method throws
+    # the error otherwise.
+    _match_const_nodes_names(model, quantized_model)
+
     backend = get_backend(model)
     algo_backend = get_algo_backend(backend)
 
@@ -94,7 +88,7 @@ def quantize_with_accuracy_control(model: ov.Model,
                                      validation_dataset.get_data())
     nncf_logger.info(f'Metric of quantized model: {quantized_metric}')
 
-    accuracy_aware_loop = QuantizationAccuracyRestorer(algo_backend, max_drop=max_drop)
+    accuracy_aware_loop = QuantizationAccuracyRestorer(algo_backend, max_drop=max_drop, is_native=False)
     quantized_model = accuracy_aware_loop.restore_accuracy(model, initial_metric,
                                                            quantized_model, quantized_metric,
                                                            validation_dataset, validation_fn)

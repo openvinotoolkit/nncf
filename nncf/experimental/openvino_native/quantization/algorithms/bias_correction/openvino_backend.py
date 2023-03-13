@@ -29,7 +29,7 @@ from nncf.experimental.openvino_native.graph.metatypes.openvino_metatypes import
 from nncf.experimental.openvino_native.graph.metatypes.common import FAKE_QUANTIZE_OPERATIONS
 from nncf.experimental.openvino_native.graph.node_utils import get_bias_value
 from nncf.experimental.openvino_native.graph.node_utils import is_node_with_bias
-from nncf.experimental.openvino_native.graph.transformations.command_creation import create_bias_correction_command
+from nncf.experimental.openvino_native.graph.transformations.command_creation import OVCommandCreator
 from nncf.experimental.openvino_native.graph.transformations.commands import OVBiasCorrectionCommand
 from nncf.experimental.openvino_native.graph.transformations.commands import OVModelExtractionCommand
 from nncf.experimental.openvino_native.graph.transformations.commands import OVOutputInsertionCommand
@@ -74,7 +74,7 @@ class OVBiasCorrectionAlgoBackend(BiasCorrectionAlgoBackend):
     def create_bias_correction_command(node: NNCFNode,
                                        bias_value: np.ndarray,
                                        nncf_graph: NNCFGraph) -> OVBiasCorrectionCommand:
-        return create_bias_correction_command(node, bias_value, nncf_graph)
+        return OVCommandCreator.create_command_to_update_bias(node, bias_value, nncf_graph)
 
     @staticmethod
     def model_extraction_command(inputs: List[str], outputs: List[str]) -> OVModelExtractionCommand:
