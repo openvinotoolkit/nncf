@@ -183,7 +183,6 @@ class OVModelTransformer(ModelTransformer):
             # TODO: (KodiaqQ) check out the models with the Split
             result = opset.result(output, name=get_result_node_name(output_name, port_id))
             extra_model_outputs.append(result)
-
         return ov.Model(results=results + extra_model_outputs,
                         sinks=assign_ops, parameters=params,
                         name=model.friendly_name)
@@ -396,7 +395,7 @@ class OVModelTransformer(ModelTransformer):
 
     @staticmethod
     def _apply_inplace_operation_insertion(model: ov.Model,
-                                           transformations: OVInplaceStatisticInsertionCommand):
+                                           transformations: List[OVInplaceStatisticInsertionCommand]):
         name_to_node_mapping = OVModelTransformer._get_name_to_node_mapping(model)
         outputs = []
         for transformation in transformations:

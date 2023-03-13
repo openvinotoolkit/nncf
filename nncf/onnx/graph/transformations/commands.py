@@ -83,6 +83,17 @@ class ONNXQuantizerInsertionCommand(ONNXInsertionCommand):
         raise NotImplementedError()
 
 
+class ONNXInplaceOpInsertionCommand(ONNXInsertionCommand):
+    def __init__(self, target_point: ONNXTargetPoint, nncf_input_node_next_onnx_nodes: Dict[str, List[str]],
+                 inplace_op_fn):
+        super().__init__(target_point, nncf_input_node_next_onnx_nodes)
+        self.inplace_op_fn = inplace_op_fn
+
+    def union(self, other: 'TransformationCommand') -> 'TransformationCommand':
+        # Have a look at nncf/torch/graph/transformations/commands/PTInsertionCommand
+        raise NotImplementedError()
+
+
 class ONNXOutputInsertionCommand(ONNXInsertionCommand):
     def union(self, other: 'TransformationCommand') -> 'TransformationCommand':
         # Have a look at nncf/torch/graph/transformations/commands/PTInsertionCommand

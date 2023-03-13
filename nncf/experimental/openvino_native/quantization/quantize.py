@@ -51,9 +51,9 @@ def quantize_impl(model: ov.Model,
     quantization_parameters = PostTrainingQuantizationParameters(
         preset=preset,
         target_device=target_device,
-        number_samples=1,
-        ignored_scopes=convert_ignored_scope_to_list(ignored_scope),
-        fast_bias_correction=False
+        number_samples=subset_size,
+        ignored_scopes=ignored_scope,
+        fast_bias_correction=fast_bias_correction,
     )
 
     #from nncf.quantization.algorithms.min_max.algorithm import MinMaxQuantization

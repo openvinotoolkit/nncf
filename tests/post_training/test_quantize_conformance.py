@@ -163,7 +163,6 @@ def validate_accuracy(model_path, val_loader):
 
 
 def benchmark_torch_model(model, dataloader, model_name, output_path):
-    return 0, 0
     data_sample, _ = next(iter(dataloader))
     # Dump model
     onnx_path = Path(output_path) / (model_name + '.onnx')
@@ -171,6 +170,7 @@ def benchmark_torch_model(model, dataloader, model_name, output_path):
     ov_path = Path(output_path) / (model_name + '.xml')
     export_to_ir(onnx_path, output_path, model_name)
 
+    return 0, 0
     # Benchmark performance
     performance = benchmark_performance(ov_path, model_name)
     # Validate accuracy

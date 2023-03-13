@@ -35,7 +35,9 @@ from nncf.onnx.graph.transformations.commands import ONNXQDQNodeRemovingCommand
 from nncf.onnx.graph.transformations.commands import ONNXOutputInsertionCommand
 from nncf.onnx.graph.transformations.commands import ONNXTargetPoint
 from nncf.onnx.statistics.collectors import ONNXMeanStatisticCollector
+from nncf.onnx.statistics.collectors import get_mean_stat_collector
 from nncf.onnx.statistics.collectors import ONNXBatchStatisticCollector
+from nncf.onnx.statistics.collectors import get_mean_batch_stat_collector
 from nncf.onnx.statistics.collectors import ONNXNNCFCollectorTensorProcessor
 from nncf.onnx.tensor import ONNXNNCFTensor
 from nncf.quantization.algorithms.bias_correction.backend import ALGO_BACKENDS
@@ -61,7 +63,7 @@ class ONNXBiasCorrectionAlgoBackend(BiasCorrectionAlgoBackend):
 
     @property
     def tensor_processor(self) -> ONNXNNCFCollectorTensorProcessor:
-        return ONNXNNCFCollectorTensorProcessor()
+        return ONNXNNCFCollectorTensorProcessor
 
     @property
     def quantizer_types(self) -> List[OperatorMetatype]:
@@ -99,10 +101,12 @@ class ONNXBiasCorrectionAlgoBackend(BiasCorrectionAlgoBackend):
     def mean_statistic_collector(reduction_shape: ReductionShape,
                                  num_samples: Optional[int] = None,
                                  window_size: Optional[int] = None) -> ONNXMeanStatisticCollector:
+        return get_mean_stat_collector(num_samples, reduction_shape, window_size)
         return ONNXMeanStatisticCollector(reduction_shape,  num_samples, window_size)
 
     @staticmethod
     def batch_statistic_collector(num_samples: int = None) -> ONNXMeanStatisticCollector:
+        return get_mean_batch_stat_collector(num_samples)
         return ONNXBatchStatisticCollector(num_samples)
 
     @staticmethod

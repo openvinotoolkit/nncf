@@ -36,10 +36,12 @@ from nncf.onnx.graph.transformations.commands import ONNXQuantizerInsertionComma
 from nncf.onnx.graph.transformations.commands import ONNXTargetPoint
 from nncf.onnx.statistics.collectors import ONNXMeanMinMaxStatisticCollector
 from nncf.onnx.statistics.collectors import ONNXMinMaxStatisticCollector
-
+from nncf.onnx.statistics.collectors import get_min_max_stat_collector
+from nncf.onnx.statistics.collectors import get_mean_min_max_stat_collector
 from nncf.quantization.algorithms.min_max.backend import MinMaxAlgoBackend
 from nncf.quantization.algorithms.min_max.backend import ALGO_BACKENDS
 
+INPLACE = True
 
 @ALGO_BACKENDS.register(BackendType.ONNX)
 class ONNXMinMaxAlgoBackend(MinMaxAlgoBackend):
@@ -149,6 +151,8 @@ class ONNXMinMaxAlgoBackend(MinMaxAlgoBackend):
             ONNXMinMaxAlgoBackend._get_reduction_shape_and_use_abs_max(nncf_graph,
                                                                        target_point,
                                                                        quantizer_config)
+        return get_min_max_stat_collector(num_samples, reduction_shape, use_abs_max,
+                                          INPLACE)
         return ONNXMinMaxStatisticCollector(use_abs_max, reduction_shape, num_samples)
 
     @staticmethod
@@ -160,6 +164,9 @@ class ONNXMinMaxAlgoBackend(MinMaxAlgoBackend):
         reduction_shape, use_abs_max =\
             ONNXMinMaxAlgoBackend._get_reduction_shape_and_use_abs_max(nncf_graph, target_point,
                                                                        quantizer_config)
+        return get_mean_min_max_stat_collector(num_samples, reduction_shape,
+                                               use_abs_max, use_per_sample_stats,
+                                               window_size=None, inplace=INPLACE)
         return ONNXMeanMinMaxStatisticCollector(use_per_sample_stats,
                                                 use_abs_max, reduction_shape,
                                                 num_samples, window_size=None)
