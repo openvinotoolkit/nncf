@@ -14,7 +14,6 @@
 from typing import Optional, Tuple
 from dataclasses import dataclass
 import numpy as np
-from nncf.common.quantization.structs import QuantizationMode
 from nncf.quantization.fake_quantize import FakeQuantizeParameters
 
 
