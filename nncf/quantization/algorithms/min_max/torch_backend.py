@@ -11,6 +11,7 @@
  limitations under the License.
 """
 
+import torch
 from typing import Dict, List, Tuple
 
 from nncf.common.hardware.config import HWConfig
@@ -109,7 +110,7 @@ class PTMinMaxAlgoBackend(MinMaxAlgoBackend):
             nncf_graph: NNCFGraph,
             target_point: PTTargetPoint,
             quantizer_config: QuantizerConfig,
-            statistics: PTMinMaxTensorStatistic) -> PTInsertionCommand:
+            statistics: MinMaxTensorStatistic) -> PTInsertionCommand:
         return PTMinMaxAlgoBackend._create_quantizer_insertion_command(nncf_graph,
                                                                        target_point,
                                                                        quantizer_config,
@@ -124,6 +125,16 @@ class PTMinMaxAlgoBackend(MinMaxAlgoBackend):
                                                                        target_point,
                                                                        quantizer_config,
                                                                        statistics)
+
+    @staticmethod
+    def unify_statistics(statistics: List[MinMaxTensorStatistic]) -> MinMaxTensorStatistic:
+        max_values, min_values = [], []
+        for statistic in statistics:
+            max_values.append(statistic.max_values)
+            min_values.append(statistic.min_values)
+        max_values = torch.max(max_values, axis=0)
+        min_values = torch.min(min_values, axis=0)
+        return PTMinMaxTensorStatistic(min_values=min_values, max_values=max_values)
 
     @staticmethod
     def minmax_statistic_collector(nncf_graph: NNCFGraph,

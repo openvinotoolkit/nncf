@@ -11,6 +11,7 @@
  limitations under the License.
 """
 
+import numpy as np
 from typing import Dict, List, Tuple, Optional
 
 from nncf.common.graph.graph import NNCFGraph
@@ -36,6 +37,7 @@ from nncf.onnx.graph.transformations.commands import ONNXQuantizerInsertionComma
 from nncf.onnx.graph.transformations.commands import ONNXTargetPoint
 from nncf.onnx.statistics.collectors import ONNXMeanMinMaxStatisticCollector
 from nncf.onnx.statistics.collectors import ONNXMinMaxStatisticCollector
+from nncf.onnx.statistics.statistics import ONNXMinMaxTensorStatistic
 
 from nncf.quantization.algorithms.min_max.backend import MinMaxAlgoBackend
 from nncf.quantization.algorithms.min_max.backend import ALGO_BACKENDS
@@ -95,6 +97,16 @@ class ONNXMinMaxAlgoBackend(MinMaxAlgoBackend):
                                                quantizer_config)
         parameters = calculate_weight_quantizer_parameters(statistics, quantizer_config, axis)
         return ONNXQuantizerInsertionCommand(target_point, nncf_input_node_next_nodes, parameters)
+
+    @staticmethod
+    def unify_statistics(statistics: List[MinMaxTensorStatistic]) -> MinMaxTensorStatistic:
+        max_values, min_values = [], []
+        for statistic in statistics:
+            max_values.append(statistic.max_values)
+            min_values.append(statistic.min_values)
+        max_values = np.max(max_values, axis=0)
+        min_values = np.min(min_values, axis=0)
+        return ONNXMinMaxTensorStatistic(min_values=min_values, max_values=max_values)
 
     @staticmethod
     def _get_nncf_input_node_next_nodes(nncf_graph: NNCFGraph):

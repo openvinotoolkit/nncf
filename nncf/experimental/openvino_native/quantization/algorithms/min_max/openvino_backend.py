@@ -11,6 +11,7 @@
  limitations under the License.
 """
 
+import numpy as np
 from typing import Dict, List, Tuple
 
 from nncf.common.graph.graph import NNCFGraph
@@ -36,6 +37,7 @@ from nncf.experimental.openvino_native.hardware.config import OVHWConfig
 from nncf.experimental.openvino_native.quantization.default_quantization import DEFAULT_OV_QUANT_TRAIT_TO_OP_DICT
 from nncf.experimental.openvino_native.statistics.collectors import OVMeanMinMaxStatisticCollector
 from nncf.experimental.openvino_native.statistics.collectors import OVMinMaxStatisticCollector
+from nncf.experimental.openvino_native.statistics.statistics import OVMinMaxTensorStatistic
 from nncf.experimental.openvino_native.quantization.quantizer_parameters import calculate_quantizer_parameters
 
 from nncf.quantization.algorithms.min_max.backend import MinMaxAlgoBackend
@@ -90,6 +92,16 @@ class OVMinMaxAlgoBackend(MinMaxAlgoBackend):
         parameters = calculate_quantizer_parameters(statistics, quantizer_config,
                                                     QuantizerGroup.WEIGHTS)
         return OVQuantizerInsertionCommand(target_point, parameters)
+
+    @staticmethod
+    def unify_statistics(statistics: List[MinMaxTensorStatistic]) -> MinMaxTensorStatistic:
+        max_values, min_values = [], []
+        for statistic in statistics:
+            max_values.append(statistic.max_values)
+            min_values.append(statistic.min_values)
+        max_values = np.max(max_values, axis=0)
+        min_values = np.min(min_values, axis=0)
+        return OVMinMaxTensorStatistic(min_values=min_values, max_values=max_values)
 
     @staticmethod
     def _get_reduction_shape_and_use_abs_max(
