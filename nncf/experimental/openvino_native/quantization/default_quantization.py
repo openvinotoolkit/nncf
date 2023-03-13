@@ -54,6 +54,7 @@ DEFAULT_OV_QUANT_TRAIT_TO_OP_DICT = {
         ov_metatypes.OVSoftmaxMetatype,
         ov_metatypes.OVExpMetatype,
         ov_metatypes.OVLogMetatype,
+        ov_metatypes.OVAssignMetatype,
         UnknownMetatype
     ],
     QuantizationTrait.CONCAT: [ov_metatypes.OVConcatMetatype],

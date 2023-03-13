@@ -22,6 +22,7 @@ from nncf.experimental.openvino_native.graph.metatypes.openvino_metatypes import
 from nncf.experimental.openvino_native.graph.metatypes.openvino_metatypes import OVConvertMetatype
 from nncf.experimental.openvino_native.graph.metatypes.openvino_metatypes import OVConstantMetatype
 from nncf.experimental.openvino_native.graph.metatypes.openvino_metatypes import OPERATIONS_WITH_BIAS_METATYPES
+from nncf.experimental.openvino_native.graph.nncf_graph_builder import OVConstantLayerAttributes
 
 
 def is_node_with_bias(node: NNCFNode, nncf_graph: NNCFGraph) -> bool:
@@ -70,6 +71,26 @@ def get_bias_value(node_with_bias: NNCFNode, nncf_graph: NNCFGraph, model: ov.Mo
     bias_constant = get_node_with_bias_value(add_node , nncf_graph)
     ov_bias_constant = ops_dict[bias_constant.node_name]
     return ov_bias_constant.get_vector()
+
+
+def get_weight_value(node_with_weight: NNCFNode, nncf_graph: NNCFGraph, model: ov.Model) -> np.ndarray:
+    """
+    Returns a weight value for the node with weight.
+
+    :param node_with_weight: Node with weight.
+    :param nncf_graph: NNCF graph.
+    :param model: The model that contains this operation.
+    :return: The weight value.
+    """
+    attrs = node_with_weight.layer_attributes  # type: OVConstantLayerAttributes
+    node = nncf_graph.get_input_edges(node_with_weight)[attrs.const_port_id].from_node
+    if node.metatype == OVConvertMetatype:
+        node = nncf_graph.get_input_edges()[0].from_node
+
+    friendly_name_to_op_map = {op.get_friendly_name(): op for op in model.get_ops()}
+    const_op = friendly_name_to_op_map[node.node_name]
+    weight_tensor = const_op.get_data()
+    return weight_tensor
 
 
 def get_node_with_bias_value(add_node: NNCFNode, nncf_graph: NNCFGraph) -> Optional[NNCFNode]:

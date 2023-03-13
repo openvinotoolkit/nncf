@@ -10,9 +10,9 @@
  See the License for the specific language governing permissions and
  limitations under the License.
 """
+from nncf.common.deprecation import warning_deprecated
 
 #pylint:disable=wrong-import-position
-from nncf.common.logging.logger import warning_deprecated
 
 warning_deprecated(
     "Importing from nncf.common.utils.logger is deprecated. "

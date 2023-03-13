@@ -350,3 +350,46 @@ class ConvNotBiasModel(OVReferenceModel):
         result = opset.result(relu, name="Result")
         model = ov.Model([result], [input_1])
         return model
+
+
+@SYNTHETIC_MODELS.register()
+class LSTMModel(OVReferenceModel):
+    def _create_ov_model(self):
+        input_1 = opset.parameter([1, 1, 128], name="Input")
+        squeeze = opset.squeeze(input_1, np.int64(1), name="Squeeze_1")
+        data = self._rng.random((256, 128)).astype(np.float32)
+        matmul_1 = opset.matmul(squeeze, data, transpose_a=False, transpose_b=True, name="MatMul_1")
+
+        variable_1 = "variable_id_1"
+        data = self._rng.random((1, 64)).astype(np.float32)
+        read_value_1 = opset.read_value(data, variable_1, name="ReadValue_1")
+        data = self._rng.random((1, 64)).astype(np.float32)
+        add = opset.add(read_value_1, data, name="Add")
+        data = self._rng.random((256, 64)).astype(np.float32)
+        matmul_2 = opset.matmul(add, data, transpose_a=False, transpose_b=True, name="MatMul_2")
+
+        add_1 = opset.add(matmul_1, matmul_2, name="Add_1")
+        split_1 = opset.split(add_1, axis=1, num_splits=4)
+        split_outputs = split_1.outputs()
+
+        sigmoid_1 = opset.sigmoid(split_outputs[0], name="Sigmoid_1")
+        sigmoid_2 = opset.sigmoid(split_outputs[1], name="Sigmoid_2")
+        sigmoid_3 = opset.sigmoid(split_outputs[2], name="Sigmoid_3")
+        tanh_1 = opset.tanh(split_outputs[3], name="Tanh_1")
+
+        data = self._rng.random((1, 64)).astype(np.float32)
+        multiply_1 = opset.multiply(sigmoid_1, data, name="Multiply_1")
+        multiply_2 = opset.multiply(tanh_1, sigmoid_2, name="Multiply_2")
+
+        add_2 = opset.add(multiply_1, multiply_2, name="Add_2")
+        tanh_2 = opset.tanh(add_2, name="Tanh_2")
+
+        multiply_3 = opset.multiply(sigmoid_3, tanh_2, name="Multiply_3")
+        assign_1 = opset.assign(multiply_3, variable_1,  name="Assign_1")
+
+        data = self._rng.random((128, 64)).astype(np.float32)
+        matmul_3 = opset.matmul(multiply_3, data, transpose_a=False, transpose_b=True, name="MatMul_3")
+
+        result = opset.result(matmul_3, name="Result")
+        model = ov.Model(results=[result], sinks=[assign_1], parameters=[input_1], name="LSTMModel")
+        return model

@@ -18,6 +18,8 @@ from nncf.common.graph.model_transformer import ModelTransformer
 from nncf.common.utils.backend import BackendType
 from nncf.common.utils.backend import get_backend
 from nncf.common.engine import Engine
+from nncf.common.graph.transformations.command_creation import CommandCreator
+
 
 TModel = TypeVar('TModel')
 
@@ -85,4 +87,21 @@ class EngineFactory:
             from nncf.torch.engine import PTEngine
             return PTEngine(model)
         raise RuntimeError('Cannot create backend-specific engine'
+                           'because {} is not supported!'.format(model_backend))
+
+
+class CommandCreatorFactory:
+    @staticmethod
+    def create(model: TModel) -> CommandCreator:
+        """
+        Factory method to create backend-specific `CommandCreator` instance based on the input model.
+
+        :param model: backend-specific model instance
+        :return: backend-specific CommandCreator instance
+        """
+        model_backend = get_backend(model)
+        if model_backend == BackendType.OPENVINO:
+            from nncf.experimental.openvino_native.graph.transformations.command_creation import OVCommandCreator
+            return OVCommandCreator()
+        raise RuntimeError('Cannot create backend-specific command creator'
                            'because {} is not supported!'.format(model_backend))

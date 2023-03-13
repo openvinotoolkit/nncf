@@ -109,6 +109,24 @@ class OVBiasCorrectionCommand(TransformationCommand):
         raise NotImplementedError()
 
 
+class OVWeightUpdateCommand(TransformationCommand):
+    """
+    Updates weight value in the model.
+    """
+
+    def __init__(self, target_point: OVTargetPoint, weight_value: np.ndarray):
+        """
+        :param target_point: Target point.
+        :param weight_value: New weight value.
+        """
+        super().__init__(TransformationType.CHANGE, target_point)
+        self.weight_value = weight_value
+
+    def union(self, other: 'TransformationCommand') -> 'TransformationCommand':
+        # Have a look at nncf/torch/graph/transformations/commands/PTInsertionCommand
+        raise NotImplementedError()
+
+
 class OVModelExtractionCommand(Command):
     """
     Extracts sub-graph based on the sub-model input and output names.

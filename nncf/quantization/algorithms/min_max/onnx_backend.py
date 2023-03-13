@@ -55,7 +55,7 @@ class ONNXMinMaxAlgoBackend(MinMaxAlgoBackend):
         return [ONNXTopKMetatype, ONNXNonMaxSuppressionMetatype]
 
     @property
-    def shape_of_metatypes(self) -> List[OperatorMetatype]:
+    def shapeof_metatypes(self) -> List[OperatorMetatype]:
         return [ONNXShapeMetatype]
 
     @property

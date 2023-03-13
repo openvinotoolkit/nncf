@@ -72,7 +72,6 @@ def convert_to_torch_fakequantizer(nncf_quantizer: BaseQuantizer) -> FakeQuantiz
 
     :return: Instance of FakeQuantize similar to the input quantizer.
     """
-    assert nncf_quantizer.num_bits == 8, "Support only 8bit quantization."
 
     # Call set_level_ranges to set actual values
     nncf_quantizer.set_level_ranges()

@@ -141,7 +141,8 @@ class GraphConverter:
         """
         nncf_graph = NNCFGraph()
         visited = set()
-        inference_nodes = model.get_parameters()
+        read_value_nodes = [op for op in model.get_ops() if op.get_type_name() == 'ReadValue']
+        inference_nodes = model.get_parameters() + read_value_nodes
 
         while inference_nodes:
             node = inference_nodes[0]

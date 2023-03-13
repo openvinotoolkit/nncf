@@ -63,7 +63,7 @@ class PTMinMaxAlgoBackend(MinMaxAlgoBackend):
         return []
 
     @property
-    def shape_of_metatypes(self) -> List[OperatorMetatype]:
+    def shapeof_metatypes(self) -> List[OperatorMetatype]:
         return []
 
     @property

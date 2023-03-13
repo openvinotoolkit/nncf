@@ -4,6 +4,7 @@ from nncf.common.graph import OperatorMetatype
 from nncf.common.graph.operator_metatypes import OperatorMetatypeRegistry
 from nncf.common.graph.operator_metatypes import UnknownMetatype
 from nncf.common.quantization.quantizer_propagation.structs import QuantizationTrait
+from nncf.common.graph.operator_metatypes import INPUT_NOOP_METATYPES
 
 METATYPES_FOR_TEST = OperatorMetatypeRegistry('TEST_METATYPES')
 
@@ -107,7 +108,44 @@ class AddTestMetatype(TestMetatype):
     name = 'add'
 
 
+@METATYPES_FOR_TEST.register()
+class ShapeOfTestMetatype(TestMetatype):
+    name = 'shapeof'
+
+
+@METATYPES_FOR_TEST.register()
+class PowerTestMetatype(TestMetatype):
+    name = 'power'
+
+
+@METATYPES_FOR_TEST.register()
+class MultiplyTestMetatype(TestMetatype):
+    name = 'multiply'
+
+
+@METATYPES_FOR_TEST.register()
+class InterpolateTestMetatype(TestMetatype):
+    name = 'interpolate'
+
+
+@METATYPES_FOR_TEST.register()
+class StridedSliceTestMetatype(TestMetatype):
+    name = 'strided_slice'
+
+
+@METATYPES_FOR_TEST.register()
+class DivideTestMetatype(TestMetatype):
+    name = 'divide'
+
+
+@METATYPES_FOR_TEST.register()
+@INPUT_NOOP_METATYPES.register()
+class ParameterTestMetatype(TestMetatype):
+    name = 'parameter'
+
+
 WEIGHT_LAYER_METATYPES = [LinearTestMetatype, Conv2dTestMetatype, MatMulTestMetatype]
+
 
 DEFAULT_TEST_QUANT_TRAIT_MAP = {
     QuantizationTrait.INPUTS_QUANTIZABLE: [
@@ -144,10 +182,20 @@ CONSTANT_METATYPES = [
 QUANTIZABLE_METATYPES = [
     Conv2dTestMetatype,
     AddTestMetatype,
+    MultiplyTestMetatype,
+    PowerTestMetatype,
+    InterpolateTestMetatype,
+    DivideTestMetatype,
 ]
 
 
 QUANTIZE_AGNOSTIC_METATYPES = [
     MaxPool2dTestMetatype,
     ReluTestMetatype,
+    StridedSliceTestMetatype,
+]
+
+
+SHAPEOF_METATYPES = [
+    ShapeOfTestMetatype,
 ]

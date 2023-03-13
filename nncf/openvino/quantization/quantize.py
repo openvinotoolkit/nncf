@@ -102,7 +102,8 @@ def quantize_impl(model: ov.Model,
                   subset_size: int,
                   fast_bias_correction: bool,
                   model_type: Optional[ModelType] = None,
-                  ignored_scope: Optional[IgnoredScope] = None) -> ov.Model:
+                  ignored_scope: Optional[IgnoredScope] = None,
+                  compress_weights: bool = True) -> ov.Model:
     """
     Implementation of the `quantize()` method for the OpenVINO backend.
     """
@@ -136,7 +137,8 @@ def quantize_impl(model: ov.Model,
     pipeline = pot.create_pipeline(algorithms, engine)
     compressed_model = pipeline.run(pot_model)
     quantized_model = _convert_compressed_model_to_openvino_model(compressed_model)
-    compress_quantize_weights_transformation(quantized_model)
+    if compress_weights:
+        compress_quantize_weights_transformation(quantized_model)
     return quantized_model
 
 
