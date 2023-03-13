@@ -58,7 +58,7 @@ def _idfn(val):
     return None
 
 
-def check_quantizer_operators(model, levels=255):
+def check_quantizer_operators(model, levels=255, overflow_fix=True):
     """Check that model contains only 8bit FakeQuantize operators."""
 
     if hasattr(model, "external_quantizers"):
@@ -78,7 +78,8 @@ def check_quantizer_operators(model, levels=255):
                 op = nncf_module.get_pre_op(key).op
                 assert isinstance(op, FakeQuantize)
                 is_symmetric = op.qscheme in [torch.per_tensor_symmetric, torch.per_channel_symmetric]
-                ref_levels = levels - 1 if is_symmetric else levels
+                narrow_range = not overflow_fix
+                ref_levels = levels - 1 if is_symmetric and narrow_range else levels
                 assert op.quant_max - op.quant_min == ref_levels
 
         if hasattr(nncf_module, "post_ops"):
@@ -251,7 +252,7 @@ def test_converting_asymmetric_quantizer(input_size, num_bits, is_per_channel, i
 
 
 @pytest.mark.parametrize("mode", ("asymmetric", "symmetric"))
-@pytest.mark.parametrize("overflow_fix", ("disable", "enable"), ids=("overflow_fix_enable", "overflow_fix_disable"))
+@pytest.mark.parametrize("overflow_fix", ("disable", "enable"), ids=("overflow_fix_disable", "overflow_fix_enable"))
 @pytest.mark.parametrize("num_bits", (4, 8), ids=("4-bits", "8-bits"))
 def test_prepare_for_inference_quantization(mode, overflow_fix, num_bits):
     model = BasicConvTestModel()
@@ -265,8 +266,8 @@ def test_prepare_for_inference_quantization(mode, overflow_fix, num_bits):
 
     inference_model = compression_ctrl.prepare_for_inference()
     x_torch = inference_model(input_tensor)
-
-    check_quantizer_operators(inference_model, 2**num_bits - 1)
+    # overflow_fix = False, because target_device = TRIAL
+    check_quantizer_operators(inference_model, 2**num_bits - 1, overflow_fix=False)
 
     assert torch.all(torch.isclose(x_nncf, x_torch)), f"{x_nncf.view(-1)} != {x_torch.view(-1)}"
 
