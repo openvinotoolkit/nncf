@@ -522,7 +522,7 @@ class OVTileMetatype(OVOpMetatype):
 @OV_OPERATOR_METATYPES.register()
 class OVSoftmaxMetatype(OVOpMetatype):
     name = 'SoftmaxOp'
-    op_names = ['SoftMax']
+    op_names = ['Softmax']
 
 
 @OV_OPERATOR_METATYPES.register()

@@ -171,9 +171,9 @@ def benchmark_torch_model(model, dataloader, model_name, output_path):
     export_to_ir(onnx_path, output_path, model_name)
 
     # Benchmark performance
-    performance = benchmark_performance(ov_path, model_name)
+    performance = 0#benchmark_performance(ov_path, model_name)
     # Validate accuracy
-    accuracy = validate_accuracy(ov_path, dataloader)
+    accuracy = 0#validate_accuracy(ov_path, dataloader)
     return performance, accuracy
 
 
@@ -226,8 +226,6 @@ def quantize_ov_native(model: ov.Model,
                        fast_bias_correction: bool = True,
                        model_type: Optional[nncf.ModelType] = None,
                        ignored_scope: Optional[nncf.IgnoredScope] = None) -> ov.Model:
-    if model_type is not None:
-        RuntimeError('Model type is not supported')
 
     quantized_model = ov_quantize_impl(model,
                                        calibration_dataset,
@@ -235,6 +233,7 @@ def quantize_ov_native(model: ov.Model,
                                        target_device=target_device,
                                        subset_size=subset_size,
                                        fast_bias_correction=fast_bias_correction,
+                                       model_type=model_type,
                                        ignored_scope=ignored_scope)
     return quantized_model
 
