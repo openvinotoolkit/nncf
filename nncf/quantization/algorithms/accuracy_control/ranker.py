@@ -61,8 +61,6 @@ class GroupToRank:
     quantizers: List[NNCFNode]
     operations: List[NNCFNode]
 
-    # TODO(andrey-churkin): Add hash
-
 
 class Ranker(ABC):
     """
@@ -102,7 +100,6 @@ class Ranker(ABC):
         """
         groups_to_rank = []
         processed = {}
-        # TODO(andrey-churkin): Set order of quantizers here.
         quantizers = quantized_model_graph.get_nodes_by_metatypes(self._algo_backend.get_quantizer_metatypes())
         quantized_model_graph_without_shapeof = remove_shapeof_subgraphs(
             deepcopy(quantized_model_graph),
