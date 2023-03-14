@@ -146,7 +146,7 @@ def torch_jit_script_wrapper(*args, **kwargs):
             def rcb_wrapper(name):
                 value = rcb(name)
                 if hasattr(value, "_original_op"):
-                    value = value._original_op
+                    value = value._original_op  # pylint: disable=protected-access
                 return value
 
             kwargs['_rcb'] = rcb_wrapper
@@ -222,7 +222,6 @@ def get_all_functions_from_namespace(namespace: NamespaceTarget, do_filter: bool
     :param namespace: Python module.
     :param do_filter: If True return only public functions, else - otherwise.
     """
-    import inspect
 
     def remove_private_functions(names: List[str]) -> List[str]:
         filtered_names = []
