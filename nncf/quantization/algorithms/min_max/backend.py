@@ -45,6 +45,13 @@ class MinMaxAlgoBackend(ABC):
 
     @property
     @abstractmethod
+    def softmax_metatype(self) -> OperatorMetatype:
+        """
+        Property for the backend-specific SoftMax metatype.
+        """
+
+    @property
+    @abstractmethod
     def post_processing_metatypes(self) -> List[OperatorMetatype]:
         """
         Property for the backend-specific post-processing metatypes (NonMaximumSupression, TopK, etc.).

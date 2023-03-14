@@ -31,6 +31,7 @@ from nncf.onnx.quantization.quantizer_parameters import calculate_activation_qua
 from nncf.onnx.quantization.quantizer_parameters import calculate_weight_quantizer_parameters
 from nncf.onnx.graph.nncf_graph_builder import ONNXExtendedLayerAttributes
 from nncf.onnx.graph.metatypes.onnx_metatypes import ONNXLinearMetatype
+from nncf.onnx.graph.metatypes.onnx_metatypes import ONNXSoftmaxMetatype
 from nncf.onnx.graph.metatypes.onnx_metatypes import ONNXNonMaxSuppressionMetatype
 from nncf.onnx.graph.metatypes.onnx_metatypes import ONNXTopKMetatype
 from nncf.onnx.graph.metatypes.onnx_metatypes import ONNXShapeMetatype
@@ -49,6 +50,10 @@ class ONNXMinMaxAlgoBackend(MinMaxAlgoBackend):
     @property
     def mat_mul_metatype(self) -> OperatorMetatype:
         return ONNXLinearMetatype
+
+    @property
+    def softmax_metatype(self) -> OperatorMetatype:
+        return ONNXSoftmaxMetatype
 
     @property
     def post_processing_metatypes(self) -> List[OperatorMetatype]:
