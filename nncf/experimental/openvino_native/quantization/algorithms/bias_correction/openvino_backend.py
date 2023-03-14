@@ -21,6 +21,11 @@ from nncf.common.graph import NNCFNode
 from nncf.common.graph.transformations.commands import TargetType
 from nncf.common.tensor_statistics.collectors import ReductionShape
 from nncf.common.utils.backend import BackendType
+from nncf.experimental.common.tensor_statistics.collectors import TensorCollector
+from nncf.experimental.openvino_native.graph.metatypes.openvino_metatypes import OVConvolutionBackpropDataMetatype
+from nncf.experimental.openvino_native.graph.metatypes.openvino_metatypes import OVConvolutionMetatype
+from nncf.experimental.openvino_native.graph.metatypes.openvino_metatypes import OVMatMulMetatype
+from nncf.experimental.openvino_native.graph.metatypes.openvino_metatypes import OVDepthwiseConvolutionMetatype
 from nncf.experimental.openvino_native.graph.metatypes.openvino_metatypes import OVOpMetatype
 from nncf.experimental.openvino_native.graph.metatypes.common import FAKE_QUANTIZE_OPERATIONS
 from nncf.experimental.openvino_native.graph.node_utils import get_bias_value
@@ -32,9 +37,7 @@ from nncf.experimental.openvino_native.graph.transformations.commands import OVO
 from nncf.experimental.openvino_native.graph.transformations.commands import OVFQNodeRemovingCommand
 from nncf.experimental.openvino_native.graph.transformations.commands import OVTargetPoint
 from nncf.experimental.openvino_native.statistics.collectors import OVNNCFCollectorTensorProcessor
-from nncf.experimental.openvino_native.statistics.collectors import OVBatchStatisticCollector
 from nncf.experimental.openvino_native.statistics.collectors import get_mean_batch_stat_collector
-from nncf.experimental.openvino_native.statistics.collectors import OVMeanStatisticCollector
 from nncf.experimental.openvino_native.statistics.collectors import get_mean_stat_collector
 from nncf.experimental.openvino_native.tensor import OVNNCFTensor
 from nncf.quantization.algorithms.bias_correction.backend import ALGO_BACKENDS
@@ -80,14 +83,12 @@ class OVBiasCorrectionAlgoBackend(BiasCorrectionAlgoBackend):
     @staticmethod
     def mean_statistic_collector(reduction_shape: ReductionShape,
                                  num_samples: Optional[int] = None,
-                                 window_size: Optional[int] = None) -> OVMeanStatisticCollector:
+                                 window_size: Optional[int] = None) -> TensorCollector:
         return get_mean_stat_collector(num_samples, reduction_shape, window_size)
-        return OVMeanStatisticCollector(reduction_shape, num_samples, window_size)
 
     @staticmethod
-    def batch_statistic_collector(num_samples: int = None) -> OVMeanStatisticCollector:
+    def batch_statistic_collector(num_samples: int = None) -> TensorCollector:
         return get_mean_batch_stat_collector(num_samples)
-        return OVBatchStatisticCollector(num_samples)
 
     @staticmethod
     def process_model_output(raw_data: Dict, output_name: str) -> OVNNCFTensor:

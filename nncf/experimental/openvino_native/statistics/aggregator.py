@@ -11,29 +11,29 @@
  limitations under the License.
 """
 
-from typing import Dict, List
+from typing import Dict
 
 import numpy as np
 import openvino.runtime as ov
-from openvino.runtime import opset9 as opset
+from collections import defaultdict
 
+from nncf.data.dataset import Dataset
+from nncf.common.graph.graph import NNCFGraph
 from nncf.common.graph.transformations.commands import TargetType
 from nncf.common.graph.transformations.layout import TransformationLayout
 from nncf.common.tensor_statistics.aggregator import StatisticPointsContainer
-from nncf.common.tensor_statistics.collectors import MergedTensorCollector
 from nncf.common.tensor_statistics.aggregator import StatisticsAggregator
+from nncf.common.graph.transformations.commands import TargetType
+from nncf.common.graph.transformations.layout import TransformationLayout
+from nncf.common.tensor_statistics.statistic_point import StatisticPointsContainer
+from nncf.common.tensor_statistics.statistic_point import StatisticPoint
 
 from nncf.experimental.openvino_native.graph.transformations.commands import OVOutputInsertionCommand
 from nncf.experimental.openvino_native.tensor import OVNNCFTensor
-from nncf.experimental.openvino_native.graph.node_utils import get_result_node_name
-
+from nncf.experimental.common.tensor_statistics.collectors import MergedTensorCollector
 from nncf.experimental.openvino_native.graph.transformations.commands import OVInplaceStatisticInsertionCommand
-from nncf.experimental.openvino_native.graph.nncf_graph_builder import get_operation_const_op
-from nncf.experimental.openvino_native.statistics.collectors import OVMinMaxStatisticCollector
-from nncf.experimental.openvino_native.statistics.collectors import OVMeanMinMaxStatisticCollector
 from nncf.experimental.openvino_native.tensor import OVNNCFTensor
-from nncf.data.dataset import Dataset
-from nncf.experimental.openvino_native.graph.node_utils import get_result_node_name
+
 
 class OVStatisticsAggregator(StatisticsAggregator):
 
@@ -67,10 +67,12 @@ class OVStatisticsAggregator(StatisticsAggregator):
             tensor_collector.register_inputs([outputs[name] for name in input_names])
 
     def _get_transformation_layout_extra_outputs(self,
-                                                 statistic_points: StatisticPointsContainer) -> TransformationLayout:
+                                                 statistic_points: StatisticPointsContainer,
+                                                 nncf_graph: NNCFGraph) -> TransformationLayout:
+        self.statistic_points = self._get_merged_statistic_points(statistic_points, nncf_graph)
         transformation_layout = TransformationLayout()
         transformation_commands = []
-        for _, statistic_point, tensor_collector in statistic_points.get_tensor_collectors():
+        for _, statistic_point, tensor_collector in self.statistic_points.get_tensor_collectors():
             for op_fn in tensor_collector.get_inplace_fn():
                 transformation_commands.append(
                     OVInplaceStatisticInsertionCommand(statistic_point.target_point, op_fn))
@@ -81,6 +83,40 @@ class OVStatisticsAggregator(StatisticsAggregator):
             transformation_layout.register(transformation_command)
 
         return transformation_layout
+
+    @staticmethod
+    #TODO(dlyakhov) Move this to common part
+    def _get_merged_statistic_points(statistic_points: StatisticPointsContainer, nncf_graph: NNCFGraph):
+        merged_statistic_points = StatisticPointsContainer()
+        target_type_to_tensor_collector_map = defaultdict(lambda: defaultdict(list))
+        for target_node_name, _statistic_points in statistic_points.data.items():
+            for statistic_point in _statistic_points:
+                target_point = statistic_point.target_point
+                if target_point.type == TargetType.POST_LAYER_OPERATION:
+                    node = nncf_graph.get_node_by_name(target_node_name)
+                    target_output_edge = nncf_graph.get_output_edges(node)[target_point.port_id]
+
+                    target_type = TargetType.PRE_LAYER_OPERATION
+                    _target_node_name = target_output_edge.to_node.node_name
+                    port_id = target_output_edge.input_port_id
+                else:
+                    target_type = statistic_point.target_point.type
+                    _target_node_name = target_point.target_node_name
+                    port_id = target_point.port_id
+
+                for tensor_collectors in statistic_point.algorithm_to_tensor_collectors.values():
+                    for tensor_collector in tensor_collectors:
+                        # TODO: Use common target point class instead of tuple
+                        target_type_to_tensor_collector_map[(_target_node_name, target_type, port_id)]['collectors'].append(tensor_collector)
+                target_type_to_tensor_collector_map[(_target_node_name, target_type, port_id)]['target_point'].append(target_point)
+
+        for merged_collectors_info in target_type_to_tensor_collector_map.values():
+            target_point = merged_collectors_info['target_point'][0]
+            collectors = merged_collectors_info['collectors']
+            merged_collector = MergedTensorCollector(collectors)
+            stat_point = StatisticPoint(target_point, merged_collector, 'Merged')
+            merged_statistic_points.add_statistic_point(stat_point)
+        return merged_statistic_points
 
     @staticmethod
     def _process_outputs(outputs: Dict[str, np.ndarray]) -> Dict[str, OVNNCFTensor]:

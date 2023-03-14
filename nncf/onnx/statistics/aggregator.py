@@ -16,6 +16,7 @@ from typing import Dict
 import numpy as np
 import onnx
 
+from nncf.common.graph.graph import NNCFGraph
 from nncf.common.factory import NNCFGraphFactory
 from nncf.common.graph.transformations.commands import TargetType
 from nncf.common.graph.transformations.layout import TransformationLayout
@@ -55,7 +56,8 @@ class ONNXStatisticsAggregator(StatisticsAggregator):
                     statistic_point.register_tensor(outputs[edge_name])
 
     def _get_transformation_layout_extra_outputs(self,
-                                                 statistic_points: StatisticPointsContainer) -> TransformationLayout:
+                                                 statistic_points: StatisticPointsContainer,
+                                                 nncf_graph: NNCFGraph) -> TransformationLayout:
         transformation_layout = TransformationLayout()
         transformation_commands = []
         for _statistic_points in statistic_points.values():

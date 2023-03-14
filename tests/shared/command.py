@@ -35,7 +35,6 @@ class Command:
             self.kwargs.update(preexec_fn=os.setsid)
         else:  # Python 3.2+ and Unix
             self.kwargs.update(start_new_session=True)
-        self.kwargs.update(env=os.environ.copy())
 
     def kill_process_tree(self, pid):
         try:

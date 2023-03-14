@@ -16,6 +16,7 @@ from typing import Dict
 import torch
 import numpy as np
 
+from nncf.common.graph.graph import NNCFGraph
 from nncf.common.graph.transformations.commands import TransformationPriority
 from nncf.common.graph.transformations.layout import TransformationLayout
 from nncf.common.tensor_statistics.aggregator import StatisticPointsContainer
@@ -37,7 +38,8 @@ class PTStatisticsAggregator(StatisticsAggregator):
         return
 
     def _get_transformation_layout_extra_outputs(self,
-                                                 statistic_points: StatisticPointsContainer) -> TransformationLayout:
+                                                 statistic_points: StatisticPointsContainer,
+                                                 nncf_graph: NNCFGraph) -> TransformationLayout:
         transformation_layout = TransformationLayout()
         transformation_commands = []
         for _statistic_points in statistic_points.values():

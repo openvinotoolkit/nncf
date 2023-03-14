@@ -122,7 +122,7 @@ class MinMaxAlgoBackend(ABC):
     def minmax_statistic_collector(nncf_graph: NNCFGraph,
                                    target_point: TargetPoint,
                                    quantizer_config: QuantizerConfig,
-                                   num_samples: int = None) -> TensorReducerBase:
+                                   num_samples: int = None) -> TensorStatisticCollectorBase:
         """
         Returns backend-specific min max statistic collector.
 
@@ -139,7 +139,7 @@ class MinMaxAlgoBackend(ABC):
                                         target_point: TargetPoint,
                                         quantizer_config: QuantizerConfig,
                                         use_per_sample_stats: bool,
-                                        num_samples: int = None) -> TensorReducerBase:
+                                        num_samples: int = None) -> TensorStatisticCollectorBase:
         """
         Returns backend-specific min max statistic collector.
 

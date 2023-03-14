@@ -11,44 +11,33 @@
  limitations under the License.
 """
 
-from typing import Union, List, Deque, Tuple, Callable
-from abc import abstractmethod
+from typing import Union, List, Deque
 import openvino.runtime.opset9 as opset
 
 import numpy as np
 
 from nncf.common.tensor import NNCFTensor
 from nncf.common.tensor import TensorElementsType
-from nncf.common.tensor_statistics.collectors import TensorReducerBase
-from nncf.common.tensor_statistics.collectors import MinMaxStatisticCollector
 from nncf.common.tensor_statistics.collectors import NNCFCollectorTensorProcessor
-from nncf.common.tensor_statistics.collectors import MeanMinMaxStatisticCollector
-from nncf.common.tensor_statistics.collectors import MinMaxOfflineStatisticCollectorSpec
-from nncf.common.tensor_statistics.collectors import TensorCollector
-from nncf.common.tensor_statistics.collectors import NoopReducer
-from nncf.common.tensor_statistics.collectors import MinReducer
-from nncf.common.tensor_statistics.collectors import MaxReducer
-from nncf.common.tensor_statistics.collectors import AbsMaxReducer
-from nncf.common.tensor_statistics.collectors import BatchMeanReducer
-from nncf.common.tensor_statistics.collectors import MeanPerChReducer
-from nncf.common.tensor_statistics.collectors import OnlineMinAggregator
-from nncf.common.tensor_statistics.collectors import OnlineMaxAggregator
-from nncf.common.tensor_statistics.collectors import OfflineMinAggregator
-from nncf.common.tensor_statistics.collectors import OfflineMaxAggregator
-from nncf.common.tensor_statistics.collectors import OfflineMeanAggregator
-from nncf.common.tensor_statistics.collectors import ShapeAggregator
-from nncf.common.tensor_statistics.collectors import NoopAggregator
-from nncf.common.tensor_statistics.collectors import TensorAggregatorBase
-from nncf.common.tensor_statistics.collectors import MeanStatisticCollector
-from nncf.common.tensor_statistics.collectors import BatchStatisticCollector
 from nncf.experimental.openvino_native.tensor import OVNNCFTensor
+from nncf.experimental.common.tensor_statistics.collectors import TensorCollector
+from nncf.experimental.common.tensor_statistics.collectors import NoopReducer
+from nncf.experimental.common.tensor_statistics.collectors import MinReducer
+from nncf.experimental.common.tensor_statistics.collectors import MaxReducer
+from nncf.experimental.common.tensor_statistics.collectors import AbsMaxReducer
+from nncf.experimental.common.tensor_statistics.collectors import BatchMeanReducer
+from nncf.experimental.common.tensor_statistics.collectors import MeanPerChReducer
+from nncf.experimental.common.tensor_statistics.collectors import OnlineMinAggregator
+from nncf.experimental.common.tensor_statistics.collectors import OnlineMaxAggregator
+from nncf.experimental.common.tensor_statistics.collectors import OfflineMeanAggregator
+from nncf.experimental.common.tensor_statistics.collectors import ShapeAggregator
+from nncf.experimental.common.tensor_statistics.collectors import NoopAggregator
 from nncf.experimental.openvino_native.statistics.statistics import OVMinMaxTensorStatistic
 from nncf.experimental.openvino_native.statistics.statistics import OVMeanTensorStatistic
 from nncf.experimental.openvino_native.statistics.statistics import OVBatchTensorStatistic
 from nncf.experimental.openvino_native.graph.node_utils import get_reduce_node_name
 from nncf.experimental.openvino_native.graph.node_utils import get_result_node_name
 from nncf.experimental.openvino_native.graph.node_utils import get_inplace_reduce_op
-from nncf.common.tensor import TensorType
 
 
 class OVNNCFCollectorTensorProcessor(NNCFCollectorTensorProcessor):
@@ -104,42 +93,6 @@ class OVNNCFCollectorTensorProcessor(NNCFCollectorTensorProcessor):
     @staticmethod
     def sum(tensor: NNCFTensor) -> TensorElementsType:
         return np.sum(tensor.tensor)
-
-
-class OVMinMaxStatisticCollector(MinMaxStatisticCollector):
-    @staticmethod
-    def _get_processor() -> NNCFCollectorTensorProcessor:
-        return OVNNCFCollectorTensorProcessor()
-
-    def get_statistics(self) -> OVMinMaxTensorStatistic:
-        return OVMinMaxTensorStatistic(self._min_values.tensor, self._max_values.tensor)
-
-
-class OVMeanMinMaxStatisticCollector(MeanMinMaxStatisticCollector):
-    @staticmethod
-    def _get_processor() -> NNCFCollectorTensorProcessor:
-        return OVNNCFCollectorTensorProcessor()
-
-    def get_statistics(self) -> OVMinMaxTensorStatistic:
-        return OVMinMaxTensorStatistic(self._min_aggregate().tensor, self._max_aggregate().tensor)
-
-
-class OVMeanStatisticCollector(MeanStatisticCollector):
-    @staticmethod
-    def _get_processor() -> NNCFCollectorTensorProcessor:
-        return OVNNCFCollectorTensorProcessor()
-
-    def get_statistics(self) -> OVMeanTensorStatistic:
-        return OVMeanTensorStatistic(self._mean_aggregate().tensor, self._shape())
-
-
-class OVBatchStatisticCollector(BatchStatisticCollector):
-    @staticmethod
-    def _get_processor() -> NNCFCollectorTensorProcessor:
-        return OVNNCFCollectorTensorProcessor()
-
-    def get_statistics(self) -> OVBatchTensorStatistic:
-        return OVBatchTensorStatistic(self._all_values)
 
 
 class OVNoopReducer(NoopReducer):

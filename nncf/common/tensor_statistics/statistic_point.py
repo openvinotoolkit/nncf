@@ -15,7 +15,7 @@ from typing import Callable, Generator, Optional
 
 from collections import UserDict
 
-from nncf.common.tensor_statistics.collectors import TensorReducerBase
+from nncf.common.tensor_statistics.collectors import TensorStatisticCollectorBase
 from nncf.common.tensor import TensorType
 from nncf.common.graph.transformations.commands import TargetPoint
 
@@ -28,7 +28,7 @@ class StatisticPoint:
     algorithm implies on what algorithm nedeed this statistics.
     """
 
-    def __init__(self, target_point: TargetPoint, tensor_collector: TensorReducerBase,
+    def __init__(self, target_point: TargetPoint, tensor_collector: TensorStatisticCollectorBase,
                  algorithm: 'Algorithm'):
         self.target_point = target_point
         self.algorithm_to_tensor_collectors = {algorithm: [tensor_collector]}
@@ -95,7 +95,7 @@ class StatisticPointsContainer(UserDict):
             self,
             target_node_name: str,
             statistic_point_condition_func: Callable[[StatisticPoint], bool],
-            algorithm: 'Algorithm') -> Generator[TensorReducerBase, None, None]:
+            algorithm: 'Algorithm') -> Generator[TensorStatisticCollectorBase, None, None]:
 
         for _statistic_point in self.iter_through_statistic_points_in_target_node(target_node_name,
                                                                                   statistic_point_condition_func):
