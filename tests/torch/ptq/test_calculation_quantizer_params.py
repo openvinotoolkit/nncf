@@ -44,7 +44,7 @@ SYM_CASES = (CaseSymParams(fq_params=FakeQuantizeParameters(
                                      256),
                            per_channel=False,
                            quant_group=QuantizerGroup.ACTIVATIONS,
-                           ref_scale=0.49920455),
+                           ref_scale=0.49530452),
              CaseSymParams(fq_params=FakeQuantizeParameters(
                                      np.array(-0.49530452, dtype=np.float32),
                                      np.array(0.49530452, dtype=np.float32),
@@ -62,7 +62,7 @@ SYM_CASES = (CaseSymParams(fq_params=FakeQuantizeParameters(
                                       256),
                             per_channel=True,
                             quant_group=QuantizerGroup.ACTIVATIONS,
-                            ref_scale=np.array([0.4835594, 0.49920455, 0.49221927]).reshape(1, 3, 1, 1)),
+                            ref_scale=np.array([0.4797816, 0.49920455, 0.48837382]).reshape(1, 3, 1, 1)),
              CaseSymParams(fq_params=FakeQuantizeParameters(
                                      np.array([-0.48837382, -0.49530452], dtype=np.float32).reshape(2, 1, 1, 1),
                                      np.array([0.48837382, 0.49530452], dtype=np.float32).reshape(2, 1, 1, 1),

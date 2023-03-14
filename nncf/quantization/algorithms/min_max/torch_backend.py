@@ -243,8 +243,7 @@ class PTMinMaxAlgoBackend(MinMaxAlgoBackend):
                 torch.nn.Parameter(torch.from_numpy(np.array(parameters.input_high - parameters.input_low)))
         else:
             quantizer.signed = np.any(parameters.input_low < 0)
-            scale = np.array(np.maximum(np.abs(parameters.input_high), np.abs(parameters.input_low)))
-            quantizer.scale = torch.nn.Parameter(torch.from_numpy(scale))
+            quantizer.scale = torch.nn.Parameter(torch.from_numpy(parameters.input_high))
 
     @staticmethod
     def _create_quantizer_insertion_command(nncf_graph: NNCFGraph,
