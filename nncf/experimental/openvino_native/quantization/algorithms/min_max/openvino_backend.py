@@ -52,7 +52,7 @@ class OVMinMaxAlgoBackend(MinMaxAlgoBackend):
     @property
     def mat_mul_metatype(self) -> OperatorMetatype:
         return OVMatMulMetatype
-    
+
     @property
     def softmax_metatype(self) -> OperatorMetatype:
         return OVSoftmaxMetatype

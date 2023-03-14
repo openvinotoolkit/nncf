@@ -41,17 +41,17 @@ def is_node_with_bias(node: NNCFNode, nncf_graph: NNCFGraph) -> bool:
     add_node = nncf_graph.get_next_nodes(node)[0]
     if add_node.metatype != OVAddMetatype:
         return False
-    
+
     bias_constant = get_node_with_bias_value(add_node, nncf_graph)
     if bias_constant is None:
         return False
-    
+
     probable_bias_shape = add_node.layer_attributes.const_shape
     probable_bias_ndim = len(probable_bias_shape)
     for i in range(2, probable_bias_ndim):
         if probable_bias_shape[i] != 1:
             return False
-    
+
     edge = nncf_graph.get_edge(node, add_node)
     return edge.tensor_shape[1] == probable_bias_shape[1]
 

@@ -444,19 +444,18 @@ class MinMaxQuantization(Algorithm):
                     for node_name in quantization_point.directly_quantized_operator_node_names:
                         node = nncf_graph.get_node_by_name(node_name)
                         mat_mul_metatype = self._backend_entity.mat_mul_metatype
-                        if node.metatype == mat_mul_metatype:
-                            softmax_metatype = self._backend_entity.softmax_metatype
-                            prev_nodes = nncf_graph.get_previous_nodes(node)
-                            for prev_node in prev_nodes:
-                                if prev_node.metatype == softmax_metatype:
-                                    to_remove_quantizers.add(key)
-                                    break
-                            if quantization_point.qconfig.mode != QuantizationMode.SYMMETRIC and node.layer_attributes is None:
-                                quantization_point.qconfig.mode = QuantizationMode.SYMMETRIC
-                                nncf_logger.debug(f'Update quantization mode for the node {node_name}'
-                                                f' to the symmetric due to ModelType parameter.')
+                        if node.metatype != mat_mul_metatype:
+                            continue
+                        softmax_metatype = self._backend_entity.softmax_metatype
+                        prev_nodes_metatype = [prev_node.metatype for prev_node in nncf_graph.get_previous_nodes(node)]
+                        if softmax_metatype in prev_nodes_metatype:
+                            to_remove_quantizers.add(key)
+                        if quantization_point.qconfig.mode != QuantizationMode.SYMMETRIC and \
+                                node.layer_attributes is None:
+                            quantization_point.qconfig.mode = QuantizationMode.SYMMETRIC
+                            nncf_logger.debug(f'Update quantization mode for the node {node_name}'
+                                              f' to the symmetric due to ModelType parameter.')
             for q_key in to_remove_quantizers:
                 node_names = quantizer_setup.quantization_points[q_key].directly_quantized_operator_node_names
                 nncf_logger.debug(f'Remove quantization point for {node_names} due to ModelType parameter.')
                 del quantizer_setup.quantization_points[q_key]
-                

@@ -35,7 +35,6 @@ ALGO_BACKENDS = Registry('algo_backends')
 
 class MinMaxAlgoBackend(ABC):
 
-
     @property
     @abstractmethod
     def mat_mul_metatype(self) -> OperatorMetatype:
@@ -182,7 +181,7 @@ class MinMaxAlgoBackend(ABC):
     def get_weight_nodes(nncf_graph: NNCFGraph) -> List[NNCFNode]:
         """
         Returns nodes having weights.
-        
-        :param nncf_graph: Instance of NNCFGraph. 
+
+        :param nncf_graph: Instance of NNCFGraph.
         :return: All nodes with weights.
         """

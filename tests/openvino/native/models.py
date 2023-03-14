@@ -346,7 +346,7 @@ class ConvNotBiasModel(OVReferenceModel):
         not_bias = opset.constant(np.zeros((1, 3, 4, 2)), dtype=np.float32, name="NotBias")
         conv_add = opset.add(conv, not_bias, name="Conv_Add")
         relu = opset.relu(conv_add, name="Relu")
-        
+
         result = opset.result(relu, name="Result")
         model = ov.Model([result], [input_1])
         return model

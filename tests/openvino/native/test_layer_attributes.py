@@ -37,8 +37,8 @@ def get_convert_conv(input_1, node_name, input_shape):
     return get_conv(input_1, node_name, input_shape, convert)
 
 
-def get_shape_node(input, op_name, input_shape):
-    return opset.shape_of(input, name=op_name)
+def get_shape_node(input_, op_name, input_shape):
+    return opset.shape_of(input_, name=op_name)
 
 
 def get_one_layer_model(op_name: str, node_creator, input_shape):
