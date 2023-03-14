@@ -6,7 +6,7 @@
 [![Website](https://img.shields.io/website?up_color=blue&up_message=docs&url=https%3A%2F%2Fdocs.openvino.ai%2Flatest%2Fopenvino_docs_model_optimization_guide.html)](https://docs.openvino.ai/latest/openvino_docs_model_optimization_guide.html)
 [![Apache License Version 2.0](https://img.shields.io/badge/license-Apache_2.0-green.svg)](LICENSE)
 [![PyPI Downloads](https://static.pepy.tech/badge/nncf)](https://pypi.org/project/nncf/)
-
+ 
 </div>
 
 _For the installation instructions, [click here](#installation)._
@@ -15,13 +15,13 @@ NNCF provides a suite of advanced algorithms for Neural Networks inference optim
 
 NNCF is designed to work with models from [PyTorch](https://pytorch.org/), [TensorFlow](https://www.tensorflow.org/), [ONNX](https://onnx.ai/) and [OpenVINO&trade;](https://docs.openvino.ai/latest/home.html).
 
-NNCF provides samples that demonstrate the usage of compression algorithms for three different use cases on public PyTorch and
-TensorFlow models and datasets: Image Classification, Object Detection and Semantic Segmentation.
-[Compression results](#nncf-compressed-model-zoo) achievable with the NNCF-powered samples can be found in a table at
+NNCF provides samples that demonstrate the usage of compression algorithms for three different use cases on public PyTorch and 
+TensorFlow models and datasets: Image Classification, Object Detection and Semantic Segmentation. 
+[Compression results](#nncf-compressed-model-zoo) achievable with the NNCF-powered samples can be found in a table at 
 the end of this document.
 
-The framework is organized as a Python\* package that can be built and used in a standalone mode. The framework
-architecture is unified to make it easy to add different compression algorithms for both PyTorch and TensorFlow deep
+The framework is organized as a Python\* package that can be built and used in a standalone mode. The framework 
+architecture is unified to make it easy to add different compression algorithms for both PyTorch and TensorFlow deep 
 learning frameworks.
 
 ## Key Features
@@ -61,7 +61,7 @@ The NNCF is organized as a regular Python package that can be imported in your t
 The basic workflow is loading a JSON configuration script containing NNCF-specific parameters determining the compression to be applied to your model, and then passing your model along with the configuration script to the `create_compressed_model` function.
 This function returns a model with additional modifications necessary to enable algorithm-specific compression during fine-tuning and handle to the object allowing you to control the compression during the training process:
 
-### Usage example with PyTorch
+### Usage example with PyTorch 
 
 ```python
 import torch
@@ -86,14 +86,10 @@ nncf_config = register_default_init_args(nncf_config, init_loader)
 # Apply the specified compression algorithms to the model
 compression_ctrl, compressed_model = create_compressed_model(model, nncf_config)
 
-# Now use compressed_model as a usual torch.nn.Module
+# Now use compressed_model as a usual torch.nn.Module 
 # to fine-tune compression parameters along with the model weights
 
 # ... the rest of the usual PyTorch-powered training pipeline
-
-# (Optional) Preparing the model to work in framework native format without NNCF specific operations to inference
-# or export the model.
-inference_model = compression_ctrl.prepare_for_inference(make_model_copy=True)
 
 # Export to ONNX or .pth when done fine-tuning
 compression_ctrl.export_model("compressed_model.onnx")
@@ -129,15 +125,11 @@ compression_ctrl, compressed_model = create_compressed_model(model, nncf_config)
 
 # ... the rest of the usual TensorFlow-powered training pipeline
 
-# (Optional) Preparing the model to work in framework native format without NNCF specific operations to inference
-# or export the model.
-inference_model = compression_ctrl.prepare_for_inference(make_model_copy=True)
-
-# Export to Frozen Graph, TensorFlow SavedModel or .h5  when done fine-tuning
+# Export to Frozen Graph, TensorFlow SavedModel or .h5  when done fine-tuning 
 compression_ctrl.export_model("compressed_model.pb", save_format='frozen_graph')
 ```
 
-For a more detailed description of NNCF usage in your training code, see [this tutorial](docs/Usage.md).
+For a more detailed description of NNCF usage in your training code, see [this tutorial](docs/Usage.md). 
 For in-depth examples of NNCF integration, browse the [sample scripts](#compression-aware-training-samples) code, or the [example patches](#third-party-repository-integration) to third-party repositories.
 For FAQ, visit this [link](./docs/FAQ.md).
 
@@ -148,7 +140,7 @@ NNCF provides [samples](#post-training-quantization-samples), which demonstrate 
 To start the algorithm, provide the following entities:
 * Original model.
 * Validation part of the dataset.
-* [Data transformation function](./docs/compression_algorithms/post_training/Quantization.md#data-transformation-function) transforming data items from the original dataset to the model input data.
+* [Data transformation function](./docs/compression_algorithms/post_training/Quantization.md#data-transformation-function) transforming data items from the original dataset to the model input data. 
 
 
 The basic workflow steps:
@@ -168,7 +160,7 @@ import torch
 from torchvision import datasets, models
 
 # Instantiate your uncompressed model
-model = models.mobilenet_v2()
+model = models.mobilenet_v2() 
 # Provide validation part of the dataset to collect statistics needed for the compression algorithm
 val_dataset = datasets.ImageFolder("/path")
 dataset_loader = torch.utils.data.DataLoader(val_dataset)
@@ -197,7 +189,7 @@ import tensorflow_datasets as tfds
 # Instantiate your uncompressed model
 model = tf.keras.applications.MobileNetV2()
 # Provide validation part of the dataset to collect statistics needed for the compression algorithm
-val_dataset = tfds.load('/path', split='validation',
+val_dataset = tfds.load('/path', split='validation', 
                         shuffle_files=False, as_supervised=True)
 
 # Step 1: Initialize transformation function
@@ -291,7 +283,7 @@ To run the samples please refer to the corresponding tutorials:
 - [ONNX Post-Training Quantization sample](examples/post_training_quantization/onnx/mobilenet_v2/README.md)
 - [OpenVINO Post-Training Quantization sample](examples/post_training_quantization/openvino/mobilenet_v2/README.md)
 
-## Model Compression Notebooks
+## Model Compression Notebooks 
 
 A collection of ready-to-run Jupyter* notebooks are also available to demonstrate how to use NNCF compression algorithms
 to optimize models for inference with the OpenVINO Toolkit.
@@ -305,7 +297,7 @@ NNCF may be straightforwardly integrated into training/evaluation pipelines of t
 ### Used by
 
 - [OpenVINO Training Extensions](https://github.com/openvinotoolkit/training_extensions)
-
+  
   NNCF is integrated into OpenVINO Training Extensions as model optimization backend. So you can train, optimize and export new models based on the available model templates as well as run exported models with OpenVINO.
 
 ### Git patches for third-party repository
@@ -324,7 +316,7 @@ This repository is tested on Python* 3.8.10, PyTorch* 1.12.1 (NVidia CUDA\* Tool
 ## Installation
 We suggest to install or use the package in the [Python virtual environment](https://docs.python.org/3/tutorial/venv.html).
 
-If you want to optimize a model from PyTorch, install PyTorch by following [PyTorch installation guide](https://pytorch.org/get-started/locally/#start-locally).
+If you want to optimize a model from PyTorch, install PyTorch by following [PyTorch installation guide](https://pytorch.org/get-started/locally/#start-locally). 
 If you want to optimize a model from TensorFlow, install TensorFlow by following [TensorFlow installation guide](https://www.tensorflow.org/install/).
 
 #### As a package built from a checked-out repository:
@@ -398,8 +390,8 @@ Refer to the [CONTRIBUTING.md](./CONTRIBUTING.md) file for guidelines on contrib
 
 ## NNCF Compressed Model Zoo
 
-Results achieved using sample scripts, example patches to third-party repositories and NNCF configuration files provided
-with this repository. See README.md files for [sample scripts](#model-compression-samples) and [example patches](#third-party-repository-integration)
+Results achieved using sample scripts, example patches to third-party repositories and NNCF configuration files provided 
+with this repository. See README.md files for [sample scripts](#model-compression-samples) and [example patches](#third-party-repository-integration) 
 to find instruction and links to exact configuration files and final checkpoints.
 - [PyTorch models](#pytorch-models)
   * [Classification](#pytorch_classification)
