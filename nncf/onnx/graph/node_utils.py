@@ -73,3 +73,21 @@ def get_input_edges_mapping(nncf_graph: NNCFGraph) -> Dict[str, Tuple[str, int]]
                 if edge.from_node == input_node:
                     input_edges_mapping[input_node.node_name].append((next_node.node_name, edge.input_port_id))
     return input_edges_mapping
+
+
+def get_input_edge(input_node_name: str, input_edges_mapping: Dict[str, Tuple[str, int]], onnx_graph: ONNXGraph) -> str:
+    """
+    Returns input edge corresponding to the NNCF input node with the name input_node_name.
+
+    :param input_node_name: Name of NNCF input node.
+    :param input_edges_mapping: A mapping of NNCF input node names and
+        a tuple with the consumed node names and their input port ids.
+    :param onnx_graph: Instance of ONNXGraph of the model.
+    :return: Input edge name.
+    """
+    input_edges = set()
+    for node_info in input_edges_mapping[input_node_name]:
+        name, port_id = node_info
+        input_edges.add(onnx_graph.get_node_edge_names(name)['input'][port_id])
+    assert len(input_edges) == 1
+    return input_edges.pop()

@@ -26,6 +26,7 @@ from nncf.onnx.graph.transformations.commands import ONNXOutputInsertionCommand
 from nncf.onnx.graph.transformations.commands import ONNXQuantizerInsertionCommand
 from nncf.onnx.graph.transformations.commands import ONNXQDQNodeRemovingCommand
 from nncf.common.graph.model_transformer import ModelTransformer
+from nncf.onnx.graph.node_utils import get_input_edge
 
 
 class ONNXModelTransformer(ModelTransformer):
@@ -59,14 +60,8 @@ class ONNXModelTransformer(ModelTransformer):
         """
         if transform_type in [TargetType.PRE_LAYER_OPERATION, TargetType.OPERATION_WITH_WEIGHTS]:
             return onnx_graph.get_node_edge_names(node_name)['input'][port_id]
-        input_edges = set()
         if node_name in input_edges_mapping:  # ADD INPUT NODE CASE
-            next_nodes = input_edges_mapping[node_name]
-            for next_node in next_nodes:
-                name, port_id = next_node
-                input_edges.add(onnx_graph.get_node_edge_names(name)['input'][port_id])
-            assert len(input_edges) == 1
-            return input_edges.pop()
+            return get_input_edge(node_name, input_edges_mapping, onnx_graph)
         return onnx_graph.get_node_edge_names(node_name)['output'][port_id]
 
     def transform(self, transformation_layout: TransformationLayout) -> onnx.ModelProto:
