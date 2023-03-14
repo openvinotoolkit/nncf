@@ -19,7 +19,7 @@ import onnx
 from nncf.common.utils.registry import Registry
 
 
-# pylint: disable=no-member
+# pylint: disable=no-member, too-many-lines
 
 def create_initializer_tensor(name: str, tensor_array: np.ndarray,
                               data_type: onnx.TensorProto = onnx.TensorProto.FLOAT) -> onnx.TensorProto:
