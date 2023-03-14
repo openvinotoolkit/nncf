@@ -85,23 +85,31 @@ Important points you should consider when training your networks with compressio
   - Turn off the `Dropout` layers (and similar ones like `DropConnect`) when training a network with quantization or sparsity
   - It is better to turn off additional regularization in the loss function (for example, L2 regularization via `weight_decay`) when training the network with RB sparsity, since it already imposes an L0 regularization term.
 
-#### Step 4 (optional): Prepare for inference model.
-During training or after the training phases have been completed, you can obtain a ready-to-use model in framework native form by removing NNCF-specific features that used during the fine-training modules.
-```
-inference_model = compression_ctrl.prepare_for_inference(make_model_copy=True)
-```
-If you set `make_model_copy=False`, the original model in the controller will be changed and further training will not be possible.
+#### Step 4: Export the compressed model
+After the compressed model has been fine-tuned to acceptable accuracy and compression stages, you can export it. There are two ways to export a model.
 
+First, you have to call the compression controller's `export_model` method to properly export the model with compression specifics into ONNX:
 
-#### Step 5 (optional): Export the compressed model to ONNX
-After the compressed model has been fine-tuned to acceptable accuracy and compression stages, you can export it to ONNX format.
-Since export process is in general algorithm-specific, you have to call the compression controller's `export_model` method to properly export the model with compression specifics into ONNX:
 ```python
 compression_ctrl.export_model("./compressed_model.onnx")
 ```
 The exported ONNX file may contain special, non-ONNX-standard operations and layers to leverage full compressed/low-precision potential of the OpenVINO toolkit.
 In some cases it is possible to export a compressed model with ONNX standard operations only (so that it can be run using `onnxruntime`, for example) - this is the case for the 8-bit symmetric quantization and sparsity/filter pruning algorithms.
 Refer to [compression algorithm documentation](./compression_algorithms) for details.
+
+Second, you have to call the compression controller's `prepare_for_inference` method, supports only for PyTorch, to properly get the model without NNCF specific nodes for training compressed model.
+The model can then be exported or converted as a conventional PyTorch model.
+If the `make_model_copy` arguments are set to `True`, a copy of the `compression_ctrl.model` will be modified.
+
+```python
+inference_model = compression_ctrl.prepare_for_inference(make_model_copy=True)
+# To ONNX format
+import torch
+torch.onnx.export(inference_model, dummy_input, './compressed_model.onnx')
+# To OpenVINO format
+from openvino.tools import mo
+ov_model = mo.convert_model(inference_model, example_input=example_input)
+```
 
 ## Saving and loading compressed models
 The complete information about compression is defined by a compressed model and a compression state.
@@ -342,4 +350,4 @@ model = training_loop.run(model,
                           configure_optimizers_fn=configure_optimizers_fn,
                           dump_checkpoint_fn=dump_checkpoint_fn)
 ```
-The above call executes the acccuracy-aware training loop and return the compressed model. For more details on how to use the accuracy-aware training loop functionality of NNCF, please refer to its [documentation](./accuracy_aware_model_training/AdaptiveCompressionTraining.md).
+The above call executes the accuracy-aware training loop and return the compressed model. For more details on how to use the accuracy-aware training loop functionality of NNCF, please refer to its [documentation](./accuracy_aware_model_training/AdaptiveCompressionTraining.md).
