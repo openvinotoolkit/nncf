@@ -120,75 +120,42 @@ def register_operator(name=None):
 
 def torch_jit_script_wrapper(*args, **kwargs):
     # Torch JIT cannot work with NNCF-modified operators,
-    # so at each import of a @torch.jit.script-decorated
-    # function we need to un-patch the torch operators
+    # so at call of torch.jit.script function we need to
+    # un-patch the torch operators
 
-    jit_script_signature = inspect.signature(_ORIG_JIT_SCRIPT)
-    assert "_rcb" in jit_script_signature.parameters and "_frames_up" in jit_script_signature.parameters
-    bound_args = jit_script_signature.bind(*args, **kwargs).arguments
-    if "_rcb" not in bound_args and inspect.isclass(bound_args["obj"]):
-    # if "_rcb" not in bound_args:
-        # frame = inspect.currentframe().f_back
-        # f_locals = frame.f_locals
-        # f_globals = frame.f_globals
-
+    # If already unpatched, don't perform unpatch/patch
+    apply_unpatch = _OPERATORS_ALREADY_WRAPPED
+    if apply_unpatch:
         unpatch_torch_operators()
 
-        # frame = inspect.currentframe().f_back
-        # f_locals_ = frame.f_locals
-        # f_globals_ = frame.f_globals
-        #
-        # print()
-        #
-        # ORIGINAL_OPERATORS_DICT = {}
-        # for it in ORIGINAL_OPERATORS:
-        #     ORIGINAL_OPERATORS_DICT[(id(it.namespace), it.name)] = it
-        # def rcb_wrapper(name):
-        #     value = rcb(name)
-        #     if 'interleave' in name:
-        #         print('??')
-        #     if value is None:
-        #         return
-        #     if not hasattr(value, '__dict__'):
-        #         print('!?', name, value)
-        #     for k in value.__dict__.keys():
-        #         if hasattr(value, k):
-        #             op = getattr(value, k)
-        #             if hasattr(op, "_original_op"):
-        #                 # if len(list(filter(lambda it: it.namespace == value and it.name == k, ORIGINAL_OPERATORS))) > 0:
-        #                 if (id(value), k) in ORIGINAL_OPERATORS_DICT:
-        #                     setattr(value, k, op._original_op)
-        #                 # pass
-        #     # if hasattr(value, "_original_op"):
-        #     #     value = value._original_op
-        #     return value
-
-        frames_up = bound_args.get("_frames_up", 0)
-        rcb = createResolutionCallbackFromFrame(frames_up + 1)
-        # kwargs["_rcb"] = rcb_wrapper
-        kwargs["_rcb"] = rcb
+    signature = inspect.signature(_ORIG_JIT_SCRIPT)
+    assert "_rcb" in signature.parameters and "_frames_up" in signature.parameters
+    bound_args = signature.bind(*args, **kwargs).arguments
+    # Process the case when the object-to-script is a class as in the original jit.script logic
+    if inspect.isclass(bound_args["obj"]):
+        # Inserting wrapper alters the call stack, hence we need to change the resolution callback accordingly
+        if "_rcb" not in bound_args:
+            frames_up = bound_args.get("_frames_up", 0)
+            rcb = createResolutionCallbackFromFrame(frames_up + 1)
+            kwargs["_rcb"] = rcb
         retval = _ORIG_JIT_SCRIPT(*args, **kwargs)
-        patch_torch_operators()
     else:
+        # For some reason resolution callback may return patched methods, so we wrap it to avoid this
         if "_rcb" in kwargs:
-            rcb = kwargs['_rcb'] if '_rcb' in kwargs else None
+            rcb = kwargs['_rcb']
 
-            ORIGINAL_OPERATORS_DICT = {}
-            for it in ORIGINAL_OPERATORS:
-                ORIGINAL_OPERATORS_DICT[(id(it.namespace), it.name)] = it
             def rcb_wrapper(name):
                 value = rcb(name)
                 if hasattr(value, "_original_op"):
                     value = value._original_op
                 return value
+
             kwargs['_rcb'] = rcb_wrapper
 
-        patch_unpatch = _OPERATORS_ALREADY_WRAPPED
-        if patch_unpatch:
-            unpatch_torch_operators()
         retval = _ORIG_JIT_SCRIPT(*args, **kwargs)
-        if patch_unpatch:
-            patch_torch_operators()
+
+    if apply_unpatch:
+        patch_torch_operators()
 
     return retval
 
@@ -205,7 +172,6 @@ def torch_jit_script_if_tracing(fn):
 
     wrapper.__original_fn = fn
     wrapper.__script_if_tracing_wrapper = True
-    # wrapper.__decorated_by_nncf_wrapper = True
 
     return wrapper
 
