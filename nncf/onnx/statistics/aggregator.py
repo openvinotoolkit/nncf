@@ -22,7 +22,7 @@ from nncf.common.graph.transformations.commands import TargetType
 from nncf.common.graph.transformations.layout import TransformationLayout
 from nncf.common.tensor_statistics.statistic_point import StatisticPointsContainer
 from nncf.common.tensor_statistics.aggregator import StatisticsAggregator
-from nncf.onnx.graph.node_utils import get_nncf_input_node_next_onnx_nodes
+from nncf.onnx.graph.node_utils import get_input_edges_mapping
 from nncf.onnx.graph.onnx_graph import ONNXGraph
 from nncf.onnx.graph.transformations.commands import ONNXOutputInsertionCommand
 from nncf.onnx.tensor import ONNXNNCFTensor
@@ -32,7 +32,7 @@ class ONNXStatisticsAggregator(StatisticsAggregator):
 
     def collect_statistics(self, model: onnx.ModelProto) -> None:
         self._nncf_graph = NNCFGraphFactory.create(model)
-        self.nncf_input_node_next_onnx_nodes = get_nncf_input_node_next_onnx_nodes(self._nncf_graph)
+        self.input_edges_mapping = get_input_edges_mapping(self._nncf_graph)
         self._onnx_graph = ONNXGraph(model)
         self._registered_weights = set()
         super().collect_statistics(model)
@@ -64,7 +64,7 @@ class ONNXStatisticsAggregator(StatisticsAggregator):
         for _statistic_points in statistic_points.values():
             for _statistic_point in _statistic_points:
                 transformation_commands.append(ONNXOutputInsertionCommand(_statistic_point.target_point,
-                                                                          self.nncf_input_node_next_onnx_nodes))
+                                                                          self.input_edges_mapping))
         for transformation_command in transformation_commands:
             transformation_layout.register(transformation_command)
 
