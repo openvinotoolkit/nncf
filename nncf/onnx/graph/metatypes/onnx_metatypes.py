@@ -327,9 +327,9 @@ class ONNXFloorMetatype(ONNXOpMetatype):
 
 
 @ONNX_OPERATION_METATYPES.register()
-class ONNXSqrtMetatype(ONNXOpMetatype):
+class ONNXPowMetatype(ONNXOpMetatype):
     name = 'SqrtOp'
-    op_names = ['Sqrt']
+    op_names = ['Sqrt', 'Pow']
     hw_config_names = [HWConfigOpName.POWER]
 
 

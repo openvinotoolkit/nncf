@@ -34,6 +34,14 @@ from nncf.experimental.openvino_native.graph.metatypes.openvino_metatypes import
 from nncf.experimental.openvino_native.graph.metatypes.openvino_metatypes import OVShapeOfMetatype
 from nncf.experimental.openvino_native.graph.metatypes.openvino_metatypes import OVMatMulMetatype
 from nncf.experimental.openvino_native.graph.metatypes.openvino_metatypes import OVSoftmaxMetatype
+from nncf.experimental.openvino_native.graph.metatypes.openvino_metatypes import OVAddMetatype
+from nncf.experimental.openvino_native.graph.metatypes.openvino_metatypes import OVPowerMetatype
+from nncf.experimental.openvino_native.graph.metatypes.openvino_metatypes import OVSqueezeMetatype
+from nncf.experimental.openvino_native.graph.metatypes.openvino_metatypes import OVMultiplyMetatype
+from nncf.experimental.openvino_native.graph.metatypes.openvino_metatypes import OVSubtractMetatype
+from nncf.experimental.openvino_native.graph.metatypes.openvino_metatypes import OVReduceMeanMetatype
+from nncf.experimental.openvino_native.graph.metatypes.openvino_metatypes import OVSquaredDifferenceMetatype
+from nncf.experimental.openvino_native.graph.metatypes.openvino_metatypes import OVMVNMetatype
 from nncf.experimental.openvino_native.graph.transformations.commands import OVQuantizerInsertionCommand
 from nncf.experimental.openvino_native.graph.transformations.commands import OVTargetPoint
 from nncf.experimental.openvino_native.hardware.config import OVHWConfig
@@ -165,8 +173,13 @@ class OVMinMaxAlgoBackend(MinMaxAlgoBackend):
     @staticmethod
     def get_model_type_ignore_scope(model_type: ModelType) -> IgnoredScope:
         if model_type == ModelType.TRANSFORMER:
-            return IgnoredScope(types=["Add", "Power", "Squeeze", "Multiply",
-                                       "Subtract", "ReduceMean", "SquaredDifference", "MVN"])
+            types = []
+            metatypes_to_add = [OVAddMetatype, OVPowerMetatype, OVSqueezeMetatype,
+                                OVMultiplyMetatype, OVSubtractMetatype, OVReduceMeanMetatype,
+                                OVSquaredDifferenceMetatype, OVMVNMetatype]
+            for metatype in metatypes_to_add:
+                types.extend(metatype.get_all_aliases())
+            return IgnoredScope(types=types)
         return IgnoredScope()
 
     @staticmethod

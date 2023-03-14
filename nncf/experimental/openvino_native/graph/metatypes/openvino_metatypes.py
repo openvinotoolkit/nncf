@@ -576,6 +576,12 @@ class OVClampMetatype(OVOpMetatype):
     op_names = ['Clamp']
 
 
+@OV_OPERATOR_METATYPES.register()
+class OVSquaredDifferenceMetatype(OVOpMetatype):
+    name = 'SquaredDifferenceOp'
+    op_names = ['SquaredDifference']
+
+
 GENERAL_WEIGHT_LAYER_METATYPES = [OVConvolutionMetatype,
                                   OVGroupConvolutionMetatype,
                                   OVDepthwiseConvolutionMetatype,

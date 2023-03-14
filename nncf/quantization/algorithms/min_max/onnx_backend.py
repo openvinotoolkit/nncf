@@ -35,6 +35,13 @@ from nncf.onnx.graph.metatypes.onnx_metatypes import ONNXSoftmaxMetatype
 from nncf.onnx.graph.metatypes.onnx_metatypes import ONNXNonMaxSuppressionMetatype
 from nncf.onnx.graph.metatypes.onnx_metatypes import ONNXTopKMetatype
 from nncf.onnx.graph.metatypes.onnx_metatypes import ONNXShapeMetatype
+from nncf.onnx.graph.metatypes.onnx_metatypes import ONNXAddLayerMetatype
+from nncf.onnx.graph.metatypes.onnx_metatypes import ONNXPowMetatype
+from nncf.onnx.graph.metatypes.onnx_metatypes import ONNXSqueezeMetatype
+from nncf.onnx.graph.metatypes.onnx_metatypes import ONNXMulLayerMetatype
+from nncf.onnx.graph.metatypes.onnx_metatypes import ONNXDivLayerMetatype
+from nncf.onnx.graph.metatypes.onnx_metatypes import ONNXSubMetatype
+from nncf.onnx.graph.metatypes.onnx_metatypes import ONNXReduceMeanMetatype
 from nncf.onnx.graph.transformations.commands import ONNXQuantizerInsertionCommand
 from nncf.onnx.graph.transformations.commands import ONNXTargetPoint
 from nncf.onnx.statistics.collectors import ONNXMeanMinMaxStatisticCollector
@@ -152,7 +159,7 @@ class ONNXMinMaxAlgoBackend(MinMaxAlgoBackend):
                                    target_point: ONNXTargetPoint,
                                    quantizer_config: QuantizerConfig,
                                    num_samples: int = None) -> ONNXMinMaxStatisticCollector:
-        reduction_shape, use_abs_max =\
+        reduction_shape, use_abs_max = \
             ONNXMinMaxAlgoBackend._get_reduction_shape_and_use_abs_max(nncf_graph,
                                                                        target_point,
                                                                        quantizer_config)
@@ -164,7 +171,7 @@ class ONNXMinMaxAlgoBackend(MinMaxAlgoBackend):
                                         quantizer_config: QuantizerConfig,
                                         use_per_sample_stats: bool,
                                         num_samples: int = None) -> ONNXMeanMinMaxStatisticCollector:
-        reduction_shape, use_abs_max =\
+        reduction_shape, use_abs_max = \
             ONNXMinMaxAlgoBackend._get_reduction_shape_and_use_abs_max(nncf_graph, target_point,
                                                                        quantizer_config)
         return ONNXMeanMinMaxStatisticCollector(use_per_sample_stats,
@@ -178,7 +185,12 @@ class ONNXMinMaxAlgoBackend(MinMaxAlgoBackend):
     @staticmethod
     def get_model_type_ignore_scope(model_type: ModelType) -> IgnoredScope:
         if model_type == ModelType.TRANSFORMER:
-            return IgnoredScope(types=["Add", "Pow", "Squeeze", "Mul", "Div", "Sub", "ReduceMean"])
+            types = []
+            metatypes_to_add = [ONNXAddLayerMetatype, ONNXPowMetatype, ONNXSqueezeMetatype,
+                                ONNXMulLayerMetatype, ONNXSubMetatype, ONNXReduceMeanMetatype]
+            for metatype in metatypes_to_add:
+                types.extend(metatype.get_all_aliases())
+            return IgnoredScope(types=types)
         return IgnoredScope()
 
     @staticmethod

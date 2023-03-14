@@ -234,15 +234,14 @@ class PTMinMaxAlgoBackend(MinMaxAlgoBackend):
         return PTInsertionCommand(target_point, quantizer, TransformationPriority.QUANTIZATION_PRIORITY)
 
     @staticmethod
-    def get_model_type_ignore_scope(model_type: ModelType):
+    def get_model_type_ignore_scope(model_type: ModelType) -> IgnoredScope:
         if model_type == ModelType.TRANSFORMER:
             types = []
             metatypes_to_add = [om.PTAddMetatype, om.PTPowerMetatype, om.PTPowerMetatype,
                                 om.PTMulMetatype, om.PTSubMetatype, om.PTMeanMetatype]
             type_name_to_add = ["squeeze"]
             for metatype in metatypes_to_add:
-                for f_names in metatype.module_to_function_names.values():
-                    types.extend(f_names)
+                types.extend(metatype.get_all_aliases())
             types.extend(type_name_to_add)
             return IgnoredScope(types=types)
         return IgnoredScope()

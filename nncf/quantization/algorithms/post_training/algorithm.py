@@ -95,7 +95,7 @@ class PostTrainingQuantizationParameters(AlgorithmParameters):
             target_device=target_device,
             quantize_outputs=quantize_outputs,
             ignored_scopes=ignored_scopes,
-            model_type = model_type
+            model_type=model_type
         )}
 
         bias_correction_algo = {BiasCorrection: BiasCorrectionParameters(

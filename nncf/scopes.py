@@ -94,12 +94,13 @@ def get_ignored_node_names_from_ignored_scope(ignored_scope: IgnoredScope,
                                               nncf_graph: NNCFGraph, strict: bool = True) -> List[str]:
     """
     Returns list of ignored names according to ignored scope and NNCFGraph.
-    Raise RuntimeError if any ignored name is not found in the NNCFGraph or
+    If strict is True, raises RuntimeError if any ignored name is not found in the NNCFGraph or
     any ignored pattern or any ignored type match 0 nodes in the NNCFGraph.
+    If strict is False, returns all possible matches.
 
     :param ignored_scope: Given ignored scope instance.
     :param nncf_grpah: Given NNCFGrpah.
-    :param strict: TODO
+    :param strict: Whether all ignored_scopes must match at least one node or not.
     :returns: List of NNCF node names from given NNCFGraph specified in given ignored scope.
     """
     error_msg = 'Refer to the original_graph.dot to discover the operations'\
