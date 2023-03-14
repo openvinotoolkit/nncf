@@ -171,9 +171,9 @@ def benchmark_torch_model(model, dataloader, model_name, output_path):
     export_to_ir(onnx_path, output_path, model_name)
 
     # Benchmark performance
-    performance = 0#benchmark_performance(ov_path, model_name)
+    performance = benchmark_performance(ov_path, model_name)
     # Validate accuracy
-    accuracy = 0#validate_accuracy(ov_path, dataloader)
+    accuracy = validate_accuracy(ov_path, dataloader)
     return performance, accuracy
 
 
