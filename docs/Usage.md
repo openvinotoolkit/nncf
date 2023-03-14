@@ -85,8 +85,8 @@ Important points you should consider when training your networks with compressio
   - Turn off the `Dropout` layers (and similar ones like `DropConnect`) when training a network with quantization or sparsity
   - It is better to turn off additional regularization in the loss function (for example, L2 regularization via `weight_decay`) when training the network with RB sparsity, since it already imposes an L0 regularization term.
 
-#### Step 4 (optional): Export the compressed model to ONNX
-After the compressed model has been fine-tuned to acceptable accuracy and compression stages, you can export it to ONNX format. There are two ways to export a model.
+#### Step 4: Export the compressed model
+After the compressed model has been fine-tuned to acceptable accuracy and compression stages, you can export it. There are two ways to export a model.
 
 First, you have to call the compression controller's `export_model` method to properly export the model with compression specifics into ONNX:
 ```python
@@ -97,7 +97,8 @@ In some cases it is possible to export a compressed model with ONNX standard ope
 Refer to [compression algorithm documentation](./compression_algorithms) for details.
 
 Second, you have to call the compression controller's `prepare_for_inference` method, supports only for PyTorch, to properly get the model without NNCF specific nodes for training compressed model.
-The model can then be exported or converted as a normal PyTorch model. If the `make_model_copy` arguments are set to `True`, a copy of the `compression_ctrl.model` will be modified.
+The model can then be exported or converted as a conventional PyTorch model.
+If the `make_model_copy` arguments are set to `True`, a copy of the `compression_ctrl.model` will be modified.
 ```python
 inference_model = compression_ctrl.prepare_for_inference(make_model_copy=True)
 
