@@ -203,6 +203,7 @@ def map_quantize_with_accuracy_control_parameters(pot_parameters):
         'stat_subset_size': lambda x: {'subset_size': x},
         # Accuracy control parameters
         'maximal_drop': lambda x: {'max_drop': x},
+        'max_iter_num': lambda x: {'max_num_iterations': x},
     }
 
     default_parameters = {}
@@ -212,7 +213,6 @@ def map_quantize_with_accuracy_control_parameters(pot_parameters):
         'inplace_statistics',
         # Accuracy control parameters
         'ranking_subset_size',
-        'max_iter_num',
         'drop_type',
         'use_prev_if_drop_increase',
         'base_algorithm',
@@ -382,7 +382,8 @@ def quantize_model_with_accuracy_control(xml_path, bin_path, accuracy_checcker_c
 
     if quantization_impl == 'pot':
         raise NotImplementedError('Accuracy Checker not supported for POT quantize_with_accuracy_control')
-    elif quantization_impl == 'native':
+
+    if quantization_impl == 'native':
         quantized_model = native_quantize_with_accuracy_control(ov_model,
                                                                 calibration_dataset,
                                                                 validation_dataset,

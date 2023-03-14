@@ -101,19 +101,19 @@ class QuantizationAccuracyRestorer:
     def __init__(self,
                  algo_backend: AccuracyControlAlgoBackend,
                  ranking_subset_size: int = 300,
-                 max_num_iterations: int = sys.maxsize,
+                 num_iterations: int = sys.maxsize,
                  max_drop: float = 0.01,
                  is_native: bool = True):
         """
         :param algo_backend: The `AccuracyControlAlgoBackend` algo backend.
         :param ranking_subset_size: The number of data items that will be selected from
             the dataset to rank groups of quantizers.
-        :param max_num_iterations: A maximal number of iterations.
+        :param num_iterations: Number of iterations.
         :param max_drop: The maximum absolute accuracy drop that should be achieved.
         """
         self.algo_backend = algo_backend
         self.ranking_subset_size = ranking_subset_size
-        self.max_num_iterations = max_num_iterations
+        self.num_iterations = num_iterations
         self.max_drop = max_drop
         # TODO(andrey-churkin): Should be removed when native implementation
         # will become the main one.

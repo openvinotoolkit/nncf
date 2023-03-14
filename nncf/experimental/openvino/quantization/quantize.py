@@ -11,6 +11,7 @@
  limitations under the License.
 """
 
+import sys
 from typing import Callable, Any, Iterable, Optional
 
 import openvino.runtime as ov
@@ -62,7 +63,8 @@ def quantize_with_accuracy_control(model: ov.Model,
                                    subset_size: int = 300,
                                    fast_bias_correction: bool = True,
                                    model_type: Optional[ModelType] = None,
-                                   ignored_scope: Optional[IgnoredScope] = None) -> ov.Model:
+                                   ignored_scope: Optional[IgnoredScope] = None,
+                                   max_num_iterations: int = sys.maxsize) -> ov.Model:
     """
     Implementation of the `quantize_with_accuracy_control()` method for the OpenVINO backend via POT.
     """
@@ -88,7 +90,10 @@ def quantize_with_accuracy_control(model: ov.Model,
                                      validation_dataset.get_data())
     nncf_logger.info(f'Metric of quantized model: {quantized_metric}')
 
-    accuracy_aware_loop = QuantizationAccuracyRestorer(algo_backend, max_drop=max_drop, is_native=False)
+    accuracy_aware_loop = QuantizationAccuracyRestorer(algo_backend,
+                                                       max_num_iterations=max_num_iterations,
+                                                       max_drop=max_drop,
+                                                       is_native=False)
     quantized_model = accuracy_aware_loop.restore_accuracy(model, initial_metric,
                                                            quantized_model, quantized_metric,
                                                            validation_dataset, validation_fn)
