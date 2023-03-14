@@ -26,6 +26,7 @@ from nncf.common.graph import NNCFNode
 from nncf.common.quantization.quantizer_removal import find_quantizer_nodes_to_cut
 from nncf.common.quantization.quantizer_removal import revert_operations_to_floating_point_precision
 from nncf.quantization.algorithms.accuracy_control.backend import AccuracyControlAlgoBackend
+from nncf.data.dataset import DataProvider
 
 
 TModel = TypeVar('TModel')
@@ -290,10 +291,14 @@ class MetricBasedRanker(Ranker):
         :param data_items: Data items.
         :return: A list that contains a metric for each item from the dataset.
         """
-        metrics = [
-            self._validation_fn(self._algo_backend.prepare_for_inference(model), [data_item]) \
-                for data_item in data_items
-        ]
+        metrics = []
+        # pylint: disable=protected-access
+        indexed_items = zip(data_items._indices, data_items) if data_items._indices else enumerate(data_items)
+        for data_item_idx, data_item in indexed_items:
+            data_provider = DataProvider([data_item], None, indices=[data_item_idx])
+            metric_value = self._validation_fn(self._algo_backend.prepare_for_inference(model), data_provider)
+            metrics.append(metric_value)
+
         return metrics
 
     def _calculate_ranking_score(self,
