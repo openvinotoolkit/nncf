@@ -129,7 +129,6 @@ def torch_jit_script_wrapper(*args, **kwargs):
         unpatch_torch_operators()
 
     signature = inspect.signature(_ORIG_JIT_SCRIPT)
-    assert "_rcb" in signature.parameters and "_frames_up" in signature.parameters
     bound_args = signature.bind(*args, **kwargs).arguments
     # Process the case when the object-to-script is a class as in the original jit.script logic
     if inspect.isclass(bound_args["obj"]):
