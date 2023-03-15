@@ -11,7 +11,6 @@
  limitations under the License.
 """
 
-import copy
 import json
 from math import isclose
 from pathlib import Path

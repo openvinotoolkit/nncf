@@ -12,7 +12,6 @@
 """
 # pylint:disable=too-many-lines
 
-import copy
 import shutil
 from collections import Counter
 from collections import OrderedDict

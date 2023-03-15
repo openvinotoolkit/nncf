@@ -10,8 +10,6 @@
  See the License for the specific language governing permissions and
  limitations under the License.
 """
-# pylint:disable=relative-beyond-top-level
-import copy
 from typing import Dict
 
 import torch
