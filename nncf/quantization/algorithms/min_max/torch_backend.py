@@ -248,7 +248,7 @@ class PTMinMaxAlgoBackend(MinMaxAlgoBackend):
 
     @staticmethod
     def get_weight_nodes(nncf_graph: NNCFGraph) -> List[NNCFNode]:
-        return nncf_graph.get_nodes_by_metatypes([
+        nodes = nncf_graph.get_nodes_by_metatypes([
             om.PTModuleConv1dMetatype,
             om.PTModuleConv2dMetatype,
             om.PTModuleConv3dMetatype,
@@ -262,3 +262,5 @@ class PTMinMaxAlgoBackend(MinMaxAlgoBackend):
             om.PTModuleEmbeddingMetatype,
             om.PTModuleEmbeddingBagMetatype,
         ])
+        return [node for node in nodes if isinstance(node.layer_attributes, WeightedLayerAttributes)]
+
