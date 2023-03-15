@@ -335,3 +335,5 @@ model = training_loop.run(model,
                           dump_checkpoint_fn=dump_checkpoint_fn)
 ```
 The above call executes the acccuracy-aware training loop and return the compressed model. For more details on how to use the accuracy-aware training loop functionality of NNCF, please refer to its [documentation](./accuracy_aware_model_training/AdaptiveCompressionTraining.md).
+
+See a PyTorch [example](../../examples/torch/classification/main.py) for **Quantization** + **Filter Pruning** Adaptive Compression scenario on CIFAR10 and ResNet18 [config](../../examples/torch/classification/configs/pruning/resnet18_cifar10_accuracy_aware.json).

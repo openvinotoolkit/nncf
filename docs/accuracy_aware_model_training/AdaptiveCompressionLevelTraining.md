@@ -3,6 +3,8 @@
 Adaptive Compression Level training loop is the meta-algorithm that performs searching for the most compression level of the underneath compression algorithms while staying within the range of the user-defined maximum accuracy degradation.
 The compression pipeline can consist of several compression algorithms (Algorithms Mixing), however, **performing a compression level search is supported only for a single compression algorithm with an adaptive compression level**. They could be  **Magnitude Sparsity** and **Filter Pruning**. In the other words, the compression schemes like **Quantization** + **Filter Pruning** or **Quantization** + **Sparsity** are supported, while **Filter Pruning** + **Sparsity** is not, because **Filter Pruning** and **Sparsity** both are algorithms with adaptive compression level.
 
+See a PyTorch [example](../../examples/torch/classification/main.py) for **Quantization** + **Filter Pruning** scenario on CIFAR10 and ResNet18 [config](../../examples/torch/classification/configs/pruning/resnet18_cifar10_accuracy_aware.json).
+
 The exact compression algorithm for which the compression level search will be applied is determined in "compression" config section. The parameters to be set by the user in this config section are: 
 1) `maximal_relative_accuracy_degradation` or `maximal_absolute_accuracy_degradation` (Optional; default `maximal_relative_accuracy_degradation=1.0`) - the maximal allowed accuracy metric drop relative to the original model metrics (in percent) or the maximal allowed absolute accuracy metric drop (in original metrics value),
 2) `initial_training_phase_epochs` (Optional; default=5) - number of epochs to train the model with the compression schedule specified in the `"params"` section of `"compression"` algorithm.
@@ -50,7 +52,7 @@ Below is an example of a filter pruning configuration with added `"accuracy_awar
 
 ```
 
-## Description of the work of Adaptive Compression Level training loop
+## How Adaptive Compression Level training loop works
 
 The first step is **Initial Training Phase** - It corresponds to the amount of epochs that the model is going to be trained for with the initial compression rate level/schedule set by the user in the standard NNCF manner (the initial pruning rate schedule above is an exponential schedule with the target pruning rate of 0.1).
 
