@@ -125,6 +125,7 @@ class GraphConverter:
         :param graph: NNCFGraph.
         """
         node_type = node.get_type_name()
+        node_type = node_type.lower()
         metatype = GraphConverter._get_node_metatype(node)
         graph.add_nncf_node(node_name=node.get_friendly_name(),
                             node_type=node_type,
