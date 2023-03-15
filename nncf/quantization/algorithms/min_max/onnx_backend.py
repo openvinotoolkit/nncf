@@ -193,8 +193,5 @@ class ONNXMinMaxAlgoBackend(MinMaxAlgoBackend):
 
     @staticmethod
     def get_weight_nodes(nncf_graph: NNCFGraph) -> List[NNCFNode]:
-        output = []
-        for node in nncf_graph.get_all_nodes():
-            if isinstance(node.layer_attributes, ONNXExtendedLayerAttributes):
-                output.append(node)
-        return output
+        return [node for node in nncf_graph.get_all_nodes() if
+                isinstance(node.layer_attributes, ONNXExtendedLayerAttributes)]

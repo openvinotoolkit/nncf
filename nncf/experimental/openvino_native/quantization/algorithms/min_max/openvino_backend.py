@@ -146,7 +146,7 @@ class OVMinMaxAlgoBackend(MinMaxAlgoBackend):
                                    target_point: OVTargetPoint,
                                    quantizer_config: QuantizerConfig,
                                    num_samples: int = None) -> OVMinMaxStatisticCollector:
-        reduction_shape, use_abs_max =\
+        reduction_shape, use_abs_max = \
             OVMinMaxAlgoBackend._get_reduction_shape_and_use_abs_max(nncf_graph, target_point,
                                                                      quantizer_config)
         return OVMinMaxStatisticCollector(use_abs_max, reduction_shape, num_samples)
@@ -157,7 +157,7 @@ class OVMinMaxAlgoBackend(MinMaxAlgoBackend):
                                         quantizer_config: QuantizerConfig,
                                         use_per_sample_stats: bool,
                                         num_samples: int = None) -> OVMeanMinMaxStatisticCollector:
-        reduction_shape, use_abs_max =\
+        reduction_shape, use_abs_max = \
             OVMinMaxAlgoBackend._get_reduction_shape_and_use_abs_max(nncf_graph, target_point,
                                                                      quantizer_config)
         return OVMeanMinMaxStatisticCollector(use_per_sample_stats,
@@ -183,9 +183,5 @@ class OVMinMaxAlgoBackend(MinMaxAlgoBackend):
 
     @staticmethod
     def get_weight_nodes(nncf_graph: NNCFGraph) -> List[NNCFNode]:
-        output = []
-        for node in nncf_graph.get_all_nodes():
-            if isinstance(node.layer_attributes, OVConstantLayerAttributes) and \
-                    node.metatype in GENERAL_WEIGHT_LAYER_METATYPES:
-                output.append(node)
-        return output
+        return [node for node in nncf_graph.get_all_nodes() if
+                isinstance(node.layer_attributes, OVConstantLayerAttributes)]

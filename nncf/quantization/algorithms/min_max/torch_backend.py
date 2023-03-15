@@ -50,9 +50,9 @@ from nncf.quantization.algorithms.min_max.backend import ALGO_BACKENDS
 
 import nncf.torch.graph.operator_metatypes as om
 
+
 @ALGO_BACKENDS.register(BackendType.TORCH)
 class PTMinMaxAlgoBackend(MinMaxAlgoBackend):
-
 
     @property
     def mat_mul_metatype(self) -> OperatorMetatype:
@@ -91,8 +91,8 @@ class PTMinMaxAlgoBackend(MinMaxAlgoBackend):
     def target_point(target_type: TargetType,
                      target_node_name: str,
                      port_id: int) -> PTTargetPoint:
-        if NNCFGraphNodeType.INPUT_NODE in target_node_name or\
-            target_type == TargetType.POST_LAYER_OPERATION:
+        if NNCFGraphNodeType.INPUT_NODE in target_node_name or \
+                target_type == TargetType.POST_LAYER_OPERATION:
             port_id = None
         if target_type in PTMinMaxAlgoBackend.TARGET_TYPE_TO_PT_INS_TYPE_MAP:
             target_type = PTMinMaxAlgoBackend.TARGET_TYPE_TO_PT_INS_TYPE_MAP[target_type]
@@ -108,6 +108,7 @@ class PTMinMaxAlgoBackend(MinMaxAlgoBackend):
                                                                        target_point,
                                                                        quantizer_config,
                                                                        statistics)
+
     @staticmethod
     def create_weight_quantizer_insertion_command(
             nncf_graph: NNCFGraph,
@@ -167,10 +168,10 @@ class PTMinMaxAlgoBackend(MinMaxAlgoBackend):
             channel_idx = 1  # channel dim for activations
 
         scale_shape = tuple(get_scale_shape(
-                            input_shape,
-                            is_weights=is_weights,
-                            per_channel=quantization_config.per_channel,
-                            channel_idx=channel_idx))
+            input_shape,
+            is_weights=is_weights,
+            per_channel=quantization_config.per_channel,
+            channel_idx=channel_idx))
 
         return input_shape, scale_shape, channel_idx
 
@@ -179,7 +180,7 @@ class PTMinMaxAlgoBackend(MinMaxAlgoBackend):
             nncf_graph: NNCFGraph,
             target_point: PTTargetPoint,
             quantizer_config: QuantizerConfig) -> Tuple[PTRangeInitCollectorParams, Tuple[int, ...]]:
-        input_shape, scale_shape, channel_idx =\
+        input_shape, scale_shape, channel_idx = \
             PTMinMaxAlgoBackend._get_input_scale_shape(nncf_graph, target_point, quantizer_config)
         return PTRangeInitCollectorParams(is_weights=target_point.is_weight_target_point(),
                                           mode=quantizer_config.mode,
@@ -193,7 +194,7 @@ class PTMinMaxAlgoBackend(MinMaxAlgoBackend):
                                      target_point: PTTargetPoint,
                                      quantizer_config: QuantizerConfig,
                                      num_samples: int = None) -> PTMeanMinMaxStatisticCollector:
-        collector_params, scale_shape =\
+        collector_params, scale_shape = \
             PTMinMaxAlgoBackend._default_collector_params_and_scale_shape(nncf_graph,
                                                                           target_point,
                                                                           quantizer_config)
@@ -227,7 +228,7 @@ class PTMinMaxAlgoBackend(MinMaxAlgoBackend):
                                             target_point: PTTargetPoint,
                                             quantizer_config: QuantizerConfig,
                                             statistics: MinMaxTensorStatistic) -> PTInsertionCommand:
-        _, scale_shape, _ =\
+        _, scale_shape, _ = \
             PTMinMaxAlgoBackend._get_input_scale_shape(nncf_graph, target_point, quantizer_config)
         quantizer = PTMinMaxAlgoBackend._create_quantizer(quantizer_config,
                                                           scale_shape, statistics)
@@ -248,19 +249,5 @@ class PTMinMaxAlgoBackend(MinMaxAlgoBackend):
 
     @staticmethod
     def get_weight_nodes(nncf_graph: NNCFGraph) -> List[NNCFNode]:
-        nodes = nncf_graph.get_nodes_by_metatypes([
-            om.PTModuleConv1dMetatype,
-            om.PTModuleConv2dMetatype,
-            om.PTModuleConv3dMetatype,
-            om.PTDepthwiseConv1dSubtype,
-            om.PTDepthwiseConv2dSubtype,
-            om.PTDepthwiseConv3dSubtype,
-            om.PTModuleLinearMetatype,
-            om.PTModuleConvTranspose1dMetatype,
-            om.PTModuleConvTranspose2dMetatype,
-            om.PTModuleConvTranspose3dMetatype,
-            om.PTModuleEmbeddingMetatype,
-            om.PTModuleEmbeddingBagMetatype,
-        ])
-        return [node for node in nodes if isinstance(node.layer_attributes, WeightedLayerAttributes)]
-
+        return [node for node in nncf_graph.get_all_nodes() if
+                isinstance(node.layer_attributes, WeightedLayerAttributes)]
