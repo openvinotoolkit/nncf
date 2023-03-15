@@ -44,17 +44,19 @@ from nncf.quantization.algorithms.fast_bias_correction.backend import FastBiasCo
 @ALGO_BACKENDS.register(BackendType.OPENVINO)
 class OVFastBiasCorrectionAlgoBackend(FastBiasCorrectionAlgoBackend):
 
+    METATYPE_TO_CHANNEL_AXIS = {
+        OVConvolutionMetatype: 1,
+        OVConvolutionBackpropDataMetatype: 1,
+        OVMatMulMetatype: -1
+    }
+
     @property
     def operation_metatypes(self) -> Registry:
         return OV_OPERATOR_METATYPES
 
     @property
     def channel_axis_by_types(self) -> Dict[OVOpMetatype, int]:
-        return {
-            OVConvolutionMetatype: 1,
-            OVConvolutionBackpropDataMetatype: 1,
-            OVMatMulMetatype: -1
-        }
+        return self.METATYPE_TO_CHANNEL_AXIS
 
     @property
     def tensor_processor(self) -> OVNNCFCollectorTensorProcessor:
@@ -88,10 +90,11 @@ class OVFastBiasCorrectionAlgoBackend(FastBiasCorrectionAlgoBackend):
 
     @staticmethod
     def create_blob(shape: Tuple[int], data: List[np.ndarray], channel_axis: int) -> np.ndarray:
-        blob = np.zeros(shape, dtype=data.dtype)
+        blob = np.zeros(shape)
         for j, idx in enumerate(np.ndindex(blob.shape[channel_axis])):
             index = tuple(slice(None) if i != channel_axis else idx for i in range(blob.ndim))
             blob[index] = data[j]
+        blob = blob.astype(data[0].dtype)
         return blob
 
     @staticmethod
@@ -116,4 +119,4 @@ class OVFastBiasCorrectionAlgoBackend(FastBiasCorrectionAlgoBackend):
 
     @staticmethod
     def is_node_with_bias(node: NNCFNode, nncf_graph: NNCFGraph) -> bool:
-        return is_node_with_bias(node, nncf_graph)
+        return is_node_with_bias(node, nncf_graph, OVFastBiasCorrectionAlgoBackend.METATYPE_TO_CHANNEL_AXIS)
