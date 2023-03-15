@@ -184,4 +184,4 @@ class OVMinMaxAlgoBackend(MinMaxAlgoBackend):
     @staticmethod
     def get_weight_nodes(nncf_graph: NNCFGraph) -> List[NNCFNode]:
         return [node for node in nncf_graph.get_all_nodes() if
-                isinstance(node.layer_attributes, OVConstantLayerAttributes)]
+                isinstance(node.layer_attributes, OVConstantLayerAttributes) and node in GENERAL_WEIGHT_LAYER_METATYPES]
