@@ -78,8 +78,7 @@ class TestPTQParams(TemplateTestPTQParams):
                                                ONNXExtendedLayerAttributes(None, None)).nncf_graph,
                  'pattern': GraphPattern()},
             'test_model_type_pass':
-                {'nncf_graph': NNCFGraphToTestMatMul(ONNXLinearMetatype,
-                                                     ONNXExtendedLayerAttributes(None, None)).nncf_graph,
+                {'nncf_graph': NNCFGraphToTestMatMul(ONNXLinearMetatype).nncf_graph,
                  'pattern': GraphPattern()},
         }
 

@@ -45,11 +45,8 @@ def get_depthwise_conv_nncf_graph() -> NNCFGraphToTestDepthwiseConv:
     return NNCFGraphToTestDepthwiseConv(PTDepthwiseConv2dSubtype)
 
 
-def get_single_matmul_nncf_graph() -> NNCFGraphToTest:
-    layer_attrs = LinearLayerAttributes(
-        weight_requires_grad=True,
-        in_features=4, out_features=4)
-    return NNCFGraphToTest(PTModuleLinearMetatype, layer_attrs, PTNNCFGraph)
+def get_single_no_weigth_matmul_nncf_graph() -> NNCFGraphToTest:
+    return NNCFGraphToTest(PTModuleLinearMetatype, None, PTNNCFGraph)
 
 
 def get_sum_aggregation_nncf_graph() -> NNCFGraphToTestSumAggregation:
