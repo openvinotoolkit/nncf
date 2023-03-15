@@ -39,7 +39,6 @@ from nncf.onnx.graph.metatypes.onnx_metatypes import ONNXAddLayerMetatype
 from nncf.onnx.graph.metatypes.onnx_metatypes import ONNXPowMetatype
 from nncf.onnx.graph.metatypes.onnx_metatypes import ONNXSqueezeMetatype
 from nncf.onnx.graph.metatypes.onnx_metatypes import ONNXMulLayerMetatype
-from nncf.onnx.graph.metatypes.onnx_metatypes import ONNXDivLayerMetatype
 from nncf.onnx.graph.metatypes.onnx_metatypes import ONNXSubMetatype
 from nncf.onnx.graph.metatypes.onnx_metatypes import ONNXReduceMeanMetatype
 from nncf.onnx.graph.transformations.commands import ONNXQuantizerInsertionCommand
