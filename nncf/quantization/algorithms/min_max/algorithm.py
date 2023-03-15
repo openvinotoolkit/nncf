@@ -440,8 +440,7 @@ class MinMaxQuantization(Algorithm):
         if model_type == ModelType.TRANSFORMER and device in [TargetDevice.ANY, TargetDevice.CPU,
                                                               TargetDevice.CPU_SPR, TargetDevice.GPU,
                                                               TargetDevice.VPU]:
-            to_remove_quantizers = set()
-            for key, quantization_point in quantizer_setup.quantization_points.items():
+            for quantization_point in quantizer_setup.quantization_points.values():
                 if quantization_point.is_activation_quantization_point():
                     for node_name in quantization_point.directly_quantized_operator_node_names:
                         node = nncf_graph.get_node_by_name(node_name)
@@ -453,7 +452,3 @@ class MinMaxQuantization(Algorithm):
                             quantization_point.qconfig.mode = QuantizationMode.SYMMETRIC
                             nncf_logger.debug(f'Update quantization mode for the node {node_name}'
                                               f' to the symmetric due to ModelType parameter.')
-            for q_key in to_remove_quantizers:
-                node_names = quantizer_setup.quantization_points[q_key].directly_quantized_operator_node_names
-                nncf_logger.debug(f'Remove quantization point for {node_names} due to ModelType parameter.')
-                del quantizer_setup.quantization_points[q_key]
