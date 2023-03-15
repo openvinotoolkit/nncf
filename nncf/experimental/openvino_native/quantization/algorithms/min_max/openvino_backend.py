@@ -53,7 +53,6 @@ from nncf.quantization.algorithms.min_max.backend import MinMaxAlgoBackend
 from nncf.quantization.algorithms.min_max.backend import ALGO_BACKENDS
 from nncf.quantization.fake_quantize import FakeQuantizeParameters
 
-INPLACE = True
 
 @ALGO_BACKENDS.register(BackendType.OPENVINO)
 class OVMinMaxAlgoBackend(MinMaxAlgoBackend):
@@ -145,25 +144,27 @@ class OVMinMaxAlgoBackend(MinMaxAlgoBackend):
     def minmax_statistic_collector(nncf_graph: NNCFGraph,
                                    target_point: OVTargetPoint,
                                    quantizer_config: QuantizerConfig,
-                                   num_samples: int = None) -> TensorCollector:
+                                   num_samples: int = None,
+                                   inplace: bool = False) -> TensorCollector:
         reduction_shape, use_abs_max =\
             OVMinMaxAlgoBackend._get_reduction_shape_and_use_abs_max(nncf_graph, target_point,
                                                                      quantizer_config)
         _num_samples = OVMinMaxAlgoBackend._get_num_samples(num_samples, target_point)
-        return get_min_max_stat_collector(_num_samples, reduction_shape, use_abs_max, INPLACE)
+        return get_min_max_stat_collector(_num_samples, reduction_shape, use_abs_max, inplace)
 
     @staticmethod
     def mean_minmax_statistic_collector(nncf_graph: NNCFGraph,
                                         target_point: OVTargetPoint,
                                         quantizer_config: QuantizerConfig,
                                         use_per_sample_stats: bool,
-                                        num_samples: int = None) -> TensorCollector:
+                                        num_samples: int = None,
+                                        inplace: bool = False) -> TensorCollector:
         reduction_shape, use_abs_max = \
             OVMinMaxAlgoBackend._get_reduction_shape_and_use_abs_max(nncf_graph, target_point,
                                                                      quantizer_config)
         _num_samples = OVMinMaxAlgoBackend._get_num_samples(num_samples, target_point)
         return get_mean_min_max_stat_collector(_num_samples, reduction_shape,
-                                               use_abs_max, use_per_sample_stats, INPLACE)
+                                               use_abs_max, use_per_sample_stats, inplace)
 
     @staticmethod
     def get_weight_tensor_port_ids(node: NNCFNode) -> List[Optional[int]]:

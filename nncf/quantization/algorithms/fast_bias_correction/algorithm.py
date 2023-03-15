@@ -44,16 +44,22 @@ class FastBiasCorrectionParameters(AlgorithmParameters):
     :param threshold: The magnitude threshold that regulates the application of the shift.
     """
 
-    def __init__(self, number_samples: int = 100, threshold: float = 2.0) -> None:
+    def __init__(self, number_samples: int = 100, threshold: float = 2.0,
+                 inplace_statistics: bool = False) -> None:
         """
         :param number_samples: The number of the samples for the statistics collection.
             This statistics uses for the further calculation of the bias shift.
         :param threshold: The magnitude threshold that regulates the application of the shift.
             Magnitude calculates as the maximum of the absolute ratio of the shift to the original bias value.
             If the calculated value less than threshold, shift will apply to the bias.
+        :param inplace_statistics: Appliclable only to backends that are using static graph during inference.
+            Defines wheather to calculate algorithm specific statistics by backend graph operations
+            or by default Python implementation. Statistics computated inplace tend to be
+            calculated faster and with lower memory stamp.
         """
         self.number_samples = number_samples
         self.threshold = threshold
+        self.inplace_statistics = inplace_statistics
 
 
 class FastBiasCorrection(Algorithm):
@@ -84,6 +90,7 @@ class FastBiasCorrection(Algorithm):
         super().__init__()
         self.number_samples = parameters.number_samples
         self.threshold = parameters.threshold
+        self.inplace_statistics = parameters.inplace_statistics
         self.nncf_graph = None
         self._backend_entity = None
 
@@ -250,7 +257,8 @@ class FastBiasCorrection(Algorithm):
         :param axis: Channel axis for the statistics calculation.
         """
         stat_collector = self._backend_entity.mean_statistic_collector(reduction_shape=axis,
-                                                                       num_samples=self.number_samples)
+                                                                       num_samples=self.number_samples,
+                                                                       inplace=self.inplace_statistics)
         container.add_statistic_point(StatisticPoint(target_point=point,
                                                      tensor_collector=stat_collector,
                                                      algorithm=FastBiasCorrection))

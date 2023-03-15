@@ -68,7 +68,8 @@ class OVFastBiasCorrectionAlgoBackend(FastBiasCorrectionAlgoBackend):
     @staticmethod
     def mean_statistic_collector(reduction_shape: ReductionShape,
                                  num_samples: Optional[int] = None,
-                                 window_size: Optional[int] = None) -> TensorCollector:
+                                 window_size: Optional[int] = None,
+                                 inplace: bool = False) -> TensorCollector:
         return get_mean_stat_collector(num_samples, reduction_shape, window_size)
 
     @staticmethod

@@ -83,12 +83,14 @@ class OVBiasCorrectionAlgoBackend(BiasCorrectionAlgoBackend):
     @staticmethod
     def mean_statistic_collector(reduction_shape: ReductionShape,
                                  num_samples: Optional[int] = None,
-                                 window_size: Optional[int] = None) -> TensorCollector:
-        return get_mean_stat_collector(num_samples, reduction_shape, window_size)
+                                 window_size: Optional[int] = None,
+                                 inplace: bool = False) -> TensorCollector:
+        # TODO: implement inplace op
+        return get_mean_stat_collector(num_samples, reduction_shape, window_size, False)
 
     @staticmethod
-    def batch_statistic_collector(num_samples: int = None) -> TensorCollector:
-        return get_mean_batch_stat_collector(num_samples)
+    def batch_statistic_collector(num_samples: int = None, inplace: bool = False) -> TensorCollector:
+        return get_mean_batch_stat_collector(num_samples, inplace)
 
     @staticmethod
     def process_model_output(raw_data: Dict, output_name: str) -> OVNNCFTensor:

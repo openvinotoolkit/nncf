@@ -51,7 +51,8 @@ def quantize_impl(model: ov.Model,
         target_device=target_device,
         number_samples=subset_size,
         ignored_scopes=ignored_scope,
-        fast_bias_correction=fast_bias_correction,
+        fast_bias_correction=False,
+        inplace_statistics=False
     )
 
     quantization_algorithm = PostTrainingQuantization(quantization_parameters)
