@@ -51,7 +51,7 @@ def is_node_with_bias(node: NNCFNode, nncf_graph: NNCFGraph) -> bool:
     channel_axis = METATYPE_TO_CHANNEL_AXIS[node.metatype]
     probable_bias_shape = add_node.layer_attributes.const_shape
     probable_bias_ndim = len(probable_bias_shape)
-    # Zero-index is batch-size
+    # Checks whether all indices except 0 and channel_axis equal 1
     for i in range(1, probable_bias_ndim):
         if i == channel_axis:
             continue
