@@ -198,11 +198,10 @@ class WeightsModel(OVReferenceModel):
         matmul_1 = opset.matmul(conv_tr, weights_1, transpose_a=False, transpose_b=False, name="MatMul_1")
         weights_0 = self._rng.random((1, 3, 1, 1)).astype(np.float32)
         matmul_0 = opset.matmul(weights_0, matmul_1, transpose_a=False, transpose_b=False, name="MatMul_0")
-        # TODO (l-bat): Unkomment after quantization support MatMul with 2 acivations
-        # matmul = opset.matmul(matmul_0, matmul_1, transpose_a=False, transpose_b=True, name="MatMul")
+        matmul = opset.matmul(matmul_0, matmul_1, transpose_a=False, transpose_b=True, name="MatMul")
         matmul_const = opset.matmul(weights_1, weights_0, transpose_a=True, transpose_b=False, name="MatMul_const")
 
-        add = opset.add(matmul_const, matmul_0)
+        add = opset.add(matmul_const, matmul)
         result = opset.result(add, name="Result")
         model = ov.Model([result], [input_1])
         return model
@@ -392,4 +391,20 @@ class LSTMModel(OVReferenceModel):
 
         result = opset.result(matmul_3, name="Result")
         model = ov.Model(results=[result], sinks=[assign_1], parameters=[input_1], name="LSTMModel")
+        return model
+
+
+@SYNTHETIC_MODELS.register()
+class AttentionBlock(OVReferenceModel):
+    def _create_ov_model(self):
+        input_1 = opset.parameter([1, 1, 1], name="Input")
+        squeeze = opset.squeeze(input_1, np.int64(1), name="Squeeze_1")
+        data = self._rng.random((1, 1)).astype(np.float32)
+        matmul_1 = opset.matmul(input_1, data, transpose_a=False, transpose_b=True, name="MatMul_1")
+        softmax_1 = opset.softmax(matmul_1, axis=1, name="Softmax_1")
+
+        matmul_2 = opset.matmul(softmax_1, squeeze, transpose_a=False, transpose_b=True, name="MatMul_2")
+
+        result = opset.result(matmul_2, name="Result")
+        model = ov.Model([result], [input_1])
         return model

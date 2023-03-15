@@ -71,10 +71,10 @@ def compare_stats(expected, actual):
 
 
 # pylint: disable=protected-access
-def quantize_model(ov_model, preset):
+def quantize_model(ov_model, q_params):
     dataset = get_dataset_for_test(ov_model)
 
-    min_max_algo = MinMaxQuantization(MinMaxQuantizationParameters(number_samples=1, preset=preset))
+    min_max_algo = MinMaxQuantization(MinMaxQuantizationParameters(number_samples=1, **q_params))
     statistics_aggregator = OVStatisticsAggregator(dataset)
     statistic_points = min_max_algo.get_statistic_points(ov_model)
     statistics_aggregator.register_stastistic_points(statistic_points)

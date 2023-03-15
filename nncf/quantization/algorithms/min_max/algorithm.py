@@ -448,10 +448,6 @@ class MinMaxQuantization(Algorithm):
                         mat_mul_metatype = self._backend_entity.mat_mul_metatype
                         if node.metatype != mat_mul_metatype:
                             continue
-                        softmax_metatype = self._backend_entity.softmax_metatype
-                        prev_nodes_metatype = [prev_node.metatype for prev_node in nncf_graph.get_previous_nodes(node)]
-                        if softmax_metatype in prev_nodes_metatype:
-                            to_remove_quantizers.add(key)
                         if quantization_point.qconfig.mode != QuantizationMode.SYMMETRIC and \
                                 node.layer_attributes is None:
                             quantization_point.qconfig.mode = QuantizationMode.SYMMETRIC
