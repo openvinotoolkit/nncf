@@ -16,7 +16,7 @@ import torch
 
 from nncf import NNCFConfig
 from nncf.common.graph.layer_attributes import ConvolutionLayerAttributes
-from nncf.common.graph.layer_attributes import LinearLayerAttributes
+from nncf.common.graph.layer_attributes import GroupNormLayerAttributes
 from nncf.quantization.algorithms.min_max.algorithm import MinMaxQuantization
 from nncf.quantization.algorithms.post_training.algorithm import PostTrainingQuantization
 from nncf.quantization.algorithms.post_training.algorithm import PostTrainingQuantizationParameters
@@ -42,7 +42,8 @@ def get_single_conv_nncf_graph() -> NNCFGraphToTest:
 
 
 def get_depthwise_conv_nncf_graph() -> NNCFGraphToTestDepthwiseConv:
-    return NNCFGraphToTestDepthwiseConv(PTDepthwiseConv2dSubtype)
+    conv_layer_attrs = GroupNormLayerAttributes(False, 3, 3)
+    return NNCFGraphToTestDepthwiseConv(PTDepthwiseConv2dSubtype, conv_layer_attrs)
 
 
 def get_single_no_weigth_matmul_nncf_graph() -> NNCFGraphToTest:
