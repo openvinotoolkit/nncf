@@ -238,17 +238,14 @@ class MinMaxQuantization(Algorithm):
             qconfig = constraints.apply_constraints_to(qconfig)
         return qconfig
 
-    def _get_quantizer_setup(self, nncf_graph: NNCFGraph, model: TModel) -> SingleConfigQuantizerSetup:
+    def _get_quantizer_setup(self, nncf_graph: NNCFGraph, pattern: GraphPattern) -> SingleConfigQuantizerSetup:
         """
         Returns SingleConfigQuantizerSetup instance based on the input NNCFGraph.
 
         :param nncf_graph: NNCFGraph instance.
-        :param model: Backend-specific model.
+        :param pattern: GraphPattern instance.
         :return: SingleConfigQuantizerSetup for the current NNCFGraph entity.
         """
-        backend = get_backend(model)
-        device = self._parameters.target_device
-        pattern = PatternsManager.get_full_pattern_graph(backend, device)
         hw_config_type = get_hw_config_type(self._parameters.target_device.value)
         hw_config_path = self._backend_entity.hw_config.get_path_to_hw_config(hw_config_type)
         hw_config = self._backend_entity.hw_config.from_json(hw_config_path)
@@ -378,6 +375,17 @@ class MinMaxQuantization(Algorithm):
             unified_scale_groups.append(unified_scale_group)
         return unified_scale_groups
 
+    def _get_graph_pattern(self, model: TModel) -> GraphPattern:
+        """
+        Returns full graph pattern for quantizer setup calculation.
+        
+        :param model: Backend-specific model.
+        :return: GraphPattern instance.
+        """
+        backend = get_backend(model)
+        device = self._parameters.target_device
+        return PatternsManager.get_full_pattern_graph(backend, device)
+
     def _apply(self,
                model: TModel,
                statistic_points: Optional[StatisticPointsContainer] = None,
@@ -386,7 +394,8 @@ class MinMaxQuantization(Algorithm):
         nncf_graph = NNCFGraphFactory.create(model) if self.nncf_graph is None else self.nncf_graph
         model_transformer = ModelTransformerFactory.create(model)
 
-        quantizer_setup = self._get_quantizer_setup(nncf_graph, model)
+        pattern = self._get_graph_pattern(model)
+        quantizer_setup = self._get_quantizer_setup(nncf_graph, pattern)
         quantization_target_points = self._get_quantization_target_points(quantizer_setup, nncf_graph)
         unified_scale_groups = self._collect_unified_groups(quantizer_setup)
         weight_layer_names = set()
@@ -444,7 +453,8 @@ class MinMaxQuantization(Algorithm):
         self._set_backend_entity(model)
         nncf_graph = NNCFGraphFactory.create(model) if self.nncf_graph is None else self.nncf_graph
 
-        quantizer_setup = self._get_quantizer_setup(nncf_graph, model)
+        pattern = self._get_graph_pattern(model)
+        quantizer_setup = self._get_quantizer_setup(nncf_graph, pattern)
         quantization_target_points = self._get_quantization_target_points(quantizer_setup, nncf_graph)
         output = StatisticPointsContainer()
         for quantization_target_point, qconfig in quantization_target_points.items():
