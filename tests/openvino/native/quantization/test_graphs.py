@@ -46,7 +46,7 @@ def test_syntetic_models_fq_placement(model_creator_func):
 @pytest.mark.parametrize('model_creator_func', [DepthwiseConv3DModel, DepthwiseConv4DModel, DepthwiseConv5DModel])
 def test_depthwise_models_fq_placement(model_creator_func):
     model = model_creator_func()
-    quantized_model = quantize_model(model.ov_model, QuantizationPreset.PERFORMANCE)
+    quantized_model = quantize_model(model.ov_model, {'preset': QuantizationPreset.PERFORMANCE})
 
     path_ref_graph = QUANTIZED_REF_GRAPHS_DIR / model.ref_graph_name
     compare_nncf_graphs(quantized_model, path_ref_graph)

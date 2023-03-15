@@ -395,7 +395,7 @@ class LSTMModel(OVReferenceModel):
 
 
 @SYNTHETIC_MODELS.register()
-class AttentionBlock(OVReferenceModel):
+class MatmulSoftmaxMatmulBlock(OVReferenceModel):
     def _create_ov_model(self):
         input_1 = opset.parameter([1, 1, 1], name="Input")
         squeeze = opset.squeeze(input_1, np.int64(1), name="Squeeze_1")
