@@ -198,7 +198,12 @@ def _execute_op(op_address: 'OperationAddress',
         if is_debug() and node is not None:
             ctx.register_node_call(node)
 
-    result = trace_tensors(result, node, ctx)
+    if not op_name == '__setitem__':
+        result = trace_tensors(result, node, ctx)
+    else:
+        result = args[0]
+        result = trace_tensors(result, node, ctx)
+        result = None
     result = ctx.execute_post_hooks(op_address, result)
     return result
 

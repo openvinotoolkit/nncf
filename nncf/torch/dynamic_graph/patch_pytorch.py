@@ -97,7 +97,7 @@ class MagicFunctionsToPatch:
                                        "__rsub__", "__mul__", "__matmul__", "__rmatmul__",
                                        "__imul__", "__rmul__", "__div__", "__idiv__",
                                        "__truediv__", "__floordiv__",
-                                       "__ifloordiv__", "__rfloordiv__", "__getitem__",
+                                       "__ifloordiv__", "__rfloordiv__", "__getitem__", "__setitem__",
                                        "__lt__", "__le__", "__gt__",
                                        "__ge__", "__mod__", "__eq__", "__ne__", "__or__",
                                        "__xor__", "__and__", "__pow__"]

@@ -154,6 +154,7 @@ def trace_tensors(operator_output: TensorOrTupleOrList,
         if ctx is not None:
             ctx.register_traced_tensor(tt)
         return tt
+    return None
     raise ValueError("Unknown return type. Can not trace function call")
 
 

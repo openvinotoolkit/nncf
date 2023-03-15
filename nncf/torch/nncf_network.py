@@ -577,7 +577,7 @@ class NNCFNetwork(nn.Module, PostGraphBuildActing):
                                                     input_port_id=port_id)
                 pre_hooks.append(pre_hook_ip)
 
-            if issubclass(node.metatype, PTSplitMetatype):
+            if issubclass(node.metatype, PTSplitMetatype) or node.node_type == '__setitem__':
                 # chunk returns a tuple of tensors, which can only be handled in NNCF
                 # once post-hook ports are enabled. Work around it for now by disallowing post-hook
                 # insertion for chunks

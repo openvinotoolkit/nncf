@@ -634,9 +634,11 @@ class SymmetricQuantizer(BaseQuantizer):
         scaled_num_bits = 1 if self._half_range else 0
         self.level_low, self.level_high, self.levels = self.calculate_level_ranges(self.num_bits - scaled_num_bits,
                                                                                    self.signed)
+        self.level_low = 0
 
     @staticmethod
     def calculate_level_ranges(num_bits, signed):
+        # return calculate_asymmetric_level_ranges(num_bits, signed)
         return calculate_symmetric_level_ranges(num_bits, signed)
 
     @property
