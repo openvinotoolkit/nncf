@@ -45,6 +45,7 @@ from nncf.common.pruning.utils import get_rounded_pruned_element_number
 from nncf.common.pruning.weights_flops_calculator import WeightsFlopsCalculator
 from nncf.common.schedulers import StubCompressionScheduler
 from nncf.common.statistics import NNCFStatistics
+from nncf.common.utils.backend import copy_model
 from nncf.common.utils.debug import is_debug
 from nncf.common.utils.os import safe_open
 from nncf.config.extractors import extract_bn_adaptation_init_params
@@ -658,10 +659,9 @@ class FilterPruningController(BasePruningAlgoController):
                                                                                                    'filter_pruning'))
         self._bn_adaptation.run(self.model)
 
-    def prepare_for_inference(self, make_model_copy: bool = True) -> NNCFNetwork:
-        model = self.model
+    def strip_model(self, model: NNCFNetwork, make_model_copy: bool = False) -> NNCFNetwork:
         if make_model_copy:
-            model = copy.deepcopy(self.model)
+            model = copy_model(model)
 
         graph = model.get_original_graph()
         ModelPruner(model, graph, PT_PRUNING_OPERATOR_METATYPES, PrunType.FILL_ZEROS).prune_model()

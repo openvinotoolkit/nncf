@@ -101,6 +101,10 @@ class PTCompressionAlgorithmController(BaseCompressionAlgorithmController):
         should be made inside this function.
         """
 
+    def prepare_for_export(self) -> None:
+        # For Torch models no need to call strip_model
+        pass
+
 
 class PTCompressionAlgorithmBuilder(BaseCompressionAlgorithmBuilder):
     """

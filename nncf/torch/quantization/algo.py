@@ -72,6 +72,7 @@ from nncf.common.schedulers import BaseCompressionScheduler
 from nncf.common.scopes import matches_any
 from nncf.common.statistics import NNCFStatistics
 from nncf.common.utils.backend import BackendType
+from nncf.common.utils.backend import copy_model
 from nncf.common.utils.debug import is_debug
 from nncf.common.utils.dot_file_rw import write_dot_graph
 from nncf.common.utils.os import safe_open
@@ -1459,14 +1460,11 @@ class QuantizationController(QuantizationControllerBase):
         nncf_stats.register('quantization', stats)
         return nncf_stats
 
-    def prepare_for_inference(self, make_model_copy: bool = True) -> NNCFNetwork:
-        model = self.model
+    def strip_model(self, model: NNCFNetwork, make_model_copy: bool = False) -> NNCFNetwork:
         if make_model_copy:
-            model = copy.deepcopy(self.model)
-
+            model = copy_model(model)
         model = replace_quantizer_to_torch_native_module(model)
         model = remove_disabled_quantizers(model)
-
         return model
 
 

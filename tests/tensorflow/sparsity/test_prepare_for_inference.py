@@ -12,16 +12,49 @@
 """
 
 import pytest
+import tensorflow as tf
 
+from tests.tensorflow.helpers import TFTensorListComparator
 from tests.tensorflow.helpers import create_compressed_model_and_algo_for_test
 from tests.tensorflow.helpers import get_basic_conv_test_model
 from tests.tensorflow.helpers import get_empty_config
 
 
+@pytest.mark.parametrize("enable_quantization", (True, False), ids=("with_quantization", "no_quantization"))
+def test_prepare_for_inference(enable_quantization):
+    input_shape = (1, 4, 4, 1)
+    model = get_basic_conv_test_model()
+    config = get_empty_config(input_sample_sizes=input_shape)
+
+    config.update({"compression": [{"algorithm": "magnitude_sparsity"}]})
+    if enable_quantization:
+        config["compression"].append(
+            {
+                "algorithm": "quantization",
+                "preset": "mixed",
+                "initializer": {
+                    "batchnorm_adaptation": {
+                        "num_bn_adaptation_samples": 0,
+                    }
+                },
+            }
+        )
+
+    compressed_model, compression_ctrl = create_compressed_model_and_algo_for_test(model, config)
+
+    input_tensor = tf.ones(input_shape)
+    x_nncf = compressed_model(input_tensor)
+
+    inference_model = compression_ctrl.prepare_for_inference()
+    x_tf = inference_model(input_tensor)
+
+    TFTensorListComparator.check_equal(x_nncf, x_tf)
+
+
 @pytest.mark.parametrize("make_model_copy", (True, False))
 @pytest.mark.parametrize("enable_quantization", (True, False), ids=("with_quantization", "no_quantization"))
 def test_make_model_copy(make_model_copy, enable_quantization):
-    input_shape = (1, 5, 5, 1)
+    input_shape = (1, 4, 4, 1)
     model = get_basic_conv_test_model(input_shape=input_shape[1:])
 
     config = get_empty_config(input_sample_sizes=input_shape)
@@ -32,11 +65,5 @@ def test_make_model_copy(make_model_copy, enable_quantization):
     compression_model, compression_ctrl = create_compressed_model_and_algo_for_test(model, config, force_no_init=True)
     inference_model = compression_ctrl.prepare_for_inference(make_model_copy=make_model_copy)
 
-    if make_model_copy:
-        assert id(inference_model) != id(compression_model)
-    else:
-        assert id(inference_model) == id(compression_ctrl.model)
-
-    if enable_quantization:
-        for ctrl in compression_ctrl.child_ctrls:
-            assert id(compression_ctrl.model) == id(ctrl.model)
+    # Transform model for sparsity creates copy of the model in both cases
+    assert id(inference_model) != id(compression_model)

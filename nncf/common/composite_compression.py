@@ -11,7 +11,6 @@
  limitations under the License.
 """
 
-import copy
 from typing import Any
 from typing import Dict
 from typing import List
@@ -27,6 +26,7 @@ from nncf.api.compression import CompressionStage
 from nncf.api.compression import TModel
 from nncf.common.statistics import NNCFStatistics
 from nncf.common.utils.backend import BackendType
+from nncf.common.utils.backend import copy_model
 from nncf.common.utils.backend import get_backend
 
 
@@ -282,59 +282,11 @@ class CompositeCompressionAlgorithmController(CompressionAlgorithmController):
         self._model = stripped_model
 
     def prepare_for_inference(self, make_model_copy: bool = True) -> TModel:
-        """
-        Prepare compressed model for inference by converting NNCF modules to native format.
-
-        :param make_model_copy: `True` means that a copy of the model will be modified.
-            `False` means that the original model in the controller will be changed and
-            no further compression actions will be available. Defaults to True.
-
-        :return: Modified model.
-        """
-        # Because of the differences in model preparation for Torch and TF backends, it is not possible to use
-        # the same pipeline. TF transformations (expect quantization) creates copy of the model,
-        # torch transformations can modify existed instance of the model.
-
         model = self.model
-
-        backend = get_backend(model)
-        if backend is BackendType.TENSORFLOW:
-            from nncf.tensorflow.quantization.algorithm import QuantizationController
-
-            # Step 1: Prepare call prepare_for_inference for not QuantizationController,
-            #         that return new instance of the model.
-            for ctrl in self.child_ctrls:
-                if not isinstance(ctrl, QuantizationController):
-                    model = ctrl.prepare_for_inference(make_model_copy=False)
-
-            # Step 2: Prepare call prepare_for_inference for QuantizationController
-            for ctrl in self.child_ctrls:
-                if isinstance(ctrl, QuantizationController):
-                    # pylint: disable=protected-access
-                    ctrl._model = model
-                    model = ctrl.prepare_for_inference(make_model_copy=False)
-
-            # Step 3: Set model in controllers
-            self._model = self.model if make_model_copy else model
-            for ctrl in self.child_ctrls:
-                # pylint: disable=protected-access
-                ctrl._model = self.model
-        else:
-            assert backend is BackendType.TORCH
-
-            if make_model_copy:
-                model = copy.deepcopy(self.model)
-
-            for ctrl in self.child_ctrls:
-                if make_model_copy:
-                    # pylint: disable=protected-access
-                    saved_model = ctrl.model
-                    ctrl._model = model
-                    model = ctrl.prepare_for_inference(make_model_copy=False)
-                    ctrl._model = saved_model
-                else:
-                    model = ctrl.prepare_for_inference(make_model_copy=False)
-
+        if make_model_copy:
+            model = copy_model(model)
+        for ctrl in self.child_ctrls:
+            model = ctrl.strip_model(model, make_model_copy=False)
         return model
 
     @property

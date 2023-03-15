@@ -21,6 +21,7 @@ from nncf.api.compression import CompressionStage
 from nncf.common.compression import NO_COMPRESSION_ALGORITHM_NAME
 from nncf.common.schedulers import StubCompressionScheduler
 from nncf.common.statistics import NNCFStatistics
+from nncf.common.utils.backend import copy_model
 from nncf.common.utils.registry import Registry
 from nncf.torch.compression_method_api import PTCompressionAlgorithmBuilder
 from nncf.torch.compression_method_api import PTCompressionAlgorithmController
@@ -88,5 +89,5 @@ class NoCompressionAlgorithmController(PTCompressionAlgorithmController):
     def prepare_for_inference(self, make_model_copy: bool = True) -> NNCFNetwork:
         model = self.model
         if make_model_copy:
-            model = copy.deepcopy(self.model)
+            model = copy_model(self.model)
         return model

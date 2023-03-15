@@ -23,6 +23,7 @@ from nncf.common.graph.transformations.layout import TransformationLayout
 from nncf.common.logging import nncf_logger
 from nncf.common.schedulers import StubCompressionScheduler
 from nncf.common.statistics import NNCFStatistics
+from nncf.common.utils.backend import copy_model
 from nncf.common.utils.registry import Registry
 from nncf.tensorflow.api.compression import TFCompressionAlgorithmBuilder
 from nncf.tensorflow.loss import TFZeroCompressionLoss
@@ -65,7 +66,7 @@ class NoCompressionAlgorithmController(BaseCompressionAlgorithmController):
     def prepare_for_inference(self, make_model_copy: bool = True) -> tf.keras.Model:
         model = self.model
         if make_model_copy:
-            model = copy.deepcopy(self.model)
+            model = copy_model(self.model)
         return model
 
 
