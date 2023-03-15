@@ -29,6 +29,7 @@ from nncf.experimental.openvino_native.graph.nncf_graph_builder import OVConstan
 def is_node_with_bias(node: NNCFNode, nncf_graph: NNCFGraph) -> bool:
     """
     Checks if the node has a bias or not.
+    Bias is a tensor with the shape 1 at every dim except batch and channel axis of output tensor.
 
     :param node: The node to check.
     :param nncf_graph: NNCFGraph instance.
@@ -47,14 +48,17 @@ def is_node_with_bias(node: NNCFNode, nncf_graph: NNCFGraph) -> bool:
     if bias_constant is None:
         return False
 
+    channel_axis = METATYPE_TO_CHANNEL_AXIS[node.metatype]
     probable_bias_shape = add_node.layer_attributes.const_shape
     probable_bias_ndim = len(probable_bias_shape)
-    for i in range(2, probable_bias_ndim):
+    # Zero-index is batch-size
+    for i in range(1, probable_bias_ndim):
+        if i == channel_axis:
+            continue
         if probable_bias_shape[i] != 1:
             return False
 
     edge = nncf_graph.get_edge(node, add_node)
-    channel_axis = METATYPE_TO_CHANNEL_AXIS[node.metatype]
     return edge.tensor_shape[channel_axis] == probable_bias_shape[channel_axis]
 
 
