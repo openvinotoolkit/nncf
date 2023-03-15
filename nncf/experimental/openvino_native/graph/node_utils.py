@@ -53,7 +53,8 @@ def is_node_with_bias(node: NNCFNode, nncf_graph: NNCFGraph) -> bool:
             return False
 
     edge = nncf_graph.get_edge(node, add_node)
-    return edge.tensor_shape[1] == probable_bias_shape[1]
+    channel_axis = node.metatype.const_channel_axis
+    return edge.tensor_shape[channel_axis] == probable_bias_shape[channel_axis]
 
 
 def get_bias_value(node_with_bias: NNCFNode, nncf_graph: NNCFGraph, model: ov.Model) -> np.ndarray:
