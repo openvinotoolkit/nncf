@@ -11,28 +11,27 @@
  limitations under the License.
 """
 
-from typing import Dict, Optional
+from typing import Optional
 
 import numpy as np
 import openvino.runtime as ov
 
 from nncf.common.graph.graph import NNCFGraph
 from nncf.common.graph.graph import NNCFNode
-from nncf.experimental.openvino_native.graph.metatypes.openvino_metatypes import OVOpMetatype
 from nncf.experimental.openvino_native.graph.metatypes.openvino_metatypes import OVAddMetatype
 from nncf.experimental.openvino_native.graph.metatypes.openvino_metatypes import OVConvertMetatype
 from nncf.experimental.openvino_native.graph.metatypes.openvino_metatypes import OVConstantMetatype
 from nncf.experimental.openvino_native.graph.metatypes.openvino_metatypes import OPERATIONS_WITH_BIAS_METATYPES
+from nncf.experimental.openvino_native.graph.metatypes.openvino_metatypes import METATYPE_TO_CHANNEL_AXIS
 from nncf.experimental.openvino_native.graph.nncf_graph_builder import OVConstantLayerAttributes
 
 
-def is_node_with_bias(node: NNCFNode, nncf_graph: NNCFGraph, channel_axis_by_types: Dict[OVOpMetatype, int]) -> bool:
+def is_node_with_bias(node: NNCFNode, nncf_graph: NNCFGraph) -> bool:
     """
     Checks if the node has a bias or not.
 
     :param node: The node to check.
     :param nncf_graph: NNCFGraph instance.
-    :param channel_axis_by_types: Mapping between channel axis of output tensor by metatype.
     :return: Return `True` if `node` corresponds to the operation
         with bias (bias is added to the output tensor of that operation),
         `False` otherwise.
@@ -55,7 +54,7 @@ def is_node_with_bias(node: NNCFNode, nncf_graph: NNCFGraph, channel_axis_by_typ
             return False
 
     edge = nncf_graph.get_edge(node, add_node)
-    channel_axis = channel_axis_by_types[node.metatype]
+    channel_axis = METATYPE_TO_CHANNEL_AXIS[node.metatype]
     return edge.tensor_shape[channel_axis] == probable_bias_shape[channel_axis]
 
 

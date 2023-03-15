@@ -25,10 +25,7 @@ from nncf.common.utils.registry import Registry
 from nncf.onnx.graph.metatypes.onnx_metatypes import ONNXOpMetatype
 from nncf.onnx.graph.metatypes.onnx_metatypes import ONNX_OPERATION_METATYPES
 from nncf.onnx.graph.metatypes.onnx_metatypes import ONNXDequantizeLinearMetatype
-from nncf.onnx.graph.metatypes.onnx_metatypes import ONNXConvolutionMetatype
-from nncf.onnx.graph.metatypes.onnx_metatypes import ONNXConvolutionTransposeMetatype
-from nncf.onnx.graph.metatypes.onnx_metatypes import ONNXDepthwiseConvolutionMetatype
-from nncf.onnx.graph.metatypes.onnx_metatypes import ONNXLinearMetatype
+from nncf.onnx.graph.metatypes.onnx_metatypes import METATYPE_TO_CHANNEL_AXIS
 from nncf.onnx.graph.node_utils import get_bias_value
 from nncf.onnx.graph.node_utils import is_node_with_bias
 from nncf.onnx.graph.transformations.command_creation import create_bias_correction_command
@@ -51,12 +48,7 @@ class ONNXFastBiasCorrectionAlgoBackend(FastBiasCorrectionAlgoBackend):
 
     @property
     def channel_axis_by_types(self) -> Dict[ONNXOpMetatype, int]:
-        return {
-            ONNXConvolutionMetatype: 1,
-            ONNXConvolutionTransposeMetatype: 1,
-            ONNXDepthwiseConvolutionMetatype: 1,
-            ONNXLinearMetatype: -1
-        }
+        return METATYPE_TO_CHANNEL_AXIS
 
     @property
     def tensor_processor(self) -> ONNXNNCFCollectorTensorProcessor:
@@ -94,7 +86,6 @@ class ONNXFastBiasCorrectionAlgoBackend(FastBiasCorrectionAlgoBackend):
         for j, idx in enumerate(np.ndindex(blob.shape[channel_axis])):
             index = tuple(slice(None) if i != channel_axis else idx for i in range(blob.ndim))
             blob[index] = data[j]
-        blob = blob.astype(data[0].dtype)
         return blob
 
     @staticmethod

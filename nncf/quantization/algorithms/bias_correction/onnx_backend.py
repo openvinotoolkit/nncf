@@ -22,10 +22,7 @@ from nncf.common.utils.backend import BackendType
 from nncf.common.graph import NNCFNode
 from nncf.common.graph import NNCFGraph
 from nncf.common.graph.operator_metatypes import OperatorMetatype
-from nncf.onnx.graph.metatypes.onnx_metatypes import ONNXConvolutionMetatype
-from nncf.onnx.graph.metatypes.onnx_metatypes import ONNXConvolutionTransposeMetatype
-from nncf.onnx.graph.metatypes.onnx_metatypes import ONNXDepthwiseConvolutionMetatype
-from nncf.onnx.graph.metatypes.onnx_metatypes import ONNXMatMulMetatype
+from nncf.onnx.graph.metatypes.onnx_metatypes import METATYPE_TO_CHANNEL_AXIS
 from nncf.onnx.graph.metatypes.onnx_metatypes import ONNXDequantizeLinearMetatype
 from nncf.onnx.graph.metatypes.onnx_metatypes import ONNXQuantizeLinearMetatype
 from nncf.onnx.graph.metatypes.onnx_metatypes import ONNXOpMetatype
@@ -52,12 +49,7 @@ class ONNXBiasCorrectionAlgoBackend(BiasCorrectionAlgoBackend):
 
     @property
     def channel_axis_by_types(self) -> Dict[ONNXOpMetatype, int]:
-        return {
-            ONNXConvolutionMetatype: 1,
-            ONNXMatMulMetatype: -1,
-            ONNXConvolutionTransposeMetatype: 1,
-            ONNXDepthwiseConvolutionMetatype: 1
-        }
+        return METATYPE_TO_CHANNEL_AXIS
 
     @property
     def tensor_processor(self) -> ONNXNNCFCollectorTensorProcessor:

@@ -476,6 +476,13 @@ OPERATIONS_WITH_BIAS_METATYPES = [ONNXConvolutionMetatype,
                                   ONNXDepthwiseConvolutionMetatype,
                                   ONNXConvolutionTransposeMetatype]
 
+METATYPE_TO_CHANNEL_AXIS = {
+    ONNXConvolutionMetatype: 1,
+    ONNXMatMulMetatype: -1,
+    ONNXConvolutionTransposeMetatype: 1,
+    ONNXDepthwiseConvolutionMetatype: 1
+}
+
 
 def get_operator_metatypes() -> List[Type[OperatorMetatype]]:
     """
@@ -513,7 +520,7 @@ def _is_depthwise_conv(model: onnx.ModelProto, node: onnx.NodeProto) -> bool:
         return False
     conv_out_channels = weight_tensor_value.shape[0]
     conv_in_channels = weight_tensor_value.shape[1] * conv_group
-    if conv_out_channels % conv_in_channels == 0 and conv_out_channels // conv_in_channels > 0 and\
+    if conv_out_channels % conv_in_channels == 0 and conv_out_channels // conv_in_channels > 0 and \
             conv_group == conv_in_channels:
         return True
     return False

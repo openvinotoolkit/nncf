@@ -596,6 +596,13 @@ OPERATIONS_WITH_BIAS_METATYPES = [OVConvolutionMetatype,
                                   OVConvolutionBackpropDataMetatype,
                                   OVMatMulMetatype]
 
+METATYPE_TO_CHANNEL_AXIS = {
+    OVConvolutionMetatype: 1,
+    OVConvolutionBackpropDataMetatype: 1,
+    OVMatMulMetatype: -1,
+    OVDepthwiseConvolutionMetatype: 1,
+}
+
 
 def get_operator_metatypes() -> List[Type[OperatorMetatype]]:
     """

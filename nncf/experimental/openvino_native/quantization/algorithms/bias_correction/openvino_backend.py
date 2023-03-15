@@ -21,10 +21,7 @@ from nncf.common.graph import NNCFNode
 from nncf.common.graph.transformations.commands import TargetType
 from nncf.common.tensor_statistics.collectors import ReductionShape
 from nncf.common.utils.backend import BackendType
-from nncf.experimental.openvino_native.graph.metatypes.openvino_metatypes import OVConvolutionBackpropDataMetatype
-from nncf.experimental.openvino_native.graph.metatypes.openvino_metatypes import OVConvolutionMetatype
-from nncf.experimental.openvino_native.graph.metatypes.openvino_metatypes import OVMatMulMetatype
-from nncf.experimental.openvino_native.graph.metatypes.openvino_metatypes import OVDepthwiseConvolutionMetatype
+from nncf.experimental.openvino_native.graph.metatypes.openvino_metatypes import METATYPE_TO_CHANNEL_AXIS
 from nncf.experimental.openvino_native.graph.metatypes.openvino_metatypes import OVOpMetatype
 from nncf.experimental.openvino_native.graph.metatypes.common import FAKE_QUANTIZE_OPERATIONS
 from nncf.experimental.openvino_native.graph.node_utils import get_bias_value
@@ -49,12 +46,7 @@ class OVBiasCorrectionAlgoBackend(BiasCorrectionAlgoBackend):
 
     @property
     def channel_axis_by_types(self) -> Dict[OVOpMetatype, int]:
-        return {
-            OVConvolutionMetatype: 1,
-            OVMatMulMetatype: -1,
-            OVConvolutionBackpropDataMetatype: 1,
-            OVDepthwiseConvolutionMetatype: 1,
-        }
+        return METATYPE_TO_CHANNEL_AXIS
 
     @property
     def tensor_processor(self) -> OVNNCFCollectorTensorProcessor:
