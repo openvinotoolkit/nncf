@@ -437,7 +437,9 @@ class MinMaxQuantization(Algorithm):
         :param device: Target device.
         :return: None
         """
-        if model_type == ModelType.TRANSFORMER and device in [TargetDevice.ANY, TargetDevice.CPU, TargetDevice.GPU]:
+        if model_type == ModelType.TRANSFORMER and device in [TargetDevice.ANY, TargetDevice.CPU,
+                                                              TargetDevice.CPU_SPR, TargetDevice.GPU,
+                                                              TargetDevice.VPU]:
             to_remove_quantizers = set()
             for key, quantization_point in quantizer_setup.quantization_points.items():
                 if quantization_point.is_activation_quantization_point():

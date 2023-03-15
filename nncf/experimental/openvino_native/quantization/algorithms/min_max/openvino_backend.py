@@ -37,7 +37,6 @@ from nncf.experimental.openvino_native.graph.metatypes.openvino_metatypes import
 from nncf.experimental.openvino_native.graph.metatypes.openvino_metatypes import OVAddMetatype
 from nncf.experimental.openvino_native.graph.metatypes.openvino_metatypes import OVPowerMetatype
 from nncf.experimental.openvino_native.graph.metatypes.openvino_metatypes import OVSqueezeMetatype
-from nncf.experimental.openvino_native.graph.metatypes.openvino_metatypes import OVMultiplyMetatype
 from nncf.experimental.openvino_native.graph.metatypes.openvino_metatypes import OVSubtractMetatype
 from nncf.experimental.openvino_native.graph.metatypes.openvino_metatypes import OVReduceMeanMetatype
 from nncf.experimental.openvino_native.graph.metatypes.openvino_metatypes import OVSquaredDifferenceMetatype
@@ -175,7 +174,7 @@ class OVMinMaxAlgoBackend(MinMaxAlgoBackend):
         if model_type == ModelType.TRANSFORMER:
             types = []
             metatypes_to_add = [OVAddMetatype, OVPowerMetatype, OVSqueezeMetatype,
-                                OVMultiplyMetatype, OVSubtractMetatype, OVReduceMeanMetatype,
+                                OVSubtractMetatype, OVReduceMeanMetatype,
                                 OVSquaredDifferenceMetatype, OVMVNMetatype]
             for metatype in metatypes_to_add:
                 types.extend(metatype.get_all_aliases())

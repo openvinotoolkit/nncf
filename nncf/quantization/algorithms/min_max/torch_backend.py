@@ -238,7 +238,7 @@ class PTMinMaxAlgoBackend(MinMaxAlgoBackend):
         if model_type == ModelType.TRANSFORMER:
             types = []
             metatypes_to_add = [om.PTAddMetatype, om.PTPowerMetatype, om.PTPowerMetatype,
-                                om.PTMulMetatype, om.PTSubMetatype, om.PTMeanMetatype]
+                                om.PTSubMetatype, om.PTMeanMetatype]
             type_name_to_add = ["squeeze"]
             for metatype in metatypes_to_add:
                 types.extend(metatype.get_all_aliases())

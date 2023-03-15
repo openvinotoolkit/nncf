@@ -38,7 +38,6 @@ from nncf.onnx.graph.metatypes.onnx_metatypes import ONNXShapeMetatype
 from nncf.onnx.graph.metatypes.onnx_metatypes import ONNXAddLayerMetatype
 from nncf.onnx.graph.metatypes.onnx_metatypes import ONNXPowMetatype
 from nncf.onnx.graph.metatypes.onnx_metatypes import ONNXSqueezeMetatype
-from nncf.onnx.graph.metatypes.onnx_metatypes import ONNXMulLayerMetatype
 from nncf.onnx.graph.metatypes.onnx_metatypes import ONNXSubMetatype
 from nncf.onnx.graph.metatypes.onnx_metatypes import ONNXReduceMeanMetatype
 from nncf.onnx.graph.transformations.commands import ONNXQuantizerInsertionCommand
@@ -186,7 +185,7 @@ class ONNXMinMaxAlgoBackend(MinMaxAlgoBackend):
         if model_type == ModelType.TRANSFORMER:
             types = []
             metatypes_to_add = [ONNXAddLayerMetatype, ONNXPowMetatype, ONNXSqueezeMetatype,
-                                ONNXMulLayerMetatype, ONNXSubMetatype, ONNXReduceMeanMetatype]
+                                ONNXSubMetatype, ONNXReduceMeanMetatype]
             for metatype in metatypes_to_add:
                 types.extend(metatype.get_all_aliases())
             return IgnoredScope(types=types)
