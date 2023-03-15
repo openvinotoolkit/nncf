@@ -12,7 +12,7 @@
 """
 
 from copy import deepcopy
-from typing import Dict, List, TypeVar, Optional, OrderedDict
+from typing import Dict, TypeVar, Optional, OrderedDict
 import collections
 
 from nncf import Dataset
@@ -348,11 +348,11 @@ class MinMaxQuantization(Algorithm):
         quantizer_setup = self._get_quantizer_setup(nncf_graph, pattern)
         for quantization_point in quantizer_setup.quantization_points.values():
             if quantization_point.is_weight_quantization_point():
-                weight_quantization_target_point = self._get_weight_quantization_target_point(quantization_point, nncf_graph)
-                self._quantization_target_points_to_qconfig[weight_quantization_target_point] = quantization_point.qconfig
+                weight_target_point = self._get_weight_quantization_target_point(quantization_point, nncf_graph)
+                self._quantization_target_points_to_qconfig[weight_target_point] = quantization_point.qconfig
             elif quantization_point.is_activation_quantization_point():
-                activation_quantization_target_point = self._get_activation_quantization_target_point(quantization_point)
-                self._quantization_target_points_to_qconfig[activation_quantization_target_point] = quantization_point.qconfig
+                activation_target_point = self._get_activation_quantization_target_point(quantization_point)
+                self._quantization_target_points_to_qconfig[activation_target_point] = quantization_point.qconfig
             else:
                 raise RuntimeError('Incorrect quantization point')
         self._quantization_target_points_to_qconfig = collections.OrderedDict(
@@ -373,8 +373,8 @@ class MinMaxQuantization(Algorithm):
 
                 # Only activation quantizers can be unified
                 if quantization_point.is_activation_quantization_point():
-                    activation_quantization_target_point = self._get_activation_quantization_target_point(quantization_point)
-                    unified_scale_group.append(activation_quantization_target_point)
+                    activation_target_point = self._get_activation_quantization_target_point(quantization_point)
+                    unified_scale_group.append(activation_target_point)
                 else:
                     raise RuntimeError('Incorrect quantization point')
             self._unified_scale_groups.append(unified_scale_group)
@@ -432,6 +432,7 @@ class MinMaxQuantization(Algorithm):
                     group_statistics.append(tensor_collector.get_statistics())
             for quantization_target_point in unified_scale_group:
                 unified_values = self._backend_entity.unify_statistics(group_statistics)
+                qconfig = quantization_target_points[quantization_target_point]
                 command = self._backend_entity.create_activation_quantizer_insertion_command(
                     nncf_graph, quantization_target_point,
                     qconfig, unified_values)
