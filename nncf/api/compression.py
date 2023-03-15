@@ -272,7 +272,8 @@ class CompressionAlgorithmController(ABC):
 
     def prepare_for_inference(self, make_model_copy: bool = True) -> TModel:
         """
-        Prepare NNCFNetwork for inference by converting NNCF modules to torch native format.
+        Prepare the compressed model for inference and export by removing nncf specific operations, as it's
+        only needed for training.
 
         :param make_model_copy: `True` means that a copy of the model will be modified.
             `False` means that the original model will be modify. Defaults to True.

@@ -102,7 +102,7 @@ The model can then be exported or converted as a conventional PyTorch model.
 If the `make_model_copy` arguments are set to `True`, a copy of the `compression_ctrl.model` will be modified.
 
 ```python
-inference_model = compression_ctrl.prepare_for_inference(make_model_copy=True)
+inference_model = compression_ctrl.prepare_for_inference()
 # To ONNX format
 import torch
 torch.onnx.export(inference_model, dummy_input, './compressed_model.onnx')
