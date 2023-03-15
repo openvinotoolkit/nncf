@@ -20,12 +20,12 @@ import openvino.runtime as ov
 
 def print_ignored_scope_by_model_name(model_name: str,
                                       xml_path: str, bin_path: str) -> None:
-    if model_name not in IS_TO_BUILDER_MAP:
+    if model_name not in MODEL_ID_TO_IGNORED_SCOPE_BUILDER_MAP:
         print(f'Model {model_name} is not found')
         return
 
     ov_model = ov.Core().read_model(model=xml_path, weights=bin_path)
-    is_names = IS_TO_BUILDER_MAP[model_name](ov_model)
+    is_names = MODEL_ID_TO_IGNORED_SCOPE_BUILDER_MAP[model_name](ov_model)
     print(f'Ignored scope for the model {model_name}')
     if is_names is None:
         print('Error occured during ignored scope colletion')
@@ -88,7 +88,7 @@ def east_resnet_v1_50_tf_is(ov_model: ov.Model) -> Optional[List[str]]:
     return None
 
 
-IS_TO_BUILDER_MAP = {
+MODEL_ID_TO_IGNORED_SCOPE_BUILDER_MAP = {
     'mobilenet_v3_large_tf': mobilenet_v3_large_tf_torch_is,
     'mobilenet_v3_large_tf2': mobilenet_v3_large_tf2_is,
     'ssd_resnet34_1200_caffe2': ssd_resnet34_1200_caffe_is,
