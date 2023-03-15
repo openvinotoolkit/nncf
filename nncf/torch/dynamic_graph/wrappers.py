@@ -41,7 +41,6 @@ from nncf.torch.dynamic_graph.trace_tensor import trace_tensors
 from nncf.torch.layer_utils import _NNCFModuleMixin
 from nncf.torch.layers import ITERATION_MODULES
 from nncf.torch.layers import NNCF_MODULES_DICT
-from nncf.torch.layers import NNCF_WRAPPED_USER_MODULES_DICT
 
 _IGNORED_SCOPES = []
 
@@ -208,9 +207,9 @@ def _collect_module_attrs_and_ignored_algorithms(ctx: TracingContext,
                                                  op_name: str) -> Tuple[BaseLayerAttributes, List[str]]:
     layer_attrs = None
     ignored_algos = []
-    curr_module = ctx.get_current_module()
-    from nncf.torch.graph.operator_metatypes import OP_NAMES_WITH_WEIGHTS
+    from nncf.torch.graph.operator_metatypes import OP_NAMES_WITH_WEIGHTS  #pylint:disable=cyclic-import
     if op_name in OP_NAMES_WITH_WEIGHTS:
+        curr_module = ctx.get_current_module()
         if curr_module is None:
             raise RuntimeError(f"Operation {op_name} requires module attributes, "
                                f"but it was executed outside any module")
