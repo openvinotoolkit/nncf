@@ -132,8 +132,8 @@ class PTMinMaxAlgoBackend(MinMaxAlgoBackend):
         for statistic in statistics:
             max_values.append(statistic.max_values)
             min_values.append(statistic.min_values)
-        max_values = torch.max(max_values, axis=0)
-        min_values = torch.min(min_values, axis=0)
+        max_values = torch.max(torch.tensor(max_values))
+        min_values = torch.min(torch.tensor(min_values))
         return PTMinMaxTensorStatistic(min_values=min_values, max_values=max_values)
 
     @staticmethod
