@@ -67,6 +67,7 @@ IGNORED_PATTERN_REASONS = {
     PatternNames.LINEAR_BIASED_ELEMENTWISE: 'Not relevant for Torch.',
     PatternNames.LINEAR_ACTIVATION_ELEMENTWISE: 'Not relevant for Torch.',
     PatternNames.LINEAR_BIASED_ACTIVATION_ELEMENTWISE: 'Not relevant for Torch.',
+    PatternNames.MATMUL_SOFTMAX_MATMUL: 'Need to be added for Torch',
 }
 
 
