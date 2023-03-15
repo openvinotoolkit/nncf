@@ -51,7 +51,8 @@ def mock_collect_statistics(mocker):
     _ = mocker.patch(
         'nncf.common.tensor_statistics.aggregator.StatisticsAggregator.collect_statistics', return_value=None)
     _ = mocker.patch(
-        'nncf.common.tensor_statistics.collectors.TensorStatisticCollectorBase.get_statistics', return_value=get_statistics_value)
+        'nncf.common.tensor_statistics.collectors.TensorStatisticCollectorBase.get_statistics',
+        return_value=get_statistics_value)
 
 
 def get_random_dataset_for_test(input_key: str,
