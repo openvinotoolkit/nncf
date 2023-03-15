@@ -327,7 +327,9 @@ class MinMaxQuantization(Algorithm):
                                                                                      output_port_id)
         return activation_quantization_target_point
 
-    def _get_quantization_target_points(self, quantizer_setup: TModel, nncf_graph: NNCFGraph) -> OrderedDict[TargetPoint, QuantizerConfig]:
+    def _get_quantization_target_points(self,
+                                        quantizer_setup: TModel,
+                                        nncf_graph: NNCFGraph) -> OrderedDict[TargetPoint, QuantizerConfig]:
         """
         Returns Quantization Target Points.
         In the Compression Pipeline logic NNCF assumes that the compression pipeline works only on the single model.
@@ -378,7 +380,7 @@ class MinMaxQuantization(Algorithm):
     def _get_graph_pattern(self, model: TModel) -> GraphPattern:
         """
         Returns full graph pattern for quantizer setup calculation.
-        
+
         :param model: Backend-specific model.
         :return: GraphPattern instance.
         """
