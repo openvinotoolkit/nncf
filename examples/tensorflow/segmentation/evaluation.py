@@ -14,30 +14,31 @@
 import sys
 
 import tensorflow as tf
+from tensorflow.python.framework.convert_to_constants import convert_variables_to_constants_v2
 
+from examples.common.sample_config import SampleConfig
 from examples.common.sample_config import create_sample_config
+from examples.tensorflow.common.argparser import get_common_argument_parser
+from examples.tensorflow.common.distributed import get_distribution_strategy
 from examples.tensorflow.common.experimental_patcher import patch_if_experimental_quantization
+from examples.tensorflow.common.logger import logger
+from examples.tensorflow.common.object_detection.checkpoint_utils import get_variables
+from examples.tensorflow.common.object_detection.datasets.builder import COCODatasetBuilder
+from examples.tensorflow.common.utils import FROZEN_GRAPH_FORMAT
+from examples.tensorflow.common.utils import SummaryWriter
+from examples.tensorflow.common.utils import Timer
 from examples.tensorflow.common.utils import close_strategy_threadpool
+from examples.tensorflow.common.utils import configure_paths
+from examples.tensorflow.common.utils import get_saving_parameters
+from examples.tensorflow.common.utils import print_args
+from examples.tensorflow.common.utils import write_metrics
+from examples.tensorflow.segmentation.models.model_selector import get_model_builder
+from examples.tensorflow.segmentation.models.model_selector import get_predefined_config
 from nncf.tensorflow import create_compressed_model
 from nncf.tensorflow import register_default_init_args
 from nncf.tensorflow.helpers.model_manager import TFModelManager
 from nncf.tensorflow.utils.state import TFCompressionState
 from nncf.tensorflow.utils.state import TFCompressionStateLoader
-
-from examples.tensorflow.common.argparser import get_common_argument_parser
-from examples.tensorflow.common.distributed import get_distribution_strategy
-from examples.tensorflow.common.logger import logger
-from examples.tensorflow.common.object_detection.datasets.builder import COCODatasetBuilder
-from examples.tensorflow.common.object_detection.checkpoint_utils import get_variables
-from examples.common.sample_config import SampleConfig
-from examples.tensorflow.common.utils import configure_paths
-from examples.tensorflow.common.utils import get_saving_parameters
-from examples.tensorflow.common.utils import print_args
-from examples.tensorflow.common.utils import SummaryWriter
-from examples.tensorflow.common.utils import write_metrics
-from examples.tensorflow.common.utils import Timer
-from examples.tensorflow.segmentation.models.model_selector import get_predefined_config
-from examples.tensorflow.segmentation.models.model_selector import get_model_builder
 
 
 def get_argument_parser():
@@ -244,9 +245,7 @@ def run_evaluation(config, eval_timeout=None):
         logger.info('Test metric = {}'.format(metric_result))
 
         if 'export' in config.mode:
-            save_path, save_format = get_saving_parameters(config)
-            compression_ctrl.export_model(save_path, save_format)
-            logger.info("Saved to {}".format(save_path))
+            export_model(compression_ctrl, config)
 
     elif 'train' in config.mode:
         validation_summary_writer = SummaryWriter(config.log_dir, 'validation')
@@ -279,15 +278,34 @@ def run_evaluation(config, eval_timeout=None):
     close_strategy_threadpool(strategy)
 
 
+def export_model(compression_ctrl, config):
+    save_path, save_format = get_saving_parameters(config)
+    if config.prepare_for_inference:
+        model = compression_ctrl.prepare_for_inference()
+        if save_format == FROZEN_GRAPH_FORMAT:
+            input_signature = []
+            for item in model.inputs:
+                input_signature.append(tf.TensorSpec(item.shape, item.dtype, item.name))
+            concrete_function = tf.function(model).get_concrete_function(input_signature)
+            frozen_func = convert_variables_to_constants_v2(concrete_function, lower_control_flow=False)
+            frozen_graph = frozen_func.graph.as_graph_def(add_shapes=True)
+
+            save_dir, name = osp.split(save_path)
+            tf.io.write_graph(frozen_graph, save_dir, name, as_text=False)
+        else:
+            model.save(save_path, save_format=save_format)
+    else:
+        compression_ctrl.export_model(save_path, save_format)
+    logger.info('Saved to {}'.format(save_path))
+
+
 def export(config):
     model_builder = get_model_builder(config)
 
     strategy = tf.distribute.get_strategy()
     compression_ctrl, _, _ = restore_compressed_model(config, strategy, model_builder, config.ckpt_path)
 
-    save_path, save_format = get_saving_parameters(config)
-    compression_ctrl.export_model(save_path, save_format)
-    logger.info("Saved to {}".format(save_path))
+    export_model(compression_ctrl, config)
 
 
 def main(argv):

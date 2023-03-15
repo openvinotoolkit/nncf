@@ -229,9 +229,14 @@ def get_common_argument_parser(**flags):
 
     parser.add_argument(
         '--disable_tensor_float_32_execution',
-        help="Disable exection in TensorFloat-32",
+        help="Disable execution in TensorFloat-32",
         action="store_true"
     )
+
+    parser.add_argument(
+        "--prepare-for-inference",
+        action='store_true',
+        help="Convert model to framework native format without NNCF-specific operation for export and test steps.")
 
     return parser
 

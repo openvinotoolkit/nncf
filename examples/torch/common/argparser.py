@@ -177,7 +177,7 @@ def get_common_argument_parser():
     parser.add_argument(
         "--prepare-for-inference",
         action='store_true',
-        help="Convert model to torch native format for export and test steps.")
+        help="Convert model to framework native format without NNCF-specific operation for export and test steps.")
 
     # Display
     parser.add_argument('-p', '--print-freq', default=10, type=int,

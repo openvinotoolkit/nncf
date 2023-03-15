@@ -11,42 +11,43 @@
  limitations under the License.
 """
 
-import sys
 import os.path as osp
+import sys
 from pathlib import Path
 
 import tensorflow as tf
 import tensorflow_addons as tfa
+from tensorflow.python.framework.convert_to_constants import convert_variables_to_constants_v2
 
-from examples.tensorflow.common.experimental_patcher import patch_if_experimental_quantization
-from nncf.config.utils import is_accuracy_aware_training
-from nncf.tensorflow.helpers.model_creation import create_compressed_model
-from nncf.tensorflow import create_compression_callbacks
-from nncf.tensorflow.helpers.model_manager import TFModelManager
-from nncf.tensorflow.initialization import register_default_init_args
-from nncf.tensorflow.utils.state import TFCompressionState
-from nncf.tensorflow.utils.state import TFCompressionStateLoader
-
+from examples.common.sample_config import create_sample_config
 from examples.tensorflow.classification.datasets.builder import DatasetBuilder
 from examples.tensorflow.common.argparser import get_common_argument_parser
 from examples.tensorflow.common.callbacks import get_callbacks
 from examples.tensorflow.common.callbacks import get_progress_bar
 from examples.tensorflow.common.distributed import get_distribution_strategy
+from examples.tensorflow.common.experimental_patcher import patch_if_experimental_quantization
 from examples.tensorflow.common.logger import logger
 from examples.tensorflow.common.model_loader import get_model
 from examples.tensorflow.common.optimizer import build_optimizer
-from examples.common.sample_config import create_sample_config
 from examples.tensorflow.common.scheduler import build_scheduler
+from examples.tensorflow.common.utils import FROZEN_GRAPH_FORMAT
+from examples.tensorflow.common.utils import SummaryWriter
+from examples.tensorflow.common.utils import close_strategy_threadpool
 from examples.tensorflow.common.utils import configure_paths
 from examples.tensorflow.common.utils import create_code_snapshot
 from examples.tensorflow.common.utils import get_saving_parameters
 from examples.tensorflow.common.utils import print_args
-from examples.tensorflow.common.utils import serialize_config
 from examples.tensorflow.common.utils import serialize_cli_args
-from examples.tensorflow.common.utils import write_metrics
-from examples.tensorflow.common.utils import SummaryWriter
-from examples.tensorflow.common.utils import close_strategy_threadpool
+from examples.tensorflow.common.utils import serialize_config
 from examples.tensorflow.common.utils import set_seed
+from examples.tensorflow.common.utils import write_metrics
+from nncf.config.utils import is_accuracy_aware_training
+from nncf.tensorflow import create_compression_callbacks
+from nncf.tensorflow.helpers.model_creation import create_compressed_model
+from nncf.tensorflow.helpers.model_manager import TFModelManager
+from nncf.tensorflow.initialization import register_default_init_args
+from nncf.tensorflow.utils.state import TFCompressionState
+from nncf.tensorflow.utils.state import TFCompressionStateLoader
 
 
 def get_argument_parser():
@@ -288,7 +289,11 @@ def run(config):
     logger.info('evaluation...')
     statistics = compression_ctrl.statistics()
     logger.info(statistics.to_str())
-    results = compress_model.evaluate(
+    eval_model = compress_model
+    if config.prepare_for_inference:
+        eval_model = compression_ctrl.prepare_for_inference()
+
+    results = eval_model.evaluate(
         validation_dataset,
         steps=validation_steps,
         callbacks=[get_progress_bar(
@@ -299,11 +304,30 @@ def run(config):
         write_metrics(results[1], config.metrics_dump)
 
     if 'export' in config.mode:
-        save_path, save_format = get_saving_parameters(config)
-        compression_ctrl.export_model(save_path, save_format)
-        logger.info('Saved to {}'.format(save_path))
+        export_model(compression_ctrl, config)
 
     close_strategy_threadpool(strategy)
+
+
+def export_model(compression_ctrl, config):
+    save_path, save_format = get_saving_parameters(config)
+    if config.prepare_for_inference:
+        model = compression_ctrl.prepare_for_inference()
+        if save_format == FROZEN_GRAPH_FORMAT:
+            input_signature = []
+            for item in model.inputs:
+                input_signature.append(tf.TensorSpec(item.shape, item.dtype, item.name))
+            concrete_function = tf.function(model).get_concrete_function(input_signature)
+            frozen_func = convert_variables_to_constants_v2(concrete_function, lower_control_flow=False)
+            frozen_graph = frozen_func.graph.as_graph_def(add_shapes=True)
+
+            save_dir, name = osp.split(save_path)
+            tf.io.write_graph(frozen_graph, save_dir, name, as_text=False)
+        else:
+            model.save(save_path, save_format=save_format)
+    else:
+        compression_ctrl.export_model(save_path, save_format)
+    logger.info('Saved to {}'.format(save_path))
 
 
 def export(config):
@@ -337,9 +361,7 @@ def export(config):
         load_checkpoint(checkpoint=checkpoint,
                         ckpt_path=config.ckpt_path)
 
-    save_path, save_format = get_saving_parameters(config)
-    compression_ctrl.export_model(save_path, save_format)
-    logger.info('Saved to {}'.format(save_path))
+    export_model(compression_ctrl, config)
 
 
 def main(argv):
