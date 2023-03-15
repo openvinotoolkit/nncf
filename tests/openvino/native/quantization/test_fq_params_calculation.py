@@ -93,8 +93,12 @@ def test_syntetic_models_fq_scales(model_creator_func, preset):
 
     ref_stats_name = model.ref_graph_name.split(".")[0] + f'_{preset.value}.json'
     ref_stats_path = REFERENCE_SCALES_DIR / ref_stats_name
-    ref_nodes = load_json(ref_stats_path)
 
+    # Unkomment lines below to generate reference for new models.
+    # from tests.openvino.native.common import dump_to_json
+    # dump_to_json(ref_stats_path, nodes)
+
+    ref_nodes = load_json(ref_stats_path)
     compare_stats(ref_nodes, nodes)
 
 
