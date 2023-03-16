@@ -263,8 +263,6 @@ def main():
     os.makedirs(output_dir, exist_ok=True)
 
     for algo_config in nncf_algorithms_config:
-        if config.nncf_model_id:
-            add_ignored_scope_by_model_name(algo_config, config.nncf_model_id, xml_path, bin_path)
         algo_name = algo_config['name']
         if algo_name == 'quantize':
             quantize_model_arguments = {
@@ -290,89 +288,6 @@ def main():
     output_model_path = os.path.join(output_dir, f'{model_name}.xml')
     ov.serialize(output_model, output_model_path)
 
-
-def add_ignored_scope_by_model_name(algo_config: Config, model_name: str,
-                                    xml_path: str, bin_path: str) -> None:
-    if 'ignored_scope' in algo_config['parameters']:
-        ignored_scope = algo_config['parameters']['ignored_scope']
-    else:
-        ignored_scope = IgnoredScope()
-        algo_config['parameters']['ignored_scope'] = ignored_scope
-    if model_name not in IS_TO_BUILDER_MAP:
-        return
-
-    ov_model = ov.Core().read_model(model=xml_path, weights=bin_path)
-    new_is_names = IS_TO_BUILDER_MAP[model_name](ov_model)
-    if new_is_names is None:
-        raise RuntimeError(f'Coulnd\'n build ignored scope'
-                           f' for model with name {model_name}')
-
-    if ignored_scope.names is None:
-        ignored_scope.names = new_is_names
-        return
-
-    ignored_scope.names.extend(new_is_names)
-
-
-def mobilenet_v3_large_tf_torch_is(ov_model: ov.Model) -> Optional[List[str]]:
-    for node in ov_model.get_ordered_ops():
-        if node.type_info.name == 'GroupConvolution':
-            return [node.get_friendly_name()]
-    return None
-
-
-def get_prev_node(node, input_port):
-    return node.input(input_port).get_source_output().get_node()
-
-
-def get_next_nodes(node, output_port):
-    return [x.get_node() for x in node.output(output_port).target_inputs]
-
-
-def mobilenet_v3_large_tf2_is(ov_model: ov.Model) -> Optional[List[str]]:
-    retval = []
-
-    for node in ov_model.get_ordered_ops():
-        if node.type_info.name == 'GroupConvolution':
-            retval.append(node.get_friendly_name())
-        if node.type_info.name == 'Add':
-            prev_nodes_names = {get_prev_node(node, i).type_info.name for i in range(2)}
-            if 'Add' in prev_nodes_names and 'HSwish' in prev_nodes_names:
-                retval.append(node.get_friendly_name())
-                assert len(retval) == 2
-                return retval
-    return None
-
-
-def ssd_resnet34_1200_caffe_is(ov_model: ov.Model) -> Optional[List[str]]:
-    for result in ov_model.get_results():
-        prev_node = get_prev_node(result, 0)
-        if prev_node.type_info.name == 'Add':
-            return [prev_node.get_friendly_name()]
-    return None
-
-
-def east_resnet_v1_50_tf_is(ov_model: ov.Model) -> Optional[List[str]]:
-    idx = 0
-    for node in ov_model.get_ordered_ops()[::-1]:
-        if node.type_info.name == 'Concat':
-            if idx < 1:
-                idx += 1
-                continue
-            next_nodes = get_next_nodes(node, 0)
-            assert len(next_nodes) == 1
-            next_node = next_nodes[0]
-            assert next_node.type_info.name == 'Convolution'
-            return [next_node.get_friendly_name()]
-    return None
-
-
-IS_TO_BUILDER_MAP = {
-    'mobilenet_v3_large_tf': mobilenet_v3_large_tf_torch_is,
-    'mobilenet_v3_large_tf2': mobilenet_v3_large_tf2_is,
-    'ssd_resnet34_1200_caffe2': ssd_resnet34_1200_caffe_is,
-    'east_resnet_v1_50_tf': east_resnet_v1_50_tf_is,
-}
 
 if __name__ == '__main__':
     main()
