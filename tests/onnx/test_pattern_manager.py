@@ -53,7 +53,6 @@ IGNORED_PATTERN_REASONS = {
     PatternNames.LINEAR_BIASED_ELEMENTWISE: 'Not relevant for ONNX.',
     PatternNames.LINEAR_ACTIVATION_ELEMENTWISE: 'Not relevant for ONNX.',
     PatternNames.LINEAR_BIASED_ACTIVATION_ELEMENTWISE: 'Not relevant for ONNX.',
-    PatternNames.MATMUL_SOFTMAX_MATMUL: 'Need to be added for ONNX',
 }
 
 
