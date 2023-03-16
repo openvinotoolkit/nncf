@@ -288,6 +288,44 @@ def create_fc_bn_hswish():
     pattern.add_edge(add_node, squeeze_node)
     return pattern
 
+
+@OPENVINO_HW_FUSED_PATTERNS.register(PatternNames.MATMUL_SOFTMAX_MATMUL)
+def create_matmul_softmax_matmul():
+    pattern = GraphPattern()
+    softmax_1 = pattern.add_node(**{GraphPattern.LABEL_ATTR: 'SOFTMAX',
+                                    GraphPattern.METATYPE_ATTR: om.OVSoftmaxMetatype})
+    mat_mul_1_1 = pattern.add_node(**{GraphPattern.LABEL_ATTR: 'MATMUL_1',
+                                      GraphPattern.METATYPE_ATTR: om.OVMatMulMetatype})
+    mat_mul_2_1 = pattern.add_node(**{GraphPattern.LABEL_ATTR: 'MATMUL_2',
+                                      GraphPattern.METATYPE_ATTR: om.OVMatMulMetatype})
+
+    any_1 = pattern.add_node(**{GraphPattern.LABEL_ATTR: 'ANY',
+                                GraphPattern.METATYPE_ATTR: GraphPattern.NON_PATTERN_NODE_TYPE})
+
+    pattern.add_edge(mat_mul_1_1, softmax_1)
+    pattern.add_edge(softmax_1, mat_mul_2_1)
+    pattern.add_edge(any_1, mat_mul_2_1)
+
+    softmax_2 = pattern.add_node(**{GraphPattern.LABEL_ATTR: 'SOFTMAX',
+                                    GraphPattern.METATYPE_ATTR: om.OVSoftmaxMetatype})
+    add_2 = pattern.add_node(**{GraphPattern.LABEL_ATTR: 'ADD',
+                                GraphPattern.METATYPE_ATTR: om.OVAddMetatype})
+    mat_mul_1_2 = pattern.add_node(**{GraphPattern.LABEL_ATTR: 'MATMUL_1',
+                                      GraphPattern.METATYPE_ATTR: om.OVMatMulMetatype})
+    mat_mul_2_2 = pattern.add_node(**{GraphPattern.LABEL_ATTR: 'MATMUL_2',
+                                      GraphPattern.METATYPE_ATTR: om.OVMatMulMetatype})
+
+    any_2 = pattern.add_node(**{GraphPattern.LABEL_ATTR: 'ANY',
+                                GraphPattern.METATYPE_ATTR: GraphPattern.NON_PATTERN_NODE_TYPE})
+
+    pattern.add_edge(mat_mul_1_2, add_2)
+    pattern.add_edge(add_2, softmax_2)
+    pattern.add_edge(softmax_2, mat_mul_2_2)
+    pattern.add_edge(any_2, mat_mul_2_2)
+
+    return pattern
+
+
 # ACTIVATIONS
 
 
@@ -713,44 +751,6 @@ def create_linear_biased_activation_elementwise():
     linear_biased.join_patterns(activations)
     linear_biased.join_patterns(elementwise)
     return linear_biased
-
-
-@OPENVINO_HW_FUSED_PATTERNS.register(PatternNames.MATMUL_SOFTMAX_MATMUL)
-def create_matmul_softmax_matmul():
-    pattern = GraphPattern()
-    softmax_1 = pattern.add_node(**{GraphPattern.LABEL_ATTR: 'SOFTMAX',
-                                   GraphPattern.METATYPE_ATTR: om.OVSoftmaxMetatype})
-    mat_mul_1_1 = pattern.add_node(**{GraphPattern.LABEL_ATTR: 'MATMUL_1',
-                                     GraphPattern.METATYPE_ATTR: om.OVMatMulMetatype})
-    mat_mul_2_1 = pattern.add_node(**{GraphPattern.LABEL_ATTR: 'MATMUL_2',
-                                     GraphPattern.METATYPE_ATTR: om.OVMatMulMetatype})
-
-    any_1 = pattern.add_node(**{GraphPattern.LABEL_ATTR: 'ANY',
-                              GraphPattern.METATYPE_ATTR: GraphPattern.NON_PATTERN_NODE_TYPE})
-
-
-    pattern.add_edge(mat_mul_1_1, softmax_1)
-    pattern.add_edge(softmax_1, mat_mul_2_1)
-    pattern.add_edge(any_1, mat_mul_2_1)
-
-    softmax_2 = pattern.add_node(**{GraphPattern.LABEL_ATTR: 'SOFTMAX',
-                                   GraphPattern.METATYPE_ATTR: om.OVSoftmaxMetatype})
-    add_2 = pattern.add_node(**{GraphPattern.LABEL_ATTR: 'ADD',
-                                   GraphPattern.METATYPE_ATTR: om.OVAddMetatype})
-    mat_mul_1_2 = pattern.add_node(**{GraphPattern.LABEL_ATTR: 'MATMUL_1',
-                                     GraphPattern.METATYPE_ATTR: om.OVMatMulMetatype})
-    mat_mul_2_2 = pattern.add_node(**{GraphPattern.LABEL_ATTR: 'MATMUL_2',
-                                     GraphPattern.METATYPE_ATTR: om.OVMatMulMetatype})
-
-    any_2 = pattern.add_node(**{GraphPattern.LABEL_ATTR: 'ANY',
-                              GraphPattern.METATYPE_ATTR: GraphPattern.NON_PATTERN_NODE_TYPE})
-
-    pattern.add_edge(mat_mul_1_2, add_2)
-    pattern.add_edge(add_2, softmax_2)
-    pattern.add_edge(softmax_2, mat_mul_2_2)
-    pattern.add_edge(any_2, mat_mul_2_2)
-
-    return pattern
 
 
 def elementwise_operations():

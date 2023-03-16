@@ -234,8 +234,7 @@ class PTMinMaxAlgoBackend(MinMaxAlgoBackend):
     def get_model_type_ignore_scope(model_type: ModelType) -> IgnoredScope:
         if model_type == ModelType.TRANSFORMER:
             types = []
-            metatypes_to_add = [om.PTAddMetatype, om.PTPowerMetatype, om.PTPowerMetatype,
-                                om.PTSubMetatype, om.PTMeanMetatype]
+            metatypes_to_add = [om.PTAddMetatype, om.PTPowerMetatype, om.PTSubMetatype, om.PTMeanMetatype]
             type_name_to_add = ["squeeze"]
             for metatype in metatypes_to_add:
                 types.extend(metatype.get_all_aliases())
