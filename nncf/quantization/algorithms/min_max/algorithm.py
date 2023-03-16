@@ -404,7 +404,7 @@ class MinMaxQuantization(Algorithm):
         weight_layer_names = set()
         def filter_func(point: StatisticPoint) -> bool:
             return MinMaxQuantization in point.algorithm_to_tensor_collectors and \
-                   point.target_point.type == quantization_target_point.type
+                   point.target_point == quantization_target_point
 
         unified_ops_list = []
         for unified_scale_group in unified_scale_groups:

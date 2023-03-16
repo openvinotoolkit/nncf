@@ -14,13 +14,11 @@
 from torchvision import models
 import torch
 import onnx
-import numpy as np
 import pytest
 
 import nncf
 
 from tests.onnx.quantization.common import get_random_dataset_for_test
-from tests.onnx.quantization.common import _get_input_key
 
 TEST_OPSETS = [7,  # NON SUPPORTED
                10,  # PER-TENSOR ONLY
@@ -31,12 +29,11 @@ TEST_OPSETS = [7,  # NON SUPPORTED
 def test_model_opset_version(tmp_path, opset_version):
     model = models.mobilenet_v2(pretrained=True)
     input_shape = [1, 3, 224, 224]
-    input_np_dtype = np.float32
     x = torch.randn(input_shape, requires_grad=False)
     torch.onnx.export(model, x, tmp_path / 'model.onnx', opset_version=opset_version)
 
     model = onnx.load_model(tmp_path / 'model.onnx')
-    dataset = get_random_dataset_for_test(_get_input_key(model), input_shape, input_np_dtype, False)
+    dataset = get_random_dataset_for_test(model, False)
     if opset_version == 7:
         with pytest.raises(Exception):
             _ = nncf.quantize(model, dataset, subset_size=1)

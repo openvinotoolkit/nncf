@@ -201,7 +201,7 @@ def test_node_removing(target_layers):
     model_to_test = LinearModel()
     onnx_model = model_to_test.onnx_model
 
-    quantized_model = min_max_quantize_model(model_to_test.input_shape[0], onnx_model)
+    quantized_model = min_max_quantize_model(onnx_model)
 
     transformation_layout = TransformationLayout()
 

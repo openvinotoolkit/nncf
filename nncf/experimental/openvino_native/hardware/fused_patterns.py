@@ -646,7 +646,7 @@ def create_clamp_mult_const():
 @OPENVINO_HW_FUSED_PATTERNS.register(PatternNames.LINEAR_SCALE_SHIFT)
 def create_linear_scale_shift():
     linear = linear_operations()
-    scale_shift = create_add_scale_shift_output()
+    scale_shift = create_scale_shift()
     linear.join_patterns(scale_shift)
     return linear
 
@@ -654,7 +654,7 @@ def create_linear_scale_shift():
 @OPENVINO_HW_FUSED_PATTERNS.register(PatternNames.LINEAR_BIASED_SCALE_SHIFT)
 def create_linear_biased_scale_shift():
     linear_biased = create_biased_op()
-    scale_shift = create_add_scale_shift_output()
+    scale_shift = create_scale_shift()
     linear_biased.join_patterns(scale_shift)
     return linear_biased
 
@@ -662,7 +662,7 @@ def create_linear_biased_scale_shift():
 @OPENVINO_HW_FUSED_PATTERNS.register(PatternNames.LINEAR_ACTIVATION_SCALE_SHIFT)
 def create_linear_activation_scale_shift():
     linear_activations = create_linear_activations()
-    scale_shift = create_add_scale_shift_output()
+    scale_shift = create_scale_shift()
 
     linear_activations.join_patterns(scale_shift)
     return linear_activations
@@ -672,7 +672,7 @@ def create_linear_activation_scale_shift():
 def create_linear_biased_activation_scale_shift():
     linear_biased = create_biased_op()
     activations = atomic_activations_operations()
-    scale_shift = create_add_scale_shift_output()
+    scale_shift = create_scale_shift()
 
     linear_biased.join_patterns(activations)
     linear_biased.join_patterns(scale_shift)

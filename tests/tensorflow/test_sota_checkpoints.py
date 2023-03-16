@@ -569,12 +569,6 @@ class TestSotaCheckpoints(RunTest):
 
 Tsc = TestSotaCheckpoints
 
-
-@pytest.fixture(autouse=True, scope='class')
-def openvino_preinstall(openvino):
-    if openvino:
-        subprocess.run('pip install scikit-image!=0.18.2rc1', cwd=PROJECT_ROOT, check=True, shell=True)
-
 # pylint:disable=line-too-long
 @pytest.fixture(autouse=True, scope='class')
 def make_metrics_dump_path(metrics_dump_dir):
