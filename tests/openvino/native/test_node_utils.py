@@ -11,11 +11,24 @@
  limitations under the License.
 """
 
-from nncf.experimental.openvino_native.graph.node_utils import is_node_with_bias
-from nncf.experimental.openvino_native.graph.nncf_graph_builder import GraphConverter
+import numpy as np
 
+from nncf.experimental.openvino_native.graph.nncf_graph_builder import GraphConverter
+from nncf.experimental.openvino_native.graph.node_utils import get_weight_value
+from nncf.experimental.openvino_native.graph.node_utils import is_node_with_bias
+from nncf.common.factory import NNCFGraphFactory
+from tests.openvino.native.models import FPModel
 from tests.openvino.native.models import ConvNotBiasModel
 from tests.openvino.native.models import ConvModel
+
+
+def test_get_weight_value_const_with_convert():
+    model = FPModel(const_dtype='FP16').ov_model
+    nncf_graph = NNCFGraphFactory.create(model)
+    node_with_weight = nncf_graph.get_node_by_name('MatMul')
+
+    actual_value = get_weight_value(node_with_weight, nncf_graph, model)
+    assert actual_value.dtype == np.uint16
 
 
 def test_is_node_with_bias():

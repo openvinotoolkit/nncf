@@ -91,7 +91,7 @@ def get_weight_value(node_with_weight: NNCFNode, nncf_graph: NNCFGraph, model: o
     attrs = node_with_weight.layer_attributes  # type: OVConstantLayerAttributes
     node = nncf_graph.get_input_edges(node_with_weight)[attrs.const_port_id].from_node
     if node.metatype == OVConvertMetatype:
-        node = nncf_graph.get_input_edges()[0].from_node
+        node = nncf_graph.get_input_edges(node)[0].from_node
 
     friendly_name_to_op_map = {op.get_friendly_name(): op for op in model.get_ops()}
     const_op = friendly_name_to_op_map[node.node_name]
