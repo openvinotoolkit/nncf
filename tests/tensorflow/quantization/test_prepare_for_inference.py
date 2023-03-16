@@ -44,8 +44,8 @@ def test_prepare_for_inference():
     TFTensorListComparator.check_equal(x_nncf, x_tf)
 
 
-@pytest.mark.parametrize("make_model_copy", (True, False))
-def test_make_model_copy(make_model_copy):
+@pytest.mark.parametrize("do_copy", (True, False))
+def test_do_copy(do_copy):
     model = get_basic_two_conv_test_model()
     config = get_basic_quantization_config()
     config["compression"] = {
@@ -53,9 +53,9 @@ def test_make_model_copy(make_model_copy):
         "preset": "mixed",
     }
     compression_model, compression_ctrl = create_compressed_model_and_algo_for_test(model, config, force_no_init=True)
-    inference_model = compression_ctrl.prepare_for_inference(make_model_copy=make_model_copy)
+    inference_model = compression_ctrl.prepare_for_inference(do_copy=do_copy)
 
-    if make_model_copy:
+    if do_copy:
         assert id(inference_model) != id(compression_model)
     else:
         assert id(inference_model) == id(compression_model)

@@ -367,8 +367,8 @@ class QuantizationBuilderV2(QuantizationBuilder):
 
 
 class QuantizationControllerV2(QuantizationController):
-    def strip_model(self, model: NNCFNetwork, make_model_copy: bool = False) -> NNCFNetwork:
-        if make_model_copy:
+    def strip_model(self, model: NNCFNetwork, do_copy: bool = False) -> NNCFNetwork:
+        if do_copy:
             model = copy_model(model)
         return model
 

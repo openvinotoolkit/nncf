@@ -699,8 +699,8 @@ class QuantizationController(BaseCompressionAlgorithmController):
     def loss(self) -> CompressionLoss:
         return self._loss
 
-    def strip_model(self, model: tf.keras.Model, make_model_copy: bool = False) -> tf.keras.Model:
-        if make_model_copy:
+    def strip_model(self, model: tf.keras.Model, do_copy: bool = False) -> tf.keras.Model:
+        if do_copy:
             model = copy_model(model)
         apply_overflow_fix(model, self._op_names)
         return model

@@ -250,17 +250,17 @@ class CompressionAlgorithmController(ABC):
         :return: A `Statistics` class instance that contains compression algorithm statistics.
         """
 
-    def strip_model(self, model: TModel, make_model_copy: bool = False) -> TModel:
+    def strip_model(self, model: TModel, do_copy: bool = False) -> TModel:
         """
         Strips auxiliary layers that were used for the model compression, as it's
         only needed for training. The method is used before exporting the model
         in the target format.
 
         :param model: The compressed model.
-        :param make_model_copy: Modify copy of the model, defaults to False.
+        :param do_copy: Modify copy of the model, defaults to False.
         :return: The stripped model.
         """
-        if make_model_copy:
+        if do_copy:
             model = copy_model(model)
         return model
 
@@ -270,17 +270,17 @@ class CompressionAlgorithmController(ABC):
         """
         self._model = self.strip_model(self._model)
 
-    def prepare_for_inference(self, make_model_copy: bool = True) -> TModel:
+    def prepare_for_inference(self, do_copy: bool = True) -> TModel:
         """
         Prepare the compressed model for inference and export by removing NNCF-specific operations, as it's
         only needed for training.
 
-        :param make_model_copy: `True` means that a copy of the model will be modified.
+        :param do_copy: `True` means that a copy of the model will be modified.
             `False` means that the original model will be modify. Defaults to True.
 
         :return: Modified model.
         """
-        return self.strip_model(self.model, make_model_copy)
+        return self.strip_model(self.model, do_copy)
 
     @abstractmethod
     def export_model(self,

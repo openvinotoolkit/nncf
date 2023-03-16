@@ -116,8 +116,8 @@ class BaseSparsityAlgoController(PTCompressionAlgorithmController, SparsityContr
     def compression_stage(self) -> CompressionStage:
         return CompressionStage.FULLY_COMPRESSED
 
-    def strip_model(self, model: NNCFNetwork, make_model_copy: bool = False) -> NNCFNetwork:
-        if make_model_copy:
+    def strip_model(self, model: NNCFNetwork, do_copy: bool = False) -> NNCFNetwork:
+        if do_copy:
             model = copy_model(model)
 
         for node in model.get_original_graph().get_all_nodes():

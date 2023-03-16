@@ -1459,8 +1459,8 @@ class QuantizationController(QuantizationControllerBase):
         nncf_stats.register('quantization', stats)
         return nncf_stats
 
-    def strip_model(self, model: NNCFNetwork, make_model_copy: bool = False) -> NNCFNetwork:
-        if make_model_copy:
+    def strip_model(self, model: NNCFNetwork, do_copy: bool = False) -> NNCFNetwork:
+        if do_copy:
             model = copy_model(model)
         model = replace_quantizer_to_torch_native_module(model)
         model = remove_disabled_quantizers(model)

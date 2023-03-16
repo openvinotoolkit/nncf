@@ -51,9 +51,9 @@ def test_prepare_for_inference(enable_quantization):
     TFTensorListComparator.check_equal(x_nncf, x_tf)
 
 
-@pytest.mark.parametrize("make_model_copy", (True, False))
+@pytest.mark.parametrize("do_copy", (True, False))
 @pytest.mark.parametrize("enable_quantization", (True, False), ids=("with_quantization", "no_quantization"))
-def test_make_model_copy(make_model_copy, enable_quantization):
+def test_do_copy(do_copy, enable_quantization):
     input_shape = (1, 4, 4, 1)
     model = get_basic_conv_test_model(input_shape=input_shape[1:])
 
@@ -63,7 +63,7 @@ def test_make_model_copy(make_model_copy, enable_quantization):
         config["compression"].append({"algorithm": "quantization", "preset": "mixed"})
 
     compression_model, compression_ctrl = create_compressed_model_and_algo_for_test(model, config, force_no_init=True)
-    inference_model = compression_ctrl.prepare_for_inference(make_model_copy=make_model_copy)
+    inference_model = compression_ctrl.prepare_for_inference(do_copy=do_copy)
 
     # Transform model for sparsity creates copy of the model in both cases
     assert id(inference_model) != id(compression_model)
