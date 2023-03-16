@@ -351,6 +351,18 @@ class ConvNotBiasModel(OVReferenceModel):
         return model
 
 
+class MatMul2DNotBiasModel(OVReferenceModel):
+    def _create_ov_model(self):
+        input_shape = [2, 5, 4, 3]
+        input_1 = opset.parameter(input_shape, name="Input")
+        data = self._rng.random((3, 4)).astype(np.float32)
+        matmul = opset.matmul(input_1, data, transpose_a=False, transpose_b=False, name="MatMul")
+        add = opset.add(matmul, self._rng.random((1, 5, 4, 4)).astype(np.float32), name="Add")
+        result_1 = opset.result(add, name="Result")
+        model = ov.Model([result_1], [input_1])
+        return model
+
+
 @SYNTHETIC_MODELS.register()
 class LSTMModel(OVReferenceModel):
     def _create_ov_model(self):

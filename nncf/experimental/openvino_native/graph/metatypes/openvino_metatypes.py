@@ -593,14 +593,19 @@ METATYPES_WITH_CONST_PORT_ID = GENERAL_WEIGHT_LAYER_METATYPES + [OVAddMetatype]
 
 # Contains the operation metatypes for which bias can be applied.
 OPERATIONS_WITH_BIAS_METATYPES = [OVConvolutionMetatype,
+                                  OVGroupConvolutionMetatype,
+                                  OVDepthwiseConvolutionMetatype,
                                   OVConvolutionBackpropDataMetatype,
+                                  OVGroupConvolutionBackpropDataMetatype,
                                   OVMatMulMetatype]
 
 METATYPE_TO_CHANNEL_AXIS = {
     OVConvolutionMetatype: 1,
-    OVConvolutionBackpropDataMetatype: 1,
-    OVMatMulMetatype: -1,
+    OVGroupConvolutionMetatype: 1,
     OVDepthwiseConvolutionMetatype: 1,
+    OVConvolutionBackpropDataMetatype: 1,
+    OVGroupConvolutionBackpropDataMetatype: 1,
+    OVMatMulMetatype: -1,
 }
 
 

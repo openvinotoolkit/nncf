@@ -478,7 +478,7 @@ OPERATIONS_WITH_BIAS_METATYPES = [ONNXConvolutionMetatype,
 
 METATYPE_TO_CHANNEL_AXIS = {
     ONNXConvolutionMetatype: 1,
-    ONNXMatMulMetatype: -1,
+    ONNXLinearMetatype: -1,
     ONNXConvolutionTransposeMetatype: 1,
     ONNXDepthwiseConvolutionMetatype: 1
 }

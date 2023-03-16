@@ -11,6 +11,7 @@
  limitations under the License.
 """
 
+import pytest
 import numpy as np
 
 from nncf.experimental.openvino_native.graph.nncf_graph_builder import GraphConverter
@@ -20,6 +21,11 @@ from nncf.common.factory import NNCFGraphFactory
 from tests.openvino.native.models import FPModel
 from tests.openvino.native.models import ConvNotBiasModel
 from tests.openvino.native.models import ConvModel
+from tests.openvino.native.models import DepthwiseConv3DModel
+from tests.openvino.native.models import DepthwiseConv4DModel
+from tests.openvino.native.models import DepthwiseConv5DModel
+from tests.openvino.native.models import MatMul2DModel
+from tests.openvino.native.models import MatMul2DNotBiasModel
 
 
 def test_get_weight_value_const_with_convert():
@@ -31,13 +37,15 @@ def test_get_weight_value_const_with_convert():
     assert actual_value.dtype == np.uint16
 
 
-def test_is_node_with_bias():
-    model = ConvNotBiasModel().ov_model
+@pytest.mark.parametrize('model_to_create, is_with_bias, node_name', [[ConvNotBiasModel, False, 'Conv'],
+                                                                      [ConvModel, True, 'Conv'],
+                                                                      [DepthwiseConv3DModel, True, 'Conv3D'],
+                                                                      [DepthwiseConv4DModel, True, 'Conv4D'],
+                                                                      [DepthwiseConv5DModel, True, 'Conv5D'],
+                                                                      [MatMul2DModel, True, 'MatMul'],
+                                                                      [MatMul2DNotBiasModel, False, 'MatMul']])
+def test_is_node_with_bias(model_to_create, is_with_bias, node_name):
+    model = model_to_create().ov_model
     nncf_graph = GraphConverter.create_nncf_graph(model)
-    node = nncf_graph.get_node_by_name('Conv')
-    assert not is_node_with_bias(node, nncf_graph)
-
-    model = ConvModel().ov_model
-    nncf_graph = GraphConverter.create_nncf_graph(model)
-    node = nncf_graph.get_node_by_name('Conv')
-    assert is_node_with_bias(node, nncf_graph)
+    node = nncf_graph.get_node_by_name(node_name)
+    assert is_node_with_bias(node, nncf_graph) == is_with_bias

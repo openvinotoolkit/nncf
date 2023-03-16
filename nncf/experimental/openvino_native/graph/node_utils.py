@@ -51,15 +51,16 @@ def is_node_with_bias(node: NNCFNode, nncf_graph: NNCFGraph) -> bool:
     channel_axis = METATYPE_TO_CHANNEL_AXIS[node.metatype]
     probable_bias_shape = add_node.layer_attributes.const_shape
     probable_bias_ndim = len(probable_bias_shape)
+    positive_channel_axis = range(probable_bias_ndim)[channel_axis]
     # Checks whether all indices except 0 and channel_axis equal 1
     for i in range(1, probable_bias_ndim):
-        if i == channel_axis:
+        if i == positive_channel_axis:
             continue
         if probable_bias_shape[i] != 1:
             return False
 
     edge = nncf_graph.get_edge(node, add_node)
-    return edge.tensor_shape[channel_axis] == probable_bias_shape[channel_axis]
+    return edge.tensor_shape[positive_channel_axis] == probable_bias_shape[positive_channel_axis]
 
 
 def get_bias_value(node_with_bias: NNCFNode, nncf_graph: NNCFGraph, model: ov.Model) -> np.ndarray:
