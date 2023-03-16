@@ -19,7 +19,7 @@ import onnx
 from nncf.common.utils.registry import Registry
 
 
-# pylint: disable=no-member
+# pylint: disable=no-member, too-many-lines
 
 def create_initializer_tensor(name: str, tensor_array: np.ndarray,
                               data_type: onnx.TensorProto = onnx.TensorProto.FLOAT) -> onnx.TensorProto:
@@ -246,6 +246,65 @@ class MultiInputOutputModel(ONNXReferenceModel):
         model = onnx.helper.make_model(graph_def, opset_imports=[op])
         onnx.checker.check_model(model)
         super().__init__(model, [input_shape_1, input_shape_2, input_shape_3], 'multi_input_output_model.dot')
+
+
+
+@ALL_SYNTHETIC_MODELS.register()
+class DoubleInputOutputModel(ONNXReferenceModel):
+    def __init__(self):
+        input_shape_1 = [1, 6, 3, 3]
+        model_input_name_1 = "X_1"
+        X_1 = onnx.helper.make_tensor_value_info(model_input_name_1,
+                                                 onnx.TensorProto.FLOAT,
+                                                 input_shape_1)
+        input_shape_2 = [2, 6, 3, 3]
+        model_input_name_2 = "X_2"
+        X_2 = onnx.helper.make_tensor_value_info(model_input_name_2,
+                                                 onnx.TensorProto.FLOAT,
+                                                 input_shape_2)
+
+        model_output_name_1 = "Y_1"
+        Y_1 = onnx.helper.make_tensor_value_info(model_output_name_1,
+                                                 onnx.TensorProto.FLOAT,
+                                                 [2, 6, 3, 3])
+
+        model_output_name_2 = "Y_2"
+        Y_2 = onnx.helper.make_tensor_value_info(model_output_name_2,
+                                                 onnx.TensorProto.FLOAT,
+                                                 [2, 6, 3, 3])
+
+        concat_node = onnx.helper.make_node(
+            name="Add2",
+            op_type="Add",
+            inputs=[
+                model_input_name_1, model_input_name_2
+            ],
+            outputs=[model_output_name_1],
+        )
+
+        add_node = onnx.helper.make_node(
+            name="Add1",
+            op_type="Add",
+            inputs=[
+                model_input_name_2, model_input_name_1
+            ],
+            outputs=[model_output_name_2]
+        )
+
+        # Create the graph (GraphProto)
+        graph_def = onnx.helper.make_graph(
+            nodes=[concat_node, add_node],
+            name="DoubleInputOutputNet",
+            inputs=[X_1, X_2],
+            outputs=[Y_1, Y_2],
+            initializer=[],
+        )
+
+        op = onnx.OperatorSetIdProto()
+        op.version = OPSET_VERSION
+        model = onnx.helper.make_model(graph_def, opset_imports=[op])
+        onnx.checker.check_model(model)
+        super().__init__(model, [input_shape_1, input_shape_2], 'double_input_output_model.dot')
 
 
 @ALL_SYNTHETIC_MODELS.register()

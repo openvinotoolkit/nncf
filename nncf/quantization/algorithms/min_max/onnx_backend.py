@@ -34,6 +34,7 @@ from nncf.onnx.graph.metatypes.onnx_metatypes import ONNXTopKMetatype
 from nncf.onnx.graph.metatypes.onnx_metatypes import ONNXShapeMetatype
 from nncf.onnx.graph.transformations.commands import ONNXQuantizerInsertionCommand
 from nncf.onnx.graph.transformations.commands import ONNXTargetPoint
+from nncf.onnx.graph.node_utils import get_input_edges_mapping
 from nncf.onnx.statistics.collectors import ONNXMeanMinMaxStatisticCollector
 from nncf.onnx.statistics.collectors import ONNXMinMaxStatisticCollector
 
@@ -76,7 +77,7 @@ class ONNXMinMaxAlgoBackend(MinMaxAlgoBackend):
             target_point: ONNXTargetPoint,
             quantizer_config: QuantizerConfig,
             statistics: MinMaxTensorStatistic) -> ONNXQuantizerInsertionCommand:
-        nncf_input_node_next_nodes = ONNXMinMaxAlgoBackend._get_nncf_input_node_next_nodes(nncf_graph)
+        nncf_input_node_next_nodes = ONNXMinMaxAlgoBackend._get_input_edges_mapping(nncf_graph)
         axis = ONNXMinMaxAlgoBackend._get_axis(nncf_graph,
                                                target_point,
                                                quantizer_config)
@@ -89,7 +90,7 @@ class ONNXMinMaxAlgoBackend(MinMaxAlgoBackend):
             target_point: ONNXTargetPoint,
             quantizer_config: QuantizerConfig,
             statistics: MinMaxTensorStatistic) -> ONNXQuantizerInsertionCommand:
-        nncf_input_node_next_nodes = ONNXMinMaxAlgoBackend._get_nncf_input_node_next_nodes(nncf_graph)
+        nncf_input_node_next_nodes = ONNXMinMaxAlgoBackend._get_input_edges_mapping(nncf_graph)
         axis = ONNXMinMaxAlgoBackend._get_axis(nncf_graph,
                                                target_point,
                                                quantizer_config)
@@ -97,12 +98,8 @@ class ONNXMinMaxAlgoBackend(MinMaxAlgoBackend):
         return ONNXQuantizerInsertionCommand(target_point, nncf_input_node_next_nodes, parameters)
 
     @staticmethod
-    def _get_nncf_input_node_next_nodes(nncf_graph: NNCFGraph):
-        output = {}
-        for input_node in nncf_graph.get_input_nodes():
-            next_nodes = nncf_graph.get_next_nodes(input_node)
-            output[input_node.node_name] = [node.node_name for node in next_nodes]
-        return output
+    def _get_input_edges_mapping(nncf_graph: NNCFGraph):
+        return get_input_edges_mapping(nncf_graph)
 
     @staticmethod
     def _get_axis(nncf_graph: NNCFGraph,
@@ -145,7 +142,7 @@ class ONNXMinMaxAlgoBackend(MinMaxAlgoBackend):
                                    target_point: ONNXTargetPoint,
                                    quantizer_config: QuantizerConfig,
                                    num_samples: int = None) -> ONNXMinMaxStatisticCollector:
-        reduction_shape, use_abs_max =\
+        reduction_shape, use_abs_max = \
             ONNXMinMaxAlgoBackend._get_reduction_shape_and_use_abs_max(nncf_graph,
                                                                        target_point,
                                                                        quantizer_config)
@@ -157,7 +154,7 @@ class ONNXMinMaxAlgoBackend(MinMaxAlgoBackend):
                                         quantizer_config: QuantizerConfig,
                                         use_per_sample_stats: bool,
                                         num_samples: int = None) -> ONNXMeanMinMaxStatisticCollector:
-        reduction_shape, use_abs_max =\
+        reduction_shape, use_abs_max = \
             ONNXMinMaxAlgoBackend._get_reduction_shape_and_use_abs_max(nncf_graph, target_point,
                                                                        quantizer_config)
         return ONNXMeanMinMaxStatisticCollector(use_per_sample_stats,

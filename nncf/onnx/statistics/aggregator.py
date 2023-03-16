@@ -16,12 +16,13 @@ from typing import Dict
 import numpy as np
 import onnx
 
-from nncf.common.graph.definitions import NNCFGraphNodeType
 from nncf.common.factory import NNCFGraphFactory
 from nncf.common.graph.transformations.commands import TargetType
 from nncf.common.graph.transformations.layout import TransformationLayout
 from nncf.common.tensor_statistics.statistic_point import StatisticPointsContainer
 from nncf.common.tensor_statistics.aggregator import StatisticsAggregator
+from nncf.onnx.graph.node_utils import get_input_edges_mapping
+from nncf.onnx.graph.node_utils import get_input_edge
 from nncf.onnx.graph.onnx_graph import ONNXGraph
 from nncf.onnx.graph.transformations.commands import ONNXOutputInsertionCommand
 from nncf.onnx.tensor import ONNXNNCFTensor
@@ -31,10 +32,7 @@ class ONNXStatisticsAggregator(StatisticsAggregator):
 
     def collect_statistics(self, model: onnx.ModelProto) -> None:
         self._nncf_graph = NNCFGraphFactory.create(model)
-        self.nncf_input_node_next_onnx_nodes = {}
-        for input_node in self._nncf_graph.get_input_nodes():
-            next_nodes = self._nncf_graph.get_next_nodes(input_node)
-            self.nncf_input_node_next_onnx_nodes[input_node.node_name] = [node.node_name for node in next_nodes]
+        self.input_edges_mapping = get_input_edges_mapping(self._nncf_graph)
         self._onnx_graph = ONNXGraph(model)
         self._registered_weights = set()
         super().collect_statistics(model)
@@ -45,13 +43,10 @@ class ONNXStatisticsAggregator(StatisticsAggregator):
             for statistic_point in _statistic_points:
                 target_point = statistic_point.target_point
                 port_id = target_point.port_id
-                if NNCFGraphNodeType.INPUT_NODE in target_point.target_node_name:
-                    nncf_node_name = self._nncf_graph.get_node_by_name(target_point.target_node_name)
-                    onnx_nodes_after_input_node = [edge.to_node for edge in
-                                                   self._nncf_graph.get_output_edges(nncf_node_name)]
-                    for onnx_node_name in onnx_nodes_after_input_node:
-                        edge_name = self._onnx_graph.get_node_edge_names(onnx_node_name.node_name)['input'][port_id]
-                        statistic_point.register_tensor(outputs[edge_name])
+                if target_point.target_node_name in self.input_edges_mapping:  # Input case
+                    edge_name = get_input_edge(target_point.target_node_name, self.input_edges_mapping,
+                                               self._onnx_graph)
+                    statistic_point.register_tensor(outputs[edge_name])
                 elif target_point.type == TargetType.POST_LAYER_OPERATION:
                     edge_name = self._onnx_graph.get_node_edge_names(node_name)['output'][port_id]
                     statistic_point.register_tensor(outputs[edge_name])
@@ -66,7 +61,7 @@ class ONNXStatisticsAggregator(StatisticsAggregator):
         for _statistic_points in statistic_points.values():
             for _statistic_point in _statistic_points:
                 transformation_commands.append(ONNXOutputInsertionCommand(_statistic_point.target_point,
-                                                                          self.nncf_input_node_next_onnx_nodes))
+                                                                          self.input_edges_mapping))
         for transformation_command in transformation_commands:
             transformation_layout.register(transformation_command)
 
