@@ -263,7 +263,8 @@ class MinMaxQuantization(Algorithm):
         quantizable_layer_nodes = [QuantizableWeightedLayerNode(node, qconf_list) for node, qconf_list
                                    in weighted_node_and_qconf_lists.items()]
         inference_nncf_graph = transform_to_inference_graph(deepcopy(nncf_graph),
-                                                            shapeof_metatypes=self._backend_entity.shapeof_metatypes)
+                                                            self._backend_entity.shapeof_metatypes,
+                                                            self._backend_entity.read_value_metatypes)
         ip_graph = InsertionPointGraph(inference_nncf_graph)
         ip_graph = ip_graph.get_ip_graph_with_merged_hw_optimized_operations(pattern, quantizable_layer_nodes)
         post_processing_types = self._backend_entity.post_processing_metatypes

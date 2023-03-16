@@ -58,6 +58,10 @@ class ONNXMinMaxAlgoBackend(MinMaxAlgoBackend):
         return [ONNXShapeMetatype]
 
     @property
+    def read_value_metatypes(self) -> List[OperatorMetatype]:
+        return []
+
+    @property
     def hw_config(self) -> HWConfig:
         return ONNXHWConfig
 

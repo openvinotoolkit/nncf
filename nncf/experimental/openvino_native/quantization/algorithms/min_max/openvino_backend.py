@@ -30,6 +30,7 @@ from nncf.experimental.openvino_native.graph.metatypes.openvino_metatypes import
 from nncf.experimental.openvino_native.graph.metatypes.openvino_metatypes import OVTopKMetatype
 from nncf.experimental.openvino_native.graph.metatypes.openvino_metatypes import OVNonMaxSuppressionMetatype
 from nncf.experimental.openvino_native.graph.metatypes.openvino_metatypes import OVShapeOfMetatype
+from nncf.experimental.openvino_native.graph.metatypes.openvino_metatypes import OVReadValueMetatype
 from nncf.experimental.openvino_native.graph.transformations.commands import OVQuantizerInsertionCommand
 from nncf.experimental.openvino_native.graph.transformations.commands import OVTargetPoint
 from nncf.experimental.openvino_native.hardware.config import OVHWConfig
@@ -56,6 +57,10 @@ class OVMinMaxAlgoBackend(MinMaxAlgoBackend):
     @property
     def shapeof_metatypes(self) -> List[OperatorMetatype]:
         return [OVShapeOfMetatype]
+
+    @property
+    def read_value_metatypes(self) -> List[OperatorMetatype]:
+        return [OVReadValueMetatype]
 
     @property
     def hw_config(self) -> HWConfig:

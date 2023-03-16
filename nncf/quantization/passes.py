@@ -12,30 +12,36 @@
 """
 
 import collections
-from typing import List
+from typing import List, Optional
 
 from nncf.common.graph.graph import NNCFGraph
 from nncf.common.graph.operator_metatypes import OperatorMetatype
 
 
-def transform_to_inference_graph(nncf_graph: NNCFGraph, shapeof_metatypes: List[OperatorMetatype]) -> NNCFGraph:
+def transform_to_inference_graph(nncf_graph: NNCFGraph, 
+                                 shapeof_metatypes: List[OperatorMetatype],
+                                 read_value_metatypes: Optional[List[OperatorMetatype]] = []) -> NNCFGraph:
     """
     This method contains pipeline of the passes that uses to provide inference graph without constant flows.
 
     :param nncf_graph: NNCFGraph instance for the transformation.
     :param shapeof_metatypes: List of backend-specific ShapeOf metatypes.
+    :param read_value_metatypes: List of backend-specific metatypes that also can be interpreted as inputs (ReadValue).
     :return: NNCFGraph in the inference style.
     """
-    inference_nncf_graph = remove_shapeof_subgraphs(nncf_graph, shapeof_metatypes)
+    inference_nncf_graph = remove_shapeof_subgraphs(nncf_graph, shapeof_metatypes, read_value_metatypes)
     return inference_nncf_graph
 
 
-def remove_shapeof_subgraphs(nncf_graph: NNCFGraph, shapeof_metatypes: List[OperatorMetatype]) -> NNCFGraph:
+def remove_shapeof_subgraphs(nncf_graph: NNCFGraph, 
+                             shapeof_metatypes: List[OperatorMetatype],
+                             read_value_metatypes: Optional[List[OperatorMetatype]] = []) -> NNCFGraph:
     """
     Removes the ShapeOf subgraphs from the provided NNCFGraph instance.
 
     :param nncf_graph: NNCFGraph instance for the transformation.
     :param shapeof_metatypes: List of backend-specific ShapeOf metatypes.
+    :param read_value_metatypes: List of backend-specific metatypes that also can be interpreted as inputs (ReadValue).
     :return: NNCFGraph without ShapeOf subgraphs.
     """
     nodes_to_drop = set()
@@ -60,7 +66,9 @@ def remove_shapeof_subgraphs(nncf_graph: NNCFGraph, shapeof_metatypes: List[Oper
         shape_of_queue.extend(nncf_graph.get_next_nodes(shape_of_node))
         while shape_of_queue:
             node = shape_of_queue.pop()
-            if node in nodes_to_drop or node in infer_nodes:
+            if node in nodes_to_drop or \
+                    node in infer_nodes or \
+                    node.metatype in read_value_metatypes:
                 continue
             nodes_to_drop.add(node)
             # traverse forward and backward to exclude full shape of subgraph
