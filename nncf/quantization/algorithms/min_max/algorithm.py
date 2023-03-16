@@ -12,7 +12,7 @@
 """
 
 from copy import deepcopy
-from typing import Dict, TypeVar, Optional, OrderedDict
+from typing import Dict, TypeVar, Optional, OrderedDict, List
 import collections
 
 from nncf import Dataset
@@ -356,16 +356,17 @@ class MinMaxQuantization(Algorithm):
             sorted(self._quantization_target_points_to_qconfig.items()))
         return self._quantization_target_points_to_qconfig
 
-    def _collect_unified_groups(self, quantizer_setup: SingleConfigQuantizerSetup) -> None:
+    def _collect_unified_groups(self, quantizer_setup: SingleConfigQuantizerSetup) -> List[List[TargetPoint]]:
         """
         Collects the group of quantizers for unification.
 
         :param quantizer_setup: SingleConfigQuantizerSetup instance
+        :return: List with the groups of the TargetPoints.
         """
         unified_scale_groups = []
-        for unified_scales_group_id in quantizer_setup.unified_scale_groups.keys():
+        for quantizer_ids in quantizer_setup.unified_scale_groups.values():
             unified_scale_group = []
-            for quantizer_id in quantizer_setup.unified_scale_groups[unified_scales_group_id]:
+            for quantizer_id in quantizer_ids:
                 quantization_point = quantizer_setup.quantization_points[quantizer_id]
 
                 # Only activation quantizers can be unified
