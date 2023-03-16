@@ -34,7 +34,6 @@ IGNORED_PATTERN_REASONS = {
     PatternNames.LINEAR_BATCH_NORM_ACTIVATIONS: 'Not relevant for OpenVINO.',
     PatternNames.LINEAR_BATCH_NORM_SCALE_SHIFT_ACTIVATIONS: 'Not relevant for OpenVINO.',
     PatternNames.LINEAR_SCALE_SHIFT_ACTIVATIONS: 'Not relevant for OpenVINO.',
-    PatternNames.SCALE_SHIFT_ACTIVATIONS: 'Not relevant for OpenVINO.',
 }
 
 
