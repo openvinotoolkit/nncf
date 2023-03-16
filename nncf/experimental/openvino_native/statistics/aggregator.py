@@ -106,7 +106,7 @@ class OVStatisticsAggregator(StatisticsAggregator):
 
                 for tensor_collectors in statistic_point.algorithm_to_tensor_collectors.values():
                     for tensor_collector in tensor_collectors:
-                        # TODO: Use common target point class instead of tuple
+                        #TODO: Use common target point class instead of tuple
                         target_type_to_tensor_collector_map[(_target_node_name, target_type, port_id)]['collectors'].append(tensor_collector)
                 target_type_to_tensor_collector_map[(_target_node_name, target_type, port_id)]['target_point'].append(target_point)
 

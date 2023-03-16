@@ -154,3 +154,34 @@ def get_inplace_min_op(reduction_shape):
 
 def get_inplace_max_op(reduction_shape, use_abs_max):
     return get_inplace_reduce_op(opset.reduce_max, 'max', reduction_shape, use_abs_max)
+
+
+def get_inplace_mean_per_ch(axis: int, op_type: str):
+    def get_op(node: ov.Node):
+        output_name = node.get_friendly_name()
+        input_shape = node.shape
+        if len(input_shape) < 3:
+            return opset.reduce_mean(node,
+                                     reduction_axes=0,
+                                     keep_dims=False,
+                                     name=get_reduce_node_name(output_name, op_type))
+
+        ch_dim = 1
+        if axis != ch_dim:
+            transpose_dims = list(range(len(input_shape)))
+            transpose_dims[axis], transpose_dims[1] = transpose_dims[1], transpose_dims[axis]
+            transposed_shape = [input_shape[dim] for dim in transpose_dims]
+
+            reshape_input_node  = opset.transpose(node, transpose_dims)
+        else:
+            reshape_input_node = node
+            transposed_shape = input_shape
+
+        reshape_op = opset.reshape(reshape_input_node,
+                                   output_shape=np.array((transposed_shape[0], transposed_shape[1], -1)),
+                                   special_zero=False)
+        return opset.reduce_mean(reshape_op,
+                                 reduction_axes=np.array((0, 2)),
+                                 keep_dims=False,
+                                 name=get_reduce_node_name(output_name, op_type))
+    return get_op

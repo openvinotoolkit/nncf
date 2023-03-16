@@ -38,6 +38,7 @@ from nncf.experimental.openvino_native.statistics.statistics import OVBatchTenso
 from nncf.experimental.openvino_native.graph.node_utils import get_reduce_node_name
 from nncf.experimental.openvino_native.graph.node_utils import get_result_node_name
 from nncf.experimental.openvino_native.graph.node_utils import get_inplace_reduce_op
+from nncf.experimental.openvino_native.graph.node_utils import get_inplace_mean_per_ch
 
 
 class OVNNCFCollectorTensorProcessor(NNCFCollectorTensorProcessor):
@@ -152,7 +153,7 @@ class OVBatchMeanReducer(BatchMeanReducer):
 
     def get_inplace_fn(self):
         return get_inplace_reduce_op(opset.reduce_mean, self.NAME,
-                                     0, False)
+                                     np.array(0), False)
 
     def get_output_name(self, target_node_name: str, port_id: int) -> str:
         if self.inplace:
@@ -166,11 +167,11 @@ class OVMeanPerChanelReducer(MeanPerChReducer):
         return OVNNCFCollectorTensorProcessor
 
     def get_inplace_fn(self):
-        raise NotImplementedError()
+        return get_inplace_mean_per_ch(self._reduction_shape, self.NAME)
 
     def get_output_name(self, target_node_name: str, port_id: int) -> str:
-        #if self.inplace:
-        #    target_node_name = get_reduce_node_name(target_node_name, self.NAME)
+        if self.inplace:
+            target_node_name = get_reduce_node_name(target_node_name, self.NAME)
         return get_result_node_name(target_node_name, port_id)
 
 
@@ -217,7 +218,7 @@ def get_mean_min_max_stat_collector(num_samples, reduction_shape, use_abs_max,
     return collector
 
 
-def get_mean_stat_collector(num_samples, reduction_shape, window_size=None, inplace=False):
+def get_mean_stat_collector(num_samples, reduction_shape, window_size=None, inplace=True):
     reducer_cls = OVBatchMeanReducer if reduction_shape == 0 else OVMeanPerChanelReducer
     reducer = reducer_cls(reduction_shape, inplace)
     noop_reducer = OVNoopReducer()
@@ -238,6 +239,9 @@ def get_mean_stat_collector(num_samples, reduction_shape, window_size=None, inpl
 
 
 def get_mean_batch_stat_collector(num_samples, inplace=True):
+    #TODO(dlyakhov): use inplace OVBatchMeanReducer
+    # after migration on openvino-dev=2023.1
+    inplace = False
     reducer = OVBatchMeanReducer(inplace=inplace)
     aggregator = NoopAggregator(num_samples)
 

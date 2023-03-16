@@ -70,7 +70,7 @@ class OVFastBiasCorrectionAlgoBackend(FastBiasCorrectionAlgoBackend):
                                  num_samples: Optional[int] = None,
                                  window_size: Optional[int] = None,
                                  inplace: bool = False) -> TensorCollector:
-        return get_mean_stat_collector(num_samples, reduction_shape, window_size)
+        return get_mean_stat_collector(num_samples, reduction_shape, window_size, inplace)
 
     @staticmethod
     def get_sub_input_output_names(subgraph: ov.Model) -> Tuple[str, str]:

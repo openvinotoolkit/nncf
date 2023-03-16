@@ -85,8 +85,7 @@ class OVBiasCorrectionAlgoBackend(BiasCorrectionAlgoBackend):
                                  num_samples: Optional[int] = None,
                                  window_size: Optional[int] = None,
                                  inplace: bool = False) -> TensorCollector:
-        # TODO: implement inplace op
-        return get_mean_stat_collector(num_samples, reduction_shape, window_size, False)
+        return get_mean_stat_collector(num_samples, reduction_shape, window_size, inplace)
 
     @staticmethod
     def batch_statistic_collector(num_samples: int = None, inplace: bool = False) -> TensorCollector:
