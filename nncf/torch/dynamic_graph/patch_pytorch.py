@@ -159,6 +159,16 @@ def torch_jit_script_wrapper(*args, **kwargs):
     return retval
 
 
+def torch_jit_trace_make_module_wrapper(*args, **kwargs):
+    apply_unpatch = _OPERATORS_ALREADY_WRAPPED
+    if apply_unpatch:
+        unpatch_torch_operators()
+    retval = _ORIG_JIT_TRACE_MAKE_MODULE(*args, **kwargs)
+    if apply_unpatch:
+        patch_torch_operators()
+    return retval
+
+
 def torch_jit_script_if_tracing(fn):
     # pylint: disable=protected-access
     @functools.wraps(fn)
@@ -186,18 +196,24 @@ ORIGINAL_OPERATORS = []  # type: List[OriginalOpInfo]
 _JIT_ALREADY_WRAPPED = False
 _OPERATORS_ALREADY_WRAPPED = False
 _ORIG_JIT_SCRIPT = None
+_ORIG_JIT_TRACE_MAKE_MODULE = None
 
 
-def patch_torch_jit_script():
+def patch_torch_jit():
     # This import statement is required, otherwise we get a
     # "RuntimeError: undefined value torch" inside the real torch.jit.script
     # pylint:disable=unused-import,redefined-outer-name,reimported
     import torch
 
-    orig = getattr(torch.jit, "script")
     global _ORIG_JIT_SCRIPT
-    _ORIG_JIT_SCRIPT = orig
+    _ORIG_JIT_SCRIPT = getattr(torch.jit, "script")
     setattr(torch.jit, "script", torch_jit_script_wrapper)
+
+    # Patch torch.jit._trace.make_module() which is called during
+    # torch.jit.trace() call
+    global _ORIG_JIT_TRACE_MAKE_MODULE
+    _ORIG_JIT_TRACE_MAKE_MODULE = getattr(torch.jit._trace, "make_module")
+    setattr(torch.jit._trace, "make_module", torch_jit_trace_make_module_wrapper)
 
     # Patch torch.jit._script_if_tracing because it references an original
     # unpatched torch.jit.script and the patching above does not affect it
@@ -248,7 +264,7 @@ def patch_torch_operators():
     # Only patch torch.jit.script during first patch_torch_operators call
     global _JIT_ALREADY_WRAPPED
     if not _JIT_ALREADY_WRAPPED:
-        patch_torch_jit_script()
+        patch_torch_jit()
         _JIT_ALREADY_WRAPPED = True
 
     # Do not patch operators twice as well
