@@ -81,7 +81,6 @@ class GraphConverter:
         :return: NNCF meta type which corresponds to OpenVINO node.
         """
         node_type = node.get_type_name()
-        node_type = node_type.lower()
         metatype = OV_OPERATOR_METATYPES.get_operator_metatype_by_op_name(node_type)
         if metatype is not UnknownMetatype:
             if metatype.get_subtypes():
@@ -125,7 +124,6 @@ class GraphConverter:
         :param graph: NNCFGraph.
         """
         node_type = node.get_type_name()
-        node_type = node_type.lower()
         metatype = GraphConverter._get_node_metatype(node)
         graph.add_nncf_node(node_name=node.get_friendly_name(),
                             node_type=node_type,
