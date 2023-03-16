@@ -98,7 +98,7 @@ After the compressed model has been fine-tuned to acceptable accuracy and compre
     Refer to [compression algorithm documentation](./compression_algorithms) for details.
     Also, this method is limited to the supported formats for export.
 
-2. Call the compression controller's `prepare_for_inference` method, to properly get the model without NNCF specific nodes for training compressed model. The model can then be exported or converted as a conventional model. By defaults, a copy of the compressed model will be modified, use `do_copy=False' to avoid creating additional copy of the model.
+2. Call the compression controller's `prepare_for_inference` method, to properly get the model without NNCF specific nodes for training compressed model, then use the standard export options. As well as this method also allows you to connect third-party inference solutions, like OpenVINO. By defaults, a copy of the compressed model will be modified, use `do_copy=False' to avoid creating additional copy of the model.
 
     ```python
     inference_model = compression_ctrl.prepare_for_inference()

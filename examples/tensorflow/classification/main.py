@@ -17,7 +17,6 @@ from pathlib import Path
 
 import tensorflow as tf
 import tensorflow_addons as tfa
-from tensorflow.python.framework.convert_to_constants import convert_variables_to_constants_v2
 
 from examples.common.sample_config import create_sample_config
 from examples.tensorflow.classification.datasets.builder import DatasetBuilder
@@ -26,16 +25,15 @@ from examples.tensorflow.common.callbacks import get_callbacks
 from examples.tensorflow.common.callbacks import get_progress_bar
 from examples.tensorflow.common.distributed import get_distribution_strategy
 from examples.tensorflow.common.experimental_patcher import patch_if_experimental_quantization
+from examples.tensorflow.common.export import export_model
 from examples.tensorflow.common.logger import logger
 from examples.tensorflow.common.model_loader import get_model
 from examples.tensorflow.common.optimizer import build_optimizer
 from examples.tensorflow.common.scheduler import build_scheduler
-from examples.tensorflow.common.utils import FROZEN_GRAPH_FORMAT
 from examples.tensorflow.common.utils import SummaryWriter
 from examples.tensorflow.common.utils import close_strategy_threadpool
 from examples.tensorflow.common.utils import configure_paths
 from examples.tensorflow.common.utils import create_code_snapshot
-from examples.tensorflow.common.utils import get_saving_parameters
 from examples.tensorflow.common.utils import print_args
 from examples.tensorflow.common.utils import serialize_cli_args
 from examples.tensorflow.common.utils import serialize_config
