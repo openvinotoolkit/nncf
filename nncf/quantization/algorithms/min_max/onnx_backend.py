@@ -57,10 +57,6 @@ class ONNXMinMaxAlgoBackend(MinMaxAlgoBackend):
         return ONNXLinearMetatype
 
     @property
-    def softmax_metatype(self) -> OperatorMetatype:
-        return ONNXSoftmaxMetatype
-
-    @property
     def post_processing_metatypes(self) -> List[OperatorMetatype]:
         return [ONNXTopKMetatype, ONNXNonMaxSuppressionMetatype]
 

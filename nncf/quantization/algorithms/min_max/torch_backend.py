@@ -59,10 +59,6 @@ class PTMinMaxAlgoBackend(MinMaxAlgoBackend):
         return om.PTModuleLinearMetatype
 
     @property
-    def softmax_metatype(self) -> OperatorMetatype:
-        return om.PTSoftmaxMetatype
-
-    @property
     def post_processing_metatypes(self) -> List[OperatorMetatype]:
         return []
 

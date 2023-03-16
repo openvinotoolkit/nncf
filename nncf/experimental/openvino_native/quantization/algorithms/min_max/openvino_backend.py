@@ -61,10 +61,6 @@ class OVMinMaxAlgoBackend(MinMaxAlgoBackend):
         return OVMatMulMetatype
 
     @property
-    def softmax_metatype(self) -> OperatorMetatype:
-        return OVSoftmaxMetatype
-
-    @property
     def post_processing_metatypes(self) -> List[OperatorMetatype]:
         return [OVTopKMetatype, OVNonMaxSuppressionMetatype]
 
