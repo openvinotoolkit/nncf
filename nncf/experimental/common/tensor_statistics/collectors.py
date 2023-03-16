@@ -161,18 +161,19 @@ class TensorCollector:
                                f' container key {container_key} are encountered')
         self._stat_container_kwargs_map[container_key] = key
 
-    def get_output_names(self, target_node_name: str, port_id: int) -> List[str]:
+    def get_output_info(self, target_node_name: str, port_id: int) -> List[str]:
         retval = []
         for reducer in self._reducers:
-            retval.append(reducer.get_output_name(target_node_name, port_id))
+            retval.append((reducer.name(), reducer.get_output_name(target_node_name, port_id)))
         return retval
 
-    def register_inputs(self, inputs: List[TensorType]):
+    def register_inputs(self, inputs: Dict[str, TensorType]):
         if not self._enabled:
             return
 
         reduced_inputs = {}
-        for input_, reducer in zip(inputs, self._reducers):
+        for reducer in self._reducers:
+            input_ = inputs[reducer.name()]
             reduced_input = reducer.reduce_input(input_)
             reduced_inputs[hash(reducer)] = reduced_input
 

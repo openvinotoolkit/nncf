@@ -59,6 +59,11 @@ class TemplateTestStatisticsAggregator:
     def dataset_samples(self):
         pass
 
+    @abstractmethod
+    @pytest.fixture
+    def inplace_statistics(self) -> bool:
+        pass
+
     @pytest.fixture
     def dataset_values(self):
         return [{'max': 1, 'min': -10},
@@ -113,7 +118,8 @@ class TemplateTestStatisticsAggregator:
                                               QuantizationMode.ASYMMETRIC, True,
                                               np.array((1, 0.1, 128)), np.array((-10, -1, -128)))),
                              ))
-    def test_statistics_aggregator(self, test_parameters: TestParameters, dataset_samples, is_stat_in_shape_of_scale):
+    def test_statistics_aggregator(self, test_parameters: TestParameters, dataset_samples, is_stat_in_shape_of_scale,
+                                   inplace_statistics):
         algo_backend = self.get_algo_backend_cls()
         model = self.get_backend_model(dataset_samples)
         nncf_graph = NNCFGraphFactory.create(model)
@@ -125,13 +131,15 @@ class TemplateTestStatisticsAggregator:
             tensor_collector = algo_backend.minmax_statistic_collector(nncf_graph=nncf_graph,
                                                                        target_point=target_point,
                                                                        quantizer_config=quantizer_config,
-                                                                       num_samples=len(dataset_samples))
+                                                                       num_samples=len(dataset_samples),
+                                                                       inplace=inplace_statistics)
         if test_parameters.range_type == RangeType.MEAN_MINMAX:
             tensor_collector = algo_backend.mean_minmax_statistic_collector(nncf_graph=nncf_graph,
                                                                             target_point=target_point,
                                                                             quantizer_config=quantizer_config,
                                                                             use_per_sample_stats=False,
-                                                                            num_samples=len(dataset_samples))
+                                                                            num_samples=len(dataset_samples),
+                                                                            inplace=inplace_statistics)
         statistics_points = StatisticPointsContainer()
         algorithm_name = 'TestAlgo'
         statistics_points.add_statistic_point(StatisticPoint(target_point=target_point,

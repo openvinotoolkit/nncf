@@ -63,8 +63,8 @@ class OVStatisticsAggregator(StatisticsAggregator):
                 RuntimeError(f'Unsupported target point type for statistic aggregator:'
                              f' {target_point.type}')
 
-            input_names = tensor_collector.get_output_names(stat_node_name, port_id)
-            tensor_collector.register_inputs([outputs[name] for name in input_names])
+            input_info = tensor_collector.get_output_info(stat_node_name, port_id)
+            tensor_collector.register_inputs({reducer: outputs[name] for reducer, name in input_info})
 
     def _get_transformation_layout_extra_outputs(self,
                                                  statistic_points: StatisticPointsContainer,

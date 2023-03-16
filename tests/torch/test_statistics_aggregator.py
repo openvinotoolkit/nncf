@@ -86,3 +86,7 @@ class TestStatisticsAggregator(TemplateTestStatisticsAggregator):
     @pytest.fixture
     def is_stat_in_shape_of_scale(self) -> bool:
         return True
+
+    @pytest.fixture(params=[False], ids=['out_of_palce'])
+    def inplace_statistics(self, request) -> bool:
+        return request.param
