@@ -17,23 +17,21 @@ from pathlib import Path
 
 import numpy as np
 import tensorflow as tf
-from tensorflow.python.framework.convert_to_constants import convert_variables_to_constants_v2
 
 from examples.common.sample_config import create_sample_config
 from examples.tensorflow.common.argparser import get_common_argument_parser
 from examples.tensorflow.common.distributed import get_distribution_strategy
 from examples.tensorflow.common.experimental_patcher import patch_if_experimental_quantization
+from examples.tensorflow.common.export import export_model
 from examples.tensorflow.common.logger import logger
 from examples.tensorflow.common.object_detection.datasets.builder import COCODatasetBuilder
 from examples.tensorflow.common.optimizer import build_optimizer
 from examples.tensorflow.common.scheduler import build_scheduler
-from examples.tensorflow.common.utils import FROZEN_GRAPH_FORMAT
 from examples.tensorflow.common.utils import SummaryWriter
 from examples.tensorflow.common.utils import Timer
 from examples.tensorflow.common.utils import close_strategy_threadpool
 from examples.tensorflow.common.utils import configure_paths
 from examples.tensorflow.common.utils import create_code_snapshot
-from examples.tensorflow.common.utils import get_saving_parameters
 from examples.tensorflow.common.utils import print_args
 from examples.tensorflow.common.utils import serialize_cli_args
 from examples.tensorflow.common.utils import serialize_config
@@ -392,27 +390,6 @@ def run(config):
         export_model(compression_ctrl, config)
 
     close_strategy_threadpool(strategy)
-
-
-def export_model(compression_ctrl, config):
-    save_path, save_format = get_saving_parameters(config)
-    if config.prepare_for_inference:
-        model = compression_ctrl.prepare_for_inference()
-        if save_format == FROZEN_GRAPH_FORMAT:
-            input_signature = []
-            for item in model.inputs:
-                input_signature.append(tf.TensorSpec(item.shape, item.dtype, item.name))
-            concrete_function = tf.function(model).get_concrete_function(input_signature)
-            frozen_func = convert_variables_to_constants_v2(concrete_function, lower_control_flow=False)
-            frozen_graph = frozen_func.graph.as_graph_def(add_shapes=True)
-
-            save_dir, name = os.path.split(save_path)
-            tf.io.write_graph(frozen_graph, save_dir, name, as_text=False)
-        else:
-            model.save(save_path, save_format=save_format)
-    else:
-        compression_ctrl.export_model(save_path, save_format)
-    logger.info('Saved to {}'.format(save_path))
 
 
 def export(config):

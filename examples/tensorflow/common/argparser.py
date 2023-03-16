@@ -233,11 +233,6 @@ def get_common_argument_parser(**flags):
         action="store_true"
     )
 
-    parser.add_argument(
-        "--prepare-for-inference",
-        action='store_true',
-        help="Convert model to framework native format without NNCF-specific operation for export and test steps.")
-
     return parser
 
 

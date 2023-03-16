@@ -31,6 +31,7 @@ from examples.torch.common.execution import get_execution_mode
 from examples.torch.common.execution import prepare_model_for_execution
 from examples.torch.common.execution import set_seed
 from examples.torch.common.execution import start_worker
+from examples.torch.common.export import export_model
 from examples.torch.common.model_loader import COMPRESSION_STATE_ATTR
 from examples.torch.common.model_loader import MODEL_STATE_ATTR
 from examples.torch.common.model_loader import extract_model_and_compression_states
@@ -60,7 +61,6 @@ from nncf.common.accuracy_aware_training import create_accuracy_aware_training_l
 from nncf.config.utils import is_accuracy_aware_training
 from nncf.torch import create_compressed_model
 from nncf.torch import load_state
-from nncf.torch.compression_method_api import PTCompressionAlgorithmController
 from nncf.torch.dynamic_graph.graph_tracer import create_input_infos
 from nncf.torch.initialization import register_default_init_args
 from nncf.torch.utils import is_main_process
@@ -257,8 +257,6 @@ def main_worker(current_gpu, config):
     if 'test' in config.mode:
         with torch.no_grad():
             val_net = net
-            if config.prepare_for_inference:
-                val_net = compression_ctrl.prepare_for_inference(make_model_copy=True)
             net.eval()
             if config['ssd_params'].get('loss_inference', False):
                 model_loss = test_net(val_net, config.device, test_data_loader, distributed=config.distributed,
@@ -472,16 +470,6 @@ def train_epoch(compression_ctrl, net, config, train_data_loader, criterion, opt
                 config.rank, iteration, epoch, model_loss.item(), t_elapsed, optimizer.param_groups[0]['lr'],
                 loss_comp.item() if isinstance(loss_comp, torch.Tensor) else loss_comp
             ))
-
-def export_model(compression_ctrl: PTCompressionAlgorithmController, config: SampleConfig) -> None:
-    if config.prepare_for_inference:
-        inference_model = compression_ctrl.prepare_for_inference()
-        inference_model = inference_model.eval().cpu()
-        input_size = config.get('input_info').get('sample_size')
-        torch.onnx.export(inference_model, torch.randn(input_size), config.to_onnx, input_names=['input.0'])
-    else:
-        compression_ctrl.export_model(config.to_onnx)
-    logger.info(f'Saved to {config.to_onnx}')
 
 
 if __name__ == '__main__':

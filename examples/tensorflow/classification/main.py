@@ -290,8 +290,6 @@ def run(config):
     statistics = compression_ctrl.statistics()
     logger.info(statistics.to_str())
     eval_model = compress_model
-    if config.prepare_for_inference:
-        eval_model = compression_ctrl.prepare_for_inference()
 
     results = eval_model.evaluate(
         validation_dataset,
@@ -307,27 +305,6 @@ def run(config):
         export_model(compression_ctrl, config)
 
     close_strategy_threadpool(strategy)
-
-
-def export_model(compression_ctrl, config):
-    save_path, save_format = get_saving_parameters(config)
-    if config.prepare_for_inference:
-        model = compression_ctrl.prepare_for_inference()
-        if save_format == FROZEN_GRAPH_FORMAT:
-            input_signature = []
-            for item in model.inputs:
-                input_signature.append(tf.TensorSpec(item.shape, item.dtype, item.name))
-            concrete_function = tf.function(model).get_concrete_function(input_signature)
-            frozen_func = convert_variables_to_constants_v2(concrete_function, lower_control_flow=False)
-            frozen_graph = frozen_func.graph.as_graph_def(add_shapes=True)
-
-            save_dir, name = osp.split(save_path)
-            tf.io.write_graph(frozen_graph, save_dir, name, as_text=False)
-        else:
-            model.save(save_path, save_format=save_format)
-    else:
-        compression_ctrl.export_model(save_path, save_format)
-    logger.info('Saved to {}'.format(save_path))
 
 
 def export(config):
