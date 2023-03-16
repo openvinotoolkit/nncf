@@ -14,7 +14,7 @@
 import json
 import os
 from argparse import ArgumentParser
-from typing import Optional, TypeVar, List
+from typing import Optional, TypeVar
 
 import openvino.runtime as ov
 from openvino.tools.accuracy_checker.evaluators.quantization_model_evaluator import \
