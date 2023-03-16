@@ -11,6 +11,7 @@
  limitations under the License.
 """
 
+import os
 import sys
 
 import tensorflow as tf
@@ -290,7 +291,7 @@ def export_model(compression_ctrl, config):
             frozen_func = convert_variables_to_constants_v2(concrete_function, lower_control_flow=False)
             frozen_graph = frozen_func.graph.as_graph_def(add_shapes=True)
 
-            save_dir, name = osp.split(save_path)
+            save_dir, name = os.path.split(save_path)
             tf.io.write_graph(frozen_graph, save_dir, name, as_text=False)
         else:
             model.save(save_path, save_format=save_format)
