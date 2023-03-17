@@ -681,6 +681,14 @@ def create_clamp_mult_const():
     return pattern
 
 
+@OPENVINO_HW_FUSED_PATTERNS.register(PatternNames.SCALE_SHIFT_ACTIVATIONS)
+def create_scale_shift_activations():
+    scale_shift = create_scale_shift()
+    activations = atomic_activations_operations()
+    scale_shift.join_patterns(activations)
+    return scale_shift
+
+
 @OPENVINO_HW_FUSED_PATTERNS.register(PatternNames.LINEAR_SCALE_SHIFT)
 def create_linear_scale_shift():
     linear = linear_operations()

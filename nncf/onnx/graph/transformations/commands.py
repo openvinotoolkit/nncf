@@ -11,7 +11,7 @@
  limitations under the License.
 """
 
-from typing import Dict, List, Optional
+from typing import Dict, List, Tuple, Optional
 import numpy as np
 
 from nncf.common.graph.transformations.commands import Command, TransformationCommand
@@ -58,13 +58,13 @@ class ONNXTargetPoint(TargetPoint):
 
 
 class ONNXInsertionCommand(TransformationCommand):
-    def __init__(self, target_point: ONNXTargetPoint, nncf_input_node_next_onnx_nodes: Dict[str, List[str]]):
+    def __init__(self, target_point: ONNXTargetPoint, input_edges_mapping: Dict[str, Tuple[str, int]]):
         super().__init__(TransformationType.INSERT, target_point)
         # Insertion command could be applied to NNCF input nodes, e.g.
         # quantizers will be tied with POST OP of NNCF input nodes.
         # To get the ONNX edge to apply a command,
         # need to keep the mapping NNCF input nodes to the following ONNX nodes.
-        self.nncf_input_node_next_onnx_nodes = nncf_input_node_next_onnx_nodes
+        self.input_edges_mapping = input_edges_mapping
 
 
     def union(self, other: 'TransformationCommand') -> 'TransformationCommand':
