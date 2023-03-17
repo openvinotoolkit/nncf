@@ -88,7 +88,7 @@ Important points you should consider when training your networks with compressio
 #### Step 4: Export the compressed model
 After the compressed model has been fine-tuned to acceptable accuracy and compression stages, you can export it. There are two ways to export a model:
 
-1. Call the compression controller's `export_model` method to properly export the model with compression specifics into ONNX:
+1. Call the compression controller's `export_model` method to properly export the model with compression specifics into ONNX.
 
     ```python
     compression_ctrl.export_model("./compressed_model.onnx")
@@ -98,7 +98,10 @@ After the compressed model has been fine-tuned to acceptable accuracy and compre
     Refer to [compression algorithm documentation](./compression_algorithms) for details.
     Also, this method is limited to the supported formats for export.
 
-2. Call the compression controller's `prepare_for_inference` method, to properly get the model without NNCF specific nodes for training compressed model, then use the standard export options. As well as this method also allows you to connect third-party inference solutions, like OpenVINO. By defaults, a copy of the compressed model will be modified, use `do_copy=False' to avoid creating additional copy of the model.
+2. Call the compression controller's `prepare_for_inference` method, to properly get the model without NNCF specific
+    nodes for training compressed model, after that you can trace the model via inference in framework operations.
+    It gives more flexibility to deploy model after optimization. As well as this method also allows you to connect
+    third-party inference solutions, like OpenVINO.
 
     ```python
     inference_model = compression_ctrl.prepare_for_inference()
