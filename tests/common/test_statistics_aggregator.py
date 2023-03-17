@@ -170,3 +170,57 @@ class TemplateTestStatisticsAggregator:
 
             assert np.allclose(stat.min_values, ref_min_val)
             assert np.allclose(stat.max_values, ref_max_val)
+
+    def test_statistics_merging(self, dataset_samples, inplace_statistics):
+        algo_backend = self.get_algo_backend_cls()
+        model = self.get_backend_model(dataset_samples)
+        nncf_graph = NNCFGraphFactory.create(model)
+
+        quantizer_config = QuantizerConfig(mode=QuantizationMode.SYMMETRIC,
+                                           per_channel=False)
+        pre_layer_target_point = self.get_target_point(TargetType.PRE_LAYER_OPERATION)
+        pre_tensor_collector = algo_backend.minmax_statistic_collector(
+            nncf_graph=nncf_graph,
+            target_point=pre_layer_target_point,
+            quantizer_config=quantizer_config,
+            num_samples=len(dataset_samples),
+            inplace=inplace_statistics)
+
+        post_layer_target_point = self.get_target_point(TargetType.POST_LAYER_OPERATION)
+        post_tensor_collector = algo_backend.minmax_statistic_collector(
+            nncf_graph=nncf_graph,
+            target_point=post_layer_target_point,
+            quantizer_config=quantizer_config,
+            num_samples=len(dataset_samples),
+            inplace=inplace_statistics)
+        unique_post_tensor_collector = algo_backend.mean_minmax_statistic_collector(
+            nncf_graph=nncf_graph,
+            target_point=post_layer_target_point,
+            quantizer_config=quantizer_config,
+            use_per_sample_stats=False,
+            num_samples=len(dataset_samples),
+            inplace=inplace_statistics)
+
+        statistics_points = StatisticPointsContainer()
+        algorithm_names = ['AAA', 'BBB', 'CCC']
+        statistics_points.add_statistic_point(StatisticPoint(target_point=pre_layer_target_point,
+                                                             tensor_collector=pre_tensor_collector,
+                                                             algorithm=algorithm_names[0]))
+        statistics_points.add_statistic_point(StatisticPoint(target_point=post_layer_target_point,
+                                                             tensor_collector=post_tensor_collector,
+                                                             algorithm=algorithm_names[1]))
+        statistics_points.add_statistic_point(StatisticPoint(target_point=post_layer_target_point,
+                                                             tensor_collector=unique_post_tensor_collector,
+                                                             algorithm=algorithm_names[2]))
+        dataset = self.get_dataset(dataset_samples)
+        statistics_aggregator = self.get_statistics_aggregator(dataset)
+        statistics_aggregator.register_stastistic_points(statistics_points)
+        statistics_aggregator.collect_statistics(model)
+
+        for _, _, tensor_collector in statistics_points.get_tensor_collectors():
+            stat = tensor_collector.get_statistics()
+            ref_min_val, ref_max_val = -128., 128
+            if tensor_collector is unique_post_tensor_collector:
+                ref_min_val, ref_max_val = -63.5, 64.5
+            assert np.allclose(stat.min_values, ref_min_val)
+            assert np.allclose(stat.max_values, ref_max_val)

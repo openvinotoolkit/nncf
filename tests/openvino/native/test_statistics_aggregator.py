@@ -66,6 +66,8 @@ class TestStatisticsAggregator(TemplateTestStatisticsAggregator):
         if target_type == TargetType.OPERATION_WITH_WEIGHTS:
             target_node_name = CONV_NODE_NAME
             port_id = 1
+        if target_type == TargetType.PRE_LAYER_OPERATION:
+            target_node_name = CONV_NODE_NAME
         return OVTargetPoint(target_type, target_node_name, port_id)
 
     @pytest.fixture

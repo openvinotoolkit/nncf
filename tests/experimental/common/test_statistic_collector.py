@@ -1,3 +1,4 @@
+import pytest
 from typing import Optional
 import numpy as np
 
@@ -75,10 +76,12 @@ def test_duplicated_statistics_are_merged():
     collector = TensorCollector()
     reducer = DummyTensorReducer('Dummy')
     reducer_a = DummyTensorReducerA('A')
-    aggregator = DummyTensorAggregator(5)
     keys = 'ABC'
+    aggregators = []
     for key in keys:
+        aggregator = DummyTensorAggregator(5)
         collector.add_branch(key, reducer, aggregator)
+        aggregators.append(aggregator)
     aggregator_a = DummyTensorAggregatorA(1)
     aggregator_b = DummyTensorAggregator(100)
     collector.add_branch('D', reducer, aggregator_a)
@@ -96,8 +99,10 @@ def test_duplicated_statistics_are_merged():
     outputs = {'Dummy': np.array(5), 'A': np.array(0)}
     collector.register_inputs({reducer: outputs[name] for reducer, name in output_info})
 
-    # Check all aggregators recieved inputs
-    assert aggregator._collected_samples == 1
+    # Check aggregators recieved inputs as expected
+    assert aggregators[0]._collected_samples == 1
+    for aggregator in aggregators[1:]:
+        assert aggregator._collected_samples == 0
     assert aggregator_a._collected_samples == 1
     assert aggregator_b._collected_samples == 1
 
@@ -167,3 +172,22 @@ def test_merged_tensor_collector():
         assert len(statistic) == 2
         assert statistic['common'] == np.array(0)
         assert statistic['unique'] == np.array(idx + 1)
+
+
+def test_ambigous_container_key():
+    collector = TensorCollector()
+    reducer = DummyTensorReducer('Dummy')
+    aggregator = DummyTensorAggregator(5)
+    collector.add_branch('A', reducer, aggregator)
+    with pytest.raises(RuntimeError):
+        collector.add_branch('A', reducer, aggregator)
+
+
+def test_ambiguous_branches():
+    collector = TensorCollector()
+    reducer = DummyTensorReducer('Dummy')
+    reducer_a = DummyTensorReducerA('Dummy')
+    aggregator = DummyTensorAggregator(5)
+    collector.add_branch('A', reducer, aggregator)
+    with pytest.raises(RuntimeError):
+        collector.add_branch('B', reducer, aggregator)

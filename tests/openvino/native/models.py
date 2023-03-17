@@ -22,10 +22,10 @@ SYNTHETIC_MODELS = Registry('OV_SYNTHETIC_MODELS')
 
 
 class OVReferenceModel(ABC):
-    def __init__(self):
+    def __init__(self, **kwargs):
         self._rng = np.random.default_rng(seed=0)
         self.ref_graph_name = f'{self.__class__.__name__}.dot'
-        self.ov_model = self._create_ov_model()
+        self.ov_model = self._create_ov_model(**kwargs)
 
     @abstractmethod
     def _create_ov_model(self) -> ov.Model:
@@ -34,13 +34,25 @@ class OVReferenceModel(ABC):
 
 @SYNTHETIC_MODELS.register()
 class LinearModel(OVReferenceModel):
-    def _create_ov_model(self):
-        input_shape = [1, 3, 4, 2]
+    def _create_ov_model(self,
+                         input_shape=None,
+                         reshape_shape=None,
+                         matmul_w_shape=None,
+                         add_shape=None):
+        if input_shape is None:
+            input_shape = [1, 3, 4, 2]
+        if reshape_shape is None:
+            reshape_shape = (1, 3, 2, 4)
+        if matmul_w_shape is None:
+            matmul_w_shape = (1, 3, 4, 5)
+        if add_shape is None:
+            add_shape = (1, 3, 2, 4)
+
         input_1 = opset.parameter(input_shape, name="Input")
-        reshape = opset.reshape(input_1, (1, 3, 2, 4), special_zero=False, name='Reshape')
-        data = self._rng.random((1, 3, 4, 5)).astype(np.float32) - 0.5
+        reshape = opset.reshape(input_1, reshape_shape, special_zero=False, name='Reshape')
+        data = self._rng.random(matmul_w_shape).astype(np.float32) - 0.5
         matmul = opset.matmul(reshape, data, transpose_a=False, transpose_b=False, name="MatMul")
-        add = opset.add(reshape, self._rng.random((1, 3, 2, 4)).astype(np.float32), name="Add")
+        add = opset.add(reshape, self._rng.random(add_shape).astype(np.float32), name="Add")
         r1 = opset.result(matmul, name="Result_MatMul")
         # TODO(KodiaqQ): Remove this after fix - CVS-100010
         r1.get_output_tensor(0).set_names(set(["Result_MatMul"]))

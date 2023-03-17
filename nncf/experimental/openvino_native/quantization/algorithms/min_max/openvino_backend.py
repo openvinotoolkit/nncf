@@ -47,7 +47,6 @@ from nncf.experimental.openvino_native.hardware.config import OVHWConfig
 from nncf.experimental.openvino_native.quantization.default_quantization import DEFAULT_OV_QUANT_TRAIT_TO_OP_DICT
 from nncf.experimental.openvino_native.statistics.collectors import get_min_max_stat_collector
 from nncf.experimental.openvino_native.statistics.collectors import get_mean_min_max_stat_collector
-from nncf.experimental.openvino_native.quantization.quantizer_parameters import calculate_quantizer_parameters
 
 from nncf.quantization.algorithms.min_max.backend import MinMaxAlgoBackend
 from nncf.quantization.algorithms.min_max.backend import ALGO_BACKENDS

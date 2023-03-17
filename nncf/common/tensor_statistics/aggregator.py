@@ -19,7 +19,6 @@ from tqdm import tqdm
 
 from nncf.common.factory import ModelTransformerFactory
 from nncf.common.factory import EngineFactory
-from nncf.common.factory import NNCFGraphFactory
 from nncf.common.graph.transformations.layout import TransformationLayout
 from nncf.common.tensor import NNCFTensor
 from nncf.common.tensor_statistics.statistic_point import StatisticPointsContainer
@@ -47,9 +46,9 @@ class StatisticsAggregator(ABC):
         :param model: backend-specific model instance
         """
         model_transformer = ModelTransformerFactory.create(model)
-        nncf_graph = NNCFGraphFactory.create(model)
 
-        transformation_layout = self._get_transformation_layout_extra_outputs(self.statistic_points, nncf_graph)
+        merged_statistics = self._get_merged_statistic_points(self.statistic_points, model)
+        transformation_layout = self._get_transformation_layout_extra_outputs(merged_statistics)
         model_with_outputs = model_transformer.transform(transformation_layout)
         engine = EngineFactory.create(model_with_outputs)
 
@@ -57,7 +56,7 @@ class StatisticsAggregator(ABC):
                                total=self.stat_subset_size):
             outputs = engine.infer(input_data)
             processed_outputs = self._process_outputs(outputs)
-            self._register_statistics(processed_outputs, self.statistic_points)
+            self._register_statistics(processed_outputs, merged_statistics)
 
     def register_stastistic_points(self, statistic_points: StatisticPointsContainer) -> None:
         """
@@ -87,6 +86,9 @@ class StatisticsAggregator(ABC):
         :param outputs: prepared raw model outputs
         :param statistic_points: StatisticPointsContainer instance with the statistic points
         """
+
+    def _get_merged_statistic_points(self, statistic_points: StatisticPointsContainer, model: TModel):
+        return self.statistic_points
 
     @abstractmethod
     def _get_transformation_layout_extra_outputs(self,

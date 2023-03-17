@@ -31,7 +31,8 @@ from nncf.common.tensor_statistics.statistic_point import StatisticPoint
 from nncf.experimental.openvino_native.graph.transformations.commands import OVOutputInsertionCommand
 from nncf.experimental.openvino_native.tensor import OVNNCFTensor
 from nncf.experimental.common.tensor_statistics.collectors import MergedTensorCollector
-from nncf.experimental.openvino_native.graph.transformations.commands import OVInplaceStatisticInsertionCommand
+from nncf.experimental.openvino_native.graph.transformations.commands import OVInplaceFnInsertionCommand
+from nncf.experimental.openvino_native.graph.nncf_graph_builder import GraphConverter
 from nncf.experimental.openvino_native.tensor import OVNNCFTensor
 
 
@@ -67,15 +68,13 @@ class OVStatisticsAggregator(StatisticsAggregator):
             tensor_collector.register_inputs({reducer: outputs[name] for reducer, name in input_info})
 
     def _get_transformation_layout_extra_outputs(self,
-                                                 statistic_points: StatisticPointsContainer,
-                                                 nncf_graph: NNCFGraph) -> TransformationLayout:
-        self.statistic_points = self._get_merged_statistic_points(statistic_points, nncf_graph)
+                                                 statistic_points: StatisticPointsContainer) -> TransformationLayout:
         transformation_layout = TransformationLayout()
         transformation_commands = []
-        for _, statistic_point, tensor_collector in self.statistic_points.get_tensor_collectors():
+        for _, statistic_point, tensor_collector in statistic_points.get_tensor_collectors():
             for op_fn in tensor_collector.get_inplace_fn():
                 transformation_commands.append(
-                    OVInplaceStatisticInsertionCommand(statistic_point.target_point, op_fn))
+                    OVInplaceFnInsertionCommand(statistic_point.target_point, op_fn))
             if tensor_collector.any_stat_out_of_place():
                 transformation_commands.append(OVOutputInsertionCommand(statistic_point.target_point))
 
@@ -86,7 +85,8 @@ class OVStatisticsAggregator(StatisticsAggregator):
 
     @staticmethod
     #TODO(dlyakhov) Move this to common part
-    def _get_merged_statistic_points(statistic_points: StatisticPointsContainer, nncf_graph: NNCFGraph):
+    def _get_merged_statistic_points(statistic_points: StatisticPointsContainer, model: ov.Model):
+        nncf_graph = GraphConverter.create_nncf_graph(model)
         merged_statistic_points = StatisticPointsContainer()
         target_type_to_tensor_collector_map = defaultdict(lambda: defaultdict(list))
         for target_node_name, _statistic_points in statistic_points.data.items():

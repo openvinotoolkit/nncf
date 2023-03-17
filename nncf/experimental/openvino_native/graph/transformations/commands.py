@@ -21,9 +21,6 @@ from nncf.common.graph.transformations.commands import Command
 from nncf.common.graph.transformations.commands import TransformationCommand
 from nncf.common.graph.transformations.commands import TransformationType
 from nncf.quantization.fake_quantize import FakeQuantizeParameters
-from nncf.quantization.algorithms.algorithm import Algorithm
-from nncf.common.tensor_statistics.collectors import TensorReducerBase
-from nncf.experimental.openvino_native.quantization.quantizer_parameters import OVQuantizerLayerParameters
 
 
 class OVTargetPoint(TargetPoint):
@@ -71,7 +68,7 @@ class OVOutputInsertionCommand(OVInsertionCommand):
         raise NotImplementedError()
 
 
-class OVInplaceStatisticInsertionCommand(OVInsertionCommand):
+class OVInplaceFnInsertionCommand(OVInsertionCommand):
     def __init__(self, target_point: OVTargetPoint,
                  inplace_op_fn: 'TensorCollectorSpecBase'):
         super().__init__(target_point)

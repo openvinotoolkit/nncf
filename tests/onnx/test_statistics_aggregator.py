@@ -78,3 +78,7 @@ class TestStatisticsAggregator(TemplateTestStatisticsAggregator):
     @pytest.fixture(params=[False], ids=['out_of_palce'])
     def inplace_statistics(self, request) -> bool:
         return request.param
+
+    @pytest.mark.skip('Merging is not implemented yet')
+    def test_statistics_merging(self, dataset_samples, inplace_statistics):
+        pass

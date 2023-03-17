@@ -132,7 +132,7 @@ def get_reduce_node_name(output_name: str, node_type: str) -> str:
 
 
 def get_inplace_reduce_op(op, node_type, reduction_axes, use_abs):
-    def get_reduce_op(node):
+    def get_reduce_op(node, output_port_id):
         output_name = node.get_friendly_name()
         if use_abs:
             op_input = opset.abs(node, name=get_reduce_node_name(output_name, 'abs'))
@@ -141,25 +141,31 @@ def get_inplace_reduce_op(op, node_type, reduction_axes, use_abs):
 
         reduction_axes_ = reduction_axes
         if reduction_axes_ is None:
-            reduction_axes_ = np.array(range(len(node.shape)))
+            partial_shape = get_partial_shape_safe(node, output_port_id)
+            reduction_axes_ = np.array(range(partial_shape.rank.get_length()))
 
         return op(op_input, reduction_axes=reduction_axes_,
                   keep_dims=True, name=get_reduce_node_name(output_name, node_type))
     return get_reduce_op
 
 
-def get_inplace_min_op(reduction_shape):
-    return get_inplace_reduce_op(opset.reduce_min, 'min', reduction_shape, False)
+def get_inplace_min_op(node_type, reduction_shape):
+    return get_inplace_reduce_op(opset.reduce_min, node_type, reduction_shape, False)
 
 
-def get_inplace_max_op(reduction_shape, use_abs_max):
-    return get_inplace_reduce_op(opset.reduce_max, 'max', reduction_shape, use_abs_max)
+def get_inplace_max_op(node_type, reduction_shape, use_abs_max):
+    return get_inplace_reduce_op(opset.reduce_max, node_type, reduction_shape, use_abs_max)
 
 
-def get_inplace_mean_per_ch(axis: int, op_type: str):
-    def get_op(node: ov.Node):
+def get_inplace_batch_mean_op(node_type):
+    return get_inplace_reduce_op(opset.reduce_mean, node_type, np.array(0), False)
+
+
+def get_inplace_mean_per_ch(op_type: str, axis: int):
+    def get_op(node: ov.Node, output_port_id):
         output_name = node.get_friendly_name()
-        input_shape = node.shape
+        input_shape = get_partial_shape_safe(node, output_port_id)
+        input_shape = [dim.get_length() if dim.is_static else -1 for dim in input_shape]
         if len(input_shape) < 3:
             return opset.reduce_mean(node,
                                      reduction_axes=0,
@@ -169,7 +175,7 @@ def get_inplace_mean_per_ch(axis: int, op_type: str):
         ch_dim = 1
         if axis != ch_dim:
             transpose_dims = list(range(len(input_shape)))
-            transpose_dims[axis], transpose_dims[1] = transpose_dims[1], transpose_dims[axis]
+            transpose_dims[axis], transpose_dims[ch_dim] = transpose_dims[ch_dim], transpose_dims[axis]
             transposed_shape = [input_shape[dim] for dim in transpose_dims]
 
             reshape_input_node  = opset.transpose(node, transpose_dims)
@@ -177,11 +183,26 @@ def get_inplace_mean_per_ch(axis: int, op_type: str):
             reshape_input_node = node
             transposed_shape = input_shape
 
+        keeped_dims = transposed_shape[:2]
+        squized_dims = -1 if -1 in transposed_shape[2:] else np.prod(transposed_shape[2:])
+        if (-1 in keeped_dims and squized_dims == -1) or keeped_dims.count(-1) > 1:
+            raise RuntimeError(f'Could not insert mean_per_ch operation inplace'
+                               f' for the node {node} because of input_shape:'
+                               f' input_shape: {input_shape} -> transposed_shape: {transposed_shape}')
+
         reshape_op = opset.reshape(reshape_input_node,
-                                   output_shape=np.array((transposed_shape[0], transposed_shape[1], -1)),
+                                   output_shape=np.array((keeped_dims[0], keeped_dims[1], squized_dims)),
                                    special_zero=False)
         return opset.reduce_mean(reshape_op,
                                  reduction_axes=np.array((0, 2)),
                                  keep_dims=False,
                                  name=get_reduce_node_name(output_name, op_type))
     return get_op
+
+
+def get_partial_shape_safe(node, port_id) -> int:
+    partial_shape = node.get_output_partial_shape(port_id)
+    if partial_shape.rank.is_dynamic or not partial_shape.all_non_negative:
+        raise RuntimeError(f'Could not collect statistics for the node {node}'
+                           f'because its ouput shape rank is dynamic or negative')
+    return partial_shape

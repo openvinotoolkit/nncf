@@ -32,11 +32,11 @@ class TemplateTestPTQParams:
         pass
 
     @abstractmethod
-    def get_min_max_statistic_collector_cls(self):
+    def check_is_min_max_statistic_collector(self, tensor_collector):
         pass
 
     @abstractmethod
-    def get_mean_max_statistic_collector_cls(self):
+    def check_is_mean_min_max_statistic_collector(self, tensor_collector):
         pass
 
     @abstractmethod
@@ -70,15 +70,15 @@ class TemplateTestPTQParams:
                 for tensor_collector in stat_point_.algorithm_to_tensor_collectors[MinMaxQuantization]:
                     if stat_point_.target_point.is_weight_target_point():
                         # default tensor_collector for weights
-                        assert isinstance(tensor_collector, self.get_min_max_statistic_collector_cls())
+                        self.check_is_min_max_statistic_collector(tensor_collector)
                         continue
                     if range_type is None:
                         # default tensor_collector for per-tensor
-                        assert isinstance(tensor_collector, self.get_mean_max_statistic_collector_cls())
+                        self.check_is_mean_min_max_statistic_collector(tensor_collector)
                     if range_type == RangeType.MINMAX:
-                        assert isinstance(tensor_collector, self.get_min_max_statistic_collector_cls())
+                        self.check_is_min_max_statistic_collector(tensor_collector)
                     elif range_type == RangeType.MEAN_MINMAX:
-                        assert isinstance(tensor_collector, self.get_mean_max_statistic_collector_cls())
+                        self.check_is_mean_min_max_statistic_collector(tensor_collector)
 
     @pytest.mark.parametrize('range_type', [RangeType.MINMAX, RangeType.MEAN_MINMAX, None])
     def test_range_type_per_channel(self, test_params, range_type):
@@ -95,7 +95,7 @@ class TemplateTestPTQParams:
             for stat_point_ in stat_point:
                 for tensor_collector in stat_point_.algorithm_to_tensor_collectors[MinMaxQuantization]:
                     # Range_type does not affect per-channel tensor_collector
-                    assert isinstance(tensor_collector, self.get_min_max_statistic_collector_cls())
+                    self.check_is_min_max_statistic_collector(tensor_collector)
 
     @pytest.mark.parametrize('quantize_outputs', [False, True])
     def test_quantize_outputs(self, test_params, quantize_outputs):

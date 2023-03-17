@@ -92,7 +92,7 @@ class TensorAggregatorBase:
         return cls.__name__
 
     def register_reduced_input(self, x: TensorType):
-        if self._num_samples is not None and\
+        if self._num_samples is not None and \
             self._collected_samples >= self._num_samples:
             return
         self._register_reduced_input_impl(x)
@@ -110,7 +110,7 @@ class TensorAggregatorBase:
         self._container = []
 
     def __eq__(self, __o: object) -> bool:
-        return isinstance(__o, self.__class__) and\
+        return isinstance(__o, self.__class__) and \
             self._num_samples == __o.num_samples
 
     def __hash__(self) -> int:
@@ -152,13 +152,28 @@ class TensorCollector:
 
     def add_branch(self, container_key: str,
                    reducer: TensorReducerBase, aggregator: TensorAggregatorBase) -> None:
+        """
+        Registers statistic collection branch for a container key. Correspondent input will be reduced
+        by given reducer and reduced value will be registered and aggregated by given aggregator.
+        Passed container key should be unique for the TensorCollector instance.
+        Passed aggregator instance should never be used twice for one TensorCollector instance.
+
+        :param container_key: Container key to pass aggregated statistic to.
+        :param reducer: TensorReducer instance for the statistic collection branch.
+        :param aggregator: TensorAggergator instance for the statistic collection branch.
+        """
+        if container_key in self._stat_container_kwargs_map:
+            raise RuntimeError(f'Two differend statistic branches for one'
+                               f' container key {container_key} are encountered')
+        if any(aggr is aggregator for aggr in self._aggregators.values()):
+            raise RuntimeError(f'One aggregator instance {aggregator} '
+                               f' for different branches is encountered')
+
         self._reducers.add(reducer)
         key = (hash(reducer), hash(aggregator))
+
         if key not in self._aggregators:
             self._aggregators[key] = aggregator
-        if container_key in self._stat_container_kwargs_map:
-            raise RuntimeError(f'Two differend statistics for one'
-                               f' container key {container_key} are encountered')
         self._stat_container_kwargs_map[container_key] = key
 
     def get_output_info(self, target_node_name: str, port_id: int) -> List[str]:

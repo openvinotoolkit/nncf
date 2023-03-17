@@ -34,7 +34,7 @@ from nncf.common.graph.transformations.commands import TargetType
 from nncf.quantization.fake_quantize import FakeQuantizeParameters
 from nncf.experimental.openvino_native.graph.transformations.commands import OVQuantizerInsertionCommand
 from nncf.experimental.openvino_native.graph.transformations.commands import OVOutputInsertionCommand
-from nncf.experimental.openvino_native.graph.transformations.commands import OVInplaceStatisticInsertionCommand
+from nncf.experimental.openvino_native.graph.transformations.commands import OVInplaceFnInsertionCommand
 from nncf.experimental.openvino_native.graph.transformations.commands import OVModelExtractionCommand
 from nncf.experimental.openvino_native.graph.transformations.commands import OVBiasCorrectionCommand
 from nncf.experimental.openvino_native.graph.transformations.commands import OVFQNodeRemovingCommand
@@ -91,7 +91,7 @@ class OVModelTransformer(ModelTransformer):
         for transformation in transformations:
             if isinstance(transformation, OVOutputInsertionCommand):
                 output_insertion_transformations.append(transformation)
-            if isinstance(transformation, OVInplaceStatisticInsertionCommand):
+            if isinstance(transformation, OVInplaceFnInsertionCommand):
                 inplace_stat_transformations.append(transformation)
             elif isinstance(transformation, OVFQNodeRemovingCommand):
                 fq_nodes_removing_transformations.append(transformation)
@@ -396,7 +396,7 @@ class OVModelTransformer(ModelTransformer):
 
     @staticmethod
     def _apply_inplace_operation_insertion(model: ov.Model,
-                                           transformations: OVInplaceStatisticInsertionCommand):
+                                           transformations: OVInplaceFnInsertionCommand):
         name_to_node_mapping = OVModelTransformer._get_name_to_node_mapping(model)
         outputs = []
         for transformation in transformations:
@@ -405,7 +405,7 @@ class OVModelTransformer(ModelTransformer):
         return OVModelTransformer._insert_outputs(model, outputs)
 
     @staticmethod
-    def _insert_inplace_operation(transformation: OVInplaceStatisticInsertionCommand,
+    def _insert_inplace_operation(transformation: OVInplaceFnInsertionCommand,
                                    name_to_node_mapping: Dict[str, ov.Node]) -> None:
         transform_type = transformation.target_point.type
 
@@ -413,13 +413,12 @@ class OVModelTransformer(ModelTransformer):
         target_node = name_to_node_mapping[node_name]
         port_id = transformation.target_point.port_id
         if transform_type == TargetType.POST_LAYER_OPERATION:
-            new_node = transformation.inplace_op_fn(target_node)
+            new_node = transformation.inplace_op_fn(target_node, port_id)
             return (new_node.output(0), port_id)
         elif transform_type in [TargetType.PRE_LAYER_OPERATION,
                                 TargetType.OPERATION_WITH_WEIGHTS]:
-            inp_node = target_node.input(port_id)
-            input_node = inp_node.get_source_output().get_node()
-            new_node = transformation.inplace_op_fn(input_node)
+            source_output = target_node.input(port_id).get_source_output()
+            new_node = transformation.inplace_op_fn(source_output.get_node(), source_output.get_index())
             return (new_node.output(0), port_id)
         else:
             raise RuntimeError(f'Transform type {transform_type} is not supported')

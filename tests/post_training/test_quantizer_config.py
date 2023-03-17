@@ -29,6 +29,10 @@ from nncf.quantization.algorithms.definitions import RangeType
 from nncf.quantization.algorithms.post_training.algorithm import PostTrainingQuantization
 from nncf.quantization.algorithms.post_training.algorithm import PostTrainingQuantizationParameters
 from nncf.quantization.algorithms.definitions import Granularity
+from nncf.experimental.common.tensor_statistics.collectors import TensorCollector
+from nncf.experimental.common.tensor_statistics.collectors import MinReducer
+from nncf.experimental.common.tensor_statistics.collectors import MaxReducer
+from nncf.experimental.common.tensor_statistics.collectors import AbsMaxReducer
 
 from tests.post_training.models import NNCFGraphToTest
 from tests.post_training.models import NNCFGraphToTestDepthwiseConv
@@ -41,11 +45,11 @@ class TemplateTestQuantizerConfig:
         pass
 
     @abstractmethod
-    def get_min_max_statistic_collector_cls(self):
+    def check_is_min_max_statistic_collector(self, tensor_collector):
         pass
 
     @abstractmethod
-    def get_mean_max_statistic_collector_cls(self):
+    def check_is_mean_min_max_statistic_collector(self, tensor_collector):
         pass
 
     @abstractmethod
@@ -198,21 +202,35 @@ class TemplateTestQuantizerConfig:
         is_weight_tp = target_point.is_weight_target_point()
         # tensor_collector type check
         if is_weight_tp or q_config_per_channel:
-            assert isinstance(tensor_collector, self.get_min_max_statistic_collector_cls())
+            self.check_is_min_max_statistic_collector(tensor_collector)
         else:
             if range_type == RangeType.MINMAX:
-                assert isinstance(tensor_collector, self.get_min_max_statistic_collector_cls())
+                self.check_is_min_max_statistic_collector(tensor_collector)
             elif range_type == RangeType.MEAN_MINMAX:
-                assert isinstance(tensor_collector, self.get_mean_max_statistic_collector_cls())
+                self.check_is_mean_min_max_statistic_collector(tensor_collector)
 
         # reduction_shape check
-        if q_config_per_channel:
-            assert tensor_collector._reduction_shape == params.ref_per_ch_reduction_shape
+        #TODO(dlyakhov): remove this if state after PTQ experimental TensorCollector migration
+        if isinstance(tensor_collector, TensorCollector):
+            reducers = tensor_collector.reducers
+            assert len(reducers) == 2
+            # use_abs_max check
+            assert any(isinstance(r, MinReducer) for r in reducers)
+            if q_config_mode == QuantizationMode.SYMMETRIC:
+                assert any(isinstance(r, AbsMaxReducer) for r in reducers)
+            elif q_config_mode == QuantizationMode.ASYMMETRIC:
+                assert any(isinstance(r, MaxReducer) for r in reducers)
         else:
-            assert tensor_collector._reduction_shape == params.ref_per_tensor_reduction_shape
+            # use_abs_max check
+            if q_config_mode == QuantizationMode.SYMMETRIC:
+                assert tensor_collector._use_abs_max
+            elif q_config_mode == QuantizationMode.ASYMMETRIC:
+                assert not tensor_collector._use_abs_max
+            reducers = [tensor_collector]
 
-        # use_abs_max check
-        if q_config_mode == QuantizationMode.SYMMETRIC:
-            assert tensor_collector._use_abs_max
-        elif q_config_mode == QuantizationMode.ASYMMETRIC:
-            assert not tensor_collector._use_abs_max
+        for reducer in reducers:
+            if q_config_per_channel:
+                assert reducer._reduction_shape == params.ref_per_ch_reduction_shape
+            else:
+                assert reducer._reduction_shape == params.ref_per_tensor_reduction_shape
+

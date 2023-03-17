@@ -12,7 +12,6 @@
 """
 
 from typing import Union, List, Deque
-import openvino.runtime.opset9 as opset
 
 import numpy as np
 
@@ -37,7 +36,9 @@ from nncf.experimental.openvino_native.statistics.statistics import OVMeanTensor
 from nncf.experimental.openvino_native.statistics.statistics import OVBatchTensorStatistic
 from nncf.experimental.openvino_native.graph.node_utils import get_reduce_node_name
 from nncf.experimental.openvino_native.graph.node_utils import get_result_node_name
-from nncf.experimental.openvino_native.graph.node_utils import get_inplace_reduce_op
+from nncf.experimental.openvino_native.graph.node_utils import get_inplace_max_op
+from nncf.experimental.openvino_native.graph.node_utils import get_inplace_min_op
+from nncf.experimental.openvino_native.graph.node_utils import get_inplace_batch_mean_op
 from nncf.experimental.openvino_native.graph.node_utils import get_inplace_mean_per_ch
 
 
@@ -107,8 +108,7 @@ class OVMinReducer(MinReducer):
         return OVNNCFCollectorTensorProcessor
 
     def get_inplace_fn(self):
-        return get_inplace_reduce_op(opset.reduce_min, self.NAME,
-                                     self._reduction_shape, False)
+        return get_inplace_min_op(self.NAME, self._reduction_shape)
 
     def get_output_name(self, target_node_name: str, port_id: int) -> str:
         if self.inplace:
@@ -122,8 +122,7 @@ class OVMaxReducer(MaxReducer):
         return OVNNCFCollectorTensorProcessor
 
     def get_inplace_fn(self):
-        return get_inplace_reduce_op(opset.reduce_max, self.NAME,
-                                     self._reduction_shape, False)
+        return get_inplace_max_op(self.NAME, self._reduction_shape, False)
 
     def get_output_name(self, target_node_name: str, port_id: int) -> str:
         if self.inplace:
@@ -137,8 +136,7 @@ class OVAbsMaxReducer(AbsMaxReducer):
         return OVNNCFCollectorTensorProcessor
 
     def get_inplace_fn(self):
-        return get_inplace_reduce_op(opset.reduce_max, self.NAME,
-                                     self._reduction_shape, True)
+        return get_inplace_max_op(self.NAME, self._reduction_shape, True)
 
     def get_output_name(self, target_node_name: str, port_id: int) -> str:
         if self.inplace:
@@ -152,8 +150,7 @@ class OVBatchMeanReducer(BatchMeanReducer):
         return OVNNCFCollectorTensorProcessor
 
     def get_inplace_fn(self):
-        return get_inplace_reduce_op(opset.reduce_mean, self.NAME,
-                                     np.array(0), False)
+        return get_inplace_batch_mean_op(self.NAME)
 
     def get_output_name(self, target_node_name: str, port_id: int) -> str:
         if self.inplace:
@@ -167,7 +164,7 @@ class OVMeanPerChanelReducer(MeanPerChReducer):
         return OVNNCFCollectorTensorProcessor
 
     def get_inplace_fn(self):
-        return get_inplace_mean_per_ch(self._reduction_shape, self.NAME)
+        return get_inplace_mean_per_ch(self.NAME, self._reduction_shape)
 
     def get_output_name(self, target_node_name: str, port_id: int) -> str:
         if self.inplace:
@@ -240,7 +237,7 @@ def get_mean_stat_collector(num_samples, reduction_shape, window_size=None, inpl
 
 def get_mean_batch_stat_collector(num_samples, inplace=True):
     #TODO(dlyakhov): use inplace OVBatchMeanReducer
-    # after migration on openvino-dev=2023.1
+    # after migration on openvino-dev=2023.0
     inplace = False
     reducer = OVBatchMeanReducer(inplace=inplace)
     aggregator = NoopAggregator(num_samples)
