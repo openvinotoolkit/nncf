@@ -34,14 +34,14 @@ def test_get_weight_value_const_with_convert():
     assert actual_value.dtype == np.uint16
 
 
-@pytest.mark.parametrize('model_to_create, is_with_bias, node_name', [[ConvNotBiasModel, False, 'Conv'],
+@pytest.mark.parametrize('model_to_create, is_with_bias, node_name', [[ConvNotBiasModel, True, 'Conv'],
                                                                       [ConvModel, True, 'Conv'],
                                                                       # TODO: add group conv to node with bias
                                                                       # [DepthwiseConv3DModel, True, 'Conv3D'],
                                                                       # [DepthwiseConv4DModel, True, 'Conv4D'],
                                                                       # [DepthwiseConv5DModel, True, 'Conv5D'],
                                                                       [MatMul2DModel, True, 'MatMul'],
-                                                                      [MatMul2DNotBiasModel, False, 'MatMul']])
+                                                                      [MatMul2DNotBiasModel, True, 'MatMul']])
 def test_is_node_with_bias(model_to_create, is_with_bias, node_name):
     model = model_to_create().ov_model
     nncf_graph = GraphConverter.create_nncf_graph(model)
