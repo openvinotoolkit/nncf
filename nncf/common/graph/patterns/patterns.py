@@ -386,5 +386,5 @@ class PatternNames(Enum):
                                                                 TargetDevice.CPU,
                                                                 TargetDevice.GPU])
 
-    # MODEL TYPE PATTERNS
+    # TRANSFORMERS
     MATMUL_SOFTMAX_MATMUL = PatternDesc('matmul_softmax_matmul')

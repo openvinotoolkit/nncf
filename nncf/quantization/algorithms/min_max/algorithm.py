@@ -356,7 +356,7 @@ class MinMaxQuantization(Algorithm):
         device = self._parameters.target_device
         pattern = PatternsManager.get_full_pattern_graph(backend, device)
         quantizer_setup = self._get_quantizer_setup(nncf_graph, pattern)
-        self._apply_model_type_pass(self._parameters.model_type, quantizer_setup, nncf_graph, device)
+        self._apply_model_type_pass(self._parameters.model_type, quantizer_setup, nncf_graph)
         for quantization_point in quantizer_setup.quantization_points.values():
             if quantization_point.is_weight_quantization_point():
                 self._add_weight_quantization_target_point(quantization_point, nncf_graph)
@@ -427,19 +427,16 @@ class MinMaxQuantization(Algorithm):
         return output
 
     def _apply_model_type_pass(self, model_type: Optional[ModelType], quantizer_setup: SingleConfigQuantizerSetup,
-                               nncf_graph: NNCFGraph, device: TargetDevice) -> None:
+                               nncf_graph: NNCFGraph) -> None:
         """
         Applies changes in-place into quantizer setup based on model_type and device parameters.
 
         :param model_type: Model type parameter.
         :param quantizer_setup: Quantizer setup which considered to update.
         :param nncf_graph: Instance of NNCFGraph.
-        :param device: Target device.
         :return: None
         """
-        if model_type == ModelType.TRANSFORMER and device in [TargetDevice.ANY, TargetDevice.CPU,
-                                                              TargetDevice.CPU_SPR, TargetDevice.GPU,
-                                                              TargetDevice.VPU]:
+        if model_type == ModelType.TRANSFORMER:
             for quantization_point in quantizer_setup.quantization_points.values():
                 if quantization_point.is_activation_quantization_point():
                     for node_name in quantization_point.directly_quantized_operator_node_names:
