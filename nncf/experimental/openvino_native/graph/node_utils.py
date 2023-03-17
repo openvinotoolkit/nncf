@@ -22,14 +22,12 @@ from nncf.experimental.openvino_native.graph.metatypes.openvino_metatypes import
 from nncf.experimental.openvino_native.graph.metatypes.openvino_metatypes import OVConvertMetatype
 from nncf.experimental.openvino_native.graph.metatypes.openvino_metatypes import OVConstantMetatype
 from nncf.experimental.openvino_native.graph.metatypes.openvino_metatypes import OPERATIONS_WITH_BIAS_METATYPES
-from nncf.experimental.openvino_native.graph.metatypes.openvino_metatypes import METATYPE_TO_CHANNEL_AXIS
 from nncf.experimental.openvino_native.graph.nncf_graph_builder import OVConstantLayerAttributes
 
 
 def is_node_with_bias(node: NNCFNode, nncf_graph: NNCFGraph) -> bool:
     """
     Checks if the node has a bias or not.
-    Bias is a tensor with the shape 1 at every dim except batch and channel axis of output tensor.
 
     :param node: The node to check.
     :param nncf_graph: NNCFGraph instance.
@@ -45,22 +43,7 @@ def is_node_with_bias(node: NNCFNode, nncf_graph: NNCFGraph) -> bool:
         return False
 
     bias_constant = get_node_with_bias_value(add_node, nncf_graph)
-    if bias_constant is None:
-        return False
-
-    channel_axis = METATYPE_TO_CHANNEL_AXIS[node.metatype]
-    probable_bias_shape = add_node.layer_attributes.const_shape
-    probable_bias_ndim = len(probable_bias_shape)
-    positive_channel_axis = range(probable_bias_ndim)[channel_axis]
-    # Checks whether all indices except 0 and channel_axis equal 1
-    for i in range(1, probable_bias_ndim):
-        if i == positive_channel_axis:
-            continue
-        if probable_bias_shape[i] != 1:
-            return False
-
-    edge = nncf_graph.get_edge(node, add_node)
-    return edge.tensor_shape[positive_channel_axis] == probable_bias_shape[positive_channel_axis]
+    return bias_constant is not None
 
 
 def get_bias_value(node_with_bias: NNCFNode, nncf_graph: NNCFGraph, model: ov.Model) -> np.ndarray:
@@ -77,7 +60,9 @@ def get_bias_value(node_with_bias: NNCFNode, nncf_graph: NNCFGraph, model: ov.Mo
     add_node = nncf_graph.get_next_nodes(node_with_bias)[0]
     bias_constant = get_node_with_bias_value(add_node , nncf_graph)
     ov_bias_constant = ops_dict[bias_constant.node_name]
-    return ov_bias_constant.get_vector()
+    flatten_vector = ov_bias_constant.constant.data
+    vector = np.reshape(flatten_vector, newshape=ov_bias_constant.get_output_shape(0))
+    return vector
 
 
 def get_weight_value(node_with_weight: NNCFNode, nncf_graph: NNCFGraph, model: ov.Model) -> np.ndarray:
