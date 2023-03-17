@@ -284,7 +284,7 @@ class FastBiasCorrection(Algorithm):
         q_outputs_mean = self._backend_entity.tensor_processor.mean_per_channel(q_outputs, channel_axis).tensor
         bias_shift = np.array(output_fp) - q_outputs_mean
         for i in range(q_outputs.tensor.ndim):
-            if i != channel_axis: 
+            if i != channel_axis:
                 bias_shift = np.expand_dims(bias_shift, i)
         return bias_shift
 

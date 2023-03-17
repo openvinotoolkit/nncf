@@ -21,9 +21,6 @@ from nncf.common.factory import NNCFGraphFactory
 from tests.openvino.native.models import FPModel
 from tests.openvino.native.models import ConvNotBiasModel
 from tests.openvino.native.models import ConvModel
-from tests.openvino.native.models import DepthwiseConv3DModel
-from tests.openvino.native.models import DepthwiseConv4DModel
-from tests.openvino.native.models import DepthwiseConv5DModel
 from tests.openvino.native.models import MatMul2DModel
 from tests.openvino.native.models import MatMul2DNotBiasModel
 

@@ -87,7 +87,7 @@ class ONNXFastBiasCorrectionAlgoBackend(FastBiasCorrectionAlgoBackend):
             blob[:, i] = value
         blob = blob.astype(data[0].dtype)
         return blob
-        
+
     @staticmethod
     def get_bias_value(node: NNCFNode, nncf_graph: NNCFGraph, model: onnx.ModelProto) -> np.ndarray:
         return get_bias_value(node, model)
