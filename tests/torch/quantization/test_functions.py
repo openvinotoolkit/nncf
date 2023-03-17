@@ -20,6 +20,7 @@ import torch
 from torch.autograd import Variable
 from torch.distributions.uniform import Uniform
 
+from nncf.common.quantization.structs import QuantizationMode
 from nncf.torch.quantization.quantize_functions import asymmetric_quantize
 from nncf.torch.quantization.quantize_functions import get_scale_zp_from_input_low_input_high
 from nncf.torch.quantization.quantize_functions import symmetric_quantize
@@ -220,12 +221,9 @@ def check_outputs_for_quantization_functions(test_val: torch.Tensor, ref_val: np
                           [16, 576, 14, 14]],
                          ids=idfn)
 @pytest.mark.parametrize('bits', (8, 4), ids=('8bit', '4bit'))
-@pytest.mark.parametrize("use_cuda", [False, True], ids=['cpu', 'cuda'])
 @pytest.mark.parametrize('scale_mode', ["single_scale", "per_channel_scale"])
-@pytest.mark.parametrize("is_weights", (True, False), ids=('weights', 'activation'))
 @pytest.mark.parametrize("is_fp16", (True, False), ids=('fp16', 'fp32'))
 class TestParametrized:
-    @pytest.mark.parametrize("is_signed", (True, False), ids=('signed', 'unsigned'))
     class TestSymmetric:
         @staticmethod
         def generate_scale(input_size, scale_mode, is_weights, is_fp16, fixed=None):
@@ -555,7 +553,6 @@ class TestParametrized:
                                                      rtol=1e-2 if is_fp16 else 1e-3)
 
 
-@pytest.mark.parametrize('quantization_mode', ['symmetric', 'asymmetric'])
 @pytest.mark.parametrize('device', ['cuda', 'cpu'])
 def test_mapping_to_zero(quantization_mode, device):
     torch.manual_seed(42)
@@ -567,7 +564,7 @@ def test_mapping_to_zero(quantization_mode, device):
     eps = 1e-6
     number_of_samples = 100
 
-    if quantization_mode == 'symmetric':
+    if quantization_mode == QuantizationMode.SYMMETRIC:
         level_low = -128
         level_high = 127
 

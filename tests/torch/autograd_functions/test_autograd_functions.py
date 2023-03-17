@@ -10,8 +10,8 @@
  See the License for the specific language governing permissions and
  limitations under the License.
 """
-from dataclasses import dataclass
 import math
+from dataclasses import dataclass
 
 import pytest
 import torch
@@ -33,7 +33,6 @@ class STThresholdTestCase:
     ref_output_tensor: torch.Tensor
 
 
-@pytest.mark.parametrize("use_cuda", [True, False])
 @pytest.mark.parametrize("requires_grad", [True, False])
 class TestAutogradFunction:
     @pytest.fixture(autouse=True)
