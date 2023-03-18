@@ -153,8 +153,9 @@ class FastBiasCorrection(Algorithm):
                 output_fp=output_fp,
                 output_name=sub_output_name)
 
-            axes = [i for i in range(bias_value.ndim) if i != channel_axis]
-            bias_shift = np.expand_dims(bias_shift, axes)
+            if bias_value.ndim > 1:
+                axes = [i for i in range(bias_value.ndim) if i != channel_axis]
+                bias_shift = np.expand_dims(bias_shift, axes)
 
             updated_bias = bias_value + bias_shift
             magnitude = self._get_bias_shift_magnitude(bias_value, updated_bias)
@@ -289,6 +290,7 @@ class FastBiasCorrection(Algorithm):
         q_outputs = self._backend_entity.process_model_output(raw_output, output_name)
         q_outputs = self._backend_entity.tensor_processor.mean_per_channel(q_outputs, channel_axis).tensor
         bias_shift = np.array(output_fp) - q_outputs
+        
         return bias_shift
 
     @staticmethod
