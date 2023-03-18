@@ -34,6 +34,7 @@ def export_model(compression_ctrl: PTCompressionAlgorithmController, config: Sam
         input_shape = tuple([1] + list(info.shape)[1:])
         input_tensor_list.append(torch.rand(input_shape))
 
-    torch.onnx.export(inference_model, tuple(input_tensor_list), save_path, input_names=input_names)
+    with torch.no_grad():
+        torch.onnx.export(inference_model, tuple(input_tensor_list), save_path, input_names=input_names)
 
     logger.info(f'Saved to {save_path}')
