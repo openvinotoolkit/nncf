@@ -61,7 +61,7 @@ def get_bias_value(node_with_bias: NNCFNode, nncf_graph: NNCFGraph, model: ov.Mo
     bias_constant = get_node_with_bias_value(add_node , nncf_graph)
     ov_bias_constant = ops_dict[bias_constant.node_name]
     flatten_vector = ov_bias_constant.get_vector()
-    vector = np.reshape(flatten_vector, newshape=ov_bias_constant.get_output_shape(0))
+    vector = np.reshape(flatten_vector, newshape=ov_bias_constant.get_data().shape)
     return vector
 
 
