@@ -221,18 +221,18 @@ def get_points_near_of_mid_points(input_data: np.array, mid_points: np.array, at
     return is_near_mid_point
 
 
-def generate_lazy_sweep_data(shape: Tuple[int], min: float = -1.0, max: float = 1.0):
+def generate_lazy_sweep_data(shape: Tuple[int], min_val: float = -1.0, max_val: float = 1.0):
     """
     Generate tensor that contains sweep values from -1.0 to 1.0.
 
     :param shape: Shape of generate tensor.
-    :param min: Min value of generated data.
-    :param max: Max value of generated data.
+    :param min_val: Min value of generated data.
+    :param max_val: Max value of generated data.
 
     :return torch.Tensor: Generated tensor.
     """
     n = np.prod(list(shape))
-    res = np.array(range(n)) / (n - 1) * (max - min) + min
+    res = np.array(range(n)) / (n - 1) * (max_val - min_val) + min_val
     res[n // 2] = 0.0
     return res.reshape(shape)
 
@@ -425,7 +425,7 @@ def visualization(
     :param save_to_file: Save plot to file as image, defaults to None.
     """
     import pandas as pd
-    import plotly.express as px
+    import plotly.express as px  # pylint:disable=import-error
 
     column_names = list(data.keys())
     for column in column_names:
@@ -434,8 +434,8 @@ def visualization(
     df = pd.DataFrame.from_dict(data)
     df["X"] = df[x_column if x_column else column_names[0]]
 
-    fig = px.scatter(data_frame=df, x='X', y=column_names)
-    fig.update_traces(marker={'size': 2})
+    fig = px.scatter(data_frame=df, x="X", y=column_names)
+    fig.update_traces(marker={"size": 2})
 
     if vertical_lines:
         for x_line in vertical_lines:
@@ -444,4 +444,4 @@ def visualization(
     if save_to_file:
         fig.write_image(save_to_file, scale=2)
     else:
-        fig.show(config={'scrollZoom': True})
+        fig.show(config={"scrollZoom": True})
