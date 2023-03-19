@@ -258,7 +258,7 @@ def test_prepare_for_inference_quantization(mode, overflow_fix, num_bits):
     register_bn_adaptation_init_args(config)
     compressed_model, compression_ctrl = create_compressed_model_and_algo_for_test(model, config)
 
-    input_tensor = generate_lazy_sweep_data(model.INPUT_SIZE)
+    input_tensor = torch.Tensor(generate_lazy_sweep_data(model.INPUT_SIZE))
     x_nncf = compressed_model(input_tensor)
 
     inference_model = compression_ctrl.prepare_for_inference()

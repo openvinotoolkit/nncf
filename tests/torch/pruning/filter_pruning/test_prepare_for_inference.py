@@ -53,7 +53,7 @@ def test_prepare_for_inference_pruning(enable_quantization):
     config = _get_config_for_algo(input_size, enable_quantization)
     compressed_model, compression_ctrl = create_compressed_model_and_algo_for_test(model, config)
 
-    input_tensor = generate_lazy_sweep_data(input_size)
+    input_tensor = torch.Tensor(generate_lazy_sweep_data(input_size))
     x_nncf = compressed_model(input_tensor)
 
     inference_model = compression_ctrl.prepare_for_inference()

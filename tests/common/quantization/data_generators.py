@@ -13,7 +13,6 @@
 from typing import Tuple
 
 import numpy as np
-import torch
 
 
 def get_quant_len_by_range(input_range: np.array, bits: int) -> np.array:
@@ -221,16 +220,18 @@ def get_points_near_of_mid_points(input_data: np.array, mid_points: np.array, at
     return is_near_mid_point
 
 
-def generate_lazy_sweep_data(shape: Tuple[int]):
+def generate_lazy_sweep_data(shape: Tuple[int], min: float = -1.0, max: float = 1.0):
     """
     Generate tensor that contains sweep values from -1.0 to 1.0.
 
     :param shape: Shape of generate tensor.
+    :param min: Min value of generated data.
+    :param max: Max value of generated data.
 
     :return torch.Tensor: Generated tensor.
     """
     n = np.prod(list(shape))
-    res = torch.Tensor(range(n)) / torch.Tensor([n - 1]) * torch.Tensor([2]) - torch.Tensor([1.0])
+    res = np.array(range(n)) / (n - 1) * (max - min) + min
     res[n // 2] = 0.0
     return res.reshape(shape)
 
