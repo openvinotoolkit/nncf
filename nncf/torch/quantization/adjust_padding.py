@@ -17,11 +17,11 @@ import networkx as nx
 import torch
 
 from nncf.common.graph import NNCFNodeName
+from nncf.common.quantization.structs import QuantizationMode
 from nncf.torch.layers import NNCFConv2d
 from nncf.torch.module_operations import UpdatePaddingValue
 from nncf.torch.nncf_network import NNCFNetwork
 from nncf.torch.quantization.layers import BaseQuantizer
-from nncf.torch.quantization.layers import QuantizationMode
 from nncf.torch.quantization.layers import QuantizerConfig
 from nncf.torch.quantization.layers import SymmetricQuantizer
 

@@ -19,7 +19,7 @@ try:
     import torch
 except: #pylint: disable=bare-except
     torch = None
-from nncf.torch.quantization.layers import QuantizationMode
+from nncf.common.quantization.structs import QuantizationMode
 from tests.shared.case_collection import COMMON_SCOPE_MARKS_VS_OPTIONS
 from tests.shared.case_collection import skip_marked_cases_if_options_not_specified
 from tests.shared.install_fixtures import tmp_venv_with_nncf  # pylint:disable=unused-import

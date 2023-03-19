@@ -21,11 +21,11 @@ import torch
 from torch import nn
 
 from nncf import NNCFConfig
+from nncf.common.quantization.structs import QuantizationMode
 from nncf.torch.quantization.layers import QUANTIZATION_MODULES
 from nncf.torch.quantization.layers import AsymmetricQuantizer
 from nncf.torch.quantization.layers import BaseQuantizer
 from nncf.torch.quantization.layers import PTQuantizerSpec
-from nncf.torch.quantization.layers import QuantizationMode
 from nncf.torch.quantization.layers import QuantizerExportMode
 from nncf.torch.quantization.layers import SymmetricQuantizer
 from tests.torch.helpers import TwoConvTestModel
