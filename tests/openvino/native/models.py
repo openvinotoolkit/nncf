@@ -221,6 +221,23 @@ class MatMul2DModel(OVReferenceModel):
         return model
 
 
+@SYNTHETIC_MODELS.register()
+class ScaleShiftReluModel(OVReferenceModel):
+    def _create_ov_model(self):
+        input_shape = [3, 5]
+        input_1 = opset.parameter(input_shape, name="Input")
+        data = self._rng.random((5, 2)).astype(np.float32)
+        matmul = opset.matmul(input_1, data, transpose_a=False, transpose_b=False, name="MatMul")
+        multiply = opset.multiply(matmul, self._rng.random((1, 2)).astype(np.float32), name="Mul")
+        add = opset.add(multiply, self._rng.random((1, 2)).astype(np.float32), name="Add")
+        relu = opset.relu(add, name="Relu")
+        data_2 = self._rng.random((2, 4)).astype(np.float32)
+        matmul_2 = opset.matmul(relu, data_2, transpose_a=False, transpose_b=False, name="MatMul2")
+        result_1 = opset.result(matmul_2, name="Result")
+        model = ov.Model([result_1], [input_1])
+        return model
+
+
 class FPModel(OVReferenceModel):
     def __init__(self, const_dtype='FP32', input_dtype='FP32'):
         self.const_dtype = np.float32 if const_dtype == 'FP32' else np.float16

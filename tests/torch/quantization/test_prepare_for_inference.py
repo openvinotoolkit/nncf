@@ -92,15 +92,10 @@ INPUT_TEST_SCALES = (
 )
 
 
-@pytest.mark.parametrize("use_cuda", (True, False), ids=("cuda", "cpu"))
-@pytest.mark.parametrize("half_range", [False, True], ids=["full_range", "half_range"])
-@pytest.mark.parametrize("is_weights", (True, False), ids=("weights", "activation"))
-@pytest.mark.parametrize("is_signed", (True, False), ids=("signed", "unsigned"))
 @pytest.mark.parametrize("input_size", INPUT_TEST_SCALES, ids=_idfn)
-@pytest.mark.parametrize("is_per_channel", (True, False), ids=("per_channel", "per_tensor"))
 @pytest.mark.parametrize("num_bits", (4, 8), ids=("4-bits", "8-bits"))
 def test_converting_symmetric_quantizer(
-    input_size, num_bits, is_per_channel, is_weights, half_range, is_signed, use_cuda
+    input_size, num_bits, is_per_channel, is_weights, is_half_range, is_signed, use_cuda
 ):
     if not torch.cuda.is_available() and use_cuda is True:
         pytest.skip("Skipping CUDA test cases for CPU only setups")
@@ -109,7 +104,7 @@ def test_converting_symmetric_quantizer(
         pytest.skip("Same case as for per_tensor case")
 
     np.random.seed(42)
-    real_num_bits = num_bits - 1 if half_range else num_bits
+    real_num_bits = num_bits - 1 if is_half_range else num_bits
     np_scale = generate_random_scale_by_input_size(input_size, is_per_channel, is_weights)
     tensor_scale = get_test_data([np_scale], use_cuda)
 
@@ -128,7 +123,7 @@ def test_converting_symmetric_quantizer(
         narrow_range=False,
         scale_shape=tuple(tensor_scale.shape),
         logarithm_scale=False,
-        half_range=half_range,
+        half_range=is_half_range,
         is_quantized_on_export=True,
     )
     quantizer = SymmetricQuantizer(qspec)
@@ -155,7 +150,7 @@ def test_converting_symmetric_quantizer(
     assert fq_levels == 2**num_bits - 1, "Levels in converted FQ should be 2**num_bits-1"
 
     fq_test_input = test_input
-    if half_range:
+    if is_half_range:
         # Required clamp of input for half range
         fq_input_low, fq_input_high = quantizer.get_input_low_input_high()
         fq_test_input = torch.min(torch.max(fq_test_input, fq_input_low), fq_input_high)
@@ -169,13 +164,10 @@ def test_converting_symmetric_quantizer(
     check_outputs(x_nncf.detach().numpy(), x_torch.detach().numpy(), np_is_near_mid_point, quant_lens)
 
 
-@pytest.mark.parametrize("use_cuda", (True, False), ids=("cuda", "cpu"))
-@pytest.mark.parametrize("half_range", [False, True], ids=["full_range", "half_range"])
-@pytest.mark.parametrize("is_weights", (True, False), ids=("weights", "activation"))
+
 @pytest.mark.parametrize("input_size", INPUT_TEST_SCALES, ids=_idfn)
-@pytest.mark.parametrize("is_per_channel", (True, False), ids=("per_channel", "per_tensor"))
 @pytest.mark.parametrize("num_bits", (4, 8), ids=("4-bits", "8-bits"))
-def test_converting_asymmetric_quantizer(input_size, num_bits, is_per_channel, is_weights, half_range, use_cuda):
+def test_converting_asymmetric_quantizer(input_size, num_bits, is_per_channel, is_weights, is_half_range, use_cuda):
     if not torch.cuda.is_available() and use_cuda is True:
         pytest.skip("Skipping CUDA test cases for CPU only setups")
 
@@ -183,7 +175,7 @@ def test_converting_asymmetric_quantizer(input_size, num_bits, is_per_channel, i
         pytest.skip("Same case as for per_tensor case")
 
     np.random.seed(42)
-    real_num_bits = num_bits - 1 if half_range else num_bits
+    real_num_bits = num_bits - 1 if is_half_range else num_bits
 
     input_low, input_range = generate_random_low_and_range_by_input_size(input_size, is_per_channel, is_weights)
 
@@ -205,7 +197,7 @@ def test_converting_asymmetric_quantizer(input_size, num_bits, is_per_channel, i
         narrow_range=False,
         scale_shape=tensor_input_low.shape,
         logarithm_scale=False,
-        half_range=half_range,
+        half_range=is_half_range,
         is_quantized_on_export=True,
     )
     quantizer = AsymmetricQuantizer(qspec)
@@ -233,7 +225,7 @@ def test_converting_asymmetric_quantizer(input_size, num_bits, is_per_channel, i
     assert fq_levels == 2**num_bits - 1, "Levels in converted FQ should be 2**num_bits-1"
 
     fq_test_input = test_input
-    if half_range:
+    if is_half_range:
         # Required clamp of input for half range
         fq_input_low, fq_input_high = quantizer.get_input_low_input_high()
         fq_test_input = torch.min(torch.max(fq_test_input, fq_input_low), fq_input_high)

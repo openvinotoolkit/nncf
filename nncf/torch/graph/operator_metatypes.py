@@ -948,3 +948,5 @@ OPERATORS_WITH_WEIGHTS_METATYPES = [
     PTModuleEmbeddingMetatype,
     PTModuleEmbeddingBagMetatype,
 ]
+
+OP_NAMES_WITH_WEIGHTS = [x for meta in OPERATORS_WITH_WEIGHTS_METATYPES for x in meta.get_all_aliases()]

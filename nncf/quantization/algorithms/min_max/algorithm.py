@@ -12,7 +12,7 @@
 """
 
 from copy import deepcopy
-from typing import Dict, List, TypeVar, Optional, OrderedDict
+from typing import Dict, TypeVar, Optional, OrderedDict
 import collections
 
 from nncf import Dataset
@@ -368,7 +368,7 @@ class MinMaxQuantization(Algorithm):
         weight_layer_names = set()
         def filter_func(point: StatisticPoint) -> bool:
             return MinMaxQuantization in point.algorithm_to_tensor_collectors and \
-                   point.target_point.type == quantization_target_point.type
+                   point.target_point == quantization_target_point
 
         for quantization_target_point, qconfig in quantization_target_points.items():
             target_node_name = quantization_target_point.target_node_name
