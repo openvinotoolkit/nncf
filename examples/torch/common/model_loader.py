@@ -10,7 +10,6 @@
  See the License for the specific language governing permissions and
  limitations under the License.
 """
-import os
 import urllib.request
 import urllib.parse
 
@@ -26,11 +25,9 @@ import examples.torch.common.models as custom_models
 from examples.torch.classification.models.mobilenet_v2_32x32 import MobileNetV2For32x32
 from examples.torch.common.example_logger import logger
 from examples.torch.common import restricted_pickle_module
+from nncf.definitions import CACHE_MODELS_PATH
 from nncf.torch.checkpoint_loading import load_state
 from nncf.torch.utils import safe_thread_call
-
-
-MODELS_PATH = '~/.cache/nncf/models'
 
 
 def load_model(model, pretrained=True, num_classes=1000, model_params=None,
@@ -107,12 +104,10 @@ def download_checkpoint(url):
     :param url: URL to download a checkpoint from
     :return: path where the checkpoint was downloaded
     """
-    expanded_models_path = os.path.expanduser(MODELS_PATH)
-    if not osp.exists(expanded_models_path):
-        os.makedirs(expanded_models_path)
-    model_filename = url.split('/')[-1]
-    download_path = osp.join(expanded_models_path, model_filename)
-    if not osp.exists(download_path):
+    if not CACHE_MODELS_PATH.exists():
+        CACHE_MODELS_PATH.mkdir(parents=True)
+    download_path = CACHE_MODELS_PATH / url.split('/')[-1]
+    if not download_path.exists():
         print("Downloading checkpoint ...")
         urllib.request.urlretrieve(url, download_path)
-    return download_path
+    return str(download_path)
