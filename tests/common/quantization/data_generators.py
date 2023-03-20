@@ -398,7 +398,7 @@ def check_outputs(arr_a: np.array, arr_b: np.array, is_near_mid_point: np.array,
         )
 
 
-def visualization(
+def scatter_plot(
     data: Dict[str, np.array], x_column: str = None, vertical_lines: np.array = None, save_to_file: str = None
 ) -> None:
     """
@@ -407,7 +407,7 @@ def visualization(
 
     Example of using:
     ```
-    visualization(
+    scatter_plot(
         data={
             "input": test_input.detach().numpy(),
             "x_nncf":  x_nncf.detach().numpy(),
