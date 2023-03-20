@@ -15,22 +15,17 @@ import os.path as osp
 import tensorflow as tf
 from tensorflow.python.framework.convert_to_constants import convert_variables_to_constants_v2
 
-from examples.common.sample_config import SampleConfig
-from examples.tensorflow.common.logger import logger
 from examples.tensorflow.common.utils import FROZEN_GRAPH_FORMAT
-from examples.tensorflow.common.utils import get_saving_parameters
-from nncf.api.compression import CompressionAlgorithmController
 
 
-def export_model(compression_ctrl: CompressionAlgorithmController, config: SampleConfig) -> None:
+def export_model(model: tf.keras.Model, save_path: str, save_format: str) -> None:
     """
     Export compressed model. Supported types 'tf', 'h5', 'frozen_graph'.
 
-    :param compression_ctrl: The controller of the compression algorithm.
-    :param config: Config of examples.
+    :param model: Target model.
+    :param save_path: Path to save.
+    :param save_format: Model format used to save model.
     """
-    save_path, save_format = get_saving_parameters(config)
-    model = compression_ctrl.prepare_for_inference()
 
     if save_format == FROZEN_GRAPH_FORMAT:
         input_signature = []
@@ -44,5 +39,3 @@ def export_model(compression_ctrl: CompressionAlgorithmController, config: Sampl
         tf.io.write_graph(frozen_graph, save_dir, name, as_text=False)
     else:
         model.save(save_path, save_format=save_format)
-
-    logger.info('Saved to {}'.format(save_path))

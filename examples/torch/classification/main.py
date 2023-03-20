@@ -224,7 +224,8 @@ def main_worker(current_gpu, config: SampleConfig):
         load_state(model, model_state_dict, is_resume=True)
 
     if is_export_only:
-        export_model(compression_ctrl, config)
+        export_model(compression_ctrl.prepare_for_inference(), config.to_onnx)
+        logger.info(f'Saved to {config.to_onnx}')
         return
 
     model, _ = prepare_model_for_execution(model, config)
@@ -296,7 +297,8 @@ def main_worker(current_gpu, config: SampleConfig):
     config.mlflow.end_run()
 
     if 'export' in config.mode:
-        export_model(compression_ctrl, config)
+        export_model(compression_ctrl.prepare_for_inference(), config.to_onnx)
+        logger.info(f'Saved to {config.to_onnx}')
 
 
 def train(config, compression_ctrl, model, criterion, criterion_fn, lr_scheduler, model_name, optimizer,

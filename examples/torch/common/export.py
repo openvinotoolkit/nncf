@@ -12,29 +12,23 @@
 """
 import torch
 
-from examples.common.sample_config import SampleConfig
-from examples.tensorflow.common.logger import logger
-from nncf.torch.compression_method_api import PTCompressionAlgorithmController
 from nncf.torch.exporter import generate_input_names_list
+from nncf.torch.nncf_network import NNCFNetwork
 
 
-def export_model(compression_ctrl: PTCompressionAlgorithmController, config: SampleConfig) -> None:
+def export_model(model: NNCFNetwork, save_path: str) -> None:
     """
     Export compressed model. Supported only 'onnx' format.
 
-    :param compression_ctrl: The controller of the compression algorithm.
-    :param config: Config of examples.
+    :param model: The target model.
+    :param save_path: Path to save onnx file.
     """
-    save_path = config.to_onnx
-    inference_model = compression_ctrl.prepare_for_inference()
-    inference_model = inference_model.eval().cpu()
-    input_names = generate_input_names_list(len(inference_model.input_infos))
+    model = model.eval().cpu()
+    input_names = generate_input_names_list(len(model.input_infos))
     input_tensor_list = []
-    for info in inference_model.input_infos:
+    for info in model.input_infos:
         input_shape = tuple([1] + list(info.shape)[1:])
         input_tensor_list.append(torch.rand(input_shape))
 
     with torch.no_grad():
-        torch.onnx.export(inference_model, tuple(input_tensor_list), save_path, input_names=input_names)
-
-    logger.info(f'Saved to {save_path}')
+        torch.onnx.export(model, tuple(input_tensor_list), save_path, input_names=input_names)

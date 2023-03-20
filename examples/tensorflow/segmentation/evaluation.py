@@ -27,6 +27,7 @@ from examples.tensorflow.common.utils import SummaryWriter
 from examples.tensorflow.common.utils import Timer
 from examples.tensorflow.common.utils import close_strategy_threadpool
 from examples.tensorflow.common.utils import configure_paths
+from examples.tensorflow.common.utils import get_saving_parameters
 from examples.tensorflow.common.utils import print_args
 from examples.tensorflow.common.utils import write_metrics
 from examples.tensorflow.segmentation.models.model_selector import get_model_builder
@@ -242,7 +243,9 @@ def run_evaluation(config, eval_timeout=None):
         logger.info('Test metric = {}'.format(metric_result))
 
         if 'export' in config.mode:
-            export_model(compression_ctrl, config)
+            save_path, save_format = get_saving_parameters(config)
+            export_model(compression_ctrl.prepare_for_inference(), save_path, save_format)
+            logger.info('Saved to {}'.format(save_path))
 
     elif 'train' in config.mode:
         validation_summary_writer = SummaryWriter(config.log_dir, 'validation')
@@ -281,7 +284,9 @@ def export(config):
     strategy = tf.distribute.get_strategy()
     compression_ctrl, _, _ = restore_compressed_model(config, strategy, model_builder, config.ckpt_path)
 
-    export_model(compression_ctrl, config)
+    save_path, save_format = get_saving_parameters(config)
+    export_model(compression_ctrl.prepare_for_inference(), save_path, save_format)
+    logger.info('Saved to {}'.format(save_path))
 
 
 def main(argv):

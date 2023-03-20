@@ -34,6 +34,7 @@ from examples.tensorflow.common.utils import SummaryWriter
 from examples.tensorflow.common.utils import close_strategy_threadpool
 from examples.tensorflow.common.utils import configure_paths
 from examples.tensorflow.common.utils import create_code_snapshot
+from examples.tensorflow.common.utils import get_saving_parameters
 from examples.tensorflow.common.utils import print_args
 from examples.tensorflow.common.utils import serialize_cli_args
 from examples.tensorflow.common.utils import serialize_config
@@ -300,7 +301,9 @@ def run(config):
         write_metrics(results[1], config.metrics_dump)
 
     if 'export' in config.mode:
-        export_model(compression_ctrl, config)
+        save_path, save_format = get_saving_parameters(config)
+        export_model(compression_ctrl.prepare_for_inference(), save_path, save_format)
+        logger.info('Saved to {}'.format(save_path))
 
     close_strategy_threadpool(strategy)
 
@@ -336,7 +339,9 @@ def export(config):
         load_checkpoint(checkpoint=checkpoint,
                         ckpt_path=config.ckpt_path)
 
-    export_model(compression_ctrl, config)
+    save_path, save_format = get_saving_parameters(config)
+    export_model(compression_ctrl.prepare_for_inference(), save_path, save_format)
+    logger.info('Saved to {}'.format(save_path))
 
 
 def main(argv):

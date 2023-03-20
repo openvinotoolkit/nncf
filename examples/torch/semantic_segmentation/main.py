@@ -10,12 +10,11 @@
  See the License for the specific language governing permissions and
  limitations under the License.
 """
-
-import functools
-import os
 # Major parts of this sample reuse code from:
 # https://github.com/davidtvs/PyTorch-ENet
 # https://github.com/pytorch/vision/tree/master/references/segmentation
+import functools
+import os
 import sys
 from copy import deepcopy
 from os import path as osp
@@ -540,7 +539,8 @@ def main_worker(current_gpu, config):
     log_common_mlflow_params(config)
 
     if is_export_only:
-        export_model(compression_ctrl, config)
+        export_model(compression_ctrl.prepare_for_inference(), config.to_onnx)
+        logger.info(f'Saved to {config.to_onnx}')
         return
 
     if is_main_process():
@@ -596,7 +596,8 @@ def main_worker(current_gpu, config):
         test(val_model, val_loader, criterion, color_encoding, config)
 
     if 'export' in config.mode:
-        export_model(compression_ctrl, config)
+        export_model(compression_ctrl.prepare_for_inference(), config.to_onnx)
+        logger.info(f'Saved to {config.to_onnx}')
 
 
 def main(argv):
