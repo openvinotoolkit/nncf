@@ -142,19 +142,20 @@ class FastBiasCorrection(Algorithm):
             sub_input_name, sub_output_name = self._backend_entity.get_sub_input_output_names(extracted_model)
 
             channel_axis = self._backend_entity.channel_axis_by_types[node.metatype]
+            positive_channel_axis = range(bias_value.ndim)[channel_axis]
             input_blob = self._create_input_data(input_shape,
                                                  input_fp,
                                                  sub_input_name,
-                                                 channel_axis)
+                                                 positive_channel_axis)
             bias_shift = self._get_bias_shift(
                 model=extracted_model,
                 input_blob=input_blob,
-                channel_axis=channel_axis,
+                channel_axis=positive_channel_axis,
                 output_fp=output_fp,
                 output_name=sub_output_name)
 
             if bias_value.ndim > 1:
-                axes = [i for i in range(bias_value.ndim) if i != channel_axis]
+                axes = [i for i in range(bias_value.ndim) if i != positive_channel_axis]
                 bias_shift = np.expand_dims(bias_shift, axes)
 
             updated_bias = bias_value + bias_shift
