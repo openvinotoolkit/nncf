@@ -161,6 +161,12 @@ class BiasCorrection(Algorithm):
             bias_shift = self._compute_bias_shift(node, model_copy_subgraph, feed_dicts, statistic_points)
 
             current_bias = self._backend_entity.get_bias_value(node, model, nncf_graph)
+
+            channel_axis = self._backend_entity.channel_axis_by_types[node.metatype]
+            if current_bias.ndim > 1:
+                axes = [i for i in range(current_bias.ndim) if i != channel_axis]
+                bias_shift = np.expand_dims(bias_shift, axes)
+
             updated_bias = current_bias + bias_shift
             magnitude = self._get_bias_shift_magnitude(current_bias, updated_bias)
 
