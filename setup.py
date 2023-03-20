@@ -130,7 +130,7 @@ TORCH_EXTRAS = [
     ]
 
 ONNX_EXTRAS = [
-        "onnx~=1.13.0",
+        "onnx~=1.13.1",
         "onnxruntime~=1.14.1"
     ]
 
