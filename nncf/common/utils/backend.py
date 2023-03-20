@@ -85,7 +85,7 @@ def copy_model(model: TModel) -> TModel:
         # TODO(l-bat): Remove after fixing ticket: 100919
         return model.clone()
     if model_backend == BackendType.TENSORFLOW:
-        # deepcopy and tensorflow.keras.models.clone_model does not works
+        # deepcopy and tensorflow.keras.models.clone_model does not work correctly on 2.8.4 version
         from nncf.tensorflow.graph.model_transformer import TFModelTransformer
         from nncf.tensorflow.graph.transformations.layout import TFTransformationLayout
         model = TFModelTransformer(model).transform(TFTransformationLayout())
