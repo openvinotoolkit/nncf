@@ -308,7 +308,7 @@ class QuantizationAccuracyRestorer:
         :param max_num_iterations: A maximal number of iterations.
         """
         if report.removed_all or not report.reached_required_drop:
-            nncf_logger.info('The algorithm could not achieve the required accuracy drop.', force=True)
+            nncf_logger.info('The algorithm could not achieve the required accuracy drop.')
 
         if report.num_iterations + 1 >= max_num_iterations:
             nncf_logger.info('Maximum number of iteration was reached.')
