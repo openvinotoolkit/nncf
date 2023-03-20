@@ -1,6 +1,9 @@
+import inspect
+
 import torch
 
 from nncf.torch.dynamic_graph.patch_pytorch import MagicFunctionsToPatch
+from nncf.torch.dynamic_graph.patch_pytorch import _ORIG_JIT_SCRIPT
 from nncf.torch.graph.operator_metatypes import PT_OPERATOR_METATYPES
 from nncf.torch.dynamic_graph.context import TracingContext
 from nncf.torch.dynamic_graph.trace_tensor import TracedTensor
@@ -67,3 +70,22 @@ def test_jit_if_tracing_script_patching(tmp_path):
 def test_jit_if_tracing_script_source():
     # Run test case in a separate process to track patching of torch by NNCF
     run_pytest_case_function_in_separate_process(test_jit_if_tracing_script_source_equals)
+
+
+def test_jit_script_signature():
+    # Check that torch.jit.script has the same signature as the wrapper was designed for
+    signature = inspect.signature(_ORIG_JIT_SCRIPT)
+    assert "obj" in signature.parameters and "_rcb" in signature.parameters and "_frames_up" in signature.parameters
+
+
+def test_jit_script_class():
+    # Define an outside function to test custom resolution callback inside torch_jit_script_wrapper
+    def outside_function(x):
+        return x + torch.tensor(1.0)
+
+    class TestClass:
+        def class_method(self, x):
+            return outside_function(x)
+
+    # Scripting a class instead of a method to trigger custom resolution callback usage
+    torch.jit.script(TestClass)
