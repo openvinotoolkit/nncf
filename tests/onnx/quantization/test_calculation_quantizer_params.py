@@ -37,12 +37,7 @@ def test_calculate_scale_zero_point(inp_low, inp_high, level_low, level_high, na
     assert np.allclose(ref_zero_point, zero_point)
 
 
-@pytest.mark.parametrize('num_bits, tensor_type, ref_levels', ((0, np.int8, (-1, -1)),
-                                                               (2, np.int8, (-2, 1)),
-                                                               (2, np.uint8, (0, 3)),
-                                                               (8, np.int8, (-128, 127)),
-                                                               (8, np.uint8, (0, 255)),
-                                                               (10, np.int8, (-512, 511)),
-                                                               (10, np.uint8, (0, 1023))))
+@pytest.mark.parametrize('num_bits, tensor_type, ref_levels', ((8, np.int8, (-128, 127)),
+                                                               (8, np.uint8, (0, 255))))
 def test_calculate_levels(num_bits, tensor_type, ref_levels):
-    assert (ref_levels[0], ref_levels[1]) == get_level_low_level_high(tensor_type, num_bits)
+    assert (ref_levels[0], ref_levels[1]) == get_level_low_level_high(tensor_type)

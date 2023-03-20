@@ -59,24 +59,21 @@ def convert_fq_params_to_onnx_params(parameters: FakeQuantizeParameters,
         raise ValueError('ONNX Quantize/Dequantize pairs only support'
                          ' input_high == output_high and input_low == output_low.')
 
-    level_low, level_high = get_level_low_level_high(tensor_type, num_bits)
+    level_low, level_high = get_level_low_level_high(tensor_type)
     narrow_range = levels == 2 ** num_bits - 1
     scale, zero_point = calculate_scale_zero_point(input_low, input_high, level_low, level_high, narrow_range)
     return ONNXQuantizerLayerParameters(scale, zero_point, tensor_type, axis)
 
 
-def get_level_low_level_high(tensor_type: np.dtype, num_bits: int) -> Tuple[int, int]:
+def get_level_low_level_high(tensor_type: np.dtype) -> Tuple[int, int]:
     """
     Returns the minimum and maximum level for the quantizer.
     In ONNX opset Q/DequantizeLinear-13 uses only two levels: [-128, 127] and [0, 255].
 
     :param tensor_type: Value type of the tensor. Could be INT8 or UINT8.
-    :param num_bits: Number of quantizer bits.
     :return: Minimum level and maximum level of the quantizer.
     """
-    if tensor_type == np.uint8:
-        return 0, 2 ** num_bits - 1
-    return - (2 ** num_bits) // 2, (2 ** num_bits) // 2 - 1
+    return (0, 255) if tensor_type == np.uint8 else (-128, 127)
 
 
 def calculate_scale_zero_point(input_low: np.ndarray, input_high: np.ndarray,

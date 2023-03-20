@@ -79,7 +79,7 @@ class ONNXMinMaxAlgoBackend(MinMaxAlgoBackend):
             parameters: FakeQuantizeParameters) -> ONNXQuantizerInsertionCommand:
         nncf_input_node_next_nodes = ONNXMinMaxAlgoBackend._get_input_edges_mapping(nncf_graph)
         axis = ONNXMinMaxAlgoBackend._get_axis(nncf_graph, target_point, quantizer_config)
-        tensor_type = np.int8 if quantizer_config.signedness_to_force or np.any(parameters.input_low < 0) else np.uint8
+        tensor_type = np.int8 if np.any(parameters.input_low < 0) else np.uint8
         onnx_parameters = convert_fq_params_to_onnx_params(parameters, quantizer_config.num_bits, tensor_type, axis)
         return ONNXQuantizerInsertionCommand(target_point, nncf_input_node_next_nodes, onnx_parameters)
 
