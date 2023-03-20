@@ -202,7 +202,7 @@ _ORIG_JIT_TRACE_MAKE_MODULE = None
 def patch_torch_jit():
     # This import statement is required, otherwise we get a
     # "RuntimeError: undefined value torch" inside the real torch.jit.script
-    # pylint:disable=unused-import,redefined-outer-name,reimported
+    # pylint:disable=unused-import,redefined-outer-name,reimported,protected-access
     import torch
 
     global _ORIG_JIT_SCRIPT
