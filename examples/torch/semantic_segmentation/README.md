@@ -45,7 +45,6 @@ This scenario demonstrates quantization with fine-tuning of UNet on Mapillary Vi
   ```
 - Run the following command to start compression with fine-tuning on GPUs:
   `python main.py -m train --config configs/unet_mapillary_int8.json --data <path_to_dataset> --weights <path_to_fp32_model_checkpoint>`
-- Use `--prepare-for-inference` argument to convert model to torch native format before `test` and `export` steps.
 
 It may take a few epochs to get the baseline accuracy results.
 

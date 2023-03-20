@@ -79,7 +79,6 @@ Run the following command to start compression with fine-tuning on all available
 It may take a few epochs to get the baseline accuracy results.
 
 Use the `--resume` flag with the path to the checkpoint to resume training from the defined checkpoint or folder with checkpoints to resume training from the last checkpoint.
-- Use `--prepare-for-inference` argument to convert model to tensorflow native format without NNCF-specific operations before `test` and `export` steps.
 
 ### Validate Your Model Checkpoint
 

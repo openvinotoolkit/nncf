@@ -75,7 +75,6 @@ FP32 model, without applying any compression algorithms.
     --log-dir=../../results/quantization/maskrcnn_coco_int8
     ```
 - Use the `--resume` flag with the path to the checkpoint to resume training from the defined checkpoint or folder with checkpoints to resume training from the last checkpoint.
-- Use `--prepare-for-inference` argument to convert model to tensorflow native format without NNCF-specific operations before `test` and `export` steps.
 
 To start checkpoints validation during training follow these steps:
 - If you did not install the package, add the repository root folder to the `PYTHONPATH` environment variable.
