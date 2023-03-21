@@ -45,10 +45,6 @@ from nncf.quantization.algorithms.bias_correction.backend import BiasCorrectionA
 class OVBiasCorrectionAlgoBackend(BiasCorrectionAlgoBackend):
 
     @property
-    def channel_axis_by_types(self) -> Dict[OVOpMetatype, int]:
-        return METATYPE_TO_CHANNEL_AXIS
-
-    @property
     def tensor_processor(self) -> OVNNCFCollectorTensorProcessor:
         return OVNNCFCollectorTensorProcessor()
 

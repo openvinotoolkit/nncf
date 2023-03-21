@@ -47,10 +47,6 @@ class ONNXFastBiasCorrectionAlgoBackend(FastBiasCorrectionAlgoBackend):
         return ONNX_OPERATION_METATYPES
 
     @property
-    def channel_axis_by_types(self) -> Dict[ONNXOpMetatype, int]:
-        return METATYPE_TO_CHANNEL_AXIS
-
-    @property
     def tensor_processor(self) -> ONNXNNCFCollectorTensorProcessor:
         return ONNXNNCFCollectorTensorProcessor()
 

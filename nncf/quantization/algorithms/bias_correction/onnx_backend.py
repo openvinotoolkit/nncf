@@ -48,10 +48,6 @@ from nncf.onnx.graph.transformations.command_creation import create_bias_correct
 class ONNXBiasCorrectionAlgoBackend(BiasCorrectionAlgoBackend):
 
     @property
-    def channel_axis_by_types(self) -> Dict[ONNXOpMetatype, int]:
-        return METATYPE_TO_CHANNEL_AXIS
-
-    @property
     def tensor_processor(self) -> ONNXNNCFCollectorTensorProcessor:
         return ONNXNNCFCollectorTensorProcessor()
 

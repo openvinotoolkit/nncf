@@ -59,6 +59,7 @@ class OVConvolutionMetatype(OVOpMetatype):
     op_names = ['Convolution']
     hw_config_names = [HWConfigOpName.CONVOLUTION]
     const_channel_axis = [0]  # const layout: [C_OUT, C_IN, Z, Y, X]
+    output_channel_axis = 1
 
 
 @OV_OPERATOR_METATYPES.register()
@@ -67,6 +68,7 @@ class OVConvolutionBackpropDataMetatype(OVOpMetatype):
     op_names = ['ConvolutionBackpropData']
     hw_config_names = [HWConfigOpName.CONVOLUTION]
     const_channel_axis = [1]  # const layout: [C_IN, C_OUT, Z, Y, X]
+    output_channel_axis = 1
 
 
 @OV_OPERATOR_METATYPES.register()
@@ -75,6 +77,7 @@ class OVDepthwiseConvolutionMetatype(OVOpMetatype):
     op_names = ['GroupConvolution']
     hw_config_names = [HWConfigOpName.DEPTHWISECONVOLUTION]
     const_channel_axis = [0, 1]  # const layout: [GROUPS, C_OUT / GROUPS, C_IN / GROUPS, Z, Y, X]
+    output_channel_axis = 1
 
     @classmethod
     def matches(cls, node: ov.Node) -> bool:
@@ -88,6 +91,7 @@ class OVGroupConvolutionMetatype(OVOpMetatype):
     hw_config_names = [HWConfigOpName.CONVOLUTION]
     subtypes = [OVDepthwiseConvolutionMetatype]
     const_channel_axis = [0, 1]  # const layout: [GROUPS, C_OUT / GROUPS, C_IN / GROUPS, Z, Y, X]
+    output_channel_axis = 1
 
 
 @OV_OPERATOR_METATYPES.register()
@@ -96,6 +100,7 @@ class OVGroupConvolutionBackpropDataMetatype(OVOpMetatype):
     op_names = ['GroupConvolutionBackpropData']
     hw_config_names = [HWConfigOpName.CONVOLUTION]
     const_channel_axis = [0, 2]  # const layout: [GROUPS, C_IN / GROUPS,  C_OUT / GROUPS, Z, Y, X]
+    output_channel_axis = 1
 
 
 @OV_OPERATOR_METATYPES.register()
@@ -104,6 +109,7 @@ class OVMatMulMetatype(OVOpMetatype):
     op_names = ['MatMul']
     hw_config_names = [HWConfigOpName.MATMUL]
     const_channel_axis = [0]  # const layout: [BATCH, Z, Y, X]
+    output_channel_axis = -1
 
 
 @OV_OPERATOR_METATYPES.register()
@@ -596,15 +602,6 @@ OPERATIONS_WITH_BIAS_METATYPES = [OVConvolutionMetatype,
                                   OVConvolutionBackpropDataMetatype,
                                   #TODO: add all metatypes with bias
                                   OVMatMulMetatype]
-
-METATYPE_TO_CHANNEL_AXIS = {
-    OVConvolutionMetatype: 1,
-    OVGroupConvolutionMetatype: 1,
-    OVDepthwiseConvolutionMetatype: 1,
-    OVConvolutionBackpropDataMetatype: 1,
-    OVGroupConvolutionBackpropDataMetatype: 1,
-    OVMatMulMetatype: -1,
-}
 
 
 def get_operator_metatypes() -> List[Type[OperatorMetatype]]:

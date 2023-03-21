@@ -43,13 +43,6 @@ class FastBiasCorrectionAlgoBackend(ABC):
 
     @property
     @abstractmethod
-    def channel_axis_by_types(self):
-        """
-        Property for the backend-specific info about channels placement in the layout.
-        """
-
-    @property
-    @abstractmethod
     def tensor_processor(self):
         """
         Returns backend-specific instance of the NNCFCollectorTensorProcessor.
