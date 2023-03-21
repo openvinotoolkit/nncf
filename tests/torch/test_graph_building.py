@@ -10,21 +10,25 @@
  See the License for the specific language governing permissions and
  limitations under the License.
 """
+from typing import List
+from typing import Tuple
+
 import pytest
 import torch
 import torch.nn.functional as F
 from copy import deepcopy
 from torch import nn
-from typing import List
-from typing import Tuple
 
 from nncf.common.graph import Dtype
 from nncf.common.graph.definitions import MODEL_INPUT_OP_NAME
 from nncf.common.graph.definitions import MODEL_OUTPUT_OP_NAME
 from nncf.common.graph.definitions import NNCFGraphNodeType
+from nncf.common.graph.layer_attributes import GatherLayerAttributes
 from nncf.common.graph.layer_attributes import MultipleInputLayerAttributes
 from nncf.common.graph.layer_attributes import MultipleOutputLayerAttributes
+from nncf.common.graph.layer_attributes import PermuteLayerAttributes
 from nncf.common.graph.layer_attributes import ReshapeLayerAttributes
+from nncf.common.graph.layer_attributes import TransposeLayerAttributes
 from nncf.torch import nncf_model_input
 from nncf.torch.dynamic_graph.context import TracingContext
 from nncf.torch.dynamic_graph.context import get_current_context
@@ -36,12 +40,14 @@ from nncf.torch.dynamic_graph.graph_tracer import create_dummy_forward_fn
 from nncf.torch.dynamic_graph.io_handling import wrap_nncf_model_outputs_with_objwalk
 from nncf.torch.graph.graph_builder import GraphBuilder
 from nncf.torch.graph.operator_metatypes import PTCatMetatype
-from nncf.torch.graph.operator_metatypes import PTReshapeMetatype
 from nncf.torch.graph.operator_metatypes import PTSplitMetatype
+from nncf.torch.graph.operator_metatypes import PTReshapeMetatype
+from nncf.torch.graph.operator_metatypes import PTTransposeMetatype
 from tests.torch.helpers import create_compressed_model_and_algo_for_test
 from tests.torch.helpers import register_bn_adaptation_init_args
 from tests.torch.test_compressed_graph import get_basic_quantization_config
 from tests.torch.test_get_modules_by_type import ModelForNameTest
+from tests.torch.test_models.synthetic import ModelWithDummyParameter
 
 TEST_TRACING_CONTEXT = 'test'
 
@@ -100,7 +106,7 @@ def test_forward_trace_function():
     # 1 -> 1
     output_tensor = forward_trace_only(torch.Tensor.view, input_tensor1, [-1])
     assert output_tensor.tensor_meta != input_tensor1.tensor_meta
-    assert output_tensor.tensor_meta.shape == (1024, )
+    assert output_tensor.tensor_meta.shape == (1024,)
 
     # 1 -> N
     outputs = forward_trace_only(torch.Tensor.chunk, input_tensor1, 3)
@@ -157,7 +163,7 @@ class ModelForTest(torch.nn.Module):
     @staticmethod
     def simple_user_dummy_forward(model):
         mock_tensor = torch.zeros(input_shapes[0])
-        args = (mock_tensor, )
+        args = (mock_tensor,)
         kwargs = {}
         args, kwargs = ModelForTest.simple_wrap_fn(args, kwargs)
         return wrap_nncf_model_outputs_with_objwalk(model(*args, **kwargs))
@@ -181,8 +187,8 @@ def test_activation_shape_tracing(input_shape: Tuple):
     shape1 = (input_shape[0], ModelForTest.CONV1_OUT_CHANNELS, input_shape[2], input_shape[3])
     final_shape = (input_shape[0], ModelForTest.OUT_CHANNELS, input_shape[2], input_shape[3])
     ref_maxpool_out_edge_shapes = [(shape1[0], shape1[1],
-                                        shape1[2] // ModelForTest.MAXPOOL_SIZE,
-                                        shape1[3] // ModelForTest.MAXPOOL_SIZE)]
+                                    shape1[2] // ModelForTest.MAXPOOL_SIZE,
+                                    shape1[3] // ModelForTest.MAXPOOL_SIZE)]
     ref_cat_out_edge_shapes = [(input_shape[0], ModelForTest.CONV2_IN_CHANNELS, input_shape[2], input_shape[3])]
     ref_node_ids_and_io_edge_shapes = [
         (f"0 /{MODEL_INPUT_OP_NAME}_0", [], [input_shape]),
@@ -281,6 +287,50 @@ def test_reshape_attributes_saved_during_graph_building(input_shape):
                 assert node.layer_attributes is None
                 assert reshape_nodes_with_attributes[node.node_name] is None
 
+
+class ModelWithPermute(nn.Module):
+    def forward(self, x: torch.Tensor):
+        # x.shape == [1, 10, 20, 10]
+        # without kwargs
+        x = x.transpose(1, 3)
+        x = x.permute(3, 2, 1, 0)
+        # with kwargs
+        x = x.transpose(1, dim1=3)
+        x = x.transpose(dim0=1, dim1=3)
+        x = x.permute(dims=[3, 2, 1, 0])
+        return x
+
+
+transpose_input_shapes = [(1, 10, 20, 10),
+                          (10, 10, 10, 10)]
+
+
+@pytest.mark.parametrize("input_shape", transpose_input_shapes)
+def test_permute_attributes_saved_during_graph_building(input_shape):
+    model = ModelWithPermute()
+    input_info = ModelInputInfo(input_shape)
+    graph_builder = GraphBuilder(create_dummy_forward_fn([input_info, ], with_input_tracing=True,
+                                                         with_output_tracing=True))
+    graph = graph_builder.build_graph(model)
+    transpose_nodes_with_attributes = {
+        'ModelWithPermute/transpose_0': TransposeLayerAttributes(1, 3),
+        'ModelWithPermute/transpose_1': TransposeLayerAttributes(1, 3),
+        'ModelWithPermute/transpose_2': TransposeLayerAttributes(1, 3),
+        'ModelWithPermute/permute_0': PermuteLayerAttributes((3, 2, 1, 0)),
+        'ModelWithPermute/permute_1': PermuteLayerAttributes((3, 2, 1, 0))
+    }
+
+    for node in graph.get_all_nodes():
+        if node.metatype is PTTransposeMetatype:
+            assert node.node_name in transpose_nodes_with_attributes
+            if isinstance(node.layer_attributes, (TransposeLayerAttributes, PermuteLayerAttributes)):
+                ref_attrs = transpose_nodes_with_attributes[node.node_name]
+                assert node.layer_attributes == ref_attrs
+            else:
+                assert node.layer_attributes is None
+                assert transpose_nodes_with_attributes[node.node_name] is None
+
+
 class ModelForTestWithSplit(ModelForTest):
     def __init__(self):
         super().__init__()
@@ -295,13 +345,14 @@ class ModelForTestWithSplit(ModelForTest):
         y = torch.cat([y1, y2], axis=1)
         return y
 
+
 @pytest.mark.parametrize("input_shape", input_shapes)
 def test_split_attributes(input_shape):
     model = ModelForTestWithSplit()
     input_info = ModelInputInfo(input_shape)
     graph_builder = GraphBuilder(create_dummy_forward_fn([input_info, ],
-                                 with_input_tracing=True,
-                                 with_output_tracing=True))
+                                                         with_input_tracing=True,
+                                                         with_output_tracing=True))
 
     graph = graph_builder.build_graph(model)
     chunk_nodes_with_attributes = {
@@ -318,6 +369,38 @@ def test_split_attributes(input_shape):
             else:
                 assert node.layer_attributes is None
                 assert chunk_nodes_with_attributes[node.node_name] is None
+
+
+class SplitByGetItemModel(ModelWithDummyParameter):
+    def forward(self, x):
+        q, k, w = x[0:1], x[1], x[2]
+        return q, k, w
+
+
+@pytest.mark.parametrize("input_shape", [
+    (3, 2)
+])
+def test_getitem_attributes(input_shape):
+    model = SplitByGetItemModel()
+    input_info = ModelInputInfo(input_shape)
+    graph_builder = GraphBuilder(create_dummy_forward_fn([input_info, ],
+                                                         with_input_tracing=True,
+                                                         with_output_tracing=True))
+
+    graph = graph_builder.build_graph(model)
+    getitem_nodes_with_attributes = {
+        'SplitByGetItemModel/__getitem__0': {'axis': 1, 'index': []}
+    }
+
+    for node in graph.get_all_nodes():
+        if node.metatype is PTTransposeMetatype:
+            assert node.node_name in getitem_nodes_with_attributes
+            if isinstance(node.layer_attributes, GatherLayerAttributes):
+                ref_attrs = getitem_nodes_with_attributes[node.node_name]
+                assert node.layer_attributes == ref_attrs
+            else:
+                assert node.layer_attributes is None
+                assert getitem_nodes_with_attributes[node.node_name] is None
 
 
 TEST_KEYWORD_1 = "keyword1"

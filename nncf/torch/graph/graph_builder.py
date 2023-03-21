@@ -20,18 +20,11 @@ from typing import Optional
 import torch
 
 from nncf.common.graph import INPUT_NOOP_METATYPES
-from nncf.common.graph.layer_attributes import MultipleInputLayerAttributes
-from nncf.common.graph.layer_attributes import ReshapeLayerAttributes
-from nncf.common.graph.layer_attributes import MultipleOutputLayerAttributes
-from nncf.common.graph.utils import get_concat_axis
-from nncf.common.graph.utils import get_split_axis
 from nncf.torch.dynamic_graph.graph import DynamicGraph
 from nncf.torch.dynamic_graph.graph_tracer import GraphTracer
 from nncf.torch.dynamic_graph.graph_tracer import ModelInputInfo
+from nncf.torch.dynamic_graph.layer_attributes_handlers import set_nodes_attributes_in_nncf_graph
 from nncf.torch.graph.graph import PTNNCFGraph
-from nncf.torch.graph.operator_metatypes import PTCatMetatype
-from nncf.torch.graph.operator_metatypes import PTReshapeMetatype
-from nncf.torch.graph.operator_metatypes import PTSplitMetatype
 from nncf.torch.graph.operator_metatypes import PT_OPERATOR_METATYPES
 
 
@@ -102,39 +95,5 @@ class GraphConverter:
                 dtype=dynamic_graph_edge.dtype
             )
 
-        for node in nncf_graph.get_all_nodes():
-            if node.metatype is PTCatMetatype:
-                input_edges = nncf_graph.get_input_edges(node)
-                output_edges = nncf_graph.get_output_edges(node)
-                # Case of intermediate node
-                if input_edges and output_edges:
-                    input_shapes = [edge.tensor_shape for edge in input_edges]
-                    output_shapes = [edge.tensor_shape for edge in output_edges]
-                    # Case node is stack
-                    if len(input_shapes[0]) != len(output_shapes[0]):
-                        continue
-                    axis = get_concat_axis(input_shapes, output_shapes)
-                    layer_attributes = MultipleInputLayerAttributes(axis)
-                    node.layer_attributes = layer_attributes
-
-            if node.metatype is PTReshapeMetatype:
-                input_nodes = nncf_graph.get_input_edges(node)
-                output_nodes = nncf_graph.get_output_edges(node)
-                # In case ReshapeMetatype op is intermediate node
-                if input_nodes and output_nodes:
-                    layer_attributes = ReshapeLayerAttributes(input_nodes[0].tensor_shape,
-                                                              output_nodes[0].tensor_shape)
-                    node.layer_attributes = layer_attributes
-
-            if node.metatype is PTSplitMetatype:
-                input_edges = nncf_graph.get_input_edges(node)
-                output_edges = nncf_graph.get_output_edges(node)
-                if input_edges and output_edges:
-                    input_shapes = [edge.tensor_shape for edge in input_edges]
-                    output_shapes = [edge.tensor_shape for edge in output_edges]
-                    axis = get_split_axis(input_shapes, output_shapes)
-                    chunks = len(output_edges)
-                    layer_attributes = MultipleOutputLayerAttributes(chunks, axis)
-                    node.layer_attributes = layer_attributes
-
+        set_nodes_attributes_in_nncf_graph(nncf_graph)
         return nncf_graph

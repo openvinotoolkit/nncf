@@ -13,7 +13,6 @@
 
 import functools
 import inspect
-from enum import Enum
 
 from typing import List
 
@@ -25,20 +24,11 @@ from torch.nn import DataParallel
 from torch.nn.parallel import DistributedDataParallel
 
 from nncf import nncf_logger
+from nncf.torch.dynamic_graph.namespace_target import NamespaceTarget
 from nncf.torch.dynamic_graph.trace_tensor import TracedTensor
 from nncf.torch.dynamic_graph.wrappers import ignore_scope
 from nncf.torch.dynamic_graph.wrappers import wrap_module_call
 from nncf.torch.dynamic_graph.wrappers import wrap_operator
-
-
-class NamespaceTarget(Enum):
-    """
-    NamespaceTarget stores modules from which patched operators were obtained.
-    """
-    TORCH_NN_FUNCTIONAL = 'torch.nn.functional'
-    TORCH_TENSOR = 'torch.tensor'
-    TORCH = 'torch'
-    EXTERNAL = 'external_function'
 
 
 def get_namespace_to_patch(namespace_target: NamespaceTarget) -> object:

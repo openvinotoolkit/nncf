@@ -369,6 +369,13 @@ class TFReshapeLayerMetatype(TFLayerMetatype):
 
 
 @KERAS_LAYER_METATYPES.register()
+class TFPermuteLayerMetatype(TFLayerMetatype):
+    name = 'PermuteKerasLayer'
+    keras_layer_names = ['Permute']
+    hw_config_names = [HWConfigOpName.TRANSPOSE]
+
+
+@KERAS_LAYER_METATYPES.register()
 class TFZeroPadding1DLayerMetatype(TFLayerMetatype):
     name = 'ZeroPadding1DKerasLayer'
     keras_layer_names = ['ZeroPadding1D']
