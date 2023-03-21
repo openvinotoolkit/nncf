@@ -21,7 +21,6 @@ from nncf.common.graph import NNCFNode
 from nncf.common.graph.transformations.commands import TargetType
 from nncf.common.tensor_statistics.collectors import ReductionShape
 from nncf.common.utils.backend import BackendType
-from nncf.experimental.openvino_native.graph.metatypes.openvino_metatypes import METATYPE_TO_CHANNEL_AXIS
 from nncf.experimental.openvino_native.graph.metatypes.openvino_metatypes import OVOpMetatype
 from nncf.experimental.openvino_native.graph.metatypes.common import FAKE_QUANTIZE_OPERATIONS
 from nncf.experimental.openvino_native.graph.node_utils import get_bias_value
