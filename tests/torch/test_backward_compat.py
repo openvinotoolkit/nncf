@@ -377,7 +377,7 @@ reference_new_builder_state = {
                         'input_port_id': None, 'target_node_name': 'ConvBNLayer/NNCFConv2d[conv]/conv2d_0'},
                     'qspec': {
                         'num_bits': 8, 'mode': 'symmetric', 'signedness_to_force': True, 'narrow_range': True,
-                        'half_range': True, 'scale_shape': (9, 1, 1, 1), 'logarithm_scale': False,
+                        'half_range': False, 'scale_shape': (9, 1, 1, 1), 'logarithm_scale': False,
                         'is_quantized_on_export': True, 'compression_lr_multiplier': None},
                     'directly_quantized_operator_node_names': ['ConvBNLayer/NNCFConv2d[conv]/conv2d_0']},
                 5: {'target_point': {
@@ -387,7 +387,7 @@ reference_new_builder_state = {
                     'input_port_id': None, 'target_node_name': 'ConvBNLayer/NNCFConv2d[conv1]/conv2d_0'},
                     'qspec': {
                         'num_bits': 8, 'mode': 'symmetric', 'signedness_to_force': True, 'narrow_range': True,
-                        'half_range': True, 'scale_shape': (3, 1, 1, 1), 'logarithm_scale': False,
+                        'half_range': False, 'scale_shape': (3, 1, 1, 1), 'logarithm_scale': False,
                         'is_quantized_on_export': True, 'compression_lr_multiplier': None},
                     'directly_quantized_operator_node_names': ['ConvBNLayer/NNCFConv2d[conv1]/conv2d_0']}
             },
@@ -405,6 +405,7 @@ def test_comp_state_without_qspec():
     nncf_config = get_basic_quantization_config(input_info={
         "sample_size": [1, 3, 100, 100]
     })
+    nncf_config['compression']['overflow_fix'] = 'disable'
     register_bn_adaptation_init_args(nncf_config)
     _, compression_ctrl = create_compressed_model_and_algo_for_test(model, nncf_config,
                                                                     compression_state=old_comp_state)

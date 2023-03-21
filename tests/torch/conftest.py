@@ -15,17 +15,15 @@ import random
 
 import pytest
 
-
 try:
     import torch
 except: #pylint: disable=bare-except
     torch = None
-
-from tests.shared.install_fixtures import tmp_venv_with_nncf #pylint:disable=unused-import
-from tests.shared.logging import nncf_caplog #pylint:disable=unused-import
-from tests.shared.case_collection import skip_marked_cases_if_options_not_specified
+from nncf.common.quantization.structs import QuantizationMode
 from tests.shared.case_collection import COMMON_SCOPE_MARKS_VS_OPTIONS
-
+from tests.shared.case_collection import skip_marked_cases_if_options_not_specified
+from tests.shared.install_fixtures import tmp_venv_with_nncf  # pylint:disable=unused-import
+from tests.shared.logging import nncf_caplog  # pylint:disable=unused-import
 
 pytest.register_assert_rewrite('tests.torch.helpers')
 
@@ -200,6 +198,29 @@ def ov_config_dir(request):
 def pip_cache_dir(request):
     return request.config.getoption("--pip-cache-dir")
 
+@pytest.fixture(params=[True, False], ids=["per_channel", "per_tensor"])
+def is_per_channel(request):
+    return request.param
+
+@pytest.fixture(params=[True, False], ids=["signed", "unsigned"])
+def is_signed(request):
+    return request.param
+
+@pytest.fixture(params=[True, False], ids=["weights", "activation"])
+def is_weights(request):
+    return request.param
+
+@pytest.fixture(params=[True, False], ids=["cuda", "cpu"])
+def use_cuda(request):
+    return request.param
+
+@pytest.fixture(params=[True, False], ids=["half_range", "full_range"])
+def is_half_range(request):
+    return request.param
+
+@pytest.fixture(params=[QuantizationMode.SYMMETRIC, QuantizationMode.ASYMMETRIC])
+def quantization_mode(request):
+    return request.param
 
 
 @pytest.fixture

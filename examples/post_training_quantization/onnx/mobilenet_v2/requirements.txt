@@ -2,6 +2,6 @@ torchvision
 tqdm
 scikit-learn
 fastdownload
-onnx
-onnxruntime
+onnx~=1.13.1
+onnxruntime~=1.14.1
 openvino-dev

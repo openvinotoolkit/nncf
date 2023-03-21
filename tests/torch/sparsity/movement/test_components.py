@@ -10,7 +10,9 @@
  See the License for the specific language governing permissions and
  limitations under the License.
 """
-from typing import Any, Dict, Tuple
+from typing import Any
+from typing import Dict
+from typing import Tuple
 from unittest.mock import MagicMock
 
 import pytest
@@ -413,7 +415,6 @@ class TestImportanceLoss:
         )
     ])
     @pytest.mark.parametrize('requires_grad', [True, False])
-    @pytest.mark.parametrize('use_cuda', [True, False])
     def test_importance_loss_forward(self, desc, requires_grad: bool, use_cuda: bool):
         if (not torch.cuda.is_available()) and use_cuda:
             pytest.skip("Skipping CUDA test cases for CPU only setups")

@@ -12,6 +12,7 @@
 """
 
 from typing import Dict, List, Tuple, Optional
+import numpy as np
 
 from nncf.parameters import ModelType
 from nncf.scopes import IgnoredScope
@@ -22,13 +23,11 @@ from nncf.common.graph.transformations.commands import TargetType
 from nncf.common.hardware.config import HWConfig
 from nncf.common.quantization.structs import QuantizerConfig
 from nncf.common.quantization.structs import QuantizationMode
-from nncf.common.tensor_statistics.statistics import MinMaxTensorStatistic
 from nncf.common.utils.backend import BackendType
+from nncf.quantization.fake_quantize import FakeQuantizeParameters
 
 from nncf.onnx.hardware.config import ONNXHWConfig
 from nncf.onnx.quantization.default_quantization import DEFAULT_ONNX_QUANT_TRAIT_TO_OP_DICT
-from nncf.onnx.quantization.quantizer_parameters import calculate_activation_quantizer_parameters
-from nncf.onnx.quantization.quantizer_parameters import calculate_weight_quantizer_parameters
 from nncf.onnx.graph.nncf_graph_builder import ONNXExtendedLayerAttributes
 from nncf.onnx.graph.metatypes.onnx_metatypes import ONNXLinearMetatype
 from nncf.onnx.graph.metatypes.onnx_metatypes import ONNXNonMaxSuppressionMetatype
@@ -47,6 +46,7 @@ from nncf.onnx.statistics.collectors import ONNXMinMaxStatisticCollector
 
 from nncf.quantization.algorithms.min_max.backend import MinMaxAlgoBackend
 from nncf.quantization.algorithms.min_max.backend import ALGO_BACKENDS
+from nncf.onnx.quantization.quantizer_parameters import convert_fq_params_to_onnx_params
 
 
 @ALGO_BACKENDS.register(BackendType.ONNX)
@@ -83,26 +83,28 @@ class ONNXMinMaxAlgoBackend(MinMaxAlgoBackend):
             nncf_graph: NNCFGraph,
             target_point: ONNXTargetPoint,
             quantizer_config: QuantizerConfig,
-            statistics: MinMaxTensorStatistic) -> ONNXQuantizerInsertionCommand:
+            parameters: FakeQuantizeParameters) -> ONNXQuantizerInsertionCommand:
         nncf_input_node_next_nodes = ONNXMinMaxAlgoBackend._get_input_edges_mapping(nncf_graph)
-        axis = ONNXMinMaxAlgoBackend._get_axis(nncf_graph,
-                                               target_point,
-                                               quantizer_config)
-        parameters = calculate_activation_quantizer_parameters(statistics, quantizer_config, axis)
-        return ONNXQuantizerInsertionCommand(target_point, nncf_input_node_next_nodes, parameters)
+        axis = ONNXMinMaxAlgoBackend._get_axis(nncf_graph, target_point, quantizer_config)
+        tensor_type = np.int8 if np.any(parameters.input_low < 0) else np.uint8
+        onnx_parameters = convert_fq_params_to_onnx_params(parameters, quantizer_config.num_bits, tensor_type, axis)
+        return ONNXQuantizerInsertionCommand(target_point, nncf_input_node_next_nodes, onnx_parameters)
 
     @staticmethod
     def create_weight_quantizer_insertion_command(
             nncf_graph: NNCFGraph,
             target_point: ONNXTargetPoint,
             quantizer_config: QuantizerConfig,
-            statistics: MinMaxTensorStatistic) -> ONNXQuantizerInsertionCommand:
+            parameters: FakeQuantizeParameters) -> ONNXQuantizerInsertionCommand:
+        if quantizer_config.signedness_to_force is False:
+            raise ValueError('The HW expects to have signed quantization of weights, '
+                             'while the quantizer configuration for weights contains signedness_to_force=False.')
+
+        tensor_type = np.int8  # The weight is restricted to have only signed range
         nncf_input_node_next_nodes = ONNXMinMaxAlgoBackend._get_input_edges_mapping(nncf_graph)
-        axis = ONNXMinMaxAlgoBackend._get_axis(nncf_graph,
-                                               target_point,
-                                               quantizer_config)
-        parameters = calculate_weight_quantizer_parameters(statistics, quantizer_config, axis)
-        return ONNXQuantizerInsertionCommand(target_point, nncf_input_node_next_nodes, parameters)
+        axis = ONNXMinMaxAlgoBackend._get_axis(nncf_graph, target_point, quantizer_config)
+        onnx_parameters = convert_fq_params_to_onnx_params(parameters, quantizer_config.num_bits, tensor_type, axis)
+        return ONNXQuantizerInsertionCommand(target_point, nncf_input_node_next_nodes, onnx_parameters)
 
     @staticmethod
     def _get_input_edges_mapping(nncf_graph: NNCFGraph):

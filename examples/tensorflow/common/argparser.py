@@ -229,7 +229,7 @@ def get_common_argument_parser(**flags):
 
     parser.add_argument(
         '--disable_tensor_float_32_execution',
-        help="Disable exection in TensorFloat-32",
+        help="Disable execution in TensorFloat-32",
         action="store_true"
     )
 

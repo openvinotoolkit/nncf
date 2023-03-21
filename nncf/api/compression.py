@@ -14,10 +14,16 @@
 from abc import ABC
 from abc import abstractmethod
 from enum import IntEnum
-from typing import Any, Dict, List, Optional, Tuple, TypeVar
+from typing import Any
+from typing import Dict
+from typing import List
+from typing import Optional
+from typing import Tuple
+from typing import TypeVar
 
 from nncf.api.statistics import Statistics
 from nncf.common.graph.transformations.layout import TransformationLayout
+from nncf.common.utils.backend import copy_model
 
 TModel = TypeVar('TModel')
 
@@ -244,11 +250,37 @@ class CompressionAlgorithmController(ABC):
         :return: A `Statistics` class instance that contains compression algorithm statistics.
         """
 
+    def strip_model(self, model: TModel, do_copy: bool = False) -> TModel:
+        """
+        Strips auxiliary layers that were used for the model compression, as it's
+        only needed for training. The method is used before exporting the model
+        in the target format.
+
+        :param model: The compressed model.
+        :param do_copy: Modify copy of the model, defaults to False.
+        :return: The stripped model.
+        """
+        if do_copy:
+            model = copy_model(model)
+        return model
+
     def prepare_for_export(self) -> None:
         """
         Prepare the compressed model for deployment.
         """
         self._model = self.strip_model(self._model)
+
+    def prepare_for_inference(self, do_copy: bool = True) -> TModel:
+        """
+        Prepare the compressed model for inference and export by removing NNCF-specific operations, as it's
+        only needed for training.
+
+        :param do_copy: `True` means that a copy of the model will be modified.
+            `False` means that the original model will be modify. Defaults to True.
+
+        :return: Modified model.
+        """
+        return self.strip_model(self.model, do_copy)
 
     @abstractmethod
     def export_model(self,
@@ -276,17 +308,6 @@ class CompressionAlgorithmController(ABC):
                 - (a, b, {}) for positional arguments only.
                 - ({'x': None, 'y': y},) for keyword arguments only.
         """
-
-    def strip_model(self, model: TModel) -> TModel:
-        """
-        Strips auxiliary layers that were used for the model compression, as it's
-        only needed for training. The method is used before exporting the model
-        in the target format.
-
-        :param model: The compressed model.
-        :return: The stripped model.
-        """
-        return model
 
     @property
     @abstractmethod

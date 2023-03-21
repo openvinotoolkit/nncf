@@ -10,25 +10,22 @@
  See the License for the specific language governing permissions and
  limitations under the License.
 """
-
-# pylint:disable=relative-beyond-top-level
 from typing import Dict
 
 import torch
 
-from nncf.torch.graph.transformations.layout import PTTransformationLayout
-from nncf.torch.nncf_network import NNCFNetwork
-
-from nncf.api.compression import CompressionStage
 from nncf.api.compression import CompressionScheduler
-from nncf.torch.compression_method_api import PTCompressionAlgorithmBuilder
-from nncf.torch.compression_method_api import PTCompressionAlgorithmController
-
-from nncf.torch.compression_method_api import PTCompressionLoss
+from nncf.api.compression import CompressionStage
 from nncf.common.compression import NO_COMPRESSION_ALGORITHM_NAME
 from nncf.common.schedulers import StubCompressionScheduler
-from nncf.common.utils.registry import Registry
 from nncf.common.statistics import NNCFStatistics
+from nncf.common.utils.backend import copy_model
+from nncf.common.utils.registry import Registry
+from nncf.torch.compression_method_api import PTCompressionAlgorithmBuilder
+from nncf.torch.compression_method_api import PTCompressionAlgorithmController
+from nncf.torch.compression_method_api import PTCompressionLoss
+from nncf.torch.graph.transformations.layout import PTTransformationLayout
+from nncf.torch.nncf_network import NNCFNetwork
 from nncf.torch.utils import get_model_device
 
 PT_COMPRESSION_ALGORITHMS = Registry('compression algorithm', add_name_as_attr=True)
@@ -86,3 +83,9 @@ class NoCompressionAlgorithmController(PTCompressionAlgorithmController):
 
     def statistics(self, quickly_collected_only: bool = False) -> NNCFStatistics:
         return NNCFStatistics()
+
+    def prepare_for_inference(self, do_copy: bool = True) -> NNCFNetwork:
+        model = self.model
+        if do_copy:
+            model = copy_model(self.model)
+        return model

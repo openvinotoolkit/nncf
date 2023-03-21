@@ -249,7 +249,7 @@ class ONNXModelTransformer(ModelTransformer):
         elif tensor_type == np.int8:
             onnx_tensor_type = onnx.TensorProto.INT8
         else:
-            raise RuntimeError('Incorrect tensor type.')
+            raise RuntimeError(f'Incorrect tensor type - {tensor_type}.')
         assert quantizer.input[1] == dequantizer.input[1] and quantizer.input[2] == dequantizer.input[2]
         scale_tensor_name = quantizer.input[1]
         zero_point_tensor_name = quantizer.input[2]

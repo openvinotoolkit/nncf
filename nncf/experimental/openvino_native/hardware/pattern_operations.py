@@ -61,6 +61,3 @@ ELEMENTWISE_OPERATIONS = {GraphPattern.METATYPE_ATTR: [ov_metatypes.OVAddMetatyp
                                                        ov_metatypes.OVMinimumMetatype,
                                                        ],
                           GraphPattern.LABEL_ATTR: 'ELEMENTWISE'}
-
-TRANSPOSED_OPERATIONS = {GraphPattern.METATYPE_ATTR: [ov_metatypes.OVConvolutionBackpropDataMetatype],
-                         GraphPattern.LABEL_ATTR: 'CONVOLUTION_BACKPROP_DATA'}

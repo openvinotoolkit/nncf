@@ -11,23 +11,21 @@
  limitations under the License.
 """
 
-from typing import List, Tuple, Type
+from typing import Tuple
 from dataclasses import dataclass
 
 import numpy as np
 
-from nncf.common.graph.operator_metatypes import OperatorMetatype
 from nncf.common.quantization.structs import QuantizationMode
 from nncf.common.quantization.quantizers import calculate_asymmetric_level_ranges
 from nncf.common.quantization.quantizers import calculate_symmetric_level_ranges
 from nncf.common.quantization.structs import QuantizerConfig
 from nncf.common.quantization.structs import QuantizerGroup
 from nncf.common.tensor_statistics.statistics import MinMaxTensorStatistic
-from nncf.experimental.openvino_native.hardware.pattern_operations import TRANSPOSED_OPERATIONS
 
 
 @dataclass
-class OVQuantizerLayerParameters:
+class FakeQuantizeParameters:
     """
     Class handles FakeQuantize layer attributes.
 
@@ -140,8 +138,8 @@ def symmetric_range(min_values: np.ndarray, max_values: np.ndarray, levels: int,
     if q_group == QuantizerGroup.WEIGHTS:
         level_low = -level_high
     else:
-        signed = quantizer_config.signedness_to_force
-        level_low = np.zeros(level_high.shape) if np.all(min_values >= 0) and not signed else \
+        signed = quantizer_config.signedness_to_force is True
+        level_low = np.zeros_like(level_high) if np.all(min_values >= 0) and not signed else \
             -level_high * levels / (levels - 2)
 
     level_low = level_low.astype(np.float32)
@@ -177,25 +175,9 @@ def asymmetric_range(min_values: np.ndarray, max_values: np.ndarray,
     return level_low, level_high
 
 
-def get_weight_stats_shape(const_shape: List[int], metatype: Type[OperatorMetatype]) -> List[int]:
-    """
-    Calculates shapes for FakeQuantize statistics.
-
-    :param const_shape: Shape of the weight tensor.
-    :param metatype: NNCF meta type which corresponds to operation.
-    :return: Shapes for FakeQuantize statistics.
-    """
-    bounds_shape = np.ones(len(const_shape), dtype=np.int32)
-    if metatype in TRANSPOSED_OPERATIONS:
-        bounds_shape[1] = const_shape[1]
-    else:
-        bounds_shape[0] = const_shape[0]
-    return bounds_shape
-
-
 def calculate_quantizer_parameters(statistics: MinMaxTensorStatistic,
                                    quantizer_config: QuantizerConfig,
-                                   quant_group: QuantizerGroup) -> OVQuantizerLayerParameters:
+                                   quant_group: QuantizerGroup) -> FakeQuantizeParameters:
     """
     Calculates FakeQuantize layer attributes for weight/activation quantizer.
 
@@ -209,19 +191,18 @@ def calculate_quantizer_parameters(statistics: MinMaxTensorStatistic,
 
     if quantizer_config.mode == QuantizationMode.SYMMETRIC:
         narrow_range = quant_group == QuantizerGroup.WEIGHTS
-        min_values = None if quant_group == QuantizerGroup.WEIGHTS else min_values
         _, _, levels = calculate_symmetric_level_ranges(quantizer_config.num_bits,
                                                         signed=True, narrow_range=narrow_range)
-        level_low, level_high = symmetric_range(min_values, max_values,
+        input_low, input_high = symmetric_range(min_values, max_values,
                                                 levels, quantizer_config, quant_group)
     else:
         _, _, levels = calculate_asymmetric_level_ranges(quantizer_config.num_bits, narrow_range=False)
-        level_low, level_high = asymmetric_range(min_values, max_values, quantizer_config, quant_group)
+        input_low, input_high = asymmetric_range(min_values, max_values, quantizer_config, quant_group)
 
-    if quant_group == QuantizerGroup.ACTIVATIONS and\
-        not quantizer_config.per_channel:
-        level_low = np.squeeze(level_low)
-        level_high = np.squeeze(level_high)
+    if not quantizer_config.per_channel:
+        input_low = np.squeeze(input_low)
+        input_high = np.squeeze(input_high)
 
-    output_low, output_high = level_low, level_high
-    return OVQuantizerLayerParameters(level_low, level_high, output_low, output_high, levels)
+    input_low, input_high = np.array(input_low), np.array(input_high)
+    output_low, output_high = input_low, input_high
+    return FakeQuantizeParameters(input_low, input_high, output_low, output_high, levels)

@@ -12,6 +12,8 @@
 """
 
 from typing import Dict, List, Tuple
+import torch
+import numpy as np
 
 from nncf.parameters import ModelType
 from nncf.scopes import IgnoredScope
@@ -24,14 +26,16 @@ from nncf.common.graph.model_transformer import ModelTransformer
 from nncf.common.graph.transformations.commands import TargetType
 from nncf.common.graph.layer_attributes import WeightedLayerAttributes
 from nncf.common.quantization.structs import QuantizerConfig
+from nncf.common.quantization.structs import QuantizationMode
 from nncf.common.quantization.initialization.range import RangeInitConfig
-from nncf.common.tensor_statistics.statistics import MinMaxTensorStatistic
+from nncf.quantization.fake_quantize import FakeQuantizeParameters
 from nncf.common.utils.backend import BackendType
 from nncf.common.graph.transformations.commands import TransformationPriority
 
 from nncf.torch.hardware.config import PTHWConfig
 from nncf.torch.quantization.default_quantization import DEFAULT_PT_QUANT_TRAIT_TO_OP_DICT
 from nncf.torch.quantization.layers import QUANTIZATION_MODULES
+from nncf.torch.quantization.layers import AsymmetricQuantizer
 from nncf.torch.quantization.layers import BaseQuantizer
 from nncf.torch.quantization.layers import PTQuantizerSpec
 from nncf.torch.quantization.layers import get_scale_shape
@@ -42,7 +46,6 @@ from nncf.torch.nncf_network import NNCFNetwork
 from nncf.torch.graph.graph import PTTargetPoint
 from nncf.torch.graph.transformations.commands import PTInsertionCommand
 from nncf.torch.tensor_statistics.collectors import PTMinMaxStatisticCollector
-from nncf.torch.tensor_statistics.statistics import PTMinMaxTensorStatistic
 from nncf.torch.tensor_statistics.collectors import PTMeanMinMaxStatisticCollector
 
 from nncf.quantization.algorithms.min_max.backend import MinMaxAlgoBackend
@@ -99,22 +102,21 @@ class PTMinMaxAlgoBackend(MinMaxAlgoBackend):
             nncf_graph: NNCFGraph,
             target_point: PTTargetPoint,
             quantizer_config: QuantizerConfig,
-            statistics: PTMinMaxTensorStatistic) -> PTInsertionCommand:
+            parameters: FakeQuantizeParameters) -> PTInsertionCommand:
         return PTMinMaxAlgoBackend._create_quantizer_insertion_command(nncf_graph,
                                                                        target_point,
                                                                        quantizer_config,
-                                                                       statistics)
-
+                                                                       parameters)
     @staticmethod
     def create_weight_quantizer_insertion_command(
             nncf_graph: NNCFGraph,
             target_point: PTTargetPoint,
             quantizer_config: QuantizerConfig,
-            statistics: MinMaxTensorStatistic) -> PTInsertionCommand:
+            parameters: FakeQuantizeParameters) -> PTInsertionCommand:
         return PTMinMaxAlgoBackend._create_quantizer_insertion_command(nncf_graph,
                                                                        target_point,
                                                                        quantizer_config,
-                                                                       statistics)
+                                                                       parameters)
 
     @staticmethod
     def minmax_statistic_collector(nncf_graph: NNCFGraph,
@@ -204,30 +206,44 @@ class PTMinMaxAlgoBackend(MinMaxAlgoBackend):
     @staticmethod
     def _create_quantizer(quantizer_config: QuantizerConfig,
                           scale_shape: Tuple,
-                          statistics: MinMaxTensorStatistic) -> BaseQuantizer:
-        quantizer_cls = QUANTIZATION_MODULES.get(quantizer_config.mode)
+                          parameters: FakeQuantizeParameters,
+                          target_type: TargetType) -> BaseQuantizer:
+        mode = quantizer_config.mode
+        quantizer_cls = QUANTIZATION_MODULES.get(mode)
+        narrow_range = target_type == TargetType.OPERATION_WITH_WEIGHTS and mode == QuantizationMode.SYMMETRIC
         quantizer_spec = PTQuantizerSpec.from_config(quantizer_config,
-                                                     narrow_range=False,
+                                                     narrow_range=narrow_range,
                                                      scale_shape=scale_shape,
                                                      half_range=False,
                                                      logarithm_scale=False,
                                                      is_quantized_on_export=False,
                                                      compression_lr_multiplier=None)
         quantizer = quantizer_cls(quantizer_spec)
+
         # Fill it with minmax
-        quantizer.apply_minmax_init(min_values=statistics.min_values,
-                                    max_values=statistics.max_values)
+        PTMinMaxAlgoBackend._fill_quantizer_parameters(quantizer, parameters)
         return quantizer
+
+    @staticmethod
+    def _fill_quantizer_parameters(quantizer: BaseQuantizer, parameters: FakeQuantizeParameters) -> None:
+        quantizer.eps = 0
+        if isinstance(quantizer, AsymmetricQuantizer):
+            quantizer.input_low = torch.nn.Parameter(torch.from_numpy(parameters.input_low))
+            quantizer.input_range = \
+                torch.nn.Parameter(torch.from_numpy(np.array(parameters.input_high - parameters.input_low)))
+        else:
+            quantizer.signed = np.any(parameters.input_low < 0)
+            quantizer.scale = torch.nn.Parameter(torch.from_numpy(parameters.input_high))
 
     @staticmethod
     def _create_quantizer_insertion_command(nncf_graph: NNCFGraph,
                                             target_point: PTTargetPoint,
                                             quantizer_config: QuantizerConfig,
-                                            statistics: MinMaxTensorStatistic) -> PTInsertionCommand:
-        _, scale_shape, _ = \
+                                            parameters: FakeQuantizeParameters) -> PTInsertionCommand:
+        _, scale_shape, _ =\
             PTMinMaxAlgoBackend._get_input_scale_shape(nncf_graph, target_point, quantizer_config)
         quantizer = PTMinMaxAlgoBackend._create_quantizer(quantizer_config,
-                                                          scale_shape, statistics)
+                                                          scale_shape, parameters, target_point.target_type)
         return PTInsertionCommand(target_point, quantizer, TransformationPriority.QUANTIZATION_PRIORITY)
 
     @staticmethod
