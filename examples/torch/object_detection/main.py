@@ -20,6 +20,8 @@ import torch
 from torch.optim.lr_scheduler import ReduceLROnPlateau
 from torch.utils import data
 
+from examples.common.sample_config import SampleConfig
+from examples.common.sample_config import create_sample_config
 from examples.torch.common import restricted_pickle_module
 from examples.torch.common.argparser import get_common_argument_parser
 from examples.torch.common.argparser import parse_args
@@ -29,14 +31,13 @@ from examples.torch.common.execution import get_execution_mode
 from examples.torch.common.execution import prepare_model_for_execution
 from examples.torch.common.execution import set_seed
 from examples.torch.common.execution import start_worker
+from examples.torch.common.export import export_model
 from examples.torch.common.model_loader import COMPRESSION_STATE_ATTR
 from examples.torch.common.model_loader import MODEL_STATE_ATTR
 from examples.torch.common.model_loader import extract_model_and_compression_states
 from examples.torch.common.model_loader import load_resuming_checkpoint
 from examples.torch.common.optimizer import get_parameter_groups
 from examples.torch.common.optimizer import make_optimizer
-from examples.common.sample_config import SampleConfig
-from examples.common.sample_config import create_sample_config
 from examples.torch.common.utils import SafeMLFLow
 from examples.torch.common.utils import configure_device
 from examples.torch.common.utils import configure_logging
@@ -209,10 +210,8 @@ def main_worker(current_gpu, config):
     log_common_mlflow_params(config)
 
     if is_export_only:
-        if config.prepare_for_inference:
-            compression_ctrl.prepare_for_inference(make_model_copy=False)
-        compression_ctrl.export_model(config.to_onnx)
-        logger.info("Saved to {}".format(config.to_onnx))
+        export_model(compression_ctrl.prepare_for_inference(), config.to_onnx)
+        logger.info(f'Saved to {config.to_onnx}')
         return
 
     if is_main_process():
@@ -259,8 +258,6 @@ def main_worker(current_gpu, config):
     if 'test' in config.mode:
         with torch.no_grad():
             val_net = net
-            if config.prepare_for_inference:
-                val_net = compression_ctrl.prepare_for_inference(make_model_copy=True)
             net.eval()
             if config['ssd_params'].get('loss_inference', False):
                 model_loss = test_net(val_net, config.device, test_data_loader, distributed=config.distributed,
@@ -272,10 +269,8 @@ def main_worker(current_gpu, config):
                     write_metrics(mAp, config.metrics_dump)
 
     if 'export' in config.mode:
-        if config.prepare_for_inference:
-            compression_ctrl.prepare_for_inference(make_model_copy=False)
-        compression_ctrl.export_model(config.to_onnx)
-        logger.info("Saved to {}".format(config.to_onnx))
+        export_model(compression_ctrl.prepare_for_inference(), config.to_onnx)
+        logger.info(f'Saved to {config.to_onnx}')
 
 
 def create_dataloaders(config):

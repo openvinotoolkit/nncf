@@ -11,7 +11,6 @@
  limitations under the License.
 """
 
-import copy
 import json
 from math import isclose
 from pathlib import Path
@@ -45,6 +44,7 @@ from nncf.common.pruning.utils import get_rounded_pruned_element_number
 from nncf.common.pruning.weights_flops_calculator import WeightsFlopsCalculator
 from nncf.common.schedulers import StubCompressionScheduler
 from nncf.common.statistics import NNCFStatistics
+from nncf.common.utils.backend import copy_model
 from nncf.common.utils.debug import is_debug
 from nncf.common.utils.os import safe_open
 from nncf.config.extractors import extract_bn_adaptation_init_params
@@ -658,19 +658,9 @@ class FilterPruningController(BasePruningAlgoController):
                                                                                                    'filter_pruning'))
         self._bn_adaptation.run(self.model)
 
-    def prepare_for_inference(self, make_model_copy: bool = True) -> NNCFNetwork:
-        """
-        Prepare NNCFNetwork for inference by converting NNCF modules to torch native format.
-
-        :param make_model_copy: `True` means that a copy of the model will be modified.
-            `False` means that the original model in the controller will be changed and
-            no further compression actions will be available. Defaults to True.
-
-        :return NNCFNetwork: Converted model.
-        """
-        model = self.model
-        if make_model_copy:
-            model = copy.deepcopy(self.model)
+    def strip_model(self, model: NNCFNetwork, do_copy: bool = False) -> NNCFNetwork:
+        if do_copy:
+            model = copy_model(model)
 
         graph = model.get_original_graph()
         ModelPruner(model, graph, PT_PRUNING_OPERATOR_METATYPES, PrunType.FILL_ZEROS).prune_model()

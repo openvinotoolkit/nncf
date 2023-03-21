@@ -354,5 +354,6 @@ class BasePruningAlgoController(BaseCompressionAlgorithmController):
 
         return pruned_layers_summary
 
-    def strip_model(self, model: tf.keras.Model) -> tf.keras.Model:
+    def strip_model(self, model: tf.keras.Model, do_copy: bool = False) -> tf.keras.Model:
+        # Transform model for pruning creates copy of the model.
         return strip_model_from_masks(model, self._op_names)

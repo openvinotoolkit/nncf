@@ -12,7 +12,6 @@
 """
 # pylint:disable=too-many-lines
 
-import copy
 import shutil
 from collections import Counter
 from collections import OrderedDict
@@ -42,10 +41,10 @@ from nncf.common.graph import NNCFNodeName
 from nncf.common.graph.definitions import MODEL_INPUT_OP_NAME
 from nncf.common.graph.layer_attributes import ConvolutionLayerAttributes
 from nncf.common.graph.layer_attributes import WeightedLayerAttributes
-from nncf.common.graph.transformations.commands import TargetPoint
-from nncf.common.graph.transformations.commands import TargetType
 from nncf.common.graph.patterns.manager import PatternsManager
 from nncf.common.graph.patterns.manager import TargetDevice
+from nncf.common.graph.transformations.commands import TargetPoint
+from nncf.common.graph.transformations.commands import TargetType
 from nncf.common.graph.utils import get_first_nodes_of_type
 from nncf.common.hardware.config import HWConfig
 from nncf.common.hardware.config import HWConfigType
@@ -71,10 +70,11 @@ from nncf.common.quantization.structs import WeightQuantizerId
 from nncf.common.schedulers import BaseCompressionScheduler
 from nncf.common.scopes import matches_any
 from nncf.common.statistics import NNCFStatistics
+from nncf.common.utils.backend import BackendType
+from nncf.common.utils.backend import copy_model
 from nncf.common.utils.debug import is_debug
 from nncf.common.utils.dot_file_rw import write_dot_graph
 from nncf.common.utils.os import safe_open
-from nncf.common.utils.backend import BackendType
 from nncf.config import NNCFConfig
 from nncf.config.extractors import extract_algo_specific_config
 from nncf.config.extractors import extract_bn_adaptation_init_params
@@ -1459,23 +1459,11 @@ class QuantizationController(QuantizationControllerBase):
         nncf_stats.register('quantization', stats)
         return nncf_stats
 
-    def prepare_for_inference(self, make_model_copy: bool = True) -> NNCFNetwork:
-        """
-        Prepare NNCFNetwork for inference by converting NNCF modules to torch native format.
-
-        :param make_model_copy: `True` means that a copy of the model will be modified.
-            `False` means that the original model in the controller will be changed and
-            no further compression actions will be available. Defaults to True.
-
-        :return NNCFNetwork: Converted model.
-        """
-        model = self.model
-        if make_model_copy:
-            model = copy.deepcopy(self.model)
-
+    def strip_model(self, model: NNCFNetwork, do_copy: bool = False) -> NNCFNetwork:
+        if do_copy:
+            model = copy_model(model)
         model = replace_quantizer_to_torch_native_module(model)
         model = remove_disabled_quantizers(model)
-
         return model
 
 

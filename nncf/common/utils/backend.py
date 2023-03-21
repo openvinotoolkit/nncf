@@ -10,11 +10,9 @@
  See the License for the specific language governing permissions and
  limitations under the License.
 """
-from typing import TypeVar
-from enum import Enum
 from copy import deepcopy
-
-from nncf.api.compression import CompressionAlgorithmController
+from enum import Enum
+from typing import TypeVar
 
 TModel = TypeVar('TModel')
 
@@ -75,19 +73,6 @@ def get_backend(model) -> BackendType:
                        'The available frameworks found: {}.'.format(', '.join(available_frameworks)))
 
 
-def infer_backend_from_compression_controller(compression_controller: CompressionAlgorithmController) -> BackendType:
-    """
-    Returns the NNCF backend name string inferred from the type of the model
-    stored in the passed compression controller.
-
-    :param compression_controller: Passed compression controller
-    (of CompressionAlgorithmController type).
-    :return: A BackendType representing the NNCF backend.
-    """
-    return get_backend(compression_controller.model)
-
-
-# TODO(l-bat): Remove after fixing ticket: 100919
 def copy_model(model: TModel) -> TModel:
     """
     Function to create copy of the backend-specific model.
@@ -97,5 +82,12 @@ def copy_model(model: TModel) -> TModel:
     """
     model_backend = get_backend(model)
     if model_backend == BackendType.OPENVINO:
+        # TODO(l-bat): Remove after fixing ticket: 100919
         return model.clone()
+    if model_backend == BackendType.TENSORFLOW:
+        # deepcopy and tensorflow.keras.models.clone_model does not work correctly on 2.8.4 version
+        from nncf.tensorflow.graph.model_transformer import TFModelTransformer
+        from nncf.tensorflow.graph.transformations.layout import TFTransformationLayout
+        model = TFModelTransformer(model).transform(TFTransformationLayout())
+        return model
     return deepcopy(model)
