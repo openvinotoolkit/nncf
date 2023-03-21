@@ -45,15 +45,14 @@ def quantize_impl(model: ov.Model,
     """
     Implementation of the `quantize()` method for the OpenVINO backend via the OpenVINO Runtime API.
     """
-    if model_type is not None:
-        raise ValueError(f'model_type={model_type} is not supported')
 
     quantization_parameters = PostTrainingQuantizationParameters(
         preset=preset,
         target_device=target_device,
         number_samples=subset_size,
         ignored_scopes=ignored_scope,
-        fast_bias_correction=fast_bias_correction
+        fast_bias_correction=fast_bias_correction,
+        model_type=model_type
     )
 
     quantization_algorithm = PostTrainingQuantization(quantization_parameters)

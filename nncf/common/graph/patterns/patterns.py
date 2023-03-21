@@ -385,3 +385,6 @@ class PatternNames(Enum):
                                                        devices=[TargetDevice.ANY,
                                                                 TargetDevice.CPU,
                                                                 TargetDevice.GPU])
+
+    # TRANSFORMERS
+    MATMUL_SOFTMAX_MATMUL = PatternDesc('matmul_softmax_matmul')

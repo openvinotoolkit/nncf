@@ -141,16 +141,24 @@ class FastBiasCorrection(Algorithm):
 
             sub_input_name, sub_output_name = self._backend_entity.get_sub_input_output_names(extracted_model)
 
-            channel_axis = self._backend_entity.channel_axis_by_types[node.metatype]
+            channel_axis = node.metatype.output_channel_axis
+            if bias_value.ndim > 1:
+                # Make index positive
+                channel_axis = range(bias_value.ndim)[channel_axis]
             input_blob = self._create_input_data(input_shape,
                                                  input_fp,
-                                                 sub_input_name)
+                                                 sub_input_name,
+                                                 channel_axis)
             bias_shift = self._get_bias_shift(
                 model=extracted_model,
                 input_blob=input_blob,
                 channel_axis=channel_axis,
                 output_fp=output_fp,
                 output_name=sub_output_name)
+
+            if bias_value.ndim > 1:
+                axes = [i for i in range(bias_value.ndim) if i != channel_axis]
+                bias_shift = np.expand_dims(bias_shift, axes)
 
             updated_bias = bias_value + bias_shift
             magnitude = self._get_bias_shift_magnitude(bias_value, updated_bias)
@@ -249,16 +257,17 @@ class FastBiasCorrection(Algorithm):
     def _create_input_data(self,
                            input_shape: Tuple[int],
                            input_fp: List[np.ndarray],
-                           input_name: str) -> Dict[str, NNCFTensor]:
+                           input_name: str,
+                           channel_axis: int) -> Dict[str, NNCFTensor]:
         """
         Creates input blob for the bias shift calculation.
-
         :param input_shape: Input shape for the blob.
         :param input_fp: Input data for the blob.
         :param input_name: Name for the output dictionary.
+        :param channel_axis: Axis to fill the blob with provided data.
         :return: The dictionary of the blob by input name.
         """
-        input_blob = self._backend_entity.create_blob(input_shape, input_fp)
+        input_blob = self._backend_entity.create_blob(input_shape, input_fp, channel_axis)
         input_data = {input_name: input_blob}
         return input_data
 
@@ -315,7 +324,7 @@ class FastBiasCorrection(Algorithm):
             post_layer_statistic_point = self._backend_entity.target_point(TargetType.POST_LAYER_OPERATION,
                                                                            node.node_name,
                                                                            output_port_id)
-            channel_axis = self._backend_entity.channel_axis_by_types[node.metatype]
+            channel_axis = node.metatype.output_channel_axis
 
             self._add_statistic_point(statistic_container,
                                       pre_layer_statistic_point,

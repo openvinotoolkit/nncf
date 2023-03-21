@@ -14,6 +14,8 @@
 from typing import Dict, List, Tuple, Optional
 import numpy as np
 
+from nncf.parameters import ModelType
+from nncf.scopes import IgnoredScope
 from nncf.common.graph.graph import NNCFGraph
 from nncf.common.graph.graph import NNCFNode
 from nncf.common.graph.operator_metatypes import OperatorMetatype
@@ -27,10 +29,15 @@ from nncf.quantization.fake_quantize import FakeQuantizeParameters
 from nncf.onnx.hardware.config import ONNXHWConfig
 from nncf.onnx.quantization.default_quantization import DEFAULT_ONNX_QUANT_TRAIT_TO_OP_DICT
 from nncf.onnx.graph.nncf_graph_builder import ONNXExtendedLayerAttributes
-from nncf.onnx.graph.metatypes.onnx_metatypes import WEIGHT_LAYER_METATYPES
+from nncf.onnx.graph.metatypes.onnx_metatypes import ONNXLinearMetatype
 from nncf.onnx.graph.metatypes.onnx_metatypes import ONNXNonMaxSuppressionMetatype
 from nncf.onnx.graph.metatypes.onnx_metatypes import ONNXTopKMetatype
 from nncf.onnx.graph.metatypes.onnx_metatypes import ONNXShapeMetatype
+from nncf.onnx.graph.metatypes.onnx_metatypes import ONNXAddLayerMetatype
+from nncf.onnx.graph.metatypes.onnx_metatypes import ONNXPowMetatype
+from nncf.onnx.graph.metatypes.onnx_metatypes import ONNXSqueezeMetatype
+from nncf.onnx.graph.metatypes.onnx_metatypes import ONNXSubMetatype
+from nncf.onnx.graph.metatypes.onnx_metatypes import ONNXReduceMeanMetatype
 from nncf.onnx.graph.transformations.commands import ONNXQuantizerInsertionCommand
 from nncf.onnx.graph.transformations.commands import ONNXTargetPoint
 from nncf.onnx.graph.node_utils import get_input_edges_mapping
@@ -46,8 +53,8 @@ from nncf.onnx.quantization.quantizer_parameters import convert_fq_params_to_onn
 class ONNXMinMaxAlgoBackend(MinMaxAlgoBackend):
 
     @property
-    def layers_with_weights_metatypes(self) -> List[OperatorMetatype]:
-        return WEIGHT_LAYER_METATYPES
+    def mat_mul_metatype(self) -> OperatorMetatype:
+        return ONNXLinearMetatype
 
     @property
     def post_processing_metatypes(self) -> List[OperatorMetatype]:
@@ -166,3 +173,19 @@ class ONNXMinMaxAlgoBackend(MinMaxAlgoBackend):
     @staticmethod
     def get_weight_tensor_port_id(node: NNCFNode) -> int:
         return node.metatype.weight_definitions.weight_port_id
+
+    @staticmethod
+    def get_model_type_ignore_scope(model_type: ModelType) -> IgnoredScope:
+        if model_type == ModelType.TRANSFORMER:
+            types = []
+            metatypes_to_add = [ONNXAddLayerMetatype, ONNXPowMetatype, ONNXSqueezeMetatype,
+                                ONNXSubMetatype, ONNXReduceMeanMetatype]
+            for metatype in metatypes_to_add:
+                types.extend(metatype.get_all_aliases())
+            return IgnoredScope(types=types)
+        return IgnoredScope()
+
+    @staticmethod
+    def get_weight_nodes(nncf_graph: NNCFGraph) -> List[NNCFNode]:
+        return [node for node in nncf_graph.get_all_nodes() if
+                isinstance(node.layer_attributes, ONNXExtendedLayerAttributes)]

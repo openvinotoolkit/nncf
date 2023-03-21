@@ -18,16 +18,18 @@ from nncf.parameters import TargetDevice
 from nncf.common.graph.patterns import GraphPattern
 from nncf.quantization.algorithms.post_training.algorithm import PostTrainingQuantization
 from nncf.quantization.algorithms.post_training.algorithm import PostTrainingQuantizationParameters
-from nncf.quantization.algorithms.min_max.onnx_backend import \
-    ONNXMinMaxAlgoBackend
+from nncf.quantization.algorithms.min_max.onnx_backend import ONNXMinMaxAlgoBackend
 from nncf.onnx.statistics.collectors import ONNXMeanMinMaxStatisticCollector
 from nncf.onnx.statistics.collectors import ONNXMinMaxStatisticCollector
 from nncf.onnx.graph.metatypes.onnx_metatypes import ONNXConvolutionMetatype
+from nncf.onnx.graph.metatypes.onnx_metatypes import ONNXLinearMetatype
+from nncf.onnx.graph.nncf_graph_builder import ONNXExtendedLayerAttributes
 
 from tests.onnx.models import LinearModel
 from tests.onnx.models import OneDepthwiseConvolutionalModel
 from tests.post_training.test_ptq_params import TemplateTestPTQParams
 from tests.post_training.models import NNCFGraphToTest
+from tests.post_training.models import NNCFGraphToTestMatMul
 
 
 # pylint: disable=protected-access
@@ -61,18 +63,23 @@ class TestPTQParams(TemplateTestPTQParams):
     @pytest.fixture(scope='session')
     def test_params(self):
         return {
-        'test_range_type_per_tensor':
-            {'model': LinearModel().onnx_model,
-             'stat_points_num': 5},
-        'test_range_type_per_channel':
-            {'model': OneDepthwiseConvolutionalModel().onnx_model,
-             'stat_points_num': 2},
-        'test_quantize_outputs':
-            {'nncf_graph': NNCFGraphToTest(ONNXConvolutionMetatype).nncf_graph,
-             'pattern': GraphPattern()},
-        'test_ignored_scopes':
-            {'nncf_graph': NNCFGraphToTest(ONNXConvolutionMetatype).nncf_graph,
-             'pattern': GraphPattern()},
+            'test_range_type_per_tensor':
+                {'model': LinearModel().onnx_model,
+                 'stat_points_num': 5},
+            'test_range_type_per_channel':
+                {'model': OneDepthwiseConvolutionalModel().onnx_model,
+                 'stat_points_num': 2},
+            'test_quantize_outputs':
+                {'nncf_graph': NNCFGraphToTest(ONNXConvolutionMetatype,
+                                               ONNXExtendedLayerAttributes(None, None)).nncf_graph,
+                 'pattern': GraphPattern()},
+            'test_ignored_scopes':
+                {'nncf_graph': NNCFGraphToTest(ONNXConvolutionMetatype,
+                                               ONNXExtendedLayerAttributes(None, None)).nncf_graph,
+                 'pattern': GraphPattern()},
+            'test_model_type_pass':
+                {'nncf_graph': NNCFGraphToTestMatMul(ONNXLinearMetatype).nncf_graph,
+                 'pattern': GraphPattern()},
         }
 
     @pytest.fixture(params=[(IgnoredScope([]), 1, 1),

@@ -13,6 +13,8 @@
 
 from typing import Dict, List, Tuple
 
+from nncf.parameters import ModelType
+from nncf.scopes import IgnoredScope
 from nncf.common.graph.graph import NNCFGraph
 from nncf.common.graph.graph import NNCFNode
 from nncf.common.graph.operator_metatypes import OperatorMetatype
@@ -28,6 +30,14 @@ from nncf.experimental.openvino_native.graph.metatypes.openvino_metatypes import
 from nncf.experimental.openvino_native.graph.metatypes.openvino_metatypes import OVTopKMetatype
 from nncf.experimental.openvino_native.graph.metatypes.openvino_metatypes import OVNonMaxSuppressionMetatype
 from nncf.experimental.openvino_native.graph.metatypes.openvino_metatypes import OVShapeOfMetatype
+from nncf.experimental.openvino_native.graph.metatypes.openvino_metatypes import OVMatMulMetatype
+from nncf.experimental.openvino_native.graph.metatypes.openvino_metatypes import OVAddMetatype
+from nncf.experimental.openvino_native.graph.metatypes.openvino_metatypes import OVPowerMetatype
+from nncf.experimental.openvino_native.graph.metatypes.openvino_metatypes import OVSqueezeMetatype
+from nncf.experimental.openvino_native.graph.metatypes.openvino_metatypes import OVSubtractMetatype
+from nncf.experimental.openvino_native.graph.metatypes.openvino_metatypes import OVReduceMeanMetatype
+from nncf.experimental.openvino_native.graph.metatypes.openvino_metatypes import OVSquaredDifferenceMetatype
+from nncf.experimental.openvino_native.graph.metatypes.openvino_metatypes import OVMVNMetatype
 from nncf.experimental.openvino_native.graph.transformations.commands import OVQuantizerInsertionCommand
 from nncf.experimental.openvino_native.graph.transformations.commands import OVTargetPoint
 from nncf.experimental.openvino_native.hardware.config import OVHWConfig
@@ -44,8 +54,8 @@ from nncf.quantization.fake_quantize import FakeQuantizeParameters
 class OVMinMaxAlgoBackend(MinMaxAlgoBackend):
 
     @property
-    def layers_with_weights_metatypes(self) -> List[OperatorMetatype]:
-        return GENERAL_WEIGHT_LAYER_METATYPES
+    def mat_mul_metatype(self) -> OperatorMetatype:
+        return OVMatMulMetatype
 
     @property
     def post_processing_metatypes(self) -> List[OperatorMetatype]:
@@ -125,7 +135,7 @@ class OVMinMaxAlgoBackend(MinMaxAlgoBackend):
                                    target_point: OVTargetPoint,
                                    quantizer_config: QuantizerConfig,
                                    num_samples: int = None) -> OVMinMaxStatisticCollector:
-        reduction_shape, use_abs_max =\
+        reduction_shape, use_abs_max = \
             OVMinMaxAlgoBackend._get_reduction_shape_and_use_abs_max(nncf_graph, target_point,
                                                                      quantizer_config)
         return OVMinMaxStatisticCollector(use_abs_max, reduction_shape, num_samples)
@@ -136,7 +146,7 @@ class OVMinMaxAlgoBackend(MinMaxAlgoBackend):
                                         quantizer_config: QuantizerConfig,
                                         use_per_sample_stats: bool,
                                         num_samples: int = None) -> OVMeanMinMaxStatisticCollector:
-        reduction_shape, use_abs_max =\
+        reduction_shape, use_abs_max = \
             OVMinMaxAlgoBackend._get_reduction_shape_and_use_abs_max(nncf_graph, target_point,
                                                                      quantizer_config)
         return OVMeanMinMaxStatisticCollector(use_per_sample_stats,
@@ -147,3 +157,21 @@ class OVMinMaxAlgoBackend(MinMaxAlgoBackend):
     @staticmethod
     def get_weight_tensor_port_id(node: NNCFNode) -> int:
         return node.layer_attributes.const_port_id
+
+    @staticmethod
+    def get_model_type_ignore_scope(model_type: ModelType) -> IgnoredScope:
+        if model_type == ModelType.TRANSFORMER:
+            types = []
+            metatypes_to_add = [OVAddMetatype, OVPowerMetatype, OVSqueezeMetatype,
+                                OVSubtractMetatype, OVReduceMeanMetatype,
+                                OVSquaredDifferenceMetatype, OVMVNMetatype]
+            for metatype in metatypes_to_add:
+                types.extend(metatype.get_all_aliases())
+            return IgnoredScope(types=types)
+        return IgnoredScope()
+
+    @staticmethod
+    def get_weight_nodes(nncf_graph: NNCFGraph) -> List[NNCFNode]:
+        return [node for node in nncf_graph.get_all_nodes() if
+                isinstance(node.layer_attributes, OVConstantLayerAttributes) and
+                node.metatype in GENERAL_WEIGHT_LAYER_METATYPES]

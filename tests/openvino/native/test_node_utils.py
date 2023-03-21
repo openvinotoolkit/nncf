@@ -11,11 +11,18 @@
  limitations under the License.
 """
 
+import pytest
 import numpy as np
 
+from nncf.experimental.openvino_native.graph.nncf_graph_builder import GraphConverter
 from nncf.experimental.openvino_native.graph.node_utils import get_weight_value
+from nncf.experimental.openvino_native.graph.node_utils import is_node_with_bias
 from nncf.common.factory import NNCFGraphFactory
 from tests.openvino.native.models import FPModel
+from tests.openvino.native.models import ConvNotBiasModel
+from tests.openvino.native.models import ConvModel
+from tests.openvino.native.models import MatMul2DModel
+from tests.openvino.native.models import MatMul2DNotBiasModel
 
 
 def test_get_weight_value_const_with_convert():
@@ -25,3 +32,18 @@ def test_get_weight_value_const_with_convert():
 
     actual_value = get_weight_value(node_with_weight, nncf_graph, model)
     assert actual_value.dtype == np.uint16
+
+
+@pytest.mark.parametrize('model_to_create, is_with_bias, node_name', [[ConvNotBiasModel, True, 'Conv'],
+                                                                      [ConvModel, True, 'Conv'],
+                                                                      # TODO: add group conv to node with bias
+                                                                      # [DepthwiseConv3DModel, True, 'Conv3D'],
+                                                                      # [DepthwiseConv4DModel, True, 'Conv4D'],
+                                                                      # [DepthwiseConv5DModel, True, 'Conv5D'],
+                                                                      [MatMul2DModel, True, 'MatMul'],
+                                                                      [MatMul2DNotBiasModel, True, 'MatMul']])
+def test_is_node_with_bias(model_to_create, is_with_bias, node_name):
+    model = model_to_create().ov_model
+    nncf_graph = GraphConverter.create_nncf_graph(model)
+    node = nncf_graph.get_node_by_name(node_name)
+    assert is_node_with_bias(node, nncf_graph) == is_with_bias

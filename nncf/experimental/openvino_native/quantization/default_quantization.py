@@ -48,6 +48,7 @@ DEFAULT_OV_QUANT_TRAIT_TO_OP_DICT = {
         ov_metatypes.OVLogicalAndMetatype,
         ov_metatypes.OVLogicalOrMetatype,
         ov_metatypes.OVLogicalXorMetatype,
+        ov_metatypes.OVSquaredDifferenceMetatype
     ],
     QuantizationTrait.NON_QUANTIZABLE: [
         ov_metatypes.OVSigmoidMetatype,

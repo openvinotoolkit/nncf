@@ -23,10 +23,6 @@ from nncf.common.utils.backend import BackendType
 from nncf.common.utils.registry import Registry
 
 from nncf.experimental.openvino_native.graph.metatypes.openvino_metatypes import OV_OPERATOR_METATYPES
-from nncf.experimental.openvino_native.graph.metatypes.openvino_metatypes import OVOpMetatype
-from nncf.experimental.openvino_native.graph.metatypes.openvino_metatypes import OVConvolutionMetatype
-from nncf.experimental.openvino_native.graph.metatypes.openvino_metatypes import OVConvolutionBackpropDataMetatype
-from nncf.experimental.openvino_native.graph.metatypes.openvino_metatypes import OVMatMulMetatype
 from nncf.experimental.openvino_native.graph.metatypes.openvino_metatypes import OVFakeQuantizeMetatype
 from nncf.experimental.openvino_native.graph.transformations.commands import OVBiasCorrectionCommand
 from nncf.experimental.openvino_native.graph.transformations.commands import OVModelExtractionCommand
@@ -47,14 +43,6 @@ class OVFastBiasCorrectionAlgoBackend(FastBiasCorrectionAlgoBackend):
     @property
     def operation_metatypes(self) -> Registry:
         return OV_OPERATOR_METATYPES
-
-    @property
-    def channel_axis_by_types(self) -> Dict[OVOpMetatype, int]:
-        return {
-            OVConvolutionMetatype: 1,
-            OVConvolutionBackpropDataMetatype: 1,
-            OVMatMulMetatype: -1
-        }
 
     @property
     def tensor_processor(self) -> OVNNCFCollectorTensorProcessor:
@@ -87,11 +75,12 @@ class OVFastBiasCorrectionAlgoBackend(FastBiasCorrectionAlgoBackend):
         return subgraph.inputs[0].node.friendly_name, subgraph.outputs[0].node.friendly_name
 
     @staticmethod
-    def create_blob(shape: Tuple[int], data: List[float]) -> np.ndarray:
+    def create_blob(shape: Tuple[int], data: List[np.ndarray], channel_axis: int) -> np.ndarray:
         blob = np.zeros(shape)
-        for i, value in enumerate(data):
-            blob[:, i] = value
-        blob = blob.astype(np.float32)
+        for j, idx in enumerate(np.ndindex(blob.shape[channel_axis])):
+            index = tuple(slice(None) if i != channel_axis else idx for i in range(blob.ndim))
+            blob[index] = data[j]
+        blob = blob.astype(data[0].dtype)
         return blob
 
     @staticmethod
@@ -104,6 +93,9 @@ class OVFastBiasCorrectionAlgoBackend(FastBiasCorrectionAlgoBackend):
 
     @staticmethod
     def is_quantized_weights(node: NNCFNode, nncf_graph: NNCFGraph) -> bool:
+        # At first, checks whether the node has weight tensor
+        if node.layer_attributes is None:
+            return False
         const_port_id = node.layer_attributes.const_port_id
         weight_node = nncf_graph.get_input_edges(node)[const_port_id].from_node
         return weight_node.metatype == OVFakeQuantizeMetatype

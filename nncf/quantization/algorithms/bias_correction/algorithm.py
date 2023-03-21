@@ -161,6 +161,13 @@ class BiasCorrection(Algorithm):
             bias_shift = self._compute_bias_shift(node, model_copy_subgraph, feed_dicts, statistic_points)
 
             current_bias = self._backend_entity.get_bias_value(node, model, nncf_graph)
+
+            channel_axis = node.metatype.output_channel_axis
+            if current_bias.ndim > 1:
+                channel_axis = range(current_bias.ndim)[channel_axis]
+                axes = [i for i in range(current_bias.ndim) if i != channel_axis]
+                bias_shift = np.expand_dims(bias_shift, axes)
+
             updated_bias = current_bias + bias_shift
             magnitude = self._get_bias_shift_magnitude(current_bias, updated_bias)
 
@@ -322,7 +329,7 @@ class BiasCorrection(Algorithm):
         output_fp = self._get_fp_outputs(statistic_points, node.node_name)
         output_tensor_name = self._backend_entity.get_output_name(model, node.node_name)
         engine = EngineFactory.create(model)
-        channel_axis = self._backend_entity.channel_axis_by_types[node.metatype]
+        channel_axis = node.metatype.output_channel_axis
         q_outputs = []
         for feed_dict in feed_dicts:
             q_output = engine.infer(feed_dict)
@@ -453,7 +460,7 @@ class BiasCorrection(Algorithm):
 
         for node in nodes_with_bias:
             node_name = node.node_name
-            channel_axis = self._backend_entity.channel_axis_by_types[node.metatype]
+            channel_axis = node.metatype.output_channel_axis
             input_port_id, output_port_id = self._backend_entity.get_activation_port_ids_for_bias_node(node)
             if node_name in biased_after_input_nodes:
                 self._collected_stat_inputs.add(node_name)

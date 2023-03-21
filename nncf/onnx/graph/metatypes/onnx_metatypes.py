@@ -78,6 +78,7 @@ class ONNXDepthwiseConvolutionMetatype(ONNXOpWithWeightsMetatype):
     op_names = ['Conv']
     hw_config_names = [HWConfigOpName.DEPTHWISECONVOLUTION]
     weight_definitions = OpWeightDef(weight_channel_axis=0, weight_port_id=1, bias_port_id=2)
+    output_channel_axis = 1
 
     @classmethod
     def matches(cls, model: onnx.ModelProto, node: onnx.NodeProto) -> bool:
@@ -90,6 +91,7 @@ class ONNXConvolutionMetatype(ONNXOpWithWeightsMetatype):
     op_names = ['Conv']
     hw_config_names = [HWConfigOpName.CONVOLUTION]
     weight_definitions = OpWeightDef(weight_channel_axis=0, weight_port_id=1, bias_port_id=2)
+    output_channel_axis = 1
     subtypes = [ONNXDepthwiseConvolutionMetatype]
 
 
@@ -99,6 +101,7 @@ class ONNXConvolutionTransposeMetatype(ONNXOpWithWeightsMetatype):
     op_names = ['ConvTranspose']
     hw_config_names = [HWConfigOpName.CONVOLUTION]
     weight_definitions = OpWeightDef(weight_channel_axis=1, weight_port_id=1, bias_port_id=2)
+    output_channel_axis = 1
 
 
 @ONNX_OPERATION_METATYPES.register()
@@ -108,6 +111,7 @@ class ONNXLinearMetatype(ONNXOpWithWeightsMetatype):
     hw_config_names = [HWConfigOpName.MATMUL]
     # TODO(kshpv): ticket:95156
     weight_definitions = OpWeightDef(weight_channel_axis=0, weight_port_id=1, bias_port_id=2)
+    output_channel_axis = -1
 
 
 @ONNX_OPERATION_METATYPES.register()
@@ -327,9 +331,9 @@ class ONNXFloorMetatype(ONNXOpMetatype):
 
 
 @ONNX_OPERATION_METATYPES.register()
-class ONNXSqrtMetatype(ONNXOpMetatype):
+class ONNXPowMetatype(ONNXOpMetatype):
     name = 'SqrtOp'
-    op_names = ['Sqrt']
+    op_names = ['Sqrt', 'Pow']
     hw_config_names = [HWConfigOpName.POWER]
 
 
@@ -513,7 +517,7 @@ def _is_depthwise_conv(model: onnx.ModelProto, node: onnx.NodeProto) -> bool:
         return False
     conv_out_channels = weight_tensor_value.shape[0]
     conv_in_channels = weight_tensor_value.shape[1] * conv_group
-    if conv_out_channels % conv_in_channels == 0 and conv_out_channels // conv_in_channels > 0 and\
+    if conv_out_channels % conv_in_channels == 0 and conv_out_channels // conv_in_channels > 0 and \
             conv_group == conv_in_channels:
         return True
     return False
