@@ -131,8 +131,8 @@ TORCH_EXTRAS = [
     ]
 
 ONNX_EXTRAS = [
-        "onnx==1.12.0",
-        "onnxruntime==1.13.1"
+        "onnx~=1.13.1",
+        "onnxruntime~=1.14.1"
     ]
 
 OPENVINO_EXTRAS = [
