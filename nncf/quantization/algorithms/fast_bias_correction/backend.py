@@ -112,7 +112,7 @@ class FastBiasCorrectionAlgoBackend(ABC):
     def create_blob(shape: Tuple[int], data: List[np.ndarray], channel_axis: int) -> np.ndarray:
         """
         Creates the backend-specific (because of layout) blob.
-        
+
         :param shape: Shape of the blob.
         :param data: Data to fill the blob.
         :param channel_axis: Axis to fill the blob with provided data.
