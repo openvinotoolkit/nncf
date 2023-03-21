@@ -35,6 +35,10 @@ class TensorReducerBase(ABC):
     def inplace(self):
         return self._inplace
 
+    @property
+    def output_port_id(self) -> int:
+        return 0
+
     @classmethod
     def name(cls):
         return cls.__name__
@@ -51,6 +55,7 @@ class TensorReducerBase(ABC):
         if self._reduction_shape is None:
             self._reduction_shape = tuple(range(len(x.shape)))
         return self._reduce_out_of_place(x)
+
 
     @abstractmethod
     def _reduce_out_of_place(self, x: TensorType):
@@ -212,11 +217,11 @@ class TensorCollector:
             return kwargs
         return self._stat_container(**kwargs)
 
-    def get_inplace_fn(self):
+    def get_inplace_fn_info(self):
         retval = []
         for reducer in self._reducers:
             if reducer.inplace:
-                retval.append(reducer.get_inplace_fn())
+                retval.append((reducer.get_inplace_fn(), reducer.output_port_id))
         return retval
 
     def any_stat_out_of_place(self) -> bool:

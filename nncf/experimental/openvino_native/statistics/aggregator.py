@@ -59,7 +59,9 @@ class OVStatisticsAggregator(StatisticsAggregator):
             elif target_point.type in [TargetType.PRE_LAYER_OPERATION,
                                        TargetType.OPERATION_WITH_WEIGHTS]:
                 node = self._name_to_node_mapping[node_name]
-                stat_node_name = node.input_value(port_id).get_node().get_friendly_name()
+                output = node.input_value(port_id)
+                stat_node_name = output.get_node().get_friendly_name()
+                port_id = output.get_index()
             else:
                 RuntimeError(f'Unsupported target point type for statistic aggregator:'
                              f' {target_point.type}')
@@ -72,9 +74,9 @@ class OVStatisticsAggregator(StatisticsAggregator):
         transformation_layout = TransformationLayout()
         transformation_commands = []
         for _, statistic_point, tensor_collector in statistic_points.get_tensor_collectors():
-            for op_fn in tensor_collector.get_inplace_fn():
+            for (op_fn, fn_out_port_id) in tensor_collector.get_inplace_fn_info():
                 transformation_commands.append(
-                    OVInplaceFnInsertionCommand(statistic_point.target_point, op_fn))
+                    OVInplaceFnInsertionCommand(statistic_point.target_point, op_fn, fn_out_port_id))
             if tensor_collector.any_stat_out_of_place():
                 transformation_commands.append(OVOutputInsertionCommand(statistic_point.target_point))
 
@@ -92,23 +94,23 @@ class OVStatisticsAggregator(StatisticsAggregator):
         for target_node_name, _statistic_points in statistic_points.data.items():
             for statistic_point in _statistic_points:
                 target_point = statistic_point.target_point
-                if target_point.type == TargetType.POST_LAYER_OPERATION:
+                if target_point.type == TargetType.PRE_LAYER_OPERATION:
                     node = nncf_graph.get_node_by_name(target_node_name)
-                    target_output_edge = nncf_graph.get_output_edges(node)[target_point.port_id]
+                    target_input_edge = nncf_graph.get_input_edges(node)[target_point.port_id]
 
-                    target_type = TargetType.PRE_LAYER_OPERATION
-                    _target_node_name = target_output_edge.to_node.node_name
-                    port_id = target_output_edge.input_port_id
+                    target_type = TargetType.POST_LAYER_OPERATION
+                    _target_node_name = target_input_edge.from_node.node_name
+                    port_id = target_input_edge.output_port_id
                 else:
                     target_type = statistic_point.target_point.type
                     _target_node_name = target_point.target_node_name
                     port_id = target_point.port_id
 
+                #TODO: Use common target point class instead of tuple
+                key = (_target_node_name, target_type, port_id)
                 for tensor_collectors in statistic_point.algorithm_to_tensor_collectors.values():
-                    for tensor_collector in tensor_collectors:
-                        #TODO: Use common target point class instead of tuple
-                        target_type_to_tensor_collector_map[(_target_node_name, target_type, port_id)]['collectors'].append(tensor_collector)
-                target_type_to_tensor_collector_map[(_target_node_name, target_type, port_id)]['target_point'].append(target_point)
+                    target_type_to_tensor_collector_map[key]['collectors'].extend(tensor_collectors)
+                target_type_to_tensor_collector_map[key]['target_point'].append(target_point)
 
         for merged_collectors_info in target_type_to_tensor_collector_map.values():
             target_point = merged_collectors_info['target_point'][0]

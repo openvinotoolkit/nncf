@@ -34,7 +34,7 @@ from nncf.experimental.common.tensor_statistics.collectors import NoopAggregator
 from nncf.experimental.openvino_native.statistics.statistics import OVMinMaxTensorStatistic
 from nncf.experimental.openvino_native.statistics.statistics import OVMeanTensorStatistic
 from nncf.experimental.openvino_native.statistics.statistics import OVBatchTensorStatistic
-from nncf.experimental.openvino_native.graph.node_utils import get_reduce_node_name
+from nncf.experimental.openvino_native.graph.node_utils import get_reducer_output_node_name
 from nncf.experimental.openvino_native.graph.node_utils import get_result_node_name
 from nncf.experimental.openvino_native.graph.node_utils import get_inplace_max_op
 from nncf.experimental.openvino_native.graph.node_utils import get_inplace_min_op
@@ -97,6 +97,8 @@ class OVNNCFCollectorTensorProcessor(NNCFCollectorTensorProcessor):
         return np.sum(tensor.tensor)
 
 
+
+
 class OVNoopReducer(NoopReducer):
     def get_output_name(self, target_node_name: str, port_id: int) -> str:
         return get_result_node_name(target_node_name, port_id)
@@ -111,9 +113,8 @@ class OVMinReducer(MinReducer):
         return get_inplace_min_op(self.NAME, self._reduction_shape)
 
     def get_output_name(self, target_node_name: str, port_id: int) -> str:
-        if self.inplace:
-            target_node_name = get_reduce_node_name(target_node_name, self.NAME)
-        return get_result_node_name(target_node_name, port_id)
+        return get_reducer_output_node_name(self.NAME, target_node_name, port_id,
+                                            self.output_port_id, self.inplace)
 
 
 class OVMaxReducer(MaxReducer):
@@ -125,9 +126,8 @@ class OVMaxReducer(MaxReducer):
         return get_inplace_max_op(self.NAME, self._reduction_shape, False)
 
     def get_output_name(self, target_node_name: str, port_id: int) -> str:
-        if self.inplace:
-            target_node_name = get_reduce_node_name(target_node_name, self.NAME)
-        return get_result_node_name(target_node_name, port_id)
+        return get_reducer_output_node_name(self.NAME, target_node_name, port_id,
+                                            self.output_port_id, self.inplace)
 
 
 class OVAbsMaxReducer(AbsMaxReducer):
@@ -139,9 +139,8 @@ class OVAbsMaxReducer(AbsMaxReducer):
         return get_inplace_max_op(self.NAME, self._reduction_shape, True)
 
     def get_output_name(self, target_node_name: str, port_id: int) -> str:
-        if self.inplace:
-            target_node_name = get_reduce_node_name(target_node_name, self.NAME)
-        return get_result_node_name(target_node_name, port_id)
+        return get_reducer_output_node_name(self.NAME, target_node_name, port_id,
+                                            self.output_port_id, self.inplace)
 
 
 class OVBatchMeanReducer(BatchMeanReducer):
@@ -153,9 +152,8 @@ class OVBatchMeanReducer(BatchMeanReducer):
         return get_inplace_batch_mean_op(self.NAME)
 
     def get_output_name(self, target_node_name: str, port_id: int) -> str:
-        if self.inplace:
-            target_node_name = get_reduce_node_name(target_node_name, self.NAME)
-        return get_result_node_name(target_node_name, port_id)
+        return get_reducer_output_node_name(self.NAME, target_node_name, port_id,
+                                            self.output_port_id, self.inplace)
 
 
 class OVMeanPerChanelReducer(MeanPerChReducer):
@@ -167,9 +165,8 @@ class OVMeanPerChanelReducer(MeanPerChReducer):
         return get_inplace_mean_per_ch(self.NAME, self._reduction_shape)
 
     def get_output_name(self, target_node_name: str, port_id: int) -> str:
-        if self.inplace:
-            target_node_name = get_reduce_node_name(target_node_name, self.NAME)
-        return get_result_node_name(target_node_name, port_id)
+        return get_reducer_output_node_name(self.NAME, target_node_name, port_id,
+                                            self.output_port_id, self.inplace)
 
 
 def get_min_max_stat_collector(num_samples, reduction_shape, use_abs_max, inplace):

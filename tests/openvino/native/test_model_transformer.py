@@ -177,7 +177,8 @@ def test_inplace_fn_insertion(test_params: InplaceOpTestCase, target_type, targe
     port_id = 1 if target_type == TargetType.OPERATION_WITH_WEIGHTS else 0
     transformed_model = create_transformed_model(
         model, target_layers, target_type, OVInplaceFnInsertionCommand,
-        port_id=port_id, inplace_op_fn=test_params.op_builder(test_params.name, test_params.reduce_shape))
+        port_id=port_id, inplace_op_fn=test_params.op_builder(test_params.name, test_params.reduce_shape),
+        fn_output_port_id=0)
 
     inplace_branches_num = 1
     if target_type == TargetType.PRE_LAYER_OPERATION:
@@ -193,7 +194,7 @@ def test_inplace_fn_insertion(test_params: InplaceOpTestCase, target_type, targe
         target_nodes.append(target_node)
 
     extra_outputs = get_extra_outputs(model, transformed_model)
-    ref_output_names = [get_result_node_name(get_reduce_node_name(target_node.get_friendly_name(), test_params.name), port_id)
+    ref_output_names = [get_result_node_name(get_reduce_node_name(target_node.get_friendly_name(), test_params.name, port_id), port_id)
                         for target_node in target_nodes]
     assert len(extra_outputs) == len(ref_output_names)
     for out_name in extra_outputs:

@@ -70,9 +70,11 @@ class OVOutputInsertionCommand(OVInsertionCommand):
 
 class OVInplaceFnInsertionCommand(OVInsertionCommand):
     def __init__(self, target_point: OVTargetPoint,
-                 inplace_op_fn: 'TensorCollectorSpecBase'):
+                 inplace_op_fn: 'TensorCollectorSpecBase',
+                 fn_output_port_id : int):
         super().__init__(target_point)
         self.inplace_op_fn = inplace_op_fn
+        self.fn_output_port_id = fn_output_port_id
 
     def union(self, other: 'TransformationCommand') -> 'TransformationCommand':
         # Have a look at nncf/torch/graph/transformations/commands/PTInsertionCommand

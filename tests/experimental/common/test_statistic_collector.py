@@ -128,7 +128,7 @@ def test_inplace_param():
     collector.add_branch('out_of_place', reducer_out_of_place, aggregator_out_of_place)
     assert len(collector._reducers) == 2
     assert len(collector._aggregators) == 2
-    assert collector.get_inplace_fn()[0] == inplace_op
+    assert collector.get_inplace_fn_info()[0] == inplace_op
     assert collector.any_stat_out_of_place()
 
 

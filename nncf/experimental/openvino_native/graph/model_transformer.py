@@ -116,10 +116,10 @@ class OVModelTransformer(ModelTransformer):
             model = self._apply_weight_update_transformations(model, weight_update_transformations)
         if model_extraction_transformation:
             model = self._apply_model_extraction_transformation(model, model_extraction_transformation)
-        if output_insertion_transformations:
-            model = self._apply_output_insertion_transformations(model, output_insertion_transformations)
         if inplace_stat_transformations:
             model = self._apply_inplace_operation_insertion(model, inplace_stat_transformations)
+        if output_insertion_transformations:
+            model = self._apply_output_insertion_transformations(model, output_insertion_transformations)
         return model
 
     @staticmethod
@@ -412,13 +412,14 @@ class OVModelTransformer(ModelTransformer):
         node_name = transformation.target_point.target_node_name
         target_node = name_to_node_mapping[node_name]
         port_id = transformation.target_point.port_id
+        fn_output_port_id = transformation.fn_output_port_id
         if transform_type == TargetType.POST_LAYER_OPERATION:
             new_node = transformation.inplace_op_fn(target_node, port_id)
-            return (new_node.output(0), port_id)
-        elif transform_type in [TargetType.PRE_LAYER_OPERATION,
-                                TargetType.OPERATION_WITH_WEIGHTS]:
+            return (new_node.output(fn_output_port_id), fn_output_port_id)
+        if transform_type in [TargetType.PRE_LAYER_OPERATION,
+                              TargetType.OPERATION_WITH_WEIGHTS]:
             source_output = target_node.input(port_id).get_source_output()
             new_node = transformation.inplace_op_fn(source_output.get_node(), source_output.get_index())
-            return (new_node.output(0), port_id)
+            return (new_node.output(fn_output_port_id), fn_output_port_id)
         else:
             raise RuntimeError(f'Transform type {transform_type} is not supported')
