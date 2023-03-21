@@ -77,6 +77,7 @@ def compare_qspecs(qspec: PTQuantizerSpec, quantizer: BaseQuantizer):
 def test_quantization_configs__with_defaults():
     model = BasicConvTestModel()
     config = get_quantization_config_without_range_init()
+    config['compression']['overflow_fix'] = 'disable'
     register_bn_adaptation_init_args(config)
     _, compression_ctrl = create_compressed_model_and_algo_for_test(model, config)
 
@@ -280,6 +281,7 @@ def test_quantizers_have_proper_narrow_range_set():
 
     model = Model()
     config = get_quantization_config_without_range_init(model_size=2)
+    config['compression']['overflow_fix'] = 'disable'
     register_bn_adaptation_init_args(config)
     quant_model, _ = create_compressed_model_and_algo_for_test(model, config)
 

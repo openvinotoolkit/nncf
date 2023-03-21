@@ -750,13 +750,6 @@ class QuantizationBuilder(PTCompressionAlgorithmBuilder):
             qconfig = qp.qconfig
             insertion_point = qp.insertion_point  # QuantizationInsertionPointBase
 
-            if qp.is_weight_quantization_point():
-                use_logarithm_scale = self._use_logarithm_scale_per_group[QuantizerGroup.WEIGHTS]
-                narrow_range = True
-            else:
-                use_logarithm_scale = self._use_logarithm_scale_per_group[QuantizerGroup.ACTIVATIONS]
-                narrow_range = False
-
             compression_lr_multiplier = self._get_compression_lr_multiplier()
 
             half_range = False
@@ -774,6 +767,13 @@ class QuantizationBuilder(PTCompressionAlgorithmBuilder):
                         raise RuntimeError(f"Unknown overflow fix type: {self._overflow_fix}")
                     if half_range:
                         nncf_logger.debug(f'Overflow issue fix will be applied to {quantizers_with_overflow_fix_str}')
+
+            if qp.is_weight_quantization_point():
+                use_logarithm_scale = self._use_logarithm_scale_per_group[QuantizerGroup.WEIGHTS]
+                narrow_range = not half_range
+            else:
+                use_logarithm_scale = self._use_logarithm_scale_per_group[QuantizerGroup.ACTIVATIONS]
+                narrow_range = False
 
             if qp.is_weight_quantization_point():
                 target_node = target_model_graph.get_node_by_name(insertion_point.target_node_name)

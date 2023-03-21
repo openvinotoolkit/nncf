@@ -23,9 +23,9 @@ from nncf.common.graph.transformations.commands import TargetType
 from nncf.common.graph.transformations.commands import TransformationCommand
 from nncf.common.hardware.config import HWConfig
 from nncf.common.tensor_statistics.collectors import TensorStatisticCollectorBase
-from nncf.common.tensor_statistics.statistics import MinMaxTensorStatistic
 from nncf.common.utils.registry import Registry
 from nncf.common.quantization.structs import QuantizerConfig
+from nncf.quantization.fake_quantize import FakeQuantizeParameters
 
 
 TModel = TypeVar('TModel')
@@ -86,14 +86,14 @@ class MinMaxAlgoBackend(ABC):
     def create_activation_quantizer_insertion_command(nncf_graph: NNCFGraph,
                                                       target_point: TargetPoint,
                                                       quantizer_config: QuantizerConfig,
-                                                      statistics: MinMaxTensorStatistic) -> TransformationCommand:
+                                                      parameters: FakeQuantizeParameters) -> TransformationCommand:
         """
         Returns backend-specific quantizer insertion command.
 
         :param nncf_graph: NNCFGraph to get input/output shapes for the target point.
         :param target_point: Target location for the correction.
         :param quantizer_config: QuantizerConfig instance for the current layer.
-        :param statistics: MinMaxTensorStatistic to calculate activation quantization parameters.
+        :param parameters: FakeQuantizeParameters to calculate activation quantization parameters.
         :return: Backend-specific TransformationCommand for the quantizer insertion operation.
         """
 
@@ -102,14 +102,14 @@ class MinMaxAlgoBackend(ABC):
     def create_weight_quantizer_insertion_command(nncf_graph: NNCFGraph,
                                                   target_point: TargetPoint,
                                                   quantizer_config: QuantizerConfig,
-                                                  statistics: MinMaxTensorStatistic) -> TransformationCommand:
+                                                  parameters: FakeQuantizeParameters) -> TransformationCommand:
         """
         Returns backend-specific quantizer insertion command.
 
         :param nncf_graph: NNCFGraph to get input/output shapes for the target point.
         :param target_point: Target location for the correction.
         :param quantizer_config: QuantizerConfig instance for the current layer.
-        :param statistics: MinMaxTensorStatistic to calculate activation quantization parameters.
+        :param parameters: FakeQuantizeParameters to calculate activation quantization parameters.
         :return: Backend-specific TransformationCommand for the quantizer insertion operation.
         """
 
