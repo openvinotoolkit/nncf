@@ -14,7 +14,7 @@
 from typing import NamedTuple, Union
 from copy import deepcopy
 import onnx
-from onnx import TensorProto
+from onnx import TensorProto  # pylint:disable=no-name-in-module
 from onnx.external_data_helper import uses_external_data
 from nncf.onnx.graph.onnx_graph import ONNXGraph
 import numpy as np

@@ -42,7 +42,10 @@ def calculate_symmetric_level_ranges(
         level_low = 0
 
     if narrow_range:
-        level_low = level_low + 1
+        if level_low < 0:
+            level_low += 1
+        else:
+            level_high -= 1
         levels = levels - 1
 
     return level_low, level_high, levels

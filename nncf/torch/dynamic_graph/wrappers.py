@@ -207,11 +207,12 @@ def _collect_module_attrs_and_ignored_algorithms(ctx: TracingContext,
                                                  op_name: str) -> Tuple[BaseLayerAttributes, List[str]]:
     layer_attrs = None
     ignored_algos = []
-    if op_name in OP_NAMES_REQUIRING_MODULE_ATTRS:
+    from nncf.torch.graph.operator_metatypes import OP_NAMES_WITH_WEIGHTS  #pylint:disable=cyclic-import
+    if op_name in OP_NAMES_WITH_WEIGHTS:
         curr_module = ctx.get_current_module()
         if curr_module is None:
-            raise RuntimeError("Operation {} requires module attributes, "
-                               "but it was executed outside any module".format(op_name))
+            raise RuntimeError(f"Operation {op_name} requires module attributes, "
+                               f"but it was executed outside any module")
         layer_attrs = _get_layer_attributes(curr_module, op_name)
         if isinstance(curr_module, _NNCFModuleMixin):
             ignored_algos = deepcopy(curr_module.ignored_algorithms)

@@ -27,10 +27,7 @@ from tests.onnx.quantization.common import mock_collect_statistics
                          )
 def test_min_max_quantization_graph(tmp_path, mocker, model_to_test):
     mock_collect_statistics(mocker)
-    if model_to_test.model_name == 'unet_camvid':
-        pytest.skip('Ticket 96049')
     onnx_model_path = ONNX_MODEL_DIR / (model_to_test.model_name + '.onnx')
-
     original_model = load_model_topology_with_zeros_weights(onnx_model_path)
-    quantized_model = min_max_quantize_model(model_to_test.input_shape, original_model)
+    quantized_model = min_max_quantize_model(original_model)
     compare_nncf_graph(quantized_model, model_to_test.path_ref_graph)

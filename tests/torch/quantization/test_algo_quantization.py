@@ -34,6 +34,7 @@ from nncf.common.quantization.structs import WeightQuantizerId
 from nncf.common.utils.debug import nncf_debug
 from nncf.torch import create_compressed_model
 from nncf.torch import register_default_init_args
+from nncf.torch import register_module
 from nncf.torch.checkpoint_loading import load_state
 from nncf.torch.compression_method_api import PTCompressionLoss
 from nncf.torch.dynamic_graph.scope import Scope
@@ -76,6 +77,7 @@ def compare_qspecs(qspec: PTQuantizerSpec, quantizer: BaseQuantizer):
 def test_quantization_configs__with_defaults():
     model = BasicConvTestModel()
     config = get_quantization_config_without_range_init()
+    config['compression']['overflow_fix'] = 'disable'
     register_bn_adaptation_init_args(config)
     _, compression_ctrl = create_compressed_model_and_algo_for_test(model, config)
 
@@ -279,6 +281,7 @@ def test_quantizers_have_proper_narrow_range_set():
 
     model = Model()
     config = get_quantization_config_without_range_init(model_size=2)
+    config['compression']['overflow_fix'] = 'disable'
     register_bn_adaptation_init_args(config)
     quant_model, _ = create_compressed_model_and_algo_for_test(model, config)
 
@@ -877,3 +880,42 @@ def test_sync_of_level_ranges_and_signed_parameter():
     loaded_sq.load_state_dict(sq.state_dict())
     assert loaded_sq.signed is True
     assert loaded_sq.level_low == -8
+
+
+@register_module()
+class UserModuleWithAddmm(torch.nn.Module):
+    def __init__(self):
+        super().__init__()
+        self.weight = torch.nn.Parameter(torch.ones([1, 1]))
+        self.bias = torch.nn.Parameter(torch.ones([1, 1]))
+
+    def forward(self, x):
+        return torch.addmm(self.bias, x, self.weight)
+
+
+class ModelWithUserModule(torch.nn.Module):
+    def __init__(self):
+        super().__init__()
+        self.user_module = UserModuleWithAddmm()
+
+    def forward(self, x):
+        x = self.user_module(x)
+        return x
+
+
+def test_can_quantize_user_module_with_addmm():
+    nncf_config = NNCFConfig.from_dict({
+        "input_info": {
+            "sample_size": [1, 1]
+        },
+        "compression":
+            {
+                "algorithm": "quantization"
+            }
+    })
+
+    train_loader = create_random_mock_dataloader(nncf_config, num_samples=10)
+    nncf_config = register_default_init_args(nncf_config, train_loader)
+
+    # Should complete successfully without exceptions:
+    create_compressed_model_and_algo_for_test(ModelWithUserModule(), nncf_config)

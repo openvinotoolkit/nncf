@@ -29,39 +29,44 @@ from nncf.quantization.algorithms.post_training.algorithm import PostTrainingQua
 from nncf.quantization.algorithms.post_training.algorithm import PostTrainingQuantizationParameters
 from nncf.onnx.graph.nncf_graph_builder import GraphConverter
 from nncf.onnx.graph.onnx_graph import ONNXGraph
-from nncf.common.quantization.structs import QuantizationMode
-from nncf.onnx.quantization.quantizer_parameters import ONNXQuantizerLayerParameters
+from nncf.onnx.statistics.statistics import ONNXMinMaxTensorStatistic
+from nncf.quantization.fake_quantize import FakeQuantizeParameters
 
 REFERENCE_GRAPHS_TEST_ROOT = 'data/reference_graphs/quantization'
 
 
 def mock_collect_statistics(mocker):
-    default_nncf_q_layer_params = ONNXQuantizerLayerParameters(np.array(0), np.array(0),
-                                                  mode=QuantizationMode.SYMMETRIC,
-                                                  axis=None,
-                                                  tensor_type=np.uint8)
     _ = mocker.patch(
-        'nncf.quantization.algorithms.min_max.onnx_backend.calculate_activation_quantizer_parameters',
-        return_value=default_nncf_q_layer_params)
-    _ = mocker.patch(
-        'nncf.quantization.algorithms.min_max.onnx_backend.calculate_weight_quantizer_parameters',
-        return_value=default_nncf_q_layer_params)
+        'nncf.quantization.fake_quantize.calculate_quantizer_parameters',
+        return_value=FakeQuantizeParameters(np.array(0), np.array(0), np.array(0), np.array(0), 256))
     _ = mocker.patch(
         'nncf.common.tensor_statistics.aggregator.StatisticsAggregator.collect_statistics', return_value=None)
     _ = mocker.patch(
-        'nncf.common.tensor_statistics.collectors.TensorStatisticCollectorBase.get_statistics', return_value=None)
+        'nncf.common.tensor_statistics.collectors.TensorStatisticCollectorBase.get_statistics',
+        return_value=ONNXMinMaxTensorStatistic(min_values=np.array(0), max_values=np.array(0)))
 
 
-def get_random_dataset_for_test(input_key: str,
-                                input_shape: List[int],
-                                input_dtype: np.dtype,
-                                has_batch_dim: bool,
+def _get_input_keys(original_model: onnx.ModelProto) -> str:
+    input_keys = [node.name for node in original_model.graph.input]
+    return input_keys
+
+
+def get_random_dataset_for_test(model: onnx.ModelProto, has_batch_dim: bool,
                                 length: Optional[int] = 10):
-    def transform_fn(item):
-        tensor = np.random.random(input_shape).astype(input_dtype)
-        if has_batch_dim:
-            tensor = np.squeeze(np.random.random(input_shape).astype(input_dtype), axis=0)
-        return {input_key: tensor}
+    keys = _get_input_keys(model)
+    onnx_graph = ONNXGraph(model)
+
+    def transform_fn(i):
+        output = {}
+        for key in keys:
+            input_dtype = onnx_graph.get_edge_dtype(key)
+            input_np_dtype = onnx.helper.mapping.TENSOR_TYPE_TO_NP_TYPE[input_dtype]
+            shape = onnx_graph.get_edge_shape(key)
+            tensor = np.random.random(shape).astype(input_np_dtype)
+            if has_batch_dim:
+                tensor = np.squeeze(np.random.random(shape).astype(input_np_dtype), axis=0)
+            output[key] = tensor
+        return output
 
     return Dataset(list(range(length)), transform_fn)
 
@@ -81,21 +86,11 @@ class ModelToTest:
         self.input_shape = input_shape
 
 
-def _get_input_key(original_model: onnx.ModelProto) -> str:
-    input_keys = [node.name for node in original_model.graph.input]
-    return input_keys[0]
-
-
-def min_max_quantize_model(
-        input_shape: List[int], original_model: onnx.ModelProto, convert_model_opset: bool = True,
-        ignored_scopes: List[str] = None, dataset_has_batch_size: bool = False) -> onnx.ModelProto:
+def min_max_quantize_model(original_model: onnx.ModelProto, convert_model_opset: bool = True,
+                           ignored_scopes: List[str] = None, dataset_has_batch_size: bool = False) -> onnx.ModelProto:
     if convert_model_opset:
         original_model = convert_opset_version(original_model)
-    onnx_graph = ONNXGraph(original_model)
-    input_dtype = onnx_graph.get_edge_dtype(original_model.graph.input[0].name)
-    input_np_dtype = onnx.helper.mapping.TENSOR_TYPE_TO_NP_TYPE[input_dtype]
-    dataset = get_random_dataset_for_test(_get_input_key(
-        original_model), input_shape, input_np_dtype, dataset_has_batch_size)
+    dataset = get_random_dataset_for_test(original_model, dataset_has_batch_size)
     post_training_quantization = PostTrainingQuantization(
         PostTrainingQuantizationParameters(number_samples=1, ignored_scopes=ignored_scopes))
     # Using PTQ, but apply only MinMax
@@ -108,16 +103,11 @@ def min_max_quantize_model(
     return quantized_model
 
 
-def ptq_quantize_model(
-        input_shape: List[int], original_model: onnx.ModelProto, convert_model_opset: bool = True,
-        ignored_scopes: List[str] = None, dataset_has_batch_size: bool = False) -> onnx.ModelProto:
+def ptq_quantize_model(original_model: onnx.ModelProto, convert_model_opset: bool = True,
+                       ignored_scopes: List[str] = None, dataset_has_batch_size: bool = False) -> onnx.ModelProto:
     if convert_model_opset:
         original_model = convert_opset_version(original_model)
-    onnx_graph = ONNXGraph(original_model)
-    input_dtype = onnx_graph.get_edge_dtype(original_model.graph.input[0].name)
-    input_np_dtype = onnx.helper.mapping.TENSOR_TYPE_TO_NP_TYPE[input_dtype]
-    dataset = get_random_dataset_for_test(_get_input_key(
-        original_model), input_shape, input_np_dtype, dataset_has_batch_size)
+    dataset = get_random_dataset_for_test(original_model, dataset_has_batch_size)
     post_training_quantization = PostTrainingQuantization(
         PostTrainingQuantizationParameters(number_samples=1, ignored_scopes=ignored_scopes))
     quantized_model = post_training_quantization.apply(original_model, dataset=dataset)

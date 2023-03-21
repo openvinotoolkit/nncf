@@ -12,7 +12,7 @@
 """
 
 from copy import deepcopy
-from typing import Dict, List, TypeVar, Optional, OrderedDict
+from typing import Dict, TypeVar, Optional, OrderedDict
 import collections
 
 from nncf import Dataset
@@ -48,6 +48,7 @@ from nncf.quantization.algorithms.min_max.backend import ALGO_BACKENDS
 from nncf.quantization.algorithms.definitions import RangeType
 from nncf.quantization.algorithms.definitions import Granularity
 from nncf.quantization.passes import transform_to_inference_graph
+from nncf.quantization.fake_quantize import calculate_quantizer_parameters
 from nncf.common.factory import NNCFGraphFactory
 from nncf.common.tensor_statistics.statistic_point import StatisticPoint
 from nncf.common.tensor_statistics.statistic_point import StatisticPointsContainer
@@ -368,7 +369,7 @@ class MinMaxQuantization(Algorithm):
         weight_layer_names = set()
         def filter_func(point: StatisticPoint) -> bool:
             return MinMaxQuantization in point.algorithm_to_tensor_collectors and \
-                   point.target_point.type == quantization_target_point.type
+                   point.target_point == quantization_target_point
 
         for quantization_target_point, qconfig in quantization_target_points.items():
             target_node_name = quantization_target_point.target_node_name
@@ -382,13 +383,15 @@ class MinMaxQuantization(Algorithm):
                     if layer_name in weight_layer_names:
                         continue
                     weight_layer_names.add(layer_name)
+                    statistics = tensor_collector.get_statistics()
+                    parameters = calculate_quantizer_parameters(statistics, qconfig, QuantizerGroup.WEIGHTS)
                     command = self._backend_entity.create_weight_quantizer_insertion_command(
-                        nncf_graph, quantization_target_point,
-                        qconfig, tensor_collector.get_statistics())
+                        nncf_graph, quantization_target_point, qconfig, parameters)
                 else:
+                    statistics = tensor_collector.get_statistics()
+                    parameters = calculate_quantizer_parameters(statistics, qconfig, QuantizerGroup.ACTIVATIONS)
                     command = self._backend_entity.create_activation_quantizer_insertion_command(
-                        nncf_graph, quantization_target_point,
-                        qconfig, tensor_collector.get_statistics())
+                        nncf_graph, quantization_target_point, qconfig, parameters)
 
                 transformation_commands.append(command)
 

@@ -13,165 +13,31 @@
 
 import pytest
 import numpy as np
-from dataclasses import dataclass
-from nncf.common.quantization.structs import QuantizationMode
-from nncf.common.quantization.structs import QuantizerConfig
 from nncf.onnx.quantization.quantizer_parameters import calculate_scale_zero_point
-from nncf.onnx.quantization.quantizer_parameters import calculate_activation_quantizer_parameters
-from nncf.onnx.quantization.quantizer_parameters import calculate_weight_quantizer_parameters
 from nncf.onnx.quantization.quantizer_parameters import get_level_low_level_high
-from nncf.onnx.quantization.quantizer_parameters import ONNXQuantizerLayerParameters
-from nncf.onnx.statistics.statistics import ONNXMinMaxTensorStatistic
 
 
-@pytest.mark.parametrize(('max_val, min_val, level_low, level_high, mode, ref_scale, ref_zero_point'),
-                         ((np.zeros((10, 10)), np.zeros((10, 10)), -128, 127, QuantizationMode.SYMMETRIC,
-                           np.zeros((10, 10)),
-                           np.zeros((10, 10), dtype=np.int32)),
-
-                          (np.zeros((10, 10)), np.zeros((10, 10)), -128, 127, QuantizationMode.ASYMMETRIC,
-                           np.zeros((10, 10)),
-                           -128 * np.ones((10, 10), dtype=np.int32)),
-
-                          (np.ones((10, 10)), np.zeros((10, 10)), 10, 999, QuantizationMode.SYMMETRIC,
-                           0.00202224 * np.ones((10, 10)),
-                           np.zeros((10, 10), dtype=np.int32)),
-
-                          (np.ones((10, 10)), np.zeros((10, 10)), 10, 999, QuantizationMode.ASYMMETRIC,
-                           0.001011122 * np.ones((10, 10)),
-                           10 * np.ones((10, 10), dtype=np.int32)),
-
-                          (10 * np.ones((10, 10)), -np.ones((10, 10)), 0, 1000, QuantizationMode.SYMMETRIC,
-                           0.02 * np.ones((10, 10)),
-                           np.zeros((10, 10), dtype=np.int32)),
-
-                          (10 * np.ones((10, 10)), -np.ones((10, 10)), 0, 1000, QuantizationMode.ASYMMETRIC,
-                           0.011 * np.ones((10, 10)),
-                           91 * np.ones((10, 10), dtype=np.int32)),
-
-                          (10 * np.ones((10, 10)), -np.ones((10, 10)), -10, -1, QuantizationMode.SYMMETRIC,
-                           2.2222222 * np.ones((10, 10)),
-                           np.zeros((10, 10), dtype=np.int32)),
-
-                          (10 * np.ones((10, 10)), -np.ones((10, 10)), -10, -1, QuantizationMode.ASYMMETRIC,
-                           1.22222222 * np.ones((10, 10)),
-                           -9 * np.ones((10, 10), dtype=np.int32))
+@pytest.mark.parametrize(('inp_low, inp_high, level_low, level_high, narrow_range, ref_scale, ref_zero_point'),
+                         ((-8e-05, 8e-05, -128, 127, True, 6.3e-7, 0),
+                          (-0.0008062992, 0.0008, 0, 255, False, 6.3e-6, 128),
+                          (-10.019569, 10, 0, 1023, False, 0.01956947, 512),
+                          (0, 1, 0, 255, False, 0.00392157, 0),
+                          (-1, 10, 0, 1023, False, 0.01075269, 93),
+                          (-11.428572, 10, 0, 15, False, 1.4285715, 8),
+                          (-10, 10, -512, 511, False, 0.01955034, 0),
+                          (-10, 10, -128, 127, True, 0.07874016, 0),
+                          (0, 25, 0, 15, False, 1.6666666, 0),
                           )
                          )
-@pytest.mark.parametrize('tensor_type', [np.int8, np.uint8])
-def test_calculate_scale_zero_point(max_val, min_val, level_low, level_high, mode, ref_scale, ref_zero_point,
-                                    tensor_type):
-    ref_scale_ = ref_scale.copy()
-    if tensor_type == np.uint8 and mode == QuantizationMode.SYMMETRIC:
-        ref_scale_ /= 2
-    assert np.allclose((ref_scale_, ref_zero_point),
-                       calculate_scale_zero_point(max_val=max_val, min_val=min_val,
-                                                  level_low=level_low, level_high=level_high,
-                                                  mode=mode, tensor_type=tensor_type))
+def test_calculate_scale_zero_point(inp_low, inp_high, level_low, level_high, narrow_range, ref_scale, ref_zero_point):
+    inp_low, inp_high = np.array(inp_low), np.array(inp_high)
+    scale, zero_point = calculate_scale_zero_point(inp_low, inp_high, level_low, level_high, narrow_range)
+    ref_zero_point = np.array(ref_zero_point, dtype=np.int32)
+    assert np.allclose(ref_scale, scale)
+    assert np.allclose(ref_zero_point, zero_point)
 
 
-@pytest.mark.parametrize('num_bits, tensor_type, ref_levels', ((0, np.int8, (-1, -1)),
-                                                               (2, np.int8, (-2, 1)),
-                                                               (2, np.uint8, (0, 3)),
-                                                               (8, np.int8, (-128, 127)),
-                                                               (8, np.uint8, (0, 255)),
-                                                               (10, np.int8, (-512, 511)),
-                                                               (10, np.uint8, (0, 1023))))
+@pytest.mark.parametrize('num_bits, tensor_type, ref_levels', ((8, np.int8, (-128, 127)),
+                                                               (8, np.uint8, (0, 255))))
 def test_calculate_levels(num_bits, tensor_type, ref_levels):
-    assert (ref_levels[0], ref_levels[1]) == get_level_low_level_high(tensor_type, num_bits)
-
-
-@dataclass
-class CaseToTestActivationQParams:
-    num_bits: int
-    mode: QuantizationMode
-    activations_signed: bool
-    per_channel: bool
-    axis: int
-    ref_tensor_type: np.ndarray
-    raises_error_for_weights: bool
-
-
-CASES_FOR_TEST = (CaseToTestActivationQParams(num_bits=8,
-                                              mode=QuantizationMode.SYMMETRIC,
-                                              activations_signed=None,
-                                              per_channel=False,
-                                              axis=None,
-                                              ref_tensor_type=np.int8,
-                                              raises_error_for_weights=False),
-                  CaseToTestActivationQParams(num_bits=8,
-                                              mode=QuantizationMode.ASYMMETRIC,
-                                              activations_signed=None,
-                                              per_channel=False,
-                                              axis=None,
-                                              ref_tensor_type=np.int8,
-                                              raises_error_for_weights=False),
-                  CaseToTestActivationQParams(num_bits=8,
-                                              mode=QuantizationMode.SYMMETRIC,
-                                              activations_signed=None,
-                                              per_channel=True,
-                                              axis=1,
-                                              ref_tensor_type=np.int8,
-                                              raises_error_for_weights=False),
-                  CaseToTestActivationQParams(num_bits=8,
-                                              mode=QuantizationMode.SYMMETRIC,
-                                              activations_signed=None,
-                                              per_channel=True,
-                                              axis=1,
-                                              ref_tensor_type=np.int8,
-                                              raises_error_for_weights=False),
-                  # Check activation_signed work
-                  CaseToTestActivationQParams(num_bits=8,
-                                              mode=QuantizationMode.SYMMETRIC,
-                                              activations_signed=False,
-                                              per_channel=False,
-                                              axis=None,
-                                              ref_tensor_type=np.uint8,
-                                              raises_error_for_weights=True),
-                  CaseToTestActivationQParams(num_bits=8,
-                                              mode=QuantizationMode.SYMMETRIC,
-                                              activations_signed=True,
-                                              per_channel=False,
-                                              axis=None,
-                                              ref_tensor_type=np.int8,
-                                              raises_error_for_weights=False),
-)
-
-
-@pytest.mark.parametrize('case_to_test', (CASES_FOR_TEST))
-def test_calculate_activation_quantizer_parameters(case_to_test: CaseToTestActivationQParams):
-    statistics = ONNXMinMaxTensorStatistic(-1 * np.ones((3, 10, 10)), np.ones((3, 10, 10)))
-    qconfig = QuantizerConfig(num_bits=case_to_test.num_bits,
-                              mode=case_to_test.mode,
-                              signedness_to_force=case_to_test.activations_signed,
-                              per_channel=case_to_test.per_channel)
-    ref_quantize_params = ONNXQuantizerLayerParameters(-1 * np.ones((3, 10, 10)), np.ones((3, 10, 10)),
-                                                       mode=case_to_test.mode,
-                                                       axis=case_to_test.axis,
-                                                       tensor_type=case_to_test.ref_tensor_type)
-    quantize_params = calculate_activation_quantizer_parameters(statistics, qconfig, case_to_test.axis)
-    assert ref_quantize_params.mode == quantize_params.mode
-    assert ref_quantize_params.axis == quantize_params.axis
-    assert ref_quantize_params.tensor_type == quantize_params.tensor_type
-
-
-@pytest.mark.parametrize('case_to_test', (CASES_FOR_TEST))
-def test_calculate_weight_quantizer_parameters(case_to_test: CaseToTestActivationQParams):
-    statistics = ONNXMinMaxTensorStatistic(-1 * np.ones((3, 10, 10)), np.ones((3, 10, 10)))
-    qconfig = QuantizerConfig(num_bits=case_to_test.num_bits,
-                              mode=case_to_test.mode,
-                              signedness_to_force=case_to_test.activations_signed,
-                              per_channel=case_to_test.per_channel)
-    ref_quantize_params = ONNXQuantizerLayerParameters(-1 * np.ones((3, 10, 10)), np.ones((3, 10, 10)),
-                                                       mode=case_to_test.mode,
-                                                       axis=case_to_test.axis,
-                                                       tensor_type=case_to_test.ref_tensor_type)
-    if case_to_test.raises_error_for_weights:
-        with pytest.raises(ValueError):
-            quantize_params = calculate_weight_quantizer_parameters(statistics, qconfig, case_to_test.axis)
-        return
-
-    quantize_params = calculate_weight_quantizer_parameters(statistics, qconfig, case_to_test.axis)
-    assert ref_quantize_params.mode == quantize_params.mode
-    assert ref_quantize_params.axis == quantize_params.axis
-    assert ref_quantize_params.tensor_type == quantize_params.tensor_type
+    assert (ref_levels[0], ref_levels[1]) == get_level_low_level_high(tensor_type)

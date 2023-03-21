@@ -14,7 +14,7 @@ from typing import Union, List, Tuple, Optional
 
 from collections import Counter
 import onnx
-from onnx import ModelProto
+from onnx import ModelProto  # pylint:disable=no-name-in-module
 
 from nncf.common.graph import NNCFGraph
 from nncf.common.graph.definitions import NNCFGraphNodeType

@@ -48,7 +48,7 @@ def test_min_max_quantization_graph_torchvision_models(tmp_path, mocker, model_t
     torch.onnx.export(model, x, onnx_model_path, opset_version=13)
 
     original_model = onnx.load(onnx_model_path)
-    quantized_model = min_max_quantize_model(model_to_test.input_shape, original_model)
+    quantized_model = min_max_quantize_model(original_model)
     compare_nncf_graph(quantized_model, model_to_test.path_ref_graph)
 
 
@@ -62,5 +62,5 @@ def test_min_max_quantization_graph_onnx_model(tmp_path, mocker, model_to_test):
     onnx_model_path = ONNX_MODEL_DIR / (model_to_test.model_name + '.onnx')
     original_model = load_model_topology_with_zeros_weights(onnx_model_path)
 
-    quantized_model = min_max_quantize_model(model_to_test.input_shape, original_model)
+    quantized_model = min_max_quantize_model(original_model)
     compare_nncf_graph(quantized_model, model_to_test.path_ref_graph)

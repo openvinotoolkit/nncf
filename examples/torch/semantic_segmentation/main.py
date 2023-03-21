@@ -10,12 +10,11 @@
  See the License for the specific language governing permissions and
  limitations under the License.
 """
-
-import functools
-import os
 # Major parts of this sample reuse code from:
 # https://github.com/davidtvs/PyTorch-ENet
 # https://github.com/pytorch/vision/tree/master/references/segmentation
+import functools
+import os
 import sys
 from copy import deepcopy
 from os import path as osp
@@ -27,6 +26,7 @@ from torch.optim.lr_scheduler import ReduceLROnPlateau
 
 import examples.torch.semantic_segmentation.utils.data as data_utils
 import examples.torch.semantic_segmentation.utils.transforms as JT
+from examples.common.sample_config import create_sample_config
 from examples.torch.common.argparser import get_common_argument_parser
 from examples.torch.common.argparser import parse_args
 from examples.torch.common.example_logger import logger
@@ -34,11 +34,11 @@ from examples.torch.common.execution import get_execution_mode
 from examples.torch.common.execution import prepare_model_for_execution
 from examples.torch.common.execution import set_seed
 from examples.torch.common.execution import start_worker
+from examples.torch.common.export import export_model
 from examples.torch.common.model_loader import extract_model_and_compression_states
 from examples.torch.common.model_loader import load_model
 from examples.torch.common.model_loader import load_resuming_checkpoint
 from examples.torch.common.optimizer import make_optimizer
-from examples.common.sample_config import create_sample_config
 from examples.torch.common.utils import SafeMLFLow
 from examples.torch.common.utils import configure_device
 from examples.torch.common.utils import configure_logging
@@ -471,7 +471,6 @@ def predict(model, images, class_encoding, config):
     color_predictions = data_utils.label_to_color(predictions, class_encoding)
     return color_predictions
 
-
 def main_worker(current_gpu, config):
     configure_device(current_gpu, config)
     config.mlflow = SafeMLFLow(config)
@@ -540,10 +539,8 @@ def main_worker(current_gpu, config):
     log_common_mlflow_params(config)
 
     if is_export_only:
-        if config.prepare_for_inference:
-            compression_ctrl.prepare_for_inference(make_model_copy=False)
-        compression_ctrl.export_model(config.to_onnx)
-        logger.info("Saved to {}".format(config.to_onnx))
+        export_model(compression_ctrl.prepare_for_inference(), config.to_onnx)
+        logger.info(f'Saved to {config.to_onnx}')
         return
 
     if is_main_process():
@@ -592,8 +589,6 @@ def main_worker(current_gpu, config):
     if 'test' in config.mode:
         logger.info(model)
         val_model = model
-        if config.prepare_for_inference:
-            val_model = compression_ctrl.prepare_for_inference(make_model_copy=True)
         model_parameters = filter(lambda p: p.requires_grad, val_model.parameters())
         params = sum(np.prod(p.size()) for p in model_parameters)
         logger.info("Trainable argument count:{params}".format(params=params))
@@ -601,10 +596,8 @@ def main_worker(current_gpu, config):
         test(val_model, val_loader, criterion, color_encoding, config)
 
     if 'export' in config.mode:
-        if config.prepare_for_inference:
-            compression_ctrl.prepare_for_inference(make_model_copy=False)
-        compression_ctrl.export_model(config.to_onnx)
-        logger.info("Saved to {}".format(config.to_onnx))
+        export_model(compression_ctrl.prepare_for_inference(), config.to_onnx)
+        logger.info(f'Saved to {config.to_onnx}')
 
 
 def main(argv):

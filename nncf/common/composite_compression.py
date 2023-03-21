@@ -26,6 +26,7 @@ from nncf.api.compression import CompressionStage
 from nncf.api.compression import TModel
 from nncf.common.statistics import NNCFStatistics
 from nncf.common.utils.backend import BackendType
+from nncf.common.utils.backend import copy_model
 from nncf.common.utils.backend import get_backend
 
 
@@ -280,6 +281,14 @@ class CompositeCompressionAlgorithmController(CompressionAlgorithmController):
             stripped_model = ctrl.strip_model(stripped_model)
         self._model = stripped_model
 
+    def prepare_for_inference(self, do_copy: bool = True) -> TModel:
+        model = self.model
+        if do_copy:
+            model = copy_model(model)
+        for ctrl in self.child_ctrls:
+            model = ctrl.strip_model(model, do_copy=False)
+        return model
+
     @property
     def compression_rate(self) -> float:
         raise NotImplementedError
@@ -320,11 +329,11 @@ class CompositeCompressionAlgorithmController(CompressionAlgorithmController):
         self.prepare_for_export()
         backend = get_backend(self.model)
         if backend is BackendType.TENSORFLOW:
-            from nncf.tensorflow.exporter import TFExporter #pylint: disable=cyclic-import
+            from nncf.tensorflow.exporter import TFExporter  # pylint: disable=cyclic-import
             exporter = TFExporter(self.model, input_names, output_names, model_args)
         else:
             assert backend is BackendType.TORCH
-            from nncf.torch.exporter import PTExporter #pylint: disable=cyclic-import
+            from nncf.torch.exporter import PTExporter  # pylint: disable=cyclic-import
             exporter = PTExporter(self.model, input_names, output_names, model_args)
         if save_format is not None:
             exporter.export_model(save_path, save_format)

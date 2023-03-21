@@ -275,6 +275,8 @@ class ExportSampleValidator(PrecisionSampleValidator):
         create_model_location = sample_location + '.create_compressed_model'
         create_model_patch = mocker.patch(create_model_location)
 
+        self._torch_onn_export_mock = mocker.patch('torch.onnx.export')
+
         if self._desc.sample_type_ == SampleType.CLASSIFICATION_STAGED:
             mocker.patch(sample_location + '.get_quantization_optimizer')
 
@@ -287,10 +289,11 @@ class ExportSampleValidator(PrecisionSampleValidator):
     def validate_spy(self):
         super().validate_spy()
         self._reg_init_args_patch.assert_called()
+
         if self.is_export_called:
-            self._ctrl_mock.export_model.assert_called_once()
+            self._torch_onn_export_mock.assert_called_once()
         else:
-            self._ctrl_mock.export_model.assert_not_called()
+            self._torch_onn_export_mock.assert_not_called()
 
 
 EXPORT_TEST_CASE_DESCRIPTORS = [
