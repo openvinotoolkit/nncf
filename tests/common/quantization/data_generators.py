@@ -10,10 +10,10 @@
  See the License for the specific language governing permissions and
  limitations under the License.
 """
+from typing import Dict
 from typing import Tuple
 
 import numpy as np
-import torch
 
 
 def get_quant_len_by_range(input_range: np.array, bits: int) -> np.array:
@@ -221,16 +221,18 @@ def get_points_near_of_mid_points(input_data: np.array, mid_points: np.array, at
     return is_near_mid_point
 
 
-def generate_lazy_sweep_data(shape: Tuple[int]):
+def generate_lazy_sweep_data(shape: Tuple[int], min_val: float = -1.0, max_val: float = 1.0):
     """
     Generate tensor that contains sweep values from -1.0 to 1.0.
 
     :param shape: Shape of generate tensor.
+    :param min_val: Min value of generated data.
+    :param max_val: Max value of generated data.
 
     :return torch.Tensor: Generated tensor.
     """
     n = np.prod(list(shape))
-    res = torch.Tensor(range(n)) / torch.Tensor([n - 1]) * torch.Tensor([2]) - torch.Tensor([1.0])
+    res = np.array(range(n)) / (n - 1) * (max_val - min_val) + min_val
     res[n // 2] = 0.0
     return res.reshape(shape)
 
@@ -394,3 +396,52 @@ def check_outputs(arr_a: np.array, arr_b: np.array, is_near_mid_point: np.array,
             f"Points: {num_fail_points} / {len(isclose_points)} | max_d={arr_diff_points.max():.8f} "
             f"Mid_points: {num_fail_spec_points} / {len(isclose_spec_points)} | max_d={arr_diff_spec_points.max():.8f}"
         )
+
+
+def scatter_plot(
+    data: Dict[str, np.array], x_column: str = None, vertical_lines: np.array = None, save_to_file: str = None
+) -> None:
+    """
+    Function to render test data on scatter plot.
+    If save_to_file is None, scatter plot will be rendered in interactive mode with enable zooming.
+
+    Example of using:
+    ```
+    scatter_plot(
+        data={
+            "input": test_input.detach().numpy(),
+            "x_nncf":  x_nncf.detach().numpy(),
+            "x_torch":  x_torch.detach().numpy(),
+        },
+        x_column="input",
+        vertical_lines=mid_quant_points,
+        save_to_file="plot.png"
+    )
+    ```
+
+    :param data: Dict with data.
+    :param x_column: Column name that will used as x-axis, defaults is 1st column.
+    :param vertical_lines: Array to render vertical lines, defaults to None.
+    :param save_to_file: Save plot to file as image, defaults to None.
+    """
+    import pandas as pd
+    import plotly.express as px  # pylint:disable=import-error
+
+    column_names = list(data.keys())
+    for column in column_names:
+        data[column] = data[column].reshape(-1)
+
+    df = pd.DataFrame.from_dict(data)
+    df["X"] = df[x_column if x_column else column_names[0]]
+
+    fig = px.scatter(data_frame=df, x="X", y=column_names)
+    fig.update_traces(marker={"size": 2})
+
+    if vertical_lines:
+        for x_line in vertical_lines:
+            fig.add_vline(x=x_line, line_width=1)
+
+    if save_to_file:
+        fig.write_image(save_to_file, scale=2)
+    else:
+        fig.show(config={"scrollZoom": True})

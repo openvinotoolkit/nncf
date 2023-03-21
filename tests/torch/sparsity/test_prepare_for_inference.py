@@ -65,7 +65,7 @@ def test_prepare_for_inference_sparsity(enable_quantization):
     assert sparsity_ctrl.sparsified_module_info[0].operand.binary_mask.shape[0] == 2
     sparsity_ctrl.sparsified_module_info[0].operand.binary_mask[0] = 0
 
-    input_tensor = generate_lazy_sweep_data(input_size)
+    input_tensor = torch.Tensor(generate_lazy_sweep_data(input_size))
     x_nncf = compressed_model(input_tensor)
 
     inference_model = compression_ctrl.prepare_for_inference()
