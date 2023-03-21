@@ -78,7 +78,7 @@ def convert_to_torch_fakequantizer(nncf_quantizer: BaseQuantizer) -> FakeQuantiz
 
     per_channel = nncf_quantizer.per_channel
     scale_shape = nncf_quantizer.scale_shape
-    ch_axis = np.argmax(scale_shape)
+    ch_axis = int(np.argmax(scale_shape))
     dtype = torch.qint8 if nncf_quantizer.level_low < 0 else torch.quint8
 
     if per_channel:
