@@ -47,6 +47,7 @@ class ActivationSparsityStatisticParameters(AlgorithmParameters):
         :param number_samples: The number of the samples for the statistics collection.
         :param target_node_types: List of node types for which statistics will be collected.
             If None or empty, statistics will be collected for Convolution and MatMul nodes.
+            If 'all' in target_node_types list, statistics will be collected for all nodes.
         :param threshold: Threshold of minimum value of statistic that will be save to the model, defaults is 0.2.
         """
         self.number_samples = number_samples
@@ -120,6 +121,8 @@ class ActivationSparsityStatistic(Algorithm):
 
         :return List[NNCFNode]: list of target nodes.
         """
+        if self.target_node_types is not None and "all" in self.target_node_types:
+            return nncf_graph.get_all_nodes()
         if self.target_node_types is not None and self.target_node_types:
             return nncf_graph.get_nodes_by_types(self.target_node_types)
         return nncf_graph.get_nodes_by_types(self._backend_entity.default_target_node_types())
