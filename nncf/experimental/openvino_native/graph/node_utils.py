@@ -60,8 +60,7 @@ def get_bias_value(node_with_bias: NNCFNode, nncf_graph: NNCFGraph, model: ov.Mo
     add_node = nncf_graph.get_next_nodes(node_with_bias)[0]
     bias_constant = get_node_with_bias_value(add_node , nncf_graph)
     ov_bias_constant = ops_dict[bias_constant.node_name]
-    vector = ov_bias_constant.get_data()
-    return vector
+    return ov_bias_constant.get_data()
 
 
 def get_weight_value(node_with_weight: NNCFNode, nncf_graph: NNCFGraph, model: ov.Model) -> np.ndarray:
