@@ -426,8 +426,8 @@ def create_input_shift_scale():
     pattern = GraphPattern()
     model_input = pattern.add_node(**{GraphPattern.LABEL_ATTR: 'MODEL_INPUT',
                                       GraphPattern.METATYPE_ATTR: om.OVParameterMetatype})
-    add_node = pattern.add_node(**{GraphPattern.LABEL_ATTR: 'ADD',
-                                   GraphPattern.METATYPE_ATTR: om.OVAddMetatype})
+    add_node = pattern.add_node(**{GraphPattern.LABEL_ATTR: 'ADD, SUBTRACT',
+                                   GraphPattern.METATYPE_ATTR: [om.OVAddMetatype, om.OVSubtractMetatype]})
     multiply_node = pattern.add_node(**{GraphPattern.LABEL_ATTR: 'MULTIPLY',
                                         GraphPattern.METATYPE_ATTR: om.OVMultiplyMetatype})
 
