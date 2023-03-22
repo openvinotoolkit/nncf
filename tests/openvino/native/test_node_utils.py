@@ -31,7 +31,7 @@ def test_get_weight_value_const_with_convert():
     node_with_weight = nncf_graph.get_node_by_name('MatMul')
 
     actual_value = get_weight_value(node_with_weight, nncf_graph, model)
-    assert actual_value.dtype == np.uint16
+    assert actual_value.dtype == np.float16
 
 
 @pytest.mark.parametrize('model_to_create, is_with_bias, node_name', [[ConvNotBiasModel, True, 'Conv'],

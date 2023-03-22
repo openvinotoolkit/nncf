@@ -46,6 +46,16 @@ def is_node_with_bias(node: NNCFNode, nncf_graph: NNCFGraph) -> bool:
     return bias_constant is not None
 
 
+def get_const_value(const_node: ov.Node) -> np.ndarray:
+    """
+    Returns the constant tensor for the node.
+
+    :param const_node: OpenVINO node.
+    :return: The constant value.
+    """
+    return const_node.get_vector().reshape(const_node.get_output_shape(0))
+
+
 def get_bias_value(node_with_bias: NNCFNode, nncf_graph: NNCFGraph, model: ov.Model) -> np.ndarray:
     """
     Returns the bias tensor for the biased node.
@@ -58,9 +68,9 @@ def get_bias_value(node_with_bias: NNCFNode, nncf_graph: NNCFGraph, model: ov.Mo
     ops_dict = {op.get_friendly_name(): op for op in model.get_ops()}
 
     add_node = nncf_graph.get_next_nodes(node_with_bias)[0]
-    bias_constant = get_node_with_bias_value(add_node , nncf_graph)
+    bias_constant = get_node_with_bias_value(add_node, nncf_graph)
     ov_bias_constant = ops_dict[bias_constant.node_name]
-    return ov_bias_constant.get_data()
+    return get_const_value(ov_bias_constant)
 
 
 def get_weight_value(node_with_weight: NNCFNode, nncf_graph: NNCFGraph, model: ov.Model) -> np.ndarray:
@@ -79,7 +89,7 @@ def get_weight_value(node_with_weight: NNCFNode, nncf_graph: NNCFGraph, model: o
 
     friendly_name_to_op_map = {op.get_friendly_name(): op for op in model.get_ops()}
     const_op = friendly_name_to_op_map[node.node_name]
-    weight_tensor = const_op.get_data()
+    weight_tensor = get_const_value(const_op)
     return weight_tensor
 
 
@@ -98,7 +108,7 @@ def get_node_with_bias_value(add_node: NNCFNode, nncf_graph: NNCFGraph) -> Optio
     bias_constant = nncf_graph.get_input_edges(add_node)[bias_port_id].from_node
 
     if bias_constant.metatype == OVConvertMetatype:
-        bias_constant = nncf_graph.get_input_edges(add_node)[0].from_node
+        bias_constant = nncf_graph.get_input_edges(bias_constant)[0].from_node
 
     return bias_constant if bias_constant.metatype == OVConstantMetatype else None
 
