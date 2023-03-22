@@ -218,12 +218,12 @@ def test_early_exit_compression_training_loop(max_accuracy_degradation,
         initial_epoch=0,
         steps_per_epoch=steps_per_epoch,
         result_dict_to_val_metric_fn=mock_result_dict_to_val_metric_fn)
-    original_model_accuracy = statistics.original_accuracy
+    uncompressed_model_accuracy = statistics.uncompressed_accuracy
     compressed_model_accuracy = statistics.compressed_accuracy
 
     if "maximal_absolute_accuracy_degradation" in max_accuracy_degradation:
-        assert (original_model_accuracy - compressed_model_accuracy) <= \
+        assert (uncompressed_model_accuracy - compressed_model_accuracy) <= \
                max_accuracy_degradation["maximal_absolute_accuracy_degradation"]
     else:
-        assert (original_model_accuracy - compressed_model_accuracy) / original_model_accuracy * 100 <= \
+        assert (uncompressed_model_accuracy - compressed_model_accuracy) / uncompressed_model_accuracy * 100 <= \
                max_accuracy_degradation["maximal_relative_accuracy_degradation"]

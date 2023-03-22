@@ -91,10 +91,10 @@ class TFAccuracyAwareTrainingRunner(BaseAccuracyAwareTrainingRunner):
 
 class TFAdaptiveCompressionLevelTrainingRunner(BaseAdaptiveCompressionLevelTrainingRunner,
                                                TFAccuracyAwareTrainingRunner):
-    def __init__(self, accuracy_aware_training_params, original_model_accuracy: float,
+    def __init__(self, accuracy_aware_training_params, uncompressed_model_accuracy: float,
                  verbose: bool = True, dump_checkpoints: bool = True, lr_updates_needed: bool = True,
                  minimal_compression_rate: float = 0.0, maximal_compression_rate: float = 0.95):
-        super().__init__(accuracy_aware_training_params, original_model_accuracy,
+        super().__init__(accuracy_aware_training_params, uncompressed_model_accuracy,
                          verbose, dump_checkpoints, lr_updates_needed,
                          minimal_compression_rate=minimal_compression_rate,
                          maximal_compression_rate=maximal_compression_rate)

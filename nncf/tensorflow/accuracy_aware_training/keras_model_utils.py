@@ -23,7 +23,9 @@ from nncf.tensorflow import tf_internals
 def accuracy_aware_fit(cls_instance, train_dataset, compression_ctrl,
                        nncf_config, callbacks, initial_epoch,
                        steps_per_epoch=None, batch_size=None, tensorboard_writer=None,
-                       log_dir=None, validation_data=None, validation_steps=None,
+                       log_dir=None,
+                       uncompressed_model_accuracy=None,
+                       validation_data=None, validation_steps=None,
                        result_dict_to_val_metric_fn=None, **kwargs):
     if result_dict_to_val_metric_fn is None:
         result_dict_to_val_metric_fn = lambda metric: metric
@@ -115,7 +117,7 @@ def accuracy_aware_fit(cls_instance, train_dataset, compression_ctrl,
     callbacks.on_train_begin()
     acc_aware_training_loop = create_accuracy_aware_training_loop(nncf_config,
                                                                   compression_ctrl,
-                                                                  )
+                                                                  uncompressed_model_accuracy)
     cls_instance = acc_aware_training_loop.run(cls_instance,
                                                train_epoch_fn=train_epoch_fn,
                                                validate_fn=validate_fn,

@@ -73,7 +73,8 @@ def _compress_lenet_for_aa(model: LeNet, config: NNCFConfig,
     model, compression_ctrl = create_compressed_model_and_algo_for_test(model, config)
     return model, compression_ctrl
 
-LENET_ORIGINAL_MODEL_ACCURACY = 0.9956666566431522  # precomputed for these cases so as not to run eval in every case
+# precomputed for these cases so as not to run eval in every case
+LENET_UNCOMPRESSED_MODEL_ACCURACY = 0.9956666566431522
 
 class LenetValidateFunctor:
     def __init__(self, num_steps: int):
@@ -151,8 +152,10 @@ def test_adaptive_compression_training_loop(finetuned_lenet, max_accuracy_degrad
         optimizer = SGD(model.parameters(), lr=learning_rate)
         return optimizer, None
 
-    acc_aware_training_loop = AdaptiveCompressionTrainingLoop(config, compression_ctrl,
-                                                              original_model_accuracy=LENET_ORIGINAL_MODEL_ACCURACY)
+    acc_aware_training_loop = AdaptiveCompressionTrainingLoop(
+        config,
+        compression_ctrl,
+        uncompressed_model_accuracy=LENET_UNCOMPRESSED_MODEL_ACCURACY)
     train_functor = LeNetTrainFunctor(train_loader, num_steps)
     model = acc_aware_training_loop.run(model,
                                         train_epoch_fn=train_functor,
@@ -223,7 +226,7 @@ def test_adaptive_compression_training_loop_with_no_training(
         return optimizer, None
 
     acc_aware_training_loop = AdaptiveCompressionTrainingLoop(config, compression_ctrl,
-                                                              original_model_accuracy=original_metric)
+                                                              uncompressed_model_accuracy=original_metric)
 
     model = acc_aware_training_loop.run(model,
                                         train_epoch_fn=train_fn,
@@ -309,8 +312,10 @@ def test_adaptive_compression_training_loop_failing(
         optimizer = SGD(model.parameters(), lr=learning_rate)
         return optimizer, None
 
-    acc_aware_training_loop = AdaptiveCompressionTrainingLoop(config, compression_ctrl,
-                                                              original_model_accuracy=LENET_ORIGINAL_MODEL_ACCURACY)
+    acc_aware_training_loop = AdaptiveCompressionTrainingLoop(
+        config,
+        compression_ctrl,
+        uncompressed_model_accuracy=LENET_UNCOMPRESSED_MODEL_ACCURACY)
 
     model = acc_aware_training_loop.run(model,
                                         train_epoch_fn=train_fn,
@@ -341,10 +346,10 @@ def test_adaptive_compression_training_loop_too_high_pruning_flops(
     Test that ACTL reaches the maximal possible compression rate and doesn't break
     """
 
-    mock_original_model_accuracy = 0.85
+    mock_uncompressed_model_accuracy = 0.85
 
     def mock_validate_fn(model, epoch=0):
-        return mock_original_model_accuracy
+        return mock_uncompressed_model_accuracy
 
     input_sample_size = [1, 1, LeNet.INPUT_SIZE[-1], LeNet.INPUT_SIZE[-1]]
     config = get_pruning_baseline_config(input_sample_size=input_sample_size)
@@ -393,8 +398,10 @@ def test_adaptive_compression_training_loop_too_high_pruning_flops(
         optimizer = SGD(model.parameters(), lr=learning_rate)
         return optimizer, None
 
-    acc_aware_training_loop = AdaptiveCompressionTrainingLoop(config, compression_ctrl,
-                                                              original_model_accuracy=mock_original_model_accuracy)
+    acc_aware_training_loop = AdaptiveCompressionTrainingLoop(
+        config,
+        compression_ctrl,
+        uncompressed_model_accuracy=mock_uncompressed_model_accuracy)
 
     model = acc_aware_training_loop.run(model,
                                         train_epoch_fn=train_fn,
@@ -441,19 +448,19 @@ def test_early_exit_training_loop(finetuned_lenet,
         return optimizer, None
 
     early_stopping_training_loop = EarlyExitCompressionTrainingLoop(config, compression_ctrl,
-                                                                    LENET_ORIGINAL_MODEL_ACCURACY)
+                                                                    LENET_UNCOMPRESSED_MODEL_ACCURACY)
     train_functor = LeNetTrainFunctor(train_loader, num_steps)
     model = early_stopping_training_loop.run(model,
                                              train_epoch_fn=train_functor,
                                              validate_fn=partial(validate_functor, train_loader=train_loader),
                                              configure_optimizers_fn=configure_optimizers_fn)
-    original_model_accuracy = LENET_ORIGINAL_MODEL_ACCURACY
+    uncompressed_model_accuracy = LENET_UNCOMPRESSED_MODEL_ACCURACY
     compressed_model_accuracy = early_stopping_training_loop.statistics.compressed_accuracy
     if "maximal_absolute_accuracy_degradation" in max_accuracy_degradation:
-        assert (original_model_accuracy - compressed_model_accuracy) <= \
+        assert (uncompressed_model_accuracy - compressed_model_accuracy) <= \
                max_accuracy_degradation["maximal_absolute_accuracy_degradation"]
     else:
-        assert (original_model_accuracy - compressed_model_accuracy) / original_model_accuracy * 100 <= \
+        assert (uncompressed_model_accuracy - compressed_model_accuracy) / uncompressed_model_accuracy * 100 <= \
                max_accuracy_degradation["maximal_relative_accuracy_degradation"]
 
 
@@ -516,7 +523,7 @@ def test_early_exit_with_mock_validation(max_accuracy_degradation, exit_epoch_nu
         return optimizer, None
 
     early_stopping_training_loop = EarlyExitCompressionTrainingLoop(config, compression_ctrl,
-                                                                    original_model_accuracy=original_metric,
+                                                                    uncompressed_model_accuracy=original_metric,
                                                                     dump_checkpoints=False)
 
     functor_loop = mock_validate_functor()
@@ -575,7 +582,7 @@ def test_early_exit_with_mock_validation_and_no_improvement(
         return optimizer, None
 
     early_stopping_training_loop = EarlyExitCompressionTrainingLoop(config, compression_ctrl,
-                                                                    original_model_accuracy=original_metric,
+                                                                    uncompressed_model_accuracy=original_metric,
                                                                     dump_checkpoints=False)
     assert early_stopping_training_loop.runner._best_checkpoint is None # pylint: disable=protected-access
 
@@ -691,7 +698,7 @@ def test_mock_dump_checkpoint(aa_config, tmp_path):
     model, compression_ctrl = create_compressed_model_and_algo_for_test(model, config)
 
     early_stopping_training_loop = EarlyExitCompressionTrainingLoop(config, compression_ctrl,
-                                                                    LENET_ORIGINAL_MODEL_ACCURACY,
+                                                                    LENET_UNCOMPRESSED_MODEL_ACCURACY,
                                                                     dump_checkpoints=True)
     model = early_stopping_training_loop.run(model,
                                              train_epoch_fn=train_fn,

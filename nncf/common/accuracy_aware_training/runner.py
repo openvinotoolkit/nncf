@@ -176,10 +176,10 @@ class BaseAccuracyAwareTrainingRunner(TrainingRunner):
     """
 
     def __init__(self, accuracy_aware_training_params: Dict[str, object],
-                 original_model_accuracy: float,
+                 uncompressed_model_accuracy: float,
                  verbose: bool = True,
                  dump_checkpoints: bool = True, lr_updates_needed: bool = True):
-        self.original_model_accuracy = original_model_accuracy
+        self.uncompressed_model_accuracy = uncompressed_model_accuracy
         self.maximal_relative_accuracy_drop = accuracy_aware_training_params.get(
             'maximal_relative_accuracy_degradation', 1.0)
         self.maximal_absolute_accuracy_drop = accuracy_aware_training_params.get(
@@ -365,13 +365,13 @@ class BaseAdaptiveCompressionLevelTrainingRunner(BaseAccuracyAwareTrainingRunner
     """
 
     def __init__(self, accuracy_aware_training_params: Dict[str, object],
-                 original_model_accuracy: float,
+                 uncompressed_model_accuracy: float,
                  verbose: bool = True,
                  dump_checkpoints: bool = True,
                  lr_updates_needed: bool = True,
                  minimal_compression_rate: float = 0.0,
                  maximal_compression_rate: float = 0.95):
-        super().__init__(accuracy_aware_training_params, original_model_accuracy,
+        super().__init__(accuracy_aware_training_params, uncompressed_model_accuracy,
                          verbose, dump_checkpoints, lr_updates_needed)
 
         self.compression_rate_step = accuracy_aware_training_params.get('initial_compression_rate_step',
