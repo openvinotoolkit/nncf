@@ -22,7 +22,6 @@ from nncf.experimental.openvino_native.graph.metatypes.openvino_metatypes import
 from nncf.experimental.openvino_native.graph.metatypes.openvino_metatypes import OVConvertMetatype
 from nncf.experimental.openvino_native.graph.metatypes.openvino_metatypes import OVConstantMetatype
 from nncf.experimental.openvino_native.graph.metatypes.openvino_metatypes import OPERATIONS_WITH_BIAS_METATYPES
-from nncf.experimental.openvino_native.graph.nncf_graph_builder import OVConstantLayerAttributes
 
 
 def is_node_with_bias(node: NNCFNode, nncf_graph: NNCFGraph) -> bool:
@@ -73,17 +72,17 @@ def get_bias_value(node_with_bias: NNCFNode, nncf_graph: NNCFGraph, model: ov.Mo
     return get_const_value(ov_bias_constant)
 
 
-def get_weight_value(node_with_weight: NNCFNode, nncf_graph: NNCFGraph, model: ov.Model) -> np.ndarray:
+def get_weight_value(node_with_weight: NNCFNode, nncf_graph: NNCFGraph, model: ov.Model, port_id: int) -> np.ndarray:
     """
     Returns a weight value for the node with weight.
 
     :param node_with_weight: Node with weight.
     :param nncf_graph: NNCF graph.
     :param model: The model that contains this operation.
+    :param port_id: The input port ID to get weight input.
     :return: The weight value.
     """
-    attrs = node_with_weight.layer_attributes  # type: OVConstantLayerAttributes
-    node = nncf_graph.get_input_edges(node_with_weight)[attrs.const_port_id].from_node
+    node = nncf_graph.get_input_edges(node_with_weight)[port_id].from_node
     if node.metatype == OVConvertMetatype:
         node = nncf_graph.get_input_edges(node)[0].from_node
 
@@ -101,10 +100,12 @@ def get_node_with_bias_value(add_node: NNCFNode, nncf_graph: NNCFGraph) -> Optio
     :param nncf_graph: NNCFGraph instance.
     :return: Optional NNCFNode with bias value.
     """
-    if not hasattr(add_node.layer_attributes, 'const_port_id'):
+    if add_node.layer_attributes is None:
         return None
 
-    bias_port_id = add_node.layer_attributes.const_port_id
+    const_port_ids = add_node.layer_attributes.get_const_port_ids()
+    assert len(const_port_ids) == 1
+    bias_port_id = list(const_port_ids.keys())[0]
     bias_constant = nncf_graph.get_input_edges(add_node)[bias_port_id].from_node
 
     if bias_constant.metatype == OVConvertMetatype:

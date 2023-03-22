@@ -23,7 +23,7 @@ from nncf.common.utils.backend import BackendType
 from nncf.common.utils.registry import Registry
 
 from nncf.experimental.openvino_native.graph.metatypes.openvino_metatypes import OV_OPERATOR_METATYPES
-from nncf.experimental.openvino_native.graph.metatypes.openvino_metatypes import OVFakeQuantizeMetatype
+from nncf.experimental.openvino_native.graph.metatypes.common import FAKE_QUANTIZE_OPERATIONS
 from nncf.experimental.openvino_native.graph.transformations.commands import OVBiasCorrectionCommand
 from nncf.experimental.openvino_native.graph.transformations.commands import OVModelExtractionCommand
 from nncf.experimental.openvino_native.graph.transformations.commands import OVTargetPoint
@@ -96,9 +96,10 @@ class OVFastBiasCorrectionAlgoBackend(FastBiasCorrectionAlgoBackend):
         # At first, checks whether the node has weight tensor
         if node.layer_attributes is None:
             return False
-        const_port_id = node.layer_attributes.const_port_id
-        weight_node = nncf_graph.get_input_edges(node)[const_port_id].from_node
-        return weight_node.metatype == OVFakeQuantizeMetatype
+        const_port_ids = node.layer_attributes.get_const_port_ids()
+        assert len(const_port_ids) == 1
+        weight_node = nncf_graph.get_input_edges(node)[const_port_ids[0]].from_node
+        return weight_node.metatype in FAKE_QUANTIZE_OPERATIONS
 
     @staticmethod
     def process_model_output(raw_data: Dict, output_name: str) -> OVNNCFTensor:

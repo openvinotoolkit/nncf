@@ -152,7 +152,7 @@ class MinMaxAlgoBackend(ABC):
     @abstractmethod
     def get_weight_tensor_port_ids(node: NNCFNode) -> List[Optional[int]]:
         """
-        Returns all node's input port indices with weight tensors.
+        Returns node's input port indices with weight tensors.
 
         :param node: NNCFNode to find its weight input port indices.
         :return: Weights input port indices.

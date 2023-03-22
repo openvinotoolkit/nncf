@@ -123,8 +123,9 @@ class OVBiasCorrectionAlgoBackend(BiasCorrectionAlgoBackend):
 
     @staticmethod
     def is_quantized_weights(node: NNCFNode, nncf_graph: NNCFGraph) -> bool:
-        const_port_id = node.layer_attributes.const_port_id
-        weight_node = nncf_graph.get_input_edges(node)[const_port_id].from_node
+        const_port_ids = node.layer_attributes.get_const_port_ids()
+        assert len(const_port_ids) == 1
+        weight_node = nncf_graph.get_input_edges(node)[const_port_ids[0]].from_node
         return weight_node.metatype in FAKE_QUANTIZE_OPERATIONS
 
     @staticmethod

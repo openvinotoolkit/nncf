@@ -205,6 +205,14 @@ class OVConstantLayerAttributes(BaseLayerAttributes):
         """
         self.const_attrs = const_attrs
 
+    def get_const_port_ids(self) -> List[int]:
+        """
+        Returns indices of input ports corresponding to the constant nodes.
+
+        :returns: List of input port indices with constants.
+        """
+        return list(self.const_attrs.keys())
+
 
 def get_operation_const_op(operation: ov.Node, const_port_id: int) -> ov.Node:
     """

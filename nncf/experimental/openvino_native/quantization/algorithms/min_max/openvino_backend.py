@@ -156,7 +156,7 @@ class OVMinMaxAlgoBackend(MinMaxAlgoBackend):
 
     @staticmethod
     def get_weight_tensor_port_ids(node: NNCFNode) -> List[Optional[int]]:
-        return list(node.layer_attributes.const_attrs.keys())
+        return node.layer_attributes.get_const_port_ids()
 
     @staticmethod
     def get_model_type_ignore_scope(model_type: ModelType) -> IgnoredScope:
