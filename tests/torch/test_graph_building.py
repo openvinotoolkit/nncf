@@ -23,7 +23,7 @@ from nncf.common.graph import Dtype
 from nncf.common.graph.definitions import MODEL_INPUT_OP_NAME
 from nncf.common.graph.definitions import MODEL_OUTPUT_OP_NAME
 from nncf.common.graph.definitions import NNCFGraphNodeType
-from nncf.common.graph.layer_attributes import GatherLayerAttributes
+from nncf.common.graph.layer_attributes import GetItemLayerAttributes
 from nncf.common.graph.layer_attributes import MultipleInputLayerAttributes
 from nncf.common.graph.layer_attributes import MultipleOutputLayerAttributes
 from nncf.common.graph.layer_attributes import PermuteLayerAttributes
@@ -40,6 +40,7 @@ from nncf.torch.dynamic_graph.graph_tracer import create_dummy_forward_fn
 from nncf.torch.dynamic_graph.io_handling import wrap_nncf_model_outputs_with_objwalk
 from nncf.torch.graph.graph_builder import GraphBuilder
 from nncf.torch.graph.operator_metatypes import PTCatMetatype
+from nncf.torch.graph.operator_metatypes import PTGatherMetatype
 from nncf.torch.graph.operator_metatypes import PTSplitMetatype
 from nncf.torch.graph.operator_metatypes import PTReshapeMetatype
 from nncf.torch.graph.operator_metatypes import PTTransposeMetatype
@@ -373,8 +374,7 @@ def test_split_attributes(input_shape):
 
 class SplitByGetItemModel(ModelWithDummyParameter):
     def forward(self, x):
-        q, k, w = x[0:1], x[1], x[2]
-        return q, k, w
+        return x[0:1], x[(0,1)], x[2]
 
 
 @pytest.mark.parametrize("input_shape", [
@@ -383,21 +383,23 @@ class SplitByGetItemModel(ModelWithDummyParameter):
 def test_getitem_attributes(input_shape):
     model = SplitByGetItemModel()
     input_info = ModelInputInfo(input_shape)
-    graph_builder = GraphBuilder(create_dummy_forward_fn([input_info, ],
-                                                         with_input_tracing=True,
-                                                         with_output_tracing=True))
-
+    custom_forward_fn = create_dummy_forward_fn(
+        [input_info, ], with_input_tracing=True, with_output_tracing=True
+    )
+    graph_builder = GraphBuilder(custom_forward_fn)
     graph = graph_builder.build_graph(model)
     getitem_nodes_with_attributes = {
-        'SplitByGetItemModel/__getitem__0': {'axis': 1, 'index': []}
+        'SplitByGetItemModel/__getitem___0': slice(0, 1, None),
+        'SplitByGetItemModel/__getitem___1': (0, 1),
+        'SplitByGetItemModel/__getitem___2': 2
     }
 
     for node in graph.get_all_nodes():
-        if node.metatype is PTTransposeMetatype:
+        if node.metatype is PTGatherMetatype:
             assert node.node_name in getitem_nodes_with_attributes
-            if isinstance(node.layer_attributes, GatherLayerAttributes):
-                ref_attrs = getitem_nodes_with_attributes[node.node_name]
-                assert node.layer_attributes == ref_attrs
+            if isinstance(node.layer_attributes, GetItemLayerAttributes):
+                ref_key = getitem_nodes_with_attributes[node.node_name]
+                assert node.layer_attributes.key == ref_key
             else:
                 assert node.layer_attributes is None
                 assert getitem_nodes_with_attributes[node.node_name] is None

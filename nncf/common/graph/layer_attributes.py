@@ -15,8 +15,6 @@ from abc import abstractmethod
 from enum import Enum
 from typing import List, Tuple, Any, Union
 
-import numpy as np
-
 
 class Dtype(Enum):
     FLOAT = 'float'
@@ -31,12 +29,12 @@ class BaseLayerAttributes(ABC):
 
 
 class MultipleInputLayerAttributes(BaseLayerAttributes):
-    """
-    Represents a layer with multiple inputs.
-    """
-
     def __init__(self,
                  axis: int):
+        """
+
+        :param axis: the dimension over which the inputs are combined (e.g. concatenated).
+        """
         self.axis = axis
 
     def __eq__(self, other: Any):
@@ -45,13 +43,14 @@ class MultipleInputLayerAttributes(BaseLayerAttributes):
 
 
 class MultipleOutputLayerAttributes(BaseLayerAttributes):
-    """
-    Represents a layer with multiple outputs.
-    """
-
     def __init__(self,
                  chunks: Union[int, List],
                  axis: int):
+        """
+
+        :param chunks:  number of chunks (outputs)
+        :param axis: the dimension along which to make multiple outputs (e.g. split the tensor).
+        """
         self.chunks = chunks
         self.axis = axis
 
@@ -62,11 +61,13 @@ class MultipleOutputLayerAttributes(BaseLayerAttributes):
 
 
 class WeightedLayerAttributes(BaseLayerAttributes):
-    """
-    Represents a layer with weights.
-    """
-
     def __init__(self, weight_requires_grad: bool, dtype: Dtype = Dtype.FLOAT):
+        """
+
+        :param weight_requires_grad: Is True if gradients need to be computed for the corresponding Tensor,
+        False otherwise.
+        :param dtype: is an object that represents the type of data.
+        """
         self.weight_requires_grad = weight_requires_grad
         self.dtype = dtype
 
@@ -93,8 +94,17 @@ class GenericWeightedLayerAttributes(WeightedLayerAttributes):
     of the exact meaning of the weight indices.
     """
 
-    def __init__(self, weight_requires_grad: bool, weight_shape: List[int],
+    def __init__(self,
+                 weight_requires_grad: bool,
+                 weight_shape: List[int],
                  filter_dimension_idx: int = 0):
+        """
+
+        :param weight_requires_grad: Is True if gradients need to be computed for the corresponding Tensor,
+        False otherwise.
+        :param weight_shape: shape of weight tensor.
+        :param filter_dimension_idx: the axis along which the filters are stored.
+        """
         super().__init__(weight_requires_grad)
         self.weight_shape = weight_shape
         self.filter_dimension_idx = filter_dimension_idx
@@ -112,6 +122,14 @@ class LinearLayerAttributes(WeightedLayerAttributes):
                  in_features: int,
                  out_features: int,
                  bias: bool = True):
+        """
+
+        :param weight_requires_grad: Is True if gradients need to be computed for the corresponding Tensor,
+        False otherwise.
+        :param in_features: number of input channels in the layer's input.
+        :param out_features: number of channels produced by the layer.
+        :param bias: If set to ``False``, the layer doesn't learn an additive bias.
+        """
         super().__init__(weight_requires_grad)
         self.in_features = in_features
         self.out_features = out_features
@@ -128,11 +146,6 @@ class LinearLayerAttributes(WeightedLayerAttributes):
 
 
 class ConvolutionLayerAttributes(WeightedLayerAttributes):
-    """
-    This class stores attributes of convolution modules/layers
-    that are useful for some algorithms.
-    """
-
     def __init__(self,
                  weight_requires_grad: bool,
                  in_channels: int,
@@ -142,6 +155,18 @@ class ConvolutionLayerAttributes(WeightedLayerAttributes):
                  groups: int,
                  transpose: bool,
                  padding_values: Tuple[int, ...]):
+        """
+
+        :param weight_requires_grad: Is True if gradients need to be computed for the corresponding Tensor,
+        False otherwise.
+        :param in_channels: number of input channels in the layer's input.
+        :param out_channels: number of channels produced by the layer.
+        :param kernel_size: size of the convolving kernel.
+        :param stride: stride of the convolution.
+        :param groups: number of blocked connections from input channels to output channels.
+        :param transpose: If set to `True`, the layer is an ordinary convolution, otherwise - transpose one.
+        :param padding_values: defines the amount of padding applied to the layer's input.
+        """
         super().__init__(weight_requires_grad)
         self.in_channels = in_channels
         self.out_channels = out_channels
@@ -174,15 +199,17 @@ class ConvolutionLayerAttributes(WeightedLayerAttributes):
 
 
 class GroupNormLayerAttributes(WeightedLayerAttributes):
-    """
-    This class stores attributes of group normalization modules/layers
-    that are useful for some algorithms.
-    """
-
     def __init__(self,
                  weight_requires_grad: bool,
                  num_channels: int,
                  num_groups: int):
+        """
+
+        :param weight_requires_grad: Is True if gradients need to be computed for the corresponding Tensor,
+        False otherwise.
+        :param num_channels: number of channels expected in the layer's input.
+        :param num_groups: number of groups to separate the channels into.
+        """
         super().__init__(weight_requires_grad)
         self.num_channels = num_channels
         self.num_groups = num_groups
@@ -201,26 +228,27 @@ class GroupNormLayerAttributes(WeightedLayerAttributes):
 
 
 class ReshapeLayerAttributes(BaseLayerAttributes):
-    """
-    This class stores attributes of reshape modules/layers
-    that are useful for some algorithms.
-    """
-
     def __init__(self,
                  input_shape: List[int],
                  output_shape: List[int]):
+        """
+
+        :param input_shape: number of elements of each of the axes of a input tensor.
+        :param output_shape: number of elements of each of the axes of a output tensor.
+        """
         self.input_shape = input_shape
         self.output_shape = output_shape
 
 
 class TransposeLayerAttributes(BaseLayerAttributes):
-    """
-    This class stores attributes of transpose modules/layers
-    that are useful for some algorithms.
-    """
     def __init__(self,
                  dim0: int,
                  dim1: int):
+        """
+
+        :param dim0: the first dimension to be transposed.
+        :param dim1: the second dimension to be transposed.
+        """
         self.dim0 = dim0
         self.dim1 = dim1
 
@@ -232,12 +260,12 @@ class TransposeLayerAttributes(BaseLayerAttributes):
 
 
 class PermuteLayerAttributes(BaseLayerAttributes):
-    """
-    This class stores attributes of permute modules/layers
-    that are useful for some algorithms.
-    """
     def __init__(self,
                  permutation: List[int]):
+        """
+
+        :param permutation: the desired ordering of dimensions.
+        """
         self.permutation = permutation
 
     def __eq__(self, other: Any) -> bool:
@@ -246,34 +274,10 @@ class PermuteLayerAttributes(BaseLayerAttributes):
                and len(self.permutation) == len(other.permutation) \
                and (l == r for l, r in zip(self.permutation, other.permutation))
 
-
-class GatherLayerAttributes(BaseLayerAttributes):
-    """
-    This class stores attributes of gather modules/layers
-    that are useful for some algorithms.
-    """
-    def __init__(self, axis: int, index: np.array):
-        """
-        :param axis:  the axis along which to index
-        :param index: the indices of elements to gather
-        """
-        self.axis = axis
-        self.index = index
-
-    def __eq__(self, other: Any) -> bool:
-        return isinstance(other, GatherLayerAttributes) \
-               and super().__eq__(other) \
-               and self.axis == other.axis \
-               and np.array_equal(self.index, other.index)
-
-
 class GetItemLayerAttributes(BaseLayerAttributes):
-    """
-    This class stores attributes of gather modules/layers
-    that are useful for some algorithms.
-    """
     def __init__(self, key: Any):
         """
-        :param key: usually int, tuple of int or slice
+
+        :param key: usually int, tuple of int or slice.
         """
         self.key = key

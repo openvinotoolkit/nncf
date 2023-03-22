@@ -21,7 +21,7 @@ from typing import Tuple
 from typing import Type
 from tensorflow.core.framework.node_def_pb2 import NodeDef
 from tensorflow.python.framework.convert_to_constants import convert_variables_to_constants_v2
-from tensorflow.python.keras.engine.keras_tensor import KerasTensor
+from nncf.tensorflow.tf_internals import KerasTensor
 
 import tensorflow as tf
 
@@ -784,7 +784,7 @@ def _get_permutation_layer_attributes(layer: tf.keras.layers.Layer,
     dims = None
     if hasattr(layer, 'dims'):
         dims = list(layer.dims)
-    elif hasattr(layer, 'inbound_nodes'):
+    else:
         inbound_nodes = layer.inbound_nodes
         if len(inbound_nodes) > 0 and hasattr(inbound_nodes[0], 'call_kwargs'):
             call_kwargs = inbound_nodes[0].call_kwargs

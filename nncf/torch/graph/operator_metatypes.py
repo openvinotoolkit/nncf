@@ -27,7 +27,7 @@ from nncf.common.graph.operator_metatypes import OperatorMetatype
 from nncf.common.graph.operator_metatypes import OperatorMetatypeRegistry
 from nncf.common.hardware.opset import HWConfigOpName
 from nncf.torch.dynamic_graph.graph import DynamicGraph
-from nncf.torch.dynamic_graph.namespace_target import NamespaceTarget
+from nncf.torch.dynamic_graph.structs import NamespaceTarget
 
 ModuleAttributes = TypeVar('ModuleAttributes', bound=BaseLayerAttributes)
 
