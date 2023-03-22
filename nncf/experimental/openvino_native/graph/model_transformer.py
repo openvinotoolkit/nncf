@@ -156,7 +156,7 @@ class OVModelTransformer(ModelTransformer):
             elif transformation.target_point.type in [TargetType.PRE_LAYER_OPERATION,
                                                       TargetType.OPERATION_WITH_WEIGHTS]:
                 output = node.input_value(port_id)
-                extra_model_outputs.append((output, port_id))
+                extra_model_outputs.append((output, output.get_index()))
             else:
                 raise NotImplementedError(f'Unsupported target point type {transformation.target_point.type}')
 
@@ -418,8 +418,8 @@ class OVModelTransformer(ModelTransformer):
             return (new_node.output(fn_output_port_id), fn_output_port_id)
         if transform_type in [TargetType.PRE_LAYER_OPERATION,
                               TargetType.OPERATION_WITH_WEIGHTS]:
-            source_output = target_node.input(port_id).get_source_output()
-            new_node = transformation.inplace_op_fn(source_output.get_node(), source_output.get_index())
+            output = target_node.input_value(port_id)
+            new_node = transformation.inplace_op_fn(output.get_node(), output.get_index())
             return (new_node.output(fn_output_port_id), fn_output_port_id)
         else:
             raise RuntimeError(f'Transform type {transform_type} is not supported')

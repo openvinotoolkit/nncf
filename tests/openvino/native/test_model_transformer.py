@@ -189,13 +189,16 @@ def test_inplace_fn_insertion(test_params: InplaceOpTestCase, target_type, targe
     for target_layer in target_layers:
         target_node = get_node_by_name(transformed_model, target_layer)
         if target_type == TargetType.OPERATION_WITH_WEIGHTS:
-            target_node = get_prev_node(target_node, 1)
+            source_output = target_node.input(1).get_source_output()
+            target_node = source_output.get_node()
+            port_id = source_output.get_index()
         check_inplace_op(target_node, test_params.ref_types, test_params.ref_values, inplace_branches_num)
-        target_nodes.append(target_node)
+        target_nodes.append((target_node, port_id))
 
+    default_output_fn_port = 0
     extra_outputs = get_extra_outputs(model, transformed_model)
-    ref_output_names = [get_result_node_name(get_reduce_node_name(target_node.get_friendly_name(), test_params.name, port_id), port_id)
-                        for target_node in target_nodes]
+    ref_output_names = [get_result_node_name(get_reduce_node_name(target_node.get_friendly_name(), test_params.name, port_id),
+                                             default_output_fn_port) for target_node, port_id in target_nodes]
     assert len(extra_outputs) == len(ref_output_names)
     for out_name in extra_outputs:
         assert out_name in ref_output_names
@@ -270,12 +273,14 @@ def test_output_insertion(target_type, target_layers):
     for target_layer in target_layers:
         target_node = get_node_by_name(transformed_model, target_layer)
         if target_type == TargetType.OPERATION_WITH_WEIGHTS:
-            target_node = get_prev_node(target_node, 1)
-        target_nodes.append(target_node)
+            source_output = target_node.input(1).get_source_output()
+            target_node = source_output.get_node()
+            port_id = source_output.get_index()
+        target_nodes.append((target_node, port_id))
 
     extra_outputs = get_extra_outputs(model, transformed_model)
     ref_output_names = [get_result_node_name(target_node.get_friendly_name(), port_id)
-                        for target_node in target_nodes]
+                        for target_node, port_id in target_nodes]
     assert len(extra_outputs) == len(ref_output_names)
     for out_name in extra_outputs:
         assert out_name in ref_output_names
