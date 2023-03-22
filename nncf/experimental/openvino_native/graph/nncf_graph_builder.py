@@ -186,8 +186,9 @@ class GraphConverter:
                         'shape': tuple(const_node.get_output_shape(0))
                     }
 
-                nncf_node = nncf_graph.get_node_by_name(node_name)
-                nncf_node.layer_attributes = OVConstantLayerAttributes(const_attrs)
+                if const_attrs:
+                    nncf_node = nncf_graph.get_node_by_name(node_name)
+                    nncf_node.layer_attributes = OVConstantLayerAttributes(const_attrs)
 
         GraphConverter._add_edges_to_nncf_graph(model, nncf_graph)
         return nncf_graph

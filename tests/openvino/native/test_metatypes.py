@@ -62,5 +62,7 @@ def test_determining_weights_port():
             continue
         if node.layer_attributes is not None:
             counter += 1
-            assert node.layer_attributes.const_port_id == REF_WEIGHTS_PORT_IDS[node.node_name]
+            assert len(node.layer_attributes.const_attrs) == 1
+            const_port_id = list(node.layer_attributes.const_attrs.keys())[0]
+            assert const_port_id == REF_WEIGHTS_PORT_IDS[node.node_name]
     assert counter == len(REF_WEIGHTS_PORT_IDS)
