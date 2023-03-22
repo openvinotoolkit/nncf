@@ -81,7 +81,7 @@ class MinMaxQuantizationParameters(AlgorithmParameters):
                  range_type: Optional[RangeType] = None,
                  quantize_outputs: bool = False,
                  ignored_scopes: Optional[IgnoredScope] = None,
-                 model_type: Optional[ModelType] = None
+                 model_type: Optional[ModelType] = None,
                  inplace_statistics: bool = False,
                  ):
         """
