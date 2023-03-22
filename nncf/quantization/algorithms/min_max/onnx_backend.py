@@ -171,7 +171,7 @@ class ONNXMinMaxAlgoBackend(MinMaxAlgoBackend):
                                                 num_samples, window_size=None)
 
     @staticmethod
-    def get_weight_tensor_port_ids(node: NNCFNode) -> Optional[List[int]]:
+    def get_weight_tensor_port_ids(node: NNCFNode) -> List[Optional[int]]:
         return [node.metatype.weight_definitions.weight_port_id]
 
     @staticmethod
@@ -191,5 +191,5 @@ class ONNXMinMaxAlgoBackend(MinMaxAlgoBackend):
                 isinstance(node.layer_attributes, ONNXExtendedLayerAttributes)]
 
     @staticmethod
-    def get_weight_name(nncf_graph: NNCFGraph, node_name: str, port_id: int) -> str:
-        return nncf_graph.get_node_by_name(node_name).layer_name
+    def get_weight_name(nncf_graph: NNCFGraph, target_point: ONNXTargetPoint) -> str:
+        return nncf_graph.get_node_by_name(target_point.target_node_name).layer_name

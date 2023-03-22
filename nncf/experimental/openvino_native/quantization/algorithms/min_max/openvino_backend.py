@@ -155,7 +155,7 @@ class OVMinMaxAlgoBackend(MinMaxAlgoBackend):
                                               num_samples)
 
     @staticmethod
-    def get_weight_tensor_port_ids(node: NNCFNode) -> Optional[List[int]]:
+    def get_weight_tensor_port_ids(node: NNCFNode) -> List[Optional[int]]:
         return list(node.layer_attributes.const_attrs.keys())
 
     @staticmethod
@@ -177,6 +177,6 @@ class OVMinMaxAlgoBackend(MinMaxAlgoBackend):
                 node.metatype in GENERAL_WEIGHT_LAYER_METATYPES]
 
     @staticmethod
-    def get_weight_name(nncf_graph: NNCFGraph, node_name: str, port_id: int) -> str:
-        node = nncf_graph.get_node_by_name(node_name)
-        return node.layer_attributes.const_attrs[port_id]['name']
+    def get_weight_name(nncf_graph: NNCFGraph, target_point: OVTargetPoint) -> str:
+        node = nncf_graph.get_node_by_name(target_point.target_node_name)
+        return node.layer_attributes.const_attrs[target_point.port_id]['name']

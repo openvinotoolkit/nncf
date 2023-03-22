@@ -142,8 +142,12 @@ class PTMinMaxAlgoBackend(MinMaxAlgoBackend):
                                                                 num_samples)
 
     @staticmethod
-    def get_weight_tensor_port_ids(node: NNCFNode) -> Optional[List[int]]:
-        return None
+    def get_weight_tensor_port_ids(node: NNCFNode) -> List[Optional[int]]:
+        return [None]
+
+    @staticmethod
+    def get_weight_name(nncf_graph: NNCFGraph, target_point: PTTargetPoint) -> str:
+        return nncf_graph.get_node_by_name(target_point.target_node_name).layer_name
 
     @staticmethod
     def get_weight_config(config: QuantizerConfig, model: NNCFNetwork) -> QuantizerConfig:
@@ -262,7 +266,3 @@ class PTMinMaxAlgoBackend(MinMaxAlgoBackend):
     def get_weight_nodes(nncf_graph: NNCFGraph) -> List[NNCFNode]:
         return [node for node in nncf_graph.get_all_nodes() if
                 isinstance(node.layer_attributes, WeightedLayerAttributes)]
-
-    @staticmethod
-    def get_weight_name(nncf_graph: NNCFGraph, node_name: str, port_id: int) -> str:
-        return nncf_graph.get_node_by_name(node_name).layer_name

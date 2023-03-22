@@ -393,8 +393,7 @@ class MinMaxQuantization(Algorithm):
                     MinMaxQuantization):
                 if quantization_target_point.is_weight_target_point():
                     # If the nodes share one weight tensor, we should have only one quantizer on that
-                    port_id = quantization_target_point.port_id
-                    weights_name = self._backend_entity.get_weight_name(nncf_graph, target_node_name, port_id)
+                    weights_name = self._backend_entity.get_weight_name(nncf_graph, quantization_target_point)
 
                     if weights_name in weight_layer_names:
                         continue
