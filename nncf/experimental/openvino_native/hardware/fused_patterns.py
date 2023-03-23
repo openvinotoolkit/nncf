@@ -666,6 +666,19 @@ def create_linear_arithmetic_activations():
     linear.join_patterns(activations)
     return linear
 
+
+@OPENVINO_HW_FUSED_PATTERNS.register(PatternNames.MVN_SCALE_SHIFT_ACTIVATIONS)
+def create_mvn_scale_shift_activations():
+    pattern = GraphPattern()
+    pattern.add_node(**{GraphPattern.LABEL_ATTR: 'MVN',
+                        GraphPattern.METATYPE_ATTR: om.OVMVNMetatype})
+    scale_shift = create_scale_shift()
+    activations = atomic_activations_operations()
+
+    pattern.join_patterns(scale_shift)
+    pattern.join_patterns(activations)
+    return pattern
+
 # DEVICE PATTERNS
 
 
