@@ -11,7 +11,7 @@
  limitations under the License.
 """
 
-from typing import List, Any
+from typing import List, Any, Optional
 
 import openvino.runtime as ov
 import numpy as np
@@ -71,15 +71,20 @@ class OVAccuracyControlAlgoBackend(AccuracyControlAlgoBackend):
             isinstance(node.layer_attributes, OVConstantLayerAttributes)
 
     @staticmethod
-    def get_bias_value(node_with_bias: NNCFNode, nncf_graph: NNCFGraph, model) -> np.ndarray:
+    def get_bias_value(node_with_bias: NNCFNode, nncf_graph: NNCFGraph, model: ov.Model) -> np.ndarray:
         return get_bias_value(node_with_bias, nncf_graph, model)
 
     @staticmethod
-    def get_weight_value(node_with_weight: NNCFNode, nncf_graph: NNCFGraph, model) -> np.ndarray:
-        return get_weight_value(node_with_weight, nncf_graph, model)
+    def get_weight_value(node_with_weight: NNCFNode, nncf_graph: NNCFGraph,
+                         model: ov.Model, port_id: int) -> np.ndarray:
+        return get_weight_value(node_with_weight, nncf_graph, model, port_id)
+
+    @staticmethod
+    def get_weight_tensor_port_ids(node: NNCFNode) -> List[Optional[int]]:
+        return node.layer_attributes.get_const_port_ids()
 
     # Preparation of model
 
     @staticmethod
-    def prepare_for_inference(model) -> Any:
+    def prepare_for_inference(model: ov.Model) -> Any:
         return ov.compile_model(model)

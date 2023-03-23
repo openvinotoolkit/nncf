@@ -238,6 +238,20 @@
                 "scales": "unified"
             }
         },
+        {
+            "type": "LSTMSequence",
+            "quantization": {
+                "activations": "q8_a",
+                "weights": "q8_w_sym"
+            }
+        },
+        {
+            "type": "GRUSequence",
+            "quantization": {
+                "activations": "q8_a",
+                "weights": "q8_w_sym"
+            }
+        },
         {"type": "Flatten"},
         {"type": "Squeeze"},
         {"type": "Unsqueeze"},

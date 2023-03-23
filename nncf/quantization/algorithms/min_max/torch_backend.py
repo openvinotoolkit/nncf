@@ -11,7 +11,7 @@
  limitations under the License.
 """
 
-from typing import Dict, List, Tuple
+from typing import Dict, List, Optional, Tuple
 import torch
 import numpy as np
 
@@ -142,8 +142,12 @@ class PTMinMaxAlgoBackend(MinMaxAlgoBackend):
                                                                 num_samples)
 
     @staticmethod
-    def get_weight_tensor_port_id(node: NNCFNode) -> int:
-        return None
+    def get_weight_tensor_port_ids(node: NNCFNode) -> List[Optional[int]]:
+        return [None]
+
+    @staticmethod
+    def get_weight_name(nncf_graph: NNCFGraph, target_point: PTTargetPoint) -> str:
+        return nncf_graph.get_node_by_name(target_point.target_node_name).layer_name
 
     @staticmethod
     def get_weight_config(config: QuantizerConfig, model: NNCFNetwork) -> QuantizerConfig:

@@ -52,11 +52,13 @@ class CommandCreator(ABC):
     @staticmethod
     @abstractmethod
     def create_command_to_update_weight(node_with_weight: NNCFNode,
-                                        weight_value: Any) -> TransformationCommand:
+                                        weight_value: Any,
+                                        weight_port_id: int) -> TransformationCommand:
         """
         Creates command to update weight value.
 
         :param node_with_weight: The node that corresponds to the operation with weight.
         :param weight_value: New weight value.
+        :param weight_port_id: The input port ID that corresponds to weight.
         :return: The command to update weight value.
         """

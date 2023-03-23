@@ -11,7 +11,7 @@
  limitations under the License.
 """
 
-from typing import Dict, List, Tuple
+from typing import Dict, List, Optional, Tuple
 
 from nncf.parameters import ModelType
 from nncf.scopes import IgnoredScope
@@ -119,7 +119,7 @@ class OVMinMaxAlgoBackend(MinMaxAlgoBackend):
             return axes, use_abs_max
 
         assert isinstance(node.layer_attributes, OVConstantLayerAttributes)
-        const_shape = node.layer_attributes.const_shape
+        const_shape = node.layer_attributes.const_attrs[target_point.port_id]['shape']
 
         if quantizer_config.per_channel:
             assert node.metatype in GENERAL_WEIGHT_LAYER_METATYPES
@@ -155,8 +155,8 @@ class OVMinMaxAlgoBackend(MinMaxAlgoBackend):
                                               num_samples)
 
     @staticmethod
-    def get_weight_tensor_port_id(node: NNCFNode) -> int:
-        return node.layer_attributes.const_port_id
+    def get_weight_tensor_port_ids(node: NNCFNode) -> List[Optional[int]]:
+        return node.layer_attributes.get_const_port_ids()
 
     @staticmethod
     def get_model_type_ignore_scope(model_type: ModelType) -> IgnoredScope:
@@ -175,3 +175,8 @@ class OVMinMaxAlgoBackend(MinMaxAlgoBackend):
         return [node for node in nncf_graph.get_all_nodes() if
                 isinstance(node.layer_attributes, OVConstantLayerAttributes) and
                 node.metatype in GENERAL_WEIGHT_LAYER_METATYPES]
+
+    @staticmethod
+    def get_weight_name(nncf_graph: NNCFGraph, target_point: OVTargetPoint) -> str:
+        node = nncf_graph.get_node_by_name(target_point.target_node_name)
+        return node.layer_attributes.const_attrs[target_point.port_id]['name']

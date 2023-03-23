@@ -40,13 +40,15 @@ class OVCommandCreator(CommandCreator):
                                       bias_value: np.ndarray,
                                       nncf_graph: NNCFGraph) -> OVBiasCorrectionCommand:
         add_node = nncf_graph.get_next_nodes(node_with_bias)[0]
-        bias_port_id = add_node.layer_attributes.const_port_id
+        const_port_ids = add_node.layer_attributes.get_const_port_ids()
+        assert len(const_port_ids) == 1
+        bias_port_id = const_port_ids[0]
         target_point = OVTargetPoint(TargetType.LAYER, node_with_bias.node_name, bias_port_id)
         return OVBiasCorrectionCommand(target_point, bias_value)
 
     @staticmethod
     def create_command_to_update_weight(node_with_weight: NNCFNode,
-                                        weight_value: np.ndarray) -> OVWeightUpdateCommand:
-        weight_port_id = node_with_weight.layer_attributes.const_port_id
+                                        weight_value: np.ndarray,
+                                        weight_port_id: int) -> OVWeightUpdateCommand:
         target_point = OVTargetPoint(TargetType.LAYER, node_with_weight.node_name, weight_port_id)
         return OVWeightUpdateCommand(target_point, weight_value)
