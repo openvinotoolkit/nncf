@@ -87,8 +87,9 @@ class StatisticsAggregator(ABC):
         :param statistic_points: StatisticPointsContainer instance with the statistic points
         """
 
-    def _get_merged_statistic_points(self, statistic_points: StatisticPointsContainer, model: TModel):
-        return self.statistic_points
+    @staticmethod
+    def _get_merged_statistic_points(statistic_points: StatisticPointsContainer, model: TModel):
+        return statistic_points
 
     @abstractmethod
     def _get_transformation_layout_extra_outputs(self,

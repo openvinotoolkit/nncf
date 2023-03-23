@@ -472,3 +472,17 @@ class MatmulSoftmaxMatmulBlock(OVReferenceModel):
         result = opset.result(matmul_2, name="Result")
         model = ov.Model([result], [input_1])
         return model
+
+class SimpleSplitModel(OVReferenceModel):
+    def _create_ov_model(self, input_shape=None, splits=None):
+        if input_shape is None:
+            input_shape = [1, 9, 4, 4]
+            splits = 3
+        input_1 = opset.parameter(input_shape, name="Input")
+        split = opset.split(input_1, 1, splits, name="Split")
+        results = []
+        for idx, output in enumerate(split.outputs()):
+            results.append(opset.result(output, name=f'Result_{idx}'))
+
+        model = ov.Model(results, [input_1])
+        return model

@@ -14,7 +14,7 @@
 import pytest
 import numpy as np
 from abc import abstractmethod
-from typing import Union
+from typing import Union, List
 from dataclasses import dataclass
 
 from nncf.common.factory import NNCFGraphFactory
@@ -38,6 +38,14 @@ class TemplateTestStatisticsAggregator:
         pass
 
     @abstractmethod
+    def get_split_concat_backend_model(self):
+        """
+        Please make the same topology with the same names as it
+        presented in Openvino test.
+        """
+        pass
+
+    @abstractmethod
     def get_statistics_aggregator(self, dataset):
         pass
 
@@ -47,6 +55,10 @@ class TemplateTestStatisticsAggregator:
 
     @abstractmethod
     def get_target_point(self, target_type: TargetType) -> TargetPoint:
+        pass
+
+    @abstractmethod
+    def get_split_concat_target_points_and_refs(self) -> List[TargetPoint]:
         pass
 
     @abstractmethod
@@ -224,3 +236,65 @@ class TemplateTestStatisticsAggregator:
                 ref_min_val, ref_max_val = -63.5, 64.5
             assert np.allclose(stat.min_values, ref_min_val)
             assert np.allclose(stat.max_values, ref_max_val)
+
+
+    def test_split_concat_statistic_merging(self, dataset_samples, inplace_statistics):
+        def _check_static_point_common(stat_point):
+            assert stat_point.target_point.type == TargetType.POST_LAYER_OPERATION
+            assert len(stat_point.algorithm_to_tensor_collectors['Merged']) == 1
+            stat_collector = stat_point.algorithm_to_tensor_collectors['Merged'][0]
+            assert len(stat_collector.reducers) == 2
+            assert len(stat_collector.aggregators) == 4
+
+        algo_backend = self.get_algo_backend_cls()
+        model = self.get_split_concat_backend_model()
+        nncf_graph = NNCFGraphFactory.create(model)
+
+        quantizer_config = QuantizerConfig(mode=QuantizationMode.SYMMETRIC,
+                                           per_channel=False)
+        statistics_points = StatisticPointsContainer()
+        collectors_and_refs = []
+        for target_point, ref in self.get_split_concat_target_points_and_refs():
+            min_max_tensor_collector = algo_backend.minmax_statistic_collector(
+                nncf_graph=nncf_graph,
+                target_point=target_point,
+                quantizer_config=quantizer_config,
+                num_samples=len(dataset_samples),
+                inplace=inplace_statistics)
+            mean_min_max_tensor_collector = algo_backend.mean_minmax_statistic_collector(
+                nncf_graph=nncf_graph,
+                target_point=target_point,
+                quantizer_config=quantizer_config,
+                use_per_sample_stats=False,
+                num_samples=len(dataset_samples),
+                inplace=inplace_statistics)
+
+            for tensor_collector in [min_max_tensor_collector, mean_min_max_tensor_collector]:
+                stat_point = StatisticPoint(target_point, tensor_collector, 'TEST')
+                statistics_points.add_statistic_point(stat_point)
+            collectors_and_refs.append((min_max_tensor_collector, ref['min_max']))
+            collectors_and_refs.append((mean_min_max_tensor_collector, ref['mean_min_max']))
+
+
+        dataset = self.get_dataset(dataset_samples)
+        statistics_aggregator = self.get_statistics_aggregator(dataset)
+        merged_statistics = statistics_aggregator._get_merged_statistic_points(statistics_points, model)
+        assert len(merged_statistics) == 5
+        assert len(merged_statistics['split']) == 3
+        port_ids = set()
+        for stat_point in merged_statistics['split']:
+            _check_static_point_common(stat_point)
+            port_ids.add(stat_point.target_point.port_id)
+
+        assert sorted(list(port_ids)) == [0, 1, 2]
+        for key in ['add_1', 'add_2', 'add_3', 'concat']:
+            assert len(merged_statistics[key]) == 1
+            _check_static_point_common(stat_point)
+
+        statistics_aggregator.register_stastistic_points(statistics_points)
+        statistics_aggregator.collect_statistics(model)
+
+        for collector, ref in collectors_and_refs:
+            stat = collector.get_statistics()
+            assert np.allclose(stat.min_values, ref[0])
+            assert np.allclose(stat.max_values, ref[1])

@@ -135,19 +135,20 @@ def get_inplace_reduce_op(op, node_type, reduction_axes, use_abs):
     def get_reduce_op(node, output_port_id):
         output_name = node.get_friendly_name()
         reduction_axes_ = reduction_axes
+        name_output_port_id = output_port_id
         if reduction_axes_ is None:
             partial_shape = get_partial_shape_safe(node, output_port_id)
             reduction_axes_ = np.array(range(partial_shape.rank.get_length()))
 
         if use_abs:
             op_input = opset.abs(node.output(output_port_id),
-                                 name=get_reduce_node_name(output_name, 'abs', output_port_id))
+                                 name=get_reduce_node_name(output_name, 'abs', name_output_port_id))
             output_port_id = 0
         else:
             op_input = node
 
         return op(op_input.output(output_port_id), reduction_axes=reduction_axes_,
-                  keep_dims=True, name=get_reduce_node_name(output_name, node_type, output_port_id))
+                  keep_dims=True, name=get_reduce_node_name(output_name, node_type, name_output_port_id))
     return get_reduce_op
 
 
@@ -168,11 +169,12 @@ def get_inplace_mean_per_ch(op_type: str, axis: int):
         output_name = node.get_friendly_name()
         input_shape = get_partial_shape_safe(node, output_port_id)
         input_shape = [dim.get_length() if dim.is_static else -1 for dim in input_shape]
+        name_output_port_id = output_port_id
         if len(input_shape) < 3:
             return opset.reduce_mean(node.output(output_port_id),
                                      reduction_axes=0,
                                      keep_dims=False,
-                                     name=get_reduce_node_name(output_name, op_type, output_port_id))
+                                     name=get_reduce_node_name(output_name, op_type, name_output_port_id))
 
         ch_dim = 1
         if axis != ch_dim:
@@ -199,7 +201,7 @@ def get_inplace_mean_per_ch(op_type: str, axis: int):
         return opset.reduce_mean(reshape_op,
                                  reduction_axes=np.array((0, 2)),
                                  keep_dims=False,
-                                 name=get_reduce_node_name(output_name, op_type, output_port_id))
+                                 name=get_reduce_node_name(output_name, op_type, name_output_port_id))
     return get_op
 
 

@@ -41,6 +41,7 @@ from tests.openvino.native.models import LinearModel
 from tests.openvino.native.models import ConvModel
 from tests.openvino.native.models import FPModel
 from tests.openvino.native.models import QuantizedModel
+from tests.openvino.native.models import SimpleSplitModel
 from tests.openvino.native.common import compare_nncf_graphs
 from tests.openvino.conftest import OPENVINO_NATIVE_TEST_ROOT
 
@@ -98,17 +99,19 @@ class InplaceOpTestCase:
 
 
 
-DEFAULT_DIMS = {
-    'input_shape': [1, 3, 2, 8],
-    'reshape_shape':[1, 3, 4, 4],
-    'matmul_w_shape':[1, 3, 4, 4],
-    'add_shape':[1, 3, 4, 4]
-}
-SHORT_DIMS = {
-    'input_shape': [1, 3, 2, 8],
-    'reshape_shape':[48],
-    'matmul_w_shape':[48, 48],
-    'add_shape':[48]
+LINEAR_MODEL_SHAPES ={
+    'DEFAULT':{
+        'input_shape': [1, 3, 2, 8],
+        'reshape_shape':[1, 3, 4, 4],
+        'matmul_w_shape':[1, 3, 4, 4],
+        'add_shape':[1, 3, 4, 4]
+    },
+    'SHORT':{
+        'input_shape': [1, 3, 2, 8],
+        'reshape_shape':[48],
+        'matmul_w_shape':[48, 48],
+        'add_shape':[48]
+    }
 }
 INPLACE_OPS_TEST_CASES = [
     # Forwarded reduce shape
@@ -148,8 +151,9 @@ def get_node_by_name(model: ov.Model, name: str):
     return nodes[0]
 
 
-def check_inplace_op(target_node, ref_types, ref_vals, inplace_branches_num):
-    next_nodes = get_next_nodes(target_node, 0)
+def check_inplace_op(target_node, ref_types, ref_vals, inplace_branches_num,
+                     output_port_id):
+    next_nodes = get_next_nodes(target_node, output_port_id)
     first_inplace_op = [node for node in next_nodes if node.type_info.name == ref_types[0]]
     assert len(first_inplace_op) == inplace_branches_num
     node = first_inplace_op[0]
@@ -172,7 +176,7 @@ def check_inplace_op(target_node, ref_types, ref_vals, inplace_branches_num):
                                          TargetType.OPERATION_WITH_WEIGHTS])
 @pytest.mark.parametrize('target_layers', TARGET_INSERT_LAYERS)
 def test_inplace_fn_insertion(test_params: InplaceOpTestCase, target_type, target_layers):
-    dims = DEFAULT_DIMS if test_params.dims == 'DEFAULT' else SHORT_DIMS
+    dims = LINEAR_MODEL_SHAPES[test_params.dims]
     model = LinearModel(**dims).ov_model
     port_id = 1 if target_type == TargetType.OPERATION_WITH_WEIGHTS else 0
     transformed_model = create_transformed_model(
@@ -192,7 +196,8 @@ def test_inplace_fn_insertion(test_params: InplaceOpTestCase, target_type, targe
             source_output = target_node.input(1).get_source_output()
             target_node = source_output.get_node()
             port_id = source_output.get_index()
-        check_inplace_op(target_node, test_params.ref_types, test_params.ref_values, inplace_branches_num)
+        check_inplace_op(target_node, test_params.ref_types, test_params.ref_values, inplace_branches_num,
+                         port_id)
         target_nodes.append((target_node, port_id))
 
     default_output_fn_port = 0
@@ -202,6 +207,33 @@ def test_inplace_fn_insertion(test_params: InplaceOpTestCase, target_type, targe
     assert len(extra_outputs) == len(ref_output_names)
     for out_name in extra_outputs:
         assert out_name in ref_output_names
+
+SPLIT_MODEL_INPUT_SHAPES = {
+    'DEFAULT': {'input_shape': [1, 9, 4, 4], 'splits': 3},
+    'SHORT': {'input_shape': [1, 9], 'splits': 3}
+}
+
+@pytest.mark.parametrize('test_params', INPLACE_OPS_TEST_CASES,
+                         ids=[str(case) for case in INPLACE_OPS_TEST_CASES])
+def test_split_inplace_fn_insertion(test_params: InplaceOpTestCase):
+    dims = SPLIT_MODEL_INPUT_SHAPES[test_params.dims]
+    model = SimpleSplitModel(**dims).ov_model
+    target_layer = 'Split'
+    port_id = 1
+    transformed_model = create_transformed_model(
+        model, [target_layer], TargetType.POST_LAYER_OPERATION, OVInplaceFnInsertionCommand,
+        port_id=port_id, inplace_op_fn=test_params.op_builder(test_params.name, test_params.reduce_shape),
+        fn_output_port_id=0)
+
+    target_node = get_node_by_name(transformed_model, target_layer)
+    check_inplace_op(target_node, test_params.ref_types, test_params.ref_values, 1, port_id)
+
+    default_output_fn_port = 0
+    extra_outputs = get_extra_outputs(model, transformed_model)
+    ref_output_name = get_result_node_name(get_reduce_node_name(target_node.get_friendly_name(), test_params.name, port_id),
+                                           default_output_fn_port)
+    assert len(extra_outputs) == 1
+    assert ref_output_name in extra_outputs
 
 
 @pytest.mark.parametrize('input_shape,raise_error', [
@@ -253,7 +285,7 @@ def test_inplace_mean_per_ch_fn_dynamic_shapes(test_params: InplaceOpTestCase, i
             fn(input_1, 0)
         return
     fn(input_1, 0)
-    check_inplace_op(input_1, test_params.ref_types, test_params.ref_values, 1)
+    check_inplace_op(input_1, test_params.ref_types, test_params.ref_values, 1, 0)
 
 
 @pytest.mark.parametrize('target_type', [TargetType.PRE_LAYER_OPERATION,
@@ -284,6 +316,23 @@ def test_output_insertion(target_type, target_layers):
     assert len(extra_outputs) == len(ref_output_names)
     for out_name in extra_outputs:
         assert out_name in ref_output_names
+
+@pytest.mark.parametrize('test_params', INPLACE_OPS_TEST_CASES,
+                         ids=[str(case) for case in INPLACE_OPS_TEST_CASES])
+def test_split_output_insertion(test_params: InplaceOpTestCase):
+    dims = SPLIT_MODEL_INPUT_SHAPES[test_params.dims]
+    model = SimpleSplitModel(**dims).ov_model
+    target_layer = 'Split'
+    port_id = 1
+    transformed_model = create_transformed_model(
+        model, [target_layer], TargetType.POST_LAYER_OPERATION, OVOutputInsertionCommand,
+        port_id=port_id)
+
+    target_node = get_node_by_name(transformed_model, target_layer)
+    extra_outputs = get_extra_outputs(model, transformed_model)
+    ref_output_name = get_result_node_name(target_node.get_friendly_name(), port_id)
+    assert len(extra_outputs) == 1
+    assert ref_output_name in extra_outputs
 
 
 TARGET_LAYERS = [('Conv_1/fq_input_0', 'Concat_1/fq_input_0', 'Conv_3/fq_weights_0', 'Add_2/fq_weights_0')]
