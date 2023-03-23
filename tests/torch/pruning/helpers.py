@@ -941,6 +941,38 @@ class HRNetBlock(nn.Module):
         return out1, out2
 
 
+class PruningTestModelPad(nn.Module):
+    def __init__(self):
+        super().__init__()
+        self.conv1 = create_conv(1, 8, 3, padding=1)
+        self.conv2 = create_conv(8, 8, 3, padding=0)
+        self.conv3 = create_conv(8, 8, 3, padding=0)
+        self.conv4 = create_conv(8, 8, 3, padding=1)
+        self.conv5 = create_conv(8, 8, 3, padding=0)
+        self.conv6 = create_conv(8, 8, 3, padding=0)
+        self.conv7 = create_conv(8, 8, 3, padding=0)
+        self.conv8 = create_conv(8, 8, 3, padding=0)
+        self.conv9 = create_conv(8, 8, 3, padding=0)
+
+    def forward(self, x):
+        x = self.conv1(x)
+        x = self.conv2(x)
+        x = torch.nn.functional.pad(x, (1, 1, 1, 1))
+        x = self.conv3(x)
+        x = self.conv4(x)
+        x = torch.nn.functional.pad(x, (1, 1, 1, 1), 'constant')
+        x = self.conv5(x)
+        x = torch.nn.functional.pad(x, (1, 1, 1, 1), 'constant', value=0)
+        x = self.conv6(x)
+        x = torch.nn.functional.pad(x, (1, 1, 1, 1), 'reflect')
+        x = self.conv7(x)
+        x = torch.nn.functional.pad(x, (1, 1, 1, 1), 'constant', value=1)
+        x = self.conv8(x)
+        x = torch.nn.functional.pad(x, (1, 1, 1, 1), value=1)
+        x = self.conv9(x)
+        return x
+
+
 def make_divisible(v, divisor, min_value=None):
     """
     This function is taken from the original tf repo.
