@@ -10,6 +10,9 @@
  See the License for the specific language governing permissions and
  limitations under the License.
 """
+import urllib.request
+import urllib.parse
+
 from functools import partial
 from os import path as osp
 from typing import Dict
@@ -22,6 +25,7 @@ import examples.torch.common.models as custom_models
 from examples.torch.classification.models.mobilenet_v2_32x32 import MobileNetV2For32x32
 from examples.torch.common.example_logger import logger
 from examples.torch.common import restricted_pickle_module
+from nncf.definitions import CACHE_MODELS_PATH
 from nncf.torch.checkpoint_loading import load_state
 from nncf.torch.utils import safe_thread_call
 
@@ -50,6 +54,9 @@ def load_model(model, pretrained=True, num_classes=1000, model_params=None,
         raise Exception("Undefined model name")
     loaded_model = safe_thread_call(load_model_fn)
     if not pretrained and weights_path is not None:
+        # Check if provided path is a url and download the checkpoint if yes
+        if is_url(weights_path):
+            weights_path = download_checkpoint(weights_path)
         sd = torch.load(weights_path, map_location='cpu', pickle_module=restricted_pickle_module)
         if MODEL_STATE_ATTR in sd:
             sd = sd[MODEL_STATE_ATTR]
@@ -76,3 +83,31 @@ def extract_model_and_compression_states(resuming_checkpoint: Optional[Dict] = N
     compression_state = resuming_checkpoint.get(COMPRESSION_STATE_ATTR)
     model_state_dict = resuming_checkpoint.get(MODEL_STATE_ATTR)
     return model_state_dict, compression_state
+
+
+def is_url(uri):
+    """
+    Checks if given URI is a URL
+    :param uri: URI to check
+    :return: True if URI is a URL, and False otherwise
+    """
+    try:
+        parsed_url = urllib.parse.urlparse(uri)
+        return parsed_url.scheme and parsed_url.netloc
+    except:     # pylint: disable=bare-except
+        return False
+
+
+def download_checkpoint(url):
+    """
+    Downloads a checkpoint by URL and returns the path where it was downloaded
+    :param url: URL to download a checkpoint from
+    :return: path where the checkpoint was downloaded
+    """
+    if not CACHE_MODELS_PATH.exists():
+        CACHE_MODELS_PATH.mkdir(parents=True)
+    download_path = CACHE_MODELS_PATH / url.split('/')[-1]
+    if not download_path.exists():
+        print("Downloading checkpoint ...")
+        urllib.request.urlretrieve(url, download_path)
+    return str(download_path)
