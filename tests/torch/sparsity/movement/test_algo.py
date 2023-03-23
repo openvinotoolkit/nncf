@@ -34,7 +34,6 @@ from nncf.experimental.torch.sparsity.movement.layers import SparseConfigByScope
 from nncf.experimental.torch.sparsity.movement.scheduler import MovementPolynomialThresholdScheduler
 from nncf.experimental.torch.sparsity.movement.scheduler import MovementSchedulerParams
 from nncf.experimental.torch.sparsity.movement.structured_mask_handler import StructuredMaskHandler
-from nncf.experimental.torch.sparsity.movement.structured_mask_strategy import STRUCTURED_MASK_STRATEGY
 from nncf.torch import create_compressed_model
 from nncf.torch.layer_utils import CompressionParameter
 from nncf.torch.layers import NNCFLinear
@@ -239,7 +238,6 @@ class TestControllerCreation:
                 assert hasattr(compression_ctrl, '_structured_mask_handler')
                 handler = getattr(compression_ctrl, '_structured_mask_handler')
                 assert isinstance(handler, StructuredMaskHandler)
-                assert isinstance(handler.strategy, STRUCTURED_MASK_STRATEGY.get(recipe.model_family))
             else:
                 with pytest.raises(RuntimeError, match=r'no supported model'):
                     create_compressed_model(recipe.model(), recipe.nncf_config(), dump_graphs=False)

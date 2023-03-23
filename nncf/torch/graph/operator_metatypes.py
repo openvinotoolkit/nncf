@@ -515,7 +515,7 @@ class PTErfMetatype(PTOperatorMetatype):
 class PTMatMulMetatype(PTOperatorMetatype):
     name = "MatMulOp"
     module_to_function_names = {
-        NamespaceTarget.TORCH_TENSOR: ["matmul"],
+        NamespaceTarget.TORCH_TENSOR: ["matmul", "__matmul__"],
         NamespaceTarget.TORCH: ["matmul", "bmm", "mm"],
     }
     hw_config_names = [HWConfigOpName.MATMUL]

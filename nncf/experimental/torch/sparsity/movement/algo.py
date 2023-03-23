@@ -10,6 +10,7 @@
  See the License for the specific language governing permissions and
  limitations under the License.
 """
+import inspect
 from copy import deepcopy
 from typing import List
 
@@ -34,8 +35,6 @@ from nncf.experimental.torch.sparsity.movement.loss import ImportanceLoss
 from nncf.experimental.torch.sparsity.movement.scheduler import MovementPolynomialThresholdScheduler
 from nncf.experimental.torch.sparsity.movement.scheduler import MovementSchedulerParams
 from nncf.experimental.torch.sparsity.movement.structured_mask_handler import StructuredMaskHandler
-from nncf.experimental.torch.sparsity.movement.structured_mask_strategy import STRUCTURED_MASK_STRATEGY
-from nncf.experimental.torch.sparsity.movement.structured_mask_strategy import detect_supported_model_family
 from nncf.torch.algo_selector import PT_COMPRESSION_ALGORITHMS
 from nncf.torch.compression_method_api import PTCompressionAlgorithmController
 from nncf.torch.graph.transformations.commands import PTInsertionCommand
@@ -116,6 +115,23 @@ class MovementSparsityBuilder(BaseSparsityAlgoBuilder):
         return MovementSparsityController(model, self._sparsified_module_info, self.config)
 
 
+
+MODEL_FAMILIES = ['bert', 'wav2vec2', 'swin']
+
+def is_supported_model_family(model: NNCFNetwork) -> None:
+    """
+    Checks whether the model family is supported by movement sparsity to conduct structured masking.
+
+    :param model: The compressed model wrapped by NNCF.
+    """
+    model_pymodules = inspect.getmodule(model.get_nncf_wrapped_model()).__name__.split('.')
+    if len(model_pymodules) >= 3 and model_pymodules[:2] == ['transformers', 'models']:
+        # the case of input model defined by HuggingFace's transformers
+        model_family = model_pymodules[2]
+        if model_family in MODEL_FAMILIES:
+            return True
+    return False
+
 @ADAPTIVE_COMPRESSION_CONTROLLERS.register('pt_movement_sparsity')
 class MovementSparsityController(BaseSparsityAlgoController):
     def __init__(self, target_model: NNCFNetwork,
@@ -132,18 +148,12 @@ class MovementSparsityController(BaseSparsityAlgoController):
         self._config = config
 
         if self._scheduler.enable_structured_masking:
-            model_family = detect_supported_model_family(self.model)
-            if model_family not in STRUCTURED_MASK_STRATEGY.registry_dict:
-                supported_model_families = list(STRUCTURED_MASK_STRATEGY.registry_dict.keys())
+            if not is_supported_model_family(self.model):
                 raise RuntimeError(
                     'You set `enable_structured_masking=True`, but no supported model is detected. '
-                    f'Supported model families: {supported_model_families}.'
+                    f'Supported model families: {MODEL_FAMILIES}.'
                 )
-            strategy_cls = STRUCTURED_MASK_STRATEGY.get(model_family)
-            strategy = strategy_cls.from_compressed_model(self.model)
-            self._structured_mask_handler = StructuredMaskHandler(self.model,
-                                                                  self.sparsified_module_info,
-                                                                  strategy)
+            self._structured_mask_handler = StructuredMaskHandler(self.model, self.sparsified_module_info)
 
     @property
     def compression_rate(self) -> float:

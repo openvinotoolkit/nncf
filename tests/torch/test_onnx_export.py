@@ -109,7 +109,7 @@ def test_can_export_single_batch_bn(tmp_path):
     test_path = tmp_path.joinpath('test.onnx')
     synthetic_model_desc = SingleLayerModelDesc(layer=nn.BatchNorm2d(4), input_sample_sizes=([1, 4, 1, 1]))
     config = get_basic_quantization_config(input_sample_sizes=synthetic_model_desc.get_input_sample_sizes(),
-                                           input_info=synthetic_model_desc.get_input_info())
+                                           input_info=synthetic_model_desc.create_input_info())
     register_bn_adaptation_init_args(config)
     model = synthetic_model_desc.get_model()
     _, compression_ctrl = create_compressed_model_and_algo_for_test(model, config)

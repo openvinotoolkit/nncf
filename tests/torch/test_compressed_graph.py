@@ -414,7 +414,7 @@ class IModelDesc(ABC):
         pass
 
     @abstractmethod
-    def get_input_info(self):
+    def create_input_info(self):
         pass
 
     @abstractmethod
@@ -443,8 +443,12 @@ class BaseDesc(IModelDesc):
     def get_input_sample_sizes(self):
         return self.input_sample_sizes
 
-    def get_input_info(self):
-        return self.input_info
+    def create_input_info(self):
+        def _create_input_info(input_sample_sizes):
+            if isinstance(input_sample_sizes, tuple):
+                return [{"sample_size": sizes} for sizes in input_sample_sizes]
+            return [{"sample_size": input_sample_sizes}]
+        return self.input_info if self.input_info else _create_input_info(self.input_sample_sizes)
 
     def get_dot_filename(self):
         return self.model_name + '.dot'
@@ -463,7 +467,8 @@ class BaseDesc(IModelDesc):
 class GeneralModelDesc(BaseDesc):
     def __init__(self,
                  input_sample_sizes: Union[Tuple[List[int], ...], List[int]] = None,
-                 model_name: str = None, wrap_inputs_fn: Callable = None, model_builder=None, input_info: Dict = None):
+                 model_name: str = None, wrap_inputs_fn: Callable = None, model_builder=None,
+                 input_info: Union[Dict, List] = None):
         super().__init__(input_sample_sizes, model_name, wrap_inputs_fn, input_info)
         if not model_name and hasattr(model_builder, '__name__'):
             self.model_name = model_builder.__name__
