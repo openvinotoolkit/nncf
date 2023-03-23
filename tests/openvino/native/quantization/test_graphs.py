@@ -22,7 +22,6 @@ from tests.openvino.omz_helpers import convert_model
 from tests.openvino.omz_helpers import download_model
 from tests.openvino.native.common import compare_nncf_graphs
 from tests.openvino.native.models import SYNTHETIC_MODELS
-from tests.openvino.native.models import WeightsModel
 from tests.openvino.native.models import DepthwiseConv4DModel
 from tests.openvino.native.models import DepthwiseConv3DModel
 from tests.openvino.native.models import DepthwiseConv5DModel
@@ -33,14 +32,11 @@ QUANTIZED_REF_GRAPHS_DIR = OPENVINO_NATIVE_TEST_ROOT / 'data' / 'reference_graph
 
 @pytest.mark.parametrize('model_creator_func', SYNTHETIC_MODELS.values())
 def test_syntetic_models_fq_placement(model_creator_func):
-    if model_creator_func == WeightsModel:
-        pytest.skip('OpenVINO backend does not support MatMul op without weights.')
     model = model_creator_func()
     quantized_model = quantize_model(model.ov_model, {'preset': QuantizationPreset.PERFORMANCE})
 
     path_ref_graph = QUANTIZED_REF_GRAPHS_DIR / model.ref_graph_name
     compare_nncf_graphs(quantized_model, path_ref_graph)
-
 
 
 @pytest.mark.parametrize('model_creator_func', [DepthwiseConv3DModel, DepthwiseConv4DModel, DepthwiseConv5DModel])

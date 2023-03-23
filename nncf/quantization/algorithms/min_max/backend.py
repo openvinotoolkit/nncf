@@ -13,7 +13,7 @@
 
 from abc import ABC
 from abc import abstractmethod
-from typing import Dict, TypeVar, List
+from typing import Dict, TypeVar, List, Optional
 
 from nncf.parameters import ModelType
 from nncf.scopes import IgnoredScope
@@ -150,13 +150,22 @@ class MinMaxAlgoBackend(ABC):
 
     @staticmethod
     @abstractmethod
-    def get_weight_tensor_port_id(model: TModel, node: NNCFNode) -> int:
+    def get_weight_tensor_port_ids(node: NNCFNode) -> List[Optional[int]]:
         """
-        Returns node's weight tensor input port ID.
+        Returns node's input port indices with weight tensors.
 
-        :param model: Backend-specific model to get structural information.
-        :param node: NNCFNode to find its weight input port ID.
-        :return: The input port ID of the weight.
+        :param node: NNCFNode to find its weight input port indices.
+        :return: Weights input port indices.
+        """
+
+    @staticmethod
+    def get_weight_name(nncf_graph: NNCFGraph, target_point: TargetPoint) -> str:
+        """
+        Returns node's weight name corresponding to port ID.
+
+        :param nncf_graph: NNCFGraph instance.
+        :param target_point: The TargetPoint instance that contains layer's information.
+        :return: Weight name.
         """
 
     @staticmethod

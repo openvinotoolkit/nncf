@@ -12,8 +12,13 @@
 """
 
 import os
+from pathlib import Path
+
 NNCF_PACKAGE_ROOT_DIR = os.path.dirname(os.path.abspath(__file__))
 HW_CONFIG_RELATIVE_DIR = "common/hardware/configs"
+
+NNCF_CACHE_PATH = Path.home() / Path('.cache/nncf/')
+CACHE_MODELS_PATH = NNCF_CACHE_PATH / Path('models')
 
 # Environment variables below, if set, mark the execution environment
 # so that certain actions within NNCF proper, such as telemetry event collection or

@@ -181,6 +181,7 @@ class QuantizedModel(OVReferenceModel):
         return model
 
 
+@SYNTHETIC_MODELS.register()
 class WeightsModel(OVReferenceModel):
     def _create_ov_model(self):
         input_1 = opset.parameter([1, 3, 5, 5], name="Input_1")
@@ -420,6 +421,28 @@ class LSTMModel(OVReferenceModel):
 
         result = opset.result(matmul_3, name="Result")
         model = ov.Model(results=[result], sinks=[assign_1], parameters=[input_1], name="LSTMModel")
+        return model
+
+
+@SYNTHETIC_MODELS.register()
+class LSTMSequenceModel(OVReferenceModel):
+    def _create_ov_model(self):
+        x = ov.opset9.parameter([1, 2, 16], name="X")
+        initial_hidden_state = ov.opset9.parameter([1, 1, 128], name="initial_hidden_state")
+        initial_cell_state = ov.opset9.parameter([1, 1, 128], name="initial_cell_state")
+        seq_len = ov.opset9.constant(np.array([2]), dtype=np.int32)
+
+        W = ov.opset9.constant(np.zeros(([1, 512, 16])), dtype=np.float32)
+        R = ov.opset9.constant(np.zeros(([1, 512, 128])), dtype=np.float32)
+        B = ov.opset9.constant(np.zeros(([1, 512])), dtype=np.float32)
+
+        lstm = opset.lstm_sequence(x, initial_hidden_state, initial_cell_state,
+                                   seq_len, W, R, B, 128, "FORWARD", name="LSTMSequence")
+        data = self._rng.random((1, 1, 128, 3)).astype(np.float32)
+        matmul = opset.matmul(lstm.output(0), data, transpose_a=False, transpose_b=False, name="MatMul")
+
+        result = opset.result(matmul, name="Result")
+        model = ov.Model(results=[result], parameters=[x, initial_hidden_state, initial_cell_state])
         return model
 
 

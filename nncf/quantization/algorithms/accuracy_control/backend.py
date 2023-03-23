@@ -13,7 +13,7 @@
 
 from abc import ABC
 from abc import abstractmethod
-from typing import List, Any, TypeVar
+from typing import List, Any, Optional, TypeVar
 
 from nncf.common.graph.graph import NNCFGraph
 from nncf.common.graph.graph import NNCFNode
@@ -111,14 +111,25 @@ class AccuracyControlAlgoBackend(ABC):
 
     @staticmethod
     @abstractmethod
-    def get_weight_value(node_with_weight: NNCFNode, nncf_graph: NNCFGraph, model: TModel) -> Any:
+    def get_weight_value(node_with_weight: NNCFNode, nncf_graph: NNCFGraph, model: TModel, port_id: int) -> Any:
         """
         Returns the weight value for the node with weight.
 
         :param node_with_weight: The node with weight.
         :param nncf_graph: The NNCF graph.
         :param model: The model that contains this operation.
+        :param port_id: The input port ID to get weight input.
         :return: The weight value.
+        """
+
+    @staticmethod
+    @abstractmethod
+    def get_weight_tensor_port_ids(node: NNCFNode) -> List[Optional[int]]:
+        """
+        Returns node's input port indices with weights tensors.
+
+        :param node: NNCFNode to find its weights input port indices.
+        :return: Weights input port indices.
         """
 
     # Preparation of model

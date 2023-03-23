@@ -21,7 +21,7 @@ def get_validation_scope() -> List[dict]:
     model_scope.append({"name": "vgg11", "quantization_params": {}})
     model_scope.append({"name": "resnet18", "quantization_params": {}})
     model_scope.append({"name": "mobilenetv2_050", "quantization_params": {"preset":QuantizationPreset.MIXED}})
-    model_scope.append({"name": "mobilenetv2_050", "quantization_params": {"preset":QuantizationPreset.MIXED, "fast_bias_correction": False}})
+    model_scope.append({"name": "mobilenetv2_050", "report_model_name": "mobilenetv2_050_BC", "quantization_params": {"preset":QuantizationPreset.MIXED, "fast_bias_correction": False}})
     model_scope.append({"name": "repvgg_a2", "quantization_params": {}})
     # Densenet121 temporary excluded due to memory leaks
     # model_scope.append({"name": "densenet121", "quantization_params": {}})
@@ -29,7 +29,7 @@ def get_validation_scope() -> List[dict]:
     model_scope.append({"name": "tf_inception_v3", "quantization_params": {"preset":QuantizationPreset.MIXED}})
     model_scope.append({"name": "xception", "quantization_params": {"preset":QuantizationPreset.MIXED}})
     model_scope.append({"name": "efficientnet_b0", "quantization_params": {"preset":QuantizationPreset.MIXED}})
-    model_scope.append({"name": "efficientnet_b0", "quantization_params": {"preset":QuantizationPreset.MIXED, "fast_bias_correction": False}})
+    model_scope.append({"name": "efficientnet_b0", "report_model_name": "efficientnet_b0_BC", "quantization_params": {"preset":QuantizationPreset.MIXED, "fast_bias_correction": False}})
     model_scope.append({"name": "darknet53", "quantization_params": {"preset":QuantizationPreset.MIXED}})
     # ResNets
     model_scope.append({"name": "seresnet18", "quantization_params": {"preset":QuantizationPreset.MIXED}})

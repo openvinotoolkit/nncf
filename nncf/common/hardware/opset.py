@@ -57,3 +57,5 @@ class HWConfigOpName:
     PAD ='Pad'
     STRIDEDSLICE='StridedSlice'
     GELU = 'Gelu'
+    LSTMSEQUENCE = 'LSTMSequence'
+    GRUSEQUENCE = 'GRUSequence'

@@ -309,11 +309,12 @@ class MinMaxQuantization(Algorithm):
         """
         node_name = quantization_point.insertion_point.target_node_name
         node = nncf_graph.get_node_by_name(node_name)
-        port_id = self._backend_entity.get_weight_tensor_port_id(node)
-        weight_quantization_target_point = self._backend_entity.target_point(TargetType.OPERATION_WITH_WEIGHTS,
-                                                                             node_name,
-                                                                             port_id)
-        self._quantization_target_points_to_qconfig[weight_quantization_target_point] = quantization_point.qconfig
+        weights_port_ids = self._backend_entity.get_weight_tensor_port_ids(node)
+        for port_id in weights_port_ids:
+            weight_quantization_target_point = self._backend_entity.target_point(TargetType.OPERATION_WITH_WEIGHTS,
+                                                                                node_name,
+                                                                                port_id)
+            self._quantization_target_points_to_qconfig[weight_quantization_target_point] = quantization_point.qconfig
 
     def _add_activation_quantization_target_point(self,
                                                   quantization_point: SingleConfigQuantizationPoint) -> None:
@@ -392,10 +393,11 @@ class MinMaxQuantization(Algorithm):
                     MinMaxQuantization):
                 if quantization_target_point.is_weight_target_point():
                     # If the nodes share one weight tensor, we should have only one quantizer on that
-                    layer_name = nncf_graph.get_node_by_name(target_node_name).layer_name
-                    if layer_name in weight_layer_names:
+                    weights_name = self._backend_entity.get_weight_name(nncf_graph, quantization_target_point)
+
+                    if weights_name in weight_layer_names:
                         continue
-                    weight_layer_names.add(layer_name)
+                    weight_layer_names.add(weights_name)
                     statistics = tensor_collector.get_statistics()
                     parameters = calculate_quantizer_parameters(statistics, qconfig, QuantizerGroup.WEIGHTS)
                     command = self._backend_entity.create_weight_quantizer_insertion_command(

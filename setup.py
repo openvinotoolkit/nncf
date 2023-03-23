@@ -142,7 +142,7 @@ OPENVINO_EXTRAS = [
 
 EXTRAS_REQUIRE = {
     "dev": [
-        "kaleido>=0.2.1"
+        "kaleido>=0.2.1",
         "matplotlib>=3.3.4, <3.6",
         "pillow>=9.0.0",
         "plotly-express>=0.4.1",
