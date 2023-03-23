@@ -15,18 +15,33 @@ from abc import ABC
 from abc import abstractmethod
 from collections import deque
 from collections import defaultdict
-from typing import Tuple, Optional, List, Set, Dict
+from typing import Tuple, Optional, List, Set, Dict, Any, Union
 
 from nncf.common.tensor_statistics.collectors import NNCFCollectorTensorProcessor
+from nncf.common.tensor_statistics.statistics import TensorStatistic
 from nncf.common.tensor_statistics.collectors import ReductionShape
 from nncf.common.tensor import TensorType
 
 
 class TensorReducerBase(ABC):
+    """
+    Tensor reducer is a callable object that reduces given tensor according to the specified rule.
+    `_reduce_out_of_place` method specifies the reduction rule in terms of NNCFCollectorTensorProcessor
+    operations.  Could handle tensors inplace or out place. If inplace operations are available in backend,
+    `get_inplace_fn` should return correspondent inplace operation builder. `get_output_name` should be
+    specified to correctly retrieve output tensors out of target model with inserted inplace operations or
+    new outputs.
+    """
 
     def __init__(self,
                  reduction_shape: Optional[ReductionShape] = None,
                  inplace: bool = False):
+        """
+        :param reduction_shape: Reduction shape for reduction calculation. Equal to list(range(len(input.shape)))
+            if empty.
+        :param: Wheather should be calculated inplace or out of place.
+
+        """
         self._reduction_shape = reduction_shape
         self._tensor_processor: NNCFCollectorTensorProcessor = self._get_processor()
         self._inplace = inplace
@@ -48,15 +63,6 @@ class TensorReducerBase(ABC):
     def _get_processor() -> NNCFCollectorTensorProcessor:
         pass
 
-    def reduce_input(self, x: TensorType):
-        if self.inplace:
-            return x
-
-        if self._reduction_shape is None:
-            self._reduction_shape = tuple(range(len(x.shape)))
-        return self._reduce_out_of_place(x)
-
-
     @abstractmethod
     def _reduce_out_of_place(self, x: TensorType):
         pass
@@ -70,6 +76,14 @@ class TensorReducerBase(ABC):
     def get_inplace_fn(self):
         pass
 
+    def __call__(self, x: TensorType):
+        if self.inplace:
+            return x
+
+        if self._reduction_shape is None:
+            self._reduction_shape = tuple(range(len(x.shape)))
+        return self._reduce_out_of_place(x)
+
     def __eq__(self, __o: object) -> bool:
         return isinstance(__o, self.__class__) and\
             self._reduction_shape == __o._reduction_shape and\
@@ -80,8 +94,21 @@ class TensorReducerBase(ABC):
 
 
 class TensorAggregatorBase:
-    def __init__(self, tensor_processor,
+    """
+    Tensor aggregator is designed to recieve (register) calculated statistics and
+    aggregate them in terms of NNCFCollectorTensorProcessor operations.
+    Method `_register_reduced_input_impl` specifies rule of tensor registration and
+    method `aggregate` specifies the aggreagtion rule.
+    """
+
+    def __init__(self, tensor_processor: NNCFCollectorTensorProcessor,
                  num_samples: Optional[int]):
+        """
+        :param tensor_processor: Backend-specific tensor processor.
+        :param num_samples: Maximum number of samples to collect. Aggregator
+            skips tensor registration if tensor registration was called num_samples times before.
+            Aggregator never skips registration if num_samples is None.
+        """
 
         self._tensor_processor = tensor_processor
         self._num_samples = num_samples
@@ -108,7 +135,7 @@ class TensorAggregatorBase:
         pass
 
     @abstractmethod
-    def aggregate(self):
+    def aggregate(self) -> Any:
         pass
 
     def reset(self):
@@ -123,12 +150,20 @@ class TensorAggregatorBase:
 
 
 class TensorCollector:
+    """
+    Calculates statistics at given tensors acording to registered statistic branches.
+    Statistic branch consist of one reducer and one aggregator instance. TensorCollector
+    applies reducer on a correspondent input and then passes reduced tensor to
+    a correspondent aggregator for each registered statistic branch.
+    Recieves tesnors by `register_input` method. Aggregated values as a TensorStatistic instance or
+    a dict could be collected by `get_statistics` call.
+    """
+
     def __init__(self,
-                 statistic_container: Optional['StatisticContainer'] = None
+                 statistic_container: Optional[TensorStatistic] = None
                  ) -> None:
         self._reducers: Set[TensorReducerBase] = set()
         self._aggregators: Dict[Tuple[int, int], TensorAggregatorBase] = dict()
-        self._aggregated_values = None
         self._stat_container_kwargs_map: Dict[str, Tuple[int, int]] = dict()
         self._stat_container = statistic_container
         self._enabled = True
@@ -155,8 +190,8 @@ class TensorCollector:
     def disable(self):
         self._enabled = False
 
-    def add_branch(self, container_key: str,
-                   reducer: TensorReducerBase, aggregator: TensorAggregatorBase) -> None:
+    def register_statistic_branch(self, container_key: str,
+                                  reducer: TensorReducerBase, aggregator: TensorAggregatorBase) -> None:
         """
         Registers statistic collection branch for a container key. Correspondent input will be reduced
         by given reducer and reduced value will be registered and aggregated by given aggregator.
@@ -181,20 +216,33 @@ class TensorCollector:
             self._aggregators[key] = aggregator
         self._stat_container_kwargs_map[container_key] = key
 
-    def get_output_info(self, target_node_name: str, port_id: int) -> List[str]:
+    def get_output_info(self, target_node_name: str, port_id: int) -> List[Tuple[str, str]]:
+        """
+        Returns list of pairs of reducers names and correspondent output names.
+
+        :param target_node_name: Target node name to assemble output name.
+        :param port_id: Target node specific port id to assemble output name.
+        :returns: List of pairs of reducers names and correspondent output names.
+        """
         retval = []
         for reducer in self._reducers:
             retval.append((reducer.name(), reducer.get_output_name(target_node_name, port_id)))
         return retval
 
-    def register_inputs(self, inputs: Dict[str, TensorType]):
+    def register_inputs(self, inputs: Dict[str, TensorType]) -> None:
+        """
+        Registers given input in TensorCollector.
+
+        :param inputs: Tensor inputs in format of dict where keys
+            are reducer names and values are correspondent input tensors
+        """
         if not self._enabled:
             return
 
         reduced_inputs = {}
         for reducer in self._reducers:
             input_ = inputs[reducer.name()]
-            reduced_input = reducer.reduce_input(input_)
+            reduced_input = reducer(input_)
             reduced_inputs[hash(reducer)] = reduced_input
 
         for (reducer_hash, _), aggregator, in self._aggregators.items():
@@ -207,7 +255,14 @@ class TensorCollector:
             result[key] = val
         return result
 
-    def get_statistics(self):
+    def get_statistics(self) -> Union[TensorStatistic, Dict[str, Any]]:
+        """
+        Returns aggregated values in format of a TensorStatistic instance or
+        a dict.
+
+        :returns: Aggregated values.
+        """
+
         aggregated_values = self._aggregate()
         kwargs = {}
         for container_key, branch_key in self._stat_container_kwargs_map.items():
@@ -217,7 +272,7 @@ class TensorCollector:
             return kwargs
         return self._stat_container(**kwargs)
 
-    def get_inplace_fn_info(self):
+    def get_inplace_fn_info(self) -> List[Tuple[Any, int]]:
         retval = []
         for reducer in self._reducers:
             if reducer.inplace:

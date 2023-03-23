@@ -16,6 +16,7 @@ from typing import Dict
 import torch
 import numpy as np
 
+from nncf.common.factory import TModel
 from nncf.common.graph.transformations.commands import TransformationPriority
 from nncf.common.graph.transformations.layout import TransformationLayout
 from nncf.common.tensor_statistics.aggregator import StatisticPointsContainer
@@ -53,6 +54,12 @@ class PTStatisticsAggregator(StatisticsAggregator):
             transformation_layout.register(transformation_command)
 
         return transformation_layout
+
+    @staticmethod
+    def _get_merged_statistic_points(statistic_points: StatisticPointsContainer, model: TModel) ->\
+            StatisticPointsContainer:
+        # TODO: mirgate to experimental statistic collector and use common merging algorithm
+        return statistic_points
 
     @staticmethod
     def _process_outputs(outputs: Dict[str, np.ndarray]) -> Dict[str, PTNNCFTensor]:

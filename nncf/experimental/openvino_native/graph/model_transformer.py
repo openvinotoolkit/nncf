@@ -11,22 +11,11 @@
  limitations under the License.
 """
 
-from typing import List, Tuple, Dict
-from typing import List, Tuple, Dict, Callable
 from enum import Enum
-from openvino.tools.mo.ops.op import Op
-from openvino.tools.mo.ops.result import Result
-from openvino.tools.mo.front.tf.graph_utils import create_op_node_with_second_input
-from openvino.tools.mo.front.common.partial_infer.utils import int64_array
-
-try:
-    from openvino.tools.mo.back.add_outputs_recursive import AddOutputRecursive
-except ImportError:
-    pass  # we try to import AddOutputRecursive for subgraphs quantization
-
-import openvino.runtime as ov
 import numpy as np
+import openvino.runtime as ov
 from openvino.runtime import opset9 as opset
+from typing import List, Tuple, Dict, Callable
 
 from nncf.common.graph.model_transformer import ModelTransformer
 from nncf.common.graph.transformations.layout import TransformationLayout
@@ -38,20 +27,8 @@ from nncf.experimental.openvino_native.graph.transformations.commands import OVI
 from nncf.experimental.openvino_native.graph.transformations.commands import OVModelExtractionCommand
 from nncf.experimental.openvino_native.graph.transformations.commands import OVBiasCorrectionCommand
 from nncf.experimental.openvino_native.graph.transformations.commands import OVFQNodeRemovingCommand
-from nncf.experimental.openvino_native.graph.node_utils import get_result_node_name
 from nncf.experimental.openvino_native.graph.transformations.commands import OVWeightUpdateCommand
-
-
-class ModelPrecision(Enum):
-    """
-    Describes the model precision based on the precision of floating point constants.
-
-    :param FP32:
-    :param FP16:
-    """
-
-    FP32 = 'FP32'
-    FP16 = 'FP16'
+from nncf.experimental.openvino_native.graph.node_utils import get_result_node_name
 
 
 class OVModelTransformer(ModelTransformer):
@@ -210,18 +187,6 @@ class OVModelTransformer(ModelTransformer):
         return model
 
     @staticmethod
-    def _get_model_precision(model: ov.Model):
-        model_precision = ModelPrecision.FP32
-        for op in model.get_ops():
-            if op.get_type_name() == 'Constant':
-                if op.get_element_type().is_real():
-                    if op.get_element_type() == ov.Type(np.float16):
-                        model_precision = ModelPrecision.FP16
-                        break
-        return model_precision
-
-
-    @staticmethod
     def _apply_quantizer_insertion_transformations(model: ov.Model,
                                                    transformations: List[OVQuantizerInsertionCommand]) -> ov.Model:
         """
@@ -231,7 +196,6 @@ class OVModelTransformer(ModelTransformer):
         :param transformations: List of the OVQuantizerInsertionCommand transformations.
         :return: Model with inserted FakeQuantize nodes.
         """
-        model_precision = OVModelTransformer._get_model_precision(model)
         name_to_node_mapping = OVModelTransformer._get_name_to_node_mapping(model)
         for transformation in transformations:
             OVModelTransformer._insert_fake_quantize_op(transformation, name_to_node_mapping)

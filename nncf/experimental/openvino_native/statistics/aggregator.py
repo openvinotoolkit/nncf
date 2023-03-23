@@ -38,9 +38,6 @@ from nncf.experimental.openvino_native.tensor import OVNNCFTensor
 
 class OVStatisticsAggregator(StatisticsAggregator):
 
-    def __init__(self, dataset: Dataset):
-        super().__init__(dataset)
-
     def collect_statistics(self, model: ov.Model) -> None:
         self._name_to_node_mapping = {
             op.get_friendly_name(): op for op in model.get_ops()
@@ -87,7 +84,8 @@ class OVStatisticsAggregator(StatisticsAggregator):
 
     @staticmethod
     #TODO(dlyakhov) Move this to common part
-    def _get_merged_statistic_points(statistic_points: StatisticPointsContainer, model: ov.Model):
+    def _get_merged_statistic_points(statistic_points: StatisticPointsContainer, model: ov.Model) ->\
+            StatisticPointsContainer:
         nncf_graph = GraphConverter.create_nncf_graph(model)
         merged_statistic_points = StatisticPointsContainer()
         target_type_to_tensor_collector_map = defaultdict(lambda: defaultdict(list))

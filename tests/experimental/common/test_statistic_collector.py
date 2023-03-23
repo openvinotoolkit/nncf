@@ -52,7 +52,7 @@ def test_aggregator_enabled():
     collector = TensorCollector()
     reducer = DummyTensorReducer('Dummy')
     aggregator = DummyTensorAggregator(5)
-    collector.add_branch('A', reducer, aggregator)
+    collector.register_statistic_branch('A', reducer, aggregator)
     inputs = {collector.get_output_info(None, None)[0][0]: np.array(100)}
 
     for _ in range(3):
@@ -80,12 +80,12 @@ def test_duplicated_statistics_are_merged():
     aggregators = []
     for key in keys:
         aggregator = DummyTensorAggregator(5)
-        collector.add_branch(key, reducer, aggregator)
+        collector.register_statistic_branch(key, reducer, aggregator)
         aggregators.append(aggregator)
     aggregator_a = DummyTensorAggregatorA(1)
     aggregator_b = DummyTensorAggregator(100)
-    collector.add_branch('D', reducer, aggregator_a)
-    collector.add_branch('E', reducer_a, aggregator_b)
+    collector.register_statistic_branch('D', reducer, aggregator_a)
+    collector.register_statistic_branch('E', reducer_a, aggregator_b)
 
     # Check reducers and aggregators are merged
     assert len(collector._reducers) == 2
@@ -124,8 +124,8 @@ def test_inplace_param():
     aggregator_inplace = DummyTensorAggregator(5)
     aggregator_out_of_place = DummyTensorAggregator(5)
 
-    collector.add_branch('inplace', reducer_inplace, aggregator_inplace)
-    collector.add_branch('out_of_place', reducer_out_of_place, aggregator_out_of_place)
+    collector.register_statistic_branch('inplace', reducer_inplace, aggregator_inplace)
+    collector.register_statistic_branch('out_of_place', reducer_out_of_place, aggregator_out_of_place)
     assert len(collector._reducers) == 2
     assert len(collector._aggregators) == 2
     assert collector.get_inplace_fn_info()[0] == inplace_op
@@ -142,8 +142,8 @@ def test_merged_tensor_collector():
                               (DummyTensorReducer,), {})(f'input_{idx + 1}')
         aggregator_unique = type(DummyTensorAggregator.__name__ + str(idx),
                                  (DummyTensorAggregator, ), {})(5)
-        collector.add_branch('common', reducer_common, aggregator_common)
-        collector.add_branch('unique', reducer_unique, aggregator_unique)
+        collector.register_statistic_branch('common', reducer_common, aggregator_common)
+        collector.register_statistic_branch('unique', reducer_unique, aggregator_unique)
 
     collectors[-1].disable()
     merged_collector = MergedTensorCollector(collectors)
@@ -178,9 +178,9 @@ def test_ambigous_container_key():
     collector = TensorCollector()
     reducer = DummyTensorReducer('Dummy')
     aggregator = DummyTensorAggregator(5)
-    collector.add_branch('A', reducer, aggregator)
+    collector.register_statistic_branch('A', reducer, aggregator)
     with pytest.raises(RuntimeError):
-        collector.add_branch('A', reducer, aggregator)
+        collector.register_statistic_branch('A', reducer, aggregator)
 
 
 def test_ambiguous_branches():
@@ -188,6 +188,6 @@ def test_ambiguous_branches():
     reducer = DummyTensorReducer('Dummy')
     reducer_a = DummyTensorReducerA('Dummy')
     aggregator = DummyTensorAggregator(5)
-    collector.add_branch('A', reducer, aggregator)
+    collector.register_statistic_branch('A', reducer, aggregator)
     with pytest.raises(RuntimeError):
-        collector.add_branch('B', reducer, aggregator)
+        collector.register_statistic_branch('B', reducer, aggregator)

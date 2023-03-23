@@ -192,7 +192,7 @@ def get_inplace_mean_per_ch(op_type: str, axis: int):
         squized_dims = -1 if -1 in transposed_shape[2:] else np.prod(transposed_shape[2:])
         if (-1 in keeped_dims and squized_dims == -1) or keeped_dims.count(-1) > 1:
             raise RuntimeError(f'Could not insert mean_per_ch operation inplace'
-                               f' for the node {node} because of input_shape:'
+                               f' for the node {node} because of'
                                f' input_shape: {input_shape} -> transposed_shape: {transposed_shape}')
 
         reshape_op = opset.reshape(reshape_input_node.output(output_port_id),
@@ -209,7 +209,7 @@ def get_partial_shape_safe(node, port_id) -> int:
     partial_shape = node.get_output_partial_shape(port_id)
     if partial_shape.rank.is_dynamic or not partial_shape.all_non_negative:
         raise RuntimeError(f'Could not collect statistics for the node {node}'
-                           f'because its ouput shape rank is dynamic or negative')
+                           f'because its output shape rank is dynamic or negative')
     return partial_shape
 
 

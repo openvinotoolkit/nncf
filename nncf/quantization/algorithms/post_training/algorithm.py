@@ -82,6 +82,8 @@ class PostTrainingQuantizationParameters(AlgorithmParameters):
         :param range_type: Type of statistics range calculation.
         :param quantize_outputs: Boolean value that says whether quantize outputs or not.
         :param ignored_scopes: Descriptor of the layers which input must not be quantized.
+        :param model_type: Model type is needed to specify additional patterns
+            in the model. Supported only `transformer` now.
         :param fast_bias_correction: Defines whether to use fast version of bias correction algorithm.
         :param inplace_statistics: Appliclable only to backends that are using static graph during inference.
             Defines wheather to calculate quantization statistics by backend graph operations or by default Python

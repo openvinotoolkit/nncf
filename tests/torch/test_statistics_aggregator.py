@@ -94,3 +94,7 @@ class TestStatisticsAggregator(TemplateTestStatisticsAggregator):
     @pytest.mark.skip('Merging is not implemented yet')
     def test_statistics_merging(self, dataset_samples, inplace_statistics):
         pass
+
+    @pytest.mark.skip('Merging is not implemented yet')
+    def test_split_concat_statistic_merging(self, dataset_samples, inplace_statistics):
+        pass

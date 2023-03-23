@@ -184,8 +184,8 @@ def get_min_max_stat_collector(num_samples, reduction_shape, use_abs_max, inplac
     aggregate_max = OnlineMaxAggregator(**kwargs)
 
     collector = TensorCollector(OVMinMaxTensorStatistic)
-    collector.add_branch(OVMinMaxTensorStatistic.MIN_STAT, reduce_min, aggregate_min)
-    collector.add_branch(OVMinMaxTensorStatistic.MAX_STAT, reduce_max, aggregate_max)
+    collector.register_statistic_branch(OVMinMaxTensorStatistic.MIN_STAT, reduce_min, aggregate_min)
+    collector.register_statistic_branch(OVMinMaxTensorStatistic.MAX_STAT, reduce_max, aggregate_max)
     return collector
 
 
@@ -207,8 +207,8 @@ def get_mean_min_max_stat_collector(num_samples, reduction_shape, use_abs_max,
     aggregate_max = OfflineMeanAggregator(**kwargs)
 
     collector = TensorCollector(OVMinMaxTensorStatistic)
-    collector.add_branch(OVMinMaxTensorStatistic.MIN_STAT, reduce_min, aggregate_min)
-    collector.add_branch(OVMinMaxTensorStatistic.MAX_STAT, reduce_max, aggregate_max)
+    collector.register_statistic_branch(OVMinMaxTensorStatistic.MIN_STAT, reduce_min, aggregate_min)
+    collector.register_statistic_branch(OVMinMaxTensorStatistic.MAX_STAT, reduce_max, aggregate_max)
     return collector
 
 
@@ -230,8 +230,8 @@ def get_mean_stat_collector(num_samples, reduction_shape, window_size=None, inpl
     aggregate_shape = ShapeAggregator()
 
     collector = TensorCollector(OVMeanTensorStatistic)
-    collector.add_branch(OVMeanTensorStatistic.MEAN_STAT, reducer, aggregate_mean)
-    collector.add_branch(OVMeanTensorStatistic.SHAPE_STAT, noop_reducer, aggregate_shape)
+    collector.register_statistic_branch(OVMeanTensorStatistic.MEAN_STAT, reducer, aggregate_mean)
+    collector.register_statistic_branch(OVMeanTensorStatistic.SHAPE_STAT, noop_reducer, aggregate_shape)
     return collector
 
 
@@ -243,5 +243,5 @@ def get_mean_batch_stat_collector(num_samples, inplace=True):
     aggregator = NoopAggregator(num_samples)
 
     collector = TensorCollector(OVBatchTensorStatistic)
-    collector.add_branch(OVBatchTensorStatistic.VALUES_STATS, reducer, aggregator)
+    collector.register_statistic_branch(OVBatchTensorStatistic.VALUES_STATS, reducer, aggregator)
     return collector

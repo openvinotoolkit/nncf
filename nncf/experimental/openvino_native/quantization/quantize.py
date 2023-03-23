@@ -52,6 +52,7 @@ def quantize_impl(model: ov.Model,
         number_samples=subset_size,
         ignored_scopes=ignored_scope,
         fast_bias_correction=fast_bias_correction,
+        model_type=model_type,
         inplace_statistics=True
     )
 

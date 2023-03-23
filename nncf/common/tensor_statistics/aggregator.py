@@ -87,18 +87,29 @@ class StatisticsAggregator(ABC):
         :param statistic_points: StatisticPointsContainer instance with the statistic points
         """
 
-    @staticmethod
-    def _get_merged_statistic_points(statistic_points: StatisticPointsContainer, model: TModel):
-        return statistic_points
-
     @abstractmethod
     def _get_transformation_layout_extra_outputs(self,
                                                  statistic_points: StatisticPointsContainer) -> TransformationLayout:
         """
-        Create backend-specific transformation layout for the further statistics collection
+        Creates backend-specific transformation layout for the further statistics collection
 
         :param statistic_points: StatisticPointsContainer to add outputs
-        :return: TransformationLayout with the corresponding transformations
+        :returns: TransformationLayout with the corresponding transformations
+        """
+
+    @staticmethod
+    @abstractmethod
+    def _get_merged_statistic_points(statistic_points: StatisticPointsContainer, model: TModel) ->\
+            StatisticPointsContainer:
+        """
+        Creates new StatisticPointContainer that has no duplicated tesnor collectors for one
+        unique statistic point. Alters statistic collectors in given statistic point container so statistics
+        collected by merged statistic collectors will be available in all correspondend statistic collectors
+        from given statistic point container.
+
+        :param statistic_points: Registered statistic points with possible tensor collectors duplicates.
+        :param model: Framework specific target model.
+        :returns: Merged statistic points container bounded with given statistic point container.
         """
 
     @staticmethod
@@ -108,5 +119,5 @@ class StatisticsAggregator(ABC):
         Post-process model outputs for the further statistics collection.
 
         :param outputs: raw model outputs
-        :return: processed model outputs in Dict[str, NNCFTensor] format
+        :returns: processed model outputs in Dict[str, NNCFTensor] format
         """
