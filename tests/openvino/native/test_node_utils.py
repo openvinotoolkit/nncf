@@ -30,7 +30,7 @@ def test_get_weight_value_const_with_convert():
     nncf_graph = NNCFGraphFactory.create(model)
     node_with_weight = nncf_graph.get_node_by_name('MatMul')
 
-    actual_value = get_weight_value(node_with_weight, nncf_graph, model)
+    actual_value = get_weight_value(node_with_weight, nncf_graph, model, port_id=1)
     assert actual_value.dtype == np.float16
 
 

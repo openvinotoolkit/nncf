@@ -105,7 +105,7 @@ def get_node_with_bias_value(add_node: NNCFNode, nncf_graph: NNCFGraph) -> Optio
 
     const_port_ids = add_node.layer_attributes.get_const_port_ids()
     assert len(const_port_ids) == 1
-    bias_port_id = list(const_port_ids.keys())[0]
+    bias_port_id = const_port_ids[0]
     bias_constant = nncf_graph.get_input_edges(add_node)[bias_port_id].from_node
 
     if bias_constant.metatype == OVConvertMetatype:
