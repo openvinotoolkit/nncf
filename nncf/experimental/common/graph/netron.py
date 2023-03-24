@@ -18,6 +18,7 @@ from typing import Optional
 import xml.etree.ElementTree as ET
 
 from nncf.common.graph import NNCFGraph
+from nncf.common.graph.graph import NNCFNode
 
 
 class Tags:
@@ -113,12 +114,17 @@ class EdgeDesc:
         edge = ET.Element(Tags.EDGE, attrs)
         return edge
 
+GET_ATTRIBUTES_FN_TYPE = Optional[Callable[[NNCFNode], Dict[str, str]]]
 
 # TODO(andrey-churkin): Add support for `PortDesc.precision` param.
 def get_graph_desc(graph: NNCFGraph,
                    include_fq_params: bool = False,
-                   get_attributes_fn: Callable = None) -> Tuple[List[NodeDesc], List[EdgeDesc]]:
-    include_node = {}  # Dict[int, bool]
+                   get_attributes_fn: GET_ATTRIBUTES_FN_TYPE = None) -> Tuple[List[NodeDesc], List[EdgeDesc]]:
+    if get_attributes_fn is None:
+        get_attributes_fn = lambda _: {
+            'metatype': str(node.metatype.name),
+        }
+    include_node: Dict[int, bool] = {}
     edges = []
     for edge in graph.get_all_edges():
         if not include_fq_params and edge.to_node.node_type == 'FakeQuantize' and edge.input_port_id != 0:
@@ -160,11 +166,6 @@ def get_graph_desc(graph: NNCFGraph,
                 )
             )
 
-        if get_attributes_fn is None:
-            get_attributes_fn = lambda _: {
-                'metatype': str(node.metatype.name),
-            }
-
         nodes.append(
             NodeDesc(
                 node_id=str(node.node_id),
@@ -183,7 +184,7 @@ def save_for_netron(graph: NNCFGraph,
                     save_path: str,
                     graph_name: str = 'Graph',
                     include_fq_params: bool = False,
-                    get_attributes_fn = None):
+                    get_attributes_fn: GET_ATTRIBUTES_FN_TYPE = None):
     node_descs, edge_descs = get_graph_desc(graph, include_fq_params, get_attributes_fn)
 
     net = ET.Element(Tags.NET, name=graph_name)
