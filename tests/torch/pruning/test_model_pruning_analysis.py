@@ -623,7 +623,7 @@ def test_groups(test_input_info_struct_: GroupPruningModulesTestStruct):
     all_pruned_modules = [info.module for info in all_pruned_modules_info]
 
     for node_name in non_pruned_module_nodes:
-        module = compressed_model.get_containing_module(node_name)
+        module = compressed_model.nncf.get_containing_module(node_name)
         assert module is not None and module not in all_pruned_modules
 
     # 2. Check that all pruned groups are valid
@@ -631,7 +631,7 @@ def test_groups(test_input_info_struct_: GroupPruningModulesTestStruct):
         first_node_name = group[0]
         cluster = clusters.get_cluster_containing_element(first_node_name)
         cluster_modules = [n.module for n in cluster.elements]
-        group_modules = [compressed_model.get_containing_module(node_name) for node_name in group]
+        group_modules = [compressed_model.nncf.get_containing_module(node_name) for node_name in group]
 
         assert Counter(cluster_modules) == Counter(group_modules)
     assert len(pruned_groups) == len(clusters.get_all_clusters())
@@ -656,15 +656,15 @@ def test_pruning_node_selector(test_input_info_struct_: GroupPruningModulesTestS
     model = model()
     model.eval()
     nncf_network = NNCFNetwork(model, input_infos=[ModelInputInfo([1, 1, 8, 8])])
-    graph = nncf_network.get_original_graph()
+    graph = nncf_network.nncf.get_original_graph()
     pruning_groups = pruning_node_selector.create_pruning_groups(graph)
 
     # 1. Check all not pruned modules
     all_pruned_nodes = pruning_groups.get_all_nodes()
-    all_pruned_modules = [nncf_network.get_containing_module(node.node_name)
+    all_pruned_modules = [nncf_network.nncf.get_containing_module(node.node_name)
                           for node in all_pruned_nodes]
     for node_name in non_pruned_module_nodes:
-        module = nncf_network.get_containing_module(node_name)
+        module = nncf_network.nncf.get_containing_module(node_name)
         assert module is not None and module not in all_pruned_modules
 
     # 2. Check that all pruned groups are valid
@@ -683,7 +683,7 @@ def test_symbolic_mask_propagation(test_input_info_struct_):
     nncf_model, _ = create_nncf_model_and_pruning_builder(model, {'prune_first_conv': prune_first})
     pruning_types = [v.op_func_name for v in NNCF_PRUNING_MODULES_DICT]
     nncf_model.eval()
-    graph = nncf_model.get_graph()
+    graph = nncf_model.nncf.get_graph()
     algo = MaskPropagationAlgorithm(graph, PT_PRUNING_OPERATOR_METATYPES, SymbolicMaskProcessor)
     final_can_prune = algo.symbolic_mask_propagation(pruning_types,
                                                      test_input_info_struct_.can_prune_after_analysis)
@@ -730,7 +730,7 @@ def test_group_special_nodes(test_special_ops_struct: GroupSpecialModulesTestStr
     nncf_model, algo_builder = create_nncf_model_and_pruning_builder(model,
                                                                      {'prune_first_conv': True})
 
-    special_ops_clusterization = cluster_special_ops(nncf_model.get_original_graph(),
+    special_ops_clusterization = cluster_special_ops(nncf_model.nncf.get_original_graph(),
                                                      algo_builder.get_types_of_grouping_ops(),
                                                      PTIdentityMaskForwardPruningOp.get_all_op_aliases())
 
@@ -781,7 +781,7 @@ def test_model_analyzer(test_struct: GroupSpecialModulesTestStruct):
     prune_operations_types = [op_name for meta_op in
                               [PTConvolutionPruningOp, PTTransposeConvolutionPruningOp, PTLinearPruningOp]
                               for op_name in meta_op.get_all_op_aliases()]
-    model_analyser = ModelAnalyzer(nncf_model.get_original_graph(),
+    model_analyser = ModelAnalyzer(nncf_model.nncf.get_original_graph(),
                                    PT_PRUNING_OPERATOR_METATYPES,
                                    prune_operations_types)
     can_prune_analysis = model_analyser.analyse_model_before_pruning()
@@ -877,7 +877,7 @@ def test_prunable_struct_(request):
 def test_is_module_prunable(test_prunable_struct: ModulePrunableTestStruct):
     model = test_prunable_struct.model()
     nncf_model, algo_builder = create_nncf_model_and_pruning_builder(model, test_prunable_struct.config_params)
-    graph = nncf_model.get_original_graph()
+    graph = nncf_model.nncf.get_original_graph()
     for module_node_name in test_prunable_struct.is_module_prunable:
         nncf_node = graph.get_node_by_name(module_node_name)
         decision = algo_builder.pruning_node_selector._is_module_prunable(graph, nncf_node)

@@ -16,13 +16,16 @@ import copy
 import tensorflow as tf
 
 from nncf.common.accuracy_aware_training import create_accuracy_aware_training_loop
+from nncf.config.structures import ModelEvaluationArgs
 from nncf.tensorflow import tf_internals
 
 
 def accuracy_aware_fit(cls_instance, train_dataset, compression_ctrl,
-                       nncf_config, callbacks, initial_epoch, uncompressed_model_accuracy,
+                       nncf_config, callbacks, initial_epoch,
                        steps_per_epoch=None, batch_size=None, tensorboard_writer=None,
-                       log_dir=None, validation_data=None, validation_steps=None,
+                       log_dir=None,
+                       uncompressed_model_accuracy=None,
+                       validation_data=None, validation_steps=None,
                        result_dict_to_val_metric_fn=None, **kwargs):
     if result_dict_to_val_metric_fn is None:
         result_dict_to_val_metric_fn = lambda metric: metric
@@ -110,9 +113,11 @@ def accuracy_aware_fit(cls_instance, train_dataset, compression_ctrl,
         optimizer = copy.copy(current_optimizer)
         return optimizer, None
 
+    nncf_config.register_extra_structs([ModelEvaluationArgs(eval_fn=validate_fn)])
     callbacks.on_train_begin()
-    cls_instance.original_model_accuracy = uncompressed_model_accuracy
-    acc_aware_training_loop = create_accuracy_aware_training_loop(nncf_config, compression_ctrl)
+    acc_aware_training_loop = create_accuracy_aware_training_loop(nncf_config,
+                                                                  compression_ctrl,
+                                                                  uncompressed_model_accuracy)
     cls_instance = acc_aware_training_loop.run(cls_instance,
                                                train_epoch_fn=train_epoch_fn,
                                                validate_fn=validate_fn,

@@ -67,7 +67,7 @@ class ElasticDepthHandler(SingleElasticityHandler):
         """
         super().__init__()
         self._target_model = target_model
-        self._tracing_context = self._target_model.get_tracing_context()  # type: TracingContext
+        self._tracing_context = self._target_model.nncf.get_tracing_context()  # type: TracingContext
         self._skipped_blocks = skipped_blocks
         self._skip_dependencies = skip_dependencies
         self._node_names_per_block = node_names_per_block
@@ -389,7 +389,7 @@ class ElasticDepthBuilder(SingleElasticityBuilder):
         :param target_model: a target NNCFNetwork for adding modifications
         :return: a handler object that can manipulate the elastic depth.
         """
-        tracing_context = target_model.get_tracing_context()
+        tracing_context = target_model.nncf.get_tracing_context()
         tracing_context.elastic_depth = True
         blocks_for_info = self._skipped_blocks
         if self._skipped_blocks is None:
@@ -446,7 +446,7 @@ class ElasticDepthBuilder(SingleElasticityBuilder):
 
     @staticmethod
     def _get_node_names_per_block(target_model: NNCFNetwork, skipped_blocks) -> Dict[int, List[NNCFNodeName]]:
-        graph = target_model.get_original_graph()
+        graph = target_model.nncf.get_original_graph()
         all_node_names_per_block = {}
         for idx, block in enumerate(skipped_blocks):
             simple_paths = graph.get_all_simple_paths(block.start_node_name, block.end_node_name)

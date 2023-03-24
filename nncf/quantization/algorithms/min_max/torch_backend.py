@@ -246,8 +246,10 @@ class PTMinMaxAlgoBackend(MinMaxAlgoBackend):
                                             parameters: FakeQuantizeParameters) -> PTInsertionCommand:
         _, scale_shape, _ =\
             PTMinMaxAlgoBackend._get_input_scale_shape(nncf_graph, target_point, quantizer_config)
+
         quantizer = PTMinMaxAlgoBackend._create_quantizer(quantizer_config,
                                                           scale_shape, parameters, target_point.target_type)
+
         return PTInsertionCommand(target_point, quantizer, TransformationPriority.QUANTIZATION_PRIORITY)
 
     @staticmethod

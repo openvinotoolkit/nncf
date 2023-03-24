@@ -12,6 +12,8 @@
 """
 
 import os.path as osp
+from typing import Callable
+from typing import Dict
 
 import torch
 from torch.optim.lr_scheduler import ReduceLROnPlateau
@@ -43,15 +45,6 @@ class PTAccuracyAwareTrainingRunner(BaseAccuracyAwareTrainingRunner):
         super().initialize_logging(log_dir, tensorboard_writer)
         if self._tensorboard_writer is None and TENSORBOARD_AVAILABLE:
             self._tensorboard_writer = SummaryWriter(self._log_dir)
-
-    def retrieve_uncompressed_model_accuracy(self, model):
-        if hasattr(model, 'original_model_accuracy') or hasattr(model.module, 'original_model_accuracy'):
-            if isinstance(model, (torch.nn.DataParallel, torch.nn.parallel.DistributedDataParallel)):
-                self.uncompressed_model_accuracy = model.module.original_model_accuracy
-            else:
-                self.uncompressed_model_accuracy = model.original_model_accuracy
-        else:
-            raise RuntimeError('Original model does not contain the pre-calculated reference metric value')
 
     def validate(self, model):
         with torch.no_grad():
@@ -150,9 +143,11 @@ class PTAccuracyAwareTrainingRunner(BaseAccuracyAwareTrainingRunner):
 
 class PTAdaptiveCompressionLevelTrainingRunner(BaseAdaptiveCompressionLevelTrainingRunner,
                                                PTAccuracyAwareTrainingRunner):
-    def __init__(self, accuracy_aware_training_params, verbose=True, dump_checkpoints=True, lr_updates_needed=True,
-                 minimal_compression_rate=0.0, maximal_compression_rate=0.95):
-        super().__init__(accuracy_aware_training_params, verbose, dump_checkpoints, lr_updates_needed,
+    def __init__(self, accuracy_aware_training_params: Dict, uncompressed_model_accuracy: float,
+                 verbose: bool = True, dump_checkpoints: bool = True, lr_updates_needed: bool = True,
+                 minimal_compression_rate: float = 0.0, maximal_compression_rate: float = 0.95):
+        super().__init__(accuracy_aware_training_params, uncompressed_model_accuracy,
+                         verbose, dump_checkpoints, lr_updates_needed,
                          minimal_compression_rate=minimal_compression_rate,
                          maximal_compression_rate=maximal_compression_rate)
 

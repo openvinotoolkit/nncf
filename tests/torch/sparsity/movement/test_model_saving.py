@@ -181,14 +181,14 @@ class TestStateDict:
         original_state_dict = model.state_dict()
         ref_state_dict = {}
         for name, value in original_state_dict.items():
-            ref_state_dict[f'nncf_module.{name}'] = value
+            ref_state_dict[f'{name}'] = value
             for keyword in ['weight', 'bias']:
                 name_parts = name.split('.')
                 if name_parts[-1] == keyword:
-                    importance_name = '.'.join(['nncf_module', *name_parts[:-1],
+                    importance_name = '.'.join([*name_parts[:-1],
                                                 f'pre_ops.0.op.{keyword}_importance'])
                     ref_state_dict[importance_name] = torch.zeros_like(value, dtype=torch.float)
-                    mask_name = '.'.join(['nncf_module', *name_parts[: -1],
+                    mask_name = '.'.join([*name_parts[: -1],
                                           f'pre_ops.0.op.{keyword}_ctx._binary_mask'])
                     ref_state_dict[mask_name] = torch.ones_like(value, dtype=torch.float)
 

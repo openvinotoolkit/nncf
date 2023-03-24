@@ -108,15 +108,9 @@ class GraphTracer:
                     self.custom_forward_fn(model)
         model.load_state_dict(sd)
 
-        if isinstance(model, PostGraphBuildActing):
-            model.post_build_graph_actions()
         context_to_use.disable_trace_dynamic_graph()
         return context_to_use.graph
 
-
-class PostGraphBuildActing:
-    def post_build_graph_actions(self):
-        pass
 
 
 def create_dummy_forward_fn(input_infos: List[ModelInputInfo], with_input_tracing=False,

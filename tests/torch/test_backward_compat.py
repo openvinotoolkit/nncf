@@ -28,8 +28,8 @@ from nncf.torch import register_default_init_args
 from nncf.torch.checkpoint_loading import load_state
 from nncf.common.graph.definitions import MODEL_INPUT_OP_NAME
 from nncf.config import NNCFConfig
-from nncf.torch.nncf_network import LEGACY_ACT_STORAGE_NAME
-from nncf.torch.nncf_network import MODEL_WRAPPED_BY_NNCF_ATTR_NAME
+from nncf.torch.nncf_network import LEGACY_EXTERNAL_QUANTIZERS_STORAGE_PREFIX
+from nncf.torch.nncf_network import LEGACY_MODEL_WRAPPED_BY_NNCF_ATTR_NAME
 from nncf.torch.quantization.algo import QUANTIZER_BUILDER_STATE_VERSION_SAVE_NAME
 from nncf.torch.quantization.algo import QuantizerBuilderStateVersion
 from tests.shared.paths import TEST_ROOT
@@ -152,16 +152,19 @@ def test_loaded_model_evals_according_to_saved_acc(_params, tmp_path, dataset_di
 
 
 old_style_sd = {
-    f'{MODEL_WRAPPED_BY_NNCF_ATTR_NAME}.conv2d.weight': torch.ones([3, 3, 1, 1]),
-    f'{MODEL_WRAPPED_BY_NNCF_ATTR_NAME}.conv2d.bias': torch.ones([3]),
-    f'{MODEL_WRAPPED_BY_NNCF_ATTR_NAME}.conv2d.pre_ops.0.op._num_bits': 8 * torch.ones([1], dtype=torch.int32),
-    f'{MODEL_WRAPPED_BY_NNCF_ATTR_NAME}.conv2d.pre_ops.0.op.signed_tensor': torch.ones([1], dtype=torch.int32),
-    f'{MODEL_WRAPPED_BY_NNCF_ATTR_NAME}.conv2d.pre_ops.0.op.enabled': torch.ones([1], dtype=torch.int32),
-    f'{MODEL_WRAPPED_BY_NNCF_ATTR_NAME}.conv2d.pre_ops.0.op.scale': torch.ones([3, 1, 1, 1]),
-    f'{LEGACY_ACT_STORAGE_NAME}./{MODEL_INPUT_OP_NAME}_0|OUTPUT._num_bits': 8 * torch.ones([1], dtype=torch.int32),
-    f'{LEGACY_ACT_STORAGE_NAME}./{MODEL_INPUT_OP_NAME}_0|OUTPUT.signed_tensor': torch.zeros([1], dtype=torch.int32),
-    f'{LEGACY_ACT_STORAGE_NAME}./{MODEL_INPUT_OP_NAME}_0|OUTPUT.enabled': torch.ones([1], dtype=torch.int32),
-    f'{LEGACY_ACT_STORAGE_NAME}./{MODEL_INPUT_OP_NAME}_0|OUTPUT.scale': torch.ones([1]),
+    f'{LEGACY_MODEL_WRAPPED_BY_NNCF_ATTR_NAME}.conv2d.weight': torch.ones([3, 3, 1, 1]),
+    f'{LEGACY_MODEL_WRAPPED_BY_NNCF_ATTR_NAME}.conv2d.bias': torch.ones([3]),
+    f'{LEGACY_MODEL_WRAPPED_BY_NNCF_ATTR_NAME}.conv2d.pre_ops.0.op._num_bits': 8 * torch.ones([1], dtype=torch.int32),
+    f'{LEGACY_MODEL_WRAPPED_BY_NNCF_ATTR_NAME}.conv2d.pre_ops.0.op.signed_tensor': torch.ones([1], dtype=torch.int32),
+    f'{LEGACY_MODEL_WRAPPED_BY_NNCF_ATTR_NAME}.conv2d.pre_ops.0.op.enabled': torch.ones([1], dtype=torch.int32),
+    f'{LEGACY_MODEL_WRAPPED_BY_NNCF_ATTR_NAME}.conv2d.pre_ops.0.op.scale': torch.ones([3, 1, 1, 1]),
+    f'{LEGACY_EXTERNAL_QUANTIZERS_STORAGE_PREFIX}./{MODEL_INPUT_OP_NAME}_0|OUTPUT._num_bits':
+        8 * torch.ones([1], dtype=torch.int32),
+    f'{LEGACY_EXTERNAL_QUANTIZERS_STORAGE_PREFIX}./{MODEL_INPUT_OP_NAME}_0|OUTPUT.signed_tensor':
+        torch.zeros([1], dtype=torch.int32),
+    f'{LEGACY_EXTERNAL_QUANTIZERS_STORAGE_PREFIX}./{MODEL_INPUT_OP_NAME}_0|OUTPUT.enabled':
+        torch.ones([1], dtype=torch.int32),
+    f'{LEGACY_EXTERNAL_QUANTIZERS_STORAGE_PREFIX}./{MODEL_INPUT_OP_NAME}_0|OUTPUT.scale': torch.ones([1]),
 }
 
 

@@ -7,7 +7,7 @@ strict digraph  {
 "5 PNASNet/NNCFConv2d[conv1]/conv2d_0" [id=5, type=conv2d];
 "6 PNASNet/NNCFBatchNorm2d[bn1]/batch_norm_0" [id=6, type=batch_norm];
 "7 PNASNet/relu_0" [id=7, type=relu];
-"8 PNASNet/SymmetricQuantizer/symmetric_quantize_0" [id=8, type=symmetric_quantize];
+"8 PNASNet/NNCFNetworkInterface[_nncf]/ModuleDict[external_quantizers]/SymmetricQuantizer[PNASNet/relu_0|OUTPUT]/symmetric_quantize_0" [id=8, type=symmetric_quantize];
 "9 PNASNet/Sequential[layer1]/CellB[0]/SepConv[sep_conv1]/NNCFConv2d[conv1]/ModuleDict[pre_ops]/UpdateWeight[0]/RBSparsifyingWeight[op]/calc_rb_binary_mask_0" [id=9, type=calc_rb_binary_mask];
 "10 PNASNet/Sequential[layer1]/CellB[0]/SepConv[sep_conv1]/NNCFConv2d[conv1]/ModuleDict[pre_ops]/UpdateWeight[0]/RBSparsifyingWeight[op]/apply_binary_mask_0" [id=10, type=apply_binary_mask];
 "11 PNASNet/Sequential[layer1]/CellB[0]/SepConv[sep_conv1]/NNCFConv2d[conv1]/ModuleDict[pre_ops]/UpdateWeight[1]/SymmetricQuantizer[op]/symmetric_quantize_0" [id=11, type=symmetric_quantize];
@@ -681,7 +681,7 @@ strict digraph  {
 "679 PNASNet/Sequential[layer5]/CellB[5]/relu_2" [id=679, type=relu];
 "680 PNASNet/Sequential[layer5]/CellB[5]/SymmetricQuantizer/symmetric_quantize_2" [id=680, type=symmetric_quantize];
 "681 PNASNet/avg_pool2d_0" [id=681, type=avg_pool2d];
-"682 PNASNet/SymmetricQuantizer/symmetric_quantize_1" [id=682, type=symmetric_quantize];
+"682 PNASNet/NNCFNetworkInterface[_nncf]/ModuleDict[external_quantizers]/SymmetricQuantizer[PNASNet/avg_pool2d_0|OUTPUT]/symmetric_quantize_0" [id=682, type=symmetric_quantize];
 "683 PNASNet/view_0" [id=683, type=view];
 "684 PNASNet/NNCFLinear[linear]/ModuleDict[pre_ops]/UpdateWeight[0]/RBSparsifyingWeight[op]/calc_rb_binary_mask_0" [id=684, type=calc_rb_binary_mask];
 "685 PNASNet/NNCFLinear[linear]/ModuleDict[pre_ops]/UpdateWeight[0]/RBSparsifyingWeight[op]/apply_binary_mask_0" [id=685, type=apply_binary_mask];
@@ -695,11 +695,11 @@ strict digraph  {
 "4 PNASNet/NNCFConv2d[conv1]/ModuleDict[pre_ops]/UpdateWeight[1]/SymmetricQuantizer[op]/symmetric_quantize_0" -> "5 PNASNet/NNCFConv2d[conv1]/conv2d_0";
 "5 PNASNet/NNCFConv2d[conv1]/conv2d_0" -> "6 PNASNet/NNCFBatchNorm2d[bn1]/batch_norm_0";
 "6 PNASNet/NNCFBatchNorm2d[bn1]/batch_norm_0" -> "7 PNASNet/relu_0";
-"7 PNASNet/relu_0" -> "8 PNASNet/SymmetricQuantizer/symmetric_quantize_0";
-"8 PNASNet/SymmetricQuantizer/symmetric_quantize_0" -> "12 PNASNet/Sequential[layer1]/CellB[0]/SepConv[sep_conv1]/NNCFConv2d[conv1]/conv2d_0";
-"8 PNASNet/SymmetricQuantizer/symmetric_quantize_0" -> "18 PNASNet/Sequential[layer1]/CellB[0]/SepConv[sep_conv2]/NNCFConv2d[conv1]/conv2d_0";
-"8 PNASNet/SymmetricQuantizer/symmetric_quantize_0" -> "21 PNASNet/Sequential[layer1]/CellB[0]/max_pool2d_0";
-"8 PNASNet/SymmetricQuantizer/symmetric_quantize_0" -> "25 PNASNet/Sequential[layer1]/CellB[0]/SepConv[sep_conv3]/NNCFConv2d[conv1]/conv2d_0";
+"7 PNASNet/relu_0" -> "8 PNASNet/NNCFNetworkInterface[_nncf]/ModuleDict[external_quantizers]/SymmetricQuantizer[PNASNet/relu_0|OUTPUT]/symmetric_quantize_0";
+"8 PNASNet/NNCFNetworkInterface[_nncf]/ModuleDict[external_quantizers]/SymmetricQuantizer[PNASNet/relu_0|OUTPUT]/symmetric_quantize_0" -> "12 PNASNet/Sequential[layer1]/CellB[0]/SepConv[sep_conv1]/NNCFConv2d[conv1]/conv2d_0";
+"8 PNASNet/NNCFNetworkInterface[_nncf]/ModuleDict[external_quantizers]/SymmetricQuantizer[PNASNet/relu_0|OUTPUT]/symmetric_quantize_0" -> "18 PNASNet/Sequential[layer1]/CellB[0]/SepConv[sep_conv2]/NNCFConv2d[conv1]/conv2d_0";
+"8 PNASNet/NNCFNetworkInterface[_nncf]/ModuleDict[external_quantizers]/SymmetricQuantizer[PNASNet/relu_0|OUTPUT]/symmetric_quantize_0" -> "21 PNASNet/Sequential[layer1]/CellB[0]/max_pool2d_0";
+"8 PNASNet/NNCFNetworkInterface[_nncf]/ModuleDict[external_quantizers]/SymmetricQuantizer[PNASNet/relu_0|OUTPUT]/symmetric_quantize_0" -> "25 PNASNet/Sequential[layer1]/CellB[0]/SepConv[sep_conv3]/NNCFConv2d[conv1]/conv2d_0";
 "9 PNASNet/Sequential[layer1]/CellB[0]/SepConv[sep_conv1]/NNCFConv2d[conv1]/ModuleDict[pre_ops]/UpdateWeight[0]/RBSparsifyingWeight[op]/calc_rb_binary_mask_0" -> "10 PNASNet/Sequential[layer1]/CellB[0]/SepConv[sep_conv1]/NNCFConv2d[conv1]/ModuleDict[pre_ops]/UpdateWeight[0]/RBSparsifyingWeight[op]/apply_binary_mask_0";
 "10 PNASNet/Sequential[layer1]/CellB[0]/SepConv[sep_conv1]/NNCFConv2d[conv1]/ModuleDict[pre_ops]/UpdateWeight[0]/RBSparsifyingWeight[op]/apply_binary_mask_0" -> "11 PNASNet/Sequential[layer1]/CellB[0]/SepConv[sep_conv1]/NNCFConv2d[conv1]/ModuleDict[pre_ops]/UpdateWeight[1]/SymmetricQuantizer[op]/symmetric_quantize_0";
 "11 PNASNet/Sequential[layer1]/CellB[0]/SepConv[sep_conv1]/NNCFConv2d[conv1]/ModuleDict[pre_ops]/UpdateWeight[1]/SymmetricQuantizer[op]/symmetric_quantize_0" -> "12 PNASNet/Sequential[layer1]/CellB[0]/SepConv[sep_conv1]/NNCFConv2d[conv1]/conv2d_0";
@@ -1429,8 +1429,8 @@ strict digraph  {
 "678 PNASNet/Sequential[layer5]/CellB[5]/NNCFBatchNorm2d[bn2]/batch_norm_0" -> "679 PNASNet/Sequential[layer5]/CellB[5]/relu_2";
 "679 PNASNet/Sequential[layer5]/CellB[5]/relu_2" -> "680 PNASNet/Sequential[layer5]/CellB[5]/SymmetricQuantizer/symmetric_quantize_2";
 "680 PNASNet/Sequential[layer5]/CellB[5]/SymmetricQuantizer/symmetric_quantize_2" -> "681 PNASNet/avg_pool2d_0";
-"681 PNASNet/avg_pool2d_0" -> "682 PNASNet/SymmetricQuantizer/symmetric_quantize_1";
-"682 PNASNet/SymmetricQuantizer/symmetric_quantize_1" -> "683 PNASNet/view_0";
+"681 PNASNet/avg_pool2d_0" -> "682 PNASNet/NNCFNetworkInterface[_nncf]/ModuleDict[external_quantizers]/SymmetricQuantizer[PNASNet/avg_pool2d_0|OUTPUT]/symmetric_quantize_0";
+"682 PNASNet/NNCFNetworkInterface[_nncf]/ModuleDict[external_quantizers]/SymmetricQuantizer[PNASNet/avg_pool2d_0|OUTPUT]/symmetric_quantize_0" -> "683 PNASNet/view_0";
 "683 PNASNet/view_0" -> "687 PNASNet/NNCFLinear[linear]/linear_0";
 "684 PNASNet/NNCFLinear[linear]/ModuleDict[pre_ops]/UpdateWeight[0]/RBSparsifyingWeight[op]/calc_rb_binary_mask_0" -> "685 PNASNet/NNCFLinear[linear]/ModuleDict[pre_ops]/UpdateWeight[0]/RBSparsifyingWeight[op]/apply_binary_mask_0";
 "685 PNASNet/NNCFLinear[linear]/ModuleDict[pre_ops]/UpdateWeight[0]/RBSparsifyingWeight[op]/apply_binary_mask_0" -> "686 PNASNet/NNCFLinear[linear]/ModuleDict[pre_ops]/UpdateWeight[1]/SymmetricQuantizer[op]/symmetric_quantize_0";

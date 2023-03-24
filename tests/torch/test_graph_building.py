@@ -543,24 +543,24 @@ class TestGraphStability:
     def test_dynamic_graph_does_not_inflate_during_multiple_forwards(self, model_and_ctrl_creator):
         compressed_model, _ = model_and_ctrl_creator()
         input_tensor = torch.zeros(input_shapes[0])
-        ref_graph = deepcopy(compressed_model.get_dynamic_graph())
+        ref_graph = deepcopy(compressed_model.nncf.get_dynamic_graph())
         for _ in range(0, 10):
             _ = compressed_model(input_tensor)
-            curr_graph = compressed_model.get_dynamic_graph()
+            curr_graph = compressed_model.nncf.get_dynamic_graph()
             assert curr_graph == ref_graph
 
     def test_dynamic_graph_is_the_same_after_export(self, model_and_ctrl_creator, tmp_path):
         compressed_model, ctrl = model_and_ctrl_creator()
-        ref_graph = deepcopy(compressed_model.get_dynamic_graph())
+        ref_graph = deepcopy(compressed_model.nncf.get_dynamic_graph())
         ctrl.export_model('tmp.onnx')
-        curr_graph = compressed_model.get_dynamic_graph()
+        curr_graph = compressed_model.nncf.get_dynamic_graph()
         assert curr_graph == ref_graph
 
     def test_dummy_forwards_do_not_inflate_dynamic_graph(self, model_and_ctrl_creator):
         compressed_model, _ = model_and_ctrl_creator()
-        ref_graph = deepcopy(compressed_model.get_dynamic_graph())
-        compressed_model.do_dummy_forward()
-        curr_graph = deepcopy(compressed_model.get_dynamic_graph())
+        ref_graph = deepcopy(compressed_model.nncf.get_dynamic_graph())
+        compressed_model.nncf.do_dummy_forward()
+        curr_graph = deepcopy(compressed_model.nncf.get_dynamic_graph())
         assert curr_graph == ref_graph
 
     def test_compressed_graph_with_user_wrap_fn(self):
@@ -570,11 +570,11 @@ class TestGraphStability:
         comp_model_wo_wrap, _ = create_model_and_control_with_defaults()
         comp_model_w_wrap, _ = create_model_with_user_wrap_inputs_fn()
 
-        ref_original_graph = comp_model_wo_wrap.get_graph()
-        ref_compressed_graph = comp_model_wo_wrap.get_graph()
+        ref_original_graph = comp_model_wo_wrap.nncf.get_graph()
+        ref_compressed_graph = comp_model_wo_wrap.nncf.get_graph()
 
-        original_graph_with_wrap = comp_model_w_wrap.get_graph()
-        compressed_graph_with_wrap = comp_model_w_wrap.get_graph()
+        original_graph_with_wrap = comp_model_w_wrap.nncf.get_graph()
+        compressed_graph_with_wrap = comp_model_w_wrap.nncf.get_graph()
 
         assert ref_original_graph == original_graph_with_wrap
         assert ref_compressed_graph == compressed_graph_with_wrap
@@ -586,11 +586,11 @@ class TestGraphStability:
         comp_model_wo_dummy, _ = create_model_and_control_with_defaults()
         comp_model_w_dummy, _ = create_model_with_user_dummy()
 
-        ref_original_graph = comp_model_wo_dummy.get_graph()
-        ref_compressed_graph = comp_model_wo_dummy.get_graph()
+        ref_original_graph = comp_model_wo_dummy.nncf.get_graph()
+        ref_compressed_graph = comp_model_wo_dummy.nncf.get_graph()
 
-        original_graph_with_dummy = comp_model_w_dummy.get_graph()
-        compressed_graph_with_dummy = comp_model_w_dummy.get_graph()
+        original_graph_with_dummy = comp_model_w_dummy.nncf.get_graph()
+        compressed_graph_with_dummy = comp_model_w_dummy.nncf.get_graph()
 
         assert ref_original_graph == original_graph_with_dummy
         assert ref_compressed_graph == compressed_graph_with_dummy
@@ -602,7 +602,7 @@ def test_nncf_graph_auxiliary_node_structure():
     register_bn_adaptation_init_args(config)
     compressed_model, _ = create_compressed_model_and_algo_for_test(model, config)
 
-    nncf_graph = compressed_model.get_graph()
+    nncf_graph = compressed_model.nncf.get_graph()
 
     input_nodes = nncf_graph.get_input_nodes()
     output_nodes = nncf_graph.get_output_nodes()

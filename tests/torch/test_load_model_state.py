@@ -27,8 +27,8 @@ from nncf.torch.checkpoint_loading import ProcessedKeys
 from nncf.torch.checkpoint_loading import load_state
 from nncf.torch.nncf_module_replacement import replace_modules_by_nncf_modules
 from nncf.torch.layers import NNCF_PADDING_VALUE_ATTR_NAME
-from nncf.torch.nncf_network import EXTERNAL_QUANTIZERS_STORAGE_NAME
-from nncf.torch.nncf_network import LEGACY_ACT_STORAGE_NAME
+from nncf.torch.nncf_network import CURRENT_EXTERNAL_QUANTIZERS_STORAGE_PREFIX
+from nncf.torch.nncf_network import LEGACY_EXTERNAL_QUANTIZERS_STORAGE_PREFIX
 from tests.torch.helpers import BasicConvTestModel
 from tests.torch.helpers import PTTensorListComparator
 
@@ -287,10 +287,10 @@ MATCH_KEY_DESC_LIST = [
 
     # can match legacy activation quantizer + new format with |INPUT and |OUTPUT
     MatchKeyDesc(num_loaded=2)
-        .keys_to_load([LEGACY_ACT_STORAGE_NAME + '.relu_0.' + OP1,
-                       LEGACY_ACT_STORAGE_NAME + '.relu_0.' + OP2])
-        .model_keys([EXTERNAL_QUANTIZERS_STORAGE_NAME + '.relu_0|OUTPUT.' + OP1,
-                     EXTERNAL_QUANTIZERS_STORAGE_NAME + '.relu_0|INPUT.' + OP2])
+        .keys_to_load([LEGACY_EXTERNAL_QUANTIZERS_STORAGE_PREFIX + '.relu_0.' + OP1,
+                       LEGACY_EXTERNAL_QUANTIZERS_STORAGE_PREFIX + '.relu_0.' + OP2])
+        .model_keys([CURRENT_EXTERNAL_QUANTIZERS_STORAGE_PREFIX + '.relu_0|OUTPUT.' + OP1,
+                     CURRENT_EXTERNAL_QUANTIZERS_STORAGE_PREFIX + '.relu_0|INPUT.' + OP2])
         .all_matched()
         .with_deprecation_warning(),
 
@@ -298,12 +298,12 @@ MATCH_KEY_DESC_LIST = [
     MatchKeyDesc(num_loaded=4)
         .keys_to_load(["conv2d.weight",
                        "RELUModule.weight",
-                       EXTERNAL_QUANTIZERS_STORAGE_NAME + '.RELU_0.' + OP1,
-                       EXTERNAL_QUANTIZERS_STORAGE_NAME + '.RELU_0.' + OP2])
+                       CURRENT_EXTERNAL_QUANTIZERS_STORAGE_PREFIX + '.RELU_0.' + OP1,
+                       CURRENT_EXTERNAL_QUANTIZERS_STORAGE_PREFIX + '.RELU_0.' + OP2])
         .model_keys(["conv2d.weight",
                      "RELUModule.weight",
-                     EXTERNAL_QUANTIZERS_STORAGE_NAME + '.relu_0|OUTPUT.' + OP1,
-                     EXTERNAL_QUANTIZERS_STORAGE_NAME + '.relu_0|INPUT.' + OP2])
+                     CURRENT_EXTERNAL_QUANTIZERS_STORAGE_PREFIX + '.relu_0|OUTPUT.' + OP1,
+                     CURRENT_EXTERNAL_QUANTIZERS_STORAGE_PREFIX + '.relu_0|INPUT.' + OP2])
         .all_matched()
         .with_deprecation_warning(),
 
@@ -311,72 +311,72 @@ MATCH_KEY_DESC_LIST = [
     MatchKeyDesc(num_loaded=4)
         .keys_to_load(["conv2d.weight",
                        "RELUModule.weight",
-                       LEGACY_ACT_STORAGE_NAME + '.RELU_0.' + OP1,
-                       LEGACY_ACT_STORAGE_NAME + '.RELU_0.' + OP2])
+                       LEGACY_EXTERNAL_QUANTIZERS_STORAGE_PREFIX + '.RELU_0.' + OP1,
+                       LEGACY_EXTERNAL_QUANTIZERS_STORAGE_PREFIX + '.RELU_0.' + OP2])
         .model_keys(["conv2d.weight",
                      "RELUModule.weight",
-                     EXTERNAL_QUANTIZERS_STORAGE_NAME + '.relu__0|OUTPUT.' + OP1,
-                     EXTERNAL_QUANTIZERS_STORAGE_NAME + '.relu__0|INPUT.' + OP2])
+                     CURRENT_EXTERNAL_QUANTIZERS_STORAGE_PREFIX + '.relu__0|OUTPUT.' + OP1,
+                     CURRENT_EXTERNAL_QUANTIZERS_STORAGE_PREFIX + '.relu__0|INPUT.' + OP2])
         .all_matched()
         .with_deprecation_warning(),
 
     # can match unified FQ
     MatchKeyDesc(num_loaded=1)
-        .keys_to_load(['module.' + LEGACY_ACT_STORAGE_NAME + '.relu_0.' + OP1,
-                       'module.' + LEGACY_ACT_STORAGE_NAME + '.relu_1.' + OP1])
-        .model_keys([EXTERNAL_QUANTIZERS_STORAGE_NAME + '.relu_0|OUTPUT;relu_1|OUTPUT.' + OP1])
+        .keys_to_load(['module.' + LEGACY_EXTERNAL_QUANTIZERS_STORAGE_PREFIX + '.relu_0.' + OP1,
+                       'module.' + LEGACY_EXTERNAL_QUANTIZERS_STORAGE_PREFIX + '.relu_1.' + OP1])
+        .model_keys([CURRENT_EXTERNAL_QUANTIZERS_STORAGE_PREFIX + '.relu_0|OUTPUT;relu_1|OUTPUT.' + OP1])
         .all_matched()
         .with_warning(r".*Unified parameters.*"),
 
     MatchKeyDesc(num_loaded=1)
-        .keys_to_load(['module.' + EXTERNAL_QUANTIZERS_STORAGE_NAME + '.relu_0.' + OP1,
-                       'module.' + EXTERNAL_QUANTIZERS_STORAGE_NAME + '.relu_1.' + OP1])
-        .model_keys([EXTERNAL_QUANTIZERS_STORAGE_NAME + '.relu_0|OUTPUT;relu_1|OUTPUT.' + OP1])
+        .keys_to_load(['module.' + CURRENT_EXTERNAL_QUANTIZERS_STORAGE_PREFIX + '.relu_0.' + OP1,
+                       'module.' + CURRENT_EXTERNAL_QUANTIZERS_STORAGE_PREFIX + '.relu_1.' + OP1])
+        .model_keys([CURRENT_EXTERNAL_QUANTIZERS_STORAGE_PREFIX + '.relu_0|OUTPUT;relu_1|OUTPUT.' + OP1])
         .all_matched()
         .with_warning(r".*Unified parameters.*"),
 
     MatchKeyDesc(num_loaded=1)
-        .keys_to_load(['module.' + EXTERNAL_QUANTIZERS_STORAGE_NAME + '.relu_0.' + OP1,
-                       'module.' + EXTERNAL_QUANTIZERS_STORAGE_NAME + '.relu_1.' + OP1,
-                       'module.' + EXTERNAL_QUANTIZERS_STORAGE_NAME + '.relu_2.' + OP1])
-        .model_keys([EXTERNAL_QUANTIZERS_STORAGE_NAME + '.relu_0|OUTPUT;relu_2|OUTPUT;relu_1|OUTPUT.' + OP1])
+        .keys_to_load(['module.' + CURRENT_EXTERNAL_QUANTIZERS_STORAGE_PREFIX + '.relu_0.' + OP1,
+                       'module.' + CURRENT_EXTERNAL_QUANTIZERS_STORAGE_PREFIX + '.relu_1.' + OP1,
+                       'module.' + CURRENT_EXTERNAL_QUANTIZERS_STORAGE_PREFIX + '.relu_2.' + OP1])
+        .model_keys([CURRENT_EXTERNAL_QUANTIZERS_STORAGE_PREFIX + '.relu_0|OUTPUT;relu_2|OUTPUT;relu_1|OUTPUT.' + OP1])
         .all_matched()
         .with_warning(r".*Unified parameters.*"),
 
     # not matched common operation
     MatchKeyDesc(num_loaded=1, expects_error=True)
-        .keys_to_load(['module.' + EXTERNAL_QUANTIZERS_STORAGE_NAME + '.relu_0.' + OP1,
-                       'module.' + EXTERNAL_QUANTIZERS_STORAGE_NAME + '.relu_1.' + OP2,
-                       'module.' + EXTERNAL_QUANTIZERS_STORAGE_NAME + '.relu_2.' + OP1_NOT_PARAM])
-        .model_keys([EXTERNAL_QUANTIZERS_STORAGE_NAME + '.relu_0|OUTPUT;relu_2|OUTPUT;relu_1|OUTPUT.' + OP1])
-        .matched([EXTERNAL_QUANTIZERS_STORAGE_NAME + '.relu_0|OUTPUT;relu_2|OUTPUT;relu_1|OUTPUT.' + OP1])
-        .unexpected(['module.' + EXTERNAL_QUANTIZERS_STORAGE_NAME + '.relu_1.' + OP2,
-                     'module.' + EXTERNAL_QUANTIZERS_STORAGE_NAME + '.relu_2.' + OP1_NOT_PARAM]),
+        .keys_to_load(['module.' + CURRENT_EXTERNAL_QUANTIZERS_STORAGE_PREFIX + '.relu_0.' + OP1,
+                       'module.' + CURRENT_EXTERNAL_QUANTIZERS_STORAGE_PREFIX + '.relu_1.' + OP2,
+                       'module.' + CURRENT_EXTERNAL_QUANTIZERS_STORAGE_PREFIX + '.relu_2.' + OP1_NOT_PARAM])
+        .model_keys([CURRENT_EXTERNAL_QUANTIZERS_STORAGE_PREFIX + '.relu_0|OUTPUT;relu_2|OUTPUT;relu_1|OUTPUT.' + OP1])
+        .matched([CURRENT_EXTERNAL_QUANTIZERS_STORAGE_PREFIX + '.relu_0|OUTPUT;relu_2|OUTPUT;relu_1|OUTPUT.' + OP1])
+        .unexpected(['module.' + CURRENT_EXTERNAL_QUANTIZERS_STORAGE_PREFIX + '.relu_1.' + OP2,
+                     'module.' + CURRENT_EXTERNAL_QUANTIZERS_STORAGE_PREFIX + '.relu_2.' + OP1_NOT_PARAM]),
 
     # not all unified scopes are matched: relu_3 vs relu_1
     MatchKeyDesc(num_loaded=1, expects_error=True)
-        .keys_to_load(['module.' + EXTERNAL_QUANTIZERS_STORAGE_NAME + '.relu_0.' + OP1,
-                       'module.' + EXTERNAL_QUANTIZERS_STORAGE_NAME + '.relu_3.' + OP1,
-                       'module.' + EXTERNAL_QUANTIZERS_STORAGE_NAME + '.relu_2.' + OP1])
-        .model_keys([EXTERNAL_QUANTIZERS_STORAGE_NAME + '.relu_0|OUTPUT;relu_2|OUTPUT;relu_1|OUTPUT.' + OP1])
-        .matched([EXTERNAL_QUANTIZERS_STORAGE_NAME + '.relu_0|OUTPUT;relu_2|OUTPUT;relu_1|OUTPUT.' + OP1])
-        .unexpected(['module.' + EXTERNAL_QUANTIZERS_STORAGE_NAME + '.relu_3.' + OP1]),
+        .keys_to_load(['module.' + CURRENT_EXTERNAL_QUANTIZERS_STORAGE_PREFIX + '.relu_0.' + OP1,
+                       'module.' + CURRENT_EXTERNAL_QUANTIZERS_STORAGE_PREFIX + '.relu_3.' + OP1,
+                       'module.' + CURRENT_EXTERNAL_QUANTIZERS_STORAGE_PREFIX + '.relu_2.' + OP1])
+        .model_keys([CURRENT_EXTERNAL_QUANTIZERS_STORAGE_PREFIX + '.relu_0|OUTPUT;relu_2|OUTPUT;relu_1|OUTPUT.' + OP1])
+        .matched([CURRENT_EXTERNAL_QUANTIZERS_STORAGE_PREFIX + '.relu_0|OUTPUT;relu_2|OUTPUT;relu_1|OUTPUT.' + OP1])
+        .unexpected(['module.' + CURRENT_EXTERNAL_QUANTIZERS_STORAGE_PREFIX + '.relu_3.' + OP1]),
 
     # won't match relu_ and relu
     MatchKeyDesc(num_loaded=2, expects_error=True)
         .keys_to_load(["conv2d.weight",
                        "RELUModule.weight",
-                       EXTERNAL_QUANTIZERS_STORAGE_NAME + '.relu_0.' + OP1,
-                       EXTERNAL_QUANTIZERS_STORAGE_NAME + '.relu_0.' + OP2])
+                       CURRENT_EXTERNAL_QUANTIZERS_STORAGE_PREFIX + '.relu_0.' + OP1,
+                       CURRENT_EXTERNAL_QUANTIZERS_STORAGE_PREFIX + '.relu_0.' + OP2])
         .model_keys(["conv2d.weight",
                      "RELUModule.weight",
-                     EXTERNAL_QUANTIZERS_STORAGE_NAME + '.relu__0|OUTPUT.' + OP1,
-                     EXTERNAL_QUANTIZERS_STORAGE_NAME + '.relu__0|INPUT.' + OP2])
+                     CURRENT_EXTERNAL_QUANTIZERS_STORAGE_PREFIX + '.relu__0|OUTPUT.' + OP1,
+                     CURRENT_EXTERNAL_QUANTIZERS_STORAGE_PREFIX + '.relu__0|INPUT.' + OP2])
         .matched(["conv2d.weight", "RELUModule.weight"])
-        .unexpected([EXTERNAL_QUANTIZERS_STORAGE_NAME + '.relu_0.' + OP1,
-                     EXTERNAL_QUANTIZERS_STORAGE_NAME + '.relu_0.' + OP2])
-        .missing([EXTERNAL_QUANTIZERS_STORAGE_NAME + '.relu__0|OUTPUT.' + OP1,
-                  EXTERNAL_QUANTIZERS_STORAGE_NAME + '.relu__0|INPUT.' + OP2]),
+        .unexpected([CURRENT_EXTERNAL_QUANTIZERS_STORAGE_PREFIX + '.relu_0.' + OP1,
+                     CURRENT_EXTERNAL_QUANTIZERS_STORAGE_PREFIX + '.relu_0.' + OP2])
+        .missing([CURRENT_EXTERNAL_QUANTIZERS_STORAGE_PREFIX + '.relu__0|OUTPUT.' + OP1,
+                  CURRENT_EXTERNAL_QUANTIZERS_STORAGE_PREFIX + '.relu__0|INPUT.' + OP2]),
 
     # can skip ignored parameters
     MatchKeyDesc(num_loaded=1).keys_to_load(['1']).model_keys(['1', '2'])
@@ -396,54 +396,54 @@ MATCH_KEY_DESC_LIST = [
     # optional parameter - not necessary in checkpoint can be initialized by default in the model
     # can match legacy activation quantizer + new format with |INPUT and |OUTPUT
     MatchKeyDesc(num_loaded=2)
-        .keys_to_load([LEGACY_ACT_STORAGE_NAME + '.RELU_0.' + OP1,
-                       LEGACY_ACT_STORAGE_NAME + '.RELU_0.' + OP2])
-        .model_keys([EXTERNAL_QUANTIZERS_STORAGE_NAME + '.RELU_0|OUTPUT.' + OP1,
-                     EXTERNAL_QUANTIZERS_STORAGE_NAME + '.RELU_0|INPUT.' + OP2])
+        .keys_to_load([LEGACY_EXTERNAL_QUANTIZERS_STORAGE_PREFIX + '.RELU_0.' + OP1,
+                       LEGACY_EXTERNAL_QUANTIZERS_STORAGE_PREFIX + '.RELU_0.' + OP2])
+        .model_keys([CURRENT_EXTERNAL_QUANTIZERS_STORAGE_PREFIX + '.RELU_0|OUTPUT.' + OP1,
+                     CURRENT_EXTERNAL_QUANTIZERS_STORAGE_PREFIX + '.RELU_0|INPUT.' + OP2])
         .all_matched()
         .with_deprecation_warning(),
 
     # can match unified FQ
     MatchKeyDesc(num_loaded=1)
-        .keys_to_load(['module.' + LEGACY_ACT_STORAGE_NAME + '.RELU_0.' + OP1,
-                       'module.' + LEGACY_ACT_STORAGE_NAME + '.RELU_1.' + OP1])
-        .model_keys([EXTERNAL_QUANTIZERS_STORAGE_NAME + '.RELU_0|OUTPUT;RELU_1|OUTPUT.' + OP1])
+        .keys_to_load(['module.' + LEGACY_EXTERNAL_QUANTIZERS_STORAGE_PREFIX + '.RELU_0.' + OP1,
+                       'module.' + LEGACY_EXTERNAL_QUANTIZERS_STORAGE_PREFIX + '.RELU_1.' + OP1])
+        .model_keys([CURRENT_EXTERNAL_QUANTIZERS_STORAGE_PREFIX + '.RELU_0|OUTPUT;RELU_1|OUTPUT.' + OP1])
         .all_matched()
         .with_warning(r".*Unified parameters.*"),
 
     MatchKeyDesc(num_loaded=1)
-        .keys_to_load(['module.' + EXTERNAL_QUANTIZERS_STORAGE_NAME + '.RELU_0.' + OP1,
-                       'module.' + EXTERNAL_QUANTIZERS_STORAGE_NAME + '.RELU_1.' + OP1])
-        .model_keys([EXTERNAL_QUANTIZERS_STORAGE_NAME + '.RELU_0|OUTPUT;RELU_1|OUTPUT.' + OP1])
+        .keys_to_load(['module.' + CURRENT_EXTERNAL_QUANTIZERS_STORAGE_PREFIX + '.RELU_0.' + OP1,
+                       'module.' + CURRENT_EXTERNAL_QUANTIZERS_STORAGE_PREFIX + '.RELU_1.' + OP1])
+        .model_keys([CURRENT_EXTERNAL_QUANTIZERS_STORAGE_PREFIX + '.RELU_0|OUTPUT;RELU_1|OUTPUT.' + OP1])
         .all_matched()
         .with_warning(r".*Unified parameters.*"),
 
     MatchKeyDesc(num_loaded=1)
-        .keys_to_load(['module.' + EXTERNAL_QUANTIZERS_STORAGE_NAME + '.RELU_0.' + OP1,
-                       'module.' + EXTERNAL_QUANTIZERS_STORAGE_NAME + '.RELU_1.' + OP1,
-                       'module.' + EXTERNAL_QUANTIZERS_STORAGE_NAME + '.RELU_2.' + OP1])
-        .model_keys([EXTERNAL_QUANTIZERS_STORAGE_NAME + '.RELU_0|OUTPUT;RELU_2|OUTPUT;RELU_1|OUTPUT.' + OP1])
+        .keys_to_load(['module.' + CURRENT_EXTERNAL_QUANTIZERS_STORAGE_PREFIX + '.RELU_0.' + OP1,
+                       'module.' + CURRENT_EXTERNAL_QUANTIZERS_STORAGE_PREFIX + '.RELU_1.' + OP1,
+                       'module.' + CURRENT_EXTERNAL_QUANTIZERS_STORAGE_PREFIX + '.RELU_2.' + OP1])
+        .model_keys([CURRENT_EXTERNAL_QUANTIZERS_STORAGE_PREFIX + '.RELU_0|OUTPUT;RELU_2|OUTPUT;RELU_1|OUTPUT.' + OP1])
         .all_matched()
         .with_warning(r".*Unified parameters.*"),
 
     # not matched common operation
     MatchKeyDesc(num_loaded=1, expects_error=True)
-        .keys_to_load(['module.' + EXTERNAL_QUANTIZERS_STORAGE_NAME + '.RELU_0.' + OP1,
-                       'module.' + EXTERNAL_QUANTIZERS_STORAGE_NAME + '.RELU_1.' + OP2,
-                       'module.' + EXTERNAL_QUANTIZERS_STORAGE_NAME + '.RELU_2.' + OP1_NOT_PARAM])
-        .model_keys([EXTERNAL_QUANTIZERS_STORAGE_NAME + '.RELU_0|OUTPUT;RELU_2|OUTPUT;RELU_1|OUTPUT.' + OP1])
-        .matched([EXTERNAL_QUANTIZERS_STORAGE_NAME + '.RELU_0|OUTPUT;RELU_2|OUTPUT;RELU_1|OUTPUT.' + OP1])
-        .unexpected(['module.' + EXTERNAL_QUANTIZERS_STORAGE_NAME + '.RELU_1.' + OP2,
-                     'module.' + EXTERNAL_QUANTIZERS_STORAGE_NAME + '.RELU_2.' + OP1_NOT_PARAM]),
+        .keys_to_load(['module.' + CURRENT_EXTERNAL_QUANTIZERS_STORAGE_PREFIX + '.RELU_0.' + OP1,
+                       'module.' + CURRENT_EXTERNAL_QUANTIZERS_STORAGE_PREFIX + '.RELU_1.' + OP2,
+                       'module.' + CURRENT_EXTERNAL_QUANTIZERS_STORAGE_PREFIX + '.RELU_2.' + OP1_NOT_PARAM])
+        .model_keys([CURRENT_EXTERNAL_QUANTIZERS_STORAGE_PREFIX + '.RELU_0|OUTPUT;RELU_2|OUTPUT;RELU_1|OUTPUT.' + OP1])
+        .matched([CURRENT_EXTERNAL_QUANTIZERS_STORAGE_PREFIX + '.RELU_0|OUTPUT;RELU_2|OUTPUT;RELU_1|OUTPUT.' + OP1])
+        .unexpected(['module.' + CURRENT_EXTERNAL_QUANTIZERS_STORAGE_PREFIX + '.RELU_1.' + OP2,
+                     'module.' + CURRENT_EXTERNAL_QUANTIZERS_STORAGE_PREFIX + '.RELU_2.' + OP1_NOT_PARAM]),
 
     # not all unified scopes are matched: RELU_3 vs RELU_1
     MatchKeyDesc(num_loaded=1, expects_error=True)
-        .keys_to_load(['module.' + EXTERNAL_QUANTIZERS_STORAGE_NAME + '.RELU_0.' + OP1,
-                       'module.' + EXTERNAL_QUANTIZERS_STORAGE_NAME + '.RELU_3.' + OP1,
-                       'module.' + EXTERNAL_QUANTIZERS_STORAGE_NAME + '.RELU_2.' + OP1])
-        .model_keys([EXTERNAL_QUANTIZERS_STORAGE_NAME + '.RELU_0|OUTPUT;RELU_2|OUTPUT;RELU_1|OUTPUT.' + OP1])
-        .matched([EXTERNAL_QUANTIZERS_STORAGE_NAME + '.RELU_0|OUTPUT;RELU_2|OUTPUT;RELU_1|OUTPUT.' + OP1])
-        .unexpected(['module.' + EXTERNAL_QUANTIZERS_STORAGE_NAME + '.RELU_3.' + OP1]),
+        .keys_to_load(['module.' + CURRENT_EXTERNAL_QUANTIZERS_STORAGE_PREFIX + '.RELU_0.' + OP1,
+                       'module.' + CURRENT_EXTERNAL_QUANTIZERS_STORAGE_PREFIX + '.RELU_3.' + OP1,
+                       'module.' + CURRENT_EXTERNAL_QUANTIZERS_STORAGE_PREFIX + '.RELU_2.' + OP1])
+        .model_keys([CURRENT_EXTERNAL_QUANTIZERS_STORAGE_PREFIX + '.RELU_0|OUTPUT;RELU_2|OUTPUT;RELU_1|OUTPUT.' + OP1])
+        .matched([CURRENT_EXTERNAL_QUANTIZERS_STORAGE_PREFIX + '.RELU_0|OUTPUT;RELU_2|OUTPUT;RELU_1|OUTPUT.' + OP1])
+        .unexpected(['module.' + CURRENT_EXTERNAL_QUANTIZERS_STORAGE_PREFIX + '.RELU_3.' + OP1]),
 
     # can skip ignored parameters
     MatchKeyDesc(num_loaded=1).keys_to_load(['1']).model_keys(['1', '2'])
@@ -463,54 +463,61 @@ MATCH_KEY_DESC_LIST = [
     # optional parameter - not necessary in checkpoint can be initialized by default in the model
     # can match legacy activation quantizer + new format with |INPUT and |OUTPUT
     MatchKeyDesc(num_loaded=2)
-        .keys_to_load([LEGACY_ACT_STORAGE_NAME + '.RELU_0.' + OP1,
-                       LEGACY_ACT_STORAGE_NAME + '.RELU_0.' + OP2])
-        .model_keys([EXTERNAL_QUANTIZERS_STORAGE_NAME + '.RELU_0|OUTPUT.' + OP1,
-                     EXTERNAL_QUANTIZERS_STORAGE_NAME + '.RELU_0|INPUT.' + OP2])
+        .keys_to_load([LEGACY_EXTERNAL_QUANTIZERS_STORAGE_PREFIX + '.RELU_0.' + OP1,
+                       LEGACY_EXTERNAL_QUANTIZERS_STORAGE_PREFIX + '.RELU_0.' + OP2])
+        .model_keys([CURRENT_EXTERNAL_QUANTIZERS_STORAGE_PREFIX + '.RELU_0|OUTPUT.' + OP1,
+                     CURRENT_EXTERNAL_QUANTIZERS_STORAGE_PREFIX + '.RELU_0|INPUT.' + OP2])
         .all_matched()
         .with_deprecation_warning(),
 
     # can match unified FQ
     MatchKeyDesc(num_loaded=1)
-        .keys_to_load(['module.' + LEGACY_ACT_STORAGE_NAME + '.RELU_0.' + OP1,
-                       'module.' + LEGACY_ACT_STORAGE_NAME + '.RELU_1.' + OP1])
-        .model_keys([EXTERNAL_QUANTIZERS_STORAGE_NAME + '.RELU_0|OUTPUT;RELU_1|OUTPUT.' + OP1])
+        .keys_to_load(['module.' + LEGACY_EXTERNAL_QUANTIZERS_STORAGE_PREFIX + '.RELU_0.' + OP1,
+                       'module.' + LEGACY_EXTERNAL_QUANTIZERS_STORAGE_PREFIX + '.RELU_1.' + OP1])
+        .model_keys([CURRENT_EXTERNAL_QUANTIZERS_STORAGE_PREFIX + '.RELU_0|OUTPUT;RELU_1|OUTPUT.' + OP1])
         .all_matched()
         .with_warning(r".*Unified parameters.*"),
 
     MatchKeyDesc(num_loaded=1)
-        .keys_to_load(['module.' + EXTERNAL_QUANTIZERS_STORAGE_NAME + '.RELU_0.' + OP1,
-                       'module.' + EXTERNAL_QUANTIZERS_STORAGE_NAME + '.RELU_1.' + OP1])
-        .model_keys([EXTERNAL_QUANTIZERS_STORAGE_NAME + '.RELU_0|OUTPUT;RELU_1|OUTPUT.' + OP1])
+        .keys_to_load(['module.' + CURRENT_EXTERNAL_QUANTIZERS_STORAGE_PREFIX + '.RELU_0.' + OP1,
+                       'module.' + CURRENT_EXTERNAL_QUANTIZERS_STORAGE_PREFIX + '.RELU_1.' + OP1])
+        .model_keys([CURRENT_EXTERNAL_QUANTIZERS_STORAGE_PREFIX + '.RELU_0|OUTPUT;RELU_1|OUTPUT.' + OP1])
         .all_matched()
         .with_warning(r".*Unified parameters.*"),
 
     MatchKeyDesc(num_loaded=1)
-        .keys_to_load(['module.' + EXTERNAL_QUANTIZERS_STORAGE_NAME + '.RELU_0.' + OP1,
-                       'module.' + EXTERNAL_QUANTIZERS_STORAGE_NAME + '.RELU_1.' + OP1,
-                       'module.' + EXTERNAL_QUANTIZERS_STORAGE_NAME + '.RELU_2.' + OP1])
-        .model_keys([EXTERNAL_QUANTIZERS_STORAGE_NAME + '.RELU_0|OUTPUT;RELU_2|OUTPUT;RELU_1|OUTPUT.' + OP1])
+        .keys_to_load(['module.' + CURRENT_EXTERNAL_QUANTIZERS_STORAGE_PREFIX + '.RELU_0.' + OP1,
+                       'module.' + CURRENT_EXTERNAL_QUANTIZERS_STORAGE_PREFIX + '.RELU_1.' + OP1,
+                       'module.' + CURRENT_EXTERNAL_QUANTIZERS_STORAGE_PREFIX + '.RELU_2.' + OP1])
+        .model_keys([CURRENT_EXTERNAL_QUANTIZERS_STORAGE_PREFIX + '.RELU_0|OUTPUT;RELU_2|OUTPUT;RELU_1|OUTPUT.' + OP1])
         .all_matched()
         .with_warning(r".*Unified parameters.*"),
 
     # not matched common operation
     MatchKeyDesc(num_loaded=1, expects_error=True)
-        .keys_to_load(['module.' + EXTERNAL_QUANTIZERS_STORAGE_NAME + '.RELU_0.' + OP1,
-                       'module.' + EXTERNAL_QUANTIZERS_STORAGE_NAME + '.RELU_1.' + OP2,
-                       'module.' + EXTERNAL_QUANTIZERS_STORAGE_NAME + '.RELU_2.' + OP1_NOT_PARAM])
-        .model_keys([EXTERNAL_QUANTIZERS_STORAGE_NAME + '.RELU_0|OUTPUT;RELU_2|OUTPUT;RELU_1|OUTPUT.' + OP1])
-        .matched([EXTERNAL_QUANTIZERS_STORAGE_NAME + '.RELU_0|OUTPUT;RELU_2|OUTPUT;RELU_1|OUTPUT.' + OP1])
-        .unexpected(['module.' + EXTERNAL_QUANTIZERS_STORAGE_NAME + '.RELU_1.' + OP2,
-                     'module.' + EXTERNAL_QUANTIZERS_STORAGE_NAME + '.RELU_2.' + OP1_NOT_PARAM]),
+        .keys_to_load(['module.' + CURRENT_EXTERNAL_QUANTIZERS_STORAGE_PREFIX + '.RELU_0.' + OP1,
+                       'module.' + CURRENT_EXTERNAL_QUANTIZERS_STORAGE_PREFIX + '.RELU_1.' + OP2,
+                       'module.' + CURRENT_EXTERNAL_QUANTIZERS_STORAGE_PREFIX + '.RELU_2.' + OP1_NOT_PARAM])
+        .model_keys([CURRENT_EXTERNAL_QUANTIZERS_STORAGE_PREFIX + '.RELU_0|OUTPUT;RELU_2|OUTPUT;RELU_1|OUTPUT.' + OP1])
+        .matched([CURRENT_EXTERNAL_QUANTIZERS_STORAGE_PREFIX + '.RELU_0|OUTPUT;RELU_2|OUTPUT;RELU_1|OUTPUT.' + OP1])
+        .unexpected(['module.' + CURRENT_EXTERNAL_QUANTIZERS_STORAGE_PREFIX + '.RELU_1.' + OP2,
+                     'module.' + CURRENT_EXTERNAL_QUANTIZERS_STORAGE_PREFIX + '.RELU_2.' + OP1_NOT_PARAM]),
 
     # not all unified scopes are matched: RELU_3 vs RELU_1
     MatchKeyDesc(num_loaded=1, expects_error=True)
-        .keys_to_load(['module.' + EXTERNAL_QUANTIZERS_STORAGE_NAME + '.RELU_0.' + OP1,
-                       'module.' + EXTERNAL_QUANTIZERS_STORAGE_NAME + '.RELU_3.' + OP1,
-                       'module.' + EXTERNAL_QUANTIZERS_STORAGE_NAME + '.RELU_2.' + OP1])
-        .model_keys([EXTERNAL_QUANTIZERS_STORAGE_NAME + '.RELU_0|OUTPUT;RELU_2|OUTPUT;RELU_1|OUTPUT.' + OP1])
-        .matched([EXTERNAL_QUANTIZERS_STORAGE_NAME + '.RELU_0|OUTPUT;RELU_2|OUTPUT;RELU_1|OUTPUT.' + OP1])
-        .unexpected(['module.' + EXTERNAL_QUANTIZERS_STORAGE_NAME + '.RELU_3.' + OP1]),
+        .keys_to_load(['module.' + CURRENT_EXTERNAL_QUANTIZERS_STORAGE_PREFIX + '.RELU_0.' + OP1,
+                       'module.' + CURRENT_EXTERNAL_QUANTIZERS_STORAGE_PREFIX + '.RELU_3.' + OP1,
+                       'module.' + CURRENT_EXTERNAL_QUANTIZERS_STORAGE_PREFIX + '.RELU_2.' + OP1])
+        .model_keys([CURRENT_EXTERNAL_QUANTIZERS_STORAGE_PREFIX + '.RELU_0|OUTPUT;RELU_2|OUTPUT;RELU_1|OUTPUT.' + OP1])
+        .matched([CURRENT_EXTERNAL_QUANTIZERS_STORAGE_PREFIX + '.RELU_0|OUTPUT;RELU_2|OUTPUT;RELU_1|OUTPUT.' + OP1])
+        .unexpected(['module.' + CURRENT_EXTERNAL_QUANTIZERS_STORAGE_PREFIX + '.RELU_3.' + OP1]),
+
+    # can match keys under _nncf in the new style and the keys without _nncf
+    MatchKeyDesc(num_loaded=1)
+        .keys_to_load(['key.op'])
+        .model_keys(['_nncf.key.op'])
+        .all_matched()
+        .with_deprecation_warning(),
 
     OptionalMatchKeyDesc(num_loaded=0)
         .keys_to_load([])

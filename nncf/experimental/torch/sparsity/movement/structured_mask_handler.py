@@ -349,7 +349,7 @@ class StructuredMaskHandler:
                            key=lambda ctx: ctx.sparsifier_operand.target_module_node.node_id)
             for ctx in ctxes:
                 stats = ctx.gather_statistics_from_operand()
-                module = self.compressed_model.get_containing_module(stats.module_node_name)
+                module = self.compressed_model.nncf.get_containing_module(stats.module_node_name)
                 entry = dict(group_id=group.group_id,
                              torch_module=module_vs_name_map[module],
                              **stats.__dict__)
@@ -378,7 +378,7 @@ class StructuredMaskHandler:
             ctxes = []
             for block in group.dim_blocks:
                 nncf_node = nncf_graph.get_node_by_id(block.producer_id)
-                module = nncf_network.get_containing_module(nncf_node.node_name)
+                module = nncf_network.nncf.get_containing_module(nncf_node.node_name)
                 if module in module_vs_sparse_module_info_map:
                     # 0 dimension corresponds to row (output channels), 1st dimension - to column (input channels)
                     prune_by_row = not bool(block.pruning_dimension)

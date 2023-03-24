@@ -286,7 +286,7 @@ NNCF has the capability to apply the model compression algorithms while satisfyi
 The following function is required to create the accuracy-aware training loop. One has to pass the `NNCFConfig` object and the compression controller (that is returned upon compressed model creation, see above).
 ```python
 from nncf.common.accuracy_aware_training import create_accuracy_aware_training_loop
-training_loop = create_accuracy_aware_training_loop(nncf_config, compression_ctrl)
+training_loop = create_accuracy_aware_training_loop(nncf_config, compression_ctrl, uncompressed_model_accuracy)
 ```
 
 In order to properly instantiate the accuracy-aware training loop, the user has to specify the 'accuracy_aware_training' section.

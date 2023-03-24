@@ -67,11 +67,11 @@ def add_adjust_padding_nodes(bitwidth_graph: nx.DiGraph, model: NNCFNetwork) -> 
     # pylint:disable=protected-access
 
     NewNodeArgs = namedtuple('NewNodeArgs', ('node_key', 'attr', 'parent_node_key'))
-    nncf_graph = model.get_graph()
+    nncf_graph = model.nncf.get_graph()
     args = []
     for node_key in bitwidth_graph.nodes:
         node = nncf_graph.get_node_by_key(node_key)
-        module = model.get_containing_module(node.node_name)
+        module = model.nncf.get_containing_module(node.node_name)
         if isinstance(module, NNCFConv2d):
             adjust_padding_ops = filter(lambda x: isinstance(x, UpdatePaddingValue), module.pre_ops.values())
             for _ in adjust_padding_ops:

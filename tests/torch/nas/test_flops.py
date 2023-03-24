@@ -128,21 +128,21 @@ def test_multi_elasticity_flops(desc: MultiElasticityTestDesc):
     multi_elasticity_handler = ctrl.multi_elasticity_handler
 
     assert multi_elasticity_handler.count_flops_and_weights_for_active_subnet() == ref_model_stats.supernet
-    model.do_dummy_forward()
+    model.nncf.do_dummy_forward()
 
     multi_elasticity_handler.disable_all()
     multi_elasticity_handler.enable_elasticity(ElasticityDim.KERNEL)
     multi_elasticity_handler.activate_minimum_subnet()
     assert multi_elasticity_handler.count_flops_and_weights_for_active_subnet() == ref_model_stats.kernel_stage
-    model.do_dummy_forward()
+    model.nncf.do_dummy_forward()
 
     multi_elasticity_handler.enable_elasticity(ElasticityDim.DEPTH)
     multi_elasticity_handler.activate_minimum_subnet()
 
     assert multi_elasticity_handler.count_flops_and_weights_for_active_subnet() == ref_model_stats.depth_stage
-    model.do_dummy_forward()
+    model.nncf.do_dummy_forward()
 
     multi_elasticity_handler.enable_elasticity(ElasticityDim.WIDTH)
     multi_elasticity_handler.activate_minimum_subnet()
     assert multi_elasticity_handler.count_flops_and_weights_for_active_subnet() == ref_model_stats.width_stage
-    model.do_dummy_forward()
+    model.nncf.do_dummy_forward()
