@@ -716,7 +716,7 @@ SYNTHETIC_MODEL_DESC_LIST = [
 )
 def test_synthetic_model_quantization(synthetic_model_desc: IModelDesc):
     config = get_basic_quantization_config(input_sample_sizes=synthetic_model_desc.get_input_sample_sizes(),
-                                           input_info=synthetic_model_desc.get_input_info())
+                                           input_info=synthetic_model_desc.input_info)
     register_bn_adaptation_init_args(config)
 
     model = synthetic_model_desc.get_model()
