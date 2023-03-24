@@ -17,23 +17,17 @@ import numpy as np
 import openvino.runtime as ov
 from collections import defaultdict
 
-from nncf.data.dataset import Dataset
-from nncf.common.graph.graph import NNCFGraph
-from nncf.common.graph.transformations.commands import TargetType
-from nncf.common.graph.transformations.layout import TransformationLayout
-from nncf.common.tensor_statistics.aggregator import StatisticPointsContainer
 from nncf.common.tensor_statistics.aggregator import StatisticsAggregator
 from nncf.common.graph.transformations.commands import TargetType
 from nncf.common.graph.transformations.layout import TransformationLayout
 from nncf.common.tensor_statistics.statistic_point import StatisticPointsContainer
 from nncf.common.tensor_statistics.statistic_point import StatisticPoint
 
-from nncf.experimental.openvino_native.graph.transformations.commands import OVOutputInsertionCommand
 from nncf.experimental.openvino_native.tensor import OVNNCFTensor
 from nncf.experimental.common.tensor_statistics.collectors import MergedTensorCollector
 from nncf.experimental.openvino_native.graph.transformations.commands import OVInplaceFnInsertionCommand
+from nncf.experimental.openvino_native.graph.transformations.commands import OVOutputInsertionCommand
 from nncf.experimental.openvino_native.graph.nncf_graph_builder import GraphConverter
-from nncf.experimental.openvino_native.tensor import OVNNCFTensor
 
 
 class OVStatisticsAggregator(StatisticsAggregator):

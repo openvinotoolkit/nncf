@@ -43,7 +43,6 @@ class TemplateTestStatisticsAggregator:
         Please make the same topology with the same names as it
         presented in Openvino test.
         """
-        pass
 
     @abstractmethod
     def get_statistics_aggregator(self, dataset):
@@ -278,6 +277,7 @@ class TemplateTestStatisticsAggregator:
 
         dataset = self.get_dataset(dataset_samples)
         statistics_aggregator = self.get_statistics_aggregator(dataset)
+        # pylint: disable=protected-access
         merged_statistics = statistics_aggregator._get_merged_statistic_points(statistics_points, model)
         assert len(merged_statistics) == 5
         assert len(merged_statistics['split']) == 3

@@ -30,7 +30,6 @@ from nncf.experimental.openvino_native.graph.transformations.commands import OVB
 from nncf.experimental.openvino_native.graph.transformations.commands import OVInplaceFnInsertionCommand
 from nncf.experimental.openvino_native.graph.node_utils import get_inplace_max_op
 from nncf.experimental.openvino_native.graph.node_utils import get_inplace_min_op
-from nncf.experimental.openvino_native.graph.node_utils import get_inplace_reduce_op
 from nncf.experimental.openvino_native.graph.node_utils import get_inplace_batch_mean_op
 from nncf.experimental.openvino_native.graph.node_utils import get_inplace_mean_per_ch
 from nncf.experimental.openvino_native.graph.node_utils import get_result_node_name
@@ -202,7 +201,8 @@ def test_inplace_fn_insertion(test_params: InplaceOpTestCase, target_type, targe
 
     default_output_fn_port = 0
     extra_outputs = get_extra_outputs(model, transformed_model)
-    ref_output_names = [get_result_node_name(get_reduce_node_name(target_node.get_friendly_name(), test_params.name, port_id),
+    ref_output_names = [get_result_node_name(get_reduce_node_name(target_node.get_friendly_name(),
+                                                                  test_params.name, port_id),
                                              default_output_fn_port) for target_node, port_id in target_nodes]
     assert len(extra_outputs) == len(ref_output_names)
     for out_name in extra_outputs:
@@ -230,7 +230,8 @@ def test_split_inplace_fn_insertion(test_params: InplaceOpTestCase):
 
     default_output_fn_port = 0
     extra_outputs = get_extra_outputs(model, transformed_model)
-    ref_output_name = get_result_node_name(get_reduce_node_name(target_node.get_friendly_name(), test_params.name, port_id),
+    ref_output_name = get_result_node_name(get_reduce_node_name(target_node.get_friendly_name(),
+                                                                test_params.name, port_id),
                                            default_output_fn_port)
     assert len(extra_outputs) == 1
     assert ref_output_name in extra_outputs

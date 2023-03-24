@@ -83,8 +83,9 @@ def quantize_model(ov_model, q_params):
     return quantized_model
 
 
-@pytest.fixture(params=[True, False], ids=['inplace', 'out_of_place'])
-def inplace_statistics(request):
+@pytest.fixture(params=[True, False], ids=['inplace', 'out_of_place'],
+                name='inplace_statistics')
+def fixture_inplace_statistics(request):
     return request.param
 
 
@@ -121,7 +122,8 @@ def test_omz_models_fq_scales(model_name, preset, inplace_statistics, tmp_path):
     _ = download_model(model_name, tmp_path)
     model_path = convert_model(model_name, tmp_path)
     model = ov.Core().read_model(model_path)
-    quantized_model = quantize_model(model, {'preset': preset, 'inplace_statistics': inplace_statistics})
+    quantized_model = quantize_model(model, {'preset': preset,
+                                             'inplace_statistics': inplace_statistics})
     nodes = get_fq_nodes_stats_algo(quantized_model)
 
     ref_stats_name = str(Path(model_path).name).rsplit('.', maxsplit=1)[0] + f'_{preset.value}.json'
@@ -141,7 +143,8 @@ REF_NODES_SHAPES = {
                          zip([LinearModel, ConvModel, MatMul2DModel], REF_NODES_SHAPES.values()))
 def test_syntetic_models_fq_shapes(model_creator_func, ref_shapes, inplace_statistics):
     model = model_creator_func()
-    quantized_model = quantize_model(model.ov_model, {'preset': QuantizationPreset.PERFORMANCE, 'inplace_statistics': inplace_statistics})
+    quantized_model = quantize_model(model.ov_model, {'preset': QuantizationPreset.PERFORMANCE,
+                                                      'inplace_statistics': inplace_statistics})
     nodes = get_fq_nodes_stats_algo(quantized_model)
     for node_name, node in nodes.items():
         assert node['input_low'].shape == ref_shapes[node_name]

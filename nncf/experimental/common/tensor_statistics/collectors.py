@@ -273,6 +273,12 @@ class TensorCollector:
         return self._stat_container(**kwargs)
 
     def get_inplace_fn_info(self) -> List[Tuple[Any, int]]:
+        """
+        Returns necessery information to insert inplace operation into graph.
+
+        :returns: nesessery information to insert inplace operation into graph
+            in format of pair of reducer builder and correspondent reducer output port id.
+        """
         retval = []
         for reducer in self._reducers:
             if reducer.inplace:
@@ -280,9 +286,22 @@ class TensorCollector:
         return retval
 
     def any_stat_out_of_place(self) -> bool:
+        """
+        Returns True if any reducer is calculated out of place.
+
+        :returns: True if any reducer is calculated out of place.
+        """
         return any(not reducer.inplace for reducer in self._reducers)
 
-    def replace_aggregator(self, key, aggregator):
+    def replace_aggregator(self, key: Tuple[int, int], aggregator: TensorAggregatorBase) -> None:
+        """
+        Friend method that replaces aggregator instance on equivalent one.
+        Key shoud be valid for for given aggregator and a statistic branch
+        with key should be present in TensorCollector.
+
+        :param key: Statistic branch key.
+        :param aggregator: Aggregator instance to replace existing instance by given key.
+        """
         assert key in self._aggregators
         assert key[1] == hash(aggregator)
         self._aggregators[key] = aggregator
@@ -293,7 +312,18 @@ class TensorCollector:
 
 
 class MergedTensorCollector(TensorCollector):
+    """
+    Tensor collector that merge several tensor collectors in one.
+    Statistics collected by a merged tensor collector automatically available
+    in all tensor collectors that were merged by the merged tensor collector.
+    This works because merged tensor collectors share tensor aggregators instances with
+    the merged tensor collector.
+    """
+
     def __init__(self, tensor_collectors: List[TensorCollector]) -> None:
+        """
+        :param tensor_collectors: Tensor collectors to merge.
+        """
         super().__init__()
         aggregators: Dict[Tuple[int, int], List[Tuple[TensorCollector, TensorAggregatorBase]]] =\
             defaultdict(list)

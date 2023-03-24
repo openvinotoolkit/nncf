@@ -13,12 +13,15 @@
 
 import pytest
 import numpy as np
+from typing import List
 
 from nncf import Dataset
+from nncf.common.graph.transformations.commands import TargetPoint
+from nncf.common.graph.transformations.commands import TargetType
 from nncf.quantization.algorithms.min_max.onnx_backend import ONNXMinMaxAlgoBackend
+
 from nncf.onnx.graph.transformations.commands import ONNXTargetPoint
 from nncf.onnx.statistics.aggregator import ONNXStatisticsAggregator
-from nncf.common.graph.transformations.commands import TargetType
 
 from tests.onnx.models import IdentityConvolutionalModel
 from tests.common.test_statistics_aggregator import TemplateTestStatisticsAggregator
@@ -44,6 +47,12 @@ class TestStatisticsAggregator(TemplateTestStatisticsAggregator):
 
     def get_statistics_aggregator(self, dataset):
         return ONNXStatisticsAggregator(dataset)
+
+    def get_split_concat_backend_model(self):
+        pass
+
+    def get_split_concat_target_points_and_refs(self) -> List[TargetPoint]:
+        pass
 
     def get_dataset(self, samples):
         def transform_fn(data_item):

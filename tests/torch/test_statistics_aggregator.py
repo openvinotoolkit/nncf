@@ -16,9 +16,11 @@ import pytest
 import numpy as np
 import torch
 from torch import nn
+from typing import List
 
 from nncf import Dataset
 from nncf.common.graph.transformations.commands import TargetType
+from nncf.common.graph.transformations.commands import TargetPoint
 from nncf.quantization.algorithms.min_max.torch_backend import PTMinMaxAlgoBackend
 from nncf.torch.statistics.aggregator import PTStatisticsAggregator
 
@@ -54,6 +56,12 @@ class TestStatisticsAggregator(TemplateTestStatisticsAggregator):
         sample = dataset_samples[0].reshape(INPUT_SHAPE[1:])
         conv_w = self.dataset_samples_to_conv_w(np.array(sample))
         return PTIdentityConvModel(conv_w).get_nncf_network()
+
+    def get_split_concat_backend_model(self):
+        pass
+
+    def get_split_concat_target_points_and_refs(self) -> List[TargetPoint]:
+        pass
 
     def get_statistics_aggregator(self, dataset):
         return PTStatisticsAggregator(dataset)

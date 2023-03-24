@@ -11,7 +11,6 @@
  limitations under the License.
 """
 
-from enum import Enum
 import numpy as np
 import openvino.runtime as ov
 from openvino.runtime import opset9 as opset
@@ -56,6 +55,7 @@ class OVModelTransformer(ModelTransformer):
         :param transformation_layout: Transformation commands.
         :return: The new instance of a model with applied transformations.
         """
+        # pylint:disable=too-many-branches
         output_insertion_transformations = []
         fq_nodes_removing_transformations = []
         quantizer_insertion_transformations = []
@@ -228,7 +228,6 @@ class OVModelTransformer(ModelTransformer):
 
         :param transformation: FakeQuantize insertion command.
         :param name_to_node_mapping: Mapping from node name to node instance.
-        :return: None
         """
         fq_params = transformation.quantizer_parameters
         input_low = fq_params.input_low
@@ -313,6 +312,7 @@ class OVModelTransformer(ModelTransformer):
         Applies weight update transformation to the model.
 
         :param transformations: List of the weight update transformations.
+        :returns: Transformed model.
         """
         name_to_node_mapping = OVModelTransformer._get_name_to_node_mapping(model)
         for transformation in transformations:
@@ -360,7 +360,13 @@ class OVModelTransformer(ModelTransformer):
 
     @staticmethod
     def _apply_inplace_operation_insertion(model: ov.Model,
-                                           transformations: OVInplaceFnInsertionCommand):
+                                           transformations: OVInplaceFnInsertionCommand) -> ov.Model:
+        """
+        Applies inplace fn insertion transformation to the model.
+
+        :param transformations: lisf of the OVInplaceFnInsertionCommand.
+        :returns: Transformed model.
+        """
         name_to_node_mapping = OVModelTransformer._get_name_to_node_mapping(model)
         outputs = []
         for transformation in transformations:
@@ -370,7 +376,14 @@ class OVModelTransformer(ModelTransformer):
 
     @staticmethod
     def _insert_inplace_operation(transformation: OVInplaceFnInsertionCommand,
-                                   name_to_node_mapping: Dict[str, ov.Node]) -> None:
+                                  name_to_node_mapping: Dict[str, ov.Node]) -> Tuple[ov.Output, int]:
+        """
+        Inserts operation inplace to a model which name_to_node_mapping is passed.
+
+        :param transformation: Inplace fn insertion command.
+        :param name_to_node_mapping: Mapping from node name to node instance.
+        :returns: Pair with inserted node output and corresponded output port id.
+        """
         transform_type = transformation.target_point.type
 
         node_name = transformation.target_point.target_node_name
@@ -385,5 +398,4 @@ class OVModelTransformer(ModelTransformer):
             output = target_node.input_value(port_id)
             new_node = transformation.inplace_op_fn(output.get_node(), output.get_index())
             return (new_node.output(fn_output_port_id), fn_output_port_id)
-        else:
-            raise RuntimeError(f'Transform type {transform_type} is not supported')
+        raise RuntimeError(f'Transform type {transform_type} is not supported')
