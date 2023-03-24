@@ -44,16 +44,27 @@ def create_venv_with_nncf(tmp_path: Path, package_type: str, venv_type: str, ext
     venv_path = tmp_path / 'venv'
     venv_path.mkdir()
 
-    python_executable_with_venv = f'. {venv_path}/bin/activate && {venv_path}/bin/python'
-    pip_with_venv = f'. {venv_path}/bin/activate && {venv_path}/bin/pip'
+    print(sys.platform)
+
+    if "linux" in sys.platform:
+        python_executable_with_venv = f'. {venv_path}/bin/activate && {venv_path}/bin/python'
+        pip_with_venv = f'. {venv_path}/bin/activate && {venv_path}/bin/pip'
+
+    if "win32" in sys.platform:
+        python_executable_with_venv = f' {venv_path}\\Scripts\\activate && python'
+        pip_with_venv = f' {venv_path}\\Scripts\\activate && python -m pip'
 
     version_string = f'{sys.version_info[0]}.{sys.version_info[1]}'
+
+    print(venv_type)
+
     if venv_type == 'virtualenv':
         subprocess.check_call(f'virtualenv -ppython{version_string} {venv_path}', shell=True)
     elif venv_type == 'venv':
-        subprocess.check_call(f'python{version_string} -m venv {venv_path}', shell=True)
+        subprocess.check_call(f'python -m venv {venv_path}', shell=True)
+
     subprocess.check_call(f'{pip_with_venv} install --upgrade pip', shell=True)
-    subprocess.check_call(f'{pip_with_venv} install wheel', shell=True)
+    subprocess.check_call(f'{pip_with_venv} install --upgrade wheel setuptools==59.5.0', shell=True)
 
     if package_type in ['build_s', 'build_w']:
         subprocess.check_call(f'{pip_with_venv} install build', shell=True)
@@ -67,15 +78,15 @@ def create_venv_with_nncf(tmp_path: Path, package_type: str, venv_type: str, ext
     if package_type == 'pip_pypi':
         run_cmd_line = f'{pip_with_venv} install nncf[{extra_reqs_str}]'
     elif package_type == 'pip_local':
-        run_cmd_line = f'{pip_with_venv} install {PROJECT_ROOT}[{extra_reqs_str}]'
+        run_cmd_line = f'{pip_with_venv} install -e {PROJECT_ROOT}[{extra_reqs_str}]'
     elif package_type == 'pip_e_local':
         run_cmd_line = f'{pip_with_venv} install -e {PROJECT_ROOT}[{extra_reqs_str}]'
     elif package_type == 'pip_git_develop':
-        run_cmd_line = f'{pip_with_venv} install git+{GITHUB_REPO_URL}@develop#egg=nncf[{extra_reqs_str}]'
+        run_cmd_line = f'{pip_with_venv} install -e git+{GITHUB_REPO_URL}@develop#egg=nncf[{extra_reqs_str}]'
     elif package_type == 'build_s':
-        run_cmd_line = f'{python_executable_with_venv} -m build -s'
+        run_cmd_line = f'{python_executable_with_venv} -m build -n -s'
     elif package_type == 'build_w':
-        run_cmd_line = f'{python_executable_with_venv} -m build -w'
+        run_cmd_line = f'{python_executable_with_venv} -m build -n -w'
     else:
         raise RuntimeError(f"Invalid package type: {package_type}")
 
