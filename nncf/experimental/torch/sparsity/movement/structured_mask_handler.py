@@ -28,6 +28,8 @@ from nncf.torch.layers import NNCF_PRUNING_MODULES_DICT
 from nncf.torch.nncf_network import NNCFNetwork
 from nncf.torch.sparsity.base_algo import SparseModuleInfo
 from nncf.experimental.torch.sparsity.movement.layers import MovementSparsifier
+from nncf.experimental.torch.pruning.operations import PT_EXPERIMENTAL_PRUNING_OPERATOR_METATYPES
+from nncf.experimental.common.pruning.nodes_grouping import get_pruning_groups
 
 SUPPORTED_NNCF_MODULES = [NNCFLinear]
 EXPECTED_NODE_LAYER_ATTRS = [LinearLayerAttributes]
@@ -362,10 +364,6 @@ class StructuredMaskHandler:
     def _create_structured_mask_context_groups(
         nncf_network: NNCFNetwork, sparsified_module_info_list: List[SparseModuleInfo]
     ) -> List[StructuredMaskContextGroup]:
-        # TODO: remove local import by resolving circular dependency
-        from nncf.experimental.torch.pruning.operations import PT_EXPERIMENTAL_PRUNING_OPERATOR_METATYPES
-        from nncf.experimental.common.pruning.nodes_grouping import get_pruning_groups
-
         module_vs_sparse_module_info_map = {minfo.module: minfo for minfo in sparsified_module_info_list}
 
         pruning_producing_types = [x.op_func_name for x in NNCF_PRUNING_MODULES_DICT]

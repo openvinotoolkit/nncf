@@ -5,41 +5,30 @@ from typing import List
 import numpy as np
 import pytest
 import torch
+from torch import nn
 
-# import nncf.torch  # TODO: why "import nncf" is not enough for calling patch_torch_operators??
-from nncf.torch import patch_torch_operators
-patch_torch_operators()  # more reliable, since it's not removed as unused
-# TODO: why this import breaks BERT tests???
-#             assert len(output_tensors_shapes) == 1 or len(set(output_tensors_shapes)) <= 1, node.node_name
-#  >           output_tensors_shape = output_tensors_shapes[0]
-#  E           IndexError: list index out of range
-#  need to dump graph, seems like some operation is not wrapped because of order of imports?
-#  ANSWER: gelu is not patched, graph is disjointed and linear has no output shapes, which is not expected.
+from nncf import NNCFConfig
+# NNCF Torch should be imported before transformers in order to patch all operations before they added to some global vars,
+# otherwise test may fail with some error (e.g. IndexError: list index out of range).
+from nncf.torch.layers import NNCF_PRUNING_MODULES_DICT
+from nncf.torch.model_creation import create_nncf_network
+from nncf.experimental.common.pruning.nodes_grouping import MinimalDimensionBlock
+from nncf.experimental.common.pruning.nodes_grouping import PruningNodeGroup
+from nncf.experimental.common.pruning.nodes_grouping import get_pruning_groups
+from nncf.experimental.torch.pruning.operations import PT_EXPERIMENTAL_PRUNING_OPERATOR_METATYPES
 
 from transformers import AutoModelForImageClassification
 from transformers import RobertaConfig
 from transformers import SwinConfig
 from transformers import ViTConfig
-
-
-from torch import nn
 from transformers import AutoModelForAudioClassification
 from transformers import AutoModelForQuestionAnswering
 from transformers import AutoModelForSequenceClassification
 from transformers import BertConfig
 from transformers import Wav2Vec2Config
 
-from nncf import NNCFConfig
-from nncf.experimental.common.pruning.nodes_grouping import MinimalDimensionBlock
-from nncf.experimental.common.pruning.nodes_grouping import PruningNodeGroup
-from nncf.experimental.common.pruning.nodes_grouping import get_pruning_groups
-from nncf.experimental.torch.pruning.operations import PT_EXPERIMENTAL_PRUNING_OPERATOR_METATYPES
-from nncf.torch.layers import NNCF_PRUNING_MODULES_DICT
-from nncf.torch.model_creation import create_nncf_network
 from tests.torch.test_compressed_graph import GeneralModelDesc
 from tests.torch.test_compressed_graph import IModelDesc
-
-
 
 
 class SelfAttention(nn.Module):

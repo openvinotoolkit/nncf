@@ -21,15 +21,15 @@ from typing import List
 from typing import Set
 
 import networkx as nx
+from nncf.torch.nested_objects_traversal import objwalk
 from nncf.common.utils.dot_file_rw import write_dot_graph
-
 from nncf.common.graph.graph import NNCFGraph
 from nncf.common.graph.graph import NNCFNode
 from nncf.common.graph.layer_attributes import ConvolutionLayerAttributes
 from nncf.common.graph.layer_attributes import LinearLayerAttributes
 from nncf.common.pruning.mask_propagation import MaskPropagationAlgorithm
 from nncf.experimental.common.graph.netron import save_for_netron
-from nncf.torch.nested_objects_traversal import objwalk
+
 
 
 class MaskProducer:
