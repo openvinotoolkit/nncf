@@ -44,8 +44,6 @@ def create_venv_with_nncf(tmp_path: Path, package_type: str, venv_type: str, ext
     venv_path = tmp_path / 'venv'
     venv_path.mkdir()
 
-    print(sys.platform)
-
     if "linux" in sys.platform:
         python_executable_with_venv = f'. {venv_path}/bin/activate && {venv_path}/bin/python'
         pip_with_venv = f'. {venv_path}/bin/activate && {venv_path}/bin/pip'
@@ -55,8 +53,6 @@ def create_venv_with_nncf(tmp_path: Path, package_type: str, venv_type: str, ext
         pip_with_venv = f' {venv_path}\\Scripts\\activate && python -m pip'
 
     version_string = f'{sys.version_info[0]}.{sys.version_info[1]}'
-
-    print(venv_type)
 
     if venv_type == 'virtualenv':
         subprocess.check_call(f'virtualenv -ppython{version_string} {venv_path}', shell=True)
@@ -82,7 +78,7 @@ def create_venv_with_nncf(tmp_path: Path, package_type: str, venv_type: str, ext
     elif package_type == 'pip_e_local':
         run_cmd_line = f'{pip_with_venv} install -e {PROJECT_ROOT}[{extra_reqs_str}]'
     elif package_type == 'pip_git_develop':
-        run_cmd_line = f'{pip_with_venv} install -e git+{GITHUB_REPO_URL}@develop#egg=nncf[{extra_reqs_str}]'
+        run_cmd_line = f'{pip_with_venv} install git+{GITHUB_REPO_URL}@develop#egg=nncf[{extra_reqs_str}]'
     elif package_type == 'build_s':
         run_cmd_line = f'{python_executable_with_venv} -m build -n -s'
     elif package_type == 'build_w':
