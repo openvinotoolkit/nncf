@@ -86,17 +86,21 @@ def test_duplicated_statistics_are_merged():
     aggregator_b = DummyTensorAggregator(100)
     collector.register_statistic_branch('D', reducer, aggregator_a)
     collector.register_statistic_branch('E', reducer_a, aggregator_b)
+    reducer_inplace = DummyTensorReducer('Dummy_inplace', True)
+    aggregator_for_inplace = DummyTensorAggregator(4)
+    collector.register_statistic_branch('F', reducer_inplace, aggregator_for_inplace)
 
     # Check reducers and aggregators are merged
-    assert len(collector._reducers) == 2
-    assert len(collector._aggregators) == 3
+    assert len(collector._reducers) == 3
+    assert len(collector._aggregators) == 4
     assert collector.num_samples == 100
 
     output_info = collector.get_output_info(None, None)
     # Check output info
-    assert sorted(output_info) == [('DummyTensorReducer', 'Dummy'), ('DummyTensorReducerA', 'A')]
+    assert sorted(output_info) == sorted([(hash(reducer_inplace), 'Dummy_inplace'),
+                                         (hash(reducer_a), 'A'), (hash(reducer), 'Dummy')])
 
-    outputs = {'Dummy': np.array(5), 'A': np.array(0)}
+    outputs = {'Dummy': np.array(5), 'A': np.array(0), 'Dummy_inplace': np.array(6)}
     collector.register_inputs({reducer: outputs[name] for reducer, name in output_info})
 
     # Check aggregators recieved inputs as expected
@@ -105,30 +109,35 @@ def test_duplicated_statistics_are_merged():
         assert aggregator._collected_samples == 0
     assert aggregator_a._collected_samples == 1
     assert aggregator_b._collected_samples == 1
+    assert aggregator_for_inplace._collected_samples == 1
 
     statistics = collector.get_statistics()
 
     # Check aggregators recieved correct inputs
-    assert len(statistics) == 5
+    assert len(statistics) == 6
     for k in 'ABC':
         assert statistics[k] == np.array(5)
     assert statistics['D'] == np.array(5)
     assert statistics['E'] == np.array(0)
+    assert statistics['F'] == np.array(6)
 
 
 def test_inplace_param():
     inplace_op = lambda: 0
     collector = TensorCollector()
+    reducer_out_of_place = DummyTensorReducer('Dummy')
     reducer_inplace = DummyTensorReducer('Dummy', True, inplace_op)
-    reducer_out_of_place = DummyTensorReducerA('Dummy')
+    reducer_other = DummyTensorReducerA('Dummy')
     aggregator_inplace = DummyTensorAggregator(5)
     aggregator_out_of_place = DummyTensorAggregator(5)
+    aggregator_other = DummyTensorAggregator(5)
 
-    collector.register_statistic_branch('inplace', reducer_inplace, aggregator_inplace)
     collector.register_statistic_branch('out_of_place', reducer_out_of_place, aggregator_out_of_place)
-    assert len(collector._reducers) == 2
-    assert len(collector._aggregators) == 2
-    assert collector.get_inplace_fn_info()[0] == inplace_op
+    collector.register_statistic_branch('inplace', reducer_inplace, aggregator_inplace)
+    collector.register_statistic_branch('other', reducer_other, aggregator_other)
+    assert len(collector._reducers) == 3
+    assert len(collector._aggregators) == 3
+    assert collector.get_inplace_fn_info()[0][0] == inplace_op
     assert collector.any_stat_out_of_place()
 
 

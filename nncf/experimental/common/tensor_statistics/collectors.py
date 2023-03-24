@@ -216,17 +216,17 @@ class TensorCollector:
             self._aggregators[key] = aggregator
         self._stat_container_kwargs_map[container_key] = key
 
-    def get_output_info(self, target_node_name: str, port_id: int) -> List[Tuple[str, str]]:
+    def get_output_info(self, target_node_name: str, port_id: int) -> List[Tuple[int, str]]:
         """
         Returns list of pairs of reducers names and correspondent output names.
 
         :param target_node_name: Target node name to assemble output name.
         :param port_id: Target node specific port id to assemble output name.
-        :returns: List of pairs of reducers names and correspondent output names.
+        :returns: List of pairs of reducers hashes and correspondent output names.
         """
         retval = []
         for reducer in self._reducers:
-            retval.append((reducer.name(), reducer.get_output_name(target_node_name, port_id)))
+            retval.append((hash(reducer), reducer.get_output_name(target_node_name, port_id)))
         return retval
 
     def register_inputs(self, inputs: Dict[str, TensorType]) -> None:
@@ -241,9 +241,9 @@ class TensorCollector:
 
         reduced_inputs = {}
         for reducer in self._reducers:
-            input_ = inputs[reducer.name()]
-            reduced_input = reducer(input_)
-            reduced_inputs[hash(reducer)] = reduced_input
+            reducer_hash = hash(reducer)
+            input_ = inputs[reducer_hash]
+            reduced_inputs[reducer_hash] = reducer(input_)
 
         for (reducer_hash, _), aggregator, in self._aggregators.items():
             aggregator.register_reduced_input(reduced_inputs[reducer_hash])
