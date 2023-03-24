@@ -25,8 +25,9 @@ from nncf.common.graph import NNCFGraph
 from nncf.common.graph import NNCFNode
 from nncf.common.quantization.quantizer_removal import find_quantizer_nodes_to_cut
 from nncf.common.quantization.quantizer_removal import revert_operations_to_floating_point_precision
+from nncf.common.logging import nncf_logger
+from nncf.common.utils.helpers import timer
 from nncf.quantization.algorithms.accuracy_control.backend import AccuracyControlAlgoBackend
-from nncf.data.dataset import DataProvider
 
 
 TModel = TypeVar('TModel')
@@ -141,11 +142,15 @@ class Ranker(ABC):
         """
         # See `Ranker.__init__()` to understand why we should do this.
         if self._ref_values is None:
-            self._ref_values = self._collect_values_for_each_item(initial_model,
-                                                                  self._get_data_items())
+            nncf_logger.info('Collecting metrics for each data item using an initial model')
+            with timer():
+                self._ref_values = self._collect_values_for_each_item(initial_model,
+                                                                    self._get_data_items())
 
-        approx_values = self._collect_values_for_each_item(quantized_model,
-                                                           self._get_data_items())
+        nncf_logger.info('Collecting metrics for each data item using a quantized model')
+        with timer():
+            approx_values = self._collect_values_for_each_item(quantized_model,
+                                                            self._get_data_items())
 
         # Create a subset of data items that will be used to rank groups of quantizers.
         scores = [
@@ -156,17 +161,19 @@ class Ranker(ABC):
         # to save all ranking data items in memory and don't read them again.
         ranking_data_items = self._get_data_items(ranking_subset_indices)
 
-        # Calculate ranking score for groups of quantizers.
-        ranking_scores = []  # ranking_scores[i] is the ranking score for groups_to_rank[i]
-        for current_group in groups_to_rank:
-            modified_model = revert_operations_to_floating_point_precision(current_group.operations,
-                                                                           current_group.quantizers,
-                                                                           quantized_model,
-                                                                           quantized_model_graph)
-            # Calculate the ranking score for the current group of quantizers.
-            ranking_score = self._calculate_ranking_score(modified_model, ranking_data_items, ranking_subset_indices)
+        nncf_logger.info('Calculating ranking score for groups of quantizers')
+        with timer():
+            # Calculate ranking score for groups of quantizers.
+            ranking_scores = []  # ranking_scores[i] is the ranking score for groups_to_rank[i]
+            for current_group in groups_to_rank:
+                modified_model = revert_operations_to_floating_point_precision(current_group.operations,
+                                                                            current_group.quantizers,
+                                                                            quantized_model,
+                                                                            quantized_model_graph)
+                # Calculate the ranking score for the current group of quantizers.
+                ranking_score = self._calculate_ranking_score(modified_model, ranking_data_items, ranking_subset_indices)
 
-            ranking_scores.append(float(ranking_score))
+                ranking_scores.append(float(ranking_score))
 
         # Rank groups.
         ranked_groups = [
@@ -291,13 +298,12 @@ class MetricBasedRanker(Ranker):
         :param data_items: Data items.
         :return: A list that contains a metric for each item from the dataset.
         """
+        model_for_inference = self._algo_backend.prepare_for_inference(model)
+
         metrics = []
-        # pylint: disable=protected-access
-        indexed_items = zip(data_items._indices, data_items) if data_items._indices else enumerate(data_items)
-        for data_item_idx, data_item in indexed_items:
-            data_provider = DataProvider([data_item], None, indices=[data_item_idx])
-            metric_value = self._validation_fn(self._algo_backend.prepare_for_inference(model), data_provider)
-            metrics.append(metric_value)
+        for data_item in data_items:
+            value = self._validation_fn(model_for_inference, [data_item])
+            metrics.append(value)
 
         return metrics
 

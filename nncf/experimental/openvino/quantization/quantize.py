@@ -27,6 +27,7 @@ from nncf.parameters import TargetDevice
 from nncf.quantization.algorithms.accuracy_control.algorithm import get_algo_backend
 from nncf.quantization.algorithms.accuracy_control.algorithm import QuantizationAccuracyRestorer
 from nncf.openvino.quantization.quantize import quantize_impl
+from nncf.common.utils.helpers import timer
 
 
 def _match_const_nodes_names(initial_model: ov.Model, quantized_model: ov.Model) -> None:
@@ -46,6 +47,10 @@ def _match_const_nodes_names(initial_model: ov.Model, quantized_model: ov.Model)
 
     for initial_name in initial_name_to_const_map:
         num_matches = 0
+
+        if 'compressed' in initial_name:
+            initial_name = initial_name[:initial_name.rfind('compressed')-1]
+
         for modified_name, const_op in modified_name_to_const_map.items():
             if modified_name.startswith(initial_name):
                 num_matches += 1
@@ -82,12 +87,16 @@ def quantize_with_accuracy_control(model: ov.Model,
     backend = get_backend(model)
     algo_backend = get_algo_backend(backend)
 
-    initial_metric = validation_fn(algo_backend.prepare_for_inference(model),
-                                   validation_dataset.get_data())
+    nncf_logger.info('Validation of initial model was started')
+    with timer():
+        initial_metric = validation_fn(algo_backend.prepare_for_inference(model),
+                                       validation_dataset.get_data())
     nncf_logger.info(f'Metric of initial model: {initial_metric}')
 
-    quantized_metric = validation_fn(algo_backend.prepare_for_inference(quantized_model),
-                                     validation_dataset.get_data())
+    nncf_logger.info('Validation of quantized model was started')
+    with timer():
+        quantized_metric = validation_fn(algo_backend.prepare_for_inference(quantized_model),
+                                         validation_dataset.get_data())
     nncf_logger.info(f'Metric of quantized model: {quantized_metric}')
 
     accuracy_aware_loop = QuantizationAccuracyRestorer(algo_backend,

@@ -14,10 +14,7 @@
 import json
 import os
 from argparse import ArgumentParser
-from typing import Optional, TypeVar, List, Iterable, Any
-from collections import OrderedDict
-import multiprocessing
-import numpy as np
+from typing import Optional, TypeVar, List
 
 import openvino.runtime as ov
 from openvino.tools.accuracy_checker.evaluators.quantization_model_evaluator import \
@@ -36,9 +33,7 @@ from nncf.parameters import (
     ModelType,
     TargetDevice
 )
-from nncf.experimental.openvino_native.quantization.quantize import \
-    quantize_with_accuracy_control as native_quantize_with_accuracy_control
-from nncf.quantization.algorithms.accuracy_control.openvino_backend import OVAccuracyControlAlgoBackend
+from tests.openvino.tools.accuracy_control_helpers import quantize_model_with_accuracy_control
 
 
 TModel = TypeVar('TModel')
@@ -304,96 +299,6 @@ def quantize_model(xml_path, bin_path, accuracy_checcker_config,
                                           **quantization_parameters)
     else:
         raise NotImplementedError()
-    return quantized_model
-
-
-class ACValidationFunction:
-    def __init__(self, model_evaluator, metric_name: str, requests_number: int = 1):
-        self._model_evaluator = model_evaluator
-        self._metric_name = metric_name
-        self._requests_number = requests_number
-
-    def __call__(self, model: ov.Model, validation_dataset: Iterable[Any]) -> float:
-        self._model_evaluator.reset()  # Reset model evaluator metrics
-        self._model_evaluator.load_network([{'model': model}])
-
-        indices = validation_dataset._indices
-
-        kwargs = {
-            'subset': indices,
-            'calculate_metrics': True,
-            'check_progress': True,
-        }
-
-        if self._requests_number == 1:
-            self._model_evaluator.process_dataset(**kwargs)
-        else:
-            ACValidationFunction._set_requests_number(kwargs, self._requests_number)
-            self._model_evaluator.process_dataset_async(*kwargs)
-
-        computed_metrics = self._model_evaluator.compute_metrics()
-        metrics = OrderedDict()
-        for metric in computed_metrics:
-            if metric.meta.get('calculate_mean', True):
-                metric_value = np.mean(metric.evaluated_value)
-            else:
-                metric_value = metric.evaluated_value[0]
-            metrics[metric.name] = metric_value
-
-        return metrics[self._metric_name]
-
-    @staticmethod
-    def _set_requests_number(params, requests_number):
-        if requests_number:
-            params['nreq'] = np.clip(requests_number, 1, multiprocessing.cpu_count())
-            if params['nreq'] != requests_number:
-                nncf.nncf_logger.warning('Number of requests {} is out of range [1, {}]. Will be used {}.'
-                                         .format(requests_number, multiprocessing.cpu_count(), params['nreq']))
-
-
-class OVAccuracyControlAlgoBackendVal(OVAccuracyControlAlgoBackend):
-    @staticmethod
-    def prepare_for_inference(model: ov.Model) -> ov.Model:
-        return model
-
-
-def quantize_model_with_accuracy_control(xml_path, bin_path, accuracy_checcker_config,
-                                         quantization_impl, quantization_parameters):
-    ov_model = ov.Core().read_model(model=xml_path, weights=bin_path)
-    model_evaluator = create_model_evaluator(accuracy_checcker_config)
-    model_evaluator.load_network([{'model': ov_model}])
-    model_evaluator.select_dataset('')
-
-    def transform_fn(data_item):
-        _, batch_annotation, batch_input, _ = data_item
-        filled_inputs, _, _ = model_evaluator._get_batch_input(
-            batch_input, batch_annotation)
-        return filled_inputs[0]
-
-    metric_name = accuracy_checcker_config['models'][0]['datasets'][0]['metrics'][0].get('name', None)
-    if metric_name is None:
-        metric_name = accuracy_checcker_config['models'][0]['datasets'][0]['metrics'][0]['type']
-
-    validation_fn = ACValidationFunction(model_evaluator, metric_name)
-    calibration_dataset = nncf.Dataset(model_evaluator.dataset, transform_fn)
-    validation_dataset = nncf.Dataset(model_evaluator.dataset, transform_fn)
-
-    quantization_parameters['algo_backend'] = OVAccuracyControlAlgoBackendVal()
-
-    if quantization_impl == 'pot':
-        raise NotImplementedError('Accuracy Checker not supported for POT quantize_with_accuracy_control')
-
-    if quantization_impl == 'native':
-        quantized_model = native_quantize_with_accuracy_control(ov_model,
-                                                                calibration_dataset,
-                                                                validation_dataset,
-                                                                validation_fn,
-                                                                **quantization_parameters)
-    else:
-        raise NotImplementedError()
-
-    del quantization_parameters['algo_backend']
-
     return quantized_model
 
 
