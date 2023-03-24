@@ -72,7 +72,7 @@ def get_bias_value(node_with_bias: NNCFNode, nncf_graph: NNCFGraph, model: ov.Mo
     return get_const_value(ov_bias_constant)
 
 
-def get_weight_value(node_with_weight: NNCFNode, nncf_graph: NNCFGraph, model: ov.Model, port_id: int) -> np.ndarray:
+def get_weight_value(node_with_weight: NNCFNode, model: ov.Model, port_id: int) -> np.ndarray:
     """
     Returns a weight value for the node with weight.
 
@@ -82,12 +82,9 @@ def get_weight_value(node_with_weight: NNCFNode, nncf_graph: NNCFGraph, model: o
     :param port_id: The input port ID to get weight input.
     :return: The weight value.
     """
-    node = nncf_graph.get_input_edges(node_with_weight)[port_id].from_node
-    if node.metatype == OVConvertMetatype:
-        node = nncf_graph.get_input_edges(node)[0].from_node
-
+    const_op_friendly_name = node_with_weight.layer_attributes.const_attrs[port_id]['name']
     friendly_name_to_op_map = {op.get_friendly_name(): op for op in model.get_ops()}
-    const_op = friendly_name_to_op_map[node.node_name]
+    const_op = friendly_name_to_op_map[const_op_friendly_name]
     weight_tensor = get_const_value(const_op)
     return weight_tensor
 

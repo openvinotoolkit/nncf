@@ -265,7 +265,7 @@ class QuantizationAccuracyRestorer:
             if algo_backend.is_node_with_weight(node):
                 node_with_weight = quantized_model_graph.get_node_by_name(node.node_name)
                 for port_id in algo_backend.get_weight_tensor_port_ids(node_with_weight):
-                    weight = algo_backend.get_weight_value(node, initial_model_graph, initial_model, port_id)
+                    weight = algo_backend.get_weight_value(node, initial_model, port_id)
                     node_with_weight.data[f'original_weight.{port_id}'] = weight
 
     @staticmethod

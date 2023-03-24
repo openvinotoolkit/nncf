@@ -288,10 +288,14 @@ class OVModelTransformer(ModelTransformer):
                          const_value: np.ndarray) -> None:
         const_port = node_with_const.input(const_port_id)
         const_node = node_with_const.input_value(const_port_id).get_node()
-        if const_node.get_type_name() == 'Convert':
+
+        while const_node.get_type_name() != 'Constant':
             const_port = const_node.input(0)
             const_node = const_node.input_value(0).get_node()
-        assert const_node.get_type_name() == 'Constant'
+
+        if const_node.get_type_name() != 'Constant':
+            raise ValueError(f'Unexpected type of node: {const_node.get_type_name()}. '
+                             f'Name: {const_node.get_friendly_name()}')
 
         const_shape = const_node.get_data().shape
         const_value = np.reshape(const_value, const_shape)

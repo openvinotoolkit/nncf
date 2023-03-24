@@ -20,7 +20,7 @@ from nncf.common.graph.layer_attributes import Dtype
 from nncf.common.graph.operator_metatypes import OperatorMetatype
 from nncf.common.graph.operator_metatypes import UnknownMetatype
 
-from nncf.experimental.openvino_native.graph.metatypes.openvino_metatypes import OVConvertMetatype
+from nncf.experimental.openvino_native.graph.metatypes.openvino_metatypes import OVConstantMetatype
 from nncf.experimental.openvino_native.graph.metatypes.openvino_metatypes import OV_OPERATOR_METATYPES
 from nncf.experimental.openvino_native.graph.metatypes.openvino_metatypes import METATYPES_WITH_CONST_PORT_ID
 from nncf.experimental.openvino_native.graph.metatypes.openvino_metatypes import OVConvolutionBackpropDataMetatype
@@ -222,8 +222,16 @@ def get_operation_const_op(operation: ov.Node, const_port_id: int) -> ov.Node:
     :param const_port_id: Given constant port id.
     :returns: Constant node of given operation placed on given const port id.
     """
-    const_node = operation.input_value(const_port_id).get_node()
-    metatype = OV_OPERATOR_METATYPES.get_operator_metatype_by_op_name(const_node.get_type_name())
-    if metatype == OVConvertMetatype:
-        const_node = const_node.input_value(0).get_node()
-    return const_node
+    node = operation.input_value(const_port_id).get_node()
+
+    # There are several cases here
+    # (Constant) -> (Operation)
+    # (Constant) -> (Convert) -> (Operation)
+    # (Constant) -> (Convert) -> (FakeQuantize) -> (Operation)
+    # (Constant) -> (Convert) -> (FakeQuantize) -> (Reshape) -> (Operation)
+    #  and etc. We need properly find the constant node. So we start with
+    # `node` and traverse up until the constant node is not found.
+    while OV_OPERATOR_METATYPES.get_operator_metatype_by_op_name(node.get_type_name()) != OVConstantMetatype:
+        node = node.input_value(0).get_node()
+
+    return node

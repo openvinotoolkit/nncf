@@ -48,14 +48,18 @@ def _match_const_nodes_names(initial_model: ov.Model, quantized_model: ov.Model)
     for initial_name in initial_name_to_const_map:
         num_matches = 0
 
-        if 'compressed' in initial_name:
-            initial_name = initial_name[:initial_name.rfind('compressed')-1]
+        name_to_search = initial_name
+        if 'compressed' in name_to_search:
+            name_to_search = name_to_search[:name_to_search.rfind('compressed')-1]
 
         for modified_name, const_op in modified_name_to_const_map.items():
-            if modified_name.startswith(initial_name):
+            if modified_name.startswith(name_to_search):
                 num_matches += 1
                 const_op.set_friendly_name(initial_name)
-        assert num_matches == 1
+
+        if num_matches != 1:
+            raise RuntimeError('Unexpected Behavior: number of matches greater than 1\n'
+                               f'num_matches: {num_matches}, name: {initial_name}')
 
 
 def quantize_with_accuracy_control(model: ov.Model,
