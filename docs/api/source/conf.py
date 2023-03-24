@@ -2,7 +2,7 @@
 #
 # For the full list of built-in configuration values, see the documentation:
 # https://www.sphinx-doc.org/en/master/usage/configuration.html
-
+import inspect
 # -- Project information -----------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#project-information
 import os
@@ -25,15 +25,17 @@ autosummary_generate = True  # Turn on sphinx.ext.autosummary
 templates_path = ['_templates']
 exclude_patterns = []
 
-def skip_util_classes(app, what, name, obj, skip, options):
-    if hasattr(obj, 'attributes'):
-        attr_names = [x.name for x in obj.attributes]
-        if "_nncf_api_marker" in attr_names:
-           return skip
+module_fqn_with_api_fns_memo = set()
+
+def skip_non_api(app, what, name, obj, skip, options):
+    if what == "module":
+        objs = inspect.getmembers(obj)
+    if hasattr(obj, "_nncf_api_marker"):
+        return False
     return True
 
-# def setup(sphinx):
-#    sphinx.connect("autodoc-skip-member", skip_util_classes)
+def setup(sphinx):
+   sphinx.connect("autodoc-skip-member", skip_non_api)
 
 # -- Options for HTML output -------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#options-for-html-output

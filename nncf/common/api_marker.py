@@ -6,3 +6,4 @@ class api:
 
     def __call__(self, obj):
         setattr(obj, api.API_MARKER_ATTR, True)
+        return obj

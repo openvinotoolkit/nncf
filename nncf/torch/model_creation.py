@@ -23,6 +23,7 @@ from torch.distributed import barrier
 from torch.nn import Module
 
 from nncf.api.compression import CompressionAlgorithmController
+from nncf.common.api_marker import api
 from nncf.common.compression import BaseCompressionAlgorithmController as BaseController
 from nncf.common.logging import nncf_logger
 from nncf.common.utils.debug import set_debug_log_dir
@@ -131,7 +132,7 @@ def create_compressed_model(model: Module,
     synchronize_all_processes_in_distributed_mode()
     return compression_ctrl, compressed_model
 
-
+@api()
 def create_nncf_network(model: torch.nn.Module,
                         config: NNCFConfig,
                         dummy_forward_fn: Callable[[Module], Any] = None,
