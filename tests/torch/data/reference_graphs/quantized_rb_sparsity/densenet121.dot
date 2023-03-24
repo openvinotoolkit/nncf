@@ -966,9 +966,9 @@ strict digraph  {
 "964 DenseNet/Sequential[dense4]/Bottleneck[15]/cat_0" [id=964, type=cat];
 "965 DenseNet/NNCFBatchNorm2d[bn]/batch_norm_0" [id=965, type=batch_norm];
 "966 DenseNet/relu_0" [id=966, type=relu];
-"967 DenseNet/SymmetricQuantizer/symmetric_quantize_0" [id=967, type=symmetric_quantize];
+"967 DenseNet/NNCFNetworkInterface[_nncf]/ModuleDict[external_quantizers]/SymmetricQuantizer[DenseNet/relu_0|OUTPUT]/symmetric_quantize_0" [id=967, type=symmetric_quantize];
 "968 DenseNet/avg_pool2d_0" [id=968, type=avg_pool2d];
-"969 DenseNet/SymmetricQuantizer/symmetric_quantize_1" [id=969, type=symmetric_quantize];
+"969 DenseNet/NNCFNetworkInterface[_nncf]/ModuleDict[external_quantizers]/SymmetricQuantizer[DenseNet/avg_pool2d_0|OUTPUT]/symmetric_quantize_0" [id=969, type=symmetric_quantize];
 "970 DenseNet/view_0" [id=970, type=view];
 "971 DenseNet/NNCFLinear[linear]/ModuleDict[pre_ops]/UpdateWeight[0]/RBSparsifyingWeight[op]/calc_rb_binary_mask_0" [id=971, type=calc_rb_binary_mask];
 "972 DenseNet/NNCFLinear[linear]/ModuleDict[pre_ops]/UpdateWeight[0]/RBSparsifyingWeight[op]/apply_binary_mask_0" [id=972, type=apply_binary_mask];
@@ -1999,10 +1999,10 @@ strict digraph  {
 "963 DenseNet/Sequential[dense4]/Bottleneck[15]/NNCFConv2d[conv2]/SymmetricQuantizer/symmetric_quantize_0" -> "964 DenseNet/Sequential[dense4]/Bottleneck[15]/cat_0";
 "964 DenseNet/Sequential[dense4]/Bottleneck[15]/cat_0" -> "965 DenseNet/NNCFBatchNorm2d[bn]/batch_norm_0";
 "965 DenseNet/NNCFBatchNorm2d[bn]/batch_norm_0" -> "966 DenseNet/relu_0";
-"966 DenseNet/relu_0" -> "967 DenseNet/SymmetricQuantizer/symmetric_quantize_0";
-"967 DenseNet/SymmetricQuantizer/symmetric_quantize_0" -> "968 DenseNet/avg_pool2d_0";
-"968 DenseNet/avg_pool2d_0" -> "969 DenseNet/SymmetricQuantizer/symmetric_quantize_1";
-"969 DenseNet/SymmetricQuantizer/symmetric_quantize_1" -> "970 DenseNet/view_0";
+"966 DenseNet/relu_0" -> "967 DenseNet/NNCFNetworkInterface[_nncf]/ModuleDict[external_quantizers]/SymmetricQuantizer[DenseNet/relu_0|OUTPUT]/symmetric_quantize_0";
+"967 DenseNet/NNCFNetworkInterface[_nncf]/ModuleDict[external_quantizers]/SymmetricQuantizer[DenseNet/relu_0|OUTPUT]/symmetric_quantize_0" -> "968 DenseNet/avg_pool2d_0";
+"968 DenseNet/avg_pool2d_0" -> "969 DenseNet/NNCFNetworkInterface[_nncf]/ModuleDict[external_quantizers]/SymmetricQuantizer[DenseNet/avg_pool2d_0|OUTPUT]/symmetric_quantize_0";
+"969 DenseNet/NNCFNetworkInterface[_nncf]/ModuleDict[external_quantizers]/SymmetricQuantizer[DenseNet/avg_pool2d_0|OUTPUT]/symmetric_quantize_0" -> "970 DenseNet/view_0";
 "970 DenseNet/view_0" -> "974 DenseNet/NNCFLinear[linear]/linear_0";
 "971 DenseNet/NNCFLinear[linear]/ModuleDict[pre_ops]/UpdateWeight[0]/RBSparsifyingWeight[op]/calc_rb_binary_mask_0" -> "972 DenseNet/NNCFLinear[linear]/ModuleDict[pre_ops]/UpdateWeight[0]/RBSparsifyingWeight[op]/apply_binary_mask_0";
 "972 DenseNet/NNCFLinear[linear]/ModuleDict[pre_ops]/UpdateWeight[0]/RBSparsifyingWeight[op]/apply_binary_mask_0" -> "973 DenseNet/NNCFLinear[linear]/ModuleDict[pre_ops]/UpdateWeight[1]/SymmetricQuantizer[op]/symmetric_quantize_0";

@@ -73,7 +73,7 @@ def check_onnx_outputs(ctrl, model, path_to_onnx):
     model.eval()
     device = get_model_device(model)
     ctrl.export_model(path_to_onnx)
-    input_sizes = model.get_nncf_wrapped_model().INPUT_SIZE
+    input_sizes = model.INPUT_SIZE
     torch_input = torch.ones(input_sizes).to(device)
     np_input = np.ones(input_sizes)
     with torch.no_grad():

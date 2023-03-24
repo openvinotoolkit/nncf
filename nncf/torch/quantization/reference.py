@@ -25,6 +25,11 @@ class ReferenceQuantize:
         else:
             raise RuntimeError("Unknown backend for ReferenceQuantize")
 
+    def _astype(self, tensor: GeneralizedTensor, dtype) -> GeneralizedTensor:
+        if self.backend is np:
+            return tensor.astype(dtype)
+        return tensor.type(dtype)
+
     def forward(self,
                 input_: GeneralizedTensor,
                 input_low: GeneralizedTensor,
@@ -48,11 +53,15 @@ class ReferenceQuantize:
                  output: GeneralizedTensor,
                  level_low: int,
                  level_high: int,
-                 range_sign: int) -> List[GeneralizedTensor]:
-        mask_hi = (input_ > (input_low + input_range)).astype(input_.dtype)
-        mask_lo = (input_ < input_low).astype(input_.dtype)
+                 is_asymmetric: bool = False) -> List[GeneralizedTensor]:
+        # is_asymmetric is unused, present only to correspond to the CPU signature of calling "backward"
+        mask_hi = (input_ > (input_low + input_range))
+        mask_hi = self._astype(mask_hi, input_.dtype)
+        mask_lo = (input_ < input_low)
+        mask_lo = self._astype(mask_lo, input_.dtype)
 
         mask_in = 1 - mask_hi - mask_lo
+        range_sign = np.sign(input_range)
         err = (output - input_) * np.reciprocal(input_range * range_sign)
         grad_range = grad_output * (err * mask_in + range_sign * (level_low / level_high) * mask_lo + mask_hi)
         grad_range = sum_like(grad_range, input_range)

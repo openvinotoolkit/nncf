@@ -70,9 +70,9 @@ strict digraph  {
 "68 SmallModel/NNCFConv2d[conv_output]/conv2d_0" [id=68, type=conv2d];
 "69 SmallModel/NNCFConv2d[conv_output]/AsymmetricQuantizer/asymmetric_quantize_0" [id=69, type=asymmetric_quantize];
 "70 SmallModel/__mul___0" [id=70, type=__mul__];
-"71 SmallModel/AsymmetricQuantizer/asymmetric_quantize_0" [id=71, type=asymmetric_quantize];
+"71 SmallModel/NNCFNetworkInterface[_nncf]/ModuleDict[external_quantizers]/AsymmetricQuantizer[SmallModel/__mul___0|OUTPUT]/asymmetric_quantize_0" [id=71, type=asymmetric_quantize];
 "72 SmallModel/add_0" [id=72, type=add];
-"73 SmallModel/AsymmetricQuantizer/asymmetric_quantize_1" [id=73, type=asymmetric_quantize];
+"73 SmallModel/NNCFNetworkInterface[_nncf]/ModuleDict[external_quantizers]/AsymmetricQuantizer[SmallModel/add_0|OUTPUT]/asymmetric_quantize_0" [id=73, type=asymmetric_quantize];
 "74 /nncf_model_output_0" [id=74, type=nncf_model_output];
 "0 /nncf_model_input_0" -> "1 AsymmetricQuantizer/asymmetric_quantize_0";
 "1 AsymmetricQuantizer/asymmetric_quantize_0" -> "13 SmallModel/NNCFConv2d[conv_input]/conv2d_0";
@@ -153,8 +153,8 @@ strict digraph  {
 "67 SmallModel/NNCFConv2d[conv_output]/ModuleDict[pre_ops]/UpdateWeight[0]/AsymmetricQuantizer[op]/asymmetric_quantize_0" -> "68 SmallModel/NNCFConv2d[conv_output]/conv2d_0";
 "68 SmallModel/NNCFConv2d[conv_output]/conv2d_0" -> "69 SmallModel/NNCFConv2d[conv_output]/AsymmetricQuantizer/asymmetric_quantize_0";
 "69 SmallModel/NNCFConv2d[conv_output]/AsymmetricQuantizer/asymmetric_quantize_0" -> "70 SmallModel/__mul___0";
-"70 SmallModel/__mul___0" -> "71 SmallModel/AsymmetricQuantizer/asymmetric_quantize_0";
-"71 SmallModel/AsymmetricQuantizer/asymmetric_quantize_0" -> "72 SmallModel/add_0";
-"72 SmallModel/add_0" -> "73 SmallModel/AsymmetricQuantizer/asymmetric_quantize_1";
-"73 SmallModel/AsymmetricQuantizer/asymmetric_quantize_1" -> "74 /nncf_model_output_0";
+"70 SmallModel/__mul___0" -> "71 SmallModel/NNCFNetworkInterface[_nncf]/ModuleDict[external_quantizers]/AsymmetricQuantizer[SmallModel/__mul___0|OUTPUT]/asymmetric_quantize_0";
+"71 SmallModel/NNCFNetworkInterface[_nncf]/ModuleDict[external_quantizers]/AsymmetricQuantizer[SmallModel/__mul___0|OUTPUT]/asymmetric_quantize_0" -> "72 SmallModel/add_0";
+"72 SmallModel/add_0" -> "73 SmallModel/NNCFNetworkInterface[_nncf]/ModuleDict[external_quantizers]/AsymmetricQuantizer[SmallModel/add_0|OUTPUT]/asymmetric_quantize_0";
+"73 SmallModel/NNCFNetworkInterface[_nncf]/ModuleDict[external_quantizers]/AsymmetricQuantizer[SmallModel/add_0|OUTPUT]/asymmetric_quantize_0" -> "74 /nncf_model_output_0";
 }

@@ -104,8 +104,8 @@ def test_can_restore_binary_mask_on_magnitude_quant_algo_resume(tmp_path, use_da
 
     load_state(const_sparse_model, sparse_model.state_dict())
 
-    op = const_sparse_model.get_nncf_wrapped_model().conv1.pre_ops['0']
+    op = const_sparse_model.conv1.pre_ops['0']
     PTTensorListComparator.check_equal(ref_mask_1, op.operand.binary_mask)
 
-    op = const_sparse_model.get_nncf_wrapped_model().conv2.pre_ops['0']
+    op = const_sparse_model.conv2.pre_ops['0']
     PTTensorListComparator.check_equal(ref_mask_2, op.operand.binary_mask)

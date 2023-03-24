@@ -27,11 +27,6 @@ class TFAccuracyAwareTrainingRunner(BaseAccuracyAwareTrainingRunner):
     The Training Runner implementation for TensorFlow training code.
     """
 
-    def retrieve_uncompressed_model_accuracy(self, model):
-        if not hasattr(model, 'original_model_accuracy'):
-            raise RuntimeError('Original model does not contain the pre-calculated reference metric value')
-        self.uncompressed_model_accuracy = model.original_model_accuracy
-
     def validate(self, model):
         self.current_val_metric_value = self._validate_fn(model, epoch=self.cumulative_epoch_count)
         is_best = (not self.is_higher_metric_better) != (self.current_val_metric_value > self.best_val_metric_value)
@@ -96,9 +91,11 @@ class TFAccuracyAwareTrainingRunner(BaseAccuracyAwareTrainingRunner):
 
 class TFAdaptiveCompressionLevelTrainingRunner(BaseAdaptiveCompressionLevelTrainingRunner,
                                                TFAccuracyAwareTrainingRunner):
-    def __init__(self, accuracy_aware_training_params, verbose=True, dump_checkpoints=True, lr_updates_needed=True,
-                 minimal_compression_rate=0.0, maximal_compression_rate=0.95):
-        super().__init__(accuracy_aware_training_params, verbose, dump_checkpoints, lr_updates_needed,
+    def __init__(self, accuracy_aware_training_params, uncompressed_model_accuracy: float,
+                 verbose: bool = True, dump_checkpoints: bool = True, lr_updates_needed: bool = True,
+                 minimal_compression_rate: float = 0.0, maximal_compression_rate: float = 0.95):
+        super().__init__(accuracy_aware_training_params, uncompressed_model_accuracy,
+                         verbose, dump_checkpoints, lr_updates_needed,
                          minimal_compression_rate=minimal_compression_rate,
                          maximal_compression_rate=maximal_compression_rate)
 

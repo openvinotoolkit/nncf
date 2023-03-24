@@ -278,17 +278,19 @@ class TestRangeInit:
         quantizers = get_all_modules_by_type(compressed_model, ['SymmetricQuantizer',
                                                                 'AsymmetricQuantizer'])
         quantizer_str_dict = {str(k): v for k, v in quantizers.items()}
-        group_1 = [quantizer_str_dict["NNCFNetwork/TwoConvTestModel[nncf_module]/Sequential[features]/"
+        group_1 = [quantizer_str_dict["TwoConvTestModel/Sequential[features]/"
                                       "Sequential[0]/NNCFConv2d[0]/ModuleDict[pre_ops]/UpdateWeight[0]/"
                                       "AsymmetricQuantizer[op]"],
-                   quantizer_str_dict["NNCFNetwork/TwoConvTestModel[nncf_module]/Sequential[features]/"
+                   quantizer_str_dict["TwoConvTestModel/Sequential[features]/"
                                       "Sequential[1]/NNCFConv2d[0]/ModuleDict[pre_ops]/UpdateWeight[0]/"
                                       "AsymmetricQuantizer[op]"]
                    ]
-        group_2 = [quantizer_str_dict[f"NNCFNetwork/ModuleDict[{EXTERNAL_QUANTIZERS_STORAGE_NAME}]/"
+        group_2 = [quantizer_str_dict[f"TwoConvTestModel/NNCFNetworkInterface[_nncf]/"
+                                      f"ModuleDict[{EXTERNAL_QUANTIZERS_STORAGE_NAME}]/"
                                       "SymmetricQuantizer[TwoConvTestModel/Sequential[features]"
                                       "/Sequential[0]/NNCFConv2d[0]/conv2d_0|OUTPUT]"],
-                   quantizer_str_dict[f"NNCFNetwork/ModuleDict[{EXTERNAL_QUANTIZERS_STORAGE_NAME}]/SymmetricQuantizer"
+                   quantizer_str_dict[f"TwoConvTestModel/NNCFNetworkInterface[_nncf]/"
+                                      f"ModuleDict[{EXTERNAL_QUANTIZERS_STORAGE_NAME}]/SymmetricQuantizer"
                                       "[/nncf_model_input_0|OUTPUT]"],
                    ]
 

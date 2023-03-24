@@ -72,7 +72,8 @@ from tests.shared.nx_graph import compare_nx_graph_with_reference
 from tests.shared.paths import TEST_ROOT
 
 
-def get_basic_quantization_config(quantization_type='symmetric', input_sample_sizes=None, input_info: Dict = None):
+def get_basic_quantization_config(quantization_type='symmetric', input_sample_sizes=None,
+                                  input_info: Union[List, Dict] = None):
     config = get_empty_config(input_sample_sizes=input_sample_sizes, input_info=input_info)
     config["compression"] = {"algorithm": "quantization",
                              "activations": {
@@ -244,12 +245,7 @@ TEST_MODELS_DESC = [
 def check_model_graph(compressed_model: NNCFNetwork, ref_dot_file_name: str, ref_dot_file_directory: str):
     if torch.cuda.is_available():
         compressed_model.to('cuda')
-    compressed_model.do_dummy_forward()
-    # internal wrapped model is still in eval mode, switch to the train mode to make sure training graph is ok
-    compressed_model.train()
-    compressed_model.rebuild_graph()
-    compressed_model.do_dummy_forward()
-    check_graph(compressed_model.get_graph(), ref_dot_file_name, ref_dot_file_directory)
+    check_graph(compressed_model.nncf.get_graph(), ref_dot_file_name, ref_dot_file_directory)
 
 
 @pytest.mark.parametrize(
@@ -769,7 +765,7 @@ def test_compressed_graph_models_hw(desc, hw_config_type):
     # pylint:disable=protected-access
     quantization_builder = QuantizationBuilder(config, should_init=False)
     single_config_quantizer_setup = quantization_builder._get_single_config_quantizer_setup(compressed_model)
-    sketch_graph = compressed_model.get_original_graph()
+    sketch_graph = compressed_model.nncf.get_original_graph()
 
     potential_quantizer_graph = prepare_potential_quantizer_graph(sketch_graph, single_config_quantizer_setup)
     path_to_dot = get_full_path_to_the_graph(desc.dot_filename, _case_dir(hw_config_type.value))

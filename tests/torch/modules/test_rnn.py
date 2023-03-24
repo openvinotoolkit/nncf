@@ -455,7 +455,9 @@ class TestNumberOfNodes:
                 continue
             counters[name] = counter
         _ = model(test_data.x, test_hidden)
-        assert model.get_graph().get_nodes_count() == 132  # NB: may always fail in debug due to superfluous 'cat' nodes
+
+        # NB: below may always fail in debug due to superfluous 'cat' nodes
+        assert model.nncf.get_graph().get_nodes_count() == 132
         assert len(counters) + 2 == 54  # 8 WQ + 44 AQ + 1 input AQ + 1 reset point AQ
         for counter in counters.values():
             assert counter.count == p.seq_length
@@ -538,7 +540,7 @@ class TestNumberOfNodes:
             quantizer.register_forward_pre_hook(partial(hook, counter=counter))
         dummy_forward_fn(model)
 
-        assert model.get_graph().get_nodes_count() == 373  # NB: may always fail in debug due to superfluous 'cat' nodes
+        assert model.nncf.get_graph().get_nodes_count() == 373  # NB: may always fail in debug due to superfluous 'cat' nodes
         assert len(counters) == 142
 
         for name, counter in counters.items():
@@ -553,7 +555,8 @@ class TestNumberOfNodes:
                 assert counter.count == 1, name
         new_seq_len = int(sequence_size / 2)
         dummy_forward_fn(model, new_seq_len)
-        assert model.get_graph().get_nodes_count() == 373  # NB: may always fail in debug due to superfluous 'cat' nodes
+        # NB: may always fail in debug due to superfluous 'cat' nodes
+        assert model.nncf.get_graph().get_nodes_count() == 373
         assert len(counters) == 142
         for name, counter in counters.items():
             if 'cell' in name or "LSTMCellForwardNNCF" in name:

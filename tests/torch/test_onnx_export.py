@@ -105,6 +105,11 @@ def test_exported_version(tmp_path: str, save_format: str, ref_opset: int):
     assert model_proto.opset_import[0].version == ref_opset
 
 
+class MultiParamForwardModel(torch.nn.Module):
+    def forward(self, param1, param2, param3 = None):
+        return param1, param2
+
+
 def test_can_export_single_batch_bn(tmp_path):
     test_path = tmp_path.joinpath('test.onnx')
     synthetic_model_desc = SingleLayerModelDesc(layer=nn.BatchNorm2d(4), input_sample_sizes=([1, 4, 1, 1]))
@@ -114,4 +119,19 @@ def test_can_export_single_batch_bn(tmp_path):
     model = synthetic_model_desc.get_model()
     _, compression_ctrl = create_compressed_model_and_algo_for_test(model, config)
     compression_ctrl.export_model(str(test_path))
+    assert test_path.exists()
+
+
+def test_can_export_with_model_args(tmp_path):
+    pytest.xfail("Torch now parses the function signature and sets up default parameters for unprovided "
+                 "arguments on its own. Need to rethink and possibly deprecate model_args parameter.")
+    test_path = tmp_path.joinpath('test.onnx')
+    model = MultiParamForwardModel()
+    config = get_basic_quantization_config(input_info=[
+        {"sample_size": [1, 1, 1, 1]},
+        {"sample_size": [1, 1, 1, 1]}
+    ])
+    register_bn_adaptation_init_args(config)
+    _, compression_ctrl = create_compressed_model_and_algo_for_test(model, config)
+    compression_ctrl.export_model(str(test_path), model_args=({'param3': 42}, ))
     assert test_path.exists()

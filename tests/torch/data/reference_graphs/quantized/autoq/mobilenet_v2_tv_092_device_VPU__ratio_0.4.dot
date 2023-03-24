@@ -265,7 +265,7 @@ strict digraph  {
 "263 MobileNetV2/Sequential[features]/ConvBNActivation[18]/ReLU6[2]/hardtanh_0" [id=263, label="hardtanh_#263", style=filled, type=hardtanh];
 "264 MobileNetV2/Sequential[features]/ConvBNActivation[18]/ReLU6[2]/SymmetricQuantizer/symmetric_quantize_0" [color=green, id=264, label="AFQ_[B:8 M:S SGN:U PC:Y]_#264_G42", style=filled, type=symmetric_quantize];
 "265 MobileNetV2/adaptive_avg_pool2d_0" [id=265, label="adaptive_avg_pool2d_#265", style=filled, type=adaptive_avg_pool2d];
-"266 MobileNetV2/AsymmetricQuantizer/asymmetric_quantize_0" [color=green, id=266, label="AFQ_[B:8 M:A SGN:S PC:N]_#266_G43", style=filled, type=asymmetric_quantize];
+"266 MobileNetV2/NNCFNetworkInterface[_nncf]/ModuleDict[external_quantizers]/AsymmetricQuantizer[MobileNetV2/adaptive_avg_pool2d_0|OUTPUT]/asymmetric_quantize_0" [color=green, id=266, label="AFQ_[B:8 M:A SGN:S PC:N]_#266_G43", style=filled, type=asymmetric_quantize];
 "267 MobileNetV2/reshape_0" [id=267, label="reshape_#267", style=filled, type=reshape];
 "268 MobileNetV2/Sequential[classifier]/Dropout[0]/dropout_0" [id=268, label="dropout_#268", style=filled, type=dropout];
 "269 MobileNetV2/Sequential[classifier]/NNCFLinear[1]/ModuleDict[pre_ops]/UpdateWeight[0]/SymmetricQuantizer[op]/symmetric_quantize_0" [color=green, id=269, label="WFQ_[B:8 M:S SGN:S PC:Y]_#269_G43", style=filled, type=symmetric_quantize];
@@ -546,8 +546,8 @@ strict digraph  {
 "262 MobileNetV2/Sequential[features]/ConvBNActivation[18]/NNCFBatchNorm2d[1]/batch_norm_0" -> "263 MobileNetV2/Sequential[features]/ConvBNActivation[18]/ReLU6[2]/hardtanh_0";
 "263 MobileNetV2/Sequential[features]/ConvBNActivation[18]/ReLU6[2]/hardtanh_0" -> "264 MobileNetV2/Sequential[features]/ConvBNActivation[18]/ReLU6[2]/SymmetricQuantizer/symmetric_quantize_0";
 "264 MobileNetV2/Sequential[features]/ConvBNActivation[18]/ReLU6[2]/SymmetricQuantizer/symmetric_quantize_0" -> "265 MobileNetV2/adaptive_avg_pool2d_0";
-"265 MobileNetV2/adaptive_avg_pool2d_0" -> "266 MobileNetV2/AsymmetricQuantizer/asymmetric_quantize_0";
-"266 MobileNetV2/AsymmetricQuantizer/asymmetric_quantize_0" -> "267 MobileNetV2/reshape_0";
+"265 MobileNetV2/adaptive_avg_pool2d_0" -> "266 MobileNetV2/NNCFNetworkInterface[_nncf]/ModuleDict[external_quantizers]/AsymmetricQuantizer[MobileNetV2/adaptive_avg_pool2d_0|OUTPUT]/asymmetric_quantize_0";
+"266 MobileNetV2/NNCFNetworkInterface[_nncf]/ModuleDict[external_quantizers]/AsymmetricQuantizer[MobileNetV2/adaptive_avg_pool2d_0|OUTPUT]/asymmetric_quantize_0" -> "267 MobileNetV2/reshape_0";
 "267 MobileNetV2/reshape_0" -> "268 MobileNetV2/Sequential[classifier]/Dropout[0]/dropout_0";
 "268 MobileNetV2/Sequential[classifier]/Dropout[0]/dropout_0" -> "270 MobileNetV2/Sequential[classifier]/NNCFLinear[1]/linear_0";
 "269 MobileNetV2/Sequential[classifier]/NNCFLinear[1]/ModuleDict[pre_ops]/UpdateWeight[0]/SymmetricQuantizer[op]/symmetric_quantize_0" -> "270 MobileNetV2/Sequential[classifier]/NNCFLinear[1]/linear_0";

@@ -139,7 +139,7 @@ class FilterPruningController(BasePruningAlgoController):
         self.pruning_quota = 0.9
         self.normalize_weights = True
 
-        self._graph = self._model.get_original_graph()
+        self._graph = self._model.nncf.get_original_graph()
         self._weights_flops_calc = WeightsFlopsCalculator(conv_op_metatypes=GENERAL_CONV_LAYER_METATYPES,
                                                           linear_op_metatypes=LINEAR_LAYER_METATYPES)
 
@@ -161,7 +161,7 @@ class FilterPruningController(BasePruningAlgoController):
         self.full_filters_num = self._weights_flops_calc.count_filters_num(self._graph, modules_out_channels)
         self.current_filters_num = self.full_filters_num
         self._pruned_layers_num = len(self.pruned_module_groups_info.get_all_nodes())
-        self._prunable_layers_num = len(self._model.get_graph().get_nodes_by_types(self._prunable_types))
+        self._prunable_layers_num = len(self._model.nncf.get_graph().get_nodes_by_types(self._prunable_types))
         self._min_possible_flops, self._min_possible_params =\
             self._calculate_flops_and_weights_in_uniformly_pruned_model(1.)
 
@@ -572,7 +572,7 @@ class FilterPruningController(BasePruningAlgoController):
     def _propagate_masks(self):
         nncf_logger.debug("Propagating pruning masks")
         # 1. Propagate masks for all modules
-        graph = self.model.get_original_graph()
+        graph = self.model.nncf.get_original_graph()
 
         init_output_masks_in_graph(graph, self.pruned_module_groups_info.get_all_nodes())
         MaskPropagationAlgorithm(graph, PT_PRUNING_OPERATOR_METATYPES, PTNNCFPruningTensorProcessor).mask_propagation()
@@ -662,7 +662,7 @@ class FilterPruningController(BasePruningAlgoController):
         if do_copy:
             model = copy_model(model)
 
-        graph = model.get_original_graph()
+        graph = model.nncf.get_original_graph()
         ModelPruner(model, graph, PT_PRUNING_OPERATOR_METATYPES, PrunType.FILL_ZEROS).prune_model()
 
         return model

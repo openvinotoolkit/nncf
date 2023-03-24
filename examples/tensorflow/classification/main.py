@@ -189,13 +189,6 @@ def run(config):
 
     resume_training = config.ckpt_path is not None
 
-    if is_accuracy_aware_training(config):
-        uncompressed_model_accuracy = get_model_accuracy(model_fn,
-                                                         model_params,
-                                                         nncf_config,
-                                                         validation_dataset,
-                                                         validation_steps)
-
     compression_state = None
     if resume_training:
         compression_state = load_compression_state(config.ckpt_path)
@@ -271,7 +264,6 @@ def run(config):
                 steps_per_epoch=train_steps,
                 tensorboard_writer=SummaryWriter(config.log_dir, 'accuracy_aware_training'),
                 log_dir=config.log_dir,
-                uncompressed_model_accuracy=uncompressed_model_accuracy,
                 result_dict_to_val_metric_fn=result_dict_to_val_metric_fn,
                 **validation_kwargs)
             logger.info(f'Compressed model statistics:\n{statistics.to_str()}')

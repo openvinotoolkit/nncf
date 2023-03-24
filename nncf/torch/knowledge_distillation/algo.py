@@ -40,7 +40,7 @@ class KnowledgeDistillationBuilder(PTCompressionAlgorithmBuilder):
             raise ValueError("Temperature shouldn't be stated for MSE Loss (softmax only feature)")
 
     def _get_transformation_layout(self, target_model: NNCFNetwork) -> PTTransformationLayout:
-        self.original_model = deepcopy(target_model.nncf_module)
+        self.original_model = deepcopy(target_model).nncf.get_clean_shallow_copy()
         for param in self.original_model.parameters():
             param.requires_grad = False
         return PTTransformationLayout()

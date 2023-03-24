@@ -50,7 +50,7 @@ def create_compressed_model_from_algo_names(nncf_network: NNCFNetwork,
     set_debug_log_dir(config.get("log_dir", ""))
 
     if dump_graphs:
-        original_model_graph = nncf_network.get_original_graph()
+        original_model_graph = nncf_network.nncf.get_original_graph()
         original_model_graph.visualize_graph(osp.join(config.get("log_dir", ""), "original_graph.dot"))
 
     builder = create_compression_algorithm_builder_from_algo_names(algo_names, config, should_init=True)
@@ -60,10 +60,10 @@ def create_compressed_model_from_algo_names(nncf_network: NNCFNetwork,
 
     # Required to ensure that the model leaving create_compressed_model has correct compressed graph.
     # In particular, this is currently required for correct functioning of RNNs.
-    compressed_model.rebuild_graph()
+    compressed_model.nncf.rebuild_graph()
 
     if dump_graphs and is_main_process():
-        original_model_graph = compressed_model.get_graph()
+        original_model_graph = compressed_model.nncf.get_graph()
         original_model_graph.visualize_graph(osp.join(config.get("log_dir", ""), "compressed_graph.dot"))
 
     synchronize_all_processes_in_distributed_mode()

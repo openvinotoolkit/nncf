@@ -363,7 +363,7 @@ def get_building_blocks(compressed_model: NNCFNetwork,
     if min_block_size > max_block_size:
         raise AttributeError(f'Minimal value for block size {min_block_size} can not be more than maximum one '
                              f'{max_block_size}. Change max_block_size or min_block_size.')
-    orig_graph = compressed_model.get_original_graph()  # PTNNCFGraph
+    orig_graph = compressed_model.nncf.get_original_graph()  # PTNNCFGraph
     blocks = get_potential_building_blocks(orig_graph, hw_fused_ops, min_block_size, max_block_size)
     sorted_blocks = sorted(blocks, key=cmp_to_key(compare_for_building_block))
     filtered_building_blocks = remove_duplicates(sorted_blocks)
@@ -646,7 +646,7 @@ def get_all_modules_in_blocks(compressed_model: NNCFNetwork,
     modules = []
     for op_address in op_adresses_in_blocks:
         if op_address.operator_name in NNCF_MODULES_OP_NAMES:
-            modules.append(compressed_model.get_module_by_scope(op_address.scope_in_model))
+            modules.append(compressed_model.nncf.get_module_by_scope(op_address.scope_in_model))
     return modules
 
 

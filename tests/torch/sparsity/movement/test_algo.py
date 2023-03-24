@@ -149,7 +149,7 @@ class TestControllerCreation:
         configs = recipe.algo_config.sparse_structure_by_scopes
         compression_lr_multiplier = recipe.algo_config.compression_lr_multiplier
         sparse_configs_by_scopes = [SparseConfigByScope.from_config(c) for c in configs]
-        for module, scope in compressed_model.get_nncf_modules().items():
+        for module, scope in compressed_model.nncf.get_nncf_modules().items():
             if not hasattr(module, 'pre_ops'):
                 continue
             count_movement_op = 0
