@@ -53,6 +53,7 @@ IGNORED_PATTERN_REASONS = {
     PatternNames.LINEAR_BIASED_ELEMENTWISE: 'Not relevant for ONNX.',
     PatternNames.LINEAR_ACTIVATION_ELEMENTWISE: 'Not relevant for ONNX.',
     PatternNames.LINEAR_BIASED_ACTIVATION_ELEMENTWISE: 'Not relevant for ONNX.',
+    PatternNames.MVN_SCALE_SHIFT_ACTIVATIONS: 'Not relevant for ONNX.',
 }
 
 
