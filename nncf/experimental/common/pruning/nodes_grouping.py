@@ -21,6 +21,7 @@ from typing import List
 from typing import Set
 
 import networkx as nx
+from nncf.common.utils.debug import DEBUG_LOG_DIR
 from nncf.torch.nested_objects_traversal import objwalk
 from nncf.common.utils.dot_file_rw import write_dot_graph
 from nncf.common.graph.graph import NNCFGraph
@@ -291,15 +292,14 @@ def get_pruning_groups(graph: NNCFGraph,
                     output_mask.get_state(), indent=4)
         return result
 
-    save_for_netron(graph, f'original.xml', get_attributes_fn=get_attributes_fn)
-
     try:
         # 2. Propagate masks
         MaskPropagationAlgorithm(graph, pruning_operations_metatypes).mask_propagation()
     finally:
         block_graph = build_nx_graph_from_roots(roots)
-        write_dot_graph(block_graph, Path(f'latest_block_group_hierarchy.dot'))
-        save_for_netron(graph, f'latest_propagated.xml', get_attributes_fn=get_attributes_fn)
+        write_dot_graph(block_graph, Path(DEBUG_LOG_DIR, 'latest_block_group_hierarchy.dot'))
+        save_for_netron(graph, str(Path(DEBUG_LOG_DIR, 'latest_propagated.xml')),
+                        get_attributes_fn=get_attributes_fn)
 
     # 3. Collect groups from producers
     blocks_map: Dict[int, List[List[DimensionBlock]]] = {}
