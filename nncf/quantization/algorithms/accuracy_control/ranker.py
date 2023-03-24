@@ -171,8 +171,8 @@ class Ranker(ABC):
                                                                             quantized_model,
                                                                             quantized_model_graph)
                 # Calculate the ranking score for the current group of quantizers.
-                ranking_score = self._calculate_ranking_score(modified_model, ranking_data_items, ranking_subset_indices)
-
+                ranking_score = self._calculate_ranking_score(modified_model, ranking_data_items,
+                                                              ranking_subset_indices)
                 ranking_scores.append(float(ranking_score))
 
         # Rank groups.

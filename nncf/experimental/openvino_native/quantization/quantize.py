@@ -31,7 +31,7 @@ from nncf.telemetry import tracked_function
 from nncf.telemetry.events import NNCF_OV_CATEGORY
 from nncf.quantization.algorithms.accuracy_control.algorithm import get_algo_backend
 from nncf.quantization.algorithms.accuracy_control.algorithm import QuantizationAccuracyRestorer
-from nncf.quantization.algorithms.accuracy_control.openvino_backend import OVAccuracyControlAlgoBackend
+from nncf.common.utils.helpers import timer
 
 
 @tracked_function(NNCF_OV_CATEGORY, [CompressionStartedWithQuantizeApi(), "target_device", "preset"])
@@ -76,8 +76,7 @@ def quantize_with_accuracy_control(model: ov.Model,
                                    fast_bias_correction: bool = True,
                                    model_type: Optional[ModelType] = None,
                                    ignored_scope: Optional[IgnoredScope] = None,
-                                   max_num_iterations: int = sys.maxsize,
-                                   algo_backend: Optional[OVAccuracyControlAlgoBackend] = None) -> ov.Model:
+                                   max_num_iterations: int = sys.maxsize) -> ov.Model:
     """
     Implementation of the `quantize_with_accuracy_control()` method for the OpenVINO backend via the
     OpenVINO Runtime API.
@@ -86,18 +85,19 @@ def quantize_with_accuracy_control(model: ov.Model,
                                     fast_bias_correction, model_type, ignored_scope, compress_weights=False)
 
     # Backends
-    if algo_backend is None:
-        backend = get_backend(model)
-        algo_backend = get_algo_backend(backend)
+    backend = get_backend(model)
+    algo_backend = get_algo_backend(backend)
 
     nncf_logger.info('Validation of initial model was started')
-    initial_metric = validation_fn(algo_backend.prepare_for_inference(model),
-                                   validation_dataset.get_data())
+    with timer():
+        initial_metric = validation_fn(algo_backend.prepare_for_inference(model),
+                                    validation_dataset.get_data())
     nncf_logger.info(f'Metric of initial model: {initial_metric}')
 
     nncf_logger.info('Validation of quantized model was started')
-    quantized_metric = validation_fn(algo_backend.prepare_for_inference(quantized_model),
-                                     validation_dataset.get_data())
+    with timer():
+        quantized_metric = validation_fn(algo_backend.prepare_for_inference(quantized_model),
+                                        validation_dataset.get_data())
     nncf_logger.info(f'Metric of quantized model: {quantized_metric}')
 
     accuracy_aware_loop = QuantizationAccuracyRestorer(algo_backend,
