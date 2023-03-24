@@ -78,7 +78,7 @@ class FunctionsToPatchWithoutTracing:
                                 'q_per_channel_axis', 'q_per_channel_scales', 'q_per_channel_zero_points', 'q_scale',
                                 'q_zero_point', 'qr', 'qscheme', 'random_', 'record_stream', 'refine_names',
                                 'register_hook', 'rename', 'rename_', 'shape', 'size', 'sort', 'storage',
-                                'storage_offset', 'stride', 'to']
+                                'storage_offset', 'stride', 'to', 'get_device']
 
     FUNCTIONS_TO_PATCH_WITHOUT_TRACING = TENSOR_CREATING_FUNCTIONS + TENSOR_UTILITY_FUNCTIONS
 

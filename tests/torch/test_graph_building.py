@@ -12,6 +12,7 @@
 """
 from typing import List
 from typing import Tuple
+from unittest.mock import MagicMock
 
 import pytest
 import torch
@@ -38,6 +39,7 @@ from nncf.torch.dynamic_graph.graph_tracer import GraphTracer
 from nncf.torch.dynamic_graph.graph_tracer import ModelInputInfo
 from nncf.torch.dynamic_graph.graph_tracer import create_dummy_forward_fn
 from nncf.torch.dynamic_graph.io_handling import wrap_nncf_model_outputs_with_objwalk
+from nncf.torch.dynamic_graph.trace_tensor import trace_tensors
 from nncf.torch.graph.graph_builder import GraphBuilder
 from nncf.torch.graph.operator_metatypes import PTCatMetatype
 from nncf.torch.graph.operator_metatypes import PTGatherMetatype
@@ -667,3 +669,8 @@ def test_integer_path_marking():
     # cat -> __floordiv__,  __floordiv__ -> __getitem__0 (to get single_idx),
     # __getitem__0 -> __getitem__1 (first indexing by tensor), __getitem__0 -> __getitem__2 (second indexing by tensor)
     assert num_integer_edges == 4
+
+
+def test_trace_output_with_no_tensors():
+    output = None
+    trace_tensors(output, MagicMock())

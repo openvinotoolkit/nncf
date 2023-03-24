@@ -10,7 +10,6 @@
  See the License for the specific language governing permissions and
  limitations under the License.
 """
-
 from typing import Iterable
 from typing import List
 from typing import Optional
@@ -21,6 +20,7 @@ from typing import Union
 import numpy as np
 import torch
 
+from nncf import nncf_logger
 from nncf.common.graph import Dtype
 
 
@@ -154,7 +154,8 @@ def trace_tensors(operator_output: TensorOrTupleOrList,
         if ctx is not None:
             ctx.register_traced_tensor(tt)
         return tt
-    raise ValueError("Unknown return type. Can not trace function call")
+    nncf_logger.debug(f"Could not find tensors to trace in operator output: {operator_output}")
+    return operator_output
 
 
 def make_tensor_metas(inputs: 'OperatorInput') -> List[Optional[TensorMeta]]:
