@@ -15,6 +15,7 @@ from copy import deepcopy
 from enum import Enum
 from typing import Dict, List, Optional, Any
 
+from nncf.common.api_marker import api
 from nncf.common.graph import NNCFNode
 from nncf.common.graph import NNCFNodeName
 from nncf.config.schemata.defaults import QUANTIZATION_BITS
@@ -167,7 +168,7 @@ class QuantizerSpec:
                    narrow_range,
                    half_range)
 
-
+@api()
 class QuantizationConstraints:
     REF_QCONF_OBJ = QuantizerConfig()
 
