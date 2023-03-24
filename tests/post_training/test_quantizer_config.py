@@ -39,6 +39,7 @@ from tests.post_training.models import NNCFGraphToTestDepthwiseConv
 from tests.post_training.models import NNCFGraphToTestSumAggregation
 
 
+# pylint: disable=protected-access,too-many-branches
 class TemplateTestQuantizerConfig:
     @abstractmethod
     def get_algo_backend(self):
@@ -113,7 +114,8 @@ class TemplateTestQuantizerConfig:
     @pytest.mark.parametrize('signed_activations', [None])
     # TODO(kshpv): add signed_activations and signed_weights which should be independent from HW config.
     def test_quantizer_config_from_ptq_params(self, weight_granularity, activation_granularity, preset, weight_bits,
-                                              activation_bits, signed_weights, signed_activations, single_conv_nncf_graph):
+                                              activation_bits, signed_weights, signed_activations,
+                                              single_conv_nncf_graph):
         algo = PostTrainingQuantization(
             PostTrainingQuantizationParameters(preset=preset,
                                                weight_bits=weight_bits,
@@ -233,4 +235,3 @@ class TemplateTestQuantizerConfig:
                 assert reducer._reduction_shape == params.ref_per_ch_reduction_shape
             else:
                 assert reducer._reduction_shape == params.ref_per_tensor_reduction_shape
-

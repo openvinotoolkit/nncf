@@ -162,4 +162,3 @@ class TemplateTestPTQParams:
                 for node_name in node_names:
                     if nncf_graph.get_node_by_name(node_name).metatype == min_max_algo._backend_entity.mat_mul_metatype:
                         assert quantization_point.qconfig.mode == QuantizationMode.SYMMETRIC
-

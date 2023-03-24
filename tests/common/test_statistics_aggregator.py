@@ -38,13 +38,6 @@ class TemplateTestStatisticsAggregator:
         pass
 
     @abstractmethod
-    def get_split_concat_backend_model(self):
-        """
-        Please make the same topology with the same names as it
-        presented in Openvino test.
-        """
-
-    @abstractmethod
     def get_statistics_aggregator(self, dataset):
         pass
 
@@ -57,8 +50,16 @@ class TemplateTestStatisticsAggregator:
         pass
 
     @abstractmethod
-    def get_split_concat_target_points_and_refs(self) -> List[TargetPoint]:
+    def get_target_point_cls(self):
         pass
+
+    @abstractmethod
+    @pytest.fixture(scope='session')
+    def test_params(self):
+        """
+        Please make the same topologies with the same names as it
+        presented in Openvino tests.
+        """
 
     @abstractmethod
     @pytest.fixture
@@ -182,7 +183,7 @@ class TemplateTestStatisticsAggregator:
             assert np.allclose(stat.min_values, ref_min_val)
             assert np.allclose(stat.max_values, ref_max_val)
 
-    def test_statistics_merging(self, dataset_samples, inplace_statistics):
+    def test_statistics_merging_simple(self, dataset_samples, inplace_statistics):
         algo_backend = self.get_algo_backend_cls()
         model = self.get_backend_model(dataset_samples)
         nncf_graph = NNCFGraphFactory.create(model)
@@ -236,24 +237,101 @@ class TemplateTestStatisticsAggregator:
             assert np.allclose(stat.min_values, ref_min_val)
             assert np.allclose(stat.max_values, ref_max_val)
 
+    @classmethod
+    def _check_static_point_common(cls, stat_point,
+                                   ref_type=TargetType.POST_LAYER_OPERATION):
+        assert stat_point.target_point.type == ref_type
+        assert len(stat_point.algorithm_to_tensor_collectors['Merged']) == 1
+        stat_collector = stat_point.algorithm_to_tensor_collectors['Merged'][0]
+        assert len(stat_collector.reducers) == 2
+        assert len(stat_collector.aggregators) == 4
 
-    def test_split_concat_statistic_merging(self, dataset_samples, inplace_statistics):
-        def _check_static_point_common(stat_point):
-            assert stat_point.target_point.type == TargetType.POST_LAYER_OPERATION
-            assert len(stat_point.algorithm_to_tensor_collectors['Merged']) == 1
-            stat_collector = stat_point.algorithm_to_tensor_collectors['Merged'][0]
-            assert len(stat_collector.reducers) == 2
-            assert len(stat_collector.aggregators) == 4
+    @classmethod
+    def _check_split_concat_merged_stats(cls, merged_statistics):
+        assert len(merged_statistics) == 5
+        assert len(merged_statistics['split']) == 3
+        port_ids = set()
+        for stat_point in merged_statistics['split']:
+            cls._check_static_point_common(stat_point)
+            port_ids.add(stat_point.target_point.port_id)
 
-        algo_backend = self.get_algo_backend_cls()
-        model = self.get_split_concat_backend_model()
+        assert sorted(list(port_ids)) == [0, 1, 2]
+        for key in ['add_1', 'add_2', 'add_3', 'concat']:
+            assert len(merged_statistics[key]) == 1
+            cls._check_static_point_common(merged_statistics[key][0])
+
+    @classmethod
+    def _check_shared_convs_merged_stats(cls, merged_statistics):
+        assert len(merged_statistics) == 1
+        assert len(merged_statistics['Conv_1']) == 1
+        stat_point = merged_statistics['Conv_1'][0]
+        cls._check_static_point_common(stat_point, TargetType.OPERATION_WITH_WEIGHTS)
+        assert stat_point.target_point.port_id == 1
+
+    MERGED_TARGET_POINT_AND_REFS = {
+    'split_concat': [
+            # Split output target points
+            ((TargetType.POST_LAYER_OPERATION, 'split', 0),
+             {'min_max': (-10, 10), 'mean_min_max': (-4.5, 5.5)}),
+            ((TargetType.PRE_LAYER_OPERATION, 'add_1', 0),
+             {'min_max': (-10, 10), 'mean_min_max': (-4.5, 5.5)}),
+
+            ((TargetType.POST_LAYER_OPERATION, 'split', 1),
+             {'min_max': (-1, 1), 'mean_min_max': (0, 1)}),
+            ((TargetType.PRE_LAYER_OPERATION, 'add_2', 0),
+             {'min_max': (-1, 1), 'mean_min_max': (0, 1)}),
+
+            ((TargetType.POST_LAYER_OPERATION, 'split', 2),
+             {'min_max': (-128, 128), 'mean_min_max': (-63.5, 64.5)}),
+            ((TargetType.PRE_LAYER_OPERATION, 'add_3', 0),
+             {'min_max': (-128, 128), 'mean_min_max': (-63.5, 64.5)}),
+
+            # Concat input target points
+            ((TargetType.POST_LAYER_OPERATION, 'add_1', 0),
+             {'min_max': (-9, 9), 'mean_min_max': (-3.5, 5.5)}),
+            ((TargetType.PRE_LAYER_OPERATION, 'concat', 0),
+             {'min_max': (-9, 9), 'mean_min_max': (-3.5, 5.5)}),
+
+            ((TargetType.POST_LAYER_OPERATION, 'add_2', 0),
+             {'min_max': (0, 2), 'mean_min_max': (1, 1.55)}),
+            ((TargetType.PRE_LAYER_OPERATION, 'concat', 1),
+             {'min_max': (0, 2), 'mean_min_max': (1, 1.55)}),
+
+            ((TargetType.POST_LAYER_OPERATION, 'add_3', 0),
+             {'min_max': (-127, 129), 'mean_min_max': (-62.5, 65.5)}),
+            ((TargetType.PRE_LAYER_OPERATION, 'concat', 2),
+             {'min_max': (-127, 129), 'mean_min_max': (-62.5, 65.5)}),
+
+            # One output to Several branch target points
+            ((TargetType.POST_LAYER_OPERATION, 'concat', 0),
+             {'min_max': (-127, 129), 'mean_min_max': (-62.5, 65.5)}),
+            ((TargetType.PRE_LAYER_OPERATION, 'add_4', 0),
+             {'min_max': (-127, 129), 'mean_min_max': (-62.5, 65.5)}),
+            ((TargetType.PRE_LAYER_OPERATION, 'add_5', 0),
+             {'min_max': (-127, 129), 'mean_min_max': (-62.5, 65.5)}),
+        ],
+        'shared_conv': [
+            ((TargetType.OPERATION_WITH_WEIGHTS, 'Conv_1', 1),
+             {'min_max': (-128, 128), 'mean_min_max': (-128, 128)}),
+            ((TargetType.OPERATION_WITH_WEIGHTS, 'Conv_2', 1),
+             {'min_max': (-128, 128), 'mean_min_max': (-128, 128)}),
+        ]
+    }
+
+    @pytest.mark.parametrize('key', ['split_concat', 'shared_conv'])
+    def test_statistic_merging(self, test_params, key, dataset_samples, inplace_statistics):
+        params = test_params['test_statistic_merging'][key]
+        model = params['model'](dataset_samples)
         nncf_graph = NNCFGraphFactory.create(model)
 
         quantizer_config = QuantizerConfig(mode=QuantizationMode.SYMMETRIC,
                                            per_channel=False)
         statistics_points = StatisticPointsContainer()
         collectors_and_refs = []
-        for target_point, ref in self.get_split_concat_target_points_and_refs():
+        algo_backend = self.get_algo_backend_cls()
+        target_point_cls = self.get_target_point_cls()
+        for target_point_args, ref in self.MERGED_TARGET_POINT_AND_REFS[key]:
+            target_point = target_point_cls(*target_point_args)
             min_max_tensor_collector = algo_backend.minmax_statistic_collector(
                 nncf_graph=nncf_graph,
                 target_point=target_point,
@@ -274,22 +352,15 @@ class TemplateTestStatisticsAggregator:
             collectors_and_refs.append((min_max_tensor_collector, ref['min_max']))
             collectors_and_refs.append((mean_min_max_tensor_collector, ref['mean_min_max']))
 
-
         dataset = self.get_dataset(dataset_samples)
         statistics_aggregator = self.get_statistics_aggregator(dataset)
         # pylint: disable=protected-access
         merged_statistics = statistics_aggregator._get_merged_statistic_points(statistics_points, model)
-        assert len(merged_statistics) == 5
-        assert len(merged_statistics['split']) == 3
-        port_ids = set()
-        for stat_point in merged_statistics['split']:
-            _check_static_point_common(stat_point)
-            port_ids.add(stat_point.target_point.port_id)
-
-        assert sorted(list(port_ids)) == [0, 1, 2]
-        for key in ['add_1', 'add_2', 'add_3', 'concat']:
-            assert len(merged_statistics[key]) == 1
-            _check_static_point_common(stat_point)
+        merged_stats_checkers_map = {
+            'split_concat': self._check_split_concat_merged_stats,
+            'shared_conv': self._check_shared_convs_merged_stats,
+        }
+        merged_stats_checkers_map[key](merged_statistics)
 
         statistics_aggregator.register_stastistic_points(statistics_points)
         statistics_aggregator.collect_statistics(model)

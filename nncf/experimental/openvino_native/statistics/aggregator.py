@@ -86,7 +86,8 @@ class OVStatisticsAggregator(StatisticsAggregator):
         for target_node_name, _statistic_points in statistic_points.data.items():
             for statistic_point in _statistic_points:
                 target_point = statistic_point.target_point
-                if target_point.type == TargetType.PRE_LAYER_OPERATION:
+                if target_point.type in [TargetType.PRE_LAYER_OPERATION,
+                                         TargetType.OPERATION_WITH_WEIGHTS]:
                     node = nncf_graph.get_node_by_name(target_node_name)
                     target_input_edge = nncf_graph.get_input_edges(node)[target_point.port_id]
 

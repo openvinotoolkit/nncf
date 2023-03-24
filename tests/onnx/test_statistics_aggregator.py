@@ -13,10 +13,8 @@
 
 import pytest
 import numpy as np
-from typing import List
 
 from nncf import Dataset
-from nncf.common.graph.transformations.commands import TargetPoint
 from nncf.common.graph.transformations.commands import TargetType
 from nncf.quantization.algorithms.min_max.onnx_backend import ONNXMinMaxAlgoBackend
 
@@ -48,11 +46,9 @@ class TestStatisticsAggregator(TemplateTestStatisticsAggregator):
     def get_statistics_aggregator(self, dataset):
         return ONNXStatisticsAggregator(dataset)
 
-    def get_split_concat_backend_model(self):
-        pass
-
-    def get_split_concat_target_points_and_refs(self) -> List[TargetPoint]:
-        pass
+    @pytest.fixture(scope='session')
+    def test_params(self):
+        return
 
     def get_dataset(self, samples):
         def transform_fn(data_item):
@@ -68,6 +64,9 @@ class TestStatisticsAggregator(TemplateTestStatisticsAggregator):
             target_node_name = CONV_NODE_NAME
             port_id = 1
         return ONNXTargetPoint(target_type, target_node_name, port_id)
+
+    def get_target_point_cls(self):
+        return ONNXTargetPoint
 
     @pytest.fixture
     def dataset_samples(self, dataset_values):
@@ -89,9 +88,9 @@ class TestStatisticsAggregator(TemplateTestStatisticsAggregator):
         return request.param
 
     @pytest.mark.skip('Merging is not implemented yet')
-    def test_statistics_merging(self, dataset_samples, inplace_statistics):
+    def test_statistics_merging_simple(self, dataset_samples, inplace_statistics):
         pass
 
     @pytest.mark.skip('Merging is not implemented yet')
-    def test_split_concat_statistic_merging(self, dataset_samples, inplace_statistics):
+    def test_statistic_merging(self, dataset_samples, inplace_statistics):
         pass

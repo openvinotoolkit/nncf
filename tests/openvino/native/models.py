@@ -486,3 +486,35 @@ class SimpleSplitModel(OVReferenceModel):
 
         model = ov.Model(results, [input_1])
         return model
+
+
+class SharedConvModel(OVReferenceModel):
+    def _create_ov_model(self, input_name, input_shape, kernel) -> ov.Model:
+        input_1 = opset.parameter(input_shape, name=input_name)
+        const_kernel = opset.constant(kernel, np.float32, name='Shared_conv_w')
+        strides = [1, 1]
+        pads = [0, 0]
+        dilations = [1, 1]
+        conv_1 = opset.convolution(input_1, const_kernel, strides, pads, pads, dilations, name="Conv_1")
+        conv_2 = opset.convolution(input_1, const_kernel, strides, pads, pads, dilations, name="Conv_2")
+        result_1 = opset.result(conv_1, name="Result_1")
+        result_2 = opset.result(conv_2, name="Result_2")
+        model = ov.Model([result_1, result_2], [input_1])
+        return model
+
+
+class SplitConcatModel(OVReferenceModel):
+    def _create_ov_model(self, input_name) -> ov.Model:
+        input_1 = opset.parameter([1, 3, 3, 3], name=input_name)
+        split = opset.split(input_1, 1, 3, name='split')
+        add_const = np.array(1).astype(np.float32)
+        add_1 = opset.add(split.output(0), add_const, name='add_1')
+        add_2 = opset.add(split.output(1), add_const, name='add_2')
+        add_3 = opset.add(split.output(2), add_const, name='add_3')
+        concat = opset.concat([add_1, add_2, add_3], 1, name='concat')
+        add_4 = opset.add(concat, add_const, name='add_4')
+        add_5 = opset.add(concat, add_const, name='add_5')
+        result_1 = opset.result(add_4, name="result_1")
+        result_2 = opset.result(add_5, name="result_2")
+        model = ov.Model([result_1, result_2], [input_1])
+        return model
