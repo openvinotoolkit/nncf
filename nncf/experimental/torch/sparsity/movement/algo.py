@@ -124,7 +124,7 @@ def is_supported_model_family(model: NNCFNetwork) -> None:
 
     :param model: The compressed model wrapped by NNCF.
     """
-    model_pymodules = inspect.getmodule(model.get_nncf_wrapped_model()).__name__.split('.')
+    model_pymodules = inspect.getmodule(model).__name__.split('.')
     if len(model_pymodules) >= 3 and model_pymodules[:2] == ['transformers', 'models']:
         # the case of input model defined by HuggingFace's transformers
         model_family = model_pymodules[2]
