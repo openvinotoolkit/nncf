@@ -16,6 +16,8 @@ import tensorflow as tf
 from tensorflow.python.framework.convert_to_constants import convert_variables_to_constants_v2
 
 from examples.tensorflow.common.utils import FROZEN_GRAPH_FORMAT
+from examples.tensorflow.common.utils import KERAS_H5_FORMAT
+from examples.tensorflow.common.utils import SAVED_MODEL_FORMAT
 
 
 def export_model(model: tf.keras.Model, save_path: str, save_format: str) -> None:
@@ -26,7 +28,6 @@ def export_model(model: tf.keras.Model, save_path: str, save_format: str) -> Non
     :param save_path: Path to save.
     :param save_format: Model format used to save model.
     """
-
     if save_format == FROZEN_GRAPH_FORMAT:
         input_signature = []
         for item in model.inputs:
@@ -34,8 +35,16 @@ def export_model(model: tf.keras.Model, save_path: str, save_format: str) -> Non
         concrete_function = tf.function(model).get_concrete_function(input_signature)
         frozen_func = convert_variables_to_constants_v2(concrete_function, lower_control_flow=False)
         frozen_graph = frozen_func.graph.as_graph_def(add_shapes=True)
-
         save_dir, name = osp.split(save_path)
         tf.io.write_graph(frozen_graph, save_dir, name, as_text=False)
-    else:
+    elif save_format == SAVED_MODEL_FORMAT:
         model.save(save_path, save_format=save_format)
+        model = tf.saved_model.load(save_path)
+        tf.saved_model.save(model, save_path)
+    elif save_format == KERAS_H5_FORMAT:
+        model.save(save_path, save_format=save_format)
+    else:
+        raise ValueError(
+            f"Not supported export format {save_format}. "
+            f"Supported formats: {FROZEN_GRAPH_FORMAT}, {SAVED_MODEL_FORMAT} and {KERAS_H5_FORMAT}."
+        )
