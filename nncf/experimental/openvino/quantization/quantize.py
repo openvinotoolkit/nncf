@@ -103,8 +103,7 @@ def quantize_with_accuracy_control(model: ov.Model,
                                          validation_dataset.get_data())
     nncf_logger.info(f'Metric of quantized model: {quantized_metric}')
 
-    accuracy_aware_loop = QuantizationAccuracyRestorer(algo_backend,
-                                                       max_num_iterations=max_num_iterations,
+    accuracy_aware_loop = QuantizationAccuracyRestorer(max_num_iterations=max_num_iterations,
                                                        max_drop=max_drop,
                                                        is_native=False)
     quantized_model = accuracy_aware_loop.restore_accuracy(model, initial_metric,
