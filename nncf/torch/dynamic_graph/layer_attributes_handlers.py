@@ -48,9 +48,9 @@ OP_NAMES_REQUIRING_MODULE_ATTRS = [
 TRANSPOSE_OP_NAMES = ['transpose', 'transpose_']
 PERMUTE_OP_NAMES = ['permute']
 GETITEM_OP_NAMES = ['__getitem__']
-GETITEM_PAD_NAMES = PTPadMetatype.get_all_aliases()
+PAD_OP_NAMES = PTPadMetatype.get_all_aliases()
 OP_NAMES_REQUIRING_ATTRS_FROM_ARGS_KWARGS = list(
-    TRANSPOSE_OP_NAMES + PERMUTE_OP_NAMES + GETITEM_OP_NAMES + GETITEM_PAD_NAMES
+    TRANSPOSE_OP_NAMES + PERMUTE_OP_NAMES + GETITEM_OP_NAMES + PAD_OP_NAMES
 )
 
 
@@ -104,7 +104,7 @@ def get_layer_attributes_from_args_and_kwargs(op_name: str, args, kwargs) -> Bas
         layer_attrs = _get_permute_attrs_from_args_kwargs(args, kwargs)
     elif op_name in GETITEM_OP_NAMES:
         layer_attrs = _get_getitem_attrs_from_args_kwargs(args, kwargs)
-    elif op_name in GETITEM_PAD_NAMES:
+    elif op_name in PAD_OP_NAMES:
         layer_attrs = _get_pad_attrs_from_args_kwargs(args, kwargs)
     return layer_attrs
 
