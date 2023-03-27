@@ -440,8 +440,8 @@ class MinMaxQuantization(Algorithm):
                     filter_func,
                     MinMaxQuantization):
                     group_statistics.append(tensor_collector.get_statistics())
+            unified_values = self._backend_entity.unify_statistics(group_statistics)
             for quantization_target_point in unified_scale_group:
-                unified_values = self._backend_entity.unify_statistics(group_statistics)
                 qconfig = quantization_target_points[quantization_target_point]
                 parameters = calculate_quantizer_parameters(unified_values, qconfig, QuantizerGroup.ACTIVATIONS)
                 command = self._backend_entity.create_activation_quantizer_insertion_command(
