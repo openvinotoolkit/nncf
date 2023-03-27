@@ -397,7 +397,7 @@ class MinMaxQuantization(Algorithm):
                     activation_target_point = self._get_activation_quantization_target_point(quantization_point)
                     unified_scale_group.append(activation_target_point)
                 else:
-                    raise RuntimeError('Incorrect quantization point')
+                    raise RuntimeError('Only activation quantizers can be unified.')
             unified_scale_groups.append(unified_scale_group)
         return unified_scale_groups
 
