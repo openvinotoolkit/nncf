@@ -12,6 +12,8 @@
 """
 
 from collections import defaultdict
+from copy import deepcopy
+from functools import reduce
 from typing import List
 from typing import Optional
 from typing import Type
@@ -127,18 +129,7 @@ class ConvolutionPruningOp(BasePruningOp):
 
 
 class TransposeConvolutionPruningOp(BasePruningOp):
-    @classmethod
-    def mask_propagation_impl(cls, node: NNCFNode, graph: NNCFGraph,
-                              tensor_processor: Type[NNCFPruningBaseTensorProcessor]) -> None:
-        input_masks = get_input_masks(node, graph)
-        output_mask = node.data.get('output_mask', None)
-
-        if is_grouped_conv(node):
-            output_mask = None
-            if is_prunable_depthwise_conv(node):
-                output_mask = input_masks[0]
-
-        node.data['output_mask'] = output_mask
+    pass
 
 
 class LinearPruningOp(BasePruningOp):
@@ -400,6 +391,11 @@ class ReshapePruningOp(BasePruningOp):
 
     @staticmethod
     def _map_dims(node: NNCFNode) -> bool:
+        """
+
+        :param node:
+        :return:
+        """
         def _check_dim_splitted(dim_from: int, dims_to: List[int],
                                 dims_to_start_idx: int):
             idx = dims_to_start_idx
@@ -450,6 +446,47 @@ class ReshapePruningOp(BasePruningOp):
             out_idx += 1
         return inp_map, out_map, mode
 
+    @staticmethod
+    def _split_block_by_reshape(
+        block: DimensionBlock,
+        list_output_channels: List[int]
+    ) -> List[DimensionBlock]:
+        """
+        Splits a dimension block into multiple blocks.
+        It's applied when some number of channels S is reshaped to N channels, e.g. S -> [A,B,C,D] and S=A*B*C*D.
+        Now we assume that pruning is possible along each new dimension instead of S one.
+        The dimension block encoding pruning of a single channel from S is no longer valid.
+        This function creates new blocks that encodes how many channels from S is pruned if we prune along a new
+        dimension from [A,B,C,D].
+        It forms new constraints by the following rules:
+            | size  | offset          |
+            |-------|-----------------|
+            | 1     | D % S           |
+            | D     | C*D % S         |
+            | C*D   | B*C*D % S       |
+            | B*C*D | A*B*C*D % S = 0 |
+
+        :param block: dimension block to split
+        :param list_output_channels: list of output channels (A,B,C,D)
+        :return:
+        """
+        if len(list_output_channels) == 1:
+            raise RuntimeError
+
+        dot_product = reduce((lambda x, y: x * y), list_output_channels)
+
+        current_size = dot_product
+        new_blocks = []
+        divided_shapes = filter(lambda x: x != 1, list_output_channels)
+        for divided_shape in divided_shapes:
+            offset = int(current_size % dot_product)
+            current_size /= divided_shape
+            new_block = deepcopy(block)
+            new_block.size = int(current_size)
+            new_block.offset = int(offset)
+            new_blocks.append(new_block)
+        return new_blocks
+
     @classmethod
     def _get_propagated_mask(cls, node: NNCFNode, graph: NNCFGraph):
         masks = get_input_masks(node, graph)
@@ -479,20 +516,35 @@ class ReshapePruningOp(BasePruningOp):
                     shifted_dim = inp_map[dim]
                     output_mask.dim_groups_map[shifted_dim] = groups
                 else:
-                    mapped_input_shape = input_shape[dim]  # assume a single int by definition of extend
-                    mapped_output_shape = [output_shape[x] for x in inp_map[dim]]
-                    # check that it simply adds 1 to the shape (Unsqueeze)
-                    if mapped_input_shape in mapped_output_shape:
-                        index_in_mapped = mapped_output_shape.index(mapped_input_shape)
-                        shifted_dim = inp_map[dim][index_in_mapped]
+                    input_channels = input_shape[dim]
+                    assert isinstance(input_channels, int), "assume a single int by definition of extend"
+                    list_output_channels = [output_shape[x] for x in inp_map[dim]]
+                    # check that it simply adds 1's to the shape (Unsqueeze)
+                    if input_channels in list_output_channels:
+                        index = list_output_channels.index(input_channels)
+                        shifted_dim = inp_map[dim][index]
                         output_mask.dim_groups_map[shifted_dim] = groups
                     else:
-                        shape_map = [mapped_input_shape, mapped_output_shape]
-                        assert len(groups) == 1
                         group = groups[0]
-                        new_groups = group.split_blocks_by_reshape(shape_map)
-                        for new_group, in_dim in zip(new_groups, inp_map[dim]):
-                            output_mask.dim_groups_map[in_dim] = [new_group]
+                        if group.has_childs():
+                            raise NotImplementedError('Splitting BlockGroup with childs isn\'t implemented yet')
+
+                        new_blocks: List[List[DimensionBlock]] = []
+                        # Group can have multiple blocks. E.g. s1 and s2.
+                        # s1 splitted into (a1,b1), s2 - into (a2,b2)
+                        # It should form the following 2 childs groups: (a1,a2) and (b1,b2)
+                        for block in group.get_blocks():
+                            dot_product = reduce((lambda x, y: x * y), list_output_channels)
+                            assert dot_product == input_channels
+                            new_blocks.append(cls._split_block_by_reshape(block, list_output_channels))
+                        child_groups: List[BlockGroup] = []
+
+                        for block_groups in zip(*new_blocks):
+                            child_groups.append(BlockGroup(blocks=list(block_groups)))
+                        group.add_childs(child_groups)
+
+                        for child_group, in_dim in zip(child_groups, inp_map[dim]):
+                            output_mask.dim_groups_map[in_dim] = [child_group]
             return output_mask
 
         if mode == 'shrink':
@@ -532,34 +584,6 @@ class TransposePruningOp(BasePruningOp):
         idx_map = [(old_idx, new_idx) for new_idx, old_idx in enumerate(new_order) if
                    old_idx in input_mask.dim_groups_map]
         output_mask = PropagationMask({new_idx: input_mask.dim_groups_map[old_idx] for old_idx, new_idx in idx_map})
-
-        node.data['output_mask'] = output_mask
-
-
-class FlattenPruningOp(BasePruningOp):
-    @classmethod
-    def accept_pruned_input(cls, node: NNCFNode) -> bool:
-        if node.layer_attributes is not None:
-            return True
-        return False
-
-    @classmethod
-    def mask_propagation_impl(cls, node: NNCFNode, graph: NNCFGraph,
-                              tensor_processor: Type[NNCFPruningBaseTensorProcessor]):
-        output_mask = None
-        input_masks = get_input_masks(node, graph)
-        assert len(input_masks) == 1
-        input_mask = input_masks[0]
-        if input_mask is not None and node.layer_attributes is not None:
-            # We assume all layers known by the mask propagation algo except
-            # StopMaskForwardOp have input/output batch dim == 0.
-            # Besides, since input_mask is not None thus no StopMaskForwardOp operations
-            # was in the path from mask producer node to this node. As all
-            # known nodes have input/output batch dim == 0 previous has too.
-            flatten_channels = node.layer_attributes.output_shape[1]
-            mask_len = input_mask.shape[0]
-            assert flatten_channels % mask_len == 0
-            output_mask = tensor_processor.repeat(input_mask, repeats=flatten_channels // mask_len)
 
         node.data['output_mask'] = output_mask
 

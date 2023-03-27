@@ -126,6 +126,7 @@ class BlockGroup:
         for child in self._childs:
             child.invalidate()
 
+    # TODO: rename
     def get_actual_groups(self) -> List[List[DimensionBlock]]:
         if not self._childs:
             return [self._blocks]
@@ -141,21 +142,14 @@ class BlockGroup:
     def add_childs(self, childs: List['BlockGroup']):
         self._childs.extend(childs)
 
+    def add_blocks(self, blocks: List[DimensionBlock]):
+        self._blocks.extend(blocks)
+
+    # reduce number of methods
     def add_block(self, block: DimensionBlock):
         self._blocks.append(block)
+        # TODO: should be done outside
         block.set_group(self)
-
-    def split_blocks_by_reshape(self, shape_map):
-        if self._childs:
-            raise NotImplementedError('Splitting BlockGroup with childs isn\'t implemented yet')
-
-        new_blocks: List[List[DimensionBlock]] = []
-        for block in self._blocks:
-            new_blocks.append(block.split_by_reshape(shape_map))
-        self._childs = []
-        for group in zip(*new_blocks):
-            self._childs.append(BlockGroup(blocks=list(group)))
-        return self._childs.copy()
 
     def close_branch(self):
         for block in self._blocks:
@@ -166,16 +160,22 @@ class BlockGroup:
 
     @staticmethod
     def join_groups(*args: 'BlockGroup') -> 'BlockGroup':
+        """Join block groups into a new one. The group combines all block and child groups from the given list of groups
+
+        :return: a new block group
+        """
         for group in args:
             assert isinstance(group, BlockGroup), \
                 f'Couldn\'t join args {args}, all elements should be BlockGroup instances'
 
         retval = BlockGroup([])
+        blocks = []
         for group in args:
             group.add_childs([retval])
             for block in group.get_blocks():
-                if block not in retval._blocks:
-                    retval._blocks.append(block)
+                if block not in blocks:
+                    blocks.append(block)
+        retval.add_blocks(blocks)
         return retval
 
 
@@ -297,8 +297,10 @@ def get_pruning_groups(graph: NNCFGraph,
         MaskPropagationAlgorithm(graph, pruning_operations_metatypes).mask_propagation()
     finally:
         block_graph = build_nx_graph_from_roots(roots)
-        write_dot_graph(block_graph, Path(DEBUG_LOG_DIR, 'latest_block_group_hierarchy.dot'))
-        save_for_netron(graph, str(Path(DEBUG_LOG_DIR, 'latest_propagated.xml')),
+        dump_dir = Path(DEBUG_LOG_DIR)
+        dump_dir.mkdir(parents=True, exist_ok=True)
+        write_dot_graph(block_graph, dump_dir / 'latest_block_group_hierarchy.dot')
+        save_for_netron(graph, str(dump_dir / 'latest_propagated.xml'),
                         get_attributes_fn=get_attributes_fn)
 
     # 3. Collect groups from producers
