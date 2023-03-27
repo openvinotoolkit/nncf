@@ -196,6 +196,7 @@ def map_quantize_with_accuracy_control_parameters(pot_parameters):
         'ignored': map_ignored_scope,
         'preset': map_preset,
         'stat_subset_size': lambda x: {'subset_size': x},
+        'use_fast_bias': lambda x: {'fast_bias_correction': x},
         # Accuracy control parameters
         'maximal_drop': lambda x: {'max_drop': x},
         'max_iter_num': lambda x: {'max_num_iterations': x},
@@ -206,6 +207,8 @@ def map_quantize_with_accuracy_control_parameters(pot_parameters):
     ignored_parameters = [
         'dump_intermediate_model',
         'inplace_statistics',
+        'activations',
+        'weights',
         # Accuracy control parameters
         'ranking_subset_size',
         'drop_type',
