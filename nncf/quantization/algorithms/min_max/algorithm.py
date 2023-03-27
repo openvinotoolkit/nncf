@@ -417,20 +417,17 @@ class MinMaxQuantization(Algorithm):
                 if quantization_target_point.is_weight_target_point():
                     # If the nodes share one weight tensor, we should have only one quantizer on that
                     weights_name = self._backend_entity.get_weight_name(nncf_graph, quantization_target_point)
-
                     if weights_name in weight_layer_names:
                         continue
                     half_range = is_half_range(self._parameters.overflow_fix, qconfig, weight_layer_names)
-                    
-                    
                     statistics = tensor_collector.get_statistics()
-                    parameters = calculate_quantizer_parameters(statistics, qconfig, QuantizerGroup.WEIGHTS)
+                    parameters = calculate_quantizer_parameters(statistics, qconfig, half_range, QuantizerGroup.WEIGHTS)
                     command = self._backend_entity.create_weight_quantizer_insertion_command(
-                        nncf_graph, quantization_target_point, qconfig, half_range, parameters)
-                    weight_layer_names.add(layer_name)
+                        nncf_graph, quantization_target_point, qconfig, parameters)
+                    weight_layer_names.add(weights_name)
                 else:
                     statistics = tensor_collector.get_statistics()
-                    parameters = calculate_quantizer_parameters(statistics, qconfig, QuantizerGroup.ACTIVATIONS)
+                    parameters = calculate_quantizer_parameters(statistics, qconfig, False, QuantizerGroup.ACTIVATIONS)
                     command = self._backend_entity.create_activation_quantizer_insertion_command(
                         nncf_graph, quantization_target_point, qconfig, parameters)
 

@@ -177,24 +177,40 @@ def asymmetric_range(min_values: np.ndarray, max_values: np.ndarray,
 
 def calculate_quantizer_parameters(statistics: MinMaxTensorStatistic,
                                    quantizer_config: QuantizerConfig,
+                                   half_range: bool,
                                    quant_group: QuantizerGroup) -> FakeQuantizeParameters:
     """
     Calculates FakeQuantize layer attributes for weight/activation quantizer.
 
     :param statistics: Collected statistics for the quantized insertion.
     :param quantizer_config: Config of the quantization configuration.
+    :param half_range: If ``True`` effectively only a half of a quantizer range are used.
+        False - the full range are used.
     :param quantizer_group: Group of the quantizer.
     :return: Parameters of the FakeQuantize layer.
     """
     min_values = np.array(statistics.min_values).astype(np.float32)
     max_values = np.array(statistics.max_values).astype(np.float32)
 
+    num_bits = quantizer_config.num_bits
+    narrow_range = quantizer_config.mode == QuantizationMode.SYMMETRIC and quant_group == QuantizerGroup.WEIGHTS
+
+    if half_range:
+        assert quantizer_config.mode == QuantizationMode.SYMMETRIC
+        num_bits = num_bits - 1
+        narrow_range = False
+
     if quantizer_config.mode == QuantizationMode.SYMMETRIC:
-        narrow_range = quant_group == QuantizerGroup.WEIGHTS
-        _, _, levels = calculate_symmetric_level_ranges(quantizer_config.num_bits,
+        _, _, levels = calculate_symmetric_level_ranges(num_bits,
                                                         signed=True, narrow_range=narrow_range)
         input_low, input_high = symmetric_range(min_values, max_values,
                                                 levels, quantizer_config, quant_group)
+        if half_range:
+            _, _, export_levels = calculate_symmetric_level_ranges(num_bits + 1,
+                                                                  signed=True, narrow_range=False)
+            input_high = input_high * export_levels / levels
+            input_low = input_low * export_levels / levels
+            levels = export_levels
     else:
         _, _, levels = calculate_asymmetric_level_ranges(quantizer_config.num_bits, narrow_range=False)
         input_low, input_high = asymmetric_range(min_values, max_values, quantizer_config, quant_group)
