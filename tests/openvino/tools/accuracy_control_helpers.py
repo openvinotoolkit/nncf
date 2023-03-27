@@ -95,6 +95,7 @@ class ACValidationFunction:
                       .format(requests_number, multiprocessing.cpu_count(), params['nreq']))
 
 
+# pylint: disable=protected-access
 def quantize_model_with_accuracy_control(xml_path: str,
                                          bin_path: str,
                                          accuracy_checcker_config,

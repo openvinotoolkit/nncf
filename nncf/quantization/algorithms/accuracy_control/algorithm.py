@@ -24,7 +24,6 @@ from nncf.common.factory import NNCFGraphFactory
 from nncf.common.logging import nncf_logger
 from nncf.common.utils.backend import get_backend
 from nncf.common.quantization.quantizer_removal import revert_operations_to_floating_point_precision
-from nncf.quantization.algorithms.accuracy_control.algorithm import get_algo_backend
 from nncf.quantization.algorithms.accuracy_control.backend import AccuracyControlAlgoBackend
 from nncf.quantization.algorithms.accuracy_control.ranker import Ranker
 from nncf.quantization.algorithms.accuracy_control.ranker import MetricBasedRanker
