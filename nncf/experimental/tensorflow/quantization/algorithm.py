@@ -11,39 +11,42 @@
  limitations under the License.
 """
 
-from typing import List, Optional, Dict, Any
+from typing import Any
+from typing import Dict
+from typing import List
+from typing import Optional
 
-from nncf.common.logging import nncf_logger
 from nncf.common.graph import NNCFGraph
 from nncf.common.graph import NNCFNode
-from nncf.common.graph.utils import get_first_nodes_of_type
 from nncf.common.graph.transformations.commands import TargetPoint
 from nncf.common.graph.transformations.commands import TargetType
 from nncf.common.graph.transformations.commands import TransformationPriority
-from nncf.common.quantization.structs import QuantizerConfig
-from nncf.common.quantization.quantizer_setup import QuantizationPointId
+from nncf.common.graph.utils import get_first_nodes_of_type
+from nncf.common.logging import nncf_logger
 from nncf.common.quantization.quantizer_setup import ActivationQuantizationInsertionPoint
+from nncf.common.quantization.quantizer_setup import QuantizationPointId
+from nncf.common.quantization.structs import QuantizerConfig
 from nncf.common.stateful_classes_registry import TF_STATEFUL_CLASSES
 from nncf.common.statistics import NNCFStatistics
+from nncf.common.utils.backend import copy_model
 from nncf.config.extractors import extract_range_init_params
-from nncf.tensorflow.algorithm_selector import TF_COMPRESSION_ALGORITHMS
-from nncf.tensorflow.graph.transformations.commands import TFInsertionCommand
-from nncf.tensorflow.graph.metatypes.tf_ops import TFOpWithWeightsMetatype
-from nncf.tensorflow.quantization.quantizers import TFQuantizerSpec
-from nncf.tensorflow.quantization.algorithm import QuantizationController
-from nncf.tensorflow.quantization.algorithm import TFQuantizationPointStateNames
-from nncf.tensorflow.quantization.algorithm import TFQuantizationPoint
-from nncf.tensorflow.quantization.algorithm import TFQuantizationSetup
-from nncf.tensorflow.quantization.algorithm import QuantizationBuilder
-from nncf.experimental.tensorflow.nncf_network import NNCFNetwork
 from nncf.experimental.tensorflow.graph.converter import SubclassedConverter
 from nncf.experimental.tensorflow.graph.model_transformer import TFModelTransformerV2
-from nncf.experimental.tensorflow.graph.transformations.layout import TFTransformationLayoutV2
-from nncf.experimental.tensorflow.quantization.init_range import TFRangeInitParamsV2
-from nncf.experimental.tensorflow.quantization.init_range import RangeInitializerV2
-from nncf.experimental.tensorflow.quantization.quantizers import create_quantizer
 from nncf.experimental.tensorflow.graph.transformations.commands import TFTargetPoint
-
+from nncf.experimental.tensorflow.graph.transformations.layout import TFTransformationLayoutV2
+from nncf.experimental.tensorflow.nncf_network import NNCFNetwork
+from nncf.experimental.tensorflow.quantization.init_range import RangeInitializerV2
+from nncf.experimental.tensorflow.quantization.init_range import TFRangeInitParamsV2
+from nncf.experimental.tensorflow.quantization.quantizers import create_quantizer
+from nncf.tensorflow.algorithm_selector import TF_COMPRESSION_ALGORITHMS
+from nncf.tensorflow.graph.metatypes.tf_ops import TFOpWithWeightsMetatype
+from nncf.tensorflow.graph.transformations.commands import TFInsertionCommand
+from nncf.tensorflow.quantization.algorithm import QuantizationBuilder
+from nncf.tensorflow.quantization.algorithm import QuantizationController
+from nncf.tensorflow.quantization.algorithm import TFQuantizationPoint
+from nncf.tensorflow.quantization.algorithm import TFQuantizationPointStateNames
+from nncf.tensorflow.quantization.algorithm import TFQuantizationSetup
+from nncf.tensorflow.quantization.quantizers import TFQuantizerSpec
 
 UNSUPPORTED_TF_OP_METATYPES = [
 ]
@@ -364,7 +367,9 @@ class QuantizationBuilderV2(QuantizationBuilder):
 
 
 class QuantizationControllerV2(QuantizationController):
-    def strip_model(self, model: NNCFNetwork) -> NNCFNetwork:
+    def strip_model(self, model: NNCFNetwork, do_copy: bool = False) -> NNCFNetwork:
+        if do_copy:
+            model = copy_model(model)
         return model
 
     def statistics(self, quickly_collected_only: bool = False) -> NNCFStatistics:

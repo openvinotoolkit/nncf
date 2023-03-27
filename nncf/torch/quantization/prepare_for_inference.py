@@ -30,15 +30,15 @@ def replace_quantizer_to_torch_native_module(model: NNCFNetwork) -> NNCFNetwork:
 
     :return: The modified NNCF network.
     """
-    for key in model.external_quantizers.keys():
-        if model.external_quantizers[key].is_enabled_quantization():
-            model.external_quantizers[key] = convert_to_torch_fakequantizer(model.external_quantizers[key])
+    for key in model.nncf.external_quantizers.keys():
+        if model.nncf.external_quantizers[key].is_enabled_quantization():
+            model.nncf.external_quantizers[key] = convert_to_torch_fakequantizer(model.nncf.external_quantizers[key])
 
-    for node in model.get_original_graph().get_all_nodes():
+    for node in model.nncf.get_original_graph().get_all_nodes():
         if node.node_type in ["nncf_model_input", "nncf_model_output"]:
             continue
 
-        nncf_module = model.get_containing_module(node.node_name)
+        nncf_module = model.nncf.get_containing_module(node.node_name)
 
         if hasattr(nncf_module, "pre_ops"):
             for key in list(nncf_module.pre_ops.keys()):
@@ -78,7 +78,7 @@ def convert_to_torch_fakequantizer(nncf_quantizer: BaseQuantizer) -> FakeQuantiz
 
     per_channel = nncf_quantizer.per_channel
     scale_shape = nncf_quantizer.scale_shape
-    ch_axis = np.argmax(scale_shape)
+    ch_axis = int(np.argmax(scale_shape))
     dtype = torch.qint8 if nncf_quantizer.level_low < 0 else torch.quint8
 
     if per_channel:
@@ -125,16 +125,16 @@ def remove_disabled_quantizers(model: NNCFNetwork) -> NNCFNetwork:
     :return: The modified NNCF network.
     """
     if hasattr(model, "external_quantizers"):
-        for key in list(model.external_quantizers.keys()):
-            op = model.external_quantizers[key]
+        for key in list(model.nncf.external_quantizers.keys()):
+            op = model.nncf.external_quantizers[key]
             if isinstance(op, BaseQuantizer) and not op.is_enabled_quantization():
-                model.external_quantizers.pop(key)
+                model.nncf.external_quantizers.pop(key)
 
-    for node in model.get_original_graph().get_all_nodes():
+    for node in model.nncf.get_original_graph().get_all_nodes():
         if node.node_type in ["nncf_model_input", "nncf_model_output"]:
             continue
 
-        nncf_module = model.get_containing_module(node.node_name)
+        nncf_module = model.nncf.get_containing_module(node.node_name)
 
         if hasattr(nncf_module, "pre_ops"):
             for key in list(nncf_module.pre_ops.keys()):

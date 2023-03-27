@@ -34,7 +34,12 @@ from nncf.torch.dynamic_graph.scope import ScopeElement
 from nncf.torch.dynamic_graph.trace_tensor import TensorMeta
 from nncf.common.utils.patcher import PATCHER
 
-_CURRENT_CONTEXT = None
+class ThreadLocalGlobalContext(threading.local):
+    def __init__(self):
+        super().__init__()
+        self.context = None
+
+_CURRENT_CONTEXT = ThreadLocalGlobalContext()
 
 
 class PreHookId:
@@ -113,9 +118,12 @@ class TracingContext:
         self._ordinals_ids = None
 
     def __enter__(self):
-        global _CURRENT_CONTEXT
-        self._save_context = _CURRENT_CONTEXT
-        _CURRENT_CONTEXT = self
+        # For DataParallel, this relies on having the same compressed context for
+        # all replicas. Otherwise we will have data races on setting and reading the global _CURRENT_CONTEXT
+        # variable, which will in turn lead to DP-specific runtime errors such as
+        # "'_thread._local' object has no attribute 'scopes'"
+        self._save_context = get_current_context()
+        set_current_context(self)
         self._reset_thread_local()
         if is_debug():
             self.reset_node_call_counters()
@@ -131,8 +139,7 @@ class TracingContext:
 
         self._reset_thread_local()
 
-        global _CURRENT_CONTEXT
-        _CURRENT_CONTEXT = self._save_context
+        set_current_context(self._save_context)
         self._save_context = None
 
     def find_operator_node(self, tensor_metas: List[Optional[TensorMeta]],
@@ -418,6 +425,10 @@ class TracingContext:
                     self.skipped_blocks = blocks
 
 
+def set_current_context(c: TracingContext):
+    _CURRENT_CONTEXT.context = c
+
+
 @contextmanager
 def no_nncf_trace():
     ctx = get_current_context()
@@ -441,7 +452,7 @@ def forward_nncf_trace():
 
 
 def get_current_context() -> TracingContext:
-    return _CURRENT_CONTEXT
+    return _CURRENT_CONTEXT.context
 
 
 def disable_tracing(method):

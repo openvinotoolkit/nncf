@@ -14,7 +14,7 @@ The sample receives a configuration file where the training schedule, hyper-para
 
 ## Installation
 
-At this point it is assumed that you have already installed nncf. You can find information on downloading nncf [here](https://github.com/openvinotoolkit/nncf#user-content-installation).  
+At this point it is assumed that you have already installed nncf. You can find information on downloading nncf [here](https://github.com/openvinotoolkit/nncf#user-content-installation).
 
 To work with the sample you should install the corresponding Python package dependencies:
 
@@ -52,8 +52,8 @@ We can run the sample after data preparation. For this follow these steps:
 - If you did not install the package, add the repository root folder to the `PYTHONPATH` environment variable.
 - Go to the `examples/tensorflow/segmentation` folder.
 - Download the pre-trained weights in checkpoint format and provide the path to them using `--weights` flag. The link to the
-archive with pre-trained weights can be found in the `TensorFlow checkpoint` column of the [results](#results) table. 
-Select the checkpoint corresponding to the `None` compression algorithm, which includes the pre-trained weights for the 
+archive with pre-trained weights can be found in the `TensorFlow checkpoint` column of the [results](#results) table.
+Select the checkpoint corresponding to the `None` compression algorithm, which includes the pre-trained weights for the
 FP32 model, without applying any compression algorithms.
 - Specify the GPUs to be used for training by setting the environment variable [`CUDA_VISIBLE_DEVICES`](https://developer.nvidia.com/blog/cuda-pro-tip-control-gpu-visibility-cuda_visible_devices/). This is necessary because training and validation during training must be performed on different GPU devices. Please note that usually only one GPU is required for validation during training.
 - (Optional) Before compressing a model, it is highly recommended checking the accuracy of the pretrained model, use the following command:

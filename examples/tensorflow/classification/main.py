@@ -11,42 +11,42 @@
  limitations under the License.
 """
 
-import sys
 import os.path as osp
+import sys
 from pathlib import Path
 
 import tensorflow as tf
 import tensorflow_addons as tfa
 
-from examples.tensorflow.common.experimental_patcher import patch_if_experimental_quantization
-from nncf.config.utils import is_accuracy_aware_training
-from nncf.tensorflow.helpers.model_creation import create_compressed_model
-from nncf.tensorflow import create_compression_callbacks
-from nncf.tensorflow.helpers.model_manager import TFModelManager
-from nncf.tensorflow.initialization import register_default_init_args
-from nncf.tensorflow.utils.state import TFCompressionState
-from nncf.tensorflow.utils.state import TFCompressionStateLoader
-
+from examples.common.sample_config import create_sample_config
 from examples.tensorflow.classification.datasets.builder import DatasetBuilder
 from examples.tensorflow.common.argparser import get_common_argument_parser
 from examples.tensorflow.common.callbacks import get_callbacks
 from examples.tensorflow.common.callbacks import get_progress_bar
 from examples.tensorflow.common.distributed import get_distribution_strategy
+from examples.tensorflow.common.experimental_patcher import patch_if_experimental_quantization
+from examples.tensorflow.common.export import export_model
 from examples.tensorflow.common.logger import logger
 from examples.tensorflow.common.model_loader import get_model
 from examples.tensorflow.common.optimizer import build_optimizer
-from examples.common.sample_config import create_sample_config
 from examples.tensorflow.common.scheduler import build_scheduler
+from examples.tensorflow.common.utils import SummaryWriter
+from examples.tensorflow.common.utils import close_strategy_threadpool
 from examples.tensorflow.common.utils import configure_paths
 from examples.tensorflow.common.utils import create_code_snapshot
 from examples.tensorflow.common.utils import get_saving_parameters
 from examples.tensorflow.common.utils import print_args
-from examples.tensorflow.common.utils import serialize_config
 from examples.tensorflow.common.utils import serialize_cli_args
-from examples.tensorflow.common.utils import write_metrics
-from examples.tensorflow.common.utils import SummaryWriter
-from examples.tensorflow.common.utils import close_strategy_threadpool
+from examples.tensorflow.common.utils import serialize_config
 from examples.tensorflow.common.utils import set_seed
+from examples.tensorflow.common.utils import write_metrics
+from nncf.config.utils import is_accuracy_aware_training
+from nncf.tensorflow import create_compression_callbacks
+from nncf.tensorflow.helpers.model_creation import create_compressed_model
+from nncf.tensorflow.helpers.model_manager import TFModelManager
+from nncf.tensorflow.initialization import register_default_init_args
+from nncf.tensorflow.utils.state import TFCompressionState
+from nncf.tensorflow.utils.state import TFCompressionStateLoader
 
 
 def get_argument_parser():
@@ -189,13 +189,6 @@ def run(config):
 
     resume_training = config.ckpt_path is not None
 
-    if is_accuracy_aware_training(config):
-        uncompressed_model_accuracy = get_model_accuracy(model_fn,
-                                                         model_params,
-                                                         nncf_config,
-                                                         validation_dataset,
-                                                         validation_steps)
-
     compression_state = None
     if resume_training:
         compression_state = load_compression_state(config.ckpt_path)
@@ -271,7 +264,6 @@ def run(config):
                 steps_per_epoch=train_steps,
                 tensorboard_writer=SummaryWriter(config.log_dir, 'accuracy_aware_training'),
                 log_dir=config.log_dir,
-                uncompressed_model_accuracy=uncompressed_model_accuracy,
                 result_dict_to_val_metric_fn=result_dict_to_val_metric_fn,
                 **validation_kwargs)
             logger.info(f'Compressed model statistics:\n{statistics.to_str()}')
@@ -288,7 +280,9 @@ def run(config):
     logger.info('evaluation...')
     statistics = compression_ctrl.statistics()
     logger.info(statistics.to_str())
-    results = compress_model.evaluate(
+    eval_model = compress_model
+
+    results = eval_model.evaluate(
         validation_dataset,
         steps=validation_steps,
         callbacks=[get_progress_bar(
@@ -300,7 +294,7 @@ def run(config):
 
     if 'export' in config.mode:
         save_path, save_format = get_saving_parameters(config)
-        compression_ctrl.export_model(save_path, save_format)
+        export_model(compression_ctrl.prepare_for_inference(), save_path, save_format)
         logger.info('Saved to {}'.format(save_path))
 
     close_strategy_threadpool(strategy)
@@ -338,7 +332,7 @@ def export(config):
                         ckpt_path=config.ckpt_path)
 
     save_path, save_format = get_saving_parameters(config)
-    compression_ctrl.export_model(save_path, save_format)
+    export_model(compression_ctrl.prepare_for_inference(), save_path, save_format)
     logger.info('Saved to {}'.format(save_path))
 
 

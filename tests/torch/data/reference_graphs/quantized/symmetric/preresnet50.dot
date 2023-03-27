@@ -301,7 +301,7 @@ strict digraph  {
 "299 PreActResNet/Sequential[layer4]/PreActBottleneck[2]/__iadd___0" [id=299, type=__iadd__];
 "300 PreActResNet/Sequential[layer4]/PreActBottleneck[2]/SymmetricQuantizer/symmetric_quantize_3" [id=300, type=symmetric_quantize];
 "301 PreActResNet/avg_pool2d_0" [id=301, type=avg_pool2d];
-"302 PreActResNet/SymmetricQuantizer/symmetric_quantize_0" [id=302, type=symmetric_quantize];
+"302 PreActResNet/NNCFNetworkInterface[_nncf]/ModuleDict[external_quantizers]/SymmetricQuantizer[PreActResNet/avg_pool2d_0|OUTPUT]/symmetric_quantize_0" [id=302, type=symmetric_quantize];
 "303 PreActResNet/view_0" [id=303, type=view];
 "304 PreActResNet/NNCFLinear[linear]/ModuleDict[pre_ops]/UpdateWeight[0]/SymmetricQuantizer[op]/symmetric_quantize_0" [id=304, type=symmetric_quantize];
 "305 PreActResNet/NNCFLinear[linear]/linear_0" [id=305, type=linear];
@@ -623,8 +623,8 @@ strict digraph  {
 "298 PreActResNet/Sequential[layer4]/PreActBottleneck[2]/NNCFConv2d[conv3]/SymmetricQuantizer/symmetric_quantize_0" -> "299 PreActResNet/Sequential[layer4]/PreActBottleneck[2]/__iadd___0";
 "299 PreActResNet/Sequential[layer4]/PreActBottleneck[2]/__iadd___0" -> "300 PreActResNet/Sequential[layer4]/PreActBottleneck[2]/SymmetricQuantizer/symmetric_quantize_3";
 "300 PreActResNet/Sequential[layer4]/PreActBottleneck[2]/SymmetricQuantizer/symmetric_quantize_3" -> "301 PreActResNet/avg_pool2d_0";
-"301 PreActResNet/avg_pool2d_0" -> "302 PreActResNet/SymmetricQuantizer/symmetric_quantize_0";
-"302 PreActResNet/SymmetricQuantizer/symmetric_quantize_0" -> "303 PreActResNet/view_0";
+"301 PreActResNet/avg_pool2d_0" -> "302 PreActResNet/NNCFNetworkInterface[_nncf]/ModuleDict[external_quantizers]/SymmetricQuantizer[PreActResNet/avg_pool2d_0|OUTPUT]/symmetric_quantize_0";
+"302 PreActResNet/NNCFNetworkInterface[_nncf]/ModuleDict[external_quantizers]/SymmetricQuantizer[PreActResNet/avg_pool2d_0|OUTPUT]/symmetric_quantize_0" -> "303 PreActResNet/view_0";
 "303 PreActResNet/view_0" -> "305 PreActResNet/NNCFLinear[linear]/linear_0";
 "304 PreActResNet/NNCFLinear[linear]/ModuleDict[pre_ops]/UpdateWeight[0]/SymmetricQuantizer[op]/symmetric_quantize_0" -> "305 PreActResNet/NNCFLinear[linear]/linear_0";
 "305 PreActResNet/NNCFLinear[linear]/linear_0" -> "306 /nncf_model_output_0";

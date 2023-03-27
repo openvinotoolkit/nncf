@@ -337,10 +337,6 @@ strict digraph  {
 "335 MobileNetSSD/SSDDetectionOutput[detection_head]/cat_1" [id=335, type=cat];
 "336 MobileNetSSD/SSDDetectionOutput[detection_head]/view_12" [id=336, type=view];
 "337 MobileNetSSD/SSDDetectionOutput[detection_head]/softmax_0" [id=337, type=softmax];
-"338 MobileNetSSD/SSDDetectionOutput[detection_head]/view_13" [id=338, type=view];
-"339 MobileNetSSD/SSDDetectionOutput[detection_head]/view_14" [id=339, type=view];
-"340 /nncf_model_output_0" [id=340, type=nncf_model_output];
-"341 /nncf_model_output_1" [id=341, type=nncf_model_output];
 "0 /nncf_model_input_0" -> "1 SymmetricQuantizer/symmetric_quantize_0";
 "1 SymmetricQuantizer/symmetric_quantize_0" -> "2 MobileNetSSD/__getitem___0";
 "1 SymmetricQuantizer/symmetric_quantize_0" -> "8 MobileNetSSD/MultiOutputSequential[basenet]/Sequential[0]/NNCFConv2d[0]/conv2d_0";
@@ -680,7 +676,6 @@ strict digraph  {
 "325 MobileNetSSD/SSDDetectionOutput[detection_head]/view_3" -> "328 MobileNetSSD/SSDDetectionOutput[detection_head]/cat_0";
 "326 MobileNetSSD/SSDDetectionOutput[detection_head]/view_4" -> "328 MobileNetSSD/SSDDetectionOutput[detection_head]/cat_0";
 "327 MobileNetSSD/SSDDetectionOutput[detection_head]/view_5" -> "328 MobileNetSSD/SSDDetectionOutput[detection_head]/cat_0";
-"328 MobileNetSSD/SSDDetectionOutput[detection_head]/cat_0" -> "338 MobileNetSSD/SSDDetectionOutput[detection_head]/view_13";
 "329 MobileNetSSD/SSDDetectionOutput[detection_head]/view_6" -> "335 MobileNetSSD/SSDDetectionOutput[detection_head]/cat_1";
 "330 MobileNetSSD/SSDDetectionOutput[detection_head]/view_7" -> "335 MobileNetSSD/SSDDetectionOutput[detection_head]/cat_1";
 "331 MobileNetSSD/SSDDetectionOutput[detection_head]/view_8" -> "335 MobileNetSSD/SSDDetectionOutput[detection_head]/cat_1";
@@ -688,8 +683,5 @@ strict digraph  {
 "333 MobileNetSSD/SSDDetectionOutput[detection_head]/view_10" -> "335 MobileNetSSD/SSDDetectionOutput[detection_head]/cat_1";
 "334 MobileNetSSD/SSDDetectionOutput[detection_head]/view_11" -> "335 MobileNetSSD/SSDDetectionOutput[detection_head]/cat_1";
 "335 MobileNetSSD/SSDDetectionOutput[detection_head]/cat_1" -> "336 MobileNetSSD/SSDDetectionOutput[detection_head]/view_12";
-"335 MobileNetSSD/SSDDetectionOutput[detection_head]/cat_1" -> "339 MobileNetSSD/SSDDetectionOutput[detection_head]/view_14";
 "336 MobileNetSSD/SSDDetectionOutput[detection_head]/view_12" -> "337 MobileNetSSD/SSDDetectionOutput[detection_head]/softmax_0";
-"338 MobileNetSSD/SSDDetectionOutput[detection_head]/view_13" -> "340 /nncf_model_output_0";
-"339 MobileNetSSD/SSDDetectionOutput[detection_head]/view_14" -> "341 /nncf_model_output_1";
 }

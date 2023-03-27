@@ -20,6 +20,7 @@ import torch
 from torch.autograd import Variable
 from torch.distributions.uniform import Uniform
 
+from nncf.common.quantization.structs import QuantizationMode
 from nncf.torch.quantization.quantize_functions import asymmetric_quantize
 from nncf.torch.quantization.quantize_functions import get_scale_zp_from_input_low_input_high
 from nncf.torch.quantization.quantize_functions import symmetric_quantize
@@ -220,12 +221,9 @@ def check_outputs_for_quantization_functions(test_val: torch.Tensor, ref_val: np
                           [16, 576, 14, 14]],
                          ids=idfn)
 @pytest.mark.parametrize('bits', (8, 4), ids=('8bit', '4bit'))
-@pytest.mark.parametrize("use_cuda", [False, True], ids=['cpu', 'cuda'])
 @pytest.mark.parametrize('scale_mode', ["single_scale", "per_channel_scale"])
-@pytest.mark.parametrize("is_weights", (True, False), ids=('weights', 'activation'))
 @pytest.mark.parametrize("is_fp16", (True, False), ids=('fp16', 'fp32'))
 class TestParametrized:
-    @pytest.mark.parametrize("is_signed", (True, False), ids=('signed', 'unsigned'))
     class TestSymmetric:
         @staticmethod
         def generate_scale(input_size, scale_mode, is_weights, is_fp16, fixed=None):
@@ -369,8 +367,7 @@ class TestParametrized:
 
             mock_prev_output_grads = np.ones(input_size, dtype=np.float16 if is_fp16 else np.float32)
             ref_grads = RQ.backward(mock_prev_output_grads, ref_input, ref_input_low,
-                                    ref_input_range, ref_output, level_low, level_high,
-                                    1)
+                                    ref_input_range, ref_output, level_low, level_high)
             del ref_grads[1]
             test_value = symmetric_quantize(test_input, levels, level_low, level_high, test_scale, EPS)
             test_value.sum().backward()
@@ -510,7 +507,6 @@ class TestParametrized:
             test_input_low, test_input_range = get_test_data(
                 [ref_input_low, ref_input_range], use_cuda, is_backward=True, is_fp16=is_fp16)
 
-            range_sign = np.sign(ref_input_range)
             ref_input_range = abs(ref_input_range) + EPS
             ref_input_low, ref_input_range = RQ.tune_range(
                 ref_input_low, ref_input_range, levels)
@@ -541,7 +537,7 @@ class TestParametrized:
             mock_prev_output_grads = np.ones(input_size, dtype=np.float16 if is_fp16 else np.float32)
             ref_grads = RQ.backward(
                 mock_prev_output_grads, ref_input, ref_input_low, ref_input_range, ref_output, level_low,
-                level_high, range_sign)
+                level_high)
 
             test_value = asymmetric_quantize(test_input, levels, level_low, level_high, test_input_low,
                                              test_input_range, eps=EPS)
@@ -555,7 +551,6 @@ class TestParametrized:
                                                      rtol=1e-2 if is_fp16 else 1e-3)
 
 
-@pytest.mark.parametrize('quantization_mode', ['symmetric', 'asymmetric'])
 @pytest.mark.parametrize('device', ['cuda', 'cpu'])
 def test_mapping_to_zero(quantization_mode, device):
     torch.manual_seed(42)
@@ -567,7 +562,7 @@ def test_mapping_to_zero(quantization_mode, device):
     eps = 1e-6
     number_of_samples = 100
 
-    if quantization_mode == 'symmetric':
+    if quantization_mode == QuantizationMode.SYMMETRIC:
         level_low = -128
         level_high = 127
 

@@ -454,7 +454,7 @@ class ElasticKernelBuilder(SingleElasticityBuilder):
         elastic_kernel_ops = []  # type: List[ElasticKernelOp]
         transformation_commands = []
 
-        graph = target_model.get_original_graph()
+        graph = target_model.nncf.get_original_graph()
         device = next(target_model.parameters()).device
         pad_commands = []
 

@@ -1,4 +1,4 @@
-From 82ce3063a27a11074529313df6255a69f6cf189f Mon Sep 17 00:00:00 2001
+From 71c900090006c02e94aa46b10da1eb6d16485a07 Mon Sep 17 00:00:00 2001
 From: Nikolay Lyalyushkin <nikolay.lyalyushkin@intel.com>
 Date: Tue, 18 Oct 2022 22:08:16 +0200
 Subject: [PATCH] Modifications for NNCF usage
@@ -20,10 +20,10 @@ Subject: [PATCH] Modifications for NNCF usage
  nncf_roberta_config_mnli.json                 |  35 ++++++
  src/transformers/modeling_utils.py            |  24 ++++
  src/transformers/pytorch_utils.py             |   3 +-
- src/transformers/trainer.py                   |  72 ++++++++++-
+ src/transformers/trainer.py                   |  51 +++++++-
  src/transformers/training_args.py             |   6 +
  src/transformers/utils/__init__.py            |   1 +
- 19 files changed, 827 insertions(+), 73 deletions(-)
+ 19 files changed, 811 insertions(+), 68 deletions(-)
  create mode 100644 nncf_bert_config_conll.json
  create mode 100644 nncf_bert_config_mrpc.json
  create mode 100644 nncf_bert_config_squad.json
@@ -1233,7 +1233,7 @@ index d94e049b5..09c99d4dd 100644
      """
      1D-convolutional layer as defined by Radford et al. for OpenAI GPT (and also used in GPT-2).
 diff --git a/src/transformers/trainer.py b/src/transformers/trainer.py
-index 214e7a978..530e80048 100755
+index 214e7a978..12a5787cd 100755
 --- a/src/transformers/trainer.py
 +++ b/src/transformers/trainer.py
 @@ -33,7 +33,7 @@ from pathlib import Path
@@ -1301,31 +1301,7 @@ index 214e7a978..530e80048 100755
          # Seed must be set before instantiating the model when using model
          enable_full_determinism(self.args.seed) if self.args.full_determinism else set_seed(self.args.seed)
          self.hp_name = None
-@@ -623,7 +652,10 @@ class Trainer:
-         self.current_flos = 0
-         self.hp_search_backend = None
-         self.use_tune_checkpoints = False
--        default_label_names = find_labels(self.model.__class__)
-+        model_class = self.model.__class__
-+        if isinstance(self.model, NNCFNetwork):
-+            model_class = self.model.get_nncf_wrapped_model().__class__
-+        default_label_names = find_labels(model_class)
-         self.label_names = default_label_names if self.args.label_names is None else self.args.label_names
-         self.control = self.callback_handler.on_init_end(self.args, self.state, self.control)
- 
-@@ -708,7 +740,10 @@ class Trainer:
-     def _set_signature_columns_if_needed(self):
-         if self._signature_columns is None:
-             # Inspect model forward signature to keep only the arguments it accepts.
--            signature = inspect.signature(self.model.forward)
-+            if isinstance(self.model, NNCFNetwork):
-+                signature = inspect.signature(self.model.get_nncf_wrapped_model().forward)
-+            else:
-+                signature = inspect.signature(self.model.forward)
-             self._signature_columns = list(signature.parameters.keys())
-             # Labels may be named label or label_ids, the default data collator handles that.
-             self._signature_columns += list(set(["label", "label_ids"] + self.label_names))
-@@ -1409,6 +1444,8 @@ class Trainer:
+@@ -1409,6 +1438,8 @@ class Trainer:
  
              if self.args.ddp_bucket_cap_mb is not None:
                  kwargs["bucket_cap_mb"] = self.args.ddp_bucket_cap_mb
@@ -1334,7 +1310,7 @@ index 214e7a978..530e80048 100755
              model = nn.parallel.DistributedDataParallel(
                  model,
                  device_ids=[self.args.local_rank] if self.args._n_gpu != 0 else None,
-@@ -1687,6 +1724,9 @@ class Trainer:
+@@ -1687,6 +1718,9 @@ class Trainer:
                      _ = list(train_dataloader.sampler)
  
          for epoch in range(epochs_trained, num_train_epochs):
@@ -1344,7 +1320,7 @@ index 214e7a978..530e80048 100755
              if isinstance(train_dataloader, DataLoader) and isinstance(train_dataloader.sampler, DistributedSampler):
                  train_dataloader.sampler.set_epoch(epoch)
              elif hasattr(train_dataloader, "dataset") and isinstance(train_dataloader.dataset, IterableDatasetShard):
-@@ -1790,6 +1830,8 @@ class Trainer:
+@@ -1790,6 +1824,8 @@ class Trainer:
                              )
  
                      # Optimizer step
@@ -1353,7 +1329,7 @@ index 214e7a978..530e80048 100755
                      optimizer_was_run = True
                      if self.deepspeed:
                          pass  # called outside the loop
-@@ -1814,6 +1856,7 @@ class Trainer:
+@@ -1814,6 +1850,7 @@ class Trainer:
                      model.zero_grad()
                      self.state.global_step += 1
                      self.state.epoch = epoch + (step + 1) / steps_in_epoch
@@ -1361,7 +1337,7 @@ index 214e7a978..530e80048 100755
                      self.control = self.callback_handler.on_step_end(args, self.state, self.control)
  
                      self._maybe_log_save_evaluate(tr_loss, model, trial, epoch, ignore_keys_for_eval)
-@@ -2033,6 +2076,14 @@ class Trainer:
+@@ -2033,6 +2070,14 @@ class Trainer:
              logs["loss"] = round(tr_loss_scalar / (self.state.global_step - self._globalstep_last_logged), 4)
              logs["learning_rate"] = self._get_learning_rate()
  
@@ -1376,7 +1352,7 @@ index 214e7a978..530e80048 100755
              self._total_loss_scalar += tr_loss_scalar
              self._globalstep_last_logged = self.state.global_step
              self.store_flos()
-@@ -2492,6 +2543,10 @@ class Trainer:
+@@ -2492,6 +2537,10 @@ class Trainer:
              # deepspeed handles loss scaling by gradient_accumulation_steps in its `backward`
              loss = loss / self.args.gradient_accumulation_steps
  
@@ -1387,25 +1363,6 @@ index 214e7a978..530e80048 100755
          if self.do_grad_scaling:
              self.scaler.scale(loss).backward()
          elif self.use_apex:
-@@ -2657,10 +2712,15 @@ class Trainer:
-         # Save a trained model and configuration using `save_pretrained()`.
-         # They can then be reloaded using `from_pretrained()`
-         if not isinstance(self.model, PreTrainedModel):
--            if isinstance(unwrap_model(self.model), PreTrainedModel):
-+            unwrapped_model = unwrap_model(self.model)
-+            if isinstance(unwrapped_model, NNCFNetwork):
-+                is_pretrained = isinstance(unwrapped_model.get_nncf_wrapped_model(), PreTrainedModel)
-+            else:
-+                is_pretrained = isinstance(unwrapped_model, PreTrainedModel)
-+            if is_pretrained:
-                 if state_dict is None:
--                    state_dict = self.model.state_dict()
--                unwrap_model(self.model).save_pretrained(output_dir, state_dict=state_dict)
-+                    state_dict = unwrapped_model.state_dict()
-+                unwrapped_model.save_pretrained(output_dir, state_dict=state_dict)
-             else:
-                 logger.info("Trainer.model is not a `PreTrainedModel`, only saving its state dict.")
-                 if state_dict is None:
 diff --git a/src/transformers/training_args.py b/src/transformers/training_args.py
 index 170315fe2..daa497c02 100644
 --- a/src/transformers/training_args.py

@@ -40,9 +40,9 @@ from tests.shared.nx_graph import compare_nx_graph_with_reference
 
 
 def check_subnet_visualization(multi_elasticity_handler, model, nas_model_name, stage):
-    model.rebuild_graph()
+    model.nncf.rebuild_graph()
     dot_file = f'{nas_model_name}_{stage}.dot'
-    width_graph = SubnetGraph(model.get_graph(), multi_elasticity_handler).get()
+    width_graph = SubnetGraph(model.nncf.get_graph(), multi_elasticity_handler).get()
     path_to_dot = get_full_path_to_the_graph(dot_file, 'nas')
     compare_nx_graph_with_reference(width_graph, path_to_dot)
 
@@ -70,16 +70,16 @@ def test_bn_adaptation_on_minimal_subnet_width_stage():
     bn_adaptation = ctrl._bn_adaptation
 
     multi_elasticity_handler.enable_all()
-    model.do_dummy_forward()
+    model.nncf.do_dummy_forward()
 
     multi_elasticity_handler.width_handler.reorganize_weights()
     bn_adaptation.run(model)
-    model.do_dummy_forward()
+    model.nncf.do_dummy_forward()
 
     multi_elasticity_handler.activate_minimum_subnet()
     # ERROR HERE
     bn_adaptation.run(model)
-    model.do_dummy_forward()
+    model.nncf.do_dummy_forward()
 
 
 ###########################
@@ -120,25 +120,26 @@ def test_random_multi_elasticity(_seed, nas_model_name):
             'invalid padding update in elastic kernel (ticket 60990)')
 
     model, ctrl, _ = create_bootstrap_nas_training_algo(nas_model_name)
+    model.eval()
 
     multi_elasticity_handler = ctrl.multi_elasticity_handler
-    model.do_dummy_forward()
+    model.nncf.do_dummy_forward()
 
     multi_elasticity_handler.disable_all()
     multi_elasticity_handler.enable_elasticity(ElasticityDim.KERNEL)
     multi_elasticity_handler.activate_random_subnet()
-    model.do_dummy_forward()
+    model.nncf.do_dummy_forward()
     check_subnet_visualization(multi_elasticity_handler, model, nas_model_name, stage='kernel')
 
     multi_elasticity_handler.enable_elasticity(ElasticityDim.DEPTH)
     multi_elasticity_handler.activate_random_subnet()
-    model.do_dummy_forward()
+    model.nncf.do_dummy_forward()
     check_subnet_visualization(multi_elasticity_handler, model, nas_model_name, stage='depth')
 
     multi_elasticity_handler.enable_elasticity(ElasticityDim.WIDTH)
     multi_elasticity_handler.width_handler.width_num_params_indicator = 1
     multi_elasticity_handler.activate_random_subnet()
-    model.do_dummy_forward()
+    model.nncf.do_dummy_forward()
     check_subnet_visualization(multi_elasticity_handler, model, nas_model_name, stage='width')
 
 
@@ -218,7 +219,7 @@ def check_output_and_weights_after_training_step(model, ref_model, actual_optimi
     ref_output = do_training_step(ref_model, ref_optimizer, input_)
     actual_output = do_training_step(model, actual_optimizer, input_)
     assert torch.equal(actual_output, ref_output)
-    ref_model.assert_weights_equal(model.get_nncf_wrapped_model())
+    ref_model.assert_weights_equal(model)
     transformation_matrix = [param.data for name, param in model.named_parameters() if name.endswith('5to3_matrix')]
     ref_model.assert_transition_matrix_equals(transformation_matrix[0])
 

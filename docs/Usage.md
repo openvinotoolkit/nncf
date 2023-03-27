@@ -85,36 +85,54 @@ Important points you should consider when training your networks with compressio
   - Turn off the `Dropout` layers (and similar ones like `DropConnect`) when training a network with quantization or sparsity
   - It is better to turn off additional regularization in the loss function (for example, L2 regularization via `weight_decay`) when training the network with RB sparsity, since it already imposes an L0 regularization term.
 
-#### Step 4 (optional): Export the compressed model to ONNX
-After the compressed model has been fine-tuned to acceptable accuracy and compression stages, you can export it to ONNX format.
-Since export process is in general algorithm-specific, you have to call the compression controller's `export_model` method to properly export the model with compression specifics into ONNX:
-```python
-compression_ctrl.export_model("./compressed_model.onnx")
-```
-The exported ONNX file may contain special, non-ONNX-standard operations and layers to leverage full compressed/low-precision potential of the OpenVINO toolkit.
-In some cases it is possible to export a compressed model with ONNX standard operations only (so that it can be run using `onnxruntime`, for example) - this is the case for the 8-bit symmetric quantization and sparsity/filter pruning algorithms.
-Refer to [compression algorithm documentation](./compression_algorithms) for details.
+#### Step 4: Export the compressed model
+After the compressed model has been fine-tuned to acceptable accuracy and compression stages, you can export it. There are two ways to export a model:
+
+1. Call the compression controller's `export_model` method to properly export the model with compression specifics into ONNX.
+
+    ```python
+    compression_ctrl.export_model("./compressed_model.onnx")
+    ```
+    The exported ONNX file may contain special, non-ONNX-standard operations and layers to leverage full compressed/low-precision potential of the OpenVINO toolkit.
+    In some cases it is possible to export a compressed model with ONNX standard operations only (so that it can be run using `onnxruntime`, for example) - this is the case for the 8-bit symmetric quantization and sparsity/filter pruning algorithms.
+    Refer to [compression algorithm documentation](./compression_algorithms) for details.
+    Also, this method is limited to the supported formats for export.
+
+2. Call the compression controller's `prepare_for_inference` method, to properly get the model without NNCF specific
+    nodes for training compressed model, after that you can trace the model via inference in framework operations.
+    It gives more flexibility to deploy model after optimization. As well as this method also allows you to connect
+    third-party inference solutions, like OpenVINO.
+
+    ```python
+    inference_model = compression_ctrl.prepare_for_inference()
+    # To ONNX format
+    import torch
+    torch.onnx.export(inference_model, dummy_input, './compressed_model.onnx')
+    # To OpenVINO format
+    from openvino.tools import mo
+    ov_model = mo.convert_model(inference_model, example_input=example_input)
+    ```
 
 ## Saving and loading compressed models
 The complete information about compression is defined by a compressed model and a compression state.
-The model characterizes the weights and topology of the network. The compression state - how to restore the setting of 
+The model characterizes the weights and topology of the network. The compression state - how to restore the setting of
 compression layers in the model and how to restore the compression schedule and the compression loss.
-The latter can be obtained by `compression_ctrl.get_compression_state()` on saving and passed to the 
-`create_compressed_model` helper function by the optional `compression_state` argument on loading. 
+The latter can be obtained by `compression_ctrl.get_compression_state()` on saving and passed to the
+`create_compressed_model` helper function by the optional `compression_state` argument on loading.
 The compressed model should be loaded once it's created.
 
-Saving and loading of the compressed model and compression state is framework-specific and can be done in an arbitrary 
+Saving and loading of the compressed model and compression state is framework-specific and can be done in an arbitrary
 way. NNCF provides one possible way of doing it with helper functions in samples.
 
 To save the best compressed checkpoint use `compression_ctrl.compression_stage()` to distinguish between 3 possible
-levels of compression: `UNCOMPRESSED`, `PARTIALLY_COMPRESSED` and `FULLY_COMPRESSED`. It is useful in case of `staged` 
-compression. Model may achieve the best accuracy on earlier stages of compression - tuning without compression or with 
-intermediate compression rate, but still fully compressed model with lower accuracy should be considered as the best 
-compressed one. `UNCOMPRESSED` means that no compression is applied for the model, for instance, in case of stage 
-quantization - when all quantization are disabled, or in case of sparsity - when current sparsity rate is zero. 
+levels of compression: `UNCOMPRESSED`, `PARTIALLY_COMPRESSED` and `FULLY_COMPRESSED`. It is useful in case of `staged`
+compression. Model may achieve the best accuracy on earlier stages of compression - tuning without compression or with
+intermediate compression rate, but still fully compressed model with lower accuracy should be considered as the best
+compressed one. `UNCOMPRESSED` means that no compression is applied for the model, for instance, in case of stage
+quantization - when all quantization are disabled, or in case of sparsity - when current sparsity rate is zero.
 `PARTIALLY_COMPRESSED` stands for the compressed model which haven't reached final compression ratio yet, e.g. magnitude
-sparsity algorithm has learnt masking of 30% weights out of 51% of target rate. The controller returns 
-`FULLY_COMPRESSED` compression stage when it finished scheduling and tuning hyper parameters of the compression 
+sparsity algorithm has learnt masking of 30% weights out of 51% of target rate. The controller returns
+`FULLY_COMPRESSED` compression stage when it finished scheduling and tuning hyper parameters of the compression
 algorithm, for example when rb-sparsity method sets final target sparsity rate for the loss.
 
 ### Saving and loading compressed models in TensorFlow
@@ -147,8 +165,8 @@ checkpoint = tf.train.Checkpoint(model=compress_model,
 checkpoint.restore(path_to_checkpoint)
 ```
 
-Since the compression state is a dictionary of Python JSON-serializable objects, we convert it to JSON 
-string within `tf.train.Checkpoint`. There are 2 helper classes: `TFCompressionState` - for saving compression state and 
+Since the compression state is a dictionary of Python JSON-serializable objects, we convert it to JSON
+string within `tf.train.Checkpoint`. There are 2 helper classes: `TFCompressionState` - for saving compression state and
 `TFCompressionStateLoader` - for loading.
 
 ### Saving and loading compressed models in PyTorch
@@ -167,7 +185,7 @@ torch.save(checkpoint, path)
 
 # load part
 resuming_checkpoint = torch.load(path)
-state_dict = resuming_checkpoint['state_dict'] 
+state_dict = resuming_checkpoint['state_dict']
 compression_ctrl, compressed_model = create_compressed_model(model, nncf_config, resuming_state_dict=state_dict)
 compression_ctrl.scheduler.load_state(resuming_checkpoint['scheduler_state'])
 ```
@@ -185,39 +203,39 @@ torch.save(checkpoint, path)
 
 # load part
 resuming_checkpoint = torch.load(path)
-compression_state = resuming_checkpoint['compression_state'] 
+compression_state = resuming_checkpoint['compression_state']
 compression_ctrl, compressed_model = create_compressed_model(model, nncf_config, compression_state=compression_state)
-state_dict = resuming_checkpoint['state_dict'] 
+state_dict = resuming_checkpoint['state_dict']
 
 # load model in a preferable way
-    load_state(compressed_model, state_dict, is_resume=True)     
-    # or when execution mode on loading is the same as on saving: 
-    # save and load in a single GPU mode or save and load in the (Distributed)DataParallel one, not in a mixed way  
+    load_state(compressed_model, state_dict, is_resume=True)
+    # or when execution mode on loading is the same as on saving:
+    # save and load in a single GPU mode or save and load in the (Distributed)DataParallel one, not in a mixed way
     compressed_model.load_state_dict(state_dict)
 ```
 
-You can save the `compressed_model` object `torch.save` as usual: via `state_dict` and `load_state_dict` methods. 
-Alternatively, you can use the `nncf.load_state` function on loading. It will attempt to load a PyTorch state dict into 
-a model by first stripping the irrelevant prefixes, such as `module.` or `nncf_module.`, from both the checkpoint and 
+You can save the `compressed_model` object `torch.save` as usual: via `state_dict` and `load_state_dict` methods.
+Alternatively, you can use the `nncf.load_state` function on loading. It will attempt to load a PyTorch state dict into
+a model by first stripping the irrelevant prefixes, such as `module.` or `nncf_module.`, from both the checkpoint and
 the model layer identifiers, and then do the matching between the layers.
-Depending on the value of the `is_resume` argument, it will then fail if an exact match could not be made 
-(when `is_resume == True`), or load the matching layer parameters and print a warning listing the mismatches 
-(when `is_resume == False`). `is_resume=False` is most commonly used if you want to load the starting weights from an 
-uncompressed model into a compressed model and `is_resume=True` is used when you want to evaluate a compressed 
+Depending on the value of the `is_resume` argument, it will then fail if an exact match could not be made
+(when `is_resume == True`), or load the matching layer parameters and print a warning listing the mismatches
+(when `is_resume == False`). `is_resume=False` is most commonly used if you want to load the starting weights from an
+uncompressed model into a compressed model and `is_resume=True` is used when you want to evaluate a compressed
 checkpoint or resume compressed checkpoint training without changing the compression algorithm parameters.
 
 The compression state can be directly pickled by `torch.save` as well, since it is a dictionary of Python objects.
 
-In the previous releases of the NNCF, model can be loaded without compression state information 
-by saving the model state dictionary `compressed_model.state_dict` and loading it via `nncf.load_state` and  
-`compressed_model.load_state_dict` methods or using optional `resuming_state_dict` argument of the 
+In the previous releases of the NNCF, model can be loaded without compression state information
+by saving the model state dictionary `compressed_model.state_dict` and loading it via `nncf.load_state` and
+`compressed_model.load_state_dict` methods or using optional `resuming_state_dict` argument of the
 `create_compressed_model`.
 This way of loading is deprecated, and we highly recommend to not use this way as it does not guarantee the exact loading
-of compression model state for algorithms with sophisticated initialization - e.g. HAWQ and AutoQ. 
+of compression model state for algorithms with sophisticated initialization - e.g. HAWQ and AutoQ.
 Also in this case, keep in mind that in order to load the resulting checkpoint file the `compressed_model` object should
 have the same structure with regard to PyTorch module and parameters as it was when the checkpoint was saved.
-In practice this means that you should use the same compression algorithms (i.e. the same NNCF configuration file) when 
-loading a compressed model checkpoint. 
+In practice this means that you should use the same compression algorithms (i.e. the same NNCF configuration file) when
+loading a compressed model checkpoint.
 
 
 ## Exploring the compressed model
@@ -268,11 +286,11 @@ NNCF has the capability to apply the model compression algorithms while satisfyi
 The following function is required to create the accuracy-aware training loop. One has to pass the `NNCFConfig` object and the compression controller (that is returned upon compressed model creation, see above).
 ```python
 from nncf.common.accuracy_aware_training import create_accuracy_aware_training_loop
-training_loop = create_accuracy_aware_training_loop(nncf_config, compression_ctrl)
+training_loop = create_accuracy_aware_training_loop(nncf_config, compression_ctrl, uncompressed_model_accuracy)
 ```
 
-In order to properly instantiate the accuracy-aware training loop, the user has to specify the 'accuracy_aware_training' section. 
-This section fully depends on what Accuracy-Aware Training loop is being used. 
+In order to properly instantiate the accuracy-aware training loop, the user has to specify the 'accuracy_aware_training' section.
+This section fully depends on what Accuracy-Aware Training loop is being used.
 For more details about config of Adaptive Compression Level Training refer to [Adaptive Compression Level Training documentation](./accuracy_aware_model_training/AdaptiveCompressionTraining.md) and Early Exit Training refer to [Early Exit Training documentation](./accuracy_aware_model_training/EarlyExitTraining.md).
 
 The training loop is launched by calling its `run` method. Before the start of the training loop, the user is expected to define several functions related to the training of the model and pass them as arguments to the `run` method of the training loop instance:
@@ -318,9 +336,9 @@ def configure_optimizers_fn():
 def dump_checkpoint_fn(model, compression_controller, accuracy_aware_runner, save_dir):
     '''
     An (optional) function that allows a user to define how to save the model's checkpoint.
-    Training loop will call this function instead own dump_checkpoint function and pass 
+    Training loop will call this function instead own dump_checkpoint function and pass
     `model`, `compression_controller`, `accuracy_aware_runner` and `save_dir` to it as arguments.
-    The user can save the states of the objects according to their own needs. 
+    The user can save the states of the objects according to their own needs.
     `save_dir` is a directory that Accuracy-Aware pipeline created to store log information.
     '''
 ```
@@ -334,4 +352,6 @@ model = training_loop.run(model,
                           configure_optimizers_fn=configure_optimizers_fn,
                           dump_checkpoint_fn=dump_checkpoint_fn)
 ```
-The above call executes the acccuracy-aware training loop and return the compressed model. For more details on how to use the accuracy-aware training loop functionality of NNCF, please refer to its [documentation](./accuracy_aware_model_training/AdaptiveCompressionTraining.md).
+The above call executes the accuracy-aware training loop and return the compressed model. For more details on how to use the accuracy-aware training loop functionality of NNCF, please refer to its [documentation](./accuracy_aware_model_training/AdaptiveCompressionTraining.md).
+
+See a PyTorch [example](../../examples/torch/classification/main.py) for **Quantization** + **Filter Pruning** Adaptive Compression scenario on CIFAR10 and ResNet18 [config](../../examples/torch/classification/configs/pruning/resnet18_cifar10_accuracy_aware.json).

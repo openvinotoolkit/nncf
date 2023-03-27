@@ -24,13 +24,11 @@ from torch.nn import Module
 
 from nncf.api.compression import CompressionAlgorithmController
 from nncf.common.compression import BaseCompressionAlgorithmController as BaseController
-from nncf.common.utils.debug import set_debug_log_dir
 from nncf.common.logging import nncf_logger
+from nncf.common.utils.debug import set_debug_log_dir
 from nncf.config import NNCFConfig
 from nncf.config.extractors import extract_algorithm_names
-from nncf.config.structures import ModelEvaluationArgs
 from nncf.config.telemetry_extractors import CompressionStartedFromConfig
-from nncf.config.utils import is_accuracy_aware_training
 from nncf.telemetry import tracked_function
 from nncf.telemetry.events import NNCF_PT_CATEGORY
 from nncf.torch.algo_selector import NoCompressionAlgorithmBuilder
@@ -43,6 +41,7 @@ from nncf.torch.utils import is_dist_avail_and_initialized
 from nncf.torch.utils import is_main_process
 # pylint:disable=too-many-branches
 from nncf.torch.utils import maybe_convert_legacy_names_in_compress_state
+from nncf.torch.utils import training_mode_switcher
 
 
 @tracked_function(NNCF_PT_CATEGORY, [CompressionStartedFromConfig(argname="config"), ])
@@ -101,7 +100,7 @@ def create_compressed_model(model: Module,
     nncf_network = create_nncf_network(model, config, dummy_forward_fn, wrap_inputs_fn, wrap_outputs_fn)
 
     if dump_graphs and is_main_process():
-        nncf_network.get_graph().visualize_graph(osp.join(config.get("log_dir", "."), "original_graph.dot"))
+        nncf_network.nncf.get_graph().visualize_graph(osp.join(config.get("log_dir", "."), "original_graph.dot"))
     builder = create_compression_algorithm_builder(config, should_init)
 
     is_state_loadable = not is_legacy_model_state_dict and compression_state is not None
@@ -114,7 +113,7 @@ def create_compressed_model(model: Module,
 
     # Required to ensure that the model leaving create_compressed_model has correct compressed graph.
     # In particular, this is currently required for correct functioning of RNNs.
-    compressed_model.rebuild_graph()
+    compressed_model.nncf.rebuild_graph()
 
     try:
         if is_legacy_model_state_dict:
@@ -123,18 +122,18 @@ def create_compressed_model(model: Module,
             load_state(compressed_model, state_dict_to_load, is_resume=True)
     finally:
         if dump_graphs and is_main_process():
-            compressed_model_graph = compressed_model.get_graph()
+            compressed_model_graph = compressed_model.nncf.get_graph()
             compressed_model_graph.visualize_graph(osp.join(config.get("log_dir", "."), "compressed_graph.dot"))
 
     synchronize_all_processes_in_distributed_mode()
     return compression_ctrl, compressed_model
 
 
-def create_nncf_network(model,
+def create_nncf_network(model: torch.nn.Module,
                         config: NNCFConfig,
                         dummy_forward_fn: Callable[[Module], Any] = None,
-                        wrap_inputs_fn: Callable[[Tuple, Dict], Tuple[Tuple, Dict]] = None,
-                        wrap_outputs_fn: Callable[[Tuple, Dict], Tuple[Tuple, Dict]] = None) -> NNCFNetwork:
+                        wrap_inputs_fn: Callable = None,
+                        wrap_outputs_fn: Callable = None) -> NNCFNetwork:
     """
     The main function used to produce a model ready for adding compression from an original PyTorch
     model and a configuration object.
@@ -171,34 +170,26 @@ def create_nncf_network(model,
             "building, then the wrap_inputs_fn parameter MUST also be specified and be consistent with "
             "the input wrapping done in dummy_forward_fn.")
 
-    # Compress model that will be deployed for the inference on target device. No need to compress parts of the
-    # model that are used on training stage only (e.g. AuxLogits of Inception-v3 model) or unused modules with weights.
-    # As a consequence, no need to care about spoiling BN statistics, as they're disabled in eval mode.
-    model.eval()
+    # Preserve `.training`/`.requires_grad` state since we will be building NNCFNetwork in `.eval` mode
+    with training_mode_switcher(model, is_training=False):
+        # Compress model that will be deployed for the inference on target device. No need to compress parts of the
+        # model that are used on training stage only (e.g. AuxLogits of Inception-v3 model) or unused modules with
+        # weights. As a consequence, no need to care about spoiling BN statistics, as they're disabled in eval mode.
 
-    input_info_list = create_input_infos(config)
-    scopes_without_shape_matching = config.get('scopes_without_shape_matching', [])
-    ignored_scopes = config.get('ignored_scopes')
-    target_scopes = config.get('target_scopes')
+        input_info_list = create_input_infos(config)
+        scopes_without_shape_matching = config.get('scopes_without_shape_matching', [])
+        ignored_scopes = config.get('ignored_scopes')
+        target_scopes = config.get('target_scopes')
 
-    original_model_accuracy = None
-    if is_accuracy_aware_training(config):
-        if config.has_extra_struct(ModelEvaluationArgs):
-            evaluation_args = config.get_extra_struct(ModelEvaluationArgs)
-            with torch.no_grad():
-                original_model_accuracy = evaluation_args.eval_fn(model)
-                nncf_logger.info(f"Uncompressed model accuracy = {original_model_accuracy}")
+        nncf_network = NNCFNetwork(model, input_infos=input_info_list,
+                                   dummy_forward_fn=dummy_forward_fn,
+                                   wrap_inputs_fn=wrap_inputs_fn,
+                                   wrap_outputs_fn=wrap_outputs_fn,
+                                   ignored_scopes=ignored_scopes,
+                                   target_scopes=target_scopes,
+                                   scopes_without_shape_matching=scopes_without_shape_matching)
 
-    nncf_network = NNCFNetwork(model, input_infos=input_info_list,
-                               dummy_forward_fn=dummy_forward_fn,
-                               wrap_inputs_fn=wrap_inputs_fn,
-                               wrap_outputs_fn=wrap_outputs_fn,
-                               ignored_scopes=ignored_scopes,
-                               target_scopes=target_scopes,
-                               scopes_without_shape_matching=scopes_without_shape_matching,
-                               original_model_accuracy=original_model_accuracy)
-
-    nncf_network.get_tracing_context().disable_trace_dynamic_graph()
+        nncf_network.nncf.get_tracing_context().disable_trace_dynamic_graph()
 
     synchronize_all_processes_in_distributed_mode()
     return nncf_network

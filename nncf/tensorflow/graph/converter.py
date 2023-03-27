@@ -10,6 +10,7 @@
  See the License for the specific language governing permissions and
  limitations under the License.
 """
+
 from abc import ABC
 from abc import abstractmethod
 from collections import defaultdict
@@ -18,16 +19,20 @@ from typing import List
 from typing import Set
 from typing import Tuple
 from typing import Type
-import tensorflow as tf
 from tensorflow.core.framework.node_def_pb2 import NodeDef
 from tensorflow.python.framework.convert_to_constants import convert_variables_to_constants_v2
 from nncf.tensorflow.tf_internals import KerasTensor
+
+import tensorflow as tf
+
 from nncf.common.graph import NNCFGraph
 from nncf.common.graph import NNCFNodeName
 from nncf.common.graph import OperatorMetatype
+from nncf.common.graph.layer_attributes import BaseLayerAttributes
 from nncf.common.graph.layer_attributes import ConvolutionLayerAttributes
 from nncf.common.graph.layer_attributes import MultipleInputLayerAttributes
 from nncf.common.graph.layer_attributes import ReshapeLayerAttributes
+from nncf.common.graph.layer_attributes import PermuteLayerAttributes
 from nncf.common.graph.layer_attributes import LinearLayerAttributes
 from nncf.common.graph.layer_attributes import MultipleOutputLayerAttributes
 from nncf.common.graph.layer_attributes import Dtype
@@ -43,8 +48,10 @@ from nncf.tensorflow.graph.metatypes.common import \
 from nncf.tensorflow.graph.metatypes.common import GENERAL_CONV_LAYER_METATYPES
 from nncf.tensorflow.graph.metatypes.common import LINEAR_LAYER_METATYPES
 from nncf.tensorflow.graph.metatypes.common import RESHAPE_METATYPES
+from nncf.tensorflow.graph.metatypes.common import DIMENSION_PERMUTATION_METATYPES
 from nncf.tensorflow.graph.metatypes.matcher import get_keras_layer_metatype
 from nncf.tensorflow.graph.metatypes.matcher import get_op_metatype
+from nncf.tensorflow.graph.metatypes import keras_layers as layer_metatypes
 from nncf.common.graph.operator_metatypes import OutputNoopMetatype
 from nncf.tensorflow.graph.metatypes.tf_ops import WEIGHTABLE_TF_OP_METATYPES
 from nncf.tensorflow.graph.utils import get_shared_node_name
@@ -563,20 +570,7 @@ class FunctionalConverter(BaseFunctionalSequentialConverter):
             layer_info = self._layer_info[layer_name]
             metatype = layer_info['metatype']
             layer = self._get_layer(layer_name)
-            if metatype in DEPTHWISE_CONV_LAYER_METATYPES:
-                layer_attributes = _get_conv_layer_attributes(layer, is_depthwise=True)
-            elif metatype in GENERAL_CONV_LAYER_METATYPES:
-                layer_attributes = _get_conv_layer_attributes(layer, is_depthwise=False)
-            elif metatype in LINEAR_LAYER_METATYPES:
-                layer_attributes = _get_linear_layer_attributes(layer)
-            elif metatype in LAYER_METATYPES_AGNOSTIC_TO_DATA_PRECISION_WITH_MULTIPLE_CONCAT_INPUTS:
-                layer_attributes = _get_multiple_input_layer_attributes(layer)
-            elif metatype in RESHAPE_METATYPES:
-                layer_attributes = _get_reshape_layer_attributes(layer)
-            elif metatype in LAYER_METATYPES_AGNOSTIC_TO_DATA_PRECISION_WITH_MULTIPLE_OUTPUTS:
-                layer_attributes = _get_multiple_output_layer_attributes(layer)
-            else:
-                layer_attributes = None
+            layer_attributes = _get_layer_attributes(metatype, layer)
             is_shared = len(self._layer_name_to_node_names[layer_name]) > 1
             nncf_node = nncf_graph.add_nncf_node(node_name=node_name,
                                                  node_type=layer_info['type'],
@@ -661,20 +655,7 @@ class SequentialConverter(BaseFunctionalSequentialConverter):
                          out_ports=[0],
                          is_shared=False)
 
-            layer_attributes = None
-            if layer_metatype in DEPTHWISE_CONV_LAYER_METATYPES:
-                layer_attributes = _get_conv_layer_attributes(model_layer, is_depthwise=True)
-            elif layer_metatype in GENERAL_CONV_LAYER_METATYPES:
-                layer_attributes = _get_conv_layer_attributes(model_layer, is_depthwise=False)
-            elif layer_metatype in LINEAR_LAYER_METATYPES:
-                layer_attributes = _get_linear_layer_attributes(model_layer)
-            elif layer_metatype in LAYER_METATYPES_AGNOSTIC_TO_DATA_PRECISION_WITH_MULTIPLE_CONCAT_INPUTS:
-                layer_attributes = _get_multiple_input_layer_attributes(model_layer)
-            elif layer_metatype in RESHAPE_METATYPES:
-                layer_attributes = _get_reshape_layer_attributes(model_layer)
-            elif layer_metatype in LAYER_METATYPES_AGNOSTIC_TO_DATA_PRECISION_WITH_MULTIPLE_OUTPUTS:
-                layer_attributes = _get_multiple_output_layer_attributes(model_layer)
-
+            layer_attributes = _get_layer_attributes(layer_metatype, model_layer)
             if layer_attributes is not None:
                 attrs.update({NNCFGraph.LAYER_ATTRIBUTES: layer_attributes})
 
@@ -719,6 +700,27 @@ class SequentialConverter(BaseFunctionalSequentialConverter):
                                                    input_port_id=0, output_port_id=0, dtype=Dtype.FLOAT)
 
         return nncf_graph
+
+
+def _get_layer_attributes(layer_metatype: Type[OperatorMetatype],
+                          model_layer: tf.keras.layers.Layer) -> BaseLayerAttributes:
+    layer_attributes = None
+    if layer_metatype in DEPTHWISE_CONV_LAYER_METATYPES:
+        layer_attributes = _get_conv_layer_attributes(model_layer, is_depthwise=True)
+    elif layer_metatype in GENERAL_CONV_LAYER_METATYPES:
+        layer_attributes = _get_conv_layer_attributes(model_layer, is_depthwise=False)
+    elif layer_metatype in LINEAR_LAYER_METATYPES:
+        layer_attributes = _get_linear_layer_attributes(model_layer)
+    elif layer_metatype in LAYER_METATYPES_AGNOSTIC_TO_DATA_PRECISION_WITH_MULTIPLE_CONCAT_INPUTS:
+        layer_attributes = _get_multiple_input_layer_attributes(model_layer)
+    elif layer_metatype in RESHAPE_METATYPES:
+        layer_attributes = _get_reshape_layer_attributes(model_layer)
+    elif layer_metatype in DIMENSION_PERMUTATION_METATYPES:
+        layer_attributes = _get_permutation_layer_attributes(model_layer, layer_metatype)
+    elif layer_metatype in LAYER_METATYPES_AGNOSTIC_TO_DATA_PRECISION_WITH_MULTIPLE_OUTPUTS:
+        layer_attributes = _get_multiple_output_layer_attributes(model_layer)
+
+    return layer_attributes
 
 
 def _get_multiple_input_layer_attributes(layer: tf.keras.layers.Layer) -> MultipleInputLayerAttributes:
@@ -775,6 +777,25 @@ def _get_reshape_layer_attributes(layer: tf.keras.layers.Layer) -> ReshapeLayerA
     if isinstance(output_shape, list):
         output_shape = output_shape[0]
     return ReshapeLayerAttributes(input_shape, output_shape)
+
+
+def _get_permutation_layer_attributes(layer: tf.keras.layers.Layer,
+                                      layer_metatype: OperatorMetatype) -> PermuteLayerAttributes:
+    dims = None
+    if hasattr(layer, 'dims'):
+        dims = list(layer.dims)
+    else:
+        inbound_nodes = layer.inbound_nodes
+        if len(inbound_nodes) > 0 and hasattr(inbound_nodes[0], 'call_kwargs'):
+            call_kwargs = inbound_nodes[0].call_kwargs
+            if 'perm' in call_kwargs:
+                dims = call_kwargs['perm']
+    assert dims, 'failed to parse permute attributes'
+    if layer_metatype is layer_metatypes.TFPermuteLayerMetatype:
+        # Indexing starts at 1 for Permute.
+        # Need a zero dimension for consistent representation of permutation.
+        dims.insert(0, 0)
+    return PermuteLayerAttributes(dims)
 
 
 def _get_multiple_output_layer_attributes(layer: tf.keras.layers.Layer) -> MultipleOutputLayerAttributes:

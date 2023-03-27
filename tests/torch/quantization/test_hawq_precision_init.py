@@ -277,7 +277,7 @@ def check_bitwidth_graph(algo_ctrl, model, path_to_dot, graph_dir, add_flops=Fal
     quantizer_switcher = QuantizersSwitcher(list(all_quantizers_per_full_scope.values()))
     # graph may not contain some quantizers (e.g. in staged scenario)
     quantizer_switcher.enable_quantizers()
-    model.rebuild_graph()
+    model.nncf.rebuild_graph()
     groups_of_adjacent_quantizers = algo_ctrl.groups_of_adjacent_quantizers
     graph = BitwidthGraph(algo_ctrl, model, groups_of_adjacent_quantizers, add_flops).get()
     nx_graph = add_adjust_padding_nodes(graph, model)
@@ -786,7 +786,7 @@ def test_compression_ratio(desc, mocker):
 
     quantizer_setup = get_single_config_quantizer_setup_spy.spy_return
     weight_qp_id_per_activation_qp_id = ctrl.groups_of_adjacent_quantizers.weight_qp_id_per_activation_qp_id
-    flops_per_module = model.get_flops_per_module()
+    flops_per_module = model.nncf.get_flops_per_module()
     ratio_calculator = CompressionRatioCalculator(flops_per_module, quantizer_setup, weight_qp_id_per_activation_qp_id)
 
     quantizer_setup = desc.apply_to_quantizer_setup(quantizer_setup)

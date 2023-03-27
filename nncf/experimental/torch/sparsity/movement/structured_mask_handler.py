@@ -359,7 +359,7 @@ class StructuredMaskHandler:
                            key=lambda ctx: ctx.sparsifier_operand.target_module_node.node_id)
             for ctx in ctxes:
                 stats = ctx.gather_statistics_from_operand()
-                module = self.compressed_model.get_containing_module(stats.module_node_name)
+                module = self.compressed_model.nncf.get_containing_module(stats.module_node_name)
                 entry = dict(group_id=group.group_id,
                              type=group.group_type.value,
                              torch_module=module_vs_name_map[module],
@@ -386,7 +386,7 @@ class StructuredMaskHandler:
             ctxes = []
             for op_addr in building_block.op_addresses:
                 if op_addr.operator_name in [m.op_func_name for m in SUPPORTED_NNCF_MODULES]:
-                    module = compressed_model.get_module_by_scope(op_addr.scope_in_model)
+                    module = compressed_model.nncf.get_module_by_scope(op_addr.scope_in_model)
                     minfo = module_vs_sparse_module_info_map[module]
                     for rule in rules_by_group_type[group_type]:
                         if matches_any(minfo.module_node_name, rule.keywords):

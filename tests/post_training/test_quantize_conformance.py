@@ -226,8 +226,6 @@ def quantize_ov_native(model: ov.Model,
                        fast_bias_correction: bool = True,
                        model_type: Optional[nncf.ModelType] = None,
                        ignored_scope: Optional[nncf.IgnoredScope] = None) -> ov.Model:
-    if model_type is not None:
-        RuntimeError('Model type is not supported')
 
     quantized_model = ov_quantize_impl(model,
                                        calibration_dataset,
@@ -235,6 +233,7 @@ def quantize_ov_native(model: ov.Model,
                                        target_device=target_device,
                                        subset_size=subset_size,
                                        fast_bias_correction=fast_bias_correction,
+                                       model_type=model_type,
                                        ignored_scope=ignored_scope)
     return quantized_model
 
@@ -401,8 +400,8 @@ RUNNERS = {
 }
 
 
-def run_ptq_timm(data, output, model_name, backends,
-                 model_quantization_params, process_connection): # pylint: disable=W0703
+def run_ptq_timm(data, output, timm_model_name, backends,
+                 model_quantization_params, process_connection, report_model_name): # pylint: disable=W0703
     torch.multiprocessing.set_sharing_strategy(
         'file_system'
     )  # W/A to avoid RuntimeError
@@ -412,10 +411,12 @@ def run_ptq_timm(data, output, model_name, backends,
         output_folder = Path(output)
         output_folder.mkdir(parents=True, exist_ok=True)
 
-        model = create_timm_model(model_name)
+        model = create_timm_model(timm_model_name)
         model.eval().cpu()
         transform = get_model_transform(model)
 
+        model_name = report_model_name
+        
         batch_one_dataloader = get_torch_dataloader(data, transform, batch_size=1)
         # benchmark original models (once)
         orig_perf, orig_acc = benchmark_torch_model(
@@ -471,13 +472,14 @@ def get_error_msg(traceback_path: PosixPath, backend_name: str) -> str:
 def test_ptq_timm(data, output, result, model_args, backends_list):  # pylint: disable=W0703
     backends = [PipelineType[backend] for backend in backends_list.split(',')]
     model_name = model_args['name']
+    report_model_name = model_args.get('report_model_name', model_name)
     quantization_params = model_args['quantization_params']
     main_connection, process_connection = Pipe()
     process = Process(target=run_ptq_timm,
                       args=(data, output, model_name, backends,
-                            quantization_params, process_connection,))
+                            quantization_params, process_connection, report_model_name))
     process.start()
     process.join()
-    result[model_name] = main_connection.recv()
+    result[report_model_name] = main_connection.recv()
     if process.exitcode:
         assert False

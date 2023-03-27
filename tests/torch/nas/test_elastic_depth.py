@@ -133,12 +133,12 @@ def test_not_matched_add_node():
     nncf_config = get_empty_config(input_sample_sizes=model.INPUT_SIZE)
     model, _ = create_compressed_model_and_algo_for_test(model, nncf_config)
     skipped_blocks = [BuildingBlock('BasicTestSuperNet/NNCFConv2d[conv1]/conv2d_0', '/nncf_model_output_0')]
-    ctx = model.get_tracing_context()
+    ctx = model.nncf.get_tracing_context()
     ctx.set_elastic_blocks(skipped_blocks)
     ctx.elastic_depth = True
     ctx.set_active_skipped_block(list(range(0, len(ctx.skipped_blocks))))
 
-    input_ = torch.ones(model.get_nncf_wrapped_model().INPUT_SIZE).to(device)
+    input_ = torch.ones(model.INPUT_SIZE).to(device)
     model(input_)
 
 
@@ -169,7 +169,7 @@ def test_skip_one_block_resnet18(mocker):
         }}}}
     compressed_model, _ = create_bootstrap_training_model_and_ctrl(model, nncf_config)
 
-    ctx = compressed_model.get_tracing_context()
+    ctx = compressed_model.nncf.get_tracing_context()
     spy_agent_conv2d = mocker.spy(NNCFConv2d, "__call__")
     spy_agent_bn = mocker.spy(torch.nn.BatchNorm2d, "__call__")
 
@@ -202,9 +202,9 @@ def test_can_export_model_with_one_skipped_block_resnet18(tmp_path):
     onnx_model_without_block_path = tmp_path / "resnet18_with_one_skipped_block.onnx"
 
     compressed_model, ctrl = create_compressed_model_and_algo_for_test(model, nncf_config)
-    compressed_model.get_tracing_context().set_elastic_blocks(skipped_blocks)
+    compressed_model.nncf.get_tracing_context().set_elastic_blocks(skipped_blocks)
     # export model to onnx
-    ctx = compressed_model.get_tracing_context()
+    ctx = compressed_model.nncf.get_tracing_context()
     ctrl.export_model(str(orig_onnx_model_path))
 
     ctx.elastic_depth = True  # activate mode with elastic depth
@@ -251,7 +251,7 @@ def test_skip_one_block_resnet50(mocker):
                                     'ResNet/Sequential[layer1]/Bottleneck[2]/relu_2')]
     compressed_model, _ = create_compressed_model_and_algo_for_test(model, nncf_config)
 
-    ctx = compressed_model.get_tracing_context()
+    ctx = compressed_model.nncf.get_tracing_context()
     ctx.set_elastic_blocks(skipped_blocks)
     spy_agent = mocker.spy(NNCFConv2d, "__call__")
     ctx.elastic_depth = True  # activate mode with elastic depth
@@ -290,7 +290,7 @@ def get_model_with_elastic_depth(model, input_sample_sizes, skipped_blocks):
     nncf_config = get_empty_config(input_sample_sizes=input_sample_sizes)
 
     compressed_model, _ = create_compressed_model_and_algo_for_test(model, nncf_config)
-    ctx = compressed_model.get_tracing_context()
+    ctx = compressed_model.nncf.get_tracing_context()
     ctx.set_elastic_blocks(skipped_blocks)
     ctx.elastic_depth = True
     ctx.set_active_skipped_block([0])
@@ -307,7 +307,7 @@ def get_ref_output_model_after_backward__with_elastic_depth():
 
     optimizer = torch.optim.Adam(compressed_model.parameters(), lr=0.01)
 
-    ctx = compressed_model.get_tracing_context()
+    ctx = compressed_model.nncf.get_tracing_context()
     ctx.elastic_depth = True
     ctx.set_active_skipped_block([0])
 
@@ -330,7 +330,7 @@ def get_ref_output_resnet50_after_backward__with_elastic_depth():
     compressed_model.train()
     optimizer = torch.optim.Adam(compressed_model.parameters(), lr=0.01)
 
-    ctx = compressed_model.get_tracing_context()
+    ctx = compressed_model.nncf.get_tracing_context()
     ctx.elastic_depth = True
     ctx.set_active_skipped_block([0])
 
@@ -469,7 +469,7 @@ def test_can_skip_trivial_block(model_creator):
     compressed_model, _ = create_bootstrap_training_model_and_ctrl(model, nncf_config)
 
     # activate elastic depth to skip the only one possible block
-    ctx = compressed_model.get_tracing_context()
+    ctx = compressed_model.nncf.get_tracing_context()
     ctx.elastic_depth = True
     ctx.set_active_skipped_block([0])
 
@@ -501,7 +501,7 @@ def test_check_dinamic_graph_not_grow():
     compressed_model, _ = create_compressed_model_and_algo_for_test(model, nncf_config)
 
     # pylint: disable=protected-access
-    ctx = compressed_model.get_tracing_context()
+    ctx = compressed_model.nncf.get_tracing_context()
     ctx.set_elastic_blocks(skipped_blocks)
     nodes_count = ctx.graph.get_nodes_count()
     ctx.elastic_depth = True  # activate mode with elastic depth

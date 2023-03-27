@@ -37,6 +37,8 @@ from torchvision.datasets import CIFAR10
 from torchvision.datasets import CIFAR100
 from torchvision.models import InceptionOutputs
 
+from examples.common.sample_config import SampleConfig
+from examples.common.sample_config import create_sample_config
 from examples.torch.common.argparser import get_common_argument_parser
 from examples.torch.common.argparser import parse_args
 from examples.torch.common.example_logger import logger
@@ -45,6 +47,7 @@ from examples.torch.common.execution import get_execution_mode
 from examples.torch.common.execution import prepare_model_for_execution
 from examples.torch.common.execution import set_seed
 from examples.torch.common.execution import start_worker
+from examples.torch.common.export import export_model
 from examples.torch.common.model_loader import COMPRESSION_STATE_ATTR
 from examples.torch.common.model_loader import MODEL_STATE_ATTR
 from examples.torch.common.model_loader import extract_model_and_compression_states
@@ -52,8 +55,6 @@ from examples.torch.common.model_loader import load_model
 from examples.torch.common.model_loader import load_resuming_checkpoint
 from examples.torch.common.optimizer import get_parameter_groups
 from examples.torch.common.optimizer import make_optimizer
-from examples.common.sample_config import SampleConfig
-from examples.common.sample_config import create_sample_config
 from examples.torch.common.utils import MockDataset
 from examples.torch.common.utils import NullContextManager
 from examples.torch.common.utils import SafeMLFLow
@@ -223,10 +224,8 @@ def main_worker(current_gpu, config: SampleConfig):
         load_state(model, model_state_dict, is_resume=True)
 
     if is_export_only:
-        if config.prepare_for_inference:
-            compression_ctrl.prepare_for_inference(make_model_copy=False)
-        compression_ctrl.export_model(config.to_onnx)
-        logger.info("Saved to {}".format(config.to_onnx))
+        export_model(compression_ctrl.prepare_for_inference(), config.to_onnx)
+        logger.info(f'Saved to {config.to_onnx}')
         return
 
     model, _ = prepare_model_for_execution(model, config)
@@ -293,17 +292,13 @@ def main_worker(current_gpu, config: SampleConfig):
 
     if 'test' in config.mode:
         val_model = model
-        if config.prepare_for_inference:
-            val_model = compression_ctrl.prepare_for_inference(make_model_copy=True)
         validate(val_loader, val_model, criterion, config)
 
     config.mlflow.end_run()
 
     if 'export' in config.mode:
-        if config.prepare_for_inference:
-            compression_ctrl.prepare_for_inference(make_model_copy=False)
-        compression_ctrl.export_model(config.to_onnx)
-        logger.info("Saved to {}".format(config.to_onnx))
+        export_model(compression_ctrl.prepare_for_inference(), config.to_onnx)
+        logger.info(f'Saved to {config.to_onnx}')
 
 
 def train(config, compression_ctrl, model, criterion, criterion_fn, lr_scheduler, model_name, optimizer,

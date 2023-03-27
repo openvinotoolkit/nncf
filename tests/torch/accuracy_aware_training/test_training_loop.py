@@ -12,6 +12,9 @@
 """
 
 import os
+from copy import deepcopy
+from typing import Callable
+
 import pytest
 from functools import partial
 
@@ -20,6 +23,7 @@ from torch import nn
 from torch.optim import SGD
 from torch.nn import functional as F
 
+from nncf import NNCFConfig
 from nncf.common.accuracy_aware_training.training_loop import AdaptiveCompressionTrainingLoop
 from nncf.common.accuracy_aware_training.training_loop import EarlyExitCompressionTrainingLoop
 
@@ -33,10 +37,12 @@ from tests.torch.pruning.helpers import get_pruning_baseline_config
 from tests.torch.sparsity.magnitude.test_helpers import get_basic_magnitude_sparsity_config
 from tests.torch.quantization.quantization_helpers import get_quantization_config_without_range_init
 
-
-def create_finetuned_lenet_model_and_dataloader(config, eval_fn, finetuning_steps,
-                                                learning_rate=1e-3):
+@pytest.fixture(scope="module")
+def finetuned_master_lenet():
+    learning_rate = 1e-3
+    finetuning_steps = 10
     with set_torch_seed():
+        config = NNCFConfig({"input_info": {"sample_size": [1, *LeNet.INPUT_SIZE]}})
         train_loader = create_ones_mock_dataloader(config, num_samples=10)
         model = LeNet()
         for param in model.parameters():
@@ -51,12 +57,57 @@ def create_finetuned_lenet_model_and_dataloader(config, eval_fn, finetuning_step
             loss = F.mse_loss(y.sum(), y_gt)
             loss.backward()
             optimizer.step()
+    return model, train_loader
 
+@pytest.fixture
+def finetuned_lenet(finetuned_master_lenet):
+    model, loader = finetuned_master_lenet
+    return deepcopy(model), loader
+
+
+def _compress_lenet_for_aa(model: LeNet, config: NNCFConfig,
+                           eval_fn: Callable, train_loader: torch.utils.data.DataLoader):
     config = register_default_init_args(config,
                                         train_loader=train_loader,
                                         model_eval_fn=partial(eval_fn, train_loader=train_loader))
     model, compression_ctrl = create_compressed_model_and_algo_for_test(model, config)
-    return model, train_loader, compression_ctrl
+    return model, compression_ctrl
+
+# precomputed for these cases so as not to run eval in every case
+LENET_UNCOMPRESSED_MODEL_ACCURACY = 0.9956666566431522
+
+class LenetValidateFunctor:
+    def __init__(self, num_steps: int):
+        self._num_steps = num_steps
+
+    def __call__(self, model, epoch=0, train_loader=None):
+        with set_torch_seed():
+            train_loader = iter(train_loader)
+            loss = torch.FloatTensor([0])
+            with torch.no_grad():
+                for _ in range(self._num_steps):
+                    x, y_gt = next(train_loader)
+                    y = model(x)
+                    loss += F.mse_loss(y.sum(), y_gt)
+        return max(1 - loss.item(), 0.0)
+
+
+class LeNetTrainFunctor:
+    def __init__(self, train_loader: torch.utils.data.DataLoader, num_steps: int):
+        self._num_steps = num_steps
+        self._train_loader = train_loader
+
+    def __call__(self, compression_ctrl, model, optimizer,  **kwargs):
+        with set_torch_seed():
+            train_loader = iter(self._train_loader)
+            for _ in range(self._num_steps):
+                compression_ctrl.scheduler.step()
+                optimizer.zero_grad()
+                x, y_gt = next(train_loader)
+                y = model(x)
+                loss = F.mse_loss(y.sum(), y_gt)
+                loss.backward()
+                optimizer.step()
 
 
 @pytest.mark.parametrize(
@@ -69,24 +120,12 @@ def create_finetuned_lenet_model_and_dataloader(config, eval_fn, finetuning_step
             ({'maximal_absolute_accuracy_degradation': 0.10}, 0.82, 0.9151),
     )
 )
-def test_adaptive_compression_training_loop(max_accuracy_degradation,
+def test_adaptive_compression_training_loop(finetuned_lenet, max_accuracy_degradation,
                                             final_compression_rate,
                                             reference_final_metric,
                                             num_steps=10, learning_rate=1e-3,
                                             initial_training_phase_epochs=5,
-                                            patience_epochs=3,
-                                            init_finetuning_steps=10):
-    def validate_fn(model, epoch=0, train_loader=None):
-        with set_torch_seed():
-            train_loader = iter(train_loader)
-            loss = torch.FloatTensor([0])
-            with torch.no_grad():
-                for _ in range(num_steps):
-                    x, y_gt = next(train_loader)
-                    y = model(x)
-                    loss += F.mse_loss(y.sum(), y_gt)
-        return max(1 - loss.item(), 0)
-
+                                            patience_epochs=3):
     input_sample_size = [1, 1, LeNet.INPUT_SIZE[-1], LeNet.INPUT_SIZE[-1]]
     config = get_basic_magnitude_sparsity_config(input_sample_size=input_sample_size)
 
@@ -103,33 +142,24 @@ def test_adaptive_compression_training_loop(max_accuracy_degradation,
         }
     }
 
+    validate_functor = LenetValidateFunctor(num_steps)
     config.update(accuracy_aware_config)
-
-    model, train_loader, compression_ctrl = create_finetuned_lenet_model_and_dataloader(config,
-                                                                                        validate_fn,
-                                                                                        init_finetuning_steps)
-
-    def train_fn(compression_ctrl, model, optimizer,
-                 train_loader=train_loader, **kwargs):
-        with set_torch_seed():
-            train_loader = iter(train_loader)
-            for _ in range(num_steps):
-                compression_ctrl.scheduler.step()
-                optimizer.zero_grad()
-                x, y_gt = next(train_loader)
-                y = model(x)
-                loss = F.mse_loss(y.sum(), y_gt)
-                loss.backward()
-                optimizer.step()
+    original_model, train_loader = finetuned_lenet
+    model, compression_ctrl = _compress_lenet_for_aa(original_model, config,
+                                                     validate_functor, train_loader)
 
     def configure_optimizers_fn():
         optimizer = SGD(model.parameters(), lr=learning_rate)
         return optimizer, None
 
-    acc_aware_training_loop = AdaptiveCompressionTrainingLoop(config, compression_ctrl)
+    acc_aware_training_loop = AdaptiveCompressionTrainingLoop(
+        config,
+        compression_ctrl,
+        uncompressed_model_accuracy=LENET_UNCOMPRESSED_MODEL_ACCURACY)
+    train_functor = LeNetTrainFunctor(train_loader, num_steps)
     model = acc_aware_training_loop.run(model,
-                                        train_epoch_fn=train_fn,
-                                        validate_fn=partial(validate_fn, train_loader=train_loader),
+                                        train_epoch_fn=train_functor,
+                                        validate_fn=partial(validate_functor, train_loader=train_loader),
                                         configure_optimizers_fn=configure_optimizers_fn)
     statistics = acc_aware_training_loop.statistics
     assert statistics.compression_rate == pytest.approx(final_compression_rate, 1e-3)
@@ -152,9 +182,8 @@ def test_adaptive_compression_training_loop_with_no_training(
     - self.runner.compression_rate_step >= self.runner.minimal_compression_rate_step
     - self.runner.cumulative_epoch_count < self.runner.maximal_total_epochs
     """
-
+    original_metric = 0.85
     def mock_validate_fn(model, init_step=False, epoch=0):
-        original_metric = 0.85
         if init_step:
             return original_metric
 
@@ -196,7 +225,8 @@ def test_adaptive_compression_training_loop_with_no_training(
         optimizer = SGD(model.parameters(), lr=learning_rate)
         return optimizer, None
 
-    acc_aware_training_loop = AdaptiveCompressionTrainingLoop(config, compression_ctrl)
+    acc_aware_training_loop = AdaptiveCompressionTrainingLoop(config, compression_ctrl,
+                                                              uncompressed_model_accuracy=original_metric)
 
     model = acc_aware_training_loop.run(model,
                                         train_epoch_fn=train_fn,
@@ -282,7 +312,10 @@ def test_adaptive_compression_training_loop_failing(
         optimizer = SGD(model.parameters(), lr=learning_rate)
         return optimizer, None
 
-    acc_aware_training_loop = AdaptiveCompressionTrainingLoop(config, compression_ctrl)
+    acc_aware_training_loop = AdaptiveCompressionTrainingLoop(
+        config,
+        compression_ctrl,
+        uncompressed_model_accuracy=LENET_UNCOMPRESSED_MODEL_ACCURACY)
 
     model = acc_aware_training_loop.run(model,
                                         train_epoch_fn=train_fn,
@@ -312,8 +345,11 @@ def test_adaptive_compression_training_loop_too_high_pruning_flops(
     """
     Test that ACTL reaches the maximal possible compression rate and doesn't break
     """
+
+    mock_uncompressed_model_accuracy = 0.85
+
     def mock_validate_fn(model, epoch=0):
-        return 0.85
+        return mock_uncompressed_model_accuracy
 
     input_sample_size = [1, 1, LeNet.INPUT_SIZE[-1], LeNet.INPUT_SIZE[-1]]
     config = get_pruning_baseline_config(input_sample_size=input_sample_size)
@@ -362,7 +398,10 @@ def test_adaptive_compression_training_loop_too_high_pruning_flops(
         optimizer = SGD(model.parameters(), lr=learning_rate)
         return optimizer, None
 
-    acc_aware_training_loop = AdaptiveCompressionTrainingLoop(config, compression_ctrl)
+    acc_aware_training_loop = AdaptiveCompressionTrainingLoop(
+        config,
+        compression_ctrl,
+        uncompressed_model_accuracy=mock_uncompressed_model_accuracy)
 
     model = acc_aware_training_loop.run(model,
                                         train_epoch_fn=train_fn,
@@ -377,20 +416,11 @@ def test_adaptive_compression_training_loop_too_high_pruning_flops(
     (({'maximal_relative_accuracy_degradation': 30.0}), ({'maximal_relative_accuracy_degradation': 1.0}),
      ({'maximal_absolute_accuracy_degradation': 0.30}), ({'maximal_absolute_accuracy_degradation': 0.05}))
 )
-def test_early_exit_training_loop(max_accuracy_degradation,
+def test_early_exit_training_loop(finetuned_lenet,
+                                  max_accuracy_degradation,
                                   num_steps=10, learning_rate=1e-3,
-                                  maximal_total_epochs=100,
-                                  init_finetuning_steps=10):
-    def validate_fn(model, epoch=0, train_loader=None):
-        with set_torch_seed():
-            train_loader = iter(train_loader)
-            loss = torch.FloatTensor([0])
-            with torch.no_grad():
-                for _ in range(num_steps):
-                    x, y_gt = next(train_loader)
-                    y = model(x)
-                    loss += F.mse_loss(y.sum(), y_gt)
-        return 1 - loss.item()
+                                  maximal_total_epochs=100):
+    validate_functor = LenetValidateFunctor(num_steps)
 
     config = get_quantization_config_without_range_init(LeNet.INPUT_SIZE[-1])
     params = {
@@ -407,39 +437,30 @@ def test_early_exit_training_loop(max_accuracy_degradation,
 
     config.update(accuracy_aware_config)
 
-    model, train_loader, compression_ctrl = create_finetuned_lenet_model_and_dataloader(config,
-                                                                                        validate_fn,
-                                                                                        init_finetuning_steps)
-
-    def train_fn(compression_ctrl, model, epoch, optimizer, lr_scheduler,
-                 train_loader=train_loader):
-        with set_torch_seed():
-            train_loader = iter(train_loader)
-            for _ in range(num_steps):
-                compression_ctrl.scheduler.step()
-                optimizer.zero_grad()
-                x, y_gt = next(train_loader)
-                y = model(x)
-                loss = F.mse_loss(y.sum(), y_gt)
-                loss.backward()
-                optimizer.step()
+    original_model, train_loader = finetuned_lenet
+    model, compression_ctrl = _compress_lenet_for_aa(original_model,
+                                                     config,
+                                                     validate_functor,
+                                                     train_loader)
 
     def configure_optimizers_fn():
         optimizer = SGD(model.parameters(), lr=learning_rate)
         return optimizer, None
 
-    early_stopping_training_loop = EarlyExitCompressionTrainingLoop(config, compression_ctrl)
+    early_stopping_training_loop = EarlyExitCompressionTrainingLoop(config, compression_ctrl,
+                                                                    LENET_UNCOMPRESSED_MODEL_ACCURACY)
+    train_functor = LeNetTrainFunctor(train_loader, num_steps)
     model = early_stopping_training_loop.run(model,
-                                             train_epoch_fn=train_fn,
-                                             validate_fn=partial(validate_fn, train_loader=train_loader),
+                                             train_epoch_fn=train_functor,
+                                             validate_fn=partial(validate_functor, train_loader=train_loader),
                                              configure_optimizers_fn=configure_optimizers_fn)
-    original_model_accuracy = model.original_model_accuracy
+    uncompressed_model_accuracy = LENET_UNCOMPRESSED_MODEL_ACCURACY
     compressed_model_accuracy = early_stopping_training_loop.statistics.compressed_accuracy
     if "maximal_absolute_accuracy_degradation" in max_accuracy_degradation:
-        assert (original_model_accuracy - compressed_model_accuracy) <= \
+        assert (uncompressed_model_accuracy - compressed_model_accuracy) <= \
                max_accuracy_degradation["maximal_absolute_accuracy_degradation"]
     else:
-        assert (original_model_accuracy - compressed_model_accuracy) / original_model_accuracy * 100 <= \
+        assert (uncompressed_model_accuracy - compressed_model_accuracy) / uncompressed_model_accuracy * 100 <= \
                max_accuracy_degradation["maximal_relative_accuracy_degradation"]
 
 
@@ -451,19 +472,22 @@ def test_early_exit_training_loop(max_accuracy_degradation,
 )
 def test_early_exit_with_mock_validation(max_accuracy_degradation, exit_epoch_number,
                                          maximal_total_epochs=100):
-    epoch_counter = 0
+    original_metric = 0.85
 
-    def mock_validate_fn(model, init_step=False, epoch=0):
-        original_metric = 0.85
-        if init_step:
-            return original_metric
-        nonlocal epoch_counter
-        epoch_counter = epoch
-        if "maximal_relative_accuracy_degradation" in max_accuracy_degradation:
-            return original_metric * (1 - 0.01 * max_accuracy_degradation['maximal_relative_accuracy_degradation']) * (
-                    epoch / exit_epoch_number)
-        return (original_metric - max_accuracy_degradation['maximal_absolute_accuracy_degradation']) * \
-               epoch / exit_epoch_number
+    class mock_validate_functor:
+        def __init__(self):
+            self.epoch_count = 0
+        def __call__(self, model, init_step=False, epoch=0):
+            if init_step:
+                return original_metric
+
+            self.epoch_count = epoch
+            if "maximal_relative_accuracy_degradation" in max_accuracy_degradation:
+                return original_metric * \
+                       (1 - 0.01 * max_accuracy_degradation['maximal_relative_accuracy_degradation']) * \
+                       (epoch / exit_epoch_number)
+            return (original_metric - max_accuracy_degradation['maximal_absolute_accuracy_degradation']) * \
+                   epoch / exit_epoch_number
 
     config = get_quantization_config_without_range_init(LeNet.INPUT_SIZE[-1])
 
@@ -483,9 +507,10 @@ def test_early_exit_with_mock_validation(max_accuracy_degradation, exit_epoch_nu
     train_loader = create_ones_mock_dataloader(config, num_samples=10)
     model = LeNet()
 
+    functor_init = mock_validate_functor()
     config = register_default_init_args(config,
                                         train_loader=train_loader,
-                                        model_eval_fn=partial(mock_validate_fn, init_step=True))
+                                        model_eval_fn=partial(functor_init, init_step=True))
 
     model, compression_ctrl = create_compressed_model_and_algo_for_test(model, config)
 
@@ -498,13 +523,16 @@ def test_early_exit_with_mock_validation(max_accuracy_degradation, exit_epoch_nu
         return optimizer, None
 
     early_stopping_training_loop = EarlyExitCompressionTrainingLoop(config, compression_ctrl,
+                                                                    uncompressed_model_accuracy=original_metric,
                                                                     dump_checkpoints=False)
+
+    functor_loop = mock_validate_functor()
     model = early_stopping_training_loop.run(model,
                                              train_epoch_fn=train_fn,
-                                             validate_fn=partial(mock_validate_fn),
+                                             validate_fn=functor_loop,
                                              configure_optimizers_fn=configure_optimizers_fn)
     # Epoch number starts from 0
-    assert epoch_counter == exit_epoch_number
+    assert functor_loop.epoch_count == exit_epoch_number
 
 
 @pytest.mark.parametrize(
@@ -514,8 +542,8 @@ def test_early_exit_with_mock_validation(max_accuracy_degradation, exit_epoch_nu
 def test_early_exit_with_mock_validation_and_no_improvement(
     max_accuracy_degradation, maximal_total_epochs=5
 ):
+    original_metric = 0.85
     def mock_validate_fn(model, init_step=False, epoch=0):
-        original_metric = 0.85
         if init_step:
             return original_metric
 
@@ -554,6 +582,7 @@ def test_early_exit_with_mock_validation_and_no_improvement(
         return optimizer, None
 
     early_stopping_training_loop = EarlyExitCompressionTrainingLoop(config, compression_ctrl,
+                                                                    uncompressed_model_accuracy=original_metric,
                                                                     dump_checkpoints=False)
     assert early_stopping_training_loop.runner._best_checkpoint is None # pylint: disable=protected-access
 
@@ -669,6 +698,7 @@ def test_mock_dump_checkpoint(aa_config, tmp_path):
     model, compression_ctrl = create_compressed_model_and_algo_for_test(model, config)
 
     early_stopping_training_loop = EarlyExitCompressionTrainingLoop(config, compression_ctrl,
+                                                                    LENET_UNCOMPRESSED_MODEL_ACCURACY,
                                                                     dump_checkpoints=True)
     model = early_stopping_training_loop.run(model,
                                              train_epoch_fn=train_fn,

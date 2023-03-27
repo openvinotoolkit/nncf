@@ -22,13 +22,8 @@ from nncf.common.utils.backend import BackendType
 from nncf.common.graph import NNCFNode
 from nncf.common.graph import NNCFGraph
 from nncf.common.graph.operator_metatypes import OperatorMetatype
-from nncf.onnx.graph.metatypes.onnx_metatypes import ONNXConvolutionMetatype
-from nncf.onnx.graph.metatypes.onnx_metatypes import ONNXConvolutionTransposeMetatype
-from nncf.onnx.graph.metatypes.onnx_metatypes import ONNXDepthwiseConvolutionMetatype
-from nncf.onnx.graph.metatypes.onnx_metatypes import ONNXMatMulMetatype
 from nncf.onnx.graph.metatypes.onnx_metatypes import ONNXDequantizeLinearMetatype
 from nncf.onnx.graph.metatypes.onnx_metatypes import ONNXQuantizeLinearMetatype
-from nncf.onnx.graph.metatypes.onnx_metatypes import ONNXOpMetatype
 from nncf.onnx.graph.transformations.commands import ONNXBiasCorrectionCommand
 from nncf.onnx.graph.transformations.commands import ONNXModelExtractionCommand
 from nncf.onnx.graph.transformations.commands import ONNXQDQNodeRemovingCommand
@@ -49,15 +44,6 @@ from nncf.onnx.graph.transformations.command_creation import create_bias_correct
 #pylint:disable=too-many-public-methods
 @ALGO_BACKENDS.register(BackendType.ONNX)
 class ONNXBiasCorrectionAlgoBackend(BiasCorrectionAlgoBackend):
-
-    @property
-    def channel_axis_by_types(self) -> Dict[ONNXOpMetatype, int]:
-        return {
-            ONNXConvolutionMetatype: 1,
-            ONNXMatMulMetatype: -1,
-            ONNXConvolutionTransposeMetatype: 1,
-            ONNXDepthwiseConvolutionMetatype: 1
-        }
 
     @property
     def tensor_processor(self) -> ONNXNNCFCollectorTensorProcessor:

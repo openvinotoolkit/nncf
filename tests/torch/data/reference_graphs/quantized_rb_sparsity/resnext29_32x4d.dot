@@ -7,7 +7,7 @@ strict digraph  {
 "5 ResNeXt/NNCFConv2d[conv1]/conv2d_0" [id=5, type=conv2d];
 "6 ResNeXt/NNCFBatchNorm2d[bn1]/batch_norm_0" [id=6, type=batch_norm];
 "7 ResNeXt/relu_0" [id=7, type=relu];
-"8 ResNeXt/SymmetricQuantizer/symmetric_quantize_0" [id=8, type=symmetric_quantize];
+"8 ResNeXt/NNCFNetworkInterface[_nncf]/ModuleDict[external_quantizers]/SymmetricQuantizer[ResNeXt/relu_0|OUTPUT]/symmetric_quantize_0" [id=8, type=symmetric_quantize];
 "9 ResNeXt/Sequential[layer1]/Block[0]/NNCFConv2d[conv1]/ModuleDict[pre_ops]/UpdateWeight[0]/RBSparsifyingWeight[op]/calc_rb_binary_mask_0" [id=9, type=calc_rb_binary_mask];
 "10 ResNeXt/Sequential[layer1]/Block[0]/NNCFConv2d[conv1]/ModuleDict[pre_ops]/UpdateWeight[0]/RBSparsifyingWeight[op]/apply_binary_mask_0" [id=10, type=apply_binary_mask];
 "11 ResNeXt/Sequential[layer1]/Block[0]/NNCFConv2d[conv1]/ModuleDict[pre_ops]/UpdateWeight[1]/SymmetricQuantizer[op]/symmetric_quantize_0" [id=11, type=symmetric_quantize];
@@ -234,7 +234,7 @@ strict digraph  {
 "232 ResNeXt/Sequential[layer3]/Block[2]/relu_2" [id=232, type=relu];
 "233 ResNeXt/Sequential[layer3]/Block[2]/SymmetricQuantizer/symmetric_quantize_2" [id=233, type=symmetric_quantize];
 "234 ResNeXt/avg_pool2d_0" [id=234, type=avg_pool2d];
-"235 ResNeXt/SymmetricQuantizer/symmetric_quantize_1" [id=235, type=symmetric_quantize];
+"235 ResNeXt/NNCFNetworkInterface[_nncf]/ModuleDict[external_quantizers]/SymmetricQuantizer[ResNeXt/avg_pool2d_0|OUTPUT]/symmetric_quantize_0" [id=235, type=symmetric_quantize];
 "236 ResNeXt/view_0" [id=236, type=view];
 "237 ResNeXt/NNCFLinear[linear]/ModuleDict[pre_ops]/UpdateWeight[0]/RBSparsifyingWeight[op]/calc_rb_binary_mask_0" [id=237, type=calc_rb_binary_mask];
 "238 ResNeXt/NNCFLinear[linear]/ModuleDict[pre_ops]/UpdateWeight[0]/RBSparsifyingWeight[op]/apply_binary_mask_0" [id=238, type=apply_binary_mask];
@@ -248,9 +248,9 @@ strict digraph  {
 "4 ResNeXt/NNCFConv2d[conv1]/ModuleDict[pre_ops]/UpdateWeight[1]/SymmetricQuantizer[op]/symmetric_quantize_0" -> "5 ResNeXt/NNCFConv2d[conv1]/conv2d_0";
 "5 ResNeXt/NNCFConv2d[conv1]/conv2d_0" -> "6 ResNeXt/NNCFBatchNorm2d[bn1]/batch_norm_0";
 "6 ResNeXt/NNCFBatchNorm2d[bn1]/batch_norm_0" -> "7 ResNeXt/relu_0";
-"7 ResNeXt/relu_0" -> "8 ResNeXt/SymmetricQuantizer/symmetric_quantize_0";
-"8 ResNeXt/SymmetricQuantizer/symmetric_quantize_0" -> "12 ResNeXt/Sequential[layer1]/Block[0]/NNCFConv2d[conv1]/conv2d_0";
-"8 ResNeXt/SymmetricQuantizer/symmetric_quantize_0" -> "32 ResNeXt/Sequential[layer1]/Block[0]/Sequential[shortcut]/NNCFConv2d[0]/conv2d_0";
+"7 ResNeXt/relu_0" -> "8 ResNeXt/NNCFNetworkInterface[_nncf]/ModuleDict[external_quantizers]/SymmetricQuantizer[ResNeXt/relu_0|OUTPUT]/symmetric_quantize_0";
+"8 ResNeXt/NNCFNetworkInterface[_nncf]/ModuleDict[external_quantizers]/SymmetricQuantizer[ResNeXt/relu_0|OUTPUT]/symmetric_quantize_0" -> "12 ResNeXt/Sequential[layer1]/Block[0]/NNCFConv2d[conv1]/conv2d_0";
+"8 ResNeXt/NNCFNetworkInterface[_nncf]/ModuleDict[external_quantizers]/SymmetricQuantizer[ResNeXt/relu_0|OUTPUT]/symmetric_quantize_0" -> "32 ResNeXt/Sequential[layer1]/Block[0]/Sequential[shortcut]/NNCFConv2d[0]/conv2d_0";
 "9 ResNeXt/Sequential[layer1]/Block[0]/NNCFConv2d[conv1]/ModuleDict[pre_ops]/UpdateWeight[0]/RBSparsifyingWeight[op]/calc_rb_binary_mask_0" -> "10 ResNeXt/Sequential[layer1]/Block[0]/NNCFConv2d[conv1]/ModuleDict[pre_ops]/UpdateWeight[0]/RBSparsifyingWeight[op]/apply_binary_mask_0";
 "10 ResNeXt/Sequential[layer1]/Block[0]/NNCFConv2d[conv1]/ModuleDict[pre_ops]/UpdateWeight[0]/RBSparsifyingWeight[op]/apply_binary_mask_0" -> "11 ResNeXt/Sequential[layer1]/Block[0]/NNCFConv2d[conv1]/ModuleDict[pre_ops]/UpdateWeight[1]/SymmetricQuantizer[op]/symmetric_quantize_0";
 "11 ResNeXt/Sequential[layer1]/Block[0]/NNCFConv2d[conv1]/ModuleDict[pre_ops]/UpdateWeight[1]/SymmetricQuantizer[op]/symmetric_quantize_0" -> "12 ResNeXt/Sequential[layer1]/Block[0]/NNCFConv2d[conv1]/conv2d_0";
@@ -484,8 +484,8 @@ strict digraph  {
 "231 ResNeXt/Sequential[layer3]/Block[2]/__iadd___0" -> "232 ResNeXt/Sequential[layer3]/Block[2]/relu_2";
 "232 ResNeXt/Sequential[layer3]/Block[2]/relu_2" -> "233 ResNeXt/Sequential[layer3]/Block[2]/SymmetricQuantizer/symmetric_quantize_2";
 "233 ResNeXt/Sequential[layer3]/Block[2]/SymmetricQuantizer/symmetric_quantize_2" -> "234 ResNeXt/avg_pool2d_0";
-"234 ResNeXt/avg_pool2d_0" -> "235 ResNeXt/SymmetricQuantizer/symmetric_quantize_1";
-"235 ResNeXt/SymmetricQuantizer/symmetric_quantize_1" -> "236 ResNeXt/view_0";
+"234 ResNeXt/avg_pool2d_0" -> "235 ResNeXt/NNCFNetworkInterface[_nncf]/ModuleDict[external_quantizers]/SymmetricQuantizer[ResNeXt/avg_pool2d_0|OUTPUT]/symmetric_quantize_0";
+"235 ResNeXt/NNCFNetworkInterface[_nncf]/ModuleDict[external_quantizers]/SymmetricQuantizer[ResNeXt/avg_pool2d_0|OUTPUT]/symmetric_quantize_0" -> "236 ResNeXt/view_0";
 "236 ResNeXt/view_0" -> "240 ResNeXt/NNCFLinear[linear]/linear_0";
 "237 ResNeXt/NNCFLinear[linear]/ModuleDict[pre_ops]/UpdateWeight[0]/RBSparsifyingWeight[op]/calc_rb_binary_mask_0" -> "238 ResNeXt/NNCFLinear[linear]/ModuleDict[pre_ops]/UpdateWeight[0]/RBSparsifyingWeight[op]/apply_binary_mask_0";
 "238 ResNeXt/NNCFLinear[linear]/ModuleDict[pre_ops]/UpdateWeight[0]/RBSparsifyingWeight[op]/apply_binary_mask_0" -> "239 ResNeXt/NNCFLinear[linear]/ModuleDict[pre_ops]/UpdateWeight[1]/SymmetricQuantizer[op]/symmetric_quantize_0";

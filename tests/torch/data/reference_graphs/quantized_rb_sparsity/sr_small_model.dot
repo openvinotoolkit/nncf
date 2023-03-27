@@ -98,7 +98,7 @@ strict digraph  {
 "96 SmallModel/NNCFConv2d[conv_output]/conv2d_0" [id=96, type=conv2d];
 "97 SmallModel/NNCFConv2d[conv_output]/SymmetricQuantizer/symmetric_quantize_0" [id=97, type=symmetric_quantize];
 "98 SmallModel/__mul___0" [id=98, type=__mul__];
-"99 SmallModel/SymmetricQuantizer/symmetric_quantize_0" [id=99, type=symmetric_quantize];
+"99 SmallModel/NNCFNetworkInterface[_nncf]/ModuleDict[external_quantizers]/SymmetricQuantizer[SmallModel/__mul___0|OUTPUT]/symmetric_quantize_0" [id=99, type=symmetric_quantize];
 "100 SmallModel/add_0" [id=100, type=add];
 "101 /nncf_model_output_0" [id=101, type=nncf_model_output];
 "0 /nncf_model_input_0" -> "1 SymmetricQuantizer/symmetric_quantize_0";
@@ -208,7 +208,7 @@ strict digraph  {
 "95 SmallModel/NNCFConv2d[conv_output]/ModuleDict[pre_ops]/UpdateWeight[1]/SymmetricQuantizer[op]/symmetric_quantize_0" -> "96 SmallModel/NNCFConv2d[conv_output]/conv2d_0";
 "96 SmallModel/NNCFConv2d[conv_output]/conv2d_0" -> "97 SmallModel/NNCFConv2d[conv_output]/SymmetricQuantizer/symmetric_quantize_0";
 "97 SmallModel/NNCFConv2d[conv_output]/SymmetricQuantizer/symmetric_quantize_0" -> "98 SmallModel/__mul___0";
-"98 SmallModel/__mul___0" -> "99 SmallModel/SymmetricQuantizer/symmetric_quantize_0";
-"99 SmallModel/SymmetricQuantizer/symmetric_quantize_0" -> "100 SmallModel/add_0";
+"98 SmallModel/__mul___0" -> "99 SmallModel/NNCFNetworkInterface[_nncf]/ModuleDict[external_quantizers]/SymmetricQuantizer[SmallModel/__mul___0|OUTPUT]/symmetric_quantize_0";
+"99 SmallModel/NNCFNetworkInterface[_nncf]/ModuleDict[external_quantizers]/SymmetricQuantizer[SmallModel/__mul___0|OUTPUT]/symmetric_quantize_0" -> "100 SmallModel/add_0";
 "100 SmallModel/add_0" -> "101 /nncf_model_output_0";
 }

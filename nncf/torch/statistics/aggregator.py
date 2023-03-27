@@ -28,7 +28,7 @@ from nncf.torch.graph.transformations.commands import PTInsertionCommand
 class PTStatisticsAggregator(StatisticsAggregator):
     def collect_statistics(self, model: NNCFNetwork) -> None:
         with torch.no_grad():
-            with model.temporary_clean_view() as intermediate_model:
+            with model.nncf.temporary_clean_view() as intermediate_model:
                 super().collect_statistics(intermediate_model)
 
     def _register_statistics(self,

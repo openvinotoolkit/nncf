@@ -27,7 +27,7 @@ from nncf.common.graph.operator_metatypes import OperatorMetatype
 from nncf.common.graph.operator_metatypes import OperatorMetatypeRegistry
 from nncf.common.hardware.opset import HWConfigOpName
 from nncf.torch.dynamic_graph.graph import DynamicGraph
-from nncf.torch.dynamic_graph.patch_pytorch import NamespaceTarget
+from nncf.torch.dynamic_graph.structs import NamespaceTarget
 
 ModuleAttributes = TypeVar('ModuleAttributes', bound=BaseLayerAttributes)
 
@@ -74,7 +74,7 @@ class PTOperatorMetatype(OperatorMetatype):
             output = output.union(function_names)
         if cls.external_op_names is not None:
             output = output.union(cls.external_op_names)
-        return output
+        return list(output)
 
     @classmethod
     def determine_subtype(cls,
@@ -931,6 +931,9 @@ def get_operator_metatypes() -> List[Type[OperatorMetatype]]:
     return list(PT_OPERATOR_METATYPES.registry_dict.values())
 
 
+OP_NAMES_REQUIRING_ATTRIBUTES_FROM_ARGS_KWARGS = [PTTransposeMetatype.get_all_aliases()]
+
+
 OPERATORS_WITH_WEIGHTS_METATYPES = [
     PTModuleConv1dMetatype,
     PTModuleConv2dMetatype,
@@ -948,3 +951,5 @@ OPERATORS_WITH_WEIGHTS_METATYPES = [
     PTModuleEmbeddingMetatype,
     PTModuleEmbeddingBagMetatype,
 ]
+
+OP_NAMES_WITH_WEIGHTS = [x for meta in OPERATORS_WITH_WEIGHTS_METATYPES for x in meta.get_all_aliases()]

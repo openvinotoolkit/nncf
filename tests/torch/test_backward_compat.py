@@ -28,8 +28,8 @@ from nncf.torch import register_default_init_args
 from nncf.torch.checkpoint_loading import load_state
 from nncf.common.graph.definitions import MODEL_INPUT_OP_NAME
 from nncf.config import NNCFConfig
-from nncf.torch.nncf_network import LEGACY_ACT_STORAGE_NAME
-from nncf.torch.nncf_network import MODEL_WRAPPED_BY_NNCF_ATTR_NAME
+from nncf.torch.nncf_network import LEGACY_EXTERNAL_QUANTIZERS_STORAGE_PREFIX
+from nncf.torch.nncf_network import LEGACY_MODEL_WRAPPED_BY_NNCF_ATTR_NAME
 from nncf.torch.quantization.algo import QUANTIZER_BUILDER_STATE_VERSION_SAVE_NAME
 from nncf.torch.quantization.algo import QuantizerBuilderStateVersion
 from tests.shared.paths import TEST_ROOT
@@ -152,16 +152,19 @@ def test_loaded_model_evals_according_to_saved_acc(_params, tmp_path, dataset_di
 
 
 old_style_sd = {
-    f'{MODEL_WRAPPED_BY_NNCF_ATTR_NAME}.conv2d.weight': torch.ones([3, 3, 1, 1]),
-    f'{MODEL_WRAPPED_BY_NNCF_ATTR_NAME}.conv2d.bias': torch.ones([3]),
-    f'{MODEL_WRAPPED_BY_NNCF_ATTR_NAME}.conv2d.pre_ops.0.op._num_bits': 8 * torch.ones([1], dtype=torch.int32),
-    f'{MODEL_WRAPPED_BY_NNCF_ATTR_NAME}.conv2d.pre_ops.0.op.signed_tensor': torch.ones([1], dtype=torch.int32),
-    f'{MODEL_WRAPPED_BY_NNCF_ATTR_NAME}.conv2d.pre_ops.0.op.enabled': torch.ones([1], dtype=torch.int32),
-    f'{MODEL_WRAPPED_BY_NNCF_ATTR_NAME}.conv2d.pre_ops.0.op.scale': torch.ones([3, 1, 1, 1]),
-    f'{LEGACY_ACT_STORAGE_NAME}./{MODEL_INPUT_OP_NAME}_0|OUTPUT._num_bits': 8 * torch.ones([1], dtype=torch.int32),
-    f'{LEGACY_ACT_STORAGE_NAME}./{MODEL_INPUT_OP_NAME}_0|OUTPUT.signed_tensor': torch.zeros([1], dtype=torch.int32),
-    f'{LEGACY_ACT_STORAGE_NAME}./{MODEL_INPUT_OP_NAME}_0|OUTPUT.enabled': torch.ones([1], dtype=torch.int32),
-    f'{LEGACY_ACT_STORAGE_NAME}./{MODEL_INPUT_OP_NAME}_0|OUTPUT.scale': torch.ones([1]),
+    f'{LEGACY_MODEL_WRAPPED_BY_NNCF_ATTR_NAME}.conv2d.weight': torch.ones([3, 3, 1, 1]),
+    f'{LEGACY_MODEL_WRAPPED_BY_NNCF_ATTR_NAME}.conv2d.bias': torch.ones([3]),
+    f'{LEGACY_MODEL_WRAPPED_BY_NNCF_ATTR_NAME}.conv2d.pre_ops.0.op._num_bits': 8 * torch.ones([1], dtype=torch.int32),
+    f'{LEGACY_MODEL_WRAPPED_BY_NNCF_ATTR_NAME}.conv2d.pre_ops.0.op.signed_tensor': torch.ones([1], dtype=torch.int32),
+    f'{LEGACY_MODEL_WRAPPED_BY_NNCF_ATTR_NAME}.conv2d.pre_ops.0.op.enabled': torch.ones([1], dtype=torch.int32),
+    f'{LEGACY_MODEL_WRAPPED_BY_NNCF_ATTR_NAME}.conv2d.pre_ops.0.op.scale': torch.ones([3, 1, 1, 1]),
+    f'{LEGACY_EXTERNAL_QUANTIZERS_STORAGE_PREFIX}./{MODEL_INPUT_OP_NAME}_0|OUTPUT._num_bits':
+        8 * torch.ones([1], dtype=torch.int32),
+    f'{LEGACY_EXTERNAL_QUANTIZERS_STORAGE_PREFIX}./{MODEL_INPUT_OP_NAME}_0|OUTPUT.signed_tensor':
+        torch.zeros([1], dtype=torch.int32),
+    f'{LEGACY_EXTERNAL_QUANTIZERS_STORAGE_PREFIX}./{MODEL_INPUT_OP_NAME}_0|OUTPUT.enabled':
+        torch.ones([1], dtype=torch.int32),
+    f'{LEGACY_EXTERNAL_QUANTIZERS_STORAGE_PREFIX}./{MODEL_INPUT_OP_NAME}_0|OUTPUT.scale': torch.ones([1]),
 }
 
 
@@ -377,7 +380,7 @@ reference_new_builder_state = {
                         'input_port_id': None, 'target_node_name': 'ConvBNLayer/NNCFConv2d[conv]/conv2d_0'},
                     'qspec': {
                         'num_bits': 8, 'mode': 'symmetric', 'signedness_to_force': True, 'narrow_range': True,
-                        'half_range': True, 'scale_shape': (9, 1, 1, 1), 'logarithm_scale': False,
+                        'half_range': False, 'scale_shape': (9, 1, 1, 1), 'logarithm_scale': False,
                         'is_quantized_on_export': True, 'compression_lr_multiplier': None},
                     'directly_quantized_operator_node_names': ['ConvBNLayer/NNCFConv2d[conv]/conv2d_0']},
                 5: {'target_point': {
@@ -387,7 +390,7 @@ reference_new_builder_state = {
                     'input_port_id': None, 'target_node_name': 'ConvBNLayer/NNCFConv2d[conv1]/conv2d_0'},
                     'qspec': {
                         'num_bits': 8, 'mode': 'symmetric', 'signedness_to_force': True, 'narrow_range': True,
-                        'half_range': True, 'scale_shape': (3, 1, 1, 1), 'logarithm_scale': False,
+                        'half_range': False, 'scale_shape': (3, 1, 1, 1), 'logarithm_scale': False,
                         'is_quantized_on_export': True, 'compression_lr_multiplier': None},
                     'directly_quantized_operator_node_names': ['ConvBNLayer/NNCFConv2d[conv1]/conv2d_0']}
             },
@@ -405,6 +408,7 @@ def test_comp_state_without_qspec():
     nncf_config = get_basic_quantization_config(input_info={
         "sample_size": [1, 3, 100, 100]
     })
+    nncf_config['compression']['overflow_fix'] = 'disable'
     register_bn_adaptation_init_args(nncf_config)
     _, compression_ctrl = create_compressed_model_and_algo_for_test(model, nncf_config,
                                                                     compression_state=old_comp_state)

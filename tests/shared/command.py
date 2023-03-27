@@ -46,6 +46,7 @@ class Command:
             print(err)
 
     def run(self, timeout=3600, assert_returncode_zero=True):
+        print(f"Running command: {self.cmd}")
         def target():
             start_time = time.time()
             with subprocess.Popen(self.cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, shell=True,

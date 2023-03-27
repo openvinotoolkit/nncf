@@ -25,16 +25,21 @@ def get_conv(input_1, node_name, input_shape, kernel=None):
     pads = [0, 0]
     dilations = [1, 1]
     if kernel is None:
-        kernel = np.ones((input_shape[1], input_shape[1], 1, 1)).astype(np.float32)
+        shape = (input_shape[1], input_shape[1], 1, 1)
+        kernel = opset.constant(np.ones(shape), dtype=np.float32, name='Const')
     return opset.convolution(input_1, kernel,
                              strides, pads, pads, dilations, name=node_name)
 
 
 def get_convert_conv(input_1, node_name, input_shape):
-    kernel = np.ones((input_shape[1], input_shape[1], 1, 1)).astype(np.float64)
-    const = opset.constant(kernel)
+    shape = (input_shape[1], input_shape[1], 1, 1)
+    const = opset.constant(np.ones(shape), dtype=np.float64, name='Const')
     convert = opset.convert(const, np.float32)
     return get_conv(input_1, node_name, input_shape, convert)
+
+
+def get_shape_node(input_, op_name, input_shape):
+    return opset.shape_of(input_, name=op_name)
 
 
 def get_one_layer_model(op_name: str, node_creator, input_shape):
@@ -46,12 +51,16 @@ def get_one_layer_model(op_name: str, node_creator, input_shape):
 
 
 @pytest.mark.parametrize('node_creator, ref_layer_attrs',
-                         [(get_conv, OVConstantLayerAttributes(1, (3, 3, 1, 1))),
-                          (get_convert_conv, OVConstantLayerAttributes(1, (3, 3, 1, 1)))])
+                         [(get_conv, OVConstantLayerAttributes({1: {'name': 'Const', 'shape': (3, 3, 1, 1)}})),
+                          (get_convert_conv, OVConstantLayerAttributes({1: {'name': 'Const', 'shape': (3, 3, 1, 1)}})),
+                          (get_shape_node, None)])
 def test_layer_attributes(node_creator, ref_layer_attrs):
     input_shape = [1, 3, 3, 3]
     op_name = 'test_node'
     ov_model = get_one_layer_model(op_name, node_creator, input_shape)
     nncf_graph = GraphConverter.create_nncf_graph(ov_model)
     node = nncf_graph.get_node_by_name(op_name)
-    assert node.layer_attributes.__dict__ == ref_layer_attrs.__dict__
+    if ref_layer_attrs is None:
+        assert node.layer_attributes is None
+    else:
+        assert node.layer_attributes.__dict__ == ref_layer_attrs.__dict__

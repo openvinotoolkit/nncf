@@ -317,7 +317,7 @@ class ONNXGraph:
         raise RuntimeError('There is no initializer with the name {}'.format(initializer_name))
 
     @staticmethod
-    def get_tensor_shape(tensor: Union[onnx.ValueInfoProto, onnx.TensorProto]) -> Tuple[int]:
+    def _get_tensor_shape(tensor: Union[onnx.ValueInfoProto, onnx.TensorProto]) -> List[int]:
         """
         Returns 'tensor' shape.
 
@@ -325,7 +325,7 @@ class ONNXGraph:
         :return: Shape of the Tensor.
         """
         if isinstance(tensor, onnx.TensorProto):
-            return tuple(tensor.dims)
+            return list(tensor.dims)
         tensor_type = tensor.type.tensor_type
         shape = []
         if tensor_type.HasField("shape"):
@@ -335,18 +335,15 @@ class ONNXGraph:
                     if isinstance(dim_value, int):
                         shape.append(dim_value)
                     else:
-                        raise RuntimeError(f'The tensor {tensor.name} has non integer shape.')
+                        return shape
                 elif d.HasField("dim_param"):
-                    # flexible shape
-                    # make manually 1
-                    shape.append(1)
+                    # flexible shape  make manually -1
+                    shape.append(-1)
                 else:
-                    raise RuntimeError(f'The tensor {tensor.name} does not have dim_value field.')
-        else:
-            raise RuntimeError(f'The tensor {tensor.name} does not have shape field')
-        return tuple(shape)
+                    return shape
+        return shape
 
-    def get_edge_shape(self, edge_name: str) -> Tuple[int]:
+    def get_edge_shape(self, edge_name: str) -> List[int]:
         """
         Returns a shape of the edge with the name 'edge_name'.
         If the activations tensors were not filled in self._activations_tensor_name_to_value_info, it updates them.
@@ -359,10 +356,10 @@ class ONNXGraph:
         if self._activations_tensor_name_to_value_info is None:
             self._update_activation_tensors()
         if edge_name in self._activations_tensor_name_to_value_info:
-            return ONNXGraph.get_tensor_shape(self._activations_tensor_name_to_value_info[edge_name])
+            return ONNXGraph._get_tensor_shape(self._activations_tensor_name_to_value_info[edge_name])
         self._update_activation_tensors(do_shape_inference=True)
         if edge_name in self._activations_tensor_name_to_value_info:
-            return ONNXGraph.get_tensor_shape(self._activations_tensor_name_to_value_info[edge_name])
+            return ONNXGraph._get_tensor_shape(self._activations_tensor_name_to_value_info[edge_name])
         raise RuntimeError('There is no edge with the name {}'.format(edge_name))
 
     def get_edge_dtype(self, edge_name: str) -> int:

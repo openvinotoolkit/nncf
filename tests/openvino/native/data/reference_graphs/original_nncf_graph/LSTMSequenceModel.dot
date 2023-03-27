@@ -1,0 +1,23 @@
+strict digraph  {
+"0 X" [id=0, type=Parameter];
+"1 initial_hidden_state" [id=1, type=Parameter];
+"2 initial_cell_state" [id=2, type=Parameter];
+"3 LSTMSequence_7" [id=3, type=LSTMSequence];
+"4 MatMul" [id=4, type=MatMul];
+"5 Result" [id=5, type=Result];
+"6 Constant_8" [id=6, type=Constant];
+"7 Constant_6" [id=7, type=Constant];
+"8 Constant_5" [id=8, type=Constant];
+"9 Constant_4" [id=9, type=Constant];
+"10 Constant_3" [id=10, type=Constant];
+"0 X" -> "3 LSTMSequence_7"  [label="[1, 2, 16]", style=solid];
+"1 initial_hidden_state" -> "3 LSTMSequence_7"  [label="[1, 1, 128]", style=solid];
+"2 initial_cell_state" -> "3 LSTMSequence_7"  [label="[1, 1, 128]", style=solid];
+"3 LSTMSequence_7" -> "4 MatMul"  [label="[1, 1, 2, 128]", style=solid];
+"4 MatMul" -> "5 Result"  [label="[1, 1, 2, 3]", style=solid];
+"6 Constant_8" -> "4 MatMul"  [label="[1, 1, 128, 3]", style=solid];
+"7 Constant_6" -> "3 LSTMSequence_7"  [label="[1, 512]", style=solid];
+"8 Constant_5" -> "3 LSTMSequence_7"  [label="[1, 512, 128]", style=solid];
+"9 Constant_4" -> "3 LSTMSequence_7"  [label="[1, 512, 16]", style=solid];
+"10 Constant_3" -> "3 LSTMSequence_7"  [label="[1]", style=dashed];
+}

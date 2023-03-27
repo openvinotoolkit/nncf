@@ -49,17 +49,19 @@ class KnowledgeDistillationLossHandler(nn.Module):
             return [torch.zeros([], device=self._compressed_context.global_buffer_store[self.KD_STORAGE_DEVICE])]
         return self._compressed_context.global_buffer_store[self.KD_LOSS_STORAGE_NAME]
 
-    def forward(self, inputs, *args, **kwargs):
+    def forward(self, compressed_model_outputs, *args, **kwargs):
         """
         Infers kd original model with latest NNCFNetwork forward inputs (*args, **kwargs) and computes distillation loss
         between results of kd original model forward and compressed model forward (inputs). Then stores loss values
         in context at storage device.
 
-        :param inputs: Results of compressed model forward used for knowledge distillation loss calculations.
+        :param compressed_model_outputs: Results of compressed model forward used for
+        knowledge distillation loss calculations.
         """
         self.zero_kd_loss()
         with torch.no_grad():
-            kd_outputs = self._kd_original_model(*args, **kwargs)
-        kd_loss = self._calculate_kd_loss_fn(inputs, kd_outputs)
-        self._compressed_context.global_buffer_store[self.KD_LOSS_STORAGE_NAME].append(kd_loss.to(
-            self._compressed_context.global_buffer_store[self.KD_STORAGE_DEVICE]))
+            original_model_outputs = self._kd_original_model(*args, **kwargs)
+        kd_loss = self._calculate_kd_loss_fn(compressed_model_outputs, original_model_outputs)
+        if kd_loss is not None:
+            self._compressed_context.global_buffer_store[self.KD_LOSS_STORAGE_NAME].append(kd_loss.to(
+                self._compressed_context.global_buffer_store[self.KD_STORAGE_DEVICE]))

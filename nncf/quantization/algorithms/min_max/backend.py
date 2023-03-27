@@ -13,8 +13,10 @@
 
 from abc import ABC
 from abc import abstractmethod
-from typing import Dict, TypeVar, List
+from typing import Dict, TypeVar, List, Optional
 
+from nncf.parameters import ModelType
+from nncf.scopes import IgnoredScope
 from nncf.common.graph.graph import NNCFGraph
 from nncf.common.graph.graph import NNCFNode
 from nncf.common.graph.operator_metatypes import OperatorMetatype
@@ -23,10 +25,9 @@ from nncf.common.graph.transformations.commands import TargetType
 from nncf.common.graph.transformations.commands import TransformationCommand
 from nncf.common.hardware.config import HWConfig
 from nncf.common.tensor_statistics.collectors import TensorStatisticCollectorBase
-from nncf.common.tensor_statistics.statistics import MinMaxTensorStatistic
 from nncf.common.utils.registry import Registry
 from nncf.common.quantization.structs import QuantizerConfig
-
+from nncf.quantization.fake_quantize import FakeQuantizeParameters
 
 TModel = TypeVar('TModel')
 ALGO_BACKENDS = Registry('algo_backends')
@@ -36,9 +37,9 @@ class MinMaxAlgoBackend(ABC):
 
     @property
     @abstractmethod
-    def layers_with_weights_metatypes(self) -> List[OperatorMetatype]:
+    def mat_mul_metatype(self) -> OperatorMetatype:
         """
-        Property for the backend-specific metatypes with weights.
+        Property for the backend-specific MatMul metatype.
         """
 
     @property
@@ -86,14 +87,14 @@ class MinMaxAlgoBackend(ABC):
     def create_activation_quantizer_insertion_command(nncf_graph: NNCFGraph,
                                                       target_point: TargetPoint,
                                                       quantizer_config: QuantizerConfig,
-                                                      statistics: MinMaxTensorStatistic) -> TransformationCommand:
+                                                      parameters: FakeQuantizeParameters) -> TransformationCommand:
         """
         Returns backend-specific quantizer insertion command.
 
         :param nncf_graph: NNCFGraph to get input/output shapes for the target point.
         :param target_point: Target location for the correction.
         :param quantizer_config: QuantizerConfig instance for the current layer.
-        :param statistics: MinMaxTensorStatistic to calculate activation quantization parameters.
+        :param parameters: FakeQuantizeParameters to calculate activation quantization parameters.
         :return: Backend-specific TransformationCommand for the quantizer insertion operation.
         """
 
@@ -102,14 +103,14 @@ class MinMaxAlgoBackend(ABC):
     def create_weight_quantizer_insertion_command(nncf_graph: NNCFGraph,
                                                   target_point: TargetPoint,
                                                   quantizer_config: QuantizerConfig,
-                                                  statistics: MinMaxTensorStatistic) -> TransformationCommand:
+                                                  parameters: FakeQuantizeParameters) -> TransformationCommand:
         """
         Returns backend-specific quantizer insertion command.
 
         :param nncf_graph: NNCFGraph to get input/output shapes for the target point.
         :param target_point: Target location for the correction.
         :param quantizer_config: QuantizerConfig instance for the current layer.
-        :param statistics: MinMaxTensorStatistic to calculate activation quantization parameters.
+        :param parameters: FakeQuantizeParameters to calculate activation quantization parameters.
         :return: Backend-specific TransformationCommand for the quantizer insertion operation.
         """
 
@@ -158,11 +159,41 @@ class MinMaxAlgoBackend(ABC):
         """
 
     @staticmethod
-    def get_weight_tensor_port_id(model: TModel, node: NNCFNode) -> int:
+    @abstractmethod
+    def get_weight_tensor_port_ids(node: NNCFNode) -> List[Optional[int]]:
         """
-        Returns node's weight tensor input port ID.
+        Returns node's input port indices with weight tensors.
 
-        :param model: Backend-specific model to get structural information.
-        :param node: NNCFNode to find its weight input port ID.
-        :return: The input port ID of the weight.
+        :param node: NNCFNode to find its weight input port indices.
+        :return: Weights input port indices.
+        """
+
+    @staticmethod
+    def get_weight_name(nncf_graph: NNCFGraph, target_point: TargetPoint) -> str:
+        """
+        Returns node's weight name corresponding to port ID.
+
+        :param nncf_graph: NNCFGraph instance.
+        :param target_point: The TargetPoint instance that contains layer's information.
+        :return: Weight name.
+        """
+
+    @staticmethod
+    @abstractmethod
+    def get_model_type_ignore_scope(model_type: ModelType) -> IgnoredScope:
+        """
+        Returns ignores scope based on a model type parameter.
+
+        :param model_type: Model type parameter.
+        :return: Instance of ignored scope.
+        """
+
+    @staticmethod
+    @abstractmethod
+    def get_weight_nodes(nncf_graph: NNCFGraph) -> List[NNCFNode]:
+        """
+        Returns nodes that have weights.
+
+        :param nncf_graph: Instance of NNCFGraph.
+        :return: All nodes with weights.
         """

@@ -25,10 +25,12 @@ from nncf.experimental.openvino_native.graph.nncf_graph_builder import GraphConv
 from nncf.experimental.openvino_native.quantization.algorithms.min_max.openvino_backend import OVMinMaxAlgoBackend
 from nncf.experimental.openvino_native.statistics.collectors import OVMeanMinMaxStatisticCollector
 from nncf.experimental.openvino_native.statistics.collectors import OVMinMaxStatisticCollector
+from nncf.experimental.openvino_native.graph.metatypes.openvino_metatypes import OVMatMulMetatype
 
 from tests.openvino.native.models import LinearModel
 from tests.openvino.native.models import DepthwiseConv4DModel
 from tests.post_training.test_ptq_params import TemplateTestPTQParams
+from tests.post_training.models import NNCFGraphToTestMatMul
 
 
 def get_patterns_setup() -> GraphPattern:
@@ -79,6 +81,9 @@ class TestPTQParams(TemplateTestPTQParams):
         'test_ignored_scopes':
             {'nncf_graph': GraphConverter.create_nncf_graph(LinearModel().ov_model),
              'pattern': get_patterns_setup()},
+        'test_model_type_pass':
+            {'nncf_graph': NNCFGraphToTestMatMul(OVMatMulMetatype).nncf_graph,
+             'pattern': GraphPattern()},
         }
 
     @pytest.fixture(params=[(IgnoredScope(), 1, 1), (IgnoredScope(['MatMul']), 1, 0),

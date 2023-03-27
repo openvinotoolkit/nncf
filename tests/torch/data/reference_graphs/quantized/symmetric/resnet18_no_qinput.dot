@@ -4,7 +4,7 @@ strict digraph  {
 "2 ResNet/NNCFConv2d[conv1]/conv2d_0" [id=2, type=conv2d];
 "3 ResNet/NNCFBatchNorm2d[bn1]/batch_norm_0" [id=3, type=batch_norm];
 "4 ResNet/relu_0" [id=4, type=relu];
-"5 ResNet/SymmetricQuantizer/symmetric_quantize_0" [id=5, type=symmetric_quantize];
+"5 ResNet/NNCFNetworkInterface[_nncf]/ModuleDict[external_quantizers]/SymmetricQuantizer[ResNet/relu_0|OUTPUT]/symmetric_quantize_0" [id=5, type=symmetric_quantize];
 "6 ResNet/MaxPool2d[maxpool]/max_pool2d_0" [id=6, type=max_pool2d];
 "7 ResNet/Sequential[layer1]/BasicBlock[0]/NNCFConv2d[conv1]/ModuleDict[pre_ops]/UpdateWeight[0]/SymmetricQuantizer[op]/symmetric_quantize_0" [id=7, type=symmetric_quantize];
 "8 ResNet/Sequential[layer1]/BasicBlock[0]/NNCFConv2d[conv1]/conv2d_0" [id=8, type=conv2d];
@@ -124,8 +124,8 @@ strict digraph  {
 "1 ResNet/NNCFConv2d[conv1]/ModuleDict[pre_ops]/UpdateWeight[0]/SymmetricQuantizer[op]/symmetric_quantize_0" -> "2 ResNet/NNCFConv2d[conv1]/conv2d_0";
 "2 ResNet/NNCFConv2d[conv1]/conv2d_0" -> "3 ResNet/NNCFBatchNorm2d[bn1]/batch_norm_0";
 "3 ResNet/NNCFBatchNorm2d[bn1]/batch_norm_0" -> "4 ResNet/relu_0";
-"4 ResNet/relu_0" -> "5 ResNet/SymmetricQuantizer/symmetric_quantize_0";
-"5 ResNet/SymmetricQuantizer/symmetric_quantize_0" -> "6 ResNet/MaxPool2d[maxpool]/max_pool2d_0";
+"4 ResNet/relu_0" -> "5 ResNet/NNCFNetworkInterface[_nncf]/ModuleDict[external_quantizers]/SymmetricQuantizer[ResNet/relu_0|OUTPUT]/symmetric_quantize_0";
+"5 ResNet/NNCFNetworkInterface[_nncf]/ModuleDict[external_quantizers]/SymmetricQuantizer[ResNet/relu_0|OUTPUT]/symmetric_quantize_0" -> "6 ResNet/MaxPool2d[maxpool]/max_pool2d_0";
 "6 ResNet/MaxPool2d[maxpool]/max_pool2d_0" -> "8 ResNet/Sequential[layer1]/BasicBlock[0]/NNCFConv2d[conv1]/conv2d_0";
 "6 ResNet/MaxPool2d[maxpool]/max_pool2d_0" -> "16 ResNet/Sequential[layer1]/BasicBlock[0]/__iadd___0";
 "7 ResNet/Sequential[layer1]/BasicBlock[0]/NNCFConv2d[conv1]/ModuleDict[pre_ops]/UpdateWeight[0]/SymmetricQuantizer[op]/symmetric_quantize_0" -> "8 ResNet/Sequential[layer1]/BasicBlock[0]/NNCFConv2d[conv1]/conv2d_0";

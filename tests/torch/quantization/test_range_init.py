@@ -19,10 +19,9 @@ from typing import Tuple
 
 import pytest
 import torch
-
-from torch import nn
 import torch.utils.data
 from pytest import approx
+from torch import nn
 from torch.utils.data import DataLoader
 from torchvision.models import squeezenet1_1
 
@@ -42,13 +41,13 @@ from nncf.torch.checkpoint_loading import load_state
 from nncf.torch.initialization import DefaultInitializingDataLoader
 from nncf.torch.initialization import wrap_dataloader_for_init
 from nncf.torch.nncf_network import EXTERNAL_QUANTIZERS_STORAGE_NAME
-from nncf.torch.quantization.init_range import PTRangeInitParams
 from nncf.torch.quantization.init_range import PTRangeInitCollectorParams
+from nncf.torch.quantization.init_range import PTRangeInitParams
 from nncf.torch.quantization.init_range import StatCollectorGenerator
+from nncf.torch.quantization.layers import QUANTIZATION_MODULES
 from nncf.torch.quantization.layers import AsymmetricQuantizer
 from nncf.torch.quantization.layers import BaseQuantizer
 from nncf.torch.quantization.layers import PTQuantizerSpec
-from nncf.torch.quantization.layers import QUANTIZATION_MODULES
 from nncf.torch.quantization.layers import SymmetricQuantizer
 from nncf.torch.tensor_statistics.collectors import PTMeanMinMaxStatisticCollector
 from nncf.torch.tensor_statistics.collectors import PTMedianMADStatisticCollector
@@ -279,17 +278,19 @@ class TestRangeInit:
         quantizers = get_all_modules_by_type(compressed_model, ['SymmetricQuantizer',
                                                                 'AsymmetricQuantizer'])
         quantizer_str_dict = {str(k): v for k, v in quantizers.items()}
-        group_1 = [quantizer_str_dict["NNCFNetwork/TwoConvTestModel[nncf_module]/Sequential[features]/"
+        group_1 = [quantizer_str_dict["TwoConvTestModel/Sequential[features]/"
                                       "Sequential[0]/NNCFConv2d[0]/ModuleDict[pre_ops]/UpdateWeight[0]/"
                                       "AsymmetricQuantizer[op]"],
-                   quantizer_str_dict["NNCFNetwork/TwoConvTestModel[nncf_module]/Sequential[features]/"
+                   quantizer_str_dict["TwoConvTestModel/Sequential[features]/"
                                       "Sequential[1]/NNCFConv2d[0]/ModuleDict[pre_ops]/UpdateWeight[0]/"
                                       "AsymmetricQuantizer[op]"]
                    ]
-        group_2 = [quantizer_str_dict[f"NNCFNetwork/ModuleDict[{EXTERNAL_QUANTIZERS_STORAGE_NAME}]/"
+        group_2 = [quantizer_str_dict[f"TwoConvTestModel/NNCFNetworkInterface[_nncf]/"
+                                      f"ModuleDict[{EXTERNAL_QUANTIZERS_STORAGE_NAME}]/"
                                       "SymmetricQuantizer[TwoConvTestModel/Sequential[features]"
                                       "/Sequential[0]/NNCFConv2d[0]/conv2d_0|OUTPUT]"],
-                   quantizer_str_dict[f"NNCFNetwork/ModuleDict[{EXTERNAL_QUANTIZERS_STORAGE_NAME}]/SymmetricQuantizer"
+                   quantizer_str_dict[f"TwoConvTestModel/NNCFNetworkInterface[_nncf]/"
+                                      f"ModuleDict[{EXTERNAL_QUANTIZERS_STORAGE_NAME}]/SymmetricQuantizer"
                                       "[/nncf_model_input_0|OUTPUT]"],
                    ]
 
@@ -501,16 +502,22 @@ def init_idfn(val):
     return val
 
 
-@pytest.mark.parametrize("quantization_mode, per_channel, range_init_type_vs_ref_vals",
-                         itertools.product(["symmetric", "asymmetric"],
-                                           [True, False],
-                                           [("min_max", 9999, 0, 9999),
-                                            ("mixed_min_max", 9999, 0, 9999),
-                                            ("mean_min_max", 9999, 0, 9999),
-                                            ("threesigma", 16119.5, -6119.5, 22239),
-                                            ("percentile", 6789, 3210, 3578)]), ids=init_idfn)
-def test_init_ranges_are_set(quantization_mode: str, per_channel: bool,
-                             range_init_type_vs_ref_vals: Tuple[str, float, float, float]):
+@pytest.mark.parametrize(
+    "range_init_type_vs_ref_vals",
+    (
+        [
+            ("min_max", 9999, 0, 9999),
+            ("mixed_min_max", 9999, 0, 9999),
+            ("mean_min_max", 9999, 0, 9999),
+            ("threesigma", 16119.5, -6119.5, 22239),
+            ("percentile", 6789, 3210, 3578),
+        ]
+    ),
+    ids=init_idfn,
+)
+def test_init_ranges_are_set(
+    quantization_mode: str, is_per_channel: bool, range_init_type_vs_ref_vals: Tuple[str, float, float, float]
+):
     class SyntheticDataset(torch.utils.data.Dataset):
         def __init__(self):
             super().__init__()
@@ -544,11 +551,11 @@ def test_init_ranges_are_set(quantization_mode: str, per_channel: bool,
                 "algorithm": "quantization",
                 "activations": {
                     "mode": quantization_mode,
-                    "per_channel": per_channel
+                    "per_channel": is_per_channel
                 },
                 "weights": {
                     "mode": quantization_mode,
-                    "per_channel": per_channel
+                    "per_channel": is_per_channel
                 },
                 "initializer": {
                     "range": {
@@ -597,14 +604,14 @@ def test_init_ranges_are_set(quantization_mode: str, per_channel: bool,
                 assert quantizer.input_low.numel() == 1
                 assert quantizer.input_range.numel() == 1
 
-    check_scales(act_quantizer_info.quantizer_module_ref, per_channel)
+    check_scales(act_quantizer_info.quantizer_module_ref, is_per_channel)
     # Weight init check
     synth_weight_model = SingleConv2dSyntheticWeightModel()
     _, compression_ctrl = create_compressed_model_and_algo_for_test(synth_weight_model,
                                                                     config_with_init)
 
     weight_quantizer_info = next(iter(compression_ctrl.weight_quantizers.values()))
-    check_scales(weight_quantizer_info.quantizer_module_ref, per_channel)
+    check_scales(weight_quantizer_info.quantizer_module_ref, is_per_channel)
 
 
 RangeInitCallCountTestStruct = namedtuple('RangeInitCallCountTestStruct',

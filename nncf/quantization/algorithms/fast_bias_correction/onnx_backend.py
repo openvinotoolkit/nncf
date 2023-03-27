@@ -24,9 +24,6 @@ from nncf.common.utils.backend import BackendType
 from nncf.common.utils.registry import Registry
 from nncf.onnx.graph.metatypes.onnx_metatypes import ONNX_OPERATION_METATYPES
 from nncf.onnx.graph.metatypes.onnx_metatypes import ONNXDequantizeLinearMetatype
-from nncf.onnx.graph.metatypes.onnx_metatypes import ONNXConvolutionMetatype
-from nncf.onnx.graph.metatypes.onnx_metatypes import ONNXConvolutionTransposeMetatype
-from nncf.onnx.graph.metatypes.onnx_metatypes import ONNXDepthwiseConvolutionMetatype
 from nncf.onnx.graph.node_utils import get_bias_value
 from nncf.onnx.graph.node_utils import is_node_with_bias
 from nncf.onnx.graph.transformations.command_creation import create_bias_correction_command
@@ -46,14 +43,6 @@ class ONNXFastBiasCorrectionAlgoBackend(FastBiasCorrectionAlgoBackend):
     @property
     def operation_metatypes(self) -> Registry:
         return ONNX_OPERATION_METATYPES
-
-    @property
-    def channel_axis_by_types(self) -> Dict[str, int]:
-        return {
-            ONNXConvolutionMetatype: 1,
-            ONNXConvolutionTransposeMetatype: 1,
-            ONNXDepthwiseConvolutionMetatype: 1
-        }
 
     @property
     def tensor_processor(self) -> ONNXNNCFCollectorTensorProcessor:
@@ -86,11 +75,12 @@ class ONNXFastBiasCorrectionAlgoBackend(FastBiasCorrectionAlgoBackend):
         return subgraph.graph.input[0].name, subgraph.graph.output[0].name
 
     @staticmethod
-    def create_blob(shape: Tuple[int], data: List[float]) -> np.ndarray:
+    def create_blob(shape: Tuple[int], data: List[np.ndarray], channel_axis: int) -> np.ndarray:
         blob = np.zeros(shape)
-        for i, value in enumerate(data):
-            blob[:, i] = value
-        blob = blob.astype(np.float32)
+        for j, idx in enumerate(np.ndindex(blob.shape[channel_axis])):
+            index = tuple(slice(None) if i != channel_axis else idx for i in range(blob.ndim))
+            blob[index] = data[j]
+        blob = blob.astype(data[0].dtype)
         return blob
 
     @staticmethod
