@@ -110,7 +110,7 @@ def parse_test_data(stat_type, mode, sign, per_ch, hf_range):
     out_h = np.array(fq_params[key]['output_high']).astype(np.float32)
     levels = fq_params[key]['levels']
     ref_quantize_params = FakeQuantizeParameters(inp_l, inp_h, out_l, out_h, levels)
-    return input_data, ref_quantize_params
+    return ref_quantize_params
 
 
 @pytest.mark.parametrize('case_to_test', ACTIVATION_CASES_FOR_TEST)

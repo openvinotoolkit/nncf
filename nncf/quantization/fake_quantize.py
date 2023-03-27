@@ -207,7 +207,7 @@ def calculate_quantizer_parameters(statistics: MinMaxTensorStatistic,
                                                 levels, quantizer_config, quant_group)
         if half_range:
             _, _, export_levels = calculate_symmetric_level_ranges(num_bits + 1,
-                                                                  signed=True, narrow_range=False)
+                                                                   signed=True, narrow_range=True)
             input_high = input_high * export_levels / levels
             input_low = input_low * export_levels / levels
             levels = export_levels
