@@ -184,13 +184,14 @@ class TemplateTestQuantizerConfig:
             port_id = None if TargetType.POST_LAYER_OPERATION else 0
             ip = ActivationQuantizationInsertionPoint(params.target_node_name, port_id)
             qp = SingleConfigQuantizationPoint(ip, q_config, [params.target_node_name])
-            target_point = min_max_algo._get_activation_quantization_target_point(qp)
+            min_max_algo._add_activation_quantization_target_point(qp)
         else:
             ip = WeightQuantizationInsertionPoint(params.target_node_name)
             qp = SingleConfigQuantizationPoint(ip, q_config, [params.target_node_name])
-            target_point = min_max_algo._get_weight_quantization_target_point(qp,
-                                                                              conv_sum_aggregation_nncf_graph.nncf_graph)
+            min_max_algo._add_weight_quantization_target_point(qp,
+                                                               conv_sum_aggregation_nncf_graph.nncf_graph)
 
+        target_point = list(min_max_algo._quantization_target_points_to_qconfig.keys())[0]
         tensor_collector = min_max_algo._get_stat_collector(conv_sum_aggregation_nncf_graph.nncf_graph,
                                                             target_point, q_config)
 

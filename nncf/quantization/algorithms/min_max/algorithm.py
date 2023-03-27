@@ -299,10 +299,10 @@ class MinMaxQuantization(Algorithm):
         final_setup = solver.get_final_quantizer_setup(finalized_proposal)
         return final_setup
 
-    def _get_weight_quantization_target_point(self, quantization_point: SingleConfigQuantizationPoint,
+    def _add_weight_quantization_target_point(self, quantization_point: SingleConfigQuantizationPoint,
                                               nncf_graph: NNCFGraph) -> None:
         """
-        Returns weight quantization target point to the set of existing points.
+        Adds weight quantization target point to the set of existing points.
 
         :param quantization_point: SingleConfigQuantizationPoint for the needed layer.
         :param model: Model in the original framework.
@@ -317,13 +317,25 @@ class MinMaxQuantization(Algorithm):
                                                                                 port_id)
             self._quantization_target_points_to_qconfig[weight_quantization_target_point] = quantization_point.qconfig
 
-    def _get_activation_quantization_target_point(self,
+    def _add_activation_quantization_target_point(self,
                                                   quantization_point: SingleConfigQuantizationPoint) -> None:
+        """
+        Adds activation quantization target point to the set of existing points.
+
+        :param nncf_graph: NNCFGraph instance for working with the graph and nodes.
+        :param quantization_point: SingleConfigQuantizationPoint for the needed layer.
+        """
+        activation_quantization_target_point = self._get_activation_quantization_target_point(quantization_point)
+        self._quantization_target_points_to_qconfig[activation_quantization_target_point] = quantization_point.qconfig
+
+    def _get_activation_quantization_target_point(self,
+                                                  quantization_point: SingleConfigQuantizationPoint) -> SingleConfigQuantizationPoint:
         """
         Returns activation quantization target point to the set of existing points.
 
         :param nncf_graph: NNCFGraph instance for working with the graph and nodes.
         :param quantization_point: SingleConfigQuantizationPoint for the needed layer.
+        :return: SingleConfigQuantizationPoint for the needed layer.
         """
         node_name = quantization_point.insertion_point.target_node_name
         # If Quantization of node's input
@@ -341,7 +353,7 @@ class MinMaxQuantization(Algorithm):
         return activation_quantization_target_point
 
     def _get_quantization_target_points(self,
-                                        quantizer_setup: TModel,
+                                        quantizer_setup: SingleConfigQuantizerSetup,
                                         nncf_graph: NNCFGraph) -> OrderedDict[TargetPoint, QuantizerConfig]:
         """
         Returns Quantization Target Points.
@@ -350,7 +362,7 @@ class MinMaxQuantization(Algorithm):
         otherwise builds NNCFGraph from the 'model',
         finds the quantization setup and processes it to the Set of Quantization Target Points.
 
-        :param model: Backend-specific model, for which Quantization Target Points are being seek.
+        :param quantizer_setup: SingleConfigQuantizerSetup instance.
         :param nncf_graph: NNCFGraph instance.
         :return: Set of Quantization Target Points.
         """
@@ -358,11 +370,9 @@ class MinMaxQuantization(Algorithm):
             return self._quantization_target_points_to_qconfig
         for quantization_point in quantizer_setup.quantization_points.values():
             if quantization_point.is_weight_quantization_point():
-                weight_target_point = self._get_weight_quantization_target_point(quantization_point, nncf_graph)
-                self._quantization_target_points_to_qconfig[weight_target_point] = quantization_point.qconfig
+                self._add_weight_quantization_target_point(quantization_point, nncf_graph)
             elif quantization_point.is_activation_quantization_point():
-                activation_target_point = self._get_activation_quantization_target_point(quantization_point)
-                self._quantization_target_points_to_qconfig[activation_target_point] = quantization_point.qconfig
+                self._add_activation_quantization_target_point(quantization_point)
             else:
                 raise RuntimeError('Incorrect quantization point')
         self._quantization_target_points_to_qconfig = collections.OrderedDict(
@@ -373,7 +383,7 @@ class MinMaxQuantization(Algorithm):
         """
         Collects the group of quantizers for unification.
 
-        :param quantizer_setup: SingleConfigQuantizerSetup instance
+        :param quantizer_setup: SingleConfigQuantizerSetup instance.
         :return: List with the groups of the TargetPoints.
         """
         unified_scale_groups = []
@@ -433,9 +443,10 @@ class MinMaxQuantization(Algorithm):
             for quantization_target_point in unified_scale_group:
                 unified_values = self._backend_entity.unify_statistics(group_statistics)
                 qconfig = quantization_target_points[quantization_target_point]
+                parameters = calculate_quantizer_parameters(unified_values, qconfig, QuantizerGroup.ACTIVATIONS)
                 command = self._backend_entity.create_activation_quantizer_insertion_command(
                     nncf_graph, quantization_target_point,
-                    qconfig, unified_values)
+                    qconfig, parameters)
                 transformation_layout.register(command)
                 unified_ops_list.append(quantization_target_point)
 

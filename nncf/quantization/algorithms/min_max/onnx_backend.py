@@ -109,7 +109,7 @@ class ONNXMinMaxAlgoBackend(MinMaxAlgoBackend):
         return ONNXQuantizerInsertionCommand(target_point, nncf_input_node_next_nodes, onnx_parameters)
 
     @staticmethod
-    def unify_statistics(statistics: List[MinMaxTensorStatistic]) -> MinMaxTensorStatistic:
+    def unify_statistics(statistics: List[ONNXMinMaxTensorStatistic]) -> ONNXMinMaxTensorStatistic:
         max_values, min_values = [], []
         for statistic in statistics:
             max_values.append(statistic.max_values)
