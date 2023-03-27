@@ -11,29 +11,32 @@
  limitations under the License.
 """
 
-from typing import Dict, List, Optional, TypeVar
+from typing import Dict
+from typing import List
+from typing import Optional
+from typing import TypeVar
 
 from nncf import Dataset
-from nncf.parameters import TargetDevice
-from nncf.parameters import ModelType
-from nncf.scopes import IgnoredScope
 from nncf.common.logging import nncf_logger
 from nncf.common.quantization.structs import QuantizationPreset
-from nncf.common.utils.backend import BackendType
-from nncf.common.utils.backend import get_backend
-from nncf.common.utils.backend import copy_model
-from nncf.quantization.algorithms.algorithm import Algorithm
-from nncf.quantization.algorithms.algorithm import AlgorithmParameters
-from nncf.quantization.algorithms.definitions import RangeType
-from nncf.quantization.algorithms.definitions import Granularity
-from nncf.quantization.algorithms.fast_bias_correction.algorithm import FastBiasCorrection
-from nncf.quantization.algorithms.fast_bias_correction.algorithm import FastBiasCorrectionParameters
-from nncf.quantization.algorithms.bias_correction.algorithm import BiasCorrection
-from nncf.quantization.algorithms.bias_correction.algorithm import BiasCorrectionParameters
-from nncf.quantization.algorithms.min_max.algorithm import MinMaxQuantization
-from nncf.quantization.algorithms.min_max.algorithm import MinMaxQuantizationParameters
 from nncf.common.tensor_statistics.aggregator import StatisticsAggregator
 from nncf.common.tensor_statistics.statistic_point import StatisticPointsContainer
+from nncf.common.utils.backend import BackendType
+from nncf.common.utils.backend import copy_model
+from nncf.common.utils.backend import get_backend
+from nncf.parameters import ModelType
+from nncf.parameters import TargetDevice
+from nncf.quantization.algorithms.algorithm import Algorithm
+from nncf.quantization.algorithms.algorithm import AlgorithmParameters
+from nncf.quantization.algorithms.bias_correction.algorithm import BiasCorrection
+from nncf.quantization.algorithms.bias_correction.algorithm import BiasCorrectionParameters
+from nncf.quantization.algorithms.definitions import Granularity
+from nncf.quantization.algorithms.definitions import RangeType
+from nncf.quantization.algorithms.fast_bias_correction.algorithm import FastBiasCorrection
+from nncf.quantization.algorithms.fast_bias_correction.algorithm import FastBiasCorrectionParameters
+from nncf.quantization.algorithms.min_max.algorithm import MinMaxQuantization
+from nncf.quantization.algorithms.min_max.algorithm import MinMaxQuantizationParameters
+from nncf.scopes import IgnoredScope
 
 TModel = TypeVar('TModel')
 
@@ -131,7 +134,7 @@ class PostTrainingQuantization(Algorithm):
         """
         This methods initializes sub-algorithms based on the general parameters.
 
-        :param algorithms: The dictonary of the parameters per algorithm type.
+        :param algorithms: The dictionary of the parameters per algorithm type.
 
         :return: The list of the algorithms instances.
         """
@@ -166,19 +169,18 @@ class PostTrainingQuantization(Algorithm):
         """
         Creates backend-specific StatisticsAggregator.
 
-        :param engine: engine for the model execution
-        :param dataset: dataset for the statistics collection and validation
-        :param model_transformer: backend-specific ModelTransformerBase instance
-        :param backend: model backend type for the further differentiations
-        :return: backnd-specific StatisticsAggregator
+        :param engine: Engine for the model execution.
+        :param dataset: Dataset for the statistics collection and validation.
+        :param model_transformer: Backend-specific ModelTransformerBase instance.
+        :param backend: Model backend type for the further differentiations.
+
+        :return: Backend-specific StatisticsAggregator.
         """
         if backend == BackendType.ONNX:
-            from nncf.onnx.statistics.aggregator import \
-                ONNXStatisticsAggregator
+            from nncf.onnx.statistics.aggregator import ONNXStatisticsAggregator
             return ONNXStatisticsAggregator(dataset)
         if backend == BackendType.OPENVINO:
-            from nncf.experimental.openvino_native.statistics.aggregator import \
-                OVStatisticsAggregator
+            from nncf.experimental.openvino_native.statistics.aggregator import OVStatisticsAggregator
             return OVStatisticsAggregator(dataset)
         if backend == BackendType.TORCH:
             from nncf.torch.statistics.aggregator import PTStatisticsAggregator
@@ -199,7 +201,7 @@ class PostTrainingQuantization(Algorithm):
             statistics_aggregator = self._create_statistics_aggregator(dataset, backend)
             for algorithm in self.algorithms:
                 algo_statistic_points = algorithm.get_statistic_points(modified_model)
-                statistics_aggregator.register_stastistic_points(algo_statistic_points)
+                statistics_aggregator.register_statistic_points(algo_statistic_points)
 
             statistics_aggregator.collect_statistics(modified_model)
             statistic_points = statistics_aggregator.statistic_points

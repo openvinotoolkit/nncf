@@ -11,26 +11,26 @@
  limitations under the License.
 """
 
-import pytest
 from pathlib import Path
+
 import numpy as np
 import openvino.runtime as ov
+import pytest
 
 from nncf.common.quantization.structs import QuantizationPreset
 from nncf.experimental.openvino_native.statistics.aggregator import OVStatisticsAggregator
 from nncf.quantization.algorithms.min_max.algorithm import MinMaxQuantization
 from nncf.quantization.algorithms.min_max.algorithm import MinMaxQuantizationParameters
-
 from tests.openvino.conftest import OPENVINO_NATIVE_TEST_ROOT
-from tests.openvino.omz_helpers import convert_model
-from tests.openvino.omz_helpers import download_model
 from tests.openvino.native.common import get_dataset_for_test
 from tests.openvino.native.common import load_json
 from tests.openvino.native.models import SYNTHETIC_MODELS
-from tests.openvino.native.models import LinearModel
 from tests.openvino.native.models import ConvModel
-from tests.openvino.native.models import MatMul2DModel
 from tests.openvino.native.models import FPModel
+from tests.openvino.native.models import LinearModel
+from tests.openvino.native.models import MatMul2DModel
+from tests.openvino.omz_helpers import convert_model
+from tests.openvino.omz_helpers import download_model
 
 REFERENCE_SCALES_DIR = OPENVINO_NATIVE_TEST_ROOT / 'data' / 'reference_scales'
 
@@ -77,7 +77,7 @@ def quantize_model(ov_model, q_params):
     min_max_algo = MinMaxQuantization(MinMaxQuantizationParameters(number_samples=1, **q_params))
     statistics_aggregator = OVStatisticsAggregator(dataset)
     statistic_points = min_max_algo.get_statistic_points(ov_model)
-    statistics_aggregator.register_stastistic_points(statistic_points)
+    statistics_aggregator.register_statistic_points(statistic_points)
     statistics_aggregator.collect_statistics(ov_model)
     quantized_model = min_max_algo._apply(ov_model, statistics_aggregator.statistic_points)
     return quantized_model
@@ -86,7 +86,7 @@ def quantize_model(ov_model, q_params):
 @pytest.mark.parametrize('preset', [QuantizationPreset.PERFORMANCE, QuantizationPreset.MIXED],
                          ids=[QuantizationPreset.PERFORMANCE.value, QuantizationPreset.MIXED.value])
 @pytest.mark.parametrize('model_creator_func', SYNTHETIC_MODELS.values())
-def test_syntetic_models_fq_scales(model_creator_func, preset):
+def test_synthetic_models_fq_scales(model_creator_func, preset):
     model = model_creator_func()
     quantized_model = quantize_model(model.ov_model, {'preset': preset})
     nodes = get_fq_nodes_stats_algo(quantized_model)
@@ -94,7 +94,7 @@ def test_syntetic_models_fq_scales(model_creator_func, preset):
     ref_stats_name = model.ref_graph_name.split(".")[0] + f'_{preset.value}.json'
     ref_stats_path = REFERENCE_SCALES_DIR / ref_stats_name
 
-    # Unkomment lines below to generate reference for new models.
+    # Uncomment lines below to generate reference for new models.
     # from tests.openvino.native.common import dump_to_json
     # dump_to_json(ref_stats_path, nodes)
 
@@ -134,7 +134,7 @@ REF_NODES_SHAPES = {
 
 @pytest.mark.parametrize('model_creator_func, ref_shapes',
                          zip([LinearModel, ConvModel, MatMul2DModel], REF_NODES_SHAPES.values()))
-def test_syntetic_models_fq_shapes(model_creator_func, ref_shapes):
+def test_synthetic_models_fq_shapes(model_creator_func, ref_shapes):
     model = model_creator_func()
     quantized_model = quantize_model(model.ov_model, {'preset': QuantizationPreset.PERFORMANCE})
     nodes = get_fq_nodes_stats_algo(quantized_model)

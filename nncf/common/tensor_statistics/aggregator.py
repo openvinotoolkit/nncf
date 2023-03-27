@@ -13,12 +13,14 @@
 from abc import ABC
 from abc import abstractmethod
 from itertools import islice
-from typing import Dict, TypeVar, Any
+from typing import Any
+from typing import Dict
+from typing import TypeVar
 
 from tqdm import tqdm
 
-from nncf.common.factory import ModelTransformerFactory
 from nncf.common.factory import EngineFactory
+from nncf.common.factory import ModelTransformerFactory
 from nncf.common.graph.transformations.layout import TransformationLayout
 from nncf.common.tensor import NNCFTensor
 from nncf.common.tensor_statistics.statistic_point import StatisticPointsContainer
@@ -57,7 +59,7 @@ class StatisticsAggregator(ABC):
             processed_outputs = self._process_outputs(outputs)
             self._register_statistics(processed_outputs, self.statistic_points)
 
-    def register_stastistic_points(self, statistic_points: StatisticPointsContainer) -> None:
+    def register_statistic_points(self, statistic_points: StatisticPointsContainer) -> None:
         """
         Register statistic points for statistics collection and recalculates the maximum number samples
         for collecting statistics, based on the maximum value from the all algorithms.

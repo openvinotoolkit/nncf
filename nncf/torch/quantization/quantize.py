@@ -12,18 +12,22 @@
 """
 
 from copy import deepcopy
-from typing import Any, Dict, Optional, Tuple
+from typing import Any
+from typing import Dict
+from typing import Optional
+from typing import Tuple
 
 import torch
+
 from nncf.common.quantization.structs import QuantizationPreset
 from nncf.config import NNCFConfig
 from nncf.config.structures import BNAdaptationInitArgs
 from nncf.config.structures import QuantizationRangeInitArgs
 from nncf.data import Dataset
-from nncf.scopes import convert_ignored_scope_to_list
-from nncf.scopes import IgnoredScope
 from nncf.parameters import ModelType
 from nncf.parameters import TargetDevice
+from nncf.scopes import IgnoredScope
+from nncf.scopes import convert_ignored_scope_to_list
 from nncf.torch.dynamic_graph.context import no_nncf_trace
 from nncf.torch.dynamic_graph.io_handling import replicate_same_tensors
 from nncf.torch.dynamic_graph.io_handling import wrap_nncf_model_inputs_with_objwalk
@@ -36,7 +40,7 @@ from nncf.torch.utils import is_tensor
 
 
 # TODO(alexsu52): It is a workaround and should be removed.
-class CalibrarionDataLoader(PTInitializingDataLoader):
+class CalibrationDataLoader(PTInitializingDataLoader):
     """
     This class wraps the nncf.Dataset.
 
@@ -58,7 +62,7 @@ class CalibrarionDataLoader(PTInitializingDataLoader):
     def __len__(self):
         if self._length is None:
             data = self._data_loader.get_inference_data()
-            self._length = CalibrarionDataLoader._get_length(data)
+            self._length = CalibrationDataLoader._get_length(data)
         return self._length
 
     def get_inputs(self, dataloader_output: Any) -> Tuple[Tuple, Dict]:
@@ -152,9 +156,6 @@ def quantize_impl(model: torch.nn.Module,
     """
     Implementation of the `quantize()` method for the PyTorch backend.
     """
-    if fast_bias_correction is False:
-        raise ValueError(f'fast_bias_correction={fast_bias_correction} is not '
-                          'supported')
     if ignored_scope is not None and ignored_scope.types is not None:
         raise RuntimeError('Quantization algorithm from the PyTorch backend '
                             'does not support operation types in the ignored '
@@ -162,10 +163,9 @@ def quantize_impl(model: torch.nn.Module,
     if target_device == TargetDevice.CPU_SPR:
         raise RuntimeError('target_device == CPU_SPR is not supported')
 
-    nncf_config = _create_nncf_config(preset, target_device, subset_size,
-                                      model_type, ignored_scope)
+    nncf_config = _create_nncf_config(preset, target_device, subset_size, model_type, ignored_scope)
 
-    calibration_data_loader = CalibrarionDataLoader(calibration_dataset)
+    calibration_data_loader = CalibrationDataLoader(calibration_dataset)
     nncf_config.register_extra_structs(
         [
             QuantizationRangeInitArgs(data_loader=calibration_data_loader),
@@ -198,8 +198,7 @@ def quantize_impl(model: torch.nn.Module,
 
         return dummy_forward
 
-    dummy_forward_fn = create_dummy_forward_fn(calibration_data_loader,
-                                               get_model_device(model))
+    dummy_forward_fn = create_dummy_forward_fn(calibration_data_loader, get_model_device(model))
 
     clone_model = deepcopy(model)
     compression_ctrl, compressed_model = create_compressed_model(

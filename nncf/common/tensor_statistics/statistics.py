@@ -11,7 +11,8 @@
  limitations under the License.
 """
 
-from abc import ABC, abstractmethod
+from abc import ABC
+from abc import abstractmethod
 from collections import Counter
 from typing import TypeVar
 
@@ -47,7 +48,7 @@ class MeanTensorStatistic(TensorStatistic):
     """
     def __init__(self, mean_values, shape):
         """
-        :param mean_values: Сollected mean per-axis values.
+        :param mean_values: Collected mean per-axis values.
         :param shape: The shape of the collected statistics.
         """
         self.mean_values = mean_values
@@ -87,7 +88,7 @@ class BatchTensorStatistic(TensorStatistic):
     """
     def __init__(self, values):
         """
-        :param values: Сollected per-batch values.
+        :param values: Collected per-batch values.
         """
         self.values = values
 

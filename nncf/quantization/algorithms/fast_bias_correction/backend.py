@@ -13,21 +13,25 @@
 
 from abc import ABC
 from abc import abstractmethod
-from typing import List, Tuple, TypeVar, Optional
+from typing import List
+from typing import Optional
+from typing import Tuple
+from typing import TypeVar
 
 import numpy as np
-from nncf.common.graph.transformations.commands import TargetPoint
-from nncf.common.graph.transformations.commands import TransformationCommand
-from nncf.common.graph.transformations.commands import TargetType
-from nncf.common.tensor import NNCFTensor
+
 from nncf.common.graph import NNCFGraph
 from nncf.common.graph import NNCFNode
-from nncf.common.tensor_statistics.collectors import TensorStatisticCollectorBase
+from nncf.common.graph.transformations.commands import TargetPoint
+from nncf.common.graph.transformations.commands import TargetType
+from nncf.common.graph.transformations.commands import TransformationCommand
+from nncf.common.tensor import NNCFTensor
 from nncf.common.tensor_statistics.collectors import ReductionShape
+from nncf.common.tensor_statistics.collectors import TensorStatisticCollectorBase
 from nncf.common.utils.registry import Registry
 
-
 TModel = TypeVar('TModel')
+TTensor = TypeVar('TTensor')
 OutputType = TypeVar('OutputType')
 ALGO_BACKENDS = Registry('algo_backends')
 
@@ -78,7 +82,7 @@ class FastBiasCorrectionAlgoBackend(ABC):
         """
         Returns backend-specific command to extract sub-model based on input & output names.
 
-        :param inputs: List of the input names for sub-model beggining.
+        :param inputs: List of the input names for sub-model beginning.
         :param outputs: List of the output names for sub-model end.
         :return: Backend-specific TransformationCommand for the model extraction.
         """
@@ -145,12 +149,14 @@ class FastBiasCorrectionAlgoBackend(ABC):
 
     @staticmethod
     @abstractmethod
-    def is_quantized_weights(node: NNCFNode, nncf_graph: NNCFGraph) -> bool:
+    def is_quantized_weights(node: NNCFNode, nncf_graph: NNCFGraph, model: TModel) -> bool:
         """
         Checks whether the node is quantized or not.
 
         :param node: NNCFNode to check.
         :param nncf_graph: NNCFGraph instance.
+        :param model: Backend-specific model.
+
         :return: boolean indicating whether the node has a quantized weights or not
         """
 
@@ -174,4 +180,14 @@ class FastBiasCorrectionAlgoBackend(ABC):
         :param node: NNCFNode with the attributes.
         :param nncf_graph: NNCFGraph that contains node.
         :return: Boolean indicating whether the node has a bias or not.
+        """
+
+    @staticmethod
+    def get_bias_shift_magnitude(current_bias_value: TTensor, updated_bias_value: TTensor) -> float:
+        """
+        Calculates bias shift magnitude based on the current and updated values.
+
+        :param current_bias_value: The original bias value.
+        :param updated_bias_value: The updated bias value.
+        :return: Magnitude between original and updated bias values.
         """

@@ -15,9 +15,9 @@ from typing import List
 
 import numpy as np
 
+from nncf.common.graph.transformations.commands import Command
 from nncf.common.graph.transformations.commands import TargetPoint
 from nncf.common.graph.transformations.commands import TargetType
-from nncf.common.graph.transformations.commands import Command
 from nncf.common.graph.transformations.commands import TransformationCommand
 from nncf.common.graph.transformations.commands import TransformationType
 from nncf.quantization.fake_quantize import FakeQuantizeParameters
@@ -134,7 +134,7 @@ class OVModelExtractionCommand(Command):
 
     def __init__(self, inputs: List[str], outputs: List[str]):
         """
-        :param inputs: List of the input names that denote the sub-graph beggining.
+        :param inputs: List of the input names that denote the sub-graph beginning.
         :param outputs: List of the output names that denote the sub-graph ending.
         """
         super().__init__(TransformationType.EXTRACT)

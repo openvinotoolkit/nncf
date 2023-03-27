@@ -11,27 +11,26 @@
  limitations under the License.
 """
 
-import pytest
 import openvino.runtime as ov
+import pytest
 
 from nncf.common.quantization.structs import QuantizationPreset
 from nncf.parameters import ModelType
-
 from tests.openvino.conftest import OPENVINO_NATIVE_TEST_ROOT
-from tests.openvino.omz_helpers import convert_model
-from tests.openvino.omz_helpers import download_model
 from tests.openvino.native.common import compare_nncf_graphs
 from tests.openvino.native.models import SYNTHETIC_MODELS
-from tests.openvino.native.models import DepthwiseConv4DModel
 from tests.openvino.native.models import DepthwiseConv3DModel
+from tests.openvino.native.models import DepthwiseConv4DModel
 from tests.openvino.native.models import DepthwiseConv5DModel
 from tests.openvino.native.quantization.test_fq_params_calculation import quantize_model
+from tests.openvino.omz_helpers import convert_model
+from tests.openvino.omz_helpers import download_model
 
 QUANTIZED_REF_GRAPHS_DIR = OPENVINO_NATIVE_TEST_ROOT / 'data' / 'reference_graphs' / 'quantized'
 
 
 @pytest.mark.parametrize('model_creator_func', SYNTHETIC_MODELS.values())
-def test_syntetic_models_fq_placement(model_creator_func):
+def test_synthetic_models_fq_placement(model_creator_func):
     model = model_creator_func()
     quantized_model = quantize_model(model.ov_model, {'preset': QuantizationPreset.PERFORMANCE})
 

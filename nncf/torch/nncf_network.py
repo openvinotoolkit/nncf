@@ -36,7 +36,6 @@ from nncf.common.graph import NNCFNode
 from nncf.common.graph import NNCFNodeName
 from nncf.common.graph.definitions import MODEL_INPUT_OP_NAME
 from nncf.common.graph.definitions import MODEL_OUTPUT_OP_NAME
-from nncf.common.graph.model_transformer import ModelTransformer
 from nncf.common.graph.transformations.commands import TargetType
 from nncf.common.graph.transformations.commands import TransformationPriority
 from nncf.common.insertion_point_graph import InsertionPointGraph
@@ -65,10 +64,8 @@ from nncf.torch.graph.graph_builder import GraphConverter
 from nncf.torch.graph.operator_metatypes import OPERATORS_WITH_WEIGHTS_METATYPES
 from nncf.torch.graph.operator_metatypes import PTSplitMetatype
 from nncf.torch.graph.transformations.commands import PTTargetPoint
-from nncf.torch.graph.transformations.layout import PTTransformationLayout
 from nncf.torch.knowledge_distillation.knowledge_distillation_handler import KnowledgeDistillationLossHandler
 from nncf.torch.layer_utils import _NNCFModuleMixin
-from nncf.torch.module_operations import UpdateWeight
 from nncf.torch.nested_objects_traversal import objwalk
 from nncf.torch.nncf_module_replacement import replace_modules_by_nncf_modules
 from nncf.torch.utils import compute_FLOPs_hook
@@ -345,7 +342,8 @@ class NNCFNetworkInterface(torch.nn.Module):
     def get_clean_shallow_copy(self) -> 'NNCFNetwork':
         # WARNING: Will reset pre- and post-ops of the underlying model. Use save_nncf_module_additions
         # and load_nncf_module_additions to preserve these, or temporary_clean_view().
-        from nncf.torch.utils import save_module_state, load_module_state  # pylint: disable=cyclic-import
+        from nncf.torch.utils import load_module_state  # pylint: disable=cyclic-import
+        from nncf.torch.utils import save_module_state  # pylint: disable=cyclic-import
         saved_state = save_module_state(self._model_ref)
         new_interface = NNCFNetworkInterface(self._model_ref, self._input_infos,
                                              self._user_dummy_forward_fn, self._wrap_inputs_fn,
@@ -799,7 +797,7 @@ class NNCFNetworkMeta(type):
         if len(cls.__bases__) == 2:
             original_class = cls.__bases__[1]
             return hash(original_class)
-        return id(NNCFNetwork)  # conforms to a default hashing behaviour in Python for cls objects
+        return id(NNCFNetwork)  # conforms to a default hashing behavior in Python for cls objects
 
     def __eq__(cls, other):
         """
@@ -850,7 +848,7 @@ class NNCFNetwork(torch.nn.Module, metaclass=NNCFNetworkMeta):
                 args, kwargs = self.nncf._wrap_inputs_fn(args, kwargs)
 
             # For purposes of scope tracking, need the original forward call to occur as if it were
-            # a module call of the correponding object.
+            # a module call of the corresponding object.
             if self.nncf._bound_original_forward is None:
                 retval = wrap_module_call(self.nncf._original_unbound_forward)(self, *args, **kwargs)
             else:
@@ -898,7 +896,7 @@ class NNCFNetwork(torch.nn.Module, metaclass=NNCFNetworkMeta):
             nncf_logger.warning("You are setting `forward` on an NNCF-processed model object.\n"
                                 "NNCF relies on custom-wrapping the `forward` call in order to function properly.\n"
                                 "Arbitrary adjustments to the forward function on an NNCFNetwork object have undefined "
-                                "behaviour.\n"
+                                "behavior.\n"
                                 "If you need to replace the underlying forward function of the original model so that "
                                 "NNCF should be using that instead of the original forward function that NNCF saved "
                                 "during the compressed model creation, you can do this by calling:\n"
@@ -943,31 +941,3 @@ class LoadStateListener:
 
     def close(self):
         self.hook.remove()
-
-
-class PTModelTransformer(ModelTransformer):
-    def __init__(self, model: NNCFNetwork):
-        super().__init__(model)
-        self._node_to_op_address_mapping = model.nncf.get_node_to_op_address_mapping()
-
-    def transform(self, transformation_layout: PTTransformationLayout) -> NNCFNetwork:
-        fns_grouped_by_points = {}  # type: Dict[PTInsertionPoint, List[Tuple[Callable, TransformationPriority]]]
-        for transformation_command in transformation_layout.transformations:  # type: PTInsertionCommand
-            target_point = transformation_command.target_point  # type: PTTargetPoint
-            target_node_name = target_point.target_node_name
-            pt_ip = PTInsertionPoint(target_type=target_point.target_type,
-                                     op_address=self._node_to_op_address_mapping[target_node_name],
-                                     input_port_id=target_point.input_port_id)
-            fn = transformation_command.fn
-            if target_point.type is TargetType.OPERATION_WITH_WEIGHTS:
-                fn = UpdateWeight(fn)
-            tup = (fn, transformation_command.priority)
-            if pt_ip not in fns_grouped_by_points:
-                fns_grouped_by_points[pt_ip] = [tup]
-            else:
-                fns_grouped_by_points[pt_ip].append(tup)
-
-        for pt_ip, fn_list_with_priority in fns_grouped_by_points.items():
-            fn_list_with_priority = sorted(fn_list_with_priority, key=lambda x: x[1])
-            self._model.nncf.insert_at_point(pt_ip, [x[0] for x in fn_list_with_priority])
-        return self._model

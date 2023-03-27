@@ -11,20 +11,21 @@
  limitations under the License.
 """
 
-import pytest
-import numpy as np
 from abc import abstractmethod
-from typing import Union
 from dataclasses import dataclass
+from typing import Union
+
+import numpy as np
+import pytest
 
 from nncf.common.factory import NNCFGraphFactory
-from nncf.quantization.algorithms.definitions import RangeType
 from nncf.common.graph.transformations.commands import TargetPoint
-from nncf.common.quantization.structs import QuantizerConfig
+from nncf.common.graph.transformations.commands import TargetType
 from nncf.common.quantization.structs import QuantizationMode
+from nncf.common.quantization.structs import QuantizerConfig
 from nncf.common.tensor_statistics.statistic_point import StatisticPoint
 from nncf.common.tensor_statistics.statistic_point import StatisticPointsContainer
-from nncf.common.graph.transformations.commands import TargetType
+from nncf.quantization.algorithms.definitions import RangeType
 from nncf.quantization.algorithms.min_max.backend import MinMaxAlgoBackend
 
 
@@ -139,7 +140,7 @@ class TemplateTestStatisticsAggregator:
                                                              algorithm=algorithm_name))
         dataset = self.get_dataset(dataset_samples)
         statistics_aggregator = self.get_statistics_aggregator(dataset)
-        statistics_aggregator.register_stastistic_points(statistics_points)
+        statistics_aggregator.register_statistic_points(statistics_points)
         statistics_aggregator.collect_statistics(model)
 
         def filter_func(point):

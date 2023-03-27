@@ -11,7 +11,10 @@
  limitations under the License.
 """
 
-from typing import Dict, List, Optional, Tuple
+from typing import Dict
+from typing import List
+from typing import Optional
+from typing import Tuple
 
 import numpy as np
 import onnx
@@ -96,7 +99,7 @@ class ONNXFastBiasCorrectionAlgoBackend(FastBiasCorrectionAlgoBackend):
         return ONNXNNCFTensor(raw_data[output_name])
 
     @staticmethod
-    def is_quantized_weights(node: NNCFNode, nncf_graph: NNCFGraph) -> bool:
+    def is_quantized_weights(node: NNCFNode, nncf_graph: NNCFGraph, model: onnx.ModelProto) -> bool:
         input_nodes = nncf_graph.get_previous_nodes(node)
         weight_port_id = node.metatype.weight_definitions.weight_port_id
         weight_node = input_nodes[weight_port_id]
@@ -105,3 +108,10 @@ class ONNXFastBiasCorrectionAlgoBackend(FastBiasCorrectionAlgoBackend):
     @staticmethod
     def is_node_with_bias(node: NNCFNode, nncf_graph: NNCFGraph) -> bool:
         return is_node_with_bias(node)
+
+    @staticmethod
+    def get_bias_shift_magnitude(current_bias_value: np.ndarray, updated_bias_value: np.ndarray) -> float:
+        bias_shift_magnitude = np.inf
+        if np.count_nonzero(current_bias_value == 0) == 0:
+            bias_shift_magnitude = np.max(np.abs((updated_bias_value - current_bias_value) / current_bias_value))
+        return bias_shift_magnitude

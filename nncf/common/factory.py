@@ -13,13 +13,12 @@
 
 from typing import TypeVar
 
+from nncf.common.engine import Engine
 from nncf.common.graph.graph import NNCFGraph
 from nncf.common.graph.model_transformer import ModelTransformer
+from nncf.common.graph.transformations.command_creation import CommandCreator
 from nncf.common.utils.backend import BackendType
 from nncf.common.utils.backend import get_backend
-from nncf.common.engine import Engine
-from nncf.common.graph.transformations.command_creation import CommandCreator
-
 
 TModel = TypeVar('TModel')
 
@@ -62,7 +61,7 @@ class ModelTransformerFactory:
             from nncf.experimental.openvino_native.graph.model_transformer import OVModelTransformer
             return OVModelTransformer(model)
         if model_backend == BackendType.TORCH:
-            from nncf.torch.nncf_network import PTModelTransformer
+            from nncf.torch.model_transformer import PTModelTransformer
             return PTModelTransformer(model)
         raise RuntimeError('Cannot create backend-specific model transformer'
                            'because {} is not supported!'.format(model_backend))

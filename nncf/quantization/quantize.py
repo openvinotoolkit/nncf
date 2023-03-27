@@ -11,19 +11,19 @@
  limitations under the License.
 """
 
-from typing import Optional
-from typing import Iterable
-from typing import Callable
 from typing import Any
+from typing import Callable
+from typing import Iterable
+from typing import Optional
 
 from nncf.api.compression import TModel
 from nncf.common.quantization.structs import QuantizationPreset
 from nncf.common.utils.backend import BackendType
 from nncf.common.utils.backend import get_backend
 from nncf.data import Dataset
-from nncf.scopes import IgnoredScope
 from nncf.parameters import ModelType
 from nncf.parameters import TargetDevice
+from nncf.scopes import IgnoredScope
 
 
 def quantize(model: TModel,
@@ -101,7 +101,7 @@ def quantize_with_accuracy_control(model: TModel,
     :param calibration_dataset: A representative dataset for the calibration process.
     :param validation_dataset: A dataset for the validation process.
     :param validation_fn: A validation function to validate the model. It should take
-        two argumets:
+        two arguments:
         - `model`: model to be validate.
         - `validation_dataset`: dataset that provides data items to
               validate the provided model.

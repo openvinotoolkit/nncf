@@ -11,13 +11,18 @@
  limitations under the License.
 """
 
-from typing import Dict, List, Tuple, Optional
+from typing import Dict
+from typing import List
+from typing import Optional
+from typing import Tuple
+
 import numpy as np
 
-from nncf.common.graph.transformations.commands import Command, TransformationCommand
-from nncf.common.graph.transformations.commands import TransformationType
-from nncf.common.graph.transformations.commands import TargetType
+from nncf.common.graph.transformations.commands import Command
 from nncf.common.graph.transformations.commands import TargetPoint
+from nncf.common.graph.transformations.commands import TargetType
+from nncf.common.graph.transformations.commands import TransformationCommand
+from nncf.common.graph.transformations.commands import TransformationType
 from nncf.onnx.quantization.quantizer_parameters import ONNXQuantizerLayerParameters
 
 
@@ -112,7 +117,7 @@ class ONNXModelExtractionCommand(Command):
 
     def __init__(self, inputs: List[str], outputs: List[str]):
         """
-        :param inputs: List of the input names that denote the sub-graph beggining.
+        :param inputs: List of the input names that denote the sub-graph beginning.
         :param outputs: List of the output names that denote the sub-graph ending.
         """
         super().__init__(TransformationType.EXTRACT)

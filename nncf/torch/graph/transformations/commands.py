@@ -1,8 +1,12 @@
 from typing import Any
 from typing import Callable
 from typing import Dict
+from typing import List
+
+import torch
 
 from nncf.common.graph import NNCFNodeName
+from nncf.common.graph.transformations.commands import Command
 from nncf.common.graph.transformations.commands import TargetPoint
 from nncf.common.graph.transformations.commands import TargetType
 from nncf.common.graph.transformations.commands import TransformationCommand
@@ -102,4 +106,39 @@ class PTInsertionCommand(TransformationCommand):
 
     def union(self, other: 'TransformationCommand') -> 'TransformationCommand':
         # TODO: keep all TransformationCommands atomic, refactor TransformationLayout instead
+        raise NotImplementedError()
+
+
+class PTModelExtractionCommand(Command):
+    """
+    Extracts sub-graph based on the sub-model input and output names.
+    """
+
+    def __init__(self, inputs: List[str], outputs: List[str]):
+        """
+        :param inputs: List of the input names that denote the sub-graph beginning.
+        :param outputs: List of the output names that denote the sub-graph ending.
+        """
+        super().__init__(TransformationType.EXTRACT)
+        self.inputs = inputs
+        self.outputs = outputs
+
+    def union(self, other: 'Command') -> 'Command':
+        raise NotImplementedError()
+
+
+class PTBiasCorrectionCommand(TransformationCommand):
+    """
+    Corrects bias value in the model based on the input value.
+    """
+
+    def __init__(self, target_point: PTTargetPoint, bias_value: torch.Tensor):
+        """
+        :param target_point: The TargetPoint instance for the correction that contains layer's information.
+        :param bias_value: The bias shift value that will be added to the original bias value.
+        """
+        super().__init__(TransformationType.CHANGE, target_point)
+        self.bias_value = bias_value
+
+    def union(self, other: 'TransformationCommand') -> 'TransformationCommand':
         raise NotImplementedError()

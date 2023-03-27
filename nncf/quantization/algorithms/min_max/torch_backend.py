@@ -11,47 +11,48 @@
  limitations under the License.
 """
 
-from typing import Dict, List, Optional, Tuple
-import torch
+from typing import Dict
+from typing import List
+from typing import Optional
+from typing import Tuple
+
 import numpy as np
+import torch
 
-from nncf.parameters import ModelType
-from nncf.scopes import IgnoredScope
-from nncf.common.hardware.config import HWConfig
-from nncf.common.graph.graph import NNCFGraph
+import nncf.torch.graph.operator_metatypes as om
 from nncf.common.graph.definitions import NNCFGraphNodeType
+from nncf.common.graph.graph import NNCFGraph
 from nncf.common.graph.graph import NNCFNode
-from nncf.common.graph.operator_metatypes import OperatorMetatype
-from nncf.common.graph.model_transformer import ModelTransformer
-from nncf.common.graph.transformations.commands import TargetType
 from nncf.common.graph.layer_attributes import WeightedLayerAttributes
-from nncf.common.quantization.structs import QuantizerConfig
-from nncf.common.quantization.structs import QuantizationMode
-from nncf.common.quantization.initialization.range import RangeInitConfig
-from nncf.quantization.fake_quantize import FakeQuantizeParameters
-from nncf.common.utils.backend import BackendType
+from nncf.common.graph.model_transformer import ModelTransformer
+from nncf.common.graph.operator_metatypes import OperatorMetatype
+from nncf.common.graph.transformations.commands import TargetType
 from nncf.common.graph.transformations.commands import TransformationPriority
-
+from nncf.common.hardware.config import HWConfig
+from nncf.common.quantization.initialization.range import RangeInitConfig
+from nncf.common.quantization.structs import QuantizationMode
+from nncf.common.quantization.structs import QuantizerConfig
+from nncf.common.utils.backend import BackendType
+from nncf.parameters import ModelType
+from nncf.quantization.algorithms.min_max.backend import ALGO_BACKENDS
+from nncf.quantization.algorithms.min_max.backend import MinMaxAlgoBackend
+from nncf.quantization.fake_quantize import FakeQuantizeParameters
+from nncf.scopes import IgnoredScope
+from nncf.torch.graph.graph import PTTargetPoint
+from nncf.torch.graph.transformations.commands import PTInsertionCommand
 from nncf.torch.hardware.config import PTHWConfig
+from nncf.torch.model_transformer import PTModelTransformer
+from nncf.torch.nncf_network import NNCFNetwork
 from nncf.torch.quantization.default_quantization import DEFAULT_PT_QUANT_TRAIT_TO_OP_DICT
+from nncf.torch.quantization.init_range import PTRangeInitCollectorParams
+from nncf.torch.quantization.init_range import StatCollectorGenerator
 from nncf.torch.quantization.layers import QUANTIZATION_MODULES
 from nncf.torch.quantization.layers import AsymmetricQuantizer
 from nncf.torch.quantization.layers import BaseQuantizer
 from nncf.torch.quantization.layers import PTQuantizerSpec
 from nncf.torch.quantization.layers import get_scale_shape
-from nncf.torch.quantization.init_range import PTRangeInitCollectorParams
-from nncf.torch.quantization.init_range import StatCollectorGenerator
-from nncf.torch.nncf_network import PTModelTransformer
-from nncf.torch.nncf_network import NNCFNetwork
-from nncf.torch.graph.graph import PTTargetPoint
-from nncf.torch.graph.transformations.commands import PTInsertionCommand
-from nncf.torch.tensor_statistics.collectors import PTMinMaxStatisticCollector
 from nncf.torch.tensor_statistics.collectors import PTMeanMinMaxStatisticCollector
-
-from nncf.quantization.algorithms.min_max.backend import MinMaxAlgoBackend
-from nncf.quantization.algorithms.min_max.backend import ALGO_BACKENDS
-
-import nncf.torch.graph.operator_metatypes as om
+from nncf.torch.tensor_statistics.collectors import PTMinMaxStatisticCollector
 
 
 @ALGO_BACKENDS.register(BackendType.TORCH)

@@ -168,6 +168,7 @@ class PTDepthwiseConv1dSubtype(PTDepthwiseConvOperatorSubtype):
     module_to_function_names = {
         NamespaceTarget.TORCH_NN_FUNCTIONAL: ["conv1d"]
     }
+    output_channel_axis = 1
 
 
 @PT_OPERATOR_METATYPES.register()
@@ -178,6 +179,7 @@ class PTModuleConv1dMetatype(PTModuleOperatorSubtype):
         NamespaceTarget.TORCH_NN_FUNCTIONAL: ["conv1d"]
     }
     subtypes = [PTDepthwiseConv1dSubtype]
+    output_channel_axis = 1
 
 
 @PT_OPERATOR_METATYPES.register()
@@ -188,6 +190,7 @@ class PTConv1dMetatype(PTOperatorMetatype):
         NamespaceTarget.TORCH_NN_FUNCTIONAL: ["conv1d"]
     }
     subtypes = [PTModuleConv1dMetatype]
+    output_channel_axis = 1
 
 
 @PT_OPERATOR_METATYPES.register()
@@ -197,6 +200,7 @@ class PTDepthwiseConv2dSubtype(PTDepthwiseConvOperatorSubtype):
     module_to_function_names = {
         NamespaceTarget.TORCH_NN_FUNCTIONAL: ["conv2d"]
     }
+    output_channel_axis = 1
 
 
 @PT_OPERATOR_METATYPES.register()
@@ -207,6 +211,7 @@ class PTModuleConv2dMetatype(PTModuleOperatorSubtype):
         NamespaceTarget.TORCH_NN_FUNCTIONAL: ["conv2d"]
     }
     subtypes = [PTDepthwiseConv2dSubtype]
+    output_channel_axis = 1
 
 
 @PT_OPERATOR_METATYPES.register()
@@ -217,6 +222,7 @@ class PTConv2dMetatype(PTOperatorMetatype):
         NamespaceTarget.TORCH_NN_FUNCTIONAL: ["conv2d"]
     }
     subtypes = [PTModuleConv2dMetatype]
+    output_channel_axis = 1
 
 
 @PT_OPERATOR_METATYPES.register()
@@ -226,6 +232,7 @@ class PTDepthwiseConv3dSubtype(PTDepthwiseConvOperatorSubtype):
     module_to_function_names = {
         NamespaceTarget.TORCH_NN_FUNCTIONAL: ["conv3d"]
     }
+    output_channel_axis = 1
 
 
 @PT_OPERATOR_METATYPES.register()
@@ -236,6 +243,7 @@ class PTModuleConv3dMetatype(PTModuleOperatorSubtype):
         NamespaceTarget.TORCH_NN_FUNCTIONAL: ["conv3d"]
     }
     subtypes = [PTDepthwiseConv3dSubtype]
+    output_channel_axis = 1
 
 
 @PT_OPERATOR_METATYPES.register()
@@ -246,6 +254,7 @@ class PTConv3dMetatype(PTOperatorMetatype):
         NamespaceTarget.TORCH_NN_FUNCTIONAL: ["conv3d"]
     }
     subtypes = [PTModuleConv3dMetatype]
+    output_channel_axis = 1
 
 
 @PT_OPERATOR_METATYPES.register()
@@ -255,6 +264,7 @@ class PTModuleConvTranspose1dMetatype(PTModuleOperatorSubtype):
     module_to_function_names = {
         NamespaceTarget.TORCH_NN_FUNCTIONAL: ["conv_transpose1d"]
     }
+    output_channel_axis = 1
 
 
 @PT_OPERATOR_METATYPES.register()
@@ -265,6 +275,7 @@ class PTConvTranspose1dMetatype(PTOperatorMetatype):
         NamespaceTarget.TORCH_NN_FUNCTIONAL: ["conv_transpose1d"]
     }
     subtypes = [PTModuleConvTranspose1dMetatype]
+    output_channel_axis = 1
 
 
 @PT_OPERATOR_METATYPES.register()
@@ -274,6 +285,7 @@ class PTModuleConvTranspose2dMetatype(PTModuleOperatorSubtype):
     module_to_function_names = {
         NamespaceTarget.TORCH_NN_FUNCTIONAL: ["conv_transpose2d"]
     }
+    output_channel_axis = 1
 
 
 @PT_OPERATOR_METATYPES.register()
@@ -284,6 +296,7 @@ class PTConvTranspose2dMetatype(PTOperatorMetatype):
         NamespaceTarget.TORCH_NN_FUNCTIONAL: ["conv_transpose2d"]
     }
     subtypes = [PTModuleConvTranspose2dMetatype]
+    output_channel_axis = 1
 
 
 @PT_OPERATOR_METATYPES.register()
@@ -293,6 +306,7 @@ class PTModuleConvTranspose3dMetatype(PTModuleOperatorSubtype):
     module_to_function_names = {
         NamespaceTarget.TORCH_NN_FUNCTIONAL: ["conv_transpose3d"]
     }
+    output_channel_axis = 1
 
 
 @PT_OPERATOR_METATYPES.register()
@@ -303,6 +317,8 @@ class PTConvTranspose3dMetatype(PTOperatorMetatype):
         NamespaceTarget.TORCH_NN_FUNCTIONAL: ["conv_transpose3d"]
     }
     subtypes = [PTModuleConvTranspose3dMetatype]
+    output_channel_axis = 1
+
 
 @PT_OPERATOR_METATYPES.register()
 class PTModuleLinearMetatype(PTModuleOperatorSubtype):
@@ -519,6 +535,7 @@ class PTMatMulMetatype(PTOperatorMetatype):
         NamespaceTarget.TORCH: ["matmul", "bmm", "mm"],
     }
     hw_config_names = [HWConfigOpName.MATMUL]
+    output_channel_axis = -1
 
 
 @PT_OPERATOR_METATYPES.register()
@@ -953,3 +970,16 @@ OPERATORS_WITH_WEIGHTS_METATYPES = [
 ]
 
 OP_NAMES_WITH_WEIGHTS = [x for meta in OPERATORS_WITH_WEIGHTS_METATYPES for x in meta.get_all_aliases()]
+
+# Contains the operation metatypes for which bias can be applied.
+OPERATORS_WITH_BIAS_METATYPES = [
+    PTModuleConv1dMetatype,
+    PTModuleConv2dMetatype,
+    PTModuleConv3dMetatype,
+    PTDepthwiseConv1dSubtype,
+    PTDepthwiseConv2dSubtype,
+    PTDepthwiseConv3dSubtype,
+    PTModuleConvTranspose1dMetatype,
+    PTModuleConvTranspose2dMetatype,
+    PTModuleConvTranspose3dMetatype,
+]

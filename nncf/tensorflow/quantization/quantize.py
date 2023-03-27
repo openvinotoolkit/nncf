@@ -22,15 +22,15 @@ from nncf.config.structures import BNAdaptationInitArgs
 from nncf.config.structures import QuantizationRangeInitArgs
 from nncf.data import Dataset
 from nncf.data.dataset import DataProvider
-from nncf.scopes import convert_ignored_scope_to_list
-from nncf.scopes import IgnoredScope
 from nncf.parameters import ModelType
 from nncf.parameters import TargetDevice
+from nncf.scopes import IgnoredScope
+from nncf.scopes import convert_ignored_scope_to_list
 from nncf.tensorflow.helpers.model_creation import create_compressed_model
 
 
 # TODO(alexsu52): It is a workaround and should be removed.
-class CalibrarionDataLoader(NNCFDataLoader):
+class CalibrationDataLoader(NNCFDataLoader):
     """
     This class wraps the nncf.Dataset.
 
@@ -105,7 +105,7 @@ def quantize_impl(model: tf.Module,
         }
     )
 
-    calibration_data_loader = CalibrarionDataLoader(calibration_dataset)
+    calibration_data_loader = CalibrationDataLoader(calibration_dataset)
     nncf_config.register_extra_structs(
         [
             QuantizationRangeInitArgs(data_loader=calibration_data_loader),
