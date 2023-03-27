@@ -248,7 +248,7 @@ class MultiElasticityHandler(ElasticityHandler):
             input_width_values, output_width_values = self.width_handler.get_active_in_out_width_values()
 
 
-        graph = self._target_model.get_graph()
+        graph = self._target_model.nncf.get_graph()
         output_shapes = collect_output_shapes(graph)
 
         flops, num_weights = self._weights_calc.count_flops_and_weights(

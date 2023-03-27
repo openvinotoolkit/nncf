@@ -48,12 +48,16 @@ DEFAULT_OV_QUANT_TRAIT_TO_OP_DICT = {
         ov_metatypes.OVLogicalAndMetatype,
         ov_metatypes.OVLogicalOrMetatype,
         ov_metatypes.OVLogicalXorMetatype,
+        ov_metatypes.OVSquaredDifferenceMetatype,
+        ov_metatypes.OVLSTMSequenceMetatype,
+        ov_metatypes.OVGRUSequenceMetatype,
     ],
     QuantizationTrait.NON_QUANTIZABLE: [
         ov_metatypes.OVSigmoidMetatype,
         ov_metatypes.OVSoftmaxMetatype,
         ov_metatypes.OVExpMetatype,
         ov_metatypes.OVLogMetatype,
+        ov_metatypes.OVAssignMetatype,
         UnknownMetatype
     ],
     QuantizationTrait.CONCAT: [ov_metatypes.OVConcatMetatype],

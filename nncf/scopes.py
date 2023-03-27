@@ -65,9 +65,9 @@ class IgnoredScope:
             names of ignored nodes.
         :param types: List of ignored operation types.
         """
-        self.names = names
-        self.patterns = patterns
-        self.types = types
+        self.names = names if names is not None else []
+        self.patterns = patterns if patterns is not None else []
+        self.types = types if types is not None else []
 
 
 def convert_ignored_scope_to_list(ignored_scope: Optional[IgnoredScope]) -> List[str]:
@@ -81,26 +81,26 @@ def convert_ignored_scope_to_list(ignored_scope: Optional[IgnoredScope]) -> List
     results = []
     if ignored_scope is None:
         return results
-    if ignored_scope.names is not None:
-        results.extend(ignored_scope.names)
-    if ignored_scope.patterns is not None:
-        for p in ignored_scope.patterns:
-            results.append('{re}' + p)
-    if ignored_scope.types is not None:
+    results.extend(ignored_scope.names)
+    for p in ignored_scope.patterns:
+        results.append('{re}' + p)
+    if ignored_scope.types:
         raise RuntimeError('Legacy ignored scope format does not support '
                            'operation types')
     return results
 
 
 def get_ignored_node_names_from_ignored_scope(ignored_scope: IgnoredScope,
-                                              nncf_graph: NNCFGraph) -> List[str]:
+                                              nncf_graph: NNCFGraph, strict: bool = True) -> List[str]:
     """
     Returns list of ignored names according to ignored scope and NNCFGraph.
-    Raise RuntimeError if any ignored name is not found in the NNCFGraph or
+    If strict is True, raises RuntimeError if any ignored name is not found in the NNCFGraph or
     any ignored pattern or any ignored type match 0 nodes in the NNCFGraph.
+    If strict is False, returns all possible matches.
 
     :param ignored_scope: Given ignored scope instance.
     :param nncf_grpah: Given NNCFGrpah.
+    :param strict: Whether all ignored_scopes must match at least one node or not.
     :returns: List of NNCF node names from given NNCFGraph specified in given ignored scope.
     """
     error_msg = 'Refer to the original_graph.dot to discover the operations'\
@@ -113,11 +113,10 @@ def get_ignored_node_names_from_ignored_scope(ignored_scope: IgnoredScope,
         for ignored_node_name in ignored_scope.names:
             if ignored_node_name in node_names:
                 matched_by_names.append(ignored_node_name)
-
-        if len(ignored_scope.names) != len(matched_by_names):
-            skipped_names = set(ignored_scope.names) - set(matched_by_names)
-            raise RuntimeError(f'Ignored nodes with name {list(skipped_names)}'
-                                ' were not found in the NNCFGraph. ' + error_msg)
+        if strict and len(ignored_scope.names) != len(matched_by_names):
+                skipped_names = set(ignored_scope.names) - set(matched_by_names)
+                raise RuntimeError(f'Ignored nodes with name {list(skipped_names)}'
+                                    ' were not found in the NNCFGraph. ' + error_msg)
         nncf_logger.info(f'{len(matched_by_names)}'
                           ' ignored nodes was found by name in the NNCFGraph')
 
@@ -130,7 +129,7 @@ def get_ignored_node_names_from_ignored_scope(ignored_scope: IgnoredScope,
             if not matches:
                 not_matched_patterns.append(str_pattern)
             matched_by_patterns.extend(matches)
-        if not_matched_patterns:
+        if strict and not_matched_patterns:
             raise RuntimeError(f'No mathes for ignored patterns {not_matched_patterns}'
                                 ' in the NNCFGraph. ' + error_msg)
         nncf_logger.info(f'{len(matched_by_patterns)}'
@@ -144,7 +143,7 @@ def get_ignored_node_names_from_ignored_scope(ignored_scope: IgnoredScope,
                 types_found.add(node.node_type)
                 matched_by_types.append(node.node_name)
         not_matched_types = set(ignored_scope.types) - types_found
-        if not_matched_types:
+        if strict and not_matched_types:
             raise RuntimeError(f'Nodes with ignored types {list(not_matched_types)}'
                                 ' were not found in the NNCFGraph. ' + error_msg)
         nncf_logger.info(f'{len(matched_by_types)}'

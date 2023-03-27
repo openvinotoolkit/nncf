@@ -59,6 +59,7 @@ class OVConvolutionMetatype(OVOpMetatype):
     op_names = ['Convolution']
     hw_config_names = [HWConfigOpName.CONVOLUTION]
     const_channel_axis = [0]  # const layout: [C_OUT, C_IN, Z, Y, X]
+    output_channel_axis = 1
 
 
 @OV_OPERATOR_METATYPES.register()
@@ -67,6 +68,7 @@ class OVConvolutionBackpropDataMetatype(OVOpMetatype):
     op_names = ['ConvolutionBackpropData']
     hw_config_names = [HWConfigOpName.CONVOLUTION]
     const_channel_axis = [1]  # const layout: [C_IN, C_OUT, Z, Y, X]
+    output_channel_axis = 1
 
 
 @OV_OPERATOR_METATYPES.register()
@@ -75,6 +77,7 @@ class OVDepthwiseConvolutionMetatype(OVOpMetatype):
     op_names = ['GroupConvolution']
     hw_config_names = [HWConfigOpName.DEPTHWISECONVOLUTION]
     const_channel_axis = [0, 1]  # const layout: [GROUPS, C_OUT / GROUPS, C_IN / GROUPS, Z, Y, X]
+    output_channel_axis = 1
 
     @classmethod
     def matches(cls, node: ov.Node) -> bool:
@@ -88,6 +91,7 @@ class OVGroupConvolutionMetatype(OVOpMetatype):
     hw_config_names = [HWConfigOpName.CONVOLUTION]
     subtypes = [OVDepthwiseConvolutionMetatype]
     const_channel_axis = [0, 1]  # const layout: [GROUPS, C_OUT / GROUPS, C_IN / GROUPS, Z, Y, X]
+    output_channel_axis = 1
 
 
 @OV_OPERATOR_METATYPES.register()
@@ -96,6 +100,7 @@ class OVGroupConvolutionBackpropDataMetatype(OVOpMetatype):
     op_names = ['GroupConvolutionBackpropData']
     hw_config_names = [HWConfigOpName.CONVOLUTION]
     const_channel_axis = [0, 2]  # const layout: [GROUPS, C_IN / GROUPS,  C_OUT / GROUPS, Z, Y, X]
+    output_channel_axis = 1
 
 
 @OV_OPERATOR_METATYPES.register()
@@ -104,6 +109,7 @@ class OVMatMulMetatype(OVOpMetatype):
     op_names = ['MatMul']
     hw_config_names = [HWConfigOpName.MATMUL]
     const_channel_axis = [0]  # const layout: [BATCH, Z, Y, X]
+    output_channel_axis = -1
 
 
 @OV_OPERATOR_METATYPES.register()
@@ -239,8 +245,8 @@ class OVReshapeMetatype(OVOpMetatype):
 
 
 @OV_OPERATOR_METATYPES.register()
-class OVShapeMetatype(OVOpMetatype):
-    name = 'ShapeOp'
+class OVShapeOfMetatype(OVOpMetatype):
+    name = 'ShapeOfOp'
     op_names = ['ShapeOf']
 
 
@@ -291,12 +297,16 @@ class OVDepthToSpaceMetatype(OVOpMetatype):
 class OVLSTMSequenceMetatype(OVOpMetatype):
     name = 'LSTMSequenceOp'
     op_names = ['LSTMSequence']
+    hw_config_names = [HWConfigOpName.LSTMSEQUENCE]
+    const_channel_axis = [0]  # const layout: [num_directions, 4 \* hidden_size, input_size]
 
 
 @OV_OPERATOR_METATYPES.register()
 class OVGRUSequenceMetatype(OVOpMetatype):
     name = 'GRUSequenceOp'
     op_names = ['GRUSequence']
+    hw_config_names = [HWConfigOpName.GRUSEQUENCE]
+    const_channel_axis = [0]  # const layout: [num_directions, 3 \* hidden_size, input_size]
 
 
 @OV_OPERATOR_METATYPES.register()
@@ -522,7 +532,7 @@ class OVTileMetatype(OVOpMetatype):
 @OV_OPERATOR_METATYPES.register()
 class OVSoftmaxMetatype(OVOpMetatype):
     name = 'SoftmaxOp'
-    op_names = ['SoftMax']
+    op_names = ['SoftMax', 'Softmax']
 
 
 @OV_OPERATOR_METATYPES.register()
@@ -576,18 +586,27 @@ class OVClampMetatype(OVOpMetatype):
     op_names = ['Clamp']
 
 
+@OV_OPERATOR_METATYPES.register()
+class OVSquaredDifferenceMetatype(OVOpMetatype):
+    name = 'SquaredDifferenceOp'
+    op_names = ['SquaredDifference']
+
+
 GENERAL_WEIGHT_LAYER_METATYPES = [OVConvolutionMetatype,
                                   OVGroupConvolutionMetatype,
                                   OVDepthwiseConvolutionMetatype,
                                   OVConvolutionBackpropDataMetatype,
                                   OVGroupConvolutionBackpropDataMetatype,
-                                  OVMatMulMetatype]
+                                  OVMatMulMetatype,
+                                  OVLSTMSequenceMetatype,
+                                  OVGRUSequenceMetatype]
 
 METATYPES_WITH_CONST_PORT_ID = GENERAL_WEIGHT_LAYER_METATYPES + [OVAddMetatype]
 
 # Contains the operation metatypes for which bias can be applied.
 OPERATIONS_WITH_BIAS_METATYPES = [OVConvolutionMetatype,
                                   OVConvolutionBackpropDataMetatype,
+                                  #TODO: add all metatypes with bias
                                   OVMatMulMetatype]
 
 

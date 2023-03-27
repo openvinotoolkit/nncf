@@ -332,8 +332,7 @@ def check_correct_nncf_modules_replacement(model: torch.nn.Module, compressed_mo
      in `compressed_model`
     """
     original_modules = get_all_modules_by_type(model, list(NNCF_MODULES_MAP.values()))
-    nncf_modules = get_all_modules_by_type(compressed_model.get_nncf_wrapped_model(),
-                                           list(NNCF_MODULES_MAP.keys()))
+    nncf_modules = get_all_modules_by_type(compressed_model, list(NNCF_MODULES_MAP.keys()))
     assert len(original_modules) == len(nncf_modules)
     for nncf_scope in nncf_modules.keys():
         original_scope = get_original_module_scope_from_nncf_module_scope(nncf_scope)

@@ -43,13 +43,6 @@ class FastBiasCorrectionAlgoBackend(ABC):
 
     @property
     @abstractmethod
-    def channel_axis_by_types(self):
-        """
-        Property for the backend-specific info about channels placement in the layout.
-        """
-
-    @property
-    @abstractmethod
     def tensor_processor(self):
         """
         Returns backend-specific instance of the NNCFCollectorTensorProcessor.
@@ -116,12 +109,13 @@ class FastBiasCorrectionAlgoBackend(ABC):
 
     @staticmethod
     @abstractmethod
-    def create_blob(shape: Tuple[int], data: List[float]) -> np.ndarray:
+    def create_blob(shape: Tuple[int], data: List[np.ndarray], channel_axis: int) -> np.ndarray:
         """
         Creates the backend-specific (because of layout) blob.
 
         :param shape: Shape of the blob.
         :param data: Data to fill the blob.
+        :param channel_axis: Axis to fill the blob with provided data.
         :return: np.ndarray blob.
         """
 

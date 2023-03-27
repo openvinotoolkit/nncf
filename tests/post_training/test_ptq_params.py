@@ -14,6 +14,9 @@
 import pytest
 from abc import abstractmethod
 
+from nncf.parameters import ModelType
+from nncf.common.quantization.structs import QuantizationPreset
+from nncf.common.quantization.structs import QuantizationMode
 from nncf.quantization.algorithms.definitions import RangeType
 from nncf.quantization.algorithms.post_training.algorithm import PostTrainingQuantization
 from nncf.quantization.algorithms.post_training.algorithm import PostTrainingQuantizationParameters
@@ -135,3 +138,28 @@ class TemplateTestPTQParams:
 
         assert act_num_q == act_num_ref
         assert weight_num_q == weight_num_ref
+
+    @pytest.mark.parametrize('model_type', [ModelType.TRANSFORMER])
+    def test_model_type_pass(self, test_params, model_type):
+        algo = PostTrainingQuantization(PostTrainingQuantizationParameters(preset=QuantizationPreset.MIXED,
+                                                                           model_type=model_type))
+        min_max_algo = algo.algorithms[0]
+        min_max_algo._backend_entity = self.get_algo_backend()
+
+        nncf_graph = test_params['test_model_type_pass']['nncf_graph']
+        pattern = test_params['test_model_type_pass']['pattern']
+        q_setup = min_max_algo._get_quantizer_setup(nncf_graph, pattern)
+        for quantization_point in q_setup.quantization_points.values():
+            if quantization_point.is_activation_quantization_point():
+                node_names = quantization_point.directly_quantized_operator_node_names
+                for node_name in node_names:
+                    if nncf_graph.get_node_by_name(node_name).metatype == min_max_algo._backend_entity.mat_mul_metatype:
+                        assert quantization_point.qconfig.mode == QuantizationMode.ASYMMETRIC
+        min_max_algo._apply_model_type_pass(model_type, q_setup, nncf_graph)
+        for quantization_point in q_setup.quantization_points.values():
+            if quantization_point.is_activation_quantization_point():
+                node_names = quantization_point.directly_quantized_operator_node_names
+                for node_name in node_names:
+                    if nncf_graph.get_node_by_name(node_name).metatype == min_max_algo._backend_entity.mat_mul_metatype:
+                        assert quantization_point.qconfig.mode == QuantizationMode.SYMMETRIC
+

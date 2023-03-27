@@ -11,12 +11,17 @@
  limitations under the License.
 """
 
-from typing import Tuple
-from typing import List
+from typing import Tuple, List, TypeVar
 
+from nncf.common.factory import ModelTransformerFactory
+from nncf.common.factory import CommandCreatorFactory
 from nncf.common.graph import NNCFGraph
 from nncf.common.graph import NNCFNode
 from nncf.common.graph.operator_metatypes import OperatorMetatype
+from nncf.common.graph.transformations.layout import TransformationLayout
+
+
+TModel = TypeVar('TModel')
 
 
 def find_quantizer_nodes_to_cut(
@@ -32,11 +37,12 @@ def find_quantizer_nodes_to_cut(
     which were found) and the list of nodes that will be reverted to original precision if
     quantizer nodes are removed.
 
-    :param graph: The NNCFGraph.
+    :param graph: The NNCFGraph without shapeof subgraphs.
     :param quantizer_node: The quantizer node that we want to remove.
     :param quantizer_metatypes: List of quantizer metatypes.
     :param const_metatypes: List of constant metatypes.
-    :param quantizable_metatypes: List of quantizable metatypes.
+    :param quantizable_metatypes: List of metatypes for operations
+        that may be quantized.
     :param quantize_agnostic_metatypes: List of quantize agnostic metatypes.
     :return: A tuple (quantizer_nodes, ops) where
         - `quantizer_nodes` is the list of quantizer nodes
@@ -79,3 +85,50 @@ def find_quantizer_nodes_to_cut(
             _parse_node_relatives(to_see_parents.pop(), is_parents=True)
 
     return to_cut, list(ops_to_return_in_orig_prec)
+
+
+def revert_operations_to_floating_point_precision(operations: List[NNCFNode],
+                                                  quantizers: List[NNCFNode],
+                                                  quantized_model: TModel,
+                                                  quantized_model_graph: NNCFGraph) -> TModel:
+    """
+    Reverts provided operations to floating-point precision by removing
+    quantizers. Restores original bias for operations with bias.
+    Restores original weights for operations with weights.
+
+    :param operations: List of operations to revert in floating-point precision.
+    :param quantizers: List of quantizers that should be removed to revert
+        operations to floating-point precision.
+    :param quantized_model: Quantized model in which provided operations
+        should be reverted to floating-point precision.
+    :param quantized_model_graph: The graph which was built for `quantized_model`.
+    :return: The model where `operations` were reverted to floating-point precision.
+    """
+    transformation_layout = TransformationLayout()
+
+    command_creator = CommandCreatorFactory.create(quantized_model)
+
+    for node in quantizers:
+        transformation_layout.register(
+            command_creator.create_command_to_remove_quantizer(node)
+        )
+
+    for node in operations:
+        original_bias = node.data.get('original_bias', None)
+        if original_bias is not None:
+            transformation_layout.register(
+                command_creator.create_command_to_update_bias(node, original_bias, quantized_model_graph)
+            )
+
+        if node.layer_attributes is not None:
+            weight_port_ids = node.layer_attributes.get_const_port_ids()
+            for port_id in weight_port_ids:
+                original_weight = node.data[f'original_weight.{port_id}']
+                transformation_layout.register(
+                    command_creator.create_command_to_update_weight(node, original_weight, port_id)
+                )
+
+    model_transformer = ModelTransformerFactory.create(quantized_model)
+    transformed_model = model_transformer.transform(transformation_layout)
+
+    return transformed_model

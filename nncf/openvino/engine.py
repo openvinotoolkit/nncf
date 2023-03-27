@@ -136,6 +136,7 @@ class OVEngine(pot.IEEngine):
         self._validation_dataset = validation_dataset
         self._validation_fn = validation_fn
         self.use_original_metric = use_original_metric
+        self.statistics_collection = False
 
     def predict(self,
                 stats_layout=None,
@@ -152,7 +153,7 @@ class OVEngine(pot.IEEngine):
             subset_indices = sorted(getattr(sampler, '_subset_indices'))
 
         is_full_dataset = subset_indices is None or len(subset_indices) == len(self.data_loader)
-        if self._validation_fn and (is_full_dataset or self.use_original_metric):
+        if self._validation_fn and (is_full_dataset or self.use_original_metric) and not self.statistics_collection:
             compiled_model = self._ie.compile_model(model=self._model, device_name=self._device)
             self._metric.avg_value = self._validation_fn(compiled_model,
                                                          self._validation_dataset.get_data(subset_indices))

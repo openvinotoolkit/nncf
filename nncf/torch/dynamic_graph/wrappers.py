@@ -16,23 +16,14 @@ from typing import Callable
 from typing import List
 from typing import Tuple
 
-from torch.nn import Conv1d
-from torch.nn import Conv2d
-from torch.nn import Conv3d
-from torch.nn import ConvTranspose1d
-from torch.nn import ConvTranspose2d
-from torch.nn import ConvTranspose3d
 from torch.nn import DataParallel
-from torch.nn import Linear
-from torch.nn import Module as TorchModule
 
 from nncf.common.graph.layer_attributes import BaseLayerAttributes
-from nncf.common.graph.layer_attributes import ConvolutionLayerAttributes
-from nncf.common.graph.layer_attributes import GenericWeightedLayerAttributes
-from nncf.common.graph.layer_attributes import GroupNormLayerAttributes
-from nncf.common.graph.layer_attributes import LinearLayerAttributes
 from nncf.common.utils.debug import is_debug
 from nncf.common.logging import nncf_logger
+from nncf.torch.dynamic_graph.layer_attributes_handlers import OP_NAMES_REQUIRING_ATTRS_FROM_ARGS_KWARGS
+from nncf.torch.dynamic_graph.layer_attributes_handlers import get_layer_attributes_from_module
+from nncf.torch.dynamic_graph.layer_attributes_handlers import get_layer_attributes_from_args_and_kwargs
 from nncf.torch.dynamic_graph.context import TracingContext
 from nncf.torch.dynamic_graph.context import get_current_context
 from nncf.torch.dynamic_graph.op_input_processing import OperatorInput
@@ -40,7 +31,6 @@ from nncf.torch.dynamic_graph.trace_tensor import make_tensor_metas
 from nncf.torch.dynamic_graph.trace_tensor import trace_tensors
 from nncf.torch.layer_utils import _NNCFModuleMixin
 from nncf.torch.layers import ITERATION_MODULES
-from nncf.torch.layers import NNCF_MODULES_DICT
 
 _IGNORED_SCOPES = []
 
@@ -57,9 +47,6 @@ def ignore_scope(cls):
     if cls not in _IGNORED_SCOPES:
         _IGNORED_SCOPES.append(cls)
     return cls
-
-
-OP_NAMES_REQUIRING_MODULE_ATTRS = [v.op_func_name for v in NNCF_MODULES_DICT]
 
 
 def wrap_operator(operator, operator_info: 'PatchedOperatorInfo'):
@@ -191,7 +178,7 @@ def _execute_op(op_address: 'OperationAddress',
         tensor_metas = make_tensor_metas(processed_input)
         node = ctx.find_operator_node(tensor_metas, op_address)
         if node is None:
-            layer_attrs, ignored_algos = _collect_module_attrs_and_ignored_algorithms(ctx, op_name)
+            layer_attrs, ignored_algos = _collect_module_attrs_and_ignored_algorithms(ctx, op_name, args, kwargs)
             is_called_inside_nncf_module = isinstance(ctx.get_current_module(), _NNCFModuleMixin)
             node = ctx.maybe_add_node(processed_input, tensor_metas, op_address,
                                       layer_attrs, ignored_algos, is_called_inside_nncf_module)
@@ -204,56 +191,19 @@ def _execute_op(op_address: 'OperationAddress',
 
 
 def _collect_module_attrs_and_ignored_algorithms(ctx: TracingContext,
-                                                 op_name: str) -> Tuple[BaseLayerAttributes, List[str]]:
+                                                 op_name: str,
+                                                 args, kwargs) -> Tuple[BaseLayerAttributes, List[str]]:
     layer_attrs = None
     ignored_algos = []
-    if op_name in OP_NAMES_REQUIRING_MODULE_ATTRS:
+    from nncf.torch.graph.operator_metatypes import OP_NAMES_WITH_WEIGHTS  #pylint:disable=cyclic-import
+    if op_name in OP_NAMES_WITH_WEIGHTS:
         curr_module = ctx.get_current_module()
         if curr_module is None:
-            raise RuntimeError("Operation {} requires module attributes, "
-                               "but it was executed outside any module".format(op_name))
-        layer_attrs = _get_layer_attributes(curr_module, op_name)
+            raise RuntimeError(f"Operation {op_name} requires module attributes, "
+                               f"but it was executed outside any module")
+        layer_attrs = get_layer_attributes_from_module(curr_module, op_name)
         if isinstance(curr_module, _NNCFModuleMixin):
             ignored_algos = deepcopy(curr_module.ignored_algorithms)
+    elif op_name in OP_NAMES_REQUIRING_ATTRS_FROM_ARGS_KWARGS:
+        layer_attrs = get_layer_attributes_from_args_and_kwargs(op_name, args, kwargs)
     return layer_attrs, ignored_algos
-
-
-def _get_layer_attributes(module: TorchModule, operator_name: str) -> BaseLayerAttributes:
-    if operator_name == "group_norm":
-        return GroupNormLayerAttributes(
-            module.weight.requires_grad,
-            module.num_channels,
-            module.num_groups
-        )
-    # torch.nn.utils.weight_norm replaces weight with weight_g and weight_v
-    is_weight_norm_applied = hasattr(module, 'weight_g') and hasattr(module, 'weight_v')
-    weight_attr = 'weight_g' if is_weight_norm_applied else 'weight'
-    if isinstance(module, (Conv1d, Conv2d, Conv3d)):
-        return ConvolutionLayerAttributes(weight_requires_grad=getattr(module, weight_attr).requires_grad,
-                                          in_channels=module.in_channels,
-                                          out_channels=module.out_channels,
-                                          kernel_size=module.kernel_size,
-                                          stride=module.stride,
-                                          groups=module.groups,
-                                          transpose=False,
-                                          padding_values=module.padding)
-    if isinstance(module, (ConvTranspose1d, ConvTranspose2d, ConvTranspose3d)):
-        return ConvolutionLayerAttributes(weight_requires_grad=getattr(module, weight_attr).requires_grad,
-                                          in_channels=module.in_channels,
-                                          out_channels=module.out_channels,
-                                          kernel_size=module.kernel_size,
-                                          stride=module.stride,
-                                          groups=module.groups,
-                                          transpose=True,
-                                          padding_values=module.padding)
-    if isinstance(module, Linear):
-        return LinearLayerAttributes(weight_requires_grad=getattr(module, weight_attr).requires_grad,
-                                     in_features=module.in_features,
-                                     out_features=module.out_features,
-                                     bias=module.bias is not None)
-    if hasattr(module, 'weight') or is_weight_norm_applied:
-        return GenericWeightedLayerAttributes(weight_requires_grad=getattr(module, weight_attr).requires_grad,
-                                              weight_shape=module.weight.shape)
-
-    return GenericWeightedLayerAttributes(weight_requires_grad=False,
-                                          weight_shape=[1, 1])

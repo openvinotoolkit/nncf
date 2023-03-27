@@ -34,17 +34,18 @@
 # installs.
 
 
+import codecs
 import glob
+import os
+import re
 import stat
 import sys
 import sysconfig
 
-import codecs
-import os
-import re
 import setuptools
-from setuptools import setup, find_packages
 from pkg_resources import parse_version
+from setuptools import find_packages
+from setuptools import setup
 
 here = os.path.abspath(os.path.dirname(__file__))
 BKC_SETUPTOOLS_VERSION = '59.5.0'
@@ -130,8 +131,8 @@ TORCH_EXTRAS = [
     ]
 
 ONNX_EXTRAS = [
-        "onnx==1.12.0",
-        "onnxruntime==1.13.1"
+        "onnx~=1.13.1",
+        "onnxruntime~=1.14.1"
     ]
 
 OPENVINO_EXTRAS = [
@@ -140,8 +141,12 @@ OPENVINO_EXTRAS = [
 
 
 EXTRAS_REQUIRE = {
-    "dev": ["matplotlib>=3.3.4, <3.6",
-            "pillow>=9.0.0"],
+    "dev": [
+        "kaleido>=0.2.1",
+        "matplotlib>=3.3.4, <3.6",
+        "pillow>=9.0.0",
+        "plotly-express>=0.4.1",
+    ],
     "tests": ["pytest"],
     "docs": [],
 

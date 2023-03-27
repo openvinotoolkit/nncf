@@ -49,11 +49,11 @@ def _get_config_for_algo(input_size, quantization=False):
 @pytest.mark.parametrize("enable_quantization", (True, False), ids=("with_quantization", "no_quantization"))
 def test_prepare_for_inference_pruning(enable_quantization):
     input_size = [1, 1, 8, 8]
-    model = BigPruningTestModel()
+    model = BigPruningTestModel().eval()
     config = _get_config_for_algo(input_size, enable_quantization)
     compressed_model, compression_ctrl = create_compressed_model_and_algo_for_test(model, config)
 
-    input_tensor = generate_lazy_sweep_data(input_size)
+    input_tensor = torch.Tensor(generate_lazy_sweep_data(input_size))
     x_nncf = compressed_model(input_tensor)
 
     inference_model = compression_ctrl.prepare_for_inference()
@@ -61,22 +61,22 @@ def test_prepare_for_inference_pruning(enable_quantization):
 
     check_quantizer_operators(inference_model)
 
-    conv2_wight = inference_model.nncf_module.conv2.weight.data
-    assert torch.count_nonzero(conv2_wight) * 2 == torch.numel(conv2_wight), "Model was not pruned"
+    conv2_weight = inference_model.conv2.weight.data
+    assert torch.count_nonzero(conv2_weight) * 2 == torch.numel(conv2_weight), "Model was not pruned"
 
     assert torch.equal(x_nncf, x_torch), f"{x_nncf=} != {x_torch}"
 
 
-@pytest.mark.parametrize("make_model_copy", (True, False))
+@pytest.mark.parametrize("do_copy", (True, False))
 @pytest.mark.parametrize("enable_quantization", (True, False), ids=("with_quantization", "no_quantization"))
-def test_make_model_copy(make_model_copy, enable_quantization):
+def test_do_copy(do_copy, enable_quantization):
     model = BasicConvTestModel()
     config = _get_config_for_algo(model.INPUT_SIZE, enable_quantization)
     compressed_model, compression_ctrl = create_compressed_model_and_algo_for_test(model, config)
 
-    inference_model = compression_ctrl.prepare_for_inference(make_model_copy=make_model_copy)
+    inference_model = compression_ctrl.prepare_for_inference(do_copy=do_copy)
 
-    if make_model_copy:
+    if do_copy:
         assert id(inference_model) != id(compressed_model)
     else:
         assert id(inference_model) == id(compressed_model)

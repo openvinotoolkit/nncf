@@ -45,12 +45,12 @@ def get_bn_for_conv_node_by_name(target_model: NNCFNetwork, conv_node_name: NNCF
     :param module_scope:
     :return: batch norm module
     """
-    graph = target_model.get_original_graph()
+    graph = target_model.nncf.get_original_graph()
     conv_node = graph.get_node_by_name(conv_node_name)
     bn_node = get_bn_node_for_conv(graph, conv_node)
     if bn_node is None:
         return None
-    bn_module = target_model.get_containing_module(bn_node.node_name)
+    bn_module = target_model.nncf.get_containing_module(bn_node.node_name)
     return bn_module
 
 

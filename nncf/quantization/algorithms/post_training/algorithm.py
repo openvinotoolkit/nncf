@@ -15,6 +15,7 @@ from typing import Dict, List, Optional, TypeVar
 
 from nncf import Dataset
 from nncf.parameters import TargetDevice
+from nncf.parameters import ModelType
 from nncf.scopes import IgnoredScope
 from nncf.common.logging import nncf_logger
 from nncf.common.quantization.structs import QuantizationPreset
@@ -56,6 +57,7 @@ class PostTrainingQuantizationParameters(AlgorithmParameters):
                  range_type: RangeType = RangeType.MEAN_MINMAX,
                  quantize_outputs: bool = False,
                  ignored_scopes: Optional[IgnoredScope] = None,
+                 model_type: Optional[ModelType] = None,
                  overflow_fix: OverflowFix = OverflowFix.FIRST_LAYER,
                  fast_bias_correction: bool = True,
                  ):
@@ -98,6 +100,7 @@ class PostTrainingQuantizationParameters(AlgorithmParameters):
             target_device=target_device,
             quantize_outputs=quantize_outputs,
             ignored_scopes=ignored_scopes,
+            model_type=model_type,
             overflow_fix=overflow_fix
         )}
 

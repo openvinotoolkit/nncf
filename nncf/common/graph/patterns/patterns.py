@@ -346,6 +346,7 @@ class PatternNames(Enum):
     LINEAR_SCALE_SHIFT_ACTIVATIONS = PatternDesc('linear_scale_shift_activations')
     LINEAR_CONST_MULTIPLY = PatternDesc('linear_const_multiply')
     SCALE_SHIFT_ACTIVATIONS = PatternDesc('scale_shift_activations')
+    MVN_SCALE_SHIFT_ACTIVATIONS = PatternDesc('mvn_scale_shift_activations')
 
     # DEVICE PATTERNS
     HSWISH_ACTIVATION_CLAMP_MULTIPLY = PatternDesc('hswish_activation_clamp_multiply',
@@ -385,3 +386,6 @@ class PatternNames(Enum):
                                                        devices=[TargetDevice.ANY,
                                                                 TargetDevice.CPU,
                                                                 TargetDevice.GPU])
+
+    # TRANSFORMERS
+    MATMUL_SOFTMAX_MATMUL = PatternDesc('matmul_softmax_matmul')

@@ -152,7 +152,7 @@ class MemoryConsumptionStatisticsCollector(StatisticsCollector):
         stats = MemoryConsumptionStatistics()
 
         fp_num_bits = 32
-        nncf_modules = self._compressed_model.get_nncf_modules()
+        nncf_modules = self._compressed_model.nncf.get_nncf_modules()
         for nncf_module in nncf_modules:
             count_el = np.prod(nncf_module.weight.shape)
             stats.fp32_weight_size += count_el * fp_num_bits
@@ -171,7 +171,7 @@ class MemoryConsumptionStatisticsCollector(StatisticsCollector):
         stats.quantized_weight_size /= 2**23
         stats.fp32_weight_size /= 2**23
 
-        original_graph = deepcopy(self._compressed_model.get_original_graph())
+        original_graph = deepcopy(self._compressed_model.nncf.get_original_graph())
 
         memory_consumption_fp_model = {}
         memory_consumption_compressed_model = {}
@@ -200,7 +200,7 @@ class MemoryConsumptionStatisticsCollector(StatisticsCollector):
         precision_enter_activation_tensor =\
              max([0] + [original_nx_graph.edges[pred_u_node, u_node]['precision'] for pred_u_node in pred_u_nodes])
         u_node_name = original_nx_graph.nodes[u_node][NNCFGraph.NODE_NAME_ATTR]
-        module = self._compressed_model.get_containing_module(u_node_name)
+        module = self._compressed_model.nncf.get_containing_module(u_node_name)
         if is_nncf_module(module):
             quantizer = self._get_weight_quantizer_for_module(module)
             if quantizer is not None:
@@ -245,7 +245,7 @@ class ShareEdgesQuantizedDataPathStatisticsCollector(StatisticsCollector):
     def collect(self) -> QuantizationConfigurationStatistics:
         # pylint: disable=too-many-branches
         merged_original_graph =\
-            self.get_merged_original_graph_with_patterns(self._compressed_model.get_original_graph())
+            self.get_merged_original_graph_with_patterns(self._compressed_model.nncf.get_original_graph())
         self.stats.quantized_edges_in_cfg = 0
         nx.set_edge_attributes(merged_original_graph, False, self.QUANTIZED_EDGES_ATTR)
         nx.set_edge_attributes(merged_original_graph, False, self.PASSED_EDGES_ATTR)
@@ -287,7 +287,7 @@ class ShareEdgesQuantizedDataPathStatisticsCollector(StatisticsCollector):
                     node_name = str(node[NNCFGraph.NODE_NAME_ATTR])
 
                     matched = False
-                    for aq_key in self._compressed_model.external_quantizers.keys():
+                    for aq_key in self._compressed_model.nncf.external_quantizers.keys():
                         if node_name in aq_key:
                             matched = True
                             break

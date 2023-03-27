@@ -27,6 +27,7 @@ from nncf.torch.tensor_statistics.collectors import PTMeanMinMaxStatisticCollect
 
 from tests.torch.helpers import create_bn, create_conv, create_depthwise_conv
 from tests.torch.ptq.helpers import get_single_conv_nncf_graph
+from tests.torch.ptq.helpers import get_single_no_weigth_matmul_nncf_graph
 from tests.torch.ptq.helpers import get_nncf_network
 
 # pylint: disable=protected-access
@@ -107,6 +108,9 @@ class TestPTQParams(TemplateTestPTQParams):
              'pattern': GraphPattern()},
         'test_ignored_scopes':
             {'nncf_graph': get_single_conv_nncf_graph().nncf_graph,
+             'pattern': GraphPattern()},
+        'test_model_type_pass':
+            {'nncf_graph': get_single_no_weigth_matmul_nncf_graph().nncf_graph,
              'pattern': GraphPattern()},
         }
 

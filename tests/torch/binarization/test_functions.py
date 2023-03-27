@@ -16,14 +16,15 @@ import pytest
 import torch
 from torch.autograd import Variable
 
-from nncf.torch.binarization.layers import xnor_binarize_op, dorefa_binarize_op, activation_bin_scale_threshold_op
+from nncf.torch.binarization.layers import activation_bin_scale_threshold_op
+from nncf.torch.binarization.layers import dorefa_binarize_op
+from nncf.torch.binarization.layers import xnor_binarize_op
 from nncf.torch.binarization.reference import ReferenceActivationBinarize
 from nncf.torch.binarization.reference import ReferenceBackendType
 from nncf.torch.binarization.reference import ReferenceDOREFABinarize
 from nncf.torch.binarization.reference import ReferenceXNORBinarize
-from tests.torch.helpers import get_grads
 from tests.torch.helpers import PTTensorListComparator
-
+from tests.torch.helpers import get_grads
 
 # reference impl
 
@@ -68,7 +69,6 @@ RACT = ReferenceActivationBinarize(backend_type=ReferenceBackendType.NUMPY)
                           [32, 192, 28, 28],
                           [32, 576, 14, 14]],
                          ids=idfn)
-@pytest.mark.parametrize("use_cuda", [False, True], ids=['cpu', 'cuda'])
 class TestParametrized:
     @pytest.mark.parametrize('weight_bin_type', ["xnor", "dorefa"])
     class TestWeightBinarization:

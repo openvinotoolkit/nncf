@@ -23,11 +23,7 @@ from nncf.common.utils.backend import BackendType
 from nncf.common.utils.registry import Registry
 
 from nncf.experimental.openvino_native.graph.metatypes.openvino_metatypes import OV_OPERATOR_METATYPES
-from nncf.experimental.openvino_native.graph.metatypes.openvino_metatypes import OVOpMetatype
-from nncf.experimental.openvino_native.graph.metatypes.openvino_metatypes import OVConvolutionMetatype
-from nncf.experimental.openvino_native.graph.metatypes.openvino_metatypes import OVConvolutionBackpropDataMetatype
-from nncf.experimental.openvino_native.graph.metatypes.openvino_metatypes import OVMatMulMetatype
-from nncf.experimental.openvino_native.graph.metatypes.openvino_metatypes import OVFakeQuantizeMetatype
+from nncf.experimental.openvino_native.graph.metatypes.common import FAKE_QUANTIZE_OPERATIONS
 from nncf.experimental.openvino_native.graph.transformations.commands import OVBiasCorrectionCommand
 from nncf.experimental.openvino_native.graph.transformations.commands import OVModelExtractionCommand
 from nncf.experimental.openvino_native.graph.transformations.commands import OVTargetPoint
@@ -36,7 +32,7 @@ from nncf.experimental.openvino_native.statistics.collectors import OVNNCFCollec
 from nncf.experimental.openvino_native.tensor import OVNNCFTensor
 from nncf.experimental.openvino_native.graph.node_utils import get_bias_value
 from nncf.experimental.openvino_native.graph.node_utils import is_node_with_bias
-from nncf.experimental.openvino_native.graph.transformations.command_creation import create_bias_correction_command
+from nncf.experimental.openvino_native.graph.transformations.command_creation import OVCommandCreator
 from nncf.quantization.algorithms.fast_bias_correction.backend import ALGO_BACKENDS
 from nncf.quantization.algorithms.fast_bias_correction.backend import FastBiasCorrectionAlgoBackend
 
@@ -47,14 +43,6 @@ class OVFastBiasCorrectionAlgoBackend(FastBiasCorrectionAlgoBackend):
     @property
     def operation_metatypes(self) -> Registry:
         return OV_OPERATOR_METATYPES
-
-    @property
-    def channel_axis_by_types(self) -> Dict[OVOpMetatype, int]:
-        return {
-            OVConvolutionMetatype: 1,
-            OVConvolutionBackpropDataMetatype: 1,
-            OVMatMulMetatype: -1
-        }
 
     @property
     def tensor_processor(self) -> OVNNCFCollectorTensorProcessor:
@@ -70,7 +58,7 @@ class OVFastBiasCorrectionAlgoBackend(FastBiasCorrectionAlgoBackend):
     def create_bias_correction_command(node: NNCFNode,
                                        bias_value: np.ndarray,
                                        nncf_graph: NNCFGraph) -> OVBiasCorrectionCommand:
-        return create_bias_correction_command(node, bias_value, nncf_graph)
+        return OVCommandCreator.create_command_to_update_bias(node, bias_value, nncf_graph)
 
     @staticmethod
     def model_extraction_command(inputs: List[str], outputs: List[str]) -> OVModelExtractionCommand:
@@ -87,11 +75,12 @@ class OVFastBiasCorrectionAlgoBackend(FastBiasCorrectionAlgoBackend):
         return subgraph.inputs[0].node.friendly_name, subgraph.outputs[0].node.friendly_name
 
     @staticmethod
-    def create_blob(shape: Tuple[int], data: List[float]) -> np.ndarray:
+    def create_blob(shape: Tuple[int], data: List[np.ndarray], channel_axis: int) -> np.ndarray:
         blob = np.zeros(shape)
-        for i, value in enumerate(data):
-            blob[:, i] = value
-        blob = blob.astype(np.float32)
+        for j, idx in enumerate(np.ndindex(blob.shape[channel_axis])):
+            index = tuple(slice(None) if i != channel_axis else idx for i in range(blob.ndim))
+            blob[index] = data[j]
+        blob = blob.astype(data[0].dtype)
         return blob
 
     @staticmethod
@@ -104,9 +93,13 @@ class OVFastBiasCorrectionAlgoBackend(FastBiasCorrectionAlgoBackend):
 
     @staticmethod
     def is_quantized_weights(node: NNCFNode, nncf_graph: NNCFGraph) -> bool:
-        const_port_id = node.layer_attributes.const_port_id
-        weight_node = nncf_graph.get_input_edges(node)[const_port_id].from_node
-        return weight_node.metatype == OVFakeQuantizeMetatype
+        # At first, checks whether the node has weight tensor
+        if node.layer_attributes is None:
+            return False
+        const_port_ids = node.layer_attributes.get_const_port_ids()
+        assert len(const_port_ids) == 1
+        weight_node = nncf_graph.get_input_edges(node)[const_port_ids[0]].from_node
+        return weight_node.metatype in FAKE_QUANTIZE_OPERATIONS
 
     @staticmethod
     def process_model_output(raw_data: Dict, output_name: str) -> OVNNCFTensor:

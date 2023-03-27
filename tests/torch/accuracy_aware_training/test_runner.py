@@ -20,6 +20,7 @@ from torch.nn import functional as F
 from torch.optim import SGD
 from torch.utils.data import DataLoader
 
+from nncf.api.compression import CompressionAlgorithmController
 from nncf.config import NNCFConfig
 from nncf.torch.accuracy_aware_training.runner import PTAccuracyAwareTrainingRunner
 from tests.torch.helpers import LeNet
@@ -29,7 +30,8 @@ from tests.torch.helpers import set_torch_seed
 from tests.torch.sparsity.magnitude.test_helpers import get_basic_magnitude_sparsity_config
 
 
-def create_initialized_lenet_model_and_dataloader(config: NNCFConfig) -> Tuple[nn.Module, DataLoader]:
+def create_initialized_lenet_model_and_dataloader(config: NNCFConfig) -> Tuple[nn.Module, DataLoader,
+                                                                               CompressionAlgorithmController]:
     with set_torch_seed():
         train_loader = create_random_mock_dataloader(config, num_samples=10)
         model = LeNet()
@@ -47,6 +49,7 @@ def create_initialized_lenet_model_and_dataloader(config: NNCFConfig) -> Tuple[n
 )
 def test_runner(num_steps, learning_rate, reference_metric):
     runner = PTAccuracyAwareTrainingRunner(accuracy_aware_training_params={},
+                                           uncompressed_model_accuracy=0.0,
                                            dump_checkpoints=False)
     input_sample_size = [1, 1, LeNet.INPUT_SIZE[-1], LeNet.INPUT_SIZE[-1]]
     config = get_basic_magnitude_sparsity_config(input_sample_size=input_sample_size)

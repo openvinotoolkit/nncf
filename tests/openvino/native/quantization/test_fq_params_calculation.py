@@ -71,10 +71,10 @@ def compare_stats(expected, actual):
 
 
 # pylint: disable=protected-access
-def quantize_model(ov_model, preset):
+def quantize_model(ov_model, q_params):
     dataset = get_dataset_for_test(ov_model)
 
-    min_max_algo = MinMaxQuantization(MinMaxQuantizationParameters(number_samples=1, preset=preset))
+    min_max_algo = MinMaxQuantization(MinMaxQuantizationParameters(number_samples=1, **q_params))
     statistics_aggregator = OVStatisticsAggregator(dataset)
     statistic_points = min_max_algo.get_statistic_points(ov_model)
     statistics_aggregator.register_stastistic_points(statistic_points)
@@ -88,13 +88,17 @@ def quantize_model(ov_model, preset):
 @pytest.mark.parametrize('model_creator_func', SYNTHETIC_MODELS.values())
 def test_syntetic_models_fq_scales(model_creator_func, preset):
     model = model_creator_func()
-    quantized_model = quantize_model(model.ov_model, preset)
+    quantized_model = quantize_model(model.ov_model, {'preset': preset})
     nodes = get_fq_nodes_stats_algo(quantized_model)
 
     ref_stats_name = model.ref_graph_name.split(".")[0] + f'_{preset.value}.json'
     ref_stats_path = REFERENCE_SCALES_DIR / ref_stats_name
-    ref_nodes = load_json(ref_stats_path)
 
+    # Unkomment lines below to generate reference for new models.
+    # from tests.openvino.native.common import dump_to_json
+    # dump_to_json(ref_stats_path, nodes)
+
+    ref_nodes = load_json(ref_stats_path)
     compare_stats(ref_nodes, nodes)
 
 
@@ -112,7 +116,7 @@ def test_omz_models_fq_scales(model_name, preset, tmp_path):
     _ = download_model(model_name, tmp_path)
     model_path = convert_model(model_name, tmp_path)
     model = ov.Core().read_model(model_path)
-    quantized_model = quantize_model(model, preset)
+    quantized_model = quantize_model(model, {'preset': preset})
     nodes = get_fq_nodes_stats_algo(quantized_model)
 
     ref_stats_name = str(Path(model_path).name).rsplit('.', maxsplit=1)[0] + f'_{preset.value}.json'
@@ -132,7 +136,7 @@ REF_NODES_SHAPES = {
                          zip([LinearModel, ConvModel, MatMul2DModel], REF_NODES_SHAPES.values()))
 def test_syntetic_models_fq_shapes(model_creator_func, ref_shapes):
     model = model_creator_func()
-    quantized_model = quantize_model(model.ov_model, QuantizationPreset.PERFORMANCE)
+    quantized_model = quantize_model(model.ov_model, {'preset': QuantizationPreset.PERFORMANCE})
     nodes = get_fq_nodes_stats_algo(quantized_model)
     for node_name, node in nodes.items():
         assert node['input_low'].shape == ref_shapes[node_name]
@@ -145,7 +149,7 @@ def test_syntetic_models_fq_shapes(model_creator_func, ref_shapes):
 @pytest.mark.parametrize('input_dtype', ['FP16', 'FP32'])
 def test_fq_precision_orig_fp32model(const_dtype, input_dtype):
     model = FPModel(const_dtype, input_dtype)
-    quantized_model = quantize_model(model.ov_model, QuantizationPreset.PERFORMANCE)
+    quantized_model = quantize_model(model.ov_model, {'preset': QuantizationPreset.PERFORMANCE})
     for op in quantized_model.get_ops():
         if op.get_type_name() == 'FakeQuantize':
             inp_node = op.input(0)

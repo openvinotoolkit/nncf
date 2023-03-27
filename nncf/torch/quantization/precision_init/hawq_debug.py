@@ -73,9 +73,9 @@ class HAWQDebugger:
             quantization_type = class_type.__name__
             all_quantizations.update(
                 get_all_modules_by_type(
-                    model.get_compression_modules_by_type(ExtraCompressionModuleType.EXTERNAL_QUANTIZER),
+                    model.nncf.get_compression_modules_by_type(ExtraCompressionModuleType.EXTERNAL_QUANTIZER),
                     quantization_type))
-            all_quantizations.update(get_all_modules_by_type(model.get_nncf_wrapped_model(), quantization_type))
+            all_quantizations.update(get_all_modules_by_type(model, quantization_type))
         all_quantizations = OrderedDict(sorted(all_quantizations.items(), key=lambda x: str(x[0])))
         return all_quantizations
 

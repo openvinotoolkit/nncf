@@ -20,7 +20,7 @@ from nncf.common.graph.transformations.commands import TargetType
 from nncf.common.graph.transformations.commands import Command
 from nncf.common.graph.transformations.commands import TransformationCommand
 from nncf.common.graph.transformations.commands import TransformationType
-from nncf.experimental.openvino_native.quantization.quantizer_parameters import OVQuantizerLayerParameters
+from nncf.quantization.fake_quantize import FakeQuantizeParameters
 
 
 class OVTargetPoint(TargetPoint):
@@ -70,7 +70,7 @@ class OVFQNodeRemovingCommand(TransformationCommand):
 
 
 class OVQuantizerInsertionCommand(OVInsertionCommand):
-    def __init__(self, target_point: OVTargetPoint, quantizer_parameters: OVQuantizerLayerParameters):
+    def __init__(self, target_point: OVTargetPoint, quantizer_parameters: FakeQuantizeParameters):
         super().__init__(target_point)
         self.quantizer_parameters = quantizer_parameters
 
@@ -91,6 +91,24 @@ class OVBiasCorrectionCommand(TransformationCommand):
         """
         super().__init__(TransformationType.CHANGE, target_point)
         self.bias_value = bias_value
+
+    def union(self, other: 'TransformationCommand') -> 'TransformationCommand':
+        # Have a look at nncf/torch/graph/transformations/commands/PTInsertionCommand
+        raise NotImplementedError()
+
+
+class OVWeightUpdateCommand(TransformationCommand):
+    """
+    Updates weight value in the model.
+    """
+
+    def __init__(self, target_point: OVTargetPoint, weight_value: np.ndarray):
+        """
+        :param target_point: Target point.
+        :param weight_value: New weight value.
+        """
+        super().__init__(TransformationType.CHANGE, target_point)
+        self.weight_value = weight_value
 
     def union(self, other: 'TransformationCommand') -> 'TransformationCommand':
         # Have a look at nncf/torch/graph/transformations/commands/PTInsertionCommand

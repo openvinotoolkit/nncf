@@ -21,15 +21,11 @@ from nncf.common.graph import NNCFNode
 from nncf.common.graph.transformations.commands import TargetType
 from nncf.common.tensor_statistics.collectors import ReductionShape
 from nncf.common.utils.backend import BackendType
-from nncf.experimental.openvino_native.graph.metatypes.openvino_metatypes import OVConvolutionBackpropDataMetatype
-from nncf.experimental.openvino_native.graph.metatypes.openvino_metatypes import OVConvolutionMetatype
-from nncf.experimental.openvino_native.graph.metatypes.openvino_metatypes import OVMatMulMetatype
-from nncf.experimental.openvino_native.graph.metatypes.openvino_metatypes import OVDepthwiseConvolutionMetatype
 from nncf.experimental.openvino_native.graph.metatypes.openvino_metatypes import OVOpMetatype
 from nncf.experimental.openvino_native.graph.metatypes.common import FAKE_QUANTIZE_OPERATIONS
 from nncf.experimental.openvino_native.graph.node_utils import get_bias_value
 from nncf.experimental.openvino_native.graph.node_utils import is_node_with_bias
-from nncf.experimental.openvino_native.graph.transformations.command_creation import create_bias_correction_command
+from nncf.experimental.openvino_native.graph.transformations.command_creation import OVCommandCreator
 from nncf.experimental.openvino_native.graph.transformations.commands import OVBiasCorrectionCommand
 from nncf.experimental.openvino_native.graph.transformations.commands import OVModelExtractionCommand
 from nncf.experimental.openvino_native.graph.transformations.commands import OVOutputInsertionCommand
@@ -46,15 +42,6 @@ from nncf.quantization.algorithms.bias_correction.backend import BiasCorrectionA
 # pylint:disable=too-many-public-methods
 @ALGO_BACKENDS.register(BackendType.OPENVINO)
 class OVBiasCorrectionAlgoBackend(BiasCorrectionAlgoBackend):
-
-    @property
-    def channel_axis_by_types(self) -> Dict[OVOpMetatype, int]:
-        return {
-            OVConvolutionMetatype: 1,
-            OVMatMulMetatype: -1,
-            OVConvolutionBackpropDataMetatype: 1,
-            OVDepthwiseConvolutionMetatype: 1,
-        }
 
     @property
     def tensor_processor(self) -> OVNNCFCollectorTensorProcessor:
@@ -74,7 +61,7 @@ class OVBiasCorrectionAlgoBackend(BiasCorrectionAlgoBackend):
     def create_bias_correction_command(node: NNCFNode,
                                        bias_value: np.ndarray,
                                        nncf_graph: NNCFGraph) -> OVBiasCorrectionCommand:
-        return create_bias_correction_command(node, bias_value, nncf_graph)
+        return OVCommandCreator.create_command_to_update_bias(node, bias_value, nncf_graph)
 
     @staticmethod
     def model_extraction_command(inputs: List[str], outputs: List[str]) -> OVModelExtractionCommand:
@@ -136,8 +123,9 @@ class OVBiasCorrectionAlgoBackend(BiasCorrectionAlgoBackend):
 
     @staticmethod
     def is_quantized_weights(node: NNCFNode, nncf_graph: NNCFGraph) -> bool:
-        const_port_id = node.layer_attributes.const_port_id
-        weight_node = nncf_graph.get_input_edges(node)[const_port_id].from_node
+        const_port_ids = node.layer_attributes.get_const_port_ids()
+        assert len(const_port_ids) == 1
+        weight_node = nncf_graph.get_input_edges(node)[const_port_ids[0]].from_node
         return weight_node.metatype in FAKE_QUANTIZE_OPERATIONS
 
     @staticmethod

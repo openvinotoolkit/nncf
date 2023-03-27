@@ -65,7 +65,7 @@ def test_prepare_for_inference_sparsity(enable_quantization):
     assert sparsity_ctrl.sparsified_module_info[0].operand.binary_mask.shape[0] == 2
     sparsity_ctrl.sparsified_module_info[0].operand.binary_mask[0] = 0
 
-    input_tensor = generate_lazy_sweep_data(input_size)
+    input_tensor = torch.Tensor(generate_lazy_sweep_data(input_size))
     x_nncf = compressed_model(input_tensor)
 
     inference_model = compression_ctrl.prepare_for_inference()
@@ -81,16 +81,16 @@ def test_prepare_for_inference_sparsity(enable_quantization):
     assert torch.all(torch.isclose(x_nncf, x_torch)), f"{x_nncf.view(-1)} != {x_torch.view(-1)}"
 
 
-@pytest.mark.parametrize("make_model_copy", (True, False))
+@pytest.mark.parametrize("do_copy", (True, False))
 @pytest.mark.parametrize("enable_quantization", (True, False), ids=("with_quantization", "no_quantization"))
-def test_make_model_copy(make_model_copy, enable_quantization):
+def test_do_copy(do_copy, enable_quantization):
     model = BasicConvTestModel()
     config = _get_config_for_algo(model.INPUT_SIZE, enable_quantization)
     compressed_model, compression_ctrl = create_compressed_model_and_algo_for_test(model, config)
 
-    inference_model = compression_ctrl.prepare_for_inference(make_model_copy=make_model_copy)
+    inference_model = compression_ctrl.prepare_for_inference(do_copy=do_copy)
 
-    if make_model_copy:
+    if do_copy:
         assert id(inference_model) != id(compressed_model)
     else:
         assert id(inference_model) == id(compressed_model)
@@ -108,7 +108,7 @@ def test_corruption_binary_masks():
     ref_mask_1 = torch.clone(compression_ctrl.sparsified_module_info[0].operand.binary_mask)
     ref_mask_2 = torch.clone(compression_ctrl.sparsified_module_info[1].operand.binary_mask)
 
-    compression_ctrl.prepare_for_inference(make_model_copy=False)
+    compression_ctrl.prepare_for_inference(do_copy=False)
 
     after_mask_1 = compression_ctrl.sparsified_module_info[0].operand.binary_mask
     after_mask_2 = compression_ctrl.sparsified_module_info[1].operand.binary_mask
@@ -137,7 +137,7 @@ def tests_weights_after_onnx_export(tmp_path):
             weights_sparse.append(data)
 
     onnx_sparse_model_prepare_path = f"{tmp_path}/sparse_model_prepare.onnx"
-    compression_ctrl.prepare_for_inference(make_model_copy=False)
+    compression_ctrl.prepare_for_inference(do_copy=False)
     compression_ctrl.export_model(onnx_sparse_model_prepare_path, "onnx")
 
     onnx_prepare_model = onnx.load(onnx_sparse_model_prepare_path)
@@ -145,7 +145,7 @@ def tests_weights_after_onnx_export(tmp_path):
 
     weights_sparse_prepare = []
     for node in graph_prepare.initializer:
-        if node.name in ["nncf_module.conv1.weight", "nncf_module.conv2.weight"]:
+        if node.name in ["conv1.weight", "conv2.weight"]:
             data = onnx.numpy_helper.to_array(node)
             weights_sparse_prepare.append(data)
 

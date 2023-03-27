@@ -1,5 +1,5 @@
 models:
-  - name: resnet34_imagenet_filter_pruning_geomedian_kd
+  - name: resnet34_imagenet_pruning_geometric_median_kd
     launchers:
       - framework: dlsdk
         device: CPU

@@ -11,7 +11,7 @@ This sample demonstrates a DL model compression in case of the Image Classificat
 
 ## Installation
 
-At this point it is assumed that you have already installed nncf. You can find information on downloading nncf [here](https://github.com/openvinotoolkit/nncf#user-content-installation).  
+At this point it is assumed that you have already installed nncf. You can find information on downloading nncf [here](https://github.com/openvinotoolkit/nncf#user-content-installation).
 
 To work with the sample you should install the corresponding Python package dependencies:
 
@@ -55,7 +55,7 @@ The ImageNet dataset in TFRecords format should be specified in the configuratio
 
 #### Test Pretrained Model
 
-Before compressing a model, it is highly recommended checking the accuracy of the pretrained model. All models which are supported in the sample has pretrained weights for ImageNet. 
+Before compressing a model, it is highly recommended checking the accuracy of the pretrained model. All models which are supported in the sample has pretrained weights for ImageNet.
 
 To load pretrained weights into a model and then evaluate the accuracy of that model, make sure that the pretrained=True option is set in the configuration file and use the following command:
 ```bash
@@ -63,7 +63,7 @@ python main.py \
 --mode=test \
 --config=configs/quantization/mobilenet_v2_imagenet_int8.json \
 --data=<path_to_imagenet_dataset> \
---disable-compression 
+--disable-compression
 ```
 
 #### Compress Pretrained Model

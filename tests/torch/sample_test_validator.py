@@ -281,6 +281,7 @@ class SanitySampleValidator(BaseSampleValidator, ABC):
     def validate_sample(self, args, mocker):
         arg_list = [key if (val is None or val is True) else "{} {}".format(key, val) for key, val in args.items()]
         command_line = " ".join(arg_list)
+        print(f"Command line arguments: {command_line}")
 
         import importlib
         main_location = self._sample_handler.get_main_location()

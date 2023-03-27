@@ -42,8 +42,6 @@ def quantize_impl(model: onnx.ModelProto,
     Implementation of the `quantize()` method for the ONNX backend.
     """
     additional_params = {}
-    if model_type is not None:
-        raise ValueError(f'model_type={model_type} is not supported')
     if target_device == TargetDevice.CPU_SPR:
         raise RuntimeError('target_device == CPU_SPR is not supported.')
     if model.opset_import[0].version < 10:
@@ -60,6 +58,7 @@ def quantize_impl(model: onnx.ModelProto,
         number_samples=subset_size,
         ignored_scopes=ignored_scope,
         fast_bias_correction=fast_bias_correction,
+        model_type=model_type,
         **additional_params
     )
 

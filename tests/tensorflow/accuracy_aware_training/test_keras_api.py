@@ -12,9 +12,10 @@
 """
 
 import random
+from typing import Dict
 
-import pytest
 import numpy as np
+import pytest
 import tensorflow as tf
 
 from nncf import NNCFConfig
@@ -80,6 +81,21 @@ def get_const_target_mock_regression_dataset(num_samples=20, img_size=10, target
     )
     return dataset
 
+class MockResultFunctor:
+    """Returns a mock value first, then parses the real inverse loss from the model's output dict."""
+    def __init__(self, mock_retval: float):
+        self._call_count = 0
+        self._mock_retval = mock_retval
+
+    def __call__(self, results_dict: Dict) -> float:
+        if self._call_count == 0:
+            retval = self._mock_retval
+        else:
+            retval = results_dict['inverse_loss']
+
+        self._call_count += 1
+        return retval
+
 
 @pytest.mark.parametrize(
     ('max_accuracy_degradation',
@@ -94,8 +110,9 @@ def get_const_target_mock_regression_dataset(num_samples=20, img_size=10, target
 )
 def test_adaptive_compression_training_loop(max_accuracy_degradation, final_compression_rate,
                                             reference_final_metric,
-                                            initial_training_phase_epochs=5, patience_epochs=3,
-                                            uncompressed_model_accuracy=0.2, steps_per_epoch=20,
+                                            initial_training_phase_epochs=5,
+                                            patience_epochs=3,
+                                            steps_per_epoch=20,
                                             img_size=10):
     set_random_seed(42)
     model = get_simple_conv_regression_model(img_size)
@@ -129,7 +146,12 @@ def test_adaptive_compression_training_loop(max_accuracy_degradation, final_comp
                            loss=tf.keras.losses.MeanSquaredError(),
                            metrics=inverse_loss)
 
-    result_dict_to_val_metric_fn = lambda results: results['inverse_loss']
+
+    # The model is not actually fine-tuned at this stage. Will force the uncompressed
+    # model accuracy to be reported higher than it is so that it fine-tunes at the same time
+    # as it is being compressed.
+    uncompressed_model_accuracy = 0.2
+    mock_result_dict_to_val_metric_fn = MockResultFunctor(uncompressed_model_accuracy)
 
     statistics = compress_model.accuracy_aware_fit(
         dataset,
@@ -138,8 +160,7 @@ def test_adaptive_compression_training_loop(max_accuracy_degradation, final_comp
         callbacks=compression_callbacks,
         initial_epoch=0,
         steps_per_epoch=steps_per_epoch,
-        uncompressed_model_accuracy=uncompressed_model_accuracy,
-        result_dict_to_val_metric_fn=result_dict_to_val_metric_fn)
+        result_dict_to_val_metric_fn=mock_result_dict_to_val_metric_fn)
     assert statistics.compressed_accuracy == pytest.approx(reference_final_metric, 1e-4)
     assert statistics.compression_rate == pytest.approx(final_compression_rate, 1e-3)
 
@@ -152,7 +173,7 @@ def test_adaptive_compression_training_loop(max_accuracy_degradation, final_comp
      )
 )
 def test_early_exit_compression_training_loop(max_accuracy_degradation,
-                                              maximal_total_epochs=100, uncompressed_model_accuracy=0.2,
+                                              maximal_total_epochs=100,
                                               steps_per_epoch=20, img_size=10):
     set_random_seed(42)
     model = get_simple_conv_regression_model(img_size)
@@ -183,7 +204,11 @@ def test_early_exit_compression_training_loop(max_accuracy_degradation,
                            loss=tf.keras.losses.MeanSquaredError(),
                            metrics=inverse_loss)
 
-    result_dict_to_val_metric_fn = lambda results: results['inverse_loss']
+    # The model is not actually fine-tuned at this stage. Will force the uncompressed
+    # model accuracy to be reported higher than it is so that it fine-tunes at the same time
+    # as it is being compressed.
+    uncompressed_model_accuracy = 0.2
+    mock_result_dict_to_val_metric_fn = MockResultFunctor(uncompressed_model_accuracy)
 
     statistics = compress_model.accuracy_aware_fit(
         dataset,
@@ -192,14 +217,13 @@ def test_early_exit_compression_training_loop(max_accuracy_degradation,
         callbacks=compression_callbacks,
         initial_epoch=0,
         steps_per_epoch=steps_per_epoch,
-        uncompressed_model_accuracy=uncompressed_model_accuracy,
-        result_dict_to_val_metric_fn=result_dict_to_val_metric_fn)
-    original_model_accuracy = compress_model.original_model_accuracy
+        result_dict_to_val_metric_fn=mock_result_dict_to_val_metric_fn)
+    uncompressed_model_accuracy = statistics.uncompressed_accuracy
     compressed_model_accuracy = statistics.compressed_accuracy
 
     if "maximal_absolute_accuracy_degradation" in max_accuracy_degradation:
-        assert (original_model_accuracy - compressed_model_accuracy) <= \
+        assert (uncompressed_model_accuracy - compressed_model_accuracy) <= \
                max_accuracy_degradation["maximal_absolute_accuracy_degradation"]
     else:
-        assert (original_model_accuracy - compressed_model_accuracy) / original_model_accuracy * 100 <= \
+        assert (uncompressed_model_accuracy - compressed_model_accuracy) / uncompressed_model_accuracy * 100 <= \
                max_accuracy_degradation["maximal_relative_accuracy_degradation"]

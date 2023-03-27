@@ -11,14 +11,18 @@
  limitations under the License.
 """
 
+from typing import Dict, Tuple
+
 import onnx
 import numpy as np
 
+from nncf.common.graph.graph import NNCFGraph
 from nncf.common.graph.graph import NNCFNode
 from nncf.onnx.graph.metatypes.onnx_metatypes import OPERATIONS_WITH_BIAS_METATYPES
 from nncf.onnx.graph.onnx_graph import ONNXGraph
 from nncf.onnx.graph.metatypes.onnx_metatypes import ONNX_OPERATION_METATYPES
 from nncf.onnx.graph.metatypes.onnx_metatypes import ONNXIdentityMetatype
+from nncf.onnx.graph.nncf_graph_builder import ONNXExtendedLayerAttributes
 
 
 def is_node_with_bias(node: NNCFNode) -> bool:
@@ -30,11 +34,13 @@ def is_node_with_bias(node: NNCFNode) -> bool:
         with bias (bias is added to the output tensor of that operation),
         `False` otherwise.
     """
-    input_tensor_names = node.layer_attributes.input_tensor_names
-    return node.metatype in OPERATIONS_WITH_BIAS_METATYPES and len(input_tensor_names) > 2
+    if node.metatype in OPERATIONS_WITH_BIAS_METATYPES and \
+            isinstance(node.layer_attributes, ONNXExtendedLayerAttributes):
+        return len(node.layer_attributes.input_tensor_names) > 2
+    return False
 
 
-def get_bias_value(node_with_bias : NNCFNode, model: onnx.ModelProto) -> np.ndarray:
+def get_bias_value(node_with_bias: NNCFNode, model: onnx.ModelProto) -> np.ndarray:
     """
     Returns the bias tensor for the biased node.
 
@@ -53,3 +59,38 @@ def get_bias_value(node_with_bias : NNCFNode, model: onnx.ModelProto) -> np.ndar
     if metatype == ONNXIdentityMetatype:
         return onnx_graph.get_initializers_value(node.input[0])
     raise RuntimeError('Could not find the bias value of the node')
+
+
+def get_input_edges_mapping(nncf_graph: NNCFGraph) -> Dict[str, Tuple[str, int]]:
+    """
+    Returns mapping between NNNCFGraph input nodes and following by ONNX nodes with corresponding input port ids.
+
+    :param nncf_graph: instance of NNCFGraph
+    :return: A mapping of NNCF input node names and a tuple with the consumed node names and their input port ids.
+    """
+    input_edges_mapping = {}
+    for input_node in nncf_graph.get_input_nodes():
+        input_edges_mapping[input_node.node_name] = []
+        for next_node in nncf_graph.get_next_nodes(input_node):
+            for edge in nncf_graph.get_input_edges(next_node):
+                if edge.from_node == input_node:
+                    input_edges_mapping[input_node.node_name].append((next_node.node_name, edge.input_port_id))
+    return input_edges_mapping
+
+
+def get_input_edge(input_node_name: str, input_edges_mapping: Dict[str, Tuple[str, int]], onnx_graph: ONNXGraph) -> str:
+    """
+    Returns input edge corresponding to the NNCF input node with the name input_node_name.
+
+    :param input_node_name: Name of NNCF input node.
+    :param input_edges_mapping: A mapping of NNCF input node names and
+        a tuple with the consumed node names and their input port ids.
+    :param onnx_graph: Instance of ONNXGraph of the model.
+    :return: Input edge name.
+    """
+    input_edges = set()
+    for node_info in input_edges_mapping[input_node_name]:
+        name, port_id = node_info
+        input_edges.add(onnx_graph.get_node_edge_names(name)['input'][port_id])
+    assert len(input_edges) == 1
+    return input_edges.pop()

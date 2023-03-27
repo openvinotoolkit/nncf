@@ -377,7 +377,7 @@ def test_sparsity_statistics_add_module(algo):
     fill_params_of_model_by_normal(submodule)
     model, compression_ctrl = create_compressed_model_and_algo_for_test(model, config)
     statistics_before = compression_ctrl.statistics()
-    model.add_module('submodule', submodule)
+    model.nncf.add_module('submodule', submodule)
     statistics_after = compression_ctrl.statistics()
     assert getattr(statistics_before, algo).model_statistics.sparsity_level == \
            getattr(statistics_after, algo).model_statistics.sparsity_level

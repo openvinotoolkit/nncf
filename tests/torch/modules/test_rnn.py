@@ -10,32 +10,37 @@
  See the License for the specific language governing permissions and
  limitations under the License.
 """
+import copy
 import logging
+import os
 import sys
 from collections import namedtuple
-from typing import List, Tuple
+from functools import partial
+from typing import List
+from typing import Tuple
 
-import copy
 import onnx
-import os
 import pytest
 import torch
 import torch.nn.functional as F
-from functools import partial
 from torch import nn
 from torch.autograd import Variable
 from torch.nn.utils.rnn import PackedSequence
 
 from nncf.torch import nncf_model_input
-from nncf.torch.dynamic_graph.io_handling import wrap_nncf_model_outputs_with_objwalk
 from nncf.torch.dynamic_graph.context import TracingContext
-from nncf.torch.layers import LSTMCellNNCF, NNCF_RNN, ITERATION_MODULES
+from nncf.torch.dynamic_graph.io_handling import wrap_nncf_model_outputs_with_objwalk
+from nncf.torch.layers import ITERATION_MODULES
+from nncf.torch.layers import NNCF_RNN
+from nncf.torch.layers import LSTMCellNNCF
 from nncf.torch.model_creation import create_compressed_model
 from nncf.torch.nncf_module_replacement import collect_modules_and_scopes_by_predicate
 from nncf.torch.utils import get_model_device
-from tests.torch.modules.seq2seq.gnmt import GNMT
-from tests.torch.helpers import get_empty_config, get_grads, create_compressed_model_and_algo_for_test
+from tests.torch.helpers import create_compressed_model_and_algo_for_test
+from tests.torch.helpers import get_empty_config
+from tests.torch.helpers import get_grads
 from tests.torch.helpers import register_bn_adaptation_init_args
+from tests.torch.modules.seq2seq.gnmt import GNMT
 
 
 def replace_lstm(model):
@@ -107,7 +112,7 @@ LSTMTestData = namedtuple('LSTMTestData', ['x', 'h0', 'c0', 'weight_ih', 'weight
 class TestLSTMCell:
     @staticmethod
     def generate_lstm_data(p, num_layers=1, num_directions=1, variable_length=False, sorted_=True, batch_first=True,
-                           is_cuda=False, bias=True, empty_initial=False, is_backward=False):
+                           use_cuda=False, bias=True, empty_initial=False, is_backward=False):
         # type: (LSTMTestSizes, int, int, bool, bool, bool, bool, bool, bool, bool) -> LSTMTestData
         num_chunks = 4
         seq_list = []
@@ -129,13 +134,13 @@ class TestLSTMCell:
 
         def wrap_tensor(tensor):
             wrapped = tensor
-            if is_cuda:
+            if use_cuda:
                 wrapped = wrapped.cuda()
             if is_backward:
                 wrapped = Variable(wrapped, requires_grad=True)
             return wrapped
 
-        if is_cuda:
+        if use_cuda:
             x_data = x_data.cuda()
         h0, c0, wih, whh, bih, bhh = ([] for _ in range(6))
         for layer_ in range(num_layers):
@@ -234,21 +239,20 @@ def test_export_lstm_cell(tmp_path):
                          ([True, True],
                           [True, False],
                           [False, False]), ids=['packed_sorted', 'packed_unsorted', 'not_packed'])
-@pytest.mark.parametrize('is_cuda', [True, False], ids=['cuda', 'cpu'])
 @pytest.mark.parametrize('empty_initial', [True, False], ids=['no_initial', 'with_initial'])
 # TODO: dropout gives different result. Looks like different random seed on CPU
 # @pytest.mark.parametrize('dropout', [0, 0.9], ids=['no_dropout', 'with_dropout'])
 @pytest.mark.parametrize('dropout', [0], ids=['no_dropout'])
 class TestLSTM:
-    def test_forward_lstm(self, sizes, bidirectional, num_layers, bias, batch_first, variable_length, sorted_, is_cuda,
+    def test_forward_lstm(self, sizes, bidirectional, num_layers, bias, batch_first, variable_length, sorted_, use_cuda,
                           empty_initial, dropout, _seed):
-        if not torch.cuda.is_available() and is_cuda is True:
+        if not torch.cuda.is_available() and use_cuda is True:
             pytest.skip("Skipping CUDA test cases for CPU only setups")
         num_directions = 2 if bidirectional else 1
         p = sizes
 
         ref_data = TestLSTMCell.generate_lstm_data(p, num_layers, num_directions, variable_length, sorted_, batch_first,
-                                                   is_cuda, bias, empty_initial)
+                                                   use_cuda, bias, empty_initial)
 
         ref_rnn = nn.LSTM(input_size=p.input_size, hidden_size=p.hidden_size, num_layers=num_layers,
                           bidirectional=bidirectional, batch_first=batch_first, bias=bias, dropout=dropout)
@@ -270,7 +274,7 @@ class TestLSTM:
         test_rnn = wrapped_test_rnn.lstm
         test_hidden = None if empty_initial else self.get_test_lstm_hidden(test_data)
 
-        if is_cuda:
+        if use_cuda:
             ref_rnn.cuda()
             test_rnn.cuda()
         ref_output, (ref_hn, ref_cn) = ref_rnn(ref_data.x, ref_hidden)
@@ -287,16 +291,16 @@ class TestLSTM:
         else:
             torch.testing.assert_allclose(test_output, ref_output, rtol=9e-2, atol=15e-4)
 
-    def test_backward_lstm(self, sizes, bidirectional, num_layers, bias, batch_first, variable_length, sorted_, is_cuda,
+    def test_backward_lstm(self, sizes, bidirectional, num_layers, bias, batch_first, variable_length, sorted_, use_cuda,
                            empty_initial, dropout, _seed):
-        if not torch.cuda.is_available() and is_cuda is True:
+        if not torch.cuda.is_available() and use_cuda is True:
             pytest.skip("Skipping CUDA test cases for CPU only setups")
         num_directions = 2 if bidirectional else 1
 
         p = sizes
 
         ref_data = TestLSTMCell.generate_lstm_data(p, num_layers, num_directions, variable_length, sorted_, batch_first,
-                                                   is_cuda, bias, empty_initial, True)
+                                                   use_cuda, bias, empty_initial, True)
 
         ref_rnn = nn.LSTM(input_size=p.input_size, hidden_size=p.hidden_size, num_layers=num_layers,
                           bidirectional=bidirectional, batch_first=batch_first, bias=bias, dropout=dropout)
@@ -307,7 +311,7 @@ class TestLSTM:
         test_rnn = replace_lstm(copy.deepcopy(ref_rnn))
         test_hidden = None if empty_initial else self.get_test_lstm_hidden(test_data)
 
-        if is_cuda:
+        if use_cuda:
             ref_rnn.cuda()
             test_rnn.cuda()
 
@@ -451,7 +455,9 @@ class TestNumberOfNodes:
                 continue
             counters[name] = counter
         _ = model(test_data.x, test_hidden)
-        assert model.get_graph().get_nodes_count() == 132  # NB: may always fail in debug due to superfluous 'cat' nodes
+
+        # NB: below may always fail in debug due to superfluous 'cat' nodes
+        assert model.nncf.get_graph().get_nodes_count() == 132
         assert len(counters) + 2 == 54  # 8 WQ + 44 AQ + 1 input AQ + 1 reset point AQ
         for counter in counters.values():
             assert counter.count == p.seq_length
@@ -534,7 +540,7 @@ class TestNumberOfNodes:
             quantizer.register_forward_pre_hook(partial(hook, counter=counter))
         dummy_forward_fn(model)
 
-        assert model.get_graph().get_nodes_count() == 373  # NB: may always fail in debug due to superfluous 'cat' nodes
+        assert model.nncf.get_graph().get_nodes_count() == 373  # NB: may always fail in debug due to superfluous 'cat' nodes
         assert len(counters) == 142
 
         for name, counter in counters.items():
@@ -549,7 +555,8 @@ class TestNumberOfNodes:
                 assert counter.count == 1, name
         new_seq_len = int(sequence_size / 2)
         dummy_forward_fn(model, new_seq_len)
-        assert model.get_graph().get_nodes_count() == 373  # NB: may always fail in debug due to superfluous 'cat' nodes
+        # NB: may always fail in debug due to superfluous 'cat' nodes
+        assert model.nncf.get_graph().get_nodes_count() == 373
         assert len(counters) == 142
         for name, counter in counters.items():
             if 'cell' in name or "LSTMCellForwardNNCF" in name:

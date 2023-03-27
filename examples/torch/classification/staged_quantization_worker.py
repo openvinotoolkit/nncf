@@ -16,12 +16,12 @@ import os.path as osp
 import time
 
 import torch
-from torch.backends import cudnn
-from torch import nn
 import torch.nn.parallel
 import torch.optim
 import torch.utils.data
 import torch.utils.data.distributed
+from torch import nn
+from torch.backends import cudnn
 from torchvision.models import InceptionOutputs
 
 from examples.torch.classification.main import AverageMeter
@@ -35,6 +35,7 @@ from examples.torch.common.example_logger import logger
 from examples.torch.common.execution import ExecutionMode
 from examples.torch.common.execution import prepare_model_for_execution
 from examples.torch.common.execution import set_seed
+from examples.torch.common.export import export_model
 from examples.torch.common.model_loader import COMPRESSION_STATE_ATTR
 from examples.torch.common.model_loader import MODEL_STATE_ATTR
 from examples.torch.common.model_loader import extract_model_and_compression_states
@@ -53,11 +54,11 @@ from nncf.common.utils.tensorboard import prepare_for_tensorboard
 from nncf.config.schemata.defaults import LR_POLY_DURATION_EPOCHS
 from nncf.config.schemata.defaults import STAGED_QUANTIZATION_BASE_LR
 from nncf.config.schemata.defaults import STAGED_QUANTIZATION_BASE_WD
+from nncf.torch import create_compressed_model
 from nncf.torch.binarization.algo import BinarizationController
 from nncf.torch.checkpoint_loading import load_state
 from nncf.torch.initialization import default_criterion_fn
 from nncf.torch.initialization import register_default_init_args
-from nncf.torch import create_compressed_model
 from nncf.torch.quantization.algo import QuantizationController
 from nncf.torch.utils import is_main_process
 
@@ -219,8 +220,8 @@ def staged_quantization_main_worker(current_gpu, config):
     log_common_mlflow_params(config)
 
     if is_export_only:
-        compression_ctrl.export_model(config.to_onnx)
-        logger.info("Saved to {}".format(config.to_onnx))
+        export_model(compression_ctrl.prepare_for_inference(), config.to_onnx)
+        logger.info(f'Saved to {config.to_onnx}')
         return
 
     if config.execution_mode != ExecutionMode.CPU_ONLY:
@@ -240,8 +241,8 @@ def staged_quantization_main_worker(current_gpu, config):
         validate(val_loader, model, criterion, config)
 
     if 'export' in config.mode:
-        compression_ctrl.export_model(config.to_onnx)
-        logger.info("Saved to {}".format(config.to_onnx))
+        export_model(compression_ctrl.prepare_for_inference(), config.to_onnx)
+        logger.info(f'Saved to {config.to_onnx}')
 
 
 

@@ -49,16 +49,17 @@ class TestQuantizerConfig(TemplateTestQuantizerConfig):
 
     @pytest.fixture
     def single_conv_nncf_graph(self) -> NNCFGraphToTest:
-        conv_layer_attrs = OVConstantLayerAttributes(0, (4, 4, 4, 4))
+        conv_layer_attrs = OVConstantLayerAttributes({0: {'name': 'dummy', 'shape': (4, 4, 4, 4)}})
         return NNCFGraphToTest(OVConvolutionMetatype, conv_layer_attrs)
 
     @pytest.fixture
     def depthwise_conv_nncf_graph(self):
-        return NNCFGraphToTestDepthwiseConv(OVDepthwiseConvolutionMetatype)
+        return NNCFGraphToTestDepthwiseConv(OVDepthwiseConvolutionMetatype,
+                                            conv_layer_attrs=OVConstantLayerAttributes({}))
 
     @pytest.fixture
     def conv_sum_aggregation_nncf_graph(self) ->\
         NNCFGraphToTestSumAggregation:
-        conv_layer_attrs = OVConstantLayerAttributes(0, (4, 4, 4, 4))
+        conv_layer_attrs = OVConstantLayerAttributes({0: {'name': 'dummy', 'shape': (4, 4, 4, 4)}})
         return NNCFGraphToTestSumAggregation(OVConvolutionMetatype, OVSumMetatype,
                                              conv_layer_attrs)

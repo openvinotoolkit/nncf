@@ -23,6 +23,7 @@ from nncf.common.graph.transformations.commands import TargetType
 from nncf.common.graph.transformations.commands import TargetPoint
 from nncf.common.graph.transformations.layout import TransformationLayout
 from nncf.parameters import TargetDevice
+from nncf.parameters import ModelType
 from nncf.common.hardware.config import get_hw_config_type
 from nncf.common.insertion_point_graph import InsertionPointGraph
 from nncf.common.quantization.quantizer_propagation.solver import QuantizerPropagationSolver
@@ -49,6 +50,7 @@ from nncf.quantization.algorithms.definitions import RangeType
 from nncf.quantization.algorithms.definitions import Granularity
 from nncf.quantization.algorithms.definitions import OverflowFix
 from nncf.quantization.passes import transform_to_inference_graph
+from nncf.quantization.fake_quantize import calculate_quantizer_parameters
 from nncf.common.factory import NNCFGraphFactory
 from nncf.common.tensor_statistics.statistic_point import StatisticPoint
 from nncf.common.tensor_statistics.statistic_point import StatisticPointsContainer
@@ -99,6 +101,7 @@ class MinMaxQuantizationParameters(AlgorithmParameters):
                  range_type: Optional[RangeType] = None,
                  quantize_outputs: bool = False,
                  ignored_scopes: Optional[IgnoredScope] = None,
+                 model_type: Optional[ModelType] = None,
                  overflow_fix: OverflowFix = OverflowFix.FIRST_LAYER
                  ):
         """
@@ -144,6 +147,7 @@ class MinMaxQuantizationParameters(AlgorithmParameters):
                                                                    signed_activations)
         self.global_quantizer_constraints[QuantizerGroup.WEIGHTS] = q_weight_constraints
         self.global_quantizer_constraints[QuantizerGroup.ACTIVATIONS] = q_activation_constraints
+        self.model_type = model_type
         self.overflow_fix = overflow_fix
 
     def _get_quantizer_constraints(self, group: QuantizerGroup, preset: QuantizationPreset, num_bits: Optional[int],
@@ -225,6 +229,7 @@ class MinMaxQuantization(Algorithm):
         :param quantizer_config: QuantizerConfig instance for the current layer.
         :return: One of the TensorStatisticCollectorBase instances
         """
+
         def is_default_parameters(range_type: RangeType,
                                   quantizer_config: QuantizerConfig) -> bool:
             return range_type is None or quantizer_config.per_channel
@@ -272,9 +277,17 @@ class MinMaxQuantization(Algorithm):
         hw_config_type = get_hw_config_type(self._parameters.target_device.value)
         hw_config_path = self._backend_entity.hw_config.get_path_to_hw_config(hw_config_type)
         hw_config = self._backend_entity.hw_config.from_json(hw_config_path)
-        weight_nodes = nncf_graph.get_nodes_by_metatypes(self._backend_entity.layers_with_weights_metatypes)
-        ignored_names = get_ignored_node_names_from_ignored_scope(self._parameters.ignored_scopes, nncf_graph)
+        model_type = self._parameters.model_type
+        ignored_scopes = self._parameters.ignored_scopes
+
+        ignored_names = get_ignored_node_names_from_ignored_scope(ignored_scopes, nncf_graph)
+        model_type_ignore_scope = self._backend_entity.get_model_type_ignore_scope(model_type)
+        ignored_names = set(ignored_names + get_ignored_node_names_from_ignored_scope(model_type_ignore_scope,
+                                                                                      nncf_graph, strict=False))
+
+        weight_nodes = self._backend_entity.get_weight_nodes(nncf_graph)
         weight_nodes = [node for node in weight_nodes if node.node_name not in ignored_names]
+
         default_weight_qconfig = self._get_default_qconfig(
             self._parameters.global_quantizer_constraints[QuantizerGroup.WEIGHTS])
         weighted_node_and_qconf_lists = assign_qconfig_lists_to_modules(nodes_with_weights=weight_nodes,
@@ -287,7 +300,7 @@ class MinMaxQuantization(Algorithm):
         quantizable_layer_nodes = [QuantizableWeightedLayerNode(node, qconf_list) for node, qconf_list
                                    in weighted_node_and_qconf_lists.items()]
         inference_nncf_graph = transform_to_inference_graph(deepcopy(nncf_graph),
-                                                            shape_of_metatypes=self._backend_entity.shape_of_metatypes)
+                                                            shapeof_metatypes=self._backend_entity.shapeof_metatypes)
         ip_graph = InsertionPointGraph(inference_nncf_graph)
         ip_graph = ip_graph.get_ip_graph_with_merged_hw_optimized_operations(pattern, quantizable_layer_nodes)
         post_processing_types = self._backend_entity.post_processing_metatypes
@@ -321,11 +334,12 @@ class MinMaxQuantization(Algorithm):
         """
         node_name = quantization_point.insertion_point.target_node_name
         node = nncf_graph.get_node_by_name(node_name)
-        port_id = self._backend_entity.get_weight_tensor_port_id(node)
-        weight_quantization_target_point = self._backend_entity.target_point(TargetType.OPERATION_WITH_WEIGHTS,
-                                                                             node_name,
-                                                                             port_id)
-        self._quantization_target_points_to_qconfig[weight_quantization_target_point] = quantization_point.qconfig
+        weights_port_ids = self._backend_entity.get_weight_tensor_port_ids(node)
+        for port_id in weights_port_ids:
+            weight_quantization_target_point = self._backend_entity.target_point(TargetType.OPERATION_WITH_WEIGHTS,
+                                                                                node_name,
+                                                                                port_id)
+            self._quantization_target_points_to_qconfig[weight_quantization_target_point] = quantization_point.qconfig
 
     def _add_activation_quantization_target_point(self,
                                                   quantization_point: SingleConfigQuantizationPoint) -> None:
@@ -369,6 +383,7 @@ class MinMaxQuantization(Algorithm):
         device = self._parameters.target_device
         pattern = PatternsManager.get_full_pattern_graph(backend, device)
         quantizer_setup = self._get_quantizer_setup(nncf_graph, pattern)
+        self._apply_model_type_pass(self._parameters.model_type, quantizer_setup, nncf_graph)
         for quantization_point in quantizer_setup.quantization_points.values():
             if quantization_point.is_weight_quantization_point():
                 self._add_weight_quantization_target_point(quantization_point, nncf_graph)
@@ -388,9 +403,10 @@ class MinMaxQuantization(Algorithm):
 
         quantization_target_points = self._get_quantization_target_points(model)
         weight_layer_names = set()
+
         def filter_func(point: StatisticPoint) -> bool:
             return MinMaxQuantization in point.algorithm_to_tensor_collectors and \
-                   point.target_point.type == quantization_target_point.type
+                   point.target_point == quantization_target_point
 
         for quantization_target_point, qconfig in quantization_target_points.items():
             target_node_name = quantization_target_point.target_node_name
@@ -400,20 +416,25 @@ class MinMaxQuantization(Algorithm):
                     MinMaxQuantization):
                 if quantization_target_point.is_weight_target_point():
                     # If the nodes share one weight tensor, we should have only one quantizer on that
-                    layer_name = nncf_graph.get_node_by_name(target_node_name).layer_name
-                    if layer_name in weight_layer_names:
+                    weights_name = self._backend_entity.get_weight_name(nncf_graph, quantization_target_point)
+
+                    if weights_name in weight_layer_names:
                         continue
                     half_range = is_half_range(self._parameters.overflow_fix, qconfig, weight_layer_names)
-                    quantizer_insertion_command = self._backend_entity.create_weight_quantizer_insertion_command(
-                        nncf_graph, quantization_target_point,
-                        qconfig, half_range, tensor_collector.get_statistics())
+                    
+                    
+                    statistics = tensor_collector.get_statistics()
+                    parameters = calculate_quantizer_parameters(statistics, qconfig, QuantizerGroup.WEIGHTS)
+                    command = self._backend_entity.create_weight_quantizer_insertion_command(
+                        nncf_graph, quantization_target_point, qconfig, half_range, parameters)
                     weight_layer_names.add(layer_name)
                 else:
-                    quantizer_insertion_command = self._backend_entity.create_activation_quantizer_insertion_command(
-                        nncf_graph, quantization_target_point,
-                        qconfig, tensor_collector.get_statistics())
+                    statistics = tensor_collector.get_statistics()
+                    parameters = calculate_quantizer_parameters(statistics, qconfig, QuantizerGroup.ACTIVATIONS)
+                    command = self._backend_entity.create_activation_quantizer_insertion_command(
+                        nncf_graph, quantization_target_point, qconfig, parameters)
 
-                transformation_commands.append(quantizer_insertion_command)
+                transformation_commands.append(command)
 
         for transformation_command in transformation_commands:
             transformation_layout.register(transformation_command)
@@ -435,3 +456,27 @@ class MinMaxQuantization(Algorithm):
                                                       tensor_collector=stat_collector,
                                                       algorithm=MinMaxQuantization))
         return output
+
+    def _apply_model_type_pass(self, model_type: Optional[ModelType], quantizer_setup: SingleConfigQuantizerSetup,
+                               nncf_graph: NNCFGraph) -> None:
+        """
+        Applies changes in-place into quantizer setup based on model_type and device parameters.
+
+        :param model_type: Model type parameter.
+        :param quantizer_setup: Quantizer setup which considered to update.
+        :param nncf_graph: Instance of NNCFGraph.
+        :return: None
+        """
+        if model_type == ModelType.TRANSFORMER:
+            for quantization_point in quantizer_setup.quantization_points.values():
+                if quantization_point.is_activation_quantization_point():
+                    for node_name in quantization_point.directly_quantized_operator_node_names:
+                        node = nncf_graph.get_node_by_name(node_name)
+                        mat_mul_metatype = self._backend_entity.mat_mul_metatype
+                        if node.metatype != mat_mul_metatype:
+                            continue
+                        if quantization_point.qconfig.mode != QuantizationMode.SYMMETRIC and \
+                                node.layer_attributes is None:
+                            quantization_point.qconfig.mode = QuantizationMode.SYMMETRIC
+                            nncf_logger.debug(f'Update quantization mode for the node {node_name}'
+                                              f' to the symmetric due to ModelType parameter.')

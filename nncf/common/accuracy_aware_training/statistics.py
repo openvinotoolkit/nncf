@@ -22,7 +22,7 @@ class TrainingLoopStatistics(Statistics):
     Contains statistics related to Accuracy Aware Training Loop
     """
 
-    original_accuracy: float
+    uncompressed_accuracy: float
     compression_rate: float
     compressed_accuracy: float
     absolute_accuracy_degradation: float
@@ -30,7 +30,7 @@ class TrainingLoopStatistics(Statistics):
     accuracy_budget: float
 
     def to_str(self):
-        stats_str = f'Original model accuracy: {self.original_accuracy:.4f}\n' \
+        stats_str = f'Uncompressed model accuracy: {self.uncompressed_accuracy:.4f}\n' \
                     f'Compressed model accuracy: {self.compressed_accuracy:.4f}\n' \
                     f'Model compression rate: {self.compression_rate:.4f}\n' \
                     f'Absolute accuracy drop: {self.absolute_accuracy_degradation:.4f}\n' \

@@ -13,7 +13,6 @@
 
 import logging
 import sys
-import warnings
 from contextlib import contextmanager
 
 NNCF_LOGGER_NAME = 'nncf'
@@ -29,7 +28,6 @@ stdout_handler.setFormatter(fmt)
 stdout_handler.setLevel(logging.INFO)
 nncf_logger.addHandler(stdout_handler)
 nncf_logger.setLevel(logging.INFO)
-
 
 def set_log_level(level: int):
     """
@@ -61,11 +59,6 @@ class DuplicateFilter:
 
 
 NNCFDeprecationWarning = FutureWarning
-
-
-def warning_deprecated(msg):
-    # Note: must use FutureWarning in order not to get suppressed by default
-    warnings.warn(msg, NNCFDeprecationWarning, stacklevel=2)
 
 
 @contextmanager

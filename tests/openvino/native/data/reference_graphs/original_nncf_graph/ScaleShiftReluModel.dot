@@ -1,0 +1,23 @@
+strict digraph  {
+"0 Input" [id=0, type=Parameter];
+"1 MatMul" [id=1, type=MatMul];
+"2 Mul" [id=2, type=Multiply];
+"3 Add" [id=3, type=Add];
+"4 Relu" [id=4, type=Relu];
+"5 MatMul2" [id=5, type=MatMul];
+"6 Result" [id=6, type=Result];
+"7 Constant_45" [id=7, type=Constant];
+"8 Constant_42" [id=8, type=Constant];
+"9 Constant_40" [id=9, type=Constant];
+"10 Constant_38" [id=10, type=Constant];
+"0 Input" -> "1 MatMul"  [label="[3, 5]", style=solid];
+"1 MatMul" -> "2 Mul"  [label="[3, 2]", style=solid];
+"2 Mul" -> "3 Add"  [label="[3, 2]", style=solid];
+"3 Add" -> "4 Relu"  [label="[3, 2]", style=solid];
+"4 Relu" -> "5 MatMul2"  [label="[3, 2]", style=solid];
+"5 MatMul2" -> "6 Result"  [label="[3, 4]", style=solid];
+"7 Constant_45" -> "5 MatMul2"  [label="[2, 4]", style=solid];
+"8 Constant_42" -> "3 Add"  [label="[1, 2]", style=solid];
+"9 Constant_40" -> "2 Mul"  [label="[1, 2]", style=solid];
+"10 Constant_38" -> "1 MatMul"  [label="[5, 2]", style=solid];
+}

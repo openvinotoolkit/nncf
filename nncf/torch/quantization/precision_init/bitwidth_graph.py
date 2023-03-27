@@ -33,10 +33,10 @@ class BitwidthGraph:
                        add_flops=False):
         # pylint:disable=too-many-branches
         # pylint:disable=too-many-statements
-        nncf_graph = model.get_graph()
+        nncf_graph = model.nncf.get_graph()
         self._nx_graph = nncf_graph.get_graph_for_structure_analysis()
         if add_flops:
-            flops_per_module = model.get_flops_per_module()
+            flops_per_module = model.nncf.get_flops_per_module()
 
             flops_vs_node_group = defaultdict(set)  # type: Dict[int, Tuple[int, Set[NNCFNode]]]
             for idx, module_node_name_and_flops in enumerate(flops_per_module.items()):
@@ -49,7 +49,7 @@ class BitwidthGraph:
             node = nncf_graph.get_node_by_key(node_key)
             color = ''
             operator_name = node.node_type
-            module = model.get_containing_module(node.node_name)
+            module = model.nncf.get_containing_module(node.node_name)
             if isinstance(module, NNCFConv2d):
                 color = 'lightblue'
                 if module.groups == module.in_channels and module.in_channels > 1:
