@@ -29,8 +29,6 @@ from nncf.quantization.algorithms.post_training.algorithm import PostTrainingQua
 from nncf.quantization.algorithms.post_training.algorithm import PostTrainingQuantizationParameters
 from nncf.onnx.graph.nncf_graph_builder import GraphConverter
 from nncf.onnx.graph.onnx_graph import ONNXGraph
-from nncf.common.quantization.structs import QuantizationMode
-from nncf.onnx.quantization.quantizer_parameters import ONNXQuantizerLayerParameters
 from nncf.onnx.statistics.statistics import ONNXMinMaxTensorStatistic
 from nncf.quantization.fake_quantize import FakeQuantizeParameters
 

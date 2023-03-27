@@ -13,7 +13,6 @@
 
 import numpy as np
 from typing import Dict, List, Tuple, Optional
-import numpy as np
 
 from nncf.parameters import ModelType
 from nncf.scopes import IgnoredScope

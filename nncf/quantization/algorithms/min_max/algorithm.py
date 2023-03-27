@@ -328,8 +328,9 @@ class MinMaxQuantization(Algorithm):
         activation_quantization_target_point = self._get_activation_quantization_target_point(quantization_point)
         self._quantization_target_points_to_qconfig[activation_quantization_target_point] = quantization_point.qconfig
 
-    def _get_activation_quantization_target_point(self,
-                                                  quantization_point: SingleConfigQuantizationPoint) -> SingleConfigQuantizationPoint:
+    def _get_activation_quantization_target_point(
+            self,
+            quantization_point: SingleConfigQuantizationPoint) -> SingleConfigQuantizationPoint:
         """
         Returns activation quantization target point to the set of existing points.
 
