@@ -167,6 +167,7 @@ class MinMaxQuantization(Algorithm):
         self._quantization_target_points_to_qconfig = \
             collections.OrderedDict()  # type: OrderedDict[TargetPoint, QuantizerConfig]
         self._parameters = parameters
+        self._unified_scale_groups = []
 
     @property
     def available_backends(self) -> Dict[str, BackendType]:
@@ -368,13 +369,13 @@ class MinMaxQuantization(Algorithm):
         nncf_graph = NNCFGraphFactory.create(model) if self.nncf_graph is None else self.nncf_graph
 
         if self._quantization_target_points_to_qconfig:
-            return self._quantization_target_points_to_qconfig
+            return self._quantization_target_points_to_qconfig, self._unified_scale_groups
         backend = get_backend(model)
         device = self._parameters.target_device
         pattern = PatternsManager.get_full_pattern_graph(backend, device)
         quantizer_setup = self._get_quantizer_setup(nncf_graph, pattern)
         self._apply_model_type_pass(self._parameters.model_type, quantizer_setup, nncf_graph)
-        unified_scale_groups = self._collect_unified_groups(quantizer_setup)
+        self._unified_scale_groups = self._collect_unified_groups(quantizer_setup)
         for quantization_point in quantizer_setup.quantization_points.values():
             if quantization_point.is_weight_quantization_point():
                 self._add_weight_quantization_target_point(quantization_point, nncf_graph)
@@ -384,7 +385,7 @@ class MinMaxQuantization(Algorithm):
                 raise RuntimeError('Incorrect quantization point')
         self._quantization_target_points_to_qconfig = collections.OrderedDict(
             sorted(self._quantization_target_points_to_qconfig.items()))
-        return self._quantization_target_points_to_qconfig, unified_scale_groups
+        return self._quantization_target_points_to_qconfig, self._unified_scale_groups
 
     def _collect_unified_groups(self, quantizer_setup: SingleConfigQuantizerSetup) -> List[List[TargetPoint]]:
         """
