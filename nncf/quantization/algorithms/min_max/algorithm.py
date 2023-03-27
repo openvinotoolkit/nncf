@@ -423,6 +423,7 @@ class MinMaxQuantization(Algorithm):
 
         pattern = self._get_graph_pattern(model)
         quantizer_setup = self._get_quantizer_setup(nncf_graph, pattern)
+        self._apply_model_type_pass(self._parameters.model_type, quantizer_setup, nncf_graph)
         quantization_target_points = self._get_quantization_target_points(quantizer_setup, nncf_graph)
         unified_scale_groups = self._collect_unified_groups(quantizer_setup)
         weight_layer_names = set()
