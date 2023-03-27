@@ -60,7 +60,7 @@ def create_venv_with_nncf(tmp_path: Path, package_type: str, venv_type: str, ext
         subprocess.check_call(f'python -m venv {venv_path}', shell=True)
 
     subprocess.check_call(f'{pip_with_venv} install --upgrade pip', shell=True)
-    subprocess.check_call(f'{pip_with_venv} install --upgrade wheel setuptools==59.5.0', shell=True)
+    subprocess.check_call(f'{pip_with_venv} install --upgrade wheel setuptools', shell=True)
 
     if package_type in ['build_s', 'build_w']:
         subprocess.check_call(f'{pip_with_venv} install build', shell=True)
