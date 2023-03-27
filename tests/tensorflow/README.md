@@ -10,12 +10,18 @@ Before testing make sure that symlinks from `tests/tensorflow/data` are correct.
 ---
 
 ## pre-commit test
-If you want to do pre-commit test, you can enter the command as below.
+A generic way to run TF pre-commit tests is via `make`:
+```
+make install-tensorflow-test
+make test-tensorflow
+```
+
+Another way is to run `pytest` explicitly:
 ```
 pytest tests/common tests/tensorflow \
        --junitxml nncf-tests.xml
 ```
-The test result will be saved in `nncf-tests.xml`, and it will returns pass, skip, warnings or error during the test.
+The tests results will be saved in `nncf-tests.xml`.
 
 ## nightly-test
 
