@@ -116,7 +116,19 @@ class ConvolutionPruningOp(BasePruningOp):
 
 
 class TransposeConvolutionPruningOp(BasePruningOp):
-    pass
+    @classmethod
+    def mask_propagation(cls, node: NNCFNode, graph: NNCFGraph,
+                         tensor_processor: Type[NNCFPruningBaseTensorProcessor]) -> None:
+        input_masks = get_input_masks(node, graph)
+        output_mask = node.data.get('output_mask', None)
+
+        # In case of group convs we can't prune by output filters
+        if is_grouped_conv(node):
+            output_mask = None
+            if is_prunable_depthwise_conv(node):
+                output_mask = input_masks[0]
+
+        node.data['output_mask'] = output_mask
 
 
 class LinearPruningOp(BasePruningOp):
@@ -241,10 +253,7 @@ class ConcatPruningOp(BasePruningOp):
         """
         input_edges = graph.get_input_edges(node)
         previous_nodes = [edge.from_node for edge in input_edges]
-        input_masks = [input_node.data['output_mask']
-                       for input_node in previous_nodes]
-
-        # type: List[NNCFTensor]
+        input_masks = [input_node.data['output_mask'] for input_node in previous_nodes] #  type: List[NNCFTensor]
         not_empty_masks = [mask for mask in input_masks if mask is not None]
         if not not_empty_masks:
             return None
