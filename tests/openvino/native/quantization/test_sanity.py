@@ -26,11 +26,11 @@ from tests.openvino.omz_helpers import convert_model
 from tests.openvino.omz_helpers import download_model
 
 OMZ_MODELS = [
-    ('resnet-18-pytorch', 'imagenette2-320', {'accuracy@top1': 0.778, 'accuracy@top5': 0.949}),
-    ('mobilenet-v3-small-1.0-224-tf', 'imagenette2-320', {'accuracy@top1': 0.755, 'accuracy@top5': 0.919}),
-    ('googlenet-v3-pytorch', 'imagenette2-320', {'accuracy@top1': 0.912, 'accuracy@top5': 0.993}),
-    ('mobilefacedet-v1-mxnet', 'wider', {'map': 0.7765857271890886}),
-    ('retinaface-resnet50-pytorch', 'wider', {'map': 0.9185150838753813}),
+    ('resnet-18-pytorch', 'imagenette2-320', {'accuracy@top1': 0.777, 'accuracy@top5': 0.948}),
+    ('mobilenet-v3-small-1.0-224-tf', 'imagenette2-320', {'accuracy@top1': 0.735, 'accuracy@top5': 0.916}),
+    ('googlenet-v3-pytorch', 'imagenette2-320', {'accuracy@top1': 0.911, 'accuracy@top5': 0.994}),
+    ('mobilefacedet-v1-mxnet', 'wider', {'map': 0.7763171885846742}}),
+    ('retinaface-resnet50-pytorch', 'wider', {'map': 0.917961898320335}),
 ]
 
 
@@ -55,5 +55,6 @@ def test_compression(data_dir, tmp_path, model, dataset, ref_metrics):
 
     report_path = tmp_path / f'{model}.csv'
     metrics = calculate_metrics(int8_ir_path, config_path, extracted_data_dir, report_path, eval_size=1000)
+    print(f'Metrics = {metrics}')
     for metric_name, metric_val in ref_metrics.items():
         assert metrics[metric_name] == pytest.approx(metric_val, abs=0.006)
