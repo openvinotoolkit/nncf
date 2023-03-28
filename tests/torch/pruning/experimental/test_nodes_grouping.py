@@ -248,16 +248,16 @@ TEST_DESCS = [
                                       image_size=224,
                                       patch_size=4,
                                       num_channels=3,
-                                      embed_dim=2,
+                                      embed_dim=4,
                                   ))
         ),
         ref_groups=[
             PruningGroup(
                 dim_blocks={
-                    PruningBlock(size=1, offset=0, producer_id=15, pruning_dimension=0),
-                    PruningBlock(size=1, offset=0, producer_id=18, pruning_dimension=0),
-                    PruningBlock(size=1, offset=0, producer_id=14, pruning_dimension=0),
-                    PruningBlock(size=1, offset=0, producer_id=33, pruning_dimension=1)
+                    PruningBlock(size=2, offset=0, producer_id=15, pruning_dimension=0),
+                    PruningBlock(size=2, offset=0, producer_id=18, pruning_dimension=0),
+                    PruningBlock(size=2, offset=0, producer_id=14, pruning_dimension=0),
+                    PruningBlock(size=2, offset=0, producer_id=33, pruning_dimension=1)
                 }
             ),
             PruningGroup(
@@ -270,7 +270,7 @@ TEST_DESCS = [
     ),
     GroupTestDesc(
         model_desc=GeneralModelDesc(
-            model_name='ViT',
+            model_name='ViT_no_heads',
             input_info=dict(sample_size=[1, 1, 4, 4]),
             model_builder=partial(AutoModelForImageClassification.from_config,
                                   ViTConfig(
@@ -300,13 +300,45 @@ TEST_DESCS = [
             ),
         ]
     ),
+    GroupTestDesc(
+        model_desc=GeneralModelDesc(
+            model_name='ViT',
+            input_info=dict(sample_size=[1, 1, 4, 4]),
+            model_builder=partial(AutoModelForImageClassification.from_config,
+                                  ViTConfig(
+                                      hidden_size=4,
+                                      num_hidden_layers=1,
+                                      num_attention_heads=2,
+                                      intermediate_size=2,
+                                      image_size=4,
+                                      patch_size=2,
+                                      num_channels=1
+                                  ))
+        ),
+        ref_groups=[
+            PruningGroup(
+                dim_blocks={
+                    PruningBlock(size=2, offset=0, producer_id=26, pruning_dimension=1),
+                    PruningBlock(size=2, offset=0, producer_id=9, pruning_dimension=0),
+                    PruningBlock(size=2, offset=0, producer_id=8, pruning_dimension=0),
+                    PruningBlock(size=2, offset=0, producer_id=12, pruning_dimension=0)
+                }
+            ),
+            PruningGroup(
+                dim_blocks={
+                    PruningBlock(size=1, offset=0, producer_id=32, pruning_dimension=1),
+                    PruningBlock(size=1, offset=0, producer_id=30, pruning_dimension=0)
+                }
+            ),
+        ]
+    ),
 ]
 
 
 @pytest.mark.parametrize(
     "desc", TEST_DESCS, ids=[m.model_desc.model_name for m in TEST_DESCS]
 )
-def test_graph(desc: GroupTestDesc):
+def test_groups(desc: GroupTestDesc):
     model_desc = desc.model_desc
     model = model_desc.get_model()
     config = NNCFConfig({"input_info": model_desc.create_input_info()})
