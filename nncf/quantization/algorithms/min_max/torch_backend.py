@@ -16,6 +16,7 @@ import torch
 import numpy as np
 
 from nncf.parameters import ModelType
+from nncf.parameters import TargetDevice
 from nncf.scopes import IgnoredScope
 from nncf.common.hardware.config import HWConfig
 from nncf.common.graph.graph import NNCFGraph
@@ -253,10 +254,12 @@ class PTMinMaxAlgoBackend(MinMaxAlgoBackend):
         return PTInsertionCommand(target_point, quantizer, TransformationPriority.QUANTIZATION_PRIORITY)
 
     @staticmethod
-    def get_model_type_ignore_scope(model_type: ModelType) -> IgnoredScope:
+    def get_model_type_ignore_scope(model_type: ModelType, device: TargetDevice) -> IgnoredScope:
         if model_type == ModelType.TRANSFORMER:
             types = []
             metatypes_to_add = [om.PTAddMetatype, om.PTPowerMetatype, om.PTSubMetatype, om.PTMeanMetatype]
+            if device != TargetDevice.CPU_SPR:
+                metatypes_to_add.append(om.PTMulMetatype)
             type_name_to_add = ["squeeze"]
             for metatype in metatypes_to_add:
                 types.extend(metatype.get_all_aliases())
