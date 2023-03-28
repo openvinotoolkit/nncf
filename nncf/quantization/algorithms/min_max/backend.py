@@ -103,7 +103,6 @@ class MinMaxAlgoBackend(ABC):
     def create_weight_quantizer_insertion_command(nncf_graph: NNCFGraph,
                                                   target_point: TargetPoint,
                                                   quantizer_config: QuantizerConfig,
-                                                  half_range: bool,
                                                   parameters: FakeQuantizeParameters) -> TransformationCommand:
         """
         Returns backend-specific quantizer insertion command.
@@ -111,8 +110,6 @@ class MinMaxAlgoBackend(ABC):
         :param nncf_graph: NNCFGraph to get input/output shapes for the target point.
         :param target_point: Target location for the correction.
         :param quantizer_config: QuantizerConfig instance for the current layer.
-        :param half_range: If ``True`` effectively only a half of an quantizer range are used.
-            False - the full range are used.
         :param parameters: FakeQuantizeParameters to calculate activation quantization parameters.
         :return: Backend-specific TransformationCommand for the quantizer insertion operation.
         """

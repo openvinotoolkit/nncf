@@ -12,7 +12,7 @@
 """
 
 from copy import deepcopy
-from typing import Dict, TypeVar, Optional, OrderedDict, Set
+from typing import Dict, TypeVar, Optional, OrderedDict, Set, List
 import collections
 
 from nncf import Dataset
@@ -384,7 +384,8 @@ class MinMaxQuantization(Algorithm):
         pattern = PatternsManager.get_full_pattern_graph(backend, device)
         quantizer_setup = self._get_quantizer_setup(nncf_graph, pattern)
         self._apply_model_type_pass(self._parameters.model_type, quantizer_setup, nncf_graph)
-        for quantization_point in quantizer_setup.quantization_points.values():
+        quantization_points = self._sort_quantization_points(list(quantizer_setup.quantization_points.values()), nncf_graph)
+        for quantization_point in quantization_points:
             if quantization_point.is_weight_quantization_point():
                 self._add_weight_quantization_target_point(quantization_point, nncf_graph)
             elif quantization_point.is_activation_quantization_point():
@@ -392,6 +393,12 @@ class MinMaxQuantization(Algorithm):
             else:
                 raise RuntimeError('Incorrect quantization point')
         return self._quantization_target_points_to_qconfig
+
+    def _sort_quantization_points(self, quantization_points: List[SingleConfigQuantizationPoint], 
+                                  nncf_graph: NNCFGraph) -> List[SingleConfigQuantizationPoint]:
+        node_names_to_pos = {node.node_name: i for i, node in enumerate(nncf_graph.topological_sort())}
+        quantization_points.sort(key = lambda point: node_names_to_pos[point.insertion_point.target_node_name])
+        return quantization_points
 
     def _apply(self,
                model: TModel,

@@ -218,7 +218,7 @@ class PTMinMaxAlgoBackend(MinMaxAlgoBackend):
         quantizer_spec = PTQuantizerSpec.from_config(quantizer_config,
                                                      narrow_range=narrow_range,
                                                      scale_shape=scale_shape,
-                                                     half_range=half_range,
+                                                     half_range=False,
                                                      logarithm_scale=False,
                                                      is_quantized_on_export=False,
                                                      compression_lr_multiplier=None)
