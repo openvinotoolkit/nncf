@@ -29,7 +29,7 @@ OMZ_MODELS = [
     ('resnet-18-pytorch', 'imagenette2-320', {'accuracy@top1': 0.777, 'accuracy@top5': 0.948}),
     ('mobilenet-v3-small-1.0-224-tf', 'imagenette2-320', {'accuracy@top1': 0.735, 'accuracy@top5': 0.916}),
     ('googlenet-v3-pytorch', 'imagenette2-320', {'accuracy@top1': 0.911, 'accuracy@top5': 0.994}),
-    ('mobilefacedet-v1-mxnet', 'wider', {'map': 0.7763171885846742}}),
+    ('mobilefacedet-v1-mxnet', 'wider', {'map': 0.7763171885846742}),
     ('retinaface-resnet50-pytorch', 'wider', {'map': 0.917961898320335}),
 ]
 
