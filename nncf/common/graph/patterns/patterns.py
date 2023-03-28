@@ -389,3 +389,4 @@ class PatternNames(Enum):
 
     # TRANSFORMERS
     MATMUL_SOFTMAX_MATMUL = PatternDesc('matmul_softmax_matmul')
+    SOFTMAX_MATMUL = PatternDesc('softmax_matmul')

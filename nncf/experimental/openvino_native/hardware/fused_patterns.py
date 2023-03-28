@@ -326,6 +326,21 @@ def create_matmul_softmax_matmul():
     return pattern
 
 
+@OPENVINO_HW_FUSED_PATTERNS.register(PatternNames.SOFTMAX_MATMUL)
+def create_softmax_matmul():
+    pattern = GraphPattern()
+    softmax = pattern.add_node(**{GraphPattern.LABEL_ATTR: 'SOFTMAX',
+                                  GraphPattern.METATYPE_ATTR: om.OVSoftmaxMetatype})
+    mat_mul = pattern.add_node(**{GraphPattern.LABEL_ATTR: 'MATMUL',
+                                  GraphPattern.METATYPE_ATTR: om.OVMatMulMetatype})
+    any = pattern.add_node(**{GraphPattern.LABEL_ATTR: 'ANY',
+                              GraphPattern.METATYPE_ATTR: GraphPattern.NON_PATTERN_NODE_TYPE})
+
+    pattern.add_edge(softmax, mat_mul)
+    pattern.add_edge(any, mat_mul)
+
+    return pattern
+
 # ACTIVATIONS
 
 

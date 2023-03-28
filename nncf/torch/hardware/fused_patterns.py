@@ -77,6 +77,19 @@ def create_matmul_softmax_matmul():
 
     return pattern
 
+
+@PT_HW_FUSED_PATTERNS.register(PatternNames.MATMUL_SOFTMAX_MATMUL)
+def create_matmul_softmax_matmul():
+    pattern = GraphPattern()
+    softmax = pattern.add_node(label='SOFTMAX', type='softmax')
+    mat_mul = pattern.add_node(label='MATMUL', type=['linear', 'addmm', 'matmul', 'bmm', 'mm'])
+    any = pattern.add_node(label='ANY', type=GraphPattern.NON_PATTERN_NODE_TYPE)
+
+    pattern.add_edge(softmax, mat_mul)
+    pattern.add_edge(any, mat_mul)
+
+    return pattern
+
 # COMBINATIONS
 
 
