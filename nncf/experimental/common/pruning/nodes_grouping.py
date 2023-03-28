@@ -127,7 +127,7 @@ class PropagationGroup:
         self.is_invalid = False
 
     def __str__(self) -> str:
-        state = list(map(str, self._blocks))
+        state = self.get_state()
         return json.dumps(state, separators=(',\n', ':'))
 
     def invalidate(self) -> None:
@@ -183,6 +183,16 @@ class PropagationGroup:
             retval.add_block(block)
         return retval
 
+
+    def get_state(self) -> str:
+        """
+        Returns a dictionary with Python data structures (dict, list, tuple, str, int, float, True, False, None) that
+        represents state of the object.
+
+        :return: state of the object
+        """
+        return list(map(str, self._blocks))
+
     def get_blocks(self) -> List[PropagationBlock]:
         return self._blocks.copy()
 
@@ -219,7 +229,7 @@ class PropagationMask:
         self.dim_groups_map = dim_groups_map if dim_groups_map is not None else {}
 
     def __str__(self) -> str:
-        state = {dim: list(map(str, groups)) for dim, groups in self.dim_groups_map.items()}
+        state = {dim: list(map(lambda x: x.get_state(), groups)) for dim, groups in self.dim_groups_map.items()}
         return json.dumps(state)
 
     def invalidate_groups(self) -> None:
