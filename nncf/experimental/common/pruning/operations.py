@@ -36,8 +36,8 @@ from nncf.common.pruning.utils import identity_mask_propagation
 from nncf.common.pruning.utils import is_grouped_conv
 from nncf.common.pruning.utils import is_prunable_depthwise_conv
 from nncf.common.tensor import NNCFTensor
-from nncf.experimental.common.pruning.nodes_grouping import BlockGroup
-from nncf.experimental.common.pruning.nodes_grouping import DimensionBlock
+from nncf.experimental.common.pruning.nodes_grouping import PropagationGroup
+from nncf.experimental.common.pruning.nodes_grouping import PropagationBlock
 from nncf.experimental.common.pruning.nodes_grouping import MaskProducer
 from nncf.experimental.common.pruning.nodes_grouping import PropagationMask
 
@@ -61,24 +61,7 @@ class BasePruningOp:
         :param graph: The model graph to prune
         :param tensor_processor: Interface with tensor processing methods
         """
-        cls.mask_propagation_impl(node, graph, tensor_processor)
-        cls.common_post_process(node, graph)
-
-    @classmethod
-    def mask_propagation_impl(cls, node: NNCFNode, graph: NNCFGraph,
-                              tensor_processor: Type[NNCFPruningBaseTensorProcessor]) -> None:
         raise NotImplementedError
-
-    @classmethod
-    def common_post_process(cls, node: NNCFNode, graph: NNCFGraph):
-        output_mask = node.data.get('output_mask', None)
-        if output_mask is not None:
-            num_output_nodes = len(graph.get_next_nodes(node))
-            if num_output_nodes > 1:
-                for groups in output_mask.dim_groups_map.values():
-                    for group in groups:
-                        for block in group.get_blocks():
-                            block.add_open_branch(num_output_nodes - 1)
 
     @classmethod
     def get_all_op_aliases(cls) -> List[str]:
@@ -94,8 +77,8 @@ class BasePruningOp:
 
 class InputPruningOp(BasePruningOp):
     @classmethod
-    def mask_propagation_impl(cls, node: NNCFNode, graph: NNCFGraph,
-                              tensor_processor: Type[NNCFPruningBaseTensorProcessor]) -> None:
+    def mask_propagation(cls, node: NNCFNode, graph: NNCFGraph,
+                         tensor_processor: Type[NNCFPruningBaseTensorProcessor]) -> None:
         node.data['output_mask'] = None
 
 
@@ -105,22 +88,22 @@ class OutputPruningOp(BasePruningOp):
         return True
 
     @classmethod
-    def mask_propagation_impl(cls, node: NNCFNode, graph: NNCFGraph,
-                              tensor_processor: Type[NNCFPruningBaseTensorProcessor]) -> None:
+    def mask_propagation(cls, node: NNCFNode, graph: NNCFGraph,
+                         tensor_processor: Type[NNCFPruningBaseTensorProcessor]) -> None:
         node.data['output_mask'] = None
 
 
 class IdentityMaskForwardPruningOp(BasePruningOp):
     @classmethod
-    def mask_propagation_impl(cls, node: NNCFNode, graph: NNCFGraph,
-                              tensor_processor: Type[NNCFPruningBaseTensorProcessor]) -> None:
+    def mask_propagation(cls, node: NNCFNode, graph: NNCFGraph,
+                         tensor_processor: Type[NNCFPruningBaseTensorProcessor]) -> None:
         identity_mask_propagation(node, graph)
 
 
 class ConvolutionPruningOp(BasePruningOp):
     @classmethod
-    def mask_propagation_impl(cls, node: NNCFNode, graph: NNCFGraph,
-                              tensor_processor: Type[NNCFPruningBaseTensorProcessor]) -> None:
+    def mask_propagation(cls, node: NNCFNode, graph: NNCFGraph,
+                         tensor_processor: Type[NNCFPruningBaseTensorProcessor]) -> None:
         input_masks = get_input_masks(node, graph)
         output_mask = node.data.get('output_mask', None)
 
@@ -138,8 +121,8 @@ class TransposeConvolutionPruningOp(BasePruningOp):
 
 class LinearPruningOp(BasePruningOp):
     @classmethod
-    def mask_propagation_impl(cls, node: NNCFNode, graph: NNCFGraph,
-                              tensor_processor: Type[NNCFPruningBaseTensorProcessor]) -> None:
+    def mask_propagation(cls, node: NNCFNode, graph: NNCFGraph,
+                         tensor_processor: Type[NNCFPruningBaseTensorProcessor]) -> None:
         input_masks = get_input_masks(node, graph)
         # length=3 in case of input, and apply_mask for weight and bias. E.g. input: [1,128,4] weight: [4,4] bias: [4]
         assert len(input_masks) in [1, 2, 3]
@@ -169,8 +152,7 @@ class LinearPruningOp(BasePruningOp):
             def _both_dim_blocks_exist(left_idx, right_idx):
                 if left_idx in left_dim_groups or \
                         right_idx in right_dim_groups:
-                    assert left_idx in left_dim_groups and \
-                           right_idx in right_dim_groups
+                    assert left_idx in left_dim_groups and right_idx in right_dim_groups
                     return True
                 return False
 
@@ -180,8 +162,9 @@ class LinearPruningOp(BasePruningOp):
                 if _both_dim_blocks_exist(dim, dim):
                     assert len(left_dim_groups[dim]) == 1 and len(
                         right_dim_groups[dim]) == 1, "multiple groups is not supported"
-                    output_mask.dim_groups_map[dim] = [BlockGroup.join_groups(left_dim_groups[dim][0],
-                                                                              right_dim_groups[dim][0])]
+                    output_mask.dim_groups_map[dim] = [
+                        PropagationGroup.join_groups(left_dim_groups[dim][0], right_dim_groups[dim][0])
+                    ]
             # Propagating left rows / right cols
             for idx, dim in enumerate(range(input_shape_len - 2, input_shape_len)):
                 if dim in input_masks[idx].dim_groups_map:
@@ -192,7 +175,7 @@ class LinearPruningOp(BasePruningOp):
                 left = left_dim_groups[input_shape_len - 1]
                 right = right_dim_groups[input_shape_len - 2]
                 assert len(left) == 1 and len(right) == 1, "multiple groups is not supported"
-                group = BlockGroup.join_groups(left[0], right[0])
+                group = PropagationGroup.join_groups(left[0], right[0])
                 group.close_branch()
                 cls.add_consumer_block(group, node)
         else:
@@ -201,7 +184,7 @@ class LinearPruningOp(BasePruningOp):
         node.data['output_mask'] = output_mask
 
     @classmethod
-    def add_consumer_block(cls, group: BlockGroup, node: NNCFNode) -> None:
+    def add_consumer_block(cls, group: PropagationGroup, node: NNCFNode) -> None:
         """
         Explicitly adds a consumer block to the given group.
 
@@ -209,8 +192,8 @@ class LinearPruningOp(BasePruningOp):
         :param node: node that corresponds to the consumer.
         """
         if node.layer_attributes is not None:
-            first_block: DimensionBlock = group.get_blocks()[0]
-            consumer_block = DimensionBlock(
+            first_block: PropagationBlock = group.get_blocks()[0]
+            consumer_block = PropagationBlock(
                 MaskProducer(node.node_id),
                 size=first_block.size,
                 offset=first_block.offset,
@@ -222,8 +205,8 @@ class LinearPruningOp(BasePruningOp):
 
 class BatchNormPruningOp(BasePruningOp):
     @classmethod
-    def mask_propagation_impl(cls, node: NNCFNode, graph: NNCFGraph,
-                              tensor_processor: Type[NNCFPruningBaseTensorProcessor]) -> None:
+    def mask_propagation(cls, node: NNCFNode, graph: NNCFGraph,
+                         tensor_processor: Type[NNCFPruningBaseTensorProcessor]) -> None:
         identity_mask_propagation(node, graph)
 
 
@@ -232,11 +215,11 @@ class GroupNormPruningOp(BasePruningOp):
     def accept_pruned_input(cls, node: NNCFNode) -> bool:
         # For Instance Normalization
         return isinstance(node.layer_attributes, GroupNormLayerAttributes) \
-               and node.layer_attributes.num_groups == node.layer_attributes.num_channels
+            and node.layer_attributes.num_groups == node.layer_attributes.num_channels
 
     @classmethod
-    def mask_propagation_impl(cls, node: NNCFNode, graph: NNCFGraph,
-                              tensor_processor: Type[NNCFPruningBaseTensorProcessor]) -> None:
+    def mask_propagation(cls, node: NNCFNode, graph: NNCFGraph,
+                         tensor_processor: Type[NNCFPruningBaseTensorProcessor]) -> None:
         if cls.accept_pruned_input(node):
             identity_mask_propagation(node, graph)
         else:
@@ -258,29 +241,31 @@ class ConcatPruningOp(BasePruningOp):
         """
         input_edges = graph.get_input_edges(node)
         previous_nodes = [edge.from_node for edge in input_edges]
-        input_masks = [input_node.data['output_mask'] for input_node in previous_nodes]
+        input_masks = [input_node.data['output_mask']
+                       for input_node in previous_nodes]
 
-        not_empty_masks = [mask for mask in input_masks if mask is not None]  # type: List[NNCFTensor]
+        # type: List[NNCFTensor]
+        not_empty_masks = [mask for mask in input_masks if mask is not None]
         if not not_empty_masks:
             return None
 
-
     @classmethod
-    def mask_propagation_impl(cls, node: NNCFNode, graph: NNCFGraph,
-                              tensor_processor: Type[NNCFPruningBaseTensorProcessor]) -> None:
+    def mask_propagation(cls, node: NNCFNode, graph: NNCFGraph,
+                         tensor_processor: Type[NNCFPruningBaseTensorProcessor]) -> None:
         result_mask = cls.generate_output_mask(node, graph, tensor_processor)
         node.data['output_mask'] = result_mask
 
 
 class ElementwisePruningOp(BasePruningOp):
     @classmethod
-    def mask_propagation_impl(cls, node: NNCFNode, graph: NNCFGraph,
-                              tensor_processor: Type[NNCFPruningBaseTensorProcessor]) -> None:
+    def mask_propagation(cls, node: NNCFNode, graph: NNCFGraph,
+                         tensor_processor: Type[NNCFPruningBaseTensorProcessor]) -> None:
         input_masks = get_input_masks(node, graph)
         if not input_masks:
             input_masks = [None]
 
-        output_mask = input_masks[0]  # elif all(m is None for m in input_masks):
+        # elif all(m is None for m in input_masks):
+        output_mask = input_masks[0]
         if len(input_masks) == 1:
             nncf_logger.warning(f"ElementWise with a single input is not properly supported. node_name={node.node_name}"
                                 "The second input might be a constant without node in the graph. "
@@ -298,8 +283,8 @@ class ElementwisePruningOp(BasePruningOp):
 
 class GatherPruningOp(BasePruningOp):
     @classmethod
-    def mask_propagation_impl(cls, node: NNCFNode, graph: NNCFGraph,
-                              tensor_processor: Type[NNCFPruningBaseTensorProcessor]) -> None:
+    def mask_propagation(cls, node: NNCFNode, graph: NNCFGraph,
+                         tensor_processor: Type[NNCFPruningBaseTensorProcessor]) -> None:
         input_masks = get_input_masks(node, graph)
         assert len(input_masks) == 1
         input_mask = input_masks[0]
@@ -359,8 +344,8 @@ class GatherPruningOp(BasePruningOp):
 
 class SplitPruningOp(BasePruningOp):
     @classmethod
-    def mask_propagation_impl(cls, node: NNCFNode, graph: NNCFGraph,
-                              tensor_processor: Type[NNCFPruningBaseTensorProcessor]) -> None:
+    def mask_propagation(cls, node: NNCFNode, graph: NNCFGraph,
+                         tensor_processor: Type[NNCFPruningBaseTensorProcessor]) -> None:
         input_masks = get_input_masks(node, graph)
         if not input_masks:
             input_masks = [None]
@@ -400,6 +385,7 @@ class ReshapeMode(Enum):
     EXTEND = auto()
     DEFAULT = auto()
 
+
 class ReshapePruningOp(BasePruningOp):
     DIMENSION_MAP = Dict[int, int]
 
@@ -410,8 +396,8 @@ class ReshapePruningOp(BasePruningOp):
         return True
 
     @classmethod
-    def mask_propagation_impl(cls, node: NNCFNode, graph: NNCFGraph,
-                              tensor_processor: Type[NNCFPruningBaseTensorProcessor]) -> None:
+    def mask_propagation(cls, node: NNCFNode, graph: NNCFGraph,
+                         tensor_processor: Type[NNCFPruningBaseTensorProcessor]) -> None:
         node.data['output_mask'] = cls._get_propagated_mask(node, graph)
 
     @staticmethod
@@ -442,7 +428,6 @@ class ReshapePruningOp(BasePruningOp):
         for idx in range(to_idx, to_idx_next + 1):
             to_map[idx] = from_idx
         return (res, to_idx_next)
-
 
     @classmethod
     def _parse_reshape(cls, node: NNCFNode) -> Tuple[DIMENSION_MAP, DIMENSION_MAP, ReshapeMode]:
@@ -476,9 +461,9 @@ class ReshapePruningOp(BasePruningOp):
 
     @staticmethod
     def _split_block(
-        block: DimensionBlock,
+        block: PropagationBlock,
         list_output_channels: List[int]
-    ) -> List[DimensionBlock]:
+    ) -> List[PropagationBlock]:
         """
         Splits a dimension block into multiple blocks.
         It's applied when some number of channels S is reshaped to N channels, e.g. S -> [A,B,C,D] and S=A*B*C*D.
@@ -517,9 +502,9 @@ class ReshapePruningOp(BasePruningOp):
 
     @classmethod
     def _split_group(cls,
-                     group: BlockGroup,
+                     group: PropagationGroup,
                      input_channels: int,
-                     list_output_channels: List[int]) -> List[BlockGroup]:
+                     list_output_channels: List[int]) -> List[PropagationGroup]:
         """
         Splits a group of dimension blocks into new child groups by a pruning dimension.
         Internally calls "_split_block" to split each block from the given group. Please refer to the
@@ -532,19 +517,20 @@ class ReshapePruningOp(BasePruningOp):
         :param group: a group of dimension blocks for splitting.
         :return: list of new groups which resultes from the split.
         """
-        new_blocks: List[List[DimensionBlock]] = []
-        child_groups: List[BlockGroup] = []
+        new_blocks: List[List[PropagationBlock]] = []
+        child_groups: List[PropagationGroup] = []
 
         for block in group.get_blocks():
             dot_product = reduce((lambda x, y: x * y), list_output_channels)
             assert dot_product == input_channels
             new_blocks.append(cls._split_block(block, list_output_channels))
 
-        for block_groups in zip(*new_blocks):  # forms [(a1,a2), (b1,b2)] from [(a1,b1), (a2,b2)]
-            child_groups.append(BlockGroup(blocks=list(block_groups)))
-        group.add_childs(child_groups)
+        # forms [(a1,a2), (b1,b2)] from [(a1,b1), (a2,b2)]
+        for block_groups in zip(*new_blocks):
+            child_groups.append(PropagationGroup(blocks=list(block_groups)))
+        for child_group in child_groups:
+            group.add_child(child_group)
         return child_groups
-
 
     @classmethod
     def _get_propagated_mask(cls, node: NNCFNode, graph: NNCFGraph):
@@ -554,7 +540,7 @@ class ReshapePruningOp(BasePruningOp):
         if mask is None or not node.layer_attributes:
             return None
 
-        inp_map, _, mode =  cls._parse_reshape(node)
+        inp_map, _, mode = cls._parse_reshape(node)
         input_shape = node.layer_attributes.input_shape
         output_shape = node.layer_attributes.output_shape
 
@@ -581,7 +567,7 @@ class ReshapePruningOp(BasePruningOp):
                         output_mask.dim_groups_map[shifted_dim] = groups
                     else:
                         group = groups[0]
-                        if group.has_childs():
+                        if group.has_children():
                             raise NotImplementedError('Splitting BlockGroup with childs isn\'t implemented yet')
                         child_groups = cls._split_group(group, input_channels, list_output_channels)
                         for child_group, in_dim in zip(child_groups, inp_map[dim]):
@@ -598,8 +584,8 @@ class ReshapePruningOp(BasePruningOp):
 
 class TransposePruningOp(BasePruningOp):
     @classmethod
-    def mask_propagation_impl(cls, node: NNCFNode, graph: NNCFGraph,
-                              tensor_processor: Type[NNCFPruningBaseTensorProcessor]) -> None:
+    def mask_propagation(cls, node: NNCFNode, graph: NNCFGraph,
+                         tensor_processor: Type[NNCFPruningBaseTensorProcessor]) -> None:
         input_masks = get_input_masks(node, graph)
         assert len(input_masks) == 1
         input_mask = input_masks[0]
@@ -619,7 +605,11 @@ class TransposePruningOp(BasePruningOp):
 
         idx_map = [(old_idx, new_idx) for new_idx, old_idx in enumerate(new_order) if
                    old_idx in input_mask.dim_groups_map]
-        output_mask = PropagationMask({new_idx: input_mask.dim_groups_map[old_idx] for old_idx, new_idx in idx_map})
+        output_mask = PropagationMask(
+            dim_groups_map={
+                new_idx: input_mask.dim_groups_map[old_idx] for old_idx, new_idx in idx_map
+            }
+        )
 
         node.data['output_mask'] = output_mask
 
@@ -630,8 +620,8 @@ class StopMaskForwardPruningOp(BasePruningOp):
         return False
 
     @classmethod
-    def mask_propagation_impl(cls, node: NNCFNode, graph: NNCFGraph,
-                              tensor_processor: Type[NNCFPruningBaseTensorProcessor]) -> None:
+    def mask_propagation(cls, node: NNCFNode, graph: NNCFGraph,
+                         tensor_processor: Type[NNCFPruningBaseTensorProcessor]) -> None:
         input_masks = get_input_masks(node, graph)
         for m in input_masks:
             if m:

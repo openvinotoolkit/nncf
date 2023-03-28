@@ -12,8 +12,8 @@ from nncf import NNCFConfig
 # otherwise test may fail with some error (e.g. IndexError: list index out of range).
 from nncf.torch.layers import NNCF_PRUNING_MODULES_DICT
 from nncf.torch.model_creation import create_nncf_network
-from nncf.experimental.common.pruning.nodes_grouping import MinimalDimensionBlock
-from nncf.experimental.common.pruning.nodes_grouping import PruningNodeGroup
+from nncf.experimental.common.pruning.nodes_grouping import PruningBlock
+from nncf.experimental.common.pruning.nodes_grouping import PruningGroup
 from nncf.experimental.common.pruning.nodes_grouping import get_pruning_groups
 from nncf.experimental.torch.pruning.operations import PT_EXPERIMENTAL_PRUNING_OPERATOR_METATYPES
 
@@ -92,7 +92,7 @@ class ReshapeReshape(nn.Module):
 @dataclass
 class GroupTestDesc:
     model_desc: IModelDesc
-    ref_groups: List[PruningNodeGroup]
+    ref_groups: List[PruningGroup]
 
 
 TEST_DESCS = [
@@ -102,12 +102,12 @@ TEST_DESCS = [
             input_sample_sizes=([384, 768])
         ),
         ref_groups=[
-            PruningNodeGroup(
+            PruningGroup(
                 dim_blocks={
-                    MinimalDimensionBlock(64, 0, 1, 0),
-                    MinimalDimensionBlock(64, 0, 2, 0),
-                    MinimalDimensionBlock(64, 0, 3, 0),
-                    MinimalDimensionBlock(64, 0, 17, 1)
+                    PruningBlock(64, 0, 1, 0),
+                    PruningBlock(64, 0, 2, 0),
+                    PruningBlock(64, 0, 3, 0),
+                    PruningBlock(64, 0, 17, 1)
                 })
         ]
     ),
@@ -129,17 +129,17 @@ TEST_DESCS = [
                 AutoModelForQuestionAnswering.from_config, BertConfig(num_hidden_layers=1))
         ),
         ref_groups=[
-            PruningNodeGroup(
+            PruningGroup(
                 dim_blocks={
-                    MinimalDimensionBlock(64, 0, 11, 0),
-                    MinimalDimensionBlock(64, 0, 12, 0),
-                    MinimalDimensionBlock(64, 0, 15, 0),
-                    MinimalDimensionBlock(64, 0, 30, 1),
+                    PruningBlock(64, 0, 11, 0),
+                    PruningBlock(64, 0, 12, 0),
+                    PruningBlock(64, 0, 15, 0),
+                    PruningBlock(64, 0, 30, 1),
                 }),
-            PruningNodeGroup(
+            PruningGroup(
                 dim_blocks={
-                    MinimalDimensionBlock(1, 0, 34, 0),
-                    MinimalDimensionBlock(1, 0, 36, 1)
+                    PruningBlock(1, 0, 34, 0),
+                    PruningBlock(1, 0, 36, 1)
                 })
         ]
     ),
@@ -162,32 +162,24 @@ TEST_DESCS = [
                                   ))
         ),
         ref_groups=[
-            PruningNodeGroup(
+            PruningGroup(
                 dim_blocks={
-                    MinimalDimensionBlock(
-                        size=2, offset=0, producer_id=31, pruning_dimension=1),
-                    MinimalDimensionBlock(
-                        size=2, offset=0, producer_id=16, pruning_dimension=0),
-                    MinimalDimensionBlock(
-                        size=2, offset=0, producer_id=12, pruning_dimension=0),
-                    MinimalDimensionBlock(
-                        size=2, offset=0, producer_id=13, pruning_dimension=0)
+                    PruningBlock(size=2, offset=0, producer_id=31, pruning_dimension=1),
+                    PruningBlock(size=2, offset=0, producer_id=16, pruning_dimension=0),
+                    PruningBlock(size=2, offset=0, producer_id=12, pruning_dimension=0),
+                    PruningBlock(size=2, offset=0, producer_id=13, pruning_dimension=0)
                 }
             ),
-            PruningNodeGroup(
+            PruningGroup(
                 dim_blocks={
-                    MinimalDimensionBlock(
-                        size=1, offset=0, producer_id=35, pruning_dimension=0),
-                    MinimalDimensionBlock(
-                        size=1, offset=0, producer_id=37, pruning_dimension=1)
+                    PruningBlock(size=1, offset=0, producer_id=35, pruning_dimension=0),
+                    PruningBlock(size=1, offset=0, producer_id=37, pruning_dimension=1)
                 }
             ),
-            PruningNodeGroup(
+            PruningGroup(
                 dim_blocks={
-                    MinimalDimensionBlock(
-                        size=1, offset=0, producer_id=42, pruning_dimension=0),
-                    MinimalDimensionBlock(
-                        size=1, offset=0, producer_id=45, pruning_dimension=1)
+                    PruningBlock(size=1, offset=0, producer_id=42, pruning_dimension=0),
+                    PruningBlock(size=1, offset=0, producer_id=45, pruning_dimension=1)
                 }
             )
         ]
@@ -201,16 +193,18 @@ TEST_DESCS = [
             ))
         ),
         ref_groups=[
-            PruningNodeGroup(dim_blocks={MinimalDimensionBlock(size=64, offset=0, producer_id=38, pruning_dimension=1),
-                                         MinimalDimensionBlock(
-                                             size=64, offset=0, producer_id=19, pruning_dimension=0),
-                                         MinimalDimensionBlock(
-                                             size=64, offset=0, producer_id=20, pruning_dimension=0),
-                                         MinimalDimensionBlock(size=64, offset=0, producer_id=23,
-                                                               pruning_dimension=0)}),
-            PruningNodeGroup(dim_blocks={MinimalDimensionBlock(size=1, offset=0, producer_id=44, pruning_dimension=1),
-                                         MinimalDimensionBlock(size=1, offset=0, producer_id=42,
-                                                               pruning_dimension=0)})
+            PruningGroup(
+                dim_blocks={
+                    PruningBlock(size=64, offset=0, producer_id=38, pruning_dimension=1),
+                    PruningBlock(size=64, offset=0, producer_id=19, pruning_dimension=0),
+                    PruningBlock(size=64, offset=0, producer_id=20, pruning_dimension=0),
+                    PruningBlock(size=64, offset=0, producer_id=23, pruning_dimension=0)
+                                 }
+                                 ),
+            PruningGroup(
+                dim_blocks={
+                    PruningBlock(size=1, offset=0, producer_id=44, pruning_dimension=1),
+                    PruningBlock(size=1, offset=0, producer_id=42, pruning_dimension=0)})
         ]
     ),
     GroupTestDesc(
@@ -227,24 +221,18 @@ TEST_DESCS = [
             ))
         ),
         ref_groups=[
-            PruningNodeGroup(
+            PruningGroup(
                 dim_blocks={
-                    MinimalDimensionBlock(
-                        size=8, offset=0, producer_id=31, pruning_dimension=0),
-                    MinimalDimensionBlock(
-                        size=8, offset=0, producer_id=53, pruning_dimension=1),
-                    MinimalDimensionBlock(
-                        size=8, offset=0, producer_id=29, pruning_dimension=0),
-                    MinimalDimensionBlock(
-                        size=8, offset=0, producer_id=35, pruning_dimension=0)
+                    PruningBlock(size=8, offset=0, producer_id=31, pruning_dimension=0),
+                    PruningBlock(size=8, offset=0, producer_id=53, pruning_dimension=1),
+                    PruningBlock(size=8, offset=0, producer_id=29, pruning_dimension=0),
+                    PruningBlock(size=8, offset=0, producer_id=35, pruning_dimension=0)
                 }
             ),
-            PruningNodeGroup(
+            PruningGroup(
                 dim_blocks={
-                    MinimalDimensionBlock(
-                        size=1, offset=0, producer_id=57, pruning_dimension=0),
-                    MinimalDimensionBlock(
-                        size=1, offset=0, producer_id=60, pruning_dimension=1)
+                    PruningBlock(size=1, offset=0, producer_id=57, pruning_dimension=0),
+                    PruningBlock(size=1, offset=0, producer_id=60, pruning_dimension=1)
                 }
             )
         ]
@@ -264,24 +252,18 @@ TEST_DESCS = [
                                   ))
         ),
         ref_groups=[
-            PruningNodeGroup(
+            PruningGroup(
                 dim_blocks={
-                    MinimalDimensionBlock(
-                        size=1, offset=0, producer_id=15, pruning_dimension=0),
-                    MinimalDimensionBlock(
-                        size=1, offset=0, producer_id=18, pruning_dimension=0),
-                    MinimalDimensionBlock(
-                        size=1, offset=0, producer_id=14, pruning_dimension=0),
-                    MinimalDimensionBlock(
-                        size=1, offset=0, producer_id=33, pruning_dimension=1)
+                    PruningBlock(size=1, offset=0, producer_id=15, pruning_dimension=0),
+                    PruningBlock(size=1, offset=0, producer_id=18, pruning_dimension=0),
+                    PruningBlock(size=1, offset=0, producer_id=14, pruning_dimension=0),
+                    PruningBlock(size=1, offset=0, producer_id=33, pruning_dimension=1)
                 }
             ),
-            PruningNodeGroup(
+            PruningGroup(
                 dim_blocks={
-                    MinimalDimensionBlock(
-                        size=1, offset=0, producer_id=45, pruning_dimension=1),
-                    MinimalDimensionBlock(
-                        size=1, offset=0, producer_id=43, pruning_dimension=0)
+                    PruningBlock(size=1, offset=0, producer_id=45, pruning_dimension=1),
+                    PruningBlock(size=1, offset=0, producer_id=43, pruning_dimension=0)
                 }
             )
         ]
@@ -302,24 +284,18 @@ TEST_DESCS = [
                                   ))
         ),
         ref_groups=[
-            PruningNodeGroup(
+            PruningGroup(
                 dim_blocks={
-                    MinimalDimensionBlock(
-                        size=1, offset=0, producer_id=26, pruning_dimension=1),
-                    MinimalDimensionBlock(
-                        size=1, offset=0, producer_id=9, pruning_dimension=0),
-                    MinimalDimensionBlock(
-                        size=1, offset=0, producer_id=8, pruning_dimension=0),
-                    MinimalDimensionBlock(
-                        size=1, offset=0, producer_id=12, pruning_dimension=0)
+                    PruningBlock(size=1, offset=0, producer_id=26, pruning_dimension=1),
+                    PruningBlock(size=1, offset=0, producer_id=9, pruning_dimension=0),
+                    PruningBlock(size=1, offset=0, producer_id=8, pruning_dimension=0),
+                    PruningBlock(size=1, offset=0, producer_id=12, pruning_dimension=0)
                 }
             ),
-            PruningNodeGroup(
+            PruningGroup(
                 dim_blocks={
-                    MinimalDimensionBlock(
-                        size=1, offset=0, producer_id=32, pruning_dimension=1),
-                    MinimalDimensionBlock(
-                        size=1, offset=0, producer_id=30, pruning_dimension=0)
+                    PruningBlock(size=1, offset=0, producer_id=32, pruning_dimension=1),
+                    PruningBlock(size=1, offset=0, producer_id=30, pruning_dimension=0)
                 }
             ),
         ]

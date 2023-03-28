@@ -32,214 +32,273 @@ from nncf.common.pruning.mask_propagation import MaskPropagationAlgorithm
 from nncf.experimental.common.graph.netron import save_for_netron
 
 
-
 class MaskProducer:
+    """
+    Defines producer of the pruning.
+    """
+
     def __init__(self, id_) -> None:
+        """
+        :param id_: identification of the producer node in the NNCFGraph.
+        """
         self.id = id_
 
 
-class DimensionBlock:
+class PropagationBlock:
+    """
+    Defines a pruning block - how much and which particular channels are supposed to be pruned for the node when a
+    single element of pruning mask is 0. We assume that pruning mask is a vector with 1's and 0's. 1 retains the
+    corresponding channel in weights, 0 prunes it.
+    The block is initialized on producers of pruning and is propagated until consumers within PropagationGroup and
+    PropagationMask.
+    Essentially, the propagation block is parametrized by size and offset. Size is the number of sequent channels to be
+    included to the block. When offset is not equal to 0, it prescribes adding channels with indent equals value of
+    offset parameter.
+    By default, a single element of structured pruning mask corresponds to a single channel in the producer.
+    Size is equal to 1, offset is 0. It means that block consist of just 1 channel.
+    But in some cases, pruning can be performed by set of channels, rather than individual one.
+    For instance, head pruning in the Transformers is removal of N sequent channels, when N is the size of the
+    head. In that case, the propagation block is encoded by size=N and offset=0.
+    Or potentially, one can remove the same propagation in each Transformer's head. The propagation block would be as
+    follows: size=1 and offset=N. It means that block is formed by taking 1 channel
+    with offset N until the end of pruning mask. Let's say size of pruning mask is 3N,
+    the size of block will be equal to 3. Block will contain 6 elements, if size=2 offset=N with the same size of
+    pruning mask.
+    """
+
     def __init__(self,
                  producer: MaskProducer,
-                 size: int = 1, offset: int = 0,
+                 size: int = 1,
+                 offset: int = 0,
                  pruning_dimension: int = 0,
-                 opened_branches: int = 1, closed_branches: int = 0) -> None:
+                 closed_branches: int = 0) -> None:
+        """
+
+        :param producer: descriptor of the producer
+        :param size: number of sequent channels
+        :param offset: when not equal to 0, it prescribes adding channels with indent equals value of the parameter.
+        :param pruning_dimension: axis number from 0 to N-1 in weights along which the dimension block defines pruning
+        structure. N is total number of dimensions.
+        :param closed_branches: number of branches where propagation block reached a consumer node on the passage from
+        the producer nodes.
+        """
         self.size = size
         self.offset = offset
         self.pruning_dimension = pruning_dimension
         self._producer = producer
-        self._opened_branches = opened_branches
         self._closed_branches = closed_branches
         self._group = None
         self._is_invalid = False
 
-    def __eq__(self, other):
+    def __eq__(self, other) -> bool:
         return self.pruning_dimension == other.pruning_dimension and \
             self.size == other.size and \
             self.offset == other.offset and \
             self._producer.id == other._producer.id
 
-    def get_state(self):
+    def __str__(self) -> str:
         return f"S:{self.size}__O:{self.offset}__ID:{self._producer.id}"
 
-    def split_by_reshape(self, shape_map: Dict[int, List[int]]) -> List['DimensionBlock']:
+    def __repr__(self) -> str:
+        return self.__str__()
+
+    def close_branch(self) -> None:
         """
-        Reshape constraints creation:
-            O -> [A, B, C, D] =>
-            constraints:
-            (size, offset):
-            (1,D %E)
-            (D, C*D % E),
-            (C*D, B*C*D % E)
-            (B*C*D, E % E = 0)
-            E=A*B*C*D
+        Increase the count of closed branches. It will be used to filter groups that have dimension blocks not reached
+        consumers on all branches.
         """
-        if len(shape_map[1]) == 1:
-            raise RuntimeError
-
-        dot_product = reduce((lambda x, y: x * y), shape_map[1])
-        assert dot_product == shape_map[0]
-
-        size = dot_product
-        blocks = []
-        divided_shapes = filter(lambda x: x != 1, shape_map[1])
-        for divided_shape in divided_shapes:
-            offset = int(size % dot_product)
-            size /= divided_shape
-            block = DimensionBlock(
-                size=int(size), offset=offset,
-                pruning_dimension=self.pruning_dimension,
-                producer=self._producer,
-                opened_branches=self._opened_branches,
-                closed_branches=self._closed_branches
-            )
-            blocks.append(block)
-        return blocks
-
-    def add_open_branch(self, num_open_branches=1):
-        self._opened_branches += num_open_branches
-
-    def close_branch(self):
         self._closed_branches += 1
 
-    def set_group(self, group):
+    def set_group(self, group) -> None:
         self._group = group
 
-    def __repr__(self):
-        return self.get_state()
 
+class PropagationGroup:
+    """
+    Defines a group of propagation blocks and links it with the list of children groups.
+    The group is initialized on producers of pruning and is propagated until consumers within PropagationMask.
+    """
 
-class BlockGroup:
-    def __init__(self, blocks: List[DimensionBlock]) -> None:
+    def __init__(self, blocks: List[PropagationBlock]) -> None:
         self._blocks = blocks
         for block in blocks:
             block.set_group(self)
-        self._childs: List['BlockGroup'] = []
+        self._children: List['PropagationGroup'] = []
         self.is_invalid = False
 
-    def get_state(self):
-        return list(map(lambda x: x.get_state(), self._blocks))
+    def __str__(self) -> str:
+        state = list(map(str, self._blocks))
+        return json.dumps(state, separators=(',\n', ':'))
 
-    def invalidate(self):
+    def invalidate(self) -> None:
+        """
+        Invalidate all blocks in the group and do the same for child groups.
+        """
         for block in self._blocks:
             block.is_invalid = True
-        for child in self._childs:
+        for child in self._children:
             child.invalidate()
 
-    # TODO: rename
-    def get_actual_groups(self) -> List[List[DimensionBlock]]:
-        if not self._childs:
+    def get_blocks_on_leaves(self) -> List[List[PropagationBlock]]:
+        """
+        Traverses all children groups until the leaves and collects all propagation blocks at them.
+
+        :return: the list of blocks from each leaf.
+        """
+        if not self._children:
             return [self._blocks]
         retval = []
-        for child in self._childs:
-            groups = child.get_actual_groups()
+        for child in self._children:
+            groups = child.get_blocks_on_leaves()
             retval.append(groups[0] if len(groups) == 1 else groups)
         return retval
 
-    def has_childs(self):
-        return bool(self._childs)
-
-    def add_childs(self, childs: List['BlockGroup']):
-        self._childs.extend(childs)
-
-    def add_blocks(self, blocks: List[DimensionBlock]):
-        self._blocks.extend(blocks)
-
-    # reduce number of methods
-    def add_block(self, block: DimensionBlock):
-        self._blocks.append(block)
-        # TODO: should be done outside
-        block.set_group(self)
-
-    def close_branch(self):
+    def close_branch(self) -> None:
+        """
+        Increase the count of closed branches for the group.
+        The counter will be used to filter groups that have propagation blocks not reached consumers on all branches.
+        """
         for block in self._blocks:
             block.close_branch()
 
-    def get_blocks(self) -> List[DimensionBlock]:
-        return self._blocks.copy()
-
     @staticmethod
-    def join_groups(*args: 'BlockGroup') -> 'BlockGroup':
-        """Join block groups into a new one. The group combines all block and child groups from the given list of groups
+    def join_groups(*args: 'PropagationGroup') -> 'PropagationGroup':
+        """
+        Join block groups into a new one. The group combines all block and child groups from the given list of groups.
 
-        :return: a new block group
+        :return: a new block group.
         """
         for group in args:
-            assert isinstance(group, BlockGroup), \
+            assert isinstance(group, PropagationGroup), \
                 f'Couldn\'t join args {args}, all elements should be BlockGroup instances'
 
-        retval = BlockGroup([])
+        retval = PropagationGroup([])
         blocks = []
         for group in args:
-            group.add_childs([retval])
+            group.add_child(retval)
             for block in group.get_blocks():
                 if block not in blocks:
                     blocks.append(block)
-        retval.add_blocks(blocks)
+        for block in blocks:
+            retval.add_block(block)
         return retval
+
+    def get_blocks(self) -> List[PropagationBlock]:
+        return self._blocks.copy()
+
+    def get_children(self) -> List['PropagationGroup']:
+        return self._children.copy()
+
+    def has_children(self) -> bool:
+        return bool(self._children)
+
+    def add_child(self, child: 'PropagationGroup') -> None:
+        self._children.append(child)
+
+    def add_block(self, block: PropagationBlock) -> None:
+        self._blocks.append(block)
+        block.set_group(self)
 
 
 class PropagationMask:
+    """
+    Contains information about pruning in the current node:
+    a group of propagation blocks per a dimension for which they are applied.
+
+    It's assumed that the propagation mask is initialized on producers and then propagated through the
+    execution graph until consumer nodes.
+
+    This helps to find possible ways of pruning nodes with tracking dependency between them.
+    For example, to constrain a group of nodes to have the same structure or to find a
+    specific pruning structure (PropagationBlock) that can be safely removed in all producers
+    with retaining it in the consumers.
+    """
+
     def __init__(self,
-                 dim_groups_map: Dict[int, List[BlockGroup]] = None):
+                 dim_groups_map: Dict[int, List[PropagationGroup]] = None) -> None:
         self.dim_groups_map = dim_groups_map if dim_groups_map is not None else {}
 
-    def invalidate_groups(self):
+    def __str__(self) -> str:
+        state = {dim: list(map(str, groups)) for dim, groups in self.dim_groups_map.items()}
+        return json.dumps(state)
+
+    def invalidate_groups(self) -> None:
+        """
+        Invalidate all blocks in the group and do the same for child groups.
+        Can happen when propagation mask for some reason can't reach the consumer.
+        For instance, when it's traversed until the node in ignored scope and that doesn't
+        support pruning.
+        """
         for groups in self.dim_groups_map.values():
             for group in groups:
                 group.invalidate()
 
-    def get_state(self):
-        result = {}
-        for dim, groups in self.dim_groups_map.items():
-            groups_state = [group.get_state() for group in groups]
-            result[dim] = groups_state
-        return result
-
 
 @dataclass
-class MinimalDimensionBlock:
+class PruningBlock:
+    """
+    Final and minimal representation of PropagationBlock after mask propagation.
+    By analogy, it defines how much and which particular channels are supposed to be pruned for the node
+    when a single element of pruning mask is 0.
+    We assume that pruning mask is a vector with 1's and 0's. 1 retains the corresponding channel in weights,
+    0 prunes it.
+    """
     size: int
     offset: int
     producer_id: int
     pruning_dimension: int
 
     @classmethod
-    def from_dimension_block(cls, dim_block: DimensionBlock):
-        return cls(dim_block.size, dim_block.offset, dim_block._producer.id, dim_block.pruning_dimension)
+    def from_propagation_block(cls, block: PropagationBlock) -> 'PruningBlock':
+        """
+        Creates an object by taking all necessary information from PropagationBlock.
+        """
+        return cls(block.size, block.offset, block._producer.id, block.pruning_dimension)
 
-    def __str__(self):
+    def __str__(self) -> str:
         return f'S{self.size}_O{self.offset}_PID{self.producer_id}'
 
-    def __hash__(self):
+    def __hash__(self) -> int:
         return hash(str(self))
 
-    def __eq__(self, other: 'MinimalDimensionBlock'):
+    def __eq__(self, other: 'PruningBlock') -> bool:
         return str(self) == str(other)
 
 
 @dataclass
-class PruningNodeGroup:
-    dim_blocks: Set[MinimalDimensionBlock]
+class PruningGroup:
+    """
+    Group of pruning blocks that is obtained after propagation.
+    """
+    dim_blocks: Set[PruningBlock]
 
-    def __eq__(self, other: 'PruningNodeGroup'):
+    def __eq__(self, other: 'PruningGroup'):
         return self.dim_blocks == other.dim_blocks
 
 
-def block_group_to_graph(graph, root_group: 'BlockGroup', visited_block_ids_map):
+def add_group_to_graph(graph: nx.DiGraph,
+                       parent_group: PropagationGroup,
+                       visited_block_ids_map: Dict[int, int]) -> None:
+    """
+    Recursive helper to traverse children of the given PropagationBlock with adding them to the graph.
+
+    :param graph: hierarhy of the propagation groups/blocks.
+    :param root_group: current group for traversing.
+    :param visited_block_ids_map: helper mapping of group addresses to the id in the graph.
+    """
     global counter
     parent_graph_id = counter
-    graph.add_node(parent_graph_id, label=json.dumps(root_group.get_state(), separators=(',\n', ':')))
-    visited_block_ids_map[id(root_group)] = parent_graph_id
-    if root_group.has_childs():
-        for child_group in root_group._childs:
+    graph.add_node(parent_graph_id, label=str(parent_group))
+    visited_block_ids_map[id(parent_group)] = parent_graph_id
+    if parent_group.has_children():
+        for child_group in parent_group.get_children():
             child_id = id(child_group)
             if child_id not in visited_block_ids_map:
                 counter += 1
                 child_graph_id = counter
                 visited_block_ids_map[id(child_group)] = child_graph_id
                 graph.add_edge(parent_graph_id, child_graph_id)
-                block_group_to_graph(graph, child_group, visited_block_ids_map)
+                add_group_to_graph(graph, child_group, visited_block_ids_map)
             else:
                 child_graph_id = visited_block_ids_map[child_id]
                 graph.add_edge(parent_graph_id, child_graph_id)
@@ -248,84 +307,109 @@ def block_group_to_graph(graph, root_group: 'BlockGroup', visited_block_ids_map)
 counter = 0
 
 
-def build_nx_graph_from_roots(roots: Dict[int, 'BlockGroup']):
+def build_block_hierarchy(root_groups: List[PropagationGroup]) -> nx.DiGraph:
+    """Creates hierarchy of propagation blocks/groups by traversing children in the given root groups.
+
+    :param roots: list of the root groups
+    :return: networkx graph that represents the hierarchy of propagation blocks/groups.
+    """
     graph = nx.DiGraph()
     global counter
     counter = 0
     visited = dict()
-    for block_group in roots.values():
-        block_group_to_graph(graph, block_group, visited)
+    for root_group in root_groups:
+        add_group_to_graph(graph, root_group, visited)
         counter += 1
     return graph
 
 
 def get_pruning_groups(graph: NNCFGraph,
                        pruning_operations_metatypes,
-                       prune_operations_types) -> List[PruningNodeGroup]:
+                       prune_operations_types) -> List[PruningGroup]:
+    """
+    Determines how nodes of the given types should be pruned: which nodes should be pruned together, along which
+    dimension, how many sequent channels with which offset. It's done by initializing PropagationMask's on the
+    operations with prunable paramaters (producers of pruning) and propagating them through the execution graph.
+
+    :param graph: nncf graph to initialize and propagate masks.
+    :param pruning_operations_metatypes: registry with operation metatypes pruning algorithm is aware of, i.e.
+    metatypes describing operations with common pruning mask application and propagation properties, e.g.
+    IdentityMaskForwardOps unifies operations that propagate pruning masks as is (relu, swish etc.), whereas
+    Convolution unifies different convolution operations (conv1d, conv2d, conv3d) which accepts some input masks and
+    provide some output masks.
+    :param prune_operations_types: types of operations with prunable parameters.
+    :return: list of groups with parameters of pruning.
+    """
     # 1. Initialize masks for producing nodes
     all_nodes_to_prune = graph.get_nodes_by_types(prune_operations_types)  # type: List[NNCFNode]
     roots = {}
     for node in all_nodes_to_prune:
         assert isinstance(node.layer_attributes, (LinearLayerAttributes, ConvolutionLayerAttributes))
         pruning_dim = node.layer_attributes.get_target_dim_for_compression()
-        root_group = BlockGroup([DimensionBlock(MaskProducer(node.node_id), pruning_dimension=pruning_dim)])
-        roots[node.node_id] = root_group
-
         output_tensors_shapes = [x.tensor_shape for x in graph.get_output_edges(node)]
-        assert len(output_tensors_shapes) == 1 or len(set(output_tensors_shapes)) <= 1, node.node_name
+        assert len(output_tensors_shapes) == 1 or len( set(output_tensors_shapes)) <= 1, node.node_name
         output_tensors_shape = output_tensors_shapes[0]
         target_output_dim_for_compression = len(output_tensors_shape) - 1
-        mask = PropagationMask({target_output_dim_for_compression: [root_group]})
+        root_group = PropagationGroup(
+            blocks=[
+                PropagationBlock(
+                    producer=MaskProducer(node.node_id),
+                    pruning_dimension=pruning_dim
+                )
+            ]
+        )
+        mask = PropagationMask(
+            dim_groups_map={
+                target_output_dim_for_compression: [root_group]
+            }
+        )
+        roots[node.node_id] = root_group
         node.data['output_mask'] = mask
 
     def get_attributes_fn(node: NNCFNode) -> Dict[str, Any]:
-        from nncf.experimental.common.pruning.nodes_grouping import PropagationMask
-        result = {'metatype': str(node.metatype.name),
-                  'node_id': str(node.node_id)}
+        result = {'metatype': str(node.metatype.name), 'node_id': str(node.node_id)}
         if node.layer_attributes:
-            result.update(map(lambda pair: (pair[0], str(
-                pair[1])), node.layer_attributes.__dict__.items()))
+            result.update(map(lambda pair: (pair[0], str(pair[1])), node.layer_attributes.__dict__.items()))
         if 'output_mask' in node.data:
-            output_mask: PropagationMask = node.data['output_mask']
+            output_mask = node.data['output_mask']
             if output_mask:
-                result['output_mask'] = json.dumps(
-                    output_mask.get_state(), indent=4)
+                result['output_mask'] = str(output_mask)
         return result
 
     try:
         # 2. Propagate masks
-        MaskPropagationAlgorithm(graph, pruning_operations_metatypes).mask_propagation()
+        MaskPropagationAlgorithm(
+            graph, pruning_operations_metatypes).mask_propagation()
     finally:
-        block_graph = build_nx_graph_from_roots(roots)
+        block_graph = build_block_hierarchy(list(roots.values()))
         dump_dir = Path(DEBUG_LOG_DIR)
         dump_dir.mkdir(parents=True, exist_ok=True)
         write_dot_graph(block_graph, dump_dir / 'latest_block_group_hierarchy.dot')
-        save_for_netron(graph, str(dump_dir / 'latest_propagated.xml'),
-                        get_attributes_fn=get_attributes_fn)
+        save_for_netron(graph, str(dump_dir / 'latest_propagated_graph.xml'), get_attributes_fn=get_attributes_fn)
 
     # 3. Collect groups from producers
-    blocks_map: Dict[int, List[List[DimensionBlock]]] = {}
+    blocks_map: Dict[int, List[List[PropagationBlock]]] = {}
     for id, group in roots.items():
-        blocks_map[id] = group.get_actual_groups()
+        blocks_map[id] = group.get_blocks_on_leaves()
 
     # Filter non closing and duplicated groups
-    pruning_groups = []  # type: List[PruningNodeGroup]
+    pruning_groups = []  # type: List[PruningGroup]
     finished_producers = []
     for groups in blocks_map.values():
         for group in groups:
             blocks = []
 
-            def collect_block_fn(x: DimensionBlock) -> DimensionBlock:
+            def collect_block_fn(x: PropagationBlock) -> PropagationBlock:
                 blocks.append(x)
                 return x
 
-            objwalk(group, lambda x: isinstance(x, DimensionBlock), collect_block_fn)
+            objwalk(group, lambda x: isinstance(x, PropagationBlock), collect_block_fn)
             if all(block._closed_branches == 1 for block in blocks):
                 for block in group:
                     assert not block._is_invalid, 'invalid groups are not handled'
-                min_group = set(map(MinimalDimensionBlock.from_dimension_block, group))
+                min_group = set(map(PruningBlock.from_propagation_block, group))
                 all_not_finished = all(g.producer_id not in finished_producers for g in min_group)
-                candidate_group = PruningNodeGroup(min_group)
+                candidate_group = PruningGroup(min_group)
                 if candidate_group not in pruning_groups and all_not_finished:
                     pruning_groups.append(candidate_group)
                     finished_producers.extend(g.producer_id for g in min_group)
