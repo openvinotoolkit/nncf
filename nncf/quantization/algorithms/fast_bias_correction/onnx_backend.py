@@ -115,3 +115,10 @@ class ONNXFastBiasCorrectionAlgoBackend(FastBiasCorrectionAlgoBackend):
         if np.count_nonzero(current_bias_value == 0) == 0:
             bias_shift_magnitude = np.max(np.abs((updated_bias_value - current_bias_value) / current_bias_value))
         return bias_shift_magnitude
+
+    @staticmethod
+    def correction_of_bias_shift_shape(bias_shift: np.ndarray, bias_value: np.ndarray, channel_axis: int) -> float:
+        if bias_value.ndim > 1:
+            axes = [i for i in range(bias_value.ndim) if i != channel_axis]
+            bias_shift = np.expand_dims(bias_shift, axes)
+        return bias_shift

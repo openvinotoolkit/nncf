@@ -191,3 +191,15 @@ class FastBiasCorrectionAlgoBackend(ABC):
         :param updated_bias_value: The updated bias value.
         :return: Magnitude between original and updated bias values.
         """
+
+    @staticmethod
+    def correction_of_bias_shift_shape(bias_shift: TTensor, bias_value: TTensor, channel_axis: int) -> float:
+        """
+        Set correct shape for bias shift.
+
+        :param bias_shift: The bias shift.
+        :param bias_value: The bias value.
+        :param channel_axis: The updated bias value.
+
+        :return: The bias with corrected shape.
+        """

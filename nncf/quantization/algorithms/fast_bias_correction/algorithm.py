@@ -138,13 +138,8 @@ class FastBiasCorrection(Algorithm):
                 nncf_logger.debug(f'Skipping node {node_name} because weights were not quantized')
                 continue
 
-            if bias_value is None:
-                nncf_logger.debug(f'Skipping node {node_name} because bias is None')
-                continue
-
             input_fp, input_shape = self._get_fp_inputs(statistic_points, node_name)
             output_fp = self._get_fp_outputs(statistic_points, node_name)
-
 
             extracted_model = self._extract_submodel(model_transformer, node_name)
 
@@ -160,7 +155,8 @@ class FastBiasCorrection(Algorithm):
                 input_blob=input_blob,
                 channel_axis=channel_axis,
                 output_fp=output_fp,
-                output_name=sub_output_name)
+                output_name=sub_output_name
+            )
 
             if bias_value.ndim > 1:
                 axes = [i for i in range(bias_value.ndim) if i != channel_axis]
@@ -204,8 +200,6 @@ class FastBiasCorrection(Algorithm):
                 node_name,
                 input_filter_func,
                 FastBiasCorrection):
-            # TODO: why extend? tensor([1,1]) -> [tensor(1), tensor(1)]
-            # TODO: is possible several collectors? Look like no!
             statistic = tensor_collector.get_statistics()
             input_fp.extend(statistic.mean_values)
             input_shape.extend(statistic.shape)
@@ -229,10 +223,7 @@ class FastBiasCorrection(Algorithm):
                 node_name,
                 output_filter_func,
                 FastBiasCorrection):
-            # TODO: why extend? tensor([1,1]) -> [tensor(1), tensor(1)]
-            # TODO: is possible several collectors? Look like no!
-            # output_fp.extend(tensor_collector.get_statistics().mean_values)
-            output_fp = tensor_collector.get_statistics().mean_values
+            output_fp.extend(tensor_collector.get_statistics().mean_values)
         return output_fp
 
     def _extract_submodel(self,
@@ -280,7 +271,7 @@ class FastBiasCorrection(Algorithm):
         """
         input_blob = self._backend_entity.create_blob(input_shape, input_fp, channel_axis)
         if input_name is None:
-            # For not named inputs, like in torch
+            # For unnamed inputs, as in pytorch
             return input_blob
         input_data = {input_name: input_blob}
         return input_data
@@ -306,7 +297,7 @@ class FastBiasCorrection(Algorithm):
         raw_output = engine.infer(input_blob)
         q_outputs = self._backend_entity.process_model_output(raw_output, output_name)
         q_outputs = self._backend_entity.tensor_processor.mean_per_channel(q_outputs, channel_axis).tensor
-        bias_shift = output_fp - q_outputs
+        bias_shift = type(q_outputs)(output_fp) - q_outputs
         return bias_shift
 
     def get_statistic_points(self, model: TModel) -> StatisticPointsContainer:

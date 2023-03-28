@@ -87,6 +87,7 @@ class PTFastBiasCorrectionAlgoBackend(FastBiasCorrectionAlgoBackend):
 
     @staticmethod
     def get_sub_input_output_names(subgraph: nn.Module) -> Tuple[str, str]:
+        # Pytorch does not have name for extracted node
         return None, None
 
     @staticmethod
@@ -95,14 +96,20 @@ class PTFastBiasCorrectionAlgoBackend(FastBiasCorrectionAlgoBackend):
         for j, idx in enumerate(np.ndindex(blob.shape[channel_axis])):
             index = tuple(slice(None) if i != channel_axis else idx for i in range(blob.ndim))
             blob[index] = data[j]
-        # blob = blob.astype(data[0].dtype)
         return blob
 
     @staticmethod
     def get_bias_value(node: NNCFNode, nncf_graph: NNCFGraph, model: nn.Module) -> np.ndarray:
         node_module = model.get_containing_module(node.node_name)
         if node_module.bias is None:
-            return None
+            # Initialize bias as zeros for node node without bias
+            node_module.bias = nn.Parameter(
+                torch.zeros(
+                    node_module.weight.data.shape[0],
+                    dtype=node_module.weight.data.dtype,
+                    device=node_module.weight.data.device,
+                )
+            )
         return node_module.bias.data
 
     @staticmethod
@@ -132,3 +139,15 @@ class PTFastBiasCorrectionAlgoBackend(FastBiasCorrectionAlgoBackend):
         if torch.count_nonzero(current_bias_value == 0) == 0:
             bias_shift_magnitude = torch.max(torch.abs((updated_bias_value - current_bias_value) / current_bias_value))
         return bias_shift_magnitude
+
+    @staticmethod
+    def correction_of_bias_shift_shape(bias_shift: torch.Tensor, bias_value: torch.Tensor, channel_axis: int) -> float:
+        if bias_value.ndim > 1:
+            # Implementation of numpy.expand_dims
+            # TODO: can be used reshape?
+            for i in range(bias_value.ndim):
+                if i < channel_axis:
+                    bias_shift = torch.unsqueeze(bias_shift, dim=0)
+                if i > channel_axis:
+                    bias_shift = torch.unsqueeze(bias_shift, dim=-1)
+        return bias_shift
