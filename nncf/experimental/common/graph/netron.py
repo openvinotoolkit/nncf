@@ -114,15 +114,15 @@ class EdgeDesc:
         edge = ET.Element(Tags.EDGE, attrs)
         return edge
 
-GET_ATTRIBUTES_FN_TYPE = Optional[Callable[[NNCFNode], Dict[str, str]]]
+GET_ATTRIBUTES_FN_TYPE = Callable[[NNCFNode], Dict[str, str]]
 
 # TODO(andrey-churkin): Add support for `PortDesc.precision` param.
 def get_graph_desc(graph: NNCFGraph,
                    include_fq_params: bool = False,
                    get_attributes_fn: GET_ATTRIBUTES_FN_TYPE = None) -> Tuple[List[NodeDesc], List[EdgeDesc]]:
     if get_attributes_fn is None:
-        get_attributes_fn = lambda _: {
-            'metatype': str(node.metatype.name),
+        get_attributes_fn = lambda x: {
+            'metatype': str(x.metatype.name),
         }
     include_node: Dict[int, bool] = {}
     edges = []
@@ -184,7 +184,7 @@ def save_for_netron(graph: NNCFGraph,
                     save_path: str,
                     graph_name: str = 'Graph',
                     include_fq_params: bool = False,
-                    get_attributes_fn: GET_ATTRIBUTES_FN_TYPE = None):
+                    get_attributes_fn: Optional[GET_ATTRIBUTES_FN_TYPE] = None):
     node_descs, edge_descs = get_graph_desc(graph, include_fq_params, get_attributes_fn)
 
     net = ET.Element(Tags.NET, name=graph_name)
