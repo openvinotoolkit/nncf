@@ -27,11 +27,39 @@ exclude_patterns = []
 
 module_fqn_with_api_fns_memo = set()
 
+_memo = {}
+
+def _has_api_members(module, memo):
+    if module in memo:
+        return memo[module]
+    modules = []
+    funcs_and_classes = []
+    has_api = False
+    for obj in inspect.getmembers(module):
+        if inspect.isfunction(obj) or inspect.isclass(obj):
+            funcs_and_classes.append(obj)
+        if inspect.ismodule(obj):
+            modules.append(obj)
+    for fc in funcs_and_classes:
+        if hasattr(fc, "_nncf_api_marker"):
+            has_api = True
+            break
+    for submodule in modules:
+        if _has_api_members(submodule, memo):
+            has_api = True
+            break
+    memo[module] = has_api
+    return has_api
+
 def skip_non_api(app, what, name, obj, skip, options):
-    if what == "module":
-        objs = inspect.getmembers(obj)
-    if hasattr(obj, "_nncf_api_marker"):
+    if what == "module" and _has_api_members(obj, _memo):
+        print(f"VSHAMPOR: not skipping module {name}, has API")
         return False
+    elif hasattr(obj, "_nncf_api_marker"):
+        print(f"VSHAMPOR: not skipping object {name}, is API")
+        return False
+
+    print(f"VSHAMPOR: skipping {what} {name}, not API")
     return True
 
 def setup(sphinx):
