@@ -119,7 +119,7 @@ GET_ATTRIBUTES_FN_TYPE = Callable[[NNCFNode], Dict[str, str]]
 # TODO(andrey-churkin): Add support for `PortDesc.precision` param.
 def get_graph_desc(graph: NNCFGraph,
                    include_fq_params: bool = False,
-                   get_attributes_fn: GET_ATTRIBUTES_FN_TYPE = None) -> Tuple[List[NodeDesc], List[EdgeDesc]]:
+                   get_attributes_fn: Optional[GET_ATTRIBUTES_FN_TYPE] = None) -> Tuple[List[NodeDesc], List[EdgeDesc]]:
     if get_attributes_fn is None:
         get_attributes_fn = lambda x: {
             'metatype': str(x.metatype.name),
